@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  fitness_chatbot:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: fitness_chatbot
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../model_cache:/app/model_cache
+      - ../logs:/app/logs
+    restart: unless-stopped
+    environment:
+      - MODEL_NAME=Qwen/Qwen2.5-0.5B-Instruct
+      - HF_HUB_OFFLINE=1
+      - TRANSFORMERS_OFFLINE=1
+      - HF_HOME=/app/model_cache
+      - TRANSFORMERS_CACHE=/app/model_cache
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  model_cache:
+  logs:
