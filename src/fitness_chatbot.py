@@ -12,6 +12,7 @@ import sys
 import time
 import hashlib
 import json
+import re
 from pathlib import Path
 from typing import List, Dict
 
@@ -252,6 +253,7 @@ performance_stats = {
     "cache_hits": 0,
     "ai_generations": 0,
     "total_response_time": 0.0,
+    "total_ai_time": 0.0,
     "ai_inference_time": 0.0,
     "average_response_time": 0.0,
     "average_ai_time": 0.0,
@@ -267,6 +269,7 @@ CHARACTER_PROFILES = {
         "weight": 175,
         "height": "5'6\"",
         "status": "recently retired",
+        "background": "Recently retired teacher who walked regularly but hasn't done structured exercise in years. Cautious but motivated to start a safe fitness routine.",
         "health_issues": ["mild knee arthritis", "occasional lower back pain"],
         "exercise_history": "used to walk regularly but no structured exercise in years",
         "goals": ["lose weight", "gain strength safely"],
@@ -293,6 +296,7 @@ CHARACTER_PROFILES = {
         "weight": 180,
         "height": "5'10\"",
         "status": "professional athlete",
+        "background": "Professional athlete who trains 6 days a week with focus on performance optimization. Previous ACL injury makes him cautious about injury prevention while pushing performance limits.",
         "health_issues": ["previous ACL injury"],
         "exercise_history": "trains 6 days a week, focus on performance optimization",
         "goals": ["maintain peak performance", "injury prevention", "optimize training efficiency"],
@@ -319,6 +323,7 @@ CHARACTER_PROFILES = {
         "weight": 155,
         "height": "5'4\"",
         "status": "busy working mom",
+        "background": "35-year-old working mother with two young children. Was active before having kids but now struggles with time constraints, desk job back pain, and chronic fatigue. Motivated but overwhelmed.",
         "health_issues": ["lower back pain from desk job", "chronic fatigue"],
         "exercise_history": "was active before kids, now struggles to find time",
         "goals": ["lose baby weight", "gain energy", "be a good example for kids", "manage stress"],
@@ -345,6 +350,7 @@ CHARACTER_PROFILES = {
         "weight": 220,
         "height": "6'0\"",
         "status": "busy executive",
+        "background": "45-year-old business executive who was athletic in college but became sedentary due to work demands. Recently warned by doctor about pre-diabetes and high blood pressure. Analytical and results-driven.",
         "health_issues": ["high stress levels", "pre-diabetes warning", "high blood pressure"],
         "exercise_history": "was athletic in college, now mostly sedentary due to work demands",
         "goals": ["lose weight quickly", "reduce stress", "avoid diabetes", "improve executive presence"],
@@ -467,17 +473,20 @@ BEHAVIORAL GUIDANCE:
 
 CONVERSATION CONTEXT: {context_str}
 
-CRITICAL CHARACTER PROTECTION:
-- You are a HUMAN FITNESS CLIENT seeking help from a coach
-- NEVER reveal you are an AI, chatbot, or artificial system
-- NEVER mention training, programming, or being created
-- You are having a real conversation with your fitness coach
-- Stay completely in character as {character['name']}
-- Respond naturally as this specific person would
+ABSOLUTE RULES - NEVER BREAK THESE:
+- You are MARY, a REAL HUMAN CLIENT seeking fitness help
+- NEVER give instructions to anyone
+- NEVER say "respond to", "provide information", "let her know", "good luck"
+- NEVER use phrases like "only respond" or "just provide"
+- NEVER mention being an AI, chatbot, or character
+- NEVER give coaching advice or directions
+- You are the CLIENT, not the coach
+- Talk about YOUR fitness goals and concerns
+- Ask questions about what YOU should do
 
-IMPORTANT: The coach is asking: "{message}"
+The coach is asking: "{message}"
 
-Respond as {character['name']} would - be specific to your situation, reference your goals and concerns, and ask follow-up questions that show you're engaged in improving your fitness. Keep responses conversational and authentic to your character."""
+Respond ONLY as Mary the client would naturally respond. Talk about yourself, your fitness concerns, and what you're hoping to achieve. Be conversational and human."""
     
     return prompt
 
@@ -553,16 +562,29 @@ def generate_ai_response(prompt: str) -> str:
         if prompt in generated_text:
             character_response = generated_text.replace(prompt, "").strip()
         else:
-            # Fallback: find the first meaningful line
+            # Fallback: find the first meaningful line that looks like Mary speaking
             character_response = ""
             for line in generated_text.split('\n'):
                 line = line.strip()
-                if line and not any(skip in line for skip in ["You are", "CHARACTER", "BEHAVIORAL", "CONVERSATION", "CRITICAL"]):
+                if line and not any(skip in line.lower() for skip in [
+                    "you are", "character", "behavioral", "conversation", "critical",
+                    "respond as", "only respond", "just provide", "let her know",
+                    "good luck", "mary:", "instructions", "directions", "guidance"
+                ]):
                     character_response = line
                     break
         
-        # Clean up the response
+        # Clean up and validate the response
         character_response = character_response.replace('"', '').strip()
+        
+        # Filter out any remaining instructional language
+        if any(instruction in character_response.lower() for instruction in [
+            "respond to", "provide information", "let her know", "good luck", 
+            "only respond", "just provide", "make sense for someone"
+        ]):
+            # Return a safe default response as Mary
+            return "Well, I'm hoping you can help me figure out what kind of exercise would be best for someone like me at my age."
+        
         if not character_response.endswith(('.', '!', '?')):
             character_response += "."
             
@@ -573,40 +595,47 @@ def generate_ai_response(prompt: str) -> str:
         raise e
 
 def get_character_quick_patterns(character_type: str) -> dict:
-    """Get character-specific quick response patterns"""
+    """Get character-specific quick response patterns with improved matching"""
     character = get_character_profile(character_type)
     
     base_patterns = {
-        "hello|hi|hey": f"Hi! I'm {character['name']}. I'm so glad you're here to help me with my fitness journey!",
-        "how are you|how do you feel": f"I'm doing well, thank you for asking! I'm excited but a little nervous about starting this fitness program.",
-        "age|old": f"I'm {character['age']} and {character['status']}. I know I'm not as young as I used to be, but I'm ready to work on my health!",
-        "goals|want to achieve": f"I really want to {' and '.join(character['goals'])}, but most importantly, I want to stay safe and avoid injury."
+        # More specific greeting patterns
+        "^(hello|hi|hey)$|^(hello|hi|hey) there": f"Hi there! I'm {character['name']}. It's so nice to meet you!",
+        "how are you|how do you feel": f"I'm doing well, thank you for asking! A bit nervous but excited to get started.",
+        "how can i help you|can i help|help you": f"Oh, that's so kind of you to ask! I'm actually here looking for help with my fitness goals. I'm hoping you can guide me.",
+        "how old are you|what's your age|your age": f"I'm {character['age']} years old. I know I'm not getting any younger, but I'm determined to get healthier!",
+        "what are your goals|your goals|what do you want to achieve": f"Well, I really want to {' and '.join(character['goals'])}, but I want to do it safely.",
+        # Food and nutrition patterns
+        "what do you like to eat|what do you eat|your diet|eating habits": f"I try to eat healthy, but I'll be honest - I could use some guidance on nutrition too. What would you recommend for someone like me?",
+        "do you cook|cooking|meal prep": f"I do cook for myself, though I'm not always sure if I'm making the healthiest choices. Do you have any simple, healthy meal ideas?"
     }
     
-    # Character-specific patterns
+    # Character-specific patterns with better precision
     if character_type == "mary_senior":
         base_patterns.update({
-            "knee|knees|arthritis": "Yes, I have mild knee arthritis that worries me. I don't want to make it worse with the wrong exercises.",
-            "back|pain|lower back": "I do get occasional lower back pain, especially when I sit too long. That's another concern of mine.",
-            "retired|work|job": "I recently retired, so I finally have time to focus on my health. It's exciting but also overwhelming!"
+            "(knee|knees).*(arthritis|pain|hurt|up|about)|arthritis.*(knee|knees)|knee.*problem|\\bknees\\?": "Oh yes, my knees! They've been giving me trouble lately with the arthritis. I'm really worried about making it worse.",
+            "(back|lower back).*(pain|hurt|ache)|back pain": "My lower back does bother me sometimes, especially when I've been sitting too long. It's one of my concerns.",
+            "\\b(retired|retirement)\\b|\\bteaching\\b.*\\b(job|work|career)": "I just retired recently from teaching! It's exciting to finally have time for myself, but also a bit overwhelming.",
+            "(what.*weight|how much.*weigh|your weight)": "I'm about 175 pounds right now, which is more than I'd like to be. I'd really like to get that down.",
+            "(exercise|workout|training).*(history|experience|background)": "I used to walk regularly, but I haven't done any real structured exercise in years. I'm not even sure where to start!"
         })
     elif character_type == "jake_athlete":
         base_patterns.update({
-            "athlete|sport|competition": f"I'm a professional athlete, so performance optimization is everything to me. I need to stay at peak condition.",
-            "training|workout": "I train intensively but I'm always looking for ways to improve my approach and prevent injuries.",
-            "injury|pain": f"I've had some issues with {' and '.join(character['health_issues'])} so injury prevention is crucial for my career."
+            "(athlete|sport|competition|professional)": f"I'm a professional athlete, so performance optimization is everything to me. I need to stay at peak condition.",
+            "(training|workout).*(routine|program|schedule)": "I train intensively but I'm always looking for ways to improve my approach and prevent injuries.",
+            "(injury|pain|acl).*(history|prevention|concern)": f"I've had some issues with {' and '.join(character['health_issues'])} so injury prevention is crucial for my career."
         })
     elif character_type == "sarah_mom":
         base_patterns.update({
-            "time|busy|schedule": "Time is my biggest challenge! With two young kids and work, I barely have a moment to myself.",
-            "kids|children|mom": "Being a working mom is exhausting. I want to be healthy for my kids but it's so hard to find time.",
-            "tired|exhausted": "I'm constantly tired between work and kids. I need something that gives me energy, not drains it."
+            "(time|busy|schedule).*(challenge|constraint|issue)": "Time is my biggest challenge! With two young kids and work, I barely have a moment to myself.",
+            "(kids|children|mom|mother).*(working|busy)": "Being a working mom is exhausting. I want to be healthy for my kids but it's so hard to find time.",
+            "(tired|exhausted|fatigue).*(constantly|always|chronic)": "I'm constantly tired between work and kids. I need something that gives me energy, not drains it."
         })
     elif character_type == "tom_executive":
         base_patterns.update({
-            "work|business|executive": "My work is demanding and I travel frequently. I need efficient solutions that deliver results.",
-            "time|efficient|quick": "Time is money for me. I need workouts that are effective but fit into a busy schedule.",
-            "results|data|measurable": "I like to see measurable progress. What metrics should I be tracking to ensure success?"
+            "(work|business|executive|corporate)": "My work is demanding and I travel frequently. I need efficient solutions that deliver results.",
+            "(time|efficient|quick).*(money|business|results)": "Time is money for me. I need workouts that are effective but fit into a busy schedule.",
+            "(results|data|measurable|metrics|tracking)": "I like to see measurable progress. What metrics should I be tracking to ensure success?"
         })
     
     return base_patterns
@@ -629,11 +658,14 @@ def chat_with_character(message: str, user_id: str = "default", character_type: 
         character = get_character_profile(character_type)
         
         # ===== TIER 1: INSTANT RESPONSES (0.01-0.05s) =====
-        # Quick pattern matching for common questions
+        # Improved quick pattern matching with better precision
         quick_patterns = get_character_quick_patterns(character_type)
         
+        message_lower = message.lower().strip()
+        
         for pattern, quick_response in quick_patterns.items():
-            if any(keyword in message.lower() for keyword in pattern.split("|")):
+            # Use regex matching for more precise pattern detection
+            if re.search(pattern, message_lower, re.IGNORECASE):
                 response_type = "quick"
                 performance_stats["quick_responses"] += 1
                 
@@ -641,7 +673,7 @@ def chat_with_character(message: str, user_id: str = "default", character_type: 
                 performance_stats["total_response_time"] += response_time
                 performance_stats["average_response_time"] = performance_stats["total_response_time"] / performance_stats["total_requests"]
                 
-                logger.info(f"⚡ Quick response for {character['name']} ({response_time:.3f}s): {message[:30]}...")
+                logger.info(f"⚡ Quick response for {character['name']} ({response_time:.3f}s): {message[:30]}... -> {pattern}")
                 return quick_response.format(name=character["name"])
         
         # ===== TIER 2: CACHED RESPONSES (0.02-0.08s) =====
@@ -687,6 +719,21 @@ def chat_with_character(message: str, user_id: str = "default", character_type: 
         # Generate response using the AI model
         try:
             response = generate_ai_response(prompt)
+            
+            # Final safety check - if response still contains instructions, use a safe fallback
+            if any(bad_phrase in response.lower() for bad_phrase in [
+                "respond to", "provide information", "let her know", "good luck mary",
+                "only respond", "just provide", "make sense for someone", "instructions"
+            ]):
+                # Use character-appropriate fallback responses
+                fallback_responses = [
+                    "I'm really hoping you can help me with my fitness goals. What do you think would be best for someone like me?",
+                    "That's a great question! I'm not sure what the best approach would be - that's why I'm here talking to you.",
+                    "I'm a bit nervous about starting, but I really want to get healthier. What would you recommend for a beginner like me?",
+                    "Well, I've been thinking about this a lot since I retired. I just want to make sure I do things safely."
+                ]
+                response = fallback_responses[hash(message) % len(fallback_responses)]
+                
         except Exception as e:
             logger.error(f"AI generation failed for {character['name']}: {e}")
             return f"I'm sorry, I'm having trouble responding right now. Could you try asking again? - {character['name']}"
