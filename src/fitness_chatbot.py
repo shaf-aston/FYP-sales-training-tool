@@ -21,40 +21,11 @@ if utils_path not in sys.path:
 # Project imports
 from utils.env import setup_model_env, assert_model_present
 from utils.paths import LOGS_DIR, MODEL_CACHE_DIR, TEMPLATES_DIR, STATIC_DIR
+from utils.logger_config import setup_logging
 from src.enhanced_responses import generate_ai_response
 
-
 # System Configuration
-
-# Fix Windows console encoding for emojis
-if sys.platform == "win32":
-    import codecs
-    sys.stdout.reconfigure(encoding='utf-8')
-    sys.stderr.reconfigure(encoding='utf-8')
-
-# Configure logging with UTF-8 encoding for emojis
-log_handlers = [
-    logging.FileHandler(LOGS_DIR / "chatbot.log", encoding='utf-8'),
-]
-
-# Only add console handler if we can handle UTF-8
-try:
-    import codecs
-    if sys.platform == "win32":
-        # Try to set UTF-8 encoding for Windows console
-        sys.stdout.reconfigure(encoding='utf-8')
-        sys.stderr.reconfigure(encoding='utf-8')
-    log_handlers.append(logging.StreamHandler())
-except:
-    # Skip console logging if UTF-8 not supported
-    pass
-
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=log_handlers
-)
-logger = logging.getLogger("fitness_chatbot")
+logger = setup_logging(LOGS_DIR)
 
 # Optimization flags - optimized for CPU performance
 ENABLE_4BIT = os.environ.get("ENABLE_4BIT", "0") == "1"  # Disabled by default for CPU
