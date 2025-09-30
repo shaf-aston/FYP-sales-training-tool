@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from typing import Optional, Iterable
-from paths import MODEL_CACHE_DIR
+from utils.paths import MODEL_CACHE_DIR
 
 DEFAULT_MODEL = "Qwen/Qwen2.5-0.5B-Instruct"
 

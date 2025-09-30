@@ -1,0 +1,58 @@
+---
+config:
+  layout: dagre
+---
+flowchart TB
+ subgraph subGraph0["Frontend Layer"]
+        UI["React.js Web Interface"]
+        Admin["Admin Panel<br>Config Controls"]
+  end
+ subgraph subGraph1["Core Services"]
+        Chat["Chat Service<br>Mary Character"]
+        Config["Configuration Service<br>Fallback Controls"]
+        Memory["Context Memory<br>Conversation History"]
+  end
+ subgraph subGraph2["AI Processing"]
+        Pipeline["Qwen2.5-0.5B Pipeline<br>CPU Optimized"]
+        Enhanced["Enhanced Response<br>Post-Processing"]
+        Fallback["Fallback System<br>Configurable"]
+  end
+ subgraph subGraph3["Data Storage"]
+        Profile@{ label: "Character Profile<br>Mary's Attributes" }
+        Cache["Response Cache<br>Performance"]
+        Logs["Application Logs<br>UTF-8 Encoded"]
+  end
+ subgraph subGraph4["Model Infrastructure"]
+        ModelCache["Local Model Cache<br>~1GB Qwen Model"]
+        Utils["Utility Scripts<br>Download &amp; Cleanup"]
+  end
+    UI --> API["FastAPI Backend<br>Port 8000"]
+    Admin --> API
+    API --> Chat & Config & Memory & Logs & Stats["Performance Statistics<br>Response Times &amp; Failures"] & Health["Health Check<br>System Status"]
+    Chat --> Pipeline & Profile & Cache
+    Pipeline --> Enhanced & ModelCache
+    Enhanced --> Fallback
+    Utils --> ModelCache
+    Profile@{ shape: rect}
+     UI:::frontend
+     Admin:::frontend
+     Chat:::core
+     Config:::core
+     Memory:::core
+     Pipeline:::ai
+     Enhanced:::ai
+     Fallback:::ai
+     Profile:::data
+     Cache:::data
+     Logs:::data
+     ModelCache:::model
+     Utils:::model
+     API:::api
+     Stats:::data
+     Health:::data
+    classDef frontend fill:#e1f5fe
+    classDef api fill:#f3e5f5
+    classDef core fill:#e8f5e8
+    classDef ai fill:#fff3e0
+    classDef data fill:#fce4ec
+    classDef model fill:#f1f8e9

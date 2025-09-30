@@ -1,86 +1,198 @@
 """
-Enhanced Conversational Response System
-Makes characters more flexible and natural in conversations
+Enhanced response handling for Mary, the fitness chatbot client.
+
+This module contains functions for generating AI responses,
+handling fallbacks, and post-processing responses for better quality.
 """
 
-def generate_conversational_response(message, character, character_type):
-    """Generate natural, flexible responses that stay in character"""
-    message_lower = message.lower()
-    name = character['name']
+import logging
+import random
+from typing import List, Dict, Optional
+
+# Configure logger
+logger = logging.getLogger("fitness_chatbot")
+
+# Fallback responses when AI generation fails completely
+FALLBACK_RESPONSES = [
+    "I'm hoping you can help me figure out the best approach for my fitness goals. What would you suggest?",
+    "I was just thinking about how to approach this—could you clarify a bit for me?",
+    "I'm just trying to explain how I'm feeling so you can guide me.",
+    "Sorry, I got distracted for a moment. Could you ask me that again?",
+    "I'd really like to understand what would work best for someone like me."
+]
+
+# Words that shouldn't appear in Mary's responses (instruction leakage)
+BAD_PHRASES = [
+    "respond to", "provide information", "let her know", "good luck", 
+    "only respond", "just provide", "make sense for someone", "don't use",
+    "inappropriate", "insensitive", "society's norms", "informational purposes",
+    "remember", "this is for", "language that might", "considered inappropriate",
+    "ai", "chatbot", "model", "generate", "system", "prompt", "instruction"
+]
+
+# Generic markers that indicate a bland response
+GENERIC_MARKERS = [
+    "not sure where to begin",
+    "i'm still learning",
+    "i'm not sure what to do",
+    "can you provide some tips",
+    "would appreciate any advice",
+    "could you help me understand",
+    "i don't know much about"
+]
+
+# Mary-specific enrichment additions when responses are too generic
+MARY_ENRICHMENT = [
+    "I usually just have oatmeal with a few berries in the morning—maybe that's too plain?",
+    "Sometimes I end up snacking on crackers mid-afternoon because I didn't plan anything better.",
+    "My knees feel stiff if I sit too long, so I'm hoping whatever we do is gentle starting out.",
+    "I never know if I'm getting enough protein—does Greek yogurt actually help much?",
+    "I used to walk every day, but I've gotten out of the habit since retiring.",
+    "My doctor mentioned I should be careful with my joints, especially my knees.",
+    "I want to be able to keep up with my grandchildren when they visit.",
+    "I was never very athletic, even when I was younger, so I'm a bit nervous."
+]
+
+def generate_ai_response(prompt: str, pipe, tokenizer=None) -> str:
+    """Generate AI response using the loaded model with minimal filtering
     
-    # Food-related responses
-    if any(word in message_lower for word in ['food', 'eat', 'meal', 'diet', 'nutrition', 'hungry']):
-        if character_type == "mary_senior":
-            return f"Well, at my age I try to eat healthy! I love vegetables from my garden, though I do have a sweet tooth for cookies. What about you - do you have favorite healthy foods? I'm always looking for new ideas that are good for someone with my health concerns."
-        elif character_type == "jake_athlete":
-            return f"Nutrition is huge for my performance! I'm big on lean proteins, complex carbs for energy, and tons of vegetables. I time my meals around training. What's your approach to nutrition? Are you looking to fuel workouts or more general health?"
-        elif character_type == "sarah_mom":
-            return f"Oh gosh, with two kids it's chaos! I try to cook healthy meals but sometimes it's whatever's fastest. The kids love pasta and I sneak vegetables in where I can. Do you have any quick healthy meal ideas that actually taste good?"
-        else:  # tom_executive
-            return f"Honestly, I eat whatever's convenient - probably part of my health problems. My assistant orders lunch, I grab coffee constantly. My doctor says I need to be more intentional about nutrition. What do busy people like us actually do to eat better?"
+    Args:
+        prompt: The prompt to send to the model
+        pipe: The pipeline object for text generation
+        tokenizer: Optional tokenizer if not included in the pipeline
     
-    # Personal questions (name, age, etc.)
-    elif any(word in message_lower for word in ['name', 'who are you', 'tell me about yourself']):
-        if character_type == "mary_senior":
-            return f"I'm Mary! I'm 65 and recently retired after teaching for 35 years. I have some arthritis in my knees and occasional back pain, but I'm determined to get healthier. I want to be strong enough to keep up with my grandkids! What brings you here today?"
-        elif character_type == "jake_athlete":
-            return f"I'm Jake, 28, professional athlete. I train 6 days a week but I'm always looking to optimize performance and prevent injury - had an ACL issue before. Every edge matters in competition. What's your fitness background?"
-        elif character_type == "sarah_mom":
-            return f"Hi! I'm Sarah, 35, working mom of two amazing but exhausting kids. I used to be active but now I'm lucky if I get 5 minutes to myself! I need to find realistic ways to get healthy again. Do you work with busy parents?"
-        else:  # tom_executive
-            return f"Tom here, 45, business executive. Doctor gave me a wake-up call about pre-diabetes and blood pressure. I was athletic in college but work consumed everything. I need efficient, proven results. What's your track record with executives?"
+    Returns:
+        A natural response from Mary's perspective
+    """
+    try:
+        response = pipe(
+            prompt,
+            max_new_tokens=150,  # Increased for more natural responses
+            num_return_sequences=1,
+            temperature=0.8,     # Higher temperature for more variety
+            do_sample=True,
+            top_p=0.9,           # More diverse sampling
+            repetition_penalty=1.1,  # Light repetition penalty
+            pad_token_id=pipe.tokenizer.eos_token_id if hasattr(pipe, 'tokenizer') and pipe.tokenizer else None
+        )
+        
+        generated_text = response[0]['generated_text'].strip()
+        
+        # Extract Mary's response (everything after the prompt)
+        if "Mary:" in generated_text:
+            # Split at Mary: and take the part after it
+            parts = generated_text.split("Mary:", 1)
+            if len(parts) > 1:
+                character_response = parts[1].strip()
+            else:
+                character_response = generated_text
+        elif prompt in generated_text:
+            character_response = generated_text.replace(prompt, "").strip()
+        else:
+            character_response = generated_text
+        
+        # Basic cleanup only
+        character_response = character_response.strip()
+        
+        # Remove any leading/trailing quotes or artifacts
+        character_response = character_response.strip('"\'')
+        
+        # Stop at first sentence if it's too long
+        if len(character_response) > 200:
+            sentences = character_response.split('. ')
+            character_response = sentences[0] + '.' if sentences else character_response[:200]
+        
+        # Light validation - just check if we have something reasonable
+        if len(character_response) < 5:
+            return get_fallback()
+            
+        return character_response
+        
+    except Exception as e:
+        logger.error(f"AI generation error: {e}")
+        # Return None to indicate failure - let calling function decide what to do
+        return None
+
+def clean_response(text: str) -> str:
+    """Basic cleanup of AI-generated response
     
-    # Greeting responses
-    elif any(word in message_lower for word in ['hi', 'hello', 'hey', 'greetings']):
-        if character_type == "mary_senior":
-            return f"Hello there! I'm Mary. It's so nice to meet you! I'm hoping you can help me figure out safe ways to get stronger at my age. I'm a bit nervous about doing the wrong thing, but I'm ready to start!"
-        elif character_type == "jake_athlete":
-            return f"Hey! Jake here. Good to meet you. I'm looking to take my training and performance to the next level. Always interested in what the latest research shows. What's your approach?"
-        elif character_type == "sarah_mom":
-            return f"Hi! I'm Sarah - thanks for fitting me into your schedule! I know how busy everyone is. I'm really hoping we can find something that works with my crazy mom life. Do you have experience with parents?"
-        else:  # tom_executive
-            return f"Hello. I'm Tom. Let's get straight to business - my time is limited but my health situation is serious. I need to see clear results efficiently. What's your methodology?"
+    Args:
+        text: Raw AI-generated text
     
-    # Goals and motivation
-    elif any(word in message_lower for word in ['goal', 'want', 'need', 'help', 'achieve']):
-        if character_type == "mary_senior":
-            return f"I really want to lose some weight and get stronger, but safely! I don't want to hurt my knees or back. I'd love to have the energy to garden more and keep up with my grandchildren. What do you think is realistic for someone like me?"
-        elif character_type == "jake_athlete":
-            return f"My goals are maintaining peak performance, injury prevention, and finding any edge I can get. I can't afford to be sidelined again. What does cutting-edge sports science say about optimization?"
-        elif character_type == "sarah_mom":
-            return f"I want to lose this baby weight and have energy to actually enjoy my kids instead of just surviving each day! I also want to be a good role model for them about healthy living. What's actually achievable for busy moms?"
-        else:  # tom_executive
-            return f"I need to lose 40-50 pounds, get my blood pressure and pre-diabetes under control, and reduce stress. Doctor's orders. I want measurable results and ROI on my time investment. What's your success rate?"
+    Returns:
+        Lightly cleaned text
+    """
+    if not text:
+        return get_fallback()
+        
+    # Basic cleanup only
+    cleaned = text.strip()
     
-    # Time and schedule questions
-    elif any(word in message_lower for word in ['time', 'busy', 'schedule', 'when', 'how long']):
-        if character_type == "mary_senior":
-            return f"Well, now that I'm retired I actually have more time than I've had in years! But I want to use it wisely. How often should someone my age exercise? I don't want to overdo it."
-        elif character_type == "jake_athlete":
-            return f"I train 6 days a week already, but I'm always looking to optimize the time. Recovery timing is crucial too. What does your research show about training frequency for athletes?"
-        elif character_type == "sarah_mom":
-            return f"Time is my biggest challenge! Between work, kids, household stuff... I might have 15-20 minutes here and there. Is that even worth it? Can you actually get results with tiny time chunks?"
-        else:  # tom_executive
-            return f"Time is money. I need maximum efficiency. What's the minimum effective dose to get health results? I can probably commit 30-45 minutes if I see ROI. What's realistic?"
+    # Remove quotes
+    cleaned = cleaned.strip('"\'')
     
-    # Money/cost questions  
-    elif any(word in message_lower for word in ['cost', 'money', 'price', 'afford', 'investment']):
-        if character_type == "mary_senior":
-            return f"I'm comfortable financially since I retired, but I want to be smart about spending. I see this as an investment in my health. What are we looking at cost-wise? I want to make sure I can stick with it."
-        elif character_type == "jake_athlete":
-            return f"I invest heavily in my performance - it's my career. If you can show me proven results and give me a competitive edge, cost isn't the primary concern. What's your track record?"
-        elif character_type == "sarah_mom":
-            return f"Money is tight with kids, but I know I need to invest in my health to take care of everyone else. What are the realistic options? I need something that fits our family budget."
-        else:  # tom_executive
-            return f"I understand ROI. If you can prove this works efficiently and gets measurable health results, I'm willing to invest significantly. What packages do you offer for executives?"
+    # Ensure proper punctuation
+    if cleaned and not cleaned.endswith(('.', '!', '?')):
+        cleaned += "."
+        
+    return cleaned
+
+def post_process_response(response: str, message_hash: int) -> str:
+    """Light post-processing for Mary's response
     
-    # Default conversational response - stay flexible and in character
-    else:
-        if character_type == "mary_senior":
-            return f"That's an interesting question! I appreciate your help with this. At my age, I'm learning it's never too late to make positive changes. I just want to be safe and smart about it. What would you recommend for someone like me?"
-        elif character_type == "jake_athlete":
-            return f"Good question! I'm always looking to learn and optimize. Performance is about details and constant improvement. What's your take on that? I'm interested in your perspective."
-        elif character_type == "sarah_mom":
-            return f"Oh that's a good point! With everything going on, I don't always think about things like that. Being a mom makes you realize there's always more to learn. What do you think would work best for someone in my situation?"
-        else:  # tom_executive
-            return f"Interesting perspective. I like to analyze all angles before making decisions. In business, you learn to ask the right questions. What data or results can you show me that would be relevant to my situation?"
+    Args:
+        response: The initial response
+        message_hash: Not used anymore, kept for compatibility
+    
+    Returns:
+        Lightly processed response
+    """
+    if not response:
+        return get_fallback()
+    
+    # Just return the response with minimal processing
+    return response.strip()
+
+def get_fallback() -> str:
+    """Return a random fallback response when AI generation fails
+    
+    Returns:
+        A generic but natural-sounding fallback response for Mary
+    """
+    return random.choice(FALLBACK_RESPONSES)
+
+def should_use_fallback(config: dict = None) -> bool:
+    """Check if fallback responses should be used based on configuration
+    
+    Args:
+        config: Configuration dictionary, if available
+    
+    Returns:
+        True if fallback responses should be used, False otherwise
+    """
+    if config is None:
+        return True  # Default to using fallbacks if no config provided
+    
+    return config.get("fallback_responses_enabled", True)
+
+def get_mary_fallback() -> str:
+    """Get Mary's fallback response
+    
+    Returns:
+        A Mary-appropriate fallback response
+    """
+    return "I'm sorry, I got a bit confused there. I'm still adjusting to this whole fitness journey. Could you explain that again?"
+
+def handle_error_response(error: Exception = None) -> str:
+    """Generate a friendly error response when AI processing fails
+    
+    Args:
+        error: Optional exception that caused the error
+    
+    Returns:
+        A natural error response from Mary's perspective
+    """
+    if error:
+        logger.error(f"Error generating response for Mary: {error}")
+    
+    return "I'm sorry, I'm having trouble responding right now. Could you try asking again? - Mary"

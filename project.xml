@@ -1,0 +1,100 @@
+<mxfile host="app.diagrams.net" modified="2025-09-30T12:00:00.000Z" agent="5.0" etag="example" version="21.6.8" type="device">
+  <diagram name="Fitness Chatbot Architecture" id="fitness-chatbot-arch">
+    <mxGraphModel dx="1422" dy="798" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <!-- Frontend Layer -->
+        <mxCell id="frontend-layer" value="Frontend Layer" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;fillColor=#e1f5fe;" vertex="1" parent="1">
+          <mxGeometry x="50" y="50" width="200" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="react-ui" value="React.js Web Interface" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bbdefb;" vertex="1" parent="frontend-layer">
+          <mxGeometry x="10" y="35" width="180" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="admin-panel" value="Admin Panel&#xa;Config Controls" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bbdefb;" vertex="1" parent="frontend-layer">
+          <mxGeometry x="10" y="75" width="180" height="35" as="geometry" />
+        </mxCell>
+        
+        <!-- API Layer -->
+        <mxCell id="api-layer" value="FastAPI Backend&#xa;Port 8000" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3e5f5;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="350" y="100" width="150" height="60" as="geometry" />
+        </mxCell>
+        
+        <!-- Core Services -->
+        <mxCell id="core-services" value="Core Services" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;fillColor=#e8f5e8;" vertex="1" parent="1">
+          <mxGeometry x="50" y="220" width="200" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="chat-service" value="Chat Service&#xa;Mary Character" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;" vertex="1" parent="core-services">
+          <mxGeometry x="10" y="35" width="180" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="config-service" value="Configuration Service&#xa;Fallback Controls" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;" vertex="1" parent="core-services">
+          <mxGeometry x="10" y="75" width="180" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="memory-service" value="Context Memory&#xa;Conversation History" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;" vertex="1" parent="core-services">
+          <mxGeometry x="10" y="115" width="180" height="30" as="geometry" />
+        </mxCell>
+        
+        <!-- AI Processing -->
+        <mxCell id="ai-processing" value="AI Processing" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;fillColor=#fff3e0;" vertex="1" parent="1">
+          <mxGeometry x="350" y="220" width="200" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="pipeline" value="Qwen2.5-0.5B Pipeline&#xa;CPU Optimized" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe0b2;" vertex="1" parent="ai-processing">
+          <mxGeometry x="10" y="35" width="180" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="enhanced" value="Enhanced Response&#xa;Post-Processing" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe0b2;" vertex="1" parent="ai-processing">
+          <mxGeometry x="10" y="75" width="180" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="fallback" value="Fallback System&#xa;Configurable" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe0b2;" vertex="1" parent="ai-processing">
+          <mxGeometry x="10" y="115" width="180" height="30" as="geometry" />
+        </mxCell>
+        
+        <!-- Data Storage -->
+        <mxCell id="data-storage" value="Data Storage" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;fillColor=#fce4ec;" vertex="1" parent="1">
+          <mxGeometry x="650" y="220" width="200" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="profile" value="Character Profile&#xa;Mary's Attributes" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8bbd9;" vertex="1" parent="data-storage">
+          <mxGeometry x="10" y="35" width="180" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="cache" value="Response Cache&#xa;Performance" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8bbd9;" vertex="1" parent="data-storage">
+          <mxGeometry x="10" y="75" width="180" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="logs" value="Application Logs&#xa;UTF-8 Encoded" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8bbd9;" vertex="1" parent="data-storage">
+          <mxGeometry x="10" y="115" width="180" height="30" as="geometry" />
+        </mxCell>
+        
+        <!-- Model Infrastructure -->
+        <mxCell id="model-infra" value="Model Infrastructure" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;fillColor=#f1f8e9;" vertex="1" parent="1">
+          <mxGeometry x="350" y="420" width="200" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="model-cache" value="Local Model Cache&#xa;~1GB Qwen Model" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dcedc8;" vertex="1" parent="model-infra">
+          <mxGeometry x="10" y="35" width="180" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="utils" value="Utility Scripts&#xa;Download & Cleanup" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dcedc8;" vertex="1" parent="model-infra">
+          <mxGeometry x="10" y="70" width="180" height="25" as="geometry" />
+        </mxCell>
+        
+        <!-- Connections -->
+        <mxCell id="conn1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="react-ui" target="api-layer">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="conn2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="admin-panel" target="api-layer">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="conn3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="api-layer" target="chat-service">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="conn4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="chat-service" target="pipeline">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="conn5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="pipeline" target="model-cache">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="conn6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="chat-service" target="profile">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
