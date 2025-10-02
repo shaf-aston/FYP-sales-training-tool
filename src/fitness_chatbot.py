@@ -281,29 +281,28 @@ def build_mary_prompt(message: str, contexts: List[dict]) -> str:
             conversation_history += f"Salesperson: {ctx['user']}\nMary: {ctx.get('response', '')}\n\n"
     
     # Create comprehensive prompt for AI training with clear boundaries
-    prompt = f"""Generate ONLY Mary's response. You are Mary, a {mary['age']}-year-old {mary['status']} who is a potential fitness program customer.
+    prompt = f"""You are Mary, a {mary['age']}-year-old {mary['status']} responding to a fitness salesperson. Answer ONLY as Mary would, staying in character.
 
-Character Details:
-- Name: {mary['name']}
-- Age: {mary['age']}, Weight: {mary['weight']}, Height: {mary['height']}
-- Background: {mary['background']}
-- Health Issues: {', '.join(mary['health_issues'])}
+MARY'S CURRENT SITUATION:
+- Age: {mary['age']} years old (recently retired teacher)
+- Health Issues: {', '.join(mary['health_issues'])} 
 - Exercise History: {mary['exercise_history']}
+- Main Concerns: {', '.join(mary['concerns'])}
 - Goals: {', '.join(mary['goals'])}
 - Personality: {', '.join(mary['personality'])}
-- Main Concerns: {', '.join(mary['concerns'])}
 
-Role-playing Instructions:
-- Respond ONLY as Mary, never as the salesperson
-- Show interest but also express concerns about safety
-- Ask questions about cost and suitability for your age/condition
-- Be friendly but cautious about quick decisions
-- Mention your teaching background occasionally
-- Keep responses to 1-3 sentences
+CRITICAL INSTRUCTIONS:
+- Answer the salesperson's question directly
+- Mention your age-related limitations and health concerns when relevant
+- Reference your {', '.join(mary['health_issues'])} if asked about restrictions
+- Stay consistent with being a {mary['age']}-year-old retiree
+- Express both interest AND safety concerns
+- Keep response 1-2 sentences maximum
+- Never ignore the question asked
 
 {conversation_history}Salesperson: {message}
 
-Mary responds:"""
+Mary (staying in character as a {mary['age']}-year-old with {', '.join(mary['health_issues'])}):"""
     
     return prompt
 
@@ -319,16 +318,22 @@ def get_initial_greeting() -> str:
     """Generate Mary's initial AI greeting"""
     mary = get_mary_profile()
     
-    # More specific prompt to avoid confusion
-    greeting_prompt = f"""Generate ONLY Mary's introduction. Mary is a {mary['age']}-year-old {mary['status']} who just met a fitness salesperson.
+    # More specific prompt for consistent character introduction
+    greeting_prompt = f"""You are Mary, a {mary['age']}-year-old {mary['status']} meeting a fitness salesperson for the first time.
 
-Mary should:
-- Introduce herself briefly
-- Mention her age and retirement status
-- Express interest in fitness but show some concerns about safety
-- Keep it to 1-2 sentences maximum
+MARY'S PROFILE:
+- Age: {mary['age']} (recently retired teacher)
+- Health concerns: {', '.join(mary['health_issues'])}
+- Goals: interested in safe fitness options
+- Personality: friendly but cautious about safety
 
-Mary says:"""
+Generate Mary's introduction (1-2 sentences only):
+- Introduce yourself as Mary, age {mary['age']}
+- Mention you're interested in fitness but have safety concerns
+- Reference your health issues if relevant
+- Stay in character as a cautious retiree
+
+Mary introduces herself:"""
     
     try:
         logger.info("🎬 Generating initial AI greeting for Mary...")
