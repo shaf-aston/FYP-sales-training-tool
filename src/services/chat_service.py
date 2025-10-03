@@ -10,14 +10,14 @@ from config.settings import MAX_CONTEXT_LENGTH, PERFORMANCE_STATS
 
 # Import enhanced_responses - handle path issues
 try:
-  from enhanced_responses import generate_ai_response
+  from fallback_responses import generate_ai_response
 except ImportError:
   import sys
   from pathlib import Path
   src_path = str(Path(__file__).resolve().parent.parent)
   if src_path not in sys.path:
     sys.path.insert(0, src_path)
-  from enhanced_responses import generate_ai_response
+  from fallback_responses import generate_ai_response
 
 logger = logging.getLogger(__name__)
 

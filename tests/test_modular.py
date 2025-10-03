@@ -50,7 +50,7 @@ def test_logger_config():
 def test_enhanced_responses():
     """Test enhanced responses"""
     try:
-        from src.enhanced_responses import generate_ai_response
+        from fallback_responses import generate_ai_response
         print("✅ Enhanced responses: Module loaded successfully")
         return True
     except Exception as e:

@@ -53,6 +53,19 @@ MARY_ENRICHMENT = [
     "I was never very athletic, even when I was younger, so I'm a bit nervous."
 ]
 
+# Global variable to toggle fallback responses
+fallback_responses_enabled = True
+
+def toggle_fallback_responses(enable: bool):
+    """Enable or disable fallback responses.
+
+    Args:
+        enable: True to enable, False to disable.
+    """
+    global fallback_responses_enabled
+    fallback_responses_enabled = enable
+    logger.info(f"Fallback responses {'enabled' if enable else 'disabled'}.")
+
 def generate_ai_response(prompt: str, pipe, tokenizer=None) -> str:
     """Generate AI response using the loaded model with minimal filtering
     
@@ -170,6 +183,9 @@ def should_use_fallback(config: dict = None) -> bool:
     Returns:
         True if fallback responses should be used, False otherwise
     """
+    if not fallback_responses_enabled:
+        return False
+
     if config is None:
         return True  # Default to using fallbacks if no config provided
     

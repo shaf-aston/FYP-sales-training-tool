@@ -12,47 +12,78 @@ flowchart TB
         Config["Configuration Service<br>Fallback Controls"]
         Memory["Context Memory<br>Conversation History"]
   end
- subgraph subGraph2["AI Processing"]
-        Pipeline["Qwen2.5-0.5B Pipeline<br>CPU Optimized"]
-        Enhanced["Enhanced Response<br>Post-Processing"]
-        Fallback["Fallback System<br>Configurable"]
+ subgraph subGraph2["ML Processing Pipeline"]
+        PreProc["Preprocessing<br>Tokenization &amp; Context Assembly"]
+        Inference["Qwen2.5-0.5B Inference<br>CPU Optimized"]
+        PostProc["Post-Processing<br>Detokenization &amp; Filtering"]
+        Enhanced["Response Enhancement<br>Character Consistency Check"]
+        Fallback["Intelligent Fallback<br>Rule-Based + Templates"]
   end
- subgraph subGraph3["Data Storage"]
+ subgraph subGraph3["Model Infrastructure"]
+        ModelCache["Model Cache<br>~1GB Qwen2.5-0.5B"]
+        Tokenizer["Tokenizer Cache<br>Vocabulary &amp; Special Tokens"]
+        ModelConfig["Model Configuration<br>Generation Parameters"]
+        Optimizer["CPU Optimization<br>Quantization &amp; Threading"]
+  end
+ subgraph subGraph4["Data Storage"]
         Profile@{ label: "Character Profile<br>Mary's Attributes" }
-        Cache["Response Cache<br>Performance"]
+        Cache["Response Cache<br>LRU Strategy"]
         Logs["Application Logs<br>UTF-8 Encoded"]
+        Stats["Performance Metrics<br>Latency &amp; Token Stats"]
   end
- subgraph subGraph4["Model Infrastructure"]
-        ModelCache["Local Model Cache<br>~1GB Qwen Model"]
-        Utils["Utility Scripts<br>Download &amp; Cleanup"]
+ subgraph Utilities["Utilities"]
+        Download["Model Downloader<br>HuggingFace Hub"]
+        Cleanup["Cache Cleanup<br>Memory Management"]
+        Health["Health Monitor<br>System Status"]
   end
-    UI --> API["FastAPI Backend<br>Port 8000"]
-    Admin --> API
-    API --> Chat & Config & Memory & Logs & Stats["Performance Statistics<br>Response Times &amp; Failures"] & Health["Health Check<br>System Status"]
-    Chat --> Pipeline & Profile & Cache
-    Pipeline --> Enhanced & ModelCache
-    Enhanced --> Fallback
-    Utils --> ModelCache
+    UI -- Calls --> API["FastAPI Backend<br>Port 8000"]
+    Admin -- Configures --> API
+    API -- Routes --> Chat
+    API -- Reads --> Config
+    API -- Writes/Reads --> Memory
+    API -- Monitors --> Health
+    Chat -- Processes --> PreProc
+    Chat -- Reads --> Profile
+    Chat -- Reads/Writes --> Cache
+    PreProc -- Feeds --> Inference
+    PreProc -- Updates --> Memory
+    Inference -- Generates --> PostProc
+    Inference -- Uses --> ModelCache & Tokenizer & ModelConfig
+    ModelCache -- Optimized by --> Optimizer
+    PostProc -- Enhances --> Enhanced
+    Enhanced -- Falls back to --> Fallback
+    Enhanced -- Checks --> Profile
+    Fallback -- Reads --> Config
+    Chat -- Logs --> Stats & Logs
+    Download -- Downloads --> ModelCache & Tokenizer
+    Cleanup -- Clears --> ModelCache & Cache
     Profile@{ shape: rect}
      UI:::frontend
      Admin:::frontend
      Chat:::core
      Config:::core
      Memory:::core
-     Pipeline:::ai
-     Enhanced:::ai
-     Fallback:::ai
+     PreProc:::ml
+     Inference:::ml
+     PostProc:::ml
+     Enhanced:::ml
+     Fallback:::ml
+     ModelCache:::model
+     Tokenizer:::model
+     ModelConfig:::model
+     Optimizer:::model
      Profile:::data
      Cache:::data
      Logs:::data
-     ModelCache:::model
-     Utils:::model
-     API:::api
      Stats:::data
-     Health:::data
+     Download:::utils
+     Cleanup:::utils
+     Health:::utils
+     API:::api
     classDef frontend fill:#e1f5fe
     classDef api fill:#f3e5f5
     classDef core fill:#e8f5e8
-    classDef ai fill:#fff3e0
-    classDef data fill:#fce4ec
+    classDef ml fill:#fff3e0
     classDef model fill:#f1f8e9
+    classDef data fill:#fce4ec
+    classDef utils fill:#e0e0e0

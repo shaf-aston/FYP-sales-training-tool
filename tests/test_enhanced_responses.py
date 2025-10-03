@@ -12,7 +12,7 @@ project_root = Path(__file__).resolve().parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-from src.enhanced_responses import (
+from fallback_responses import (
     generate_ai_response,
     post_process_response,
     clean_response,

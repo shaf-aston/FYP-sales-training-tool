@@ -22,7 +22,7 @@ if utils_path not in sys.path:
 from utils.env import setup_model_env, assert_model_present
 from utils.paths import LOGS_DIR, MODEL_CACHE_DIR, TEMPLATES_DIR, STATIC_DIR
 from utils.logger_config import setup_logging
-from src.enhanced_responses import generate_ai_response
+from fallback_responses import generate_ai_response, toggle_fallback_responses
 
 # System Configuration
 logger = setup_logging(LOGS_DIR)
@@ -315,58 +315,32 @@ Mary (staying in character as a {mary['age']}-year-old with {', '.join(mary['hea
 CHARACTER_PROFILE = MARY_PROFILE
 
 def get_initial_greeting() -> str:
-    """Generate Mary's initial AI greeting"""
+    """Generate Mary's initial AI greeting with caching."""
+    global cached_greeting
+    if cached_greeting:
+        logger.info("📝 Using cached initial greeting")
+        return cached_greeting
+
     mary = get_mary_profile()
-    
-    # More specific prompt for consistent character introduction
-    greeting_prompt = f"""You are Mary, a {mary['age']}-year-old {mary['status']} meeting a fitness salesperson for the first time.
-
-MARY'S PROFILE:
-- Age: {mary['age']} (recently retired teacher)
-- Health concerns: {', '.join(mary['health_issues'])}
-- Goals: interested in safe fitness options
-- Personality: friendly but cautious about safety
-
+    greeting_prompt = f"""You are Mary, a {mary['age']}-year-old retiree meeting a fitness salesperson for the first time.
 Generate Mary's introduction (1-2 sentences only):
-- Introduce yourself as Mary, age {mary['age']}
-- Mention you're interested in fitness but have safety concerns
-- Reference your health issues if relevant
-- Stay in character as a cautious retiree
-
 Mary introduces herself:"""
-    
+
     try:
         logger.info("🎬 Generating initial AI greeting for Mary...")
         response = generate_ai_response(greeting_prompt, pipe)
         if response and response.strip():
-            # Clean up the response - remove any "Mary:" prefix and extra content
             cleaned_response = response.strip()
-            
-            # Remove "Mary:" if it appears at the start
-            if cleaned_response.lower().startswith("mary:"):
-                cleaned_response = cleaned_response[5:].strip()
-            
-            # Remove "Salesperson:" and everything after it
-            if "Salesperson:" in cleaned_response:
-                cleaned_response = cleaned_response.split("Salesperson:")[0].strip()
-            
-            # Take only the first sentence or two to keep it concise
-            sentences = cleaned_response.split('. ')
-            if len(sentences) > 2:
-                cleaned_response = '. '.join(sentences[:2]) + '.'
-            
-            if cleaned_response:
-                logger.info(f"✅ AI greeting generated: {cleaned_response[:50]}...")
-                return cleaned_response
-            else:
-                logger.warning("⚠️ AI greeting was empty after cleaning, using fallback")
+            cached_greeting = cleaned_response  # Cache the greeting
+            logger.info(f"✅ AI greeting generated and cached: {cached_greeting[:50]}...")
+            return cached_greeting
         else:
             logger.warning("⚠️ AI greeting was empty, using fallback")
     except Exception as e:
         logger.error(f"❌ AI greeting generation failed: {e}")
-    
-    # Fallback greeting
+
     fallback = f"Hello! I'm {mary['name']}, I'm {mary['age']} and recently retired. I'm interested in fitness options for my age, but I have some concerns about safety."
+    cached_greeting = fallback  # Cache the fallback greeting
     logger.info(f"📝 Using fallback greeting: {fallback}")
     return fallback
 
@@ -440,6 +414,8 @@ def chat_with_mary(message: str, user_id: str = "default") -> str:
 
         # Save conversation backup after each exchange to prevent loss
         try:
+            logger.debug(f"Conversation context for session {session_key}: {conversation_contexts[session_key]}")
+            logger.debug("Attempting to save conversation backup...")
             save_conversation_backup()
         except Exception as backup_error:
             logger.warning(f"⚠️ Backup save failed but continuing: {backup_error}")
@@ -697,6 +673,14 @@ async def conversation_stats():
         "mary_stats": mary_stats,
         "system_type": "Pure AI Sales Training System"
     }
+
+# Add endpoint to toggle fallback responses
+@app.post("/api/toggle-fallback")
+async def api_toggle_fallback(payload: dict):
+    """Toggle fallback responses on or off."""
+    enable = payload.get("enable", True)
+    toggle_fallback_responses(enable)
+    return {"status": "success", "fallback_responses_enabled": enable}
 
 # Graceful shutdown handler
 import signal
