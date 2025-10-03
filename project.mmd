@@ -49,43 +49,38 @@ flowchart LR
         Download["Download"]
   end
  subgraph subGraph7["Output Layer"]
-        AIVoice["AI Voice"]
+    direction TB
         AIText["AI Text"]
+        AIVoice["AI Voice"]
         PerfFeedback["Feedback"]
         SessionReport["Report"]
   end
-
+    AIText -. via TTS .-> AIVoice
+    AIText --> PerfFeedback & SessionReport & subGraph4
+    AIVoice --> PerfFeedback & SessionReport
     UI -- Calls --> API
     Admin -- Configures --> API
     API -- Routes --> Chat
     API -- Reads/Writes --> Config & Memory
     API -- Monitors --> Health
     Chat -- Processes --> PreProc
-
     PreProc --> Inference
     Inference --> PostProc
     PostProc --> Enhanced
-    Enhanced --> Fallback
-
-    Fallback & Enhanced -- Generates --> AIText & AIVoice
-
-    AIText & AIVoice --> TTS
-    TTS --> EmotionTTS
+    Enhanced -- If invalid --> Fallback
+    Enhanced -- Generates --> AIText
+    Fallback --> AIText
+    TTS --> AIVoice
     EmotionTTS --> AIVoice
-
-    AIText & AIVoice --> PerfFeedback & SessionReport
-
     Inference -- Uses --> subGraph5
-
     Chat -- Logs --> Logs & Stats & Cache & Profile
-
     Download -- Downloads --> ModelCache & Tokenizer
     Cleanup -- Clears --> ModelCache & Cache
     PostProc -- Generates --> Feedback & Analytics
     Feedback --> PerfFeedback
     Analytics --> SessionReport
-    PersonaDB & AVStorage -- Stores --> Profile
-
+    PersonaDB -- Stores --> Profile
+    AVStorage -- Stores --> Profile
      UI:::frontend
      Admin:::frontend
      API:::api
@@ -114,15 +109,14 @@ flowchart LR
      Health:::utils
      Cleanup:::utils
      Download:::utils
-     AIVoice:::output
      AIText:::output
+     AIVoice:::output
      PerfFeedback:::output
      SessionReport:::output
-
     classDef frontend fill:#e1f5fe
     classDef api fill:#f3e5f5
-    classDef core fill:#e8f5e8
-    classDef ml fill:#fff3e0
+    classDef core fill:#e8f5e8,fill:#e8f5e8
+    classDef ml fill:#fff3e0,fill:#fff3e0
     classDef tts fill:#ffe0b2
     classDef model fill:#f1f8e9
     classDef data fill:#fce4ec
