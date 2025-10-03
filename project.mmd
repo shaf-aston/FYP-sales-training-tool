@@ -1,4 +1,9 @@
-flowchart TB
+---
+config:
+  layout: dagre
+  theme: mc
+---
+flowchart LR
  subgraph subGraph0["Frontend Layer"]
         UI["React.js Web Interface"]
         Admin["Admin Panel<br>Config Controls"]
@@ -49,12 +54,11 @@ flowchart TB
     ModelCache -- Optimized by --> Optimizer
     Chat -- Logs, Reads --> DataStorage["DataStorage"]
     Download -- Downloads --> ModelCache & Tokenizer
-    Cleanup -- Clears --> ModelCache & Cache
+    Cleanup L_Cleanup_ModelCache_0@-- Clears --> ModelCache & Cache
     PreProc -- Updates --> Memory
     Fallback -- Reads --> Config
     Enhanced -- Checks --> Profile
     Inference -- Uses --> subGraph4
-
      UI:::frontend
      Admin:::frontend
      API:::api
@@ -66,17 +70,17 @@ flowchart TB
      PostProc:::ml
      Enhanced:::ml
      Fallback:::ml
-     ModelCache:::model
      Tokenizer:::model
+     ModelCache:::model
      ModelConfig:::model
      Optimizer:::model
      Logs:::data
      Stats:::data
      Cache:::data
      Profile:::data
-     Download:::utils
-     Cleanup:::utils
      Health:::utils
+     Cleanup:::utils
+     Download:::utils
     classDef frontend fill:#e1f5fe
     classDef api fill:#f3e5f5
     classDef core fill:#e8f5e8
@@ -84,3 +88,4 @@ flowchart TB
     classDef model fill:#f1f8e9
     classDef data fill:#fce4ec
     classDef utils fill:#e0e0e0
+    L_Cleanup_ModelCache_0@{ animation: fast }
