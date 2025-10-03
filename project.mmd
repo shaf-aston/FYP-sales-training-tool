@@ -25,7 +25,7 @@ flowchart TB
         Optimizer["CPU Optimization<br>Quantization &amp; Threading"]
   end
  subgraph subGraph5["Data Storage"]
-        Logs["Application Logs<br>UTF-8 Encoded"]
+        Logs["Application Logs<br>"]
         Stats["Performance Metrics<br>Latency &amp; Token Stats"]
         Cache["Response Cache<br>LRU Strategy"]
         Profile["Character Profile<br>"]
@@ -46,7 +46,6 @@ flowchart TB
     Inference -- Generates --> PostProc
     PostProc -- Enhances --> Enhanced
     Enhanced -- Falls back to --> Fallback
-    Inference -- Uses --> ModelCache & Tokenizer & ModelConfig
     ModelCache -- Optimized by --> Optimizer
     Chat -- Logs, Reads --> DataStorage["DataStorage"]
     Download -- Downloads --> ModelCache & Tokenizer
@@ -54,6 +53,7 @@ flowchart TB
     PreProc -- Updates --> Memory
     Fallback -- Reads --> Config
     Enhanced -- Checks --> Profile
+    Inference -- Uses --> subGraph4
 
      UI:::frontend
      Admin:::frontend
@@ -70,10 +70,10 @@ flowchart TB
      Tokenizer:::model
      ModelConfig:::model
      Optimizer:::model
-     Profile:::data
-     Cache:::data
      Logs:::data
      Stats:::data
+     Cache:::data
+     Profile:::data
      Download:::utils
      Cleanup:::utils
      Health:::utils
