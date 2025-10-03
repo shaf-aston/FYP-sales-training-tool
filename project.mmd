@@ -19,8 +19,8 @@ flowchart TB
         Fallback["Intelligent Fallback<br>Rule-Based + Templates"]
   end
  subgraph subGraph4["Model Infrastructure"]
-        ModelCache["Model Cache<br>~1GB Qwen2.5-0.5B"]
         Tokenizer["Tokenizer Cache<br>Vocabulary &amp; Special Tokens"]
+        ModelCache["Model Cache<br>~1GB Qwen2.5-0.5B"]
         ModelConfig["Model Configuration<br>Generation Parameters"]
         Optimizer["CPU Optimization<br>Quantization &amp; Threading"]
   end
@@ -31,9 +31,9 @@ flowchart TB
         Profile["Character Profile<br>"]
   end
  subgraph Utilities["Utilities"]
-        Download["Model Downloader<br>HuggingFace Hub"]
-        Cleanup["Cache Cleanup<br>Memory Management"]
         Health["Health Monitor<br>System Status"]
+        Cleanup["Cache Cleanup<br>Memory Management"]
+        Download["Model Downloader<br>HuggingFace Hub"]
   end
     UI -- Calls --> API
     Admin -- Configures --> API
