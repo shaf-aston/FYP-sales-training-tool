@@ -1,89 +1,94 @@
----
-config:
-  layout: dagre
----
-flowchart TB
- subgraph subGraph0["Frontend Layer"]
-        UI["React.js Web Interface"]
-        Admin["Admin Panel<br>Config Controls"]
+graph TB
+  subgraph Frontend Layer
+    UI[React.js Web Interface]
+    Admin[Admin Panel<br>Config Controls]
   end
- subgraph subGraph1["Core Services"]
-        Chat["Chat Service<br>Mary Character"]
-        Config["Configuration Service<br>Fallback Controls"]
-        Memory["Context Memory<br>Conversation History"]
+
+  subgraph API Layer
+    API[FastAPI Backend<br>Port 8000]
   end
- subgraph subGraph2["ML Processing Pipeline"]
-        PreProc["Preprocessing<br>Tokenization &amp; Context Assembly"]
-        Inference["Qwen2.5-0.5B Inference<br>CPU Optimized"]
-        PostProc["Post-Processing<br>Detokenization &amp; Filtering"]
-        Enhanced["Response Enhancement<br>Character Consistency Check"]
-        Fallback["Intelligent Fallback<br>Rule-Based + Templates"]
+
+  subgraph Core Services
+    Chat[Chat Service<br>Mary Character]
+    Config[Configuration Service<br>Fallback Controls]
+    Memory[Context Memory<br>Conversation History]
   end
- subgraph subGraph3["Model Infrastructure"]
-        ModelCache["Model Cache<br>~1GB Qwen2.5-0.5B"]
-        Tokenizer["Tokenizer Cache<br>Vocabulary &amp; Special Tokens"]
-        ModelConfig["Model Configuration<br>Generation Parameters"]
-        Optimizer["CPU Optimization<br>Quantization &amp; Threading"]
+
+  subgraph ML Processing Pipeline
+    PreProc[Preprocessing<br>Tokenization & Context Assembly]
+    Inference[Qwen2.5-0.5B Inference<br>CPU Optimized]
+    PostProc[Post-Processing<br>Detokenization & Filtering]
+    Enhanced[Response Enhancement<br>Character Consistency Check]
+    Fallback[Intelligent Fallback<br>Rule-Based + Templates]
   end
- subgraph subGraph4["Data Storage"]
-        Profile@{ label: "Character Profile<br>Mary's Attributes" }
-        Cache["Response Cache<br>LRU Strategy"]
-        Logs["Application Logs<br>UTF-8 Encoded"]
-        Stats["Performance Metrics<br>Latency &amp; Token Stats"]
+
+  subgraph Model Infrastructure
+    ModelCache[Model Cache<br>~1GB Qwen2.5-0.5B]
+    Tokenizer[Tokenizer Cache<br>Vocabulary & Special Tokens]
+    ModelConfig[Model Configuration<br>Generation Parameters]
+    Optimizer[CPU Optimization<br>Quantization & Threading]
   end
- subgraph Utilities["Utilities"]
-        Download["Model Downloader<br>HuggingFace Hub"]
-        Cleanup["Cache Cleanup<br>Memory Management"]
-        Health["Health Monitor<br>System Status"]
+
+  subgraph Data Storage
+    Profile[Character Profile<br>Mary's Attributes]
+    Cache[Response Cache<br>LRU Strategy]
+    Logs[Application Logs<br>UTF-8 Encoded]
+    Stats[Performance Metrics<br>Latency & Token Stats]
   end
-    UI -- Calls --> API["FastAPI Backend<br>Port 8000"]
-    Admin -- Configures --> API
-    API -- Routes --> Chat
-    API -- Reads --> Config
-    API -- Writes/Reads --> Memory
-    API -- Monitors --> Health
-    Chat -- Processes --> PreProc
-    Chat -- Reads --> Profile
-    Chat -- Reads/Writes --> Cache
-    PreProc -- Feeds --> Inference
-    PreProc -- Updates --> Memory
-    Inference -- Generates --> PostProc
-    Inference -- Uses --> ModelCache & Tokenizer & ModelConfig
-    ModelCache -- Optimized by --> Optimizer
-    PostProc -- Enhances --> Enhanced
-    Enhanced -- Falls back to --> Fallback
-    Enhanced -- Checks --> Profile
-    Fallback -- Reads --> Config
-    Chat -- Logs --> Stats & Logs
-    Download -- Downloads --> ModelCache & Tokenizer
-    Cleanup -- Clears --> ModelCache & Cache
-    Profile@{ shape: rect}
-     UI:::frontend
-     Admin:::frontend
-     Chat:::core
-     Config:::core
-     Memory:::core
-     PreProc:::ml
-     Inference:::ml
-     PostProc:::ml
-     Enhanced:::ml
-     Fallback:::ml
-     ModelCache:::model
-     Tokenizer:::model
-     ModelConfig:::model
-     Optimizer:::model
-     Profile:::data
-     Cache:::data
-     Logs:::data
-     Stats:::data
-     Download:::utils
-     Cleanup:::utils
-     Health:::utils
-     API:::api
-    classDef frontend fill:#e1f5fe
-    classDef api fill:#f3e5f5
-    classDef core fill:#e8f5e8
-    classDef ml fill:#fff3e0
-    classDef model fill:#f1f8e9
-    classDef data fill:#fce4ec
-    classDef utils fill:#e0e0e0
+
+  subgraph Utilities
+    Download[Model Downloader<br>HuggingFace Hub]
+    Cleanup[Cache Cleanup<br>Memory Management]
+    Health[Health Monitor<br>System Status]
+  end
+
+  %% Connections between layers
+  UI -- Calls --> API
+  Admin -- Configures --> API
+
+  API -- Routes --> Chat
+  API -- Reads --> Config
+  API -- Writes/Reads --> Memory
+  API -- Monitors --> Health
+
+  Chat -- Processes --> PreProc
+  PreProc -- Feeds --> Inference
+  Inference -- Generates --> PostProc
+  PostProc -- Enhances --> Enhanced
+  Enhanced -- Falls back to --> Fallback
+
+  Inference -- Uses --> ModelCache
+  Inference -- Uses --> Tokenizer
+  Inference -- Uses --> ModelConfig
+  ModelCache -- Optimized by --> Optimizer
+
+  Chat -- Reads --> Profile
+  Chat -- Reads/Writes --> Cache
+  Chat -- Logs --> Stats
+  Chat -- Logs --> Logs
+
+  Download -- Downloads --> ModelCache
+  Download -- Downloads --> Tokenizer
+  Cleanup -- Clears --> ModelCache
+  Cleanup -- Clears --> Cache
+
+  PreProc -- Updates --> Memory
+  Fallback -- Reads --> Config
+  Enhanced -- Checks --> Profile
+
+  %% Styling
+  classDef frontend fill:#e1f5fe
+  classDef api fill:#f3e5f5
+  classDef core fill:#e8f5e8
+  classDef ml fill:#fff3e0
+  classDef model fill:#f1f8e9
+  classDef data fill:#fce4ec
+  classDef utils fill:#e0e0e0
+
+  class UI,Admin frontend
+  class API api
+  class Chat,Config,Memory core
+  class PreProc,Inference,PostProc,Enhanced,Fallback ml
+  class ModelCache,Tokenizer,ModelConfig,Optimizer model
+  class Profile,Cache,Logs,Stats data
+  class Download,Cleanup,Health utils
