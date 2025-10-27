@@ -29,8 +29,9 @@ scipy>=1.7.0,<1.13.0
 coqui-tts>=0.15.0,<0.22.0          # Pin range to avoid breaking changes
 pyttsx3>=2.90,<2.91
 openai-whisper>=20231117           # Requires FFmpeg on PATH
-# pydub>=0.25.1                    # Optional: audio format helpers (requires ffmpeg)
-# gtts>=2.3.0                      # Optional: Google TTS (online)
+pydub>=0.25.1                      # Audio format helpers (requires ffmpeg)
+SpeechRecognition>=3.10.0          # Google Speech Recognition fallback
+soundfile>=0.12.1                  # Audio file I/O for TTS/STT
 
 # ----------------------
 # Performance / Optional

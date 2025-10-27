@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
+import "bootstrap/dist/css/bootstrap.min.css";
 import "./EnhancedTrainingDashboard.css";
 import VoiceChat from "./VoiceChat";
+
+// Note: Reusable UI components are defined in the CSS and markup below.
 
 const EnhancedTrainingDashboard = () => {
   const [currentView, setCurrentView] = useState("dashboard");
@@ -55,12 +58,11 @@ const EnhancedTrainingDashboard = () => {
       );
 
       // Execute all requests in parallel for better performance
-      const [progressInitialized, progressData, personasData] =
-        await Promise.allSettled([
-          progressInit,
-          progressDataPromise,
-          personasDataPromise,
-        ]);
+      const [, progressData, personasData] = await Promise.allSettled([
+        progressInit,
+        progressDataPromise,
+        personasDataPromise,
+      ]);
 
       // Step 4: Finalize setup
       setLoadingStatus("Finalizing setup...");

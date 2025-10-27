@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./BootstrapDashboard.css";
 
@@ -17,50 +17,46 @@ const BootstrapEnhancedDashboard = () => {
   // Mock user ID - in production this would come from authentication
   const userId = "demo_user_123";
 
-  useEffect(() => {
-    initializeUserData();
-  }, []); // Intentionally empty - initializeUserData is stable
+  const initializeUserData = useCallback(async () => {
+    // Fallback data for immediate display
+    const fallbackPersonas = [
+      {
+        name: "Mary",
+        description:
+          "Professional sales manager with 10+ years experience in B2B sales. Specializes in objection handling and closing techniques.",
+        personality_traits: ["Professional", "Direct", "Results-Oriented"],
+        communication_style: "Professional Communication",
+      },
+      {
+        name: "Jake",
+        description:
+          "Experienced enterprise sales representative focused on relationship building and consultative selling approaches.",
+        personality_traits: ["Professional", "Friendly", "Consultative"],
+        communication_style: "Professional Communication",
+      },
+      {
+        name: "Sarah",
+        description:
+          "Senior account executive specializing in complex sales cycles and strategic account management.",
+        personality_traits: ["Professional", "Strategic", "Detail-Oriented"],
+        communication_style: "Professional Communication",
+      },
+      {
+        name: "David",
+        description:
+          "Sales training specialist with expertise in role-playing scenarios and skill development exercises.",
+        personality_traits: ["Professional", "Encouraging", "Analytical"],
+        communication_style: "Professional Communication",
+      },
+    ];
 
-  // Fallback data for immediate display
-  const fallbackPersonas = [
-    {
-      name: "Mary",
-      description:
-        "Professional sales manager with 10+ years experience in B2B sales. Specializes in objection handling and closing techniques.",
-      personality_traits: ["Professional", "Direct", "Results-Oriented"],
-      communication_style: "Professional Communication",
-    },
-    {
-      name: "Jake",
-      description:
-        "Experienced enterprise sales representative focused on relationship building and consultative selling approaches.",
-      personality_traits: ["Professional", "Friendly", "Consultative"],
-      communication_style: "Professional Communication",
-    },
-    {
-      name: "Sarah",
-      description:
-        "Senior account executive specializing in complex sales cycles and strategic account management.",
-      personality_traits: ["Professional", "Strategic", "Detail-Oriented"],
-      communication_style: "Professional Communication",
-    },
-    {
-      name: "David",
-      description:
-        "Sales training specialist with expertise in role-playing scenarios and skill development exercises.",
-      personality_traits: ["Professional", "Encouraging", "Analytical"],
-      communication_style: "Professional Communication",
-    },
-  ];
+    const fallbackProgress = {
+      total_sessions: 0,
+      training_hours: "0.0",
+      skills_mastered: 0,
+      average_rating: "0.0",
+    };
 
-  const fallbackProgress = {
-    total_sessions: 0,
-    training_hours: "0.0",
-    skills_mastered: 0,
-    average_rating: "0.0",
-  };
-
-  const initializeUserData = async () => {
     try {
       setLoading(true);
       setLoadingStatus("Initializing dashboard...");
@@ -131,7 +127,11 @@ const BootstrapEnhancedDashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
+
+  useEffect(() => {
+    initializeUserData();
+  }, [initializeUserData]);
 
   const startTrainingSession = async (persona) => {
     try {

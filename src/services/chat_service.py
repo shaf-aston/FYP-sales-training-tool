@@ -38,44 +38,42 @@ class ChatService:
     self.performance_stats = PERFORMANCE_STATS.copy()
     self.performance_stats["startup_time"] = time.time()
     
-    # Initialize integrated services
     self.context_manager = get_context_manager()
     self.prompt_manager = get_prompt_manager()
     self.analytics = get_analytics_aggregator()
     
     # Session management
     self.active_sessions: Dict[str, Dict] = {}
+    self.response_cache: Dict[str, str] = {}
     
-    logger.info("🔧 ChatService initialized with enhanced services")
+    logger.info("🔧 ChatService initialized with enhanced services and caching")
   
   def get_initial_greeting(self, pipe) -> str:
-    """Generate Mary's initial AI greeting"""
+    """Generate and cache Mary's initial AI greeting"""
+    cache_key = "initial_greeting_mary"
+    if cache_key in self.response_cache:
+        logger.info(" Using cached initial greeting")
+        return self.response_cache[cache_key]
+
     mary = get_mary_profile()
     greeting_prompt = f"""You are Mary, a {mary['age']}-year-old {mary['status']} meeting a fitness salesperson. Introduce yourself and express interest in getting healthier while mentioning safety concerns.\n\nMary:"""
     
     try:
+      logger.info(" Generating initial AI greeting for Mary...")
       response = generate_ai_response(greeting_prompt, pipe)
-      if response: 
-        return response
+      if response and response.strip():
+          cleaned_response = response.strip()
+          self.response_cache[cache_key] = cleaned_response  # Cache the greeting
+          logger.info(f" AI greeting generated and cached: {cleaned_response[:50]}...")
+          return cleaned_response
+      else:
+          logger.warning(" AI greeting was empty, using fallback")
     except Exception as e:
       logger.warning(f"AI greeting generation failed: {e}")
-    
-    return f"Hello! I'm {mary['name']}, interested in fitness options for my age."
+    fallback = f"Hello! I'm {mary['name']}, interested in fitness options for my age."
+    self.response_cache[cache_key] = fallback # Cache the fallback
+    return fallback
 
-  # Backwards-compatible fallback helper expected by tests
-  def _get_fallback_response(self, message: str) -> str:
-    """Return a safe fallback response when AI generation is unavailable.
-
-    This mirrors legacy behavior expected by tests and callers that use a
-    private fallback helper. It intentionally ignores the input message and
-    returns a generic but friendly response.
-    """
-    try:
-      return get_fallback()
-    except Exception:
-      # Final safety net
-      return "I'm sorry, I need a moment. Could you repeat that in a simpler way?"
-  
   def chat_with_persona(self, message: str, user_id: str, persona_name: str, pipe, session_id: str = None) -> Dict:
     """Enhanced AI chat function with integrated services"""
     start_time = time.time()
@@ -134,22 +132,32 @@ class ChatService:
         self.context_manager.add_persona_context(persona_description, session_id)
         session["context_added"] = True
       
-      # Get session data for prompt building
-      session_data = {
-        "objectives": ["Build rapport", "Practice sales skills", "Handle objections"],
-        "scenario": f"Sales training with {persona_name}",
-        "focus_areas": ["Communication", "Persuasion", "Empathy"]
-      }
-      
       logger.info(f"🤖 Generating AI response for {persona_name}: {message[:50]}...")
       
       # Build optimized prompt using prompt manager
       prompt = self.prompt_manager.build_sales_training_prompt(
         user_input=message,
         persona_name=persona_name,
-        session_data=session_data,
         session_id=session_id
       )
+
+      # Check cache for the generated prompt
+      if prompt in self.response_cache:
+          logger.info(f"⚡️ Cache hit for persona '{persona_name}'. Returning cached response.")
+          response_time = time.time() - start_time
+          self.analytics.track_event(user_id, session_id, "message_sent", {
+            "message": message,
+            "persona_name": persona_name,
+            "cached_response": True,
+            "response_time_seconds": response_time
+          })
+          return {
+              "response": self.response_cache[prompt],
+              "status": "success_cached",
+              "session_id": session_id,
+              "persona_name": persona_name,
+              "response_time": round(response_time, 3)
+          }
       
       # Generate response using the AI model
       response = generate_ai_response(prompt, pipe)
@@ -201,7 +209,10 @@ class ChatService:
         "response_length": len(response)
       })
       
-      logger.info(f"✨ AI response for {persona_name} generated ({response_time:.3f}s)")
+      # Cache the newly generated response
+      self.response_cache[prompt] = response
+
+      logger.info(f"✨ AI response for {persona_name} generated and cached ({response_time:.3f}s)")
       
       return {
         "response": response,

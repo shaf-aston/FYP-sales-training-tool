@@ -2,37 +2,22 @@
 Main FastAPI application entry point for AI Sales Training Chatbot
 Modular architecture with clean separation of concerns
 """
-import sys
 import logging
-from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-
-# Add project paths for imports
-project_root = Path(__file__).resolve().parent
-parent_dir = project_root.parent
-src_path = str(project_root)
-utils_path = str(parent_dir / "utils")
-
-if src_path not in sys.path:
-  sys.path.insert(0, src_path)
-if utils_path not in sys.path:
-  sys.path.insert(0, utils_path)
-if str(parent_dir) not in sys.path:
-  sys.path.insert(0, str(parent_dir))
 
 # Project imports
 from config.settings import (
   APP_TITLE, APP_VERSION, CORS_ORIGINS, STATIC_DIR, LOGS_DIR, DEFAULT_MODEL
 )
 from services.model_service import model_service
-from services.chat_service import chat_service
 from api import api_router
 from utils.logger_config import setup_logging
 
 # Initialize logging
-logger = setup_logging(LOGS_DIR)
+setup_logging(LOGS_DIR)
+logger = logging.getLogger(__name__)
 
 def create_app() -> FastAPI:
   """Create and configure FastAPI application"""

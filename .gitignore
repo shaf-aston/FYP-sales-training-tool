@@ -59,7 +59,9 @@ logs/
 .cache/
 .huggingface/
 model_cache/
-models/
+# Ignore large model files, but not the directory itself
+models/*.bin
+models/*.safetensors
 *.bin
 *.safetensors
 *.json.tmp
