@@ -1,5 +1,4 @@
 """
-Enhanced response handling for Mary, the fitness chatbot client.
 
 This module contains functions for generating AI responses,
 handling fallbacks, and post-processing responses for better quality.
@@ -7,12 +6,13 @@ handling fallbacks, and post-processing responses for better quality.
 
 import logging
 import random
+import time
 from typing import List, Dict, Optional
 
 # Configure logger
 logger = logging.getLogger("fitness_chatbot")
 
-# Fallback responses when AI generation fails completely
+# Fallback responses (kept for compatibility with other modules)
 FALLBACK_RESPONSES = [
     "I'm hoping you can help me figure out the best approach for my fitness goals. What would you suggest?",
     "I was just thinking about how to approach this—could you clarify a bit for me?",
@@ -21,47 +21,11 @@ FALLBACK_RESPONSES = [
     "I'd really like to understand what would work best for someone like me."
 ]
 
-# Words that shouldn't appear in Mary's responses (instruction leakage)
-BAD_PHRASES = [
-    "respond to", "provide information", "let her know", "good luck", 
-    "only respond", "just provide", "make sense for someone", "don't use",
-    "inappropriate", "insensitive", "society's norms", "informational purposes",
-    "remember", "this is for", "language that might", "considered inappropriate",
-    "ai", "chatbot", "model", "generate", "system", "prompt", "instruction"
-]
-
-# Generic markers that indicate a bland response
-GENERIC_MARKERS = [
-    "not sure where to begin",
-    "i'm still learning",
-    "i'm not sure what to do",
-    "can you provide some tips",
-    "would appreciate any advice",
-    "could you help me understand",
-    "i don't know much about"
-]
-
-# Mary-specific enrichment additions when responses are too generic
-MARY_ENRICHMENT = [
-    "I usually just have oatmeal with a few berries in the morning—maybe that's too plain?",
-    "Sometimes I end up snacking on crackers mid-afternoon because I didn't plan anything better.",
-    "My knees feel stiff if I sit too long, so I'm hoping whatever we do is gentle starting out.",
-    "I never know if I'm getting enough protein—does Greek yogurt actually help much?",
-    "I used to walk every day, but I've gotten out of the habit since retiring.",
-    "My doctor mentioned I should be careful with my joints, especially my knees.",
-    "I want to be able to keep up with my grandchildren when they visit.",
-    "I was never very athletic, even when I was younger, so I'm a bit nervous."
-]
-
-# Global variable to toggle fallback responses
+# Global toggle (some modules query this)
 fallback_responses_enabled = True
 
 def toggle_fallback_responses(enable: bool):
-    """Enable or disable fallback responses.
-
-    Args:
-        enable: True to enable, False to disable.
-    """
+    """Enable or disable fallback responses."""
     global fallback_responses_enabled
     fallback_responses_enabled = enable
     logger.info(f"Fallback responses {'enabled' if enable else 'disabled'}.")
@@ -78,16 +42,19 @@ def generate_ai_response(prompt: str, pipe, tokenizer=None) -> str:
         A natural response from Mary's perspective
     """
     try:
+        gen_start = time.time()
+        # Lower-latency generation: short output, deterministic search
         response = pipe(
             prompt,
-            max_new_tokens=150,  # Increased for more natural responses
-            num_return_sequences=1,
-            temperature=0.8,     # Higher temperature for more variety
-            do_sample=True,
-            top_p=0.9,           # More diverse sampling
-            repetition_penalty=1.1,  # Light repetition penalty
-            pad_token_id=pipe.tokenizer.eos_token_id if hasattr(pipe, 'tokenizer') and pipe.tokenizer else None
+            max_new_tokens=64,
+            do_sample=False,
+            num_beams=1,
+            repetition_penalty=1.05,
+            return_full_text=False,
+            pad_token_id=(pipe.tokenizer.eos_token_id if hasattr(pipe, 'tokenizer') and pipe.tokenizer else None),
+            eos_token_id=(pipe.tokenizer.eos_token_id if hasattr(pipe, 'tokenizer') and pipe.tokenizer else None),
         )
+        gen_time = time.time() - gen_start
         
         generated_text = response[0]['generated_text'].strip()
         
@@ -117,38 +84,24 @@ def generate_ai_response(prompt: str, pipe, tokenizer=None) -> str:
         
         # Light validation - just check if we have something reasonable
         if len(character_response) < 5:
-            return get_fallback()
-            
-        return character_response
+            # Do NOT use textual fallbacks here; signal failure to caller
+            logger.warning("Generated response too short (<5 chars). Returning None to avoid fallback.")
+            return None
         
+        # Approximate token count for throughput logging
+        try:
+            tok = (pipe.tokenizer if hasattr(pipe, 'tokenizer') and pipe.tokenizer else tokenizer)
+            new_tokens = len(tok.encode(character_response)) if tok else max(1, len(character_response) // 4)
+        except Exception:
+            new_tokens = max(1, len(character_response) // 4)
+        tps = new_tokens / gen_time if gen_time > 0 else new_tokens
+        logger.info(f"AI generation completed in {gen_time:.3f}s | ~{new_tokens} tokens | ~{tps:.1f} tok/s")
+        return character_response
+
     except Exception as e:
         logger.error(f"AI generation error: {e}")
         # Return None to indicate failure - let calling function decide what to do
         return None
-
-def clean_response(text: str) -> str:
-    """Basic cleanup of AI-generated response
-    
-    Args:
-        text: Raw AI-generated text
-    
-    Returns:
-        Lightly cleaned text
-    """
-    if not text:
-        return get_fallback()
-        
-    # Basic cleanup only
-    cleaned = text.strip()
-    
-    # Remove quotes
-    cleaned = cleaned.strip('"\'')
-    
-    # Ensure proper punctuation
-    if cleaned and not cleaned.endswith(('.', '!', '?')):
-        cleaned += "."
-        
-    return cleaned
 
 def post_process_response(response: str, message_hash: int) -> str:
     """Light post-processing for Mary's response

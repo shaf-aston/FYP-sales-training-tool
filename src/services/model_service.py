@@ -21,96 +21,52 @@ class ModelService:
     self.model_name = None
   
   def _load_pipeline(self, model_name: str):
-    """Load model with progressive optimization attempts - CPU optimized."""
+    """Load model and return a text-generation pipeline with timing logs."""
     start_time = time.time()
-    logger.info("🚀 Starting FAST model loading process...")
-    
-    # Set torch to use all CPU cores
-    torch.set_num_threads(torch.get_num_threads())  # Use all available cores
-    
-    # Tokenizer loading timing
-    tokenizer_start = time.time()
+    logger.info("🚀 Starting model loading process...")
+
+    # Tokenizer
+    tok_start = time.time()
     tokenizer = AutoTokenizer.from_pretrained(
       model_name,
       cache_dir=MODEL_CACHE_DIR,
       trust_remote_code=True
     )
-    tokenizer_time = time.time() - tokenizer_start
-    logger.info(f"⏱️ Tokenizer loaded in {tokenizer_time:.2f} seconds")
+    tok_time = time.time() - tok_start
+    logger.info(f"⏱️ Tokenizer loaded in {tok_time:.2f}s")
 
-    model_kwargs = dict(
+    # Model
+    preferred_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
+    model_start = time.time()
+    model = AutoModelForCausalLM.from_pretrained(
+      pretrained_model_name_or_path=model_name,
       cache_dir=MODEL_CACHE_DIR,
       trust_remote_code=True,
-      pretrained_model_name_or_path=model_name,
-      torch_dtype=torch.float32,  # Use float32 for CPU (faster than float16 on CPU)
-      low_cpu_mem_usage=True      # Optimize CPU memory usage
+      torch_dtype=preferred_dtype,
+      low_cpu_mem_usage=True
     )
-
-    loaded_with = "standard"
-
-    # Try bitsandbytes 4-bit
-    if ENABLE_4BIT:
+    if torch.cuda.is_available():
       try:
-        import bitsandbytes  # noqa: F401
-        model_kwargs.update({
-          "load_in_4bit": True,
-          "device_map": "auto"
-        })
-        loaded_with = "4bit-bnb"
-        logger.info("Attempting 4-bit quantization with bitsandbytes")
-      except ImportError:
-        logger.warning("bitsandbytes not available, skipping 4-bit quantization")
+        model = model.to("cuda")
+        logger.info("📦 Model moved to CUDA device")
       except Exception as e:
-        logger.warning(f"4-bit quantization failed: {e}")
+        logger.warning(f"Failed to move model to CUDA: {e}")
+    mdl_time = time.time() - model_start
+    logger.info(f"⏱️ Model loaded in {mdl_time:.2f}s (dtype={preferred_dtype})")
 
-    # Try accelerate device mapping if not already set
-    if ENABLE_ACCELERATE and "device_map" not in model_kwargs:
-      try:
-        from accelerate import infer_auto_device_map  # noqa: F401
-        model_kwargs["device_map"] = "auto"
-        loaded_with = loaded_with + "+accelerate"
-        logger.info("Using accelerate for device mapping")
-      except ImportError:
-        logger.warning("accelerate not available")
-      except Exception as e:
-        logger.warning(f"accelerate setup failed: {e}")
-
-    # Model loading timing
-    model_start = time.time()
-    logger.info(f"📦 Loading model with config: {model_kwargs}")
-    model = AutoModelForCausalLM.from_pretrained(**model_kwargs)
-    model_time = time.time() - model_start
-    logger.info(f"⏱️ Model loaded in {model_time:.2f} seconds")
-
-    # Try optimum BetterTransformer optimization
-    if ENABLE_OPTIMUM:
-      opt_start = time.time()
-      try:
-        from optimum.bettertransformer import BetterTransformer
-        model = BetterTransformer.transform(model)
-        loaded_with = loaded_with + "+bettertransformer"
-        opt_time = time.time() - opt_start
-        logger.info(f"⏱️ BetterTransformer applied in {opt_time:.2f} seconds")
-      except ImportError:
-        logger.warning("optimum not available, skipping BetterTransformer")
-      except Exception as e:
-        logger.warning(f"BetterTransformer optimization failed: {e}")
-
-    # Pipeline creation timing - CPU optimized
-    pipeline_start = time.time()
+    # Pipeline
+    pipe_start = time.time()
     pipe = pipeline(
       "text-generation",
       model=model,
       tokenizer=tokenizer,
-      device=-1,  # Force CPU device
-      batch_size=1,  # Single batch for faster processing
-      return_full_text=False  # Only return generated text
+      device=(0 if torch.cuda.is_available() else -1),
+      batch_size=1,
+      return_full_text=False
     )
-    pipeline_time = time.time() - pipeline_start
-    logger.info(f"⏱️ Pipeline created in {pipeline_time:.2f} seconds")
-
+    pipe_time = time.time() - pipe_start
     total_time = time.time() - start_time
-    logger.info(f"✅ TOTAL model loading time: {total_time:.2f} seconds with {loaded_with}")
+    logger.info(f"⏱️ Pipeline created in {pipe_time:.2f}s | TOTAL load: {total_time:.2f}s")
     return pipe
   
   def initialize_model(self, model_name: str):

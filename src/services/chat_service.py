@@ -134,12 +134,16 @@ class ChatService:
       
       logger.info(f"🤖 Generating AI response for {persona_name}: {message[:50]}...")
       
-      # Build optimized prompt using prompt manager
+      # Build optimized prompt using prompt manager (smaller recent window for speed)
+      prompt_build_start = time.time()
+      recent_window = 1 if persona_name.lower() == "mary" else 3
       prompt = self.prompt_manager.build_sales_training_prompt(
         user_input=message,
         persona_name=persona_name,
-        session_id=session_id
+        session_id=session_id,
+        include_recent=recent_window
       )
+      prompt_build_time = time.time() - prompt_build_start
 
       # Check cache for the generated prompt
       if prompt in self.response_cache:
@@ -159,18 +163,23 @@ class ChatService:
               "response_time": round(response_time, 3)
           }
       
-      # Generate response using the AI model
+      # Generate response using the AI model with timing
+      gen_start = time.time()
       response = generate_ai_response(prompt, pipe)
+      gen_time = time.time() - gen_start
       
       # Handle AI generation failure
       if response is None:
         self.performance_stats["ai_failures"] += 1
-        logger.error(f"AI generation failed for {persona_name}")
+        logger.error(f"AI generation failed for {persona_name} (prompt: {prompt_build_time:.3f}s, gen: {gen_time:.3f}s)")
         return {
-          "response": "I'm sorry, I need a moment to think. Could you repeat that?",
+          "response": "",
           "status": "error",
+          "error": "generation_failed",
           "session_id": session_id,
-          "persona_name": persona_name
+          "persona_name": persona_name,
+          "prompt_time": round(prompt_build_time, 3),
+          "gen_time": round(gen_time, 3)
         }
 
       # Add assistant response to context
@@ -191,7 +200,7 @@ class ChatService:
 
       # Calculate timing
       response_time = time.time() - start_time
-      ai_time = response_time  # Simplified for now
+      ai_time = gen_time
       
       self.performance_stats["total_ai_time"] += ai_time
       self.performance_stats["average_ai_time"] = self.performance_stats["total_ai_time"] / self.performance_stats["ai_generations"]
@@ -212,7 +221,9 @@ class ChatService:
       # Cache the newly generated response
       self.response_cache[prompt] = response
 
-      logger.info(f"✨ AI response for {persona_name} generated and cached ({response_time:.3f}s)")
+      logger.info(
+        f"✨ {persona_name} response timings | prompt: {prompt_build_time:.3f}s | gen: {gen_time:.3f}s | total: {response_time:.3f}s"
+      )
       
       return {
         "response": response,
@@ -220,6 +231,8 @@ class ChatService:
         "session_id": session_id,
         "persona_name": persona_name,
         "response_time": round(response_time, 3),
+        "prompt_time": round(prompt_build_time, 3),
+        "gen_time": round(gen_time, 3),
         "message_count": len(session["messages"]),
         "context_tokens": self.context_manager.get_total_tokens()
       }

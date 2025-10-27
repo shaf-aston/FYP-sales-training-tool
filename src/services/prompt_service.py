@@ -118,10 +118,11 @@ class PromptManager:
             "persona_communication_style": persona.get("communication_style", "")
         }
 
-    def build_conversation_context(self, session_id: str = "", include_recent: int = 5) -> str:
+    def build_conversation_context(self, session_id: str = "", include_recent: int = 3) -> str:
         """Build conversation context from recent messages"""
         try:
-            context_window = self.context_manager.build_context_window(session_id, include_recent)
+            # build_context_window only accepts number of recent messages
+            context_window = self.context_manager.build_context_window(include_recent)
             if not context_window or "CONVERSATION HISTORY:" not in context_window:
                 return "This is the beginning of your conversation."
             
@@ -136,7 +137,8 @@ class PromptManager:
         self, 
         user_input: str,
         persona_name: str,
-        session_id: str = ""
+        session_id: str = "",
+        include_recent: Optional[int] = None
     ) -> str:
         """Build the final sales training prompt."""
         
@@ -145,7 +147,11 @@ class PromptManager:
             raise ValueError("Sales training template not found")
         
         persona_context = self.build_persona_context(persona_name)
-        conversation_context = self.build_conversation_context(session_id)
+        # Use caller-provided recent-window if available (e.g., Mary -> faster)
+        conversation_context = self.build_conversation_context(
+            session_id,
+            include_recent if include_recent is not None else 3
+        )
         
         prompt_vars = {
             "user_input": user_input,

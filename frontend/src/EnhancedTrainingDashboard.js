@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./EnhancedTrainingDashboard.css";
 import VoiceChat from "./VoiceChat";
+import ChatInterface from "./ChatInterface";
+import Header from "./Header";
 
 // Note: Reusable UI components are defined in the CSS and markup below.
 
-const EnhancedTrainingDashboard = () => {
+const EnhancedTrainingDashboard = ({ onSwitchInterface = () => {} }) => {
   const [currentView, setCurrentView] = useState("dashboard");
   const [userProgress, setUserProgress] = useState(null);
   const [availablePersonas, setAvailablePersonas] = useState([]);
@@ -15,85 +17,154 @@ const EnhancedTrainingDashboard = () => {
   const [loadingStatus, setLoadingStatus] = useState("");
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [messages, setMessages] = useState([]);
+  const [selectedPersonaForChat, setSelectedPersonaForChat] = useState(null);
+  const [, setSelectedPersonaContext] = useState(null);
 
   // Mock user ID - in production this would come from authentication
   const userId = "demo_user_123";
 
-  useEffect(() => {
-    initializeUserData();
-  }, []);
+  // Helper: fetch with timeout
+  const fetchWithTimeout = async (resource, options = {}) => {
+    const { timeout = 6000 } = options;
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
 
-  const initializeUserData = async () => {
     try {
-      setLoading(true);
-      setLoadingStatus("Initializing dashboard...");
-      setLoadingProgress(10);
+      const response = await fetch(resource, {
+        ...options,
+        signal: controller.signal,
+      });
+      return response;
+    } finally {
+      clearTimeout(id);
+    }
+  };
 
-      // Step 1: Initialize user progress
-      setLoadingStatus("Setting up your profile...");
-      setLoadingProgress(25);
+  const initializeUserData = useCallback(async () => {
+    const progressKey = `dashboard_progress_${userId}`;
+    const personasKey = `personas_cache`;
 
-      const progressInit = fetch(
+    // 1) Try cache first for instant paint
+    try {
+      const cachedProgress = sessionStorage.getItem(progressKey);
+      const cachedPersonas = sessionStorage.getItem(personasKey);
+
+      if (cachedProgress) {
+        setUserProgress(JSON.parse(cachedProgress));
+      }
+      if (cachedPersonas) {
+        const parsed = JSON.parse(cachedPersonas);
+        if (parsed?.personas) setAvailablePersonas(parsed.personas);
+      }
+
+      // If we had cache, avoid blocking overlay and refresh in background
+      const shouldBlock = !(cachedProgress && cachedPersonas);
+      if (shouldBlock) {
+        setLoading(true);
+        setLoadingStatus("Initializing dashboard...");
+        setLoadingProgress(10);
+      }
+
+      // 2) Initialize on server (non-blocking if cached)
+      const progressInit = fetchWithTimeout(
         `/api/v2/progress/initialize?user_id=${userId}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          timeout: 5000,
         }
       );
 
-      // Step 2: Load progress data
-      setLoadingStatus("Loading your progress...");
-      setLoadingProgress(50);
+      // 3) Fetch latest progress and personas in parallel
+      if (shouldBlock) {
+        setLoadingStatus("Loading your progress...");
+        setLoadingProgress(50);
+      }
 
-      const progressDataPromise = fetch(
-        `/api/v2/progress/${userId}/dashboard`
+      const progressDataPromise = fetchWithTimeout(
+        `/api/v2/progress/${userId}/dashboard`,
+        { timeout: 6000 }
       ).then((res) => (res.ok ? res.json() : null));
 
-      // Step 3: Load personas
-      setLoadingStatus("Loading training partners...");
-      setLoadingProgress(75);
+      if (shouldBlock) {
+        setLoadingStatus("Loading training partners...");
+        setLoadingProgress(75);
+      }
 
-      const personasDataPromise = fetch("/api/v2/personas").then((res) =>
-        res.ok ? res.json() : null
-      );
+      const personasDataPromise = fetchWithTimeout(`/api/v2/personas`, {
+        timeout: 6000,
+      }).then((res) => (res.ok ? res.json() : null));
 
-      // Execute all requests in parallel for better performance
       const [, progressData, personasData] = await Promise.allSettled([
         progressInit,
         progressDataPromise,
         personasDataPromise,
       ]);
 
-      // Step 4: Finalize setup
-      setLoadingStatus("Finalizing setup...");
-      setLoadingProgress(90);
+      if (shouldBlock) {
+        setLoadingStatus("Finalizing setup...");
+        setLoadingProgress(90);
+      }
 
-      // Set progress data if available
       if (progressData.status === "fulfilled" && progressData.value) {
         setUserProgress(progressData.value);
+        sessionStorage.setItem(progressKey, JSON.stringify(progressData.value));
       }
 
-      // Set personas data if available
       if (personasData.status === "fulfilled" && personasData.value) {
         setAvailablePersonas(personasData.value.personas);
+        sessionStorage.setItem(personasKey, JSON.stringify(personasData.value));
       }
 
-      setLoadingProgress(100);
-      setLoadingStatus("Ready!");
-
-      // Brief delay to show completion
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      if (shouldBlock) {
+        setLoadingProgress(100);
+        setLoadingStatus("Ready!");
+        await new Promise((resolve) => setTimeout(resolve, 300));
+      }
     } catch (error) {
       console.error("Error initializing user data:", error);
       setLoadingStatus("Error loading dashboard");
     } finally {
       setLoading(false);
     }
+  }, [userId]);
+
+  // Kick off initialization (placed after declaration to avoid TDZ)
+  useEffect(() => {
+    initializeUserData();
+  }, [initializeUserData]);
+
+  const preloadPersonaContext = async (personaName) => {
+    try {
+      const cacheKey = `persona_context_${personaName}`;
+      const cached = sessionStorage.getItem(cacheKey);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        setSelectedPersonaContext(parsed);
+        return parsed;
+      }
+
+      const res = await fetchWithTimeout(
+        `/api/v2/personas/${personaName}/context`,
+        { timeout: 6000 }
+      );
+      if (res.ok) {
+        const ctx = await res.json();
+        sessionStorage.setItem(cacheKey, JSON.stringify(ctx));
+        setSelectedPersonaContext(ctx);
+        return ctx;
+      }
+    } catch (e) {
+      console.error("Failed to preload persona context", e);
+    }
+    return null;
   };
 
   const startTrainingSession = async (personaName) => {
     try {
       setLoading(true);
+      // Fetch persona context for RAG usage and testing visibility
+      await preloadPersonaContext(personaName);
       const response = await fetch("/api/v2/personas/start-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -119,6 +190,45 @@ const EnhancedTrainingDashboard = () => {
       console.error("Error starting training session:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const startChatSession = (persona) => {
+    setSelectedPersonaForChat(persona);
+    setCurrentView("chat");
+  };
+
+  const handleTabChange = async (view) => {
+    setCurrentView(view);
+    try {
+      // Fire lightweight API calls on tab switches for testability and readiness
+      if (view === "dashboard") {
+        // refresh progress silently
+        fetchWithTimeout(`/api/v2/progress/${userId}/dashboard`, {
+          timeout: 6000,
+        })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((data) => {
+            if (data) setUserProgress(data);
+          })
+          .catch(() => {});
+      } else if (view === "training") {
+        // Get training recommendations and, if session exists, preload its persona context
+        fetchWithTimeout(`/api/v2/training/recommendations/${userId}`, {
+          timeout: 6000,
+        }).catch(() => {});
+        if (activeSession?.persona?.name) {
+          preloadPersonaContext(activeSession.persona.name);
+        }
+      } else if (view === "feedback") {
+        // Prime analytics data (non-blocking)
+        fetchWithTimeout(
+          `/api/v2/feedback/analytics/dashboard?user_id=${userId}`,
+          { timeout: 6000 }
+        ).catch(() => {});
+      }
+    } catch (e) {
+      // non-blocking
     }
   };
 
@@ -232,101 +342,183 @@ const EnhancedTrainingDashboard = () => {
         <p>Track your progress and improve your sales skills</p>
       </div>
 
-      {userProgress && (
-        <div className="progress-overview">
-          <div className="progress-card">
-            <h3>Overall Progress</h3>
-            <div className="progress-bar">
+      <div className="progress-overview">
+        {userProgress ? (
+          <>
+            <div className="progress-card">
+              <h3>Overall Progress</h3>
+              <div className="progress-bar">
+                <div
+                  className="progress-fill"
+                  style={{
+                    width: `${userProgress.overall_progress.completion_percentage}%`,
+                  }}
+                ></div>
+              </div>
+              <p>
+                {userProgress.overall_progress.completion_percentage.toFixed(1)}
+                % Complete
+              </p>
+            </div>
+
+            <div className="stats-grid">
+              <div className="stat-card">
+                <h4>Total Sessions</h4>
+                <span className="stat-value">
+                  {userProgress.session_statistics.total_sessions}
+                </span>
+              </div>
+              <div className="stat-card">
+                <h4>Training Hours</h4>
+                <span className="stat-value">
+                  {userProgress.session_statistics.total_hours.toFixed(1)}
+                </span>
+              </div>
+              <div className="stat-card">
+                <h4>Skills Mastered</h4>
+                <span className="stat-value">
+                  {userProgress.overall_progress.skills_mastered}
+                </span>
+              </div>
+              <div className="stat-card">
+                <h4>Average Rating</h4>
+                <span className="stat-value">
+                  {userProgress.session_statistics.average_success_rating.toFixed(
+                    1
+                  )}
+                </span>
+              </div>
+            </div>
+
+            <div className="skills-breakdown">
+              <h3>Skills Progress</h3>
+              <div className="skills-grid">
+                {Object.entries(userProgress.skills_breakdown).map(
+                  ([skill, data]) => (
+                    <div key={skill} className="skill-card">
+                      <h4>{skill.replace("_", " ").toUpperCase()}</h4>
+                      <div className="skill-level">{data.current_level}</div>
+                      <div className="skill-progress">
+                        <div
+                          className="skill-progress-bar"
+                          style={{ width: `${data.progress_percentage}%` }}
+                        ></div>
+                      </div>
+                      <p>
+                        {data.progress_percentage.toFixed(1)}% to{" "}
+                        {data.target_level}
+                      </p>
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="progress-card">
               <div
-                className="progress-fill"
-                style={{
-                  width: `${userProgress.overall_progress.completion_percentage}%`,
-                }}
+                className="loading-skeleton"
+                style={{ height: 20, width: 180, marginBottom: 12 }}
+              ></div>
+              <div className="progress-bar">
+                <div
+                  className="loading-skeleton"
+                  style={{ height: 12, width: "100%" }}
+                ></div>
+              </div>
+              <div
+                className="loading-skeleton"
+                style={{ height: 16, width: 120, marginTop: 8 }}
               ></div>
             </div>
-            <p>
-              {userProgress.overall_progress.completion_percentage.toFixed(1)}%
-              Complete
-            </p>
-          </div>
+            <div className="stats-grid">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="stat-card">
+                  <div
+                    className="loading-skeleton"
+                    style={{ height: 16, width: 120, margin: "0 auto 8px" }}
+                  ></div>
+                  <div
+                    className="loading-skeleton"
+                    style={{ height: 28, width: 80, margin: "0 auto" }}
+                  ></div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
 
-          <div className="stats-grid">
-            <div className="stat-card">
-              <h4>Total Sessions</h4>
-              <span className="stat-value">
-                {userProgress.session_statistics.total_sessions}
-              </span>
-            </div>
-            <div className="stat-card">
-              <h4>Training Hours</h4>
-              <span className="stat-value">
-                {userProgress.session_statistics.total_hours.toFixed(1)}
-              </span>
-            </div>
-            <div className="stat-card">
-              <h4>Skills Mastered</h4>
-              <span className="stat-value">
-                {userProgress.overall_progress.skills_mastered}
-              </span>
-            </div>
-            <div className="stat-card">
-              <h4>Average Rating</h4>
-              <span className="stat-value">
-                {userProgress.session_statistics.average_success_rating.toFixed(
-                  1
-                )}
-              </span>
-            </div>
-          </div>
-
-          <div className="skills-breakdown">
-            <h3>Skills Progress</h3>
-            <div className="skills-grid">
-              {Object.entries(userProgress.skills_breakdown).map(
-                ([skill, data]) => (
-                  <div key={skill} className="skill-card">
-                    <h4>{skill.replace("_", " ").toUpperCase()}</h4>
-                    <div className="skill-level">{data.current_level}</div>
-                    <div className="skill-progress">
-                      <div
-                        className="skill-progress-bar"
-                        style={{ width: `${data.progress_percentage}%` }}
-                      ></div>
-                    </div>
-                    <p>
-                      {data.progress_percentage.toFixed(1)}% to{" "}
-                      {data.target_level}
-                    </p>
-                  </div>
-                )
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
+      {/* Personas */}
       <div className="personas-section">
         <h3>Choose Your Training Partner</h3>
         <div className="personas-grid">
-          {availablePersonas.map((persona) => (
-            <div key={persona.name} className="persona-card">
-              <h4>{persona.name}</h4>
-              <p className="persona-type">
-                Type: {persona.type.replace("_", " ")}
-              </p>
-              <p className="persona-difficulty">
-                Difficulty: {persona.difficulty}
-              </p>
-              <p className="persona-background">{persona.background}</p>
-              <button
-                className="start-session-btn"
-                onClick={() => startTrainingSession(persona.name)}
-                disabled={loading}
-              >
-                Start Training
-              </button>
-            </div>
-          ))}
+          {availablePersonas && availablePersonas.length > 0
+            ? availablePersonas.map((persona) => (
+                <div key={persona.name} className="persona-card">
+                  <h4
+                    role="button"
+                    onClick={() => preloadPersonaContext(persona.name)}
+                    title="Load persona context"
+                  >
+                    {persona.name}
+                  </h4>
+                  <p className="persona-type">
+                    Type: {persona.type.replace("_", " ")}
+                  </p>
+                  <p className="persona-difficulty">
+                    Difficulty: {persona.difficulty}
+                  </p>
+                  <p className="persona-background">{persona.background}</p>
+                  <div className="persona-actions">
+                    <button
+                      className="start-session-btn"
+                      onClick={() => startTrainingSession(persona.name)}
+                      disabled={loading}
+                    >
+                      <i className="fas fa-play"></i>
+                      Start Training
+                    </button>
+                    <button
+                      className="chat-session-btn"
+                      onClick={() => startChatSession(persona)}
+                      disabled={loading}
+                    >
+                      <i className="fas fa-comments"></i>
+                      Chat Now
+                    </button>
+                  </div>
+                </div>
+              ))
+            : Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="persona-card">
+                  <div
+                    className="loading-skeleton"
+                    style={{ height: 24, width: 160, marginBottom: 16 }}
+                  ></div>
+                  <div
+                    className="loading-skeleton"
+                    style={{ height: 14, width: 120, marginBottom: 8 }}
+                  ></div>
+                  <div
+                    className="loading-skeleton"
+                    style={{ height: 14, width: 140, marginBottom: 8 }}
+                  ></div>
+                  <div
+                    className="loading-skeleton"
+                    style={{ height: 60, width: "100%", marginBottom: 16 }}
+                  ></div>
+                  <div
+                    className="loading-skeleton"
+                    style={{ height: 44, width: "100%", marginBottom: 10 }}
+                  ></div>
+                  <div
+                    className="loading-skeleton"
+                    style={{ height: 44, width: "100%" }}
+                  ></div>
+                </div>
+              ))}
         </div>
       </div>
     </div>
@@ -334,6 +526,18 @@ const EnhancedTrainingDashboard = () => {
 
   const renderTraining = () => (
     <div className="training-view">
+      {!activeSession && (
+        <div className="empty-state training-empty">
+          <h2>Start a training session</h2>
+          <p>Select a persona from the Dashboard to begin practicing.</p>
+          <button
+            className="start-session-btn"
+            onClick={() => setCurrentView("dashboard")}
+          >
+            Go to Dashboard
+          </button>
+        </div>
+      )}
       <div className="training-header">
         <h2>Training with {activeSession?.persona.name}</h2>
         <div className="persona-info">
@@ -403,8 +607,35 @@ const EnhancedTrainingDashboard = () => {
     </div>
   );
 
+  const renderChat = () => (
+    <div className="chat-view">
+      <ChatInterface
+        selectedPersona={selectedPersonaForChat}
+        onClose={() => {
+          setCurrentView("dashboard");
+          setSelectedPersonaForChat(null);
+        }}
+        isStandalone={false}
+      />
+    </div>
+  );
+
   const renderFeedback = () => (
     <div className="feedback-view">
+      {!sessionAnalysis && (
+        <div className="empty-state feedback-empty">
+          <h2>No feedback yet</h2>
+          <p>
+            Finish a training session to see detailed analysis and next steps.
+          </p>
+          <button
+            className="start-session-btn"
+            onClick={() => setCurrentView("dashboard")}
+          >
+            Start Training
+          </button>
+        </div>
+      )}
       <div className="feedback-header">
         <h2>Training Session Analysis</h2>
         <p>Here's how you performed and areas for improvement</p>
@@ -487,28 +718,27 @@ const EnhancedTrainingDashboard = () => {
 
   return (
     <div className="enhanced-training-dashboard">
-      <nav className="dashboard-nav">
-        <button
-          className={currentView === "dashboard" ? "active" : ""}
-          onClick={() => setCurrentView("dashboard")}
-        >
-          Dashboard
-        </button>
-        <button
-          className={currentView === "training" ? "active" : ""}
-          onClick={() => setCurrentView("training")}
-          disabled={!activeSession}
-        >
-          Training
-        </button>
-        <button
-          className={currentView === "feedback" ? "active" : ""}
-          onClick={() => setCurrentView("feedback")}
-          disabled={!sessionAnalysis}
-        >
-          Feedback
-        </button>
-      </nav>
+      <Header
+        leftItems={[
+          {
+            label: "Dashboard",
+            active: currentView === "dashboard",
+            onClick: () => handleTabChange("dashboard"),
+          },
+          {
+            label: "Training",
+            active: currentView === "training",
+            onClick: () => handleTabChange("training"),
+          },
+          {
+            label: "Feedback",
+            active: currentView === "feedback",
+            onClick: () => handleTabChange("feedback"),
+          },
+        ]}
+        currentInterface={"enhanced"}
+        onSwitchInterface={onSwitchInterface}
+      />
 
       <main className="dashboard-content">
         {loading && (
@@ -529,6 +759,7 @@ const EnhancedTrainingDashboard = () => {
 
         {currentView === "dashboard" && renderDashboard()}
         {currentView === "training" && renderTraining()}
+        {currentView === "chat" && renderChat()}
         {currentView === "feedback" && renderFeedback()}
       </main>
     </div>

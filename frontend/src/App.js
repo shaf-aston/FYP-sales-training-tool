@@ -1,33 +1,18 @@
 import React, { useState } from "react";
 import "./App.css";
 import EnhancedTrainingDashboard from "./EnhancedTrainingDashboard";
-import LegacyChatInterface from "./LegacyChatInterface";
+import StandaloneChatPage from "./StandaloneChatPage";
 
 function App() {
   const [currentInterface, setCurrentInterface] = useState("enhanced");
 
   return (
     <div className="App">
-      <div className="interface-selector">
-        <button
-          className={currentInterface === "enhanced" ? "active" : ""}
-          onClick={() => setCurrentInterface("enhanced")}
-        >
-          Enhanced Training Dashboard
-        </button>
-        <button
-          className={currentInterface === "legacy" ? "active" : ""}
-          onClick={() => setCurrentInterface("legacy")}
-        >
-          Legacy Chat Interface
-        </button>
-      </div>
-
       {currentInterface === "enhanced" ? (
-        <EnhancedTrainingDashboard />
-      ) : (
-        <LegacyChatInterface />
-      )}
+        <EnhancedTrainingDashboard onSwitchInterface={setCurrentInterface} />
+      ) : currentInterface === "chat" ? (
+        <StandaloneChatPage onSwitchInterface={setCurrentInterface} />
+      ) : null}
     </div>
   );
 }

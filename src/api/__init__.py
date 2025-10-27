@@ -7,6 +7,7 @@ from .routes.system_routes import router as system_router
 from .routes.web_routes import router as web_router
 from .routes.enhanced_routes import enhanced_router
 from .routes.voice_routes import router as voice_router
+from .routes.persona_chat_routes import persona_chat_router
 
 # Create main API router
 api_router = APIRouter()
@@ -17,3 +18,4 @@ api_router.include_router(system_router, prefix="", tags=["system"])
 api_router.include_router(web_router, prefix="", tags=["web"])
 api_router.include_router(enhanced_router, tags=["enhanced"])  # Enhanced training features
 api_router.include_router(voice_router, tags=["voice"])  # Voice processing routes
+api_router.include_router(persona_chat_router, tags=["persona-chat"])  # Persona-specific chat routes
