@@ -4,6 +4,7 @@ import os
 import sys
 import logging
 from pathlib import Path
+from logging.handlers import RotatingFileHandler
 
 def setup_logging(logs_dir: Path, logger_name: str = "fitness_chatbot"):
   """Setup centralized logging configuration"""
@@ -14,10 +15,17 @@ def setup_logging(logs_dir: Path, logger_name: str = "fitness_chatbot"):
     sys.stdout.reconfigure(encoding='utf-8')
     sys.stderr.reconfigure(encoding='utf-8')
 
+  # Ensure logs directory exists
+  try:
+    logs_dir.mkdir(parents=True, exist_ok=True)
+  except Exception:
+    pass
+
   # Configure logging handlers
-  log_handlers = [
-    logging.FileHandler(logs_dir / "chatbot.log", encoding='utf-8'),
-  ]
+  file_handler = RotatingFileHandler(
+    logs_dir / "chatbot.log", maxBytes=5 * 1024 * 1024, backupCount=3, encoding='utf-8'
+  )
+  log_handlers = [file_handler]
 
   # Add console handler if UTF-8 is supported
   try:

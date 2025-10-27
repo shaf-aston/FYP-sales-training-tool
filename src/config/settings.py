@@ -12,6 +12,11 @@ LOGS_DIR = PROJECT_ROOT / "logs"
 MODEL_CACHE_DIR = PROJECT_ROOT / "model_cache"
 TEMPLATES_DIR = PROJECT_ROOT / "templates"
 STATIC_DIR = PROJECT_ROOT / "static"
+DATA_DIR = PROJECT_ROOT / "data"
+
+# Database paths (overridable via env)
+SESSIONS_DB_PATH = Path(os.environ.get("SESSIONS_DB_PATH", str(DATA_DIR / "sessions.db")))
+QUALITY_DB_PATH = Path(os.environ.get("QUALITY_DB_PATH", str(DATA_DIR / "quality_metrics.db")))
 
 # AI Model Configuration
 DEFAULT_MODEL = "Qwen/Qwen2.5-0.5B-Instruct"

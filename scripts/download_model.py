@@ -5,13 +5,13 @@ import argparse
 import time
 from pathlib import Path
 
-# Add utils to path for imports
+# Add project root to path for imports
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent
-sys.path.insert(0, str(PROJECT_ROOT / "utils"))
+sys.path.insert(0, str(PROJECT_ROOT))
 
-from paths import LOGS_DIR, MODEL_CACHE_DIR
-from env import setup_model_env, assert_model_present
+from utils.paths import LOGS_DIR, MODEL_CACHE_DIR
+from utils.env import setup_model_env, assert_model_present
 
 # Configure logging
 logging.basicConfig(

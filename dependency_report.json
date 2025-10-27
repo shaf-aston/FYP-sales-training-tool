@@ -1,0 +1,91 @@
+{
+  "timestamp": "1761138579.2672155",
+  "python_version": "3.12.8",
+  "platform": "win32",
+  "dependencies": {
+    "torch": {
+      "available": true,
+      "version": "2.7.1+cu118",
+      "type": "core"
+    },
+    "transformers": {
+      "available": true,
+      "version": "4.54.1",
+      "type": "core"
+    },
+    "fastapi": {
+      "available": true,
+      "version": "0.103.1",
+      "type": "core"
+    },
+    "uvicorn": {
+      "available": true,
+      "version": "0.23.2",
+      "type": "core"
+    },
+    "numpy": {
+      "available": true,
+      "version": "2.2.6",
+      "type": "core"
+    },
+      "available": true,
+      "version": "2.11.7",
+      "type": "core"
+    },
+    "accelerate": {
+      "available": true,
+      "version": "0.34.2",
+      "type": "optimization",
+      "description": "GPU acceleration and device mapping"
+    },
+    "bitsandbytes": {
+      "available": true,
+      "version": "0.45.5",
+      "type": "optimization",
+      "description": "4-bit quantization for memory efficiency"
+    },
+    "optimum": {
+      "available": true,
+      "version": "unknown",
+      "type": "optimization",
+      "description": "BetterTransformer optimizations"
+    },
+    "psutil": {
+      "available": true,
+      "version": "5.9.8",
+      "type": "optimization",
+      "description": "System and process monitoring"
+    },
+    "whisper": {
+      "available": true,
+      "version": "20240930",
+      "type": "voice",
+      "description": "Speech-to-text recognition"
+    },
+    "TTS": {
+      "available": false,
+      "install_cmd": "pip install coqui-tts",
+      "type": "voice",
+      "description": "High-quality text-to-speech"
+    },
+    "librosa": {
+      "available": true,
+      "version": "0.10.1",
+      "type": "voice",
+      "description": "Advanced audio processing"
+    },
+    "scipy": {
+      "available": true,
+      "version": "1.16.1",
+      "type": "voice",
+      "description": "Scientific computing for audio"
+    },
+    "elevenlabs": {
+      "available": true,
+      "version": "2.18.0",
+      "type": "voice",
+      "description": "Premium text-to-speech service"
+    }
+  },
+  "recommendations": []
+}

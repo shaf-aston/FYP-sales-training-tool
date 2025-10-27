@@ -87,4 +87,4 @@ if __name__ == "__main__":
   from config.settings import HOST, PORT
   
   logger.info(f"🌐 Starting server on {HOST}:{PORT}")
-  uvicorn.run(app, host=HOST, port=PORT)
+  uvicorn.run(app, host=HOST, port=PORT) 

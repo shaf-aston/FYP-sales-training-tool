@@ -1,0 +1,283 @@
+---
+config:
+  layout: dagre
+  theme: base
+---
+flowchart TB
+    %% ============================================================================
+    %% FOUNDATION LAYER - Data Sources & Processing
+    %% ============================================================================
+    
+    subgraph FoundationLayer["Foundation Layer: Data Sources & Processing"]
+        direction TB
+        
+        subgraph DataSources["Shared Data Sources"]
+            SalesScenarios["Sales Scenarios
+            JSON schemas + templates
+            Industry-specific conversation templates,
+            customer persona definitions"]
+            
+            AudioRecordings["Audio Recordings
+            S3 + CDN storage
+            Real sales conversation recordings,
+            expert demonstration samples"]
+            
+            VideoRecordings["Video Recordings
+            Media file management
+            Sales presentation videos,
+            training demonstration content"]
+            
+            TextTranscripts["Text Data/Transcripts
+            PostgreSQL + search indexing
+            Conversation logs, performance annotations,
+            expert feedback comments"]
+        end
+        
+        subgraph DataProcessing["Data Processing Pipeline"]
+            AudioProcessor["Audio Processing
+            FastAPI + WebSocket handlers
+            Speech-to-text conversion, tone analysis,
+            pacing detection, and clarity assessment"]
+            
+            VideoProcessor["Video Processing
+            Computer vision + ML models
+            Facial expression analysis, gesture detection,
+            body language interpretation"]
+            
+            TextProcessor["Text Processing
+            spaCy + NLP pipeline
+            Sentiment analysis, keyword extraction,
+            conversation structure analysis"]
+        end
+    end
+    
+    %% ============================================================================
+    %% MODEL TRAINING LAYER - Dual Training Paths
+    %% ============================================================================
+    
+    subgraph ModelTrainingLayer["Model Training Layer: Dual Training Paths"]
+        direction LR
+        
+        %% Path A: Roleplay Partner Training
+        subgraph PathA["Roleplay Partner Training Pipeline"]
+            direction TB
+            
+            subgraph RoleplayFeatures["Feature Extraction"]
+                ProspectFeatures["Prospect Feature Extraction
+                Transformers + embeddings
+                Customer personality trait identification,
+                behavioral pattern recognition"]
+                
+                ObjectionPatterns["Objection Pattern Analysis
+                Template-based + ML generation
+                Common sales objection database,
+                context-aware pushback generation"]
+                
+                PersonaModeling["Persona Modeling
+                Personality trait embeddings
+                Customer behavior model definitions,
+                decision-making pattern templates"]
+            end
+            
+            subgraph RoleplayTraining["Model Training"]
+                RoleplayModelTraining["Roleplay Model Training
+                GPT fine-tuning + custom models
+                Persona-specific response generation,
+                contextual conversation management"]
+            end
+            
+            subgraph RoleplayComponents["Generation Components"]
+                PersonaGenerator["Persona Response Generator
+                Neural language models
+                Dynamic prospect response creation,
+                personality-consistent communication"]
+                
+                ConversationManager["Conversation Flow Manager
+                Turn-taking algorithms + state machines
+                Natural dialogue pattern management,
+                conversation pacing control"]
+                
+                ObjectionHandler["Objection Handler
+                Rule-based + ML hybrid system
+                Realistic pushback generation,
+                objection escalation management"]
+            end
+            
+            subgraph RoleplayValidation["Validation & Quality Control"]
+                RoleplayEvaluation["Model Evaluation
+                Cross-validation + testing framework
+                Response quality assessment,
+                persona consistency validation"]
+                
+                RealismValidation["Realism Assessment
+                Human evaluation + automated metrics
+                Human-like behavior validation,
+                conversation naturalness scoring"]
+                
+                ExpertReview["Expert Review System
+                Sales trainer annotation platform
+                Professional validation workflow,
+                quality assessment interface"]
+            end
+        end
+        
+        %% Path B: Feedback System Training
+        subgraph PathB["Feedback System Training Pipeline"]
+            direction TB
+            
+            subgraph FeedbackFeatures["Performance Analysis"]
+                PerformanceExtraction["Performance Feature Extraction
+                scikit-learn + custom metrics
+                Communication effectiveness analysis,
+                sales technique identification"]
+                
+                QuestionAnalysis["Question Quality Analysis
+                NLP + sales methodology frameworks
+                SPIN selling technique assessment,
+                question effectiveness scoring"]
+                
+                ListeningAssessment["Listening Assessment
+                Audio analysis + conversation mining
+                Active listening behavior detection,
+                response relevance evaluation"]
+            end
+            
+            subgraph FeedbackTraining["Model Training"]
+                FeedbackModelTraining["Feedback Model Training
+                Supervised learning + ranking algorithms
+                Performance classification model training,
+                suggestion generation optimization"]
+            end
+            
+            subgraph FeedbackComponents["Feedback Generation"]
+                PerformanceClassifier["Performance Classifier
+                Multi-class ML models
+                Skill level categorization system,
+                competency area identification"]
+                
+                SuggestionEngine["Suggestion Generator
+                Template-based + ML recommendation
+                Personalized improvement tip generation,
+                actionable feedback creation"]
+                
+                ProgressAnalyzer["Progress Tracker
+                Time-series analysis + trend detection
+                Learning curve progression analysis,
+                performance improvement tracking"]
+            end
+            
+            subgraph FeedbackValidation["Validation & Testing"]
+                FeedbackEvaluation["Model Evaluation
+                A/B testing + user satisfaction metrics
+                Suggestion accuracy assessment,
+                improvement effectiveness validation"]
+                
+                AccuracyTesting["Accuracy Assessment
+                Prediction validation + expert review
+                Feedback precision measurement,
+                suggestion relevance evaluation"]
+                
+                UserFeedback["User Satisfaction Tracking
+                Rating system + feedback collection
+                Quality perception measurement,
+                user experience evaluation"]
+            end
+        end
+    end
+    
+    %% ============================================================================
+    %% APPLICATION LAYER - User Interface & Deployment
+    %% ============================================================================
+    
+    subgraph ApplicationLayer["Application Layer: User Interface & Deployment"]
+        direction TB
+        
+        subgraph CoreServices["Core API Services"]
+            APIGateway["API Gateway
+            FastAPI + async request handling
+            RESTful endpoint management,
+            WebSocket connection handling"]
+        end
+        
+        subgraph UserApplications["User Applications"]
+            RoleplayChatbot["Sales Roleplay Chatbot
+            React + real-time communication
+            Interactive training interface,
+            conversation management system"]
+            
+            DashboardInterface["Feedback Dashboard
+            React + D3.js visualization
+            Performance metric visualization,
+            progress tracking interface"]
+        end
+    end
+    
+    %% ============================================================================
+    %% LEARNING LAYER - Continuous Improvement
+    %% ============================================================================
+    
+    subgraph LearningLayer["Learning Layer: Continuous Improvement"]
+        direction TB
+        
+        DataCollection["User Interaction Collection
+        Event tracking + data pipeline
+        Real-time usage data capture,
+        behavioral pattern logging"]
+        
+        SystemAnalysis["Performance Analysis
+        Statistical analysis + ML evaluation
+        Model effectiveness assessment,
+        user outcome measurement"]
+        
+        AutoRetraining["Automated Retraining
+        Pipeline automation + monitoring
+        Model drift detection system,
+        performance threshold monitoring"]
+    end
+    
+    %% ============================================================================
+    %% PRIMARY DATA FLOWS - Simplified Connections
+    %% ============================================================================
+    
+    %% Foundation to Training
+    DataSources --> DataProcessing
+    DataProcessing --> PathA
+    DataProcessing --> PathB
+    
+    %% Training Pipeline Flows
+    RoleplayFeatures --> RoleplayTraining --> RoleplayComponents --> RoleplayValidation
+    FeedbackFeatures --> FeedbackTraining --> FeedbackComponents --> FeedbackValidation
+    
+    %% Training to Application
+    RoleplayValidation --> CoreServices
+    FeedbackValidation --> CoreServices
+    CoreServices --> UserApplications
+    
+    %% Continuous Learning Flow
+    UserApplications --> DataCollection
+    DataCollection --> SystemAnalysis
+    SystemAnalysis --> AutoRetraining
+    AutoRetraining -.->|Model Updates| DataSources
+    
+    %% Cross-System Integration
+    RoleplayComponents -.->|Interaction Data| FeedbackFeatures
+    FeedbackComponents -.->|Performance Insights| RoleplayFeatures
+    
+    %% ============================================================================
+    %% STYLING DEFINITIONS
+    %% ============================================================================
+    
+    classDef foundationStyle fill:#f0f8ff,stroke:#4682b4,stroke-width:3px,color:#000
+    classDef trainingStyle fill:#fff5ee,stroke:#ff7f50,stroke-width:3px,color:#000
+    classDef roleplayStyle fill:#e1ffe1,stroke:#00cc66,stroke-width:2px,color:#000
+    classDef feedbackStyle fill:#ffe1e1,stroke:#cc0066,stroke-width:2px,color:#000
+    classDef applicationStyle fill:#f0e1ff,stroke:#9900cc,stroke-width:3px,color:#000
+    classDef learningStyle fill:#e1f0ff,stroke:#0066cc,stroke-width:3px,color:#000
+    
+    %% Apply Styles
+    class FoundationLayer,DataSources,DataProcessing foundationStyle
+    class ModelTrainingLayer trainingStyle
+    class PathA,RoleplayFeatures,RoleplayTraining,RoleplayComponents,RoleplayValidation roleplayStyle
+    class PathB,FeedbackFeatures,FeedbackTraining,FeedbackComponents,FeedbackValidation feedbackStyle
+    class ApplicationLayer,CoreServices,UserApplications applicationStyle
+    class LearningLayer learningStyle

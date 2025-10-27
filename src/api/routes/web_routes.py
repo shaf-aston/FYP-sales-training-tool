@@ -29,3 +29,19 @@ async def home(request: Request):
       "character_name": character["name"]
     }
   )
+
+@router.post("/chat")
+async def legacy_chat_endpoint(request: dict):
+  """Legacy chat endpoint for backwards compatibility"""
+  from fastapi import HTTPException
+  
+  message = request.get("message", "")
+  user_id = request.get("user_id", "default")
+  
+  if not message:
+    raise HTTPException(status_code=400, detail="Message is required")
+  
+  pipe = model_service.get_pipeline()
+  result = chat_service.chat_with_mary(message, user_id, pipe)
+  
+  return {"response": result}

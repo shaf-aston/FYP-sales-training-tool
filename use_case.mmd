@@ -1,0 +1,85 @@
+@startuml
+!theme plain
+left to right direction
+
+skinparam usecase {
+  BackgroundColor<<MVP>> #e1f5fe
+  BorderColor<<MVP>> #0288d1
+  BorderThickness 2
+  BackgroundColor<<Admin>> #fff3e0
+  BorderColor<<Admin>> #ff8f00
+  BackgroundColor<<Dev>> #f3e5f5
+  BorderColor<<Dev>> #8e24aa
+}
+
+skinparam rectangle {
+  BackgroundColor #f8f9fa
+  BorderColor #6c757d
+}
+
+actor "Sales Representative" as SalesRep
+actor "Administrator" as Admin  
+actor "Developer" as Dev
+
+rectangle "VoiceCoach AI System" {
+  rectangle "Core User Features" {
+    usecase "Login & Authentication" as UC1 <<MVP>>
+    usecase "Select Training Scenario" as UC2 <<MVP>>
+    usecase "Engage in Voice Conversation" as UC3 <<MVP>>
+    usecase "Receive Real-time Feedback" as UC4 <<MVP>>
+    usecase "View Session Report" as UC5 <<MVP>>
+    usecase "Upload Audio/Video/Transcript" as UC6
+    usecase "Create/Customize Persona" as UC7
+    usecase "Track Progress Over Time" as UC8
+  }
+  
+  rectangle "Administration Features" {
+    usecase "Manage Training Scenarios" as UC9 <<Admin>>
+    usecase "Manage AI Personas" as UC10 <<Admin>>
+    usecase "View Team Analytics" as UC11 <<Admin>>
+    usecase "Configure System Settings" as UC12 <<Admin>>
+  }
+  
+  rectangle "System Management" {
+    usecase "Monitor System Health" as UC13 <<Dev>>
+    usecase "Deploy Model Updates" as UC14 <<Dev>>
+    usecase "Manage AI Pipeline" as UC15 <<Dev>>
+    usecase "Debug Performance Issues" as UC16 <<Dev>>
+  }
+}
+
+' Sales Representative interactions (MVP focus)
+SalesRep -- UC1
+SalesRep -- UC2  
+SalesRep -- UC3
+SalesRep -- UC4
+SalesRep -- UC5
+SalesRep -- UC6
+SalesRep -- UC7
+SalesRep -- UC8
+
+' Administrator interactions (business management)
+Admin -- UC1
+Admin -- UC5
+Admin -- UC9
+Admin -- UC10
+Admin -- UC11
+Admin -- UC12
+
+' Developer interactions (technical management)  
+Dev -- UC13
+Dev -- UC14
+Dev -- UC15
+Dev -- UC16
+Dev -- UC12
+
+' Key system relationships (keeping them cleaner)
+UC3 ..> UC4 : <<includes>>
+UC5 ..> UC8 : <<extends>>
+UC6 ..> UC7 : <<includes>>
+
+note top of UC3 : Core AI conversation engine\nSTT → LLM → TTS pipeline
+note right of UC4 : Real-time performance scoring\nConversation analytics  
+note bottom of UC6 : Supports audio, video, and\ntranscript uploads for personas
+
+@enduml

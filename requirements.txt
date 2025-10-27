@@ -1,13 +1,49 @@
-fastapi==0.103.1
-uvicorn[standard]==0.23.2
-transformers>=4.30.0
-torch>=2.0.0
-pydantic>=2.0.0
-python-multipart>=0.0.6
-jinja2>=3.1.0
+# Sales Roleplay Chatbot requirements
+# Install with: pip install -r requirements.txt
 
-# Performance optimizations
-accelerate>=0.20.0
-bitsandbytes>=0.40.0
-optimum>=1.12.0
-safetensors>=0.3.0
+# ----------------------
+# Web/API
+# ----------------------
+fastapi>=0.103.1,<0.116.0          # 0.103.x supports Pydantic v2; keep <0.116 for stability
+uvicorn[standard]>=0.23.2,<0.32.0
+python-multipart>=0.0.6,<0.0.10
+jinja2>=3.1.0,<3.2.0
+aiofiles>=23.2.0,<24.2.0
+
+# ----------------------
+# AI/ML
+# ----------------------
+transformers>=4.30.0,<4.45.0
+torch>=2.0.0,<2.4.0                # Choose CPU/CUDA build as needed on Windows
+numpy>=1.24.0,<2.0.0               # Keep <2.0 unless tested
+pydantic>=2.0.0,<2.9.0
+safetensors>=0.3.0,<0.5.0
+tiktoken>=0.5.0,<0.8.0
+
+# ----------------------
+# Voice (local)
+# These are heavy on Windows. Install FFmpeg separately (required by whisper/tts).
+# ----------------------
+librosa>=0.9.0,<0.11.0
+scipy>=1.7.0,<1.13.0
+coqui-tts>=0.15.0,<0.22.0          # Pin range to avoid breaking changes
+pyttsx3>=2.90,<2.91
+openai-whisper>=20231117           # Requires FFmpeg on PATH
+# pydub>=0.25.1                    # Optional: audio format helpers (requires ffmpeg)
+# gtts>=2.3.0                      # Optional: Google TTS (online)
+
+# ----------------------
+# Performance / Optional
+# ----------------------
+accelerate>=0.20.0,<0.32.0
+# bitsandbytes is not reliable on Windows. Leave commented unless you’re on Linux.
+# bitsandbytes>=0.41.0,<0.45.0     # Uncomment on Linux only
+optimum>=1.12.0,<1.20.0
+psutil>=5.8.0,<6.0.0
+
+# ----------------------
+# Testing / Tools
+# ----------------------
+pytest>=7.0.0,<9.0.0
+pytest-asyncio>=0.21.0,<0.24.0
+requests>=2.31.0,<2.33.0           # Used in tests and API calls

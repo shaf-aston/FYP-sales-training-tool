@@ -1,0 +1,42 @@
+[
+  {
+    "conversation_id": "expert_001",
+    "scenario_type": "objection_handling",
+    "expert_response": "I understand your concern about the price. Many of our clients felt the same way initially. Let me show you how this investment pays for itself within the first quarter through increased efficiency and reduced manual work. What specific budget constraints are you working with?",
+    "context": "Customer objects to price being too high",
+    "techniques_used": [
+      "empathy",
+      "social_proof",
+      "roi_demonstration",
+      "question_redirect"
+    ],
+    "effectiveness_score": 0.95,
+    "persona_type": "skeptical_manager"
+  },
+  {
+    "conversation_id": "expert_002",
+    "scenario_type": "needs_discovery",
+    "expert_response": "That's really interesting. Tell me more about your current process for handling customer inquiries. How much time does your team spend on this daily, and what's the biggest challenge you're facing?",
+    "context": "Customer mentions current solution limitations",
+    "techniques_used": [
+      "active_listening",
+      "open_ended_questions",
+      "pain_discovery"
+    ],
+    "effectiveness_score": 0.92,
+    "persona_type": "busy_executive"
+  },
+  {
+    "conversation_id": "expert_003",
+    "scenario_type": "value_presentation",
+    "expert_response": "Based on what you've shared about handling 200 inquiries per day manually, our automation solution would save your team approximately 4 hours daily. That's 20 hours per week your staff could focus on higher-value activities. How would that impact your business?",
+    "context": "Presenting solution value after needs discovery",
+    "techniques_used": [
+      "quantified_value",
+      "time_savings",
+      "impact_question"
+    ],
+    "effectiveness_score": 0.94,
+    "persona_type": "friendly_small_business"
+  }
+]
