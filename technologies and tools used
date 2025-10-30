@@ -1,0 +1,127 @@
+TECHNOLOGIES, TOOLS, FRAMEWORKS, AND LIBRARIES USED IN SALES ROLEPLAY CHATBOT
+=================================================================================
+
+BACKEND FRAMEWORK & API
+-----------------------
+FastAPI - High-performance async web framework for building RESTful API endpoints with automatic OpenAPI documentation
+Pydantic v2 - Data validation and serialization library for automatic request/response validation with type checking
+uvicorn - Lightning-fast ASGI server for running FastAPI application with hot-reload support during development
+python-multipart - Handles file uploads and multipart form data in FastAPI endpoints (audio upload for STT)
+
+AI/ML & LANGUAGE MODELS
+-----------------------
+transformers - Hugging Face library for loading and running Qwen2.5-0.5B-Instruct language model for persona response generation
+torch - PyTorch deep learning framework (CPU mode) for neural network inference and model execution
+optimum - Model optimization library providing BetterTransformer for 2-4x faster CPU inference with greedy decoding
+LangChain - Framework for conversation chain management and memory handling to maintain chat context across turns
+langchain-community - Community integrations for LangChain including custom retrievers and memory implementations
+sentencepiece - Required tokenizer backend for Qwen model subword segmentation and encoding
+
+VOICE & AUDIO PROCESSING
+------------------------
+faster-whisper - High-performance speech-to-text (STT) engine using CTranslate2 backend (4x faster than openai-whisper)
+librosa - Audio analysis library for feature extraction, noise filtering, and audio preprocessing before STT
+scipy - Scientific computing library used for signal processing and audio filtering operations
+coqui-tts - Neural text-to-speech (TTS) engine for generating natural-sounding persona voice responses
+pyttsx3 - Offline TTS engine as fallback for quick voice synthesis without neural models
+pydub - Audio format conversion and manipulation library requiring FFmpeg for codec support
+SpeechRecognition - Google Speech Recognition API wrapper as fallback STT when faster-whisper unavailable
+soundfile - Low-level audio file I/O for reading/writing WAV and other audio formats for TTS/STT pipelines
+
+DATABASE & STORAGE
+------------------
+psycopg2-binary - PostgreSQL database adapter for storing session data, conversation history, and custom personas
+alembic - Database migration tool for managing schema changes and version control of PostgreSQL database
+JSON files - Lightweight storage for default personas (data/default_personas.json) and custom personas (data/custom_personas.json)
+
+FRONTEND FRAMEWORK & UI
+-----------------------
+React - JavaScript UI library for building interactive single-page chat interface with component-based architecture
+axios - Promise-based HTTP client for making API requests from frontend to FastAPI backend endpoints
+Bootstrap - CSS framework providing responsive layout and pre-built UI components for chat interface styling
+Font Awesome - Icon library for visual elements like microphone button, send button, and loading indicators
+react-scripts - Build toolchain for compiling, bundling, and serving React application during development
+
+SECURITY & AUTHENTICATION
+--------------------------
+python-jose - JWT (JSON Web Token) implementation for secure user authentication and session management
+passlib - Password hashing library with bcrypt support for secure credential storage
+bcrypt - Cryptographic hashing algorithm for one-way password encryption in user authentication
+
+UTILITIES & HELPERS
+-------------------
+python-dotenv - Loads environment variables from .env file for configuration management (API keys, database URLs)
+requests - HTTP library for making external API calls to third-party services and webhooks
+aiofiles - Async file I/O library for non-blocking file operations in async FastAPI endpoints
+numpy - Numerical computing library for array operations in audio processing and ML inference
+
+DEVELOPMENT & TESTING
+---------------------
+pytest - Testing framework for unit tests, integration tests, and regression test suites
+pytest-asyncio - Plugin for testing async FastAPI endpoints and services with async/await syntax
+httpx - Async HTTP client for testing FastAPI routes with TestClient support
+pytest-cov - Code coverage plugin for measuring test coverage percentage across modules
+
+LOGGING & MONITORING
+--------------------
+Custom logger_config.py - Centralized logging configuration with emoji markers (📨⏱️⚡✅) for timing instrumentation
+Python logging module - Built-in logging with INFO level for developer-visible performance tracking
+
+DEVELOPMENT TOOLS
+-----------------
+FFmpeg - External multimedia framework required for audio codec support in whisper, pydub, and TTS libraries
+Git - Version control system for source code management and collaboration
+Node.js & npm - JavaScript runtime and package manager for building and serving React frontend
+bash.exe - Default shell environment for running terminal commands on Windows
+
+PROJECT-SPECIFIC SERVICES
+-------------------------
+PersonaService (src/services/persona_service.py) - Central service managing persona definitions from JSON storage with CRUD operations
+ChatService (src/services/chat_service.py) - Conversation orchestration service with comprehensive timing logs and response generation
+ModelService (src/services/model_service.py) - Lazy-loading service for Qwen model initialization with BetterTransformer optimization
+VoiceService (src/services/voice_service.py) - Audio processing pipeline coordinating STT, TTS, and audio preprocessing
+SessionService (src/services/session_service.py) - Session lifecycle management tracking conversation state and metadata
+FallbackResponses (src/fallback_responses.py) - AI response wrapper with optimized generation parameters (max_tokens=50, greedy decoding)
+
+API ROUTE MODULES
+-----------------
+chat_routes.py - Core chat endpoints (/api/chat, /api/greeting, /api/personas) with Pydantic validation
+persona_chat_routes.py - V2 persona-specific endpoints (/api/v2/personas) for enhanced persona interactions
+sessions_routes.py - Session management endpoints (/api/sessions/start, /api/sessions/end) with automatic validation
+team_routes.py - Team/multi-user management endpoints for collaborative roleplay scenarios
+external_routes.py - Integration endpoints for external service webhooks and third-party API callbacks
+dashboard_routes.py - Analytics and reporting endpoints for performance metrics and conversation insights
+system_routes.py - Health checks, system status, and administrative endpoints
+
+DATA MODELS
+-----------
+Pydantic Request Models (src/models/request_models.py) - ChatRequest, SessionStartRequest, PersonaCreateRequest with field validators
+Pydantic Response Models (src/models/request_models.py) - ChatResponse, SessionEndRequest, HealthCheckResponse for type-safe API responses
+Persona Dataclass (src/models/persona.py) - Structured persona definition with 15+ fields including background, goals, objections
+Character Profiles (src/models/character_profiles.py) - Legacy persona storage being migrated to JSON-based PersonaService
+
+CONFIGURATION & SETTINGS
+------------------------
+settings.py (config/settings.py) - Application configuration with environment-specific settings (dev/prod)
+paths.py (utils/paths.py) - Centralized path resolution for model cache, data directories, and log files
+db.py (utils/db.py) - Database connection pooling and session management utilities
+env.py (utils/env.py) - Environment variable loading and validation helpers
+
+MIGRATION SCRIPTS
+-----------------
+001_create_personas_table.sql - PostgreSQL schema migration for personas table with indexes
+download_model.py - Script for pre-downloading Qwen model and tokenizer to local cache
+run_chatbot.py - Application entry point script for starting FastAPI server
+run_migrations.py - Database migration runner using alembic for schema updates
+
+ARCHIVED/BACKUP MODULES
+-----------------------
+fallback_responses.py.backup - Backup of previous fallback response logic before optimization
+settings_backup.py - Configuration backup before refactoring to environment-based settings
+dashboard_fixes_summary.py - Legacy dashboard debugging utilities
+
+BUILD ARTIFACTS
+---------------
+frontend/build/ - Production-optimized React bundle with minified JS/CSS and asset manifest
+model_cache/ - Local storage for downloaded Qwen model weights, tokenizers, and pipeline configs
+logs/conversation_backup.json - JSON-formatted conversation history for debugging and analysis

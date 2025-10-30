@@ -9,6 +9,14 @@ import random
 import time
 from typing import List, Dict, Optional
 
+# Import model configuration for dynamic model switching
+try:
+    from config.model_config import get_active_model_config
+except ImportError:
+    # Fallback if model_config not available
+    def get_active_model_config():
+        return {"generation_config": {"max_new_tokens": 32, "do_sample": False, "num_beams": 1, "temperature": 0.7, "repetition_penalty": 1.05}}
+
 # Configure logger
 logger = logging.getLogger("fitness_chatbot")
 
@@ -42,19 +50,23 @@ def generate_ai_response(prompt: str, pipe, tokenizer=None) -> str:
         A natural response from Mary's perspective
     """
     try:
+        # Use configured generation settings (optimized for speed by default)
+        gen_config = get_active_model_config()["generation_config"]
+        
         gen_start = time.time()
-        # Lower-latency generation: short output, deterministic search
+        # Optimized generation params for 30s target: lower max_new_tokens, greedy decoding
         response = pipe(
             prompt,
-            max_new_tokens=64,
-            do_sample=False,
-            num_beams=1,
-            repetition_penalty=1.05,
+            max_new_tokens=gen_config.get("max_new_tokens", 50),  # Cap at 50 for speed
+            do_sample=False,  # Greedy decoding (fastest)
+            temperature=1.0,  # Ignored when do_sample=False but set for safety
+            repetition_penalty=1.1,  # Light penalty to avoid loops
             return_full_text=False,
             pad_token_id=(pipe.tokenizer.eos_token_id if hasattr(pipe, 'tokenizer') and pipe.tokenizer else None),
             eos_token_id=(pipe.tokenizer.eos_token_id if hasattr(pipe, 'tokenizer') and pipe.tokenizer else None),
         )
         gen_time = time.time() - gen_start
+        logger.info(f"⚡ Model inference completed in {gen_time:.2f}s")
         
         generated_text = response[0]['generated_text'].strip()
         
@@ -71,16 +83,62 @@ def generate_ai_response(prompt: str, pipe, tokenizer=None) -> str:
         else:
             character_response = generated_text
         
-        # Basic cleanup only
+        # Enhanced cleanup for better prospect responses
         character_response = character_response.strip()
+        
+        # Remove template markers and formatting instructions (CRITICAL FIX)
+        import re
+        character_response = re.sub(r'###.*?###', '', character_response, flags=re.IGNORECASE | re.DOTALL)
+        character_response = re.sub(r'\*\*.*?Format.*?\*\*', '', character_response, flags=re.IGNORECASE)
+        character_response = re.sub(r'Response Format:', '', character_response, flags=re.IGNORECASE)
+        character_response = re.sub(r'Now respond as.*?:', '', character_response, flags=re.IGNORECASE)
+        
+        # Remove persona labels from response text (Mary (potential customer):, etc.)
+        character_response = re.sub(r'\b\w+\s*\(potential customer\):', '', character_response, flags=re.IGNORECASE)
+        character_response = re.sub(r'potential customer:', '', character_response, flags=re.IGNORECASE)
+        character_response = re.sub(r'\bMary\s*:', '', character_response, flags=re.IGNORECASE)
+        character_response = re.sub(r'\bJake\s*:', '', character_response, flags=re.IGNORECASE)
+        character_response = re.sub(r'\bSarah\s*:', '', character_response, flags=re.IGNORECASE)
+        character_response = re.sub(r'\bDavid\s*:', '', character_response, flags=re.IGNORECASE)
+        
+        # Re-strip after regex cleanup
+        character_response = character_response.strip()
+        
+        # AGGRESSIVE removal of salesperson references (AI should ONLY be prospect)
+        character_response = character_response.replace("Salesperson:", "").strip()
+        character_response = character_response.replace("Sales person:", "").strip()
+        character_response = character_response.replace("I'm a salesperson", "").strip()
+        character_response = character_response.replace("I am a salesperson", "").strip()
+        character_response = character_response.replace("my job is to provide information", "").strip()
+        character_response = character_response.replace("my job is to", "").strip()
+        
+        # Remove phrases that show confidence about fitness (Mary should be uncertain)
+        character_response = re.sub(r"I understand the benefits", "I've heard about the benefits but I'm not sure", character_response, flags=re.IGNORECASE)
+        character_response = re.sub(r"I know all about", "I've heard about", character_response, flags=re.IGNORECASE)
         
         # Remove any leading/trailing quotes or artifacts
         character_response = character_response.strip('"\'')
+        
+        # Remove any AI-like language that breaks character
+        character_response = character_response.replace("As an AI", "").strip()
+        character_response = character_response.replace("I'm an AI", "").strip()
+        
+        # Remove incomplete sentences that start with removed content
+        if character_response.startswith("and my job") or character_response.startswith("and help you"):
+            character_response = ""
         
         # Stop at first sentence if it's too long
         if len(character_response) > 200:
             sentences = character_response.split('. ')
             character_response = sentences[0] + '.' if sentences else character_response[:200]
+        
+        # Check for salesperson contamination and reject if found
+        if any(phrase in character_response.lower() for phrase in [
+            "i'm a salesperson", "i am a salesperson", "my job is to provide", 
+            "my job is to help you", "as a salesperson"
+        ]):
+            logger.warning("Response contains salesperson language. Rejecting to avoid role confusion.")
+            return None
         
         # Light validation - just check if we have something reasonable
         if len(character_response) < 5:

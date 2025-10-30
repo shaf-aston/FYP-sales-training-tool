@@ -48,6 +48,7 @@ class Persona:
     health_considerations: List[str] = None
     time_constraints: List[str] = None
     preferred_communication: str = "friendly"
+    industry: str = "fitness"  # allows multi-industry personas
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert persona to dictionary"""
@@ -63,7 +64,10 @@ class PersonaService:
         self.personas: Dict[str, Persona] = {}
         self.active_sessions: Dict[str, Dict] = {}
         self.persona_performance: Dict[str, Dict] = {}
-        self._initialize_default_personas()
+        # Prefer JSON defaults if present; fallback to code defaults
+        if not self._load_default_personas():
+            self._initialize_default_personas()
+        self._load_custom_personas()
     
     def _initialize_default_personas(self):
         """Initialize default training personas"""
@@ -153,10 +157,75 @@ class PersonaService:
                 "common_objections": [],
                 "trainer_feedback": []
             }
+
+    def _default_personas_path(self) -> Path:
+        return PROJECT_ROOT / "data" / "default_personas.json"
+
+    def _load_default_personas(self) -> bool:
+        """Load default personas from data/default_personas.json if available.
+        Returns True if loaded, else False.
+        """
+        path = self._default_personas_path()
+        if not path.exists():
+            return False
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                raw = json.load(f)
+            loaded = 0
+            for p in raw.get("personas", []):
+                try:
+                    persona = Persona(
+                        name=p["name"],
+                        age=p.get("age", 30),
+                        background=p.get("background", ""),
+                        personality_traits=p.get("personality_traits", []),
+                        goals=p.get("goals", []),
+                        concerns=p.get("concerns", []),
+                        objections=p.get("objections", []),
+                        budget_range=p.get("budget_range", ""),
+                        decision_style=p.get("decision_style", ""),
+                        expertise_level=p.get("expertise_level", "beginner"),
+                        persona_type=PersonaType(p.get("persona_type", PersonaType.BEGINNER.value)),
+                        difficulty=DifficultyLevel(p.get("difficulty", DifficultyLevel.EASY.value)),
+                        health_considerations=p.get("health_considerations"),
+                        time_constraints=p.get("time_constraints"),
+                        preferred_communication=p.get("preferred_communication", "friendly"),
+                        industry=p.get("industry", "fitness"),
+                    )
+                    self.personas[persona.name.lower()] = persona
+                    self.persona_performance[persona.name.lower()] = {
+                        "total_sessions": 0,
+                        "average_session_length": 0,
+                        "successful_closes": 0,
+                        "common_objections": [],
+                        "trainer_feedback": []
+                    }
+                    loaded += 1
+                except Exception as e:
+                    logger.warning(f"Skipping invalid default persona: {e}")
+            logger.info(f"Loaded {loaded} default personas from JSON")
+            return loaded > 0
+        except Exception as e:
+            logger.error(f"Failed to load default personas: {e}")
+            return False
     
     def get_persona(self, persona_name: str) -> Optional[Persona]:
         """Get persona by name"""
         return self.personas.get(persona_name.lower())
+
+    def add_or_update_persona(self, persona: Persona, persist: bool = True) -> None:
+        """Add or update a persona and optionally persist to disk."""
+        key = persona.name.lower()
+        self.personas[key] = persona
+        self.persona_performance.setdefault(key, {
+            "total_sessions": 0,
+            "average_session_length": 0,
+            "successful_closes": 0,
+            "common_objections": [],
+            "trainer_feedback": []
+        })
+        if persist:
+            self._save_custom_personas()
     
     def list_personas(self) -> List[Dict[str, Any]]:
         """List all available personas"""
@@ -166,7 +235,8 @@ class PersonaService:
                 "type": persona.persona_type.value,
                 "difficulty": persona.difficulty.value,
                 "background": persona.background,
-                "age": persona.age
+                "age": persona.age,
+                "industry": getattr(persona, "industry", "fitness"),
             }
             for persona in self.personas.values()
         ]
@@ -284,8 +354,17 @@ BEHAVIORAL GUIDELINES:
 - Communication style: {persona_data['preferred_communication']}
 - Consider your budget: {persona_data['budget_range']}
 
+CRITICAL PERSONALITY RULES:
+- You are CAUTIOUS and UNCERTAIN about fitness - NOT confident or experienced
+- You have real CONCERNS and FEARS about starting exercise (express these!)
+- You're seeking HELP because you DON'T know what to do - you're not an expert
+- When asked about past exercise, be HONEST about your gaps and worries
+- NEVER say "I understand the benefits" - say "I've heard about benefits but I'm worried..."
+- DO NOT include any labels like "{persona_data['name']}:" in your response - just speak naturally
+
 {context}Salesperson: {user_message}
-{persona_data['name']}:"""
+
+Now respond as {persona_data['name']} (speak naturally, no labels):"""
         
         return prompt
     
@@ -295,30 +374,79 @@ BEHAVIORAL GUIDELINES:
             "beginner": [
                 "I'm new to this, so I need to understand the basics first.",
                 "That sounds interesting, but I'm worried about getting started.",
-                "Can you explain that in simpler terms?"
+                "Can you explain that in simpler terms?",
             ],
             "skeptical": [
                 "I've heard that before from other gyms. How is this different?",
                 "That sounds too good to be true. Do you have proof?",
-                "I need to see concrete evidence before making any decisions."
+                "I need to see concrete evidence before making any decisions.",
             ],
             "budget_conscious": [
                 "That might be out of my budget range. Do you have cheaper options?",
                 "I'm on a tight budget. What's the most affordable plan?",
-                "Cost is a major factor for me. Can we discuss pricing?"
+                "Cost is a major factor for me. Can we discuss pricing?",
             ],
             "time_constrained": [
                 "I have very limited time. How long would this take?",
                 "My schedule is crazy. Do you have flexible options?",
-                "Time is my biggest constraint. Can this work with a busy schedule?"
-            ]
+                "Time is my biggest constraint. Can this work with a busy schedule?",
+            ],
         }
-        
-        persona_type = persona_data.get('persona_type', 'beginner')
-        fallback_list = responses.get(persona_type, responses['beginner'])
-        
+
+        persona_type = persona_data.get("persona_type", "beginner")
+        fallback_list = responses.get(persona_type, responses["beginner"])
+
         import random
         return random.choice(fallback_list)
+
+    def _custom_personas_path(self) -> Path:
+        return PROJECT_ROOT / "data" / "custom_personas.json"
+
+    def _load_custom_personas(self) -> None:
+        """Load custom personas from data/custom_personas.json if present."""
+        try:
+            path = self._custom_personas_path()
+            if path.exists():
+                with open(path, "r", encoding="utf-8") as f:
+                    raw = json.load(f)
+                for p in raw.get("personas", []):
+                    try:
+                        persona = Persona(
+                            name=p["name"],
+                            age=p.get("age", 30),
+                            background=p.get("background", ""),
+                            personality_traits=p.get("personality_traits", []),
+                            goals=p.get("goals", []),
+                            concerns=p.get("concerns", []),
+                            objections=p.get("objections", []),
+                            budget_range=p.get("budget_range", ""),
+                            decision_style=p.get("decision_style", ""),
+                            expertise_level=p.get("expertise_level", "beginner"),
+                            persona_type=PersonaType(p.get("persona_type", PersonaType.BEGINNER.value)),
+                            difficulty=DifficultyLevel(p.get("difficulty", DifficultyLevel.EASY.value)),
+                            health_considerations=p.get("health_considerations"),
+                            time_constraints=p.get("time_constraints"),
+                            preferred_communication=p.get("preferred_communication", "friendly"),
+                            industry=p.get("industry", "fitness"),
+                        )
+                        self.add_or_update_persona(persona, persist=False)
+                    except Exception as e:
+                        logger.warning(f"Skipping invalid custom persona: {e}")
+        except Exception as e:
+            logger.error(f"Failed to load custom personas: {e}")
+
+    def _save_custom_personas(self) -> None:
+        """Persist non-default personas to data/custom_personas.json."""
+        try:
+            path = self._custom_personas_path()
+            path.parent.mkdir(parents=True, exist_ok=True)
+            # Consider all personas not in defaults as custom (heuristic)
+            defaults = {"mary", "jake", "sarah", "david"}
+            custom = [p.to_dict() for k, p in self.personas.items() if k not in defaults]
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump({"personas": custom}, f, indent=2)
+        except Exception as e:
+            logger.error(f"Failed to save custom personas: {e}")
     
     def _get_emergency_response(self, persona_data: Dict) -> str:
         """Emergency response when all else fails"""

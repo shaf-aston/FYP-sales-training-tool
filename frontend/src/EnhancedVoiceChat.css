@@ -1,0 +1,467 @@
+/* Enhanced Voice Chat Styles */
+.enhanced-voice-chat {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 20px;
+  color: white;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.voice-controls {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  justify-content: center;
+}
+
+.recording-section {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.record-button {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: none;
+  font-size: 2.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+  color: white;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.record-button:hover:not(:disabled) {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+.record-button.recording {
+  background: linear-gradient(45deg, #ff4757, #c44569);
+  animation: pulse 1.5s infinite;
+}
+
+.record-button.processing {
+  background: linear-gradient(45deg, #ffa726, #ff7043);
+  cursor: not-allowed;
+}
+
+.record-button:disabled {
+  background: #666;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.05);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+.processing-spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top: 3px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.audio-level-indicator {
+  width: 40px;
+  height: 60px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.audio-level-bar {
+  width: 100%;
+  background: linear-gradient(to top, #4ecdc4, #44a08d);
+  border-radius: 20px;
+  position: absolute;
+  bottom: 0;
+  transition: height 0.1s ease;
+}
+
+.voice-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.analysis-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  user-select: none;
+}
+
+.analysis-toggle input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #4ecdc4;
+}
+
+.voice-status {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.status-indicator {
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-indicator.active {
+  background: rgba(76, 217, 100, 0.3);
+  border: 1px solid #4cd964;
+}
+
+.status-indicator.inactive {
+  background: rgba(255, 59, 48, 0.3);
+  border: 1px solid #ff3b30;
+}
+
+.error-message {
+  background: rgba(255, 59, 48, 0.2);
+  border: 1px solid #ff3b30;
+  padding: 12px;
+  border-radius: 10px;
+  text-align: center;
+  font-weight: 500;
+}
+
+.processing-message {
+  background: rgba(255, 167, 38, 0.2);
+  border: 1px solid #ffa726;
+  padding: 12px;
+  border-radius: 10px;
+  text-align: center;
+  font-weight: 500;
+  animation: glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes glow {
+  from {
+    box-shadow: 0 0 5px rgba(255, 167, 38, 0.5);
+  }
+
+  to {
+    box-shadow: 0 0 20px rgba(255, 167, 38, 0.8);
+  }
+}
+
+/* Analysis Results Styles */
+.analysis-results {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 15px;
+  padding: 25px;
+  margin-top: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.analysis-results h3 {
+  margin: 0 0 20px 0;
+  font-size: 1.4rem;
+  text-align: center;
+  color: #fff;
+}
+
+.performance-score {
+  margin-bottom: 25px;
+}
+
+.performance-score h4 {
+  margin: 0 0 10px 0;
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.score-display {
+  position: relative;
+  height: 30px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 15px;
+  overflow: hidden;
+}
+
+.score-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #ff6b6b 0%, #ffa726 50%, #4ecdc4 100%);
+  border-radius: 15px;
+  transition: width 0.8s ease;
+}
+
+.score-text {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-weight: bold;
+  font-size: 0.9rem;
+  color: white;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 15px;
+  margin-bottom: 25px;
+}
+
+.metric-card {
+  background: rgba(255, 255, 255, 0.15);
+  padding: 15px;
+  border-radius: 12px;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.metric-value {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #4ecdc4;
+  margin-bottom: 5px;
+}
+
+.metric-label {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.8);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.recommendations {
+  margin-bottom: 25px;
+}
+
+.recommendations h4 {
+  margin: 0 0 15px 0;
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.recommendations ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.recommendations li {
+  background: rgba(76, 217, 100, 0.2);
+  border: 1px solid rgba(76, 217, 100, 0.4);
+  padding: 12px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.qa-analysis {
+  margin-bottom: 25px;
+}
+
+.qa-analysis h4 {
+  margin: 0 0 15px 0;
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.qa-analysis p {
+  margin: 8px 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.sentences-breakdown {
+  margin-top: 15px;
+}
+
+.sentences-breakdown h5 {
+  margin: 0 0 10px 0;
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.sentence {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 8px;
+  padding: 8px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.sentence.question {
+  background: rgba(255, 167, 38, 0.2);
+  border-left: 3px solid #ffa726;
+}
+
+.sentence.statement {
+  background: rgba(255, 255, 255, 0.1);
+  border-left: 3px solid rgba(255, 255, 255, 0.3);
+}
+
+.sentence-type {
+  font-weight: bold;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.8);
+  min-width: 80px;
+}
+
+.sentence-text {
+  flex: 1;
+  line-height: 1.3;
+}
+
+.training-techniques {
+  margin-bottom: 25px;
+}
+
+.training-techniques h4 {
+  margin: 0 0 15px 0;
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.technique-card {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 15px;
+  margin-bottom: 15px;
+  border-radius: 10px;
+}
+
+.technique-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.technique-name {
+  font-weight: bold;
+  font-size: 0.95rem;
+  color: #4ecdc4;
+  text-transform: capitalize;
+}
+
+.effectiveness-score {
+  background: rgba(76, 217, 100, 0.3);
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  border: 1px solid rgba(76, 217, 100, 0.5);
+}
+
+.technique-description {
+  margin: 10px 0;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.suggestions {
+  margin-top: 10px;
+}
+
+.suggestions strong {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.suggestions ul {
+  list-style: none;
+  padding: 0;
+  margin: 5px 0 0 0;
+}
+
+.suggestions li {
+  background: rgba(255, 167, 38, 0.2);
+  padding: 6px 10px;
+  margin: 4px 0;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  border-left: 2px solid #ffa726;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .enhanced-voice-chat {
+    padding: 15px;
+  }
+
+  .voice-controls {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .recording-section {
+    justify-content: center;
+  }
+
+  .record-button {
+    width: 70px;
+    height: 70px;
+    font-size: 2rem;
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .metric-value {
+    font-size: 1.5rem;
+  }
+
+  .analysis-results {
+    padding: 20px;
+  }
+
+  .technique-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
+}

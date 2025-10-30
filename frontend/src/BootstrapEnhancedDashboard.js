@@ -14,8 +14,23 @@ const BootstrapEnhancedDashboard = () => {
   const [messages, setMessages] = useState([]);
   const [currentMessage, setCurrentMessage] = useState("");
 
+  // Training feedback visibility state with localStorage persistence
+  // Default to false (minimized/hidden) as preferred by user
+  const [feedbackVisible, setFeedbackVisible] = useState(() => {
+    const saved = localStorage.getItem("trainingFeedbackVisible");
+    return saved !== null ? JSON.parse(saved) : false;
+  });
+
   // Mock user ID - in production this would come from authentication
   const userId = "demo_user_123";
+
+  // Save feedback visibility preference
+  useEffect(() => {
+    localStorage.setItem(
+      "trainingFeedbackVisible",
+      JSON.stringify(feedbackVisible)
+    );
+  }, [feedbackVisible]);
 
   const initializeUserData = useCallback(async () => {
     // Fallback data for immediate display
@@ -84,20 +99,20 @@ const BootstrapEnhancedDashboard = () => {
       // Parallel requests with timeout protection
       const requests = [
         requestTimeout(
-          fetch(`/api/v2/progress/initialize?user_id=${userId}`, {
+          fetch(`/api/progress/initialize?user_id=${userId}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
           })
         ).catch(() => null),
 
         requestTimeout(
-          fetch(`/api/v2/progress/${userId}/dashboard`).then((res) =>
+          fetch(`/api/progress/${userId}/dashboard`).then((res) =>
             res.ok ? res.json() : null
           )
         ).catch(() => null),
 
         requestTimeout(
-          fetch("/api/v2/personas").then((res) => (res.ok ? res.json() : null))
+          fetch("/api/personas").then((res) => (res.ok ? res.json() : null))
         ).catch(() => null),
       ];
 
@@ -136,7 +151,7 @@ const BootstrapEnhancedDashboard = () => {
   const startTrainingSession = async (persona) => {
     try {
       setLoading(true);
-      const response = await fetch("/api/v2/personas/start-session", {
+      const response = await fetch("/api/sessions/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id: userId, persona_name: persona.name }),
@@ -168,14 +183,14 @@ const BootstrapEnhancedDashboard = () => {
     setCurrentMessage("");
 
     try {
-      const response = await fetch("/api/v2/personas/chat", {
+      // Use the working /api/chat endpoint instead of broken /api/v2/personas/chat
+      const response = await fetch("http://localhost:8000/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: currentMessage,
           user_id: userId,
           session_id: activeSession.session_id,
-          persona_name: activeSession.persona_name,
         }),
       });
 
@@ -197,7 +212,7 @@ const BootstrapEnhancedDashboard = () => {
   const endSession = async (rating) => {
     try {
       setLoading(true);
-      const response = await fetch("/api/v2/personas/end-session", {
+      const response = await fetch("/api/sessions/end", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -349,6 +364,24 @@ const BootstrapEnhancedDashboard = () => {
               </div>
               <div>
                 <button
+                  className={`btn btn-sm me-2 ${
+                    feedbackVisible ? "btn-success" : "btn-outline-light"
+                  }`}
+                  onClick={() => setFeedbackVisible(!feedbackVisible)}
+                  title={
+                    feedbackVisible
+                      ? "Hide training feedback"
+                      : "Show training feedback"
+                  }
+                >
+                  <i
+                    className={`fas ${
+                      feedbackVisible ? "fa-eye" : "fa-eye-slash"
+                    } me-1`}
+                  ></i>
+                  Feedback
+                </button>
+                <button
                   className="btn btn-outline-light btn-sm me-2"
                   onClick={() => setCurrentView("dashboard")}
                 >
@@ -395,14 +428,47 @@ const BootstrapEnhancedDashboard = () => {
                       )}
                     </div>
                     <p className="mb-0">{message.content}</p>
-                    {message.feedback && (
+                    {message.feedback && feedbackVisible && (
                       <div
-                        className="mt-2 p-2 rounded"
+                        className="mt-2 p-2 rounded position-relative"
                         style={{ background: "rgba(34, 197, 94, 0.1)" }}
                       >
+                        <button
+                          className="btn btn-sm position-absolute"
+                          style={{
+                            top: "2px",
+                            right: "2px",
+                            background: "none",
+                            border: "none",
+                            color: "rgba(34, 197, 94, 0.7)",
+                            fontSize: "12px",
+                          }}
+                          onClick={() => setFeedbackVisible(false)}
+                          title="Hide training feedback"
+                        >
+                          <i className="fas fa-times"></i>
+                        </button>
                         <small className="text-success">
                           <i className="fas fa-lightbulb me-1"></i>
                           {message.feedback}
+                        </small>
+                      </div>
+                    )}
+                    {/* Show hidden feedback indicator */}
+                    {message.feedback && !feedbackVisible && (
+                      <div className="mt-2">
+                        <small className="text-muted">
+                          <i className="fas fa-eye-slash me-1"></i>
+                          <span
+                            style={{
+                              cursor: "pointer",
+                              textDecoration: "underline",
+                            }}
+                            onClick={() => setFeedbackVisible(true)}
+                            title="Click to show training feedback"
+                          >
+                            Training feedback hidden
+                          </span>
                         </small>
                       </div>
                     )}

@@ -4,10 +4,10 @@ Enhanced with integrated context management, prompt optimization, and analytics
 """
 import time
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 import uuid
 
-from models.character_profiles import get_mary_profile, build_mary_prompt, PERSONAS
+from services.persona_service import persona_service
 from config.settings import MAX_CONTEXT_LENGTH, PERFORMANCE_STATS
 
 # Import enhanced_responses - handle path issues
@@ -27,6 +27,7 @@ from .prompt_service import get_prompt_manager
 from .analytics_service import get_analytics_aggregator
 from .feedback_service import feedback_service
 from .persona_service import persona_service
+from .langchain_conversation_service import get_langchain_service
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,8 @@ class ChatService:
     self.context_manager = get_context_manager()
     self.prompt_manager = get_prompt_manager()
     self.analytics = get_analytics_aggregator()
+    self.langchain_service = get_langchain_service()
+    self.use_langchain = True  # Enable LangChain by default
     
     # Session management
     self.active_sessions: Dict[str, Dict] = {}
@@ -55,8 +58,10 @@ class ChatService:
         logger.info(" Using cached initial greeting")
         return self.response_cache[cache_key]
 
-    mary = get_mary_profile()
-    greeting_prompt = f"""You are Mary, a {mary['age']}-year-old {mary['status']} meeting a fitness salesperson. Introduce yourself and express interest in getting healthier while mentioning safety concerns.\n\nMary:"""
+    pm = persona_service.get_persona("Mary")
+    mary_age = pm.age if pm else 65
+    mary_status = getattr(pm, "expertise_level", "beginner") if pm else "beginner"
+    greeting_prompt = f"""You are Mary, a {mary_age}-year-old {mary_status} meeting a fitness salesperson. Introduce yourself and express interest in getting healthier while mentioning safety concerns.\n\nMary:"""
     
     try:
       logger.info(" Generating initial AI greeting for Mary...")
@@ -83,6 +88,8 @@ class ChatService:
       session_id = str(uuid.uuid4())
     
     try:
+      logger.info(f"📨 [{session_id[:8]}] Chat request from {user_id} to {persona_name} | msg_len={len(message)}")
+      
       # Track analytics event
       self.analytics.track_event(user_id, session_id, "message_sent", {
         "message": message,
@@ -127,12 +134,63 @@ class ChatService:
       
       # Add persona context if not already added
       if not session["context_added"]:
-        persona_data = PERSONAS.get(persona_name, {})
-        persona_description = f"You are {persona_data.get('name', persona_name)}, {persona_data.get('description', 'a sales training persona')}"
+        p = persona_service.get_persona(persona_name)
+        persona_description = (
+          f"You are {p.name}, {getattr(p, 'background', 'a sales training persona')}" if p else
+          f"You are {persona_name}, a sales training persona"
+        )
         self.context_manager.add_persona_context(persona_description, session_id)
         session["context_added"] = True
       
       logger.info(f"🤖 Generating AI response for {persona_name}: {message[:50]}...")
+      
+      # Use LangChain if enabled (replaces custom prompt building)
+      if self.use_langchain:
+        try:
+          logger.info(f"🔗 Using LangChain conversation management for {persona_name}")
+          langchain_result = self.langchain_service.chat_with_persona(
+            message=message,
+            session_id=session_id,
+            persona_name=persona_name,
+            pipeline=pipe
+          )
+          
+          # Add to conversation context for legacy compatibility
+          self.context_manager.add_context(
+            langchain_result["response"], 
+            role="assistant", 
+            importance=0.9, 
+            message_type="response",
+            session_id=session_id
+          )
+          
+          # Update session
+          session["messages"].append({
+            "user_message": message,
+            "persona_response": langchain_result["response"],
+            "timestamp": time.time()
+          })
+          
+          # Update analytics
+          response_time = time.time() - start_time
+          self.analytics.track_event(user_id, session_id, "message_sent", {
+            "message": message,
+            "persona_name": persona_name,
+            "langchain_managed": True,
+            "response_time_seconds": response_time
+          })
+          
+          logger.info(f"✅ LangChain response completed in {response_time:.2f}s")
+          return {
+            **langchain_result,
+            "response_time": round(response_time, 3),
+            "prompt_time": 0.0,  # No custom prompt building
+            "gen_time": langchain_result.get("response_time", 0.0)
+          }
+          
+        except Exception as e:
+          logger.warning(f"🔗 LangChain failed: {e}, falling back to custom prompt building")
+          # Continue to custom prompt building below
       
       # Build optimized prompt using prompt manager (smaller recent window for speed)
       prompt_build_start = time.time()
@@ -144,6 +202,7 @@ class ChatService:
         include_recent=recent_window
       )
       prompt_build_time = time.time() - prompt_build_start
+      logger.info(f"⏱️ Prompt built in {prompt_build_time:.3f}s | context_window={recent_window}")
 
       # Check cache for the generated prompt
       if prompt in self.response_cache:
@@ -167,11 +226,12 @@ class ChatService:
       gen_start = time.time()
       response = generate_ai_response(prompt, pipe)
       gen_time = time.time() - gen_start
+      logger.info(f"⚡ AI inference: {gen_time:.2f}s")
       
       # Handle AI generation failure
       if response is None:
         self.performance_stats["ai_failures"] += 1
-        logger.error(f"AI generation failed for {persona_name} (prompt: {prompt_build_time:.3f}s, gen: {gen_time:.3f}s)")
+        logger.error(f"❌ AI generation failed for {persona_name} | prompt_time={prompt_build_time:.3f}s | gen_time={gen_time:.3f}s")
         return {
           "response": "",
           "status": "error",
@@ -222,7 +282,7 @@ class ChatService:
       self.response_cache[prompt] = response
 
       logger.info(
-        f"✨ {persona_name} response timings | prompt: {prompt_build_time:.3f}s | gen: {gen_time:.3f}s | total: {response_time:.3f}s"
+        f"✅ [{session_id[:8]}] Response complete | prompt={prompt_build_time:.2f}s | inference={gen_time:.2f}s | total={response_time:.2f}s | msg_count={len(session['messages'])}"
       )
       
       return {
@@ -260,6 +320,48 @@ class ChatService:
     """Legacy Mary chat function - now uses enhanced system"""
     result = self.chat_with_persona(message, user_id, "Mary", pipe)
     return result.get("response", "Error occurred")
+  
+  def start_session(self, user_id: str, persona_name: str) -> Dict:
+    """Create a new session without sending a message.
+    Generates a session_id, primes persona context, and records analytics.
+    """
+    try:
+      session_id = str(uuid.uuid4())
+      start_time = time.time()
+      session_key = f"{user_id}_{persona_name}_{session_id}"
+
+      # Initialize session record
+      self.active_sessions[session_key] = {
+        "user_id": user_id,
+        "persona_name": persona_name,
+        "session_id": session_id,
+        "start_time": start_time,
+        "messages": [],
+        "context_added": True,
+      }
+
+      # Prime persona context for this session
+      p = persona_service.get_persona(persona_name)
+      persona_description = (
+        f"You are {p.name}, {getattr(p, 'background', 'a sales training persona')}" if p else
+        f"You are {persona_name}, a sales training persona"
+      )
+      self.context_manager.add_persona_context(persona_description, session_id)
+
+      # Track analytics
+      self.analytics.track_event(user_id, session_id, "session_start", {
+        "persona_name": persona_name,
+        "start_time": start_time,
+      })
+
+      return {
+        "status": "session_started",
+        "session_id": session_id,
+        "persona_name": persona_name,
+      }
+    except Exception as e:
+      logger.error(f"Error starting session: {e}")
+      return {"status": "error", "error": str(e)}
   
   def end_session(self, user_id: str, session_id: str, persona_name: str = None) -> Dict:
     """End training session and generate feedback"""
@@ -553,7 +655,7 @@ class ChatService:
     # Request rate (requests per minute)
     requests_per_minute = (total_requests / max(uptime / 60, 1)) if uptime > 60 else 0
     
-    from models.character_profiles import MARY_PROFILE
+    pm = persona_service.get_persona("Mary")
     
     return {
       "status": "ok",
@@ -563,9 +665,9 @@ class ChatService:
       
       # Character info
       "character": {
-        "name": MARY_PROFILE["name"],
-        "age": MARY_PROFILE["age"],
-        "status": MARY_PROFILE["status"]
+        "name": (pm.name if pm else "Mary"),
+        "age": (pm.age if pm else 65),
+        "status": getattr(pm, "expertise_level", "beginner") if pm else "beginner"
       },
       
       # Performance metrics
@@ -616,6 +718,25 @@ class ChatService:
         "reliability": "excellent" if self.performance_stats["ai_failures"] == 0 else "good" if self.performance_stats["ai_failures"] < 5 else "needs_attention",
         "ai_training": "Pure AI system - all responses generated dynamically for realistic sales training"
       }
+    }
+  
+  def toggle_langchain(self, enabled: bool = None) -> bool:
+    """Toggle LangChain conversation management on/off"""
+    if enabled is not None:
+      self.use_langchain = enabled
+    else:
+      self.use_langchain = not self.use_langchain
+    
+    mode = "LangChain" if self.use_langchain else "Custom Prompt"
+    logger.info(f"🔗 Conversation management set to: {mode}")
+    return self.use_langchain
+  
+  def get_langchain_status(self) -> Dict[str, Any]:
+    """Get current LangChain integration status"""
+    return {
+      "langchain_enabled": self.use_langchain,
+      "active_conversations": len(self.langchain_service.conversations) if self.use_langchain else 0,
+      "conversation_management": "LangChain" if self.use_langchain else "Custom Prompt Building"
     }
 
 # Global chat service instance

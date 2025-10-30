@@ -1,5 +1,5 @@
 {
-  "timestamp": "1761138579.2672155",
+  "timestamp": "1761842078.97271",
   "python_version": "3.12.8",
   "platform": "win32",
   "dependencies": {
@@ -28,6 +28,7 @@
       "version": "2.2.6",
       "type": "core"
     },
+    "pydantic": {
       "available": true,
       "version": "2.11.7",
       "type": "core"
@@ -63,14 +64,14 @@
       "description": "Speech-to-text recognition"
     },
     "TTS": {
-      "available": false,
-      "install_cmd": "pip install coqui-tts",
+      "available": true,
+      "version": "0.27.2",
       "type": "voice",
       "description": "High-quality text-to-speech"
     },
     "librosa": {
       "available": true,
-      "version": "0.10.1",
+      "version": "0.11.0",
       "type": "voice",
       "description": "Advanced audio processing"
     },

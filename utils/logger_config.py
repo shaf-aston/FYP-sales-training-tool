@@ -20,7 +20,7 @@ class JsonFormatter(logging.Formatter):
         }
         return json.dumps(log_record)
 
-def setup_logging(logs_dir: Path, log_level: str = "INFO", use_json: bool = False):
+def setup_logging(logs_dir: Path, log_level: str = "WARNING", use_json: bool = False):
     """Setup centralized and structured logging configuration."""
 
     # Get log level from environment or use default

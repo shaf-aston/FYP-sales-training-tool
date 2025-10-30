@@ -66,10 +66,3 @@ async def startup_event():
 async def shutdown_event():
   """Application shutdown event handler"""
   logger.info("🛑 Shutting down AI Sales Training System...")
-
-if __name__ == "__main__":
-  import uvicorn
-  from config.settings import HOST, PORT
-  
-  logger.info(f"🌐 Starting server on {HOST}:{PORT}")
-  uvicorn.run(app, host=HOST, port=PORT) 

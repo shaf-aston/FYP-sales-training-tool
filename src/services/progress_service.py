@@ -548,7 +548,8 @@ class ProgressTrackingService:
     def get_user_progress_dashboard(self, user_id: str) -> Dict[str, Any]:
         """Get comprehensive progress dashboard for user"""
         if user_id not in self.user_profiles:
-            return {"error": "User not found"}
+            # If user not found, initialize with empty profile
+            self.initialize_user_profile(user_id)
         
         profile = self.user_profiles[user_id]
         skill_assessments = self.skill_assessments[user_id]
@@ -675,7 +676,8 @@ class ProgressTrackingService:
     def export_user_data(self, user_id: str) -> Dict[str, Any]:
         """Export all user data for analysis or backup"""
         if user_id not in self.user_profiles:
-            return {"error": "User not found"}
+            # If user not found, create a new profile
+            self.initialize_user_profile(user_id)
         
         return {
             "profile": self.user_profiles[user_id],

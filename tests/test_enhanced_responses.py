@@ -3,21 +3,20 @@
 Test script for enhanced_responses module
 """
 
+
+
 import sys
-import json
 from pathlib import Path
 
-# Add project root to Python path
-project_root = Path(__file__).resolve().parent
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
+# Add project root to path
+project_root = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(project_root))
+sys.path.insert(0, str(project_root / "src"))
 
-from fallback_responses import (
+from src.fallback_responses import (
     generate_ai_response,
     post_process_response,
-    clean_response,
-    get_random_fallback,
-    get_character_fallback,
+    get_mary_fallback,
     handle_error_response
 )
 
@@ -36,7 +35,7 @@ def test_cleanup():
     
     for i, response in enumerate(test_responses):
         print(f"\nTest {i+1}: {response[:30]}...")
-        cleaned = clean_response(response)
+        cleaned = post_process_response(response, 0)
         print(f"Cleaned: {cleaned}")
 
 def test_character_fallbacks():
@@ -46,7 +45,7 @@ def test_character_fallbacks():
     characters = ["mary_senior", "jake_athlete", "sarah_mom", "tom_executive", "unknown_character"]
     
     for character in characters:
-        fallback = get_character_fallback(character)
+        fallback = get_mary_fallback()
         print(f"{character}: {fallback}")
 
 def test_post_processing():
@@ -62,7 +61,7 @@ def test_post_processing():
     
     for response, character, msg_hash in test_cases:
         print(f"\nOriginal ({character}): {response}")
-        enhanced = post_process_response(response, character, msg_hash)
+        enhanced = post_process_response(response, msg_hash)
         print(f"Enhanced: {enhanced}")
         
 def test_error_handling():
@@ -72,7 +71,7 @@ def test_error_handling():
     characters = ["mary_senior", "jake_athlete", "sarah_mom", "tom_executive"]
     
     for character in characters:
-        error_resp = handle_error_response(character, Exception("Test error"))
+        error_resp = handle_error_response(Exception("Test error"))
         print(f"{character}: {error_resp}")
 
 def mock_pipeline(prompt, **kwargs):
@@ -83,8 +82,12 @@ def test_generate_response():
     """Test generate_ai_response with a mock pipeline"""
     print("\n=== Testing Generate Response ===")
     
-    mock_pipe = type('MockPipe', (), {})()
-    mock_pipe.__call__ = mock_pipeline
+    # Create a proper mock pipe with a __call__ method
+    class MockPipe:
+        def __call__(self, prompt, **kwargs):
+            return [{"generated_text": prompt + "\nI'm hoping you can help me figure out the best approach for my fitness goals."}]
+    
+    mock_pipe = MockPipe()
     mock_pipe.tokenizer = type('MockTokenizer', (), {})()
     mock_pipe.tokenizer.eos_token_id = 0
     

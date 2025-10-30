@@ -3,36 +3,45 @@ Enhanced Chat API routes with integrated services
 """
 from fastapi import APIRouter, HTTPException
 from typing import Optional
-from models.character_profiles import get_mary_profile, PERSONAS
+from services.persona_service import persona_service
 from services.chat_service import chat_service
 from services.model_service import model_service
+from models.request_models import ChatRequest, ChatResponse
 
 router = APIRouter()
 
-@router.post("/chat")
-async def api_chat(payload: dict):
+@router.post("/chat", response_model=ChatResponse)
+async def api_chat(request: ChatRequest):
   """Enhanced chat endpoint for sales training conversations"""
-  message = payload.get("message", "")
-  user_id = payload.get("user_id", "default")
-  persona_name = payload.get("persona_name", "Mary")
-  session_id = payload.get("session_id")
   
-  if not message:
+  if not request.message:
     raise HTTPException(status_code=400, detail="Message is required")
   
   pipe = model_service.get_pipeline()
-  result = chat_service.chat_with_persona(message, user_id, persona_name, pipe, session_id)
+  result = chat_service.chat_with_persona(
+    request.message, 
+    request.user_id, 
+    request.persona_name, 
+    pipe, 
+    request.session_id
+  )
   
   # Get persona info
-  persona = PERSONAS.get(persona_name, get_mary_profile())
+  p = persona_service.get_persona(request.persona_name)
+  persona = {
+    "name": p.name if p else request.persona_name,
+    "age": p.age if p else "Unknown",
+    "status": getattr(p, "expertise_level", "Training persona") if p else "Training persona",
+    "description": getattr(p, "background", f"{request.persona_name} sales training persona") if p else f"{request.persona_name} sales training persona",
+  }
   
   return {
     **result,
     "character": {
-      "name": persona.get("name", persona_name),
+      "name": persona.get("name", request.persona_name),
       "age": persona.get("age", "Unknown"),
       "status": persona.get("status", "Training persona"),
-      "description": persona.get("description", f"{persona_name} sales training persona")
+      "description": persona.get("description", f"{request.persona_name} sales training persona")
     }
   }
 
@@ -41,7 +50,9 @@ async def api_greeting():
   """Get Mary's initial greeting"""
   pipe = model_service.get_pipeline()
   greeting = chat_service.get_initial_greeting(pipe)
-  character = get_mary_profile()
+  # Prefer Mary from persona service if present
+  p = persona_service.get_persona("Mary")
+  character = {"name": p.name if p else "Mary", "age": p.age if p else 65, "status": getattr(p, "expertise_level", "beginner") if p else "beginner"}
   
   return {
     "greeting": greeting,
@@ -55,7 +66,21 @@ async def api_greeting():
 @router.get("/character")
 async def get_character_details():
   """Get Mary's character profile"""
-  return {"character": get_mary_profile()}
+  p = persona_service.get_persona("Mary")
+  if not p:
+    raise HTTPException(status_code=404, detail="Mary persona not found")
+  
+  return {
+    "character": {
+      "name": p.name,
+      "age": p.age,
+      "background": p.background,
+      "personality_traits": p.personality_traits,
+      "goals": p.goals,
+      "concerns": p.concerns,
+      "expertise_level": p.expertise_level
+    }
+  }
 
 # Removed duplicate /chat route - using enhanced version above
 
@@ -100,14 +125,30 @@ async def get_system_analytics(days_back: int = 7):
 @router.get("/personas")
 async def list_personas():
   """List all available training personas"""
-  return {
-    "personas": [
-      {
-        "name": name,
-        "description": persona.get("description", ""),
-        "personality_traits": persona.get("personality_traits", []),
-        "communication_style": persona.get("communication_style", "")
-      }
-      for name, persona in PERSONAS.items()
-    ]
+  return {"personas": persona_service.list_personas()}
+
+@router.get("/personas/{persona_name}/context")
+async def get_persona_context_v1(persona_name: str):
+  """Unified context endpoint under /api/personas/{name}/context.
+  Mirrors the richer v2 context but simplified and fast for UI needs.
+  """
+  p = persona_service.get_persona(persona_name)
+  if not p:
+    raise HTTPException(status_code=404, detail=f"Persona '{persona_name}' not found")
+
+  persona = {
+    "name": p.name,
+    "age": p.age,
+    "description": p.background,
+    "goals": p.goals,
   }
+  context = {
+    "persona_info": persona,
+    "conversation_style": {
+      "tone": getattr(p, "preferred_communication", "friendly"),
+      "personality_traits": getattr(p, "personality_traits", []),
+      "main_concerns": getattr(p, "concerns", []),
+      "goals": getattr(p, "goals", []),
+    },
+  }
+  return {"success": True, "persona_name": persona_name, "context": context}

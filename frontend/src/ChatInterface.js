@@ -19,6 +19,8 @@ const ChatInterface = ({
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
   const initializedRef = useRef(false);
+  const loadingIntervalRef = useRef(null);
+  const [, setLoadingDots] = useState(0);
 
   // Default to Mary if no persona selected
   const activePersona = useMemo(
@@ -51,6 +53,32 @@ const ChatInterface = ({
     }
   };
 
+  // Build a friendly persona greeting; memoized and defensive
+  const createPersonalizedGreeting = useCallback(
+    (context) => {
+      const persona = (context && context.persona_info) || {
+        name: activePersona?.name || "Customer",
+        age: activePersona?.age,
+        background:
+          activePersona?.background ||
+          "I'm looking to understand if your training is a good fit for me.",
+      };
+
+      const greetings = {
+        Mary: `Hello! I'm Mary. I'm ${persona.age} and recently retired from teaching. I'm interested in starting a fitness routine, but I want to make sure it's safe and appropriate for someone my age. I've heard good things about personal training - could you help me understand what that would involve?`,
+        Jake: `Hi there. I'm Jake, and I'll be direct - I'm extremely busy running my company and I'm skeptical about fitness programs. I work 60+ hours a week and I need to see real, measurable results if I'm going to invest time and money in this. What can you show me?`,
+        Sarah: `Hey! I'm Sarah, and I'm really interested in getting fit, but I need to be honest - I'm on a pretty tight budget as a recent graduate. I'm still paying off student loans, so I need to make sure I'm getting the best value for my money. What are my options?`,
+        David: `Hi! I'm David, father of two teenagers. I'm interested in fitness, but my main concern is how this fits with my family life. I work full-time and want to set a good example for my kids. Do you have solutions that work for busy parents?`,
+      };
+
+      return (
+        greetings[persona.name] ||
+        `Hello! I'm ${persona.name}. ${persona.background}`
+      );
+    },
+    [activePersona]
+  );
+
   const initializeChat = useCallback(async () => {
     if (initializedRef.current) return;
     initializedRef.current = true;
@@ -60,73 +88,102 @@ const ChatInterface = ({
       setIsLoading(true);
 
       const cacheKey = `persona_context_${activePersona.name}`;
-      const cached = sessionStorage.getItem(cacheKey);
-      if (cached) {
-        const contextData = JSON.parse(cached);
-        const personalizedGreeting = createPersonalizedGreeting(
-          contextData.context
-        );
-        setMessages([
-          {
-            id: Date.now(),
-            sender: "persona",
-            content: personalizedGreeting,
-            timestamp: new Date(),
-            persona: activePersona,
-            context: contextData.context,
-          },
-        ]);
-      } else {
-        // Instant lightweight greeting while network fetch happens
-        setMessages([
-          {
-            id: Date.now(),
-            sender: "persona",
-            content: `Hello! I'm ${activePersona.name}. ${activePersona.background}`,
-            timestamp: new Date(),
-            persona: activePersona,
-          },
-        ]);
-      }
 
-      // Refresh from network in background
-      const response = await fetchWithTimeout(
-        `/api/v2/personas/${activePersona.name}/context`,
+      // Show animated loading bubble while model initializes
+      const loadingId = `loading_${Date.now()}`;
+      setMessages([
+        {
+          id: loadingId,
+          sender: "persona",
+          content: "Loading model...",
+          timestamp: new Date(),
+          persona: activePersona,
+        },
+      ]);
+
+      // Start dots animation (0..5)
+      loadingIntervalRef.current = setInterval(() => {
+        setLoadingDots((d) => {
+          const newDots = d >= 5 ? 0 : d + 1;
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === loadingId
+                ? {
+                    ...m,
+                    content: `Loading model${".".repeat(newDots)}`,
+                    timestamp: new Date(),
+                  }
+                : m
+            )
+          );
+          return newDots;
+        });
+      }, 500);
+
+      // Fetch persona context in parallel (for personalized greeting and later use)
+      const contextPromise = fetchWithTimeout(
+        `/api/personas/${activePersona.name}/context`,
         {
           method: "GET",
           headers: { "Content-Type": "application/json" },
           timeout: 6000,
         }
-      );
-      if (response.ok) {
-        const contextData = await response.json();
+      )
+        .then((res) => (res.ok ? res.json() : null))
+        .catch(() => null);
+
+      // Trigger model load via greeting API
+      const greetingPromise = fetchWithTimeout(`/api/greeting`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        timeout: 30000, // allow more time for first-time model load
+      })
+        .then((res) => (res.ok ? res.json() : null))
+        .catch(() => null);
+
+      const [contextData, greetingData] = await Promise.all([
+        contextPromise,
+        greetingPromise,
+      ]);
+
+      // Build final initial message content
+      const personalizedGreeting = contextData
+        ? createPersonalizedGreeting(contextData.context)
+        : null;
+
+      const finalGreeting =
+        (greetingData && greetingData.greeting) ||
+        personalizedGreeting ||
+        `Hello! I'm ${activePersona.name}. ${activePersona.background}`;
+
+      // Replace loading bubble with the real greeting
+      setMessages([
+        {
+          id: Date.now(),
+          sender: "persona",
+          content: finalGreeting,
+          timestamp: new Date(),
+          persona: activePersona,
+          context: contextData ? contextData.context : undefined,
+        },
+      ]);
+
+      // Cache context if available
+      if (contextData) {
         sessionStorage.setItem(cacheKey, JSON.stringify(contextData));
-        const personalizedGreeting = createPersonalizedGreeting(
-          contextData.context
-        );
-        // Replace first message if it's a generic one
-        setMessages((prev) => {
-          if (prev.length === 1 && prev[0].sender === "persona") {
-            return [
-              {
-                id: Date.now(),
-                sender: "persona",
-                content: personalizedGreeting,
-                timestamp: new Date(),
-                persona: activePersona,
-                context: contextData.context,
-              },
-            ];
-          }
-          return prev;
-        });
       }
     } catch (error) {
       console.error("Error initializing chat:", error);
     } finally {
+      // Stop loading animation
+      if (loadingIntervalRef.current) {
+        clearInterval(loadingIntervalRef.current);
+        loadingIntervalRef.current = null;
+      }
+      setLoadingDots(0);
       setIsLoading(false);
     }
-  }, [activePersona]);
+  }, [activePersona, createPersonalizedGreeting]);
 
   useEffect(() => {
     if (activePersona) {
@@ -138,21 +195,15 @@ const ChatInterface = ({
     scrollToBottom();
   }, [messages]);
 
-  const createPersonalizedGreeting = (context) => {
-    const persona = context.persona_info;
-
-    const greetings = {
-      Mary: `Hello! I'm Mary. I'm ${persona.age} and recently retired from teaching. I'm interested in starting a fitness routine, but I want to make sure it's safe and appropriate for someone my age. I've heard good things about personal training - could you help me understand what that would involve?`,
-      Jake: `Hi there. I'm Jake, and I'll be direct - I'm extremely busy running my company and I'm skeptical about fitness programs. I work 60+ hours a week and I need to see real, measurable results if I'm going to invest time and money in this. What can you show me?`,
-      Sarah: `Hey! I'm Sarah, and I'm really interested in getting fit, but I need to be honest - I'm on a pretty tight budget as a recent graduate. I'm still paying off student loans, so I need to make sure I'm getting the best value for my money. What are my options?`,
-      David: `Hi! I'm David, father of two teenagers. I'm interested in fitness, but my main concern is how this fits with my family life. I work full-time and want to set a good example for my kids. Do you have solutions that work for busy parents?`,
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (loadingIntervalRef.current) {
+        clearInterval(loadingIntervalRef.current);
+        loadingIntervalRef.current = null;
+      }
     };
-
-    return (
-      greetings[persona.name] ||
-      `Hello! I'm ${persona.name}. ${persona.background}`
-    );
-  };
+  }, []);
 
   const sendMessage = async () => {
     if (!inputMessage.trim() || isLoading) return;
@@ -170,20 +221,18 @@ const ChatInterface = ({
     setIsTyping(true);
 
     try {
-      const response = await fetch(
-        `/api/v2/personas/${activePersona.name}/chat`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            persona_name: activePersona.name,
-            user_message: userMessage.content,
-            session_id: sessionId,
-          }),
-        }
-      );
+      const response = await fetch(`/api/chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: userMessage.content,
+          user_id: "api_user",
+          session_id: sessionId,
+          persona_name: activePersona.name,
+        }),
+      });
 
       if (response.ok) {
         const responseData = await response.json();
@@ -192,7 +241,7 @@ const ChatInterface = ({
           const personaMessage = {
             id: Date.now() + 1,
             sender: "persona",
-            content: responseData.persona_response,
+            content: responseData.response || responseData.persona_response,
             timestamp: new Date(),
             persona: activePersona,
             analysis: responseData.training_analysis,
@@ -246,8 +295,37 @@ const ChatInterface = ({
           </div>
           <div className="persona-details">
             <h3>
-              Chat with {activePersona.name} - Your {activePersona.age}-year-old{" "}
-              {activePersona.description.split(" ").slice(-1)[0]} Client
+              {(() => {
+                const name = activePersona?.name || "Customer";
+                const agePart =
+                  typeof activePersona?.age === "number" &&
+                  !Number.isNaN(activePersona.age)
+                    ? `${activePersona.age}-year-old`
+                    : "";
+                const typePart = (activePersona?.type || "")
+                  .toString()
+                  .trim()
+                  .toLowerCase();
+                // Fallback if description is missing; avoid calling split on undefined
+                const descWord = (activePersona?.description || "")
+                  .toString()
+                  .trim()
+                  .split(" ")
+                  .filter(Boolean)
+                  .slice(-1)[0];
+
+                const qualifier = [agePart, typePart || descWord]
+                  .filter(Boolean)
+                  .join(" ")
+                  .trim();
+
+                return (
+                  <>
+                    Chat with {name}
+                    {qualifier ? ` - Your ${qualifier} client` : ""}
+                  </>
+                );
+              })()}
             </h3>
             <p>
               Help {activePersona.name} create a safe and effective workout plan

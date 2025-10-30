@@ -7,7 +7,6 @@ from pydantic import BaseModel
 import logging
 
 # Import persona profiles and services
-from models.character_profiles import PERSONAS
 from services.persona_service import persona_service
 from services.chat_service import chat_service
 
@@ -29,10 +28,19 @@ class PersonaContextRequest(BaseModel):
 async def get_persona_context(persona_name: str) -> Dict[str, Any]:
     """Get specific JSON context for a persona"""
     try:
-        if persona_name not in PERSONAS:
+        p = persona_service.get_persona(persona_name)
+        if not p:
             raise HTTPException(status_code=404, detail=f"Persona '{persona_name}' not found")
         
-        persona = PERSONAS[persona_name]
+        persona = {
+            "name": p.name,
+            "age": p.age,
+            "description": p.background,
+            "goals": p.goals,
+            "personality_traits": getattr(p, "personality_traits", []),
+            "communication_style": getattr(p, "preferred_communication", "friendly"),
+            "pain_points": getattr(p, "concerns", []),
+        }
         
         # Create persona-specific context
         context = {
@@ -128,7 +136,8 @@ async def chat_with_specific_persona(
 ) -> Dict[str, Any]:
     """Enhanced chat endpoint with persona-specific context and behavior"""
     try:
-        if persona_name not in PERSONAS:
+        p = persona_service.get_persona(persona_name)
+        if not p:
             raise HTTPException(status_code=404, detail=f"Persona '{persona_name}' not found")
         
         # Get persona context
@@ -154,7 +163,13 @@ async def chat_with_specific_persona(
         )
         
         # Generate response using chat service
-        response_data = chat_service.get_response(enhanced_prompt, pipe)
+        response_data = chat_service.chat_with_persona(
+            message=request.user_message,
+            user_id="api_user",
+            persona_name=persona_name,
+            pipe=pipe,
+            session_id=request.session_id
+        )
         
         # Post-process response to match persona
         persona_response = post_process_persona_response(
@@ -364,22 +379,8 @@ def generate_improvement_suggestions(
 @persona_chat_router.get("/")
 async def list_all_personas() -> Dict[str, Any]:
     """List all available personas with their basic info"""
-    personas_info = {}
-    
-    for name, persona in PERSONAS.items():
-        personas_info[name] = {
-            "name": persona["name"],
-            "age": persona.get("age", "Unknown"),
-            "description": persona["description"],
-            "personality_traits": persona.get("personality_traits", []),
-            "main_challenges": persona.get("pain_points", [])[:3]  # Top 3 challenges
-        }
-    
-    return {
-        "success": True,
-        "total_personas": len(personas_info),
-        "personas": personas_info
-    }
+    personas = persona_service.list_personas()
+    return {"success": True, "total_personas": len(personas), "personas": personas}
 
 @persona_chat_router.post("/compare-approaches")
 async def compare_sales_approaches(
@@ -389,7 +390,7 @@ async def compare_sales_approaches(
 ) -> Dict[str, Any]:
     """Compare two different sales approaches for a specific persona"""
     try:
-        if persona_name not in PERSONAS:
+        if not persona_service.get_persona(persona_name):
             raise HTTPException(status_code=404, detail=f"Persona '{persona_name}' not found")
         
         # Get persona context
