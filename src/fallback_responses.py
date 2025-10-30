@@ -54,10 +54,10 @@ def generate_ai_response(prompt: str, pipe, tokenizer=None) -> str:
         gen_config = get_active_model_config()["generation_config"]
         
         gen_start = time.time()
-        # Optimized generation params for 30s target: lower max_new_tokens, greedy decoding
+        # Balanced generation params: longer responses but still fast
         response = pipe(
             prompt,
-            max_new_tokens=gen_config.get("max_new_tokens", 50),  # Cap at 50 for speed
+            max_new_tokens=gen_config.get("max_new_tokens", 120),  # Increase to 120 for complete sentences
             do_sample=False,  # Greedy decoding (fastest)
             temperature=1.0,  # Ignored when do_sample=False but set for safety
             repetition_penalty=1.1,  # Light penalty to avoid loops

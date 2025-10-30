@@ -42,8 +42,14 @@ class ChatService:
     self.context_manager = get_context_manager()
     self.prompt_manager = get_prompt_manager()
     self.analytics = get_analytics_aggregator()
-    self.langchain_service = get_langchain_service()
-    self.use_langchain = True  # Enable LangChain by default
+    try:
+      self.langchain_service = get_langchain_service()
+      self.use_langchain = False  # Disable LangChain by default for now (testing)
+      logger.info("🔗 LangChain service available (disabled by default)")
+    except Exception as e:
+      self.langchain_service = None
+      self.use_langchain = False
+      logger.warning(f"🔗 LangChain service unavailable: {e}")
     
     # Session management
     self.active_sessions: Dict[str, Dict] = {}
@@ -75,7 +81,7 @@ class ChatService:
           logger.warning(" AI greeting was empty, using fallback")
     except Exception as e:
       logger.warning(f"AI greeting generation failed: {e}")
-    fallback = f"Hello! I'm {mary['name']}, interested in fitness options for my age."
+    fallback = "Hello! I'm Mary, interested in fitness options for my age."
     self.response_cache[cache_key] = fallback # Cache the fallback
     return fallback
 
