@@ -655,7 +655,7 @@ async def synthesize_speech(
     """Synthesize speech from text with emotion and voice cloning"""
     try:
         voice_service = get_voice_service()
-        synthesis_result = voice_service.synthesize_speech(
+        synthesis_result = await voice_service.synthesize_speech(
             text=text,
             emotion=emotion,
             speaker_id=speaker_id,
@@ -679,11 +679,11 @@ async def transcribe_speech(request: VoiceProcessingRequest) -> Dict[str, Any]:
     """Transcribe speech to text with confidence and emotion detection"""
     try:
         voice_service = get_voice_service()
-        transcription_result = voice_service.transcribe_speech(
+        transcription_result = await voice_service.transcribe_speech(
             audio_data=request.audio_data,
             detect_emotion=True
         )
-        
+
         return {
             "success": True,
             "transcribed_text": transcription_result["text"],

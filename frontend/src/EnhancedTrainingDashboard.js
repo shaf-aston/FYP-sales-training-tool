@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./EnhancedTrainingDashboard.css";
 import VoiceChat from "./VoiceChat";
@@ -7,8 +8,13 @@ import Header from "./Header";
 
 // Note: Reusable UI components are defined in the CSS and markup below.
 
-const EnhancedTrainingDashboard = ({ onSwitchInterface = () => {} }) => {
-  const [currentView, setCurrentView] = useState("dashboard");
+const EnhancedTrainingDashboard = ({
+  onSwitchInterface = () => {},
+  selectedPersona = null,
+  viewMode = "dashboard",
+}) => {
+  const navigate = useNavigate();
+  const [currentView, setCurrentView] = useState(viewMode);
   const [userProgress, setUserProgress] = useState(null);
   const [availablePersonas, setAvailablePersonas] = useState([]);
   const [activeSession, setActiveSession] = useState(null);
@@ -134,6 +140,14 @@ const EnhancedTrainingDashboard = ({ onSwitchInterface = () => {} }) => {
     initializeUserData();
   }, [initializeUserData]);
 
+  // Handle selectedPersona from URL routing
+  useEffect(() => {
+    if (selectedPersona && viewMode === "training") {
+      // Auto-start training session with the selected persona
+      startTrainingSession(selectedPersona);
+    }
+  }, [selectedPersona, viewMode]);
+
   const preloadPersonaContext = async (personaName) => {
     try {
       const cacheKey = `persona_context_${personaName}`;
@@ -161,45 +175,34 @@ const EnhancedTrainingDashboard = ({ onSwitchInterface = () => {} }) => {
   };
 
   const startTrainingSession = async (personaName) => {
-    try {
-      setLoading(true);
-      // Fetch persona context for RAG usage and testing visibility
-      await preloadPersonaContext(personaName);
-      const response = await fetch("/api/v2/personas/start-session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          persona_name: personaName,
-          scenario: "initial_contact",
-        }),
-      });
-
-      if (response.ok) {
-        const sessionData = await response.json();
-        setActiveSession(sessionData.session_data);
-        setMessages([
-          {
-            sender: "persona",
-            content: sessionData.initial_greeting,
-            timestamp: new Date(),
-          },
-        ]);
-        setCurrentView("training");
-      }
-    } catch (error) {
-      console.error("Error starting training session:", error);
-    } finally {
-      setLoading(false);
-    }
+    // Navigate to training URL with persona
+    navigate(`/training/${personaName.toLowerCase()}`);
   };
 
   const startChatSession = (persona) => {
-    setSelectedPersonaForChat(persona);
-    setCurrentView("chat");
+    // Navigate to chat URL with persona
+    navigate(`/chat/${persona.name.toLowerCase()}`);
   };
 
   const handleTabChange = async (view) => {
+    // Navigate to dedicated URLs for each section
+    if (view === "dashboard") {
+      navigate("/dashboard");
+    } else if (view === "training") {
+      if (selectedPersona) {
+        navigate(`/training/${selectedPersona.toLowerCase()}`);
+      } else {
+        navigate("/training");
+      }
+    } else if (view === "feedback") {
+      navigate("/feedback");
+    } else if (view === "general-chat") {
+      navigate("/general-chat");
+    }
+
+    // Update current view for rendering
     setCurrentView(view);
+
     try {
       // Fire lightweight API calls on tab switches for testability and readiness
       if (view === "dashboard") {
@@ -532,7 +535,7 @@ const EnhancedTrainingDashboard = ({ onSwitchInterface = () => {} }) => {
           <p>Select a persona from the Dashboard to begin practicing.</p>
           <button
             className="start-session-btn"
-            onClick={() => setCurrentView("dashboard")}
+            onClick={() => navigate("/dashboard")}
           >
             Go to Dashboard
           </button>
@@ -612,7 +615,11 @@ const EnhancedTrainingDashboard = ({ onSwitchInterface = () => {} }) => {
       <ChatInterface
         selectedPersona={selectedPersonaForChat}
         onClose={() => {
-          setCurrentView("dashboard");
+          if (selectedPersona) {
+            navigate("/dashboard");
+          } else {
+            setCurrentView("dashboard");
+          }
           setSelectedPersonaForChat(null);
         }}
         isStandalone={false}
@@ -630,7 +637,11 @@ const EnhancedTrainingDashboard = ({ onSwitchInterface = () => {} }) => {
           </p>
           <button
             className="start-session-btn"
-            onClick={() => setCurrentView("dashboard")}
+            onClick={() =>
+              selectedPersona
+                ? navigate("/dashboard")
+                : setCurrentView("dashboard")
+            }
           >
             Start Training
           </button>
@@ -704,7 +715,11 @@ const EnhancedTrainingDashboard = ({ onSwitchInterface = () => {} }) => {
         <button
           className="continue-training-btn"
           onClick={() => {
-            setCurrentView("dashboard");
+            if (selectedPersona) {
+              navigate("/dashboard");
+            } else {
+              setCurrentView("dashboard");
+            }
             setActiveSession(null);
             setSessionAnalysis(null);
             setMessages([]);

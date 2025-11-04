@@ -6,6 +6,9 @@ import logging
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+import psutil
+import time
+import os
 
 # Project imports
 from config.settings import (
@@ -28,9 +31,9 @@ def create_app() -> FastAPI:
   # Configure CORS middleware
   app.add_middleware(
     CORSMiddleware,
-    allow_origins=CORS_ORIGINS,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=["https://your-production-domain.com"],  # Restrict to specific origins
+    allow_methods=["GET", "POST"],  # Restrict to necessary methods
+    allow_headers=["Authorization", "Content-Type"],  # Restrict to necessary headers
     allow_credentials=True
   )
   
@@ -42,27 +45,84 @@ def create_app() -> FastAPI:
   
   return app
 
-def initialize_services():
-  """Initialize all application services"""
+async def initialize_services_async():
+  """Initialize all application services asynchronously"""
   logger.info("🚀 Initializing AI Sales Training System...")
   
-  # Initialize model service
-  logger.info("📦 Loading AI model...")
+  # Initialize model service with proper model name
+  from services.model_service import model_service
+  logger.info(f"📦 Initializing AI model: {DEFAULT_MODEL}")
   model_service.initialize_model(DEFAULT_MODEL)
-  logger.info("✅ Model service initialized")
   
   logger.info("✅ All services initialized successfully")
+
+def initialize_services():
+  """Initialize critical services only (for fast startup)"""
+  logger.info("🚀 Fast startup mode - AI Sales Training System...")
+  
+  # Initialize model service with model name (lazy loading)
+  from services.model_service import model_service
+  logger.info(f"📦 Setting model for lazy loading: {DEFAULT_MODEL}")
+  model_service.initialize_model(DEFAULT_MODEL)
+  
+  logger.info("📦 Model will load on first request (lazy loading)")
+  logger.info("✅ Critical services ready")
+
+def validate_environment_variables():
+    """Validate critical environment variables"""
+    required_vars = ["MODEL_NAME"]
+    for var in required_vars:
+        if not os.getenv(var):
+            raise EnvironmentError(f"❌ Missing required environment variable: {var}")
+
+# Validate environment variables during startup
+validate_environment_variables()
 
 # Create FastAPI application
 app = create_app()
 
 @app.on_event("startup")
 async def startup_event():
-  """Application startup event handler"""
+  """Application startup event handler - optimized for speed"""
+  # Fast startup - initialize with model name set
   initialize_services()
-  logger.info("🎯 AI Sales Training Chatbot is ready for training sessions!")
+  logger.info("🎯 AI Sales Training Chatbot server ready! (Models load on-demand)")
 
 @app.on_event("shutdown")
 async def shutdown_event():
   """Application shutdown event handler"""
   logger.info("🛑 Shutting down AI Sales Training System...")
+
+# Add a simple health check endpoint directly
+@app.get("/api/health")
+async def health_check():
+    """Extended health check endpoint with detailed metrics"""
+    from services.model_service import model_service
+
+    # Measure response time
+    start_time = time.time()
+    model_loaded = model_service._model_loaded
+    model_name = model_service.model_name
+    response_time = time.time() - start_time
+
+    # Get memory usage
+    memory_info = psutil.virtual_memory()
+    memory_usage = {
+        "total": memory_info.total,
+        "available": memory_info.available,
+        "used": memory_info.used,
+        "percent": memory_info.percent,
+    }
+
+    # Get active connections
+    active_connections = len(psutil.net_connections())
+
+    return {
+        "status": "healthy",
+        "model_loaded": model_loaded,
+        "model_name": model_name,
+        "version": APP_VERSION,
+        "response_time": response_time,
+        "memory_usage": memory_usage,
+        "active_connections": active_connections,
+    }

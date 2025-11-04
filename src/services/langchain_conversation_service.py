@@ -3,13 +3,36 @@ LangChain integration service for conversation management
 Replaces custom prompt building with LangChain conversation chains and memory
 """
 import logging
-from typing import Dict, List, Optional, Any
-from langchain.memory import ConversationBufferWindowMemory
-from langchain.schema import BaseMessage, HumanMessage, AIMessage
-from langchain.chains import ConversationChain
-from langchain.prompts import PromptTemplate
-from langchain.llms.base import LLM
-from langchain.callbacks.manager import CallbackManagerForLLMRun
+import time
+from typing import Dict, List, Optional, Any, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from langchain.memory import ConversationBufferWindowMemory
+    from langchain.schema import BaseMessage, HumanMessage, AIMessage
+    from langchain.chains import ConversationChain
+    from langchain.prompts import PromptTemplate
+    from langchain.llms.base import LLM
+    from langchain.callbacks.manager import CallbackManagerForLLMRun
+else:
+    try:
+        from langchain.memory import ConversationBufferWindowMemory
+        from langchain.schema import BaseMessage, HumanMessage, AIMessage
+        from langchain.chains import ConversationChain
+        from langchain.prompts import PromptTemplate
+        from langchain.llms.base import LLM
+        from langchain.callbacks.manager import CallbackManagerForLLMRun
+        HAS_LANGCHAIN = True
+    except ImportError:
+        HAS_LANGCHAIN = False
+        # Set to None for runtime - LangChain features will be disabled
+        ConversationBufferWindowMemory = None
+        BaseMessage = None
+        HumanMessage = None
+        AIMessage = None
+        ConversationChain = None
+        PromptTemplate = None
+        LLM = None
+        CallbackManagerForLLMRun = None
 
 logger = logging.getLogger(__name__)
 
@@ -34,10 +57,10 @@ class TransformersLLM(LLM):
             # Use optimized generation params
             response = self.pipeline(
                 prompt,
-                max_new_tokens=50,
-                do_sample=False,
-                temperature=1.0,
-                repetition_penalty=1.1,
+                max_new_tokens=200,      # Increased for detailed responses
+                do_sample=True,          # Enable sampling for variety
+                temperature=0.85,
+                repetition_penalty=1.15,
                 return_full_text=False,
                 pad_token_id=self.pipeline.tokenizer.eos_token_id if hasattr(self.pipeline, 'tokenizer') else None,
                 eos_token_id=self.pipeline.tokenizer.eos_token_id if hasattr(self.pipeline, 'tokenizer') else None,

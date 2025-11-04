@@ -93,7 +93,7 @@ class TranscriptProcessor:
         Main processing pipeline for transcripts
         
         Args:
-            stt_result: Raw STT result from Google Cloud or Whisper
+            stt_result: Raw STT result from Google Cloud
             
         Returns:
             Processed transcript with annotations

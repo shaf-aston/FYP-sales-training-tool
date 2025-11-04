@@ -22,19 +22,35 @@ const ChatInterface = ({
   const loadingIntervalRef = useRef(null);
   const [, setLoadingDots] = useState(0);
 
-  // Default to Mary if no persona selected
-  const activePersona = useMemo(
-    () =>
-      selectedPersona || {
+  // Default to Mary if no persona selected, handle both string and object inputs
+  const activePersona = useMemo(() => {
+    if (!selectedPersona) {
+      return {
         name: "Mary",
         age: 65,
         description:
           "65-year-old recently retired teacher interested in safe fitness options",
         background:
           "Recently retired teacher who walked regularly but hasn't done structured exercise in years. Cautious but motivated to start a safe fitness routine.",
-      },
-    [selectedPersona]
-  );
+      };
+    }
+
+    // If selectedPersona is a string (from URL params), convert to object
+    if (typeof selectedPersona === "string") {
+      const personaName =
+        selectedPersona.charAt(0).toUpperCase() +
+        selectedPersona.slice(1).toLowerCase();
+      return {
+        name: personaName,
+        age: personaName === "Mary" ? 65 : 35, // Default ages
+        description: `Sales training with ${personaName}`,
+        background: `Training persona: ${personaName}`,
+      };
+    }
+
+    // If selectedPersona is already an object, use it
+    return selectedPersona;
+  }, [selectedPersona]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -154,7 +170,9 @@ const ChatInterface = ({
       const finalGreeting =
         (greetingData && greetingData.greeting) ||
         personalizedGreeting ||
-        `Hello! I'm ${activePersona.name}. ${activePersona.background}`;
+        `Hello! I'm ${activePersona?.name || "your assistant"}. ${
+          activePersona?.background || "How can I help you today?"
+        }`;
 
       // Replace loading bubble with the real greeting
       setMessages([
@@ -399,7 +417,9 @@ const ChatInterface = ({
           <textarea
             className="message-input-field"
             placeholder={`Type your ${
-              activePersona.name.toLowerCase() === "mary" ? "fitness" : "sales"
+              activePersona?.name?.toLowerCase() === "mary"
+                ? "fitness"
+                : "sales"
             } question here...`}
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}

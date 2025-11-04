@@ -4,11 +4,14 @@ Enhanced Chat API routes with integrated services
 from fastapi import APIRouter, HTTPException
 from typing import Optional
 from services.persona_service import persona_service
-from services.chat_service import chat_service
+from services.chat_service import ChatService
 from services.model_service import model_service
 from models.request_models import ChatRequest, ChatResponse
 
 router = APIRouter()
+
+# Global chat service instance
+chat_service = ChatService()
 
 @router.post("/chat", response_model=ChatResponse)
 async def api_chat(request: ChatRequest):

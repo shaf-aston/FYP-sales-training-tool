@@ -7,26 +7,60 @@ import io
 import time
 import logging
 import hashlib
-from typing import Dict, List, Optional, Union, Tuple
+from typing import Dict, List, Optional, Union, Tuple, Any
 from pathlib import Path
 import json
 import tempfile
 
-try:
-    import whisper
-    import torch
-    import numpy as np
-    import librosa
-    WHISPER_AVAILABLE = True
-except ImportError as e:
-    logging.warning(f"Whisper not available: {e}")
-    WHISPER_AVAILABLE = False
+# Lazy import flags
+WHISPER_AVAILABLE = False
+SPEECH_RECOGNITION_AVAILABLE = False
+whisper = None
+torch = None
+np = None
+librosa = None
+sr = None
 
-try:
-    import speech_recognition as sr
-    SPEECH_RECOGNITION_AVAILABLE = True
-except ImportError:
-    SPEECH_RECOGNITION_AVAILABLE = False
+def _lazy_import_whisper():
+    """Lazy import of Whisper and dependencies"""
+    global WHISPER_AVAILABLE, whisper, torch, np, librosa
+    if whisper is not None:
+        return WHISPER_AVAILABLE
+    
+    try:
+        import whisper as _whisper
+        import torch as _torch
+        import numpy as _np
+        import librosa as _librosa
+        
+        whisper = _whisper
+        torch = _torch
+        np = _np
+        librosa = _librosa
+        WHISPER_AVAILABLE = True
+        logging.info("✅ Whisper and dependencies loaded successfully")
+    except ImportError as e:
+        logging.warning(f"Whisper not available: {e}")
+        WHISPER_AVAILABLE = False
+    
+    return WHISPER_AVAILABLE
+
+def _lazy_import_speech_recognition():
+    """Lazy import of SpeechRecognition"""
+    global SPEECH_RECOGNITION_AVAILABLE, sr
+    if sr is not None:
+        return SPEECH_RECOGNITION_AVAILABLE
+    
+    try:
+        import speech_recognition as _sr
+        sr = _sr
+        SPEECH_RECOGNITION_AVAILABLE = True
+        logging.info("✅ SpeechRecognition loaded successfully")
+    except ImportError:
+        logging.warning("SpeechRecognition not available")
+        SPEECH_RECOGNITION_AVAILABLE = False
+    
+    return SPEECH_RECOGNITION_AVAILABLE
 
 from config.settings import PROJECT_ROOT
 
@@ -205,9 +239,12 @@ class EnhancedSTTService:
         
         # Auto-detect GPU availability
         if gpu_enabled is None:
-            self.gpu_enabled = torch.cuda.is_available() if WHISPER_AVAILABLE else False
+            if _lazy_import_whisper() and torch is not None:
+                self.gpu_enabled = torch.cuda.is_available()
+            else:
+                self.gpu_enabled = False
         else:
-            self.gpu_enabled = gpu_enabled and WHISPER_AVAILABLE
+            self.gpu_enabled = gpu_enabled and _lazy_import_whisper()
         
         # Backend models
         self.whisper_model = None
@@ -234,7 +271,7 @@ class EnhancedSTTService:
     def _initialize_backends(self):
         """Initialize available STT backends"""
         # Initialize Whisper
-        if WHISPER_AVAILABLE and self.primary_backend == "whisper":
+        if self.primary_backend == "whisper" and _lazy_import_whisper():
             try:
                 model_name = "base"  # Good balance of speed and accuracy
                 logger.info(f"Loading Whisper model: {model_name}")
@@ -251,7 +288,7 @@ class EnhancedSTTService:
                 self.whisper_model = None
         
         # Initialize SpeechRecognition as fallback
-        if SPEECH_RECOGNITION_AVAILABLE:
+        if _lazy_import_speech_recognition():
             try:
                 self.speech_recognizer = sr.Recognizer()
                 
@@ -264,7 +301,7 @@ class EnhancedSTTService:
                 logger.error(f"❌ Error initializing SpeechRecognition: {e}")
                 self.speech_recognizer = None
     
-    def transcribe_audio(self, audio_data: Union[bytes, np.ndarray, str], 
+    def transcribe_audio(self, audio_data: Union[bytes, Any, str], 
                         language: str = None) -> Optional[STTResult]:
         """
         Transcribe audio to text
@@ -287,7 +324,7 @@ class EnhancedSTTService:
             except Exception as e:
                 logger.error(f"Error reading audio file {audio_data}: {e}")
                 return None
-        elif isinstance(audio_data, np.ndarray):
+        elif _lazy_import_whisper() and np is not None and hasattr(audio_data, 'dtype'):  # Check if it's array-like
             # Convert numpy array to bytes
             audio_bytes = self._numpy_to_wav_bytes(audio_data)
         else:
@@ -460,8 +497,11 @@ class EnhancedSTTService:
         
         return None
     
-    def _numpy_to_wav_bytes(self, audio_array: np.ndarray, sample_rate: int = 16000) -> bytes:
+    def _numpy_to_wav_bytes(self, audio_array: Any, sample_rate: int = 16000) -> bytes:
         """Convert numpy array to WAV bytes"""
+        if not _lazy_import_whisper() or np is None:
+            logger.error("NumPy/Whisper not available for audio conversion")
+            return b""
         try:
             import soundfile as sf
             
@@ -547,18 +587,18 @@ class EnhancedSTTService:
                     tmp_path = tmp_file.name
                 
                 # Use librosa to validate
-                if WHISPER_AVAILABLE:
-                    audio, sr = librosa.load(tmp_path, sr=None)
+                if _lazy_import_whisper() and librosa is not None:
+                    audio, sr_rate = librosa.load(tmp_path, sr=None)
                     
                     # Check duration
-                    duration = len(audio) / sr
+                    duration = len(audio) / sr_rate
                     if duration < 0.1:
                         validation["issues"].append("Audio too short (< 0.1s)")
                     elif duration > 300:  # 5 minutes
                         validation["recommendations"].append("Consider splitting long audio")
                     
                     # Check sample rate
-                    if sr < 8000:
+                    if sr_rate < 8000:
                         validation["recommendations"].append("Low sample rate may affect quality")
                 
                 # Clean up
@@ -591,8 +631,8 @@ class EnhancedSTTService:
             "cache_hit_rate": (self.stats["cache_hits"] / max(self.stats["transcriptions"], 1)) * 100,
             "primary_backend": self.primary_backend,
             "gpu_enabled": self.gpu_enabled,
-            "whisper_available": WHISPER_AVAILABLE and self.whisper_model is not None,
-            "speech_recognition_available": SPEECH_RECOGNITION_AVAILABLE and self.speech_recognizer is not None,
+            "whisper_available": _lazy_import_whisper() and self.whisper_model is not None,
+            "speech_recognition_available": _lazy_import_speech_recognition() and self.speech_recognizer is not None,
             **cache_stats
         }
     

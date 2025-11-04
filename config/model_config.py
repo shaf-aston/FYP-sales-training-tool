@@ -14,23 +14,36 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 BASE_MODEL = "Qwen/Qwen2.5-0.5B-Instruct"
 TRAINED_MODEL_PATH = PROJECT_ROOT / "training" / "models" / "sales_roleplay_model"  # Your trained model location
 
-# Performance optimization settings
+# Performance optimization settings with better context
 GENERATION_CONFIG = {
     "base_model": {
-        "max_new_tokens": 32,      # OPTIMIZED: Faster responses (3-5s instead of 15-20s)
-        "do_sample": False,         # Greedy decoding - fastest
-        "num_beams": 1,            # No beam search
-        "temperature": 0.7,
-        "repetition_penalty": 1.05
+        "max_new_tokens": 200,      # INCREASED: More detailed, contextual responses
+        "do_sample": True,          # Enable sampling for variety
+        "num_beams": 1,            # No beam search for speed
+        "temperature": 0.85,       # Slightly more creative for natural responses
+        "repetition_penalty": 1.15, # Stronger penalty to prevent repetition
+        "pad_token_id": 151643,    # Qwen pad token
+        "eos_token_id": 151645     # Qwen end token
     },
     "trained_model": {
-        "max_new_tokens": 48,      # Trained model can be slightly longer
-        "do_sample": True,          # Sampling for more natural responses
+        "max_new_tokens": 250,     # Even longer for trained model with full context
+        "do_sample": True,         # Sampling for natural responses
         "num_beams": 1,
-        "temperature": 0.8,
-        "top_p": 0.9,
-        "repetition_penalty": 1.1
+        "temperature": 0.9,        # More creative for engaging responses
+        "repetition_penalty": 1.2, # Stronger anti-repetition
+        "pad_token_id": 151643,
+        "eos_token_id": 151645
     }
+}
+
+# Context memory settings
+CONTEXT_CONFIG = {
+    "max_history_turns": 15,       # Remember last 15 exchanges (increased)
+    "context_window": 2048,        # Maximum context length
+    "memory_retention": True,      # Keep consistent facts
+    "persona_consistency": True,   # Maintain persona traits
+    "creative_gaps": False,        # DON'T make up info - admit unknowns
+    "user_prompt_weight": 0.9      # HIGH weight for user context relevance
 }
 
 def get_active_model_config():

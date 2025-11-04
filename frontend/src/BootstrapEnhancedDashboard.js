@@ -1,6 +1,12 @@
 import React, { useState, useEffect, useCallback } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./BootstrapDashboard.css";
+import GeneralChat from "./GeneralChat";
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
+// Initialize toast notifications
+toast.configure();
 
 const BootstrapEnhancedDashboard = () => {
   const [currentView, setCurrentView] = useState("dashboard");
@@ -31,6 +37,17 @@ const BootstrapEnhancedDashboard = () => {
       JSON.stringify(feedbackVisible)
     );
   }, [feedbackVisible]);
+
+  const handleApiError = (error, context) => {
+    console.error(`Error during ${context}:`, error);
+    toast.error(
+      `Something went wrong while ${context}. Please try again later.`,
+      {
+        position: toast.POSITION.TOP_RIGHT,
+        autoClose: 5000,
+      }
+    );
+  };
 
   const initializeUserData = useCallback(async () => {
     // Fallback data for immediate display
@@ -162,13 +179,18 @@ const BootstrapEnhancedDashboard = () => {
         setActiveSession(sessionData);
         setMessages([]);
         setCurrentView("training");
+      } else {
+        throw new Error("Failed to start training session");
       }
     } catch (error) {
-      console.error("Error starting session:", error);
+      handleApiError(error, "starting the training session");
     } finally {
       setLoading(false);
     }
   };
+
+  const API_BASE_URL =
+    process.env.REACT_APP_API_BASE_URL || "http://localhost:8000";
 
   const sendMessage = async () => {
     if (!currentMessage.trim() || !activeSession) return;
@@ -183,8 +205,7 @@ const BootstrapEnhancedDashboard = () => {
     setCurrentMessage("");
 
     try {
-      // Use the working /api/chat endpoint instead of broken /api/v2/personas/chat
-      const response = await fetch("http://localhost:8000/api/chat", {
+      const response = await fetch(`${API_BASE_URL}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -203,9 +224,11 @@ const BootstrapEnhancedDashboard = () => {
           feedback: data.feedback,
         };
         setMessages((prev) => [...prev, personaMessage]);
+      } else {
+        throw new Error("Failed to send message");
       }
     } catch (error) {
-      console.error("Error sending message:", error);
+      handleApiError(error, "sending your message");
     }
   };
 
@@ -643,6 +666,22 @@ const BootstrapEnhancedDashboard = () => {
             </button>
             <button
               className={`btn btn-custom-outline me-2 ${
+                currentView === "generalchat" ? "active" : ""
+              }`}
+              onClick={() => setCurrentView("generalchat")}
+            >
+              <i className="fas fa-comments me-1"></i>General Chat
+            </button>
+            <button
+              className={`btn btn-custom-outline me-2 ${
+                currentView === "directchat" ? "active" : ""
+              }`}
+              onClick={() => setCurrentView("directchat")}
+            >
+              <i className="fas fa-comments me-1"></i>Direct Chat
+            </button>
+            <button
+              className={`btn btn-custom-outline me-2 ${
                 currentView === "training" ? "active" : ""
               }`}
               disabled={!activeSession}
@@ -666,6 +705,8 @@ const BootstrapEnhancedDashboard = () => {
         {currentView === "dashboard" && renderDashboard()}
         {currentView === "training" && renderTraining()}
         {currentView === "feedback" && renderFeedback()}
+        {currentView === "directchat" && renderDirectChat()}
+        {currentView === "generalchat" && <GeneralChat />}
       </main>
 
       {/* Loading Overlay */}
@@ -689,3 +730,14 @@ const BootstrapEnhancedDashboard = () => {
 };
 
 export default BootstrapEnhancedDashboard;
+
+// Direct Chat placeholder
+function renderDirectChat() {
+  return (
+    <div className="direct-chat-view p-4 text-center">
+      <h2>Direct Chat</h2>
+      <p>Start a direct conversation with the AI assistant here.</p>
+      {/* TODO: Add chat UI here */}
+    </div>
+  );
+}

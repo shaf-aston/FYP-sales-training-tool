@@ -1963,3 +1963,196 @@
   color: #94a3b8;
   margin-bottom: 1rem;
 }
+
+/* Router Link Styles */
+.start-session-btn,
+.chat-session-btn {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: white;
+}
+
+.start-session-btn {
+  background: linear-gradient(135deg, var(--success-color), var(--success-dark));
+  box-shadow: 0 4px 15px rgba(0, 255, 136, 0.3);
+}
+
+.start-session-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 255, 136, 0.4);
+  color: white;
+}
+
+.chat-session-btn {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+}
+
+.chat-session-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+  color: white;
+}
+
+/* Persona-specific page styles */
+.persona-chat-page,
+.training-page {
+  min-height: 100vh;
+  background: var(--primary-gradient);
+}
+
+.persona-header,
+.training-header {
+  background: rgba(20, 25, 45, 0.9);
+  padding: 2rem 0;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.persona-intro,
+.training-intro {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.persona-avatar-large {
+  font-size: 4rem;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--card-bg);
+  border-radius: 50%;
+  border: 2px solid var(--card-border-glow);
+}
+
+.persona-info h1,
+.training-info h1 {
+  color: var(--text-primary);
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.persona-tagline,
+.training-tagline {
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+}
+
+.persona-details-inline,
+.training-details {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.detail-badge {
+  background: var(--card-bg);
+  color: var(--text-light);
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  border: 1px solid var(--card-border);
+}
+
+.difficulty-easy {
+  background: rgba(34, 197, 94, 0.2);
+  border-color: #22c55e;
+  color: #22c55e;
+}
+
+.difficulty-medium {
+  background: rgba(251, 191, 36, 0.2);
+  border-color: #fbbf24;
+  color: #fbbf24;
+}
+
+.difficulty-hard {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.page-actions,
+.training-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.persona-context,
+.training-content {
+  padding: 2rem 0;
+}
+
+.context-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.context-card {
+  background: var(--card-bg);
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid var(--card-border);
+}
+
+.context-card h3 {
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+}
+
+.context-card p {
+  color: var(--text-light);
+  line-height: 1.6;
+}
+
+.context-card ul {
+  list-style: none;
+  padding: 0;
+}
+
+.context-card li {
+  color: var(--text-light);
+  padding: 0.25rem 0;
+  position: relative;
+  padding-left: 1.5rem;
+}
+
+.context-card li::before {
+  content: '•';
+  color: var(--success-color);
+  position: absolute;
+  left: 0;
+}
+
+.traits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.trait-badge {
+  background: var(--success-light);
+  color: var(--success-color);
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  border: 1px solid var(--success-color);
+}

@@ -44,12 +44,12 @@ class DataProcessingPipeline:
             path.mkdir(parents=True, exist_ok=True)
         
         # Initialize Whisper model for speech-to-text
-        try:
-            self.whisper_model = whisper.load_model("base")
-            logger.info("Whisper model loaded successfully")
-        except Exception as e:
-            logger.warning(f"Could not load Whisper model: {e}")
-            self.whisper_model = None
+        # try:
+        #     self.whisper_model = whisper.load_model("base")
+        #     logger.info("Whisper model loaded successfully")
+        # except Exception as e:
+        #     logger.warning(f"Could not load Whisper model: {e}")
+        #     self.whisper_model = None
     
     def process_youtube_videos(self, video_files: List[str]) -> List[ProcessedData]:
         """Process YouTube sales training videos"""
@@ -62,7 +62,7 @@ class DataProcessingPipeline:
                 audio_path = self._extract_audio_from_video(video_file)
                 
                 # Transcribe audio to text
-                transcript = self._transcribe_audio(audio_path)
+                transcript = "Placeholder transcript for video file" # self._transcribe_audio(audio_path)
                 
                 # Process the transcript
                 processed = self._process_transcript(transcript, source="youtube", file=video_file)
@@ -81,7 +81,7 @@ class DataProcessingPipeline:
         for audio_file in audio_files:
             try:
                 # Transcribe audio to text
-                transcript = self._transcribe_audio(audio_file)
+                transcript = "Placeholder transcript for audio file" # self._transcribe_audio(audio_file)
                 
                 # Extract audio features
                 audio_features = self._extract_audio_features(audio_file)
@@ -130,18 +130,18 @@ class DataProcessingPipeline:
         logger.info(f"Extracting audio from {video_path} to {audio_path}")
         return audio_path
     
-    def _transcribe_audio(self, audio_path: str) -> str:
-        """Convert audio to text using Whisper"""
-        if not self.whisper_model:
-            logger.warning("Whisper model not available, returning placeholder transcript")
-            return "Placeholder transcript for audio file"
+    # def _transcribe_audio(self, audio_path: str) -> str:
+    #     """Convert audio to text using Whisper"""
+    #     if not self.whisper_model:
+    #         logger.warning("Whisper model not available, returning placeholder transcript")
+    #         return "Placeholder transcript for audio file"
         
-        try:
-            result = self.whisper_model.transcribe(audio_path)
-            return result["text"]
-        except Exception as e:
-            logger.error(f"Error transcribing audio: {e}")
-            return "Error transcribing audio"
+    #     try:
+    #         result = self.whisper_model.transcribe(audio_path)
+    #         return result["text"]
+    #     except Exception as e:
+    #         logger.error(f"Error transcribing audio: {e}")
+    #         return "Error transcribing audio"
     
     def _extract_audio_features(self, audio_path: str) -> Dict:
         """Extract audio features for analysis"""

@@ -4,7 +4,7 @@ Explanation of the ML pipeline Flow
 •	Text Input is supported for accessibility/testing.
 •	Upload allows users to provide audio/video/transcripts for persona training.
 2. Pre-processing
-•	Speech-to-Text (STT): Converts audio to text (Whisper API).
+•	Speech-to-Text (STT): Converts audio to text (Google Cloud STT).
 •	Text Cleaning: Normalizes and sanitizes input.
 •	Context Builder: Assembles conversation context and prompt for the LLM.
 •	Persona Extraction: Learns new personas from uploaded data.
@@ -15,7 +15,7 @@ Explanation of the ML pipeline Flow
 •	Feedback Generation: Analyzes conversation for performance feedback.
 •	Analytics: Tracks metrics and conversation quality.
 4. TTS Layer
-•	Text-to-Speech: Converts AI text to natural voice (ElevenLabs).
+•	Text-to-Speech: Converts AI text to natural voice (Coqui TTS).
 •	Emotion-Aware TTS: (Future) Adds emotional nuance to voice.
 5. Model Infrastructure
 •	Model Cache: Stores models locally or in the cloud.
@@ -144,13 +144,13 @@ Phase 1: Foundation & Research (Weeks 1-3)
 Goal: Establish technical foundation and validate approach
 Week 1: Project Setup & Research
 •	Set up development environment (React, FastAPI, PostgreSQL)
-•	Research and test speech APIs (Whisper, ElevenLabs)
+•	Research and test speech APIs (Google Cloud STT, Coqui TTS)
 •	Create project repository with CI/CD pipeline
 •	Conduct 10 user interviews with sales professionals
 •	Document pain points and feature priorities
 Week 2: Technical Proof of Concept
 •	Build basic voice capture in browser (Web Audio API)
-•	Integrate Whisper API for speech-to-text
+•	Integrate Google Cloud STT for speech-to-text
 •	Test GPT-4 for conversation management
 •	Create simple TTS integration
 •	Achieve < 2 second round-trip latency
@@ -193,7 +193,7 @@ Next Steps (Start Today)
 1.	Set up development environment
 2.	Create project repository
 3.	Schedule 5 user interviews for this week
-4.	Test Whisper API with sample audio
+4.	Test Google Cloud STT API with sample audio
 5.	Draft initial database schema
 Requirements Document
 ‘Vision’
@@ -202,9 +202,9 @@ To create an AI-powered voice conversation trainer that makes elite communicatio
 Functional Requirements
 Core Features (MVP)
 1. Voice Conversation Engine
-•	Real-time speech-to-text (STT) processing (Whisper API).
+•	Real-time speech-to-text (STT) processing (Google Cloud STT).
 •	Natural language understanding and conversation flow (LLM like Qwen2.5-0.5B).
-•	Text-to-speech (TTS) with emotional variation (e.g ElevenLabs).
+•	Text-to-speech (TTS) with emotional variation (e.g Coqui TTS).
 •	Supports multiple back-and-forth exchanges between the user and the AI rather than just responding to a single question or statement.
 •	Conversation context memory.
 2. Persona System
@@ -237,7 +237,7 @@ Technical Requirements
 
 •	Frontend Layer: React.js web interface, Admin panel.
 •	Backend: Python FastAPI.
-•	AI/ML: Whisper (STT), GPT-4/Qwen2.5-0.5B (LLM), ElevenLabs (TTS).
+•	AI/ML: Google Cloud STT (STT), GPT-4/Qwen2.5-0.5B (LLM), Coqui TTS (TTS).
 •	Database: PostgreSQL (user data), Redis (session management).
 •	Analytics: Custom ML pipeline for feedback.
 •	API Layer: FastAPI backend.

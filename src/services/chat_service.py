@@ -21,13 +21,87 @@ except ImportError:
     sys.path.insert(0, src_path)
   from fallback_responses import generate_ai_response, get_fallback
 
-# Import new integrated services
-from .context_service import get_context_manager
-from .prompt_service import get_prompt_manager
-from .analytics_service import get_analytics_aggregator
-from .feedback_service import feedback_service
+# Import context memory service with error handling
+try:
+    from .context_memory import context_memory
+except ImportError:
+    # Create a simple fallback context memory
+    class SimpleContextMemory:
+        def __init__(self):
+            self.conversations = {}
+        def add_message(self, session_id, message, sender, persona=None):
+            pass
+        def get_conversation_context(self, session_id, max_messages=10):
+            return ""
+        def build_enhanced_prompt(self, persona, message, session_id):
+            return f"You are {persona}. Human says: {message}\n\nRespond as {persona}:"
+        def extract_new_facts(self, persona, response):
+            pass
+    context_memory = SimpleContextMemory()
+
+# Import model config with proper path handling
+try:
+    from config.model_config import CONTEXT_CONFIG, get_active_model_config
+except ImportError:
+    # Fallback for import issues
+    CONTEXT_CONFIG = {
+        "max_history_turns": 15,
+        "context_window": 2048,
+        "memory_retention": True,
+        "persona_consistency": True,
+        "creative_gaps": False,      # Don't make up info
+        "user_prompt_weight": 0.9    # High weight for user context
+    }
+    def get_active_model_config():
+        return {
+            "generation_config": {
+                "max_new_tokens": 200,    # Increased for detailed responses
+                "do_sample": True,
+                "temperature": 0.85,
+                "repetition_penalty": 1.15
+            }
+        }
+
+# Import new integrated services with error handling
+try:
+    from .context_service import get_context_manager
+except ImportError:
+    def get_context_manager():
+        class DummyContextManager:
+            def add_context(self, *args, **kwargs): pass
+            def add_persona_context(self, *args, **kwargs): pass
+        return DummyContextManager()
+
+try:
+    from .prompt_service import get_prompt_manager
+except ImportError:
+    def get_prompt_manager():
+        class DummyPromptManager:
+            def build_sales_training_prompt(self, user_input, persona_name, session_id, include_recent=3):
+                return f"You are {persona_name}. Human says: {user_input}\n\nRespond as {persona_name}:"
+        return DummyPromptManager()
+
+try:
+    from .analytics_service import get_analytics_aggregator
+except ImportError:
+    def get_analytics_aggregator():
+        class DummyAnalytics:
+            def track_event(self, *args, **kwargs): pass
+        return DummyAnalytics()
+try:
+    from .feedback_service import feedback_service
+except ImportError:
+    class DummyFeedbackService:
+        pass
+    feedback_service = DummyFeedbackService()
+
 from .persona_service import persona_service
-from .langchain_conversation_service import get_langchain_service
+
+try:
+    from .langchain_conversation_service import get_langchain_service
+except ImportError:
+    def get_langchain_service():
+        return None
 
 logger = logging.getLogger(__name__)
 
@@ -39,17 +113,32 @@ class ChatService:
     self.performance_stats = PERFORMANCE_STATS.copy()
     self.performance_stats["startup_time"] = time.time()
     
-    self.context_manager = get_context_manager()
-    self.prompt_manager = get_prompt_manager()
-    self.analytics = get_analytics_aggregator()
     try:
-      self.langchain_service = get_langchain_service()
-      self.use_langchain = False  # Disable LangChain by default for now (testing)
-      logger.info("🔗 LangChain service available (disabled by default)")
+        self.context_manager = get_context_manager()
+        self.prompt_manager = get_prompt_manager()
+        self.analytics = get_analytics_aggregator()
     except Exception as e:
-      self.langchain_service = None
-      self.use_langchain = False
-      logger.warning(f"🔗 LangChain service unavailable: {e}")
+        logger.warning(f"Service initialization failed: {e}")
+        # Use simple fallbacks
+        class SimpleService:
+            def add_context(self, *args, **kwargs): pass
+            def add_persona_context(self, *args, **kwargs): pass
+            def build_sales_training_prompt(self, user_input, persona_name, session_id, include_recent=3):
+                return f"You are {persona_name}. Human says: {user_input}\n\nRespond as {persona_name}:"
+            def track_event(self, *args, **kwargs): pass
+        
+        self.context_manager = SimpleService()
+        self.prompt_manager = SimpleService()
+        self.analytics = SimpleService()
+    
+    try:
+        self.langchain_service = get_langchain_service()
+        self.use_langchain = False  # Disable LangChain by default for now (testing)
+        logger.info("🔗 LangChain service available (disabled by default)")
+    except Exception as e:
+        self.langchain_service = None
+        self.use_langchain = False
+        logger.warning(f"🔗 LangChain service unavailable: {e}")
     
     # Session management
     self.active_sessions: Dict[str, Dict] = {}
@@ -94,7 +183,7 @@ class ChatService:
       session_id = str(uuid.uuid4())
     
     try:
-      logger.info(f"📨 [{session_id[:8]}] Chat request from {user_id} to {persona_name} | msg_len={len(message)}")
+      # Chat request received
       
       # Track analytics event
       self.analytics.track_event(user_id, session_id, "message_sent", {
@@ -198,41 +287,36 @@ class ChatService:
           logger.warning(f"🔗 LangChain failed: {e}, falling back to custom prompt building")
           # Continue to custom prompt building below
       
-      # Build optimized prompt using prompt manager (smaller recent window for speed)
-      prompt_build_start = time.time()
-      recent_window = 1 if persona_name.lower() == "mary" else 3
-      prompt = self.prompt_manager.build_sales_training_prompt(
-        user_input=message,
-        persona_name=persona_name,
-        session_id=session_id,
-        include_recent=recent_window
-      )
-      prompt_build_time = time.time() - prompt_build_start
-      logger.info(f"⏱️ Prompt built in {prompt_build_time:.3f}s | context_window={recent_window}")
-
-      # Check cache for the generated prompt
-      if prompt in self.response_cache:
-          logger.info(f"⚡️ Cache hit for persona '{persona_name}'. Returning cached response.")
-          response_time = time.time() - start_time
-          self.analytics.track_event(user_id, session_id, "message_sent", {
-            "message": message,
-            "persona_name": persona_name,
-            "cached_response": True,
-            "response_time_seconds": response_time
-          })
-          return {
-              "response": self.response_cache[prompt],
-              "status": "success_cached",
-              "session_id": session_id,
-              "persona_name": persona_name,
-              "response_time": round(response_time, 3)
-          }
+      # Add user message to context memory
+      context_memory.add_message(session_id, message, "user", persona_name)
       
-      # Generate response using the AI model with timing
+      # Build enhanced prompt with context memory
+      prompt_build_start = time.time()
+      prompt = context_memory.build_enhanced_prompt(persona_name, message, session_id)
+      prompt_build_time = time.time() - prompt_build_start
+      logger.info(f"⏱️ Enhanced prompt built in {prompt_build_time:.3f}s with context memory")
+
+      # Generate response using the AI model with enhanced config
       gen_start = time.time()
-      response = generate_ai_response(prompt, pipe)
+      model_config = get_active_model_config()
+      
+      # Use enhanced generation config for longer, more contextual responses
+      if pipe:
+        try:
+          # Generate with enhanced parameters
+          result = pipe(prompt, **model_config["generation_config"])
+          if result and len(result) > 0:
+            response = result[0].get("generated_text", "").strip()
+          else:
+            response = None
+        except Exception as e:
+          logger.error(f"Pipeline generation failed: {e}")
+          response = generate_ai_response(prompt, pipe)
+      else:
+        response = generate_ai_response(prompt, pipe)
+        
       gen_time = time.time() - gen_start
-      logger.info(f"⚡ AI inference: {gen_time:.2f}s")
+      logger.info(f"⚡ Enhanced AI inference: {gen_time:.2f}s")
       
       # Handle AI generation failure
       if response is None:
@@ -248,7 +332,12 @@ class ChatService:
           "gen_time": round(gen_time, 3)
         }
 
-      # Add assistant response to context
+      # Store AI response in context memory and extract facts
+      if response:
+        context_memory.add_message(session_id, response, "assistant", persona_name)
+        context_memory.extract_new_facts(persona_name, response)
+      
+      # Add assistant response to legacy context manager for compatibility
       self.context_manager.add_context(
         response,
         role="assistant",
@@ -284,8 +373,8 @@ class ChatService:
         "response_length": len(response)
       })
       
-      # Cache the newly generated response
-      self.response_cache[prompt] = response
+      # CACHE DISABLED - Don't store responses to ensure fresh generation
+      # self.response_cache[prompt] = response
 
       logger.info(
         f"✅ [{session_id[:8]}] Response complete | prompt={prompt_build_time:.2f}s | inference={gen_time:.2f}s | total={response_time:.2f}s | msg_count={len(session['messages'])}"

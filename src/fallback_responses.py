@@ -29,8 +29,8 @@ FALLBACK_RESPONSES = [
     "I'd really like to understand what would work best for someone like me."
 ]
 
-# Global toggle (some modules query this)
-fallback_responses_enabled = True
+# Global toggle (some modules query this) - DISABLED TO PREVENT REPEATED RESPONSES
+fallback_responses_enabled = False
 
 def toggle_fallback_responses(enable: bool):
     """Enable or disable fallback responses."""
@@ -49,24 +49,39 @@ def generate_ai_response(prompt: str, pipe, tokenizer=None) -> str:
     Returns:
         A natural response from Mary's perspective
     """
+    # Check if pipeline is available
+    if pipe is None:
+        logger.error("❌ Pipeline not available - model failed to load")
+        logger.error("Check server logs for detailed error messages")
+        # Return a more user-friendly fallback
+        return "I'm having trouble connecting to my AI assistant right now. Let me help you anyway - what questions do you have about your fitness goals?"
+    
     try:
         # Use configured generation settings (optimized for speed by default)
         gen_config = get_active_model_config()["generation_config"]
         
         gen_start = time.time()
-        # Balanced generation params: longer responses but still fast
-        response = pipe(
-            prompt,
-            max_new_tokens=gen_config.get("max_new_tokens", 120),  # Increase to 120 for complete sentences
-            do_sample=False,  # Greedy decoding (fastest)
-            temperature=1.0,  # Ignored when do_sample=False but set for safety
-            repetition_penalty=1.1,  # Light penalty to avoid loops
-            return_full_text=False,
-            pad_token_id=(pipe.tokenizer.eos_token_id if hasattr(pipe, 'tokenizer') and pipe.tokenizer else None),
-            eos_token_id=(pipe.tokenizer.eos_token_id if hasattr(pipe, 'tokenizer') and pipe.tokenizer else None),
-        )
+        
+        # Use configured generation settings (only valid parameters)
+        generation_params = {
+            "max_new_tokens": gen_config.get("max_new_tokens", 32),
+            "do_sample": gen_config.get("do_sample", False),
+            "repetition_penalty": gen_config.get("repetition_penalty", 1.05),
+            "num_beams": gen_config.get("num_beams", 1),
+            "return_full_text": False,
+            "pad_token_id": (pipe.tokenizer.eos_token_id if hasattr(pipe, 'tokenizer') and pipe.tokenizer else None),
+            "eos_token_id": (pipe.tokenizer.eos_token_id if hasattr(pipe, 'tokenizer') and pipe.tokenizer else None),
+        }
+        
+        # Only add temperature if sampling is enabled
+        if gen_config.get("do_sample", False):
+            generation_params["temperature"] = gen_config.get("temperature", 0.7)
+        
+        response = pipe(prompt, **generation_params)
         gen_time = time.time() - gen_start
-        logger.info(f"⚡ Model inference completed in {gen_time:.2f}s")
+        
+        # Minimal logging - only response time
+        logger.info(f"⚡ AI response generated in {gen_time:.2f}s")
         
         generated_text = response[0]['generated_text'].strip()
         
@@ -137,14 +152,13 @@ def generate_ai_response(prompt: str, pipe, tokenizer=None) -> str:
             "i'm a salesperson", "i am a salesperson", "my job is to provide", 
             "my job is to help you", "as a salesperson"
         ]):
-            logger.warning("Response contains salesperson language. Rejecting to avoid role confusion.")
-            return None
+            logger.warning("Response contains salesperson language. Using fallback.")
+            return "I'm not quite sure I understand. Could you explain that differently?"
         
         # Light validation - just check if we have something reasonable
         if len(character_response) < 5:
-            # Do NOT use textual fallbacks here; signal failure to caller
-            logger.warning("Generated response too short (<5 chars). Returning None to avoid fallback.")
-            return None
+            logger.warning("Generated response too short (<5 chars). Using fallback.")
+            return "Could you tell me more about that?"
         
         # Approximate token count for throughput logging
         try:
@@ -153,13 +167,17 @@ def generate_ai_response(prompt: str, pipe, tokenizer=None) -> str:
         except Exception:
             new_tokens = max(1, len(character_response) // 4)
         tps = new_tokens / gen_time if gen_time > 0 else new_tokens
-        logger.info(f"AI generation completed in {gen_time:.3f}s | ~{new_tokens} tokens | ~{tps:.1f} tok/s")
+        logger.info(f"✅ AI generation completed in {gen_time:.3f}s | ~{new_tokens} tokens | ~{tps:.1f} tok/s")
+        
+        # Minimal logging - only essential info
+        logger.info(f"✅ Response: {character_response[:50]}{'...' if len(character_response) > 50 else ''}")
+        
         return character_response
 
     except Exception as e:
         logger.error(f"AI generation error: {e}")
-        # Return None to indicate failure - let calling function decide what to do
-        return None
+        # Return error message instead of None
+        return "I'm sorry, I'm having trouble understanding right now. Could you rephrase that?"
 
 def post_process_response(response: str, message_hash: int) -> str:
     """Light post-processing for Mary's response
@@ -178,12 +196,13 @@ def post_process_response(response: str, message_hash: int) -> str:
     return response.strip()
 
 def get_fallback() -> str:
-    """Return a random fallback response when AI generation fails
+    """Return a simple fallback response when AI generation fails
     
     Returns:
-        A generic but natural-sounding fallback response for Mary
+        A generic response to keep the conversation flowing
     """
-    return random.choice(FALLBACK_RESPONSES)
+    logger.warning("Fallback response used - AI generation may not be working")
+    return "I'm not quite sure about that. Could you ask me something else?"
 
 def should_use_fallback(config: dict = None) -> bool:
     """Check if fallback responses should be used based on configuration

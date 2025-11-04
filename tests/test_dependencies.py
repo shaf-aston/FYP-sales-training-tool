@@ -10,6 +10,7 @@ import subprocess
 import importlib
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+import unittest
 
 def safe_print(text):
     """Print text safely, handling Unicode issues on Windows"""
@@ -136,8 +137,7 @@ class DependencyValidator:
             ("whisper", "OpenAI Whisper", "pip install openai-whisper", "Speech-to-text recognition"),
             ("TTS", "Coqui TTS", "pip install coqui-tts", "High-quality text-to-speech"),
             ("librosa", "Librosa", "pip install librosa", "Advanced audio processing"),
-            ("scipy", "SciPy", "pip install scipy", "Scientific computing for audio"),
-            ("elevenlabs", "ElevenLabs", "pip install elevenlabs", "Premium text-to-speech service")
+            ("scipy", "SciPy", "pip install scipy", "Scientific computing for audio")
         ]
         
         available_count = 0
@@ -449,6 +449,64 @@ def main():
     
     return core_ok
 
+class TestDependencies(unittest.TestCase):
+    def test_core_dependencies(self):
+        core_deps = [
+            ("torch", "PyTorch"),
+            ("transformers", "Transformers"),
+            ("fastapi", "FastAPI"),
+            ("uvicorn", "Uvicorn"),
+            ("numpy", "NumPy"),
+            ("pydantic", "Pydantic")
+        ]
+
+        for module_name, display_name in core_deps:
+            with self.subTest(module=module_name):
+                try:
+                    module = importlib.import_module(module_name)
+                    self.assertIsNotNone(module, f"{display_name} is not available")
+                except ImportError:
+                    self.fail(f"{display_name} is not installed")
+
+    def test_optimization_dependencies(self):
+        opt_deps = [
+            ("accelerate", "Accelerate"),
+            ("bitsandbytes", "BitsAndBytes"),
+            ("optimum", "Optimum"),
+            ("psutil", "PSUtil")
+        ]
+
+        for module_name, display_name in opt_deps:
+            with self.subTest(module=module_name):
+                try:
+                    module = importlib.import_module(module_name)
+                    self.assertIsNotNone(module, f"{display_name} is not available")
+                except ImportError:
+                    self.fail(f"{display_name} is not installed")
+
+    def test_voice_dependencies(self):
+        voice_deps = [
+            ("whisper", "OpenAI Whisper"),
+            ("TTS", "Coqui TTS"),
+            ("librosa", "Librosa"),
+            ("scipy", "SciPy")
+        ]
+
+        for module_name, display_name in voice_deps:
+            with self.subTest(module=module_name):
+                try:
+                    if module_name == "TTS":
+                        # Special case for Coqui TTS
+                        import importlib
+                        module = importlib.import_module(module_name)
+                        self.assertIsNotNone(module, f"{display_name} is not available")
+                    else:
+                        module = importlib.import_module(module_name)
+                        self.assertIsNotNone(module, f"{display_name} is not available")
+                except ImportError:
+                    self.fail(f"{display_name} is not installed")
+
 if __name__ == "__main__":
+    unittest.main()
     success = main()
     sys.exit(0 if success else 1)

@@ -2,8 +2,13 @@ import os
 from pathlib import Path
 from typing import Optional, Iterable
 from utils.paths import MODEL_CACHE_DIR
+import logging
 
 DEFAULT_MODEL = "Qwen/Qwen2.5-0.5B-Instruct"
+
+# Initialize logger
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 def setup_model_env(model_name: Optional[str] = None, offline: bool = True) -> str:
     """Configure environment variables for local (offline) model usage.
@@ -60,15 +65,22 @@ def assert_model_present(model_name: Optional[str] = None) -> Path:
     """Validate that a locally cached model exists with required artifacts.
 
     Returns the resolved directory containing model files, or raises RuntimeError
-    if not found / incomplete.
+    if not found / incomplete. Falls back to downloading the model if offline mode is disabled.
     """
     resolved = model_name or os.environ.get("MODEL_NAME", DEFAULT_MODEL)
     mdir = local_model_dir(resolved)
     if not mdir.exists():
-        raise RuntimeError(
-            f"Model directory '{mdir}' not found (expected flattened or snapshot layout).\n"
-            f"Run: python scripts/download_model.py"
-        )
+        if os.getenv("HF_HUB_OFFLINE") == "1":
+            raise RuntimeError(
+                f"Model directory '{mdir}' not found (expected flattened or snapshot layout).\n"
+                f"Run: python scripts/download_model.py"
+            )
+        else:
+            logger.info("Model not found locally. Attempting to download...")
+            # Trigger model download here (e.g., using transformers API)
+            from transformers import AutoModelForCausalLM
+            AutoModelForCausalLM.from_pretrained(resolved, cache_dir=MODEL_CACHE_DIR)
+            logger.info("Model downloaded successfully.")
     # Require at least config.json AND one weight/token file
     config_ok = any(p.name == "config.json" for p in mdir.iterdir() if p.is_file())
     weight_ok = any(p.suffix in {".safetensors", ".bin"} for p in mdir.iterdir() if p.is_file())

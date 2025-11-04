@@ -13,6 +13,10 @@ from .routes.sessions_routes import router as sessions_router
 from .routes.persona_admin_routes import router as persona_admin_router
 from .routes.team_routes import router as team_router
 from .routes.external_routes import router as external_router
+from .routes.training_routes import training_router
+from .routes.feedback_routes import feedback_router
+from .routes.general_chat_routes import general_chat_router
+from .routes.testing_routes import testing_router
 
 # Create main API router
 api_router = APIRouter()
@@ -29,3 +33,7 @@ api_router.include_router(sessions_router, tags=["sessions"])  # Unified session
 api_router.include_router(persona_admin_router, tags=["persona-admin"])  # Persona cloning & management
 api_router.include_router(team_router, tags=["team"])  # Team training features
 api_router.include_router(external_router, tags=["external"])  # External read-only integration
+api_router.include_router(training_router, tags=["training"])  # Training session management
+api_router.include_router(feedback_router, tags=["feedback"])  # Session feedback and analytics
+api_router.include_router(general_chat_router, tags=["general-chat"])  # General chat (renamed from Direct Chat)
+api_router.include_router(testing_router, tags=["testing"])  # Comprehensive API testing endpoints

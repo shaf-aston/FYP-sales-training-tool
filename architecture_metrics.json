@@ -1,0 +1,67 @@
+{
+  "current": {
+    "timestamp": "2025-11-04T19:52:25.965610",
+    "total_files": 62,
+    "total_lines": 21049,
+    "largest_file": {
+      "path": "src\\services\\advanced_audio_analysis.py",
+      "lines": 1345,
+      "size_bytes": 60914,
+      "last_modified": "2025-10-27T16:06:06.329590",
+      "complexity_score": 27.806691449814124
+    },
+    "files_over_500_lines": 16,
+    "files_over_1000_lines": 4,
+    "average_file_size": 339.5,
+    "duplicate_files": [
+      "stt_service.py: src\\services\\stt_service.py & src\\infrastructure\\stt_service.py",
+      "analytics_aggregator.py: src\\infrastructure\\analytics_aggregator.py & src\\services\\analytics_aggregator.py",
+      "model_service.py: src\\services\\model_service.py & src\\core\\model_service.py",
+      "analytics_logger.py: src\\infrastructure\\analytics_logger.py & src\\services\\analytics_logger.py",
+      "__init__.py: src\\api\\__init__.py & src\\__init__.py",
+      "__init__.py: src\\api\\__init__.py & src\\models\\__init__.py",
+      "__init__.py: src\\api\\__init__.py & src\\services\\__init__.py",
+      "__init__.py: src\\api\\__init__.py & src\\api\\routes\\__init__.py"
+    ],
+    "architectural_score": 0.0,
+    "recommendations": [
+      "Refactor 4 files over 1000 lines",
+      "Consider refactoring 16 files over 500 lines",
+      "Remove 8 duplicate files"
+    ]
+  },
+  "history": [
+    {
+      "timestamp": "2025-11-04T19:52:25.965610",
+      "total_files": 62,
+      "total_lines": 21049,
+      "largest_file": {
+        "path": "src\\services\\advanced_audio_analysis.py",
+        "lines": 1345,
+        "size_bytes": 60914,
+        "last_modified": "2025-10-27T16:06:06.329590",
+        "complexity_score": 27.806691449814124
+      },
+      "files_over_500_lines": 16,
+      "files_over_1000_lines": 4,
+      "average_file_size": 339.5,
+      "duplicate_files": [
+        "stt_service.py: src\\services\\stt_service.py & src\\infrastructure\\stt_service.py",
+        "analytics_aggregator.py: src\\infrastructure\\analytics_aggregator.py & src\\services\\analytics_aggregator.py",
+        "model_service.py: src\\services\\model_service.py & src\\core\\model_service.py",
+        "analytics_logger.py: src\\infrastructure\\analytics_logger.py & src\\services\\analytics_logger.py",
+        "__init__.py: src\\api\\__init__.py & src\\__init__.py",
+        "__init__.py: src\\api\\__init__.py & src\\models\\__init__.py",
+        "__init__.py: src\\api\\__init__.py & src\\services\\__init__.py",
+        "__init__.py: src\\api\\__init__.py & src\\api\\routes\\__init__.py"
+      ],
+      "architectural_score": 0.0,
+      "recommendations": [
+        "Refactor 4 files over 1000 lines",
+        "Consider refactoring 16 files over 500 lines",
+        "Remove 8 duplicate files"
+      ]
+    }
+  ],
+  "generated_at": "2025-11-04T19:52:25.970131"
+}

@@ -7,7 +7,7 @@ import io
 import time
 import logging
 import hashlib
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union, TYPE_CHECKING, Any
 from pathlib import Path
 import json
 
@@ -20,6 +20,14 @@ try:
 except ImportError as e:
     logging.warning(f"Coqui TTS not available: {e}")
     TTS_AVAILABLE = False
+    # Define placeholder for type hints
+    if TYPE_CHECKING:
+        from TTS.api import TTS
+    else:
+        TTS = Any
+    torch = None
+    sf = None
+    np = None
 
 from config.settings import PROJECT_ROOT
 
@@ -335,7 +343,7 @@ class EnhancedTTSService:
                 audio = model.synthesize(clean_text)
             
             # Convert to numpy array if needed
-            if not isinstance(audio, np.ndarray):
+            if np and not isinstance(audio, np.ndarray):
                 audio = np.array(audio)
             
             # Apply voice modifications
@@ -395,8 +403,11 @@ class EnhancedTTSService:
         
         return text
     
-    def _apply_voice_modifications(self, audio: np.ndarray, voice_profile: TTSVoiceProfile) -> np.ndarray:
+    def _apply_voice_modifications(self, audio: Any, voice_profile: TTSVoiceProfile) -> Any:
         """Apply voice modifications like speed and pitch"""
+        if not TTS_AVAILABLE or np is None:
+            return audio
+        
         try:
             # Speed modification
             if voice_profile.speed != 1.0:
@@ -422,8 +433,11 @@ class EnhancedTTSService:
             logger.warning(f"Error applying voice modifications: {e}")
             return audio
     
-    def _audio_to_bytes(self, audio: np.ndarray, output_format: str) -> bytes:
+    def _audio_to_bytes(self, audio: Any, output_format: str) -> bytes:
         """Convert audio array to bytes"""
+        if not TTS_AVAILABLE or np is None or sf is None:
+            return b""
+        
         try:
             # Normalize audio to 16-bit range
             if audio.dtype != np.int16:
@@ -541,3 +555,39 @@ def initialize_tts_service(cache_enabled: bool = True, gpu_enabled: bool = None,
         _tts_service.preload_models()
     
     return _tts_service
+
+class TTSService:
+    """Simplified TTS service wrapper for compatibility with voice_config.VoiceEmotion"""
+    
+    def __init__(self):
+        """Initialize TTS service"""
+        self.enhanced_service = get_tts_service()
+        
+    async def text_to_speech(self, text: str, emotion=None, speaker_voice: str = "default", 
+                           language: str = "en") -> Optional[bytes]:
+        """Convert text to speech with async interface"""
+        try:
+            # Convert emotion to string if it's an enum
+            if hasattr(emotion, 'value'):
+                emotion_str = emotion.value
+            else:
+                emotion_str = str(emotion) if emotion else "neutral"
+            
+            # Use enhanced service
+            result = self.enhanced_service.synthesize_speech(
+                text, speaker_voice, language, emotion_str
+            )
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"TTS async wrapper failed: {e}")
+            return None
+    
+    def get_performance_metrics(self) -> Dict:
+        """Get TTS performance metrics"""
+        return self.enhanced_service.get_performance_metrics()
+    
+    def clear_cache(self) -> None:
+        """Clear TTS cache"""
+        self.enhanced_service.clear_cache()

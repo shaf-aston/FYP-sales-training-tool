@@ -13,6 +13,7 @@ from services.tts_service import get_tts_service
 from services.stt_service import get_stt_service
 from services.chat_service import chat_service
 from services.model_service import model_service
+from services.voice_service import get_voice_service, VoiceEmotion
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["voice"])
@@ -35,31 +36,23 @@ async def speech_to_text(audio: UploadFile = File(...), language: Optional[str] 
         }
     """
     try:
-        stt_service = get_stt_service()
+        voice_service = get_voice_service()
         
         # Read audio file
         audio_bytes = await audio.read()
         
-        # Validate audio
-        validation = stt_service.validate_audio(audio_bytes)
-        if not validation["valid"]:
-            raise HTTPException(
-                status_code=400, 
-                detail=f"Invalid audio: {', '.join(validation['issues'])}"
-            )
+        # Use enhanced voice service pipeline
+        vs_result = await voice_service.speech_to_text(audio_bytes, language=language)
         
-        # Transcribe audio
-        result = stt_service.transcribe_audio(audio_bytes, language=language)
-        
-        if result is None or not result.text:
-            raise HTTPException(status_code=500, detail="Failed to transcribe audio")
-        
+        if not vs_result or not vs_result.get("text"):
+            raise HTTPException(status_code=500, detail="Failed to transcribe audio using voice service")
+
         return {
-            "text": result.text,
-            "confidence": result.confidence,
-            "language": result.language,
-            "duration": result.duration,
-            "processing_time": result.processing_time,
+            "text": vs_result.get("text"),
+            "confidence": vs_result.get("confidence"),
+            "language": vs_result.get("language", language),
+            "duration": vs_result.get("duration"),
+            "processing_time": vs_result.get("processing_time"),
             "status": "success"
         }
         
@@ -86,19 +79,18 @@ async def text_to_speech(payload: dict):
     try:
         text = payload.get("text", "")
         persona_name = payload.get("persona_name", "System")
-        output_format = payload.get("format", "wav")
         
         if not text or not text.strip():
             raise HTTPException(status_code=400, detail="Text is required")
         
-        # Get TTS service
-        tts_service = get_tts_service()
+        # Services
+        voice_service = get_voice_service()
         
-        # Generate speech
-        logger.info(f"Generating TTS for persona '{persona_name}': {text[:50]}...")
-        audio_bytes = tts_service.synthesize_speech(text, persona_name, output_format)
+        # Use enhanced voice service TTS
+        emotion = VoiceEmotion.FRIENDLY if persona_name else VoiceEmotion.NEUTRAL
+        audio_bytes = await voice_service.text_to_speech(text, emotion)
         
-        if audio_bytes is None or len(audio_bytes) == 0:
+        if not audio_bytes:
             raise HTTPException(status_code=500, detail="Failed to generate speech")
         
         # Return audio stream
@@ -124,38 +116,20 @@ async def voice_chat(
     persona_name: Optional[str] = "Mary",
     session_id: Optional[str] = None
 ):
-    """Complete voice conversation: audio -> STT -> AI chat -> TTS -> audio
-    
-    Args:
-        audio: Audio file with user's speech
-        user_id: User identifier for conversation context
-        persona_name: Persona to chat with (Mary, Jake, Sarah, David)
-        session_id: Session ID for conversation continuity
-        
-    Returns:
-        {
-            "user_text": "transcribed user speech",
-            "ai_response": "AI text response",
-            "ai_audio_base64": "base64 encoded audio",
-            "confidence": 0.95,
-            "session_id": "session-id",
-            "status": "success"
-        }
-    """
+    """Complete voice conversation: audio -> STT -> AI chat -> TTS -> audio"""
     try:
-        # Get services
-        stt_service = get_stt_service()
-        tts_service = get_tts_service()
+        voice_service = get_voice_service()
         
         # Step 1: Convert speech to text (STT)
         logger.info(f"Processing voice chat for user {user_id}")
         audio_bytes = await audio.read()
         
-        stt_result = stt_service.transcribe_audio(audio_bytes)
-        if stt_result is None or not stt_result.text:
+        stt_result = await voice_service.speech_to_text(audio_bytes)
+        if not stt_result or not stt_result.get("text"):
             raise HTTPException(status_code=500, detail="Failed to transcribe audio")
         
-        user_text = stt_result.text
+        user_text = stt_result.get("text")
+        stt_confidence = stt_result.get("confidence")
         logger.info(f"Transcribed: {user_text}")
         
         # Step 2: Get AI response
@@ -172,20 +146,14 @@ async def voice_chat(
         session_id = chat_result.get("session_id")
         
         # Step 3: Convert AI response to speech (TTS)
-        ai_audio_base64 = None
-        try:
-            ai_audio_bytes = tts_service.synthesize_speech(ai_response, persona_name)
-            if ai_audio_bytes:
-                ai_audio_base64 = base64.b64encode(ai_audio_bytes).decode('utf-8')
-        except Exception as tts_error:
-            logger.warning(f"TTS generation failed: {tts_error}")
-            # Continue without audio - user still gets text response
+        ai_audio_bytes = await voice_service.text_to_speech(ai_response, VoiceEmotion.FRIENDLY)
+        ai_audio_base64 = base64.b64encode(ai_audio_bytes).decode('utf-8') if ai_audio_bytes else None
         
         return {
             "user_text": user_text,
             "ai_response": ai_response,
             "ai_audio_base64": ai_audio_base64,
-            "confidence": stt_result.confidence,
+            "confidence": stt_confidence,
             "session_id": session_id,
             "persona_name": persona_name,
             "message_count": chat_result.get("message_count", 0),
@@ -202,31 +170,24 @@ async def voice_chat(
 async def voice_status():
     """Check TTS and STT service availability and statistics"""
     try:
-        stt_service = get_stt_service()
-        tts_service = get_tts_service()
-        
-        stt_stats = stt_service.get_stats()
-        tts_stats = tts_service.get_stats()
+        voice_service = get_voice_service()
+        capabilities = voice_service.get_voice_capabilities()
         
         return {
             "stt": {
-                "available": stt_stats["whisper_available"] or stt_stats["speech_recognition_available"],
-                "backend": stt_stats["primary_backend"],
-                "gpu_enabled": stt_stats["gpu_enabled"],
-                "transcriptions": stt_stats["transcriptions"],
-                "cache_hit_rate": round(stt_stats["cache_hit_rate"], 2),
-                "avg_processing_time": round(stt_stats["average_processing_time"], 3)
+                "available": capabilities.get("stt", {}).get("available"),
+                "backend": capabilities.get("stt", {}).get("backend"),
+                "gpu_enabled": capabilities.get("stt", {}).get("gpu_enabled"),
+                "details": capabilities.get("stt", {}).get("details")
             },
             "tts": {
-                "available": len(tts_stats["loaded_models"]) > 0 or tts_service is not None,
-                "gpu_enabled": tts_stats["gpu_enabled"],
-                "loaded_models": tts_stats["loaded_models"],
-                "generations": tts_stats["generations"],
-                "cache_hit_rate": round(tts_stats["cache_hit_rate"], 2),
-                "avg_generation_time": round(tts_stats["average_generation_time"], 3)
+                "available": capabilities.get("tts", {}).get("available"),
+                "backend": capabilities.get("tts", {}).get("backend"),
+                "gpu_enabled": capabilities.get("tts", {}).get("gpu_enabled"),
+                "details": capabilities.get("tts", {}).get("details")
             },
-            "available_voices": tts_service.get_available_voices(),
-            "supported_languages": stt_service.get_supported_languages(),
+            "available_voices": capabilities.get("available_voices", {}),
+            "supported_languages": capabilities.get("supported_languages", []),
             "status": "ready"
         }
     except Exception as e:

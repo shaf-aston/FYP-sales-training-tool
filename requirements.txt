@@ -15,7 +15,7 @@ aiofiles>=23.2.0,<24.2.0
 # ----------------------
 transformers>=4.30.0,<4.45.0
 torch>=2.0.0,<2.4.0                # Choose CPU/CUDA build as needed on Windows
-numpy>=1.24.0,<2.0.0               # Keep <2.0 unless tested
+numpy>=1.23.5,<2.0.0               # Keep <2.0 unless tested
 pydantic>=2.0.0,<2.9.0
 safetensors>=0.3.0,<0.5.0
 tiktoken>=0.5.0,<0.8.0
@@ -23,22 +23,23 @@ langchain>=0.1.0,<0.3.0            # Conversation chain and memory management
 langchain-community>=0.0.20,<0.3.0 # LangChain community integrations
 
 # ----------------------
-# Voice (local)
+# Voice (local) - OPTIONAL for Python 3.12 compatibility
 # These are heavy on Windows. Install FFmpeg separately (required by whisper/tts).
+# Note: coqui-tts does not support Python 3.12. Use TTS fallback or Python 3.11.
 # ----------------------
-librosa>=0.9.0,<0.11.0
-scipy>=1.7.0,<1.13.0
-coqui-tts>=0.15.0,<0.22.0          # Pin range to avoid breaking changes
-pyttsx3>=2.90,<2.91
-faster-whisper>=0.10.0,<1.1.0      # 4x faster than openai-whisper (CTranslate2 backend)
-pydub>=0.25.1                      # Audio format helpers (requires ffmpeg)
-SpeechRecognition>=3.10.0          # Google Speech Recognition fallback
-soundfile>=0.12.1                  # Audio file I/O for TTS/STT
+# librosa>=0.9.0,<0.11.0           # Commented - install separately if needed
+# scipy>=1.7.0,<1.13.0             # Commented - install separately if needed
+# coqui-tts>=0.15.0,<0.22.0        # NOT compatible with Python 3.12
+pyttsx3>=2.90,<2.91                # Lightweight TTS fallback (works on 3.12)
+# faster-whisper>=0.10.0,<1.1.0    # Commented - install separately if needed
+# pydub>=0.25.1                    # Commented - install separately if needed
+# SpeechRecognition>=3.10.0        # Commented - install separately if needed
+# soundfile>=0.12.1                # Commented - install separately if needed
 
 # ----------------------
-# Cloud Speech Services (Optional)
+# Cloud Speech Services (Optional) - Commented for Python 3.12
 # ----------------------
-google-cloud-speech>=2.20.0,<2.27.0  # Google Cloud Speech-to-Text API (optional)
+# google-cloud-speech>=2.20.0,<2.27.0  # Google Cloud Speech-to-Text API (optional)
 # Set GOOGLE_APPLICATION_CREDENTIALS environment variable to enable
 
 # ----------------------

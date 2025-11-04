@@ -10,7 +10,7 @@ import time
 import logging
 import hashlib
 import threading
-from typing import Dict, Any, Optional, List, Tuple
+from typing import Dict, Any, Optional, List, Tuple, TYPE_CHECKING
 from pathlib import Path
 from dataclasses import dataclass, asdict
 from datetime import datetime, timedelta
@@ -43,6 +43,16 @@ try:
 except ImportError:
     TRANSFORMERS_AVAILABLE = False
     logging.error("❌ Transformers not available - this is required for the system")
+    # Define placeholder types for type hints when transformers is not available
+    if TYPE_CHECKING:
+        from transformers import PreTrainedTokenizer, PreTrainedModel, Pipeline
+    else:
+        PreTrainedTokenizer = Any
+        PreTrainedModel = Any
+        Pipeline = Any
+        AutoTokenizer = None
+        AutoModelForCausalLM = None
+        pipeline = None
 
 # Optional optimization libraries
 try:
@@ -135,13 +145,28 @@ class ModelOptimizationService:
     """Advanced service for model optimization, caching, and performance monitoring"""
     
     def __init__(self, cache_config: Optional[CacheConfig] = None):
-        # Check for required dependencies
+        # Check for required dependencies - warn but don't crash
         if not TORCH_AVAILABLE or not TRANSFORMERS_AVAILABLE:
-            raise ImportError(
-                "Missing required dependencies. Please install:\n"
-                "  pip install torch transformers"
+            missing = []
+            if not TORCH_AVAILABLE:
+                missing.append("torch")
+            if not TRANSFORMERS_AVAILABLE:
+                missing.append("transformers")
+            
+            logger.warning(
+                f"Missing dependencies: {', '.join(missing)}. "
+                "Model optimization features will be limited. "
+                "To enable: pip install " + " ".join(missing)
             )
+            # Initialize with minimal functionality
+            self.available = False
+            self.cache_config = cache_config or CacheConfig()
+            self.model_cache = {}
+            self.tokenizer_cache = {}
+            self.pipeline_cache = {}
+            return
         
+        self.available = True
         self.cache_config = cache_config or CacheConfig()
         
         # Caching systems

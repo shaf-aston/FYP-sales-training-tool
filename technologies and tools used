@@ -19,13 +19,12 @@ sentencepiece - Required tokenizer backend for Qwen model subword segmentation a
 
 VOICE & AUDIO PROCESSING
 ------------------------
-faster-whisper - High-performance speech-to-text (STT) engine using CTranslate2 backend (4x faster than openai-whisper)
+Google Cloud Speech-to-Text (STT) - Cloud-based speech-to-text service for highly accurate audio transcription
+Google Cloud Text-to-Speech (TTS) - Cloud-based text-to-speech service for generating natural-sounding voice responses
 librosa - Audio analysis library for feature extraction, noise filtering, and audio preprocessing before STT
 scipy - Scientific computing library used for signal processing and audio filtering operations
 coqui-tts - Neural text-to-speech (TTS) engine for generating natural-sounding persona voice responses
-pyttsx3 - Offline TTS engine as fallback for quick voice synthesis without neural models
 pydub - Audio format conversion and manipulation library requiring FFmpeg for codec support
-SpeechRecognition - Google Speech Recognition API wrapper as fallback STT when faster-whisper unavailable
 soundfile - Low-level audio file I/O for reading/writing WAV and other audio formats for TTS/STT pipelines
 
 DATABASE & STORAGE

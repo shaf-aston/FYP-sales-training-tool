@@ -7,9 +7,17 @@ import json
 import logging
 from typing import List, Dict, Optional, Tuple
 from pathlib import Path
-import numpy as np
 from datetime import datetime
 from dataclasses import dataclass
+
+# Make numpy optional - fallback to simple implementations if not available
+try:
+    import numpy as np
+    HAS_NUMPY = True
+except ImportError:
+    HAS_NUMPY = False
+    logger = logging.getLogger(__name__)
+    logger.warning("NumPy not available - using simplified embedding operations")
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +27,7 @@ class Document:
     id: str
     content: str
     metadata: Dict
-    embedding: Optional[np.ndarray] = None
+    embedding: Optional[List[float]] = None  # Changed from np.ndarray to List for flexibility
     timestamp: float = 0.0
 
 class RAGService:
@@ -28,7 +36,7 @@ class RAGService:
     def __init__(self):
         self.documents: List[Document] = []
         self.document_store: Dict[str, Document] = {}
-        self.embeddings_cache: Dict[str, np.ndarray] = {}
+        self.embeddings_cache: Dict[str, List[float]] = {}  # Changed from np.ndarray to List
         self.knowledge_base_path = "data/knowledge_base"
         self.max_context_length = 4000
         self.similarity_threshold = 0.7
@@ -121,7 +129,7 @@ class RAGService:
         
         logger.debug(f"Added document: {document.id}")
     
-    def _generate_simple_embedding(self, text: str) -> np.ndarray:
+    def _generate_simple_embedding(self, text: str) -> List[float]:
         """Generate a simple text embedding (placeholder for proper embeddings)"""
         # This is a simple word frequency based embedding
         # In production, use proper embeddings like sentence-transformers
@@ -129,16 +137,23 @@ class RAGService:
         vocab = set(words)
         
         # Create a simple frequency vector
-        embedding = np.zeros(100)  # Fixed size embedding
+        embedding = [0.0] * 100  # Fixed size embedding
         for i, word in enumerate(list(vocab)[:100]):
-            embedding[i] = words.count(word) / len(words)
+            embedding[i] = words.count(word) / len(words) if words else 0.0
         
         # Normalize
-        norm = np.linalg.norm(embedding)
-        if norm > 0:
-            embedding = embedding / norm
-        
-        return embedding
+        if HAS_NUMPY:
+            embedding_array = np.array(embedding)
+            norm = np.linalg.norm(embedding_array)
+            if norm > 0:
+                embedding_array = embedding_array / norm
+            return embedding_array.tolist()
+        else:
+            # Simple normalization without numpy
+            norm = sum(x*x for x in embedding) ** 0.5
+            if norm > 0:
+                embedding = [x / norm for x in embedding]
+            return embedding
     
     def retrieve_relevant_context(self, query: str, max_docs: int = 3) -> List[Document]:
         """Retrieve relevant documents for the given query"""
@@ -151,7 +166,12 @@ class RAGService:
         similarities = []
         for doc in self.documents:
             if doc.embedding is not None:
-                similarity = np.dot(query_embedding, doc.embedding)
+                # Compute dot product similarity
+                if HAS_NUMPY:
+                    similarity = np.dot(query_embedding, doc.embedding)
+                else:
+                    # Simple dot product without numpy
+                    similarity = sum(a * b for a, b in zip(query_embedding, doc.embedding))
                 similarities.append((doc, similarity))
         
         # Sort by similarity
