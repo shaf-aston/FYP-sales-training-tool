@@ -31,6 +31,7 @@ const Header = ({
             )}
           </React.Fragment>
         ))}
+        {/* ...existing code... */}
       </div>
       {/* Only show interface switcher when useRouting is true */}
       {useRouting && (

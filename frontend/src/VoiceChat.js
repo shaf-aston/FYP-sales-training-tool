@@ -18,13 +18,10 @@ const VoiceChat = ({ onVoiceMessage, isListening: externalListening }) => {
   const streamRef = useRef(null);
 
   // Check voice service status on mount
-  useEffect(() => {
-    checkVoiceStatus();
-  }, []);
-
   const checkVoiceStatus = async () => {
     try {
-      const response = await fetch("/api/voice/status");
+      // Backend route is mounted as /api/voice-status (not /api/voice/status)
+      const response = await fetch("/api/voice-status");
       const status = await response.json();
       setVoiceStatus({
         whisper: status.whisper_available,
@@ -34,6 +31,11 @@ const VoiceChat = ({ onVoiceMessage, isListening: externalListening }) => {
       console.error("Failed to check voice status:", error);
     }
   };
+
+  // Check voice service status on mount
+  useEffect(() => {
+    checkVoiceStatus();
+  }, []);
 
   const startRecording = async () => {
     try {
@@ -121,7 +123,8 @@ const VoiceChat = ({ onVoiceMessage, isListening: externalListening }) => {
       formData.append("user_id", "default");
 
       // Send to voice chat endpoint
-      const response = await fetch("/api/voice/voice-chat", {
+      // Backend voice chat endpoint is /api/voice-chat
+      const response = await fetch("/api/voice-chat", {
         method: "POST",
         body: formData,
       });

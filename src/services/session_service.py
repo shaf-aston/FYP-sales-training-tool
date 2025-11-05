@@ -93,7 +93,7 @@ class TrainingSession:
             data['end_time'] = datetime.fromisoformat(data['end_time'])
         return cls(**data)
 
-from config.settings import SESSIONS_DB_PATH
+from infrastructure.settings import SESSIONS_DB_PATH
 
 class SessionDatabase:
     """Database manager for session storage"""

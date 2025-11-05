@@ -140,13 +140,23 @@ const EnhancedTrainingDashboard = ({
     initializeUserData();
   }, [initializeUserData]);
 
+  const startTrainingSession = useCallback(
+    async (personaName) => {
+      // Navigate to training URL with persona
+      navigate(`/training/${personaName.toLowerCase()}`);
+    },
+    [navigate]
+  );
+
   // Handle selectedPersona from URL routing
   useEffect(() => {
     if (selectedPersona && viewMode === "training") {
       // Auto-start training session with the selected persona
-      startTrainingSession(selectedPersona);
+      // Directly navigate here to avoid referencing the callback before
+      // it's initialized when hot-reloading during development.
+      navigate(`/training/${selectedPersona.toLowerCase()}`);
     }
-  }, [selectedPersona, viewMode]);
+  }, [selectedPersona, viewMode, navigate]);
 
   const preloadPersonaContext = async (personaName) => {
     try {
@@ -172,11 +182,6 @@ const EnhancedTrainingDashboard = ({
       console.error("Failed to preload persona context", e);
     }
     return null;
-  };
-
-  const startTrainingSession = async (personaName) => {
-    // Navigate to training URL with persona
-    navigate(`/training/${personaName.toLowerCase()}`);
   };
 
   const startChatSession = (persona) => {
@@ -749,6 +754,11 @@ const EnhancedTrainingDashboard = ({
             label: "Feedback",
             active: currentView === "feedback",
             onClick: () => handleTabChange("feedback"),
+          },
+          {
+            label: "General Chat",
+            active: currentView === "general-chat",
+            onClick: () => handleTabChange("general-chat"),
           },
         ]}
         currentInterface={"enhanced"}

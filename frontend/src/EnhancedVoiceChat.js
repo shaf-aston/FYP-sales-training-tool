@@ -24,10 +24,6 @@ const EnhancedVoiceChat = ({
   const streamRef = useRef(null);
 
   // Check voice service status on mount
-  useEffect(() => {
-    checkVoiceStatus();
-  }, []);
-
   const checkVoiceStatus = async () => {
     try {
       const response = await fetch("/api/voice-status");
@@ -37,6 +33,11 @@ const EnhancedVoiceChat = ({
       console.error("Failed to check voice status:", error);
     }
   };
+
+  // Check voice service status on mount
+  useEffect(() => {
+    checkVoiceStatus();
+  }, []);
 
   const startRecording = async () => {
     try {

@@ -10,7 +10,7 @@ from pathlib import Path
 from dataclasses import dataclass, asdict
 from enum import Enum
 
-from config.settings import PROJECT_ROOT, MAX_CONTEXT_LENGTH
+from infrastructure.settings import PROJECT_ROOT, MAX_CONTEXT_LENGTH
 
 logger = logging.getLogger(__name__)
 

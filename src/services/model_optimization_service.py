@@ -98,9 +98,9 @@ except (ImportError, RuntimeError) as e:
         logging.info("ℹ️  optimum not available - BetterTransformer optimization disabled")
         logging.info("   To enable: pip install optimum")
 
-from config.settings import MODEL_CACHE_DIR
+from infrastructure.settings import MODEL_CACHE_DIR
 try:
-    from config.settings import ENABLE_4BIT, ENABLE_ACCELERATE, ENABLE_OPTIMUM
+    from infrastructure.settings import ENABLE_4BIT, ENABLE_ACCELERATE, ENABLE_OPTIMUM
 except ImportError:
     # Fallback values if config doesn't exist
     ENABLE_4BIT = BITSANDBYTES_AVAILABLE

@@ -9,7 +9,7 @@ from pathlib import Path
 from services.chat_service import chat_service
 from services.model_service import model_service
 from models.character_profiles import get_mary_profile
-from config.settings import TEMPLATES_DIR
+from infrastructure.settings import TEMPLATES_DIR
 
 router = APIRouter()
 templates = Jinja2Templates(directory=TEMPLATES_DIR)

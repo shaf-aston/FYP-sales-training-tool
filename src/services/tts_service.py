@@ -16,7 +16,17 @@ try:
     import torch
     import soundfile as sf
     import numpy as np
-    TTS_AVAILABLE = True
+    # Verify Numba/NumPy compatibility before marking available
+    try:
+        import numba
+        numba_version = tuple(map(int, numba.__version__.split('.')))
+        numpy_version = tuple(map(int, np.__version__.split('.')))
+        if numpy_version > (2, 2):
+            raise ImportError(f"NumPy {np.__version__} incompatible with Numba {numba.__version__} (requires ≤2.2)")
+        TTS_AVAILABLE = True
+    except ImportError as numba_e:
+        logging.warning(f"Coqui TTS disabled: {numba_e}")
+        TTS_AVAILABLE = False
 except ImportError as e:
     logging.warning(f"Coqui TTS not available: {e}")
     TTS_AVAILABLE = False
@@ -29,7 +39,7 @@ except ImportError as e:
     sf = None
     np = None
 
-from config.settings import PROJECT_ROOT
+from infrastructure.settings import PROJECT_ROOT
 
 logger = logging.getLogger(__name__)
 

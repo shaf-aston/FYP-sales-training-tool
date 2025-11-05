@@ -123,12 +123,13 @@ def run_server():
         os.environ["TRANSFORMERS_CACHE"] = str(MODEL_CACHE_DIR)
         
         # Run the server
-        chatbot_path = SRC_DIR / "fitness_chatbot.py"
+        chatbot_path = SRC_DIR / "main.py"
         logger.info(f"Running server from: {chatbot_path}")
         
         # Start the process
         process = subprocess.Popen(
-            [sys.executable, str(chatbot_path)],
+            [sys.executable, "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--log-config", "None"],
+            # [sys.executable, str(chatbot_path)],
             stdout=subprocess.PIPE, 
             stderr=subprocess.PIPE,
             text=True,

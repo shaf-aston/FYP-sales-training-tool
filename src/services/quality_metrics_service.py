@@ -29,7 +29,7 @@ from contextlib import contextmanager
 import threading
 import statistics
 from collections import defaultdict
-from config.settings import QUALITY_DB_PATH
+from infrastructure.settings import QUALITY_DB_PATH
 
 # Configure logging
 logger = logging.getLogger(__name__)

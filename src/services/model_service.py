@@ -7,7 +7,7 @@ from pathlib import Path
 import pickle
 import sys
 
-from config.settings import (
+from infrastructure.settings import (
   ENABLE_4BIT, ENABLE_ACCELERATE, ENABLE_OPTIMUM, MODEL_CACHE_DIR
 )
 
@@ -185,7 +185,7 @@ class ModelService:
         
         # Try to get model config
         try:
-            from env import assert_model_present
+            from utils.env import assert_model_present
             # Ensure model exists locally before attempting load
             mdir = assert_model_present(self.model_name)
             logger.info(f"✅ Validated local model directory: {mdir}")

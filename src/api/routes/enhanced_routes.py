@@ -10,7 +10,8 @@ import logging
 # Import services
 from services.persona_service import persona_service, PersonaType, DifficultyLevel
 from services.progress_service import progress_service, SkillLevel, TrainingMetric
-from services.feedback_service import feedback_service, FeedbackType, FeedbackCategory
+from services.feedback_service import feedback_service
+from services.feedback_models import FeedbackType, FeedbackCategory
 from services.rag_service import rag_service
 from services.preprocessing_service import preprocessing_service
 from services.postprocessing_service import postprocessing_service

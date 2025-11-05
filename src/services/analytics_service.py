@@ -14,7 +14,7 @@ from pathlib import Path
 from collections import defaultdict, Counter
 import statistics
 
-from config.settings import PROJECT_ROOT
+from infrastructure.settings import PROJECT_ROOT
 
 logger = logging.getLogger(__name__)
 

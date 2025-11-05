@@ -7,7 +7,7 @@ import logging
 from transformers import pipeline, AutoTokenizer, AutoModelForCausalLM
 from pathlib import Path
 
-from config.settings import (
+from infrastructure.settings import (
   ENABLE_4BIT, ENABLE_ACCELERATE, ENABLE_OPTIMUM, MODEL_CACHE_DIR
 )
 

@@ -9,9 +9,14 @@ from fastapi.middleware.cors import CORSMiddleware
 import psutil
 import time
 import os
+import sys
+from pathlib import Path
+
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 # Project imports
-from config.settings import (
+from infrastructure.settings import (
   APP_TITLE, APP_VERSION, CORS_ORIGINS, STATIC_DIR, LOGS_DIR, DEFAULT_MODEL
 )
 from services.model_service import model_service
@@ -70,10 +75,9 @@ def initialize_services():
 
 def validate_environment_variables():
     """Validate critical environment variables"""
-    required_vars = ["MODEL_NAME"]
-    for var in required_vars:
-        if not os.getenv(var):
-            raise EnvironmentError(f"❌ Missing required environment variable: {var}")
+    # Only check for MODEL_NAME if not set in config
+    if not os.getenv("MODEL_NAME") and not DEFAULT_MODEL:
+        raise EnvironmentError("❌ Missing required environment variable: MODEL_NAME or DEFAULT_MODEL")
 
 # Validate environment variables during startup
 validate_environment_variables()

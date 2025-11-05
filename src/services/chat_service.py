@@ -8,7 +8,8 @@ from typing import Dict, List, Optional, Any
 import uuid
 
 from services.persona_service import persona_service
-from config.settings import MAX_CONTEXT_LENGTH, PERFORMANCE_STATS
+from services.model_service import model_service
+from infrastructure.settings import MAX_CONTEXT_LENGTH, PERFORMANCE_STATS
 
 # Import enhanced_responses - handle path issues
 try:

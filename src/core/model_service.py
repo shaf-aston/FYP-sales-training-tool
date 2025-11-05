@@ -5,7 +5,7 @@ import time
 import logging
 from pathlib import Path
 
-from config.settings import (
+from infrastructure.settings import (
   ENABLE_4BIT, ENABLE_ACCELERATE, ENABLE_OPTIMUM, MODEL_CACHE_DIR
 )
 

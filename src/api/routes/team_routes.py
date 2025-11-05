@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Dict, Any
 from fastapi import APIRouter, HTTPException
 
-from config.settings import PROJECT_ROOT
+from infrastructure.settings import PROJECT_ROOT
 
 router = APIRouter(prefix="/api/team", tags=["team"])  # unified
 

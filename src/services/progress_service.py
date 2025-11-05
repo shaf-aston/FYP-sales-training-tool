@@ -11,7 +11,7 @@ from dataclasses import dataclass, asdict
 from enum import Enum
 from datetime import datetime, timedelta
 
-from config.settings import PROJECT_ROOT
+from infrastructure.settings import PROJECT_ROOT
 
 logger = logging.getLogger(__name__)
 

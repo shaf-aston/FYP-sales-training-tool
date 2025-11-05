@@ -62,7 +62,7 @@ def _lazy_import_speech_recognition():
     
     return SPEECH_RECOGNITION_AVAILABLE
 
-from config.settings import PROJECT_ROOT
+from infrastructure.settings import PROJECT_ROOT
 
 logger = logging.getLogger(__name__)
 
