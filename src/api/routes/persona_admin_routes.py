@@ -5,7 +5,7 @@ import re
 from typing import Dict, Any, List, Optional
 from fastapi import APIRouter, HTTPException
 
-from services.persona_service import persona_service, Persona, PersonaType, DifficultyLevel
+from services.ai_services import persona_service, Persona, PersonaType, DifficultyLevel
 
 router = APIRouter(prefix="/api/personas", tags=["persona-admin"])  # under unified /api
 

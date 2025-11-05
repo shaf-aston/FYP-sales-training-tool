@@ -4,7 +4,7 @@ Unified session management routes under /api
 from fastapi import APIRouter, HTTPException
 from typing import Dict
 
-from services.chat_service import chat_service
+from services.ai_services import chat_service
 from models.request_models import SessionStartRequest, SessionEndRequest
 
 router = APIRouter(prefix="/api", tags=["sessions"]) 

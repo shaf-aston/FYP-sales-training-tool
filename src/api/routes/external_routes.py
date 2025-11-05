@@ -6,7 +6,7 @@ import os
 from fastapi import APIRouter, HTTPException, Header
 from typing import Optional
 
-from services.persona_service import persona_service
+from services.ai_services import persona_service
 
 router = APIRouter(prefix="/external", tags=["external"])  # not under /api to make it explicit
 

@@ -6,8 +6,8 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 
-from services.chat_service import chat_service
-from services.model_service import model_service
+from services.ai_services import chat_service
+from services.ai_services import model_service
 from models.character_profiles import get_mary_profile
 from infrastructure.settings import TEMPLATES_DIR
 

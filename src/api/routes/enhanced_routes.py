@@ -8,16 +8,16 @@ from pydantic import BaseModel
 import logging
 
 # Import services
-from services.persona_service import persona_service, PersonaType, DifficultyLevel
-from services.progress_service import progress_service, SkillLevel, TrainingMetric
-from services.feedback_service import feedback_service
-from services.feedback_models import FeedbackType, FeedbackCategory
-from services.rag_service import rag_service
-from services.preprocessing_service import preprocessing_service
-from services.postprocessing_service import postprocessing_service
-from services.voice_service import get_voice_service
-from services.model_optimization_service import model_optimization_service
-from services.validation_service import validation_service
+from services.ai_services import persona_service, PersonaType, DifficultyLevel
+from services.data_services import progress_service, SkillLevel, TrainingMetric
+from services.analysis_services import feedback_service
+from services.analysis_services import FeedbackType, FeedbackCategory
+from services.ai_services import rag_service
+from services.analysis_services import preprocessing_service
+from services.analysis_services import postprocessing_service
+from services.voice_services import get_voice_service
+from services.ai_services import model_optimization_service
+from services.analysis_services import validation_service
 
 logger = logging.getLogger(__name__)
 
@@ -149,7 +149,7 @@ async def start_persona_training_session(request: PersonaSelectionRequest) -> Di
 async def chat_with_persona(request: TrainingSessionRequest) -> Dict[str, Any]:
     """Send message to persona and get response"""
     try:
-        from services.model_service import model_service
+        from services.ai_services import model_service
         pipe = model_service.get_pipeline()
         
         if not pipe:
@@ -381,8 +381,8 @@ async def get_training_recommendations(user_id: str) -> Dict[str, Any]:
 async def get_system_health() -> Dict[str, Any]:
     """Get comprehensive system health status"""
     try:
-        from services.model_service import model_service
-        from services.chat_service import chat_service
+        from services.ai_services import model_service
+        from services.ai_services import chat_service
         
         model_name = model_service.get_model_name() or "Unknown"
         
@@ -892,8 +892,8 @@ async def enhanced_chat_with_all_services(
             base_response = persona_response_data["persona_response"]
         else:
             # Use regular chat service
-            from services.chat_service import chat_service
-            from services.model_service import model_service
+            from services.ai_services import chat_service
+            from services.ai_services import model_service
             
             pipe = model_service.get_pipeline()
             if not pipe:

@@ -2,8 +2,8 @@
 System monitoring and health API routes
 """
 from fastapi import APIRouter
-from services.chat_service import chat_service
-from services.model_service import model_service
+from services.ai_services import chat_service
+from services.ai_services import model_service
 
 try:
   from fallback_responses import toggle_fallback_responses

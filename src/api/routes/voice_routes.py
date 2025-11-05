@@ -9,11 +9,11 @@ import logging
 import base64
 from typing import Optional
 
-from services.tts_service import get_tts_service
-from services.stt_service import get_stt_service
-from services.chat_service import chat_service
-from services.model_service import model_service
-from services.voice_service import get_voice_service, VoiceEmotion
+from services.voice_servicess import get_tts_service
+from services.voice_servicess import get_stt_service
+from services.ai_services import chat_service
+from services.ai_services import model_service
+from services.voice_services import get_voice_service, VoiceEmotion
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["voice"])
