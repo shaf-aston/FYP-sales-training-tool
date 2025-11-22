@@ -69,30 +69,22 @@ class EmotionalIntelligenceAnalyzer:
             
             logger.info(f"Analyzing emotional intelligence in {len(conversation_history)} exchanges")
             
-            # Extract messages
             user_messages, ai_messages = self._extract_messages(conversation_history)
             
-            # Calculate empathy score
             empathy_score = self._calculate_empathy_score(user_messages)
             
-            # Calculate rapport score
             rapport_score = self._calculate_rapport_score(user_messages)
             
-            # Calculate adaptability score
             adaptability_score = self._calculate_adaptability_score(user_messages, persona_data)
             
-            # Calculate emotional awareness
             emotional_awareness_score = self._calculate_emotional_awareness(user_messages, ai_messages)
             
-            # Calculate overall EQ score
             overall_eq_score = self._calculate_overall_eq_score(
                 empathy_score, rapport_score, adaptability_score, emotional_awareness_score
             )
             
-            # Determine EQ rating
             eq_rating = self._rate_emotional_intelligence(overall_eq_score)
             
-            # Identify strengths and improvement areas
             strengths, improvement_areas = self._identify_eq_strengths_and_gaps(
                 empathy_score, rapport_score, adaptability_score, emotional_awareness_score
             )
@@ -146,7 +138,6 @@ class EmotionalIntelligenceAnalyzer:
             elif 'bot' in exchange:
                 ai_messages.append(exchange['bot'])
         
-        # Clean messages
         user_messages = [msg.strip() for msg in user_messages if msg and msg.strip()]
         ai_messages = [msg.strip() for msg in ai_messages if msg and msg.strip()]
         
@@ -163,11 +154,9 @@ class EmotionalIntelligenceAnalyzer:
         for message in user_messages:
             message_lower = message.lower()
             
-            # Count empathy indicators
             if any(phrase in message_lower for phrase in self.empathy_indicators):
                 empathy_signals += 1
         
-        # Calculate percentage and scale to 0-100
         empathy_ratio = empathy_signals / total_messages
         empathy_score = min(empathy_ratio * 100, 100.0)
         
@@ -184,20 +173,17 @@ class EmotionalIntelligenceAnalyzer:
         for message in user_messages:
             message_lower = message.lower()
             
-            # Count rapport building phrases
             if any(phrase in message_lower for phrase in self.rapport_building_phrases):
                 rapport_signals += 1
         
-        # Calculate percentage and scale to 0-100
         rapport_ratio = rapport_signals / total_messages
-        rapport_score = min(rapport_ratio * 150, 100.0)  # Rapport phrases are less common, so scale up
+        rapport_score = min(rapport_ratio * 150, 100.0)
         
         return rapport_score
     
     def _calculate_adaptability_score(self, user_messages: List[str], persona_data: Optional[Dict]) -> float:
         """Calculate adaptability score based on persona-specific responses"""
         if not user_messages or not persona_data:
-            # Calculate basic adaptability from general indicators
             adaptability_signals = 0
             total_messages = len(user_messages)
             
@@ -209,14 +195,12 @@ class EmotionalIntelligenceAnalyzer:
             adaptability_ratio = adaptability_signals / total_messages if total_messages > 0 else 0
             return min(adaptability_ratio * 100, 100.0)
         
-        # Persona-specific adaptability analysis
         persona_traits = persona_data.get("personality_traits", [])
         persona_concerns = persona_data.get("concerns", [])
         
         trait_adaptation_score = self._calculate_trait_adaptation(user_messages, persona_traits)
         concern_adaptation_score = self._calculate_concern_adaptation(user_messages, persona_concerns)
         
-        # Combine scores
         adaptability_score = (trait_adaptation_score + concern_adaptation_score) / 2
         
         return adaptability_score
@@ -224,7 +208,7 @@ class EmotionalIntelligenceAnalyzer:
     def _calculate_trait_adaptation(self, user_messages: List[str], persona_traits: List[str]) -> float:
         """Calculate how well the user adapted to persona traits"""
         if not persona_traits:
-            return 50.0  # Neutral score if no traits specified
+            return 50.0
         
         adaptation_signals = 0
         all_text = ' '.join(user_messages).lower()
@@ -232,7 +216,6 @@ class EmotionalIntelligenceAnalyzer:
         for trait in persona_traits:
             trait_lower = trait.lower()
             
-            # Check for trait-specific adaptation
             if trait_lower == "cautious":
                 if any(word in all_text for word in ["safe", "careful", "gradually", "step by step", "comfortable"]):
                     adaptation_signals += 1
@@ -255,14 +238,13 @@ class EmotionalIntelligenceAnalyzer:
     def _calculate_concern_adaptation(self, user_messages: List[str], persona_concerns: List[str]) -> float:
         """Calculate how well the user addressed persona concerns"""
         if not persona_concerns:
-            return 50.0  # Neutral score if no concerns specified
+            return 50.0
         
         concern_addressed = 0
         all_text = ' '.join(user_messages).lower()
         
         for concern in persona_concerns:
             concern_words = concern.lower().split()
-            # Check if any concern-related words appear in user messages
             if any(word in all_text for word in concern_words):
                 concern_addressed += 1
         
@@ -277,26 +259,21 @@ class EmotionalIntelligenceAnalyzer:
         emotional_responses = 0
         tone_matching = 0
         
-        # Analyze AI emotional responses
         for ai_msg in ai_messages:
             ai_lower = ai_msg.lower()
             if any(word in ai_lower for word in self.emotional_awareness_keywords):
                 emotional_responses += 1
         
-        # Analyze tone matching (user acknowledging AI emotions)
         for i, ai_msg in enumerate(ai_messages):
             ai_lower = ai_msg.lower()
             
-            # Check if AI expressed emotion
             ai_emotional = any(word in ai_lower for word in self.emotional_awareness_keywords)
             
             if ai_emotional and i + 1 < len(user_messages):
-                # Check if user acknowledged in next response
                 user_response = user_messages[i + 1].lower()
                 if any(word in user_response for word in self.empathy_indicators):
                     tone_matching += 1
         
-        # Calculate scores
         emotional_response_ratio = emotional_responses / len(ai_messages) if ai_messages else 0
         tone_matching_ratio = tone_matching / len(ai_messages) if ai_messages else 0
         
@@ -307,12 +284,11 @@ class EmotionalIntelligenceAnalyzer:
     def _calculate_overall_eq_score(self, empathy: float, rapport: float, 
                                   adaptability: float, emotional_awareness: float) -> float:
         """Calculate overall emotional intelligence score"""
-        # Weighted average
         weights = {
-            'empathy': 0.3,      # 30% - Core EQ component
-            'rapport': 0.25,     # 25% - Relationship building
-            'adaptability': 0.25, # 25% - Flexibility and awareness
-            'emotional_awareness': 0.2  # 20% - Emotional recognition
+            'empathy': 0.3,
+            'rapport': 0.25,
+            'adaptability': 0.25,
+            'emotional_awareness': 0.2
         }
         
         overall_score = (
@@ -343,7 +319,6 @@ class EmotionalIntelligenceAnalyzer:
         strengths = []
         improvement_areas = []
         
-        # Check each component
         if empathy >= 60:
             strengths.append("Strong empathetic responses")
         elif empathy < 30:
@@ -380,7 +355,6 @@ class EmotionalIntelligenceAnalyzer:
             'recommendations': []
         }
         
-        # Generate recommendations based on scores
         if analysis.empathy_score < 50:
             insights['recommendations'].append("Practice empathetic language like 'I understand your concern' or 'That makes sense'")
         
@@ -390,7 +364,6 @@ class EmotionalIntelligenceAnalyzer:
         if analysis.adaptability_score < 50:
             insights['recommendations'].append("Adapt your communication style to match the customer's personality and preferences")
         
-        # Overall recommendations
         if analysis.overall_eq_score >= 70:
             insights['recommendations'].append("Continue developing strong emotional intelligence skills")
         elif analysis.overall_eq_score < 50:

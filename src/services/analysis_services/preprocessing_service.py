@@ -4,8 +4,11 @@ Preprocessing service for parallel text processing, persona extraction, and cont
 import re
 import logging
 import asyncio
+from datetime import datetime, UTC
+import re
+import logging
+import asyncio
 from typing import Dict, List, Optional, Tuple, Any
-from datetime import datetime
 from dataclasses import dataclass
 import concurrent.futures
 from enum import Enum
@@ -41,9 +44,8 @@ class PreprocessingService:
     async def process_input(self, user_input: str, conversation_history: List[Dict], 
                           user_profile: Dict = None) -> ProcessedInput:
         """Process user input through parallel preprocessing pipeline"""
-        start_time = datetime.now().timestamp()
+        start_time = datetime.now(UTC).timestamp()
         
-        # Run preprocessing tasks in parallel
         tasks = [
             self._clean_text(user_input),
             self._extract_persona(user_input, conversation_history),
@@ -54,10 +56,9 @@ class PreprocessingService:
         results = await asyncio.gather(*tasks)
         cleaned_text, persona_attributes, context_metadata, additional_metadata = results
         
-        # Combine metadata
         final_metadata = {**context_metadata, **additional_metadata}
         
-        processing_time = datetime.now().timestamp() - start_time
+        processing_time = datetime.now(UTC).timestamp() - start_time
         confidence_score = self._calculate_confidence(results)
         
         return ProcessedInput(
@@ -94,10 +95,8 @@ class PreprocessingService:
     
     def _calculate_confidence(self, results: List[Any]) -> float:
         """Calculate overall processing confidence score"""
-        # Simple confidence calculation based on processing success
         confidence = 1.0
         
-        # Reduce confidence if any component failed
         for result in results:
             if not result:
                 confidence *= 0.8
@@ -121,24 +120,18 @@ class TextCleaner:
         if not text:
             return ""
         
-        # Convert to lowercase for processing (preserve original case in result)
         original_text = text
         cleaned = text.strip()
         
-        # Remove URLs and emails
         cleaned = self.patterns['url_pattern'].sub('[URL]', cleaned)
         cleaned = self.patterns['email_pattern'].sub('[EMAIL]', cleaned)
         
-        # Clean repeated punctuation
         cleaned = self.patterns['repeated_punctuation'].sub(r'\1', cleaned)
         
-        # Remove excessive special characters but keep basic punctuation
         cleaned = self.patterns['special_chars'].sub(' ', cleaned)
         
-        # Normalize whitespace
         cleaned = self.patterns['extra_spaces'].sub(' ', cleaned)
         
-        # Basic typo correction (simple cases)
         cleaned = self._basic_typo_correction(cleaned)
         
         return cleaned.strip()
@@ -161,7 +154,6 @@ class TextCleaner:
         for word in words:
             clean_word = re.sub(r'[^\w]', '', word.lower())
             if clean_word in corrections:
-                # Preserve original punctuation
                 corrected_word = word.replace(clean_word, corrections[clean_word])
                 corrected_words.append(corrected_word)
             else:
@@ -209,38 +201,31 @@ class PersonaExtractor:
         text_lower = text.lower()
         persona_scores = {}
         
-        # Analyze current message
         for persona_type, indicators in self.persona_indicators.items():
             score = 0.0
             
-            # Check keywords
             for keyword in indicators['keywords']:
                 if keyword in text_lower:
                     score += 1.0
             
-            # Check phrases
             for phrase in indicators['phrases']:
                 if phrase in text_lower:
                     score += 2.0
             
-            # Check patterns
             for pattern in indicators['patterns']:
                 if re.search(pattern, text_lower):
                     score += 1.5
             
             persona_scores[persona_type.value] = score
         
-        # Analyze conversation history for persona consistency
         history_scores = self._analyze_conversation_history(conversation_history)
         
-        # Combine current and historical scores
         combined_scores = {}
         for persona in persona_scores:
             current_score = persona_scores[persona]
             historical_score = history_scores.get(persona, 0.0)
             combined_scores[persona] = (current_score * 0.7) + (historical_score * 0.3)
         
-        # Determine primary persona
         primary_persona = max(combined_scores, key=combined_scores.get) if combined_scores else PersonaType.AMIABLE.value
         
         return {
@@ -258,13 +243,11 @@ class PersonaExtractor:
         if not history:
             return history_scores
         
-        # Analyze last few exchanges
         recent_messages = history[-3:] if len(history) > 3 else history
         
         for exchange in recent_messages:
             user_message = exchange.get('user', '').lower()
             if user_message:
-                # Run persona extraction on historical message
                 for persona_type, indicators in self.persona_indicators.items():
                     score = 0.0
                     for keyword in indicators['keywords']:
@@ -414,19 +397,15 @@ class ContextBuilder:
         if not text:
             return 'low'
         
-        # Length-based assessment
         word_count = len(text.split())
         
-        # Question-based assessment
         question_count = text.count('?')
         
-        # Historical engagement
         avg_history_length = 0
         if history:
             total_words = sum(len(exchange.get('user', '').split()) for exchange in history)
             avg_history_length = total_words / len(history)
         
-        # Calculate engagement score
         engagement_score = 0
         
         if word_count > 10:
@@ -453,7 +432,7 @@ class MetadataAssembler:
     def assemble(self, text: str, history: List[Dict], profile: Dict) -> Dict[str, Any]:
         """Assemble metadata from various sources"""
         metadata = {
-            'timestamp': datetime.now().isoformat(),
+            'timestamp': datetime.now(UTC).isoformat(),
             'input_length': len(text) if text else 0,
             'word_count': len(text.split()) if text else 0,
             'conversation_turn': len(history) + 1 if history else 1,
@@ -461,7 +440,6 @@ class MetadataAssembler:
             'processing_version': '1.0'
         }
         
-        # Add profile-based metadata
         if profile:
             metadata.update({
                 'user_experience_level': profile.get('experience_level', 'unknown'),
@@ -471,5 +449,4 @@ class MetadataAssembler:
         
         return metadata
 
-# Global preprocessing service instance
 preprocessing_service = PreprocessingService()

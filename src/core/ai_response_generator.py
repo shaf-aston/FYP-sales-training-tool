@@ -8,13 +8,9 @@ import time
 import re
 from typing import Optional
 
-# Import model configuration for dynamic model switching
-try:
-    from config.model_config import get_active_model_config
-except ImportError:
-    # Fallback if model_config not available
-    def get_active_model_config():
-        return {"generation_config": {"max_new_tokens": 120, "do_sample": False, "num_beams": 1, "temperature": 0.7, "repetition_penalty": 1.05}}
+
+# Use centralized config loader
+from config.config_loader import config
 
 logger = logging.getLogger("fitness_chatbot")
 
@@ -31,32 +27,34 @@ def generate_ai_response(prompt: str, pipe, tokenizer=None) -> Optional[str]:
         A clean, natural response from persona perspective or None if failed
     """
     try:
-        gen_config = get_active_model_config()["generation_config"]
-        
+        gen_config = {
+            "max_new_tokens": config.get("llm.max_tokens", 120),
+            "do_sample": True,
+            "num_beams": 1,
+            "temperature": config.get("llm.temperature", 0.8),
+            "repetition_penalty": 1.05
+        }
         gen_start = time.time()
         response = pipe(
             prompt,
-            max_new_tokens=gen_config.get("max_new_tokens", 120),
-            do_sample=False,
-            temperature=1.0,
-            repetition_penalty=1.1,
+            max_new_tokens=gen_config["max_new_tokens"],
+            do_sample=gen_config["do_sample"],
+            temperature=gen_config["temperature"],
+            repetition_penalty=gen_config["repetition_penalty"],
+            num_beams=gen_config["num_beams"],
             return_full_text=False,
             pad_token_id=(pipe.tokenizer.eos_token_id if hasattr(pipe, 'tokenizer') and pipe.tokenizer else None),
             eos_token_id=(pipe.tokenizer.eos_token_id if hasattr(pipe, 'tokenizer') and pipe.tokenizer else None),
         )
         gen_time = time.time() - gen_start
         logger.info(f"⚡ Model inference completed in {gen_time:.2f}s")
-        
         generated_text = response[0]['generated_text'].strip()
         character_response = _extract_response(generated_text, prompt)
         character_response = _clean_response(character_response)
-        
         if not _validate_response(character_response):
             return None
-        
         _log_generation_stats(character_response, gen_time, pipe, tokenizer)
         return character_response
-
     except Exception as e:
         logger.error(f"AI generation error: {e}")
         return None
@@ -76,46 +74,40 @@ def _clean_response(text: str) -> str:
     """Aggressively clean response from formatting artifacts"""
     text = text.strip()
     
-    # Remove markdown and template markers
-    text = re.sub(r'###.*?###', '', text, flags=re.IGNORECASE | re.DOTALL)
-    text = re.sub(r'\*\*([^*]*)\*\*', r'\1', text)  # **text** → text
-    text = re.sub(r'\*\*', '', text)  # Remove standalone **
-    text = re.sub(r'\*([^*]+)\*', r'\1', text)  # *text* → text
-    text = re.sub(r'#{1,6}\s*', '', text)  # Remove headers
+    text = re.sub(r'#+ ', '', text)
+    text = re.sub(r'\*\*([^*]*)\*\*', r'\1', text) 
+    text = re.sub(r'\*\*', '', text)
+    text = re.sub(r'\*([^*]+)\*', r'\1', text)
+    text = re.sub(r'#{1,6}\s*', '', text)
     text = re.sub(r'Response Format:', '', text, flags=re.IGNORECASE)
     text = re.sub(r'Now respond as.*?:', '', text, flags=re.IGNORECASE)
-    text = re.sub(r'\*+', '', text)  # Remove remaining asterisks
+    text = re.sub(r'\*+', '', text)
     
-    # Remove persona labels
     text = re.sub(r'\b\w+\s*\(potential customer\):', '', text, flags=re.IGNORECASE)
     text = re.sub(r'potential customer:', '', text, flags=re.IGNORECASE)
     text = re.sub(r'\b(Mary|Jake|Sarah|David)\s*:', '', text, flags=re.IGNORECASE)
     
-    # Clean whitespace
     text = re.sub(r'\s+', ' ', text)
     text = text.strip()
     
-    # Remove salesperson references
     text = text.replace("Salesperson:", "").strip()
     text = text.replace("I'm a salesperson", "").strip()
     text = text.replace("I am a salesperson", "").strip()
     text = text.replace("my job is to provide information", "").strip()
     text = text.replace("my job is to", "").strip()
     
-    # Fix confidence language for personas
     text = re.sub(r"I understand the benefits", "I've heard about the benefits but I'm not sure", text, flags=re.IGNORECASE)
     text = re.sub(r"I know all about", "I've heard about", text, flags=re.IGNORECASE)
     
-    # Remove AI language
     text = text.replace("As an AI", "").strip()
     text = text.replace("I'm an AI", "").strip()
     text = text.strip('"\'')
     
-    # Handle incomplete sentences
     if text.startswith(("and my job", "and help you")):
         text = ""
     
     return _ensure_complete_sentences(text)
+
 
 
 def _ensure_complete_sentences(text: str) -> str:
@@ -141,7 +133,6 @@ def _validate_response(text: str) -> bool:
         logger.warning("Response too short (<5 chars)")
         return False
     
-    # Check for salesperson contamination
     forbidden_phrases = [
         "i'm a salesperson", "i am a salesperson", "my job is to provide", 
         "my job is to help you", "as a salesperson"

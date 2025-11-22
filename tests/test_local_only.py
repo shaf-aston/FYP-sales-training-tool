@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Local-Only Functionality Tests
 =============================
@@ -13,7 +12,6 @@ import unittest
 import tempfile
 from pathlib import Path
 
-# Add project root to Python path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
@@ -23,7 +21,6 @@ class TestLocalOnlyFunctionality(unittest.TestCase):
     
     def setUp(self):
         """Set up test environment to ensure no API keys are used"""
-        # Remove any API keys from environment
         self.original_env = {}
         api_keys = [
             'ELEVENLABS_API_KEY', 'ELEVENLABS_KEY',
@@ -44,50 +41,46 @@ class TestLocalOnlyFunctionality(unittest.TestCase):
     def test_core_imports_work_without_tokens(self):
         """Test that core modules import without requiring API tokens"""
         try:
-            # Core services should import without tokens
-            from services.voice_service import get_voice_service
-            from services.model_service import model_service
-            from services.chat_service import chat_service
-            
+            from src.services.voice_services import EnhancedVoiceService, get_voice_service
+            from src.services.ai_services import model_service, chat_service
+
             self.assertTrue(True, "All core services imported successfully")
-            
-        except Exception as e:
+
+        except ImportError as e:
             self.fail(f"Core imports failed: {e}")
-    
+        except Exception as e:
+            self.fail(f"Unexpected error during imports: {e}")
+
     def test_voice_service_local_only(self):
         """Test voice service works with local backends only"""
         try:
-            from services.voice_service import get_voice_service
-            
+            from src.services.voice_services import EnhancedVoiceService, get_voice_service
+
             vs = get_voice_service()
             available = vs.is_available()
-            
-            # Should have local services available
+
             self.assertIsInstance(available, dict)
             self.assertIn('whisper', available)
-            
-            # Should not depend on cloud services
-            self.assertFalse(available.get('elevenlabs', False), 
+
+            self.assertFalse(available.get('elevenlabs', False),
                            "ElevenLabs should be disabled for local-only mode")
-            
-            # Check that pyttsx3 is available (local TTS)
+
             if available.get('pyttsx3'):
                 self.assertTrue(True, "Local TTS (pyttsx3) is available")
-            
+
+        except ImportError as e:
+            self.fail(f"Voice service import failed: {e}")
         except Exception as e:
             self.fail(f"Voice service local test failed: {e}")
     
     def test_model_service_works_offline(self):
         """Test that model service works without internet"""
         try:
-            from services.model_service import model_service
+            from src.services.ai_services import model_service
             
-            # Should be able to get pipeline without internet
-            # (assuming model is cached)
             pipeline = model_service.get_pipeline()
             
             if pipeline is None:
-                # This is OK if model isn't downloaded yet
                 self.skipTest("Model not downloaded - run python scripts/download_model.py first")
             else:
                 self.assertIsNotNone(pipeline, "Model pipeline should be available offline")
@@ -95,24 +88,20 @@ class TestLocalOnlyFunctionality(unittest.TestCase):
         except ImportError as e:
             self.fail(f"Model service import failed: {e}")
         except Exception as e:
-            # Model might not be downloaded - that's OK for this test
             self.skipTest(f"Model not available (expected): {e}")
     
     def test_chat_service_basic_functionality(self):
         """Test chat service basic functionality without external dependencies"""
         try:
-            from services.chat_service import chat_service
+            from src.services.ai_services import chat_service
             
-            # Test fallback responses work
             fallback_response = chat_service._get_fallback_response("Hello")
             self.assertIsInstance(fallback_response, str)
             self.assertGreater(len(fallback_response), 0)
             
-            # Test conversation context management
             user_id = "test_user"
             persona = "mary"
             
-            # This should work even without a model
             context = chat_service.conversation_contexts.get(f"{user_id}_{persona}", [])
             self.assertIsInstance(context, list)
             
@@ -122,10 +111,8 @@ class TestLocalOnlyFunctionality(unittest.TestCase):
     def test_no_network_dependencies_in_imports(self):
         """Ensure imports don't require network access"""
         try:
-            # These should all work offline
-            import src.fitness_chatbot  # Main application
+            import src.main
             
-            # API routes should import without network
             from api.routes import chat_routes, voice_routes, web_routes
             
             self.assertTrue(True, "All modules imported without network")
@@ -138,7 +125,6 @@ class TestLocalOnlyFunctionality(unittest.TestCase):
         try:
             import config.settings
             
-            # Should have sensible defaults without tokens
             self.assertTrue(True, "Configuration loaded without tokens")
             
         except Exception as e:
@@ -149,7 +135,6 @@ class TestLocalOnlyFunctionality(unittest.TestCase):
         try:
             import fallback_responses
             
-            # Should have fallback responses defined
             self.assertTrue(True, "Fallback responses available")
             
         except Exception as e:
@@ -163,11 +148,9 @@ class TestLocalTTSFunctionality(unittest.TestCase):
         try:
             import pyttsx3
             
-            # Try to initialize TTS engine
             engine = pyttsx3.init()
             self.assertIsNotNone(engine)
             
-            # Test basic functionality (don't actually play audio)
             engine.setProperty('rate', 200)
             rate = engine.getProperty('rate')
             self.assertIsInstance(rate, (int, float))
@@ -188,7 +171,6 @@ class TestLocalTTSFunctionality(unittest.TestCase):
         except ImportError:
             self.skipTest("Coqui TTS not installed - install with: pip install coqui-tts")
         except Exception as e:
-            # Initialization might fail, but import should work
             self.assertTrue(True, f"Coqui TTS import worked (init may fail: {e})")
 
 class TestRegressionStability(unittest.TestCase):
@@ -198,7 +180,7 @@ class TestRegressionStability(unittest.TestCase):
         """Test that voice service can be created multiple times"""
         for i in range(5):
             try:
-                from services.voice_service import get_voice_service
+                from src.services.voice_services import EnhancedVoiceService, get_voice_service
                 vs = get_voice_service()
                 available = vs.is_available()
                 self.assertIsInstance(available, dict)
@@ -212,16 +194,14 @@ class TestRegressionStability(unittest.TestCase):
         
         initial_objects = len(gc.get_objects())
         
-        # Create and destroy services multiple times
         for i in range(3):
-            from services.voice_service import get_voice_service
+            from src.services.voice_services import EnhancedVoiceService, get_voice_service
             vs = get_voice_service()
             del vs
             gc.collect()
         
         final_objects = len(gc.get_objects())
         
-        # Allow some growth but not excessive
         growth = final_objects - initial_objects
         self.assertLess(growth, 1000, f"Excessive memory growth: {growth} objects")
 
@@ -230,16 +210,13 @@ def run_local_only_tests():
     print("Running Local-Only Functionality Tests...")
     print("=" * 50)
     
-    # Create test suite
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
     
-    # Add test cases
     suite.addTests(loader.loadTestsFromTestCase(TestLocalOnlyFunctionality))
     suite.addTests(loader.loadTestsFromTestCase(TestLocalTTSFunctionality))
     suite.addTests(loader.loadTestsFromTestCase(TestRegressionStability))
     
-    # Run tests
     runner = unittest.TextTestRunner(verbosity=2)
     result = runner.run(suite)
     

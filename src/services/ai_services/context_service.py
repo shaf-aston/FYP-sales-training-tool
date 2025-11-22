@@ -7,7 +7,7 @@ import tiktoken
 import logging
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 
 logger = logging.getLogger(__name__)
 
@@ -17,11 +17,11 @@ class ContextItem:
     """Individual context item with metadata"""
     content: str
     timestamp: datetime
-    role: str  # 'user', 'assistant', 'system'
-    importance: float = 1.0  # 0.0-1.0 importance score
+    role: str
+    importance: float = 1.0
     tokens: int = 0
     session_id: str = ""
-    message_type: str = "message"  # 'message', 'instruction', 'persona', 'feedback'
+    message_type: str = "message" 
 
 
 class ContextWindowManager:
@@ -40,11 +40,10 @@ class ContextWindowManager:
         try:
             self.encoding = tiktoken.encoding_for_model(model_name)
         except KeyError:
-            # Fallback to cl100k_base for unknown models
             self.encoding = tiktoken.get_encoding("cl100k_base")
         
         self.context_items: List[ContextItem] = []
-        self.reserved_tokens = 500  # Reserve tokens for response generation
+        self.reserved_tokens = 500
     
     def count_tokens(self, text: str) -> int:
         """Count tokens in text using tiktoken"""
@@ -52,7 +51,6 @@ class ContextWindowManager:
             return len(self.encoding.encode(text))
         except Exception as e:
             logger.warning(f"Error counting tokens: {e}")
-            # Fallback estimation: ~4 chars per token
             return len(text) // 4
     
     def add_context(self, content: str, role: str = "user", 
@@ -63,7 +61,7 @@ class ContextWindowManager:
         
         context_item = ContextItem(
             content=content,
-            timestamp=datetime.now(),
+            timestamp=datetime.now(UTC),
             role=role,
             importance=importance,
             tokens=token_count,
@@ -98,21 +96,17 @@ class ContextWindowManager:
     
     def _calculate_relevance_score(self, item: ContextItem, current_time: datetime) -> float:
         """Calculate relevance score for context item"""
-        # Base score from importance
         score = item.importance
         
-        # Recency bonus (items within last hour get bonus)
         time_diff = current_time - item.timestamp
         if time_diff < timedelta(hours=1):
             recency_bonus = 1.0 - (time_diff.total_seconds() / 3600) * 0.3
             score *= recency_bonus
         else:
-            # Older items get penalty
             hours_old = time_diff.total_seconds() / 3600
             age_penalty = max(0.5, 1.0 - (hours_old - 1) * 0.1)
             score *= age_penalty
         
-        # Message type bonuses
         type_bonuses = {
             "instruction": 1.0,
             "persona": 0.9,
@@ -121,7 +115,6 @@ class ContextWindowManager:
         }
         score *= type_bonuses.get(item.message_type, 1.0)
         
-        # Role bonuses
         role_bonuses = {
             "system": 1.0,
             "user": 0.9,
@@ -135,27 +128,22 @@ class ContextWindowManager:
         """Select context items that fit within token limit"""
         current_time = datetime.now()
         
-        # Calculate relevance scores
         scored_items = []
         for item in self.context_items:
             relevance = self._calculate_relevance_score(item, current_time)
             scored_items.append((item, relevance))
         
-        # Sort by relevance score (descending)
         scored_items.sort(key=lambda x: x[1], reverse=True)
         
-        # Select items that fit within token limit
         selected_items = []
         used_tokens = 0
         
-        # Always include system instructions and persona context first
         for item, score in scored_items:
             if item.message_type in ["instruction", "persona"]:
                 if used_tokens + item.tokens <= available_tokens:
                     selected_items.append(item)
                     used_tokens += item.tokens
         
-        # Then add other items by relevance
         for item, score in scored_items:
             if item.message_type not in ["instruction", "persona"]:
                 if used_tokens + item.tokens <= available_tokens:
@@ -174,21 +162,17 @@ class ContextWindowManager:
         if not self.context_items:
             return ""
         
-        # Ensure we include recent messages
         recent_messages = []
         message_items = [item for item in self.context_items if item.message_type == "message"]
         if message_items and include_recent_messages > 0:
-            recent_messages = message_items[-include_recent_messages * 2:]  # user + assistant pairs
+            recent_messages = message_items[-include_recent_messages * 2:]
         
-        # Get selected context items
         selected_items = self._select_context_items(available_tokens)
         
-        # Ensure recent messages are included
         for msg in recent_messages:
             if msg not in selected_items:
                 selected_items.append(msg)
         
-        # Remove duplicates by ID and sort by timestamp
         seen_items = set()
         unique_items = []
         for item in selected_items:
@@ -199,14 +183,11 @@ class ContextWindowManager:
         
         unique_items.sort(key=lambda x: x.timestamp)
         
-        # Build final context
         context_parts = []
         
-        # Group by message type for better organization
         system_items = [item for item in unique_items if item.role == "system"]
         conversation_items = [item for item in unique_items if item.role in ["user", "assistant"]]
         
-        # Add system context first
         for item in system_items:
             if item.message_type == "instruction":
                 context_parts.append(f"SYSTEM: {item.content}")
@@ -215,7 +196,6 @@ class ContextWindowManager:
             else:
                 context_parts.append(f"SYSTEM: {item.content}")
         
-        # Add conversation history
         if conversation_items:
             context_parts.append("\nCONVERSATION HISTORY:")
             for item in conversation_items:
@@ -224,11 +204,9 @@ class ContextWindowManager:
         
         final_context = "\n".join(context_parts)
         
-        # Verify token count
         final_tokens = self.count_tokens(final_context)
         if final_tokens > available_tokens:
             logger.warning(f"Context exceeds limit: {final_tokens} > {available_tokens}")
-            # Truncate if necessary
             final_context = self._truncate_context(final_context, available_tokens)
         
         logger.info(f"Built context window: {self.count_tokens(final_context)} tokens")
@@ -241,7 +219,6 @@ class ContextWindowManager:
         if len(tokens) <= max_tokens:
             return context
         
-        # Truncate from the middle, preserving system context and recent messages
         truncated_tokens = tokens[:max_tokens]
         truncated_context = self.encoding.decode(truncated_tokens)
         
@@ -253,7 +230,6 @@ class ContextWindowManager:
         cutoff_time = datetime.now() - timedelta(hours=hours)
         
         old_count = len(self.context_items)
-        # Keep system instructions and important context
         self.context_items = [
             item for item in self.context_items
             if (item.timestamp > cutoff_time or 
@@ -309,13 +285,11 @@ class ContextWindowManager:
         
         current_time = datetime.now()
         
-        # Calculate relevance scores and remove lowest scoring items
         scored_items = []
         for item in self.context_items:
             relevance = self._calculate_relevance_score(item, current_time)
             scored_items.append((item, relevance))
         
-        # Sort by relevance and keep top items
         scored_items.sort(key=lambda x: x[1], reverse=True)
         
         target_tokens = self.max_tokens - self.reserved_tokens
@@ -340,7 +314,6 @@ class ContextWindowManager:
         }
 
 
-# Global instance
 _context_manager = None
 
 def get_context_manager() -> ContextWindowManager:

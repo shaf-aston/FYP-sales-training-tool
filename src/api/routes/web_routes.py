@@ -6,10 +6,10 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 
-from services.ai_services import chat_service
-from services.ai_services import model_service
-from models.character_profiles import get_mary_profile
-from infrastructure.settings import TEMPLATES_DIR
+from src.services.ai_services import chat_service
+from src.services.ai_services import model_service
+from src.data_access.character_profiles import get_mary_profile
+from config.paths import TEMPLATES_DIR
 
 router = APIRouter()
 templates = Jinja2Templates(directory=TEMPLATES_DIR)

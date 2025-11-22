@@ -15,7 +15,6 @@ from typing import Dict, List, Optional, Any
 import time
 import asyncio
 
-# Import modular components
 from .feedback_models import FeedbackSummary
 from .conversation_analyzer import ConversationAnalyzer
 from .communication_analyzer import CommunicationAnalyzer
@@ -39,11 +38,9 @@ class FeedbackAnalyticsService:
         self.emotional_intelligence_analyzer = EmotionalIntelligenceAnalyzer()
         self.feedback_generator = FeedbackGenerator()
 
-        # Performance tracking
         self.analysis_count = 0
         self.total_processing_time = 0.0
 
-        # Session storage (for backward compatibility)
         self.session_analyses = {}
         self.user_feedback_history = {}
 
@@ -66,19 +63,16 @@ class FeedbackAnalyticsService:
         try:
             logger.info(f"Starting comprehensive feedback analysis for session {session_id}")
 
-            # Extract conversation data
             conversation_history = session_data.get('conversation_history', [])
             persona_data = session_data.get('persona_data', {})
 
             if not conversation_history:
                 raise ValueError("No conversation history provided for analysis")
 
-            # Run all analysis components in parallel for efficiency
             analysis_results = await self._run_parallel_analysis(
                 conversation_history, persona_data
             )
 
-            # Generate comprehensive feedback summary
             feedback_summary = self.feedback_generator.generate_feedback_summary(
                 session_id=session_id,
                 user_id=user_id,
@@ -89,7 +83,6 @@ class FeedbackAnalyticsService:
                 persona_data=persona_data
             )
 
-            # Store analysis results (for backward compatibility)
             analysis_record = {
                 'session_id': session_id,
                 'user_id': user_id,
@@ -105,16 +98,13 @@ class FeedbackAnalyticsService:
 
             self.session_analyses[session_id] = analysis_record
 
-            # Update user history
             if user_id not in self.user_feedback_history:
                 self.user_feedback_history[user_id] = []
             self.user_feedback_history[user_id].append(analysis_record)
 
-            # Update performance metrics
             processing_time = time.time() - start_time
             self._update_performance_metrics(processing_time)
 
-            # Format response for backward compatibility
             response = self._format_legacy_response(feedback_summary, analysis_results)
 
             logger.info(f"✅ Feedback analysis completed in {processing_time:.2f}s")
@@ -134,7 +124,6 @@ class FeedbackAnalyticsService:
     async def _run_parallel_analysis(self, conversation_history: List[Dict], persona_data: Dict) -> Dict[str, Any]:
         """Run all analysis components in parallel for efficiency"""
 
-        # Create analysis tasks
         conversation_task = asyncio.create_task(
             self._run_conversation_analysis(conversation_history)
         )
@@ -151,7 +140,6 @@ class FeedbackAnalyticsService:
             self._run_emotional_intelligence_analysis(conversation_history, persona_data)
         )
 
-        # Run all analyses concurrently
         conversation_metrics = await conversation_task
         communication_analysis = await communication_task
         sales_process_analysis = await sales_process_task
@@ -240,10 +228,8 @@ class FeedbackAnalyticsService:
         analysis_record = self.session_analyses[session_id]
         feedback_summary = FeedbackSummary.from_dict(analysis_record['feedback_summary'])
 
-        # Get insights from feedback generator
         insights = self.feedback_generator.get_feedback_insights(feedback_summary)
 
-        # Add component-specific insights
         component_insights = {
             'conversation_insights': self.conversation_analyzer.get_conversation_insights(
                 feedback_summary.conversation_metrics
@@ -266,7 +252,6 @@ class FeedbackAnalyticsService:
             'analysis_timestamp': analysis_record['analysis_timestamp']
         }
 
-    # Legacy methods for backward compatibility
     def get_analytics_dashboard(self, user_id: str = None, timeframe_days: int = 30) -> Dict[str, Any]:
         """Legacy analytics dashboard method"""
         cutoff_time = time.time() - (timeframe_days * 24 * 3600)
@@ -288,13 +273,12 @@ class FeedbackAnalyticsService:
                 "timeframe_days": timeframe_days,
                 "total_sessions": len(user_sessions),
                 "average_score": round(avg_score, 1),
-                "score_trend": "stable",  # Simplified for legacy compatibility
-                "improvement_rate": 0.0,   # Simplified for legacy compatibility
-                "category_breakdown": {},  # Would need more complex logic
+                "score_trend": "stable",
+                "improvement_rate": 0.0,
+                "category_breakdown": {},
                 "recent_achievements": []
             }
         else:
-            # System-wide dashboard
             total_sessions = len(self.session_analyses)
             recent_sessions = [s for s in self.session_analyses.values()
                              if s.get("analysis_timestamp", 0) > cutoff_time]
@@ -311,9 +295,9 @@ class FeedbackAnalyticsService:
                     "total_feedback_items": sum(len(s['feedback_summary'].get('feedback_items', []))
                                               for s in self.session_analyses.values())
                 },
-                "performance_distribution": {},  # Simplified
-                "common_improvement_areas": [],  # Simplified
-                "success_rate_by_category": {}   # Simplified
+                "performance_distribution": {},
+                "common_improvement_areas": [],
+                "success_rate_by_category": {}
             }
 
     def generate_improvement_plan(self, user_id: str, timeframe_days: int = 30) -> Dict[str, Any]:
@@ -321,12 +305,11 @@ class FeedbackAnalyticsService:
         if user_id not in self.user_feedback_history:
             return {"error": "No feedback history found for user"}
 
-        recent_sessions = self.user_feedback_history[user_id][-5:]  # Last 5 sessions
+        recent_sessions = self.user_feedback_history[user_id][-5:]
 
         if not recent_sessions:
             return {"error": "No recent sessions found"}
 
-        # Simplified improvement plan
         avg_score = sum(s['feedback_summary']['overall_score'] for s in recent_sessions) / len(recent_sessions)
 
         return {
@@ -334,9 +317,9 @@ class FeedbackAnalyticsService:
             "plan_created": time.time(),
             "timeframe_days": timeframe_days,
             "current_level": "intermediate" if avg_score >= 70 else "developing" if avg_score >= 50 else "beginner",
-            "focus_areas": ["Communication", "Sales Process", "Emotional Intelligence"][:2],  # Simplified
-            "weekly_goals": [],  # Would need more complex logic
-            "recommended_scenarios": [],  # Simplified
+            "focus_areas": ["Communication", "Sales Process", "Emotional Intelligence"][:2],
+            "weekly_goals": [],
+            "recommended_scenarios": [],
             "success_metrics": {
                 "target_overall_score": 75,
                 "minimum_sessions_per_week": 3,
@@ -347,14 +330,12 @@ class FeedbackAnalyticsService:
                     "Positive feedback on communication"
                 ]
             },
-            "resources": []  # Simplified
+            "resources": []
         }
 
 
-# Global service instance for backward compatibility
 feedback_service = FeedbackAnalyticsService()
 
-# Legacy function for backward compatibility
 def analyze_conversation_feedback(session_data: Dict[str, Any], user_id: str) -> Dict[str, Any]:
     """Legacy function for backward compatibility"""
     import asyncio

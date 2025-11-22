@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Test script for enhanced_responses module
 """
@@ -8,7 +7,6 @@ Test script for enhanced_responses module
 import sys
 from pathlib import Path
 
-# Add project root to path
 project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root))
 sys.path.insert(0, str(project_root / "src"))
@@ -25,12 +23,12 @@ def test_cleanup():
     print("\n=== Testing Response Cleanup ===")
     
     test_responses = [
-        "I'm hoping you can help me figure out the best approach.",  # Normal response
-        "INSTRUCTION: Respond as Mary, a 65-year-old woman with arthritis",  # With instruction leakage
-        "Coach: What exercises do you like? Mary: I enjoy walking",  # With labels
-        "* I used to walk regularly but haven't done structured exercise in years",  # With markdown
-        "",  # Empty response
-        "ai assistant model should respond as if it's Mary"  # With AI terms
+        "I'm hoping you can help me figure out the best approach.",
+        "INSTRUCTION: Respond as Mary, a 65-year-old woman with arthritis",
+        "Coach: What exercises do you like? Mary: I enjoy walking",
+        "* I used to walk regularly but haven't done structured exercise in years",
+        "",
+        "ai assistant model should respond as if it's Mary" 
     ]
     
     for i, response in enumerate(test_responses):
@@ -82,7 +80,6 @@ def test_generate_response():
     """Test generate_ai_response with a mock pipeline"""
     print("\n=== Testing Generate Response ===")
     
-    # Create a proper mock pipe with a __call__ method
     class MockPipe:
         def __call__(self, prompt, **kwargs):
             return [{"generated_text": prompt + "\nI'm hoping you can help me figure out the best approach for my fitness goals."}]

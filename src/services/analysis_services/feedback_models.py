@@ -191,7 +191,6 @@ class FeedbackSummary:
             priority_improvements=data['priority_improvements']
         )
 
-# Utility functions for creating feedback items
 def create_positive_feedback(category: FeedbackCategory, title: str, description: str, 
                            example: str, timestamp: float = None) -> FeedbackItem:
     """Create a positive feedback item"""

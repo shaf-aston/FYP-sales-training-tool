@@ -10,10 +10,21 @@ CREATE_PERSONAS_TABLE = """
 CREATE TABLE IF NOT EXISTS personas (
     id SERIAL PRIMARY KEY,
     name TEXT UNIQUE NOT NULL,
-    type TEXT,
-    difficulty TEXT,
+    age INTEGER,
     background TEXT,
-    metadata JSONB,
+    personality_traits TEXT[],
+    goals TEXT[],
+    concerns TEXT[],
+    objections TEXT[],
+    budget_range TEXT,
+    decision_style TEXT,
+    expertise_level TEXT,
+    persona_type TEXT,
+    difficulty TEXT,
+    health_considerations TEXT[],
+    time_constraints TEXT[],
+    preferred_communication TEXT,
+    industry TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 """
@@ -52,7 +63,7 @@ def init_db():
 
 
 def add_persona(persona: Dict) -> Optional[Dict]:
-    """Insert or update a persona. persona should contain name, type, difficulty, background, metadata."""
+    """Insert or update a persona."""
     if not DATABASE_URL:
         return None
     conn = _get_conn()
@@ -60,22 +71,55 @@ def add_persona(persona: Dict) -> Optional[Dict]:
         cur = conn.cursor(cursor_factory=RealDictCursor)
         cur.execute(
             """
-            INSERT INTO personas (name, type, difficulty, background, metadata)
-            VALUES (%s, %s, %s, %s, %s)
+            INSERT INTO personas (
+                name, age, background, personality_traits, goals, concerns, 
+                objections, budget_range, decision_style, expertise_level, 
+                persona_type, difficulty, health_considerations, time_constraints, 
+                preferred_communication, industry
+            )
+            VALUES (
+                %(name)s, %(age)s, %(background)s, %(personality_traits)s, %(goals)s, 
+                %(concerns)s, %(objections)s, %(budget_range)s, %(decision_style)s, 
+                %(expertise_level)s, %(persona_type)s, %(difficulty)s, 
+                %(health_considerations)s, %(time_constraints)s, 
+                %(preferred_communication)s, %(industry)s
+            )
             ON CONFLICT (name) DO UPDATE SET
-              type = EXCLUDED.type,
-              difficulty = EXCLUDED.difficulty,
+              age = EXCLUDED.age,
               background = EXCLUDED.background,
-              metadata = EXCLUDED.metadata
+              personality_traits = EXCLUDED.personality_traits,
+              goals = EXCLUDED.goals,
+              concerns = EXCLUDED.concerns,
+              objections = EXCLUDED.objections,
+              budget_range = EXCLUDED.budget_range,
+              decision_style = EXCLUDED.decision_style,
+              expertise_level = EXCLUDED.expertise_level,
+              persona_type = EXCLUDED.persona_type,
+              difficulty = EXCLUDED.difficulty,
+              health_considerations = EXCLUDED.health_considerations,
+              time_constraints = EXCLUDED.time_constraints,
+              preferred_communication = EXCLUDED.preferred_communication,
+              industry = EXCLUDED.industry
             RETURNING *;
             """,
-            (
-                persona.get("name"),
-                persona.get("type"),
-                persona.get("difficulty"),
-                persona.get("background"),
-                json.dumps(persona.get("metadata") or {}),
-            ),
+            {
+                "name": persona.get("name"),
+                "age": persona.get("age"),
+                "background": persona.get("background"),
+                "personality_traits": persona.get("personality_traits"),
+                "goals": persona.get("goals"),
+                "concerns": persona.get("concerns"),
+                "objections": persona.get("objections"),
+                "budget_range": persona.get("budget_range"),
+                "decision_style": persona.get("decision_style"),
+                "expertise_level": persona.get("expertise_level"),
+                "persona_type": persona.get("persona_type"),
+                "difficulty": persona.get("difficulty"),
+                "health_considerations": persona.get("health_considerations"),
+                "time_constraints": persona.get("time_constraints"),
+                "preferred_communication": persona.get("preferred_communication"),
+                "industry": persona.get("industry"),
+            },
         )
         row = cur.fetchone()
         conn.commit()

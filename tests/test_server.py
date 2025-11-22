@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Simple test server to verify FastAPI setup
 """
@@ -6,7 +5,6 @@ import sys
 import os
 from pathlib import Path
 
-# Add src directory to Python path
 project_root = Path(__file__).parent
 src_dir = project_root / "src"
 sys.path.insert(0, str(project_root))
@@ -17,7 +15,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="Test Server", version="1.0.0")
 
-# Configure CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://localhost:5173"],
@@ -31,7 +28,7 @@ async def root():
     return {"message": "Test server is running!"}
 
 @app.get("/api/v2/personas")
-async def test_personas():
+async def get_personas():
     return {
         "personas": [
             {
@@ -45,7 +42,7 @@ async def test_personas():
     }
 
 @app.post("/api/v2/progress/initialize")
-async def test_progress_init(user_id: str = "demo_user_123"):
+async def initialize_progress(user_id: str = "demo_user_123"):
     return {
         "profile_created": True,
         "user_profile": {
@@ -57,7 +54,7 @@ async def test_progress_init(user_id: str = "demo_user_123"):
     }
 
 @app.get("/api/v2/progress/{user_id}/dashboard")
-async def test_dashboard(user_id: str):
+async def get_dashboard_data(user_id: str):
     return {
         "user_profile": {"user_id": user_id, "experience_level": "beginner"},
         "overall_progress": {"completion_percentage": 0},

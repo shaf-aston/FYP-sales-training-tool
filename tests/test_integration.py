@@ -7,7 +7,6 @@ import time
 import asyncio
 from pathlib import Path
 
-# Add project paths
 project_root = Path(__file__).resolve().parent.parent
 src_path = str(project_root / "src")
 utils_path = str(project_root / "utils")
@@ -18,10 +17,8 @@ if str(project_root) not in sys.path:
 if utils_path not in sys.path:
     sys.path.insert(0, utils_path)
 
-# Mock dependencies
 from unittest.mock import MagicMock, patch
 
-# Create mock modules for services
 sys.modules['src.services.context_service'] = MagicMock()
 sys.modules['src.services.prompt_service'] = MagicMock()
 sys.modules['src.services.analytics_service'] = MagicMock()
@@ -29,7 +26,6 @@ sys.modules['src.services.feedback_service'] = MagicMock()
 sys.modules['src.services.persona_service'] = MagicMock()
 sys.modules['src.services.chat_service'] = MagicMock()
 
-# Create mock functions for service getters
 sys.modules['src.services.context_service'].get_context_manager = MagicMock(return_value=MagicMock())
 sys.modules['src.services.prompt_service'].get_prompt_manager = MagicMock(return_value=MagicMock())
 sys.modules['src.services.analytics_service'].get_analytics_aggregator = MagicMock(return_value=MagicMock())
@@ -37,7 +33,6 @@ sys.modules['src.services.feedback_service'].feedback_service = MagicMock()
 sys.modules['src.services.persona_service'].persona_service = MagicMock()
 sys.modules['src.services.chat_service'].chat_service = MagicMock()
 
-# Configure chat service mock for specific test cases
 chat_service_mock = sys.modules['src.services.chat_service'].chat_service
 chat_service_mock.get_conversation_stats.return_value = {"system_type": "enhanced"}
 chat_service_mock.get_user_analytics.return_value = {"status": "success"}
@@ -50,29 +45,29 @@ def test_service_imports():
     try:
         from src.services.context_service import get_context_manager
         context_manager = get_context_manager()
-        print("✅ Context Manager imported and initialized")
+        print("[PASS] Context Manager imported and initialized")
         
         from src.services.prompt_service import get_prompt_manager
         prompt_manager = get_prompt_manager()
-        print("✅ Prompt Manager imported and initialized")
+        print("[PASS] Prompt Manager imported and initialized")
         
         from src.services.analytics_service import get_analytics_aggregator
         analytics = get_analytics_aggregator()
-        print("✅ Analytics Aggregator imported and initialized")
+        print("[PASS] Analytics Aggregator imported and initialized")
         
         from src.services.feedback_service import feedback_service
-        print("✅ Feedback Service imported")
+        print("[PASS] Feedback Service imported")
         
         from src.services.persona_service import persona_service
-        print("✅ Persona Service imported")
+        print("[PASS] Persona Service imported")
         
         from src.services.chat_service import chat_service
-        print("✅ Enhanced Chat Service imported")
+        print("[PASS] Enhanced Chat Service imported")
         
         return True
         
     except Exception as e:
-        print(f"❌ Import error: {e}")
+        print(f"[FAIL] Import error: {e}")
         return False
 
 def test_context_manager():
@@ -83,26 +78,22 @@ def test_context_manager():
         from src.services.context_service import get_context_manager
         context_manager = get_context_manager()
         
-        # Test adding context
         context_manager.add_context("Hello, I'm interested in your product", role="user")
         context_manager.add_context("Great! I'd love to help you. What are you looking for?", role="assistant")
         
-        # Test context window building
         context_window = context_manager.build_context_window()
-        print(f"✅ Context window built: {len(context_window)} characters")
+        print(f"[PASS] Context window built: {len(context_window)} characters")
         
-        # Test token counting
         token_count = context_manager.get_total_tokens()
-        print(f"✅ Token counting works: {token_count} tokens")
+        print(f"[PASS] Token counting works: {token_count} tokens")
         
-        # Test context summary
         summary = context_manager.get_context_summary()
-        print(f"✅ Context summary: {summary['total_items']} items")
+        print(f"[PASS] Context summary: {summary['total_items']} items")
         
         return True
         
     except Exception as e:
-        print(f"❌ Context Manager error: {e}")
+        print(f"[FAIL] Context Manager error: {e}")
         return False
 
 def test_prompt_manager():
@@ -113,7 +104,6 @@ def test_prompt_manager():
         from src.services.prompt_service import get_prompt_manager
         prompt_manager = get_prompt_manager()
         
-        # Test sales training prompt
         prompt = prompt_manager.build_sales_training_prompt(
             user_input="I'm looking for a fitness solution",
             persona_name="Mary",
@@ -121,16 +111,15 @@ def test_prompt_manager():
             session_id="test_session"
         )
         
-        print(f"✅ Sales training prompt built: {len(prompt)} characters")
+        print(f"[PASS] Sales training prompt built: {len(prompt)} characters")
         
-        # Test prompt validation
         validation = prompt_manager.validate_prompt(prompt, "sales_training")
-        print(f"✅ Prompt validation: {validation['valid']}")
+        print(f"[PASS] Prompt validation: {validation['valid']}")
         
         return True
         
     except Exception as e:
-        print(f"❌ Prompt Manager error: {e}")
+        print(f"[FAIL] Prompt Manager error: {e}")
         return False
 
 def test_analytics_service():
@@ -141,23 +130,21 @@ def test_analytics_service():
         from src.services.analytics_service import get_analytics_aggregator
         analytics = get_analytics_aggregator()
         
-        # Test event tracking
         success = analytics.track_event(
             user_id="test_user",
             session_id="test_session",
             event_type="session_start",
             data={"persona_name": "Mary"}
         )
-        print(f"✅ Event tracking: {success}")
+        print(f"[PASS] Event tracking: {success}")
         
-        # Test analytics generation
         user_analytics = analytics.generate_user_analytics("test_user", days_back=7)
-        print(f"✅ User analytics generated: {len(user_analytics)} fields")
+        print(f"[PASS] User analytics generated: {len(user_analytics)} fields")
         
         return True
         
     except Exception as e:
-        print(f"❌ Analytics Service error: {e}")
+        print(f"[FAIL] Analytics Service error: {e}")
         return False
 
 def test_chat_service_integration():
@@ -167,22 +154,19 @@ def test_chat_service_integration():
     try:
         from src.services.chat_service import chat_service
         
-        # Test conversation stats
         stats = chat_service.get_conversation_stats()
-        print(f"✅ Enhanced conversation stats: {stats['system_type']}")
+        print(f"[PASS] Enhanced conversation stats: {stats['system_type']}")
         
-        # Test user analytics method
         analytics = chat_service.get_user_analytics("test_user", days_back=7)
-        print(f"✅ Chat service analytics: {analytics['status']}")
+        print(f"[PASS] Chat service analytics: {analytics['status']}")
         
-        # Test system analytics
         system_analytics = chat_service.get_system_analytics()
-        print(f"✅ System analytics: {system_analytics['status']}")
+        print(f"[PASS] System analytics: {system_analytics['status']}")
         
         return True
         
     except Exception as e:
-        print(f"❌ Chat Service Integration error: {e}")
+        print(f"[FAIL] Chat Service Integration error: {e}")
         return False
 
 def test_api_routes():
@@ -190,14 +174,12 @@ def test_api_routes():
     print("\n🌐 Testing Enhanced API Routes...")
     
     try:
-        # Check if the enhanced routes file exists
         chat_routes_file = project_root / "src" / "api" / "routes" / "chat_routes.py"
         
         if not chat_routes_file.exists():
-            print("❌ Chat routes file not found")
+            print("[FAIL] Chat routes file not found")
             return False
         
-        # Read the file and check for enhanced endpoints
         with open(chat_routes_file, 'r', encoding='utf-8') as f:
             content = f.read()
         
@@ -210,9 +192,8 @@ def test_api_routes():
         ]
         
         found_endpoints = [ep for ep in enhanced_endpoints if ep in content]
-        print(f"✅ Enhanced endpoints found in code: {len(found_endpoints)}/{len(enhanced_endpoints)}")
+        print(f"[PASS] Enhanced endpoints found in code: {len(found_endpoints)}/{len(enhanced_endpoints)}")
         
-        # Check for enhanced functions
         enhanced_functions = [
             "end_session",
             "get_session_feedback", 
@@ -222,12 +203,12 @@ def test_api_routes():
         ]
         
         found_functions = [func for func in enhanced_functions if func in content]
-        print(f"✅ Enhanced functions found: {len(found_functions)}/{len(enhanced_functions)}")
+        print(f"[PASS] Enhanced functions found: {len(found_functions)}/{len(enhanced_functions)}")
         
         return len(found_endpoints) >= 4 and len(found_functions) >= 4
         
     except Exception as e:
-        print(f"❌ API Routes error: {e}")
+        print(f"[FAIL] API Routes error: {e}")
         return False
 
 def run_integration_tests():
@@ -249,7 +230,7 @@ def run_integration_tests():
         try:
             results[test_name] = test_func()
         except Exception as e:
-            print(f"❌ {test_name} failed with exception: {e}")
+            print(f"[FAIL] {test_name} failed with exception: {e}")
             results[test_name] = False
     
     print("\n" + "=" * 60)
@@ -258,7 +239,7 @@ def run_integration_tests():
     
     passed = 0
     for test_name, result in results.items():
-        status = "✅ PASS" if result else "❌ FAIL"
+        status = "[PASS] PASS" if result else "[FAIL] FAIL"
         print(f"{status} {test_name}")
         if result:
             passed += 1

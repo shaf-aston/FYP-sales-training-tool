@@ -28,7 +28,6 @@ import logging
 from contextlib import contextmanager
 import threading
 
-# Configure logging
 logger = logging.getLogger(__name__)
 
 @dataclass
@@ -65,10 +64,10 @@ class TrainingSession:
     session_id: str
     user_id: str
     persona_id: str
-    session_type: str  # 'sales_training', 'product_demo', 'objection_handling', etc.
+    session_type: str
     start_time: datetime
     end_time: Optional[datetime] = None
-    status: str = 'active'  # 'active', 'completed', 'paused', 'abandoned'
+    status: str = 'active' 
     session_goals: Optional[List[str]] = None
     total_turns: int = 0
     total_duration: Optional[float] = None
@@ -93,7 +92,7 @@ class TrainingSession:
             data['end_time'] = datetime.fromisoformat(data['end_time'])
         return cls(**data)
 
-from infrastructure.settings import SESSIONS_DB_PATH
+from config.settings import SESSIONS_DB_PATH, DEFAULT_CONVERSATION_LIMIT
 
 class SessionDatabase:
     """Database manager for session storage"""
@@ -131,7 +130,6 @@ class SessionDatabase:
         with self.get_connection() as conn:
             cursor = conn.cursor()
             
-            # Sessions table
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS training_sessions (
                     session_id TEXT PRIMARY KEY,
@@ -153,7 +151,6 @@ class SessionDatabase:
                 )
             ''')
             
-            # Conversation turns table
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS conversation_turns (
                     turn_id TEXT PRIMARY KEY,
@@ -173,7 +170,6 @@ class SessionDatabase:
                 )
             ''')
             
-            # Create indexes for better performance
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON training_sessions (user_id)')
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_sessions_status ON training_sessions (status)')
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_sessions_start_time ON training_sessions (start_time)')
@@ -234,7 +230,6 @@ class SessionDatabase:
                     json.dumps(turn.metadata) if turn.metadata else None
                 ))
                 
-                # Update session turn count
                 cursor.execute('''
                     UPDATE training_sessions 
                     SET total_turns = total_turns + 1,
@@ -259,7 +254,6 @@ class SessionDatabase:
                 
                 end_time = datetime.now()
                 
-                # Get session start time to calculate duration
                 cursor.execute('SELECT start_time FROM training_sessions WHERE session_id = ?', (session_id,))
                 row = cursor.fetchone()
                 if not row:
@@ -305,7 +299,6 @@ class SessionDatabase:
                 if not row:
                     return None
                 
-                # Convert row to TrainingSession
                 session_data = {
                     'session_id': row['session_id'],
                     'user_id': row['user_id'],
@@ -328,16 +321,21 @@ class SessionDatabase:
             logger.error(f"Failed to get session: {e}")
             return None
 
-    def get_session_conversation(self, session_id: str) -> List[ConversationTurn]:
-        """Get all conversation turns for a session"""
+    def get_session_conversation(self, session_id: str, limit: Optional[int] = None) -> List[ConversationTurn]:
+        """Get all conversation turns for a session, optionally limited by the most recent turns"""
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute('''
+                query = """
                     SELECT * FROM conversation_turns 
                     WHERE session_id = ? 
                     ORDER BY timestamp ASC
-                ''', (session_id,))
+                """
+                params = [session_id]
+                if limit:
+                    query += " LIMIT ?"
+                    params.append(limit)
+                cursor.execute(query, params)
                 
                 turns = []
                 for row in cursor.fetchall():
@@ -484,7 +482,6 @@ class SessionDatabase:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
                 
-                # Base queries
                 base_session_query = 'SELECT * FROM training_sessions'
                 base_turn_query = 'SELECT * FROM conversation_turns'
                 params = []
@@ -494,7 +491,6 @@ class SessionDatabase:
                     base_turn_query += ' WHERE session_id IN (SELECT session_id FROM training_sessions WHERE user_id = ?)'
                     params = [user_id, user_id]
                 
-                # Session statistics
                 cursor.execute(f'''
                     SELECT 
                         COUNT(*) as total_sessions,
@@ -509,7 +505,6 @@ class SessionDatabase:
                 
                 session_stats = cursor.fetchone()
                 
-                # Turn statistics
                 if user_id:
                     cursor.execute('''
                         SELECT 
@@ -530,7 +525,6 @@ class SessionDatabase:
                 
                 turn_stats = cursor.fetchone()
                 
-                # Session type distribution
                 session_type_query = f'''
                     SELECT session_type, COUNT(*) as count 
                     FROM ({base_session_query})
@@ -581,7 +575,7 @@ class SessionLogStore:
             user_id=user_id,
             persona_id=persona_id,
             session_type=session_type,
-            start_time=datetime.now(),
+            start_time=datetime.now(UTC),
             session_goals=session_goals,
             metadata=metadata or {}
         )
@@ -642,7 +636,7 @@ class SessionLogStore:
         if not session:
             return None
         
-        conversation = self.db.get_session_conversation(session_id)
+        conversation = self.db.get_session_conversation(session_id, limit=DEFAULT_CONVERSATION_LIMIT)
         
         return {
             'session': session.to_dict(),
@@ -668,7 +662,7 @@ class SessionLogStore:
             session_data = session.to_dict()
             
             if include_conversations:
-                conversation = self.db.get_session_conversation(session.session_id)
+                conversation = self.db.get_session_conversation(session.session_id, limit=DEFAULT_CONVERSATION_LIMIT)
                 session_data['conversation'] = [turn.to_dict() for turn in conversation]
             
             history.append(session_data)
@@ -679,10 +673,8 @@ class SessionLogStore:
                             user_id: Optional[str] = None,
                             time_range: Optional[int] = None) -> Dict[str, Any]:
         """Get comprehensive session analytics"""
-        # Base statistics
         stats = self.db.get_session_statistics(user_id)
         
-        # Add time range filtering if specified
         if time_range:
             start_date = datetime.now() - timedelta(days=time_range)
             sessions = self.db.search_sessions(
@@ -692,7 +684,6 @@ class SessionLogStore:
         else:
             sessions = self.db.search_sessions(user_id=user_id)
         
-        # Calculate additional metrics
         if sessions:
             completion_rate = len([s for s in sessions if s.status == 'completed']) / len(sessions) * 100
             avg_session_score = 0
@@ -739,7 +730,6 @@ class SessionLogStore:
             with self.db.get_connection() as conn:
                 cursor = conn.cursor()
                 
-                # Get sessions to delete
                 cursor.execute('''
                     SELECT session_id FROM training_sessions 
                     WHERE start_time < ? AND status = 'completed'
@@ -750,13 +740,11 @@ class SessionLogStore:
                 if not session_ids:
                     return 0
                 
-                # Delete conversation turns first (foreign key constraint)
                 cursor.execute(f'''
                     DELETE FROM conversation_turns 
                     WHERE session_id IN ({','.join('?' * len(session_ids))})
                 ''', session_ids)
                 
-                # Delete sessions
                 cursor.execute(f'''
                     DELETE FROM training_sessions 
                     WHERE session_id IN ({','.join('?' * len(session_ids))})
@@ -769,10 +757,8 @@ class SessionLogStore:
             logger.error(f"Failed to cleanup old sessions: {e}")
             return 0
 
-# Global instance
 session_store = SessionLogStore()
 
-# Export for easy importing
 __all__ = [
     'SessionLogStore', 
     'TrainingSession', 

@@ -13,10 +13,9 @@ import threading
 from typing import Dict, Any, Optional, List, Tuple, TYPE_CHECKING
 from pathlib import Path
 from dataclasses import dataclass, asdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from collections import defaultdict
 
-# Core requirements (should always be available)
 try:
     import torch
     TORCH_AVAILABLE = True
@@ -43,7 +42,6 @@ try:
 except ImportError:
     TRANSFORMERS_AVAILABLE = False
     logging.error("❌ Transformers not available - this is required for the system")
-    # Define placeholder types for type hints when transformers is not available
     if TYPE_CHECKING:
         from transformers import PreTrainedTokenizer, PreTrainedModel, Pipeline
     else:
@@ -54,7 +52,6 @@ except ImportError:
         AutoModelForCausalLM = None
         pipeline = None
 
-# Optional optimization libraries
 try:
     import psutil
     PSUTIL_AVAILABLE = True
@@ -64,7 +61,6 @@ except ImportError:
     logging.info("ℹ️  psutil not available - system monitoring will be limited")
     logging.info("   To enable: pip install psutil")
 
-# Optional: bitsandbytes for quantization
 try:
     import bitsandbytes as bnb
     BITSANDBYTES_AVAILABLE = True
@@ -74,7 +70,6 @@ except ImportError:
     logging.info("ℹ️  bitsandbytes not available - 4-bit quantization disabled")
     logging.info("   To enable: pip install bitsandbytes")
 
-# Optional: accelerate for device mapping
 try:
     from accelerate import infer_auto_device_map
     ACCELERATE_AVAILABLE = True
@@ -84,7 +79,6 @@ except ImportError:
     logging.info("ℹ️  accelerate not available - automatic device mapping disabled")
     logging.info("   To enable: pip install accelerate")
 
-# Optional: optimum for BetterTransformer (handle version conflicts)
 try:
     from optimum.bettertransformer import BetterTransformer
     OPTIMUM_AVAILABLE = True
@@ -98,14 +92,8 @@ except (ImportError, RuntimeError) as e:
         logging.info("ℹ️  optimum not available - BetterTransformer optimization disabled")
         logging.info("   To enable: pip install optimum")
 
-from infrastructure.settings import MODEL_CACHE_DIR
-try:
-    from infrastructure.settings import ENABLE_4BIT, ENABLE_ACCELERATE, ENABLE_OPTIMUM
-except ImportError:
-    # Fallback values if config doesn't exist
-    ENABLE_4BIT = BITSANDBYTES_AVAILABLE
-    ENABLE_ACCELERATE = ACCELERATE_AVAILABLE
-    ENABLE_OPTIMUM = OPTIMUM_AVAILABLE
+from config.paths import MODEL_CACHE_DIR
+from config.settings import ENABLE_4BIT, ENABLE_ACCELERATE, ENABLE_OPTIMUM
 
 logger = logging.getLogger(__name__)
 
@@ -129,9 +117,9 @@ class ModelPerformanceMetrics:
 @dataclass 
 class CacheConfig:
     """Configuration for model and tokenizer caching"""
-    max_model_cache_size: int = 5  # Maximum number of models to keep in memory
-    max_tokenizer_cache_size: int = 10  # Maximum number of tokenizers to keep in memory
-    cache_ttl_hours: int = 24  # Time to live for cached items
+    max_model_cache_size: int = 5
+    max_tokenizer_cache_size: int = 10
+    cache_ttl_hours: int = 24
     enable_disk_cache: bool = True
     enable_memory_cache: bool = True
     cache_compression: bool = False
@@ -145,7 +133,6 @@ class ModelOptimizationService:
     """Advanced service for model optimization, caching, and performance monitoring"""
     
     def __init__(self, cache_config: Optional[CacheConfig] = None):
-        # Check for required dependencies - warn but don't crash
         if not TORCH_AVAILABLE or not TRANSFORMERS_AVAILABLE:
             missing = []
             if not TORCH_AVAILABLE:
@@ -158,7 +145,6 @@ class ModelOptimizationService:
                 "Model optimization features will be limited. "
                 "To enable: pip install " + " ".join(missing)
             )
-            # Initialize with minimal functionality
             self.available = False
             self.cache_config = cache_config or CacheConfig()
             self.model_cache = {}
@@ -169,29 +155,23 @@ class ModelOptimizationService:
         self.available = True
         self.cache_config = cache_config or CacheConfig()
         
-        # Caching systems
-        self.model_cache = {}  # In-memory model cache
-        self.tokenizer_cache = {}  # In-memory tokenizer cache
-        self.pipeline_cache = {}  # Pipeline cache
+        self.model_cache = {}
+        self.tokenizer_cache = {}
+        self.pipeline_cache = {}
         
-        # Cache metadata
         self.cache_metadata = {}
         self.access_times = defaultdict(list)
         self.performance_metrics = {}
         
-        # Threading for async operations
         self.cache_lock = threading.RLock()
         self.optimization_lock = threading.RLock()
         
-        # Performance monitoring
         self.inference_stats = defaultdict(list)
         self.system_stats = []
         
-        # Configuration management
         self.config_history = []
         self.active_optimizations = {}
         
-        # Track available optimization features
         self.optimization_features = {
             'quantization': BITSANDBYTES_AVAILABLE,
             'accelerate': ACCELERATE_AVAILABLE,
@@ -200,13 +180,10 @@ class ModelOptimizationService:
             'psutil': PSUTIL_AVAILABLE
         }
         
-        # Initialize cache directory structure
         self._initialize_cache_structure()
         
-        # Load existing cache metadata
         self._load_cache_metadata()
         
-        # Log optimization features status
         self._log_optimization_features()
         
         logger.info("Model Optimization Service initialized")
@@ -222,13 +199,13 @@ class ModelOptimizationService:
         
         missing_features = []
         if not self.optimization_features['quantization']:
-            missing_features.append("pip install bitsandbytes  # For 4-bit quantization")
+            missing_features.append("pip install bitsandbytes")
         if not self.optimization_features['accelerate']:
-            missing_features.append("pip install accelerate  # For device mapping")
+            missing_features.append("pip install accelerate")
         if not self.optimization_features['optimum']:
-            missing_features.append("pip install optimum  # For BetterTransformer")
+            missing_features.append("pip install optimum")
         if not self.optimization_features['psutil']:
-            missing_features.append("pip install psutil  # For system monitoring")
+            missing_features.append("pip install psutil")
         
         if missing_features:
             logger.info("   To enable additional optimizations:")
@@ -324,9 +301,8 @@ class ModelOptimizationService:
     
     def _estimate_model_memory(self, model_name: str) -> float:
         """Estimate memory requirements for a model"""
-        # Simple heuristic based on model name and known patterns
         model_size_estimates = {
-            "0.5B": 1.0,  # GB
+            "0.5B": 1.0,
             "1B": 2.0,
             "2B": 4.0,
             "3B": 6.0,
@@ -336,10 +312,8 @@ class ModelOptimizationService:
         
         for size_key, memory_gb in model_size_estimates.items():
             if size_key in model_name:
-                # Add overhead for optimization layers
                 return memory_gb * 1.5
         
-        # Default estimate for unknown models
         return 2.0
     
     def load_optimized_model(self, model_name: str, 
@@ -347,7 +321,6 @@ class ModelOptimizationService:
         """Load model with advanced optimizations and caching"""
         start_time = time.time()
         
-        # Default optimization configuration
         if optimization_config is None:
             optimization_config = {
                 "enable_quantization": ENABLE_4BIT,
@@ -362,24 +335,19 @@ class ModelOptimizationService:
         cache_key = self._generate_cache_key(model_name, optimization_config)
         
         with self.cache_lock:
-            # Check memory cache first
             if cache_key in self.model_cache and self.cache_config.enable_memory_cache:
                 logger.info(f"Loading model from memory cache: {model_name}")
                 self._update_access_time(cache_key)
                 model, tokenizer = self.model_cache[cache_key]
                 
-                # Update performance metrics
                 self._record_cache_hit(model_name, time.time() - start_time)
                 return model, tokenizer
             
-            # Check if we need to free memory before loading
             self._manage_cache_capacity()
             
-            # Load model with optimizations
             logger.info(f"Loading model with optimizations: {model_name}")
             model, tokenizer = self._load_model_with_optimizations(model_name, optimization_config)
             
-            # Cache the loaded model
             if self.cache_config.enable_memory_cache:
                 self.model_cache[cache_key] = (model, tokenizer)
                 self._update_cache_metadata(cache_key, model_name, optimization_config)
@@ -394,7 +362,6 @@ class ModelOptimizationService:
                                      config: Dict[str, Any]) -> Tuple[PreTrainedModel, PreTrainedTokenizer]:
         """Load model with progressive optimization attempts"""
         
-        # Load tokenizer first
         tokenizer_start = time.time()
         tokenizer_kwargs = {
             "cache_dir": MODEL_CACHE_DIR,
@@ -406,14 +373,12 @@ class ModelOptimizationService:
         tokenizer_time = time.time() - tokenizer_start
         logger.info(f"Tokenizer loaded in {tokenizer_time:.2f}s")
         
-        # Prepare model loading arguments
         model_kwargs = {
             "cache_dir": MODEL_CACHE_DIR,
             "trust_remote_code": True,
             "low_cpu_mem_usage": config.get("low_cpu_mem_usage", True)
         }
         
-        # Configure torch dtype
         dtype_map = {
             "float32": torch.float32,
             "float16": torch.float16,
@@ -424,7 +389,6 @@ class ModelOptimizationService:
         
         optimization_level = "standard"
         
-        # Apply quantization if enabled and available
         if config.get("enable_quantization", False) and self.optimization_features['quantization']:
             try:
                 model_kwargs.update({
@@ -440,7 +404,6 @@ class ModelOptimizationService:
         elif config.get("enable_quantization", False):
             logger.info("Quantization requested but bitsandbytes not available")
         
-        # Apply device mapping if enabled and available
         if config.get("enable_accelerate", False) and self.optimization_features['accelerate']:
             try:
                 model_kwargs["device_map"] = config.get("device_map", "auto")
@@ -451,13 +414,11 @@ class ModelOptimizationService:
         elif config.get("enable_accelerate", False):
             logger.info("Accelerate requested but accelerate library not available")
         
-        # Load the model
         model_start = time.time()
         model = AutoModelForCausalLM.from_pretrained(model_name, **model_kwargs)
         model_time = time.time() - model_start
         logger.info(f"Model loaded in {model_time:.2f}s")
         
-        # Apply BetterTransformer optimization if available
         if config.get("enable_optimum", False) and self.optimization_features['optimum']:
             try:
                 model = BetterTransformer.transform(model)
@@ -468,10 +429,8 @@ class ModelOptimizationService:
         elif config.get("enable_optimum", False):
             logger.info("BetterTransformer requested but optimum library not available")
         
-        # Set model to evaluation mode and optimize for inference
         model.eval()
         
-        # Apply torch compile if available (PyTorch 2.0+)
         if config.get("enable_torch_compile", False) and self.optimization_features['torch_compile']:
             try:
                 model = torch.compile(model, mode="reduce-overhead")
@@ -499,7 +458,7 @@ class ModelOptimizationService:
                 "do_sample": True,
                 "temperature": 0.7,
                 "top_p": 0.9,
-                "pad_token_id": None,  # Will be set based on tokenizer
+                "pad_token_id": None,
                 "return_full_text": False,
                 "batch_size": 1
             }
@@ -507,16 +466,13 @@ class ModelOptimizationService:
         cache_key = self._generate_cache_key(f"{task}:{model_name}", pipeline_config)
         
         with self.cache_lock:
-            # Check pipeline cache
             if cache_key in self.pipeline_cache:
                 logger.info(f"Loading pipeline from cache: {task}:{model_name}")
                 self._update_access_time(cache_key)
                 return self.pipeline_cache[cache_key]
             
-            # Load model and tokenizer
             model, tokenizer = self.load_optimized_model(model_name)
             
-            # Configure pipeline arguments
             pipe_kwargs = {
                 "model": model,
                 "tokenizer": tokenizer,
@@ -525,15 +481,12 @@ class ModelOptimizationService:
                 "return_full_text": pipeline_config.get("return_full_text", False)
             }
             
-            # Handle special tokens
             if tokenizer.pad_token is None:
                 tokenizer.pad_token = tokenizer.eos_token
                 pipeline_config["pad_token_id"] = tokenizer.eos_token_id
             
-            # Create pipeline
             pipe = pipeline(task, **pipe_kwargs)
             
-            # Cache the pipeline
             self.pipeline_cache[cache_key] = pipe
             self._update_cache_metadata(cache_key, f"{task}:{model_name}", pipeline_config)
             
@@ -553,19 +506,15 @@ class ModelOptimizationService:
                 "return_tensors": "pt"
             }
         
-        # Set padding configuration
         if optimization_config.get("enable_padding", True):
             if tokenizer.pad_token is None:
                 tokenizer.pad_token = tokenizer.eos_token
         
-        # Set truncation configuration
         if optimization_config.get("enable_truncation", True):
             tokenizer.model_max_length = optimization_config.get("max_length", 512)
         
-        # Pre-compile common patterns for faster tokenization
         if hasattr(tokenizer, 'backend_tokenizer'):
             try:
-                # Enable fast tokenizer optimizations
                 tokenizer.backend_tokenizer.enable_truncation(
                     max_length=optimization_config.get("max_length", 512)
                 )
@@ -581,9 +530,7 @@ class ModelOptimizationService:
     
     def _manage_cache_capacity(self):
         """Manage cache capacity and evict old items if necessary"""
-        # Check model cache capacity
         if len(self.model_cache) >= self.cache_config.max_model_cache_size:
-            # Evict least recently used items
             sorted_items = sorted(
                 self.cache_metadata.items(),
                 key=lambda x: x[1].get('last_access', 0)
@@ -596,9 +543,7 @@ class ModelOptimizationService:
                     del self.model_cache[cache_key]
                     logger.info(f"Evicted model from cache: {cache_key}")
         
-        # Check tokenizer cache capacity
         if len(self.tokenizer_cache) >= self.cache_config.max_tokenizer_cache_size:
-            # Evict least recently used tokenizers
             sorted_tokenizers = sorted(
                 [(k, v) for k, v in self.cache_metadata.items() if "tokenizer" in k],
                 key=lambda x: x[1].get('last_access', 0)
@@ -620,7 +565,6 @@ class ModelOptimizationService:
         self.cache_metadata[cache_key]['last_access'] = current_time
         self.access_times[cache_key].append(current_time)
         
-        # Keep only recent access times
         cutoff_time = current_time - (self.cache_config.cache_ttl_hours * 3600)
         self.access_times[cache_key] = [
             t for t in self.access_times[cache_key] if t > cutoff_time
@@ -661,16 +605,15 @@ class ModelOptimizationService:
             model_name=model_name,
             load_time=load_time,
             memory_usage_mb=memory_info.get('used_gb', 0) * 1024,
-            inference_time_avg=0.0,  # Will be updated during inference
+            inference_time_avg=0.0,
             inference_count=0,
             cache_hits=self.performance_metrics.get(model_name, {}).get('cache_hits', 0),
             cache_misses=self.performance_metrics.get(model_name, {}).get('cache_misses', 0) + 1,
             optimization_level=self.active_optimizations.get(model_name, "standard"),
             device_type="cuda" if torch.cuda.is_available() else "cpu",
-            timestamp=datetime.now().isoformat()
+            timestamp=datetime.now(UTC).isoformat()
         )
         
-        # Save metrics to disk
         metrics_file = MODEL_CACHE_DIR / "performance" / f"{model_name.replace('/', '--')}_metrics.json"
         try:
             with open(metrics_file, 'w') as f:
@@ -694,7 +637,6 @@ class ModelOptimizationService:
             'tokens_per_second': output_length / inference_time if inference_time > 0 else 0
         })
         
-        # Keep only recent inference stats (last 100 inferences)
         if len(self.inference_stats[model_name]) > 100:
             self.inference_stats[model_name] = self.inference_stats[model_name][-100:]
     
@@ -707,7 +649,6 @@ class ModelOptimizationService:
         memory_info = self._get_system_memory_info()
         gpu_info = self._get_gpu_memory_info()
         
-        # Calculate cache hit rates
         cache_stats = {}
         for model_name, stats in self.performance_metrics.items():
             total_requests = stats['cache_hits'] + stats['cache_misses']
@@ -736,12 +677,11 @@ class ModelOptimizationService:
     def get_performance_analytics(self, model_name: Optional[str] = None) -> Dict[str, Any]:
         """Get detailed performance analytics"""
         if model_name:
-            # Model-specific analytics
             if model_name not in self.inference_stats:
                 return {"error": f"No performance data for model {model_name}"}
             
             stats = self.inference_stats[model_name]
-            recent_stats = stats[-50:]  # Last 50 inferences
+            recent_stats = stats[-50:]
             
             avg_inference_time = np.mean([s['inference_time'] for s in recent_stats])
             avg_tokens_per_second = np.mean([s['tokens_per_second'] for s in recent_stats])
@@ -760,7 +700,6 @@ class ModelOptimizationService:
                 'optimization_level': self.active_optimizations.get(model_name, "standard")
             }
         else:
-            # System-wide analytics
             total_inferences = sum(len(stats) for stats in self.inference_stats.values())
             active_models = list(self.inference_stats.keys())
             
@@ -783,7 +722,6 @@ class ModelOptimizationService:
         ttl_seconds = self.cache_config.cache_ttl_hours * 3600
         
         with self.cache_lock:
-            # Clean expired model cache items
             expired_keys = []
             for cache_key, metadata in self.cache_metadata.items():
                 if force or (current_time - metadata.get('last_access', 0)) > ttl_seconds:
@@ -793,35 +731,30 @@ class ModelOptimizationService:
                 if cache_key in self.model_cache:
                     del self.model_cache[cache_key]
                     items_cleaned += 1
-                    # Estimate memory freed (rough approximation)
-                    memory_freed_mb += 500  # Rough estimate per model
+                    memory_freed_mb += 500
                 
                 if cache_key in self.tokenizer_cache:
                     del self.tokenizer_cache[cache_key]
                     items_cleaned += 1
-                    memory_freed_mb += 50  # Rough estimate per tokenizer
+                    memory_freed_mb += 50
                 
                 if cache_key in self.pipeline_cache:
                     del self.pipeline_cache[cache_key]
                     items_cleaned += 1
-                    memory_freed_mb += 100  # Rough estimate per pipeline
+                    memory_freed_mb += 100
                 
-                # Remove metadata
                 if cache_key in self.cache_metadata:
                     del self.cache_metadata[cache_key]
         
-        # Force garbage collection
         import gc
         gc.collect()
         
-        # Clear GPU cache if available
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
             torch.cuda.synchronize()
         
         cleanup_time = time.time() - start_time
         
-        # Save updated metadata
         self._save_cache_metadata()
         
         return {
@@ -838,11 +771,10 @@ class ModelOptimizationService:
             'cache_config': asdict(self.cache_config),
             'active_optimizations': self.active_optimizations,
             'performance_summary': self.get_cache_statistics(),
-            'export_timestamp': datetime.now().isoformat()
+            'export_timestamp': datetime.now(UTC).isoformat()
         }
         
-        # Save configuration to disk
-        config_file = MODEL_CACHE_DIR / "configs" / f"config_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        config_file = MODEL_CACHE_DIR / "configs" / f"config_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.json"
         try:
             with open(config_file, 'w') as f:
                 json.dump(config, f, indent=2)
@@ -858,7 +790,6 @@ class ModelOptimizationService:
             with open(config_file, 'r') as f:
                 config = json.load(f)
             
-            # Update cache configuration
             cache_config_dict = config.get('cache_config', {})
             for key, value in cache_config_dict.items():
                 if hasattr(self.cache_config, key):
@@ -887,10 +818,8 @@ class ModelOptimizationService:
             model_start = time.time()
             
             try:
-                # Load model and create pipeline
                 pipeline = self.create_optimized_pipeline(model_name)
                 
-                # Run test inferences
                 test_times = []
                 for test_input in test_inputs:
                     inference_start = time.time()
@@ -925,5 +854,4 @@ class ModelOptimizationService:
             'results': warmup_results
         }
 
-# Global model optimization service instance
 model_optimization_service = ModelOptimizationService()

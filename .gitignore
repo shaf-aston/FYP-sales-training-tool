@@ -59,6 +59,10 @@ logs/
 .cache/
 .huggingface/
 model_cache/
+data/processed_data/
+data/quality_metrics.db
+data/sessions.db
+audio_cache/
 # Ignore large model files, but not the directory itself
 models/*.bin
 models/*.safetensors
@@ -89,9 +93,7 @@ desktop.ini
 .ipynb_checkpoints
 *.ipynb
 
-# Docker
-.docker/
-docker-compose.override.yml
+.data
 
 # Runtime and temporary files
 *.tmp

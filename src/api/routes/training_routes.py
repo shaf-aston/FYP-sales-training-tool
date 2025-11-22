@@ -10,7 +10,6 @@ from datetime import datetime
 
 training_router = APIRouter(prefix="/api/v2/training", tags=["Training"])
 
-# Mock training data - replace with database
 TRAINING_DATA = {
     "demo_user_123": {
         "training_sessions": [],
@@ -57,7 +56,6 @@ async def start_training_session(data: dict):
             "messages": []
         }
         
-        # Store session (in production, use database)
         if user_id not in TRAINING_DATA:
             TRAINING_DATA[user_id] = {"training_sessions": [], "recommendations": []}
         
@@ -82,7 +80,6 @@ async def add_training_message(session_id: str, data: dict):
         if not message:
             raise HTTPException(status_code=400, detail="message required")
         
-        # Find session (in production, use database)
         session_found = False
         for user_id, user_data in TRAINING_DATA.items():
             for session in user_data["training_sessions"]:
@@ -112,7 +109,6 @@ async def add_training_message(session_id: str, data: dict):
 async def get_training_session(session_id: str):
     """Get training session details"""
     try:
-        # Find session
         for user_id, user_data in TRAINING_DATA.items():
             for session in user_data["training_sessions"]:
                 if session["session_id"] == session_id:
@@ -133,14 +129,13 @@ async def get_training_progress(user_id: str):
         total_sessions = len(sessions)
         completed_sessions = len([s for s in sessions if s.get("status") == "completed"])
         
-        # Calculate progress metrics
         progress_data = {
             "user_id": user_id,
             "total_sessions": total_sessions,
             "completed_sessions": completed_sessions,
             "completion_rate": (completed_sessions / total_sessions * 100) if total_sessions > 0 else 0,
             "last_session": sessions[-1]["start_time"] if sessions else None,
-            "training_hours": total_sessions * 0.5,  # Estimate 30min per session
+            "training_hours": total_sessions * 0.5,
             "skills_progress": {
                 "objection_handling": {"level": "beginner", "progress": 25},
                 "closing_techniques": {"level": "beginner", "progress": 15},

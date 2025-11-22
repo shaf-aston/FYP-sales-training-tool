@@ -97,25 +97,18 @@ class SalesProcessAnalyzer:
             
             logger.info(f"Analyzing sales process in {len(conversation_history)} exchanges")
             
-            # Extract user messages
             user_messages = self._extract_user_messages(conversation_history)
             
-            # Identify phases covered
             phases_covered, phase_transitions = self._identify_phases(user_messages)
             
-            # Calculate phase effectiveness
             phase_effectiveness = self._calculate_phase_effectiveness(phases_covered, phase_transitions)
             
-            # Identify sales techniques used
             sales_techniques_used = self._identify_techniques(user_messages)
             
-            # Calculate overall process score
             process_score = self._calculate_process_score(phases_covered, phase_effectiveness, sales_techniques_used)
             
-            # Identify missing phases
             missing_phases = self._identify_missing_phases(phases_covered)
             
-            # Generate recommendations
             recommendations = self._generate_recommendations(phases_covered, missing_phases, sales_techniques_used)
             
             analysis = SalesProcessAnalysis(
@@ -167,13 +160,11 @@ class SalesProcessAnalyzer:
             message_lower = message.lower()
             detected_phase = None
             
-            # Check each phase for keywords
             for phase, keywords in self.phase_keywords.items():
                 if any(keyword in message_lower for keyword in keywords):
                     detected_phase = phase
                     break
             
-            # Track phase transitions
             if detected_phase and detected_phase != current_phase:
                 if current_phase is not None:
                     phase_transitions.append({
@@ -185,11 +176,9 @@ class SalesProcessAnalyzer:
                 
                 current_phase = detected_phase
                 
-                # Add to covered phases if not already there
                 if detected_phase not in phases_covered:
                     phases_covered.append(detected_phase)
         
-        # If no phases detected, try to infer from content patterns
         if not phases_covered:
             phases_covered = self._infer_phases_from_patterns(user_messages)
         
@@ -200,7 +189,6 @@ class SalesProcessAnalyzer:
         phases = []
         all_text = ' '.join(user_messages).lower()
         
-        # Simple pattern-based inference
         if any(word in all_text for word in ['hello', 'hi', 'introduce']):
             phases.append(SalesPhase.OPENING)
         
@@ -225,16 +213,13 @@ class SalesProcessAnalyzer:
         
         for phase in SalesPhase:
             if phase in phases_covered:
-                # Base score for covering the phase
                 score = 50.0
                 
-                # Bonus for proper sequencing (earlier phases get higher scores)
                 phase_order = list(SalesPhase)
                 if phase in phase_order:
                     order_bonus = (len(phase_order) - phase_order.index(phase)) * 5
                     score += order_bonus
                 
-                # Bonus for smooth transitions
                 transition_count = sum(1 for t in phase_transitions 
                                      if t['to'] == phase or t['from'] == phase)
                 if transition_count > 0:
@@ -263,19 +248,16 @@ class SalesProcessAnalyzer:
         """Calculate overall sales process effectiveness score"""
         score = 0.0
         
-        # Phase coverage score (40% weight)
         total_phases = len(SalesPhase)
         coverage_ratio = len(phases_covered) / total_phases
         phase_coverage_score = coverage_ratio * 40
         score += phase_coverage_score
         
-        # Phase effectiveness score (35% weight)
         if phases_covered:
             avg_effectiveness = sum(phase_effectiveness[phase.value] for phase in phases_covered) / len(phases_covered)
             effectiveness_score = (avg_effectiveness / 100) * 35
             score += effectiveness_score
         
-        # Technique usage score (25% weight)
         total_techniques = len(self.sales_techniques)
         technique_ratio = len(techniques_used) / total_techniques
         technique_score = technique_ratio * 25
@@ -293,22 +275,18 @@ class SalesProcessAnalyzer:
         """Generate recommendations for sales process improvement"""
         recommendations = []
         
-        # Missing phases recommendations
         if missing_phases:
             phase_names = [phase.value.replace('_', ' ').title() for phase in missing_phases]
             recommendations.append(f"Practice these missing phases: {', '.join(phase_names)}")
         
-        # Process flow recommendations
         if len(phases_covered) < 3:
             recommendations.append("Focus on completing a full sales process cycle")
         
-        # Technique recommendations
         missing_techniques = [tech for tech in self.sales_techniques.keys() if tech not in techniques_used]
         if missing_techniques:
             technique_names = [tech.replace('_', ' ').title() for tech in missing_techniques[:2]]
             recommendations.append(f"Practice these sales techniques: {', '.join(technique_names)}")
         
-        # Specific recommendations based on what's missing
         if SalesPhase.CLOSING not in phases_covered:
             recommendations.append("Always attempt to close the conversation with a clear next step")
         
@@ -318,7 +296,7 @@ class SalesProcessAnalyzer:
         if not techniques_used:
             recommendations.append("Incorporate proven sales techniques like consultative selling and benefit focus")
         
-        return recommendations[:4]  # Limit to top 4 recommendations
+        return recommendations[:4]
     
     def get_process_insights(self, analysis: SalesProcessAnalysis) -> Dict[str, Any]:
         """Generate insights and detailed analysis from sales process results"""
@@ -330,7 +308,6 @@ class SalesProcessAnalyzer:
             'critical_gaps': []
         }
         
-        # Identify strengths
         if analysis.process_score >= 70:
             insights['strengths'].append("Strong overall sales process adherence")
         
@@ -340,7 +317,6 @@ class SalesProcessAnalyzer:
         if len(analysis.sales_techniques_used) >= 3:
             insights['strengths'].append("Good technique diversity")
         
-        # Identify critical gaps
         if not analysis.phases_covered:
             insights['critical_gaps'].append("No sales process phases identified")
         

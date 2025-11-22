@@ -19,7 +19,6 @@ class SpeakerAnalyzer:
         if not segments:
             return []
         
-        # Group segments by speaker
         speaker_segments = defaultdict(list)
         for segment in segments:
             speaker_segments[segment.speaker_id].append(segment)
@@ -27,15 +26,12 @@ class SpeakerAnalyzer:
         speakers = []
         
         for speaker_id, speaker_segs in speaker_segments.items():
-            # Calculate speaking characteristics
             total_time = sum((seg.end_time - seg.start_time) for seg in speaker_segs)
             turn_count = len(speaker_segs)
             avg_confidence = sum(seg.confidence for seg in speaker_segs) / len(speaker_segs)
             
-            # Determine role based on speaking patterns and content
             role = self._determine_speaker_role(speaker_segs)
             
-            # Extract characteristics
             characteristics = self._extract_speaker_characteristics(speaker_segs)
             characteristics.update({
                 'speaking_time': total_time,
@@ -57,13 +53,11 @@ class SpeakerAnalyzer:
         """Determine speaker role based on content analysis"""
         combined_text = ' '.join(seg.text.lower() for seg in segments)
         
-        # Sales role indicators
         sales_indicators = [
             'our product', 'our service', 'our company', 'we offer', 'i can help',
             'let me show you', 'our solution', 'benefits include', 'roi'
         ]
         
-        # Prospect role indicators  
         prospect_indicators = [
             'we need', 'our budget', 'our requirements', 'we\'re looking for',
             'our current', 'we use', 'our situation', 'our challenge'
@@ -90,7 +84,7 @@ class SpeakerAnalyzer:
             'avg_words_per_turn': len(words) / len(segments) if segments else 0,
             'total_words': len(words),
             'avg_turn_duration': total_duration / len(segments) if segments else 0,
-            'speaking_pace': len(words) / total_duration * 60 if total_duration > 0 else 0,  # words per minute
+            'speaking_pace': len(words) / total_duration * 60 if total_duration > 0 else 0,
             'question_count': sum(seg.text.count('?') for seg in segments),
             'interruption_count': self._count_interruptions(segments),
             'enthusiasm_indicators': self._count_enthusiasm(combined_text),
@@ -105,7 +99,6 @@ class SpeakerAnalyzer:
         
         for segment in segments:
             text = segment.text.strip()
-            # Look for incomplete sentences or cut-offs
             if text.endswith(('-', '--')) or len(text.split()) < 3:
                 interruption_count += 1
         
@@ -121,13 +114,11 @@ class SpeakerAnalyzer:
         """Calculate professionalism score based on language patterns"""
         text_lower = text.lower()
         
-        # Professional indicators
         professional_words = [
             'solution', 'implement', 'strategic', 'optimize', 'efficient',
             'professional', 'expertise', 'experience', 'qualified'
         ]
         
-        # Unprofessional indicators
         unprofessional_words = [
             'umm', 'uh', 'like', 'whatever', 'dunno', 'gonna', 'yeah'
         ]
@@ -139,6 +130,5 @@ class SpeakerAnalyzer:
         if total_words == 0:
             return 0.5
         
-        # Calculate score (0-1 scale)
         score = (professional_count - unprofessional_count) / total_words
-        return max(0.0, min(1.0, score + 0.5))  # Normalize to 0-1 range
+        return max(0.0, min(1.0, score + 0.5))

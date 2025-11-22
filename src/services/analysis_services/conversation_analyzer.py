@@ -58,19 +58,14 @@ class ConversationAnalyzer:
             
             logger.info(f"Analyzing conversation with {len(conversation_history)} exchanges")
             
-            # Extract messages
             user_messages, ai_messages = self._extract_messages(conversation_history)
             
-            # Calculate basic metrics
             basic_metrics = self._calculate_basic_metrics(user_messages, ai_messages)
             
-            # Analyze conversation flow
             flow_score = self._analyze_conversation_flow(conversation_history)
             
-            # Calculate engagement score
             engagement_score = self._calculate_engagement_score(user_messages)
             
-            # Estimate duration (simple heuristic)
             total_duration = self._estimate_conversation_duration(user_messages, ai_messages)
             
             metrics = ConversationMetrics(
@@ -102,7 +97,6 @@ class ConversationAnalyzer:
         ai_messages = []
         
         for exchange in conversation_history:
-            # Handle different conversation formats
             if 'user_message' in exchange:
                 user_messages.append(exchange['user_message'])
             elif 'user' in exchange:
@@ -119,7 +113,6 @@ class ConversationAnalyzer:
             elif 'bot' in exchange:
                 ai_messages.append(exchange['bot'])
         
-        # Clean empty messages
         user_messages = [msg.strip() for msg in user_messages if msg and msg.strip()]
         ai_messages = [msg.strip() for msg in ai_messages if msg and msg.strip()]
         
@@ -132,7 +125,6 @@ class ConversationAnalyzer:
         if not all_messages:
             return {'avg_response_length': 0.0}
         
-        # Calculate word counts
         word_counts = [len(msg.split()) for msg in all_messages]
         avg_response_length = sum(word_counts) / len(word_counts)
         
@@ -146,42 +138,36 @@ class ConversationAnalyzer:
     def _analyze_conversation_flow(self, conversation_history: List[Dict]) -> float:
         """Analyze the natural flow and coherence of conversation"""
         if len(conversation_history) < 2:
-            return 0.5  # Neutral score for short conversations
+            return 0.5
         
-        flow_score = 0.5  # Base score
+        flow_score = 0.5
         
-        # Check for question-answer patterns
         question_answer_pairs = 0
         follow_up_questions = 0
         
         for i, exchange in enumerate(conversation_history):
             user_msg = exchange.get('user_message', '').lower()
             
-            # Check if user asks questions
             if any(starter in user_msg for starter in self.question_starters):
                 question_answer_pairs += 1
             
-            # Check for follow-up questions
             if i > 0 and '?' in user_msg:
                 prev_exchange = conversation_history[i-1]
                 ai_response = prev_exchange.get('persona_response', '').lower()
-                if len(ai_response.split()) > 5:  # AI gave substantial response
+                if len(ai_response.split()) > 5:
                     follow_up_questions += 1
         
-        # Bonus for good question-answer flow
         if conversation_history:
             qa_ratio = question_answer_pairs / len(conversation_history)
-            flow_score += min(qa_ratio * 0.3, 0.2)  # Max 0.2 bonus
+            flow_score += min(qa_ratio * 0.3, 0.2)
         
-        # Bonus for follow-up questions (shows engagement)
         if question_answer_pairs > 0:
             follow_up_ratio = follow_up_questions / question_answer_pairs
-            flow_score += min(follow_up_ratio * 0.2, 0.15)  # Max 0.15 bonus
+            flow_score += min(follow_up_ratio * 0.2, 0.15)
         
-        # Check for conversation length appropriateness
-        if 5 <= len(conversation_history) <= 20:  # Good conversation length
+        if 5 <= len(conversation_history) <= 20:
             flow_score += 0.1
-        elif len(conversation_history) > 20:  # Very engaged conversation
+        elif len(conversation_history) > 20:
             flow_score += 0.15
         
         return min(flow_score, 1.0)
@@ -191,44 +177,37 @@ class ConversationAnalyzer:
         if not user_messages:
             return 0.0
         
-        engagement_score = 0.3  # Base engagement
+        engagement_score = 0.3
         
-        # Check for engagement indicators
         engagement_signals = 0
         disengagement_signals = 0
         
         for message in user_messages:
             message_lower = message.lower()
             
-            # Positive engagement indicators
             engagement_signals += sum(1 for keyword in self.engagement_keywords 
                                     if keyword in message_lower)
             
-            # Negative engagement indicators
             disengagement_signals += sum(1 for keyword in self.disengagement_keywords 
                                        if keyword in message_lower)
             
-            # Question asking (shows interest)
             if '?' in message:
                 engagement_signals += 1
             
-            # Length indicates engagement
             word_count = len(message.split())
-            if word_count > 15:  # Detailed responses
+            if word_count > 15:
                 engagement_signals += 1
-            elif word_count < 3:  # Very short responses
+            elif word_count < 3:
                 disengagement_signals += 1
         
-        # Calculate engagement based on signals
         total_messages = len(user_messages)
-        positive_ratio = engagement_signals / (total_messages * 2)  # Normalize
+        positive_ratio = engagement_signals / (total_messages * 2)
         negative_ratio = disengagement_signals / (total_messages * 2)
         
-        engagement_score += min(positive_ratio * 0.5, 0.4)  # Max 0.4 bonus
-        engagement_score -= min(negative_ratio * 0.3, 0.2)  # Max 0.2 penalty
+        engagement_score += min(positive_ratio * 0.5, 0.4)
+        engagement_score -= min(negative_ratio * 0.3, 0.2)
         
-        # Bonus for conversation progression
-        if total_messages >= 5:  # Sustained conversation
+        if total_messages >= 5:
             engagement_score += 0.1
         
         return max(0.0, min(engagement_score, 1.0))
@@ -240,16 +219,13 @@ class ConversationAnalyzer:
         if not all_messages:
             return 0.0
         
-        # Simple heuristic: ~150 words per minute reading/speaking
         total_words = sum(len(msg.split()) for msg in all_messages)
         
-        # Account for thinking/processing time between messages
-        message_processing_time = len(all_messages) * 0.5  # 30 seconds per message
+        message_processing_time = len(all_messages) * 0.5
         
-        # Calculate speaking time
-        speaking_time = total_words / 150  # minutes
+        speaking_time = total_words / 150
         
-        return speaking_time + (message_processing_time / 60)  # Convert to minutes
+        return speaking_time + (message_processing_time / 60)
     
     def get_conversation_insights(self, metrics: ConversationMetrics) -> Dict[str, Any]:
         """Generate insights and recommendations from conversation metrics"""
@@ -264,7 +240,6 @@ class ConversationAnalyzer:
                              'too_brief' if metrics.average_response_length < 10 else 'too_verbose'
         }
         
-        # Generate recommendations
         recommendations = []
         
         if metrics.conversation_flow_score < 0.6:

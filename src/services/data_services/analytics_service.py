@@ -9,12 +9,13 @@ import sqlite3
 import time
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional, Tuple
+from pathlib import Path
 from dataclasses import dataclass, asdict
 from pathlib import Path
 from collections import defaultdict, Counter
 import statistics
 
-from infrastructure.settings import PROJECT_ROOT
+from config.paths import PROJECT_ROOT
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +26,7 @@ class AnalyticsEvent:
     event_id: str
     user_id: str
     session_id: str
-    event_type: str  # session_start, message_sent, feedback_received, etc.
+    event_type: str
     timestamp: float
     data: Dict[str, Any]
     
@@ -41,7 +42,7 @@ class PerformanceMetrics:
     sessions_completed: int
     total_conversations: int
     average_score: float
-    score_trend: str  # improving, declining, stable
+    score_trend: str
     top_strengths: List[str]
     improvement_areas: List[str]
     engagement_metrics: Dict[str, Any]
@@ -57,7 +58,7 @@ class AnalyticsDatabase:
     def __init__(self, db_path: str = None):
         """Initialize analytics database"""
         if db_path is None:
-            db_path = PROJECT_ROOT / "logs" / "analytics.db"
+            db_path = Path(PROJECT_ROOT) / "logs" / "analytics.db"
         
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -69,7 +70,6 @@ class AnalyticsDatabase:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             
-            # Events table
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS analytics_events (
                     event_id TEXT PRIMARY KEY,
@@ -82,7 +82,6 @@ class AnalyticsDatabase:
                 )
             ''')
             
-            # User metrics table
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS user_metrics (
                     metric_id TEXT PRIMARY KEY,
@@ -96,7 +95,6 @@ class AnalyticsDatabase:
                 )
             ''')
             
-            # Session summaries table
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS session_summaries (
                     session_id TEXT PRIMARY KEY,
@@ -113,7 +111,6 @@ class AnalyticsDatabase:
                 )
             ''')
             
-            # Learning progress table
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS learning_progress (
                     progress_id TEXT PRIMARY KEY,
@@ -128,7 +125,6 @@ class AnalyticsDatabase:
                 )
             ''')
             
-            # System performance table
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS system_performance (
                     record_id TEXT PRIMARY KEY,
@@ -143,7 +139,6 @@ class AnalyticsDatabase:
                 )
             ''')
             
-            # Create indexes
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_events_user_time ON analytics_events(user_id, timestamp)')
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_metrics_user_type ON user_metrics(user_id, metric_type)')
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_sessions_user ON session_summaries(user_id, start_time)')
@@ -353,10 +348,8 @@ class AnalyticsAggregator:
             data=data or {}
         )
         
-        # Store event
         success = self.db.store_event(event)
         
-        # Process event for real-time metrics
         if success and event_type in self.event_processors:
             self.event_processors[event_type](event)
         
@@ -364,7 +357,6 @@ class AnalyticsAggregator:
     
     def _process_session_start(self, event: AnalyticsEvent):
         """Process session start event"""
-        # Track session initiation metrics
         self.db.store_user_metric(
             metric_id=f"{event.user_id}_session_start_{int(event.timestamp)}",
             user_id=event.user_id,
@@ -381,7 +373,6 @@ class AnalyticsAggregator:
         duration = event.data.get("duration_minutes", 0)
         completion_status = event.data.get("completion_status", "unknown")
         
-        # Track session completion
         self.db.store_user_metric(
             metric_id=f"{event.user_id}_session_end_{int(event.timestamp)}",
             user_id=event.user_id,
@@ -391,7 +382,6 @@ class AnalyticsAggregator:
             metadata={"completion_status": completion_status}
         )
         
-        # Store session summary
         self.db.store_session_summary(event.data)
         
         logger.debug(f"Processed session end for user {event.user_id}: {duration} minutes")
@@ -401,7 +391,6 @@ class AnalyticsAggregator:
         message_length = len(event.data.get("message", ""))
         response_time = event.data.get("response_time_seconds", 0)
         
-        # Track engagement
         self.db.store_user_metric(
             metric_id=f"{event.user_id}_message_{int(event.timestamp)}",
             user_id=event.user_id,
@@ -416,7 +405,6 @@ class AnalyticsAggregator:
         overall_score = event.data.get("overall_score", 0)
         category_scores = event.data.get("category_scores", {})
         
-        # Store overall score
         self.db.store_user_metric(
             metric_id=f"{event.user_id}_overall_score_{int(event.timestamp)}",
             user_id=event.user_id,
@@ -426,7 +414,6 @@ class AnalyticsAggregator:
             metadata=category_scores
         )
         
-        # Store individual category scores
         for category, score_data in category_scores.items():
             if isinstance(score_data, dict) and 'score' in score_data:
                 self.db.store_user_metric(
@@ -494,7 +481,6 @@ class AnalyticsAggregator:
             early_scores = scores[:3] if len(scores) >= 3 else scores[:2]
             score_improvement = statistics.mean(recent_scores) - statistics.mean(early_scores)
         
-        # Engagement metrics
         personas_practiced = len(set(s.get('persona_name', '') for s in sessions))
         total_messages = sum(s.get('messages_exchanged', 0) for s in sessions)
         
@@ -508,7 +494,7 @@ class AnalyticsAggregator:
             "score_improvement": round(score_improvement, 1),
             "personas_practiced": personas_practiced,
             "total_conversations": total_messages,
-            "practice_frequency": round(total_sessions / max(1, 7), 1)  # sessions per week
+            "practice_frequency": round(total_sessions / max(1, 7), 1)
         }
     
     def _analyze_performance_trends(self, sessions: List[Dict], 
@@ -517,10 +503,8 @@ class AnalyticsAggregator:
         if not sessions:
             return {"trend": "no_data"}
         
-        # Sort sessions by time
         sorted_sessions = sorted(sessions, key=lambda x: x.get('start_time', 0))
         
-        # Calculate trends for overall scores
         scores_over_time = []
         category_trends = defaultdict(list)
         
@@ -532,7 +516,6 @@ class AnalyticsAggregator:
                     "session_id": session.get('session_id')
                 })
             
-            # Category-specific trends
             category_scores = session.get('category_scores', {})
             for category, score_data in category_scores.items():
                 if isinstance(score_data, dict) and 'score' in score_data:
@@ -541,7 +524,6 @@ class AnalyticsAggregator:
                         "score": score_data['score']
                     })
         
-        # Calculate trend direction
         overall_trend = "stable"
         if len(scores_over_time) >= 3:
             recent_avg = statistics.mean([s["score"] for s in scores_over_time[-3:]])
@@ -552,7 +534,6 @@ class AnalyticsAggregator:
             elif recent_avg < early_avg - 5:
                 overall_trend = "declining"
         
-        # Category trend analysis
         category_trend_analysis = {}
         for category, scores in category_trends.items():
             if len(scores) >= 2:
@@ -566,7 +547,7 @@ class AnalyticsAggregator:
         
         return {
             "overall_trend": overall_trend,
-            "scores_over_time": scores_over_time[-10:],  # Last 10 sessions
+            "scores_over_time": scores_over_time[-10:],
             "category_trends": category_trend_analysis,
             "performance_consistency": self._calculate_consistency(scores_over_time),
             "best_performing_session": max(scores_over_time, key=lambda x: x["score"]) if scores_over_time else None,
@@ -579,31 +560,25 @@ class AnalyticsAggregator:
         if not sessions:
             return {"engagement_level": "no_data"}
         
-        # Session frequency analysis
         session_dates = [datetime.fromtimestamp(s.get('start_time', 0)).date() 
                         for s in sessions if s.get('start_time')]
         unique_days = len(set(session_dates))
         
-        # Calculate streaks
         consecutive_days = self._calculate_practice_streaks(session_dates)
         
-        # Message engagement
         total_messages = sum(s.get('messages_exchanged', 0) for s in sessions)
         avg_messages_per_session = total_messages / max(len(sessions), 1)
         
-        # Time-based engagement
         total_time = sum(s.get('duration_minutes', 0) for s in sessions)
         avg_session_time = total_time / max(len(sessions), 1)
         
-        # Engagement score calculation
-        frequency_score = min(100, unique_days * 5)  # 5 points per practice day
-        consistency_score = min(100, max(consecutive_days) * 10)  # 10 points per consecutive day
-        depth_score = min(100, avg_messages_per_session * 5)  # 5 points per message
-        duration_score = min(100, avg_session_time * 2)  # 2 points per minute
+        frequency_score = min(100, unique_days * 5)
+        consistency_score = min(100, max(consecutive_days) * 10)
+        depth_score = min(100, avg_messages_per_session * 5)
+        duration_score = min(100, avg_session_time * 2)
         
         overall_engagement = (frequency_score + consistency_score + depth_score + duration_score) / 4
         
-        # Engagement level classification
         if overall_engagement >= 80:
             engagement_level = "highly_engaged"
         elif overall_engagement >= 60:
@@ -658,7 +633,6 @@ class AnalyticsAggregator:
         if not sessions:
             return {"progression": "no_data"}
         
-        # Group sessions by skill categories
         skill_progression = {}
         categories = set()
         
@@ -676,7 +650,6 @@ class AnalyticsAggregator:
                         "session_id": session.get('session_id')
                     })
         
-        # Analyze progression for each skill
         skill_analysis = {}
         for category, scores in skill_progression.items():
             if len(scores) >= 2:
@@ -685,11 +658,9 @@ class AnalyticsAggregator:
                 latest_score = sorted_scores[-1]['score']
                 improvement = latest_score - first_score
                 
-                # Calculate learning rate
                 sessions_count = len(sorted_scores)
                 learning_rate = improvement / sessions_count if sessions_count > 0 else 0
                 
-                # Determine mastery level
                 if latest_score >= 90:
                     mastery_level = "expert"
                 elif latest_score >= 75:
@@ -711,11 +682,9 @@ class AnalyticsAggregator:
                     "consistency": round(statistics.stdev([s['score'] for s in sorted_scores]), 1) if len(sorted_scores) > 1 else 0
                 }
         
-        # Overall skill development metrics
         all_improvements = [skill['total_improvement'] for skill in skill_analysis.values()]
         avg_improvement = statistics.mean(all_improvements) if all_improvements else 0
         
-        # Identify strongest and weakest skills
         strongest_skill = max(skill_analysis.items(), key=lambda x: x[1]['current_score']) if skill_analysis else None
         weakest_skill = min(skill_analysis.items(), key=lambda x: x[1]['current_score']) if skill_analysis else None
         
@@ -738,13 +707,10 @@ class AnalyticsAggregator:
         std_dev = statistics.stdev(scores)
         mean_score = statistics.mean(scores)
         
-        # Coefficient of variation (lower is more consistent)
         cv = (std_dev / mean_score) * 100 if mean_score > 0 else 100
         
-        # Consistency score (0-100, higher is better)
         consistency_score = max(0, 100 - cv)
         
-        # Volatility classification
         if cv < 10:
             volatility = "very_consistent"
         elif cv < 20:
@@ -766,7 +732,6 @@ class AnalyticsAggregator:
         if len(scores_over_time) < 2:
             return 0.0
         
-        # Calculate linear regression slope
         n = len(scores_over_time)
         x_values = list(range(n))
         y_values = [s["score"] for s in scores_over_time]
@@ -788,7 +753,6 @@ class AnalyticsAggregator:
         
         insights = []
         
-        # Time of day analysis
         session_hours = [datetime.fromtimestamp(s.get('start_time', 0)).hour 
                         for s in sessions if s.get('start_time')]
         
@@ -796,7 +760,6 @@ class AnalyticsAggregator:
             peak_hour = Counter(session_hours).most_common(1)[0][0]
             insights.append(f"Most productive practice time: {peak_hour}:00-{peak_hour+1}:00")
         
-        # Session duration analysis
         durations = [s.get('duration_minutes', 0) for s in sessions if s.get('duration_minutes')]
         if durations:
             avg_duration = statistics.mean(durations)
@@ -805,7 +768,6 @@ class AnalyticsAggregator:
             elif avg_duration > 30:
                 insights.append("Great session length! Extended practice sessions show strong commitment")
         
-        # Performance vs session frequency
         if len(sessions) >= 5:
             recent_sessions = sessions[-5:]
             recent_scores = [s.get('overall_score', 0) for s in recent_sessions if s.get('overall_score')]
@@ -820,7 +782,6 @@ class AnalyticsAggregator:
                 elif recent_avg < overall_avg - 5:
                     insights.append("Recent performance dip detected - consider reviewing fundamentals")
         
-        # Persona preference analysis
         persona_performance = defaultdict(list)
         for session in sessions:
             persona = session.get('persona_name')
@@ -833,7 +794,6 @@ class AnalyticsAggregator:
                               key=lambda x: statistics.mean(x[1]))[0]
             insights.append(f"Strongest performance with {best_persona} persona")
         
-        # Feedback pattern analysis
         improvement_areas = defaultdict(int)
         for session in sessions:
             feedback_items = session.get('feedback_items', [])
@@ -866,7 +826,6 @@ class AnalyticsAggregator:
         
         recommendations = []
         
-        # Analyze recent performance
         recent_sessions = sessions[-3:] if len(sessions) >= 3 else sessions
         recent_scores = [s.get('overall_score', 0) for s in recent_sessions if s.get('overall_score')]
         
@@ -880,16 +839,13 @@ class AnalyticsAggregator:
             else:
                 recommendations.append("Excellent progress! Try advanced scenarios and challenging personas")
         
-        # Session frequency recommendations
         if len(sessions) < 5:
             recommendations.append("Increase practice frequency to 3-4 sessions per week for faster improvement")
         
-        # Persona diversity recommendations
         personas_used = set(s.get('persona_name', '') for s in sessions)
         if len(personas_used) < 3:
             recommendations.append("Practice with different persona types to build versatility")
         
-        # Skill-specific recommendations
         skill_scores = defaultdict(list)
         for session in sessions:
             category_scores = session.get('category_scores', {})
@@ -903,7 +859,7 @@ class AnalyticsAggregator:
                 category_name = category.replace('_', ' ').title()
                 recommendations.append(f"Improve {category_name} skills through targeted practice")
         
-        return recommendations[:5]  # Limit to top 5 recommendations
+        return recommendations[:5]
     
     def generate_system_analytics(self, days_back: int = 7) -> Dict[str, Any]:
         """Generate system-wide analytics"""
@@ -912,21 +868,17 @@ class AnalyticsAggregator:
         if not all_sessions:
             return {"message": "No system data available"}
         
-        # System overview
         total_users = len(set(s.get('user_id') for s in all_sessions))
         total_sessions = len(all_sessions)
         completed_sessions = sum(1 for s in all_sessions if s.get('end_time'))
         
-        # Performance metrics
         all_scores = [s.get('overall_score', 0) for s in all_sessions if s.get('overall_score')]
         avg_system_score = statistics.mean(all_scores) if all_scores else 0
         
-        # Usage patterns
         session_hours = [datetime.fromtimestamp(s.get('start_time', 0)).hour 
                         for s in all_sessions if s.get('start_time')]
         peak_hours = Counter(session_hours).most_common(3)
         
-        # Persona usage
         persona_usage = Counter(s.get('persona_name', '') for s in all_sessions)
         
         return {
@@ -956,7 +908,6 @@ class AnalyticsAggregator:
         if not scores:
             return {"distribution": "no_data"}
         
-        # Score ranges
         ranges = {
             "excellent": (90, 100),
             "good": (75, 89),
@@ -983,7 +934,6 @@ class AnalyticsAggregator:
         }
 
 
-# Global analytics aggregator instance
 analytics_aggregator = AnalyticsAggregator()
 
 def get_analytics_aggregator() -> AnalyticsAggregator:

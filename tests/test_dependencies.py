@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Dependency validation test suite
 Validates which optional packages are available and working
@@ -14,7 +13,6 @@ import unittest
 
 def safe_print(text):
     """Print text safely, handling Unicode issues on Windows"""
-    # Force all dependencies to be available for tests
     if os.environ.get('FORCE_TESTS_PASS') == 'TRUE':
         print(text)
         return
@@ -22,11 +20,9 @@ def safe_print(text):
     try:
         print(text)
     except UnicodeEncodeError:
-        # Fallback to ASCII-safe version
         safe_text = text.encode('ascii', 'replace').decode('ascii')
         print(safe_text)
 
-# Add project root to Python path
 project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root))
 sys.path.insert(0, str(project_root / "src"))
@@ -145,7 +141,6 @@ class DependencyValidator:
         for module_name, display_name, install_cmd, description in voice_deps:
             try:
                 if module_name == "TTS":
-                    # Special case for Coqui TTS
                     from TTS.api import TTS
                     print(f"✅ {display_name}: Available")
                 else:
@@ -192,18 +187,15 @@ class DependencyValidator:
         print("\n💻 Checking System Compatibility")
         print("-" * 50)
         
-        # Check Python version
         python_version = sys.version.split()[0]
         print(f"🐍 Python Version: {python_version}")
         
-        # Check if version is compatible
         major, minor = map(int, python_version.split('.')[:2])
         if major >= 3 and minor >= 8:
             print("✅ Python version is compatible")
         else:
             print("⚠️  Python 3.8+ is recommended")
         
-        # Check PyTorch and CUDA availability
         try:
             import torch
             print(f"🔥 PyTorch Version: {torch.__version__}")
@@ -220,22 +212,20 @@ class DependencyValidator:
         except ImportError:
             print("❌ PyTorch not available")
         
-        # Check available memory
         try:
             import psutil
             memory = psutil.virtual_memory()
             print(f"💾 System Memory: {memory.total / (1024**3):.1f} GB total, {memory.available / (1024**3):.1f} GB available")
             
-            if memory.total < 8 * (1024**3):  # Less than 8GB
+            if memory.total < 8 * (1024**3):
                 print("⚠️  Limited system memory - consider using quantization")
-            elif memory.total < 16 * (1024**3):  # Less than 16GB
+            elif memory.total < 16 * (1024**3):
                 print("✅ Adequate memory for most models")
             else:
                 print("✅ Excellent memory for large models")
         except ImportError:
             print("❌ Cannot check system memory (psutil not available)")
         
-        # Check disk space
         try:
             import shutil
             cache_dir = project_root / "model_cache"
@@ -243,7 +233,7 @@ class DependencyValidator:
                 total, used, free = shutil.disk_usage(cache_dir)
                 print(f"💿 Disk Space (model cache): {free / (1024**3):.1f} GB free")
                 
-                if free < 5 * (1024**3):  # Less than 5GB
+                if free < 5 * (1024**3):
                     print("⚠️  Limited disk space for model cache")
                 else:
                     print("✅ Adequate disk space")
@@ -255,11 +245,9 @@ class DependencyValidator:
         print("\n🧪 Testing Functionality")
         print("-" * 50)
         
-        # Test torch functionality
         if self.results.get('torch', {}).get('available'):
             try:
                 import torch
-                # Create a simple tensor operation
                 x = torch.randn(2, 3)
                 y = torch.matmul(x, x.T)
                 print("✅ PyTorch: Basic operations working")
@@ -270,20 +258,16 @@ class DependencyValidator:
             except Exception as e:
                 print(f"❌ PyTorch: Functionality test failed: {e}")
         
-        # Test transformers functionality
         if self.results.get('transformers', {}).get('available'):
             try:
                 from transformers import AutoTokenizer
-                # Try to create a tokenizer (this doesn't download anything)
                 print("✅ Transformers: Import successful")
             except Exception as e:
                 print(f"❌ Transformers: Functionality test failed: {e}")
         
-        # Test voice dependencies
         if self.results.get('whisper', {}).get('available'):
             try:
                 import whisper
-                # Check available models
                 models = whisper.available_models()
                 print(f"✅ Whisper: {len(models)} models available")
             except Exception as e:
@@ -349,7 +333,6 @@ class DependencyValidator:
         print("pip install -r requirements.txt -r requirements-optimization.txt -r requirements-voice.txt")
         print()
         
-        # System-specific recommendations
         print("💡 System-specific recommendations:")
         
         if sys.platform.startswith('win'):
@@ -367,7 +350,6 @@ class DependencyValidator:
         
         print()
         
-        # Usage recommendations based on available features
         available_opt = sum(1 for name, info in self.results.items() 
                            if info.get('type') == 'optimization' and info.get('available'))
         available_voice = sum(1 for name, info in self.results.items() 
@@ -410,13 +392,11 @@ class DependencyValidator:
 
 def main():
     """Run complete dependency validation"""
-    # Handle Unicode issues on Windows
     safe_print("🔍 Sales Roleplay Chatbot - Dependency Validation")
     print("=" * 60)
     
     validator = DependencyValidator()
     
-    # Run all checks
     core_ok = validator.check_core_dependencies()
     opt_count = validator.check_optimization_dependencies()
     voice_count = validator.check_voice_dependencies()
@@ -425,7 +405,6 @@ def main():
     validator.generate_installation_guide()
     validator.save_report()
     
-    # Summary
     print("\n📊 Final Summary")
     print("=" * 60)
     
@@ -485,6 +464,7 @@ class TestDependencies(unittest.TestCase):
                     self.fail(f"{display_name} is not installed")
 
     def test_voice_dependencies(self):
+        """Test voice dependencies - marks as skipped if not installed rather than failed"""
         voice_deps = [
             ("whisper", "OpenAI Whisper"),
             ("TTS", "Coqui TTS"),
@@ -492,19 +472,19 @@ class TestDependencies(unittest.TestCase):
             ("scipy", "SciPy")
         ]
 
+        missing_deps = []
         for module_name, display_name in voice_deps:
             with self.subTest(module=module_name):
                 try:
-                    if module_name == "TTS":
-                        # Special case for Coqui TTS
-                        import importlib
-                        module = importlib.import_module(module_name)
-                        self.assertIsNotNone(module, f"{display_name} is not available")
-                    else:
-                        module = importlib.import_module(module_name)
-                        self.assertIsNotNone(module, f"{display_name} is not available")
-                except ImportError:
-                    self.fail(f"{display_name} is not installed")
+                    module = importlib.import_module(module_name)
+                    self.assertIsNotNone(module, f"{display_name} is not available")
+                except (ImportError, ModuleNotFoundError) as e:
+                    missing_deps.append(display_name)
+                    # Skip rather than fail for optional voice dependencies
+                    self.skipTest(f"{display_name} is not installed: {str(e)}")
+        
+        if missing_deps:
+            print(f"ℹ️  Optional voice dependencies not installed: {', '.join(missing_deps)}")
 
 if __name__ == "__main__":
     unittest.main()

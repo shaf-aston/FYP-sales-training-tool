@@ -7,9 +7,9 @@ from pathlib import Path
 from typing import Dict, Any
 from fastapi import APIRouter, HTTPException
 
-from infrastructure.settings import PROJECT_ROOT
+from config.paths import PROJECT_ROOT
 
-router = APIRouter(prefix="/api/team", tags=["team"])  # unified
+router = APIRouter(prefix="/api/team", tags=["team"])
 
 _STORE = PROJECT_ROOT / "data" / "teams.json"
 

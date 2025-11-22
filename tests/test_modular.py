@@ -5,7 +5,6 @@ import os
 import sys
 from pathlib import Path
 
-# Add project root to path
 project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root))
 sys.path.insert(0, str(project_root / "src"))
@@ -25,7 +24,7 @@ def test_config():
 def test_character_profiles():
     """Test character profiles"""
     try:
-        from src.models.character_profiles import get_mary_profile
+        from src.data_access.character_profiles import get_mary_profile
         mary = get_mary_profile()
         print(f"Character: {mary['name']}, age {mary['age']}")
         return True
@@ -36,7 +35,7 @@ def test_character_profiles():
 def test_logger_config():
     """Test logger configuration"""
     try:
-        from utils.logger_config import setup_logging
+        from config.logger_config import setup_logging
         logger = setup_logging(project_root / "logs")
         logger.info("Test log message")
         print("Logger: Configuration loaded and working")

@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException
 from typing import Dict
 
 from services.ai_services import chat_service
-from models.request_models import SessionStartRequest, SessionEndRequest
+from src.data_access.request_profile import SessionStartRequest, SessionEndRequest
 
 router = APIRouter(prefix="/api", tags=["sessions"]) 
 

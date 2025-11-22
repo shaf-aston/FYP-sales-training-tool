@@ -5,6 +5,7 @@ import "./EnhancedTrainingDashboard.css";
 import VoiceChat from "./VoiceChat";
 import ChatInterface from "./ChatInterface";
 import Header from "./Header";
+import API_ENDPOINTS from "./config/apiConfig";
 
 // Note: Reusable UI components are defined in the CSS and markup below.
 
@@ -73,7 +74,7 @@ const EnhancedTrainingDashboard = ({
 
       // 2) Initialize on server (non-blocking if cached)
       const progressInit = fetchWithTimeout(
-        `/api/v2/progress/initialize?user_id=${userId}`,
+        API_ENDPOINTS.INITIALIZE_PROGRESS(userId),
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -97,7 +98,7 @@ const EnhancedTrainingDashboard = ({
         setLoadingProgress(75);
       }
 
-      const personasDataPromise = fetchWithTimeout(`/api/v2/personas`, {
+      const personasDataPromise = fetchWithTimeout(API_ENDPOINTS.GET_PERSONAS, {
         timeout: 6000,
       }).then((res) => (res.ok ? res.json() : null));
 
@@ -212,7 +213,7 @@ const EnhancedTrainingDashboard = ({
       // Fire lightweight API calls on tab switches for testability and readiness
       if (view === "dashboard") {
         // refresh progress silently
-        fetchWithTimeout(`/api/v2/progress/${userId}/dashboard`, {
+        fetchWithTimeout(API_ENDPOINTS.GET_DASHBOARD_PROGRESS(userId), {
           timeout: 6000,
         })
           .then((r) => (r.ok ? r.json() : null))
@@ -222,7 +223,7 @@ const EnhancedTrainingDashboard = ({
           .catch(() => {});
       } else if (view === "training") {
         // Get training recommendations and, if session exists, preload its persona context
-        fetchWithTimeout(`/api/v2/training/recommendations/${userId}`, {
+        fetchWithTimeout(API_ENDPOINTS.GET_TRAINING_RECOMMENDATIONS(userId), {
           timeout: 6000,
         }).catch(() => {});
         if (activeSession?.persona?.name) {
@@ -230,10 +231,9 @@ const EnhancedTrainingDashboard = ({
         }
       } else if (view === "feedback") {
         // Prime analytics data (non-blocking)
-        fetchWithTimeout(
-          `/api/v2/feedback/analytics/dashboard?user_id=${userId}`,
-          { timeout: 6000 }
-        ).catch(() => {});
+        fetchWithTimeout(API_ENDPOINTS.GET_FEEDBACK_ANALYTICS(userId), {
+          timeout: 6000,
+        }).catch(() => {});
       }
     } catch (e) {
       // non-blocking
@@ -256,7 +256,7 @@ const EnhancedTrainingDashboard = ({
         },
       ]);
 
-      const response = await fetch("/api/v2/personas/chat", {
+      const response = await fetch(API_ENDPOINTS.PERSONA_CHAT, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -318,7 +318,7 @@ const EnhancedTrainingDashboard = ({
 
     try {
       setLoading(true);
-      const response = await fetch("/api/v2/feedback/analyze", {
+      const response = await fetch(API_ENDPOINTS.ANALYZE_FEEDBACK, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

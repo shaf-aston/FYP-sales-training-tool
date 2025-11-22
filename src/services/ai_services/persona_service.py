@@ -2,15 +2,14 @@
 Persona Management Service for AI Sales Training System
 Handles persona creation, management, and response generation
 """
-import json
 import logging
 import time
 from typing import Dict, List, Optional, Any
-from pathlib import Path
 from dataclasses import dataclass, asdict
 from enum import Enum
 
-from infrastructure.settings import PROJECT_ROOT, MAX_CONTEXT_LENGTH
+from config.settings import MAX_CONTEXT_LENGTH
+from . import persona_db_service
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +47,7 @@ class Persona:
     health_considerations: List[str] = None
     time_constraints: List[str] = None
     preferred_communication: str = "friendly"
-    industry: str = "fitness"  # allows multi-industry personas
+    industry: str = "fitness" 
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert persona to dictionary"""
@@ -57,6 +56,28 @@ class Persona:
         data['difficulty'] = self.difficulty.value
         return data
 
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "Persona":
+        """Create a Persona object from a dictionary."""
+        return cls(
+            name=data["name"],
+            age=data.get("age"),
+            background=data.get("background"),
+            personality_traits=data.get("personality_traits", []),
+            goals=data.get("goals", []),
+            concerns=data.get("concerns", []),
+            objections=data.get("objections", []),
+            budget_range=data.get("budget_range"),
+            decision_style=data.get("decision_style"),
+            expertise_level=data.get("expertise_level"),
+            persona_type=PersonaType(data.get("persona_type")),
+            difficulty=DifficultyLevel(data.get("difficulty")),
+            health_considerations=data.get("health_considerations"),
+            time_constraints=data.get("time_constraints"),
+            preferred_communication=data.get("preferred_communication"),
+            industry=data.get("industry"),
+        )
+
 class PersonaService:
     """Service for managing training personas and generating responses"""
     
@@ -64,159 +85,36 @@ class PersonaService:
         self.personas: Dict[str, Persona] = {}
         self.active_sessions: Dict[str, Dict] = {}
         self.persona_performance: Dict[str, Dict] = {}
-        # Prefer JSON defaults if present; fallback to code defaults
-        if not self._load_default_personas():
-            self._initialize_default_personas()
-        self._load_custom_personas()
+        persona_db_service.init_db()
+        self._load_personas_from_db()
     
-    def _initialize_default_personas(self):
-        """Initialize default training personas"""
-        # Mary - Health-focused beginner (existing)
-        mary = Persona(
-            name="Mary",
-            age=65,
-            background="Recently retired teacher, wants to start fitness routine",
-            personality_traits=["friendly", "cautious", "eager to learn"],
-            goals=["lose weight", "gain strength safely", "improve overall health"],
-            concerns=["safety", "injury prevention", "age-appropriate exercises"],
-            objections=["too expensive", "too intense", "not suitable for my age"],
-            budget_range="$50-150/month",
-            decision_style="careful research",
-            expertise_level="beginner",
-            persona_type=PersonaType.HEALTH_FOCUSED,
-            difficulty=DifficultyLevel.EASY,
-            health_considerations=["mild knee arthritis", "occasional back pain"],
-            time_constraints=["flexible schedule", "prefers morning workouts"],
-            preferred_communication="supportive and educational"
-        )
-        
-        # Jake - Skeptical experienced prospect
-        jake = Persona(
-            name="Jake",
-            age=35,
-            background="Corporate executive, has tried multiple gym memberships",
-            personality_traits=["analytical", "skeptical", "results-driven"],
-            goals=["efficient workouts", "stress relief", "maintain current fitness"],
-            concerns=["time efficiency", "proven results", "value for money"],
-            objections=["tried gyms before", "don't have time", "skeptical of promises"],
-            budget_range="$100-300/month",
-            decision_style="needs proof and data",
-            expertise_level="intermediate",
-            persona_type=PersonaType.SKEPTICAL,
-            difficulty=DifficultyLevel.HARD,
-            health_considerations=["high stress levels", "sedentary job"],
-            time_constraints=["only 45 minutes", "early morning or evening"],
-            preferred_communication="direct and fact-based"
-        )
-        
-        # Sarah - Budget-conscious student
-        sarah = Persona(
-            name="Sarah",
-            age=22,
-            background="College student with part-time job",
-            personality_traits=["enthusiastic", "budget-conscious", "social"],
-            goals=["stay fit on budget", "make friends", "stress relief from studies"],
-            concerns=["cost", "flexible scheduling", "beginner-friendly"],
-            objections=["can't afford expensive plans", "need flexible scheduling"],
-            budget_range="$25-75/month",
-            decision_style="price-sensitive",
-            expertise_level="beginner",
-            persona_type=PersonaType.BUDGET_CONSCIOUS,
-            difficulty=DifficultyLevel.MEDIUM,
-            health_considerations=["generally healthy", "occasional stress"],
-            time_constraints=["variable schedule", "study periods"],
-            preferred_communication="energetic and supportive"
-        )
-        
-        # David - Time-constrained professional
-        david = Persona(
-            name="David",
-            age=42,
-            background="Busy doctor with irregular schedule",
-            personality_traits=["efficient", "health-conscious", "decisive"],
-            goals=["maximize limited time", "maintain health", "stress management"],
-            concerns=["time efficiency", "flexible scheduling", "professional credibility"],
-            objections=["don't have time", "schedule too unpredictable"],
-            budget_range="$150-400/month",
-            decision_style="quick decisions when convinced",
-            expertise_level="intermediate",
-            persona_type=PersonaType.TIME_CONSTRAINED,
-            difficulty=DifficultyLevel.MEDIUM,
-            health_considerations=["high stress", "irregular eating"],
-            time_constraints=["20-30 minute sessions", "irregular availability"],
-            preferred_communication="professional and efficient"
-        )
-        
-        # Store personas
-        for persona in [mary, jake, sarah, david]:
-            self.personas[persona.name.lower()] = persona
-            self.persona_performance[persona.name.lower()] = {
-                "total_sessions": 0,
-                "average_session_length": 0,
-                "successful_closes": 0,
-                "common_objections": [],
-                "trainer_feedback": []
-            }
+    def _load_personas_from_db(self):
+        """Load personas from the database."""
+        personas_data = persona_db_service.get_personas()
+        for p_data in personas_data:
+            try:
+                persona = Persona.from_dict(p_data)
+                self.personas[persona.name.lower()] = persona
+                self.persona_performance[persona.name.lower()] = {
+                    "total_sessions": 0,
+                    "average_session_length": 0,
+                    "successful_closes": 0,
+                    "common_objections": [],
+                    "trainer_feedback": []
+                }
+            except Exception as e:
+                logger.warning(f"Skipping invalid persona from DB: {e}")
+        logger.info(f"Loaded {len(self.personas)} personas from database.")
 
-    def _default_personas_path(self) -> Path:
-        return PROJECT_ROOT / "data" / "default_personas.json"
-
-    def _load_default_personas(self) -> bool:
-        """Load default personas from data/default_personas.json if available.
-        Returns True if loaded, else False.
-        """
-        path = self._default_personas_path()
-        if not path.exists():
-            return False
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                raw = json.load(f)
-            loaded = 0
-            for p in raw.get("personas", []):
-                try:
-                    persona = Persona(
-                        name=p["name"],
-                        age=p.get("age", 30),
-                        background=p.get("background", ""),
-                        personality_traits=p.get("personality_traits", []),
-                        goals=p.get("goals", []),
-                        concerns=p.get("concerns", []),
-                        objections=p.get("objections", []),
-                        budget_range=p.get("budget_range", ""),
-                        decision_style=p.get("decision_style", ""),
-                        expertise_level=p.get("expertise_level", "beginner"),
-                        persona_type=PersonaType(p.get("persona_type", PersonaType.BEGINNER.value)),
-                        difficulty=DifficultyLevel(p.get("difficulty", DifficultyLevel.EASY.value)),
-                        health_considerations=p.get("health_considerations"),
-                        time_constraints=p.get("time_constraints"),
-                        preferred_communication=p.get("preferred_communication", "friendly"),
-                        industry=p.get("industry", "fitness"),
-                    )
-                    self.personas[persona.name.lower()] = persona
-                    self.persona_performance[persona.name.lower()] = {
-                        "total_sessions": 0,
-                        "average_session_length": 0,
-                        "successful_closes": 0,
-                        "common_objections": [],
-                        "trainer_feedback": []
-                    }
-                    loaded += 1
-                except Exception as e:
-                    logger.warning(f"Skipping invalid default persona: {e}")
-            logger.info(f"Loaded {loaded} default personas from JSON")
-            return loaded > 0
-        except Exception as e:
-            logger.error(f"Failed to load default personas: {e}")
-            return False
-    
     def get_persona(self, persona_name: str) -> Optional[Persona]:
         """Get persona by name"""
         return self.personas.get(persona_name.lower())
 
-    def add_or_update_persona(self, persona: Persona, persist: bool = True) -> None:
-        """Add or update a persona and optionally persist to disk."""
+    def add_or_update_persona(self, persona: Persona) -> None:
+        """Add or update a persona and persist to the database."""
         key = persona.name.lower()
         self.personas[key] = persona
+        persona_db_service.add_persona(persona.to_dict())
         self.persona_performance.setdefault(key, {
             "total_sessions": 0,
             "average_session_length": 0,
@@ -224,8 +122,6 @@ class PersonaService:
             "common_objections": [],
             "trainer_feedback": []
         })
-        if persist:
-            self._save_custom_personas()
     
     def list_personas(self) -> List[Dict[str, Any]]:
         """List all available personas"""
@@ -288,10 +184,8 @@ class PersonaService:
         session = self.active_sessions[session_id]
         persona_data = session["persona"]
         
-        # Build persona-specific prompt
         prompt = self._build_persona_prompt(persona_data, user_message, session["conversation_history"])
         
-        # Generate AI response
         try:
             from fallback_responses import generate_ai_response
             response = generate_ai_response(prompt, pipe)
@@ -299,10 +193,8 @@ class PersonaService:
             if not response:
                 response = self._get_fallback_response(persona_data, user_message)
             
-            # Update session data
             self._update_session_data(session_id, user_message, response)
             
-            # Analyze response for training metrics
             analysis = self._analyze_interaction(user_message, response, persona_data)
             
             return {
@@ -323,14 +215,12 @@ class PersonaService:
     
     def _build_persona_prompt(self, persona_data: Dict, user_message: str, history: List[Dict]) -> str:
         """Build AI prompt based on persona characteristics"""
-        # Build conversation context
         context = ""
         if history:
-            recent_history = history[-3:]  # Last 3 exchanges
+            recent_history = history[-3:]
             for exchange in recent_history:
                 context += f"Salesperson: {exchange['user_message']}\n{persona_data['name']}: {exchange['persona_response']}\n\n"
         
-        # Build comprehensive persona prompt
         prompt = f"""You are {persona_data['name']}, a {persona_data['age']}-year-old potential fitness customer.
 
 CHARACTER PROFILE:
@@ -399,55 +289,6 @@ Now respond as {persona_data['name']} (speak naturally, no labels):"""
         import random
         return random.choice(fallback_list)
 
-    def _custom_personas_path(self) -> Path:
-        return PROJECT_ROOT / "data" / "custom_personas.json"
-
-    def _load_custom_personas(self) -> None:
-        """Load custom personas from data/custom_personas.json if present."""
-        try:
-            path = self._custom_personas_path()
-            if path.exists():
-                with open(path, "r", encoding="utf-8") as f:
-                    raw = json.load(f)
-                for p in raw.get("personas", []):
-                    try:
-                        persona = Persona(
-                            name=p["name"],
-                            age=p.get("age", 30),
-                            background=p.get("background", ""),
-                            personality_traits=p.get("personality_traits", []),
-                            goals=p.get("goals", []),
-                            concerns=p.get("concerns", []),
-                            objections=p.get("objections", []),
-                            budget_range=p.get("budget_range", ""),
-                            decision_style=p.get("decision_style", ""),
-                            expertise_level=p.get("expertise_level", "beginner"),
-                            persona_type=PersonaType(p.get("persona_type", PersonaType.BEGINNER.value)),
-                            difficulty=DifficultyLevel(p.get("difficulty", DifficultyLevel.EASY.value)),
-                            health_considerations=p.get("health_considerations"),
-                            time_constraints=p.get("time_constraints"),
-                            preferred_communication=p.get("preferred_communication", "friendly"),
-                            industry=p.get("industry", "fitness"),
-                        )
-                        self.add_or_update_persona(persona, persist=False)
-                    except Exception as e:
-                        logger.warning(f"Skipping invalid custom persona: {e}")
-        except Exception as e:
-            logger.error(f"Failed to load custom personas: {e}")
-
-    def _save_custom_personas(self) -> None:
-        """Persist non-default personas to data/custom_personas.json."""
-        try:
-            path = self._custom_personas_path()
-            path.parent.mkdir(parents=True, exist_ok=True)
-            # Consider all personas not in defaults as custom (heuristic)
-            defaults = {"mary", "jake", "sarah", "david"}
-            custom = [p.to_dict() for k, p in self.personas.items() if k not in defaults]
-            with open(path, "w", encoding="utf-8") as f:
-                json.dump({"personas": custom}, f, indent=2)
-        except Exception as e:
-            logger.error(f"Failed to save custom personas: {e}")
-    
     def _get_emergency_response(self, persona_data: Dict) -> str:
         """Emergency response when all else fails"""
         return f"I need a moment to think about that. Could you tell me more about what you're offering?"
@@ -464,7 +305,6 @@ Now respond as {persona_data['name']} (speak naturally, no labels):"""
         
         session["conversation_history"].append(interaction)
         
-        # Limit history size
         if len(session["conversation_history"]) > MAX_CONTEXT_LENGTH:
             session["conversation_history"] = session["conversation_history"][-MAX_CONTEXT_LENGTH:]
     
@@ -478,11 +318,9 @@ Now respond as {persona_data['name']} (speak naturally, no labels):"""
             "suggested_improvements": []
         }
         
-        # Simple keyword-based analysis
         user_lower = user_message.lower()
         response_lower = persona_response.lower()
         
-        # Detect interaction types
         if any(word in user_lower for word in ["price", "cost", "budget", "expensive"]):
             analysis["interaction_type"] = "pricing_discussion"
         elif any(word in user_lower for word in ["benefit", "feature", "include", "offer"]):
@@ -492,19 +330,16 @@ Now respond as {persona_data['name']} (speak naturally, no labels):"""
         elif any(word in user_lower for word in ["hello", "hi", "introduce", "tell me"]):
             analysis["interaction_type"] = "initial_contact"
         
-        # Detect objections in persona response
         objection_keywords = persona_data.get('objections', [])
         for objection in objection_keywords:
             if any(word in response_lower for word in objection.lower().split()):
                 analysis["objections_raised"].append(objection)
         
-        # Engagement level based on response length and enthusiasm
         if len(persona_response) > 100 or any(word in response_lower for word in ["great", "excellent", "love", "perfect"]):
             analysis["engagement_level"] = "high"
         elif len(persona_response) < 30 or any(word in response_lower for word in ["no", "not", "can't", "won't"]):
             analysis["engagement_level"] = "low"
         
-        # Detect closing opportunities
         if any(phrase in response_lower for phrase in ["sounds good", "interested", "when can", "how do i"]):
             analysis["closing_opportunity"] = True
         
@@ -533,7 +368,7 @@ Now respond as {persona_data['name']} (speak naturally, no labels):"""
                 "closing_attempts": session["performance_metrics"]["closing_attempts"]
             },
             "conversation_analysis": self._analyze_conversation_flow(history),
-            "recommendations": self._generate_training_recommendations(session)
+            "recommendations": self._generate_training_recommendations(history)
         }
         
         return analytics
@@ -551,7 +386,6 @@ Now respond as {persona_data['name']} (speak naturally, no labels):"""
         }
         
         for i, exchange in enumerate(history):
-            # Simple stage detection based on keywords
             user_msg = exchange["user_message"].lower()
             persona_resp = exchange["persona_response"].lower()
             
@@ -571,7 +405,6 @@ Now respond as {persona_data['name']} (speak naturally, no labels):"""
                 "timestamp": exchange.get("timestamp", 0)
             })
             
-            # Track engagement level
             engagement = "medium"
             if len(persona_resp) > 100:
                 engagement = "high"
@@ -594,7 +427,6 @@ Now respond as {persona_data['name']} (speak naturally, no labels):"""
         if len(history) < 3:
             recommendations.append("Try to engage in longer conversations to build rapport")
         
-        # Check for persona-specific recommendations
         if persona_data["persona_type"] == "skeptical":
             recommendations.append("For skeptical personas, provide more data and proof points")
         elif persona_data["persona_type"] == "budget_conscious":
@@ -602,7 +434,6 @@ Now respond as {persona_data['name']} (speak naturally, no labels):"""
         elif persona_data["persona_type"] == "time_constrained":
             recommendations.append("Emphasize efficiency and time-saving benefits")
         
-        # Check for objection handling
         if session["performance_metrics"]["objections_handled"]:
             recommendations.append("Good job handling objections - practice different objection responses")
         else:
@@ -622,23 +453,19 @@ Now respond as {persona_data['name']} (speak naturally, no labels):"""
         if success_rating:
             session["success_rating"] = success_rating
         
-        # Generate final analytics
         final_report = self.get_session_analytics(session_id)
         
-        # Update persona performance stats
         persona_name = session["persona"]["name"].lower()
         if persona_name in self.persona_performance:
             perf = self.persona_performance[persona_name]
             duration = (session["end_time"] - session["start_time"]) / 60
             
-            # Update averages
             total_sessions = perf["total_sessions"]
             perf["average_session_length"] = ((perf["average_session_length"] * (total_sessions - 1)) + duration) / total_sessions
             
             if success_rating and success_rating >= 4:
                 perf["successful_closes"] += 1
         
-        # Archive session (in production, this would go to database)
         archived_session = self.active_sessions.pop(session_id)
         
         logger.info(f"Training session {session_id} completed")
@@ -659,5 +486,4 @@ Now respond as {persona_data['name']} (speak naturally, no labels):"""
             }
         }
 
-# Global persona service instance
 persona_service = PersonaService()

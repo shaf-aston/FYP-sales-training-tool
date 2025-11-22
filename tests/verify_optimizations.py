@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Quick verification script to test all optimizations
 """
@@ -73,7 +72,7 @@ def test_model_config():
     """Test model configuration"""
     print("\n🔧 Testing model configuration...")
     try:
-        from src.config.model_config import get_active_model_config, get_training_config
+        from config.model_config import get_active_model_config, get_training_config
         
         active_config = get_active_model_config()
         training_config = get_training_config()
@@ -93,7 +92,6 @@ def test_frontend_endpoint():
     """Test if frontend can reach backend"""
     print("\n🌐 Testing frontend endpoint compatibility...")
     
-    # Test the endpoint that frontend will use
     test_message = {
         "message": "Test from frontend",
         "user_id": "frontend_test",
@@ -130,7 +128,6 @@ def main():
         "Frontend Compatibility": False
     }
     
-    # Only test endpoints if backend is alive
     if results["Backend Alive"]:
         results["Chat Endpoint Speed"] = test_chat_endpoint_speed()
         results["Frontend Compatibility"] = test_frontend_endpoint()

@@ -107,7 +107,7 @@ class TrainingAnnotation:
     timestamp: float
     technique: TrainingTechnique
     description: str
-    effectiveness_rating: int  # 1-10 scale
+    effectiveness_rating: int
     improvement_suggestions: List[str]
     related_segment_id: str
     metadata: Dict[str, Any] = None

@@ -7,7 +7,6 @@ from typing import Dict, List, Optional, Any
 from pydantic import BaseModel
 import logging
 
-# Import services
 from services.ai_services import persona_service, PersonaType, DifficultyLevel
 from services.data_services import progress_service, SkillLevel, TrainingMetric
 from services.analysis_services import feedback_service
@@ -21,10 +20,8 @@ from services.analysis_services import validation_service
 
 logger = logging.getLogger(__name__)
 
-# Enhanced API router
 enhanced_router = APIRouter(prefix="/api/v2", tags=["Enhanced Training"])
 
-# Pydantic models for request/response validation
 class PersonaSelectionRequest(BaseModel):
     persona_name: str
     scenario: Optional[str] = "initial_contact"
@@ -54,7 +51,6 @@ class UserAssessmentRequest(BaseModel):
     strengths: Optional[List[str]] = []
     improvement_areas: Optional[List[str]] = []
 
-# Persona Management Endpoints
 @enhanced_router.get("/personas")
 async def list_personas(
     difficulty: Optional[str] = None,
@@ -64,7 +60,6 @@ async def list_personas(
     try:
         personas = persona_service.list_personas()
         
-        # Apply filters
         if difficulty:
             personas = [p for p in personas if p["difficulty"] == difficulty]
         
@@ -111,7 +106,6 @@ async def get_persona_details(persona_name: str) -> Dict[str, Any]:
 async def start_persona_training_session(request: PersonaSelectionRequest) -> Dict[str, Any]:
     """Start a new training session with selected persona"""
     try:
-        # Generate user_id if not provided (in production, this would come from authentication)
         user_id = f"user_{int(time.time())}"
         
         session_data = persona_service.start_training_session(
@@ -120,7 +114,6 @@ async def start_persona_training_session(request: PersonaSelectionRequest) -> Di
             scenario=request.scenario
         )
         
-        # Initialize user progress tracking if needed
         progress_service.initialize_user_profile(user_id)
         
         return {
@@ -150,7 +143,7 @@ async def chat_with_persona(request: TrainingSessionRequest) -> Dict[str, Any]:
     """Send message to persona and get response"""
     try:
         from services.ai_services import model_service
-        pipe = model_service.get_pipeline()
+        pipe = await model_service.get_pipeline()
         
         if not pipe:
             raise HTTPException(status_code=503, detail="AI model not available")
@@ -176,7 +169,6 @@ async def chat_with_persona(request: TrainingSessionRequest) -> Dict[str, Any]:
         logger.error(f"Error in persona chat: {e}")
         raise HTTPException(status_code=500, detail="Failed to generate persona response")
 
-# Progress Tracking Endpoints
 @enhanced_router.post("/progress/initialize")
 async def initialize_user_progress(
     user_id: str,
@@ -251,28 +243,22 @@ async def get_leaderboard(
         logger.error(f"Error getting leaderboard: {e}")
         raise HTTPException(status_code=500, detail="Failed to retrieve leaderboard")
 
-# Feedback Analytics Endpoints
 @enhanced_router.post("/feedback/analyze")
 async def analyze_training_session(request: FeedbackRequest) -> Dict[str, Any]:
     """Analyze a completed training session and provide detailed feedback"""
     try:
-        # Get session data from persona service
         if request.session_id not in persona_service.active_sessions:
             raise HTTPException(status_code=404, detail="Session not found")
         
         session_data = persona_service.active_sessions[request.session_id].copy()
         
-        # Add success rating if provided
         if request.success_rating:
             session_data["success_rating"] = request.success_rating
         
-        # Perform comprehensive analysis
         analysis_results = feedback_service.analyze_conversation(session_data, request.user_id)
         
-        # Record session in progress tracking
         progress_record = progress_service.record_training_session(request.user_id, session_data)
         
-        # End the persona session
         persona_service.end_training_session(request.session_id, request.success_rating)
         
         return {
@@ -329,21 +315,17 @@ async def get_analytics_dashboard(
         logger.error(f"Error getting analytics dashboard: {e}")
         raise HTTPException(status_code=500, detail="Failed to retrieve analytics dashboard")
 
-# Training Recommendations Endpoints
 @enhanced_router.get("/training/recommendations/{user_id}")
 async def get_training_recommendations(user_id: str) -> Dict[str, Any]:
     """Get personalized training recommendations"""
     try:
-        # Get user progress data
         dashboard = progress_service.get_user_progress_dashboard(user_id)
         
         if "error" in dashboard:
             raise HTTPException(status_code=404, detail="User not found")
         
-        # Get feedback history for additional recommendations
-        improvement_plan = feedback_service.generate_improvement_plan(user_id, 14)  # 2 weeks
+        improvement_plan = feedback_service.generate_improvement_plan(user_id, 14)
         
-        # Combine recommendations
         recommendations = {
             "user_id": user_id,
             "current_level": dashboard["user_profile"]["experience_level"],
@@ -358,7 +340,6 @@ async def get_training_recommendations(user_id: str) -> Dict[str, Any]:
             "improvement_plan": improvement_plan if "error" not in improvement_plan else None
         }
         
-        # Recommend personas based on skill gaps
         skill_gaps = [area for area, data in dashboard["skills_breakdown"].items() 
                      if data["progress_percentage"] < 60]
         
@@ -376,7 +357,6 @@ async def get_training_recommendations(user_id: str) -> Dict[str, Any]:
         logger.error(f"Error getting training recommendations: {e}")
         raise HTTPException(status_code=500, detail="Failed to get training recommendations")
 
-# System Health and Monitoring
 @enhanced_router.get("/system/health")
 async def get_system_health() -> Dict[str, Any]:
     """Get comprehensive system health status"""
@@ -386,10 +366,8 @@ async def get_system_health() -> Dict[str, Any]:
         
         model_name = model_service.get_model_name() or "Unknown"
         
-        # Get health data from existing chat service
         base_health = chat_service.get_health_data(model_name)
         
-        # Add enhanced system metrics
         enhanced_health = {
             **base_health,
             "enhanced_features": {
@@ -480,7 +458,6 @@ async def get_system_health() -> Dict[str, Any]:
         logger.error(f"Error getting system health: {e}")
         raise HTTPException(status_code=500, detail="Failed to retrieve system health")
 
-# Export user data (for compliance/backup)
 @enhanced_router.get("/users/{user_id}/export")
 async def export_user_data(user_id: str) -> Dict[str, Any]:
     """Export all user data for analysis or backup"""
@@ -490,7 +467,6 @@ async def export_user_data(user_id: str) -> Dict[str, Any]:
         if "error" in user_data:
             raise HTTPException(status_code=404, detail=user_data["error"])
         
-        # Add feedback data
         feedback_history = feedback_service.user_feedback_history.get(user_id, [])
         user_data["feedback_history"] = feedback_history
         
@@ -505,17 +481,15 @@ async def export_user_data(user_id: str) -> Dict[str, Any]:
         logger.error(f"Error exporting user data: {e}")
         raise HTTPException(status_code=500, detail="Failed to export user data")
 
-# Add time import at the top
 import time
 
-# New Pydantic models for additional services
 class RAGQueryRequest(BaseModel):
     query: str
     context_size: Optional[int] = 5
     similarity_threshold: Optional[float] = 0.7
 
 class VoiceProcessingRequest(BaseModel):
-    audio_data: str  # Base64 encoded audio
+    audio_data: str
     emotion_target: Optional[str] = "neutral"
     voice_clone_reference: Optional[str] = None
 
@@ -528,7 +502,6 @@ class ValidationRequest(BaseModel):
     output_data: Optional[Dict[str, Any]] = None
     validation_context: Optional[Dict[str, Any]] = None
 
-# RAG Service Endpoints
 @enhanced_router.post("/rag/query")
 async def query_knowledge_base(request: RAGQueryRequest) -> Dict[str, Any]:
     """Query the RAG knowledge base for relevant information"""
@@ -574,7 +547,6 @@ async def enhance_response_with_rag(
         logger.error(f"Error enhancing response with RAG: {e}")
         raise HTTPException(status_code=500, detail="Failed to enhance response")
 
-# Preprocessing Service Endpoints
 @enhanced_router.post("/preprocessing/analyze")
 async def analyze_input_preprocessing(
     text: str,
@@ -582,7 +554,6 @@ async def analyze_input_preprocessing(
 ) -> Dict[str, Any]:
     """Analyze and preprocess input text"""
     try:
-        # Perform comprehensive preprocessing
         cleaned_text = preprocessing_service.text_cleaner.clean_text(text)
         persona_analysis = preprocessing_service.persona_extractor.extract_persona_indicators(text)
         context_data = preprocessing_service.context_builder.build_context(text, persona_context or {})
@@ -601,7 +572,6 @@ async def analyze_input_preprocessing(
         logger.error(f"Error in preprocessing: {e}")
         raise HTTPException(status_code=500, detail="Failed to preprocess input")
 
-# Post-processing Service Endpoints  
 @enhanced_router.post("/postprocessing/enhance")
 async def enhance_output_postprocessing(
     response: str,
@@ -610,7 +580,6 @@ async def enhance_output_postprocessing(
 ) -> Dict[str, Any]:
     """Enhance output using post-processing pipeline"""
     try:
-        # Run through post-processing pipeline
         safety_result = postprocessing_service.safety_filter.filter_response(response)
         
         if safety_result["safe"]:
@@ -645,7 +614,6 @@ async def enhance_output_postprocessing(
         logger.error(f"Error in post-processing: {e}")
         raise HTTPException(status_code=500, detail="Failed to post-process response")
 
-# Voice Service Endpoints
 @enhanced_router.post("/voice/synthesize")
 async def synthesize_speech(
     text: str,
@@ -696,7 +664,6 @@ async def transcribe_speech(request: VoiceProcessingRequest) -> Dict[str, Any]:
         logger.error(f"Error in speech transcription: {e}")
         raise HTTPException(status_code=500, detail="Failed to transcribe speech")
 
-# Model Optimization Endpoints
 @enhanced_router.post("/optimization/load-model")
 async def load_optimized_model(request: ModelOptimizationRequest) -> Dict[str, Any]:
     """Load model with optimization settings"""
@@ -706,7 +673,6 @@ async def load_optimized_model(request: ModelOptimizationRequest) -> Dict[str, A
             optimization_config=request.optimization_config
         )
         
-        # Get performance metrics
         performance_stats = model_optimization_service.get_performance_analytics(request.model_name)
         
         return {
@@ -759,7 +725,6 @@ async def warmup_models(model_names: List[str]) -> Dict[str, Any]:
         logger.error(f"Error warming up models: {e}")
         raise HTTPException(status_code=500, detail="Failed to warmup models")
 
-# Validation Service Endpoints
 @enhanced_router.post("/validation/validate-input")
 async def validate_input_data(request: ValidationRequest) -> Dict[str, Any]:
     """Validate input data for safety and compliance"""
@@ -850,7 +815,6 @@ async def get_validation_report(timeframe_hours: int = 24) -> Dict[str, Any]:
         logger.error(f"Error getting validation report: {e}")
         raise HTTPException(status_code=500, detail="Failed to get validation report")
 
-# Integrated Enhanced Chat Endpoint
 @enhanced_router.post("/chat/enhanced")
 async def enhanced_chat_with_all_services(
     user_message: str,
@@ -863,7 +827,6 @@ async def enhanced_chat_with_all_services(
 ) -> Dict[str, Any]:
     """Enhanced chat endpoint that integrates all services"""
     try:
-        # Input validation
         if validate_input:
             input_validation = validation_service.validate_input({
                 "message": user_message
@@ -876,13 +839,10 @@ async def enhanced_chat_with_all_services(
                     "validation_results": [r.to_dict() for r in input_validation]
                 }
         
-        # Sanitize input
         sanitized_message, sanitization_results = validation_service.sanitize_input(user_message)
         
-        # Preprocessing
         preprocessing_results = await analyze_input_preprocessing(sanitized_message)
         
-        # Get base response from persona or chat service
         if persona_name and session_id:
             persona_response_data = await chat_with_persona(TrainingSessionRequest(
                 user_id="enhanced_user",
@@ -891,7 +851,6 @@ async def enhanced_chat_with_all_services(
             ))
             base_response = persona_response_data["persona_response"]
         else:
-            # Use regular chat service
             from services.ai_services import chat_service
             from services.ai_services import model_service
             
@@ -902,7 +861,6 @@ async def enhanced_chat_with_all_services(
             chat_response = chat_service.get_response(sanitized_message, pipe)
             base_response = chat_response["response"]
         
-        # RAG enhancement
         if enable_rag:
             rag_enhancement = await enhance_response_with_rag(
                 user_message=sanitized_message,
@@ -912,7 +870,6 @@ async def enhanced_chat_with_all_services(
         else:
             enhanced_response = base_response
         
-        # Post-processing
         postprocessing_results = await enhance_output_postprocessing(enhanced_response)
         
         if not postprocessing_results["success"]:
@@ -924,7 +881,6 @@ async def enhanced_chat_with_all_services(
         
         final_response = postprocessing_results["enhanced_response"]
         
-        # Output validation
         validation_results = []
         if validate_output:
             output_validation = validation_service.validate_output({
@@ -933,7 +889,6 @@ async def enhanced_chat_with_all_services(
             }, {"message": sanitized_message})
             validation_results = [r.to_dict() for r in output_validation]
         
-        # Voice synthesis (if requested)
         voice_data = None
         if enable_voice:
             try:

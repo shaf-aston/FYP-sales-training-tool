@@ -7,7 +7,6 @@ import sys
 import asyncio
 from pathlib import Path
 
-# Add src to path
 sys.path.insert(0, str(Path(__file__).parent))
 
 def validate_imports():
@@ -17,7 +16,7 @@ def validate_imports():
     print("=" * 70)
     
     try:
-        from src.services.voice_service import EnhancedVoiceService
+        from src.services.voice_services.voice_service import EnhancedVoiceService
         print("✅ EnhancedVoiceService imported successfully")
         return True, EnhancedVoiceService
     except Exception as e:
@@ -114,14 +113,12 @@ def validate_cache_operations(service):
     print("=" * 70)
     
     try:
-        # Test adding to cache
         test_key = "test_key_validation"
         test_data = {"text": "Test transcription", "confidence": 0.95}
         
         service._add_to_cache(test_key, test_data)
         print(f"✅ Cache add operation successful")
         
-        # Test retrieving from cache
         cached_data = service._get_from_cache(test_key)
         if cached_data and cached_data.get('text') == "Test transcription":
             print(f"✅ Cache retrieval successful")
@@ -129,11 +126,9 @@ def validate_cache_operations(service):
             print(f"❌ Cache retrieval failed")
             return False
         
-        # Test cache size
         cache_size = len(service.transcription_cache)
         print(f"✅ Cache size tracking works: {cache_size} entries")
         
-        # Test clearing cache
         service.clear_cache()
         if len(service.transcription_cache) == 0:
             print(f"✅ Cache clear successful")
@@ -190,7 +185,6 @@ async def validate_async_methods(service):
     print("=" * 70)
     
     try:
-        # Check if methods are coroutines
         import inspect
         
         async_methods = [
@@ -256,39 +250,30 @@ async def main():
     
     results = {}
     
-    # 1. Test imports
     success, VoiceServiceClass = validate_imports()
     results['imports'] = success
     if not success:
         print("\n❌ CRITICAL: Cannot proceed without successful import")
         return False
     
-    # 2. Test initialization
     success, service = validate_initialization(VoiceServiceClass)
     results['initialization'] = success
     if not success:
         print("\n❌ CRITICAL: Cannot proceed without successful initialization")
         return False
     
-    # 3. Validate properties
     results['properties'] = validate_properties(service)
     
-    # 4. Validate methods
     results['methods'] = validate_methods(service)
     
-    # 5. Test cache operations
     results['cache_operations'] = validate_cache_operations(service)
     
-    # 6. Test metrics
     results['metrics'] = validate_metrics(service)
     
-    # 7. Test async methods
     results['async_methods'] = await validate_async_methods(service)
     
-    # 8. Validate configuration
     results['configuration'] = validate_configuration(service)
     
-    # Summary
     print("\n" + "=" * 70)
     print("VALIDATION SUMMARY")
     print("=" * 70)

@@ -5,13 +5,12 @@ Computes dashboard metrics from analytics_events table and logs
 import json
 import os
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Dict, List, Any, Optional
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-# Import DB service for optional database queries
 try:
     from .persona_db_service import _get_conn, DATABASE_URL
     DB_AVAILABLE = True
@@ -39,7 +38,6 @@ class AnalyticsAggregator:
     def get_user_dashboard_metrics(self, user_id: str, days_back: int = 30) -> Dict[str, Any]:
         """Get comprehensive dashboard metrics for a user"""
         try:
-            # Try database first, fall back to file logs
             if DB_AVAILABLE and DATABASE_URL:
                 return self._get_metrics_from_db(user_id, days_back)
             else:
@@ -53,9 +51,8 @@ class AnalyticsAggregator:
         conn = _get_conn()
         try:
             cur = conn.cursor()
-            cutoff_date = datetime.utcnow() - timedelta(days=days_back)
+            cutoff_date = datetime.now(UTC) - timedelta(days=days_back)
             
-            # Get all events for user in timeframe
             cur.execute("""
                 SELECT event_type, payload, created_at
                 FROM analytics_events 
@@ -66,7 +63,6 @@ class AnalyticsAggregator:
             events = cur.fetchall()
             cur.close()
             
-            # Process events
             sessions = []
             current_session = None
             total_messages = 0
@@ -94,7 +90,6 @@ class AnalyticsAggregator:
                     sessions.append(current_session)
                     current_session = None
             
-            # Add incomplete session if exists
             if current_session:
                 sessions.append(current_session)
             
@@ -108,7 +103,7 @@ class AnalyticsAggregator:
         if not LOG_FILE.exists():
             return self._get_fallback_metrics(user_id)
         
-        cutoff_date = datetime.utcnow() - timedelta(days=days_back)
+        cutoff_date = datetime.now(UTC) - timedelta(days=days_back)
         sessions = []
         current_session = None
         total_messages = 0
@@ -123,7 +118,6 @@ class AnalyticsAggregator:
                         if event.get('user_id') != user_id:
                             continue
                         
-                        # Parse timestamp
                         event_time = datetime.fromisoformat(entry['ts'].replace('Z', '+00:00'))
                         if event_time < cutoff_date:
                             continue
@@ -155,7 +149,6 @@ class AnalyticsAggregator:
                         logger.warning(f"Skipping malformed log entry: {e}")
                         continue
             
-            # Add incomplete session
             if current_session:
                 sessions.append(current_session)
             
@@ -168,25 +161,20 @@ class AnalyticsAggregator:
     def _compute_metrics_from_sessions(self, user_id: str, sessions: List[Dict], total_messages: int) -> Dict[str, Any]:
         """Compute final dashboard metrics from session data"""
         
-        # Basic session statistics
         total_sessions = len(sessions)
         completed_sessions = [s for s in sessions if s.get('end_time')]
         
-        # Calculate total hours
         total_hours = 0.0
         for session in completed_sessions:
             if session['start_time'] and session['end_time']:
                 duration = session['end_time'] - session['start_time']
                 total_hours += duration.total_seconds() / 3600
         
-        # Calculate average rating
         ratings = [s['success_rating'] for s in completed_sessions if s.get('success_rating')]
         avg_rating = sum(ratings) / len(ratings) if ratings else 5.0
         
-        # Skill progress simulation based on activity
         skills_progress = self._compute_skill_progress(sessions, total_messages)
         
-        # Overall completion percentage
         avg_skill_progress = sum(skill['progress_percentage'] for skill in skills_progress.values()) / len(skills_progress)
         
         return {
@@ -231,14 +219,12 @@ class AnalyticsAggregator:
             'time_management': 40.0
         }
         
-        # Boost progress based on activity
-        activity_boost = min(total_messages * 2, 30)  # Up to 30% boost
+        activity_boost = min(total_messages * 2, 30)
         
         skills_breakdown = {}
         for skill_key, base_pct in base_progress.items():
             adjusted_pct = min(base_pct + activity_boost, 100)
             
-            # Determine current and target levels
             if adjusted_pct < 40:
                 current_level = "beginner"
                 target_level = "intermediate"
@@ -328,17 +314,14 @@ class AnalyticsAggregator:
         conn = _get_conn()
         try:
             cur = conn.cursor()
-            cutoff_date = datetime.utcnow() - timedelta(days=days_back)
+            cutoff_date = datetime.now(UTC) - timedelta(days=days_back)
             
-            # Total events
             cur.execute("SELECT COUNT(*) FROM analytics_events WHERE created_at >= %s", (cutoff_date,))
             total_events = cur.fetchone()[0]
             
-            # Unique users
             cur.execute("SELECT COUNT(DISTINCT user_id) FROM analytics_events WHERE created_at >= %s", (cutoff_date,))
             unique_users = cur.fetchone()[0]
             
-            # Event type breakdown
             cur.execute("""
                 SELECT event_type, COUNT(*) 
                 FROM analytics_events 
@@ -377,7 +360,6 @@ class AnalyticsAggregator:
                         entry = json.loads(line.strip())
                         event = entry.get('event', {})
                         
-                        # Parse timestamp
                         event_time = datetime.fromisoformat(entry['ts'].replace('Z', '+00:00'))
                         if event_time < cutoff_date:
                             continue
@@ -404,5 +386,4 @@ class AnalyticsAggregator:
             return {"error": "Failed to read analytics logs"}
 
 
-# Global instance
 analytics_aggregator = AnalyticsAggregator()

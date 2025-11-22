@@ -1,8 +1,9 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import PropTypes from "prop-types";
 import "./Header.css";
 
-const Header = () => {
+const Header = ({ personas = [] }) => {
   return (
     <header className="app-header">
       <div className="header-container">
@@ -21,22 +22,28 @@ const Header = () => {
             General Chat
           </Link>
           <div className="nav-divider">|</div>
-          <Link to="/chat/mary" className="nav-link">
-            Chat with Mary
-          </Link>
-          <Link to="/chat/jake" className="nav-link">
-            Chat with Jake
-          </Link>
-          <Link to="/chat/sarah" className="nav-link">
-            Chat with Sarah
-          </Link>
-          <Link to="/chat/david" className="nav-link">
-            Chat with David
-          </Link>
+          {personas.map((persona) => (
+            <Link
+              key={persona.name}
+              to={`/chat/${persona.name.toLowerCase()}`}
+              className="nav-link"
+            >
+              Chat with {persona.displayName || persona.name}
+            </Link>
+          ))}
         </nav>
       </div>
     </header>
   );
+};
+
+Header.propTypes = {
+  personas: PropTypes.arrayOf(
+    PropTypes.shape({
+      name: PropTypes.string.isRequired,
+      displayName: PropTypes.string,
+    })
+  ),
 };
 
 export default Header;

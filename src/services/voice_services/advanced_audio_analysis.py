@@ -11,10 +11,9 @@ This refactored version uses modular components for improved maintainability:
 
 import logging
 from typing import Dict, List, Optional, Any
-from datetime import datetime
+from datetime import datetime, UTC
 import asyncio
 
-# Import modular components
 from .audio_analysis_models import (
     AdvancedAudioAnalysis, TimestampedSegment, Speaker, ContextSection,
     RolePlayBlock, TrainingAnnotation, SpeakerRole, RolePlayPhase
@@ -39,7 +38,6 @@ class AdvancedAudioAnalysisService:
         self.roleplay_analyzer = RolePlayAnalyzer()
         self.training_annotator = TrainingAnnotator()
         
-        # Performance tracking
         self.analysis_count = 0
         self.total_processing_time = 0.0
         
@@ -59,36 +57,32 @@ class AdvancedAudioAnalysisService:
         Returns:
             Complete analysis with all component results
         """
-        start_time = datetime.now()
+        start_time = datetime.now(UTC)
         
         try:
             if not segments:
                 raise ValueError("No segments provided for analysis")
             
-            session_id = session_id or f"session_{int(datetime.now().timestamp())}"
+            session_id = session_id or f"session_{int(datetime.now(UTC).timestamp())}"
             metadata = metadata or {}
             
             logger.info(f"Starting comprehensive analysis for session {session_id}")
             logger.info(f"Processing {len(segments)} segments with {len(self._get_component_list())} analyzers")
             
-            # Run all analysis components
             results = await self._run_parallel_analysis(segments)
             
-            # Extract results
             speakers = results['speakers']
             context_sections = results['context_sections']
             roleplay_blocks = results['roleplay_blocks']
             training_annotations = results['training_annotations']
             
-            # Calculate overall effectiveness score
             overall_score = self._calculate_comprehensive_score(
                 speakers, context_sections, roleplay_blocks, training_annotations
             )
             
-            # Create final analysis result
             analysis = AdvancedAudioAnalysis(
                 session_id=session_id,
-                timestamp=datetime.now().isoformat(),
+                timestamp=datetime.now(UTC).isoformat(),
                 speakers=speakers,
                 segments=segments,
                 context_sections=context_sections,
@@ -103,8 +97,7 @@ class AdvancedAudioAnalysisService:
                 }
             )
             
-            # Update performance metrics
-            processing_time = (datetime.now() - start_time).total_seconds()
+            processing_time = (datetime.now(UTC) - start_time).total_seconds()
             self._update_performance_metrics(processing_time)
             
             logger.info(f"✅ Comprehensive analysis completed in {processing_time:.2f}s")
@@ -120,24 +113,20 @@ class AdvancedAudioAnalysisService:
     async def _run_parallel_analysis(self, segments: List[TimestampedSegment]) -> Dict[str, Any]:
         """Run all analysis components in parallel for efficiency"""
         
-        # Step 1: Speaker analysis (required first)
         speakers = self.speaker_analyzer.analyze(segments)
         
-        # Step 2: Run remaining analyses in parallel
         async def run_context_analysis():
             return self.context_analyzer.analyze(segments)
         
         async def run_roleplay_analysis():
             return self.roleplay_analyzer.analyze(segments, speakers, [])
         
-        # Run context and roleplay analysis in parallel
         context_task = asyncio.create_task(run_context_analysis())
         roleplay_task = asyncio.create_task(run_roleplay_analysis())
         
         context_sections = await context_task
         roleplay_blocks = await roleplay_task
         
-        # Step 3: Generate training annotations (needs all previous results)
         training_annotations = self.training_annotator.generate_annotations(
             segments, speakers, roleplay_blocks
         )
@@ -154,31 +143,25 @@ class AdvancedAudioAnalysisService:
                                      roleplay_blocks: List[RolePlayBlock],
                                      training_annotations: List[TrainingAnnotation]) -> float:
         """Calculate overall conversation effectiveness score using all components"""
-        score = 0.5  # Base score
+        score = 0.5
         
-        # Speaker analysis contribution (15%)
-        if len(speakers) >= 2:  # Good interaction
+        if len(speakers) >= 2:
             speaker_score = sum(s.confidence for s in speakers) / len(speakers)
             score += speaker_score * 0.15
         
-        # Context analysis contribution (25%)
         if context_sections:
             avg_context_importance = sum(cs.importance_score for cs in context_sections) / len(context_sections)
             score += avg_context_importance * 0.25
         
-        # Roleplay analysis contribution (35%)
         if roleplay_blocks:
             avg_roleplay_effectiveness = sum(rb.effectiveness_score for rb in roleplay_blocks) / len(roleplay_blocks)
             score += avg_roleplay_effectiveness * 0.35
             
-            # Bonus for phase diversity
             unique_phases = len(set(block.phase for block in roleplay_blocks))
-            if unique_phases >= 3:  # Good phase coverage
+            if unique_phases >= 3:
                 score += 0.05
         
-        # Training annotation contribution (25%)
         if training_annotations:
-            # Positive vs improvement ratio
             positive_annotations = [a for a in training_annotations 
                                   if a.metadata.get('annotation_type') == 'positive']
             positive_ratio = len(positive_annotations) / len(training_annotations)
@@ -216,7 +199,6 @@ class AdvancedAudioAnalysisService:
     
     def get_detailed_analysis_summary(self, analysis: AdvancedAudioAnalysis) -> Dict[str, Any]:
         """Generate comprehensive analysis summary with component breakdowns"""
-        # Get component-specific summaries
         speaker_summary = self.speaker_analyzer.get_speaker_summary(analysis.speakers)
         context_summary = self.context_analyzer.get_context_summary(analysis.context_sections)
         roleplay_summary = self.roleplay_analyzer.get_phase_statistics(analysis.roleplay_blocks)
@@ -243,20 +225,17 @@ class AdvancedAudioAnalysisService:
         """Extract key insights from the comprehensive analysis"""
         insights = []
         
-        # Speaker insights
         if len(analysis.speakers) == 1:
             insights.append("⚠️ Only one speaker identified - consider improving interaction")
         elif len(analysis.speakers) > 2:
             insights.append("✅ Multi-party conversation detected")
         
-        # Roleplay insights
         phases_covered = set(block.phase for block in analysis.roleplay_blocks)
         if len(phases_covered) >= 4:
             insights.append("✅ Comprehensive role-play covering multiple sales phases")
         elif len(phases_covered) <= 2:
             insights.append("⚠️ Limited phase coverage - practice more diverse scenarios")
         
-        # Training insights
         positive_annotations = [a for a in analysis.training_annotations 
                               if a.metadata.get('annotation_type') == 'positive']
         if len(positive_annotations) >= len(analysis.training_annotations) * 0.6:
@@ -270,7 +249,6 @@ class AdvancedAudioAnalysisService:
         """Generate actionable recommendations based on analysis"""
         recommendations = []
         
-        # Based on overall score
         if analysis.overall_score >= 0.8:
             recommendations.append("🎯 Excellent performance - focus on advanced techniques")
         elif analysis.overall_score >= 0.6:
@@ -278,7 +256,6 @@ class AdvancedAudioAnalysisService:
         else:
             recommendations.append("🔧 Significant improvement needed - focus on basic techniques")
         
-        # Based on roleplay coverage
         phases_covered = set(block.phase.value for block in analysis.roleplay_blocks)
         missing_phases = {'opening', 'discovery', 'presentation', 'handling_objections', 'closing'} - phases_covered
         
@@ -286,7 +263,6 @@ class AdvancedAudioAnalysisService:
             phase_names = ', '.join(missing_phases)
             recommendations.append(f"📝 Practice these phases: {phase_names}")
         
-        # Based on training annotations
         improvement_annotations = [a for a in analysis.training_annotations 
                                  if a.metadata.get('annotation_type') == 'improvement']
         if improvement_annotations:
@@ -296,7 +272,6 @@ class AdvancedAudioAnalysisService:
         return recommendations
 
 
-# Global service instance for backward compatibility
 _advanced_audio_service: Optional[AdvancedAudioAnalysisService] = None
 
 def get_advanced_audio_service() -> AdvancedAudioAnalysisService:
@@ -311,7 +286,6 @@ def reset_advanced_audio_service():
     global _advanced_audio_service
     _advanced_audio_service = None
 
-# Legacy compatibility exports
 def analyze_advanced_audio(segments: List[TimestampedSegment], **kwargs) -> AdvancedAudioAnalysis:
     """Legacy function for backward compatibility"""
     import asyncio

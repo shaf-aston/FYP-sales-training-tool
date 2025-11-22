@@ -3,84 +3,102 @@ TECHNOLOGIES, TOOLS, FRAMEWORKS, AND LIBRARIES USED IN SALES ROLEPLAY CHATBOT
 
 BACKEND FRAMEWORK & API
 -----------------------
-FastAPI - High-performance async web framework for building RESTful API endpoints with automatic OpenAPI documentation
-Pydantic v2 - Data validation and serialization library for automatic request/response validation with type checking
-uvicorn - Lightning-fast ASGI server for running FastAPI application with hot-reload support during development
-python-multipart - Handles file uploads and multipart form data in FastAPI endpoints (audio upload for STT)
+- **FastAPI**: High-performance async framework for building RESTful APIs with automatic OpenAPI documentation.
+  - *Reason*: Simplifies API development with built-in validation and async support.
+- **Pydantic v2**: Data validation and serialization library.
+  - *Reason*: Ensures type safety and automatic validation for API requests/responses.
+- **Uvicorn**: ASGI server for running FastAPI applications.
+  - *Reason*: Provides fast and lightweight server capabilities with hot-reload.
 
 AI/ML & LANGUAGE MODELS
 -----------------------
-transformers - Hugging Face library for loading and running Qwen2.5-0.5B-Instruct language model for persona response generation
-torch - PyTorch deep learning framework (CPU mode) for neural network inference and model execution
-optimum - Model optimization library providing BetterTransformer for 2-4x faster CPU inference with greedy decoding
-LangChain - Framework for conversation chain management and memory handling to maintain chat context across turns
-langchain-community - Community integrations for LangChain including custom retrievers and memory implementations
-sentencepiece - Required tokenizer backend for Qwen model subword segmentation and encoding
+- **Transformers (Hugging Face)**: Library for loading and running Qwen2.5-0.5B-Instruct model.
+  - *Reason*: Simplifies integration of state-of-the-art language models.
+- **Torch (PyTorch)**: Deep learning framework for model inference.
+  - *Reason*: Provides efficient neural network execution.
+- **Optimum**: Model optimization library.
+  - *Reason*: Enhances inference speed with BetterTransformer.
+- **LangChain**: Framework for managing conversation chains and memory.
+  - *Reason*: Maintains chat context across turns.
+- **SentencePiece**: Tokenizer backend.
+  - *Reason*: Handles subword segmentation for Qwen model.
 
 VOICE & AUDIO PROCESSING
 ------------------------
-Google Cloud Speech-to-Text (STT) - Cloud-based speech-to-text service for highly accurate audio transcription
-Google Cloud Text-to-Speech (TTS) - Cloud-based text-to-speech service for generating natural-sounding voice responses
-librosa - Audio analysis library for feature extraction, noise filtering, and audio preprocessing before STT
-scipy - Scientific computing library used for signal processing and audio filtering operations
-coqui-tts - Neural text-to-speech (TTS) engine for generating natural-sounding persona voice responses
-pydub - Audio format conversion and manipulation library requiring FFmpeg for codec support
-soundfile - Low-level audio file I/O for reading/writing WAV and other audio formats for TTS/STT pipelines
+- **Google Cloud STT/TTS**: Cloud-based services for speech-to-text and text-to-speech.
+  - *Reason*: Provides high accuracy and natural-sounding voices.
+- **Librosa**: Audio analysis library.
+  - *Reason*: Preprocesses audio for noise filtering and feature extraction.
+- **Coqui-TTS**: Neural TTS engine.
+  - *Reason*: Generates natural-sounding persona voices.
+- **Pydub**: Audio manipulation library.
+  - *Reason*: Converts and processes audio formats.
+- **Soundfile**: Audio file I/O library.
+  - *Reason*: Reads/writes WAV and other formats.
 
 DATABASE & STORAGE
 ------------------
-psycopg2-binary - PostgreSQL database adapter for storing session data, conversation history, and custom personas
-alembic - Database migration tool for managing schema changes and version control of PostgreSQL database
-JSON files - Lightweight storage for default personas (data/default_personas.json) and custom personas (data/custom_personas.json)
+- **Psycopg2-binary**: PostgreSQL adapter.
+  - *Reason*: Manages session data and conversation history.
+- **Alembic**: Database migration tool.
+  - *Reason*: Tracks schema changes and version control.
+- **JSON Files**: Lightweight storage for personas.
+  - *Reason*: Simplifies default and custom persona management.
 
 FRONTEND FRAMEWORK & UI
 -----------------------
-React - JavaScript UI library for building interactive single-page chat interface with component-based architecture
-axios - Promise-based HTTP client for making API requests from frontend to FastAPI backend endpoints
-Bootstrap - CSS framework providing responsive layout and pre-built UI components for chat interface styling
-Font Awesome - Icon library for visual elements like microphone button, send button, and loading indicators
-react-scripts - Build toolchain for compiling, bundling, and serving React application during development
+- **React**: JavaScript library for building the chat interface.
+  - *Reason*: Enables dynamic and interactive UI development.
+- **Axios**: HTTP client for API requests.
+  - *Reason*: Simplifies communication between frontend and backend.
+- **Bootstrap**: CSS framework.
+  - *Reason*: Provides responsive layouts and pre-built components.
 
 SECURITY & AUTHENTICATION
 --------------------------
-python-jose - JWT (JSON Web Token) implementation for secure user authentication and session management
-passlib - Password hashing library with bcrypt support for secure credential storage
-bcrypt - Cryptographic hashing algorithm for one-way password encryption in user authentication
+- **Python-JOSE**: JWT implementation.
+  - *Reason*: Secures user authentication and session management.
+- **Passlib**: Password hashing library.
+  - *Reason*: Ensures secure credential storage.
 
 UTILITIES & HELPERS
 -------------------
-python-dotenv - Loads environment variables from .env file for configuration management (API keys, database URLs)
-requests - HTTP library for making external API calls to third-party services and webhooks
-aiofiles - Async file I/O library for non-blocking file operations in async FastAPI endpoints
-numpy - Numerical computing library for array operations in audio processing and ML inference
+- **Python-dotenv**: Loads environment variables.
+  - *Reason*: Manages API keys and configuration securely.
+- **Requests**: HTTP library.
+  - *Reason*: Handles external API calls.
+- **Numpy**: Numerical computing library.
+  - *Reason*: Supports array operations in audio processing.
 
 DEVELOPMENT & TESTING
 ---------------------
-pytest - Testing framework for unit tests, integration tests, and regression test suites
-pytest-asyncio - Plugin for testing async FastAPI endpoints and services with async/await syntax
-httpx - Async HTTP client for testing FastAPI routes with TestClient support
-pytest-cov - Code coverage plugin for measuring test coverage percentage across modules
+- **Pytest**: Testing framework.
+  - *Reason*: Simplifies unit and integration testing.
+- **Httpx**: Async HTTP client.
+  - *Reason*: Tests FastAPI routes efficiently.
 
 LOGGING & MONITORING
 --------------------
-Custom logger_config.py - Centralized logging configuration with emoji markers (📨⏱️⚡✅) for timing instrumentation
-Python logging module - Built-in logging with INFO level for developer-visible performance tracking
+- **Custom Logger**: Centralized logging configuration.
+  - *Reason*: Tracks performance and debugging with clear markers.
 
 DEVELOPMENT TOOLS
 -----------------
-FFmpeg - External multimedia framework required for audio codec support in whisper, pydub, and TTS libraries
-Git - Version control system for source code management and collaboration
-Node.js & npm - JavaScript runtime and package manager for building and serving React frontend
-bash.exe - Default shell environment for running terminal commands on Windows
+- **FFmpeg**: Multimedia framework.
+  - *Reason*: Supports audio codec requirements.
+- **Git**: Version control system.
+  - *Reason*: Manages source code and collaboration.
 
 PROJECT-SPECIFIC SERVICES
 -------------------------
-PersonaService (src/services/persona_service.py) - Central service managing persona definitions from JSON storage with CRUD operations
-ChatService (src/services/chat_service.py) - Conversation orchestration service with comprehensive timing logs and response generation
-ModelService (src/services/model_service.py) - Lazy-loading service for Qwen model initialization with BetterTransformer optimization
-VoiceService (src/services/voice_service.py) - Audio processing pipeline coordinating STT, TTS, and audio preprocessing
-SessionService (src/services/session_service.py) - Session lifecycle management tracking conversation state and metadata
-FallbackResponses (src/fallback_responses.py) - AI response wrapper with optimized generation parameters (max_tokens=50, greedy decoding)
+- **PersonaService**: Manages persona definitions.
+  - *Reason*: Centralizes persona CRUD operations.
+- **ChatService**: Orchestrates conversation logic.
+  - *Reason*: Handles response generation and timing logs.
+- **ModelService**: Manages AI model loading.
+  - *Reason*: Optimizes model initialization and inference.
+- **VoiceService**: Coordinates STT and TTS pipelines.
+  - *Reason*: Streamlines audio processing workflows.
 
 API ROUTE MODULES
 -----------------

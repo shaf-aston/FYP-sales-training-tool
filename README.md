@@ -1,34 +1,48 @@
 # AI-Powered Sales Training Chatbot
 
-## 🏗️ Modular Architecture (All files < 300 lines)
+An advanced conversational AI system for sales role-play training with integrated speech-to-text and text-to-speech capabilities.
 
-### Project Structure
+## 🏗️ Architecture Overview
+
+### Modular Design
 ```
 src/
-├── core/                    # Core AI & Response Generation
-│   ├── ai_response_generator.py (176 lines)
-│   ├── fallback_service.py (90 lines)  
-│   └── model_service.py
-├── business_logic/          # Business Rules & Personas
-│   ├── chat_service.py
-│   ├── persona_service.py
-│   └── langchain_conversation_service.py
-├── infrastructure/          # Supporting Services
-│   ├── analytics_service.py
-│   ├── voice_service.py
-│   └── stt_service.py
-├── data_access/            # Data Layer
-│   └── db.py
-└── fallback_responses.py (22 lines) # Legacy compatibility
+├── services/
+│   ├── ai_services/         # Model management and AI responses
+│   ├── voice_services/      # STT/TTS and audio processing
+│   ├── analysis_services/   # Conversation analysis and feedback
+│   └── data_services/       # Data persistence and analytics
+├── api/                     # FastAPI routes and endpoints
+├── infrastructure/          # Core infrastructure and settings
+└── models/                  # Data models and schemas
 ```
 
-## ✨ Key Achievements
+### Training Pipeline
+```
+training/
+├── scripts/                 # Training pipeline scripts
+├── configs/                 # Hydra/OmegaConf configurations
+└── data/                   # Training datasets and outputs
+```
 
-### 🛠️ Response Quality Fixes
-- ✅ Fixed response truncation (50→120 tokens)
-- ✅ Enhanced formatting cleanup (**, ###, *text* removal)
-- ✅ Added comprehensive sentence completion
-- ✅ Prevented AI role confusion
+## ✨ Key Features
+
+### 🎯 Core Capabilities
+- **Multi-persona Sales Training**: Dynamic persona switching for various sales scenarios
+- **Voice Integration**: Real-time STT/TTS with emotion detection
+- **Advanced Analytics**: Performance tracking and conversation analysis
+- **Roleplay Scenarios**: Comprehensive NEPQ methodology integration
+
+### 🚀 Performance Optimizations
+- **Memory Management**: GPU memory optimization with cleanup
+- **Lazy Loading**: On-demand model initialization
+- **Caching**: Intelligent model and response caching
+- **Batch Processing**: Efficient data processing pipelines
+
+### 📊 Monitoring & Tracking
+- **Weights & Biases Integration**: Experiment tracking and metrics
+- **Real-time Analytics**: Performance and usage monitoring
+- **Health Checks**: System status and resource monitoring
 
 ### 🏗️ Architecture Improvements  
 - ✅ **Major refactoring**: voice_service.py reduced from 1,529 to 313 lines (79% reduction)

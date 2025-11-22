@@ -1,7 +1,7 @@
 import os
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, UTC
 from typing import Dict
 
 from pathlib import Path
@@ -10,7 +10,6 @@ LOG_DIR = Path(__file__).resolve().parents[2] / "logs"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 LOG_FILE = LOG_DIR / "conversation_events.log"
 
-# Simple file logger for analytics/events
 logger = logging.getLogger("analytics_logger")
 logger.setLevel(logging.INFO)
 file_handler = logging.FileHandler(LOG_FILE)
@@ -19,7 +18,6 @@ file_handler.setFormatter(formatter)
 if not logger.handlers:
     logger.addHandler(file_handler)
 
-# Try optional DB integration
 try:
     from .persona_db_service import _get_conn, init_db
     DB_AVAILABLE = True
@@ -38,20 +36,17 @@ def log_event(event: Dict):
       }
     """
     entry = {
-        "ts": datetime.utcnow().isoformat() + "Z",
+        "ts": datetime.now(UTC).isoformat() + "Z",
         "event": event,
     }
-    # append to local file as JSON lines for easy ingestion
     try:
         with open(LOG_FILE, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry) + "\n")
     except Exception:
         logger.exception("Failed writing analytics event to file")
 
-    # Optional DB insert
     if DB_AVAILABLE:
         try:
-            # Ensure DB tables exist
             init_db()
             conn = _get_conn()
             cur = conn.cursor()

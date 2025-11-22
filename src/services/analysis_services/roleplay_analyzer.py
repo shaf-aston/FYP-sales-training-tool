@@ -5,7 +5,7 @@ Specialized analyzer for sales role-play interactions
 
 import logging
 from typing import Dict, List, Optional, Set, Tuple
-from datetime import datetime
+from datetime import datetime, UTC
 import re
 
 from .audio_analysis_models import (
@@ -76,13 +76,10 @@ class RolePlayAnalyzer:
             
             logger.info(f"Analyzing {len(segments)} segments for role-play patterns")
             
-            # Step 1: Identify phase transitions
             phase_segments = self._identify_phases(segments)
             
-            # Step 2: Group segments into blocks
             blocks = self._create_roleplay_blocks(phase_segments, speakers)
             
-            # Step 3: Analyze techniques used in each block
             for block in blocks:
                 block.techniques_used = self._identify_techniques(block.segments)
                 block.effectiveness_score = self._calculate_block_effectiveness(block)
@@ -102,13 +99,11 @@ class RolePlayAnalyzer:
             text_lower = segment.text.lower()
             phase_scores = {}
             
-            # Score each phase based on keyword matches
             for phase, keywords in self.phase_keywords.items():
                 score = sum(1 for keyword in keywords if keyword in text_lower)
                 if score > 0:
                     phase_scores[phase] = score
             
-            # Assign the phase with highest score, or DISCOVERY as default
             if phase_scores:
                 best_phase = max(phase_scores.keys(), key=lambda p: phase_scores[p])
             else:
@@ -131,20 +126,16 @@ class RolePlayAnalyzer:
         
         for segment, phase in phase_segments:
             if phase != current_phase:
-                # Start new block if we have accumulated segments
                 if current_segments:
                     block = self._create_block(block_id, current_phase, current_segments)
                     blocks.append(block)
                     block_id += 1
                 
-                # Start new accumulation
                 current_phase = phase
                 current_segments = [segment]
             else:
-                # Continue current block
                 current_segments.append(segment)
         
-        # Don't forget the last block
         if current_segments:
             block = self._create_block(block_id, current_phase, current_segments)
             blocks.append(block)
@@ -163,12 +154,12 @@ class RolePlayAnalyzer:
             start_time=start_time,
             end_time=end_time,
             segments=segments,
-            techniques_used=[],  # Will be filled by _identify_techniques
-            effectiveness_score=0.0,  # Will be calculated later
+            techniques_used=[],
+            effectiveness_score=0.0,
             metadata={
                 'segment_count': len(segments),
                 'duration': end_time - start_time,
-                'created_at': datetime.now().isoformat()
+                'created_at': datetime.now(UTC).isoformat()
             }
         )
     
@@ -179,7 +170,6 @@ class RolePlayAnalyzer:
         for segment in segments:
             text_lower = segment.text.lower()
             
-            # Check for each technique
             for technique, keywords in self.sales_techniques.items():
                 if any(keyword in text_lower for keyword in keywords):
                     techniques.add(technique)
@@ -188,36 +178,28 @@ class RolePlayAnalyzer:
     
     def _calculate_block_effectiveness(self, block: RolePlayBlock) -> float:
         """Calculate effectiveness score for a role-play block"""
-        score = 0.5  # Base score
+        score = 0.5
         
-        # Technique diversity bonus
         technique_count = len(block.techniques_used)
-        score += min(technique_count * 0.1, 0.3)  # Max 0.3 bonus
+        score += min(technique_count * 0.1, 0.3)
         
-        # Phase-specific scoring
         if block.phase == RolePlayPhase.DISCOVERY:
-            # Discovery should have questioning
             if 'questioning' in block.techniques_used:
                 score += 0.1
         elif block.phase == RolePlayPhase.PRESENTATION:
-            # Presentation should have benefit selling
             if 'benefit_selling' in block.techniques_used:
                 score += 0.1
         elif block.phase == RolePlayPhase.HANDLING_OBJECTIONS:
-            # Objection handling should have empathy
             if 'empathy' in block.techniques_used:
                 score += 0.1
         elif block.phase == RolePlayPhase.CLOSING:
-            # Closing should have closing techniques
             if any(tech in block.techniques_used for tech in ['assumptive_close', 'trial_close']):
                 score += 0.1
         
-        # Duration appropriateness (not too short, not too long)
         duration = block.end_time - block.start_time
-        if 10 <= duration <= 120:  # 10 seconds to 2 minutes is good
+        if 10 <= duration <= 120:
             score += 0.1
         
-        # Engagement level (based on segment count)
         if len(block.segments) >= 3:
             score += 0.05
         

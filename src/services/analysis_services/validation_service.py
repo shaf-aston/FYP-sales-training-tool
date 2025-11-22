@@ -11,7 +11,7 @@ import hashlib
 from typing import Dict, Any, List, Optional, Tuple, Union
 from dataclasses import dataclass, asdict
 from enum import Enum
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 import unicodedata
 
 logger = logging.getLogger(__name__)
@@ -76,7 +76,6 @@ class ComprehensiveValidationService:
     def __init__(self, config: Optional[ValidationConfig] = None):
         self.config = config or ValidationConfig()
         
-        # Validation history and statistics
         self.validation_history = []
         self.validation_stats = {
             'total_validations': 0,
@@ -86,7 +85,6 @@ class ComprehensiveValidationService:
             'by_level': {}
         }
         
-        # Initialize validation components
         self.input_validator = InputValidator(self.config)
         self.output_validator = OutputValidator(self.config)
         self.safety_validator = SafetyValidator(self.config)
@@ -101,24 +99,19 @@ class ComprehensiveValidationService:
         start_time = time.time()
         results = []
         
-        # Basic input validation
         results.extend(self.input_validator.validate_basic_input(input_data))
         
-        # Safety validation
         if self.config.enable_content_safety:
             results.extend(self.safety_validator.validate_input_safety(input_data))
         
-        # Business rules validation
         if self.config.enable_business_rules and validation_context:
             results.extend(self.business_validator.validate_input_rules(input_data, validation_context))
         
-        # Update statistics
         self._update_validation_stats(results)
         
-        # Store validation history
         validation_record = {
             'type': 'input_validation',
-            'timestamp': datetime.now().isoformat(),
+            'timestamp': datetime.now(UTC).isoformat(),
             'processing_time': time.time() - start_time,
             'results': [r.to_dict() for r in results],
             'total_checks': len(results),
@@ -136,28 +129,22 @@ class ComprehensiveValidationService:
         start_time = time.time()
         results = []
         
-        # Basic output validation
         results.extend(self.output_validator.validate_basic_output(output_data))
         
-        # Quality validation
         if self.config.enable_output_quality_checks:
             results.extend(self.quality_validator.validate_output_quality(output_data, input_context))
         
-        # Safety validation
         if self.config.enable_content_safety:
             results.extend(self.safety_validator.validate_output_safety(output_data))
         
-        # Business rules validation
         if self.config.enable_business_rules and validation_context:
             results.extend(self.business_validator.validate_output_rules(output_data, validation_context))
         
-        # Update statistics
         self._update_validation_stats(results)
         
-        # Store validation history
         validation_record = {
             'type': 'output_validation',
-            'timestamp': datetime.now().isoformat(),
+            'timestamp': datetime.now(UTC).isoformat(),
             'processing_time': time.time() - start_time,
             'results': [r.to_dict() for r in results],
             'total_checks': len(results),
@@ -173,16 +160,12 @@ class ComprehensiveValidationService:
         start_time = time.time()
         results = []
         
-        # Validate conversation structure
         results.extend(self._validate_conversation_structure(conversation_data))
         
-        # Validate conversation content
         results.extend(self._validate_conversation_content(conversation_data))
         
-        # Validate conversation flow
         results.extend(self._validate_conversation_flow(conversation_data))
         
-        # Update statistics
         self._update_validation_stats(results)
         
         return results
@@ -196,16 +179,12 @@ class ComprehensiveValidationService:
         if not self.config.enable_input_sanitization:
             return sanitized_text, results
         
-        # Remove potentially harmful characters
         sanitized_text = self._remove_harmful_characters(sanitized_text)
         
-        # Normalize unicode
         sanitized_text = unicodedata.normalize('NFKD', sanitized_text)
         
-        # Remove excessive whitespace
         sanitized_text = re.sub(r'\s+', ' ', sanitized_text).strip()
         
-        # Truncate if too long
         if len(sanitized_text) > self.config.max_input_length:
             original_length = len(sanitized_text)
             sanitized_text = sanitized_text[:self.config.max_input_length]
@@ -217,11 +196,10 @@ class ComprehensiveValidationService:
                 passed=True,
                 message=f"Input truncated from {original_length} to {len(sanitized_text)} characters",
                 details={'original_length': original_length, 'truncated_length': len(sanitized_text)},
-                timestamp=datetime.now().isoformat(),
+                timestamp=datetime.now(UTC).isoformat(),
                 processing_time=time.time() - start_time
             ))
         
-        # Check for and remove blocked patterns
         for pattern in self.config.blocked_patterns:
             if re.search(pattern, sanitized_text, re.IGNORECASE):
                 sanitized_text = re.sub(pattern, '[FILTERED]', sanitized_text, flags=re.IGNORECASE)
@@ -233,7 +211,7 @@ class ComprehensiveValidationService:
                     passed=True,
                     message=f"Blocked pattern removed: {pattern}",
                     details={'pattern': pattern},
-                    timestamp=datetime.now().isoformat(),
+                    timestamp=datetime.now(UTC).isoformat(),
                     processing_time=time.time() - start_time
                 ))
         
@@ -254,11 +232,10 @@ class ComprehensiveValidationService:
                     passed=False,
                     message=f"Missing required field: {field}",
                     details={'missing_field': field},
-                    timestamp=datetime.now().isoformat(),
+                    timestamp=datetime.now(UTC).isoformat(),
                     processing_time=time.time() - start_time
                 ))
         
-        # Validate conversation history structure
         history = conversation_data.get('conversation_history', [])
         if not isinstance(history, list):
             results.append(ValidationResult(
@@ -268,11 +245,10 @@ class ComprehensiveValidationService:
                 passed=False,
                 message="conversation_history must be a list",
                 details={'actual_type': type(history).__name__},
-                timestamp=datetime.now().isoformat(),
+                timestamp=datetime.now(UTC).isoformat(),
                 processing_time=time.time() - start_time
             ))
         
-        # Validate individual conversation exchanges
         for i, exchange in enumerate(history):
             if not isinstance(exchange, dict):
                 results.append(ValidationResult(
@@ -282,7 +258,7 @@ class ComprehensiveValidationService:
                     passed=False,
                     message=f"Conversation exchange {i} must be a dictionary",
                     details={'exchange_index': i, 'actual_type': type(exchange).__name__},
-                    timestamp=datetime.now().isoformat(),
+                    timestamp=datetime.now(UTC).isoformat(),
                     processing_time=time.time() - start_time
                 ))
                 continue
@@ -297,7 +273,7 @@ class ComprehensiveValidationService:
                         passed=False,
                         message=f"Exchange {i} missing field: {field}",
                         details={'exchange_index': i, 'missing_field': field},
-                        timestamp=datetime.now().isoformat(),
+                        timestamp=datetime.now(UTC).isoformat(),
                         processing_time=time.time() - start_time
                     ))
         
@@ -317,14 +293,12 @@ class ComprehensiveValidationService:
             user_message = exchange.get('user_message', '')
             persona_response = exchange.get('persona_response', '')
             
-            # Validate user message
             if user_message:
                 message_results = self.safety_validator.validate_text_content(user_message, 'user_message')
                 for result in message_results:
                     result.details['exchange_index'] = i
                 results.extend(message_results)
             
-            # Validate persona response
             if persona_response:
                 response_results = self.safety_validator.validate_text_content(persona_response, 'persona_response')
                 for result in response_results:
@@ -348,17 +322,15 @@ class ComprehensiveValidationService:
                 passed=False,
                 message="Empty conversation history",
                 details={'history_length': 0},
-                timestamp=datetime.now().isoformat(),
+                timestamp=datetime.now(UTC).isoformat(),
                 processing_time=time.time() - start_time
             ))
             return results
         
-        # Check for conversation continuity
         for i in range(1, len(history)):
             current_exchange = history[i]
             previous_exchange = history[i-1]
             
-            # Validate timestamp ordering
             current_time = current_exchange.get('timestamp')
             previous_time = previous_exchange.get('timestamp')
             
@@ -375,7 +347,7 @@ class ComprehensiveValidationService:
                             passed=False,
                             message=f"Timestamp ordering issue at exchange {i}",
                             details={'exchange_index': i, 'current_time': current_time, 'previous_time': previous_time},
-                            timestamp=datetime.now().isoformat(),
+                            timestamp=datetime.now(UTC).isoformat(),
                             processing_time=time.time() - start_time
                         ))
                 except ValueError:
@@ -386,7 +358,7 @@ class ComprehensiveValidationService:
                         passed=False,
                         message=f"Invalid timestamp format at exchange {i}",
                         details={'exchange_index': i, 'timestamp': current_time},
-                        timestamp=datetime.now().isoformat(),
+                        timestamp=datetime.now(UTC).isoformat(),
                         processing_time=time.time() - start_time
                     ))
         
@@ -394,10 +366,8 @@ class ComprehensiveValidationService:
     
     def _remove_harmful_characters(self, text: str) -> str:
         """Remove potentially harmful characters from text"""
-        # Remove control characters except newline and tab
         cleaned = ''.join(char for char in text if unicodedata.category(char)[0] != 'C' or char in '\n\t')
         
-        # Remove potential script injection patterns
         script_patterns = [
             r'<script.*?>.*?</script>',
             r'javascript:',
@@ -421,7 +391,6 @@ class ComprehensiveValidationService:
             else:
                 self.validation_stats['failed_validations'] += 1
             
-            # Update by type
             val_type = result.validation_type.value
             if val_type not in self.validation_stats['by_type']:
                 self.validation_stats['by_type'][val_type] = {'passed': 0, 'failed': 0}
@@ -431,7 +400,6 @@ class ComprehensiveValidationService:
             else:
                 self.validation_stats['by_type'][val_type]['failed'] += 1
             
-            # Update by level
             level = result.level.value
             if level not in self.validation_stats['by_level']:
                 self.validation_stats['by_level'][level] = 0
@@ -453,12 +421,12 @@ class ComprehensiveValidationService:
             'failed_validations': self.validation_stats['failed_validations'],
             'breakdown_by_type': self.validation_stats['by_type'],
             'breakdown_by_level': self.validation_stats['by_level'],
-            'recent_validations': len(self.validation_history[-100:])  # Last 100 validations
+            'recent_validations': len(self.validation_history[-100:])
         }
     
     def get_validation_report(self, timeframe_hours: int = 24) -> Dict[str, Any]:
         """Generate comprehensive validation report"""
-        cutoff_time = datetime.now() - timedelta(hours=timeframe_hours)
+        cutoff_time = datetime.now(UTC) - timedelta(hours=timeframe_hours)
         
         recent_validations = [
             v for v in self.validation_history
@@ -493,7 +461,6 @@ class ComprehensiveValidationService:
                     key = f"{result['validation_type']}:{result['message']}"
                     failure_counts[key] = failure_counts.get(key, 0) + 1
         
-        # Sort by frequency and return top 5
         sorted_failures = sorted(failure_counts.items(), key=lambda x: x[1], reverse=True)[:5]
         
         return [
@@ -516,7 +483,6 @@ class InputValidator:
         results = []
         start_time = time.time()
         
-        # Check required fields
         if 'message' not in input_data:
             results.append(ValidationResult(
                 validation_id=self._generate_validation_id(),
@@ -525,11 +491,10 @@ class InputValidator:
                 passed=False,
                 message="Missing required 'message' field in input",
                 details={},
-                timestamp=datetime.now().isoformat(),
+                timestamp=datetime.now(UTC).isoformat(),
                 processing_time=time.time() - start_time
             ))
         
-        # Validate message length
         message = input_data.get('message', '')
         if len(message) > self.config.max_input_length:
             results.append(ValidationResult(
@@ -539,11 +504,10 @@ class InputValidator:
                 passed=False,
                 message=f"Input message exceeds maximum length of {self.config.max_input_length} characters",
                 details={'message_length': len(message), 'max_length': self.config.max_input_length},
-                timestamp=datetime.now().isoformat(),
+                timestamp=datetime.now(UTC).isoformat(),
                 processing_time=time.time() - start_time
             ))
         
-        # Validate message is not empty
         if not message.strip():
             results.append(ValidationResult(
                 validation_id=self._generate_validation_id(),
@@ -552,7 +516,7 @@ class InputValidator:
                 passed=False,
                 message="Input message is empty or whitespace only",
                 details={},
-                timestamp=datetime.now().isoformat(),
+                timestamp=datetime.now(UTC).isoformat(),
                 processing_time=time.time() - start_time
             ))
         
@@ -574,7 +538,6 @@ class OutputValidator:
         results = []
         start_time = time.time()
         
-        # Check required fields
         required_fields = ['response', 'timestamp']
         for field in required_fields:
             if field not in output_data:
@@ -585,11 +548,10 @@ class OutputValidator:
                     passed=False,
                     message=f"Missing required '{field}' field in output",
                     details={'missing_field': field},
-                    timestamp=datetime.now().isoformat(),
+                    timestamp=datetime.now(UTC).isoformat(),
                     processing_time=time.time() - start_time
                 ))
         
-        # Validate response length
         response = output_data.get('response', '')
         if len(response) > self.config.max_output_length:
             results.append(ValidationResult(
@@ -599,11 +561,10 @@ class OutputValidator:
                 passed=False,
                 message=f"Output response exceeds maximum length of {self.config.max_output_length} characters",
                 details={'response_length': len(response), 'max_length': self.config.max_output_length},
-                timestamp=datetime.now().isoformat(),
+                timestamp=datetime.now(UTC).isoformat(),
                 processing_time=time.time() - start_time
             ))
         
-        # Validate response is not empty
         if not response.strip():
             results.append(ValidationResult(
                 validation_id=self._generate_validation_id(),
@@ -612,7 +573,7 @@ class OutputValidator:
                 passed=False,
                 message="Output response is empty or whitespace only",
                 details={},
-                timestamp=datetime.now().isoformat(),
+                timestamp=datetime.now(UTC).isoformat(),
                 processing_time=time.time() - start_time
             ))
         
@@ -629,7 +590,6 @@ class SafetyValidator:
     def __init__(self, config: ValidationConfig):
         self.config = config
         
-        # Initialize safety patterns
         self.profanity_patterns = self._load_profanity_patterns()
         self.pii_patterns = self._load_pii_patterns()
         self.inappropriate_patterns = self._load_inappropriate_patterns()
@@ -659,17 +619,14 @@ class SafetyValidator:
         results = []
         start_time = time.time()
         
-        # Check for profanity
         if self.config.enable_profanity_filter:
             profanity_results = self._check_profanity(text, context)
             results.extend(profanity_results)
         
-        # Check for PII
         if self.config.enable_pii_detection:
             pii_results = self._check_pii(text, context)
             results.extend(pii_results)
         
-        # Check for inappropriate content
         inappropriate_results = self._check_inappropriate_content(text, context)
         results.extend(inappropriate_results)
         
@@ -677,27 +634,24 @@ class SafetyValidator:
     
     def _load_profanity_patterns(self) -> List[str]:
         """Load profanity detection patterns"""
-        # Basic profanity patterns - in production, use a comprehensive list
         return [
-            r'\b(damn|hell|crap|stupid|idiot)\b',  # Mild profanity
-            # Add more patterns as needed
+            r'\b(damn|hell|crap|stupid|idiot)\b',
         ]
     
     def _load_pii_patterns(self) -> List[str]:
         """Load PII detection patterns"""
         return [
-            r'\b\d{3}-\d{2}-\d{4}\b',  # SSN pattern
-            r'\b\d{4}\s?\d{4}\s?\d{4}\s?\d{4}\b',  # Credit card pattern
-            r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',  # Email pattern
-            r'\b\d{3}-\d{3}-\d{4}\b',  # Phone pattern
+            r'\b\d{3}-\d{2}-\d{4}\b',
+            r'\b\d{4}\s?\d{4}\s?\d{4}\s?\d{4}\b',
+            r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',
+            r'\b\d{3}-\d{3}-\d{4}\b',
         ]
     
     def _load_inappropriate_patterns(self) -> List[str]:
         """Load inappropriate content patterns"""
         return [
-            r'\b(violence|threat|harm|kill|hurt)\b',  # Violence-related
-            r'\b(discrimination|racist|sexist|hate)\b',  # Discrimination
-            # Add more patterns as needed
+            r'\b(violence|threat|harm|kill|hurt)\b',
+            r'\b(discrimination|racist|sexist|hate)\b',
         ]
     
     def _check_profanity(self, text: str, context: str) -> List[ValidationResult]:
@@ -779,16 +733,13 @@ class QualityValidator:
         
         response = output_data.get('response', '')
         
-        # Check response relevance
         if input_context and 'message' in input_context:
             relevance_results = self._check_response_relevance(response, input_context['message'])
             results.extend(relevance_results)
         
-        # Check response completeness
         completeness_results = self._check_response_completeness(response)
         results.extend(completeness_results)
         
-        # Check response coherence
         coherence_results = self._check_response_coherence(response)
         results.extend(coherence_results)
         
@@ -798,11 +749,9 @@ class QualityValidator:
         """Check if response is relevant to input"""
         results = []
         
-        # Simple keyword overlap check
         input_words = set(input_message.lower().split())
         response_words = set(response.lower().split())
         
-        # Remove common stop words for better analysis
         stop_words = {'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by'}
         input_words -= stop_words
         response_words -= stop_words
@@ -811,7 +760,7 @@ class QualityValidator:
             overlap = len(input_words & response_words)
             overlap_ratio = overlap / len(input_words)
             
-            if overlap_ratio < 0.1:  # Less than 10% overlap
+            if overlap_ratio < 0.1:
                 results.append(ValidationResult(
                     validation_id=self._generate_validation_id(),
                     validation_type=ValidationType.OUTPUT_QUALITY,
@@ -829,7 +778,6 @@ class QualityValidator:
         """Check if response is complete and well-formed"""
         results = []
         
-        # Check for abrupt endings
         if len(response) > 10 and not response.rstrip().endswith(('.', '!', '?', '"', "'")):
             results.append(ValidationResult(
                 validation_id=self._generate_validation_id(),
@@ -842,7 +790,6 @@ class QualityValidator:
                 processing_time=0.001
             ))
         
-        # Check minimum length for substantive responses
         if len(response.split()) < 5:
             results.append(ValidationResult(
                 validation_id=self._generate_validation_id(),
@@ -864,10 +811,9 @@ class QualityValidator:
         sentences = re.split(r'[.!?]+', response)
         sentences = [s.strip() for s in sentences if s.strip()]
         
-        # Check for extremely long sentences
         for i, sentence in enumerate(sentences):
             words_in_sentence = len(sentence.split())
-            if words_in_sentence > 50:  # Very long sentence
+            if words_in_sentence > 50:
                 results.append(ValidationResult(
                     validation_id=self._generate_validation_id(),
                     validation_type=ValidationType.OUTPUT_QUALITY,
@@ -879,17 +825,15 @@ class QualityValidator:
                     processing_time=0.001
                 ))
         
-        # Check for repeated phrases (potential generation issues)
         words = response.lower().split()
         if len(words) > 10:
-            # Check for 3-word phrase repetitions
             phrases = [' '.join(words[i:i+3]) for i in range(len(words)-2)]
             phrase_counts = {}
             for phrase in phrases:
                 phrase_counts[phrase] = phrase_counts.get(phrase, 0) + 1
             
             for phrase, count in phrase_counts.items():
-                if count > 2:  # Phrase repeated more than twice
+                if count > 2:
                     results.append(ValidationResult(
                         validation_id=self._generate_validation_id(),
                         validation_type=ValidationType.OUTPUT_QUALITY,
@@ -914,7 +858,6 @@ class BusinessRulesValidator:
     def __init__(self, config: ValidationConfig):
         self.config = config
         
-        # Define business rules
         self.sales_compliance_rules = self._initialize_sales_rules()
         self.conversation_rules = self._initialize_conversation_rules()
     
@@ -923,7 +866,6 @@ class BusinessRulesValidator:
         """Validate input against business rules"""
         results = []
         
-        # Check sales compliance rules
         if validation_context.get('conversation_type') == 'sales':
             results.extend(self._validate_sales_input_rules(input_data, validation_context))
         
@@ -934,7 +876,6 @@ class BusinessRulesValidator:
         """Validate output against business rules"""
         results = []
         
-        # Check sales compliance rules
         if validation_context.get('conversation_type') == 'sales':
             results.extend(self._validate_sales_output_rules(output_data, validation_context))
         
@@ -980,7 +921,6 @@ class BusinessRulesValidator:
         
         message = input_data.get('message', '').lower()
         
-        # Check for prohibited claims in user input
         for claim in self.sales_compliance_rules['prohibited_claims']:
             if claim in message:
                 results.append(ValidationResult(
@@ -1003,7 +943,6 @@ class BusinessRulesValidator:
         
         response = output_data.get('response', '').lower()
         
-        # Check for prohibited claims in response
         for claim in self.sales_compliance_rules['prohibited_claims']:
             if claim in response:
                 results.append(ValidationResult(
@@ -1017,7 +956,6 @@ class BusinessRulesValidator:
                     processing_time=0.001
                 ))
         
-        # Check for required disclaimers when making claims
         claim_indicators = ['will', 'guarantee', 'promise', 'ensure', 'definitely']
         has_claims = any(indicator in response for indicator in claim_indicators)
         
@@ -1042,5 +980,4 @@ class BusinessRulesValidator:
         timestamp = str(time.time())
         return hashlib.md5(timestamp.encode()).hexdigest()[:8]
 
-# Global validation service instance
 validation_service = ComprehensiveValidationService()

@@ -9,11 +9,11 @@ import logging
 import base64
 from typing import Optional
 
-from services.voice_servicess import get_tts_service
-from services.voice_servicess import get_stt_service
-from services.ai_services import chat_service
-from services.ai_services import model_service
-from services.voice_services import get_voice_service, VoiceEmotion
+from src.services.voice_services import get_tts_service
+from src.services.voice_services import get_stt_service
+from src.services.ai_services import chat_service
+from src.services.ai_services import model_service
+from src.services.voice_services import get_voice_service, VoiceEmotion
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["voice"])
@@ -38,10 +38,8 @@ async def speech_to_text(audio: UploadFile = File(...), language: Optional[str] 
     try:
         voice_service = get_voice_service()
         
-        # Read audio file
         audio_bytes = await audio.read()
         
-        # Use enhanced voice service pipeline
         vs_result = await voice_service.speech_to_text(audio_bytes, language=language)
         
         if not vs_result or not vs_result.get("text"):
@@ -83,17 +81,16 @@ async def text_to_speech(payload: dict):
         if not text or not text.strip():
             raise HTTPException(status_code=400, detail="Text is required")
         
-        # Services
         voice_service = get_voice_service()
         
-        # Use enhanced voice service TTS
-        emotion = VoiceEmotion.FRIENDLY if persona_name else VoiceEmotion.NEUTRAL
-        audio_bytes = await voice_service.text_to_speech(text, emotion)
+        # Use persona_name as speaker_voice, default to "System"
+        speaker_voice = persona_name if persona_name else "System"
+        emotion = VoiceEmotion.FRIENDLY
+        audio_bytes = await voice_service.text_to_speech(text, emotion, speaker_voice=speaker_voice)
         
         if not audio_bytes:
             raise HTTPException(status_code=500, detail="Failed to generate speech")
         
-        # Return audio stream
         return Response(
             content=audio_bytes,
             media_type="audio/wav",
@@ -120,7 +117,6 @@ async def voice_chat(
     try:
         voice_service = get_voice_service()
         
-        # Step 1: Convert speech to text (STT)
         logger.info(f"Processing voice chat for user {user_id}")
         audio_bytes = await audio.read()
         
@@ -132,8 +128,7 @@ async def voice_chat(
         stt_confidence = stt_result.get("confidence")
         logger.info(f"Transcribed: {user_text}")
         
-        # Step 2: Get AI response
-        pipe = model_service.get_pipeline()
+        pipe = await model_service.get_pipeline()
         chat_result = chat_service.chat_with_persona(
             message=user_text,
             user_id=user_id,
@@ -145,8 +140,12 @@ async def voice_chat(
         ai_response = chat_result.get("response", "I apologize, I'm having trouble responding.")
         session_id = chat_result.get("session_id")
         
-        # Step 3: Convert AI response to speech (TTS)
-        ai_audio_bytes = await voice_service.text_to_speech(ai_response, VoiceEmotion.FRIENDLY)
+        # Use persona_name for TTS voice
+        ai_audio_bytes = await voice_service.text_to_speech(
+            ai_response, 
+            VoiceEmotion.FRIENDLY, 
+            speaker_voice=persona_name if persona_name else "System"
+        )
         ai_audio_base64 = base64.b64encode(ai_audio_bytes).decode('utf-8') if ai_audio_bytes else None
         
         return {

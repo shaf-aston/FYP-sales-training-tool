@@ -8,8 +8,7 @@ from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
 
 from .context_service import get_context_manager
-# Import character profiles using absolute import to work when 'src' is on sys.path
-from models.character_profiles import PERSONAS
+from src.data_access.character_profiles import PERSONAS
 
 logger = logging.getLogger(__name__)
 
@@ -27,50 +26,17 @@ class PromptTemplate:
 class PromptManager:
     """Manages prompt construction and optimization"""
     
-    # Default prompt templates
     TEMPLATES = {
         "sales_training": PromptTemplate(
             name="sales_training",
             template=(
-                "### CRITICAL: YOU ARE THE PROSPECT/CUSTOMER ###\n"
-                "You are {persona_name}, a potential FITNESS CLIENT. You are NOT a salesperson, NOT a trainer, NOT selling anything. "
+                "# You are {persona_name}, a potential FITNESS CLIENT. You are NOT a salesperson, NOT a trainer, NOT selling anything. "
                 "YOU ARE THE PERSON BEING SOLD TO. A salesperson is trying to sell YOU a fitness program. "
                 "You respond as {persona_name} - the customer who might buy something. NEVER say you are a salesperson.\n\n"
-                "### Your Profile: {persona_name} ###\n"
+                "# Persona Details\n"
                 "- **Description**: {persona_description}\n"
                 "- **Background**: {persona_background}\n"
                 "- **Goals**: {persona_goals}\n"
-                "- **Concerns**: {persona_pain_points}\n"
-                "- **Communication Style**: {persona_communication_style}\n\n"
-                "### YOUR PERSONALITY AND MINDSET ###\n"
-                "- You are CAUTIOUS and UNCERTAIN about fitness - NOT confident or knowledgeable\n"
-                "- You have CONCERNS and FEARS about doing the wrong exercises or getting hurt\n"
-                "- You are seeking HELP and GUIDANCE - you don't have all the answers\n"
-                "- You've HEARD ABOUT fitness benefits but you're not experienced with them\n"
-                "- You ask questions because you're UNSURE, not because you're an expert\n\n"
-                "### REMEMBER: YOU ARE THE CUSTOMER ###\n"
-                "- You are a potential FITNESS CLIENT looking for help with exercise\n"
-                "- You are NOT a salesperson - you are being sold to\n"
-                "- You ask questions about what's being offered to you\n"
-                "- You express your concerns as a potential customer\n"
-                "- You are cautious about fitness programs being sold to you\n\n"
-                "### Example Conversation ###\n"
-                "Salesperson: \"We have a new fitness program that might fit your goals.\"\n"
-                "You ({persona_name}): \"Okay, I'm listening. What makes this one different from others?\"\n\n"
-                "Salesperson: \"Sure, first let me know how long you've been walking regularly for?\"\n"
-                "You ({persona_name}): \"Well, I used to walk regularly when I was teaching, maybe for 20-30 years. But honestly, I haven't kept it up since retiring a few years ago. I'm worried I've lost a lot of that fitness.\"\n\n"
-                "### Recent Conversation ###\n"
-                "{conversation_context}\n\n"
-                "### Current Situation ###\n"
-                "A salesperson just said to you: \"{user_input}\"\n\n"
-                "### CRITICAL INSTRUCTIONS FOR YOUR RESPONSE ###\n"
-                "- Respond ONLY as {persona_name}, speaking naturally in first person\n"
-                "- Do NOT include any labels like 'Mary:', '{persona_name}:', or 'potential customer:'\n"
-                "- Do NOT include formatting instructions or markers in your response\n"
-                "- Just speak naturally as {persona_name} would speak\n"
-                "- Show your concerns and personality from your profile above\n"
-                "- You are cautious about fitness, NOT confident or experienced\n\n"
-                "Now respond as {persona_name}:"
             ),
             required_fields=["persona_name", "persona_description", "user_input", "persona_background", "persona_goals", "persona_pain_points", "persona_communication_style"],
             optional_fields=["conversation_context"],
@@ -138,7 +104,6 @@ class PromptManager:
     def build_conversation_context(self, session_id: str = "", include_recent: int = 3) -> str:
         """Build conversation context from recent messages"""
         try:
-            # build_context_window only accepts number of recent messages
             context_window = self.context_manager.build_context_window(include_recent)
             if not context_window or "CONVERSATION HISTORY:" not in context_window:
                 return "This is the beginning of your conversation."
@@ -164,7 +129,6 @@ class PromptManager:
             raise ValueError("Sales training template not found")
         
         persona_context = self.build_persona_context(persona_name)
-        # Use caller-provided recent-window if available (e.g., Mary -> faster)
         conversation_context = self.build_conversation_context(
             session_id,
             include_recent if include_recent is not None else 3
@@ -182,8 +146,7 @@ class PromptManager:
             token_count = self.context_manager.count_tokens(prompt)
             if token_count > template.max_tokens:
                 logger.warning(f"Prompt exceeds token limit: {token_count} > {template.max_tokens}. Truncating...")
-                # A simple truncation strategy can be implemented here if needed
-                prompt = prompt[:template.max_tokens * 4] # Rough estimate
+                prompt = prompt[:template.max_tokens * 4]
 
             logger.debug(f"Built sales training prompt: {self.context_manager.count_tokens(prompt)} tokens")
             return prompt
@@ -192,7 +155,6 @@ class PromptManager:
             logger.error(f"Missing required field for prompt: {e}")
             raise ValueError(f"Missing required field for prompt template: {e}")
 
-# Global instance
 _prompt_manager = None
 
 def get_prompt_manager() -> PromptManager:

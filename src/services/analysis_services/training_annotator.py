@@ -123,22 +123,18 @@ class TrainingAnnotator:
             
             annotations = []
             
-            # Find salesperson segments
             salesperson_segments = self._get_salesperson_segments(segments, speakers)
             
             if not salesperson_segments:
                 logger.warning("No salesperson identified - generating generic annotations")
                 salesperson_segments = segments
             
-            # Generate positive annotations
             positive_annotations = self._generate_positive_annotations(salesperson_segments)
             annotations.extend(positive_annotations)
             
-            # Generate improvement annotations
             improvement_annotations = self._generate_improvement_annotations(salesperson_segments)
             annotations.extend(improvement_annotations)
             
-            # Generate phase-specific annotations
             phase_annotations = self._generate_phase_annotations(roleplay_blocks)
             annotations.extend(phase_annotations)
             
@@ -169,7 +165,6 @@ class TrainingAnnotator:
             text_lower = segment.text.lower()
             
             for technique, rule in self.annotation_rules.items():
-                # Check if this technique is demonstrated
                 pattern_matches = any(
                     re.search(pattern, text_lower) for pattern in rule['patterns']
                 )
@@ -198,13 +193,12 @@ class TrainingAnnotator:
     def _generate_improvement_annotations(self, segments: List[TimestampedSegment]) -> List[TrainingAnnotation]:
         """Generate improvement opportunity annotations"""
         annotations = []
-        annotation_id = 1000  # Different ID space
+        annotation_id = 1000
         
         for segment in segments:
             text_lower = segment.text.lower()
             word_count = len(segment.text.split())
             
-            # Check negative patterns
             for issue, rule in self.negative_patterns.items():
                 should_annotate = False
                 
@@ -222,7 +216,7 @@ class TrainingAnnotator:
                         timestamp=segment.start_time,
                         technique=issue,
                         description=rule['feedback'],
-                        effectiveness_rating=4,  # Lower rating for improvement areas
+                        effectiveness_rating=4,
                         improvement_suggestions=rule['suggestions'],
                         related_segment_id=f"segment_{segments.index(segment)}",
                         metadata={
@@ -240,7 +234,7 @@ class TrainingAnnotator:
     def _generate_phase_annotations(self, roleplay_blocks: List[RolePlayBlock]) -> List[TrainingAnnotation]:
         """Generate phase-specific training annotations"""
         annotations = []
-        annotation_id = 2000  # Different ID space
+        annotation_id = 2000
         
         phase_feedback = {
             'opening': {
@@ -276,7 +270,6 @@ class TrainingAnnotator:
             if phase_key in phase_feedback:
                 feedback_rule = phase_feedback[phase_key]
                 
-                # Determine if this is positive or improvement feedback
                 is_positive = block.effectiveness_score >= feedback_rule['good_score']
                 
                 annotation = TrainingAnnotation(
@@ -331,15 +324,12 @@ class TrainingAnnotator:
         if not annotations:
             return {}
         
-        # Categorize annotations
         positive_count = sum(1 for a in annotations if a.metadata.get('annotation_type') == 'positive')
         improvement_count = sum(1 for a in annotations if a.metadata.get('annotation_type') == 'improvement')
         phase_count = sum(1 for a in annotations if a.metadata.get('annotation_type') == 'phase_feedback')
         
-        # Calculate average effectiveness
         avg_rating = sum(a.effectiveness_rating for a in annotations) / len(annotations)
         
-        # Find most common techniques
         techniques = [a.technique for a in annotations]
         technique_counts = {tech: techniques.count(tech) for tech in set(techniques)}
         

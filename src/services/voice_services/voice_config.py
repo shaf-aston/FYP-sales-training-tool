@@ -7,7 +7,6 @@ import logging
 from enum import Enum
 from pathlib import Path
 
-# Core dependencies that should always be available
 try:
     import numpy as np
     NUMPY_AVAILABLE = True
@@ -22,7 +21,6 @@ except ImportError:
     TORCH_AVAILABLE = False
     logging.warning("PyTorch not available - falling back to CPU-only mode")
 
-# Google Cloud Speech-to-Text (PRIMARY STT SERVICE)
 try:
     from google.cloud import speech
     GOOGLE_CLOUD_STT_AVAILABLE = True
@@ -32,7 +30,6 @@ except ImportError:
     logging.info("ℹ️  Google Cloud STT not available - basic fallback will be used")
     logging.info("   To enable: pip install google-cloud-speech")
 
-# Coqui TTS (OPTIONAL)
 try:
     from TTS.api import TTS
     COQUI_AVAILABLE = True
@@ -42,7 +39,6 @@ except ImportError:
     logging.info("ℹ️  Coqui TTS not available - text-to-speech will use simple fallback")
     logging.info("   To enable: pip install coqui-tts")
 
-# Audio processing libraries (OPTIONAL)
 try:
     import librosa
     LIBROSA_AVAILABLE = True
@@ -59,7 +55,6 @@ except ImportError:
     SCIPY_AVAILABLE = False
     logging.info("ℹ️  SciPy not available - some audio features limited")
 
-# Local TTS providers
 try:
     import pyttsx3
     PYTTSX3_AVAILABLE = True
@@ -67,18 +62,16 @@ try:
 except Exception:
     PYTTSX3_AVAILABLE = False
 
-# Transcript processor
 try:
-    from services.transcript_processor import get_transcript_processor
+    from src.services.analysis_services.transcript_processor import get_transcript_processor
     TRANSCRIPT_PROCESSOR_AVAILABLE = True
 except Exception:
     TRANSCRIPT_PROCESSOR_AVAILABLE = False
     logging.warning("Transcript processor not available")
 
-# Configuration flags for external services (disabled for local operation)
-ELEVENLABS_AVAILABLE = False  # Disabled for local-only operation
-GTTS_AVAILABLE = False        # Disabled for offline operation
-HUGGINGFACE_AVAILABLE = False # Disabled - using local models only
+ELEVENLABS_AVAILABLE = False
+GTTS_AVAILABLE = False
+HUGGINGFACE_AVAILABLE = False
 
 class VoiceEmotion(Enum):
     """Emotion types for voice synthesis"""
@@ -94,27 +87,21 @@ class VoiceEmotion(Enum):
 class VoiceConfig:
     """Voice service configuration constants"""
     
-    # Cache settings
     MAX_CACHE_SIZE = 1000
     CACHE_TTL_HOURS = 24
     
-    # Audio processing settings
     DEFAULT_SAMPLE_RATE = 16000
     MAX_AUDIO_LENGTH_SECONDS = 300
     
-    # Performance settings
     MAX_CONCURRENT_REQUESTS = 5
     TIMEOUT_SECONDS = 30
     
-    # File paths
     CACHE_DIR = Path("model_cache/stt_cache")
     TTS_CACHE_DIR = Path("model_cache/tts_cache")
     
-    # Google Cloud settings
     GOOGLE_CLOUD_ENCODING = "LINEAR16"
     GOOGLE_CLOUD_SAMPLE_RATE = 16000
     
-    # Emotion profiles for different voice characteristics
     EMOTION_PROFILES = {
         VoiceEmotion.NEUTRAL: {
             "pitch": 0.0,

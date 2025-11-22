@@ -1,20 +1,21 @@
-"""
-Services Package - Organized into logical modules
-"""
+from .voice import VoiceService, create_voice_service
+from .stt import STTService, create_stt_service
+from .tts import TTSService, create_tts_service
 
-# Import from organized service modules
-from .ai_services import *
-from .voice_services import *
-from .data_services import *
-from .analysis_services import *
-
-# Maintain backward compatibility
+# Legacy imports for backward compatibility
 try:
-    from .ai_services import model_service, chat_service
+    from .voice_services.voice_service import EnhancedVoiceService
+    from .voice_services.stt_service import EnhancedSTTService
+    from .voice_services.tts_service import EnhancedTTSService
 except ImportError:
-    pass
+    # Fallback if legacy services are not available
+    EnhancedVoiceService = None
+    EnhancedSTTService = None
+    EnhancedTTSService = None
 
-try:
-    from .voice_services import get_voice_service, get_stt_service, get_tts_service
-except ImportError:
-    pass
+__all__ = [
+    'VoiceService', 'create_voice_service',
+    'STTService', 'create_stt_service', 
+    'TTSService', 'create_tts_service',
+    'EnhancedVoiceService', 'EnhancedSTTService', 'EnhancedTTSService'
+]

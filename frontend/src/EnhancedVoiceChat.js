@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import "./EnhancedVoiceChat.css";
+import API_ENDPOINTS from "./config/apiConfig";
 
 const EnhancedVoiceChat = ({
   onVoiceMessage,
@@ -26,7 +27,7 @@ const EnhancedVoiceChat = ({
   // Check voice service status on mount
   const checkVoiceStatus = async () => {
     try {
-      const response = await fetch("/api/voice-status");
+      const response = await fetch(API_ENDPOINTS.VOICE_STATUS);
       const status = await response.json();
       setVoiceStatus(status);
     } catch (error) {
@@ -130,7 +131,7 @@ const EnhancedVoiceChat = ({
 
       if (showAdvancedAnalysis) {
         // Use advanced analysis endpoint
-        response = await fetch("/api/advanced-audio-analysis", {
+        response = await fetch(API_ENDPOINTS.ADVANCED_AUDIO_ANALYSIS, {
           method: "POST",
           body: formData,
         });
@@ -141,7 +142,7 @@ const EnhancedVoiceChat = ({
         voiceChatFormData.append("user_id", "default");
         voiceChatFormData.append("persona_name", "Mary");
 
-        response = await fetch("/api/voice-chat", {
+        response = await fetch(API_ENDPOINTS.VOICE_CHAT, {
           method: "POST",
           body: voiceChatFormData,
         });

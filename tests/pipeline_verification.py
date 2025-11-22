@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Pipeline Implementation Verification System
 Ensures all core pipelines are properly implemented and functional
@@ -9,7 +8,6 @@ import importlib
 from pathlib import Path
 from typing import Dict, List, Any, Tuple
 
-# Add project root to path
 project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root))
 
@@ -25,22 +23,16 @@ class PipelineVerifier:
         print("🔍 PIPELINE IMPLEMENTATION VERIFICATION")
         print("=" * 60)
         
-        # 1. Request Processing Pipeline
         self.results["request_pipeline"] = self._verify_request_pipeline()
         
-        # 2. Voice Processing Pipeline  
         self.results["voice_pipeline"] = self._verify_voice_pipeline()
         
-        # 3. Training Pipeline
         self.results["training_pipeline"] = self._verify_training_pipeline()
         
-        # 4. Analytics Pipeline
         self.results["analytics_pipeline"] = self._verify_analytics_pipeline()
         
-        # 5. Configuration System
         self.results["config_system"] = self._verify_config_system()
         
-        # 6. File Organization
         self.results["organization"] = self._verify_organization()
         
         return self.results
@@ -70,9 +62,7 @@ class PipelineVerifier:
             }
             print(f"   {component:20} {'✅' if exists else '❌'} {file_path}")
         
-        # Verify pipeline flow integration
         try:
-            # Check if chat_service imports other pipeline components
             chat_service_path = self.project_root / "src/services/chat_service.py"
             if chat_service_path.exists():
                 content = chat_service_path.read_text()
@@ -114,7 +104,6 @@ class PipelineVerifier:
             }
             print(f"   {component:20} {'✅' if exists else '❌'} {file_path}")
         
-        # Check voice route integration
         try:
             voice_routes_path = self.project_root / "src/api/routes/voice_routes.py"
             if voice_routes_path.exists():
@@ -157,7 +146,6 @@ class PipelineVerifier:
             }
             print(f"   {component:20} {'✅' if exists else '❌'} {file_path}")
         
-        # Verify model switching configuration
         try:
             model_config_path = self.project_root / "src/config/model_config.py"
             if model_config_path.exists():
@@ -199,7 +187,6 @@ class PipelineVerifier:
             }
             print(f"   {component:20} {'✅' if exists else '❌'} {file_path}")
         
-        # Check analytics integration in chat service
         try:
             chat_service_path = self.project_root / "src/services/chat_service.py"
             if chat_service_path.exists():
@@ -240,7 +227,6 @@ class PipelineVerifier:
             }
             print(f"   {config_name:20} {'✅' if exists else '❌'} {file_path}")
         
-        # Verify config imports
         try:
             config_init_path = self.project_root / "src/config/__init__.py"
             if config_init_path.exists():
@@ -317,11 +303,9 @@ class PipelineVerifier:
             if pipeline_key in self.results:
                 pipeline_data = self.results[pipeline_key]
                 
-                # Determine if pipeline is working
                 if pipeline_key == "organization":
                     is_working = pipeline_data.get("organization_score", 0) >= 80
                 else:
-                    # Check if most components exist
                     components = pipeline_data.get("components", {})
                     if components:
                         working_components = sum(1 for comp in components.values() if comp.get("exists", False))

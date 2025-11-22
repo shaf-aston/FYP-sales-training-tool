@@ -4,104 +4,52 @@ Dashboard and progress API routes for frontend integration
 from fastapi import APIRouter, HTTPException
 from typing import Dict, List, Any
 import logging
+from src.data_access.character_profiles import PERSONAS
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# Sample personas data
-PERSONAS = [
-    {
-        "id": "mary",
-        "name": "Mary",
-        "title": "New Customer",
-        "description": "A 65-year-old retiree interested in starting a fitness routine",
-        "personality": "Cautious but interested",
-        "fitness_level": "Beginner",
-        "age": 65,
-        "goals": ["Weight loss", "General health", "Low impact exercises"]
-    },
-    {
-        "id": "jake",
-        "name": "Jake",
-        "title": "Young Professional",
-        "description": "A 28-year-old office worker looking to build muscle and stay fit",
-        "personality": "Enthusiastic and goal-oriented",
-        "fitness_level": "Intermediate",
-        "age": 28,
-        "goals": ["Muscle building", "Strength training", "Time-efficient workouts"]
-    },
-    {
-        "id": "sarah",
-        "name": "Sarah",
-        "title": "Busy Parent",
-        "description": "A 35-year-old mother looking for quick, effective workouts",
-        "personality": "Practical and time-conscious",
-        "fitness_level": "Beginner to Intermediate",
-        "age": 35,
-        "goals": ["Weight management", "Energy boost", "Flexible scheduling"]
-    }
-]
-
-# Sample progress data
+# Mock progress data for demonstration and testing
 SAMPLE_PROGRESS = {
     "user_stats": {
-        "total_sessions": 15,
-        "completed_scenarios": 8,
-        "success_rate": 75.5,
-        "average_confidence": 4.2,
-        "improvement_trend": "increasing"
+        "total_sessions": 5,
+        "completed_scenarios": 3,
+        "success_rate": 0.75,
+        "average_confidence": 0.82,
+        "improvement_trend": "upward"
     },
     "recent_sessions": [
-        {
-            "date": "2025-10-28",
-            "persona": "Mary",
-            "scenario": "Initial Consultation",
-            "score": 85,
-            "duration": "12:45",
-            "key_improvements": ["Active listening", "Needs assessment"]
-        },
-        {
-            "date": "2025-10-27",
-            "persona": "Jake",
-            "scenario": "Membership Upgrade",
-            "score": 78,
-            "duration": "15:30",
-            "key_improvements": ["Objection handling", "Value proposition"]
-        },
-        {
-            "date": "2025-10-26",
-            "persona": "Sarah",
-            "scenario": "Schedule Consultation",
-            "score": 92,
-            "duration": "10:20",
-            "key_improvements": ["Time management", "Solution focus"]
-        }
+        {"session_id": "session_1", "score": 85, "scenario": "initial_consultation", "date": "2025-11-10"},
+        {"session_id": "session_2", "score": 78, "scenario": "membership_upgrade", "date": "2025-11-12"},
+        {"session_id": "session_3", "score": 90, "scenario": "family_fitness", "date": "2025-11-14"}
     ],
     "skills_breakdown": {
-        "communication": 82,
+        "communication": 80,
         "product_knowledge": 75,
-        "objection_handling": 68,
-        "closing_techniques": 71,
+        "objection_handling": 70,
+        "closing_techniques": 85,
         "relationship_building": 88
     },
-    "weekly_progress": [
-        {"week": "Week 1", "sessions": 3, "avg_score": 72},
-        {"week": "Week 2", "sessions": 4, "avg_score": 76},
-        {"week": "Week 3", "sessions": 5, "avg_score": 81},
-        {"week": "Week 4", "sessions": 3, "avg_score": 85}
-    ]
+    "weekly_progress": [70, 75, 80, 85, 90]
 }
+
+# PERSONAS = [] #TODO Insert personas from character_profiles.py
+PERSONAS = PERSONAS
+  
 
 @router.get("/api/v2/personas")
 async def get_personas():
     """Get available training personas"""
     logger.info("Fetching available personas")
+    if not PERSONAS:
+        raise HTTPException(status_code=404, detail="No personas available")
     return {"personas": PERSONAS}
 
-# Unified v1 equivalents under /api for frontend without /v2
 @router.get("/api/personas")
 async def get_personas_v1():
+    if not PERSONAS:
+        raise HTTPException(status_code=404, detail="No personas available")
     return {"personas": PERSONAS}
 
 @router.get("/api/v2/progress/initialize")
@@ -126,7 +74,6 @@ async def get_dashboard_data(user_id: str):
     logger.info(f"Fetching dashboard data for user: {user_id}")
     
     if user_id != "demo_user_123":
-        # For other users, return default/empty data
         empty_progress = {
             "user_stats": {
                 "total_sessions": 0,
@@ -158,8 +105,6 @@ async def log_training_session(user_id: str, session_data: Dict[str, Any]):
     """Log a completed training session"""
     logger.info(f"Logging session for user: {user_id}")
     
-    # In a real app, this would save to database
-    # For now, just return success
     return {
         "status": "success",
         "message": "Session logged successfully",

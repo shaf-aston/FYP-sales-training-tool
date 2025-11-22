@@ -12,7 +12,6 @@ import asyncio
 
 testing_router = APIRouter(prefix="/api/test", tags=["API Testing"])
 
-# Test data models
 class ChatTestRequest(BaseModel):
     message: str
     persona: Optional[str] = None
@@ -28,7 +27,6 @@ class FeedbackTestRequest(BaseModel):
     user_id: Optional[str] = "test_user"
     success_rating: Optional[int] = 5
 
-# ========== CHAT TESTING ENDPOINTS ==========
 
 @testing_router.post("/chat/general")
 async def test_general_chat(request: ChatTestRequest):
@@ -41,7 +39,6 @@ async def test_general_chat(request: ChatTestRequest):
          -d '{"message": "Hello, tell me about sales techniques"}'
     """
     try:
-        # Simulate general chat processing
         response = {
             "user_message": request.message,
             "ai_response": f"Thank you for asking about '{request.message}'. In sales training, I'd recommend focusing on building rapport first, then understanding customer needs through open-ended questions. Would you like to practice with one of our personas?",
@@ -74,7 +71,6 @@ async def test_persona_chat(request: ChatTestRequest):
         raise HTTPException(status_code=400, detail="persona is required for persona chat testing")
     
     try:
-        # Persona-specific responses
         persona_responses = {
             "mary": "Well, I'm quite cautious about new products. I've been retired for a few years now and I'm on a fixed budget. What exactly are you selling?",
             "jake": "Look, I'm busy and I get pitched all the time. You've got 30 seconds to tell me why this matters to my business.",
@@ -106,7 +102,6 @@ async def test_persona_chat(request: ChatTestRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Persona chat test failed: {str(e)}")
 
-# ========== TRAINING TESTING ENDPOINTS ==========
 
 @testing_router.post("/training/start")
 async def test_training_session(request: TrainingTestRequest):
@@ -162,7 +157,6 @@ async def test_training_message(session_id: str, request: ChatTestRequest):
          -d '{"message": "Hi Mary, I have something that could help with your retirement planning"}'
     """
     try:
-        # Simulate training conversation
         training_response = f"Thanks for that approach! In a real training session with session '{session_id}', the persona would respond based on their personality. This would be analyzed for communication effectiveness, objection handling, and closing techniques."
         
         response = {
@@ -188,7 +182,6 @@ async def test_training_message(session_id: str, request: ChatTestRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Training message test failed: {str(e)}")
 
-# ========== FEEDBACK TESTING ENDPOINTS ==========
 
 @testing_router.post("/feedback/analyze")
 async def test_feedback_analysis(request: FeedbackTestRequest):
@@ -246,7 +239,6 @@ async def test_feedback_analysis(request: FeedbackTestRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Feedback analysis test failed: {str(e)}")
 
-# ========== VOICE TESTING ENDPOINTS ==========
 
 @testing_router.post("/voice/simulate")
 async def test_voice_functionality(text: str = Form(...), persona: Optional[str] = Form(None)):
@@ -285,7 +277,6 @@ async def test_voice_functionality(text: str = Form(...), persona: Optional[str]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Voice test failed: {str(e)}")
 
-# ========== SYSTEM TESTING ENDPOINTS ==========
 
 @testing_router.get("/system/health")
 async def test_system_health():
@@ -296,7 +287,6 @@ async def test_system_health():
     curl -X GET "http://localhost:8000/api/test/system/health"
     """
     try:
-        # Simulate various system checks
         health_data = {
             "server_status": "healthy",
             "database_connection": "connected",
@@ -366,7 +356,6 @@ async def list_all_endpoints():
         }
     }
 
-# ========== BULK TESTING ENDPOINT ==========
 
 @testing_router.post("/run/full-test-suite")
 async def run_full_test_suite():
@@ -383,23 +372,18 @@ async def run_full_test_suite():
             "summary": {}
         }
         
-        # Test general chat
         chat_result = await test_general_chat(ChatTestRequest(message="Test message"))
         results["tests_run"].append({"test": "general_chat", "status": "passed", "response_time": "0.3s"})
         
-        # Test persona chat
         persona_result = await test_persona_chat(ChatTestRequest(message="Test message", persona="mary"))
         results["tests_run"].append({"test": "persona_chat", "status": "passed", "response_time": "0.4s"})
         
-        # Test training session
         training_result = await test_training_session(TrainingTestRequest(persona_name="mary"))
         results["tests_run"].append({"test": "training_session", "status": "passed", "response_time": "0.2s"})
         
-        # Test feedback analysis
         feedback_result = await test_feedback_analysis(FeedbackTestRequest(session_id="test_session_123"))
         results["tests_run"].append({"test": "feedback_analysis", "status": "passed", "response_time": "0.3s"})
         
-        # Calculate summary
         total_tests = len(results["tests_run"])
         passed_tests = len([t for t in results["tests_run"] if t["status"] == "passed"])
         

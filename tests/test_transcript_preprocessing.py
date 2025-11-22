@@ -4,11 +4,10 @@ Test transcript preprocessing pipeline
 import sys
 from pathlib import Path
 
-# Add project root to path
 project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root / "src"))
 
-from services.transcript_processor import get_transcript_processor
+from src.services.analysis_services.transcript_processor import get_transcript_processor
 
 
 def test_stt_corrections():
@@ -18,7 +17,6 @@ def test_stt_corrections():
     
     processor = get_transcript_processor()
     
-    # Sample transcript with errors
     sample_result = {
         'text': 'I can understand the restaurant now. You want to start getting healthy, but I suppose for you, why is this something you want to do now as opposed to waiting another 3632 months from now?',
         'segments': [
@@ -166,7 +164,6 @@ def test_full_pipeline():
     
     processor = get_transcript_processor()
     
-    # Realistic sample from Google Cloud STT
     sample_result = {
         'text': 'i can understand the restaurant now you want to start getting healthy but i suppose for you why is this something you want to do now as opposed to waiting another 3632 months from now cast i guess i have to do it now or weapon just procrastinate awesome how did that feel aiden',
         'segments': [

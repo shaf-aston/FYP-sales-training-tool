@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException
 
 from services.ai_services import persona_service, Persona, PersonaType, DifficultyLevel
 
-router = APIRouter(prefix="/api/personas", tags=["persona-admin"])  # under unified /api
+router = APIRouter(prefix="/api/personas", tags=["persona-admin"])
 
 
 # --- simple heuristic extractors -------------------------------------------------
@@ -43,7 +43,6 @@ def _infer_type(text: str) -> PersonaType:
 
 
 def _infer_difficulty(text: str) -> DifficultyLevel:
-    # naive: skeptical/time mentions -> harder
     if any(p.search(text) for p, _ in SKEPTIC_KEYS + TIME_KEYS):
         return DifficultyLevel.MEDIUM
     return DifficultyLevel.EASY
@@ -73,7 +72,6 @@ async def clone_persona(payload: Dict[str, Any]) -> Dict[str, Any]:
     difficulty = _infer_difficulty(text)
     age = _infer_age(text)
 
-    # Rough heuristics for goals/concerns/objections
     goals = _split_list(re.search(r"goals?\s*[:\-]\s*(.+)", text, re.I|re.S).group(1) if re.search(r"goals?\s*[:\-]\s*(.+)", text, re.I|re.S) else "")
     concerns = _split_list(re.search(r"concerns?\s*[:\-]\s*(.+)", text, re.I|re.S).group(1) if re.search(r"concerns?\s*[:\-]\s*(.+)", text, re.I|re.S) else "")
     objections = _split_list(re.search(r"objections?\s*[:\-]\s*(.+)", text, re.I|re.S).group(1) if re.search(r"objections?\s*[:\-]\s*(.+)", text, re.I|re.S) else "")
@@ -136,7 +134,6 @@ async def save_persona(payload: Dict[str, Any]) -> Dict[str, Any]:
 
 @router.get("/custom")
 async def list_custom_personas() -> Dict[str, Any]:
-    # Heuristic: entries not in defaults are custom
     defaults = {"mary", "jake", "sarah", "david"}
     personas = [p for p in persona_service.list_personas() if p["name"].lower() not in defaults]
     return {"personas": personas}

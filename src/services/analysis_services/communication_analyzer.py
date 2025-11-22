@@ -69,22 +69,16 @@ class CommunicationAnalyzer:
             
             logger.info(f"Analyzing communication patterns in {len(conversation_history)} exchanges")
             
-            # Extract user messages
             user_messages = self._extract_user_messages(conversation_history)
             
-            # Analyze style scores
             style_scores = self._calculate_style_scores(user_messages)
             
-            # Determine dominant style
             dominant_style = self._determine_dominant_style(style_scores)
             
-            # Analyze question patterns
             question_analysis = self._analyze_question_patterns(user_messages)
             
-            # Analyze language patterns
             language_patterns = self._analyze_language_patterns(user_messages)
             
-            # Rate overall effectiveness
             effectiveness_rating = self._rate_communication_effectiveness(
                 style_scores, question_analysis, language_patterns
             )
@@ -117,7 +111,6 @@ class CommunicationAnalyzer:
         user_messages = []
         
         for exchange in conversation_history:
-            # Handle different message formats
             if 'user_message' in exchange:
                 user_messages.append(exchange['user_message'])
             elif 'user' in exchange:
@@ -125,7 +118,6 @@ class CommunicationAnalyzer:
             elif 'human' in exchange:
                 user_messages.append(exchange['human'])
         
-        # Clean and filter messages
         user_messages = [msg.strip() for msg in user_messages if msg and msg.strip()]
         
         return user_messages
@@ -148,7 +140,6 @@ class CommunicationAnalyzer:
         for message in user_messages:
             message_lower = message.lower()
             
-            # Count style indicators
             if any(word in message_lower for word in self.professional_indicators):
                 style_counts['professional'] += 1
             
@@ -161,7 +152,6 @@ class CommunicationAnalyzer:
             if any(word in message_lower for word in self.assertive_indicators):
                 style_counts['assertive'] += 1
         
-        # Convert to percentages
         style_scores = {
             style: (count / total_messages) * 100
             for style, count in style_counts.items()
@@ -174,15 +164,13 @@ class CommunicationAnalyzer:
         if not style_scores:
             return CommunicationStyle.PASSIVE
         
-        # Find style with highest score
         dominant_name = max(style_scores.keys(), key=lambda k: style_scores[k])
         
-        # Map to CommunicationStyle enum
         style_mapping = {
-            'professional': CommunicationStyle.ASSERTIVE,  # Professional maps to assertive
-            'casual': CommunicationStyle.RELATIONSHIP_FOCUSED,  # Casual maps to relationship-focused
-            'empathetic': CommunicationStyle.RELATIONSHIP_FOCUSED,  # Empathetic maps to relationship-focused
-            'assertive': CommunicationStyle.ASSERTIVE  # Assertive stays assertive
+            'professional': CommunicationStyle.ASSERTIVE,
+            'casual': CommunicationStyle.RELATIONSHIP_FOCUSED,
+            'empathetic': CommunicationStyle.RELATIONSHIP_FOCUSED,
+            'assertive': CommunicationStyle.ASSERTIVE
         }
         
         return style_mapping.get(dominant_name, CommunicationStyle.PASSIVE)
@@ -203,9 +191,7 @@ class CommunicationAnalyzer:
         for message in user_messages:
             message_lower = message.lower()
             
-            # Count questions
             if '?' in message:
-                # Check if it's an open-ended question
                 if any(starter in message_lower for starter in self.question_starters):
                     open_questions += 1
                 else:
@@ -219,7 +205,6 @@ class CommunicationAnalyzer:
         else:
             question_ratio = (open_questions / total_questions) * 100
             
-            # Determine quality based on ratio
             if question_ratio >= 70:
                 quality = 'excellent_open_focused'
             elif question_ratio >= 50:
@@ -247,7 +232,6 @@ class CommunicationAnalyzer:
                 'professional_language_ratio': 0.0
             }
         
-        # Calculate word statistics
         all_words = []
         total_chars = 0
         
@@ -256,16 +240,13 @@ class CommunicationAnalyzer:
             all_words.extend(words)
             total_chars += len(message)
         
-        # Basic statistics
         total_words = len(all_words)
         unique_words = len(set(word.lower() for word in all_words))
         avg_words_per_message = total_words / len(user_messages)
         avg_chars_per_message = total_chars / len(user_messages)
         
-        # Vocabulary richness (unique words / total words)
         vocabulary_richness = (unique_words / total_words) * 100 if total_words > 0 else 0
         
-        # Positive language analysis
         positive_words = [
             'great', 'excellent', 'amazing', 'wonderful', 'fantastic', 'perfect',
             'good', 'better', 'best', 'love', 'like', 'enjoy', 'happy', 'pleased'
@@ -275,12 +256,10 @@ class CommunicationAnalyzer:
                            if word.lower() in positive_words)
         positive_ratio = (positive_count / total_words) * 100 if total_words > 0 else 0
         
-        # Professional language analysis
         professional_count = sum(1 for word in all_words 
                                if word.lower() in self.professional_indicators)
         professional_ratio = (professional_count / total_words) * 100 if total_words > 0 else 0
         
-        # Sentence structure analysis
         sentences_with_questions = sum(1 for msg in user_messages if '?' in msg)
         sentences_with_exclamation = sum(1 for msg in user_messages if '!' in msg)
         
@@ -304,47 +283,42 @@ class CommunicationAnalyzer:
         """Rate overall communication effectiveness"""
         score = 0
         
-        # Style balance (20 points max)
         total_style_score = sum(style_scores.values())
-        if total_style_score >= 80:  # Good style presence
+        if total_style_score >= 80:
             score += 20
         elif total_style_score >= 50:
             score += 15
         elif total_style_score >= 25:
             score += 10
         
-        # Question quality (30 points max)
         question_ratio = question_analysis.get('question_ratio', 0)
-        if question_ratio >= 60:  # Good balance of open/closed questions
+        if question_ratio >= 60:
             score += 30
         elif question_ratio >= 40:
             score += 20
         elif question_ratio >= 20:
             score += 10
         
-        # Language quality (25 points max)
         vocab_richness = language_patterns.get('vocabulary_richness', 0)
-        if vocab_richness >= 40:  # Good vocabulary diversity
+        if vocab_richness >= 40:
             score += 15
         
         professional_ratio = language_patterns.get('professional_language_ratio', 0)
-        if professional_ratio >= 10:  # Appropriate professional language
+        if professional_ratio >= 10:
             score += 10
         
-        # Engagement indicators (25 points max)
         engagement = language_patterns.get('engagement_indicators', {})
         question_pct = engagement.get('question_percentage', 0)
         exclamation_pct = engagement.get('exclamation_percentage', 0)
         
-        if question_pct >= 20:  # Good questioning engagement
+        if question_pct >= 20:
             score += 15
         elif question_pct >= 10:
             score += 10
         
-        if exclamation_pct >= 5:  # Appropriate enthusiasm
+        if exclamation_pct >= 5:
             score += 10
         
-        # Convert score to rating
         if score >= 80:
             return "excellent"
         elif score >= 65:
@@ -365,7 +339,6 @@ class CommunicationAnalyzer:
             'recommendations': []
         }
         
-        # Analyze strengths
         if analysis.style_scores.get('professional', 0) > 60:
             insights['strengths'].append("Strong professional communication")
         
@@ -375,7 +348,6 @@ class CommunicationAnalyzer:
         if analysis.question_analysis.get('question_ratio', 0) > 60:
             insights['strengths'].append("Effective use of open-ended questions")
         
-        # Analyze improvement areas
         if analysis.style_scores.get('professional', 0) < 30:
             insights['improvement_areas'].append("Professional tone could be stronger")
             insights['recommendations'].append("Use more courteous language like 'please', 'thank you', 'I appreciate'")

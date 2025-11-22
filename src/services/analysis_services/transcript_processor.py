@@ -28,19 +28,17 @@ class SpeakerSegment:
 @dataclass
 class TrainingAnnotation:
     """Represents a training point or technique annotation"""
-    annotation_type: str  # "TRAINING POINT", "TECHNIQUE", "ROLE PLAY"
+    annotation_type: str
     label: str
     description: str
-    position: int  # Position in transcript
+    position: int
 
 
 class TranscriptProcessor:
     """Processes transcripts to add structure and annotations"""
     
     def __init__(self):
-        # Common STT correction patterns
         self.stt_corrections = {
-            # Common mishearings
             'restaurant': 'rationale',
             'cast': 'Cass',
             'cassidy': 'Cassidy',
@@ -48,24 +46,20 @@ class TranscriptProcessor:
             'milk': 'correct',
             'period': 'nope',
             
-            # Number corrections
             '3632 months': '3, 6, or 12 months',
             'tree months': '3 months',
             'sex months': '6 months',
             
-            # Common sales terms
             'clothes': 'close',
             'by': 'buy',
             'sale': 'sell',
             'lead': 'lead',
             
-            # Filler word corrections
             'um': '',
             'uh': '',
             'ah': '',
         }
         
-        # Speaker name mappings
         self.speaker_names = {
             'speaker_0': 'Trainer',
             'speaker_1': 'Aiden',
@@ -74,7 +68,6 @@ class TranscriptProcessor:
             'speaker_4': 'Nico',
         }
         
-        # Training point patterns
         self.training_patterns = {
             'acknowledge': 'Acknowledge prospect\'s reasoning',
             'timing_objection': 'Timing Objection Handling',
@@ -100,16 +93,12 @@ class TranscriptProcessor:
         """
         logger.info("Processing transcript...")
         
-        # Step 1: Apply STT corrections
         corrected_result = self.apply_stt_corrections(stt_result)
         
-        # Step 2: Add speaker diarization labels
         diarized_result = self.add_speaker_labels(corrected_result)
         
-        # Step 3: Segment into sentences
         segmented_result = self.segment_sentences(diarized_result)
         
-        # Step 4: Add training annotations
         annotated_result = self.add_training_annotations(segmented_result)
         
         logger.info("Transcript processing complete")
@@ -128,13 +117,11 @@ class TranscriptProcessor:
         text = stt_result.get('text', '')
         segments = stt_result.get('segments', [])
         
-        # Apply word-level corrections
         corrected_text = text
         corrections_applied = []
         
         for incorrect, correct in self.stt_corrections.items():
             if incorrect.lower() in corrected_text.lower():
-                # Case-insensitive replacement
                 pattern = re.compile(re.escape(incorrect), re.IGNORECASE)
                 corrected_text = pattern.sub(correct, corrected_text)
                 corrections_applied.append({
@@ -143,7 +130,6 @@ class TranscriptProcessor:
                     'explanation': self._get_correction_explanation(incorrect, correct)
                 })
         
-        # Update segments with corrections
         corrected_segments = []
         for segment in segments:
             segment_text = segment.get('text', '')
@@ -187,7 +173,6 @@ class TranscriptProcessor:
         segments = stt_result.get('segments', [])
         speaker_tags = stt_result.get('speaker_tags', {})
         
-        # Group segments by speaker
         speaker_segments = []
         current_speaker = None
         current_text = []
@@ -198,15 +183,12 @@ class TranscriptProcessor:
         for segment in segments:
             speaker_tag = segment.get('speaker_tag')
             
-            # Determine speaker name
             if speaker_tag is not None:
                 speaker_name = self.speaker_names.get(f'speaker_{speaker_tag}', f'Speaker {speaker_tag}')
             else:
                 speaker_name = self._infer_speaker(segment.get('text', ''))
             
-            # Group consecutive segments from same speaker
             if speaker_name != current_speaker:
-                # Save previous speaker's segment
                 if current_speaker and current_text:
                     speaker_segments.append(SpeakerSegment(
                         speaker_id=current_speaker,
@@ -217,19 +199,16 @@ class TranscriptProcessor:
                         words=current_words
                     ))
                 
-                # Start new speaker segment
                 current_speaker = speaker_name
                 current_text = [segment.get('text', '')]
                 current_start = segment.get('start', 0)
                 current_end = segment.get('end', 0)
                 current_words = [segment]
             else:
-                # Continue current speaker's segment
                 current_text.append(segment.get('text', ''))
                 current_end = segment.get('end', 0)
                 current_words.append(segment)
         
-        # Add final segment
         if current_speaker and current_text:
             speaker_segments.append(SpeakerSegment(
                 speaker_id=current_speaker,
@@ -240,7 +219,6 @@ class TranscriptProcessor:
                 words=current_words
             ))
         
-        # Format as labeled text
         labeled_text = self._format_speaker_segments(speaker_segments)
         
         result = stt_result.copy()
@@ -261,18 +239,14 @@ class TranscriptProcessor:
 
     def _infer_speaker(self, text: str) -> str:
         """Infer speaker based on content if speaker_tag not available"""
-        # Simple heuristic - can be enhanced with ML
         text_lower = text.lower()
         
-        # Trainer patterns
         if any(word in text_lower for word in ['awesome', 'great job', 'how did that feel', 'let\'s practice']):
             return 'Trainer'
         
-        # Coach/sales patterns
         if any(word in text_lower for word in ['i can understand', 'let me ask', 'what would you say']):
             return 'Aiden'
         
-        # Prospect patterns
         if any(word in text_lower for word in ['i guess', 'i suppose', 'i\'m not sure']):
             return 'Cassidy'
         
@@ -298,7 +272,6 @@ class TranscriptProcessor:
         for segment in speaker_segments:
             text = segment['text']
             
-            # Apply sentence segmentation
             sentences = self._segment_into_sentences(text)
             
             segmented_segment = segment.copy()
@@ -306,7 +279,6 @@ class TranscriptProcessor:
             segmented_segment['text'] = ' '.join(sentences)
             segmented_segments.append(segmented_segment)
         
-        # Update labeled text with proper sentences
         labeled_lines = []
         for segment in segmented_segments:
             for sentence in segment['sentences']:
@@ -322,31 +294,22 @@ class TranscriptProcessor:
 
     def _segment_into_sentences(self, text: str) -> List[str]:
         """Segment text into proper sentences with capitalization and punctuation"""
-        # Remove extra whitespace
         text = ' '.join(text.split())
         
-        # Split on common sentence boundaries
-        # Handle: periods, question marks, exclamations
         sentences = re.split(r'(?<=[.!?])\s+', text)
         
-        # If no punctuation, split on pauses (multiple spaces, commas before conjunctions)
         if len(sentences) == 1:
-            # Split on patterns like "word, and", "word. so", etc.
             sentences = re.split(r'[,;]\s+(?=and|but|so|or|yet|however|therefore|i\s)', text, flags=re.IGNORECASE)
         
-        # Capitalize and add punctuation
         formatted_sentences = []
         for sentence in sentences:
             sentence = sentence.strip()
             if not sentence:
                 continue
             
-            # Capitalize first letter
             sentence = sentence[0].upper() + sentence[1:] if len(sentence) > 1 else sentence.upper()
             
-            # Add ending punctuation if missing
             if not sentence[-1] in '.!?':
-                # Add question mark for questions
                 if any(sentence.lower().startswith(q) for q in ['what', 'where', 'when', 'why', 'how', 'who', 'is', 'are', 'can', 'do', 'does']):
                     sentence += '?'
                 else:
@@ -374,7 +337,6 @@ class TranscriptProcessor:
             text = segment['text']
             speaker = segment['speaker']
             
-            # Detect role play markers
             if self._is_role_play_start(text, speaker):
                 annotations.append(TrainingAnnotation(
                     annotation_type='ROLE PLAY',
@@ -383,7 +345,6 @@ class TranscriptProcessor:
                     position=i
                 ))
             
-            # Detect training points
             training_point = self._identify_training_point(text, speaker)
             if training_point:
                 annotations.append(TrainingAnnotation(
@@ -393,7 +354,6 @@ class TranscriptProcessor:
                     position=i
                 ))
             
-            # Detect techniques
             technique = self._identify_technique(text, speaker)
             if technique:
                 annotations.append(TrainingAnnotation(
@@ -403,7 +363,6 @@ class TranscriptProcessor:
                     position=i
                 ))
             
-            # Create annotated segment
             segment_annotations = [a for a in annotations if a.position == i]
             annotated_segment = segment.copy()
             annotated_segment['annotations'] = [
@@ -416,7 +375,6 @@ class TranscriptProcessor:
             ]
             annotated_segments.append(annotated_segment)
         
-        # Format annotated text
         annotated_text = self._format_annotated_text(annotated_segments)
         
         result = stt_result.copy()
@@ -450,21 +408,18 @@ class TranscriptProcessor:
         """Identify training points in the conversation"""
         text_lower = text.lower()
         
-        # Acknowledgment patterns
         if 'i can understand' in text_lower or 'i see' in text_lower or 'that makes sense' in text_lower:
             return {
                 'label': 'Acknowledge prospect\'s reasoning',
                 'description': 'Recognize why the prospect wants to take action.'
             }
         
-        # Objection identification
         if speaker in ['Cassidy', 'Prospect'] and any(word in text_lower for word in ['procrastinate', 'not sure', 'maybe', 'i guess']):
             return {
                 'label': 'Identify Objection',
                 'description': 'Prospect admits potential delay if not acted on immediately.'
             }
         
-        # Reflection
         if speaker == 'Trainer' and any(phrase in text_lower for phrase in ['how did that feel', 'what did you notice', 'how was that']):
             return {
                 'label': 'Reflection',
@@ -477,21 +432,18 @@ class TranscriptProcessor:
         """Identify sales techniques being demonstrated"""
         text_lower = text.lower()
         
-        # Timing objection handling
         if 'why' in text_lower and any(time in text_lower for time in ['now', 'later', 'months', 'weeks']):
             return {
                 'label': 'Timing Objection Handling',
                 'description': 'Ask why they want to start now versus later.'
             }
         
-        # Lock-in timing
         if 'urgency' in text_lower or 'commitment' in text_lower or ('have to' in text_lower and 'now' in text_lower):
             return {
                 'label': 'Lock-in Timing',
                 'description': 'Use their urgency to motivate commitment.'
             }
         
-        # Open-ended questions
         if text.strip().endswith('?') and any(word in text_lower for word in ['what', 'how', 'why', 'tell me']):
             return {
                 'label': 'Open-Ended Question',
@@ -509,14 +461,12 @@ class TranscriptProcessor:
             text = segment['text']
             annotations = segment.get('annotations', [])
             
-            # Add speaker label
             lines.append(f"[{speaker}]: \"{text}\"")
             
-            # Add annotations
             for annotation in annotations:
                 lines.append(f"[{annotation['type']} - {annotation['label']}]: {annotation['description']}")
             
-            lines.append('')  # Blank line between segments
+            lines.append('')
         
         return '\n'.join(lines)
 
@@ -534,7 +484,6 @@ class TranscriptProcessor:
         return table
 
 
-# Global instance
 _transcript_processor = None
 
 

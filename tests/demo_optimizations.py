@@ -12,22 +12,20 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from src.services.voice_service import EnhancedVoiceService
+from src.services.voice_services.voice_service import EnhancedVoiceService
 
 def create_test_audio():
     """Create a temporary WAV file for testing"""
     with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as f:
         filepath = f.name
     
-    # Generate 1 second of silence at 16kHz
     sample_rate = 16000
     duration = 1.0
     samples = np.zeros(int(sample_rate * duration), dtype=np.int16)
     
-    # Write WAV file
     with wave.open(filepath, 'w') as wav_file:
-        wav_file.setnchannels(1)  # Mono
-        wav_file.setsampwidth(2)  # 16-bit
+        wav_file.setnchannels(1)
+        wav_file.setsampwidth(2)
         wav_file.setframerate(sample_rate)
         wav_file.writeframes(samples.tobytes())
     
@@ -41,7 +39,6 @@ async def demo_cache_functionality():
     
     service = EnhancedVoiceService()
     
-    # Simulate cache operations
     print("\n1. Adding mock transcription to cache...")
     test_key = "audio_hash_123_en_1"
     test_result = {
@@ -66,7 +63,7 @@ async def demo_cache_functionality():
     print("\n3. Testing cache expiration...")
     import time
     old_ttl = service.cache_ttl
-    service.cache_ttl = 0.1  # Set to 100ms
+    service.cache_ttl = 0.1
     
     service._add_to_cache("temp_key", {"text": "Temporary"})
     print(f"   Added entry with 100ms TTL")
@@ -123,7 +120,6 @@ async def demo_hash_generation():
     else:
         print(f"   ⚠️  Keys unexpectedly match")
     
-    # Cleanup
     import os
     os.remove(audio_file)
     
@@ -219,7 +215,6 @@ async def demo_async_operations():
     cache_key = await service._get_audio_cache_key(audio_file, "en", True)
     print(f"   ✅ Generated cache key: {cache_key}")
     
-    # Cleanup
     import os
     os.remove(audio_file)
     

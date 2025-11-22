@@ -10,7 +10,6 @@ from datetime import datetime, timedelta
 
 feedback_router = APIRouter(prefix="/api/v2/feedback", tags=["Feedback"])
 
-# Mock feedback data - replace with database
 FEEDBACK_DATA = {
     "demo_user_123": {
         "sessions_analyzed": [],
@@ -34,7 +33,6 @@ async def analyze_training_session(data: dict):
         if not session_id or not user_id:
             raise HTTPException(status_code=400, detail="session_id and user_id required")
         
-        # Generate mock analysis (in production, use AI analysis)
         analysis_result = {
             "session_id": session_id,
             "user_id": user_id,
@@ -80,7 +78,6 @@ async def analyze_training_session(data: dict):
             }
         }
         
-        # Store analysis
         if user_id not in FEEDBACK_DATA:
             FEEDBACK_DATA[user_id] = {"sessions_analyzed": [], "overall_analytics": {}}
         
@@ -111,7 +108,6 @@ async def get_feedback_analytics(user_id: str):
                 "message": "No feedback data available yet"
             }
         
-        # Calculate analytics
         total_sessions = len(sessions)
         avg_communication = sum(s["feedback_analysis"]["overall_scores"]["communication"] for s in sessions) / total_sessions
         avg_persuasion = sum(s["feedback_analysis"]["overall_scores"]["persuasion"] for s in sessions) / total_sessions
@@ -147,7 +143,6 @@ async def get_feedback_analytics(user_id: str):
 async def get_session_feedback(session_id: str):
     """Get detailed feedback for specific session"""
     try:
-        # Find session feedback
         for user_id, user_data in FEEDBACK_DATA.items():
             for analysis in user_data["sessions_analyzed"]:
                 if analysis["session_id"] == session_id:
@@ -165,7 +160,6 @@ async def get_feedback_history(user_id: str, limit: int = 10):
         user_data = FEEDBACK_DATA.get(user_id, {"sessions_analyzed": []})
         sessions = user_data["sessions_analyzed"]
         
-        # Return most recent sessions
         recent_sessions = sorted(sessions, key=lambda x: x["analysis_timestamp"], reverse=True)[:limit]
         
         return {

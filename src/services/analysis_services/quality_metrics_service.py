@@ -20,7 +20,7 @@ Features:
 import sqlite3
 import json
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Dict, List, Optional, Any, Union, Tuple
 from dataclasses import dataclass, asdict
 from pathlib import Path
@@ -29,9 +29,8 @@ from contextlib import contextmanager
 import threading
 import statistics
 from collections import defaultdict
-from infrastructure.settings import QUALITY_DB_PATH
+from config.settings import QUALITY_DB_PATH
 
-# Configure logging
 logger = logging.getLogger(__name__)
 
 @dataclass
@@ -40,15 +39,15 @@ class QualityMetric:
     metric_id: str
     session_id: str
     user_id: str
-    metric_type: str  # 'communication', 'persuasion', 'empathy', 'objection_handling', etc.
-    metric_category: str  # 'skill', 'behavior', 'outcome', 'engagement'
-    score: float  # 0.0 to 1.0 or 0 to 100 depending on scale
-    score_scale: str  # 'normalized' (0-1) or 'percentage' (0-100)
-    measurement_context: str  # 'turn_level', 'session_level', 'conversation_segment'
+    metric_type: str
+    metric_category: str
+    score: float
+    score_scale: str
+    measurement_context: str
     timestamp: datetime
     metadata: Optional[Dict[str, Any]] = None
-    confidence: Optional[float] = None  # Confidence in the measurement
-    source: str = 'automated'  # 'automated', 'self_assessment', 'peer_review', 'instructor'
+    confidence: Optional[float] = None
+    source: str = 'automated' 
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization"""
@@ -68,15 +67,15 @@ class ImprovementRecommendation:
     recommendation_id: str
     user_id: str
     skill_area: str
-    priority: str  # 'high', 'medium', 'low'
+    priority: str
     recommendation_text: str
     action_items: List[str]
-    target_improvement: float  # Expected improvement percentage
-    timeframe: str  # 'immediate', 'short_term', 'long_term'
-    based_on_sessions: List[str]  # Session IDs used to generate recommendation
+    target_improvement: float
+    timeframe: str
+    based_on_sessions: List[str]
     created_at: datetime
-    status: str = 'active'  # 'active', 'completed', 'dismissed'
-    progress: Optional[float] = None  # 0-100% completion
+    status: str = 'active' 
+    progress: Optional[float] = None
     metadata: Optional[Dict[str, Any]] = None
 
     def to_dict(self) -> Dict[str, Any]:
@@ -98,8 +97,8 @@ class SkillAssessment:
     user_id: str
     assessment_date: datetime
     overall_score: float
-    skill_scores: Dict[str, float]  # skill_name -> score
-    percentile_rankings: Dict[str, float]  # skill_name -> percentile
+    skill_scores: Dict[str, float]
+    percentile_rankings: Dict[str, float]
     improvement_areas: List[str]
     strengths: List[str]
     assessment_summary: str
@@ -154,7 +153,6 @@ class QualityMetricsDatabase:
         with self.get_connection() as conn:
             cursor = conn.cursor()
             
-            # Quality metrics table
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS quality_metrics (
                     metric_id TEXT PRIMARY KEY,
@@ -173,7 +171,6 @@ class QualityMetricsDatabase:
                 )
             ''')
             
-            # Improvement recommendations table
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS improvement_recommendations (
                     recommendation_id TEXT PRIMARY KEY,
@@ -192,7 +189,6 @@ class QualityMetricsDatabase:
                 )
             ''')
             
-            # Skill assessments table
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS skill_assessments (
                     assessment_id TEXT PRIMARY KEY,
@@ -210,7 +206,6 @@ class QualityMetricsDatabase:
                 )
             ''')
             
-            # Performance benchmarks table
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS performance_benchmarks (
                     benchmark_id TEXT PRIMARY KEY,
@@ -227,7 +222,6 @@ class QualityMetricsDatabase:
                 )
             ''')
             
-            # Create indexes for better performance
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_metrics_user_id ON quality_metrics (user_id)')
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_metrics_session_id ON quality_metrics (session_id)')
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_metrics_type ON quality_metrics (metric_type)')
@@ -490,13 +484,11 @@ class QualityMetricsStore:
                              source: str = 'automated') -> bool:
         """Record comprehensive metrics from a completed session"""
         try:
-            timestamp = datetime.now()
+            timestamp = datetime.now(UTC)
             
-            # Store individual skill metrics
             for skill, score in feedback_scores.items():
                 metric_id = str(uuid.uuid4())
                 
-                # Determine category
                 category = 'skill'
                 for cat, skills in self.skill_categories.items():
                     if skill in skills:
@@ -514,7 +506,7 @@ class QualityMetricsStore:
                     measurement_context='session_level',
                     timestamp=timestamp,
                     metadata=conversation_analysis,
-                    confidence=0.85,  # Default confidence for automated analysis
+                    confidence=0.85,
                     source=source
                 )
                 
@@ -531,8 +523,7 @@ class QualityMetricsStore:
                                 days_back: int = 30) -> Optional[SkillAssessment]:
         """Generate comprehensive skill assessment based on recent performance"""
         try:
-            # Get recent metrics
-            start_date = datetime.now() - timedelta(days=days_back)
+            start_date = datetime.now(UTC) - timedelta(days=days_back)
             metrics = self.db.get_user_metrics(
                 user_id=user_id,
                 start_date=start_date
@@ -542,7 +533,6 @@ class QualityMetricsStore:
                 logger.warning(f"No metrics found for user {user_id}")
                 return None
             
-            # Calculate skill scores
             skill_scores = {}
             skill_metrics = defaultdict(list)
             
@@ -552,27 +542,20 @@ class QualityMetricsStore:
             for skill, scores in skill_metrics.items():
                 skill_scores[skill] = statistics.mean(scores)
             
-            # Calculate overall score
             overall_score = statistics.mean(skill_scores.values()) if skill_scores else 0
             
-            # Calculate percentile rankings (simplified - in real implementation, 
-            # would compare against broader user base)
             percentile_rankings = {}
             for skill, score in skill_scores.items():
-                # Simple percentile calculation - would be more sophisticated in production
-                percentile_rankings[skill] = min(score, 95.0)  # Cap at 95th percentile
+                percentile_rankings[skill] = min(score, 95.0)
             
-            # Identify improvement areas and strengths
             sorted_skills = sorted(skill_scores.items(), key=lambda x: x[1])
             improvement_areas = [skill for skill, score in sorted_skills[:3] if score < 70]
             strengths = [skill for skill, score in sorted_skills[-3:] if score >= 80]
             
-            # Generate assessment summary
             summary = self._generate_assessment_summary(
                 overall_score, skill_scores, improvement_areas, strengths
             )
             
-            # Generate recommendations
             recommendations = self._generate_skill_recommendations(
                 skill_scores, improvement_areas
             )
@@ -580,7 +563,7 @@ class QualityMetricsStore:
             assessment = SkillAssessment(
                 assessment_id=str(uuid.uuid4()),
                 user_id=user_id,
-                assessment_date=datetime.now(),
+                assessment_date=datetime.now(UTC),
                 overall_score=overall_score,
                 skill_scores=skill_scores,
                 percentile_rankings=percentile_rankings,
@@ -607,21 +590,18 @@ class QualityMetricsStore:
                                            focus_area: Optional[str] = None) -> List[ImprovementRecommendation]:
         """Generate personalized improvement recommendations"""
         try:
-            # Get recent metrics and assessments
             metrics = self.db.get_user_metrics(user_id, limit=500)
             assessments = self.db.get_user_assessments(user_id, limit=3)
             
             if not metrics:
                 return []
             
-            # Analyze performance trends
             performance_analysis = self._analyze_performance_trends(metrics)
             
             recommendations = []
             
-            # Generate recommendations based on lowest performing skills
             skill_averages = defaultdict(list)
-            for metric in metrics[-100:]:  # Last 100 metrics
+            for metric in metrics[-100:]:
                 skill_averages[metric.metric_type].append(metric.score)
             
             for skill, scores in skill_averages.items():
@@ -630,7 +610,7 @@ class QualityMetricsStore:
                 if focus_area and skill != focus_area:
                     continue
                 
-                if avg_score < 70:  # Threshold for improvement needed
+                if avg_score < 70:
                     recommendation = self._create_improvement_recommendation(
                         user_id=user_id,
                         skill_area=skill,
@@ -654,7 +634,7 @@ class QualityMetricsStore:
                                 days_back: int = 90) -> Dict[str, Any]:
         """Get comprehensive performance analytics"""
         try:
-            start_date = datetime.now() - timedelta(days=days_back)
+            start_date = datetime.now(UTC) - timedelta(days=days_back)
             metrics = self.db.get_user_metrics(
                 user_id=user_id,
                 start_date=start_date
@@ -663,7 +643,6 @@ class QualityMetricsStore:
             if not metrics:
                 return {}
             
-            # Group metrics by skill
             skill_data = defaultdict(list)
             for metric in metrics:
                 skill_data[metric.metric_type].append({
@@ -672,7 +651,6 @@ class QualityMetricsStore:
                     'session_id': metric.session_id
                 })
             
-            # Calculate analytics for each skill
             skill_analytics = {}
             for skill, data in skill_data.items():
                 scores = [d['score'] for d in data]
@@ -687,7 +665,6 @@ class QualityMetricsStore:
                     'score_distribution': self._calculate_score_distribution(scores)
                 }
             
-            # Overall analytics
             all_scores = [metric.score for metric in metrics]
             overall_analytics = {
                 'overall_average': statistics.mean(all_scores),
@@ -704,7 +681,7 @@ class QualityMetricsStore:
                 'analysis_period': {
                     'days': days_back,
                     'start_date': start_date.isoformat(),
-                    'end_date': datetime.now().isoformat()
+                    'end_date': datetime.now(UTC).isoformat()
                 }
             }
             
@@ -720,10 +697,8 @@ class QualityMetricsStore:
             if not metrics:
                 return {}
             
-            # Sort by timestamp
             metrics.sort(key=lambda m: m.timestamp)
             
-            # Create time series data
             time_series = []
             for metric in metrics:
                 time_series.append({
@@ -732,7 +707,6 @@ class QualityMetricsStore:
                     'session_id': metric.session_id
                 })
             
-            # Calculate progress indicators
             scores = [m.score for m in metrics]
             recent_scores = scores[-10:] if len(scores) >= 10 else scores
             early_scores = scores[:10] if len(scores) >= 10 else scores[:len(scores)//2] if len(scores) > 2 else scores
@@ -769,7 +743,6 @@ class QualityMetricsStore:
         """Generate a comprehensive assessment summary"""
         summary_parts = []
         
-        # Overall performance
         if overall_score >= 85:
             summary_parts.append("Excellent overall performance with strong skills across multiple areas.")
         elif overall_score >= 70:
@@ -779,11 +752,9 @@ class QualityMetricsStore:
         else:
             summary_parts.append("Performance indicates need for comprehensive skill development.")
         
-        # Strengths
         if strengths:
             summary_parts.append(f"Key strengths include: {', '.join(strengths)}.")
         
-        # Areas for improvement
         if improvement_areas:
             summary_parts.append(f"Priority improvement areas: {', '.join(improvement_areas)}.")
         
@@ -817,7 +788,6 @@ class QualityMetricsStore:
                                         recent_sessions: List[str]) -> Optional[ImprovementRecommendation]:
         """Create a detailed improvement recommendation"""
         try:
-            # Determine priority based on score and trend
             if current_score < 50:
                 priority = 'high'
             elif current_score < 70:
@@ -825,7 +795,6 @@ class QualityMetricsStore:
             else:
                 priority = 'low'
             
-            # Generate specific recommendations based on skill area
             skill_recommendations = {
                 'clarity': {
                     'text': "Improve communication clarity through structured speaking and simpler language",
@@ -864,8 +833,7 @@ class QualityMetricsStore:
             
             rec_info = skill_recommendations.get(skill_area, default_rec)
             
-            # Calculate target improvement
-            target_improvement = min(30, 85 - current_score)  # Aim for 85 or 30% improvement
+            target_improvement = min(30, 85 - current_score)
             
             recommendation = ImprovementRecommendation(
                 recommendation_id=str(uuid.uuid4()),
@@ -877,7 +845,7 @@ class QualityMetricsStore:
                 target_improvement=target_improvement,
                 timeframe='short_term' if priority == 'high' else 'medium_term',
                 based_on_sessions=recent_sessions,
-                created_at=datetime.now(),
+                created_at=datetime.now(UTC),
                 metadata={
                     'current_score': current_score,
                     'performance_trend': performance_trend
@@ -915,17 +883,14 @@ class QualityMetricsStore:
         if len(data) < 3:
             return 'insufficient_data'
         
-        # Sort by timestamp
         data.sort(key=lambda x: x['timestamp'])
         
-        # Calculate linear regression slope
         scores = [d['score'] for d in data]
         x_values = list(range(len(scores)))
         
         if len(scores) < 2:
             return 'stable'
         
-        # Simple slope calculation
         slope = (scores[-1] - scores[0]) / (len(scores) - 1)
         
         if slope > 2:
@@ -938,11 +903,11 @@ class QualityMetricsStore:
     def _calculate_score_distribution(self, scores: List[float]) -> Dict[str, int]:
         """Calculate score distribution across ranges"""
         distribution = {
-            'excellent': 0,  # 90-100
-            'good': 0,       # 80-89
-            'average': 0,    # 70-79
-            'below_average': 0,  # 60-69
-            'poor': 0        # <60
+            'excellent': 0,
+            'good': 0,
+            'average': 0,
+            'below_average': 0,
+            'poor': 0
         }
         
         for score in scores:
@@ -964,10 +929,8 @@ class QualityMetricsStore:
         if len(metrics) < 10:
             return 0.0
         
-        # Sort by timestamp
         metrics.sort(key=lambda m: m.timestamp)
         
-        # Compare first quarter with last quarter
         quarter_size = len(metrics) // 4
         early_scores = [m.score for m in metrics[:quarter_size]]
         recent_scores = [m.score for m in metrics[-quarter_size:]]
@@ -989,8 +952,6 @@ class QualityMetricsStore:
             return 100.0
         
         variance = statistics.variance(scores)
-        # Convert variance to consistency score (0-100)
-        # Lower variance = higher consistency
         consistency = max(0, 100 - variance)
         return min(100, consistency)
 
@@ -1005,14 +966,11 @@ class QualityMetricsStore:
             return 100.0
         
         skill_range = max(averages) - min(averages)
-        # Convert range to balance score (smaller range = better balance)
         balance = max(0, 100 - skill_range)
         return balance
 
-# Global instance
 quality_metrics_store = QualityMetricsStore()
 
-# Export for easy importing
 __all__ = [
     'QualityMetricsStore',
     'QualityMetric',

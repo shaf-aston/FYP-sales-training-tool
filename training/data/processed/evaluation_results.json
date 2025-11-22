@@ -1,0 +1,2770 @@
+{
+  "batch_statistics": {
+    "total_conversations": 8,
+    "overall_score_mean": 0.48817155209543694,
+    "overall_score_std": 0.021261618041878292,
+    "metric_statistics": {
+      "response_quality": {
+        "mean": 0.6963466643528871,
+        "std": 0.07098815700613816,
+        "min": 0.575,
+        "max": 0.835,
+        "median": 0.6913908765652951
+      },
+      "persona_consistency": {
+        "mean": 0.0625,
+        "std": 0.16535945694153692,
+        "min": 0.0,
+        "max": 0.5,
+        "median": 0.0
+      },
+      "sales_effectiveness": {
+        "mean": 0.4538149928774929,
+        "std": 0.025287089483693334,
+        "min": 0.4203703703703704,
+        "max": 0.5111111111111112,
+        "median": 0.44859868813357184
+      },
+      "conversation_flow": {
+        "mean": 0.8001623376623377,
+        "std": 0.0998384542255576,
+        "min": 0.7,
+        "max": 0.9,
+        "median": 0.8006493506493506
+      },
+      "objection_handling": {
+        "mean": 0.34416666666666673,
+        "std": 0.20746987733162617,
+        "min": 0.0,
+        "max": 0.6000000000000001,
+        "median": 0.41000000000000003
+      },
+      "engagement_quality": {
+        "mean": 0.6738024094364937,
+        "std": 0.08330943268479826,
+        "min": 0.5,
+        "max": 0.82,
+        "median": 0.6723473837209302
+      }
+    },
+    "common_recommendations": {
+      "Focus on using more effective sales techniques and stage-appropriate language": 8,
+      "Improve objection handling by acknowledging concerns and providing solutions": 7,
+      "Improve response quality by being more clear and concise": 5,
+      "Better align responses with skeptical communication style": 5,
+      "Increase engagement by asking more questions and using emotional language": 5
+    }
+  },
+  "evaluation_timestamp": "2025-11-06T17:55:54.297466",
+  "evaluations": [
+    {
+      "conversation_id": "6cca56291648",
+      "overall_score": 0.47211111111111104,
+      "persona_consistency_score": 0.0,
+      "sales_effectiveness_score": 0.4444444444444445,
+      "response_quality_score": 0.6399999999999999,
+      "recommendations": [
+        "Improve response quality by being more clear and concise",
+        "Better align responses with skeptical communication style",
+        "Focus on using more effective sales techniques and stage-appropriate language"
+      ],
+      "metric_scores": {
+        "response_quality": {
+          "score": 0.6399999999999999,
+          "max_score": 1.0,
+          "explanation": "Average response quality across 5 responses",
+          "details": {
+            "total_responses": 5,
+            "quality_issues": [
+              "Low quality response: Introduction...",
+              "Low quality response: Yeah so I’d say the first part of this call is pre..."
+            ],
+            "strengths": []
+          }
+        },
+        "persona_consistency": {
+          "score": 0.0,
+          "max_score": 1.0,
+          "explanation": "Persona consistency for skeptical style",
+          "details": {
+            "persona_style": "skeptical",
+            "consistency_issues": [],
+            "style_matches": 0,
+            "total_analyzed": 0
+          }
+        },
+        "sales_effectiveness": {
+          "score": 0.4444444444444445,
+          "max_score": 1.0,
+          "explanation": "Sales effectiveness across 5 interactions",
+          "details": {
+            "stages_covered": [
+              "opening"
+            ],
+            "techniques_used": [
+              "urgency",
+              "reframing",
+              "questioning"
+            ],
+            "missed_opportunities": [
+              "opening: introduction...",
+              "opening: hi, is this [name]?...",
+              "opening: hey, this is just edin from pr...",
+              "opening: now i know you had recently pu...",
+              "opening: yeah so i’d say the first part..."
+            ],
+            "strong_techniques": []
+          }
+        },
+        "conversation_flow": {
+          "score": 0.7,
+          "max_score": 1.0,
+          "explanation": "Conversation flow quality across 4 transitions",
+          "details": {
+            "transitions": [
+              {
+                "from_stage": "opening",
+                "to_stage": "opening",
+                "score": 0.7
+              },
+              {
+                "from_stage": "opening",
+                "to_stage": "opening",
+                "score": 0.7
+              },
+              {
+                "from_stage": "opening",
+                "to_stage": "opening",
+                "score": 0.7
+              },
+              {
+                "from_stage": "opening",
+                "to_stage": "opening",
+                "score": 0.7
+              }
+            ],
+            "flow_issues": [
+              "Poor transition at turn 1",
+              "Poor transition at turn 2",
+              "Poor transition at turn 3",
+              "Poor transition at turn 4"
+            ],
+            "natural_progressions": 0
+          }
+        },
+        "objection_handling": {
+          "score": 0.6000000000000001,
+          "max_score": 1.0,
+          "explanation": "Objection handling quality for 1 objections",
+          "details": {
+            "objections_identified": 1,
+            "objections_handled": 1,
+            "objection_types": [
+              "other"
+            ],
+            "handling_quality": [
+              {
+                "objection": "Now I know you had recently purchased some supplem",
+                "response": "Yeah so I’d say the first part of this call is pre",
+                "score": 0.6000000000000001
+              }
+            ]
+          }
+        },
+        "engagement_quality": {
+          "score": 0.72,
+          "max_score": 1.0,
+          "explanation": "Engagement quality across 5 interactions",
+          "details": {
+            "questions_asked": 4,
+            "emotional_connections": 0,
+            "personalization_attempts": 0,
+            "engagement_techniques": [
+              "questioning",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "conversation_id": "ccbdb8097b35",
+      "overall_score": 0.5125277777777778,
+      "persona_consistency_score": 0.0,
+      "sales_effectiveness_score": 0.5111111111111112,
+      "response_quality_score": 0.835,
+      "recommendations": [
+        "Better align responses with casual communication style",
+        "Focus on using more effective sales techniques and stage-appropriate language",
+        "Improve objection handling by acknowledging concerns and providing solutions"
+      ],
+      "metric_scores": {
+        "response_quality": {
+          "score": 0.835,
+          "max_score": 1.0,
+          "explanation": "Average response quality across 5 responses",
+          "details": {
+            "total_responses": 5,
+            "quality_issues": [],
+            "strengths": [
+              "High quality response: What weight would you be hoping to get down to, if...",
+              "High quality response: How long has it been since you were [GOAL WEIGHT]?...",
+              "High quality response: Why do you feel you’ve struggled with your weight ..."
+            ]
+          }
+        },
+        "persona_consistency": {
+          "score": 0.0,
+          "max_score": 1.0,
+          "explanation": "Persona consistency for casual style",
+          "details": {
+            "persona_style": "casual",
+            "consistency_issues": [],
+            "style_matches": 0,
+            "total_analyzed": 0
+          }
+        },
+        "sales_effectiveness": {
+          "score": 0.5111111111111112,
+          "max_score": 1.0,
+          "explanation": "Sales effectiveness across 5 interactions",
+          "details": {
+            "stages_covered": [
+              "discovery"
+            ],
+            "techniques_used": [
+              "urgency",
+              "questioning"
+            ],
+            "missed_opportunities": [
+              "discovery: great… so what age are you?...",
+              "discovery: perfect, and what is your curr...",
+              "discovery: what weight would you be hopin...",
+              "discovery: how long has it been since you..."
+            ],
+            "strong_techniques": []
+          }
+        },
+        "conversation_flow": {
+          "score": 0.9,
+          "max_score": 1.0,
+          "explanation": "Conversation flow quality across 4 transitions",
+          "details": {
+            "transitions": [
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              }
+            ],
+            "flow_issues": [],
+            "natural_progressions": 4
+          }
+        },
+        "objection_handling": {
+          "score": 0.0,
+          "max_score": 1.0,
+          "explanation": "Objection handling quality for 0 objections",
+          "details": {
+            "objections_identified": 0,
+            "objections_handled": 0,
+            "objection_types": [],
+            "handling_quality": []
+          }
+        },
+        "engagement_quality": {
+          "score": 0.82,
+          "max_score": 1.0,
+          "explanation": "Engagement quality across 5 interactions",
+          "details": {
+            "questions_asked": 5,
+            "emotional_connections": 1,
+            "personalization_attempts": 0,
+            "engagement_techniques": [
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "conversation_id": "a67e04864ead",
+      "overall_score": 0.5086143410852714,
+      "persona_consistency_score": 0.0,
+      "sales_effectiveness_score": 0.4643410852713179,
+      "response_quality_score": 0.7343023255813953,
+      "recommendations": [
+        "Better align responses with skeptical communication style",
+        "Focus on using more effective sales techniques and stage-appropriate language",
+        "Improve objection handling by acknowledging concerns and providing solutions",
+        "Increase engagement by asking more questions and using emotional language"
+      ],
+      "metric_scores": {
+        "response_quality": {
+          "score": 0.7343023255813953,
+          "max_score": 1.0,
+          "explanation": "Average response quality across 43 responses",
+          "details": {
+            "total_responses": 43,
+            "quality_issues": [
+              "Low quality response: Past Experience...",
+              "Low quality response: EMOTIONAL EATING:...",
+              "Low quality response: Supplement Pre-handle...",
+              "Low quality response: SHORTER VERSION...",
+              "Low quality response: SHORTER VERSION..."
+            ],
+            "strengths": [
+              "High quality response: Ok so obviously supplements are going to be a help...",
+              "High quality response: Do you have any idea maybe why you didn't get resu...",
+              "High quality response: In what sort of situations do you notice that beha...",
+              "High quality response: >> Make sure you understand the specifics of the p...",
+              "High quality response: Ok and what about XYZ… was that much of the same o...",
+              "High quality response: Ok well forget about us here for a moment… I am re...",
+              "High quality response: INTRODUCE COACH -   And just so I am really clear ...",
+              "High quality response: WHAT ELSE DO THEY WANT? - EXPAND ON SOLUTION ONLY ..."
+            ]
+          }
+        },
+        "persona_consistency": {
+          "score": 0.0,
+          "max_score": 1.0,
+          "explanation": "Persona consistency for skeptical style",
+          "details": {
+            "persona_style": "skeptical",
+            "consistency_issues": [],
+            "style_matches": 0,
+            "total_analyzed": 0
+          }
+        },
+        "sales_effectiveness": {
+          "score": 0.4643410852713179,
+          "max_score": 1.0,
+          "explanation": "Sales effectiveness across 43 interactions",
+          "details": {
+            "stages_covered": [
+              "discovery"
+            ],
+            "techniques_used": [
+              "social_proof",
+              "urgency",
+              "reframing",
+              "scarcity",
+              "questioning"
+            ],
+            "missed_opportunities": [
+              "discovery: past experience...",
+              "discovery: if they give a list...",
+              "discovery: ok and out of everything you’v...",
+              "discovery: how much did you lose?...",
+              "discovery: are you still following it now...",
+              "discovery: why not, if you don’t mind me ...",
+              "discovery: and those x pounds that you ha...",
+              "discovery: okay. so yeah, you've had some...",
+              "discovery: do you have any idea maybe why...",
+              "discovery: okay i guess like everyone can...",
+              "discovery: if they have never lost anythi...",
+              "discovery: emotional eating:...",
+              "discovery: what's behind that?...",
+              "discovery: in what sort of situations do ...",
+              "discovery: how long has that been going o...",
+              "discovery: have you ever had help with xy...",
+              "discovery: do you feel like if you could ...",
+              "discovery: got you makes sense......",
+              "discovery: go deeper ask why is that so...",
+              "discovery: if they say it is unsustainabl...",
+              "discovery: ah ok so [problem they said].....",
+              "discovery: if they have tried lots of thi...",
+              "discovery: ok and what about xyz… was tha...",
+              "discovery: if they have lost weight / had...",
+              "discovery: why not do it themselves...",
+              "discovery: supplement pre-handle...",
+              "discovery: ok well forget about us here f...",
+              "discovery: shorter version...",
+              "discovery: and do you see yourself taking...",
+              "discovery: dyi- put aside their thing -xy...",
+              "discovery: oh yeah that makes sense...",
+              "discovery: okay, i'm curious like what's ...",
+              "discovery: aha ok and i am not talking ab...",
+              "discovery: and again i'm really not about...",
+              "discovery: yes, okay, but like why now? y...",
+              "discovery: shorter version...",
+              "discovery: and i'm not talking about us, ...",
+              "discovery: use your conversational flexib..."
+            ],
+            "strong_techniques": []
+          }
+        },
+        "conversation_flow": {
+          "score": 0.8999999999999999,
+          "max_score": 1.0,
+          "explanation": "Conversation flow quality across 42 transitions",
+          "details": {
+            "transitions": [
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              }
+            ],
+            "flow_issues": [],
+            "natural_progressions": 42
+          }
+        },
+        "objection_handling": {
+          "score": 0.4,
+          "max_score": 1.0,
+          "explanation": "Objection handling quality for 10 objections",
+          "details": {
+            "objections_identified": 10,
+            "objections_handled": 0,
+            "objection_types": [
+              "other",
+              "other",
+              "other",
+              "other",
+              "time",
+              "other",
+              "other",
+              "other",
+              "other",
+              "time"
+            ],
+            "handling_quality": [
+              {
+                "objection": "Ok so obviously supplements are going to be a help",
+                "response": "If they give a list",
+                "score": 0.4
+              },
+              {
+                "objection": "Okay. So yeah, you've had some success losing weig",
+                "response": "Do you have any idea maybe why you didn't get resu",
+                "score": 0.4
+              },
+              {
+                "objection": ">> Make sure you understand the specifics of the p",
+                "response": "GO DEEPER ASK WHY IS THAT SO",
+                "score": 0.4
+              },
+              {
+                "objection": "Ah ok so [PROBLEM THEY SAID]...didn’t really feel ",
+                "response": "If they have tried lots of things and you want to ",
+                "score": 0.4
+              },
+              {
+                "objection": "IF THEY HAVE LOST WEIGHT / HAD SUCCESS MULTIPLE TI",
+                "response": "WHY NOT DO IT THEMSELVES",
+                "score": 0.4
+              },
+              {
+                "objection": "Ok well forget about us here for a moment… I am re",
+                "response": "SHORTER VERSION",
+                "score": 0.4
+              },
+              {
+                "objection": "Aha ok and I am not talking about us particular, y",
+                "response": "And again I'm really not about us, BUT IS that som",
+                "score": 0.4
+              },
+              {
+                "objection": "And again I'm really not about us, BUT IS that som",
+                "response": "Yes, okay, but like why now? You know, why not jus",
+                "score": 0.4
+              },
+              {
+                "objection": "Yes, okay, but like why now? You know, why not jus",
+                "response": "SHORTER VERSION",
+                "score": 0.4
+              },
+              {
+                "objection": "And I'm not talking about us, but if it meant that",
+                "response": "USE YOUR CONVERSATIONAL FLEXIBILITY AND SKILLS AND",
+                "score": 0.4
+              }
+            ]
+          }
+        },
+        "engagement_quality": {
+          "score": 0.6790697674418604,
+          "max_score": 1.0,
+          "explanation": "Engagement quality across 43 interactions",
+          "details": {
+            "questions_asked": 23,
+            "emotional_connections": 3,
+            "personalization_attempts": 2,
+            "engagement_techniques": [
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "questioning",
+              "personalization",
+              "questioning",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "personalization",
+              "personalization",
+              "questioning",
+              "personalization",
+              "personalization",
+              "questioning",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "personalization",
+              "questioning",
+              "questioning",
+              "personalization"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "conversation_id": "c2f79b64f1fe",
+      "overall_score": 0.4534953703703703,
+      "persona_consistency_score": 0.0,
+      "sales_effectiveness_score": 0.4203703703703704,
+      "response_quality_score": 0.673611111111111,
+      "recommendations": [
+        "Improve response quality by being more clear and concise",
+        "Better align responses with skeptical communication style",
+        "Focus on using more effective sales techniques and stage-appropriate language",
+        "Improve objection handling by acknowledging concerns and providing solutions"
+      ],
+      "metric_scores": {
+        "response_quality": {
+          "score": 0.673611111111111,
+          "max_score": 1.0,
+          "explanation": "Average response quality across 18 responses",
+          "details": {
+            "total_responses": 18,
+            "quality_issues": [
+              "Low quality response: Current State...",
+              "Low quality response: NEED CURRENT PAIN...",
+              "Low quality response: GO DEEPER - THOUGHTS...",
+              "Low quality response: EXPAND THE TIME FRAME...",
+              "Low quality response: Future State...",
+              "Low quality response: GET SPECIFIC TANGIBLES...",
+              "Low quality response: Cost of Inaction..."
+            ],
+            "strengths": [
+              "High quality response: Ok, and suppose that in X weeks/months time we wer..."
+            ]
+          }
+        },
+        "persona_consistency": {
+          "score": 0.0,
+          "max_score": 1.0,
+          "explanation": "Persona consistency for skeptical style",
+          "details": {
+            "persona_style": "skeptical",
+            "consistency_issues": [],
+            "style_matches": 0,
+            "total_analyzed": 0
+          }
+        },
+        "sales_effectiveness": {
+          "score": 0.4203703703703704,
+          "max_score": 1.0,
+          "explanation": "Sales effectiveness across 18 interactions",
+          "details": {
+            "stages_covered": [
+              "presentation"
+            ],
+            "techniques_used": [
+              "urgency",
+              "questioning"
+            ],
+            "missed_opportunities": [
+              "presentation: current state...",
+              "presentation: ok but i guess besides the obv...",
+              "presentation: need current pain...",
+              "presentation: ok… but just to bring it back ...",
+              "presentation: in what way?...",
+              "presentation: go deeper - thoughts...",
+              "presentation: like what makes you say that s...",
+              "presentation: how often do you think about y...",
+              "presentation: in what way… what exactly goes...",
+              "presentation: expand the time frame...",
+              "presentation: how long has that been going o...",
+              "presentation: ok… so feeling like that / dea...",
+              "presentation: future state...",
+              "presentation: get specific tangibles...",
+              "presentation: ok so if you were to imagine y...",
+              "presentation: cost of inaction..."
+            ],
+            "strong_techniques": []
+          }
+        },
+        "conversation_flow": {
+          "score": 0.7,
+          "max_score": 1.0,
+          "explanation": "Conversation flow quality across 17 transitions",
+          "details": {
+            "transitions": [
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              }
+            ],
+            "flow_issues": [
+              "Poor transition at turn 1",
+              "Poor transition at turn 2",
+              "Poor transition at turn 3",
+              "Poor transition at turn 4",
+              "Poor transition at turn 5",
+              "Poor transition at turn 6",
+              "Poor transition at turn 7",
+              "Poor transition at turn 8",
+              "Poor transition at turn 9",
+              "Poor transition at turn 10",
+              "Poor transition at turn 11",
+              "Poor transition at turn 12",
+              "Poor transition at turn 13",
+              "Poor transition at turn 14",
+              "Poor transition at turn 15",
+              "Poor transition at turn 16",
+              "Poor transition at turn 17"
+            ],
+            "natural_progressions": 0
+          }
+        },
+        "objection_handling": {
+          "score": 0.4,
+          "max_score": 1.0,
+          "explanation": "Objection handling quality for 5 objections",
+          "details": {
+            "objections_identified": 5,
+            "objections_handled": 0,
+            "objection_types": [
+              "other",
+              "other",
+              "other",
+              "time",
+              "need"
+            ],
+            "handling_quality": [
+              {
+                "objection": "Ok but I guess besides the obvious… just trying to",
+                "response": "NEED CURRENT PAIN",
+                "score": 0.4
+              },
+              {
+                "objection": "Ok… but just to bring it back to the current situa",
+                "response": "In what way?",
+                "score": 0.4
+              },
+              {
+                "objection": "Ok… so feeling like that / dealing with [PROBLEM].",
+                "response": "Future State",
+                "score": 0.4
+              },
+              {
+                "objection": "Ok, and suppose that in X weeks/months time we wer",
+                "response": "GET SPECIFIC TANGIBLES",
+                "score": 0.4
+              }
+            ]
+          }
+        },
+        "engagement_quality": {
+          "score": 0.7,
+          "max_score": 1.0,
+          "explanation": "Engagement quality across 18 interactions",
+          "details": {
+            "questions_asked": 11,
+            "emotional_connections": 4,
+            "personalization_attempts": 2,
+            "engagement_techniques": [
+              "questioning",
+              "questioning",
+              "personalization",
+              "questioning",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "visualization",
+              "personalization",
+              "questioning",
+              "personalization"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "conversation_id": "be5cec057e90",
+      "overall_score": 0.4667222222222222,
+      "persona_consistency_score": 0.0,
+      "sales_effectiveness_score": 0.45042735042735044,
+      "response_quality_score": 0.6961538461538461,
+      "recommendations": [
+        "Improve response quality by being more clear and concise",
+        "Better align responses with skeptical communication style",
+        "Focus on using more effective sales techniques and stage-appropriate language",
+        "Improve objection handling by acknowledging concerns and providing solutions",
+        "Increase engagement by asking more questions and using emotional language"
+      ],
+      "metric_scores": {
+        "response_quality": {
+          "score": 0.6961538461538461,
+          "max_score": 1.0,
+          "explanation": "Average response quality across 39 responses",
+          "details": {
+            "total_responses": 39,
+            "quality_issues": [
+              "Low quality response: Transition to Pitch...",
+              "Low quality response: WAIT FOR RESPONSE...",
+              "Low quality response: NORMAL PITCH...",
+              "Low quality response: Cool, so the second pillar is that it needs to be ...",
+              "Low quality response: Ok and the final pillar is that we need to provide...",
+              "Low quality response: Why do you feel like it is though? [SKEPTICAL]..."
+            ],
+            "strengths": [
+              "High quality response: So what I can do is give you a walk through of how...",
+              "High quality response: So the program focuses on life-long change and to ..."
+            ]
+          }
+        },
+        "persona_consistency": {
+          "score": 0.0,
+          "max_score": 1.0,
+          "explanation": "Persona consistency for skeptical style",
+          "details": {
+            "persona_style": "skeptical",
+            "consistency_issues": [
+              "Style mismatch: so that initial phase lasts an absolute minimum of...",
+              "Style mismatch: make sense so far?...",
+              "Style mismatch: so your coach would provide you with a tailored up...",
+              "Style mismatch: no questions asked. does that make sense...",
+              "Style mismatch: link to them & solve their problem..."
+            ],
+            "style_matches": 0,
+            "total_analyzed": 5
+          }
+        },
+        "sales_effectiveness": {
+          "score": 0.45042735042735044,
+          "max_score": 1.0,
+          "explanation": "Sales effectiveness across 39 interactions",
+          "details": {
+            "stages_covered": [
+              "presentation"
+            ],
+            "techniques_used": [
+              "mirroring",
+              "reframing",
+              "scarcity",
+              "urgency",
+              "questioning"
+            ],
+            "missed_opportunities": [
+              "presentation: transition to pitch...",
+              "presentation: ok so it’s important for you t...",
+              "presentation: because you know how you said ...",
+              "presentation: and… because of that, it’s cau...",
+              "presentation: wait for response...",
+              "presentation: give a basic overview of the l...",
+              "presentation: normal pitch...",
+              "presentation: but you would actually be work...",
+              "presentation: 1) effective, 2) enjoyable, an...",
+              "presentation: 3) that we provide you with a ...",
+              "presentation: absolute bulldozer of certaint...",
+              "presentation: you know the way that you're d...",
+              "presentation: well, we're going to show you...",
+              "presentation: exactly where you're going wro...",
+              "presentation: we're going to show you exactl...",
+              "presentation: so it's not a question of if y...",
+              "presentation: we need to show you the exact ...",
+              "presentation: and you will never have to ask...",
+              "presentation: so we need to give you a reall...",
+              "presentation: link to them & solve their pro...",
+              "presentation: cool and if you were getting c...",
+              "presentation: ok and the final pillar is tha...",
+              "presentation: do you feel if you could stop ...",
+              "presentation: yeah that’s why that makes suc...",
+              "presentation: does that all make sense?...",
+              "presentation: checking for fear post pitch...",
+              "presentation: so i guess…do you feel like th...",
+              "presentation: if you can sense any doubt / u...",
+              "presentation: i can sense just a little bit ...",
+              "presentation: why do you feel like it is tho...",
+              "presentation: are they 100% bought in?...",
+              "presentation: ok so you feel like if you had...",
+              "presentation: are they 100% bought in?..."
+            ],
+            "strong_techniques": []
+          }
+        },
+        "conversation_flow": {
+          "score": 0.7,
+          "max_score": 1.0,
+          "explanation": "Conversation flow quality across 43 transitions",
+          "details": {
+            "transitions": [
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              },
+              {
+                "from_stage": "presentation",
+                "to_stage": "presentation",
+                "score": 0.7
+              }
+            ],
+            "flow_issues": [
+              "Poor transition at turn 1",
+              "Poor transition at turn 2",
+              "Poor transition at turn 3",
+              "Poor transition at turn 4",
+              "Poor transition at turn 5",
+              "Poor transition at turn 6",
+              "Poor transition at turn 7",
+              "Poor transition at turn 8",
+              "Poor transition at turn 9",
+              "Poor transition at turn 10",
+              "Poor transition at turn 11",
+              "Poor transition at turn 12",
+              "Poor transition at turn 13",
+              "Poor transition at turn 14",
+              "Poor transition at turn 15",
+              "Poor transition at turn 16",
+              "Poor transition at turn 17",
+              "Poor transition at turn 18",
+              "Poor transition at turn 19",
+              "Poor transition at turn 20",
+              "Poor transition at turn 21",
+              "Poor transition at turn 22",
+              "Poor transition at turn 23",
+              "Poor transition at turn 24",
+              "Poor transition at turn 25",
+              "Poor transition at turn 26",
+              "Poor transition at turn 27",
+              "Poor transition at turn 28",
+              "Poor transition at turn 29",
+              "Poor transition at turn 30",
+              "Poor transition at turn 31",
+              "Poor transition at turn 32",
+              "Poor transition at turn 33",
+              "Poor transition at turn 34",
+              "Poor transition at turn 35",
+              "Poor transition at turn 36",
+              "Poor transition at turn 37",
+              "Poor transition at turn 38",
+              "Poor transition at turn 39",
+              "Poor transition at turn 40",
+              "Poor transition at turn 41",
+              "Poor transition at turn 42",
+              "Poor transition at turn 43"
+            ],
+            "natural_progressions": 0
+          }
+        },
+        "objection_handling": {
+          "score": 0.42000000000000004,
+          "max_score": 1.0,
+          "explanation": "Objection handling quality for 12 objections",
+          "details": {
+            "objections_identified": 12,
+            "objections_handled": 1,
+            "objection_types": [
+              "other",
+              "other",
+              "other",
+              "other",
+              "need",
+              "need",
+              "other",
+              "time",
+              "other",
+              "time",
+              "other",
+              "need"
+            ],
+            "handling_quality": [
+              {
+                "objection": "Because you know how you said you want to lose [WE",
+                "response": "and… because of that, it’s causing you to feel… I ",
+                "score": 0.4
+              },
+              {
+                "objection": "but you would actually be working with them daily ",
+                "response": "1) effective, 2) enjoyable, and",
+                "score": 0.4
+              },
+              {
+                "objection": "So it's not a question of if you can lose this WEI",
+                "response": "We need to show you the exact steps, so you never ",
+                "score": 0.4
+              },
+              {
+                "objection": "We need to show you the exact steps, so you never ",
+                "response": "And you will never have to ask yourself, are you d",
+                "score": 0.4
+              },
+              {
+                "objection": "LINK TO THEM & SOLVE THEIR PROBLEM",
+                "response": "Cool, so the second pillar is that it needs to be ",
+                "score": 0.4
+              },
+              {
+                "objection": "Cool, so the second pillar is that it needs to be ",
+                "response": "LINK TO THEM & SOLVE THEIR PROBLEM",
+                "score": 0.4
+              },
+              {
+                "objection": "LINK TO THEM & SOLVE THEIR PROBLEM",
+                "response": "Cool and if you were getting consistent results an",
+                "score": 0.6000000000000001
+              },
+              {
+                "objection": "Ok and the final pillar is that we need to provide",
+                "response": "Do you feel if you could stop [PROBLEM] that would",
+                "score": 0.4
+              },
+              {
+                "objection": "Do you feel if you could stop [PROBLEM] that would",
+                "response": "Yeah that’s why that makes such a difference… On t",
+                "score": 0.4
+              },
+              {
+                "objection": "So what this all means for you is that we will hel",
+                "response": "Does that all make sense?",
+                "score": 0.4
+              }
+            ]
+          }
+        },
+        "engagement_quality": {
+          "score": 0.6615384615384614,
+          "max_score": 1.0,
+          "explanation": "Engagement quality across 39 interactions",
+          "details": {
+            "questions_asked": 12,
+            "emotional_connections": 11,
+            "personalization_attempts": 3,
+            "engagement_techniques": [
+              "personalization",
+              "personalization",
+              "personalization",
+              "questioning",
+              "personalization",
+              "personalization",
+              "personalization",
+              "personalization",
+              "personalization",
+              "personalization",
+              "personalization",
+              "personalization",
+              "personalization",
+              "personalization",
+              "personalization",
+              "questioning",
+              "personalization",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "personalization",
+              "personalization",
+              "questioning",
+              "questioning",
+              "personalization",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "conversation_id": "78f94be84d4e",
+      "overall_score": 0.49722545219638237,
+      "persona_consistency_score": 0.0,
+      "sales_effectiveness_score": 0.4467700258397933,
+      "response_quality_score": 0.686627906976744,
+      "recommendations": [
+        "Improve response quality by being more clear and concise",
+        "Better align responses with skeptical communication style",
+        "Focus on using more effective sales techniques and stage-appropriate language",
+        "Improve objection handling by acknowledging concerns and providing solutions",
+        "Increase engagement by asking more questions and using emotional language"
+      ],
+      "metric_scores": {
+        "response_quality": {
+          "score": 0.686627906976744,
+          "max_score": 1.0,
+          "explanation": "Average response quality across 43 responses",
+          "details": {
+            "total_responses": 43,
+            "quality_issues": [
+              "Low quality response: 65lb guarantee //7mo+12mo= 5000$...",
+              "Low quality response: 95lb guarantee// 10m+12mo=   $7500-$8000...",
+              "Low quality response: Uncertain answer...",
+              "Low quality response: If they say yes...",
+              "Low quality response: No worries… well one way we could do it is half no...",
+              "Low quality response: __________________________________________________...",
+              "Low quality response: Presenting an option...",
+              "Low quality response: __________________________________________________...",
+              "Low quality response: Drop Selling..."
+            ],
+            "strengths": [
+              "High quality response: Cool, the once off upfront investment if you were ...",
+              "High quality response: Yeah that’s not a problem… We can really tailor it...",
+              "High quality response: Ok well just to see if I can help you on this call...",
+              "High quality response: Ok well what if… hypothetically… we were able to r..."
+            ]
+          }
+        },
+        "persona_consistency": {
+          "score": 0.0,
+          "max_score": 1.0,
+          "explanation": "Persona consistency for skeptical style",
+          "details": {
+            "persona_style": "skeptical",
+            "consistency_issues": [],
+            "style_matches": 0,
+            "total_analyzed": 0
+          }
+        },
+        "sales_effectiveness": {
+          "score": 0.4467700258397933,
+          "max_score": 1.0,
+          "explanation": "Sales effectiveness across 43 interactions",
+          "details": {
+            "stages_covered": [
+              "closing"
+            ],
+            "techniques_used": [
+              "reframing",
+              "social_proof",
+              "questioning"
+            ],
+            "missed_opportunities": [
+              "closing: scholarship - 900$ pif or - 97...",
+              "closing: $1200 pif or  - 130$ per month...",
+              "closing: $1500 pif  25lb guarantee 3 mo...",
+              "closing: 35lb guarantee 4 mo + 12 mo  /...",
+              "closing: 45lb guarantee // 5 mo + 12 mo...",
+              "closing: 3250$- over 12 m = 325$...",
+              "closing: 55lb guarantee // 6 mo + 12 mo...",
+              "closing: monthly - 487$ = 3900$...",
+              "closing: 65lb guarantee //7mo+12mo= 500...",
+              "closing: 75lb guarantee // 8m+12mo= 550...",
+              "closing: 85lb guarantee // 9m+12mo= - $...",
+              "closing: 95lb guarantee// 10m+12mo=   $...",
+              "closing: 105lb guarantee// 11m+12mo = $...",
+              "closing: now we can of course break tha...",
+              "closing: do you have any questions abou...",
+              "closing: ok so would it be better for y...",
+              "closing: split it up - check for fear b...",
+              "closing: uncertain answer...",
+              "closing: i can sense a little bit of un...",
+              "closing: if they say yes...",
+              "closing: makes sense… so is it more a q...",
+              "closing: if you get an option that work...",
+              "closing: no worries… well one way we co...",
+              "closing: ok well one way we could do it...",
+              "closing: ______________________________...",
+              "closing: presenting an option...",
+              "closing: ok well one way we do it is we...",
+              "closing: would that allow you to get th...",
+              "closing: or do you feel you might need ...",
+              "closing: ______________________________...",
+              "closing: drop selling...",
+              "closing: right… i guess my concern is h...",
+              "closing: if you never get the help you ...",
+              "closing: ok so well look… before i see ...",
+              "closing: and you’re not just being poli...",
+              "closing: ok so just to see if i can act...",
+              "closing: ok well if it means that you c..."
+            ],
+            "strong_techniques": []
+          }
+        },
+        "conversation_flow": {
+          "score": 0.8999999999999999,
+          "max_score": 1.0,
+          "explanation": "Conversation flow quality across 42 transitions",
+          "details": {
+            "transitions": [
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              }
+            ],
+            "flow_issues": [],
+            "natural_progressions": 42
+          }
+        },
+        "objection_handling": {
+          "score": 0.4666666666666666,
+          "max_score": 1.0,
+          "explanation": "Objection handling quality for 3 objections",
+          "details": {
+            "objections_identified": 3,
+            "objections_handled": 1,
+            "objection_types": [
+              "other",
+              "need",
+              "other"
+            ],
+            "handling_quality": [
+              {
+                "objection": "Now we can of course break that up… but most peopl",
+                "response": "Do you have any questions about that?",
+                "score": 0.6000000000000001
+              },
+              {
+                "objection": "Yeah that’s not a problem… We can really tailor it",
+                "response": "Uncertain answer",
+                "score": 0.4
+              },
+              {
+                "objection": "Right… I guess my concern is how are you ever goin",
+                "response": "if you never get the help you need…?",
+                "score": 0.4
+              }
+            ]
+          }
+        },
+        "engagement_quality": {
+          "score": 0.6441860465116279,
+          "max_score": 1.0,
+          "explanation": "Engagement quality across 43 interactions",
+          "details": {
+            "questions_asked": 16,
+            "emotional_connections": 6,
+            "personalization_attempts": 4,
+            "engagement_techniques": [
+              "questioning",
+              "visualization",
+              "personalization",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "personalization",
+              "personalization",
+              "questioning",
+              "personalization",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "conversation_id": "9112ac8cadeb",
+      "overall_score": 0.48259280866702736,
+      "persona_consistency_score": 0.0,
+      "sales_effectiveness_score": 0.45972222222222225,
+      "response_quality_score": 0.7300781249999999,
+      "recommendations": [
+        "Better align responses with analytical communication style",
+        "Focus on using more effective sales techniques and stage-appropriate language",
+        "Improve objection handling by acknowledging concerns and providing solutions",
+        "Increase engagement by asking more questions and using emotional language"
+      ],
+      "metric_scores": {
+        "response_quality": {
+          "score": 0.7300781249999999,
+          "max_score": 1.0,
+          "explanation": "Average response quality across 64 responses",
+          "details": {
+            "total_responses": 64,
+            "quality_issues": [
+              "Low quality response: —------------------------------------...",
+              "Low quality response: You know I just heard the information there...",
+              "Low quality response: But Again book the call is only step 1, you can bu...",
+              "Low quality response: I'm not gonig to Beat around the bush... because p...",
+              "Low quality response: You;re alwas going to have other questions..you;re...",
+              "Low quality response: Yes, can you give me like an hour..."
+            ],
+            "strengths": [
+              "High quality response: Okay, will the information is just the information...",
+              "High quality response: So based on the resarch that you;ve done... what i...",
+              "High quality response: You don't need to do anyting...  but the question ...",
+              "High quality response: Yeah, I just want to make sure that I's not Emotio...",
+              "High quality response: All decisions are emotinoal, that is a Fact of Lif...",
+              "High quality response: Why do you want to do it? Just answer me that...",
+              "High quality response: so those results come with certain conseqhencees. ...",
+              "High quality response: Okay let's take that and pt it over there... what ...",
+              "High quality response: You can throw it at me all you want but you'll not...",
+              "High quality response: you can give me a yes in 2026 if you want , the qu..."
+            ]
+          }
+        },
+        "persona_consistency": {
+          "score": 0.0,
+          "max_score": 1.0,
+          "explanation": "Persona consistency for analytical style",
+          "details": {
+            "persona_style": "analytical",
+            "consistency_issues": [
+              "Style mismatch: i made decisions quickly in the past… and it didn’...",
+              "Style mismatch: okay, so it’s an arbitrary thing… do you truly bel...",
+              "Style mismatch: no it sounds good, i just know that last time i mo...",
+              "Style mismatch: so can you think of any reason that 24 hours rolls...",
+              "Style mismatch: so it's a random 24 hour wait for no reason... you...",
+              "Style mismatch: why not though? cause you could...",
+              "Style mismatch: because obviously i want to scale the business...",
+              "Style mismatch: are you sure? because it sounds like you kinda wan...",
+              "Style mismatch: i'd say i'm 80% ready, i;ve been through programs ...",
+              "Style mismatch: when you went through tat program... whether you m...",
+              "Style mismatch: so the time didn't make a difference either way......",
+              "Style mismatch: it's not really a worry, it's just that the realit...",
+              "Style mismatch: 5 mins ago it was 100k now its  a million, this is...",
+              "Style mismatch: what is acutally coming up for you? if we can fix ..."
+            ],
+            "style_matches": 0,
+            "total_analyzed": 14
+          }
+        },
+        "sales_effectiveness": {
+          "score": 0.45972222222222225,
+          "max_score": 1.0,
+          "explanation": "Sales effectiveness across 64 interactions",
+          "details": {
+            "stages_covered": [
+              "closing",
+              "opening",
+              "discovery",
+              "objection_handling"
+            ],
+            "techniques_used": [
+              "social_proof",
+              "reframing",
+              "scarcity",
+              "urgency",
+              "questioning"
+            ],
+            "missed_opportunities": [
+              "discovery: james and jill roleplay dec 7t...",
+              "discovery: green = remove the logical fou...",
+              "discovery: orange = confirmation on the p...",
+              "discovery: light red = commitment and res...",
+              "discovery: purple = reverse buy in (selli...",
+              "discovery: —-----------------------------...",
+              "discovery: because that is what it sounds...",
+              "opening: it's just that i don't want to...",
+              "discovery: you know i just heard the info...",
+              "opening: no that is why i booked this c...",
+              "opening: but again book the call is onl...",
+              "opening: no obviously i make more resea...",
+              "discovery: so based on the resarch that y...",
+              "opening: no it's not fear, its the reas...",
+              "opening: how will you know if it is the...",
+              "discovery: i guess gut feeling.....",
+              "opening: i'm not gonig to beat around t...",
+              "discovery: no obviously i don't want to...",
+              "opening: well then who do you acutally ...",
+              "discovery: yeah of course i need to make ...",
+              "opening: yeah i also want to make sure ...",
+              "opening: well that is a different thing...",
+              "discovery: at the moment there is nothngi...",
+              "opening: nothing that we have gone over...",
+              "opening: i can go around the houes budd...",
+              "discovery: no i do, i do want to do it...",
+              "discovery: why do you want to do it? just...",
+              "discovery: because i need to make that ch...",
+              "discovery: no you don't need to. you can ...",
+              "opening: yea, my decisio making process...",
+              "opening: you;re alwas going to have oth...",
+              "discovery: i don't want to make it with p...",
+              "discovery: bueinsss is presssure....",
+              "discovery: i want to be the entrepenur...",
+              "discovery: are you sure? because it sound...",
+              "opening: i don't have 100k to give you....",
+              "opening: that is a different conversati...",
+              "opening: i have th money... but i cat j...",
+              "discovery: okay, so then what is left?...",
+              "opening: do you feel jill that if you s...",
+              "discovery: can  igive you my yesy before ...",
+              "discovery: you can give me a yes in 2026 ...",
+              "discovery: you don't need to . the questi...",
+              "discovery: okay, so can i challenge you e...",
+              "discovery: yes, can you give me like an h...",
+              "discovery: no you can fuck off. we've alr...",
+              "discovery: you can plant hooks earlier in...",
+              "discovery: we don’t “pre-handle” objectio...",
+              "discovery: doing the work earlier on the ..."
+            ],
+            "strong_techniques": []
+          }
+        },
+        "conversation_flow": {
+          "score": 0.7012987012987013,
+          "max_score": 1.0,
+          "explanation": "Conversation flow quality across 77 transitions",
+          "details": {
+            "transitions": [
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "closing",
+                "score": 0.4
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "opening",
+                "score": 0.4
+              },
+              {
+                "from_stage": "opening",
+                "to_stage": "opening",
+                "score": 0.7
+              },
+              {
+                "from_stage": "opening",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "opening",
+                "score": 0.4
+              },
+              {
+                "from_stage": "opening",
+                "to_stage": "opening",
+                "score": 0.7
+              },
+              {
+                "from_stage": "opening",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "opening",
+                "score": 0.4
+              },
+              {
+                "from_stage": "opening",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "closing",
+                "score": 0.4
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "opening",
+                "score": 0.4
+              },
+              {
+                "from_stage": "opening",
+                "to_stage": "opening",
+                "score": 0.7
+              },
+              {
+                "from_stage": "opening",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "opening",
+                "score": 0.4
+              },
+              {
+                "from_stage": "opening",
+                "to_stage": "opening",
+                "score": 0.7
+              },
+              {
+                "from_stage": "opening",
+                "to_stage": "closing",
+                "score": 0.4
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "discovery",
+                "score": 0.4
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "opening",
+                "score": 0.4
+              },
+              {
+                "from_stage": "opening",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "opening",
+                "score": 0.4
+              },
+              {
+                "from_stage": "opening",
+                "to_stage": "opening",
+                "score": 0.7
+              },
+              {
+                "from_stage": "opening",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "opening",
+                "score": 0.4
+              },
+              {
+                "from_stage": "opening",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "opening",
+                "score": 0.4
+              },
+              {
+                "from_stage": "opening",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "objection_handling",
+                "score": 0.4
+              },
+              {
+                "from_stage": "objection_handling",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "opening",
+                "score": 0.4
+              },
+              {
+                "from_stage": "opening",
+                "to_stage": "opening",
+                "score": 0.7
+              },
+              {
+                "from_stage": "opening",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "opening",
+                "score": 0.4
+              },
+              {
+                "from_stage": "opening",
+                "to_stage": "opening",
+                "score": 0.7
+              },
+              {
+                "from_stage": "opening",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "opening",
+                "score": 0.4
+              },
+              {
+                "from_stage": "opening",
+                "to_stage": "opening",
+                "score": 0.7
+              },
+              {
+                "from_stage": "opening",
+                "to_stage": "closing",
+                "score": 0.4
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "closing",
+                "score": 0.9
+              },
+              {
+                "from_stage": "closing",
+                "to_stage": "discovery",
+                "score": 0.4
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "objection_handling",
+                "score": 0.4
+              },
+              {
+                "from_stage": "objection_handling",
+                "to_stage": "discovery",
+                "score": 0.4
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "opening",
+                "score": 0.4
+              },
+              {
+                "from_stage": "opening",
+                "to_stage": "opening",
+                "score": 0.7
+              },
+              {
+                "from_stage": "opening",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "opening",
+                "score": 0.4
+              },
+              {
+                "from_stage": "opening",
+                "to_stage": "objection_handling",
+                "score": 0.4
+              },
+              {
+                "from_stage": "objection_handling",
+                "to_stage": "discovery",
+                "score": 0.4
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "opening",
+                "score": 0.4
+              },
+              {
+                "from_stage": "opening",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "opening",
+                "score": 0.4
+              },
+              {
+                "from_stage": "opening",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              },
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              }
+            ],
+            "flow_issues": [
+              "Poor transition at turn 6",
+              "Poor transition at turn 7",
+              "Poor transition at turn 8",
+              "Poor transition at turn 10",
+              "Poor transition at turn 11",
+              "Poor transition at turn 13",
+              "Poor transition at turn 15",
+              "Poor transition at turn 16",
+              "Poor transition at turn 17",
+              "Poor transition at turn 20",
+              "Poor transition at turn 21",
+              "Poor transition at turn 22",
+              "Poor transition at turn 23",
+              "Poor transition at turn 25",
+              "Poor transition at turn 27",
+              "Poor transition at turn 28",
+              "Poor transition at turn 32",
+              "Poor transition at turn 34",
+              "Poor transition at turn 36",
+              "Poor transition at turn 40",
+              "Poor transition at turn 41",
+              "Poor transition at turn 43",
+              "Poor transition at turn 44",
+              "Poor transition at turn 49",
+              "Poor transition at turn 50",
+              "Poor transition at turn 51",
+              "Poor transition at turn 54",
+              "Poor transition at turn 56",
+              "Poor transition at turn 57",
+              "Poor transition at turn 59",
+              "Poor transition at turn 60",
+              "Poor transition at turn 62",
+              "Poor transition at turn 63",
+              "Poor transition at turn 64",
+              "Poor transition at turn 65",
+              "Poor transition at turn 69"
+            ],
+            "natural_progressions": 41
+          }
+        },
+        "objection_handling": {
+          "score": 0.4666666666666667,
+          "max_score": 1.0,
+          "explanation": "Objection handling quality for 14 objections",
+          "details": {
+            "objections_identified": 14,
+            "objections_handled": 2,
+            "objection_types": [
+              "need",
+              "other",
+              "need",
+              "other",
+              "other",
+              "need",
+              "other",
+              "time",
+              "other",
+              "price",
+              "other",
+              "other",
+              "other",
+              "need"
+            ],
+            "handling_quality": [
+              {
+                "objection": "so it's a Random 24 hour wait for no reason... you",
+                "response": "because that is what it sounds like",
+                "score": 0.4
+              },
+              {
+                "objection": "I'm not gonig to Beat around the bush... because p",
+                "response": "No obviously I don't want to",
+                "score": 0.4
+              },
+              {
+                "objection": "You don't need to do anyting...  but the question ",
+                "response": "Yeah, I just want to make sure that I's not Emotio",
+                "score": 0.4
+              },
+              {
+                "objection": "I can go around the Houes buddy, but do you acutal",
+                "response": "No I do, I do want to do it",
+                "score": 0.4
+              },
+              {
+                "objection": "You;re alwas going to have other questions..you;re",
+                "response": "so those results come with certain conseqhencees. ",
+                "score": 0.4
+              },
+              {
+                "objection": "That is the Difference btween and Entrepenur nad a",
+                "response": "I want to be the entrepenur",
+                "score": 0.4
+              },
+              {
+                "objection": "I have th Money... but I cat just throw it at this",
+                "response": "You can throw it at me all you want but you'll not",
+                "score": 0.8
+              },
+              {
+                "objection": "You can throw it at me all you want but you'll not",
+                "response": "Okay, so then what is left?",
+                "score": 0.4
+              },
+              {
+                "objection": "What is acutally coming up for you? If we can fix ",
+                "response": "You don't need to . the question is to you want to",
+                "score": 0.6000000000000001
+              }
+            ]
+          }
+        },
+        "engagement_quality": {
+          "score": 0.6656249999999999,
+          "max_score": 1.0,
+          "explanation": "Engagement quality across 64 interactions",
+          "details": {
+            "questions_asked": 27,
+            "emotional_connections": 8,
+            "personalization_attempts": 3,
+            "engagement_techniques": [
+              "questioning",
+              "personalization",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "visualization",
+              "personalization",
+              "personalization",
+              "questioning",
+              "personalization",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "questioning",
+              "personalization",
+              "questioning",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "questioning",
+              "personalization",
+              "personalization",
+              "personalization",
+              "personalization"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "conversation_id": "234cf0a183a1",
+      "overall_score": 0.5120833333333333,
+      "persona_consistency_score": 0.5,
+      "sales_effectiveness_score": 0.43333333333333335,
+      "response_quality_score": 0.575,
+      "recommendations": [
+        "Improve response quality by being more clear and concise",
+        "Better align responses with casual communication style",
+        "Focus on using more effective sales techniques and stage-appropriate language",
+        "Improve objection handling by acknowledging concerns and providing solutions",
+        "Increase engagement by asking more questions and using emotional language"
+      ],
+      "metric_scores": {
+        "response_quality": {
+          "score": 0.575,
+          "max_score": 1.0,
+          "explanation": "Average response quality across 1 responses",
+          "details": {
+            "total_responses": 1,
+            "quality_issues": [
+              "Low quality response: # ROLEPLAY TRANSCRIPT..."
+            ],
+            "strengths": []
+          }
+        },
+        "persona_consistency": {
+          "score": 0.5,
+          "max_score": 1.0,
+          "explanation": "Persona consistency for casual style",
+          "details": {
+            "persona_style": "casual",
+            "consistency_issues": [
+              "Style mismatch: - 'script grail.docx' is a main full script\n- sale..."
+            ],
+            "style_matches": 0,
+            "total_analyzed": 1
+          }
+        },
+        "sales_effectiveness": {
+          "score": 0.43333333333333335,
+          "max_score": 1.0,
+          "explanation": "Sales effectiveness across 1 interactions",
+          "details": {
+            "stages_covered": [
+              "discovery"
+            ],
+            "techniques_used": [],
+            "missed_opportunities": [
+              "discovery: # roleplay transcript..."
+            ],
+            "strong_techniques": []
+          }
+        },
+        "conversation_flow": {
+          "score": 0.9,
+          "max_score": 1.0,
+          "explanation": "Conversation flow quality across 1 transitions",
+          "details": {
+            "transitions": [
+              {
+                "from_stage": "discovery",
+                "to_stage": "discovery",
+                "score": 0.9
+              }
+            ],
+            "flow_issues": [],
+            "natural_progressions": 1
+          }
+        },
+        "objection_handling": {
+          "score": 0.0,
+          "max_score": 1.0,
+          "explanation": "Objection handling quality for 0 objections",
+          "details": {
+            "objections_identified": 0,
+            "objections_handled": 0,
+            "objection_types": [],
+            "handling_quality": []
+          }
+        },
+        "engagement_quality": {
+          "score": 0.5,
+          "max_score": 1.0,
+          "explanation": "Engagement quality across 1 interactions",
+          "details": {
+            "questions_asked": 0,
+            "emotional_connections": 0,
+            "personalization_attempts": 0,
+            "engagement_techniques": []
+          }
+        }
+      }
+    }
+  ]
+}

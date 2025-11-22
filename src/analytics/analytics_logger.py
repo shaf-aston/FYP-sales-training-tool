@@ -1,0 +1,74 @@
+import os
+import json
+import logging
+from datetime import datetime, UTC
+from typing import Dict
+
+from pathlib import Path
+
+LOG_DIR = Path(__file__).resolve().parents[2] / "logs"
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+LOG_FILE = LOG_DIR / "conversation_events.log"
+
+logger = logging.getLogger("analytics_logger")
+logger.setLevel(logging.INFO)
+file_handler = logging.FileHandler(LOG_FILE)
+formatter = logging.Formatter("%(asctime)s - %(message)s")
+file_handler.setFormatter(formatter)
+if not logger.handlers:
+    logger.addHandler(file_handler)
+
+DB_AVAILABLE = False
+_get_conn = None
+init_db = None
+try:
+    # Import dynamically to avoid static import resolution issues in analysis tools
+    import importlib
+    try:
+        mod = importlib.import_module("services.ai_services.persona_db_service")
+    except Exception:
+        mod = importlib.import_module("src.services.ai_services.persona_db_service") if importlib.util.find_spec("src.services.ai_services.persona_db_service") else None
+
+    if mod:
+        _get_conn = getattr(mod, "_get_conn", None)
+        init_db = getattr(mod, "init_db", None)
+        if _get_conn:
+            DB_AVAILABLE = True
+except Exception:
+    DB_AVAILABLE = False
+
+
+def log_event(event: Dict):
+    """Persist an event to the local log file and optionally to the database.
+
+    Event shape:
+      {
+        'user_id': 'user123',
+        'event_type': 'message_sent' | 'message_received' | 'session_started' | 'session_ended',
+        'payload': {...}
+      }
+    """
+    entry = {
+        "ts": datetime.now(UTC).isoformat() + "Z",
+        "event": event,
+    }
+    try:
+        with open(LOG_FILE, "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry) + "\n")
+    except Exception:
+        logger.exception("Failed writing analytics event to file")
+
+    if DB_AVAILABLE:
+        try:
+            init_db()
+            conn = _get_conn()
+            cur = conn.cursor()
+            cur.execute(
+                "INSERT INTO analytics_events (user_id, event_type, payload) VALUES (%s, %s, %s);",
+                (event.get("user_id"), event.get("event_type"), json.dumps(event.get("payload") or {})),
+            )
+            conn.commit()
+            cur.close()
+            conn.close()
+        except Exception:
+            logger.exception("Failed writing analytics event to DB")

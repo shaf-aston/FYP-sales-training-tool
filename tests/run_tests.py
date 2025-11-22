@@ -12,7 +12,6 @@ def run_tests(args):
     """Run tests with pytest"""
     pytest_args = []
     
-    # Handle specific test suites
     if args.suite:
         if args.suite == "deps":
             pytest_args.append("test_dependencies.py")
@@ -23,16 +22,13 @@ def run_tests(args):
         elif args.suite == "integration":
             pytest_args.append("test_integration.py")
             
-    # Add verbosity
     pytest_args.extend(["-v"])
     
-    # Add JUnit XML report
     if not args.no_report:
         report_path = Path("tests/output/test-results.xml")
         report_path.parent.mkdir(exist_ok=True)
         pytest_args.extend(["--junitxml", str(report_path)])
     
-    # Add coverage if requested
     if args.coverage:
         pytest_args.extend([
             "--cov=src",
@@ -40,7 +36,6 @@ def run_tests(args):
             "--cov-report=term-missing"
         ])
     
-    # Run pytest with collected arguments
     return pytest.main(pytest_args)
 
 def main():

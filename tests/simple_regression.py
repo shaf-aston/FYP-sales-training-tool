@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Simple Regression Test Runner
 ============================
@@ -7,9 +6,9 @@ Runs core tests repeatedly to ensure system stability.
 Perfect for regression testing after changes.
 
 Usage:
-    python tests/simple_regression.py           # Run once
-    python tests/simple_regression.py --loop 5  # Run 5 times  
-    python tests/simple_regression.py --watch   # Run continuously
+    python tests/simple_regression.py
+    python tests/simple_regression.py --loop 5
+    python tests/simple_regression.py --watch
 """
 
 import sys
@@ -18,7 +17,6 @@ import time
 import argparse
 from pathlib import Path
 
-# Add project root to path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
@@ -28,26 +26,21 @@ def test_basic_functionality():
     print("🧪 Testing basic functionality...")
     
     try:
-        # Test 1: Core imports
         print("  ✓ Testing imports...")
-        from services.voice_service import get_voice_service
-        from services.model_service import model_service
-        from services.chat_service import chat_service
+        from src.services.voice_services import get_voice_service
+        from src.services.ai_services import model_service
+        from src.services.ai_services import chat_service
         print("    ✅ All core services imported")
         
-        # Test 2: Voice service creation
         print("  ✓ Testing voice service...")
         vs = get_voice_service()
         available = vs.is_available()
         print(f"    ✅ Voice service created - Services: {list(available.keys())}")
         
-        # Test 3: Chat service
         print("  ✓ Testing chat service...")
-        # Test conversation context management
         context = chat_service.conversation_contexts
         print(f"    ✅ Chat service works - Context type: {type(context)}")
         
-        # Test 4: No cloud dependencies
         print("  ✓ Testing local-only mode...")
         elevenlabs_disabled = not available.get('elevenlabs', False)
         huggingface_disabled = not available.get('huggingface', False)
@@ -57,9 +50,8 @@ def test_basic_functionality():
         else:
             print("    ⚠️  Some cloud services still enabled")
         
-        # Test 5: Configuration
         print("  ✓ Testing configuration...")
-        import config.settings
+        import src.config.settings
         print("    ✅ Configuration loads without tokens")
         
         return True
@@ -73,10 +65,9 @@ def test_voice_functionality():
     print("🎤 Testing voice functionality...")
     
     try:
-        from services.voice_service import get_voice_service
+        from src.services.voice_services import get_voice_service
         vs = get_voice_service()
         
-        # Test local TTS availability
         available = vs.is_available()
         
         if available.get('pyttsx3'):
@@ -105,14 +96,13 @@ def test_model_functionality():
     print("🤖 Testing AI model...")
     
     try:
-        from services.model_service import model_service
+        from src.services.ai_services import model_service
         
-        # Check if pipeline can be created
         pipeline = model_service.get_pipeline()
         
         if pipeline is None:
             print("    ⚠️  Model not downloaded - run: python scripts/download_model.py")
-            return True  # This is expected if model not downloaded
+            return True
         else:
             print("    ✅ Model pipeline available")
             return True
@@ -128,7 +118,6 @@ def run_regression_test():
     
     start_time = time.time()
     
-    # Run all test categories
     tests = [
         ("Basic Functionality", test_basic_functionality),
         ("Voice Functionality", test_voice_functionality), 
@@ -142,7 +131,6 @@ def run_regression_test():
         results.append((test_name, result))
         print()
     
-    # Summary
     duration = time.time() - start_time
     passed = sum(1 for _, result in results if result)
     total = len(results)
@@ -178,21 +166,20 @@ def main():
             run_count = 0
             while True:
                 run_count += 1
-                print(f"\\n🔄 Run #{run_count} - {time.strftime('%H:%M:%S')}")
+                print(f"\n🔄 Run {run_count}")
                 success = run_regression_test()
-                
+
                 if not success:
                     print("❌ Test failed - stopping watch mode")
                     sys.exit(1)
-                
+
                 time.sleep(args.delay)
-                
+
         except KeyboardInterrupt:
-            print("\\n👋 Stopping watch mode")
+            print("\n👋 Stopping watch mode")
             sys.exit(0)
     
     else:
-        # Run specified number of times
         all_success = True
         
         for i in range(args.loop):
@@ -204,7 +191,7 @@ def main():
                 all_success = False
                 break
             
-            if i < args.loop - 1:  # Don't sleep after last run
+            if i < args.loop - 1:
                 time.sleep(1)
         
         sys.exit(0 if all_success else 1)

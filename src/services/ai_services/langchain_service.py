@@ -4,94 +4,22 @@ Replaces custom prompt building with LangChain conversation chains and memory
 """
 import logging
 import time
-from typing import Dict, List, Optional, Any, TYPE_CHECKING
+from typing import Dict, List, Optional, Any
 
-if TYPE_CHECKING:
-    from langchain.memory import ConversationBufferWindowMemory
-    from langchain.schema import BaseMessage, HumanMessage, AIMessage
-    from langchain.chains import ConversationChain
-    from langchain.prompts import PromptTemplate
-    from langchain.llms.base import LLM
-    from langchain.callbacks.manager import CallbackManagerForLLMRun
-else:
-    try:
-        from langchain.memory import ConversationBufferWindowMemory
-        from langchain.schema import BaseMessage, HumanMessage, AIMessage
-        from langchain.chains import ConversationChain
-        from langchain.prompts import PromptTemplate
-        from langchain.llms.base import LLM
-        from langchain.callbacks.manager import CallbackManagerForLLMRun
-        HAS_LANGCHAIN = True
-    except ImportError:
-        HAS_LANGCHAIN = False
-        # Set to None for runtime - LangChain features will be disabled
-        ConversationBufferWindowMemory = None
-        BaseMessage = None
-        HumanMessage = None
-        AIMessage = None
-        ConversationChain = None
-        PromptTemplate = None
-        LLM = None
-        CallbackManagerForLLMRun = None
+from langchain.memory import ConversationBufferWindowMemory
+from langchain.chains import ConversationChain
+from langchain.prompts import PromptTemplate
+
+from .langchain_base import BaseLangChainService, TransformersLLM
+from config.model_config import BASE_MODEL
 
 logger = logging.getLogger(__name__)
 
-
-class TransformersLLM(LLM):
-    """Custom LangChain LLM wrapper for Transformers pipeline"""
-    
-    def __init__(self, pipeline):
-        super().__init__()
-        self.pipeline = pipeline
-        self.model_name = "Qwen/Qwen2.5-0.5B-Instruct"
-    
-    def _call(
-        self,
-        prompt: str,
-        stop: Optional[List[str]] = None,
-        run_manager: Optional[CallbackManagerForLLMRun] = None,
-        **kwargs: Any,
-    ) -> str:
-        """Call the model with the given prompt"""
-        try:
-            # Use optimized generation params
-            response = self.pipeline(
-                prompt,
-                max_new_tokens=200,      # Increased for detailed responses
-                do_sample=True,          # Enable sampling for variety
-                temperature=0.85,
-                repetition_penalty=1.15,
-                return_full_text=False,
-                pad_token_id=self.pipeline.tokenizer.eos_token_id if hasattr(self.pipeline, 'tokenizer') else None,
-                eos_token_id=self.pipeline.tokenizer.eos_token_id if hasattr(self.pipeline, 'tokenizer') else None,
-            )
-            
-            generated_text = response[0]['generated_text'].strip()
-            
-            # Clean response - remove any persona labels or formatting
-            import re
-            generated_text = re.sub(r'###.*?###', '', generated_text, flags=re.IGNORECASE | re.DOTALL)
-            generated_text = re.sub(r'\b\w+\s*\(potential customer\):', '', generated_text, flags=re.IGNORECASE)
-            generated_text = re.sub(r'\bMary\s*:', '', generated_text, flags=re.IGNORECASE)
-            generated_text = re.sub(r"I understand the benefits", "I've heard about the benefits but I'm not sure", generated_text, flags=re.IGNORECASE)
-            
-            return generated_text.strip()
-            
-        except Exception as e:
-            logger.error(f"LangChain LLM call failed: {e}")
-            return "I'm sorry, I'm having trouble responding right now. Could you try asking again?"
-    
-    @property
-    def _llm_type(self) -> str:
-        return "transformers_pipeline"
-
-
-class LangChainConversationService:
+class LangChainConversationService(BaseLangChainService):
     """LangChain-based conversation management service"""
     
     def __init__(self):
-        self.conversations: Dict[str, ConversationChain] = {}
-        self.memories: Dict[str, ConversationBufferWindowMemory] = {}
+        super().__init__()
         logger.info("🔗 LangChain conversation service initialized")
     
     def _create_persona_prompt_template(self, persona_data: Dict) -> PromptTemplate:
@@ -145,15 +73,12 @@ Now respond as {persona_name} (speak naturally, no labels):"""
     def get_or_create_conversation(self, session_id: str, persona_name: str, pipeline) -> ConversationChain:
         """Get existing conversation or create new one"""
         if session_id not in self.conversations:
-            # Import persona service here to avoid circular imports
-            from services.persona_service import persona_service
+            from .persona_service import persona_service  # Corrected import path
             
-            # Get persona data
             persona = persona_service.get_persona(persona_name)
             if not persona:
                 raise ValueError(f"Persona {persona_name} not found")
             
-            # Create memory with window of 5 exchanges (10 total messages)
             memory = ConversationBufferWindowMemory(
                 k=10,
                 return_messages=False,
@@ -161,10 +86,8 @@ Now respond as {persona_name} (speak naturally, no labels):"""
                 output_key="response"
             )
             
-            # Create custom LLM wrapper
             llm = TransformersLLM(pipeline)
             
-            # Create prompt template with persona data
             prompt_template = self._create_persona_prompt_template({
                 "persona_name": persona.name,
                 "age": persona.age,
@@ -179,7 +102,6 @@ Now respond as {persona_name} (speak naturally, no labels):"""
                 "preferred_communication": persona.preferred_communication
             })
             
-            # Create conversation chain
             conversation = ConversationChain(
                 llm=llm,
                 prompt=prompt_template,
@@ -201,14 +123,11 @@ Now respond as {persona_name} (speak naturally, no labels):"""
         try:
             start_time = time.time()
             
-            # Get or create conversation chain
             conversation = self.get_or_create_conversation(session_id, persona_name, pipeline)
             
-            # Get persona data for response formatting
-            from services.persona_service import persona_service
+            from .persona_service import persona_service  # Corrected import path
             persona = persona_service.get_persona(persona_name)
             
-            # Generate response using LangChain
             response_data = conversation.predict(
                 input=message,
                 persona_name=persona.name,
@@ -226,9 +145,8 @@ Now respond as {persona_name} (speak naturally, no labels):"""
             
             response_time = time.time() - start_time
             
-            # Get conversation history for context
             memory = self.memories[session_id]
-            message_count = len(memory.chat_memory.messages) // 2  # Pairs of human/ai messages
+            message_count = len(memory.chat_memory.messages) // 2
             
             logger.info(f"🔗 LangChain response generated in {response_time:.2f}s for {persona_name}")
             
@@ -244,7 +162,6 @@ Now respond as {persona_name} (speak naturally, no labels):"""
             
         except Exception as e:
             logger.error(f"LangChain conversation failed: {e}")
-            # Fallback to simple response
             return {
                 "response": "I'm sorry, I'm having trouble responding right now. Could you try asking again?",
                 "status": "error",
@@ -281,7 +198,6 @@ Now respond as {persona_name} (speak naturally, no labels):"""
         return history
 
 
-# Global instance
 _langchain_service = None
 
 def get_langchain_service() -> LangChainConversationService:

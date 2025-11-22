@@ -9,7 +9,7 @@ from typing import Optional
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
-from infrastructure.settings import DATA_DIR
+from config.paths import DATA_DIR
 
 
 def _default_sqlite_url() -> str:

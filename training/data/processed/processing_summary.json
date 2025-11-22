@@ -1,0 +1,19 @@
+{
+  "total_conversations": 8,
+  "total_turns": 238,
+  "unique_personas": 8,
+  "conversation_outcomes": {
+    "information_gathering": 3,
+    "objection_handling_practice": 1,
+    "objection_handling": 2,
+    "closing_attempt": 2
+  },
+  "sales_stages_covered": {
+    "opening": 30,
+    "presentation": 62,
+    "closing": 52,
+    "discovery": 91,
+    "objection_handling": 3
+  },
+  "processing_timestamp": "2025-11-06T21:43:28.677289"
+}

@@ -9,7 +9,6 @@ from typing import Dict, Optional
 
 logger = logging.getLogger("fitness_chatbot")
 
-# Fallback responses for when AI generation fails
 FALLBACK_RESPONSES = [
     "I'm hoping you can help me figure out the best approach for my fitness goals. What would you suggest?",
     "I was just thinking about how to approach this—could you clarify a bit for me?",
@@ -18,7 +17,6 @@ FALLBACK_RESPONSES = [
     "I'd really like to understand what would work best for someone like me."
 ]
 
-# Global toggle for fallback responses
 fallback_responses_enabled = True
 
 
@@ -47,7 +45,7 @@ def should_use_fallback(config: Optional[Dict] = None) -> bool:
         return False
 
     if config is None:
-        return True  # Default to using fallbacks if no config provided
+        return True
     
     return config.get("fallback_responses_enabled", True)
 

@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import patch, MagicMock
-from services.model_service import ModelService
+from src.services.ai_services.model_service import ModelService
 
 class TestModelService(unittest.TestCase):
 
@@ -8,9 +8,9 @@ class TestModelService(unittest.TestCase):
         self.model_service = ModelService()
         self.model_service.model_name = "test-model"
 
-    @patch("services.model_service.AutoTokenizer.from_pretrained")
-    @patch("services.model_service.AutoModelForCausalLM.from_pretrained")
-    @patch("services.model_service.pipeline")
+    @patch("src.services.ai_services.model_service.AutoTokenizer.from_pretrained")
+    @patch("src.services.ai_services.model_service.AutoModelForCausalLM.from_pretrained")
+    @patch("src.services.ai_services.model_service.pipeline")
     def test_load_pipeline_success(self, mock_pipeline, mock_model, mock_tokenizer):
         mock_pipeline.return_value = "mocked_pipeline"
         mock_model.return_value = MagicMock()

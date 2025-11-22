@@ -1,41 +1,83 @@
 #!/usr/bin/env python3
-"""Test script to verify import paths are working correctly."""
-
+"""
+Simple import test to isolate the issue
+"""
 import sys
 from pathlib import Path
 
-# Add project root to Python path
-project_root = Path(__file__).resolve().parent
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
+# Add src to path
+sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-print("Testing imports from utils...")
+print("Testing individual imports...")
+
+# Test 1: Basic service imports
+print("\n1. Testing enhanced services...")
+try:
+    from src.services.voice_services.stt_service import EnhancedSTTService
+    print("[PASS] EnhancedSTTService imported successfully")
+except Exception as e:
+    print(f"[FAIL] EnhancedSTTService failed: {e}")
 
 try:
-    from utils.env import setup_model_env
-    print("✓ Successfully imported setup_model_env from utils.env")
-except ImportError as e:
-    print(f"✗ Failed to import from utils.env: {e}")
+    from src.services.voice_services.tts_service import EnhancedTTSService
+    print("[PASS] EnhancedTTSService imported successfully")
+except Exception as e:
+    print(f"[FAIL] EnhancedTTSService failed: {e}")
 
 try:
-    from utils.paths import PROJECT_ROOT, LOGS_DIR
-    print(f"✓ Successfully imported from utils.paths. Project root: {PROJECT_ROOT}")
-    print(f"  Logs directory: {LOGS_DIR}")
-except ImportError as e:
-    print(f"✗ Failed to import from utils.paths: {e}")
+    from src.services.voice_services.voice_service import EnhancedVoiceService
+    print("[PASS] EnhancedVoiceService imported successfully")
+except Exception as e:
+    print(f"[FAIL] EnhancedVoiceService failed: {e}")
 
-print("\nTesting imports from src...")
+# Test 2: Test service instantiation
+print("\n2. Testing service instantiation...")
 try:
-    # Add src directory to Python path
-    src_path = project_root / "src"
-    if str(src_path) not in sys.path:
-        sys.path.insert(0, str(src_path))
+    stt_service = EnhancedSTTService()
+    print(f"[PASS] STT service created: {type(stt_service)}")
     
-    from fitness_chatbot import app
-    print("✓ Successfully imported app from fitness_chatbot")
-except ImportError as e:
-    print(f"✗ Failed to import from fitness_chatbot: {e}")
+    # Test basic methods
+    if hasattr(stt_service, 'transcribe_audio'):
+        print("[PASS] transcribe_audio method available")
+    if hasattr(stt_service, 'get_stats'):
+        print("[PASS] get_stats method available") 
+    
+    stats = stt_service.get_stats()
+    print(f"[PASS] Got stats: {list(stats.keys())[:5]}...")
+    
+except Exception as e:
+    print(f"[FAIL] STT service creation failed: {e}")
 
-print("\nPython path:")
-for path in sys.path:
-    print(f"- {path}")
+try:
+    tts_service = EnhancedTTSService()
+    print(f"[PASS] TTS service created: {type(tts_service)}")
+    
+    # Test basic methods
+    if hasattr(tts_service, 'synthesize_speech'):
+        print("[PASS] synthesize_speech method available")
+    if hasattr(tts_service, 'get_stats'):
+        print("[PASS] get_stats method available")
+    
+    stats = tts_service.get_stats()
+    print(f"[PASS] Got stats: {list(stats.keys())[:5]}...")
+    
+except Exception as e:
+    print(f"[FAIL] TTS service creation failed: {e}")
+
+try:
+    voice_service = EnhancedVoiceService()
+    print(f"[PASS] Voice service created: {type(voice_service)}")
+    
+    # Test basic methods
+    if hasattr(voice_service, 'speech_to_text'):
+        print("[PASS] speech_to_text method available")
+    if hasattr(voice_service, 'text_to_speech'):
+        print("[PASS] text_to_speech method available")
+    
+    info = voice_service.get_service_info()
+    print(f"[PASS] Got service info: {list(info.keys())[:5]}...")
+    
+except Exception as e:
+    print(f"[FAIL] Voice service creation failed: {e}")
+
+print("\nImport test complete!")

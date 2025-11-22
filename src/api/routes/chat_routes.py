@@ -1,26 +1,23 @@
 """
 Enhanced Chat API routes with integrated services
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from typing import Optional
 from services.ai_services import persona_service
-from services.ai_services import ChatService
+from services.ai_services.chat_service import get_chat_service, ChatService
 from services.ai_services import model_service
-from models.request_models import ChatRequest, ChatResponse
+from src.data_access.request_profile import ChatRequest, ChatResponse
 
 router = APIRouter()
 
-# Global chat service instance
-chat_service = ChatService()
-
 @router.post("/chat", response_model=ChatResponse)
-async def api_chat(request: ChatRequest):
+async def api_chat(request: ChatRequest, chat_service: ChatService = Depends(get_chat_service)):
   """Enhanced chat endpoint for sales training conversations"""
   
   if not request.message:
     raise HTTPException(status_code=400, detail="Message is required")
   
-  pipe = model_service.get_pipeline()
+  pipe = await model_service.get_pipeline()
   result = chat_service.chat_with_persona(
     request.message, 
     request.user_id, 
@@ -29,7 +26,6 @@ async def api_chat(request: ChatRequest):
     request.session_id
   )
   
-  # Get persona info
   p = persona_service.get_persona(request.persona_name)
   persona = {
     "name": p.name if p else request.persona_name,
@@ -49,11 +45,10 @@ async def api_chat(request: ChatRequest):
   }
 
 @router.get("/greeting")
-async def api_greeting():
+async def api_greeting(chat_service: ChatService = Depends(get_chat_service)):
   """Get Mary's initial greeting"""
-  pipe = model_service.get_pipeline()
+  pipe = await model_service.get_pipeline()
   greeting = chat_service.get_initial_greeting(pipe)
-  # Prefer Mary from persona service if present
   p = persona_service.get_persona("Mary")
   character = {"name": p.name if p else "Mary", "age": p.age if p else 65, "status": getattr(p, "expertise_level", "beginner") if p else "beginner"}
   
@@ -85,21 +80,20 @@ async def get_character_details():
     }
   }
 
-# Removed duplicate /chat route - using enhanced version above
 
 @router.post("/reset-conversation")
-async def reset_conversation(payload: dict):
+async def reset_conversation(payload: dict, chat_service: ChatService = Depends(get_chat_service)):
   """Reset conversation for fresh training session"""
   user_id = payload.get("user_id", "default")
   return chat_service.reset_conversation(user_id)
 
 @router.get("/conversation-stats")
-async def conversation_stats():
+async def conversation_stats(chat_service: ChatService = Depends(get_chat_service)):
   """Get enhanced conversation statistics for training analysis"""
   return chat_service.get_conversation_stats()
 
 @router.post("/end-session")
-async def end_session(payload: dict):
+async def end_session(payload: dict, chat_service: ChatService = Depends(get_chat_service)):
   """End training session and generate feedback"""
   user_id = payload.get("user_id", "default")
   session_id = payload.get("session_id")
@@ -111,17 +105,17 @@ async def end_session(payload: dict):
   return chat_service.end_session(user_id, session_id, persona_name)
 
 @router.get("/session-feedback/{user_id}/{session_id}")
-async def get_session_feedback(user_id: str, session_id: str):
+async def get_session_feedback(user_id: str, session_id: str, chat_service: ChatService = Depends(get_chat_service)):
   """Get detailed feedback for a training session"""
   return chat_service.get_session_feedback(user_id, session_id)
 
 @router.get("/user-analytics/{user_id}")
-async def get_user_analytics(user_id: str, days_back: int = 30):
+async def get_user_analytics(user_id: str, days_back: int = 30, chat_service: ChatService = Depends(get_chat_service)):
   """Get comprehensive user analytics and progress"""
   return chat_service.get_user_analytics(user_id, days_back)
 
 @router.get("/system-analytics")
-async def get_system_analytics(days_back: int = 7):
+async def get_system_analytics(days_back: int = 7, chat_service: ChatService = Depends(get_chat_service)):
   """Get system-wide analytics and performance metrics"""
   return chat_service.get_system_analytics(days_back)
 

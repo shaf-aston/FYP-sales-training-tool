@@ -11,11 +11,10 @@ import tempfile
 import shutil
 from datetime import datetime, timedelta
 
-# Add the src directory to the Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-from services.session_service import SessionLogStore, TrainingSession, ConversationTurn
-from services.quality_metrics_service import QualityMetricsStore, QualityMetric
+from src.services.data_services.session_service import SessionLogStore, TrainingSession, ConversationTurn
+from src.services.analysis_services.quality_metrics_service import QualityMetricsStore, QualityMetric
 
 def test_storage_services():
     """Test core storage service functionality"""
@@ -23,16 +22,13 @@ def test_storage_services():
     print("Testing Storage Services...")
     print("=" * 40)
     
-    # Create temporary directory
     temp_dir = tempfile.mkdtemp()
     
     try:
-        # Test 1: Session Log Store Basic Operations
         print("1. Testing Session Log Store...")
         
         session_store = SessionLogStore(db_path=os.path.join(temp_dir, "sessions.db"))
         
-        # Start a session
         session_id = session_store.start_session(
             user_id="test_user",
             persona_id="mary",
@@ -42,7 +38,6 @@ def test_storage_services():
         
         print(f"   ✓ Started session: {session_id}")
         
-        # Log conversation turns
         turn_success = session_store.log_conversation_turn(
             session_id=session_id,
             user_message="Hello, I'm interested in your product",
@@ -55,7 +50,6 @@ def test_storage_services():
         
         print(f"   ✓ Logged conversation turn: {turn_success}")
         
-        # End session
         end_success = session_store.end_session(
             session_id=session_id,
             final_scores={"clarity": 85.0, "rapport_building": 78.0}
@@ -63,7 +57,6 @@ def test_storage_services():
         
         print(f"   ✓ Ended session: {end_success}")
         
-        # Retrieve session details
         details = session_store.get_session_details(session_id)
         session_found = details is not None
         conversation_logged = len(details.get('conversation', [])) > 0 if details else False
@@ -71,12 +64,10 @@ def test_storage_services():
         print(f"   ✓ Retrieved session details: {session_found}")
         print(f"   ✓ Conversation logged: {conversation_logged}")
         
-        # Test 2: Quality Metrics Store Basic Operations
         print("\n2. Testing Quality Metrics Store...")
         
         metrics_store = QualityMetricsStore(db_path=os.path.join(temp_dir, "metrics.db"))
         
-        # Record session metrics
         metrics_success = metrics_store.record_session_metrics(
             session_id=session_id,
             user_id="test_user",
@@ -89,23 +80,19 @@ def test_storage_services():
         
         print(f"   ✓ Recorded session metrics: {metrics_success}")
         
-        # Get user metrics
         user_metrics = metrics_store.db.get_user_metrics("test_user")
         metrics_found = len(user_metrics) > 0
         
         print(f"   ✓ Retrieved user metrics: {metrics_found} ({len(user_metrics)} metrics)")
         
-        # Test 3: Integration Test
         print("\n3. Testing Integration...")
         
-        # Create another session with metrics
         session_id_2 = session_store.start_session(
             user_id="test_user",
             persona_id="jake",
             session_type="objection_training"
         )
         
-        # Log multiple turns
         for i in range(3):
             session_store.log_conversation_turn(
                 session_id=session_id_2,
@@ -128,13 +115,11 @@ def test_storage_services():
             feedback_scores={"empathy": 82.0, "clarity": 77.0}
         )
         
-        # Get user history
         history = session_store.get_user_history("test_user")
         history_found = len(history) >= 2
         
         print(f"   ✓ User has session history: {history_found} ({len(history)} sessions)")
         
-        # Get performance analytics
         try:
             analytics = metrics_store.get_performance_analytics("test_user")
             analytics_generated = len(analytics) > 0
@@ -144,10 +129,8 @@ def test_storage_services():
         
         print(f"   ✓ Performance analytics generated: {analytics_generated}")
         
-        # Test 4: Data Consistency
         print("\n4. Testing Data Consistency...")
         
-        # Verify session count matches between services
         all_metrics = metrics_store.db.get_user_metrics("test_user")
         unique_sessions_in_metrics = len(set(m.session_id for m in all_metrics))
         
@@ -160,7 +143,6 @@ def test_storage_services():
         print(f"     Sessions in log store: {session_count}")
         print(f"     Unique sessions in metrics: {unique_sessions_in_metrics}")
         
-        # Test Results Summary
         print("\n" + "=" * 40)
         
         all_tests = [
@@ -193,11 +175,10 @@ def test_storage_services():
         return False
         
     finally:
-        # Cleanup
         try:
             shutil.rmtree(temp_dir)
         except:
-            pass  # Ignore cleanup errors
+            pass
 
 if __name__ == "__main__":
     success = test_storage_services()

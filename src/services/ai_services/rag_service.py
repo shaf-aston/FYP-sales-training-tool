@@ -10,7 +10,6 @@ from pathlib import Path
 from datetime import datetime
 from dataclasses import dataclass
 
-# Make numpy optional - fallback to simple implementations if not available
 try:
     import numpy as np
     HAS_NUMPY = True
@@ -27,7 +26,7 @@ class Document:
     id: str
     content: str
     metadata: Dict
-    embedding: Optional[List[float]] = None  # Changed from np.ndarray to List for flexibility
+    embedding: Optional[List[float]] = None
     timestamp: float = 0.0
 
 class RAGService:
@@ -36,13 +35,18 @@ class RAGService:
     def __init__(self):
         self.documents: List[Document] = []
         self.document_store: Dict[str, Document] = {}
-        self.embeddings_cache: Dict[str, List[float]] = {}  # Changed from np.ndarray to List
+        self.embeddings_cache: Dict[str, List[float]] = {}
         self.knowledge_base_path = "data/knowledge_base"
         self.max_context_length = 4000
         self.similarity_threshold = 0.7
         
-        # Initialize knowledge base
-        self._load_knowledge_base()
+        self.knowledge_base_loaded = False
+
+    def _ensure_knowledge_base_loaded(self):
+        """Ensure the knowledge base is loaded before use"""
+        if not self.knowledge_base_loaded:
+            self._load_knowledge_base()
+            self.knowledge_base_loaded = True
     
     def _load_knowledge_base(self):
         """Load existing knowledge base from disk"""
@@ -124,24 +128,19 @@ class RAGService:
         self.documents.append(document)
         self.document_store[document.id] = document
         
-        # Generate simple embedding (in production, use proper embeddings)
         document.embedding = self._generate_simple_embedding(document.content)
         
         logger.debug(f"Added document: {document.id}")
     
     def _generate_simple_embedding(self, text: str) -> List[float]:
         """Generate a simple text embedding (placeholder for proper embeddings)"""
-        # This is a simple word frequency based embedding
-        # In production, use proper embeddings like sentence-transformers
         words = text.lower().split()
         vocab = set(words)
         
-        # Create a simple frequency vector
-        embedding = [0.0] * 100  # Fixed size embedding
+        embedding = [0.0] * 100
         for i, word in enumerate(list(vocab)[:100]):
             embedding[i] = words.count(word) / len(words) if words else 0.0
         
-        # Normalize
         if HAS_NUMPY:
             embedding_array = np.array(embedding)
             norm = np.linalg.norm(embedding_array)
@@ -149,7 +148,6 @@ class RAGService:
                 embedding_array = embedding_array / norm
             return embedding_array.tolist()
         else:
-            # Simple normalization without numpy
             norm = sum(x*x for x in embedding) ** 0.5
             if norm > 0:
                 embedding = [x / norm for x in embedding]
@@ -157,27 +155,23 @@ class RAGService:
     
     def retrieve_relevant_context(self, query: str, max_docs: int = 3) -> List[Document]:
         """Retrieve relevant documents for the given query"""
+        self._ensure_knowledge_base_loaded()
         if not self.documents:
             return []
         
         query_embedding = self._generate_simple_embedding(query)
         
-        # Calculate similarities
         similarities = []
         for doc in self.documents:
             if doc.embedding is not None:
-                # Compute dot product similarity
                 if HAS_NUMPY:
                     similarity = np.dot(query_embedding, doc.embedding)
                 else:
-                    # Simple dot product without numpy
                     similarity = sum(a * b for a, b in zip(query_embedding, doc.embedding))
                 similarities.append((doc, similarity))
         
-        # Sort by similarity
         similarities.sort(key=lambda x: x[1], reverse=True)
         
-        # Filter by threshold and return top results
         relevant_docs = []
         for doc, sim in similarities[:max_docs]:
             if sim >= self.similarity_threshold:
@@ -189,27 +183,23 @@ class RAGService:
         """Build context for the AI model using RAG"""
         context_parts = []
         
-        # Add relevant knowledge
         relevant_docs = self.retrieve_relevant_context(query)
         if relevant_docs:
             context_parts.append("=== RELEVANT KNOWLEDGE ===")
             for doc in relevant_docs:
                 context_parts.append(f"[{doc.metadata.get('category', 'general')}] {doc.content}")
         
-        # Add conversation history
         if conversation_history:
             context_parts.append("\n=== CONVERSATION HISTORY ===")
-            for entry in conversation_history[-3:]:  # Last 3 exchanges
+            for entry in conversation_history[-3:]:
                 context_parts.append(f"User: {entry.get('user', '')}")
                 context_parts.append(f"Assistant: {entry.get('response', '')}")
         
-        # Add user profile if available
         if user_profile:
             context_parts.append("\n=== USER PROFILE ===")
             for key, value in user_profile.items():
                 context_parts.append(f"{key}: {value}")
         
-        # Combine and truncate if necessary
         full_context = "\n".join(context_parts)
         if len(full_context) > self.max_context_length:
             full_context = full_context[:self.max_context_length] + "..."
@@ -256,11 +246,9 @@ Please respond as Mary, incorporating relevant knowledge from above while mainta
         results = []
         
         for doc in self.documents:
-            # Category filter
             if category and doc.metadata.get('category') != category:
                 continue
             
-            # Simple text search
             if query.lower() in doc.content.lower():
                 results.append({
                     "id": doc.id,
@@ -269,7 +257,6 @@ Please respond as Mary, incorporating relevant knowledge from above while mainta
                     "relevance_score": self._calculate_relevance(query, doc.content)
                 })
         
-        # Sort by relevance
         results.sort(key=lambda x: x["relevance_score"], reverse=True)
         return results
     
@@ -299,5 +286,4 @@ Please respond as Mary, incorporating relevant knowledge from above while mainta
             "similarity_threshold": self.similarity_threshold
         }
 
-# Global RAG service instance
 rag_service = RAGService()

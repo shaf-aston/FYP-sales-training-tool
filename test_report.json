@@ -1,0 +1,22 @@
+{
+  "timestamp": "2025-11-22T21:26:48.833962",
+  "duration_seconds": 41.736916,
+  "test_results": {
+    "all_tests": {
+      "test_functionality.py": {
+        "returncode": 0,
+        "stdout": "Testing basic functionality preservation...\n============================================================\n\n1. Testing basic imports...\n[FAIL] Core import failed: cannot import name 'QUALITY_DB_PATH' from 'config.settings' (C:\\Users\\Shaf\\Downloads\\Final Year Project pack folder\\Sales roleplay chatbot\\src\\config\\settings.py)\n\n2. Testing legacy compatibility...\n[FAIL] Legacy import failed: No module named 'src.services.interfaces'\n\n3. Testing service instantiation...\n[FAIL] Service instantiation failed: name 'EnhancedSTTService' is not defined\n\n4. Testing configuration access...\n[PASS] Config loaded: Basic config\n\n5. Testing AI model integration...\n[PASS] AI model service available: qwen2\n\n6. Testing core functionality methods...\n[FAIL] Functionality check failed: name 'EnhancedVoiceService' is not defined\n\n7. Testing STT backends and confidence scoring...\n[FAIL] STT backend check failed: name 'EnhancedSTTService' is not defined\n\n8. Testing TTS quality metrics...\n[FAIL] TTS quality check failed: name 'EnhancedTTSService' is not defined\n\n9. Testing session management...\n[FAIL] Session management check failed: cannot import name 'TEMPLATES_DIR' from 'config.paths' (C:\\Users\\Shaf\\Downloads\\Final Year Project pack folder\\Sales roleplay chatbot\\src\\config\\paths.py)\n\n10. Testing error handling...\n[FAIL] Error handling check failed: cannot import name 'TEMPLATES_DIR' from 'config.paths' (C:\\Users\\Shaf\\Downloads\\Final Year Project pack folder\\Sales roleplay chatbot\\src\\config\\paths.py)\n\n============================================================\nFunctionality preservation test complete!\n",
+        "stderr": "C:\\Python312\\Lib\\site-packages\\ctranslate2\\__init__.py:8: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.\n  import pkg_resources\nC:\\Python312\\Lib\\site-packages\\pydub\\utils.py:170: RuntimeWarning: Couldn't find ffmpeg or avconv - defaulting to ffmpeg, but may not work\n  warn(\"Couldn't find ffmpeg or avconv - defaulting to ffmpeg, but may not work\", RuntimeWarning)\nNoise reduction not available\nJIWER not available\n",
+        "success": true,
+        "file_path": "C:\\Users\\Shaf\\Downloads\\Final Year Project pack folder\\Sales roleplay chatbot\\tests\\test_functionality.py"
+      }
+    }
+  },
+  "summary": {
+    "total_suites": 1,
+    "passed_suites": 0,
+    "python_version": "3.12.8 (tags/v3.12.8:2dc476b, Dec  3 2024, 19:30:04) [MSC v.1942 64 bit (AMD64)]",
+    "platform": "win32",
+    "project_root": "C:\\Users\\Shaf\\Downloads\\Final Year Project pack folder\\Sales roleplay chatbot"
+  }
+}

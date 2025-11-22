@@ -11,7 +11,7 @@ from dataclasses import dataclass, asdict
 from enum import Enum
 from datetime import datetime, timedelta
 
-from infrastructure.settings import PROJECT_ROOT
+from config.paths import PROJECT_ROOT
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ class SkillAssessment:
     target_level: SkillLevel
     progress_percentage: float
     recent_scores: List[float]
-    improvement_trend: str  # "improving", "stable", "declining"
+    improvement_trend: str
     last_updated: float
     
     def to_dict(self) -> Dict[str, Any]:
@@ -141,7 +141,6 @@ class ProgressTrackingService:
         if user_id in self.user_profiles:
             return self.user_profiles[user_id]
         
-        # Create user profile
         profile = {
             "user_id": user_id,
             "created_date": time.time(),
@@ -157,11 +156,9 @@ class ProgressTrackingService:
             "custom_settings": {}
         }
         
-        # Apply initial assessment if provided
         if initial_assessment:
             profile.update(initial_assessment)
         
-        # Initialize skill assessments
         skill_assessments = {}
         for skill in TrainingMetric:
             assessment = SkillAssessment(
@@ -175,7 +172,6 @@ class ProgressTrackingService:
             )
             skill_assessments[skill] = assessment
         
-        # Store everything
         self.user_profiles[user_id] = profile
         self.skill_assessments[user_id] = skill_assessments
         self.session_history[user_id] = []
@@ -190,7 +186,6 @@ class ProgressTrackingService:
         if user_id not in self.user_profiles:
             self.initialize_user_profile(user_id)
         
-        # Extract session metrics
         session_summary = {
             "session_id": session_data.get("session_id"),
             "persona_name": session_data.get("persona", {}).get("name"),
@@ -202,25 +197,19 @@ class ProgressTrackingService:
             "performance_scores": {}
         }
         
-        # Analyze session for skill performance
         performance_analysis = self._analyze_session_performance(session_data)
         session_summary["performance_scores"] = performance_analysis
         
-        # Update user profile
         self.user_profiles[user_id]["total_sessions"] += 1
         self.user_profiles[user_id]["total_training_hours"] += session_summary["duration_minutes"] / 60
         self.user_profiles[user_id]["last_active"] = time.time()
         
-        # Update skill assessments
         self._update_skill_assessments(user_id, performance_analysis)
         
-        # Store session history
         self.session_history[user_id].append(session_summary)
         
-        # Update performance trends
         self._update_performance_trends(user_id, session_summary)
         
-        # Check for achievements and milestones
         achievements = self._check_achievements(user_id, session_summary)
         
         logger.info(f"Recorded training session for {user_id}: {session_summary['session_id']}")
@@ -239,18 +228,15 @@ class ProgressTrackingService:
         persona_data = session_data.get("persona", {})
         success_rating = session_data.get("success_rating", 0)
         
-        # Initialize scores
-        scores = {skill.value: 50.0 for skill in TrainingMetric}  # Start with neutral scores
+        scores = {skill.value: 50.0 for skill in TrainingMetric}
         
         if not conversation_history:
             return scores
         
-        # Analyze conversation for skill indicators
         total_exchanges = len(conversation_history)
         user_responses = [exchange.get("user_message", "") for exchange in conversation_history]
         persona_responses = [exchange.get("persona_response", "") for exchange in conversation_history]
         
-        # Rapport Building Analysis
         rapport_indicators = 0
         for response in user_responses:
             response_lower = response.lower()
@@ -259,14 +245,11 @@ class ProgressTrackingService:
         
         scores[TrainingMetric.RAPPORT_BUILDING.value] = min(90, 30 + (rapport_indicators / max(total_exchanges, 1)) * 60)
         
-        # Objection Handling Analysis
         objection_indicators = 0
         objection_responses = 0
         for i, persona_resp in enumerate(persona_responses):
-            # Check if persona raised objections
             if any(word in persona_resp.lower() for word in ["but", "however", "concerned", "worried", "expensive", "not sure"]):
                 objection_indicators += 1
-                # Check if user handled it well in next response
                 if i + 1 < len(user_responses):
                     user_next = user_responses[i + 1].lower()
                     if any(word in user_next for word in ["understand", "appreciate", "let me", "what if", "consider"]):
@@ -275,7 +258,6 @@ class ProgressTrackingService:
         if objection_indicators > 0:
             scores[TrainingMetric.OBJECTION_HANDLING.value] = 20 + (objection_responses / objection_indicators) * 70
         
-        # Closing Techniques Analysis
         closing_attempts = 0
         for response in user_responses:
             response_lower = response.lower()
@@ -284,7 +266,6 @@ class ProgressTrackingService:
         
         scores[TrainingMetric.CLOSING_TECHNIQUES.value] = min(85, 20 + closing_attempts * 20 + success_rating * 10)
         
-        # Product Knowledge Analysis
         knowledge_indicators = 0
         for response in user_responses:
             response_lower = response.lower()
@@ -293,19 +274,16 @@ class ProgressTrackingService:
         
         scores[TrainingMetric.PRODUCT_KNOWLEDGE.value] = min(85, 25 + (knowledge_indicators / max(total_exchanges, 1)) * 60)
         
-        # Listening Skills Analysis
         listening_indicators = 0
         for i, user_resp in enumerate(user_responses):
-            if i > 0:  # Skip first response
+            if i > 0:
                 prev_persona = persona_responses[i-1].lower()
                 user_resp_lower = user_resp.lower()
-                # Check if user response references what persona said
                 if any(word in user_resp_lower for word in ["you mentioned", "you said", "based on", "since you"]):
                     listening_indicators += 1
         
         scores[TrainingMetric.LISTENING_SKILLS.value] = min(90, 30 + (listening_indicators / max(total_exchanges-1, 1)) * 60)
         
-        # Persuasion Skills Analysis
         persuasion_indicators = 0
         for response in user_responses:
             response_lower = response.lower()
@@ -314,13 +292,12 @@ class ProgressTrackingService:
         
         scores[TrainingMetric.PERSUASION_SKILLS.value] = min(85, 25 + (persuasion_indicators / max(total_exchanges, 1)) * 60)
         
-        # Time Management Analysis (based on session duration and efficiency)
         duration_minutes = (session_data.get("end_time", time.time()) - session_data.get("start_time", time.time())) / 60
-        ideal_duration = 15  # Assume 15 minutes is ideal
+        ideal_duration = 15
         
-        if duration_minutes <= ideal_duration * 1.2:  # Within 20% of ideal
+        if duration_minutes <= ideal_duration * 1.2:
             time_score = 80 + success_rating * 2
-        elif duration_minutes <= ideal_duration * 1.5:  # Within 50% of ideal
+        elif duration_minutes <= ideal_duration * 1.5:
             time_score = 60 + success_rating * 2
         else:
             time_score = 40 + success_rating * 2
@@ -337,12 +314,10 @@ class ProgressTrackingService:
             skill = TrainingMetric(skill_name)
             assessment = current_assessments[skill]
             
-            # Add score to recent scores
             assessment.recent_scores.append(score)
-            if len(assessment.recent_scores) > 10:  # Keep only last 10 scores
+            if len(assessment.recent_scores) > 10:
                 assessment.recent_scores = assessment.recent_scores[-10:]
             
-            # Calculate improvement trend
             if len(assessment.recent_scores) >= 3:
                 recent_avg = sum(assessment.recent_scores[-3:]) / 3
                 older_avg = sum(assessment.recent_scores[-6:-3]) / 3 if len(assessment.recent_scores) >= 6 else recent_avg
@@ -354,7 +329,6 @@ class ProgressTrackingService:
                 else:
                     assessment.improvement_trend = "stable"
             
-            # Update current level based on average recent performance
             avg_score = sum(assessment.recent_scores) / len(assessment.recent_scores)
             new_level = self._calculate_skill_level(skill, avg_score)
             
@@ -362,7 +336,6 @@ class ProgressTrackingService:
                 logger.info(f"User {user_id} skill level updated: {skill.value} from {assessment.current_level.value} to {new_level.value}")
                 assessment.current_level = new_level
             
-            # Update progress percentage
             current_benchmark = self.skill_benchmarks[skill][assessment.current_level]["min_score"]
             target_benchmark = self.skill_benchmarks[skill][assessment.target_level]["min_score"]
             
@@ -378,7 +351,7 @@ class ProgressTrackingService:
         """Calculate skill level based on average score"""
         benchmarks = self.skill_benchmarks[skill]
         
-        for level in reversed(list(SkillLevel)):  # Start from expert level
+        for level in reversed(list(SkillLevel)):
             if average_score >= benchmarks[level]["min_score"]:
                 return level
         
@@ -397,27 +370,23 @@ class ProgressTrackingService:
         trends = self.performance_trends[user_id]
         current_time = time.time()
         
-        # Weekly session tracking
         trends["weekly_sessions"].append({
             "date": current_time,
             "session_count": 1,
             "total_duration": session_summary["duration_minutes"]
         })
         
-        # Skill progression tracking
         for skill_name, score in session_summary["performance_scores"].items():
             trends["skill_progression"][skill_name].append({
                 "date": current_time,
                 "score": score
             })
         
-        # Success rate trend
         trends["success_rate_trend"].append({
             "date": current_time,
             "success_rating": session_summary.get("success_rating", 0)
         })
         
-        # Clean old data (keep only last 30 days)
         cutoff_date = current_time - (30 * 24 * 3600)
         for trend_key in trends:
             if isinstance(trends[trend_key], list):
@@ -431,7 +400,6 @@ class ProgressTrackingService:
         achievements = []
         profile = self.user_profiles[user_id]
         
-        # Session count milestones
         session_milestones = [1, 5, 10, 25, 50, 100]
         total_sessions = profile["total_sessions"]
         
@@ -444,11 +412,9 @@ class ProgressTrackingService:
                 "date": time.time()
             })
         
-        # Skill level achievements
         skill_assessments = self.skill_assessments[user_id]
         for skill, assessment in skill_assessments.items():
             if assessment.current_level in [SkillLevel.INTERMEDIATE, SkillLevel.ADVANCED, SkillLevel.EXPERT]:
-                # Check if this is a new level (would need to store previous state)
                 achievements.append({
                     "type": "skill_advancement",
                     "title": f"{skill.value.replace('_', ' ').title()} {assessment.current_level.value.title()}",
@@ -457,7 +423,6 @@ class ProgressTrackingService:
                     "date": time.time()
                 })
         
-        # Success rate achievements
         recent_sessions = self.session_history[user_id][-5:] if len(self.session_history[user_id]) >= 5 else []
         if recent_sessions:
             avg_success = sum(s.get("success_rating", 0) for s in recent_sessions) / len(recent_sessions)
@@ -494,13 +459,11 @@ class ProgressTrackingService:
         
         recommendations = []
         
-        # Find weakest skills
         skill_scores = {}
         for skill, assessment in skill_assessments.items():
             avg_score = sum(assessment.recent_scores) / len(assessment.recent_scores) if assessment.recent_scores else 0
             skill_scores[skill] = avg_score
         
-        # Sort skills by score (weakest first)
         weakest_skills = sorted(skill_scores.items(), key=lambda x: x[1])[:3]
         
         for skill, score in weakest_skills:
@@ -510,7 +473,6 @@ class ProgressTrackingService:
             elif score < 70:
                 recommendations.append(f"Continue developing {skill_name} skills with challenging personas")
         
-        # Experience-based recommendations
         if profile["total_sessions"] < 5:
             recommendations.append("Complete more training sessions to build consistency")
         elif profile["total_sessions"] < 20:
@@ -518,7 +480,7 @@ class ProgressTrackingService:
         else:
             recommendations.append("Consider practicing with expert-level personas for advanced challenges")
         
-        return recommendations[:5]  # Return top 5 recommendations
+        return recommendations[:5]
     
     def create_learning_goal(self, user_id: str, goal_data: Dict[str, Any]) -> str:
         """Create a new learning goal for the user"""
@@ -533,7 +495,7 @@ class ProgressTrackingService:
             description=goal_data.get("description", ""),
             target_skill=TrainingMetric(goal_data["target_skill"]),
             target_level=SkillLevel(goal_data["target_level"]),
-            target_date=goal_data.get("target_date", time.time() + (30 * 24 * 3600)),  # Default 30 days
+            target_date=goal_data.get("target_date", time.time() + (30 * 24 * 3600)),
             current_progress=0.0,
             milestones=goal_data.get("milestones", []),
             is_completed=False,
@@ -548,17 +510,14 @@ class ProgressTrackingService:
     def get_user_progress_dashboard(self, user_id: str) -> Dict[str, Any]:
         """Get comprehensive progress dashboard for user"""
         if user_id not in self.user_profiles:
-            # If user not found, initialize with empty profile
             self.initialize_user_profile(user_id)
         
         profile = self.user_profiles[user_id]
         skill_assessments = self.skill_assessments[user_id]
         recent_sessions = self.session_history[user_id][-10:] if self.session_history[user_id] else []
         
-        # Calculate overall progress
         total_progress = sum(assessment.progress_percentage for assessment in skill_assessments.values()) / len(skill_assessments)
         
-        # Get skill breakdown
         skills_breakdown = {}
         for skill, assessment in skill_assessments.items():
             skills_breakdown[skill.value] = {
@@ -570,7 +529,6 @@ class ProgressTrackingService:
                 "benchmark_description": self.skill_benchmarks[skill][assessment.current_level]["description"]
             }
         
-        # Calculate session statistics
         session_stats = {
             "total_sessions": len(self.session_history[user_id]),
             "total_hours": profile["total_training_hours"],
@@ -579,7 +537,6 @@ class ProgressTrackingService:
             "average_success_rating": sum(s.get("success_rating", 0) for s in recent_sessions) / max(len(recent_sessions), 1)
         }
         
-        # Get active learning goals
         active_goals = [goal.to_dict() for goal in self.learning_goals[user_id] if not goal.is_completed]
         
         dashboard = {
@@ -612,7 +569,7 @@ class ProgressTrackingService:
             "next_recommendations": self._generate_next_steps(user_id),
             "achievements_summary": {
                 "total_badges": len(profile.get("certifications", [])),
-                "recent_achievements": []  # Would be populated from achievement system
+                "recent_achievements": []
             }
         }
         
@@ -635,8 +592,6 @@ class ProgressTrackingService:
     
     def get_leaderboard(self, timeframe: str = "all_time", skill: str = None) -> List[Dict[str, Any]]:
         """Get leaderboard for user rankings"""
-        # This would typically query a database in production
-        # For now, return a simplified version based on current data
         
         user_rankings = []
         
@@ -644,12 +599,10 @@ class ProgressTrackingService:
             skill_assessments = self.skill_assessments[user_id]
             
             if skill and skill in [s.value for s in TrainingMetric]:
-                # Specific skill leaderboard
                 target_skill = TrainingMetric(skill)
                 assessment = skill_assessments[target_skill]
                 score = sum(assessment.recent_scores) / len(assessment.recent_scores) if assessment.recent_scores else 0
             else:
-                # Overall leaderboard
                 scores = []
                 for assessment in skill_assessments.values():
                     if assessment.recent_scores:
@@ -661,22 +614,19 @@ class ProgressTrackingService:
                 "score": score,
                 "total_sessions": profile["total_sessions"],
                 "total_hours": profile["total_training_hours"],
-                "rank": 0  # Will be calculated after sorting
+                "rank": 0
             })
         
-        # Sort by score descending
         user_rankings.sort(key=lambda x: x["score"], reverse=True)
         
-        # Assign ranks
         for i, user in enumerate(user_rankings):
             user["rank"] = i + 1
         
-        return user_rankings[:20]  # Top 20
+        return user_rankings[:20]
     
     def export_user_data(self, user_id: str) -> Dict[str, Any]:
         """Export all user data for analysis or backup"""
         if user_id not in self.user_profiles:
-            # If user not found, create a new profile
             self.initialize_user_profile(user_id)
         
         return {
@@ -688,5 +638,4 @@ class ProgressTrackingService:
             "export_date": time.time()
         }
 
-# Global progress tracking service instance
 progress_service = ProgressTrackingService()

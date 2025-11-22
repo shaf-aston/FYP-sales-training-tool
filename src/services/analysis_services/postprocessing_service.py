@@ -43,25 +43,20 @@ class PostProcessingService:
     async def process_response(self, raw_response: str, context: Dict, 
                              persona_attributes: Dict, user_profile: Dict = None) -> ProcessedResponse:
         """Process AI response through post-processing pipeline"""
-        start_time = datetime.now().timestamp()
+        start_time = datetime.now(UTC).timestamp()
         
-        # Step 1: Safety and compliance check
         safety_result = self.safety_filter.check_safety(raw_response)
         if not safety_result['passed']:
             logger.warning(f"Response failed safety check: {safety_result['reason']}")
             fallback_response = self.fallback_engine.get_fallback(context, persona_attributes)
             return self._create_fallback_result(fallback_response, safety_result, start_time)
         
-        # Step 2: Response ranking and selection (if multiple responses)
         selected_response = self.response_ranker.select_best([raw_response], context, persona_attributes)
         
-        # Step 3: Persona-specific refinement
         refined_response = self.persona_refiner.refine_for_persona(selected_response, persona_attributes)
         
-        # Step 4: Tone and clarity adjustment
         adjusted_response = self.tone_adjuster.adjust_tone(refined_response, context, persona_attributes)
         
-        # Step 5: Final validation
         validation_results = self.validator.validate_final_response(adjusted_response, context)
         
         if not validation_results['valid']:
@@ -69,7 +64,7 @@ class PostProcessingService:
             fallback_response = self.fallback_engine.get_fallback(context, persona_attributes)
             return self._create_fallback_result(fallback_response, validation_results, start_time)
         
-        processing_time = datetime.now().timestamp() - start_time
+        processing_time = datetime.now(UTC).timestamp() - start_time
         
         return ProcessedResponse(
             final_text=adjusted_response,
@@ -83,23 +78,58 @@ class PostProcessingService:
     
     def _create_fallback_result(self, fallback_response: str, failure_info: Dict, start_time: float) -> ProcessedResponse:
         """Create result for fallback responses"""
-        processing_time = datetime.now().timestamp() - start_time
+        processing_time = datetime.now(UTC).timestamp() - start_time
         
         return ProcessedResponse(
             final_text=fallback_response,
-            quality_score=0.6,  # Fallback responses get moderate score
-            safety_passed=True,  # Fallbacks are pre-approved
+            quality_score=0.6,
+            safety_passed=True,
             persona_alignment=0.7,
             tone_score=0.7,
             validation_results={'fallback_used': True, 'reason': failure_info},
             processing_time=processing_time
         )
 
+    def apply_post_processing(self, response: str, prompt: str) -> str:
+        """Apply post-processing logic to model-generated responses."""
+        if not prompt.startswith("I'm hoping"):
+
+            # Remove unwanted characters and formatting instructions
+            response = re.sub(r'#|\*\*.*?Format.*?\*\*|Response Format:|Now respond as.*?:', '', response, flags=re.IGNORECASE)
+
+            # Remove role-playing indicators and specific names
+            response = re.sub(r'\b(?:Mary|Jake|Sarah|David)\s*:', '', response, flags=re.IGNORECASE)
+            response = re.sub(r'\b\w+\s*\(potential customer\):|potential customer:', '', response, flags=re.IGNORECASE)
+
+            # Remove salesperson-related phrases
+            response = re.sub(r"I'm a salesperson|I am a salesperson|Salesperson:|Sales person:|my job is to provide information|my job is to", '', response, flags=re.IGNORECASE)
+
+            # Replace specific phrases for better alignment
+            response = re.sub(r"I understand the benefits", "I've heard about the benefits but I'm not sure", response, flags=re.IGNORECASE)
+            response = re.sub(r"I know all about", "I've heard about", response, flags=re.IGNORECASE)
+
+            # Final cleanup
+            response = response.strip('"\'').replace("As an AI", '').replace("I'm an AI", '').strip()
+
+            # Handle overly long responses
+            if len(response) > 200:
+                sentences = response.split('. ')
+                response = sentences[0] + '.' if sentences else response[:200]
+
+            # Use fallback for inappropriate or too short responses
+            if any(phrase in response.lower() for phrase in [
+                "i'm a salesperson", "i am a salesperson", "my job is to provide", 
+                "my job is to help you", "as a salesperson"
+            ]) or len(response) < 5:
+                logger.warning("Response contains salesperson language or is too short. Using fallback.")
+                return "I'm not quite sure I understand. Could you explain that differently?"
+
+        return response
+
 class SafetyFilter:
     """Filter responses for safety and compliance"""
     
     def __init__(self):
-        # Prohibited content patterns
         self.prohibited_patterns = [
             r'personal\s+information',
             r'medical\s+advice',
@@ -110,7 +140,6 @@ class SafetyFilter:
             r'harassment'
         ]
         
-        # Sales compliance keywords
         self.compliance_violations = [
             'guaranteed results', 'no risk', 'get rich quick', 'limited time only',
             'act now or lose forever', 'exclusive deal', 'secret formula'
@@ -123,7 +152,6 @@ class SafetyFilter:
         
         response_lower = response.lower()
         
-        # Check for prohibited content
         for pattern in self.prohibited_patterns:
             if re.search(pattern, response_lower):
                 return {
@@ -132,7 +160,6 @@ class SafetyFilter:
                     'pattern': pattern
                 }
         
-        # Check sales compliance
         for violation in self.compliance_violations:
             if violation in response_lower:
                 return {
@@ -141,7 +168,6 @@ class SafetyFilter:
                     'violation': violation
                 }
         
-        # Check length constraints
         if len(response) > 2000:
             return {'passed': False, 'reason': 'too_long'}
         
@@ -164,7 +190,6 @@ class ResponseRanker:
             score = self._calculate_response_score(response, context, persona_attributes)
             scored_responses.append((response, score))
         
-        # Sort by score and return best
         scored_responses.sort(key=lambda x: x[1], reverse=True)
         return scored_responses[0][0]
     
@@ -172,22 +197,18 @@ class ResponseRanker:
         """Calculate quality score for a response"""
         score = 0.0
         
-        # Length appropriateness (50-500 words ideal for sales)
         word_count = len(response.split())
         if 50 <= word_count <= 500:
             score += 2.0
         elif 20 <= word_count < 50 or 500 < word_count <= 800:
             score += 1.0
         
-        # Persona alignment
         persona_score = self._check_persona_alignment(response, persona_attributes)
         score += persona_score
         
-        # Context relevance
         context_score = self._check_context_relevance(response, context)
         score += context_score
         
-        # Sales effectiveness indicators
         sales_score = self._check_sales_effectiveness(response)
         score += sales_score
         
@@ -234,16 +255,13 @@ class ResponseRanker:
         response_lower = response.lower()
         effectiveness_score = 0.0
         
-        # Check for questions (good for engagement)
         if '?' in response:
             effectiveness_score += 0.5
         
-        # Check for benefits language
         benefit_words = ['benefit', 'advantage', 'help you', 'save', 'improve', 'increase']
         matches = sum(1 for word in benefit_words if word in response_lower)
         effectiveness_score += min(matches * 0.2, 1.0)
         
-        # Check for empathy indicators
         empathy_words = ['understand', 'appreciate', 'realize', 'see your point']
         matches = sum(1 for phrase in empathy_words if phrase in response_lower)
         effectiveness_score += min(matches * 0.3, 1.0)
@@ -270,9 +288,7 @@ class PersonaRefiner:
     
     def _refine_for_analytical(self, response: str, attributes: Dict) -> str:
         """Refine response for analytical persona"""
-        # Add data-driven language if missing
         if not any(word in response.lower() for word in ['data', 'statistics', 'research', 'study']):
-            # Insert analytical language naturally
             response = response.replace('This helps', 'Research shows this helps')
             response = response.replace('many people', 'studies indicate that people')
         
@@ -280,7 +296,6 @@ class PersonaRefiner:
     
     def _refine_for_driver(self, response: str, attributes: Dict) -> str:
         """Refine response for driver persona"""
-        # Make more direct and results-focused
         response = response.replace('I think', 'The result is')
         response = response.replace('maybe we could', 'we will')
         response = response.replace('possibly', 'definitely')
@@ -289,7 +304,6 @@ class PersonaRefiner:
     
     def _refine_for_expressive(self, response: str, attributes: Dict) -> str:
         """Refine response for expressive persona"""
-        # Add relationship and social elements
         if 'people' not in response.lower():
             response = response.replace('This solution', 'People love this solution because it')
         
@@ -297,7 +311,6 @@ class PersonaRefiner:
     
     def _refine_for_amiable(self, response: str, attributes: Dict) -> str:
         """Refine response for amiable persona"""
-        # Add supportive and caring language
         response = response.replace('You should', 'You might want to consider')
         response = response.replace('You need to', 'It would be helpful if you')
         
@@ -305,7 +318,6 @@ class PersonaRefiner:
     
     def _refine_for_skeptical(self, response: str, attributes: Dict) -> str:
         """Refine response for skeptical persona"""
-        # Add proof and evidence elements
         if not any(word in response.lower() for word in ['proof', 'evidence', 'guarantee', 'proven']):
             response = response.replace('This works', 'This proven approach works')
         
@@ -318,16 +330,13 @@ class ToneAdjuster:
         """Adjust response tone for clarity and appropriateness"""
         emotional_tone = context.get('emotional_tone', 'neutral')
         
-        # Adjust based on emotional context
         if emotional_tone == 'negative':
             response = self._add_empathy(response)
         elif emotional_tone == 'positive':
             response = self._maintain_enthusiasm(response)
         
-        # Ensure professional tone
         response = self._ensure_professional_tone(response)
         
-        # Improve clarity
         response = self._improve_clarity(response)
         
         return response
@@ -340,7 +349,6 @@ class ToneAdjuster:
             "That's a valid point. "
         ]
         
-        # Add empathy if not already present
         if not any(phrase in response for phrase in ['understand', 'see your point', 'appreciate']):
             response = empathy_starters[0] + response
         
@@ -348,7 +356,6 @@ class ToneAdjuster:
     
     def _maintain_enthusiasm(self, response: str) -> str:
         """Maintain appropriate enthusiasm for positive emotions"""
-        # Ensure response matches positive energy without being excessive
         if not any(word in response.lower() for word in ['great', 'excellent', 'wonderful', 'fantastic']):
             response = response.replace('good', 'great')
         
@@ -356,7 +363,6 @@ class ToneAdjuster:
     
     def _ensure_professional_tone(self, response: str) -> str:
         """Ensure professional sales tone"""
-        # Replace casual language
         replacements = {
             ' gonna ': ' going to ',
             ' wanna ': ' want to ',
@@ -373,18 +379,14 @@ class ToneAdjuster:
     
     def _improve_clarity(self, response: str) -> str:
         """Improve response clarity"""
-        # Break up long sentences
         sentences = response.split('. ')
         
         improved_sentences = []
         for sentence in sentences:
-            # Split very long sentences
             if len(sentence.split()) > 25:
-                # Find natural break point
                 words = sentence.split()
                 mid_point = len(words) // 2
                 
-                # Look for conjunction near midpoint
                 for i in range(max(mid_point - 5, 0), min(mid_point + 5, len(words))):
                     if words[i].lower() in ['and', 'but', 'because', 'however', 'while']:
                         first_part = ' '.join(words[:i])
@@ -411,25 +413,20 @@ class ResponseValidator:
             'issues': []
         }
         
-        # Check basic requirements
         if not response or len(response.strip()) < 10:
             validation_result['valid'] = False
             validation_result['issues'].append('response_too_short')
             return validation_result
         
-        # Calculate quality score
         quality_score = self._calculate_quality_score(response, context)
         validation_result['quality_score'] = quality_score
         
-        # Calculate persona alignment
         persona_alignment = self._calculate_persona_alignment(response, context)
         validation_result['persona_alignment'] = persona_alignment
         
-        # Calculate tone score
         tone_score = self._calculate_tone_score(response, context)
         validation_result['tone_score'] = tone_score
         
-        # Determine if response passes minimum thresholds
         if quality_score < 0.5:
             validation_result['valid'] = False
             validation_result['issues'].append('low_quality_score')
@@ -442,21 +439,18 @@ class ResponseValidator:
         """Calculate overall quality score"""
         score = 0.0
         
-        # Length appropriateness
         word_count = len(response.split())
         if 30 <= word_count <= 200:
             score += 0.3
         elif 10 <= word_count < 30 or 200 < word_count <= 400:
             score += 0.2
         
-        # Grammatical indicators (simple checks)
-        if response.count('.') > 0:  # Has sentences
+        if response.count('.') > 0:
             score += 0.1
         
-        if response.count('?') > 0:  # Has questions (good for engagement)
+        if response.count('?') > 0:
             score += 0.1
         
-        # Professional language indicators
         professional_indicators = ['however', 'therefore', 'additionally', 'furthermore', 'specifically']
         matches = sum(1 for indicator in professional_indicators if indicator in response.lower())
         score += min(matches * 0.1, 0.3)
@@ -465,12 +459,10 @@ class ResponseValidator:
     
     def _calculate_persona_alignment(self, response: str, context: Dict) -> float:
         """Calculate persona alignment score"""
-        # Placeholder - in full implementation, this would check against persona requirements
         return 0.8
     
     def _calculate_tone_score(self, response: str, context: Dict) -> float:
         """Calculate tone appropriateness score"""
-        # Placeholder - in full implementation, this would analyze tone matching
         return 0.8
 
 class FallbackEngine:
@@ -514,13 +506,10 @@ class FallbackEngine:
         """Get appropriate fallback response"""
         primary_persona = persona_attributes.get('primary_persona', 'general')
         
-        # Get templates for persona
         templates = self.fallback_templates.get(primary_persona, self.fallback_templates['general'])
         
-        # Select template based on context
         conversation_stage = context.get('conversation_stage', 'discovery')
         
-        # Simple selection logic - in production, this would be more sophisticated
         if conversation_stage == 'opening':
             return templates[0]
         elif conversation_stage in ['discovery', 'presentation']:
@@ -528,5 +517,4 @@ class FallbackEngine:
         else:
             return templates[-1]
 
-# Global post-processing service instance
 postprocessing_service = PostProcessingService()

@@ -27,7 +27,6 @@ class AdvancedAudioAnalysisService:
         self.speaker_analyzer = SpeakerAnalyzer()
         self.context_analyzer = ContextAnalyzer()
         
-        # Performance metrics
         self.analysis_count = 0
         self.total_processing_time = 0.0
         
@@ -58,26 +57,20 @@ class AdvancedAudioAnalysisService:
             
             logger.info(f"Starting analysis for session {session_id} with {len(segments)} segments")
             
-            # Step 1: Speaker Analysis
             speakers = self.speaker_analyzer.analyze(segments)
             logger.info(f"Identified {len(speakers)} speakers")
             
-            # Step 2: Context Analysis
             context_sections = self.context_analyzer.analyze(segments)
             logger.info(f"Created {len(context_sections)} context sections")
             
-            # Step 3: Generate role-play blocks (simplified for now)
             roleplay_blocks = self._generate_roleplay_blocks(segments, context_sections)
             logger.info(f"Generated {len(roleplay_blocks)} role-play blocks")
             
-            # Step 4: Create training annotations (simplified for now)
             training_annotations = self._generate_training_annotations(segments, speakers)
             logger.info(f"Created {len(training_annotations)} training annotations")
             
-            # Step 5: Calculate overall score
             overall_score = self._calculate_overall_score(speakers, context_sections, roleplay_blocks)
             
-            # Create comprehensive analysis result
             analysis = AdvancedAudioAnalysis(
                 session_id=session_id,
                 timestamp=datetime.now().isoformat(),
@@ -90,7 +83,6 @@ class AdvancedAudioAnalysisService:
                 metadata=metadata
             )
             
-            # Update metrics
             processing_time = (datetime.now() - start_time).total_seconds()
             self._update_metrics(processing_time)
             
@@ -107,24 +99,21 @@ class AdvancedAudioAnalysisService:
         blocks = []
         
         for i, section in enumerate(context_sections):
-            # Extract phase from section metadata
             phase_str = section.metadata.get('phase', 'unknown')
             
-            # Convert to RolePlayPhase enum
             from .audio_analysis_models import RolePlayPhase
             try:
                 phase = RolePlayPhase(phase_str)
             except ValueError:
-                phase = RolePlayPhase.DISCOVERY  # Default fallback
+                phase = RolePlayPhase.DISCOVERY
             
-            # Create role-play block
             block = RolePlayBlock(
                 id=f"block_{i}",
                 phase=phase,
                 start_time=section.start_time,
                 end_time=section.end_time,
                 segments=section.segments,
-                techniques_used=[],  # Will be populated by more sophisticated analysis
+                techniques_used=[],
                 effectiveness_score=section.importance_score,
                 metadata={'generated_from_context_section': section.id}
             )
@@ -138,7 +127,6 @@ class AdvancedAudioAnalysisService:
         """Generate training annotations (simplified implementation)"""
         annotations = []
         
-        # Find salesperson segments for annotation
         salesperson_speakers = [s for s in speakers if s.role.value == 'salesperson']
         
         if not salesperson_speakers:
@@ -147,15 +135,14 @@ class AdvancedAudioAnalysisService:
         salesperson_id = salesperson_speakers[0].id
         salesperson_segments = [s for s in segments if s.speaker_id == salesperson_id]
         
-        # Create annotations for key moments
         for i, segment in enumerate(salesperson_segments):
-            if '?' in segment.text:  # Question technique
+            if '?' in segment.text:
                 annotation = TrainingAnnotation(
                     id=f"annotation_{len(annotations)}",
                     timestamp=segment.start_time,
                     technique="questioning",
                     description="Used questioning technique to engage prospect",
-                    effectiveness_rating=7,  # Default rating
+                    effectiveness_rating=7,
                     improvement_suggestions=["Consider more open-ended questions"],
                     related_segment_id=f"segment_{i}",
                     metadata={'auto_generated': True}
@@ -168,23 +155,19 @@ class AdvancedAudioAnalysisService:
                                context_sections: List[ContextSection],
                                roleplay_blocks: List[RolePlayBlock]) -> float:
         """Calculate overall conversation effectiveness score"""
-        score = 0.5  # Base score
+        score = 0.5
         
-        # Speaker diversity bonus
         if len(speakers) >= 2:
             score += 0.1
         
-        # Context richness
         avg_section_score = sum(s.importance_score for s in context_sections) / len(context_sections) if context_sections else 0
         score += avg_section_score * 0.3
         
-        # Role-play completeness
-        if len(roleplay_blocks) >= 3:  # Multiple phases covered
+        if len(roleplay_blocks) >= 3:
             score += 0.1
         
-        # Engagement indicators
         total_segments = sum(len(section.segments) for section in context_sections)
-        if total_segments > 10:  # Good interaction level
+        if total_segments > 10:
             score += 0.1
         
         return min(score, 1.0)
@@ -219,7 +202,6 @@ class AdvancedAudioAnalysisService:
             'duration': analysis.segments[-1].end_time - analysis.segments[0].start_time if analysis.segments else 0
         }
 
-# Global service instance
 _audio_analysis_service: Optional[AdvancedAudioAnalysisService] = None
 
 def get_audio_analysis_service() -> AdvancedAudioAnalysisService:

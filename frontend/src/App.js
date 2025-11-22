@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -9,6 +9,9 @@ import {
 import "./App.css";
 import EnhancedTrainingDashboard from "./EnhancedTrainingDashboard";
 import StandaloneChatPage from "./StandaloneChatPage";
+import DeveloperDashboard from "./components/DeveloperDashboard";
+import Header from "./components/Header";
+import API_ENDPOINTS from "./config/apiConfig";
 
 // Page components for different views
 const DashboardPage = () => {
@@ -40,14 +43,34 @@ const TrainWithPersona = () => {
 };
 
 function App() {
+  const [personas, setPersonas] = useState([]);
+
+  useEffect(() => {
+    const fetchPersonas = async () => {
+      try {
+        const response = await fetch(API_ENDPOINTS.GET_PERSONAS);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        setPersonas(data);
+      } catch (error) {
+        console.error("Failed to fetch personas:", error);
+        setPersonas([]); // Set empty array on error
+      }
+    };
+
+    fetchPersonas();
+  }, []);
+
   return (
     <Router>
+      <Header personas={personas} />
       <div className="App">
+        <DeveloperDashboard />
         <Routes>
-          {/* Main dashboard route */}
           <Route path="/" element={<DashboardPage />} />
 
-          {/* Dedicated routes for main sections */}
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/training" element={<TrainingPage />} />
           <Route path="/feedback" element={<FeedbackPage />} />

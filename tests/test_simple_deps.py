@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Simple dependency checker - Windows compatible
 """
@@ -24,7 +23,6 @@ def main():
     print("Sales Roleplay Chatbot - Dependency Check")
     print("=" * 50)
     
-    # Core dependencies
     print("\nCore Dependencies:")
     core_deps = [
         ("torch", "PyTorch"),
@@ -39,7 +37,6 @@ def main():
         if check_package(package, display):
             core_available += 1
     
-    # Optional dependencies
     print("\nOptional Dependencies:")
     opt_deps = [
         ("accelerate", "Accelerate"),
@@ -55,7 +52,6 @@ def main():
         if check_package(package, display):
             opt_available += 1
     
-    # Special check for Coqui TTS
     print("\nVoice Dependencies:")
     try:
         from TTS.api import TTS
@@ -65,7 +61,6 @@ def main():
         print("[MISSING] Coqui TTS: Not available")
         tts_available = False
     
-    # Summary
     print("\n" + "=" * 50)
     print("SUMMARY:")
     print(f"Core Dependencies: {core_available}/{len(core_deps)}")

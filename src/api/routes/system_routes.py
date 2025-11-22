@@ -2,15 +2,14 @@
 System monitoring and health API routes
 """
 from fastapi import APIRouter
-from services.ai_services import chat_service
-from services.ai_services import model_service
+from src.services.ai_services import chat_service
+from src.services.ai_services import model_service
 
 try:
   from fallback_responses import toggle_fallback_responses
 except ImportError:
   import sys
   from pathlib import Path
-  # Navigate up to the project root to find the 'src' directory
   src_path = str(Path(__file__).resolve().parent.parent.parent)
   if src_path not in sys.path:
     sys.path.insert(0, src_path)
