@@ -1,0 +1,742 @@
+######################################################################
+# SOURCE: Week 1 - IntroSPM_2025.pdf
+# SIZE: 1212.8 KB
+######################################################################
+
+============================================================
+PAGE 1
+============================================================
+Unit 1: Introduction (part 1)
+Software Project 
+Management
+Thais Webber
+Richard Lee
+
+
+============================================================
+PAGE 2
+============================================================
+2
+• Module tutors:
+– Thais Webber
+– Richard Lee
+• Details can be found on Blackboard:
+– Links to WASS calendars
+– e-mail addresses
+• Module information
+– Module Specification CS3SPM 
+– Module Overview (our planned lectures/tutorials)
+Module staff
+ASTON
+
+
+============================================================
+PAGE 3
+============================================================
+3
+Module Overview (Blackboard)
+ASTON
+
+
+============================================================
+PAGE 4
+============================================================
+4
+Why Software Project Management module?
+• Who has started the Final Year Project (FYP) CS3IP? 
+Motivation
+
+
+============================================================
+PAGE 5
+============================================================
+5
+Why Software Project Management module?
+• Who has started the Final Year Project (FYP) CS3IP? 
+• Do you know that one of the main reasons of failure of the FYP is …
+– the lack of good strategies to manage the time to develop the 
+project (e.g., following a plan and updating it when required)? 
+– the lack of communication with stakeholders (e.g., supervisor, 
+tutor)?
+Motivation
+
+
+============================================================
+PAGE 6
+============================================================
+6
+
+
+============================================================
+PAGE 7
+============================================================
+7
+• Prepare yourself in advance. Ask yourself: 
+– What should you do to succeed? 
+– What are the risks to avoid? 
+– What are the best strategies to follow? 
+– What to do if you are confronted with a problem?
+• This module will help you to answer those questions
+What about your Final Year Project?
+
+
+============================================================
+PAGE 8
+============================================================
+8
+When you have completed this unit, you will be able to: 
+• Appreciate the need for a project management module dedicated to 
+software development 
+• Understand the aims, scope and structure of the module 
+• Define key concepts and terminology associated with software project 
+management
+Unit 1: Introduction to Software Project Management
+
+
+============================================================
+PAGE 9
+============================================================
+9
+• Exploring the underlying principles of software project management, and 
+their use in quantitative approaches to managing software projects 
+(Throughout the module)
+• How to define software metrics and how to measure, estimate and 
+analyse data associated with software projects (Weeks 2-3)
+• How to plan and schedule resources in software projects (Weeks 4-5)
+• How to manage, monitor and control risk, quality and people in software 
+projects (Weeks 6-10)
+Module information
+
+
+============================================================
+PAGE 10
+============================================================
+10
+Example 1*:
+As the software manager responsible for building a new system, you are 
+required to tell the sales team when the system will be ready. You have 
+25 use cases as requirements, and 5 software engineers who tell you 
+that they can have the system ready to ship in four months. 
+Do you accept this estimate or not?
+*Adapted from Laird & Brennan, Software Measurement and Estimation, Wiley, 2006. 
+Need for principled, quantitative approaches
+
+
+============================================================
+PAGE 11
+============================================================
+11
+Example 2*:
+You are responsible for making a go/no-go decision on releasing a new 
+software application. The testing team tells you that there are 
+approximately eight defects per thousand lines of code left in the system. 
+Should you say ‘yes’ or ‘no’?
+*Adapted from Laird & Brennan, Software Measurement and Estimation, Wiley, 2006. 
+This module will provide the knowledge and tools required to take these 
+decisions with confidence, based on rigorous analysis of available data
+Need for principled, quantitative approaches
+
+
+============================================================
+PAGE 12
+============================================================
+12
+• Software is a relatively new field 
+– decades old, compared to thousands of years for building bridges/houses
+• Subject to rapid change in tools and techniques
+• Difficult to learn from experience when all projects are unique
+• Lack of physical artefacts
+• Large number of unsuccessful / late / over-budget projects
+Why a module dedicated to software project management?
+
+
+============================================================
+PAGE 13
+============================================================
+13
+• User involvement
+• Executive management support
+• Clear statement of requirements
+• Proper planning
+• Realistic expectations
+What makes a successful project?
+For reflection…
+What are some examples of 
+unrealistic expectations in a project?
+
+
+============================================================
+PAGE 14
+============================================================
+14
+• Introduction (Week 1)
+• Measurement, Estimation & Data Analysis (Weeks 2-3)
+• Software Project Planning (Weeks 4-5)
+• Agile vs Traditional Methodologies (Week 6)
+• Risk Management (Week 8)
+• Monitoring, Control and Quality Management (Week9)
+• Revision (Week 10)
+*On CS3SPM Blackboard page:  
+> Module Information > Module Overview 
+Topics CS3SPM
+
+
+============================================================
+PAGE 15
+============================================================
+15
+• Lecture
+–
+Mondays, 9-11am
+–
+Online
+–
+Recorded and slides provided
+• Tutorial
+–
+(some) Fridays, 10-11am (in-person)
+–
+On-campus, room can vary (check your timetable)  
+–
+Run by a lecturer and teaching assistants
+–
+Problem solving based on exam-type questions
+–
+Questions ideally should be answered in advance
+–
+Solutions are provided after each tutorial
+Mode of learning
+
+
+============================================================
+PAGE 16
+============================================================
+16
+• 100% closed-book exam (in January): 
+– Questions on theoretical aspects of Software Project Management 
+covered in lectures and tutorials 
+– Problems similar to those addressed in tutorials and revision session
+– Exam contains sections 
+• A mandatory section (general questions on all topics covered) 
+• A section comprising a choice of questions 
+– A guide for self-study for preparation for the exam (and quizzes) will be 
+made available on Blackboard and reviewed in Week 10 (last lecture). 
+Assessment
+https://www.aston.ac.uk/academic-services/for-students/examinations/examination-calendars
+
+
+============================================================
+PAGE 17
+============================================================
+17
+• Formal feedback:
+– Example solutions for tutorial problems
+• Informal feedback:
+– Discussions during tutorials
+– Questions answered during lectures and labs
+– Office hours
+Feedback
+
+
+============================================================
+PAGE 18
+============================================================
+18
+• Bob Hughes & Mike Cotterell, Software 
+Project Management, 5th edition, 
+McGraw Hill, 2009 
+• Essential for this module, available from 
+the library as a physical book and eBook
+• Other resources
+–
+Blackboard Module information
+–
+Please check >Talis Reading list 
+Textbook
+
+
+============================================================
+PAGE 19
+============================================================
+19
+1.
+The art of scrum : how Scrum masters bind dev teams and unleash agility. 
+Book author: Dave McKenna, 2016.
+2.
+Agile project management with Kanban. Book author: Eric Brechner, 2015.
+3.
+The Mythical Man-Month. Frederick Brooks (author), 1995; latest Essays on 
+Software Engineering, 2021 ed.
+Additional (recommended) reading
+
+
+============================================================
+PAGE 20
+============================================================
+20
+1.
+Linda M. Laird & M. Carol Brennan, Software Measurement and Estimation: 
+A Practical Approach, Wiley-Blackwell, 2006.
+2.
+James Cadle & Donald Yeates, Project Management for Information 
+Systems, 5th edition, Prentice Hall, 2007.
+3.
+Norman E. Fenton & Sharli L. Pfleeger, Software Metrics: A Rigorous and 
+Practical Approach, 2nd edition, PWS Publishing, 1998.
+4.
+Shari L. Pfleeger & Joanne M. Atlee, Software Engineering: Theory and 
+Practice, 4th edition, Prentice Hall, 2009. 
+Additional (further) reading
+
+
+============================================================
+PAGE 21
+============================================================
+Unit 1: Introduction (part 2)
+Software Project 
+Management
+Thais Webber
+Richard Lee
+
+
+============================================================
+PAGE 22
+============================================================
+22
+• Some dictionary definitions:
+– A specific plan or design
+– A planned undertaking
+– A large undertaking, e.g., a public works scheme
+• Key points above are planning and size of task
+What is a project?
+
+
+============================================================
+PAGE 23
+============================================================
+23
+• Jobs: repetition of well-defined, well-understood tasks with little or no uncertainty
+• Exploration: e.g., finding a cure for a disease; the outcome, duration and budget 
+are highly uncertain
+• Projects: lie in the middle of both
+Jobs versus projects
+Uncertainty 
+of outcome
+Routine
+Jobs
+Projects
+Exploration
+
+
+============================================================
+PAGE 24
+============================================================
+26
+• Non-routine 
+• Planned 
+• Aiming at a specific target 
+• Carried out for a customer 
+• Carried out by a temporary work group 
+• Involving several specialisms 
+• Made up of several different phases 
+• Constrained by time and resources 
+• Large and/or complex
+Characteristics of projects
+
+
+============================================================
+PAGE 25
+============================================================
+27
+• Voluntary systems (e.g., computer games) versus 
+ 
+Compulsory systems (e.g. the order processing system in an organization) 
+• Information systems (used by human operators directly) versus 
+ 
+Embedded systems (controlling a device or machine) 
+• Objective-based (client provides problem that can be solved in multiple ways) 
+versus Product-based (client provides product specification)
+Distinguishing different types of project is important as different types of tasks 
+need different project approaches 
+Some ways of categorising projects
+
+
+============================================================
+PAGE 26
+============================================================
+28
+Project factors in management
+Scope
+Time
+Cost
+Quality
+
+
+============================================================
+PAGE 27
+============================================================
+29
+Is it 
+worth 
+doing?
+How 
+do we 
+do it?
+Do it
+Project management cycle
+Feasibility study
+Plan
+Project execution
+1. Project feasibility 
+and analysis
+2. Planning for 
+implementation
+3. Implementation
+4. Termination, 
+evaluation, handover
+Key Phases
+Source: book SPM pg.5
+Business case
+Tasks/Resources/
+Timeline/Budget
+Managing changes/ 
+Lessons learned
+Closure
+
+
+============================================================
+PAGE 28
+============================================================
+30
+Software lifecycle (ISO 12207)
+Requirements analysis
+Architecture design
+Requirements analysis
+Architecture design
+Requirements analysis
+Detailed design
+Code and test
+Integration
+Qualification test
+Integration
+Qualification test
+Installation
+Acceptance support
+Requirements
+Design
+Code & test
+Installation / 
+acceptance 
+support
+Software
+Software
+System
+System
+Process implementation
+*A new ISO/IEC/IEEE draft update (P12207) is in development
+
+
+============================================================
+PAGE 29
+============================================================
+31
+• Requirements elicitation: what does the client need? 
+• Requirements analysis: converting ‘customer-facing’ requirements 
+into equivalents that developers can understand 
+• Types of requirements  
+–
+Functional requirements: What the software should do—its main features or 
+functions.
+–
+Non-functional requirements: How well the software should work—for example, 
+its speed (performance), reliability, security, and quality.
+–
+Resource constraints: Limitations or restrictions, like cost (budget), deadlines, 
+and technology choices.
+ISO 12207: requirements
+
+
+============================================================
+PAGE 30
+============================================================
+32
+• Architecture design 
+–
+Based on system requirements 
+–
+Defines components of system: hardware, software, organizational 
+–
+Software requirements will come out of this 
+• Code and test 
+–
+Of individual components 
+• Integration 
+–
+Putting the components together
+ISO 12207: design and code & test
+
+
+============================================================
+PAGE 31
+============================================================
+33
+• Qualification testing 
+–
+Testing the system (not just the software) 
+• Installation 
+–
+The process of making the system operational 
+–
+Includes setting up standing data, setting system parameters, installing on 
+operational hardware platforms, user training, etc. 
+• Acceptance and Support 
+–
+Including maintenance and enhancement 
+ISO 12207 continued
+
+
+============================================================
+PAGE 32
+============================================================
+34
+A stakeholder is any person or organisation impacted by, or able to influence, 
+a software project’s requirements or outcome. 
+• Why they matter
+– Shape requirements
+– Spot problems early
+– Provide feedback
+– Ensure product is useful and adopted
+– Missing stakeholders: unmet needs & higher risk
+• Different stakeholders may have different/conflicting objectives 
+– Need to define common project objectives 
+– Need to agree on an acceptable compromise
+What is a stakeholder?
+
+
+============================================================
+PAGE 33
+============================================================
+35
+• Who counts as a stakeholder?
+– End users (the ones that use and benefit from the system)
+– Managers and clients (sponsors, strategic decision makers)
+– Project build team (developers, designers, testers, and project 
+managers)
+– External groups (regulatory bodies, legal experts, customers, 
+suppliers, shareholders, and community representatives)
+– Support and maintenance staff
+Involving the right stakeholders from the start leads to clearer 
+requirements, better software, and smoother project progress.
+Stakeholders
+
+
+============================================================
+PAGE 34
+============================================================
+37
+Representing stakeholders whilst ensuring a single-point responsibility for delivery
+Stakeholders
+Team 
+Members
+Project 
+Manager
+Sponsor
+Steering 
+Group
+Project board: 
+senior decision 
+makers
+Primary risk-
+taker/investor
+Single point 
+responsibility 
+for delivery
+Cross-functional people 
+who do the work
+
+
+============================================================
+PAGE 35
+============================================================
+40
+• Objectives define what must be achieved — not the detailed tasks.
+They focus on the outcome, not the activity.
+• Focus on what will be put in place, rather than how activities will be 
+carried out 
+– YES   Deliver an online booking system that allows users to register, make appointments, and 
+receive email confirmations will be live by 1st December.
+– NO   Design and code a booking website using HTML and JavaScript.
+Setting clear project objectives
+
+
+============================================================
+PAGE 36
+============================================================
+41
+S – 
+Specific: concrete and well-defined 
+M – 
+Measurable, that is, satisfaction of the objective can be  
+ 
+ 
+ 
+objectively judged 
+A – 
+Achievable: it is within the power of the individual or group  
+ 
+ 
+concerned to meet the target 
+R – 
+Relevant: the objective must be relevant to the true purpose of 
+ 
+ 
+the project 
+T – 
+Time-constrained: time-bound, there is a defined point in time by 
+ 
+which the objective should be achieved
+Objectives should be SMART
+Example: Deliver an online booking system that allows users to register, make 
+appointments, and receive email confirmations will be live by 1st December.
+
+
+============================================================
+PAGE 37
+============================================================
+42
+• Given a set of SMART objectives, we want: 
+–
+Q – quality software product 
+–
+C – cost: no significant budget overshoot 
+–
+T – time: no significant delays 
+–
+P – good productivity 
+• Questions: 
+–
+What is ‘software quality’ and (how) can it be measured? 
+–
+Can we determine in advance what a project is going to cost? 
+–
+How do we know if a significant deadline overshoot is likely? 
+–
+Is ‘productivity’ measurable in a software engineering environment? 
+Goals of Software Project Management
+
+
+============================================================
+PAGE 38
+============================================================
+44
+• Level 1: Operational: activity level (short-term) Day-to-day activities 
+which vary greatly depending on the project’s process 
+• Level 2: Tactical: project level (mid-term) Quality, Time, Cost, 
+Productivity 
+• Level 3: Strategic: organisational level (long-term) 
+–
+reducing costs 
+–
+expanding customer base 
+–
+increasing user satisfaction 
+–
+improving productivity 
+–
+reducing time-to-market
+Levels of project objectives
+
+
+============================================================
+PAGE 39
+============================================================
+45
+• How should we ‘choose between competing designs’ (e.g., by complexity)? 
+• How long will this ‘phase of the project’ take? 
+• Are the ‘current project risks’ worth addressing? Do we really need to worry 
+about them? 
+• Which ‘modules’ need extra attention during testing? 
+• Has ‘team productivity’ changed over the last few months?
+Tactical project questions (examples)
+(Project-Specific Issues)
+
+
+============================================================
+PAGE 40
+============================================================
+46
+• Why are projects in this department often ‘over schedule by 30%’ or more? 
+• Can we ‘reduce future costs’ by consistently using this new software tool? 
+• Does ‘Team X consistently produce better code than Team Y’? If so, why?
+• Would adopting a ‘new team structure’ significantly improve time-to-market for 
+in-house projects?
+• Has our ‘cost estimation model’ (used over the last 18 months) been accurate? 
+Can it be calibrated for our environment?
+Strategic project questions (examples)
+(Long-Term, Organisation-Wide Issues)
+
+
+============================================================
+PAGE 41
+============================================================
+47
+• Planning – deciding what is to be done 
+• Organising – making arrangements 
+• Staffing – selecting the right people for the job 
+• Directing – giving instructions 
+• Monitoring – checking on progress 
+• Controlling – taking action to remedy hold-ups 
+• Innovating – coming up with solutions when problems emerge 
+• Representing – liaising with clients, users, developers and other 
+stakeholders 
+*Adapted from D. Ince et al, Introduction to Software Project Management and Quality Assurance, McGraw Hill, 1993.
+Components of Software Project Management*
+
+
+============================================================
+PAGE 42
+============================================================
+54
+• Software projects differ significantly from other engineering 
+projects: new field, rapid change, high failure rate & complexity, no 
+physical artefacts 
+• We need principled, quantitative approaches that can support informed 
+management decisions at strategic, tactic and operational level 
+• Specific – Measurable – Achievable – Relevant – Time-constrained 
+SMART project objectives are required to build quality software within 
+budget, without delays and with good productivity
+Summary of key points in this unit
+
+
+============================================================
+PAGE 43
+============================================================
+55
+• EXPLAIN WHY should the objectives of a software project be SMART? 
+What does SMART stand for? 
+• EXPLAIN WHY is software project management important? Why is it 
+needed? 
+• EXPLAIN the differences between a job, a project, and outright 
+exploration. 
+• EXPLAIN WHY is software project management differs from other 
+project management disciplines. 
+• Start devising SMART objectives for your FYP 
+Review Questions
+
+
+============================================================
+PAGE 44
+============================================================
+56
+• Unit 2: Measurement, Estimation and Data Analysis
+Next lectures (Weeks 2-3)
+
+
+============================================================
+PAGE 45
+============================================================
+Unit 1: Introduction
+Software Project 
+Management
+Thais Webber
+Richard Lee

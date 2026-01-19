@@ -1,92 +1,90 @@
-# AI-Powered Sales Training Chatbot
+# Sales Roleplay Chatbot
 
-An advanced conversational AI system for sales role-play training with integrated speech-to-text and text-to-speech capabilities.
+Rule-based sales training system using KALAP V2 framework. Implements Smash Formula methodology for realistic conversation practice with real-time response validation and phase-based progression.
 
-## 🏗️ Architecture Overview
+## Key Technologies
 
-### Modular Design
+- **Backend**: FastAPI + KALAP V2 core engine (Python)
+- **Frontend**: React.js SPA
+- **Libraries**: rapidfuzz, jinja2, textblob (3 minimal dependencies)
+
+## Main Features
+
+- Interactive roleplay with configurable prospect personas
+- 6-phase conversation flow (Intent → Logical Certainty → Emotional Certainty → Future Pace → Consequences → Pitch)
+- Real-time response validation with phase advancement gates
+- Intent/objection detection via fuzzy matching
+- Session context tracking and commitment temperature monitoring
+
+## Architecture
+
+**Modular design** (High cohesion, loose coupling):
+
 ```
-src/
-├── services/
-│   ├── ai_services/         # Model management and AI responses
-│   ├── voice_services/      # STT/TTS and audio processing
-│   ├── analysis_services/   # Conversation analysis and feedback
-│   └── data_services/       # Data persistence and analytics
-├── api/                     # FastAPI routes and endpoints
-├── infrastructure/          # Core infrastructure and settings
-└── models/                  # Data models and schemas
-```
-
-### Training Pipeline
-```
-training/
-├── scripts/                 # Training pipeline scripts
-├── configs/                 # Hydra/OmegaConf configurations
-└── data/                   # Training datasets and outputs
-```
-
-## ✨ Key Features
-
-### 🎯 Core Capabilities
-- **Multi-persona Sales Training**: Dynamic persona switching for various sales scenarios
-- **Voice Integration**: Real-time STT/TTS with emotion detection
-- **Advanced Analytics**: Performance tracking and conversation analysis
-- **Roleplay Scenarios**: Comprehensive NEPQ methodology integration
-
-### 🚀 Performance Optimizations
-- **Memory Management**: GPU memory optimization with cleanup
-- **Lazy Loading**: On-demand model initialization
-- **Caching**: Intelligent model and response caching
-- **Batch Processing**: Efficient data processing pipelines
-
-### 📊 Monitoring & Tracking
-- **Weights & Biases Integration**: Experiment tracking and metrics
-- **Real-time Analytics**: Performance and usage monitoring
-- **Health Checks**: System status and resource monitoring
-
-### 🏗️ Architecture Improvements  
-- ✅ **Major refactoring**: voice_service.py reduced from 1,529 to 313 lines (79% reduction)
-- ✅ **Eliminated duplicate directories**: Consolidated API and configuration management
-- ✅ **Removed service duplication**: Archived redundant services across directories
-- ✅ **Clear separation of concerns**: Defined distinct responsibilities for each module
-- ✅ All core files under 700 lines for maintainability
-- ✅ Backward compatibility maintained
-- ✅ Clean import structure and dependency management
-
-### 🎯 AI-Powered Personas
-- **Mary Chen**: Fitness beginner, budget-conscious, needs confidence
-- **Jake Rodriguez**: Busy professional, time constraints, efficiency-focused
-- **Sarah Williams**: Health-focused, goal-oriented, research-driven
-- **David Thompson**: Skeptical, experience-based, requires proof
-
-### ⚙️ Technical Features
-- **Qwen2.5-0.5B-Instruct** model for natural conversations
-- **Smart Response Cleaning**: Removes all formatting artifacts
-- **LangChain Integration**: Advanced conversation memory
-- **Modular Voice System**: Separate STT, TTS, and orchestration services
-- **Performance Optimized**: ~30-50 tokens/second throughput
-- **Dependency Validation**: Automated checks for core and optional dependencies
-- **Code Quality**: 83% reduction in largest file size for better maintainability
-
-## 🚀 Quick Start
-```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Run the chatbot
-python scripts/run_chatbot.py
-
-# Test the modular architecture  
-python -c "from src.fallback_responses import generate_ai_response; print('✅ Working')"
+Frontend (React) → Backend (FastAPI) → KALAP V2 Core
+    ├─ response_generator.py - Orchestrator
+    ├─ context_tracker.py - Session data
+    ├─ question_router.py - Strategic question selection
+    ├─ phase_manager.py - Phase transitions & gates
+    ├─ answer_validator.py - Response scoring & validation
+    └─ fuzzy_matcher.py - Intent detection
 ```
 
-## 📊 Performance Metrics
-- **Response Time**: ~0.2-0.5s for AI generation
-- **Memory Usage**: Optimized for 0.5B parameter model
-- **Fallback Rate**: <5% under normal conditions
-- **Code Organization**: 100% core files under 300 lines (largest file: 260 lines)
-- **Maintainability**: 83% size reduction in voice service (1,529→260 lines)
-- **Dependency Coverage**: Core and optional modules validated
+**Code Quality**:
+- Zero hardcoding (all config in constants.js + JSON)
+- Single Responsibility Principle applied
+- 113 tests passing (100%): 70 core + 43 supporting, organized by component criticality
 
 ---
-**Built with ❤️ for realistic sales training scenarios**
+
+## Setup (3 Steps)
+
+**Prerequisites**: Python 3.12+, Node.js 18+
+
+### 1. Environment Configuration
+```bash
+# Backend
+cp backend/.env.example backend/.env
+
+# Frontend
+cp frontend/.env.example frontend/.env
+```
+
+### 2. Backend (Terminal 1)
+```bash
+cd "Sales roleplay chatbot"
+pip install -r requirements.txt
+python -m uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+```
+Server runs at: `http://localhost:8000`
+
+### 3. Frontend (Terminal 2)
+```bash
+cd "Sales roleplay chatbot/frontend"
+npm install && npm start
+```
+App opens at: `http://localhost:3000`
+
+**Tests** (optional):
+```bash
+cd "Sales roleplay chatbot" && pytest tests/ -v
+```
+
+---
+
+## Design Decisions
+
+| Decision | Rationale | Impact |
+|----------|-----------|--------|
+| **Rule-based over LLM** | Deterministic behavior enables 100% test coverage; <100ms response time | Predictable, auditable, testable |
+| **6 focused modules** | Single Responsibility Principle applied per module | Independent testing, clear boundaries |
+| **JSON configuration** | Phase definitions, scoring rules externalized | Non-technical users can modify behavior without code changes |
+| **In-memory storage** | Academic FYP scope: single-user, session-based | Zero infrastructure overhead; appropriate for prototype stage |
+| **Test organization** | Core (70 tests) vs Supporting (43 tests) by criticality | Prioritized test execution; clear component importance |
+
+**Trade-offs Accepted**:
+- Simplicity over NLP sophistication (fuzzy matching vs transformer models)
+- Explicit rules over learned patterns (maintainability, explainability)
+- Session-based over persistent storage (development velocity, reduced complexity)
+
+---

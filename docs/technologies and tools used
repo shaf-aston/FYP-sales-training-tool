@@ -1,0 +1,83 @@
+# Technologies and Tools Used
+
+**Document Purpose**: Comprehensive list of all third-party dependencies with justifications for each choice. Demonstrates adherence to "use existing libraries" principle and provides traceability for dependency decisions.
+
+---
+
+TECHNOLOGIES, TOOLS, FRAMEWORKS, MODULES AND LIBRARIES USED IN PROJECT
+=================================================================================
+
+BACKEND FRAMEWORK & API
+-----------------------
+- **FastAPI**: High-performance async framework for building RESTful APIs.
+  - Simplifies API development with built-in validation and async support.
+- **Pydantic v2**: Data validation and serialization library.
+  - Ensures type safety and automatic validation for API requests/responses.
+- **Uvicorn**: ASGI server for running FastAPI applications.
+  - Provides fast and lightweight server capabilities with hot-reload for development.
+
+CONVERSATION LOGIC
+--------------------------
+- **KALAP v2 Framework**: Custom rule-based conversation engine using deterministic logic.
+  - "Start Simple" approach. Provides stability and control without LLM complexity.
+- **rapidfuzz**: Fuzzy string matching for intent recognition.
+  - Industry-standard library for keyword matching with typo tolerance, reducing custom code.
+- **jinja2**: Template rendering for dynamic question generation.
+  - Simplifies string formatting in question routing, following library reuse principle.
+- **textblob**: Sentiment analysis for response scoring.
+  - Lightweight library for basic sentiment detection in answer validation.
+
+VOICE & AUDIO PROCESSING
+------------------------
+- **Web Speech API**: Browser-native Speech-to-Text and Text-to-Speech.
+  - Free, privacy-friendly (client-side), and requires no backend infrastructure.
+
+DATABASE & STORAGE
+------------------
+- **In-Memory Storage**: Python Dictionaries (`ContextTracker`).
+  - Rapid prototyping. No database setup required for current development phase.
+
+FRONTEND FRAMEWORK & UI
+-----------------------
+- **React**: JavaScript library for building the chat interface.
+  - Enables dynamic and interactive UI development.
+- **Fetch API**: Native browser HTTP client.
+  - Standard, no external dependencies like Axios needed for simple requests.
+- **CSS Modules**: Component-scoped styling.
+  - Modular and maintainable styles without heavy frameworks.
+
+DEVELOPMENT TOOLS
+-----------------
+- **Git**: Version control system.
+  - Manages source code and collaboration.
+
+TESTING FRAMEWORK
+-----------------
+- **pytest**: Testing framework with markers and fixtures.
+  - Enables organized unit and integration testing for regression validation.
+- **pytest-asyncio**: Async test support for FastAPI endpoints.
+  - Handles asynchronous test cases in the testing suite.
+- **pytest-cov**: Coverage reporting tool.
+  - Provides detailed test coverage metrics for code quality assurance.
+
+PROJECT-SPECIFIC SERVICES
+-------------------------
+- **ChatService**: Orchestrates conversation logic.
+  - Handles response generation and connects API to KALAP logic.
+- **VoiceService (Frontend)**: Manages Web Speech API interactions.
+  - Encapsulates browser-specific voice logic.
+
+API ROUTE MODULES
+-----------------
+- **routes.py**: Core endpoints (`/chat`, `/health`, `/conversation/{id}`).
+  - Centralized routing for the MVP.
+
+DATA MODELS
+-----------
+- **Pydantic Models**: `ChatRequest`, `ChatResponse`.
+  - Defines strict contracts between Frontend and Backend.
+
+CONFIGURATION
+-------------
+- **Hardcoded Constants**: Currently used for simplicity.
+  - "Start Simple" philosophy. Environment variables to be added as complexity grows.

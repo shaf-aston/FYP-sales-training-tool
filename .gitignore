@@ -1,126 +1,119 @@
 # Python
 __pycache__/
 *.py[cod]
-*$py.class
-*.so
-.Python
-env/
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-*.egg-info/
-.installed.cfg
-*.egg
 *.pyc
 *.pyo
+*.pyd
+.Python
 
-# Virtual Environment
+# Virtual environments
 venv/
+.venv/
 ENV/
 env/
-.venv/
+
+# Environment variables and secrets
 .env
+
+# Model and AI cache
+model_cache/
+.cache/
+.huggingface/
+audio_cache/
+
+# Database files
+data/processed_data/
+data/quality_metrics.db
+data/sessions.db
+*.db
+*.sqlite
+*.sqlite3
+
+# Training data
+training/data
+
 
 # Node.js / React
 node_modules/
+frontend/build/
+frontend/dist/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .npm
 .yarn/
 package-lock.json
-yarn.lock
-
-# React build output
-frontend/build/
-frontend/dist/
-
-# Environment variables
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
 
 # Logs
-*.log
 logs/
+*.log
 *.log.*
 
-# AI Model cache and data
-.cache/
-.huggingface/
-model_cache/
-data/processed_data/
-data/quality_metrics.db
-data/sessions.db
-audio_cache/
-# Ignore large model files, but not the directory itself
-models/*.bin
-models/*.safetensors
-*.bin
-*.safetensors
-*.json.tmp
-*.lock
+# Build and dist
+dist/
+build/
 
-# IDE specific files
+# IDE/editor files
 .idea/
 .vscode/
+*.code-workspace
+*.sublime-project
+*.sublime-workspace
 *.swp
 *.swo
-*.sublime-*
-*.code-workspace
+*~
 
-# OS specific files
+# OS files
 .DS_Store
 .DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
 desktop.ini
+._*
 
-# Jupyter Notebook
-.ipynb_checkpoints
+# Jupyter
+.ipynb_checkpoints/
 *.ipynb
 
-.data
+# Test/coverage
+.pytest_cache/
+.coverage
+htmlcov/
+coverage/
+*.cover
+.hypothesis/
 
-# Runtime and temporary files
+# Temporary and backup files
 *.tmp
 *.temp
-*.pid
-*.seed
-*.pid.lock
-
-# Coverage and testing
-coverage/
-.coverage
-.nyc_output
-.pytest_cache/
-htmlcov/
-
-# Backup and editor files
-*~
 *.bak
 *.backup
 *.orig
+.data
 
-# Kombai generated files (if applicable)
-.kombai/
+# Test reports and cleanup files
+test_report.json
+cleanup_report_*.json
 
-# Windows specific
-*.cab
-*.msi
-*.msm
-*.msp
+# Mock directories from testing
+MagicMock/
 
+# Large model files
+*.bin
+*.safetensors
+*.onnx
+*.pt
+*.pth
+*.ckpt
+
+# Training artifacts
+training/checkpoints/
+training/runs/
+training/outputs/
+
+
+
+
+
+
+/api keys
+/example.py

@@ -1,0 +1,575 @@
+######################################################################
+# SOURCE: LDC on writing a report.pptx
+# SIZE: 10655.5 KB
+######################################################################
+
+============================================================
+SLIDE 1
+============================================================
+Learning Development Centre
+LDC@aston.ac.uk
+Report writing
+
+============================================================
+SLIDE 2
+============================================================
+What makes a piece of work ‘academic’…
+
+============================================================
+SLIDE 3
+============================================================
+What are the key features of a report?How might this be different to an essay?
+
+============================================================
+SLIDE 4
+============================================================
+
+Divided into clear sections with headings / sub-headings
+Visual: they contain tables and figures
+
+Like essay writing:
+Academic writing style
+Evidenced: research, facts, (using referencing)
+Include introduction and conclusion
+Key features of a report
+4
+This Photo by Unknown Author is licensed under CC BY
+
+============================================================
+SLIDE 5
+============================================================
+
+Present answer to question(s), proposing solutions and recommendations
+
+ 
+Types of report
+Analytical reports
+Practical reports
+Discuss the procedures, results and significance of practical work/experiments 
+	(e.g. lab reports) 
+
+============================================================
+SLIDE 7
+============================================================
+Your headings and sub-headings should be specific and informative
+
+============================================================
+SLIDE 8
+============================================================
+Figure captions are given below the figure
+Table captions are given above the table
+Captions should include:
+ a statement of what is being figured
+definitions for any symbols or acronyms used. 
+a citation if copied from another source
+
+Setting out figures and tables
+
+============================================================
+SLIDE 9
+============================================================
+Tables and Figures
+
+============================================================
+SLIDE 10
+============================================================
+
+References > Insert Caption
+Write the Table or Figure number followed by short description in the ‘Caption’ box 
+Choose if it is a Table or Figure from ‘Label’ box
+Then select ‘OK’
+MS Word Tip: Use ‘insert caption’ for your table and figures
+
+============================================================
+SLIDE 11
+============================================================
+Tip: Build your structure first
+
+Decide your headings and sub-headings
+A logical order to guide the reader to find key information
+Are the sections relevant to the assignment question/brief?
+Check instructions  You may have a specific report structure to follow (with given headings)
+Check marking criteria
+
+One issue or topic per paragraph
+Select evidence (e.g. facts, research findings, references) for each paragraph
+Consider where you might add figures or tables 
+
+
+============================================================
+SLIDE 12
+============================================================
+
+Charging points aren’t at their optimal just yet, and are still quite rare overall. I think there’s nowhere near enough charging stations to meet the expected number of electric cars on the road by 2040.
+
+
+
+What is Academic Writing Style?
+What might need revising in this example?
+
+============================================================
+SLIDE 13
+============================================================
+Charging points aren’t at their optimal just yet, and are still quite rare overall. I think there’s nowhere near enough charging stations to meet the expected number of electric cars on the road by 2040.
+
+Imprecise/vague language   
+Informal language (e.g. personal pronoun, use of contractions)
+Wordy (could be more concise)
+No referencing to support arguments
+
+
+============================================================
+SLIDE 14
+============================================================
+Avoids emotive and judgemental language (e.g. ‘this is terrible’)
+Supports arguments with evidence, examples and references  
+Avoids conversational language and slang (e.g. ‘at the end of the day’)    
+Avoids contractions (e.g. don’t, can’t)
+Written in impersonal style (can use passive voice)
+
+
+
+Academic writing style is objective and formal
+
+============================================================
+SLIDE 15
+============================================================
+I conducted twelve interviews.
+
+ I recommend the replacement of SAC units.
+
+
+You Try… Make these sentences non-personal
+
+============================================================
+SLIDE 16
+============================================================
+I conducted twelve interviews
+PASSIVE: Twelve interviews were conducted
+
+I recommend the replacement of SAC units 
+PASSIVE: The replacement of SAC units is recommended.
+Rewritten…(examples)
+
+============================================================
+SLIDE 17
+============================================================
+Assume the reader is educated, but a non-specialist
+Your report should not be hard to read because of long words, complicated sentences and technical jargon
+
+A measurement of air speed was undertaken by using an anemometer     
+Can be simplified to:
+An anemometer was used to measure air speed
+				OR
+Air speed was measured using an anemometer
+
+
+Your writing does not need to be complicated
+
+============================================================
+SLIDE 18
+============================================================
+The following information includes words and phrases that add nothing to the meaning. Rewrite it as briefly and clearly as possible.
+
+Academic writing is clear and concise
+18
+The road was originally designed with the needs of residential users predominantly in mind, although over a number of years an element of commercial use, much of which consists of retail properties, has come into existence. If an additional amount of traffic is generated, as it might well be if the current proposal is implemented, problems of increased congestion and even more pollution would inevitably result, to the detriment of residents. (71 words)
+
+Activity adapted from: Van Emden, J. (2005) Writing for Engineers. 3rd edn. Palgrave: Macmillan
+
+============================================================
+SLIDE 19
+============================================================
+Making writing more concise…
+19
+The road was originally designed with the needs of residential users predominantly in mind, although over a number of years an element of commercial use, much of which consists of retail properties, has come into existence. If an additional amount of traffic is generated, as it might well be if the current proposal is implemented, problems of increased congestion and even more pollution would inevitably result, to the detriment of residents. 
+(From 71 to 36 words)
+
+The road was designed mainly for residential users, although there has been some commercial development, mainly retail. The current proposal would be likely to increase both traffic congestion and pollution. 
+(30 words)
+Activity adapted from: Van Emden, J (2005) Writing for Engineers (3rd ed). Palgrave: Macmillan
+
+============================================================
+SLIDE 20
+============================================================
+Avoids vagueness 
+‘many argue’		 how many? who? 
+
+Uses precise language: 
+‘tested regularly           how long is regular? Be specific e.g. tested every 15 minutes
+
+Uses cautious wording (it is rare to be 100% certain):
+  e.g. this suggests, this indicates, it is possible, may, could, might
+
+Provides references to back-up claims and to show where information is from
+
+
+Academic writing is accurate
+
+============================================================
+SLIDE 21
+============================================================
+What’s a reference?
+When you write your assignments, you will refer to the words, ideas, views and research of others.
+You must acknowledge the sources you have used in the form of a reference.
+
+============================================================
+SLIDE 22
+============================================================
+
+I think the high-speed rail line will have a limited positive economic impact.  The benefits associated with proximity even in the best-case scenario will be small. Also, the economic benefits associated with accessibility will be limited because commuters will still need to travel longer distances to reach the new rail station sites.
+Are you persuaded?
+
+============================================================
+SLIDE 23
+============================================================
+There is evidence that the high-speed rail line will have a limited positive economic impact. Graham and Melo (2011) argue that the economic benefits associated with proximity, (due to better connectivity, lower travel times and costs), even in the best-case scenario are small (between 0.02% and 0.19% of UK’s GDP). Also, the economic benefits associated with accessibility appear limited, ‘for many in the UK a new HSR line will result in similar or longer door-to-door rail journey (to London)’ (Sanchez-Mateos and Givioni, 2011, p. 114).
+Are you more persuaded?
+
+============================================================
+SLIDE 24
+============================================================
+Referencing is essential because…
+Helps you demonstrate your own voice by evidencing and strengthening your arguments
+Shows your awareness of a subject and bring depth to your analysis
+Enable readers to find the source of ideas/publications you have used in your writing
+Evidence your research and avoid plagiarism
+Adds authority, credibility and is good practice.
+
+
+============================================================
+SLIDE 25
+============================================================
+Harvard referencing
+
+============================================================
+SLIDE 26
+============================================================
+When copying words… 				(Harvard)
+Use quotes sparingly - paraphrasing or summarising can demonstrate better understanding.
+
+Quotes can be effective when the words used are important or have impact, i.e definitions
+
+However, if you do copy text into your work you must add quotation marks and in-text citation within the sentence.
+
+============================================================
+SLIDE 27
+============================================================
+Writing about ideas you have read in your own words (Harvard)
+
+============================================================
+SLIDE 28
+============================================================
+If referencing the same source again – use the same number
+IEEE referencing format… 
+
+============================================================
+SLIDE 29
+============================================================
+When copying words (IEEE)…
+
+============================================================
+SLIDE 30
+============================================================
+Writing about ideas you have read in your own words (IEEE)
+
+============================================================
+SLIDE 31
+============================================================
+More rules for Harvard style citations…
+Two or three authors
+Write - and - before last surname listed
+Castle, Green and Anders (2014) found…
+It was found that… (Castle, Green and Anders, 2014)
+
+More than three authors? 
+Use ‘et al.’ after first surname
+Smith et al. (2010) highlight that…
+It has been highlighted that… (Smith et al., 2010).
+In reference list  = list all Authors
+
+No year information?
+Use (no date)
+Jones (no date) highlights that…
+It has been highlighted that…(Jones, no date).
+
+
+============================================================
+SLIDE 32
+============================================================
+You also need to provide in-text citations, for copied images, tables, & diagrams
+Figure 1: Three possible qualitative structures of a system kernel function (Parnell et al., 2011, p.80). 
+
+============================================================
+SLIDE 33
+============================================================
+Harvard - Reference List (A-Z Author order at end of assignment)
+Reference List
+British Gas (2012) A green light to save you more. Eastbourne: British Gas
+Strathearn, G. (2013) Energy and environmental issues for the 21st century. Basingstoke: Palgrave Macmillan.
+Young, L. (2012) Sustaining our energy: challenges and conflicts. Available at: http://books.google.com (Accessed: 12 November 2021).
+
+
+============================================================
+SLIDE 34
+============================================================
+Key referencing resource:  Cite Them Right online
+You do not need to learn how to create the different references in the reference list. Help is at hand: http://www.citethemrightonline.com/
+Log-in using your  Aston account
+
+============================================================
+SLIDE 36
+============================================================
+‘Cite them right’ then tells you the correct format for your reference
+Follow the rule
+
+============================================================
+SLIDE 37
+============================================================
+Create the reference using Harvard ‘rule’ for Journal Articles:
+Detailed record of reading
+
+Title of Journal: IEEE Transactions on Engineering Management
+
+Title of article: Resource Planning in Engineering Services Firms
+
+Authors: V. Hargaden and J. K. Ryan
+
+Volume and issue: vol. 62, no. 4
+
+Year of publication: 2015
+
+DOI: https://doi.org/10.1109/TEM.2015.2457675.
+
+Page reference: pp. 578-590
+
+Harvard referencing rule 
+(journal article with doi number)
+
+Surname, Initial. (Year of publication) 'Title of article', Title of Journal, volume (issue), Page reference. Available at: DOI
+
+
+============================================================
+SLIDE 38
+============================================================
+Create the reference using Harvard ‘rule’ for Journal Articles:
+Detailed record of reading
+
+Title of Journal: IEEE Transactions on Engineering Management
+
+Title of article: Resource Planning in Engineering Services Firms
+
+Authors: V. Hargaden and J. K. Ryan
+
+Volume and issue: vol. 62, no. 4
+
+Year of publication: 2015
+
+DOI: https://doi.org/10.1109/TEM.2015.2457675.
+
+Page reference: pp. 578-590
+
+Harvard referencing rule 
+(journal article with doi number)
+
+Surname, Initial. (Year of publication) 'Title of article', Title of Journal, volume (issue), Page reference. Available at: DOI
+
+Harvard reference for this source:
+Hargaden, V. and Ryan, J.K. (2015) ‘Resource Planning in Engineering Services Firms’, IEEE Transactions on Engineering Management, 62 (4), pp. 578-590. Available at: https://doi.org/ 10.1109/TEM.2015.2457675
+
+============================================================
+SLIDE 39
+============================================================
+Create this reference using IEEE ‘rule’ for Journal Articles:
+Detailed record of reading
+
+Title of Journal: IEEE Transactions on Engineering Management
+
+Title of article: Resource Planning in Engineering Services Firms
+
+Authors: V. Hargaden and J. K. Ryan
+
+Volume and issue: vol. 62, no. 4
+
+Year of publication: 2015
+
+doi number: 10.1109/TEM.2015.2457675.
+
+Page reference: pp. 578-590
+
+IEEE referencing rule 
+(journal article with doi number)
+
+
+
+
+
+
+
+============================================================
+SLIDE 40
+============================================================
+Create this reference using IEEE ‘rule’ for Journal Articles:
+Detailed record of reading
+
+Title of Journal: IEEE Transactions on Engineering Management
+
+Title of article: Resource Planning in Engineering Services Firms
+
+Authors: V. Hargaden and J. K. Ryan
+
+Volume and issue: vol. 62, no. 4
+
+Year of publication: 2015
+
+doi number: 10.1109/TEM.2015.2457675.
+
+Page reference: pp. 578-590
+
+IEEE referencing rule 
+(journal article with doi number)
+
+
+
+
+
+
+[1]		V. Hargaden and J. K. Ryan, “Resource 			Planning in Engineering Services Firms,” 			IEEE Transactions on Engineering 				Management, 	vol. 62, no. 4, 578-590, 			2015. doi: 	10.1109/TEM.2015.2457675.
+	
+
+============================================================
+SLIDE 41
+============================================================
+
+Aston University:
+
+	 “Plagiarism – where a student uses, without acknowledgement, the work of other people and presents it as their own which may give an unfair advantage over others. Intentional and unintentional acts of plagiarism (whether reckless or otherwise) will be construed as offences.”
+
+What is plagiarism?
+
+============================================================
+SLIDE 42
+============================================================
+Plagiarism can include…
+
+============================================================
+SLIDE 43
+============================================================
+Lecturers detect plagiarism in a student’s work through experience and by using text-matching software ‘turn it in’ (similarity report). 
+ 
+Plagiarism can result in
+Reduced, or no marks
+Facing the University Disciplinary Board 
+Plagiarism detection
+
+============================================================
+SLIDE 44
+============================================================
+Turnitin Similarity report
+This Photo by Unknown Author is licensed under CC BY-SA-NC
+
+============================================================
+SLIDE 45
+============================================================
+Is this plagiarism?
+
+============================================================
+SLIDE 46
+============================================================
+Yes it is plagiarism – copied text is not in quotation marks +  poor citation placement
+A citation could be placed before the list e.g According to ERP (2020), OFGEMs approach included:
+
+Some points could then be paraphrased.
+e.g. – highlighting competitive pricing
+ If not possible, the copied parts should be in quotation marks
+
+============================================================
+SLIDE 47
+============================================================
+You will also need to consider the quality of the sources you reference!
+Use and reference sources that you know are authoritative, credible and reliable.
+Consider who the author is and what makes them an expert.
+Consider how recent the information is. 
+Consider the purpose of the source (e.g. why it was written and intended audience).
+
+
+
+============================================================
+SLIDE 48
+============================================================
+Activity
+Put these sources in order of strength. How suitable are they for academic assignments?
+Wikipedia entry
+Journal article 
+Company report
+General website (.com / .co.uk)
+Academic text book
+News article
+
+Which would you avoid using in your assignments?
+
+============================================================
+SLIDE 49
+============================================================
+Decisions, decisions: Evaluating sources of information.
+
+============================================================
+SLIDE 50
+============================================================
+Journal article (‘peer reviewed’ - research focused)
+Company report (industry information, but may have bias and absent information)
+Academic text book (provides overview)
+News article (can be used to highlight public trends, but beware of bias, fake  news and tabloid press)
+General website (may have unreliable, non-expert 				information. Relevant, official, company and government websites can be 	used)
+Wikipedia entry (unreliable information)
+
+
+
+============================================================
+SLIDE 51
+============================================================
+Finding relevant research
+https://libguides.aston.ac.uk/Engineering_Management
+
+
+Where?
+
+Aston Library ‘Smart Search’
+
+Google Scholar
+
+
+============================================================
+SLIDE 52
+============================================================
+
+A very useful resource for finding research:
+	Library Smart Search and Libguides: 
+	https://libguides.aston.ac.uk/Logistics 					https://libguides.aston.ac.uk/Engineering_Management
+
+A very useful resource for referencing: 
+	Cite Them Right: http://www.citethemrightonline.com/
+
+A very useful resource for academic vocabulary: 
+	Manchester University’s academic phrasebank: http://www.phrasebank.manchester.ac.uk/
+
+
+Resources to help you…
+
+============================================================
+SLIDE 53
+============================================================
+Learning Development Centre (LDC)
+Advice on your assignment writing, referencing, maths, and study strategies. 
+
+1:1 tutorials (on campus, and online)
+Learning Development Centre Blackboard
+
+Visit LDC webpage: www.aston.ac.uk/ldc
+
+Reception: 	First Floor, Library
+Telephone:  	0121 204 3040
+Email:          	LDC@aston.ac.uk
+
+
+

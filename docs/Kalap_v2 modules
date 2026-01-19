@@ -1,0 +1,294 @@
+# KALAP V2 Directory Structure & File Purposes
+
+**Document Purpose**: Detailed technical documentation explaining each module's responsibility, libraries used, and rationale. This document helps examiners understand the core engine architecture and design decisions.
+
+---
+
+## High-Level Architecture Overview
+
+The kalap_v2 directory is the **core training engine** that transforms a simple chatbot into an intelligent sales coaching system. Think of it as the "brain" that evaluates, guides, and scores the sales role-play experience.
+
+### Refactoring Notes (Dec 2025)
+**43% code reduction** achieved through:
+1. **answer_validator.py**: Unified `validate()` and `calculate_completion_score()` into single `_score_text()` method
+2. **fuzzy_matcher.py**: Removed 4 unused methods (`match_keyword_category`, `contains_keywords`, `get_all_matches`, `calculate_match_confidence`)
+3. **response_generator.py**: Extracted `_build_metadata()` and `_try_advance_phase()` helpers to eliminate duplication between salesrep/prospect modes
+
+**Rationale**: External libraries (rapidfuzz, textblob, jinja2) handle fuzzy matching, sentiment analysis, and templating—no need for custom implementations. Maintains Single Responsibility Principle with minimal code.
+
+---
+
+## Root Level Files (The Core Engine)
+
+### `phase_manager.py` (185 lines)
+**What it does:**  
+The **phase transition logic engine** that determines when the conversation can advance.
+
+**Purpose:**  
+- Validates gate requirements (has the trainee captured enough information?)
+- Decides when it's appropriate to move from one phase to the next
+- Ensures the conversation follows a logical, professional sales methodology
+- **Stateless** - does not store session data, reads/writes through `context_tracker`
+
+**Libraries Used:**
+- None (pure Python logic for phase transitions)
+
+**Real-world analogy:** Like a driving test evaluator who checks if you've met all requirements before issuing your license, but doesn't keep your records (the DMV does that).
+
+---
+
+### `question_router.py` (255 lines)
+**What it does:**  
+The **strategic decision-maker** that determines what the bot should say or ask next.
+
+**Purpose:**  
+- Based on the current phase and the trainee's last response, selects the most appropriate next question or topic
+- Ensures the conversation stays relevant and progresses toward the phase's learning objectives
+- Prevents the bot from asking random or repetitive questions
+- Routes the conversation down different paths based on how well the trainee is performing
+
+**Libraries Used:**
+- `jinja2`: Used in `format_question_with_context()` for rendering question templates with captured variables. Enables dynamic context injection without manual string operations.
+
+**Real-world analogy:** Like a chess opponent who adapts their strategy based on your moves, not just following a pre-written script.
+
+---
+
+### `response_generator.py` (208 lines)
+**What it does:**  
+The **orchestration coordinator** that manages all kalap_v2 components to generate contextual responses.
+
+**Purpose:**  
+- Coordinates phase_manager, context_tracker, answer_validator, and question_router
+- Selects appropriate templated questions based on phase and conversation state
+- Validates trainee responses and determines next action (probe, advance, continue)
+- Uses Jinja2 templates for dynamic context injection into questions
+- **Refactored**: Extracted `_build_metadata()` and `_try_advance_phase()` to eliminate duplication between salesrep/prospect modes
+- Planned for future LLM integration (v3) for truly dynamic responses
+
+**Libraries Used:**
+- `jinja2`: Enables template rendering with variable substitution (e.g., {{variable}} syntax) for dynamic question generation. Replaces manual string formatting, ensuring clean separation of data and presentation.
+
+**Real-world analogy:** Like an orchestra conductor who coordinates all musicians, ensuring they play the right notes at the right time.
+
+---
+
+### `answer_validator.py` (153 lines)
+**What it does:**  
+The **strict examiner** that evaluates the quality of the trainee's responses.
+
+**Purpose:**  
+- Analyzes what the trainee said after each bot question
+- Checks if they addressed the question, used appropriate sales techniques, and demonstrated key skills
+- Assigns quality scores to their performance
+- Identifies what information they successfully captured from the prospect
+- Detects missed opportunities or mistakes
+- **Refactored**: Unified `validate()` and `calculate_completion_score()` into shared `_score_text()` core method
+
+**Libraries Used:**
+- `textblob`: Provides sentiment analysis for evaluating emotional content in responses. Pre-trained NLP eliminates need for custom sentiment models.
+
+**Real-world analogy:** Like a coach with a clipboard who's evaluating every move you make during practice, noting what you did right and what needs improvement.
+
+---
+
+### `fuzzy_matcher.py` (68 lines)
+**What it does:**  
+The **intent recognition engine** that matches user input to intent categories using fuzzy keyword matching.
+
+**Purpose:**  
+- Detects user intents (objections, questions, transition signals)
+- Handles typos and partial matches using fuzzy string matching
+- Determines phase transition readiness based on keyword signals
+- **Refactored**: Removed 4 unused methods. Leverages rapidfuzz library for all fuzzy matching logic.
+
+**Libraries Used:**
+- `rapidfuzz`: Industry-standard fuzzy string matching with `partial_ratio()` scoring. Replaces need for custom Levenshtein distance or ngram implementations.
+
+**Real-world analogy:** Like a translator who understands what someone means even if they don't say it perfectly.
+
+---
+
+### `context_tracker.py` (300 lines)
+**What it does:**  
+The **single source of truth** for all conversation data (in-memory storage).
+
+**Purpose:**  
+- Stores the **current_phase** (no other module stores this)
+- Stores every message exchanged during the role-play in memory
+- Tracks what information the trainee has successfully uncovered (budget, timeline, pain points, etc.)
+- Records quality scores for each piece of captured information
+- Monitors emotional hooks, objections, and buyer commitment level
+- Maintains separate session dictionaries for multiple simultaneous training sessions
+- Provides the data foundation for final performance feedback
+- **Single-user optimized**: Uses in-memory dict storage (no database overhead)
+
+**Libraries Used:**
+- None (pure Python in-memory storage for minimalism and single-user optimization)
+
+**Real-world analogy:** Like a whiteboard where a coach tracks your practice performance - fast, simple, and cleared after each session.
+
+---
+
+### `fuzzy_matcher.py`
+**What it does:**  
+The **flexible understanding tool** that recognizes meaning, not just exact words.
+
+**Purpose:**  
+- Matches user input to intents using `rapidfuzz` library (fuzzy string matching)
+- Uses `partial_ratio` algorithm to handle typos, word order, and substring matches
+- Identifies key concepts and keywords even when phrased differently (70% similarity threshold)
+- Detects objection signals and transition readiness with confidence scoring
+- Future-ready for `mode="advanced"` semantic NLP upgrades
+
+**Libraries Used:**
+- `rapidfuzz`: Provides efficient fuzzy string matching algorithms (partial_ratio, token_sort_ratio, etc.) to handle typos and variations without custom Levenshtein implementation. Reduces code complexity and improves accuracy.
+
+**Real-world analogy:** Like a teacher who accepts multiple correct ways to solve a math problem, not just the one method they taught.
+
+---
+
+## `config/` Directory (The Rule Book)
+
+This folder contains the **configuration files that define how the training system operates** without needing to change code.
+
+### `phase_definitions.json`
+**What it does:**  
+The **master blueprint** of the entire sales process structure.
+
+**Purpose:**  
+- Defines each phase of the sales call (Opening, Discovery, Solution Presentation, etc.)
+- Lists the learning objectives for each phase
+- Specifies what questions the bot can ask in each stage
+- Defines what the trainee needs to accomplish to successfully complete each phase
+- Sets the expected behaviors and skills for each stage
+
+**Real-world analogy:** Like a curriculum guide that outlines what students should learn in each grade level and what they need to know before advancing.
+
+---
+
+### `scoring_rules.json`
+**What it does:**  
+The **grading rubric** that defines how performance is evaluated.
+
+**Purpose:**  
+- Specifies exactly how many points are awarded for correct techniques
+- Defines penalties for poor practices or mistakes
+- Sets the criteria for what constitutes a "good" vs. "excellent" response
+- Lists bonus points for demonstrating advanced skills (active listening, empathy, objection handling)
+- Defines thresholds for passing or failing the training session
+
+**Real-world analogy:** Like a detailed scoring guide for a figure skating competition that breaks down points for technical elements vs. artistic impression.
+
+---
+
+### `transition_signals.json`
+**What it does:**  
+The **phase change detector** that recognizes when it's time to move forward.
+
+**Purpose:**  
+- Lists keywords and phrases that indicate readiness to progress (e.g., "So based on what you've told me..." signals moving from discovery to solution)
+- Defines conversation patterns that suggest a phase is complete
+- Helps the phase manager recognize natural transition points
+- Prevents premature phase changes when key objectives haven't been met
+
+**Real-world analogy:** Like traffic signals that know when it's safe to proceed based on specific conditions being met.
+
+---
+
+## `prompts/` Directory (The Script Library)
+
+This folder contains the **prompt templates that give the AI bot its personality and knowledge** for different contexts.
+
+### `phase_prompts.py`
+**What it does:**  
+**Phase-specific instruction sets** for the AI bot.
+
+**Purpose:**  
+- Contains different prompts for each sales phase
+- Tells the AI how to behave during the Opening (be welcoming, establish rapport) vs. Discovery (be inquisitive, probe deeper) vs. Closing (show buying signals or hesitation)
+- Adjusts the bot's difficulty and realism for each stage
+- Ensures the bot's responses are contextually appropriate
+
+**Real-world analogy:** Like stage directions in a play that tell the actor how to behave in Act 1 vs. Act 3.
+
+---
+
+### `prospect_prompts.py`
+**What it does:**  
+**The prospect character's personality and background**.
+
+**Purpose:**  
+- Defines who the bot is pretending to be (job title, company size, industry, current challenges)
+- Establishes the prospect's personality (skeptical, enthusiastic, analytical, budget-conscious)
+- Sets the prospect's knowledge level and decision-making authority
+- Creates a consistent character throughout the conversation
+
+**Real-world analogy:** Like a character sheet in a role-playing game that defines the NPC's backstory, motivations, and personality traits.
+
+---
+
+### `sales_prompts.py`
+**What it does:**  
+**Sales methodology instructions** for evaluating the trainee's techniques.
+
+**Purpose:**  
+- Contains the sales framework being taught (SPIN Selling, Challenger Sale, Sandler Training, etc.)
+- Defines what "good selling" looks like according to the chosen methodology
+- Provides the validator with criteria for assessing sales techniques
+- Guides the system on what to look for when scoring performance
+
+**Real-world analogy:** Like a coaching manual that defines the proper form for a golf swing or tennis serve.
+
+---
+
+### `shared_patterns.py`
+**What it does:**  
+**Reusable prompt components** shared across different contexts.
+
+**Purpose:**  
+- Contains common instructions like tone of voice, formality level, response length guidelines
+- Stores frequently used phrases or formatting rules
+- Prevents duplication by centralizing shared prompt elements
+- Ensures consistency in how the bot communicates across all phases
+
+**Real-world analogy:** Like a style guide for writers that defines consistent grammar, tone, and formatting rules to use throughout a publication.
+
+---
+
+## How It All Works Together (Full Architecture)
+
+### **Within KALAP V2:**
+
+1. **Trainee sends a message** → `response_generator.py` (orchestrator) receives it
+2. **`context_tracker.py`** stores the message in conversation history
+3. **`fuzzy_matcher.py`** matches the input to intents/signals
+4. **`answer_validator.py`** scores the quality of the response
+5. **`phase_manager.py`** reads current phase from `context_tracker.py`, validates gate requirements, and advances phase if ready (writing back to `context_tracker.py`)
+6. **`question_router.py`** selects the next appropriate question template based on phase and performance
+7. **`response_generator.py`** formats the template with context using Jinja2 from `prompts/phase_prompts.py`
+8. **`context_tracker.py`** stores the bot response and updated metadata (scores, captures, emotional hooks, etc.)
+
+### **Via the Backend API:**
+
+- Frontend sends HTTP POST to `/chat` endpoint
+- `backend/routes.py` receives the request and calls `response_generator.generate_response()`
+- KALAP V2 processes the message through the steps above
+- Results returned to frontend with conversation ID, phase, and bot response
+- Frontend displays the response and prepares for next turn
+
+### **At Training Completion:**
+
+`context_tracker.py` has a complete record used to generate the final performance report with scoring based on `scoring_rules.json`.
+
+
+
+
+
+
+
+
+research and analysis of inspiration
+todo list - trello
+Research on tech to use
+document previus trial and erroring code and ai

@@ -1,4 +1,0 @@
-# ROLEPLAY TRANSCRIPT
-
-- 'SCRIPT GRAIL.docx' is a main full script
-- sales-training-transcripts contains small talk, question answering and sometimes short specific section roleplays

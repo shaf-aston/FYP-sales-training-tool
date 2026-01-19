@@ -1,0 +1,1636 @@
+
+================================================================================
+[DOCUMENT METADATA]
+================================================================================
+PDF FILE: Week 6 - Agile-part1-online.pdf
+EXTRACTION DATE: 2025-12-19 11:42:41
+CONTENT TYPE: LLM-optimized text extraction
+================================================================================
+
+################################################################################
+[SECTION 1: TEXT CONTENT]
+################################################################################
+
+================================================================================
+Page 1
+================================================================================
+Unit 4: Agile & Scrum (part 1)
+Software Project 
+Management
+Thais Webber 
+Richard Lee
+
+
+================================================================================
+Page 2
+================================================================================
+4
+1.
+Describe the core ideas behind agile software development. 
+2.
+Begin to explain the structure, participants, artefacts, and events of 
+the Scrum methodology. 
+Goals for this week
+4
+
+
+================================================================================
+Page 3
+================================================================================
+10
+• Different focus:
+–
+Change is something to embrace; we determine what is best for the project as we go along
+–
+Instead of big-design-upfront and fixed deadlines/costs, focus on client-developer collaboration
+–
+Keep only the parts of the process that deliver value (no process for the sake of process)
+• Examples of agile methodologies:
+–
+Extreme Programming (XP) (technical excellence)
+–
+Scrum (management, process)
+–
+DSDM (Dynamic Systems Development Method) (controlled agile option) 
+–
+Crystal (there is no “one-size-fits-all” Agile method)
+–
+Adaptive Software Development – an evolution of RAD (focus learning)
+–
+Pragmatic Programming (developers encouraged to be flexible but disciplined, mindset)
+–
+Kanban (continuous flow agile, visualise and optimise) 
+What is agile development?
+10
+
+
+================================================================================
+Page 4
+================================================================================
+16
+• The most appropriate projects for agile are ones with aggressive 
+deadlines, high degree of complexity, and high degree of novelty to 
+them
+• Novelty
+• Urgency
+• Complexity
+Projects suited for agile delivery
+Focus is on delivering the 
+highest business value in 
+the shortest time
+16
+
+
+================================================================================
+Page 5
+================================================================================
+27
+• Agility allows a better alignment between business objectives and IT 
+• Agility provides gains in terms of visibility, adaptability, business value, 
+and risk reduction
+• Costs reduction thanks to better effectiveness 
+• Time-to-market reduction 
+• Alignment with the market and business requirements 
+• Control over change cost 
+• Longer life software 
+• People aware of their responsibilities, more motivated 
+• Problems arise faster 
+Agile benefits
+...but success 
+depends upon 
+people rather than 
+processes
+27
+
+
+================================================================================
+Page 6
+================================================================================
+33
+• Active user involvement and close collaboration is essential 
+• Requirements emerge and evolve 
+• Frequent delivery 
+• System structure tends to degrade as new increments are added 
+• Regular changes to the deliverable usually corrupt the structure unless 
+time & money spent on refactoring 
+Agile drawbacks
+33
+
+
+================================================================================
+Page 7
+================================================================================
+34
+Quick poll vote – Agile discussion
+34
+1 – You prefer to deliver fast and tidy things up later?
+2 – You would rather spend more time keeping everything clean from the start?
+
+
+================================================================================
+Page 8
+================================================================================
+39
+Agile Manifesto - values
+Individuals and 
+interactions
+Working software
+Customer 
+collaboration
+Responding to 
+change
+Processes and tools
+Comprehensive 
+documentation
+Contract 
+negotiation
+Following a plan
+over
+over
+over
+over
+39
+
+
+================================================================================
+Page 9
+================================================================================
+50
+• Trust between:
+–
+Manager and employees
+–
+Colleagues
+–
+Customers and partners
+• Transparency:
+–
+To identify and prevent obstacles
+–
+To be more effective
+–
+To facilitate collaboration
+–
+To adapt
+–
+Not to watch or oversee
+Other values
+50
+
+
+================================================================================
+Page 10
+================================================================================
+59
+• At the centre of empiric approaches
+• Agility provides a framework, not a recipe
+• Adapting practices according to:
+–
+the product we want to deliver
+–
+the skills and talents of the team
+–
+the conditions and the environment
+• No agility without quality
+Continuous improvement
+Plan
+Do
+Check
+Act
+59
+(PDCA Cycle)
+
+
+================================================================================
+Page 11
+================================================================================
+66
+• Working at a steady and sustainable pace:
+–
+Promotes motivation
+–
+Increases effectiveness over time
+–
+Reduces the likelihood of risk
+• Traditional project:
+–
+The closer we are to delivery, the greater the pressure
+• Agile project
+–
+Pace and pressure are steady
+Sustainable pace
+66
+
+
+================================================================================
+Page 12
+================================================================================
+82
+• Visibility is 
+central to agile:
+–
+Information 
+shared with all
+–
+Problems arise 
+easier
+–
+Actors feel 
+responsible
+System of prioritisation
+Complexity/effort
+Value
+High value, 
+low complexity 
+- do these first
+Low value,  
+high complexity 
+- don't do these
+High value, 
+moderate 
+complexity -
+do these 
+second
+Low value, 
+low complexity 
+- do these 
+third
+High value, 
+high complexity 
+- should you do 
+these?
+Low value, 
+moderate 
+complexity 
+- should 
+you do 
+these?
+1
+2
+3
+?
+?
+!!
+82
+
+
+================================================================================
+Page 13
+================================================================================
+84
+• What is Scrum?
+–
+Term originally comes from rugby
+–
+Success in a scrum depends upon working closely together as a team
+• The Scrum framework:
+–
+Lightweight framework that promotes lightweight, adaptive solutions to complex problems
+–
+Originated in 1995 (Sutherland and Schwaber)
+–
+Several books published by both
+Scrum
+84
+•
+Teamwork
+•
+Coordination
+•
+Trust
+
+
+================================================================================
+Page 14
+================================================================================
+85
+• Is an agile, lightweight process 
+• Emphasis on collaboration 
+• Can manage and control software and product development 
+• Uses iterative, incremental practices 
+• Has a simple implementation 
+• Increases productivity 
+• Suited to complex product development 
+• Reduces time to benefits 
+• Easy to understand – hard to execute 
+• Embraces adaptive, empirical systems development
+What is Scrum
+85
+
+
+================================================================================
+Page 15
+================================================================================
+86
+1.
+Commitment to achieving the goals and supporting each other 
+2.
+Focus on the work of the Sprint to make the best possible progress 
+toward the sprint goal 
+3.
+Openness about the work and the challenges you run into 
+4.
+Respect each other to be capable, independent people 
+5.
+Courage to do the right thing and work on tough problems
+Values according to Scrum
+86
+
+
+================================================================================
+Page 16
+================================================================================
+87
+What is Scrum?  Sequential vs. Overlap
+Requirements
+Design
+Code
+Test
+time
+Sequential:
+Overlap:
+87
+
+
+================================================================================
+Page 17
+================================================================================
+91
+The three pillars of Scrum
+Transparency
+Inspection
+Adaptation
+Scrum
+Work is visible to 
+everyone, enabling 
+early identification 
+of obstacles
+Artefacts are 
+checked frequently, 
+as they are being 
+developed
+Change direction as 
+soon as it becomes 
+necessary; give up if 
+necessary
+91
+The team, the Product 
+Owner, and stakeholders
+The product, the Sprint 
+progress, the backlog 
+Agile doesn’t fear change —
+it expects it.
+
+
+================================================================================
+Page 18
+================================================================================
+93
+Product Backlog
+Sprint Backlog
+Product Backlog
+Product 
+Increment
+Daily Scrum
+Sprint
+1
+2
+3
+4
+5
+93
+
+
+================================================================================
+Page 19
+================================================================================
+94
+• Defines what will be built
+• Contains a broad list of descriptions of all required 
+features, wish-list items, etc. prioritised by business value.
+• Product owner is in charge of defining priorities here
+• Items here are gradually refined into items that can be 
+completed in a sprint
+1 - Product Backlog
+94
+
+
+================================================================================
+Page 20
+================================================================================
+95
+• Task items from the product backlog that will be completed 
+in the next 'sprint'
+• Collectively planned by the whole team
+• Updated every day to reflect the team's latest decisions
+2 - Sprint backlog
+95
+Sprint backlog
+
+
+================================================================================
+Page 21
+================================================================================
+96
+• Also known as an iteration, these are the units into which large, 
+complex problems are broken down
+• Occurs over a timeframe of typically 1-4 weeks, with a new 
+sprint beginning as soon as one ends
+• Team must respect the prioritisation agreed for the sprint 
+backlog
+3 - Sprint
+96
+Sprint
+
+
+================================================================================
+Page 22
+================================================================================
+97
+• Also known as a 'stand-up meeting', this is a short but essential 
+daily meeting involving everyone working on the sprint.
+–
+Updates on the previous day are shared
+–
+Plans for the day ahead are shared
+–
+Anything that has been learned since the last meeting, including problems, is 
+discussed
+• Run by an individual titled 'Scrum Master'
+• An opportunity to reflect and plan, and ensure work is both 
+synchronised and relevant to the sprint goal
+4 - Daily Scrum
+97
+Sprint
+Daily 
+Scrum
+
+
+================================================================================
+Page 23
+================================================================================
+98
+• The output of every sprint, which should be a deliverable, 
+functional, usable product
+• Each increment builds on all previous increments; the 
+next increment should comprise everything that existed 
+already, plus everything from the latest sprint
+• Each increment should be a working version of the 
+product that could, if necessary, be shipped.
+5 - Product Increment
+98
+Product 
+Increment
+(output)
+fully tested, integrated, and meeting the definition of “done”
+
+
+================================================================================
+Page 24
+================================================================================
+101
+• Product owner
+–
+Possibly a Product Manager / Project Sponsor / Key end-user 
+–
+Decides features, release date, prioritisation, budget 
+• Scrum Master
+–
+Typically a Project Manager or Team Leader 
+–
+Responsible for enacting Scrum values and practices 
+–
+Remove impediments / politics, keeps everyone productive
+• Project Team
+–
+5-10 members; Teams are self-organising 
+–
+Cross-functional: QA, Programmers, UI Designers, etc. 
+–
+Membership should change only between sprints
+Roles
+101
+
+
+================================================================================
+Page 25
+================================================================================
+102
+• Sprint planning
+–
+Determining what will take place during a sprint
+• Daily stand-up
+–
+What did I do yesterday, what will I do today, what obstacles am I facing?
+• Sprint review
+–
+Everyone who wants to attend can attend; accomplishments are shown
+• Sprint retrospective
+–
+Examining lessons learned for the next sprint
+Events
+102
+
+
+================================================================================
+Page 26
+================================================================================
+103
+•
+Apply Agile thinking – plan in small, achievable steps
+•
+Be ready to adapt when feedback or new ideas emerge
+•
+Keep your scope realistic and deliver value early
+•
+Reflect regularly – what’s working, what needs improvement
+•
+Document your process clearly — show evidence of iteration and learning
+–
+From Agile: Product Backlog, Sprint Log or Progress Journal, Reflections
+–
+From Waterfall (still useful!): Project Definition, Requirements document, 
+meetings and decisions log, design diagrams (UML, mock-ups, flowcharts), 
+Timeline (Gantt chart), Trello board – keep versioned documentation
+FYP and Agile practice – A few tips…
+103
+
+
+================================================================================
+Page 27
+================================================================================
+Unit 4: Agile & Scrum (Intro)
+Software Project 
+Management
+Thais Webber
+Richard Lee
+
+
+################################################################################
+[SECTION 2: VISUAL ELEMENTS - OCR EXTRACTED TEXT]
+Total Visual Elements: 212
+################################################################################
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 1, Image 1
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 2, Image 1
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 3, Image 1
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 4, Image 1
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 4, Image 2
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 4, Image 3
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 4, Image 4
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 5, Image 1
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 6, Image 1
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 7, Image 1
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 8, Image 1
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 9, Image 1
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 10, Image 1
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 10, Image 2
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 10, Image 3
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 10, Image 4
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 10, Image 5
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 10, Image 6
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 10, Image 7
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 10, Image 8
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 10, Image 9
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 11, Image 1
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 12, Image 1
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 12, Image 2
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 12, Image 3
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 12, Image 4
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 12, Image 5
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 12, Image 6
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 12, Image 7
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 12, Image 8
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 12, Image 9
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 12, Image 10
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 12, Image 11
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 12, Image 12
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 12, Image 13
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 12, Image 14
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 12, Image 15
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 12, Image 16
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 12, Image 17
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 12, Image 18
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 12, Image 19
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 12, Image 20
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 12, Image 21
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 12, Image 22
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 12, Image 23
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 12, Image 24
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 12, Image 25
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 12, Image 26
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 13, Image 1
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 14, Image 1
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 15, Image 1
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 16, Image 1
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 16, Image 2
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 16, Image 3
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 16, Image 4
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 16, Image 5
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 16, Image 6
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 16, Image 7
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 16, Image 8
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 16, Image 9
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 16, Image 10
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 16, Image 11
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 16, Image 12
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 16, Image 13
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 17, Image 1
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 17, Image 2
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 17, Image 3
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 17, Image 4
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 17, Image 5
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 17, Image 6
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 17, Image 7
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 17, Image 8
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 17, Image 9
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 17, Image 10
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 17, Image 11
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 17, Image 12
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 17, Image 13
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 17, Image 14
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 17, Image 15
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 17, Image 16
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 17, Image 17
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 17, Image 18
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 17, Image 19
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 17, Image 20
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 18, Image 1
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 18, Image 2
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 18, Image 3
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 18, Image 4
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 18, Image 5
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 18, Image 6
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 18, Image 7
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 18, Image 8
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 18, Image 9
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 18, Image 10
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 18, Image 11
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 18, Image 12
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 18, Image 13
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 18, Image 14
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 18, Image 15
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 18, Image 16
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 18, Image 17
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 18, Image 18
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 18, Image 19
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 18, Image 20
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 18, Image 21
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 18, Image 22
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 18, Image 23
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 18, Image 24
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 18, Image 25
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 18, Image 26
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 18, Image 27
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 18, Image 28
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 18, Image 29
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 18, Image 30
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 18, Image 31
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 18, Image 32
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 18, Image 33
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 18, Image 34
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 18, Image 35
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 18, Image 36
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 19, Image 1
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 19, Image 2
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 20, Image 1
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 20, Image 2
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 20, Image 3
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 21, Image 1
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 21, Image 2
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 21, Image 3
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 21, Image 4
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 21, Image 5
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 21, Image 6
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 21, Image 7
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 21, Image 8
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 21, Image 9
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 21, Image 10
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 21, Image 11
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 21, Image 12
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 21, Image 13
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 21, Image 14
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 21, Image 15
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 21, Image 16
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 21, Image 17
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 21, Image 18
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 21, Image 19
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 21, Image 20
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 21, Image 21
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 21, Image 22
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 21, Image 23
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 21, Image 24
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 21, Image 25
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 21, Image 26
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 21, Image 27
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 21, Image 28
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 22, Image 1
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 22, Image 2
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 22, Image 3
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 22, Image 4
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 22, Image 5
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 22, Image 6
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 22, Image 7
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 22, Image 8
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 22, Image 9
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 22, Image 10
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 22, Image 11
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 22, Image 12
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 22, Image 13
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 22, Image 14
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 22, Image 15
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 22, Image 16
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 22, Image 17
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 22, Image 18
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 22, Image 19
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 22, Image 20
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 22, Image 21
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 22, Image 22
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 22, Image 23
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 22, Image 24
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 22, Image 25
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 22, Image 26
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 22, Image 27
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 23, Image 1
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 23, Image 2
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 23, Image 3
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 23, Image 4
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 23, Image 5
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 23, Image 6
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 23, Image 7
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 23, Image 8
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 23, Image 9
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 23, Image 10
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 23, Image 11
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 23, Image 12
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 23, Image 13
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 23, Image 14
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 23, Image 15
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 23, Image 16
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 23, Image 17
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 23, Image 18
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 23, Image 19
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 23, Image 20
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 23, Image 21
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 23, Image 22
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 23, Image 23
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 23, Image 24
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 23, Image 25
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 23, Image 26
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 23, Image 27
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 23, Image 28
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 24, Image 1
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 25, Image 1
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 26, Image 1
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+[VISUAL ELEMENT - ERROR]
+Location: Page 27, Image 1
+Error: tesseract is not installed or it's not in your PATH. See README file for more information.
+
+
+================================================================================
+[END OF DOCUMENT]
+================================================================================
