@@ -35,6 +35,36 @@ sales-chatbot/
 
 ---
 
+## Technologies & Requirements
+
+- **Python:** 3.12+ recommended (create a virtualenv).
+- **Core libraries:** Flask for the web UI; other deps in `requirements.txt`.
+- **LLM & API:** Groq API (Llama 3.2 via Groq) — requires a Groq API key.
+- **Speech (optional):** Vosk offline model included for local ASR.
+- **Frontend:** Simple HTML/JS in `templates/` and `static/` for the chat UI.
+- **Install:** `pip install -r requirements.txt` and set the Groq API key.
+ 
+## Overview & How to Use (high level)
+
+- **Purpose:** A conversational sales assistant that guides a buyer through four structured stages (IMPACT) using an LLM and a lightweight Flask UI.
+- **Quick run:**
+    - Install deps: `pip install -r requirements.txt`
+    - Set API key: `GROQ_API_KEY` environment variable
+    - Start server: `python app.py`
+    - Open: `http://localhost:5000`
+- **What each part does (high level):**
+    - `app.py` — runs the Flask server, serves the UI, and forwards user messages to the bot logic.
+    - `chatbot.py` — core logic: builds prompts, manages conversation history, and implements the IMPACT state machine (Intent → Logical → Emotional → Pitch).
+    - `templates/` & `static/` — frontend UI and client-side scripts (chat interface and optional audio in `static/speech.js`).
+    - Offline server-side Vosk support has been removed from this copy to save space; the browser-side Web Speech API (`static/speech.js`) still provides voice input when supported by the browser.
+- **Conversation flow (simple):**
+    1. User sends a message from the browser to `app.py`.
+    2. `chatbot.py` appends to history, selects the current IMPACT stage, and builds a prompt.
+    3. LLM (Groq) returns a response; `chatbot.py` inspects the reply to decide whether to advance stages or ask a follow-up.
+    4. Response returned to the browser and displayed in the chat UI.
+- **Where to tweak behavior:** adjust temperature and prompt templates in `chatbot.py`; change the server port in `app.py`.
+- **Notes:** This is intentionally high-level. Tell me which part you want expanded (e.g., prompt templates, state transitions, or deploy steps).
+
 ## Test Without Web Interface
 ```bash
 python chatbot.py
@@ -55,11 +85,6 @@ python chatbot.py
 - Logical → "ok, I see the issue..."
 - Emotional → "that's a powerful reason..."
 
----
-
-## Cost
-
-**Zero.** Groq provides free access to Llama 3.2 with generous limits.
 
 ---
 

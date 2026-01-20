@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sales Chatbot - IMPACT Framework</title>
+    <script src="{{ url_for('static', filename='speech.js') }}"></script>
     <style>
       * {
         margin: 0;
@@ -241,6 +242,31 @@
       .hidden {
         display: none;
       }
+
+      .mic-btn {
+        background: rgba(255, 255, 255, 0.05);
+        color: #e6ddc8;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 12px 14px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 16px;
+        transition: all 0.15s;
+      }
+      .mic-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
+      .mic-btn.recording {
+        background: #dc2626;
+        color: white;
+        border-color: #dc2626;
+        animation: pulse 1s infinite;
+      }
+      @keyframes pulse {
+        50% {
+          opacity: 0.7;
+        }
+      }
     </style>
   </head>
   <body>
@@ -254,6 +280,14 @@
         <div class="chat-container" id="chatContainer"></div>
 
         <div class="input-area">
+          <button
+            class="mic-btn"
+            id="micBtn"
+            onclick="toggleMic()"
+            title="Voice input"
+          >
+            🎤
+          </button>
           <input
             type="text"
             id="messageInput"
@@ -297,6 +331,11 @@
               return;
             }
 
+            // Restore history if exists
+            if (data.history && data.history.length > 0) {
+              data.history.forEach(msg => addMessage(msg.content, msg.role));
+            }
+            
             addMessage(data.message, "bot");
             updateStage(data.stage);
           })
@@ -396,6 +435,42 @@
         if (event.key === "Enter") {
           sendMessage();
         }
+      }
+
+      // ===== SPEECH MODULE INTEGRATION =====
+      let speechRecognizer;
+
+      // Wait for DOM and script to load
+      window.addEventListener("DOMContentLoaded", () => {
+        speechRecognizer = new SpeechRecognizer();
+      });
+
+      function toggleMic() {
+        if (!speechRecognizer) {
+          alert("Speech module loading...");
+          return;
+        }
+
+        const input = document.getElementById("messageInput");
+        const micBtn = document.getElementById("micBtn");
+
+        if (speechRecognizer.getState()) {
+          speechRecognizer.stop();
+          return;
+        }
+
+        micBtn.classList.add("recording");
+
+        speechRecognizer.start(
+          (text) => {
+            // Insert at cursor
+            const pos = input.selectionStart;
+            const val = input.value;
+            input.value = val.substring(0, pos) + text + val.substring(pos);
+            input.selectionStart = input.selectionEnd = pos + text.length;
+          },
+          () => micBtn.classList.remove("recording"), // onStop callback
+        );
       }
     </script>
   </body>

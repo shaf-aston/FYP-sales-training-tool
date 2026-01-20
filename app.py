@@ -16,6 +16,11 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET", secrets.token_hex(32))
 CORS(app)
 
+# Simple favicon handler to avoid browser 404s requesting /favicon.ico
+@app.route('/favicon.ico')
+def favicon():
+    return ('', 204)
+
 # Store chatbot instances per session
 chatbots = {}
 
@@ -26,39 +31,27 @@ def home():
 
 @app.route('/api/init', methods=['POST'])
 def init_chatbot():
-    """Initialize a new chatbot for this session using .env API key"""
+    """Initialize session and return chat history if exists"""
     
-    # Get API key from environment
-    api_key = os.environ.get("GROQ_API_KEY")
-    
-    if not api_key:
+    if not os.environ.get("GROQ_API_KEY"):
         return jsonify({"error": "API key not configured in .env file"}), 500
     
-    # Create session ID if doesn't exist
     if 'session_id' not in session:
         session['session_id'] = secrets.token_hex(16)
     
     session_id = session['session_id']
+    history = []
     
-    try:
-        # Initialize chatbot
-        bot = SalesChatbot(api_key)
-        chatbots[session_id] = bot
-        
-        # Get initial greeting
-        greeting = bot.chat("Hi")
-        
-        if greeting.startswith("Error:"):
-            return jsonify({"error": greeting}), 400
-        
-        return jsonify({
-            "success": True,
-            "message": greeting,
-            "stage": bot.stage
-        })
+    # Return history if bot exists
+    if session_id in chatbots:
+        history = [{"role": msg["role"], "content": msg["content"]} for msg in chatbots[session_id].history]
     
-    except Exception as e:
-        return jsonify({"error": f"Initialization failed: {str(e)}"}), 500
+    return jsonify({
+        "success": True,
+        "message": "Hey, what's up? How can I help you out?",
+        "stage": "intent",
+        "history": history
+    })
 
 @app.route('/api/chat', methods=['POST'])
 def chat():
@@ -73,9 +66,15 @@ def chat():
         return jsonify({"error": "Message too long (max 1000 characters)"}), 400
     
     session_id = session.get('session_id')
+    if not session_id:
+        return jsonify({"error": "Session not initialized"}), 400
     
-    if not session_id or session_id not in chatbots:
-        return jsonify({"error": "Chatbot not initialized"}), 400
+    # Lazy init: create bot on first message
+    if session_id not in chatbots:
+        api_key = os.environ.get("GROQ_API_KEY")
+        if not api_key:
+            return jsonify({"error": "API key not configured"}), 500
+        chatbots[session_id] = SalesChatbot(api_key)
     
     bot = chatbots[session_id]
     
