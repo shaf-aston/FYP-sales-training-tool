@@ -1,0 +1,733 @@
+================================================================================
+[DOCUMENT METADATA]
+================================================================================
+FILE: Week 3 - Estimation.pdf
+EXTRACTION DATE: 2026-01-19 09:23:24
+TYPE: PDF
+================================================================================
+
+################################################################################
+[SECTION 1: TEXT CONTENT]
+################################################################################
+
+================================================================================
+Page 1
+================================================================================
+Unit 2: Measurement, 
+estimation & data analysis
+Software Project 
+Management
+Thais Webber
+Richard Lee
+
+
+================================================================================
+Page 2
+================================================================================
+2
+When you have completed this unit, you will be able to: 
+• Appreciate the key role of measurement, estimation and data analysis 
+in software project management 
+• Understand measurement theory and use appropriate scale types to 
+quantify the attributes of software projects 
+• Understand the need for estimates and use estimates to judge software 
+project characteristics including size, effort and cost
+Unit objectives
+2
+
+
+================================================================================
+Page 3
+================================================================================
+3
+• Role of measurement, estimation and data analysis 
+• Key measurement concepts and measurement theory 
+• Theory and practice of estimation and prediction 
+Outline
+3
+
+
+================================================================================
+Page 4
+================================================================================
+4
+• Estimation is the process of predicting an expected value for some 
+attribute (whose value is not known)
+• The uncertainty is expressed in terms of probabilities
+• Estimates are forecasts or predictions; we estimate what we cannot 
+measure
+–
+the entity whose attribute we estimate may not exist yet or is not sufficiently mature to be 
+measured accurately
+–
+not because we don’t understand what we are trying to measure
+What is estimation?
+4
+
+
+================================================================================
+Page 5
+================================================================================
+5
+• Estimation is closely linked to measurement because estimates are 
+based (explicitly or implicitly) on data obtained from measurement
+• Representational validity and scale types are still just as relevant 
+• The most common use of estimation in software projects is resource 
+prediction
+What is estimation?
+5
+
+
+================================================================================
+Page 6
+================================================================================
+6
+• When needed?
+–
+determining if a project proposal is feasible resource-wise
+–
+bidding for a contract
+–
+planning a project: predicting cost and duration, etc.
+–
+tracking resource expenditure during a project
+If estimates are poor, the resulting losses can take a company out 
+of business 
+Resource prediction
+6
+
+
+================================================================================
+Page 7
+================================================================================
+7
+• In principle, measurements are 'exact'
+–
+predictions are uncertain
+• An estimate of an attribute A lies within some overall range of possible 
+values on the scale X to which the (actual) value of A belongs
+–
+different values on X will have different 'likelihoods' of corresponding to the actual value of A
+• Estimates and probability are closely linked
+–
+Reminder: a probability is formally expressed as a value in the interval [0.0, 1.0], though you 
+will also see it as a percentage (i.e., in the interval [0.0, 100.0])
+Modelling uncertainty
+7
+
+
+================================================================================
+Page 8
+================================================================================
+8
+• Continuous variables
+–
+Example: the duration of a software project, the weight of a server
+–
+If we estimate that attribute A will have the specific value a, then a is termed a ‘point estimate’, 
+and the probability of our estimate being precisely correct is zero
+–
+If we estimate that A will have a value that lies in a non-empty interval , then the probability of 
+being correct can be non-zero
+• Discrete variables
+–
+Example: number of people, SLOC
+–
+It is still likely that there is uncertainty - each of the possible values a1 , a2 , …, an may have a 
+non-zero probability
+Estimates and probability
+8
+
+
+================================================================================
+Page 9
+================================================================================
+9
+• [L, U] denotes an interval; all values v such that L <= v <= U
+–
+L is the lower bound
+–
+U is the upper bound
+• The probability P of the actual value a (of attribute A) lying in the 
+interval [L, U] is written as:
+P(a ∊ [L,U])
+• If P(project_duration_in_months ∊ [8, 12]) = 0.95, then [8, 12] is a 95% 
+confidence interval
+Confidence intervals
+9
+
+
+================================================================================
+Page 10
+================================================================================
+10
+• (L, M, U) is a triple spanning the interval [L,U] where M, the central 
+value of the triple, is the expected value of the estimate
+• If M in (L, M, U) is the mid-point of the interval [L, U] (it does not have 
+to be), then:
+M – L = U – M= δ
+and (L, M, U) = (M - δ, M, M + δ), which is more usually written:
+M ± δ
+Example: the estimate for the number of defects in a software 
+application is 20 ± 3 per thousand SLOC
+Interval notation for estimates
+10
+
+
+================================================================================
+Page 11
+================================================================================
+11
+• Ways to improve on an expert judgement:
+–
+Group estimation (the Delphi method)
+–
+Task decomposition
+–
+Analogy
+–
+Formal modelling
+Improved estimates
+11
+
+
+================================================================================
+Page 12
+================================================================================
+12
+• Iterative prediction technique involving a group of experts
+–
+Each expert provides an estimate in each iteration
+–
+The estimates from all experts are “summarised” (e.g., averaged) and the result is 
+communicated back to the experts...
+–
+... and used to come up with a new set of expert estimates in the next iteration
+• Estimates obtained by a group of experts are more accurate than those 
+provided by a single expert
+The Delphi method
+12
+
+
+================================================================================
+Page 13
+================================================================================
+13
+• Decompose
+–
+a project’s software process into phases
+–
+a project phase into ‘activities’ or ‘work packages’
+–
+a system into separate subsystems or ‘functional units’
+• Top-down: Estimate an overall value and then proportionately 
+distribute this over the components of the distribution.
+–
+When is this appropriate? When the project completion time is fixed
+• Bottom-up: Estimate a value for individual components, and then 
+obtain the overall figure (e.g. by summing them).
+–
+When is this appropriate? e.g., for an open-ended or research project
+Estimation by decomposition
+13
+
+
+================================================================================
+Page 14
+================================================================================
+14
+• S size - example units SLOC (but it could also be number of modules) 
+• EpS (effort per size) - example of units used: pm/SLOC 
+• SpE (size per effort) called Productivity - example of units: SLOC/pm 
+• CpS unit cost - example of units used: £/SLOC 
+• CpE unit cost rate - example of units used: £/pm 
+• Effort = S x EpS - example working units: SLOC x pm/SLOC → pm 
+• Effort = S/SpE working the units: (SLOC) / (SLOC/pm) → pm 
+• Cost = S x CpS example of units £ but it could also be € (EUROS) - example 
+working the units: SLOC x £/SLOC → £ 
+• Cost = Effort x CpE - example working the units: pm x £/pm → £
+ 
+pm = person-month, but it could be person-week (for example)
+Formulae
+14
+
+
+================================================================================
+Page 15
+================================================================================
+15
+• Attributes estimated: system size, development effort and cost
+• Decomposition: system into ‘functional units’/ subsystems (USI, GRD, DBMS)
+• Strategy: bottom-up with multiple conversion factors
+• Delphi average = (Min + 4 * Likely + Max) / 6
+Worked example 1
+<-------- SLOC -------->
+Delphi 
+Average
+Unit Cost
+Productivity
+Cost
+Effort
+Functional 
+Unit
+Minimum
+Likely
+Maximum
+Expected
+CpS
+(£/SLOC)
+SpE
+(SLOC/pm)
+£
+pm
+USI
+1,800
+2,400
+2,700
+2,350
+15
+335
+35,250
+7.01
+GRD
+4,050
+4,900
+6,200
+4,975
+22
+200
+109,450
+24.88
+DBMS
+2,950
+3,400
+3,700
+3,375
+18
+240
+60,750
+14.06
+TOTALS →
+10,700
+205,450
+≈46
+15
+
+
+================================================================================
+Page 16
+================================================================================
+16
+• Attributes estimated: development effort and cost
+• Two dimensional decomposition: system into subsystems; process into phases
+• Strategy: bottom-up using expert judgement
+• What will this project cost?
+Worked example 2
+Function
+Requirement
+Design
+Code
+Test
+Total
+USI
+1.0
+2.0
+0.5
+3.5
+7.0
+GRD
+1.5
+11.0
+4.0
+10.5
+27.0
+DBMS
+2.0
+6.0
+3.0
+4.0
+15.0
+Total pm
+4.5
+19.0
+7.5
+18.0
+49.0
+CpE (£/pm)
+5,200
+4,800
+4,250
+4,500
+16
+
+
+================================================================================
+Page 17
+================================================================================
+17
+1. Look for a past project (or unit) Q that is ‘very similar’ to the new project P
+2. Obtain recorded effort value* E for Q: Q.E 
+3. Identify orthogonal factors accounting for significant differences between Q 
+and P & expected to impact P’s effort 
+4. Adjust Q.E to take into account factors identified in (3):
+P.E = Q.E * (Rf1 * Rf2 * ...) + (Af1 + Af2 + ...) 
+What might be typical ratio factors Rfi or additive factors Afi? 
+–
+E.g., size or development rate for ratio factors; different components between P and Q for 
+additive factors
+* effort might be time, cost, development time, etc.
+Estimation by analogy
+17
+
+
+================================================================================
+Page 18
+================================================================================
+18
+• We will develop a new graphics project G 
+• We have developed in the past a similar project called Q
+• Suppose we know from project Q, that Q.E = 100pm
+–
+to develop Q, 100 person-months were needed
+• Question: What is the effort that you predict for the new project G? 
+• One significant difference between G and Q is size
+–
+Q.S = 25,000 SLOC
+–
+G.S ≈ 20,000 SLOC ± 2,500 SLOC
+Worked example
+18
+
+
+================================================================================
+Page 19
+================================================================================
+19
+• Need database of relevant past project data 
+• What is an ‘analogous project’?
+–
+Need attributes that can be measured at estimation time, that are reasonably independent and 
+correlated with variable you are trying to predict
+–
+Analogue identification mostly by expert judgement
+• Identify adjustment factor(s) and estimate them quantitatively for new 
+project 
+Finding analogous projects
+19
+
+
+================================================================================
+Page 20
+================================================================================
+20
+• Measurement, estimation and data analysis are key software project 
+management tools
+–
+they support reliable quantitative comparisons, evaluations and decision-making 
+• The values of software project/artefact attributes can be established
+–
+using measurement for existing entities 
+–
+using estimation/prediction for entities that will exist in the future
+Summary of key points in this unit
+20
+
+
+================================================================================
+Page 21
+================================================================================
+21
+• Consider the Top-Down Decomposition of tasks
+• Useful tools: Trello - https://trello.com/en & Gantt Chart
+• SMART Goals / Objectives 
+Tips for FYP this week
+21
+
+
+================================================================================
+Page 22
+================================================================================
+22
+When you have completed this unit, you will be able to: 
+• Appreciate the key role of measurement, estimation and data analysis 
+in software project management 
+• Understand measurement theory and use appropriate scale types to 
+quantify the attributes of software projects 
+• Understand the need for estimates and use estimates to judge software 
+project characteristics including size, effort and cost
+Unit objectives
+22
+
+
+================================================================================
+Page 23
+================================================================================
+Unit 2: Measurement, 
+estimation & data analysis
+Software Project 
+Management
+Thais Webber
+Richard Lee
+
+
+################################################################################
+[SECTION 2: VISUAL ELEMENTS - OCR EXTRACTED TEXT]
+################################################################################
+Total Visual Elements: 23
+
+================================================================================
+[VISUAL ELEMENT #1]
+Location: Page 1, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #2]
+Location: Page 2, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #3]
+Location: Page 3, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #4]
+Location: Page 4, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #5]
+Location: Page 5, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #6]
+Location: Page 6, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #7]
+Location: Page 7, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #8]
+Location: Page 8, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #9]
+Location: Page 9, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #10]
+Location: Page 10, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #11]
+Location: Page 11, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #12]
+Location: Page 12, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #13]
+Location: Page 13, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #14]
+Location: Page 14, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #15]
+Location: Page 15, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #16]
+Location: Page 16, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #17]
+Location: Page 17, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #18]
+Location: Page 18, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #19]
+Location: Page 19, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #20]
+Location: Page 20, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #21]
+Location: Page 21, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #22]
+Location: Page 22, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #23]
+Location: Page 23, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[END OF DOCUMENT]
+================================================================================

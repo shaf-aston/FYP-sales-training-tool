@@ -1,0 +1,1224 @@
+================================================================================
+[DOCUMENT METADATA]
+================================================================================
+FILE: LDC on writing a report.pptx
+EXTRACTION DATE: 2026-01-19 09:23:30
+TYPE: PPTX
+================================================================================
+
+################################################################################
+[SECTION 1: TEXT CONTENT]
+################################################################################
+
+================================================================================
+Slide 1
+================================================================================
+Learning Development Centre
+LDC@aston.ac.uk
+Report writing
+
+================================================================================
+Slide 2
+================================================================================
+References > Insert Caption
+Write the Table or Figure number followed by short description in the ‘Caption’ box 
+Choose if it is a Table or Figure from ‘Label’ box
+Then select ‘OK’
+MS Word Tip: Use ‘insert caption’ for your table and figures
+
+================================================================================
+Slide 3
+================================================================================
+Tip: Build your structure first
+Decide your headings and sub-headings
+A logical order to guide the reader to find key information
+Are the sections relevant to the assignment question/brief?
+Check instructions 
+ You may have a specific report structure to follow (with given headings)
+Check marking criteria
+One issue or topic per paragraph
+Select evidence (e.g. facts, research findings, references) for each paragraph
+Consider where you might add figures or tables 
+
+================================================================================
+Slide 4
+================================================================================
+Charging points aren’t at their optimal just yet, and are still quite rare overall. I think there’s nowhere near enough charging stations to meet the expected number of electric cars on the road by 2040.
+What is Academic Writing Style?
+What might need revising in this example?
+
+================================================================================
+Slide 5
+================================================================================
+Charging points 
+aren’t 
+at their optimal 
+just yet
+, and are still 
+quite rare overall.
+ I 
+think there’s nowhere near enough
+ charging stations to meet the 
+expected number
+ of electric cars on the road by 2040.
+Imprecise/vague language   
+Informal language (e.g. personal pronoun, use of contractions)
+Wordy (could be more concise)
+No referencing to support arguments
+
+================================================================================
+Slide 6
+================================================================================
+Avoids emotive 
+and 
+judgemental
+language (e.g. ‘this is terrible’)
+Supports arguments 
+with 
+evidence, examples and references  
+Avoids conversational language and slang (e.g. ‘at the end of the day’)    
+A
+voids 
+contractions (e.g. don’t,
+can’t)
+W
+ritten 
+in 
+impersonal
+style (can use passive voice)
+Academic writing style is objective and formal
+
+================================================================================
+Slide 7
+================================================================================
+I conducted twelve interviews.
+ I recommend the replacement of SAC units.
+You Try… Make these sentences non-personal
+
+================================================================================
+Slide 8
+================================================================================
+I conducted twelve interviews
+PASSIVE: Twelve interviews were conducted
+I recommend the replacement of SAC units 
+PASSIVE: The replacement of SAC units is recommended.
+Rewritten…(examples)
+
+================================================================================
+Slide 9
+================================================================================
+Assume the reader is educated, but a non-specialist
+Your report should not be hard to read because of long words, complicated sentences and technical jargon
+A measurement of air speed was undertaken by using an anemometer     
+Can be simplified to:
+An anemometer was used to measure air speed
+OR
+Air speed was measured using an anemometer
+Your writing does not need to be complicated
+
+================================================================================
+Slide 10
+================================================================================
+The following information includes words and phrases that add nothing to the meaning. Rewrite it as briefly and clearly as possible.
+Academic writing is clear and concise
+18
+The road was originally designed with the needs of residential users predominantly in mind, although over a number of years an element of commercial use, much of which consists of retail properties, has come into existence. If an additional amount of traffic is generated, as it might well be if the current proposal is implemented, problems of increased congestion and even more pollution would inevitably result, to the detriment of residents. (71 words)
+Activity adapted from: Van Emden, J. (2005) 
+Writing for Engineers. 
+3
+rd
+edn
+. Palgrave: Macmillan
+
+================================================================================
+Slide 11
+================================================================================
+Making writing more concise…
+19
+The road was 
+originally
+ designed with 
+the needs of 
+residential users 
+predominantly
+ in mind, although
+over a number of years an element of 
+commercial use, 
+much of which consists 
+of retail properties, 
+has come into
+existence
+. 
+If an additional amount of traffic is generated, 
+as it might well be 
+if the current proposal is implemented, problems of increased congestion and 
+even more 
+pollution would inevitably result, 
+to the detriment of residents
+. 
+(From 71 to 36 words)
+The road was designed mainly for residential users, although there has been some commercial development, mainly retail. The current proposal would be likely to increase both traffic congestion and pollution. 
+(30 words)
+Activity adapted from: Van Emden, J (2005) 
+Writing for Engineers 
+(3
+rd
+ed
+). Palgrave: Macmillan
+
+================================================================================
+Slide 12
+================================================================================
+What makes a piece of work ‘academic’…
+
+================================================================================
+Slide 13
+================================================================================
+Avoids vagueness 
+‘
+many argue’		 
+how many? who? 
+Uses 
+precise language: 
+‘tested regularly           
+how long is regular? Be specific e.g. tested 
+every 15 
+minutes
+Uses cautious wording (it is rare to be 100% certain):
+  e.g.
+this suggests, this indicates, it is possible, may, could, might
+Provides references to back-up claims and to show where information is from
+Academic writing is accurate
+
+================================================================================
+Slide 14
+================================================================================
+What’s a reference?
+When you write your assignments, you will 
+refer
+ to the words, ideas, views and research of others.
+You must acknowledge the sources you have used in the form of a reference.
+
+================================================================================
+Slide 15
+================================================================================
+I think the high-speed rail line will have a limited positive economic impact.  The benefits associated with proximity even in the best-case scenario will be small. Also, the economic benefits associated with accessibility will be limited because commuters will still need to travel longer distances to reach the new rail station sites.
+Are you persuaded?
+
+================================================================================
+Slide 16
+================================================================================
+There is evidence that the high-speed rail line will have a limited positive economic impact. 
+Graham and 
+Melo
+ (2011) 
+argue
+that the economic benefits associated with proximity, (due to better connectivity, lower travel times and costs), even in the best-case scenario are small (between 0.02% and 0.19% of UK’s GDP). Also, the economic benefits associated with accessibility appear limited, ‘for many in the UK a new HSR line will result in similar or longer door-to-door rail journey (to London)’ 
+(Sanchez-
+Mateos
+ and 
+Givioni
+, 2011, p. 114).
+Are you more persuaded?
+
+================================================================================
+Slide 17
+================================================================================
+Referencing is essential because…
+Helps you demonstrate your own voice by evidencing and strengthening your arguments
+Shows your awareness of a subject and bring depth to your analysis
+Enable readers to find the source of ideas/publications you have used in your writing
+Evidence your research and avoid plagiarism
+Adds authority, credibility and is good practice.
+
+================================================================================
+Slide 18
+================================================================================
+Harvard referencing
+
+================================================================================
+Slide 19
+================================================================================
+When copying words… 				(Harvard)
+Use quotes sparingly - paraphrasing or summarising can demonstrate better understanding.
+Quotes can be effective when the words used are important or have impact, 
+i.e
+ definitions
+However, if you do copy text into your work you must add quotation marks and in-text citation within the sentence.
+
+================================================================================
+Slide 20
+================================================================================
+Writing about ideas you have read in your own words (Harvard)
+
+================================================================================
+Slide 21
+================================================================================
+If referencing the same source again – use the same number
+IEEE referencing format… 
+
+================================================================================
+Slide 22
+================================================================================
+When copying words (IEEE)…
+
+================================================================================
+Slide 23
+================================================================================
+What are the key features of a report?
+How might this be different to an essay?
+
+================================================================================
+Slide 24
+================================================================================
+Writing about ideas you have read in your own words (IEEE)
+
+================================================================================
+Slide 25
+================================================================================
+More rules for Harvard style citations…
+Two or three authors
+Write - and - before last surname listed
+Castle, Green and Anders (2014) found…
+It was found that… (Castle, Green and Anders, 2014)
+More than three authors? 
+Use ‘et al.’ after first surname
+Smith et al. (2010) highlight that…
+It has been highlighted that… (Smith et al., 2010
+).
+In reference list  = list all Authors
+No year information?
+Use (no date)
+Jones (no date) highlights that…
+It has been highlighted that…(Jones, no date).
+No person named as author?
+Refer to the Organisation
+BBC (2019) highlight that…
+It has been highlighted that…(BBC, 2019).
+Several articles released by the same author in the same year?
+Label  a, b, c… after year to identify them in citations and reference list
+(Khan and Li, 2019a) 
+(Khan and Li, 2019b)
+Khan, T., and Li, R. (2019a) 
+Business Handbook
+. London: Routledge.
+Khan, T., and Li, R. (2019b) 
+Business Insiders
+. Available at: businesshacks.com (Accessed: 01 January 2022).
+
+================================================================================
+Slide 26
+================================================================================
+You also need to provide in-text citations, for copied images, tables, & diagrams
+Figure 1: Three possible qualitative structures of a system kernel function (Parnell et al., 2011, p.80). 
+(Author, Year, page) for Harvard style
+or [citation number, page] for IEEE style
+Provide a figure number and a description
+
+================================================================================
+Slide 27
+================================================================================
+Harvard - Reference List (A-Z Author order at end of assignment)
+Reference List
+British Gas (2012) 
+A green light to save you more
+. Eastbourne: British Gas
+Strathearn, G. (2013) 
+Energy and environmental issues for the 21st century
+. Basingstoke: Palgrave Macmillan.
+Young, L. (2012) 
+Sustaining our energy: challenges and conflicts
+. Available at: http://books.google.com (Accessed: 12 November 2021).
+
+================================================================================
+Slide 28
+================================================================================
+Key referencing resource:  Cite Them Right online
+You do not need to learn how to create the different references in 
+the reference list. 
+Help is at hand: 
+http://www.citethemrightonline.com/
+Log-in using your  Aston account
+
+================================================================================
+Slide 30
+================================================================================
+‘Cite them right’ then tells you the correct format for your reference
+Follow the rule
+
+================================================================================
+Slide 31
+================================================================================
+Create the reference using Harvard ‘rule’ for Journal Articles:
+Detailed record of reading
+Title of Journal: 
+IEEE Transactions on Engineering Management
+Title of article: 
+Resource Planning in Engineering Services Firms
+Authors: 
+V. 
+Hargaden
+ and J. K. Ryan
+Volume and issue: 
+vol. 62, no. 4
+Year of publication:
+ 2015
+DOI: 
+https://doi.org/10.1109/TEM.2015.2457675.
+Page reference: 
+pp. 578-590
+Harvard referencing rule 
+(journal article with 
+doi
+ number)
+Surname, Initial. (Year of publication) 'Title of article', 
+Title of Journal
+, volume (issue), Page reference. Available at: DOI
+
+================================================================================
+Slide 32
+================================================================================
+Create the reference using Harvard ‘rule’ for Journal Articles:
+Detailed record of reading
+Title of Journal: 
+IEEE Transactions on Engineering Management
+Title of article: 
+Resource Planning in Engineering Services Firms
+Authors: 
+V. 
+Hargaden
+ and J. K. Ryan
+Volume and issue: 
+vol. 62, no. 4
+Year of publication:
+ 2015
+DOI: 
+https://doi.org/10.1109/TEM.2015.2457675.
+Page reference: 
+pp. 578-590
+Harvard referencing rule 
+(journal article with 
+doi
+ number)
+Surname, Initial. (Year of publication) 'Title of article', 
+Title of Journal
+, volume (issue), Page reference. Available at: DOI
+Harvard reference for this source:
+Hargaden
+, V. and Ryan, J.K. (2015) ‘Resource Planning in Engineering Services Firms’, 
+IEEE Transactions on Engineering Management
+, 62 (4), pp. 578-590. Available at: https://doi.org/ 10.1109/TEM.2015.2457675
+
+================================================================================
+Slide 33
+================================================================================
+Create this reference using IEEE ‘rule’ for Journal Articles:
+Detailed record of reading
+Title of Journal: 
+IEEE Transactions on Engineering Management
+Title of article: 
+Resource Planning in Engineering Services Firms
+Authors: 
+V. 
+Hargaden
+ and J. K. Ryan
+Volume and issue: 
+vol. 62, no. 4
+Year of publication:
+ 2015
+doi
+ number: 
+10.1109/TEM.2015.2457675.
+Page reference: 
+pp. 578-590
+IEEE referencing rule 
+(journal article with 
+doi
+ number)
+[Reference number]
+Initial. Surname, "Title of article," 
+Title of journal
+, volume, issue number, pages, Abbreviated month day, year of publication. 
+doi
+: 
+doi
+ number.
+
+================================================================================
+Slide 34
+================================================================================
+Divided into clear sections with headings / sub-headings
+Visual: they contain tables and figures
+Like essay writing:
+Academic writing style
+Evidenced: research, facts, (using referencing)
+Include introduction and conclusion
+Key features of a report
+4
+This Photo
+ by Unknown Author is licensed under 
+CC BY
+
+================================================================================
+Slide 35
+================================================================================
+Create this reference using IEEE ‘rule’ for Journal Articles:
+Detailed record of reading
+Title of Journal: 
+IEEE Transactions on Engineering Management
+Title of article: 
+Resource Planning in Engineering Services Firms
+Authors: 
+V. 
+Hargaden
+ and J. K. Ryan
+Volume and issue: 
+vol. 62, no. 4
+Year of publication:
+ 2015
+doi
+ number: 
+10.1109/TEM.2015.2457675.
+Page reference: 
+pp. 578-590
+IEEE referencing rule 
+(journal article with 
+doi
+ number)
+[Reference number]
+Initial. Surname, "Title of article," 
+Title of journal
+, volume, issue number, pages, Abbreviated month day, year of publication. 
+doi
+: 
+doi
+ number .
+[1]		V. 
+Hargaden
+ and J. K. Ryan, “Resource 			Planning in Engineering Services Firms,” 			
+IEEE Transactions on Engineering 				Management, 	
+vol. 62, no. 4, 578-590, 			2015. 
+doi
+: 	10.1109/TEM.2015.2457675.
+
+================================================================================
+Slide 36
+================================================================================
+Aston University:
+	 “Plagiarism – where a student uses, without acknowledgement, the work of other people and presents it as their own which may give an unfair advantage over others. Intentional and unintentional acts of plagiarism (whether reckless or otherwise) will be construed as offences.”
+What is plagiarism?
+
+================================================================================
+Slide 37
+================================================================================
+Plagiarism can include…
+
+================================================================================
+Slide 38
+================================================================================
+Lecturers detect plagiarism in a student’s work through experience and by using text-matching software ‘
+turn it in
+’ (similarity report). 
+Plagiarism can result in
+Reduced, or no marks
+Facing the University Disciplinary Board 
+Plagiarism detection
+
+================================================================================
+Slide 39
+================================================================================
+Turnitin Similarity report
+This Photo
+ by Unknown Author is licensed under 
+CC BY-SA-NC
+
+================================================================================
+Slide 40
+================================================================================
+Is this plagiarism?
+
+================================================================================
+Slide 41
+================================================================================
+Yes it is plagiarism – copied text is not in quotation marks +  poor citation placement
+A citation could be placed before the list 
+e.g
+ According to ERP (2020), OFGEMs approach included:
+Some points could then be paraphrased.
+e.g. – highlighting competitive pricing
+ If not possible, the copied parts should be in quotation marks
+
+================================================================================
+Slide 42
+================================================================================
+You will also need to consider the quality of the sources you reference!
+Use and reference sources that you know are 
+authoritative
+, 
+credible
+ and 
+reliable
+.
+Consider who the author is and what makes them an expert.
+Consider how recent the information is. 
+Consider the purpose of the source (e.g. why it was written and intended audience).
+
+================================================================================
+Slide 43
+================================================================================
+Activity
+Put these sources in order of strength. How suitable are they for academic assignments?
+Wikipedia entry
+Journal article 
+Company report
+General website (.com / .co.uk)
+Academic text book
+News article
+Which would you avoid using in your assignments?
+
+================================================================================
+Slide 44
+================================================================================
+Decisions, decisions: Evaluating sources of information.
+
+================================================================================
+Slide 45
+================================================================================
+Present answer to question(s), proposing solutions and recommendations
+Types of report
+Analytical reports
+Practical reports
+Discuss the procedures, results and significance of practical work/experiments 
+	(e.g. lab reports) 
+
+================================================================================
+Slide 46
+================================================================================
+Journal article 
+(‘peer reviewed’ - research focused)
+Company report 
+(industry information, but may have bias and absent information)
+Academic text book 
+(provides overview)
+News article 
+(can be used to highlight public trends, but beware of bias, fake  news and tabloid press)
+General website 
+(may have unreliable, non-expert 				information. Relevant, official, company and government websites can be 	used)
+Wikipedia entry 
+(unreliable information)
+
+================================================================================
+Slide 47
+================================================================================
+Finding relevant research
+More info about finding and evaluating resources and library support on Aston 
+LibGuides
+https://libguides.aston.ac.uk/Engineering_Management
+Where?
+Aston Library ‘Smart Search’
+Google Scholar
+
+================================================================================
+Slide 48
+================================================================================
+A very useful resource for finding research:
+	Library Smart Search and 
+Libguides
+: 
+https://libguides.aston.ac.uk/Logistics
+https://libguides.aston.ac.uk/Engineering_Management
+A very useful resource for referencing: 
+	Cite Them Right: 
+http://www.citethemrightonline.com/
+A very useful resource for academic vocabulary: 
+	Manchester University’s academic 
+phrasebank
+: 
+http://www.phrasebank.manchester.ac.uk/
+Resources to help you…
+
+================================================================================
+Slide 49
+================================================================================
+Learning Development Centre (LDC)
+Advice on your assignment writing, referencing, maths, and study strategies. 
+1:1 tutorials (on campus, and online)
+Learning Development Centre Blackboard
+Visit LDC webpage: 
+www.aston.ac.uk/ldc
+Reception: 	First Floor, Library
+Telephone:  	0121 204 3040
+Email:          	LDC@aston.ac.uk
+
+================================================================================
+Slide 50
+================================================================================
+Section headings & subheadings
+ numbered and indented
+Consistent numbering system (I, II, III, IV 
+Or
+ 1, 2, 3, 4….)
+
+================================================================================
+Slide 51
+================================================================================
+Your headings and sub-headings should be specific and informative
+Uninformative
+Heading
+Consumption
+Needs
+Iteration 2
+Informative 
+Heading
+Changes
+ in energy consumption
+Stakeholder needs
+Iteration 2: electrode power algorithms 
+
+================================================================================
+Slide 52
+================================================================================
+Figure captions are given 
+below 
+the figure
+Table captions are given 
+above
+ the table
+Captions should include:
+ a statement of what is being figured
+definitions for any symbols or acronyms used. 
+a citation if copied from another source
+Setting out figures and tables
+Table 2: The specific heat capacity at different temperatures for seawater [15].
+
+================================================================================
+Slide 53
+================================================================================
+Tables and Figures
+Signpost and discuss the figure in your writing
+Clear, easy to read and well labelled
+The figure should be placed in document, shortly after it is first mentioned
+Label with appropriate units
+
+################################################################################
+[SECTION 2: VISUAL ELEMENTS - OCR EXTRACTED TEXT]
+################################################################################
+Total Visual Elements: 44
+
+================================================================================
+[VISUAL ELEMENT #1]
+Location: ppt/media/image50.PNG
+Type: PNG image
+Dimensions: 1678x579 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+[VISUAL ELEMENT - ERROR]
+Location: ppt/media/image20.svg
+Error: See logs
+
+
+================================================================================
+[VISUAL ELEMENT #2]
+Location: ppt/media/image49.png
+Type: PNG image
+Dimensions: 1523x936 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+[VISUAL ELEMENT - ERROR]
+Location: ppt/media/image26.svg
+Error: See logs
+
+
+================================================================================
+[VISUAL ELEMENT #3]
+Location: ppt/media/image25.png
+Type: PNG image
+Dimensions: 384x384 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #4]
+Location: ppt/media/image48.png
+Type: PNG image
+Dimensions: 1260x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #5]
+Location: ppt/media/image24.jpg
+Type: JPG image
+Dimensions: 1043x1148 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #6]
+Location: ppt/media/image47.png
+Type: PNG image
+Dimensions: 199x199 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #7]
+Location: ppt/media/image23.jpg
+Type: JPG image
+Dimensions: 2048x2048 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #8]
+Location: ppt/media/image46.jpg
+Type: JPG image
+Dimensions: 1600x1600 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+[VISUAL ELEMENT - ERROR]
+Location: ppt/media/image22.svg
+Error: See logs
+
+
+================================================================================
+[VISUAL ELEMENT #9]
+Location: ppt/media/image21.png
+Type: PNG image
+Dimensions: 384x384 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #10]
+Location: ppt/media/image19.png
+Type: PNG image
+Dimensions: 384x384 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+[VISUAL ELEMENT - ERROR]
+Location: ppt/media/image18.svg
+Error: See logs
+
+
+================================================================================
+[VISUAL ELEMENT #11]
+Location: ppt/media/image17.png
+Type: PNG image
+Dimensions: 384x384 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+[VISUAL ELEMENT - ERROR]
+Location: ppt/media/image16.svg
+Error: See logs
+
+
+================================================================================
+[VISUAL ELEMENT #12]
+Location: ppt/media/image15.png
+Type: PNG image
+Dimensions: 384x384 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #13]
+Location: ppt/media/image14.emf
+Type: EMF image
+Dimensions: 1778x1000 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #14]
+Location: ppt/media/image13.jpeg
+Type: JPEG image
+Dimensions: 1280x720 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #15]
+Location: ppt/media/image12.jpeg
+Type: JPEG image
+Dimensions: 1280x720 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #16]
+Location: ppt/media/image11.jpeg
+Type: JPEG image
+Dimensions: 1280x720 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #17]
+Location: ppt/media/image10.jpeg
+Type: JPEG image
+Dimensions: 1280x720 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #18]
+Location: ppt/media/image9.jpeg
+Type: JPEG image
+Dimensions: 1280x720 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #19]
+Location: ppt/media/image8.jpeg
+Type: JPEG image
+Dimensions: 1280x720 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #20]
+Location: ppt/media/image7.jpeg
+Type: JPEG image
+Dimensions: 1280x720 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #21]
+Location: ppt/media/image6.jpeg
+Type: JPEG image
+Dimensions: 1280x720 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #22]
+Location: ppt/media/image5.jpeg
+Type: JPEG image
+Dimensions: 1280x720 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #23]
+Location: ppt/media/image4.jpeg
+Type: JPEG image
+Dimensions: 1280x720 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #24]
+Location: ppt/media/image3.jpeg
+Type: JPEG image
+Dimensions: 1280x720 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #25]
+Location: ppt/media/image2.jpeg
+Type: JPEG image
+Dimensions: 1280x720 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #26]
+Location: ppt/media/image1.jpeg
+Type: JPEG image
+Dimensions: 1280x720 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #27]
+Location: ppt/media/image27.png
+Type: PNG image
+Dimensions: 384x384 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #28]
+Location: ppt/media/image45.jpg
+Type: JPG image
+Dimensions: 3386x2260 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #29]
+Location: ppt/media/image44.png
+Type: PNG image
+Dimensions: 776x407 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #30]
+Location: ppt/media/image43.png
+Type: PNG image
+Dimensions: 1200x660 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #31]
+Location: ppt/media/image42.jpg
+Type: JPG image
+Dimensions: 400x400 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+[VISUAL ELEMENT - ERROR]
+Location: ppt/media/image28.svg
+Error: See logs
+
+
+================================================================================
+[VISUAL ELEMENT #32]
+Location: ppt/media/image41.png
+Type: PNG image
+Dimensions: 1177x636 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #33]
+Location: ppt/media/image40.png
+Type: PNG image
+Dimensions: 1708x792 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #34]
+Location: ppt/media/image39.png
+Type: PNG image
+Dimensions: 1724x808 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #35]
+Location: ppt/media/image38.png
+Type: PNG image
+Dimensions: 621x419 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #36]
+Location: ppt/media/image29.png
+Type: PNG image
+Dimensions: 833x721 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #37]
+Location: ppt/media/image30.png
+Type: PNG image
+Dimensions: 402x301 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #38]
+Location: ppt/media/image31.png
+Type: PNG image
+Dimensions: 714x495 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #39]
+Location: ppt/media/image37.png
+Type: PNG image
+Dimensions: 810x360 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #40]
+Location: ppt/media/image36.png
+Type: PNG image
+Dimensions: 1231x245 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #41]
+Location: ppt/media/image35.png
+Type: PNG image
+Dimensions: 640x640 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #42]
+Location: ppt/media/image34.jpg
+Type: JPG image
+Dimensions: 2048x1395 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #43]
+Location: ppt/media/image33.png
+Type: PNG image
+Dimensions: 1900x187 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #44]
+Location: ppt/media/image32.png
+Type: PNG image
+Dimensions: 501x373 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[END OF DOCUMENT]
+================================================================================

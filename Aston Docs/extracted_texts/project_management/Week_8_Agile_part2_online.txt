@@ -1,0 +1,818 @@
+######################################################################
+# SOURCE: Week 8 - Agile-part2-online.pdf
+# SIZE: 1308.6 KB
+######################################################################
+
+============================================================
+PAGE 1
+============================================================
+Unit 4: Agile, Scrum & Kanban (2)
+Software Project 
+Management
+Thais Webber
+Richard Lee
+
+
+============================================================
+PAGE 2
+============================================================
+4
+• Explain the structure, participants, events, and artefacts of the 
+Scrum methodology
+• Understand Kanban principles and artefacts
+• Compare the Scrum and Kanban methodologies, and understand their 
+advantages and disadvantages
+Goals for this week
+4
+
+
+============================================================
+PAGE 3
+============================================================
+6
+• An agile, lightweight framework
+• Focuses on teamwork, collaboration, and adaptability.
+• Uses iterative and incremental cycles to deliver value step by step.
+• Helps teams increase productivity and deliver benefits faster through 
+continuous feedback and improvement.
+From past lecture… What is Scrum?
+6
+
+
+============================================================
+PAGE 4
+============================================================
+9
+Structure of Scrum
+9
+Sprint Backlog
+Product Backlog
+Product 
+Increment
+Daily Scrum
+Sprint Cycle
+Project Team
+3-10 members
+Self-organising
+Multiple roles 
+Sprints are fixed time periods in which a team 
+focuses on tasks that lead to delivery value
+
+
+============================================================
+PAGE 5
+============================================================
+10
+Structure of Scrum
+10
+Sprint Backlog
+Product Backlog
+Product 
+Increment
+Daily Scrum
+Sprint Cycle
+to-do list
+user stories
+
+
+============================================================
+PAGE 6
+============================================================
+12
+Structure of Scrum
+12
+Sprint Backlog
+Product Backlog
+Product 
+Increment
+Daily Scrum
+Sprint Cycle
+Product Owner 
+responsible for maintaining the product backlog
+to-do list
+user stories
+
+
+============================================================
+PAGE 7
+============================================================
+13
+Four key events in Scrum
+13
+Sprint Backlog
+Product Backlog
+Product 
+Increment
+Sprint Cycle
+Sprint Planning
+What will take place during a sprint?
+
+
+============================================================
+PAGE 8
+============================================================
+14
+Sprint Planning
+14
+Sprint Backlog
+Product Backlog
+Product 
+Increment
+Daily Scrum
+Sprint cycle
+     usually 2-4 weeks
+Sprint Planning
+
+
+============================================================
+PAGE 9
+============================================================
+15
+• Provides a short-term vision: from 1 to 4 weeks 
+• Takes place only at the beginning of an iteration 
+Objective: set the Sprint backlog (i.e., user stories list) that the team 
+are committed to develop during the sprint according to: 
+–
+Effort estimation defined for each user story 
+–
+Team capacity and constraints for that sprint
+Input: Product backlog 
+Output: Sprint backlog 
+Prerequisite: Product backlog is up to date
+Sprint Planning
+15
+
+
+============================================================
+PAGE 10
+============================================================
+16
+• Purpose:
+–
+To determine how much work can be accomplished in the upcoming sprint and 
+answer the question 'how will we do it?'
+• Outputs:
+–
+Commitment of several features, stories or bug fixes
+–
+Sprint backlog describing how to accomplish the commitment
+• Rules
+–
+Product owner must come prepared with clearly defined, prioritised backlog items
+–
+Product owner has authority over the priorities for the next sprint
+–
+Team has authority over the amount of work that can be accomplished during the sprint
+–
+Team must make a commitment before the end of the meeting
+Sprint Planning
+16
+
+
+============================================================
+PAGE 11
+============================================================
+17
+Four key events in Scrum
+17
+Sprint Backlog
+Product Backlog
+Product 
+Increment
+Daily Scrum or
+Daily Stand-up
+Sprint Cycle
+maximum 10-15 minutes
+
+
+============================================================
+PAGE 12
+============================================================
+18
+Daily Stand-up
+18
+Sprint Backlog
+Product Backlog
+Product 
+Increment
+Daily Scrum
+Sprint
+Whole team and Scrum master 
+Leader keeps everyone productive; 
+follows Scrum values and practices
+
+
+============================================================
+PAGE 13
+============================================================
+19
+• Goal: 
+–
+Enable to team to share progress with each other 
+–
+Make visible the blocks (or impediments) - daily - for whole team to see 
+• Everyone stands in a circle and reports 3 things: 
+–
+What did I do since the last Daily standup Meeting? 
+–
+What will I try to do by the next Daily standup meeting? 
+–
+Any issues that prevent us to progress? 
+• 10-15 minutes maximum
+This is the only formal communication each day. 
+–
+Informal communication may take place throughout the day on issues or things 
+that need to change (perhaps via Slack or Discord).
+Daily Stand-Up
+19
+
+
+============================================================
+PAGE 14
+============================================================
+20
+• No discussion or debate: listening only
+–
+After the meeting ends, discussion and problem-solving can begin
+• Team and Scrum master only
+–
+Product owner can be invited, as can others, but that's up to the team
+• After the meeting, the Scrum Master leads the removal of issues/blocks
+Daily Stand-Up
+20
+
+
+============================================================
+PAGE 15
+============================================================
+21
+Four key events in Scrum
+21
+Sprint Backlog
+Product Backlog
+Product 
+Increment
+Sprint Cycle
+Sprint Review
+Team accomplishments are shown
+
+
+============================================================
+PAGE 16
+============================================================
+22
+Sprint Review
+22
+Sprint Backlog
+Product Backlog
+Product 
+Increment
+Daily Scrum
+Sprint
+Sprint Review
+End of the Sprint
+Whole team participates
+
+
+============================================================
+PAGE 17
+============================================================
+23
+• Takes place at the end of the sprint 
+• Whole team participates
+• Only completed user stories (product increment) are presented 
+• Team presents what it accomplished during the sprint to the business 
+stakeholders and end-users for feedback and ideas
+• Typically takes the form of a demo of new features
+–
+Informal atmosphere
+–
+Follows 2-hour prep time rule 
+–
+No slides (usually)
+Sprint Review
+23
+
+
+============================================================
+PAGE 18
+============================================================
+24
+Four key events in Scrum
+24
+Sprint Backlog
+Product Backlog
+Sprint Cycle
+Sprint Retrospective
+Examining process and lessons learned for the next 
+sprint
+Product 
+Increment
+
+
+============================================================
+PAGE 19
+============================================================
+25
+Sprint Retrospective
+25
+Sprint Backlog
+Product Backlog
+Product 
+Increment
+Daily Scrum
+Sprint
+Sprint Retrospective
+1h per Sprint week
+Scrum master 
+Manages this event 
+Just for the team
+
+
+============================================================
+PAGE 20
+============================================================
+26
+• Takes place after the Sprint review 
+• Managed by the Scrum master 
+• Duration: 1 hour per sprint week 
+• Period of reflection around Scrum project progression 
+–
+At the organisational level and technical aspects 
+• Teams can address issues met during the sprint: 
+–
+Issues are identified 
+–
+Issues' importance evaluated 
+–
+Solutions and decisions made
+• Format: brainstorming, sailboat, post-it... 
+Sprint Retrospective
+26
+
+
+============================================================
+PAGE 21
+============================================================
+27
+Sprint Retrospective (sailboat)
+27
+Wind: what is 
+pushing us 
+forward?
+Anchor: what is 
+holding us back?
+Rocks: what risks 
+do we face?
+Goal/vision: 
+what are we 
+working towards?
+
+
+============================================================
+PAGE 22
+============================================================
+28
+Sprint Retrospective (post-its)
+28
+What
+
+
+============================================================
+PAGE 23
+============================================================
+29
+Four key events in Scrum
+29
+Sprint Backlog
+Product Backlog
+Product 
+Increment
+Daily Scrum or
+Daily Stand-up
+Sprint Cycle
+Sprint Planning
+Sprint Retrospective
+Sprint Review
+
+
+============================================================
+PAGE 24
+============================================================
+30
+• Sprint planning
+–
+Determining what will take place during a sprint
+• Daily stand-up
+–
+What did I do yesterday, what will I do today, what obstacles am I facing?
+• Sprint review
+–
+Everyone who wants to attend can attend; accomplishments are shown
+• Sprint retrospective
+–
+Examining lessons learned for the next sprint
+Events - Summary
+30
+
+
+============================================================
+PAGE 25
+============================================================
+31
+• Product owner
+–
+Possibly a Product Manager / Project Sponsor / Key end-user 
+–
+Decides features, release date, prioritisation, budget 
+• Scrum Master
+–
+Typically, a Project Manager or Team Leader 
+–
+Responsible for enacting Scrum values and practices 
+–
+Remove impediments / politics, keeps everyone productive
+• Project Team
+–
+3-10 members; Teams are self-organising 
+–
+Cross-functional: QA, Programmers, UI Designers, etc. 
+–
+Membership should change only between sprints
+Participants in Scrum
+31
+
+
+============================================================
+PAGE 26
+============================================================
+32
+• Responsible for the ‘what’
+• One product owner per product (avoid mixed directions)
+• Responsibilities and activities:
+–
+Accountable for ROI 
+–
+Engaged with the final product and business users 
+–
+Has a clear vision about the product and have a good understanding of the product 
+–
+Manages the Product backlog 
+–
+Prioritises the functionalities 
+–
+Makes sure that the project team share the same vision and understanding related to the 
+challenges 
+–
+Formalises business needs with different granularity levels according to the importance of 
+functionalities 
+–
+Communicates about progress made 
+Product Owner
+32
+
+
+============================================================
+PAGE 27
+============================================================
+33
+• Facilitator role
+• One scrum master per project
+• Responsibilities and activities:
+–
+Involved in the product implementation 
+–
+Engaged in team progress 
+–
+Manages the project team 
+–
+Removes obstacles that can reduce team effectiveness 
+–
+Makes sure team members collaborate 
+–
+Makes sure the product owner is always feeding the project team
+Scrum Master
+33
+
+
+============================================================
+PAGE 28
+============================================================
+34
+• Cross-functional team - includes design, coding, testing, and other 
+resources required for potentially shippable software 
+• Self-organising and self-managing 
+• Inspects and adapts through Daily Scrum Meeting and Retrospective 
+• Assists product owner to prepare the backlog 
+• Plans the sprint 
+• Swarms over tasks – minimise Idle work
+• Transparent, focused (no more than 2 tasks), works sustainably, stays 
+together
+Project Team
+34
+
+
+============================================================
+PAGE 29
+============================================================
+35
+• Enables projects where the business requirements are hard to quantify 
+to be successfully developed 
+• Fast moving, cutting-edge developments can be quickly coded and 
+tested 
+• Due to short sprints and constant feedback, it becomes easier to cope 
+with changes
+• Daily meetings make it possible to measure individual productivity. This 
+leads to improvements in the productivity of each team member
+• The overhead cost in terms of process and management is minimal, 
+leading to a quicker, cheaper result.
+Advantages of Scrum
+35
+
+
+============================================================
+PAGE 30
+============================================================
+36
+• Scrum is one of the leading causes of scope creep because unless there 
+is a definite end date, the project management stakeholders will be 
+tempted to keep demanding new functionality 
+• If the team members are not committed, the project will either never 
+complete or fail 
+• It is good for small, fast-moving projects as it works well with small 
+teams 
+• This methodology requires experienced team members
+• If any of the team members leave during a development, it can have a 
+huge effect on the project development
+Disadvantages of Scrum
+36
+
+
+============================================================
+PAGE 31
+============================================================
+38
+Scrum – Advantages and Disadvantages
+38
+Advantages
+Disadvantages
+•
+Works well when requirements are unclear or 
+changing
+•
+Risk of scope creep if there is no clear end date
+•
+Allows fast coding and testing for new ideas
+•
+Needs strong team commitment to succeed
+•
+Short sprints and constant feedback make 
+change easier to manage
+•
+Better suited to small, experienced teams
+•
+Daily meetings improve visibility and 
+productivity
+•
+Team member turnover can slow or harm 
+progress
+•
+Low overhead – lighter processes lead to faster 
+delivery
+•
+Requires discipline to avoid confusion or 
+burnout
+
+
+============================================================
+PAGE 32
+============================================================
+41
+• Kanban means ‘signboard’ or ‘visual card’ in Japanese
+• Lean method for managing work — not only for software.
+• Originally used for just-in-time car manufacturing at Toyota (late 1940s) 
+where parts were manufactured only when demanded (‘pulled’)
+–
+This reduced work-in-progress stocks and quickly pointed to any bottlenecks 
+hidden by traditional push-oriented schedules
+• Adapted for software by David Anderson of Microsoft to handle 
+software maintenance requests
+Introduction to Kanban
+41
+
+
+============================================================
+PAGE 33
+============================================================
+42
+1.
+Capture high-level routines
+2.
+Redecorate your wall (e.g., To Do, In Progress, Done)
+3.
+Define done
+4.
+Do your daily stand-ups
+Kanban Steps
+42
+
+
+============================================================
+PAGE 34
+============================================================
+43
+• We need to define the pipeline that works goes through 
+• For instance, when developing new features for your software:
+1. Take items from backlog 
+2. Specify the work to implement it 
+3. Implement it 
+4. Validate that it works 
+5. Deliver to customers or partners
+Kanban: capturing high-level routine
+43
+
+
+============================================================
+PAGE 35
+============================================================
+44
+Kanban: redecorate your wall
+44
+To-Do / Doing / Done
+Pipeline visualisation
+Limit to number of cards 
+- work-in-progress (WIP)
+
+
+============================================================
+PAGE 36
+============================================================
+45
+• Just like Scrum’s definition of done
+– ‘Done’ means the specific requirements for moving a card from one 
+stage to the next
+• Examples of ‘done’ by stage:
+–
+Specify (done): items broken into tasks doable within a day, and quick specs 
+done for each item
+–
+Implement (done): code reviewed and tested, static analysis conducted, code 
+is checked in, customer-facing documentation is completed
+–
+Validate (done): deployment to production, trial by real customers, issues 
+identified are resolved
+Kanban: define done
+45
+
+
+============================================================
+PAGE 37
+============================================================
+46
+• Project manager asks for any blockers and helps solve these
+ 
+(That’s it: there’s no discussion of who’s doing what, as that’s on the board)
+• Should take 5-15 minutes
+–
+Longer discussions can take place separately, involving only those to whom the 
+discussion is relevant
+• If a particular step or person keeps getting blocked (or takes longer 
+than expected), further analysis should take place:
+» Was the work not broken up evenly?
+» Are there inefficiencies in the process?
+» Can someone else step in and help?
+Kanban: stand-ups
+46
+
+
+============================================================
+PAGE 38
+============================================================
+47
+• Ease of use: Kanban is a very simple and easy to understand approach, which 
+makes it practical to apply effectively. No need to be an expert to work with 
+Kanban. 
+• Promotes continuous and sustainable improvements: Kanban approach 
+not only consists of manual cards but also draws visualizations of the process 
+outputs which makes the analysis of work easier. 
+• Adaptability: Kanban encourages maximum adaptability 
+• Collaboration: Kanban focuses on collaboration; this makes the team work 
+together to produce the ideal outcomes/deliverables. 
+• Low Overheads: Supervision of the use of a Kanban board, cards, and 
+analysis of output is easier as compared to most methods/approaches to 
+project management. 
+Advantages of Kanban
+47
+wisdomplexus.com
+
+
+============================================================
+PAGE 39
+============================================================
+48
+• Lack of iteration: building software in iterations is a foundation for 
+most development processes, which is not integral to Kanban at a 
+ticket level. You can build iteration on top of Kanban, but it often ends 
+up being its own separate process
+• Lack of timing: there are no timeframes associated with each phase, 
+which can be disadvantageous
+• Dependency on the board: if the board is not updated, or is too 
+simplistic to begin with, any advantages that come from Kanban are 
+lost
+Disadvantages of Kanban
+48
+wisdomplexus.com
+
+
+============================================================
+PAGE 40
+============================================================
+49
+Kanban – Advantages and Disadvantages
+49
+Advantages
+Disadvantages
+Ease of use
+Lack of iteration
+Continuous improvement
+Lack of timing
+Adaptability
+Board dependency
+Collaboration
+Low overheads
+
+
+============================================================
+PAGE 41
+============================================================
+50
+Scrum vs Kanban 
+50
+Scrum
+Kanban
+Type
+•
+Agile framework with defined structure and events
+•
+Agile method focused on visualising and 
+managing workflow
+Key idea
+•
+Work in short, planned sprints
+•
+Maintain continuous flow of work
+Roles
+•
+Clear roles; team setup contains Product Owner, 
+Scrum Master, Developers
+•
+No fixed roles; flexible team setup
+Planning
+•
+Work is planned before each sprint
+•
+Work is pulled as capacity allows
+Focus
+•
+Delivering increments of value at regular intervals
+•
+Keeping steady progress and improving 
+flow
+Changes
+•
+Not allowed during a sprint
+•
+Can be made anytime
+
+
+============================================================
+PAGE 42
+============================================================
+51
+• Next tutorial session scheduled:
+–
+Friday 9:00-10:00 – Reviewing Agile 
+principles and approaches
+–
+Q&A forums – please your participation is 
+highly encouraged!
+• Coming up next:
+–
+Monday 9:00-11:00
+–
+Risk Management in Software Projects 
+• Learn how to identify, assess, and 
+respond to potential risks before they 
+impact project success.
+Upcoming sessions overview
+51
+
+
+============================================================
+PAGE 43
+============================================================
+Unit 4: Agile, Scrum & Kanban (2)
+Software Project 
+Management
+Thais Webber
+Richard Lee

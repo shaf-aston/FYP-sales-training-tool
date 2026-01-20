@@ -1,0 +1,1780 @@
+================================================================================
+[DOCUMENT METADATA]
+================================================================================
+FILE: Unit 5 - Risk Management-online1.pdf
+EXTRACTION DATE: 2026-01-19 09:22:11
+TYPE: PDF
+================================================================================
+
+################################################################################
+[SECTION 1: TEXT CONTENT]
+################################################################################
+
+================================================================================
+Page 1
+================================================================================
+Unit 5: Risk Management
+Software Project 
+Management
+Thais Webber
+Richard Lee
+
+
+================================================================================
+Page 2
+================================================================================
+2
+According to Step Wise
+2
+0. Select project
+1. Identify project 
+objectives
+2. Identify project 
+infrastructure
+3. Analyse project 
+characteristics
+4. Identify products 
+and activities
+5. Estimate effort 
+for activity
+6. Identify activity 
+risks
+7. Allocate 
+resources
+8. Review / 
+publicise plan
+9. Execute plan
+10. Lower-level 
+planning
+For each 
+activity
+Lower
+-level 
+detail
+Review
+
+
+================================================================================
+Page 3
+================================================================================
+3
+• Define risk and risk management in the context of software projects 
+• Categorise software project risks based on their impact and probability 
+• Understand risk management steps including risk identification, risk 
+analysis, risk planning and risk monitoring 
+Unit Objectives
+3
+
+
+================================================================================
+Page 4
+================================================================================
+4
+• Introduction 
+• Categories of risk 
+• Dealing with risk in software projects 
+• Evaluating risks to the schedule using PERT
+Outline
+4
+
+
+================================================================================
+Page 5
+================================================================================
+5
+• The chance of exposure to the adverse consequences of future events 
+(PRINCE2) 
+• An uncertain event or condition that, if it occurs, has a positive or negative 
+effect on a project’s objectives (US Project Management Body of Knowledge 
+standard – PM-BOK) 
+• Risks can be negative or positive
+• Risks relate to possible future problems, not current ones 
+• Risks involve a possible cause and its effect(s)
+Definition of Risk
+5
+
+
+================================================================================
+Page 6
+================================================================================
+6
+• Negative risk involves understanding potential problems that might 
+occur in the project and how they might impede project success 
+• Example : Key staff are ill at critical times in the project
+Negative Risk
+6
+
+
+================================================================================
+Page 7
+================================================================================
+7
+• Positive risks can result in good things happening; sometimes called 
+opportunities 
+• Positive risk management is an investment 
+• Example : a new technology developed saving you time if released
+Positive Risk
+7
+
+
+================================================================================
+Page 8
+================================================================================
+8
+Risk changes as the project progresses
+8
+Level
+Project duration
+
+
+================================================================================
+Page 9
+================================================================================
+9
+• Lack of awareness of the approach 
+• Unwillingness to spend additional time and resources on risk 
+management 
+• Development managers may want projects to go ahead and do not 
+want project sponsors to be deterred by consideration of possible 
+failure
+• If successful, you might not experience any tangible benefit, in spite of 
+there being a cost associated with its use (which is actually a risk)
+Why is risk planning not widely used?
+9
+
+
+================================================================================
+Page 10
+================================================================================
+10
+• Project Risk Management includes the processes concerned with 
+identifying, analysing, and responding to project risk 
+• It aims at:
+– maximizing the results of positive events 
+– minimizing the consequences of adverse events 
+Project Risk Management
+10
+
+
+================================================================================
+Page 11
+================================================================================
+11
+• Project Risk Management includes the processes concerned with 
+identifying, analysing, and responding to project risk 
+• It aims at:
+– maximizing the results of positive events 
+– minimizing the consequences of adverse events 
+• Risks factors: 
+– Project size 
+– Complexity 
+– Speed of implementation
+Project Risk Management
+11
+
+
+================================================================================
+Page 12
+================================================================================
+12
+• Introduction 
+• Categories of risk 
+• Dealing with risk in software projects 
+• Evaluating risks to the schedule using PERT
+Outline
+12
+
+
+================================================================================
+Page 13
+================================================================================
+13
+Categories of Risk
+13
+Actors
+Technology
+Tasks
+Structure
+Based on a socio-technical 
+model of system development 
+(Lyytinen, Mathiassen & 
+Ropponen, 1998)
+
+
+================================================================================
+Page 14
+================================================================================
+14
+• Actors include people, all those involved in the project - developers, 
+users, managers, etc. 
+• For example, high turnover/staff leaving leads to loss of information that 
+is importance to the project
+Categories of Risk
+14
+Actors
+Technology
+Tasks
+Structure
+Based on a socio-technical 
+model of system development 
+(Lyytinen, Mathiassen & 
+Ropponen, 1998)
+
+
+================================================================================
+Page 15
+================================================================================
+15
+• Technology relates to development tools and techniques used to 
+implement the project and to technology embedded in the project 
+deliverables
+Categories of Risk
+15
+Actors
+Technology
+Tasks
+Structure
+Based on a socio-technical 
+model of system development 
+(Lyytinen, Mathiassen & 
+Ropponen, 1998)
+
+
+================================================================================
+Page 16
+================================================================================
+16
+• Tasks represent the work to be carried out 
+• A typical risk is that the amount of effort needed to carry out the task is 
+underestimated, so work is not completed by the deadline
+Categories of Risk
+16
+Actors
+Technology
+Tasks
+Structure
+Based on a socio-technical 
+model of system development 
+(Lyytnien, Mathiassen & 
+Ropponen, 1998)
+
+
+================================================================================
+Page 17
+================================================================================
+17
+• Structure covers management procedures 
+• For example, a group assigned a project task is not informed of the 
+assignment because it is not part of the project communication 
+network, so task completion is delayed
+Categories of Risk
+17
+Actors
+Technology
+Tasks
+Structure
+Based on a socio-technical 
+model of system development 
+(Lyytinen, Mathiassen & 
+Ropponen, 1998)
+
+
+================================================================================
+Page 18
+================================================================================
+18
+• Introduction 
+• Categories of risk 
+• Dealing with risk in software projects 
+• Evaluating risks to the schedule using PERT
+Outline
+18
+
+
+================================================================================
+Page 19
+================================================================================
+19
+The planning for risk includes four steps: 
+1.
+Risk identification – what risks might we find? 
+2.
+Risk analysis and prioritisation – which are the most serious risks? 
+– Quantitative risk analysis 
+– Qualitative risk analysis 
+3.
+Risk planning – what are we going to do about them? 
+4.
+Risk monitoring – what is the current state of the risk?
+A Risk Management Framework
+19
+
+
+================================================================================
+Page 20
+================================================================================
+20
+The most serious effects of risk are:
+• Failure to keep within the cost estimate 
+• Failure to achieve the required completion date (schedule) 
+• Failure to achieve the required quality or operational requirements
+Risk Identification
+20
+
+
+================================================================================
+Page 21
+================================================================================
+21
+Boehm's Top Ten Risks (1/2)
+21
+Risk Item
+Risk Management Technique
+Personnel shortfalls
+Staffing with top talent, job matching, team building, key personnel 
+agreements, cross training.
+Unrealistic schedules and budgets
+Detailed multisource cost and schedule estimation, design to cost, 
+incremental development, software reuse, requirements scrubbing.
+Developing the wrong functions & 
+properties
+Organisation analysis, mission analysis, operations-concept formulation, user 
+surveys and user participation, prototyping, early users’ manuals, off-nominal 
+performance analysis, quality-factor analysis.
+Developing the wrong user interface
+Prototyping, scenarios, task analysis, user participation.
+Gold-plating (superfluous features)
+Requirements scrubbing, prototyping, cost-benefit analysis, designing to cost.
+1
+2
+3
+4
+5
+
+
+================================================================================
+Page 22
+================================================================================
+22
+Boehm's Top Ten Risks (2/2)
+22
+Risk Item
+Risk Management Technique
+Continuing stream of requirements changes
+High change threshold, incremental development (deferring changes to 
+later increments). 
+Shortfalls in externally-furnished components
+Benchmarking, inspections, reference checking, compatibility analysis. 
+Shortfalls in externally-performed tasks
+Reference checking, pre-award audits, award-fee contracts, competitive 
+design or prototyping, team-building.
+Real-time performance shortfalls
+Simulation, benchmarking, modelling, prototyping, instrumentation, 
+tuning. 
+Straining computer science capabilities
+Technical analysis, cost-benefit analysis, prototyping, reference checking. 
+6
+7
+8
+9
+10
+
+
+================================================================================
+Page 23
+================================================================================
+23
+• Numeric estimate of the overall risk on project objectives
+• Used for projects:
+–
+that require a contingency reserve for schedule and budget
+–
+that are large and complex, involving go/no-go decisions
+–
+for which senior management wants more detail
+• Techniques
+–
+Three-point estimate
+–
+Expected Monetary Value (EMV) or Risk Exposure
+–
+Program Evaluation and Review Technique (PERT)
+Quantitative Risk Analysis
+23
+
+
+================================================================================
+Page 24
+================================================================================
+24
+• A key quantitative indicator in risk analysis and prioritisation is probability
+–
+Lowest probability is 0 (absolutely no chance - 0%)
+–
+Highest probability is 1 (absolutely certain - 100%)
+–
+In practice, risks tend to be one extreme or the other very rarely
+• Another quantitative indicator is the cost of the risk occurring:
+–
+Money
+–
+Time
+–
+A quality metric, such as defects per 1,000 lines of code, increasing
+• The threat can be readily quantified by multiplying these
+–
+Probability x impact
+Quantitative Risk Analysis
+24
+
+
+================================================================================
+Page 25
+================================================================================
+25
+• Prioritisation of risks uses a pre-defined rating scale, which considers 
+likelihood and impact
+–
+More subjective evaluation of both probability and impact
+–
+Quick and easy to perform
+–
+No special software or tools are required
+Qualitative Risk Analysis
+25
+Category/area of Risk
+Severity
+Likelihood (chance)
+
+
+================================================================================
+Page 26
+================================================================================
+26
+Probability-impact matrix
+26
+Medium
+High
+High
+Low
+Medium
+High
+Low
+Low
+Medium
+High
+Medium
+Low
+High
+Medium
+Low
+PROBABILITY (LIKELIHOOD)
+IMPACT
+Risk matrix
+
+
+================================================================================
+Page 27
+================================================================================
+27
+• Risk exposure 
+cannot be calculated
+• An area (in the top-
+right) is selected as 
+containing tasks that 
+require risk planning
+Probability-impact matrix
+27
+critical
+critical
+low
+significant
+low
+high
+High
+Moderate
+Low
+High
+Moderate
+Low
+PROBABILITY (LIKELIHOOD)
+IMPACT
+high
+low
+Significant
+high
+critical
+significant
+Significant
+
+
+================================================================================
+Page 28
+================================================================================
+29
+• Risk acceptance – when the cost of avoiding the risk is (estimated to 
+be) greater than the actual cost of the damage that might be inflicted 
+• Risk avoidance – avoid the cause associated with the risk 
+–
+e.g., buying an off-the-shelf application avoids the risk associated with developing 
+the application (such as poor estimates of effort) 
+• Risk reduction – actions are taken to reduce the likelihood of the risk 
+–
+e.g., prototyping ought to reduce the risk of incorrect requirements; or offer 
+generous bonuses on project completion to reduce likelihood that staff may leave 
+during project
+How to deal with risks (5 ways)
+29
+
+
+================================================================================
+Page 29
+================================================================================
+30
+• Risk transfer – the risk is transferred to another person or organisation 
+–
+e.g., the risk of incorrect development estimates can be transferred by negotiating 
+a fixed price contract with an external software supplier 
+• Risk mitigation/contingency measures – actions are taken to reduce 
+the impact if the risk does occur 
+–
+need to monitor progress of project activities to identify occurrence of causes of 
+risk 
+–
+e.g., backups can be taken to allow rapid recovery in the case of data corruption
+How to deal with risks (5 ways)
+30
+
+
+================================================================================
+Page 30
+================================================================================
+31
+• Addressing a risk usually has a cost associated with it, and the cost-
+effectiveness can be measured:
+ 
+leverage = (REbefore - REafter) / cost
+• leverage: how much have we reduced risk (should be > 1.00)
+– REbefore: the risk exposure cost before the intervention
+– REafter: the risk exposure cost after the intervention
+– cost: usually money, but not necessarily
+Cost-effectiveness of risk actions
+31
+
+
+================================================================================
+Page 31
+================================================================================
+33
+Example:
+• 1% chance of a fire causing £200,000 damage
+• Fire alarm costing £500 reduces probability of fire to 0.5%
+• Cost-effectiveness of this risk reduction action?
+– leverage = (REbefore - REafter) / cost
+Cost-effectiveness of risk actions
+33
+
+
+================================================================================
+Page 32
+================================================================================
+34
+Example (answer):
+• 1% chance of a fire causing £200,000 damage
+–
+REbefore = 0.01 * 200,000 = 2,000
+• Fire alarm costing £500 reduces probability of fire to 0.5%
+–
+REafter = 0.005 * 200,000 = 1,000
+–
+cost = £500
+• Cost-effectiveness:
+–
+leverage = (REbefore - REafter) / cost
+–
+leverage = (2,000 - 1,000) / 500 = 
+2.00 
+ 
+Buy the fire alarm!
+Cost-effectiveness of risk actions
+34
+
+
+================================================================================
+Page 33
+================================================================================
+35
+Risk Management Plan
+35
+Risk Description
+Likelihood 
+(low/med/high)
+Impact 
+(low/med/high)
+Severity
+Owner
+Mitigation 
+strategies
+Poorly-defined project 
+purpose
+Medium
+High
+High
+Project manager
+Complete a business 
+case...
+
+
+================================================================================
+Page 34
+================================================================================
+36
+• Introduction 
+• Categories of risk 
+• Dealing with risk in software projects 
+• Evaluating risks to the schedule using PERT
+Outline
+36
+
+
+================================================================================
+Page 35
+================================================================================
+37
+• Program Evaluation and Review Technique
+• Used to determine the expected time for project activities based on 
+a combination of optimistic, pessimistic and expected durations
+• Can be used to calculate the probability of project overrun
+• Requires an understanding of critical path analysis
+PERT
+37
+
+
+================================================================================
+Page 36
+================================================================================
+38
+• For the whole project:
+–
+A list of activities
+–
+Predecessor/dependency relationships
+–
+Critical path 
+• For each activity (three-point estimate):
+–
+Likely duration
+–
+Optimistic duration
+–
+Pessimistic duration
+What do we need?
+38
+
+
+================================================================================
+Page 37
+================================================================================
+39
+What do we need? 
+39
+Optimistic
+Pessimistic
+Likely
+A
+Requirements
+N/A
+6
+12
+9
+B
+Software
+A
+5
+12
+8
+C
+Hardware
+A
+7
+13
+9
+D
+Training
+A
+12
+18
+14
+E
+Implementation
+B, C
+3
+7
+5
+F
+Testing
+E
+4
+9
+5
+Duration Estimates
+Task
+Description
+Predecessors
+Optimistic time (the best-case scenario, where everything goes as planned)
+Likely time (the most realistic time, based on experience or best estimate)
+Pessimistic time (the worst-case scenario, where things go wrong and delays occur)
+
+
+================================================================================
+Page 38
+================================================================================
+40
+1.
+We calculate the mean of (optimistic), (pessimistic) and (4 * likely) to 
+get the expected duration. e.g. for A, (6 + 12 + 9 + 9 + 9 + 9) / 6 = 9.00
+What do we calculate? 
+40
+Optimistic
+Pessimistic
+Likely
+A
+Requirements
+N/A
+6
+12
+9
+9.00
+1.00
+B
+Software
+A
+5
+12
+8
+8.17
+1.36
+C
+Hardware
+A
+7
+13
+9
+9.33
+1.00
+D
+Training
+A
+12
+18
+14
+14.33
+1.00
+E
+Implementation
+B, C
+3
+7
+5
+5.00
+0.44
+F
+Testing
+E
+4
+9
+5
+5.50
+0.69
+Duration Estimates
+Expected 
+Duration
+Variance
+Task
+Description
+Predecessors
+1
+2
+(For each task, new columns…)
+(optimistic) + (pessimistic) + (4 * likely)
+6 
+Expected duration = 
+
+
+================================================================================
+Page 39
+================================================================================
+41
+1.
+We calculate the mean of (optimistic), (pessimistic) and (4 * likely) to 
+get the expected duration. e.g. for A, (6 + 12 + 9 + 9 + 9 + 9) / 6 = 9.00
+2.
+For the variance (a measure of how much these values vary), 
+      we calculate ( (pessimistic - optimistic) / 6 ) ^ 2 
+e.g. for A, ( (12-6) / 6 ) ^ 2 = 1.00
+What do we calculate? 
+41
+Optimistic
+Pessimistic
+Likely
+A
+Requirements
+N/A
+6
+12
+9
+9.00
+1.00
+B
+Software
+A
+5
+12
+8
+8.17
+1.36
+C
+Hardware
+A
+7
+13
+9
+9.33
+1.00
+D
+Training
+A
+12
+18
+14
+14.33
+1.00
+E
+Implementation
+B, C
+3
+7
+5
+5.00
+0.44
+F
+Testing
+E
+4
+9
+5
+5.50
+0.69
+Duration Estimates
+Expected 
+Duration
+Variance
+Task
+Description
+Predecessors
+1
+2
+(For each task, new columns…)
+
+
+================================================================================
+Page 40
+================================================================================
+42
+• We need to know the critical path, which can be determined using an 
+activity network 
+• For the sake of simplicity, the critical path is highlighted here in yellow
+• Only these items feed into subsequent calculations 
+–
+The sum of expected duration CP and the sum of variances CP)
+What do we calculate? 
+42
+Optimistic
+Pessimistic
+Likely
+A
+Requirements
+N/A
+6
+12
+9
+9.00
+1.00
+B
+Software
+A
+5
+12
+8
+8.17
+1.36
+C
+Hardware
+A
+7
+13
+9
+9.33
+1.00
+D
+Training
+A
+12
+18
+14
+14.33
+1.00
+E
+Implementation
+B, C
+3
+7
+5
+5.00
+0.44
+F
+Testing
+E
+4
+9
+5
+5.50
+0.69
+Duration Estimates
+Expected 
+Duration
+Variance
+Task
+Description
+Predecessors
+Sum CP:       28.33                 3.14 
+
+
+================================================================================
+Page 41
+================================================================================
+43
+1.
+Sum of all expected durations on the critical path
+2.
+Sum of all variance values on the critical path
+All rows now will take these same values into account
+What do we calculate? 
+43
+1
+2
+3
+4
+5
+
+
+================================================================================
+Page 42
+================================================================================
+44
+1.
+Sum of all expected durations on the critical path
+2.
+Sum of all variance values on the critical path
+3.
+The number of days we've told our client this will take (target date)
+What do we calculate? 
+44
+1
+2
+3
+4
+5
+
+
+================================================================================
+Page 43
+================================================================================
+45
+1.
+Sum of all expected durations on the critical path
+2.
+Sum of all variance values on the critical path
+3.
+The number of days we've told our client this will take (target date)
+4.
+Z-score: a measure of the difference between columns 1 and 3:
+–
+(Column 3 - Column 1) / Square Root (Column 2)
+–
+(Target Date – Total Duration ) / (Standard Deviation)
+What do we calculate? 
+45
+1
+2
+3
+4
+5
+
+
+================================================================================
+Page 44
+================================================================================
+46
+1.
+Sum of all expected durations on the critical path
+2.
+Sum of all variance values on the critical path
+3.
+The number of days we've told our client this will take (target date)
+4.
+Z-score: a measure of the difference between columns 1 and 3:
+–
+(Column 3 - Column 1) / Square Root (Column 2)
+–
+(Target Date – Total Duration ) / (Standard Deviation)
+5.
+The probability that we will meet the target date (using Z-Score)
+What do we calculate? 
+46
+1
+2
+3
+4
+5
+
+
+================================================================================
+Page 45
+================================================================================
+47
+• These calculations assume a 
+normal distribution of potential 
+duration; the likeliest duration is 
+the interval in which sits 28.83 
+(e.g., weeks), and “longer is as 
+likely as shorter”
+Normal Distribution
+47
+28.83
+30
+
+
+================================================================================
+Page 46
+================================================================================
+48
+What do we calculate?
+48
+Z-table
+Prob. (%) 
+meeting 
+target
+0.659
+
+
+================================================================================
+Page 47
+================================================================================
+49
+• Risks represent potential future problems or opportunities, and link 
+causes to their effects 
+• Risks in software projects are related to actors, technology, structure, 
+tasks (or a combination thereof) 
+• Identified risks needs to be analysed in terms of impact and likelihood 
+• High-impact and/or high-likelihood risks may need to be addressed by 
+eliminating or reducing their likelihood or impact 
+• Risks to the schedule can be analysed using PERT
+Summary of Key Points
+49
+
+
+================================================================================
+Page 48
+================================================================================
+50
+• Boehm, B. (1989) ‘Software risk management’, European Software Engineering 
+Conference, Berlin, vol. 387. https://doi.org/10.1007/3-540-51635-2_29 
+• Hughes, B. & Cotterell, M., (2009) Software Project Management, 5th ed., London: 
+McGraw-Hill. (Chapter on Risks - pp.162-191)
+• Lyytinen, K., Mathiassen, L. & Ropponen, J. (1998) ‘Attention Shaping and Software Risk 
+– A Categorical Analysis of Four Classic Risk Management Approaches’, Information 
+Systems Research, 9(3), pp.233-255. 
+https://pubsonline.informs.org/doi/pdf/10.1287/isre.9.3.233 
+References (further reading)
+50
+
+
+================================================================================
+Page 49
+================================================================================
+Unit 5: Risk Management
+Software Project 
+Management
+Thais Webber
+Richard Lee
+
+
+################################################################################
+[SECTION 2: VISUAL ELEMENTS - OCR EXTRACTED TEXT]
+################################################################################
+Total Visual Elements: 60
+
+================================================================================
+[VISUAL ELEMENT #1]
+Location: Page 1, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #2]
+Location: Page 2, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #3]
+Location: Page 3, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #4]
+Location: Page 4, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #5]
+Location: Page 5, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #6]
+Location: Page 6, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #7]
+Location: Page 7, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #8]
+Location: Page 8, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #9]
+Location: Page 9, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #10]
+Location: Page 10, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #11]
+Location: Page 11, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #12]
+Location: Page 12, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #13]
+Location: Page 13, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #14]
+Location: Page 14, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #15]
+Location: Page 15, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #16]
+Location: Page 16, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #17]
+Location: Page 17, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #18]
+Location: Page 18, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #19]
+Location: Page 19, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #20]
+Location: Page 20, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #21]
+Location: Page 21, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #22]
+Location: Page 22, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #23]
+Location: Page 23, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #24]
+Location: Page 24, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #25]
+Location: Page 25, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #26]
+Location: Page 26, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #27]
+Location: Page 27, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #28]
+Location: Page 28, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #29]
+Location: Page 29, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #30]
+Location: Page 30, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #31]
+Location: Page 31, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #32]
+Location: Page 32, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #33]
+Location: Page 33, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #34]
+Location: Page 34, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #35]
+Location: Page 35, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #36]
+Location: Page 36, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #37]
+Location: Page 37, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #38]
+Location: Page 38, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #39]
+Location: Page 39, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #40]
+Location: Page 40, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #41]
+Location: Page 41, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #42]
+Location: Page 41, Image 2
+Type: PNG image
+Dimensions: 1074x228 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #43]
+Location: Page 42, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #44]
+Location: Page 42, Image 2
+Type: PNG image
+Dimensions: 1074x228 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #45]
+Location: Page 43, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #46]
+Location: Page 43, Image 2
+Type: PNG image
+Dimensions: 1074x228 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #47]
+Location: Page 44, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #48]
+Location: Page 44, Image 2
+Type: PNG image
+Dimensions: 1074x228 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #49]
+Location: Page 45, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #50]
+Location: Page 45, Image 2
+Type: PNG image
+Dimensions: 1074x228 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #51]
+Location: Page 45, Image 3
+Type: PNG image
+Dimensions: 944x392 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #52]
+Location: Page 46, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #53]
+Location: Page 46, Image 2
+Type: PNG image
+Dimensions: 1074x228 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #54]
+Location: Page 46, Image 3
+Type: PNG image
+Dimensions: 390x281 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #55]
+Location: Page 46, Image 4
+Type: JPEG image
+Dimensions: 759x540 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #56]
+Location: Page 46, Image 5
+Type: PNG image
+Dimensions: 333x226 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #57]
+Location: Page 46, Image 6
+Type: JPEG image
+Dimensions: 641x428 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #58]
+Location: Page 47, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #59]
+Location: Page 48, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[VISUAL ELEMENT #60]
+Location: Page 49, Image 1
+Type: JPEG image
+Dimensions: 1920x1080 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[END OF DOCUMENT]
+================================================================================

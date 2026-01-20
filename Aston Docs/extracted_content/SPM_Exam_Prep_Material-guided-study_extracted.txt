@@ -1,0 +1,358 @@
+================================================================================
+[DOCUMENT METADATA]
+================================================================================
+FILE: SPM_Exam_Prep_Material-guided-study.pdf
+EXTRACTION DATE: 2026-01-19 09:22:06
+TYPE: PDF
+================================================================================
+
+################################################################################
+[SECTION 1: TEXT CONTENT]
+################################################################################
+
+================================================================================
+Page 1
+================================================================================
+CS3SPM Exam Personal Study Material 
+Software Project Management 
+ 
+ 
+ 
+ 
+This material provides valuable insights to aid in your exam preparation. While it offers 
+useful guidance, it is not meant to serve as your sole preparation resource. In addition to 
+this material, it's essential to incorporate all the topics covered in both lectures and tutorials 
+into your exam preparation.  
+ 
+The intention behind this resource is to assist you in navigating through the lecture slides 
+efficiently, preventing the need to review a large volume of slides aimlessly. Also, remember 
+that you have access to lecture recordings and short support videos, which can be 
+beneficial. We trust that you will find this material helpful.  
+ 
+Included below are a set of questions and exercises designed to assist you as you 
+prepare for the exam. However, please note that this is just a guide. As mentioned 
+earlier, we encourage proactive studying and recommend using the slides provided 
+during lectures and tutorials as a fundamental part of your preparation process. 
+ 
+GENERAL  
+• 
+EXPLAIN WHY the objectives of a software project should be SMART? What does 
+SMART stand for? 
+• 
+EXPLAIN WHY is software project management important? Why is it needed? 
+• 
+EXPLAIN WHY is software project management is different from other project 
+management disciplines? PROVIDE three reasons. 
+• 
+COMPARE routine tasks, projects, and exploration by detailing their distinct 
+characteristics and key differences. 
+• 
+CRITICALLY COMPARE the approaches building versus buying software. 
+• 
+EXPLAIN the advantages and disadvantages of off-the-shelf software. 
+• 
+EXPLAIN the advantages and disadvantages of prototyping.  
+• 
+DESCRIBE the different types of prototyping. 
+• 
+EXPLAIN WHAT are the reasons for prototyping? 
+• 
+EXPLAIN the advantages and disadvantages of incremental development process. 
+• 
+EXPLAIN WHAT are incremental development process and agile methods? 
+• 
+EXPLAIN WHAT are the differences between incremental delivery and prototype? 
+• 
+EXPLAIN WHY apply agile methods? 
+• 
+EXPLAIN WHAT are the recommendable ‘rules of thumb’ to decide which development 
+process should be used (How to choose a model)? 
+• 
+WHAT is Project size estimation? 
+• 
+NAME and EXPLAIN three techniques to improve estimation in Software Project 
+Management. Name advantages and disadvantages of each one. 
+ 
+
+
+================================================================================
+Page 2
+================================================================================
+CS3SPM Exam Personal Study Material 
+Software Project Management 
+ 
+ 
+ 
+Measurement and Estimation 
+• 
+WHAT is estimation and WHY is done in Software Project Management? 
+• 
+EXPLAIN HOW is the estimation by analogy approach to obtaining effort estimates 
+done? 
+• 
+NAME and DESCRIBE the limitations of measuring and/or estimating software size in 
+SLOC? WHY do we use it anyway? What are the possible alternatives? 
+• 
+WHAT units can be used to measure the Size of Software? (NAME four). 
+• 
+EXPLAIN the various types of scales used for project data, providing examples for each. 
+• 
+CRITICALLY COMPARE the function-point analysis of software with the analysis done 
+using SLOC. 
+• 
+EXPLAIN the difference between effort and elapsed time. 
+ 
+Software Project Planning   
+• 
+DEFINE the objective of the PLANNING activity and DISCUSS what it enables. GIVE an 
+EXAMPLE per each item. 
+• 
+CRITICALLY COMPARE PRINCE (i.e. PRINCE 2) and Step Wise frameworks. 
+• 
+NAME THREE ways in which the ACTIVITY NETWORK helps the Software Project 
+Manager in Planning. 
+• 
+DESCRIBE the approaches that can be used to identify products and activities in 
+projects? 
+• 
+DRAW an activity network from a given project specification with tasks duration 
+estimations. APPLY the fields (activity description format) studied in lectures to 
+describe each activity; and CALCULATE the quantitative information for each activity, 
+you will need them to identify project critical path and project duration. DISCUSS the 
+fields and how they contribute to the analysis of tasks dependencies during planning. 
+• 
+About the Critical path: EXPLAIN WHAT is the critical path of a plan? How is it used? 
+EXPLAIN WHAT is it useful for? Can there be more than one critical path? Can there be 
+no critical path at all? 
+• 
+EXPLAIN what a sub-critical path is and WHY it needs to be monitored. WHY is a sub-
+critical path important? 
+• 
+EXPLAIN what objective-based software projects and product-based software projects 
+are and their differences. 
+ 
+Agile: Principles and methodologies 
+• 
+COMPARE “big-design-up-front” methodologies against “agile” methodologies. 
+• 
+EXPLAIN the core values and principles of the Agile Manifesto. 
+• 
+DEFINE the high-level structure of the Scrum Framework. 
+• 
+EXPLAIN the pillars and values of Scrum. 
+• 
+EXPLAIN the structure of the Scrum Team. 
+
+
+================================================================================
+Page 3
+================================================================================
+CS3SPM Exam Personal Study Material 
+Software Project Management 
+ 
+ 
+• 
+EXPLAIN the Scrum events (sprint planning, daily standups, sprint review, and sprint 
+retrospective). 
+• 
+COMPARE Product and Sprint Backlogs. 
+• 
+EXPLAIN Disadvantages and Advantages of Scrum. 
+• 
+EXPLAIN when to use Scrum, Kanban, or StepWise/PRINCE2. 
+• 
+CRITICALLY COMPARE Scrum vs Kanban.  
+• 
+PROVIDE AN EXAMPLE of applying Scrum/Kanban to your FYP or any other project 
+SMART goals and objectives. 
+• 
+WRITE a short paragraph (MAX 6-8 lines) describing the goal and context of your Final 
+Year Project or any other project. Then: DESCRIBE at least THREE SMART objectives of 
+this project, being careful to explain each of the 5 properties denoted by the SMART 
+acronym but paying particular attention to the property denoted by “M” (in other words 
+how will you check or know that you have succeeded with that objective?) 
+• 
+For the same project: DESCRIBE at least FOUR project risks, classify them in terms of 
+likelihood and impact, and list possible mitigations for these risks. 
+ 
+ 
+Risk Management 
+• 
+EXPLAIN WHAT are the top 10 software development risks according to Barry Boehm? 
+Also, explain the risk reduction techniques used for each of the 10 risk categories. 
+• 
+NAME the benefits of risk planning. 
+• 
+EXPLAIN WHY is risk planning not widely used? 
+• 
+Briefly DESCRIBE 4 mitigation strategies to get a given software project back on track 
+when the project has experienced delays due to unexpected events. 
+• 
+EXPLAIN the steps to follow while planning for risk? What does each step cover? 
+• 
+EXPLAIN WHAT is risk exposure? What is risk reduction leverage? 
+• 
+DEFINE risk and risk management in the context of software projects. 
+• 
+WHAT are the categories of risk? 
+• 
+WHAT are the approaches to identify risks? 
+• 
+DESCRIBE the FOUR categories of risk in software projects 
+• 
+Given any software development project as an example (e.g., a final-year undergraduate 
+project whose objective is to develop a web site for booking appointments, or your own 
+project idea or FYP): 
+• 
+IDENTIFY FOUR risks associated.  
+• 
+ASSESS the likely probability level and impact level of EACH of these risks. 
+• 
+DRAW UP a probability-impact grid- Risk matrix (Likelihood vs Impact) – please 
+PLACE the risks you identified in the matrix.  
+• 
+LIST two effective mitigation strategies for each identified risk that could help 
+minimise their impact or likelihood.  
+• 
+IDENTIFY TWO risks in your final year project or any other project. How have/would 
+you deal with them? (THREE lines max per risk). 
+ 
+
+
+================================================================================
+Page 4
+================================================================================
+CS3SPM Exam Personal Study Material 
+Software Project Management 
+ 
+ 
+Project Monitoring and Control 
+• 
+WHY are project monitoring and control important? 
+• 
+DESCRIBE 5 strategies for getting a given software project back on track when the 
+project has experienced delays due to unexpected events. 
+• 
+WHAT is exception planning? 
+• 
+EXPLAIN the role of checkpoints and milestones in a software project.  
+• 
+LIST the artefacts that can be used for project monitoring, including their advantages 
+and limitations. 
+• 
+Gantt charts, slip charts, any monitoring chart or tools you can exemplify. 
+ 
+ 
+Note: In addition to the questions above, do carefully study the tutorials questions 
+(remember examples of solution have been published on Blackboard).  
+ 
+Some of the module content also have short videos as complementary resources. 
+ 
+Specifically, take special care while preparing exercise problems that cover the following: 
+ 
+• 
+Unit 2: Measurement and Estimation:  
+o Effort estimation - You should know the formulas effort estimation given in 
+class, such as effort = system_size / productivity. 
+• 
+Unit 3: Planning:  
+• 
+Activity planning: how to construct and use activity networks. 
+• 
+Critical path: how to identify it and make analysis based on it  
+• 
+Exercise simulation of delays in tasks and path (or possible changes in 
+configuration) that might change project duration 
+• 
+Unit 4: Agile methodologies: 
+• 
+Scrum and Kanban details  
+ 
+ 
+
+
+================================================================================
+Page 5
+================================================================================
+CS3SPM Exam Personal Study Material 
+Software Project Management 
+ 
+ 
+• 
+Unit 5: Risk management 
+• 
+Risk analysis and prioritisation techniques 
+• 
+Risk identification, Risk matrix 
+• 
+Calculation of the risk exposure factor 
+• 
+Application of the Program Evaluation and Review Technique (PERT), including the 
+use of the table with z values. 
+• 
+Unit 6: Monitoring and Control (plus Quality) 
+• 
+Gantt charts 
+ 
+Formulas and Z-score Table (provided in the exam paper): 
+PERT technique  
+Activity expected time te = (L + 4M +U) / 6 
+Activity variance v = ((U – L) / 6) ^ 2 
+For a sequence/chain of activities: 
+te = te (A1) + te (A2) + … + te (An) and v = v(A1) + v(A2) + … v(An) 
+For activities running concurrently: 
+te = max (te (A1), te (A2), …, te (An)) and v = max (v(A1), v(A2), …, v(An)) 
+Given a target deadline T, the z value for an activity, a set of activities or an 
+entire project is given by z = (T – te) / sqrt(v), where te and v are the PERT 
+expected time and variance respectively. 
+ 
+Measurement, estimation and data analysis 
+Effort = S x EpS    
+Effort = S/SpE  
+Cost = S x CpS   
+Cost = Effort x CpE 
+New Project Effort = Old Project Effort * (Rf1 * Rf2 * ...) + (Af1 + Af2 + ...) 
+ 
+ 
+ 
+ 
+
+
+================================================================================
+Page 6
+================================================================================
+CS3SPM Exam Personal Study Material 
+Software Project Management 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Z-score table 
+ 
+ 
+
+
+################################################################################
+[SECTION 2: VISUAL ELEMENTS - OCR EXTRACTED TEXT]
+################################################################################
+Total Visual Elements: 1
+
+================================================================================
+[VISUAL ELEMENT #1]
+Location: Page 6, Image 1
+Type: JPEG image
+Dimensions: 759x793 pixels
+================================================================================
+[OCR EXTRACTED TEXT FROM THIS VISUAL]:
+[No readable text detected in this image]
+================================================================================
+
+
+================================================================================
+[END OF DOCUMENT]
+================================================================================

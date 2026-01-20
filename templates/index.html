@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sales Chatbot - IMPACT Framework</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        height: 100%;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+          Cantarell, sans-serif;
+        background: linear-gradient(135deg, #0b1220 0%, #071018 100%);
+        display: flex;
+        justify-content: center;
+        align-items: stretch;
+        padding: 20px;
+        color: #dcd6c9;
+        overflow: hidden;
+      }
+
+      .container {
+        width: 100%;
+        max-width: 800px;
+        background: linear-gradient(
+          180deg,
+          rgba(12, 18, 28, 0.95),
+          rgba(6, 10, 16, 0.95)
+        );
+        border-radius: 12px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        /* make container span the viewport height minus body padding */
+        height: calc(100vh - 40px);
+        max-height: 700px;
+        min-height: 0;
+      }
+
+      .header {
+        background: rgba(255, 255, 255, 0.02);
+        color: #f3ecd7;
+        padding: 18px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+      }
+
+      .header h1 {
+        font-size: 20px;
+        font-weight: 600;
+      }
+
+      .stage-badge {
+        background: rgba(183, 119, 31, 0.12);
+        color: #f7e9d1;
+        padding: 6px 12px;
+        border-radius: 16px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .chat-container {
+        flex: 1 1 0; /* This line allows scroll */
+        height: 500px;
+        overflow-y: auto;
+        padding: 20px;
+        background: linear-gradient(
+          180deg,
+          rgba(6, 10, 16, 0.6),
+          rgba(8, 12, 18, 0.6)
+        );
+        min-height: 0;
+      }
+
+      /* Custom scrollbar for dark theme */
+      .chat-container {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(183, 119, 31, 0.6) rgba(255, 255, 255, 0.05);
+      }
+
+      .chat-container::-webkit-scrollbar {
+        width: 10px;
+      }
+
+      .chat-container::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 5px;
+        margin: 4px 0;
+      }
+
+      .chat-container::-webkit-scrollbar-thumb {
+        background: rgba(183, 119, 31, 0.6);
+        border-radius: 5px;
+        border: 2px solid rgba(6, 10, 16, 0.6);
+      }
+
+      .chat-container::-webkit-scrollbar-thumb:hover {
+        background: rgba(183, 119, 31, 0.8);
+      }
+
+      .chat-container::-webkit-scrollbar-thumb:active {
+        background: #b7791f;
+      }
+
+      .message {
+        display: flex;
+        margin-bottom: 16px;
+      }
+
+      .message.user {
+        justify-content: flex-end;
+      }
+
+      .message.bot {
+        justify-content: flex-start;
+      }
+
+      .message-bubble {
+        max-width: 70%;
+        padding: 12px 16px;
+        border-radius: 16px;
+        font-size: 14px;
+        line-height: 1.5;
+        contain: layout paint;
+      }
+
+      .message.user .message-bubble {
+        background: linear-gradient(180deg, #b7791f, #9a5f10);
+        color: #071018;
+        border-bottom-right-radius: 6px;
+        box-shadow: 0 6px 18px rgba(151, 96, 30, 0.12);
+      }
+
+      .message.bot .message-bubble {
+        background: linear-gradient(
+          180deg,
+          rgba(255, 255, 255, 0.02),
+          rgba(255, 255, 255, 0.03)
+        );
+        color: #e7dfcd;
+        border: 1px solid rgba(255, 255, 255, 0.03);
+        border-bottom-left-radius: 6px;
+      }
+
+      .typing-indicator {
+        display: flex;
+        gap: 4px;
+        padding: 12px 16px;
+      }
+
+      .typing-indicator span {
+        width: 8px;
+        height: 8px;
+        background: #b7791f;
+        border-radius: 50%;
+        opacity: 0.9;
+        animation: typing 1.4s infinite;
+      }
+
+      .typing-indicator span:nth-child(2) {
+        animation-delay: 0.2s;
+      }
+
+      .typing-indicator span:nth-child(3) {
+        animation-delay: 0.4s;
+      }
+
+      @keyframes typing {
+        0%,
+        60%,
+        100% {
+          transform: translateY(0);
+        }
+        30% {
+          transform: translateY(-10px);
+        }
+      }
+
+      .input-area {
+        padding: 16px;
+        background: rgba(255, 255, 255, 0.01);
+        border-top: 1px solid rgba(255, 255, 255, 0.02);
+        display: flex;
+        gap: 10px;
+      }
+
+      .input-area input {
+        flex: 1;
+        padding: 12px 16px;
+        background: rgba(255, 255, 255, 0.02);
+        color: #e6ddc8;
+        border: 1px solid rgba(255, 255, 255, 0.03);
+        border-radius: 8px;
+        font-size: 14px;
+      }
+
+      .input-area input:focus {
+        outline: none;
+        border-color: rgba(183, 119, 31, 0.18);
+        box-shadow: 0 8px 20px rgba(15, 10, 6, 0.2);
+      }
+
+      .send-btn {
+        background: #b7791f;
+        color: #071018;
+        border: none;
+        padding: 12px 20px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        transition:
+          background 0.15s,
+          transform 0.06s;
+      }
+
+      .send-btn:hover {
+        background: #9a5f10;
+        transform: translateY(-1px);
+      }
+
+      .send-btn:disabled {
+        background: #94a3b8;
+        cursor: not-allowed;
+      }
+
+      .hidden {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div id="chatScreen">
+        <div class="header">
+          <h1>Sales Assistant</h1>
+          <div class="stage-badge" id="stageBadge">Intent</div>
+        </div>
+
+        <div class="chat-container" id="chatContainer"></div>
+
+        <div class="input-area">
+          <input
+            type="text"
+            id="messageInput"
+            placeholder="Type your message..."
+            onkeypress="handleKeyPress(event)"
+          />
+          <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+            Send
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let isTyping = false;
+
+      function createMessageElement(text, sender) {
+        const messageDiv = document.createElement("div");
+        messageDiv.className = `message ${sender}`;
+
+        const bubble = document.createElement("div");
+        bubble.className = "message-bubble";
+        bubble.textContent = text;
+
+        messageDiv.appendChild(bubble);
+        return messageDiv;
+      }
+
+      function initChatbot() {
+        fetch("/api/init", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({}),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.error) {
+              alert("Error: " + data.error);
+              return;
+            }
+
+            addMessage(data.message, "bot");
+            updateStage(data.stage);
+          })
+          .catch((error) => {
+            alert("Error initializing chatbot: " + error);
+          });
+      }
+
+      // Auto-initialize on page load
+      window.addEventListener("DOMContentLoaded", initChatbot);
+
+      function addMessage(text, sender) {
+        const container = document.getElementById("chatContainer");
+
+        const fragment = document.createDocumentFragment();
+        fragment.appendChild(createMessageElement(text, sender));
+        container.appendChild(fragment);
+
+        requestAnimationFrame(() => {
+          container.scrollTop = container.scrollHeight;
+        });
+      }
+
+      function sendMessage() {
+        const input = document.getElementById("messageInput");
+        const message = input.value.trim();
+
+        if (!message || isTyping) return;
+
+        addMessage(message, "user");
+        input.value = "";
+
+        showTyping();
+
+        fetch("/api/chat", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ message: message }),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            hideTyping();
+
+            if (data.error) {
+              addMessage("Error: " + data.error, "bot");
+              return;
+            }
+
+            addMessage(data.message, "bot");
+            updateStage(data.stage);
+          })
+          .catch((error) => {
+            hideTyping();
+            addMessage("Error: " + error, "bot");
+          });
+      }
+
+      function showTyping() {
+        isTyping = true;
+        const container = document.getElementById("chatContainer");
+        const typingDiv = document.createElement("div");
+        typingDiv.className = "message bot";
+        typingDiv.id = "typingIndicator";
+
+        const bubble = document.createElement("div");
+        bubble.className = "message-bubble";
+
+        const indicator = document.createElement("div");
+        indicator.className = "typing-indicator";
+        indicator.innerHTML = "<span></span><span></span><span></span>";
+
+        bubble.appendChild(indicator);
+        typingDiv.appendChild(bubble);
+        container.appendChild(typingDiv);
+
+        container.scrollTop = container.scrollHeight;
+        document.getElementById("sendBtn").disabled = true;
+      }
+
+      function hideTyping() {
+        isTyping = false;
+        const typing = document.getElementById("typingIndicator");
+        if (typing) {
+          typing.remove();
+        }
+        document.getElementById("sendBtn").disabled = false;
+      }
+
+      function updateStage(stage) {
+        const badge = document.getElementById("stageBadge");
+        badge.textContent = stage.toUpperCase();
+      }
+
+      function handleKeyPress(event) {
+        if (event.key === "Enter") {
+          sendMessage();
+        }
+      }
+    </script>
+  </body>
+</html>

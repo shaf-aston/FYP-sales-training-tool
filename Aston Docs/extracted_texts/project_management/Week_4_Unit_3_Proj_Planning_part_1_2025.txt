@@ -1,0 +1,1124 @@
+######################################################################
+# SOURCE: Week 4 - Unit 3 Proj Planning - part 1 2025.pdf
+# SIZE: 851.7 KB
+######################################################################
+
+============================================================
+PAGE 1
+============================================================
+Unit 3: Software Project Planning (1)
+Software Project 
+Management
+Thais Webber
+Richard Lee
+
+
+============================================================
+PAGE 2
+============================================================
+2
+When you have completed this unit, you will be able to: 
+• Approach project planning in an organised, step-by-step and top-down 
+manner 
+• Select an appropriate development and life cycle approach for projects 
+• Apply estimation techniques to predict software development effort, 
+using bottom-up estimation to avoid unrealistic predictions 
+• Produce an activity plan for a project, identify required resources and 
+devise work plans and resource schedules
+Unit objectives
+
+
+============================================================
+PAGE 3
+============================================================
+3
+• Frameworks for software project planning
+– Motivation
+– Step Wise project planning
+– PRINCE2 project planning 
+• Selection of software project approaches 
+• Effort estimation for software projects 
+• Activity planning and resource allocation
+Outline
+
+
+============================================================
+PAGE 4
+============================================================
+4
+• People are often at a loss as to where to start in project planning 
+– Students involved in individual and group projects (consider your own 
+experience in individual and group projects) 
+– Professionals new to software project management 
+Motivation for the use of frameworks
+A new 
+Project
+Planning 
+framework
+
+
+============================================================
+PAGE 5
+============================================================
+5
+• Structured approaches or frameworks for software project planning 
+address the need for systematic and repeatable planning:
+– They list the main steps involved in project planning 
+– They suggest best practices for carrying out these steps 
+– They indicate logical order of steps, including possible 
+iterations or feedback loops
+– They remain applicable across different application domains
+– Their concepts and techniques apply to manage small or 
+large/complex projects 
+Motivation for the use of frameworks
+A new 
+Project
+
+
+============================================================
+PAGE 6
+============================================================
+6
+• Two planning frameworks covered in the module 
+– Step Wise – focuses on planning techniques 
+– PRINCE2 – focuses more on procedural aspects 
+• Both can be used in combination with: 
+– Traditional methodologies (such as Waterfall, Incremental, 
+Iterative, Spiral, V-model, etc.) 
+– Agile approaches (such as Scrum, Kanban, XP, etc.)
+Motivation for the use of frameworks
+
+
+============================================================
+PAGE 7
+============================================================
+7
+Project factors (from SPM Introduction)
+Scope
+Time
+Cost
+Quality
+QCTS model
+Project constraints
+Interdependent constraints to 
+balance as a project manager
+Considerations on resources 
+and risks during planning
+
+
+============================================================
+PAGE 8
+============================================================
+8
+1.
+Agree on all project goals
+2.
+Develop clearly defined plans with assigned responsibilities and accountabilities
+3.
+Manage the project scope effectively 
+4.
+Cultivate constant effective communication
+5.
+Make sure you have management support 
+Success factors for project management
+
+
+============================================================
+PAGE 9
+============================================================
+9
+• Frameworks for software project planning
+– Motivation
+– Step Wise project planning
+– PRINCE2 project planning 
+• Selection of software project approaches 
+• Effort estimation for software projects 
+• Activity planning and resource allocation
+Outline
+
+
+============================================================
+PAGE 10
+============================================================
+10
+• Developed and enhanced over the years by Robert Hughes 
+at the University of Brighton
+• Tries to answer the question: “What sequence of steps 
+should we follow to produce a realistic, defensible project 
+plan for this software project?”
+• Scalability
+– useful for small project as well as large 
+– range of applications including software development 
+projects
+Step Wise project planning framework
+(refer to 
+Book SPM, 
+Hughes & 
+Cotterell – 
+Ch.3)
+
+
+============================================================
+PAGE 11
+============================================================
+11
+Step Wise - an overview
+0. Select project
+1. Identify project 
+objectives
+2. Identify project 
+infrastructure
+3. Analyse project 
+characteristics
+4. Identify products 
+and activities
+5. Estimate effort 
+for activity
+6. Identify activity 
+risks
+7. Allocate 
+resources
+8. Review / 
+publicise plan
+9. Execute plan
+10. Lower-level 
+planning
+For each 
+activity
+Lower
+-level 
+detail
+Review
+(Book SPM 
+Hughes & Cotterell – Ch.3)
+
+
+============================================================
+PAGE 12
+============================================================
+12
+Step Wise - an overview
+0. Select project
+1. Identify project 
+objectives
+2. Identify project 
+infrastructure
+3. Analyse project 
+characteristics
+4. Identify products 
+and activities
+5. Estimate effort 
+for activity
+6. Identify activity 
+risks
+7. Allocate 
+resources
+8. Review / 
+publicise plan
+9. Execute plan
+10. Lower-level 
+planning
+For each 
+activity
+Lower
+-level 
+detail
+Review
+
+
+============================================================
+PAGE 13
+============================================================
+13
+• College currently outsources payroll processing, which is costly and 
+limits data analysis
+• Decision made to bring payroll in-house by acquiring an off-the-shelf 
+application - supported by a new internal payroll office and small 
+software add-ons to integrate with timetabling data.   
+• About the decision alternatives:
+ 
+ 
+In-house versus outsourcing (external/third party)
+ 
+ 
+Off-the-shelf versus custom-developed
+Project scenario: college payroll system
+Assume you were hired as the project manager
+
+
+============================================================
+PAGE 14
+============================================================
+14
+Step Wise - an overview
+0. Select project
+1. Identify project 
+objectives
+2. Identify project 
+infrastructure
+3. Analyse project 
+characteristics
+4. Identify products 
+and activities
+5. Estimate effort 
+for activity
+6. Identify activity 
+risks
+7. Allocate 
+resources
+8. Review / 
+publicise plan
+9. Execute plan
+10. Lower-level 
+planning
+For each 
+activity
+Lower
+-level 
+detail
+Review
+
+
+============================================================
+PAGE 15
+============================================================
+15
+• 1.1 Identify objectives and measures of effectiveness 
+– how do we know if we have succeeded?
+– From Unit 1: objectives must be SMART: 
+– Specific, Measurable, Achievable, Relevant, Time-constrained 
+• 1.2 Establish a project authority 
+– who is the boss?
+• 1.3 Identify all stakeholders in the project and their interests 
+– who will be affected/involved in the project?
+Step 1: identify project objectives
+
+
+============================================================
+PAGE 16
+============================================================
+16
+• 1.4 Modify objectives in the light of stakeholder analysis 
+– do we need to do things to win over stakeholders?
+• 1.5 Establish methods of communication with all parties 
+– how do we keep in contact?
+Step 1: identify project objectives
+
+
+============================================================
+PAGE 17
+============================================================
+17
+Step Wise - an overview
+0. Select project
+1. Identify project 
+objectives
+2. Identify project 
+infrastructure
+3. Analyse project 
+characteristics
+4. Identify products 
+and activities
+5. Estimate effort 
+for activity
+6. Identify activity 
+risks
+7. Allocate 
+resources
+8. Review / 
+publicise plan
+9. Execute plan
+10. Lower-level 
+planning
+For each 
+activity
+Lower
+-level 
+detail
+Review
+
+
+============================================================
+PAGE 18
+============================================================
+18
+• 2.1 Establish link between project and any strategic plan 
+– why did they want the project?
+• 2.2 Identify installation standards and procedures 
+– what standards do we have to follow?
+• 2.3. Identify project team organisation 
+– where do I fit in?
+– members roles and responsibilities
+Step 2: identify project infrastructure
+
+
+============================================================
+PAGE 19
+============================================================
+19
+Step Wise - an overview
+0. Select project
+1. Identify project 
+objectives
+2. Identify project 
+infrastructure
+3. Analyse project 
+characteristics
+4. Identify products 
+and activities
+5. Estimate effort 
+for activity
+6. Identify activity 
+risks
+7. Allocate 
+resources
+8. Review / 
+publicise plan
+9. Execute plan
+10. Lower-level 
+planning
+For each 
+activity
+Lower
+-level 
+detail
+Review
+Size 
+Complexity
+Risks
+Constraints 
+Priorities 
+
+
+============================================================
+PAGE 20
+============================================================
+20
+• 3.1 Distinguish the project as either objective-based or product-based. 
+– Is there more than one way of achieving success? 
+Step 3: analyse project characteristics
+
+
+============================================================
+PAGE 21
+============================================================
+21
+• 3.1 Distinguish the project as either objective-based or product-based. 
+– Is there more than one way of achieving success? 
+• 3.2 Analyse other project characteristics (e.g., quality-based) 
+– what is different about this project?
+Step 3: analyse project characteristics
+
+
+============================================================
+PAGE 22
+============================================================
+22
+• 3.3 Identify high level project risks 
+– what could go wrong?
+– what can we do to stop it?
+Step 3: analyse project characteristics
+What can be a high-risk scenario in 
+software development projects?
+
+
+============================================================
+PAGE 23
+============================================================
+23
+• 3.3 Identify high level project risks 
+– what could go wrong?
+– what can we do to stop it?
+• 3.4 Consider user requirements concerning implementation
+Step 3: analyse project characteristics
+Functionalities
+Usability
+Performance
+Integration with other systems
+Security, privacy, etc.
+
+
+============================================================
+PAGE 24
+============================================================
+24
+• 3.3 Identify high level project risks 
+– what could go wrong?
+– what can we do to stop it?
+• 3.4 Consider user requirements concerning implementation
+• 3.5 Select development methodology and life cycle approach: 
+– Waterfall? Incremental? Agile? etc.
+Step 3: analyse project characteristics
+Complexity
+Changeability
+Delivery
+
+
+============================================================
+PAGE 25
+============================================================
+25
+• 3.3 Identify high level project risks 
+– what could go wrong?
+– what can we do to stop it?
+• 3.4 Consider user requirements concerning implementation
+• 3.5 Select development methodology and life cycle approach: 
+– Waterfall? Incremental? Agile? etc.
+• 3.6 Review overall resource estimates 
+–
+does all this increase the cost? 
+Step 3: analyse project characteristics
+
+
+============================================================
+PAGE 26
+============================================================
+26
+Step Wise - an overview
+0. Select project
+1. Identify project 
+objectives
+2. Identify project 
+infrastructure
+3. Analyse project 
+characteristics
+4. Identify products 
+and activities
+5. Estimate effort 
+for activity
+6. Identify activity 
+risks
+7. Allocate 
+resources
+8. Review / 
+publicise plan
+9. Execute plan
+10. Lower-level 
+planning
+For each 
+activity
+Lower
+-level 
+detail
+Review
+PBS
+PFD
+Activity Networks
+
+
+============================================================
+PAGE 27
+============================================================
+27
+• 4.1 Identify and describe project products 
+–
+what do we have to produce in terms of both customer 
+deliverables and intermediate artefacts?
+–
+Typically, a product hierarchy that can be documented 
+in a Product Breakdown Structure (PBS)
+• 4.2 Document generic product flows 
+–
+Some products need one or several other products to 
+exist before they can be created 
+–
+E.g., specification must exist before design, and design 
+before code 
+–
+Product Flow Diagrams (PFDs) are used to 
+represent these relationships
+Step 4: identify products and activities
+(PBS)
+(PFD)
+
+
+============================================================
+PAGE 28
+============================================================
+28
+• 4.3 Recognise product instances 
+–
+The PBS (Product Breakdown Structure) and PFD will probably have identified generic 
+products (e.g. ‘software modules’) for which specific instances can be identified (e.g., 
+‘module A’, ‘module B’, etc.) 
+–
+In many cases this has to be left to later, more detailed, planning
+• 4.4 Produce ideal activity network 
+–
+Identify the activities needed to create each product in the PFD (Product Flow 
+Diagrams) 
+• More than one activity might be needed to create a single product 
+• Hint: Identify activities by verb + noun, avoiding ‘produce X’ 
+–
+Draw up activity network 
+Step 4: identify products and activities
+
+
+============================================================
+PAGE 29
+============================================================
+29
+Step 4: identify products and activities
+Design 
+Product A
+Design 
+module A
+Design 
+module B
+Design 
+module C
+Code 
+module A
+Code 
+module B
+Code 
+module C
+Test 
+Product A
+Checkpoint
+An activity network: activities order and flow (arrows) 
+start
+end
+flow
+
+
+============================================================
+PAGE 30
+============================================================
+30
+• 4.3 Recognise product instances 
+–
+The PBS (Product Breakdown Structure) and PFD will probably have identified generic products (e.g. 
+‘software modules’) for which specific instances can be identified (e.g., ‘module A’, ‘module B’, etc.) 
+–
+In many cases this has to be left to later, more detailed, planning
+• 4.4 Produce ideal activity network 
+–
+Identify the activities needed to create each product in the PFD (Product Flow Diagrams) 
+–
+More than one activity might be needed to create a single product 
+–
+Hint: Identify activities by verb + noun, avoiding ‘produce X’ 
+–
+Draw up activity network 
+• 4.5 Add stages & checkpoints/milestones 
+–
+Ensure that intermediate products are compatible, and project can proceed without major 
+incompatibility risks
+Step 4: identify products and activities
+
+
+============================================================
+PAGE 31
+============================================================
+31
+Step 4: identify products and activities
+Design 
+Product A
+Design 
+module A
+Design 
+module B
+Design 
+module C
+Code 
+module A
+Code 
+module B
+Code 
+module C
+Test 
+Product A
+Checkpoint
+An activity network: activities order and flow (arrows) 
+start
+end
+
+
+============================================================
+PAGE 32
+============================================================
+32
+• Products:
+• The result of an activity 
+–
+Could be (among other things) 
+•
+physical thing (installed pc)
+•
+a document (logical data structure) 
+•
+a person (trained user) 
+•
+a new version of an old product (updated software) 
+Step 4: identify products and activities
+
+
+============================================================
+PAGE 33
+============================================================
+33
+• Products:
+• The result of an activity 
+–
+Could be (among other things) 
+•
+physical thing (installed pc)
+•
+a document (logical data structure) 
+•
+a person (trained user) 
+•
+a new version of an old product (updated software) 
+• The following are normally NOT products: 
+–
+activities (e.g. training) 
+–
+events (e.g. interviews completed) 
+–
+resources and actors (e.g. software developer)
+Step 4: identify products and activities
+
+
+============================================================
+PAGE 34
+============================================================
+34
+• Consider a final-year project whose objective is to develop a web 
+application that Aston students can use to advertise items for sale 
+• What are some of the main project products? 
+Step 4: identify products and activities
+
+
+============================================================
+PAGE 35
+============================================================
+35
+• Consider a final-year project whose objective is to develop a web 
+application that Aston students can use to advertise items for sale 
+• What are some of the main project products? 
+• Possible solution includes: 
+–
+Project definition form 
+–
+Project objectives 
+–
+Preliminary work plan 
+–
+Progress report 
+–
+Final report 
+–
+Requirements document 
+–
+Project diary 
+–
+Design iteration 1 
+–
+Design iteration 2
+Step 4: identify products and activities
+
+
+============================================================
+PAGE 36
+============================================================
+36
+Step Wise - an overview
+0. Select project
+1. Identify project 
+objectives
+2. Identify project 
+infrastructure
+3. Analyse project 
+characteristics
+4. Identify products 
+and activities
+5. Estimate effort 
+for activity
+6. Identify activity 
+risks
+7. Allocate 
+resources
+8. Review / 
+publicise plan
+9. Execute plan
+10. Lower-level 
+planning
+For each 
+activity
+Lower
+-level 
+detail
+Review
+
+
+============================================================
+PAGE 37
+============================================================
+37
+• 5.1 Carry out bottom-up estimates 
+–
+Distinguish carefully between effort and elapsed time 
+–
+Effort = number of staff-days, staff-weeks, etc. required to complete a task 
+–
+Elapsed time = calendar time between task start time and task end time 
+–
+Example: If 2 people work on the same task for 5 days without any interruption, then the effort 
+is 10 staff-days and the elapsed time is 5 days. 
+• 5.2. Revise plan to create controllable activities 
+–
+break up very long activities into a series of smaller, easier to monitor & control ones 
+–
+bundle up very short activities
+Step 5: estimate effort for each activity 
+
+
+============================================================
+PAGE 38
+============================================================
+38
+Step Wise - an overview
+0. Select project
+1. Identify project 
+objectives
+2. Identify project 
+infrastructure
+3. Analyse project 
+characteristics
+4. Identify products 
+and activities
+5. Estimate effort 
+for activity
+6. Identify activity 
+risks
+7. Allocate 
+resources
+8. Review / 
+publicise plan
+9. Execute plan
+10. Lower-level 
+planning
+For each 
+activity
+Lower
+-level 
+detail
+Review
+
+
+============================================================
+PAGE 39
+============================================================
+39
+(to be studied in more detail later in the module)
+• 6.1.Identify and quantify risks for activities 
+–
+Estimate damage if risk occurs (measured in time lost or money wasted) 
+–
+Estimate likelihood of risk occurring 
+• 6.2. Plan risk reduction and contingency measures 
+–
+risk reduction: activity to eliminate/reduce likelihood of risk occurring 
+–
+contingency: action to take if risk does occur in order to reduce impact
+Step 6: identify activity risks
+
+
+============================================================
+PAGE 40
+============================================================
+40
+Step Wise - an overview
+0. Select project
+1. Identify project 
+objectives
+2. Identify project 
+infrastructure
+3. Analyse project 
+characteristics
+4. Identify products 
+and activities
+5. Estimate effort 
+for activity
+6. Identify activity 
+risks
+7. Allocate 
+resources
+8. Review / 
+publicise plan
+9. Execute plan
+10. Lower-level 
+planning
+For each 
+activity
+Lower
+-level 
+detail
+Review
+
+
+============================================================
+PAGE 41
+============================================================
+41
+(to be studied in more detail later in the module)
+• 7.1 Identify and allocate resources to activities 
+–
+Record type of staff needed for each activity 
+–
+Identify staff available and allocate to tasks provisionally 
+• 7.2 Revise plans and estimates to take into account resource 
+constraints 
+–
+Staff not being available until a later date 
+–
+Staff needed for other, non-project activities
+The result of these steps is typically a Gantt chart (devised in the 
+1910s by American management consultant Henry Gantt) 
+Step 7: allocate resources
+
+
+============================================================
+PAGE 42
+============================================================
+42
+Step Wise - an overview
+0. Select project
+1. Identify project 
+objectives
+2. Identify project 
+infrastructure
+3. Analyse project 
+characteristics
+4. Identify products 
+and activities
+5. Estimate effort 
+for activity
+6. Identify activity 
+risks
+7. Allocate 
+resources
+8. Review / 
+publicise plan
+9. Execute plan
+10. Lower-level 
+planning
+For each 
+activity
+Lower
+-level 
+detail
+Review
+
+
+============================================================
+PAGE 43
+============================================================
+43
+• 8.1 Review quality aspects of project plan 
+–
+Ensure that quality criteria are defined for all activities, i.e., criteria that need to be 
+fulfilled to sign off an activity as completed 
+–
+Helps identify and correct problems with individual activities at an early stage 
+• 8.2 Document plan and obtain agreement 
+–
+Ensure that all parties involved understand and “sign up” to the commitments 
+required of them in the plan 
+Step 8: review / publicise plan
+
+
+============================================================
+PAGE 44
+============================================================
+44
+Step Wise - an overview
+0. Select project
+1. Identify project 
+objectives
+2. Identify project 
+infrastructure
+3. Analyse project 
+characteristics
+4. Identify products 
+and activities
+5. Estimate effort 
+for activity
+6. Identify activity 
+risks
+7. Allocate 
+resources
+8. Review / 
+publicise plan
+9. Execute plan
+10. Lower-level 
+planning
+For each 
+activity
+Lower
+-level 
+detail
+Review
+
+
+============================================================
+PAGE 45
+============================================================
+45
+• Step 9: execute plan
+• Step 10: lower-level planning
+• Detailed plans are required and feasible for the current activities 
+• Detailed plans for later project stages are often not possible 
+–
+Estimates of effort, start dates, etc. are associated with confidence intervals that 
+are too large
+Steps 9 & 10
+
+
+============================================================
+PAGE 46
+============================================================
+46
+• Frameworks for software project planning
+–
+Motivation
+–
+Step Wise project planning
+–
+PRINCE2 project planning 
+• Selection of software project approaches 
+• Effort estimation for software projects 
+• Activity planning and resource allocation
+Outline
+
+
+============================================================
+PAGE 47
+============================================================
+47
+• PRINCE2 acronym: PRojects IN Controlled Environments, version 2 
+• Standardised set of process-based project management procedures, 
+originally intended for ICT projects 
+• Devised under the sponsorship of UK’s Office of Government 
+Commerce, and used primarily in the UK
+• 1996 revision of earlier 1989 PRINCE framework – recently in 2017, 
+emphasis on agility 
+Overview of PRINCE2
+
+
+============================================================
+PAGE 48
+============================================================
+48
+• Large projects are divided into subsets of project activities organised 
+into stages 
+–
+Stages are managed as a sequence of individual units 
+–
+Project Board authorises project manager to execute a stage only after the plans 
+for that stage are approved 
+–
+The end of a stage is a decision point when the Project Board reviews progress to 
+data and decides that project remains feasible and is worth continuing 
+• Project planning activities are placed into seven processes 
+Overview of PRINCE2
+
+
+============================================================
+PAGE 49
+============================================================
+49
+1.
+Directing a Project covers activities by the Project Board 
+2.
+Starting up a Project comprises activities concerned with reaching a position where 
+detailed project planning can begin 
+3.
+Initiating the Project refers to activities associated with producing an overall plan for the 
+project
+4.
+Controlling a Stage includes the activities carried out by the project manager once a 
+stage has been authorised 
+5.
+Managing Product Delivery covers activities that involve communication between the 
+project manager and team managers 
+6.
+Managing Stage Boundaries includes activities associated with the creation of next 
+stage plans & updates to overall project plan 
+7.
+Closing the Project includes end-of-project activities
+PRINCE2 processes
+
+
+============================================================
+PAGE 50
+============================================================
+50
+PRINCE2 processes
+Corporate or Program Management
+Directing a Project
+Planning
+Starting up a 
+project
+Managing 
+Product Delivery
+Initiating a project
+Controlling a stage
+Managing 
+Stage Boundaries
+Closing a project
+1
+2
+3
+4
+6
+7
+5
+
+
+============================================================
+PAGE 51
+============================================================
+51
+• Both PRINCE2 and Step Wise focus on how the project is organised 
+and controlled — defining roles, stages, and planning activities.
+• Both are originally product-based approaches
+• PRINCE2 is process-based, while Step Wise places more emphasis on 
+techniques used in project planning 
+–
+Techniques similar to those employed by Step Wise can be used in PRINCE2, but they are not 
+prescribed by the framework 
+• Often also compared to PMBOK - Project Management Body of 
+Knowledge (PMI, PMP certification)
+Comparison to Step Wise
+
+
+============================================================
+PAGE 52
+============================================================
+52
+• Frameworks for software project planning (Week 4 lecture)
+–
+Step Wise vs Prince 2 (further reading and knowledge check quiz)
+–
+This week’s tutorial (Week 4) – Planning activities
+• Introduction to activities and deliverables (products)
+• Next week (Week 5 lecture)
+–
+Selection of software development approaches 
+–
+Activity networks (theory and practice)
+• Critical path analysis (CPA)
+• Resource allocation considerations
+What’s next…
+
+
+============================================================
+PAGE 53
+============================================================
+Unit 3: Software Project Planning (1)
+Software Project 
+Management
+Thais Webber
+Richard Lee

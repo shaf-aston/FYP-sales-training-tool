@@ -1,92 +1,86 @@
-# AI-Powered Sales Training Chatbot
+# Sales Chatbot - IMPACT Framework
 
-An advanced conversational AI system for sales role-play training with integrated speech-to-text and text-to-speech capabilities.
+## Quick Start (3 Steps)
 
-## 🏗️ Architecture Overview
-
-### Modular Design
-```
-src/
-├── services/
-│   ├── ai_services/         # Model management and AI responses
-│   ├── voice_services/      # STT/TTS and audio processing
-│   ├── analysis_services/   # Conversation analysis and feedback
-│   └── data_services/       # Data persistence and analytics
-├── api/                     # FastAPI routes and endpoints
-├── infrastructure/          # Core infrastructure and settings
-└── models/                  # Data models and schemas
-```
-
-### Training Pipeline
-```
-training/
-├── scripts/                 # Training pipeline scripts
-├── configs/                 # Hydra/OmegaConf configurations
-└── data/                   # Training datasets and outputs
-```
-
-## ✨ Key Features
-
-### 🎯 Core Capabilities
-- **Multi-persona Sales Training**: Dynamic persona switching for various sales scenarios
-- **Voice Integration**: Real-time STT/TTS with emotion detection
-- **Advanced Analytics**: Performance tracking and conversation analysis
-- **Roleplay Scenarios**: Comprehensive NEPQ methodology integration
-
-### 🚀 Performance Optimizations
-- **Memory Management**: GPU memory optimization with cleanup
-- **Lazy Loading**: On-demand model initialization
-- **Caching**: Intelligent model and response caching
-- **Batch Processing**: Efficient data processing pipelines
-
-### 📊 Monitoring & Tracking
-- **Weights & Biases Integration**: Experiment tracking and metrics
-- **Real-time Analytics**: Performance and usage monitoring
-- **Health Checks**: System status and resource monitoring
-
-### 🏗️ Architecture Improvements  
-- ✅ **Major refactoring**: voice_service.py reduced from 1,529 to 313 lines (79% reduction)
-- ✅ **Eliminated duplicate directories**: Consolidated API and configuration management
-- ✅ **Removed service duplication**: Archived redundant services across directories
-- ✅ **Clear separation of concerns**: Defined distinct responsibilities for each module
-- ✅ All core files under 700 lines for maintainability
-- ✅ Backward compatibility maintained
-- ✅ Clean import structure and dependency management
-
-### 🎯 AI-Powered Personas
-- **Mary Chen**: Fitness beginner, budget-conscious, needs confidence
-- **Jake Rodriguez**: Busy professional, time constraints, efficiency-focused
-- **Sarah Williams**: Health-focused, goal-oriented, research-driven
-- **David Thompson**: Skeptical, experience-based, requires proof
-
-### ⚙️ Technical Features
-- **Qwen2.5-0.5B-Instruct** model for natural conversations
-- **Smart Response Cleaning**: Removes all formatting artifacts
-- **LangChain Integration**: Advanced conversation memory
-- **Modular Voice System**: Separate STT, TTS, and orchestration services
-- **Performance Optimized**: ~30-50 tokens/second throughput
-- **Dependency Validation**: Automated checks for core and optional dependencies
-- **Code Quality**: 83% reduction in largest file size for better maintainability
-
-## 🚀 Quick Start
+### 1. Install Dependencies
 ```bash
-# Install dependencies
 pip install -r requirements.txt
-
-# Run the chatbot
-python scripts/run_chatbot.py
-
-# Test the modular architecture  
-python -c "from src.fallback_responses import generate_ai_response; print('✅ Working')"
 ```
 
-## 📊 Performance Metrics
-- **Response Time**: ~0.2-0.5s for AI generation
-- **Memory Usage**: Optimized for 0.5B parameter model
-- **Fallback Rate**: <5% under normal conditions
-- **Code Organization**: 100% core files under 300 lines (largest file: 260 lines)
-- **Maintainability**: 83% size reduction in voice service (1,529→260 lines)
-- **Dependency Coverage**: Core and optional modules validated
+### 2. Get Free API Key
+- Go to https://console.groq.com
+- Sign up (free, no credit card)
+- Create API key
+- Copy it
+
+### 3. Run
+```bash
+python app.py
+```
+
+Open browser: http://localhost:5000
 
 ---
-**Built with ❤️ for realistic sales training scenarios**
+
+## Project Structure
+```
+sales-chatbot/
+├── chatbot.py           # Core logic (IMPACT stages)
+├── app.py               # Flask web server
+├── requirements.txt     # Dependencies
+├── README.md           # This file
+└── templates/
+    └── index.html      # Chat interface
+```
+
+---
+
+## Test Without Web Interface
+```bash
+python chatbot.py
+```
+
+---
+
+## How It Works
+
+**State Machine with 4 Stages:**
+1. **Intent** - What do they want?
+2. **Logical** - What's their current approach?
+3. **Emotional** - Why now? What if they don't fix it?
+4. **Pitch** - Commit to change
+
+**Stage transitions triggered by AI response signals:**
+- Intent → "got it, that makes sense..."
+- Logical → "ok, I see the issue..."
+- Emotional → "that's a powerful reason..."
+
+---
+
+## Cost
+
+**Zero.** Groq provides free access to Llama 3.2 with generous limits.
+
+---
+
+## For FYP Defense
+
+**What you built:**
+"Conversational AI sales assistant using LLM-powered dialogue with structured stage management."
+
+**Technical approach:**
+"State machine architecture with dynamic prompt engineering, conversation history management, and heuristic-based stage transitions, powered by Llama 3.2 via Groq API."
+
+**Innovation:**
+"Combines structured sales methodology with natural language generation, eliminating rigid form-based interactions while maintaining systematic information extraction."
+
+---
+
+## Troubleshooting
+
+| Issue | Fix |
+|-------|-----|
+| Module not found | `pip install -r requirements.txt` |
+| Invalid API key | Check console.groq.com |
+| Port 5000 in use | Change to 5001 in app.py |
+| Weird responses | Adjust temperature in chatbot.py |
