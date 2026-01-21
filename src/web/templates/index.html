@@ -75,6 +75,24 @@
         letter-spacing: 0.5px;
       }
 
+      .reset-btn {
+        background: rgba(255, 255, 255, 0.03);
+        color: #e6ddc8;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+
+      .reset-btn:hover {
+        background: rgba(183, 119, 31, 0.15);
+        border-color: rgba(183, 119, 31, 0.3);
+        color: #f7e9d1;
+      }
+
       .chat-container {
         flex: 1 1 0; /* This line allows scroll */
         height: 500px;
@@ -274,7 +292,11 @@
       <div id="chatScreen">
         <div class="header">
           <h1>Sales Assistant</h1>
-          <div class="stage-badge" id="stageBadge">Intent</div>
+          <div style="display: flex; gap: 10px; align-items: center">
+            <button class="reset-btn" onclick="resetChat()">Reset</button>
+            <div class="stage-badge" id="strategyBadge">Consultative</div>
+            <div class="stage-badge" id="stageBadge">Intent</div>
+          </div>
         </div>
 
         <div class="chat-container" id="chatContainer"></div>
@@ -331,13 +353,15 @@
               return;
             }
 
-            // Restore history if exists
+            // Restore history if exists, otherwise show welcome message
             if (data.history && data.history.length > 0) {
-              data.history.forEach(msg => addMessage(msg.content, msg.role));
+              data.history.forEach((msg) => addMessage(msg.content, msg.role));
+            } else {
+              addMessage(data.message, "bot");
             }
-            
-            addMessage(data.message, "bot");
+
             updateStage(data.stage);
+            if (data.strategy) updateStrategy(data.strategy);
           })
           .catch((error) => {
             alert("Error initializing chatbot: " + error);
@@ -388,6 +412,7 @@
 
             addMessage(data.message, "bot");
             updateStage(data.stage);
+            if (data.strategy) updateStrategy(data.strategy);
           })
           .catch((error) => {
             hideTyping();
@@ -431,10 +456,39 @@
         badge.textContent = stage.toUpperCase();
       }
 
+      function updateStrategy(strategy) {
+        const badge = document.getElementById("strategyBadge");
+        badge.textContent = strategy.toUpperCase();
+      }
+
       function handleKeyPress(event) {
         if (event.key === "Enter") {
           sendMessage();
         }
+      }
+
+      function resetChat() {
+        if (!confirm("Reset conversation? This will clear all history.")) {
+          return;
+        }
+
+        fetch("/api/reset", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              document.getElementById("chatContainer").innerHTML = "";
+              updateStage("intent");
+              initChatbot();
+            }
+          })
+          .catch((error) => {
+            alert("Error resetting chat: " + error);
+          });
       }
 
       // ===== SPEECH MODULE INTEGRATION =====

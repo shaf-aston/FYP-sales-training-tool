@@ -1,8 +1,9 @@
 from flask import Flask, render_template, request, jsonify, session
 from flask_cors import CORS
-from chatbot import SalesChatbot
 import os
 import sys
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+from chatbot import SalesChatbot
 import secrets
 from dotenv import load_dotenv
 
@@ -30,7 +31,7 @@ def home():
     return render_template('index.html')
 
 @app.route('/api/init', methods=['POST'])
-def init_chatbot():
+def api_init():
     """Initialize session and return chat history if exists"""
     
     if not os.environ.get("GROQ_API_KEY"):
@@ -50,6 +51,7 @@ def init_chatbot():
         "success": True,
         "message": "Hey, what's up? How can I help you out?",
         "stage": "intent",
+        "strategy": "consultative",
         "history": history
     })
 
@@ -74,7 +76,10 @@ def chat():
         api_key = os.environ.get("GROQ_API_KEY")
         if not api_key:
             return jsonify({"error": "API key not configured"}), 500
-        chatbots[session_id] = SalesChatbot(api_key)
+        
+        # Get product type from request or env (default: "general")
+        product_type = data.get('product_type', os.environ.get("PRODUCT_TYPE", "general"))
+        chatbots[session_id] = SalesChatbot(api_key, product_type=product_type)
     
     bot = chatbots[session_id]
     
@@ -85,6 +90,7 @@ def chat():
             "success": True,
             "message": response,
             "stage": bot.stage,
+            "strategy": bot.strategy_name,
             "extracted": bot.extracted
         })
     
