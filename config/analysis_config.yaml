@@ -68,3 +68,13 @@ preference_keywords:
   durability:
     - "strong"
     - "durable"
+
+# Stage advancement thresholds
+advancement:
+  intent:
+    low_intent_max_turns: 6
+    high_intent_max_turns: 4
+  logical:
+    max_turns: 5
+  emotional:
+    max_turns: 6

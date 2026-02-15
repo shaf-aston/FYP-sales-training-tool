@@ -3,7 +3,7 @@ import os
 import time
 import requests
 from typing import List, Dict
-from .base import BaseLLMProvider, LLMResponse
+from .base import BaseLLMProvider, LLMResponse, auto_log_performance
 
 
 class OllamaProvider(BaseLLMProvider):
@@ -19,6 +19,7 @@ class OllamaProvider(BaseLLMProvider):
         self.model = model or os.environ.get("OLLAMA_MODEL", self.DEFAULT_MODEL)
         self.base_url = base_url or os.environ.get("OLLAMA_HOST", "http://localhost:11434")
     
+    @auto_log_performance  # ✅ Decorator on concrete implementation
     def chat(self, messages: List[Dict], temperature: float = 0.8, max_tokens: int = 200, stage: str = None) -> LLMResponse:
         if not self.is_available():
             return LLMResponse(content="", model=self.model, latency_ms=0, error="Ollama server not running or model not installed")

@@ -17,6 +17,7 @@ from .analysis import (
     analyze_state,
     user_demands_directness
 )
+from .config_loader import load_analysis_config
 
 
 # ============================================================================
@@ -79,6 +80,23 @@ FLOWS = {
 # ADVANCEMENT LOGIC (Pure Functions)
 # ============================================================================
 
+def _get_max_turns(stage, intent_level='medium'):
+    """Get max turns for stage from config.
+    
+    Rationale: Avoid hardcoded magic numbers.
+    """
+    config = load_analysis_config()
+    advancement = config.get('advancement', {})
+    
+    if stage == 'intent':
+        intent_config = advancement.get('intent', {})
+        if intent_level == 'low':
+            return intent_config.get('low_intent_max_turns', 6)
+        return intent_config.get('high_intent_max_turns', 4)
+    
+    return advancement.get(stage, {}).get('max_turns', 5)
+
+
 def user_has_clear_intent(history, user_msg, turns):
     """Check if user expressed clear buying/problem intent.
     
@@ -107,7 +125,7 @@ def user_has_clear_intent(history, user_msg, turns):
     
     # Max turns based on intent level (avoid stagnation)
     intent_level = analyze_state(history, user_msg)["intent"]
-    max_turns = 6 if intent_level == 'low' else 4
+    max_turns = _get_max_turns('intent', intent_level)
     return turns >= max_turns
 
 

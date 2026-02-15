@@ -2,7 +2,7 @@
 import os
 import time
 from typing import List, Dict
-from .base import BaseLLMProvider, LLMResponse
+from .base import BaseLLMProvider, LLMResponse, auto_log_performance
 import requests
 import logging
 
@@ -36,6 +36,7 @@ class GroqProvider(BaseLLMProvider):
             self._client = Groq(api_key=self.api_key)
         return self._client
 
+    @auto_log_performance  # ✅ Decorator on concrete implementation
     def chat(self, messages: List[Dict], temperature: float = 0.8, max_tokens: int = 200, stage: str = None) -> LLMResponse:
         if not self.is_available():
             error_msg = f"Groq unavailable. Library: {GROQ_AVAILABLE}, API Key: {'Set' if self.api_key else 'Missing'}"
