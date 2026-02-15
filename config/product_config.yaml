@@ -1,0 +1,40 @@
+# Product-based flow configuration
+# Maps product types to sales strategies and context descriptions
+
+products:
+  luxury_cars:
+    strategy: "consultative"
+    context: "luxury vehicles"
+
+  enterprise_software:
+    strategy: "consultative"
+    context: "enterprise software"
+
+  budget_fragrances:
+    strategy: "transactional"
+    context: "$30 fragrances"
+
+  watches:
+    strategy: "transactional"
+    context: "watches"
+
+  car:
+    strategy: "transactional"
+    context: "automotive purchase"
+
+  cars:
+    strategy: "transactional"
+    context: "automotive purchase"
+
+  vehicle:
+    strategy: "transactional"
+    context: "automotive purchase"
+
+  general:
+    strategy: "consultative"
+    context: "products/services"
+
+# Default configuration when product type not found
+default:
+  strategy: "transactional"
+  context: "products/services"

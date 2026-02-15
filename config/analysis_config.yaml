@@ -1,0 +1,70 @@
+# Configuration for analysis.py - NLU logic parameters
+
+# Conversation analysis thresholds
+thresholds:
+  min_substantive_word_count: 8  # Words needed for "substantive answer"
+  short_message_limit: 4          # Max words for "short" response
+  question_fatigue_threshold: 2   # Questions in recent turns triggering fatigue
+  validation_loop_threshold: 2    # Validations triggering repetition warning
+  recent_history_window: 10       # Turns to check for goal priming
+  recent_text_messages: 3         # User messages to check for intent keywords
+
+# Goal indicator keywords for intent locking
+goal_indicators:
+  - "lose weight"
+  - "put on muscle"
+  - "been fat"
+  - "struggling"
+  - "looking to"
+  - "trying to"
+  - "need to"
+  - "want to"
+  - "problem"
+  - "issue"
+  - "challenge"
+  - "goal"
+  - "trying"
+
+# Question word patterns for literal question detection
+question_patterns:
+  starters:
+    - "what"
+    - "when"
+    - "where"
+    - "who"
+    - "how"
+    - "why"
+    - "whats"
+    # Assumptive starters
+    - "I'm guessing"
+    - "I imagine"
+    - "...must have..."
+    - "It seems like"
+
+# Preference extraction keywords
+preference_keywords:
+  reliability:
+    - "reliability"
+    - "reliable"
+  budget:
+    - "cheap"
+    - "budget"
+    - "affordable"
+  mileage:
+    - "low mileage"
+    - "mileage"
+  safety:
+    - "safety"
+    - "safe"
+  roadtrip:
+    - "roadtrip"
+    - "road trip"
+  family:
+    - "family"
+  comfort:
+    - "comfort"
+  fuel_efficient:
+    - "fuel efficient"
+  durability:
+    - "strong"
+    - "durable"

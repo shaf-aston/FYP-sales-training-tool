@@ -1,10 +1,10 @@
 /**
- * Speech Recognition Module
- * Single Responsibility: Convert speech to text
+ * Advanced Speech Recognition Module
+ * Improvements: Interim results, robust error handling, dynamic language
  */
 
 class SpeechRecognizer {
-  constructor() {
+  constructor(language = "en-US") {
     const SpeechRecognition =
       window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -14,67 +14,112 @@ class SpeechRecognizer {
     }
 
     this.recognition = new SpeechRecognition();
-    this.recognition.continuous = true; // Keep listening until manually stopped
-    this.recognition.interimResults = false;
-    this.recognition.lang = "en-US";
-    this.isRecording = false;
-    this.onTextCallback = null;
-    this.onStopCallback = null;
+    this.recognition.continuous = true;
+    this.recognition.interimResults = true; // IMPROVEMENT: Enable real-time feedback
+    this.recognition.lang = language;
 
-    this.recognition.onresult = (e) => {
-      // Process only NEW results to avoid duplication
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        if (e.results[i].isFinal) {
-          const text = e.results[i][0].transcript + " ";
-          if (this.onTextCallback) this.onTextCallback(text);
+    this.isRecording = false;
+    this.ignoreOnEnd = false; // Flag to stop the restart loop on fatal errors
+
+    // Callbacks
+    this.onFinalText = null;
+    this.onInterimText = null; // New callback for gray text
+    this.onStop = null;
+    this.onError = null;
+
+    this.recognition.onresult = (event) => {
+      let interimTranscript = "";
+
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          // Send final text
+          const text = event.results[i][0].transcript.trim() + " ";
+          if (this.onFinalText) this.onFinalText(text);
+        } else {
+          // Concatenate interim text
+          interimTranscript += event.results[i][0].transcript;
         }
+      }
+
+      // Send interim text (for live preview)
+      if (this.onInterimText) {
+        this.onInterimText(interimTranscript);
       }
     };
 
     this.recognition.onend = () => {
-      // Auto-restart if still supposed to be recording
-      if (this.isRecording) {
-        this.recognition.start();
-      } else if (this.onStopCallback) {
-        this.onStopCallback(); // Only call when actually stopping
+      if (this.isRecording && !this.ignoreOnEnd) {
+        // IMPROVEMENT: Delay restart slightly to prevent CPU spinning if errors loop
+        setTimeout(() => {
+          try {
+            this.recognition.start();
+          } catch (e) {
+            // Determine if we need to handle specific restart errors
+          }
+        }, 100);
+      } else {
+        this.isRecording = false;
+        if (this.onStop) this.onStop();
       }
     };
 
-    this.recognition.onerror = (e) => {
-      if (e.error !== "no-speech" && e.error !== "aborted") {
-        console.error("Speech error:", e.error);
+    this.recognition.onerror = (event) => {
+      // IMPROVEMENT: Handle specific errors differently
+      if (event.error === "no-speech") {
+        // This is normal, just ignore and let it restart in onend
+        return;
       }
-      this.isRecording = false;
-      if (this.onStopCallback) this.onStopCallback();
+
+      if (event.error === "audio-capture" || event.error === "not-allowed") {
+        // Fatal errors - do not restart
+        this.ignoreOnEnd = true;
+        this.isRecording = false;
+      }
+
+      console.warn("Speech recognition error", event.error);
+      if (this.onError) this.onError(event.error);
     };
   }
 
-  start(onText, onStop) {
-    if (!this.recognition) {
-      alert("Speech not supported. Use Chrome or Edge.");
+  /**
+   * Start recording
+   * @param {Function} onFinal - Callback for finalized text
+   * @param {Function} onInterim - Callback for live streaming text
+   * @param {Function} onStop - Callback when stopped
+   * @param {Function} onError - Callback for errors
+   */
+  start(onFinal, onInterim, onStop, onError) {
+    if (!this.recognition) return false;
+    if (this.isRecording) return true;
+
+    this.onFinalText = onFinal;
+    this.onInterimText = onInterim;
+    this.onStop = onStop;
+    this.onError = onError;
+
+    this.isRecording = true;
+    this.ignoreOnEnd = false;
+
+    try {
+      this.recognition.start();
+      return true;
+    } catch (e) {
+      console.error(e);
       return false;
     }
-    if (this.isRecording) return false;
-
-    this.onTextCallback = onText;
-    this.onStopCallback = onStop;
-    this.recognition.start();
-    this.isRecording = true;
-    return true;
   }
 
   stop() {
     if (this.recognition && this.isRecording) {
-      this.isRecording = false; // Set flag BEFORE stopping to prevent auto-restart
+      this.isRecording = false;
+      this.ignoreOnEnd = true; // Explicitly stop the loop
       this.recognition.stop();
     }
   }
 
-  isAvailable() {
-    return this.recognition !== null;
-  }
-
-  getState() {
-    return this.isRecording;
+  setLanguage(lang) {
+    if (this.recognition) {
+      this.recognition.lang = lang;
+    }
   }
 }

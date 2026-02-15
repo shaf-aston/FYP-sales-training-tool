@@ -1,34 +1,25 @@
-"""Product-based strategy configuration"""
+"""Product-based flow configuration.
+
+Loads FSM configuration from YAML files for easy modification.
+"""
+
+import os
+from .config_loader import get_product_settings
+
 
 def get_product_config(product_key):
-    """Get configuration for product type"""
-    return PRODUCT_CONFIGS.get(product_key, PRODUCT_CONFIGS["general"])
+    """Get flow configuration for product type.
+    
+    Args:
+        product_key: Product type identifier
+        
+    Returns:
+        dict: {"strategy": str, "context": str}
+    """
+    return get_product_settings(product_key)
 
 
-PRODUCT_CONFIGS = {
-    "luxury_cars": {
-        "strategy": "consultative",
-        "context": "luxury vehicles"
-    },
-    "enterprise_software": {
-        "strategy": "consultative",
-        "context": "enterprise software solutions"
-    },
-    "coaching": {
-        "strategy": "consultative",
-        "context": "high-ticket coaching programs"
-    },
-    "budget_fragrances": {
-        "strategy": "transactional",
-        "context": "$30 fragrances"
-    },
-    "retail_clothing": {
-        "strategy": "transactional",
-        "context": "retail clothing"
-    },
-    "general": {
-        "strategy": "consultative",
-        "context": "general products/services"
-    }
-}
+def get_groq_model():
+    """Fetch the Groq model name from environment variables."""
+    return os.environ.get("GROQ_MODEL", "default-model")
 

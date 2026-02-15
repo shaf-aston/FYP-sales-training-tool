@@ -1,0 +1,95 @@
+# Behavioral Signals - Keyword Detection Patterns
+# Used by analysis.py for intent classification and state detection
+
+impatience:
+  - "just show me"
+  - "just tell me"
+  - "get to the point"
+  - "what do you have"
+  - "cut to the chase"
+  - "hurry"
+  - "recommendations"
+  - "suggest something"
+  - "what are my options"
+
+commitment:
+  - "yes"
+  - "let's do it"
+  - "i'm in"
+  - "okay"
+  - "this one"
+  - "that one"
+  - "i'll take"
+  - "both"
+  - "let's go"
+  - "fine"
+
+objection:
+  - "but"
+  - "expensive"
+  - "think about"
+  - "maybe"
+
+walking:
+  - "no thanks"
+  - "not interested"
+  - "pass"
+  - "no"
+
+low_intent:
+  - "all good"
+  - "no issues"
+  - "just browsing"
+  - "just looking"
+  - "fine as is"
+  - "happy as is"
+  - "no problem"
+  - "no need"
+  - "everything's fine"
+  - "not right now"
+  - "maybe later"
+
+guarded:
+  - "fine"
+  - "okay"
+  - "sure"
+  - "yeah"
+  - "yep"
+  - "not really"
+  - "idk"
+  - "dunno"
+  - "maybe"
+
+high_intent:
+  - "want"
+  - "need"
+  - "looking for"
+  - "trying to"
+  - "help with"
+  - "problem"
+  - "struggling"
+
+# Demand directness keywords (Conversational Repair Theory)
+demand_directness:
+  - "tell me"
+  - "just tell me"
+  - "what is it"
+  - "explain"
+  - "i asked you"
+  - "get to the point"
+  - "stop asking"
+  - "cut to the chase"
+  - "my weight i said"
+  - "im looking to"
+  - "losing patience"
+
+# Validation phrases for loop detection
+validation_phrases:
+  - "makes sense"
+  - "that's"
+  - "sounds like"
+  - "understand"
+  - "i see"
+  - "got it"
+  - "fair enough"
+  - "that sounds"
