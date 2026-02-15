@@ -1,29 +1,73 @@
-from flask import Flask, render_template, request, jsonify, session
+from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
 import os
 import sys
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from chatbot import SalesChatbot
+import time
 import secrets
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
-load_dotenv()
+# Load environment variables from .env file
+load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+from chatbot.chatbot import SalesChatbot
+from chatbot.providers import get_available_providers
+from chatbot.performance import PerformanceTracker
 
 # Disable .pyc file generation
 sys.dont_write_bytecode = True
 
 app = Flask(__name__)
-# Use environment-provided secret when available; fallback to a generated key for dev
-app.secret_key = os.environ.get("FLASK_SECRET", secrets.token_hex(32))
 CORS(app)
+
+# Configuration
+CONFIG = {
+    "MAX_MESSAGE_LENGTH": 1000,
+    "SESSION_IDLE_MINUTES": 60
+}
+
+# Session storage with timestamps for cleanup
+sessions = {}
+session_timestamps = {}
+
+
+def cleanup_expired_sessions():
+    """Remove sessions idle > SESSION_IDLE_MINUTES. Called lazily on requests."""
+    now = datetime.now()
+    max_idle = timedelta(minutes=CONFIG["SESSION_IDLE_MINUTES"])
+    expired = [sid for sid, ts in session_timestamps.items() if now - ts > max_idle]
+    for sid in expired:
+        del sessions[sid]
+        del session_timestamps[sid]
+    if expired:
+        app.logger.info(f"Cleaned up {len(expired)} idle sessions")
+
+
+def get_session(session_id):
+    """Get chatbot, updating timestamp."""
+    if session_id in sessions:
+        session_timestamps[session_id] = datetime.now()
+    return sessions.get(session_id)
+
+
+def set_session(session_id, chatbot):
+    """Store chatbot."""
+    sessions[session_id] = chatbot
+    session_timestamps[session_id] = datetime.now()
+
+
+def delete_session(session_id):
+    """Remove session."""
+    if session_id in sessions:
+        del sessions[session_id]
+        del session_timestamps[session_id]
+
 
 # Simple favicon handler to avoid browser 404s requesting /favicon.ico
 @app.route('/favicon.ico')
 def favicon():
     return ('', 204)
-
-# Store chatbot instances per session
-chatbots = {}
 
 @app.route('/')
 def home():
@@ -32,98 +76,181 @@ def home():
 
 @app.route('/api/init', methods=['POST'])
 def api_init():
-    """Initialize session and return chat history if exists"""
-    
-    if not os.environ.get("GROQ_API_KEY"):
-        return jsonify({"error": "API key not configured in .env file"}), 500
-    
-    if 'session_id' not in session:
-        session['session_id'] = secrets.token_hex(16)
-    
-    session_id = session['session_id']
-    history = []
-    
-    # Return history if bot exists
-    if session_id in chatbots:
-        history = [{"role": msg["role"], "content": msg["content"]} for msg in chatbots[session_id].history]
+    """Initialize session and return session_id"""
+    session_id = secrets.token_hex(16)
+    app.logger.info(f"Session initialized: {session_id}")
     
     return jsonify({
         "success": True,
+        "session_id": session_id,
         "message": "Hey, what's up? How can I help you out?",
         "stage": "intent",
-        "strategy": "consultative",
-        "history": history
+        "strategy": None,
+        "history": []
+    })
+
+@app.route('/api/health', methods=['GET'])
+def api_health():
+    """Health check: provider availability and performance stats"""
+    cleanup_expired_sessions()  # Lazy cleanup
+    session_id = request.headers.get('X-Session-ID')
+    
+    # Get active provider info
+    active_provider = None
+    active_model = None
+    if session_id:
+        bot = get_session(session_id)
+        if bot:
+            active_provider = type(bot.provider).__name__.replace('Provider', '').lower()
+            active_model = bot.provider.get_model_name()
+    
+    # Get available providers
+    provider_status = get_available_providers()
+    
+    # Get aggregate performance stats
+    perf_stats = PerformanceTracker.get_provider_stats()
+    
+    return jsonify({
+        "ok": True,
+        "active": {
+            "provider": active_provider,
+            "model": active_model
+        },
+        "available_providers": provider_status,
+        "performance_stats": perf_stats
     })
 
 @app.route('/api/chat', methods=['POST'])
 def chat():
     """Handle chat messages"""
+    cleanup_expired_sessions()  # Lazy cleanup
     data = request.json
     user_message = data.get('message', '').strip()
     
     if not user_message:
         return jsonify({"error": "Message required"}), 400
     
-    if len(user_message) > 1000:
-        return jsonify({"error": "Message too long (max 1000 characters)"}), 400
+    if len(user_message) > CONFIG["MAX_MESSAGE_LENGTH"]:
+        return jsonify({"error": f"Message too long (max {CONFIG['MAX_MESSAGE_LENGTH']} characters)"}), 400
     
-    session_id = session.get('session_id')
+    session_id = request.headers.get('X-Session-ID')
     if not session_id:
-        return jsonify({"error": "Session not initialized"}), 400
+        return jsonify({"error": "Session ID required in X-Session-ID header"}), 400
     
     # Lazy init: create bot on first message
-    if session_id not in chatbots:
-        api_key = os.environ.get("GROQ_API_KEY")
-        if not api_key:
-            return jsonify({"error": "API key not configured"}), 500
-        
-        # Get product type from request or env (default: "general")
-        product_type = data.get('product_type', os.environ.get("PRODUCT_TYPE", "general"))
-        chatbots[session_id] = SalesChatbot(api_key, product_type=product_type)
-    
-    bot = chatbots[session_id]
+    bot = get_session(session_id)
+    if not bot:
+        try:
+            product_type = data.get('product_type', os.environ.get("PRODUCT_TYPE", "general"))
+            
+            # Force Groq as default (override .env if needed)
+            provider = data.get('provider', "groq")
+            
+            bot = SalesChatbot(provider_type=provider, product_type=product_type, session_id=session_id)
+            set_session(session_id, bot)
+        except Exception as init_error:
+            return jsonify({"error": f"Error initializing chatbot: {str(init_error)}"}), 500
     
     try:
+        request_start_time = time.time()
         response = bot.chat(user_message)
+        request_time = (time.time() - request_start_time) * 1000
         
+        # FSM refactor: access flow_engine attributes
         return jsonify({
             "success": True,
             "message": response,
-            "stage": bot.stage,
-            "strategy": bot.strategy_name,
-            "extracted": bot.extracted
+            "stage": bot.flow_engine.current_stage,
+            "strategy": bot.flow_engine.flow_type,
+            "latency_ms": round(request_time, 0)
         })
     
     except Exception as e:
+        app.logger.exception(f"Chat error: {e}")
         return jsonify({"error": f"Chat error: {str(e)}"}), 500
 
 @app.route('/api/summary', methods=['GET'])
 def get_summary():
     """Get conversation summary"""
-    session_id = session.get('session_id')
+    session_id = request.headers.get('X-Session-ID')
     
-    if not session_id or session_id not in chatbots:
-        return jsonify({"error": "Chatbot not initialized"}), 400
+    if not session_id:
+        return jsonify({"error": "Session ID required"}), 400
     
-    bot = chatbots[session_id]
+    bot = get_session(session_id)
+    if not bot:
+        return jsonify({"error": "Session not found"}), 400
     
     return jsonify({
         "success": True,
         "summary": bot.get_conversation_summary()
     })
 
+@app.route('/api/edit', methods=['POST'])
+def edit_message():
+    """Edit user message and regenerate from that point"""
+    data = request.json
+    session_id = request.headers.get('X-Session-ID')
+    msg_index = data.get('index')
+    new_message = data.get('message', '').strip()
+
+    # Validate session exists
+    if not session_id:
+        return jsonify({"error": "Session ID required"}), 400
+    
+    bot = get_session(session_id)
+    if not bot:
+        return jsonify({"error": "Session not found"}), 400
+    
+    # Validate inputs
+    if msg_index is None:
+        return jsonify({"error": "Missing message index"}), 400
+    
+    if not new_message:
+        return jsonify({"error": "Message cannot be empty"}), 400
+    
+    if len(new_message) > CONFIG["MAX_MESSAGE_LENGTH"]:
+        return jsonify({"error": f"Message too long (max {CONFIG['MAX_MESSAGE_LENGTH']} characters)"}), 400
+
+    try:
+        msg_index = int(msg_index)
+        
+        # Validate index is within bounds
+        max_index = len(bot.flow_engine.conversation_history) - 1
+        if msg_index < 0 or msg_index > max_index:
+            return jsonify({"error": f"Invalid index. Valid range: 0-{max_index}"}), 400
+
+        # Rewind to turn BEFORE the edit, then replay with new message
+        turn_index = msg_index // 2  # Convert message index to turn index
+        if not bot.rewind_to_turn(turn_index):
+            return jsonify({"error": "Rewind failed"}), 500
+        
+        # Now chat with the new message
+        response = bot.chat(new_message)
+        
+        return jsonify({
+            "success": True,
+            "message": response,
+            "history": [{"role": m["role"], "content": m["content"]} for m in bot.flow_engine.conversation_history],
+            "stage": bot.flow_engine.current_stage,
+            "strategy": bot.flow_engine.flow_type
+        })
+    except ValueError:
+        return jsonify({"error": "Invalid index format"}), 400
+    except Exception as e:
+        return jsonify({"error": f"Edit error: {str(e)}"}), 500
+
 @app.route('/api/reset', methods=['POST'])
 def reset():
     """Reset the conversation"""
-    session_id = session.get('session_id')
+    session_id = request.headers.get('X-Session-ID')
     
-    if session_id and session_id in chatbots:
-        del chatbots[session_id]
+    if session_id:
+        delete_session(session_id)
     
     return jsonify({"success": True})
 
 if __name__ == '__main__':
-    # Create templates directory if it doesn't exist
-    os.makedirs('templates', exist_ok=True)
-    
     app.run(debug=True, port=5000)
+
+

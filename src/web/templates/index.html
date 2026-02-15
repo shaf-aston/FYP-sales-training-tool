@@ -64,15 +64,29 @@
         font-weight: 600;
       }
 
-      .stage-badge {
-        background: rgba(183, 119, 31, 0.12);
-        color: #f7e9d1;
-        padding: 6px 12px;
-        border-radius: 16px;
-        font-size: 12px;
+      .status-container {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        font-size: 11px;
+        color: #a39885;
+      }
+
+      .status-item {
+        display: flex;
+        gap: 6px;
+        align-items: baseline;
+      }
+
+      .status-label {
+        color: #7a736a;
+        font-weight: 500;
+      }
+
+      .status-value {
+        color: #d4c5a9;
         font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
+        text-transform: capitalize;
       }
 
       .reset-btn {
@@ -174,6 +188,47 @@
         color: #e7dfcd;
         border: 1px solid rgba(255, 255, 255, 0.03);
         border-bottom-left-radius: 6px;
+      }
+
+      /* TTS Speaker Button */
+      .tts-btn {
+        background: transparent;
+        border: none;
+        color: #b7791f;
+        cursor: pointer;
+        padding: 4px 8px;
+        font-size: 14px;
+        opacity: 0.7;
+        transition: opacity 0.15s;
+      }
+      .tts-btn:hover {
+        opacity: 1;
+      }
+      .tts-btn.speaking {
+        color: #4ade80;
+      }
+
+      /* Edit Button for User Messages */
+      .edit-btn {
+        background: transparent;
+        border: none;
+        color: #888;
+        cursor: pointer;
+        padding: 4px 8px;
+        font-size: 12px;
+        opacity: 0.6;
+        transition: opacity 0.15s;
+      }
+      .edit-btn:hover {
+        opacity: 1;
+        color: #b7791f;
+      }
+
+      .message-actions {
+        display: flex;
+        gap: 4px;
+        margin-top: 4px;
+        justify-content: flex-end;
       }
 
       .typing-indicator {
@@ -292,10 +347,20 @@
       <div id="chatScreen">
         <div class="header">
           <h1>Sales Assistant</h1>
-          <div style="display: flex; gap: 10px; align-items: center">
+          <div style="display: flex; gap: 12px; align-items: center">
             <button class="reset-btn" onclick="resetChat()">Reset</button>
-            <div class="stage-badge" id="strategyBadge">Consultative</div>
-            <div class="stage-badge" id="stageBadge">Intent</div>
+            <div class="status-container">
+              <div class="status-item">
+                <span class="status-label">Strategy:</span>
+                <span class="status-value" id="strategyBadge"
+                  >consultative</span
+                >
+              </div>
+              <div class="status-item">
+                <span class="status-label">Stage:</span>
+                <span class="status-value" id="stageBadge">intent</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -315,6 +380,7 @@
             id="messageInput"
             placeholder="Type your message..."
             onkeypress="handleKeyPress(event)"
+            autocomplete="off"
           />
           <button class="send-btn" id="sendBtn" onclick="sendMessage()">
             Send
@@ -324,18 +390,121 @@
     </div>
 
     <script>
-      let isTyping = false;
+      let isTyping = false,
+        userTurnIndex = 0,
+        sessionId = null;
 
-      function createMessageElement(text, sender) {
-        const messageDiv = document.createElement("div");
-        messageDiv.className = `message ${sender}`;
+      // Get or create session_id in LocalStorage
+      function getSessionId() {
+        if (!sessionId) {
+          sessionId = localStorage.getItem("sessionId");
+          if (!sessionId) {
+            sessionId = Math.random().toString(36).substring(2, 18);
+            localStorage.setItem("sessionId", sessionId);
+          }
+        }
+        return sessionId;
+      }
 
+      // ===== TTS MODULE (Free Web Speech API) =====
+      const tts = {
+        speak: (t) =>
+          "speechSynthesis" in window &&
+          (speechSynthesis.cancel(),
+          speechSynthesis.speak(new SpeechSynthesisUtterance(t)),
+          true),
+        stop: () => "speechSynthesis" in window && speechSynthesis.cancel(),
+        isSpeaking: () =>
+          "speechSynthesis" in window && speechSynthesis.speaking,
+      };
+
+      // Helper to parse spoken commands into punctuation
+      function parsePunctuation(text) {
+        return text
+          .replace(/ period /g, ". ")
+          .replace(/ comma /g, ", ")
+          .replace(/ question mark /g, "? ")
+          .replace(/ new line /g, " "); // Chatbots usually prefer single line inputs
+      }
+
+      function createMessageElement(text, sender, msgIdx) {
+        const msg = document.createElement("div");
+        msg.className = `message ${sender}`;
+        msg.dataset.index = msgIdx;
+
+        // Create bubble safely
         const bubble = document.createElement("div");
         bubble.className = "message-bubble";
-        bubble.textContent = text;
+        bubble.textContent = text; // SAFE: Renders HTML as plain text
 
-        messageDiv.appendChild(bubble);
-        return messageDiv;
+        // Create actions container
+        const actions = document.createElement("div");
+        actions.className = "message-actions";
+
+        // TTS for bot, Edit for user
+        if (sender === "bot") {
+          const btn = Object.assign(document.createElement("button"), {
+            className: "tts-btn",
+            innerHTML: "🔊",
+            title: "Read aloud",
+          });
+          btn.onclick = () =>
+            tts.isSpeaking()
+              ? (tts.stop(), btn.classList.remove("speaking"))
+              : (tts.speak(text),
+                btn.classList.add("speaking"),
+                setTimeout(() => btn.classList.remove("speaking"), 5000));
+          actions.appendChild(btn);
+        } else {
+          const btn = Object.assign(document.createElement("button"), {
+            className: "edit-btn",
+            innerHTML: "✏️ Edit",
+          });
+          btn.onclick = () => editMessage(msgIdx, text);
+          actions.appendChild(btn);
+        }
+
+        // Append parts
+        msg.appendChild(bubble);
+        msg.appendChild(actions);
+
+        return msg;
+      }
+
+      function editMessage(msgIdx, originalText) {
+        if (
+          !confirm(
+            "Are you sure? This will erase all conversation history after this message.",
+          )
+        )
+          return;
+        const newText = prompt("Edit your message:", originalText);
+        if (newText && newText.trim() && newText !== originalText) {
+          fetch("/api/edit", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Session-ID": getSessionId(),
+            },
+            body: JSON.stringify({ index: msgIdx, message: newText.trim() }),
+          })
+            .then((r) => r.json())
+            .then((data) => {
+              if (data.success) {
+                // Reload chat from edited point
+                document.getElementById("chatContainer").innerHTML = "";
+                userTurnIndex = 0;
+                data.history.forEach((msg) =>
+                  addMessage(msg.content, msg.role === "user" ? "user" : "bot"),
+                );
+                updateStage(data.stage);
+                if (data.strategy) updateStrategy(data.strategy);
+              } else {
+                alert("Edit failed: " + (data.error || "Unknown error"));
+              }
+            })
+            .catch((e) => alert("Edit error: " + e));
+        }
       }
 
       function initChatbot() {
@@ -353,7 +522,14 @@
               return;
             }
 
+            // Store returned session_id
+            if (data.session_id) {
+              sessionId = data.session_id;
+              localStorage.setItem("sessionId", sessionId);
+            }
+
             // Restore history if exists, otherwise show welcome message
+            userTurnIndex = 0;
             if (data.history && data.history.length > 0) {
               data.history.forEach((msg) => addMessage(msg.content, msg.role));
             } else {
@@ -373,9 +549,14 @@
 
       function addMessage(text, sender) {
         const container = document.getElementById("chatContainer");
+        let msgIdx = null;
+        if (sender === "user") {
+          msgIdx = userTurnIndex * 2;
+          userTurnIndex += 1;
+        }
 
         const fragment = document.createDocumentFragment();
-        fragment.appendChild(createMessageElement(text, sender));
+        fragment.appendChild(createMessageElement(text, sender, msgIdx));
         container.appendChild(fragment);
 
         requestAnimationFrame(() => {
@@ -398,6 +579,7 @@
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "X-Session-ID": getSessionId(),
           },
           body: JSON.stringify({ message: message }),
         })
@@ -476,12 +658,14 @@
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "X-Session-ID": getSessionId(),
           },
         })
           .then((response) => response.json())
           .then((data) => {
             if (data.success) {
               document.getElementById("chatContainer").innerHTML = "";
+              userTurnIndex = 0;
               updateStage("intent");
               initChatbot();
             }
@@ -508,22 +692,43 @@
         const input = document.getElementById("messageInput");
         const micBtn = document.getElementById("micBtn");
 
+        // STOP if already recording
         if (speechRecognizer.getState()) {
           speechRecognizer.stop();
           return;
         }
 
         micBtn.classList.add("recording");
+        micBtn.innerHTML = "⏹"; // Change icon to Stop
+
+        // Store existing text so we don't overwrite what the user already typed
+        let baseText = input.value;
 
         speechRecognizer.start(
+          // 1. FINAL Text (Black)
           (text) => {
-            // Insert at cursor
-            const pos = input.selectionStart;
-            const val = input.value;
-            input.value = val.substring(0, pos) + text + val.substring(pos);
-            input.selectionStart = input.selectionEnd = pos + text.length;
+            const formatted = parsePunctuation(text);
+            baseText += formatted; // Update our base text
+            input.value = baseText; // Commit it to input
+            input.focus();
           },
-          () => micBtn.classList.remove("recording"), // onStop callback
+          // 2. INTERIM Text (Gray/Preview)
+          (text) => {
+            // Show base text + what is currently being spoken
+            input.value = baseText + text;
+          },
+          // 3. ON STOP
+          () => {
+            micBtn.classList.remove("recording");
+            micBtn.innerHTML = "🎤"; // Change back to Mic
+            input.focus(); // Return focus to input so user can hit Enter
+          },
+          // 4. ON ERROR
+          (err) => {
+            console.warn("Mic Error:", err);
+            micBtn.classList.remove("recording");
+            micBtn.innerHTML = "🎤"; // Change back to Mic
+          },
         );
       }
     </script>

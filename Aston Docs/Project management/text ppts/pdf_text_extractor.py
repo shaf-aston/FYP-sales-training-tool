@@ -39,7 +39,6 @@ def setup_output_directory(base: Path) -> Path:
 
 def extract_text_from_pdf(pdf_path: Path) -> str:
     if fitz is None:
-        LOG.debug("fitz not present; skipping PDF text extraction: %s", pdf_path)
         return ""
     try:
         doc = fitz.open(pdf_path)
@@ -51,7 +50,6 @@ def extract_text_from_pdf(pdf_path: Path) -> str:
         doc.close()
         return "\n".join(parts)
     except Exception:
-        LOG.exception("PDF text extraction failed for %s", pdf_path)
         return ""
 
 
@@ -78,7 +76,6 @@ def extract_images_from_pdf(pdf_path: Path, ocr_lang: Optional[str] = None, ocr_
                     try:
                         ocr_text = pytesseract.image_to_string(image, lang=ocr_lang, config=ocr_config) if pytesseract else ''
                     except Exception:
-                        LOG.exception('OCR failed for image on page %s of %s', pno, pdf_path)
                         ocr_text = ''
                     blocks.append(
                         f"\n{'='*80}\n"
@@ -92,14 +89,12 @@ def extract_images_from_pdf(pdf_path: Path, ocr_lang: Optional[str] = None, ocr_
                         f"{'='*80}\n"
                     )
                 except Exception:
-                    LOG.exception('Error extracting image on page %s in %s', pno, pdf_path)
                     blocks.append(f"\n[VISUAL ELEMENT - ERROR]\nLocation: Page {pno}, Image {idx}\nError: See logs\n")
         doc.close()
         if count:
             return '\n'.join(blocks), count
         return '[No visual elements found in PDF]', 0
     except Exception:
-        LOG.exception('Error extracting visual elements from %s', pdf_path)
         return '[Error extracting visual elements: see logs]', 0
 
 
@@ -155,7 +150,6 @@ def extract_images_from_pptx(pptx_path: Path, ocr_lang: Optional[str] = None, oc
                     try:
                         ocr_text = pytesseract.image_to_string(image, lang=ocr_lang, config=ocr_config) if pytesseract else ''
                     except Exception:
-                        LOG.exception('OCR failed for image %s in %s', m, pptx_path)
                         ocr_text = ''
                     texts.append(
                         f"\n{'='*80}\n"
@@ -169,7 +163,6 @@ def extract_images_from_pptx(pptx_path: Path, ocr_lang: Optional[str] = None, oc
                         f"{'='*80}\n"
                     )
                 except Exception:
-                    LOG.exception('Error extracting media %s from %s', m, pptx_path)
                     texts.append(f"\n[VISUAL ELEMENT - ERROR]\nLocation: {m}\nError: See logs\n")
             if count:
                 return '\n'.join(texts), count
@@ -227,8 +220,6 @@ def main():
     parser.add_argument('--tesseract-cmd', default=None, help='Explicit tesseract executable path')
     parser.add_argument('--log-level', default='INFO', help='Logging level')
     args = parser.parse_args()
-
-    logging.basicConfig(level=getattr(logging, args.log_level.upper(), logging.INFO), format='%(levelname)s: %(message)s')
 
     script_dir = Path(__file__).parent
     if args.dir:
