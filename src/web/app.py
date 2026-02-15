@@ -250,6 +250,38 @@ def reset():
     
     return jsonify({"success": True})
 
+@app.route('/api/switch-provider', methods=['POST'])
+def switch_provider():
+    """Switch LLM provider mid-conversation.
+    
+    Request Body:
+        {"provider": "groq"|"ollama", "model": "optional-model-name"}
+    
+    Returns:
+        {"success": bool, "from": str, "to": str, "model": str}
+    """
+    data = request.json
+    session_id = request.headers.get('X-Session-ID')
+    
+    if not session_id:
+        return jsonify({"error": "Session ID required"}), 400
+    
+    bot = get_session(session_id)
+    if not bot:
+        return jsonify({"error": "No active session"}), 400
+    
+    provider_type = data.get('provider')
+    if not provider_type:
+        return jsonify({"error": "Provider type required"}), 400
+    
+    result = bot.switch_provider(
+        provider_type=provider_type,
+        model=data.get('model')
+    )
+    
+    status_code = 200 if result.get("success") else 400
+    return jsonify(result), status_code
+
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
 

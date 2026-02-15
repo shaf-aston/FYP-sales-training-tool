@@ -195,8 +195,6 @@ class SalesChatbot:
                             # Sequential advancement to next stage
                             self.flow_engine.advance()
                 except Exception as e:
-                    import logging
-                    logger = logging.getLogger(__name__)
                     logger.error(f"Replay error at turn {i//2}: {e}")
                     return False
         
@@ -213,3 +211,57 @@ class SalesChatbot:
             "model": self.provider.get_model_name()
         })
         return summary
+    
+    def switch_provider(self, provider_type: str, model: str = None) -> dict:
+        """Hot-swap LLM provider without losing conversation state.
+        
+        Use Case: 
+        - Fallback to local when cloud fails
+        - A/B testing different models mid-conversation
+        - Cost optimization (switch to local for long conversations)
+        
+        Args:
+            provider_type: 'groq' or 'ollama'
+            model: Optional model override
+            
+        Returns:
+            dict: {"success": bool, "from": str, "to": str, "model": str}
+        """
+        from .providers import create_provider
+        
+        old_provider_name = type(self.provider).__name__
+        old_model = self.provider.get_model_name()
+        
+        try:
+            new_provider = create_provider(provider_type, model=model)
+            
+            # Verify new provider is available before switching
+            if not new_provider.is_available():
+                return {
+                    "success": False,
+                    "error": f"{provider_type} provider is not available",
+                    "current_provider": old_provider_name,
+                    "current_model": old_model
+                }
+            
+            self.provider = new_provider
+            new_model = self.provider.get_model_name()
+            
+            logger.info(f"Provider switched: {old_provider_name}({old_model}) → "
+                       f"{type(self.provider).__name__}({new_model})")
+            
+            return {
+                "success": True,
+                "from": old_provider_name.replace('Provider', '').lower(),
+                "to": provider_type,
+                "old_model": old_model,
+                "new_model": new_model
+            }
+        except Exception as e:
+            logger.error(f"Provider switch failed: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "current_provider": old_provider_name,
+                "current_model": old_model
+            }

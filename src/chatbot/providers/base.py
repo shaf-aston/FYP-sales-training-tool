@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import List, Dict, Optional
 from functools import wraps
 import logging
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -19,10 +20,18 @@ class LLMResponse:
 
 
 def auto_log_performance(chat_method):
-    """Decorator: Automatically logs LLM performance without cluttering business logic"""
+    """Decorator: Automatically logs LLM performance without cluttering business logic.
+    
+    USAGE: Apply to CONCRETE implementations, not ABC.
+    """
     @wraps(chat_method)
     def wrapper(self, *args, **kwargs):
+        start = time.time()
         response = chat_method(self, *args, **kwargs)
+        
+        # Calculate latency if not already set
+        if response.latency_ms == 0:
+            response.latency_ms = (time.time() - start) * 1000
         
         # Auto-log in background
         stage = kwargs.get('stage', 'unknown')
@@ -39,8 +48,8 @@ class BaseLLMProvider(ABC):
     """Contract: All LLM providers must implement these methods"""
     
     @abstractmethod
-    @auto_log_performance
     def chat(self, messages: List[Dict], temperature: float = 0.8, max_tokens: int = 200, stage: str = None) -> LLMResponse:
+        """Generate response from LLM. Implementations should use @auto_log_performance."""
         pass
     
     @abstractmethod

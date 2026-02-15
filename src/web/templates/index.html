@@ -432,6 +432,11 @@
         msg.className = `message ${sender}`;
         msg.dataset.index = msgIdx;
 
+        // ADD: Data attribute for targeting during edits
+        if (msgIdx !== null && msgIdx !== undefined) {
+          msg.setAttribute("data-msg-idx", msgIdx);
+        }
+
         // Create bubble safely
         const bubble = document.createElement("div");
         bubble.className = "message-bubble";
@@ -478,33 +483,57 @@
           )
         )
           return;
+
         const newText = prompt("Edit your message:", originalText);
-        if (newText && newText.trim() && newText !== originalText) {
-          fetch("/api/edit", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-Session-ID": getSessionId(),
-            },
-            body: JSON.stringify({ index: msgIdx, message: newText.trim() }),
-          })
-            .then((r) => r.json())
-            .then((data) => {
-              if (data.success) {
-                // Reload chat from edited point
-                document.getElementById("chatContainer").innerHTML = "";
-                userTurnIndex = 0;
-                data.history.forEach((msg) =>
-                  addMessage(msg.content, msg.role === "user" ? "user" : "bot"),
-                );
-                updateStage(data.stage);
-                if (data.strategy) updateStrategy(data.strategy);
-              } else {
-                alert("Edit failed: " + (data.error || "Unknown error"));
-              }
-            })
-            .catch((e) => alert("Edit error: " + e));
+        if (!newText || !newText.trim() || newText === originalText) {
+          return;
         }
+
+        // Show loading state
+        const container = document.getElementById("chatContainer");
+        const editingMsg = container.querySelector(
+          `[data-msg-idx="${msgIdx}"]`,
+        );
+        if (editingMsg) {
+          editingMsg.style.opacity = "0.5";
+        }
+
+        fetch("/api/edit", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Session-ID": getSessionId(),
+          },
+          body: JSON.stringify({ index: msgIdx, message: newText.trim() }),
+        })
+          .then((r) => r.json())
+          .then((data) => {
+            if (data.success) {
+              // CRITICAL: Clear container and rebuild with FRESH indices
+              container.innerHTML = "";
+              userTurnIndex = 0; // Reset the turn counter
+
+              // Rebuild ALL messages with correct indices
+              data.history.forEach((msg, idx) => {
+                addMessage(msg.content, msg.role === "user" ? "user" : "bot");
+              });
+
+              updateStage(data.stage);
+              if (data.strategy) updateStrategy(data.strategy);
+            } else {
+              alert("Edit failed: " + (data.error || "Unknown error"));
+              // Restore opacity
+              if (editingMsg) {
+                editingMsg.style.opacity = "1";
+              }
+            }
+          })
+          .catch((e) => {
+            alert("Edit error: " + e);
+            if (editingMsg) {
+              editingMsg.style.opacity = "1";
+            }
+          });
       }
 
       function initChatbot() {
