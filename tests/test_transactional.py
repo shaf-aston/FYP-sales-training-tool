@@ -39,11 +39,12 @@ def manual_transactional_demo():
         print(f"\n[TURN {i}] {context}")
         print(f"  User:  {msg}")
         response = bot.chat(msg)
-        print(f"  Bot:   {response[:120]}..." if len(response) > 120 else f"  Bot:   {response}")
+        print(f"  Bot:   {response.content[:120]}..." if len(response.content) > 120 else f"  Bot:   {response.content}")
         print(f"  Stage: {bot.current_stage} | Turn in stage: {bot.stage_turn_count}")
+        print(f"  Latency: {response.latency_ms:.1f}ms")
         
         # Validate no trailing questions in pitch stage
-        if bot.current_stage == "pitch" and response.endswith('?'):
+        if bot.current_stage == "pitch" and response.content.endswith('?'):
             print("  ⚠️  ERROR: Trailing question in PITCH stage!")
         
         if bot.current_stage == "pitch":

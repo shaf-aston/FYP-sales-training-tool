@@ -24,6 +24,27 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+class ChatResponse:
+    """Structured response from chat() method including latency metrics."""
+    def __init__(self, content, latency_ms=None, provider=None, model=None, input_len=0, output_len=0):
+        """Initialize ChatResponse with bot reply and performance metrics.
+        
+        Args:
+            content: Bot response text
+            latency_ms: Elapsed time for LLM call (milliseconds)
+            provider: LLM provider name ('groq', 'ollama')
+            model: Model identifier
+            input_len: User message character count
+            output_len: Bot response character count
+        """
+        self.content = content
+        self.latency_ms = latency_ms
+        self.provider = provider
+        self.model = model
+        self.input_len = input_len
+        self.output_len = output_len
+
+
 class SalesChatbot:
     """Sales chatbot with FSM-based flow management.
     
@@ -51,7 +72,7 @@ class SalesChatbot:
         )
     
     def chat(self, user_message):
-        """Process user message and return bot response.
+        """Process user message and return bot response with metrics.
         
         FLOW:
         1. Build LLM messages (system prompt + history)
@@ -60,9 +81,10 @@ class SalesChatbot:
         4. Record turn in FSM
         5. Log performance metrics
         6. Check for stage advancement
+        7. Return ChatResponse with latency
         
-        Rationale: Single responsibility - orchestrate LLM interaction.
-        FSM handles state, provider handles inference, tracker handles metrics.
+        Returns:
+            ChatResponse: Response content + latency metrics
         """
         
         # Build messages for LLM
@@ -73,7 +95,7 @@ class SalesChatbot:
             {"role": "user", "content": user_message}
         ]
         
-        # Call LLM
+        # Call LLM and track latency
         request_start = time.time()
         try:
             llm_response = self.provider.chat(
@@ -83,12 +105,21 @@ class SalesChatbot:
                 stage=self.flow_engine.current_stage
             )
             
+            latency_ms = (time.time() - request_start) * 1000
+            
             # Handle provider errors or empty responses
             if llm_response.error or not llm_response.content:
                 error_detail = llm_response.error if llm_response.error else "empty response"
                 fallback = f"I'm having trouble ({error_detail}). Try again?"
                 self.flow_engine.add_turn(user_message, fallback)
-                return fallback
+                return ChatResponse(
+                    content=fallback,
+                    latency_ms=latency_ms,
+                    provider=type(self.provider).__name__.replace('Provider', '').lower(),
+                    model=self.provider.get_model_name(),
+                    input_len=len(user_message),
+                    output_len=len(fallback)
+                )
             
             bot_reply = llm_response.content
             
@@ -96,15 +127,17 @@ class SalesChatbot:
             self.flow_engine.add_turn(user_message, bot_reply)
             
             # Log performance
+            provider_name = type(self.provider).__name__.replace('Provider', '').lower()
+            model_name = self.provider.get_model_name()
+            
             if self.session_id:
-                latency_ms = (time.time() - request_start) * 1000
                 PerformanceTracker.log_stage_latency(
                     session_id=self.session_id,
                     stage=self.flow_engine.current_stage,
                     strategy=self.flow_engine.flow_type,
                     latency_ms=latency_ms,
-                    provider=type(self.provider).__name__.replace('Provider', '').lower(),
-                    model=self.provider.get_model_name(),
+                    provider=provider_name,
+                    model=model_name,
                     user_message_length=len(user_message),
                     bot_response_length=len(bot_reply)
                 )
@@ -119,14 +152,28 @@ class SalesChatbot:
                     # Sequential advance
                     self.flow_engine.advance()
             
-            return bot_reply
+            return ChatResponse(
+                content=bot_reply,
+                latency_ms=latency_ms,
+                provider=provider_name,
+                model=model_name,
+                input_len=len(user_message),
+                output_len=len(bot_reply)
+            )
         
         except Exception as e:
             logger.exception(f"Unexpected error: {e}")
-            
+            latency_ms = (time.time() - request_start) * 1000
             fallback = "Something went wrong. Can you try again?"
             self.flow_engine.add_turn(user_message, fallback)
-            return fallback
+            return ChatResponse(
+                content=fallback,
+                latency_ms=latency_ms,
+                provider="unknown",
+                model="unknown",
+                input_len=len(user_message),
+                output_len=len(fallback)
+            )
     
     def rewind_to_turn(self, turn_index):
         """Rewind conversation to specific turn.

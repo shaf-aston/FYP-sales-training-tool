@@ -30,10 +30,11 @@ def manual_conversation_test():
     for msg in messages:
         print(f"\n👤 USER: {msg}")
         response = bot.chat(msg)
-        print(f"🤖 BOT: {response}")
+        print(f"🤖 BOT: {response.content}")
+        print(f"   ⏱️  Latency: {response.latency_ms:.1f}ms")
         
         # Check if always ending with question
-        if response.endswith('?'):
+        if response.content.endswith('?'):
             print("   ⚠️  [Ends with question]")
         else:
             print("   ✓ [Statement/mixed response]")

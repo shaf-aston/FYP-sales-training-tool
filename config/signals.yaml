@@ -11,6 +11,11 @@ impatience:
   - "recommendations"
   - "suggest something"
   - "what are my options"
+  - "skip to"
+  - "bottom line"
+  - "quick answer"
+  - "don't have time"
+  - "make it quick"
 
 commitment:
   - "yes"
@@ -23,18 +28,43 @@ commitment:
   - "both"
   - "let's go"
   - "fine"
+  - "sign me up"
+  - "where do i sign"
+  - "sold"
+  - "deal"
+  - "count me in"
+  - "go ahead"
+  - "proceed"
+  - "book it"
+  - "reserve"
 
 objection:
   - "but"
   - "expensive"
   - "think about"
   - "maybe"
+  - "however"
+  - "too much"
+  - "can't afford"
+  - "budget"
+  - "cheaper"
+  - "discount"
+  - "not sure"
+  - "hesitant"
+  - "concerns"
+  - "worried about"
 
 walking:
   - "no thanks"
   - "not interested"
   - "pass"
   - "no"
+  - "nah"
+  - "not for me"
+  - "i'll pass"
+  - "not today"
+  - "changed my mind"
+  - "not what i want"
 
 low_intent:
   - "all good"
@@ -48,6 +78,12 @@ low_intent:
   - "everything's fine"
   - "not right now"
   - "maybe later"
+  - "just exploring"
+  - "checking things out"
+  - "seeing what's out there"
+  - "window shopping"
+  - "not urgent"
+  - "no rush"
 
 guarded:
   - "fine"
@@ -59,6 +95,10 @@ guarded:
   - "idk"
   - "dunno"
   - "maybe"
+  - "i guess"
+  - "whatever"
+  - "meh"
+  - "k"
 
 high_intent:
   - "want"
@@ -68,6 +108,14 @@ high_intent:
   - "help with"
   - "problem"
   - "struggling"
+  - "urgent"
+  - "asap"
+  - "right away"
+  - "as soon as possible"
+  - "immediately"
+  - "quickly"
+  - "have to"
+  - "must"
 
 # Demand directness keywords (Conversational Repair Theory)
 demand_directness:
@@ -82,6 +130,16 @@ demand_directness:
   - "my weight i said"
   - "im looking to"
   - "losing patience"
+  - "i said"
+  - "already told you"
+  - "answer the question"
+  - "directly"
+  - "straight answer"
+  - "stop beating around the bush"
+  - "frustrated"
+  - "what do you mean"
+  - "that wasnt what i asked"
+  - "wasnt what i"
 
 # Validation phrases for loop detection
 validation_phrases:
@@ -93,3 +151,92 @@ validation_phrases:
   - "got it"
   - "fair enough"
   - "that sounds"
+  - "i hear you"
+  - "right"
+  - "okay"
+  - "gotcha"
+
+# Direct information request phrases (Speech Act Theory)
+direct_info_requests:
+  - "what options"
+  - "give options"
+  - "show me"
+  - "can you give"
+  - "what do you have"
+  - "tell me about"
+  - "show options"
+  - "options?"
+  - "what are the options"
+  - "give me options"
+  - "list"
+  - "what can you offer"
+  - "what's available"
+  - "show me what you have"
+  - "what do you offer"
+  - "recommendations"
+  - "suggest"
+
+# Price sensitivity indicators
+price_sensitivity:
+  - "how much"
+  - "cost"
+  - "price"
+  - "expensive"
+  - "cheap"
+  - "afford"
+  - "budget"
+  - "payment"
+  - "financing"
+  - "monthly"
+  - "down payment"
+  - "total"
+
+# Urgency indicators
+urgency:
+  - "today"
+  - "now"
+  - "immediately"
+  - "asap"
+  - "urgent"
+  - "right away"
+  - "this week"
+  - "soon"
+  - "quickly"
+
+# Comparison shopping signals
+comparing:
+  - "compared to"
+  - "versus"
+  - "vs"
+  - "difference between"
+  - "which is better"
+  - "other options"
+  - "alternatives"
+  - "competitors"
+
+# Authority/decision-making signals
+needs_approval:
+  - "need to check with"
+  - "talk to my"
+  - "spouse"
+  - "wife"
+  - "husband"
+  - "partner"
+  - "boss"
+  - "manager"
+  - "team"
+  - "get approval"
+
+# Trust building / skepticism signals
+skepticism:
+  - "really?"
+  - "are you sure"
+  - "prove it"
+  - "how do i know"
+  - "guarantee"
+  - "too good to be true"
+  - "scam"
+  - "trust"
+  - "legitimate"
+  - "reviews"
+  - "testimonials"

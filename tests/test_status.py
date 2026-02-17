@@ -70,10 +70,10 @@ def test_error_handling():
     
     # Chat should not crash even with bad provider
     response = bot.chat("Hello")
-    assert isinstance(response, str), "Returns string response"
-    assert len(response) > 0, "Returns non-empty response"
+    assert hasattr(response, 'content'), "Returns ChatResponse object"
+    assert len(response.content) > 0, "Returns non-empty response"
     # FSM refactor: history in flow_engine
-    assert "trouble" in response.lower() or len(bot.flow_engine.conversation_history) > 0, "Handled gracefully"
+    assert "trouble" in response.content.lower() or len(bot.flow_engine.conversation_history) > 0, "Handled gracefully"
     print("✓ Error handling working (graceful fallback)")
 
 

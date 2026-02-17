@@ -1,6 +1,14 @@
-"""Performance tracking for user study metrics (temporary JSON file storage)
+"""Performance tracking for user study metrics (temporary JSON file storage).
 
-Collects per-stage latency, provider usage, strategy paths for analysis
+Collects per-stage latency, provider usage, strategy paths for analysis.
+Metrics stored in metrics.jsonl (JSONL format for streaming append).
+
+Functions:
+- log_stage_latency: Record LLM response time per stage
+- log_error: Log error events with context
+- get_provider_stats: Aggregate latency by provider
+- get_session_metrics: Retrieve all metrics for a session
+- get_turn_latency_summary: Get latest turn latency for UI display
 """
 import json
 import os
@@ -15,11 +23,28 @@ lock = Lock()
 # Avoids polluting global logging config on module import
 
 def get_logger():
+    """Get logger instance for performance tracking module.
+    
+    Returns:
+        logging.Logger: Configured logger for this module
+    """
     return logging.getLogger(__name__)
 
 class PerformanceTracker:
     @staticmethod
     def log_stage_latency(session_id, stage, strategy, latency_ms, provider, model, user_message_length=0, bot_response_length=0):
+        """Log LLM latency metrics for a conversation turn.
+        
+        Args:
+            session_id: Unique session identifier
+            stage: Current FSM stage (intent, logical, emotional, pitch, objection)
+            strategy: Flow strategy (consultative, transactional)
+            latency_ms: LLM response time in milliseconds
+            provider: LLM provider name (groq, ollama)
+            model: Model identifier
+            user_message_length: Character count of user input
+            bot_response_length: Character count of bot output
+        """
         metric = {
             "timestamp": datetime.now().isoformat(),
             "session_id": session_id,
@@ -90,3 +115,26 @@ class PerformanceTracker:
             except FileNotFoundError:
                 pass
         return session_metrics
+    
+    @staticmethod
+    def get_turn_latency_summary(session_id):
+        """Get latency from last recorded turn in session (for UI display)."""
+        with lock:
+            try:
+                last_metric = None
+                with open(METRICS_FILE, 'r') as f:
+                    for line in f:
+                        metric = json.loads(line)
+                        if metric.get("session_id") == session_id:
+                            last_metric = metric
+                if last_metric and "latency_ms" in last_metric:
+                    return {
+                        "latency_ms": round(last_metric["latency_ms"], 1),
+                        "provider": last_metric.get("provider", ""),
+                        "model": last_metric.get("model", ""),
+                        "input_length": last_metric.get("user_msg_len", 0),
+                        "output_length": last_metric.get("bot_resp_len", 0)
+                    }
+            except FileNotFoundError:
+                pass
+        return None
