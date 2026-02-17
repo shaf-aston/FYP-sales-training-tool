@@ -248,31 +248,21 @@ def extract_preferences(history):
     if not history:
         return ""
     
-    preference_keywords = {
-        "reliability", "reliable", "cheap", "budget", "affordable",
-        "low mileage", "mileage", "safety", "safe", "roadtrip", "road trip",
-        "family", "comfort", "fuel efficient", "strong", "durable"
-    }
+    # Load preference keywords from config
+    from .config_loader import load_analysis_config
+    config = load_analysis_config()
+    pref_config = config.get("preference_keywords", {})
     
     mentioned = set()
     for msg in history:
         if msg["role"] == "user":
             content_lower = msg["content"].lower()
-            for keyword in preference_keywords:
-                if keyword in content_lower:
-                    # Normalize to canonical form
-                    if keyword in ["reliable", "reliability"]:
-                        mentioned.add("reliability")
-                    elif keyword in ["cheap", "affordable", "budget"]:
-                        mentioned.add("budget-friendly")
-                    elif keyword in ["low mileage", "mileage"]:
-                        mentioned.add("low mileage")
-                    elif keyword in ["safety", "safe"]:
-                        mentioned.add("safety")
-                    elif keyword in ["roadtrip", "road trip"]:
-                        mentioned.add("road trips")
-                    else:
-                        mentioned.add(keyword)
+            
+            # Check each category
+            for category, keywords in pref_config.items():
+                if any(keyword in content_lower for keyword in keywords):
+                    # Use category name as canonical form
+                    mentioned.add(category)
     
     return ", ".join(sorted(mentioned)) if mentioned else ""
 
@@ -331,24 +321,28 @@ def is_literal_question(user_message):
     
     msg_lower = user_message.lower().strip()
     
-    # Pattern 1: Starts with question word
-    question_word_patterns = [
-        r'^(what|when|where|who|how|why)\s+',  # Direct question: "what is..."
-        r'^whats\s+',  # Casual: "whats your name"
-    ]
+    # Load patterns from config
+    from .config_loader import load_analysis_config
+    config = load_analysis_config()
+    patterns = config.get("question_patterns", {})
     
-    starts_with_question_word = any(
-        re.match(pattern, msg_lower) for pattern in question_word_patterns
+    starters = patterns.get("starters", [])
+    rhetorical_markers = patterns.get("rhetorical_markers", [])
+    
+    # Pattern 1: Starts with question word
+    starts_with_question = any(
+        msg_lower.startswith(word) for word in starters
     )
     
     # Pattern 2: Ends with question mark
     ends_with_question_mark = msg_lower.endswith('?')
     
-    # Pattern 3: Rhetorical questions are typically longer (multiple clauses)
+    # Pattern 3: Rhetorical questions have specific markers OR multiple clauses
+    has_rhetorical_marker = any(marker in msg_lower for marker in rhetorical_markers)
     has_multiple_clauses = msg_lower.count(',') > 1
+    is_rhetorical = has_rhetorical_marker or has_multiple_clauses
     
-    is_question = starts_with_question_word or ends_with_question_mark
-    is_rhetorical = is_question and has_multiple_clauses
+    is_question = starts_with_question or ends_with_question_mark
     
     return is_question and not is_rhetorical
 

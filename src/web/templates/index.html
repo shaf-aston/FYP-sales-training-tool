@@ -190,6 +190,24 @@
         border-bottom-left-radius: 6px;
       }
 
+      /* Latency/Metrics Badge */
+      .message-metrics {
+        font-size: 10px;
+        color: #6b6460;
+        margin-top: 4px;
+        opacity: 0.5;
+        font-weight: 400;
+        letter-spacing: 0.3px;
+      }
+
+      .message.bot .message-metrics {
+        margin-left: 4px;
+      }
+
+      .message.user .message-metrics {
+        margin-right: 4px;
+      }
+
       /* TTS Speaker Button */
       .tts-btn {
         background: transparent;
@@ -427,7 +445,7 @@
           .replace(/ new line /g, " "); // Chatbots usually prefer single line inputs
       }
 
-      function createMessageElement(text, sender, msgIdx) {
+      function createMessageElement(text, sender, msgIdx, metrics = null) {
         const msg = document.createElement("div");
         msg.className = `message ${sender}`;
         msg.dataset.index = msgIdx;
@@ -473,6 +491,21 @@
         msg.appendChild(bubble);
         msg.appendChild(actions);
 
+        // Add metrics if provided (for bot responses)
+        if (metrics && sender === "bot") {
+          const metricsDiv = document.createElement("div");
+          metricsDiv.className = "message-metrics";
+          let metricsText = `${metrics.latency_ms.toFixed(1)}ms`;
+          if (metrics.provider) {
+            metricsText += ` • ${metrics.provider}`;
+          }
+          if (metrics.input_length || metrics.output_length) {
+            metricsText += ` • ${metrics.input_length}→${metrics.output_length}`;
+          }
+          metricsDiv.textContent = metricsText;
+          msg.appendChild(metricsDiv);
+        }
+
         return msg;
       }
 
@@ -515,7 +548,25 @@
 
               // Rebuild ALL messages with correct indices
               data.history.forEach((msg, idx) => {
-                addMessage(msg.content, msg.role === "user" ? "user" : "bot");
+                let metrics = null;
+                // If this is the last bot message, include its metrics
+                if (
+                  idx === data.history.length - 1 &&
+                  msg.role === "bot" &&
+                  data.latency_ms
+                ) {
+                  metrics = {
+                    latency_ms: data.latency_ms,
+                    provider: data.provider || "",
+                    input_length: 0,
+                    output_length: 0,
+                  };
+                }
+                addMessage(
+                  msg.content,
+                  msg.role === "user" ? "user" : "bot",
+                  metrics,
+                );
               });
 
               updateStage(data.stage);
@@ -576,7 +627,7 @@
       // Auto-initialize on page load
       window.addEventListener("DOMContentLoaded", initChatbot);
 
-      function addMessage(text, sender) {
+      function addMessage(text, sender, metrics = null) {
         const container = document.getElementById("chatContainer");
         let msgIdx = null;
         if (sender === "user") {
@@ -585,7 +636,9 @@
         }
 
         const fragment = document.createDocumentFragment();
-        fragment.appendChild(createMessageElement(text, sender, msgIdx));
+        fragment.appendChild(
+          createMessageElement(text, sender, msgIdx, metrics),
+        );
         container.appendChild(fragment);
 
         requestAnimationFrame(() => {
@@ -621,7 +674,15 @@
               return;
             }
 
-            addMessage(data.message, "bot");
+            // Extract metrics from response
+            const metrics = {
+              latency_ms: data.latency_ms || 0,
+              provider: data.provider || "",
+              input_length: data.metrics?.input_length || 0,
+              output_length: data.metrics?.output_length || 0,
+            };
+
+            addMessage(data.message, "bot", metrics);
             updateStage(data.stage);
             if (data.strategy) updateStrategy(data.strategy);
           })

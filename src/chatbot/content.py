@@ -639,8 +639,9 @@ def generate_stage_prompt(strategy, stage, product_context, history, user_messag
     
     # CRITICAL FIX: Direct information requests (Speech Act Theory)
     # Handle at ALL stages, not just pitch - user can ask for options anytime
-    direct_info_requests = ["what options", "give options", "show me", "can you give",
-                           "what do you have", "tell me about", "show options", "options?"]
+    from .config_loader import load_signals
+    signals_config = load_signals()
+    direct_info_requests = signals_config.get("direct_info_requests", [])
     is_direct_request = any(phrase in user_message.lower() for phrase in direct_info_requests)
     
     if is_direct_request:

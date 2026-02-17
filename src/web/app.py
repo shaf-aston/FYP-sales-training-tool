@@ -152,17 +152,21 @@ def chat():
             return jsonify({"error": f"Error initializing chatbot: {str(init_error)}"}), 500
     
     try:
-        request_start_time = time.time()
         response = bot.chat(user_message)
-        request_time = (time.time() - request_start_time) * 1000
         
-        # FSM refactor: access flow_engine attributes
+        # Extract content and metrics from ChatResponse
         return jsonify({
             "success": True,
-            "message": response,
+            "message": response.content,
             "stage": bot.flow_engine.current_stage,
             "strategy": bot.flow_engine.flow_type,
-            "latency_ms": round(request_time, 0)
+            "latency_ms": round(response.latency_ms, 1),
+            "provider": response.provider,
+            "model": response.model,
+            "metrics": {
+                "input_length": response.input_len,
+                "output_length": response.output_len
+            }
         })
     
     except Exception as e:
@@ -230,10 +234,13 @@ def edit_message():
         
         return jsonify({
             "success": True,
-            "message": response,
+            "message": response.content,
             "history": [{"role": m["role"], "content": m["content"]} for m in bot.flow_engine.conversation_history],
             "stage": bot.flow_engine.current_stage,
-            "strategy": bot.flow_engine.flow_type
+            "strategy": bot.flow_engine.flow_type,
+            "latency_ms": round(response.latency_ms, 1),
+            "provider": response.provider,
+            "model": response.model
         })
     except ValueError:
         return jsonify({"error": "Invalid index format"}), 400
