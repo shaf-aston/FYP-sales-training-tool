@@ -1,13 +1,11 @@
-"""Finite State Machine for sales flow management
+"""Finite State Machine for sales flow management.
 
-Replaces: consultative.py, transactional.py, intent.py, objection.py
-Provides: Single source of truth for flow logic
+Provides: Single source of truth for flow logic and state transitions.
 
 DESIGN PRINCIPLES:
 - Declarative configuration (data > code)
-- Pure functions for advancement logic (testable, stateless)
+- Pure functions for advancement logic
 - Single Responsibility: FSM owns state transitions
-- Open/Closed: Extend via FLOWS config, no code modification needed
 """
 
 from .content import generate_stage_prompt, SIGNALS
@@ -18,6 +16,9 @@ from .analysis import (
     user_demands_directness
 )
 from .config_loader import load_analysis_config
+
+# Cache config to avoid disk I/O on every stage check
+_STAGE_CONFIG = load_analysis_config()
 
 
 # ============================================================================
@@ -85,8 +86,7 @@ def _get_max_turns(stage, intent_level='medium'):
     
     Rationale: Avoid hardcoded magic numbers.
     """
-    config = load_analysis_config()
-    advancement = config.get('advancement', {})
+    advancement = _STAGE_CONFIG.get('advancement', {})
     
     if stage == 'intent':
         intent_config = advancement.get('intent', {})
@@ -99,18 +99,14 @@ def _get_max_turns(stage, intent_level='medium'):
 
 def user_has_clear_intent(history, user_msg, turns):
     """Check if user expressed clear buying/problem intent.
-    
+
     Advance when:
-    1. Direct requests (explicit need) - in CURRENT message
-    2. Buying signals (high intent) - in CURRENT message
-    3. Intent keywords (moderate intent) - in history OR current
-    4. Max turns based on intent level (forced progression)
+    1. Buying signals (high intent) - in CURRENT message
+    2. Intent keywords (moderate intent) - in history OR current
+    3. Max turns based on intent level (forced progression)
+
+    Note: Direct info requests are handled by should_advance() as pitch jumps.
     """
-    # Check CURRENT message FIRST (highest priority - was missing)
-    direct_requests = ["what options", "show me", "tell me about"]
-    if user_msg and any(phrase in user_msg.lower() for phrase in direct_requests):
-        return True
-    
     # Buying signals - high intent
     if user_msg and any(word in user_msg.lower() for word in ["buy", "purchase"]):
         return True
@@ -260,6 +256,12 @@ class SalesFlowEngine:
             # Skip directly to pitch stage if available
             if "pitch" in self.flow_config["stages"]:
                 return "pitch"  # Jump to pitch, skip intermediate stages
+
+        # Check for direct information requests (advance to pitch)
+        direct_requests = SIGNALS.get("direct_info_requests", [])
+        if any(phrase in user_message.lower() for phrase in direct_requests):
+            if "pitch" in self.flow_config["stages"]:
+                return "pitch"
         
         # Check urgency override (consultative only - impatience)
         urgency_target = transition.get("urgency_skip_to")

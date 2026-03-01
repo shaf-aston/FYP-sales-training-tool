@@ -12,7 +12,7 @@ def clear_all_caches():
     
     # Targets to remove
     cache_dirs = ["__pycache__", ".pytest_cache", ".mypy_cache"]
-    cache_files = ["*.pyc", "*.pyo", "*.pyd"]
+    cache_files = ["*.pyc", "*.pyo"]
     
     print("🧹 Cleaning Python caches...")
     print(f"📂 Project root: {project_root}\n")

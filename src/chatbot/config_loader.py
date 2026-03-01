@@ -8,20 +8,16 @@ from pathlib import Path
 from functools import lru_cache
 
 
-# Get config directory path (project root / config)
-# Find project root by looking for requirements.txt
-def _find_project_root():
-    """Find project root directory by looking for requirements.txt."""
-    current = Path(__file__).parent
-    while current != current.parent:
-        if (current / "requirements.txt").exists():
-            return current
-        current = current.parent
-    # Fallback: assume we're in src/chatbot and go up 2 levels
-    return Path(__file__).parent.parent.parent
+# Get config directory path (src/config - adjacent to chatbot package)
+# Config is now in src/config, one level up from current module
+CONFIG_DIR = Path(__file__).parent.parent / "config"
 
-
-CONFIG_DIR = _find_project_root() / "config"
+# Required top-level keys in signals.yaml — guards against silent YAML typos
+_REQUIRED_SIGNAL_KEYS = {
+    "commitment", "objection", "walking", "impatience",
+    "low_intent", "high_intent", "guarded", "demand_directness",
+    "direct_info_requests", "soft_positive", "validation_phrases",
+}
 
 
 @lru_cache(maxsize=None)
@@ -53,8 +49,15 @@ def load_signals():
     
     Returns:
         dict: Signal keyword mappings
+        
+    Raises:
+        ValueError: If any required signal keys are missing
     """
-    return load_yaml("signals.yaml")
+    signals = load_yaml("signals.yaml")
+    missing = _REQUIRED_SIGNAL_KEYS - signals.keys()
+    if missing:
+        raise ValueError(f"signals.yaml missing required keys: {sorted(missing)}")
+    return signals
 
 
 @lru_cache(maxsize=None)
@@ -79,23 +82,26 @@ def load_product_config():
 
 def get_product_settings(product_type):
     """Get configuration for a specific product type.
-    
+
+    Supports alias resolution: if product_type is not a direct key,
+    checks each product's 'aliases' list for a match.
+
     Args:
-        product_type: Product identifier string
-        
+        product_type: Product identifier string (canonical key or alias)
+
     Returns:
-        dict: {"strategy": str, "context": str}
+        dict: {"strategy": str, "context": str, ...}
     """
     config = load_product_config()
-    return config["products"].get(product_type, config["default"])
+    products = config["products"]
 
+    # Direct match (O(1) dict lookup)
+    if product_type in products:
+        return products[product_type]
 
-def reload_configs():
-    """Clear all cached configurations to force reload.
-    
-    Useful for development/testing when YAML files are modified.
-    """
-    load_yaml.cache_clear()
-    load_signals.cache_clear()
-    load_analysis_config.cache_clear()
-    load_product_config.cache_clear()
+    # Alias resolution: check each product's aliases list
+    for _key, settings in products.items():
+        if product_type in settings.get("aliases", []):
+            return settings
+
+    return config["default"]

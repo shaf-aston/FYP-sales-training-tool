@@ -1,16 +1,9 @@
 """Groq cloud provider - wraps existing Groq API integration"""
 import os
 import time
+import logging
 from typing import List, Dict
 from .base import BaseLLMProvider, LLMResponse, auto_log_performance
-import requests
-import logging
-
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
-from functools import lru_cache
-from ..performance import PerformanceTracker
-from ..config import get_groq_model
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +18,7 @@ class GroqProvider(BaseLLMProvider):
     """Cloud LLM via Groq API with persistent client."""
 
     def __init__(self, model: str = None):
-        # Fetch the model from the centralized configuration
-        self.model = model or get_groq_model()
+        self.model = model or os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
         self.api_key = os.environ.get("SAFE_GROQ_API_KEY", "").strip()
         self._client = None  # Instance variable, not class variable
         logger.info(f"GroqProvider initialized with model: {self.model}, API key present: {bool(self.api_key)}")
@@ -64,7 +56,7 @@ class GroqProvider(BaseLLMProvider):
             return LLMResponse(content="", model=self.model, latency_ms=0, error=str(e))
 
     def is_available(self) -> bool:
-        return GROQ_AVAILABLE and self.api_key is not None
+        return GROQ_AVAILABLE and bool(self.api_key)
     
     def get_model_name(self) -> str:
         return self.model

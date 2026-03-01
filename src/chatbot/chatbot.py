@@ -13,10 +13,12 @@ BENEFITS:
 - Easier testing (pure functions)
 """
 
-from .providers import create_provider, GROQ
-from .config import get_product_config
+from dataclasses import dataclass
+from .providers import create_provider
+from .config_loader import get_product_settings
 from .performance import PerformanceTracker
 from .flow import SalesFlowEngine
+import re
 import time
 import logging
 
@@ -24,25 +26,24 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+@dataclass
 class ChatResponse:
-    """Structured response from chat() method including latency metrics."""
-    def __init__(self, content, latency_ms=None, provider=None, model=None, input_len=0, output_len=0):
-        """Initialize ChatResponse with bot reply and performance metrics.
-        
-        Args:
-            content: Bot response text
-            latency_ms: Elapsed time for LLM call (milliseconds)
-            provider: LLM provider name ('groq', 'ollama')
-            model: Model identifier
-            input_len: User message character count
-            output_len: Bot response character count
-        """
-        self.content = content
-        self.latency_ms = latency_ms
-        self.provider = provider
-        self.model = model
-        self.input_len = input_len
-        self.output_len = output_len
+    """Structured response from chat() method including latency metrics.
+    
+    Attributes:
+        content: Bot response text
+        latency_ms: Elapsed time for LLM call (milliseconds)
+        provider: LLM provider name ('groq', 'ollama')
+        model: Model identifier
+        input_len: User message character count
+        output_len: Bot response character count
+    """
+    content: str
+    latency_ms: float = None
+    provider: str = None
+    model: str = None
+    input_len: int = 0
+    output_len: int = 0
 
 
 class SalesChatbot:
@@ -59,16 +60,57 @@ class SalesChatbot:
     """
     
     def __init__(self, provider_type=None, model=None, product_type="general", session_id=None):
-        self.provider = create_provider(provider_type or GROQ, model=model)
+        self.provider = create_provider(provider_type, model=model)  # Factory defaults to "groq"
         self.session_id = session_id
         
         # Load product config
-        config = get_product_config(product_type)
-        
+        config = get_product_settings(product_type)
+
+        # Build product context with knowledge if available
+        product_context = config["context"]
+        if "knowledge" in config:
+            product_context = f"{config['context']}\n\nPRODUCT KNOWLEDGE:\n{config['knowledge']}"
+
+        # Load custom knowledge if available (user-provided data, separate from built-in)
+        # Delimiters prevent user-entered text from being interpreted as LLM instructions
+        try:
+            from .knowledge import get_custom_knowledge_text
+            custom_knowledge = get_custom_knowledge_text()
+            if custom_knowledge:
+                product_context += (
+                    "\n\n--- BEGIN CUSTOM PRODUCT DATA ---\n"
+                    f"{custom_knowledge}\n"
+                    "--- END CUSTOM PRODUCT DATA ---"
+                )
+        except ImportError:
+            pass  # knowledge module not available, no impact
+
         # Initialize FSM
         self.flow_engine = SalesFlowEngine(
             flow_type=config["strategy"],  # "consultative" or "transactional"
-            product_context=config["context"]
+            product_context=product_context
+        )
+    
+    @property
+    def _provider_name(self):
+        """Get provider type name (lowercase)."""
+        return type(self.provider).__name__.replace('Provider', '').lower()
+    
+    @property
+    def _model_name(self):
+        """Get model identifier from provider."""
+        return self.provider.get_model_name()
+    
+    def _fallback(self, message, latency_ms, user_message):
+        """Build fallback ChatResponse after adding turn to history."""
+        self.flow_engine.add_turn(user_message, message)
+        return ChatResponse(
+            content=message,
+            latency_ms=latency_ms,
+            provider=self._provider_name,
+            model=self._model_name,
+            input_len=len(user_message),
+            output_len=len(message)
         )
     
     def chat(self, user_message):
@@ -101,7 +143,7 @@ class SalesChatbot:
             llm_response = self.provider.chat(
                 llm_messages,
                 temperature=0.8,
-                max_tokens=150,
+                max_tokens=250,
                 stage=self.flow_engine.current_stage
             )
             
@@ -111,24 +153,12 @@ class SalesChatbot:
             if llm_response.error or not llm_response.content:
                 error_detail = llm_response.error if llm_response.error else "empty response"
                 fallback = f"I'm having trouble ({error_detail}). Try again?"
-                self.flow_engine.add_turn(user_message, fallback)
-                return ChatResponse(
-                    content=fallback,
-                    latency_ms=latency_ms,
-                    provider=type(self.provider).__name__.replace('Provider', '').lower(),
-                    model=self.provider.get_model_name(),
-                    input_len=len(user_message),
-                    output_len=len(fallback)
-                )
+                return self._fallback(fallback, latency_ms, user_message)
             
             bot_reply = llm_response.content
             
             # Record turn
             self.flow_engine.add_turn(user_message, bot_reply)
-            
-            # Log performance
-            provider_name = type(self.provider).__name__.replace('Provider', '').lower()
-            model_name = self.provider.get_model_name()
             
             if self.session_id:
                 PerformanceTracker.log_stage_latency(
@@ -136,8 +166,8 @@ class SalesChatbot:
                     stage=self.flow_engine.current_stage,
                     strategy=self.flow_engine.flow_type,
                     latency_ms=latency_ms,
-                    provider=provider_name,
-                    model=model_name,
+                    provider=self._provider_name,
+                    model=self._model_name,
                     user_message_length=len(user_message),
                     bot_response_length=len(bot_reply)
                 )
@@ -155,8 +185,8 @@ class SalesChatbot:
             return ChatResponse(
                 content=bot_reply,
                 latency_ms=latency_ms,
-                provider=provider_name,
-                model=model_name,
+                provider=self._provider_name,
+                model=self._model_name,
                 input_len=len(user_message),
                 output_len=len(bot_reply)
             )
@@ -165,15 +195,7 @@ class SalesChatbot:
             logger.exception(f"Unexpected error: {e}")
             latency_ms = (time.time() - request_start) * 1000
             fallback = "Something went wrong. Can you try again?"
-            self.flow_engine.add_turn(user_message, fallback)
-            return ChatResponse(
-                content=fallback,
-                latency_ms=latency_ms,
-                provider="unknown",
-                model="unknown",
-                input_len=len(user_message),
-                output_len=len(fallback)
-            )
+            return self._fallback(fallback, latency_ms, user_message)
     
     def rewind_to_turn(self, turn_index):
         """Rewind conversation to specific turn.
@@ -274,8 +296,6 @@ class SalesChatbot:
         Returns:
             dict: {"success": bool, "from": str, "to": str, "model": str}
         """
-        from .providers import create_provider
-        
         old_provider_name = type(self.provider).__name__
         old_model = self.provider.get_model_name()
         

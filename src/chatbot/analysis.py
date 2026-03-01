@@ -2,40 +2,26 @@
 
 PURPOSE:
 - Analyze user intent, tone, and conversational state
-- Detect behavioral signals (impatience, guardedness, question fatigue)
-- Extract preferences and goals from conversation history
-- Provide context-aware interpretation of user messages
+- Detect behavioral signals
+- Extract preferences and goals
+- Context-aware interpretation
 
 DESIGN PRINCIPLE:
-Separation of concerns - this module handles "understanding what the user said"
-while flow.py handles "what to do next" and content.py handles "what to say"
-
-ACADEMIC FOUNDATIONS:
-- Speech Act Theory (Searle, 1969): Distinguish illocutionary force
-- Relevance Theory (Sperber & Wilson, 1995): Context-dependent interpretation
-- Goal Priming (Chartrand & Bargh, 1996): Once goal stated, lock high intent
-- Conversational Repair Theory (Schegloff, 1992): Detect frustration patterns
-- Discourse Representation (Kamp & Reyle, 1993): Maintain context across turns
+Pure analysis only—no decision making (flow.py) or content generation (content.py).
 """
 
 import re
+import random
 from functools import lru_cache
 
 # ============================================================================
 # CONFIGURATION - Loaded from YAML (analysis_config.yaml)
 # ============================================================================
 
-from .config_loader import load_analysis_config
+from .config_loader import load_analysis_config, load_signals
 
 _yaml_config = load_analysis_config()
-CONFIG = {
-    "MIN_SUBSTANTIVE_WORD_COUNT": _yaml_config["thresholds"]["min_substantive_word_count"],
-    "SHORT_MESSAGE_LIMIT": _yaml_config["thresholds"]["short_message_limit"],
-    "QUESTION_FATIGUE_THRESHOLD": _yaml_config["thresholds"]["question_fatigue_threshold"],
-    "VALIDATION_LOOP_THRESHOLD": _yaml_config["thresholds"]["validation_loop_threshold"],
-    "RECENT_HISTORY_WINDOW": _yaml_config["thresholds"]["recent_history_window"],
-    "RECENT_TEXT_MESSAGES": _yaml_config["thresholds"]["recent_text_messages"],
-}
+_T = _yaml_config["thresholds"]  # Shorthand for threshold access
 
 # ============================================================================
 # KEYWORD UTILITIES
@@ -77,10 +63,6 @@ def text_contains_any_keyword(text, keywords):
     return any(_compile_keyword_pattern(k).search(text) for k in keywords)
 
 
-# Backward compatibility alias
-matches_any = text_contains_any_keyword
-
-
 def extract_recent_user_messages(conversation_history, max_messages=None):
     """Extract recent user messages from conversation history.
     
@@ -92,7 +74,7 @@ def extract_recent_user_messages(conversation_history, max_messages=None):
         str: Combined text of recent user messages (lowercase)
     """
     if max_messages is None:
-        max_messages = CONFIG["RECENT_TEXT_MESSAGES"]
+        max_messages = _T["recent_text_messages"]
     
     if not conversation_history:
         return ""
@@ -123,62 +105,32 @@ def check_user_intent_keywords(conversation_history, keywords):
 # INTENT & STATE ANALYSIS
 # ============================================================================
 
-def _has_user_stated_clear_goal(history):
-    """Check if user has explicitly stated a goal/problem in recent history.
-    
-    Academic Basis: Goal Priming (Chartrand & Bargh, 1996)
-    Once goal is primed, subsequent low-engagement responses indicate reflection,
-    not disinterest. Lock intent to HIGH until contradicted.
-    
-    Returns:
-        bool: True if clear goal/problem detected in recent conversation
-    """
-    from .config_loader import load_analysis_config
-    goal_indicator_keywords = load_analysis_config()["goal_indicators"]
-    
-    window = CONFIG["RECENT_HISTORY_WINDOW"]
-    recent_messages = history[-window:] if history else []
-    
-    for message in recent_messages:
-        if message.get('role') == 'user':
-            user_text = message.get('content', '').lower()
-            if any(keyword in user_text for keyword in goal_indicator_keywords):
-                return True
-    
-    return False
-
-
 def analyze_state(history, user_message="", signal_keywords=None):
     """Unified analysis returning {intent, guarded, question_fatigue}.
     
-    Single pass over conversation history to extract:
-    - intent (high/medium/low) from keyword signals
-    - guarded (bool) if response is short + curt (context-aware)
-    - question_fatigue (bool) if recent bot questions exceed threshold
-    
-    Intent Lock
-    If user has stated a clear goal, LOCK intent to HIGH regardless of short responses.
-    Academic: Recency Bias + Goal Priming (Kahneman & Tversky, 1974; Chartrand & Bargh, 1996)
-    
-    Context-Aware Guardedness
-    'ok' after substantive answer to question = agreement, not guardedness.
-    Academic: Relevance Theory (Sperber & Wilson, 1995)
+    Extracts intent, guardedness, and question fatigue in single pass.
+    Implements Intent Lock and Agreement vs Guardedness logic.
     
     Args:
         history: Conversation history
         user_message: Current user message
-        signal_keywords: Signal keywords dict (default: imported from content.py)
+        signal_keywords: Signal keywords dict (default: content.SIGNALS)
         
     Returns:
-        dict: {"intent": str, "guarded": bool, "question_fatigue": bool}
+        dict: Analysis results
     """
     # Import signals only if not provided (allows testing with custom signals)
     if signal_keywords is None:
         from .content import SIGNALS
         signal_keywords = SIGNALS
     
-    # INTENT LOCK: Check if goal was stated
-    user_stated_clear_goal = _has_user_stated_clear_goal(history)
+    # INTENT LOCK: Check if goal was stated (inline _has_user_stated_clear_goal logic)
+    goal_indicator_keywords = load_analysis_config()["goal_indicators"]
+    window = _T["recent_history_window"]
+    user_stated_clear_goal = any(
+        text_contains_any_keyword(m.get('content', '').lower(), goal_indicator_keywords)
+        for m in history[-window:] if m.get('role') == 'user'
+    ) if history else False
     
     # Default intent detection
     intent = 'medium'
@@ -196,13 +148,13 @@ def analyze_state(history, user_message="", signal_keywords=None):
     # Context-aware guardedness detection
     guarded = False
     if user_message:
-        is_short = len(user_message.split()) <= CONFIG["SHORT_MESSAGE_LIMIT"]
+        is_short = len(user_message.split()) <= _T["short_message_limit"]
         has_guarded_signal = text_contains_any_keyword(user_message.lower(), signal_keywords["guarded"])
         
         if is_short and has_guarded_signal:
             # Check context: was previous bot message a question?
             prev_bot_asked_question = False
-            if history and len(history) >= 1:
+            if history and history[-1].get('role') == 'assistant':
                 prev_message = history[-1].get('content', '')
                 prev_bot_asked_question = '?' in prev_message
             
@@ -211,7 +163,7 @@ def analyze_state(history, user_message="", signal_keywords=None):
             if history and len(history) >= 2:
                 prev_user_message = history[-2].get('content', '')
                 word_count = len(prev_user_message.split())
-                user_gave_substantive_answer = word_count >= CONFIG["MIN_SUBSTANTIVE_WORD_COUNT"]
+                user_gave_substantive_answer = word_count >= _T["min_substantive_word_count"]
             
             # Agreement pattern: question → substantive answer → "ok"
             # This is NOT guarded; it's agreement
@@ -224,7 +176,7 @@ def analyze_state(history, user_message="", signal_keywords=None):
     if history:
         recent_bot_messages = [msg['content'] for msg in history[-4:] if msg['role'] == 'assistant']
         question_count = sum(1 for msg in recent_bot_messages if '?' in msg)
-        question_fatigue = question_count >= CONFIG["QUESTION_FATIGUE_THRESHOLD"]
+        question_fatigue = question_count >= _T["question_fatigue_threshold"]
     
     return {"intent": intent, "guarded": guarded, "question_fatigue": question_fatigue}
 
@@ -248,8 +200,6 @@ def extract_preferences(history):
     if not history:
         return ""
     
-    # Load preference keywords from config
-    from .config_loader import load_analysis_config
     config = load_analysis_config()
     pref_config = config.get("preference_keywords", {})
     
@@ -260,8 +210,7 @@ def extract_preferences(history):
             
             # Check each category
             for category, keywords in pref_config.items():
-                if any(keyword in content_lower for keyword in keywords):
-                    # Use category name as canonical form
+                if text_contains_any_keyword(content_lower, keywords):
                     mentioned.add(category)
     
     return ", ".join(sorted(mentioned)) if mentioned else ""
@@ -279,22 +228,20 @@ def is_repetitive_validation(history, threshold=None):
     
     Args:
         history: Conversation history
-        threshold: Max validations allowed (default: CONFIG)
+        threshold: Max validations allowed (default: ANALYSIS_THRESHOLDS)
     
     Returns:
         bool: True if excessive validation detected
     """
     if threshold is None:
-        threshold = CONFIG["VALIDATION_LOOP_THRESHOLD"]
+        threshold = _T["validation_loop_threshold"]
     
     if not history or len(history) < 4:
         return False
     
-    # Load validation phrases from signals config
-    from .config_loader import load_signals
     validation_phrases = load_signals().get("validation_phrases", [])
     
-    recent_bot = [m["content"].lower() for m in history[-4:] if m["role"] == "assistant"]
+    recent_bot = [m["content"].lower() for m in history[-10:] if m["role"] == "assistant"]
     validation_count = sum(
         1 for msg in recent_bot 
         if any(phrase in msg for phrase in validation_phrases)
@@ -321,8 +268,6 @@ def is_literal_question(user_message):
     
     msg_lower = user_message.lower().strip()
     
-    # Load patterns from config
-    from .config_loader import load_analysis_config
     config = load_analysis_config()
     patterns = config.get("question_patterns", {})
     
@@ -363,8 +308,6 @@ def user_demands_directness(history, user_message):
     Returns:
         bool: True if user shows frustration signals
     """
-    # Load demand/frustration keywords from signals config
-    from .config_loader import load_signals
     signals = load_signals()
     demand_indicator_keywords = signals.get("demand_directness", [])
     
@@ -381,3 +324,157 @@ def user_demands_directness(history, user_message):
             return True
     
     return has_demand
+
+def extract_user_keywords(history, max_keywords=6):
+    """Extract key nouns/terms from user messages for lexical entrainment.
+
+    Academic Basis: Lexical Entrainment (Brennan & Clark, 1996)
+    Embedding user's own terms (not full phrases) builds rapport
+    and signals active listening.
+
+    Args:
+        history: Conversation history
+        max_keywords: Maximum keywords to track
+
+    Returns:
+        list: User's key terms for embedding in responses
+    """
+    # Common filler words to exclude
+    stop_words = {'i', 'me', 'my', 'a', 'an', 'the', 'is', 'are', 'was',
+                  'were', 'be', 'been', 'have', 'has', 'had', 'do', 'does',
+                  'did', 'will', 'would', 'could', 'should', 'can', 'may',
+                  'to', 'of', 'in', 'for', 'on', 'with', 'at', 'by', 'from',
+                  'it', 'its', 'this', 'that', 'not', 'no', 'yes', 'just',
+                  'so', 'but', 'and', 'or', 'if', 'then', 'than', 'too',
+                  'very', 'really', 'also', 'like', 'you', 'your', 'dont',
+                  'im', 'ive', 'some', 'what', 'how', 'about', 'etc', 'want',
+                  'need', 'get', 'got', 'one', 'know'}
+
+    keywords = []
+    for msg in history:
+        if msg["role"] == "user":
+            words = msg["content"].lower().split()
+            for word in words:
+                cleaned = word.strip(".,!?;:'\"")
+                if cleaned and len(cleaned) > 2 and cleaned not in stop_words:
+                    if cleaned not in keywords:
+                        keywords.append(cleaned)
+
+    return keywords[-max_keywords:]
+
+
+# ============================================================================
+# OBJECTION CLASSIFICATION
+# ============================================================================
+
+# Objection type keyword patterns for classification
+# Maps each objection type to keywords that signal it
+_OBJECTION_KEYWORDS = {
+    "money": ["expensive", "cost", "price", "afford", "budget", "too much",
+              "payment", "financing", "cheaper", "discount", "can't afford",
+              "pricey", "money", "investment"],
+    "partner": ["spouse", "wife", "husband", "partner", "boss", "manager",
+                "team", "check with", "talk to", "get approval", "need to ask",
+                "run it by"],
+    "fear": ["scared", "worried", "risk", "fail", "wrong choice", "regret",
+             "what if", "nervous", "uncertain", "guarantee", "proof"],
+    "logistical": ["time", "schedule", "busy", "when", "how long", "process",
+                   "complicated", "hassle", "setup", "difficult", "steps"],
+    "think": ["think about it", "think it over", "need time", "not sure",
+              "let me think", "sleep on it", "consider", "mull it over"],
+    "smokescreen": ["not interested", "no thanks", "pass", "nah",
+                    "not for me", "i'm good", "all set"],
+}
+
+# Reframe strategy descriptions for LLM guidance
+_REFRAME_DESCRIPTIONS = {
+    "money": {
+        "isolate_funds": "Isolate the money concern: 'Setting aside the investment for a moment, is this what you want?'",
+        "self_solve": "Calculate cost of inaction: 'What's it costing you monthly to NOT solve this?'",
+        "plant_credit": "Introduce financing/payment options: 'Most clients use X to spread the cost.'",
+        "funding_options": "Explore alternative funding: 'Have you considered using Y to fund this?'",
+    },
+    "partner": {
+        "same_side": "Get on their side: 'Totally understand. What do you think THEY would say about it?'",
+        "open_wallet_test": "Test real decision-maker: 'If they said yes, would YOU move forward?'",
+        "schedule_followup": "Bring partner in: 'Want to set up a call with them so they can hear it directly?'",
+    },
+    "fear": {
+        "change_of_process": "Reframe risk as process: 'What's the risk of staying where you are?'",
+        "island_analogy": "Use future contrast: 'A year from now, what's worse — trying and adjusting, or staying the same?'",
+        "identity_reframe": "Connect to identity: 'You said you wanted [goal]. This is how people like you get there.'",
+    },
+    "logistical": {
+        "solve_mechanics": "Remove the barrier: 'What if I handled [logistics]? Would that change things?'",
+        "simplify_process": "Simplify: 'It's actually just [N] steps. Here's exactly what happens next.'",
+    },
+    "think": {
+        "drill_to_root": "Find the real concern: 'Totally fair. What specifically would you be weighing up?'",
+        "handle_root_type": "Address root concern: Once identified, handle as money/fear/partner type.",
+    },
+    "smokescreen": {
+        "legitimacy_test": "Test if genuine: 'I hear you. Just so I understand — is it the product itself, or something else?'",
+    },
+}
+
+
+def classify_objection(user_message, history=None):
+    """Classify objection type from user message and suggest reframe strategy.
+
+    Uses the objection_handling configuration from analysis_config.yaml to
+    determine the objection type and select an appropriate reframe strategy.
+
+    Academic Basis: Objection handling frameworks (Cialdini, 2006; Rackham, 1988)
+    Classification priority follows the order in analysis_config.yaml to check
+    smokescreens first (most common false objections) before genuine concerns.
+
+    Args:
+        user_message: Current user message containing the objection
+        history: Conversation history for context
+
+    Returns:
+        dict: {
+            "type": str (objection type or "unknown"),
+            "strategy": str (reframe strategy name),
+            "guidance": str (LLM-readable reframe instruction)
+        }
+    """
+    config = load_analysis_config()
+    objection_config = config.get("objection_handling", {})
+    classification_order = objection_config.get("classification_order",
+                                                 ["smokescreen", "partner", "money", "fear", "logistical", "think"])
+
+    msg_lower = user_message.lower()
+    combined_text = msg_lower
+    if history:
+        recent_user = [m["content"].lower() for m in history[-4:] if m["role"] == "user"]
+        combined_text = " ".join(recent_user) + " " + msg_lower
+
+    # Check each type in priority order
+    for obj_type in classification_order:
+        keywords = _OBJECTION_KEYWORDS.get(obj_type, [])
+        if text_contains_any_keyword(combined_text, keywords):
+            # Get reframe strategies from YAML config
+            strategies = objection_config.get("reframe_strategies", {}).get(obj_type, [])
+            if strategies:
+                strategy_name = random.choice(strategies)
+            else:
+                strategy_name = "general_reframe"
+
+            # Get human-readable guidance
+            guidance = _REFRAME_DESCRIPTIONS.get(obj_type, {}).get(
+                strategy_name,
+                f"Address the {obj_type} concern directly using the user's stated goals."
+            )
+
+            return {
+                "type": obj_type,
+                "strategy": strategy_name,
+                "guidance": guidance,
+            }
+
+    return {
+        "type": "unknown",
+        "strategy": "general_reframe",
+        "guidance": "Acknowledge the concern. Recall the user's stated goal. Ask what specifically is holding them back.",
+    }

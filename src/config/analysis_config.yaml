@@ -1,0 +1,307 @@
+# Objection handling configuration
+objection_handling:
+  # Classification priority order (check in this order)
+  classification_order:
+    - "smokescreen"
+    - "partner"
+    - "money"
+    - "fear"
+    - "logistical"
+    - "think"
+
+  # Max reframes before accepting the objection
+  max_reframes:
+    fear: 3
+    logistical: 2
+    money: 4
+    partner: 3
+    think: 2
+    smokescreen: 1
+
+  # Reframe strategies per type
+  reframe_strategies:
+    fear:
+      - "change_of_process"
+      - "island_analogy"
+      - "identity_reframe"
+    logistical:
+      - "solve_mechanics"
+      - "simplify_process"
+    money:
+      - "isolate_funds"
+      - "self_solve"
+      - "plant_credit"
+      - "funding_options"
+    partner:
+      - "same_side"
+      - "open_wallet_test"
+      - "schedule_followup"
+    think:
+      - "drill_to_root"
+      - "handle_root_type"
+    smokescreen:
+      - "legitimacy_test"
+
+# Goal indicator keywords for intent locking
+goal_indicators:
+  - "lose weight"
+  - "put on muscle"
+  - "been fat"
+  - "struggling"
+  - "looking to"
+  - "trying to"
+  - "need to"
+  - "want to"
+  - "problem"
+  - "issue"
+  - "challenge"
+  - "goal"
+  - "trying"
+  - "fix"
+  - "solve"
+  - "improve"
+  - "upgrade"
+  - "replace"
+  - "better"
+  - "tired of"
+  - "sick of"
+  - "fed up"
+  - "done with"
+  - "ready to"
+  - "time to"
+  - "shopping for"
+  - "in the market for"
+  - "comparing options"
+  - "decided to"
+  - "planning to buy"
+
+# Preference extraction keywords (prioritized by frequency & likelihood)
+# Purpose: Keyword matching → Category extraction → Injected into LLM prompt as context
+# Usage: extract_preferences() scans history, returns "budget, safety, efficiency" → LLM personalizes response
+preference_keywords:
+  # FINANCIAL CONCERN - Most common objection & preference anchor
+  budget:
+    - "affordable"
+    - "out of pocket"
+    - "payment plan"
+    - "what's the price"
+    - "monthly cost"
+    - "can't spend"
+    - "value"
+    - "worth it"
+  
+  # RELIABILITY - Risk mitigation, trust signal
+  reliability:
+    - "reliable"
+    - "reliability"
+    - "dependable"
+    - "break down"
+    - "won't fail"
+    - "trustworthy"
+    - "problem-free"
+    - "last long"
+    - "not fail"
+  
+  # SAFETY - Emotional priority, often family-driven
+  safety:
+    - "safe"
+    - "safety"
+    - "crash test"
+    - "protection"
+    - "secure"
+    - "airbags"
+    - "accident"
+    - "peace of mind"
+    - "protect"
+  
+  # FUEL EFFICIENCY - Ongoing cost concern
+  efficiency:
+    - "fuel efficient"
+    - "mpg"
+    - "gas"
+    - "consume"
+    - "fuel cost"
+    - "electric"
+    - "hybrid"
+    - "save on gas"
+  
+  # COMFORT & LUXURY - Lifestyle/lifestyle upgrade
+  comfort:
+    - "comfortable"
+    - "comfort"
+    - "luxury"
+    - "plush"
+    - "cozy"
+    - "nice"
+    - "smooth ride"
+    - "relaxing"
+  
+  # PERFORMANCE - Enthusiasm/excitement driver
+  performance:
+    - "fast"
+    - "speed"
+    - "horsepower"
+    - "powerful"
+    - "acceleration"
+    - "sporty"
+    - "quick"
+    - "exciting"
+  
+  # TECHNOLOGY - Modern buyer priority
+  technology:
+    - "tech"
+    - "smart"
+    - "touchscreen"
+    - "apple carplay"
+    - "android auto"
+    - "navigation"
+    - "bluetooth"
+    - "infotainment"
+    - "connected"
+    - "updates"
+  
+  # FAMILY NEEDS - Life stage indicator
+  family:
+    - "family"
+    - "kids"
+    - "children"
+    - "baby"
+    - "passengers"
+    - "car seat"
+    - "spacious"
+    - "room for"
+  
+  # PRACTICAL USAGE - Task-specific needs
+  cargo:
+    - "cargo"
+    - "trunk"
+    - "storage"
+    - "haul"
+    - "load"
+    - "carry"
+    - "space"
+    - "fit in"
+  
+  # WARRANTY & SUPPORT - Long-term confidence
+  warranty:
+    - "warranty"
+    - "guarantee"
+    - "coverage"
+    - "covered"
+    - "protected"
+    - "service"
+    - "maintenance"
+  
+  # FUEL TYPE (Emerging priority) - Merged with efficiency
+  fuel_type:
+    - "gas"
+    - "diesel"
+    - "plug-in"
+  
+  # MILEAGE (Used car specific, reliability proxy)
+  mileage:
+    - "mileage"
+    - "low mileage"
+    - "miles"
+    - "odometer"
+    - "kilometers"
+
+  # QUALITY - Cross-domain premium preference
+  quality:
+    - "quality"
+    - "premium"
+    - "high-end"
+    - "best"
+    - "top-of-the-line"
+    - "craftsmanship"
+
+  # CONVENIENCE - Ease of use preference
+  convenience:
+    - "easy"
+    - "simple"
+    - "convenient"
+    - "hassle-free"
+    - "straightforward"
+
+  # BRAND - Brand-conscious buyers
+  brand:
+    - "brand"
+    - "reputation"
+    - "well-known"
+    - "trusted brand"
+    - "established"
+
+  # RESULTS - Outcome-driven buyers
+  results:
+    - "results"
+    - "outcomes"
+    - "track record"
+    - "proof"
+    - "evidence"
+    - "testimonials"
+
+# Analysis thresholds
+thresholds:
+  min_substantive_word_count: 8
+  short_message_limit: 4
+  question_fatigue_threshold: 2
+  validation_loop_threshold: 2
+  recent_history_window: 10
+  recent_text_messages: 3
+
+# Question patterns
+question_patterns:
+  starters:
+    - "what"
+    - "when"
+    - "where"
+    - "who"
+    - "how"
+    - "why"
+    - "whats"
+    - "which"
+    - "can you"
+    - "could you"
+    - "would you"
+    - "will you"
+    - "do you"
+    - "does"
+    - "is"
+    - "are"
+  rhetorical_markers:
+    - "right?"
+    - "don't you think"
+    - "wouldn't you say"
+
+# Elicitation guidance (Behavior Ops tradecraft - informational only for LLM prompts)
+# Purpose: LLM understands when to use STATEMENTS instead of QUESTIONS
+# Note: Actual implementation in content.py TACTICS dict and analyze_state() logic
+elicitation_context:
+  description: "Use statements to extract information when direct questions fail or trigger defensiveness"
+  
+  # When system switches from questions to elicitation statements
+  # These align with analyze_state() checks in analysis.py
+  mode_triggers:
+    - "low_intent detected (just browsing signals)"
+    - "guarded response (short + evasive after question)"
+    - "question_fatigue (2+ consecutive bot questions)"
+    - "validation_loop (excessive acknowledgments)"
+    - "no_preferences_extracted (user not volunteering info)"
+  
+  # Elicitation statement types (implemented in content.py TACTICS["elicitation"])
+  statement_types:
+    presumptive: "Assume incorrect state to trigger correction"
+    understatement: "Downplay to reduce pressure"
+    reflective: "Mirror without asking"
+    shared_observation: "Reference common patterns"
+    curiosity_statement: "Express interest without demanding"
+
+# Advancement thresholds
+advancement:
+  intent:
+    low_intent_max_turns: 6
+    high_intent_max_turns: 4
+  logical:
+    max_turns: 5
+  emotional:
+    max_turns: 6
