@@ -11,27 +11,29 @@
 
 ## TABLE OF CONTENTS
 
-1. **Executive Summary** – Quick overview of project status & metrics
-2. **Contextual Investigation** – Problem statement, theory, related work
-3. **Project Process & Professionalism** – Requirements, architecture, iterative development
-4. **Deliverable** – Implementation details, testing framework, limitations
-5. **Evaluation & Reflection** – Requirements satisfaction, strengths, personal growth
-6. **Exposition** – Report structure, documentation, references
-7. **Appendices A-D** – Iterative case studies, code examples, metrics, testing approach
+1. **Contextual Investigation** – Problem statement, theory, related work
+2. **Project Process & Professionalism** – Requirements, architecture, iterative development
+3. **Deliverable** – Implementation details, testing framework, limitations
+4. **Evaluation & Reflection** – Requirements satisfaction, strengths, personal growth
+5. **Exposition** – Report structure, documentation
+6. **References** – Harvard-referenced sources
+7. **Appendix A** – Iterative case studies (permission questions, tone matching, stage advancement, over-probing)
+8. **Appendix B** – Testing framework summary
 
 ---
 
 ## EXECUTIVE SUMMARY
 
-Web-based AI sales assistant combining LLM fluency with explicit sales methodology control. Implements a five-stage FSM (Intent → Logical → Emotional → Pitch → Objection) derived from IMPACT/NEPQ frameworks. Constrains Llama-3.3-70b via prompt engineering (~100 LOC of stage-specific templates) while preserving natural dialogue.
+Web-based AI sales assistant combining LLM fluency with explicit sales methodology control. Implements a five-stage FSM (Intent → Logical → Emotional → Pitch → Objection) derived from IMPACT/NEPQ frameworks. Constrains Llama-3.3-70b via prompt engineering (~650 LOC of stage-specific templates and generation logic in `content.py`) while preserving natural dialogue.
 
 **Current Status (Production):**
 - All 5 functional requirements met; 5/5 non-functional constraints satisfied
-- 194 LOC core engine + 130 LOC web layer + 523 LOC frontend = 847 total
+- ~2,900 LOC application code (1,525 chatbot core + 310 Flask API + 1,068 frontend) + 1,227 LOC tests + 568 lines YAML config
 - <1s avg response latency; 92% appropriate stage progression (n=25 conversations)
 - Zero-cost deployment (Groq free tier + Flask dev server)
-- Multi-key API failover with thread-safe round-robin distribution
+- Provider abstraction enabling Groq (cloud) / Ollama (local) hot-switching
 - Two flow configurations: consultative (5 stages) and transactional (3 stages)
+- Objection classification system with 6 typed reframe strategies driven by YAML configuration
 
 **Core Contribution:** Prompt engineering as a control mechanism—system prompts inject stage-specific goals and advancement signals, achieving methodology adherence without fine-tuning.
 
@@ -84,94 +86,46 @@ Can Llama-3.3-70b be systematically constrained via prompt engineering to achiev
 **Sales Methodology Research Base:**
 
 *SPIN Selling Methodology (Rackham, 1988):*
-- **Empirical Foundation:** Analysis of 35,000 sales calls across 23 countries  
-- **Key Finding:** Need-Payoff questions increase close rates by 47% compared to feature-focused approaches
-- **Application:** Forms theoretical basis for consultative strategy question sequencing in logical → emotional → consequence exploration
+- **Empirical Foundation:** Analysis of 35,000 sales calls. Need-Payoff questions increase close rates by 47%.
+- **Application:** Forms basis for consultative question sequencing.
 
-*NEPQ Framework (Miner, 2020):*  
-- **Core Principle:** Objections represent emotional resistance, not logical concerns; reframing addresses System 2 thinking (Kahneman, 2011)
-- **Implementation:** Bot responses avoid defensive argumentation, instead probe underlying concerns through consequence questions
+*NEPQ Framework (Acuff and Miner, 2023):*  
+- **Core Principle:** Objections are emotional; reframing addresses System 2 thinking (Kahneman, 2011).
+- **Application:** Bot probes concerns rather than arguing.
 
-*Finite State Machine Theory Applied to Conversation:*
-- **State Representation:** Five discrete conversation stages with deterministic transitions
-- **Heuristic Advancement:** Hybrid model combining rule-based state changes with probabilistic keyword matching
-- **Conversation Control:** FSM structure ensures methodology compliance while allowing natural language flexibility
+*Sales Sniper Objection Handling Matrix:*
+- **Core Principle:** Objections must be classified by root cause (Fear, Logistical, Money, Partner, Smokescreen) for targeted resolution.
+- **Application:** Matrix-based classification logic in `classify_objection` ensures the bot handles "I need to think about it" differently from "I can't afford it".
 
 **Prompt Engineering Academic Foundation:**
 
-*Elicitation Techniques for Low-Intent Re-engagement:*  
-- **What it does:** Makes the chatbot more conversational and less pushy when a user isn't interested (says things like "all good" or "just browsing").  
-- **Where it lives:** 
-  - Templates: `src/chatbot/strategies/prompts.py` (the `LOW_INTENT_ELICITATION` dictionary)
-  - Detection: `analyze_state()` function checks recent messages and returns intent level
-- **How it works:** When a user shows low intent, the bot uses friendly statements like "Got it—no rush. What's been catching your eye lately?" instead of pushing for a sale.
+*Prompt-as-Constraint (Constitutional AI - Bai et al., 2022):*
+- **Concept:** Using hierarchical natural language constraints (P1 Hard Rules > P2 Preferences) to guide model behavior.
+- **Evidence:** Reduced harmful outputs by 95% without fine-tuning.
+- **Application:** "DO NOT end pitches with '?'" ensures assertive closes.
 
-*Statement-Based Patterns:*  
-- **Concept:** Replace direct questions with friendly statements ("What’s been catching your eye lately?") to make the conversation feel more natural.  
-- **Where:** Templates stored in `STRATEGY_PROMPTS["intent"]["intent"]` inside `src/chatbot/strategies/prompts.py`.  
-- **How:** When low intent is detected, the system adds these friendly statements to the conversation. It also ensures the bot uses statements before asking questions and limits the number of questions.
+*Lexical Entrainment (Brennan & Clark, 1996):*
+- **Concept:** Conversational partners who adopt each other's terms ("conceptual pacts") build rapport faster.
+- **Application:** The `extract_user_keywords` function feeds user-specific terms into the prompt, reducing mechanical parroting.
 
-*Adaptive Prompting:*  
-- **What it does:** Automatically changes how the bot behaves based on how interested the user seems (high, medium, or low intent).  
-- **Where it lives:** 
-  - Intent detection: `analyze_state()` in `src/chatbot/strategies/prompts.py`
-  - Stage management: `should_advance()` in `src/chatbot/strategies/intent.py`
-- **How it works:** 
-  - If LOW intent: Use gentle, rapport-building prompts. Allow 6 turns before advancing.
-  - If HIGH intent: Use direct discovery questions. Only allow 4 turns.
-  - The bot picks the right prompt template based on the intent level detected.
+*Relevance Theory (Sperber & Wilson, 1995):*
+- **Concept:** Communication should maximize relevance. Ambiguous "or" questions force unnecessary cognitive load.
+- **Application:** "Question Clarity" rule forbids ambiguous binary questions, forcing the bot to choose the most likely path.
 
-*Few-Shot Learning (Brown et al., 2020 - "Language Models are Few-Shot Learners"):*
-- **Technique:** Providing concrete input-output examples within prompts to guide model behavior
-- **Implementation:** 4 bad/good example pairs in `prompts.py` demonstrating tone matching, statement-before-question patterns, anti-parroting behavior, and pitch stage output format
-- **Evidence:** GPT-3 paper showed few-shot prompting achieves 85-90% of fine-tuned performance at zero training cost
-- **Application:** Examples include "Bad: 'What brings you here?' → Good: 'Makes sense. What's the goal here?'"
+*Speech Act Theory (Searle, 1969):*
+- **Concept:** Utterances like "Show me options" are directive acts requiring immediate fulfillment, not conversation.
+- **Application:** Direct request checks bypass the standard FSM flow to provide immediate data.
 
-*Chain-of-Thought Prompting (Wei et al., 2022 - "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models"):*
-- **Technique:** Explicit reasoning scaffolds that decompose complex tasks into sequential steps
-- **Implementation:** IDENTIFY→RECALL→CONNECT→REFRAME framework in objection handling stage with worked example
-- **Evidence:** CoT improved accuracy on GSM8K math problems from 17.9% to 58.1% (+40.2%)
-- **Application:** Objection stage prompts include: "IDENTIFY: Extract the core concern... RECALL: Check if you've already addressed this..."
+*Chain-of-Thought (Wei et al., 2022) & Generated Knowledge (Liu et al., 2022):*
+- **Concept:** Structuring reasoning steps and generating facts before answering improves accuracy.
+- **Application:** Objection handling prompts use IDENTIFY→RECALL→CONNECT→REFRAME sequencing.
 
-*Constitutional AI (Bai et al., 2022 - "Constitutional AI: Harmlessness from AI Feedback"):*
-- **Technique:** Hierarchical constraint prioritization where hard rules override soft preferences
-- **Implementation:** Three-tier priority system in `prompts.py`: P1 (hard rules: never insult, never claim certainty), P2 (strong preferences: one question max, match buyer tone), P3 (guidelines: use first name, cite earlier statements)
-- **Evidence:** Constitutional approach reduced harmful outputs by 95% without human labeling
-- **Application:** Constraint hierarchy ensures safety-critical rules always enforced while allowing flexibility in stylistic choices
-
-*Generated Knowledge Prompting (Liu et al., 2022 - "Generated Knowledge Prompting for Commonsense Reasoning"):*
-- **Technique:** Self-generating relevant facts before answering improves reasoning accuracy
-- **Implementation:** Intent stage prompts require model to extract tangible outcomes, buyer experiences, and appropriate tone before responding
-- **Evidence:** GKP improved accuracy on CommonsenseQA by 9.6% through self-generated fact priming
-- **Application:** "GENERATED KNOWLEDGE PRIMING: Before responding, identify from conversation: What TANGIBLE outcome are they seeking?"
-
-*ReAct Framework (Yao et al., 2023 - "ReAct: Synergizing Reasoning and Acting in Language Models"):*
-- **Technique:** Separating reasoning (intent classification) from acting (response generation) to prevent role overfitting
-- **Implementation:** Mandatory intent classification (HIGH/MEDIUM/LOW) before response generation in `prompts.py` with explicit behavioral gates
-- **Evidence:** ReAct improved decision-making success rates from 45% to 67% (+22%) in ALFWorld benchmark by forcing explicit state grounding
-- **Application:** Prevents "unconditioned solution dumping"—bot classifies user intent BEFORE deciding whether to pitch, probe, or engage conversationally
-- **Problem Solved:** Low-intent users ("All good", "Just browsing") no longer receive forced pitches; system shifts to rapport-building mode
-
-*Self-Consistency (Wang et al., 2022 - "Self-Consistency Improves Chain of Thought Reasoning"):*
-- **Technique:** Sample multiple reasoning paths and select majority answer for improved reliability
-- **Status:** Documented as future enhancement; could generate 3 response candidates and select most stage-appropriate
-- **Evidence:** Self-consistency improved GSM8K from 58.1% to 74.4% (+16.3%)
-
-*Automatic Prompt Engineer (Zhou et al., 2022 - "Large Language Models Are Human-Level Prompt Engineers"):*
-- **Technique:** Using LLMs to optimize prompt wording through iterative refinement
-- **Methodology Applied:** Prompt templates refined through systematic A/B testing across 25+ conversation scenarios
-- **Evidence:** APE-generated prompts outperformed human-crafted prompts on 21/24 benchmarks
-
-**LLM Constraint Literature Review:**
+*Conversational Repair (Schegloff, 1992):*
+- **Concept:** Users signaled frustration through repetition; systems must recognize and repair.
+- **Application:** "Demand directness" detection triggers an immediate strategy shift to transactional mode.
 
 **Summary of Theoretical Foundation:**
-
-This project synthesizes three academic streams:
-1. **Constitutional AI** (Bai et al., 2022): External constraints guide LLM behavior without architecture changes
-2. **Prompt Engineering** (Wei et al., 2022; Brown et al., 2020): Structured prompts achieve 85-90% task adherence comparable to fine-tuning
-3. **AI in Sales Research** (Syam & Sharma, 2018): Practical application gaps remain in AI systems maintaining sales process fidelity
-
-Our contribution addresses the third gap through systematic integration of the first two approaches—using prompt-based constraints (Constitutional AI) with explicit reasoning scaffolds (Chain-of-Thought, Few-Shot Learning) to maintain IMPACT framework adherence while preserving conversational authenticity.
+This project synthesizes **Constitutional AI** (constraints), **Prompt Engineering** (reasoning scaffolds), and **Psycholinguistic Theory** (lexical entrainment, relevancy) to achieve high-fidelity sales simulations without model fine-tuning.
 
 ---
 
@@ -192,7 +146,7 @@ For constraint-based professional tasks, prompt engineering achieves commercial-
 For structured professional tasks with explicit goal hierarchies (IMPACT framework: 5 stages, 12 behavioral constraints), modern large language models (70B+ parameters) possess sufficient reasoning capacity to interpret natural language specifications without domain-specific fine-tuning.
 
 **Empirical Evidence:**
-- Llama-3.3-70b + 100 LOC structured prompts: 92% stage accuracy (zero training)
+- Llama-3.3-70b + ~650 LOC prompt engineering system: 92% stage accuracy (zero training)
 - Permission question removal: 100% through 3-layer prompt constraints
 - Tone matching: 95% accuracy across 12 buyer personas via few-shot examples
 - Information extraction: 88% field completion through generated knowledge prompting
@@ -294,7 +248,7 @@ This contextual investigation establishes both the business necessity and techni
 
 Project employed a throwaway prototyping approach, recognizing that initial architectural assumptions required empirical validation before committing to full implementation. Strategy Pattern implementation (Weeks 1-8, 855 LOC across 5 files) served as a learning prototype that revealed fundamental architectural mismatches. Rather than incrementally patching symptoms, the entire approach was discarded and rebuilt using an FSM architecture (Week 9+, 430 LOC, -50% code reduction). This disciplined approach to recognizing and abandoning suboptimal solutions demonstrates professional-level engineering judgement.
 
-**Development Philosophy:** Rather than hardcoding sales logic into conditional branches, the system uses **prompt engineering as the control mechanism**—stage-specific goals, advancement signals, and behavioral constraints embedded in ~100 LOC [NOTE: NUMBER SUBJECT TO CHANGE] of natural language prompts. This approach prioritized flexibility and reusability over brittle rule sets.
+**Development Philosophy:** Rather than hardcoding sales logic into conditional branches, the system uses **prompt engineering as the control mechanism**—stage-specific goals, advancement signals, and behavioral constraints embedded in ~650 LOC of natural language prompts and generation logic (`content.py`). This approach prioritized flexibility and reusability over brittle rule sets.
 
 #### 2.2.1 Output Problems Encountered & Fixes
 
@@ -321,33 +275,9 @@ Key prompt engineering techniques implemented (see Section 1.3 for full academic
 | ReAct Framework | Yao et al., 2023 | Intent classification gate | Prevents inappropriate pitching |
 
 **Iterative Testing Cycles:**
-The project employed continuous test-driven refinement:
+The project employed continuous test-driven refinement. The four core output quality issues (permission questions, tone matching, stage advancement, strategy switching) were resolved through the iterative observe → fix → validate methodology documented with full metrics in Appendix A. Two additional issues unique to conversation flow management are documented below:
 
-1. **Testing Scenario → Observation → Prompt Tweak → Code Tweak → Retest**
-   - **Issue #1 (Early Stage):** Consultative strategy probing too aggressively; users felt interrogated.
-   - *Solution:* Added "BE HUMAN" rule in base prompts; shifted to statements first ("That makes sense"), then optional open-ended questions.
-   - **Iteration:** 3 test runs across 8 scenarios showed 65% → 82% user satisfaction (measured by response length & reciprocal questions).
-
-2. **Transactional Permission Questions (Recent):**
-   - **Observation:** Bot ending pitch with "Would you like to take a look?" broke sales momentum.
-   - **Root Cause:** Stage advancement happened AFTER response generation; cleaning code ran too late.
-   - **Prompt Fix:** Added explicit output constraints ("DO NOT end with '?'", examples of action-oriented endings).
-   - **Code Fix:** Predictive stage checking—determine if advancing before cleaning response.
-   - **Regex Pattern:** `r'\s*\?\s*$'` to strip trailing questions in pitch stage.
-   - **Validation:** 4 test conversations; 100% removal of permission questions; maintained conversational tone.
-
-3. **Buyer Persona Detection via Tone Matching:**
-   - **Initial:** Bot used same formal language for casual users (tone mismatch).
-   - **Iterative Tests:** Casual user phrases ("yo", "nah") vs. formal ("I would appreciate").
-   - **Prompt Evolution:** Added real-time tone locking in first message, with explicit mirror instructions.
-   - **Outcome:** 75% → 95% tone-match accuracy across 12 test personas.
-
-4. **Strategy Switching Signal Refinement:**
-   - **Early Problem:** False positives ("help" detected in every response).
-   - **Tuning:** Refined regex to whole-word match only (`\bhardcode\b`); added context checking (consecutive help signals vs. one-off).
-   - **Validation:** 5 test cases, 100% accuracy on consultative vs. transactional detection.
-
-5. **Small-Talk Loop Problem (Critical Fix):**
+1. **Small-Talk Loop Problem (Critical Fix):**
    - **Problem:** Bot stuck in repetitive small-talk—responding to "yep"/"ok"/"not much" with endless follow-ups, never transitioning to sales.
    - **Failed Fix #1:** Added bridging logic to append transition questions automatically. Made it worse—bot became over-passive, stuck in agreeable loops.
    - **Root Cause:** Over-engineering. Keyword matching + forced question appending + contradictory prompt rules fought each other.
@@ -356,68 +286,14 @@ The project employed continuous test-driven refinement:
    - **Outcome:** Bot naturally transitions after 1-2 small-talk exchanges. Conversation flows to sales intent without hardcoded forcing.
    - **Lesson:** Trust pre-trained AI for conversation flow. Use prompts for guidance, not restrictions. Less code = better results.
 
-6. **Over-Parroting Fix (Anti-Acknowledgment):**
+2. **Over-Parroting Fix (Anti-Acknowledgment):**
    - **Problem:** Bot wasting time repeating user statements: "So you're doing alright... What's been going on?"
    - **Root Cause:** Generic "build rapport" instruction → LLM defaulted to mirroring every response.
    - **Solution:** Explicit PARROTING rule: Skip acknowledgment on vague small-talk. Only mirror when user shares emotional/specific content.
    - **Validation:** 4 test scenarios with vague responses ("all good", "yeah sure", "not much"). Zero parroting detected. Bot asks direct questions without restating.
    - **Result:** Cleaner, faster conversations. Gets to sales intent in 3-4 turns without wasting tokens on acknowledgment theater.
 
-**Test-Driven Refactoring Methodology Applied:**
-
-Systematic approach to debugging and validation, demonstrating professional-level problem-solving:
-
-**Case Study: Permission Question Elimination (Weeks 7-8)**
-
-1. **OBSERVE:** Measured 75% of pitch responses ended with "Would you like...?" (4 test conversations)
-2. **HYPOTHESIZE:** Stage advancement timing issue—cleaning logic runs after generation, can't detect current stage
-3. **FIX (Layer 1):** Added prompt constraint "DO NOT end with '?'. Examples: 'That's $89, in stock.'"
-   - **Result:** 60% still had questions (prompt alone insufficient; LLM habits override)
-4. **FIX (Layer 2):** Implemented predictive stage checking—determine if advancing to pitch BEFORE response cleaning
-   ```python
-   will_be_pitch = (self.stage == "intent" and self.should_advance()) or self.stage == "pitch"
-   if will_be_pitch: clean_response()
-   ```
-   - **Result:** 30% remaining (timing fixed but LLM still occasionally slips)
-5. **FIX (Layer 3):** Added regex enforcement as final guardrail
-   ```python
-   bot_response = re.sub(r'\s*\?\s*$', '.', bot_response)
-   ```
-   - **Result:** 0% questions (100% elimination; guaranteed removal)
-6. **VALIDATE:** 4 additional test conversations, zero regressions detected
-
-**Professional Learning:** 3-layer solution architecture (prompt guidance + predictive logic + enforcement) achieved 100% reliability. Demonstrates systematic hypothesis testing over random fixes—each layer addresses specific failure mode identified through measurement.
-
-**Prompt Engineering Over Hardcoding:**
-Instead of:
-```python
-# AVOID: Hardcoded logic
-if stage == "pitch" and has_question(bot_response):
-    bot_response = remove_trailing_question(bot_response)
-```
-We used:
-```python
-# BETTER: Flexible prompt constraints
-"DO NOT end with '?'. Examples of good endings: 'That's $89, in stock.' or statement without question."
-```
-Then backed with code-level enforcement only when LLM slipped (~25% of cases). This pattern allows quick iteration on behavior without recompiling.
-
-**Systematic Testing Coverage:**
-
-| Test Category | Scenarios | Pass Rate | Iteration Cycles |
-|---------------|-----------|-----------|------------------|
-| Permission Questions | 4 | 100% (after 3 iterations) | 3 |
-| Tone Matching | 12 personas | 95% | 4 |
-| Stage Advancement | 8 flows | 92% | 5 |
-| Strategy Switching | 5 signals | 100% | 2 |
-| Objection Handling | 6 objections | 88% | 2 |
-
-**Testing Artifacts:**
-- `tests/test_transactional.py`: Validates fast pitch without permission questions
-- `tests/test_transactional_showcase.py`: Demonstrates full flow with stage advancement
-- Manual conversation logs: 25+ test scenarios across consultative/transactional, capturing edge cases (impatience, objections, tone mismatches)
-
-**Key Methodological Insight:** Each problem required 2-5 iteration cycles. Initial fixes addressed symptoms; final solutions addressed root causes identified through systematic observation and measurement.
+**Key Methodological Insight:** Each problem required 2-5 iteration cycles. Initial fixes addressed symptoms; final solutions addressed root causes identified through systematic observation and measurement. The full layered fix methodology (prompt → predictive code → regex enforcement) is documented with code examples in Appendix A.1, with iteration-by-iteration metrics in Appendix A.5.
 
 #### 2.2.3 Code Implementation: Key Snippets With Documentation
 
@@ -450,7 +326,7 @@ def should_advance_stage(self, bot_response: str, user_message: str) -> bool:
 
 ---
 
-**Snippet 2: Permission Question Removal (`transactional.py`, lines 85-95)**
+**Snippet 2: Permission Question Removal (`chatbot.py` — pitch-stage response cleaning)**
 ```python
 def _clean_response(self, response: str, stage: str, will_advance: bool) -> str:
     """Removes permission questions from pitch stage."""
@@ -472,7 +348,7 @@ def _clean_response(self, response: str, stage: str, will_advance: bool) -> str:
 
 ---
 
-**Snippet 3: Whole-Word Keyword Matching (`prompts.py`, lines 50-65)**
+**Snippet 3: Whole-Word Keyword Matching (`analysis.py` — NLU signal detection)**
 ```python
 def matches_any(text: str, keywords: list[str]) -> bool:
     """Checks if text contains any keyword using whole-word matching.
@@ -531,7 +407,7 @@ def create_provider(provider_type: str, **kwargs) -> BaseLLMProvider:
 
 ---
 
-**Snippet 5: Chain-of-Thought Objection Handling (`consultative.py`, lines 110-130)**
+**Snippet 5: Chain-of-Thought Objection Handling (`content.py` — objection stage prompt template)**
 ```python
 objection_prompt = """STAGE: OBJECTION (IMPACT: Reframe concerns)
 GOAL: Acknowledge concern, probe for real reason, reframe as opportunity
@@ -566,7 +442,7 @@ ONE QUESTION MAX. DO NOT argue or justify.
 
 ---
 
-**Snippet 6: Few-Shot Learning Examples (`prompts.py`, lines 70-95)**
+**Snippet 6: Few-Shot Learning Examples (`content.py` — behavioral constraint examples)**
 ```python
 FEW_SHOT_EXAMPLES = """
 FEW-SHOT LEARNING (Brown et al., 2020 - 4 concrete examples):
@@ -719,7 +595,7 @@ Finite State Machine: "What is the current state? What are valid transitions?" �
 
 #### 2.3.4 New Architecture: Finite State Machine (Week 9+)
 
-**Refactored File Structure:**
+**Refactored File Structure (Initial FSM Migration):**
 ```
 src/chatbot/
 ├── flow.py        (150 LOC) - FSM engine + declarative configuration
@@ -727,7 +603,7 @@ src/chatbot/
 └── prompts.py     (200 LOC) - Prompt templates (unchanged)
 ```
 
-**Total Codebase:** 2 files, ~430 LOC (-50% code reduction)
+**Initial Migration Result:** ~430 LOC (-50% code reduction from Strategy Pattern). Subsequent development expanded the architecture into the production structure documented in Section 3.1.
 
 **FSM Core Concept:**
 ```python
@@ -894,51 +770,53 @@ class SalesChatbot:
 **Key Lesson:**
 > *Pattern selection should match problem domain. Strategy Pattern is for dynamic algorithm selection; Finite State Machine is for state-driven sequential processes. Mismatching patterns adds complexity (over-abstraction, multiple files, tight coupling) that provides no benefit.*
 
-**Outcome:**
-- 50% code reduction
-- 83% faster feature development
-- 100% cleaner architecture
-- Single source of truth for flow logic
-- Easier testing with pure functions
-
 ---
 
 **Design Pattern Applications:**
 - **Finite State Machine (FSM):** `flow.py`—declarative stage management with configuration-driven transitions
 - **Pure Functions:** Advancement rules (`user_has_clear_intent()`, etc.) are stateless, testable functions
 - **Configuration Over Code:** `FLOWS` dictionary defines behavior; zero hardcoded logic in methods
-- **Factory Pattern:** `get_strategy(name)` dynamic instantiation
-- **State Machine:** 5 stages with deterministic transitions + heuristic advancement signals
+- **Factory Pattern:** `create_provider()` dynamic LLM provider instantiation
+- **State Machine:** 5 stages (consultative) / 3 stages (transactional) with deterministic transitions + heuristic advancement signals
 - **Lazy Initialization:** Bot created on first message, not session init (reduces memory)
 - **Dependency Injection:** `__init__(api_key, model_name, product_type)` for testability
 
-**Module Structure:**
+**Module Structure (Production):**
 ```
 src/
-├── chatbot/                   # Core business logic (zero Flask deps)
-│   ├── chatbot.py            # Main SalesChatbot class (194 LOC)
-│   ├── config.py             # Product → strategy mapping
-│   └── strategies/
-│       ├── consultative.py   # IMPACT (deep probing)
-│       ├── transactional.py  # Fast pitch
-│       └── prompts.py        # Shared prompt utilities
-├── web/                       # Presentation layer
-│   ├── app.py                # Flask routes (130 LOC)
-│   ├── static/speech.js      # Frontend JS
-│   └── templates/index.html  # Chat UI
+├── chatbot/                   # Core business logic (zero Flask deps) — 1,525 LOC
+│   ├── chatbot.py            # Main SalesChatbot orchestrator (314 LOC)
+│   ├── flow.py               # FSM engine + declarative FLOWS config (319 LOC)
+│   ├── content.py            # Prompt generation + stage templates (647 LOC)
+│   ├── analysis.py           # NLU pipeline: state, keywords, objections (386 LOC)
+│   ├── performance.py        # Metrics logging + JSONL export (111 LOC)
+│   ├── config_loader.py      # YAML config loading (90 LOC)
+│   ├── config.py             # Product → flow mapping wrapper (14 LOC)
+│   └── providers/            # LLM abstraction layer (244 LOC)
+│       ├── base.py           # Abstract contract + logging decorator
+│       ├── groq_provider.py  # Cloud LLM (Groq API)
+│       ├── ollama_provider.py # Local LLM (Ollama)
+│       └── factory.py        # Provider selection
+├── config/                    # Declarative configuration — 568 lines YAML
+│   ├── product_config.yaml   # Product types, strategies, knowledge base
+│   ├── analysis_config.yaml  # Objection classification + reframe strategies
+│   └── signals.yaml          # Keyword lists for NLU signal detection
+├── web/                       # Presentation layer — 1,378 LOC
+│   ├── app.py                # Flask REST API (310 LOC)
+│   └── templates/index.html  # SPA frontend: chat, speech, editing (1,068 LOC)
 ```
 
 **Key Design Decisions:**
 1. **Separation of Concerns:** Core chatbot has zero web dependencies → CLI/API reusable
-2. **Prompt Engineering over Fine-Tuning:** 100 LOC of prompts vs. GPU-intensive training
+2. **Prompt Engineering over Fine-Tuning:** ~650 LOC of prompt templates vs. GPU-intensive training
 3. **In-Memory State:** No database → GDPR-compliant, no SQL injection risk
 4. **Multi-Key Failover:** Round-robin prevents single quota burnout
 
 **Project Management Principles Applied (Aston SPM Framework):**
 
-*Work Breakdown Structure (WBS):* System decomposed into independent modules (`providers/`, `strategies/`, `web/`) enabling parallel development. Each component developed and tested in isolation before integration.
+*Work Breakdown Structure (WBS):* System decomposed into independent modules (`providers/`, `chatbot/`, `web/`, `config/`) enabling parallel development. Each component developed and tested in isolation before integration.
 
-*Modular Decomposition:* Strategy pattern enables adding new sales methodologies with <100 LOC, zero refactoring of core engine. Validates extensibility requirement.
+*Modular Decomposition:* FSM-based flow configuration enables adding new sales methodologies by extending the `FLOWS` dictionary and advancement rules, with zero refactoring of core engine. Validates extensibility requirement.
 
 ### 2.5 Risk Management & Mitigation
 
@@ -1000,18 +878,20 @@ src/
 
 | Component | LOC (Initial → Current) | Dev Hours | Complexity | % of Total Time |
 |-----------|-------------------------|-----------|------------|----------------|
-| **Core Engine** (chatbot.py) | 134 → 136 | 12h | High | 17% |
-| **Strategies** (consultative + transactional) | 226 → 214 | 18h | High | 26% |
-| **Provider Abstraction** | 228 → 215 | 10h | Medium | 14% |
-| **Web Layer** (Flask) | 154 → 154 | 8h | Low | 11% |
-| **Prompts & Few-Shot** | 251 → 149 | 22h | Very High | 31% |
-| **TOTAL** | **993 → 868** | **70h** | - | **100%** |
+| **Core Engine** (chatbot.py) | 134 → 314 | 12h | High | 17% |
+| **FSM + Prompts** (flow.py, content.py, analysis.py) | 477 → 1,352 | 18h | High | 26% |
+| **Provider Abstraction** (providers/) | 228 → 244 | 10h | Medium | 14% |
+| **Web Layer** (Flask + frontend) | 154 → 1,378 | 8h | Low | 11% |
+| **Prompt Engineering & Few-Shot Tuning** | embedded in content.py | 22h | Very High | 31% |
+| **TOTAL** | **~993 → ~2,900** | **70h** | - | **100%** |
+
+*Note: LOC counts exclude test suite (1,227 LOC) and YAML configuration (568 lines). "Initial" figures reflect the pre-FSM Strategy Pattern codebase; "Current" reflects production state.*
 
 **Key Insights:**
 
 1. **Prompt Engineering as Code:** Consumed 31% of development time (22/70h). Validates "prompt as code" approach where behavioral tuning happens in natural language rather than Python. Traditional approach (fine-tuning) would require 48h GPU training + $200-500 costs.
 
-2. **Productivity Metric:** 12.4 LOC/hour (868 LOC ÷ 70h). Within expected range for research-intensive development (industry: 10-25 LOC/h for Python).
+2. **Productivity Metric:** ~41 LOC/hour (2,900 LOC ÷ 70h) for production application code. Higher than typical range for research-intensive development (industry: 10-25 LOC/h for Python), reflecting the substantial frontend SPA and prompt template contributions.
 
 3. **Refactoring Impact:** Provider abstraction (10h investment) enabled zero-cost cloud↔local switching, preventing 8h+ blocked development time during Groq API restrictions.
 
@@ -1027,12 +907,8 @@ src/
 
 **Current Production Features:**
 1. **Iteratively-Refined Intent Classification:** Initial regex-based detection (60% accuracy) → enhanced with tone-matching context (90% accuracy). Refined through 8 test scenarios to avoid false positives on transactional signals.
-2. **Permission Question Removal (Transactional Strategy):** Learned through testing that LLM naturally adds "Would you like...?" at pitch stage. Implemented:
-   - Prompt constraint: Explicit "DO NOT end with ?" with examples
-   - Code enforcement: Regex pattern `r'\s*\?\s*$'` on pitch-stage responses
-   - Predictive validation: Check if stage will advance before cleaning
-   - Outcome: 100% removal while preserving conversational tone
-3. **Tone Matching via Buyer Persona Detection:** Tested across 12 personas (casual, formal, technical, price-sensitive). Prompt now locks tone in first 1-2 messages with explicit mirroring rules.
+2. **Permission Question Removal:** Three-layer fix (prompt constraint + predictive stage check + regex enforcement) achieved 100% elimination. Full iterative development documented in Section 2.2.2, code in Snippet 2.
+3. **Tone Matching via Buyer Persona Detection:** Early tone-locking in first 1-2 messages with explicit mirroring rules. Tested across 12 personas; 95% accuracy. Iterative refinement documented in Section 2.2.
 4. **Thread-Safe Key Cycling:** Validated under concurrent load (5 simultaneous users); no quota exhaustion.
 5. **Stage Advancement Signals:** Tested refinement of keyword matching—moved from simple `in` checks to whole-word regex `\bword\b` to reduce false positives.
 6. **History Windowing:** Empirically tuned to 20-message window through latency testing (15 msg = 920ms, 20 msg = 980ms, 25 msg = 1050ms).
@@ -1040,13 +916,13 @@ src/
 **Technology Choices (Justified by Testing):**
 - **Llama-3.3-70b (Groq) vs. GPT-4:** Tested both on 5 identical conversations. Llama achieved 92% stage progression vs. GPT-4's 88% BUT at zero cost (Groq free tier). Trade-off: acceptable for FYP scope.
 - **Flask vs. FastAPI:** Chose Flask for simplicity; FastAPI not needed for request-response cycles <2s. Session isolation tested; per-instance bots work well (no queue bottlenecks).
-- **Prompt Engineering (100 LOC) vs. Fine-Tuning:** Evaluated fine-tuning cost ($200-500 + 48h training); prompt approach yielded 92% accuracy in <20 LOC per strategy. Reusability won.
+- **Prompt Engineering (~650 LOC) vs. Fine-Tuning:** Evaluated fine-tuning cost ($200-500 + 48h training); prompt engineering approach yielded 92% accuracy. Reusability and iteration speed won.
 
 #### 2.4.1 Provider Abstraction Architecture (Groq + Ollama Hybrid)
 
 **Problem:** Groq API restriction blocked cloud access during development—single point of failure. Needed local fallback with one-liner switching and modular design.
 
-**Solution:** Provider abstraction layer (180 LOC across 4 files):
+**Solution:** Provider abstraction layer (244 LOC across 4 files):
 ```
 src/chatbot/providers/
 ├── base.py          # Abstract contract (BaseLLMProvider)
@@ -1055,7 +931,7 @@ src/chatbot/providers/
 └── factory.py       # create_provider() switcher
 ```
 
-**Design:** Loose coupling via abstract interface—providers isolated from strategies/chatbot logic. Each file handles one responsibility (contract definition, cloud API, local server, selection logic). Chatbot.py imports only `create_provider`, zero LLM-specific code.
+**Design:** Loose coupling via abstract interface—providers isolated from FSM engine/chatbot logic. Each file handles one responsibility (contract definition, cloud API, local server, selection logic). Chatbot.py imports only `create_provider`, zero LLM-specific code.
 
 **Refactor impact:**
 ```python
@@ -1103,44 +979,51 @@ Testing validated: maintains 5-stage context, follows tone-matching rules (97% a
 4. **Auto-Selection:** Factory checks `LLM_PROVIDER` env var (default: groq)
 
 **Code impact:**
-- Provider abstraction: 4 new files (base, factory, groq, ollama) = 180 LOC
-- Chatbot.py refactored: 25 lines removed, 2 lines added
-- Zero changes to strategies or web layer (true modularity)
+- Provider abstraction: 4 new files (base, factory, groq, ollama) = 244 LOC
+- Chatbot.py refactored: provider-agnostic via `create_provider()`
+- Zero changes to FSM engine or web layer (true modularity)
 
-**---
+---
 
 ## 3. DELIVERABLE
 
 ### 3.1 Implementation Outcomes
 
-**Core Chatbot Engine (`src/chatbot/chatbot.py`):**
-- **Lines of Code:** 194 LOC
+**Core Chatbot Engine (`src/chatbot/chatbot.py` — 314 LOC):**
 - **Key Methods:**
-  - `__init__()`: Initialize session, load product config, set strategy
-  - `chat(user_message)`: Main message handler—classifies intent, switches strategy, cycles API keys, calls LLM, extracts info, advances stages
-  - `_classify_initial_intent()`: Regex-based transactional vs. consultative detection
-  - `should_advance_stage()`: Checks bot/user signals for progression
--*Cloud vs Local Trade-offs:**
+  - `__init__()`: Initialize session, load product config, inject product knowledge, create FSM flow engine
+  - `chat(user_message)`: Main message handler—generates stage-aware prompts, calls LLM, advances FSM, logs performance
+  - `rewind_to_turn(n)`: Hard-reset FSM and replay history to support message editing
+  - `get_status()`: Returns current stage, flow type, and turn count for UI display
 
-| | Groq (Cloud) | Ollama (Local) |
-|---|---|---|
-| Model | 70B | 14B |
-| Latency | 980ms | 3-5s |
-| Cost | Free tier (30/min limit) | Zero, unlimited |
-| Privacy | Data sent to cloud | Stays local |
-| Availability | Depends on API/internet | Always available |
-| Rate Limits | Yes | No |
-| Accuracy | Higher (larger model) | Good (sufficient for training) |
+**FSM Engine (`src/chatbot/flow.py` — 319 LOC):**
+- Declarative `FLOWS` configuration for consultative (5 stages) and transactional (3 stages)
+- Pure-function advancement rules: `user_has_clear_intent()`, `user_shows_doubt()`, `commitment_or_objection()`, `commitment_or_walkaway()`
+- Urgency-skip detection with configurable target stages
+- Turn counting with max-turn safety nets per stage
 
-**Implementation:** Groq default (faster, higher quality for demos). Ollama fallback when cloud unavailable. Switch via `set LLM_PROVIDER=ollama`. Factory auto-selects based on env var.
+**Prompt Generation (`src/chatbot/content.py` — 647 LOC):**
+- Stage-specific prompt templates with P1 (hard rules) / P2 (preferences) / P3 (examples) priority hierarchy
+- Adaptive state detection: intent level, guardedness, question fatigue
+- Elicitation tactics for low-intent engagement (Generated Knowledge, Liu et al., 2022)
+- Objection classification integration with 6 typed reframe strategies
+- Few-shot learning examples (Brown et al., 2020) and lexical entrainment (Brennan & Clark, 1996)
 
-**Code impact:** 4 provider files (180 LOC). Chatbot.py: 25 lines removed, 2 added. Zero changes to strategies/web layer.
+**NLU Pipeline (`src/chatbot/analysis.py` — 386 LOC):**
+- State analysis: intent classification (high/medium/low), guardedness detection, question fatigue
+- Preference extraction and user keyword identification for lexical entrainment
+- Objection classification with history-aware context (6 types: money, partner, fear, logistical, think, smokescreen)
+- Directness demand detection for urgency overrides
 
-**Web Interface Features:**
-- Real-time chat interface with message history
-- Session isolation and conversation reset capability  
-- Stage indicator and system status display
-- Error handling: API error display, rate-limit messaging
+**Provider Architecture:** Cloud vs. local trade-off analysis, model selection rationale, and implementation details documented in Section 2.4.1.
+
+**Web Interface Features (`src/web/` — 1,378 LOC):**
+- Real-time chat interface with message history and localStorage persistence
+- Session isolation (cryptographic session IDs) and conversation reset capability
+- Stage indicator and system status display (flow type, current stage, turn count)
+- **Message editing with FSM state replay:** Users can edit previous messages; system rewinds FSM and replays from that point
+- **Speech recognition** (Web Speech API) and **text-to-speech** (SpeechSynthesis API) for voice interaction
+- Error handling: API error display, rate-limit messaging, graceful degradation
 
 ### 3.2 Testing & Validation Through Iterative Refinement
 
@@ -1219,7 +1102,7 @@ Developer testing provides initial validation but introduces bias—tester famil
 
 1. **Modular Architecture:** Core chatbot reusable in CLI/tests/other UIs (zero Flask deps)
 2. **FSM-Based Flow Management:** Declarative configuration enables adding new sales methodologies without touching core logic; -50% code reduction vs. initial Strategy Pattern approach
-3. **Prompt Engineering:** 100 LOC of prompts vs. GPU-intensive fine-tuning; zero-shot control
+3. **Prompt Engineering:** ~650 LOC of prompt templates and generation logic vs. GPU-intensive fine-tuning; zero-shot control
 4. **Multi-Key Resilience:** Thread-safe round-robin prevents single-point quota failure
 5. **Methodology Adherence:** 92% stage progression accuracy vs. 40-60% for unconstrained LLMs
 
@@ -1276,17 +1159,12 @@ Instead of defending initial design (sunk cost fallacy), conducted systematic ev
 **Time Management:** Estimated 55 hours; actual 70 hours (+27%). Underestimated prompt tuning & iterative validation—allocated 8 hours, consumed 22 hours (31% of total development time). However, this investment in behavioral constraint engineering delivered higher ROI than traditional code optimization.
 
 **Technical Growth Beyond Initial Objectives:**
-1. **Prompt Engineering as Control Mechanism:** Well-crafted natural language constraints (100 LOC) outperformed hardcoded logic (400+ LOC) for behavioral guidance. Flexibility to iterate without code recompile delivered significant efficiency gains—permission question fix required 3 prompt iterations versus estimated 8 hours for code-based solution.
+1. **Prompt Engineering as Control Mechanism:** Well-crafted natural language constraints (~650 LOC in `content.py`) outperformed hardcoded logic (400+ LOC) for behavioral guidance. Flexibility to iterate without code recompile delivered significant efficiency gains—permission question fix required 3 prompt iterations versus estimated 8 hours for code-based solution.
 2. **Iterative Testing Discipline:** Established systematic methodology: observe → hypothesize → fix (layered) → validate → measure. Each gap (permission questions, tone mismatch, stage advancement) followed this cycle, catching issues rule-based systems would miss.
 3. **Thread-Safe Concurrency:** Implemented `threading.Lock()` for round-robin key cycling after discovering race conditions during concurrent load testing (5 simultaneous users). Learned the hard way that "appears to work" in single-user testing ≠ production-ready.
 4. **Metrics-Driven Architecture:** Quantified every design decision: coupling (6 imports/file), code review time (45min→10min), feature development (2-3h→30min). This data justified refactoring to stakeholders (academic supervisor) and demonstrated professional-level engineering rigor.
 
-**Challenges & Iterations:**
-1. **Permission Question Problem:** Initial observation: "Would you like...?" breaking sales flow. Root cause: stage advancement timing. Solution took 3 iterations (prompt-only → predictive checking → regex cleaning). Validated with 4 test runs achieving 100% removal.
-2. **Tone Matching:** Early tests showed tone mismatches with casual users. Tested across 12 personas; refined prompt to lock tone early; accuracy improved 75% → 95%.
-3. **Stage Progression Accuracy:** Started at 40% (false positives on advancement). Systematic keyword tuning (removing overly broad patterns like "yes", adding whole-word matching) → 92% by turn 3.
-
-**Key Insight:** The most impactful fixes weren't architectural (those worked fine)—they were **prompt-level behavioral tweaks validated through continuous testing**. This shows why prompt engineering is underrated: it's iterative, low-risk, and immediately measurable.
+**Key Insight:** The most impactful fixes weren't architectural (those worked fine)—they were **prompt-level behavioral tweaks validated through continuous testing** (see Appendix A for full iteration metrics). This shows why prompt engineering is underrated: it's iterative, low-risk, and immediately measurable.
 
 **Critical Lessons for Future LLM Projects:**
 1. **Test Early, Test Often:** Don't wait for complete implementation; validate outputs from day 1 with representative scenarios
@@ -1294,20 +1172,13 @@ Instead of defending initial design (sunk cost fallacy), conducted systematic ev
 3. **Observe Actual Output:** Don't assume prompts work—measure trailing questions, tone mismatches, false positives in real conversations
 4. **Small Changes, Big Impact:** <20 LOC changes yielded 75%→100% improvements (permission Qs), 62%→95% (tone matching)
 5. **Iterate in Layers:** Start with prompts (fast), add predictive checks (medium), enforce with regex (guaranteed)
+6. **Track Metrics Continuously:** Track key metrics (stage accuracy, tone matching) across every iteration to detect regressions early; establish measurable success criteria before implementation
 
 **What I'd Do Differently:**
 1. **Establish test scenarios day 1:** Define 15-20 representative conversations upfront (covering persona variations: casual, formal, technical, price-sensitive, impatient) and systematically track metrics across iterations. This would have identified tone matching issues 2 weeks earlier.
 2. **Allocate 30% of development time to prompt engineering:** Not 15%. This is where ROI is highest—small prompt changes yielded 50+ percentage point improvements in key metrics.
 3. **Implement structured logging from start:** Rather than manual conversation analysis, save all interactions to JSON format with metadata (stage, strategy, extracted fields, user persona) for trend analysis and regression detection.
 4. **Quantitative user testing:** Beyond personal validation, implement A/B testing framework to measure conversation completion rates, information extraction quality, and user satisfaction scores across different prompt variations.
-
-**Critical Success Factors for Future LLM Projects:**
-1. **Test-Driven Prompt Development:** Establish measurable success criteria before implementation; validate behavioural changes through systematic testing rather than intuition
-2. **Layered Control Strategy:** Combine prompts (guidance), predictive validation (prevention), and regex enforcement (guarantee) for reliable output control
-3. **Continuous Quality Measurement:** Track key metrics (stage accuracy, information extraction, tone matching) across every iteration to detect regressions early
-4. **Empirical Iteration Cycles:** Each observed gap requires: specific test case → root cause analysis → targeted fix → validation across multiple scenarios → metric tracking
-
-This systematic approach to LLM application development, emphasizing continuous testing and measurable improvement, represents a significant learning outcome that extends beyond this specific project to any AI system requiring reliable behavioral control.
 
 ### 4.5 Retrospective: Rejected Architectural Approaches
 
@@ -1327,7 +1198,7 @@ Believed generic LLMs couldn't maintain sales methodology constraints without do
 
 **Why It Was Abandoned:**
 - **Week 3 Discovery:** Tested Llama-3.3-70b with structured prompts (IMPACT stage definitions). Achieved 87% stage progression accuracy with ZERO training.
-- **Cost-Benefit Analysis:** Prompt engineering (100 LOC) vs. fine-tuning ($500 + infrastructure complexity). ROI didn't justify investment for FYP scope.
+- **Cost-Benefit Analysis:** Prompt engineering (~650 LOC) vs. fine-tuning ($500 + infrastructure complexity). ROI didn't justify investment for FYP scope.
 - **Iteration Speed:** Prompt changes = instant testing. Model retraining = 48h feedback loop. Academic deadline constraints favored rapid iteration.
 
 **Final Architecture:**
@@ -1365,7 +1236,7 @@ Sales training is verbal skill development. Assumed text-only interface inadequa
 **Final Architecture:**
 - Request-response HTTP (no WebSockets)
 - Zero audio processing
-- 847 LOC total vs. estimated 2000+ LOC with speech pipeline
+- ~2,900 LOC application code vs. estimated 5,000+ LOC with speech pipeline
 
 **Key Learning:** Differentiate core requirements from impressive features. Academic evaluation rewards depth in methodology implementation, not feature breadth. Multimedia can be post-FYP enhancement.
 
@@ -1483,6 +1354,21 @@ Good engineering isn't building everything that might be useful—it's building 
 3. **Conversational AI Ethics:** Framework development for professional training applications ensuring bias mitigation and inclusive representation
 
 ### 4.8 Final Reflection
+
+The most impactful discovery of this project was the effectiveness of **layered control**: prompts set behavioral direction, predictive code catches timing issues, and regex enforcement provides guaranteed compliance. This three-layer pattern (documented in detail as Case Study 1, Appendix A) became the project's core engineering methodology.
+
+Every major quality improvement followed the same iterative cycle: **observe → hypothesize → fix (layered) → validate → measure**. Permission question elimination (75% → 0%), tone matching (62% → 95%), and stage advancement accuracy (40% → 92%) all required 2-5 iteration cycles before achieving target metrics. Initial fixes invariably addressed symptoms; final solutions addressed root causes identified through systematic measurement. Full iterative case studies with metrics are documented in Appendix A.
+
+**Key Insight:** Prompt engineering is not a "workaround"—it is the primary control mechanism for this class of application. Code-level enforcement handles only the ~25% of cases where LLM habits override prompt instructions. This hybrid approach delivered commercial-viable accuracy (92%) at zero infrastructure cost.
+
+---
+
+## APPENDIX A: ITERATIVE CASE STUDIES
+
+Detailed documentation of the observe → hypothesize → fix → validate cycle applied to each major output quality issue. These case studies provide the empirical evidence underpinning the metrics reported in Section 2.2 and Section 3.2.
+
+### A.1 Case Study 1: Permission Questions → Three-Layer Fix
+
 **Problem Observation (Test #1):**
 ```
 User: "yeah that's what i want"
@@ -1490,38 +1376,16 @@ Bot: "Picture this: a sleek, minimalist watch... Would you like to take a look?"
 [FAIL] 75% of pitch responses ended with permission questions
 ```
 
-**Root Cause Analysis:**
-- Stage advancement happened AFTER response generation
-- LLM naturally adds "Would you like...?" at pitch
-- Question-removal code couldn't run at the right time (still in intent stage)
+**Root Cause:** Stage advancement happened AFTER response generation. LLM naturally adds "Would you like...?" at pitch. Question-removal code couldn't run at the right time (still in intent stage).
 
-**Three-Layer Solution Developed:**
+**Iterative Fix:**
+1. **Prompt Level:** Added `"DO NOT end with '?'"` with action-oriented examples → 60% still had questions
+2. **Predictive Code Check:** Determine if advancing to pitch BEFORE cleaning response → 30% remaining
+3. **Regex Enforcement:** `re.sub(r'\s*\?\s*$', '.', bot_response)` → 0% questions (100% removal)
 
-1. **Prompt Level** (Initial attempt):
-   - Added: `"DO NOT end with '?'. Examples of good endings: 'That's $89, in stock.'"` 
-   - Result: LLM still added questions 25% of the time
+**Validation:** 4 test conversations, zero regressions. Cost: 1 hour, <5 LOC.
 
-2. **Predictive Code Check** (Second iteration):
-   ```python
-   will_advance = self.strategy.should_advance(...)
-   will_be_pitch = (self.stage == "intent" and will_advance) or self.stage == "pitch"
-   if will_be_pitch and self.strategy_name == "transactional":
-       # Clean response BEFORE stage advancement
-   ```
-   - Result: Caught 70% of cases; missed responses after generation
-
-3. **Regex Enforcement** (Final solution):
-   ```python
-   bot_response = re.sub(r'\s*\?\s*$', '.', bot_response)
-   ```
-   - Result: 100% removal; maintained conversational tone
-
-**Validation Metrics:**
-- Before: 75% had trailing questions
-- After: 0% (4/4 test conversations)
-- Cost: 1 hour, <5 LOC added
-
-**Key Learning:** Prompt engineering sets direction; code enforces guardrails when LLM slips.
+**Key Learning:** Prompt engineering sets direction; code enforces guardrails when LLM slips (~25% of cases).
 
 ---
 
@@ -1691,19 +1555,19 @@ Bot: "What's the main challenge? How long have you been stuck? What does success
 
 ---
 
-## APPENDIX A: Testing Framework Summary
+## APPENDIX B: Testing Framework Summary
 
-### A.1 Test Suite Purpose & Timeline
+### B.1 Test Suite Purpose & Timeline
 
 **Created:** Week 8-10 of development (December 2025) during iterative refinement phase  
 **Rationale:** Manual testing revealed inconsistent behavior; needed systematic validation of prompt engineering fixes  
-**Total Tests:** 9 automated tests + 25+ manual conversation scenarios
+**Total Tests:** 76 automated tests across 10 test classes + 25+ manual conversation scenarios
 
-### A.2 Key Test Files & Functions
+### B.2 Key Test Files & Functions
 
-**`tests/test_all.py` (Primary Test Suite):**
-- **Purpose:** Validates core functionality across both strategies
-- **Key Tests:** Strategy switching, tone matching, stage progression accuracy, information extraction
+**`tests/test_all.py` (Primary Test Suite — 76 tests):**
+- **Purpose:** Validates core functionality across keyword matching, state analysis, FSM flow, advancement rules, chatbot integration, config loading, literal question detection, objection classification, intent lock, and product knowledge
+- **Key Tests:** Stage progression, tone matching, objection classification (6 types), product knowledge injection, intent lock with goal priming
 - **When Created:** After identifying permission question problem; needed regression testing
 
 **`tests/test_transactional.py` (Specific Fix Validation):**  
@@ -1715,14 +1579,14 @@ Bot: "What's the main challenge? How long have you been stuck? What does success
 - **Purpose:** Interactive demonstration of full conversation flow with stage advancement
 - **Usage:** Demo tool for FYP presentation; shows methodology adherence in practice
 
-### A.3 Why Tests Were Essential
+### B.3 Why Tests Were Essential
 
 1. **Regression Prevention:** Prompt changes in one area broke behavior elsewhere; tests caught this
 2. **Quantitative Validation:** Needed measurable proof of 92% stage accuracy, 95% tone matching claims  
 3. **Iterative Development:** Each fix required validation across multiple scenarios to ensure robustness
 4. **Academic Rigor:** FYP required empirical evidence of system reliability; tests provide this proof
 
-### A.4 Test-Driven Improvements Achieved
+### B.4 Test-Driven Improvements Achieved
 
 | Problem | Test Created | Improvement Measured |
 |---------|-------------|---------------------|
@@ -1765,7 +1629,19 @@ Wei, J., Wang, X., Schuurmans, D., Bosma, M., Xia, F., Chi, E., ... & Zhou, D. (
 
 Yao, S., Zhao, J., Yu, D., Du, N., Shafran, I., Narasimhan, K., & Cao, Y. (2023). ReAct: Synergizing reasoning and acting in language models. *International Conference on Learning Representations* (ICLR).
 
+**Psycholinguistics & Communication Theory:**
+
+Brennan, S.E. and Clark, H.H. (1996). Conceptual pacts and lexical choice in conversation. *Journal of Experimental Psychology: Learning, Memory, and Cognition*, 22(6), pp. 1482-1493.
+
+Schegloff, E.A. (1992). Repair after next turn: The last structurally provided defense of intersubjectivity in conversation. *American Journal of Sociology*, 97(5), pp. 1295-1345.
+
+Searle, J.R. (1969). *Speech Acts: An Essay in the Philosophy of Language*. Cambridge: Cambridge University Press.
+
+Sperber, D. and Wilson, D. (1995). *Relevance: Communication and Cognition*. 2nd edn. Oxford: Blackwell.
+
 **Sales Methodology & Business Context:**
+
+Acuff, J. and Miner, J. (2023). *The New Model of Selling: Selling to an Unsellable Generation*. New York: Morgan James Publishing.
 
 Association for Talent Development (ATD) (2023). *2023 State of the Industry Report*. Alexandria, VA: ATD Press. Available at: https://www.td.org/research-reports/2023-state-of-the-industry (Accessed: 3 February 2026).
 
@@ -1777,19 +1653,15 @@ Jordan, K. (2015). Massive open online course completion rates revisited: Assess
 
 Kahneman, D. (2011). *Thinking, Fast and Slow*. New York: Farrar, Straus and Giroux.
 
-Miner, J. (2020). *The New Model of Selling: Selling to an Unsellable Generation*. Nashville: Miner Media Group.
-
 Rackham, N. (1988). *SPIN Selling*. New York: McGraw-Hill.
-
-Syam, N. and Sharma, A. (2018). Waiting for a sales renaissance in the fourth industrial revolution: Machine learning and artificial intelligence in sales research and practice. *Industrial Marketing Management*, 69, pp. 135-146.
 
 Syam, N. and Sharma, A. (2018). Waiting for a sales renaissance in the fourth industrial revolution: Machine learning and artificial intelligence in sales research and practice. *Industrial Marketing Management*, 69, pp. 135-146.
 
 ---
 
-## 7. APPENDICES
-
-*Note: Appendices contain supplementary material including code samples, conversation transcripts, and detailed testing methodology.*
+**Appendix Index:**
+- **Appendix A:** Iterative Case Studies (A.1–A.6) — detailed observe → fix → validate cycles for each output quality issue
+- **Appendix B:** Testing Framework Summary (B.1–B.4) — test suite purpose, key files, rationale, and improvement metrics
 
 ---
 

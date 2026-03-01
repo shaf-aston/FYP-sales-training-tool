@@ -2,7 +2,6 @@ from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
 import os
 import sys
-import time
 import secrets
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
@@ -14,6 +13,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from chatbot.chatbot import SalesChatbot
 from chatbot.providers import get_available_providers
 from chatbot.performance import PerformanceTracker
+from chatbot.knowledge import (
+    load_custom_knowledge, save_custom_knowledge,
+    get_custom_knowledge_text, clear_custom_knowledge,
+)
 
 # Disable .pyc file generation
 sys.dont_write_bytecode = True
@@ -21,47 +24,60 @@ sys.dont_write_bytecode = True
 app = Flask(__name__)
 CORS(app)
 
-# Configuration
-CONFIG = {
+# Application configuration
+APP_CONFIG = {
     "MAX_MESSAGE_LENGTH": 1000,
     "SESSION_IDLE_MINUTES": 60
 }
 
-# Session storage with timestamps for cleanup
+# Session storage: {session_id: {"bot": SalesChatbot, "ts": datetime}}
 sessions = {}
-session_timestamps = {}
 
 
 def cleanup_expired_sessions():
     """Remove sessions idle > SESSION_IDLE_MINUTES. Called lazily on requests."""
     now = datetime.now()
-    max_idle = timedelta(minutes=CONFIG["SESSION_IDLE_MINUTES"])
-    expired = [sid for sid, ts in session_timestamps.items() if now - ts > max_idle]
+    max_idle = timedelta(minutes=APP_CONFIG["SESSION_IDLE_MINUTES"])
+    expired = [sid for sid, s in sessions.items() if now - s["ts"] > max_idle]
     for sid in expired:
         del sessions[sid]
-        del session_timestamps[sid]
     if expired:
         app.logger.info(f"Cleaned up {len(expired)} idle sessions")
 
 
 def get_session(session_id):
     """Get chatbot, updating timestamp."""
-    if session_id in sessions:
-        session_timestamps[session_id] = datetime.now()
-    return sessions.get(session_id)
+    entry = sessions.get(session_id)
+    if entry:
+        entry["ts"] = datetime.now()
+        return entry["bot"]
+    return None
 
 
 def set_session(session_id, chatbot):
     """Store chatbot."""
-    sessions[session_id] = chatbot
-    session_timestamps[session_id] = datetime.now()
+    sessions[session_id] = {"bot": chatbot, "ts": datetime.now()}
 
 
 def delete_session(session_id):
     """Remove session."""
-    if session_id in sessions:
-        del sessions[session_id]
-        del session_timestamps[session_id]
+    sessions.pop(session_id, None)
+
+
+def require_session():
+    """Validate session header and return (bot, error_response).
+    
+    Returns:
+        (bot, None) if valid session exists
+        (None, error_response) if missing or invalid
+    """
+    session_id = request.headers.get('X-Session-ID')
+    if not session_id:
+        return None, (jsonify({"error": "Session ID required"}), 400)
+    bot = get_session(session_id)
+    if not bot:
+        return None, (jsonify({"error": "Session not found"}), 400)
+    return bot, None
 
 
 # Simple favicon handler to avoid browser 404s requesting /favicon.ico
@@ -76,9 +92,38 @@ def home():
 
 @app.route('/api/init', methods=['POST'])
 def api_init():
-    """Initialize session and return session_id"""
+    """Initialize or restore session. Creates bot eagerly to avoid first-message latency."""
+    data = request.json or {}
+    existing_id = data.get('session_id')
+
+    # Restore existing session if still alive on server
+    if existing_id:
+        bot = get_session(existing_id)
+        if bot:
+            history = [{"role": m["role"], "content": m["content"]}
+                       for m in bot.flow_engine.conversation_history]
+            app.logger.info(f"Restored session: {existing_id} ({len(history)} messages)")
+            return jsonify({
+                "success": True,
+                "session_id": existing_id,
+                "message": None,
+                "stage": bot.flow_engine.current_stage,
+                "strategy": bot.flow_engine.flow_type,
+                "history": history
+            })
+
+    # Create new session with eager bot initialization
     session_id = secrets.token_hex(16)
-    app.logger.info(f"Session initialized: {session_id}")
+    product_type = data.get('product_type', os.environ.get("PRODUCT_TYPE", "general"))
+    provider = data.get('provider', os.environ.get("PROVIDER", "groq"))
+    
+    try:
+        bot = SalesChatbot(provider_type=provider, product_type=product_type, session_id=session_id)
+        set_session(session_id, bot)
+        app.logger.info(f"New session: {session_id} (product={product_type}, provider={provider})")
+    except Exception as init_error:
+        app.logger.exception(f"Bot init failed: {init_error}")
+        return jsonify({"error": f"Init failed: {str(init_error)}"}), 500
     
     return jsonify({
         "success": True,
@@ -87,6 +132,58 @@ def api_init():
         "stage": "intent",
         "strategy": None,
         "history": []
+    })
+
+@app.route('/api/restore', methods=['POST'])
+def api_restore():
+    """Rebuild bot from client-side history after server session loss.
+    
+    Accepts full conversation history from localStorage, replays into fresh bot
+    to reconstruct FSM state without any LLM calls.
+    """
+    data = request.json or {}
+    history = data.get('history', [])  # [{role, content}, ...]
+    product_type = data.get('product_type', os.environ.get("PRODUCT_TYPE", "general"))
+    provider = data.get('provider', os.environ.get("PROVIDER", "groq"))
+    
+    session_id = secrets.token_hex(16)
+    
+    try:
+        bot = SalesChatbot(provider_type=provider, product_type=product_type, session_id=session_id)
+        
+        # Replay history directly into FSM — no LLM calls, just state reconstruction
+        if history:
+            for i in range(0, len(history), 2):
+                if i + 1 >= len(history):
+                    break  # Malformed history (odd length) — skip incomplete pair
+                
+                if (history[i].get('role') == 'user' and 
+                    history[i + 1].get('role') == 'assistant'):
+                    
+                    user_msg = history[i]['content']
+                    bot_msg = history[i + 1]['content']
+                    bot.flow_engine.add_turn(user_msg, bot_msg)
+                    
+                    # Re-calculate state transitions based on replayed history
+                    advancement = bot.flow_engine.should_advance(user_msg)
+                    if advancement:
+                        if isinstance(advancement, str):
+                            bot.flow_engine.advance(target_stage=advancement)
+                        else:
+                            bot.flow_engine.advance()
+        
+        set_session(session_id, bot)
+        app.logger.info(f"Restored session: {session_id} ({len(history)} messages replayed)")
+        
+    except Exception as e:
+        app.logger.exception(f"Restore failed: {e}")
+        return jsonify({"error": f"Restore failed: {str(e)}"}), 500
+    
+    return jsonify({
+        "success": True,
+        "session_id": session_id,
+        "stage": bot.flow_engine.current_stage,
+        "strategy": bot.flow_engine.flow_type,
     })
 
 @app.route('/api/health', methods=['GET'])
@@ -122,7 +219,7 @@ def api_health():
 
 @app.route('/api/chat', methods=['POST'])
 def chat():
-    """Handle chat messages"""
+    """Handle chat messages. Bot must be initialized via /api/init first."""
     cleanup_expired_sessions()  # Lazy cleanup
     data = request.json
     user_message = data.get('message', '').strip()
@@ -130,26 +227,17 @@ def chat():
     if not user_message:
         return jsonify({"error": "Message required"}), 400
     
-    if len(user_message) > CONFIG["MAX_MESSAGE_LENGTH"]:
-        return jsonify({"error": f"Message too long (max {CONFIG['MAX_MESSAGE_LENGTH']} characters)"}), 400
+    if len(user_message) > APP_CONFIG["MAX_MESSAGE_LENGTH"]:
+        return jsonify({"error": f"Message too long (max {APP_CONFIG['MAX_MESSAGE_LENGTH']} characters)"}), 400
     
     session_id = request.headers.get('X-Session-ID')
     if not session_id:
         return jsonify({"error": "Session ID required in X-Session-ID header"}), 400
     
-    # Lazy init: create bot on first message
+    # Bot must exist (created in /api/init)
     bot = get_session(session_id)
     if not bot:
-        try:
-            product_type = data.get('product_type', os.environ.get("PRODUCT_TYPE", "general"))
-            
-            # Force Groq as default (override .env if needed)
-            provider = data.get('provider', "groq")
-            
-            bot = SalesChatbot(provider_type=provider, product_type=product_type, session_id=session_id)
-            set_session(session_id, bot)
-        except Exception as init_error:
-            return jsonify({"error": f"Error initializing chatbot: {str(init_error)}"}), 500
+        return jsonify({"error": "No active session. Call /api/init first."}), 400
     
     try:
         response = bot.chat(user_message)
@@ -176,14 +264,8 @@ def chat():
 @app.route('/api/summary', methods=['GET'])
 def get_summary():
     """Get conversation summary"""
-    session_id = request.headers.get('X-Session-ID')
-    
-    if not session_id:
-        return jsonify({"error": "Session ID required"}), 400
-    
-    bot = get_session(session_id)
-    if not bot:
-        return jsonify({"error": "Session not found"}), 400
+    bot, err = require_session()
+    if err: return err
     
     return jsonify({
         "success": True,
@@ -194,17 +276,11 @@ def get_summary():
 def edit_message():
     """Edit user message and regenerate from that point"""
     data = request.json
-    session_id = request.headers.get('X-Session-ID')
     msg_index = data.get('index')
     new_message = data.get('message', '').strip()
-
-    # Validate session exists
-    if not session_id:
-        return jsonify({"error": "Session ID required"}), 400
     
-    bot = get_session(session_id)
-    if not bot:
-        return jsonify({"error": "Session not found"}), 400
+    bot, err = require_session()
+    if err: return err
     
     # Validate inputs
     if msg_index is None:
@@ -213,8 +289,8 @@ def edit_message():
     if not new_message:
         return jsonify({"error": "Message cannot be empty"}), 400
     
-    if len(new_message) > CONFIG["MAX_MESSAGE_LENGTH"]:
-        return jsonify({"error": f"Message too long (max {CONFIG['MAX_MESSAGE_LENGTH']} characters)"}), 400
+    if len(new_message) > APP_CONFIG["MAX_MESSAGE_LENGTH"]:
+        return jsonify({"error": f"Message too long (max {APP_CONFIG['MAX_MESSAGE_LENGTH']} characters)"}), 400
 
     try:
         msg_index = int(msg_index)
@@ -267,16 +343,10 @@ def switch_provider():
     Returns:
         {"success": bool, "from": str, "to": str, "model": str}
     """
+    bot, err = require_session()
+    if err: return err
+    
     data = request.json
-    session_id = request.headers.get('X-Session-ID')
-    
-    if not session_id:
-        return jsonify({"error": "Session ID required"}), 400
-    
-    bot = get_session(session_id)
-    if not bot:
-        return jsonify({"error": "No active session"}), 400
-    
     provider_type = data.get('provider')
     if not provider_type:
         return jsonify({"error": "Provider type required"}), 400
@@ -288,6 +358,67 @@ def switch_provider():
     
     status_code = 200 if result.get("success") else 400
     return jsonify(result), status_code
+
+
+# ─── Knowledge Base Routes ──────────────────────────────────────────
+
+@app.route('/knowledge')
+def knowledge_page():
+    """Serve the knowledge base management page."""
+    return render_template('knowledge.html')
+
+
+@app.route('/api/knowledge', methods=['GET'])
+def get_knowledge():
+    """Retrieve current custom knowledge."""
+    return jsonify({"success": True, "data": load_custom_knowledge()})
+
+
+@app.route('/api/knowledge', methods=['POST'])
+def save_knowledge_route():
+    """Save custom knowledge data with field-level validation."""
+    from chatbot.knowledge import ALLOWED_FIELDS, MAX_FIELD_LENGTH
+
+    data = request.json
+    if not data or not isinstance(data, dict):
+        return jsonify({"error": "No data provided"}), 400
+
+    # Reject unknown fields early (knowledge.py also whitelists, this is defense-in-depth)
+    unknown = set(data.keys()) - ALLOWED_FIELDS
+    if unknown:
+        return jsonify({"error": f"Unknown fields: {', '.join(unknown)}"}), 400
+
+    # Reject oversized values before they reach the storage layer
+    for key, value in data.items():
+        if not isinstance(value, str):
+            return jsonify({"error": f"Field '{key}' must be a string"}), 400
+        if len(value) > MAX_FIELD_LENGTH:
+            return jsonify({"error": f"Field '{key}' exceeds {MAX_FIELD_LENGTH} chars"}), 400
+
+    success = save_custom_knowledge(data)
+    return jsonify({"success": success})
+
+
+@app.route('/api/knowledge', methods=['DELETE'])
+def clear_knowledge_route():
+    """Clear all custom knowledge."""
+    success = clear_custom_knowledge()
+    return jsonify({"success": success})
+
+
+@app.errorhandler(Exception)
+def handle_unexpected_error(e):
+    """Catch-all for unhandled exceptions — prevents stack trace leakage.
+    
+    Re-raises HTTP exceptions (4xx, 5xx) so Flask handles them normally.
+    Only catches truly unexpected errors (e.g., unhandled ValueError, TypeError).
+    """
+    from werkzeug.exceptions import HTTPException
+    if isinstance(e, HTTPException):
+        return e  # Let Flask handle 400, 404, etc. normally
+    app.logger.exception("Unhandled error")
+    return jsonify({"error": "Internal server error"}), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

@@ -4,16 +4,11 @@ from .base import BaseLLMProvider
 from .groq_provider import GroqProvider
 from .ollama_provider import OllamaProvider
 
-# Provider constants (single source of truth)
-GROQ = 'groq'
-OLLAMA = 'ollama'
-
 # Provider registry
 PROVIDERS = {
-    GROQ: GroqProvider,
-    OLLAMA: OllamaProvider
+    "groq": GroqProvider,
+    "ollama": OllamaProvider
 }
-
 
 def create_provider(provider_type: str = None, model: str = None) -> BaseLLMProvider:
     """Create provider instance with automatic fallback to env variable/default"""

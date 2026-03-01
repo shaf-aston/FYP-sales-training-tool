@@ -8,7 +8,12 @@ Tests for:
 """
 
 import pytest
-from src.chatbot.analysis import (
+import sys, os
+
+# Allow imports from src/
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+
+from chatbot.analysis import (
     analyze_state,
     is_literal_question,
     user_demands_directness,
@@ -198,18 +203,21 @@ class TestPriority3FrustrationOverride:
     """
     
     def test_frustration_demand_indicators(self):
-        """Test detection of explicit demands."""
+        """Test detection of explicit demands.
+
+        Note: 'tell me' and 'explain' are intentionally NOT in demand_directness
+        signals — they are legitimate requests, not frustration signals.
+        Only strong frustration signals are tested here.
+        """
         demand_messages = [
-            'tell me',
             'just tell me',
             'what is it',
-            'explain',
             'i asked you',
             'get to the point',
             'stop asking',
             'cut to the chase',
         ]
-        
+
         history = []
         for msg in demand_messages:
             assert user_demands_directness(history, msg) == True, \
@@ -220,7 +228,6 @@ class TestPriority3FrustrationOverride:
         frustration_messages = [
             'youre right, im frustrated',
             'im looking to lose weight i said',
-            'what do you mean by that',
             'that wasnt what i asked',
         ]
         
@@ -242,10 +249,13 @@ class TestPriority3FrustrationOverride:
             "Failed to detect repeated frustration"
     
     def test_turn_18_20_scenario(self):
-        """Test Turn 18-20: User demands directness."""
+        """Test Turn 18-20: User demands directness.
+
+        'tell me then' is no longer a frustration signal (too broad).
+        'just tell me' (with qualifier) is the correct signal.
+        """
         messages = [
-            'tell me then',  # Turn 18
-            'just tell me',  # Turn 20
+            'just tell me',  # Turn 20 — strong signal with qualifier
         ]
         
         history = []
@@ -270,10 +280,10 @@ class TestPriority3FrustrationOverride:
     def test_case_insensitivity(self):
         """Test frustration detection is case-insensitive."""
         messages = [
-            'TELL ME',
-            'Tell Me',
-            'tElL mE',
             'JUST TELL ME',
+            'Just Tell Me',
+            'GET TO THE POINT',
+            'Stop Asking',
         ]
         
         history = []
@@ -408,18 +418,18 @@ class TestIntegrationScenarios:
     
     def test_full_turn_18_20_scenario(self):
         """Full integration: Turns 18-20 frustration scenario.
-        
-        Turn 18: User demands directness
-        Expected: Flow engine skips to pitch
+
+        'tell me then' is no longer a frustration signal (too broad).
+        Tests with the qualifier form 'just tell me' which is the correct signal.
         """
         conversation = [
             {'role': 'assistant', 'content': 'Let me ask a few questions to understand better'},
-            {'role': 'user', 'content': 'tell me then'},  # Demand for directness
+            {'role': 'user', 'content': 'just tell me'},
         ]
-        
-        is_frustrated = user_demands_directness(conversation, 'tell me then')
+
+        is_frustrated = user_demands_directness(conversation, 'just tell me')
         assert is_frustrated == True, \
-            "Turn 18: Failed to detect frustration demand"
+            "Turn 18-20: Failed to detect frustration demand"
     
     def test_full_turn_28_guarded_fix(self):
         """Full integration: Turn 28 context-aware guardedness.

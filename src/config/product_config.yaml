@@ -1,0 +1,127 @@
+# Product-based flow configuration
+# Maps product types to sales strategies, context descriptions, and product knowledge
+# Products with 'aliases' lists allow multiple lookup keys to resolve to the same entry
+
+products:
+  luxury_cars:
+    strategy: "consultative"
+    context: "luxury vehicles"
+    aliases: ["luxury_car", "luxury", "premium_cars"]
+    knowledge: |
+      Available models:
+      - BMW 5 Series: $55,000-$65,000. Twin-turbo inline-6, 335hp, leather interior, 12.3" touchscreen, adaptive cruise, parking assist. MPG: 26 city / 33 highway.
+      - Mercedes C-Class: $48,000-$58,000. Turbo inline-4, 255hp, MB User Experience infotainment, 64-color ambient lighting, Burmester audio. MPG: 25 city / 35 highway.
+      - Audi A6: $58,000-$68,000. Turbo V6, 335hp, Quattro AWD, virtual cockpit, Bang & Olufsen audio, matrix LED headlights. MPG: 23 city / 31 highway.
+      Key differentiators: BMW=driving dynamics, Mercedes=comfort/luxury, Audi=tech/AWD.
+
+  enterprise_software:
+    strategy: "consultative"
+    context: "enterprise CRM software"
+    aliases: ["crm", "software", "saas", "enterprise"]
+    knowledge: |
+      Available plans:
+      - Starter: $29/user/month. Contact management, email integration, basic reporting, 5GB storage. Up to 10 users.
+      - Professional: $79/user/month. Pipeline management, workflow automation, advanced analytics, API access, 50GB storage. Up to 100 users.
+      - Enterprise: $149/user/month. Custom dashboards, AI-powered insights, dedicated support, SSO, unlimited storage, custom integrations. Unlimited users.
+      Key differentiators: Starter=small teams getting started, Professional=growing teams needing automation, Enterprise=large orgs needing customization.
+
+  budget_fragrances:
+    strategy: "transactional"
+    context: "$30 fragrances"
+    aliases: ["fragrance", "fragrances", "perfume", "cologne"]
+    knowledge: |
+      Available fragrances:
+      - Fresh Sport: $25. Citrus top notes, aquatic heart, cedar base. Lasts 4-6 hours. Best for: daytime, office, gym.
+      - Dark Oud: $30. Oud, amber, vanilla, musk base. Lasts 8-10 hours. Best for: evening, dates, winter.
+      - Classic Woody: $28. Bergamot, lavender, sandalwood, vetiver. Lasts 6-8 hours. Best for: everyday, versatile.
+      Key differentiators: Fresh Sport=light/daytime, Dark Oud=bold/evening, Classic Woody=versatile/all-occasion.
+
+  watches:
+    strategy: "transactional"
+    context: "watches"
+    aliases: ["watch", "timepiece", "timepieces"]
+    knowledge: |
+      Available watches:
+      - Chrono Sport: $180. Stainless steel, 42mm, chronograph, 100m water resistance, leather strap. Style: sporty/casual.
+      - Classic Dress: $220. Rose gold case, 38mm, sapphire crystal, slim profile, mesh bracelet. Style: formal/elegant.
+      - Diver Pro: $250. Titanium, 44mm, automatic movement, 300m water resistance, rotating bezel, rubber strap. Style: adventure/sport.
+      Key differentiators: Chrono=everyday sport, Classic=formal occasions, Diver=serious water/adventure use.
+
+  automotive:
+    strategy: "transactional"
+    context: "automotive purchase"
+    aliases: ["car", "cars", "vehicle", "vehicles", "auto", "automobile"]
+    knowledge: |
+      Available vehicles:
+      - Toyota Corolla: $22,000-$28,000. 2.0L 4-cylinder, 169hp, 8.0" touchscreen, Toyota Safety Sense, 40 MPG highway. Best for: reliability, fuel economy, commuting.
+      - Honda Civic: $24,000-$30,000. 1.5L turbo, 180hp, 9.0" touchscreen, Honda Sensing, 37 MPG highway. Best for: driving fun, tech features, resale value.
+      - Hyundai Elantra: $21,000-$27,000. 2.0L 4-cylinder, 147hp, 10.25" touchscreen, SmartSense safety, 37 MPG highway. Best for: value, warranty (10yr/100k), features per dollar.
+      Key differentiators: Corolla=reliability king, Civic=driver's choice, Elantra=best value.
+
+  fitness:
+    strategy: "consultative"
+    context: "fitness coaching and supplements"
+    aliases: ["gym", "training", "coaching", "supplements", "personal_training", "workout"]
+    knowledge: |
+      Available programs:
+      - Starter Plan: $99/month. 2 coaching sessions/week, basic meal plan template, access to training app, monthly check-in call. Best for: beginners, accountability seekers.
+      - Pro Plan: $199/month. 4 coaching sessions/week, customized meal plan, weekly video check-ins, supplement guidance, body composition tracking. Best for: committed individuals wanting structured transformation.
+      - Elite Plan: $399/month. Daily coaching access, fully customized nutrition with macro tracking, supplement protocol, bi-weekly InBody scans, priority messaging with coach. Best for: serious athletes, competition prep, rapid transformation.
+      Key differentiators: Starter=foundation/habits, Pro=structured transformation, Elite=all-in premium coaching.
+      Additional context: Average client loses 12-15lbs in first 3 months on Pro plan. 95% client retention rate. All trainers certified (NASM/ACE) with 5+ years experience. Money-back guarantee if no visible results in 30 days.
+
+  premium_electronics:
+    strategy: "transactional"
+    context: "premium electronics"
+    aliases: ["electronics", "laptop", "laptops", "tech", "computer", "computers", "phone", "phones"]
+    knowledge: |
+      Available products:
+      - MacBook Pro 14": $1,999-$2,499. Apple M3 Pro chip, 18GB RAM, 512GB-1TB SSD, 14.2" Liquid Retina XDR display, 18hr battery, MagSafe charging. Best for: creative professionals, developers, Apple ecosystem users.
+      - Dell XPS 15: $1,499-$2,199. Intel Core i7-13700H, 16-32GB RAM, 512GB-1TB SSD, 15.6" OLED 3.5K display, Thunderbolt 4. Best for: Windows power users, business professionals, versatility.
+      - Samsung Galaxy S24 Ultra: $1,299-$1,419. Snapdragon 8 Gen 3, 12GB RAM, 256GB-1TB, 6.8" QHD+ AMOLED, S Pen, 200MP camera, 5000mAh battery. Best for: Android enthusiasts, photography, productivity on the go.
+      Key differentiators: MacBook=ecosystem/battery/build quality, XPS=Windows versatility/display, Galaxy=mobile photography/S Pen.
+
+  insurance:
+    strategy: "consultative"
+    context: "insurance plans"
+    aliases: ["life_insurance", "health_insurance", "coverage", "policy", "policies"]
+    knowledge: |
+      Available plans:
+      - Essential Cover: $45/month. $250,000 life cover, $500 deductible, basic hospitalization, GP visits covered, 80/20 co-insurance after deductible. Best for: young singles, basic protection.
+      - Family Shield: $125/month. $500,000 life cover, $250 deductible, full hospitalization, specialist visits, dental/vision included, prescription coverage. Best for: families, comprehensive everyday coverage.
+      - Premium Protection: $225/month. $1,000,000 life cover, $100 deductible, worldwide coverage, mental health, alternative therapy, critical illness rider, income protection. Best for: high earners, executives, maximum peace of mind.
+      Key differentiators: Essential=affordable basics, Family Shield=comprehensive family coverage, Premium=maximum protection with extras.
+      Additional context: Claims processed within 48 hours. No medical exam required for Essential. 15% multi-policy discount available. A+ rated by AM Best.
+
+  jewelry:
+    strategy: "consultative"
+    context: "fine jewelry"
+    aliases: ["rings", "engagement", "diamonds", "necklace", "bracelet"]
+    knowledge: |
+      Available pieces:
+      - Classic Solitaire Ring: $3,500-$5,000. 0.75-1.0ct round brilliant diamond, VS2 clarity, G color, 14k white gold band, GIA certified. Best for: timeless elegance, engagement.
+      - Halo Pave Ring: $5,500-$8,000. 1.0-1.5ct center diamond, VS1 clarity, F color, 18k white gold, pave-set halo with 0.35ct accent diamonds, GIA certified. Best for: maximum sparkle, statement piece.
+      - Tennis Bracelet: $4,200-$6,500. 3.0-5.0ct total weight, round brilliant diamonds, VS2-SI1 clarity, G-H color, 14k white gold, box clasp with safety. Best for: everyday luxury, gifts, anniversaries.
+      Key differentiators: Classic Solitaire=timeless/understated, Halo Pave=maximum brilliance/modern, Tennis Bracelet=versatile luxury.
+      Additional context: All diamonds ethically sourced and conflict-free. Lifetime warranty on settings. Free resizing within first year. 30-day return policy.
+
+  financial_services:
+    strategy: "consultative"
+    context: "financial advisory and wealth management"
+    aliases: ["investments", "investing", "wealth", "financial", "advisory", "portfolio"]
+    knowledge: |
+      Available service tiers:
+      - Growth Portfolio: $50,000 minimum investment. 0.75% annual management fee, diversified ETF portfolio, quarterly rebalancing, annual review meeting, online dashboard access. Best for: young professionals, long-term wealth building.
+      - Premium Advisory: $250,000 minimum investment. 0.50% annual management fee, personalized asset allocation, monthly rebalancing, dedicated advisor, tax-loss harvesting, quarterly strategy calls. Best for: established earners, active wealth optimization.
+      - Private Wealth: $1,000,000+ minimum investment. 0.35% annual management fee, bespoke portfolio construction, alternative investments access (PE, hedge funds), estate planning integration, family office services, priority direct line to senior advisor. Best for: high-net-worth individuals, complex financial situations.
+      Key differentiators: Growth=accessible/automated, Premium=personalized/hands-on, Private Wealth=bespoke/comprehensive.
+      Additional context: SEC-registered investment advisor. Average 8.2% annual returns over past decade (net of fees). Fiduciary duty - legally obligated to act in your best interest. SIPC insured up to $500,000.
+
+  general:
+    strategy: "consultative"
+    context: "products/services"
+
+# Default configuration when product type not found
+default:
+  strategy: "transactional"
+  context: "products/services"

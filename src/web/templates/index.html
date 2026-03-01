@@ -45,7 +45,6 @@
         flex-direction: column;
         /* make container span the viewport height minus body padding */
         height: calc(100vh - 40px);
-        max-height: 700px;
         min-height: 0;
       }
 
@@ -108,8 +107,7 @@
       }
 
       .chat-container {
-        flex: 1 1 0; /* This line allows scroll */
-        height: 500px;
+        flex: 1 1 0;
         overflow-y: auto;
         padding: 20px;
         background: linear-gradient(
@@ -118,10 +116,6 @@
           rgba(8, 12, 18, 0.6)
         );
         min-height: 0;
-      }
-
-      /* Custom scrollbar for dark theme */
-      .chat-container {
         scrollbar-width: thin;
         scrollbar-color: rgba(183, 119, 31, 0.6) rgba(255, 255, 255, 0.05);
       }
@@ -148,6 +142,30 @@
 
       .chat-container::-webkit-scrollbar-thumb:active {
         background: #b7791f;
+      }
+
+      /* Scrollbar for textareas */
+      textarea,
+      .inline-edit-box {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(183, 119, 31, 0.4) transparent;
+      }
+      textarea::-webkit-scrollbar,
+      .inline-edit-box::-webkit-scrollbar {
+        width: 6px;
+      }
+      textarea::-webkit-scrollbar-track,
+      .inline-edit-box::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      textarea::-webkit-scrollbar-thumb,
+      .inline-edit-box::-webkit-scrollbar-thumb {
+        background: rgba(183, 119, 31, 0.4);
+        border-radius: 3px;
+      }
+      textarea::-webkit-scrollbar-thumb:hover,
+      .inline-edit-box::-webkit-scrollbar-thumb:hover {
+        background: rgba(183, 119, 31, 0.6);
       }
 
       .message {
@@ -192,10 +210,10 @@
 
       /* Latency/Metrics Badge */
       .message-metrics {
-        font-size: 10px;
+        font-size: 11px;
         color: #6b6460;
         margin-top: 4px;
-        opacity: 0.5;
+        opacity: 0.65;
         font-weight: 400;
         letter-spacing: 0.3px;
       }
@@ -291,7 +309,7 @@
         gap: 10px;
       }
 
-      .input-area input {
+      .input-area textarea {
         flex: 1;
         padding: 12px 16px;
         background: rgba(255, 255, 255, 0.02);
@@ -299,12 +317,83 @@
         border: 1px solid rgba(255, 255, 255, 0.03);
         border-radius: 8px;
         font-size: 14px;
+        font-family: inherit;
+        line-height: 1.5;
+        resize: none;
+        min-height: 44px;
+        max-height: 120px;
+        overflow-y: auto;
       }
 
-      .input-area input:focus {
+      .input-area textarea:focus {
         outline: none;
         border-color: rgba(183, 119, 31, 0.18);
         box-shadow: 0 8px 20px rgba(15, 10, 6, 0.2);
+      }
+
+      .edit-divider {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 12px 0 8px;
+        color: #6b6460;
+        font-size: 11px;
+        letter-spacing: 0.5px;
+      }
+      .edit-divider::before,
+      .edit-divider::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: rgba(255, 255, 255, 0.06);
+      }
+
+      .message.historical {
+        opacity: 0.3;
+        filter: grayscale(0.5);
+        pointer-events: none;
+      }
+
+      .inline-edit-box {
+        width: 100%;
+        padding: 8px 10px;
+        background: rgba(255, 255, 255, 0.06);
+        color: #e6ddc8;
+        border: 1px solid #b7791f;
+        border-radius: 8px;
+        font-size: 14px;
+        font-family: inherit;
+        line-height: 1.4;
+        resize: vertical;
+        min-height: 56px;
+        margin-top: 4px;
+      }
+
+      .inline-edit-actions {
+        display: flex;
+        gap: 6px;
+        margin-top: 6px;
+      }
+
+      .inline-save-btn {
+        background: #b7791f;
+        color: #071018;
+        border: none;
+        padding: 5px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .inline-cancel-btn {
+        background: transparent;
+        color: #888;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        padding: 5px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        cursor: pointer;
       }
 
       .send-btn {
@@ -358,6 +447,13 @@
           opacity: 0.7;
         }
       }
+
+      #chatScreen {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        min-height: 0;
+      }
     </style>
   </head>
   <body>
@@ -366,13 +462,14 @@
         <div class="header">
           <h1>Sales Assistant</h1>
           <div style="display: flex; gap: 12px; align-items: center">
+            <a href="/knowledge" class="reset-btn" style="text-decoration: none"
+              >Knowledge Base</a
+            >
             <button class="reset-btn" onclick="resetChat()">Reset</button>
             <div class="status-container">
               <div class="status-item">
                 <span class="status-label">Strategy:</span>
-                <span class="status-value" id="strategyBadge"
-                  >consultative</span
-                >
+                <span class="status-value" id="strategyBadge">—</span>
               </div>
               <div class="status-item">
                 <span class="status-label">Stage:</span>
@@ -393,13 +490,13 @@
           >
             🎤
           </button>
-          <input
-            type="text"
+          <textarea
             id="messageInput"
-            placeholder="Type your message..."
-            onkeypress="handleKeyPress(event)"
+            placeholder="Type your message… (Shift+Enter for new line)"
+            onkeydown="handleKeyDown(event)"
+            rows="1"
             autocomplete="off"
-          />
+          ></textarea>
           <button class="send-btn" id="sendBtn" onclick="sendMessage()">
             Send
           </button>
@@ -412,19 +509,60 @@
         userTurnIndex = 0,
         sessionId = null;
 
-      // Get or create session_id in LocalStorage
+      // ─── Session ─────────────────────────────────────────────────
       function getSessionId() {
-        if (!sessionId) {
-          sessionId = localStorage.getItem("sessionId");
-          if (!sessionId) {
-            sessionId = Math.random().toString(36).substring(2, 18);
-            localStorage.setItem("sessionId", sessionId);
-          }
-        }
+        if (!sessionId) sessionId = localStorage.getItem("sessionId");
         return sessionId;
       }
 
-      // ===== TTS MODULE (Free Web Speech API) =====
+      // ─── localStorage history ─────────────────────────────────────
+      // Maintains a mirror of the conversation for reload persistence.
+      // Stored as [{role:"user"|"assistant", content:str}]
+      let _cachedHistory = [];
+
+      function saveHistoryToStorage() {
+        localStorage.setItem("chatHistory", JSON.stringify(_cachedHistory));
+      }
+
+      function loadHistoryFromStorage() {
+        try {
+          return JSON.parse(localStorage.getItem("chatHistory") || "[]");
+        } catch {
+          return [];
+        }
+      }
+
+      function clearStoredHistory() {
+        _cachedHistory = [];
+        localStorage.removeItem("chatHistory");
+        localStorage.removeItem("chatStage");
+        localStorage.removeItem("chatStrategy");
+      }
+
+      // ─── Session Expiration Handler ───────────────────────────────
+      function handleSessionExpired() {
+        // Clear all stored data
+        localStorage.removeItem("sessionId");
+        clearStoredHistory();
+        sessionId = null;
+
+        // Clear the chat container
+        const container = document.getElementById("chatContainer");
+        container.innerHTML = "";
+
+        // Add a notice
+        const notice = document.createElement("div");
+        notice.className = "edit-divider";
+        notice.textContent = "Session expired — conversation has been reset";
+        notice.style.color = "#d4a373";
+        notice.style.marginBottom = "12px";
+        container.appendChild(notice);
+
+        // Reinitialize the chatbot
+        initChatbot();
+      }
+
+      // ─── TTS ──────────────────────────────────────────────────────
       const tts = {
         speak: (t) =>
           "speechSynthesis" in window &&
@@ -436,123 +574,204 @@
           "speechSynthesis" in window && speechSynthesis.speaking,
       };
 
-      // Helper to parse spoken commands into punctuation
       function parsePunctuation(text) {
         return text
           .replace(/ period /g, ". ")
           .replace(/ comma /g, ", ")
           .replace(/ question mark /g, "? ")
-          .replace(/ new line /g, " "); // Chatbots usually prefer single line inputs
+          .replace(/ new line /g, "\n");
       }
 
+      // ─── Message rendering ────────────────────────────────────────
       function createMessageElement(text, sender, msgIdx, metrics = null) {
         const msg = document.createElement("div");
         msg.className = `message ${sender}`;
-        msg.dataset.index = msgIdx;
 
-        // ADD: Data attribute for targeting during edits
         if (msgIdx !== null && msgIdx !== undefined) {
           msg.setAttribute("data-msg-idx", msgIdx);
         }
 
-        // Create bubble safely
         const bubble = document.createElement("div");
         bubble.className = "message-bubble";
-        bubble.textContent = text; // SAFE: Renders HTML as plain text
+        // Preserve newlines as <br> in display
+        const safeText = text || "";
+        bubble.innerHTML = safeText
+          .split("\n")
+          .map((l) => {
+            const s = document.createElement("span");
+            s.textContent = l;
+            return s.outerHTML;
+          })
+          .join("<br>");
 
-        // Create actions container
         const actions = document.createElement("div");
         actions.className = "message-actions";
 
-        // TTS for bot, Edit for user
         if (sender === "bot") {
           const btn = Object.assign(document.createElement("button"), {
             className: "tts-btn",
             innerHTML: "🔊",
             title: "Read aloud",
           });
-          btn.onclick = () =>
-            tts.isSpeaking()
-              ? (tts.stop(), btn.classList.remove("speaking"))
-              : (tts.speak(text),
-                btn.classList.add("speaking"),
-                setTimeout(() => btn.classList.remove("speaking"), 5000));
+          btn.onclick = () => {
+            if (tts.isSpeaking()) {
+              tts.stop();
+              btn.classList.remove("speaking");
+            } else {
+              speechSynthesis.cancel();
+              const utter = new SpeechSynthesisUtterance(text);
+              btn.classList.add("speaking");
+              utter.onend = () => btn.classList.remove("speaking");
+              utter.onerror = () => btn.classList.remove("speaking");
+              speechSynthesis.speak(utter);
+            }
+          };
           actions.appendChild(btn);
         } else {
           const btn = Object.assign(document.createElement("button"), {
             className: "edit-btn",
             innerHTML: "✏️ Edit",
           });
-          btn.onclick = () => editMessage(msgIdx, text);
+          btn.onclick = () => editMessage(msgIdx, text, msg);
           actions.appendChild(btn);
         }
 
-        // Append parts
         msg.appendChild(bubble);
         msg.appendChild(actions);
 
-        // Add metrics if provided (for bot responses)
         if (metrics && sender === "bot") {
           const metricsDiv = document.createElement("div");
           metricsDiv.className = "message-metrics";
-          let metricsText = `${metrics.latency_ms.toFixed(1)}ms`;
-          if (metrics.provider) {
-            metricsText += ` • ${metrics.provider}`;
-          }
-          if (metrics.input_length || metrics.output_length) {
-            metricsText += ` • ${metrics.input_length}→${metrics.output_length}`;
-          }
-          metricsDiv.textContent = metricsText;
+          let t = `${metrics.latency_ms.toFixed(1)}ms`;
+          if (metrics.provider) t += ` • ${metrics.provider}`;
+          if (metrics.input_length || metrics.output_length)
+            t += ` • ${metrics.input_length}→${metrics.output_length}`;
+          metricsDiv.textContent = t;
           msg.appendChild(metricsDiv);
         }
 
         return msg;
       }
 
-      function editMessage(msgIdx, originalText) {
-        if (
-          !confirm(
-            "Are you sure? This will erase all conversation history after this message.",
-          )
-        )
-          return;
-
-        const newText = prompt("Edit your message:", originalText);
-        if (!newText || !newText.trim() || newText === originalText) {
-          return;
-        }
-
-        // Show loading state
+      // ─── Inline edit → "string of 2 conversations" ───────────────
+      // Clicking Edit replaces the bubble with an inline textarea.
+      // On Save: grey out everything from the edited message onward,
+      // insert a divider, then append the new branch below.
+      function editMessage(msgIdx, originalText, msgEl) {
         const container = document.getElementById("chatContainer");
-        const editingMsg = container.querySelector(
-          `[data-msg-idx="${msgIdx}"]`,
-        );
-        if (editingMsg) {
-          editingMsg.style.opacity = "0.5";
-        }
 
-        fetch("/api/edit", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Session-ID": getSessionId(),
-          },
-          body: JSON.stringify({ index: msgIdx, message: newText.trim() }),
-        })
-          .then((r) => r.json())
-          .then((data) => {
-            if (data.success) {
-              // CRITICAL: Clear container and rebuild with FRESH indices
-              container.innerHTML = "";
-              userTurnIndex = 0; // Reset the turn counter
+        // Swap bubble for inline editor
+        const bubble = msgEl.querySelector(".message-bubble");
+        const actions = msgEl.querySelector(".message-actions");
+        bubble.style.display = "none";
+        actions.style.display = "none";
 
-              // Rebuild ALL messages with correct indices
-              data.history.forEach((msg, idx) => {
+        const ta = document.createElement("textarea");
+        ta.className = "inline-edit-box";
+        ta.value = originalText;
+
+        const btnRow = document.createElement("div");
+        btnRow.className = "inline-edit-actions";
+
+        const saveBtn = document.createElement("button");
+        saveBtn.className = "inline-save-btn";
+        saveBtn.textContent = "Save";
+
+        const cancelBtn = document.createElement("button");
+        cancelBtn.className = "inline-cancel-btn";
+        cancelBtn.textContent = "Cancel";
+
+        btnRow.append(saveBtn, cancelBtn);
+        msgEl.append(ta, btnRow);
+        ta.focus();
+
+        cancelBtn.onclick = () => {
+          ta.remove();
+          btnRow.remove();
+          bubble.style.display = "";
+          actions.style.display = "";
+        };
+
+        saveBtn.onclick = () => {
+          const newText = ta.value.trim();
+          if (!newText || newText === originalText) {
+            cancelBtn.click();
+            return;
+          }
+          if (newText.length > 1000) {
+            alert("Message too long (max 1000 characters)");
+            return;
+          }
+
+          // Disable edit UI while waiting
+          saveBtn.disabled = true;
+          cancelBtn.disabled = true;
+          ta.disabled = true;
+
+          // Grey out from edited message to end of container
+          const allMsgs = [...container.children];
+          const startIdx = allMsgs.indexOf(msgEl);
+          for (let i = startIdx; i < allMsgs.length; i++) {
+            allMsgs[i].classList.add("historical");
+            allMsgs[i].removeAttribute("data-msg-idx");
+          }
+
+          // Recompute userTurnIndex = active (non-historical) user msgs
+          userTurnIndex = container.querySelectorAll(
+            ".message.user:not(.historical)",
+          ).length;
+
+          fetch("/api/edit", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Session-ID": getSessionId(),
+            },
+            body: JSON.stringify({ index: msgIdx, message: newText }),
+          })
+            .then((r) => r.json())
+            .then((data) => {
+              if (!data.success) {
+                // Check if session expired
+                if (data.error === "Session not found") {
+                  handleSessionExpired();
+                  return;
+                }
+
+                // Undo greying
+                allMsgs
+                  .slice(startIdx)
+                  .forEach((el) => el.classList.remove("historical"));
+                userTurnIndex =
+                  container.querySelectorAll(".message.user").length;
+                ta.disabled = false;
+                saveBtn.disabled = false;
+                cancelBtn.disabled = false;
+                alert("Edit failed: " + (data.error || "Unknown error"));
+                return;
+              }
+
+              // Remove inline editor, restore hidden bubble (now historical)
+              ta.remove();
+              btnRow.remove();
+              bubble.style.display = "";
+              actions.style.display = "";
+
+              // Insert visual divider
+              const divider = document.createElement("div");
+              divider.className = "edit-divider";
+              divider.textContent = "Edited";
+              container.appendChild(divider);
+
+              // Append new branch: everything from edit point in returned history
+              // data.history is the full new history; slice from msgIdx onward
+              const newMsgs = data.history.slice(msgIdx);
+              newMsgs.forEach((m, i) => {
+                const role = m.role === "user" ? "user" : "bot";
                 let metrics = null;
-                // If this is the last bot message, include its metrics
                 if (
-                  idx === data.history.length - 1 &&
-                  msg.role === "bot" &&
+                  i === newMsgs.length - 1 &&
+                  role === "bot" &&
                   data.latency_ms
                 ) {
                   metrics = {
@@ -562,72 +781,147 @@
                     output_length: 0,
                   };
                 }
-                addMessage(
-                  msg.content,
-                  msg.role === "user" ? "user" : "bot",
-                  metrics,
-                );
+                addMessage(m.content, role, metrics);
               });
+
+              // Sync cached history with server truth
+              _cachedHistory = data.history.map((m) => ({
+                role: m.role,
+                content: m.content,
+              }));
+              saveHistoryToStorage();
 
               updateStage(data.stage);
               if (data.strategy) updateStrategy(data.strategy);
-            } else {
-              alert("Edit failed: " + (data.error || "Unknown error"));
-              // Restore opacity
-              if (editingMsg) {
-                editingMsg.style.opacity = "1";
-              }
-            }
-          })
-          .catch((e) => {
-            alert("Edit error: " + e);
-            if (editingMsg) {
-              editingMsg.style.opacity = "1";
-            }
-          });
+            })
+            .catch((e) => {
+              allMsgs
+                .slice(startIdx)
+                .forEach((el) => el.classList.remove("historical"));
+              ta.disabled = false;
+              saveBtn.disabled = false;
+              cancelBtn.disabled = false;
+              alert("Edit error: " + e);
+            });
+        };
       }
 
+      // ─── Init / reload restoration ────────────────────────────────
       function initChatbot() {
+        const existingId = localStorage.getItem("sessionId");
+
         fetch("/api/init", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({}),
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            session_id: existingId,
+            // product_type and provider can be optionally sent here
+            // They fall back to environment variables if not provided
+          }),
         })
-          .then((response) => response.json())
+          .then((r) => r.json())
           .then((data) => {
             if (data.error) {
               alert("Error: " + data.error);
               return;
             }
 
-            // Store returned session_id
-            if (data.session_id) {
-              sessionId = data.session_id;
-              localStorage.setItem("sessionId", sessionId);
-            }
-
-            // Restore history if exists, otherwise show welcome message
+            sessionId = data.session_id;
+            localStorage.setItem("sessionId", sessionId);
             userTurnIndex = 0;
-            if (data.history && data.history.length > 0) {
-              data.history.forEach((msg) => addMessage(msg.content, msg.role));
-            } else {
-              addMessage(data.message, "bot");
-            }
 
-            updateStage(data.stage);
-            if (data.strategy) updateStrategy(data.strategy);
+            if (data.history && data.history.length > 0) {
+              // Server restored live session
+              _cachedHistory = data.history.map((m) => ({
+                role: m.role,
+                content: m.content,
+              }));
+              saveHistoryToStorage();
+              data.history.forEach((m) =>
+                renderMessage(m.content, m.role === "user" ? "user" : "bot"),
+              );
+              updateStage(data.stage);
+              if (data.strategy) updateStrategy(data.strategy);
+            } else {
+              // New session — check localStorage for visual restore
+              const stored = loadHistoryFromStorage();
+              if (stored.length > 0) {
+                // Server has no live session (restarted), silently reconstruct
+                _cachedHistory = stored;
+                stored.forEach((m) =>
+                  renderMessage(m.content, m.role === "user" ? "user" : "bot"),
+                );
+                const storedStage = localStorage.getItem("chatStage");
+                if (storedStage) updateStage(storedStage);
+                const storedStrategy = localStorage.getItem("chatStrategy");
+                if (storedStrategy) updateStrategy(storedStrategy);
+
+                // Rebuild server session silently (no user-facing message)
+                fetch("/api/restore", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    history: stored,
+                  }),
+                })
+                  .then((r) => r.json())
+                  .then((d) => {
+                    if (d.success) {
+                      sessionId = d.session_id;
+                      localStorage.setItem("sessionId", sessionId);
+                      // Stage/strategy already restored — no flicker
+                    }
+                  })
+                  .catch((e) => {
+                    // Restore failed — user needs to refresh to continue
+                    console.error("Restore failed:", e);
+                    const notice = document.createElement("div");
+                    notice.className = "edit-divider";
+                    notice.textContent =
+                      "Connection issue — please refresh to continue";
+                    notice.style.color = "#d4a373";
+                    document
+                      .getElementById("chatContainer")
+                      .appendChild(notice);
+                    document.getElementById("sendBtn").disabled = true;
+                  });
+              } else {
+                addMessage(data.message, "bot");
+                updateStage(data.stage);
+              }
+            }
           })
           .catch((error) => {
             alert("Error initializing chatbot: " + error);
           });
       }
 
-      // Auto-initialize on page load
-      window.addEventListener("DOMContentLoaded", initChatbot);
+      window.addEventListener("DOMContentLoaded", () => {
+        initChatbot();
+        const ta = document.getElementById("messageInput");
+        ta.addEventListener("input", () => autoResizeTextarea(ta));
+        speechRecognizer = new SpeechRecognizer();
+      });
 
+      // ─── renderMessage ────────────────────────────────────────────
+      // Render-only (no cache side effects). Used during history restore.
+      function renderMessage(text, sender) {
+        const container = document.getElementById("chatContainer");
+        let msgIdx = null;
+        if (sender === "user") {
+          msgIdx = userTurnIndex * 2;
+          userTurnIndex += 1;
+        }
+        const el = createMessageElement(text, sender, msgIdx, null);
+        container.appendChild(el);
+        requestAnimationFrame(() => {
+          container.scrollTop = container.scrollHeight;
+        });
+      }
+
+      // ─── addMessage ───────────────────────────────────────────────
       function addMessage(text, sender, metrics = null) {
+        // Render to DOM first (without cache side effects)
         const container = document.getElementById("chatContainer");
         let msgIdx = null;
         if (sender === "user") {
@@ -635,26 +929,40 @@
           userTurnIndex += 1;
         }
 
-        const fragment = document.createDocumentFragment();
-        fragment.appendChild(
-          createMessageElement(text, sender, msgIdx, metrics),
-        );
-        container.appendChild(fragment);
-
+        const el = createMessageElement(text, sender, msgIdx, metrics);
+        container.appendChild(el);
         requestAnimationFrame(() => {
           container.scrollTop = container.scrollHeight;
         });
+
+        // Then update cache (unique to addMessage, not called during restore)
+        if (sender === "user") {
+          _cachedHistory.push({ role: "user", content: text });
+          saveHistoryToStorage();
+        } else {
+          // Cache all bot responses (including initial greeting)
+          _cachedHistory.push({ role: "assistant", content: text });
+          saveHistoryToStorage();
+          localStorage.setItem(
+            "chatStage",
+            document.getElementById("stageBadge").textContent,
+          );
+          localStorage.setItem(
+            "chatStrategy",
+            document.getElementById("strategyBadge").textContent,
+          );
+        }
       }
 
+      // ─── sendMessage ──────────────────────────────────────────────
       function sendMessage() {
         const input = document.getElementById("messageInput");
         const message = input.value.trim();
-
         if (!message || isTyping) return;
 
         addMessage(message, "user");
         input.value = "";
-
+        autoResizeTextarea(input);
         showTyping();
 
         fetch("/api/chat", {
@@ -663,25 +971,26 @@
             "Content-Type": "application/json",
             "X-Session-ID": getSessionId(),
           },
-          body: JSON.stringify({ message: message }),
+          body: JSON.stringify({ message }),
         })
-          .then((response) => response.json())
+          .then((r) => r.json())
           .then((data) => {
             hideTyping();
-
             if (data.error) {
+              // Check if session expired
+              if (data.error === "Session not found") {
+                handleSessionExpired();
+                return;
+              }
               addMessage("Error: " + data.error, "bot");
               return;
             }
-
-            // Extract metrics from response
             const metrics = {
               latency_ms: data.latency_ms || 0,
               provider: data.provider || "",
               input_length: data.metrics?.input_length || 0,
               output_length: data.metrics?.output_length || 0,
             };
-
             addMessage(data.message, "bot", metrics);
             updateStage(data.stage);
             if (data.strategy) updateStrategy(data.strategy);
@@ -692,57 +1001,61 @@
           });
       }
 
+      // ─── Typing indicator ─────────────────────────────────────────
       function showTyping() {
         isTyping = true;
         const container = document.getElementById("chatContainer");
         const typingDiv = document.createElement("div");
         typingDiv.className = "message bot";
         typingDiv.id = "typingIndicator";
-
         const bubble = document.createElement("div");
         bubble.className = "message-bubble";
-
         const indicator = document.createElement("div");
         indicator.className = "typing-indicator";
         indicator.innerHTML = "<span></span><span></span><span></span>";
-
         bubble.appendChild(indicator);
         typingDiv.appendChild(bubble);
         container.appendChild(typingDiv);
-
         container.scrollTop = container.scrollHeight;
         document.getElementById("sendBtn").disabled = true;
       }
 
       function hideTyping() {
         isTyping = false;
-        const typing = document.getElementById("typingIndicator");
-        if (typing) {
-          typing.remove();
-        }
+        document.getElementById("typingIndicator")?.remove();
         document.getElementById("sendBtn").disabled = false;
       }
 
+      // ─── Badge helpers ────────────────────────────────────────────
       function updateStage(stage) {
-        const badge = document.getElementById("stageBadge");
-        badge.textContent = stage.toUpperCase();
+        document.getElementById("stageBadge").textContent = stage.toUpperCase();
       }
 
       function updateStrategy(strategy) {
-        const badge = document.getElementById("strategyBadge");
-        badge.textContent = strategy.toUpperCase();
+        document.getElementById("strategyBadge").textContent =
+          strategy.toUpperCase();
       }
 
-      function handleKeyPress(event) {
-        if (event.key === "Enter") {
+      // ─── Textarea auto-resize ─────────────────────────────────────
+      function autoResizeTextarea(el) {
+        el.style.height = "auto";
+        el.style.height = Math.min(el.scrollHeight, 120) + "px";
+      }
+
+      // ─── Key handler ──────────────────────────────────────────────
+      // Enter = send, Shift+Enter = newline (default textarea behaviour)
+      function handleKeyDown(event) {
+        if (event.key === "Enter" && !event.shiftKey) {
+          event.preventDefault();
           sendMessage();
         }
+        // Shift+Enter falls through — browser inserts newline naturally
       }
 
+      // ─── Reset ───────────────────────────────────────────────────
       function resetChat() {
-        if (!confirm("Reset conversation? This will clear all history.")) {
+        if (!confirm("Reset conversation? This will clear all history."))
           return;
-        }
 
         fetch("/api/reset", {
           method: "POST",
@@ -751,27 +1064,24 @@
             "X-Session-ID": getSessionId(),
           },
         })
-          .then((response) => response.json())
+          .then((r) => r.json())
           .then((data) => {
             if (data.success) {
               document.getElementById("chatContainer").innerHTML = "";
               userTurnIndex = 0;
+              clearStoredHistory();
+              localStorage.removeItem("sessionId");
+              sessionId = null;
               updateStage("intent");
+              updateStrategy("—");
               initChatbot();
             }
           })
-          .catch((error) => {
-            alert("Error resetting chat: " + error);
-          });
+          .catch((error) => alert("Error resetting chat: " + error));
       }
 
-      // ===== SPEECH MODULE INTEGRATION =====
+      // ─── Speech module ────────────────────────────────────────────
       let speechRecognizer;
-
-      // Wait for DOM and script to load
-      window.addEventListener("DOMContentLoaded", () => {
-        speechRecognizer = new SpeechRecognizer();
-      });
 
       function toggleMic() {
         if (!speechRecognizer) {
@@ -782,42 +1092,34 @@
         const input = document.getElementById("messageInput");
         const micBtn = document.getElementById("micBtn");
 
-        // STOP if already recording
         if (speechRecognizer.getState()) {
           speechRecognizer.stop();
           return;
         }
 
         micBtn.classList.add("recording");
-        micBtn.innerHTML = "⏹"; // Change icon to Stop
-
-        // Store existing text so we don't overwrite what the user already typed
+        micBtn.innerHTML = "⏹";
         let baseText = input.value;
 
         speechRecognizer.start(
-          // 1. FINAL Text (Black)
           (text) => {
-            const formatted = parsePunctuation(text);
-            baseText += formatted; // Update our base text
-            input.value = baseText; // Commit it to input
+            baseText += parsePunctuation(text);
+            input.value = baseText;
+            autoResizeTextarea(input);
             input.focus();
           },
-          // 2. INTERIM Text (Gray/Preview)
           (text) => {
-            // Show base text + what is currently being spoken
             input.value = baseText + text;
           },
-          // 3. ON STOP
           () => {
             micBtn.classList.remove("recording");
-            micBtn.innerHTML = "🎤"; // Change back to Mic
-            input.focus(); // Return focus to input so user can hit Enter
+            micBtn.innerHTML = "🎤";
+            input.focus();
           },
-          // 4. ON ERROR
           (err) => {
             console.warn("Mic Error:", err);
             micBtn.classList.remove("recording");
-            micBtn.innerHTML = "🎤"; // Change back to Mic
+            micBtn.innerHTML = "🎤";
           },
         );
       }

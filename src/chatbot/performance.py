@@ -14,21 +14,9 @@ import json
 import os
 from datetime import datetime
 from threading import Lock
-import logging
 
 METRICS_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'metrics.jsonl')
 lock = Lock()
-
-# Removed basicConfig - let the application configure logging centrally
-# Avoids polluting global logging config on module import
-
-def get_logger():
-    """Get logger instance for performance tracking module.
-    
-    Returns:
-        logging.Logger: Configured logger for this module
-    """
-    return logging.getLogger(__name__)
 
 class PerformanceTracker:
     @staticmethod
@@ -60,23 +48,6 @@ class PerformanceTracker:
             try:
                 with open(METRICS_FILE, 'a') as f:
                     f.write(json.dumps(metric) + '\n')
-            except Exception:
-                pass
-
-    @staticmethod
-    def log_error(session_id, error_message, provider, model):
-        """Log errors for debugging purposes"""
-        error_metric = {
-            "timestamp": datetime.now().isoformat(),
-            "session_id": session_id,
-            "error": error_message,
-            "provider": provider,
-            "model": model
-        }
-        with lock:
-            try:
-                with open(METRICS_FILE, 'a') as f:
-                    f.write(json.dumps(error_metric) + '\n')
             except Exception:
                 pass
 
