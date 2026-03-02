@@ -454,6 +454,56 @@
         height: 100%;
         min-height: 0;
       }
+
+      /* Mobile Phone Compatibility */
+      @media (max-width: 640px) {
+        body {
+          padding: 0;
+        }
+
+        .container {
+          height: 100vh;
+          height: 100dvh; /* accounts for mobile browser UI */
+          border-radius: 0;
+          box-shadow: none;
+        }
+
+        .header {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 12px;
+          padding: 16px;
+        }
+
+        .header > div {
+          flex-wrap: wrap;
+          justify-content: flex-start;
+        }
+
+        .status-container {
+          width: 100%;
+          justify-content: flex-start;
+        }
+
+        .message-bubble {
+          max-width: 90%;
+        }
+
+        .input-area {
+          padding: 12px;
+          padding-bottom: max(12px, env(safe-area-inset-bottom));
+          gap: 8px;
+        }
+
+        .mic-btn, .send-btn {
+          padding: 10px 14px;
+        }
+
+        #messageInput {
+          font-size: 16px; /* iOS requires 16px input fonts to prevent zoom focus */
+          padding: 10px 14px;
+        }
+      }
     </style>
   </head>
   <body>
@@ -560,6 +610,21 @@
 
         // Reinitialize the chatbot
         initChatbot();
+      }
+
+      // If server reports session loss, clear client state and re-init
+      function handleServerSessionError(data) {
+        if (!data) return false;
+        const err = data.error;
+        if (err === "No active session" || err === "Session not found") {
+          console.warn("Server lost session memory. Re-initializing...");
+          localStorage.removeItem("sessionId"); // Clear ghost ID
+          clearStoredHistory();
+          sessionId = null;
+          initChatbot();
+          return true;
+        }
+        return false;
       }
 
       // ─── TTS ──────────────────────────────────────────────────────
