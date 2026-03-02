@@ -146,39 +146,59 @@ def analyze_state(history, user_message="", signal_keywords=None):
         intent = 'high'
     
     # Context-aware guardedness detection
+    # Priority: decisive (short + commitment/high_intent) > guarded > agreement
     guarded = False
+    decisive = False
     if user_message:
         is_short = len(user_message.split()) <= _T["short_message_limit"]
-        has_guarded_signal = text_contains_any_keyword(user_message.lower(), signal_keywords["guarded"])
-        
-        if is_short and has_guarded_signal:
-            # Check context: was previous bot message a question?
-            prev_bot_asked_question = False
-            if history and history[-1].get('role') == 'assistant':
-                prev_message = history[-1].get('content', '')
-                prev_bot_asked_question = '?' in prev_message
-            
-            # Check if user gave substantive previous answer
-            user_gave_substantive_answer = False
-            if history and len(history) >= 2:
-                prev_user_message = history[-2].get('content', '')
-                word_count = len(prev_user_message.split())
-                user_gave_substantive_answer = word_count >= _T["min_substantive_word_count"]
-            
-            # Agreement pattern: question → substantive answer → "ok"
-            # This is NOT guarded; it's agreement
-            is_agreement_pattern = prev_bot_asked_question and user_gave_substantive_answer
-            
-            guarded = not is_agreement_pattern
-    
+
+        if is_short:
+            # Check for decisive signals FIRST — commitment/high_intent overrides guardedness.
+            # "Send the contract." (3 words) is action, not hesitation.
+            has_commitment = text_contains_any_keyword(
+                user_message.lower(), signal_keywords.get("commitment", [])
+            )
+            has_high_intent = text_contains_any_keyword(
+                user_message.lower(), signal_keywords.get("high_intent", [])
+            )
+
+            if has_commitment or has_high_intent:
+                # Decisive: short answer carrying intent/commitment — advance, don't elicit
+                decisive = True
+            else:
+                # Only check guarded when there is no decisive signal
+                has_guarded_signal = text_contains_any_keyword(
+                    user_message.lower(), signal_keywords["guarded"]
+                )
+
+                if has_guarded_signal:
+                    # Check context: was previous bot message a question?
+                    prev_bot_asked_question = False
+                    if history and history[-1].get('role') == 'assistant':
+                        prev_message = history[-1].get('content', '')
+                        prev_bot_asked_question = '?' in prev_message
+
+                    # Check if user gave substantive previous answer
+                    user_gave_substantive_answer = False
+                    if history and len(history) >= 2:
+                        prev_user_message = history[-2].get('content', '')
+                        word_count = len(prev_user_message.split())
+                        user_gave_substantive_answer = word_count >= _T["min_substantive_word_count"]
+
+                    # Agreement pattern: question → substantive answer → "ok"
+                    # This is NOT guarded; it's agreement
+                    is_agreement_pattern = prev_bot_asked_question and user_gave_substantive_answer
+
+                    guarded = not is_agreement_pattern
+
     # Question fatigue detection
     question_fatigue = False
     if history:
         recent_bot_messages = [msg['content'] for msg in history[-4:] if msg['role'] == 'assistant']
         question_count = sum(1 for msg in recent_bot_messages if '?' in msg)
         question_fatigue = question_count >= _T["question_fatigue_threshold"]
-    
-    return {"intent": intent, "guarded": guarded, "question_fatigue": question_fatigue}
+
+    return {"intent": intent, "guarded": guarded, "question_fatigue": question_fatigue, "decisive": decisive}
 
 
 # ============================================================================
