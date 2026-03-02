@@ -488,7 +488,13 @@
         }
 
         .mic-btn,
-        .send-btn {
+        .send-btn,
+        .reset-btn {
+          min-height: 48px;
+          min-width: 48px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
           padding: 10px 14px;
         }
 

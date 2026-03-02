@@ -329,7 +329,10 @@
           border-left: none;
           border-bottom: 2px solid transparent;
           white-space: nowrap;
-          padding: 9px 12px;
+          padding: 12px 16px;
+          min-height: 48px;
+          display: inline-flex;
+          align-items: center;
         }
         .side a.active {
           border-bottom-color: #b7791f;
@@ -338,5 +341,12 @@
         .side a .dot {
           right: 4px;
           top: 4px;
+        }
+        .nav-btn {
+          min-height: 48px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 10px 16px;
         }
       }
