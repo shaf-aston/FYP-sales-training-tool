@@ -300,6 +300,26 @@
       }
       /* Responsive */
       @media (max-width: 640px) {
+        body {
+          padding: 0;
+        }
+        .container {
+          height: 100vh;
+          height: 100dvh;
+          max-height: none;
+          border-radius: 0;
+        }
+        .header {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 12px;
+          padding: 16px;
+        }
+        .header-r {
+          width: 100%;
+          justify-content: flex-start;
+          gap: 16px;
+        }
         .kb-body {
           flex-direction: column;
         }
