@@ -105,6 +105,12 @@ guarded:
   - "not sure"
   - "no comment"
   - "rather not say"
+  - "yh"
+  - "ik"
+  - "ok"
+  - "yep"
+  - "i know"
+  - "sure"
 
 # High intent signals (user actively wants to buy or solve a problem)
 high_intent:
