@@ -8,8 +8,6 @@ from pathlib import Path
 from functools import lru_cache
 
 
-# Get config directory path (src/config - adjacent to chatbot package)
-# Config is now in src/config, one level up from current module
 CONFIG_DIR = Path(__file__).parent.parent / "config"
 
 # Required top-level keys in signals.yaml — guards against silent YAML typos
@@ -22,18 +20,7 @@ _REQUIRED_SIGNAL_KEYS = {
 
 @lru_cache(maxsize=None)
 def load_yaml(filename):
-    """Load and cache YAML configuration file.
-    
-    Args:
-        filename: Name of YAML file in config directory
-        
-    Returns:
-        dict: Parsed YAML content
-        
-    Raises:
-        FileNotFoundError: If config file doesn't exist
-        yaml.YAMLError: If YAML parsing fails
-    """
+    """Load and cache a YAML file from CONFIG_DIR. Raises on missing file or parse error."""
     filepath = CONFIG_DIR / filename
     
     if not filepath.exists():
@@ -45,14 +32,7 @@ def load_yaml(filename):
 
 @lru_cache(maxsize=None)
 def load_signals():
-    """Load behavioral signal keywords from signals.yaml.
-    
-    Returns:
-        dict: Signal keyword mappings
-        
-    Raises:
-        ValueError: If any required signal keys are missing
-    """
+    """Load signals.yaml and validate required keys are present."""
     signals = load_yaml("signals.yaml")
     missing = _REQUIRED_SIGNAL_KEYS - signals.keys()
     if missing:
@@ -62,46 +42,43 @@ def load_signals():
 
 @lru_cache(maxsize=None)
 def load_analysis_config():
-    """Load analysis configuration from analysis_config.yaml.
-    
-    Returns:
-        dict: Analysis thresholds and parameters
-    """
     return load_yaml("analysis_config.yaml")
 
 
 @lru_cache(maxsize=None)
 def load_product_config():
-    """Load product configuration from product_config.yaml.
-    
-    Returns:
-        dict: Product type to strategy/context mappings
-    """
     return load_yaml("product_config.yaml")
 
 
+@lru_cache(maxsize=1)
+def _build_alias_map():
+    """Pre-compute alias→settings map for O(1) alias lookup."""
+    config = load_product_config()
+    alias_map = {}
+    for settings in config["products"].values():
+        for alias in settings.get("aliases", []):
+            alias_map[alias] = settings
+    return alias_map
+
+
 def get_product_settings(product_type):
-    """Get configuration for a specific product type.
-
-    Supports alias resolution: if product_type is not a direct key,
-    checks each product's 'aliases' list for a match.
-
-    Args:
-        product_type: Product identifier string (canonical key or alias)
-
-    Returns:
-        dict: {"strategy": str, "context": str, ...}
-    """
+    """Return product config for the given type or alias. Falls back to default."""
     config = load_product_config()
     products = config["products"]
-
-    # Direct match (O(1) dict lookup)
+    
+    # Direct match in products
     if product_type in products:
         return products[product_type]
+    
+    # Try alias lookup
+    aliased = _build_alias_map().get(product_type)
+    if aliased:
+        return aliased
+    
+    # Fallback to default (inside products dict)
+    if "default" in products:
+        return products["default"]
+    
+    # If no default exists, raise error
+    raise ValueError(f"Product type '{product_type}' not found and no default config available")
 
-    # Alias resolution: check each product's aliases list
-    for _key, settings in products.items():
-        if product_type in settings.get("aliases", []):
-            return settings
-
-    return config["default"]

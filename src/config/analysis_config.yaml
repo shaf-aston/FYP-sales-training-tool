@@ -192,9 +192,8 @@ preference_keywords:
     - "service"
     - "maintenance"
   
-  # FUEL TYPE (Emerging priority) - Merged with efficiency
+  # FUEL TYPE — "gas" excluded (already in efficiency)
   fuel_type:
-    - "gas"
     - "diesel"
     - "plug-in"
   

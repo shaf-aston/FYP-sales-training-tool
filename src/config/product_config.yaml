@@ -3,6 +3,14 @@
 # Products with 'aliases' lists allow multiple lookup keys to resolve to the same entry
 
 products:
+  default:
+    strategy: "intent"
+    context: "various products and services"
+    knowledge: |
+      You represent a sales assistant who can help with multiple product categories.
+      When asked what you sell: briefly explain you can assist with various products and ask what they're interested in.
+      Focus on understanding their needs quickly and moving to relevant options.
+
   luxury_cars:
     strategy: "consultative"
     context: "luxury vehicles"
@@ -117,11 +125,4 @@ products:
       Key differentiators: Growth=accessible/automated, Premium=personalized/hands-on, Private Wealth=bespoke/comprehensive.
       Additional context: SEC-registered investment advisor. Average 8.2% annual returns over past decade (net of fees). Fiduciary duty - legally obligated to act in your best interest. SIPC insured up to $500,000.
 
-  general:
-    strategy: "consultative"
-    context: "products/services"
 
-# Default configuration when product type not found
-default:
-  strategy: "transactional"
-  context: "products/services"

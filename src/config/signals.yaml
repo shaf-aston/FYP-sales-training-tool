@@ -2,14 +2,11 @@
 # Used by analysis.py for intent classification and state detection
 
 # Impatience signals (user wants to skip discovery and see options)
+# Deduplicated: removed overlaps with demand_directness and direct_info_requests
 impatience:
   - "just show me"
-  - "just tell me"
-  - "get to the point"
-  - "what do you have"
-  - "cut to the chase"
-  - "hurry"
   - "what are my options"
+  - "hurry"
   - "skip to"
   - "bottom line"
   - "quick answer"
@@ -18,14 +15,8 @@ impatience:
 
 # Commitment signals (user is ready to buy/commit; checked at pitch/objection stages)
 commitment:
-  - "yes"
   - "let's do it"
   - "i'm in"
-  - "okay"
-  - "sure"
-  - "fine"
-  - "yeah"
-  - "yep"
   - "this one"
   - "that one"
   - "i'll take"
@@ -43,7 +34,6 @@ commitment:
 
 # Objection signals (user has concerns or hesitation)
 objection:
-  - "but"
   - "think about"
   - "however"
   - "too much"
@@ -213,16 +203,12 @@ price_sensitivity:
   - "can't afford"
 
 # Urgency indicators
+# Deduplicated: removed overlaps with high_intent (higher specificity)
 urgency:
   - "today"
   - "now"
-  - "immediately"
-  - "asap"
-  - "urgent"
-  - "right away"
   - "this week"
   - "soon"
-  - "quickly"
 
 # Comparison shopping signals
 comparing:

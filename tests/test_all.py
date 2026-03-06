@@ -13,12 +13,10 @@ from chatbot.analysis import (
     text_contains_any_keyword,
     analyze_state,
     extract_preferences,
-    extract_recent_user_messages,
     user_demands_directness,
     is_literal_question,
     extract_user_keywords,
     classify_objection,
-    _has_user_stated_clear_goal,
 )
 from chatbot.content import SIGNALS
 from chatbot.flow import (
@@ -321,9 +319,9 @@ class TestShouldAdvance:
 class TestChatbotInit:
     """SalesChatbot initialisation via product config."""
 
-    def test_default_is_consultative(self):
+    def test_default_is_intent_discovery(self):
         bot = SalesChatbot(product_type="general")
-        assert bot.flow_engine.flow_type == "consultative"
+        assert bot.flow_engine.flow_type == "intent"
         assert bot.flow_engine.current_stage == "intent"
 
     def test_transactional_product(self):
@@ -384,13 +382,13 @@ class TestConfigLoading:
     def test_product_config_has_products(self):
         config = load_product_config()
         assert "products" in config
-        assert "general" in config["products"]
+        assert "default" in config["products"]
 
     def test_product_settings_returns_strategy_and_context(self):
         settings = get_product_settings("general")
         assert "strategy" in settings
         assert "context" in settings
-        assert settings["strategy"] in ["consultative", "transactional"]
+        assert settings["strategy"] in ["consultative", "transactional", "intent"]
 
     def test_unknown_product_falls_back_to_default(self):
         settings = get_product_settings("nonexistent_product_xyz")
@@ -485,14 +483,17 @@ class TestIntentLock:
     """Intent Lock with Goal Priming (Chartrand & Bargh, 1996)."""
 
     def test_goal_priming_detects_explicit_goals(self):
+        """Goal stated in history → analyze_state returns high intent."""
         history = [
             {"role": "user", "content": "I want to lose weight"},
             {"role": "assistant", "content": "Great! How much weight?"},
         ]
-        assert _has_user_stated_clear_goal(history) is True
+        state = analyze_state(history, user_message="tell me more")
+        assert state["intent"] == "high"
 
     def test_goal_priming_empty_history(self):
-        assert _has_user_stated_clear_goal([]) is False
+        state = analyze_state([], user_message="hello")
+        assert state["intent"] == "medium"
 
     def test_intent_lock_prevents_reversion(self):
         """Turn 14-16 scenario: goal stated, then short 'idk' — intent stays HIGH."""
@@ -504,11 +505,10 @@ class TestIntentLock:
         assert state["intent"] == "high"
 
     def test_agreement_pattern_not_guarded(self):
-        """Turn 28 scenario: 'ok' after substantive answer = agreement, not guarded."""
+        """'ok' after bot question + substantive user answer = agreement, not guarded."""
         history = [
-            {"role": "assistant", "content": "What's your primary fitness goal?"},
             {"role": "user", "content": "I want to lose about twenty pounds this year"},
-            {"role": "assistant", "content": "That sounds achievable. Here are some options."},
+            {"role": "assistant", "content": "That sounds achievable. Would you like to see some options?"},
         ]
         state = analyze_state(history, "ok")
         assert state["guarded"] is False
@@ -536,10 +536,10 @@ class TestProductKnowledge:
         bot = SalesChatbot(product_type="car")
         assert "PRODUCT KNOWLEDGE" in bot.flow_engine.product_context
 
-    def test_general_product_has_no_knowledge(self):
-        """Products without knowledge field should still work."""
+    def test_default_product_has_knowledge(self):
+        """Default product includes knowledge in context."""
         bot = SalesChatbot(product_type="general")
-        assert "PRODUCT KNOWLEDGE" not in bot.flow_engine.product_context
+        assert "PRODUCT KNOWLEDGE" in bot.flow_engine.product_context
 
 
 # ====================================================================
@@ -578,7 +578,7 @@ class TestOllamaProviderConfig:
 
     def test_default_model(self):
         provider = OllamaProvider()
-        assert provider.model == "phi3:mini"
+        assert provider.model == "llama3.2:3b"
 
     def test_custom_model(self):
         provider = OllamaProvider(model="llama3:8b")
@@ -799,7 +799,7 @@ class TestWebEndpoints:
         data = resp.get_json()
         assert data["success"] is True
         assert "session_id" in data
-        assert data["stage"] == "intent"
+        assert data["stage"] == "----"
 
     def test_chat_requires_session_header(self):
         resp = self.client.post('/api/chat', json={"message": "hello"})

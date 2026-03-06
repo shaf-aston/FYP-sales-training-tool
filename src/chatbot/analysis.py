@@ -1,160 +1,84 @@
-"""Natural Language Understanding and conversation analysis utilities.
+"""Conversation analysis — intent, signals, state detection.
 
-PURPOSE:
-- Analyze user intent, tone, and conversational state
-- Detect behavioral signals
-- Extract preferences and goals
-- Context-aware interpretation
-
-DESIGN PRINCIPLE:
-Pure analysis only—no decision making (flow.py) or content generation (content.py).
+Pure analysis only. Decisions live in flow.py, prompts in content.py.
 """
 
 import re
 import random
 from functools import lru_cache
 
-# ============================================================================
-# CONFIGURATION - Loaded from YAML (analysis_config.yaml)
-# ============================================================================
-
 from .config_loader import load_analysis_config, load_signals
 
 _yaml_config = load_analysis_config()
-_T = _yaml_config["thresholds"]  # Shorthand for threshold access
+_T = _yaml_config["thresholds"]
 
-# ============================================================================
-# KEYWORD UTILITIES
-# ============================================================================
+_NEGATIONS = frozenset({"not", "don't", "doesn't", "no", "never", "can't", "won't"})
+
+
+# --- Core keyword matching ---
 
 @lru_cache(maxsize=256)
-def _compile_keyword_pattern(keyword):
-    """Compile and cache regex pattern for keyword matching.
-    
-    Uses LRU cache to avoid recompiling the same patterns repeatedly.
-    Significant performance gain for repeated keyword checks.
-    
-    Args:
-        keyword: Keyword to compile pattern for
-        
-    Returns:
-        Compiled regex pattern
-    """
-    return re.compile(rf'\b{re.escape(keyword)}\b', re.I)
+def _build_union_pattern(keyword_tuple):
+    """Compile keywords into a single alternation regex. Cached by keyword set."""
+    parts = [rf'\b{re.escape(k)}\b' for k in keyword_tuple]
+    return re.compile('|'.join(parts), re.IGNORECASE)
 
 
 def text_contains_any_keyword(text, keywords):
-    """Check if text contains any keyword using word boundaries (case-insensitive).
-    
-    Uses cached compiled regex patterns for 5-10x performance improvement.
-    Word boundaries avoid false positives:
-    - "just" matches "just", not "justice"
-    - "need" matches "need", not "needle"
-    
-    Args:
-        text: Text to search (case-insensitive)
-        keywords: List of keywords to match
-        
-    Returns:
-        bool: True if any keyword found with word boundaries
+    """Return True if text contains any non-negated keyword (word-boundary, case-insensitive).
+
+    Iterates all matches so a negated first match doesn't block a valid later one.
+    E.g. "don't need X but I want Y" — "need" is negated, "want" is not -> True.
     """
-    if not text:
+    if not text or not keywords:
         return False
-    return any(_compile_keyword_pattern(k).search(text) for k in keywords)
+    pattern = _build_union_pattern(tuple(keywords))
+    for match in pattern.finditer(text):
+        preceding = text[:match.start()].split()
+        if not (preceding and preceding[-1].lower() in _NEGATIONS):
+            return True
+    return False
 
 
-def extract_recent_user_messages(conversation_history, max_messages=None):
-    """Extract recent user messages from conversation history.
-    
-    Args:
-        conversation_history: List of {"role": str, "content": str} dicts
-        max_messages: Number of recent user messages to extract (default: CONFIG)
-        
-    Returns:
-        str: Combined text of recent user messages (lowercase)
-    """
-    if max_messages is None:
-        max_messages = _T["recent_text_messages"]
-    
-    if not conversation_history:
-        return ""
-    
-    # Extract last N*2 messages (to account for bot messages), then filter to user
-    recent_window = conversation_history[-(max_messages * 2):]
-    user_messages = [msg['content'].lower() for msg in recent_window if msg['role'] == 'user']
-    return ' '.join(user_messages[-max_messages:])
-
-
-def check_user_intent_keywords(conversation_history, keywords):
-    """Check if recent user messages contain intent keywords.
-    
-    Convenience wrapper around text_contains_any_keyword for history checking.
-    
-    Args:
-        conversation_history: Conversation history list
-        keywords: Keywords to search for
-        
-    Returns:
-        bool: True if keywords found in recent user messages
-    """
-    recent_text = extract_recent_user_messages(conversation_history)
-    return text_contains_any_keyword(recent_text, keywords)
-
-
-# ============================================================================
-# INTENT & STATE ANALYSIS
-# ============================================================================
+# --- State analysis ---
 
 def analyze_state(history, user_message="", signal_keywords=None):
-    """Unified analysis returning {intent, guarded, question_fatigue}.
-    
-    Extracts intent, guardedness, and question fatigue in single pass.
-    Implements Intent Lock and Agreement vs Guardedness logic.
-    
-    Args:
-        history: Conversation history
-        user_message: Current user message
-        signal_keywords: Signal keywords dict (default: content.SIGNALS)
-        
-    Returns:
-        dict: Analysis results
+    """Return {intent, guarded, question_fatigue, decisive} for the current turn.
+
+    Implements Intent Lock (high intent sticks once stated) and distinguishes
+    agreement ("ok" after substantive answer) from guardedness ("ok" to a question).
     """
-    # Import signals only if not provided (allows testing with custom signals)
     if signal_keywords is None:
         from .content import SIGNALS
         signal_keywords = SIGNALS
-    
-    # INTENT LOCK: Check if goal was stated (inline _has_user_stated_clear_goal logic)
-    goal_indicator_keywords = load_analysis_config()["goal_indicators"]
+
+    # Intent Lock: check if goal was stated in recent history
+    goal_keywords = _yaml_config["goal_indicators"]
     window = _T["recent_history_window"]
-    user_stated_clear_goal = any(
-        text_contains_any_keyword(m.get('content', '').lower(), goal_indicator_keywords)
-        for m in history[-window:] if m.get('role') == 'user'
+    user_stated_goal = any(
+        text_contains_any_keyword(m.get("content", "").lower(), goal_keywords)
+        for m in history[-window:] if m.get("role") == "user"
     ) if history else False
-    
+
     # Default intent detection
-    intent = 'medium'
+    intent = "medium"
     if user_message or history:
-        recent_text = (user_message + ' ' + extract_recent_user_messages(history, 2)).lower()
+        recent_text = (user_message + " " + _extract_recent_user_text(history, 2)).lower()
         if text_contains_any_keyword(recent_text, signal_keywords["low_intent"]):
-            intent = 'low'
+            intent = "low"
         elif text_contains_any_keyword(recent_text, signal_keywords["high_intent"]):
-            intent = 'high'
-    
-    # INTENT LOCK: Override to HIGH if goal was stated (ignore short responses)
-    if user_stated_clear_goal:
-        intent = 'high'
-    
-    # Context-aware guardedness detection
-    # Priority: decisive (short + commitment/high_intent) > guarded > agreement
+            intent = "high"
+
+    if user_stated_goal:
+        intent = "high"
+
+    # Guardedness / decisiveness detection
     guarded = False
     decisive = False
     if user_message:
         is_short = len(user_message.split()) <= _T["short_message_limit"]
 
         if is_short:
-            # Check for decisive signals FIRST — commitment/high_intent overrides guardedness.
-            # "Send the contract." (3 words) is action, not hesitation.
             has_commitment = text_contains_any_keyword(
                 user_message.lower(), signal_keywords.get("commitment", [])
             )
@@ -163,232 +87,121 @@ def analyze_state(history, user_message="", signal_keywords=None):
             )
 
             if has_commitment or has_high_intent:
-                # Decisive: short answer carrying intent/commitment — advance, don't elicit
                 decisive = True
             else:
-                # Only check guarded when there is no decisive signal
-                has_guarded_signal = text_contains_any_keyword(
+                has_guarded = text_contains_any_keyword(
                     user_message.lower(), signal_keywords["guarded"]
                 )
+                if has_guarded:
+                    prev_bot_asked = (
+                        history and history[-1].get("role") == "assistant"
+                        and "?" in history[-1].get("content", "")
+                    )
+                    prev_user_substantive = (
+                        len(history) >= 2
+                        and len(history[-2].get("content", "").split()) >= _T["min_substantive_word_count"]
+                    )
+                    # Agreement pattern: question -> substantive answer -> "ok" is NOT guarded
+                    guarded = not (prev_bot_asked and prev_user_substantive)
 
-                if has_guarded_signal:
-                    # Check context: was previous bot message a question?
-                    prev_bot_asked_question = False
-                    if history and history[-1].get('role') == 'assistant':
-                        prev_message = history[-1].get('content', '')
-                        prev_bot_asked_question = '?' in prev_message
-
-                    # Check if user gave substantive previous answer
-                    user_gave_substantive_answer = False
-                    if history and len(history) >= 2:
-                        prev_user_message = history[-2].get('content', '')
-                        word_count = len(prev_user_message.split())
-                        user_gave_substantive_answer = word_count >= _T["min_substantive_word_count"]
-
-                    # Agreement pattern: question → substantive answer → "ok"
-                    # This is NOT guarded; it's agreement
-                    is_agreement_pattern = prev_bot_asked_question and user_gave_substantive_answer
-
-                    guarded = not is_agreement_pattern
-
-    # Question fatigue detection
+    # Question fatigue
     question_fatigue = False
     if history:
-        recent_bot_messages = [msg['content'] for msg in history[-4:] if msg['role'] == 'assistant']
-        question_count = sum(1 for msg in recent_bot_messages if '?' in msg)
-        question_fatigue = question_count >= _T["question_fatigue_threshold"]
+        recent_bot = [m["content"] for m in history[-4:] if m["role"] == "assistant"]
+        question_fatigue = sum(1 for msg in recent_bot if "?" in msg) >= _T["question_fatigue_threshold"]
 
     return {"intent": intent, "guarded": guarded, "question_fatigue": question_fatigue, "decisive": decisive}
 
 
-# ============================================================================
-# PREFERENCE EXTRACTION
-# ============================================================================
+# --- Preference and keyword extraction ---
 
 def extract_preferences(history):
-    """Extract user preferences from conversation history.
-    
-    Maintains discourse representation (Kamp & Reyle, 1993).
-    Working memory constraint: Extract once, reuse (Cowan, 2001).
-    
-    Args:
-        history: Conversation history
-        
-    Returns:
-        str: Comma-separated string of mentioned preferences or empty string
+    """Return comma-separated preference categories mentioned by the user.
+
+    Categories defined in analysis_config.yaml (preference_keywords).
     """
     if not history:
         return ""
-    
-    config = load_analysis_config()
-    pref_config = config.get("preference_keywords", {})
-    
+    pref_config = _yaml_config.get("preference_keywords", {})
     mentioned = set()
     for msg in history:
         if msg["role"] == "user":
-            content_lower = msg["content"].lower()
-            
-            # Check each category
+            text = msg["content"].lower()
             for category, keywords in pref_config.items():
-                if text_contains_any_keyword(content_lower, keywords):
+                if text_contains_any_keyword(text, keywords):
                     mentioned.add(category)
-    
     return ", ".join(sorted(mentioned)) if mentioned else ""
 
 
-# ============================================================================
-# CONVERSATION PATTERN DETECTION
-# ============================================================================
+def extract_user_keywords(history, max_keywords=6):
+    """Extract the user's key terms (nouns/descriptors) for lexical entrainment."""
+    stop_words = {
+        'i', 'me', 'my', 'a', 'an', 'the', 'is', 'are', 'was', 'were', 'be', 'been',
+        'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should',
+        'can', 'may', 'to', 'of', 'in', 'for', 'on', 'with', 'at', 'by', 'from',
+        'it', 'its', 'this', 'that', 'not', 'no', 'yes', 'just', 'so', 'but', 'and',
+        'or', 'if', 'then', 'than', 'too', 'very', 'really', 'also', 'like', 'you',
+        'your', 'dont', 'im', 'ive', 'some', 'what', 'how', 'about', 'etc', 'want',
+        'need', 'get', 'got', 'one', 'know',
+    }
+    keywords = []
+    for msg in history:
+        if msg["role"] == "user":
+            for word in msg["content"].lower().split():
+                cleaned = word.strip(".,!?;:'\"")
+                if cleaned and len(cleaned) > 2 and cleaned not in stop_words and cleaned not in keywords:
+                    keywords.append(cleaned)
+    return keywords[-max_keywords:]
+
+
+# --- Detection helpers ---
 
 def is_repetitive_validation(history, threshold=None):
-    """Detect validation loops (Grice's Maxim of Relevance).
-    
-    Academic: Cooperative Principle (Grice, 1975) - excessive validation
-    violates Maxim of Quantity ("don't say more than needed").
-    
-    Args:
-        history: Conversation history
-        threshold: Max validations allowed (default: ANALYSIS_THRESHOLDS)
-    
-    Returns:
-        bool: True if excessive validation detected
-    """
+    """Detect if the bot has been over-validating recently."""
     if threshold is None:
         threshold = _T["validation_loop_threshold"]
-    
     if not history or len(history) < 4:
         return False
-    
     validation_phrases = load_signals().get("validation_phrases", [])
-    
     recent_bot = [m["content"].lower() for m in history[-10:] if m["role"] == "assistant"]
-    validation_count = sum(
-        1 for msg in recent_bot 
-        if any(phrase in msg for phrase in validation_phrases)
-    )
-    
-    return validation_count >= threshold
+    count = sum(1 for msg in recent_bot if any(phrase in msg for phrase in validation_phrases))
+    return count >= threshold
 
 
 def is_literal_question(user_message):
-    """Detect if user is asking for literal information (not rhetorical).
-    
-    Academic Basis: Speech Act Theory (Searle, 1969)
-    Messages ending with ? are REQUESTS FOR INFORMATION.
-    Bot must distinguish: literal question vs rhetorical vs reflective.
-    
-    Args:
-        user_message: User's message
-        
-    Returns:
-        bool: True if message is asking for information
-    """
+    """Return True if the user is genuinely asking for information (not rhetorical)."""
     if not user_message:
         return False
-    
-    msg_lower = user_message.lower().strip()
-    
-    config = load_analysis_config()
-    patterns = config.get("question_patterns", {})
-    
+    msg = user_message.lower().strip()
+    patterns = _yaml_config.get("question_patterns", {})
     starters = patterns.get("starters", [])
-    rhetorical_markers = patterns.get("rhetorical_markers", [])
-    
-    # Pattern 1: Starts with question word
-    starts_with_question = any(
-        msg_lower.startswith(word) for word in starters
-    )
-    
-    # Pattern 2: Ends with question mark
-    ends_with_question_mark = msg_lower.endswith('?')
-    
-    # Pattern 3: Rhetorical questions have specific markers OR multiple clauses
-    has_rhetorical_marker = any(marker in msg_lower for marker in rhetorical_markers)
-    has_multiple_clauses = msg_lower.count(',') > 1
-    is_rhetorical = has_rhetorical_marker or has_multiple_clauses
-    
-    is_question = starts_with_question or ends_with_question_mark
-    
+    rhetorical = patterns.get("rhetorical_markers", [])
+
+    is_question = any(msg.startswith(w) for w in starters) or msg.endswith("?")
+    is_rhetorical = any(m in msg for m in rhetorical) or msg.count(",") > 1
     return is_question and not is_rhetorical
 
 
 def user_demands_directness(history, user_message):
-    """Detect if user is frustrated and demanding direct answers.
-    
-    Academic Basis: Conversational Repair Theory (Schegloff, 1992) +
-    Politeness Collapse (Brown & Levinson, 1987)
-    
-    When user repeats frustration = politeness breaking down.
-    Bot must EXIT current strategy immediately.
-    
-    Args:
-        history: Conversation history
-        user_message: Current user message
-        
-    Returns:
-        bool: True if user shows frustration signals
+    """Detect frustration or explicit demands for a straight answer.
+
+    Triggers pitch skip in flow.py when True.
     """
     signals = load_signals()
-    demand_indicator_keywords = signals.get("demand_directness", [])
-    
+    demand_keywords = signals.get("demand_directness", [])
     msg_lower = user_message.lower()
-    
-    # Check for explicit demands or frustration
-    has_demand = text_contains_any_keyword(msg_lower, demand_indicator_keywords)
-    
-    # Check for repeated frustration (user clarifying same concern twice)
-    if history and len(history) >= 2:
-        prev_user_message = history[-2].get('content', '').lower()
-        if prev_user_message and 'i said' in msg_lower:
-            # User is repeating themselves = frustration
-            return True
-    
-    return has_demand
 
-def extract_user_keywords(history, max_keywords=6):
-    """Extract key nouns/terms from user messages for lexical entrainment.
+    if text_contains_any_keyword(msg_lower, demand_keywords):
+        return True
 
-    Academic Basis: Lexical Entrainment (Brennan & Clark, 1996)
-    Embedding user's own terms (not full phrases) builds rapport
-    and signals active listening.
+    if history and len(history) >= 2 and "i said" in msg_lower:
+        return True
 
-    Args:
-        history: Conversation history
-        max_keywords: Maximum keywords to track
-
-    Returns:
-        list: User's key terms for embedding in responses
-    """
-    # Common filler words to exclude
-    stop_words = {'i', 'me', 'my', 'a', 'an', 'the', 'is', 'are', 'was',
-                  'were', 'be', 'been', 'have', 'has', 'had', 'do', 'does',
-                  'did', 'will', 'would', 'could', 'should', 'can', 'may',
-                  'to', 'of', 'in', 'for', 'on', 'with', 'at', 'by', 'from',
-                  'it', 'its', 'this', 'that', 'not', 'no', 'yes', 'just',
-                  'so', 'but', 'and', 'or', 'if', 'then', 'than', 'too',
-                  'very', 'really', 'also', 'like', 'you', 'your', 'dont',
-                  'im', 'ive', 'some', 'what', 'how', 'about', 'etc', 'want',
-                  'need', 'get', 'got', 'one', 'know'}
-
-    keywords = []
-    for msg in history:
-        if msg["role"] == "user":
-            words = msg["content"].lower().split()
-            for word in words:
-                cleaned = word.strip(".,!?;:'\"")
-                if cleaned and len(cleaned) > 2 and cleaned not in stop_words:
-                    if cleaned not in keywords:
-                        keywords.append(cleaned)
-
-    return keywords[-max_keywords:]
+    return False
 
 
-# ============================================================================
-# OBJECTION CLASSIFICATION
-# ============================================================================
+# --- Objection classification ---
 
-# Objection type keyword patterns for classification
-# Maps each objection type to keywords that signal it
 _OBJECTION_KEYWORDS = {
     "money": ["expensive", "cost", "price", "afford", "budget", "too much",
               "payment", "financing", "cheaper", "discount", "can't afford",
@@ -406,7 +219,6 @@ _OBJECTION_KEYWORDS = {
                     "not for me", "i'm good", "all set"],
 }
 
-# Reframe strategy descriptions for LLM guidance
 _REFRAME_DESCRIPTIONS = {
     "money": {
         "isolate_funds": "Isolate the money concern: 'Setting aside the investment for a moment, is this what you want?'",
@@ -439,62 +251,45 @@ _REFRAME_DESCRIPTIONS = {
 
 
 def classify_objection(user_message, history=None):
-    """Classify objection type from user message and suggest reframe strategy.
-
-    Uses the objection_handling configuration from analysis_config.yaml to
-    determine the objection type and select an appropriate reframe strategy.
-
-    Academic Basis: Objection handling frameworks (Cialdini, 2006; Rackham, 1988)
-    Classification priority follows the order in analysis_config.yaml to check
-    smokescreens first (most common false objections) before genuine concerns.
-
-    Args:
-        user_message: Current user message containing the objection
-        history: Conversation history for context
-
-    Returns:
-        dict: {
-            "type": str (objection type or "unknown"),
-            "strategy": str (reframe strategy name),
-            "guidance": str (LLM-readable reframe instruction)
-        }
-    """
-    config = load_analysis_config()
-    objection_config = config.get("objection_handling", {})
-    classification_order = objection_config.get("classification_order",
-                                                 ["smokescreen", "partner", "money", "fear", "logistical", "think"])
+    """Classify objection type and return reframe strategy for the LLM prompt."""
+    objection_config = _yaml_config.get("objection_handling", {})
+    classification_order = objection_config.get(
+        "classification_order",
+        ["smokescreen", "partner", "money", "fear", "logistical", "think"],
+    )
 
     msg_lower = user_message.lower()
-    combined_text = msg_lower
+    combined = msg_lower
     if history:
         recent_user = [m["content"].lower() for m in history[-4:] if m["role"] == "user"]
-        combined_text = " ".join(recent_user) + " " + msg_lower
+        combined = " ".join(recent_user) + " " + msg_lower
 
-    # Check each type in priority order
     for obj_type in classification_order:
         keywords = _OBJECTION_KEYWORDS.get(obj_type, [])
-        if text_contains_any_keyword(combined_text, keywords):
-            # Get reframe strategies from YAML config
+        if text_contains_any_keyword(combined, keywords):
             strategies = objection_config.get("reframe_strategies", {}).get(obj_type, [])
-            if strategies:
-                strategy_name = random.choice(strategies)
-            else:
-                strategy_name = "general_reframe"
-
-            # Get human-readable guidance
+            strategy_name = random.choice(strategies) if strategies else "general_reframe"
             guidance = _REFRAME_DESCRIPTIONS.get(obj_type, {}).get(
                 strategy_name,
-                f"Address the {obj_type} concern directly using the user's stated goals."
+                f"Address the {obj_type} concern directly using the user's stated goals.",
             )
-
-            return {
-                "type": obj_type,
-                "strategy": strategy_name,
-                "guidance": guidance,
-            }
+            return {"type": obj_type, "strategy": strategy_name, "guidance": guidance}
 
     return {
         "type": "unknown",
         "strategy": "general_reframe",
         "guidance": "Acknowledge the concern. Recall the user's stated goal. Ask what specifically is holding them back.",
     }
+
+
+# --- Internal helpers ---
+
+def _extract_recent_user_text(history, max_messages=None):
+    """Combined lowercase text of the N most recent user messages."""
+    if max_messages is None:
+        max_messages = _T["recent_text_messages"]
+    if not history:
+        return ""
+    recent = history[-(max_messages * 2):]
+    user_msgs = [m["content"].lower() for m in recent if m["role"] == "user"]
+    return " ".join(user_msgs[-max_messages:])

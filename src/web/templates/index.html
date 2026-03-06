@@ -5,7 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Eloquencé FYP</title>
     <script src="{{ url_for('static', filename='speech.js') }}"></script>
-    <link rel="stylesheet" href="{{ url_for('static', filename='chat.css') }}">
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='chat.css') }}"
+    />
   </head>
   <body>
     <div class="container">
@@ -16,6 +19,13 @@
             <a href="/knowledge" class="reset-btn" style="text-decoration: none"
               >Knowledge Base</a
             >
+            <button
+              class="reset-btn"
+              id="trainingToggleBtn"
+              onclick="toggleTrainingPanel()"
+            >
+              Training
+            </button>
             <button class="reset-btn" onclick="resetChat()">Reset</button>
             <div class="status-container">
               <div class="status-item">
@@ -24,7 +34,7 @@
               </div>
               <div class="status-item">
                 <span class="status-label">Stage:</span>
-                <span class="status-value" id="stageBadge">intent</span>
+                <span class="status-value" id="stageBadge">—</span>
               </div>
             </div>
           </div>
@@ -55,11 +65,52 @@
       </div>
     </div>
 
+    <div id="trainingPanel">
+      <div class="training-header">
+        <span>🎓 Training</span>
+        <button class="training-close-btn" onclick="toggleTrainingPanel()">
+          ×
+        </button>
+      </div>
+      <div class="training-body">
+        <div class="training-section">
+          <div class="training-label">📍 Stage Goal</div>
+          <div class="training-value" id="tStageGoal">—</div>
+        </div>
+        <div class="training-section">
+          <div class="training-label">🔍 What the bot just did</div>
+          <div class="training-value" id="tWhatBotDid">—</div>
+        </div>
+        <div class="training-section">
+          <div class="training-label">➡ Where we're heading</div>
+          <div class="training-value" id="tWhereHeading">—</div>
+        </div>
+        <div class="training-section">
+          <div class="training-label">⚡ Advance when</div>
+          <div class="training-value" id="tNextTrigger">—</div>
+        </div>
+        <div class="training-section">
+          <div class="training-label">⚠ Watch for</div>
+          <ul class="training-tips" id="tWatchFor"></ul>
+        </div>
+        <div class="training-section training-qa">
+          <div class="training-label">💬 Ask the coach</div>
+          <div style="display:flex;gap:6px;margin-top:4px">
+            <input type="text" id="trainingQuestion" placeholder="e.g. What should I have said instead?" style="flex:1;padding:6px 10px;border:1px solid #444;border-radius:6px;background:#1a1a2e;color:#e0e0e0;font-size:13px" onkeydown="if(event.key==='Enter')askTrainingCoach()">
+            <button onclick="askTrainingCoach()" style="padding:6px 12px;border:none;border-radius:6px;background:#4a9eff;color:#fff;cursor:pointer;font-size:13px">Ask</button>
+          </div>
+          <div id="trainingAnswer" style="margin-top:6px;font-size:13px;color:#b0b0b0;min-height:18px"></div>
+        </div>
+      </div>
+    </div>
+
     <script>
       let isTyping = false,
         userTurnIndex = 0,
         sessionId = null;
-
+      // Module-level state to avoid circular DOM reads
+      let _currentStage = "intent";
+      let _currentStrategy = "—";
       // ─── Session ─────────────────────────────────────────────────
       function getSessionId() {
         if (!sessionId) sessionId = localStorage.getItem("sessionId");
@@ -116,8 +167,13 @@
       // If server reports session loss, clear client state and re-init
       function handleServerSessionError(data) {
         if (!data) return false;
-        const err = data.error;
-        if (err === "No active session" || err === "Session not found") {
+        // Check for error code first (reliable), then fallback to error message matching
+        if (
+          data.code === "SESSION_EXPIRED" ||
+          (data.error &&
+            (data.error.toLowerCase().includes("session") ||
+              data.error.toLowerCase().includes("no active")))
+        ) {
           console.warn("Server lost session memory. Re-initializing...");
           localStorage.removeItem("sessionId"); // Clear ghost ID
           clearStoredHistory();
@@ -149,6 +205,14 @@
       }
 
       // ─── Message rendering ────────────────────────────────────────
+      function parseMarkdown(line) {
+        return line
+          .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+          .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+          .replace(/\*(.+?)\*/g, "<em>$1</em>")
+          .replace(/^(\d+)\.\s/, "<strong>$1.</strong> ");
+      }
+
       function createMessageElement(text, sender, msgIdx, metrics = null) {
         const msg = document.createElement("div");
         msg.className = `message ${sender}`;
@@ -159,13 +223,17 @@
 
         const bubble = document.createElement("div");
         bubble.className = "message-bubble";
-        // Preserve newlines as <br> in display
+        // Preserve newlines as <br>; bot messages get markdown rendered
         const safeText = text || "";
         bubble.innerHTML = safeText
           .split("\n")
           .map((l) => {
             const s = document.createElement("span");
-            s.textContent = l;
+            if (sender === "bot") {
+              s.innerHTML = parseMarkdown(l);
+            } else {
+              s.textContent = l;
+            }
             return s.outerHTML;
           })
           .join("<br>");
@@ -298,9 +366,8 @@
             .then((r) => r.json())
             .then((data) => {
               if (!data.success) {
-                // Check if session expired
-                if (data.error === "Session not found") {
-                  handleSessionExpired();
+                // Check if session expired using improved error detection
+                if (handleServerSessionError(data)) {
                   return;
                 }
 
@@ -357,13 +424,10 @@
               }));
               saveHistoryToStorage();
 
-              updateStage(data.stage);
-              if (data.strategy) updateStrategy(data.strategy);
+              updateSessionUI(data);
             })
             .catch((e) => {
-              allMsgs
-                .slice(startIdx)
-                .forEach((el) => el.classList.remove("historical"));
+              rollbackEditUI(allMsgs, startIdx);
               ta.disabled = false;
               saveBtn.disabled = false;
               cancelBtn.disabled = false;
@@ -381,7 +445,7 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             session_id: existingId,
-            // product_type and provider can be optionally sent here
+            // provider can also be sent here
             // They fall back to environment variables if not provided
           }),
         })
@@ -407,7 +471,10 @@
                 renderMessage(m.content, m.role === "user" ? "user" : "bot"),
               );
               updateStage(data.stage);
-              if (data.strategy) updateStrategy(data.strategy);
+              if (data.strategy) {
+                updateStrategy(data.strategy);
+                localStorage.setItem("chatStrategy", data.strategy);
+              }
             } else {
               // New session — check localStorage for visual restore
               const stored = loadHistoryFromStorage();
@@ -453,7 +520,10 @@
                   });
               } else {
                 addMessage(data.message, "bot");
-                updateStage(data.stage);
+                updateSessionUI(data);
+                if (data.strategy) {
+                  localStorage.setItem("chatStrategy", data.strategy);
+                }
               }
             }
           })
@@ -467,6 +537,11 @@
         const ta = document.getElementById("messageInput");
         ta.addEventListener("input", () => autoResizeTextarea(ta));
         speechRecognizer = new SpeechRecognizer();
+        // Restore training panel open state
+        if (localStorage.getItem("trainingPanelOpen") === "true") {
+          document.getElementById("trainingPanel").classList.add("open");
+          document.querySelector(".container").classList.add("panel-open");
+        }
       });
 
       // ─── renderMessage ────────────────────────────────────────────
@@ -509,14 +584,8 @@
           // Cache all bot responses (including initial greeting)
           _cachedHistory.push({ role: "assistant", content: text });
           saveHistoryToStorage();
-          localStorage.setItem(
-            "chatStage",
-            document.getElementById("stageBadge").textContent,
-          );
-          localStorage.setItem(
-            "chatStrategy",
-            document.getElementById("strategyBadge").textContent,
-          );
+          localStorage.setItem("chatStage", _currentStage);
+          localStorage.setItem("chatStrategy", _currentStrategy);
         }
       }
 
@@ -543,11 +612,8 @@
           .then((data) => {
             hideTyping();
             if (data.error) {
-              // Check if session expired
-              if (data.error === "Session not found") {
-                handleSessionExpired();
-                return;
-              }
+              // Check if session expired using improved error detection
+              if (handleServerSessionError(data)) return;
               addMessage("Error: " + data.error, "bot");
               return;
             }
@@ -558,8 +624,7 @@
               output_length: data.metrics?.output_length || 0,
             };
             addMessage(data.message, "bot", metrics);
-            updateStage(data.stage);
-            if (data.strategy) updateStrategy(data.strategy);
+            updateSessionUI(data);
           })
           .catch((error) => {
             hideTyping();
@@ -594,12 +659,91 @@
 
       // ─── Badge helpers ────────────────────────────────────────────
       function updateStage(stage) {
+        _currentStage = stage;
         document.getElementById("stageBadge").textContent = stage.toUpperCase();
       }
 
       function updateStrategy(strategy) {
+        _currentStrategy = strategy;
         document.getElementById("strategyBadge").textContent =
           strategy.toUpperCase();
+      }
+
+      // Consolidated UI update helper
+      function updateSessionUI(data) {
+        if (data.stage) updateStage(data.stage);
+        if (data.strategy) updateStrategy(data.strategy);
+        if (data.training) updateTrainingPanel(data.training);
+      }
+
+      // Edit rollback helper
+      function rollbackEditUI(allMsgs, startIdx) {
+        allMsgs
+          .slice(startIdx)
+          .forEach((el) => el.classList.remove("historical"));
+      }
+
+      // ─── Training panel ───────────────────────────────────────────
+      function toggleTrainingPanel() {
+        const panel = document.getElementById("trainingPanel");
+        const container = document.querySelector(".container");
+        const open = panel.classList.toggle("open");
+        container.classList.toggle("panel-open", open);
+        localStorage.setItem("trainingPanelOpen", open);
+      }
+
+      function updateTrainingPanel(training) {
+        if (!training) return;
+        document.getElementById("tStageGoal").textContent =
+          training.stage_goal || "—";
+        document.getElementById("tWhatBotDid").textContent =
+          training.what_bot_did || "—";
+        document.getElementById("tWhereHeading").textContent =
+          training.where_heading || "—";
+        document.getElementById("tNextTrigger").textContent =
+          training.next_trigger || "—";
+        const ul = document.getElementById("tWatchFor");
+        ul.innerHTML = "";
+        (training.watch_for || []).forEach((tip) => {
+          const li = document.createElement("li");
+          li.textContent = tip;
+          ul.appendChild(li);
+        });
+      }
+
+      // ─── Training Q&A ─────────────────────────────────────────────
+      function askTrainingCoach() {
+        const input = document.getElementById("trainingQuestion");
+        const answer = document.getElementById("trainingAnswer");
+        const question = input.value.trim();
+        if (!question) return;
+
+        answer.textContent = "Thinking...";
+        input.disabled = true;
+
+        fetch("/api/training/ask", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Session-ID": getSessionId(),
+          },
+          body: JSON.stringify({ question }),
+        })
+          .then((r) => r.json())
+          .then((data) => {
+            const raw = data.answer || data.error || "No answer received.";
+            answer.innerHTML = raw.split("\n")
+              .filter(l => l.trim())
+              .map(l => `<div>${parseMarkdown(l)}</div>`)
+              .join("");
+            input.disabled = false;
+            input.value = "";
+            input.focus();
+          })
+          .catch((e) => {
+            answer.textContent = "Error: " + e;
+            input.disabled = false;
+          });
       }
 
       // ─── Textarea auto-resize ─────────────────────────────────────
@@ -658,7 +802,7 @@
         const input = document.getElementById("messageInput");
         const micBtn = document.getElementById("micBtn");
 
-        if (speechRecognizer.getState()) {
+        if (speechRecognizer.isRecording) {
           speechRecognizer.stop();
           return;
         }
