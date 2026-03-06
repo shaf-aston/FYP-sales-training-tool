@@ -15,7 +15,7 @@ from chatbot.providers import get_available_providers
 from chatbot.performance import PerformanceTracker
 from chatbot.knowledge import (
     load_custom_knowledge, save_custom_knowledge,
-    get_custom_knowledge_text, clear_custom_knowledge,
+    clear_custom_knowledge, ALLOWED_FIELDS, MAX_FIELD_LENGTH,
 )
 
 # Disable .pyc file generation
@@ -32,6 +32,38 @@ APP_CONFIG = {
 
 # Session storage: {session_id: {"bot": SalesChatbot, "ts": datetime}}
 sessions = {}
+
+
+def _validate_message(text: str):
+    """Validate message text and return (clean_text, error_response).
+    
+    Returns:
+        (text, None) if valid
+        (None, error_response) if invalid
+    """
+    text = text.strip()
+    if not text:
+        return None, (jsonify({"error": "Message required"}), 400)
+    if len(text) > APP_CONFIG["MAX_MESSAGE_LENGTH"]:
+        return None, (jsonify({"error": f"Message too long (max {APP_CONFIG['MAX_MESSAGE_LENGTH']} characters)"}), 400)
+    return text, None
+
+
+def _bot_state(bot: SalesChatbot) -> dict:
+    """Extract common bot state fields for JSON responses.
+    
+    Returns:
+        dict: {"stage": str, "strategy": str}
+    """
+    # In discovery mode (intent strategy), stage is unset since real flow isn't determined yet
+    # Once switched to consultative/transactional, show actual stage
+    stage = "----" if bot.flow_engine.flow_type == "intent" else bot.flow_engine.current_stage.upper()
+    strategy = bot.flow_engine.flow_type.upper()
+    
+    return {
+        "stage": stage,
+        "strategy": strategy
+    }
 
 
 def cleanup_expired_sessions():
@@ -66,7 +98,7 @@ def delete_session(session_id):
 
 def require_session():
     """Validate session header and return (bot, error_response).
-    
+
     Returns:
         (bot, None) if valid session exists
         (None, error_response) if missing or invalid
@@ -76,7 +108,7 @@ def require_session():
         return None, (jsonify({"error": "Session ID required"}), 400)
     bot = get_session(session_id)
     if not bot:
-        return None, (jsonify({"error": "Session not found"}), 400)
+        return None, (jsonify({"error": "Session not found", "code": "SESSION_EXPIRED"}), 400)
     return bot, None
 
 
@@ -107,16 +139,15 @@ def api_init():
                 "success": True,
                 "session_id": existing_id,
                 "message": None,
-                "stage": bot.flow_engine.current_stage,
-                "strategy": bot.flow_engine.flow_type,
+                **_bot_state(bot),
                 "history": history
             })
 
     # Create new session with eager bot initialization
     session_id = secrets.token_hex(16)
-    product_type = data.get('product_type', os.environ.get("PRODUCT_TYPE", "general"))
-    provider = data.get('provider', os.environ.get("PROVIDER", "groq"))
-    
+    product_type = data.get('product_type')  # None → generic default → intent-first discovery
+    provider = data.get('provider', "groq")
+
     try:
         bot = SalesChatbot(provider_type=provider, product_type=product_type, session_id=session_id)
         set_session(session_id, bot)
@@ -124,14 +155,23 @@ def api_init():
     except Exception as init_error:
         app.logger.exception(f"Bot init failed: {init_error}")
         return jsonify({"error": f"Init failed: {str(init_error)}"}), 500
-    
+
     return jsonify({
         "success": True,
         "session_id": session_id,
         "message": "Hey, what's up? How can I help you out?",
-        "stage": "intent",
-        "strategy": None,
-        "history": []
+        **_bot_state(bot),
+        "history": [],
+        "training": {
+            "stage_goal": "Understand what brought the prospect here.",
+            "what_bot_did": "Opened with a casual, approachable greeting.",
+            "where_heading": "Uncovering their goal or problem before advancing.",
+            "next_trigger": "Prospect reveals a clear intention or need.",
+            "watch_for": [
+                "Avoid pitching before intent is clear",
+                "Match their energy from the first message",
+            ],
+        },
     })
 
 @app.route('/api/restore', methods=['POST'])
@@ -143,8 +183,8 @@ def api_restore():
     """
     data = request.json or {}
     history = data.get('history', [])  # [{role, content}, ...]
-    product_type = data.get('product_type', os.environ.get("PRODUCT_TYPE", "general"))
-    provider = data.get('provider', os.environ.get("PROVIDER", "groq"))
+    product_type = data.get('product_type')  # None → generic default → intent-first discovery
+    provider = data.get('provider', "groq")
     
     session_id = secrets.token_hex(16)
     
@@ -153,24 +193,7 @@ def api_restore():
         
         # Replay history directly into FSM — no LLM calls, just state reconstruction
         if history:
-            for i in range(0, len(history), 2):
-                if i + 1 >= len(history):
-                    break  # Malformed history (odd length) — skip incomplete pair
-                
-                if (history[i].get('role') == 'user' and 
-                    history[i + 1].get('role') == 'assistant'):
-                    
-                    user_msg = history[i]['content']
-                    bot_msg = history[i + 1]['content']
-                    bot.flow_engine.add_turn(user_msg, bot_msg)
-                    
-                    # Re-calculate state transitions based on replayed history
-                    advancement = bot.flow_engine.should_advance(user_msg)
-                    if advancement:
-                        if isinstance(advancement, str):
-                            bot.flow_engine.advance(target_stage=advancement)
-                        else:
-                            bot.flow_engine.advance()
+            bot.flow_engine.replay_history(history)
         
         set_session(session_id, bot)
         app.logger.info(f"Restored session: {session_id} ({len(history)} messages replayed)")
@@ -182,8 +205,7 @@ def api_restore():
     return jsonify({
         "success": True,
         "session_id": session_id,
-        "stage": bot.flow_engine.current_stage,
-        "strategy": bot.flow_engine.flow_type,
+        **_bot_state(bot),
     })
 
 @app.route('/api/health', methods=['GET'])
@@ -198,8 +220,8 @@ def api_health():
     if session_id:
         bot = get_session(session_id)
         if bot:
-            active_provider = type(bot.provider).__name__.replace('Provider', '').lower()
-            active_model = bot.provider.get_model_name()
+            active_provider = bot._provider_name
+            active_model = bot._model_name
     
     # Get available providers
     provider_status = get_available_providers()
@@ -222,13 +244,9 @@ def chat():
     """Handle chat messages. Bot must be initialized via /api/init first."""
     cleanup_expired_sessions()  # Lazy cleanup
     data = request.json
-    user_message = data.get('message', '').strip()
-    
-    if not user_message:
-        return jsonify({"error": "Message required"}), 400
-    
-    if len(user_message) > APP_CONFIG["MAX_MESSAGE_LENGTH"]:
-        return jsonify({"error": f"Message too long (max {APP_CONFIG['MAX_MESSAGE_LENGTH']} characters)"}), 400
+    user_message, err = _validate_message(data.get('message', ''))
+    if err:
+        return err
     
     session_id = request.headers.get('X-Session-ID')
     if not session_id:
@@ -237,29 +255,50 @@ def chat():
     # Bot must exist (created in /api/init)
     bot = get_session(session_id)
     if not bot:
-        return jsonify({"error": "No active session. Call /api/init first."}), 400
+        return jsonify({"error": "No active session. Call /api/init first.", "code": "SESSION_EXPIRED"}), 400
     
     try:
         response = bot.chat(user_message)
-        
+        training = bot.generate_training(user_message, response.content)
+
         # Extract content and metrics from ChatResponse
         return jsonify({
             "success": True,
             "message": response.content,
-            "stage": bot.flow_engine.current_stage,
-            "strategy": bot.flow_engine.flow_type,
+            **_bot_state(bot),
             "latency_ms": round(response.latency_ms, 1),
             "provider": response.provider,
             "model": response.model,
             "metrics": {
                 "input_length": response.input_len,
                 "output_length": response.output_len
-            }
+            },
+            "training": training,
         })
-    
+
     except Exception as e:
         app.logger.exception(f"Chat error: {e}")
         return jsonify({"error": f"Chat error: {str(e)}"}), 500
+
+@app.route('/api/training/ask', methods=['POST'])
+def training_ask():
+    """Answer a trainee's question about the conversation and sales techniques."""
+    bot, err = require_session()
+    if err: return err
+
+    data = request.json or {}
+    question = (data.get('question') or '').strip()
+    if not question:
+        return jsonify({"error": "Question required"}), 400
+    if len(question) > APP_CONFIG["MAX_MESSAGE_LENGTH"]:
+        return jsonify({"error": "Question too long"}), 400
+
+    try:
+        result = bot.answer_training_question(question)
+        return jsonify({"success": True, **result})
+    except Exception as e:
+        app.logger.exception(f"Training Q&A error: {e}")
+        return jsonify({"error": "Failed to generate answer"}), 500
 
 @app.route('/api/summary', methods=['GET'])
 def get_summary():
@@ -277,21 +316,17 @@ def edit_message():
     """Edit user message and regenerate from that point"""
     data = request.json
     msg_index = data.get('index')
-    new_message = data.get('message', '').strip()
+    new_message, err = _validate_message(data.get('message', ''))
     
-    bot, err = require_session()
+    bot, bot_err = require_session()
+    if bot_err: return bot_err
+    
     if err: return err
     
     # Validate inputs
     if msg_index is None:
         return jsonify({"error": "Missing message index"}), 400
     
-    if not new_message:
-        return jsonify({"error": "Message cannot be empty"}), 400
-    
-    if len(new_message) > APP_CONFIG["MAX_MESSAGE_LENGTH"]:
-        return jsonify({"error": f"Message too long (max {APP_CONFIG['MAX_MESSAGE_LENGTH']} characters)"}), 400
-
     try:
         msg_index = int(msg_index)
         
@@ -307,16 +342,17 @@ def edit_message():
         
         # Now chat with the new message
         response = bot.chat(new_message)
-        
+        training = bot.generate_training(new_message, response.content)
+
         return jsonify({
             "success": True,
             "message": response.content,
             "history": [{"role": m["role"], "content": m["content"]} for m in bot.flow_engine.conversation_history],
-            "stage": bot.flow_engine.current_stage,
-            "strategy": bot.flow_engine.flow_type,
+            **_bot_state(bot),
             "latency_ms": round(response.latency_ms, 1),
             "provider": response.provider,
-            "model": response.model
+            "model": response.model,
+            "training": training,
         })
     except ValueError:
         return jsonify({"error": "Invalid index format"}), 400
@@ -325,40 +361,12 @@ def edit_message():
 
 @app.route('/api/reset', methods=['POST'])
 def reset():
-    """Reset the conversation"""
     session_id = request.headers.get('X-Session-ID')
     
     if session_id:
         delete_session(session_id)
     
     return jsonify({"success": True})
-
-@app.route('/api/switch-provider', methods=['POST'])
-def switch_provider():
-    """Switch LLM provider mid-conversation.
-    
-    Request Body:
-        {"provider": "groq"|"ollama", "model": "optional-model-name"}
-    
-    Returns:
-        {"success": bool, "from": str, "to": str, "model": str}
-    """
-    bot, err = require_session()
-    if err: return err
-    
-    data = request.json
-    provider_type = data.get('provider')
-    if not provider_type:
-        return jsonify({"error": "Provider type required"}), 400
-    
-    result = bot.switch_provider(
-        provider_type=provider_type,
-        model=data.get('model')
-    )
-    
-    status_code = 200 if result.get("success") else 400
-    return jsonify(result), status_code
-
 
 # ─── Knowledge Base Routes ──────────────────────────────────────────
 
@@ -377,8 +385,6 @@ def get_knowledge():
 @app.route('/api/knowledge', methods=['POST'])
 def save_knowledge_route():
     """Save custom knowledge data with field-level validation."""
-    from chatbot.knowledge import ALLOWED_FIELDS, MAX_FIELD_LENGTH
-
     data = request.json
     if not data or not isinstance(data, dict):
         return jsonify({"error": "No data provided"}), 400
@@ -420,7 +426,6 @@ def handle_unexpected_error(e):
     return jsonify({"error": "Internal server error"}), 500
 
 
+
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
-
-

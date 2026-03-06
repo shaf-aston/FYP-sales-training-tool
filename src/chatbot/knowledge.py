@@ -1,14 +1,4 @@
-"""Custom knowledge base - user-provided product knowledge.
-
-PURPOSE: Allow users to input custom product data (pricing, specs, company info)
-that gets injected into the chatbot's prompts alongside built-in product knowledge.
-
-DESIGN PRINCIPLES:
-- Separate from config_loader (config = immutable app config; knowledge = mutable user data)
-- Graceful degradation: empty/missing knowledge = chatbot works exactly as before
-- Simple YAML storage (no database needed for single-user academic project)
-- No imports from other chatbot modules (no circular dependencies)
-"""
+"""User-provided custom knowledge — stored in YAML, injected into prompts at runtime."""
 
 import re
 import yaml
@@ -28,11 +18,7 @@ KNOWLEDGE_FILE = Path(__file__).parent.parent / "config" / "custom_knowledge.yam
 
 
 def load_custom_knowledge() -> dict:
-    """Load custom knowledge from YAML file.
-
-    Returns:
-        dict: Knowledge data, or empty dict if file doesn't exist/is empty
-    """
+    """Load custom knowledge from YAML. Returns empty dict if missing or invalid."""
     if not KNOWLEDGE_FILE.exists():
         return {}
     try:
@@ -66,16 +52,7 @@ def _sanitize_knowledge(data: dict) -> dict:
 
 
 def save_custom_knowledge(data: dict) -> bool:
-    """Save custom knowledge to YAML file.
-
-    Applies field whitelist and value sanitization before writing.
-
-    Args:
-        data: Knowledge dictionary to save
-
-    Returns:
-        bool: True if save successful
-    """
+    """Sanitize and save custom knowledge to YAML. Returns True on success."""
     try:
         sanitized = _sanitize_knowledge(data)
         KNOWLEDGE_FILE.parent.mkdir(parents=True, exist_ok=True)
@@ -88,14 +65,7 @@ def save_custom_knowledge(data: dict) -> bool:
 
 
 def get_custom_knowledge_text() -> str:
-    """Get formatted knowledge text for prompt injection.
-
-    Returns formatted text ready for insertion into product_context.
-    Returns empty string if no custom knowledge exists.
-
-    Returns:
-        str: Formatted knowledge text or empty string
-    """
+    """Return formatted knowledge text for prompt injection, or empty string if none."""
     data = load_custom_knowledge()
     if not data:
         return ""
@@ -113,11 +83,7 @@ def get_custom_knowledge_text() -> str:
 
 
 def clear_custom_knowledge() -> bool:
-    """Delete all custom knowledge.
-
-    Returns:
-        bool: True if deletion successful or file didn't exist
-    """
+    """Delete custom knowledge file. Returns True on success or if already absent."""
     try:
         if KNOWLEDGE_FILE.exists():
             KNOWLEDGE_FILE.unlink()

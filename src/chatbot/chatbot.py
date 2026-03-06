@@ -1,43 +1,42 @@
-"""Sales chatbot orchestrator - refactored with FSM.
+"""Sales chatbot orchestrator — FSM flow management, LLM calls, performance tracking."""
 
-ARCHITECTURE CHANGES:
-- Replaced Strategy Pattern with Finite State Machine
-- Consolidated 5 strategy files into 1 flow.py
-- Reduced coupling (no strategy imports)
-- Single source of truth for flow logic
-
-BENEFITS:
-- 50% code reduction (183 → ~95 lines)
-- Declarative flow configuration
-- Higher cohesion, lower coupling
-- Easier testing (pure functions)
-"""
-
-from dataclasses import dataclass
-from .providers import create_provider
-from .config_loader import get_product_settings
-from .performance import PerformanceTracker
-from .flow import SalesFlowEngine
+import json
+import logging
 import re
 import time
-import logging
+from dataclasses import dataclass
 
-# Module-level logger (consolidate all logging calls)
+from .config_loader import get_product_settings
+from .flow import SalesFlowEngine
+from .performance import PerformanceTracker
+from .providers import create_provider
+
 logger = logging.getLogger(__name__)
+
+# Strategy detection keywords — used by _apply_advancement() discovery mode
+_TRANSACTIONAL_INDICATORS = [
+    "budget", "price", "cost", "money", "afford",
+    "spec", "feature", "delivery", "availability",
+]
+_CONSULTATIVE_INDICATORS = [
+    "help you with", "understand", "transformation",
+    "goals", "challenges", "situation", "approach", "strategy",
+]
+
+# User-intent cues should dominate strategy choice while in discovery mode
+_USER_CONSULTATIVE_SIGNALS = [
+    "mentor", "mentorship", "coaching", "coach", "consulting",
+    "guidance", "training", "program", "service", "improve", "learn",
+]
+_USER_TRANSACTIONAL_SIGNALS = [
+    "budget", "price", "cost", "buy", "purchase", "order",
+    "spec", "feature", "availability", "delivery", "quote",
+]
 
 
 @dataclass
 class ChatResponse:
-    """Structured response from chat() method including latency metrics.
-    
-    Attributes:
-        content: Bot response text
-        latency_ms: Elapsed time for LLM call (milliseconds)
-        provider: LLM provider name ('groq', 'ollama')
-        model: Model identifier
-        input_len: User message character count
-        output_len: Bot response character count
-    """
+    """Structured response from chat() including latency metrics."""
     content: str
     latency_ms: float = None
     provider: str = None
@@ -47,32 +46,18 @@ class ChatResponse:
 
 
 class SalesChatbot:
-    """Sales chatbot with FSM-based flow management.
-    
-    RESPONSIBILITIES:
-    - LLM provider orchestration
-    - Performance tracking
-    - FSM lifecycle management
-    
-    DESIGN PATTERN: Dependency Injection
-    - Flow engine injected at init
-    - Provider injected at init
-    """
-    
-    def __init__(self, provider_type=None, model=None, product_type="general", session_id=None):
-        self.provider = create_provider(provider_type, model=model)  # Factory defaults to "groq"
-        self.session_id = session_id
-        
-        # Load product config
-        config = get_product_settings(product_type)
+    """Orchestrates provider, FSM flow engine, and performance tracking."""
 
-        # Build product context with knowledge if available
+    def __init__(self, provider_type=None, model=None, product_type=None, session_id=None):
+        self.provider = create_provider(provider_type, model=model)
+        self.session_id = session_id
+
+        config = get_product_settings(product_type or "")
+
         product_context = config["context"]
         if "knowledge" in config:
             product_context = f"{config['context']}\n\nPRODUCT KNOWLEDGE:\n{config['knowledge']}"
 
-        # Load custom knowledge if available (user-provided data, separate from built-in)
-        # Delimiters prevent user-entered text from being interpreted as LLM instructions
         try:
             from .knowledge import get_custom_knowledge_text
             custom_knowledge = get_custom_knowledge_text()
@@ -83,24 +68,83 @@ class SalesChatbot:
                     "--- END CUSTOM PRODUCT DATA ---"
                 )
         except ImportError:
-            pass  # knowledge module not available, no impact
+            pass
 
-        # Initialize FSM
         self.flow_engine = SalesFlowEngine(
-            flow_type=config["strategy"],  # "consultative" or "transactional"
-            product_context=product_context
+            flow_type=config["strategy"],
+            product_context=product_context,
         )
-    
+
+    # --- Properties ---
+
     @property
     def _provider_name(self):
-        """Get provider type name (lowercase)."""
-        return type(self.provider).__name__.replace('Provider', '').lower()
-    
+        return type(self.provider).__name__.replace("Provider", "").lower()
+
     @property
     def _model_name(self):
-        """Get model identifier from provider."""
         return self.provider.get_model_name()
-    
+
+    # --- Core chat loop ---
+
+    def chat(self, user_message):
+        """Process user message and return ChatResponse with content + metrics."""
+        recent_history = self.flow_engine.conversation_history[-10:]
+        llm_messages = [
+            {"role": "system", "content": self.flow_engine.get_current_prompt(user_message)}
+        ] + recent_history + [
+            {"role": "user", "content": user_message}
+        ]
+
+        request_start = time.time()
+        try:
+            llm_response = self.provider.chat(
+                llm_messages,
+                temperature=0.8,
+                max_tokens=200,
+                stage=self.flow_engine.current_stage,
+            )
+
+            if llm_response.error or not llm_response.content:
+                error_detail = llm_response.error or "empty response"
+                return self._fallback(
+                    f"I'm having trouble ({error_detail}). Try again?",
+                    llm_response.latency_ms, user_message,
+                )
+
+            bot_reply = llm_response.content
+            self.flow_engine.add_turn(user_message, bot_reply)
+
+            if self.session_id:
+                PerformanceTracker.log_stage_latency(
+                    session_id=self.session_id,
+                    stage=self.flow_engine.current_stage,
+                    strategy=self.flow_engine.flow_type,
+                    latency_ms=llm_response.latency_ms,
+                    provider=self._provider_name,
+                    model=self._model_name,
+                    user_message_length=len(user_message),
+                    bot_response_length=len(bot_reply),
+                )
+
+            self._apply_advancement(user_message)
+
+            return ChatResponse(
+                content=bot_reply,
+                latency_ms=llm_response.latency_ms,
+                provider=self._provider_name,
+                model=self._model_name,
+                input_len=len(user_message),
+                output_len=len(bot_reply),
+            )
+
+        except Exception as e:
+            logger.exception(f"Unexpected error: {e}")
+            return self._fallback(
+                "Something went wrong. Can you try again?",
+                (time.time() - request_start) * 1000, user_message,
+            )
+
     def _fallback(self, message, latency_ms, user_message):
         """Build fallback ChatResponse after adding turn to history."""
         self.flow_engine.add_turn(user_message, message)
@@ -110,225 +154,178 @@ class SalesChatbot:
             provider=self._provider_name,
             model=self._model_name,
             input_len=len(user_message),
-            output_len=len(message)
+            output_len=len(message),
         )
-    
-    def chat(self, user_message):
-        """Process user message and return bot response with metrics.
-        
-        FLOW:
-        1. Build LLM messages (system prompt + history)
-        2. Call LLM provider
-        3. Handle errors gracefully
-        4. Record turn in FSM
-        5. Log performance metrics
-        6. Check for stage advancement
-        7. Return ChatResponse with latency
-        
-        Returns:
-            ChatResponse: Response content + latency metrics
-        """
-        
-        # Build messages for LLM
-        recent_history = self.flow_engine.conversation_history[-10:]
-        llm_messages = [
-            {"role": "system", "content": self.flow_engine.get_current_prompt(user_message)}
-        ] + recent_history + [
-            {"role": "user", "content": user_message}
+
+    def _apply_advancement(self, user_message):
+        """Check and apply FSM stage advancement. Handles discovery -> real strategy switch."""
+        from .analysis import text_contains_any_keyword
+
+        if self.flow_engine.flow_type == "intent":
+            history = self.flow_engine.conversation_history
+            user_text = (user_message or "").lower()
+            has_cons_user = text_contains_any_keyword(user_text, _USER_CONSULTATIVE_SIGNALS)
+            has_trans_user = text_contains_any_keyword(user_text, _USER_TRANSACTIONAL_SIGNALS)
+
+            if has_cons_user:
+                self.flow_engine.switch_strategy("consultative")
+            elif has_trans_user:
+                self.flow_engine.switch_strategy("transactional")
+            elif len(history) >= 2:
+                bot_last = history[-1].get("content", "").lower()
+                has_trans = text_contains_any_keyword(bot_last, _TRANSACTIONAL_INDICATORS)
+                has_cons = text_contains_any_keyword(bot_last, _CONSULTATIVE_INDICATORS)
+
+                if has_cons:
+                    self.flow_engine.switch_strategy("consultative")
+                elif has_trans:
+                    self.flow_engine.switch_strategy("transactional")
+                elif self.flow_engine.stage_turn_count >= 3:
+                    self.flow_engine.switch_strategy("consultative")
+
+        advancement = self.flow_engine.should_advance(user_message)
+        if advancement:
+            self.flow_engine.advance(
+                target_stage=advancement if isinstance(advancement, str) else None
+            )
+
+    # --- Training ---
+
+    def generate_training(self, user_msg, bot_reply):
+        """Generate coaching notes for the current exchange via lightweight LLM call."""
+        stage = self.flow_engine.current_stage
+        flow_type = self.flow_engine.flow_type
+        sequence = (
+            "intent -> logical -> emotional -> pitch -> objection"
+            if flow_type == "consultative"
+            else "intent -> pitch -> objection"
+        )
+
+        system_prompt = (
+            "You are a sales training coach observing a live roleplay session. "
+            "Give the trainee concise, specific coaching after each exchange.\n\n"
+            f"CONTEXT:\n"
+            f"- Strategy: {flow_type} | Stage: {stage} (turn {self.flow_engine.stage_turn_count})\n"
+            f"- Stage sequence: {sequence}\n\n"
+            "Reply ONLY with valid JSON — no markdown fences, no extra text:\n"
+            "{\n"
+            '  "stage_goal": "<15 words max: what this stage is trying to accomplish>",\n'
+            '  "what_bot_did": "<15 words max: technique the rep just used and why>",\n'
+            '  "where_heading": "<15 words max: where the conversation goes next>",\n'
+            '  "next_trigger": "<15 words max: what needs to happen to advance>",\n'
+            '  "watch_for": ["<tip 1, 10 words max>", "<tip 2, 10 words max>"]\n'
+            "}"
+        )
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": f"Prospect: {user_msg}\nSales Rep: {bot_reply}"},
         ]
-        
-        # Call LLM and track latency
-        request_start = time.time()
+
         try:
-            llm_response = self.provider.chat(
-                llm_messages,
-                temperature=0.8,
-                max_tokens=250,
-                stage=self.flow_engine.current_stage
-            )
-            
-            latency_ms = (time.time() - request_start) * 1000
-            
-            # Handle provider errors or empty responses
+            llm_response = self.provider.chat(messages, temperature=0.3, max_tokens=150, stage=stage)
             if llm_response.error or not llm_response.content:
-                error_detail = llm_response.error if llm_response.error else "empty response"
-                fallback = f"I'm having trouble ({error_detail}). Try again?"
-                return self._fallback(fallback, latency_ms, user_message)
-            
-            bot_reply = llm_response.content
-            
-            # Record turn
-            self.flow_engine.add_turn(user_message, bot_reply)
-            
-            if self.session_id:
-                PerformanceTracker.log_stage_latency(
-                    session_id=self.session_id,
-                    stage=self.flow_engine.current_stage,
-                    strategy=self.flow_engine.flow_type,
-                    latency_ms=latency_ms,
-                    provider=self._provider_name,
-                    model=self._model_name,
-                    user_message_length=len(user_message),
-                    bot_response_length=len(bot_reply)
-                )
-            
-            # Check for advancement
-            advancement = self.flow_engine.should_advance(user_message)
-            if advancement:
-                if isinstance(advancement, str):
-                    # Direct jump to stage
-                    self.flow_engine.advance(target_stage=advancement)
-                else:
-                    # Sequential advance
-                    self.flow_engine.advance()
-            
-            return ChatResponse(
-                content=bot_reply,
-                latency_ms=latency_ms,
-                provider=self._provider_name,
-                model=self._model_name,
-                input_len=len(user_message),
-                output_len=len(bot_reply)
-            )
-        
+                raise ValueError("Empty or error response")
+
+            raw = llm_response.content.strip()
+            raw = re.sub(r"^```(?:json)?\s*", "", raw)
+            raw = re.sub(r"\s*```$", "", raw)
+
+            result = json.loads(raw)
+            if not isinstance(result.get("watch_for"), list):
+                result["watch_for"] = []
+            return result
+
         except Exception as e:
-            logger.exception(f"Unexpected error: {e}")
-            latency_ms = (time.time() - request_start) * 1000
-            fallback = "Something went wrong. Can you try again?"
-            return self._fallback(fallback, latency_ms, user_message)
-    
+            logger.warning(f"Training generation failed: {e}")
+            return {
+                "stage_goal": f"Progress through the {stage} stage.",
+                "what_bot_did": "—",
+                "where_heading": "—",
+                "next_trigger": "—",
+                "watch_for": [],
+            }
+
+    def answer_training_question(self, question):
+        """Answer a trainee's question about the current conversation and sales techniques."""
+        history = self.flow_engine.conversation_history
+        stage = self.flow_engine.current_stage
+        flow_type = self.flow_engine.flow_type
+
+        recent = history[-10:] if history else []
+        conversation_summary = "\n".join(
+            f"{'Prospect' if m['role'] == 'user' else 'Sales Rep'}: {m['content'][:100]}"
+            for m in recent
+        )
+
+        system_prompt = (
+            "You are a sales training coach. A trainee is watching a live roleplay and has a question.\n\n"
+            f"CONVERSATION CONTEXT:\n"
+            f"- Strategy: {flow_type} | Stage: {stage}\n"
+            f"- Recent exchange:\n{conversation_summary}\n\n"
+            "Reply with 2-3 bullet points using '• ' as the bullet character. "
+            "Each bullet: one sentence, max 15 words, actionable and specific to this conversation. "
+            "No intro sentence, no summary — bullets only."
+        )
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": question},
+        ]
+
+        try:
+            llm_response = self.provider.chat(messages, temperature=0.4, max_tokens=200, stage=stage)
+            if llm_response.error or not llm_response.content:
+                return {"answer": "Couldn't generate an answer right now. Try rephrasing your question."}
+            return {"answer": llm_response.content.strip()}
+        except Exception as e:
+            logger.warning(f"Training Q&A failed: {e}")
+            return {"answer": "Something went wrong generating the answer. Try again."}
+
+    # --- Session management ---
+
     def rewind_to_turn(self, turn_index):
-        """Rewind conversation to specific turn.
-        
-        Rationale: Reconstruct FSM state by replaying history.
-        CRITICAL: Must reset FSM state before replaying to avoid duplication.
-        
-        Algorithm:
-        1. Validate turn_index is within bounds
-        2. Extract the history slice we want to keep
-        3. HARD RESET the FSM (clear history, stage, counters)
-        4. Replay turns to rebuild state from scratch with error checking
-        
-        Returns:
-            bool: True if rewind successful, False if invalid index
-        """
-        # 1. Validate index
+        """Rewind to turn_index by hard-resetting FSM state and replaying history."""
         max_turns = len(self.flow_engine.conversation_history) // 2
         if turn_index < 0 or turn_index > max_turns:
             logger.warning(f"Invalid turn_index {turn_index}, max is {max_turns}")
             return False
-        
-        # 2. Capture the slice of history we want to KEEP
+
         history_length = turn_index * 2
-        # Safety check - don't exceed current history
         if history_length > len(self.flow_engine.conversation_history):
             return False
 
         old_history = self.flow_engine.conversation_history[:history_length]
-        
         if old_history and history_length % 2 != 0:
             logger.warning("Invalid history slice (odd length)")
             return False
-        
-        # ---------------------------------------------------------
-        # CRITICAL FIX: HARD RESET THE ENGINE STATE
-        # ---------------------------------------------------------
-        # Clear conversation history to an empty list
-        self.flow_engine.conversation_history = []
-        
-        # Reset turn counter for the current stage
-        self.flow_engine.stage_turn_count = 0
-        
-        # Reset stage to the initial stage of the current flow strategy
-        initial_stage = self.flow_engine.flow_config["stages"][0]
-        self.flow_engine.current_stage = initial_stage
-        # ---------------------------------------------------------
 
-        # 3. Replay turns to rebuild state from scratch
-        for i in range(0, len(old_history), 2):
-            if i + 1 < len(old_history):
-                user_msg = old_history[i]['content']
-                bot_msg = old_history[i + 1]['content']
-                
-                try:
-                    # Now this adds to the freshly cleared history (correct)
-                    self.flow_engine.add_turn(user_msg, bot_msg)
-                    
-                    # Re-calculate state transitions based on replayed history
-                    advancement = self.flow_engine.should_advance(user_msg)
-                    if advancement:
-                        if isinstance(advancement, str):
-                            # Direct jump to specific stage
-                            self.flow_engine.advance(target_stage=advancement)
-                        else:
-                            # Sequential advancement to next stage
-                            self.flow_engine.advance()
-                except Exception as e:
-                    logger.error(f"Replay error at turn {i//2}: {e}")
-                    return False
-        
+        self.flow_engine.conversation_history = []
+        self.flow_engine.stage_turn_count = 0
+        self.flow_engine.current_stage = self.flow_engine.flow_config["stages"][0]
+        self.flow_engine.replay_history(old_history)
         return True
-    
+
     def get_conversation_summary(self):
-        """Return conversation summary.
-        
-        Rationale: Debugging and monitoring support.
-        """
+        """Return FSM state summary with provider info."""
         summary = self.flow_engine.get_summary()
-        summary.update({
-            "provider": type(self.provider).__name__,
-            "model": self.provider.get_model_name()
-        })
+        summary.update({"provider": self._provider_name, "model": self._model_name})
         return summary
-    
-    def switch_provider(self, provider_type: str, model: str = None) -> dict:
-        """Hot-swap LLM provider without losing conversation state.
-        
-        Use Case: 
-        - Fallback to local when cloud fails
-        - A/B testing different models mid-conversation
-        - Cost optimization (switch to local for long conversations)
-        
-        Args:
-            provider_type: 'groq' or 'ollama'
-            model: Optional model override
-            
-        Returns:
-            dict: {"success": bool, "from": str, "to": str, "model": str}
-        """
-        old_provider_name = type(self.provider).__name__
-        old_model = self.provider.get_model_name()
-        
+
+    def switch_provider(self, provider_type, model=None):
+        """Hot-swap LLM provider without losing conversation state."""
+        old_name = self._provider_name
+        old_model = self._model_name
         try:
             new_provider = create_provider(provider_type, model=model)
-            
-            # Verify new provider is available before switching
             if not new_provider.is_available():
-                return {
-                    "success": False,
-                    "error": f"{provider_type} provider is not available",
-                    "current_provider": old_provider_name,
-                    "current_model": old_model
-                }
-            
+                return {"success": False, "error": f"{provider_type} provider is not available",
+                        "current_provider": old_name, "current_model": old_model}
             self.provider = new_provider
-            new_model = self.provider.get_model_name()
-            
-            logger.info(f"Provider switched: {old_provider_name}({old_model}) → "
-                       f"{type(self.provider).__name__}({new_model})")
-            
-            return {
-                "success": True,
-                "from": old_provider_name.replace('Provider', '').lower(),
-                "to": provider_type,
-                "old_model": old_model,
-                "new_model": new_model
-            }
+            logger.info(f"Provider switched: {old_name}({old_model}) -> {self._provider_name}({self._model_name})")
+            return {"success": True, "from": old_name, "to": provider_type,
+                    "old_model": old_model, "new_model": self._model_name}
         except Exception as e:
             logger.error(f"Provider switch failed: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "current_provider": old_provider_name,
-                "current_model": old_model
-            }
+            return {"success": False, "error": str(e),
+                    "current_provider": old_name, "current_model": old_model}

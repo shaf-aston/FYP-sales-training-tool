@@ -16,30 +16,20 @@ class LLMResponse:
     model: str
     latency_ms: float
     error: Optional[str] = None
-    stage: Optional[str] = None  # Track stage context for logging
 
 
 def auto_log_performance(chat_method):
-    """Decorator: Automatically logs LLM performance without cluttering business logic.
-    
-    USAGE: Apply to CONCRETE implementations, not ABC.
-    """
+    """Decorator: log LLM latency and errors after each chat() call."""
     @wraps(chat_method)
     def wrapper(self, *args, **kwargs):
         start = time.time()
         response = chat_method(self, *args, **kwargs)
-        
-        # Calculate latency if not already set
         if response.latency_ms == 0:
             response.latency_ms = (time.time() - start) * 1000
-        
-        # Auto-log in background
         stage = kwargs.get('stage', 'unknown')
         logger.info(f"LLM Response | Model: {response.model} | Latency: {response.latency_ms:.0f}ms | Stage: {stage}")
-        
         if response.error:
             logger.error(f"LLM Error: {response.error}")
-        
         return response
     return wrapper
 

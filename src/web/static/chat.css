@@ -415,10 +415,6 @@ textarea::-webkit-scrollbar-thumb:hover,
   cursor: not-allowed;
 }
 
-.hidden {
-  display: none;
-}
-
 .mic-btn {
   background: rgba(255, 255, 255, 0.05);
   color: #e6ddc8;
@@ -452,6 +448,106 @@ textarea::-webkit-scrollbar-thumb:hover,
   flex-direction: column;
   height: 100%;
   min-height: 0;
+}
+
+/* ─── Training Panel ─────────────────────────────────────────────── */
+
+.container.panel-open {
+  flex-direction: row;
+  max-width: 1100px;
+  align-items: stretch;
+}
+
+.container.panel-open #chatScreen {
+  flex: 1;
+  min-width: 0;
+  height: auto;
+}
+
+#trainingPanel {
+  display: none;
+  flex: 0 0 290px;
+  width: 290px;
+  flex-direction: column;
+  background: rgba(8, 12, 20, 0.98);
+  border-left: 1px solid rgba(255, 255, 255, 0.05);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(183, 119, 31, 0.4) transparent;
+}
+
+#trainingPanel.open {
+  display: flex;
+}
+
+.training-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 16px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 13px;
+  font-weight: 600;
+  color: #b7791f;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  background: rgba(8, 12, 20, 0.98);
+  z-index: 1;
+}
+
+.training-close-btn {
+  background: none;
+  border: none;
+  color: #6b6460;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0 2px;
+  transition: color 0.15s;
+}
+
+.training-close-btn:hover {
+  color: #e6ddc8;
+}
+
+.training-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.training-section {
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.training-label {
+  font-size: 10px;
+  color: #6b6460;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 5px;
+  font-weight: 500;
+}
+
+.training-value {
+  font-size: 13px;
+  color: #d4c5a9;
+  line-height: 1.45;
+}
+
+.training-tips {
+  margin: 0;
+  padding-left: 14px;
+  list-style: disc;
+}
+
+.training-tips li {
+  font-size: 12px;
+  color: #a39885;
+  line-height: 1.5;
+  margin-bottom: 2px;
 }
 
 /* Mobile Phone Compatibility */
@@ -528,5 +624,22 @@ textarea::-webkit-scrollbar-thumb:hover,
     font-size: 16px;
     /* iOS requires 16px input fonts to prevent zoom focus */
     padding: 10px 14px;
+  }
+
+  .container.panel-open {
+    flex-direction: column;
+    max-width: 100%;
+  }
+
+  #trainingPanel.open {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 85vw;
+    max-width: 320px;
+    height: 100dvh;
+    z-index: 100;
+    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.5);
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
   }
 }
