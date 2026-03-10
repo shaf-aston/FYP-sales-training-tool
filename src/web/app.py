@@ -3,7 +3,10 @@ from flask_cors import CORS
 import os
 import sys
 import secrets
+import json
+import threading
 from datetime import datetime, timedelta
+from pathlib import Path
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -13,6 +16,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from chatbot.chatbot import SalesChatbot
 from chatbot.providers import get_available_providers
 from chatbot.performance import PerformanceTracker
+from chatbot.content import generate_init_greeting
 from chatbot.knowledge import (
     load_custom_knowledge, save_custom_knowledge,
     clear_custom_knowledge, ALLOWED_FIELDS, MAX_FIELD_LENGTH,
@@ -27,16 +31,26 @@ CORS(app)
 # Application configuration
 APP_CONFIG = {
     "MAX_MESSAGE_LENGTH": 1000,
-    "SESSION_IDLE_MINUTES": 60
+    "SESSION_IDLE_MINUTES": 60,
+    "CLEANUP_INTERVAL_SECONDS": 900  # 15 minutes
 }
 
 # Session storage: {session_id: {"bot": SalesChatbot, "ts": datetime}}
+# Architecture:
+#   - In-memory dict for fast access during active requests
+#   - Background cleanup thread removes idle sessions every 15 minutes
+#   - Thread-safe access with _session_lock (prevents race conditions)
 sessions = {}
 
+# Lock for thread-safe session access
+_session_lock = threading.Lock()
+
+
+# ─── Request helpers ─────────────────────────────────────────────────────────
 
 def _validate_message(text: str):
     """Validate message text and return (clean_text, error_response).
-    
+
     Returns:
         (text, None) if valid
         (None, error_response) if invalid
@@ -51,7 +65,7 @@ def _validate_message(text: str):
 
 def _bot_state(bot: SalesChatbot) -> dict:
     """Extract common bot state fields for JSON responses.
-    
+
     Returns:
         dict: {"stage": str, "strategy": str}
     """
@@ -59,41 +73,63 @@ def _bot_state(bot: SalesChatbot) -> dict:
     # Once switched to consultative/transactional, show actual stage
     stage = "----" if bot.flow_engine.flow_type == "intent" else bot.flow_engine.current_stage.upper()
     strategy = bot.flow_engine.flow_type.upper()
-    
+
     return {
         "stage": stage,
         "strategy": strategy
     }
 
 
+# ─── Session helpers ─────────────────────────────────────────────────────────
+
 def cleanup_expired_sessions():
-    """Remove sessions idle > SESSION_IDLE_MINUTES. Called lazily on requests."""
-    now = datetime.now()
-    max_idle = timedelta(minutes=APP_CONFIG["SESSION_IDLE_MINUTES"])
-    expired = [sid for sid, s in sessions.items() if now - s["ts"] > max_idle]
-    for sid in expired:
-        del sessions[sid]
-    if expired:
-        app.logger.info(f"Cleaned up {len(expired)} idle sessions")
+    """Remove sessions idle > SESSION_IDLE_MINUTES. Called both lazily and by background thread."""
+    with _session_lock:
+        now = datetime.now()
+        max_idle = timedelta(minutes=APP_CONFIG["SESSION_IDLE_MINUTES"])
+        expired = [sid for sid, s in sessions.items() if now - s["ts"] > max_idle]
+        for sid in expired:
+            del sessions[sid]
+        if expired:
+            app.logger.info(f"Cleaned up {len(expired)} idle sessions")
+
+
+def _schedule_periodic_cleanup():
+    """Background thread: cleanup every CLEANUP_INTERVAL_SECONDS."""
+    def cleanup_loop():
+        while True:
+            import time
+            time.sleep(APP_CONFIG["CLEANUP_INTERVAL_SECONDS"])
+            try:
+                cleanup_expired_sessions()
+            except Exception as e:
+                app.logger.error(f"Cleanup thread error: {e}")
+
+    thread = threading.Thread(target=cleanup_loop, daemon=True)
+    thread.start()
+    app.logger.info(f"Started background cleanup thread (interval: {APP_CONFIG['CLEANUP_INTERVAL_SECONDS']}s)")
 
 
 def get_session(session_id):
-    """Get chatbot, updating timestamp."""
-    entry = sessions.get(session_id)
-    if entry:
-        entry["ts"] = datetime.now()
-        return entry["bot"]
+    """Get chatbot, updating timestamp. Returns bot or None."""
+    with _session_lock:
+        entry = sessions.get(session_id)
+        if entry:
+            entry["ts"] = datetime.now()
+            return entry["bot"]
     return None
 
 
 def set_session(session_id, chatbot):
-    """Store chatbot."""
-    sessions[session_id] = {"bot": chatbot, "ts": datetime.now()}
+    """Store chatbot in memory."""
+    with _session_lock:
+        sessions[session_id] = {"bot": chatbot, "ts": datetime.now()}
 
 
 def delete_session(session_id):
-    """Remove session."""
-    sessions.pop(session_id, None)
+    """Remove session from memory."""
+    with _session_lock:
+        sessions.pop(session_id, None)
 
 
 def require_session():
@@ -112,15 +148,33 @@ def require_session():
     return bot, None
 
 
+# ─── Page routes ─────────────────────────────────────────────────────────────
+
 # Simple favicon handler to avoid browser 404s requesting /favicon.ico
+# Start background cleanup thread on app startup
+_schedule_periodic_cleanup()
+
+
+# ─── Page routes ─────────────────────────────────────────────────────────────
+
 @app.route('/favicon.ico')
 def favicon():
     return ('', 204)
+
 
 @app.route('/')
 def home():
     """Serve the chat interface"""
     return render_template('index.html')
+
+
+@app.route('/knowledge')
+def knowledge_page():
+    """Serve the knowledge base management page."""
+    return render_template('knowledge.html')
+
+
+# ─── Session lifecycle API ───────────────────────────────────────────────────
 
 @app.route('/api/init', methods=['POST'])
 def api_init():
@@ -143,7 +197,7 @@ def api_init():
                 "history": history
             })
 
-    # Create new session with eager bot initialization
+    # Create new session with eager bot initialistion
     session_id = secrets.token_hex(16)
     product_type = data.get('product_type')  # None → generic default → intent-first discovery
     provider = data.get('provider', "groq")
@@ -151,33 +205,28 @@ def api_init():
     try:
         bot = SalesChatbot(provider_type=provider, product_type=product_type, session_id=session_id)
         set_session(session_id, bot)
-        app.logger.info(f"New session: {session_id} (product={product_type}, provider={provider})")
+        app.logger.info(f"New session: {session_id} (product={product_type}, strategy={bot.flow_engine.flow_type}, provider={provider})")
     except Exception as init_error:
         app.logger.exception(f"Bot init failed: {init_error}")
         return jsonify({"error": f"Init failed: {str(init_error)}"}), 500
 
+    # Generate greeting and training data from content.py — synced with STRATEGY_PROMPTS
+    init_data = generate_init_greeting(bot.flow_engine.flow_type)
+
     return jsonify({
         "success": True,
         "session_id": session_id,
-        "message": "Hey, what's up? How can I help you out?",
+        "message": init_data["message"],
         **_bot_state(bot),
         "history": [],
-        "training": {
-            "stage_goal": "Understand what brought the prospect here.",
-            "what_bot_did": "Opened with a casual, approachable greeting.",
-            "where_heading": "Uncovering their goal or problem before advancing.",
-            "next_trigger": "Prospect reveals a clear intention or need.",
-            "watch_for": [
-                "Avoid pitching before intent is clear",
-                "Match their energy from the first message",
-            ],
-        },
+        "training": init_data["training"],
     })
+
 
 @app.route('/api/restore', methods=['POST'])
 def api_restore():
     """Rebuild bot from client-side history after server session loss.
-    
+
     Accepts full conversation history from localStorage, replays into fresh bot
     to reconstruct FSM state without any LLM calls.
     """
@@ -185,35 +234,36 @@ def api_restore():
     history = data.get('history', [])  # [{role, content}, ...]
     product_type = data.get('product_type')  # None → generic default → intent-first discovery
     provider = data.get('provider', "groq")
-    
+
     session_id = secrets.token_hex(16)
-    
+
     try:
         bot = SalesChatbot(provider_type=provider, product_type=product_type, session_id=session_id)
-        
+
         # Replay history directly into FSM — no LLM calls, just state reconstruction
         if history:
             bot.flow_engine.replay_history(history)
-        
+
         set_session(session_id, bot)
         app.logger.info(f"Restored session: {session_id} ({len(history)} messages replayed)")
-        
+
     except Exception as e:
         app.logger.exception(f"Restore failed: {e}")
         return jsonify({"error": f"Restore failed: {str(e)}"}), 500
-    
+
     return jsonify({
         "success": True,
         "session_id": session_id,
         **_bot_state(bot),
     })
 
+
 @app.route('/api/health', methods=['GET'])
 def api_health():
     """Health check: provider availability and performance stats"""
     cleanup_expired_sessions()  # Lazy cleanup
     session_id = request.headers.get('X-Session-ID')
-    
+
     # Get active provider info
     active_provider = None
     active_model = None
@@ -222,13 +272,13 @@ def api_health():
         if bot:
             active_provider = bot._provider_name
             active_model = bot._model_name
-    
+
     # Get available providers
     provider_status = get_available_providers()
-    
+
     # Get aggregate performance stats
     perf_stats = PerformanceTracker.get_provider_stats()
-    
+
     return jsonify({
         "ok": True,
         "active": {
@@ -239,6 +289,19 @@ def api_health():
         "performance_stats": perf_stats
     })
 
+
+@app.route('/api/reset', methods=['POST'])
+def reset():
+    session_id = request.headers.get('X-Session-ID')
+
+    if session_id:
+        delete_session(session_id)
+
+    return jsonify({"success": True})
+
+
+# ─── Conversation API ─────────────────────────────────────────────────────────
+
 @app.route('/api/chat', methods=['POST'])
 def chat():
     """Handle chat messages. Bot must be initialized via /api/init first."""
@@ -247,16 +310,16 @@ def chat():
     user_message, err = _validate_message(data.get('message', ''))
     if err:
         return err
-    
+
     session_id = request.headers.get('X-Session-ID')
     if not session_id:
         return jsonify({"error": "Session ID required in X-Session-ID header"}), 400
-    
+
     # Bot must exist (created in /api/init)
     bot = get_session(session_id)
     if not bot:
         return jsonify({"error": "No active session. Call /api/init first.", "code": "SESSION_EXPIRED"}), 400
-    
+
     try:
         response = bot.chat(user_message)
         training = bot.generate_training(user_message, response.content)
@@ -280,6 +343,71 @@ def chat():
         app.logger.exception(f"Chat error: {e}")
         return jsonify({"error": f"Chat error: {str(e)}"}), 500
 
+
+@app.route('/api/edit', methods=['POST'])
+def edit_message():
+    """Edit user message and regenerate from that point"""
+    session_id = request.headers.get('X-Session-ID')
+    data = request.json
+    msg_index = data.get('index')
+    new_message, err = _validate_message(data.get('message', ''))
+
+    bot, bot_err = require_session()
+    if bot_err: return bot_err
+
+    if err: return err
+
+    # Validate inputs
+    if msg_index is None:
+        return jsonify({"error": "Missing message index"}), 400
+
+    try:
+        msg_index = int(msg_index)
+
+        # Validate index is within bounds
+        max_index = len(bot.flow_engine.conversation_history) - 1
+        if msg_index < 0 or msg_index > max_index:
+            return jsonify({"error": f"Invalid index. Valid range: 0-{max_index}"}), 400
+
+        # Rewind to turn BEFORE the edit, then replay with new message
+        turn_index = msg_index // 2  # Convert message index to turn index
+        if not bot.rewind_to_turn(turn_index):
+            return jsonify({"error": "Rewind failed"}), 500
+
+        # Now chat with the new message
+        response = bot.chat(new_message)
+        training = bot.generate_training(new_message, response.content)
+
+        return jsonify({
+            "success": True,
+            "message": response.content,
+            "history": [{"role": m["role"], "content": m["content"]} for m in bot.flow_engine.conversation_history],
+            **_bot_state(bot),
+            "latency_ms": round(response.latency_ms, 1),
+            "provider": response.provider,
+            "model": response.model,
+            "training": training,
+        })
+    except ValueError:
+        return jsonify({"error": "Invalid index format"}), 400
+    except Exception as e:
+        return jsonify({"error": f"Edit error: {str(e)}"}), 500
+
+
+@app.route('/api/summary', methods=['GET'])
+def get_summary():
+    """Get conversation summary"""
+    bot, err = require_session()
+    if err: return err
+
+    return jsonify({
+        "success": True,
+        "summary": bot.get_conversation_summary()
+    })
+
+
+# ─── Training API ─────────────────────────────────────────────────────────────
+
 @app.route('/api/training/ask', methods=['POST'])
 def training_ask():
     """Answer a trainee's question about the conversation and sales techniques."""
@@ -300,81 +428,8 @@ def training_ask():
         app.logger.exception(f"Training Q&A error: {e}")
         return jsonify({"error": "Failed to generate answer"}), 500
 
-@app.route('/api/summary', methods=['GET'])
-def get_summary():
-    """Get conversation summary"""
-    bot, err = require_session()
-    if err: return err
-    
-    return jsonify({
-        "success": True,
-        "summary": bot.get_conversation_summary()
-    })
 
-@app.route('/api/edit', methods=['POST'])
-def edit_message():
-    """Edit user message and regenerate from that point"""
-    data = request.json
-    msg_index = data.get('index')
-    new_message, err = _validate_message(data.get('message', ''))
-    
-    bot, bot_err = require_session()
-    if bot_err: return bot_err
-    
-    if err: return err
-    
-    # Validate inputs
-    if msg_index is None:
-        return jsonify({"error": "Missing message index"}), 400
-    
-    try:
-        msg_index = int(msg_index)
-        
-        # Validate index is within bounds
-        max_index = len(bot.flow_engine.conversation_history) - 1
-        if msg_index < 0 or msg_index > max_index:
-            return jsonify({"error": f"Invalid index. Valid range: 0-{max_index}"}), 400
-
-        # Rewind to turn BEFORE the edit, then replay with new message
-        turn_index = msg_index // 2  # Convert message index to turn index
-        if not bot.rewind_to_turn(turn_index):
-            return jsonify({"error": "Rewind failed"}), 500
-        
-        # Now chat with the new message
-        response = bot.chat(new_message)
-        training = bot.generate_training(new_message, response.content)
-
-        return jsonify({
-            "success": True,
-            "message": response.content,
-            "history": [{"role": m["role"], "content": m["content"]} for m in bot.flow_engine.conversation_history],
-            **_bot_state(bot),
-            "latency_ms": round(response.latency_ms, 1),
-            "provider": response.provider,
-            "model": response.model,
-            "training": training,
-        })
-    except ValueError:
-        return jsonify({"error": "Invalid index format"}), 400
-    except Exception as e:
-        return jsonify({"error": f"Edit error: {str(e)}"}), 500
-
-@app.route('/api/reset', methods=['POST'])
-def reset():
-    session_id = request.headers.get('X-Session-ID')
-    
-    if session_id:
-        delete_session(session_id)
-    
-    return jsonify({"success": True})
-
-# ─── Knowledge Base Routes ──────────────────────────────────────────
-
-@app.route('/knowledge')
-def knowledge_page():
-    """Serve the knowledge base management page."""
-    return render_template('knowledge.html')
-
+# ─── Knowledge API ───────────────────────────────────────────────────────────
 
 @app.route('/api/knowledge', methods=['GET'])
 def get_knowledge():
@@ -412,10 +467,12 @@ def clear_knowledge_route():
     return jsonify({"success": success})
 
 
+# ─── Error handler ───────────────────────────────────────────────────────────
+
 @app.errorhandler(Exception)
 def handle_unexpected_error(e):
     """Catch-all for unhandled exceptions — prevents stack trace leakage.
-    
+
     Re-raises HTTP exceptions (4xx, 5xx) so Flask handles them normally.
     Only catches truly unexpected errors (e.g., unhandled ValueError, TypeError).
     """
@@ -424,7 +481,6 @@ def handle_unexpected_error(e):
         return e  # Let Flask handle 400, 404, etc. normally
     app.logger.exception("Unhandled error")
     return jsonify({"error": "Internal server error"}), 500
-
 
 
 if __name__ == '__main__':

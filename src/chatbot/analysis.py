@@ -42,23 +42,29 @@ def text_contains_any_keyword(text, keywords):
 
 # --- State analysis ---
 
+def _has_user_stated_clear_goal(history):
+    """Return True if user stated a clear goal in recent history (for tests/debugging)."""
+    if not history:
+        return False
+    goal_keywords = _yaml_config["goal_indicators"]
+    window = _T["recent_history_window"]
+    return any(
+        text_contains_any_keyword(m.get("content", "").lower(), goal_keywords)
+        for m in history[-window:] if m.get("role") == "user"
+    )
+
+
 def analyze_state(history, user_message="", signal_keywords=None):
     """Return {intent, guarded, question_fatigue, decisive} for the current turn.
 
-    Implements Intent Lock (high intent sticks once stated) and distinguishes
-    agreement ("ok" after substantive answer) from guardedness ("ok" to a question).
+    Implements Intent Lock (high intent sticks once stated) and uses context-aware
+    guardedness detection from guardedness_analyzer module.
     """
     if signal_keywords is None:
-        from .content import SIGNALS
-        signal_keywords = SIGNALS
+        signal_keywords = load_signals()
 
     # Intent Lock: check if goal was stated in recent history
-    goal_keywords = _yaml_config["goal_indicators"]
-    window = _T["recent_history_window"]
-    user_stated_goal = any(
-        text_contains_any_keyword(m.get("content", "").lower(), goal_keywords)
-        for m in history[-window:] if m.get("role") == "user"
-    ) if history else False
+    user_stated_goal = _has_user_stated_clear_goal(history)
 
     # Default intent detection
     intent = "medium"
@@ -72,37 +78,24 @@ def analyze_state(history, user_message="", signal_keywords=None):
     if user_stated_goal:
         intent = "high"
 
-    # Guardedness / decisiveness detection
-    guarded = False
+    # Guardedness detection (context-aware)
+    from .guardedness_analyzer import get_guardedness_level
+    guardedness_level = 0.0
+    if user_message:
+        guardedness_level = get_guardedness_level(user_message, history)
+    guarded = guardedness_level > 0.4
+
+    # Decisiveness detection
     decisive = False
     if user_message:
-        is_short = len(user_message.split()) <= _T["short_message_limit"]
-
-        if is_short:
-            has_commitment = text_contains_any_keyword(
-                user_message.lower(), signal_keywords.get("commitment", [])
-            )
-            has_high_intent = text_contains_any_keyword(
-                user_message.lower(), signal_keywords.get("high_intent", [])
-            )
-
-            if has_commitment or has_high_intent:
-                decisive = True
-            else:
-                has_guarded = text_contains_any_keyword(
-                    user_message.lower(), signal_keywords["guarded"]
-                )
-                if has_guarded:
-                    prev_bot_asked = (
-                        history and history[-1].get("role") == "assistant"
-                        and "?" in history[-1].get("content", "")
-                    )
-                    prev_user_substantive = (
-                        len(history) >= 2
-                        and len(history[-2].get("content", "").split()) >= _T["min_substantive_word_count"]
-                    )
-                    # Agreement pattern: question -> substantive answer -> "ok" is NOT guarded
-                    guarded = not (prev_bot_asked and prev_user_substantive)
+        has_commitment = text_contains_any_keyword(
+            user_message.lower(), signal_keywords.get("commitment", [])
+        )
+        has_high_intent = text_contains_any_keyword(
+            user_message.lower(), signal_keywords.get("high_intent", [])
+        )
+        # Decisive if commitment/high-intent signals AND not guarded
+        decisive = (has_commitment or has_high_intent) and not guarded
 
     # Question fatigue
     question_fatigue = False
@@ -178,7 +171,7 @@ def is_literal_question(user_message):
     rhetorical = patterns.get("rhetorical_markers", [])
 
     is_question = any(msg.startswith(w) for w in starters) or msg.endswith("?")
-    is_rhetorical = any(m in msg for m in rhetorical) or msg.count(",") > 1
+    is_rhetorical = any(m in msg for m in rhetorical)
     return is_question and not is_rhetorical
 
 

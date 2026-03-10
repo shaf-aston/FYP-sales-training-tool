@@ -1,8 +1,10 @@
 """Groq cloud provider - wraps existing Groq API integration"""
+
 import os
 import time
 import logging
 from typing import List, Dict
+
 from .base import BaseLLMProvider, LLMResponse, auto_log_performance
 
 logger = logging.getLogger(__name__)
@@ -20,13 +22,8 @@ class GroqProvider(BaseLLMProvider):
     def __init__(self, model: str = None):
         self.model = model or os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
         self.api_key = os.environ.get("SAFE_GROQ_API_KEY", "").strip()
-        self._client = None  # Instance variable, not class variable
+        self._client = None
         logger.info(f"GroqProvider initialized with model: {self.model}, API key present: {bool(self.api_key)}")
-
-    def _get_client(self):
-        if not self._client:
-            self._client = Groq(api_key=self.api_key)
-        return self._client
 
     @auto_log_performance
     def chat(self, messages: List[Dict], temperature: float = 0.8, max_tokens: int = 200, stage: str = None) -> LLMResponse:
@@ -34,7 +31,7 @@ class GroqProvider(BaseLLMProvider):
             error_msg = f"Groq unavailable. Library: {GROQ_AVAILABLE}, API Key: {'Set' if self.api_key else 'Missing'}"
             logger.error(error_msg)
             return LLMResponse(content="", model=self.model, latency_ms=0, error=error_msg)
-        
+
         request_start_time = time.time()
         try:
             client = self._get_client()
@@ -57,6 +54,11 @@ class GroqProvider(BaseLLMProvider):
 
     def is_available(self) -> bool:
         return GROQ_AVAILABLE and bool(self.api_key)
-    
+
     def get_model_name(self) -> str:
         return self.model
+
+    def _get_client(self):
+        if not self._client:
+            self._client = Groq(api_key=self.api_key)
+        return self._client

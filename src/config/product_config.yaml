@@ -1,8 +1,12 @@
-# Product-based flow configuration
-# Maps product types to sales strategies, context descriptions, and product knowledge
-# Products with 'aliases' lists allow multiple lookup keys to resolve to the same entry
+# Sales strategy config per product
+# strategy: which FSM flow to use (consultative / transactional / intent)
+# aliases: alternative names that map to the same product
+# knowledge: injected into the LLM system prompt at runtime
 
 products:
+
+  # ─── Discovery (unknown product) ────────────────────────────────────────────
+
   default:
     strategy: "intent"
     context: "various products and services"
@@ -11,27 +15,70 @@ products:
       When asked what you sell: briefly explain you can assist with various products and ask what they're interested in.
       Focus on understanding their needs quickly and moving to relevant options.
 
+  # ─── Consultative — high-ticket, relationship-driven ────────────────────────
+
   luxury_cars:
     strategy: "consultative"
     context: "luxury vehicles"
     aliases: ["luxury_car", "luxury", "premium_cars"]
     knowledge: |
       Available models:
-      - BMW 5 Series: $55,000-$65,000. Twin-turbo inline-6, 335hp, leather interior, 12.3" touchscreen, adaptive cruise, parking assist. MPG: 26 city / 33 highway.
-      - Mercedes C-Class: $48,000-$58,000. Turbo inline-4, 255hp, MB User Experience infotainment, 64-color ambient lighting, Burmester audio. MPG: 25 city / 35 highway.
-      - Audi A6: $58,000-$68,000. Turbo V6, 335hp, Quattro AWD, virtual cockpit, Bang & Olufsen audio, matrix LED headlights. MPG: 23 city / 31 highway.
-      Key differentiators: BMW=driving dynamics, Mercedes=comfort/luxury, Audi=tech/AWD.
+      - BMW X3 (2026): $50,900-$65,900. Turbocharged 4-cyl 255hp (30 xDrive) or 6-cyl M50 xDrive. xDrive AWD standard, curved 12.3" display, iDrive 8, Harman Kardon audio, adaptive suspension. MPG: 28 city / 35 highway. Best for: sporty handling, tech features, driving dynamics.
+      - Mercedes-Benz C-Class (2026): $49,650-$64,150. C300 (255hp turbo 4-cyl) or AMG C43 (416hp). MBUX infotainment, 64-colour ambient lighting, Burmester 3D audio, rear-axle steering option. MPG: 26 city / 35 highway. Best for: interior luxury, prestige, ride comfort.
+      - Audi A6 (2026): $57,000-$70,000+. 3.0L turbocharged V6 362hp, quattro AWD, virtual cockpit plus, MMI touch response, Bang & Olufsen audio, matrix LED headlights. Best for: understated prestige, AWD confidence, technology.
+      Key differentiators: BMW=sporty/driver-focused, Mercedes=luxury comfort/prestige, Audi=technology and AWD capability.
+      Audi offers free scheduled maintenance for first 3 years/30,000 miles (2026 models). BMW ConnectedDrive included. Mercedes MBUX gets OTA updates.
 
-  enterprise_software:
+  fitness:
     strategy: "consultative"
-    context: "enterprise CRM software"
-    aliases: ["crm", "software", "saas", "enterprise"]
+    context: "personal fitness coaching and nutrition"
+    aliases: ["gym", "training", "coaching", "supplements", "personal_training", "workout"]
+    knowledge: |
+      Available coaching plans:
+      - Foundation Plan: $99/month. 2 x 1:1 coaching sessions/week, basic meal plan template, training app access, monthly progress call. Best for: beginners, building habits, accountability.
+      - Transformation Plan: $199/month. 4 x 1:1 sessions/week, fully customised nutrition and macro tracking, weekly video check-ins, supplement guidance, body composition tracking. Best for: committed individuals wanting structured, measurable results.
+      - Elite Coaching: $399/month. Daily coach access, personalised nutrition protocol, supplement stack, bi-weekly InBody scans, priority messaging, competition prep option. Best for: serious athletes, rapid transformation, competition prep.
+      Key differentiators: Foundation=habits/accountability, Transformation=structured results, Elite=all-in performance coaching.
+      Additional context: Average client loses 12-15 lbs in first 3 months on Transformation plan. 95% client retention. All coaches NASM/ACE certified with 5+ years experience. 30-day money-back guarantee if no visible results.
+
+  insurance:
+    strategy: "consultative"
+    context: "life and health insurance plans"
+    aliases: ["life_insurance", "health_insurance", "coverage", "policy", "policies"]
     knowledge: |
       Available plans:
-      - Starter: $29/user/month. Contact management, email integration, basic reporting, 5GB storage. Up to 10 users.
-      - Professional: $79/user/month. Pipeline management, workflow automation, advanced analytics, API access, 50GB storage. Up to 100 users.
-      - Enterprise: $149/user/month. Custom dashboards, AI-powered insights, dedicated support, SSO, unlimited storage, custom integrations. Unlimited users.
-      Key differentiators: Starter=small teams getting started, Professional=growing teams needing automation, Enterprise=large orgs needing customization.
+      - Essential Life: $35/month. $250,000 term life cover (20-year term), no medical exam required, digital application, coverage begins within 48 hours. Best for: young adults, first-time buyers, basic financial protection.
+      - Family Shield: $145/month. $500,000 life cover, $300 deductible, full hospitalisation, GP and specialist visits, dental and vision add-on available, covers family of 4. Best for: young families, comprehensive everyday protection.
+      - Premium Protection: $245/month. $1,000,000 life cover, critical illness rider, income protection, mental health coverage, worldwide emergency cover, dedicated personal advisor. Best for: high earners, executives, maximum peace of mind.
+      Key differentiators: Essential=affordable entry-level, Family Shield=comprehensive family cover, Premium=full protection with extras.
+      Additional context: Claims processed within 48 hours. 15% multi-policy discount. A+ rated by AM Best. Average life insurance cost in 2026 is $26/month nationally — our plans include bundled benefits beyond basic life cover.
+
+  jewelry:
+    strategy: "consultative"
+    context: "fine jewelry and engagement rings"
+    aliases: ["rings", "engagement", "diamonds", "necklace", "bracelet"]
+    knowledge: |
+      Available pieces:
+      - Classic Solitaire Ring: $3,800-$5,500. 0.75-1.0ct round brilliant natural diamond, VS2 clarity, G colour, 14k white gold band, GIA certified. Best for: timeless elegance, traditional engagement.
+      - Halo Pavé Ring: $6,000-$9,000. 1.0-1.5ct centre diamond, VS1 clarity, F colour, 18k white gold, 0.35ct pavé accent halo, GIA certified. Best for: maximum sparkle, modern romance, statement piece.
+      - Lab-Grown Solitaire: $2,200-$3,500. 1.0-1.5ct lab-created diamond, VVS clarity, E-F colour, 14k white gold. Chemically identical to natural diamonds at 40-60% less cost. Best for: value-conscious buyers, eco-conscious couples.
+      - Tennis Bracelet: $4,500-$7,000. 3.0-5.0ct total weight, round brilliant diamonds, VS2-SI1 clarity, G-H colour, 14k white gold, box clasp with safety catch. Best for: anniversary gifts, everyday luxury.
+      Key differentiators: Solitaire=timeless/understated, Halo=brilliance/modern, Lab-Grown=value without compromise, Tennis Bracelet=versatile gifting.
+      Additional context: Average US engagement ring spend in 2026 is $6,500-$8,580. All natural diamonds ethically sourced and conflict-free. Lifetime setting warranty. Free resizing within first year. 30-day return policy.
+
+  financial_services:
+    strategy: "consultative"
+    context: "personal financial advisory and wealth management"
+    aliases: ["investments", "investing", "wealth", "financial", "advisory", "portfolio"]
+    knowledge: |
+      Available service tiers:
+      - Wealth Starter: $50,000 minimum investment. 0.75% annual management fee, diversified ETF portfolio, quarterly rebalancing, annual review meeting, online dashboard. Best for: young professionals, first-time investors, long-term wealth building.
+      - Premium Advisory: $250,000 minimum investment. 0.50% annual fee, personalised asset allocation, monthly rebalancing, dedicated advisor, tax-loss harvesting, quarterly strategy calls. Best for: established earners, active wealth optimisation.
+      - Private Wealth: $1,000,000+ minimum investment. 0.35% annual fee, bespoke portfolio construction, alternative investments (private equity, hedge funds), estate planning integration, family office services, direct line to senior advisor. Best for: high-net-worth individuals, complex financial situations.
+      Key differentiators: Starter=accessible/automated, Premium=personalised/hands-on, Private Wealth=bespoke/comprehensive.
+      Additional context: SEC-registered investment advisor. Average 8.2% annual net returns over past decade. Fiduciary duty — legally obligated to act in your best interest. SIPC insured up to $500,000. Fee-based model (no commissions).
+
+  # ─── Transactional — direct, price-driven ───────────────────────────────────
 
   budget_fragrances:
     strategy: "transactional"
@@ -66,18 +113,6 @@ products:
       - Hyundai Elantra: $21,000-$27,000. 2.0L 4-cylinder, 147hp, 10.25" touchscreen, SmartSense safety, 37 MPG highway. Best for: value, warranty (10yr/100k), features per dollar.
       Key differentiators: Corolla=reliability king, Civic=driver's choice, Elantra=best value.
 
-  fitness:
-    strategy: "consultative"
-    context: "fitness coaching and supplements"
-    aliases: ["gym", "training", "coaching", "supplements", "personal_training", "workout"]
-    knowledge: |
-      Available programs:
-      - Starter Plan: $99/month. 2 coaching sessions/week, basic meal plan template, access to training app, monthly check-in call. Best for: beginners, accountability seekers.
-      - Pro Plan: $199/month. 4 coaching sessions/week, customized meal plan, weekly video check-ins, supplement guidance, body composition tracking. Best for: committed individuals wanting structured transformation.
-      - Elite Plan: $399/month. Daily coaching access, fully customized nutrition with macro tracking, supplement protocol, bi-weekly InBody scans, priority messaging with coach. Best for: serious athletes, competition prep, rapid transformation.
-      Key differentiators: Starter=foundation/habits, Pro=structured transformation, Elite=all-in premium coaching.
-      Additional context: Average client loses 12-15lbs in first 3 months on Pro plan. 95% client retention rate. All trainers certified (NASM/ACE) with 5+ years experience. Money-back guarantee if no visible results in 30 days.
-
   premium_electronics:
     strategy: "transactional"
     context: "premium electronics"
@@ -88,41 +123,3 @@ products:
       - Dell XPS 15: $1,499-$2,199. Intel Core i7-13700H, 16-32GB RAM, 512GB-1TB SSD, 15.6" OLED 3.5K display, Thunderbolt 4. Best for: Windows power users, business professionals, versatility.
       - Samsung Galaxy S24 Ultra: $1,299-$1,419. Snapdragon 8 Gen 3, 12GB RAM, 256GB-1TB, 6.8" QHD+ AMOLED, S Pen, 200MP camera, 5000mAh battery. Best for: Android enthusiasts, photography, productivity on the go.
       Key differentiators: MacBook=ecosystem/battery/build quality, XPS=Windows versatility/display, Galaxy=mobile photography/S Pen.
-
-  insurance:
-    strategy: "consultative"
-    context: "insurance plans"
-    aliases: ["life_insurance", "health_insurance", "coverage", "policy", "policies"]
-    knowledge: |
-      Available plans:
-      - Essential Cover: $45/month. $250,000 life cover, $500 deductible, basic hospitalization, GP visits covered, 80/20 co-insurance after deductible. Best for: young singles, basic protection.
-      - Family Shield: $125/month. $500,000 life cover, $250 deductible, full hospitalization, specialist visits, dental/vision included, prescription coverage. Best for: families, comprehensive everyday coverage.
-      - Premium Protection: $225/month. $1,000,000 life cover, $100 deductible, worldwide coverage, mental health, alternative therapy, critical illness rider, income protection. Best for: high earners, executives, maximum peace of mind.
-      Key differentiators: Essential=affordable basics, Family Shield=comprehensive family coverage, Premium=maximum protection with extras.
-      Additional context: Claims processed within 48 hours. No medical exam required for Essential. 15% multi-policy discount available. A+ rated by AM Best.
-
-  jewelry:
-    strategy: "consultative"
-    context: "fine jewelry"
-    aliases: ["rings", "engagement", "diamonds", "necklace", "bracelet"]
-    knowledge: |
-      Available pieces:
-      - Classic Solitaire Ring: $3,500-$5,000. 0.75-1.0ct round brilliant diamond, VS2 clarity, G color, 14k white gold band, GIA certified. Best for: timeless elegance, engagement.
-      - Halo Pave Ring: $5,500-$8,000. 1.0-1.5ct center diamond, VS1 clarity, F color, 18k white gold, pave-set halo with 0.35ct accent diamonds, GIA certified. Best for: maximum sparkle, statement piece.
-      - Tennis Bracelet: $4,200-$6,500. 3.0-5.0ct total weight, round brilliant diamonds, VS2-SI1 clarity, G-H color, 14k white gold, box clasp with safety. Best for: everyday luxury, gifts, anniversaries.
-      Key differentiators: Classic Solitaire=timeless/understated, Halo Pave=maximum brilliance/modern, Tennis Bracelet=versatile luxury.
-      Additional context: All diamonds ethically sourced and conflict-free. Lifetime warranty on settings. Free resizing within first year. 30-day return policy.
-
-  financial_services:
-    strategy: "consultative"
-    context: "financial advisory and wealth management"
-    aliases: ["investments", "investing", "wealth", "financial", "advisory", "portfolio"]
-    knowledge: |
-      Available service tiers:
-      - Growth Portfolio: $50,000 minimum investment. 0.75% annual management fee, diversified ETF portfolio, quarterly rebalancing, annual review meeting, online dashboard access. Best for: young professionals, long-term wealth building.
-      - Premium Advisory: $250,000 minimum investment. 0.50% annual management fee, personalized asset allocation, monthly rebalancing, dedicated advisor, tax-loss harvesting, quarterly strategy calls. Best for: established earners, active wealth optimization.
-      - Private Wealth: $1,000,000+ minimum investment. 0.35% annual management fee, bespoke portfolio construction, alternative investments access (PE, hedge funds), estate planning integration, family office services, priority direct line to senior advisor. Best for: high-net-worth individuals, complex financial situations.
-      Key differentiators: Growth=accessible/automated, Premium=personalized/hands-on, Private Wealth=bespoke/comprehensive.
-      Additional context: SEC-registered investment advisor. Average 8.2% annual returns over past decade (net of fees). Fiduciary duty - legally obligated to act in your best interest. SIPC insured up to $500,000.
-
-

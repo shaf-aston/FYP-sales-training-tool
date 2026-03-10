@@ -295,12 +295,79 @@ elicitation_context:
     shared_observation: "Reference common patterns"
     curiosity_statement: "Express interest without demanding"
 
-# Advancement thresholds
+# Advancement configuration (FSM stage transitions)
 advancement:
+  # Intent discovery stage
   intent:
     low_intent_max_turns: 6
     high_intent_max_turns: 4
+  
+  # Logical certainty stage (consultative)
   logical:
-    max_turns: 5
+    max_turns: 10  # Safety valve (was 5, updated to enforce framework)
+    min_matches: 1
+    # Doubt signal keywords
+    doubt_keywords:
+      - "not working"
+      - "struggling"
+      - "problem"
+      - "difficult"
+      - "frustrated"
+      - "issue"
+      - "challenge"
+      - "stuck"
+      - "failing"
+      - "fail"
+      - "wrong"
+      - "bad"
+      - "worse"
+      - "costing"
+      - "losing"
+      - "waste"
+      - "inefficient"
+      - "broken"
+      - "slow"
+      - "inconsistent"
+      - "unreliable"
+      - "miss"
+      - "mistake"
+      - "error"
+      - "confusion"
+      - "unsure"
+  
+  # Emotional certainty stage (consultative)
   emotional:
-    max_turns: 6
+    max_turns: 10  # Safety valve (was 6, updated to enforce framework)
+    min_matches: 1
+    # Emotional stakes keywords
+    stakes_keywords:
+      - "feel"
+      - "worried"
+      - "excited"
+      - "scared"
+      - "hope"
+      - "fear"
+      - "impact"
+      - "change"
+      - "life"
+      - "future"
+      - "dream"
+      - "stress"
+      - "pressure"
+      - "important"
+      - "matter"
+      - "means"
+      - "care"
+      - "family"
+      - "loved ones"
+      - "career"
+      - "security"
+      - "peace of mind"
+      - "anxiety"
+      - "relief"
+      - "desperate"
+      - "urgent"
+      - "need"
+      - "tired"
+      - "exhausted"
+      - "fed up"
