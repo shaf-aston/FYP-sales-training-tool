@@ -93,6 +93,12 @@ def get_tactic(category="elicitation", subtype=None, context=""):
 # Each strategy only sees its own prompts — no cross-contamination.
 
 STRATEGY_PROMPTS = {
+    # === CONSULTATIVE & INTENT-DISCOVERY STRATEGIES ===
+    # These stages follow the NEPQ (Neuro-Emotional Persuasion Questioning) framework
+    # by Jeremy Miner. See Impact formula.txt for the practical script, and
+    # NEPQ_ALIGNMENT.md for detailed mapping.
+    # Reference: https://7thlevelhq.com/my-story-how-i-created-nepq
+
     "intent": {
         "intent": """STAGE: INTENT DISCOVERY (PRODUCT DISCOVERY)
 GOAL: Discover what product/service category the user is interested in.
@@ -119,6 +125,10 @@ ADVANCE WHEN:
     },
 
     "consultative": {
+        # ===== NEPQ Stage 1: INTENT (Connecting + Situation) =====
+        # Impact formula.txt lines 3-12: "Get tangible and experience"
+        # Goal: Discover what they're hoping to achieve (tangible) + current experience
+
         "intent": """STAGE: INTENT DISCOVERY
 GOAL: Understand the user's purpose.
 
@@ -162,6 +172,12 @@ ADVANCE WHEN:
 - User volunteers problem/goal.
 - OR 6 turns max.
 """,
+        # ===== NEPQ Stage 2: LOGICAL CERTAINTY (Problem Awareness) =====
+        # Impact formula.txt lines 15-33: "Get cause, problem, and probe"
+        # Two-phase probe: (1) Cause—"What are you doing for X that's causing Y?"
+        # (2) Like/Dislike—"Besides [negative], do you like [current process]?" + "What would you change?"
+        # Optional: Impact chain—"Has X had an impact on Y?" (connects to emotional stage)
+
         "logical": """STAGE: LOGICAL (NEPQ Problem Awareness)
 GOAL: Guide prospect to NAME their own problem. Create doubt in current approach.
 
@@ -191,6 +207,13 @@ SELF-CHECK:
 
 ADVANCE WHEN: Prospect names a clear problem they have with current approach + doubt is established.
 """,
+        # ===== NEPQ Stage 3: EMOTIONAL CERTAINTY (Solution Awareness + Consequence) =====
+        # Impact formula.txt lines 36-58: "Identity shift and future pace"
+        # Three phases:
+        # (1) IDENTITY FRAME—"Why look at change NOW vs. doubling down?" (lines 37-45)
+        # (2) FUTURE PACING—"What would be different?" (lines 50-53)
+        # (3) CONSEQUENCE OF INACTION—"What happens if you don't change?" (lines 54-58)
+
         "emotional": """STAGE: EMOTIONAL (NEPQ Solution Awareness + Consequence of Inaction)
 GOAL: Surface deeper motivations. Shift prospect from pain of present to desire for future (and cost of staying).
 
@@ -225,6 +248,10 @@ SELF-CHECK:
 
 ADVANCE WHEN: Prospect has expressed both what they want (FP) and consequences of inaction (COI). Emotional investment is clear.
 """,
+        # ===== NEPQ Stage 4: PITCH (Qualifying + Committing) =====
+        # Impact formula.txt lines 59-71: "Commitment to change, pillars, and sell themselves"
+        # Commitment questions → 3-pillar pitch → assumptive close
+
         "pitch": """STAGE: PITCH
 GOAL: Get commitment and present solution.
 
@@ -250,6 +277,10 @@ SELF-CHECK:
 
 ADVANCE WHEN: Objection raised or deal closed.
 """,
+        # ===== NEPQ Stage 5: OBJECTION HANDLING =====
+        # Implicit in NEPQ framework
+        # Strategy: Classify type → Recall stakes → Reframe using prospect's words
+
         "objection": """STAGE: OBJECTION HANDLING
 GOAL: Resolve resistance.
 
@@ -268,6 +299,11 @@ Bot: "I hear you. You mentioned wanting $5k/month. This generates that in month 
 ADVANCE WHEN: Resolved or Walk-away.
 """,
     },
+
+    # ===== TRANSACTIONAL STRATEGY (Non-NEPQ) =====
+    # For simple, price-first products (cars, insurance, generic services)
+    # Framework: NEEDS → MATCH → CLOSE (efficient, NOT emotion-based)
+    # See NEPQ_ALIGNMENT.md for full discussion
 
     "transactional": {
         "intent": """STAGE: INTENT (TRANSACTIONAL) — NEEDS PHASE
