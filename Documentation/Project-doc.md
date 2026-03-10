@@ -102,7 +102,7 @@ This project integrates three complementary theoretical domains to achieve high-
 
 Rackham's (1988) SPIN Selling methodology provides empirical grounding: analysis of 35,000 sales calls shows Need-Payoff questions increase close rates by 47%. The framework prescribes sequential questioning stages (Situation → Problem → Implication → Need-Payoff) that naturally map to conversation progression. However, pure SPIN Selling is insufficient in isolation—it emphasizes advisor-driven questioning but doesn't address the central challenge: when *should* conversation advance if the user isn't responding as planned?
 
-The NEPQ framework (Acuff & Miner, 2023) is founded on the principle that *human beings are most persuasive when they allow others to persuade themselves*—structured questions guide prospects to discover their own problems and articulate their own stakes, triggering deeper emotional commitment. This extends SPIN by recognizing that objections are emotional responses rooted in System 2 thinking (Kahneman, 2011). Rather than arguing with objections, the bot probes underlying concerns and reframes them as solvable problems. This required explicit objection classification (Sales Sniper matrix: Fear, Logistical, Money, Partner, Smokescreen) enabling targeted reframe strategies. The theoretical contribution: *sequential sales methodology requires both progression logic and emotional intelligence in objection handling*—neither SPIN nor basic objection handling suffices alone.
+The NEPQ framework (Acuff & Miner, 2023) is founded on the principle that *human beings are most persuasive when they allow others to persuade themselves*—structured questions guide prospects to discover their own problems and articulate their own stakes, triggering deeper emotional commitment. This extends SPIN by recognizing that objections are often fast, emotional responses (System 1) that prospects rationalize with logic (System 2) (Kahneman, 2011). Rather than arguing with objections, the bot probes underlying concerns and reframes them as solvable problems. This required explicit objection classification (Sales Sniper matrix: Fear, Logistical, Money, Partner, Smokescreen; Ryder, 2020) enabling targeted reframe strategies. The theoretical contribution: *sequential sales methodology requires both progression logic and emotional intelligence in objection handling*—neither SPIN nor basic objection handling suffices alone.
 
 **Prompt Engineering as Behavioral Constraint**
 
@@ -2066,49 +2066,51 @@ Every major quality improvement followed the same iterative cycle: **observe →
 
 **Prompt Engineering & LLM Research:**
 
-Bai, Y., Jones, A., Ndousse, K., Askell, A., Chen, A., DasSarma, N., ... & Kaplan, J. (2022). Constitutional AI: Harmlessness from AI feedback. *arXiv preprint arXiv:2212.08073*.
+Bai, Y. *et al.* (2022) 'Constitutional AI: harmlessness from AI feedback', *arXiv*. Available at: https://arxiv.org/abs/2212.08073 (Accessed: 10 March 2026).
 
-Brown, T., Mann, B., Ryder, N., Subbiah, M., Kaplan, J. D., Dhariwal, P., ... & Amodei, D. (2020). Language models are few-shot learners. *Advances in Neural Information Processing Systems* (NeurIPS), 33, 1877-1901.
+Brown, T. *et al.* (2020) 'Language models are few-shot learners', *Advances in Neural Information Processing Systems*, 33, pp. 1877–1901.
 
-Liu, J., Liu, A., Lu, X., Welleck, S., West, P., Le Bras, R., ... & Hajishirzi, H. (2022). Generated knowledge prompting for commonsense reasoning. *Proceedings of the 60th Annual Meeting of the Association for Computational Linguistics* (Volume 1: Long Papers), pp. 3154-3169.
+Huang, J. *et al.* (2024) 'Large language models cannot self-correct reasoning yet', *12th International Conference on Learning Representations (ICLR 2024)*. Vienna, Austria, 7-11 May.
 
-Wei, J., Wang, X., Schuurmans, D., Bosma, M., Xia, F., Chi, E., ... & Zhou, D. (2022). Chain-of-thought prompting elicits reasoning in large language models. *Advances in Neural Information Processing Systems*, 35, 24824-24837.
+Liu, J. *et al.* (2022) 'Generated knowledge prompting for commonsense reasoning', *Proceedings of the 60th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)*. Dublin, Ireland, 22-27 May. Stroudsburg, PA: Association for Computational Linguistics, pp. 3154–3169.
 
-Yao, S., Zhao, J., Yu, D., Du, N., Shafran, I., Narasimhan, K., & Cao, Y. (2023). ReAct: Synergizing reasoning and acting in language models. *International Conference on Learning Representations* (ICLR).
+Wei, J. *et al.* (2022) 'Chain-of-thought prompting elicits reasoning in large language models', *Advances in Neural Information Processing Systems*, 35, pp. 24824–24837.
+
+Yao, S. *et al.* (2023) 'ReAct: synergizing reasoning and acting in language models', *11th International Conference on Learning Representations (ICLR 2023)*. Kigali, Rwanda, 1-5 May.
 
 **Psycholinguistics & Communication Theory:**
 
-Brennan, S.E. and Clark, H.H. (1996). Conceptual pacts and lexical choice in conversation. *Journal of Experimental Psychology: Learning, Memory, and Cognition*, 22(6), pp. 1482-1493.
+Brennan, S.E. and Clark, H.H. (1996) 'Conceptual pacts and lexical choice in conversation', *Journal of Experimental Psychology: Learning, Memory, and Cognition*, 22(6), pp. 1482–1493.
 
-Schegloff, E.A. (1992). Repair after next turn: The last structurally provided defense of intersubjectivity in conversation. *American Journal of Sociology*, 97(5), pp. 1295-1345.
+Kahneman, D. (2011) *Thinking, fast and slow*. New York: Farrar, Straus and Giroux.
 
-Searle, J.R. (1969). *Speech Acts: An Essay in the Philosophy of Language*. Cambridge: Cambridge University Press.
+Schegloff, E.A. (1992) 'Repair after next turn: the last structurally provided defense of intersubjectivity in conversation', *American Journal of Sociology*, 97(5), pp. 1295–1345.
 
-Sperber, D. and Wilson, D. (1995). *Relevance: Communication and Cognition*. 2nd edn. Oxford: Blackwell.
+Searle, J.R. (1969) *Speech acts: an essay in the philosophy of language*. Cambridge: Cambridge University Press.
 
-**Sales Methodology & Business Context:**
+Sperber, D. and Wilson, D. (1995) *Relevance: communication and cognition*. 2nd edn. Oxford: Blackwell.
 
-Acuff, J. and Miner, J. (2023). *The New Model of Selling: Selling to an Unsellable Generation*. New York: Morgan James Publishing.
+**Sales Methodology, E-Learning & Business Context:**
 
-Association for Talent Development (ATD) (2023). *2023 State of the Industry Report*. Alexandria, VA: ATD Press. Available at: https://www.td.org/research-reports/2023-state-of-the-industry (Accessed: 3 February 2026).
+Acuff, J. and Miner, J. (2023) *The new model of selling: selling to an unsellable generation*. New York: Morgan James Publishing.
 
-Grand View Research (2023). *Corporate Training Market Size, Share & Trends Analysis Report, 2023-2030*. Available at: https://www.grandviewresearch.com/industry-analysis/corporate-training-market-report (Accessed: 3 February 2026).
+Association for Talent Development (2023) *2023 state of the industry report*. Available at: https://www.td.org/research-reports/2023-state-of-the-industry (Accessed: 10 March 2026).
 
-Huang, J., Chen, X., Mishra, S., Zheng, H. S., Yu, A. W., Song, X., & Zhou, D. (2024). Large language models cannot self-correct reasoning yet. *International Conference on Learning Representations* (ICLR).
+Grand View Research (2023) *Corporate training market size, share & trends analysis report, 2023-2030*. Available at: https://www.grandviewresearch.com/industry-analysis/corporate-training-market-report (Accessed: 10 March 2026).
 
-Jordan, K. (2015). Massive open online course completion rates revisited: Assessment, length and attrition. *The International Review of Research in Open and Distributed Learning*, 16(3), pp. 341-358.
+Jordan, K. (2015) 'Massive open online course completion rates revisited: assessment, length and attrition', *The International Review of Research in Open and Distributed Learning*, 16(3), pp. 341–358.
 
-Kahneman, D. (2011). *Thinking, Fast and Slow*. New York: Farrar, Straus and Giroux.
+Rackham, N. (1988) *SPIN selling*. New York: McGraw-Hill.
 
-Rackham, N. (1988). *SPIN Selling*. New York: McGraw-Hill.
+Ryder, M. (2020) 'The objection handling matrix', *Sales Sniper*. Available at: https://www.salessniper.net (Accessed: 10 March 2026).
 
-Syam, N. and Sharma, A. (2018). Waiting for a sales renaissance in the fourth industrial revolution: Machine learning and artificial intelligence in sales research and practice. *Industrial Marketing Management*, 69, pp. 135-146.
+Syam, N. and Sharma, A. (2018) 'Waiting for a sales renaissance in the fourth industrial revolution: machine learning and artificial intelligence in sales research and practice', *Industrial Marketing Management*, 69, pp. 135–146.
 
 **Security & Regulatory Guidance:**
 
-ICO (2023). *Guidance on AI and Data Protection*. Wilmslow: Information Commissioner's Office. Available at: https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/artificial-intelligence/ (Accessed: 5 March 2026).
+Information Commissioner's Office (2023) *Guidance on AI and data protection*. Available at: https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/artificial-intelligence/ (Accessed: 10 March 2026).
 
-OWASP (2021). *OWASP Top Ten: A01 – Injection; A02 – Cryptographic Failures*. OWASP Foundation. Available at: https://owasp.org/www-project-top-ten/ (Accessed: 5 March 2026).
+OWASP Foundation (2021) *OWASP top ten: A01 – injection; A02 – cryptographic failures*. Available at: https://owasp.org/www-project-top-ten/ (Accessed: 10 March 2026).
 
 ---
 
