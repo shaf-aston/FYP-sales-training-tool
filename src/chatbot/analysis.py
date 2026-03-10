@@ -7,12 +7,23 @@ import re
 import random
 from functools import lru_cache
 
-from .config_loader import load_analysis_config, load_signals
+from .loader import load_analysis_config, load_signals
 
 _yaml_config = load_analysis_config()
 _T = _yaml_config["thresholds"]
+_SIGNALS = load_signals()
 
 _NEGATIONS = frozenset({"not", "don't", "doesn't", "no", "never", "can't", "won't"})
+
+_STOP_WORDS = frozenset({
+    'i', 'me', 'my', 'a', 'an', 'the', 'is', 'are', 'was', 'were', 'be', 'been',
+    'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should',
+    'can', 'may', 'to', 'of', 'in', 'for', 'on', 'with', 'at', 'by', 'from',
+    'it', 'its', 'this', 'that', 'not', 'no', 'yes', 'just', 'so', 'but', 'and',
+    'or', 'if', 'then', 'than', 'too', 'very', 'really', 'also', 'like', 'you',
+    'your', 'dont', 'im', 'ive', 'some', 'what', 'how', 'about', 'etc', 'want',
+    'need', 'get', 'got', 'one', 'know',
+})
 
 
 # --- Core keyword matching ---
@@ -43,7 +54,7 @@ def text_contains_any_keyword(text, keywords):
 # --- State analysis ---
 
 def _has_user_stated_clear_goal(history):
-    """Return True if user stated a clear goal in recent history (for tests/debugging)."""
+    """Return True if user stated a clear goal recently (Intent Lock trigger)."""
     if not history:
         return False
     goal_keywords = _yaml_config["goal_indicators"]
@@ -54,11 +65,76 @@ def _has_user_stated_clear_goal(history):
     )
 
 
+def detect_guardedness(user_message, history):
+    """Simplified guardedness detection using keyword matching.
+    
+    Returns float 0.0 (not guarded) to 1.0 (very guarded).
+    
+    Special case: Single-word agreement after substantive answer is NOT guarded.
+    """
+    if not user_message:
+        return 0.0
+    
+    msg_lower = user_message.lower().strip()
+    msg_length = len(user_message.split())
+    
+    # Load guardedness keywords from signals.yaml
+    guardedness = _SIGNALS.get("guardedness_keywords", {})
+    agreement_words = set(guardedness.get("agreement_words", []))
+    
+    # PRIORITY CHECK: Agreement pattern detection
+    # Pattern: substantive user response → bot question → "ok" = agreement, NOT guarded
+    if msg_lower in agreement_words and len(history) >= 2:
+        recent_msgs = history[-4:]
+        has_substantive_user = any(
+            m.get('role') == 'user' and len(m.get('content', '').split()) >= 8
+            for m in recent_msgs
+        )
+        has_bot_question = any(
+            m.get('role') == 'assistant' and '?' in m.get('content', '')
+            for m in recent_msgs
+        )
+        if has_substantive_user and has_bot_question:
+            return 0.0  # Agreement pattern, not guarded
+    
+    # Single-word dismissals (not in agreement_words)
+    dismissal_words = set(guardedness.get("dismissal", []))
+    if msg_lower in dismissal_words:
+        return 0.9
+    
+    # Agreement with elaboration (NOT guarded)
+    if msg_lower.split()[0] in agreement_words and msg_length > 3:
+        return 0.1  # Low guardedness for elaborated agreement
+    
+    # Count keyword matches from all guardedness categories
+    match_count = 0
+    for category in ["sarcasm", "deflection", "defensive", "evasive"]:
+        keywords = guardedness.get(category, [])
+        if any(phrase in msg_lower for phrase in keywords):
+            match_count += 1
+    
+    # Context: Short reply to detailed question
+    if history and len(history) >= 1:
+        last_bot = next((m.get('content', '') for m in reversed(history) if m.get('role') == 'assistant'), '')
+        if len(last_bot.split()) > 50 and msg_length < 8:
+            match_count += 1
+    
+    # Map match count to guardedness level
+    if match_count == 0:
+        return 0.0
+    elif match_count == 1:
+        return 0.3
+    elif match_count == 2:
+        return 0.6
+    else:
+        return 1.0
+
+
 def analyze_state(history, user_message="", signal_keywords=None):
     """Return {intent, guarded, question_fatigue, decisive} for the current turn.
 
-    Implements Intent Lock (high intent sticks once stated) and uses context-aware
-    guardedness detection from guardedness_analyzer module.
+    Implements Intent Lock (high intent sticks once stated) and uses simplified
+    guardedness detection via detect_guardedness().
     """
     if signal_keywords is None:
         signal_keywords = load_signals()
@@ -78,11 +154,10 @@ def analyze_state(history, user_message="", signal_keywords=None):
     if user_stated_goal:
         intent = "high"
 
-    # Guardedness detection (context-aware)
-    from .guardedness_analyzer import get_guardedness_level
+    # Guardedness detection (simplified keyword matching)
     guardedness_level = 0.0
     if user_message:
-        guardedness_level = get_guardedness_level(user_message, history)
+        guardedness_level = detect_guardedness(user_message, history)
     guarded = guardedness_level > 0.4
 
     # Decisiveness detection
@@ -128,21 +203,12 @@ def extract_preferences(history):
 
 def extract_user_keywords(history, max_keywords=6):
     """Extract the user's key terms (nouns/descriptors) for lexical entrainment."""
-    stop_words = {
-        'i', 'me', 'my', 'a', 'an', 'the', 'is', 'are', 'was', 'were', 'be', 'been',
-        'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should',
-        'can', 'may', 'to', 'of', 'in', 'for', 'on', 'with', 'at', 'by', 'from',
-        'it', 'its', 'this', 'that', 'not', 'no', 'yes', 'just', 'so', 'but', 'and',
-        'or', 'if', 'then', 'than', 'too', 'very', 'really', 'also', 'like', 'you',
-        'your', 'dont', 'im', 'ive', 'some', 'what', 'how', 'about', 'etc', 'want',
-        'need', 'get', 'got', 'one', 'know',
-    }
     keywords = []
     for msg in history:
         if msg["role"] == "user":
             for word in msg["content"].lower().split():
                 cleaned = word.strip(".,!?;:'\"")
-                if cleaned and len(cleaned) > 2 and cleaned not in stop_words and cleaned not in keywords:
+                if cleaned and len(cleaned) > 2 and cleaned not in _STOP_WORDS and cleaned not in keywords:
                     keywords.append(cleaned)
     return keywords[-max_keywords:]
 
@@ -155,7 +221,7 @@ def is_repetitive_validation(history, threshold=None):
         threshold = _T["validation_loop_threshold"]
     if not history or len(history) < 4:
         return False
-    validation_phrases = load_signals().get("validation_phrases", [])
+    validation_phrases = _SIGNALS.get("validation_phrases", [])
     recent_bot = [m["content"].lower() for m in history[-10:] if m["role"] == "assistant"]
     count = sum(1 for msg in recent_bot if any(phrase in msg for phrase in validation_phrases))
     return count >= threshold
@@ -180,8 +246,7 @@ def user_demands_directness(history, user_message):
 
     Triggers pitch skip in flow.py when True.
     """
-    signals = load_signals()
-    demand_keywords = signals.get("demand_directness", [])
+    demand_keywords = _SIGNALS.get("demand_directness", [])
     msg_lower = user_message.lower()
 
     if text_contains_any_keyword(msg_lower, demand_keywords):
@@ -212,39 +277,38 @@ _OBJECTION_KEYWORDS = {
                     "not for me", "i'm good", "all set"],
 }
 
-_REFRAME_DESCRIPTIONS = {
-    "money": {
-        "isolate_funds": "Isolate the money concern: 'Setting aside the investment for a moment, is this what you want?'",
-        "self_solve": "Calculate cost of inaction: 'What's it costing you monthly to NOT solve this?'",
-        "plant_credit": "Introduce financing/payment options: 'Most clients use X to spread the cost.'",
-        "funding_options": "Explore alternative funding: 'Have you considered using Y to fund this?'",
-    },
-    "partner": {
-        "same_side": "Get on their side: 'Totally understand. What do you think THEY would say about it?'",
-        "open_wallet_test": "Test real decision-maker: 'If they said yes, would YOU move forward?'",
-        "schedule_followup": "Bring partner in: 'Want to set up a call with them so they can hear it directly?'",
-    },
-    "fear": {
-        "change_of_process": "Reframe risk as process: 'What's the risk of staying where you are?'",
-        "island_analogy": "Use future contrast: 'A year from now, what's worse — trying and adjusting, or staying the same?'",
-        "identity_reframe": "Connect to identity: 'You said you wanted [goal]. This is how people like you get there.'",
-    },
-    "logistical": {
-        "solve_mechanics": "Remove the barrier: 'What if I handled [logistics]? Would that change things?'",
-        "simplify_process": "Simplify: 'It's actually just [N] steps. Here's exactly what happens next.'",
-    },
-    "think": {
-        "drill_to_root": "Find the real concern: 'Totally fair. What specifically would you be weighing up?'",
-        "handle_root_type": "Address root concern: Once identified, handle as money/fear/partner type.",
-    },
-    "smokescreen": {
-        "legitimacy_test": "Test if genuine: 'I hear you. Just so I understand — is it the product itself, or something else?'",
-    },
-}
-
-
 def classify_objection(user_message, history=None):
     """Classify objection type and return reframe strategy for the LLM prompt."""
+    _REFRAME_DESCRIPTIONS = {
+        "money": {
+            "isolate_funds": "Isolate the money concern: 'Setting aside the investment for a moment, is this what you want?'",
+            "self_solve": "Calculate cost of inaction: 'What's it costing you monthly to NOT solve this?'",
+            "plant_credit": "Introduce financing/payment options: 'Most clients use X to spread the cost.'",
+            "funding_options": "Explore alternative funding: 'Have you considered using Y to fund this?'",
+        },
+        "partner": {
+            "same_side": "Get on their side: 'Totally understand. What do you think THEY would say about it?'",
+            "open_wallet_test": "Test real decision-maker: 'If they said yes, would YOU move forward?'",
+            "schedule_followup": "Bring partner in: 'Want to set up a call with them so they can hear it directly?'",
+        },
+        "fear": {
+            "change_of_process": "Reframe risk as process: 'What's the risk of staying where you are?'",
+            "island_analogy": "Use future contrast: 'A year from now, what's worse — trying and adjusting, or staying the same?'",
+            "identity_reframe": "Connect to identity: 'You said you wanted [goal]. This is how people like you get there.'",
+        },
+        "logistical": {
+            "solve_mechanics": "Remove the barrier: 'What if I handled [logistics]? Would that change things?'",
+            "simplify_process": "Simplify: 'It's actually just [N] steps. Here's exactly what happens next.'",
+        },
+        "think": {
+            "drill_to_root": "Find the real concern: 'Totally fair. What specifically would you be weighing up?'",
+            "handle_root_type": "Address root concern: Once identified, handle as money/fear/partner type.",
+        },
+        "smokescreen": {
+            "legitimacy_test": "Test if genuine: 'I hear you. Just so I understand — is it the product itself, or something else?'",
+        },
+    }
+
     objection_config = _yaml_config.get("objection_handling", {})
     classification_order = objection_config.get(
         "classification_order",
@@ -255,6 +319,9 @@ def classify_objection(user_message, history=None):
     combined = msg_lower
     if history:
         recent_user = [m["content"].lower() for m in history[-4:] if m["role"] == "user"]
+        # Deduplicate: history already contains current message as last user turn
+        if recent_user and recent_user[-1] == msg_lower:
+            recent_user = recent_user[:-1]
         combined = " ".join(recent_user) + " " + msg_lower
 
     for obj_type in classification_order:

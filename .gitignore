@@ -46,8 +46,10 @@ Thumbs.db
 
 .claude
 .pytest_cache
-Aston Docs/
+# Aston Docs/
 sessions_backup/
+
+# CS3IP Mark Scheme-2025-6.pdf
 
 .tmp*
 .Clear-Caches.py

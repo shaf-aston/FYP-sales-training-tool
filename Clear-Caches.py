@@ -1,4 +1,4 @@
-# Don't dele this file
+# Don't delete this file
 
 import os
 import shutil

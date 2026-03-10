@@ -264,6 +264,14 @@ class TestAdvancementRules:
     def test_intent_no_advance_on_greeting(self):
         assert not user_has_clear_intent([], "hello there", 0)
 
+    def test_intent_no_advance_on_generic_want(self):
+        """'want' alone is a stopword — generic desire ≠ buying intent."""
+        assert not user_has_clear_intent([], "i want to make more money", 0)
+
+    def test_intent_no_advance_on_generic_need(self):
+        """'need' alone is a stopword — 'I need more' has no buying signal."""
+        assert not user_has_clear_intent([], "i need more revenue", 0)
+
     def test_intent_advance_on_max_turns(self):
         """Even without keywords, intent advances after max turns."""
         assert user_has_clear_intent([], "still thinking", 6)

@@ -45,10 +45,10 @@ class OllamaProvider(BaseLLMProvider):
                     "options": {
                         "temperature": temperature,
                         "num_predict": max_tokens,
-                        "num_ctx": 4096,
-                        "top_p": 0.9,
-                        "top_k": 40,
-                        "repeat_penalty": 1.1,
+                        "num_ctx": int(os.environ.get("OLLAMA_NUM_CTX", 4096)),
+                        "top_p": float(os.environ.get("OLLAMA_TOP_P", 0.9)),
+                        "top_k": int(os.environ.get("OLLAMA_TOP_K", 40)),
+                        "repeat_penalty": float(os.environ.get("OLLAMA_REPEAT_PENALTY", 1.1)),
                     },
                 },
                 timeout=60,
@@ -74,7 +74,7 @@ class OllamaProvider(BaseLLMProvider):
 
     def is_available(self) -> bool:
         """Check if Ollama server is running and model is installed. Cached for 30s."""
-        if self._available_cache:
+        if self._available_cache is not None:
             cached_result, cached_time = self._available_cache
             if time.time() - cached_time < self._cache_ttl:
                 return cached_result
@@ -87,7 +87,7 @@ class OllamaProvider(BaseLLMProvider):
 
             models = resp.json().get("models", [])
             model_family = self.model.split(":")[0]
-            result = any(model_family in m["name"] for m in models)
+            result = any(m["name"] == self.model or m["name"].startswith(model_family + ":") for m in models)
             self._available_cache = (result, time.time())
             return result
         except requests.exceptions.RequestException:

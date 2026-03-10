@@ -12,7 +12,7 @@ Tests framework compliance: stages should NOT auto-advance without proper signal
 """
 
 import pytest
-from src.chatbot.chatbot import SalesChatbot
+from chatbot.chatbot import SalesChatbot
 
 
 class TestConsultativeFlowIntegration:

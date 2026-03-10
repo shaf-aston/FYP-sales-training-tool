@@ -2,10 +2,21 @@
 
 from .content import generate_stage_prompt, SIGNALS
 from .analysis import text_contains_any_keyword, analyze_state, user_demands_directness, _extract_recent_user_text
-from .config_loader import load_analysis_config
+from .loader import load_analysis_config
 
 _STAGE_CONFIG = load_analysis_config()
 
+# Shared transitions used across multiple strategies (identical regardless of strategy)
+_COMMON_TRANSITIONS = {
+    "pitch": {
+        "next": "objection",
+        "advance_on": "commitment_or_objection"
+    },
+    "objection": {
+        "next": None,
+        "advance_on": "commitment_or_walkaway"
+    }
+}
 
 FLOWS = {
     "intent": {
@@ -23,28 +34,18 @@ FLOWS = {
         "transitions": {
             "intent": {
                 "next": "logical",
-                "advance_on": "user_has_clear_intent",
-                "max_turns": {"low_intent": 6, "high_intent": 4}
+                "advance_on": "user_has_clear_intent"
             },
             "logical": {
                 "next": "emotional",
                 "advance_on": "user_shows_doubt",
-                "max_turns": 10,
                 "urgency_skip_to": "pitch",
             },
             "emotional": {
                 "next": "pitch",
-                "advance_on": "user_expressed_stakes",
-                "max_turns": 10
+                "advance_on": "user_expressed_stakes"
             },
-            "pitch": {
-                "next": "objection",
-                "advance_on": "commitment_or_objection"
-            },
-            "objection": {
-                "next": None,
-                "advance_on": "commitment_or_walkaway"
-            }
+            **_COMMON_TRANSITIONS
         }
     },
 
@@ -53,17 +54,9 @@ FLOWS = {
         "transitions": {
             "intent": {
                 "next": "pitch",
-                "advance_on": "user_has_clear_intent",
-                "max_turns": {"low_intent": 6, "high_intent": 4}
+                "advance_on": "user_has_clear_intent"
             },
-            "pitch": {
-                "next": "objection",
-                "advance_on": "commitment_or_objection"
-            },
-            "objection": {
-                "next": None,
-                "advance_on": "commitment_or_walkaway"
-            }
+            **_COMMON_TRANSITIONS
         }
     }
 }
@@ -73,14 +66,14 @@ FLOWS = {
 
 def user_has_clear_intent(history, user_msg, turns):
     """True when buying signals, intent keywords, or max turns reached.
-    
-    Intent stage is discovery - allow turn-based advancement since user may be reticent.
-    """
-    if user_msg and any(word in user_msg.lower() for word in ["buy", "purchase"]):
-        return True
 
-    intent_keywords = ['want', 'need', 'looking for', 'help with',
-                       'interested in', 'price', 'problem']
+    Intent stage is discovery - allow turn-based advancement since user may be reticent.
+    NOTE: 'want' and 'need' are deliberately excluded - they are stopwords (analysis.py)
+    and fire on generic statements ("I want to make money") that carry no buying intent.
+    """
+    intent_keywords = ['looking for', 'help with', 'interested in',
+                       'price', 'problem', 'buy', 'purchase', 'struggling',
+                       'have to', 'ready to buy', 'looking to buy']
     if user_msg and text_contains_any_keyword(user_msg.lower(), intent_keywords):
         return True
 
@@ -94,54 +87,54 @@ def user_has_clear_intent(history, user_msg, turns):
     return turns >= max_turns
 
 
+def _check_advancement_condition(history, user_msg, turns, stage_name, min_turns=2):
+    """Generic advancement detector: check config keywords + safety valve.
+
+    Used by stages that require signal detection before auto-advancement.
+    FRAMEWORK: Must detect actual signal (doubt, stakes) or hit max_turns safety valve.
+    Do NOT auto-advance on turn count alone - violates consultative framework.
+
+    Args:
+        turns: Number of turns in the CURRENT stage (stage_turn_count)
+        min_turns: Minimum turns required in this stage before checking signals
+    """
+    if turns < min_turns:
+        return False
+
+    # Load config and keywords for this stage
+    stage_config = _STAGE_CONFIG.get('advancement', {}).get(stage_name, {})
+    keyword_key = {
+        'logical': 'doubt_keywords',
+        'emotional': 'stakes_keywords'
+    }.get(stage_name, f'{stage_name}_keywords')
+
+    keywords = stage_config.get(keyword_key, [])
+    max_turns = stage_config.get('max_turns', 10)
+
+    # Check for signal in recent conversation
+    recent_text = _extract_recent_user_text(history, max_messages=5)
+    has_signal = text_contains_any_keyword(recent_text, keywords)
+
+    # Safety valve: auto-advance if max_turns exceeded (resistant prospect)
+    return has_signal or turns >= max_turns
+
+
 def user_shows_doubt(history, user_msg, turns):
     """True when user acknowledges pain points or current approach isn't working.
-    
+
     FRAMEWORK REQUIREMENT: Must detect actual doubt/problem acknowledgment.
-    Do NOT auto-advance on turn count - this violates the consultative framework.
     Safety valve: After max_turns without doubt signals, assume resistant prospect and advance.
     """
-    if len(history) < 4:
-        return False
-    
-    # Load config-driven keywords and thresholds
-    logical_config = _STAGE_CONFIG.get('advancement', {}).get('logical', {})
-    doubt_keywords = logical_config.get('doubt_keywords', [
-        'not working', 'struggling', 'problem', 'difficult', 'frustrated'
-    ])
-    max_turns = logical_config.get('max_turns', 10)
-    
-    # Require actual doubt signals - user acknowledging current approach has problems
-    recent_text = _extract_recent_user_text(history, max_messages=5)
-    has_doubt = text_contains_any_keyword(recent_text, doubt_keywords)
-    
-    # Safety valve: if max_turns+ with no doubt, prospect may be resistant - advance anyway
-    return has_doubt or turns >= max_turns
+    return _check_advancement_condition(history, user_msg, turns, 'logical', min_turns=2)
 
 
 def user_expressed_stakes(history, user_msg, turns):
     """True when user shares emotional stakes or consequences.
-    
+
     FRAMEWORK REQUIREMENT: Must detect actual emotional investment.
-    Do NOT auto-advance on turn count - this violates the consultative framework.
     Safety valve: After max_turns without stakes, assume low-emotion prospect and advance.
     """
-    if len(history) < 6:
-        return False
-    
-    # Load config-driven keywords and thresholds
-    emotional_config = _STAGE_CONFIG.get('advancement', {}).get('emotional', {})
-    stakes_keywords = emotional_config.get('stakes_keywords', [
-        'feel', 'worried', 'excited', 'scared', 'hope', 'fear'
-    ])
-    max_turns = emotional_config.get('max_turns', 10)
-    
-    # Require actual emotional stakes - user expressing why this matters personally
-    recent_text = _extract_recent_user_text(history, max_messages=5)
-    has_stakes = text_contains_any_keyword(recent_text, stakes_keywords)
-    
-    # Safety valve: if max_turns+ with no stakes, prospect may not be emotional - advance anyway
-    return has_stakes or turns >= max_turns
+    return _check_advancement_condition(history, user_msg, turns, 'emotional', min_turns=3)
 
 
 def commitment_or_objection(history, user_msg, turns):
@@ -175,6 +168,7 @@ class SalesFlowEngine:
     def __init__(self, flow_type, product_context):
         if flow_type not in FLOWS:
             flow_type = "consultative"
+        self._initial_flow_type = flow_type  # Track initial strategy for rewind
         self.flow_config = FLOWS[flow_type]
         self.flow_type = flow_type
         self.product_context = product_context
@@ -260,6 +254,14 @@ class SalesFlowEngine:
         self.stage_turn_count = 0
         return True
 
+    def reset_to_initial(self):
+        """Reset FSM to initial flow type (before any strategy switches). Clears history."""
+        self.flow_type = self._initial_flow_type
+        self.flow_config = FLOWS[self._initial_flow_type]
+        self.current_stage = self.flow_config["stages"][0]
+        self.stage_turn_count = 0
+        self.conversation_history = []
+
     def replay_history(self, history):
         """Replay a history list, advancing FSM state as if turns happened live."""
         pairs = zip(history[::2], history[1::2])
@@ -275,6 +277,7 @@ class SalesFlowEngine:
         """Return current FSM state as a dict."""
         return {
             "flow_type": self.flow_type,
+            "display_strategy": self.strategy_for_prompts,
             "current_stage": self.current_stage,
             "stage_turn_count": self.stage_turn_count,
             "total_turns": len(self.conversation_history) // 2,

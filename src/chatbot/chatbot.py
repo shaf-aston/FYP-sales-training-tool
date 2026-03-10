@@ -6,7 +6,7 @@ import re
 import time
 from dataclasses import dataclass
 
-from .config_loader import get_product_settings, load_signals
+from .loader import get_product_settings, load_signals
 from .flow import SalesFlowEngine
 from .performance import PerformanceTracker
 from .providers import create_provider
@@ -59,7 +59,7 @@ class SalesChatbot:
                     f"{custom_knowledge}\n"
                     "--- END CUSTOM PRODUCT DATA ---"
                 )
-        except ImportError:
+        except (ImportError, OSError, ValueError):
             pass
 
         self.flow_engine = SalesFlowEngine(
@@ -121,15 +121,19 @@ class SalesChatbot:
             )
 
         except Exception as e:
-            logger.exception(f"Unexpected error: {e}")
+            logger.exception("Unexpected error")
             return self._fallback(
                 "Something went wrong. Can you try again?",
                 (time.time() - request_start) * 1000, user_message,
             )
 
     def _fallback(self, message, latency_ms, user_message):
-        """Build fallback ChatResponse after adding turn to history."""
-        self.flow_engine.add_turn(user_message, message)
+        """Build fallback ChatResponse after adding turn to history.
+
+        Append directly without incrementing stage_turn_count — error turns don't count toward FSM advancement.
+        """
+        self.flow_engine.conversation_history.append({"role": "user", "content": user_message})
+        self.flow_engine.conversation_history.append({"role": "assistant", "content": message})
         return ChatResponse(
             content=message,
             latency_ms=latency_ms,
@@ -151,8 +155,10 @@ class SalesChatbot:
 
             if has_cons_user:
                 self.flow_engine.switch_strategy("consultative")
+                return
             elif has_trans_user:
                 self.flow_engine.switch_strategy("transactional")
+                return
             elif len(history) >= 2:
                 bot_last = history[-1].get("content", "").lower()
                 has_trans = text_contains_any_keyword(bot_last, _TRANSACTIONAL_INDICATORS)
@@ -160,10 +166,13 @@ class SalesChatbot:
 
                 if has_cons:
                     self.flow_engine.switch_strategy("consultative")
+                    return
                 elif has_trans:
                     self.flow_engine.switch_strategy("transactional")
+                    return
                 elif self.flow_engine.stage_turn_count >= 3:
                     self.flow_engine.switch_strategy("consultative")
+                    return
 
         advancement = self.flow_engine.should_advance(user_message)
         if advancement:
@@ -195,14 +204,21 @@ class SalesChatbot:
             return False
 
         old_history = self.flow_engine.conversation_history[:history_length]
-        if old_history and history_length % 2 != 0:
-            logger.warning("Invalid history slice (odd length)")
-            return False
 
-        self.flow_engine.conversation_history = []
-        self.flow_engine.stage_turn_count = 0
-        self.flow_engine.current_stage = self.flow_engine.flow_config["stages"][0]
-        self.flow_engine.replay_history(old_history)
+        # Reset FSM to initial state (clears history and resets to initial strategy)
+        self.flow_engine.reset_to_initial()
+
+        # Return early if rewinding to turn 0 (full reset)
+        if turn_index == 0:
+            return True
+
+        # Replay history with strategy-switch handling (calls _apply_advancement per turn)
+        for user_msg_dict, bot_msg_dict in zip(old_history[::2], old_history[1::2]):
+            user_msg = user_msg_dict.get("content", "")
+            bot_msg = bot_msg_dict.get("content", "")
+            self.flow_engine.add_turn(user_msg, bot_msg)
+            self._apply_advancement(user_msg)
+
         return True
 
     def get_conversation_summary(self):

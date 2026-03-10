@@ -10,6 +10,7 @@ objection_handling:
     - "think"
 
   # Max reframes before accepting the objection
+  # FUTURE: max_reframes feature not yet implemented — no code reads these values.
   max_reframes:
     fear: 3
     logistical: 2
@@ -126,6 +127,9 @@ preference_keywords:
     - "save on gas"
   
   # COMFORT & LUXURY - Lifestyle/lifestyle upgrade
+  # NOTE: "luxury" also appears in luxury_cars product context (product_config.yaml line ~21).
+  # In automotive/transactional sessions, "luxury" triggers preference extraction (comfort) rather than
+  # product matching. This is intentional (transactional = direct to pitch) but worth noting.
   comfort:
     - "comfortable"
     - "comfort"
@@ -183,6 +187,9 @@ preference_keywords:
     - "fit in"
   
   # WARRANTY & SUPPORT - Long-term confidence
+  # NOTE: "coverage" also appears in insurance product aliases (product_config.yaml).
+  # In cross-domain sessions, "coverage" may trigger both preference extraction AND product detection.
+  # This is acceptable (coverage is semantically related to both), but worth noting for debugging.
   warranty:
     - "warranty"
     - "guarantee"
@@ -307,6 +314,9 @@ advancement:
     max_turns: 10  # Safety valve (was 5, updated to enforce framework)
     min_matches: 1
     # Doubt signal keywords
+    # NOTE: Removed single-word generics ("bad", "worse", "slow", "wrong", "miss",
+    # "mistake", "error", "confusion", "unsure") — they fire on unrelated contexts.
+    # Examples: "wrong person", "slow weather", "mistake yesterday" =/= problem doubt.
     doubt_keywords:
       - "not working"
       - "struggling"
@@ -318,46 +328,36 @@ advancement:
       - "stuck"
       - "failing"
       - "fail"
-      - "wrong"
-      - "bad"
-      - "worse"
       - "costing"
       - "losing"
       - "waste"
       - "inefficient"
       - "broken"
-      - "slow"
-      - "inconsistent"
       - "unreliable"
-      - "miss"
-      - "mistake"
-      - "error"
-      - "confusion"
-      - "unsure"
+      - "inconsistent"
   
   # Emotional certainty stage (consultative)
   emotional:
     max_turns: 10  # Safety valve (was 6, updated to enforce framework)
     min_matches: 1
     # Emotional stakes keywords
+    # NOTE: Removed single-word generics ("feel", "need", "change", "care", "tired",
+    # "matter") — they fire on unrelated contexts (physical fatigue, preferences,
+    # historical facts). Kept emotional investment language with clear stakes focus
+    # ("worried", "family", "career", "security", "desperate", etc.)
     stakes_keywords:
-      - "feel"
       - "worried"
       - "excited"
       - "scared"
       - "hope"
       - "fear"
       - "impact"
-      - "change"
       - "life"
       - "future"
       - "dream"
       - "stress"
       - "pressure"
       - "important"
-      - "matter"
-      - "means"
-      - "care"
       - "family"
       - "loved ones"
       - "career"
@@ -367,7 +367,5 @@ advancement:
       - "relief"
       - "desperate"
       - "urgent"
-      - "need"
-      - "tired"
       - "exhausted"
       - "fed up"

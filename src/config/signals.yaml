@@ -80,32 +80,65 @@ low_intent:
   - "not in the market"
   - "nothing much"
 
-# Evasive/guarded responses (triggers elicitation mode)
-guarded:
-  - "not really"
-  - "idk"
-  - "dunno"
-  - "maybe"
-  - "i guess"
-  - "whatever"
-  - "meh"
-  - "k"
-  - "sort of"
-  - "kinda"
-  - "not sure"
-  - "no comment"
-  - "rather not say"
-  - "yh"
-  - "ik"
-  - "ok"
-  - "yep"
-  - "i know"
-  - "sure"
+# Guardedness keywords (simplified keyword-based detection)
+# Patterns indicating user is being evasive, dismissive, or defensive
+guardedness_keywords:
+  # Sarcasm markers
+  sarcasm:
+    - "yeah sure"
+    - "oh sure"
+    - "right..."
+    - "whatever you say"
+    - "if you say so"
+    - "sure thing"
+    - "yeah right"
+    - "oh really"
+  
+  # Deflection phrases
+  deflection:
+    - "i don't know"
+    - "i'm not sure"
+    - "i guess"
+    - "maybe"
+    - "i'll think about it"
+    - "we'll see"
+    - "let me consider"
+  
+  # Defensive statements
+  defensive:
+    - "it's fine"
+    - "no problem"
+    - "all good"
+    - "don't worry"
+    - "i'm fine"
+    - "i don't need"
+    - "i'm good"
+  
+  # Single-word dismissals
+  dismissal:
+    - "whatever"
+    - "idk"
+    - "dunno"
+  
+  # Evasive question responses
+  evasive:
+    - "why do you ask"
+    - "what do you mean"
+    - "why does it matter"
+    - "why do you care"
+    - "what's it to you"
+  
+  # Agreement words (NOT guarded when following substantive answer)
+  agreement_words:
+    - "ok"
+    - "sure"
+    - "fine"
+    - "alright"
 
 # High intent signals (user actively wants to buy or solve a problem)
+# NOTE: "want" and "need" removed — they are stopwords that fire on casual statements
+# ("I want to make money", "I need milk") with no buying intent. Context keywords only.
 high_intent:
-  - "want"
-  - "need"
   - "looking for"
   - "trying to"
   - "help with"
@@ -262,6 +295,14 @@ soft_positive:
   - "thats nice"
 
 # Strategy detection keywords (used during intent/discovery phase)
+# INTENT: Detect strategy from BOT's own messages (chatbot.py: _CONSULTATIVE_INDICATORS / _TRANSACTIONAL_INDICATORS)
+# When bot says these words, it signals what strategy is active.
+#
+# NOTE: These lists overlap with user_transactional_signals/user_consultative_signals intentionally:
+# - transactional_bot_indicators: Words the bot outputs when using transactional strategy
+# - user_transactional_signals: Words the USER says when they want transactional strategy
+# Both lists are checked at different times/contexts, so duplication is correct by design.
+
 # Bot response indicators
 transactional_bot_indicators:
   - "budget"
@@ -285,6 +326,8 @@ consultative_bot_indicators:
   - "strategy"
 
 # User intent signals (override bot detection)
+# INTENT: Detect strategy from USER's messages (chatbot.py: _apply_advancement strategy switch)
+# When user says these words, it signals their preference for which strategy to use.
 user_consultative_signals:
   - "mentor"
   - "mentorship"
@@ -298,6 +341,11 @@ user_consultative_signals:
   - "improve"
   - "learn"
 
+# NOTE: Keywords "budget", "price", "cost", "spec", "feature", "delivery", "availability" appear here
+# AND in transactional_bot_indicators (above). This is intentional:
+# - transactional_bot_indicators: Triggered when BOT outputs these words (confirms transactional mode)
+# - user_transactional_signals: Triggered when USER inputs these words (user wants transactional)
+# Both contexts are valid, and detection order is: user_transactional_signals checked first (user overrides bot).
 user_transactional_signals:
   - "budget"
   - "price"
