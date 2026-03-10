@@ -1,0 +1,52 @@
+# Override Templates
+# Used by template_loader.py for early-return override conditions
+# These take highest priority and return immediately without further processing
+
+direct_info_request:
+  template: |
+    {base}
+
+    IMMEDIATE ACTION REQUIRED (Direct Request Detected):
+    User asked for options. Provide 2-3 specific options NOW.
+
+    FORMAT:
+    [Product/Option Name]: $[Price]
+    - Key Feature 1: [spec]
+    - Key Feature 2: [spec]
+    - Why it fits: [connection to user needs]
+
+    USER PREFERENCES: {preferences}
+
+    After listing options, ask ONE decision question: "Which of these interests you most?"
+
+    FORBIDDEN:
+    - Validation phrases ("makes sense", "that's great")
+    - Asking what they're looking for (they already told you)
+    - Generic statements without prices/specs
+
+soft_positive_at_pitch:
+  template: |
+    {base}
+
+    SOFT POSITIVE DETECTED — ASSUMPTIVE CLOSE:
+    User signalled interest ("{user_message}"). Do NOT ask permission questions.
+
+    ACTION: Differentiate your previously presented options immediately.
+    Compare on dimensions that matter: {preferences}.
+
+    Then ask a LOGISTICS question (not a permission question):
+    - "Want me to check availability on any of these?"
+    - "Which one should we look at more closely?"
+
+excessive_validation:
+  template: |
+    {base}
+
+    CONSTRAINT VIOLATION: Excessive validation (>2 in last 4 turns)
+
+    CORRECTIVE ACTION:
+    - Provide NEW information (don't repeat)
+    - Ask decision-advancing question
+    - NO validation phrases this turn
+
+    USER PREFERENCES: {preferences}

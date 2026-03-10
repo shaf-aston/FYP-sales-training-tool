@@ -3,6 +3,7 @@
 import os
 import time
 import logging
+import threading
 from typing import List, Dict
 
 from .base import BaseLLMProvider, LLMResponse, auto_log_performance
@@ -23,6 +24,7 @@ class GroqProvider(BaseLLMProvider):
         self.model = model or os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
         self.api_key = os.environ.get("SAFE_GROQ_API_KEY", "").strip()
         self._client = None
+        self._client_lock = threading.Lock()
         logger.info(f"GroqProvider initialized with model: {self.model}, API key present: {bool(self.api_key)}")
 
     @auto_log_performance
@@ -59,6 +61,7 @@ class GroqProvider(BaseLLMProvider):
         return self.model
 
     def _get_client(self):
-        if not self._client:
-            self._client = Groq(api_key=self.api_key)
+        with self._client_lock:
+            if not self._client:
+                self._client = Groq(api_key=self.api_key)
         return self._client

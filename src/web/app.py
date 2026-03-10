@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
 import os
 import sys
+import time
 import secrets
 import json
 import threading
@@ -148,9 +149,8 @@ def require_session():
     return bot, None
 
 
-# ─── Page routes ─────────────────────────────────────────────────────────────
+# ─── App startup ─────────────────────────────────────────────────────────────
 
-# Simple favicon handler to avoid browser 404s requesting /favicon.ico
 # Start background cleanup thread on app startup
 _schedule_periodic_cleanup()
 
@@ -292,11 +292,11 @@ def api_health():
 
 @app.route('/api/reset', methods=['POST'])
 def reset():
+    """Delete the current session."""
     session_id = request.headers.get('X-Session-ID')
-
-    if session_id:
-        delete_session(session_id)
-
+    if not session_id:
+        return jsonify({"error": "Session ID required"}), 400
+    delete_session(session_id)
     return jsonify({"success": True})
 
 
@@ -347,8 +347,7 @@ def chat():
 @app.route('/api/edit', methods=['POST'])
 def edit_message():
     """Edit user message and regenerate from that point"""
-    session_id = request.headers.get('X-Session-ID')
-    data = request.json
+    data = request.json or {}
     msg_index = data.get('index')
     new_message, err = _validate_message(data.get('message', ''))
 
@@ -484,4 +483,4 @@ def handle_unexpected_error(e):
 
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(debug=os.environ.get('FLASK_DEBUG', 'false').lower() == 'true', port=5000)
