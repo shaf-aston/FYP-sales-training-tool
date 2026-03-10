@@ -82,9 +82,14 @@ def test_stage_progression():
     os.environ["GROQ_API_KEY"] = "test_key"
     bot = SalesChatbot()
     
-    # FSM refactor: current_stage in flow_engine
+    # New architecture: bot starts in "intent" discovery flow
     assert bot.flow_engine.current_stage == "intent", "Starts at intent"
-    assert bot.flow_engine.flow_type in ["consultative", "transactional"], "Valid flow type"
+    assert bot.flow_engine.flow_type == "intent", "Starts in discovery mode"
+    
+    # Simulate strategy switch (discovery -> consultative)
+    bot.flow_engine.switch_strategy("consultative")
+    assert bot.flow_engine.flow_type == "consultative", "Switched to consultative"
+    assert bot.flow_engine.current_stage == "intent", "Reset to first stage of new flow"
     
     # Manually advance (simulating successful intent)
     bot.flow_engine.stage_turn_count = 5  # Trigger max turns rule

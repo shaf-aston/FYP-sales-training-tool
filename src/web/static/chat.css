@@ -1,3 +1,5 @@
+/* ─── Reset & Base ───────────────────────────────────────────────────────── */
+
 * {
   margin: 0;
   padding: 0;
@@ -22,6 +24,8 @@ body {
   overflow: hidden;
 }
 
+/* ─── Layout ─────────────────────────────────────────────────────────────── */
+
 .container {
   width: 100%;
   max-width: 800px;
@@ -37,6 +41,15 @@ body {
   height: calc(100vh - 40px);
   min-height: 0;
 }
+
+#chatScreen {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+/* ─── Header ─────────────────────────────────────────────────────────────── */
 
 .header {
   background: rgba(255, 255, 255, 0.02);
@@ -96,6 +109,8 @@ body {
   color: #f7e9d1;
 }
 
+/* ─── Chat Area ──────────────────────────────────────────────────────────── */
+
 .chat-container {
   flex: 1 1 0;
   overflow-y: auto;
@@ -132,7 +147,7 @@ body {
   background: #b7791f;
 }
 
-/* Scrollbar for textareas */
+/* Scrollbar for textareas and inline edit */
 textarea,
 .inline-edit-box {
   scrollbar-width: thin;
@@ -159,6 +174,8 @@ textarea::-webkit-scrollbar-thumb:hover,
 .inline-edit-box::-webkit-scrollbar-thumb:hover {
   background: rgba(183, 119, 31, 0.6);
 }
+
+/* ─── Messages ───────────────────────────────────────────────────────────── */
 
 .message {
   display: flex;
@@ -198,7 +215,6 @@ textarea::-webkit-scrollbar-thumb:hover,
   border-bottom-left-radius: 6px;
 }
 
-/* Latency/Metrics Badge */
 .message-metrics {
   font-size: 11px;
   color: #6b6460;
@@ -216,7 +232,21 @@ textarea::-webkit-scrollbar-thumb:hover,
   margin-right: 4px;
 }
 
-/* TTS Speaker Button */
+.message.historical {
+  opacity: 0.3;
+  filter: grayscale(0.5);
+  pointer-events: none;
+}
+
+/* ─── Message Controls ───────────────────────────────────────────────────── */
+
+.message-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+  justify-content: flex-end;
+}
+
 .tts-btn {
   background: transparent;
   border: none;
@@ -236,7 +266,6 @@ textarea::-webkit-scrollbar-thumb:hover,
   color: #4ade80;
 }
 
-/* Edit Button for User Messages */
 .edit-btn {
   background: transparent;
   border: none;
@@ -253,12 +282,7 @@ textarea::-webkit-scrollbar-thumb:hover,
   color: #b7791f;
 }
 
-.message-actions {
-  display: flex;
-  gap: 4px;
-  margin-top: 4px;
-  justify-content: flex-end;
-}
+/* ─── Typing Indicator ───────────────────────────────────────────────────── */
 
 .typing-indicator {
   display: flex;
@@ -296,6 +320,8 @@ textarea::-webkit-scrollbar-thumb:hover,
   }
 }
 
+/* ─── Input Area ─────────────────────────────────────────────────────────── */
+
 .input-area {
   padding: 16px;
   background: rgba(255, 255, 255, 0.01);
@@ -324,72 +350,6 @@ textarea::-webkit-scrollbar-thumb:hover,
   outline: none;
   border-color: rgba(183, 119, 31, 0.18);
   box-shadow: 0 8px 20px rgba(15, 10, 6, 0.2);
-}
-
-.edit-divider {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 12px 0 8px;
-  color: #6b6460;
-  font-size: 11px;
-  letter-spacing: 0.5px;
-}
-
-.edit-divider::before,
-.edit-divider::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.message.historical {
-  opacity: 0.3;
-  filter: grayscale(0.5);
-  pointer-events: none;
-}
-
-.inline-edit-box {
-  width: 100%;
-  padding: 8px 10px;
-  background: rgba(255, 255, 255, 0.06);
-  color: #e6ddc8;
-  border: 1px solid #b7791f;
-  border-radius: 8px;
-  font-size: 14px;
-  font-family: inherit;
-  line-height: 1.4;
-  resize: vertical;
-  min-height: 56px;
-  margin-top: 4px;
-}
-
-.inline-edit-actions {
-  display: flex;
-  gap: 6px;
-  margin-top: 6px;
-}
-
-.inline-save-btn {
-  background: #b7791f;
-  color: #071018;
-  border: none;
-  padding: 5px 12px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.inline-cancel-btn {
-  background: transparent;
-  color: #888;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  padding: 5px 12px;
-  border-radius: 6px;
-  font-size: 12px;
-  cursor: pointer;
 }
 
 .send-btn {
@@ -443,14 +403,69 @@ textarea::-webkit-scrollbar-thumb:hover,
   }
 }
 
-#chatScreen {
+/* ─── Inline Edit ────────────────────────────────────────────────────────── */
+
+.edit-divider {
   display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 0;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 8px;
+  color: #6b6460;
+  font-size: 11px;
+  letter-spacing: 0.5px;
 }
 
-/* ─── Training Panel ─────────────────────────────────────────────── */
+.edit-divider::before,
+.edit-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.inline-edit-box {
+  width: 100%;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #e6ddc8;
+  border: 1px solid #b7791f;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  line-height: 1.4;
+  resize: vertical;
+  min-height: 56px;
+  margin-top: 4px;
+}
+
+.inline-edit-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.inline-save-btn {
+  background: #b7791f;
+  color: #071018;
+  border: none;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.inline-cancel-btn {
+  background: transparent;
+  color: #888;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+/* ─── Training Panel ─────────────────────────────────────────────────────── */
 
 .container.panel-open {
   flex-direction: row;
@@ -550,7 +565,15 @@ textarea::-webkit-scrollbar-thumb:hover,
   margin-bottom: 2px;
 }
 
-/* Mobile Phone Compatibility */
+#trainingAnswer div {
+  font-size: 12px;
+  color: #a39885;
+  line-height: 1.5;
+  margin-bottom: 4px;
+}
+
+/* ─── Mobile ─────────────────────────────────────────────────────────────── */
+
 @media (max-width: 640px) {
 
   html,

@@ -1,7 +1,7 @@
 """Finite State Machine for sales flow — state transitions and advancement logic."""
 
 from .content import generate_stage_prompt, SIGNALS
-from .analysis import text_contains_any_keyword, analyze_state, user_demands_directness
+from .analysis import text_contains_any_keyword, analyze_state, user_demands_directness, _extract_recent_user_text
 from .config_loader import load_analysis_config
 
 _STAGE_CONFIG = load_analysis_config()
@@ -29,13 +29,13 @@ FLOWS = {
             "logical": {
                 "next": "emotional",
                 "advance_on": "user_shows_doubt",
-                "max_turns": 5,
+                "max_turns": 10,
                 "urgency_skip_to": "pitch",
             },
             "emotional": {
                 "next": "pitch",
                 "advance_on": "user_expressed_stakes",
-                "max_turns": 6
+                "max_turns": 10
             },
             "pitch": {
                 "next": "objection",
@@ -72,7 +72,10 @@ FLOWS = {
 # --- Advancement Rules (Pure Functions) ---
 
 def user_has_clear_intent(history, user_msg, turns):
-    """True when buying signals, intent keywords, or max turns reached."""
+    """True when buying signals, intent keywords, or max turns reached.
+    
+    Intent stage is discovery - allow turn-based advancement since user may be reticent.
+    """
     if user_msg and any(word in user_msg.lower() for word in ["buy", "purchase"]):
         return True
 
@@ -81,31 +84,64 @@ def user_has_clear_intent(history, user_msg, turns):
     if user_msg and text_contains_any_keyword(user_msg.lower(), intent_keywords):
         return True
 
-    recent_text = _recent_user_text(history)
+    recent_text = _extract_recent_user_text(history, max_messages=3)
     if text_contains_any_keyword(recent_text, intent_keywords):
         return True
 
+    # Allow turn-based advancement for intent stage only
     intent_level = analyze_state(history, user_msg, signal_keywords=SIGNALS)["intent"]
     max_turns = 4 if intent_level == "high" else 6
     return turns >= max_turns
 
 
 def user_shows_doubt(history, user_msg, turns):
-    """True when user acknowledges pain points or max turns reached."""
+    """True when user acknowledges pain points or current approach isn't working.
+    
+    FRAMEWORK REQUIREMENT: Must detect actual doubt/problem acknowledgment.
+    Do NOT auto-advance on turn count - this violates the consultative framework.
+    Safety valve: After max_turns without doubt signals, assume resistant prospect and advance.
+    """
     if len(history) < 4:
-        return turns >= 5
-    doubt_keywords = ['not working', 'struggling', 'problem',
-                      'difficult', 'frustrated', 'true', 'right']
-    return text_contains_any_keyword(_recent_user_text(history), doubt_keywords) or turns >= 5
+        return False
+    
+    # Load config-driven keywords and thresholds
+    logical_config = _STAGE_CONFIG.get('advancement', {}).get('logical', {})
+    doubt_keywords = logical_config.get('doubt_keywords', [
+        'not working', 'struggling', 'problem', 'difficult', 'frustrated'
+    ])
+    max_turns = logical_config.get('max_turns', 10)
+    
+    # Require actual doubt signals - user acknowledging current approach has problems
+    recent_text = _extract_recent_user_text(history, max_messages=5)
+    has_doubt = text_contains_any_keyword(recent_text, doubt_keywords)
+    
+    # Safety valve: if max_turns+ with no doubt, prospect may be resistant - advance anyway
+    return has_doubt or turns >= max_turns
 
 
 def user_expressed_stakes(history, user_msg, turns):
-    """True when user shares emotional stakes or max turns reached."""
+    """True when user shares emotional stakes or consequences.
+    
+    FRAMEWORK REQUIREMENT: Must detect actual emotional investment.
+    Do NOT auto-advance on turn count - this violates the consultative framework.
+    Safety valve: After max_turns without stakes, assume low-emotion prospect and advance.
+    """
     if len(history) < 6:
-        return turns >= 6
-    emotional_keywords = ['feel', 'worried', 'excited', 'scared',
-                          'hope', 'fear', 'impact', 'change']
-    return text_contains_any_keyword(_recent_user_text(history), emotional_keywords) or turns >= 6
+        return False
+    
+    # Load config-driven keywords and thresholds
+    emotional_config = _STAGE_CONFIG.get('advancement', {}).get('emotional', {})
+    stakes_keywords = emotional_config.get('stakes_keywords', [
+        'feel', 'worried', 'excited', 'scared', 'hope', 'fear'
+    ])
+    max_turns = emotional_config.get('max_turns', 10)
+    
+    # Require actual emotional stakes - user expressing why this matters personally
+    recent_text = _extract_recent_user_text(history, max_messages=5)
+    has_stakes = text_contains_any_keyword(recent_text, stakes_keywords)
+    
+    # Safety valve: if max_turns+ with no stakes, prospect may not be emotional - advance anyway
+    return has_stakes or turns >= max_turns
 
 
 def commitment_or_objection(history, user_msg, turns):
@@ -120,15 +156,6 @@ def commitment_or_walkaway(history, user_msg, turns):
     """True when user commits or walks away — objection stage exit."""
     return (text_contains_any_keyword(user_msg, SIGNALS["commitment"]) or
             text_contains_any_keyword(user_msg, SIGNALS["walking"]))
-
-
-def _recent_user_text(history, max_messages=3):
-    """Combined lowercase text of last N user messages."""
-    if not history:
-        return ""
-    recent = history[-(max_messages * 2):]
-    user_msgs = [m["content"].lower() for m in recent if m["role"] == "user"]
-    return " ".join(user_msgs[-max_messages:])
 
 
 ADVANCEMENT_RULES = {
@@ -147,8 +174,7 @@ class SalesFlowEngine:
 
     def __init__(self, flow_type, product_context):
         if flow_type not in FLOWS:
-            raise ValueError(f"Unknown flow type: {flow_type}. Available: {list(FLOWS.keys())}")
-
+            flow_type = "consultative"
         self.flow_config = FLOWS[flow_type]
         self.flow_type = flow_type
         self.product_context = product_context
@@ -183,21 +209,21 @@ class SalesFlowEngine:
         if not transition:
             return False
 
-        # Frustration/directness: skip to pitch immediately
-        if user_demands_directness(self.conversation_history, user_message):
-            if "pitch" in self.flow_config["stages"]:
+        has_pitch_stage = "pitch" in self.flow_config["stages"]
+        
+        # Frustration/directness OR direct info request: skip to pitch immediately
+        if has_pitch_stage:
+            if user_demands_directness(self.conversation_history, user_message):
                 return "pitch"
-
-        # Direct info request: also jumps to pitch
-        direct_requests = SIGNALS.get("direct_info_requests", [])
-        if text_contains_any_keyword(user_message, direct_requests):
-            if "pitch" in self.flow_config["stages"]:
+            
+            direct_requests = SIGNALS.get("direct_info_requests", [])
+            if text_contains_any_keyword(user_message, direct_requests):
                 return "pitch"
 
         # Impatience: urgency_skip_to override (consultative only)
-        urgency_target = transition.get("urgency_skip_to")
-        if urgency_target and text_contains_any_keyword(user_message, SIGNALS["impatience"]):
-            return urgency_target
+        if transition.get("urgency_skip_to"):
+            if text_contains_any_keyword(user_message, SIGNALS.get("impatience", [])):
+                return transition["urgency_skip_to"]
 
         rule_name = transition.get("advance_on")
         if rule_name and rule_name in ADVANCEMENT_RULES:
@@ -235,10 +261,11 @@ class SalesFlowEngine:
         return True
 
     def replay_history(self, history):
-        """Reconstruct FSM state by replaying message pairs."""
-        for i in range(0, len(history) - 1, 2):
-            user_msg = history[i]["content"]
-            bot_msg = history[i + 1]["content"]
+        """Replay a history list, advancing FSM state as if turns happened live."""
+        pairs = zip(history[::2], history[1::2])
+        for user_msg_dict, bot_msg_dict in pairs:
+            user_msg = user_msg_dict.get("content", "")
+            bot_msg = bot_msg_dict.get("content", "")
             self.add_turn(user_msg, bot_msg)
             advancement = self.should_advance(user_msg)
             if advancement:

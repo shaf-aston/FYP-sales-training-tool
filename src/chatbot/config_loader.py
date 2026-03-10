@@ -15,6 +15,8 @@ _REQUIRED_SIGNAL_KEYS = {
     "commitment", "objection", "walking", "impatience",
     "low_intent", "high_intent", "guarded", "demand_directness",
     "direct_info_requests", "soft_positive", "validation_phrases",
+    "transactional_bot_indicators", "consultative_bot_indicators",
+    "user_consultative_signals", "user_transactional_signals",
 }
 
 

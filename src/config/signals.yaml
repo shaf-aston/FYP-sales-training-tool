@@ -260,3 +260,53 @@ soft_positive:
   - "hmm"
   - "okay cool"
   - "thats nice"
+
+# Strategy detection keywords (used during intent/discovery phase)
+# Bot response indicators
+transactional_bot_indicators:
+  - "budget"
+  - "price"
+  - "cost"
+  - "money"
+  - "afford"
+  - "spec"
+  - "feature"
+  - "delivery"
+  - "availability"
+
+consultative_bot_indicators:
+  - "help you with"
+  - "understand"
+  - "transformation"
+  - "goals"
+  - "challenges"
+  - "situation"
+  - "approach"
+  - "strategy"
+
+# User intent signals (override bot detection)
+user_consultative_signals:
+  - "mentor"
+  - "mentorship"
+  - "coaching"
+  - "coach"
+  - "consulting"
+  - "guidance"
+  - "training"
+  - "program"
+  - "service"
+  - "improve"
+  - "learn"
+
+user_transactional_signals:
+  - "budget"
+  - "price"
+  - "cost"
+  - "buy"
+  - "purchase"
+  - "order"
+  - "spec"
+  - "feature"
+  - "availability"
+  - "delivery"
+  - "quote"

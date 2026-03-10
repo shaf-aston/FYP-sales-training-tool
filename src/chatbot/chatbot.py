@@ -6,32 +6,20 @@ import re
 import time
 from dataclasses import dataclass
 
-from .config_loader import get_product_settings
+from .config_loader import get_product_settings, load_signals
 from .flow import SalesFlowEngine
 from .performance import PerformanceTracker
 from .providers import create_provider
+from . import trainer
 
 logger = logging.getLogger(__name__)
 
-# Strategy detection keywords — used by _apply_advancement() discovery mode
-_TRANSACTIONAL_INDICATORS = [
-    "budget", "price", "cost", "money", "afford",
-    "spec", "feature", "delivery", "availability",
-]
-_CONSULTATIVE_INDICATORS = [
-    "help you with", "understand", "transformation",
-    "goals", "challenges", "situation", "approach", "strategy",
-]
-
-# User-intent cues should dominate strategy choice while in discovery mode
-_USER_CONSULTATIVE_SIGNALS = [
-    "mentor", "mentorship", "coaching", "coach", "consulting",
-    "guidance", "training", "program", "service", "improve", "learn",
-]
-_USER_TRANSACTIONAL_SIGNALS = [
-    "budget", "price", "cost", "buy", "purchase", "order",
-    "spec", "feature", "availability", "delivery", "quote",
-]
+# Load strategy detection keywords from config
+_SIGNALS = load_signals()
+_TRANSACTIONAL_INDICATORS = _SIGNALS.get("transactional_bot_indicators", [])
+_CONSULTATIVE_INDICATORS = _SIGNALS.get("consultative_bot_indicators", [])
+_USER_CONSULTATIVE_SIGNALS = _SIGNALS.get("user_consultative_signals", [])
+_USER_TRANSACTIONAL_SIGNALS = _SIGNALS.get("user_transactional_signals", [])
 
 
 @dataclass
@@ -51,6 +39,10 @@ class SalesChatbot:
     def __init__(self, provider_type=None, model=None, product_type=None, session_id=None):
         self.provider = create_provider(provider_type, model=model)
         self.session_id = session_id
+        
+        # Cache provider info to avoid repeated lookups
+        self._provider_name = type(self.provider).__name__.replace("Provider", "").lower()
+        self._model_name = self.provider.get_model_name()
 
         config = get_product_settings(product_type or "")
 
@@ -74,16 +66,6 @@ class SalesChatbot:
             flow_type=config["strategy"],
             product_context=product_context,
         )
-
-    # --- Properties ---
-
-    @property
-    def _provider_name(self):
-        return type(self.provider).__name__.replace("Provider", "").lower()
-
-    @property
-    def _model_name(self):
-        return self.provider.get_model_name()
 
     # --- Core chat loop ---
 
@@ -193,94 +175,11 @@ class SalesChatbot:
 
     def generate_training(self, user_msg, bot_reply):
         """Generate coaching notes for the current exchange via lightweight LLM call."""
-        stage = self.flow_engine.current_stage
-        flow_type = self.flow_engine.flow_type
-        sequence = (
-            "intent -> logical -> emotional -> pitch -> objection"
-            if flow_type == "consultative"
-            else "intent -> pitch -> objection"
-        )
-
-        system_prompt = (
-            "You are a sales training coach observing a live roleplay session. "
-            "Give the trainee concise, specific coaching after each exchange.\n\n"
-            f"CONTEXT:\n"
-            f"- Strategy: {flow_type} | Stage: {stage} (turn {self.flow_engine.stage_turn_count})\n"
-            f"- Stage sequence: {sequence}\n\n"
-            "Reply ONLY with valid JSON — no markdown fences, no extra text:\n"
-            "{\n"
-            '  "stage_goal": "<15 words max: what this stage is trying to accomplish>",\n'
-            '  "what_bot_did": "<15 words max: technique the rep just used and why>",\n'
-            '  "where_heading": "<15 words max: where the conversation goes next>",\n'
-            '  "next_trigger": "<15 words max: what needs to happen to advance>",\n'
-            '  "watch_for": ["<tip 1, 10 words max>", "<tip 2, 10 words max>"]\n'
-            "}"
-        )
-
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": f"Prospect: {user_msg}\nSales Rep: {bot_reply}"},
-        ]
-
-        try:
-            llm_response = self.provider.chat(messages, temperature=0.3, max_tokens=150, stage=stage)
-            if llm_response.error or not llm_response.content:
-                raise ValueError("Empty or error response")
-
-            raw = llm_response.content.strip()
-            raw = re.sub(r"^```(?:json)?\s*", "", raw)
-            raw = re.sub(r"\s*```$", "", raw)
-
-            result = json.loads(raw)
-            if not isinstance(result.get("watch_for"), list):
-                result["watch_for"] = []
-            return result
-
-        except Exception as e:
-            logger.warning(f"Training generation failed: {e}")
-            return {
-                "stage_goal": f"Progress through the {stage} stage.",
-                "what_bot_did": "—",
-                "where_heading": "—",
-                "next_trigger": "—",
-                "watch_for": [],
-            }
+        return trainer.generate_training(self.provider, self.flow_engine, user_msg, bot_reply)
 
     def answer_training_question(self, question):
         """Answer a trainee's question about the current conversation and sales techniques."""
-        history = self.flow_engine.conversation_history
-        stage = self.flow_engine.current_stage
-        flow_type = self.flow_engine.flow_type
-
-        recent = history[-10:] if history else []
-        conversation_summary = "\n".join(
-            f"{'Prospect' if m['role'] == 'user' else 'Sales Rep'}: {m['content'][:100]}"
-            for m in recent
-        )
-
-        system_prompt = (
-            "You are a sales training coach. A trainee is watching a live roleplay and has a question.\n\n"
-            f"CONVERSATION CONTEXT:\n"
-            f"- Strategy: {flow_type} | Stage: {stage}\n"
-            f"- Recent exchange:\n{conversation_summary}\n\n"
-            "Reply with 2-3 bullet points using '• ' as the bullet character. "
-            "Each bullet: one sentence, max 15 words, actionable and specific to this conversation. "
-            "No intro sentence, no summary — bullets only."
-        )
-
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": question},
-        ]
-
-        try:
-            llm_response = self.provider.chat(messages, temperature=0.4, max_tokens=200, stage=stage)
-            if llm_response.error or not llm_response.content:
-                return {"answer": "Couldn't generate an answer right now. Try rephrasing your question."}
-            return {"answer": llm_response.content.strip()}
-        except Exception as e:
-            logger.warning(f"Training Q&A failed: {e}")
-            return {"answer": "Something went wrong generating the answer. Try again."}
+        return trainer.answer_training_question(self.provider, self.flow_engine, question)
 
     # --- Session management ---
 
@@ -311,21 +210,3 @@ class SalesChatbot:
         summary = self.flow_engine.get_summary()
         summary.update({"provider": self._provider_name, "model": self._model_name})
         return summary
-
-    def switch_provider(self, provider_type, model=None):
-        """Hot-swap LLM provider without losing conversation state."""
-        old_name = self._provider_name
-        old_model = self._model_name
-        try:
-            new_provider = create_provider(provider_type, model=model)
-            if not new_provider.is_available():
-                return {"success": False, "error": f"{provider_type} provider is not available",
-                        "current_provider": old_name, "current_model": old_model}
-            self.provider = new_provider
-            logger.info(f"Provider switched: {old_name}({old_model}) -> {self._provider_name}({self._model_name})")
-            return {"success": True, "from": old_name, "to": provider_type,
-                    "old_model": old_model, "new_model": self._model_name}
-        except Exception as e:
-            logger.error(f"Provider switch failed: {e}")
-            return {"success": False, "error": str(e),
-                    "current_provider": old_name, "current_model": old_model}

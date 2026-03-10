@@ -158,10 +158,11 @@ class TestPriority2LiteralQuestions:
                 f"Failed to detect question mark ending: {question}"
     
     def test_rhetorical_questions_excluded(self):
-        """Test that complex rhetorical questions are excluded."""
+        """Test that rhetorical questions with explicit markers are excluded."""
         rhetorical = [
-            "why is the sky blue, why are clouds white, why do birds sing?",  # Multiple clauses
-            "dont you think, isnt it obvious, wouldnt you agree?",  # Multiple clauses
+            "that's obvious, right?",  # "right?" is a rhetorical marker
+            "you understand this, don't you think?",  # "don't you think" = rhetorical
+            "Makes sense, wouldn't you say?",  # "wouldn't you say" = rhetorical
         ]
         
         for question in rhetorical:

@@ -47,6 +47,7 @@ Thumbs.db
 .claude
 .pytest_cache
 Aston Docs/
+sessions_backup/
 
 .tmp*
 .Clear-Caches.py

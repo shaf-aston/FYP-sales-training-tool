@@ -1,13 +1,18 @@
 """Per-stage LLM latency tracking. Metrics appended to metrics.jsonl."""
+
 import json
 import os
 from datetime import datetime
 from threading import Lock
 
 METRICS_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'metrics.jsonl')
+
+# File-level lock — PerformanceTracker methods are called from request threads
 lock = Lock()
 
+
 class PerformanceTracker:
+
     @staticmethod
     def log_stage_latency(session_id, stage, strategy, latency_ms, provider, model, user_message_length=0, bot_response_length=0):
         """Append a latency metric record to metrics.jsonl."""
