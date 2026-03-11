@@ -54,7 +54,7 @@ ADVANCE WHEN:
 GOAL: Understand the user's purpose.
 
 PATTERN:
-1. Acknowledge what they said.
+1. Acknowledge what they said
 2. Redirect to purpose: "What brings you here?"
 
 EXAMPLES (Contrastive):
@@ -237,7 +237,7 @@ NEEDS PHASE RULES:
 - If user gives both, SKIP to pitch immediately.
 
 PATTERN:
-1. Acknowledge.
+1. Acknowledge (only when tactical, not repitive)
 2. Ask ONE specific question (budget OR use-case).
 3. If have data, SKIP to pitch.
 

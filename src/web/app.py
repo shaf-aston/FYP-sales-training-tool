@@ -2,10 +2,7 @@ from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
 import os
 import sys
-import time
 import secrets
-import json
-import threading
 from datetime import datetime, timedelta
 from pathlib import Path
 from dotenv import load_dotenv
@@ -23,45 +20,54 @@ from chatbot.knowledge import (
     clear_custom_knowledge, ALLOWED_FIELDS, MAX_FIELD_LENGTH,
 )
 
+# Security module (centralized security controls)
+from .security import (
+    SecurityConfig,
+    RateLimiter,
+    PromptInjectionValidator,
+    SecurityHeadersMiddleware,
+    InputValidator,
+    SessionSecurityManager,
+    ClientIPExtractor,
+    initialize_security,
+    require_rate_limit,
+)
+
 # Disable .pyc file generation
 sys.dont_write_bytecode = True
 
+# Initialize Flask app
 app = Flask(__name__)
-CORS(app)
 
-# Application configuration
-APP_CONFIG = {
-    "MAX_MESSAGE_LENGTH": 1000,
-    "SESSION_IDLE_MINUTES": 60,
-    "CLEANUP_INTERVAL_SECONDS": 900  # 15 minutes
-}
+# CORS: restrict to configured origins (default: Render deployment + localhost dev).
+# Override via ALLOWED_ORIGINS env var (comma-separated) for other deployments.
+_allowed_origins = [
+    o.strip() for o in
+    os.environ.get('ALLOWED_ORIGINS', 'https://fyp-sales-training-tool.onrender.com,http://localhost:5000').split(',')
+    if o.strip()
+]
+CORS(app, origins=_allowed_origins)
 
-# Session storage: {session_id: {"bot": SalesChatbot, "ts": datetime}}
-# Architecture:
-#   - In-memory dict for fast access during active requests
-#   - Background cleanup thread removes idle sessions every 15 minutes
-#   - Thread-safe access with _session_lock (prevents race conditions)
-sessions = {}
+# ─── Security Initialization ─────────────────────────────────────────────────
 
-# Lock for thread-safe session access
-_session_lock = threading.Lock()
+# Initialize security components (from security module)
+rate_limiter, session_manager, injection_validator = initialize_security(
+    app_logger=app.logger
+)
 
+# Wire security middleware
+app.after_request(SecurityHeadersMiddleware.apply)
+session_manager.start_background_cleanup()
 
 # ─── Request helpers ─────────────────────────────────────────────────────────
 
 def _validate_message(text: str):
-    """Validate message text and return (clean_text, error_response).
-
-    Returns:
-        (text, None) if valid
-        (None, error_response) if invalid
-    """
-    text = text.strip()
-    if not text:
-        return None, (jsonify({"error": "Message required"}), 400)
-    if len(text) > APP_CONFIG["MAX_MESSAGE_LENGTH"]:
-        return None, (jsonify({"error": f"Message too long (max {APP_CONFIG['MAX_MESSAGE_LENGTH']} characters)"}), 400)
-    return text, None
+    """Validate and sanitize message text. Returns (clean_text, error_response)."""
+    return InputValidator.validate_message(
+        text.strip(),
+        injection_validator=injection_validator,
+        max_length=SecurityConfig.MAX_MESSAGE_LENGTH
+    )
 
 
 def _bot_state(bot: SalesChatbot) -> dict:
@@ -84,53 +90,23 @@ def _bot_state(bot: SalesChatbot) -> dict:
 # ─── Session helpers ─────────────────────────────────────────────────────────
 
 def cleanup_expired_sessions():
-    """Remove sessions idle > SESSION_IDLE_MINUTES. Called both lazily and by background thread."""
-    with _session_lock:
-        now = datetime.now()
-        max_idle = timedelta(minutes=APP_CONFIG["SESSION_IDLE_MINUTES"])
-        expired = [sid for sid, s in sessions.items() if now - s["ts"] > max_idle]
-        for sid in expired:
-            del sessions[sid]
-        if expired:
-            app.logger.info(f"Cleaned up {len(expired)} idle sessions")
-
-
-def _schedule_periodic_cleanup():
-    """Background thread: cleanup every CLEANUP_INTERVAL_SECONDS."""
-    def cleanup_loop():
-        while True:
-            import time
-            time.sleep(APP_CONFIG["CLEANUP_INTERVAL_SECONDS"])
-            try:
-                cleanup_expired_sessions()
-            except Exception as e:
-                app.logger.error(f"Cleanup thread error: {e}")
-
-    thread = threading.Thread(target=cleanup_loop, daemon=True)
-    thread.start()
-    app.logger.info(f"Started background cleanup thread (interval: {APP_CONFIG['CLEANUP_INTERVAL_SECONDS']}s)")
+    """Remove sessions idle > SESSION_IDLE_MINUTES. Called lazily by HTTP requests."""
+    session_manager.cleanup_expired()
 
 
 def get_session(session_id):
     """Get chatbot, updating timestamp. Returns bot or None."""
-    with _session_lock:
-        entry = sessions.get(session_id)
-        if entry:
-            entry["ts"] = datetime.now()
-            return entry["bot"]
-    return None
+    return session_manager.get(session_id)
 
 
 def set_session(session_id, chatbot):
     """Store chatbot in memory."""
-    with _session_lock:
-        sessions[session_id] = {"bot": chatbot, "ts": datetime.now()}
+    session_manager.set(session_id, chatbot)
 
 
 def delete_session(session_id):
     """Remove session from memory."""
-    with _session_lock:
-        sessions.pop(session_id, None)
+    session_manager.delete(session_id)
 
 
 def require_session():
@@ -151,11 +127,7 @@ def require_session():
 
 # ─── App startup ─────────────────────────────────────────────────────────────
 
-# Start background cleanup thread on app startup
-_schedule_periodic_cleanup()
-
-
-# ─── Page routes ─────────────────────────────────────────────────────────────
+# Page routes
 
 @app.route('/favicon.ico')
 def favicon():
@@ -177,6 +149,7 @@ def knowledge_page():
 # ─── Session lifecycle API ───────────────────────────────────────────────────
 
 @app.route('/api/init', methods=['POST'])
+@require_rate_limit('init')
 def api_init():
     """Initialize or restore session. Creates bot eagerly to avoid first-message latency."""
     data = request.json or {}
@@ -196,6 +169,13 @@ def api_init():
                 **_bot_state(bot),
                 "history": history
             })
+
+    # Session count ceiling: reject new sessions when server is full
+    if not session_manager.can_create():
+        app.logger.warning(
+            f"Session cap ({SecurityConfig.MAX_SESSIONS}) reached — rejecting new init"
+        )
+        return jsonify({"error": "Server at capacity. Please try again later."}), 503
 
     # Create new session with eager bot initialistion
     session_id = secrets.token_hex(16)
@@ -303,6 +283,7 @@ def reset():
 # ─── Conversation API ─────────────────────────────────────────────────────────
 
 @app.route('/api/chat', methods=['POST'])
+@require_rate_limit('chat')
 def chat():
     """Handle chat messages. Bot must be initialized via /api/init first."""
     cleanup_expired_sessions()  # Lazy cleanup
@@ -417,7 +398,7 @@ def training_ask():
     question = (data.get('question') or '').strip()
     if not question:
         return jsonify({"error": "Question required"}), 400
-    if len(question) > APP_CONFIG["MAX_MESSAGE_LENGTH"]:
+    if len(question) > SecurityConfig.MAX_MESSAGE_LENGTH:
         return jsonify({"error": "Question too long"}), 400
 
     try:
@@ -440,20 +421,15 @@ def get_knowledge():
 def save_knowledge_route():
     """Save custom knowledge data with field-level validation."""
     data = request.json
-    if not data or not isinstance(data, dict):
-        return jsonify({"error": "No data provided"}), 400
 
-    # Reject unknown fields early (knowledge.py also whitelists, this is defense-in-depth)
-    unknown = set(data.keys()) - ALLOWED_FIELDS
-    if unknown:
-        return jsonify({"error": f"Unknown fields: {', '.join(unknown)}"}), 400
-
-    # Reject oversized values before they reach the storage layer
-    for key, value in data.items():
-        if not isinstance(value, str):
-            return jsonify({"error": f"Field '{key}' must be a string"}), 400
-        if len(value) > MAX_FIELD_LENGTH:
-            return jsonify({"error": f"Field '{key}' exceeds {MAX_FIELD_LENGTH} chars"}), 400
+    # Validate knowledge data (type checking, field whitelisting, length limits)
+    error = InputValidator.validate_knowledge_data(
+        data,
+        allowed_fields=ALLOWED_FIELDS,
+        max_field_length=MAX_FIELD_LENGTH
+    )
+    if error:
+        return error
 
     success = save_custom_knowledge(data)
     return jsonify({"success": success})
