@@ -12,7 +12,7 @@ from .performance import PerformanceTracker
 from .providers import create_provider
 from . import trainer
 
-logger = logging.getLogger(__name__)
+_base_logger = logging.getLogger(__name__)
 
 # Load strategy detection keywords from config
 _SIGNALS = load_signals()
@@ -39,6 +39,7 @@ class SalesChatbot:
     def __init__(self, provider_type=None, model=None, product_type=None, session_id=None):
         self.provider = create_provider(provider_type, model=model)
         self.session_id = session_id
+        self.logger = logging.LoggerAdapter(_base_logger, {"session_id": session_id or "-"})
         
         # Cache provider info to avoid repeated lookups
         self._provider_name = type(self.provider).__name__.replace("Provider", "").lower()
@@ -121,7 +122,7 @@ class SalesChatbot:
             )
 
         except Exception as e:
-            logger.exception("Unexpected error")
+            self.logger.exception("Unexpected error")
             return self._fallback(
                 "Something went wrong. Can you try again?",
                 (time.time() - request_start) * 1000, user_message,
@@ -192,11 +193,16 @@ class SalesChatbot:
 
     # --- Session management ---
 
+    def rewind(self, steps: int):
+        """Rewind back by `steps` turns from the current position."""
+        current_turns = len(self.flow_engine.conversation_history) // 2
+        return self.rewind_to_turn(max(0, current_turns - steps))
+
     def rewind_to_turn(self, turn_index):
         """Rewind to turn_index by hard-resetting FSM state and replaying history."""
         max_turns = len(self.flow_engine.conversation_history) // 2
         if turn_index < 0 or turn_index > max_turns:
-            logger.warning(f"Invalid turn_index {turn_index}, max is {max_turns}")
+            self.logger.warning(f"Invalid turn_index {turn_index}, max is {max_turns}")
             return False
 
         history_length = turn_index * 2

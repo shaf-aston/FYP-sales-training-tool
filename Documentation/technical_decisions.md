@@ -1,3 +1,5 @@
+# DONT REMOVE THIS FILE
+
 # Technical Decisions: Rationale and Trade-offs
 
 This document evaluates three critical architectural choices that distinguish this system from generic LLM-augmented chatbots.

@@ -3,11 +3,13 @@ import os
 from .base import BaseLLMProvider
 from .groq_provider import GroqProvider
 from .ollama_provider import OllamaProvider
+from .dummy_provider import DummyProvider
 
 # Provider registry
 PROVIDERS = {
     "groq": GroqProvider,
-    "ollama": OllamaProvider
+    "ollama": OllamaProvider,
+    "dummy": DummyProvider,
 }
 
 def create_provider(provider_type: str = None, model: str = None) -> BaseLLMProvider:

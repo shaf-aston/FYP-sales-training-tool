@@ -264,10 +264,23 @@ class SalesFlowEngine:
 
     def replay_history(self, history):
         """Replay a history list, advancing FSM state as if turns happened live."""
-        pairs = zip(history[::2], history[1::2])
-        for user_msg_dict, bot_msg_dict in pairs:
-            user_msg = user_msg_dict.get("content", "")
-            bot_msg = bot_msg_dict.get("content", "")
+        # Build (user_msg, bot_msg) pairs by checking actual roles
+        for i in range(0, len(history) - 1, 2):
+            msg_a = history[i]
+            msg_b = history[i + 1]
+            
+            # Determine which is user and which is bot by checking roles
+            if msg_a.get("role") == "user" and msg_b.get("role") == "assistant":
+                user_msg = msg_a.get("content", "")
+                bot_msg = msg_b.get("content", "")
+            elif msg_a.get("role") == "assistant" and msg_b.get("role") == "user":
+                # Out of order: bot message followed by user message (shouldn't happen, but handle it)
+                user_msg = msg_b.get("content", "")
+                bot_msg = msg_a.get("content", "")
+            else:
+                # Skip malformed pairs
+                continue
+            
             self.add_turn(user_msg, bot_msg)
             advancement = self.should_advance(user_msg)
             if advancement:

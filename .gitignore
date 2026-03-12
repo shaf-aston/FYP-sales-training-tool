@@ -43,13 +43,16 @@ Thumbs.db
 
 # Project specific
 *.log
+Impact formula.txt
 
 .claude
 .pytest_cache
-# Aston Docs/
+Aston Docs/
 sessions_backup/
+Documentation/What i did strat.md
 
-# CS3IP Mark Scheme-2025-6.pdf
+
+CS3IP Mark Scheme-2025-6.pdf
 marks.md
 .tmp*
 .Clear-Caches.py

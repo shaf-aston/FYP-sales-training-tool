@@ -45,8 +45,8 @@ class SecurityConfig:
     # Message validation
     MAX_MESSAGE_LENGTH = 1000
 
-    # Knowledge field validation
-    MAX_FIELD_LENGTH = 5000
+    # Knowledge field validation — must match knowledge.MAX_FIELD_LENGTH in src/chatbot/knowledge.py
+    MAX_FIELD_LENGTH = 1000
 
     # Rate limiting: (max_requests, window_seconds)
     RATE_LIMITS = {
