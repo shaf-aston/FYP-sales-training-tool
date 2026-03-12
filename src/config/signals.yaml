@@ -180,6 +180,38 @@ demand_directness:
   - "that wasnt what i asked"
   - "wasnt what i"
 
+# Emotional disclosure / vulnerability signals
+# Tactical acknowledgment is warranted when user shares these — not before
+emotional_disclosure:
+  - "accident"
+  - "struggling"
+  - "frustrating"
+  - "frustrated"
+  - "worried"
+  - "stressed"
+  - "scared"
+  - "difficult"
+  - "hard time"
+  - "hard lately"
+  - "tough"
+  - "exhausted"
+  - "overwhelmed"
+  - "overwhelming"
+  - "lost"
+  - "upset"
+  - "angry"
+  - "disappointed"
+  - "failed"
+  - "failure"
+  - "let down"
+  - "stuck"
+  - "desperate"
+  - "feels wrong"
+  - "been rough"
+  - "been hard"
+  - "through a lot"
+  - "gone through"
+
 # Validation phrases for loop detection
 validation_phrases:
   - "makes sense"
