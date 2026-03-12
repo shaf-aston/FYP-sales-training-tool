@@ -54,8 +54,8 @@ ADVANCE WHEN:
 GOAL: Understand the user's purpose.
 
 PATTERN:
-1. Acknowledge what they said
-2. Redirect to purpose: "What brings you here?"
+1. Redirect to purpose — no filler acknowledgment before you know why they're here
+2. Match their energy immediately
 
 EXAMPLES (Contrastive):
 
@@ -82,7 +82,6 @@ BEFORE RESPONDING:
 3. Short answer? -> Treat as agreement, not guarded.
 
 STRUCTURE:
-- Acknowledge briefly (max 5 words).
 - Make ONE participation/observation statement about their situation.
 - Follow with ONE soft, open-ended question to keep conversation flowing.
   GOOD: "What's felt hardest to figure out so far?"
@@ -255,7 +254,6 @@ FORBIDDEN:
 GOAL: Light rapport, then steer to product.
 
 STRUCTURE:
-- Acknowledge briefly (max 5 words).
 - Make ONE observation about their situation.
 - Follow with ONE soft, open-ended question about what they're after.
   GOOD: "What's been the main thing putting you off so far?"
@@ -606,6 +604,35 @@ def _build_tactic_guidance(strategy, state, user_message):
     return ""
 
 
+def _get_acknowledgment_guidance(ack_context):
+    """Translate acknowledgment decision into a concrete LLM instruction.
+
+    "full"  → User is vulnerable — validate before anything else
+    "light" → User is guarded — brief acknowledgment builds openness
+    "none"  → Skip it entirely — lead with substance
+    """
+    if ack_context == "full":
+        return """
+ACKNOWLEDGMENT (DO THIS FIRST):
+User shared something personal, emotional, or vulnerable.
+→ 1 sentence of genuine validation: "That sounds tough." / "That's a real thing to deal with."
+→ Then move forward. Do NOT dwell, repeat, or expand on the acknowledgment.
+"""
+    if ack_context == "light":
+        return """
+ACKNOWLEDGMENT (BRIEF — lowers defences):
+User appears guarded. A short acknowledgment creates safety before asking anything.
+→ 3–5 words max: "I get that." / "Makes sense." — then redirect immediately.
+→ Do NOT over-explain or validate repeatedly.
+"""
+    # "none"
+    return """
+ACKNOWLEDGMENT: SKIP.
+This is a factual question, info request, or low-engagement message.
+→ Lead directly with substance. No "That makes sense", "Great question", or opener phrases.
+"""
+
+
 def _check_override_condition(base, user_message, stage, history, preferences):
     """Check for early-return override conditions (direct request, soft positive, excessive validation).
 
@@ -672,13 +699,21 @@ def _get_stage_specific_prompt(strategy, stage, state, user_message, history):
     if stage == "objection" and user_message:
         objection_info = classify_objection(user_message, history)
         if objection_info["type"] != "unknown":
+            _ack_step = {
+                "fear":        "1. Full acknowledgment: validate the concern (1 sentence) — they need to feel heard before reframing",
+                "money":       "1. Light acknowledgment: 'I hear you.' — then go straight to reframe",
+                "think":       "1. Light acknowledgment: 'Totally fair.' — then drill to the real concern",
+                "partner":     "1. Light acknowledgment: 'Makes sense.' — shows respect for their process",
+                "logistical":  "1. SKIP acknowledgment — solve the logistics directly, no preamble",
+                "smokescreen": "1. SKIP acknowledgment — test if genuine first: 'Is it the product itself, or something else?'",
+            }.get(objection_info["type"], "1. Light acknowledgment only if concern feels genuine — otherwise reframe directly")
             objection_context = f"""
 OBJECTION CLASSIFIED: {objection_info['type'].upper()}
 REFRAME STRATEGY: {objection_info['strategy']}
 GUIDANCE: {objection_info['guidance']}
 
 STEPS:
-1. Acknowledge the concern (do NOT dismiss it)
+{_ack_step}
 2. Recall the user's stated goal/problem from earlier
 3. Apply the reframe strategy above
 4. Ask ONE question to move forward
@@ -698,7 +733,7 @@ def generate_stage_prompt(strategy, stage, product_context, history, user_messag
     3. STAGE SELECT: intent_low vs intent, objection classification
     4. ASSEMBLY: base + stage + adaptations + preferences + keywords
     """
-    from .analysis import analyze_state, extract_preferences
+    from .analysis import analyze_state, extract_preferences, detect_acknowledgment_context
 
     # Build base prompt and analyze state
     base = get_base_prompt(product_context, strategy, history)
@@ -710,13 +745,18 @@ def generate_stage_prompt(strategy, stage, product_context, history, user_messag
     if override:
         return override
 
-    # TIER 2: Build adaptive tactic guidance
+    # TIER 2: Acknowledgment decision (must precede stage prompt so LLM sees it first)
+    ack_guidance = _get_acknowledgment_guidance(
+        detect_acknowledgment_context(user_message, history, state)
+    )
+
+    # TIER 3: Build adaptive tactic guidance
     tactic_guidance = _build_tactic_guidance(strategy, state, user_message)
 
-    # TIER 3: Get stage-specific prompt
+    # TIER 4: Get stage-specific prompt
     stage_prompt, stage_context = _get_stage_specific_prompt(strategy, stage, state, user_message, history)
 
-    # TIER 4: Assemble final prompt
+    # TIER 5: Assemble final prompt
     preference_keyword_context = _get_preference_and_keyword_context(history, preferences)
-    
-    return base + stage_prompt + stage_context + tactic_guidance + preference_keyword_context
+
+    return base + ack_guidance + stage_prompt + stage_context + tactic_guidance + preference_keyword_context

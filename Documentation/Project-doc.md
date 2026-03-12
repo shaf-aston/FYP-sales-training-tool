@@ -96,7 +96,7 @@ Can Llama-3.3-70b be systematically constrained via prompt engineering to achiev
 
 ### 1.3 Academic & Theoretical Foundation
 
-This project integrates three complementary theoretical domains to achieve high-fidelity, constrained sales conversation simulation:
+Achieving reliable methodology adherence without fine-tuning requires three distinct control mechanisms: progression logic to enforce stage sequencing, emotional intelligence for objection handling, and behavioral enforcement to constrain LLM output. Each is addressed by a specific theoretical domain:
 
 **Sales Methodology & Conversational Structure**
 
@@ -106,7 +106,7 @@ The NEPQ framework (Acuff & Miner, 2023) is founded on the principle that *human
 
 **Prompt Engineering as Behavioral Constraint**
 
-Constitutional AI (Bai et al., 2022) introduced hierarchical natural language constraints (P1 Hard Rules → P2 Preferences → P3 Examples) that reduce harmful outputs by 95% without fine-tuning. This project inverts the application: rather than constraining against harmful behavior, we constrain *toward* specific professional behaviors (stage-appropriate questioning, tone matching, information extraction). The core innovation is treating **prompt engineering as the control mechanism** rather than hardcoded conditional logic.
+Constitutional AI (Bai et al., 2022) introduced hierarchical natural language constraints (P1 Hard Rules → P2 Preferences → P3 Examples) that reduce harmful outputs by 95% without fine-tuning. This project inverts the application: rather than constraining against harmful behavior, we constrain *toward* specific professional behaviors (stage-appropriate questioning, tone matching, information extraction).
 
 Chain-of-Thought (Wei et al., 2022) and Generated Knowledge (Liu et al., 2022) demonstrate that structuring reasoning steps improves accuracy. Applied here: objection handling uses explicit IDENTIFY→RECALL→CONNECT→REFRAME scaffolding, improving resolution rates from 65% baseline to 88%. Relevance Theory (Sperber & Wilson, 1995) motivated the "Question Clarity" constraint—ambiguous "or" questions force unnecessary cognitive load, so the bot chooses the most likely interpretation rather than presenting false choice.
 
@@ -186,8 +186,8 @@ Demonstrates that prompt engineering + FSM hybrid architecture enables zero-cost
 4. **Systematic Information Extraction:** Structured capture of prospect information for training assessment
 5. **Prompt Engineering Control:** Behavioral modification without code changes; rapid iteration capability
 
-**Business Value Proposition:**  
-The system enables significant scaling of trainer-to-learner ratios while maintaining methodology fidelity, reducing marginal cost per training session to zero through free-tier API usage, with 24/7 availability and consistent quality standards.
+**Business Value Proposition:**
+The system enables significant scaling of trainer-to-learner ratios while maintaining methodology fidelity, with 24/7 availability and consistent quality standards through free-tier API usage.
 
 ### 1.5 Project Objectives & Success Criteria
 
@@ -204,8 +204,6 @@ The system enables significant scaling of trainer-to-learner ratios while mainta
 - **Practical:** Demonstrates viability of prompt-constrained LLMs for structured professional training applications
 - **Technical:** Validates FSM + prompt engineering hybrid architecture for conversation control  
 - **Academic:** Provides empirical evidence that behavioral constraints via natural language specifications achieve comparable results to fine-tuning at zero cost
-
-This contextual investigation establishes both the business necessity and technical feasibility of AI-powered sales training, positioning the deliverable within academic literature while addressing real-world market inefficiencies through innovative prompt engineering applications.
 
 ---
 
@@ -346,11 +344,11 @@ Through continuous testing, five critical output quality issues were identified 
 | **False Stage Advancement** | User: "yeah that's a good point" → Bot advances to pitch (40% false positives) | Whole-word regex `\bword\b` + context validation + keyword refinement | 92% stage progression accuracy |
 | **Over-Probing (Consultative)** | Bot: 3 questions per response causing interrogation feel | "BE HUMAN" rule: statement BEFORE question, 1-2 questions max | 1 question/response average; natural flow |
 | **Unconditioned Solution Dumping** | User: "All good" → Bot: "Great! Have you considered optimizing X? We offer solutions that..." | ReAct framework: Intent classification (HIGH/MEDIUM/LOW) gate + engagement mode for low-intent users | 100% prevention of inappropriate pitching; natural rapport-building |
-| **Premature Stage Advancement (FSM Logic)** | Bot advancing from Logical stage to Pitch after 5 turns, regardless of whether user expressed genuine doubt; violates consultative sales methodology | Redesigned advancement rules to mandate explicit "doubt signals" (keywords: 'struggling', 'not working', 'problem', etc.); 10-turn safety valve prevents infinite loops while building conviction | 94% accuracy; bot now spends time building belief before pitching |
+| **Premature Stage Advancement (FSM Logic)** | Bot advancing from Logical stage to Pitch after 5 turns, regardless of whether user expressed genuine doubt — a concrete instance of **hallucinated stage adherence** (§1.2): stage-appropriate language without the informational prerequisites that stage is meant to enforce | Redesigned advancement rules to mandate explicit "doubt signals" (keywords: 'struggling', 'not working', 'problem', etc.); 10-turn safety valve prevents infinite loops while building conviction | 94% accuracy; bot now spends time building belief before pitching |
 
 **Key Lesson:** Prompt engineering sets behavioral direction; code-level enforcement catches when LLM slips (~25% of cases). Iterative testing cycles (observe → fix → validate) more effective than upfront design. Full iterative testing methodology documented in Appendix A.
 
-Key prompt engineering techniques implemented (see Section 1.3 for full academic citations):
+Key prompt engineering techniques implemented (full academic citations in §1.3):
 
 | **Technique** | **Paper** | **Implementation** | **Measured Impact** |
 |---------------|-----------|-------------------|---------------------|
@@ -362,24 +360,24 @@ Key prompt engineering techniques implemented (see Section 1.3 for full academic
 
 #### 2.2.2 Theory-to-Implementation Traceability: From Academic Foundation to Code Artifact
 
-To validate that design decisions were systematically informed by theoretical research rather than ad-hoc engineering choices, the following table maps each academic framework to the specific implementation problem it solved and the empirical outcome:
+The table below presents the same implementations from §2.2.1 through a theoretical lens — showing which academic framework motivated each fix. Outcome metrics are identical to §2.2.1; the purpose here is to demonstrate that each fix was theoretically grounded, not ad-hoc:
 
 | **Theoretical Framework** | **Problem Solved** | **Implementation Artifact** | **Baseline → Target → Achieved** |
 |---|---|---|---|
 | **Constitutional AI (Bai et al., 2022)** | Permission questions breaking sales momentum (LLM default: ask "Would you like...?" at pitch stage) | 3-tier P1/P2/P3 constraint hierarchy in `content.py` + predictive stage checking + regex enforcement `r'\s*\?\s*$'` | 75% had trailing Qs → 100% removal target → **100%** ✅ |
-| **NEPQ Framework (Acuff & Miner, 2023)** | Defensive objection responses; bot arguing instead of reframing | Objection stage prompt with IDENTIFY→RECALL→CONNECT→REFRAME structure in `content.py` (lines 414-440) | 65% → 88% target → **88%** ✅ |
+| **NEPQ Framework (Acuff & Miner, 2023)** | Defensive objection responses; bot arguing instead of reframing | Objection stage prompt with IDENTIFY→RECALL→CONNECT→REFRAME structure in `content.py` (lines 414-440) | 65% → 88% target → **88%** ✅ (jointly with Chain-of-Thought; NEPQ contributes emotional reframing structure) |
 | **Conversational Repair (Schegloff, 1992)** | User frustration/repetition ignored; system continues normal flow | `user_demands_directness()` detection in `flow.py` with urgency override to pitch stage; configurable `urgency_skip_to` | No override → R4 implemented → **100% test pass** ✅ |
 | **Lexical Entrainment (Brennan & Clark, 1996)** | Mechanical bot feel; ignoring user terminology | `extract_user_keywords()` in `analysis.py` + keyword injection into subsequent prompts in `content.py` | 62% tone mismatch → 95% target → **95%** ✅ |
-| **Chain-of-Thought (Wei et al., 2022)** | Generic objection responses lacking structured reasoning | IDENTIFY→RECALL→CONNECT→REFRAME prompt scaffold in objection stage | 65% baseline → 88% target → **88%** ✅ |
+| **Chain-of-Thought (Wei et al., 2022)** | Generic objection responses lacking structured reasoning | IDENTIFY→RECALL→CONNECT→REFRAME prompt scaffold in objection stage | 65% baseline → 88% target → **88%** ✅ (jointly with NEPQ; CoT contributes explicit reasoning sequence) |
 | **Speech Act Theory (Searle, 1969)** | Direct user requests ("Show me price") treated as conversation, not action | Direct-request bypass in `flow.py` (Snippet 2 logic) + urgency_skip_to configuration | Ignored directives → R4 met → **Test validated** ✅ |
 | **SPIN Selling Stages (Rackham, 1988)** | No inherent stage progression structure; Strategy Pattern couldn't enforce sequential dependency | FSM architecture in `flow.py` with FLOWS config + sequential transition rules | 855 LOC fragmented → 430 LOC FSM → **92% accuracy** ✅ |
 | **Generated Knowledge (Liu et al., 2022)** | Low intent users receiving high-pressure pitches | Intent-level priming in intent stage prompt + ReAct gate for LOW intent engagement mode | 40% inappropriate pitching → 100% prevention → **100%** ✅ |
 | **Few-Shot Learning (Brown et al., 2020)** | Tone mismatches across buyer personas | 4 concrete bad/good example pairs in `content.py` FEW_SHOT_EXAMPLES | 62% mismatch → 95% target → **95%** ✅ |
 
-**Validation Insight:** Every quality improvement in the project trace back to a deliberate theoretical choice. No "fixes" were purely engineering hacks; each addressed a gap identified in academic literature and resulted in measurable improvement. This demonstrates processes and artefacts are not just informed by theory—they directly implement theoretical recommendations.
+**Validation Insight:** The table above is notable for what it *doesn't* contain: post-hoc justification. Each fix was pre-motivated by an identified theoretical gap, not reverse-engineered after the fact. This is the distinction between evidence-based engineering and engineering with citations.
 
 **Iterative Testing Cycles:**
-The project employed continuous test-driven refinement. The four core output quality issues (permission questions, tone matching, stage advancement, strategy switching) were resolved through the iterative observe → fix → validate methodology documented with full metrics in Appendix A. Two additional issues unique to conversation flow management are documented below:
+The project employed continuous test-driven refinement. The four core output quality issues (permission questions, tone matching, stage advancement, strategy switching) were resolved through iterative testing cycles documented with full metrics in Appendix A. Two additional issues unique to conversation flow management are documented below:
 
 1. **Small-Talk Loop Problem (Critical Fix):**
    - **Problem:** Bot stuck in repetitive small-talk—responding to "yep"/"ok"/"not much" with endless follow-ups, never transitioning to sales.
@@ -400,8 +398,6 @@ The project employed continuous test-driven refinement. The four core output qua
 **Key Methodological Insight:** Each problem required 2-5 iteration cycles. Initial fixes addressed symptoms; final solutions addressed root causes identified through systematic observation and measurement. The full layered fix methodology (prompt → predictive code → regex enforcement) is documented with code examples in Appendix A.1, with iteration-by-iteration metrics in Appendix A.5.
 
 #### 2.2.3 Code Implementation: Key Snippets With Documentation
-
-This section documents critical code patterns with line-by-line explanations of design decisions and issue resolutions.
 
 **Snippet 1: Stage Advancement Logic (`chatbot.py`, lines 180-195)**
 ```python
@@ -765,7 +761,7 @@ Finite State Machine: "What is the current state? What are valid transitions?" �
 3. **Configuration Over Code:** Transitions, stages, and advancement rules should be declarative, not procedural
 4. **Linear Progression:** The conversation progresses linearly through defined stages; classic FSM pattern
 
-**Theoretical Grounding:** This architectural choice is reinforced by Rackham's (1988) SPIN Selling framework, which empirically demonstrates that effective consultative selling requires sequential questioning stages where each stage builds understanding before progressing (Situation → Problem → Implication → Need-Payoff). A Strategy Pattern enforces dynamic algorithm selection; FSM naturally enforces state-dependent transitions required by methodology. The architecture is thus not arbitrary but directly implements the empirical findings of sales methodology research.
+**Theoretical Grounding:** As established in §1.3, Rackham's (1988) SPIN Selling framework empirically demonstrates that sales conversations require sequential stage dependency — each stage builds understanding before progression is warranted. A Strategy Pattern enforces algorithm selection; FSM enforces state-dependent transitions. The architecture directly implements that sequential requirement rather than working around it.
 
 ---
 
@@ -1100,7 +1096,7 @@ src/
 **Technology Choices (Justified by Testing):**
 - **Llama-3.3-70b (Groq) vs. GPT-4:** Tested both on 5 identical conversations. Llama achieved 92% stage progression vs. GPT-4's 88% BUT at zero cost (Groq free tier). Trade-off: acceptable for FYP scope.
 - **Flask vs. FastAPI:** Chose Flask for simplicity; FastAPI not needed for request-response cycles <2s. Session isolation tested; per-instance bots work well (no queue bottlenecks).
-- **Prompt Engineering (~650 LOC) vs. Fine-Tuning:** Evaluated fine-tuning cost ($200-500 + 48h training); prompt engineering approach yielded 92% accuracy. Reusability and iteration speed won.
+- **Prompt Engineering (~650 LOC) vs. Fine-Tuning:** Evaluated fine-tuning cost and time (see §1.3 comparative analysis); prompt engineering approach yielded 92% accuracy with zero infrastructure overhead. Reusability and iteration speed won.
 
 #### 2.4.1 Provider Abstraction Architecture (Groq + Ollama Hybrid)
 
@@ -1240,7 +1236,7 @@ Testing validated: maintains 5-stage context, follows tone-matching rules (97% a
 
 **Key Insights:**
 
-1. **Prompt Engineering as Code:** Consumed 31% of development time (22/70h). Validates "prompt as code" approach where behavioral tuning happens in natural language rather than Python. Traditional approach (fine-tuning) would require 48h GPU training + $200-500 costs.
+1. **Prompt Engineering as Code:** Consumed 31% of development time (22/70h). Validates "prompt as code" approach where behavioral tuning happens in natural language rather than Python. Traditional approach (fine-tuning) would require substantially more infrastructure and iteration overhead (see §1.3).
 
 2. **Productivity Metric:** ~41 LOC/hour (2,900 LOC ÷ 70h) for production application code. Higher than typical range for research-intensive development (industry: 10-25 LOC/h for Python), reflecting the substantial frontend SPA and prompt template contributions.
 
@@ -1308,7 +1304,7 @@ The system was designed with data minimisation as a primary architectural constr
 
 #### 2.8.5 Implemented Security Controls — Technical Details
 
-This section documents the specific security controls implemented in response to the STRIDE threat model (Section 2.8.3). All controls are implemented in `src/web/app.py`; code references are provided for verification.
+The controls below implement the STRIDE mitigations identified in §2.8.3. Following the March 2026 security refactor, all controls are implemented in `src/web/security.py` (extracted from `app.py` for modularity); code references are provided for verification.
 
 **1. CORS Restriction (Spoofing Prevention)**
 
@@ -1773,9 +1769,6 @@ The system was demonstrated to the academic supervisor across evaluation session
 
 The primary limitation is the absence of independent user testing — developer-conducted testing introduces confirmation bias as tester familiarity with the system may unconsciously avoid edge cases. The 25+ conversation test set was designed to partially mitigate this through adversarial scenario inclusion (impatient users, off-topic deflections, price-only focus), but independent validation remains a gap. The UAT methodology documented above is the planned next step for post-FYP development and would provide the statistical confidence required for commercial deployment claims.
 
-**Critical Assessment of Current Evaluation:**
-Developer testing provides initial validation but introduces bias—tester familiarity with system behavior may influence interaction patterns. UAT will provide independent verification and identify real-world usability issues not apparent in controlled testing. This limitation acknowledged; evaluation strengthened through systematic approach and transparent metric reporting.
-
 ### 4.1b Theoretical Validation: Did Empirical Results Confirm Academic Claims?
 
 Beyond requirement satisfaction, a critical evaluation asks: **Did the empirical results validate the theoretical predictions that motivated our design decisions?** This subsection measures that alignment.
@@ -1824,21 +1817,8 @@ Implemented Strategy Pattern because textbooks (CS2001/CS2006 coursework) recomm
 Code review during permission question debugging revealed fundamental issue: transactional.py contained only 30 LOC in a separate file requiring imports, boilerplate, and mental context switching. Recognized I was optimizing for "appears professional" (abstractions, separation of concerns) over "actually solves the problem efficiently."
 
 **Evidence That Forced Rethinking:**
-- 45 minutes average code review time per feature change (measured across 6 changes)
-- 40% of bugs caused by inconsistent updates across 4 strategy files
-- Test suite required mocking 4 separate classes with complex interdependencies
-- Adding "hybrid" strategy would require duplicating logic across multiple files instead of extending a configuration
 
-**Professional-Level Decision Making Process:**
-
-Instead of defending initial design (sunk cost fallacy), conducted systematic evaluation:
-
-1. **Measured Coupling:** Documented 6 imports per strategy file, all pulling from same prompts.py utilities
-2. **Timed Development Cycles:** Code reviews 45min, feature additions 2-3 hours (measured, not estimated)
-3. **Analyzed Problem Domain:** Sequential flow (intent→pitch→objection) ≠ dynamic algorithm selection (Strategy Pattern's purpose)
-4. **Prototyped Alternative:** 150 LOC FSM proof-of-concept built in 4 hours
-5. **Validated with Metrics:** -50% code reduction, -78% code review time, +2% accuracy improvement
-6. **Executed Refactoring:** Systematic migration with test suite validation at each step
+The specific metrics — 45min code review cycles, 40% of bugs from inconsistent Strategy files, -50% LOC after FSM migration — are documented in full in §2.3. The personal dimension of that evidence was recognising I had optimised for *appearing* professional (abstract base classes, factory patterns, separation of concerns) over *actually* solving the problem. The sunk cost of Weeks 1–8 made this harder to accept than the data warranted.
 
 **Key Professional Learning Outcome:**
 
@@ -2058,7 +2038,7 @@ The most impactful discovery of this project was the effectiveness of **layered 
 
 Every major quality improvement followed the same iterative cycle: **observe → hypothesize → fix (layered) → validate → measure**. Permission question elimination (75% → 0%), tone matching (62% → 95%), and stage advancement accuracy (40% → 92%) all required 2-5 iteration cycles before achieving target metrics. Initial fixes invariably addressed symptoms; final solutions addressed root causes identified through systematic measurement. Full iterative case studies with metrics are documented in Appendix A.
 
-**Key Insight:** Prompt engineering is not a "workaround"—it is the primary control mechanism for this class of application. Code-level enforcement handles only the ~25% of cases where LLM habits override prompt instructions. This hybrid approach delivered commercial-viable accuracy (92%) at zero infrastructure cost.
+**Key Insight:** As established in §1.3, prompt engineering delivers commercial-viable accuracy (92%) at zero infrastructure cost for structured professional tasks. The reinforcing lesson from implementation: the ~25% of cases that required code-level enforcement (regex guardrails, predictive stage checking) were not failures of prompt engineering — they were expected boundary cases efficiently handled by a two-layer system. A single-layer approach (prompts only, or code only) would have been both less reliable and significantly more expensive to maintain.
 
 ---
 
@@ -2115,8 +2095,12 @@ OWASP Foundation (2021) *OWASP top ten: A01 – injection; A02 – cryptographic
 ---
 
 **Appendix Index:**
-- **Appendix A:** Iterative Case Studies (A.1–A.6) — detailed observe → fix → validate cycles for each output quality issue
+- **Appendix A:** Iterative Case Studies (A.1–A.7) — detailed observe → fix → validate cycles for each output quality issue
 - **Appendix B:** Testing Framework Summary (B.1–B.4) — test suite purpose, key files, rationale, and improvement metrics
+- **Appendix C:** Project Development Diary (28-week timeline)
+- **Appendix D:** Failed Example Conversation — FSM stage advancement bug
+- **Appendix E:** Technical Decisions — architectural rationale and trade-offs
+- **Appendix F:** Keyword Noise Audit — FSM false-positive stage advancement iterative case study
 
 ## APPENDIX A: ITERATIVE CASE STUDIES
 
@@ -2366,9 +2350,9 @@ def is_rhetorical(user_msg):
 
 ---
 
-## APPENDIX A: Keyword Noise Audit — Iterative Improvement Case Study
+## APPENDIX F: Keyword Noise Audit — Iterative Improvement Case Study
 
-### A.1 Problem: False-Positive FSM Stage Advancement
+### F.1 Problem: False-Positive FSM Stage Advancement
 
 **Symptom:** System advanced through sales flow stages when users made contextually unrelated statements. Example:
 - User: "i want to make more money" → Bot triggered **transactional** mode (skip discovery)
@@ -2377,7 +2361,7 @@ def is_rhetorical(user_msg):
 
 **Impact:** 15/18 test utterances (83%) showed false-positive stage advancement
 
-### A.2 Investigation: Systematic Keyword Audit
+### F.2 Investigation: Systematic Keyword Audit
 
 **Problem:** Code review revealed internal contradiction:
 - `analysis.py` listed `'want'`/`'need'` as **stopwords** (unreliable noise)
@@ -2390,7 +2374,7 @@ def is_rhetorical(user_msg):
 - "I **felt** tired from gym" (fatigue, not emotional stakes)
 - "I **need** milk" (grocery, not buying intent)
 
-### A.3 Solution: Three-Part Fix
+### F.3 Solution: Three-Part Fix
 
 **Fix 1 – Flow.py (Week 9)**
 Removed `'want'` and `'need'` from `flow.py` lines 72–76. Regression test confirms: "i want to make more money" no longer triggers advancement.
@@ -2403,7 +2387,7 @@ Removed 7 single-word generics from `analysis_config.yaml`: `"feel"`, `"change"`
 
 Also aligned `signals.yaml` lines 138–140 to remove `'want'`/`'need'` from `high_intent` for consistency across modules.
 
-### A.4 Validation: Before & After
+### F.4 Validation: Before & After
 
 **Before Fix:** 15/18 utterances (83%) triggered inappropriate stage advancement
 **After Fix:** 1/18 utterances (5%) false positive (only "broken" in product context — judged acceptable)
@@ -2415,7 +2399,7 @@ def test_intent_no_advance_on_generic_want():
     assert not user_has_clear_intent([], "i want to make more money", 0)
 ```
 
-### A.5 Design Principle: Anchoring Keywords in Context
+### F.5 Design Principle: Anchoring Keywords in Context
 
 **Lesson:** Single-word keywords are unreliable across domains. Effective signal detection requires context:
 
@@ -2428,7 +2412,7 @@ def test_intent_no_advance_on_generic_want():
 
 **Principle:** *If a keyword fires on unrelated contexts, remove it; use multi-word phrases that anchor meaning.*
 
-### A.6 Impact & Lessons
+### F.6 Impact & Lessons
 
 **Achieved:**
 1. Reduced false-positive rate: 83% → 5%

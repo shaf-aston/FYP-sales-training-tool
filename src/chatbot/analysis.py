@@ -241,6 +241,53 @@ def is_literal_question(user_message):
     return is_question and not is_rhetorical
 
 
+def detect_acknowledgment_context(user_message, history, state):
+    """Determine if/how acknowledgment is psychologically warranted this turn.
+
+    Returns: "full" | "light" | "none"
+      "full"  → User shared vulnerability or emotional content — validate before moving on
+      "light" → User is guarded/evasive — brief acknowledgment lowers defences, creates openness
+      "none"  → Info request, factual question, or low-engagement filler — acknowledgment here is noise
+    """
+    if not user_message:
+        return "none"
+
+    msg_lower = user_message.lower()
+
+    # Never acknowledge direct info requests — lead with substance
+    direct_requests = _SIGNALS.get("direct_info_requests", [])
+    if text_contains_any_keyword(msg_lower, direct_requests):
+        return "none"
+
+    # Never acknowledge low-engagement filler (e.g. "all good", "just looking")
+    low_intent = _SIGNALS.get("low_intent", [])
+    if text_contains_any_keyword(msg_lower, low_intent) and len(user_message.split()) < 6:
+        return "none"
+
+    # Full acknowledgment: user shared emotional content or vulnerability
+    emotional_keywords = _SIGNALS.get("emotional_disclosure", [])
+    if text_contains_any_keyword(msg_lower, emotional_keywords):
+        return "full"
+
+    # Full acknowledgment: literal question with personal emotional context in history
+    # e.g. "so what can I do?" after they shared a struggle
+    if history:
+        recent_user = [m["content"].lower() for m in history[-4:] if m["role"] == "user"]
+        if any(text_contains_any_keyword(m, emotional_keywords) for m in recent_user):
+            if is_literal_question(user_message):
+                return "light"
+
+    # Light acknowledgment: guarded/evasive — builds comfort and openness
+    if state.get("guarded"):
+        return "light"
+
+    # Short factual question — skip it
+    if is_literal_question(user_message) and len(user_message.split()) < 8:
+        return "none"
+
+    return "none"
+
+
 def user_demands_directness(history, user_message):
     """Detect frustration or explicit demands for a straight answer.
 
