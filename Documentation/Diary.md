@@ -1,3 +1,5 @@
+# DONT REMOVE THIS FILE
+
 ## Appendix C: Project Development Diary
 
 **Project Overview:** Sales conversation AI chatbot with FSM-driven conversation routing, prompt-based behavioral control, and real-time coaching feedback for sales training.

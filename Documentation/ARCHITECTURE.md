@@ -1,5 +1,10 @@
 # Sales Chatbot Architecture - Post-Refactor Documentation
 
+> **Related Documents:**
+> - [Project-doc.md](Project-doc.md) — Full project report (contextual investigation, evaluation, references)
+> - [technical_decisions.md](technical_decisions.md) — Design rationale for major architectural choices
+> - [../TESTING_STRATEGY.md](../TESTING_STRATEGY.md) — Test suite design and academic basis
+
 ## Overview
 This document describes the refactored architecture (March 2026) that enforces SRP, eliminates circular dependencies, and fixes framework stage advancement logic.
 
@@ -18,11 +23,124 @@ app.py (Flask HTTP)
        │    └─> analysis.py (NLP)
        └─> providers/ (LLM abstraction)
 
-config_loader.py (shared utility, no dependencies)
+loader.py (shared utility, no dependencies)
 security.py (security controls, no dependencies on chatbot logic)
 ```
 
 **Key Principle**: No circular imports. Each module has a single, clear responsibility.
+
+---
+
+## FSM State Diagrams
+
+### Consultative Flow (5-Stage NEPQ)
+
+```
+                    ┌─────────────────────────────────────────────────────┐
+                    │               DISCOVERY (Intent)                    │
+                    │  Goal: detect strategy from user's first signals    │
+                    └────────────────────┬────────────────────────────────┘
+                                         │  user_has_clear_intent()
+                                         │  (consultative keywords detected)
+                                         ▼
+  ┌────────────────────────────────────────────────────────────────────────┐
+  │                        INTENT (NEPQ Lines 3-12)                        │
+  │  Goal: "Get tangible" — surface what the prospect wants / is missing   │
+  │  Tactic: open elicitation, permission to explore                       │
+  │  Advancement: user states clear goal OR 4-6 turns elapsed              │
+  └────────────────────┬───────────────────────────────────────────────────┘
+                       │  user_has_clear_intent()
+                       ▼
+  ┌────────────────────────────────────────────────────────────────────────┐
+  │                      LOGICAL (NEPQ Lines 15-33)                        │
+  │  Goal: Two-phase probe — cause of problem + impact chain               │
+  │  Tactic: "What's been causing that?" then "What would change if…?"     │
+  │  Advancement: doubt/problem keywords OR 10-turn safety valve           │
+  └────────────────────┬───────────────────────────────────────────────────┘
+                       │  user_shows_doubt()
+                       ▼
+  ┌────────────────────────────────────────────────────────────────────────┐
+  │                     EMOTIONAL (NEPQ Lines 36-58)                       │
+  │  Goal: Identity Frame → Future Pacing → Consequence of Inaction (COI)  │
+  │  Tactic: "What would it mean for you / your family if this continued?" │
+  │  Advancement: emotional stakes keywords OR 10-turn safety valve        │
+  └────────────────────┬───────────────────────────────────────────────────┘
+                       │  user_expressed_stakes()
+                       ▼
+  ┌────────────────────────────────────────────────────────────────────────┐
+  │                       PITCH (NEPQ Lines 59-71)                         │
+  │  Goal: commitment check → 3-pillar solution → assumptive close         │
+  │  Rule: NO trailing "?" — action-oriented close only                    │
+  │  Advancement: soft positive, commitment signal, or objection raised    │
+  └────────────────────┬───────────────────────────────────────────────────┘
+                       │  commitment_or_objection()
+                       ▼
+  ┌────────────────────────────────────────────────────────────────────────┐
+  │                         OBJECTION                                       │
+  │  Goal: CLASSIFY → RECALL → REFRAME → RESPOND                           │
+  │  Types: fear, money, partner, logistical, indecision, smokescreen      │
+  │  Advancement: commitment confirmed OR walk-away signal                 │
+  └────────────────────────────────────────────────────────────────────────┘
+
+Override (any stage):
+  user_demands_directness() → urgency_skip_to = "pitch"
+  (Conversational Repair: Schegloff, 1992)
+```
+
+### Transactional Flow (3-Stage Fast Path)
+
+```
+  ┌────────────────────────────────────────────────┐
+  │              INTENT (max 2 turns)               │
+  │  Goal: capture budget + use-case only           │
+  │  NO emotional probing; NO logical stage         │
+  └───────────────────┬────────────────────────────┘
+                      │  user_has_clear_intent()
+                      ▼
+  ┌────────────────────────────────────────────────┐
+  │                    PITCH                        │
+  │  Goal: present matching options + close         │
+  │  Assumptive close; action-oriented language     │
+  └───────────────────┬────────────────────────────┘
+                      │  commitment_or_objection()
+                      ▼
+  ┌────────────────────────────────────────────────┐
+  │                  OBJECTION                      │
+  │  Classify → Reframe (price/time/suitability)    │
+  └────────────────────────────────────────────────┘
+```
+
+### Strategy Detection Flow
+
+```
+  User First Message
+         │
+         ▼
+  ┌──────────────────────────┐
+  │   DISCOVERY (intent FSM) │
+  │   Detect keyword signals │
+  └──────┬─────────┬─────────┘
+         │         │
+   consultative  transactional
+   keywords       keywords
+   detected       detected
+         │         │
+         ▼         ▼
+  Consultative  Transactional
+  5-stage FSM   3-stage FSM
+```
+
+**Key Guard Conditions (Phase 4 Fix):**
+
+| Stage      | Advancement Rule            | Signals Required                         | Safety Valve |
+|------------|-----------------------------|------------------------------------------|--------------|
+| Intent     | `user_has_clear_intent()`   | goal/intent keywords OR 4-6 turns        | 6 turns      |
+| Logical    | `user_shows_doubt()`        | doubt/problem keywords **required**      | 10 turns     |
+| Emotional  | `user_expressed_stakes()`   | emotional stakes keywords **required**   | 10 turns     |
+| Pitch      | `commitment_or_objection()` | commitment signal OR objection raised    | —            |
+| Objection  | `commitment_or_walkaway()`  | commitment OR explicit walk-away signal  | —            |
+
+The "required" annotation above reflects the Phase 4 fix: prior to correction, `user_shows_doubt` and `user_expressed_stakes` auto-advanced after a turn threshold regardless of conversational content — a concrete instance of *hallucinated stage adherence* (see [Project-doc.md §1.2](Project-doc.md)). The fix mandates explicit keyword evidence before FSM progression.
 
 ---
 
@@ -127,7 +245,7 @@ def user_shows_doubt(history, user_msg, turns):
 ### 4. content.py (Prompts)
 **Purpose**: Stage-specific prompts and conversational tactics  
 **SLOC**: ~740  
-**Dependencies**: `config_loader` (for SIGNALS), `analysis` (inline for state functions)
+**Dependencies**: `loader` (for SIGNALS), `analysis` (inline for state functions)
 
 **Responsibilities**:
 - Define STRATEGY_PROMPTS (consultative, transactional)
@@ -148,7 +266,7 @@ def user_shows_doubt(history, user_msg, turns):
 ### 5. analysis.py (NLP Utilities)
 **Purpose**: Pure NLP functions for intent detection, keyword matching, state analysis  
 **SLOC**: ~295  
-**Dependencies**: `config_loader` (for YAML configs and SIGNALS)
+**Dependencies**: `loader` (for YAML configs and SIGNALS)
 
 **Responsibilities**:
 - Analyze user state (intent level, guardedness, question fatigue)
@@ -173,7 +291,7 @@ def user_shows_doubt(history, user_msg, turns):
 
 ---
 
-### 6. config_loader.py (Configuration)
+### 6. loader.py (Configuration)
 **Purpose**: Load YAML configs, product settings, and signal keywords  
 **SLOC**: ~80  
 **Dependencies**: None (pure utility)

@@ -23,7 +23,7 @@ class TestConsultativeFlowIntegration:
     @pytest.fixture
     def chatbot(self):
         """Create chatbot instance with consultative flow."""
-        bot = SalesChatbot(provider_type="groq", product_type="signals_service")
+        bot = SalesChatbot(provider_type="dummy", product_type="signals_service")
         bot.flow_engine.switch_strategy("consultative")
         return bot
 
@@ -41,7 +41,7 @@ class TestConsultativeFlowIntegration:
         assert chatbot.flow_engine.current_stage == "intent"
         
         # Phase 2: Express clear intent → should advance to logical
-        response = chatbot.chat("I want to make $10k per month trading crypto")
+        response = chatbot.chat("I'm struggling to make consistent profits and looking for help improving my trading")
         assert chatbot.flow_engine.current_stage == "logical", "Should advance to logical after clear intent"
         
         # Phase 3: Resist doubt for 9 turns → should STAY in logical
@@ -77,7 +77,7 @@ class TestConsultativeFlowIntegration:
         """
         # Switch to logical stage
         chatbot.flow_engine.switch_strategy("consultative")
-        chatbot.chat("I want to make $10k/month trading")
+        chatbot.chat("I'm struggling with my trading strategy and looking for a solution")
         assert chatbot.flow_engine.current_stage == "logical"
         
         # Resist for EXACTLY 10 turns (safety valve triggers)
@@ -94,7 +94,7 @@ class TestConsultativeFlowIntegration:
         If prospect says "I want to buy" during logical stage, should jump to pitch.
         """
         # Get to logical stage
-        chatbot.chat("I want to make $10k/month")
+        chatbot.chat("I'm looking for help with my trading to make consistent profits")
         assert chatbot.flow_engine.current_stage == "logical"
         
         # Express strong commitment
@@ -110,7 +110,7 @@ class TestConsultativeFlowIntegration:
         
         User request: "I want to buy a mentorship for trading" should NOT switch to transactional.
         """
-        bot = SalesChatbot(provider_type="groq", product_type="mentorship_service")
+        bot = SalesChatbot(provider_type="dummy", product_type="mentorship_service")
         
         # Start in intent discovery
         assert bot.flow_engine.flow_type == "intent"
@@ -129,9 +129,9 @@ class TestConsultativeFlowIntegration:
         Pricing should only come up in pitch stage or if prospect explicitly asks.
         """
         # Get to logical stage
-        chatbot.chat("I want $10k/month")
+        chatbot.chat("I'm struggling with trading consistency and looking for a solution")
         assert chatbot.flow_engine.current_stage == "logical"
-        
+
         # Bot should NOT bring up pricing
         for i in range(5):
             response = chatbot.chat(f"Tell me about your solution, iteration {i+1}")
@@ -150,7 +150,7 @@ class TestConsultativeFlowIntegration:
         Training feedback should be context-aware based on current stage.
         """
         # Get to logical stage
-        chatbot.chat("I want $15k/month from trading")
+        chatbot.chat("I'm struggling to grow my trading income and looking for professional help")
         assert chatbot.flow_engine.current_stage == "logical"
         
         # Generate training
@@ -227,7 +227,7 @@ class TestTransactionalFlowComparison:
     @pytest.fixture
     def transactional_bot(self):
         """Create chatbot with transactional flow."""
-        bot = SalesChatbot(provider_type="groq", product_type="crypto_signals")
+        bot = SalesChatbot(provider_type="dummy", product_type="crypto_signals")
         bot.flow_engine.switch_strategy("transactional")
         return bot
 
@@ -239,13 +239,13 @@ class TestTransactionalFlowComparison:
         Consultative: intent → logical → emotional → pitch → objection (5 stages)
         """
         # Transactional should go straight to pitch after intent
-        response = transactional_bot.chat("I want crypto trading signals")
-        
+        response = transactional_bot.chat("I want to buy crypto trading signals")
+
         # After stating clear intent, should be in pitch or near pitch
         # (transactional doesn't need doubt/stakes building)
         turns = 0
         while transactional_bot.flow_engine.current_stage == "intent" and turns < 3:
-            response = transactional_bot.chat("Yes, I want trading signals")
+            response = transactional_bot.chat("Yes, I want to purchase trading signals")
             turns += 1
         
         assert transactional_bot.flow_engine.current_stage == "pitch", \
