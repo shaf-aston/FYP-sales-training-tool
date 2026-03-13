@@ -64,7 +64,11 @@ Sylvia meeting #6	24.11.25
 
 
 Tues		17.02.2026 (Date I think)
-Demoed current working project that uses groq api key structure
+- Demoed current working project that uses groq api key; went through a full example sales conversation
+- Discussed strategy pattern issues with separate files per strategy such as duplication, tweaks not maintainable as they had to be copied throughout due to wrong abstraction (should decide stage by stage not upfront), hard to enforce cross stage rules
+- Reviewed architecture diagrams: cleaned up line routing and structure to show data flow better instead of weird ambiguous connections
+
+
 
 
 
