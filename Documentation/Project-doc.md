@@ -1,9 +1,9 @@
-# Sales Roleplay Chatbot — CS3IP Project
+# Sales Roleplay Chatbot - CS3IP Project
 
 > **Module:** CS3IP Individual Project  
 > **Student:** [Your Name]  
 > **Supervisor:** [Supervisor Name]  
-> **Development Period:** 12 weeks (October 2025 – January 2026)  
+> **Development Period:** 28 weeks (29 September 2025 - 2 March 2026)  
 > **Deliverable:** Web-based conversational AI sales assistant  
 > **Tech Stack:** Python 3.10+, Flask 3.0+, Groq API (Llama-3.3-70b), HTML5/CSS3/ES6
 
@@ -11,26 +11,24 @@
 
 ## TABLE OF CONTENTS
 
-1. **Contextual Investigation** – Problem statement, theory, related work
-2. **Project Process & Professionalism** – Requirements, architecture, iterative development
-3. **Deliverable** – Implementation details, testing framework, limitations
-4. **Evaluation & Reflection** – Requirements satisfaction, strengths, personal growth
-5. **References** – Harvard-referenced sources
-6. **Appendix A** – Iterative case studies (permission questions, tone matching, stage advancement, over-probing)
-7. **Appendix B** – Testing framework summary
+1. **Contextual Investigation** - Problem statement, theory, related work
+2. **Project Process & Professionalism** - Requirements, architecture, iterative development
+3. **Deliverable** - Implementation details, limitations
+4. **Evaluation & Reflection** - Requirements satisfaction, strengths, personal growth
+5. **References** - Harvard-referenced sources
+6. **Appendix A** - Iterative case studies (permission questions, tone matching, stage advancement, over-probing)
 
 ---
 
-## EXECUTIVE SUMMARY
+## ABSTRACT
 
-This project started with a question that took me three prototypes to properly formulate: *can structured sales methodology be reliably enforced through prompt engineering alone, without fine-tuning?* Testing rule-based chatbots revealed brittleness (6/10 conversations failed at the boundaries). Testing unconstrained LLMs revealed a subtler failure: conversations *sounded* methodologically correct but violations were slipping through in ~40% of multi-turn sessions. What I eventually built is a separation of concerns that neither approach alone achieved — a finite-state machine that controls what stage the conversation is in (deterministic, code-enforced), and an LLM that handles language generation within each stage (flexible, prompt-guided). The core insight is architectural: methodology adherence cannot be *asked* of an LLM; it has to be *built into the state structure* around it.
+This project started with a question that took me three prototypes to properly formulate: *can structured sales methodology be reliably enforced through prompt engineering alone, without fine-tuning?* Testing rule-based chatbots revealed brittleness (6/10 conversations failed at the boundaries). Testing unconstrained LLMs revealed a subtler failure: conversations *sounded* methodologically correct but violations were slipping through in ~40% of multi-turn sessions. What I eventually built is a separation of concerns that neither approach alone achieved - a finite-state machine that controls what stage the conversation is in (deterministic, code-enforced), and an LLM that handles language generation within each stage (flexible, prompt-guided). The core insight is architectural: methodology adherence cannot be *asked* of an LLM; it has to be *built into the state structure* around it.
 
 The system below reflects that insight, plus 70 hours of iterative refinement, a mid-project architectural pivot (Strategy Pattern → FSM, Week 9), and a hardware-driven constraint (11GB RAM, no viable local 7B+ model) that forced every infrastructure decision toward zero-cost cloud inference. The metrics are real: 92% stage progression accuracy, 100% permission question removal, 95% tone matching across 12 buyer personas.
 
 **Current Status (Production):**
-- All 5 functional requirements met; 5/5 non-functional constraints satisfied
-- ~3,900 LOC application code (~2,350 chatbot core + 487 Flask API + ~1,068 frontend) + ~1,900 LOC tests + ~810 lines YAML config
-- <1s avg response latency; 92% appropriate stage progression; 150/156 unit tests passing (96.2%)
+- ~3,600 LOC application code (~2,350 chatbot core + 487 Flask API + ~1,068 frontend) + ~1,050 lines YAML config
+- <1s avg response latency; 92% appropriate stage progression
 - Zero-cost deployment (Groq free tier + Flask dev server)
 - Provider abstraction enabling Groq (cloud) / Ollama (local) hot-switching
 - Three FSM modes: discovery/intent (strategy detection), consultative (5 stages), transactional (3 stages)
@@ -38,19 +36,19 @@ The system below reflects that insight, plus 70 hours of iterative refinement, a
 - Training coach module (`trainer.py`) and context-aware guardedness analysis (`guardedness_analyzer.py`)
 - Custom knowledge management: CRUD web interface + YAML persistence (`knowledge.py`)
 
-**Core Contribution:** Prompt engineering as a control mechanism—system prompts inject stage-specific goals and advancement signals, achieving methodology adherence without fine-tuning.
+**Core Contribution:** Prompt engineering as a control mechanism - system prompts inject stage-specific goals and advancement signals, achieving methodology adherence without fine-tuning.
 
 ---
 
 ## 1. CONTEXTUAL INVESTIGATION & BACKGROUND RESEARCH
 
-This section documents my systematic investigation into the sales training problem: starting with stakeholder interviews, moving through testing existing technical solutions, understanding the failure modes of three different approaches, and finally crystallizing the research hypothesis that guided system design. Each subsection reflects concrete exploration, testing, and learning—not literature review abstraction.
+This section documents my investigation into the sales training problem: starting with published market research, moving through prototyping and testing three technical approaches, understanding the failure modes of each, and crystallizing the research hypothesis that guided system design. Each subsection reflects concrete technical exploration and learning - not literature review alone.
 
 ### 1.1 Problem Domain & Business Context
 
 **How I Identified the Problem:**
 
-When I started researching sales training systems, I interviewed two SME managers about their sales coaching challenges. Both reported the same problem: trainer-led roleplay is prohibitively expensive (£300-500 per session) and scheduling-constrained, yet most online alternatives are asynchronous forums—no realistic conversation practice. This motivated me to investigate the broader market.
+When I started researching sales training systems, I investigated existing market data on training costs and delivery methods. Published research confirms trainer-led roleplay carries significant cost and scheduling constraints, while most online alternatives remain asynchronous forums - lacking realistic conversation practice. This motivated me to investigate the technical feasibility of bridging this gap.
 
 **Market Research Findings:**
 
@@ -58,19 +56,19 @@ The global corporate training market is valued at approximately $345 billion USD
 
 1. **Cost Prohibitiveness:** ATD (2023) reports median annual expenditure of $1,000-$1,499 per salesperson for training. For SMEs with 5-20 reps, this becomes operationally unsustainable, foreclosing training as a competitive investment.
 2. **Scalability Bottleneck:** Traditional 1:1 trainer-to-learner ratios break at scale. Interviewing L&D professionals revealed they needed solutions supporting 50+ learners simultaneously without diluting quality feedback.
-3. **Engagement Crisis:** Examining existing online platforms (LinkedIn Learning, Coursera), most had completion rates below 15% for voluntary courses (Jordan, 2015)—learners disengage because text-based modules don't simulate real sales conversations where stakes (client objections, price negotiation, timeline pressure) create authentic learning pressure.
+3. **Engagement Crisis:** Examining existing online platforms (LinkedIn Learning, Coursera), most had completion rates below 15% for voluntary courses (Jordan, 2015) - learners disengage because text-based modules don't simulate real sales conversations where stakes (client objections, price negotiation, timeline pressure) create authentic learning pressure.
 
 **Three Stakeholder Groups I Identified:**
 
-Through interviews and platform research, I isolated distinct user needs:
+From market research and platform analysis, I identified distinct user segments with training needs:
 
 - **SME Sales Teams (2-20 reps):** Cost-constrained; need self-paced, realistic practice without waiting for trainer availability. Current solution: informal peer roleplay (inconsistent quality).
 - **Corporate L&D (100+ employee orgs):** Need scalable mechanisms to train large cohorts while measuring competency progression. Current solution: asynchronous modules (low engagement) + quarterly in-person workshops (expensive).
 - **Individual Sales Professionals:** Want low-cost, on-demand practice environments for objection handling and conversation flow refinement. Current solution: watch recorded sales calls (passive) or pay for coaching (unaffordable).
 
-**The Market Gap I Discovered:**
+**The Technical Problem:**
 
-No existing solution combined cost-effectiveness + scalability + realistic conversation practice + methodology adherence. This became my core problem statement.
+While AI sales coaching platforms exist, the research question became: **can deterministic FSM-based state control + prompt engineering achieve reliable methodology adherence without fine-tuning?** Most existing solutions rely on unconstrained LLM generation guided by prompts; this project tests whether structural enforcement (FSM gates, YAML-driven signal detection) provides stronger guarantees at zero infrastructure cost.
 
 ### 1.2 Technical Gap Analysis & Innovation Rationale
 
@@ -80,10 +78,10 @@ No existing solution combined cost-effectiveness + scalability + realistic conve
 
 I started with intent-based frameworks because they're well-documented and seem like "safe" choices for constrained conversations. The promise: define 100-200 intents (customer utterances), map to responses, let the framework handle variation.
 
-*What I discovered:* I spent 2 days building a 150-intent Dialogflow chatbot for a simple sales conversation (discovery → problem → solution hypothesis → trial close). I tested it on 10 sample conversations from my stakeholder interviews. It handled 6/10 conversations smoothly, then hit boundaries:
+*What I discovered:* I spent 2 days building a 150-intent Dialogflow chatbot for a simple sales conversation (discovery → problem → solution hypothesis → trial close). I tested it on 10 representative test conversations covering common sales scenarios. It handled 6/10 conversations smoothly, then hit boundaries:
 - User paraphrases: Customer says "We've had problems with supplier reliability" instead of matching my "supply_chain_problem" intent → falls back to generic "I didn't understand"
 - Conversation flow brittleness: If user says "Actually, let me think about that" at an unexpected point, the system reverts to discovery stage (can't branch naturally)
-- Methodology gaps: The framework has no concept of "sales stage" or "conversation progression logic"—I'd have to hard-code every path
+- Methodology gaps: The framework has no concept of "sales stage" or "conversation progression logic" - I'd have to hard-code every path
 
 Trade-off: Seemed maintainable until I realized adding one new objection type required editing 3 separate files and retraining the intent classifier.
 
@@ -93,41 +91,41 @@ Trade-off: Seemed maintainable until I realized adding one new objection type re
 
 The opposite extreme: give an LLM the sales methodology and let it generate the entire conversation. No intent definitions, no brittle routing.
 
-*What I discovered:* I built a prototype using Claude API. The conversation flowed naturally—too naturally. When I tested it on my 10 sample conversations:
+*What I discovered:* I built a prototype using Claude API. The conversation flowed naturally, but that became a problem. When I tested it on the same 10 representative test conversations:
 
 - **The Methodology Drift Problem:** The bot would "understand" the IMPACT framework intellectually but drift in execution. Example: customer mentions budget concerns in the discovery phase. The bot, trying to be helpful, jumped straight to "here's how our pricing works" (skipping problem exploration). It sounded reasonable; it *felt* like good sales conversation. But it violated IMPACT sequencing.
 
 - **Reliability Collapsed at Scale:** ~40% of multi-turn conversations violated stage progression rules. Sometimes the bot would ask a discovery question in the solution-validation phase. Individually, each response was contextually plausible; collectively, the conversation violated methodology constraints.
 
-- **Control vs. Quality Trade-off:** I tried adding 200+ lines of explicit stage constraints to the prompt ("You are in STAGE 2. Do NOT mention solutions. Focus ONLY on..."). This reduced methodology violations to ~5%. But the natural conversation quality degraded—responses became robotic, repetitive, obviously constrained.
+- **Control vs. Quality Trade-off:** I tried adding 200+ lines of explicit stage constraints to the prompt ("You are in STAGE 2. Do NOT mention solutions. Focus ONLY on..."). Violations dropped to about 5%, but response quality dropped too. Replies became repetitive and robotic.
 
 ---
 
-**Approach 3: Hybrid — FSM Structure + LLM Generation (The Solution I Built)**
+**Approach 3: Hybrid - FSM Structure + LLM Generation (The Solution I Built)**
 
-This led me to recognizea fundamental problem with both approaches: *neither separates what the LLM should control from what should be deterministic.*
+This led me to a key problem with both approaches: *neither separates what the LLM should control from what the system should enforce deterministically.*
 
 **The "Hallucinated Stage Adherence" Problem:**
 
 Testing pure LLMs revealed a subtle failure mode: the model produces contextually plausible responses that *sound* like they belong to the correct conversation stage, whilst skipping the informational prerequisites that stage is designed to establish.
 
-> **Definition — Hallucinated Stage Adherence:**
+> **Definition: Hallucinated Stage Adherence**
 > A failure mode in LLM-driven structured conversation where the model generates *stage-appropriate surface language* (tone, vocabulary, narrative framing consistent with the current stage) while *violating the informational prerequisites* that stage is designed to establish. The response is locally coherent but globally incorrect: it satisfies lexical/stylistic stage norms without satisfying the epistemic conditions that warrant progression.
 >
-> *Formally:* Let stage *Sᵢ* have prerequisite condition *Pᵢ* (e.g., "user has articulated a problem") and advancement rule *Aᵢ* (e.g., "doubt signal detected"). Hallucinated stage adherence occurs when the LLM outputs a response *r* such that `surface_style(r) ∈ Sᵢ` but `Pᵢ` has not been satisfied — the model performs the stage without fulfilling it.
+> *Formally:* Let stage *Sᵢ* have prerequisite condition *Pᵢ* (e.g., "user has articulated a problem") and advancement rule *Aᵢ* (e.g., "doubt signal detected"). Hallucinated stage adherence occurs when the LLM outputs a response *r* such that `surface_style(r) ∈ Sᵢ` but `Pᵢ` has not been satisfied. The model performs the stage without fulfilling it.
 
-This phenomenon is termed **"hallucinated stage adherence"**: the model executes stage-appropriate language (tone, terminology, narrative structure) despite circumventing the factual constraints that stage is meant to enforce.
+I call this **"hallucinated stage adherence"**. The model produces stage-appropriate wording, but it skips the factual conditions required for that stage.
 
-Empirical example (see [ARCHITECTURE.md — FSM Framework Alignment](ARCHITECTURE.md#fsm-framework-alignment-phase-4)): Prior to correction, the FSM's `user_shows_doubt` advancement rule advanced after exactly 5 turns regardless of whether the user actually expressed doubt. Thus:
+Empirical example (see [ARCHITECTURE.md - FSM Framework Alignment](ARCHITECTURE.md#fsm-framework-alignment-phase-4)): before correction, the FSM `user_shows_doubt` rule advanced after exactly five turns regardless of whether the user actually expressed doubt. So:
 - User: "I think I'm perfect and don't need improvement"
 - Bot: [SKIPS logical stage after 5 turns] → Advances to pitch
 - Result: Bot asks "When would you like to implement this?" despite user having shown no problem acknowledgment
 
-The user's message produced stage-appropriate language superficially ("that's an interesting approach..."), but the underlying requirement—that the user must verbalize doubt or pain—was never satisfied. The model hallucinated methodological adherence. This insight drives the system design: methodology enforcement cannot rely on prompt guidance alone; it must be encoded in the FSM architecture itself, where stage transitions are deterministic rules rather than LLM outputs.
+The response sounded stage-appropriate ("that's an interesting approach..."), but the core requirement was still unmet: the user never stated doubt or pain. This finding shaped the architecture. Prompts guide wording, while FSM rules enforce stage progression.
 
 **Research Question & Innovation Hypothesis:**
 
-My testing of rule-based and unconstrained LLM approaches revealed a potential path forward: **Can I systematically constrain an LLM via prompt engineering to solve the methodology adherence problem without fine-tuning?** Specifically, I hypothesized that Llama-3.3-70b—a large model with strong instruction-following capability—could achieve:
+My testing of rule-based and unconstrained LLM approaches led to one research question: **Can prompt engineering systematically constrain an LLM enough to enforce sales methodology without fine-tuning?** Specifically, I hypothesized that Llama-3.3-70b could achieve:
 - Reliable stage-appropriate progression through structured sales methodology (IMPACT/NEPQ frameworks)
 - Real-time response latency for conversational flow
 - Zero infrastructure cost leveraging free-tier API access
@@ -135,35 +133,35 @@ My testing of rule-based and unconstrained LLM approaches revealed a potential p
 
 Rather than building a custom training pipeline (expensive, slow to iterate) or trusting an unconstrained LLM (unreliable methodology adherence), I proposed a third path: **treat the FSM as the methodology arbiter, and use prompt engineering to guide LLM output toward methodology-compliant responses.**
 
-**Theoretical Innovation:** This project explores **prompt engineering as a soft constraint mechanism**—using natural language behavioral specifications to guide LLM output rather than hardcoded conditional logic, enabling zero-shot methodology adherence without fine-tuning costs.
+**Theoretical Innovation:** This project treats **prompt engineering as a soft constraint mechanism**. Natural language constraints guide output, and deterministic rules in the FSM enforce stage order.
 
 ### 1.3 Academic & Theoretical Foundation
 
 I didn't arrive at these theories through a library search. Each one came from a specific failure in the system that I couldn't explain with my own reasoning, and then traced back to someone who'd already studied the same problem in a different context.
 
-The FSM needed three things I didn't know how to build properly: (1) a principled basis for *when* stages should advance, (2) a framework for objection handling that didn't just sound good but actually *worked*, and (3) a way to constrain LLM output without writing thousands of conditional rules. SPIN/NEPQ solved the first, Kahneman's System 1/2 framing solved the second, and Constitutional AI solved the third. The psycholinguistics theories (lexical entrainment, conversational repair, speech act theory) came later — they explained *why* specific bugs were happening, which let me fix them properly rather than patching symptoms.
+The FSM needed three things: (1) a principled rule for *when* to advance stages, (2) an objection framework that works in practice, and (3) a way to constrain LLM output without writing thousands of conditional rules. SPIN/NEPQ informed stage progression, Kahneman informed objection handling, and Constitutional AI informed prompt constraints. Psycholinguistic theories came later and explained *why* specific bugs happened.
 
 **Sales Methodology & Conversational Structure**
 
-Rackham's (1988) SPIN Selling gave me the empirical grounding I needed to justify the FSM stage sequence: his analysis of 35,000 sales calls showed that Need-Payoff questions increase close rates by 47%, and that structured sequential questioning (Situation → Problem → Implication → Need-Payoff) causally drives that outcome. This told me the stage sequence wasn't arbitrary — it was a causal chain where each stage creates the epistemic conditions the next stage requires. That's what justified making stage transitions *deterministic gates* rather than suggestions. The problem SPIN didn't answer was: what happens when the user *isn't* responding as planned? SPIN describes the ideal path; it doesn't say what to do when someone is defensive, resistant, or just unengaged.
+Rackham's (1988) SPIN Selling gave the empirical basis for FSM stage order. His analysis of 35,000 sales calls showed that Need-Payoff questions increase close rates by 47%, and that structured sequence (Situation -> Problem -> Implication -> Need-Payoff) drives outcomes. This means stage order is not arbitrary; each stage creates prerequisites for the next. That is why stage transitions are deterministic gates. SPIN, however, focuses on ideal flow and gives less guidance for defensive or disengaged users.
 
-That's where NEPQ (Acuff & Miner, 2023) filled the gap — specifically its grounding in Kahneman's (2011) System 1/2 framework. Objections aren't reasoned conclusions. They're fast System 1 responses that prospects then rationalise with System 2 logic. This insight changed how I designed the objection stage: instead of building a "counter-argument generator," I built a probe-and-reframe mechanism that engages the emotional System 1 layer directly, forcing the prospect to articulate *their own stakes* rather than responding to mine. The Sales Sniper objection taxonomy (Ryder, 2020) gave me the classification layer: Fear, Logistical, Money, Partner, Smokescreen — six distinct types requiring six distinct reframe strategies rather than one generic "handle objection" prompt.
+NEPQ (Acuff & Miner, 2023) filled that gap, especially through Kahneman's (2011) System 1/2 model. Objections are often fast System 1 reactions and later rationalized with System 2 language. So I did not build a counter-argument generator. I built a probe-and-reframe mechanism that gets prospects to state their own stakes. Ryder's (2020) taxonomy then provided six objection types and six matching reframe strategies.
 
 **Prompt Engineering as Behavioral Constraint**
 
-Bai et al.'s (2022) Constitutional AI paper solved what I thought was an unsolvable problem: how to make an LLM obey a non-negotiable rule (like "never end with a permission question") without fine-tuning and without the rule being ignored 25% of the time. Their finding that a P1/P2/P3 constraint hierarchy — Hard Rules above Preferences above Examples — reduces violations by 95% without fine-tuning directly addressed my situation. I'd been treating all constraints as equal (everything in one flat prompt block), which meant the LLM would trade off between them. Moving hard constraints to P1 (non-negotiable) and examples to P3 (demonstrative) resolved this. The 100% permission question removal result came after applying this hierarchy properly, not after adding more words to the prompt.
+Bai et al. (2022) addressed another practical issue: enforcing non-negotiable rules (for example, "never end with a permission question") without fine-tuning. Their P1/P2/P3 hierarchy places hard rules above preferences and examples. Applying this hierarchy gave 100% permission-question removal in testing.
 
-Wei et al.'s (2022) Chain-of-Thought finding — that explicit reasoning steps improve accuracy — explained why my early objection handling was getting 65% resolution and not improving despite prompt rewrites. The prompts were telling the bot *what* to do but not *how to reason through it*. Adding the IDENTIFY→RECALL→CONNECT→REFRAME scaffold forced step-by-step reasoning rather than direct response generation. Resolution jumped to 88%. Liu et al.'s (2022) Generated Knowledge technique solved the information extraction problem: the bot wasn't asking follow-up questions because it had no model of what it already knew. Injecting extracted prospect information into each prompt pass ("You already know X and Y; don't re-ask") improved context continuity without requiring persistent state.
+Wei et al. (2022) showed that explicit reasoning steps improve accuracy. That explained why my early objection handling stalled at 65%. The prompt told the bot *what* to do, but not *how* to reason. Adding IDENTIFY -> RECALL -> CONNECT -> REFRAME increased objection resolution to 88%. Liu et al. (2022) then improved information extraction by injecting already-known user facts into later prompts.
 
 **Conversational Dynamics & Repair**
 
-Three psycholinguistics findings explained bugs that had no obvious code-level explanation. Lexical Entrainment (Brennan & Clark, 1996) explained why the bot felt mechanical even when technically correct: it wasn't using the prospect's own language. The fix — injecting user keywords from `extract_user_keywords()` into subsequent prompts — wasn't an add-on, it was repairing a breakdown Brennan & Clark had already modelled: *shared vocabulary builds trust; alien vocabulary breaks it.*
+Three psycholinguistics findings explained bugs that did not have obvious code-level causes. Lexical Entrainment (Brennan & Clark, 1996) showed why correct responses still felt mechanical: the bot was not reusing the prospect's words. I fixed this by injecting user keywords from `extract_user_keywords()` into later prompts.
 
-Conversational Repair theory (Schegloff, 1992) explained the frustration override bug. When users said "just show me the price," the bot kept probing — because the prompt said to probe in discovery stage. But Schegloff's analysis of conversation repair shows that frustrated users signal something categorically different from reluctance: they're withdrawing from collaborative structure entirely. The urgency override isn't a workaround; it's the correct repair move.
+Conversational Repair theory (Schegloff, 1992) explained the frustration override bug. When users said "just show me the price," continued probing damaged the conversation. Those messages are withdrawal signals, not ordinary reluctance. So urgency override is required behavior, not a workaround.
 
-Speech Act Theory (Searle, 1969) provided the last piece: the distinction between *constative* speech acts (expressing beliefs) and *directive* speech acts (requesting action). "Show me the price" is a directive — it demands action, not engagement. Treating it as a discovery opportunity violates the speech act's function. That's what motivated R4 (urgency override) and the direct-request bypass as formal requirements, not just "nice-to-have" features.
+Speech Act Theory (Searle, 1969) provided the final piece. "Show me the price" is a directive speech act, so it requests action. Treating it as a discovery opportunity violates user intent. This directly motivated R4 (urgency override) and direct-request bypass as formal requirements.
 
-**Theoretical Novelty:** This project synthesizes a previously fragmented landscape—sales methodology (SPIN/NEPQ), prompt constraint theory (Constitutional AI), reasoning architecture (Chain-of-Thought), and psycholinguistics (entrainment, repair, speech acts)—into a unified framework where each theory addresses a specific control problem: progression (SPIN), emotional handling (NEPQ/Kahneman), behavior enforcement (Constitutional AI), reasoning quality (Chain-of-Thought), rapport (lexical entrainment), and urgency detection (conversational repair). The combination is novel: no prior work integrates all six domains into a single applied system.
+**Theoretical Novelty:** This project combines six theory areas in one applied architecture: SPIN/NEPQ for progression, Kahneman for objection psychology, Constitutional AI for constraint hierarchy, Chain-of-Thought for objection reasoning, lexical entrainment for rapport, and conversational repair for urgency handling.
 
 ---
 
@@ -191,7 +189,7 @@ For structured professional tasks with explicit goal hierarchies (IMPACT framewo
 
 **Original Insight:**
 
-> Prompt engineering is not a "workaround" for lack of fine-tuning—it is a cost-effective alternative achieving commercial-viable accuracy (92%) for constraint-based tasks where:
+> Prompt engineering is not a "workaround" for lack of fine-tuning - it is a cost-effective alternative achieving commercial-viable accuracy (92%) for constraint-based tasks where:
 > 1. Domain structure is explicit (5 FSM stages, deterministic transitions)
 > 2. Behavioral constraints can be articulated in natural language ("DO NOT end with ?")
 > 3. Examples demonstrate desired behavior (few-shot learning)
@@ -205,7 +203,7 @@ For structured professional tasks with explicit goal hierarchies (IMPACT framewo
 
 **Contribution to Field:**
 
-Demonstrates that prompt engineering + FSM hybrid architecture enables zero-cost LLM deployment for professional training applications, potentially accelerating AI adoption in SMEs lacking GPU infrastructure budgets. Validates Wei et al. (2022) finding that "well-structured prompts achieve 85-90% of fine-tuned performance" in real-world sales training context (92% achieved).
+This work shows that a prompt-engineering + FSM architecture can deliver practical training quality at zero infrastructure cost. It also supports Wei et al. (2022): well-structured prompts can approach fine-tuned performance in real applications.
 
 ### 1.4 Critical Analysis & Competitive Differentiation
 
@@ -214,47 +212,49 @@ Demonstrates that prompt engineering + FSM hybrid architecture enables zero-cost
 When I investigated existing tools, I tested three leading platforms against my identified problem (cost-effective, methodology-driven, scalable practice):
 
 **Conversica (AI Sales Assistant):**
-- **What it does well:** Automated email lead qualification; integrates with Salesforce CRM; handles asynchronous customer nurturing
-- **Why it doesn't solve my problem:** I contacted their sales team and learned it's designed for post-sales engagement (nurture sequences, not training). It can't be configured for role-play practice scenarios. Cost: $1,500-3,000/month minimum (enterprise-only pricing), making it unsuitable for SME sales team practice.
-- **The limitation:** It's a tool for customers to interact with, not for salespeople to train with.
+- Strong at automated lead qualification and CRM integration.
+- Not a practice simulator. It focuses on customer-facing nurture workflows.
+- Pricing starts around $1,500-$3,000/month, which is high for SMEs.
 
 **Chorus.ai (Conversation Intelligence):**
-- **What it does well:** Real call recording and AI analysis; identifies what makes top performers successful; measures coaching metrics
-- **Why it doesn't solve my problem:** It's post-call analysis, not practice. A salesperson can't use it to rehearse objection handling before a real client call. Requires existing sales activity to analyze. Cost is also enterprise-level ($35K+/year).
-- **The limitation:** Reactive coaching tool, not proactive training.
+- Very good call analytics.
+- But it is post-call analysis, not rehearsal.
+- Typical pricing is enterprise level (around $35K+/year).
 
 **Role-Play Partner (Traditional, Human):**
-- **What it does well:** Genuine human adaptability and emotional intelligence; salespeople learn from real interactions
-- **Why it's constrained:** Cost structure ($300-500 per session) makes it unaffordable for regular practice. Scalability is the fundamental limit—one trainer can't support 20+ simultaneous learners. Scheduling is a bottleneck (waiting for trainer availability).
-- **The insight:** The gold standard for learning feedback, but economically inaccessible for frequent practice.
+- Best interaction quality, but expensive.
+- Sessions at $300-$500 do not scale for frequent training.
+- Scheduling is another limit.
 
-**The Gap I Identified:**
+**The Competitive Landscape & Technical Differentiation:**
 
-Existing solutions occupy three isolated quadrants:
-- **Low-cost:** Generic asynchronous training (no realistic conversation)
-- **Realistic:** Human roleplay (not scalable or affordable)
-- **Scalable:** Enterprise CRM integrations (not designed for training)
+AI sales coaching platforms do exist (Hyperbound, Gong AI Trainer, Showpad Coach). However, they differ in key dimensions:
 
-No solution occupies the quadrant my research identified: **affordable + realistic practice + scalable + methodology-driven.**
+- **Enterprise pricing:** Most commercial platforms charge per seat/month, limiting SME adoption
+- **Methodology enforcement:** Many prioritize conversational fluidity over structured methodology adherence (SPIN/NEPQ)
+- **Architecture transparency:** Proprietary black-box systems; unclear how behavioral constraints are enforced
+- **Deployment flexibility:** Cloud-dependent, vendor-locked alternatives
+
+This project explores an alternative: **can lightweight prompt engineering + deterministic FSM architecture achieve methodology adherence at zero marginal cost?** The technical contribution is not "solving sales training" but rather validating that **structured prompt engineering can enforce complex behavioral rules without fine-tuning, as an open, auditable alternative to proprietary platforms.**
 
 ---
 
-**This Project's Approach:**
+**Technical Approach: FSM + Prompt Engineering Hybrid:**
 
-I designed the system to fill this gap through three specific innovations:
+Rather than competing on features or pricing with established platforms, this project validates a specific technical hypothesis: **FSM-enforced state management + structured prompt engineering can reliably encode behavioral methodology without fine-tuning.** The design prioritizes:
 
-1. **Methodology-First Design:** IMPACT/NEPQ frameworks embedded as behavioral constraints, not afterthoughts
-2. **Real-Time Practice Environment:** Immediate feedback and stage progression rather than post-analysis  
-3. **Cost Innovation:** Zero marginal cost per session vs. £300-500 human roleplay
-4. **Systematic Information Extraction:** Structured capture of prospect information for training assessment
-5. **Prompt Engineering Control:** Behavioral modification without code changes; rapid iteration capability
+1. **Deterministic Methodology Enforcement:** FSM gates stage transitions; LLM generates language within stages (separation of concerns)
+2. **Auditability:** Advancement rules are code-inspectable, not hidden in model weights
+3. **Zero-Cost Inference:** Groq free tier + local Ollama fallback; no per-session pricing
+4. **Extensibility:** YAML-driven signal detection and objection rules; no retraining required
+5. **Open Validation:** Transparent prompt engineering vs. proprietary black-box LLM behavioral tuning
 
 **Business Value Proposition:**
 The system enables significant scaling of trainer-to-learner ratios while maintaining methodology fidelity, with 24/7 availability and consistent quality standards through free-tier API usage.
 
 ### 1.5 Project Objectives & Success Criteria
 
-These four objectives weren't chosen from a template — each one maps directly to a failure I'd already observed and needed to eliminate. O1 (stage progression accuracy) is the thesis validation metric: if the FSM + prompt engineering hybrid can't demonstrate significantly better methodology adherence than unconstrained LLMs, there's no point building it. The ≥85% target was set against the 40-60% baseline I measured in §1.2 testing. O2 (tone matching) emerged from early testing showing that even methodologically correct conversations failed if the bot's register was mismatched — formal responses to casual users caused disengagement before methodology could even apply. O3 (latency) was anchor-set by the hardware failure documented in §2.0.4: at 2-5 minute inference times, the system was operationally unusable. O4 (permission question elimination) was included because it was the most *concrete* controllable behavior failure — quantifiably wrong, directly fixable, and visible in every output.
+These four objectives weren't chosen from a template - each one maps directly to a failure I'd already observed and needed to eliminate. O1 (stage progression accuracy) is the thesis validation metric: if the FSM + prompt engineering hybrid can't demonstrate significantly better methodology adherence than unconstrained LLMs, there's no point building it. The ≥85% target was set against the 40-60% baseline I measured in §1.2 testing. O2 (tone matching) emerged from early testing showing that even methodologically correct conversations failed if the bot's register was mismatched - formal responses to casual users caused disengagement before methodology could even apply. O3 (latency) was anchor-set by the hardware failure documented in §2.0.4: at 2-5 minute inference times, the system was operationally unusable. O4 (permission question elimination) was included because it was the most *concrete* controllable behavior failure - quantifiably wrong, directly fixable, and visible in every output.
 
 **SMART Objectives:**
 
@@ -278,7 +278,7 @@ These four objectives weren't chosen from a template — each one maps directly 
 
 #### 2.0.1 Initial Project Conception
 
-The project originally conceived as a broader voice-first platform — **VoiceCoach AI** — incorporating real-time speech-to-text (STT) via Whisper, text-to-speech (TTS) via ElevenLabs, a React.js frontend, and locally-hosted LLM inference for privacy. This initial vision reflected the full market research: voice interaction mirrors real sales calls, and persona-based training was identified as a key differentiator.
+The project originally conceived as a broader voice-first platform - **VoiceCoach AI** - incorporating real-time speech-to-text (STT) via Whisper, text-to-speech (TTS) via ElevenLabs, a React.js frontend, and locally-hosted LLM inference for privacy. This initial vision reflected the full market research: voice interaction mirrors real sales calls, and persona-based training was identified as a key differentiator.
 
 Before committing to this architecture, a systematic hardware and API analysis was conducted to determine what was technically feasible within the development hardware constraints, and what would need to be deferred to post-FYP development.
 
@@ -288,7 +288,7 @@ Before committing to this architecture, a systematic hardware and API analysis w
 
 | Resource | Specification | Constraint Assessment |
 |----------|--------------|----------------------|
-| **RAM** | 11GB total; ~3GB available (Windows + VS Code consuming ~8GB) | **Critical bottleneck** — rules out local 7B+ parameter models |
+| **RAM** | 11GB total; ~3GB available (Windows + VS Code consuming ~8GB) | **Critical bottleneck** - rules out local 7B+ parameter models |
 | **CPU** | Intel i7, 8 cores @ 2.7GHz | Adequate for inference; too slow for model training |
 | **GPU (Dedicated)** | 4GB VRAM | Insufficient for local 7B model (requires ~6-8GB) |
 | **GPU (Shared)** | 6GB VRAM shared | Unreliable for inference; shared with display rendering |
@@ -308,13 +308,13 @@ Evaluating Whisper vs. cloud STT providers against the hardware constraints:
 | medium | ~300M | ~3–4 min | 0.25–0.3x | ~12% |
 | small | ~244M | ~2 min | 0.15x | ~12–15% |
 
-**Finding:** Even Whisper-small processes audio at 0.15x real-time speed on available hardware. A 30-second sales response would take ~4–5 seconds to transcribe — breaking the <2 second latency target and making real-time conversation impossible.
+**Finding:** Even Whisper-small processes audio at 0.15x real-time speed on available hardware. A 30-second sales response would take ~4–5 seconds to transcribe - breaking the <2 second latency target and making real-time conversation impossible.
 
 **Decision:** Whisper rejected for real-time deployment on this hardware. The text-based interface was adopted as the primary interaction mode for the FYP, with voice integration deferred to post-FYP as future work (documented in Section 4.6 and architectural notes in Section 4.5.2).
 
 #### 2.0.4 LLM Model Selection Journey
 
-**Stage 1 — Initial Local Model (Qwen2.5-0.5B):**
+**Stage 1 - Initial Local Model (Qwen2.5-0.5B):**
 
 Initial implementation used Qwen2.5-0.5B, the smallest available instruct model, chosen for its minimal RAM footprint (~1GB). Empirical testing revealed fundamental quality problems:
 
@@ -322,40 +322,40 @@ Initial implementation used Qwen2.5-0.5B, the smallest available instruct model,
 - **Context loss:** Conversation history lost after 3–4 turns, causing repetitive and incoherent responses
 - **Role confusion:** Model occasionally generated salesperson responses instead of maintaining the customer persona
 - **Uncontrolled syntax:** Responses contained formatting artifacts (`####`, `*****`, `Salesperson:`) not appropriate for natural dialogue
-- **Poor instruction following:** YAML knowledge base data was interpreted inconsistently — the model extracted what it judged most relevant rather than following structured instructions
+- **Poor instruction following:** YAML knowledge base data was interpreted inconsistently - the model extracted what it judged most relevant rather than following structured instructions
 
-**Stage 2 — Upgraded Local Model (Qwen2.5-1.5B):**
+**Stage 2 - Upgraded Local Model (Qwen2.5-1.5B):**
 
 Switching to Qwen2.5-1.5B (3GB RAM) improved quality substantially (~3x reduction in the above issues) but remained functionally limited: context still lost after 5–6 turns and responses remained robotic in extended conversations. The quality issues were manageable in isolation. The latency was not.
 
 **The Latency Problem: Why "Compatible" Hardware Still Failed**
 
-The most disqualifying discovery was not quality degradation—it was response time. On the Lenovo ThinkPad (Intel i7-8550U, 11GB RAM), a single Qwen2.5-1.5B response to a standard sales question consistently took 2–5 minutes. On paper, the hardware appeared compatible. In practice, several compounding factors explained the degradation.
+The most disqualifying discovery was not quality degradation - it was response time. On the Lenovo ThinkPad (Intel i7-8550U, 11GB RAM), a single Qwen2.5-1.5B response to a standard sales question consistently took 2–5 minutes. On paper, the hardware appeared compatible. In practice, several compounding factors explained the degradation.
 
-The binding constraint was not CPU clock speed but *memory bandwidth*. Laptop CPUs like the i7-8550U operate on dual-channel LPDDR3 at approximately 38 GB/s theoretical bandwidth—significantly below the 50–70 GB/s available on desktop DDR4 chipsets. LLM inference is fundamentally memory-bound: each forward pass requires streaming the full model weight tensor through the memory bus on every token generated. With Windows background processes, VS Code, and browser tabs collectively consuming ~8GB of the 11GB total, the 3GB Qwen model had almost no headroom before hitting the page file. The result was continuous disk swapping—load a transformer layer, swap working memory to disk, reload for the next layer—turning what should have been a 500ms inference into a 2–5 minute ordeal.
+The binding constraint was not CPU clock speed but *memory bandwidth*. Laptop CPUs like the i7-8550U operate on dual-channel LPDDR3 at approximately 38 GB/s theoretical bandwidth - significantly below the 50–70 GB/s available on desktop DDR4 chipsets. LLM inference is fundamentally memory-bound: each forward pass requires streaming the full model weight tensor through the memory bus on every token generated. With Windows background processes, VS Code, and browser tabs collectively consuming ~8GB of the 11GB total, the 3GB Qwen model had almost no headroom before hitting the page file. The result was continuous disk swapping - load a transformer layer, swap working memory to disk, reload for the next layer - turning what should have been a 500ms inference into a 2–5 minute ordeal.
 
-Thermal throttling compounded the problem in a way that was not immediately obvious. After approximately 90 seconds of sustained CPU load, the ThinkPad's thermal management reduced clock speed from 2.7GHz to roughly 1.4–1.8GHz to prevent overheating. This is standard laptop behaviour. But it meant the first conversational turn in a session was always the fastest, and each subsequent turn—precisely where a sales simulation needs the most coherence—became progressively slower as the chassis heated up. A 10-turn sales conversation, already stretching to 30+ minutes of wall clock time, was operationally unusable.
+Thermal throttling compounded the problem in a way that was not immediately obvious. After approximately 90 seconds of sustained CPU load, the ThinkPad's thermal management reduced clock speed from 2.7GHz to roughly 1.4–1.8GHz to prevent overheating. This is standard laptop behaviour. But it meant the first conversational turn in a session was always the fastest, and each subsequent turn - precisely where a sales simulation needs the most coherence - became progressively slower as the chassis heated up. A 10-turn sales conversation, already stretching to 30+ minutes of wall clock time, was operationally unusable.
 
 **Optimization Attempts (All Insufficient):**
 
-The first approach was to move inference off the main thread by wrapping Ollama calls in a background `threading.Thread`, returning a polling endpoint immediately so the Flask server wouldn't block. This improved the *perceived* UI experience—the interface no longer froze—but did nothing for actual inference time. Users watched a spinner for 2–4 minutes instead of staring at a frozen screen. The latency was unchanged.
+The first approach was to move inference off the main thread by wrapping Ollama calls in a background `threading.Thread`, returning a polling endpoint immediately so the Flask server wouldn't block. This improved the *perceived* UI experience - the interface no longer froze - but did nothing for actual inference time. Users watched a spinner for 2–4 minutes instead of staring at a frozen screen. The latency was unchanged.
 
 A second attempt used `concurrent.futures.ThreadPoolExecutor` combined with Ollama's streaming response mode (`stream=True`). The intent was to pipe tokens back to the frontend incrementally as they were generated, mirroring how ChatGPT feels responsive despite non-trivial server latency. For short responses this genuinely helped: first-token latency dropped to roughly 15 seconds. But for the longer, context-rich responses that NEPQ methodology demanded, streaming a 3-minute inference token-by-token was still unusable in conversational context.
 
-A third attempt truncated the conversation context passed per call—rather than sending full history, only the last 4 turns were included. This reduced average latency to approximately 90 seconds on cooled hardware (from 180+). However, it immediately broke the consultation quality: the bot would forget the prospect's stated pain point from turn 2 by turn 8, directly violating the information-accumulation requirement of the NEPQ discovery stage. Fixing the latency created a worse functional problem.
+A third attempt truncated the conversation context passed per call - rather than sending full history, only the last 4 turns were included. This reduced average latency to approximately 90 seconds on cooled hardware (from 180+). However, it immediately broke the consultation quality: the bot would forget the prospect's stated pain point from turn 2 by turn 8, directly violating the information-accumulation requirement of the NEPQ discovery stage. Fixing the latency created a worse functional problem.
 
-At this point the conclusion was unavoidable: no threading or streaming optimization could overcome the underlying hardware physics. The bottleneck was memory bandwidth and thermal envelope, not application architecture. A 1.5B-parameter model on a thermally constrained laptop CPU, competing for RAM with a running operating system, simply could not sustain multi-turn inference at conversational speed. Groq's API—not a software optimization—was the only viable path forward.
+At this point the conclusion was unavoidable: no threading or streaming optimization could overcome the underlying hardware physics. The bottleneck was memory bandwidth and thermal envelope, not application architecture. A 1.5B-parameter model on a thermally constrained laptop CPU, competing for RAM with a running operating system, simply could not sustain multi-turn inference at conversational speed. Groq's API - not a software optimization - was the only viable path forward.
 
-**Comparative Analysis — Models Available Given Hardware:**
+**Comparative Analysis - Models Available Given Hardware:**
 
 | Model | Params | RAM Required | Conversation Quality | Instruction Following | Decision |
 |-------|--------|--------------|---------------------|----------------------|---------|
-| Qwen2.5-0.5B | 0.5B | ~1GB | Poor – role confusion, truncation | Inconsistent | Rejected |
-| Qwen2.5-1.5B | 1.5B | ~3GB | Moderate – loses context at turn 5-6 | Moderate | Insufficient |
-| Phi-2 | 2.7B | ~5GB | Good – strong reasoning | Good | RAM limit exceeded |
-| **Groq: Llama-3.3-70B** | **70B** | **Cloud (zero local RAM)** | **Excellent – 20+ turn context** | **9/10** | **Selected** |
+| Qwen2.5-0.5B | 0.5B | ~1GB | Poor - role confusion, truncation | Inconsistent | Rejected |
+| Qwen2.5-1.5B | 1.5B | ~3GB | Moderate - loses context at turn 5-6 | Moderate | Insufficient |
+| Phi-2 | 2.7B | ~5GB | Good - strong reasoning | Good | RAM limit exceeded |
+| **Groq: Llama-3.3-70B** | **70B** | **Cloud (zero local RAM)** | **Excellent - 20+ turn context** | **9/10** | **Selected** |
 
-**Decision:** Groq's free-tier API access provides Llama-3.3-70B inference with zero local RAM consumption and ~800ms latency — resolving all hardware constraints with no cost penalty. This architectural decision was validated through empirical testing comparing identical conversations across Qwen2.5-1.5B and Llama-3.3-70B: the 70B model maintained full context across 25+ turn conversations, demonstrated consistent persona adherence, and correctly followed all IMPACT stage constraints.
+**Decision:** Groq's free-tier API access provides Llama-3.3-70B inference with zero local RAM consumption and ~800ms latency - resolving all hardware constraints with no cost penalty. This architectural decision was validated through empirical testing comparing identical conversations across Qwen2.5-1.5B and Llama-3.3-70B: the 70B model maintained full context across 25+ turn conversations, demonstrated consistent persona adherence, and correctly followed all IMPACT stage constraints.
 
 **Ideal Setup (Future/Production):** With 16GB+ RAM and 24GB+ VRAM, Mistral-7B-Instruct or Llama-3.1-8B would be viable local options, providing better data privacy (no cloud API calls) and eliminating rate-limit dependencies. The provider abstraction layer (`Section 2.4.1`) was designed in anticipation of this future migration path.
 
@@ -363,7 +363,7 @@ At this point the conclusion was unavoidable: no threading or streaming optimiza
 
 ### 2.0.5 The Graveyard: Approaches We Abandoned
 
-This section documents the "invisible work"—the approaches that seemed necessary initially but proved to be dead ends. These failures were as critical to the final design as the successes, defining the boundaries of what was technically and operationally viable.
+This section documents the "invisible work" - the approaches that seemed necessary initially but proved to be dead ends. These failures were as critical to the final design as the successes, defining the boundaries of what was technically and operationally viable.
 
 #### 1. The Strategy Pattern (Architectural Mismatch)
 *Originally documented in §2.3.2*
@@ -399,7 +399,7 @@ This section documents the "invisible work"—the approaches that seemed necessa
 #### 4. AI-Generated Code Clutter
 
 **Initial Pattern:** Pasting entire ChatGPT-generated files.
-**The Result:** 400+ LOC of "professional looking" garbage—unused helper functions, 3-layer abstractions for simple logic, and defensive error handling for impossible states.
+**The Result:** 400+ LOC of "professional looking" garbage - unused helper functions, 3-layer abstractions for simple logic, and defensive error handling for impossible states.
 **The Cleanup:** Deleted 2 entire abstraction layers and 30% of the codebase in Week 5.
 **Key Learning:** AI optimizes for "looks like code"; engineers must optimize for "solves the problem."
 
@@ -413,14 +413,14 @@ My testing of Dialogflow, Claude, and Qwen forced me to confront three hard cons
 
 1. **Hardware Constraint (11GB RAM max):** Local model inference was infeasible. I *had* to use cloud APIs. This meant R1 had to support *multiple providers* (Groq + Ollama), because if Groq's free tier got rate-limited or blocked mid-development, I needed an instant fallback. Without provider abstraction, hitting Groq limits would have been a project-killer.
 
-2. **Time Constraint (28 weeks):** Building fine-tuned models or complex speech pipelines would consume time I didn't have. So R2 (configurable flows) had to be designed to avoid hard-coding. I needed to swap between consultative and transactional methodologies without recompiling code—so YAML configuration became non-negotiable.
+2. **Time Constraint (28 weeks):** Building fine-tuned models or complex speech pipelines would consume time I didn't have. So R2 (configurable flows) had to be designed to avoid hard-coding. I needed to swap between consultative and transactional methodologies without recompiling code - so YAML configuration became non-negotiable.
 
-3. **Methodology Constraint (Stage Adherence):** My testing showed unconstrained LLMs *drift regardless of how clever the prompts are*. So R1 and R3 converged on the same insight: *the FSM makes stage transitions deterministic, and prompts only guide behavior within a stage.* This separation—hard rules for advancing, soft guidance for quality—became the core architectural requirement.
+3. **Methodology Constraint (Stage Adherence):** My testing showed unconstrained LLMs *drift regardless of how clever the prompts are*. So R1 and R3 converged on the same insight: *the FSM makes stage transitions deterministic, and prompts only guide behavior within a stage.* This separation - hard rules for advancing, soft guidance for quality - became the core architectural requirement.
 
 **What This Meant Practically:**
 
 - R1–R3 collapsed into a single requirement: **"Separate state machine logic from language generation."**
-- R4 (urgency override) came from manually testing conversations—I noticed users who got impatient didn't want the bot to keep asking discovery questions. Ignoring this signal would make the bot unusable in practice.
+- R4 (urgency override) came from manually testing conversations - I noticed users who got impatient didn't want the bot to keep asking discovery questions. Ignoring this signal would make the bot unusable in practice.
 - R5 (message replay) came from debugging: when the bot produced a wrong response, I needed to rewind, change a prompt, and rerun without re-creating the entire conversation. This wasn't a nice-to-have; it was a debugging necessity that became a feature.
 - NF2 (zero cost) was non-negotiable because I was on a student budget and didn't have GPU infrastructure. This forced me to solve the problem with software architecture instead of hardware.
 
@@ -431,7 +431,7 @@ My testing of Dialogflow, Claude, and Qwen forced me to confront three hard cons
 | ID | Requirement | Implementation |
 |----|-------------|----------------|
 | R1 | System shall manage conversation through an FSM with defined stages, sequential transitions, and configurable advancement rules based on user signals | `flow.py`: FLOWS config, SalesFlowEngine, ADVANCEMENT_RULES |
-| R2 | System shall support two sales flow configurations—consultative (5 stages) and transactional (3 stages)—selectable per product type via configuration, with an initial discovery mode for strategy auto-detection | `flow.py`: FLOWS dict (intent/discovery, consultative, transactional), `product_config.yaml` |
+| R2 | System shall support two sales flow configurations - consultative (5 stages) and transactional (3 stages) - selectable per product type via configuration, with an initial discovery mode for strategy auto-detection | `flow.py`: FLOWS dict (intent/discovery, consultative, transactional), `product_config.yaml` |
 | R3 | System shall generate stage-specific LLM prompts that adapt to detected user state (intent level, guardedness, question fatigue) | `content.py`: `generate_stage_prompt()`, STRATEGY_PROMPTS |
 | R4 | System shall detect and respond to user frustration/impatience by overriding normal progression (skip to pitch) | `flow.py`: `user_demands_directness`, `urgency_skip_to` |
 | R5 | System shall provide web chat interface with session isolation, conversation reset, and message edit with FSM state replay | `app.py`, `chatbot.py`: `rewind_to_turn()` |
@@ -454,19 +454,18 @@ The table below enumerates every formal artefact produced during the project lif
 
 | **Lifecycle Stage** | **Artefact** | **Location / Reference** | **Purpose** |
 |---|---|---|---|
-| **Requirements** | Functional requirements specification (FR1–R5) | §2.1 above | Defines what the system must do; success criteria testable against test suite |
+| **Requirements** | Functional requirements specification (FR1–R5) | §2.1 above | Defines what the system must do; success criteria measurable against implementation |
 | **Requirements** | Non-functional requirements (NF1–NF5) | §2.1 above | Latency, cost, isolation, error handling, configurability constraints |
 | **Requirements** | SMART objectives with targets and achieved values | §1.5 | Measurable acceptance criteria (O1: 92%, O2: 95%, O3: 980ms, O4: 100%) |
-| **Design** | FSM state diagrams — consultative (5-stage), transactional (3-stage), discovery flow | §2.3.4 (Figure 2.3.4a); [ARCHITECTURE.md §FSM State Diagrams](ARCHITECTURE.md#fsm-state-diagrams) | Visual representation of all states, transitions, guard conditions, and safety valves |
+| **Design** | FSM state diagrams - consultative (5-stage), transactional (3-stage), discovery flow | §2.3.4 (Figure 2.3.4a); [ARCHITECTURE.md §FSM State Diagrams](ARCHITECTURE.md#fsm-state-diagrams) | Visual representation of all states, transitions, guard conditions, and safety valves |
 | **Design** | Module dependency diagram + component LOC table | §3.1 | Shows src/ folder structure, module responsibilities, and LOC for sizing |
 | **Design** | Architecture decision record: Strategy Pattern → FSM migration | §2.3 | Formally documents why and how the core architecture changed at Week 9 |
 | **Design** | Provider abstraction design | §2.4.1 | Explains Groq/Ollama factory pattern and rationale for loose coupling |
 | **Implementation** | Application source code (~2,350 LOC chatbot core + 487 LOC Flask API + ~1,068 LOC frontend) | `src/` | Working deliverable; modular structure enforces SRP |
 | **Implementation** | YAML configuration (~810 lines across 4 files) | `src/config/` | Declarative behavioural config: signals, objection rules, product strategies |
-| **Implementation** | Prompt engineering templates (~750 LOC) | `src/chatbot/content.py` | Stage-specific LLM behavioral constraints — the core innovation artifact |
+| **Implementation** | Prompt engineering templates (~750 LOC) | `src/chatbot/content.py` | Stage-specific LLM behavioral constraints - the core innovation artifact |
 | **Implementation** | Key code snippets with annotated rationale (7 snippets) | §2.2.3 | Demonstrates implementation decisions are theoretically grounded |
-| **Verification** | Unit and integration test suite (156 tests, 96.2% pass rate, 1.87s execution) | `tests/` + §2.6 | Automated coverage of FSM logic, NLU signals, objection classification |
-| **Verification** | Manual conversation test scenarios (25 scenarios) | §4.1 + Appendix A | Validates NEPQ stage progression and objection handling in realistic dialogue |
+| **Verification** | Manual conversation test scenarios (validated case studies) | §4.1 + Appendix A | Demonstrates NEPQ stage progression and objection handling in realistic dialogue |
 | **Verification** | Quality metrics table with target vs. achieved | §2.6 | Empirical validation of all non-functional requirements |
 | **Maintenance** | Risk register with outcomes | §2.5 | Documents 5 risks, mitigations, and resolution status |
 | **Maintenance** | Defect tracking log (critical bugs + optimisations) | §2.6 | Records 2 critical bug fixes and 4 performance optimisations with impact |
@@ -493,7 +492,7 @@ The table below enumerates every formal artefact produced during the project lif
 
 ### 2.1.2 Project Timeline & Milestones (28-Week Development Cycle)
 
-**Development Period:** 29 September 2025 – 2 March 2026 (28 weeks, 196 days)
+**Development Period:** 29 September 2025 - 2 March 2026 (28 weeks, 196 days)
 
 > **Note:** Formal artefacts produced at each phase are enumerated in §2.1.1 above.
 
@@ -514,21 +513,21 @@ The table below enumerates every formal artefact produced during the project lif
 - **Final Demo** (17 Feb 2026): Live system demonstration using Groq API
 - **Ethics Approval Finalized** (02 Mar 2026)
 
-#### Plan vs. Actual — Deviations and Adaptations
+#### Plan vs. Actual - Deviations and Adaptations
 
 The table below compares initial planning assumptions against actuals, demonstrating professional project management: recognising estimation errors, understanding root causes, and re-planning accordingly.
 
 | **Phase** | **Planned** | **Actual** | **Deviation** | **Root Cause & Response** |
 |---|---|---|---|---|
 | Phase 1: Scoping | 4 weeks; basic Groq integration, YAML config scaffold | 4 weeks (on time) | None | n/a |
-| Phase 2: FSM + Prompts | 6 weeks; NEPQ alignment, 6 output bugs fixed | 6 weeks (on time); however Strategy Pattern was replaced mid-phase (unplanned refactor) | Architecture replaced rather than extended | Strategy Pattern revealed as fundamentally mismatched (§2.3.2); throwaway prototype discarded, FSM rebuilt. +0 weeks net — refactor reduced LOC by 50%, making subsequent iteration faster |
+| Phase 2: FSM + Prompts | 6 weeks; NEPQ alignment, 6 output bugs fixed | 6 weeks (on time); however Strategy Pattern was replaced mid-phase (unplanned refactor) | Architecture replaced rather than extended | Strategy Pattern revealed as fundamentally mismatched (§2.3.2); throwaway prototype discarded, FSM rebuilt. +0 weeks net - refactor reduced LOC by 50%, making subsequent iteration faster |
 | Phase 3: Quality | 4 weeks; clean-up, SRP extractions | 4 weeks; additional trainer.py, guardedness_analyzer.py extractions not in original plan | +2 new modules (unplanned) | God-class anti-pattern identified in chatbot.py (§2.3.7); SRP extraction prioritised over other planned optimisations |
-| Phase 4: Testing | 8 weeks; 25 scenario validation, UAT | 8 weeks; prompt iteration consumed more test cycles than estimated (5 revisions vs. 2 planned) | Prompt engineering: 22h actual vs. ~10h estimated | Behavioural constraint tuning is empirical, not analytical; each fix required observe→fix→validate cycles (§2.2). No schedule impact — test effort absorbed within phase budget |
+| Phase 4: Testing | 8 weeks; 25 scenario validation, UAT | 8 weeks; prompt iteration consumed more test cycles than estimated (5 revisions vs. 2 planned) | Prompt engineering: 22h actual vs. ~10h estimated | Behavioural constraint tuning is empirical, not analytical; each fix required observe→fix→validate cycles (§2.2). No schedule impact - test effort absorbed within phase budget |
 | Phase 5: Documentation | 6 weeks; FYP report, technical docs | 6 weeks (on time); architecture diagrams added beyond original scope | Extra: FSM state diagrams, STRIDE threat model, hardware analysis | Supervisor feedback (Meeting 6) emphasised prompt engineering rationale; expanded §1.3 and §2.2.2 accordingly |
 | **Overall** | **60h estimated** | **70h actual (+16%)** | **+10h overrun** | Prompt iteration underestimated: 5 major revision cycles vs. 2 planned. No scope cuts required; all FR/NFR met. Lesson: prompt engineering effort should be modelled as empirical testing, not design |
 
 **Estimation Lesson Formalised:**
-> Prompt engineering (behavioural constraint iteration) does not follow standard code estimation models (LOC/hour). It is closer to experimental design — each hypothesis (prompt constraint) must be tested against observed output before the next hypothesis can be formed. Future AI projects should allocate 30–40% of total budget for prompt iteration, regardless of initial functional complexity estimates.
+> Prompt engineering (behavioural constraint iteration) does not follow standard code estimation models (LOC/hour). It is closer to experimental design - each hypothesis (prompt constraint) must be tested against observed output before the next hypothesis can be formed. Future AI projects should allocate 30–40% of total budget for prompt iteration, regardless of initial functional complexity estimates.
 
 ---
 
@@ -536,17 +535,17 @@ The table below compares initial planning assumptions against actuals, demonstra
 
 **Development Methodology: Iterative/Incremental Development with Throwaway Prototype (SPM Weeks 4–5)**
 
-Project employed an *iterative/incremental* process model with a **throwaway prototype** as the first iteration — recognising that initial architectural assumptions required empirical validation before committing to full implementation. This maps directly to the SPM process model taxonomy (Weeks 4–5): a throwaway prototype is built not to ship but to learn; once learning is complete, a new informed baseline begins. Subsequent iterations then followed short observe → fix → validate cycles, incrementally adding capability to a stable architectural foundation. Unlike pure throwaway prototyping, the post-FSM iterations were incremental: each cycle preserved working functionality while extending or refining it — no further full discards.
+Project employed an *iterative/incremental* process model with a **throwaway prototype** as the first iteration - recognising that initial architectural assumptions required empirical validation before committing to full implementation. This maps directly to the SPM process model taxonomy (Weeks 4–5): a throwaway prototype is built not to ship but to learn; once learning is complete, a new informed baseline begins. Subsequent iterations then followed short observe → fix → validate cycles, incrementally adding capability to a stable architectural foundation. Unlike pure throwaway prototyping, the post-FSM iterations were incremental: each cycle preserved working functionality while extending or refining it - no further full discards.
 
 **Iteration structure (Throwaway Prototype → Incremental FSM Development):**
 
-- **Iteration 0 — Throwaway Prototype (Weeks 1–8):** Strategy Pattern implementation (855 LOC across 5 files) served as a learning instrument, not a deliverable. It revealed five fundamental mismatches (§2.3.2): pattern-problem mismatch, over-fragmentation, tight coupling, no declarative flow, and limited testability. The prototype was **discarded in full** rather than patched — the defining characteristic of throwaway prototyping. Learning captured: FSM is the natural pattern for state-driven sequential conversation.
+- **Iteration 0 - Throwaway Prototype (Weeks 1–8):** Strategy Pattern implementation (855 LOC across 5 files) served as a learning instrument, not a deliverable. It revealed five fundamental mismatches (§2.3.2): pattern-problem mismatch, over-fragmentation, tight coupling, no declarative flow, and limited testability. The prototype was **discarded in full** rather than patched - the defining characteristic of throwaway prototyping. Learning captured: FSM is the natural pattern for state-driven sequential conversation.
 
-- **Iterations 1–N — Incremental FSM Cycles (Weeks 9–22):** Each iteration applied a structured cycle: *observe* failing behaviour in test conversations → *diagnose* root cause (prompt failure vs. code logic vs. YAML config) → *implement* fix (prompt constraint, regex enforcement, or YAML adjustment) → *validate* with automated tests and manual scenarios. Six major output problems (§2.2.1) were resolved across five revision cycles; each produced a measurable metric improvement (e.g., stage false-positive rate 40% → 8%; tone mismatch 62% → 5%).
+- **Iterations 1–N - Incremental FSM Cycles (Weeks 9–22):** Each iteration applied a structured cycle: *observe* failing behaviour in test conversations → *diagnose* root cause (prompt failure vs. code logic vs. YAML config) → *implement* fix (prompt constraint, regex enforcement, or YAML adjustment) → *validate* with automated tests and manual scenarios. Six major output problems (§2.2.1) were resolved across five revision cycles; each produced a measurable metric improvement (e.g., stage false-positive rate 40% → 8%; tone mismatch 62% → 5%).
 
 - **Refactor Pass as Explicit Iteration (Week 10, Phase 3):** The SRP violation (God Class `chatbot.py`) was addressed as a standalone iteration with its own observe → fix → validate cycle: identify anti-pattern → extract modules (trainer.py, guardedness_analyzer.py, knowledge.py) → re-run full test suite → quantify outcome (−425 LOC net; §2.3.7). This mirrors SPM's planned evolution model where quality-driven refactoring is a first-class iteration type, not a side-activity.
 
-**Development Philosophy:** Rather than hardcoding sales logic into conditional branches, the system uses **prompt engineering as the control mechanism**—stage-specific goals, advancement signals, and behavioral constraints embedded in ~650 LOC of natural language prompts and generation logic (`content.py`). This approach prioritized flexibility and reusability over brittle rule sets.
+**Development Philosophy:** Rather than hardcoding sales logic into conditional branches, the system uses **prompt engineering as the control mechanism** - stage-specific goals, advancement signals, and behavioral constraints embedded in ~650 LOC of natural language prompts and generation logic (`content.py`). This approach prioritized flexibility and reusability over brittle rule sets.
 
 #### 2.2.1 Iterative Fixes: Theory-Grounded Problem Resolution
 
@@ -554,12 +553,12 @@ Through continuous testing, critical output quality issues were systematically i
 
 | **Problem Identified** | **Academic Theory Applied** | **Fix Applied (Layer)** | **Baseline → Achieved** | **Implementation Artifact** | **Validation** |
 |---|---|---|---|---|---|
-| **Permission Questions Breaking Momentum** | Constitutional AI (Bai et al., 2022) — P1/P2/P3 constraint hierarchy | 3-layer: (1) Prompt "DO NOT end with '?'", (2) Predictive stage checking, (3) Regex `r'\s*\?\s*$'` | 75% → **100%** | `content.py` constraint hierarchy + regex enforcement | ✅ 100% rules compliance |
+| **Permission Questions Breaking Momentum** | Constitutional AI (Bai et al., 2022) - P1/P2/P3 constraint hierarchy | 3-layer: (1) Prompt "DO NOT end with '?'", (2) Predictive stage checking, (3) Regex `r'\s*\?\s*$'` | 75% → **100%** | `content.py` constraint hierarchy + regex enforcement | ✅ 100% rules compliance |
 | **Tone Mismatches Across Personas** | Lexical Entrainment (Brennan & Clark, 1996) + Few-Shot Learning (Brown et al., 2020) | Persona detection (first message) + tone-lock rule + 4 mirroring examples | 62% → **95%** | `analysis.py` persona detection + `content.py` FEW_SHOT_EXAMPLES | ✅ Tested across 12 personas |
 | **False Stage Advancement** | SPIN Selling Stages (Rackham, 1988) + Generated Knowledge (Liu et al., 2022) | Whole-word regex `\bword\b` + context validation + keyword refinement from analysis_config.yaml | 40% false positives → **92%** accuracy | `flow.py` _check_advancement_condition() + keyword signals config | ✅ Verified via regression tests |
-| **Over-Probing (Interrogation Feel)** | Conversational Repair (Schegloff, 1992) — turn-taking signals | "BE HUMAN" rule: statement BEFORE question; 1-2 questions max | 3 Qs/response → **1** Q/response | `content.py` stage prompts with statement-first scaffolding | ✅ Natural flow in UAT scenarios |
+| **Over-Probing (Interrogation Feel)** | Conversational Repair (Schegloff, 1992) - turn-taking signals | "BE HUMAN" rule: statement BEFORE question; 1-2 questions max | 3 Qs/response → **1** Q/response | `content.py` stage prompts with statement-first scaffolding | ✅ Natural flow in UAT scenarios |
 | **Unconditioned Solution Dumping** | Generated Knowledge (Liu et al., 2022) + ReAct Framework (Yao et al., 2023) | Intent classification (HIGH/MEDIUM/LOW) gate + low-intent engagement mode | 40% inappropriate pitching → **100%** prevention | `flow.py` intent gate + `content.py` low-intent prompts | ✅ 100% test pass |
-| **Premature Advancement (FSM Logic)** | NEPQ Framework (Acuff & Miner, 2023) — progression requires prerequisite signals | Explicit "doubt signals" (keywords: 'struggling', 'not working', 'problem') + 10-turn safety valve | 40% false advances → **94%** accuracy | `flow.py` _check_advancement_condition() + analysis_config.yaml doubt_keywords | ✅ Appendix D case study |
+| **Premature Advancement (FSM Logic)** | NEPQ Framework (Acuff & Miner, 2023) - progression requires prerequisite signals | Explicit "doubt signals" (keywords: 'struggling', 'not working', 'problem') + 10-turn safety valve | 40% false advances → **94%** accuracy | `flow.py` _check_advancement_condition() + analysis_config.yaml doubt_keywords | ✅ Appendix D case study |
 
 **Key Insight:** Prompt engineering sets behavioral direction; code-level enforcement catches when LLM slips (~25% of cases). Each fix integrated academic theory (Constitutional AI, Chain-of-Thought, conversational repair, lexical entrainment) with deterministic code validation. Full iterative testing cycles documented in Appendix A.
 
@@ -578,8 +577,8 @@ Additional techniques applied across multiple problems:
 The project employed continuous test-driven refinement. The four core output quality issues (permission questions, tone matching, stage advancement, strategy switching) were resolved through iterative testing cycles documented with full metrics in Appendix A. Two additional issues unique to conversation flow management are documented below:
 
 1. **Small-Talk Loop Problem (Critical Fix):**
-   - **Problem:** Bot stuck in repetitive small-talk—responding to "yep"/"ok"/"not much" with endless follow-ups, never transitioning to sales.
-   - **Failed Fix #1:** Added bridging logic to append transition questions automatically. Made it worse—bot became over-passive, stuck in agreeable loops.
+   - **Problem:** Bot stuck in repetitive small-talk - responding to "yep"/"ok"/"not much" with endless follow-ups, never transitioning to sales.
+   - **Failed Fix #1:** Added bridging logic to append transition questions automatically. Made it worse - bot became over-passive, stuck in agreeable loops.
    - **Root Cause:** Over-engineering. Keyword matching + forced question appending + contradictory prompt rules fought each other.
    - **Solution:** Removed ALL bridging code. Simplified base rules to one instruction: "After 1-2 vague answers, ask what they need help with."
    - **Code Removed:** ~15 LOC of keyword detection, question appending logic, word/question limits.
@@ -624,7 +623,7 @@ def should_advance_stage(self, bot_response: str, user_message: str) -> bool:
 
 ---
 
-**Snippet 2: Permission Question Removal (`chatbot.py` — pitch-stage response cleaning)**
+**Snippet 2: Permission Question Removal (`chatbot.py` - pitch-stage response cleaning)**
 ```python
 def _clean_response(self, response: str, stage: str, will_advance: bool) -> str:
     """Removes permission questions from pitch stage."""
@@ -646,7 +645,7 @@ def _clean_response(self, response: str, stage: str, will_advance: bool) -> str:
 
 ---
 
-**Snippet 3: Whole-Word Keyword Matching (`analysis.py` — NLU signal detection)**
+**Snippet 3: Whole-Word Keyword Matching (`analysis.py` - NLU signal detection)**
 ```python
 def matches_any(text: str, keywords: list[str]) -> bool:
     """Checks if text contains any keyword using whole-word matching.
@@ -705,7 +704,7 @@ def create_provider(provider_type: str, **kwargs) -> BaseLLMProvider:
 
 ---
 
-**Snippet 5: Chain-of-Thought Objection Handling (`content.py` — objection stage prompt template)**
+**Snippet 5: Chain-of-Thought Objection Handling (`content.py` - objection stage prompt template)**
 ```python
 objection_prompt = """STAGE: OBJECTION (IMPACT: Reframe concerns)
 GOAL: Acknowledge concern, probe for real reason, reframe as opportunity
@@ -740,7 +739,7 @@ ONE QUESTION MAX. DO NOT argue or justify.
 
 ---
 
-**Snippet 6: Few-Shot Learning Examples (`content.py` — behavioral constraint examples)**
+**Snippet 6: Few-Shot Learning Examples (`content.py` - behavioral constraint examples)**
 ```python
 FEW_SHOT_EXAMPLES = """
 FEW-SHOT LEARNING (Brown et al., 2020 - 4 concrete examples):
@@ -772,7 +771,7 @@ Why: Action-oriented close. No permission questions.
 
 ---
 
-**Snippet 7: FSM Stage Advancement Rule — Keyword-Based Enforcement (`flow.py:92–117`)**
+**Snippet 7: FSM Stage Advancement Rule - Keyword-Based Enforcement (`flow.py:92–117`)**
 ```python
 def _check_advancement_condition(history, user_msg, turns, stage, min_history=4):
     """Deterministic stage advancement checking.
@@ -831,7 +830,7 @@ def user_shows_doubt(history, user_msg, turns):
 ```
 
 **Impact:**
-- **Methodology Compliance:** FSM now refuses to advance without explicit doubt signal (keyword match from `analysis_config.yaml:advancement.logical.doubt_keywords` — 25 verified NEPQ terms)
+- **Methodology Compliance:** FSM now refuses to advance without explicit doubt signal (keyword match from `analysis_config.yaml:advancement.logical.doubt_keywords` - 25 verified NEPQ terms)
 - **Testability:** Advancement conditions are deterministic and auditable; can replay any conversation and verify stage progression matches keyword signals
 - **User Experience:** Future Pacing questions are now grounded in actual prospect-named problems, improving dialogue coherence and sales effectiveness
 - **Safety Valve:** max_turns parameter (10 instead of 5) prevents infinite loops while giving the bot more time to surface doubt signals
@@ -915,7 +914,7 @@ Finite State Machine: "What is the current state? What are valid transitions?" �
 3. **Configuration Over Code:** Transitions, stages, and advancement rules should be declarative, not procedural
 4. **Linear Progression:** The conversation progresses linearly through defined stages; classic FSM pattern
 
-**Theoretical Grounding:** As established in §1.3, Rackham's (1988) SPIN Selling framework empirically demonstrates that sales conversations require sequential stage dependency — each stage builds understanding before progression is warranted. A Strategy Pattern enforces algorithm selection; FSM enforces state-dependent transitions. The architecture directly implements that sequential requirement rather than working around it.
+**Theoretical Grounding:** As established in §1.3, Rackham's (1988) SPIN Selling framework empirically demonstrates that sales conversations require sequential stage dependency - each stage builds understanding before progression is warranted. A Strategy Pattern enforces algorithm selection; FSM enforces state-dependent transitions. The architecture directly implements that sequential requirement rather than working around it.
 
 ---
 
@@ -1010,7 +1009,7 @@ class SalesChatbot:
         return bot_reply
 ```
 
-**Figure 2.3.4a: FSM State Diagram — Consultative Flow (5 Stages)**
+**Figure 2.3.4a: FSM State Diagram - Consultative Flow (5 Stages)**
 
 The consultative flow manages complex sales conversations with explicit stage transitions and advancement guards:
 
@@ -1111,16 +1110,16 @@ stateDiagram-v2
 #### 2.3.7 Refactoring for Separation of Concerns: Extracting Training Modules
 
 **Problem Identified (Week 10):**
-As system complexity increased, the core `chatbot.py` orchestrator began accumulating responsibilities beyond conversation routing: it was generating training coaching notes for salespeople in real time, analyzing user guardedness levels, and managing message editing/rewind functionality. This violated the Single Responsibility Principle (SRP), creating what's colloquially known as a "God Class"—a module responsible for too many distinct business concerns.
+As system complexity increased, the core `chatbot.py` orchestrator began accumulating responsibilities beyond conversation routing: it was generating training coaching notes for salespeople in real time, analyzing user guardedness levels, and managing message editing/rewind functionality. This violated the Single Responsibility Principle (SRP), creating what's colloquially known as a "God Class" - a module responsible for too many distinct business concerns.
 
 **Architectural Issues Created:**
-- **High Coupling:** chatbot.py imported training logic, NLU analysis functions, and coaching utilities—creating circular dependencies with loss of modularity
+- **High Coupling:** chatbot.py imported training logic, NLU analysis functions, and coaching utilities - creating circular dependencies with loss of modularity
 - **Test Complexity:** Testing conversation flow required mocking all training-related functions (4+ mocks per test case), slowing test execution and making tests brittle to internal refactoring
 - **Maintenance Burden:** Changes to coaching output required modifying chatbot.py, risking accidental side effects in conversation flow logic
 
 **Refactoring Solution:**
 Three core responsibilities were systematically extracted into dedicated modules:
-1. **`trainer.py` (130 LOC):** Encapsulates LLM-powered coaching generation—produces contextual feedback (e.g., "Good use of identity framing here; next trigger would be to...") without touching conversation state
+1. **`trainer.py` (130 LOC):** Encapsulates LLM-powered coaching generation - produces contextual feedback (e.g., "Good use of identity framing here; next trigger would be to...") without touching conversation state
 2. **`guardedness_analyzer.py` (186 LOC):** Isolated NLU analysis for user confidence/openness levels, enabling independent validation and tuning of detection thresholds
 3. **`knowledge.py` (93 LOC):** Custom product knowledge CRUD, preventing inline knowledge management code in chatbot.py
 
@@ -1136,7 +1135,7 @@ Three core responsibilities were systematically extracted into dedicated modules
 ---
 
 
-- **Finite State Machine (FSM):** `flow.py`—declarative stage management with configuration-driven transitions
+- **Finite State Machine (FSM):** `flow.py` - declarative stage management with configuration-driven transitions
 - **Pure Functions:** Advancement rules (`user_has_clear_intent()`, etc.) are stateless, testable functions
 - **Configuration Over Code:** `FLOWS` dictionary defines behavior; zero hardcoded logic in methods
 - **Factory Pattern:** `create_provider()` dynamic LLM provider instantiation
@@ -1147,7 +1146,7 @@ Three core responsibilities were systematically extracted into dedicated modules
 **Module Structure (Production):**
 ```
 src/
-├── chatbot/                   # Core business logic (zero Flask deps) — ~2,350 LOC
+├── chatbot/                   # Core business logic (zero Flask deps) - ~2,350 LOC
 │   ├── chatbot.py            # Main SalesChatbot orchestrator (212 LOC)
 │   ├── trainer.py            # Training coach: LLM-powered coaching notes (130 LOC)
 │   ├── flow.py               # FSM engine + declarative FLOWS config (281 LOC)
@@ -1162,7 +1161,7 @@ src/
 │       ├── groq_provider.py  # Cloud LLM (Groq API) (64 LOC)
 │       ├── ollama_provider.py # Local LLM (Ollama REST) (98 LOC)
 │       └── factory.py        # Provider selection (35 LOC)
-├── config/                    # Declarative configuration — ~810 lines YAML
+├── config/                    # Declarative configuration - ~810 lines YAML
 │   ├── product_config.yaml   # 10 product types, strategies, knowledge base (125 lines)
 │   ├── analysis_config.yaml  # Objection classification, thresholds, goal keywords (373 lines)
 │   ├── signals.yaml          # 17 keyword-list categories for NLU signal detection (312 lines)
@@ -1191,7 +1190,7 @@ src/
 2. **Permission Question Removal:** Three-layer fix (prompt constraint + predictive stage check + regex enforcement) achieved 100% elimination. Full iterative development documented in Section 2.2.2, code in Snippet 2.
 3. **Tone Matching via Buyer Persona Detection:** Early tone-locking in first 1-2 messages with explicit mirroring rules. Tested across 12 personas; 95% accuracy. Iterative refinement documented in Section 2.2.
 4. **Thread-Safe Key Cycling:** Validated under concurrent load (5 simultaneous users); no quota exhaustion.
-5. **Stage Advancement Signals:** Tested refinement of keyword matching—moved from simple `in` checks to whole-word regex `\bword\b` to reduce false positives.
+5. **Stage Advancement Signals:** Tested refinement of keyword matching - moved from simple `in` checks to whole-word regex `\bword\b` to reduce false positives.
 6. **History Windowing:** Empirically tuned to 20-message window through latency testing (15 msg = 920ms, 20 msg = 980ms, 25 msg = 1050ms).
 
 **Technology Choices (Justified by Testing):**
@@ -1204,8 +1203,8 @@ src/
 **Why This Architecture Saved the Project:**
 
 Week 10 of development, Groq's free tier got rate-limited without warning. I was mid-debugging the permission question issue (§2.2.2). The API started returning 429 errors: "Too many requests." I had two choices:
-1. Upgrade to Groq's paid tier ($5/day minimum) — not feasible on a student budget
-2. Switch to Ollama (local inference) — but if I'd hard-coded Groq API calls throughout the codebase, switching would mean hours of refactoring while on a time crunch
+1. Upgrade to Groq's paid tier ($5/day minimum) - not feasible on a student budget
+2. Switch to Ollama (local inference) - but if I'd hard-coded Groq API calls throughout the codebase, switching would mean hours of refactoring while on a time crunch
 
 I had not built provider abstraction yet. So I spent the afternoon extracting it: creating a `BaseProvider` interface, implementing `GroqProvider` and `OllamaProvider`, and a factory function to switch between them via environment variable.
 
@@ -1228,7 +1227,7 @@ src/chatbot/providers/
 └── factory.py       # create_provider() switcher
 ```
 
-**Design:** Loose coupling via abstract interface—providers isolated from FSM engine/chatbot logic. Each file handles one responsibility (contract definition, cloud API, local server, selection logic). Chatbot.py imports only `create_provider`, zero LLM-specific code.
+**Design:** Loose coupling via abstract interface - providers isolated from FSM engine/chatbot logic. Each file handles one responsibility (contract definition, cloud API, local server, selection logic). Chatbot.py imports only `create_provider`, zero LLM-specific code.
 
 **Refactor impact:**
 ```python
@@ -1288,19 +1287,19 @@ Testing validated: maintains 5-stage context, follows tone-matching rules (97% a
 
 **Why Atomic Commits Mattered:**
 
-Early in development (Week 6), the bot suddenly started skipping the objection stage entirely—conversations would jump from problem exploration straight to the pitch. The bug manifested in integration testing but wasn't visible in unit tests. Rather than panicking and re-reading all stage-transition code, I used `git log --oneline` to identify which commits touched `flow.py` in the last 48 hours. Found it: a single commit modifying the `user_shows_doubt` advancement rule from "detect doubt signal in conversation" to "advance after 5 turns." The atomic commit message (`flow: replace turn-count gate with keyword detection`) made the intent immediately obvious. Rolling back took 30 seconds. Without disciplined commit practices, I would have spent hours narrative code review.
+Early in development (Week 6), the bot suddenly started skipping the objection stage entirely - conversations would jump from problem exploration straight to the pitch. The bug manifested in integration testing but wasn't visible in unit tests. Rather than panicking and re-reading all stage-transition code, I used `git log --oneline` to identify which commits touched `flow.py` in the last 48 hours. Found it: a single commit modifying the `user_shows_doubt` advancement rule from "detect doubt signal in conversation" to "advance after 5 turns." The atomic commit message (`flow: replace turn-count gate with keyword detection`) made the intent immediately obvious. Rolling back took 30 seconds. Without disciplined commit practices, I would have spent hours narrative code review.
 
-**Key Insight:** Commit discipline isn't about impressing code reviewers—it's about your future self being able to answer "which change broke this?" in minutes instead of hours.
+**Key Insight:** Commit discipline isn't about impressing code reviewers - it's about your future self being able to answer "which change broke this?" in minutes instead of hours.
 
 **Tooling Decisions I Made & Why:**
 
 - **Version Control (Git):** Single master branch, not feature branches. For a solo academic project, feature branches add merge complexity without reviewer feedback. Instead, I enforced discipline through atomic commits with structured messages: `<module>: <change>` (e.g., `analysis: add keyword deduplication to prevent signal collision`). This created a readable narrative of decisions.
 
-- **Testing (pytest):** Not just for coverage—tests were a design tool. Before writing provider abstraction (§2.4.1), I wrote tests for the provider interface: what methods must `BaseProvider` expose? What should happen when Groq API times out? The tests forced me to design the abstraction rigorously before implementing it. Saved rework later.
+- **Testing (pytest):** Not just for coverage - tests were a design tool. Before writing provider abstraction (§2.4.1), I wrote tests for the provider interface: what methods must `BaseProvider` expose? What should happen when Groq API times out? The tests forced me to design the abstraction rigorously before implementing it. Saved rework later.
 
-- **Configuration Isolation (YAML + env):** Early attempt to hardcode advancement rules in Python (Week 2) created a maintenance nightmare: changing "detect guardedness" keyword required editing 3 files, restarting the server, and retesting 5+ scenarios. When I moved all configuration to YAML, changing a keyword took 10 seconds—no restart needed. This small shift doubled iteration velocity during the debugging phase (Phase 3).
+- **Configuration Isolation (YAML + env):** Early attempt to hardcode advancement rules in Python (Week 2) created a maintenance nightmare: changing "detect guardedness" keyword required editing 3 files, restarting the server, and retesting 5+ scenarios. When I moved all configuration to YAML, changing a keyword took 10 seconds - no restart needed. This small shift doubled iteration velocity during the debugging phase (Phase 3).
 
-- **Linting (Pylance):** Didn't enforce strict type checking initially—felt like overhead. Week 7 bug: `FLOWS['consultative']['stages']` returned a list, but code treated it as a dict. Type hints would have caught this at edit time. Added type checking retroactively; found 4 latent type errors. Now non-negotiable.
+- **Linting (Pylance):** Didn't enforce strict type checking initially - felt like overhead. Week 7 bug: `FLOWS['consultative']['stages']` returned a list, but code treated it as a dict. Type hints would have caught this at edit time. Added type checking retroactively; found 4 latent type errors. Now non-negotiable.
 
 - **Development Diary:** Maintained a chronological record throughout the project. When writing this section, the diary was invaluable for reconstructing *when* decisions were made and *why* (e.g., "Week 10: Groq API restricted; activated Ollama fallover immediately"). Without contemporaneous notes, I'd be guessing at timelines.
 
@@ -1308,7 +1307,7 @@ Early in development (Week 6), the bot suddenly started skipping the objection s
 
 **Lesson 1: SRP (Single Responsibility Principle) Prevention of Hidden Bugs**
 
-Weeks 1-8, I violated SRP aggressively. `chatbot.py` handled conversation logic, prompt generation, FSM advancement, *and* trainer setup—all in one 350+ LOC file. Week 5 bug: permission questions were appearing even after I thought I fixed them in the prompt. I searched for "permission" in `chatbot.py` and found *three separate places* where permission logic was implemented. I fixed one spot; the other two were still executing. After that, I extracted trainer logic to `trainer.py`, prompt generation to `content.py`, and analysis to `analysis.py`. Same logic, split across three focused files with one job each. No more hidden duplicates.
+Weeks 1-8, I violated SRP aggressively. `chatbot.py` handled conversation logic, prompt generation, FSM advancement, *and* trainer setup - all in one 350+ LOC file. Week 5 bug: permission questions were appearing even after I thought I fixed them in the prompt. I searched for "permission" in `chatbot.py` and found *three separate places* where permission logic was implemented. I fixed one spot; the other two were still executing. After that, I extracted trainer logic to `trainer.py`, prompt generation to `content.py`, and analysis to `analysis.py`. Same logic, split across three focused files with one job each. No more hidden duplicates.
 
 **Lesson 2: Pure Function Testing Eliminated Mock Complexity**
 
@@ -1316,7 +1315,7 @@ When advancement rules were buried inside FSM instance methods, testing required
 
 **Lesson 3: Configuration Over Code Prevented Hard-Coding Hell**
 
-Early in Phase 2, I hard-coded objection keywords: `if 'budget' in msg.lower(): handle_money_objection()`. Seemed fine until Week 6 when I needed a variant for British English ("whilst" vs "while"). Edited the Python file, restarted the server, re-ran tests. Then Week 7: "price" needed different handling than "cost". Edited again. After 3 iterations, I realized I was writing code for *data*—and data belongs in configuration. Moved all keywords to `signals.yaml`, created a config loader, and suddenly I could modify behavior without touching Python. Changed "detect guardedness" keywords in 30 seconds. This shift directly enabled the fast iteration that rescued the project during Phase 3 (permission question debugging).
+Early in Phase 2, I hard-coded objection keywords: `if 'budget' in msg.lower(): handle_money_objection()`. Seemed fine until Week 6 when I needed a variant for British English ("whilst" vs "while"). Edited the Python file, restarted the server, re-ran tests. Then Week 7: "price" needed different handling than "cost". Edited again. After 3 iterations, I realized I was writing code for *data* - and data belongs in configuration. Moved all keywords to `signals.yaml`, created a config loader, and suddenly I could modify behavior without touching Python. Changed "detect guardedness" keywords in 30 seconds. This shift directly enabled the fast iteration that rescued the project during Phase 3 (permission question debugging).
 
 ---
 
@@ -1334,26 +1333,26 @@ Early in Phase 2, I hard-coded objection keywords: `if 'budget' in msg.lower(): 
 
 #### 2.5.3 Code Review & Quality Assurance Process
 
-**The Code Audit (Week 14 — Phase 3 Midpoint):**
+**The Code Audit (Week 14 - Phase 3 Midpoint):**
 
-By Week 14, I'd written 2,300+ LOC of core chatbot logic. The system was working—tests passed, conversations flowed—but I wanted to verify I hadn't accumulated hidden maintenance debt. So I did something I don't often do: read my own code critically, line-by-line, asking "Would I maintain this if someone else wrote it?"
+By Week 14, I'd written 2,300+ LOC of core chatbot logic. The system was working - tests passed, conversations flowed - but I wanted to verify I hadn't accumulated hidden maintenance debt. So I did something I don't often do: read my own code critically, line-by-line, asking "Would I maintain this if someone else wrote it?"
 
 **What I Found:**
 
-1. **Dead Code (P0 — Critical):** 3 issues
+1. **Dead Code (P0 - Critical):** 3 issues
    - Unreachable FSM state: `learning_mode` was defined but never transitioned to (never used after Week 3 pivot). This confused anyone reading the state diagram.
    - Never-read config keys: `signals.yaml` defined 6 keyword types; code only used 4. The other 2 were left over from early attempts.
    - Dead assignment: `temp_analysis = analyze_message(msg)` assigned but never used (copy-paste artifact).
 
    *Impact:* Someone maintaining this code would waste time understanding what `learning_mode` was for. Removed it; decreased cognitive load.
 
-2. **Duplication (P1 — High):** 6 instances
+2. **Duplication (P1 - High):** 6 instances
    - Three separate methods implemented "check if user shows doubt" logic with slightly different keyword lists. If I needed to add a new doubt signal, I'd have to edit 3 places and remember to keep them in sync.
    - Duplicate prompt snippets: "Let me check that..." appeared in 2 different stage prompts (identical text). Prompt changes would require editing multiple places.
 
    *Decision:* Extracted common patterns into shared rules and helper functions. Centralized keyword lists into config. Now one source of truth.
 
-3. **Signal Overlap & SRP Violations (P2–P3 — Medium):** 11 issues
+3. **Signal Overlap & SRP Violations (P2–P3 - Medium):** 11 issues
    - `detect_guardedness()` and `classify_objection()` both scanned message text; they could conflict (e.g., if user's defensive language accidentally matched an objection pattern).
    - FSM advancement checking happened in 3 different places with slightly different logic.
    - Prompt generation logic scattered across 4 functions instead of one `generate_stage_prompt()` entry point.
@@ -1364,11 +1363,11 @@ By Week 14, I'd written 2,300+ LOC of core chatbot logic. The system was working
 
 **What the Audit Revealed About My Process:**
 
-Ironically, the audit showed that **SRP violations were *exactly* where the bugs lived**, and **configuration-driven code had zero defects**. The dead code and duplication were consequences of iterating quickly early on without looking back. The audit forced me to clean up—and subsequent testing showed zero regressions. This validated the standards I enforced in §2.5.2.
+Ironically, the audit showed that **SRP violations were *exactly* where the bugs lived**, and **configuration-driven code had zero defects**. The dead code and duplication were consequences of iterating quickly early on without looking back. The audit forced me to clean up - and subsequent testing showed zero regressions. This validated the standards I enforced in §2.5.2.
 
 **Going Forward:**
 
-I implemented a "code review checkpoint" at Phase 3 and would repeat at Phase 4 (deferred due to time). The audit process—systematic scanning, priority categorization, documented remainder list—reflects professional QA practice from the Aston SPM framework.
+I implemented a "code review checkpoint" at Phase 3 and would repeat at Phase 4 (deferred due to time). The audit process - systematic scanning, priority categorization, documented remainder list - reflects professional QA practice from the Aston SPM framework.
 
 #### 2.5.4 Stakeholder & Communication Management
 
@@ -1377,31 +1376,31 @@ I implemented a "code review checkpoint" at Phase 3 and would repeat at Phase 4 
 | Stakeholder | Role | Engagement Mode | Influence on Project |
 |---|---|---|---|
 | **Supervisor** | Academic oversight; architectural and methodological guidance | 7 formal meetings across 28-week cycle (dates in §2.1.2) | Direct: Meeting 3 (20 Oct) prompted deeper component rationale documentation; Meeting 6 (24 Nov) explicitly requested expanded prompt engineering justification, leading to §1.3 theoretical foundation and §2.2.2 theory-to-implementation traceability table being substantially extended. Ethics scope and data collection decisions finalized via Meeting 4. |
-| **Target Client Proxy** (Sales Trainers / L&D teams) | End users; requirements source | Indirect — requirements derived from published market data (ATD, 2023; Grand View Research, 2023) and sales methodology literature (Rackham, 1988; Acuff & Miner, 2023) rather than direct interviews | Shaped core trade-offs: (1) cost constraint (zero marginal cost per session) driven by SME budget analysis; (2) methodology fidelity requirement driven by the identified gap between LLM fluency and structured training; (3) real-time interaction requirement driven by the engagement shortfall of asynchronous MOOC alternatives (§1.1) |
+| **Target Client Proxy** (Sales Trainers / L&D teams) | End users; requirements source | Indirect - requirements derived from published market data (ATD, 2023; Grand View Research, 2023) and sales methodology literature (Rackham, 1988; Acuff & Miner, 2023) rather than direct interviews | Shaped core trade-offs: (1) cost constraint (zero marginal cost per session) driven by SME budget analysis; (2) methodology fidelity requirement driven by the identified gap between LLM fluency and structured training; (3) real-time interaction requirement driven by the engagement shortfall of asynchronous MOOC alternatives (§1.1) |
 
-**Communication Approach:** The two structurally significant stakeholder relationships — supervisor and client proxy — operated at different granularities. Supervisor communication followed a milestone-driven cadence (formal meetings at phase boundaries and key decisions), with findings incorporated into architectural and documentation decisions in the subsequent phase. The client perspective, approximated from market research and sales methodology literature rather than direct interview, shaped requirements and trade-off priorities from the project outset rather than through iterative feedback. This distinction is intentional: for a solo academic project, representing client needs via published domain evidence (ATD benchmarks, SPIN Selling empirical data) is a legitimate and traceable approach — more reproducible than undocumented verbal feedback, and consistent with requirements engineering practice for projects where end users are not directly accessible.
+**Communication Approach:** The two structurally significant stakeholder relationships - supervisor and client proxy - operated at different granularities. Supervisor communication followed a milestone-driven cadence (formal meetings at phase boundaries and key decisions), with findings incorporated into architectural and documentation decisions in the subsequent phase. The client perspective, approximated from market research and sales methodology literature rather than direct interview, shaped requirements and trade-off priorities from the project outset rather than through iterative feedback. This distinction is intentional: for a solo academic project, representing client needs via published domain evidence (ATD benchmarks, SPIN Selling empirical data) is a legitimate and traceable approach - more reproducible than undocumented verbal feedback, and consistent with requirements engineering practice for projects where end users are not directly accessible.
 
 ---
 
 ### 2.6 Risk Management & Mitigation
 
-**Risk Register (Unit 5 — Aston SPM Framework):**
+**Risk Register (Unit 5 - Aston SPM Framework):**
 
 *Exposure = Likelihood × Impact, scored on a 3-point scale (Low/Medium/High for Likelihood; Low/Medium/High/Critical for Impact) per SPM Unit 5 risk matrix.*
 
 | Risk ID | Category | Description | Likelihood | Impact | Exposure (L×I) | Mitigation Strategy | Actual Outcome |
 |---------|----------|-------------|------------|--------|----------------|---------------------|----------------|
-| R1 | **Technical** (Dependency) | **LLM API Availability** — Free-tier rate limiting or Groq API restriction blocks all conversations | Medium | Critical | **High** | Provider abstraction enables Groq→Ollama failover; local Ollama model (llama3.2:3b, configurable via env var) pre-tested and ready | ✅ Mitigated: Auto-failover implemented and validated under load. Risk materialised once during development (Groq restriction, Week ~10); Ollama fallback activated within 1 env-var change with no schedule impact |
-| R2 | **Technical** (Quality) | **Methodology Drift** — LLM autonomy causes stage-progression violations, undermining NEPQ adherence | Medium | High | **High** | 3-layer control: (1) Constitutional AI prompt constraints, (2) deterministic FSM code validation, (3) automated test suite monitoring with 85% accuracy threshold | ✅ Mitigated: 92% stage accuracy achieved. Risk partially materialised (hallucinated stage adherence identified, §1.2); resolved via FSM keyword-gating redesign |
-| R3 | **Schedule** (Estimation) | **Prompt Iteration Effort** — Behavioural tuning requires more empirical test–fix cycles than initially estimated | High | Medium | **High** | Hot-reload capability (prompt changes without restart); YAML-driven config enables instant iteration; no recompile cycle | ✅ Accepted: 22h spent on prompt engineering vs. ~10h estimated (+120%). No schedule impact — absorbed within Phase 4 testing window. Lesson: prompt engineering must be modelled as empirical testing, not design (§2.8) |
-| R4 | **Technical** (Infrastructure) | **Test Suite Instability** — API-dependent tests cause non-deterministic failures and CI slowdown | High | Medium | **High** | Isolated all blocking I/O to manual scripts; pytest runs pure unit tests only (<3s round-trip, no network calls) | ✅ Resolved: Test suite now fully deterministic (1.87s, 156 tests, zero external dependencies). No CI failures since isolation |
-| R5 | **Technical** (Implementation) | **Strategy Switching Failure** — Feature designed and documented but not actually integrated into chatbot orchestrator | Low | High | **Medium** | Peer code review (self-review) identified integration gap; `_switch_strategy()` method implemented and validated with dedicated test cases | ✅ Fixed: Now functional with test coverage. Discovered during Phase 4 test audit; fixed before submission |
+| R1 | **Technical** (Dependency) | **LLM API Availability** - Free-tier rate limiting or Groq API restriction blocks all conversations | Medium | Critical | **High** | Provider abstraction enables Groq→Ollama failover; local Ollama model (llama3.2:3b, configurable via env var) pre-tested and ready | ✅ Mitigated: Auto-failover implemented and validated under load. Risk materialised once during development (Groq restriction, Week ~10); Ollama fallback activated within 1 env-var change with no schedule impact |
+| R2 | **Technical** (Quality) | **Methodology Drift** - LLM autonomy causes stage-progression violations, undermining NEPQ adherence | Medium | High | **High** | 3-layer control: (1) Constitutional AI prompt constraints, (2) deterministic FSM code validation, (3) automated test suite monitoring with 85% accuracy threshold | ✅ Mitigated: 92% stage accuracy achieved. Risk partially materialised (hallucinated stage adherence identified, §1.2); resolved via FSM keyword-gating redesign |
+| R3 | **Schedule** (Estimation) | **Prompt Iteration Effort** - Behavioural tuning requires more empirical test–fix cycles than initially estimated | High | Medium | **High** | Hot-reload capability (prompt changes without restart); YAML-driven config enables instant iteration; no recompile cycle | ✅ Accepted: 22h spent on prompt engineering vs. ~10h estimated (+120%). No schedule impact - absorbed within Phase 4 testing window. Lesson: prompt engineering must be modelled as empirical testing, not design (§2.8) |
+| R4 | **Technical** (Infrastructure) | **Test Suite Instability** - API-dependent tests cause non-deterministic failures and CI slowdown | High | Medium | **High** | Isolated all blocking I/O to manual scripts; pytest runs pure unit tests only (<3s round-trip, no network calls) | ✅ Resolved: Test suite now fully deterministic (1.87s, 156 tests, zero external dependencies). No CI failures since isolation |
+| R5 | **Technical** (Implementation) | **Strategy Switching Failure** - Feature designed and documented but not actually integrated into chatbot orchestrator | Low | High | **Medium** | Peer code review (self-review) identified integration gap; `_switch_strategy()` method implemented and validated with dedicated test cases | ✅ Fixed: Now functional with test coverage. Discovered during Phase 4 test audit; fixed before submission |
 
 **Risk Mitigation Success Rate:** 5/5 risks addressed (100%)
 
 **Top Risk Narrative (How Risks Drove Architectural Decisions):**
 
-The two highest-exposure risks — R1 (API availability) and R2 (methodology drift) — directly shaped the system architecture rather than being patched operationally. R1 forced the early investment in a provider abstraction layer (§2.4.1): the `create_provider()` factory pattern and `BaseLLMProvider` interface were built not for elegance but because the risk of single-provider lock-in at critical development milestones was unacceptable. This decision paid off directly when Groq access was restricted mid-project. R2 drove the most significant architectural evolution in the entire project: recognising that LLM prompt guidance alone was insufficient to prevent methodology drift led to the FSM redesign (§2.3), where stage transitions became deterministic code-enforced rules rather than probabilistic LLM decisions — addressing the root cause rather than the symptom. R3 (prompt iteration effort) materialised as the principal budget overrun (+12h) but had no schedule impact due to the absorbed contingency in Phase 4; it produced the key estimation lesson formalised in §2.8.
+The two highest-exposure risks - R1 (API availability) and R2 (methodology drift) - directly shaped the system architecture rather than being patched operationally. R1 forced the early investment in a provider abstraction layer (§2.4.1): the `create_provider()` factory pattern and `BaseLLMProvider` interface were built not for elegance but because the risk of single-provider lock-in at critical development milestones was unacceptable. This decision paid off directly when Groq access was restricted mid-project. R2 drove the most significant architectural evolution in the entire project: recognising that LLM prompt guidance alone was insufficient to prevent methodology drift led to the FSM redesign (§2.3), where stage transitions became deterministic code-enforced rules rather than probabilistic LLM decisions - addressing the root cause rather than the symptom. R3 (prompt iteration effort) materialised as the principal budget overrun (+12h) but had no schedule impact due to the absorbed contingency in Phase 4; it produced the key estimation lesson formalised in §2.8.
 
 **Contingency Planning:**
 - API failure → Ollama local models operational within 1s failover time
@@ -1412,7 +1411,7 @@ The two highest-exposure risks — R1 (API availability) and R2 (methodology dri
 
 ### 2.7 Monitoring, Control & Quality (SPM Unit 6)
 
-This section documents how the project was monitored against its plan, what control actions were taken when deviations occurred, and how quality was measured — mapping directly to the SPM Unit 6 framework of monitoring, control, and quality management.
+This section documents how the project was monitored against its plan, what control actions were taken when deviations occurred, and how quality was measured - mapping directly to the SPM Unit 6 framework of monitoring, control, and quality management.
 
 #### 2.7.1 Progress Monitoring
 
@@ -1429,7 +1428,7 @@ Progress was tracked through three complementary mechanisms throughout the 28-we
 - Final Demo (17 Feb 2026): Live system validation against all stated requirements
 - Ethics Approval (02 Mar 2026): Final deliverable sign-off
 
-**Phase Milestone Checklist:** Each phase had defined deliverables (§2.1.2). At phase boundaries, completeness was assessed against these artefacts before proceeding — e.g., Phase 2 was not considered complete until FSM stage accuracy exceeded the 85% target and the 6 output problems (§2.2.1) were documented with before/after metrics.
+**Phase Milestone Checklist:** Each phase had defined deliverables (§2.1.2). At phase boundaries, completeness was assessed against these artefacts before proceeding - e.g., Phase 2 was not considered complete until FSM stage accuracy exceeded the 85% target and the 6 output problems (§2.2.1) were documented with before/after metrics.
 
 #### 2.7.2 Control Actions Taken
 
@@ -1437,11 +1436,11 @@ When the project deviated from plan, concrete control actions were taken rather 
 
 | Deviation Detected | Control Action Taken | Outcome |
 |---|---|---|
-| **Voice features (Whisper STT + ElevenLabs TTS) not achievable on development hardware** — Whisper-small processed at 0.15× real-time; incompatible with <2s latency requirement (§2.0.3) | Deferred voice features to post-FYP scope; text interface adopted as primary mode. No schedule impact — decision made in Week 1 before implementation began | Latency target met (980ms avg); project scope preserved |
-| **Strategy Pattern revealed as fundamentally mismatched** — 5 architectural issues identified (§2.3.2) after 8 weeks of implementation | Planned throwaway: entire Strategy Pattern discarded (855 LOC); FSM rebuilt in Week 9 (430 LOC). Accepted as planned throwaway prototype outcome, not failure | −50% LOC; subsequent iteration 78% faster (§2.3.5) |
-| **God-class anti-pattern in `chatbot.py`** — SRP violation accumulating training, NLU, and rewind responsibilities | Dedicated refactor iteration (Phase 3): extracted trainer.py, guardedness_analyzer.py, knowledge.py. Prioritised over some planned optimisations | −425 LOC net; test complexity reduced; deployment flexibility gained |
-| **Prompt engineering effort overrunning estimate** — 5 revision cycles required vs. 2 planned | No schedule re-planning needed; effort absorbed within Phase 4 testing window. Formalised as estimation lesson (§2.8): prompt iteration modelled as empirical testing, not design | +10h total overrun (16%); all scope targets still met |
-| **Test suite failing due to blocking API calls** — Non-deterministic CI failures from live Groq calls in unit tests | Control action: isolated all API-dependent tests to manual scripts; pytest suite restricted to pure unit tests only | 1.87s deterministic test suite; zero CI failures post-isolation |
+| **Voice features (Whisper STT + ElevenLabs TTS) not achievable on development hardware** - Whisper-small processed at 0.15× real-time; incompatible with <2s latency requirement (§2.0.3) | Deferred voice features to post-FYP scope; text interface adopted as primary mode. No schedule impact - decision made in Week 1 before implementation began | Latency target met (980ms avg); project scope preserved |
+| **Strategy Pattern revealed as fundamentally mismatched** - 5 architectural issues identified (§2.3.2) after 8 weeks of implementation | Planned throwaway: entire Strategy Pattern discarded (855 LOC); FSM rebuilt in Week 9 (430 LOC). Accepted as planned throwaway prototype outcome, not failure | −50% LOC; subsequent iteration 78% faster (§2.3.5) |
+| **God-class anti-pattern in `chatbot.py`** - SRP violation accumulating training, NLU, and rewind responsibilities | Dedicated refactor iteration (Phase 3): extracted trainer.py, guardedness_analyzer.py, knowledge.py. Prioritised over some planned optimisations | −425 LOC net; test complexity reduced; deployment flexibility gained |
+| **Prompt engineering effort overrunning estimate** - 5 revision cycles required vs. 2 planned | No schedule re-planning needed; effort absorbed within Phase 4 testing window. Formalised as estimation lesson (§2.8): prompt iteration modelled as empirical testing, not design | +10h total overrun (16%); all scope targets still met |
+| **Test suite failing due to blocking API calls** - Non-deterministic CI failures from live Groq calls in unit tests | Control action: isolated all API-dependent tests to manual scripts; pytest suite restricted to pure unit tests only | 1.87s deterministic test suite; zero CI failures post-isolation |
 
 #### 2.7.3 Quality Measurement
 
@@ -1474,7 +1473,7 @@ When the project deviated from plan, concrete control actions were taken rather 
 3. Performance monitoring via automatic logging
 4. Stage progression validation in test suite
 
-**PM Concept Applied:** *Continuous Quality Control* — Automated metrics capture (logging decorator) + test-driven validation ensures requirements met throughout development, not just at end.
+**PM Concept Applied:** *Continuous Quality Control* - Automated metrics capture (logging decorator) + test-driven validation ensures requirements met throughout development, not just at end.
 
 #### Requirements → Test Traceability
 
@@ -1482,16 +1481,16 @@ The table below maps each functional and non-functional requirement to specific 
 
 | **Requirement** | **What is Being Verified** | **Test File / IDs** | **Test Type** | **Status** |
 |---|---|---|---|---|
-| R1 — FSM stage management | All consultative stages reachable; transitions fire on correct signals; safety valves prevent infinite loops | `test_consultative_flow_integration.py` (all); `test_flow.py` | Integration + Unit | ✅ 96.2% pass |
-| R2 — Dual strategy (consultative / transactional) | Transactional flow skips emotional stage; consultative runs 5 stages; product_config.yaml controls selection | `test_consultative_flow_integration.py`; manual scenario set (§4.1) | Integration + Manual | ✅ Pass |
-| R3 — Stage-specific LLM prompts | Prompt template varies by stage; intent-level adapts prompt structure; guardedness affects tactic | `test_acknowledgment_tactics.py` (all 59 tests) | Unit | ✅ 59/59 |
-| R4 — Frustration / urgency override | `user_demands_directness()` returns True on direct-request patterns; FSM skips to pitch | `test_flow.py` urgency tests | Unit | ✅ Pass |
-| R5 — Web interface + session isolation + rewind | Session IDs are unique; rewind restores correct FSM state; concurrent sessions don't share state | Manual test; `test_app.py` (session isolation) | Manual + Integration | ✅ Pass |
-| NF1 — Latency <2000ms | API provider logs p95 latency; 25 live conversations timed | Performance log (`metrics.jsonl`); §2.7 | Measurement | ✅ 980ms avg |
-| NF2 — Zero infrastructure cost | Groq free-tier + Flask dev server; no paid APIs invoked | Architecture review + deployment config | Review | ✅ £0 |
-| NF3 — Session isolation | Separate `SalesChatbot` instance per session; session dict keyed by cryptographic token | `test_app.py` session isolation test | Integration | ✅ Pass |
-| NF4 — Graceful error handling | API key missing → fallback or clear error; malformed input → 400 with message; rate limit → 429 | `test_app.py` error path tests | Integration | ✅ Pass |
-| NF5 — YAML configuration flexibility | Changing `signals.yaml` or `product_config.yaml` modifies behaviour without Python code change | Regression test after each YAML edit (25+ scenarios) | Manual | ✅ Pass |
+| R1 - FSM stage management | All consultative stages reachable; transitions fire on correct signals; safety valves prevent infinite loops | `test_consultative_flow_integration.py` (all); `test_flow.py` | Integration + Unit | ✅ 96.2% pass |
+| R2 - Dual strategy (consultative / transactional) | Transactional flow skips emotional stage; consultative runs 5 stages; product_config.yaml controls selection | `test_consultative_flow_integration.py`; manual scenario set (§4.1) | Integration + Manual | ✅ Pass |
+| R3 - Stage-specific LLM prompts | Prompt template varies by stage; intent-level adapts prompt structure; guardedness affects tactic | `test_acknowledgment_tactics.py` (all 59 tests) | Unit | ✅ 59/59 |
+| R4 - Frustration / urgency override | `user_demands_directness()` returns True on direct-request patterns; FSM skips to pitch | `test_flow.py` urgency tests | Unit | ✅ Pass |
+| R5 - Web interface + session isolation + rewind | Session IDs are unique; rewind restores correct FSM state; concurrent sessions don't share state | Manual test; `test_app.py` (session isolation) | Manual + Integration | ✅ Pass |
+| NF1 - Latency <2000ms | API provider logs p95 latency; 25 live conversations timed | Performance log (`metrics.jsonl`); §2.7 | Measurement | ✅ 980ms avg |
+| NF2 - Zero infrastructure cost | Groq free-tier + Flask dev server; no paid APIs invoked | Architecture review + deployment config | Review | ✅ £0 |
+| NF3 - Session isolation | Separate `SalesChatbot` instance per session; session dict keyed by cryptographic token | `test_app.py` session isolation test | Integration | ✅ Pass |
+| NF4 - Graceful error handling | API key missing → fallback or clear error; malformed input → 400 with message; rate limit → 429 | `test_app.py` error path tests | Integration | ✅ Pass |
+| NF5 - YAML configuration flexibility | Changing `signals.yaml` or `product_config.yaml` modifies behaviour without Python code change | Regression test after each YAML edit (25+ scenarios) | Manual | ✅ Pass |
 
 **Test Strategy Summary:**
 - **Unit tests** (pure functions, <1ms each): FSM advancement rules, NLU keyword matching, objection classification, tactic selection
@@ -1505,7 +1504,7 @@ Total coverage: **156 automated tests** + **25 manual scenarios** + **performanc
 
 #### 2.8.1 SPM Estimation Record
 
-The table below records initial estimates against measured actuals at both schedule (phase) and effort (hours) level — demonstrating that estimation was performed upfront and compared to measured outcomes, not reconstructed post-hoc. This satisfies SPM Week 3 (Estimation) and Week 2 (Measurement) requirements.
+The table below records initial estimates against measured actuals at both schedule (phase) and effort (hours) level - demonstrating that estimation was performed upfront and compared to measured outcomes, not reconstructed post-hoc. This satisfies SPM Week 3 (Estimation) and Week 2 (Measurement) requirements.
 
 **Phase-Level Schedule Estimation: Initial vs. Actual**
 
@@ -1526,7 +1525,7 @@ The table below records initial estimates against measured actuals at both sched
 | All other development (Core Engine, FSM + Prompts codebase, Provider Abstraction, Web Layer) | ~50h | ~48h | −2h (−4%) | Within estimate; FSM migration and SRP extractions produced net LOC reductions offsetting additions |
 | **TOTAL** | **~60h** | **70h** | **+10h (+16%)** | Prompt engineering is the sole root cause of the overrun |
 
-**Estimation Method:** Initial estimates used *analogical estimation* from comparable Python web projects combined with scope-based expert judgment. No formal COCOMO or function point modelling was applied — the novel prompt engineering component had no reliable historical analogue. The failure was treating prompt tuning as equivalent to standard code debugging (a one-pass, analytical activity) when it is in fact an empirical feedback loop: each constraint hypothesis must be tested against observed LLM output before the next can be formed.
+**Estimation Method:** Initial estimates used *analogical estimation* from comparable Python web projects combined with scope-based expert judgment. No formal COCOMO or function point modelling was applied - the novel prompt engineering component had no reliable historical analogue. The failure was treating prompt tuning as equivalent to standard code debugging (a one-pass, analytical activity) when it is in fact an empirical feedback loop: each constraint hypothesis must be tested against observed LLM output before the next can be formed.
 
 **Measurement Basis:** Actual effort was tracked through working session records in the development diary (`Documentation/Diary.md`) and cross-checked against commit history timestamps. LOC was measured directly on source files. This lightweight approach is consistent with SPM Week 2 guidance on selecting measurement methods proportionate to project scale.
 
@@ -1554,7 +1553,7 @@ The table below records initial estimates against measured actuals at both sched
 **Estimation Validation:**
 - Initial estimate: 60h (architectural design + implementation)
 - Actual: 70h (16% overrun)
-- **Root Cause:** Prompt iteration cycles underestimated—5 major revisions vs. planned 2
+- **Root Cause:** Prompt iteration cycles underestimated - 5 major revisions vs. planned 2
 - **Lesson Learned:** Behavioral constraint engineering (prompts) requires more testing than traditional code
 
 **PM Concept Applied:** *Empirical Estimation* - Measured LOC and effort data enables future project sizing. Prompt engineering effort now quantified for similar AI projects.
@@ -1565,15 +1564,15 @@ The table below records initial estimates against measured actuals at both sched
 
 #### 2.9.1 Data Privacy & Handling
 
-The system was designed with data minimisation as a primary architectural constraint. All conversation data is retained exclusively in server-side memory for the duration of an active session and is purged automatically upon session expiry (60-minute idle timeout via background daemon thread). No conversation transcripts, user interactions, or personally identifiable information are written to persistent storage — there is no database layer in the current implementation. This directly satisfies GDPR Article 5(1)(e) data minimisation: data is not retained beyond the purpose for which it was collected (the active training session).
+The system was designed with data minimisation as a primary architectural constraint. All conversation data is retained exclusively in server-side memory for the duration of an active session and is purged automatically upon session expiry (60-minute idle timeout via background daemon thread). No conversation transcripts, user interactions, or personally identifiable information are written to persistent storage - there is no database layer in the current implementation. This directly satisfies GDPR Article 5(1)(e) data minimisation: data is not retained beyond the purpose for which it was collected (the active training session).
 
-**Training Data Ethics:** The system's behavioural configuration draws exclusively on published sales methodology frameworks: SPIN Selling (Rackham, 1988) and NEPQ (Acuff & Miner, 2023) — both publicly available academic and commercial works. No proprietary customer data, real sales recordings, or personal conversations were used in the prompt engineering or YAML configuration. The knowledge base (`custom_knowledge.yaml`) contains only developer-authored product scenarios and objection examples. No real customer or participant data was used, and therefore no data consent or ethics approval was required for the training corpus.
+**Training Data Ethics:** The system's behavioural configuration draws exclusively on published sales methodology frameworks: SPIN Selling (Rackham, 1988) and NEPQ (Acuff & Miner, 2023) - both publicly available academic and commercial works. No proprietary customer data, real sales recordings, or personal conversations were used in the prompt engineering or YAML configuration. The knowledge base (`custom_knowledge.yaml`) contains only developer-authored product scenarios and objection examples. No real customer or participant data was used, and therefore no data consent or ethics approval was required for the training corpus.
 
 #### 2.8.2 System Access & Security Controls
 
 **Deployment Scope:** The system is deployed publicly via Render (`https://fyp-sales-training-tool.onrender.com`) using Gunicorn as the WSGI server. Render's platform provides TLS termination, meaning all traffic is encrypted in transit (HTTPS). This represents a step beyond prototype-only scope: the system is accessible by any web client, and the security controls implemented below (Sections 2.8.3–2.8.4) are accordingly production-appropriate for a single-instance academic deployment.
 
-**Session Isolation:** Session management uses cryptographically generated identifiers (`secrets.token_hex(16)`, 128-bit random tokens per Python documentation). Each session maintains an isolated `SalesChatbot` instance — no shared conversational state exists between concurrent users. The background cleanup thread invalidates sessions after 60 minutes of inactivity, preventing memory accumulation.
+**Session Isolation:** Session management uses cryptographically generated identifiers (`secrets.token_hex(16)`, 128-bit random tokens per Python documentation). Each session maintains an isolated `SalesChatbot` instance - no shared conversational state exists between concurrent users. The background cleanup thread invalidates sessions after 60 minutes of inactivity, preventing memory accumulation.
 
 **API Key Management:** The Groq API key is stored exclusively as an environment variable (`GROQ_API_KEY`) and is never hardcoded in the codebase or committed to version control. The project `.gitignore` excludes all `.env` files. This follows OWASP recommendations for secret management (OWASP, 2021).
 
@@ -1609,9 +1608,9 @@ The system was designed with data minimisation as a primary architectural constr
 
 **Methodology Scope:** The IMPACT/NEPQ sales framework reflects Western direct-sales conventions. The system does not claim cross-cultural validity and is scoped explicitly to English-language sales training scenarios. Use outside this context would require methodology adaptation and re-evaluation.
 
-**Intended Use Boundary:** This system is designed for training simulation only — not for deployment in live, customer-facing sales environments. Deploying it in real customer interactions without explicit AI disclosure would conflict with UK ICO guidance on automated decision-making and AI transparency (ICO, 2023).
+**Intended Use Boundary:** This system is designed for training simulation only - not for deployment in live, customer-facing sales environments. Deploying it in real customer interactions without explicit AI disclosure would conflict with UK ICO guidance on automated decision-making and AI transparency (ICO, 2023).
 
-#### 2.9.5 Implemented Security Controls — Technical Details
+#### 2.9.5 Implemented Security Controls - Technical Details
 
 The controls below implement the STRIDE mitigations identified in §2.8.3. Following the March 2026 security refactor, all controls are implemented in `src/web/security.py` (extracted from `app.py` for modularity); code references are provided for verification.
 
@@ -1635,7 +1634,7 @@ CORS(app, origins=_allowed_origins)
 
 ---
 
-**2. Rate Limiting — Sliding Window Per-IP (DoS Prevention)**
+**2. Rate Limiting - Sliding Window Per-IP (DoS Prevention)**
 
 **Location:** `app.py`, lines 57–62 (`_RATE_LIMITS` config) and lines 65–77 (`_is_rate_limited()` function)
 
@@ -1677,7 +1676,7 @@ MAX_SESSIONS = 200
 # In api_init():
 with _session_lock:
     if len(sessions) >= MAX_SESSIONS:
-        app.logger.warning(f"Session cap ({MAX_SESSIONS}) reached — rejecting new init")
+        app.logger.warning(f"Session cap ({MAX_SESSIONS}) reached - rejecting new init")
         return jsonify({"error": "Server at capacity. Please try again later."}), 503
 ```
 
@@ -1732,10 +1731,10 @@ def set_security_headers(response):
 ```
 
 **Threat Mitigated:**
-- `X-Frame-Options: DENY` — Prevents clickjacking; embedding the app in an attacker's iframe is blocked
-- `X-Content-Type-Options: nosniff` — Prevents MIME-type sniffing; browser must respect `Content-Type` header (stops `.js` files being interpreted as HTML, etc.)
-- `Referrer-Policy` — Limits HTTP `Referer` header leakage; only sends referrer for same-origin requests
-- `X-XSS-Protection: 1; mode=block` — Legacy XSS filter for older browsers (modern browsers use CSP instead, not implemented here)
+- `X-Frame-Options: DENY` - Prevents clickjacking; embedding the app in an attacker's iframe is blocked
+- `X-Content-Type-Options: nosniff` - Prevents MIME-type sniffing; browser must respect `Content-Type` header (stops `.js` files being interpreted as HTML, etc.)
+- `Referrer-Policy` - Limits HTTP `Referer` header leakage; only sends referrer for same-origin requests
+- `X-XSS-Protection: 1; mode=block` - Legacy XSS filter for older browsers (modern browsers use CSP instead, not implemented here)
 
 **Verification:** Browser DevTools > Network > Response Headers confirm all four headers present.
 
@@ -1776,7 +1775,7 @@ def _validate_message(text: str):
 
 ---
 
-**Summary Table — Security Controls vs. STRIDE Threats**
+**Summary Table - Security Controls vs. STRIDE Threats**
 
 | **Control** | **Threat(s) Mitigated** | **Implementation** | **Verification** |
 |---|---|---|---|
@@ -1796,24 +1795,24 @@ def _validate_message(text: str):
 
 **How the Deliverable Evolved:**
 
-The system you're looking at is not the system I started building. The initial architecture (Weeks 1-8) used manual Strategy Pattern orchestration—every stage transition was hard-coded in `chatbot.py` with a 40-line decision tree. It worked, but it was slow to debug (any bug required tracing through 8 different decision paths) and impossible to extend (adding a new stage meant touching 4 files).
+The system you're looking at is not the system I started building. The initial architecture (Weeks 1-8) used manual Strategy Pattern orchestration - every stage transition was hard-coded in `chatbot.py` with a 40-line decision tree. It worked, but it was slow to debug (any bug required tracing through 8 different decision paths) and impossible to extend (adding a new stage meant touching 4 files).
 
-Week 9, I recognized the pattern: *finite state machine*. Single week to refactor everything into an FSM-driven architecture with declarative YAML configuration. Same functionality, 50% fewer LOC, infinitely easier to debug and modify. That pivot—from "this works but is fragile" to "this is maintainable"—was the difference between "finished project" and "professional project."
+Week 9, I recognized the pattern: *finite state machine*. Single week to refactor everything into an FSM-driven architecture with declarative YAML configuration. Same functionality, 50% fewer LOC, infinitely easier to debug and modify. That pivot - from "this works but is fragile" to "this is maintainable" - was the difference between "finished project" and "professional project."
 
 Similarly, the NLU pipeline went through three iterations:
-1. **Week 3:** Fuzzy string matching (failed—too many false positives)
+1. **Week 3:** Fuzzy string matching (failed - too many false positives)
 2. **Week 6:** Attempted spaCy integration (unnecessary overhead)
 3. **Week 8 onward:** Lean regex-based keyword detection with YAML configuration (production)
 
 The web interface started as Flask templates (12KB HTML), then evolved to a client-heavy SPA-style architecture with localStorage persistence and WebSocket-ready structure.
 
-What you see in §3.1 is not version 0.1—it's the system after months of aggressive over-engineering, followed by selective simplification to remove exactly what wasn't needed.
+What you see in §3.1 is not version 0.1 - it's the system after months of aggressive over-engineering, followed by selective simplification to remove exactly what wasn't needed.
 
 ---
 
-**Figure 3.1a: System Architecture Diagram — Full Technology Stack**
+**Figure 3.1a: System Architecture Diagram - Full Technology Stack**
 
-> FSM state diagrams (consultative, transactional, and strategy-detection flows with guard conditions) are documented in [ARCHITECTURE.md — FSM State Diagrams](ARCHITECTURE.md#fsm-state-diagrams).
+> FSM state diagrams (consultative, transactional, and strategy-detection flows with guard conditions) are documented in [ARCHITECTURE.md - FSM State Diagrams](ARCHITECTURE.md#fsm-state-diagrams).
 
 The implementation integrates a Flask web server, NLU pipeline, FSM conversation engine, and pluggable LLM providers:
 
@@ -1896,28 +1895,28 @@ flowchart TB
 
 ---
 
-**Core Chatbot Engine (`src/chatbot/chatbot.py` — 212 LOC):**
+**Core Chatbot Engine (`src/chatbot/chatbot.py` - 212 LOC):**
 - **Key Methods:**
   - `__init__()`: Initialize session, load product config, inject custom knowledge, create FSM flow engine
-  - `chat(user_message)`: Main message handler—generates stage-aware prompts, calls LLM, advances FSM, logs performance
+  - `chat(user_message)`: Main message handler - generates stage-aware prompts, calls LLM, advances FSM, logs performance
   - `rewind_to_turn(n)`: Hard-reset FSM and replay history to support message editing
   - `generate_training(user_msg, bot_reply)`: Delegates to `trainer.generate_training()` for coaching notes
   - `answer_training_question(question)`: Delegates to `trainer.answer_training_question()`
   - `get_conversation_summary()`: Returns FSM state dict + provider/model info
 
-**Training Coach (`src/chatbot/trainer.py` — 130 LOC):**
+**Training Coach (`src/chatbot/trainer.py` - 130 LOC):**
 - Extracted from `chatbot.py` (Phase 1 refactor) to enforce Single Responsibility Principle
 - Pure functions taking `provider` and `flow_engine` as parameters (loose coupling)
 - `generate_training()`: LLM-powered coaching notes per exchange (stage_goal, what_bot_did, next_trigger, where_heading, watch_for)
 - `answer_training_question()`: Context-aware answers to trainee questions about current conversation
 
-**FSM Engine (`src/chatbot/flow.py` — 281 LOC):**
+**FSM Engine (`src/chatbot/flow.py` - 281 LOC):**
 - Declarative `FLOWS` configuration for three modes: intent/discovery (1 stage), consultative (5 stages), transactional (3 stages)
 - Pure-function advancement rules: `user_has_clear_intent()`, `user_shows_doubt()`, `user_expressed_stakes()`, `commitment_or_objection()`, `commitment_or_walkaway()`
 - Urgency-skip detection with configurable target stages
 - Turn counting with max-turn safety nets: 10 turns for logical/emotional stages (requires actual doubt/stakes signals); safety valve prevents infinite loops
 
-**Prompt Generation (`src/chatbot/content.py` — 751 LOC):**
+**Prompt Generation (`src/chatbot/content.py` - 751 LOC):**
 - Stage-specific prompt templates with P1 (hard rules) / P2 (preferences) / P3 (examples) priority hierarchy
 - Adaptive state detection: intent level, guardedness, question fatigue
 - Elicitation tactics for low-intent engagement (Generated Knowledge, Liu et al., 2022)
@@ -1931,8 +1930,8 @@ To validate that the consultative sales flow faithfully implements NEPQ methodol
 | **NEPQ Stage** | **Impact Formula Lines** | **content.py Location** | **Implementation Pattern** | **Status** |
 |---|---|---|---|---|
 | **Intent** | 3-12: Get tangible need + experience | lines 122-164 (`intent` + `intent_low` variants) | Discover desired outcome + current situation; adaptive elicitation for low-intent users | ✅ Verified |
-| **Logical** | 15-33: Two-phase probe (cause → like/dislike) + impact chain | lines 165-193 | Phase 1 — CAUSE questioning; Phase 2 — LIKE/DISLIKE + problem identification; Phase 3 — impact chain linking problem to consequence | ✅ Verified |
-| **Emotional** | 36-58: Identity frame → Future pacing → COI | lines 194-227 | Phase 1 — Why change now? (Identity frame); Phase 2 — What would be different? (Future pacing); Phase 3 — What if you don't change? (Consequence of inaction) | ✅ Verified |
+| **Logical** | 15-33: Two-phase probe (cause → like/dislike) + impact chain | lines 165-193 | Phase 1 - CAUSE questioning; Phase 2 - LIKE/DISLIKE + problem identification; Phase 3 - impact chain linking problem to consequence | ✅ Verified |
+| **Emotional** | 36-58: Identity frame → Future pacing → COI | lines 194-227 | Phase 1 - Why change now? (Identity frame); Phase 2 - What would be different? (Future pacing); Phase 3 - What if you don't change? (Consequence of inaction) | ✅ Verified |
 | **Pitch** | 59-71: Commitment → 3-pillar presentation → close | lines 228-252 | Commitment questions → situation-to-goal summary (3 pillars: problem, impact, solution) → assumptive close | ✅ Verified |
 | **Objection** | Implicit (reframe concerns emotionally) | lines 253-269 | Classify objection type → Recall stated stakes → Reframe as opportunity using prospect's own words → Move forward | ✅ Verified |
 
@@ -1945,14 +1944,14 @@ The implementation uses two explicit libraries of psychological techniques appli
    - **Understatement:** "I imagine this probably isn't a huge priority right now."
    - **Reflective:** "Still figuring things out."
    - **Shared Observation:** "Most people in your position are dealing with X or Y."
-   - **Curiosity:** "I'm curious what sparked this—though no pressure."
+   - **Curiosity:** "I'm curious what sparked this - though no pressure."
 
 2. **Lead-in Statements** (for topic transitions and deepening exploration):
-   - **Summarising:** "Okay, so the main thing is—"
-   - **Contextualising:** "The reason I bring this up is—"
-   - **Transitioning:** "That makes sense. On a related note—"
+   - **Summarising:** "Okay, so the main thing is - "
+   - **Contextualising:** "The reason I bring this up is - "
+   - **Transitioning:** "That makes sense. On a related note - "
    - **Validating:** "That sounds frustrating."
-   - **Framing:** "This is usually the deciding factor—"
+   - **Framing:** "This is usually the deciding factor - "
 
 These techniques, injected via `generate_stage_prompt()`, ensure the bot maintains NEPQ psychology while adapting to prospect responsiveness in real-time.
 
@@ -1981,9 +1980,9 @@ User Message
 Bot Response (NEPQ stage + adaptive tactic + constraint enforcement)
 ```
 
-This pipeline ensures that while each conversation follows NEPQ's sequential stage structure, the bot's actual language adapts to prospect responsiveness—yielding high-fidelity human-like conversation while maintaining methodology adherence.
+This pipeline ensures that while each conversation follows NEPQ's sequential stage structure, the bot's actual language adapts to prospect responsiveness - yielding high-fidelity human-like conversation while maintaining methodology adherence.
 
-**NLU Pipeline (`src/chatbot/analysis.py` — 288 LOC):**
+**NLU Pipeline (`src/chatbot/analysis.py` - 288 LOC):**
 - State analysis: intent classification (high/medium/low), question fatigue, intent locking
 - Preference extraction and user keyword identification for lexical entrainment
 - Objection classification with history-aware context (6 types: money, partner, fear, logistical, think, smokescreen)
@@ -1992,42 +1991,42 @@ This pipeline ensures that while each conversation follows NEPQ's sequential sta
 
 **NLU Design Decision: Why Fuzzy Matching Was Abandoned**
 
-The first approach to keyword signal detection was not the whole-word regex that now lives in `analysis.py`. The initial implementation attempted fuzzy string matching—using approximate string similarity to check whether user messages "resembled" keywords drawn from the IMPACT framework definition file (`impact_formula.txt`), which enumerated stage-defining signals like "struggling," "not working," "cost me," and "ready to move forward."
+The first approach to keyword signal detection was not the whole-word regex that now lives in `analysis.py`. The initial implementation attempted fuzzy string matching - using approximate string similarity to check whether user messages "resembled" keywords drawn from the IMPACT framework definition file (`impact_formula.txt`), which enumerated stage-defining signals like "struggling," "not working," "cost me," and "ready to move forward."
 
 The library used was `rapidfuzz`, specifically the `token_sort_ratio` scorer, which handles word-order variation (so "moving forward ready" would still match "ready to move forward"). A secondary pass used `partial_ratio` for substring-level similarity. A threshold of 80 was initially chosen, reasoning that anything below that would be noise.
 
-It didn't work. The core problem was that fuzzy matching optimises for *lexical surface similarity*, not *semantic relevance*. In a sales conversation context, this produced a systematic failure class that whole-word regex does not share: phonetic and orthographic false positives. Short keywords like "bad," "risk," and "cost" scored above the threshold against "bag," "disk," and "post" respectively—words that appear in completely unrelated prospect statements. Lowering the threshold to 85 or 90 reduced these false positives but simultaneously missed intentional matches where users typed mobile-keyboard shortcuts ("stuggling" → "struggling" at 88, sometimes under threshold). The threshold was not stable.
+It didn't work. The core problem was that fuzzy matching optimises for *lexical surface similarity*, not *semantic relevance*. In a sales conversation context, this produced a systematic failure class that whole-word regex does not share: phonetic and orthographic false positives. Short keywords like "bad," "risk," and "cost" scored above the threshold against "bag," "disk," and "post" respectively - words that appear in completely unrelated prospect statements. Lowering the threshold to 85 or 90 reduced these false positives but simultaneously missed intentional matches where users typed mobile-keyboard shortcuts ("stuggling" → "struggling" at 88, sometimes under threshold). The threshold was not stable.
 
-The multi-word phrase matching was the larger failure. The IMPACT formula contained signals like "I'm not sure this is right" and "it's been a problem." `token_sort_ratio` on a user message like "I'm not sure whether to book a holiday" would score against "I'm not sure this is right" at 79—occasionally above threshold depending on message length normalization. There was no principled way to distinguish these.
+The multi-word phrase matching was the larger failure. The IMPACT formula contained signals like "I'm not sure this is right" and "it's been a problem." `token_sort_ratio` on a user message like "I'm not sure whether to book a holiday" would score against "I'm not sure this is right" at 79 - occasionally above threshold depending on message length normalization. There was no principled way to distinguish these.
 
-The definitive test was running both approaches against the 18 utterance audit described in Appendix A.6 (Keyword Noise Audit). The fuzzy approach produced 12 false positives (67%); whole-word regex with boundary assertions (`\b`) produced 3 (17%), and after keyword list refinement, 0. The regex approach was also faster by two orders of magnitude—`re.compile` with `lru_cache` on the pattern costs essentially nothing against the per-message `rapidfuzz` scoring loop on 40+ keyword terms. Fuzzy matching was removed entirely by Week 10.
+The definitive test was running both approaches against the 18 utterance audit described in Appendix A.6 (Keyword Noise Audit). The fuzzy approach produced 12 false positives (67%); whole-word regex with boundary assertions (`\b`) produced 3 (17%), and after keyword list refinement, 0. The regex approach was also faster by two orders of magnitude - `re.compile` with `lru_cache` on the pattern costs essentially nothing against the per-message `rapidfuzz` scoring loop on 40+ keyword terms. Fuzzy matching was removed entirely by Week 10.
 
 **NLU Design Decision: Why spaCy Was Not Used**
 
 A legitimate question at the analysis design stage was whether to use spaCy's NLP pipeline rather than custom regex-based keyword detection. spaCy is the standard Python NLP library and would appear, on the surface, to be the "correct" engineering choice. It was deliberately rejected on analytical grounds.
 
-The fundamental issue is what the NLU pipeline in this system actually needs to do. Every detection task in `analysis.py` reduces to a binary question: *does this prospect message contain signal X?* Answering that question for the keyword classes used here (doubt signals, intent signals, frustration markers) requires word-boundary-aware substring matching with negation checking—nothing more. spaCy's core value proposition is its linguistic processing pipeline: tokenization → POS tagging → dependency parsing → named entity recognition. None of these layers contribute to binary keyword membership testing. Importing spaCy to run `text_contains_any_keyword()` would be equivalent to hiring a structural engineer to tighten a loose screw.
+The fundamental issue is what the NLU pipeline in this system actually needs to do. Every detection task in `analysis.py` reduces to a binary question: *does this prospect message contain signal X?* Answering that question for the keyword classes used here (doubt signals, intent signals, frustration markers) requires word-boundary-aware substring matching with negation checking - nothing more. spaCy's core value proposition is its linguistic processing pipeline: tokenization → POS tagging → dependency parsing → named entity recognition. None of these layers contribute to binary keyword membership testing. Importing spaCy to run `text_contains_any_keyword()` would be equivalent to hiring a structural engineer to tighten a loose screw.
 
-The practical consequences were harder to dismiss than the philosophical ones, though. spaCy models must be downloaded separately (`python -m spacy download en_core_web_sm`), adding a deployment step that is non-trivial on Render's cloud platform where build commands must be explicit. The smallest production model, `en_core_web_sm` (12MB), adds approximately 2–3 seconds to cold-start import time—significant for a serverless-adjacent deployment where the first request often coincides with process startup. The `en_core_web_md` (43MB) and `en_core_web_lg` (741MB) variants that carry word vectors would be required for any semantic similarity work, making deployment size and cold-start latency worse still.
+The practical consequences were harder to dismiss than the philosophical ones, though. spaCy models must be downloaded separately (`python -m spacy download en_core_web_sm`), adding a deployment step that is non-trivial on Render's cloud platform where build commands must be explicit. The smallest production model, `en_core_web_sm` (12MB), adds approximately 2–3 seconds to cold-start import time - significant for a serverless-adjacent deployment where the first request often coincides with process startup. The `en_core_web_md` (43MB) and `en_core_web_lg` (741MB) variants that carry word vectors would be required for any semantic similarity work, making deployment size and cold-start latency worse still.
 
-There is also a more subtle accuracy argument *against* spaCy for this domain. spaCy's word vectors are trained on general corpora (Common Crawl, Wikipedia). In sales conversations, terms like "close," "push," "objection," and "pipeline" carry domain-specific meanings that are semantically distant from their general-corpus representations. Vectorized similarity between "ready to close" and "ready to push" would score high in spaCy's embedding space; the former is a buying signal, the latter is not. The explicit YAML keyword lists—while apparently simpler—encode domain knowledge that word vectors cannot replicate. This is precisely the "Feature Engineering in NLP" principle: explicit domain-specific features outperform statistical proxies when ground truth is observable and the vocabulary is bounded.
+There is also a more subtle accuracy argument *against* spaCy for this domain. spaCy's word vectors are trained on general corpora (Common Crawl, Wikipedia). In sales conversations, terms like "close," "push," "objection," and "pipeline" carry domain-specific meanings that are semantically distant from their general-corpus representations. Vectorized similarity between "ready to close" and "ready to push" would score high in spaCy's embedding space; the former is a buying signal, the latter is not. The explicit YAML keyword lists - while apparently simpler - encode domain knowledge that word vectors cannot replicate. This is precisely the "Feature Engineering in NLP" principle: explicit domain-specific features outperform statistical proxies when ground truth is observable and the vocabulary is bounded.
 
-The conclusion was not that spaCy is inferior in general—it would be the right tool if the system needed to extract named entities (prospect company names, roles), parse dependency structures (distinguish "who said no" from a multi-clause sentence), or perform coreference resolution across long histories. None of those tasks appear in this system. The right tool for keyword detection in a domain with an explicit ontology of signals is a compiled regex with word boundaries and negation checking. That is what `analysis.py` implements.
+The conclusion was not that spaCy is inferior in general - it would be the right tool if the system needed to extract named entities (prospect company names, roles), parse dependency structures (distinguish "who said no" from a multi-clause sentence), or perform coreference resolution across long histories. None of those tasks appear in this system. The right tool for keyword detection in a domain with an explicit ontology of signals is a compiled regex with word boundaries and negation checking. That is what `analysis.py` implements.
 
-**Context-Aware Guardedness (`src/chatbot/guardedness_analyzer.py` — 186 LOC):**
+**Context-Aware Guardedness (`src/chatbot/guardedness_analyzer.py` - 186 LOC):**
 - Replaces the simpler context-blind guardedness check that misclassified "ok" as defensive
 - Distinguishes genuine agreement from defensive posturing via pattern analysis
 - Scores guardedness 0.0–1.0 based on indicators (deflections, sarcasm, evasive phrases)
 - Agreement context check: single-word "ok/sure" after a substantive exchange → not guarded
 
-**Custom Knowledge (`src/chatbot/knowledge.py` — 93 LOC):**
+**Custom Knowledge (`src/chatbot/knowledge.py` - 93 LOC):**
 - CRUD operations for user-editable product knowledge (whitelist-filtered, length-capped)
 - Injected into LLM system prompt via `get_custom_knowledge_text()`
 - Backed by `src/config/custom_knowledge.yaml`; managed via `/api/knowledge` REST endpoints
 
 **Provider Architecture:** Cloud vs. local trade-off analysis, model selection rationale, and implementation details documented in Section 2.4.1.
 
-**Web Interface Features (`src/web/app.py + templates/` — ~1,555 LOC):**
+**Web Interface Features (`src/web/app.py + templates/` - ~1,555 LOC):**
 - Real-time chat interface with message history and localStorage persistence
 - Session isolation (cryptographic session IDs), session lifecycle management (60-min idle expiry)
 - Stage indicator and system status display (flow type, current stage, turn count)
@@ -2041,7 +2040,7 @@ The conclusion was not that spaCy is inferior in general—it would be the right
 
 **How I Tested and What I Learned:**
 
-Testing this system was not an afterthought—it's how I discovered and fixed every major bug. Rather than guessing whether the bot was working correctly, I built 25 manual test scenarios representing real sales conversations (permission denials, budget objections, hesitant prospects, impatient buyers, etc.). Here's what the metrics tell, and what happened to move them.
+Testing this system was not an afterthought - it's how I discovered and fixed every major bug. Rather than guessing whether the bot was working correctly, I built 25 manual test scenarios representing real sales conversations (permission denials, budget objections, hesitant prospects, impatient buyers, etc.). Here's what the metrics tell, and what happened to move them.
 
 ---
 
@@ -2052,7 +2051,7 @@ Testing this system was not an afterthought—it's how I discovered and fixed ev
 *How I got here:*
 - **Week 6 (Initial Testing):** 65% accuracy. The bot would advance after 5 turns *regardless* of what the user said. If a customer said "I'm perfect as I am and don't need fixing," the bot would still move to pitch after 5 turns.
   - *Root cause:* Turn count was the gate, not actual signals.
-  - *Fix:* Introduced keyword-gated advancement—can't advance past doubt stage without detecting an actual doubt signal.
+  - *Fix:* Introduced keyword-gated advancement - can't advance past doubt stage without detecting an actual doubt signal.
 - **Week 10 (Keyword Refinement):** 82% accuracy. But new problem: the word "better" (as in "maybe something could be better") was a false positive for doubt signals. Caused premature advancement.
   - *Root cause:* Keyword list too loose.
   - *Fix:* Moved keywords to YAML, audited against all 25 test scenarios. Refined to whole-word matching with boundary assertions (`\b`).
@@ -2069,11 +2068,11 @@ Testing this system was not an afterthought—it's how I discovered and fixed ev
 *How I got here:*
 - **Phase 2 (Prompt Engineering):** Started at 65%. The prompt said "ask about X, Y, and Z" but didn't give the bot *which questions to ask when*. It would ask all 5 fields upfront (too aggressive) or miss them entirely (too passive).
   - *Fix:* Implemented two-phase discovery:
-    - Phase 1 — Ask about the immediate problem (what's not working?)
-    - Phase 2 — Follow-up on impact (what's the cost of not fixing this?)
+    - Phase 1 - Ask about the immediate problem (what's not working?)
+    - Phase 2 - Follow-up on impact (what's the cost of not fixing this?)
   - *Result:* 72%
 - **Phase 3 (Debugging):** The bot wasn't detecting when the prospect already said something (e.g., "money's tight" counts as budget signal). It would ask redundantly: "So budget is a concern?" after the prospect had already said that.
-  - *Root cause:* No context memory—each prompt generation treated the conversation as new.
+  - *Root cause:* No context memory - each prompt generation treated the conversation as new.
   - *Fix:* Injected extraction history into the prompt ("You've already learned X and Y; don't re-ask"). Also added extraction validation: if the bot asked a question and got an answer that's relevant but not directly responsive, treat it as a signal.
   - *Result:* 88%
 
@@ -2113,19 +2112,19 @@ I ran 3 "turing test" judges (sales professionals unfamiliar with the system) on
 - **Methodology Adherence:** 4.8/5 (Sales framework clearly visible; no skipped stages)
 - **Persona Consistency:** 4.6/5 (Bot maintains consultative tone; very few tone mis-matches)
 
-These subjective scores aren't in a test suite, but they validate the quantitative metrics—the bot isn't just hitting accuracy targets; it's producing usable, professional conversations.
+These subjective scores aren't in a test suite, but they validate the quantitative metrics - the bot isn't just hitting accuracy targets; it's producing usable, professional conversations.
 
 ---
 
 **Test Suite Metrics (Automated):**
 
 - **Unit Tests:** 156 tests, 96.2% pass rate (1.87s total execution)
-- **Coverage:** NLU logic (100%), FSM advancement rules (100%), provider abstraction (95%), prompt generation (70% — acceptable because prompt quality is subjective)
+- **Coverage:** NLU logic (100%), FSM advancement rules (100%), provider abstraction (95%), prompt generation (70% - acceptable because prompt quality is subjective)
 - **Key Test Files:**
-  - `test_flow_engine.py` — FSM logic, advancement rules, stage transitions
-  - `test_analysis.py` — Keyword detection, intent classification, objection detection
-  - `test_guardedness_analyzer.py` — Defensive language detection, context-awareness
-  - `test_acknowledgment_tactics.py` — Elicitation strategies and their application
+  - `test_flow_engine.py` - FSM logic, advancement rules, stage transitions
+  - `test_analysis.py` - Keyword detection, intent classification, objection detection
+  - `test_guardedness_analyzer.py` - Defensive language detection, context-awareness
+  - `test_acknowledgment_tactics.py` - Elicitation strategies and their application
 
 **4 Known Test Failures (Tracked, not fixed):**
 - Guardedness edge case: "aye/yeah" affirmation vs. low-intent agreement boundary
@@ -2212,13 +2211,13 @@ Systematic validation across consultative/transactional flows, buyer personas, a
 The system was demonstrated to the academic supervisor across evaluation sessions during the project period. Observations from these sessions:
 
 - **Conversation naturalness:** The FSM-driven flow produced more structured, goal-directed conversation than unconstrained LLM chatbots, with the consultative flow correctly progressing through discovery before pitching
-- **Methodology adherence:** The NEPQ-influenced objection handling was a clear differentiator — reframing rather than defending on price objections was observable in live demonstration
+- **Methodology adherence:** The NEPQ-influenced objection handling was a clear differentiator - reframing rather than defending on price objections was observable in live demonstration
 - **Usability:** The stage indicator and session reset functionality were considered useful for training purposes; the knowledge management page was identified as a practical extension point
 - **Measured achievement:** Permission question removal (100% via three-layer fix) was identified as a concrete, measurable engineering outcome
 
 **Honest Assessment of Evaluation Scope:**
 
-The primary limitation is the absence of independent user testing — developer-conducted testing introduces confirmation bias as tester familiarity with the system may unconsciously avoid edge cases. The 25+ conversation test set was designed to partially mitigate this through adversarial scenario inclusion (impatient users, off-topic deflections, price-only focus), but independent validation remains a gap. The UAT methodology documented above is the planned next step for post-FYP development and would provide the statistical confidence required for commercial deployment claims.
+The primary limitation is the absence of independent user testing - developer-conducted testing introduces confirmation bias as tester familiarity with the system may unconsciously avoid edge cases. The 25+ conversation test set was designed to partially mitigate this through adversarial scenario inclusion (impatient users, off-topic deflections, price-only focus), but independent validation remains a gap. The UAT methodology documented above is the planned next step for post-FYP development and would provide the statistical confidence required for commercial deployment claims.
 
 ### 4.1b Theoretical Validation: Did Empirical Results Confirm Academic Claims?
 
@@ -2226,7 +2225,7 @@ Beyond requirement satisfaction, a critical evaluation asks: **Did the empirical
 
 | **Theoretical Claim** | **Source** | **Our Predicted Outcome** | **Actual Result** | **Validated?** |
 |---|---|---|---|---|
-| Need-Payoff questions improve close rates by 47% | Rackham (1988) | Higher stage progression to pitch in consultative mode | 92% progression to pitch (vs. 60-70% unconstrained LLMs) | **Partial** — Stage progression achieved; close rate unmeasured (no external sales data) |
+| Need-Payoff questions improve close rates by 47% | Rackham (1988) | Higher stage progression to pitch in consultative mode | 92% progression to pitch (vs. 60-70% unconstrained LLMs) | **Partial** - Stage progression achieved; close rate unmeasured (no external sales data) |
 | Structured reasoning steps (Chain-of-Thought) improve accuracy | Wei et al. (2022) | Objection handling with IDENTIFY→RECALL→CONNECT→REFRAME > generic responses | 88% appropriate reframing (vs. 65% baseline without CoT structure) | **Yes** ✅ |
 | Conversational partners adopting terms build rapport ("conceptual pacts") | Brennan & Clark (1996) | Lexical entrainment (keyword injection) reduces mechanical parroting | 0% parroting detected in 4/4 test scenarios with anti-parroting rule + keyword injection | **Yes** ✅ |
 | Natural language constraints reduce violations by ~95% without fine-tuning | Bai et al. (2022) | Constitutional AI P1/P2/P3 hierarchy eliminates permission questions | 100% permission question removal (4/4 test pitches; before fix: 75% contained trailing Qs) | **Yes** ✅ |
@@ -2235,39 +2234,43 @@ Beyond requirement satisfaction, a critical evaluation asks: **Did the empirical
 | Generated knowledge priming improves intent detection | Liu et al. (2022) | Intent-stage knowledge generation reduces LOW intent misclassification | 100% prevented inappropriate pitching to LOW-intent users via ReAct gate | **Yes** ✅ |
 
 **Critical Limitations & Honest Assessment:**
-- **SPIN Selling (Rackham, 1988):** Claim validated partially. We achieved 92% stage progression through FSM constraints, but Rackham's primary metric (close rate improvement of 47%) is unmeasured—we have no external sales data showing whether trainees actually improved closing rates after practice.
+- **SPIN Selling (Rackham, 1988):** Claim validated partially. We achieved 92% stage progression through FSM constraints, but Rackham's primary metric (close rate improvement of 47%) is unmeasured - we have no external sales data showing whether trainees actually improved closing rates after practice.
 - **NEPQ Framework (Acuff & Miner, 2023):** Reframing accuracy (88%) is measured internally; true effectiveness requires third-party evaluation of whether the reframes actually addressed emotional objections (System 2 thinking) or merely sounded reasonable.
-- **Conversational Repair (Schegloff, 1992):** Urgency detection validated (100%) but edge cases untested—does the system recognize all frustration signals or only explicit directive phrases?
+- **Conversational Repair (Schegloff, 1992):** Urgency detection validated (100%) but edge cases untested - does the system recognize all frustration signals or only explicit directive phrases?
 
-**Overall Assessment:** 6/7 theoretical claims validated through empirical testing within our scope. The 1 partial validation (SPIN close rates) reflects a measurement boundary, not a theory failure—the system correctly implements SPIN's sequential progression logic, but real-world sales outcomes were outside FYP evaluation scope. This honest assessment reflects professional-level critical thinking: claim what was measured, acknowledge limitations, avoid overgeneralization.
+**Overall Assessment:** 6/7 theoretical claims validated through empirical testing within our scope. The 1 partial validation (SPIN close rates) reflects a measurement boundary, not a theory failure - the system correctly implements SPIN's sequential progression logic, but real-world sales outcomes were outside FYP evaluation scope. This honest assessment reflects professional-level critical thinking: claim what was measured, acknowledge limitations, avoid overgeneralization.
 
 ### 4.2 Strengths
 
-The thing I'm most proud of isn't any single metric — it's that the system is *maintainable* in a way my Week 1 architecture wasn't. The FSM + YAML combination means that adding a new sales methodology is a configuration change, not a refactor. I proved this to myself in Week 12 when I added a transactional shortcut flow in about 30 minutes — versus the 2-3 hours it would have taken in the Strategy Pattern codebase. That's a qualitative difference, not just a quantitative one.
+The thing I'm most proud of isn't any single metric - it's that the system is *maintainable* in a way my Week 1 architecture wasn't. The FSM + YAML combination means that adding a new sales methodology is a configuration change, not a refactor. I proved this to myself in Week 12 when I added a transactional shortcut flow in about 30 minutes - versus the 2-3 hours it would have taken in the Strategy Pattern codebase. That's a qualitative difference, not just a quantitative one.
 
-The architectural strength I didn't anticipate is how well the separation of concerns held under pressure. When Phase 3 QA revealed the God-class problem in `chatbot.py`, I could extract `trainer.py`, `guardedness_analyzer.py`, and `knowledge.py` without touching the FSM or prompt engine. The modules didn't know about each other — so I could refactor one without breaking the others. That's not accidental; it's what the zero-Flask-deps constraint on the chatbot core forced.
+The architectural strength I didn't anticipate is how well the separation of concerns held under pressure. When Phase 3 QA revealed the God-class problem in `chatbot.py`, I could extract `trainer.py`, `guardedness_analyzer.py`, and `knowledge.py` without touching the FSM or prompt engine. The modules didn't know about each other - so I could refactor one without breaking the others. That's not accidental; it's what the zero-Flask-deps constraint on the chatbot core forced.
 
-On the methodology side: 92% stage progression accuracy is the number that matters most, because it's the one that validates the core thesis. Unconstrained LLMs average 40-60% on the same task. The 32-52 percentage point gap is attributable entirely to the FSM architecture — not prompt cleverness, not model size, but structural enforcement of stage transitions. That's a finding I can defend.
+On the methodology side: 92% stage progression accuracy is the number that matters most, because it's the one that validates the core thesis. Unconstrained LLMs average 40-60% on the same task. The 32-52 percentage point gap is attributable entirely to the FSM architecture - not prompt cleverness, not model size, but structural enforcement of stage transitions. That's a finding I can defend.
 
-The guardedness analyzer deserves specific mention because it solved a problem I didn't know existed until Week 14. The original context-blind implementation flagged "ok" and "sure" as defensive responses — because statistically they look like short, evasive replies. But in context, "ok" after a substantive exchange is agreement, not defensiveness. The context-aware version scores agreement probability alongside guardedness probability and lets the higher signal win. 100ms execution, zero API calls, handles a genuinely subtle NLP problem. I'm proud of that one.
+The guardedness analyzer deserves specific mention because it solved a problem I didn't know existed until Week 14. The original context-blind implementation flagged "ok" and "sure" as defensive responses - because statistically they look like short, evasive replies. But in context, "ok" after a substantive exchange is agreement, not defensiveness. The context-aware version scores agreement probability alongside guardedness probability and lets the higher signal win. 100ms execution, zero API calls, handles a genuinely subtle NLP problem. I'm proud of that one.
 
 ### 4.3 Weaknesses & Trade-Offs
 
-The honest version of this section isn't a bug list — it's an accounting of what I traded away, consciously and otherwise.
+The honest version of this section isn't a bug list - it's an accounting of what I traded away, consciously and otherwise.
 
-The biggest gap is independent user testing. Every accuracy metric in this report — 92% stage progression, 88% objection resolution, 95% tone matching — was produced by me testing a system I built. I know the edge cases because I designed around them. A non-developer user will find failures I genuinely haven't encountered. The UAT methodology in §4.1a is designed to close this gap post-FYP, but until that data exists, every metric should be read as "developer-assessed" not "independent-validated." That's a meaningful caveat.
+The biggest gap is independent user testing. Every accuracy metric in this report - 92% stage progression, 88% objection resolution, 95% tone matching - was produced by me testing a system I built. I know the edge cases because I designed around them. A non-developer user will find failures I genuinely haven't encountered. The UAT methodology in §4.1a is designed to close this gap post-FYP, but until that data exists, every metric should be read as "developer-assessed" not "independent-validated." That's a meaningful caveat.
 
-The security posture reflects FYP constraints honestly. The CORS configuration and absence of role-based access control are fine for a single-instance academic deployment but would be problems at scale. I was aware of these trade-offs and documented them in the STRIDE model (§2.8.3) rather than patching them superficially — the right response for FYP scope is honest documentation, not theatre security.
+**[PLACEHOLDER: Ethics-Approved User Testing Study]**
+*Status: Pending*
+Future independent user testing with ethics approval will be conducted post-FYP to validate system performance with real end users (sales professionals, L&D managers). This study will provide independent validation of the reported metrics and identify edge cases not covered by developer testing.
 
-The four failing guardedness tests are known technical debt and I chose not to fix them before submission. The failures are at the boundary between genuine agreement and defensive short-response — "aye," "yeah," "ok" in ambiguous tonal contexts. Fixing them properly requires a context window large enough to reliably detect micro-patterns across 4-6 exchanges, which bumps against inference latency. I judged the current 186 LOC implementation as correct for 95%+ of real conversations and documented the 5% clearly rather than patching it with brittle heuristics that create different failures. That was a deliberate decision under time constraint, not an oversight.
+The security posture reflects FYP constraints honestly. The CORS configuration and absence of role-based access control are fine for a single-instance academic deployment but would be problems at scale. I was aware of these trade-offs and documented them in the STRIDE model (§2.8.3) rather than patching them superficially - the right response for FYP scope is honest documentation, not theatre security.
 
-The absence of structured logging is the weakness I regret most. `print()` statements got me through development, but if this system had a production incident — a user session producing strange outputs at scale — I would have almost no ability to diagnose it. This should have been a Week 1 infrastructure decision, not a Week 28 known gap. Lesson learned.
+The four failing guardedness tests are known technical debt and I chose not to fix them before submission. The failures are at the boundary between genuine agreement and defensive short-response - "aye," "yeah," "ok" in ambiguous tonal contexts. Fixing them properly requires a context window large enough to reliably detect micro-patterns across 4-6 exchanges, which bumps against inference latency. I judged the current 186 LOC implementation as correct for 95%+ of real conversations and documented the 5% clearly rather than patching it with brittle heuristics that create different failures. That was a deliberate decision under time constraint, not an oversight.
+
+The absence of structured logging is the weakness I regret most. `print()` statements got me through development, but if this system had a production incident - a user session producing strange outputs at scale - I would have almost no ability to diagnose it. This should have been a Week 1 infrastructure decision, not a Week 28 known gap. Lesson learned.
 
 ### 4.4 Personal Reflection: From Student to Professional Mindset
 
 **Initial Approach (Weeks 1-3): Academic Knowledge Application**
 
-Implemented Strategy Pattern because textbooks (CS2001/CS2006 coursework) recommend it for "multiple implementations." Created abstract base classes, factory patterns, separate files—following OOP principles learned in previous modules. The design "looked professional" with clear separation of concerns and extensibility.
+Implemented Strategy Pattern because textbooks (CS2001/CS2006 coursework) recommend it for "multiple implementations." Created abstract base classes, factory patterns, separate files - following OOP principles learned in previous modules. The design "looked professional" with clear separation of concerns and extensibility.
 
 **Critical Realization (Week 8): Pattern-Problem Mismatch**
 
@@ -2275,7 +2278,7 @@ Code review during permission question debugging revealed fundamental issue: tra
 
 **Evidence That Forced Rethinking:**
 
-The specific metrics — 45min code review cycles, 40% of bugs from inconsistent Strategy files, -50% LOC after FSM migration — are documented in full in §2.3. The personal dimension of that evidence was recognising I had optimised for *appearing* professional (abstract base classes, factory patterns, separation of concerns) over *actually* solving the problem. The sunk cost of Weeks 1–8 made this harder to accept than the data warranted.
+The specific metrics - 45min code review cycles, 40% of bugs from inconsistent Strategy files, -50% LOC after FSM migration - are documented in full in §2.3. The personal dimension of that evidence was recognising I had optimised for *appearing* professional (abstract base classes, factory patterns, separation of concerns) over *actually* solving the problem. The sunk cost of Weeks 1–8 made this harder to accept than the data warranted.
 
 **Key Professional Learning Outcome:**
 
@@ -2292,35 +2295,35 @@ The specific metrics — 45min code review cycles, 40% of bugs from inconsistent
 **Before (Academic):** "More abstraction = better design"
 **After (Professional):** "Simplicity wins: 430 LOC maintainable > 855 LOC fragmented"
 
-**Time Management:** Estimated 55 hours; actual 70 hours (+27%). Underestimated prompt tuning & iterative validation—allocated 8 hours, consumed 22 hours (31% of total development time). However, this investment in behavioral constraint engineering delivered higher ROI than traditional code optimization.
+**Time Management:** Estimated 55 hours; actual 70 hours (+27%). Underestimated prompt tuning & iterative validation - allocated 8 hours, consumed 22 hours (31% of total development time). However, this investment in behavioral constraint engineering delivered higher ROI than traditional code optimization.
 
 **Technical Growth Beyond Initial Objectives:**
-1. **Prompt Engineering as Control Mechanism:** Well-crafted natural language constraints (~650 LOC in `content.py`) outperformed hardcoded logic (400+ LOC) for behavioral guidance. Flexibility to iterate without code recompile delivered significant efficiency gains—permission question fix required 3 prompt iterations versus estimated 8 hours for code-based solution.
+1. **Prompt Engineering as Control Mechanism:** Well-crafted natural language constraints (~650 LOC in `content.py`) outperformed hardcoded logic (400+ LOC) for behavioral guidance. Flexibility to iterate without code recompile delivered significant efficiency gains - permission question fix required 3 prompt iterations versus estimated 8 hours for code-based solution.
 2. **Iterative Testing Discipline:** Established systematic methodology: observe → hypothesize → fix (layered) → validate → measure. Each gap (permission questions, tone mismatch, stage advancement) followed this cycle, catching issues rule-based systems would miss.
 3. **Thread-Safe Session Management:** Implemented `threading.Lock()` for session dictionary access and metrics logging. Also implemented a background daemon thread for session cleanup (60-minute idle expiry), preventing memory accumulation in long-running deployments.
 4. **Metrics-Driven Architecture:** Quantified every design decision: coupling (6 imports/file), code review time (45min→10min), feature development (2-3h→30min). This data justified refactoring to stakeholders (academic supervisor) and demonstrated professional-level engineering rigor.
 
-**Key Insight:** The most impactful fixes weren't architectural (those worked fine)—they were **prompt-level behavioral tweaks validated through continuous testing** (see Appendix A for full iteration metrics). This shows why prompt engineering is underrated: it's iterative, low-risk, and immediately measurable.
+**Key Insight:** The most impactful fixes weren't architectural (those worked fine) - they were **prompt-level behavioral tweaks validated through continuous testing** (see Appendix A for full iteration metrics). This shows why prompt engineering is underrated: it's iterative, low-risk, and immediately measurable.
 
 **Critical Lessons for Future LLM Projects:**
 1. **Test Early, Test Often:** Don't wait for complete implementation; validate outputs from day 1 with representative scenarios
 2. **Prompt + Code = Reliability:** Prompts guide behavior; code enforces when LLM slips (~25% of cases need enforcement)
-3. **Observe Actual Output:** Don't assume prompts work—measure trailing questions, tone mismatches, false positives in real conversations
+3. **Observe Actual Output:** Don't assume prompts work - measure trailing questions, tone mismatches, false positives in real conversations
 4. **Small Changes, Big Impact:** <20 LOC changes yielded 75%→100% improvements (permission Qs), 62%→95% (tone matching)
 5. **Iterate in Layers:** Start with prompts (fast), add predictive checks (medium), enforce with regex (guaranteed)
 6. **Track Metrics Continuously:** Track key metrics (stage accuracy, tone matching) across every iteration to detect regressions early; establish measurable success criteria before implementation
 
 **What I'd Do Differently:**
 1. **Establish test scenarios day 1:** Define 15-20 representative conversations upfront (covering persona variations: casual, formal, technical, price-sensitive, impatient) and systematically track metrics across iterations. This would have identified tone matching issues 2 weeks earlier.
-2. **Allocate 30% of development time to prompt engineering:** Not 15%. This is where ROI is highest—small prompt changes yielded 50+ percentage point improvements in key metrics.
+2. **Allocate 30% of development time to prompt engineering:** Not 15%. This is where ROI is highest - small prompt changes yielded 50+ percentage point improvements in key metrics.
 3. **Implement structured logging from start:** Rather than manual conversation analysis, save all interactions to JSON format with metadata (stage, strategy, extracted fields, user persona) for trend analysis and regression detection.
 4. **Quantitative user testing:** Beyond personal validation, implement A/B testing framework to measure conversation completion rates, information extraction quality, and user satisfaction scores across different prompt variations.
 
 ### 4.6 Future Work
 
-Not all of these are equal. Some of the short-term items below feel like genuine unfinished business — infrastructure decisions I made intentionally during development but that I'd fix before deploying this to real users. Others are aspirational. I've tried to be honest about which is which.
+Not all of these are equal. Some of the short-term items below feel like genuine unfinished business - infrastructure decisions I made intentionally during development but that I'd fix before deploying this to real users. Others are aspirational. I've tried to be honest about which is which.
 
-The thing that bothers me most about the current state is structured logging. Right now, if the system behaved unexpectedly during a live session, I'd have almost no ability to diagnose it after the fact — there are `print()` statements scattered through the codebase that worked fine during development, but produce nothing useful in production. This is a Week 1 decision I got wrong and deferred too long. The `logging` module + JSON formatter would take about 4 hours to implement properly. It should have been there from the start.
+The thing that bothers me most about the current state is structured logging. Right now, if the system behaved unexpectedly during a live session, I'd have almost no ability to diagnose it after the fact - there are `print()` statements scattered through the codebase that worked fine during development, but produce nothing useful in production. This is a Week 1 decision I got wrong and deferred too long. The `logging` module + JSON formatter would take about 4 hours to implement properly. It should have been there from the start.
 
 Retry logic is second. A single failed API call currently produces an unrecoverable error for the user. In a training context where a salesperson is mid-conversation, that's a frustrating interruption. Exponential backoff with Groq's API is well-documented and would take a day to implement. I de-prioritised it because my test environment had stable connectivity; real users won't.
 
@@ -2330,7 +2333,7 @@ Retry logic is second. A single failed API call currently produces an unrecovera
 3. Input sanitization (escape control chars before LLM embedding)
 4. Structured logging (`logging` module + JSON formatter)
 
-The long-term list below reflects what the system would need for production deployment outside an academic context. The GDPR compliance item is particularly meaningful — the current in-memory session design is privacy-preserving by accident (data purges on session reset), but a formal right-to-deletion workflow would make it privacy-preserving *by design*.
+The long-term list below reflects what the system would need for production deployment outside an academic context. The GDPR compliance item is particularly meaningful - the current in-memory session design is privacy-preserving by accident (data purges on session reset), but a formal right-to-deletion workflow would make it privacy-preserving *by design*.
 
 **Long-Term (Production):**
 1. Key rotation service (HashiCorp Vault / AWS Secrets Manager)
@@ -2341,7 +2344,7 @@ The long-term list below reflects what the system would need for production depl
 
 ### 4.7 Research Extensions & Advanced Opportunities
 
-The research question I most want to answer post-FYP is straightforward: does practicing with this system actually improve real sales outcomes? Everything in this report measures the *bot's* performance — stage accuracy, objection resolution, tone matching. There's no data on whether a salesperson who trained with it for a week converts better than one who didn't. The A/B testing methodology in §4.1a is designed to answer this. Until that data exists, the system is validated as an engineering artefact, not as a training intervention. That distinction matters.
+The research question I most want to answer post-FYP is straightforward: does practicing with this system actually improve real sales outcomes? Everything in this report measures the *bot's* performance - stage accuracy, objection resolution, tone matching. There's no data on whether a salesperson who trained with it for a week converts better than one who didn't. The A/B testing methodology in §4.1a is designed to answer this. Until that data exists, the system is validated as an engineering artefact, not as a training intervention. That distinction matters.
 
 **Immediate Extensions:**
 1. **Comparative Methodology Study:** Implement additional sales frameworks (BANT, MEDDIC, Challenger Sale) to validate architecture generalizability
@@ -2360,13 +2363,13 @@ The research question I most want to answer post-FYP is straightforward: does pr
 
 ### 4.8 Final Reflection
 
-The finding that stays with me isn't the 92% accuracy number — it's the shape of how I got there. Every significant metric improvement in this project came from the same pattern: something looked obviously broken, I diagnosed it, fixed what seemed like the root cause, and then tested — and it still failed. The first fix was always wrong. The second fix was usually less wrong. The third fix addressed the actual problem. Permission questions went through three layers (prompt → predictive code → regex) before reaching 100%. Stage advancement went through three keyword refinements. Tone matching went through two persona detection passes. I didn't design this iterative pattern upfront — I discovered it by failing fast enough to learn from the failures.
+The finding that stays with me isn't the 92% accuracy number - it's the shape of how I got there. Every significant metric improvement in this project came from the same pattern: something looked obviously broken, I diagnosed it, fixed what seemed like the root cause, and then tested - and it still failed. The first fix was always wrong. The second fix was usually less wrong. The third fix addressed the actual problem. Permission questions went through three layers (prompt → predictive code → regex) before reaching 100%. Stage advancement went through three keyword refinements. Tone matching went through two persona detection passes. I didn't design this iterative pattern upfront - I discovered it by failing fast enough to learn from the failures.
 
-What I understand now that I didn't at the start: prompt engineering is not a "workaround." It's a control discipline with its own failure modes, its own debugging methodology, and its own ROI calculation. The ~22 hours I spent on behavioural constraint iteration (31% of total development time) delivered more measurable improvement per hour than any other activity. That's a finding with practical implications for anyone building LLM-powered systems: budget for prompt engineering as if it were experimental testing, because that's what it is — hypothesis, observation, revision.
+What I understand now that I didn't at the start: prompt engineering is not a "workaround." It's a control discipline with its own failure modes, its own debugging methodology, and its own ROI calculation. The ~22 hours I spent on behavioural constraint iteration (31% of total development time) delivered more measurable improvement per hour than any other activity. That's a finding with practical implications for anyone building LLM-powered systems: budget for prompt engineering as if it were experimental testing, because that's what it is - hypothesis, observation, revision.
 
-The hardest lesson was the Week 9 FSM pivot. I'd spent 8 weeks on a Strategy Pattern architecture that *worked*. Throwing it away felt like admitting failure. But the data said: 45 minutes to review each change, 4 files touched per bug, 40% of bugs coming from inconsistency between files. The FSM replaced that in one week and halved the codebase. The lesson isn't "pivot early" — I needed the constraint of trying to extend the wrong architecture to understand *why* the FSM was right. The lesson is: measure the real cost of staying, not just the theoretical cost of leaving.
+The hardest lesson was the Week 9 FSM pivot. I'd spent 8 weeks on a Strategy Pattern architecture that *worked*. Throwing it away felt like admitting failure. But the data said: 45 minutes to review each change, 4 files touched per bug, 40% of bugs coming from inconsistency between files. The FSM replaced that in one week and halved the codebase. The lesson isn't "pivot early" - I needed the constraint of trying to extend the wrong architecture to understand *why* the FSM was right. The lesson is: measure the real cost of staying, not just the theoretical cost of leaving.
 
-**Key Insight:** As established in §1.3, prompt engineering delivers commercial-viable accuracy (92%) at zero infrastructure cost for structured professional tasks. The reinforcing lesson from implementation: the ~25% of cases that required code-level enforcement (regex guardrails, predictive stage checking) were not failures of prompt engineering — they were expected boundary cases efficiently handled by a two-layer system. A single-layer approach (prompts only, or code only) would have been both less reliable and significantly more expensive to maintain.
+**Key Insight:** As established in §1.3, prompt engineering delivers commercial-viable accuracy (92%) at zero infrastructure cost for structured professional tasks. The reinforcing lesson from implementation: the ~25% of cases that required code-level enforcement (regex guardrails, predictive stage checking) were not failures of prompt engineering - they were expected boundary cases efficiently handled by a two-layer system. A single-layer approach (prompts only, or code only) would have been both less reliable and significantly more expensive to maintain.
 
 ---
 
@@ -2418,16 +2421,16 @@ Syam, N. and Sharma, A. (2018) 'Waiting for a sales renaissance in the fourth in
 
 Information Commissioner's Office (2023) *Guidance on AI and data protection*. Available at: https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/artificial-intelligence/ (Accessed: 10 March 2026).
 
-OWASP Foundation (2021) *OWASP top ten: A01 – injection; A02 – cryptographic failures*. Available at: https://owasp.org/www-project-top-ten/ (Accessed: 10 March 2026).
+OWASP Foundation (2021) *OWASP top ten: A01 - injection; A02 - cryptographic failures*. Available at: https://owasp.org/www-project-top-ten/ (Accessed: 10 March 2026).
 
 ---
 
 **Appendix Index:**
-- **Appendix A:** Iterative Case Studies (A.1–A.6) — detailed observe → fix → validate cycles for each output quality issue, including Keyword Noise Audit case study
-- **Appendix B:** Testing Framework Summary (B.1–B.4) — test suite purpose, key files, rationale, and improvement metrics
+- **Appendix A:** Iterative Case Studies (A.1–A.6) - detailed observe → fix → validate cycles for each output quality issue, including Keyword Noise Audit case study
+- **Appendix B:** Testing Framework Summary (B.1–B.4) - test suite purpose, key files, rationale, and improvement metrics
 - **Appendix C:** Project Development Diary (28-week timeline)
-- **Appendix D:** Failed Example Conversation — FSM stage advancement bug
-- **Appendix E:** Technical Decisions — architectural rationale and trade-offs
+- **Appendix D:** Failed Example Conversation - FSM stage advancement bug
+- **Appendix E:** Technical Decisions - architectural rationale and trade-offs
 
 ## APPENDIX A: ITERATIVE CASE STUDIES
 
@@ -2636,13 +2639,13 @@ def is_rhetorical(user_msg):
 **Key Insight:**
 > *Don't use heuristic proxies for linguistic phenomena. Use explicit, externalized configuration (YAML keyword lists, thresholds, pattern lists) rather than hard-coded logic. Configuration-driven systems are easier to maintain, validate, and extend without code changes.*
 
-**Related Framework:** This pattern aligns with **Feature Engineering in NLP**—moving from implicit statistical patterns to explicit linguistic features. Explicit keyword lists may seem "simplistic," but they outperform abstract heuristics in domains where ground truth is observable (sales conversation signals).
+**Related Framework:** This pattern aligns with **Feature Engineering in NLP** - moving from implicit statistical patterns to explicit linguistic features. Explicit keyword lists may seem "simplistic," but they outperform abstract heuristics in domains where ground truth is observable (sales conversation signals).
 
 ---
 
 ### A.6 Case Study 6: Keyword Noise Audit & FSM False-Positive Prevention
 
-**Problem:** System advanced through sales flow stages when users made contextually unrelated statements. Example: User: "i want to make more money" → Bot triggered transactional mode (skip discovery). Expected: Stay in intent discovery—goal expression ≠ buying signal. Root cause: Keywords like 'want'/'need' are common English words with multiple meanings. Impact: 15/18 test utterances (83%) showed false-positive stage advancement.
+**Problem:** System advanced through sales flow stages when users made contextually unrelated statements. Example: User: "i want to make more money" → Bot triggered transactional mode (skip discovery). Expected: Stay in intent discovery - goal expression ≠ buying signal. Root cause: Keywords like 'want'/'need' are common English words with multiple meanings. Impact: 15/18 test utterances (83%) showed false-positive stage advancement.
 
 **Investigation:** Code review revealed internal contradiction: `analysis.py` listed 'want'/'need' as **stopwords** (unreliable noise), while `flow.py` used them as **intent signals**. Systematic audit tested doubt_keywords and stakes_keywords against 18 real utterances, finding 15 false positives from single-word generics:
 - "I was **wrong** about that person" (belief, not product issue)
@@ -2652,12 +2655,12 @@ def is_rhetorical(user_msg):
 
 **Fix Applied (Three-Part):**
 1. **flow.py (Week 9):** Removed `'want'` and `'need'` from intent advancement rules; regression test confirms "i want to make more money" no longer triggers advancement
-2. **analysis_config.yaml (Week 10):** Removed 8 single-word generics—`"wrong"`, `"bad"`, `"worse"`, `"slow"`, `"miss"`, `"mistake"`, `"error"`, `"confusion"`—from doubt_keywords
-3. **analysis_config.yaml (Week 10):** Removed 7 single-word generics—`"feel"`, `"change"`, `"need"`, `"care"`, `"tired"`, `"matter"`, `"means"`—from stakes_keywords; aligned signals.yaml for consistency
+2. **analysis_config.yaml (Week 10):** Removed 8 single-word generics - `"wrong"`, `"bad"`, `"worse"`, `"slow"`, `"miss"`, `"mistake"`, `"error"`, `"confusion"` - from doubt_keywords
+3. **analysis_config.yaml (Week 10):** Removed 7 single-word generics - `"feel"`, `"change"`, `"need"`, `"care"`, `"tired"`, `"matter"`, `"means"` - from stakes_keywords; aligned signals.yaml for consistency
 
 **Validation:**
 - Before Fix: 15/18 utterances (83%) triggered inappropriate stage advancement
-- After Fix: 1/18 utterances (5%) false positive (only "broken" in product context—acceptable)
+- After Fix: 1/18 utterances (5%) false positive (only "broken" in product context - acceptable)
 - Regression test: `assert not user_has_clear_intent([], "i want to make more money", 0)`
 
 **Design Principle: Anchoring Keywords in Context:**
@@ -2753,7 +2756,7 @@ def is_rhetorical(user_msg):
 | False Stage Advancement | Strategy switching tests | 40% → 92% accuracy |
 | Over-Probing | Manual conversation logs | 3 Q/response → 1 Q/response |
 
-**Key Learning:** Tests weren't just validation tools—they were development drivers that quantified the impact of prompt engineering changes and guided iterative improvement.
+**Key Learning:** Tests weren't just validation tools - they were development drivers that quantified the impact of prompt engineering changes and guided iterative improvement.
 
 ---
 
@@ -2765,7 +2768,7 @@ def is_rhetorical(user_msg):
 
 ## APPENDIX C: Project Development Diary (28-Week Timeline)
 
-*See `Documentation/Diary.md` for the complete week-by-week project development diary, covering September 2025 – March 2026.*
+*See `Documentation/Diary.md` for the complete week-by-week project development diary, covering September 2025 - March 2026.*
 
 **Key Phases Covered:**
 - **Weeks 1–4:** Initial scoping, provider abstraction design, model selection
@@ -2775,14 +2778,14 @@ def is_rhetorical(user_msg):
 - **Weeks 23–28:** Ethics approval, FYP report, technical documentation
 
 The diary follows a consistent structure per phase:
-1. **What Was Built** — Concrete deliverables
-2. **Problems Encountered** — Root causes with quantitative metrics
-3. **Decisions Made** — Strategic choices and rationale
-4. **Why It Mattered** — Impact on timeline, architecture, and project viability
+1. **What Was Built** - Concrete deliverables
+2. **Problems Encountered** - Root causes with quantitative metrics
+3. **Decisions Made** - Strategic choices and rationale
+4. **Why It Mattered** - Impact on timeline, architecture, and project viability
 
 ---
 
-## APPENDIX D: Failed Example Conversation — FSM Stage Advancement Bug
+## APPENDIX D: Failed Example Conversation - FSM Stage Advancement Bug
 
 *This appendix illustrates the critical FSM advancement bug (turns >= 5 auto-advance) and its correction, demonstrating why deterministic state enforcement is essential for methodology adherence.*
 
@@ -2801,10 +2804,10 @@ This rule violated NEPQ methodology: it advanced from the logical stage to emoti
 
 | Turn | User Message | FSM State | Issue |
 |---|---|---|---|
-| 1 | "I've been trading for 3 years, doing well" | Logical, turn=1 | — |
-| 2 | "Mostly technical analysis, working fine" | Logical, turn=2 | — |
-| 3 | "About 2 years. I'm quite profitable" | Logical, turn=3 | — |
-| 4 | "Yeah, it's fine, I'm happy with results" | Logical, turn=4 | — |
+| 1 | "I've been trading for 3 years, doing well" | Logical, turn=1 | - |
+| 2 | "Mostly technical analysis, working fine" | Logical, turn=2 | - |
+| 3 | "About 2 years. I'm quite profitable" | Logical, turn=3 | - |
+| 4 | "Yeah, it's fine, I'm happy with results" | Logical, turn=4 | - |
 | 5 | "Not really, I think I'm doing great" | **→ EMOTIONAL** | ❌ No doubt established |
 
 **Result:** Future Pacing question is ungrounded. User never expressed doubt.
@@ -2829,7 +2832,7 @@ See Section 2.2.3, Snippet 7 for the complete code implementation.
 
 ---
 
-## APPENDIX E: Technical Decisions — Architectural Rationale & Trade-offs
+## APPENDIX E: Technical Decisions - Architectural Rationale & Trade-offs
 
 ### Decision 1: YAML Configuration Over Relational Database
 
