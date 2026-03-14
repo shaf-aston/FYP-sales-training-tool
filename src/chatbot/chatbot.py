@@ -7,6 +7,7 @@ import time
 from dataclasses import dataclass
 
 from .loader import get_product_settings, load_signals
+from .analysis import text_contains_any_keyword
 from .flow import SalesFlowEngine
 from .performance import PerformanceTracker
 from .providers import create_provider
@@ -146,8 +147,6 @@ class SalesChatbot:
 
     def _apply_advancement(self, user_message):
         """Check and apply FSM stage advancement. Handles discovery -> real strategy switch."""
-        from .analysis import text_contains_any_keyword
-
         if self.flow_engine.flow_type == "intent":
             history = self.flow_engine.conversation_history
             user_text = (user_message or "").lower()
@@ -226,6 +225,18 @@ class SalesChatbot:
             self._apply_advancement(user_msg)
 
         return True
+
+    def replay(self, history):
+        """Replay a history list into a fresh bot, including strategy-switch detection.
+
+        Use this instead of flow_engine.replay_history() — it applies _apply_advancement
+        so intent → consultative/transactional switches are correctly reconstructed.
+        """
+        for user_msg_dict, bot_msg_dict in zip(history[::2], history[1::2]):
+            user_msg = user_msg_dict.get("content", "")
+            bot_msg = bot_msg_dict.get("content", "")
+            self.flow_engine.add_turn(user_msg, bot_msg)
+            self._apply_advancement(user_msg)
 
     def get_conversation_summary(self):
         """Return FSM state summary with provider info."""

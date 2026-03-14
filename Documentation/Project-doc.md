@@ -70,32 +70,30 @@ AI sales coaching platforms exist, but most rely on unconstrained LLM generation
 
 ### 1.2 Technical Gap Analysis & Innovation Rationale
 
-**I Tested Three Technical Approaches:**
+**Tested Three Technical Approaches:**
 
-**Approach 1: Rule-Based Chatbots (Dialogflow, Rasa Framework)**
+**Approach 1: Local LLM (Qwen2.5)**
 
-I started with intent-based frameworks because they're well-documented and seem like "safe" choices for constrained conversations. The promise: define 100-200 intents (customer utterances), map to responses, let the framework handle variation.
+The first attempt ran a quantised Qwen2.5 model locally (11 GB RAM) to generate all responses. The bot was prompted to follow the IMPACT sales methodology, supplemented by external sales datasets (SalesCentre and similar corpora) to ground outputs in real sales language. Development ran for approximately three months.
 
-*What I discovered:* I spent 2 days building a 150-intent Dialogflow chatbot for a simple sales conversation (discovery → problem → solution hypothesis → trial close). I tested it on 10 representative test conversations covering common sales scenarios. It handled 6/10 conversations smoothly, then hit boundaries:
-- User paraphrases: Customer says "We've had problems with supplier reliability" instead of matching my "supply_chain_problem" intent → falls back to generic "I didn't understand"
-- Conversation flow brittleness: If user says "Actually, let me think about that" at an unexpected point, the system reverts to discovery stage (can't branch naturally)
-- Methodology gaps: The framework has no concept of "sales stage" or "conversation progression logic" - I'd have to hard-code every path
+*What I discovered:* Response generation took 3–5 minutes per turn — a hard usability blocker for any real-time conversation practice. Beyond latency, four failure modes emerged during testing:
 
-Trade-off: Seemed maintainable until I realized adding one new objection type required editing 3 separate files and retraining the intent classifier.
+- **Response truncation:** The model cut off mid-sentence or mid-argument before completing a stage objective.
+- **Waffle:** Outputs were excessively long and unfocused, restating context instead of advancing the conversation.
+- **Markdown artefacts:** Despite explicit prompt instructions, the model injected `####` headers and other markdown tokens into conversational output, requiring a post-processing strip pass.
+- **Prompt non-adherence:** Behavioural constraints (tone, stage adherence, format) were followed inconsistently even with repeated reinforcement in the system prompt. The external datasets added further noise, conflicting with methodology prompts and producing inconsistent persona behaviour.
 
 ---
 
-**Approach 2: Unconstrained Large Language Models (GPT-4, Claude)**
+**Approach 2: First-Principles Fuzzy Matching**
 
-The opposite extreme: give an LLM the sales methodology and let it generate the entire conversation. No intent definitions, no brittle routing.
+To eliminate latency and regain control over conversation flow, the second iteration replaced the LLM entirely with a deterministic rule-based approach — built from first principles rather than a dialogue management framework (Dialogflow, Rasa). User utterances were matched against predefined intent patterns using fuzzy string similarity (`rapidfuzz`). Based on the closest match, the system selected a scripted response and advanced through the IMPACT formula stages deterministically. Development ran for approximately one month.
 
-*What I discovered:* I built a prototype using Claude API. The conversation flowed naturally, but that became a problem. When I tested it on the same 10 representative test conversations:
+*What I discovered:* Latency was near-instantaneous and stage sequencing was fully reliable. But three new failure modes appeared:
 
-- **The Methodology Drift Problem:** The bot would "understand" the IMPACT framework intellectually but drift in execution. Example: customer mentions budget concerns in the discovery phase. The bot, trying to be helpful, jumped straight to "here's how our pricing works" (skipping problem exploration). It sounded reasonable; it *felt* like good sales conversation. But it violated IMPACT sequencing.
-
-- **Reliability Collapsed at Scale:** ~40% of multi-turn conversations violated stage progression rules. Sometimes the bot would ask a discovery question in the solution-validation phase. Individually, each response was contextually plausible; collectively, the conversation violated methodology constraints.
-
-- **Control vs. Quality Trade-off:** I tried adding 200+ lines of explicit stage constraints to the prompt ("You are in STAGE 2. Do NOT mention solutions. Focus ONLY on..."). Violations dropped to about 5%, but response quality dropped too. Replies became repetitive and robotic.
+- **Response rigidity:** Every matched intent produced the same fixed reply, making repeated conversations feel mechanical and predictable. Responses could not adapt language to the user's specific phrasing, context, or product domain.
+- **High maintenance cost:** Each new intent, stage variation, or edge case required separately hand-coding response branches. Adding coverage for one sales strategy required substantial duplicated effort.
+- **No strategy flexibility:** The architecture could not accommodate different sales strategies (e.g. consultative vs. transactional) without a near-complete rewrite of the matching and routing logic.
 
 ---
 
@@ -128,13 +126,13 @@ Rather than building a custom training pipeline (expensive, slow to iterate) or 
 
 **Theoretical Innovation:** This project treats **prompt engineering as a soft constraint mechanism**. Natural language constraints guide output, and deterministic rules in the FSM enforce stage order.
 
-### 1.3 Academic & Theoretical Foundation
+### 1.3 Sales Structure Foundation
 
 Each theory here was adopted because a specific system failure demanded it — not found through a literature search and then applied. The FSM needed three things: (1) a principled rule for *when* to advance stages, (2) an objection framework that works in practice, and (3) a way to constrain LLM output without thousands of conditional rules.
 
 **Sales Methodology & Conversational Structure**
 
-Rackham's (1988) SPIN Selling provided the empirical basis for FSM stage order. His analysis of 35,000 sales calls showed that Need-Payoff questions increase close rates by 47% and that a structured sequence (Situation → Problem → Implication → Need-Payoff) outperforms ad-hoc questioning. This justified deterministic stage gates: stage order is not arbitrary, because each stage creates prerequisites for the next. However, SPIN assumes cooperative prospects and gives less guidance for defensive or disengaged users.
+Rackham's (1988) SPIN Selling provided the empirical basis for implementing a FSM stage order into my project. His analysis of 35,000 sales calls showed that Need-Payoff questions increase close rates by 47% and that a structured sequence (Situation → Problem → Implication → Need-Payoff) outperforms ad-hoc questioning. This justified deterministic stage gates: stage order is not arbitrary, because each stage creates prerequisites for the next. However, SPIN assumes cooperative prospects and gives less guidance for defensive or disengaged users.
 
 NEPQ (Acuff & Miner, 2023) filled that gap. Drawing on Kahneman's (2011) System 1/2 model, it treats objections as fast emotional reactions later rationalised with logical language. This informed the design: rather than building a counter-argument generator, the system uses a probe-and-reframe mechanism that gets prospects to state their own stakes. Ryder's (2020) taxonomy then provided six objection types with matched reframe strategies.
 

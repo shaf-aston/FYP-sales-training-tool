@@ -184,6 +184,11 @@ def api_init():
 
     try:
         bot = SalesChatbot(provider_type=provider, product_type=product_type, session_id=session_id)
+        # Dev: override strategy, skipping intent-detection phase entirely
+        force_strategy = data.get('force_strategy')
+        if force_strategy in ("consultative", "transactional"):
+            bot.flow_engine._initial_flow_type = force_strategy
+            bot.flow_engine.switch_strategy(force_strategy)
         set_session(session_id, bot)
         app.logger.info(f"New session: {session_id} (product={product_type}, strategy={bot.flow_engine.flow_type}, provider={provider})")
     except Exception as init_error:
@@ -220,9 +225,9 @@ def api_restore():
     try:
         bot = SalesChatbot(provider_type=provider, product_type=product_type, session_id=session_id)
 
-        # Replay history directly into FSM — no LLM calls, just state reconstruction
+        # Replay history into bot — reconstructs FSM state and strategy switches
         if history:
-            bot.flow_engine.replay_history(history)
+            bot.replay(history)
 
         set_session(session_id, bot)
         app.logger.info(f"Restored session: {session_id} ({len(history)} messages replayed)")
@@ -343,18 +348,20 @@ def edit_message():
 
     try:
         msg_index = int(msg_index)
+    except (TypeError, ValueError):
+        return jsonify({"error": "Invalid index format"}), 400
 
-        # Validate index is within bounds
-        max_index = len(bot.flow_engine.conversation_history) - 1
-        if msg_index < 0 or msg_index > max_index:
-            return jsonify({"error": f"Invalid index. Valid range: 0-{max_index}"}), 400
+    # Validate index is within bounds
+    max_index = len(bot.flow_engine.conversation_history) - 1
+    if msg_index < 0 or msg_index > max_index:
+        return jsonify({"error": f"Invalid index. Valid range: 0-{max_index}"}), 400
 
+    try:
         # Rewind to turn BEFORE the edit, then replay with new message
         turn_index = msg_index // 2  # Convert message index to turn index
         if not bot.rewind_to_turn(turn_index):
             return jsonify({"error": "Rewind failed"}), 500
 
-        # Now chat with the new message
         response = bot.chat(new_message)
         training = bot.generate_training(new_message, response.content)
 
@@ -368,8 +375,6 @@ def edit_message():
             "model": response.model,
             "training": training,
         })
-    except ValueError:
-        return jsonify({"error": "Invalid index format"}), 400
     except Exception as e:
         return jsonify({"error": f"Edit error: {str(e)}"}), 500
 
@@ -440,6 +445,98 @@ def clear_knowledge_route():
     """Clear all custom knowledge."""
     success = clear_custom_knowledge()
     return jsonify({"success": success})
+
+
+# ─── Dev/Debug API ───────────────────────────────────────────────────────────
+# These endpoints exist for developer testing only.
+# They expose internal FSM state and prompt content — do not expose in production.
+
+@app.route('/api/debug/config', methods=['GET'])
+def debug_config():
+    """Return available products and providers for the dev panel dropdowns."""
+    from chatbot.providers.factory import PROVIDERS
+    from chatbot.loader import load_product_config
+    products = load_product_config()["products"]
+    return jsonify({
+        "products": [
+            {"id": k, "strategy": v["strategy"], "label": v.get("context", k)}
+            for k, v in products.items()
+        ],
+        "providers": list(PROVIDERS.keys()),
+    })
+
+
+@app.route('/api/debug/prompt', methods=['GET'])
+def debug_prompt():
+    """Return the current system prompt exactly as the LLM will receive it."""
+    bot, err = require_session()
+    if err: return err
+    return jsonify({
+        "prompt": bot.flow_engine.get_current_prompt(user_message=""),
+        "stage": bot.flow_engine.current_stage,
+        "strategy": bot.flow_engine.flow_type,
+    })
+
+
+@app.route('/api/debug/stage', methods=['POST'])
+def debug_stage():
+    """Jump FSM to a specific stage, bypassing advancement rules."""
+    bot, err = require_session()
+    if err: return err
+    data = request.json or {}
+    stage = data.get('stage')
+    stages = bot.flow_engine.flow_config["stages"]
+    if not stage or stage not in stages:
+        return jsonify({"error": f"Invalid stage. Available: {stages}"}), 400
+    bot.flow_engine.advance(target_stage=stage)
+    return jsonify({"success": True, **_bot_state(bot)})
+
+
+@app.route('/api/debug/analyse', methods=['POST'])
+def debug_analyse():
+    """Analyse a message against FSM signals without sending it to the LLM.
+
+    Shows intent state, which signal categories match, and whether the
+    current stage's advancement rule would fire.
+    """
+    bot, err = require_session()
+    if err: return err
+    data = request.json or {}
+    message = (data.get('message') or '').strip()
+    if not message:
+        return jsonify({"error": "message required"}), 400
+
+    from chatbot.analysis import analyze_state, user_demands_directness, text_contains_any_keyword
+    from chatbot.flow import ADVANCEMENT_RULES
+    from chatbot.content import SIGNALS
+
+    history = bot.flow_engine.conversation_history
+    state = analyze_state(history, message, signal_keywords=SIGNALS)
+
+    signal_keys = [
+        'high_intent', 'low_intent', 'commitment', 'objection', 'walking',
+        'impatience', 'direct_info_requests',
+        'user_consultative_signals', 'user_transactional_signals',
+    ]
+    msg_lower = message.lower()
+    signal_hits = {k: text_contains_any_keyword(msg_lower, SIGNALS.get(k, [])) for k in signal_keys}
+    signal_hits['demands_directness'] = user_demands_directness(history, message)
+
+    transition = bot.flow_engine.flow_config["transitions"].get(bot.flow_engine.current_stage)
+    rule_name = transition.get("advance_on") if transition else None
+    would_advance = None
+    if rule_name and rule_name in ADVANCEMENT_RULES:
+        would_advance = bool(ADVANCEMENT_RULES[rule_name](history, message, bot.flow_engine.stage_turn_count))
+
+    return jsonify({
+        "state": state,
+        "signal_hits": signal_hits,
+        "advancement": {
+            "rule": rule_name,
+            "would_advance": would_advance,
+            "stage_turns": bot.flow_engine.stage_turn_count,
+        },
+    })
 
 
 # ─── Error handler ───────────────────────────────────────────────────────────
