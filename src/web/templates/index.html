@@ -9,6 +9,282 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='chat.css') }}"
     />
+    <style>
+      /* ─── Dev Panel ─────────────────────────────────────────────────────── */
+      #devPanel {
+        position: fixed;
+        top: 12px;
+        right: 12px;
+        width: 310px;
+        max-height: calc(100vh - 24px);
+        background: rgba(4, 10, 18, 0.97);
+        border: 1px solid rgba(74, 222, 128, 0.22);
+        border-radius: 10px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.7), 0 0 0 1px rgba(74,222,128,0.06);
+        display: none;
+        flex-direction: column;
+        z-index: 999;
+        overflow: hidden;
+        font-size: 12px;
+        color: #c8d4c0;
+      }
+      #devPanel.open { display: flex; }
+
+      .dp-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+        border-bottom: 1px solid rgba(74,222,128,0.12);
+        background: rgba(74,222,128,0.05);
+        flex-shrink: 0;
+      }
+      .dp-header-title {
+        font-size: 12px;
+        font-weight: 600;
+        color: #4ade80;
+        flex: 1;
+        letter-spacing: 0.03em;
+      }
+      .dp-shortcut {
+        font-size: 10px;
+        color: #4a6a50;
+        background: rgba(74,222,128,0.08);
+        border: 1px solid rgba(74,222,128,0.15);
+        border-radius: 4px;
+        padding: 1px 5px;
+        font-family: monospace;
+      }
+      .dp-close {
+        background: none;
+        border: none;
+        color: #4a6a50;
+        cursor: pointer;
+        font-size: 18px;
+        line-height: 1;
+        padding: 0 2px;
+        transition: color 0.15s;
+      }
+      .dp-close:hover { color: #4ade80; }
+
+      .dp-body {
+        overflow-y: auto;
+        flex: 1;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(74,222,128,0.3) transparent;
+      }
+
+      .dp-section {
+        padding: 10px 14px;
+        border-bottom: 1px solid rgba(255,255,255,0.04);
+      }
+      .dp-section-label {
+        font-size: 9px;
+        font-weight: 600;
+        color: #4ade80;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      /* Session state grid */
+      .dp-kv { display: grid; grid-template-columns: 90px 1fr; row-gap: 4px; }
+      .dp-k { color: #4a6a50; font-size: 11px; }
+      .dp-v { color: #c8d4c0; font-size: 11px; font-weight: 500; }
+      .dp-v.green { color: #4ade80; }
+      .dp-v.amber { color: #b7791f; }
+
+      /* Stage jump buttons */
+      .dp-stages { display: flex; flex-wrap: wrap; gap: 5px; }
+      .dp-stage-btn {
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.1);
+        color: #a0b0a0;
+        border-radius: 5px;
+        padding: 4px 9px;
+        font-size: 11px;
+        cursor: pointer;
+        transition: all 0.15s;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .dp-stage-btn:hover {
+        background: rgba(74,222,128,0.12);
+        border-color: rgba(74,222,128,0.35);
+        color: #4ade80;
+      }
+      .dp-stage-btn.current {
+        background: rgba(74,222,128,0.14);
+        border-color: rgba(74,222,128,0.4);
+        color: #4ade80;
+        font-weight: 600;
+      }
+      .dp-stage-note {
+        font-size: 10px;
+        color: #3a5040;
+        margin-top: 6px;
+        line-height: 1.4;
+      }
+
+      /* Message analyser */
+      .dp-analyse-row { display: flex; gap: 6px; margin-top: 6px; }
+      .dp-input {
+        flex: 1;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 5px;
+        color: #c8d4c0;
+        font-size: 11px;
+        padding: 5px 8px;
+        font-family: inherit;
+      }
+      .dp-input:focus { outline: none; border-color: rgba(74,222,128,0.3); }
+      .dp-btn {
+        background: rgba(74,222,128,0.12);
+        border: 1px solid rgba(74,222,128,0.25);
+        color: #4ade80;
+        border-radius: 5px;
+        padding: 5px 10px;
+        font-size: 11px;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: all 0.15s;
+      }
+      .dp-btn:hover { background: rgba(74,222,128,0.2); }
+      .dp-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+      .dp-analyse-result {
+        margin-top: 8px;
+        font-size: 11px;
+        line-height: 1.5;
+      }
+      .dp-analyse-group { margin-bottom: 6px; }
+      .dp-analyse-group-label {
+        color: #4a6a50;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-bottom: 3px;
+      }
+      .dp-signal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 6px; }
+      .dp-signal-item { display: flex; align-items: center; gap: 4px; font-size: 10px; }
+      .dp-hit { color: #4ade80; }
+      .dp-miss { color: #3a5040; }
+      .dp-adv-box {
+        background: rgba(255,255,255,0.03);
+        border-radius: 5px;
+        padding: 6px 8px;
+        margin-top: 4px;
+        font-size: 11px;
+      }
+      .dp-adv-yes { color: #4ade80; font-weight: 600; }
+      .dp-adv-no { color: #b7791f; }
+      .dp-adv-null { color: #4a6a50; }
+
+      /* System prompt */
+      .dp-prompt-wrap {
+        background: rgba(0,0,0,0.3);
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 5px;
+        max-height: 220px;
+        overflow-y: auto;
+        margin-top: 8px;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(74,222,128,0.3) transparent;
+      }
+      .dp-prompt-pre {
+        margin: 0;
+        padding: 8px 10px;
+        font-size: 10px;
+        font-family: 'Courier New', monospace;
+        white-space: pre-wrap;
+        word-break: break-word;
+        color: #8aa080;
+        line-height: 1.5;
+      }
+      .dp-prompt-empty { color: #3a5040; font-style: italic; }
+      .dp-btn-row { display: flex; gap: 6px; }
+      .dp-btn-sm {
+        background: rgba(74,222,128,0.08);
+        border: 1px solid rgba(74,222,128,0.18);
+        color: #4a6a50;
+        border-radius: 4px;
+        padding: 2px 7px;
+        font-size: 10px;
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+      .dp-btn-sm:hover { color: #4ade80; border-color: rgba(74,222,128,0.35); }
+
+      /* Reinit */
+      .dp-field { margin-bottom: 7px; }
+      .dp-field label { display: block; color: #4a6a50; font-size: 10px; margin-bottom: 3px; }
+      .dp-select {
+        width: 100%;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 5px;
+        color: #c8d4c0;
+        font-size: 11px;
+        padding: 5px 7px;
+        font-family: inherit;
+      }
+      .dp-select:focus { outline: none; border-color: rgba(74,222,128,0.3); }
+      .dp-select option { background: #0a1018; }
+      .dp-btn-full {
+        width: 100%;
+        background: rgba(74,222,128,0.12);
+        border: 1px solid rgba(74,222,128,0.3);
+        color: #4ade80;
+        border-radius: 5px;
+        padding: 7px;
+        font-size: 11px;
+        font-weight: 600;
+        cursor: pointer;
+        margin-top: 4px;
+        transition: all 0.15s;
+        letter-spacing: 0.02em;
+      }
+      .dp-btn-full:hover { background: rgba(74,222,128,0.2); }
+
+      /* Dev toggle button in header */
+      #devToggleBtn {
+        background: transparent;
+        border: none;
+        color: #4a6460;
+        cursor: pointer;
+        font-size: 14px;
+        padding: 4px 6px;
+        border-radius: 6px;
+        opacity: 0.35;
+        transition: opacity 0.15s, color 0.15s;
+        line-height: 1;
+      }
+      #devToggleBtn:hover { opacity: 1; color: #4ade80; }
+      #devToggleBtn.active { opacity: 1; color: #4ade80; }
+
+      /* Toast inside dev panel */
+      #dp-toast {
+        position: absolute;
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(74,222,128,0.15);
+        border: 1px solid rgba(74,222,128,0.3);
+        color: #4ade80;
+        border-radius: 6px;
+        padding: 4px 12px;
+        font-size: 11px;
+        opacity: 0;
+        transition: opacity 0.2s;
+        pointer-events: none;
+        white-space: nowrap;
+      }
+      #dp-toast.show { opacity: 1; }
+    </style>
   </head>
   <body>
     <div class="container">
@@ -16,6 +292,7 @@
         <div class="header">
           <h1>Sales Assistant</h1>
           <div style="display: flex; gap: 12px; align-items: center">
+            <button id="devToggleBtn" title="Dev Panel (Ctrl+Shift+D)" onclick="toggleDevPanel()">⚙</button>
             <a href="/knowledge" class="reset-btn" style="text-decoration: none"
               >Knowledge Base</a
             >
@@ -102,6 +379,88 @@
           <div id="trainingAnswer" style="margin-top:6px;font-size:13px;color:#b0b0b0;min-height:18px"></div>
         </div>
       </div>
+    </div>
+
+    <!-- ─── Dev Panel ──────────────────────────────────────────────────────── -->
+    <div id="devPanel">
+      <div class="dp-header">
+        <span class="dp-header-title">⚙ Dev Panel</span>
+        <kbd class="dp-shortcut">Ctrl+Shift+D</kbd>
+        <button class="dp-close" onclick="toggleDevPanel()">×</button>
+      </div>
+      <div class="dp-body">
+
+        <!-- 1. Session State -->
+        <div class="dp-section">
+          <div class="dp-section-label">Session State</div>
+          <div class="dp-kv" id="dp-state">
+            <span class="dp-k">Strategy</span><span class="dp-v" id="dp-s-strategy">—</span>
+            <span class="dp-k">Stage</span><span class="dp-v" id="dp-s-stage">—</span>
+            <span class="dp-k">Stage turns</span><span class="dp-v" id="dp-s-stageTurns">—</span>
+            <span class="dp-k">Total turns</span><span class="dp-v" id="dp-s-totalTurns">—</span>
+            <span class="dp-k">Provider</span><span class="dp-v" id="dp-s-provider">—</span>
+            <span class="dp-k">Model</span><span class="dp-v" id="dp-s-model" style="word-break:break-all">—</span>
+          </div>
+        </div>
+
+        <!-- 2. Stage Jump -->
+        <div class="dp-section">
+          <div class="dp-section-label">Jump to Stage</div>
+          <div class="dp-stages" id="dp-stage-btns"></div>
+          <div class="dp-stage-note">Bypasses FSM prerequisites — next message will reply from the chosen stage.</div>
+        </div>
+
+        <!-- 3. Message Analyser -->
+        <div class="dp-section">
+          <div class="dp-section-label">Message Analyser</div>
+          <div style="font-size:10px;color:#3a5040;line-height:1.4">Check what signals fire and whether this message would advance the current stage — without sending anything to the LLM.</div>
+          <div class="dp-analyse-row">
+            <input type="text" id="dp-analyse-input" class="dp-input" placeholder="Paste or type a test message…" onkeydown="if(event.key==='Enter')devAnalyseMessage()">
+            <button class="dp-btn" onclick="devAnalyseMessage()">Run</button>
+          </div>
+          <div class="dp-analyse-result" id="dp-analyse-result"></div>
+        </div>
+
+        <!-- 4. System Prompt -->
+        <div class="dp-section">
+          <div class="dp-section-label">
+            System Prompt
+            <div class="dp-btn-row">
+              <button class="dp-btn-sm" onclick="devFetchPrompt()">Fetch</button>
+              <button class="dp-btn-sm" id="dp-copy-btn" onclick="devCopyPrompt()" style="display:none">Copy</button>
+            </div>
+          </div>
+          <div style="font-size:10px;color:#3a5040;line-height:1.4">Exact text sent to the LLM as the system message for the current stage.</div>
+          <div class="dp-prompt-wrap" id="dp-prompt-wrap" style="display:none">
+            <pre class="dp-prompt-pre" id="dp-prompt-pre"></pre>
+          </div>
+        </div>
+
+        <!-- 5. Reinitialise -->
+        <div class="dp-section">
+          <div class="dp-section-label">Reinitialise</div>
+          <div style="font-size:10px;color:#3a5040;line-height:1.4;margin-bottom:8px">Start a fresh session with specific settings. Resets the full conversation.</div>
+          <div class="dp-field">
+            <label>Product</label>
+            <select id="dp-product" class="dp-select"><option value="">Loading…</option></select>
+          </div>
+          <div class="dp-field">
+            <label>Provider</label>
+            <select id="dp-provider-sel" class="dp-select"><option value="">Loading…</option></select>
+          </div>
+          <div class="dp-field">
+            <label>Strategy override</label>
+            <select id="dp-strategy-sel" class="dp-select">
+              <option value="">Auto-detect (from product)</option>
+              <option value="consultative">Force consultative</option>
+              <option value="transactional">Force transactional</option>
+            </select>
+          </div>
+          <button class="dp-btn-full" onclick="devApplyReinit()">Apply &amp; Reset</button>
+        </div>
+
+      </div>
+      <div id="dp-toast"></div>
     </div>
 
     <script>
@@ -542,6 +901,13 @@
           document.getElementById("trainingPanel").classList.add("open");
           document.querySelector(".container").classList.add("panel-open");
         }
+        // Dev panel keyboard shortcut
+        document.addEventListener("keydown", (e) => {
+          if (e.ctrlKey && e.shiftKey && e.key === "D") {
+            e.preventDefault();
+            toggleDevPanel();
+          }
+        });
       });
 
       // ─── renderMessage ────────────────────────────────────────────
@@ -674,6 +1040,10 @@
         if (data.stage) updateStage(data.stage);
         if (data.strategy) updateStrategy(data.strategy);
         if (data.training) updateTrainingPanel(data.training);
+        // Keep dev panel session state in sync if it's open
+        if (document.getElementById("devPanel").classList.contains("open")) {
+          loadDevState();
+        }
       }
 
       // Edit rollback helper
@@ -788,6 +1158,264 @@
             }
           })
           .catch((error) => alert("Error resetting chat: " + error));
+      }
+
+      // ─── Dev Panel ───────────────────────────────────────────────
+      let _devConfig = null;
+      let _devPromptText = "";
+
+      function toggleDevPanel() {
+        const panel = document.getElementById("devPanel");
+        const btn = document.getElementById("devToggleBtn");
+        const open = panel.classList.toggle("open");
+        btn.classList.toggle("active", open);
+        if (open) {
+          loadDevState();
+          loadDevConfig();
+        }
+      }
+
+      function dpToast(msg, duration = 1800) {
+        const t = document.getElementById("dp-toast");
+        t.textContent = msg;
+        t.classList.add("show");
+        setTimeout(() => t.classList.remove("show"), duration);
+      }
+
+      async function loadDevState() {
+        const sid = getSessionId();
+        if (!sid) {
+          document.getElementById("dp-s-strategy").textContent = "no session";
+          return;
+        }
+        try {
+          const r = await fetch("/api/summary", { headers: { "X-Session-ID": sid } });
+          const d = await r.json();
+          if (!d.success) return;
+          const s = d.summary;
+          document.getElementById("dp-s-strategy").textContent = s.flow_type || "—";
+          document.getElementById("dp-s-stage").textContent = s.current_stage || "—";
+          document.getElementById("dp-s-stageTurns").textContent = s.stage_turn_count ?? "—";
+          document.getElementById("dp-s-totalTurns").textContent = s.total_turns ?? "—";
+          document.getElementById("dp-s-provider").textContent = s.provider || "—";
+          document.getElementById("dp-s-model").textContent = s.model || "—";
+          renderStageButtons(s.flow_type, s.current_stage);
+        } catch(e) { /* silently ignore */ }
+      }
+
+      function renderStageButtons(flowType, currentStage) {
+        const stageMap = {
+          intent: ["intent"],
+          consultative: ["intent", "logical", "emotional", "pitch", "objection"],
+          transactional: ["intent", "pitch", "objection"],
+        };
+        const stages = stageMap[flowType] || [];
+        const container = document.getElementById("dp-stage-btns");
+        container.innerHTML = "";
+        stages.forEach(s => {
+          const btn = document.createElement("button");
+          btn.className = "dp-stage-btn" + (s === currentStage ? " current" : "");
+          btn.textContent = s;
+          btn.onclick = () => devJumpStage(s);
+          container.appendChild(btn);
+        });
+        if (!stages.length) container.textContent = "No stages (no session)";
+      }
+
+      async function devJumpStage(stage) {
+        const sid = getSessionId();
+        if (!sid) return;
+        try {
+          const r = await fetch("/api/debug/stage", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-Session-ID": sid },
+            body: JSON.stringify({ stage }),
+          });
+          const d = await r.json();
+          if (!d.success) { dpToast("Error: " + (d.error || "failed")); return; }
+          updateStage(d.stage);
+          updateStrategy(d.strategy);
+          await loadDevState();
+          dpToast("Jumped → " + stage.toUpperCase());
+        } catch(e) { dpToast("Error: " + e); }
+      }
+
+      async function loadDevConfig() {
+        if (_devConfig) { populateDevConfig(_devConfig); return; }
+        try {
+          const r = await fetch("/api/debug/config");
+          _devConfig = await r.json();
+          populateDevConfig(_devConfig);
+        } catch(e) { /* silently ignore */ }
+      }
+
+      function populateDevConfig(cfg) {
+        const pSel = document.getElementById("dp-product");
+        pSel.innerHTML = '<option value="">Default (auto-strategy)</option>';
+        (cfg.products || []).forEach(p => {
+          const opt = document.createElement("option");
+          opt.value = p.id;
+          opt.textContent = p.id + "  (" + p.strategy + ")";
+          pSel.appendChild(opt);
+        });
+
+        const prvSel = document.getElementById("dp-provider-sel");
+        prvSel.innerHTML = "";
+        (cfg.providers || ["groq"]).forEach(p => {
+          const opt = document.createElement("option");
+          opt.value = p;
+          opt.textContent = p;
+          if (p === "groq") opt.selected = true;
+          prvSel.appendChild(opt);
+        });
+      }
+
+      async function devFetchPrompt() {
+        const sid = getSessionId();
+        if (!sid) { dpToast("No active session"); return; }
+        document.getElementById("dp-prompt-pre").textContent = "Fetching…";
+        document.getElementById("dp-prompt-wrap").style.display = "block";
+        document.getElementById("dp-copy-btn").style.display = "none";
+        try {
+          const r = await fetch("/api/debug/prompt", { headers: { "X-Session-ID": sid } });
+          const d = await r.json();
+          if (d.error) { document.getElementById("dp-prompt-pre").textContent = "Error: " + d.error; return; }
+          _devPromptText = d.prompt;
+          document.getElementById("dp-prompt-pre").textContent = d.prompt;
+          document.getElementById("dp-copy-btn").style.display = "inline";
+        } catch(e) { document.getElementById("dp-prompt-pre").textContent = "Error: " + e; }
+      }
+
+      function devCopyPrompt() {
+        if (!_devPromptText) return;
+        navigator.clipboard.writeText(_devPromptText)
+          .then(() => dpToast("Copied to clipboard"))
+          .catch(() => dpToast("Copy failed"));
+      }
+
+      async function devAnalyseMessage() {
+        const sid = getSessionId();
+        const input = document.getElementById("dp-analyse-input");
+        const result = document.getElementById("dp-analyse-result");
+        const message = input.value.trim();
+        if (!message) return;
+        if (!sid) { result.textContent = "No active session"; return; }
+
+        result.textContent = "Running…";
+        try {
+          const r = await fetch("/api/debug/analyse", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-Session-ID": sid },
+            body: JSON.stringify({ message }),
+          });
+          const d = await r.json();
+          if (d.error) { result.textContent = "Error: " + d.error; return; }
+          result.innerHTML = renderAnalysisResult(d);
+        } catch(e) { result.textContent = "Error: " + e; }
+      }
+
+      function renderAnalysisResult(d) {
+        const { state, signal_hits, advancement } = d;
+
+        const stateColor = v => v === "high" ? "dp-hit" : v === "low" ? "dp-miss" : "";
+
+        // State row
+        const stateHtml = `
+          <div class="dp-analyse-group">
+            <div class="dp-analyse-group-label">State</div>
+            <div class="dp-signal-grid">
+              <div class="dp-signal-item"><span class="${stateColor(state.intent)}">●</span> intent: <strong>${state.intent}</strong></div>
+              <div class="dp-signal-item"><span class="${state.guarded ? 'dp-hit' : 'dp-miss'}">●</span> guarded: ${state.guarded}</div>
+              <div class="dp-signal-item"><span class="${state.decisive ? 'dp-hit' : 'dp-miss'}">●</span> decisive: ${state.decisive}</div>
+              <div class="dp-signal-item"><span class="${state.question_fatigue ? 'dp-hit' : 'dp-miss'}">●</span> q.fatigue: ${state.question_fatigue}</div>
+            </div>
+          </div>`;
+
+        // Signals
+        const sigLabels = {
+          high_intent: "High Intent", low_intent: "Low Intent",
+          commitment: "Commitment", objection: "Objection",
+          walking: "Walking Away", impatience: "Impatience",
+          demands_directness: "Demands Directness", direct_info_requests: "Direct Info Req",
+          user_consultative_signals: "→ Consultative", user_transactional_signals: "→ Transactional",
+        };
+        const sigItems = Object.entries(sigLabels).map(([k, label]) => {
+          const hit = signal_hits[k];
+          return `<div class="dp-signal-item"><span class="${hit ? 'dp-hit' : 'dp-miss'}">${hit ? '✓' : '✗'}</span> <span class="${hit ? '' : 'dp-miss'}">${label}</span></div>`;
+        }).join("");
+        const signalsHtml = `
+          <div class="dp-analyse-group">
+            <div class="dp-analyse-group-label">Signals</div>
+            <div class="dp-signal-grid">${sigItems}</div>
+          </div>`;
+
+        // Advancement
+        const rule = advancement.rule || "none";
+        const wa = advancement.would_advance;
+        const waClass = wa === null ? "dp-adv-null" : wa ? "dp-adv-yes" : "dp-adv-no";
+        const waLabel = wa === null ? "N/A (terminal stage)" : wa ? "YES — would advance" : "NO — stays in stage";
+        const advHtml = `
+          <div class="dp-analyse-group">
+            <div class="dp-analyse-group-label">Advancement Check</div>
+            <div class="dp-adv-box">
+              <div>Rule: <span style="color:#8aa080">${rule}</span></div>
+              <div>Stage turns: <span style="color:#c8d4c0">${advancement.stage_turns}</span></div>
+              <div class="${waClass}" style="margin-top:3px;font-weight:600">${waLabel}</div>
+            </div>
+          </div>`;
+
+        return stateHtml + signalsHtml + advHtml;
+      }
+
+      async function devApplyReinit() {
+        const product = document.getElementById("dp-product").value || null;
+        const provider = document.getElementById("dp-provider-sel").value || "groq";
+        const forceStrategy = document.getElementById("dp-strategy-sel").value || null;
+
+        // Reset current session silently
+        const sid = getSessionId();
+        if (sid) {
+          try {
+            await fetch("/api/reset", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "X-Session-ID": sid },
+            });
+          } catch(e) { /* ignore */ }
+        }
+
+        // Clear client state
+        document.getElementById("chatContainer").innerHTML = "";
+        userTurnIndex = 0;
+        clearStoredHistory();
+        localStorage.removeItem("sessionId");
+        sessionId = null;
+        updateStage("intent");
+        updateStrategy("—");
+
+        // Reinit with new settings (extend the existing initChatbot flow)
+        const body = { provider };
+        if (product) body.product_type = product;
+        if (forceStrategy) body.force_strategy = forceStrategy;
+
+        try {
+          const r = await fetch("/api/init", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          const data = await r.json();
+          if (data.error) { dpToast("Init failed: " + data.error); return; }
+
+          sessionId = data.session_id;
+          localStorage.setItem("sessionId", sessionId);
+          userTurnIndex = 0;
+          addMessage(data.message, "bot");
+          updateSessionUI(data);
+          if (data.strategy) localStorage.setItem("chatStrategy", data.strategy);
+
+          await loadDevState();
+          dpToast("Reinitialised ✓");
+        } catch(e) { dpToast("Error: " + e); }
       }
 
       // ─── Speech module ────────────────────────────────────────────

@@ -114,7 +114,7 @@ def detect_guardedness(user_message, history):
             match_count += 1
     
     # Context: Short reply to detailed question
-    if history and len(history) >= 1:
+    if history:
         last_bot = next((m.get('content', '') for m in reversed(history) if m.get('role') == 'assistant'), '')
         if len(last_bot.split()) > 50 and msg_length < 8:
             match_count += 1
@@ -307,6 +307,36 @@ def user_demands_directness(history, user_message):
 
 # --- Objection classification ---
 
+_REFRAME_DESCRIPTIONS = {
+    "money": {
+        "isolate_funds": "Isolate the money concern: 'Setting aside the investment for a moment, is this what you want?'",
+        "self_solve": "Calculate cost of inaction: 'What's it costing you monthly to NOT solve this?'",
+        "plant_credit": "Introduce financing/payment options: 'Most clients use X to spread the cost.'",
+        "funding_options": "Explore alternative funding: 'Have you considered using Y to fund this?'",
+    },
+    "partner": {
+        "same_side": "Get on their side: 'Totally understand. What do you think THEY would say about it?'",
+        "open_wallet_test": "Test real decision-maker: 'If they said yes, would YOU move forward?'",
+        "schedule_followup": "Bring partner in: 'Want to set up a call with them so they can hear it directly?'",
+    },
+    "fear": {
+        "change_of_process": "Reframe risk as process: 'What's the risk of staying where you are?'",
+        "island_analogy": "Use future contrast: 'A year from now, what's worse — trying and adjusting, or staying the same?'",
+        "identity_reframe": "Connect to identity: 'You said you wanted [goal]. This is how people like you get there.'",
+    },
+    "logistical": {
+        "solve_mechanics": "Remove the barrier: 'What if I handled [logistics]? Would that change things?'",
+        "simplify_process": "Simplify: 'It's actually just [N] steps. Here's exactly what happens next.'",
+    },
+    "think": {
+        "drill_to_root": "Find the real concern: 'Totally fair. What specifically would you be weighing up?'",
+        "handle_root_type": "Address root concern: Once identified, handle as money/fear/partner type.",
+    },
+    "smokescreen": {
+        "legitimacy_test": "Test if genuine: 'I hear you. Just so I understand — is it the product itself, or something else?'",
+    },
+}
+
 _OBJECTION_KEYWORDS = {
     "money": ["expensive", "cost", "price", "afford", "budget", "too much",
               "payment", "financing", "cheaper", "discount", "can't afford",
@@ -326,36 +356,6 @@ _OBJECTION_KEYWORDS = {
 
 def classify_objection(user_message, history=None):
     """Classify objection type and return reframe strategy for the LLM prompt."""
-    _REFRAME_DESCRIPTIONS = {
-        "money": {
-            "isolate_funds": "Isolate the money concern: 'Setting aside the investment for a moment, is this what you want?'",
-            "self_solve": "Calculate cost of inaction: 'What's it costing you monthly to NOT solve this?'",
-            "plant_credit": "Introduce financing/payment options: 'Most clients use X to spread the cost.'",
-            "funding_options": "Explore alternative funding: 'Have you considered using Y to fund this?'",
-        },
-        "partner": {
-            "same_side": "Get on their side: 'Totally understand. What do you think THEY would say about it?'",
-            "open_wallet_test": "Test real decision-maker: 'If they said yes, would YOU move forward?'",
-            "schedule_followup": "Bring partner in: 'Want to set up a call with them so they can hear it directly?'",
-        },
-        "fear": {
-            "change_of_process": "Reframe risk as process: 'What's the risk of staying where you are?'",
-            "island_analogy": "Use future contrast: 'A year from now, what's worse — trying and adjusting, or staying the same?'",
-            "identity_reframe": "Connect to identity: 'You said you wanted [goal]. This is how people like you get there.'",
-        },
-        "logistical": {
-            "solve_mechanics": "Remove the barrier: 'What if I handled [logistics]? Would that change things?'",
-            "simplify_process": "Simplify: 'It's actually just [N] steps. Here's exactly what happens next.'",
-        },
-        "think": {
-            "drill_to_root": "Find the real concern: 'Totally fair. What specifically would you be weighing up?'",
-            "handle_root_type": "Address root concern: Once identified, handle as money/fear/partner type.",
-        },
-        "smokescreen": {
-            "legitimacy_test": "Test if genuine: 'I hear you. Just so I understand — is it the product itself, or something else?'",
-        },
-    }
-
     objection_config = _yaml_config.get("objection_handling", {})
     classification_order = objection_config.get(
         "classification_order",

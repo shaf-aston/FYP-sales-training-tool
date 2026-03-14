@@ -25,9 +25,8 @@ def generate_training(provider, flow_engine, user_msg, bot_reply):
     stage = flow_engine.current_stage
     flow_type = flow_engine.flow_type
     
-    # Get recent conversation context (last 3 exchanges = 6 messages)
     history = flow_engine.conversation_history
-    recent = history[-6:] if len(history) >= 3 else history
+    recent = history[-6:]
     
     context = "\n".join(
         f"{m['role'].upper()}: {m['content']}"
@@ -99,8 +98,7 @@ def answer_training_question(provider, flow_engine, question):
     stage = flow_engine.current_stage
     flow_type = flow_engine.flow_type
 
-    # Get recent conversation (last 4 exchanges = 8 messages)
-    recent = history[-8:] if len(history) > 8 else history
+    recent = history[-8:]
     
     conversation = "\n".join(
         f"{m['role'].upper()}: {m['content']}"
