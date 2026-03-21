@@ -330,7 +330,7 @@ class ProspectSession:
             int: Score from 1 (poor) to 5 (excellent)
         """
         from .loader import load_signals
-        from .analysis import text_contains_any_keyword
+        from .analysis import text_contains_any_keyword, classify_intent_level
 
         signals = load_signals()
         msg_lower = user_msg.lower()
@@ -339,11 +339,16 @@ class ProspectSession:
         # Base score starts at 3 (neutral)
         score = 3.0
 
+        intent_level = classify_intent_level([], user_msg, signal_keywords=signals)
+
         # Strong positive signals (commitment, high intent)
         if text_contains_any_keyword(msg_lower, signals.get("commitment", [])):
             score += 2.0  # 5
-        elif text_contains_any_keyword(msg_lower, signals.get("high_intent", [])):
+        elif intent_level == "high":
             score += 1.0  # 4
+
+        if intent_level == "low":
+            score -= 0.5
 
         # Negative signals (objection, walking, impatience)
         if text_contains_any_keyword(msg_lower, signals.get("walking", [])):

@@ -52,6 +52,7 @@ class SecurityConfig:
     RATE_LIMITS = {
         "init": (10, 60),   # 10 inits per 60 seconds
         "chat": (60, 60),   # 60 messages per 60 seconds
+        "knowledge": (10, 60),  # 10 knowledge updates per 60 seconds
     }
 
     # Security headers

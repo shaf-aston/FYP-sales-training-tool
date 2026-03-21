@@ -5,6 +5,7 @@ import sys
 import secrets
 import threading
 import time
+from dataclasses import asdict
 from datetime import datetime, timedelta
 from pathlib import Path
 from dotenv import load_dotenv
@@ -222,7 +223,7 @@ def api_init():
         app.logger.info(f"New session: {session_id} (product={product_type}, strategy={bot.flow_engine.flow_type}, provider={provider})")
     except Exception as init_error:
         app.logger.exception(f"Bot init failed: {init_error}")
-        return jsonify({"error": f"Init failed: {str(init_error)}"}), 500
+        return jsonify({"error": "Initialization failed. Please try again."}), 500
 
     # Generate greeting and training data from content.py — synced with STRATEGY_PROMPTS
     init_data = generate_init_greeting(bot.flow_engine.flow_type)
@@ -263,7 +264,7 @@ def api_restore():
 
     except Exception as e:
         app.logger.exception(f"Restore failed: {e}")
-        return jsonify({"error": f"Restore failed: {str(e)}"}), 500
+        return jsonify({"error": "Restore failed. Please retry."}), 500
 
     return jsonify({
         "success": True,
@@ -380,7 +381,7 @@ def chat():
 
     except Exception as e:
         app.logger.exception(f"Chat error: {e}")
-        return jsonify({"error": f"Chat error: {str(e)}"}), 500
+        return jsonify({"error": "Chat request failed. Please retry."}), 500
 
 
 @app.route('/api/edit', methods=['POST'])
@@ -429,7 +430,8 @@ def edit_message():
             "training": training,
         })
     except Exception as e:
-        return jsonify({"error": f"Edit error: {str(e)}"}), 500
+        app.logger.exception(f"Edit error: {e}")
+        return jsonify({"error": "Edit failed. Please retry."}), 500
 
 
 @app.route('/api/summary', methods=['GET'])
@@ -561,6 +563,7 @@ def get_knowledge():
 
 
 @app.route('/api/knowledge', methods=['POST'])
+@require_rate_limit('knowledge')
 def save_knowledge_route():
     """Save custom knowledge data with field-level validation."""
     data = request.json
@@ -579,6 +582,7 @@ def save_knowledge_route():
 
 
 @app.route('/api/knowledge', methods=['DELETE'])
+@require_rate_limit('knowledge')
 def clear_knowledge_route():
     """Clear all custom knowledge."""
     success = clear_custom_knowledge()
@@ -594,8 +598,15 @@ _DEBUG_ENABLED = os.environ.get('ENABLE_DEBUG_PANEL', '').lower() == 'true'
 
 @app.before_request
 def _guard_debug_endpoints():
-    if request.path.startswith('/api/debug/') and not _DEBUG_ENABLED:
+    if not request.path.startswith('/api/debug/'):
+        return None
+
+    if not _DEBUG_ENABLED:
         return jsonify({"error": "Debug endpoints disabled"}), 403
+
+    client_ip = ClientIPExtractor.get_ip(request)
+    if client_ip not in {'127.0.0.1', '::1', '::ffff:127.0.0.1'}:
+        return jsonify({"error": "Debug endpoints are localhost-only"}), 403
 
 
 @app.route('/api/debug/config', methods=['GET'])
@@ -676,7 +687,7 @@ def debug_analyse():
         would_advance = bool(ADVANCEMENT_RULES[rule_name](history, message, bot.flow_engine.stage_turn_count))
 
     return jsonify({
-        "state": state,
+        "state": asdict(state),
         "signal_hits": signal_hits,
         "advancement": {
             "rule": rule_name,
@@ -746,7 +757,7 @@ def prospect_init():
         })
     except Exception as e:
         app.logger.exception(f"Prospect init failed: {e}")
-        return jsonify({"error": f"Prospect init failed: {str(e)}"}), 500
+        return jsonify({"error": "Prospect init failed. Please retry."}), 500
 
 
 @app.route('/api/prospect/chat', methods=['POST'])
@@ -784,7 +795,7 @@ def prospect_chat():
         return jsonify(result)
     except Exception as e:
         app.logger.exception(f"Prospect chat error: {e}")
-        return jsonify({"error": f"Prospect chat error: {str(e)}"}), 500
+        return jsonify({"error": "Prospect chat failed. Please retry."}), 500
 
 
 @app.route('/api/prospect/state', methods=['GET'])
@@ -808,7 +819,7 @@ def prospect_evaluate():
         return jsonify({"success": True, **evaluation})
     except Exception as e:
         app.logger.exception(f"Prospect evaluation error: {e}")
-        return jsonify({"error": f"Evaluation failed: {str(e)}"}), 500
+        return jsonify({"error": "Evaluation failed. Please retry."}), 500
 
 
 @app.route('/api/prospect/reset', methods=['POST'])

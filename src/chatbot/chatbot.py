@@ -6,6 +6,7 @@ import os
 import re
 import time
 from dataclasses import dataclass
+from typing import Any
 
 from .loader import get_product_settings, load_signals, assign_ab_variant
 from .analysis import text_contains_any_keyword, classify_objection
@@ -88,7 +89,7 @@ class SalesChatbot:
 
     # --- Core chat loop ---
 
-    def chat(self, user_message):
+    def chat(self, user_message: str) -> ChatResponse:
         """Process user message and return ChatResponse with content + metrics."""
         recent_history = self.flow_engine.conversation_history[-10:]
         llm_messages = [
@@ -101,7 +102,7 @@ class SalesChatbot:
         if self.session_id:
             from .analysis import analyze_state
             state = analyze_state(self.flow_engine.conversation_history, user_message)
-            intent_level = state.get("intent", "medium")
+            intent_level = state.intent
             user_turn_count = len([m for m in self.flow_engine.conversation_history if m["role"] == "user"]) + 1
             SessionAnalytics.record_intent_classification(
                 session_id=self.session_id,
@@ -171,7 +172,7 @@ class SalesChatbot:
                 (time.time() - request_start) * 1000, user_message,
             )
 
-    def _fallback(self, message, latency_ms, user_message):
+    def _fallback(self, message: str, latency_ms: float, user_message: str) -> ChatResponse:
         """Build fallback ChatResponse after adding turn to history.
 
         Append directly without incrementing stage_turn_count — error turns don't count toward FSM advancement.
@@ -200,23 +201,12 @@ class SalesChatbot:
         elif has_trans_user:
             self.flow_engine.switch_strategy(Strategy.TRANSACTIONAL)
             return True
-        elif len(history) >= 2:
-            bot_last = history[-1].get("content", "").lower()
-            has_trans = text_contains_any_keyword(bot_last, _TRANSACTIONAL_INDICATORS)
-            has_cons = text_contains_any_keyword(bot_last, _CONSULTATIVE_INDICATORS)
-
-            if has_cons:
-                self.flow_engine.switch_strategy(Strategy.CONSULTATIVE)
-                return True
-            elif has_trans:
-                self.flow_engine.switch_strategy(Strategy.TRANSACTIONAL)
-                return True
-            elif self.flow_engine.stage_turn_count >= 3:
-                self.flow_engine.switch_strategy(Strategy.CONSULTATIVE)
-                return True
+        elif self.flow_engine.stage_turn_count >= 3:
+            self.flow_engine.switch_strategy(Strategy.CONSULTATIVE)
+            return True
         return False
 
-    def _apply_advancement(self, user_message):
+    def _apply_advancement(self, user_message: str) -> None:
         """Check and apply FSM stage advancement. Handles discovery -> real strategy switch."""
         if self.flow_engine.flow_type == Strategy.INTENT:
             old_strategy = self.flow_engine.flow_type
@@ -233,11 +223,9 @@ class SalesChatbot:
                 return
 
         old_stage = self.flow_engine.current_stage
-        advancement = self.flow_engine.should_advance(user_message)
-        if advancement:
-            self.flow_engine.advance(
-                target_stage=advancement if isinstance(advancement, str) else None
-            )
+        target_stage = self.flow_engine.get_advance_target(user_message)
+        if target_stage:
+            self.flow_engine.advance(target_stage=target_stage)
 
             # Record stage transition
             if self.session_id and old_stage != self.flow_engine.current_stage:
@@ -251,11 +239,11 @@ class SalesChatbot:
 
     # --- Training ---
 
-    def generate_training(self, user_msg, bot_reply):
+    def generate_training(self, user_msg: str, bot_reply: str) -> dict[str, Any]:
         """Generate coaching notes for the current exchange via lightweight LLM call."""
         return trainer.generate_training(self.provider, self.flow_engine, user_msg, bot_reply)
 
-    def answer_training_question(self, question):
+    def answer_training_question(self, question: str) -> dict[str, Any]:
         """Answer a trainee's question about the current conversation and sales techniques."""
         return trainer.answer_training_question(self.provider, self.flow_engine, question)
 
@@ -266,7 +254,7 @@ class SalesChatbot:
         current_turns = len(self.flow_engine.conversation_history) // 2
         return self.rewind_to_turn(max(0, current_turns - steps))
 
-    def rewind_to_turn(self, turn_index):
+    def rewind_to_turn(self, turn_index: int) -> bool:
         """Rewind to turn_index by hard-resetting FSM state and replaying history."""
         max_turns = len(self.flow_engine.conversation_history) // 2
         if turn_index < 0 or turn_index > max_turns:
@@ -295,7 +283,7 @@ class SalesChatbot:
 
         return True
 
-    def replay(self, history):
+    def replay(self, history: list[dict[str, str]]) -> None:
         """Replay a history list into a fresh bot, including strategy-switch detection.
 
         Use this instead of flow_engine.replay_history() — it applies _apply_advancement

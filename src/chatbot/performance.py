@@ -18,7 +18,7 @@ MAX_METRICS_LINES = 5000     # rotate when file reaches this line count
 _METRICS_LINES_KEEP = 2500   # keep newest N lines after rotation
 
 # TTL cache for provider stats (avoid full file scan on every health check)
-_stats_cache = {"data": {}, "ts": 0.0}
+_stats_cache = {"data": {}, "ts": 0.0, "file": None}
 _STATS_TTL = 30.0  # seconds
 
 
@@ -57,7 +57,7 @@ class PerformanceTracker:
         now = time.time()
         with lock:
             # Return cached stats if TTL not expired
-            if now - _stats_cache["ts"] < _STATS_TTL:
+            if _stats_cache["file"] == METRICS_FILE and now - _stats_cache["ts"] < _STATS_TTL:
                 return dict(_stats_cache["data"])
 
             # Scan metrics file and rebuild cache
@@ -85,6 +85,7 @@ class PerformanceTracker:
             # Update cache
             _stats_cache["data"] = stats
             _stats_cache["ts"] = now
+            _stats_cache["file"] = METRICS_FILE
 
         return stats
 

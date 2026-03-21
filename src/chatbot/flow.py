@@ -1,7 +1,15 @@
 """Finite State Machine for sales flow — state transitions and advancement logic."""
 
+from typing import Any, Optional
+
 from .content import generate_stage_prompt, SIGNALS
-from .analysis import text_contains_any_keyword, analyze_state, user_demands_directness, _extract_recent_user_text
+from .analysis import (
+    text_contains_any_keyword,
+    classify_intent_level,
+    user_demands_directness,
+    _extract_recent_user_text,
+    commitment_or_walkaway,
+)
 from .loader import load_analysis_config
 from .utils import Strategy, Stage
 
@@ -65,30 +73,45 @@ FLOWS = {
 
 # --- Advancement Rules (Pure Functions) ---
 
-def user_has_clear_intent(history, user_msg, turns):
+def user_has_clear_intent(history: list[dict[str, str]], user_msg: str, turns: int) -> bool:
     """True when buying signals, intent keywords, or max turns reached.
 
     Intent stage is discovery - allow turn-based advancement since user may be reticent.
     NOTE: 'want' and 'need' are deliberately excluded - they are stopwords (analysis.py)
     and fire on generic statements ("I want to make money") that carry no buying intent.
     """
-    intent_keywords = ['looking for', 'help with', 'interested in',
-                       'price', 'problem', 'buy', 'purchase', 'struggling',
-                       'have to', 'ready to buy', 'looking to buy']
-    if user_msg and text_contains_any_keyword(user_msg.lower(), intent_keywords):
+    explicit_intent_phrases = [
+        "looking for",
+        "help with",
+        "interested in",
+        "price",
+        "problem",
+        "buy",
+        "purchase",
+        "struggling",
+        "have to",
+        "ready to buy",
+        "looking to buy",
+    ]
+    if user_msg and text_contains_any_keyword(user_msg.lower(), explicit_intent_phrases):
         return True
 
-    recent_text = _extract_recent_user_text(history, max_messages=3)
-    if text_contains_any_keyword(recent_text, intent_keywords):
+    intent_level = classify_intent_level(history, user_msg, signal_keywords=SIGNALS)
+    if intent_level == "high":
         return True
 
     # Allow turn-based advancement for intent stage only
-    intent_level = analyze_state(history, user_msg, signal_keywords=SIGNALS)["intent"]
     max_turns = 4 if intent_level == "high" else 6
     return turns >= max_turns
 
 
-def _check_advancement_condition(history, user_msg, turns, stage_name, min_turns=2):
+def _check_advancement_condition(
+    history: list[dict[str, str]],
+    user_msg: str,
+    turns: int,
+    stage_name: str,
+    min_turns: int = 2,
+) -> bool:
     """Generic advancement detector: check config keywords + safety valve.
 
     Used by stages that require signal detection before auto-advancement.
@@ -112,15 +135,17 @@ def _check_advancement_condition(history, user_msg, turns, stage_name, min_turns
     keywords = stage_config.get(keyword_key, [])
     max_turns = stage_config.get('max_turns', 10)
 
-    # Check for signal in recent conversation
-    recent_text = _extract_recent_user_text(history, max_messages=5)
+    # Check only messages from current stage window to avoid prior-stage leakage.
+    user_msgs = [m["content"].lower() for m in history if m.get("role") == "user"]
+    recent_stage_msgs = user_msgs[-max(turns, 0):] if turns > 0 else []
+    recent_text = " ".join(recent_stage_msgs)
     has_signal = text_contains_any_keyword(recent_text, keywords)
 
     # Safety valve: auto-advance if max_turns exceeded (resistant prospect)
     return has_signal or turns >= max_turns
 
 
-def user_shows_doubt(history, user_msg, turns):
+def user_shows_doubt(history: list[dict[str, str]], user_msg: str, turns: int) -> bool:
     """True when user acknowledges pain points or current approach isn't working.
 
     FRAMEWORK REQUIREMENT: Must detect actual doubt/problem acknowledgment.
@@ -129,7 +154,7 @@ def user_shows_doubt(history, user_msg, turns):
     return _check_advancement_condition(history, user_msg, turns, 'logical', min_turns=2)
 
 
-def user_expressed_stakes(history, user_msg, turns):
+def user_expressed_stakes(history: list[dict[str, str]], user_msg: str, turns: int) -> bool:
     """True when user shares emotional stakes or consequences.
 
     FRAMEWORK REQUIREMENT: Must detect actual emotional investment.
@@ -138,7 +163,7 @@ def user_expressed_stakes(history, user_msg, turns):
     return _check_advancement_condition(history, user_msg, turns, 'emotional', min_turns=3)
 
 
-def commitment_or_objection(history, user_msg, turns):
+def commitment_or_objection(history: list[dict[str, str]], user_msg: str, turns: int) -> bool:
     """True when user commits or objects. Short messages excluded (likely fillers)."""
     if len(user_msg.split()) < 3:
         return False
@@ -146,10 +171,7 @@ def commitment_or_objection(history, user_msg, turns):
             text_contains_any_keyword(user_msg, SIGNALS["objection"]))
 
 
-def commitment_or_walkaway(history, user_msg, turns):
-    """True when user commits or walks away — objection stage exit."""
-    return (text_contains_any_keyword(user_msg, SIGNALS["commitment"]) or
-            text_contains_any_keyword(user_msg, SIGNALS["walking"]))
+# commitment_or_walkaway moved to analysis.py to avoid circular imports
 
 
 ADVANCEMENT_RULES = {
@@ -166,9 +188,9 @@ ADVANCEMENT_RULES = {
 class SalesFlowEngine:
     """FSM managing stage state, transitions, history, and prompt generation."""
 
-    def __init__(self, flow_type, product_context):
+    def __init__(self, flow_type: str, product_context: str) -> None:
         if flow_type not in FLOWS:
-            flow_type = Strategy.CONSULTATIVE
+            raise ValueError(f"Invalid flow_type: {flow_type}")
         self._initial_flow_type = flow_type  # Track initial strategy for rewind
         self.flow_config = FLOWS[flow_type]
         self.flow_type = flow_type
@@ -188,7 +210,7 @@ class SalesFlowEngine:
             return self.flow_type
         return Strategy.CONSULTATIVE
 
-    def get_current_prompt(self, user_message=""):
+    def get_current_prompt(self, user_message: str = "") -> str:
         """Generate system prompt for current stage via content.py."""
         return generate_stage_prompt(
             strategy=self.strategy_for_prompts,
@@ -198,13 +220,19 @@ class SalesFlowEngine:
             user_message=user_message,
         )
 
-    def should_advance(self, user_message):
-        """Return False (stay), True (next stage), or str (jump to named stage)."""
+    def get_advance_target(self, user_message: str) -> Optional[str]:
+        """Return target stage name, or None to stay in current stage."""
         transition = self.flow_config["transitions"].get(self.current_stage)
         if not transition:
-            return False
+            return None
 
         has_pitch_stage = Stage.PITCH in self.flow_config["stages"]
+
+        # Fast path: explicit commitment during discovery stages jumps to pitch.
+        if has_pitch_stage and self.current_stage in (Stage.LOGICAL, Stage.EMOTIONAL):
+            commitment_terms = SIGNALS.get("commitment", []) + ["sign up"]
+            if text_contains_any_keyword(user_message.lower(), commitment_terms):
+                return Stage.PITCH
 
         # Frustration/directness OR direct info request: skip to pitch immediately
         if has_pitch_stage:
@@ -223,11 +251,21 @@ class SalesFlowEngine:
         rule_name = transition.get("advance_on")
         if rule_name and rule_name in ADVANCEMENT_RULES:
             if ADVANCEMENT_RULES[rule_name](self.conversation_history, user_message, self.stage_turn_count):
-                return True
+                return transition.get("next")
 
-        return False
+        return None
 
-    def advance(self, target_stage=None):
+    def should_advance(self, user_message: str):
+        """Compatibility API: return False (stay), True (next), or str (jump stage)."""
+        transition = self.flow_config["transitions"].get(self.current_stage)
+        target = self.get_advance_target(user_message)
+        if not target:
+            return False
+        if transition and target == transition.get("next"):
+            return True
+        return target
+
+    def advance(self, target_stage: Optional[str] = None) -> None:
         """Advance to target_stage (jump) or next sequential stage."""
         stages = self.flow_config["stages"]
         if target_stage and target_stage in stages:
@@ -239,13 +277,13 @@ class SalesFlowEngine:
                 self.current_stage = stages[idx + 1]
                 self.stage_turn_count = 0
 
-    def add_turn(self, user_message, bot_response):
+    def add_turn(self, user_message: str, bot_response: str) -> None:
         """Append user/assistant messages and increment turn counter."""
         self.conversation_history.append({"role": "user", "content": user_message})
         self.conversation_history.append({"role": "assistant", "content": bot_response})
         self.stage_turn_count += 1
 
-    def switch_strategy(self, new_strategy):
+    def switch_strategy(self, new_strategy: str) -> bool:
         """Switch FSM to a different strategy. Resets to first stage."""
         if new_strategy not in FLOWS:
             return False
@@ -255,7 +293,7 @@ class SalesFlowEngine:
         self.stage_turn_count = 0
         return True
 
-    def reset_to_initial(self):
+    def reset_to_initial(self) -> None:
         """Reset FSM to initial flow type (before any strategy switches). Clears history."""
         self.flow_type = self._initial_flow_type
         self.flow_config = FLOWS[self._initial_flow_type]
@@ -263,7 +301,7 @@ class SalesFlowEngine:
         self.stage_turn_count = 0
         self.conversation_history = []
 
-    def get_summary(self):
+    def get_summary(self) -> dict[str, Any]:
         """Return current FSM state as a dict."""
         return {
             "flow_type": self.flow_type,
@@ -273,7 +311,7 @@ class SalesFlowEngine:
             "total_turns": len(self.conversation_history) // 2,
         }
 
-    def restore_state(self, state):
+    def restore_state(self, state: dict[str, Any]) -> None:
         """Restore FSM state from dictionary (deserialize)."""
         self.flow_type = state["flow_type"]
         self.current_stage = state["current_stage"]

@@ -20,7 +20,7 @@ class OllamaProvider(BaseLLMProvider):
     DEFAULT_MODEL = "llama3.2:3b"
 
     def __init__(self, model: str = None, base_url: str = None):
-        self.model = model or os.environ.get("OLLAMA_MODEL", self.DEFAULT_MODEL)
+        self.model = model or self.DEFAULT_MODEL
         self.base_url = base_url or os.environ.get("OLLAMA_HOST", "http://localhost:11434")
         self._available_cache = None
         self._cache_ttl = 30

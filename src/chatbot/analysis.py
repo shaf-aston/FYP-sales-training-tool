@@ -5,16 +5,39 @@ Pure analysis only. Decisions live in flow.py, prompts in content.py.
 
 import re
 import random
+from dataclasses import dataclass
 from functools import lru_cache
+from typing import Any
 
 from .loader import load_analysis_config, load_signals
-from .utils import range_label
 
-_GUARD_THRESHOLDS = [1, 2, 3]
-_GUARD_LEVELS = [0.0, 0.3, 0.6, 1.0]
+
+@dataclass
+class ConversationState:
+    """Analyzed state of a conversation turn.
+
+    Attributes:
+        intent: User intent level ("low", "medium", "high")
+        guarded: Whether user is showing defensive/evasive behavior
+        question_fatigue: Whether bot has asked too many questions recently
+        decisive: Whether user is ready to make a decision (high intent + not guarded)
+    """
+    intent: str
+    guarded: bool
+    question_fatigue: bool
+    decisive: bool
+
+    def __getitem__(self, key: str):
+        """Backwards-compatible dict-style access for legacy callers/tests."""
+        return getattr(self, key)
+
+    def get(self, key: str, default=None):
+        """Backwards-compatible dict.get() style access."""
+        return getattr(self, key, default)
+
 
 _yaml_config = load_analysis_config()
-_T = _yaml_config["thresholds"]
+_THRESHOLDS = _yaml_config["thresholds"]
 _SIGNALS = load_signals()
 
 _NEGATIONS = frozenset({"not", "don't", "doesn't", "no", "never", "can't", "won't"})
@@ -62,14 +85,44 @@ def _has_user_stated_clear_goal(history):
     if not history:
         return False
     goal_keywords = _yaml_config["goal_indicators"]
-    window = _T["recent_history_window"]
-    return any(
-        text_contains_any_keyword(m.get("content", "").lower(), goal_keywords)
-        for m in history[-window:] if m.get("role") == "user"
-    )
+    window = _THRESHOLDS["recent_history_window"]
+    recent_user_msgs = [
+        m.get("content", "").lower()
+        for m in history[-window:]
+        if m.get("role") == "user"
+    ]
+    if any(text_contains_any_keyword(msg, goal_keywords) for msg in recent_user_msgs):
+        return True
+
+    # Keep broad intent verbs out of config, but still detect goal phrasing in context.
+    goal_verb_pattern = re.compile(r"\b(?:want to|need to|trying to)\s+\w+\s+\w+")
+    return any(goal_verb_pattern.search(msg) for msg in recent_user_msgs)
 
 
-def detect_guardedness(user_message, history):
+def classify_intent_level(history, user_message="", signal_keywords=None):
+    """Classify current intent level as "low", "medium", or "high".
+
+    Uses the same intent-lock behavior as analyze_state so all callers share
+    one consistent intent model.
+    """
+    if signal_keywords is None:
+        signal_keywords = load_signals()
+
+    if _has_user_stated_clear_goal(history):
+        return "high"
+
+    if not (user_message or history):
+        return "medium"
+
+    recent_text = (user_message + " " + _extract_recent_user_text(history, 2)).lower()
+    if text_contains_any_keyword(recent_text, signal_keywords["low_intent"]):
+        return "low"
+    if text_contains_any_keyword(recent_text, signal_keywords["high_intent"]):
+        return "high"
+    return "medium"
+
+
+def detect_guardedness(user_message: str, history: list[dict[str, str]]) -> float:
     """Simplified guardedness detection using keyword matching.
     
     Returns float 0.0 (not guarded) to 1.0 (very guarded).
@@ -110,24 +163,34 @@ def detect_guardedness(user_message, history):
     if msg_lower.split()[0] in agreement_words and msg_length > 3:
         return 0.1  # Low guardedness for elaborated agreement
     
-    # Count keyword matches from all guardedness categories
-    match_count = 0
-    for category in ["sarcasm", "deflection", "defensive", "evasive"]:
+    # Weighted scoring for guardedness categories
+    CATEGORY_WEIGHTS = {
+        "evasive": 0.5,     # strongest signal
+        "sarcasm": 0.35,    # social resistance
+        "deflection": 0.2,  # ambiguous
+        "defensive": 0.1,   # weakest signal
+    }
+    
+    score = 0.0
+    for category, weight in CATEGORY_WEIGHTS.items():
         keywords = guardedness.get(category, [])
         if any(phrase in msg_lower for phrase in keywords):
-            match_count += 1
+            score += weight
     
-    # Context: Short reply to detailed question
+    # Context multiplier: Short reply to detailed question
     if history:
         last_bot = next((m.get('content', '') for m in reversed(history) if m.get('role') == 'assistant'), '')
         if len(last_bot.split()) > 50 and msg_length < 8:
-            match_count += 1
+            score *= 1.4
     
-    # Map match count to guardedness level
-    return range_label(match_count, _GUARD_THRESHOLDS, _GUARD_LEVELS)
+    return min(score, 1.0)
 
 
-def analyze_state(history, user_message="", signal_keywords=None):
+def analyze_state(
+    history: list[dict[str, str]],
+    user_message: str = "",
+    signal_keywords: dict[str, Any] | None = None,
+) -> ConversationState:
     """Return {intent, guarded, question_fatigue, decisive} for the current turn.
 
     Implements Intent Lock (high intent sticks once stated) and uses simplified
@@ -136,20 +199,7 @@ def analyze_state(history, user_message="", signal_keywords=None):
     if signal_keywords is None:
         signal_keywords = load_signals()
 
-    # Intent Lock: check if goal was stated in recent history
-    user_stated_goal = _has_user_stated_clear_goal(history)
-
-    # Default intent detection
-    intent = "medium"
-    if user_message or history:
-        recent_text = (user_message + " " + _extract_recent_user_text(history, 2)).lower()
-        if text_contains_any_keyword(recent_text, signal_keywords["low_intent"]):
-            intent = "low"
-        elif text_contains_any_keyword(recent_text, signal_keywords["high_intent"]):
-            intent = "high"
-
-    if user_stated_goal:
-        intent = "high"
+    intent = classify_intent_level(history, user_message, signal_keywords=signal_keywords)
 
     # Guardedness detection (simplified keyword matching)
     guardedness_level = 0.0
@@ -173,9 +223,9 @@ def analyze_state(history, user_message="", signal_keywords=None):
     question_fatigue = False
     if history:
         recent_bot = [m["content"] for m in history[-4:] if m["role"] == "assistant"]
-        question_fatigue = sum(1 for msg in recent_bot if "?" in msg) >= _T["question_fatigue_threshold"]
+        question_fatigue = sum(1 for msg in recent_bot if "?" in msg) >= _THRESHOLDS["question_fatigue_threshold"]
 
-    return {"intent": intent, "guarded": guarded, "question_fatigue": question_fatigue, "decisive": decisive}
+    return ConversationState(intent=intent, guarded=guarded, question_fatigue=question_fatigue, decisive=decisive)
 
 
 # --- Preference and keyword extraction ---
@@ -198,7 +248,7 @@ def extract_preferences(history):
     return ", ".join(sorted(mentioned)) if mentioned else ""
 
 
-def extract_user_keywords(history, max_keywords=6):
+def extract_user_keywords(history: list[dict[str, str]], max_keywords: int = 6) -> list[str]:
     """Extract the user's key terms (nouns/descriptors) for lexical entrainment."""
     keywords = []
     for msg in history:
@@ -215,7 +265,7 @@ def extract_user_keywords(history, max_keywords=6):
 def is_repetitive_validation(history, threshold=None):
     """Detect if the bot has been over-validating recently."""
     if threshold is None:
-        threshold = _T["validation_loop_threshold"]
+        threshold = _THRESHOLDS["validation_loop_threshold"]
     if not history or len(history) < 4:
         return False
     validation_phrases = _SIGNALS.get("validation_phrases", [])
@@ -238,7 +288,18 @@ def is_literal_question(user_message):
     return is_question and not is_rhetorical
 
 
-def detect_acknowledgment_context(user_message, history, state):
+def commitment_or_walkaway(history: list[dict[str, str]], user_msg: str, turns: int) -> bool:
+    """True when user commits or walks away — objection stage exit."""
+    # Use internal _SIGNALS loaded at module level
+    return (text_contains_any_keyword(user_msg.lower(), _SIGNALS.get("commitment", [])) or
+            text_contains_any_keyword(user_msg.lower(), _SIGNALS.get("walking", [])))
+
+
+def detect_acknowledgment_context(
+    user_message: str,
+    history: list[dict[str, str]],
+    state: ConversationState,
+) -> str:
     """Determine if/how acknowledgment is psychologically warranted this turn.
 
     Returns: "full" | "light" | "none"
@@ -275,7 +336,7 @@ def detect_acknowledgment_context(user_message, history, state):
                 return "light"
 
     # Light acknowledgment: guarded/evasive — builds comfort and openness
-    if state.get("guarded"):
+    if state.guarded:
         return "light"
 
     # Short factual question — skip it
@@ -391,7 +452,7 @@ def classify_objection(user_message, history=None):
 def _extract_recent_user_text(history, max_messages=None):
     """Combined lowercase text of the N most recent user messages."""
     if max_messages is None:
-        max_messages = _T["recent_text_messages"]
+        max_messages = _THRESHOLDS["recent_text_messages"]
     if not history:
         return ""
     recent = history[-(max_messages * 2):]

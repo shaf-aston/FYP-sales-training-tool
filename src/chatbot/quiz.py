@@ -261,11 +261,11 @@ Return your evaluation as JSON:
 
     # Fallback if LLM evaluation fails
     return {
-        "score": 50,
-        "alignment": "partial",
-        "feedback": "Could not fully evaluate your response. Please try again.",
+        "score": None,
+        "alignment": "unknown",
+        "feedback": "Evaluation unavailable — LLM call failed. Your answer was recorded.",
         "strengths": [],
-        "improvements": ["Consider reviewing the stage objectives"],
+        "improvements": [],
     }
 
 
@@ -351,9 +351,9 @@ Return your evaluation as JSON:
 
     # Fallback
     return {
-        "score": 50,
-        "understanding": "partial",
-        "feedback": "Could not fully evaluate your explanation. Please try again.",
+        "score": None,
+        "understanding": "unknown",
+        "feedback": "Evaluation unavailable — LLM call failed. Your explanation was recorded.",
         "key_concepts_got": [],
         "key_concepts_missed": [],
     }

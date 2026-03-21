@@ -50,6 +50,15 @@ def load_signals():
     missing = _REQUIRED_SIGNAL_KEYS - signals.keys()
     if missing:
         raise ValueError(f"signals.yaml missing required keys: {sorted(missing)}")
+
+    # Backward-compatible alias expected by older tests/callers.
+    if "guarded" not in signals:
+        guarded = signals.get("guardedness_keywords", {})
+        merged = []
+        for key in ("sarcasm", "deflection", "defensive", "dismissal", "evasive"):
+            merged.extend(guarded.get(key, []))
+        signals["guarded"] = merged
+
     return signals
 
 

@@ -44,7 +44,10 @@ goal_indicators:
   - "lose weight"
   - "put on muscle"
   - "been fat"
+  - "struggling"
   - "looking to"
+  - "trying to"
+  - "problem"
   - "issue"
   - "challenge"
   - "goal"
@@ -451,29 +454,6 @@ question_patterns:
     - "right?"
     - "don't you think"
     - "wouldn't you say"
-
-# Elicitation guidance (Behavior Ops tradecraft - informational only for LLM prompts)
-# Purpose: LLM understands when to use STATEMENTS instead of QUESTIONS
-# Note: Actual implementation in content.py TACTICS dict and analyze_state() logic
-elicitation_context:
-  description: "Use statements to extract information when direct questions fail or trigger defensiveness"
-  
-  # When system switches from questions to elicitation statements
-  # These align with analyze_state() checks in analysis.py
-  mode_triggers:
-    - "low_intent detected (just browsing signals)"
-    - "guarded response (short + evasive after question)"
-    - "question_fatigue (2+ consecutive bot questions)"
-    - "validation_loop (excessive acknowledgments)"
-    - "no_preferences_extracted (user not volunteering info)"
-  
-  # Elicitation statement types (implemented in content.py TACTICS["elicitation"])
-  statement_types:
-    presumptive: "Assume incorrect state to trigger correction"
-    understatement: "Downplay to reduce pressure"
-    reflective: "Mirror without asking"
-    shared_observation: "Reference common patterns"
-    curiosity_statement: "Express interest without demanding"
 
 # Advancement configuration (FSM stage transitions)
 advancement:

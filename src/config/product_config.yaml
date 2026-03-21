@@ -3,6 +3,9 @@
 # aliases: alternative names that map to the same product
 # knowledge: injected into the LLM system prompt at runtime
 
+metadata:
+  last_updated: "2026-03-21"
+
 products:
 
   # ─── Discovery (unknown product) ────────────────────────────────────────────

@@ -1,6 +1,8 @@
 # Strategy Adaptations
 # Used by template_loader.py for adaptive tactic guidance
 # Applied after override checks but before stage-specific prompts
+# Prompt routing precedence: overrides -> adaptations -> stage/base prompt assembly
+# Use adaptations for tactical style changes, not hard behavioral forcing.
 
 decisive_user:
   advance_note:

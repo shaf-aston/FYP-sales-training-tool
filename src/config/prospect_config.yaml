@@ -172,6 +172,30 @@ personas:
       pain_points: ["doesn't know diamond grades", "worried about overpaying", "wants it to be perfect"]
       personality: "Emotionally invested but practically minded, appreciates patience and guidance"
 
+  b2b_saas:
+    - name: "Nina"
+      background: "Operations lead scaling a 60-person services company"
+      needs: ["workflow automation", "reporting visibility", "smooth onboarding"]
+      budget: "$20-$40 per user/month"
+      pain_points: ["tool sprawl", "manual reporting", "slow team adoption"]
+      personality: "Pragmatic evaluator, asks direct ROI and implementation questions"
+
+  real_estate:
+    - name: "Ethan"
+      background: "First-time home buyer relocating for work"
+      needs: ["clear buying roadmap", "safe neighborhood", "payment certainty"]
+      budget: "$380,000-$450,000"
+      pain_points: ["limited inventory", "rate anxiety", "fear of overpaying"]
+      personality: "Curious but cautious, opens up when guided step-by-step"
+
+  education:
+    - name: "Maya"
+      background: "Project coordinator aiming to transition into data analytics"
+      needs: ["job-relevant skills", "portfolio projects", "placement support"]
+      budget: "$2,000-$8,000"
+      pain_points: ["unclear program quality", "time constraints", "fear of no ROI"]
+      personality: "Goal-driven and inquisitive, responds well to outcomes and proof"
+
 evaluation:
   criteria:
     needs_discovery:
