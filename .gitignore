@@ -67,10 +67,17 @@ metrics.jsonl
 metrics.json
 Impact formula.txt
 .claude
-Aston Docs/
 sessions_backup/
+sessions*
+metrics.jsonl
+metrics.json
+Impact formula.txt
 Documentation/What i did strat.md
+Documentation/
+Aston Docs/
 sessions/
+sessions_backup/
+.Clear-Caches.py
 
 # Local secrets and sockets
 *.key
@@ -93,16 +100,6 @@ tmp/
 
 # Notebook checkpoints
 .ipynb_checkpoints/
-
-# Project artifacts and exports
-metrics.jsonl
-metrics.json
-Impact formula.txt
-Documentation/What i did strat.md
-Aston Docs/
-sessions/
-sessions_backup/
-.Clear-Caches.py
 
 # Ignore build/env files used during development, not checked in
 .env
