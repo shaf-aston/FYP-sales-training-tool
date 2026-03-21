@@ -7,12 +7,13 @@ import re
 import time
 from dataclasses import dataclass
 
-from .loader import get_product_settings, load_signals
-from .analysis import text_contains_any_keyword
+from .loader import get_product_settings, load_signals, assign_ab_variant
+from .analysis import text_contains_any_keyword, classify_objection
 from .flow import SalesFlowEngine
 from .performance import PerformanceTracker
+from .session_analytics import SessionAnalytics
 from .providers import create_provider
-from .utils import Strategy
+from .utils import Strategy, Stage
 from . import trainer
 
 _base_logger = logging.getLogger(__name__)
@@ -45,7 +46,7 @@ class SalesChatbot:
         self.product_type = product_type
         self.provider_type = provider_type
         self.logger = logging.LoggerAdapter(_base_logger, {"session_id": session_id or "-"})
-        
+
         # Cache provider info to avoid repeated lookups
         self._provider_name = type(self.provider).__name__.replace("Provider", "").lower()
         self._model_name = self.provider.get_model_name()
@@ -73,6 +74,18 @@ class SalesChatbot:
             product_context=product_context,
         )
 
+        # A/B variant assignment for prompt testing (deterministic per session)
+        self._ab_variant = assign_ab_variant(session_id) if session_id else None
+
+        # Record session start for evaluation analytics
+        if session_id:
+            SessionAnalytics.record_session_start(
+                session_id=session_id,
+                product_type=product_type or "unknown",
+                initial_strategy=str(self.flow_engine.flow_type),
+                ab_variant=self._ab_variant
+            )
+
     # --- Core chat loop ---
 
     def chat(self, user_message):
@@ -83,6 +96,18 @@ class SalesChatbot:
         ] + recent_history + [
             {"role": "user", "content": user_message}
         ]
+
+        # Record intent classification on each user turn
+        if self.session_id:
+            from .analysis import analyze_state
+            state = analyze_state(self.flow_engine.conversation_history, user_message)
+            intent_level = state.get("intent", "medium")
+            user_turn_count = len([m for m in self.flow_engine.conversation_history if m["role"] == "user"]) + 1
+            SessionAnalytics.record_intent_classification(
+                session_id=self.session_id,
+                intent_level=intent_level,
+                user_turn_count=user_turn_count
+            )
 
         request_start = time.time()
         try:
@@ -117,6 +142,18 @@ class SalesChatbot:
                 )
 
             self._apply_advancement(user_message)
+
+            # Record objection classification if at OBJECTION stage
+            if self.session_id and self.flow_engine.current_stage == Stage.OBJECTION:
+                objection_data = classify_objection(user_message, self.flow_engine.conversation_history)
+                objection_type = objection_data.get("type", "unknown") if isinstance(objection_data, dict) else "unknown"
+                user_turn_count = len([m for m in self.flow_engine.conversation_history if m["role"] == "user"])
+                SessionAnalytics.record_objection_classified(
+                    session_id=self.session_id,
+                    objection_type=objection_type,
+                    strategy=str(self.flow_engine.flow_type),
+                    user_turn_count=user_turn_count
+                )
 
             return ChatResponse(
                 content=bot_reply,
@@ -182,13 +219,35 @@ class SalesChatbot:
     def _apply_advancement(self, user_message):
         """Check and apply FSM stage advancement. Handles discovery -> real strategy switch."""
         if self.flow_engine.flow_type == Strategy.INTENT:
+            old_strategy = self.flow_engine.flow_type
             if self._detect_and_switch_strategy(user_message):
+                # Record strategy switch from INTENT to real strategy
+                if self.session_id and old_strategy != self.flow_engine.flow_type:
+                    SessionAnalytics.record_strategy_switch(
+                        session_id=self.session_id,
+                        from_strategy=str(old_strategy),
+                        to_strategy=str(self.flow_engine.flow_type),
+                        reason="signal_detection",
+                        user_turn_count=len([m for m in self.flow_engine.conversation_history if m["role"] == "user"])
+                    )
                 return
+
+        old_stage = self.flow_engine.current_stage
         advancement = self.flow_engine.should_advance(user_message)
         if advancement:
             self.flow_engine.advance(
                 target_stage=advancement if isinstance(advancement, str) else None
             )
+
+            # Record stage transition
+            if self.session_id and old_stage != self.flow_engine.current_stage:
+                SessionAnalytics.record_stage_transition(
+                    session_id=self.session_id,
+                    from_stage=str(old_stage),
+                    to_stage=str(self.flow_engine.current_stage),
+                    strategy=str(self.flow_engine.flow_type),
+                    user_turns_in_stage=self.flow_engine.stage_turn_count - 1
+                )
 
     # --- Training ---
 
@@ -271,6 +330,20 @@ class SalesChatbot:
         }
         with open(f"sessions/{self.session_id}.json", "w") as f:
             json.dump(state, f)
+
+    def record_session_end(self):
+        """Record session completion for evaluation analytics."""
+        if not self.session_id:
+            return
+        user_turn_count = len([m for m in self.flow_engine.conversation_history if m["role"] == "user"])
+        bot_turn_count = len([m for m in self.flow_engine.conversation_history if m["role"] == "assistant"])
+        SessionAnalytics.record_session_end(
+            session_id=self.session_id,
+            final_stage=str(self.flow_engine.current_stage),
+            final_strategy=str(self.flow_engine.flow_type),
+            user_turn_count=user_turn_count,
+            bot_turn_count=bot_turn_count
+        )
 
     @staticmethod
     def load_session(session_id):

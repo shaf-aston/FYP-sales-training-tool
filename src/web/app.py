@@ -16,6 +16,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from chatbot.chatbot import SalesChatbot
 from chatbot.providers import get_available_providers
 from chatbot.performance import PerformanceTracker
+from chatbot.session_analytics import SessionAnalytics
 from chatbot.content import generate_init_greeting
 from chatbot.loader import QuickMatcher
 from chatbot.knowledge import (
@@ -63,8 +64,14 @@ app.after_request(SecurityHeadersMiddleware.apply)
 session_manager.start_background_cleanup()
 
 
-# ─── Prospect Session Cleanup ──────────────────────────────────────────────────
-# Start background cleanup for prospect sessions (same pattern as main sessions)
+# ─── Prospect Session Management ───────────────────────────────────────────────
+# Use a second SessionSecurityManager instance for prospect sessions (eliminates code duplication)
+prospect_session_manager = SessionSecurityManager(
+    max_sessions=100,  # Lower limit than main chat sessions
+    idle_minutes=30,
+    cleanup_interval=SecurityConfig.CLEANUP_INTERVAL_SECONDS,
+)
+prospect_session_manager.start_background_cleanup()
 
 
 # ─── Request helpers ─────────────────────────────────────────────────────────
@@ -681,65 +688,23 @@ def debug_analyse():
 
 # ─── Prospect Mode API ──────────────────────────────────────────────────────
 
-prospect_sessions = {}  # session_id -> {"ps": ProspectSession, "ts": datetime}
-_prospect_lock = threading.Lock()
-MAX_PROSPECT_SESSIONS = 100  # Lower limit than main sessions
-
-
-def _cleanup_prospect_sessions():
-    """Remove expired prospect sessions (idle > 30 minutes)."""
-    with _prospect_lock:
-        now = datetime.now()
-        expired = [
-            sid for sid, data in prospect_sessions.items()
-            if (now - data["ts"]).total_seconds() > 1800  # 30 min idle
-        ]
-        for sid in expired:
-            del prospect_sessions[sid]
-        if expired:
-            app.logger.info(f"Cleaned {len(expired)} expired prospect sessions")
-
-
-def start_prospect_cleanup():
-    """Start background cleanup thread for prospect sessions (daemon mode)."""
-    cleanup_interval = 900  # 15 minutes, matching main session cleanup
-
-    def cleanup_loop():
-        while True:
-            try:
-                time.sleep(cleanup_interval)
-                _cleanup_prospect_sessions()
-            except Exception as e:
-                app.logger.error(f"Prospect session cleanup thread error: {e}")
-
-    thread = threading.Thread(target=cleanup_loop, daemon=True)
-    thread.start()
-    app.logger.info(
-        f"Started background cleanup thread for prospect sessions "
-        f"(interval: {cleanup_interval}s, timeout: 30 min)"
-    )
-
-
 def require_prospect_session():
     """Validate prospect session. Returns (prospect_session, error_response)."""
     session_id = request.headers.get('X-Session-ID')
     if not session_id:
         return None, (jsonify({"error": "Session ID required"}), 400)
-    with _prospect_lock:
-        data = prospect_sessions.get(session_id)
-        if not data:
-            return None, (jsonify({"error": "Prospect session not found", "code": "SESSION_EXPIRED"}), 400)
-        data["ts"] = datetime.now()  # Touch timestamp
-        return data["ps"], None
+    ps = prospect_session_manager.get(session_id)
+    if not ps:
+        return None, (jsonify({"error": "Prospect session not found", "code": "SESSION_EXPIRED"}), 400)
+    return ps, None
 
 
 @app.route('/api/prospect/init', methods=['POST'])
 @require_rate_limit('init')
 def prospect_init():
     """Create a prospect session. Bot plays the buyer, user plays the salesperson."""
-    with _prospect_lock:
-        if len(prospect_sessions) >= MAX_PROSPECT_SESSIONS:
-            return jsonify({"error": "Prospect mode at capacity. Try again later."}), 503
+    if not prospect_session_manager.can_create():
+        return jsonify({"error": "Prospect mode at capacity. Try again later."}), 503
 
     data = request.json or {}
     difficulty = data.get('difficulty', 'medium')
@@ -760,8 +725,7 @@ def prospect_init():
             session_id=session_id,
         )
         opening = ps.get_opening_message()
-        with _prospect_lock:
-            prospect_sessions[session_id] = {"ps": ps, "ts": datetime.now()}
+        prospect_session_manager.set(session_id, ps)
         app.logger.info(f"Prospect session: {session_id} (difficulty={difficulty}, product={product_type})")
 
         return jsonify({
@@ -852,9 +816,40 @@ def prospect_reset():
     """End and remove a prospect session."""
     session_id = request.headers.get('X-Session-ID')
     if session_id:
-        with _prospect_lock:
-            prospect_sessions.pop(session_id, None)
+        prospect_session_manager.delete(session_id)
     return jsonify({"success": True})
+
+
+# ─── Evaluation Analytics APIs ───────────────────────────────────────────────────
+
+@app.route('/api/analytics/session/<session_id>', methods=['GET'])
+def get_session_analytics(session_id):
+    """Get analytics events for a specific session (for evaluation study).
+
+    Returns all recorded events: stage transitions, intent classifications,
+    objection types, strategy switches.
+    """
+    events = SessionAnalytics.get_session_analytics(session_id)
+    return jsonify({"success": True, "session_id": session_id, "events": events})
+
+
+@app.route('/api/analytics/summary', methods=['GET'])
+def get_analytics_summary():
+    """Get aggregated analytics summary for evaluation chapter.
+
+    Returns:
+    - stage_reach_distribution: how many sessions reached each stage
+    - intent_distribution: frequency of low/medium/high classifications
+    - objection_type_distribution: which objection types appear most
+    - initial_strategy_distribution: consultative vs transactional assigned
+    - strategy_switch_frequency: how often strategies changed
+    - ab_variant_distribution: distribution across A/B variants
+    - sessions_reached_pitch: count of sessions reaching pitch stage
+    - sessions_reached_objection: count of sessions reaching objection stage
+    - total_sessions: total session count
+    """
+    summary = SessionAnalytics.get_evaluation_summary()
+    return jsonify({"success": True, **summary})
 
 
 # ─── Error handler ───────────────────────────────────────────────────────────
@@ -874,8 +869,6 @@ def handle_unexpected_error(e):
 
 
 # ─── Application Startup ────────────────────────────────────────────────────────
-# Initialize background cleanup threads
-start_prospect_cleanup()
 
 if __name__ == '__main__':
     app.run(debug=os.environ.get('FLASK_DEBUG', 'false').lower() == 'true', port=5000)

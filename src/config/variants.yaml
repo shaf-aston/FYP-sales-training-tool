@@ -1,0 +1,27 @@
+# A/B Variant Testing Configuration
+# Used for evaluating NEPQ-aligned prompts vs generic alternatives
+# See loader.py: get_variant_prompt() and assign_ab_variant()
+#
+# Usage:
+# - assign_ab_variant(session_id) deterministically assigns "variant_a" or "variant_b"
+# - get_variant_prompt(base_prompt, variant_type) returns variant-specific version
+#
+# Structure:
+# variant_a: Control group (original/generic prompts)
+# variant_b: Treatment group (NEPQ-aligned prompts) — for FYP evaluation
+#
+# Note: If this file doesn't exist or variant not found, system uses base prompts unchanged.
+
+variant_a:
+  description: "Control group - generic sales prompts without explicit NEPQ framework"
+  prompts:
+    intent: "Greeting variant A: generic discovery approach"
+    logical: "Logical stage variant A: generic problem exploration"
+    emotional: "Emotional stage variant A: generic stakes discussion"
+
+variant_b:
+  description: "Treatment group - NEPQ-aligned prompts (Impact formula.txt methodology)"
+  prompts:
+    intent: "Greeting variant B: NEPQ-aligned tangible experience elicitation"
+    logical: "Logical stage variant B: NEPQ two-phase probe (cause → like/dislike)"
+    emotional: "Emotional stage variant B: NEPQ three-phase (Identity → FP → COI)"

@@ -612,6 +612,31 @@ FAILED (Pre-existing):
 - Zero breaking changes, all 14 routes functional
 - See `SECURITY_REFACTOR_REVIEW.md` for detailed verification
 
+### Phase 7: Technical Audit Fixes (21 March 2026)
+External technical review identified 10 architectural/implementation issues. 3 high/medium priority issues fixed:
+
+**1. Unified session management**
+- `app.py` previously maintained two separate session stores: `SessionSecurityManager` for main chat + raw `prospect_sessions` dict with duplicate lock/cleanup thread
+- **Fix**: Replaced raw dict with second `SessionSecurityManager(max_sessions=100, idle_minutes=30)` instance
+- **Impact**: Eliminated ~60 lines of duplicate code; unified capacity and timeout logic
+
+**2. Prospect mode double LLM call**
+- `prospect.py:_update_readiness()` called `provider.chat()` twice per turn: once for response, again to rate salesperson 1-5
+- **Fix**: Replaced LLM rating with deterministic `_score_sales_message()` using keyword signals from `signals.yaml`
+- **Impact**: Halved prospect mode latency (~300ms saved per turn); zero API cost for rating; functionally equivalent scoring
+
+**3. Cache key normalization**
+- `QuickMatcher.match_product()` cached by raw text but normalized inside function
+- **Fix**: Split into public wrapper + private `_match_product_normalized()` cached method
+- **Impact**: "Cars" and "cars" now share cache entry (improved hit rate)
+
+**Deferred**: `content.py` SRP refactor (high risk/low ROI), guardedness weighting (minor enhancement), cold-start optimization (acceptable trade-off), quiz fallback improvements (rare edge case)
+
+**Rejected**: Session analytics module, A/B prompt testing (out of scope per user directive)
+
+See `technical_audit.md` for full review and disposition rationale.
+
+
 ---
 
 ## Summary

@@ -4,11 +4,13 @@ Centralizes loading of all configuration files (signals, analysis, product confi
 and template files (tactics, overrides, adaptations) with caching.
 
 Includes QuickMatcher utility for fuzzy/rapid text-to-config matching.
+Includes A/B variant selection for prompt testing in evaluation studies.
 """
 
 import yaml
 import random
 import re
+import hashlib
 from pathlib import Path
 from functools import lru_cache
 from difflib import SequenceMatcher
@@ -309,7 +311,6 @@ class QuickMatcher:
         return re.sub(r'\s+', ' ', text.lower().strip())
 
     @classmethod
-    @lru_cache(maxsize=128)
     def match_product(cls, text):
         """Match free-form text to a product type.
 
@@ -326,6 +327,22 @@ class QuickMatcher:
             ('luxury_cars', 0.95)
         """
         normalized = cls.normalize(text)
+        return cls._match_product_normalized(normalized)
+
+    @classmethod
+    @lru_cache(maxsize=128)
+    def _match_product_normalized(cls, normalized):
+        """Internal cached method that receives pre-normalized text.
+
+        This ensures cache hits for "Cars" and "cars" since both normalize
+        to "cars" before cache lookup.
+
+        Args:
+            normalized: Already normalized text (lowercase, trimmed, collapsed whitespace)
+
+        Returns:
+            tuple: (product_key, confidence) or (None, 0.0)
+        """
         if not normalized:
             return (None, 0.0)
 
@@ -525,3 +542,79 @@ def quick_match_product(text):
     if product_key and confidence >= 0.6:
         return get_product_settings(product_key)
     return get_product_settings("default")
+
+
+# --- A/B Variant Selection (for prompt testing in evaluation studies) ---
+
+def assign_ab_variant(session_id):
+    """Deterministically assign A/B variant based on session_id.
+
+    Uses hash-based determinism: same session_id always gets same variant.
+    Enables controlled prompt experiment (NEPQ variant vs generic variant).
+
+    Args:
+        session_id: Unique session identifier
+
+    Returns:
+        str: "variant_a" or "variant_b" (deterministic based on session_id)
+
+    Example:
+        >>> assign_ab_variant("session_123")
+        'variant_a'
+        >>> assign_ab_variant("session_123")  # Called again with same ID
+        'variant_a'  # Same result
+        >>> assign_ab_variant("session_124")
+        'variant_b'
+    """
+    if not session_id:
+        return "variant_a"  # default if no session_id
+
+    # Hash session_id and mod by 2 to get 0 or 1
+    hash_val = int(hashlib.md5(session_id.encode()).hexdigest(), 16)
+    variant_index = hash_val % 2
+
+    return "variant_a" if variant_index == 0 else "variant_b"
+
+
+def get_variant_prompt(base_prompt, variant_type, strategy=None):
+    """Get variant-specific version of a prompt template.
+
+    Looks for variants in variants.yaml (future: can extend to other sources).
+    If no variants.yaml or variant not found, returns base_prompt unchanged.
+
+    Args:
+        base_prompt: Base prompt template string
+        variant_type: "variant_a" or "variant_b"
+        strategy: Optional strategy context ("consultative", "transactional")
+
+    Returns:
+        str: Variant-specific prompt (or base_prompt if variant not found)
+
+    Example:
+        >>> get_variant_prompt(base_prompt, "variant_a", strategy="consultative")
+        # Returns NEPQ-aligned variant if available
+    """
+    try:
+        variants = load_yaml("variants.yaml")
+    except FileNotFoundError:
+        # No variants.yaml — use base prompt
+        return base_prompt
+
+    if not variants or variant_type not in variants:
+        return base_prompt
+
+    variant_data = variants[variant_type]
+
+    # Simple string replacement (future: could use more sophisticated templating)
+    if "prompts" in variant_data and isinstance(variant_data["prompts"], dict):
+        # Variant templates keyed by name or strategy
+        for key, template in variant_data["prompts"].items():
+            # If strategy-specific variant exists, use it
+            if strategy and strategy in variant_data["prompts"]:
+                return variant_data["prompts"][strategy]
+        # Return first available variant template
+        first_template = next(iter(variant_data["prompts"].values()), None)
+        if first_template:
+            return first_template
+
+    return base_prompt

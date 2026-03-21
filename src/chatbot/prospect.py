@@ -294,37 +294,15 @@ class ProspectSession:
         )
 
     def _update_readiness(self, user_msg: str, bot_response: str):
-        """Rate user's sales message and update readiness score."""
+        """Rate user's sales message and update readiness score.
+
+        Uses deterministic scoring based on keyword signals, message quality,
+        and turn context. Eliminates second LLM call that doubled latency.
+        """
         behavior = self.difficulty_profile["behavior"]
 
-        rating_prompt = f"""Rate this salesperson's message on a scale of 1-5 for sales effectiveness.
-
-SALESPERSON'S MESSAGE: "{user_msg}"
-
-PROSPECT'S RESPONSE: "{bot_response}"
-
-CONTEXT: The prospect is a {self.state.difficulty} difficulty buyer at readiness {self.state.readiness:.2f}.
-
-Rate ONLY with a single number 1-5:
-1 = Poor (pushy, irrelevant, or ignores prospect's concerns)
-2 = Below average (generic, doesn't build rapport)
-3 = Average (acceptable but unremarkable)
-4 = Good (asks good questions, builds rapport, addresses needs)
-5 = Excellent (perfectly tailored, empathetic, moves conversation forward)
-
-Return ONLY the number."""
-
-        try:
-            messages = [
-                {"role": "system", "content": rating_prompt},
-                {"role": "user", "content": "Rate the message."},
-            ]
-            rating_response = self.provider.chat(messages, temperature=0.1, max_tokens=10)
-            # Extract number from response
-            match = re.search(r"[1-5]", rating_response.content)
-            rating = int(match.group()) if match else 3
-        except Exception:
-            rating = 3  # Default to neutral
+        # Deterministic scoring based on signals
+        rating = self._score_sales_message(user_msg, bot_response)
 
         # Map rating to readiness change
         gain = behavior["readiness_gain_per_good_turn"]
@@ -338,6 +316,65 @@ Return ONLY the number."""
             delta = 0.01  # Slight gain for neutral
 
         self.state.readiness = clamp(self.state.readiness + delta)
+
+    def _score_sales_message(self, user_msg: str, bot_response: str) -> int:
+        """Deterministic scoring of sales message quality (1-5).
+
+        Scoring criteria:
+        - Commitment/high-intent signals → 4-5 (advancing the sale)
+        - Objection/walking signals → 1-2 (losing the prospect)
+        - Demand for directness → 2 (pressure, not rapport)
+        - Message length and turn context → modifiers
+
+        Returns:
+            int: Score from 1 (poor) to 5 (excellent)
+        """
+        from .loader import load_signals
+        from .analysis import text_contains_any_keyword
+
+        signals = load_signals()
+        msg_lower = user_msg.lower()
+        msg_length = len(user_msg.split())
+
+        # Base score starts at 3 (neutral)
+        score = 3.0
+
+        # Strong positive signals (commitment, high intent)
+        if text_contains_any_keyword(msg_lower, signals.get("commitment", [])):
+            score += 2.0  # 5
+        elif text_contains_any_keyword(msg_lower, signals.get("high_intent", [])):
+            score += 1.0  # 4
+
+        # Negative signals (objection, walking, impatience)
+        if text_contains_any_keyword(msg_lower, signals.get("walking", [])):
+            score -= 2.0  # 1
+        elif text_contains_any_keyword(msg_lower, signals.get("objection", [])):
+            score -= 0.5  # 2.5
+        elif text_contains_any_keyword(msg_lower, signals.get("impatience", [])):
+            score -= 1.0  # 2
+
+        # Demand for directness (pressure without rapport)
+        if text_contains_any_keyword(msg_lower, signals.get("demand_directness", [])):
+            score -= 1.0  # 2
+
+        # Message quality factors
+        # Very short messages (< 5 words) are likely low-effort
+        if msg_length < 5:
+            score -= 0.5
+
+        # Questions are good (discovery)
+        if '?' in user_msg:
+            score += 0.3
+
+        # Early turns should focus on discovery, not pitching
+        if self.state.turn_count <= 2:
+            # Penalize price/feature mentions too early
+            if any(word in msg_lower for word in ["price", "cost", "payment", "buy", "purchase"]):
+                score -= 0.5
+
+        # Clamp to 1-5 range
+        return max(1, min(5, round(score)))
+
 
     def _check_end_conditions(self) -> str | None:
         """Check if the session should end. Returns 'sold', 'walked', or None."""
