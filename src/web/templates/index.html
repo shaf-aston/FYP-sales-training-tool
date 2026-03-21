@@ -20,7 +20,9 @@
         background: rgba(4, 10, 18, 0.97);
         border: 1px solid rgba(74, 222, 128, 0.22);
         border-radius: 10px;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.7), 0 0 0 1px rgba(74,222,128,0.06);
+        box-shadow:
+          0 8px 32px rgba(0, 0, 0, 0.7),
+          0 0 0 1px rgba(74, 222, 128, 0.06);
         display: none;
         flex-direction: column;
         z-index: 999;
@@ -28,15 +30,17 @@
         font-size: 12px;
         color: #c8d4c0;
       }
-      #devPanel.open { display: flex; }
+      #devPanel.open {
+        display: flex;
+      }
 
       .dp-header {
         display: flex;
         align-items: center;
         gap: 8px;
         padding: 10px 14px;
-        border-bottom: 1px solid rgba(74,222,128,0.12);
-        background: rgba(74,222,128,0.05);
+        border-bottom: 1px solid rgba(74, 222, 128, 0.12);
+        background: rgba(74, 222, 128, 0.05);
         flex-shrink: 0;
       }
       .dp-header-title {
@@ -49,8 +53,8 @@
       .dp-shortcut {
         font-size: 10px;
         color: #4a6a50;
-        background: rgba(74,222,128,0.08);
-        border: 1px solid rgba(74,222,128,0.15);
+        background: rgba(74, 222, 128, 0.08);
+        border: 1px solid rgba(74, 222, 128, 0.15);
         border-radius: 4px;
         padding: 1px 5px;
         font-family: monospace;
@@ -65,18 +69,20 @@
         padding: 0 2px;
         transition: color 0.15s;
       }
-      .dp-close:hover { color: #4ade80; }
+      .dp-close:hover {
+        color: #4ade80;
+      }
 
       .dp-body {
         overflow-y: auto;
         flex: 1;
         scrollbar-width: thin;
-        scrollbar-color: rgba(74,222,128,0.3) transparent;
+        scrollbar-color: rgba(74, 222, 128, 0.3) transparent;
       }
 
       .dp-section {
         padding: 10px 14px;
-        border-bottom: 1px solid rgba(255,255,255,0.04);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
       }
       .dp-section-label {
         font-size: 9px;
@@ -91,17 +97,36 @@
       }
 
       /* Session state grid */
-      .dp-kv { display: grid; grid-template-columns: 90px 1fr; row-gap: 4px; }
-      .dp-k { color: #4a6a50; font-size: 11px; }
-      .dp-v { color: #c8d4c0; font-size: 11px; font-weight: 500; }
-      .dp-v.green { color: #4ade80; }
-      .dp-v.amber { color: #b7791f; }
+      .dp-kv {
+        display: grid;
+        grid-template-columns: 90px 1fr;
+        row-gap: 4px;
+      }
+      .dp-k {
+        color: #4a6a50;
+        font-size: 11px;
+      }
+      .dp-v {
+        color: #c8d4c0;
+        font-size: 11px;
+        font-weight: 500;
+      }
+      .dp-v.green {
+        color: #4ade80;
+      }
+      .dp-v.amber {
+        color: #b7791f;
+      }
 
       /* Stage jump buttons */
-      .dp-stages { display: flex; flex-wrap: wrap; gap: 5px; }
+      .dp-stages {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+      }
       .dp-stage-btn {
-        background: rgba(255,255,255,0.04);
-        border: 1px solid rgba(255,255,255,0.1);
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.1);
         color: #a0b0a0;
         border-radius: 5px;
         padding: 4px 9px;
@@ -112,13 +137,13 @@
         letter-spacing: 0.04em;
       }
       .dp-stage-btn:hover {
-        background: rgba(74,222,128,0.12);
-        border-color: rgba(74,222,128,0.35);
+        background: rgba(74, 222, 128, 0.12);
+        border-color: rgba(74, 222, 128, 0.35);
         color: #4ade80;
       }
       .dp-stage-btn.current {
-        background: rgba(74,222,128,0.14);
-        border-color: rgba(74,222,128,0.4);
+        background: rgba(74, 222, 128, 0.14);
+        border-color: rgba(74, 222, 128, 0.4);
         color: #4ade80;
         font-weight: 600;
       }
@@ -130,21 +155,28 @@
       }
 
       /* Message analyser */
-      .dp-analyse-row { display: flex; gap: 6px; margin-top: 6px; }
+      .dp-analyse-row {
+        display: flex;
+        gap: 6px;
+        margin-top: 6px;
+      }
       .dp-input {
         flex: 1;
-        background: rgba(255,255,255,0.04);
-        border: 1px solid rgba(255,255,255,0.1);
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 5px;
         color: #c8d4c0;
         font-size: 11px;
         padding: 5px 8px;
         font-family: inherit;
       }
-      .dp-input:focus { outline: none; border-color: rgba(74,222,128,0.3); }
+      .dp-input:focus {
+        outline: none;
+        border-color: rgba(74, 222, 128, 0.3);
+      }
       .dp-btn {
-        background: rgba(74,222,128,0.12);
-        border: 1px solid rgba(74,222,128,0.25);
+        background: rgba(74, 222, 128, 0.12);
+        border: 1px solid rgba(74, 222, 128, 0.25);
         color: #4ade80;
         border-radius: 5px;
         padding: 5px 10px;
@@ -153,15 +185,22 @@
         white-space: nowrap;
         transition: all 0.15s;
       }
-      .dp-btn:hover { background: rgba(74,222,128,0.2); }
-      .dp-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+      .dp-btn:hover {
+        background: rgba(74, 222, 128, 0.2);
+      }
+      .dp-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
 
       .dp-analyse-result {
         margin-top: 8px;
         font-size: 11px;
         line-height: 1.5;
       }
-      .dp-analyse-group { margin-bottom: 6px; }
+      .dp-analyse-group {
+        margin-bottom: 6px;
+      }
       .dp-analyse-group-label {
         color: #4a6a50;
         font-size: 10px;
@@ -169,47 +208,73 @@
         letter-spacing: 0.06em;
         margin-bottom: 3px;
       }
-      .dp-signal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 6px; }
-      .dp-signal-item { display: flex; align-items: center; gap: 4px; font-size: 10px; }
-      .dp-hit { color: #4ade80; }
-      .dp-miss { color: #3a5040; }
+      .dp-signal-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2px 6px;
+      }
+      .dp-signal-item {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 10px;
+      }
+      .dp-hit {
+        color: #4ade80;
+      }
+      .dp-miss {
+        color: #3a5040;
+      }
       .dp-adv-box {
-        background: rgba(255,255,255,0.03);
+        background: rgba(255, 255, 255, 0.03);
         border-radius: 5px;
         padding: 6px 8px;
         margin-top: 4px;
         font-size: 11px;
       }
-      .dp-adv-yes { color: #4ade80; font-weight: 600; }
-      .dp-adv-no { color: #b7791f; }
-      .dp-adv-null { color: #4a6a50; }
+      .dp-adv-yes {
+        color: #4ade80;
+        font-weight: 600;
+      }
+      .dp-adv-no {
+        color: #b7791f;
+      }
+      .dp-adv-null {
+        color: #4a6a50;
+      }
 
       /* System prompt */
       .dp-prompt-wrap {
-        background: rgba(0,0,0,0.3);
-        border: 1px solid rgba(255,255,255,0.06);
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.06);
         border-radius: 5px;
         max-height: 220px;
         overflow-y: auto;
         margin-top: 8px;
         scrollbar-width: thin;
-        scrollbar-color: rgba(74,222,128,0.3) transparent;
+        scrollbar-color: rgba(74, 222, 128, 0.3) transparent;
       }
       .dp-prompt-pre {
         margin: 0;
         padding: 8px 10px;
         font-size: 10px;
-        font-family: 'Courier New', monospace;
+        font-family: "Courier New", monospace;
         white-space: pre-wrap;
         word-break: break-word;
         color: #8aa080;
         line-height: 1.5;
       }
-      .dp-prompt-empty { color: #3a5040; font-style: italic; }
-      .dp-btn-row { display: flex; gap: 6px; }
+      .dp-prompt-empty {
+        color: #3a5040;
+        font-style: italic;
+      }
+      .dp-btn-row {
+        display: flex;
+        gap: 6px;
+      }
       .dp-btn-sm {
-        background: rgba(74,222,128,0.08);
-        border: 1px solid rgba(74,222,128,0.18);
+        background: rgba(74, 222, 128, 0.08);
+        border: 1px solid rgba(74, 222, 128, 0.18);
         color: #4a6a50;
         border-radius: 4px;
         padding: 2px 7px;
@@ -217,27 +282,42 @@
         cursor: pointer;
         transition: all 0.15s;
       }
-      .dp-btn-sm:hover { color: #4ade80; border-color: rgba(74,222,128,0.35); }
+      .dp-btn-sm:hover {
+        color: #4ade80;
+        border-color: rgba(74, 222, 128, 0.35);
+      }
 
       /* Reinit */
-      .dp-field { margin-bottom: 7px; }
-      .dp-field label { display: block; color: #4a6a50; font-size: 10px; margin-bottom: 3px; }
+      .dp-field {
+        margin-bottom: 7px;
+      }
+      .dp-field label {
+        display: block;
+        color: #4a6a50;
+        font-size: 10px;
+        margin-bottom: 3px;
+      }
       .dp-select {
         width: 100%;
-        background: rgba(255,255,255,0.04);
-        border: 1px solid rgba(255,255,255,0.1);
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 5px;
         color: #c8d4c0;
         font-size: 11px;
         padding: 5px 7px;
         font-family: inherit;
       }
-      .dp-select:focus { outline: none; border-color: rgba(74,222,128,0.3); }
-      .dp-select option { background: #0a1018; }
+      .dp-select:focus {
+        outline: none;
+        border-color: rgba(74, 222, 128, 0.3);
+      }
+      .dp-select option {
+        background: #0a1018;
+      }
       .dp-btn-full {
         width: 100%;
-        background: rgba(74,222,128,0.12);
-        border: 1px solid rgba(74,222,128,0.3);
+        background: rgba(74, 222, 128, 0.12);
+        border: 1px solid rgba(74, 222, 128, 0.3);
         color: #4ade80;
         border-radius: 5px;
         padding: 7px;
@@ -248,7 +328,9 @@
         transition: all 0.15s;
         letter-spacing: 0.02em;
       }
-      .dp-btn-full:hover { background: rgba(74,222,128,0.2); }
+      .dp-btn-full:hover {
+        background: rgba(74, 222, 128, 0.2);
+      }
 
       /* Dev toggle button in header */
       #devToggleBtn {
@@ -260,11 +342,19 @@
         padding: 4px 6px;
         border-radius: 6px;
         opacity: 0.35;
-        transition: opacity 0.15s, color 0.15s;
+        transition:
+          opacity 0.15s,
+          color 0.15s;
         line-height: 1;
       }
-      #devToggleBtn:hover { opacity: 1; color: #4ade80; }
-      #devToggleBtn.active { opacity: 1; color: #4ade80; }
+      #devToggleBtn:hover {
+        opacity: 1;
+        color: #4ade80;
+      }
+      #devToggleBtn.active {
+        opacity: 1;
+        color: #4ade80;
+      }
 
       /* Toast inside dev panel */
       #dp-toast {
@@ -272,8 +362,8 @@
         bottom: 10px;
         left: 50%;
         transform: translateX(-50%);
-        background: rgba(74,222,128,0.15);
-        border: 1px solid rgba(74,222,128,0.3);
+        background: rgba(74, 222, 128, 0.15);
+        border: 1px solid rgba(74, 222, 128, 0.3);
         color: #4ade80;
         border-radius: 6px;
         padding: 4px 12px;
@@ -283,7 +373,9 @@
         pointer-events: none;
         white-space: nowrap;
       }
-      #dp-toast.show { opacity: 1; }
+      #dp-toast.show {
+        opacity: 1;
+      }
     </style>
   </head>
   <body>
@@ -292,7 +384,13 @@
         <div class="header">
           <h1>Sales Assistant</h1>
           <div style="display: flex; gap: 12px; align-items: center">
-            <button id="devToggleBtn" title="Dev Panel (Ctrl+Shift+D)" onclick="toggleDevPanel()">⚙</button>
+            <button
+              id="devToggleBtn"
+              title="Dev Panel (Ctrl+Shift+D)"
+              onclick="toggleDevPanel()"
+            >
+              ⚙
+            </button>
             <a href="/knowledge" class="reset-btn" style="text-decoration: none"
               >Knowledge Base</a
             >
@@ -314,7 +412,7 @@
               class="reset-btn"
               id="prospectToggleBtn"
               onclick="openProspectSetup()"
-              style="border-color: rgba(6,182,212,0.3); color: #06b6d4"
+              style="border-color: rgba(6, 182, 212, 0.3); color: #06b6d4"
             >
               Prospect Mode
             </button>
@@ -388,12 +486,49 @@
         </div>
         <div class="training-section training-qa">
           <div class="training-label">💬 Ask the coach</div>
-          <div style="display:flex;gap:6px;margin-top:4px">
-            <label class="sr-only" for="trainingQuestion">Training question</label>
-            <input type="text" id="trainingQuestion" placeholder="e.g. What should I have said instead?" style="flex:1;padding:6px 10px;border:1px solid #444;border-radius:6px;background:#1a1a2e;color:#e0e0e0;font-size:13px" onkeydown="if(event.key==='Enter')askTrainingCoach()">
-            <button onclick="askTrainingCoach()" style="padding:6px 12px;border:none;border-radius:6px;background:#4a9eff;color:#fff;cursor:pointer;font-size:13px">Ask</button>
+          <div style="display: flex; gap: 6px; margin-top: 4px">
+            <label class="sr-only" for="trainingQuestion"
+              >Training question</label
+            >
+            <input
+              type="text"
+              id="trainingQuestion"
+              placeholder="e.g. What should I have said instead?"
+              style="
+                flex: 1;
+                padding: 6px 10px;
+                border: 1px solid #444;
+                border-radius: 6px;
+                background: #1a1a2e;
+                color: #e0e0e0;
+                font-size: 13px;
+              "
+              onkeydown="if (event.key === 'Enter') askTrainingCoach();"
+            />
+            <button
+              onclick="askTrainingCoach()"
+              style="
+                padding: 6px 12px;
+                border: none;
+                border-radius: 6px;
+                background: #4a9eff;
+                color: #fff;
+                cursor: pointer;
+                font-size: 13px;
+              "
+            >
+              Ask
+            </button>
           </div>
-          <div id="trainingAnswer" style="margin-top:6px;font-size:13px;color:#b0b0b0;min-height:18px"></div>
+          <div
+            id="trainingAnswer"
+            style="
+              margin-top: 6px;
+              font-size: 13px;
+              color: #b0b0b0;
+              min-height: 18px;
+            "
+          ></div>
         </div>
       </div>
     </div>
@@ -406,13 +541,25 @@
       </div>
       <div class="quiz-body">
         <div class="quiz-type-buttons">
-          <button class="quiz-type-btn active" onclick="selectQuizType('stage')" id="quiz-btn-stage">
+          <button
+            class="quiz-type-btn active"
+            onclick="selectQuizType('stage')"
+            id="quiz-btn-stage"
+          >
             Stage
           </button>
-          <button class="quiz-type-btn" onclick="selectQuizType('next_move')" id="quiz-btn-next_move">
+          <button
+            class="quiz-type-btn"
+            onclick="selectQuizType('next_move')"
+            id="quiz-btn-next_move"
+          >
             Next Move
           </button>
-          <button class="quiz-type-btn" onclick="selectQuizType('direction')" id="quiz-btn-direction">
+          <button
+            class="quiz-type-btn"
+            onclick="selectQuizType('direction')"
+            id="quiz-btn-direction"
+          >
             Direction
           </button>
         </div>
@@ -425,7 +572,11 @@
             class="quiz-answer-input"
             placeholder="Type your answer here..."
           ></textarea>
-          <button class="quiz-submit-btn" onclick="submitQuiz()" id="quizSubmitBtn">
+          <button
+            class="quiz-submit-btn"
+            onclick="submitQuiz()"
+            id="quizSubmitBtn"
+          >
             Submit Answer
           </button>
         </div>
@@ -437,13 +588,21 @@
     <div id="prospectPanel">
       <div class="prospect-header">
         <span>Prospect Mode</span>
-        <button class="prospect-close-btn" onclick="endProspectMode()">×</button>
+        <button class="prospect-close-btn" onclick="endProspectMode()">
+          ×
+        </button>
       </div>
       <div class="prospect-body">
         <div class="prospect-section">
           <div class="prospect-label">Prospect</div>
           <div class="prospect-value" id="prospectName">—</div>
-          <div class="prospect-value" id="prospectBackground" style="font-size:11px;color:#8b8fa3;margin-top:2px">—</div>
+          <div
+            class="prospect-value"
+            id="prospectBackground"
+            style="font-size: 11px; color: #8b8fa3; margin-top: 2px"
+          >
+            —
+          </div>
         </div>
         <div class="prospect-section">
           <div class="prospect-label">Difficulty</div>
@@ -452,35 +611,67 @@
         <div class="prospect-section">
           <div class="prospect-label">Buying Readiness</div>
           <div class="prospect-readiness-bar">
-            <div class="prospect-readiness-fill" id="prospectReadinessFill" style="width:20%;background:#ef4444"></div>
+            <div
+              class="prospect-readiness-fill"
+              id="prospectReadinessFill"
+              style="width: 20%; background: #ef4444"
+            ></div>
           </div>
-          <div style="display:flex;justify-content:space-between;margin-top:3px">
-            <span style="font-size:10px;color:#6b6b80">Not interested</span>
-            <span style="font-size:12px;font-weight:600;color:#06b6d4" id="prospectReadinessVal">0%</span>
-            <span style="font-size:10px;color:#6b6b80">Ready to buy</span>
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              margin-top: 3px;
+            "
+          >
+            <span style="font-size: 10px; color: #6b6b80">Not interested</span>
+            <span
+              style="font-size: 12px; font-weight: 600; color: #06b6d4"
+              id="prospectReadinessVal"
+              >0%</span
+            >
+            <span style="font-size: 10px; color: #6b6b80">Ready to buy</span>
           </div>
         </div>
         <div class="prospect-section">
           <div class="prospect-label">Turn</div>
           <div class="prospect-value" id="prospectTurnCount">0</div>
         </div>
-        <div class="prospect-section" id="prospectCoachingSection" style="display:none">
+        <div
+          class="prospect-section"
+          id="prospectCoachingSection"
+          style="display: none"
+        >
           <div class="prospect-label">Coaching Hint</div>
           <div class="prospect-coaching" id="prospectCoachingHint">—</div>
         </div>
         <div class="prospect-section">
-          <button class="prospect-btn danger" onclick="endAndScore()">End &amp; Score</button>
+          <button class="prospect-btn danger" onclick="endAndScore()">
+            End &amp; Score
+          </button>
         </div>
         <div class="prospect-settings">
-          <button class="prospect-settings-toggle" onclick="toggleProspectSettings()">Settings</button>
+          <button
+            class="prospect-settings-toggle"
+            onclick="toggleProspectSettings()"
+          >
+            Settings
+          </button>
           <div class="prospect-settings-body" id="prospectSettingsBody">
             <div class="prospect-setting-row">
               <span>Show hints</span>
-              <div class="toggle-switch" id="prospectHintsToggle" onclick="toggleProspectHints()"></div>
+              <div
+                class="toggle-switch"
+                id="prospectHintsToggle"
+                onclick="toggleProspectHints()"
+              ></div>
             </div>
             <div class="prospect-setting-row">
               <span>Evaluation display</span>
-              <select id="prospectEvalDisplay" onchange="saveProspectSettings()">
+              <select
+                id="prospectEvalDisplay"
+                onchange="saveProspectSettings()"
+              >
                 <option value="inline">Inline</option>
                 <option value="modal">Modal</option>
                 <option value="panel">Panel</option>
@@ -498,15 +689,27 @@
         <div class="prospect-setup-field">
           <label>Difficulty</label>
           <div class="prospect-diff-buttons">
-            <button class="prospect-diff-btn" onclick="selectProspectDifficulty('easy', this)" data-diff="easy">
+            <button
+              class="prospect-diff-btn"
+              onclick="selectProspectDifficulty('easy', this)"
+              data-diff="easy"
+            >
               <span class="diff-label">Easy</span>
               <span class="diff-desc">Friendly buyer</span>
             </button>
-            <button class="prospect-diff-btn selected" onclick="selectProspectDifficulty('medium', this)" data-diff="medium">
+            <button
+              class="prospect-diff-btn selected"
+              onclick="selectProspectDifficulty('medium', this)"
+              data-diff="medium"
+            >
               <span class="diff-label">Medium</span>
               <span class="diff-desc">Cautious evaluator</span>
             </button>
-            <button class="prospect-diff-btn" onclick="selectProspectDifficulty('hard', this)" data-diff="hard">
+            <button
+              class="prospect-diff-btn"
+              onclick="selectProspectDifficulty('hard', this)"
+              data-diff="hard"
+            >
               <span class="diff-label">Hard</span>
               <span class="diff-desc">Tough negotiator</span>
             </button>
@@ -514,14 +717,24 @@
         </div>
         <div class="prospect-setup-field">
           <label>Product</label>
-          <label class="sr-only" for="prospectProductSelect">Prospect product</label>
+          <label class="sr-only" for="prospectProductSelect"
+            >Prospect product</label
+          >
           <select id="prospectProductSelect">
             <option value="default">General (any product)</option>
           </select>
         </div>
         <div class="prospect-setup-actions">
-          <button class="prospect-setup-cancel" onclick="closeProspectSetup()">Cancel</button>
-          <button class="prospect-setup-start" id="prospectStartBtn" onclick="startProspectMode()">Start Practice</button>
+          <button class="prospect-setup-cancel" onclick="closeProspectSetup()">
+            Cancel
+          </button>
+          <button
+            class="prospect-setup-start"
+            id="prospectStartBtn"
+            onclick="startProspectMode()"
+          >
+            Start Practice
+          </button>
         </div>
       </div>
     </div>
@@ -534,17 +747,24 @@
         <button class="dp-close" onclick="toggleDevPanel()">×</button>
       </div>
       <div class="dp-body">
-
         <!-- 1. Session State -->
         <div class="dp-section">
           <div class="dp-section-label">Session State</div>
           <div class="dp-kv" id="dp-state">
-            <span class="dp-k">Strategy</span><span class="dp-v" id="dp-s-strategy">—</span>
-            <span class="dp-k">Stage</span><span class="dp-v" id="dp-s-stage">—</span>
-            <span class="dp-k">Stage turns</span><span class="dp-v" id="dp-s-stageTurns">—</span>
-            <span class="dp-k">Total turns</span><span class="dp-v" id="dp-s-totalTurns">—</span>
-            <span class="dp-k">Provider</span><span class="dp-v" id="dp-s-provider">—</span>
-            <span class="dp-k">Model</span><span class="dp-v" id="dp-s-model" style="word-break:break-all">—</span>
+            <span class="dp-k">Strategy</span
+            ><span class="dp-v" id="dp-s-strategy">—</span>
+            <span class="dp-k">Stage</span
+            ><span class="dp-v" id="dp-s-stage">—</span>
+            <span class="dp-k">Stage turns</span
+            ><span class="dp-v" id="dp-s-stageTurns">—</span>
+            <span class="dp-k">Total turns</span
+            ><span class="dp-v" id="dp-s-totalTurns">—</span>
+            <span class="dp-k">Provider</span
+            ><span class="dp-v" id="dp-s-provider">—</span>
+            <span class="dp-k">Model</span
+            ><span class="dp-v" id="dp-s-model" style="word-break: break-all"
+              >—</span
+            >
           </div>
         </div>
 
@@ -552,15 +772,27 @@
         <div class="dp-section">
           <div class="dp-section-label">Jump to Stage</div>
           <div class="dp-stages" id="dp-stage-btns"></div>
-          <div class="dp-stage-note">Bypasses FSM prerequisites — next message will reply from the chosen stage.</div>
+          <div class="dp-stage-note">
+            Bypasses FSM prerequisites — next message will reply from the chosen
+            stage.
+          </div>
         </div>
 
         <!-- 3. Message Analyser -->
         <div class="dp-section">
           <div class="dp-section-label">Message Analyser</div>
-          <div style="font-size:10px;color:#3a5040;line-height:1.4">Check what signals fire and whether this message would advance the current stage — without sending anything to the LLM.</div>
+          <div style="font-size: 10px; color: #3a5040; line-height: 1.4">
+            Check what signals fire and whether this message would advance the
+            current stage — without sending anything to the LLM.
+          </div>
           <div class="dp-analyse-row">
-            <input type="text" id="dp-analyse-input" class="dp-input" placeholder="Paste or type a test message…" onkeydown="if(event.key==='Enter')devAnalyseMessage()">
+            <input
+              type="text"
+              id="dp-analyse-input"
+              class="dp-input"
+              placeholder="Paste or type a test message…"
+              onkeydown="if (event.key === 'Enter') devAnalyseMessage();"
+            />
             <button class="dp-btn" onclick="devAnalyseMessage()">Run</button>
           </div>
           <div class="dp-analyse-result" id="dp-analyse-result"></div>
@@ -571,12 +803,24 @@
           <div class="dp-section-label">
             System Prompt
             <div class="dp-btn-row">
-              <button class="dp-btn-sm" onclick="devFetchPrompt()">Fetch</button>
-              <button class="dp-btn-sm" id="dp-copy-btn" onclick="devCopyPrompt()" style="display:none">Copy</button>
+              <button class="dp-btn-sm" onclick="devFetchPrompt()">
+                Fetch
+              </button>
+              <button
+                class="dp-btn-sm"
+                id="dp-copy-btn"
+                onclick="devCopyPrompt()"
+                style="display: none"
+              >
+                Copy
+              </button>
             </div>
           </div>
-          <div style="font-size:10px;color:#3a5040;line-height:1.4">Exact text sent to the LLM as the system message for the current stage.</div>
-          <div class="dp-prompt-wrap" id="dp-prompt-wrap" style="display:none">
+          <div style="font-size: 10px; color: #3a5040; line-height: 1.4">
+            Exact text sent to the LLM as the system message for the current
+            stage.
+          </div>
+          <div class="dp-prompt-wrap" id="dp-prompt-wrap" style="display: none">
             <pre class="dp-prompt-pre" id="dp-prompt-pre"></pre>
           </div>
         </div>
@@ -584,14 +828,28 @@
         <!-- 5. Reinitialise -->
         <div class="dp-section">
           <div class="dp-section-label">Reinitialise</div>
-          <div style="font-size:10px;color:#3a5040;line-height:1.4;margin-bottom:8px">Start a fresh session with specific settings. Resets the full conversation.</div>
+          <div
+            style="
+              font-size: 10px;
+              color: #3a5040;
+              line-height: 1.4;
+              margin-bottom: 8px;
+            "
+          >
+            Start a fresh session with specific settings. Resets the full
+            conversation.
+          </div>
           <div class="dp-field">
             <label>Product</label>
-            <select id="dp-product" class="dp-select"><option value="">Loading…</option></select>
+            <select id="dp-product" class="dp-select">
+              <option value="">Loading…</option>
+            </select>
           </div>
           <div class="dp-field">
             <label>Provider</label>
-            <select id="dp-provider-sel" class="dp-select"><option value="">Loading…</option></select>
+            <select id="dp-provider-sel" class="dp-select">
+              <option value="">Loading…</option>
+            </select>
           </div>
           <div class="dp-field">
             <label>Strategy override</label>
@@ -601,9 +859,10 @@
               <option value="transactional">Force transactional</option>
             </select>
           </div>
-          <button class="dp-btn-full" onclick="devApplyReinit()">Apply &amp; Reset</button>
+          <button class="dp-btn-full" onclick="devApplyReinit()">
+            Apply &amp; Reset
+          </button>
         </div>
-
       </div>
       <div id="dp-toast"></div>
     </div>

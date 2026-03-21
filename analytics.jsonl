@@ -118,3 +118,4 @@
 {"timestamp": "2026-03-21T22:51:15.259887", "session_id": "025d981ae9fd3407ce1b29866979994a", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_b"}
 {"timestamp": "2026-03-21T22:52:22.914682", "session_id": "7c5232d2315f1bc372861e1d8e2e7f0e", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
 {"timestamp": "2026-03-21T22:53:32.432245", "session_id": "05149db60ad0b32a25660b9a6df14f6e", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_b"}
+{"timestamp": "2026-03-21T22:55:23.713285", "session_id": "85e75be80012dcf7addce3dedbe28a97", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_b"}
