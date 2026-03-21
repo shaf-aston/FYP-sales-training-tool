@@ -9,16 +9,6 @@ objection_handling:
     - "logistical"
     - "think"
 
-  # Max reframes before accepting the objection
-  # FUTURE: max_reframes feature not yet implemented — no code reads these values.
-  max_reframes:
-    fear: 3
-    logistical: 2
-    money: 4
-    partner: 3
-    think: 2
-    smokescreen: 1
-
   # Reframe strategies per type
   reframe_strategies:
     fear:
@@ -44,37 +34,71 @@ objection_handling:
       - "legitimacy_test"
 
 # Goal indicator keywords for intent locking
+# Removed near-universal verbs ("want to", "need to", "trying", "fix", "solve",
+# "improve", "upgrade", "replace", "better", "ready to", "time to") — fire on
+# unrelated utterances, causing premature intent lock.
+# Removed duplicates with high_intent (signals.yaml): "struggling", "trying to",
+# "problem", "shopping for" — kept in high_intent only (per-turn detection).
 goal_indicators:
+  # Core intent indicators (domain-agnostic)
   - "lose weight"
   - "put on muscle"
   - "been fat"
-  - "struggling"
   - "looking to"
-  - "trying to"
-  - "need to"
-  - "want to"
-  - "problem"
   - "issue"
   - "challenge"
   - "goal"
-  - "trying"
-  - "fix"
-  - "solve"
-  - "improve"
-  - "upgrade"
-  - "replace"
-  - "better"
   - "tired of"
   - "sick of"
   - "fed up"
   - "done with"
-  - "ready to"
-  - "time to"
-  - "shopping for"
   - "in the market for"
   - "comparing options"
   - "decided to"
   - "planning to buy"
+  # Real estate specific
+  - "buying a home"
+  - "selling my house"
+  - "moving to"
+  - "relocating"
+  - "downsizing"
+  - "upsizing"
+  - "first home"
+  # Fitness specific
+  - "get in shape"
+  - "build strength"
+  - "run a marathon"
+  - "competition prep"
+  - "health transformation"
+  # Financial specific
+  - "retire early"
+  - "grow wealth"
+  - "financial freedom"
+  - "passive income"
+  - "protect assets"
+  # Insurance specific
+  - "protect my family"
+  - "peace of mind"
+  - "coverage gap"
+  - "underinsured"
+  # Education specific
+  - "change careers"
+  - "upskill"
+  - "get certified"
+  - "land a job"
+  - "promotion"
+  # B2B specific
+  - "scale operations"
+  - "reduce costs"
+  - "improve efficiency"
+  - "streamline"
+  - "automate"
+  # Travel specific
+  - "need a break"
+  - "vacation"
+  - "getaway"
+  - "anniversary trip"
+  - "honeymoon"
 
 # Preference extraction keywords (prioritized by frequency & likelihood)
 # Purpose: Keyword matching → Category extraction → Injected into LLM prompt as context
@@ -245,6 +269,155 @@ preference_keywords:
     - "proof"
     - "evidence"
     - "testimonials"
+
+  # ─── Domain-Specific Preference Categories ───────────────────────────────────
+
+  # LOCATION - Real estate / travel preferences
+  location:
+    - "location"
+    - "area"
+    - "neighborhood"
+    - "district"
+    - "zip code"
+    - "commute"
+    - "nearby"
+    - "close to"
+    - "walking distance"
+    - "proximity"
+
+  # FLEXIBILITY - Time/schedule preferences
+  flexibility:
+    - "flexible"
+    - "schedule"
+    - "timing"
+    - "availability"
+    - "hours"
+    - "weekend"
+    - "evening"
+    - "part-time"
+    - "full-time"
+    - "self-paced"
+    - "on-demand"
+
+  # SUPPORT - Service/assistance preferences
+  support:
+    - "support"
+    - "help"
+    - "assistance"
+    - "customer service"
+    - "responsive"
+    - "available"
+    - "24/7"
+    - "dedicated"
+    - "personal"
+    - "one-on-one"
+
+  # SPEED - Urgency/timeline preferences
+  speed:
+    - "fast"
+    - "quick"
+    - "immediate"
+    - "urgent"
+    - "asap"
+    - "expedited"
+    - "same-day"
+    - "next-day"
+    - "timeline"
+    - "turnaround"
+
+  # PRIVACY - Security/confidentiality preferences
+  privacy:
+    - "privacy"
+    - "private"
+    - "confidential"
+    - "secure"
+    - "encrypted"
+    - "data protection"
+    - "gdpr"
+    - "hipaa"
+    - "compliant"
+
+  # SCALABILITY - Growth/expansion preferences (B2B)
+  scalability:
+    - "scale"
+    - "grow"
+    - "expand"
+    - "growth"
+    - "capacity"
+    - "enterprise"
+    - "unlimited"
+    - "seats"
+    - "users"
+
+  # SIMPLICITY - Ease of use preferences
+  simplicity:
+    - "simple"
+    - "easy"
+    - "intuitive"
+    - "user-friendly"
+    - "straightforward"
+    - "beginner"
+    - "no experience"
+    - "plug and play"
+    - "turnkey"
+
+  # CUSTOMIZATION - Personalization preferences
+  customization:
+    - "custom"
+    - "personalized"
+    - "tailored"
+    - "bespoke"
+    - "configured"
+    - "adapted"
+    - "specific needs"
+    - "unique"
+
+  # SUSTAINABILITY - Eco-conscious preferences
+  sustainability:
+    - "eco-friendly"
+    - "sustainable"
+    - "green"
+    - "environmental"
+    - "carbon"
+    - "renewable"
+    - "ethical"
+    - "organic"
+    - "recycled"
+
+  # PRESTIGE - Status/exclusivity preferences
+  prestige:
+    - "exclusive"
+    - "premium"
+    - "luxury"
+    - "prestigious"
+    - "elite"
+    - "vip"
+    - "high-end"
+    - "status"
+    - "impressive"
+
+  # TRACK RECORD - Experience/history preferences
+  track_record:
+    - "experience"
+    - "years"
+    - "established"
+    - "proven"
+    - "portfolio"
+    - "case studies"
+    - "success stories"
+    - "references"
+    - "credentials"
+
+  # COMMUNITY - Social/network preferences
+  community:
+    - "community"
+    - "network"
+    - "peers"
+    - "alumni"
+    - "connections"
+    - "like-minded"
+    - "group"
+    - "cohort"
 
 # Analysis thresholds
 thresholds:

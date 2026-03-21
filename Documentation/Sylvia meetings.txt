@@ -82,3 +82,22 @@ Working on ethics approval docs
 Mon 		02.03.2026
 Finalised and finished ethics approval
 
+
+Tues 		18.03.2026
+- Explained high-level structure of working andd justified use and UI info of current phase
+
+Make features valuable for training purpose:
+- Can assess/test user based on what they think is best way to take forward the conversation (which is compared in similarity to the bots next move and it analyses) and what phase we are in right now
+- Include future development of the chatbot being the prospect of [Easy/Med/hard]
+- Able to track user metrics to determine
+- Architectural diagrams to make CLEAR of flow and everything etc
+
+Testing:
+- system or some other kinda testing can be used; probably not unit testing as I don't have units to test. Instead said to test some part of the system testing or load testing of Render
+- Include mentioning of Developer testing
+
+
+NEXT Meeting:
+Have ready Architectural diagrams
+Ask about Including SPM Stuff
+Try to go over a section of report

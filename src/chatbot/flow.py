@@ -3,57 +3,58 @@
 from .content import generate_stage_prompt, SIGNALS
 from .analysis import text_contains_any_keyword, analyze_state, user_demands_directness, _extract_recent_user_text
 from .loader import load_analysis_config
+from .utils import Strategy, Stage
 
-_STAGE_CONFIG = load_analysis_config()
+_ANALYSIS_CONFIG = load_analysis_config()
 
 # Shared transitions used across multiple strategies (identical regardless of strategy)
 _COMMON_TRANSITIONS = {
-    "pitch": {
-        "next": "objection",
+    Stage.PITCH: {
+        "next": Stage.OBJECTION,
         "advance_on": "commitment_or_objection"
     },
-    "objection": {
+    Stage.OBJECTION: {
         "next": None,
         "advance_on": "commitment_or_walkaway"
     }
 }
 
 FLOWS = {
-    "intent": {
-        "stages": ["intent"],
+    Strategy.INTENT: {
+        "stages": [Stage.INTENT],
         "transitions": {
-            "intent": {
+            Stage.INTENT: {
                 "next": None,
                 "advance_on": None,
             }
         }
     },
 
-    "consultative": {
-        "stages": ["intent", "logical", "emotional", "pitch", "objection"],
+    Strategy.CONSULTATIVE: {
+        "stages": [Stage.INTENT, Stage.LOGICAL, Stage.EMOTIONAL, Stage.PITCH, Stage.OBJECTION],
         "transitions": {
-            "intent": {
-                "next": "logical",
+            Stage.INTENT: {
+                "next": Stage.LOGICAL,
                 "advance_on": "user_has_clear_intent"
             },
-            "logical": {
-                "next": "emotional",
+            Stage.LOGICAL: {
+                "next": Stage.EMOTIONAL,
                 "advance_on": "user_shows_doubt",
-                "urgency_skip_to": "pitch",
+                "urgency_skip_to": Stage.PITCH,
             },
-            "emotional": {
-                "next": "pitch",
+            Stage.EMOTIONAL: {
+                "next": Stage.PITCH,
                 "advance_on": "user_expressed_stakes"
             },
             **_COMMON_TRANSITIONS
         }
     },
 
-    "transactional": {
-        "stages": ["intent", "pitch", "objection"],
+    Strategy.TRANSACTIONAL: {
+        "stages": [Stage.INTENT, Stage.PITCH, Stage.OBJECTION],
         "transitions": {
-            "intent": {
-                "next": "pitch",
+            Stage.INTENT: {
+                "next": Stage.PITCH,
                 "advance_on": "user_has_clear_intent"
             },
             **_COMMON_TRANSITIONS
@@ -102,7 +103,7 @@ def _check_advancement_condition(history, user_msg, turns, stage_name, min_turns
         return False
 
     # Load config and keywords for this stage
-    stage_config = _STAGE_CONFIG.get('advancement', {}).get(stage_name, {})
+    stage_config = _ANALYSIS_CONFIG.get('advancement', {}).get(stage_name, {})
     keyword_key = {
         'logical': 'doubt_keywords',
         'emotional': 'stakes_keywords'
@@ -167,7 +168,7 @@ class SalesFlowEngine:
 
     def __init__(self, flow_type, product_context):
         if flow_type not in FLOWS:
-            flow_type = "consultative"
+            flow_type = Strategy.CONSULTATIVE
         self._initial_flow_type = flow_type  # Track initial strategy for rewind
         self.flow_config = FLOWS[flow_type]
         self.flow_type = flow_type
@@ -183,9 +184,9 @@ class SalesFlowEngine:
         'intent' discovery mode uses consultative-style prompting since it's doing
         open discovery, not product-matching.
         """
-        if self.flow_type in ("consultative", "transactional"):
+        if self.flow_type in (Strategy.CONSULTATIVE, Strategy.TRANSACTIONAL):
             return self.flow_type
-        return "consultative"
+        return Strategy.CONSULTATIVE
 
     def get_current_prompt(self, user_message=""):
         """Generate system prompt for current stage via content.py."""
@@ -203,16 +204,16 @@ class SalesFlowEngine:
         if not transition:
             return False
 
-        has_pitch_stage = "pitch" in self.flow_config["stages"]
-        
+        has_pitch_stage = Stage.PITCH in self.flow_config["stages"]
+
         # Frustration/directness OR direct info request: skip to pitch immediately
         if has_pitch_stage:
             if user_demands_directness(self.conversation_history, user_message):
-                return "pitch"
-            
+                return Stage.PITCH
+
             direct_requests = SIGNALS.get("direct_info_requests", [])
             if text_contains_any_keyword(user_message, direct_requests):
-                return "pitch"
+                return Stage.PITCH
 
         # Impatience: urgency_skip_to override (consultative only)
         if transition.get("urgency_skip_to"):
@@ -271,3 +272,13 @@ class SalesFlowEngine:
             "stage_turn_count": self.stage_turn_count,
             "total_turns": len(self.conversation_history) // 2,
         }
+
+    def restore_state(self, state):
+        """Restore FSM state from dictionary (deserialize)."""
+        self.flow_type = state["flow_type"]
+        self.current_stage = state["current_stage"]
+        self.stage_turn_count = state["stage_turn_count"]
+        self.conversation_history = state.get("conversation_history", [])
+        self._initial_flow_type = state.get("initial_flow_type", self.flow_type)
+        if self.flow_type in FLOWS:
+            self.flow_config = FLOWS[self.flow_type]

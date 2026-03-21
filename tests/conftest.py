@@ -1,10 +1,16 @@
-import os, time
+import os, sys, time
+
+# Add src/ to path for all test files
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+
+# Dummy API key so chatbot can be instantiated without real provider
+os.environ.setdefault("GROQ_API_KEY", "test_key")
 
 os.environ.setdefault("TZ", "Europe/London")
 try:
     time.tzset()
-except:
-    pass
+except AttributeError:
+    pass  # Windows
 
 try:
     import thinc.util as _thinc_util

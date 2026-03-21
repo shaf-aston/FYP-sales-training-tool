@@ -633,3 +633,336 @@ FAILED (Pre-existing):
 - Monitor real conversations to validate 10-turn safety valve is appropriate
 - Consider extracting prompt_builder.py for further decoupling
 - Tune guardedness detection to fix remaining edge case tests
+
+---
+
+## Additional Architecture Diagrams
+
+### Configuration Data Flow
+
+This diagram illustrates how YAML configuration files flow through the system:
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                         YAML CONFIGURATION LAYER                              │
+│                           src/config/*.yaml                                   │
+├─────────────────┬─────────────────┬─────────────────┬────────────────────────┤
+│  signals.yaml   │ analysis_config │ product_config  │    tactics.yaml        │
+│  (behavioral    │   .yaml         │   .yaml         │  adaptations.yaml      │
+│   signals)      │  (thresholds)   │  (products)     │  overrides.yaml        │
+└────────┬────────┴────────┬────────┴────────┬────────┴───────────┬────────────┘
+         │                 │                 │                    │
+         ▼                 ▼                 ▼                    ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                          loader.py (Configuration Hub)                        │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────────────┐  │
+│  │  load_signals() │  │load_analysis()  │  │ get_product_settings()      │  │
+│  │  → cached dict  │  │ → cached dict   │  │ → alias lookup + fallback   │  │
+│  └─────────────────┘  └─────────────────┘  └─────────────────────────────┘  │
+│  ┌─────────────────────────────────────────────────────────────────────────┐ │
+│  │                    QuickMatcher (Fuzzy Matching)                        │ │
+│  │  match_product() | match_signals() | detect_preferences()               │ │
+│  └─────────────────────────────────────────────────────────────────────────┘ │
+└──────────────────────────────────────────────────────────────────────────────┘
+         │                 │                 │                    │
+         ▼                 ▼                 ▼                    ▼
+┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
+│   analysis.py   │ │    flow.py      │ │   content.py    │ │   chatbot.py    │
+│  (NLU signals)  │ │ (FSM advances)  │ │(prompt building)│ │ (orchestration) │
+└─────────────────┘ └─────────────────┘ └─────────────────┘ └─────────────────┘
+```
+
+### Conversation Turn Sequence Diagram
+
+This sequence diagram shows the complete flow for a single conversation turn:
+
+```
+User            app.py          chatbot.py       flow.py        content.py      provider
+ │                │                 │               │               │               │
+ │  POST /chat    │                 │               │               │               │
+ │───────────────>│                 │               │               │               │
+ │                │                 │               │               │               │
+ │                │ validate_msg()  │               │               │               │
+ │                │────────────────>│               │               │               │
+ │                │                 │               │               │               │
+ │                │                 │ analyze_state()               │               │
+ │                │                 │──────────────>│               │               │
+ │                │                 │ {intent,guard}│               │               │
+ │                │                 │<──────────────│               │               │
+ │                │                 │               │               │               │
+ │                │                 │ should_advance()              │               │
+ │                │                 │───────────────────────────────>               │
+ │                │                 │ True/False/stage              │               │
+ │                │                 │<───────────────────────────────               │
+ │                │                 │               │               │               │
+ │                │                 │               │ generate_stage_prompt()       │
+ │                │                 │               │───────────────>               │
+ │                │                 │               │  prompt_str   │               │
+ │                │                 │               │<───────────────               │
+ │                │                 │               │               │               │
+ │                │                 │ generate(prompt)              │               │
+ │                │                 │──────────────────────────────────────────────>│
+ │                │                 │               │               │   LLM call    │
+ │                │                 │ LLMResponse   │               │               │
+ │                │                 │<──────────────────────────────────────────────│
+ │                │                 │               │               │               │
+ │                │ ChatResponse    │               │               │               │
+ │                │<────────────────│               │               │               │
+ │                │                 │               │               │               │
+ │  JSON reply    │                 │               │               │               │
+ │<───────────────│                 │               │               │               │
+ │                │                 │               │               │               │
+```
+
+### Product Matching Flow
+
+Shows how the QuickMatcher resolves user input to product configuration:
+
+```
+                        User Input
+                   "I need help with cars"
+                            │
+                            ▼
+              ┌─────────────────────────────┐
+              │   QuickMatcher.normalize()  │
+              │   "i need help with cars"   │
+              └──────────────┬──────────────┘
+                             │
+          ┌──────────────────┼──────────────────┐
+          │                  │                  │
+          ▼                  ▼                  ▼
+┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
+│  Exact Match    │  │  Alias Match    │  │  Fuzzy Match    │
+│  product_key    │  │  aliases list   │  │  context words  │
+│  in text?       │  │  in text?       │  │  similarity?    │
+└────────┬────────┘  └────────┬────────┘  └────────┬────────┘
+         │                    │                    │
+    "automotive"         ["car", "cars"]      "automotive
+    in text? NO          in text? YES         purchase"
+         │                    │               score: 0.4
+         │                    ▼                    │
+         │         ┌───────────────────┐           │
+         │         │ Return:           │           │
+         │         │ ("automotive",    │           │
+         │         │   0.95)           │           │
+         │         └───────────────────┘           │
+         │                    ▲                    │
+         └────────────────────┴────────────────────┘
+                              │
+                              ▼
+              ┌─────────────────────────────┐
+              │   get_product_settings()    │
+              │   → automotive config       │
+              │   strategy: transactional   │
+              │   context: "automotive..."  │
+              │   knowledge: "Toyota..."    │
+              └─────────────────────────────┘
+```
+
+### Signal Detection Pipeline
+
+Shows how behavioral signals are detected and used:
+
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│                         User Message                                       │
+│                  "I've been struggling to lose weight"                     │
+└────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                    ┌───────────────┼───────────────┐
+                    │               │               │
+                    ▼               ▼               ▼
+          ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
+          │  Signal Match   │ │ Preference Match│ │ Goal Indicator  │
+          │  signals.yaml   │ │analysis_config  │ │analysis_config  │
+          └────────┬────────┘ └────────┬────────┘ └────────┬────────┘
+                   │                   │                   │
+          emotional_disclosure  fitness/health      "lose weight"
+          ["struggling"]        (none detected)     goal_indicators
+                   │                   │                   │
+                   └───────────────────┼───────────────────┘
+                                       │
+                                       ▼
+                    ┌─────────────────────────────────────────┐
+                    │            analyze_state()              │
+                    │  {                                      │
+                    │    intent: "high",                      │
+                    │    emotional_disclosure: true,          │
+                    │    goal_stated: true,                   │
+                    │    product_hint: "fitness"              │
+                    │  }                                      │
+                    └─────────────────────────────────────────┘
+                                       │
+                    ┌──────────────────┴───────────────────┐
+                    │                                      │
+                    ▼                                      ▼
+          ┌─────────────────────────┐      ┌─────────────────────────────┐
+          │      flow.py            │      │       content.py            │
+          │  Advancement check:     │      │  Prompt adaptation:         │
+          │  → user_has_clear_      │      │  → Acknowledge emotion      │
+          │    intent() = True      │      │  → Consultative mode        │
+          │  → Advance stage        │      │  → NEPQ stage rules         │
+          └─────────────────────────┘      └─────────────────────────────┘
+```
+
+### Complete System Architecture
+
+High-level view of all major components and their interactions:
+
+```
+┌────────────────────────────────────────────────────────────────────────────────┐
+│                              WEB LAYER (Flask)                                  │
+│  ┌──────────────────────────┐  ┌──────────────────────────────────────────┐   │
+│  │        app.py            │  │           security.py                    │   │
+│  │  - REST endpoints        │  │  - Rate limiting                         │   │
+│  │  - Session management    │  │  - Input validation                      │   │
+│  │  - Error handling        │  │  - Prompt injection detection            │   │
+│  └────────────┬─────────────┘  └──────────────────────────────────────────┘   │
+│               │                                                                 │
+└───────────────┼─────────────────────────────────────────────────────────────────┘
+                │
+                ▼
+┌────────────────────────────────────────────────────────────────────────────────┐
+│                            CORE CHATBOT LAYER                                   │
+│  ┌──────────────────────────┐  ┌──────────────────────────────────────────┐   │
+│  │       chatbot.py         │  │           trainer.py                     │   │
+│  │  - Orchestration         │  │  - Coaching feedback                     │   │
+│  │  - Session state         │  │  - Q&A handling                          │   │
+│  │  - History management    │  │  - Training prompts                      │   │
+│  │  - Rewind/edit           │  │                                          │   │
+│  └────────────┬─────────────┘  └──────────────────────────────────────────┘   │
+│               │                                                                 │
+│  ┌────────────┴─────────────────────────────────────────────────────────────┐  │
+│  │                        FSM + PROMPT ENGINE                                │  │
+│  │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────────┐   │  │
+│  │  │    flow.py      │  │   content.py    │  │      analysis.py        │   │  │
+│  │  │                 │  │                 │  │                         │   │  │
+│  │  │ - Stage mgmt    │  │ - Prompt gen    │  │ - NLU signals           │   │  │
+│  │  │ - Advancement   │  │ - Rule inject   │  │ - State detection       │   │  │
+│  │  │ - Strategy sw.  │  │ - Tactic select │  │ - Keyword matching      │   │  │
+│  │  └────────┬────────┘  └────────┬────────┘  └───────────┬─────────────┘   │  │
+│  │           │                    │                       │                  │  │
+│  │           └────────────────────┼───────────────────────┘                  │  │
+│  └────────────────────────────────┼──────────────────────────────────────────┘  │
+│                                   │                                             │
+└───────────────────────────────────┼─────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────────────┐
+│                          CONFIGURATION LAYER                                    │
+│  ┌──────────────────────────┐  ┌──────────────────────────────────────────┐   │
+│  │       loader.py          │  │           src/config/*.yaml              │   │
+│  │                          │  │                                          │   │
+│  │ - YAML loading           │  │ signals.yaml      - behavioral signals   │   │
+│  │ - Caching                │  │ analysis_config   - thresholds/prefs     │   │
+│  │ - Template rendering     │  │ product_config    - products/knowledge   │   │
+│  │ - QuickMatcher           │  │ tactics.yaml      - conversation tactics │   │
+│  │ - Alias resolution       │  │ adaptations.yaml  - mode adaptations     │   │
+│  │                          │  │ overrides.yaml    - early returns        │   │
+│  │                          │  │ prospect_config   - buyer personas       │   │
+│  └──────────────────────────┘  └──────────────────────────────────────────┘   │
+│                                                                                 │
+└────────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────────────┐
+│                            LLM PROVIDER LAYER                                   │
+│  ┌──────────────────────────┐  ┌──────────────────────────────────────────┐   │
+│  │      factory.py          │  │          Provider Implementations        │   │
+│  │                          │  │                                          │   │
+│  │ create_provider()        │  │  groq_provider.py   → Groq Cloud API     │   │
+│  │ - Factory pattern        │  │  ollama_provider.py → Ollama local       │   │
+│  │ - Env-driven selection   │  │  dummy_provider.py  → Testing mock       │   │
+│  │                          │  │                                          │   │
+│  │        ↓                 │  │  All implement BaseLLMProvider:          │   │
+│  │  BaseLLMProvider         │  │  - generate(prompt, history)             │   │
+│  │  (abstract interface)    │  │  - health_check()                        │   │
+│  └──────────────────────────┘  └──────────────────────────────────────────┘   │
+│                                                                                 │
+└────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### YAML Configuration Schema
+
+Reference diagram for configuration file structure:
+
+```
+src/config/
+│
+├── signals.yaml                    # Behavioral keyword lists
+│   ├── commitment: [...]           # "let's do it", "sign me up"
+│   ├── objection: [...]            # "too much", "hesitant"
+│   ├── walking: [...]              # "no thanks", "pass"
+│   ├── low_intent: [...]           # "just browsing"
+│   ├── high_intent: [...]          # "urgent", "immediately"
+│   ├── guardedness_keywords:       # Nested by type
+│   │   ├── sarcasm: [...]
+│   │   ├── deflection: [...]
+│   │   └── defensive: [...]
+│   ├── demand_directness: [...]    # "get to the point"
+│   ├── direct_info_requests: [...]
+│   ├── *_bot_indicators: [...]     # Strategy detection (bot)
+│   ├── user_*_signals: [...]       # Strategy detection (user)
+│   └── *_intent: [...]             # Domain-specific signals
+│
+├── analysis_config.yaml            # Thresholds and patterns
+│   ├── objection_handling:
+│   │   ├── classification_order: [...]
+│   │   └── reframe_strategies: {...}
+│   ├── goal_indicators: [...]
+│   ├── preference_keywords:        # 15+ categories
+│   │   ├── budget: [...]
+│   │   ├── reliability: [...]
+│   │   └── ... (see file)
+│   ├── thresholds:
+│   │   ├── min_substantive_word_count: 8
+│   │   └── ...
+│   ├── question_patterns:
+│   │   ├── starters: [...]
+│   │   └── rhetorical_markers: [...]
+│   └── advancement:                # FSM stage config
+│       ├── intent: {...}
+│       ├── logical:
+│       │   ├── max_turns: 10
+│       │   └── doubt_keywords: [...]
+│       └── emotional:
+│           ├── max_turns: 10
+│           └── stakes_keywords: [...]
+│
+├── product_config.yaml             # Product definitions
+│   └── products:
+│       ├── default:
+│       │   ├── strategy: "intent"
+│       │   └── knowledge: "..."
+│       ├── luxury_cars:
+│       │   ├── strategy: "consultative"
+│       │   ├── aliases: [...]
+│       │   ├── context: "..."
+│       │   └── knowledge: "..."
+│       └── ... (10+ products)
+│
+├── tactics.yaml                    # Conversation tactics
+│   ├── elicitation:
+│   │   ├── presumptive: [...]
+│   │   ├── understatement: [...]
+│   │   └── combined: [...]
+│   └── lead_ins: {...}
+│
+├── adaptations.yaml                # Mode adaptations
+│   ├── decisive_user: {...}
+│   ├── literal_question: {...}
+│   └── low_intent_guarded: {...}
+│
+├── overrides.yaml                  # Early-return overrides
+│   ├── direct_info_request: {...}
+│   ├── soft_positive_at_pitch: {...}
+│   └── excessive_validation: {...}
+│
+└── prospect_config.yaml            # AI prospect personas
+    ├── difficulty_profiles:
+    │   ├── easy: {...}
+    │   ├── medium: {...}
+    │   └── hard: {...}
+    ├── personas: {...}
+    └── evaluation: {...}
+```

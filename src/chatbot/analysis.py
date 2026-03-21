@@ -8,6 +8,10 @@ import random
 from functools import lru_cache
 
 from .loader import load_analysis_config, load_signals
+from .utils import range_label
+
+_GUARD_THRESHOLDS = [1, 2, 3]
+_GUARD_LEVELS = [0.0, 0.3, 0.6, 1.0]
 
 _yaml_config = load_analysis_config()
 _T = _yaml_config["thresholds"]
@@ -120,14 +124,7 @@ def detect_guardedness(user_message, history):
             match_count += 1
     
     # Map match count to guardedness level
-    if match_count == 0:
-        return 0.0
-    elif match_count == 1:
-        return 0.3
-    elif match_count == 2:
-        return 0.6
-    else:
-        return 1.0
+    return range_label(match_count, _GUARD_THRESHOLDS, _GUARD_LEVELS)
 
 
 def analyze_state(history, user_message="", signal_keywords=None):

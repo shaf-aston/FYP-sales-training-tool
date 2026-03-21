@@ -14,6 +14,9 @@ METRICS_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'metrics.json
 # File-level lock — PerformanceTracker methods are called from request threads
 lock = Lock()
 
+MAX_METRICS_LINES = 5000     # rotate when file reaches this line count
+_METRICS_LINES_KEEP = 2500   # keep newest N lines after rotation
+
 # TTL cache for provider stats (avoid full file scan on every health check)
 _stats_cache = {"data": {}, "ts": 0.0}
 _STATS_TTL = 30.0  # seconds
@@ -37,6 +40,12 @@ class PerformanceTracker:
         }
         with lock:
             try:
+                if os.path.exists(METRICS_FILE):
+                    with open(METRICS_FILE, 'r') as f:
+                        lines = f.readlines()
+                    if len(lines) >= MAX_METRICS_LINES:
+                        with open(METRICS_FILE, 'w') as f:
+                            f.writelines(lines[-_METRICS_LINES_KEEP:])
                 with open(METRICS_FILE, 'a') as f:
                     f.write(json.dumps(metric) + '\n')
             except Exception as e:
@@ -69,13 +78,14 @@ class PerformanceTracker:
             except FileNotFoundError:
                 pass
 
-        # Calculate averages
-        for provider, data in stats.items():
-            data["avg_latency_ms"] = data["total_latency"] / data["count"] if data["count"] > 0 else 0
+            # Calculate averages
+            for provider, data in stats.items():
+                data["avg_latency_ms"] = data["total_latency"] / data["count"] if data["count"] > 0 else 0
 
-        # Update cache
-        _stats_cache["data"] = stats
-        _stats_cache["ts"] = now
+            # Update cache
+            _stats_cache["data"] = stats
+            _stats_cache["ts"] = now
+
         return stats
 
     @staticmethod

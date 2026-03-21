@@ -8,10 +8,6 @@ Tests for:
 """
 
 import pytest
-import sys, os
-
-# Allow imports from src/
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from chatbot.analysis import (
     analyze_state,

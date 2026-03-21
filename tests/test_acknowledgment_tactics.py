@@ -9,12 +9,7 @@ Academic Basis:
 Framework: AAA pattern (Arrange-Act-Assert)
 """
 
-import sys, os, pytest
-
-# Allow imports from src/
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
-
-os.environ.setdefault("GROQ_API_KEY", "test_key")
+import pytest
 
 from chatbot.analysis import (
     detect_acknowledgment_context,

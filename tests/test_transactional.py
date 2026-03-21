@@ -10,8 +10,7 @@ This demonstrates the fixed transactional sales strategy:
 - Leads toward purchase action
 """
 
-import sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+import os
 from dotenv import load_dotenv
 load_dotenv()
 

@@ -2,6 +2,7 @@
 
 import json
 import logging
+import os
 import re
 import time
 from dataclasses import dataclass
@@ -11,6 +12,7 @@ from .analysis import text_contains_any_keyword
 from .flow import SalesFlowEngine
 from .performance import PerformanceTracker
 from .providers import create_provider
+from .utils import Strategy
 from . import trainer
 
 _base_logger = logging.getLogger(__name__)
@@ -40,6 +42,8 @@ class SalesChatbot:
     def __init__(self, provider_type=None, model=None, product_type=None, session_id=None):
         self.provider = create_provider(provider_type, model=model)
         self.session_id = session_id
+        self.product_type = product_type
+        self.provider_type = provider_type
         self.logger = logging.LoggerAdapter(_base_logger, {"session_id": session_id or "-"})
         
         # Cache provider info to avoid repeated lookups
@@ -98,6 +102,7 @@ class SalesChatbot:
 
             bot_reply = llm_response.content
             self.flow_engine.add_turn(user_message, bot_reply)
+            self.save_session()
 
             if self.session_id:
                 PerformanceTracker.log_stage_latency(
@@ -145,35 +150,40 @@ class SalesChatbot:
             output_len=len(message),
         )
 
+    def _detect_and_switch_strategy(self, user_message) -> bool:
+        """Inspect signals to detect and switch strategy. Returns True if switch occurred."""
+        history = self.flow_engine.conversation_history
+        user_text = (user_message or "").lower()
+        has_cons_user = text_contains_any_keyword(user_text, _USER_CONSULTATIVE_SIGNALS)
+        has_trans_user = text_contains_any_keyword(user_text, _USER_TRANSACTIONAL_SIGNALS)
+
+        if has_cons_user:
+            self.flow_engine.switch_strategy(Strategy.CONSULTATIVE)
+            return True
+        elif has_trans_user:
+            self.flow_engine.switch_strategy(Strategy.TRANSACTIONAL)
+            return True
+        elif len(history) >= 2:
+            bot_last = history[-1].get("content", "").lower()
+            has_trans = text_contains_any_keyword(bot_last, _TRANSACTIONAL_INDICATORS)
+            has_cons = text_contains_any_keyword(bot_last, _CONSULTATIVE_INDICATORS)
+
+            if has_cons:
+                self.flow_engine.switch_strategy(Strategy.CONSULTATIVE)
+                return True
+            elif has_trans:
+                self.flow_engine.switch_strategy(Strategy.TRANSACTIONAL)
+                return True
+            elif self.flow_engine.stage_turn_count >= 3:
+                self.flow_engine.switch_strategy(Strategy.CONSULTATIVE)
+                return True
+        return False
+
     def _apply_advancement(self, user_message):
         """Check and apply FSM stage advancement. Handles discovery -> real strategy switch."""
-        if self.flow_engine.flow_type == "intent":
-            history = self.flow_engine.conversation_history
-            user_text = (user_message or "").lower()
-            has_cons_user = text_contains_any_keyword(user_text, _USER_CONSULTATIVE_SIGNALS)
-            has_trans_user = text_contains_any_keyword(user_text, _USER_TRANSACTIONAL_SIGNALS)
-
-            if has_cons_user:
-                self.flow_engine.switch_strategy("consultative")
+        if self.flow_engine.flow_type == Strategy.INTENT:
+            if self._detect_and_switch_strategy(user_message):
                 return
-            elif has_trans_user:
-                self.flow_engine.switch_strategy("transactional")
-                return
-            elif len(history) >= 2:
-                bot_last = history[-1].get("content", "").lower()
-                has_trans = text_contains_any_keyword(bot_last, _TRANSACTIONAL_INDICATORS)
-                has_cons = text_contains_any_keyword(bot_last, _CONSULTATIVE_INDICATORS)
-
-                if has_cons:
-                    self.flow_engine.switch_strategy("consultative")
-                    return
-                elif has_trans:
-                    self.flow_engine.switch_strategy("transactional")
-                    return
-                elif self.flow_engine.stage_turn_count >= 3:
-                    self.flow_engine.switch_strategy("consultative")
-                    return
-
         advancement = self.flow_engine.should_advance(user_message)
         if advancement:
             self.flow_engine.advance(
@@ -243,3 +253,41 @@ class SalesChatbot:
         summary = self.flow_engine.get_summary()
         summary.update({"provider": self._provider_name, "model": self._model_name})
         return summary
+
+    def save_session(self):
+        """Session Persistence state to disk."""
+        if not self.session_id:
+            return
+        os.makedirs('sessions', exist_ok=True)
+        state = {
+            "session_id": self.session_id,
+            "product_type": self.product_type,
+            "provider_type": self.provider_type,
+            "flow_type": self.flow_engine.flow_type,
+            "current_stage": self.flow_engine.current_stage,
+            "stage_turn_count": self.flow_engine.stage_turn_count,
+            "conversation_history": self.flow_engine.conversation_history,
+            "initial_flow_type": self.flow_engine._initial_flow_type
+        }
+        with open(f"sessions/{self.session_id}.json", "w") as f:
+            json.dump(state, f)
+
+    @staticmethod
+    def load_session(session_id):
+        """Load session from disk if exists. Returns SalesChatbot or None."""
+        try:
+            path = f"sessions/{session_id}.json"
+            if not os.path.exists(path):
+                return None
+            with open(path, "r") as f:
+                state = json.load(f)
+            bot = SalesChatbot(
+                provider_type=state.get("provider_type"),
+                product_type=state.get("product_type"),
+                session_id=session_id
+            )
+            bot.flow_engine.restore_state(state)
+            return bot
+        except Exception as e:
+            logging.getLogger(__name__).error(f"Failed to load session {session_id}: {e}")
+            return None

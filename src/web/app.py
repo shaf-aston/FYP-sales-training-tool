@@ -3,6 +3,8 @@ from flask_cors import CORS
 import os
 import sys
 import secrets
+import threading
+import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from dotenv import load_dotenv
@@ -15,13 +17,14 @@ from chatbot.chatbot import SalesChatbot
 from chatbot.providers import get_available_providers
 from chatbot.performance import PerformanceTracker
 from chatbot.content import generate_init_greeting
+from chatbot.loader import QuickMatcher
 from chatbot.knowledge import (
     load_custom_knowledge, save_custom_knowledge,
     clear_custom_knowledge, ALLOWED_FIELDS, MAX_FIELD_LENGTH,
 )
 
 # Security module (centralized security controls)
-from .security import (
+from web.security import (
     SecurityConfig,
     RateLimiter,
     PromptInjectionValidator,
@@ -58,6 +61,11 @@ rate_limiter, session_manager, injection_validator = initialize_security(
 # Wire security middleware
 app.after_request(SecurityHeadersMiddleware.apply)
 session_manager.start_background_cleanup()
+
+
+# ─── Prospect Session Cleanup ──────────────────────────────────────────────────
+# Start background cleanup for prospect sessions (same pattern as main sessions)
+
 
 # ─── Request helpers ─────────────────────────────────────────────────────────
 
@@ -158,6 +166,12 @@ def api_init():
     # Restore existing session if still alive on server
     if existing_id:
         bot = get_session(existing_id)
+        if not bot:
+            # Try loading from disk if not in memory
+            bot = SalesChatbot.load_session(existing_id)
+            if bot:
+                set_session(existing_id, bot)
+                app.logger.info(f"Restored session from disk: {existing_id}")
         if bot:
             history = [{"role": m["role"], "content": m["content"]}
                        for m in bot.flow_engine.conversation_history]
@@ -180,7 +194,15 @@ def api_init():
     # Create new session with eager bot initialistion
     session_id = secrets.token_hex(16)
     product_type = data.get('product_type')  # None → generic default → intent-first discovery
+    user_message = data.get('user_message', '')
     provider = data.get('provider', "groq")
+
+    # Auto-detect product from user message if not explicitly provided
+    if (not product_type or product_type == 'default') and user_message:
+        detected_product, confidence = QuickMatcher.match_product(user_message)
+        if detected_product and confidence >= 0.7:
+            product_type = detected_product
+            app.logger.info(f"Auto-detected product: {product_type} (confidence: {confidence:.2f})")
 
     try:
         bot = SalesChatbot(provider_type=provider, product_type=product_type, session_id=session_id)
@@ -246,7 +268,6 @@ def api_restore():
 @app.route('/api/health', methods=['GET'])
 def api_health():
     """Health check: provider availability and performance stats"""
-    cleanup_expired_sessions()  # Lazy cleanup
     session_id = request.headers.get('X-Session-ID')
 
     # Get active provider info
@@ -275,12 +296,44 @@ def api_health():
     })
 
 
+@app.route('/api/config', methods=['GET'])
+def api_config():
+    """Expose system configuration metadata for frontend synchronization.
+
+    Returns configuration limits, available products, and strategies
+    so the frontend can validate input and guide users appropriately.
+    """
+    from chatbot.loader import load_product_config
+
+    config = load_product_config()
+    products = config.get('products', {})
+
+    return jsonify({
+        "ok": True,
+        "limits": {
+            "max_message_length": SecurityConfig.MAX_MESSAGE_LENGTH,
+            "max_field_length": SecurityConfig.MAX_FIELD_LENGTH,
+            "max_sessions": SecurityConfig.MAX_SESSIONS,
+        },
+        "rate_limits": {
+            "init": {"requests": SecurityConfig.RATE_LIMITS["init"][0], "window_seconds": SecurityConfig.RATE_LIMITS["init"][1]},
+            "chat": {"requests": SecurityConfig.RATE_LIMITS["chat"][0], "window_seconds": SecurityConfig.RATE_LIMITS["chat"][1]},
+        },
+        "products": {
+            "available": list(products.keys()),
+            "default": "default",
+        },
+        "strategies": ["consultative", "transactional", "intent"],
+    })
+
+
 @app.route('/api/reset', methods=['POST'])
 def reset():
     """Delete the current session."""
+    bot, err = require_session()
+    if err: return err
+    
     session_id = request.headers.get('X-Session-ID')
-    if not session_id:
-        return jsonify({"error": "Session ID required"}), 400
     delete_session(session_id)
     return jsonify({"success": True})
 
@@ -291,20 +344,13 @@ def reset():
 @require_rate_limit('chat')
 def chat():
     """Handle chat messages. Bot must be initialized via /api/init first."""
-    cleanup_expired_sessions()  # Lazy cleanup
     data = request.json
     user_message, err = _validate_message(data.get('message', ''))
     if err:
         return err
 
-    session_id = request.headers.get('X-Session-ID')
-    if not session_id:
-        return jsonify({"error": "Session ID required in X-Session-ID header"}), 400
-
-    # Bot must exist (created in /api/init)
-    bot = get_session(session_id)
-    if not bot:
-        return jsonify({"error": "No active session. Call /api/init first.", "code": "SESSION_EXPIRED"}), 400
+    bot, err = require_session()
+    if err: return err
 
     try:
         response = bot.chat(user_message)
@@ -414,6 +460,91 @@ def training_ask():
         return jsonify({"error": "Failed to generate answer"}), 500
 
 
+# ─── Quiz/Assessment API ─────────────────────────────────────────────────────
+
+@app.route('/api/quiz/question', methods=['GET'])
+def quiz_get_question():
+    """Get a quiz question for the specified type."""
+    bot, err = require_session()
+    if err: return err
+
+    quiz_type = request.args.get('type', 'stage')
+    from chatbot.quiz import get_quiz_question
+    question = get_quiz_question(quiz_type)
+
+    return jsonify({
+        "success": True,
+        "question": question,
+        "type": quiz_type,
+        **_bot_state(bot),
+    })
+
+
+@app.route('/api/quiz/stage', methods=['POST'])
+def quiz_stage():
+    """Stage identification quiz (deterministic evaluation)."""
+    bot, err = require_session()
+    if err: return err
+
+    data = request.json or {}
+    answer = (data.get('answer') or '').strip()
+    if not answer:
+        return jsonify({"error": "Answer required"}), 400
+    if len(answer) > SecurityConfig.MAX_MESSAGE_LENGTH:
+        return jsonify({"error": "Answer too long"}), 400
+
+    from chatbot.quiz import evaluate_stage_quiz
+    result = evaluate_stage_quiz(answer, bot)
+
+    return jsonify({"success": True, **result, **_bot_state(bot)})
+
+
+@app.route('/api/quiz/next-move', methods=['POST'])
+def quiz_next_move():
+    """Next move quiz (LLM-evaluated comparison)."""
+    bot, err = require_session()
+    if err: return err
+
+    data = request.json or {}
+    response = (data.get('response') or '').strip()
+    if not response:
+        return jsonify({"error": "Response required"}), 400
+    if len(response) > SecurityConfig.MAX_MESSAGE_LENGTH:
+        return jsonify({"error": "Response too long"}), 400
+
+    # Get last user message from history for context
+    history = bot.flow_engine.conversation_history
+    last_user_msg = ""
+    for msg in reversed(history):
+        if msg.get("role") == "user":
+            last_user_msg = msg.get("content", "")
+            break
+
+    from chatbot.quiz import evaluate_next_move_quiz
+    result = evaluate_next_move_quiz(response, bot, last_user_msg)
+
+    return jsonify({"success": True, **result, **_bot_state(bot)})
+
+
+@app.route('/api/quiz/direction', methods=['POST'])
+def quiz_direction():
+    """Direction/strategy quiz (LLM-evaluated understanding check)."""
+    bot, err = require_session()
+    if err: return err
+
+    data = request.json or {}
+    explanation = (data.get('explanation') or '').strip()
+    if not explanation:
+        return jsonify({"error": "Explanation required"}), 400
+    if len(explanation) > SecurityConfig.MAX_MESSAGE_LENGTH:
+        return jsonify({"error": "Explanation too long"}), 400
+
+    from chatbot.quiz import evaluate_direction_quiz
+    result = evaluate_direction_quiz(explanation, bot)
+
+    return jsonify({"success": True, **result, **_bot_state(bot)})
+
+
 # ─── Knowledge API ───────────────────────────────────────────────────────────
 
 @app.route('/api/knowledge', methods=['GET'])
@@ -450,6 +581,15 @@ def clear_knowledge_route():
 # ─── Dev/Debug API ───────────────────────────────────────────────────────────
 # These endpoints exist for developer testing only.
 # They expose internal FSM state and prompt content — do not expose in production.
+# Guard: set ENABLE_DEBUG_PANEL=true in .env for local dev; leave unset on deployment.
+
+_DEBUG_ENABLED = os.environ.get('ENABLE_DEBUG_PANEL', '').lower() == 'true'
+
+@app.before_request
+def _guard_debug_endpoints():
+    if request.path.startswith('/api/debug/') and not _DEBUG_ENABLED:
+        return jsonify({"error": "Debug endpoints disabled"}), 403
+
 
 @app.route('/api/debug/config', methods=['GET'])
 def debug_config():
@@ -539,6 +679,184 @@ def debug_analyse():
     })
 
 
+# ─── Prospect Mode API ──────────────────────────────────────────────────────
+
+prospect_sessions = {}  # session_id -> {"ps": ProspectSession, "ts": datetime}
+_prospect_lock = threading.Lock()
+MAX_PROSPECT_SESSIONS = 100  # Lower limit than main sessions
+
+
+def _cleanup_prospect_sessions():
+    """Remove expired prospect sessions (idle > 30 minutes)."""
+    with _prospect_lock:
+        now = datetime.now()
+        expired = [
+            sid for sid, data in prospect_sessions.items()
+            if (now - data["ts"]).total_seconds() > 1800  # 30 min idle
+        ]
+        for sid in expired:
+            del prospect_sessions[sid]
+        if expired:
+            app.logger.info(f"Cleaned {len(expired)} expired prospect sessions")
+
+
+def start_prospect_cleanup():
+    """Start background cleanup thread for prospect sessions (daemon mode)."""
+    cleanup_interval = 900  # 15 minutes, matching main session cleanup
+
+    def cleanup_loop():
+        while True:
+            try:
+                time.sleep(cleanup_interval)
+                _cleanup_prospect_sessions()
+            except Exception as e:
+                app.logger.error(f"Prospect session cleanup thread error: {e}")
+
+    thread = threading.Thread(target=cleanup_loop, daemon=True)
+    thread.start()
+    app.logger.info(
+        f"Started background cleanup thread for prospect sessions "
+        f"(interval: {cleanup_interval}s, timeout: 30 min)"
+    )
+
+
+def require_prospect_session():
+    """Validate prospect session. Returns (prospect_session, error_response)."""
+    session_id = request.headers.get('X-Session-ID')
+    if not session_id:
+        return None, (jsonify({"error": "Session ID required"}), 400)
+    with _prospect_lock:
+        data = prospect_sessions.get(session_id)
+        if not data:
+            return None, (jsonify({"error": "Prospect session not found", "code": "SESSION_EXPIRED"}), 400)
+        data["ts"] = datetime.now()  # Touch timestamp
+        return data["ps"], None
+
+
+@app.route('/api/prospect/init', methods=['POST'])
+@require_rate_limit('init')
+def prospect_init():
+    """Create a prospect session. Bot plays the buyer, user plays the salesperson."""
+    with _prospect_lock:
+        if len(prospect_sessions) >= MAX_PROSPECT_SESSIONS:
+            return jsonify({"error": "Prospect mode at capacity. Try again later."}), 503
+
+    data = request.json or {}
+    difficulty = data.get('difficulty', 'medium')
+    product_type = data.get('product_type', 'default')
+    provider = data.get('provider', 'groq')
+
+    if difficulty not in ('easy', 'medium', 'hard'):
+        return jsonify({"error": "Invalid difficulty. Choose: easy, medium, hard"}), 400
+
+    session_id = secrets.token_hex(16)
+
+    try:
+        from chatbot.prospect import ProspectSession
+        ps = ProspectSession(
+            provider_type=provider,
+            product_type=product_type,
+            difficulty=difficulty,
+            session_id=session_id,
+        )
+        opening = ps.get_opening_message()
+        with _prospect_lock:
+            prospect_sessions[session_id] = {"ps": ps, "ts": datetime.now()}
+        app.logger.info(f"Prospect session: {session_id} (difficulty={difficulty}, product={product_type})")
+
+        return jsonify({
+            "success": True,
+            "session_id": session_id,
+            "message": opening.content,
+            "persona": {
+                "name": ps.persona.get("name", "Unknown"),
+                "background": ps.persona.get("background", ""),
+                "personality": ps.persona.get("personality", ""),
+            },
+            "state": opening.state_snapshot,
+            "difficulty": difficulty,
+            "product_type": product_type,
+            "latency_ms": opening.latency_ms,
+            "provider": opening.provider,
+            "model": opening.model,
+        })
+    except Exception as e:
+        app.logger.exception(f"Prospect init failed: {e}")
+        return jsonify({"error": f"Prospect init failed: {str(e)}"}), 500
+
+
+@app.route('/api/prospect/chat', methods=['POST'])
+@require_rate_limit('chat')
+def prospect_chat():
+    """User sends a sales message; prospect responds."""
+    ps, err = require_prospect_session()
+    if err:
+        return err
+
+    data = request.json or {}
+    user_message, val_err = _validate_message(data.get('message', ''))
+    if val_err:
+        return val_err
+
+    if ps.state.has_committed or ps.state.has_walked:
+        return jsonify({"error": "Session has ended. Get evaluation or reset."}), 400
+
+    show_hints = data.get('show_hints', False)
+
+    try:
+        response = ps.process_turn(user_message, show_hints=show_hints)
+        result = {
+            "success": True,
+            "message": response.content,
+            "state": response.state_snapshot,
+            "latency_ms": response.latency_ms,
+            "provider": response.provider,
+            "model": response.model,
+            "ended": ps.state.has_committed or ps.state.has_walked,
+            "outcome": ps.state.status,
+        }
+        if response.coaching:
+            result["coaching"] = response.coaching
+        return jsonify(result)
+    except Exception as e:
+        app.logger.exception(f"Prospect chat error: {e}")
+        return jsonify({"error": f"Prospect chat error: {str(e)}"}), 500
+
+
+@app.route('/api/prospect/state', methods=['GET'])
+def prospect_state():
+    """Get current prospect session state."""
+    ps, err = require_prospect_session()
+    if err:
+        return err
+    return jsonify({"success": True, "state": ps.state.to_dict()})
+
+
+@app.route('/api/prospect/evaluate', methods=['POST'])
+def prospect_evaluate():
+    """Generate final evaluation scorecard."""
+    ps, err = require_prospect_session()
+    if err:
+        return err
+
+    try:
+        evaluation = ps.get_evaluation()
+        return jsonify({"success": True, **evaluation})
+    except Exception as e:
+        app.logger.exception(f"Prospect evaluation error: {e}")
+        return jsonify({"error": f"Evaluation failed: {str(e)}"}), 500
+
+
+@app.route('/api/prospect/reset', methods=['POST'])
+def prospect_reset():
+    """End and remove a prospect session."""
+    session_id = request.headers.get('X-Session-ID')
+    if session_id:
+        with _prospect_lock:
+            prospect_sessions.pop(session_id, None)
+    return jsonify({"success": True})
+
+
 # ─── Error handler ───────────────────────────────────────────────────────────
 
 @app.errorhandler(Exception)
@@ -554,6 +872,10 @@ def handle_unexpected_error(e):
     app.logger.exception("Unhandled error")
     return jsonify({"error": "Internal server error"}), 500
 
+
+# ─── Application Startup ────────────────────────────────────────────────────────
+# Initialize background cleanup threads
+start_prospect_cleanup()
 
 if __name__ == '__main__':
     app.run(debug=os.environ.get('FLASK_DEBUG', 'false').lower() == 'true', port=5000)

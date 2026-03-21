@@ -24,8 +24,7 @@ low_intent_guarded:
   transactional:
     template: |
       ADAPTATION ({reason}): Keep it brief and natural.
-      - Make one short observation about what they've described, then show the most relevant option.
-      - Do NOT interrogate. Do NOT ask multiple questions. Lead with product fit.
+      Make one short observation, then show the most relevant option. No interrogation or multiple questions.
   
   consultative:
     template: |
@@ -33,10 +32,7 @@ low_intent_guarded:
       REASON: {reason}
       PATTERN: [Observation statement] -> [ONE soft open-ended follow-up]
       EXAMPLE: "{elicitation_example}"
-      RULES:
-      - Statement first: make an observation about their situation (no interrogation)
-      - Then ONE natural follow-up that keeps the conversation moving forward
-      - Follow-up must be open-ended, not binary (no "Do you want X?" or "Are you Y?")
+      RULES: Statement first (observation, no interrogation), then ONE open-ended follow-up. Not binary ("Do you want X?").
     elicitation_type: "combined"
 
 # Reason mapping for low_intent_guarded adaptations

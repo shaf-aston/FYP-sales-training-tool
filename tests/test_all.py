@@ -6,9 +6,6 @@ Tests are grouped by module and test behaviour, not just initial state.
 
 import sys, os, pytest
 
-# Allow imports from src/
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
-
 from chatbot.analysis import (
     text_contains_any_keyword,
     analyze_state,
@@ -27,12 +24,7 @@ from chatbot.flow import (
     commitment_or_objection,
     commitment_or_walkaway,
 )
-from chatbot.config_loader import load_signals, load_product_config, get_product_settings
-
-
-# Set a dummy key so SalesChatbot can be instantiated without a real provider
-os.environ.setdefault("GROQ_API_KEY", "test_key")
-
+from chatbot.loader import load_signals, load_product_config, get_product_settings
 from chatbot.chatbot import SalesChatbot
 
 

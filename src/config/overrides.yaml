@@ -19,10 +19,7 @@ direct_info_request:
 
     After listing options, ask ONE decision question: "Which of these interests you most?"
 
-    FORBIDDEN:
-    - Validation phrases ("makes sense", "that's great")
-    - Asking what they're looking for (they already told you)
-    - Generic statements without prices/specs
+    FORBIDDEN: Validation phrases | asking what they're looking for | generic statements without prices/specs
 
 soft_positive_at_pitch:
   template: |
@@ -34,9 +31,7 @@ soft_positive_at_pitch:
     ACTION: Differentiate your previously presented options immediately.
     Compare on dimensions that matter: {preferences}.
 
-    Then ask a LOGISTICS question (not a permission question):
-    - "Want me to check availability on any of these?"
-    - "Which one should we look at more closely?"
+    Then ask a LOGISTICS question: "Want me to check availability?" / "Which one should we look at more closely?"
 
 excessive_validation:
   template: |
@@ -44,9 +39,6 @@ excessive_validation:
 
     CONSTRAINT VIOLATION: Excessive validation (>2 in last 4 turns)
 
-    CORRECTIVE ACTION:
-    - Provide NEW information (don't repeat)
-    - Ask decision-advancing question
-    - NO validation phrases this turn
+    CORRECTIVE ACTION: Provide NEW information. Ask decision-advancing question. NO validation this turn.
 
     USER PREFERENCES: {preferences}

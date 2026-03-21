@@ -1,3 +1,23 @@
+/* ─── Design Tokens ─────────────────────────────────────────────────────── */
+
+:root {
+  --bg-primary: #0b1220;
+  --bg-secondary: #071018;
+  --text-primary: #dcd6c9;
+  --text-heading: #f3ecd7;
+  --text-body: #e6ddc8;
+  --text-muted: #8b8fa3;
+  --accent-gold: #b7791f;
+  --accent-gold-dark: #9a5f10;
+  --accent-indigo: #6366f1;
+  --accent-indigo-dark: #4f46e5;
+  --accent-cyan: #06b6d4;
+  --accent-cyan-dark: #0891b2;
+  --accent-green: #22c55e;
+  --accent-red: #ef4444;
+  --accent-yellow: #eab308;
+}
+
 /* ─── Reset & Base ───────────────────────────────────────────────────────── */
 
 * {
@@ -15,12 +35,12 @@ body {
   font-family:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
     Cantarell, sans-serif;
-  background: linear-gradient(135deg, #0b1220 0%, #071018 100%);
+  background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
   display: flex;
   justify-content: center;
   align-items: stretch;
   padding: 20px;
-  color: #dcd6c9;
+  color: var(--text-primary);
   overflow: hidden;
 }
 
@@ -53,7 +73,7 @@ body {
 
 .header {
   background: rgba(255, 255, 255, 0.02);
-  color: #f3ecd7;
+  color: var(--text-heading);
   padding: 18px 20px;
   display: flex;
   justify-content: space-between;
@@ -93,7 +113,7 @@ body {
 
 .reset-btn {
   background: rgba(255, 255, 255, 0.03);
-  color: #e6ddc8;
+  color: var(--text-body);
   border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 6px 12px;
   border-radius: 8px;
@@ -144,7 +164,7 @@ body {
 }
 
 .chat-container::-webkit-scrollbar-thumb:active {
-  background: #b7791f;
+  background: var(--accent-gold);
 }
 
 /* Scrollbar for textareas and inline edit */
@@ -200,8 +220,8 @@ textarea::-webkit-scrollbar-thumb:hover,
 }
 
 .message.user .message-bubble {
-  background: linear-gradient(180deg, #b7791f, #9a5f10);
-  color: #071018;
+  background: linear-gradient(180deg, var(--accent-gold), var(--accent-gold-dark));
+  color: var(--bg-secondary);
   border-bottom-right-radius: 6px;
   box-shadow: 0 6px 18px rgba(151, 96, 30, 0.12);
 }
@@ -250,7 +270,7 @@ textarea::-webkit-scrollbar-thumb:hover,
 .tts-btn {
   background: transparent;
   border: none;
-  color: #b7791f;
+  color: var(--accent-gold);
   cursor: pointer;
   padding: 4px 8px;
   font-size: 14px;
@@ -279,7 +299,7 @@ textarea::-webkit-scrollbar-thumb:hover,
 
 .edit-btn:hover {
   opacity: 1;
-  color: #b7791f;
+  color: var(--accent-gold);
 }
 
 /* ─── Typing Indicator ───────────────────────────────────────────────────── */
@@ -293,7 +313,7 @@ textarea::-webkit-scrollbar-thumb:hover,
 .typing-indicator span {
   width: 8px;
   height: 8px;
-  background: #b7791f;
+  background: var(--accent-gold);
   border-radius: 50%;
   opacity: 0.9;
   animation: typing 1.4s infinite;
@@ -334,7 +354,7 @@ textarea::-webkit-scrollbar-thumb:hover,
   flex: 1;
   padding: 12px 16px;
   background: rgba(255, 255, 255, 0.02);
-  color: #e6ddc8;
+  color: var(--text-body);
   border: 1px solid rgba(255, 255, 255, 0.03);
   border-radius: 8px;
   font-size: 14px;
@@ -353,8 +373,8 @@ textarea::-webkit-scrollbar-thumb:hover,
 }
 
 .send-btn {
-  background: #b7791f;
-  color: #071018;
+  background: var(--accent-gold);
+  color: var(--bg-secondary);
   border: none;
   padding: 12px 20px;
   border-radius: 8px;
@@ -366,7 +386,7 @@ textarea::-webkit-scrollbar-thumb:hover,
 }
 
 .send-btn:hover {
-  background: #9a5f10;
+  background: var(--accent-gold-dark);
   transform: translateY(-1px);
 }
 
@@ -377,7 +397,7 @@ textarea::-webkit-scrollbar-thumb:hover,
 
 .mic-btn {
   background: rgba(255, 255, 255, 0.05);
-  color: #e6ddc8;
+  color: var(--text-body);
   border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 12px 14px;
   border-radius: 8px;
@@ -427,8 +447,8 @@ textarea::-webkit-scrollbar-thumb:hover,
   width: 100%;
   padding: 8px 10px;
   background: rgba(255, 255, 255, 0.06);
-  color: #e6ddc8;
-  border: 1px solid #b7791f;
+  color: var(--text-body);
+  border: 1px solid var(--accent-gold);
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
@@ -445,8 +465,8 @@ textarea::-webkit-scrollbar-thumb:hover,
 }
 
 .inline-save-btn {
-  background: #b7791f;
-  color: #071018;
+  background: var(--accent-gold);
+  color: var(--bg-secondary);
   border: none;
   padding: 5px 12px;
   border-radius: 6px;
@@ -473,7 +493,14 @@ textarea::-webkit-scrollbar-thumb:hover,
   align-items: stretch;
 }
 
-.container.panel-open #chatScreen {
+.container.quiz-panel-open {
+  flex-direction: row;
+  max-width: 1150px;
+  align-items: stretch;
+}
+
+.container.panel-open #chatScreen,
+.container.quiz-panel-open #chatScreen {
   flex: 1;
   min-width: 0;
   height: auto;
@@ -503,7 +530,7 @@ textarea::-webkit-scrollbar-thumb:hover,
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   font-size: 13px;
   font-weight: 600;
-  color: #b7791f;
+  color: var(--accent-gold);
   flex-shrink: 0;
   position: sticky;
   top: 0;
@@ -523,7 +550,7 @@ textarea::-webkit-scrollbar-thumb:hover,
 }
 
 .training-close-btn:hover {
-  color: #e6ddc8;
+  color: var(--text-body);
 }
 
 .training-body {
@@ -570,6 +597,769 @@ textarea::-webkit-scrollbar-thumb:hover,
   color: #a39885;
   line-height: 1.5;
   margin-bottom: 4px;
+}
+
+/* ─── Quiz Panel ────────────────────────────────────────────────────────── */
+
+#quizPanel {
+  display: none;
+  flex: 0 0 320px;
+  width: 320px;
+  flex-direction: column;
+  background: rgba(8, 12, 20, 0.98);
+  border-left: 1px solid rgba(255, 255, 255, 0.05);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(99, 102, 241, 0.4) transparent;
+}
+
+#quizPanel.open {
+  display: flex;
+}
+
+.quiz-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 16px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-indigo);
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  background: rgba(8, 12, 20, 0.98);
+  z-index: 1;
+}
+
+.quiz-close-btn {
+  background: none;
+  border: none;
+  color: #6b6b80;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0 2px;
+  transition: color 0.15s;
+}
+
+.quiz-close-btn:hover {
+  color: #e6e6f0;
+}
+
+.quiz-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 16px;
+}
+
+.quiz-type-buttons {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.quiz-type-btn {
+  flex: 1;
+  padding: 8px 6px;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  background: rgba(99, 102, 241, 0.08);
+  color: var(--text-muted);
+  border-radius: 6px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+}
+
+.quiz-type-btn:hover {
+  background: rgba(99, 102, 241, 0.15);
+  color: #a5a8f0;
+}
+
+.quiz-type-btn.active {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: rgba(99, 102, 241, 0.5);
+  color: var(--accent-indigo);
+  font-weight: 600;
+}
+
+.quiz-question {
+  font-size: 14px;
+  color: #c8c8d8;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  background: rgba(99, 102, 241, 0.06);
+  border-radius: 8px;
+  border-left: 3px solid var(--accent-indigo);
+  line-height: 1.45;
+}
+
+.quiz-answer-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.quiz-answer-input {
+  flex: 1;
+  min-height: 80px;
+  max-height: 140px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  color: #e0e0e8;
+  font-size: 13px;
+  font-family: inherit;
+  resize: none;
+  line-height: 1.45;
+}
+
+.quiz-answer-input:focus {
+  outline: none;
+  border-color: rgba(99, 102, 241, 0.4);
+}
+
+.quiz-submit-btn {
+  padding: 10px 16px;
+  border: none;
+  background: var(--accent-indigo);
+  color: #fff;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.quiz-submit-btn:hover {
+  background: var(--accent-indigo-dark);
+}
+
+.quiz-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.quiz-feedback {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.quiz-feedback.correct {
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: var(--accent-green);
+}
+
+.quiz-feedback.incorrect {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: var(--accent-red);
+}
+
+.quiz-feedback.partial {
+  background: rgba(234, 179, 8, 0.12);
+  border: 1px solid rgba(234, 179, 8, 0.3);
+  color: var(--accent-yellow);
+}
+
+.quiz-score {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.quiz-feedback-text {
+  font-size: 12px;
+  line-height: 1.5;
+  opacity: 0.9;
+}
+
+.quiz-details {
+  margin-top: 8px;
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.quiz-details ul {
+  margin: 4px 0 0 0;
+  padding-left: 16px;
+}
+
+.quiz-details li {
+  margin-bottom: 2px;
+}
+
+/* ─── Prospect Panel ────────────────────────────────────────────────────── */
+
+.container.prospect-panel-open {
+  flex-direction: row;
+  max-width: 1150px;
+  align-items: stretch;
+}
+
+.container.prospect-panel-open #chatScreen {
+  flex: 1;
+  min-width: 0;
+  height: auto;
+}
+
+#prospectPanel {
+  display: none;
+  flex: 0 0 320px;
+  width: 320px;
+  flex-direction: column;
+  background: rgba(8, 12, 20, 0.98);
+  border-left: 1px solid rgba(255, 255, 255, 0.05);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(6, 182, 212, 0.4) transparent;
+}
+
+#prospectPanel.open {
+  display: flex;
+}
+
+.prospect-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 16px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-cyan);
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  background: rgba(8, 12, 20, 0.98);
+  z-index: 1;
+}
+
+.prospect-close-btn {
+  background: none;
+  border: none;
+  color: #6b6b80;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0 2px;
+  transition: color 0.15s;
+}
+
+.prospect-close-btn:hover {
+  color: #e6e6f0;
+}
+
+.prospect-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.prospect-section {
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.prospect-label {
+  font-size: 10px;
+  color: #6b6b80;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 5px;
+  font-weight: 500;
+}
+
+.prospect-value {
+  font-size: 13px;
+  color: #d4c5a9;
+  line-height: 1.45;
+}
+
+/* Readiness bar */
+.prospect-readiness-bar {
+  width: 100%;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.prospect-readiness-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.4s ease, background 0.4s ease;
+  min-width: 2%;
+}
+
+/* Difficulty badges */
+.prospect-difficulty-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.prospect-difficulty-badge.easy {
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--accent-green);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.prospect-difficulty-badge.medium {
+  background: rgba(234, 179, 8, 0.15);
+  color: var(--accent-yellow);
+  border: 1px solid rgba(234, 179, 8, 0.3);
+}
+
+.prospect-difficulty-badge.hard {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--accent-red);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* Prospect mode buttons */
+.prospect-btn {
+  padding: 8px 14px;
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  background: rgba(6, 182, 212, 0.1);
+  color: var(--accent-cyan);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  width: 100%;
+}
+
+.prospect-btn:hover {
+  background: rgba(6, 182, 212, 0.2);
+  border-color: rgba(6, 182, 212, 0.5);
+}
+
+.prospect-btn.danger {
+  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--accent-red);
+}
+
+.prospect-btn.danger:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+/* Prospect setup overlay */
+#prospectSetup {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 200;
+  justify-content: center;
+  align-items: center;
+}
+
+#prospectSetup.open {
+  display: flex;
+}
+
+.prospect-setup-card {
+  background: linear-gradient(180deg, rgba(12, 18, 28, 0.98), rgba(6, 10, 16, 0.98));
+  border: 1px solid rgba(6, 182, 212, 0.2);
+  border-radius: 12px;
+  padding: 28px;
+  width: 420px;
+  max-width: 90vw;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+
+.prospect-setup-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--accent-cyan);
+  margin-bottom: 20px;
+}
+
+.prospect-setup-field {
+  margin-bottom: 16px;
+}
+
+.prospect-setup-field label {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.prospect-setup-field select {
+  width: 100%;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: #e0e0e8;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.prospect-setup-field select:focus {
+  outline: none;
+  border-color: rgba(6, 182, 212, 0.4);
+}
+
+.prospect-setup-field select option {
+  background: #0a1018;
+}
+
+/* Difficulty selector buttons */
+.prospect-diff-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.prospect-diff-btn {
+  flex: 1;
+  padding: 10px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-muted);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+}
+
+.prospect-diff-btn:hover {
+  background: rgba(6, 182, 212, 0.1);
+  border-color: rgba(6, 182, 212, 0.3);
+}
+
+.prospect-diff-btn.selected {
+  background: rgba(6, 182, 212, 0.15);
+  border-color: rgba(6, 182, 212, 0.5);
+  color: var(--accent-cyan);
+}
+
+.prospect-diff-btn .diff-label {
+  font-size: 13px;
+  font-weight: 600;
+  display: block;
+}
+
+.prospect-diff-btn .diff-desc {
+  font-size: 10px;
+  opacity: 0.7;
+  margin-top: 2px;
+  display: block;
+}
+
+.prospect-setup-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.prospect-setup-start {
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  background: var(--accent-cyan);
+  color: var(--bg-secondary);
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.prospect-setup-start:hover {
+  background: var(--accent-cyan-dark);
+}
+
+.prospect-setup-start:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.prospect-setup-cancel {
+  padding: 10px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+/* Evaluation card */
+.prospect-evaluation {
+  background: rgba(6, 182, 212, 0.06);
+  border: 1px solid rgba(6, 182, 212, 0.2);
+  border-radius: 12px;
+  padding: 20px;
+  margin: 12px 0;
+  max-width: 85%;
+}
+
+.prospect-eval-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.prospect-eval-score {
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--accent-cyan);
+}
+
+.prospect-eval-grade {
+  font-size: 24px;
+  font-weight: 700;
+  padding: 4px 14px;
+  border-radius: 8px;
+}
+
+.prospect-eval-grade.grade-a {
+  background: rgba(34, 197, 94, 0.2);
+  color: var(--accent-green);
+}
+
+.prospect-eval-grade.grade-b {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+}
+
+.prospect-eval-grade.grade-c {
+  background: rgba(234, 179, 8, 0.15);
+  color: var(--accent-yellow);
+}
+
+.prospect-eval-grade.grade-d {
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+}
+
+.prospect-eval-grade.grade-f {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--accent-red);
+}
+
+.prospect-eval-outcome {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.prospect-eval-outcome.sold {
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--accent-green);
+}
+
+.prospect-eval-outcome.walked {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--accent-red);
+}
+
+.prospect-eval-outcome.incomplete {
+  background: rgba(234, 179, 8, 0.15);
+  color: var(--accent-yellow);
+}
+
+.prospect-eval-criteria {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.prospect-eval-criterion {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+}
+
+.prospect-eval-criterion-name {
+  font-size: 12px;
+  color: #a0a8b8;
+  text-transform: capitalize;
+}
+
+.prospect-eval-criterion-score {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent-cyan);
+  white-space: nowrap;
+}
+
+.prospect-eval-criterion-feedback {
+  font-size: 11px;
+  color: #7a7a8a;
+  margin-top: 3px;
+  line-height: 1.4;
+}
+
+.prospect-eval-list {
+  margin: 8px 0;
+}
+
+.prospect-eval-list-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.prospect-eval-list ul {
+  margin: 0;
+  padding-left: 16px;
+}
+
+.prospect-eval-list li {
+  font-size: 12px;
+  color: #a0a8b8;
+  margin-bottom: 2px;
+  line-height: 1.4;
+}
+
+.prospect-eval-summary {
+  font-size: 13px;
+  color: #c8c8d8;
+  line-height: 1.5;
+  padding: 10px 12px;
+  background: rgba(6, 182, 212, 0.06);
+  border-radius: 8px;
+  border-left: 3px solid var(--accent-cyan);
+  margin-top: 12px;
+}
+
+.prospect-try-again-btn {
+  margin-top: 12px;
+  padding: 8px 16px;
+  border: none;
+  background: var(--accent-cyan);
+  color: var(--bg-secondary);
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.prospect-try-again-btn:hover {
+  background: var(--accent-cyan-dark);
+}
+
+/* Coaching hint */
+.prospect-coaching {
+  padding: 8px 12px;
+  background: rgba(6, 182, 212, 0.08);
+  border: 1px solid rgba(6, 182, 212, 0.15);
+  border-radius: 6px;
+  font-size: 12px;
+  color: #67e8f9;
+  line-height: 1.45;
+  margin-top: 4px;
+}
+
+/* Prospect settings (low prominence) */
+.prospect-settings {
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  padding: 10px 16px;
+}
+
+.prospect-settings-toggle {
+  background: none;
+  border: none;
+  color: #4a4a5a;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 0;
+  transition: color 0.15s;
+}
+
+.prospect-settings-toggle:hover {
+  color: var(--text-muted);
+}
+
+.prospect-settings-body {
+  display: none;
+  margin-top: 8px;
+}
+
+.prospect-settings-body.open {
+  display: block;
+}
+
+.prospect-setting-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.prospect-setting-row select {
+  padding: 3px 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  color: #c8c8d8;
+  font-size: 11px;
+  font-family: inherit;
+}
+
+/* Toggle switch */
+.toggle-switch {
+  position: relative;
+  width: 34px;
+  height: 18px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 9px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.toggle-switch.on {
+  background: rgba(6, 182, 212, 0.5);
+}
+
+.toggle-switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  background: #e0e0e8;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+
+.toggle-switch.on::after {
+  transform: translateX(16px);
 }
 
 /* ─── Mobile ─────────────────────────────────────────────────────────────── */
@@ -655,6 +1445,23 @@ textarea::-webkit-scrollbar-thumb:hover,
   }
 
   #trainingPanel.open {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 85vw;
+    max-width: 320px;
+    height: 100dvh;
+    z-index: 100;
+    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.5);
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .container.prospect-panel-open {
+    flex-direction: column;
+    max-width: 100%;
+  }
+
+  #prospectPanel.open {
     position: fixed;
     top: 0;
     right: 0;

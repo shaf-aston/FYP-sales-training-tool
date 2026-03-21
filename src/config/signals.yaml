@@ -237,7 +237,7 @@ direct_info_requests:
   - "what do you have"
   - "tell me about"
   - "show options"
-  - "options?"
+  - "options"
   - "what are the options"
   - "give me options"
   - "list"
@@ -390,3 +390,250 @@ user_transactional_signals:
   - "availability"
   - "delivery"
   - "quote"
+  - "how much"
+  - "in stock"
+  - "ship"
+  - "checkout"
+  - "add to cart"
+
+# ═════════════════════════════════════════════════════════════════════════════════
+# ⚠️  PLANNED SIGNALS — NOT YET INTEGRATED INTO ANALYSIS.PY
+# ═════════════════════════════════════════════════════════════════════════════════
+#
+# The following signal categories are intentionally NOT called by analyze_state() in
+# analysis.py. They are semantic signal libraries for a future phase where:
+#   1. Module can detect product domain from conversation context
+#   2. Switch signals dynamically based on detected domain
+#   3. Improve domain-specific intent detection and objection handling
+#
+# Categories below:
+#   - real_estate_intent, fitness_intent, financial_intent, insurance_intent,
+#     education_intent, b2b_intent, travel_intent (domain-specific)
+#   - positive_investment, negative_investment (emotional state)
+#   - early_stage, consideration_stage, decision_stage (buyer journey)
+#   - rapport_positive, rapport_negative (relationship indicators)
+#
+# Keep these definitions: they represent future enhancements and serve as
+# documentation for product-specific signal patterns (e.g., "mortgage" signals
+# real estate interest; "upskill" signals education interest). DO NOT delete.
+#
+# ─────────────────────────────────────────────────────────────────────────────────
+
+# ─── Domain-Specific Behavioral Signals (PLANNED) ─────────────────────────────────
+# Purpose: Enhanced intent detection for specific product domains
+# Each domain has signals unique to that purchase context
+# NOTE: Currently unused by analysis.py. Reserved for future domain-aware signal detection.
+
+# Real estate / property signals
+real_estate_intent:
+  - "looking for a home"
+  - "buying a house"
+  - "selling my home"
+  - "moving to"
+  - "relocating"
+  - "mortgage"
+  - "pre-approved"
+  - "down payment"
+  - "first-time buyer"
+  - "school district"
+  - "commute"
+  - "square feet"
+  - "bedrooms"
+  - "bathrooms"
+  - "neighborhood"
+  - "investment property"
+  - "rental income"
+
+# Fitness / coaching signals
+fitness_intent:
+  - "lose weight"
+  - "get in shape"
+  - "build muscle"
+  - "personal trainer"
+  - "meal plan"
+  - "nutrition"
+  - "workout routine"
+  - "accountability"
+  - "transformation"
+  - "body composition"
+  - "strength training"
+  - "cardio"
+  - "flexibility"
+
+# Financial / investment signals
+financial_intent:
+  - "retirement planning"
+  - "investment strategy"
+  - "portfolio"
+  - "wealth management"
+  - "financial advisor"
+  - "tax optimization"
+  - "estate planning"
+  - "risk tolerance"
+  - "diversification"
+  - "compound growth"
+  - "passive income"
+  - "asset allocation"
+
+# Insurance signals
+insurance_intent:
+  - "coverage"
+  - "policy"
+  - "premium"
+  - "deductible"
+  - "beneficiary"
+  - "life insurance"
+  - "health insurance"
+  - "term life"
+  - "whole life"
+  - "family protection"
+  - "claims"
+  - "pre-existing"
+
+# Education / certification signals
+education_intent:
+  - "career change"
+  - "upskill"
+  - "certification"
+  - "bootcamp"
+  - "online course"
+  - "degree"
+  - "credential"
+  - "job placement"
+  - "portfolio"
+  - "industry recognition"
+  - "hands-on"
+  - "curriculum"
+
+# B2B / SaaS signals
+b2b_intent:
+  - "demo"
+  - "pilot"
+  - "enterprise"
+  - "integration"
+  - "implementation"
+  - "onboarding"
+  - "user seats"
+  - "license"
+  - "workflow"
+  - "productivity"
+  - "roi"
+  - "security compliance"
+  - "sso"
+  - "api"
+
+# Travel signals
+travel_intent:
+  - "vacation"
+  - "trip"
+  - "getaway"
+  - "booking"
+  - "reservation"
+  - "destination"
+  - "all-inclusive"
+  - "flight"
+  - "hotel"
+  - "resort"
+  - "itinerary"
+  - "travel dates"
+
+# ─── Expanded Emotional State Signals ───────────────────────────────────────────
+# Purpose: Better detection of emotional investment and readiness
+
+# Positive emotional investment (near commitment)
+positive_investment:
+  - "excited about"
+  - "really like"
+  - "love the"
+  - "perfect for"
+  - "exactly what"
+  - "been looking for"
+  - "this is it"
+  - "impressed"
+  - "convinced"
+  - "makes sense"
+  - "definitely"
+
+# Negative emotional state (concern/resistance)
+negative_investment:
+  - "worried about"
+  - "concerned about"
+  - "nervous about"
+  - "hesitant"
+  - "uncertain"
+  - "risky"
+  - "afraid"
+  - "anxious"
+  - "overwhelmed"
+  - "confused"
+  - "complicated"
+
+# ─── Decision Stage Signals ─────────────────────────────────────────────────────
+# Purpose: Detect where user is in buying journey
+
+# Early stage (research/awareness)
+early_stage:
+  - "just starting"
+  - "researching"
+  - "exploring options"
+  - "learning about"
+  - "curious about"
+  - "heard about"
+  - "what is"
+  - "how does"
+  - "explain"
+  - "overview"
+
+# Middle stage (consideration/evaluation)
+consideration_stage:
+  - "comparing"
+  - "difference between"
+  - "pros and cons"
+  - "better option"
+  - "which one"
+  - "recommend"
+  - "most popular"
+  - "best for"
+  - "reviews"
+  - "testimonials"
+
+# Late stage (decision/purchase)
+decision_stage:
+  - "ready to"
+  - "want to start"
+  - "sign up"
+  - "get started"
+  - "next steps"
+  - "how do i"
+  - "when can"
+  - "timeline"
+  - "implementation"
+  - "onboarding"
+
+# ─── Rapport Indicators ─────────────────────────────────────────────────────────
+# Purpose: Detect rapport building and relationship development
+
+rapport_positive:
+  - "appreciate"
+  - "thank you"
+  - "helpful"
+  - "makes sense"
+  - "good point"
+  - "i see"
+  - "understand"
+  - "fair enough"
+  - "agree"
+  - "exactly"
+  - "you're right"
+
+rapport_negative:
+  - "not helpful"
+  - "don't understand"
+  - "confused"
+  - "wasting time"
+  - "not listening"
+  - "already said"
+  - "repeating"
+  - "frustrating"
+  - "annoying"
+  - "pushy"

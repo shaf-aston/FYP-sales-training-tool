@@ -11,17 +11,19 @@ dist/
 # Environment files
 .env
 
+# Python specifics
+*.py[cod]
+*.pyo
+*.pyd
+*.pdb
+*.so
+.pytest_cache/
+.Python
+
 # VSCode settings
 .vscode/
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-.git
 
-# Virtual environment
+# Virtual environments
 .venv/
 venv/
 ENV/
@@ -32,7 +34,6 @@ instance/
 flask_session/
 
 # IDEs
-.vscode/
 .idea/
 *.swp
 *.swo
@@ -41,18 +42,61 @@ flask_session/
 .DS_Store
 Thumbs.db
 
-# Project specific
-*.log
-Impact formula.txt
+# JetBrains
+*.iml
+.idea/
 
+# Jupyter
+.ipynb_checkpoints/
+
+# Logs and runtime
+*.log
+*.pot
+*.mo
+
+# Coverage
+.coverage
+htmlcov/
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+
+# Project specific generated files
+metrics.jsonl
+metrics.json
+Impact formula.txt
 .claude
-.pytest_cache
 Aston Docs/
 sessions_backup/
 Documentation/What i did strat.md
+sessions/
+
+# Local secrets and sockets
+*.key
+*.pem
+*.crt
+*.db
+*.sqlite
+*.sqlite3
+*.env.local
+*.venv
+
+# Build artifacts
+tmp/
+*.tmp
+*.cache
+
+# OS temporary files
+*.~
+*~
+
+# Notebook checkpoints
+.ipynb_checkpoints/
 
 
 CS3IP Mark Scheme-2025-6.pdf
 marks.md
 .tmp*
 .Clear-Caches.py
+

@@ -3,8 +3,7 @@
 These tests are temporary (for Feb 2026 user study validation)
 Will be replaced with comprehensive tests later
 """
-import sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+import os
 
 from chatbot.chatbot import SalesChatbot
 from chatbot.performance import PerformanceTracker

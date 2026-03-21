@@ -1,0 +1,106 @@
+# Quiz Assessment Configuration
+# Defines the stages and questions used to score training conversations
+
+# Stage descriptions and clear evaluation criteria for quiz scoring
+stages:
+  consultative:
+    intent:
+      goal: "Discover what the user is hoping to achieve and their current situation"
+      advance_when: "User reveals clear goal + context"
+      next_stage: "logical"
+      key_concepts:
+        - "Open-ended discovery questions"
+        - "Match user's energy"
+        - "No pitching yet"
+        - "Listen for tangible goals"
+
+    logical:
+      goal: "Guide prospect to articulate their own problem with current approach"
+      advance_when: "User names a clear problem and expresses doubt in current approach"
+      next_stage: "emotional"
+      key_concepts:
+        - "Two-phase probe (cause then like/dislike)"
+        - "Never state problem for them"
+        - "Create doubt in current approach"
+        - "Max 1 question per turn"
+
+    emotional:
+      goal: "Surface deeper motivations and consequences of inaction"
+      advance_when: "User shares emotional stakes or consequences"
+      next_stage: "pitch"
+      key_concepts:
+        - "Identity frame (why change now)"
+        - "Future pacing (what would be different)"
+        - "Consequence of inaction"
+        - "Connect to personal stakes"
+
+    pitch:
+      goal: "Present solution using commitment + 3-pillar structure"
+      advance_when: "User commits or raises objection"
+      next_stage: "objection"
+      key_concepts:
+        - "Get micro-commitment first"
+        - "Three pillars tied to stated goals"
+        - "Assumptive close"
+        - "No trailing questions"
+
+    objection:
+      goal: "Classify objection type and reframe using appropriate strategy"
+      advance_when: "User commits or walks away"
+      next_stage: null
+      key_concepts:
+        - "Classify (money/partner/fear/think/smokescreen)"
+        - "Recall their stated goals"
+        - "Reframe using type-specific strategy"
+        - "Never argue or pressure"
+
+  transactional:
+    intent:
+      goal: "Quickly gather budget and use-case (max 2 turns)"
+      advance_when: "Budget and use-case clear"
+      next_stage: "pitch"
+      key_concepts:
+        - "Fast discovery"
+        - "Budget first"
+        - "Use-case second"
+        - "No emotional probing"
+
+    pitch:
+      goal: "Present matching options with assumptive close"
+      advance_when: "User commits or raises objection"
+      next_stage: "objection"
+      key_concepts:
+        - "Match to stated needs"
+        - "Sensory language"
+        - "Price and availability included"
+        - "Lead to action"
+
+    objection:
+      goal: "Address concerns directly and redirect to value"
+      advance_when: "User commits or walks away"
+      next_stage: null
+      key_concepts:
+        - "Acknowledge concern"
+        - "Redirect to benefits"
+        - "Simple, direct answers"
+        - "No over-elaboration"
+
+# Quiz question templates by type
+questions:
+  stage:
+    - "What stage of the sales process are we in right now?"
+    - "Based on the conversation so far, which stage and strategy are we using?"
+    - "Can you identify the current stage and overall strategy?"
+    - "Where are we in the FSM (stage and strategy)?"
+
+  next_move:
+    - "What would you say next to this customer?"
+    - "How would you respond to their last message?"
+    - "As the salesperson, what's your next response?"
+    - "Given the conversation so far, what would be an effective next message?"
+
+  direction:
+    - "Where are you taking this conversation and why?"
+    - "What's your strategy for moving forward from here?"
+    - "Explain your approach for the next few turns."
+    - "What are you trying to achieve and how will you get there?"

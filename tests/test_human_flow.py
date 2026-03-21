@@ -1,8 +1,7 @@
 """Manual conversation flow testing - NOT for pytest (blocks on real API calls)
 Run directly: python tests/test_human_flow.py
 """
-import sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+import os
 from dotenv import load_dotenv
 load_dotenv()
 
