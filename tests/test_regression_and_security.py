@@ -81,7 +81,7 @@ from chatbot.flow import (
     commitment_or_objection,
     commitment_or_walkaway,
 )
-from chatbot.content import get_base_rules, _SHARED_RULES
+from chatbot.prompts import get_base_rules, _SHARED_RULES
 from chatbot.analysis import analyze_state, user_demands_directness
 from chatbot.performance import PerformanceTracker, MAX_METRICS_LINES
 from chatbot.loader import load_analysis_config

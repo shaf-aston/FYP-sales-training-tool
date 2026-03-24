@@ -537,22 +537,6 @@ class QuickMatcher:
         return (best_candidate, best_score)
 
 
-# Convenience function for quick product matching
-def quick_match_product(text):
-    """Convenience function for product matching.
-
-    Args:
-        text: User input text
-
-    Returns:
-        Product settings dict if matched, else default settings
-    """
-    product_key, confidence = QuickMatcher.match_product(text)
-    if product_key and confidence >= 0.6:
-        return get_product_settings(product_key)
-    return get_product_settings("default")
-
-
 # --- A/B Variant Selection (for prompt testing in evaluation studies) ---
 
 def assign_ab_variant(session_id):

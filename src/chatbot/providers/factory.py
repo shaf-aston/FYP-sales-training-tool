@@ -1,20 +1,19 @@
 """Provider factory - one-liner provider creation with automatic fallback"""
-import os
 from .base import BaseLLMProvider
 from .groq_provider import GroqProvider
-from .ollama_provider import OllamaProvider
+from .openrouter_provider import OpenRouterProvider
 from .dummy_provider import DummyProvider
 
 # Provider registry
 PROVIDERS = {
     "groq": GroqProvider,
-    "ollama": OllamaProvider,
+    "openrouter": OpenRouterProvider,
     "dummy": DummyProvider,
 }
 
 def create_provider(provider_type: str = None, model: str = None) -> BaseLLMProvider:
     """Create provider instance with automatic fallback to env variable/default"""
-    provider_type = (provider_type or os.environ.get("LLM_PROVIDER", "groq")).lower()
+    provider_type = (provider_type or "groq").lower()
     
     if provider_type not in PROVIDERS:
         raise ValueError(f"Unknown provider: {provider_type}. Available: {list(PROVIDERS.keys())}")

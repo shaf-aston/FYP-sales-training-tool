@@ -14,7 +14,7 @@ def test_provider_factory():
     """Verify provider factory returns valid providers"""
     providers = get_available_providers()
     assert isinstance(providers, dict), "Factory returns dict"
-    assert 'groq' in providers or 'ollama' in providers, "At least one provider available"
+    assert 'groq' in providers or 'openrouter' in providers, "At least one provider available"
     print("✓ Provider factory working")
 
 
@@ -44,7 +44,7 @@ def test_performance_stats():
     # Stats may be empty first run, but should be valid dict
     assert isinstance(stats, dict), "Stats returns dict"
     if stats:
-        assert 'groq' in stats or 'ollama' in stats, "Provider stats present"
+        assert 'groq' in stats or 'openrouter' in stats, "Provider stats present"
         if 'groq' in stats:
             assert 'avg_latency_ms' in stats['groq'], "Avg latency tracked"
     print("✓ Performance stats aggregation working")

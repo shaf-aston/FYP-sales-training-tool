@@ -26,9 +26,8 @@
    - 6.1 Chat Turn Lifecycle
    - 6.2 FSM Advancement
    - 6.3 Prompt Assembly Pipeline
-   - 6.4 Strategy Detection & Switching
-   - 6.5 Prospect Mode Turn
-   - 6.6 Session Lifecycle
+   - 6.4 Prospect Mode Turn
+   - 6.5 Session Lifecycle
 7. [Deployment View](#7-deployment-view)
 8. [Cross-Cutting Concerns](#8-cross-cutting-concerns)
    - 8.1 Security
@@ -59,7 +58,7 @@ An AI-powered sales roleplay chatbot that trains users in consultative and trans
 |----|-------------|--------------|
 | R1 | Structured sales conversation flow | FSM with 5-stage consultative + 3-stage transactional paths |
 | R2 | Real-time coaching feedback | `trainer.py` generates per-turn coaching via lightweight LLM call |
-| R3 | Multiple LLM provider support | Factory pattern — Groq (cloud) and Ollama (local), hot-swappable |
+| R3 | Multiple LLM provider support | Factory pattern — Groq (primary) and OpenRouter (backup), hot-swappable |
 | R4 | Response latency < 2 seconds | Deterministic NLU (<50ms) + single LLM call (~980ms Groq) |
 | R5 | Configurable without code changes | 9 YAML config files (~1,400 lines) with `@lru_cache` |
 | R6 | Prospect Mode (buyer simulation) | `prospect.py` — AI plays buyer, user practises selling |
@@ -78,13 +77,14 @@ An AI-powered sales roleplay chatbot that trains users in consultative and trans
 
 ### 1.4 System at a Glance
 
+> **Note on Code Metrics:** SLOC (Source Lines of Code) metrics have been intentionally removed from this document. Line counts are poor indicators of architectural quality, complexity, or maintainability. Focus is placed instead on design patterns, module responsibilities, and data flow.
+
 | Metric | Value |
 |--------|-------|
-| Core Python modules | 14 (+ 4 provider files) |
-| Total SLOC (Python, excl. tests) | ~4,800 |
-| YAML configuration | 9 files, ~1,400 lines |
+| Core Python modules | 21 (16 chatbot + 5 providers) |
+| YAML configuration | 9 files (~1,400 lines) |
 | REST API endpoints | 25 |
-| Design patterns | Factory, FSM, Strategy, Decorator, Observer |
+| Design patterns | Factory, FSM, Strategy, Decorator, Observer, Template Method |
 | Test coverage | 96.2% (150/156 passing) |
 
 ---
@@ -96,7 +96,7 @@ An AI-powered sales roleplay chatbot that trains users in consultative and trans
 | **Python 3.10+ / Flask 3.0+** | FYP requirement; Flask lightweight for single-server deployment |
 | **No database** | Deliberate trade-off: JSONL files + in-memory sessions avoid DB complexity for FYP scope |
 | **Single-server deployment** | No horizontal scaling needed; in-memory sessions are acceptable |
-| **External LLM dependency** | Groq API (primary) or Ollama (local fallback); no self-hosted training |
+| **External LLM dependency** | Groq API (primary) or OpenRouter (cloud backup); no self-hosted training |
 | **YAML-only configuration** | Non-engineers can edit signals, products, thresholds without code changes |
 | **Browser-only frontend** | HTML5 + CSS3 + vanilla ES6 JavaScript; no framework dependency |
 
@@ -106,24 +106,29 @@ An AI-powered sales roleplay chatbot that trains users in consultative and trans
 
 ### 3.1 Business Context
 
-```
-                        ┌─────────────────────┐
-                        │   Sales Practitioner │
-                        │   (Browser Client)   │
-                        └──────────┬──────────┘
-                                   │ HTTP
-                                   ▼
-                        ┌─────────────────────┐
-                        │   Sales Roleplay     │
-                        │   Chatbot System     │
-                        └──────┬──────┬───────┘
-                               │      │
-                    ┌──────────┘      └──────────┐
-                    ▼                             ▼
-          ┌─────────────────┐           ┌─────────────────┐
-          │  Groq Cloud API │           │  Ollama Local    │
-          │  (LLM Provider) │           │  (LLM Provider)  │
-          └─────────────────┘           └─────────────────┘
+**Figure 1 — System Context Diagram (C4 Level 1):** Shows all actors, system boundaries, external dependencies, communication protocols, and data exchanged. This is the highest-level architectural view.
+
+```mermaid
+graph TD
+    SP["**Sales Practitioner**\nBrowser · HTML5 + ES6 SPA\nSends chat messages\nReceives AI-generated coaching"]
+
+    subgraph SYS ["Sales Roleplay Chatbot — Python 3.12 · Flask 3.0 · localhost:5000"]
+        WL["**Web Layer**\napp.py · security.py\n25 REST endpoints · Rate limiting · Input validation"]
+        CC["**Chatbot Core**\nchatbot.py · flow.py · analysis.py\ncontent.py · loader.py · trainer.py"]
+        PL["**LLM Provider Layer**\nFactory pattern · BaseLLMProvider ABC\nGroqProvider · OpenRouterProvider · DummyProvider"]
+    end
+
+    GR["**Groq Cloud API**\napi.groq.com\nModel: llama-3.3-70b-versatile\nLatency: ~980 ms avg · groq-sdk HTTPS"]
+    OR["**OpenRouter Cloud API**\nopenrouter.ai/api/v1\nModel: llama-3.3-70b-instruct:free\nLatency: ~1200 ms avg · HTTP · backup provider"]
+    FS["**File System**\nanalytics.jsonl — evaluation events\nmetrics.jsonl — per-turn latency\nsessions/*.json — session backup\nsrc/config/*.yaml — 9 config files"]
+
+    SP -->|"HTTP POST /api/chat\n{message, X-Session-ID header}"| WL
+    WL -->|"JSON {response, stage, strategy,\ntraining coaching, latency_ms}"| SP
+    PL -->|"groq-sdk · HTTPS · TLS encrypted\nchat completions API"| GR
+    PL -.->|"HTTP · openrouter.ai\nbackup when Groq unavailable"| OR
+    CC -->|"File I/O · append-only writes\nread on startup with @lru_cache"| FS
+    WL --- CC
+    CC --- PL
 ```
 
 ### 3.2 Technical Context
@@ -131,7 +136,7 @@ An AI-powered sales roleplay chatbot that trains users in consultative and trans
 | External System | Protocol | Purpose |
 |----------------|----------|---------|
 | Groq API | HTTPS (groq-sdk) | Primary LLM — Llama-3.3-70b-versatile, ~980ms avg |
-| Ollama | HTTP localhost:11434 | Local LLM fallback — llama3.2:3b, 3-5s |
+| OpenRouter API | HTTPS (requests) | Backup LLM — llama-3.3-70b-instruct:free, ~1200ms avg |
 | Browser | HTTP/HTTPS | Single-page chat UI with localStorage persistence |
 | File system | Local I/O | Session JSON, metrics JSONL, analytics JSONL, YAML config |
 
@@ -164,7 +169,7 @@ An AI-powered sales roleplay chatbot that trains users in consultative and trans
 │  threading.Lock · functools.lru_cache           │
 ├─────────────────────────────────────────────────┤
 │ LLM PROVIDERS                                   │
-│  Groq SDK (cloud) · Requests/Ollama (local)     │
+│  Groq SDK (cloud) · OpenRouter (cloud backup)   │
 ├─────────────────────────────────────────────────┤
 │ PERSISTENCE                                     │
 │  JSONL (metrics, analytics) · JSON (sessions)   │
@@ -181,57 +186,91 @@ An AI-powered sales roleplay chatbot that trains users in consultative and trans
 The system has three external boundaries:
 
 1. **User boundary** — Browser ↔ Flask API (HTTP)
-2. **LLM boundary** — Chatbot Core ↔ Groq/Ollama (HTTP/SDK)
+2. **LLM boundary** — Chatbot Core ↔ Groq/OpenRouter (HTTP/SDK)
 3. **Persistence boundary** — Core ↔ File system (JSONL, JSON, YAML)
 
 ### 5.2 Level 2 — Containers
 
+**Figure 2 — Container Diagram (C4 Level 2):** Decomposes the system into its six major containers with data flow direction and technology choices. Each container maps to a distinct directory in the source tree.
+
+```mermaid
+graph TB
+    subgraph Browser ["Browser — Client Tier"]
+        UI["**Chat SPA**\nindex.html · app.js · chat.css\nTraining panel · Dev panel\nQuiz panel · Speech I/O"]
+        LS["**localStorage**\nSession ID persistence\nConversation history\n(client-side recovery)"]
+    end
+
+    subgraph Flask ["Flask Server — localhost:5000"]
+        subgraph WebLayer ["Web Layer  (src/web/)"]
+            App["**app.py**\n25 REST endpoints\nRoute handlers · JSON serialization\nSession lookup via require_session()"]
+            Sec["**security.py**\nRateLimiter · PromptInjectionValidator\nSessionSecurityManager · InputValidator\nSecurityHeadersMiddleware · ClientIPExtractor"]
+        end
+
+        subgraph Core ["Chatbot Core  (src/chatbot/)"]
+            CB["**chatbot.py**\nSalesChatbot — orchestrator\nCoordinates FSM · LLM · analytics"]
+            FSM["**flow.py**\nSalesFlowEngine — FSM\nFLOWS dict · ADVANCEMENT_RULES\nStage transitions · History management"]
+            NLU["**analysis.py**\nKeyword-based NLU pipeline\nanalyze_state() · classify_intent_level()\ndetect_guardedness() · classify_objection()"]
+            Prompt["**content.py**\nPrompt orchestration · generate_stage_prompt()\n4-tier pipeline · imports prompts.py + tactics.py"]
+            Prompts["**prompts.py**\nSTRATEGY_PROMPTS dict · _SHARED_RULES\nNEPQ stage templates · acknowledgment guidance"]
+            Loader["**loader.py**\nYAML config hub · @lru_cache\nQuickMatcher · assign_ab_variant()\nTemplate rendering · Tactic selection"]
+        end
+
+        subgraph Features ["Feature Modules  (src/chatbot/)"]
+            TR["**trainer.py**\ngenerate_training()\nanswer_training_question()\nRubric-injected coaching"]
+            QZ["**quiz.py**\nStage · next-move · direction quizzes\nDeterministic + LLM-scored paths"]
+            PS["**prospect.py**\nProspectSession · buyer simulation\nDeterministic _score_sales_message()"]
+            KN["**knowledge.py**\nCustom product knowledge\nPrompt injection · Field sanitization"]
+        end
+
+        subgraph Observability ["Observability  (src/chatbot/)"]
+            SA["**session_analytics.py**\nSessionAnalytics — static methods\nRecord: stage transitions · intent\nobjections · strategy switches\nFile: analytics.jsonl  (rotation: 10k→5k)"]
+            PM["**performance.py**\nPerformanceTracker — static methods\nlog_stage_latency() per turn\nFile: metrics.jsonl  (rotation: 5k→2.5k)"]
+        end
+
+        subgraph Providers ["LLM Provider Layer  (src/chatbot/providers/)"]
+            FP["**factory.py**\ncreate_provider(type) factory fn\nPROVIDERS registry dict"]
+            GP["**groq_provider.py**\nGroqProvider extends BaseLLMProvider\ngroq-sdk · threading.Lock\n~980 ms avg"]
+            OP["**openrouter_provider.py**\nOpenRouterProvider extends BaseLLMProvider\nrequests.Session · threading.Lock\n~1200 ms avg · backup provider"]
+            BP["**base.py**\nBaseLLMProvider ABC\n@auto_log_performance decorator\nLLMResponse dataclass"]
+        end
+    end
+
+    subgraph Config ["Configuration Layer  (src/config/  —  9 YAML files · ~1,400 lines)"]
+        YAML["signals.yaml · analysis_config.yaml · product_config.yaml\ntactics.yaml · adaptations.yaml · overrides.yaml\nprospect_config.yaml · quiz_config.yaml · variants.yaml"]
+    end
+
+    subgraph Persistence ["Persistence Layer  (project root)"]
+        PF["analytics.jsonl · metrics.jsonl · sessions/*.json"]
+    end
+
+    Browser -->|"HTTP REST\nX-Session-ID header"| WebLayer
+    App --> CB
+    CB --> FSM
+    CB --> NLU
+    FSM --> Prompt
+    Prompt --> NLU
+    Prompt --> Loader
+    CB --> Features
+    CB --> Observability
+    CB --> FP
+    FP --> GP
+    FP --> OP
+    GP --> BP
+    OP --> BP
+    Loader --> Config
+    Observability --> Persistence
 ```
-┌──────────────────────────────────────────────────────────────┐
-│                    SALES ROLEPLAY CHATBOT                     │
-│                                                              │
-│  ┌────────────────────────────────────────────────────────┐  │
-│  │  WEB LAYER                                             │  │
-│  │  app.py (885 SLOC) · security.py (250+ SLOC)          │  │
-│  │  25 REST endpoints · rate limiting · input validation  │  │
-│  └───────────────────────┬────────────────────────────────┘  │
-│                          │                                    │
-│  ┌───────────────────────▼────────────────────────────────┐  │
-│  │  CHATBOT CORE                                          │  │
-│  │  ┌──────────┐ ┌────────┐ ┌──────────┐ ┌───────────┐  │  │
-│  │  │chatbot.py│ │flow.py │ │analysis. │ │content.py │  │  │
-│  │  │366 SLOC  │ │317 SLOC│ │py 445 SL │ │732 SLOC   │  │  │
-│  │  │Orchestr. │ │FSM     │ │NLU       │ │Prompts    │  │  │
-│  │  └──────────┘ └────────┘ └──────────┘ └───────────┘  │  │
-│  │  ┌──────────┐ ┌────────┐ ┌──────────┐ ┌───────────┐  │  │
-│  │  │prospect. │ │trainer.│ │quiz.py   │ │knowledge. │  │  │
-│  │  │py 474 SL │ │py ~145 │ │~300 SLOC │ │py 94 SLOC │  │  │
-│  │  │Buyer sim │ │Coaching│ │Assessment│ │Custom KB  │  │  │
-│  │  └──────────┘ └────────┘ └──────────┘ └───────────┘  │  │
-│  │  ┌──────────┐ ┌────────────────┐ ┌─────────────────┐  │  │
-│  │  │loader.py │ │session_analyti │ │performance.py   │  │  │
-│  │  │621 SLOC  │ │cs.py  235 SLOC │ │108 SLOC         │  │  │
-│  │  │Config hub│ │Eval analytics  │ │Latency metrics  │  │  │
-│  │  └──────────┘ └────────────────┘ └─────────────────┘  │  │
-│  └───────────────────────┬────────────────────────────────┘  │
-│                          │                                    │
-│  ┌───────────────────────▼────────────────────────────────┐  │
-│  │  LLM PROVIDER LAYER                                    │  │
-│  │  base.py (ABC) · factory.py · groq_provider.py         │  │
-│  │  ollama_provider.py · dummy_provider.py                │  │
-│  └────────────────────────────────────────────────────────┘  │
-│                                                              │
-│  ┌────────────────────────────────────────────────────────┐  │
-│  │  CONFIGURATION LAYER (src/config/)                     │  │
-│  │  9 YAML files · ~1,400 lines · @lru_cache             │  │
-│  └────────────────────────────────────────────────────────┘  │
-│                                                              │
-│  ┌────────────────────────────────────────────────────────┐  │
-│  │  PERSISTENCE LAYER                                     │  │
-│  │  metrics.jsonl · analytics.jsonl · sessions/*.json     │  │
-│  └────────────────────────────────────────────────────────┘  │
-└──────────────────────────────────────────────────────────────┘
-```
+
+**Container responsibilities:**
+
+| Container | Owner File(s) | Key Responsibility |
+|-----------|--------------|-------------------|
+| Chat SPA | `index.html` · `app.js` | Single-page UI, localStorage session recovery, training/dev panels |
+| Web Layer | `app.py` · `security.py` | HTTP routing, input sanitization, rate limiting, session lifecycle |
+| Chatbot Core | `chatbot.py` · `flow.py` · `analysis.py` · `content.py` · `loader.py` | FSM + NLU + prompt generation + LLM orchestration |
+| Feature Modules | `trainer.py` · `quiz.py` · `prospect.py` · `knowledge.py` | Coaching, assessment, buyer simulation, custom knowledge |
+| Observability | `session_analytics.py` · `performance.py` | Event logging, latency tracking, evaluation data |
+| Provider Layer | `providers/` (4 files) | LLM abstraction — hot-swappable Groq/OpenRouter backends |
 
 ### 5.3 Level 3 — Component Detail
 
@@ -250,7 +289,7 @@ app.py ────────────────────────�
   │     │     └── analysis.py                                   │
   │     ├── analysis.py                                         │
   │     ├── loader.py                                           │
-  │     ├── providers/factory.py → base.py → groq/ollama        │
+  │     ├── providers/factory.py → base.py → groq/openrouter   │
   │     ├── trainer.py  [uses provider, not chatbot]            │
   │     ├── session_analytics.py  [static methods, no deps]     │
   │     └── performance.py  [static methods, no deps]           │
@@ -271,7 +310,7 @@ app.py ────────────────────────�
        happen inside function calls, not at module level.        │
 ```
 
-#### 5.3.2 chatbot.py — Orchestrator (366 SLOC)
+#### 5.3.2 chatbot.py — Orchestrator
 
 **Purpose:** Coordinate LLM calls, FSM state, session management, analytics recording, and training generation.
 
@@ -306,7 +345,7 @@ class ChatResponse:
 
 ---
 
-#### 5.3.3 flow.py — Finite State Machine (317 SLOC)
+#### 5.3.3 flow.py — Finite State Machine
 
 **Purpose:** Define sales flow stages, advancement rules, and state transitions.
 
@@ -346,7 +385,7 @@ TRANSACTIONAL strategy: [INTENT] → [PITCH] → [OBJECTION]
 
 ---
 
-#### 5.3.4 analysis.py — NLU Pipeline (445 SLOC)
+#### 5.3.4 analysis.py — NLU Pipeline
 
 **Purpose:** Pure signal detection functions. **No decisions, no state transitions** — only returns measurements.
 
@@ -390,44 +429,51 @@ class ConversationState:
 
 ---
 
-#### 5.3.5 content.py — Prompt Engine (732 SLOC)
+#### 5.3.5 Prompt System (refactored into 4 modules)
 
-**Purpose:** Stage-specific prompt templates, conversational tactics, and adaptive routing.
+The prompt system was refactored from a monolithic `content.py` into four smaller, focused modules:
 
-**Data structures:**
+**content.py — Prompt Orchestration**
 
-`STRATEGY_PROMPTS` dict:
+Coordinates prompt assembly via 4-tier pipeline:
 ```
-"intent"        → { "intent": "...discovery greeting..." }
+Tier 1 (Overrides)    → Direct info requests, soft positives, validation loops
+Tier 2 (Acknowledgment) → Emotional validation guidance from state
+Tier 3 (Tactics)      → Adaptive tactical guidance based on user state
+Tier 4 (Assembly)     → Base + stage prompt + context + preferences
+```
+
+| Function | Purpose |
+|----------|---------|
+| `generate_stage_prompt(strategy, stage, product_context, history, user_message)` | Main entry — assembles complete system prompt |
+| `_get_stage_specific_prompt(strategy, stage, state, user_message, history)` | Handle intent_low vs intent, objection classification |
+| `_get_preference_and_keyword_context(history, preferences)` | Extract and format lexical entrainment |
+
+**prompts.py — Stage Templates**
+
+Contains `STRATEGY_PROMPTS` dict and shared prompt rules:
+```
 "consultative"  → { "intent", "intent_low", "logical", "emotional", "pitch", "objection" }
 "transactional" → { "intent", "intent_low", "pitch", "objection" }
 ```
 
-`_SHARED_RULES` — 5 universal hard rules (P1 priority):
-1. NO ending pitch/close with `?` (signals uncertainty)
-2. NO parroting (feels robotic)
-3. NO `"Would you like...?"` (permission-seeking weakens authority)
-4. NO products without prices (feels evasive)
-5. NO closed yes/no questions (kills conversational flow)
-
-**Key functions:**
-
 | Function | Purpose |
 |----------|---------|
-| `generate_stage_prompt(strategy, stage, product_context, history, user_message)` | Assemble complete system prompt via 4-tier pipeline |
 | `get_prompt(strategy, stage)` | Retrieve raw template from `STRATEGY_PROMPTS` |
-| `get_base_rules(strategy)` | Strategy-scoped rules (shared + strategy-specific) |
-| `generate_init_greeting(strategy)` | Initial bot message (`{message, training}` dict) |
-| `get_tactic(category, subtype, context)` | Random tactic from `tactics.yaml` |
-| `detect_acknowledgment_context(...)` | When to validate emotionally |
+| `get_base_prompt(product_context, strategy, history)` | Build base prompt with context |
+| `generate_init_greeting(strategy)` | Initial bot message |
+| `get_acknowledgment_guidance(context_type)` | Emotional validation text |
 
-**4-tier prompt assembly pipeline:**
-```
-Tier 1 (Base)       → Select strategy + stage template
-Tier 2 (Rules)      → Apply _SHARED_RULES + strategy-specific rules
-Tier 3 (Context)    → Inject acknowledgment, overrides, user preferences, custom knowledge
-Tier 4 (Adaptation) → Stage-specific adaptations (guardedness, literal questions, decisive user)
-```
+**overrides.py — Early-Exit Conditions**
+
+Handles high-priority overrides that bypass normal prompt assembly:
+- Direct info requests ("price", "cost", "how much")
+- Soft positives at PITCH stage ("yes", "ok", "sounds good")
+- Excessive validation detection
+
+**tactics.py — Adaptive Guidance**
+
+Builds tactical guidance based on user state (decisive, guarded, literal questions).
 
 **NEPQ framework mapping** (consultative strategy):
 | Stage | NEPQ Phase | Impact formula.txt Lines |
@@ -438,11 +484,9 @@ Tier 4 (Adaptation) → Stage-specific adaptations (guardedness, literal questio
 | pitch | Commitment → 3-pillar → assumptive close | Lines 59-71 |
 | objection | Classify → Reframe pattern | — |
 
-**Design note:** 732 lines owning prompts + assembly + acknowledgment + overrides. Violates strict SRP, but the external boundary (prompt generation) is well-defined. Refactoring deferred post-FYP.
-
 ---
 
-#### 5.3.6 loader.py — Configuration Hub (621 SLOC)
+#### 5.3.6 loader.py — Configuration Hub
 
 **Purpose:** Load and cache all YAML configs; provide product matching, template rendering, and A/B variant assignment.
 
@@ -496,7 +540,7 @@ Tier 4 (Adaptation) → Stage-specific adaptations (guardedness, literal questio
 
 ```
 ┌──────────────────────────────────────────────┐
-│  BaseLLMProvider (ABC)  — base.py (52 SLOC)  │
+│  BaseLLMProvider (ABC)  — base.py            │
 │                                              │
 │  Abstract methods:                           │
 │    chat(messages, temperature, max_tokens)    │
@@ -510,26 +554,25 @@ Tier 4 (Adaptation) → Stage-specific adaptations (guardedness, literal questio
 └───────┬──────────────┬──────────────┬────────┘
         │              │              │
         ▼              ▼              ▼
-┌──────────────┐ ┌───────────┐ ┌───────────┐
-│GroqProvider  │ │OllamaProvi│ │DummyProvid│
-│groq-sdk      │ │der        │ │er         │
-│68 SLOC       │ │requests   │ │Testing    │
-│              │ │99 SLOC    │ │stub       │
-│Model:        │ │           │ │           │
-│ llama-3.3-   │ │Model:     │ │Returns    │
-│ 70b-versatile│ │ llama3.2: │ │fixed text │
-│              │ │ 3b        │ │           │
-│Key:          │ │           │ │           │
-│ SAFE_GROQ_   │ │Host:      │ │           │
-│ API_KEY      │ │ localhost: │ │           │
-│              │ │ 11434     │ │           │
-│~980ms avg    │ │3-5s avg   │ │<1ms       │
-└──────────────┘ └───────────┘ └───────────┘
+┌──────────────┐ ┌─────────────┐ ┌───────────┐
+│GroqProvider  │ │OpenRouter   │ │DummyProvid│
+│groq-sdk      │ │Provider     │ │er         │
+│              │ │requests     │ │Testing    │
+│Model:        │ │             │ │stub       │
+│ llama-3.3-   │ │Model:       │ │Returns    │
+│ 70b-versatile│ │ llama-3.3-  │ │fixed text │
+│              │ │ 70b-instruct│ │           │
+│Key:          │ │             │ │           │
+│ SAFE_GROQ_   │ │Key:         │ │           │
+│ API_KEY      │ │OPENROUTER_  │ │           │
+│              │ │API_KEY      │ │           │
+│~980ms avg    │ │~1200ms avg  │ │<1ms       │
+└──────────────┘ └─────────────┘ └───────────┘
 ```
 
-**Factory** — `factory.py` (38 SLOC):
+**Factory** — `factory.py`:
 ```python
-PROVIDERS = {"groq": GroqProvider, "ollama": OllamaProvider, "dummy": DummyProvider}
+PROVIDERS = {"groq": GroqProvider, "openrouter": OpenRouterProvider, "dummy": DummyProvider}
 create_provider(provider_type, model=None) → BaseLLMProvider
 get_available_providers() → dict  # Check all providers' availability
 ```
@@ -546,7 +589,7 @@ class LLMResponse:
 
 ---
 
-#### 5.3.8 prospect.py — Buyer Simulation (474 SLOC)
+#### 5.3.8 prospect.py — Buyer Simulation
 
 **Purpose:** AI plays a realistic buyer; user practises selling. No FSM — readiness-based progression.
 
@@ -608,7 +651,7 @@ class ProspectState:
 
 ---
 
-#### 5.3.9 prospect_evaluator.py — Post-Session Evaluation (136 SLOC)
+#### 5.3.9 prospect_evaluator.py — Post-Session Evaluation
 
 **Purpose:** Single LLM call to evaluate the user's sales performance after a prospect session ends.
 
@@ -641,7 +684,7 @@ class ProspectState:
 
 ---
 
-#### 5.3.10 trainer.py — Coaching Feedback (~145 SLOC)
+#### 5.3.10 trainer.py — Coaching Feedback
 
 **Purpose:** Generate per-turn coaching notes and answer trainee questions about sales technique.
 
@@ -665,7 +708,7 @@ class ProspectState:
 
 ---
 
-#### 5.3.11 quiz.py — Assessment System (~300 SLOC)
+#### 5.3.11 quiz.py — Assessment System
 
 **Purpose:** Three quiz types testing the user's understanding of sales methodology.
 
@@ -684,7 +727,7 @@ class ProspectState:
 
 ---
 
-#### 5.3.12 knowledge.py — Custom Product Knowledge (94 SLOC)
+#### 5.3.12 knowledge.py — Custom Product Knowledge
 
 **Purpose:** Allow users to upload custom product information that gets injected into LLM prompts.
 
@@ -705,7 +748,7 @@ class ProspectState:
 
 ---
 
-#### 5.3.13 session_analytics.py — Evaluation Analytics (235 SLOC)
+#### 5.3.13 session_analytics.py — Evaluation Analytics
 
 **Purpose:** Record conversation-level events for FYP evaluation chapter. File-based, append-only.
 
@@ -743,7 +786,7 @@ class ProspectState:
 
 ---
 
-#### 5.3.14 performance.py — Latency Metrics (108 SLOC)
+#### 5.3.14 performance.py — Latency Metrics
 
 **Purpose:** Per-turn LLM latency tracking for operational monitoring.
 
@@ -762,7 +805,7 @@ class ProspectState:
 
 ---
 
-#### 5.3.15 utils.py — Shared Utilities (60 SLOC)
+#### 5.3.15 utils.py — Shared Utilities
 
 **Enums** (all `str` subclass for JSON serialization):
 ```python
@@ -789,7 +832,7 @@ class Stage(str, Enum):
 
 ---
 
-#### 5.3.16 security.py — Defensive Infrastructure (250+ SLOC)
+#### 5.3.16 security.py — Defensive Infrastructure
 
 **Purpose:** Centralized security controls. **Zero dependencies on business logic** — one-way import only (`app.py → security.py`).
 
@@ -837,170 +880,331 @@ class Stage(str, Enum):
 
 ---
 
+### 5.4 Class Diagrams
+
+#### 5.4.1 Core Class Diagram
+
+**Figure 3 — Core Class Diagram (Low-Level):** Shows primary classes with their attributes, methods, return types, and relationships. Uses UML notation: `+` public, `-` private, `..>` dependency, `-->` association, `<|--` inheritance.
+
+```mermaid
+classDiagram
+    class SalesChatbot {
+        -provider : BaseLLMProvider
+        -flow_engine : SalesFlowEngine
+        -session_id : str
+        -logger : Logger
+        -_ab_variant : str
+        +chat(user_message str) ChatResponse
+        +_apply_advancement(user_message str) void
+        +_detect_and_switch_strategy(user_message str) bool
+        +generate_training(user_msg str, bot_reply str) dict
+        +answer_training_question(question str) dict
+        +rewind_to_turn(turn_index int) bool
+        +replay(history list) bool
+        +save_session() void
+        +load_session(session_id str) bool
+        +get_conversation_summary() dict
+        +record_session_end() void
+    }
+
+    class SalesFlowEngine {
+        -flow_type : str
+        -flow_config : dict
+        -current_stage : str
+        -stage_turn_count : int
+        -conversation_history : list
+        -_initial_flow_type : str
+        +get_current_prompt(user_message str) str
+        +get_advance_target(user_message str) Optional~str~
+        +advance(target_stage str) void
+        +add_turn(user_msg str, bot_reply str) void
+        +switch_strategy(new_strategy str) bool
+        +reset_to_initial() void
+        +restore_state(state dict) void
+        +get_summary() dict
+    }
+
+    class ChatResponse {
+        <<dataclass>>
+        +content : str
+        +latency_ms : float
+        +provider : str
+        +model : str
+        +input_len : int
+        +output_len : int
+    }
+
+    class ConversationState {
+        <<dataclass>>
+        +intent : str
+        +guarded : bool
+        +question_fatigue : bool
+        +decisive : bool
+    }
+
+    class SessionSecurityManager {
+        -_store : dict
+        -_lock : threading.Lock
+        -_max_capacity : int
+        -_idle_minutes : int
+        +get(session_id str) Optional~object~
+        +set(session_id str, obj object) void
+        +delete(session_id str) void
+        +can_create() bool
+        +cleanup_expired() void
+        +start_background_cleanup() void
+    }
+
+    class RateLimiter {
+        -_limits : dict
+        -_state : dict
+        -_lock : threading.Lock
+        +is_limited(ip str, bucket str) bool
+    }
+
+    class SessionAnalytics {
+        <<static methods>>
+        +record_session_start(session_id, product_type, strategy, ab_variant) void
+        +record_stage_transition(session_id, from_stage, to_stage, strategy, turns) void
+        +record_intent_classification(session_id, intent_level, turn_count) void
+        +record_objection_classified(session_id, objection_type, strategy, turn) void
+        +record_strategy_switch(session_id, from_s, to_s, reason, turn) void
+        +record_session_end(session_id, final_stage, final_strategy, turns) void
+        +get_evaluation_summary() dict
+    }
+
+    class PerformanceTracker {
+        <<static methods>>
+        +log_stage_latency(session_id, stage, strategy, latency_ms, ...) void
+        +get_provider_stats() dict
+        +get_session_metrics(session_id str) list
+    }
+
+    SalesChatbot --> SalesFlowEngine : orchestrates
+    SalesChatbot ..> ChatResponse : returns
+    SalesChatbot ..> SessionAnalytics : fires events
+    SalesChatbot ..> PerformanceTracker : logs metrics
+    SalesFlowEngine ..> ConversationState : reads via analysis.py
+```
+
+#### 5.4.2 LLM Provider Class Hierarchy
+
+**Figure 4 — Provider Class Hierarchy (Low-Level):** Shows the Factory + Template Method pattern used for LLM abstraction. `BaseLLMProvider` defines the interface; concrete providers implement it. `@auto_log_performance` wraps `chat()` to add latency measurement transparently.
+
+```mermaid
+classDiagram
+    class BaseLLMProvider {
+        <<abstract>>
+        +chat(messages list, temperature float, max_tokens int) LLMResponse
+        +is_available() bool
+        +get_model_name() str
+    }
+
+    class GroqProvider {
+        -_client : groq.Groq
+        -_model : str
+        -_lock : threading.Lock
+        -MODEL_DEFAULT : str = "llama-3.3-70b-versatile"
+        +chat(messages list, temperature float, max_tokens int) LLMResponse
+        +is_available() bool
+        +get_model_name() str
+    }
+
+    class OpenRouterProvider {
+        -api_key : str
+        -model : str
+        -_session : requests.Session
+        -_session_lock : threading.Lock
+        +chat(messages list, temperature float, max_tokens int) LLMResponse
+        +is_available() bool
+        +get_model_name() str
+    }
+
+    class DummyProvider {
+        -_response_text : str
+        +chat(messages list, temperature float, max_tokens int) LLMResponse
+        +is_available() bool
+        +get_model_name() str
+    }
+
+    class LLMResponse {
+        <<dataclass>>
+        +content : str
+        +model : str
+        +latency_ms : float
+        +error : Optional~str~
+    }
+
+    BaseLLMProvider <|-- GroqProvider : extends
+    BaseLLMProvider <|-- OpenRouterProvider : extends
+    BaseLLMProvider <|-- DummyProvider : extends
+    BaseLLMProvider ..> LLMResponse : returns
+    GroqProvider ..> LLMResponse : returns
+    OpenRouterProvider ..> LLMResponse : returns
+
+    note for BaseLLMProvider "Decorated with @auto_log_performance\nWraps chat() to: measure latency,\ncall PerformanceTracker.log_stage_latency(),\nand handle exceptions → LLMResponse.error"
+    note for GroqProvider "API key: SAFE_GROQ_API_KEY env var\nPersistent client reused across calls\nthreading.Lock prevents concurrent client creation\n~980ms avg per call"
+    note for OpenRouterProvider "API key: OPENROUTER_API_KEY env var\nBackup when Groq rate-limited/unavailable\nrequests.Session with threading.Lock\n~1200ms avg per call"
+```
+
+#### 5.4.3 FSM Data Structures (Zoomed In)
+
+**Figure 5 — FSM Data Structures (Low-Level):** Shows the internal structure of `flow.py` — how the `FLOWS` dict encodes stage transitions, how `SalesFlowEngine` maintains state, and how pure-function advancement rules are wired to FSM transitions.
+
+```mermaid
+graph TD
+    subgraph FLOWS_DICT ["FLOWS dict — static configuration"]
+        FC["CONSULTATIVE\n stages: INTENT→LOGICAL→EMOTIONAL→PITCH→OBJECTION\n transitions: {INTENT: {next: LOGICAL, advance_on: user_has_clear_intent},\n               LOGICAL: {next: EMOTIONAL, advance_on: user_shows_doubt, urgency_skip: PITCH},\n               EMOTIONAL: {next: PITCH, advance_on: user_expressed_stakes},\n               ...COMMON_TRANSITIONS}"]
+        FT["TRANSACTIONAL\n stages: INTENT→PITCH→OBJECTION\n transitions: {INTENT: {next: PITCH, advance_on: user_has_clear_intent},\n               ...COMMON_TRANSITIONS}"]
+        FI["INTENT (discovery)\n stages: INTENT only\n transitions: {}  — no advancement rules"]
+        CT["_COMMON_TRANSITIONS\n PITCH: {next: OBJECTION, advance_on: commitment_or_objection}\n OBJECTION: {next: None, advance_on: commitment_or_walkaway}"]
+    end
+
+    subgraph AR ["ADVANCEMENT_RULES dict — pure functions"]
+        R1["user_has_clear_intent\n(history, user_msg, turns) → bool\nChecks: explicit_intent_phrases OR\n        classify_intent_level == 'high' OR\n        turns >= 4-6 (safety valve)"]
+        R2["user_shows_doubt\n(history, user_msg, turns) → bool\nCalls: _check_advancement_condition(..., 'logical', min_turns=2)\nRequires: doubt_keywords from analysis_config.yaml OR turns >= 10"]
+        R3["user_expressed_stakes\n(history, user_msg, turns) → bool\nCalls: _check_advancement_condition(..., 'emotional', min_turns=3)\nRequires: stakes_keywords from analysis_config.yaml OR turns >= 10"]
+        R4["commitment_or_objection\n(history, user_msg, turns) → bool\nRequires: len(user_msg.split()) >= 3 AND\n          commitment OR objection keywords"]
+        R5["commitment_or_walkaway\n(history, user_msg, turns) → bool\nChecks: commitment OR walking signals in SIGNALS dict"]
+    end
+
+    subgraph SFE ["SalesFlowEngine instance — runtime state"]
+        ST["flow_type: 'consultative'\ncurrent_stage: 'logical'\nstage_turn_count: 3\nconversation_history: [14 messages]"]
+    end
+
+    CT --> FC
+    CT --> FT
+    R1 & R2 & R3 & R4 & R5 --> AR
+    FLOWS_DICT --> SFE
+    AR --> SFE
+```
+
+---
+
 ## 6. Runtime View
 
 ### 6.1 Chat Turn Lifecycle
 
-```
-User types message
-       │
-       ▼
-┌──────────────────────────────────────────────────────────────┐
-│  1. FRONTEND: POST /api/chat {message, session_id}           │
-└──────────────────────┬───────────────────────────────────────┘
-                       ▼
-┌──────────────────────────────────────────────────────────────┐
-│  2. APP.PY: Validate & Route                                 │
-│     ├─ RateLimiter.is_limited(ip, 'chat')                    │
-│     ├─ InputValidator.validate_message(text)                 │
-│     │    ├─ PromptInjectionValidator.sanitize()              │
-│     │    └─ Length check (≤1000 chars)                       │
-│     └─ require_session() → get SalesChatbot from store       │
-└──────────────────────┬───────────────────────────────────────┘
-                       ▼
-┌──────────────────────────────────────────────────────────────┐
-│  3. CHATBOT.CHAT(user_message)                               │
-│     │                                                        │
-│     ├─ 3a. PROMPT GENERATION                                 │
-│     │   flow_engine.get_current_prompt(user_message)         │
-│     │     └─ content.generate_stage_prompt(...)              │
-│     │         ├─ analysis.analyze_state()  [intent,guarded]  │
-│     │         ├─ Check overrides  [info request? soft pos?]  │
-│     │         ├─ extract_preferences() + extract_keywords()  │
-│     │         └─ Assemble 4-tier prompt                      │
-│     │                                                        │
-│     ├─ 3b. LLM CALL                                         │
-│     │   provider.chat([system + recent_history + user_msg])  │
-│     │     └─ Groq API (~980ms) or Ollama (3-5s)             │
-│     │                                                        │
-│     ├─ 3c. POST-RESPONSE                                     │
-│     │   ├─ flow_engine.add_turn(user_msg, bot_reply)         │
-│     │   ├─ _apply_advancement(user_message)                  │
-│     │   │    ├─ If INTENT: _detect_and_switch_strategy()     │
-│     │   │    ├─ flow_engine.get_advance_target(user_msg)     │
-│     │   │    └─ If target: flow_engine.advance(target)       │
-│     │   │                                                    │
-│     │   ├─ SessionAnalytics.record_intent_classification()   │
-│     │   ├─ SessionAnalytics.record_stage_transition() *      │
-│     │   ├─ SessionAnalytics.record_objection_classified() *  │
-│     │   └─ PerformanceTracker.log_stage_latency()            │
-│     │       (* = if applicable)                              │
-│     │                                                        │
-│     └─ 3d. TRAINING GENERATION                               │
-│         trainer.generate_training(user_msg, bot_reply)       │
-│           └─ Lightweight LLM call (temp=0.3, max=200 tokens) │
-└──────────────────────┬───────────────────────────────────────┘
-                       ▼
-┌──────────────────────────────────────────────────────────────┐
-│  4. APP.PY: Return JSON response                             │
-│     {content, latency_ms, stage, strategy, training, metrics}│
-└──────────────────────┬───────────────────────────────────────┘
-                       ▼
-┌──────────────────────────────────────────────────────────────┐
-│  5. FRONTEND: Update UI                                      │
-│     ├─ Render bot message (markdown: bold, italic, lists)    │
-│     ├─ Update stage badge + strategy indicator               │
-│     ├─ Show training panel (coaching feedback)               │
-│     └─ Store session in localStorage                         │
-└──────────────────────────────────────────────────────────────┘
+**Figure 6 — Chat Turn Sequence Diagram (Low-Level):** Shows the complete message flow for a single user turn, with real class names, method signatures, and timing information. Demonstrates how the 6-layer architecture coordinates to produce a response.
+
+```mermaid
+sequenceDiagram
+    actor Browser
+    participant app as app.py<br/>Flask Route Handler
+    participant sec as security.py<br/>SecurityManager
+    participant cb as chatbot.py<br/>SalesChatbot
+    participant flow as flow.py<br/>SalesFlowEngine
+    participant content as content.py<br/>Prompt Engine
+    participant analysis as analysis.py<br/>NLU Pipeline
+    participant groq as GroqProvider<br/>Groq Cloud API
+    participant trainer as trainer.py<br/>Coaching Module
+    participant analytics as session_analytics.py<br/>Event Logger
+
+    Browser->>+app: POST /api/chat {message: "I'm struggling with my current car"}
+    app->>sec: RateLimiter.is_limited(ip, 'chat') → False
+    app->>sec: InputValidator.validate_message(text, validator, max_length=1000)
+    sec-->>app: sanitized_message (14 regex patterns applied)
+    app->>+cb: bot.chat(user_message)
+
+    Note over cb,flow: Step 1 — Prompt Assembly (~5ms)
+    cb->>+flow: flow_engine.get_current_prompt(user_message)
+    flow->>+content: generate_stage_prompt(strategy='consultative', stage='logical', ...)
+    content->>+analysis: analyze_state(history, user_message, signal_keywords=SIGNALS)
+    analysis-->>-content: ConversationState{intent='high', guarded=False, decisive=True}
+    content->>content: Check P0-P2 override conditions → None fire
+    content->>content: P3: Select STRATEGY_PROMPTS['consultative']['logical']
+    content->>content: P4: decisive=True → skip extra probing instruction
+    content->>content: P5: extract_preferences() → 'reliability, family'
+    content-->>-flow: assembled system_prompt (prompt engine result)
+    flow-->>-cb: system_prompt
+
+    Note over cb,groq: Step 2 — LLM Call (~980ms)
+    cb->>+groq: provider.chat([system_prompt, history[-10:], user_msg], temp=0.8)
+    Note over groq: @auto_log_performance measures latency
+    groq-->>-cb: LLMResponse{content='That sounds frustrating...', latency_ms=982, model='llama-3.3-70b-versatile'}
+
+    Note over cb,analytics: Step 3 — Post-Response Processing (~3ms)
+    cb->>flow: flow_engine.add_turn(user_msg, bot_reply)
+    cb->>+flow: _apply_advancement(user_message)
+    flow->>flow: get_advance_target(user_message)
+    flow->>analysis: user_shows_doubt(history, message, turns=3) → True
+    flow-->>cb: target_stage = 'emotional'
+    cb->>flow: flow_engine.advance(target_stage='emotional')
+    flow-->>-cb: current_stage = 'emotional', stage_turn_count = 0
+    cb->>analytics: record_stage_transition(session_id, 'logical', 'emotional', 'consultative', turns=3)
+    cb->>analytics: record_intent_classification(session_id, 'high', user_turn_count=5)
+    cb->>+trainer: generate_training(user_msg, bot_reply)
+
+    Note over trainer,groq: Step 4 — Coaching (~500ms parallel)
+    trainer->>groq: provider.chat(coaching_prompt_with_rubric, temp=0.3, max_tokens=350)
+    groq-->>trainer: LLMResponse{content='{"stage_goal": "...", ...}'}
+    trainer-->>-cb: {stage_goal, what_bot_did, next_trigger, where_heading, watch_for}
+
+    cb-->>-app: ChatResponse{content, latency_ms=982, provider='groq', model='...'}
+    app-->>-Browser: JSON{response, stage='emotional', strategy='consultative',<br/>              training={coaching dict}, metrics={latency_ms, input_len, output_len}}
+    Browser->>Browser: updateSessionUI() → render bot msg, update stage badge,<br/>                   update training panel, sync dev panel if open
 ```
 
 ---
 
 ### 6.2 FSM State Machines
 
-**Consultative Flow (5-stage, NEPQ-based):**
+**Figure 7 — FSM State Diagram — Consultative Flow (Medium-Level):** Shows the 5-stage NEPQ-based consultative flow with guard conditions, shortcut paths, and advancement rule names. States map directly to `Stage` enum values in `utils.py`.
 
-```
-┌──────────┐   user_has_clear_intent()    ┌──────────┐
-│  INTENT  │  ─────────────────────────>  │ LOGICAL  │
-│          │   OR 4-6 turns elapsed       │          │
-│ "Get     │                              │ Two-phase│
-│ tangible │                              │ probe:   │
-│ and      │                              │ cause →  │
-│ experience│                             │ impact   │
-└──────────┘                              └────┬─────┘
-                                               │
-                              user_shows_doubt()│
-                              (doubt keywords   │
-                               REQUIRED         │
-                               OR 10 turns)     │
-                                               ▼
-                                          ┌──────────┐
-                                          │EMOTIONAL │
-                                          │          │
-                                          │Identity  │
-                                          │Frame →   │
-                                          │Future    │
-                                          │Pacing →  │
-                                          │COI       │
-                                          └────┬─────┘
-                                               │
-                              user_expressed_   │
-                              stakes()         │
-                              (stakes keywords  │
-                               REQUIRED         │
-                               OR 10 turns)     │
-               ┌───────────────────────────────┘
-               │
-               │    ┌──── user_demands_directness() ──┐
-               │    │     (frustration → skip to pitch)│
-               ▼    ▼                                  │
-          ┌──────────┐                                 │
-          │  PITCH   │ <───────────────────────────────┘
-          │          │
-          │Commitment│
-          │→ 3-pillar│
-          │→ close   │
-          └────┬─────┘
-               │
-               │ commitment_or_objection()
-               ▼
-          ┌──────────┐
-          │OBJECTION │
-          │          │
-          │CLASSIFY →│
-          │RECALL →  │
-          │REFRAME → │
-          │RESPOND   │
-          └────┬─────┘
-               │
-               │ commitment_or_walkaway()
-               ▼
-          ┌──────────┐
-          │  CLOSED  │
-          │ (deal or │
-          │  walked) │
-          └──────────┘
+```mermaid
+stateDiagram-v2
+    [*] --> INTENT : Session initialized\nflow_type = 'consultative'
+
+    INTENT --> LOGICAL : user_has_clear_intent(history, msg, turns)\n[explicit intent phrase OR intent_level==high OR turns>=4]
+    INTENT --> PITCH : user_demands_directness(history, msg)\n[frustration / urgency fast-path]
+
+    LOGICAL --> EMOTIONAL : user_shows_doubt(history, msg, turns)\n[doubt_keywords from analysis_config.yaml\nOR turns >= 10 safety valve]
+    LOGICAL --> PITCH : user_demands_directness(history, msg)\nOR impatience signals in SIGNALS dict\nOR urgency_skip_to override fires
+
+    EMOTIONAL --> PITCH : user_expressed_stakes(history, msg, turns)\n[stakes_keywords from analysis_config.yaml\nOR turns >= 10 safety valve]
+    EMOTIONAL --> PITCH : commitment terms detected\n[SIGNALS['commitment'] keywords]
+
+    PITCH --> OBJECTION : commitment_or_objection(history, msg, turns)\n[len(msg.split())>=3 AND commitment OR objection keywords]
+
+    OBJECTION --> [*] : commitment_or_walkaway(history, msg, turns)\n[SOLD: commitment keywords]\n[WALKED: walking signals]
 ```
 
-**Transactional Flow (3-stage, NEEDS→MATCH→CLOSE):**
+**Figure 8 — FSM State Diagram — Transactional Flow (Medium-Level):** The 3-stage fast-track flow for price-driven products. Skips logical and emotional probing entirely; moves from intent directly to pitch once budget and use-case are clear.
 
+```mermaid
+stateDiagram-v2
+    [*] --> INTENT : Session initialized\nflow_type = 'transactional'\nProduct: budget_fragrances / watches / automotive
+
+    INTENT --> PITCH : user_has_clear_intent(history, msg, turns)\n[budget + use-case clear OR turns >= 2]\nMax 2 turns before advancing
+
+    PITCH --> OBJECTION : commitment_or_objection(history, msg, turns)\n[len(msg.split())>=3 AND commitment OR objection]
+
+    OBJECTION --> [*] : commitment_or_walkaway()\n[SOLD or WALKED]
 ```
-┌──────────┐   user_has_clear_intent()    ┌──────────┐
-│  INTENT  │  ─────────────────────────>  │  PITCH   │
-│          │   OR max 2 turns             │          │
-│Budget +  │                              │Match     │
-│use-case  │                              │options + │
-│only      │                              │close     │
-└──────────┘                              └────┬─────┘
-                                               │
-                              commitment_or_   │
-                              objection()      │
-                                               ▼
-                                          ┌──────────┐
-                                          │OBJECTION │
-                                          │          │
-                                          │Resolve + │
-                                          │close     │
-                                          └────┬─────┘
-                                               │
-                              commitment_or_   │
-                              walkaway()       │
-                                               ▼
-                                          ┌──────────┐
-                                          │  CLOSED  │
-                                          └──────────┘
+
+**Figure 9 — Strategy Detection Flow (Medium-Level):** Shows how the INTENT discovery mode resolves to a real strategy. User signals take priority; bot-output fallback only fires after 3 turns.
+
+```mermaid
+flowchart TD
+    START["Session starts\nproduct_type = 'default'\nflow_type = 'intent'\ncurrent_stage = 'INTENT'"] --> TURN
+
+    TURN["New user turn\n_detect_and_switch_strategy(user_message)"]
+
+    TURN --> UCS{Check user signals\nfirst — highest priority}
+
+    UCS -->|"user_consultative_signals?\n'tell me more', 'struggling',\n'help me understand', 'coaching'"| CONS["switch_strategy('consultative')\n5-stage NEPQ flow"]
+
+    UCS -->|"user_transactional_signals?\n'price', 'cost', 'budget',\n'buy now', 'how much'"| TRANS["switch_strategy('transactional')\n3-stage fast-track flow"]
+
+    UCS -->|"No user signals detected"| TURNS3{stage_turn_count >= 3?}
+
+    TURNS3 -->|"No — stay in INTENT\nkeep discovering"| TURN
+
+    TURNS3 -->|"Yes — check BOT output\n(fallback heuristic)"| BOT{Bot output signals}
+
+    BOT -->|"consultative_bot_indicators\ndetected in last reply"| CONS
+    BOT -->|"transactional_bot_indicators\ndetected in last reply"| TRANS
+    BOT -->|"Ambiguous — no clear signal"| DEFAULT["switch_strategy('consultative')\nsafe default"]
 ```
 
 **Guard conditions summary:**
@@ -1017,101 +1221,43 @@ User types message
 
 ### 6.3 Prompt Assembly Pipeline (6-Priority Routing)
 
-```
-User message arrives
-       │
-       ▼
-┌─ P0: OVERRIDE — Direct Info Request ──────────────────────┐
-│  "price", "cost", "how much" detected?                    │
-│  YES → Return direct-answer prompt. STOP.                 │
-└───────────────────────────────────────────────────────────┘
-       │ NO
-       ▼
-┌─ P1: OVERRIDE — Soft Positive at PITCH ───────────────────┐
-│  "yes", "ok", "sounds good" AND stage == PITCH?           │
-│  YES → Return assumptive-close prompt. STOP.              │
-└───────────────────────────────────────────────────────────┘
-       │ NO
-       ▼
-┌─ P2: OVERRIDE — Excessive Validation Loop ────────────────┐
-│  Bot validated >3× in recent history?                     │
-│  YES → Return pivot-forward prompt. STOP.                 │
-└───────────────────────────────────────────────────────────┘
-       │ NO
-       ▼
-┌─ P3: STAGE-SPECIFIC BASE ────────────────────────────────┐
-│  INTENT    → Elicitation ("get tangible")                │
-│  LOGICAL   → Doubt-building ("two-phase probe")         │
-│  EMOTIONAL → Stakes surfacing ("identity frame")         │
-│  PITCH     → Value prop + assumptive close               │
-│  OBJECTION → Classify + type-specific reframe            │
-└──────────────────────────────────────────────────────────┘
-       │
-       ▼
-┌─ P4: USER STATE ADAPTATION ──────────────────────────────┐
-│  analyze_state(history, user_message)                    │
-│  ├─ intent == "low"        → inject elicitation tactic   │
-│  ├─ guarded == true        → light acknowledgment        │
-│  ├─ question_fatigue       → reduce question count       │
-│  └─ decisive == true       → skip probing, move forward  │
-└──────────────────────────────────────────────────────────┘
-       │
-       ▼
-┌─ P5: CONTENT INJECTION ─────────────────────────────────┐
-│  ├─ extract_preferences()   → "budget, safety, ..."     │
-│  ├─ extract_user_keywords() → lexical entrainment       │
-│  └─ custom knowledge        → product specs/pricing     │
-└──────────────────────────────────────────────────────────┘
-       │
-       ▼
-   FINAL SYSTEM PROMPT (assembled, contextualized)
+**Figure 10 — Prompt Assembly Pipeline (Low-Level, Zoomed In):** Shows the priority-routing algorithm inside `content.generate_stage_prompt()`. P0–P2 are early-exit overrides; P3–P5 assemble the base prompt with state-aware adaptations. This is the core of the adaptive prompt engineering system.
+
+```mermaid
+flowchart TD
+    UM["User message arrives\ngenerate_stage_prompt(strategy, stage, product_context, history, user_message)"]
+
+    UM --> P0{"P0: Direct Info Request Override\ntext_contains_any_keyword(msg, SIGNALS['direct_info_requests'])\nKeywords: 'price', 'cost', 'how much', 'what does it cost'"}
+    P0 -->|"YES — fires"| S0["Return overrides.yaml:\ndirect_info_request template\nSKIPS all lower tiers"]
+    P0 -->|"NO"| P1
+
+    P1{"P1: Soft Positive at PITCH Override\ntext_contains_any_keyword(msg, SIGNALS['soft_positive'])\nAND current_stage == 'pitch'\nKeywords: 'yes', 'ok', 'sounds good', 'alright'"}
+    P1 -->|"YES — fires"| S1["Return overrides.yaml:\nsoft_positive_at_pitch template\n(assumptive close)\nSKIPS tiers P2–P5"]
+    P1 -->|"NO"| P2
+
+    P2{"P2: Excessive Validation Loop\nis_repetitive_validation(history, threshold=3)\nCounts validation phrases in last 6 bot messages"}
+    P2 -->|"YES — fires"| S2["Return overrides.yaml:\nexcessive_validation template\n(pivot forward)\nSKIPS tiers P3–P5"]
+    P2 -->|"NO"| P3
+
+    P3["P3: Stage-Specific Base Prompt\nget_prompt(strategy, stage) from STRATEGY_PROMPTS dict\nget_base_rules(strategy) → _SHARED_RULES + strategy-specific rules\n(5 universal rules + strategy extras)"]
+
+    P3 --> P4["P4: User State Adaptation\nanalyze_state(history, user_message) → ConversationState\napplied via adaptations.yaml templates"]
+
+    P4 -->|"intent == 'low'"| A1["inject: elicitation tactic\nfrom tactics.yaml\n(presumptive/combined/discovery)"]
+    P4 -->|"guarded == True"| A2["inject: light acknowledgment\ndetect_acknowledgment_context() → 'light'"]
+    P4 -->|"question_fatigue == True\n(≥3 bot questions in last 4 msgs)"| A3["inject: reduce-question-count\ninstruction"]
+    P4 -->|"decisive == True\n(high_intent AND NOT guarded)"| A4["inject: skip-probing\nmove-forward instruction"]
+
+    A1 & A2 & A3 & A4 --> P5["P5: Content Injection\nextract_preferences(history) → 'budget, safety, reliability'\nextract_user_keywords(history) → lexical entrainment keywords\nget_custom_knowledge_text() → custom product specs"]
+
+    P5 --> FINAL["Final System Prompt\nFully assembled · Contextualized · Stage-appropriate\nSent as system message to LLM provider"]
 ```
 
 **Priority resolution:** If P0 fires, P1-P5 are skipped. If P1 fires, P2-P5 are skipped. Prevents conflicting instructions.
 
 ---
 
-### 6.4 Strategy Detection & Switching
-
-```
-Session starts (product_type = "default")
-       │
-       ▼
-┌──────────────────────────────────────────────────────────┐
-│  INTENT MODE  (single stage, no advancement rules)       │
-│                                                          │
-│  On each turn, chatbot._detect_and_switch_strategy():    │
-│                                                          │
-│  Priority 1: Check USER signals                          │
-│  ┌────────────────────────────────────────────────────┐  │
-│  │ user_consultative_signals?                         │  │
-│  │   "tell me more", "help me understand",            │  │
-│  │   "struggling", "coaching", "mentorship"           │  │
-│  │   → switch_strategy(CONSULTATIVE)                  │  │
-│  ├────────────────────────────────────────────────────┤  │
-│  │ user_transactional_signals?                        │  │
-│  │   "price", "cost", "budget", "buy", "how much"     │  │
-│  │   → switch_strategy(TRANSACTIONAL)                 │  │
-│  └────────────────────────────────────────────────────┘  │
-│                                                          │
-│  Priority 2: After 3 turns with no user signals          │
-│  ┌────────────────────────────────────────────────────┐  │
-│  │ Check BOT output indicators (fallback)             │  │
-│  │   consultative_bot_indicators → CONSULTATIVE       │  │
-│  │   transactional_bot_indicators → TRANSACTIONAL     │  │
-│  │   ambiguous → CONSULTATIVE (safe default)          │  │
-│  └────────────────────────────────────────────────────┘  │
-└──────────────────────────────────────────────────────────┘
-       │
-       ├──────────────────────┐
-       ▼                      ▼
-  CONSULTATIVE            TRANSACTIONAL
-  (5 stages)              (3 stages)
-```
-
----
-
-### 6.5 Prospect Mode Turn Lifecycle
+### 6.4 Prospect Mode Turn Lifecycle
 
 ```
 User (salesperson) sends message
@@ -1149,7 +1295,7 @@ User (salesperson) sends message
 
 ---
 
-### 6.6 Session Lifecycle
+### 6.5 Session Lifecycle
 
 ```
 ┌─────────────┐     POST /api/init       ┌─────────────────────┐
@@ -1214,9 +1360,9 @@ Two SessionSecurityManager instances:
               │ HTTPS (outbound only)
               ▼
 ┌───────────────────────────┐   ┌───────────────────────────┐
-│  Groq Cloud API           │   │  Ollama (optional)        │
-│  api.groq.com             │   │  localhost:11434          │
-│  SAFE_GROQ_API_KEY env    │   │  OLLAMA_HOST env          │
+│  Groq Cloud API           │   │  OpenRouter Cloud API     │
+│  api.groq.com             │   │  openrouter.ai/api/v1     │
+│  SAFE_GROQ_API_KEY env    │   │  OPENROUTER_API_KEY env   │
 └───────────────────────────┘   └───────────────────────────┘
 ```
 
@@ -1226,8 +1372,8 @@ Two SessionSecurityManager instances:
 |----------|---------|---------|
 | `SAFE_GROQ_API_KEY` | Groq API authentication | Required for Groq |
 | `GROQ_MODEL` | Groq model selection | `llama-3.3-70b-versatile` |
-| `OLLAMA_HOST` | Ollama server URL | `http://localhost:11434` |
-| `OLLAMA_MODEL` | Ollama model selection | `llama3.2:3b` |
+| `OPENROUTER_API_KEY` | OpenRouter API authentication | Optional (backup) |
+| `OPENROUTER_MODEL` | OpenRouter model selection | `meta-llama/llama-3.3-70b-instruct:free` |
 | `ENABLE_DEBUG_PANEL` | Enable `/api/debug/*` endpoints | `false` |
 | `ALLOWED_ORIGINS` | CORS allowed origins | localhost |
 
@@ -1294,7 +1440,7 @@ Request arrives
 | `analytics.jsonl` file | `threading.Lock` in `SessionAnalytics` |
 | Groq API client | `threading.Lock` in `GroqProvider` (persistent client) |
 | YAML config | `@lru_cache` — immutable after first load, thread-safe by design |
-| Ollama availability | 30-second TTL cache, atomic bool update |
+| OpenRouter session | `threading.Lock` in `OpenRouterProvider._session_lock` |
 
 ### 8.3 Error Handling & Resilience
 
@@ -1336,7 +1482,7 @@ Request arrives
 | NLU analysis (analyze_state) | < 50ms | ~10ms |
 | Prompt assembly (4-tier) | < 20ms | ~5ms |
 | LLM call (Groq) | < 2000ms | ~980ms avg |
-| LLM call (Ollama) | < 10000ms | ~3-5s |
+| LLM call (OpenRouter) | < 2000ms | ~1200ms |
 | Post-response (advancement + logging) | < 10ms | ~3ms |
 | Training generation (2nd LLM call) | < 2000ms | ~500ms |
 | **Total per turn (Groq)** | **< 2500ms** | **~1500ms** |
@@ -1441,7 +1587,7 @@ Request arrives
 | Dual session management | High | **Fixed** — unified to `SessionSecurityManager` for both session types |
 | Double LLM call in prospect mode | Medium | **Fixed** — deterministic `_score_sales_message()` |
 | Cache key normalization | Low | **Fixed** — `_match_product_normalized()` |
-| content.py SRP violation | Medium | **Deferred** — 732 lines, but well-defined boundary; refactor risks prompt regression |
+| content.py SRP violation | Medium | **Fixed** — refactored into content.py (157), prompts.py (473), overrides.py (43), tactics.py (39) |
 | Guardedness threshold claim | Low | **Rejected** — review's claim was factually incorrect |
 | performance.py cold-start scan | Low | **Deferred** — deliberate trade-off vs database |
 | Quiz fallback scores | Low | **Deferred** — LLM failures rare |
@@ -1453,7 +1599,6 @@ Request arrives
 
 | Limitation | Impact | Mitigation |
 |-----------|--------|------------|
-| content.py is 732 SLOC | Harder to test individual prompt concerns | External boundary well-defined; defer to post-FYP |
 | JSONL cold-start scan | First `get_provider_stats()` after restart reads full file | File capped at 5000 lines; <100ms scan |
 | Sessions lost on restart | Active conversations reset | Client-side history + `replay()` endpoint |
 | No horizontal scaling | Single-server only | Adequate for FYP / demo context |
@@ -1714,12 +1859,12 @@ QuickMatcher.match_product()
 
 | Phase | Period | Key Changes |
 |-------|--------|-------------|
-| **Phase 1** | Oct-Nov 2025 | Extracted `trainer.py` from `chatbot.py` (350→250 SLOC) |
+| **Phase 1** | Oct-Nov 2025 | Extracted `trainer.py` from `chatbot.py` for modularity |
 | **Phase 2** | Nov 2025 | Broke circular dependencies — `analysis.py` calls `load_signals()` directly |
 | **Phase 3** | Dec 2025 | Removed brittle comma-counting heuristic from `is_literal_question()` |
 | **Phase 4** | Jan 2026 | **Critical FSM fix:** `user_shows_doubt()` and `user_expressed_stakes()` now require actual signal keywords (not just turn count). Safety valve raised from 5-6 to 10 turns. |
 | **Phase 5** | Feb 2026 | Keyword audit: removed 11 near-universal verbs + 4 duplicates from `goal_indicators` |
-| **Phase 6** | Mar 2026 | Extracted `security.py` (250+ SLOC) — 7 components from inline code in `app.py` |
+| **Phase 6** | Mar 2026 | Extracted `security.py` — 7 security components from inline code in `app.py` |
 | **Phase 7** | 21 Mar 2026 | Technical audit fixes: unified session management, deterministic prospect scoring, cache normalization. Added session analytics + A/B variant infrastructure. |
 
 ---
@@ -1751,25 +1896,28 @@ QuickMatcher.match_product()
 ```
 src/
 ├── chatbot/
-│   ├── chatbot.py          (366 SLOC)   Orchestrator
-│   ├── flow.py             (317 SLOC)   FSM state machine
-│   ├── analysis.py         (445 SLOC)   NLU signal detection
-│   ├── content.py          (732 SLOC)   Prompt generation
-│   ├── loader.py           (621 SLOC)   Config loading & caching
-│   ├── prospect.py         (474 SLOC)   Buyer simulation
-│   ├── prospect_evaluator.py (136 SLOC) Post-session evaluation
-│   ├── trainer.py          (~145 SLOC)  Coaching feedback
-│   ├── quiz.py             (~300 SLOC)  Assessment system
-│   ├── knowledge.py        (94 SLOC)    Custom product knowledge
-│   ├── session_analytics.py (235 SLOC)  Evaluation analytics
+│   ├── chatbot.py          (371 SLOC)   Orchestrator
+│   ├── flow.py             (322 SLOC)   FSM state machine
+│   ├── analysis.py         (466 SLOC)   NLU signal detection
+│   ├── content.py          (157 SLOC)   Prompt orchestration
+│   ├── prompts.py          (473 SLOC)   Stage templates & shared rules
+│   ├── overrides.py        (43 SLOC)    Early-exit conditions
+│   ├── tactics.py          (39 SLOC)    Adaptive guidance
+│   ├── loader.py           (613 SLOC)   Config loading & caching
+│   ├── prospect.py         (473 SLOC)   Buyer simulation
+│   ├── prospect_evaluator.py (135 SLOC) Post-session evaluation
+│   ├── trainer.py          (137 SLOC)   Coaching feedback
+│   ├── quiz.py             (359 SLOC)   Assessment system
+│   ├── knowledge.py        (93 SLOC)    Custom product knowledge
+│   ├── session_analytics.py (234 SLOC)  Evaluation analytics
 │   ├── performance.py      (108 SLOC)   Latency metrics
-│   ├── utils.py            (60 SLOC)    Enums & helpers
+│   ├── utils.py            (59 SLOC)    Enums & helpers
 │   └── providers/
-│       ├── base.py         (52 SLOC)    BaseLLMProvider (ABC)
-│       ├── factory.py      (38 SLOC)    Provider factory
-│       ├── groq_provider.py (68 SLOC)   Groq Cloud API
-│       ├── ollama_provider.py (99 SLOC) Ollama local
-│       └── dummy_provider.py            Testing stub
+│       ├── base.py         (51 SLOC)    BaseLLMProvider (ABC)
+│       ├── factory.py      (37 SLOC)    Provider factory
+│       ├── groq_provider.py (67 SLOC)   Groq Cloud API
+│       ├── openrouter_provider.py (92 SLOC) OpenRouter cloud
+│       └── dummy_provider.py (30 SLOC)  Testing stub
 │
 ├── config/
 │   ├── signals.yaml        (~400 lines) Behavioural keywords
@@ -1783,8 +1931,8 @@ src/
 │   └── variants.yaml       (~35 lines)  A/B prompt variants
 │
 └── web/
-    ├── app.py              (885 SLOC)   Flask routes & session mgmt
-    ├── security.py         (250+ SLOC)  Security infrastructure
+    ├── app.py              (890 SLOC)   Flask routes & session mgmt
+    ├── security.py         (587 SLOC)   Security infrastructure
     ├── templates/
     │   ├── index.html      (500+ lines) Chat UI (SPA)
     │   └── knowledge.html               Knowledge editor

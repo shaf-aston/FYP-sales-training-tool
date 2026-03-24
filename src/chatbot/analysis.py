@@ -52,6 +52,21 @@ _STOP_WORDS = frozenset({
     'need', 'get', 'got', 'one', 'know',
 })
 
+# Cached guardedness signal sets (loaded once at import)
+_AGREEMENT_WORDS = frozenset(_SIGNALS.get("guardedness_keywords", {}).get("agreement_words", []))
+_DISMISSAL_WORDS = frozenset(_SIGNALS.get("guardedness_keywords", {}).get("dismissal", []))
+
+# Guardedness category weights (evasive signals strongest, defensive weakest)
+_GUARDEDNESS_WEIGHTS = {
+    "evasive": 0.5,
+    "sarcasm": 0.35,
+    "deflection": 0.2,
+    "defensive": 0.1,
+}
+
+# History window multiplier for extracting recent user text
+_HISTORY_WINDOW_MULTIPLIER = 2
+
 
 # --- Core keyword matching ---
 
@@ -73,7 +88,7 @@ def text_contains_any_keyword(text, keywords):
     pattern = _build_union_pattern(tuple(keywords))
     for match in pattern.finditer(text):
         preceding = text[:match.start()].split()
-        if not (preceding and preceding[-1].lower() in _NEGATIONS):
+        if not preceding or preceding[-1].lower() not in _NEGATIONS:
             return True
     return False
 
@@ -134,14 +149,10 @@ def detect_guardedness(user_message: str, history: list[dict[str, str]]) -> floa
     
     msg_lower = user_message.lower().strip()
     msg_length = len(user_message.split())
-    
-    # Load guardedness keywords from signals.yaml
-    guardedness = _SIGNALS.get("guardedness_keywords", {})
-    agreement_words = set(guardedness.get("agreement_words", []))
-    
+
     # PRIORITY CHECK: Agreement pattern detection
     # Pattern: substantive user response → bot question → "ok" = agreement, NOT guarded
-    if msg_lower in agreement_words and len(history) >= 2:
+    if msg_lower in _AGREEMENT_WORDS and len(history) >= 2:
         recent_msgs = history[-4:]
         has_substantive_user = any(
             m.get('role') == 'user' and len(m.get('content', '').split()) >= 8
@@ -153,27 +164,22 @@ def detect_guardedness(user_message: str, history: list[dict[str, str]]) -> floa
         )
         if has_substantive_user and has_bot_question:
             return 0.0  # Agreement pattern, not guarded
-    
+
     # Single-word dismissals (not in agreement_words)
-    dismissal_words = set(guardedness.get("dismissal", []))
-    if msg_lower in dismissal_words:
+    if msg_lower in _DISMISSAL_WORDS:
         return 0.9
-    
+
     # Agreement with elaboration (NOT guarded)
-    if msg_lower.split()[0] in agreement_words and msg_length > 3:
+    # Guard against empty message (whitespace-only after strip)
+    split_msg = msg_lower.split()
+    if split_msg and split_msg[0] in _AGREEMENT_WORDS and msg_length > 3:
         return 0.1  # Low guardedness for elaborated agreement
-    
-    # Weighted scoring for guardedness categories
-    CATEGORY_WEIGHTS = {
-        "evasive": 0.5,     # strongest signal
-        "sarcasm": 0.35,    # social resistance
-        "deflection": 0.2,  # ambiguous
-        "defensive": 0.1,   # weakest signal
-    }
-    
+
+    # Weighted scoring using cached guardedness weights
+    guardedness_keywords = _SIGNALS.get("guardedness_keywords", {})
     score = 0.0
-    for category, weight in CATEGORY_WEIGHTS.items():
-        keywords = guardedness.get(category, [])
+    for category, weight in _GUARDEDNESS_WEIGHTS.items():
+        keywords = guardedness_keywords.get(category, [])
         if any(phrase in msg_lower for phrase in keywords):
             score += weight
     

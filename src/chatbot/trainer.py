@@ -7,6 +7,8 @@ import json
 import logging
 import re
 
+from .quiz import get_stage_rubric
+
 logger = logging.getLogger(__name__)
 
 
@@ -24,19 +26,27 @@ def generate_training(provider, flow_engine, user_msg, bot_reply):
     """
     stage = flow_engine.current_stage
     flow_type = flow_engine.flow_type
-    
+
+    rubric = get_stage_rubric(stage, flow_type)
+
     history = flow_engine.conversation_history
     recent = history[-6:]
-    
+
     context = "\n".join(
         f"{m['role'].upper()}: {m['content']}"
         for m in recent
     ) if recent else "No prior context"
 
-    # Simple, directive prompt
+    rubric_context = (
+        f"Stage Goal: {rubric['goal']}\n"
+        f"Advance When: {rubric['advance_when']}\n"
+        f"Key Concepts: {', '.join(rubric.get('key_concepts', []))}"
+    )
+
     system_prompt = (
         f"You're a sales coach analyzing this exchange. Reply with JSON only:\n\n"
-        f"CONTEXT: {flow_type} sales | Stage: {stage}\n\n"
+        f"CONTEXT: {flow_type} sales | Stage: {stage}\n"
+        f"{rubric_context}\n\n"
         f"Recent conversation:\n{context}\n\n"
         f"Current:\nUSER: {user_msg}\nBOT: {bot_reply}\n\n"
         "Return JSON:\n"
@@ -49,7 +59,6 @@ def generate_training(provider, flow_engine, user_msg, bot_reply):
         "}"
     )
 
-    # Add consultative constraint if applicable
     if flow_type == "consultative" and stage not in ["pitch", "objection"]:
         system_prompt += "\nNOTE: Don't recommend pricing talk unless prospect asks or stage is 'pitch'."
 
@@ -59,7 +68,7 @@ def generate_training(provider, flow_engine, user_msg, bot_reply):
     ]
 
     try:
-        llm_response = provider.chat(messages, temperature=0.3, max_tokens=200, stage=stage)
+        llm_response = provider.chat(messages, temperature=0.3, max_tokens=350, stage=stage)
         if llm_response.error or not llm_response.content:
             raise ValueError("Empty or error response")
 
@@ -75,9 +84,9 @@ def generate_training(provider, flow_engine, user_msg, bot_reply):
     except Exception as e:
         logger.warning(f"Training generation failed: {e}")
         return {
-            "stage_goal": f"Progress through the {stage} stage.",
+            "stage_goal": rubric["goal"],
             "what_bot_did": "—",
-            "next_trigger": "—",
+            "next_trigger": rubric["advance_when"],
             "where_heading": "—",
             "watch_for": [],
         }

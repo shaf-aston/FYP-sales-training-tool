@@ -16,7 +16,8 @@ from chatbot.analysis import (
     analyze_state,
     text_contains_any_keyword,
 )
-from chatbot.content import _get_acknowledgment_guidance, SIGNALS
+from chatbot.prompts import get_acknowledgment_guidance as _get_acknowledgment_guidance
+from chatbot.content import SIGNALS
 
 
 # ====================================================================

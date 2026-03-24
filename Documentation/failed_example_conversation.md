@@ -19,7 +19,7 @@ If the bot advances to emotional without a named problem, the FP/COI questions b
 
 ## The Bug
 
-**Code location**: `flow.py`, prior implementation of `user_shows_doubt()` (lines 120–126 now, but previously simpler)
+**Code location**: `flow.py`, prior implementation of `user_shows_doubt()` (lines 148–154 in current code)
 
 **Old rule** (pseudo-code, from ARCHITECTURE.md Phase 4):
 ```python
@@ -30,13 +30,13 @@ def user_shows_doubt(history, user_msg, turns):
 
 The problem: **`turns >= 5` guarantees True regardless of conversational content.** A user saying "I'm very happy with my approach" on turn 5 would trigger advancement, even though no doubt was expressed.
 
-**New rule** (current implementation, lines 120–126):
+**New rule** (current implementation, lines 148–154):
 ```python
 def user_shows_doubt(history, user_msg, turns):
-    return _check_advancement_condition(history, user_msg, turns, 'logical', min_history=4)
+    return _check_advancement_condition(history, user_msg, turns, 'logical', min_turns=2)
 ```
 
-Which delegates to `_check_advancement_condition()` (lines 92–117):
+Which delegates to `_check_advancement_condition()` (lines 108–145):
 ```python
 keywords = stage_config.get(keyword_key, [])  # doubt_keywords from config
 max_turns = stage_config.get('max_turns', 10)
@@ -48,6 +48,7 @@ return has_signal or turns >= max_turns  # ✓ Safety valve: 10 turns, not 5
 1. Keyword check is now **explicit and auditable** (reads from `analysis_config.yaml:advancement.logical.doubt_keywords`)
 2. Safety valve increased from 5 turns → 10 turns (gives bot more time to surface doubt)
 3. Keywords are verified against NEPQ framework (not arbitrary)
+4. Minimum turns (`min_turns=2`) required before checking — prevents premature advancement
 
 ---
 
@@ -174,16 +175,16 @@ assert flow_engine.current_stage == "logical" or "great" in conversation[-1][1],
 Logical | `user_shows_doubt` | **5 turns** (AUTO) | **10 turns** (requires doubt signals)
 ```
 
-**After** (flow.py, lines 120–126):
+**After** (flow.py, lines 148–154):
 ```python
 def user_shows_doubt(history, user_msg, turns):
-    return _check_advancement_condition(history, user_msg, turns, 'logical', min_history=4)
+    return _check_advancement_condition(history, user_msg, turns, 'logical', min_turns=2)
 ```
 
 This delegates to `_check_advancement_condition()` which:
-1. Loads `doubt_keywords` from config (lines 102–108)
-2. Searches recent user text for those keywords (line 115)
-3. Returns True if found OR turns >= 10 (line 117)
+1. Loads `doubt_keywords` from config (lines 129–135)
+2. Searches recent user text for those keywords (line 142)
+3. Returns True if found OR turns >= 10 (line 145)
 
 **Verification**: Run the test scenario above; assert `flow_engine.current_stage == "logical"` after turn 5 when user messages contain no doubt keywords.
 

@@ -3,7 +3,6 @@
 import json
 import logging
 import os
-import re
 import time
 from dataclasses import dataclass
 from typing import Any
@@ -41,6 +40,10 @@ class ChatResponse:
 class SalesChatbot:
     """Orchestrates provider, FSM flow engine, and performance tracking."""
 
+    # ====================================================================
+    # Initialization
+    # ====================================================================
+
     def __init__(self, provider_type=None, model=None, product_type=None, session_id=None):
         self.provider = create_provider(provider_type, model=model)
         self.session_id = session_id
@@ -67,8 +70,8 @@ class SalesChatbot:
                     f"{custom_knowledge}\n"
                     "--- END CUSTOM PRODUCT DATA ---"
                 )
-        except (ImportError, OSError, ValueError):
-            pass
+        except (ImportError, OSError, ValueError) as e:
+            _base_logger.debug(f"Custom knowledge not loaded: {e}")
 
         self.flow_engine = SalesFlowEngine(
             flow_type=config["strategy"],
@@ -87,7 +90,9 @@ class SalesChatbot:
                 ab_variant=self._ab_variant
             )
 
-    # --- Core chat loop ---
+    # ====================================================================
+    # Core Chat API
+    # ====================================================================
 
     def chat(self, user_message: str) -> ChatResponse:
         """Process user message and return ChatResponse with content + metrics."""
@@ -121,10 +126,35 @@ class SalesChatbot:
 
             if llm_response.error or not llm_response.content:
                 error_detail = llm_response.error or "empty response"
-                return self._fallback(
-                    f"I'm having trouble ({error_detail}). Try again?",
-                    llm_response.latency_ms, user_message,
-                )
+                
+                # Auto-switch to OpenRouter on rate limit (429)
+                if "rate_limit_exceeded" in str(error_detail).lower() or "429" in str(error_detail):
+                    self.logger.warning(f"Rate limit hit, switching to OpenRouter: {error_detail}")
+                    if self._try_switch_to_openrouter():
+                        # Retry with OpenRouter
+                        llm_response = self.provider.chat(
+                            llm_messages,
+                            temperature=0.8,
+                            max_tokens=200,
+                            stage=self.flow_engine.current_stage,
+                        )
+                        if not llm_response.error and llm_response.content:
+                            self.logger.info("Successfully switched to OpenRouter after rate limit")
+                        else:
+                            return self._fallback(
+                                "I'm currently receiving too many requests. Please try again in a moment.",
+                                llm_response.latency_ms, user_message,
+                            )
+                    else:
+                        return self._fallback(
+                            "I'm currently receiving too many requests. Please try again in a moment.",
+                            llm_response.latency_ms, user_message,
+                        )
+                else:
+                    return self._fallback(
+                        "I'm having trouble connecting to the AI provider. Please try again.",
+                        llm_response.latency_ms, user_message,
+                    )
 
             bot_reply = llm_response.content
             self.flow_engine.add_turn(user_message, bot_reply)
@@ -188,6 +218,32 @@ class SalesChatbot:
             output_len=len(message),
         )
 
+    # ====================================================================
+    # FSM Advancement Logic
+    # ====================================================================
+
+    def _try_switch_to_openrouter(self) -> bool:
+        """Attempt to switch to OpenRouter provider with backup API key. Returns True if successful."""
+        try:
+            from .providers.factory import PROVIDERS
+            # Create OpenRouter provider instance
+            openrouter_provider = PROVIDERS["openrouter"](
+                model=os.environ.get("openrouter_model1", "meta-llama/llama-3.3-70b-instruct:free")
+            )
+            
+            if openrouter_provider.is_available():
+                self.provider = openrouter_provider
+                self._provider_name = "openrouter"
+                self._model_name = openrouter_provider.get_model_name()
+                self.logger.info(f"Switched to OpenRouter with model: {self._model_name}")
+                return True
+            else:
+                self.logger.error("OpenRouter provider not available (missing API key)")
+                return False
+        except Exception as e:
+            self.logger.error(f"Failed to switch to OpenRouter: {e}")
+            return False
+
     def _detect_and_switch_strategy(self, user_message) -> bool:
         """Inspect signals to detect and switch strategy. Returns True if switch occurred."""
         history = self.flow_engine.conversation_history
@@ -237,7 +293,9 @@ class SalesChatbot:
                     user_turns_in_stage=self.flow_engine.stage_turn_count - 1
                 )
 
-    # --- Training ---
+    # ====================================================================
+    # Training API
+    # ====================================================================
 
     def generate_training(self, user_msg: str, bot_reply: str) -> dict[str, Any]:
         """Generate coaching notes for the current exchange via lightweight LLM call."""
@@ -247,7 +305,9 @@ class SalesChatbot:
         """Answer a trainee's question about the current conversation and sales techniques."""
         return trainer.answer_training_question(self.provider, self.flow_engine, question)
 
-    # --- Session management ---
+    # ====================================================================
+    # Session State Management
+    # ====================================================================
 
     def rewind(self, steps: int):
         """Rewind back by `steps` turns from the current position."""
@@ -300,6 +360,10 @@ class SalesChatbot:
         summary = self.flow_engine.get_summary()
         summary.update({"provider": self._provider_name, "model": self._model_name})
         return summary
+
+    # ====================================================================
+    # Session Persistence & Analytics
+    # ====================================================================
 
     def save_session(self):
         """Session Persistence state to disk."""

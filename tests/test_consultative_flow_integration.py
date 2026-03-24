@@ -23,8 +23,7 @@ class TestConsultativeFlowIntegration:
     @pytest.fixture
     def chatbot(self):
         """Create chatbot instance with consultative flow."""
-        bot = SalesChatbot(provider_type="dummy", product_type="signals_service")
-        bot.flow_engine.switch_strategy("consultative")
+        bot = SalesChatbot(provider_type="dummy", product_type="luxury_cars")
         return bot
 
     def test_full_consultative_flow_requires_signals(self, chatbot):

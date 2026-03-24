@@ -119,3 +119,148 @@
 {"timestamp": "2026-03-21T22:52:22.914682", "session_id": "7c5232d2315f1bc372861e1d8e2e7f0e", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
 {"timestamp": "2026-03-21T22:53:32.432245", "session_id": "05149db60ad0b32a25660b9a6df14f6e", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_b"}
 {"timestamp": "2026-03-21T22:55:23.713285", "session_id": "85e75be80012dcf7addce3dedbe28a97", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_b"}
+{"timestamp": "2026-03-21T23:02:46.578068", "session_id": "758009067e8456f43684b6db45e0370d", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_b"}
+{"timestamp": "2026-03-21T23:02:46.603040", "session_id": "d700fa650e5cd6f1a9205ce2fa111681", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-21T23:04:15.770523", "session_id": "0ab14014dc2c8170a64afccfe8ba3710", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-21T23:04:17.455436", "session_id": "35fc7a11decfe054f71847b92af4cecd", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T08:36:10.137961", "session_id": "ad64d9e409b2140251c8c7cac4387afc", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T08:36:15.264775", "session_id": "analytics_test_session", "event_type": "session_start", "product_type": "cars", "initial_strategy": "consultative", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T08:36:15.278341", "session_id": "analytics_test_session", "event_type": "intent_classification", "intent_level": "high", "user_turn": 1}
+{"timestamp": "2026-03-23T08:36:15.294131", "session_id": "analytics_test_session", "event_type": "stage_transition", "from_stage": "intent", "to_stage": "logical", "strategy": "consultative", "user_turns_in_stage": 2}
+{"timestamp": "2026-03-23T08:36:15.310452", "session_id": "analytics_test_session", "event_type": "objection_classified", "objection_type": "money", "strategy": "consultative", "user_turn": 5}
+{"timestamp": "2026-03-23T08:36:15.322452", "session_id": "analytics_test_session", "event_type": "strategy_switch", "from_strategy": "intent", "to_strategy": "consultative", "reason": "signal_detection", "user_turn": 1}
+{"timestamp": "2026-03-23T08:36:15.337452", "session_id": "analytics_test_session", "event_type": "session_end", "final_stage": "objection", "final_strategy": "consultative", "user_turn_count": 6, "bot_turn_count": 6}
+{"timestamp": "2026-03-23T08:36:19.456726", "session_id": "test_error_001", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T08:36:19.459733", "session_id": "test_error_001", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 1}
+{"timestamp": "2026-03-23T08:36:21.574839", "session_id": "test_session_002", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T08:36:28.266613", "session_id": "0f274e84e3e973fe47b1b5259b67089e", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_b"}
+{"timestamp": "2026-03-23T19:20:10.826932", "session_id": "test_error_001", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T19:20:10.852210", "session_id": "test_error_001", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 1}
+{"timestamp": "2026-03-23T19:20:13.081661", "session_id": "test_session_002", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T19:20:13.547840", "session_id": "analytics_test_session", "event_type": "session_start", "product_type": "cars", "initial_strategy": "consultative", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T19:20:13.571975", "session_id": "analytics_test_session", "event_type": "intent_classification", "intent_level": "high", "user_turn": 1}
+{"timestamp": "2026-03-23T19:20:13.593400", "session_id": "analytics_test_session", "event_type": "stage_transition", "from_stage": "intent", "to_stage": "logical", "strategy": "consultative", "user_turns_in_stage": 2}
+{"timestamp": "2026-03-23T19:20:13.607252", "session_id": "analytics_test_session", "event_type": "objection_classified", "objection_type": "money", "strategy": "consultative", "user_turn": 5}
+{"timestamp": "2026-03-23T19:20:13.628185", "session_id": "analytics_test_session", "event_type": "strategy_switch", "from_strategy": "intent", "to_strategy": "consultative", "reason": "signal_detection", "user_turn": 1}
+{"timestamp": "2026-03-23T19:20:13.650503", "session_id": "analytics_test_session", "event_type": "session_end", "final_stage": "objection", "final_strategy": "consultative", "user_turn_count": 6, "bot_turn_count": 6}
+{"timestamp": "2026-03-23T19:20:15.297152", "session_id": "a7aa8855843870f79ceab8817084029c", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_b"}
+{"timestamp": "2026-03-23T19:44:49.385000", "session_id": "cf78b3712fad7a2c6ee85b2b5c381521", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_b"}
+{"timestamp": "2026-03-23T19:44:50.657047", "session_id": "analytics_test_session", "event_type": "session_start", "product_type": "cars", "initial_strategy": "consultative", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T19:44:50.678815", "session_id": "analytics_test_session", "event_type": "intent_classification", "intent_level": "high", "user_turn": 1}
+{"timestamp": "2026-03-23T19:44:50.696030", "session_id": "analytics_test_session", "event_type": "stage_transition", "from_stage": "intent", "to_stage": "logical", "strategy": "consultative", "user_turns_in_stage": 2}
+{"timestamp": "2026-03-23T19:44:50.710535", "session_id": "analytics_test_session", "event_type": "objection_classified", "objection_type": "money", "strategy": "consultative", "user_turn": 5}
+{"timestamp": "2026-03-23T19:44:50.728534", "session_id": "analytics_test_session", "event_type": "strategy_switch", "from_strategy": "intent", "to_strategy": "consultative", "reason": "signal_detection", "user_turn": 1}
+{"timestamp": "2026-03-23T19:44:50.746535", "session_id": "analytics_test_session", "event_type": "session_end", "final_stage": "objection", "final_strategy": "consultative", "user_turn_count": 6, "bot_turn_count": 6}
+{"timestamp": "2026-03-23T19:44:56.078098", "session_id": "8fadd7d19a3b3f5e9812fae18d362ba6", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T19:44:56.093095", "session_id": "ffeb05386fd69ed57e21def0c8592fbe", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_b"}
+{"timestamp": "2026-03-23T19:44:56.168806", "session_id": "1b6f2dc6eabde44f3f6067bbcbac1928", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T19:44:56.196031", "session_id": "1b6f2dc6eabde44f3f6067bbcbac1928", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 1}
+{"timestamp": "2026-03-23T19:44:58.584384", "session_id": "1863b8d9723d07c3ddc46ad5a1986c9a", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_b"}
+{"timestamp": "2026-03-23T19:44:58.618050", "session_id": "86819a8083ce0a0f917d40577c5cb353", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_b"}
+{"timestamp": "2026-03-23T19:44:58.651323", "session_id": "f169bf5c901f889eda7a1d3ec4c8c856", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T19:45:02.914633", "session_id": "test_session_002", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T19:45:02.948478", "session_id": "test_error_001", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T19:45:02.968715", "session_id": "test_error_001", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 1}
+{"timestamp": "2026-03-23T20:45:22.539836", "session_id": "analytics_test_session", "event_type": "session_start", "product_type": "cars", "initial_strategy": "consultative", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T20:45:22.561303", "session_id": "analytics_test_session", "event_type": "intent_classification", "intent_level": "high", "user_turn": 1}
+{"timestamp": "2026-03-23T20:45:22.578512", "session_id": "analytics_test_session", "event_type": "stage_transition", "from_stage": "intent", "to_stage": "logical", "strategy": "consultative", "user_turns_in_stage": 2}
+{"timestamp": "2026-03-23T20:45:22.597544", "session_id": "analytics_test_session", "event_type": "objection_classified", "objection_type": "money", "strategy": "consultative", "user_turn": 5}
+{"timestamp": "2026-03-23T20:45:22.615539", "session_id": "analytics_test_session", "event_type": "strategy_switch", "from_strategy": "intent", "to_strategy": "consultative", "reason": "signal_detection", "user_turn": 1}
+{"timestamp": "2026-03-23T20:45:22.630202", "session_id": "analytics_test_session", "event_type": "session_end", "final_stage": "objection", "final_strategy": "consultative", "user_turn_count": 6, "bot_turn_count": 6}
+{"timestamp": "2026-03-23T20:45:22.706874", "session_id": "test_session_002", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T20:45:26.847656", "session_id": "test_error_001", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T20:45:26.879662", "session_id": "test_error_001", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 1}
+{"timestamp": "2026-03-23T20:45:30.301862", "session_id": "45351a5b889c744bf4c82873d402b44f", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T20:45:36.725335", "session_id": "1b82328b2212ad211fe2ec0c5cd9ff32", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T20:45:36.759910", "session_id": "a6cda84c34a05bc99f25a002da86b6ac", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_b"}
+{"timestamp": "2026-03-23T20:45:36.885014", "session_id": "ae14ef300d3ae02514644f163002947e", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_b"}
+{"timestamp": "2026-03-23T20:45:36.921091", "session_id": "345489c8d52973000e129807b6f175db", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_b"}
+{"timestamp": "2026-03-23T20:45:36.947640", "session_id": "345489c8d52973000e129807b6f175db", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 1}
+{"timestamp": "2026-03-23T20:45:38.688213", "session_id": "9a8b548ea8d177f9d16f28477a909345", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_b"}
+{"timestamp": "2026-03-23T20:45:38.722368", "session_id": "cb94adeed02ef1f778971ae94bc04fcc", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_b"}
+{"timestamp": "2026-03-23T20:58:15.504549", "session_id": "test_error_001", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T20:58:15.510540", "session_id": "test_error_001", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 1}
+{"timestamp": "2026-03-23T20:58:15.571660", "session_id": "test_session_002", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T21:04:54.893552", "session_id": "test_error_001", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T21:04:54.898649", "session_id": "test_error_001", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 1}
+{"timestamp": "2026-03-23T21:04:54.972524", "session_id": "test_session_002", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T21:38:01.067639", "session_id": "analytics_test_session", "event_type": "session_start", "product_type": "cars", "initial_strategy": "consultative", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T21:38:01.087554", "session_id": "analytics_test_session", "event_type": "intent_classification", "intent_level": "high", "user_turn": 1}
+{"timestamp": "2026-03-23T21:38:01.106063", "session_id": "analytics_test_session", "event_type": "stage_transition", "from_stage": "intent", "to_stage": "logical", "strategy": "consultative", "user_turns_in_stage": 2}
+{"timestamp": "2026-03-23T21:38:01.125371", "session_id": "analytics_test_session", "event_type": "objection_classified", "objection_type": "money", "strategy": "consultative", "user_turn": 5}
+{"timestamp": "2026-03-23T21:38:01.144080", "session_id": "analytics_test_session", "event_type": "strategy_switch", "from_strategy": "intent", "to_strategy": "consultative", "reason": "signal_detection", "user_turn": 1}
+{"timestamp": "2026-03-23T21:38:01.160168", "session_id": "analytics_test_session", "event_type": "session_end", "final_stage": "objection", "final_strategy": "consultative", "user_turn_count": 6, "bot_turn_count": 6}
+{"timestamp": "2026-03-23T21:38:04.663531", "session_id": "b1734d9fc772a394631a61b1ca0633d2", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_b"}
+{"timestamp": "2026-03-23T21:38:05.859235", "session_id": "8050d5afa35702f6c64f853bce676380", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_b"}
+{"timestamp": "2026-03-23T21:38:05.896489", "session_id": "0dcc3a8b40513e1034ca90b9f25e5e2c", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_b"}
+{"timestamp": "2026-03-23T21:38:05.928339", "session_id": "2a19216b1a2135fb24c94672a9465131", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_b"}
+{"timestamp": "2026-03-23T21:38:05.962375", "session_id": "f14c4c2e0ed66b4db690af11a14bb9f0", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T21:38:05.995893", "session_id": "7e616a815932c0e9c5a02afe0aa7f8f8", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_b"}
+{"timestamp": "2026-03-23T21:38:06.017231", "session_id": "7e616a815932c0e9c5a02afe0aa7f8f8", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 1}
+{"timestamp": "2026-03-23T21:38:08.807751", "session_id": "00a9e1e1dd5d1e3f5825bbd9f3efadca", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T21:38:09.778007", "session_id": "test_session_002", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T21:38:09.832334", "session_id": "test_error_001", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T21:38:09.851853", "session_id": "test_error_001", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 1}
+{"timestamp": "2026-03-23T23:02:15.563253", "session_id": "ce6f9b0b6c909f6e923acb2a5d5cbeca", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_b"}
+{"timestamp": "2026-03-23T23:02:15.579279", "session_id": "dcde38d99759f00d3374c36bc7fdee43", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T23:02:15.616889", "session_id": "d733f0b6c3b24119bbf5d60cc18e9234", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T23:02:15.651479", "session_id": "a62bb7a853f68c4d4fb0eef85732e013", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_b"}
+{"timestamp": "2026-03-23T23:02:15.684490", "session_id": "f68eb523a5cff868fae29163a175d359", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T23:02:15.717802", "session_id": "2ad6e6ded2ad6264f0a8800b5d7a31d2", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T23:02:15.746839", "session_id": "2ad6e6ded2ad6264f0a8800b5d7a31d2", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 1}
+{"timestamp": "2026-03-23T23:02:19.323803", "session_id": "analytics_test_session", "event_type": "session_start", "product_type": "cars", "initial_strategy": "consultative", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T23:02:19.324803", "session_id": "analytics_test_session", "event_type": "intent_classification", "intent_level": "high", "user_turn": 1}
+{"timestamp": "2026-03-23T23:02:19.341238", "session_id": "analytics_test_session", "event_type": "stage_transition", "from_stage": "intent", "to_stage": "logical", "strategy": "consultative", "user_turns_in_stage": 2}
+{"timestamp": "2026-03-23T23:02:19.361233", "session_id": "analytics_test_session", "event_type": "objection_classified", "objection_type": "money", "strategy": "consultative", "user_turn": 5}
+{"timestamp": "2026-03-23T23:02:19.380240", "session_id": "analytics_test_session", "event_type": "strategy_switch", "from_strategy": "intent", "to_strategy": "consultative", "reason": "signal_detection", "user_turn": 1}
+{"timestamp": "2026-03-23T23:02:19.398246", "session_id": "analytics_test_session", "event_type": "session_end", "final_stage": "objection", "final_strategy": "consultative", "user_turn_count": 6, "bot_turn_count": 6}
+{"timestamp": "2026-03-23T23:02:20.556616", "session_id": "f8a9b6b47040095f9bab1b5514b78927", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T23:02:22.382237", "session_id": "test_session_002", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T23:02:22.415951", "session_id": "test_error_001", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T23:02:22.435181", "session_id": "test_error_001", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 1}
+{"timestamp": "2026-03-23T22:15:03.216510", "session_id": "635545418a45f00834845c133c88e0b6", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_b"}
+{"timestamp": "2026-03-23T22:15:03.576153", "session_id": "5706fe3bedda65e39a30d898a91ac7ef", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T22:15:28.821504", "session_id": "5706fe3bedda65e39a30d898a91ac7ef", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 2}
+{"timestamp": "2026-03-23T22:15:37.802043", "session_id": "5706fe3bedda65e39a30d898a91ac7ef", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 3}
+{"timestamp": "2026-03-23T22:15:38.197908", "session_id": "5706fe3bedda65e39a30d898a91ac7ef", "event_type": "strategy_switch", "from_strategy": "intent", "to_strategy": "Strategy.CONSULTATIVE", "reason": "signal_detection", "user_turn": 3}
+{"timestamp": "2026-03-23T22:15:44.721871", "session_id": "7eb9c1fd4c3c5a62af71215cb9f0c714", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T22:15:49.300520", "session_id": "7eb9c1fd4c3c5a62af71215cb9f0c714", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 1}
+{"timestamp": "2026-03-23T22:15:56.234922", "session_id": "7eb9c1fd4c3c5a62af71215cb9f0c714", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 2}
+{"timestamp": "2026-03-23T22:16:06.712255", "session_id": "7eb9c1fd4c3c5a62af71215cb9f0c714", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 3}
+{"timestamp": "2026-03-23T22:16:07.004531", "session_id": "7eb9c1fd4c3c5a62af71215cb9f0c714", "event_type": "strategy_switch", "from_strategy": "intent", "to_strategy": "Strategy.CONSULTATIVE", "reason": "signal_detection", "user_turn": 3}
+{"timestamp": "2026-03-23T22:16:15.621832", "session_id": "0f1d31ed1f0af05bc73d5a0b8d7cb968", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T22:16:36.503033", "session_id": "0f1d31ed1f0af05bc73d5a0b8d7cb968", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 1}
+{"timestamp": "2026-03-23T22:16:37.375012", "session_id": "0f1d31ed1f0af05bc73d5a0b8d7cb968", "event_type": "strategy_switch", "from_strategy": "intent", "to_strategy": "Strategy.TRANSACTIONAL", "reason": "signal_detection", "user_turn": 1}
+{"timestamp": "2026-03-23T22:34:56.567229", "session_id": "6bc62c36e8e82ba3820c72de4174dccb", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T22:35:02.742245", "session_id": "6bc62c36e8e82ba3820c72de4174dccb", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 1}
+{"timestamp": "2026-03-23T22:35:06.090971", "session_id": "6bc62c36e8e82ba3820c72de4174dccb", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 2}
+{"timestamp": "2026-03-23T22:35:09.824652", "session_id": "6bc62c36e8e82ba3820c72de4174dccb", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 3}
+{"timestamp": "2026-03-23T22:35:10.067856", "session_id": "6bc62c36e8e82ba3820c72de4174dccb", "event_type": "strategy_switch", "from_strategy": "intent", "to_strategy": "Strategy.CONSULTATIVE", "reason": "signal_detection", "user_turn": 3}
+{"timestamp": "2026-03-23T22:35:44.126386", "session_id": "6bc62c36e8e82ba3820c72de4174dccb", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 4}
+{"timestamp": "2026-03-23T22:36:09.214470", "session_id": "6bc62c36e8e82ba3820c72de4174dccb", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 5}
+{"timestamp": "2026-03-23T22:36:15.382699", "session_id": "6bc62c36e8e82ba3820c72de4174dccb", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 6}
+{"timestamp": "2026-03-23T22:36:20.207961", "session_id": "6bc62c36e8e82ba3820c72de4174dccb", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 7}
+{"timestamp": "2026-03-23T22:36:26.032836", "session_id": "6bc62c36e8e82ba3820c72de4174dccb", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 8}
+{"timestamp": "2026-03-23T22:36:35.310793", "session_id": "6bc62c36e8e82ba3820c72de4174dccb", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 9}
+{"timestamp": "2026-03-23T22:36:36.022737", "session_id": "6bc62c36e8e82ba3820c72de4174dccb", "event_type": "stage_transition", "from_stage": "Stage.INTENT", "to_stage": "Stage.LOGICAL", "strategy": "Strategy.CONSULTATIVE", "user_turns_in_stage": -1}
+{"timestamp": "2026-03-23T22:37:06.426007", "session_id": "6bc62c36e8e82ba3820c72de4174dccb", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 10}
+{"timestamp": "2026-03-23T22:37:11.231755", "session_id": "6bc62c36e8e82ba3820c72de4174dccb", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 11}
+{"timestamp": "2026-03-23T22:37:42.858380", "session_id": "6bc62c36e8e82ba3820c72de4174dccb", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 12}
+{"timestamp": "2026-03-23T22:37:46.722044", "session_id": "6bc62c36e8e82ba3820c72de4174dccb", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 13}
+{"timestamp": "2026-03-23T22:37:51.981236", "session_id": "6bc62c36e8e82ba3820c72de4174dccb", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 14}
+{"timestamp": "2026-03-23T22:38:07.668547", "session_id": "6bc62c36e8e82ba3820c72de4174dccb", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 15}
+{"timestamp": "2026-03-23T22:38:11.471992", "session_id": "6bc62c36e8e82ba3820c72de4174dccb", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 16}
+{"timestamp": "2026-03-23T22:38:14.581972", "session_id": "6bc62c36e8e82ba3820c72de4174dccb", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 17}
+{"timestamp": "2026-03-23T22:41:43.350785", "session_id": "6bc62c36e8e82ba3820c72de4174dccb", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 18}
+{"timestamp": "2026-03-23T22:42:00.572781", "session_id": "6bc62c36e8e82ba3820c72de4174dccb", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 19}
+{"timestamp": "2026-03-23T22:54:47.555787", "session_id": "8ae96f1ec0836d2be1cf11aa7c4b91d9", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_b"}
+{"timestamp": "2026-03-23T22:54:53.430180", "session_id": "8ae96f1ec0836d2be1cf11aa7c4b91d9", "event_type": "intent_classification", "intent_level": "low", "user_turn": 1}
+{"timestamp": "2026-03-23T22:55:16.579032", "session_id": "8ae96f1ec0836d2be1cf11aa7c4b91d9", "event_type": "intent_classification", "intent_level": "low", "user_turn": 2}
+{"timestamp": "2026-03-23T22:55:28.157845", "session_id": "8ae96f1ec0836d2be1cf11aa7c4b91d9", "event_type": "intent_classification", "intent_level": "low", "user_turn": 3}
+{"timestamp": "2026-03-23T22:57:02.538948", "session_id": "8ae96f1ec0836d2be1cf11aa7c4b91d9", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 4}
+{"timestamp": "2026-03-23T23:07:40.411594", "session_id": "04dbe30a6c2c9b50dd803b68ef265b11", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_b"}
+{"timestamp": "2026-03-23T23:07:40.749679", "session_id": "204fcd6279484e1fd000462ab8c70e1c", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_b"}
+{"timestamp": "2026-03-23T23:07:40.858136", "session_id": "204fcd6279484e1fd000462ab8c70e1c", "event_type": "strategy_switch", "from_strategy": "intent", "to_strategy": "Strategy.CONSULTATIVE", "reason": "signal_detection", "user_turn": 2}
+{"timestamp": "2026-03-23T23:09:45.088734", "session_id": "b8d042046db745496143583d978b404a", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T23:09:45.421537", "session_id": "b3817c24e09f3c7e49a10c85eac9fd29", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-23T23:09:45.448073", "session_id": "b3817c24e09f3c7e49a10c85eac9fd29", "event_type": "strategy_switch", "from_strategy": "intent", "to_strategy": "Strategy.CONSULTATIVE", "reason": "signal_detection", "user_turn": 2}

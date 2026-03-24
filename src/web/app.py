@@ -3,11 +3,7 @@ from flask_cors import CORS
 import os
 import sys
 import secrets
-import threading
-import time
 from dataclasses import asdict
-from datetime import datetime, timedelta
-from pathlib import Path
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -141,9 +137,20 @@ def require_session():
     return bot, None
 
 
-# ─── App startup ─────────────────────────────────────────────────────────────
+def require_prospect_session():
+    """Validate prospect session. Returns (prospect_session, error_response)."""
+    session_id = request.headers.get('X-Session-ID')
+    if not session_id:
+        return None, (jsonify({"error": "Session ID required"}), 400)
+    ps = prospect_session_manager.get(session_id)
+    if not ps:
+        return None, (jsonify({"error": "Prospect session not found", "code": "SESSION_EXPIRED"}), 400)
+    return ps, None
 
-# Page routes
+
+# ====================================================================
+# Page Routes
+# ====================================================================
 
 @app.route('/favicon.ico')
 def favicon():
@@ -161,6 +168,10 @@ def knowledge_page():
     """Serve the knowledge base management page."""
     return render_template('knowledge.html')
 
+
+# ====================================================================
+# Public API Endpoints
+# ====================================================================
 
 # ─── Session lifecycle API ───────────────────────────────────────────────────
 
@@ -589,7 +600,9 @@ def clear_knowledge_route():
     return jsonify({"success": success})
 
 
-# ─── Dev/Debug API ───────────────────────────────────────────────────────────
+# ====================================================================
+# Development & Debug Endpoints
+# ====================================================================
 # These endpoints exist for developer testing only.
 # They expose internal FSM state and prompt content — do not expose in production.
 # Guard: set ENABLE_DEBUG_PANEL=true in .env for local dev; leave unset on deployment.
@@ -697,18 +710,10 @@ def debug_analyse():
     })
 
 
-# ─── Prospect Mode API ──────────────────────────────────────────────────────
-
-def require_prospect_session():
-    """Validate prospect session. Returns (prospect_session, error_response)."""
-    session_id = request.headers.get('X-Session-ID')
-    if not session_id:
-        return None, (jsonify({"error": "Session ID required"}), 400)
-    ps = prospect_session_manager.get(session_id)
-    if not ps:
-        return None, (jsonify({"error": "Prospect session not found", "code": "SESSION_EXPIRED"}), 400)
-    return ps, None
-
+# ====================================================================
+# Prospect Mode API
+# ====================================================================
+# Role-reversal mode: User plays salesperson, bot plays prospect/buyer
 
 @app.route('/api/prospect/init', methods=['POST'])
 @require_rate_limit('init')

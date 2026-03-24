@@ -66,7 +66,7 @@ coverage.xml
 metrics.jsonl
 metrics.json
 Impact formula.txt
-.claude
+.claude/
 sessions_backup/
 sessions*
 metrics.jsonl

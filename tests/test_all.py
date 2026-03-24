@@ -548,7 +548,7 @@ class TestProductKnowledge:
 
 from chatbot.providers.base import BaseLLMProvider, LLMResponse
 from chatbot.providers.factory import create_provider, PROVIDERS
-from chatbot.providers.ollama_provider import OllamaProvider
+from chatbot.providers.openrouter_provider import OpenRouterProvider
 from chatbot.providers.groq_provider import GroqProvider
 
 
@@ -573,38 +573,34 @@ class TestProviderBase:
         assert resp.error == "timeout"
 
 
-class TestOllamaProviderConfig:
-    """OllamaProvider initialisation and configuration (no live server needed)."""
+class TestOpenRouterProviderConfig:
+    """OpenRouterProvider initialisation and configuration (no live API calls)."""
 
     def test_default_model(self):
-        provider = OllamaProvider()
-        assert provider.model == "llama3.2:3b"
+        provider = OpenRouterProvider()
+        assert "llama" in provider.model.lower()
 
     def test_custom_model(self):
-        provider = OllamaProvider(model="llama3:8b")
-        assert provider.model == "llama3:8b"
+        provider = OpenRouterProvider(model="anthropic/claude-3-sonnet")
+        assert provider.model == "anthropic/claude-3-sonnet"
 
-    def test_default_base_url(self):
-        provider = OllamaProvider()
-        assert "localhost" in provider.base_url
-        assert "11434" in provider.base_url
+    def test_api_base_url(self):
+        provider = OpenRouterProvider()
+        assert provider.API_BASE == "https://openrouter.ai/api/v1"
 
-    def test_endpoints_defined(self):
-        assert OllamaProvider.CHAT_ENDPOINT == "/api/chat"
-        assert OllamaProvider.TAGS_ENDPOINT == "/api/tags"
+    def test_unavailable_without_api_key(self, monkeypatch):
+        """When API keys are missing, provider should be unavailable."""
+        monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+        monkeypatch.delenv("OPENROUTER_BACKUP_API_KEY", raising=False)
+        provider = OpenRouterProvider()
+        assert not provider.is_available()
 
-    def test_unavailable_returns_error_response(self):
-        """When Ollama is not running, chat() should return LLMResponse with error."""
-        provider = OllamaProvider(base_url="http://localhost:99999")
-        resp = provider.chat([{"role": "user", "content": "test"}])
-        assert isinstance(resp, LLMResponse)
-        assert resp.error is not None
-        assert resp.content == ""
-
-    def test_availability_cache_initialised(self):
-        provider = OllamaProvider()
-        assert provider._available_cache is None
-        assert provider._cache_ttl == 30
+    def test_fallback_to_backup_key(self, monkeypatch):
+        """Should fallback to backup key when primary is missing."""
+        monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+        monkeypatch.setenv("OPENROUTER_BACKUP_API_KEY", "backup_key")
+        provider = OpenRouterProvider()
+        assert provider.api_key == "backup_key"
 
 
 class TestGroqProviderConfig:
@@ -633,9 +629,9 @@ class TestProviderFactory:
         provider = create_provider("groq")
         assert isinstance(provider, GroqProvider)
 
-    def test_create_ollama(self):
-        provider = create_provider("ollama")
-        assert isinstance(provider, OllamaProvider)
+    def test_create_openrouter(self):
+        provider = create_provider("openrouter")
+        assert isinstance(provider, OpenRouterProvider)
 
     def test_unknown_raises_valueerror(self):
         with pytest.raises(ValueError, match="Unknown provider"):
@@ -647,7 +643,7 @@ class TestProviderFactory:
 
     def test_registry_has_expected_providers(self):
         assert "groq" in PROVIDERS
-        assert "ollama" in PROVIDERS
+        assert "openrouter" in PROVIDERS
 
 
 # ====================================================================
