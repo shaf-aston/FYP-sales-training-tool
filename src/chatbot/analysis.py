@@ -10,7 +10,7 @@ from functools import lru_cache
 from typing import Any
 
 from .loader import load_analysis_config, load_signals
-from .constants import HISTORY_WINDOW_MULTIPLIER, MAX_USER_KEYWORDS
+from .constants import MAX_USER_KEYWORDS
 
 
 @dataclass
@@ -57,6 +57,8 @@ _STOP_WORDS = frozenset({
 _AGREEMENT_WORDS = frozenset(_SIGNALS.get("guardedness_keywords", {}).get("agreement_words", []))
 _DISMISSAL_WORDS = frozenset(_SIGNALS.get("guardedness_keywords", {}).get("dismissal", []))
 
+_GOAL_VERB_PATTERN = re.compile(r"\b(?:want to|need to|trying to)\s+\w+\s+\w+")
+
 # Guardedness category weights (evasive signals strongest, defensive weakest)
 _GUARDEDNESS_WEIGHTS = {
     "evasive": 0.5,
@@ -64,10 +66,6 @@ _GUARDEDNESS_WEIGHTS = {
     "deflection": 0.2,
     "defensive": 0.1,
 }
-
-# History window multiplier for extracting recent user text (imported from constants)
-_HISTORY_WINDOW_MULTIPLIER = HISTORY_WINDOW_MULTIPLIER
-
 
 # --- Core keyword matching ---
 
@@ -111,8 +109,7 @@ def _has_user_stated_clear_goal(history) -> bool:
         return True
 
     # Keep broad intent verbs out of config, but still detect goal phrasing in context.
-    goal_verb_pattern = re.compile(r"\b(?:want to|need to|trying to)\s+\w+\s+\w+")
-    return any(goal_verb_pattern.search(msg) for msg in recent_user_msgs)
+    return any(_GOAL_VERB_PATTERN.search(msg) for msg in recent_user_msgs)
 
 
 def classify_intent_level(history, user_message="", signal_keywords=None) -> str:
@@ -181,7 +178,7 @@ def detect_guardedness(user_message: str, history: list[dict[str, str]]) -> floa
     score = 0.0
     for category, weight in _GUARDEDNESS_WEIGHTS.items():
         keywords = guardedness_keywords.get(category, [])
-        if any(phrase in msg_lower for phrase in keywords):
+        if text_contains_any_keyword(msg_lower, keywords):
             score += weight
     
     # Context multiplier: Short reply to detailed question
@@ -279,7 +276,7 @@ def is_repetitive_validation(history, threshold=None) -> bool:
         return False
     validation_phrases = _SIGNALS.get("validation_phrases", [])
     recent_bot = [m["content"].lower() for m in history[-10:] if m["role"] == "assistant"]
-    count = sum(1 for msg in recent_bot if any(phrase in msg for phrase in validation_phrases))
+    count = sum(1 for msg in recent_bot if text_contains_any_keyword(msg, validation_phrases))
     return count >= threshold
 
 
@@ -293,7 +290,7 @@ def is_literal_question(user_message) -> bool:
     rhetorical = patterns.get("rhetorical_markers", [])
 
     is_question = any(msg.startswith(w) for w in starters) or msg.endswith("?")
-    is_rhetorical = any(m in msg for m in rhetorical)
+    is_rhetorical = text_contains_any_keyword(msg, rhetorical)
     return is_question and not is_rhetorical
 
 

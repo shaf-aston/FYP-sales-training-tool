@@ -129,3 +129,37 @@ if history:
 **Rationale**: This detects interrogation overload. If the bot asks 2+ questions in the last 4 messages, the user may be overwhelmed or defensive. When `question_fatigue=True`, `generate_stage_prompt()` injects `_build_tactic_guidance()` guidance: "Do NOT interrogate. Switch to statements that invite correction (elicitation)."
 
 **Not detected**: This threshold does NOT distinguish between a single multi-part question ("What's been the main thing holding you back, and how long has that been an issue?") and two separate questions. It counts message boundaries, not logical question units. This is intentionally simple to avoid over-engineering; in practice, the bot's prompt already constrains it to one question per turn.
+
+---
+
+## Guardedness Scoring: Word-Boundary Matching Over Substring Search
+
+### The Problem
+
+`detect_guardedness()` scores a message by iterating over weighted guardedness categories (evasive, sarcasm, deflection, defensive) and checking whether any keyword in each category appears in the message. The original implementation used Python substring containment:
+
+```python
+if any(phrase in msg_lower for phrase in keywords):
+    score += weight
+```
+
+This is a false-positive source. A keyword like `"no"` matches `"know"`, `"time"` matches `"sometime"`, `"risk"` matches `"brisk"`. A user saying "I know the timing is tight" would incorrectly accumulate guardedness score from both `"no"` (inside "know") and `"time"` (inside "timing").
+
+### Decision
+
+Replace substring containment with `text_contains_any_keyword()` — the same word-boundary regex function used by every other keyword check in `analysis.py` (intent, commitment, objection, emotional disclosure):
+
+```python
+if text_contains_any_keyword(msg_lower, keywords):
+    score += weight
+```
+
+`text_contains_any_keyword()` compiles keywords into `\b{keyword}\b` patterns (cached via `lru_cache`), enforcing word boundaries. It also skips matches preceded by negation tokens — so "I'm not being defensive" correctly returns 0 score rather than triggering the defensive category.
+
+### Rationale
+
+Consistency matters here because guardedness detection feeds directly into acknowledgment tactic selection (`detect_acknowledgment_context()`) and the `guarded` flag on `ConversationState`. A false-positive guardedness score causes the bot to respond with light acknowledgment ("Got it") in situations where no acknowledgment is warranted — subtly but consistently degrading conversational naturalness. Word-boundary matching eliminates the entire class of partial-word false positives with no performance cost (patterns are cached).
+
+### Trade-off
+
+`text_contains_any_keyword()` performs negation detection, which changes behaviour for negated guardedness phrases: "I'm not being evasive" previously scored 0.5 (evasive category hit); now scores 0.0. This is the correct outcome semantically. No mitigation needed.
