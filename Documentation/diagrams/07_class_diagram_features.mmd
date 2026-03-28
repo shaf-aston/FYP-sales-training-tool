@@ -1,0 +1,176 @@
+%%{init: {"theme": "base"}}%%
+%% DIAGRAM 7 — UML CLASS DIAGRAM: Feature Modules + NLU + Prompt System
+%% Replaces: old 04_class_diagram_features
+%% Key change: verbose notes trimmed to 1–2 essential facts per class.
+%% All module-level functions represented as <<module>> stereotypes (they are NOT Python classes).
+
+classDiagram
+
+    %% ── Prospect Mode ────────────────────────────────────────────────────────
+    class ProspectState {
+        <<dataclass>>
+        +float readiness
+        +int objections_raised
+        +int turn_count
+        +list needs_disclosed
+        +bool has_committed
+        +bool has_walked
+        +dict persona
+        +str difficulty
+        +str product_type
+        +list conversation_history
+    }
+    note for ProspectState "readiness ∈ [0.0, 1.0]\nSOLD: readiness ≥ 0.85 AND turn_count ≥ 3\nWALKED: (turns ≥ patience_turns AND readiness < 0.4) OR readiness ≤ 0.0"
+
+    class ProspectResponse {
+        <<dataclass>>
+        +str content
+        +float readiness
+        +str readiness_label
+        +str outcome
+        +Optional~dict~ hint
+        +int turn_count
+        +float latency_ms
+    }
+    note for ProspectResponse "readiness_label from range_label(): 5 labels from 'Very skeptical' to 'Nearly ready to buy'\noutcome: None | 'sold' | 'walked'"
+
+    class ProspectSession {
+        +str session_id
+        +str product_type
+        +str difficulty
+        +ProspectState state
+        +BaseLLMProvider provider
+        +dict prospect_config
+        +get_opening_message() ProspectResponse
+        +process_turn(user_message str, show_hints bool) ProspectResponse
+        +get_evaluation() dict
+        +to_dict() dict
+        +from_dict(data dict)$ ProspectSession
+        -_update_readiness(user_msg str, bot_response str) None
+        -_score_sales_message(user_msg str, bot_response str) int
+        -_check_end_conditions() str
+        -_generate_coaching_hint(user_message str) dict
+        -_build_system_prompt() str
+    }
+    note for ProspectSession "_score_sales_message() is DETERMINISTIC — no LLM per turn:\n  +2 commitment · +1 high_intent · +len bonus · +question bonus\n  -2 walking · -0.5 objection · -1 impatience · early-turn penalty\nDifficulty profiles: easy/medium/hard in prospect_config.yaml"
+
+    class ProspectEvaluator {
+        <<module>>
+        +evaluate_session(session_data dict, provider BaseLLMProvider)$ dict
+        -_score_rubric_item(item str, history list, provider)$ dict
+    }
+    note for ProspectEvaluator "Post-session LLM rubric: NEPQ stage coverage · objection handling · rapport · close attempt · listening"
+
+    %% ── Quiz ─────────────────────────────────────────────────────────────────
+    class QuizModule {
+        <<module>>
+        +get_quiz_question(quiz_type str)$ dict
+        +evaluate_stage_quiz(answer str, bot SalesChatbot)$ dict
+        +evaluate_next_move_quiz(response str, bot SalesChatbot, last_user_msg str)$ dict
+        +evaluate_direction_quiz(explanation str, bot SalesChatbot)$ dict
+    }
+    note for QuizModule "stage quiz: deterministic match to current FSM stage\nnext-move + direction: LLM-scored · fallback score=50 on LLM failure\nConfig: quiz_config.yaml (question bank + answer keys)"
+
+    %% ── Trainer ──────────────────────────────────────────────────────────────
+    class TrainerModule {
+        <<module>>
+        +generate_training(provider BaseLLMProvider, flow_engine SalesFlowEngine, user_msg str, bot_reply str)$ dict
+        +answer_training_question(question str, flow_context dict, provider BaseLLMProvider)$ dict
+    }
+    note for TrainerModule "Called UNCONDITIONALLY on every /api/chat response\nReturns: {stage_goal, what_bot_did, next_trigger, where_heading, watch_for: list[str]}\nOn LLM failure: returns static default from quiz.get_stage_rubric()"
+
+    %% ── Knowledge ────────────────────────────────────────────────────────────
+    class KnowledgeModule {
+        <<module>>
+        +load_custom_knowledge()$ dict
+        +save_custom_knowledge(data dict)$ bool
+        +clear_custom_knowledge()$ bool
+        +get_custom_knowledge_text()$ str
+        +ALLOWED_FIELDS list$
+        +MAX_FIELD_LENGTH int$
+    }
+    note for KnowledgeModule "get_custom_knowledge_text() injected into product_context at SalesChatbot.__init__\nas '--- BEGIN CUSTOM PRODUCT DATA --- {custom_knowledge} --- END CUSTOM PRODUCT DATA ---'"
+
+    %% ── NLU Module (analysis.py — all module-level functions) ────────────────
+    class AnalysisModule {
+        <<module>>
+        +analyze_state(history list, user_message str, signal_keywords dict)$ ConversationState
+        +classify_intent_level(history list, user_message str, signal_keywords)$ str
+        +detect_guardedness(user_message str, history list)$ float
+        +text_contains_any_keyword(text str, keywords)$ bool
+        +is_literal_question(user_message str)$ bool
+        +user_demands_directness(history list, user_message str)$ bool
+        +is_repetitive_validation(history list, threshold int)$ bool
+        +detect_acknowledgment_context(user_message str, history list, state)$ str
+        +extract_preferences(history list)$ str
+        +extract_user_keywords(history list, max_keywords int)$ list
+        +classify_objection(user_message str, history list)$ dict
+        +commitment_or_walkaway(history list, user_message str)$ bool
+    }
+    note for AnalysisModule "Pure functions only — no state, no decisions, no LLM calls\nAll signals from signals.yaml + analysis_config.yaml via @lru_cache loaders\nSee 05_nlu_pipeline for full algorithm detail (intent lock · guardedness · weighted scoring)"
+
+    %% ── Prompt System (all module-level functions) ───────────────────────────
+    class ContentModule {
+        <<module>>
+        +generate_stage_prompt(strategy, stage, product_context, history, user_message)$ str
+        -_get_stage_specific_prompt(strategy, stage, state, user_message, history)$ str
+        -_get_preference_and_keyword_context(history list, preferences str)$ str
+    }
+    note for ContentModule "Orchestrates 4-tier pipeline: Tier1 override → Tier2 ack → Tier3 tactics → Tier4 assembly\nImports SIGNALS dict from flow.py (used for commitment fast-path detection)"
+
+    class PromptsModule {
+        <<module>>
+        +STRATEGY_PROMPTS dict$
+        +_SHARED_RULES str$
+        +get_prompt(strategy str, stage str)$ str
+        +get_base_prompt(product_context str, strategy str, history list)$ str
+        +generate_init_greeting(strategy str)$ dict
+        +get_acknowledgment_guidance(context_type str)$ str
+    }
+    note for PromptsModule "STRATEGY_PROMPTS keys: consultative→{intent,intent_low,logical,emotional,pitch,objection}\n  transactional→{intent,intent_low,pitch,objection}\n_SHARED_RULES applied universally to all stages"
+
+    class OverridesModule {
+        <<module>>
+        +check_override(user_message str, stage, history list, state)$ Optional~str~
+        +is_direct_info_request(user_message str)$ bool
+        +is_soft_positive(user_message str, stage)$ bool
+    }
+    note for OverridesModule "Tier 1 early-exit — bypasses Tiers 2–4 entirely if triggered"
+
+    class TacticsModule {
+        <<module>>
+        +get_adaptive_guidance(state ConversationState, stage, strategy)$ str
+        -_build_decisive_guidance(stage, strategy)$ str
+        -_build_guarded_guidance()$ str
+        -_build_question_guidance()$ str
+    }
+
+    %% ── FSM Rules (module-level functions in flow.py) ────────────────────────
+    class AdvancementRulesModule {
+        <<module>>
+        +FLOWS dict$
+        +_COMMON_TRANSITIONS dict$
+        +ADVANCEMENT_RULES dict$
+        +user_has_clear_intent(history list, user_msg str, turns int)$ bool
+        +user_shows_doubt(history list, user_msg str, turns int)$ bool
+        +user_expressed_stakes(history list, user_msg str, turns int)$ bool
+        +commitment_or_objection(history list, user_msg str, turns int)$ bool
+        -_check_advancement_condition(history list, user_msg str, turns int, stage_name str, min_turns int)$ bool
+    }
+    note for AdvancementRulesModule "_COMMON_TRANSITIONS reused by both strategies:\n  PITCH:{next:OBJECTION, advance_on:commitment_or_objection}\n  OBJECTION:{next:None, advance_on:commitment_or_walkaway}\ncommitment_or_walkaway lives in analysis.py to avoid circular import"
+
+    %% ── Relationships ────────────────────────────────────────────────────────
+    ProspectSession *-- ProspectState              : state (composition)
+    ProspectSession ..> ProspectResponse           : returns
+    ProspectSession --> ProspectEvaluator          : delegates post-session eval
+    ProspectSession --> QuickMatcher               : loads prospect_config
+
+    ContentModule --> PromptsModule                : stage templates
+    ContentModule --> OverridesModule              : Tier 1 override check
+    ContentModule --> TacticsModule                : Tier 3 tactical guidance
+    ContentModule --> AnalysisModule               : analyze_state() + detect_ack()
+
+    AnalysisModule ..> ConversationState           : produces
+
+    AdvancementRulesModule --> AnalysisModule      : commitment_or_walkaway (avoids circular import)
+    AdvancementRulesModule --> ContentModule       : SIGNALS dict imported by content

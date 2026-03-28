@@ -4,6 +4,12 @@ let isTyping = false,
 // Module-level state to avoid circular DOM reads
 let _currentStage = "intent";
 let _currentStrategy = "—";
+
+// ─── Voice Mode State ─────────────────────────────────────────
+// Server-based voice (Deepgram/Groq + Edge TTS) vs browser-based (Web Speech API)
+let voiceModeEnabled = false; // Toggle: true = server voice, false = browser speech
+let voiceModeInitialized = false;
+
 // ─── Session ─────────────────────────────────────────────────
 function getSessionId() {
   if (!sessionId) sessionId = localStorage.getItem("sessionId");
@@ -87,6 +93,38 @@ const tts = {
   stop: () => "speechSynthesis" in window && speechSynthesis.cancel(),
   isSpeaking: () => "speechSynthesis" in window && speechSynthesis.speaking,
 };
+
+// ─── Toast Notifications ──────────────────────────────────────
+function showToast(message, type = "info") {
+  // Remove existing toast if any
+  const existing = document.querySelector(".toast-notification");
+  if (existing) existing.remove();
+
+  const toast = document.createElement("div");
+  toast.className = `toast-notification toast-${type}`;
+  toast.textContent = message;
+  toast.style.cssText = `
+    position: fixed;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 12px 24px;
+    border-radius: 8px;
+    background: ${type === "error" ? "#dc2626" : type === "success" ? "#16a34a" : "#2563eb"};
+    color: white;
+    font-size: 14px;
+    z-index: 10000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    animation: toastIn 0.3s ease;
+  `;
+  document.body.appendChild(toast);
+
+  // Auto-remove after 4 seconds
+  setTimeout(() => {
+    toast.style.animation = "toastOut 0.3s ease forwards";
+    setTimeout(() => toast.remove(), 300);
+  }, 4000);
+}
 
 function parsePunctuation(text) {
   return text
@@ -1692,13 +1730,20 @@ function tryAgainProspect() {
 let speechRecognizer;
 
 function toggleMic() {
+  const micBtn = document.getElementById("micBtn");
+  const input = document.getElementById("messageInput");
+
+  // Use server-based voice mode if enabled
+  if (voiceModeEnabled) {
+    toggleServerVoiceMode(micBtn, input);
+    return;
+  }
+
+  // Fallback to browser-based speech recognition
   if (!speechRecognizer) {
     alert("Speech module loading...");
     return;
   }
-
-  const input = document.getElementById("messageInput");
-  const micBtn = document.getElementById("micBtn");
 
   if (speechRecognizer.isRecording) {
     speechRecognizer.stop();
@@ -1730,4 +1775,114 @@ function toggleMic() {
       micBtn.innerHTML = "🎤";
     },
   );
+}
+
+/**
+ * Server-based voice mode: Record audio → Deepgram/Groq → LLM → Edge TTS
+ */
+async function toggleServerVoiceMode(micBtn, input) {
+  const vm = getVoiceMode();
+
+  // Initialize on first use
+  if (!voiceModeInitialized) {
+    micBtn.innerHTML = "⏳";
+    const ok = await vm.init();
+    if (!ok) {
+      micBtn.innerHTML = "🎤";
+      alert("Could not access microphone. Please allow microphone access.");
+      return;
+    }
+    voiceModeInitialized = true;
+
+    // Set up callbacks
+    vm.onTranscription = (text) => {
+      // Add user's transcribed message to chat
+      addMessage(text, "user");
+      input.value = "";
+    };
+
+    vm.onResponse = (data) => {
+      // Add bot response with metrics
+      const metrics = {
+        latency_ms: data.latency?.total_ms || 0,
+        provider: data.provider,
+        model: data.model,
+      };
+      addMessage(data.message, "assistant", metrics);
+
+      // Update stage/strategy display
+      if (data.stage) updateStage(data.stage);
+      if (data.strategy) updateStrategy(data.strategy);
+
+      // Update training panel
+      if (data.training) updateTrainingPanel(data.training);
+    };
+
+    vm.onError = (err) => {
+      console.error("Voice mode error:", err);
+      showToast(err, "error");
+      micBtn.classList.remove("recording");
+      micBtn.innerHTML = "🎤";
+    };
+
+    vm.onRecordingStart = () => {
+      micBtn.classList.add("recording");
+      micBtn.innerHTML = "⏹";
+    };
+
+    vm.onRecordingStop = () => {
+      micBtn.innerHTML = "⏳"; // Processing indicator
+    };
+
+    vm.onAudioPlay = () => {
+      // Optional: Visual feedback when bot is speaking
+    };
+
+    vm.onAudioEnd = () => {
+      micBtn.classList.remove("recording");
+      micBtn.innerHTML = "🎤";
+    };
+  }
+
+  // Toggle recording
+  if (vm.isRecording) {
+    vm.stopRecording();
+  } else {
+    vm.startRecording();
+  }
+}
+
+/**
+ * Enable/disable server-based voice mode
+ */
+function setVoiceMode(enabled) {
+  voiceModeEnabled = enabled;
+  const btn = document.getElementById("voiceModeBtn");
+  const indicator = document.getElementById("voiceModeIndicator");
+
+  if (btn) {
+    btn.classList.toggle("active", enabled);
+  }
+  if (indicator) {
+    indicator.textContent = enabled ? "🔊" : "⌨️";
+  }
+
+  // Show feedback
+  showToast(
+    enabled
+      ? "Voice Mode enabled (server-based)"
+      : "Voice Mode disabled (browser-based)",
+    "info",
+  );
+  console.log(
+    "Voice mode:",
+    enabled ? "enabled (server)" : "disabled (browser)",
+  );
+}
+
+/**
+ * Toggle voice mode on/off
+ */
+function toggleVoiceMode() {
+  setVoiceMode(!voiceModeEnabled);
 }

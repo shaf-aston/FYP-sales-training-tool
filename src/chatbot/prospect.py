@@ -10,9 +10,12 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
-from .loader import load_prospect_config
+from .loader import load_prospect_config, load_signals
 from .providers.factory import create_provider
 from .utils import clamp, clamp_score, range_label
+
+# Module-level signal loading (cached via @lru_cache in loader)
+_SIGNALS = load_signals()
 
 _READINESS_THRESHOLDS = [0.2, 0.4, 0.6, 0.8]
 _READINESS_LABELS = [
@@ -329,20 +332,18 @@ class ProspectSession:
         Returns:
             int: Score from 1 (poor) to 5 (excellent)
         """
-        from .loader import load_signals
         from .analysis import text_contains_any_keyword, classify_intent_level
 
-        signals = load_signals()
         msg_lower = user_msg.lower()
         msg_length = len(user_msg.split())
 
         # Base score starts at 3 (neutral)
         score = 3.0
 
-        intent_level = classify_intent_level([], user_msg, signal_keywords=signals)
+        intent_level = classify_intent_level([], user_msg, signal_keywords=_SIGNALS)
 
         # Strong positive signals (commitment, high intent)
-        if text_contains_any_keyword(msg_lower, signals.get("commitment", [])):
+        if text_contains_any_keyword(msg_lower, _SIGNALS.get("commitment", [])):
             score += 2.0  # 5
         elif intent_level == "high":
             score += 1.0  # 4
@@ -351,15 +352,15 @@ class ProspectSession:
             score -= 0.5
 
         # Negative signals (objection, walking, impatience)
-        if text_contains_any_keyword(msg_lower, signals.get("walking", [])):
+        if text_contains_any_keyword(msg_lower, _SIGNALS.get("walking", [])):
             score -= 2.0  # 1
-        elif text_contains_any_keyword(msg_lower, signals.get("objection", [])):
+        elif text_contains_any_keyword(msg_lower, _SIGNALS.get("objection", [])):
             score -= 0.5  # 2.5
-        elif text_contains_any_keyword(msg_lower, signals.get("impatience", [])):
+        elif text_contains_any_keyword(msg_lower, _SIGNALS.get("impatience", [])):
             score -= 1.0  # 2
 
         # Demand for directness (pressure without rapport)
-        if text_contains_any_keyword(msg_lower, signals.get("demand_directness", [])):
+        if text_contains_any_keyword(msg_lower, _SIGNALS.get("demand_directness", [])):
             score -= 1.0  # 2
 
         # Message quality factors

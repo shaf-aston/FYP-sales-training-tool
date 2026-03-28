@@ -1,0 +1,134 @@
+%%{init: {"theme": "base"}}%%
+%% DIAGRAM 9 — PROSPECT MODE + TRAINING FEATURES
+%% Replaces: old 08_sequence_prospect_mode
+%% Key change: Opening message flow trimmed (was 5 steps for a single LLM call).
+%% Added: trainer.py and quiz.py feature flows as opt sections at the end.
+%% Prospect mode = trainee plays salesperson, AI plays buyer — practice closing the deal.
+
+sequenceDiagram
+    autonumber
+
+    participant Br  as Browser
+    participant App as app.py
+    participant PS  as ProspectSession
+    participant PE  as ProspectEvaluator
+    participant Ldr as loader.py
+    participant Pv  as Provider (Groq)
+    participant API as Groq Cloud API
+
+    %% ── Session Start ────────────────────────────────────────────────────────
+    Br->>App: POST /api/prospect/start
+  {product_type, difficulty, persona, session_id}
+
+    App->>PS: ProspectSession(provider_type, product_type, difficulty, persona, session_id)
+
+    PS->>Ldr: load_prospect_config()  [cached via @lru_cache]
+    Ldr-->>PS: personas · difficulty_profiles · patience_turns · readiness_params
+
+    note over PS: ProspectState initialised:
+  readiness     = difficulty_profile.initial_readiness
+  turn_count    = 0
+  has_committed = False
+  has_walked    = False
+
+Difficulty initial_readiness:
+  easy   → 0.4  (higher starting point, generous gain/loss)
+  medium → 0.25 (balanced gain/loss)
+  hard   → 0.1  (low start, punishing loss, short patience)
+
+    PS->>Pv: provider.chat([system_prompt + opening_message_request])
+    Pv->>API: HTTPS llama-3.3-70b-versatile
+    API-->>Pv: buyer opening line
+    Pv-->>PS: LLMResponse
+    PS-->>App: ProspectResponse {content, readiness, readiness_label, outcome=null, turn_count=0}
+    App-->>Br: JSON {prospect_message, readiness, readiness_label, turn_count}
+
+    %% ── Per-Turn Loop ────────────────────────────────────────────────────────
+    loop Each salesperson turn
+
+        Br->>App: POST /api/prospect/chat  {user_message, show_hints, session_id}
+        App->>PS: process_turn(user_message, show_hints)
+
+        note over PS: STEP 1 — Readiness Scoring  (DETERMINISTIC — zero LLM calls)
+_score_sales_message(user_msg, recent_bot_response) → score 1–5:
+  +2 commitment signal (signals.yaml)     +1 high_intent signal
+  +1 length bonus (long message)          +1 question bonus ('?' present)
+  -2 walking signal (walkaway keywords)   -0.5 objection signal
+  -1 impatience signal                    -1 early-turn penalty (premature price/feature mention)
+
+        note over PS: STEP 2 — Update Readiness
+score 4–5 → readiness += difficulty_gain   (e.g. easy: +0.15)
+score 1–2 → readiness -= difficulty_loss   (e.g. hard: -0.20)
+score 3   → readiness += 0.01  (negligible progress)
+clamp to [0.0, 1.0]
+
+        note over PS: STEP 3 — End Condition Check
+SOLD:   readiness ≥ 0.85  AND  turn_count ≥ 3
+WALKED: (turn_count ≥ patience_turns AND readiness < 0.4)
+        OR readiness ≤ 0.0
+
+        alt outcome == "sold"
+            PS->>PS: state.has_committed = True
+            PS-->>App: ProspectResponse {outcome: "sold", readiness, turn_count}
+        else outcome == "walked"
+            PS->>PS: state.has_walked = True
+            PS-->>App: ProspectResponse {outcome: "walked", readiness, turn_count}
+        else conversation continues
+            PS->>Pv: provider.chat(system_prompt + conversation_history)
+            Pv->>API: HTTPS request  (buyer reply generation)
+            API-->>Pv: buyer reply text
+            Pv-->>PS: LLMResponse
+
+            opt show_hints == True
+                PS->>PS: _generate_coaching_hint(user_message)
+                PS->>Pv: LLM call — generate hint for this turn
+                Pv-->>PS: hint {title, suggestion, tip}
+            end
+
+            PS-->>App: ProspectResponse {content, readiness, readiness_label, hint, turn_count}
+        end
+
+        App-->>Br: JSON {prospect_message, readiness, readiness_label, outcome, hint}
+    end
+
+    %% ── Post-Session Evaluation ──────────────────────────────────────────────
+    Br->>App: POST /api/prospect/evaluate  {session_id}
+    App->>PS: get_evaluation()
+    PS->>PE: evaluate_session(session_data, provider)
+
+    PE->>Pv: LLM rubric scoring — 5 dimensions:
+  NEPQ stage coverage · objection handling
+  rapport building · close attempt · listening
+    Pv->>API: HTTPS request
+    API-->>Pv: scores + feedback text
+    Pv-->>PE: structured evaluation dict
+    PE-->>PS: {rubric_scores, overall_score, strengths, improvements}
+    PS-->>App: evaluation dict
+    App-->>Br: JSON {evaluation, session_summary}
+
+    %% ── Training Feature (every /api/chat turn) ──────────────────────────────
+    note over App,Pv: TRAINING FEATURE — runs on EVERY /api/chat response (NOT prospect mode)
+app.py calls bot.generate_training(user_message, bot_reply) UNCONDITIONALLY
+trainer.generate_training(provider, flow_engine, user_msg, bot_reply):
+  System prompt includes: current FSM stage · expected NEPQ technique
+    what user said · what bot replied
+  LLM returns: {stage_goal, what_bot_did, next_trigger, where_heading, watch_for: list[str]}
+Returned to browser in every /api/chat JSON response under 'training' key
+
+    %% ── Quiz Feature ─────────────────────────────────────────────────────────
+    opt Trainee requests quiz
+        Br->>App: GET /api/quiz/question?type={stage|next-move|direction}
+        App-->>Br: question text from quiz_config.yaml
+
+        Br->>App: POST /api/quiz/stage  {answer}
+        note over App: Stage-ID quiz is DETERMINISTIC:
+compare answer to current FSM stage name — no LLM
+        App-->>Br: {correct: bool, correct_answer: str, explanation: str}
+
+        Br->>App: POST /api/quiz/next-move  {response, last_user_message}
+        note over App: Next-move quiz is LLM-scored:
+compare user's response to ideal next technique
+        App->>Pv: LLM evaluation call
+        Pv-->>App: score + feedback
+        App-->>Br: {score: int, feedback: str, ideal_response: str}
+    end

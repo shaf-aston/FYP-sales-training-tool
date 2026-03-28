@@ -1,0 +1,224 @@
+%%{init: {"theme": "base", "themeVariables": {"fontSize": "12px"}, "flowchart": {"curve": "basis", "nodeSpacing": 28, "rankSpacing": 42}}}%%
+%% DIAGRAM 5 — NLU ANALYSIS PIPELINE (analysis.py — full algorithm view)
+%% Replaces: old 10_nlu_analysis_pipeline
+%% Key change: 4 parallel branches (intent/guardedness/fatigue/decisive) now flow top-to-bottom
+%% sequentially rather than fanning out from a single entry node — eliminates wide layout.
+%% analyze_state() is called TWICE per turn:
+%%   1st: inside generate_stage_prompt (Tier 2 onward) — drives prompt assembly
+%%   2nd: in chatbot.chat() lines 111–121 — drives analytics recording only
+
+flowchart TD
+
+    INPUT(["analyze_state(
+  history: list[dict],
+  user_message: str,
+  signal_keywords: dict | None  ← loads load_signals() if None
+)"])
+
+    %% ── Intent Classification ────────────────────────────────────────────────
+    subgraph IntentPath["Intent Classification — classify_intent_level()"]
+        I_EMPTY{"user_message empty\nAND history empty?"}
+        I_EMPTY -->|"Yes"| I_MED0["return 'medium'  (default for empty input)"]
+        I_EMPTY -->|"No"| I_GOAL
+
+        I_GOAL{"_has_user_stated_clear_goal(history)
+Checks BOTH:
+  1) text_contains_any_keyword(recent_user_msgs[-window:],
+       analysis_config.yaml:goal_indicators)
+  2) regex: r'\\b(?:want to|need to|trying to)\\s+\\w+\\s+\\w+'
+  window = thresholds['recent_history_window']"}
+
+        I_GOAL -->|"True → Intent Lock fires
+once locked, never regresses"| I_HIGH_LOCK["return 'high'
+(intent lock — irreversible for this session)"]
+
+        I_GOAL -->|"False — no clear goal stated"| I_RECENT["Build recent_text:
+user_message + ' ' + _extract_recent_user_text(history, 2)
+.lower()"]
+
+        I_RECENT --> I_LOW{"text_contains_any_keyword(
+  recent_text,
+  signal_keywords['low_intent']
+)"}
+        I_LOW -->|"Match"| I_RETURN_LOW["return 'low'"]
+        I_LOW -->|"No match"| I_HIGH{"text_contains_any_keyword(
+  recent_text,
+  signal_keywords['high_intent']
+)"}
+        I_HIGH -->|"Match"| I_RETURN_HIGH["return 'high'"]
+        I_HIGH -->|"No match"| I_RETURN_MED["return 'medium'  (default — no signals detected)"]
+    end
+
+    INPUT --> I_EMPTY
+
+    I_MED0 & I_HIGH_LOCK & I_RETURN_LOW & I_RETURN_HIGH & I_RETURN_MED --> GUARD_ENTRY
+
+    %% ── Guardedness Scoring ──────────────────────────────────────────────────
+    subgraph GuardPath["Guardedness Detection — detect_guardedness()  →  float [0.0, 1.0]  →  bool"]
+        GUARD_ENTRY["detect_guardedness(user_message, history)
+  if not user_message: return 0.0"]
+
+        P1{"PRIORITY 1
+Single agreement word?
+msg_lower in _AGREEMENT_WORDS
+(ok, yes, sure, fine, alright...)
+AND len(history) ≥ 2"}
+
+        P1_CTX{"Agreement Context Check:
+recent_msgs = history[-4:]
+has_substantive_user: any user msg ≥ 8 words?
+has_bot_question: any assistant msg with '?'?
+Both required to confirm genuine agreement"}
+
+        P2{"PRIORITY 2
+Single dismissal word?
+msg_lower in _DISMISSAL_WORDS
+(no, nope, whatever, not interested...)"}
+
+        P3{"PRIORITY 3
+Agreement + elaboration?
+split_msg[0] in _AGREEMENT_WORDS
+AND msg_length > 3 words
+e.g. 'yes but I think...'"}
+
+        GUARD_ENTRY --> P1
+        P1 -->|"True — is agreement word"| P1_CTX
+        P1_CTX -->|"Both present\n→ genuine agreement"| G_0a["return 0.0  (not guarded)"]
+        P1_CTX -->|"Not both → ambiguous"| P2
+        P1 -->|"False — not agreement word"| P2
+
+        P2 -->|"True"| G_09["return 0.9  (strongly guarded)"]
+        P2 -->|"False"| P3
+
+        P3 -->|"True"| G_01["return 0.1  (low — not guarded)"]
+        P3 -->|"False"| WEIGHTED
+
+        subgraph WeightedScore["PRIORITY 4 — Weighted Category Scoring (signals.yaml)"]
+            direction LR
+            W_CAT["Score each matched category:
+evasive keywords    × 0.50  (e.g. 'not really', 'I don't know')
+sarcasm keywords    × 0.35
+deflection keywords × 0.20  (e.g. 'maybe', 'we'll see')
+defensive keywords  × 0.10  (e.g. 'fine', 'whatever')
+score = sum of matched category weights"]
+            W_CTX["Context multiplier:
+last_bot = last assistant message
+if len(last_bot.split()) > 50
+AND len(user_msg.split()) < 8:
+  score *= 1.4  (short reply to long bot response = amplified)
+score = min(score, 1.0)"]
+            W_CAT --> W_CTX
+        end
+
+        WEIGHTED --> W_CAT
+        W_CTX --> GUARD_THRESH{"score > 0.4?"}
+        GUARD_THRESH -->|"Yes"| G_TRUE["guarded = True"]
+        GUARD_THRESH -->|"No"| G_FALSE["guarded = False"]
+    end
+
+    %% ── Question Fatigue + Decisiveness ──────────────────────────────────────
+    subgraph FatDec["Question Fatigue + Decisiveness — inline in analyze_state()"]
+        direction LR
+
+        subgraph FatPath["Question Fatigue"]
+            F_COUNT["Count '?' in last 4 assistant messages:
+recent_bot = [m['content'] for m in history[-4:]
+              if m['role'] == 'assistant']
+count = sum(1 for msg in recent_bot if '?' in msg)"]
+            F_CHECK{"count ≥ thresholds
+['question_fatigue_threshold']
+(analysis_config.yaml)"}
+            F_COUNT --> F_CHECK
+            F_CHECK -->|"Yes"| QF_T["question_fatigue = True"]
+            F_CHECK -->|"No"| QF_F["question_fatigue = False"]
+        end
+
+        subgraph DecPath["Decisiveness"]
+            D_CHECK["(commitment signal OR high_intent signal)
+AND NOT guarded
+→ decisive = True  (user signalling readiness to close)
+else decisive = False"]
+        end
+    end
+
+    G_0a & G_09 & G_01 & G_TRUE & G_FALSE --> FatDec
+
+    %% ── Output ───────────────────────────────────────────────────────────────
+    COMPOSE["ConversationState(
+  intent          = classify_intent_level() result,
+  guarded         = detect_guardedness() > 0.4,
+  question_fatigue = count ≥ threshold,
+  decisive        = (commitment OR high_intent) AND NOT guarded
+)"]
+
+    FatDec --> COMPOSE
+
+    STATE_OUT(["ConversationState returned to caller
+Used by:
+  Tier 2 (acknowledgment injection — full/light/none)
+  Tier 3 (tactical guidance — decisive/guarded/literal-Q)
+  content.py assembly (intent_low template selection)
+  chatbot.chat() analytics recording (intent_level only)"])
+
+    COMPOSE --> STATE_OUT
+
+    %% ── Objection Classification (separate call, OBJECTION stage only) ───────
+    subgraph ObjPath["Objection Classification — classify_objection()  (separate call from OBJECTION stage only)"]
+        OBJ_IN["classify_objection(user_message, history)
+Loads signals.yaml keyword sets at call time"]
+
+        OBJ_MATCH{"Match against 7 type keyword sets
+from signals.yaml — first match wins:"}
+
+        OBJ_IN --> OBJ_MATCH
+
+        OBJ_MATCH --> OBJ_S["smokescreen — 'need to think / not ready / maybe later'
+Reframe: explore what is really blocking them"]
+        OBJ_MATCH --> OBJ_M["money — 'too expensive / can't afford / out of budget'
+Reframe: ROI framing / total value justification"]
+        OBJ_MATCH --> OBJ_F["fear — 'not sure it will work / risky / never tried'
+Reframe: social proof / specific case study"]
+        OBJ_MATCH --> OBJ_P["partner — 'need to check with spouse / boss / partner'
+Reframe: include decision-maker in conversation"]
+        OBJ_MATCH --> OBJ_L["logistical — 'bad timing / too busy / not now'
+Reframe: urgency / cost of further delay"]
+        OBJ_MATCH --> OBJ_T["think — 'let me think about it'
+Reframe: uncover the hidden real concern"]
+        OBJ_MATCH --> OBJ_U["unknown — no keyword match from any set
+Reframe: open question to surface true objection"]
+
+        OBJ_OUT(["dict {type, strategy, guidance}
+→ content._get_stage_specific_prompt() (objection prompt injection)
+→ SessionAnalytics.record_objection_classified()"])
+
+        OBJ_S & OBJ_M & OBJ_F & OBJ_P & OBJ_L & OBJ_T & OBJ_U --> OBJ_OUT
+    end
+
+    STATE_OUT --> OBJ_IN
+
+    %% ── Keyword Matching Engine (shared by all functions above) ──────────────
+    subgraph KWMatch["Keyword Matching Engine — text_contains_any_keyword()  (shared utility)"]
+        direction LR
+        KW_IN(["(text: str, keywords: list | tuple)"])
+        KW_G{"text empty\nOR keywords empty?"}
+        KW_CACHE["_build_union_pattern(tuple(keywords))
+@lru_cache(maxsize=256)
+Compiles: r'\\b(?:kw1|kw2|...)\\b' re.IGNORECASE
+Cached per unique keyword tuple — compiled once"]
+        KW_ITER["pattern.finditer(text)
+Iterate ALL matches (not just first)
+→ negated first match cannot block later valid match
+e.g. 'don't need X but I want Y'
+  'need' negated → skip · 'want' not negated → True"]
+        KW_NEG["Per match:
+preceding = text[:match.start()].split()
+if preceding[-1].lower() in _NEGATIONS: skip
+_NEGATIONS = {not, don't, doesn't, no, never, can't, won't}
+else: return True"]
+        KW_OUT(["True if any non-negated match found
+False if all matches negated or no match at all"])
+
+        KW_IN --> KW_G
+        KW_G -->|"Either empty"| KW_FALSE["return False"]
+        KW_G -->|"Both present"| KW_CACHE --> KW_ITER --> KW_NEG --> KW_OUT
+    end

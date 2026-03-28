@@ -6,6 +6,7 @@ import time
 import logging
 from datetime import datetime
 from threading import Lock
+from .constants import MAX_METRICS_LINES, METRICS_KEEP_AFTER_ROTATION
 
 logger = logging.getLogger(__name__)
 
@@ -14,19 +15,47 @@ METRICS_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'metrics.json
 # File-level lock — PerformanceTracker methods are called from request threads
 lock = Lock()
 
-MAX_METRICS_LINES = 5000     # rotate when file reaches this line count
-_METRICS_LINES_KEEP = 2500   # keep newest N lines after rotation
-
 # TTL cache for provider stats (avoid full file scan on every health check)
 _stats_cache = {"data": {}, "ts": 0.0, "file": None}
 _STATS_TTL = 30.0  # seconds
+
+# In-memory line counter — avoids re-reading file on every write
+_metrics_line_count: int = -1  # -1 = uninitialized
+
+
+def _get_metrics_line_count() -> int:
+    """Get current line count, initializing from file if needed."""
+    global _metrics_line_count
+    if _metrics_line_count < 0:
+        try:
+            if os.path.exists(METRICS_FILE):
+                with open(METRICS_FILE, 'r') as f:
+                    _metrics_line_count = sum(1 for _ in f)
+            else:
+                _metrics_line_count = 0
+        except Exception:
+            _metrics_line_count = 0
+    return _metrics_line_count
+
+
+def _increment_metrics_line_count() -> None:
+    """Increment line count after successful write."""
+    global _metrics_line_count
+    if _metrics_line_count >= 0:
+        _metrics_line_count += 1
+
+
+def _reset_metrics_line_count(new_count: int) -> None:
+    """Reset line count after rotation."""
+    global _metrics_line_count
+    _metrics_line_count = new_count
 
 
 class PerformanceTracker:
 
     @staticmethod
     def log_stage_latency(session_id, stage, strategy, latency_ms, provider, model, user_message_length=0, bot_response_length=0):
-        """Append a latency metric record to metrics.jsonl."""
+        """Append a latency metric record to metrics.jsonl (uses in-memory line count)."""
         metric = {
             "timestamp": datetime.now().isoformat(),
             "session_id": session_id,
@@ -40,14 +69,20 @@ class PerformanceTracker:
         }
         with lock:
             try:
-                if os.path.exists(METRICS_FILE):
+                current_count = _get_metrics_line_count()
+
+                # Rotate if exceeds max lines
+                if current_count >= MAX_METRICS_LINES and os.path.exists(METRICS_FILE):
                     with open(METRICS_FILE, 'r') as f:
                         lines = f.readlines()
-                    if len(lines) >= MAX_METRICS_LINES:
-                        with open(METRICS_FILE, 'w') as f:
-                            f.writelines(lines[-_METRICS_LINES_KEEP:])
+                    keep_lines = lines[-METRICS_KEEP_AFTER_ROTATION:]
+                    with open(METRICS_FILE, 'w') as f:
+                        f.writelines(keep_lines)
+                    _reset_metrics_line_count(len(keep_lines))
+
                 with open(METRICS_FILE, 'a') as f:
                     f.write(json.dumps(metric) + '\n')
+                _increment_metrics_line_count()
             except Exception as e:
                 logger.warning("Failed to record metric: %s", e)
 

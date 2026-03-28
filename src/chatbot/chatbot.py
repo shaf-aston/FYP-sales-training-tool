@@ -1,22 +1,43 @@
 """Sales chatbot orchestrator — FSM flow management, LLM calls, performance tracking."""
 
-import json
 import logging
 import os
 import time
 from dataclasses import dataclass
 from typing import Any
 
-from .loader import get_product_settings, load_signals, assign_ab_variant
-from .analysis import text_contains_any_keyword, classify_objection
+from .loader import get_product_settings, load_signals, assign_ab_variant, load_web_search_config
+from .analysis import text_contains_any_keyword, classify_objection, should_trigger_web_search, build_search_query
+from .web_search import WebSearchService
 from .flow import SalesFlowEngine
 from .performance import PerformanceTracker
 from .session_analytics import SessionAnalytics
+from .session_persistence import SessionPersistence
 from .providers import create_provider
 from .utils import Strategy, Stage
 from . import trainer
+from .constants import (
+    RECENT_HISTORY_WINDOW,
+    MIN_SECONDS_BETWEEN_SEARCHES,
+    SEARCH_CACHE_TTL_SECONDS,
+    MAX_SEARCH_RESULTS,
+    MIN_TURNS_BEFORE_STRATEGY_FALLBACK,
+    DEFAULT_TEMPERATURE,
+    DEFAULT_MAX_TOKENS,
+)
 
 _base_logger = logging.getLogger(__name__)
+
+
+def _format_search_context(results) -> str:
+    """Format search results into a prompt-injectable block."""
+    snippets = "\n".join(f"- {r.snippet}" for r in results if r.snippet)
+    return (
+        "\n\n[WEB SEARCH CONTEXT — external validation only, do not quote URLs directly]\n"
+        f"{snippets}\n"
+        "[Use this to support your reframe. Integrate naturally. Do not present as the primary argument.]\n"
+    )
+
 
 # Load strategy detection keywords from config
 _SIGNALS = load_signals()
@@ -78,6 +99,11 @@ class SalesChatbot:
             product_context=product_context,
         )
 
+        # Web search enrichment service + config
+        self._ws_config = load_web_search_config()
+        self._web_search = WebSearchService(cache_ttl=self._ws_config.get("cache_ttl_seconds", SEARCH_CACHE_TTL_SECONDS))
+        self._last_search_time: float = 0.0
+
         # A/B variant assignment for prompt testing (deterministic per session)
         self._ab_variant = assign_ab_variant(session_id) if session_id else None
 
@@ -96,9 +122,21 @@ class SalesChatbot:
 
     def chat(self, user_message: str) -> ChatResponse:
         """Process user message and return ChatResponse with content + metrics."""
-        recent_history = self.flow_engine.conversation_history[-10:]
+        recent_history = self.flow_engine.conversation_history[-RECENT_HISTORY_WINDOW:]
+
+        # Pre-compute objection classification once (used by search, prompt, and analytics)
+        objection_data = None
+        if self.flow_engine.current_stage == Stage.OBJECTION:
+            objection_data = classify_objection(user_message, self.flow_engine.conversation_history)
+
+        # Assemble system prompt, then optionally append search context
+        system_prompt = self.flow_engine.get_current_prompt(user_message, objection_data=objection_data)
+        search_context = self._maybe_enrich_with_search(user_message, objection_data=objection_data)
+        if search_context:
+            system_prompt += search_context
+
         llm_messages = [
-            {"role": "system", "content": self.flow_engine.get_current_prompt(user_message)}
+            {"role": "system", "content": system_prompt}
         ] + recent_history + [
             {"role": "user", "content": user_message}
         ]
@@ -119,8 +157,8 @@ class SalesChatbot:
         try:
             llm_response = self.provider.chat(
                 llm_messages,
-                temperature=0.8,
-                max_tokens=200,
+                temperature=DEFAULT_TEMPERATURE,
+                max_tokens=DEFAULT_MAX_TOKENS,
                 stage=self.flow_engine.current_stage,
             )
 
@@ -134,8 +172,8 @@ class SalesChatbot:
                         # Retry with OpenRouter
                         llm_response = self.provider.chat(
                             llm_messages,
-                            temperature=0.8,
-                            max_tokens=200,
+                            temperature=DEFAULT_TEMPERATURE,
+                            max_tokens=DEFAULT_MAX_TOKENS,
                             stage=self.flow_engine.current_stage,
                         )
                         if not llm_response.error and llm_response.content:
@@ -175,8 +213,7 @@ class SalesChatbot:
             self._apply_advancement(user_message)
 
             # Record objection classification if at OBJECTION stage
-            if self.session_id and self.flow_engine.current_stage == Stage.OBJECTION:
-                objection_data = classify_objection(user_message, self.flow_engine.conversation_history)
+            if self.session_id and self.flow_engine.current_stage == Stage.OBJECTION and objection_data:
                 objection_type = objection_data.get("type", "unknown") if isinstance(objection_data, dict) else "unknown"
                 user_turn_count = len([m for m in self.flow_engine.conversation_history if m["role"] == "user"])
                 SessionAnalytics.record_objection_classified(
@@ -219,6 +256,59 @@ class SalesChatbot:
         )
 
     # ====================================================================
+    # Web Search Enrichment
+    # ====================================================================
+
+    def _maybe_enrich_with_search(self, user_message: str, objection_data: dict | None = None) -> str | None:
+        """Return formatted search context string, or None if not triggered.
+
+        Checks: feature enabled → rate limit → trigger condition → search → format.
+        Returns None on any failure path — conversation continues unchanged.
+
+        Args:
+            objection_data: Pre-computed objection classification (avoids re-computing)
+        """
+        if not self._ws_config.get("enabled"):
+            return None
+
+        now = time.time()
+        if now - self._last_search_time < self._ws_config.get("min_seconds_between_searches", MIN_SECONDS_BETWEEN_SEARCHES):
+            return None
+
+        stage = str(self.flow_engine.current_stage)
+
+        # Use pre-computed objection type if provided
+        objection_type = None
+        if stage == "objection" and objection_data:
+            objection_type = objection_data.get("type") if isinstance(objection_data, dict) else None
+
+        if not should_trigger_web_search(stage, objection_type, user_message, self._ws_config):
+            return None
+
+        query = build_search_query(
+            objection_type=objection_type,
+            product_type=self.product_type or "",
+            templates=self._ws_config.get("query_templates", {}),
+        )
+
+        response = self._web_search.search(query, max_results=self._ws_config.get("max_results", MAX_SEARCH_RESULTS))
+
+        if response.error or not response.results:
+            return None
+
+        self._last_search_time = now
+
+        if self.session_id:
+            SessionAnalytics.record_web_search(
+                session_id=self.session_id,
+                query=query,
+                result_count=len(response.results),
+                cached=response.cached,
+            )
+
+        return _format_search_context(response.results)
+
+    # ====================================================================
     # FSM Advancement Logic
     # ====================================================================
 
@@ -257,7 +347,7 @@ class SalesChatbot:
         elif has_trans_user:
             self.flow_engine.switch_strategy(Strategy.TRANSACTIONAL)
             return True
-        elif self.flow_engine.stage_turn_count >= 3:
+        elif self.flow_engine.stage_turn_count >= MIN_TURNS_BEFORE_STRATEGY_FALLBACK:
             self.flow_engine.switch_strategy(Strategy.CONSULTATIVE)
             return True
         return False
@@ -366,22 +456,20 @@ class SalesChatbot:
     # ====================================================================
 
     def save_session(self):
-        """Session Persistence state to disk."""
+        """Persist session state to disk using SessionPersistence."""
         if not self.session_id:
             return
-        os.makedirs('sessions', exist_ok=True)
-        state = {
-            "session_id": self.session_id,
-            "product_type": self.product_type,
-            "provider_type": self.provider_type,
-            "flow_type": self.flow_engine.flow_type,
-            "current_stage": self.flow_engine.current_stage,
-            "stage_turn_count": self.flow_engine.stage_turn_count,
-            "conversation_history": self.flow_engine.conversation_history,
-            "initial_flow_type": self.flow_engine._initial_flow_type
-        }
-        with open(f"sessions/{self.session_id}.json", "w") as f:
-            json.dump(state, f)
+
+        SessionPersistence.save(
+            session_id=self.session_id,
+            product_type=self.product_type,
+            provider_type=self.provider_type,
+            flow_type=str(self.flow_engine.flow_type),
+            current_stage=str(self.flow_engine.current_stage),
+            stage_turn_count=self.flow_engine.stage_turn_count,
+            conversation_history=self.flow_engine.conversation_history,
+            initial_flow_type=str(self.flow_engine._initial_flow_type)
+        )
 
     def record_session_end(self):
         """Record session completion for evaluation analytics."""
@@ -400,12 +488,12 @@ class SalesChatbot:
     @staticmethod
     def load_session(session_id):
         """Load session from disk if exists. Returns SalesChatbot or None."""
+        state = SessionPersistence.load(session_id)
+
+        if not state:
+            return None
+
         try:
-            path = f"sessions/{session_id}.json"
-            if not os.path.exists(path):
-                return None
-            with open(path, "r") as f:
-                state = json.load(f)
             bot = SalesChatbot(
                 provider_type=state.get("provider_type"),
                 product_type=state.get("product_type"),
@@ -414,5 +502,5 @@ class SalesChatbot:
             bot.flow_engine.restore_state(state)
             return bot
         except Exception as e:
-            logging.getLogger(__name__).error(f"Failed to load session {session_id}: {e}")
+            logging.getLogger(__name__).error(f"Failed to restore session {session_id}: {e}")
             return None

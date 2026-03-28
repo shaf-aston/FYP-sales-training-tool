@@ -58,7 +58,7 @@ An AI-powered sales roleplay chatbot that trains users in consultative and trans
 |----|-------------|--------------|
 | R1 | Structured sales conversation flow | FSM with 5-stage consultative + 3-stage transactional paths |
 | R2 | Real-time coaching feedback | `trainer.py` generates per-turn coaching via lightweight LLM call |
-| R3 | Multiple LLM provider support | Factory pattern — Groq (primary) and OpenRouter (backup), hot-swappable |
+| R3 | Multiple LLM provider support | Factory pattern — Groq primary (~980 ms), OpenRouter Fallback 1 (~1200 ms, auto-switch on Groq 429) |
 | R4 | Response latency < 2 seconds | Deterministic NLU (<50ms) + single LLM call (~980ms Groq) |
 | R5 | Configurable without code changes | 9 YAML config files (~1,400 lines) with `@lru_cache` |
 | R6 | Prospect Mode (buyer simulation) | `prospect.py` — AI plays buyer, user practises selling |
@@ -81,9 +81,9 @@ An AI-powered sales roleplay chatbot that trains users in consultative and trans
 
 | Metric | Value |
 |--------|-------|
-| Core Python modules | 21 (16 chatbot + 5 providers) |
+| Core Python modules | 26 (17 chatbot + 7 providers + 2 web) |
 | YAML configuration | 9 files (~1,400 lines) |
-| REST API endpoints | 25 |
+| REST API endpoints | 31 |
 | Design patterns | Factory, FSM, Strategy, Decorator, Observer, Template Method |
 | Test coverage | 96.2% (150/156 passing) |
 
@@ -113,7 +113,7 @@ graph TD
     SP["**Sales Practitioner**\nBrowser · HTML5 + ES6 SPA\nSends chat messages\nReceives AI-generated coaching"]
 
     subgraph SYS ["Sales Roleplay Chatbot — Python 3.12 · Flask 3.0 · localhost:5000"]
-        WL["**Web Layer**\napp.py · security.py\n25 REST endpoints · Rate limiting · Input validation"]
+        WL["**Web Layer**\napp.py · security.py\n31 REST endpoints · Rate limiting · Input validation"]
         CC["**Chatbot Core**\nchatbot.py · flow.py · analysis.py\ncontent.py · loader.py · trainer.py"]
         PL["**LLM Provider Layer**\nFactory pattern · BaseLLMProvider ABC\nGroqProvider · OpenRouterProvider · DummyProvider"]
     end
@@ -150,7 +150,7 @@ graph TD
 |----------|----------|-----------|
 | **Conversation control** | Finite State Machine (not free-form) | Deterministic + testable, but constrained flexibility |
 | **Signal detection** | Keyword-based NLU (not LLM) | Fast (<50ms) + reproducible, but requires keyword curation |
-| **Prompt generation** | 6-priority routing pipeline | Prevents conflicting instructions, but adds assembly complexity |
+| **Prompt generation** | 4-tier assembly pipeline (override → acknowledgment → tactics → stage template) | Prevents conflicting instructions from different layers, but adds assembly complexity |
 | **Provider abstraction** | Factory + ABC interface | Hot-swappable providers, zero code changes to switch |
 | **Session management** | In-memory dict + `SessionSecurityManager` | Simple + bounded, but lost on server restart |
 | **Configuration** | YAML + `@lru_cache` | Editable without code, but requires restart for changes |
@@ -202,7 +202,7 @@ graph TB
 
     subgraph Flask ["Flask Server — localhost:5000"]
         subgraph WebLayer ["Web Layer  (src/web/)"]
-            App["**app.py**\n25 REST endpoints\nRoute handlers · JSON serialization\nSession lookup via require_session()"]
+            App["**app.py**\n31 REST endpoints\nRoute handlers · JSON serialization\nSession lookup via require_session()"]
             Sec["**security.py**\nRateLimiter · PromptInjectionValidator\nSessionSecurityManager · InputValidator\nSecurityHeadersMiddleware · ClientIPExtractor"]
         end
 
@@ -417,10 +417,12 @@ class ConversationState:
 
 **Objection types:** `smokescreen`, `partner`, `money`, `fear`, `logistical`, `think`, `unknown`
 
-**Guardedness scoring:**
-- Categories: sarcasm, deflection, defensive, evasive (from `signals.yaml`)
-- Thresholds: `[1, 2, 3]` → Levels: `[0.0, 0.3, 0.6, 1.0]`
-- Special case: Single-word agreement after substantive response → `0.0`
+**Guardedness scoring** (4 priority-ordered cases, then fallback to weighted):
+1. Single agreement word (`ok`, `yes`, `sure`…) AND history ≥ 2 turns → context check: if recent user msg ≥ 8 words AND recent bot msg has `?` → `0.0` (genuine agreement, not guarded)
+2. Single dismissal word (`no`, `nope`, `whatever`…) → `0.9` (strongly guarded)
+3. Agreement word at start + elaboration (msg > 3 words, e.g. "yes but I think…") → `0.1` (low guardedness)
+4. Weighted category scoring (from `signals.yaml`): evasive × 0.50, sarcasm × 0.35, deflection × 0.20, defensive × 0.10; context multiplier × 1.4 if short reply (< 8 words) to long bot message (> 50 words); clamp to [0.0, 1.0]
+- **Threshold:** `score > 0.4` → `guarded = True`
 
 **Critical implementation details:**
 - **Intent Lock:** Once `user_stated_clear_goal` triggers → `"high"` forever (no regression)
@@ -572,10 +574,26 @@ Builds tactical guidance based on user state (decisive, guarded, literal questio
 
 **Factory** — `factory.py`:
 ```python
-PROVIDERS = {"groq": GroqProvider, "openrouter": OpenRouterProvider, "dummy": DummyProvider}
+PROVIDERS = {
+    "groq": GroqProvider,              # primary (~980 ms)
+    "openrouter": OpenRouterProvider,  # fallback 1 (~1200 ms, auto-switch on 429)
+    "dummy": DummyProvider             # test stub only
+}
 create_provider(provider_type, model=None) → BaseLLMProvider
-get_available_providers() → dict  # Check all providers' availability
+get_available_providers() → dict  # Check all providers' is_available()
 ```
+
+> `sambanova_provider.py` exists in the providers directory but is **not registered** in `factory.py` and not used by any active code path.
+
+**VoiceProvider** (`voice_provider.py` — 361 SLOC, separate from `BaseLLMProvider`):
+
+| Component | Technology | Purpose |
+|-----------|-----------|---------|
+| STT primary | Deepgram SDK | Speech-to-text (~200–500 ms) |
+| STT backup | Groq Whisper API | Failover when Deepgram rate-limited |
+| TTS | Edge TTS (Microsoft) | Text-to-speech, 4 neural voices |
+
+Lazy-loaded by `app.py` on first voice request. Not involved in text-mode chat turns.
 
 **LLMResponse:**
 ```python
@@ -642,12 +660,14 @@ class ProspectState:
 | Sold | `readiness ≥ 0.85` AND `turn_count ≥ 3` |
 | Walked | (`turn_count ≥ patience_turns` AND `readiness < 0.4`) OR `readiness ≤ 0.0` |
 
-**Difficulty profiles** (from `prospect_config.yaml`):
-| Difficulty | Initial Readiness | Gain/Loss | Patience | Max Objections |
-|-----------|-------------------|-----------|----------|----------------|
-| Easy | Higher | Generous | Long | Few |
-| Medium | Moderate | Balanced | Moderate | Moderate |
-| Hard | Low | Punishing | Short | Many |
+**Difficulty profiles** (from `prospect_config.yaml` — exact values set in YAML):
+| Difficulty | Initial Readiness | Gain per good turn | Loss per poor turn | Patience (turns) |
+|-----------|-------------------|--------------------|--------------------|------------------|
+| Easy | ~0.40 (higher starting point) | +0.15 | -0.08 | Long (lenient) |
+| Medium | ~0.25 (moderate start) | +0.10 | -0.12 | Moderate |
+| Hard | ~0.10 (low — must earn trust) | +0.07 | -0.20 | Short (strict) |
+
+> Exact values configurable in `prospect_config.yaml` without code changes.
 
 ---
 
@@ -690,8 +710,8 @@ class ProspectState:
 
 | Function | Purpose | LLM Config |
 |----------|---------|-----------|
-| `generate_training(provider, flow_engine, user_msg, bot_reply)` | Post-turn coaching | temp=0.3, max_tokens=200 |
-| `answer_training_question(provider, flow_engine, question)` | Q&A about technique | temp=0.4, max_tokens=300 |
+| `generate_training(provider, flow_engine, user_msg, bot_reply)` | Post-turn coaching | temp=0.3, max_tokens=350 |
+| `answer_training_question(provider, flow_engine, question)` | Q&A about technique | temp=0.5, max_tokens=250 |
 
 **Training output:**
 ```python
@@ -880,6 +900,34 @@ class Stage(str, Enum):
 
 ---
 
+#### 5.3.17 web_search.py — Objection-Time Context Enrichment
+
+**Purpose:** Fetch DuckDuckGo search results during OBJECTION stage to ground the bot's response with external validation (statistics, industry data).
+
+**Class: `WebSearchService`**
+
+| Method | Purpose |
+|--------|---------|
+| `search(query, max_results=3) → SearchResponse` | Fetch + cache results; never raises |
+| `_fetch(query, max_results) → list[SearchResult]` | DuckDuckGo (`duckduckgo-search` library) |
+| `_normalize_query(query) → str` | Strip special chars, cap at 100 chars |
+
+**Trigger (in `chatbot.py`):** `should_trigger_web_search(stage, objection_type, user_message, ws_config)` — only fires at OBJECTION stage on certain objection types. Rate-limited via `last_search_time` tracked in `SalesChatbot`.
+
+**Cache:** TTL-based in-memory dict (default 30 min). No external cache dependency.
+
+**Output:**
+```python
+@dataclass
+class SearchResponse:
+    results: list[SearchResult]  # [SearchResult(title, snippet, url), ...]
+    query: str
+    cached: bool
+    error: str | None
+```
+
+---
+
 ### 5.4 Class Diagrams
 
 #### 5.4.1 Core Class Diagram
@@ -1020,6 +1068,14 @@ classDiagram
         +get_model_name() str
     }
 
+    class SambanovaProvider {
+        -_client : openai.OpenAI
+        -_model : str
+        +chat(messages list, temperature float, max_tokens int) LLMResponse
+        +is_available() bool
+        +get_model_name() str
+    }
+
     class DummyProvider {
         -_response_text : str
         +chat(messages list, temperature float, max_tokens int) LLMResponse
@@ -1037,14 +1093,15 @@ classDiagram
 
     BaseLLMProvider <|-- GroqProvider : extends
     BaseLLMProvider <|-- OpenRouterProvider : extends
+    BaseLLMProvider <|-- SambanovaProvider : extends
     BaseLLMProvider <|-- DummyProvider : extends
     BaseLLMProvider ..> LLMResponse : returns
-    GroqProvider ..> LLMResponse : returns
-    OpenRouterProvider ..> LLMResponse : returns
 
-    note for BaseLLMProvider "Decorated with @auto_log_performance\nWraps chat() to: measure latency,\ncall PerformanceTracker.log_stage_latency(),\nand handle exceptions → LLMResponse.error"
-    note for GroqProvider "API key: SAFE_GROQ_API_KEY env var\nPersistent client reused across calls\nthreading.Lock prevents concurrent client creation\n~980ms avg per call"
-    note for OpenRouterProvider "API key: OPENROUTER_API_KEY env var\nBackup when Groq rate-limited/unavailable\nrequests.Session with threading.Lock\n~1200ms avg per call"
+    note for BaseLLMProvider "Decorated with @auto_log_performance\nWraps chat() to: measure wall-clock latency,\nfill response.latency_ms if 0, log error if set"
+    note for GroqProvider "Env: SAFE_GROQ_API_KEY or GROQ_API_KEY\nModel: llama-3.3-70b-versatile · ~980 ms avg\nthreading.Lock · primary provider"
+    note for OpenRouterProvider "Env: OPENROUTER_API_KEY\nModel: llama-3.3-70b-instruct:free · ~1200 ms avg\nrequests.Session · Fallback 1 (triggers on 429)"
+    note for SambanovaProvider "File exists (sambanova_provider.py) but NOT registered in factory.py\nModel: Meta-Llama-3.1-70B-Instruct · openai SDK compat endpoint\nNot used in any active code path"
+    note for DummyProvider "Returns 'Test response' · latency_ms=0\nNo API key needed · test suite only"
 ```
 
 #### 5.4.3 FSM Data Structures (Zoomed In)
@@ -1085,7 +1142,7 @@ graph TD
 
 ### 6.1 Chat Turn Lifecycle
 
-**Figure 6 — Chat Turn Sequence Diagram (Low-Level):** Shows the complete message flow for a single user turn, with real class names, method signatures, and timing information. Demonstrates how the 6-layer architecture coordinates to produce a response.
+**Figure 6 — Chat Turn Sequence Diagram (Low-Level):** Shows the complete message flow for a single user turn, with real class names, method signatures, and timing information. Demonstrates how `app.py → SalesChatbot → SalesFlowEngine → PromptEngine → Provider → Analytics` coordinate to produce a response. See `03_chat_turn_sequence.mmd` for the full 8-step version with 8 participants.
 
 ```mermaid
 sequenceDiagram
@@ -1111,10 +1168,10 @@ sequenceDiagram
     flow->>+content: generate_stage_prompt(strategy='consultative', stage='logical', ...)
     content->>+analysis: analyze_state(history, user_message, signal_keywords=SIGNALS)
     analysis-->>-content: ConversationState{intent='high', guarded=False, decisive=True}
-    content->>content: Check P0-P2 override conditions → None fire
-    content->>content: P3: Select STRATEGY_PROMPTS['consultative']['logical']
-    content->>content: P4: decisive=True → skip extra probing instruction
-    content->>content: P5: extract_preferences() → 'reliability, family'
+    content->>content: Tier 1 override check → None fire (not a price query or soft-yes)
+    content->>content: Tier 2: detect_acknowledgment_context() → 'full' (disclosed problem)
+    content->>content: Tier 3: decisive=True → close guidance injected (do not probe further)
+    content->>content: Tier 4: STRATEGY_PROMPTS['consultative']['logical'] + extract_preferences() → 'reliability, family'
     content-->>-flow: assembled system_prompt (prompt engine result)
     flow-->>-cb: system_prompt
 
@@ -1182,29 +1239,41 @@ stateDiagram-v2
     OBJECTION --> [*] : commitment_or_walkaway()\n[SOLD or WALKED]
 ```
 
-**Figure 9 — Strategy Detection Flow (Medium-Level):** Shows how the INTENT discovery mode resolves to a real strategy. User signals take priority; bot-output fallback only fires after 3 turns.
+**Figure 9 — Strategy Detection Flow (Medium-Level):** Shows how INTENT discovery mode resolves to a strategy. `_detect_and_switch_strategy()` runs inside `_apply_advancement()` after the LLM response, only when `flow_type == Strategy.INTENT`.
 
 ```mermaid
 flowchart TD
-    START["Session starts\nproduct_type = 'default'\nflow_type = 'intent'\ncurrent_stage = 'INTENT'"] --> TURN
+    START["Session starts in INTENT mode
+product_type = unknown / default
+flow_type = Strategy.INTENT
+stage = Stage.INTENT"] --> TURN
 
-    TURN["New user turn\n_detect_and_switch_strategy(user_message)"]
+    TURN["Post-LLM: _detect_and_switch_strategy(user_message)
+Called only when flow_type == Strategy.INTENT"]
 
-    TURN --> UCS{Check user signals\nfirst — highest priority}
+    TURN --> UCS{"Check user signals (priority 1 + 2)"}
 
-    UCS -->|"user_consultative_signals?\n'tell me more', 'struggling',\n'help me understand', 'coaching'"| CONS["switch_strategy('consultative')\n5-stage NEPQ flow"]
+    UCS -->|"user_consultative_signals detected
+e.g. 'problem', 'frustrated', 'feel', 'struggling'
+from signals.yaml user_consultative_signals list"| CONS["switch_strategy('consultative')
+stage reset to INTENT · stage_turn_count=0
+record_strategy_switch(reason='consultative_signal')"]
 
-    UCS -->|"user_transactional_signals?\n'price', 'cost', 'budget',\n'buy now', 'how much'"| TRANS["switch_strategy('transactional')\n3-stage fast-track flow"]
+    UCS -->|"user_transactional_signals detected
+e.g. 'price', 'budget', 'buy now', 'how much'
+from signals.yaml user_transactional_signals list"| TRANS["switch_strategy('transactional')
+stage reset to INTENT · stage_turn_count=0
+record_strategy_switch(reason='transactional_signal')"]
 
-    UCS -->|"No user signals detected"| TURNS3{stage_turn_count >= 3?}
+    UCS -->|"No user signals detected"| TURNS3{"stage_turn_count ≥ 3?"}
 
-    TURNS3 -->|"No — stay in INTENT\nkeep discovering"| TURN
+    TURNS3 -->|"No — keep discovering"| STAY["Stage stays INTENT
+stage_turn_count increments next turn"]
+    STAY --> TURN
 
-    TURNS3 -->|"Yes — check BOT output\n(fallback heuristic)"| BOT{Bot output signals}
-
-    BOT -->|"consultative_bot_indicators\ndetected in last reply"| CONS
-    BOT -->|"transactional_bot_indicators\ndetected in last reply"| TRANS
-    BOT -->|"Ambiguous — no clear signal"| DEFAULT["switch_strategy('consultative')\nsafe default"]
+    TURNS3 -->|"Yes — 3 turns, no signals"| DEFAULT["switch_strategy('consultative')
+Safe default — prevents permanent discovery loop
+record_strategy_switch(reason='default_after_3_turns')"]
 ```
 
 **Guard conditions summary:**
@@ -1219,41 +1288,51 @@ flowchart TD
 
 ---
 
-### 6.3 Prompt Assembly Pipeline (6-Priority Routing)
+### 6.3 Prompt Assembly Pipeline (4-Tier System)
 
-**Figure 10 — Prompt Assembly Pipeline (Low-Level, Zoomed In):** Shows the priority-routing algorithm inside `content.generate_stage_prompt()`. P0–P2 are early-exit overrides; P3–P5 assemble the base prompt with state-aware adaptations. This is the core of the adaptive prompt engineering system.
+**Figure 10 — Prompt Assembly Pipeline (Low-Level):** Shows the 4-tier assembly algorithm inside `content.generate_stage_prompt()`. Tier 1 is an early-exit override layer; Tiers 2–4 build the state-aware prompt. See `04_prompt_assembly.mmd` for full detail.
 
 ```mermaid
 flowchart TD
-    UM["User message arrives\ngenerate_stage_prompt(strategy, stage, product_context, history, user_message)"]
+    UM["generate_stage_prompt(strategy, stage, product_context, history, user_message)"]
 
-    UM --> P0{"P0: Direct Info Request Override\ntext_contains_any_keyword(msg, SIGNALS['direct_info_requests'])\nKeywords: 'price', 'cost', 'how much', 'what does it cost'"}
-    P0 -->|"YES — fires"| S0["Return overrides.yaml:\ndirect_info_request template\nSKIPS all lower tiers"]
-    P0 -->|"NO"| P1
+    UM --> T1{"TIER 1 — Override Check (early-exit)
+overrides.check_override(user_message, stage, history, state)"}
+    T1 -->|"direct_info_request
+'price'/'cost'/'how much'"| OV1["Return factual-reply template
+(skips Tiers 2–4)"]
+    T1 -->|"soft_positive at PITCH
+'yes'/'ok'/'sounds good'"| OV2["Return move-to-close template
+(skips Tiers 2–4)"]
+    T1 -->|"repetitive_validation loop
+is_repetitive_validation(history, threshold)"| OV3["Return pattern-interrupt template
+(skips Tiers 2–4)"]
+    T1 -->|"No override"| T2
 
-    P1{"P1: Soft Positive at PITCH Override\ntext_contains_any_keyword(msg, SIGNALS['soft_positive'])\nAND current_stage == 'pitch'\nKeywords: 'yes', 'ok', 'sounds good', 'alright'"}
-    P1 -->|"YES — fires"| S1["Return overrides.yaml:\nsoft_positive_at_pitch template\n(assumptive close)\nSKIPS tiers P2–P5"]
-    P1 -->|"NO"| P2
+    OV1 & OV2 & OV3 --> FINAL
 
-    P2{"P2: Excessive Validation Loop\nis_repetitive_validation(history, threshold=3)\nCounts validation phrases in last 6 bot messages"}
-    P2 -->|"YES — fires"| S2["Return overrides.yaml:\nexcessive_validation template\n(pivot forward)\nSKIPS tiers P3–P5"]
-    P2 -->|"NO"| P3
+    T2["TIER 2 — Acknowledgment
+analyze_state() → ConversationState
+detect_acknowledgment_context() → full / light / none"]
 
-    P3["P3: Stage-Specific Base Prompt\nget_prompt(strategy, stage) from STRATEGY_PROMPTS dict\nget_base_rules(strategy) → _SHARED_RULES + strategy-specific rules\n(5 universal rules + strategy extras)"]
+    T2 --> T3["TIER 3 — Adaptive Tactics
+state.decisive → close guidance (DO NOT probe further)
+state.guarded → back-off (single open question)
+is_literal_question() → answer directly first
+else → get_tactic('elicitation') from tactics.yaml"]
 
-    P3 --> P4["P4: User State Adaptation\nanalyze_state(history, user_message) → ConversationState\napplied via adaptations.yaml templates"]
+    T3 --> T4["TIER 4 — Stage Assembly
+get_base_prompt(product_context, strategy, history)
++ STRATEGY_PROMPTS[strategy][stage]  (intent_low if intent=='low')
++ _SHARED_RULES + acknowledgment_guidance + adaptive_guidance
++ preference_context + lexical entrainment keywords"]
 
-    P4 -->|"intent == 'low'"| A1["inject: elicitation tactic\nfrom tactics.yaml\n(presumptive/combined/discovery)"]
-    P4 -->|"guarded == True"| A2["inject: light acknowledgment\ndetect_acknowledgment_context() → 'light'"]
-    P4 -->|"question_fatigue == True\n(≥3 bot questions in last 4 msgs)"| A3["inject: reduce-question-count\ninstruction"]
-    P4 -->|"decisive == True\n(high_intent AND NOT guarded)"| A4["inject: skip-probing\nmove-forward instruction"]
-
-    A1 & A2 & A3 & A4 --> P5["P5: Content Injection\nextract_preferences(history) → 'budget, safety, reliability'\nextract_user_keywords(history) → lexical entrainment keywords\nget_custom_knowledge_text() → custom product specs"]
-
-    P5 --> FINAL["Final System Prompt\nFully assembled · Contextualized · Stage-appropriate\nSent as system message to LLM provider"]
+    T4 --> FINAL["Complete system prompt
+→ llm_messages[0] = {role:'system', content:prompt}
+  + history[-10:] + [{role:'user', content:user_message}]"]
 ```
 
-**Priority resolution:** If P0 fires, P1-P5 are skipped. If P1 fires, P2-P5 are skipped. Prevents conflicting instructions.
+**Tier resolution:** If Tier 1 fires, Tiers 2–4 are skipped entirely. This prevents override templates from being contaminated by acknowledgment or tactical guidance intended for normal conversation turns.
 
 ---
 
@@ -1289,7 +1368,8 @@ User (salesperson) sends message
 │  │   └─ readiness ≤ 0.0 → "walked"                      │
 │  │                                                       │
 │  └─ Return ProspectResponse                              │
-│      {content, latency_ms, state_snapshot, coaching}     │
+│      {content, readiness, readiness_label, outcome,      │
+│       hint (if show_hints=True), turn_count, latency_ms} │
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -1342,7 +1422,7 @@ Two SessionSecurityManager instances:
 │  ┌───────────────────────────────────────────────────┐   │
 │  │  Flask Server  (localhost:5000)                    │   │
 │  │  ├── Gunicorn / Flask dev server                  │   │
-│  │  ├── 25 REST endpoints                            │   │
+│  │  ├── 31 REST endpoints                            │   │
 │  │  ├── In-memory session store (dict + Lock)        │   │
 │  │  └── File I/O: sessions/, metrics.jsonl,          │   │
 │  │       analytics.jsonl, src/config/*.yaml          │   │
@@ -1370,10 +1450,12 @@ Two SessionSecurityManager instances:
 
 | Variable | Purpose | Default |
 |----------|---------|---------|
-| `SAFE_GROQ_API_KEY` | Groq API authentication | Required for Groq |
-| `GROQ_MODEL` | Groq model selection | `llama-3.3-70b-versatile` |
-| `OPENROUTER_API_KEY` | OpenRouter API authentication | Optional (backup) |
+| `SAFE_GROQ_API_KEY` | Groq API authentication (LLM + Whisper backup STT) | Required for Groq |
+| `GROQ_MODEL` | Groq LLM model selection | `llama-3.3-70b-versatile` |
+| `OPENROUTER_API_KEY` | OpenRouter API (auto-fallback when Groq 429s) | Optional |
 | `OPENROUTER_MODEL` | OpenRouter model selection | `meta-llama/llama-3.3-70b-instruct:free` |
+| `DEEPGRAM_API` | Deepgram STT (primary voice transcription) | Optional (voice mode) |
+| `GROQ_WHISPER_KEY` | Groq Whisper key (STT backup, falls back to GROQ_API_KEY) | Optional |
 | `ENABLE_DEBUG_PANEL` | Enable `/api/debug/*` endpoints | `false` |
 | `ALLOWED_ORIGINS` | CORS allowed origins | localhost |
 
@@ -1679,8 +1761,9 @@ Request arrives
 | Method | Path | Purpose | Auth |
 |--------|------|---------|------|
 | `POST` | `/api/training/ask` | Answer trainee's question about technique | `X-Session-ID` |
-| `POST` | `/api/quiz/stage` | Stage identification quiz | `X-Session-ID` |
-| `POST` | `/api/quiz/next_move` | Next move quiz (LLM-scored) | `X-Session-ID` |
+| `GET` | `/api/quiz/question` | Random question from quiz_config.yaml by type | `X-Session-ID` |
+| `POST` | `/api/quiz/stage` | Stage identification quiz (deterministic) | `X-Session-ID` |
+| `POST` | `/api/quiz/next-move` | Next move quiz (LLM-scored) | `X-Session-ID` |
 | `POST` | `/api/quiz/direction` | Strategic direction quiz (LLM-scored) | `X-Session-ID` |
 
 ### 11.4 Prospect Mode Endpoints
@@ -1688,9 +1771,10 @@ Request arrives
 | Method | Path | Purpose | Auth |
 |--------|------|---------|------|
 | `POST` | `/api/prospect/init` | Start prospect session (persona + difficulty) | None |
-| `POST` | `/api/prospect/turn` | Process one salesperson turn | `X-Session-ID` |
+| `POST` | `/api/prospect/chat` | Process one salesperson turn | `X-Session-ID` |
 | `GET` | `/api/prospect/state` | Get readiness, persona, turn count | `X-Session-ID` |
-| `GET` | `/api/prospect/evaluation` | Post-session evaluation (LLM-scored) | `X-Session-ID` |
+| `POST` | `/api/prospect/evaluate` | Post-session evaluation (LLM-scored rubric) | `X-Session-ID` |
+| `POST` | `/api/prospect/reset` | End prospect session + clear state | `X-Session-ID` |
 
 **POST /api/prospect/init** — Request:
 ```json
@@ -1713,15 +1797,27 @@ Request arrives
 
 | Method | Path | Purpose | Auth | Rate Limit |
 |--------|------|---------|------|-----------|
-| `GET` | `/api/knowledge/current` | Load current custom knowledge | None | — |
-| `POST` | `/api/knowledge/update` | Save custom knowledge (validated) | None | `knowledge` |
-| `POST` | `/api/knowledge/clear` | Delete custom knowledge | None | `knowledge` |
+| `GET` | `/api/knowledge` | Load current custom knowledge | None | — |
+| `POST` | `/api/knowledge` | Save custom knowledge (validated) | None | `knowledge` |
+| `DELETE` | `/api/knowledge` | Delete custom knowledge | None | `knowledge` |
 
 ### 11.7 Debug Endpoints
 
 | Method | Path | Purpose | Guard |
 |--------|------|---------|-------|
-| `GET` | `/api/debug/*` | Development-only introspection | `ENABLE_DEBUG_PANEL=true` env var |
+| `GET` | `/api/debug/config` | Full app config dump | `ENABLE_DEBUG_PANEL=true` |
+| `GET` | `/api/debug/prompt` | Assembled prompt for current session state | `ENABLE_DEBUG_PANEL=true` |
+| `POST` | `/api/debug/stage` | Force FSM stage override | `ENABLE_DEBUG_PANEL=true` |
+| `POST` | `/api/debug/analyse` | Run NLU analysis on a test message | `ENABLE_DEBUG_PANEL=true` |
+
+### 11.8 Voice Endpoints
+
+| Method | Path | Purpose | Auth |
+|--------|------|---------|------|
+| `GET` | `/api/voice/status` | Deepgram + Edge TTS availability check | None |
+| `POST` | `/api/voice/transcribe` | Audio → text (Deepgram primary, Groq Whisper backup) | `X-Session-ID` |
+| `POST` | `/api/voice/synthesize` | Text → audio (Edge TTS, choice of 4 neural voices) | None |
+| `POST` | `/api/voice/chat` | Transcribe → chat → synthesize in one request | `X-Session-ID` |
 
 ---
 
@@ -1912,12 +2008,15 @@ src/
 │   ├── session_analytics.py (234 SLOC)  Evaluation analytics
 │   ├── performance.py      (108 SLOC)   Latency metrics
 │   ├── utils.py            (59 SLOC)    Enums & helpers
+│   ├── web_search.py       (94 SLOC)    Web search enrichment (objection-time context)
 │   └── providers/
 │       ├── base.py         (51 SLOC)    BaseLLMProvider (ABC)
 │       ├── factory.py      (37 SLOC)    Provider factory
-│       ├── groq_provider.py (67 SLOC)   Groq Cloud API
-│       ├── openrouter_provider.py (92 SLOC) OpenRouter cloud
-│       └── dummy_provider.py (30 SLOC)  Testing stub
+│       ├── groq_provider.py (67 SLOC)        Groq Cloud API (~980 ms · primary)
+│       ├── openrouter_provider.py (92 SLOC)  OpenRouter (~1200 ms · auto-fallback on 429)
+│       ├── sambanova_provider.py (86 SLOC)   SambaNova API (openai SDK compat · unregistered)
+│       ├── voice_provider.py (361 SLOC)      Deepgram STT (primary) + Groq Whisper (backup) + Edge TTS
+│       └── dummy_provider.py (30 SLOC)       Testing stub (latency=0)
 │
 ├── config/
 │   ├── signals.yaml        (~400 lines) Behavioural keywords
@@ -1945,6 +2044,6 @@ src/
 
 ---
 
-**Document Version:** 3.0
+**Document Version:** 3.1
 **Template:** arc42 (adapted for FYP)
-**Last Updated:** 21 March 2026
+**Last Updated:** 27 March 2026

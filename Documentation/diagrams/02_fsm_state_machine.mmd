@@ -1,0 +1,117 @@
+%%{init: {"theme": "base"}}%%
+%% DIAGRAM 2 — FSM STATE MACHINE (all 3 strategies)
+%% Replaces: old 05_fsm_state_machine
+%% Key change: RewindOps section replaced with top-level note (removed 6 messy bidirectional arrows)
+%% Rewind/reset note: rewind(n) pops last N turn pairs, stage_turn_count reduced, stage unchanged.
+%%   rewind_to_turn(i) truncates history to turn i*2, FSM stage recalculated.
+%%   reset_to_initial() sets flow_type=_initial_flow_type, stage=first, stage_turn_count=0, history=[].
+%%   All rewind ops available via POST /api/rewind and POST /api/edit.
+
+stateDiagram-v2
+
+    [*] --> StrategyInit : POST /api/init\nQuickMatcher resolves product_type
+
+    state StrategyInit {
+        [*] --> LoadConfig
+        LoadConfig --> SetStrategy
+        note right of LoadConfig
+            get_product_settings(product_type)
+            → product_config.yaml lookup
+            default: strategy = "intent"
+            SalesFlowEngine(flow_type=strategy)
+            _initial_flow_type stored for reset
+        end note
+        SetStrategy --> [*] : flow_type ∈ {intent, consultative, transactional}
+    }
+
+    StrategyInit --> IntentDiscovery  : flow_type == "intent"  (unknown product)
+    StrategyInit --> Consultative     : flow_type == "consultative"\nor force_strategy=consultative on /api/init
+    StrategyInit --> Transactional    : flow_type == "transactional"\nor force_strategy=transactional on /api/init
+
+    %% ── INTENT DISCOVERY ─────────────────────────────────────────────────────
+    state "INTENT — Discovery Mode\n(uses CONSULTATIVE prompt templates while discovering)" as IntentDiscovery {
+
+        [*] --> ID_INTENT
+
+        state "Stage.INTENT\nBot probes for need · problem · context\nstage_turn_count increments each turn" as ID_INTENT
+
+        ID_INTENT --> ID_INTENT          : no signals detected\nstage_turn_count < 3
+
+        ID_INTENT --> ToConsultative     : consultative signals detected\n(problem · frustration · feel etc. from signals.yaml)\n→ switch_strategy(CONSULTATIVE) · stage_turn_count=0
+
+        ID_INTENT --> ToTransactional    : transactional signals detected\n(price · budget · buy now etc. from signals.yaml)\n→ switch_strategy(TRANSACTIONAL) · stage_turn_count=0
+
+        ID_INTENT --> ToConsultativeDef  : stage_turn_count ≥ 3 · no signals detected\n→ default to CONSULTATIVE · stage_turn_count=0
+
+        note right of ID_INTENT
+            _detect_and_switch_strategy() in chatbot.py
+            called AFTER LLM response, inside _apply_advancement():
+              1) user_consultative_signals → CONSULTATIVE
+              2) user_transactional_signals → TRANSACTIONAL
+              3) stage_turn_count ≥ 3 → CONSULTATIVE  (default)
+            All three paths call SessionAnalytics.record_strategy_switch()
+        end note
+
+        ToConsultative    --> [*]
+        ToTransactional   --> [*]
+        ToConsultativeDef --> [*]
+    }
+
+    IntentDiscovery --> Consultative  : switched to CONSULTATIVE
+    IntentDiscovery --> Transactional : switched to TRANSACTIONAL
+
+    %% ── CONSULTATIVE (NEPQ) ──────────────────────────────────────────────────
+    state "CONSULTATIVE — 5 stages  (NEPQ / Impact Formula framework)" as Consultative {
+
+        [*] --> C_INTENT
+
+        state "Stage.INTENT\nGet tangible + experience (Impact formula lines 3–12)\nLow intent → intent_low template (softer, less assumptive)" as C_INTENT
+
+        state "Stage.LOGICAL\nTwo-phase probe: cause → like/dislike (lines 15–33)\nMin 2 turns · safety valve at max_turns (analysis_config.yaml)" as C_LOGICAL
+
+        state "Stage.EMOTIONAL\nIdentity Frame → Future Pacing → COI (lines 36–58)\nMin 3 turns · safety valve at max_turns (analysis_config.yaml)" as C_EMOTIONAL
+
+        state "Stage.PITCH\nCommitment → 3-pillar → assumptive close (lines 59–71)\n_SHARED_RULES: no pitch ending with '?'" as C_PITCH
+
+        state "Stage.OBJECTION\nClassify → Reframe  (7 types: smokescreen · money · fear\npartner · logistical · think · unknown)" as C_OBJECTION
+
+        %% Normal advancement
+        C_INTENT    --> C_LOGICAL   : user_has_clear_intent()\nhigh intent signals OR turns ≥ 4 (high) / 6 (medium)
+        C_LOGICAL   --> C_EMOTIONAL : user_shows_doubt()\ndoubt_keywords from analysis_config.yaml · min 2 turns
+        C_EMOTIONAL --> C_PITCH     : user_expressed_stakes()\nstakes_keywords from analysis_config.yaml · min 3 turns
+        C_PITCH     --> C_OBJECTION : commitment_or_objection()\nSIGNALS[commitment] OR SIGNALS[objection] · min 3 words
+        C_OBJECTION --> [*]         : commitment_or_walkaway()\nOutcome: SOLD (committed) or WALKED (walkaway)
+
+        %% Fast-path skips
+        C_LOGICAL   --> C_PITCH : FAST-A: commitment signal detected at LOGICAL\n(SIGNALS[commitment] keywords found)
+        C_EMOTIONAL --> C_PITCH : FAST-A: commitment signal detected at EMOTIONAL
+        C_LOGICAL   --> C_PITCH : FAST-B·C·D: user_demands_directness()\nor direct_info_requests keyword\nor urgency_skip_to + impatience signal
+        C_EMOTIONAL --> C_PITCH : FAST-B·C·D: same directness / urgency paths
+
+        %% Self-loops
+        C_INTENT    --> C_INTENT    : still discovering
+        C_LOGICAL   --> C_LOGICAL   : probing — no signal yet
+        C_EMOTIONAL --> C_EMOTIONAL : eliciting — no signal yet
+        C_OBJECTION --> C_OBJECTION : reframe cycle
+    }
+
+    %% ── TRANSACTIONAL ────────────────────────────────────────────────────────
+    state "TRANSACTIONAL — 3 stages  (NEEDS → MATCH → CLOSE)" as Transactional {
+
+        [*] --> T_INTENT
+
+        state "Stage.INTENT\nGather budget + use-case · max ~2 turns\nLow intent → intent_low template" as T_INTENT
+
+        state "Stage.PITCH\nPresent matching product options\nAssumptive close — no emotional probing\n_SHARED_RULES: no pitch ending with '?'" as T_PITCH
+
+        state "Stage.OBJECTION\nClassify → Reframe (same 7 types)\nTransactional-specific reframe variants" as T_OBJECTION
+
+        T_INTENT    --> T_PITCH     : user_has_clear_intent()  (same rule as CONSULTATIVE)
+        T_PITCH     --> T_OBJECTION : commitment_or_objection()
+        T_OBJECTION --> [*]         : commitment_or_walkaway() · SOLD or WALKED
+
+        T_INTENT    --> T_PITCH : FAST-B·C·D: directness / direct_info_request / impatience
+
+        T_INTENT    --> T_INTENT    : still gathering
+        T_OBJECTION --> T_OBJECTION : reframe cycle
+    }

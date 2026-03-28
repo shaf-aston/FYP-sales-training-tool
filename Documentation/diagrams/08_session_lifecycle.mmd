@@ -1,0 +1,152 @@
+%%{init: {"theme": "base", "themeVariables": {"fontSize": "12px"}, "flowchart": {"curve": "basis", "nodeSpacing": 30, "rankSpacing": 48}}}%%
+%% DIAGRAM 8 — SESSION LIFECYCLE (all initialisation + restore paths)
+%% Replaces: old 11_sequence_session_init
+%% Key change: 6-flow sequence diagram replaced with branching flowchart.
+%% Flowchart is cleaner for branching paths — no wide participant headers needed.
+%% Covers: 5 paths — new session · product auto-detect · in-memory restore ·
+%%         disk-backup restore · replay from localStorage · plus Force Strategy + Reset.
+
+flowchart TD
+
+    PAGE_LOAD(["Browser page load / app start
+reads localStorage['session_id']"])
+
+    HAS_ID{"session_id
+in localStorage?"}
+
+    PAGE_LOAD --> HAS_ID
+
+    %% ═══════════════════════════════════════════════════════════════
+    %% PATH A — New session, no product known
+    %% ═══════════════════════════════════════════════════════════════
+    HAS_ID -->|"No — first visit\n(no session_id stored)"| A_REQ
+
+    subgraph PathA["Path A — New Session (unknown product)"]
+        A_REQ["POST /api/init
+{product_type: null, user_message: ''}"]
+        A_CAP["SessionSecurityManager.can_create()
+→ True if below MAX_SESSIONS cap"]
+        A_ID["session_id = secrets.token_hex(16)
+(32-char cryptographic hex string)"]
+        A_BOT["SalesChatbot(provider='groq', product_type=None, session_id)
+get_product_settings(None) → default strategy = 'intent'
+SalesFlowEngine(flow_type='intent', stage=Stage.INTENT)"]
+        A_REC["SessionAnalytics.record_session_start(
+  session_id, product='unknown', strategy='intent', ab_variant)"]
+        A_GREET["prompts.generate_init_greeting('intent')
+→ opening line from STRATEGY_PROMPTS[consultative][init_greeting]
+  (INTENT mode uses CONSULTATIVE greeting template)"]
+        A_STORE["localStorage['session_id'] = session_id
+localStorage['history'] = []"]
+        A_REQ --> A_CAP --> A_ID --> A_BOT --> A_REC --> A_GREET --> A_STORE
+    end
+
+    %% ═══════════════════════════════════════════════════════════════
+    %% PATH B — New session, product auto-detected from first message
+    %% ═══════════════════════════════════════════════════════════════
+    HAS_ID -->|"No — user typed first message\n(product hint in text)"| B_REQ
+
+    subgraph PathB["Path B — Product Auto-Detection"]
+        B_REQ["POST /api/init
+{product_type: null, user_message: 'I want to buy a car'}"]
+        B_QM["QuickMatcher.match_product(user_message)
+exact key → alias → fuzzy + context scoring
+Returns (product_key, confidence)"]
+        B_CONF{"confidence ≥ 0.7?"}
+        B_ACCEPT["product_type = matched key  (e.g. 'cars' at 0.92)
+SalesChatbot(product_type='cars')
+product_config.yaml → strategy = 'consultative'
+SalesFlowEngine(flow_type='consultative')"]
+        B_REJECT["product_type = None
+Falls back to Path A behaviour
+strategy = 'intent' (discovery mode)"]
+        B_GREET["generate_init_greeting(strategy)
+→ strategy-specific opening message"]
+        B_REQ --> B_QM --> B_CONF
+        B_CONF -->|"Yes — accepted"| B_ACCEPT --> B_GREET
+        B_CONF -->|"No — below threshold"| B_REJECT --> B_GREET
+    end
+
+    %% ═══════════════════════════════════════════════════════════════
+    %% PATH C — Existing session (page reload, server still has it)
+    %% ═══════════════════════════════════════════════════════════════
+    HAS_ID -->|"Yes — session_id in localStorage"| C_REQ
+
+    C_REQ["POST /api/init  {session_id: 'abc123...'}"]
+    C_MEM{"session_manager.get(session_id)
+found in memory?"}
+
+    C_REQ --> C_MEM
+
+    C_MEM -->|"Yes — server has it"| C_RESTORE["Return from memory:
+history · current_stage · strategy
+No new greeting (conversation already in progress)
+Response: {success:true, stage:'LOGICAL', strategy:'CONSULTATIVE', history:[...]}"]
+
+    %% ═══════════════════════════════════════════════════════════════
+    %% PATH D — Session lost (server restart), try disk backup
+    %% ═══════════════════════════════════════════════════════════════
+    C_MEM -->|"No — not in memory\n(server restarted / deployed)"| D_DISK
+
+    D_DISK{"sessions/{session_id}.json
+disk backup exists?"}
+
+    D_DISK -->|"Yes"| D_LOAD["SalesChatbot.load_session(session_id)
+→ restore SalesChatbot from JSON
+session_manager.set(session_id, restored_bot)
+Return: history · stage · strategy"]
+
+    %% ═══════════════════════════════════════════════════════════════
+    %% PATH E — No disk backup, replay from localStorage history
+    %% ═══════════════════════════════════════════════════════════════
+    D_DISK -->|"No — no backup either"| E_ERR
+
+    subgraph PathE["Path E — Replay from localStorage  (disaster recovery)"]
+        E_ERR["App returns: {error: 'Session not found', code: 'SESSION_EXPIRED'}
+Browser reads localStorage['history'] = [{role,content} × N]"]
+        E_REQ["Browser sends POST /api/restore
+{history: [{role,content}×N], product_type, provider}"]
+        E_NEW_ID["new_session_id = secrets.token_hex(16)
+SalesChatbot(provider, product_type, new_session_id)"]
+        E_REPLAY["bot.replay(history):
+  Iterates turn pairs in history
+  Calls FSM advancement logic on each pair
+  Reconstructs current_stage + strategy
+  NO LLM calls — purely deterministic reconstruction"]
+        E_STORE["session_manager.set(new_session_id, bot)
+localStorage['session_id'] = new_session_id
+Return: {success:true, session_id:new_id, stage, strategy}"]
+        E_ERR --> E_REQ --> E_NEW_ID --> E_REPLAY --> E_STORE
+    end
+
+    %% ═══════════════════════════════════════════════════════════════
+    %% FORCE STRATEGY — Developer override
+    %% ═══════════════════════════════════════════════════════════════
+    FORCE_REQ["POST /api/init  {force_strategy: 'consultative', product_type: 'cars'}
+Sets _initial_flow_type = 'consultative'
+flow_engine.switch_strategy('consultative')
+Bypasses INTENT discovery — starts directly in CONSULTATIVE/INTENT"]
+
+    %% ═══════════════════════════════════════════════════════════════
+    %% SESSION RESET
+    %% ═══════════════════════════════════════════════════════════════
+    RESET_REQ["POST /api/reset  X-Session-ID header
+session_manager.delete(session_id)
+clear localStorage['session_id'] + localStorage['history']
+Browser redirects → fresh POST /api/init"]
+
+    %% ═══════════════════════════════════════════════════════════════
+    %% All successful paths converge to active session
+    %% ═══════════════════════════════════════════════════════════════
+    ACTIVE(["Active session — POST /api/chat available
+SalesChatbot in SessionSecurityManager
+  idle timeout resets on each request
+  background_cleanup() thread handles stale sessions"])
+
+    A_STORE --> ACTIVE
+    B_GREET --> ACTIVE
+    C_RESTORE --> ACTIVE
+    D_LOAD --> ACTIVE
+    E_STORE --> ACTIVE
+    FORCE_REQ --> ACTIVE
+    RESET_REQ -->|"→ re-init"| PAGE_LOAD

@@ -1,0 +1,218 @@
+"""Session lifecycle endpoints — init, restore, reset, health, config."""
+
+from flask import Blueprint, request, jsonify
+import secrets
+from chatbot.chatbot import SalesChatbot
+from chatbot.providers import get_available_providers
+from chatbot.performance import PerformanceTracker
+from chatbot.content import generate_init_greeting
+from chatbot.loader import QuickMatcher
+from web.security import require_rate_limit
+
+bp = Blueprint('session', __name__, url_prefix='/api')
+
+
+def init_routes(app, session_manager_obj, get_session_func, set_session_func, delete_session_func, bot_state_func):
+    """Initialize session routes with dependency injection.
+
+    Args:
+        app: Flask app (for logger access)
+        session_manager_obj: SessionSecurityManager instance
+        get_session_func: Function to get session by ID
+        set_session_func: Function to store session
+        delete_session_func: Function to delete session
+        bot_state_func: Function to extract bot state dict
+    """
+    bp.app = app
+    bp.session_manager = session_manager_obj
+    bp.get_session = get_session_func
+    bp.set_session = set_session_func
+    bp.delete_session = delete_session_func
+    bp.bot_state = bot_state_func
+
+
+@bp.route('/init', methods=['POST'])
+def api_init():
+    """Initialize or restore session. Creates bot eagerly to avoid first-message latency."""
+    data = request.json or {}
+    existing_id = data.get('session_id')
+
+    # Restore existing session if still alive on server
+    if existing_id:
+        bot = bp.get_session(existing_id)
+        if not bot:
+            # Try loading from disk if not in memory
+            bot = SalesChatbot.load_session(existing_id)
+            if bot:
+                bp.set_session(existing_id, bot)
+                bp.app.logger.info(f"Restored session from disk: {existing_id}")
+        if bot:
+            history = [{"role": m["role"], "content": m["content"]}
+                       for m in bot.flow_engine.conversation_history]
+            bp.app.logger.info(f"Restored session: {existing_id} ({len(history)} messages)")
+            return jsonify({
+                "success": True,
+                "session_id": existing_id,
+                "message": None,
+                **bp.bot_state(bot),
+                "history": history
+            })
+
+    # Session count ceiling: reject new sessions when server is full
+    from web.security import SecurityConfig
+    if not bp.session_manager.can_create():
+        bp.app.logger.warning(
+            f"Session cap ({SecurityConfig.MAX_SESSIONS}) reached — rejecting new init"
+        )
+        return jsonify({"error": "Server at capacity. Please try again later."}), 503
+
+    # Create new session with eager bot initialization
+    session_id = secrets.token_hex(16)
+    product_type = data.get('product_type')  # None → generic default → intent-first discovery
+    user_message = data.get('user_message', '')
+    provider = data.get('provider', "groq")
+
+    # Auto-detect product from user message if not explicitly provided
+    if (not product_type or product_type == 'default') and user_message:
+        detected_product, confidence = QuickMatcher.match_product(user_message)
+        if detected_product and confidence >= 0.7:
+            product_type = detected_product
+            bp.app.logger.info(f"Auto-detected product: {product_type} (confidence: {confidence:.2f})")
+
+    try:
+        bot = SalesChatbot(provider_type=provider, product_type=product_type, session_id=session_id)
+        # Dev: override strategy, skipping intent-detection phase entirely
+        force_strategy = data.get('force_strategy')
+        if force_strategy in ("consultative", "transactional"):
+            bot.flow_engine._initial_flow_type = force_strategy
+            bot.flow_engine.switch_strategy(force_strategy)
+        bp.set_session(session_id, bot)
+        bp.app.logger.info(f"New session: {session_id} (product={product_type}, strategy={bot.flow_engine.flow_type}, provider={provider})")
+    except Exception as init_error:
+        bp.app.logger.exception(f"Bot init failed: {init_error}")
+        return jsonify({"error": "Initialization failed. Please try again."}), 500
+
+    # Generate greeting and training data from content.py — synced with STRATEGY_PROMPTS
+    init_data = generate_init_greeting(bot.flow_engine.flow_type)
+
+    return jsonify({
+        "success": True,
+        "session_id": session_id,
+        "message": init_data["message"],
+        **bp.bot_state(bot),
+        "history": [],
+        "training": init_data["training"],
+    })
+
+
+@bp.route('/restore', methods=['POST'])
+def api_restore():
+    """Rebuild bot from client-side history after server session loss.
+
+    Accepts full conversation history from localStorage, replays into fresh bot
+    to reconstruct FSM state without any LLM calls.
+    """
+    data = request.json or {}
+    history = data.get('history', [])  # [{role, content}, ...]
+    product_type = data.get('product_type')  # None → generic default → intent-first discovery
+    provider = data.get('provider', "groq")
+
+    session_id = secrets.token_hex(16)
+
+    try:
+        bot = SalesChatbot(provider_type=provider, product_type=product_type, session_id=session_id)
+
+        # Replay history into bot — reconstructs FSM state and strategy switches
+        if history:
+            bot.replay(history)
+
+        bp.set_session(session_id, bot)
+        bp.app.logger.info(f"Restored session: {session_id} ({len(history)} messages replayed)")
+
+    except Exception as e:
+        bp.app.logger.exception(f"Restore failed: {e}")
+        return jsonify({"error": "Restore failed. Please retry."}), 500
+
+    return jsonify({
+        "success": True,
+        "session_id": session_id,
+        **bp.bot_state(bot),
+    })
+
+
+@bp.route('/health', methods=['GET'])
+def api_health():
+    """Health check: provider availability and performance stats"""
+    session_id = request.headers.get('X-Session-ID')
+
+    # Get active provider info
+    active_provider = None
+    active_model = None
+    if session_id:
+        bot = bp.get_session(session_id)
+        if bot:
+            active_provider = bot._provider_name
+            active_model = bot._model_name
+
+    # Get available providers
+    provider_status = get_available_providers()
+
+    # Get aggregate performance stats
+    perf_stats = PerformanceTracker.get_provider_stats()
+
+    return jsonify({
+        "ok": True,
+        "active": {
+            "provider": active_provider,
+            "model": active_model
+        },
+        "available_providers": provider_status,
+        "performance_stats": perf_stats
+    })
+
+
+@bp.route('/config', methods=['GET'])
+def api_config():
+    """Expose system configuration metadata for frontend synchronization.
+
+    Returns configuration limits, available products, and strategies
+    so the frontend can validate input and guide users appropriately.
+    """
+    from chatbot.loader import load_product_config
+    from web.security import SecurityConfig
+
+    config = load_product_config()
+    products = config.get('products', {})
+
+    return jsonify({
+        "ok": True,
+        "limits": {
+            "max_message_length": SecurityConfig.MAX_MESSAGE_LENGTH,
+            "max_field_length": SecurityConfig.MAX_FIELD_LENGTH,
+            "max_sessions": SecurityConfig.MAX_SESSIONS,
+        },
+        "rate_limits": {
+            "init": {"requests": SecurityConfig.RATE_LIMITS["init"][0], "window_seconds": SecurityConfig.RATE_LIMITS["init"][1]},
+            "chat": {"requests": SecurityConfig.RATE_LIMITS["chat"][0], "window_seconds": SecurityConfig.RATE_LIMITS["chat"][1]},
+        },
+        "products": {
+            "available": list(products.keys()),
+            "default": "default",
+        },
+        "strategies": ["consultative", "transactional", "intent"],
+    })
+
+
+@bp.route('/reset', methods=['POST'])
+def reset():
+    """Delete the current session."""
+    session_id = request.headers.get('X-Session-ID')
+    if not session_id:
+        return jsonify({"error": "Session ID required"}), 400
+
+    bot = bp.get_session(session_id)
+    if not bot:
+        return jsonify({"error": "Session not found"}), 400
+
+    bp.delete_session(session_id)
+    return jsonify({"success": True})

@@ -2,7 +2,8 @@
 
 from typing import Any, Optional
 
-from .content import generate_stage_prompt, SIGNALS
+from .content import generate_stage_prompt
+from .loader import load_signals, load_analysis_config
 from .analysis import (
     text_contains_any_keyword,
     classify_intent_level,
@@ -10,9 +11,10 @@ from .analysis import (
     _extract_recent_user_text,
     commitment_or_walkaway,
 )
-from .loader import load_analysis_config
 from .utils import Strategy, Stage
 
+# Load signals directly from loader (not re-exported from content)
+SIGNALS = load_signals()
 _ANALYSIS_CONFIG = load_analysis_config()
 
 # Shared transitions used across multiple strategies (identical regardless of strategy)
@@ -210,14 +212,20 @@ class SalesFlowEngine:
             return self.flow_type
         return Strategy.CONSULTATIVE
 
-    def get_current_prompt(self, user_message: str = "") -> str:
-        """Generate system prompt for current stage via content.py."""
+    def get_current_prompt(self, user_message: str = "", objection_data: dict | None = None) -> str:
+        """Generate system prompt for current stage via content.py.
+
+        Args:
+            user_message: The current user input
+            objection_data: Pre-computed objection classification (avoids redundant calls)
+        """
         return generate_stage_prompt(
             strategy=self.strategy_for_prompts,
             stage=self.current_stage,
             product_context=self.product_context,
             history=self.conversation_history,
             user_message=user_message,
+            objection_data=objection_data,
         )
 
     def get_advance_target(self, user_message: str) -> Optional[str]:

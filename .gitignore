@@ -63,8 +63,6 @@ nosetests.xml
 coverage.xml
 
 # Project specific generated files
-metrics.jsonl
-metrics.json
 Impact formula.txt
 .claude/
 sessions_backup/
@@ -73,7 +71,7 @@ metrics.jsonl
 metrics.json
 Impact formula.txt
 Documentation/What i did strat.md
-Documentation/
+# Documentation/
 Aston Docs/
 sessions/
 sessions_backup/
@@ -117,6 +115,9 @@ __pycache__/
 instance/
 .webassets-cache
 flask_session/
-
+analytics.jsonl
+metrics.jsonl
 
 todo for marks.md
+CLAUDE.md
+src/config/custom_knowledge.yaml

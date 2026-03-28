@@ -1,4 +1,5 @@
-groq>=0.11.0
+groq>=1.1.0
+duckduckgo-search>=6.0
 flask>=3.0.0
 flask-cors>=4.0.0
 gunicorn>=20.1.0
@@ -6,4 +7,6 @@ pyyaml>=6.0
 requests>=2.31.0
 python-dotenv>=1.0.0
 
-# Note: Vosk removed (offline ASR) — add back if you re-enable speech features
+# Voice mode dependencies
+edge-tts>=6.1.0         # Microsoft neural TTS (free, unlimited)
+deepgram-sdk>=3.0.0     # Deepgram STT (primary provider)

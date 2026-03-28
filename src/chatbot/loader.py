@@ -127,6 +127,11 @@ def load_adaptations():
     return load_yaml("adaptations.yaml")
 
 
+def load_web_search_config():
+    """Load web_search_config.yaml with caching via load_yaml()."""
+    return load_yaml("web_search_config.yaml")
+
+
 # --- Template Utilities ---
 
 def get_tactic(category="elicitation", subtype=None, context=""):

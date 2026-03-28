@@ -1,0 +1,176 @@
+%%{init: {"theme": "base", "themeVariables": {"fontSize": "12px"}, "flowchart": {"curve": "basis", "nodeSpacing": 30, "rankSpacing": 45}}}%%
+%% DIAGRAM 4 — 4-TIER PROMPT ASSEMBLY PIPELINE
+%% Replaces: old 07_prompt_assembly_pipeline
+%% Key change: 8 parallel STRATEGY_PROMPTS routing boxes replaced with single routing table node.
+%% This eliminates the widest section of the original diagram while preserving all routing detail.
+
+flowchart TD
+
+    START(["flow_engine.get_current_prompt(user_message)
+strategy_for_prompts:
+  INTENT mode → CONSULTATIVE templates
+  else → actual flow_type (CONSULTATIVE or TRANSACTIONAL)"])
+
+    ENTRY["content.generate_stage_prompt(
+  strategy: str,   ← from strategy_for_prompts
+  stage: Stage,
+  product_context: str,
+  history: list,
+  user_message: str
+)"]
+
+    START --> ENTRY
+
+    %% ── TIER 1: Override Check ───────────────────────────────────────────────
+    ENTRY --> T1{{"TIER 1 — Override Check  (overrides.py)
+check_override(user_message, stage, history, state)"}}
+
+    T1 -->|"direct_info_request
+'price' / 'cost' / 'how much'
+SIGNALS['direct_info_requests']"| OV1["overrides.get_override_template('direct_info', **ctx)
+→ short factual reply + redirect to probing"]
+
+    T1 -->|"soft_positive at PITCH
+'yes'/'ok'/'sounds good'/'alright'
+AND current_stage == PITCH"| OV2["overrides.early_exit_prompt(stage)
+→ move-to-close template (skip re-pitch)"]
+
+    T1 -->|"repetitive_validation loop
+is_repetitive_validation(history, threshold)
+threshold from analysis_config.yaml"| OV3["overrides.get_override_template('excessive_validation')
+→ pattern-interrupt template"]
+
+    T1 -->|"None of the above"| T2_ENTRY
+
+    OV1 & OV2 & OV3 --> FINAL_PROMPT
+
+    %% ── TIER 2: Acknowledgment ───────────────────────────────────────────────
+    subgraph Tier2["TIER 2 — Acknowledgment Guidance  ( analysis.py + prompts.py )"]
+        T2_ENTRY["analysis.analyze_state(history, user_message)
+→ ConversationState {intent, guarded, question_fatigue, decisive}"]
+
+        T2_ACK["analysis.detect_acknowledgment_context(user_message, history, state)"]
+
+        T2_FULL["'full'  — user disclosed personal problem
+prompts.get_acknowledgment_guidance('full')
+→ 'That must be really difficult...'
+   'I understand how frustrating that is...'"]
+
+        T2_LIGHT["'light'  — guarded=True (defensive/evasive signals)
+prompts.get_acknowledgment_guidance('light')
+→ 'Got it.' / 'I hear you.' / 'That makes sense.'"]
+
+        T2_NONE["'none'  — neutral info request
+OR state.decisive=True (skip acknowledgment entirely)
+→ no acknowledgment text injected"]
+
+        T2_ENTRY --> T2_ACK
+        T2_ACK -->|"vulnerability signal\nin user_message"| T2_FULL
+        T2_ACK -->|"guarded signal\n(score > 0.4)"| T2_LIGHT
+        T2_ACK -->|"neutral"| T2_NONE
+    end
+
+    T2_FULL & T2_LIGHT & T2_NONE --> T3_ENTRY
+
+    %% ── TIER 3: Adaptive Tactics ─────────────────────────────────────────────
+    subgraph Tier3["TIER 3 — Adaptive Tactical Guidance  ( tactics.py + loader.py )"]
+        T3_ENTRY["tactics.get_adaptive_guidance(state: ConversationState, stage, strategy)"]
+
+        T3_DEC["state.decisive == True
+→ commitment signal + high_intent + NOT guarded
+Focus on close / summarise / present options
+DO NOT probe further — user signals readiness"]
+
+        T3_GUARD["state.guarded == True  (guardedness_score > 0.4)
+→ back off from probing · single open question
+do not push · light touch only"]
+
+        T3_QUES["is_literal_question(user_message)
+→ genuine '?' detected (not rhetorical)
+Answer the question directly first
+then resume probing — do not ignore it"]
+
+        T3_ELICIT["Default — no special state detected
+loader.get_tactic('elicitation', subtype, context)
+→ random selection from tactics.yaml
+elicitation technique injected into prompt"]
+
+        T3_ENTRY -->|"decisive"| T3_DEC
+        T3_ENTRY -->|"guarded"| T3_GUARD
+        T3_ENTRY -->|"literal question"| T3_QUES
+        T3_ENTRY -->|"none of above"| T3_ELICIT
+    end
+
+    T3_DEC & T3_GUARD & T3_QUES & T3_ELICIT --> T4_ENTRY
+
+    %% ── TIER 4: Stage Assembly ───────────────────────────────────────────────
+    subgraph Tier4["TIER 4 — Stage Assembly  ( prompts.py + content.py + loader.py )"]
+        T4_ENTRY["prompts.get_base_prompt(product_context, strategy, history)
+→ role definition + product info + conversation context summary"]
+
+        T4_LOW_CHECK{"state.intent == 'low'?"}
+        T4_ENTRY --> T4_LOW_CHECK
+
+        T4_LOW_CHECK -->|"True — no intent shown yet"| T4_INTENT_LOW["STRATEGY_PROMPTS[strategy]['intent_low']
+→ softer discovery prompt · less assumptive
+   more open-ended exploration"]
+
+        T4_LOW_CHECK -->|"False — medium or high intent"| T4_ROUTE["Stage routing table:
+consultative · intent    → NEPQ get-tangible  (Impact formula lines 3–12)
+consultative · logical   → two-phase probe: cause → like/dislike  (lines 15–33)
+consultative · emotional → Identity Frame → Future Pacing → COI  (lines 36–58)
+consultative · pitch     → commitment → 3-pillar → assumptive close  (lines 59–71)
+consultative · objection → classify → reframe  (7-type skeleton)
+transactional · intent   → budget + use-case · max ~2 turns
+transactional · pitch    → present matching options + assumptive close
+transactional · objection → transactional-specific reframe variants"]
+
+        T4_OBJ_CHECK{"OBJECTION stage only:
+commitment_or_walkaway()
+(walk-detection guard)"}
+
+        T4_ROUTE -->|"objection stage"| T4_OBJ_CHECK
+        T4_ROUTE -->|"non-objection stages\n(intent/logical/emotional/pitch)"| T4_SHARED
+
+        T4_OBJ_CHECK -->|"Walkaway detected\n(do not inject reframe)"| T4_WALK["Skip objection reframe injection
+Prompt focuses on conversation wrap-up"]
+
+        T4_OBJ_CHECK -->|"Not walking away"| T4_OBJ_INJECT["Inject classify_objection() result:
+{type, strategy, guidance} from _OBJECTION_SKELETONS
+type ∈ {smokescreen, money, fear, partner, logistical, think, unknown}"]
+
+        T4_SHARED["_SHARED_RULES (injected into ALL stages — universal constraints):
+NO pitch ending with '?'  ·  NO 'Would you like..?'
+NO unsolicited product spec lists  ·  NO revealing you are AI
+NO breaking character  ·  Max 2 sentences per response
+Never list more than 3 items at once"]
+
+        T4_PREFS["_get_preference_and_keyword_context(history, preferences):
+extract_preferences(history) → comma-separated user categories
+extract_user_keywords(history, max_keywords=6) → last 6 content nouns
+→ lexical entrainment: mirror the user's own vocabulary in responses"]
+
+        T4_ASSEMBLE["Assemble final system prompt string:
+  base_prompt
++ stage_template  (from routing above)
++ _SHARED_RULES
++ acknowledgment_guidance  (Tier 2 output)
++ adaptive_guidance  (Tier 3 output)
++ preference_context  (extracted user categories)
++ keyword_context  (lexical entrainment nouns)"]
+
+        T4_INTENT_LOW & T4_WALK & T4_OBJ_INJECT --> T4_SHARED
+        T4_SHARED --> T4_PREFS --> T4_ASSEMBLE
+    end
+
+    T4_ASSEMBLE --> FINAL_PROMPT
+
+    FINAL_PROMPT(["Complete system prompt string returned to SalesFlowEngine → SalesChatbot
+
+Assembled into llm_messages:
+  [{role:'system', content:system_prompt}]
+  + conversation_history[-10:]
+  + [{role:'user', content:user_message}]
+
+NOTE: SIGNALS dict is imported from flow.py into content.py
+  (used for fast-path commitment detection in _get_stage_specific_prompt)"])

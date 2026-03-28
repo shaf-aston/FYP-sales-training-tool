@@ -10,6 +10,7 @@ from functools import lru_cache
 from typing import Any
 
 from .loader import load_analysis_config, load_signals
+from .constants import HISTORY_WINDOW_MULTIPLIER, MAX_USER_KEYWORDS
 
 
 @dataclass
@@ -64,20 +65,20 @@ _GUARDEDNESS_WEIGHTS = {
     "defensive": 0.1,
 }
 
-# History window multiplier for extracting recent user text
-_HISTORY_WINDOW_MULTIPLIER = 2
+# History window multiplier for extracting recent user text (imported from constants)
+_HISTORY_WINDOW_MULTIPLIER = HISTORY_WINDOW_MULTIPLIER
 
 
 # --- Core keyword matching ---
 
 @lru_cache(maxsize=256)
-def _build_union_pattern(keyword_tuple):
+def _build_union_pattern(keyword_tuple) -> re.Pattern:
     """Compile keywords into a single alternation regex. Cached by keyword set."""
     parts = [rf'\b{re.escape(k)}\b' for k in keyword_tuple]
     return re.compile('|'.join(parts), re.IGNORECASE)
 
 
-def text_contains_any_keyword(text, keywords):
+def text_contains_any_keyword(text, keywords) -> bool:
     """Return True if text contains any non-negated keyword (word-boundary, case-insensitive).
 
     Iterates all matches so a negated first match doesn't block a valid later one.
@@ -95,7 +96,7 @@ def text_contains_any_keyword(text, keywords):
 
 # --- State analysis ---
 
-def _has_user_stated_clear_goal(history):
+def _has_user_stated_clear_goal(history) -> bool:
     """Return True if user stated a clear goal recently (Intent Lock trigger)."""
     if not history:
         return False
@@ -114,7 +115,7 @@ def _has_user_stated_clear_goal(history):
     return any(goal_verb_pattern.search(msg) for msg in recent_user_msgs)
 
 
-def classify_intent_level(history, user_message="", signal_keywords=None):
+def classify_intent_level(history, user_message="", signal_keywords=None) -> str:
     """Classify current intent level as "low", "medium", or "high".
 
     Uses the same intent-lock behavior as analyze_state so all callers share
@@ -236,7 +237,7 @@ def analyze_state(
 
 # --- Preference and keyword extraction ---
 
-def extract_preferences(history):
+def extract_preferences(history) -> str:
     """Return comma-separated preference categories mentioned by the user.
 
     Categories defined in analysis_config.yaml (preference_keywords).
@@ -254,7 +255,7 @@ def extract_preferences(history):
     return ", ".join(sorted(mentioned)) if mentioned else ""
 
 
-def extract_user_keywords(history: list[dict[str, str]], max_keywords: int = 6) -> list[str]:
+def extract_user_keywords(history: list[dict[str, str]], max_keywords: int = MAX_USER_KEYWORDS) -> list[str]:
     """Extract the user's key terms (nouns/descriptors) for lexical entrainment."""
     keywords = []
     for msg in history:
@@ -268,7 +269,7 @@ def extract_user_keywords(history: list[dict[str, str]], max_keywords: int = 6) 
 
 # --- Detection helpers ---
 
-def is_repetitive_validation(history, threshold=None):
+def is_repetitive_validation(history, threshold=None) -> bool:
     """Detect if the bot has been over-validating recently."""
     if threshold is None:
         threshold = _THRESHOLDS["validation_loop_threshold"]
@@ -280,7 +281,7 @@ def is_repetitive_validation(history, threshold=None):
     return count >= threshold
 
 
-def is_literal_question(user_message):
+def is_literal_question(user_message) -> bool:
     """Return True if the user is genuinely asking for information (not rhetorical)."""
     if not user_message:
         return False
@@ -352,7 +353,7 @@ def detect_acknowledgment_context(
     return "none"
 
 
-def user_demands_directness(history, user_message):
+def user_demands_directness(history, user_message) -> bool:
     """Detect frustration or explicit demands for a straight answer.
 
     Triggers pitch skip in flow.py when True.
@@ -418,7 +419,7 @@ _OBJECTION_KEYWORDS = {
                     "not for me", "i'm good", "all set"],
 }
 
-def classify_objection(user_message, history=None):
+def classify_objection(user_message, history=None) -> dict[str, Any]:
     """Classify objection type and return reframe strategy for the LLM prompt."""
     objection_config = _yaml_config.get("objection_handling", {})
     classification_order = objection_config.get(
@@ -453,9 +454,50 @@ def classify_objection(user_message, history=None):
     }
 
 
+# --- Web search trigger helpers ---
+
+def should_trigger_web_search(
+    stage: str,
+    objection_type: str | None,
+    user_message: str,
+    config: dict,
+) -> bool:
+    """Return True if web search enrichment should fire this turn.
+
+    Pure function — config injected as a dict so tests need no file I/O.
+    Two trigger paths:
+      1. User message contains an explicit evidence/proof phrase (any stage).
+      2. Objection stage with a trigger-eligible objection type.
+    """
+    if not config.get("enabled"):
+        return False
+    msg_lower = user_message.lower()
+    if any(phrase in msg_lower for phrase in config.get("trigger_phrases", [])):
+        return True
+    if stage == "objection" and objection_type in config.get("trigger_objection_types", []):
+        return True
+    return False
+
+
+def build_search_query(
+    objection_type: str | None,
+    product_type: str,
+    templates: dict,
+) -> str:
+    """Build a focused search query from objection type and product context.
+
+    Pure function — templates injected for easy testing.
+    Falls back to the "explicit" template when objection_type is unknown/None.
+    """
+    keyword = product_type or "product"
+    template_key = objection_type if objection_type in templates else "explicit"
+    template = templates.get(template_key, "{keyword} facts data")
+    return template.replace("{keyword}", keyword)
+
+
 # --- Internal helpers ---
 
-def _extract_recent_user_text(history, max_messages=None):
+def _extract_recent_user_text(history, max_messages=None) -> str:
     """Combined lowercase text of the N most recent user messages."""
     if max_messages is None:
         max_messages = _THRESHOLDS["recent_text_messages"]

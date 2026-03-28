@@ -6,6 +6,7 @@
     <title>Eloquencé FYP</title>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="{{ url_for('static', filename='speech.js') }}"></script>
+    <script src="{{ url_for('static', filename='voice.js') }}"></script>
     <link
       rel="stylesheet"
       href="{{ url_for('static', filename='chat.css') }}"
@@ -434,6 +435,15 @@
         <div class="chat-container" id="chatContainer"></div>
 
         <div class="input-area">
+          <button
+            class="voice-mode-btn"
+            id="voiceModeBtn"
+            onclick="toggleVoiceMode()"
+            title="Toggle Voice Mode (Server-based TTS/STT)"
+            aria-label="Toggle Voice Mode: Server-based text-to-speech and speech-to-text"
+          >
+            <span id="voiceModeIndicator">⌨️</span>
+          </button>
           <button
             class="mic-btn"
             id="micBtn"

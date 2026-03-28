@@ -16,6 +16,7 @@ import time
 import logging
 from datetime import datetime
 from threading import Lock
+from .constants import MAX_ANALYTICS_LINES, ANALYTICS_KEEP_AFTER_ROTATION
 
 logger = logging.getLogger(__name__)
 
@@ -24,8 +25,36 @@ ANALYTICS_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'analytics.
 # File-level lock for thread-safe writes
 lock = Lock()
 
-MAX_ANALYTICS_LINES = 10000     # rotate when file reaches this line count
-_ANALYTICS_LINES_KEEP = 5000    # keep newest N lines after rotation
+# In-memory line counter — avoids re-reading file on every write
+_line_count: int = -1  # -1 = uninitialized, will scan on first write
+
+
+def _get_line_count() -> int:
+    """Get current line count, initializing from file if needed."""
+    global _line_count
+    if _line_count < 0:
+        try:
+            if os.path.exists(ANALYTICS_FILE):
+                with open(ANALYTICS_FILE, 'r') as f:
+                    _line_count = sum(1 for _ in f)
+            else:
+                _line_count = 0
+        except Exception:
+            _line_count = 0
+    return _line_count
+
+
+def _increment_line_count() -> None:
+    """Increment line count after successful write."""
+    global _line_count
+    if _line_count >= 0:
+        _line_count += 1
+
+
+def _reset_line_count(new_count: int) -> None:
+    """Reset line count after rotation."""
+    global _line_count
+    _line_count = new_count
 
 
 class SessionAnalytics:
@@ -118,21 +147,38 @@ class SessionAnalytics:
         SessionAnalytics._write_analytics(event)
 
     @staticmethod
+    def record_web_search(session_id: str, query: str, result_count: int, cached: bool) -> None:
+        """Record a web search enrichment event for evaluation analytics."""
+        event = {
+            "timestamp": datetime.now().isoformat(),
+            "session_id": session_id,
+            "event_type": "web_search",
+            "query": query,
+            "result_count": result_count,
+            "cached": cached,
+        }
+        SessionAnalytics._write_analytics(event)
+
+    @staticmethod
     def _write_analytics(event):
-        """Append analytics event to file with rotation."""
+        """Append analytics event to file with rotation (uses in-memory line count)."""
         with lock:
             try:
+                current_count = _get_line_count()
+
                 # Rotate file if it reaches max lines
-                if os.path.exists(ANALYTICS_FILE):
+                if current_count >= MAX_ANALYTICS_LINES and os.path.exists(ANALYTICS_FILE):
                     with open(ANALYTICS_FILE, 'r') as f:
                         lines = f.readlines()
-                    if len(lines) >= MAX_ANALYTICS_LINES:
-                        with open(ANALYTICS_FILE, 'w') as f:
-                            f.writelines(lines[-_ANALYTICS_LINES_KEEP:])
+                    keep_lines = lines[-ANALYTICS_KEEP_AFTER_ROTATION:]
+                    with open(ANALYTICS_FILE, 'w') as f:
+                        f.writelines(keep_lines)
+                    _reset_line_count(len(keep_lines))
 
                 # Append event
                 with open(ANALYTICS_FILE, 'a') as f:
                     f.write(json.dumps(event) + '\n')
+                _increment_line_count()
             except Exception as e:
                 logger.warning("Failed to record analytics event: %s", e)
 

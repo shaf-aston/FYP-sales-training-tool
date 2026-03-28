@@ -22,6 +22,7 @@ from .analysis import (
     extract_user_keywords,
     commitment_or_walkaway
 )
+from .constants import PERSONA_CHECKPOINT_TURNS, TERSE_INPUT_THRESHOLD
 
 # Exported signals for consumers (e.g. flow.py)
 SIGNALS = load_signals()
@@ -47,21 +48,26 @@ Naturally embed 1-2 into your response. Do NOT replay full sentences.
     return preference_context + keyword_context
 
 
-def _get_stage_specific_prompt(strategy, stage, state, user_message, history):
-    """Get stage-specific prompt with any special handling (intent_low, objection classification)."""
-    
+def _get_stage_specific_prompt(strategy, stage, state, user_message, history, objection_data=None):
+    """Get stage-specific prompt with any special handling (intent_low, objection classification).
+
+    Args:
+        objection_data: Pre-computed objection classification (avoids redundant classify_objection calls)
+    """
+
     # Intent stage: pick low-intent or standard prompt
     if stage == "intent":
         prompt_key = "intent_low" if state.intent == "low" else "intent"
         return get_prompt(strategy, prompt_key), ""
-    
+
     # Objection stage: classify and inject reframe guidance
     if stage == "objection" and user_message:
         # Check if user is walking — no reframe needed
         if commitment_or_walkaway(history, user_message, 0):
             return get_prompt(strategy, stage), ""  # user is walking — no reframe needed
-        
-        objection_info = classify_objection(user_message, history)
+
+        # Use pre-computed objection_data if provided, otherwise compute
+        objection_info = objection_data if objection_data else classify_objection(user_message, history)
         if objection_info["type"] != "unknown":
             # Map type to acknowledgment instruction
             ack_map = {
@@ -98,14 +104,18 @@ def generate_stage_prompt(
     product_context: str,
     history: list[dict[str, str]],
     user_message: str = "",
+    objection_data: dict | None = None,
 ) -> str:
     """Build the full system prompt for the current turn.
-    
+
     4-tier routing:
     1. OVERRIDES: Direct requests, soft positives, validation loops (immediate return)
     2. ADAPTATIONS: Decisive users, literal questions, low-intent/guarded (tactical guidance)
     3. STAGE SELECT: intent_low vs intent, objection classification
     4. ASSEMBLY: base + stage + adaptations + preferences + keywords
+
+    Args:
+        objection_data: Pre-computed objection classification (avoids redundant calls)
     """
     # Build base prompt and analyze state
     base = get_base_prompt(product_context, strategy, history)
@@ -126,7 +136,7 @@ def generate_stage_prompt(
     tactic_guidance = build_tactic_guidance(strategy, state, user_message)
 
     # TIER 4: Get stage-specific prompt
-    stage_prompt, stage_context = _get_stage_specific_prompt(strategy, stage, state, user_message, history)
+    stage_prompt, stage_context = _get_stage_specific_prompt(strategy, stage, state, user_message, history, objection_data)
 
     # TIER 5: Assemble final prompt
     preference_keyword_context = _get_preference_and_keyword_context(history, preferences)
@@ -145,12 +155,12 @@ Intent: {state.intent} | Guarded: {'yes' if state.guarded else 'no'}
     terse_guidance = ""
     # Safe null check
     msg_len = len(user_message.split()) if user_message else 0
-    if msg_len < 3 and stage != "intent":
+    if msg_len < TERSE_INPUT_THRESHOLD and stage != "intent":
         terse_guidance = "\nTERSE INPUT: Very short answer. Make ONE observation, then ONE question. Do not over-probe.\n"
 
-    # Periodic persona reinforcement (anchor every 6 turns)
+    # Periodic persona reinforcement (anchor every N turns from constants)
     persona_checkpoint = ""
-    if turn_count > 0 and turn_count % 6 == 0:
+    if turn_count > 0 and turn_count % PERSONA_CHECKPOINT_TURNS == 0:
         persona_checkpoint = f"\n[CHECKPOINT — Turn {turn_count}]: Stay in {strategy} mode. One question per turn. Current stage: {stage}.\n"
 
     # Strict ordering: Base -> State -> Ack -> Stage -> Strategy Specific -> Tactics -> Preferences -> Terse -> Checkpoint
