@@ -1,4 +1,6 @@
-import os, sys, time
+import os
+import sys
+import time
 
 # Add src/ to path for all test files
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
@@ -18,14 +20,14 @@ try:
     def _safe_fix_random_seed(seed):
         try:
             return _orig_fix(seed)
-        except:
+        except Exception:
             try:
                 s = int(seed) % (2 ** 32)
-            except:
+            except Exception:
                 s = 0
             return _orig_fix(s)
     _thinc_util.fix_random_seed = _safe_fix_random_seed
-except:
+except Exception:
     pass
 
 def pytest_configure(config):

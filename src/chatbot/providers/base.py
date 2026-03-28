@@ -38,7 +38,7 @@ class BaseLLMProvider(ABC):
     """Contract: All LLM providers must implement these methods"""
     
     @abstractmethod
-    def chat(self, messages: List[Dict], temperature: float = 0.8, max_tokens: int = 200, stage: str = None) -> LLMResponse:
+    def chat(self, messages: List[Dict], temperature: float = 0.8, max_tokens: int = 200, stage: str | None = None) -> LLMResponse:
         """Generate response from LLM. Implementations should use @auto_log_performance."""
         pass
     

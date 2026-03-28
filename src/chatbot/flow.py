@@ -8,7 +8,6 @@ from .analysis import (
     text_contains_any_keyword,
     classify_intent_level,
     user_demands_directness,
-    _extract_recent_user_text,
     commitment_or_walkaway,
 )
 from .utils import Strategy, Stage
@@ -29,7 +28,7 @@ _COMMON_TRANSITIONS = {
     }
 }
 
-FLOWS = {
+FLOWS: dict[str | Strategy, dict[str, Any]] = {
     Strategy.INTENT: {
         "stages": [Stage.INTENT],
         "transitions": {

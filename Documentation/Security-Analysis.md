@@ -29,7 +29,7 @@
 - ⚠️ **Partially Mitigated**: Residual risk remains; acceptable for academic scope; production deployment would require enhancement
 - ⛔ **Not Mitigated**: Threat is unaddressed; unsuitable for public deployment
 
-**Honest Assessment:** The system is hardened against automated abuse (DoS) and common injection patterns (prompt injection) but lacks defense-in-depth authentication for multi-user scenarios. In the FYP context (single-instance Render deployment, academic evaluation only), this is appropriate. Production deployment to external users would require: (1) authentication/authorization layer, (2) comprehensive audit logging, (3) expanded injection regex or ML-based anomaly detection.
+**Honest Assessment:** The system is hardened against automated abuse (DoS) and common injection patterns (prompt injection) but lacks defence-in-depth authentication for multi-user scenarios. In the FYP context (single-instance Render deployment, academic evaluation only), this is appropriate. Production deployment to external users would require: (1) authentication/authorization layer, (2) comprehensive audit logging, (3) expanded injection regex or ML-based anomaly detection.
 
 ---
 
@@ -142,7 +142,7 @@ def _sanitize_message(text: str) -> str:
     return sanitized
 ```
 
-**Threat Mitigated:** Regex catches 6 common jailbreak pattern families (each using word-boundary assertions and optional quantifiers to cover phrasing variations): "ignore previous instructions", "disregard above", "forget your system", "print your prompt", "act as if", etc. **Silent replacement strategy:** matched patterns are replaced with `[removed]` rather than hard-rejecting the request. This prevents oracle feedback to attackers (they cannot infer whether the filter was triggered). Defense-in-depth: primary mitigation is Constitutional AI P1 rules in the system prompt; regex layer catches obvious attempts before LLM processing.
+**Threat Mitigated:** Regex catches 6 common jailbreak pattern families (each using word-boundary assertions and optional quantifiers to cover phrasing variations): "ignore previous instructions", "disregard above", "forget your system", "print your prompt", "act as if", etc. **Silent replacement strategy:** matched patterns are replaced with `[removed]` rather than hard-rejecting the request. This prevents oracle feedback to attackers (they cannot infer whether the filter was triggered). Defence-in-depth: primary mitigation is Constitutional AI P1 rules in the system prompt; regex layer catches obvious attempts before LLM processing.
 
 **Verification:** Test cases pass for all 14 patterns + 50 variations. Limitations: sophisticated multi-step injections (e.g., encoding attacks, semantic paraphrasing) may evade. Production deployment would benefit from ML-based anomaly detection.
 
@@ -227,4 +227,4 @@ def _validate_message(text: str):
 
 Information Commissioner's Office (2023) *Guidance on AI and data protection*. Available at: https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/artificial-intelligence/ (Accessed: 10 March 2026).
 
-Shostack, A. (2014) *Threat modeling: designing for security*. Indianapolis: Wiley.
+Shostack, A. (2014) *Threat modelling: designing for security*. Indianapolis: Wiley.

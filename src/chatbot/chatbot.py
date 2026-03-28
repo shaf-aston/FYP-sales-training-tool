@@ -1,7 +1,6 @@
 """Sales chatbot orchestrator — FSM flow management, LLM calls, performance tracking."""
 
 import logging
-import os
 import time
 from dataclasses import dataclass
 from typing import Any
@@ -51,9 +50,9 @@ _USER_TRANSACTIONAL_SIGNALS = _SIGNALS.get("user_transactional_signals", [])
 class ChatResponse:
     """Structured response from chat() including latency metrics."""
     content: str
-    latency_ms: float = None
-    provider: str = None
-    model: str = None
+    latency_ms: float | None = None
+    provider: str | None = None
+    model: str | None = None
     input_len: int = 0
     output_len: int = 0
 
@@ -164,30 +163,13 @@ class SalesChatbot:
 
             if llm_response.error or not llm_response.content:
                 error_detail = llm_response.error or "empty response"
-                
-                # Auto-switch to OpenRouter on rate limit (429)
+
                 if "rate_limit_exceeded" in str(error_detail).lower() or "429" in str(error_detail):
-                    self.logger.warning(f"Rate limit hit, switching to OpenRouter: {error_detail}")
-                    if self._try_switch_to_openrouter():
-                        # Retry with OpenRouter
-                        llm_response = self.provider.chat(
-                            llm_messages,
-                            temperature=DEFAULT_TEMPERATURE,
-                            max_tokens=DEFAULT_MAX_TOKENS,
-                            stage=self.flow_engine.current_stage,
-                        )
-                        if not llm_response.error and llm_response.content:
-                            self.logger.info("Successfully switched to OpenRouter after rate limit")
-                        else:
-                            return self._fallback(
-                                "I'm currently receiving too many requests. Please try again in a moment.",
-                                llm_response.latency_ms, user_message,
-                            )
-                    else:
-                        return self._fallback(
-                            "I'm currently receiving too many requests. Please try again in a moment.",
-                            llm_response.latency_ms, user_message,
-                        )
+                    self.logger.warning(f"Rate limit hit: {error_detail}")
+                    return self._fallback(
+                        "I'm currently receiving too many requests. Please try again in a moment.",
+                        llm_response.latency_ms, user_message,
+                    )
                 else:
                     return self._fallback(
                         "I'm having trouble connecting to the AI provider. Please try again.",
@@ -232,7 +214,7 @@ class SalesChatbot:
                 output_len=len(bot_reply),
             )
 
-        except Exception as e:
+        except Exception:
             self.logger.exception("Unexpected error")
             return self._fallback(
                 "Something went wrong. Can you try again?",
@@ -312,31 +294,8 @@ class SalesChatbot:
     # FSM Advancement Logic
     # ====================================================================
 
-    def _try_switch_to_openrouter(self) -> bool:
-        """Attempt to switch to OpenRouter provider with backup API key. Returns True if successful."""
-        try:
-            from .providers.factory import PROVIDERS
-            # Create OpenRouter provider instance
-            openrouter_provider = PROVIDERS["openrouter"](
-                model=os.environ.get("openrouter_model1", "meta-llama/llama-3.3-70b-instruct:free")
-            )
-            
-            if openrouter_provider.is_available():
-                self.provider = openrouter_provider
-                self._provider_name = "openrouter"
-                self._model_name = openrouter_provider.get_model_name()
-                self.logger.info(f"Switched to OpenRouter with model: {self._model_name}")
-                return True
-            else:
-                self.logger.error("OpenRouter provider not available (missing API key)")
-                return False
-        except Exception as e:
-            self.logger.error(f"Failed to switch to OpenRouter: {e}")
-            return False
-
     def _detect_and_switch_strategy(self, user_message) -> bool:
         """Inspect signals to detect and switch strategy. Returns True if switch occurred."""
-        history = self.flow_engine.conversation_history
         user_text = (user_message or "").lower()
         has_cons_user = text_contains_any_keyword(user_text, _USER_CONSULTATIVE_SIGNALS)
         has_trans_user = text_contains_any_keyword(user_text, _USER_TRANSACTIONAL_SIGNALS)

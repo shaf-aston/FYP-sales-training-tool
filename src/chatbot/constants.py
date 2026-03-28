@@ -1,7 +1,7 @@
-"""Centralized configuration constants for chatbot behavior.
+"""Centralised configuration constants for chatbot behaviour.
 
 All magic numbers and thresholds used across the chatbot system.
-Modify these values to tune behavior without touching core logic.
+Modify these values to tune behaviour without touching core logic.
 """
 
 # ============================================================================

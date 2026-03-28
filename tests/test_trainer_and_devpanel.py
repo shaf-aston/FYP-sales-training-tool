@@ -10,13 +10,11 @@ Run with: pytest tests/test_trainer_and_devpanel.py -v
 import sys
 import os
 import json
-import pytest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
 
 from chatbot.trainer import generate_training, answer_training_question
 from chatbot.flow import SalesFlowEngine, ADVANCEMENT_RULES
-from chatbot.utils import Stage, Strategy
 from chatbot.analysis import analyze_state, user_demands_directness, text_contains_any_keyword
 from chatbot.content import SIGNALS
 

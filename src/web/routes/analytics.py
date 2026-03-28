@@ -1,5 +1,7 @@
 """Analytics, quiz, and knowledge management endpoints."""
 
+# pyright: ignore[reportGeneralTypeIssues]  # Flask Blueprint dynamic attribute injection
+
 from flask import Blueprint, request, jsonify
 from chatbot.session_analytics import SessionAnalytics
 from chatbot.knowledge import load_custom_knowledge, save_custom_knowledge, clear_custom_knowledge, ALLOWED_FIELDS, MAX_FIELD_LENGTH
@@ -14,8 +16,8 @@ def init_routes(app, require_session_func):
         app: Flask app (for logger access)
         require_session_func: Function to validate and return (bot, error)
     """
-    bp.app = app
-    bp.require_session = require_session_func
+    bp.app = app  # type: ignore[attr-defined]
+    bp.require_session = require_session_func  # type: ignore[attr-defined]
 
 
 # ============================================================================
@@ -25,9 +27,8 @@ def init_routes(app, require_session_func):
 @bp.route('/quiz/question', methods=['GET'])
 def quiz_get_question():
     """Get a quiz question for the specified type."""
-    from web.security import SecurityConfig
 
-    bot, err = bp.require_session()
+    bot, err = bp.require_session()  # type: ignore
     if err:
         return err
 
@@ -54,7 +55,7 @@ def quiz_stage():
     """Stage identification quiz (deterministic evaluation)."""
     from web.security import SecurityConfig
 
-    bot, err = bp.require_session()
+    bot, err = bp.require_session()  # type: ignore
     if err:
         return err
 
@@ -81,7 +82,7 @@ def quiz_next_move():
     """Next move quiz (LLM-evaluated comparison)."""
     from web.security import SecurityConfig
 
-    bot, err = bp.require_session()
+    bot, err = bp.require_session()  # type: ignore
     if err:
         return err
 
@@ -116,7 +117,7 @@ def quiz_direction():
     """Direction/strategy quiz (LLM-evaluated understanding check)."""
     from web.security import SecurityConfig
 
-    bot, err = bp.require_session()
+    bot, err = bp.require_session()  # type: ignore
     if err:
         return err
 

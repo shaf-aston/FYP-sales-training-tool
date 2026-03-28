@@ -3,16 +3,13 @@
 The bot's behaviour is governed by a readiness score + difficulty parameters,
 creating emergent buyer dynamics rather than scripted FSM stages.
 """
-import json
 import random
-import re
 import time
 from dataclasses import dataclass, field
-from typing import Any
 
 from .loader import load_prospect_config, load_signals
 from .providers.factory import create_provider
-from .utils import clamp, clamp_score, range_label
+from .utils import clamp, range_label
 
 # Module-level signal loading (cached via @lru_cache in loader)
 _SIGNALS = load_signals()
@@ -26,10 +23,6 @@ _READINESS_LABELS = [
     "Nearly ready to buy — just needs final reassurance",
 ]
 
-
-# =============================================================================
-# Data Structures
-# =============================================================================
 
 @dataclass
 class ProspectState:
@@ -75,10 +68,6 @@ class ProspectResponse:
     coaching: dict | None = None
 
 
-# =============================================================================
-# Persona Selection
-# =============================================================================
-
 def select_persona(product_type: str, difficulty: str) -> dict:
     """Select a persona for the prospect session.
 
@@ -87,17 +76,14 @@ def select_persona(product_type: str, difficulty: str) -> dict:
     config = load_prospect_config()
     personas = config.get("personas", {})
 
-    # Try product-specific personas first
     product_personas = personas.get(product_type)
     if product_personas:
         return random.choice(product_personas)
 
-    # Fallback to general
     general = personas.get("general", [])
     if general:
         return random.choice(general)
 
-    # Ultimate fallback
     return {
         "name": "Alex",
         "background": "Professional considering a purchase",
@@ -107,10 +93,6 @@ def select_persona(product_type: str, difficulty: str) -> dict:
         "personality": "Practical and straightforward",
     }
 
-
-# =============================================================================
-# ProspectSession
-# =============================================================================
 
 class ProspectSession:
     """Manages a single prospect-mode conversation."""
@@ -136,16 +118,13 @@ class ProspectSession:
         self.difficulty_profile = profiles[difficulty]
         behavior = self.difficulty_profile["behavior"]
 
-        # Select persona
         if persona is None:
             persona = select_persona(product_type, difficulty)
         self.persona = persona
 
-        # Load product context
         self.product_type = product_type
         self.product_context = self._load_product_context(product_type)
 
-        # Initialize state
         self.state = ProspectState(
             readiness=behavior["initial_readiness"],
             persona=persona,
@@ -153,10 +132,8 @@ class ProspectSession:
             product_type=product_type,
         )
 
-        # Conversation history: [{role, content}]
         self.conversation_history: list[dict] = []
 
-        # Behaviour rules from config
         behavior_rules = config.get("behavior_rules", {})
         self.behavior_rules = behavior_rules.get(difficulty, "")
 
@@ -180,16 +157,13 @@ class ProspectSession:
         behavior = self.difficulty_profile["behavior"]
         persona = self.persona
 
-        # Readiness description
         readiness_desc = range_label(self.state.readiness, _READINESS_THRESHOLDS, _READINESS_LABELS)
 
-        # Format needs and pain points
         needs = persona.get("needs", [])
         pain_points = persona.get("pain_points", [])
         needs_formatted = "\n".join(f"  - {n}" for n in needs)
         pain_points_formatted = "\n".join(f"  - {p}" for p in pain_points)
 
-        # Product knowledge for the prospect
         product_knowledge = ""
         if self.product_context:
             product_knowledge = f"PRODUCT INFORMATION (you may know some of this as a buyer doing research):\n{self.product_context}"
@@ -249,16 +223,12 @@ class ProspectSession:
         """Process one user (salesperson) message and return prospect's response."""
         self.state.turn_count += 1
 
-        # Add user message to history
         self.conversation_history.append({
             "role": "user",
             "content": user_message,
         })
 
-        # Build system prompt with current state
         system_prompt = self._build_system_prompt()
-
-        # Build messages for LLM
         messages = [{"role": "system", "content": system_prompt}]
         messages.extend(self.conversation_history)
 
@@ -266,16 +236,13 @@ class ProspectSession:
         response = self.provider.chat(messages, temperature=0.7, max_tokens=250)
         latency = (time.time() - start) * 1000
 
-        # Add bot response to history
         self.conversation_history.append({
             "role": "assistant",
             "content": response.content,
         })
 
-        # Update readiness based on user's sales quality
         self._update_readiness(user_message, response.content)
 
-        # Check end conditions
         end = self._check_end_conditions()
         if end == "sold":
             self.state.has_committed = True
@@ -307,7 +274,6 @@ class ProspectSession:
         # Deterministic scoring based on signals
         rating = self._score_sales_message(user_msg, bot_response)
 
-        # Map rating to readiness change
         gain = behavior["readiness_gain_per_good_turn"]
         loss = behavior["readiness_loss_per_bad_turn"]
 

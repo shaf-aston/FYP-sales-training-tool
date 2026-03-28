@@ -19,6 +19,23 @@ import tempfile
 import threading
 import importlib.util
 
+from chatbot.flow import (
+    FLOWS,
+    SalesFlowEngine,
+    _COMMON_TRANSITIONS,
+    _check_advancement_condition,
+    user_has_clear_intent,
+    user_shows_doubt,
+    user_expressed_stakes,
+    commitment_or_objection,
+    commitment_or_walkaway,
+)
+from chatbot.prompts import get_base_rules, _SHARED_RULES
+from chatbot.analysis import analyze_state
+from chatbot.performance import PerformanceTracker, MAX_METRICS_LINES
+from chatbot.loader import load_analysis_config
+from chatbot.chatbot import SalesChatbot
+
 os.environ.pop("ENABLE_DEBUG_PANEL", None)     # Ensure debug panel OFF for all tests
 
 
@@ -54,6 +71,7 @@ def _load_web_app():
         sec_spec = importlib.util.spec_from_file_location(
             'web.security', os.path.join(web_dir, 'security.py')
         )
+        assert sec_spec is not None  # Type narrowing: file must exist
         sec_mod = importlib.util.module_from_spec(sec_spec)
         sec_mod.__package__ = 'web'
         sys.modules['web.security'] = sec_mod
@@ -63,29 +81,13 @@ def _load_web_app():
     app_spec = importlib.util.spec_from_file_location(
         'web.app', os.path.join(web_dir, 'app.py')
     )
+    assert app_spec is not None  # Type narrowing: file must exist
     app_mod = importlib.util.module_from_spec(app_spec)
     app_mod.__package__ = 'web'
     sys.modules['web.app'] = app_mod
     app_spec.loader.exec_module(app_mod)
 
     return app_mod
-
-from chatbot.flow import (
-    FLOWS,
-    SalesFlowEngine,
-    _COMMON_TRANSITIONS,
-    _check_advancement_condition,
-    user_has_clear_intent,
-    user_shows_doubt,
-    user_expressed_stakes,
-    commitment_or_objection,
-    commitment_or_walkaway,
-)
-from chatbot.prompts import get_base_rules, _SHARED_RULES
-from chatbot.analysis import analyze_state, user_demands_directness
-from chatbot.performance import PerformanceTracker, MAX_METRICS_LINES
-from chatbot.loader import load_analysis_config
-from chatbot.chatbot import SalesChatbot
 
 
 # =====================================================================
@@ -279,17 +281,6 @@ class TestP1_CheckAdvancementConditionHelper:
 # =====================================================================
 # SECTION 3 — P2 Regressions: Bug Fixes
 # =====================================================================
-
-class TestP2_GoalIndicatorsCleanup:
-    """P2 Fix #10: 11 near-universal verbs removed from goal_indicators in
-    analysis_config.yaml to prevent premature intent lock.
-
-    Bug mode if reverted: Messages like "I want to make dinner" or "need more
-    time" would classify as high_intent, causing the FSM to skip discovery.
-
-    What must hold: Generic phrases ("want to", "need to" alone) don't produce
-    high_intent. Only specific signals or explicit product goals do.
-    """
 
 _SHOULD_NOT_TRIGGER_HIGH_INTENT = [
     "i want to make more money",     # "want to" alone (removed)

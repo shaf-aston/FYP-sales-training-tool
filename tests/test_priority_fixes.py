@@ -37,7 +37,7 @@ class TestPriority1IntentLock:
             {'role': 'user', 'content': 'I want to lose weight'},
             {'role': 'assistant', 'content': 'Great! How much weight?'},
         ]
-        assert _has_user_stated_clear_goal(history) == True
+        assert _has_user_stated_clear_goal(history)
     
     def test_goal_priming_detects_problem_keywords(self):
         """Test detection of problem/issue keywords."""
@@ -45,12 +45,12 @@ class TestPriority1IntentLock:
             {'role': 'user', 'content': 'been fat for years'},
             {'role': 'assistant', 'content': 'I see'},
         ]
-        assert _has_user_stated_clear_goal(history) == True
+        assert _has_user_stated_clear_goal(history)
     
     def test_goal_priming_empty_history(self):
         """Test handles empty history gracefully."""
-        assert _has_user_stated_clear_goal([]) == False
-        assert _has_user_stated_clear_goal(None) == False
+        assert not _has_user_stated_clear_goal([])
+        assert not _has_user_stated_clear_goal(None)
     
     def test_intent_lock_prevents_reversion(self):
         """Test PRIORITY 1: Intent locks to HIGH after goal stated.
@@ -86,7 +86,7 @@ class TestPriority1IntentLock:
                 {'role': 'user', 'content': f'I am {keyword} get healthier'},
                 {'role': 'assistant', 'content': 'Tell me more'},
             ]
-            assert _has_user_stated_clear_goal(history) == True, \
+            assert _has_user_stated_clear_goal(history), \
                 f"Failed to detect goal keyword: {keyword}"
     
     def test_intent_lock_recency_weighting(self):
@@ -100,7 +100,7 @@ class TestPriority1IntentLock:
             {'role': 'user', 'content': 'i want to lose weight'},  # Recent goal
         ]
         
-        assert _has_user_stated_clear_goal(history) == True
+        assert _has_user_stated_clear_goal(history)
 
 
 class TestPriority2LiteralQuestions:
@@ -127,7 +127,7 @@ class TestPriority2LiteralQuestions:
         ]
         
         for question in literal_questions:
-            assert is_literal_question(question) == True, \
+            assert is_literal_question(question), \
                 f"Failed to detect literal question: {question}"
     
     def test_literal_question_casual_format(self):
@@ -139,7 +139,7 @@ class TestPriority2LiteralQuestions:
         ]
         
         for question in casual_questions:
-            assert is_literal_question(question) == True, \
+            assert is_literal_question(question), \
                 f"Failed to detect casual question: {question}"
     
     def test_literal_question_with_trailing_question_mark(self):
@@ -150,7 +150,7 @@ class TestPriority2LiteralQuestions:
         ]
         
         for question in questions:
-            assert is_literal_question(question) == True, \
+            assert is_literal_question(question), \
                 f"Failed to detect question mark ending: {question}"
     
     def test_rhetorical_questions_excluded(self):
@@ -162,7 +162,7 @@ class TestPriority2LiteralQuestions:
         ]
         
         for question in rhetorical:
-            assert is_literal_question(question) == False, \
+            assert not is_literal_question(question), \
                 f"Incorrectly detected rhetorical as literal: {question}"
     
     def test_non_questions(self):
@@ -176,13 +176,13 @@ class TestPriority2LiteralQuestions:
         ]
         
         for text in non_questions:
-            assert is_literal_question(text) == False, \
+            assert not is_literal_question(text), \
                 f"Incorrectly detected non-question: {text}"
     
     def test_turn_40_scenario(self):
         """Test Turn 40 from user conversation: 'whats changed?'"""
         user_message = "whats changed?"
-        assert is_literal_question(user_message) == True, \
+        assert is_literal_question(user_message), \
             "Failed to detect Turn 40 'whats changed?' as literal question"
 
 
@@ -217,7 +217,7 @@ class TestPriority3FrustrationOverride:
 
         history = []
         for msg in demand_messages:
-            assert user_demands_directness(history, msg) == True, \
+            assert user_demands_directness(history, msg), \
                 f"Failed to detect demand: {msg}"
     
     def test_frustration_emotion_indicators(self):
@@ -230,7 +230,7 @@ class TestPriority3FrustrationOverride:
         
         history = []
         for msg in frustration_messages:
-            assert user_demands_directness(history, msg) == True, \
+            assert user_demands_directness(history, msg), \
                 f"Failed to detect frustration: {msg}"
     
     def test_frustration_repeated_clarification(self):
@@ -242,7 +242,7 @@ class TestPriority3FrustrationOverride:
         ]
         
         user_message = 'My weight, I said'
-        assert user_demands_directness(history, user_message) == True, \
+        assert user_demands_directness(history, user_message), \
             "Failed to detect repeated frustration"
     
     def test_turn_18_20_scenario(self):
@@ -257,7 +257,7 @@ class TestPriority3FrustrationOverride:
         
         history = []
         for msg in messages:
-            assert user_demands_directness(history, msg) == True, \
+            assert user_demands_directness(history, msg), \
                 f"Failed to detect frustration in Turn 18-20 scenario: {msg}"
     
     def test_normal_responses_not_flagged(self):
@@ -271,7 +271,7 @@ class TestPriority3FrustrationOverride:
         
         history = []
         for msg in normal_messages:
-            assert user_demands_directness(history, msg) == False, \
+            assert not user_demands_directness(history, msg), \
                 f"Incorrectly flagged as frustration: {msg}"
     
     def test_case_insensitivity(self):
@@ -285,7 +285,7 @@ class TestPriority3FrustrationOverride:
         
         history = []
         for msg in messages:
-            assert user_demands_directness(history, msg) == True, \
+            assert user_demands_directness(history, msg), \
                 f"Case sensitivity failed: {msg}"
 
 
@@ -321,7 +321,7 @@ class TestPriority4ContextAwareGuardedness:
         state = analyze_state(history, 'ok')
         
         # PRIORITY 4 FIX: 'ok' after substantive answer = agreement, NOT guarded
-        assert state['guarded'] == False, \
+        assert not state['guarded'], \
             f"Incorrectly flagged agreement as guarded: {state}"
     
     def test_turn_28_agreement_scenario(self):
@@ -334,7 +334,7 @@ class TestPriority4ContextAwareGuardedness:
         ]
         
         state = analyze_state(history, 'ok')
-        assert state['guarded'] == False, \
+        assert not state['guarded'], \
             "Turn 28: Incorrectly flagged 'ok' as guarded when agreeing"
     
     def test_actual_guardedness_still_detected(self):
@@ -379,12 +379,12 @@ class TestPriority4ContextAwareGuardedness:
             {'role': 'user', 'content': 'ok'},
         ]
         
-        state_short = analyze_state(history_short, 'ok')
-        state_medium = analyze_state(history_medium, 'ok')
+        analyze_state(history_short, 'ok')
+        analyze_state(history_medium, 'ok')
         state_long = analyze_state(history_long, 'ok')
         
         # Long answer should be recognized as substantive
-        assert state_long['guarded'] == False, \
+        assert not state_long['guarded'], \
             "Should recognize 12+ word answer as substantive (not guarded)"
 
 
@@ -425,7 +425,7 @@ class TestIntegrationScenarios:
         ]
 
         is_frustrated = user_demands_directness(conversation, 'just tell me')
-        assert is_frustrated == True, \
+        assert is_frustrated, \
             "Turn 18-20: Failed to detect frustration demand"
     
     def test_full_turn_28_guarded_fix(self):
@@ -443,7 +443,7 @@ class TestIntegrationScenarios:
         state = analyze_state(conversation, 'ok')
         
         # PRIORITY 4: 'ok' after substantive answer = agreement, not guarded
-        assert state['guarded'] == False, \
+        assert not state['guarded'], \
             f"Turn 28: Failed to recognize agreement pattern. Guarded={state['guarded']}"
     
     def test_full_turn_40_literal_question(self):
@@ -453,7 +453,7 @@ class TestIntegrationScenarios:
         Expected: Recognized as literal question, trigger answer mode
         """
         is_question = is_literal_question('whats changed?')
-        assert is_question == True, \
+        assert is_question, \
             "Turn 40: Failed to detect 'whats changed?' as literal question"
 
 

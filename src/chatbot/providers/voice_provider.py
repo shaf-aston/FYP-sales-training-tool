@@ -10,8 +10,9 @@ import asyncio
 import logging
 import threading
 import atexit
+import importlib.util
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Any
 
 logger = logging.getLogger(__name__)
 
@@ -31,16 +32,18 @@ def _get_event_loop() -> asyncio.AbstractEventLoop:
             _loop = asyncio.new_event_loop()
 
             def _run_loop():
+                assert _loop is not None  # Type narrowing
                 asyncio.set_event_loop(_loop)
                 _loop.run_forever()
 
             _loop_thread = threading.Thread(target=_run_loop, daemon=True)
             _loop_thread.start()
             logger.info("VoiceProvider: Started persistent async event loop")
+    assert _loop is not None  # Type narrowing before return
     return _loop
 
 
-def _run_async(coro) -> any:
+def _run_async(coro: Any) -> Any:
     """Run a coroutine on the persistent event loop and wait for result."""
     loop = _get_event_loop()
     future = asyncio.run_coroutine_threadsafe(coro, loop)
@@ -73,11 +76,8 @@ except ImportError:
     GROQ_AVAILABLE = False
 
 # Check for Edge TTS
-try:
-    import edge_tts
-    EDGE_TTS_AVAILABLE = True
-except ImportError:
-    EDGE_TTS_AVAILABLE = False
+EDGE_TTS_AVAILABLE = importlib.util.find_spec("edge_tts") is not None
+if not EDGE_TTS_AVAILABLE:
     logger.warning("Edge TTS not installed. Run: pip install edge-tts")
 
 
@@ -133,7 +133,7 @@ class VoiceProvider:
         self._deepgram_client = None
         if DEEPGRAM_AVAILABLE and self._deepgram_api_key:
             try:
-                self._deepgram_client = DeepgramClient(self._deepgram_api_key)
+                self._deepgram_client = DeepgramClient(self._deepgram_api_key)  # type: ignore
                 logger.info("Deepgram STT initialized (primary)")
             except Exception as e:
                 logger.warning(f"Deepgram init failed: {e}")
@@ -146,7 +146,7 @@ class VoiceProvider:
         self._groq_client = None
         if GROQ_AVAILABLE and self._groq_api_key:
             try:
-                self._groq_client = Groq(api_key=self._groq_api_key)
+                self._groq_client = Groq(api_key=self._groq_api_key)  # type: ignore
                 logger.info("Groq Whisper STT initialized (backup)")
             except Exception as e:
                 logger.warning(f"Groq Whisper init failed: {e}")
@@ -234,6 +234,7 @@ class VoiceProvider:
 
     def _transcribe_deepgram(self, audio_bytes: bytes, filename: str) -> TranscriptionResult:
         """Transcribe using Deepgram API (v6 SDK)."""
+        assert self._deepgram_client is not None  # Type narrowing: caller checks before calling
         start = time.time()
         try:
             # Deepgram v6 SDK uses different API structure
@@ -247,7 +248,7 @@ class VoiceProvider:
             source = {"buffer": audio_bytes, "mimetype": self._get_mimetype(filename)}
 
             # Transcribe using listen.rest.v1
-            response = self._deepgram_client.listen.rest.v("1").transcribe_file(
+            response = self._deepgram_client.listen.rest.v("1").transcribe_file(  # type: ignore[attr-defined]
                 source, options
             )
 
@@ -280,6 +281,7 @@ class VoiceProvider:
 
     def _transcribe_groq_whisper(self, audio_bytes: bytes, filename: str) -> TranscriptionResult:
         """Transcribe using Groq Whisper API (backup)."""
+        assert self._groq_client is not None  # Type narrowing: caller checks before calling
         start = time.time()
         try:
             response = self._groq_client.audio.transcriptions.create(
@@ -307,7 +309,7 @@ class VoiceProvider:
                 error=str(e)
             )
 
-    def synthesize(self, text: str, voice: str = None) -> SynthesisResult:
+    def synthesize(self, text: str, voice: str | None = None) -> SynthesisResult:
         """Synthesize speech from text using Edge TTS.
 
         Args:
@@ -366,12 +368,13 @@ class VoiceProvider:
 
     async def _generate_audio(self, text: str, voice: str) -> bytes:
         """Generate audio using edge-tts async."""
+        import edge_tts
         communicate = edge_tts.Communicate(text, voice)
         audio_chunks = []
 
         async for chunk in communicate.stream():
             if chunk["type"] == "audio":
-                audio_chunks.append(chunk["data"])
+                audio_chunks.append(chunk.get("data", b""))
 
         return b"".join(audio_chunks)
 

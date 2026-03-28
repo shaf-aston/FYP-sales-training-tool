@@ -12,7 +12,6 @@ Complements performance.py (per-turn latency) with conversation-level insights.
 
 import json
 import os
-import time
 import logging
 from datetime import datetime
 from threading import Lock

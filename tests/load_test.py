@@ -253,7 +253,7 @@ def print_results(metrics: LoadTestMetrics, duration: int):
     print("LOAD TEST RESULTS")
     print("="*70)
 
-    print(f"\n[STATS] Request Statistics:")
+    print("\n[STATS] Request Statistics:")
     print(f"   Total Sent:       {summary['total_requests']}")
     print(f"   Completed:        {summary['completed']}")
     print(f"   Successful:       {summary['successful']}")
@@ -261,22 +261,22 @@ def print_results(metrics: LoadTestMetrics, duration: int):
     print(f"   Error Rate:       {summary['error_rate']*100:.1f}%")
 
     if summary['successful'] > 0:
-        print(f"\n Response Times (ms):")
+        print("\n Response Times (ms):")
         print(f"   Average:          {summary['response_time_avg']:.2f}")
         print(f"   Median:           {summary['response_time_median']:.2f}")
         print(f"   95th Percentile:  {summary['response_time_p95']:.2f}")
         print(f"   Min:              {summary['response_time_min']:.2f}")
         print(f"   Max:              {summary['response_time_max']:.2f}")
 
-    print(f"\n Throughput:")
+    print("\n Throughput:")
     print(f"   Requests/sec:     {summary['completed'] / duration:.2f}")
 
-    print(f"\n Status Codes:")
+    print("\n Status Codes:")
     for code, count in sorted(summary['status_codes'].items()):
         print(f"   {code}: {count}")
 
     if summary['sample_errors']:
-        print(f"\n Sample Errors:")
+        print("\n Sample Errors:")
         for error in summary['sample_errors']:
             print(f"   - {error}")
 

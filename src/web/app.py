@@ -9,31 +9,33 @@ Routes are now split across multiple blueprint modules in web/routes/:
 - analytics.py: Analytics, quizzes, knowledge management
 - debug.py: Debug panel (development only)
 """
+# ruff: noqa: E402
+# NOTE: E402 suppressed because sys.path MUST be manipulated before importing
+# chatbot modules. This is an intentional pattern, not a code quality issue.
+
+import os
+import sys
+
+# MUST happen before importing chatbot modules (add parent to path)
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from flask import Flask, render_template
 from flask_cors import CORS
-import os
-import sys
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from chatbot.constants import MAX_PROSPECT_SESSIONS, PROSPECT_IDLE_MINUTES
 
 # Security module (centralized security controls)
 from web.security import (
     SecurityConfig,
-    RateLimiter,
-    PromptInjectionValidator,
     SecurityHeadersMiddleware,
     InputValidator,
     SessionSecurityManager,
     ClientIPExtractor,
     initialize_security,
-    require_rate_limit,
 )
 
 # Disable .pyc file generation
@@ -52,25 +54,14 @@ _allowed_origins = [
 CORS(app, origins=_allowed_origins)
 
 
-# ============================================================================
-# Security Initialization
-# ============================================================================
-
-# Initialize security components (from security module)
 rate_limiter, session_manager, injection_validator = initialize_security(
     app_logger=app.logger
 )
 
-# Wire security middleware
 app.after_request(SecurityHeadersMiddleware.apply)
 session_manager.start_background_cleanup()
 
 
-# ============================================================================
-# Prospect Session Management
-# ============================================================================
-
-# Use a second SessionSecurityManager instance for prospect sessions (eliminates code duplication)
 prospect_session_manager = SessionSecurityManager(
     max_sessions=MAX_PROSPECT_SESSIONS,
     idle_minutes=PROSPECT_IDLE_MINUTES,
@@ -78,10 +69,6 @@ prospect_session_manager = SessionSecurityManager(
 )
 prospect_session_manager.start_background_cleanup()
 
-
-# ============================================================================
-# Helper Functions (Shared across blueprints via dependency injection)
-# ============================================================================
 
 def get_session(session_id):
     """Get chatbot, updating timestamp. Returns bot or None."""
@@ -143,14 +130,11 @@ def _bot_state(bot):
     }
 
 
-# ============================================================================
-# Blueprint Registration
-# ============================================================================
+# Blueprint modules must be imported AFTER app initialization (app needs to exist).
+# E402 suppressed because this is an intentional Flask pattern.
 
-# Import blueprint modules
-from web.routes import session, chat, prospect, voice, analytics, debug
+from web.routes import session, chat, prospect, voice, analytics, debug  # noqa: E402
 
-# Initialize blueprints with dependency injection (pass helper functions)
 session.init_routes(app, session_manager, get_session, set_session, delete_session, _bot_state)
 chat.init_routes(app, get_session, require_session, _validate_message, _bot_state)
 prospect.init_routes(app, prospect_session_manager, _validate_message)
@@ -158,7 +142,6 @@ voice.init_routes(app, require_session, _validate_message, _bot_state)
 analytics.init_routes(app, require_session)
 debug.init_routes(app, require_session)
 
-# Register blueprints with Flask app
 app.register_blueprint(session.bp)
 app.register_blueprint(chat.bp)
 app.register_blueprint(prospect.bp)
@@ -168,10 +151,6 @@ app.register_blueprint(debug.bp)
 
 # Note: Rate limiting is applied via @require_rate_limit decorators in blueprint files
 
-
-# ============================================================================
-# Page Routes (UI templates remain in main app)
-# ============================================================================
 
 @app.route('/favicon.ico')
 def favicon():
@@ -189,10 +168,6 @@ def knowledge_page():
     """Serve the knowledge base management page."""
     return render_template('knowledge.html')
 
-
-# ============================================================================
-# Debug Panel Guard
-# ============================================================================
 
 _DEBUG_ENABLED = os.environ.get('ENABLE_DEBUG_PANEL', '').lower() == 'true'
 
@@ -212,10 +187,6 @@ def _guard_debug_endpoints():
         return jsonify({"error": "Debug endpoints are localhost-only"}), 403
 
 
-# ============================================================================
-# Error Handler
-# ============================================================================
-
 @app.errorhandler(Exception)
 def handle_unexpected_error(e):
     """Catch-all for unhandled exceptions — prevents stack trace leakage.
@@ -230,10 +201,6 @@ def handle_unexpected_error(e):
     app.logger.exception("Unhandled error")
     return jsonify({"error": "Internal server error"}), 500
 
-
-# ============================================================================
-# Application Startup
-# ============================================================================
 
 if __name__ == '__main__':
     app.run(debug=os.environ.get('FLASK_DEBUG', 'false').lower() == 'true', port=5000)

@@ -103,7 +103,7 @@ goal_indicators:
   - "anniversary trip"
   - "honeymoon"
 
-# Preference extraction keywords (prioritized by frequency & likelihood)
+# Preference extraction keywords (prioritised by frequency & likelihood)
 # Purpose: Keyword matching → Category extraction → Injected into LLM prompt as context
 # Usage: extract_preferences() scans history, returns "budget, safety, efficiency" → LLM personalizes response
 preference_keywords:

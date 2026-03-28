@@ -12,7 +12,7 @@
 ### The Training Gap
 
 **Supervisor Feedback (Meeting 5, February 2026):**
-The chatbot's core functionality — holding realistic conversations — does not directly validate that a trainee *understands* the sales process. A user could replay conversations and memorize responses without internalizing:
+The chatbot's core functionality — holding realistic conversations — does not directly validate that a trainee *understands* the sales process. A user could replay conversations and memorise responses without internalizing:
 - What stage they're in and why
 - What triggers advancement between stages
 - Whether their next move aligns with the current stage goal
@@ -448,7 +448,7 @@ displayQuizFeedback() // Render score, feedback, details
 | "Can't verify trainees understand the concepts" | Stage quiz forces explicit naming of stage + strategy | `evaluate_stage_quiz()` requires both to score correct |
 | "No signal that trainee internalised methodology" | Direction quiz asks trainee to explain their reasoning | LLM evaluates whether response references stage goal + advancement triggers |
 | "Replayable conversations don't test live response quality" | Next Move quiz evaluates proposed response in real-time | User proposes response *before* seeing bot's answer |
-| "No differentiation between memorizers and learners" | Multiple quiz types test different cognitive levels | Stage quiz (recall) → Next Move (application) → Direction (analysis) |
+| "No differentiation between memorisers and learners" | Multiple quiz types test different cognitive levels | Stage quiz (recall) → Next Move (application) → Direction (analysis) |
 
 ---
 

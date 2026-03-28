@@ -47,7 +47,7 @@ python -m flask run
 ✅ **Custom Knowledge** — Web interface to add product data without code changes
 
 ### Academic Innovation
-🔬 **Prompt Engineering as Behavioral Constraint** — Natural language specifications guide LLM output without fine-tuning (92% stage accuracy)
+🔬 **Prompt Engineering as Behavioural Constraint** — Natural language specifications guide LLM output without fine-tuning (92% stage accuracy)
 🔬 **Hybrid FSM + LLM** — Deterministic state transitions + probabilistic response generation = auditable methodology adherence
 🔬 **Tactical Acknowledgment** — Conditional validation based on psychological readiness (emotional disclosure vs. guarded response)
 
@@ -118,7 +118,7 @@ open htmlcov/index.html
 **Test Coverage**: 198 tests (59 Phase 1 + 139 planned)
 - Unit tests (pure logic, <1ms each)
 - Integration tests (FSM + analysis, no LLM)
-- Behavioral tests (NEPQ framework verification)
+- Behavioural tests (NEPQ framework verification)
 
 See [TESTING_STRATEGY.md](TESTING_STRATEGY.md) for full framework.
 
@@ -237,7 +237,7 @@ This project synthesizes six research domains into a unified framework:
 |--------|-----------|-------------|
 | **Sales Methodology** | Rackham (1988): SPIN Selling | Stage progression logic |
 | **Emotional Persuasion** | Acuff & Miner (2023): NEPQ | Objection handling, future pacing |
-| **LLM Constraint Theory** | Bai et al. (2023): Constitutional AI | Prompt engineering for behavior control |
+| **LLM Constraint Theory** | Bai et al. (2023): Constitutional AI | Prompt engineering for behaviour control |
 | **Reasoning Quality** | Wei et al. (2022): Chain-of-Thought | Structured objection reframing |
 | **Conversational Rapport** | Brennan & Clark (1996): Lexical Entrainment | User keyword injection |
 | **Pragmatic Repair** | Schegloff (1992): Conversational Repair | Frustration detection + urgency override |
@@ -304,9 +304,9 @@ Code reviews follow standards in [DEVELOPMENT_GUIDE.md](DEVELOPMENT_GUIDE.md).
 
 ---
 
-## 📜 License
+## 📜 Licence
 
-[Specify license: MIT, Apache 2.0, etc.]
+[Specify licence: MIT, Apache 2.0, etc.]
 
 ---
 

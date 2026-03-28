@@ -4,7 +4,6 @@ Combines templates (prompts.py), intervention logic (overrides.py),
 and tactical adaptations (tactics.py) into the final system prompt.
 """
 
-from typing import Any
 from .loader import load_signals
 from .prompts import (
     get_prompt,

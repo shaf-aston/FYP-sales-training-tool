@@ -144,7 +144,7 @@ personas:
   fitness:
     - name: "David"
       background: "Software engineer, 32, wants to get back in shape after years of desk work"
-      needs: ["structured program", "accountability", "flexible scheduling"]
+      needs: ["structured programme", "accountability", "flexible scheduling"]
       budget: "$100-$200/month"
       pain_points: ["tried gym apps but lost motivation", "doesn't know proper form", "irregular work hours"]
       personality: "Analytical, wants to understand the methodology, responds to evidence"
@@ -193,7 +193,7 @@ personas:
       background: "Project coordinator aiming to transition into data analytics"
       needs: ["job-relevant skills", "portfolio projects", "placement support"]
       budget: "$2,000-$8,000"
-      pain_points: ["unclear program quality", "time constraints", "fear of no ROI"]
+      pain_points: ["unclear programme quality", "time constraints", "fear of no ROI"]
       personality: "Goal-driven and inquisitive, responds well to outcomes and proof"
 
 evaluation:

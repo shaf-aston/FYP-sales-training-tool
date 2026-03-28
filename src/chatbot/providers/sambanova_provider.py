@@ -14,10 +14,10 @@ logger = logging.getLogger(__name__)
 
 class SambaNovaProvider(BaseLLMProvider):
     """Cloud LLM via SambaNova API."""
-    
+
     API_BASE = "https://api.sambanova.ai/v1"
 
-    def __init__(self, model: str = None):
+    def __init__(self, model: str | None = None):
         self.api_key = os.environ.get("SAMBANOVA_API_KEY", "").strip()
         self.model = model or os.environ.get("SAMBANOVA_MODEL", "Meta-Llama-3.3-70B-Instruct")
         self._session = None
@@ -29,7 +29,7 @@ class SambaNovaProvider(BaseLLMProvider):
         )
 
     @auto_log_performance
-    def chat(self, messages: List[Dict], temperature: float = 0.8, max_tokens: int = 200, stage: str = None) -> LLMResponse:
+    def chat(self, messages: List[Dict], temperature: float = 0.8, max_tokens: int = 200, stage: str | None = None) -> LLMResponse:
         if not self.is_available():
             error_msg = f"SambaNova unavailable. API Key: {'Set' if self.api_key else 'Missing'}"
             logger.error(error_msg)
@@ -60,7 +60,7 @@ class SambaNovaProvider(BaseLLMProvider):
             )
 
         except requests.exceptions.HTTPError as e:
-            error_detail = e.response.json().get("error", {}).get("message", str(e)) if e.response else str(e)
+            error_detail = e.response.json().get("error", {}).get("message", str(e)) if e.response is not None else str(e)
             logger.error(f"SambaNova HTTP error: {error_detail}", exc_info=True)
             return LLMResponse(content="", model=self.model, latency_ms=0, error=error_detail)
             

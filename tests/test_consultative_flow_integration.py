@@ -40,32 +40,32 @@ class TestConsultativeFlowIntegration:
         assert chatbot.flow_engine.current_stage == "intent"
         
         # Phase 2: Express clear intent → should advance to logical
-        response = chatbot.chat("I'm struggling to make consistent profits and looking for help improving my trading")
+        chatbot.chat("I'm struggling to make consistent profits and looking for help improving my trading")
         assert chatbot.flow_engine.current_stage == "logical", "Should advance to logical after clear intent"
         
         # Phase 3: Resist doubt for 9 turns → should STAY in logical
         for i in range(9):
-            response = chatbot.chat(f"My current strategy is perfect and working great, iteration {i+1}")
+            chatbot.chat(f"My current strategy is perfect and working great, iteration {i+1}")
             assert chatbot.flow_engine.current_stage == "logical", f"Should stay in logical without doubt, turn {i+1}"
         
         # Phase 4: Express doubt → should advance to emotional
-        response = chatbot.chat("Actually, I'm really struggling with consistency and losing money")
+        chatbot.chat("Actually, I'm really struggling with consistency and losing money")
         # Note: May need 1-2 more turns depending on keyword detection
         if chatbot.flow_engine.current_stage == "logical":
             # One more turn to process doubt
-            response = chatbot.chat("It's a serious problem for me")
+            chatbot.chat("It's a serious problem for me")
         assert chatbot.flow_engine.current_stage == "emotional", "Should advance to emotional after expressing doubt"
         
         # Phase 5: Resist emotional stakes for 9 turns → should STAY in emotional
         for i in range(9):
-            response = chatbot.chat(f"It doesn't really matter much to me, iteration {i+1}")
+            chatbot.chat(f"It doesn't really matter much to me, iteration {i+1}")
             assert chatbot.flow_engine.current_stage == "emotional", f"Should stay in emotional without stakes, turn {i+1}"
         
         # Phase 6: Express emotional stakes → should advance to pitch
-        response = chatbot.chat("I'm really worried about my family's future and I feel stressed about money")
+        chatbot.chat("I'm really worried about my family's future and I feel stressed about money")
         # Similar, may need 1-2 turns
         if chatbot.flow_engine.current_stage == "emotional":
-            response = chatbot.chat("This really matters to me a lot")
+            chatbot.chat("This really matters to me a lot")
         assert chatbot.flow_engine.current_stage == "pitch", "Should advance to pitch after expressing stakes"
 
     def test_safety_valve_prevents_infinite_loops(self, chatbot):
@@ -81,7 +81,7 @@ class TestConsultativeFlowIntegration:
         
         # Resist for EXACTLY 10 turns (safety valve triggers)
         for i in range(10):
-            response = chatbot.chat(f"Everything is perfect, iteration {i+1}")
+            chatbot.chat(f"Everything is perfect, iteration {i+1}")
         
         # Should advance to emotional (safety valve triggered)
         assert chatbot.flow_engine.current_stage == "emotional", "Safety valve should trigger after 10 turns"
@@ -97,7 +97,7 @@ class TestConsultativeFlowIntegration:
         assert chatbot.flow_engine.current_stage == "logical"
         
         # Express strong commitment
-        response = chatbot.chat("Yes, I want to sign up right now, let's do this!")
+        chatbot.chat("Yes, I want to sign up right now, let's do this!")
         
         # Should advance to pitch or directly asking for commitment
         # (implementation may vary - check that we're NOT stuck in logical)
@@ -115,7 +115,7 @@ class TestConsultativeFlowIntegration:
         assert bot.flow_engine.flow_type == "intent"
         
         # User says "mentorship"
-        response = bot.chat("I want to buy a mentorship for trading Bitcoin")
+        bot.chat("I want to buy a mentorship for trading Bitcoin")
         
         # Should switch to consultative (not transactional)
         assert bot.flow_engine.flow_type == "consultative", "Mentorship keyword should trigger consultative strategy"
@@ -184,12 +184,12 @@ class TestConsultativeFlowIntegration:
         assert chatbot.flow_engine.current_stage == "pitch"
         
         # Raise objection
-        response = chatbot.chat("This sounds too expensive for me")
+        chatbot.chat("This sounds too expensive for me")
         
         # Should transition to objection handling
         # (may need 1-2 turns to process objection)
         if chatbot.flow_engine.current_stage == "pitch":
-            response = chatbot.chat("I'm not sure I can afford it")
+            chatbot.chat("I'm not sure I can afford it")
         
         # Implementation note: Objection detection may vary
         # At minimum, should NOT advance back to intent or regress
@@ -238,13 +238,13 @@ class TestTransactionalFlowComparison:
         Consultative: intent → logical → emotional → pitch → objection (5 stages)
         """
         # Transactional should go straight to pitch after intent
-        response = transactional_bot.chat("I want to buy crypto trading signals")
+        transactional_bot.chat("I want to buy crypto trading signals")
 
         # After stating clear intent, should be in pitch or near pitch
         # (transactional doesn't need doubt/stakes building)
         turns = 0
         while transactional_bot.flow_engine.current_stage == "intent" and turns < 3:
-            response = transactional_bot.chat("Yes, I want to purchase trading signals")
+            transactional_bot.chat("Yes, I want to purchase trading signals")
             turns += 1
         
         assert transactional_bot.flow_engine.current_stage == "pitch", \
@@ -257,7 +257,7 @@ class TestTransactionalFlowComparison:
         
         Unlike consultative, transactional sales can talk pricing right away.
         """
-        response = transactional_bot.chat("How much do your signals cost?")
+        transactional_bot.chat("How much do your signals cost?")
         
         # Bot should be comfortable discussing pricing (no restriction)
         # This is acceptable in transactional mode

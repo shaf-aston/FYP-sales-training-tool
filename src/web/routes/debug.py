@@ -1,5 +1,7 @@
 """Debug panel endpoints — development/testing only."""
 
+# pyright: ignore[reportGeneralTypeIssues]  # Flask Blueprint dynamic attribute injection
+
 from flask import Blueprint, request, jsonify
 from dataclasses import asdict
 
@@ -13,8 +15,8 @@ def init_routes(app, require_session_func):
         app: Flask app (for logger access)
         require_session_func: Function to validate and return (bot, error)
     """
-    bp.app = app
-    bp.require_session = require_session_func
+    bp.app = app  # type: ignore[attr-defined]
+    bp.require_session = require_session_func  # type: ignore[attr-defined]
 
 
 @bp.route('/config', methods=['GET'])
@@ -35,7 +37,7 @@ def debug_config():
 @bp.route('/prompt', methods=['GET'])
 def debug_prompt():
     """Return the current system prompt exactly as the LLM will receive it."""
-    bot, err = bp.require_session()
+    bot, err = bp.require_session()  # type: ignore
     if err:
         return err
     return jsonify({
@@ -48,7 +50,7 @@ def debug_prompt():
 @bp.route('/stage', methods=['POST'])
 def debug_stage():
     """Jump FSM to a specific stage, bypassing advancement rules."""
-    bot, err = bp.require_session()
+    bot, err = bp.require_session()  # type: ignore
     if err:
         return err
     data = request.json or {}
@@ -74,7 +76,7 @@ def debug_analyse():
     Shows intent state, which signal categories match, and whether the
     current stage's advancement rule would fire.
     """
-    bot, err = bp.require_session()
+    bot, err = bp.require_session()  # type: ignore
     if err:
         return err
     data = request.json or {}

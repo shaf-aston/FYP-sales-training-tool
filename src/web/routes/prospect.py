@@ -14,9 +14,9 @@ def init_routes(app, prospect_session_manager_obj, validate_message_func):
         prospect_session_manager_obj: SessionSecurityManager instance for prospect sessions
         validate_message_func: Function to validate message text
     """
-    bp.app = app
-    bp.prospect_session_manager = prospect_session_manager_obj
-    bp.validate_message = validate_message_func
+    bp.app = app  # type: ignore
+    bp.prospect_session_manager = prospect_session_manager_obj  # type: ignore
+    bp.validate_message = validate_message_func  # type: ignore
 
 
 def _require_prospect_session():
@@ -24,7 +24,7 @@ def _require_prospect_session():
     session_id = request.headers.get('X-Session-ID')
     if not session_id:
         return None, (jsonify({"error": "Session ID required"}), 400)
-    ps = bp.prospect_session_manager.get(session_id)
+    ps = bp.prospect_session_manager.get(session_id)  # type: ignore
     if not ps:
         return None, (jsonify({"error": "Prospect session not found", "code": "SESSION_EXPIRED"}), 400)
     return ps, None
@@ -33,7 +33,7 @@ def _require_prospect_session():
 @bp.route('/init', methods=['POST'])
 def prospect_init():
     """Create a prospect session. Bot plays the buyer, user plays the salesperson."""
-    if not bp.prospect_session_manager.can_create():
+    if not bp.prospect_session_manager.can_create():  # type: ignore
         return jsonify({"error": "Prospect mode at capacity. Try again later."}), 503
 
     data = request.json or {}
@@ -55,8 +55,8 @@ def prospect_init():
             session_id=session_id,
         )
         opening = ps.get_opening_message()
-        bp.prospect_session_manager.set(session_id, ps)
-        bp.app.logger.info(f"Prospect session: {session_id} (difficulty={difficulty}, product={product_type})")
+        bp.prospect_session_manager.set(session_id, ps)  # type: ignore
+        bp.app.logger.info(f"Prospect session: {session_id} (difficulty={difficulty}, product={product_type})")  # type: ignore
 
         return jsonify({
             "success": True,
@@ -75,7 +75,7 @@ def prospect_init():
             "model": opening.model,
         })
     except Exception as e:
-        bp.app.logger.exception(f"Prospect init failed: {e}")
+        bp.app.logger.exception(f"Prospect init failed: {e}")  # type: ignore
         return jsonify({"error": "Prospect init failed. Please retry."}), 500
 
 
@@ -85,9 +85,10 @@ def prospect_chat():
     ps, err = _require_prospect_session()
     if err:
         return err
+    assert ps is not None
 
     data = request.json or {}
-    user_message, val_err = bp.validate_message(data.get('message', ''))
+    user_message, val_err = bp.validate_message(data.get('message', ''))  # type: ignore
     if val_err:
         return val_err
 
@@ -112,7 +113,7 @@ def prospect_chat():
             result["coaching"] = response.coaching
         return jsonify(result)
     except Exception as e:
-        bp.app.logger.exception(f"Prospect chat error: {e}")
+        bp.app.logger.exception(f"Prospect chat error: {e}")  # type: ignore
         return jsonify({"error": "Prospect chat failed. Please retry."}), 500
 
 
@@ -122,6 +123,7 @@ def prospect_state():
     ps, err = _require_prospect_session()
     if err:
         return err
+    assert ps is not None
     return jsonify({"success": True, "state": ps.state.to_dict()})
 
 
@@ -131,12 +133,13 @@ def prospect_evaluate():
     ps, err = _require_prospect_session()
     if err:
         return err
+    assert ps is not None
 
     try:
         evaluation = ps.get_evaluation()
         return jsonify({"success": True, **evaluation})
     except Exception as e:
-        bp.app.logger.exception(f"Prospect evaluation error: {e}")
+        bp.app.logger.exception(f"Prospect evaluation error: {e}")  # type: ignore
         return jsonify({"error": "Evaluation failed. Please retry."}), 500
 
 
@@ -145,5 +148,5 @@ def prospect_reset():
     """End and remove a prospect session."""
     session_id = request.headers.get('X-Session-ID')
     if session_id:
-        bp.prospect_session_manager.delete(session_id)
+        bp.prospect_session_manager.delete(session_id)  # type: ignore
     return jsonify({"success": True})

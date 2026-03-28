@@ -2,7 +2,7 @@
 
 ## Appendix C: Project Development Diary
 
-**Project Overview:** Sales conversation AI chatbot with FSM-driven conversation routing, prompt-based behavioral control, and real-time coaching feedback for sales training.
+**Project Overview:** Sales conversation AI chatbot with FSM-driven conversation routing, prompt-based behavioural control, and real-time coaching feedback for sales training.
 
 **Timeline:** September 2025 – March 2026 (28 weeks)
 
@@ -83,14 +83,14 @@
   - Feature addition time: 2-3 hours (update 4 files, test across strategies)
   - Test setup required 4+ mocks per test case
 - **Poor Extensibility:** Adding "hybrid" strategy required new class + inheritance hierarchy; non-code users couldn't modify flow without developer
-- **Methodology Mismatch:** Strategy Pattern designed for behavior selection; sales conversation inherently state-driven (stages, transitions, guards)
+- **Methodology Mismatch:** Strategy Pattern designed for behaviour selection; sales conversation inherently state-driven (stages, transitions, guards)
 
 **Decisions Made:**
 - Complete architecture pivot: discard Strategy Pattern entirely
 - Rebuild using Finite State Machine pattern (natural fit for state-driven domain)
 - Move advancement logic to configuration (YAML-driven `FLOWS` dict)
 - Make advancement rules pure functions (stateless, isolated testing)
-- Decision: **Configuration Over Code** (enable non-technical users to modify behavior without code changes)
+- Decision: **Configuration Over Code** (enable non-technical users to modify behaviour without code changes)
 
 **Why It Mattered:**
 - **Metrics:** -63% LOC reduction (855 LOC → 430 LOC); -78% code review time (45 min → 10 min); -83% feature addition time (2-3 hrs → 30 min)
@@ -103,7 +103,7 @@
 ### **Week 7-8 (Nov 11 – Nov 24): Prompt Engineering Refinement — Permission Questions & Tone**
 
 **What Was Built:**
-- 3-layer control architecture for behavioral enforcement:
+- 3-layer control architecture for behavioural enforcement:
   - **Layer 1 (Prompt):** System message constraints ("DO NOT end permission questions with '?'")
   - **Layer 2 (Predictive Logic):** Pre-response check before generating (detect if advancing to PITCH stage)
   - **Layer 3 (Enforcement):** Regex cleanup (strip trailing `?` as final guardrail)
@@ -124,7 +124,7 @@
   - Root cause: Each advancement rule triggered separate question; not coordinated
 
 **Decisions Made:**
-- Implemented 3-layer fix (prompt + code + regex) for permission questions; accepting defense-in-depth overhead
+- Implemented 3-layer fix (prompt + code + regex) for permission questions; accepting defence-in-depth overhead
 - Built persona detection at conversation start + continuous tone-locking (not relying on prompt alone)
 - Added "BE HUMAN" rule: statement BEFORE question; max 1-2 questions per response
 - Decision: **Layered Enforcement** (prompt for direction, code for guarantees, regex for safety net)
@@ -219,7 +219,7 @@
 
 **Decisions Made:**
 - Narrative-first approach: Document decisions as stories (problem → solution → why it matters), not just implementation details
-- Live demo prioritizes **user experience** over technical depth (show it working naturally, then explain the engineering)
+- Live demo prioritises **user experience** over technical depth (show it working naturally, then explain the engineering)
 - Decision: **Exposition matters as much as implementation** (mark scheme: 40 min demo significant portion of grade)
 
 **Why It Mattered:**
@@ -286,7 +286,7 @@
 | **Weeks 1-2** | Technical Constraint | Pragmatic Pivot | Local inference insufficient; cloud APIs necessary for interactive tools |
 | **Weeks 3-4** | Data Quality | Config-Driven Design | Open datasets often inconsistent; prompting more reliable than fine-tuning |
 | **Weeks 5-6** | Architectural Fit | Pattern Selection | Choose patterns matching domain (FSM for state-driven, not Strategy) |
-| **Weeks 7-8** | Quality Enforcement | Layered Control | Single-layer fixes insufficient; defense-in-depth (prompt + code + regex) works |
+| **Weeks 7-8** | Quality Enforcement | Layered Control | Single-layer fixes insufficient; defence-in-depth (prompt + code + regex) works |
 | **Weeks 9-10** | Measurement | Systematic Testing | Testing reveals assumptions; metrics-driven refinement mandatory |
 | **Weeks 11-12** | Maintainability | SRP Extraction | Micromodule extraction eliminates anti-patterns; improves testability |
 | **Weeks 13-15** | Communication | Narrative-First | Technical skill + exposition skill required for high marks |

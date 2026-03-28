@@ -1,123 +1,79 @@
-# Byte-compiled / optimized / DLL files
+# Python bytecode and caches
 __pycache__/
 *.py[cod]
 *$py.class
-
-# Distribution / packaging
-build/
-dist/
-*.egg-info/
-
-# Environment files
-.env
-
-# Python specifics
-*.py[cod]
 *.pyo
 *.pyd
-*.pdb
-*.so
 .pytest_cache/
 .Python
 
-# VSCode settings
-.vscode/
+# Build and packaging artifacts
+build/
+dist/
+*.egg-info/
+tmp/
+*.tmp
+.cache
 
-# Virtual environments
+# Environments and local config
+.env
+*.env.local
 .venv/
 venv/
 ENV/
+*.venv
 
-# Flask
+# Flask runtime
 instance/
 .webassets-cache
 flask_session/
 
-# IDEs
+# IDE/editor files
+.vscode/
 .idea/
+*.iml
 *.swp
 *.swo
 
-# OS
+# OS files
 .DS_Store
 Thumbs.db
-
-# JetBrains
-*.iml
-.idea/
+*.~
+*~
 
 # Jupyter
 .ipynb_checkpoints/
 
-# Logs and runtime
+# Logs and test/coverage outputs
 *.log
 *.pot
 *.mo
-
-# Coverage
 .coverage
-htmlcov/
 .coverage.*
-.cache
+htmlcov/
 nosetests.xml
 coverage.xml
 
-# Project specific generated files
-Impact formula.txt
-.claude/
-sessions_backup/
-sessions*
-metrics.jsonl
-metrics.json
-Impact formula.txt
-Documentation/What i did strat.md
-# Documentation/
-Aston Docs/
-sessions/
-sessions_backup/
-.Clear-Caches.py
-
-# Local secrets and sockets
+# Secrets and local database files
 *.key
 *.pem
 *.crt
 *.db
 *.sqlite
 *.sqlite3
-*.env.local
-*.venv
 
-# Build artifacts
-tmp/
-*.tmp
-*.cache
-
-# OS temporary files
-*.~
-*~
-
-# Notebook checkpoints
-.ipynb_checkpoints/
-
-# Ignore build/env files used during development, not checked in
-.env
-.venv/
-venv/
-
-# Python artifacts
-dist/
-build/
-__pycache__/
-*.py[cod]
-*.pyo
-
-# Flask runtime
-instance/
-.webassets-cache
-flask_session/
-analytics.jsonl
+# Project-specific generated or local-only files
+.claude/
+sessions/
+sessions_backup/
 metrics.jsonl
-
+metrics.json
+analytics.jsonl
+Impact formula.txt
 todo for marks.md
 CLAUDE.md
+update_diagrams.py
+Clear-Caches.py
+Documentation/What i did strat.md
+Aston Docs/
 src/config/custom_knowledge.yaml

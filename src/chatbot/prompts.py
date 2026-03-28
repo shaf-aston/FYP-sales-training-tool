@@ -1,7 +1,6 @@
 """Prompt templates and static prompt generation logic."""
 
 import logging
-from .loader import load_signals
 
 logger = logging.getLogger(__name__)
 

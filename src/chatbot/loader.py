@@ -28,8 +28,6 @@ _REQUIRED_SIGNAL_KEYS = {
 }
 
 
-# --- Base YAML Loader ---
-
 @lru_cache(maxsize=None)
 def load_yaml(filename):
     """Load and cache a YAML file from CONFIG_DIR. Raises on missing file or parse error."""
@@ -41,8 +39,6 @@ def load_yaml(filename):
     with open(filepath, 'r', encoding='utf-8') as f:
         return yaml.safe_load(f)
 
-
-# --- Configuration Loaders ---
 
 def load_signals():
     """Load signals.yaml and validate required keys are present."""
@@ -110,8 +106,6 @@ def get_product_settings(product_type):
     raise ValueError(f"Product type '{product_type}' not found and no default config available")
 
 
-# --- Template Loaders ---
-
 def load_tactics():
     """Load tactics.yaml with caching via load_yaml()."""
     return load_yaml("tactics.yaml")
@@ -131,8 +125,6 @@ def load_web_search_config():
     """Load web_search_config.yaml with caching via load_yaml()."""
     return load_yaml("web_search_config.yaml")
 
-
-# --- Template Utilities ---
 
 def get_tactic(category="elicitation", subtype=None, context=""):
     """Get a random tactic from the specified category/subtype.
@@ -257,8 +249,6 @@ def get_adaptation_template(adaptation_type, strategy=None, **kwargs):
 
     return ""
 
-
-# --- Quick Matcher Utility ---
 
 @lru_cache(maxsize=1)
 def _build_signal_patterns():
@@ -541,8 +531,6 @@ class QuickMatcher:
 
         return (best_candidate, best_score)
 
-
-# --- A/B Variant Selection (for prompt testing in evaluation studies) ---
 
 def assign_ab_variant(session_id):
     """Deterministically assign A/B variant based on session_id.

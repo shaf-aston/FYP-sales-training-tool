@@ -2,7 +2,7 @@
 # Used by template_loader.py for early-return override conditions
 # These take highest priority and return immediately without further processing
 # Prompt routing precedence: overrides -> adaptations -> stage/base prompt assembly
-# Use overrides only for immediate behavioral forcing conditions.
+# Use overrides only for immediate behavioural forcing conditions.
 
 direct_info_request:
   template: |

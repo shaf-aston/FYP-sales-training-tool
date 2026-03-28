@@ -1,7 +1,8 @@
 """Chat conversation endpoints — main chat, edit, summary, training."""
 
+# pyright: ignore[reportGeneralTypeIssues]  # Flask Blueprint dynamic attribute injection
+
 from flask import Blueprint, request, jsonify
-from chatbot.constants import DEFAULT_TEMPERATURE, DEFAULT_MAX_TOKENS
 
 bp = Blueprint('chat', __name__, url_prefix='/api')
 
@@ -17,23 +18,22 @@ def init_routes(app, get_session_func, require_session_func, validate_message_fu
         bot_state_func: Function to extract bot state dict
     """
     # Store dependencies in blueprint context
-    bp.app = app
-    bp.require_session = require_session_func
-    bp.validate_message = validate_message_func
-    bp.bot_state = bot_state_func
+    bp.app = app  # type: ignore[attr-defined]
+    bp.require_session = require_session_func  # type: ignore[attr-defined]
+    bp.validate_message = validate_message_func  # type: ignore[attr-defined]
+    bp.bot_state = bot_state_func  # type: ignore[attr-defined]
 
 
 @bp.route('/chat', methods=['POST'])
 def chat():
     """Handle chat messages. Bot must be initialized via /api/init first."""
-    from web.security import SecurityConfig
 
     data = request.json
-    user_message, err = bp.validate_message(data.get('message', ''))
+    user_message, err = bp.validate_message(data.get('message', ''))  # type: ignore
     if err:
         return err
 
-    bot, err = bp.require_session()
+    bot, err = bp.require_session()  # type: ignore
     if err:
         return err
 
@@ -45,7 +45,7 @@ def chat():
         return jsonify({
             "success": True,
             "message": response.content,
-            **bp.bot_state(bot),
+            **bp.bot_state(bot),  # type: ignore
             "latency_ms": round(response.latency_ms, 1),
             "provider": response.provider,
             "model": response.model,
@@ -57,7 +57,7 @@ def chat():
         })
 
     except Exception as e:
-        bp.app.logger.exception(f"Chat error: {e}")
+        bp.app.logger.exception(f"Chat error: {e}")  # type: ignore
         return jsonify({"error": "Chat request failed. Please retry."}), 500
 
 
@@ -66,9 +66,9 @@ def edit_message():
     """Edit user message and regenerate from that point"""
     data = request.json or {}
     msg_index = data.get('index')
-    new_message, err = bp.validate_message(data.get('message', ''))
+    new_message, err = bp.validate_message(data.get('message', ''))  # type: ignore
 
-    bot, bot_err = bp.require_session()
+    bot, bot_err = bp.require_session()  # type: ignore
     if bot_err:
         return bot_err
 
@@ -102,21 +102,21 @@ def edit_message():
             "success": True,
             "message": response.content,
             "history": [{"role": m["role"], "content": m["content"]} for m in bot.flow_engine.conversation_history],
-            **bp.bot_state(bot),
+            **bp.bot_state(bot),  # type: ignore
             "latency_ms": round(response.latency_ms, 1),
             "provider": response.provider,
             "model": response.model,
             "training": training,
         })
     except Exception as e:
-        bp.app.logger.exception(f"Edit error: {e}")
+        bp.app.logger.exception(f"Edit error: {e}")  # type: ignore
         return jsonify({"error": "Edit failed. Please retry."}), 500
 
 
 @bp.route('/summary', methods=['GET'])
 def get_summary():
     """Get conversation summary"""
-    bot, err = bp.require_session()
+    bot, err = bp.require_session()  # type: ignore
     if err:
         return err
 
@@ -131,7 +131,7 @@ def training_ask():
     """Answer a trainee's question about the conversation and sales techniques."""
     from web.security import SecurityConfig
 
-    bot, err = bp.require_session()
+    bot, err = bp.require_session()  # type: ignore
     if err:
         return err
 
@@ -146,5 +146,5 @@ def training_ask():
         result = bot.answer_training_question(question)
         return jsonify({"success": True, **result})
     except Exception as e:
-        bp.app.logger.exception(f"Training Q&A error: {e}")
+        bp.app.logger.exception(f"Training Q&A error: {e}")  # type: ignore
         return jsonify({"error": "Failed to generate answer"}), 500

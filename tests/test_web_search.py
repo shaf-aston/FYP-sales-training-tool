@@ -4,7 +4,6 @@ All tests mock duckduckgo_search at the module level — no network calls.
 """
 
 import time
-import pytest
 
 from chatbot.web_search import WebSearchService, SearchResult, SearchResponse
 from chatbot.analysis import should_trigger_web_search, build_search_query

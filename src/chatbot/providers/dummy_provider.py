@@ -15,7 +15,7 @@ class DummyProvider(BaseLLMProvider):
         messages: List[Dict],
         temperature: float = 0.8,
         max_tokens: int = 200,
-        stage: str = None,
+        stage: str | None = None,
     ) -> LLMResponse:
         return LLMResponse(
             content="I understand — tell me more.",

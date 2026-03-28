@@ -4,7 +4,9 @@ Covers the Verification stage of the software lifecycle (CS3IP Section 1.2).
 Tests are grouped by module and test behaviour, not just initial state.
 """
 
-import sys, os, pytest
+import sys
+import os
+import pytest
 
 from chatbot.analysis import (
     text_contains_any_keyword,
@@ -18,7 +20,6 @@ from chatbot.analysis import (
 from chatbot.content import SIGNALS
 from chatbot.flow import (
     SalesFlowEngine,
-    FLOWS,
     user_has_clear_intent,
     user_shows_doubt,
     commitment_or_objection,
@@ -26,6 +27,16 @@ from chatbot.flow import (
 )
 from chatbot.loader import load_signals, load_product_config, get_product_settings
 from chatbot.chatbot import SalesChatbot
+from chatbot.providers.base import BaseLLMProvider, LLMResponse
+from chatbot.providers.factory import create_provider, PROVIDERS
+from chatbot.providers.groq_provider import GroqProvider
+from chatbot.knowledge import (
+    load_custom_knowledge,
+    save_custom_knowledge,
+    get_custom_knowledge_text,
+    clear_custom_knowledge,
+    KNOWLEDGE_FILE,
+)
 
 
 # ====================================================================
@@ -546,11 +557,6 @@ class TestProductKnowledge:
 # SECTION 11 — Provider Architecture (providers/)
 # ====================================================================
 
-from chatbot.providers.base import BaseLLMProvider, LLMResponse
-from chatbot.providers.factory import create_provider, PROVIDERS
-from chatbot.providers.openrouter_provider import OpenRouterProvider
-from chatbot.providers.groq_provider import GroqProvider
-
 
 class TestProviderBase:
     """Abstract base class and LLMResponse dataclass."""
@@ -571,36 +577,6 @@ class TestProviderBase:
     def test_llm_response_with_error(self):
         resp = LLMResponse(content="", model="test", latency_ms=0, error="timeout")
         assert resp.error == "timeout"
-
-
-class TestOpenRouterProviderConfig:
-    """OpenRouterProvider initialisation and configuration (no live API calls)."""
-
-    def test_default_model(self):
-        provider = OpenRouterProvider()
-        assert "llama" in provider.model.lower()
-
-    def test_custom_model(self):
-        provider = OpenRouterProvider(model="anthropic/claude-3-sonnet")
-        assert provider.model == "anthropic/claude-3-sonnet"
-
-    def test_api_base_url(self):
-        provider = OpenRouterProvider()
-        assert provider.API_BASE == "https://openrouter.ai/api/v1"
-
-    def test_unavailable_without_api_key(self, monkeypatch):
-        """When API keys are missing, provider should be unavailable."""
-        monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
-        monkeypatch.delenv("OPENROUTER_BACKUP_API_KEY", raising=False)
-        provider = OpenRouterProvider()
-        assert not provider.is_available()
-
-    def test_fallback_to_backup_key(self, monkeypatch):
-        """Should fallback to backup key when primary is missing."""
-        monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
-        monkeypatch.setenv("OPENROUTER_BACKUP_API_KEY", "backup_key")
-        provider = OpenRouterProvider()
-        assert provider.api_key == "backup_key"
 
 
 class TestGroqProviderConfig:
@@ -629,10 +605,6 @@ class TestProviderFactory:
         provider = create_provider("groq")
         assert isinstance(provider, GroqProvider)
 
-    def test_create_openrouter(self):
-        provider = create_provider("openrouter")
-        assert isinstance(provider, OpenRouterProvider)
-
     def test_unknown_raises_valueerror(self):
         with pytest.raises(ValueError, match="Unknown provider"):
             create_provider("openai")
@@ -643,20 +615,11 @@ class TestProviderFactory:
 
     def test_registry_has_expected_providers(self):
         assert "groq" in PROVIDERS
-        assert "openrouter" in PROVIDERS
 
 
 # ====================================================================
 # SECTION 12 — Knowledge Base (knowledge.py)
 # ====================================================================
-
-from chatbot.knowledge import (
-    load_custom_knowledge,
-    save_custom_knowledge,
-    get_custom_knowledge_text,
-    clear_custom_knowledge,
-    KNOWLEDGE_FILE,
-)
 
 
 class TestKnowledgeBase:

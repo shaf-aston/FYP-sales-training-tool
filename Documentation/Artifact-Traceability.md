@@ -12,13 +12,13 @@
 | **Stage Advancement Logic** | `src/chatbot/flow.py:92-142` (_check_advancement_condition) | O1: Stage progression accuracy | Keyword-match verification against `analysis_config.yaml` advancement keywords | Deterministic keyword detection | 100% match rate (25/25 conversations) | ✅ EXCEED |
 | **Intent Level Detection** | `src/chatbot/analysis.py:34-68` (35 LOC) | R3: Adaptive prompts based on user state | Regex matching against 15 intent signals in `signals.yaml` | Detect all 3 intent levels consistently | 95% detection (48/50 test utterances) | ✅ PASS |
 | **Guardedness Analyzer** | `src/chatbot/analysis.py:69-186` (118 LOC) | R3: Stage-specific LLM prompts | Pattern matching validation; 4 known failures documented in Section 4.3 | ≥95% | 95% (known edge cases bounded) | ⚠️ PASS with caveats |
-| **Prompt Templates (Consultative)** | `src/chatbot/content.py:161-272` (112 LOC NEPQ-aligned prompts) | O1, O2, R3: Stage accuracy + tone matching | Manual prompt inspection + behavioral output validation | Adherence to NEPQ 5-stage structure | 100% structural compliance | ✅ PASS |
+| **Prompt Templates (Consultative)** | `src/chatbot/content.py:161-272` (112 LOC NEPQ-aligned prompts) | O1, O2, R3: Stage accuracy + tone matching | Manual prompt inspection + behavioural output validation | Adherence to NEPQ 5-stage structure | 100% structural compliance | ✅ PASS |
 | **Prompt Templates (Transactional)** | `src/chatbot/content.py:273-340` (68 LOC) | R2: Dual flow configurations | Comparative prompt structure analysis | Skips emotional stage; 3-stage progression | 100% confirmed | ✅ PASS |
 | **Permission Question Removal** | `src/chatbot/content.py:P1 rules + app.py:response_pipeline (regex at line ~445)` | O4: Permission question elimination | Regex validation: `r'\s*\?\s*$'` on pitch-stage output | 100% removal | 100% (0/4 pitch responses contained trailing ?) | ✅ EXCEED |
 | **Objection Classification Framework** | `src/chatbot/content.py:284-403` (120 LOC scaffold) | R3, O1: Objection handling accuracy; 4-step CLASSIFY→RECALL→REFRAME→RESPOND | Manual validation across 8 test objections (price, time, partner, fear, logistical, smokescreen variants) | ≥88% effective reframe | 88% (7/8 produced genuine reframes vs. counter-arguments) | ✅ MEET |
 | **Chain-of-Thought Structure** | `src/chatbot/content.py:objection_prompt (lines 336-358)` | O1: Objection handling | Wei et al. (2022) framework validation; explicit IDENTIFY→RECALL→CONNECT→REFRAME steps | Structured reasoning steps visible in prompt | 100% present; 88% execution rate | ✅ PASS |
-| **Tone Matching Mechanism** | `src/chatbot/analysis.py:extract_user_keywords() + content.py:prompt injection` | O2: Tone matching across buyer personas | Behavioral output assessment across 12 personas (casual, formal, technical, price-sensitive, impatient, technical) | ≥90% | 95% (11/12 personas matched; 1 partial) | ✅ EXCEED |
-| **Few-Shot Examples** | `src/chatbot/content.py:inline examples (lines 695-721)` | O2: Tone matching | Embedding 4 concrete bad/good examples in each stage prompt | Reduce tone mismatches via example-guided behavior | 62% → 95% improvement post-addition | ✅ EXCEED |
+| **Tone Matching Mechanism** | `src/chatbot/analysis.py:extract_user_keywords() + content.py:prompt injection` | O2: Tone matching across buyer personas | Behavioural output assessment across 12 personas (casual, formal, technical, price-sensitive, impatient, technical) | ≥90% | 95% (11/12 personas matched; 1 partial) | ✅ EXCEED |
+| **Few-Shot Examples** | `src/chatbot/content.py:inline examples (lines 695-721)` | O2: Tone matching | Embedding 4 concrete bad/good examples in each stage prompt | Reduce tone mismatches via example-guided behaviour | 62% → 95% improvement post-addition | ✅ EXCEED |
 | **Product Configuration** | `src/config/product_config.yaml` (126 lines, 10 product types) | R2: Dual flow configurations; NF5: YAML flexibility | No code changes required to add product; strategy assignment per product | Enable 10 distinct product scenarios without code duplication | 10/10 configured; 0 code changes needed to switch | ✅ EXCEED |
 | **Signal Detection Config** | `src/config/signals.yaml` (89 lines) | R3: Adaptive prompts based on signals | YAML-driven keyword lists for intent, doubt, stakes, guardedness, directness | Reconfigure all advancement signals without Python changes | 100% verified (17-term doubt_keywords (reduced from 25 after false-positive audit); 15-term intent_signals) | ✅ PASS |
 | **Analysis Config** | `src/config/analysis_config.yaml` (47 lines) | R3, O1: Stage advancement conditions | Threshold values for keyword matching, max_turns safety valves | Deterministic advancement conditions per stage | 100% loaded and applied (5 stages × 3 advancement types) | ✅ PASS |
@@ -51,7 +51,7 @@
 
 Sample sizes and validation methodologies, while rigorous, are appropriately scoped for Final Year Project requirements:
 
-- **Behavioral validation samples** (25 conversations, 8 objections, 12 personas): Valid for FYP-level confidence. Recommend 100+ conversations for production deployment claims.
+- **Behavioural validation samples** (25 conversations, 8 objections, 12 personas): Valid for FYP-level confidence. Recommend 100+ conversations for production deployment claims.
 - **Manual measurement** (rubric-based annotation, documented below): Repeatable; not A/B tested vs. end-users.
 - **Automated test coverage** (395 unit + integration tests): 100% passing; 0 deprecated tests.
 - **Load testing**: 20 concurrent users validated; not stress-tested at 500+ scale.
@@ -77,7 +77,7 @@ Sample sizes and validation methodologies, while rigorous, are appropriately sco
 
 ### B.2.1 Validation Rubrics: Manual Measurement Framework
 
-Manual validation (behavioral assessment) operationalized via **5-point Likert scales** for each metric:
+Manual validation (behavioural assessment) operationalized via **5-point Likert scales** for each metric:
 
 | Objective | Rubric | Criterion | FYP Scope |
 |---|---|---|---|

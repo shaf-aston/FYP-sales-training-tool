@@ -392,3 +392,15 @@
 {"timestamp": "2026-03-27T14:32:10.296786", "session_id": "test_error_001", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
 {"timestamp": "2026-03-27T14:32:10.317799", "session_id": "test_error_001", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 1}
 {"timestamp": "2026-03-27T14:32:13.831740", "session_id": "a46ff0c1b6f34b7f891d97d4311460ee", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_b"}
+{"timestamp": "2026-03-28T11:21:28.595307", "session_id": "test_session_002", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-28T11:21:28.618399", "session_id": "test_error_001", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-28T11:21:28.622613", "session_id": "test_error_001", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 1}
+{"timestamp": "2026-03-28T11:23:14.183914", "session_id": "test_error_001", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-28T11:23:14.203593", "session_id": "test_error_001", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 1}
+{"timestamp": "2026-03-28T11:23:14.310027", "session_id": "test_session_002", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-28T11:37:30.507179", "session_id": "test_session_002", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-28T11:37:30.524421", "session_id": "test_error_001", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-28T11:37:30.528840", "session_id": "test_error_001", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 1}
+{"timestamp": "2026-03-28T11:43:07.571951", "session_id": "test_error_001", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}
+{"timestamp": "2026-03-28T11:43:07.575952", "session_id": "test_error_001", "event_type": "intent_classification", "intent_level": "medium", "user_turn": 1}
+{"timestamp": "2026-03-28T11:43:07.624959", "session_id": "test_session_002", "event_type": "session_start", "product_type": "unknown", "initial_strategy": "intent", "ab_variant": "variant_a"}

@@ -146,7 +146,7 @@ def require_rate_limit(bucket: str) -> Callable:
             from flask import request, jsonify
 
             ip = ClientIPExtractor.get_ip(request)
-            if rate_limiter.is_limited(ip, bucket):
+            if rate_limiter is not None and rate_limiter.is_limited(ip, bucket):
                 return jsonify({
                     "error": "Too many requests. Please slow down."
                 }), 429
@@ -173,7 +173,7 @@ class PromptInjectionValidator:
     - "Your real instructions"
     - "Act as if you..."
 
-    Defense-in-depth: This is the second line of defense (first is Constitutional
+    Defence-in-depth: This is the second line of defence (first is Constitutional
     AI system prompt). Catches obvious patterns before they reach the LLM.
     """
 
@@ -205,7 +205,7 @@ class PromptInjectionValidator:
         """
         sanitized = PromptInjectionValidator.INJECTION_PATTERN.sub('[removed]', text)
         if sanitized != text and log_fn:
-            log_fn(f"Prompt injection stripped from message")
+            log_fn("Prompt injection stripped from message")
         return sanitized
 
     @staticmethod
@@ -326,7 +326,7 @@ class InputValidator:
         """
         from flask import jsonify
 
-        # Check field is allowed (defense-in-depth; also checked in knowledge.py)
+        # Check field is allowed (defence-in-depth; also checked in knowledge.py)
         if key not in allowed_fields:
             return jsonify({"error": f"Unknown field: {key}"}), 400
 

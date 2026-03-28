@@ -1,5 +1,7 @@
 """Voice mode endpoints — STT, TTS, and full voice-to-voice chat."""
 
+# pyright: ignore[reportGeneralTypeIssues]  # Flask Blueprint dynamic attribute injection
+
 from flask import Blueprint, request, jsonify, Response
 import base64
 from chatbot.constants import MAX_AUDIO_SIZE_BYTES, MAX_TTS_TEXT_LENGTH
@@ -19,10 +21,10 @@ def init_routes(app, require_session_func, validate_message_func, bot_state_func
         validate_message_func: Function to validate message text
         bot_state_func: Function to extract bot state dict
     """
-    bp.app = app
-    bp.require_session = require_session_func
-    bp.validate_message = validate_message_func
-    bp.bot_state = bot_state_func
+    bp.app = app  # type: ignore[attr-defined]
+    bp.require_session = require_session_func  # type: ignore[attr-defined]
+    bp.validate_message = validate_message_func  # type: ignore[attr-defined]
+    bp.bot_state = bot_state_func  # type: ignore[attr-defined]
 
 
 def get_voice_provider():
@@ -52,7 +54,7 @@ def voice_status():
             "error": f"Voice dependencies not installed: {e}",
         })
     except Exception as e:
-        bp.app.logger.exception(f"Voice status error: {e}")
+        bp.app.logger.exception(f"Voice status error: {e}")  # type: ignore
         return jsonify({"success": False, "error": str(e)}), 500
 
 
@@ -95,7 +97,7 @@ def voice_transcribe():
         })
 
     except Exception as e:
-        bp.app.logger.exception(f"Voice transcribe error: {e}")
+        bp.app.logger.exception(f"Voice transcribe error: {e}")  # type: ignore
         return jsonify({"error": "Transcription failed. Please retry."}), 500
 
 
@@ -134,7 +136,7 @@ def voice_synthesize():
         )
 
     except Exception as e:
-        bp.app.logger.exception(f"Voice synthesize error: {e}")
+        bp.app.logger.exception(f"Voice synthesize error: {e}")  # type: ignore
         return jsonify({"error": "Synthesis failed. Please retry."}), 500
 
 
@@ -150,7 +152,7 @@ def voice_chat():
     if 'audio' not in request.files:
         return jsonify({"error": "No audio file provided. Use 'audio' field."}), 400
 
-    bot, err = bp.require_session()
+    bot, err = bp.require_session()  # type: ignore
     if err:
         return err
 
@@ -184,7 +186,7 @@ def voice_chat():
             return jsonify({"success": False, "error": "No speech detected in audio"}), 400
 
         # Validate transcribed message (security check)
-        clean_message, val_err = bp.validate_message(user_message)
+        clean_message, val_err = bp.validate_message(user_message)  # type: ignore
         if val_err:
             return val_err
 
@@ -204,7 +206,7 @@ def voice_chat():
             "success": True,
             "transcription": user_message,
             "message": response.content,
-            **bp.bot_state(bot),
+            **bp.bot_state(bot),  # type: ignore
             "audio": audio_b64,
             "audio_type": synthesis.content_type if not synthesis.error else "",
             "voice": synthesis.voice,
@@ -224,5 +226,5 @@ def voice_chat():
         })
 
     except Exception as e:
-        bp.app.logger.exception(f"Voice chat error: {e}")
+        bp.app.logger.exception(f"Voice chat error: {e}")  # type: ignore
         return jsonify({"error": "Voice chat failed. Please retry."}), 500

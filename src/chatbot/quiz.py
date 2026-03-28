@@ -12,13 +12,9 @@ from .loader import load_yaml
 from .utils import clamp_score, extract_json_from_llm
 
 
-# =============================================================================
-# Configuration Loading
-# =============================================================================
-
 _quiz_config = None
 
-# Valid LLM output enums — anything outside these falls back to default
+# valid enums; anything else falls back
 _ALIGNMENT_VALUES = {"strong", "partial", "weak"}
 _UNDERSTANDING_VALUES = {"excellent", "good", "partial", "needs_work"}
 
@@ -44,14 +40,12 @@ def get_stage_rubric(stage: str, strategy: str) -> dict:
     config = _load_quiz_config()
     stages = config.get("stages", {})
 
-    # Map "intent" strategy to consultative for rubric lookup
     lookup_strategy = "consultative" if strategy == "intent" else strategy
 
     strategy_stages = stages.get(lookup_strategy, {})
     rubric = strategy_stages.get(stage, None)
 
     if rubric is None:
-        # Fallback rubric for unknown stages
         return {
             "goal": f"Complete the {stage} stage",
             "advance_when": "Stage objectives are met",
@@ -74,13 +68,10 @@ def get_quiz_question(quiz_type: str) -> str:
     config = _load_quiz_config()
     questions = config.get("questions", {})
 
-    # Normalize quiz type (allow underscore or hyphen)
     normalized_type = quiz_type.replace("-", "_").lower()
-
     type_questions = questions.get(normalized_type, [])
 
     if not type_questions:
-        # Fallback questions
         fallbacks = {
             "stage": "What stage and strategy are we currently in?",
             "next_move": "What would you say next to this customer?",
@@ -90,10 +81,6 @@ def get_quiz_question(quiz_type: str) -> str:
 
     return random.choice(type_questions)
 
-
-# =============================================================================
-# Stage Quiz (Deterministic)
-# =============================================================================
 
 def evaluate_stage_quiz(user_answer: str, bot: Any) -> dict:
     """Evaluate stage identification quiz.
@@ -117,16 +104,9 @@ def evaluate_stage_quiz(user_answer: str, bot: Any) -> dict:
     expected_stage = bot.flow_engine.current_stage
     expected_strategy = bot.flow_engine.flow_type
 
-    # Normalize answer for comparison
     answer_lower = user_answer.strip().lower()
-
-    # Check for stage match (substring — no collision risk between stage names)
     stage_correct = expected_stage.lower() in answer_lower
-
-    # Check for strategy match
     strategy_correct = expected_strategy.lower() in answer_lower
-
-    # Both must be correct
     correct = stage_correct and strategy_correct
 
     feedback = _generate_stage_feedback(
@@ -157,7 +137,6 @@ def _generate_stage_feedback(
     if correct:
         return f"Correct! We're in the {stage.upper()} stage using {strategy.upper()} strategy."
 
-    # Provide specific feedback on what was wrong
     if not stage_correct and not strategy_correct:
         return (
             f"Not quite. We're actually in the {stage.upper()} stage "
@@ -174,10 +153,6 @@ def _generate_stage_feedback(
             f"We're using {strategy.upper()} ({stage.upper()} stage)."
         )
 
-
-# =============================================================================
-# Next Move Quiz (LLM-based)
-# =============================================================================
 
 def evaluate_next_move_quiz(
     user_response: str,
@@ -207,7 +182,6 @@ def evaluate_next_move_quiz(
     strategy = bot.flow_engine.flow_type
     rubric = get_stage_rubric(stage, strategy)
 
-    # Build evaluation prompt
     eval_prompt = f"""You are evaluating a sales trainee's proposed response.
 
 CONTEXT:
@@ -245,7 +219,6 @@ Return your evaluation as JSON:
 
         response = bot.provider.chat(messages, temperature=0.3, max_tokens=300)
 
-        # Extract JSON from LLM response
         result = extract_json_from_llm(response.content)
         if result:
             alignment = result.get("alignment")
@@ -257,9 +230,8 @@ Return your evaluation as JSON:
                 "improvements": result.get("improvements", []),
             }
     except Exception:
-        pass  # Fall through to fallback
+        pass
 
-    # Fallback if LLM evaluation fails
     return {
         "score": None,
         "alignment": "unknown",
@@ -268,10 +240,6 @@ Return your evaluation as JSON:
         "improvements": [],
     }
 
-
-# =============================================================================
-# Direction Quiz (LLM-based)
-# =============================================================================
 
 def evaluate_direction_quiz(user_explanation: str, bot: Any) -> dict:
     """Evaluate direction/strategy quiz using LLM.
@@ -335,7 +303,6 @@ Return your evaluation as JSON:
 
         response = bot.provider.chat(messages, temperature=0.3, max_tokens=300)
 
-        # Extract JSON from LLM response
         result = extract_json_from_llm(response.content)
         if result:
             understanding = result.get("understanding")
@@ -347,9 +314,8 @@ Return your evaluation as JSON:
                 "key_concepts_missed": result.get("key_concepts_missed", []),
             }
     except Exception:
-        pass  # Fall through to fallback
+        pass
 
-    # Fallback
     return {
         "score": None,
         "understanding": "unknown",

@@ -9,7 +9,7 @@ Date: 21 March 2026
 
 **Scope:** 10 architectural and implementation issues identified across `app.py`, `security.py`, `prospect.py`, `loader.py`, `chatbot.py`, `analysis.py`, `performance.py`, `quiz.py`, and `content.py`.
 
-**Actions taken:** 3 high/medium priority issues fixed (dual session management, double LLM call, cache key normalization). 4 issues deferred as low-impact or requiring disproportionate refactor effort. 3 suggestions categorized as academic enhancements not applicable to current development phase.
+**Actions taken:** 3 high/medium priority issues fixed (dual session management, double LLM call, cache key normalization). 4 issues deferred as low-impact or requiring disproportionate refactor effort. 3 suggestions categorised as academic enhancements not applicable to current development phase.
 
 ---
 
@@ -28,7 +28,7 @@ Date: 21 March 2026
 **Files changed:**
 - `src/web/app.py`: Lines 66-73 (initialization), lines 684-721 (cleanup functions removed), prospect endpoints simplified
 
-**Impact:** Eliminates architectural inconsistency. Reduces maintenance surface area. Both session types now use identical cleanup behavior.
+**Impact:** Eliminates architectural inconsistency. Reduces maintenance surface area. Both session types now use identical cleanup behaviour.
 
 ---
 
@@ -46,19 +46,19 @@ Date: 21 March 2026
 **Files changed:**
 - `src/chatbot/prospect.py`: Lines 296-341 (replaced LLM rating with deterministic scoring)
 
-**Impact:** Halves prospect mode latency. Zero functional change to readiness score behavior (keyword-based scoring correlates well with LLM ratings based on turn testing).
+**Impact:** Halves prospect mode latency. Zero functional change to readiness score behaviour (keyword-based scoring correlates well with LLM ratings based on turn testing).
 
 ---
 
 ### ✅ FIXED — Low Priority
 
 #### Issue #6: Cache key normalization bug (Low severity)
-**Problem:** `QuickMatcher.match_product()` decorated with `@lru_cache(maxsize=128)` but `normalize()` called inside the function. Cache key was raw text, so `"Cars"` and `"cars"` cached separately despite identical normalized form.
+**Problem:** `QuickMatcher.match_product()` decorated with `@lru_cache(maxsize=128)` but `normalise()` called inside the function. Cache key was raw text, so `"Cars"` and `"cars"` cached separately despite identical normalised form.
 
 **Fix applied:**
 - Extracted cached logic into private `_match_product_normalized(normalized_text)` method
 - Public `match_product()` now normalizes then delegates to cached method
-- Cache now operates on normalized text, maximizing hit rate
+- Cache now operates on normalised text, maximizing hit rate
 
 **Files changed:**
 - `src/chatbot/loader.py`: Lines 311-369 (split method into public wrapper + private cached implementation)
@@ -83,7 +83,7 @@ content/
 
 **Disposition: DEFERRED**
 
-**Rationale:** This is a large refactor with significant risk of introducing regressions in prompt behavior. The coupling described is real, but `content.py` is working correctly and the module boundary (prompt generation) is well-defined. Unit testing challenge acknowledged as limitation but does not justify refactor risk at this stage of development. Would be appropriate for post-FYP maintenance if system enters production use.
+**Rationale:** This is a large refactor with significant risk of introducing regressions in prompt behaviour. The coupling described is real, but `content.py` is working correctly and the module boundary (prompt generation) is well-defined. Unit testing challenge acknowledged as limitation but does not justify refactor risk at this stage of development. Would be appropriate for post-FYP maintenance if system enters production use.
 
 ---
 
@@ -172,7 +172,7 @@ def _detect_and_switch_strategy(self, user_message) -> bool:
 ## 🔍 ARCHITECTURAL OBSERVATIONS (No Action Required)
 
 ### content.py Complexity
-While `content.py` is 600+ lines, it serves a single clear purpose: prompt generation. The coupling is internal to that responsibility. Module extraction (acknowledgment.py, overrides.py, etc.) would improve testability but risk regression in prompt behavior. Current implementation is internally complex but externally well-bounded.
+While `content.py` is 600+ lines, it serves a single clear purpose: prompt generation. The coupling is internal to that responsibility. Module extraction (acknowledgment.py, overrides.py, etc.) would improve testability but risk regression in prompt behaviour. Current implementation is internally complex but externally well-bounded.
 
 **Design principle observed:** Prompt engineering is empirical and tightly coupled by nature. Each component (base rules, adaptations, overrides, acknowledgment) interacts with the others to produce the final prompt. Splitting into separate modules creates coordination complexity that may exceed the testing benefit.
 

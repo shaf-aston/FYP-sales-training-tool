@@ -55,14 +55,14 @@ return has_signal or turns >= max_turns  # ✓ Safety valve: 10 turns, not 5
 ## Constructed Scenario: Trading Mentorship Consultation
 
 ### Setup
-- **Product**: Trading mentorship program
+- **Product**: Trading mentorship programme
 - **Strategy**: Consultative (NEPQ 5-stage)
 - **Current FSM state**: User has stated intent ("help with trading"). FSM is now in **logical stage**.
 - **Goal of logical stage**: Establish doubt in the user's current trading approach
 
 ---
 
-## BEFORE: Bug Behavior (turns >= 5 auto-advances)
+## BEFORE: Bug Behaviour (turns >= 5 auto-advances)
 
 ### Conversation Trace
 
@@ -88,7 +88,7 @@ The Future Pacing question presupposes a problem ("help you...become better"), b
 
 ---
 
-## AFTER: Fixed Behavior (keyword-based with 10-turn safety valve)
+## AFTER: Fixed Behaviour (keyword-based with 10-turn safety valve)
 
 ### Same Conversation, But with New Logic
 

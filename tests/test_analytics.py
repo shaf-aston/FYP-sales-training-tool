@@ -35,7 +35,7 @@ def test_variant_prompt():
     # Should return base if variants.yaml doesn't exist or variant not found
     result_a = get_variant_prompt(base, "variant_a")
     assert result_a is not None, "Variant prompt returned None"
-    print(f"  [OK] get_variant_prompt returns result (fallback to base if variants.yaml missing)")
+    print("  [OK] get_variant_prompt returns result (fallback to base if variants.yaml missing)")
 
 
 def test_analytics_recording():
@@ -115,7 +115,7 @@ def test_evaluation_summary():
     assert "stage_reach" in summary, "Summary missing stage_reach"
     assert "intent_distribution" in summary, "Summary missing intent_distribution"
     assert "objection_types" in summary, "Summary missing objection_types"
-    print(f"  [OK] Evaluation summary structure valid")
+    print("  [OK] Evaluation summary structure valid")
     print(f"    - Total sessions: {summary.get('total_sessions', 0)}")
     print(f"    - Stages reached: {summary.get('stage_reach', {})}")
     print(f"    - Intent distribution: {summary.get('intent_distribution', {})}")

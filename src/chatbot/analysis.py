@@ -19,7 +19,7 @@ class ConversationState:
 
     Attributes:
         intent: User intent level ("low", "medium", "high")
-        guarded: Whether user is showing defensive/evasive behavior
+        guarded: Whether user is showing defensive/evasive behaviour
         question_fatigue: Whether bot has asked too many questions recently
         decisive: Whether user is ready to make a decision (high intent + not guarded)
     """
@@ -118,7 +118,7 @@ def _has_user_stated_clear_goal(history) -> bool:
 def classify_intent_level(history, user_message="", signal_keywords=None) -> str:
     """Classify current intent level as "low", "medium", or "high".
 
-    Uses the same intent-lock behavior as analyze_state so all callers share
+    Uses the same intent-lock behaviour as analyze_state so all callers share
     one consistent intent model.
     """
     if signal_keywords is None:
@@ -205,6 +205,8 @@ def analyze_state(
     """
     if signal_keywords is None:
         signal_keywords = load_signals()
+
+    assert signal_keywords is not None  # Type narrowing for pyright
 
     intent = classify_intent_level(history, user_message, signal_keywords=signal_keywords)
 

@@ -3,7 +3,7 @@
 Test-first approach for deterministic quiz evaluation.
 Run: pytest tests/test_quiz.py -v
 """
-from helpers import MockFlowEngine, MockBot
+from helpers import MockBot
 
 
 # =============================================================================

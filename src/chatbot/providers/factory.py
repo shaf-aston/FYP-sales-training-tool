@@ -1,19 +1,17 @@
 """Provider factory - one-liner provider creation with automatic fallback"""
 from .base import BaseLLMProvider
 from .groq_provider import GroqProvider
-from .openrouter_provider import OpenRouterProvider
 from .sambanova_provider import SambaNovaProvider
 from .dummy_provider import DummyProvider
 
 # Provider registry
 PROVIDERS = {
     "groq": GroqProvider,
-    "openrouter": OpenRouterProvider,
     "sambanova": SambaNovaProvider,
     "dummy": DummyProvider,
 }
 
-def create_provider(provider_type: str = None, model: str = None) -> BaseLLMProvider:
+def create_provider(provider_type: str | None = None, model: str | None = None) -> BaseLLMProvider:
     """Create provider instance with automatic fallback to env variable/default"""
     provider_type = (provider_type or "groq").lower()
     
