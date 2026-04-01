@@ -211,8 +211,8 @@ class TestBuildSearchQuery:
         assert "facts" in q
 
     def test_none_objection_falls_back_to_explicit(self):
-        q = build_search_query(None, "jewelry", self._TEMPLATES)
-        assert "jewelry" in q
+        q = build_search_query(None, "jewellery", self._TEMPLATES)
+        assert "jewellery" in q
 
     def test_empty_product_type_uses_fallback_keyword(self):
         q = build_search_query("money", "", self._TEMPLATES)

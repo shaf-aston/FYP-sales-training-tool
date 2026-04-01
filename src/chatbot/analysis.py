@@ -306,7 +306,7 @@ def detect_acknowledgment_context(
     history: list[dict[str, str]],
     state: ConversationState,
 ) -> str:
-    """Determine if/how acknowledgment is psychologically warranted this turn.
+    """Determine if/how acknowledgment is psychologically warranted this turn
 
     Returns: "full" | "light" | "none"
       "full"  → User shared vulnerability or emotional content — validate before moving on

@@ -1,7 +1,5 @@
 """Voice mode endpoints — STT, TTS, and full voice-to-voice chat."""
 
-# pyright: ignore[reportGeneralTypeIssues]  # Flask Blueprint dynamic attribute injection
-
 from flask import Blueprint, request, jsonify, Response
 import base64
 from chatbot.constants import MAX_AUDIO_SIZE_BYTES, MAX_TTS_TEXT_LENGTH

@@ -7,7 +7,7 @@ import os
 import sys
 
 from chatbot.chatbot import SalesChatbot
-from chatbot.performance import PerformanceTracker
+from chatbot.analytics.performance import PerformanceTracker
 from chatbot.providers import get_available_providers
 
 

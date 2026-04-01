@@ -83,7 +83,7 @@ class TestProspectState:
     """Test ProspectState data structure behavior."""
 
     def test_initial_readiness_matches_difficulty(self):
-        from chatbot.prospect import ProspectState
+        from chatbot.prospect.prospect import ProspectState
         from chatbot.loader import load_prospect_config as _load_prospect_config
         config = _load_prospect_config()
         for diff, profile in config["difficulty_profiles"].items():
@@ -102,22 +102,22 @@ class TestProspectState:
         assert _clamp(1.5) == 1.0
 
     def test_status_active(self):
-        from chatbot.prospect import ProspectState
+        from chatbot.prospect.prospect import ProspectState
         state = ProspectState(readiness=0.5)
         assert state.status == "active"
 
     def test_status_sold(self):
-        from chatbot.prospect import ProspectState
+        from chatbot.prospect.prospect import ProspectState
         state = ProspectState(readiness=0.9, has_committed=True)
         assert state.status == "sold"
 
     def test_status_walked(self):
-        from chatbot.prospect import ProspectState
+        from chatbot.prospect.prospect import ProspectState
         state = ProspectState(readiness=0.1, has_walked=True)
         assert state.status == "walked"
 
     def test_to_dict(self):
-        from chatbot.prospect import ProspectState
+        from chatbot.prospect.prospect import ProspectState
         state = ProspectState(
             readiness=0.65,
             objections_raised=2,
@@ -141,13 +141,13 @@ class TestPersonaSelection:
     """Test persona selection logic."""
 
     def test_general_personas_returned(self):
-        from chatbot.prospect import select_persona
+        from chatbot.prospect.prospect import select_persona
         persona = select_persona("nonexistent_product", "easy")
         assert "name" in persona
         assert "needs" in persona
 
     def test_product_specific_persona_exists(self):
-        from chatbot.prospect import select_persona
+        from chatbot.prospect.prospect import select_persona
         persona = select_persona("luxury_cars", "medium")
         assert "name" in persona
         # Should get a luxury car persona, not a general one
@@ -162,14 +162,14 @@ class TestPromptBuilding:
     """Test system prompt construction."""
 
     def test_persona_name_in_prompt(self):
-        from chatbot.prospect import ProspectSession
+        from chatbot.prospect.prospect import ProspectSession
         # We need to mock the provider to avoid actual LLM calls
         session = ProspectSession.__new__(ProspectSession)
         session.persona = {"name": "TestUser", "background": "Test", "personality": "Nice",
                           "needs": ["speed"], "pain_points": ["slow"], "budget": "$100"}
         session.product_type = "default"
         session.product_context = "test products"
-        session.state = __import__("chatbot.prospect", fromlist=["ProspectState"]).ProspectState(
+        session.state = __import__("chatbot.prospect.prospect", fromlist=["ProspectState"]).ProspectState(
             readiness=0.5, difficulty="easy", persona=session.persona
         )
         config = __import__("chatbot.loader", fromlist=["load_prospect_config"]).load_prospect_config()
@@ -180,7 +180,7 @@ class TestPromptBuilding:
         assert "TestUser" in prompt
 
     def test_difficulty_rules_in_prompt(self):
-        from chatbot.prospect import ProspectSession, ProspectState
+        from chatbot.prospect.prospect import ProspectSession, ProspectState
         from chatbot.loader import load_prospect_config
         config = load_prospect_config()
 
@@ -230,7 +230,7 @@ class TestEvaluator:
     """Test evaluation utilities."""
 
     def test_grade_from_score(self):
-        from chatbot.prospect_evaluator import _grade_from_score
+        from chatbot.prospect.prospect_evaluator import _grade_from_score
         assert _grade_from_score(95) == "A"
         assert _grade_from_score(85) == "B"
         assert _grade_from_score(75) == "C"
@@ -238,7 +238,7 @@ class TestEvaluator:
         assert _grade_from_score(50) == "F"
 
     def test_fallback_evaluation(self):
-        from chatbot.prospect_evaluator import _fallback_evaluation
+        from chatbot.prospect.prospect_evaluator import _fallback_evaluation
         result = _fallback_evaluation("walked")
         assert result["overall_score"] == 50
         assert result["grade"] == "C"
@@ -246,7 +246,7 @@ class TestEvaluator:
         assert len(result["criteria_scores"]) == 5
 
     def test_build_evaluation_weights(self):
-        from chatbot.prospect_evaluator import _build_evaluation
+        from chatbot.prospect.prospect_evaluator import _build_evaluation
         from chatbot.loader import load_prospect_config
         config = load_prospect_config()
         criteria = config["evaluation"]["criteria"]
@@ -281,7 +281,7 @@ class TestSerialization:
     """Test ProspectState and session serialization."""
 
     def test_state_roundtrip(self):
-        from chatbot.prospect import ProspectState
+        from chatbot.prospect.prospect import ProspectState
         state = ProspectState(
             readiness=0.75,
             objections_raised=2,

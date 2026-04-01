@@ -133,13 +133,13 @@ def _bot_state(bot):
 # Blueprint modules must be imported AFTER app initialization (app needs to exist).
 # E402 suppressed because this is an intentional Flask pattern.
 
-from web.routes import session, chat, prospect, voice, analytics, debug  # noqa: E402
+from web.routes import session, chat, prospect, voice, analytics, debug
 
 session.init_routes(app, session_manager, get_session, set_session, delete_session, _bot_state)
 chat.init_routes(app, get_session, require_session, _validate_message, _bot_state)
 prospect.init_routes(app, prospect_session_manager, _validate_message)
 voice.init_routes(app, require_session, _validate_message, _bot_state)
-analytics.init_routes(app, require_session)
+analytics.init_routes(app, require_session, _bot_state)
 debug.init_routes(app, require_session)
 
 app.register_blueprint(session.bp)

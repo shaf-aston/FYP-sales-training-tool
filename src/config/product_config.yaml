@@ -1,4 +1,4 @@
-# Sales strategy config per product
+# Bot is the Seller
 # strategy: which FSM flow to use (consultative / transactional / intent)
 # aliases: alternative names that map to the same product
 # knowledge: injected into the LLM system prompt at runtime
@@ -56,9 +56,9 @@ products:
       Key differentiators: Essential=affordable entry-level, Family Shield=comprehensive family cover, Premium=full protection with extras.
       Additional context: Claims processed within 48 hours. 15% multi-policy discount. A+ rated by AM Best. Average life insurance cost in 2026 is $26/month nationally — our plans include bundled benefits beyond basic life cover.
 
-  jewelry:
+  jewellery:
     strategy: "consultative"
-    context: "fine jewelry and engagement rings"
+    context: "fine jewellery and engagement rings"
     aliases: ["rings", "engagement", "diamonds", "necklace", "bracelet"]
     knowledge: |
       Available pieces:

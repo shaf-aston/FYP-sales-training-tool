@@ -101,9 +101,7 @@ def user_has_clear_intent(history: list[dict[str, str]], user_msg: str, turns: i
     if intent_level == "high":
         return True
 
-    # Allow turn-based advancement for intent stage only
-    max_turns = 4 if intent_level == "high" else 6
-    return turns >= max_turns
+    return turns >= 6
 
 
 def _check_advancement_condition(
@@ -201,6 +199,11 @@ class SalesFlowEngine:
         self.conversation_history = []
 
     @property
+    def user_turn_count(self) -> int:
+        """Number of user messages in conversation history."""
+        return sum(1 for m in self.conversation_history if m.get("role") == "user")
+
+    @property
     def strategy_for_prompts(self):
         """Map flow_type to the strategy key used by content.py prompts.
 
@@ -211,12 +214,13 @@ class SalesFlowEngine:
             return self.flow_type
         return Strategy.CONSULTATIVE
 
-    def get_current_prompt(self, user_message: str = "", objection_data: dict | None = None) -> str:
+    def get_current_prompt(self, user_message: str = "", objection_data: dict | None = None, pre_state=None) -> str:
         """Generate system prompt for current stage via content.py.
 
         Args:
             user_message: The current user input
             objection_data: Pre-computed objection classification (avoids redundant calls)
+            pre_state: Pre-computed ConversationState (avoids redundant analyze_state call)
         """
         return generate_stage_prompt(
             strategy=self.strategy_for_prompts,
@@ -225,6 +229,7 @@ class SalesFlowEngine:
             history=self.conversation_history,
             user_message=user_message,
             objection_data=objection_data,
+            pre_state=pre_state,
         )
 
     def get_advance_target(self, user_message: str) -> Optional[str]:

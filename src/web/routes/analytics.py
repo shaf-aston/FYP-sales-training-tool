@@ -1,23 +1,23 @@
 """Analytics, quiz, and knowledge management endpoints."""
 
-# pyright: ignore[reportGeneralTypeIssues]  # Flask Blueprint dynamic attribute injection
-
 from flask import Blueprint, request, jsonify
-from chatbot.session_analytics import SessionAnalytics
+from chatbot.analytics.session_analytics import SessionAnalytics
 from chatbot.knowledge import load_custom_knowledge, save_custom_knowledge, clear_custom_knowledge, ALLOWED_FIELDS, MAX_FIELD_LENGTH
 
 bp = Blueprint('analytics', __name__, url_prefix='/api')
 
 
-def init_routes(app, require_session_func):
+def init_routes(app, require_session_func, bot_state_func=None):
     """Initialize analytics routes with dependency injection.
 
     Args:
         app: Flask app (for logger access)
         require_session_func: Function to validate and return (bot, error)
+        bot_state_func: Function to extract bot state dict
     """
     bp.app = app  # type: ignore[attr-defined]
     bp.require_session = require_session_func  # type: ignore[attr-defined]
+    bp.bot_state = bot_state_func  # type: ignore[attr-defined]
 
 
 # ============================================================================
@@ -33,20 +33,14 @@ def quiz_get_question():
         return err
 
     quiz_type = request.args.get('type', 'stage')
-    from chatbot.quiz import get_quiz_question
+    from chatbot.training.quiz import get_quiz_question
     question = get_quiz_question(quiz_type)
-
-    # Extract bot state (inline to avoid circular dependency)
-    from chatbot.utils import Strategy
-    stage = "----" if bot.flow_engine.flow_type == Strategy.INTENT else bot.flow_engine.current_stage.upper()
-    strategy = bot.flow_engine.flow_type.upper()
 
     return jsonify({
         "success": True,
         "question": question,
         "type": quiz_type,
-        "stage": stage,
-        "strategy": strategy,
+        **bp.bot_state(bot),  # type: ignore[misc]
     })
 
 
@@ -66,15 +60,10 @@ def quiz_stage():
     if len(answer) > SecurityConfig.MAX_MESSAGE_LENGTH:
         return jsonify({"error": "Answer too long"}), 400
 
-    from chatbot.quiz import evaluate_stage_quiz
+    from chatbot.training.quiz import evaluate_stage_quiz
     result = evaluate_stage_quiz(answer, bot)
 
-    # Extract bot state
-    from chatbot.utils import Strategy
-    stage = "----" if bot.flow_engine.flow_type == Strategy.INTENT else bot.flow_engine.current_stage.upper()
-    strategy = bot.flow_engine.flow_type.upper()
-
-    return jsonify({"success": True, **result, "stage": stage, "strategy": strategy})
+    return jsonify({"success": True, **result, **bp.bot_state(bot)})  # type: ignore[misc]
 
 
 @bp.route('/quiz/next-move', methods=['POST'])
@@ -101,15 +90,10 @@ def quiz_next_move():
             last_user_msg = msg.get("content", "")
             break
 
-    from chatbot.quiz import evaluate_next_move_quiz
+    from chatbot.training.quiz import evaluate_next_move_quiz
     result = evaluate_next_move_quiz(response, bot, last_user_msg)
 
-    # Extract bot state
-    from chatbot.utils import Strategy
-    stage = "----" if bot.flow_engine.flow_type == Strategy.INTENT else bot.flow_engine.current_stage.upper()
-    strategy = bot.flow_engine.flow_type.upper()
-
-    return jsonify({"success": True, **result, "stage": stage, "strategy": strategy})
+    return jsonify({"success": True, **result, **bp.bot_state(bot)})  # type: ignore[misc]
 
 
 @bp.route('/quiz/direction', methods=['POST'])
@@ -128,15 +112,10 @@ def quiz_direction():
     if len(explanation) > SecurityConfig.MAX_MESSAGE_LENGTH:
         return jsonify({"error": "Explanation too long"}), 400
 
-    from chatbot.quiz import evaluate_direction_quiz
+    from chatbot.training.quiz import evaluate_direction_quiz
     result = evaluate_direction_quiz(explanation, bot)
 
-    # Extract bot state
-    from chatbot.utils import Strategy
-    stage = "----" if bot.flow_engine.flow_type == Strategy.INTENT else bot.flow_engine.current_stage.upper()
-    strategy = bot.flow_engine.flow_type.upper()
-
-    return jsonify({"success": True, **result, "stage": stage, "strategy": strategy})
+    return jsonify({"success": True, **result, **bp.bot_state(bot)})  # type: ignore[misc]
 
 
 # ============================================================================

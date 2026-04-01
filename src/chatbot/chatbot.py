@@ -9,12 +9,12 @@ from .loader import get_product_settings, load_signals, assign_ab_variant, load_
 from .analysis import text_contains_any_keyword, classify_objection, should_trigger_web_search, build_search_query
 from .web_search import WebSearchService
 from .flow import SalesFlowEngine
-from .performance import PerformanceTracker
-from .session_analytics import SessionAnalytics
+from .analytics.performance import PerformanceTracker
+from .analytics.session_analytics import SessionAnalytics
 from .session_persistence import SessionPersistence
 from .providers import create_provider
 from .utils import Strategy, Stage
-from . import trainer
+from .training import trainer
 from .constants import (
     RECENT_HISTORY_WINDOW,
     MIN_SECONDS_BETWEEN_SEARCHES,
@@ -121,7 +121,12 @@ class SalesChatbot:
 
     def chat(self, user_message: str) -> ChatResponse:
         """Process user message and return ChatResponse with content + metrics."""
+        from .analysis import analyze_state
+
         recent_history = self.flow_engine.conversation_history[-RECENT_HISTORY_WINDOW:]
+
+        # Pre-compute shared state once (used by prompt assembly + analytics)
+        state = analyze_state(self.flow_engine.conversation_history, user_message)
 
         # Pre-compute objection classification once (used by search, prompt, and analytics)
         objection_data = None
@@ -129,7 +134,7 @@ class SalesChatbot:
             objection_data = classify_objection(user_message, self.flow_engine.conversation_history)
 
         # Assemble system prompt, then optionally append search context
-        system_prompt = self.flow_engine.get_current_prompt(user_message, objection_data=objection_data)
+        system_prompt = self.flow_engine.get_current_prompt(user_message, objection_data=objection_data, pre_state=state)
         search_context = self._maybe_enrich_with_search(user_message, objection_data=objection_data)
         if search_context:
             system_prompt += search_context
@@ -142,14 +147,10 @@ class SalesChatbot:
 
         # Record intent classification on each user turn
         if self.session_id:
-            from .analysis import analyze_state
-            state = analyze_state(self.flow_engine.conversation_history, user_message)
-            intent_level = state.intent
-            user_turn_count = len([m for m in self.flow_engine.conversation_history if m["role"] == "user"]) + 1
             SessionAnalytics.record_intent_classification(
                 session_id=self.session_id,
-                intent_level=intent_level,
-                user_turn_count=user_turn_count
+                intent_level=state.intent,
+                user_turn_count=self.flow_engine.user_turn_count + 1,
             )
 
         request_start = time.time()
@@ -197,7 +198,7 @@ class SalesChatbot:
             # Record objection classification if at OBJECTION stage
             if self.session_id and self.flow_engine.current_stage == Stage.OBJECTION and objection_data:
                 objection_type = objection_data.get("type", "unknown") if isinstance(objection_data, dict) else "unknown"
-                user_turn_count = len([m for m in self.flow_engine.conversation_history if m["role"] == "user"])
+                user_turn_count = self.flow_engine.user_turn_count
                 SessionAnalytics.record_objection_classified(
                     session_id=self.session_id,
                     objection_type=objection_type,
@@ -323,7 +324,7 @@ class SalesChatbot:
                         from_strategy=str(old_strategy),
                         to_strategy=str(self.flow_engine.flow_type),
                         reason="signal_detection",
-                        user_turn_count=len([m for m in self.flow_engine.conversation_history if m["role"] == "user"])
+                        user_turn_count=self.flow_engine.user_turn_count
                     )
                 return
 
@@ -434,8 +435,8 @@ class SalesChatbot:
         """Record session completion for evaluation analytics."""
         if not self.session_id:
             return
-        user_turn_count = len([m for m in self.flow_engine.conversation_history if m["role"] == "user"])
-        bot_turn_count = len([m for m in self.flow_engine.conversation_history if m["role"] == "assistant"])
+        user_turn_count = self.flow_engine.user_turn_count
+        bot_turn_count = len(self.flow_engine.conversation_history) - user_turn_count
         SessionAnalytics.record_session_end(
             session_id=self.session_id,
             final_stage=str(self.flow_engine.current_stage),

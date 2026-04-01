@@ -47,7 +47,7 @@ def prospect_init():
     session_id = secrets.token_hex(16)
 
     try:
-        from chatbot.prospect import ProspectSession
+        from chatbot.prospect.prospect import ProspectSession
         ps = ProspectSession(
             provider_type=provider,
             product_type=product_type,

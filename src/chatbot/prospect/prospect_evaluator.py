@@ -3,8 +3,8 @@
 Evaluates the user's sales performance across 5 criteria using a single LLM call
 with the full conversation history.
 """
-from .loader import load_prospect_config
-from .utils import clamp_score, extract_json_from_llm, range_label
+from ..loader import load_prospect_config
+from ..utils import clamp_score, extract_json_from_llm, range_label
 
 _GRADE_THRESHOLDS = [60, 70, 80, 90]
 _GRADE_LABELS = ["F", "D", "C", "B", "A"]

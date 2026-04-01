@@ -32,7 +32,7 @@ from chatbot.flow import (
 )
 from chatbot.prompts import get_base_rules, _SHARED_RULES
 from chatbot.analysis import analyze_state
-from chatbot.performance import PerformanceTracker, MAX_METRICS_LINES
+from chatbot.analytics.performance import PerformanceTracker, MAX_METRICS_LINES
 from chatbot.loader import load_analysis_config
 from chatbot.chatbot import SalesChatbot
 
@@ -408,18 +408,17 @@ class TestP3_MetricsRotationConstant:
     def test_file_trimmed_when_over_cap(self):
         """Writing more than MAX_METRICS_LINES lines must trigger rotation."""
         with tempfile.NamedTemporaryFile(mode='w', suffix='.jsonl', delete=False) as f:
-            # Pre-fill with MAX_METRICS_LINES lines (threshold for rotation)
             for i in range(MAX_METRICS_LINES):
                 f.write(json.dumps({"seq": i}) + "\n")
             temp_path = f.name
 
         try:
-            # Patch the tracker to use our temp file
-            from chatbot import performance
-            original_file = performance.METRICS_FILE
-            performance.METRICS_FILE = temp_path
+            from chatbot.analytics import performance
+            from chatbot.analytics.jsonl_store import JSONLWriter
+            temp_writer = JSONLWriter(temp_path, MAX_METRICS_LINES, MAX_METRICS_LINES // 2)
+            original_get = performance._get_writer
+            performance._get_writer = lambda: temp_writer
 
-            # Trigger one more write — rotation must occur
             PerformanceTracker.log_stage_latency(
                 session_id="rotation_test",
                 stage="intent",
@@ -434,12 +433,11 @@ class TestP3_MetricsRotationConstant:
             with open(temp_path) as f:
                 lines = f.readlines()
 
-            # File should now be trimmed to ~2500 lines + 1 new entry (< MAX/2 + buffer)
             assert len(lines) <= MAX_METRICS_LINES // 2 + 10, (
                 f"Rotation did not trim the file: {len(lines)} lines remain after rotation"
             )
         finally:
-            performance.METRICS_FILE = original_file
+            performance._get_writer = original_get
             try:
                 os.unlink(temp_path)
             except OSError:

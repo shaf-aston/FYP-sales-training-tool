@@ -7,7 +7,7 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-SESSIONS_DIR = 'sessions'
+SESSIONS_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'sessions')
 
 
 class SessionPersistence:

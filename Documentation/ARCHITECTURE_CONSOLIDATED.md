@@ -1883,7 +1883,7 @@ Products define their sales strategy in `product_config.yaml`:
 | luxury_cars | consultative | High-value, relationship-building |
 | fitness | consultative | Complex, coaching-based |
 | insurance | consultative | Trust-dependent |
-| jewelry | consultative | Emotional purchase |
+| jewellery | consultative | Emotional purchase |
 | financial_services | consultative | High-value, trust-based |
 | budget_fragrances | transactional | Price-driven |
 | watches | transactional | Feature-comparison |

@@ -7,9 +7,9 @@ import random
 import time
 from dataclasses import dataclass, field
 
-from .loader import load_prospect_config, load_signals
-from .providers.factory import create_provider
-from .utils import clamp, range_label
+from ..loader import load_prospect_config, load_signals
+from ..providers.factory import create_provider
+from ..utils import clamp, range_label
 
 # Module-level signal loading (cached via @lru_cache in loader)
 _SIGNALS = load_signals()
@@ -141,10 +141,22 @@ class ProspectSession:
         """Load product knowledge for the prospect's context."""
         try:
             from .loader import load_product_config
+            from .knowledge import get_custom_knowledge_text
+
             products = load_product_config().get("products", {})
             product = products.get(product_type, products.get("default", {}))
             context = product.get("context", "various products and services")
             knowledge = product.get("knowledge", "")
+
+            # Inject custom knowledge if available
+            custom_knowledge = get_custom_knowledge_text()
+            if custom_knowledge:
+                knowledge += (
+                    "\n\n--- BEGIN CUSTOM PRODUCT DATA ---\n"
+                    f"{custom_knowledge}\n"
+                    "--- END CUSTOM PRODUCT DATA ---"
+                )
+
             return f"{context}\n\n{knowledge}" if knowledge else context
         except Exception:
             return "various products and services"

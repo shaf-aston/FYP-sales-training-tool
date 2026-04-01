@@ -1886,3 +1886,78 @@ function setVoiceMode(enabled) {
 function toggleVoiceMode() {
   setVoiceMode(!voiceModeEnabled);
 }
+
+// ============================================
+// TRAINING SCORE UI
+// ============================================
+
+async function scoreSession() {
+  const container = document.getElementById('chatContainer');
+  
+  // Show loading message
+  const loadingMsg = document.createElement('div');
+  loadingMsg.className = 'message bot';
+  loadingMsg.innerHTML = '<div class="message-bubble" style="color:#10b981">Calculating your session score...</div>';
+  container.appendChild(loadingMsg);
+  container.scrollTop = container.scrollHeight;
+
+  try {
+    const headers = { 'Content-Type': 'application/json' };
+    if (_sessionId) {
+      headers['X-Session-ID'] = _sessionId;
+    }
+
+    const response = await fetch('/api/session/score', {
+      method: 'GET',
+      headers: headers
+    });
+    
+    const data = await response.json();
+    loadingMsg.remove();
+    
+    if (data.success && data.score) {
+      renderSessionScore(data.score);
+    } else {
+      loadingMsg.innerHTML = `<div class="message-bubble error">Error: ${data.error || 'Failed to generate score'}</div>`;
+      container.appendChild(loadingMsg);
+    }
+  } catch (err) {
+    loadingMsg.innerHTML = `<div class="message-bubble error">Error connection: ${err}</div>`;
+    container.appendChild(loadingMsg);
+  }
+}
+
+function renderSessionScore(scoreData) {
+  const container = document.getElementById('chatContainer');
+  const scoreCard = document.createElement('div');
+  scoreCard.className = 'message bot';
+  
+  const b = scoreData.breakdown;
+  const m = scoreData.metrics;
+  
+  let html = `
+    <div class="message-bubble" style="background-color: #0f172a; border: 1px solid #10b981; max-width: 80%;">
+      <h3 style="color: #10b981; margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #1e293b; padding-bottom: 5px;">Session Training Score: ${scoreData.total_score}/100</h3>
+      <p style="margin: 0 0 10px 0; font-size: 0.9em; color: #94a3b8;">Breakdown of your interaction:</p>
+      
+      <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.9em;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>Stage Progression (30):</span> <span style="color:#10b981">${b.stage_progression}</span></div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>Signal Detection (25):</span> <span style="color:#10b981">${b.signal_detection}</span></div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>Objection Handling (20):</span> <span style="color:#10b981">${b.objection_handling}</span></div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>Questioning Depth (15):</span> <span style="color:#10b981">${b.questioning_depth}</span></div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>Conv. Length (10):</span> <span style="color:#10b981">${b.conversation_length}</span></div>
+      </div>
+      
+      <div style="margin-top: 10px; font-size: 0.85em; color: #64748b;">
+        <strong>Details:</strong> 
+        Stages Reached: ${m.stages_reached.join(', ') || 'None'}<br>
+        Signal Ratio: ${m.signal_ratio}<br>
+        Total Turns: ${m.turns}
+      </div>
+    </div>
+  `;
+  
+  scoreCard.innerHTML = html;
+  container.appendChild(scoreCard);
+  container.scrollTop = container.scrollHeight;
+}

@@ -33,8 +33,6 @@ __all__ = ["generate_stage_prompt", "generate_init_greeting", "get_prompt", "SIG
 def _get_preference_and_keyword_context(history, preferences):
     """Extract and format user preferences and keywords for prompt context."""
     preference_context = f"\nUSER PREFERENCES: {preferences}\nUSE these to personalize your response." if preferences else ""
-    
-    # We need to make sure extract_user_keywords is imported - added it above
     user_keywords = extract_user_keywords(history)
     keyword_context = ""
     if user_keywords:
@@ -104,6 +102,7 @@ def generate_stage_prompt(
     history: list[dict[str, str]],
     user_message: str = "",
     objection_data: dict | None = None,
+    pre_state=None,
 ) -> str:
     """Build the full system prompt for the current turn.
 
@@ -115,10 +114,10 @@ def generate_stage_prompt(
 
     Args:
         objection_data: Pre-computed objection classification (avoids redundant calls)
+        pre_state: Pre-computed ConversationState (avoids redundant analyze_state call)
     """
-    # Build base prompt and analyze state
     base = get_base_prompt(product_context, strategy, history)
-    state = analyze_state(history, user_message, signal_keywords=SIGNALS)
+    state = pre_state if pre_state is not None else analyze_state(history, user_message, signal_keywords=SIGNALS)
     preferences = extract_preferences(history)
 
     # TIER 1: Check for override conditions (highest priority - early return)

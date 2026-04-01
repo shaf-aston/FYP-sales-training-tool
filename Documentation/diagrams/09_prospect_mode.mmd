@@ -1,20 +1,31 @@
-%%{init: {"theme": "base"}}%%
-%% DIAGRAM 9 — PROSPECT MODE + TRAINING FEATURES
-%% Replaces: old 08_sequence_prospect_mode
-%% Key change: Opening message flow trimmed (was 5 steps for a single LLM call).
-%% Added: trainer.py and quiz.py feature flows as opt sections at the end.
-%% Prospect mode = trainee plays salesperson, AI plays buyer — practice closing the deal.
+---
+title: Prospect Mode & Training Hook Sequences
+---
+%% ==========================================
+%% PURPOSE: Shows the control flow inverted where the Trainee acts as the Salesperson, mapping how the AI buyer scores readiness, combined with the quiz and training feedback hooks.
+%% ==========================================
+%%{init: {"theme": "base", "sequence": {"actorMargin": 30, "messageMargin": 25}}}%%
 
 sequenceDiagram
     autonumber
 
-    participant Br  as Browser
-    participant App as app.py
-    participant PS  as ProspectSession
-    participant PE  as ProspectEvaluator
-    participant Ldr as loader.py
-    participant Pv  as Provider (Groq)
-    participant API as Groq Cloud API
+    box rgba(102,187,106,0.15) Client
+        participant Br  as Browser
+    end
+    box rgba(66,165,245,0.15) Web Layer
+        participant App as app.py
+    end
+    box rgba(171,71,188,0.15) Feature Modules
+        participant PS  as ProspectSession
+        participant PE  as ProspectEvaluator
+    end
+    box rgba(255,167,38,0.15) Core Config
+        participant Ldr as loader.py
+    end
+    box rgba(236,64,122,0.15) Provider Layer
+        participant Pv  as Provider (Groq)
+        participant API as Groq Cloud API
+    end
 
     %% ── Session Start ────────────────────────────────────────────────────────
     Br->>App: POST /api/prospect/start

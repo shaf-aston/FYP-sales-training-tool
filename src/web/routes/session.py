@@ -1,14 +1,16 @@
 """Session lifecycle endpoints — init, restore, reset, health, config."""
 
-# pyright: ignore[reportGeneralTypeIssues]  # Flask Blueprint dynamic attribute injection
+import logging
 
 from flask import Blueprint, request, jsonify
 import secrets
 from chatbot.chatbot import SalesChatbot
 from chatbot.providers import get_available_providers
-from chatbot.performance import PerformanceTracker
+from chatbot.analytics.performance import PerformanceTracker
 from chatbot.content import generate_init_greeting
 from chatbot.loader import QuickMatcher
+
+logger = logging.getLogger(__name__)
 
 bp = Blueprint('session', __name__, url_prefix='/api')
 
@@ -202,6 +204,26 @@ def api_config():
         },
         "strategies": ["consultative", "transactional", "intent"],
     })
+
+
+@bp.route('/score', methods=['GET'])
+def get_score():
+    """Retrieve post-session performance score for the current roleplay session."""
+    session_id = request.headers.get('X-Session-ID')
+    if not session_id:
+        return jsonify({"error": "Session ID required"}), 400
+
+    bot = bp.get_session(session_id)  # type: ignore
+    if not bot:
+        return jsonify({"error": "Session not found"}), 404
+
+    from chatbot.training.trainer import score_session
+    try:
+        score_data = score_session(session_id)
+        return jsonify({"success": True, "score": score_data})
+    except Exception as e:
+        logger.error(f"Error calculating session score: {e}")
+        return jsonify({"error": "Failed to calculate score"}), 500
 
 
 @bp.route('/reset', methods=['POST'])

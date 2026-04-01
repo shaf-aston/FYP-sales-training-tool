@@ -1,7 +1,5 @@
 """Chat conversation endpoints — main chat, edit, summary, training."""
 
-# pyright: ignore[reportGeneralTypeIssues]  # Flask Blueprint dynamic attribute injection
-
 from flask import Blueprint, request, jsonify
 
 bp = Blueprint('chat', __name__, url_prefix='/api')

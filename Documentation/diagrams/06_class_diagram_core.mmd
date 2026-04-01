@@ -1,8 +1,10 @@
-%%{init: {"theme": "base"}}%%
-%% DIAGRAM 6 — UML CLASS DIAGRAM: Core Classes
-%% Replaces: old 03_class_diagram_core
-%% Key change: verbose multi-paragraph notes trimmed to 1–2 essential facts per class.
-%% Full algorithm detail is in 05_nlu_pipeline and 02_fsm_state_machine.
+---
+title: Core Class Diagram
+---
+%% ==========================================
+%% PURPOSE: Illustrates the primary object-oriented structure of the Sales Chatbot core, including Enumerations for State/Strategy, Session storage models, and the Flow Engine.
+%% ==========================================
+%%{init: {"theme": "base", "flowchart": {"nodeSpacing": 40, "rankSpacing": 40}}}%%
 
 classDiagram
 
@@ -77,7 +79,7 @@ classDiagram
         -_try_switch_to_provider(name str) bool
         -_fallback(message str, latency_ms float, user_message str) ChatResponse
     }
-    note for SalesChatbot "chat() execution order: prompt → intent → LLM → fallback → persist → latency → FSM → objection → training\n_detect_and_switch_strategy(): INTENT mode only, runs post-LLM inside _apply_advancement()\nModule constants: _RECENT_HISTORY_WINDOW=-10 · _DEFAULT_TEMPERATURE=0.8 · _DEFAULT_MAX_TOKENS=200"
+    note for SalesChatbot "chat() execution order: prompt → intent → LLM → fallback → persist → latency → FSM → objection → training<br/>_detect_and_switch_strategy(): INTENT mode only, runs post-LLM inside _apply_advancement()<br/>Module constants: _RECENT_HISTORY_WINDOW=-10 · _DEFAULT_TEMPERATURE=0.8 · _DEFAULT_MAX_TOKENS=200"
 
     %% ── FSM ──────────────────────────────────────────────────────────────────
     class SalesFlowEngine {
@@ -100,7 +102,7 @@ classDiagram
         +get_summary() dict
         +to_dict() dict
     }
-    note for SalesFlowEngine "strategy_for_prompts: INTENT → CONSULTATIVE templates · else returns actual flow_type\nget_advance_target() 5 evaluation paths (see 02_fsm_state_machine for full detail)\nADVANCEMENT_RULES dict (module-level): maps rule name strings → rule functions"
+    note for SalesFlowEngine "strategy_for_prompts: INTENT → CONSULTATIVE templates · else returns actual flow_type<br/>get_advance_target() 5 evaluation paths (see 02_fsm_state_machine for full detail)<br/>ADVANCEMENT_RULES dict (module-level): maps rule name strings → rule functions"
 
     %% ── Provider Hierarchy ───────────────────────────────────────────────────
     class BaseLLMProvider {
@@ -139,7 +141,7 @@ classDiagram
         +is_available() bool
         +get_model_name() str
     }
-    note for SambanovaProvider "Model: Meta-Llama-3.1-70B-Instruct · Env: SAMBANOVA_API_KEY · openai SDK compat\nFile exists but NOT registered in factory.py — not used in any active code path"
+    note for SambanovaProvider "Model: Meta-Llama-3.1-70B-Instruct · Env: SAMBANOVA_API_KEY · openai SDK compat<br/>File exists but NOT registered in factory.py — not used in any active code path"
 
     class DummyProvider {
         -str fixed_response
@@ -168,7 +170,7 @@ classDiagram
         +record_session_end(session_id str, final_stage str, final_strategy str, turns int)$
         +get_evaluation_summary()$ dict
     }
-    note for SessionAnalytics "Writes to analytics.jsonl (project root) · rotation: 10 000 → keep 5 000 lines\nget_evaluation_summary() reads full file → stage reach rates · intent distribution · A/B variant split"
+    note for SessionAnalytics "Writes to analytics.jsonl (project root) · rotation: 10 000 → keep 5 000 lines<br/>get_evaluation_summary() reads full file → stage reach rates · intent distribution · A/B variant split"
 
     class PerformanceTracker {
         <<service>>
@@ -177,7 +179,7 @@ classDiagram
         +get_summary() dict$
         +get_provider_stats() dict$
     }
-    note for PerformanceTracker "Writes to metrics.jsonl (project root) under threading.Lock · MAX_METRICS_LINES=5000 → trim to 2500\nget_provider_stats() feeds GET /api/health response"
+    note for PerformanceTracker "Writes to metrics.jsonl (project root) under threading.Lock · MAX_METRICS_LINES=5000 → trim to 2500<br/>get_provider_stats() feeds GET /api/health response"
 
     class QuickMatcher {
         -dict product_config
@@ -189,7 +191,7 @@ classDiagram
         +score_text_match(text str, target str, method str) float
         +find_best_match(text str, candidates list, threshold float) tuple
     }
-    note for QuickMatcher "match_product() normalises then calls @lru_cache _match_product_normalized() — 'Cars' and 'cars' share cache\nConfidence tiers: exact=1.0 · alias=0.95 · fuzzy+context=0.6–0.8 · threshold ≥0.7 accepted"
+    note for QuickMatcher "match_product() normalises then calls @lru_cache _match_product_normalized() — 'Cars' and 'cars' share cache<br/>Confidence tiers: exact=1.0 · alias=0.95 · fuzzy+context=0.6–0.8 · threshold ≥0.7 accepted"
 
     %% ── Relationships ────────────────────────────────────────────────────────
     SalesChatbot *-- SalesFlowEngine          : flow_engine (composition)
@@ -213,3 +215,28 @@ classDiagram
     ProviderFactory ..> SambanovaProvider     : instantiates
     ProviderFactory ..> DummyProvider         : instantiates
     ProviderFactory ..> BaseLLMProvider       : returns as
+
+    %% ── Colour Scheme ────────────────────────────────────────────────────────
+    classDef enumStyle   fill:#78909C,stroke:#37474F,stroke-width:2.5px,color:#fff
+    classDef dtoStyle    fill:#26C6DA,stroke:#006064,stroke-width:2.5px,color:#fff
+    classDef coreStyle   fill:#FFA726,stroke:#E65100,stroke-width:2.5px,color:#fff
+    classDef provStyle   fill:#EC407A,stroke:#880E4F,stroke-width:2.5px,color:#fff
+    classDef obsStyle    fill:#26C6DA,stroke:#006064,stroke-width:2.5px,color:#fff
+    classDef webStyle    fill:#42A5F5,stroke:#0D47A1,stroke-width:2.5px,color:#fff
+
+    class Strategy          enumStyle
+    class Stage             enumStyle
+    class ChatResponse      dtoStyle
+    class LLMResponse       dtoStyle
+    class ConversationState dtoStyle
+    class SalesChatbot      coreStyle
+    class SalesFlowEngine   coreStyle
+    class BaseLLMProvider   provStyle
+    class GroqProvider      provStyle
+    class OpenRouterProvider provStyle
+    class SambanovaProvider provStyle
+    class DummyProvider     provStyle
+    class ProviderFactory   provStyle
+    class SessionAnalytics  obsStyle
+    class PerformanceTracker obsStyle
+    class QuickMatcher      webStyle

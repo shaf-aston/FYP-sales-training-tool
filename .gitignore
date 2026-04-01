@@ -77,3 +77,8 @@ Clear-Caches.py
 Documentation/What i did strat.md
 Aston Docs/
 src/config/custom_knowledge.yaml
+.ruff_cache
+utils/
+SKILL.md
+# Ignore old project iterations and dumps
+Documentation/_archive/

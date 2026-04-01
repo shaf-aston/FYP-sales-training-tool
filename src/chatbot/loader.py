@@ -3,7 +3,7 @@
 Centralizes loading of all configuration files (signals, analysis, product configs)
 and template files (tactics, overrides, adaptations) with caching.
 
-Includes QuickMatcher utility for fuzzy/rapid text-to-config matching.
+Includes QuickMatcher utility for fuzzy product-to-config matching.
 Includes A/B variant selection for prompt testing in evaluation studies.
 """
 
@@ -250,43 +250,6 @@ def get_adaptation_template(adaptation_type, strategy=None, **kwargs):
     return ""
 
 
-@lru_cache(maxsize=1)
-def _build_signal_patterns():
-    """Pre-compile regex patterns for all signal categories."""
-    signals = load_signals()
-    compiled = {}
-    for category, keywords in signals.items():
-        if not isinstance(keywords, list):
-            continue
-        patterns = []
-        for keyword in keywords:
-            keyword_norm = re.sub(r'\s+', ' ', keyword.lower().strip())
-            if ' ' not in keyword_norm:
-                patterns.append((re.compile(rf'\b{re.escape(keyword_norm)}\b'), keyword))
-            else:
-                patterns.append((None, keyword_norm, keyword))  # Substring match
-        compiled[category] = patterns
-    return compiled
-
-
-@lru_cache(maxsize=1)
-def _build_preference_patterns():
-    """Pre-compile regex patterns for all preference categories."""
-    config = load_analysis_config()
-    preference_keywords = config.get("preference_keywords", {})
-    compiled = {}
-    for category, keywords in preference_keywords.items():
-        patterns = []
-        for keyword in keywords:
-            keyword_norm = re.sub(r'\s+', ' ', keyword.lower().strip())
-            if ' ' not in keyword_norm:
-                patterns.append((re.compile(rf'\b{re.escape(keyword_norm)}\b'), keyword))
-            else:
-                patterns.append((None, keyword_norm, keyword))  # Substring match
-        compiled[category] = patterns
-    return compiled
-
-
 class QuickMatcher:
     """Fuzzy matching utility for rapid text-to-config searches.
 
@@ -388,150 +351,6 @@ class QuickMatcher:
 
         return (best_match, best_score) if best_match else (None, 0.0)
 
-    @classmethod
-    def match_signals(cls, text, signal_category):
-        """Match text against a specific signal category using pre-compiled patterns.
-
-        Args:
-            text: User input text to analyze
-            signal_category: Key in signals.yaml (e.g., "commitment", "objection")
-
-        Returns:
-            list: Matched signal keywords found in text
-
-        Example:
-            >>> QuickMatcher.match_signals("let's do it, sign me up", "commitment")
-            ["let's do it", "sign me up"]
-        """
-        normalized = cls.normalize(text)
-        if not normalized:
-            return []
-
-        all_patterns = _build_signal_patterns()
-        patterns = all_patterns.get(signal_category, [])
-
-        matched = []
-        for entry in patterns:
-            if len(entry) == 2:
-                # Pre-compiled regex pattern
-                pattern, keyword = entry
-                if pattern.search(normalized):
-                    matched.append(keyword)
-            else:
-                # Substring match (multi-word)
-                _, keyword_norm, keyword = entry
-                if keyword_norm in normalized:
-                    matched.append(keyword)
-
-        return matched
-
-    @classmethod
-    def detect_preferences(cls, text):
-        """Detect preference categories from text using pre-compiled patterns.
-
-        Args:
-            text: User input text to analyze
-
-        Returns:
-            dict: {category: [matched_keywords]} for detected preferences
-
-        Example:
-            >>> QuickMatcher.detect_preferences("I need something affordable and reliable")
-            {'budget': ['affordable'], 'reliability': ['reliable']}
-        """
-        normalized = cls.normalize(text)
-        if not normalized:
-            return {}
-
-        all_patterns = _build_preference_patterns()
-        detected = {}
-
-        for category, patterns in all_patterns.items():
-            matched = []
-            for entry in patterns:
-                if len(entry) == 2:
-                    # Pre-compiled regex pattern
-                    pattern, keyword = entry
-                    if pattern.search(normalized):
-                        matched.append(keyword)
-                else:
-                    # Substring match (multi-word)
-                    _, keyword_norm, keyword = entry
-                    if keyword_norm in normalized:
-                        matched.append(keyword)
-            if matched:
-                detected[category] = matched
-
-        return detected
-
-    @classmethod
-    def score_text_match(cls, text, target, method="fuzzy"):
-        """Calculate match score between two strings.
-
-        Args:
-            text: Source text to match
-            target: Target string to match against
-            method: Matching method ("exact", "contains", "fuzzy")
-
-        Returns:
-            float: Match score (0.0 to 1.0)
-
-        Example:
-            >>> QuickMatcher.score_text_match("luxury cars", "luxury_cars", "fuzzy")
-            0.91
-        """
-        text_norm = cls.normalize(text)
-        target_norm = cls.normalize(target)
-
-        if not text_norm or not target_norm:
-            return 0.0
-
-        if method == "exact":
-            return 1.0 if text_norm == target_norm else 0.0
-
-        if method == "contains":
-            if target_norm in text_norm or text_norm in target_norm:
-                shorter, longer = sorted([text_norm, target_norm], key=len)
-                return len(shorter) / len(longer)
-            return 0.0
-
-        # Default: fuzzy matching using SequenceMatcher
-        return SequenceMatcher(None, text_norm, target_norm).ratio()
-
-    @classmethod
-    def find_best_match(cls, text, candidates, threshold=0.6):
-        """Find the best matching candidate from a list.
-
-        Args:
-            text: Source text to match
-            candidates: List of candidate strings to match against
-            threshold: Minimum score to consider a match (default 0.6)
-
-        Returns:
-            tuple: (best_candidate, score) or (None, 0.0)
-
-        Example:
-            >>> QuickMatcher.find_best_match("car", ["automotive", "jewelry", "insurance"])
-            ('automotive', 0.0)  # No direct match
-            >>> QuickMatcher.find_best_match("cars and vehicles", ["automotive", "jewelry"])
-            (None, 0.0)
-        """
-        if not candidates:
-            return (None, 0.0)
-
-        text_norm = cls.normalize(text)
-        best_candidate = None
-        best_score = 0.0
-
-        for candidate in candidates:
-            score = cls.score_text_match(text_norm, candidate, method="fuzzy")
-            if score > best_score and score >= threshold:
-                best_score = score
-                best_candidate = candidate
-
-        return (best_candidate, best_score)
-
-
 def assign_ab_variant(session_id):
     """Deterministically assign A/B variant based on session_id.
 
@@ -591,15 +410,11 @@ def get_variant_prompt(base_prompt, variant_type, strategy=None):
 
     variant_data = variants[variant_type]
 
-    # Simple string replacement (future: could use more sophisticated templating)
     if "prompts" in variant_data and isinstance(variant_data["prompts"], dict):
-        # Variant templates keyed by name or strategy
-        for key, template in variant_data["prompts"].items():
-            # If strategy-specific variant exists, use it
-            if strategy and strategy in variant_data["prompts"]:
-                return variant_data["prompts"][strategy]
-        # Return first available variant template
-        first_template = next(iter(variant_data["prompts"].values()), None)
+        prompts = variant_data["prompts"]
+        if strategy and strategy in prompts:
+            return prompts[strategy]
+        first_template = next(iter(prompts.values()), None)
         if first_template:
             return first_template
 

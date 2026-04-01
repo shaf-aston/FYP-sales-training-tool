@@ -8,8 +8,8 @@ Provides three quiz types:
 import random
 from typing import Any
 
-from .loader import load_yaml
-from .utils import clamp_score, extract_json_from_llm
+from ..loader import load_yaml
+from ..utils import clamp_score, extract_json_from_llm
 
 
 _quiz_config = None

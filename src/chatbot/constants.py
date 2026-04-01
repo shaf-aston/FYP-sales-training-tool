@@ -20,9 +20,6 @@ PERSONA_CHECKPOINT_TURNS = 6
 # Maximum keywords to extract from user messages for embedding
 MAX_USER_KEYWORDS = 6
 
-# Maximum reframe attempts before escalation (FUTURE - not yet implemented)
-MAX_OBJECTION_REFRAMES = 3
-
 
 # ============================================================================
 # Web Search Enrichment

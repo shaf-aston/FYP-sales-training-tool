@@ -1,24 +1,35 @@
-%%{init: {"theme": "base"}}%%
-%% DIAGRAM 3 — CHAT TURN SEQUENCE (single /api/chat request, end-to-end)
-%% Replaces: old 06_sequence_chat_turn
-%% Key change: 13 participants → 8 by merging:
-%%   Content + Prompts + Overrides + Tactics + Analysis (prompt role) → PromptEngine
-%%   SessionAnalytics + PerformanceTracker → Analytics
-%%   SambanovaProvider + OpenRouterProvider (fallbacks) folded into Provider participant
-%%   Groq API + SambaNova API + OpenRouter API → LLM_API participant
-%% All 8 execution steps preserved with exact method names and ordering.
+---
+title: Chat Turn Sequence
+---
+%% ==========================================
+%% PURPOSE: Traces a single HTTP request through the system. Detail includes input validation, prompt assembly, LLM execution, Fallback chains, and response/analytics recording.
+%% ==========================================
+%%{init: {"theme": "base", "sequence": {"actorMargin": 30, "messageMargin": 25}}}%%
 
 sequenceDiagram
     autonumber
 
-    participant Br  as Browser
-    participant App as app.py
-    participant Bot as SalesChatbot
-    participant FSM as SalesFlowEngine
-    participant PE  as PromptEngine
-    participant Pv  as Provider
-    participant API as LLM API
-    participant Obs as Analytics + Metrics
+    box rgba(102,187,106,0.15) Client
+        participant Br  as Browser
+    end
+    box rgba(66,165,245,0.15) Web Layer
+        participant App as app.py
+    end
+    box rgba(255,167,38,0.15) Chatbot Core
+        participant Bot as SalesChatbot
+        participant FSM as SalesFlowEngine
+        participant PE  as PromptEngine
+    end
+    box rgba(171,71,188,0.15) Feature Modules
+        participant WS as WebSearchService
+    end
+    box rgba(236,64,122,0.15) Provider Layer
+        participant Pv  as Provider
+        participant API as LLM API
+    end
+    box rgba(38,198,218,0.15) Observability
+        participant Obs as Analytics + Metrics
+    end
 
     Br->>App: POST /api/chat  {message: "..."}  X-Session-ID header
     note over App: @require_rate_limit('chat')
@@ -69,6 +80,13 @@ chatbot.py lines 104–108: prompt assembled BEFORE intent recording
 
     FSM-->>Bot: system_prompt
 
+    %% ── STEP 1b: Optional Web Search Enrichment ──────────────────────────────
+    opt current_stage == Stage.OBJECTION and should_trigger_web_search
+        Bot->>WS: search(build_search_query(product, objection_type))
+        WS-->>Bot: SearchResponse (DuckDuckGo results)
+        Bot->>Bot: system_prompt += _format_search_context(results)
+    end
+
     %% ── STEP 2: Intent Recording (AFTER prompt, BEFORE LLM) ─────────────────
     note over Bot: chatbot.py lines 111–121: separate analyze_state() call for analytics only
     Bot->>PE: analyze_state(conversation_history, user_message)
@@ -89,7 +107,7 @@ chatbot.py lines 104–108: prompt assembled BEFORE intent recording
 
     %% ── STEP 4: Fallback Chain ───────────────────────────────────────────────
     alt LLMResponse.error contains "rate_limit_exceeded" or "429" or any error
-        note over Bot: fallbacks = ["sambanova", "openrouter"]  (current provider removed)
+        note over Bot: fallbacks = ['sambanova', 'openrouter']  (current provider removed)
         Bot->>Pv: _try_switch_to_provider("sambanova")
         alt SambaNova available
             Pv->>API: HTTPS  Meta-Llama-3.1-70B  (SambaNova · openai SDK compat)

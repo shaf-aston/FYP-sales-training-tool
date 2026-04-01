@@ -1,15 +1,25 @@
-%%{init: {"theme": "base"}}%%
-%% DIAGRAM 2 — FSM STATE MACHINE (all 3 strategies)
-%% Replaces: old 05_fsm_state_machine
-%% Key change: RewindOps section replaced with top-level note (removed 6 messy bidirectional arrows)
-%% Rewind/reset note: rewind(n) pops last N turn pairs, stage_turn_count reduced, stage unchanged.
-%%   rewind_to_turn(i) truncates history to turn i*2, FSM stage recalculated.
-%%   reset_to_initial() sets flow_type=_initial_flow_type, stage=first, stage_turn_count=0, history=[].
-%%   All rewind ops available via POST /api/rewind and POST /api/edit.
+---
+title: FSM State Machine (All Strategies)
+---
+%% ==========================================
+%% PURPOSE: Maps the active transitions between the Sales Stages (Intent, Logical, Emotional, Pitch, Objection) across Consultative and Transactional modes. Enforces strict sales methodology.
+%% ==========================================
+%%{init: {"theme": "base", "flowchart": {"nodeSpacing": 40, "rankSpacing": 40}}}%%
 
 stateDiagram-v2
 
-    [*] --> StrategyInit : POST /api/init\nQuickMatcher resolves product_type
+    classDef initClass     fill:#78909C,stroke:#37474F,stroke-width:2.5px,color:#fff
+    classDef intentClass   fill:#42A5F5,stroke:#0D47A1,stroke-width:2.5px,color:#fff
+    classDef consultClass  fill:#FFA726,stroke:#E65100,stroke-width:2.5px,color:#fff
+    classDef transClass    fill:#AB47BC,stroke:#4A148C,stroke-width:2.5px,color:#fff
+    classDef stageIntent   fill:#42A5F5,stroke:#0D47A1,stroke-width:2px,color:#fff
+    classDef stageLogical  fill:#26C6DA,stroke:#006064,stroke-width:2px,color:#fff
+    classDef stageEmotional fill:#AB47BC,stroke:#4A148C,stroke-width:2px,color:#fff
+    classDef stagePitch    fill:#FFA726,stroke:#E65100,stroke-width:2px,color:#fff
+    classDef stageObj      fill:#EC407A,stroke:#880E4F,stroke-width:2px,color:#fff
+    classDef exitState     fill:#66BB6A,stroke:#1B5E20,stroke-width:2px,color:#fff
+
+    [*] --> StrategyInit : POST /api/init<br/>QuickMatcher resolves product_type
 
     state StrategyInit {
         [*] --> LoadConfig
@@ -25,23 +35,23 @@ stateDiagram-v2
     }
 
     StrategyInit --> IntentDiscovery  : flow_type == "intent"  (unknown product)
-    StrategyInit --> Consultative     : flow_type == "consultative"\nor force_strategy=consultative on /api/init
-    StrategyInit --> Transactional    : flow_type == "transactional"\nor force_strategy=transactional on /api/init
+    StrategyInit --> Consultative     : flow_type == "consultative"<br/>or force_strategy=consultative on /api/init
+    StrategyInit --> Transactional    : flow_type == "transactional"<br/>or force_strategy=transactional on /api/init
 
     %% ── INTENT DISCOVERY ─────────────────────────────────────────────────────
-    state "INTENT — Discovery Mode\n(uses CONSULTATIVE prompt templates while discovering)" as IntentDiscovery {
+    state "INTENT — Discovery Mode<br/>(uses CONSULTATIVE prompt templates while discovering)" as IntentDiscovery {
 
         [*] --> ID_INTENT
 
-        state "Stage.INTENT\nBot probes for need · problem · context\nstage_turn_count increments each turn" as ID_INTENT
+        state "Stage.INTENT<br/>Bot probes for need · problem · context<br/>stage_turn_count increments each turn" as ID_INTENT
 
-        ID_INTENT --> ID_INTENT          : no signals detected\nstage_turn_count < 3
+        ID_INTENT --> ID_INTENT          : no signals detected<br/>stage_turn_count < 3
 
-        ID_INTENT --> ToConsultative     : consultative signals detected\n(problem · frustration · feel etc. from signals.yaml)\n→ switch_strategy(CONSULTATIVE) · stage_turn_count=0
+        ID_INTENT --> ToConsultative     : consultative signals detected<br/>(problem · frustration · feel etc. from signals.yaml)<br/>→ switch_strategy(CONSULTATIVE) · stage_turn_count=0
 
-        ID_INTENT --> ToTransactional    : transactional signals detected\n(price · budget · buy now etc. from signals.yaml)\n→ switch_strategy(TRANSACTIONAL) · stage_turn_count=0
+        ID_INTENT --> ToTransactional    : transactional signals detected<br/>(price · budget · buy now etc. from signals.yaml)<br/>→ switch_strategy(TRANSACTIONAL) · stage_turn_count=0
 
-        ID_INTENT --> ToConsultativeDef  : stage_turn_count ≥ 3 · no signals detected\n→ default to CONSULTATIVE · stage_turn_count=0
+        ID_INTENT --> ToConsultativeDef  : stage_turn_count ≥ 3 · no signals detected<br/>→ default to CONSULTATIVE · stage_turn_count=0
 
         note right of ID_INTENT
             _detect_and_switch_strategy() in chatbot.py
@@ -65,27 +75,27 @@ stateDiagram-v2
 
         [*] --> C_INTENT
 
-        state "Stage.INTENT\nGet tangible + experience (Impact formula lines 3–12)\nLow intent → intent_low template (softer, less assumptive)" as C_INTENT
+        state "Stage.INTENT<br/>Get tangible + experience (Impact formula lines 3–12)<br/>Low intent → intent_low template (softer, less assumptive)" as C_INTENT
 
-        state "Stage.LOGICAL\nTwo-phase probe: cause → like/dislike (lines 15–33)\nMin 2 turns · safety valve at max_turns (analysis_config.yaml)" as C_LOGICAL
+        state "Stage.LOGICAL<br/>Two-phase probe: cause → like/dislike (lines 15–33)<br/>Min 2 turns · safety valve at max_turns (analysis_config.yaml)" as C_LOGICAL
 
-        state "Stage.EMOTIONAL\nIdentity Frame → Future Pacing → COI (lines 36–58)\nMin 3 turns · safety valve at max_turns (analysis_config.yaml)" as C_EMOTIONAL
+        state "Stage.EMOTIONAL<br/>Identity Frame → Future Pacing → COI (lines 36–58)<br/>Min 3 turns · safety valve at max_turns (analysis_config.yaml)" as C_EMOTIONAL
 
-        state "Stage.PITCH\nCommitment → 3-pillar → assumptive close (lines 59–71)\n_SHARED_RULES: no pitch ending with '?'" as C_PITCH
+        state "Stage.PITCH<br/>Commitment → 3-pillar → assumptive close (lines 59–71)<br/>_SHARED_RULES: no pitch ending with '?'" as C_PITCH
 
-        state "Stage.OBJECTION\nClassify → Reframe  (7 types: smokescreen · money · fear\npartner · logistical · think · unknown)" as C_OBJECTION
+        state "Stage.OBJECTION<br/>Classify → Reframe  (7 types: smokescreen · money · fear<br/>partner · logistical · think · unknown)" as C_OBJECTION
 
         %% Normal advancement
-        C_INTENT    --> C_LOGICAL   : user_has_clear_intent()\nhigh intent signals OR turns ≥ 4 (high) / 6 (medium)
-        C_LOGICAL   --> C_EMOTIONAL : user_shows_doubt()\ndoubt_keywords from analysis_config.yaml · min 2 turns
-        C_EMOTIONAL --> C_PITCH     : user_expressed_stakes()\nstakes_keywords from analysis_config.yaml · min 3 turns
-        C_PITCH     --> C_OBJECTION : commitment_or_objection()\nSIGNALS[commitment] OR SIGNALS[objection] · min 3 words
-        C_OBJECTION --> [*]         : commitment_or_walkaway()\nOutcome: SOLD (committed) or WALKED (walkaway)
+        C_INTENT    --> C_LOGICAL   : user_has_clear_intent()<br/>high intent signals OR turns ≥ 4 (high) / 6 (medium)
+        C_LOGICAL   --> C_EMOTIONAL : user_shows_doubt()<br/>doubt_keywords from analysis_config.yaml · min 2 turns
+        C_EMOTIONAL --> C_PITCH     : user_expressed_stakes()<br/>stakes_keywords from analysis_config.yaml · min 3 turns
+        C_PITCH     --> C_OBJECTION : commitment_or_objection()<br/>SIGNALS[commitment] OR SIGNALS[objection] · min 3 words
+        C_OBJECTION --> [*]         : commitment_or_walkaway()<br/>Outcome: SOLD (committed) or WALKED (walkaway)
 
         %% Fast-path skips
-        C_LOGICAL   --> C_PITCH : FAST-A: commitment signal detected at LOGICAL\n(SIGNALS[commitment] keywords found)
+        C_LOGICAL   --> C_PITCH : FAST-A: commitment signal detected at LOGICAL<br/>(SIGNALS[commitment] keywords found)
         C_EMOTIONAL --> C_PITCH : FAST-A: commitment signal detected at EMOTIONAL
-        C_LOGICAL   --> C_PITCH : FAST-B·C·D: user_demands_directness()\nor direct_info_requests keyword\nor urgency_skip_to + impatience signal
+        C_LOGICAL   --> C_PITCH : FAST-B·C·D: user_demands_directness()<br/>or direct_info_requests keyword<br/>or urgency_skip_to + impatience signal
         C_EMOTIONAL --> C_PITCH : FAST-B·C·D: same directness / urgency paths
 
         %% Self-loops
@@ -100,18 +110,38 @@ stateDiagram-v2
 
         [*] --> T_INTENT
 
-        state "Stage.INTENT\nGather budget + use-case · max ~2 turns\nLow intent → intent_low template" as T_INTENT
+        state "Stage.INTENT<br/>Gather budget + use-case · max ~2 turns<br/>Low intent → intent_low template" as T_INTENT
 
-        state "Stage.PITCH\nPresent matching product options\nAssumptive close — no emotional probing\n_SHARED_RULES: no pitch ending with '?'" as T_PITCH
+        state "Stage.PITCH<br/>Present matching product options<br/>Assumptive close — no emotional probing<br/>_SHARED_RULES: no pitch ending with '?'" as T_PITCH
 
-        state "Stage.OBJECTION\nClassify → Reframe (same 7 types)\nTransactional-specific reframe variants" as T_OBJECTION
+        state "Stage.OBJECTION<br/>Classify → Reframe (same 7 types)<br/>Transactional-specific reframe variants" as T_OBJECTION
 
         T_INTENT    --> T_PITCH     : user_has_clear_intent()  (same rule as CONSULTATIVE)
         T_PITCH     --> T_OBJECTION : commitment_or_objection()
         T_OBJECTION --> [*]         : commitment_or_walkaway() · SOLD or WALKED
 
-        T_INTENT    --> T_PITCH : FAST-B·C·D: directness / direct_info_request / impatience
+        T_INTENT    --> T_PITCH : FAST-B·C·D: directness<br/>/ direct_info_request / impatience
 
         T_INTENT    --> T_INTENT    : still gathering
         T_OBJECTION --> T_OBJECTION : reframe cycle
     }
+
+    %% ── Colour Assignments ───────────────────────────────────────────────────
+    class StrategyInit    initClass
+    class IntentDiscovery intentClass
+    class Consultative    consultClass
+    class Transactional   transClass
+    class ID_INTENT       stageIntent
+    class C_INTENT        stageIntent
+    class C_LOGICAL       stageLogical
+    class C_EMOTIONAL     stageEmotional
+    class C_PITCH         stagePitch
+    class C_OBJECTION     stageObj
+    class T_INTENT        stageIntent
+    class T_PITCH         stagePitch
+    class T_OBJECTION     stageObj
+    class LoadConfig      initClass
+    class SetStrategy     initClass
+    class ToConsultative  consultClass
+    class ToTransactional transClass
+    class ToConsultativeDef consultClass

@@ -1,7 +1,5 @@
 """Debug panel endpoints — development/testing only."""
 
-# pyright: ignore[reportGeneralTypeIssues]  # Flask Blueprint dynamic attribute injection
-
 from flask import Blueprint, request, jsonify
 from dataclasses import asdict
 

@@ -1,8 +1,10 @@
-%%{init: {"theme": "base"}}%%
-%% DIAGRAM 7 — UML CLASS DIAGRAM: Feature Modules + NLU + Prompt System
-%% Replaces: old 04_class_diagram_features
-%% Key change: verbose notes trimmed to 1–2 essential facts per class.
-%% All module-level functions represented as <<module>> stereotypes (they are NOT Python classes).
+---
+title: Features Class Diagram
+---
+%% ==========================================
+%% PURPOSE: Outlines the specific implementation models for the supplementary Training hooks, Quizzes, Product matching (Loader pattern), and the evaluation utilities.
+%% ==========================================
+%%{init: {"theme": "base", "flowchart": {"nodeSpacing": 40, "rankSpacing": 40}}}%%
 
 classDiagram
 
@@ -20,7 +22,7 @@ classDiagram
         +str product_type
         +list conversation_history
     }
-    note for ProspectState "readiness ∈ [0.0, 1.0]\nSOLD: readiness ≥ 0.85 AND turn_count ≥ 3\nWALKED: (turns ≥ patience_turns AND readiness < 0.4) OR readiness ≤ 0.0"
+    note for ProspectState "readiness ∈ [0.0, 1.0]<br/>SOLD: readiness ≥ 0.85 AND turn_count ≥ 3<br/>WALKED: (turns ≥ patience_turns AND readiness < 0.4) OR readiness ≤ 0.0"
 
     class ProspectResponse {
         <<dataclass>>
@@ -32,7 +34,7 @@ classDiagram
         +int turn_count
         +float latency_ms
     }
-    note for ProspectResponse "readiness_label from range_label(): 5 labels from 'Very skeptical' to 'Nearly ready to buy'\noutcome: None | 'sold' | 'walked'"
+    note for ProspectResponse "readiness_label from range_label(): 5 labels from 'Very skeptical' to 'Nearly ready to buy'<br/>outcome: None | 'sold' | 'walked'"
 
     class ProspectSession {
         +str session_id
@@ -52,7 +54,7 @@ classDiagram
         -_generate_coaching_hint(user_message str) dict
         -_build_system_prompt() str
     }
-    note for ProspectSession "_score_sales_message() is DETERMINISTIC — no LLM per turn:\n  +2 commitment · +1 high_intent · +len bonus · +question bonus\n  -2 walking · -0.5 objection · -1 impatience · early-turn penalty\nDifficulty profiles: easy/medium/hard in prospect_config.yaml"
+    note for ProspectSession "_score_sales_message() is DETERMINISTIC — no LLM per turn:<br/>  +2 commitment · +1 high_intent · +len bonus · +question bonus<br/>  -2 walking · -0.5 objection · -1 impatience · early-turn penalty<br/>Difficulty profiles: easy/medium/hard in prospect_config.yaml"
 
     class ProspectEvaluator {
         <<module>>
@@ -69,7 +71,7 @@ classDiagram
         +evaluate_next_move_quiz(response str, bot SalesChatbot, last_user_msg str)$ dict
         +evaluate_direction_quiz(explanation str, bot SalesChatbot)$ dict
     }
-    note for QuizModule "stage quiz: deterministic match to current FSM stage\nnext-move + direction: LLM-scored · fallback score=50 on LLM failure\nConfig: quiz_config.yaml (question bank + answer keys)"
+    note for QuizModule "stage quiz: deterministic match to current FSM stage<br/>next-move + direction: LLM-scored · fallback score=50 on LLM failure<br/>Config: quiz_config.yaml (question bank + answer keys)"
 
     %% ── Trainer ──────────────────────────────────────────────────────────────
     class TrainerModule {
@@ -77,7 +79,7 @@ classDiagram
         +generate_training(provider BaseLLMProvider, flow_engine SalesFlowEngine, user_msg str, bot_reply str)$ dict
         +answer_training_question(question str, flow_context dict, provider BaseLLMProvider)$ dict
     }
-    note for TrainerModule "Called UNCONDITIONALLY on every /api/chat response\nReturns: {stage_goal, what_bot_did, next_trigger, where_heading, watch_for: list[str]}\nOn LLM failure: returns static default from quiz.get_stage_rubric()"
+    note for TrainerModule "Called UNCONDITIONALLY on every /api/chat response<br/>Returns: {stage_goal, what_bot_did, next_trigger, where_heading, watch_for: list[str]}<br/>On LLM failure: returns static default from quiz.get_stage_rubric()"
 
     %% ── Knowledge ────────────────────────────────────────────────────────────
     class KnowledgeModule {
@@ -89,7 +91,7 @@ classDiagram
         +ALLOWED_FIELDS list$
         +MAX_FIELD_LENGTH int$
     }
-    note for KnowledgeModule "get_custom_knowledge_text() injected into product_context at SalesChatbot.__init__\nas '--- BEGIN CUSTOM PRODUCT DATA --- {custom_knowledge} --- END CUSTOM PRODUCT DATA ---'"
+    note for KnowledgeModule "get_custom_knowledge_text() injected into product_context at SalesChatbot.__init__<br/>as '--- BEGIN CUSTOM PRODUCT DATA --- {custom_knowledge} --- END CUSTOM PRODUCT DATA ---'"
 
     %% ── NLU Module (analysis.py — all module-level functions) ────────────────
     class AnalysisModule {
@@ -107,7 +109,7 @@ classDiagram
         +classify_objection(user_message str, history list)$ dict
         +commitment_or_walkaway(history list, user_message str)$ bool
     }
-    note for AnalysisModule "Pure functions only — no state, no decisions, no LLM calls\nAll signals from signals.yaml + analysis_config.yaml via @lru_cache loaders\nSee 05_nlu_pipeline for full algorithm detail (intent lock · guardedness · weighted scoring)"
+    note for AnalysisModule "Pure functions only — no state, no decisions, no LLM calls<br/>All signals from signals.yaml + analysis_config.yaml via @lru_cache loaders<br/>See 05_nlu_pipeline for full algorithm detail (intent lock · guardedness · weighted scoring)"
 
     %% ── Prompt System (all module-level functions) ───────────────────────────
     class ContentModule {
@@ -116,7 +118,7 @@ classDiagram
         -_get_stage_specific_prompt(strategy, stage, state, user_message, history)$ str
         -_get_preference_and_keyword_context(history list, preferences str)$ str
     }
-    note for ContentModule "Orchestrates 4-tier pipeline: Tier1 override → Tier2 ack → Tier3 tactics → Tier4 assembly\nImports SIGNALS dict from flow.py (used for commitment fast-path detection)"
+    note for ContentModule "Orchestrates 4-tier pipeline: Tier1 override → Tier2 ack → Tier3 tactics → Tier4 assembly<br/>Imports SIGNALS dict from flow.py (used for commitment fast-path detection)"
 
     class PromptsModule {
         <<module>>
@@ -127,7 +129,7 @@ classDiagram
         +generate_init_greeting(strategy str)$ dict
         +get_acknowledgment_guidance(context_type str)$ str
     }
-    note for PromptsModule "STRATEGY_PROMPTS keys: consultative→{intent,intent_low,logical,emotional,pitch,objection}\n  transactional→{intent,intent_low,pitch,objection}\n_SHARED_RULES applied universally to all stages"
+    note for PromptsModule "STRATEGY_PROMPTS keys: consultative→{intent,intent_low,logical,emotional,pitch,objection}<br/>  transactional→{intent,intent_low,pitch,objection}<br/>_SHARED_RULES applied universally to all stages"
 
     class OverridesModule {
         <<module>>
@@ -157,7 +159,7 @@ classDiagram
         +commitment_or_objection(history list, user_msg str, turns int)$ bool
         -_check_advancement_condition(history list, user_msg str, turns int, stage_name str, min_turns int)$ bool
     }
-    note for AdvancementRulesModule "_COMMON_TRANSITIONS reused by both strategies:\n  PITCH:{next:OBJECTION, advance_on:commitment_or_objection}\n  OBJECTION:{next:None, advance_on:commitment_or_walkaway}\ncommitment_or_walkaway lives in analysis.py to avoid circular import"
+    note for AdvancementRulesModule "_COMMON_TRANSITIONS reused by both strategies:<br/>  PITCH:{next:OBJECTION, advance_on:commitment_or_objection}<br/>  OBJECTION:{next:None, advance_on:commitment_or_walkaway}<br/>commitment_or_walkaway lives in analysis.py to avoid circular import"
 
     %% ── Relationships ────────────────────────────────────────────────────────
     ProspectSession *-- ProspectState              : state (composition)
@@ -174,3 +176,30 @@ classDiagram
 
     AdvancementRulesModule --> AnalysisModule      : commitment_or_walkaway (avoids circular import)
     AdvancementRulesModule --> ContentModule       : SIGNALS dict imported by content
+
+    class WebSearchService {
+        -_cache_ttl: int
+        -_cache: dict
+        +search(query: str, max_results: int) SearchResponse
+        -_fetch(query: str, max_results: int)
+    }
+
+    %% ── Colour Scheme ────────────────────────────────────────────────────────
+    classDef featureStyle fill:#AB47BC,stroke:#4A148C,stroke-width:2.5px,color:#fff
+    classDef coreStyle    fill:#FFA726,stroke:#E65100,stroke-width:2.5px,color:#fff
+    classDef dtoStyle     fill:#26C6DA,stroke:#006064,stroke-width:2.5px,color:#fff
+
+    class ProspectState      featureStyle
+    class ProspectResponse   featureStyle
+    class ProspectSession    featureStyle
+    class ProspectEvaluator  featureStyle
+    class QuizModule         featureStyle
+    class TrainerModule      featureStyle
+    class KnowledgeModule    featureStyle
+    class WebSearchService   featureStyle
+    class AnalysisModule     coreStyle
+    class ContentModule      coreStyle
+    class PromptsModule      coreStyle
+    class OverridesModule    coreStyle
+    class TacticsModule      coreStyle
+    class AdvancementRulesModule coreStyle

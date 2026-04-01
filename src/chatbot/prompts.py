@@ -346,7 +346,7 @@ def get_base_rules(strategy="consultative"):
         return """
 INTENT DISCOVERY RULES:
 Be casual, match their energy. Ask open-ended questions about what they're looking for.
-Listen for product category signals (cars, fitness, jewelry, insurance, etc.).
+Listen for product category signals (cars, fitness, jewellery, insurance, etc.).
 Do NOT pitch products or ask specific feature questions — discovery only.
 """ + _SHARED_RULES
 
