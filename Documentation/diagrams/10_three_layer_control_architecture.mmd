@@ -120,13 +120,19 @@ flowchart TD
     RETURN --> END_NODE(["Chat Turn Complete<br/>——————————————<br/>Next turn starts with:<br/>ACTUAL current_stage<br/>(from FSM, not LLM guess)"]):::success
 
     %% ── SMALL-TALK LOOP FIX ANNOTATION ───────────────────────────────────
-    note right of Layer1: <b>Small-Talk Loop Fix</b><br/>Prevents repetitive affirmations
+    Layer1_note["<b>Small-Talk Loop Fix</b><br/>Prevents repetitive affirmations"]
+    Layer1 -.- Layer1_note
+    style Layer1_note fill:none,stroke:none
 
-    note right of Layer2: <b>Small-Talk Loop Fix</b><br/>Blocks advancement without signals
+    Layer2_note["<b>Small-Talk Loop Fix</b><br/>Blocks advancement without signals"]
+    Layer2 -.- Layer2_note
+    style Layer2_note fill:none,stroke:none
 
-    note right of Layer3: <b>Small-Talk Loop Fix</b><br/>Detects & overrides excessive<br/>validation patterns
+    Layer3_note["<b>Small-Talk Loop Fix</b><br/>Detects & overrides excessive<br/>validation patterns"]
+    Layer3 -.- Layer3_note
+    style Layer3_note fill:none,stroke:none
 
     %% ── RELIABILITY IMPACT ────────────────────────────────────────────────
-    note right of RETURN
-        <b>🎯 Reliability Impact:</b><br/>Layer 1 alone: ~70% success (LLM drift from RLHF)<br/>  Layer 2 + 1: ~85% (FSM prevents escape)<br/>  All 3 layers: ~92% (redundant checks catch remaining drift)<br/><br/><b>Key Insight:</b> Each layer is independent;<br/>system remains functional if one fails.
-    end note
+    RETURN_note["<b>🎯 Reliability Impact:</b><br/>Layer 1 alone: ~70% success (LLM drift from RLHF)<br/>  Layer 2 + 1: ~85% (FSM prevents escape)<br/>  All 3 layers: ~92% (redundant checks catch remaining drift)<br/><br/><b>Key Insight:</b> Each layer is independent;<br/>system remains functional if one fails."]
+    RETURN -.- RETURN_note
+    style RETURN_note fill:none,stroke:none

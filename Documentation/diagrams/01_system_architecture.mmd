@@ -10,13 +10,9 @@ graph TD
     classDef junctionStyle stroke-width:0px,fill:transparent,font-size:1px
 
 Browser(["🌐 Browser — HTML5 SPA"]):::client
-note right of Browser
-    index.html · app.js · chat.css
-    Web Speech API (voice input)
-    localStorage: session_id + full history
-    parseMarkdown() on bot messages
-    textContent for user messages (XSS-safe)
-end note
+BrowserNote["index.html · app.js · chat.css<br/>Web Speech API (voice input)<br/>localStorage: session_id + full history<br/>parseMarkdown() on bot messages<br/>textContent for user messages (XSS-safe)"]
+style BrowserNote fill:none,stroke:none
+Browser -.- BrowserNote
 
 subgraph Flask["⚙️  Flask 3.0  ·  Python 3.10+  ·  localhost:5000 / Render cloud"]
     direction TB

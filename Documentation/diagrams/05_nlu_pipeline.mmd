@@ -7,7 +7,7 @@ title: NLU Analysis Pipeline
 %%{init: {"theme": "base", "flowchart": {"nodeSpacing": 40, "rankSpacing": 40}}}%%
 
 flowchart TD
-    classDef junctionStyle width:0px,height:0px,stroke-width:0px,font-size:0px;
+    classDef junctionStyle stroke-width:0px,fill:transparent,font-size:1px
     classDef terminal fill:#37474F,stroke:#263238,stroke-width:2.5px,color:#fff
     classDef core     fill:#FFA726,stroke:#E65100,stroke-width:2.5px,color:#fff
     classDef decision fill:#29B6F6,stroke:#0277BD,stroke-width:2px,color:#000
@@ -167,7 +167,8 @@ from signals.yaml — first match wins:"}:::decision
 
         OBJ_OUT(["dict {type, strategy, guidance}<br/>→ content._get_stage_specific_prompt() (objection prompt injection)<br/>→ SessionAnalytics.record_objection_classified()"]):::terminal
 
-        
+    end
+
     J_AUTO_3[ ]:::junctionStyle
     OBJ_S --- J_AUTO_3
     OBJ_M --- J_AUTO_3
@@ -177,8 +178,6 @@ from signals.yaml — first match wins:"}:::decision
     OBJ_T --- J_AUTO_3
     OBJ_U --- J_AUTO_3
     J_AUTO_3 --> OBJ_OUT
-
-    end
 
     STATE_OUT --> OBJ_IN
 

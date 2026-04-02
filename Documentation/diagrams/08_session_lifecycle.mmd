@@ -7,9 +7,9 @@ title: Session Lifecycle & Memory Recovery
 %%{init: {"theme": "base", "flowchart": {"nodeSpacing": 40, "rankSpacing": 40}}}%%
 
 flowchart TD
-    classDef junctionStyle width:0px,height:0px,stroke-width:0px,font-size:0px;
+    classDef junctionStyle stroke-width:0px,fill:transparent,font-size:1px
     classDef terminal fill:#37474F,stroke:#263238,stroke-width:2.5px,color:#fff
-    classDef client   fill:#66BB6A,stroke:#1B5E20,stroke-width:2.5px,color:#fff
+    classDef browser  fill:#66BB6A,stroke:#1B5E20,stroke-width:2.5px,color:#fff
     classDef web      fill:#42A5F5,stroke:#0D47A1,stroke-width:2.5px,color:#fff
     classDef core     fill:#FFA726,stroke:#E65100,stroke-width:2.5px,color:#fff
     classDef feature  fill:#AB47BC,stroke:#4A148C,stroke-width:2.5px,color:#fff
@@ -17,7 +17,7 @@ flowchart TD
     classDef fs       fill:#78909C,stroke:#37474F,stroke-width:2.5px,color:#fff
     classDef decision fill:#29B6F6,stroke:#0277BD,stroke-width:2px,color:#000
 
-    PAGE_LOAD(["Browser page load / app start<br/>reads localStorage['session_id']"]:::terminal)
+    PAGE_LOAD["Browser page load / app start<br/>reads localStorage.session_id"]:::terminal
 
     HAS_ID{"session_id
 in localStorage?"}:::decision
@@ -36,7 +36,7 @@ in localStorage?"}:::decision
         A_BOT["SalesChatbot(provider='groq', product_type=None, session_id)<br/>get_product_settings(None) → default strategy = 'intent'<br/>SalesFlowEngine(flow_type='intent', stage=Stage.INTENT)"]:::core
         A_REC["SessionAnalytics.record_session_start(<br/>  session_id, product='unknown', strategy='intent', ab_variant)"]:::core
         A_GREET["prompts.generate_init_greeting('intent')<br/>→ opening line from STRATEGY_PROMPTS[consultative][init_greeting]<br/>  (INTENT mode uses CONSULTATIVE greeting template)"]:::core
-        A_STORE["localStorage['session_id'] = session_id<br/>localStorage['history'] = []"]:::client
+        A_STORE["localStorage.session_id = session_id<br/>localStorage.history = &#91;&#93;"]:::browser
         A_REQ --> A_CAP --> A_ID --> A_BOT --> A_REC --> A_GREET --> A_STORE
     end
 
@@ -68,7 +68,7 @@ found in memory?"}:::decision
 
     C_REQ --> C_MEM
 
-    C_MEM -->|"Yes — server has it"| C_RESTORE["Return from memory:<br/>history · current_stage · strategy<br/>No new greeting (conversation already in progress)<br/>Response: {success:true, stage:'LOGICAL', strategy:'CONSULTATIVE', history:[...]}"]:::core
+    C_MEM -->|"Yes — server has it"| C_RESTORE["Return from memory:<br/>history · current_stage · strategy<br/>No new greeting (conversation already in progress)<br/>Response: {success:true, stage:'LOGICAL', strategy:'CONSULTATIVE', history:&#91;...&#93;}"]:::core
 
     %% ═══════════════════════════════════════════════════════════════
     %% PATH D — Session lost (server restart), try disk backup
@@ -86,11 +86,11 @@ disk backup exists?"}:::decision
     D_DISK -->|"No — no backup either"| E_ERR
 
     subgraph PathE["Path E — Replay from localStorage  (disaster recovery)"]
-        E_ERR["App returns: {error: 'Session not found', code: 'SESSION_EXPIRED'}<br/>Browser reads localStorage['history'] = [{role,content} × N]"]:::feature
-        E_REQ["Browser sends POST /api/restore<br/>{history: [{role,content}×N], product_type, provider}"]:::feature
+        E_ERR["App returns: {error: 'Session not found', code: 'SESSION_EXPIRED'}<br/>Browser reads localStorage.history = &#91;{role,content} × N&#93;"]:::feature
+        E_REQ["Browser sends POST /api/restore<br/>{history: &#91;{role,content}×N&#93;, product_type, provider}"]:::feature
         E_NEW_ID["new_session_id = secrets.token_hex(16)<br/>SalesChatbot(provider, product_type, new_session_id)"]:::feature
         E_REPLAY["bot.replay(history):<br/>  Iterates turn pairs in history<br/>  Calls FSM advancement logic on each pair<br/>  Reconstructs current_stage + strategy<br/>  NO LLM calls — purely deterministic reconstruction"]:::feature
-        E_STORE["session_manager.set(new_session_id, bot)<br/>localStorage['session_id'] = new_session_id<br/>Return: {success:true, session_id:new_id, stage, strategy}"]:::feature
+        E_STORE["session_manager.set(new_session_id, bot)<br/>localStorage.session_id = new_session_id<br/>Return: {success:true, session_id:new_id, stage, strategy}"]:::feature
         E_ERR --> E_REQ --> E_NEW_ID --> E_REPLAY --> E_STORE
     end
 
@@ -102,12 +102,12 @@ disk backup exists?"}:::decision
     %% ═══════════════════════════════════════════════════════════════
     %% SESSION RESET
     %% ═══════════════════════════════════════════════════════════════
-    RESET_REQ["POST /api/reset  X-Session-ID header<br/>session_manager.delete(session_id)<br/>clear localStorage['session_id'] + localStorage['history']<br/>Browser redirects → fresh POST /api/init"]:::fs
+    RESET_REQ["POST /api/reset  X-Session-ID header<br/>session_manager.delete(session_id)<br/>clear localStorage.session_id + localStorage.history<br/>Browser redirects → fresh POST /api/init"]:::fs
 
     %% ═══════════════════════════════════════════════════════════════
     %% All successful paths converge to active session
     %% ═══════════════════════════════════════════════════════════════
-    ACTIVE(["Active session — POST /api/chat available<br/>SalesChatbot in SessionSecurityManager<br/>  idle timeout resets on each request<br/>  background_cleanup() thread handles stale sessions"]:::terminal)
+    ACTIVE["Active session — POST /api/chat available<br/><br/>SalesChatbot in SessionSecurityManager<br/>  idle timeout resets on each request<br/>  background_cleanup() thread handles stale sessions"]:::terminal
 
     A_STORE --> ACTIVE
     B_GREET --> ACTIVE
