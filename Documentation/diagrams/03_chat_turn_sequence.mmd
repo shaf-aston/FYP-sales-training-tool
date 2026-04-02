@@ -1,8 +1,12 @@
 ---
-title: Chat Turn Sequence
+title: Chat Turn Sequence (with 3-Layer Control Architecture Highlighted)
 ---
 %% ==========================================
-%% PURPOSE: Traces a single HTTP request through the system. Detail includes input validation, prompt assembly, LLM execution, Fallback chains, and response/analytics recording.
+%% PURPOSE: Traces a single HTTP request through the system, highlighting where the
+%% 3-layer control architecture (drift prevention) is applied:
+%%   🟪 Layer 1: PROMPT CONSTRAINTS (soft influence via rules) — Steps 4-7
+%%   🔴 Layer 2: FSM GUARDS (hard blocking of invalid transitions) — Step 10
+%%   🔵 Layer 3: OUTPUT CONTRACTS (hard pattern detection) — Step 8
 %% ==========================================
 %%{init: {"theme": "base", "sequence": {"actorMargin": 30, "messageMargin": 25}}}%%
 
@@ -32,50 +36,78 @@ sequenceDiagram
     end
 
     Br->>App: POST /api/chat  {message: "..."}  X-Session-ID header
-    note over App: @require_rate_limit('chat')
-InputValidator.validate_message():
-  strip whitespace · max_length=SecurityConfig.MAX_MESSAGE_LENGTH
-  PromptInjectionValidator pattern scan
-require_session(): session_manager.get(session_id)  OR  400 SESSION_EXPIRED
+    note over App
+      require_rate_limit('chat')
+      InputValidator.validate_message():
+        strip whitespace · max_length=SecurityConfig.MAX_MESSAGE_LENGTH
+        PromptInjectionValidator pattern scan
+      require_session(): session_manager.get(session_id)  OR  400 SESSION_EXPIRED
+    end note
 
     App->>Bot: bot.chat(user_message)
 
     %% ── STEP 1: Prompt Assembly ──────────────────────────────────────────────
-    note over Bot: recent_history = conversation_history[-10:]
-chatbot.py lines 104–108: prompt assembled BEFORE intent recording
+    note over Bot
+      recent_history = conversation_history[-10:]
+      chatbot.py lines 104–108: prompt assembled BEFORE intent recording
+    end note
 
     Bot->>FSM: flow_engine.get_current_prompt(user_message)
     FSM->>FSM: strategy_for_prompts property:
-  INTENT mode → returns CONSULTATIVE (uses consultative templates)
-  else → returns actual flow_type (CONSULTATIVE or TRANSACTIONAL)
+    note over FSM
+      INTENT mode -> returns CONSULTATIVE (uses consultative templates)
+      else -> returns actual flow_type (CONSULTATIVE or TRANSACTIONAL)
+    end note
 
     FSM->>PE: generate_stage_prompt(strategy, stage, product_context, history, user_message)
 
-    note over PE: PromptEngine = content.py + prompts.py + overrides.py + tactics.py + analysis.py
+    note over PE
+      PromptEngine = content.py + prompts.py + overrides.py + tactics.py + analysis.py
+    end note
 
     PE->>PE: Tier 1 — check_override(user_message, stage, history, state)
-  direct_info_request: 'price'/'cost'/'how much' (SIGNALS['direct_info_requests'])
-  soft_positive at PITCH: 'yes'/'ok'/'sounds good'/'alright' AND stage==PITCH
-  repetitive_validation: is_repetitive_validation(history, threshold from analysis_config.yaml)
+    note over PE
+      direct_info_request: 'price'/'cost'/'how much' (SIGNALS['direct_info_requests'])
+      soft_positive at PITCH: 'yes'/'ok'/'sounds good'/'alright' AND stage==PITCH
+      repetitive_validation: is_repetitive_validation(history, threshold from analysis_config.yaml)
+      🟪 LAYER 1 — PROMPT CONSTRAINTS (SOFT)
+      Tier 1 override check (overrides.py)
+      Small-talk loop fix: detects excessive "I understand" patterns
+    end note
 
     alt Override triggered (Tier 1 early-exit — skips Tiers 2–4)
         PE-->>FSM: override prompt returned immediately
     else No override
         PE->>PE: Tier 2 — analyze_state(history, user_message) → ConversationState
         PE->>PE: detect_acknowledgment_context(user_message, history, state)
-  'full'  — user disclosed personal problem (vulnerability signal)
-  'light' — guarded=True (defensive / evasive signals detected)
-  'none'  — neutral info request  OR  state.decisive=True
+        note over PE
+          'full'  — user disclosed personal problem (vulnerability signal)
+          'light' — guarded=True (defensive / evasive signals detected)
+          'none'  — neutral info request  OR  state.decisive=True
+        end note
         PE->>PE: Tier 3 — get_adaptive_guidance(state, stage, strategy)
-  state.decisive → close guidance (DO NOT probe more)
-  state.guarded  → back-off (single open question, do not push)
-  is_literal_question(user_message) → answer directly first
-  else → get_tactic('elicitation', subtype): random from tactics.yaml
+        note over PE
+          state.decisive → close guidance (DO NOT probe more)
+          state.guarded  → back-off (single open question, do not push)
+          is_literal_question(user_message) → answer directly first
+          else → get_tactic('elicitation', subtype): random from tactics.yaml
+        end note
         PE->>PE: Tier 4 — get_base_prompt(product_context, strategy, history)
-  + STRATEGY_PROMPTS[strategy][stage]  (intent_low if state.intent=='low')
-  + _SHARED_RULES + acknowledgment_guidance + adaptive_guidance
-  + preference_context + keyword_context (lexical entrainment)
+        note over PE
+          + STRATEGY_PROMPTS[strategy][stage]  (intent_low if state.intent=='low')
+          + _SHARED_RULES + acknowledgment_guidance + adaptive_guidance
+          + preference_context + keyword_context (lexical entrainment)
+        end note
         PE-->>FSM: complete system prompt string
+
+    note over PE
+      🟪 LAYER 1 — PROMPT CONSTRAINTS (continued)
+      Tier 4: _SHARED_RULES applied to ALL strategies:
+        P1: NO parroting >3 words, NO ending pitch with '?'
+        P2: Max 1-2 questions per response
+        Anti-parroting rule: embed keywords, never replay
+        Small-talk loop prevention: hard limits on affirmations
+    end note
     end
 
     FSM-->>Bot: system_prompt
@@ -88,7 +120,9 @@ chatbot.py lines 104–108: prompt assembled BEFORE intent recording
     end
 
     %% ── STEP 2: Intent Recording (AFTER prompt, BEFORE LLM) ─────────────────
-    note over Bot: chatbot.py lines 111–121: separate analyze_state() call for analytics only
+    note over Bot
+      chatbot.py lines 111–121: separate analyze_state() call for analytics only
+    end note
     Bot->>PE: analyze_state(conversation_history, user_message)
     PE-->>Bot: ConversationState  (only intent_level used here)
     Bot->>Obs: record_intent_classification(session_id, intent_level, user_turn_count)
@@ -96,18 +130,30 @@ chatbot.py lines 104–108: prompt assembled BEFORE intent recording
 
     %% ── STEP 3: LLM Call ─────────────────────────────────────────────────────
     Bot->>Pv: provider.chat(llm_messages, temperature=0.8, max_tokens=200, stage)
-    note over Pv: llm_messages = [{role:'system', content:system_prompt}]
-               + conversation_history[-10:]
-               + [{role:'user', content:user_message}]
-@auto_log_performance decorator: measures wall-clock latency,
-  fills response.latency_ms from timer if 0, logs error if set
+    note over Pv
+      llm_messages = [{role:'system', content:system_prompt}]
+                   + conversation_history[-10:]
+                   + [{role:'user', content:user_message}]
+      @auto_log_performance decorator: measures wall-clock latency,
+        fills response.latency_ms from timer if 0, logs error if set
+    end note
     Pv->>API: HTTPS  llama-3.3-70b-versatile  (Groq primary)
     API-->>Pv: completion response  (~980 ms avg)
     Pv-->>Bot: LLMResponse {content, model, latency_ms, error=None}
 
     %% ── STEP 4: Fallback Chain ───────────────────────────────────────────────
     alt LLMResponse.error contains "rate_limit_exceeded" or "429" or any error
-        note over Bot: fallbacks = ['sambanova', 'openrouter']  (current provider removed)
+        note over Bot
+          🔵 LAYER 3 — OUTPUT CONTRACTS (implicitly validates via signal detection)
+          Fallback detection uses text_contains_any_keyword():
+            Word-boundary regex matching · case-insensitive · negation-aware
+            Cached for performance · powers all 3 layers
+          is_repetitive_validation() scans patterns in bot history
+          Small-talk loop fix: detects excessive validation phrases
+        end note
+        note over Bot
+          fallbacks = ['sambanova', 'openrouter']  (current provider removed)
+        end note
         Bot->>Pv: _try_switch_to_provider("sambanova")
         alt SambaNova available
             Pv->>API: HTTPS  Meta-Llama-3.1-70B  (SambaNova · openai SDK compat)
@@ -141,24 +187,39 @@ chatbot.py lines 104–108: prompt assembled BEFORE intent recording
     %% ── STEP 6: FSM Advancement ──────────────────────────────────────────────
     Bot->>Bot: _apply_advancement(user_message)
 
+    note over Bot
+      🔴 LAYER 2 — FSM GUARDS (HARD BLOCKING)
+      flow_engine.get_advance_target() evaluates advancement guards:
+        Guard 1: Min turns in stage met?
+        Guard 2: Signal keywords found in recent messages? (stage window filter)
+        Guard 3: Safety valve triggered? (max_turns ≥ 10)
+      If all guards pass → Advance to next stage
+      Else → Block advancement, stay in current stage
+      Small-talk loop fix: guards prevent bot from getting stuck
+    end note
+
     alt flow_type == INTENT  (discovery mode)
-        Bot->>Bot: _detect_and_switch_strategy(user_message)
-  1) user_consultative_signals → switch_strategy(CONSULTATIVE)
-  2) user_transactional_signals → switch_strategy(TRANSACTIONAL)
-  3) stage_turn_count ≥ 3 → switch_strategy(CONSULTATIVE)  [default]
-        alt Strategy switched
-            Bot->>FSM: switch_strategy(new_strategy)
-  flow_type updated · current_stage = Stage.INTENT · stage_turn_count = 0
-            Bot->>Obs: record_strategy_switch(session_id, from, to, reason, turn_count)
-        end
+      Bot->>Bot: _detect_and_switch_strategy(user_message)
+      note over Bot
+        1) user_consultative_signals → switch_strategy(CONSULTATIVE)
+        2) user_transactional_signals → switch_strategy(TRANSACTIONAL)
+        3) stage_turn_count ≥ 3 → switch_strategy(CONSULTATIVE)  [default]
+      end note
+      alt Strategy switched
+        Bot->>FSM: switch_strategy(new_strategy)
+    flow_type updated · current_stage = Stage.INTENT · stage_turn_count = 0
+        Bot->>Obs: record_strategy_switch(session_id, from, to, reason, turn_count)
+      end
     else flow_type in {CONSULTATIVE, TRANSACTIONAL}
         Bot->>FSM: get_advance_target(user_message)
-        note over FSM: 5 evaluation paths (in priority order):
-  1 commitment signal at LOGICAL/EMOTIONAL → PITCH
-  2 user_demands_directness() → PITCH
-  3 direct_info_requests keywords → PITCH
-  4 urgency_skip_to + impatience signal → skip stage
-  5 ADVANCEMENT_RULES[advance_on](history, msg, stage_turn_count)
+        note over FSM
+          5 evaluation paths (in priority order):
+            1 commitment signal at LOGICAL/EMOTIONAL → PITCH
+            2 user_demands_directness() → PITCH
+            3 direct_info_requests keywords → PITCH
+            4 urgency_skip_to + impatience signal → skip stage
+            5 ADVANCEMENT_RULES[advance_on](history, msg, stage_turn_count)
+        end note
         alt Target stage returned
             FSM->>FSM: advance(target_stage)
   current_stage = target_stage · stage_turn_count = 0
@@ -170,28 +231,35 @@ chatbot.py lines 104–108: prompt assembled BEFORE intent recording
 
     %% ── STEP 7: Objection Classification (OBJECTION stage only) ─────────────
     opt current_stage == Stage.OBJECTION
-        Bot->>PE: classify_objection(user_message, history)
-  Matches against 7 keyword sets in signals.yaml · first match wins
-        PE-->>Bot: {type: smokescreen|money|fear|partner|logistical|think|unknown}
-        Bot->>Obs: record_objection_classified(session_id, type, strategy, turn_count)
+      Bot->>PE: classify_objection(user_message, history)
+      note over PE
+        Matches against 7 keyword sets in signals.yaml · first match wins
+      end note
+      PE-->>Bot: {type: smokescreen|money|fear|partner|logistical|think|unknown}
+      Bot->>Obs: record_objection_classified(session_id, type, strategy, turn_count)
     end
 
     %% ── STEP 8: Response + Training (unconditional) ──────────────────────────
     Bot-->>App: ChatResponse {content, latency_ms, provider, model, input_len, output_len}
 
-    note over App: generate_training() called UNCONDITIONALLY on every /api/chat  (app.py:376)
-NOT conditional on ENABLE_DEBUG_PANEL
+    note over App
+      generate_training() called UNCONDITIONALLY on every /api/chat  (app.py:376)
+      NOT conditional on ENABLE_DEBUG_PANEL
+    end note
     App->>Bot: bot.generate_training(user_message, response.content)
     Bot-->>App: {stage_goal, what_bot_did, next_trigger, where_heading, watch_for: list[str]}
 
-    App-->>Br: JSON {
-  success: true,
-  message: bot_reply,
-  stage: current_stage.upper()  OR  "----" if INTENT mode,
-  strategy: flow_type.upper(),
-  latency_ms: round(latency_ms, 1),
-  provider: _provider_name,
-  model: _model_name,
-  metrics: {input_length, output_length},
-  training: {coaching, technique, score}
-}
+    App-->>Br: JSON (see note)
+    note right of App
+      {
+        success: true,
+        message: bot_reply,
+        stage: current_stage.upper()  OR  "----" if INTENT mode,
+        strategy: flow_type.upper(),
+        latency_ms: round(latency_ms, 1),
+        provider: _provider_name,
+        model: _model_name,
+        metrics: {input_length, output_length},
+        training: {coaching, technique, score}
+      }
+    end note

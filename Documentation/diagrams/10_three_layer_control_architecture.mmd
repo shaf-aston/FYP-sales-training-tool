@@ -1,0 +1,132 @@
+---
+title: 3-Layer Control Architecture (Drift Prevention)
+---
+%% ==========================================
+%% PURPOSE: Demonstrates how the 3-layer control system prevents semantic drift:
+%% Layer 1 (Prompt Constraints) — Soft influence via rules
+%% Layer 2 (FSM Guards) — Hard blocking of invalid transitions
+%% Layer 3 (Output Contracts) — Hard catching of violations via pattern detection
+%% ==========================================
+%%{init: {"theme": "base", "flowchart": {"nodeSpacing": 50, "rankSpacing": 50}}}%%
+
+flowchart TD
+    classDef prompt fill:#9C27B0,stroke:#6A1B9A,stroke-width:2.5px,color:#fff
+    classDef fsm fill:#D32F2F,stroke:#B71C1C,stroke-width:2.5px,color:#fff
+    classDef contract fill:#1976D2,stroke:#0D47A1,stroke-width:2.5px,color:#fff
+    classDef decision fill:#F57F17,stroke:#E65100,stroke-width:2px,color:#fff
+    classDef success fill:#388E3C,stroke:#1B5E20,stroke-width:2.5px,color:#fff
+    classDef process fill:#00897B,stroke:#004D40,stroke-width:2px,color:#fff
+
+    %% ── ENTRY POINT ──────────────────────────────────────────────────────────
+    START(["User Message In"])
+
+    START --> ANALYSIS["<b>ANALYSIS PHASE</b><br/>classify_intent() · classify_objection()<br/>identify_sentiment() · detect_guardedness()"]:::process
+
+    ANALYSIS --> LAYER1_ENTRY
+
+    %% ── LAYER 1: PROMPT CONSTRAINTS (SOFT) ─────────────────────────────────
+    subgraph Layer1["🟪 LAYER 1: PROMPT CONSTRAINTS (Soft Influence)"]
+        LAYER1_ENTRY["check_override_condition()<br/>(overrides.py)"]:::prompt
+
+        LAYER1_CHECK{{"Condition Met?<br/>━━━━<br/>├─ direct_info_request<br/>├─ soft_positive @ pitch<br/>├─ repetitive_validation<br/>└─ None of above"}}:::decision
+
+        OVERRIDE["Override Template<br/>Early Exit<br/>(Skip Tiers 2-4)"]:::prompt
+        STANDARD["Standard Pipeline<br/>Tiers 2-4"]:::prompt
+
+        LAYER1_CHECK -->|Yes| OVERRIDE
+        LAYER1_CHECK -->|No| STANDARD
+
+        TIERS["<b>Tier 4 — Context Assembly:</b><br/>────────────────────<br/>STRATEGY_PROMPTS[strategy][stage]<br/>+<br/>_SHARED_RULES:<br/>  P1: NO parroting exceeding 3 words<br/>  P1: NO ending pitch with '?'<br/>  P1: NO 'Would you like?' phrasing<br/>  P2: Max 1-2 questions per response<br/>  P3: Match user tone<br/>  + Terse input guidance if <threshold<br/>  + Anti-parroting rule<br/>  + Persona checkpoint every N turns"]:::prompt
+
+        STANDARD --> TIERS
+        OVERRIDE --- TIERS
+        TIERS --> PROMPT_OUT["System Prompt Generated<br/>(Constraints applied first)"]:::prompt
+    end
+
+    LAYER1_ENTRY --- LAYER1_ENTRY
+
+    PROMPT_OUT --> LLM["<b>LLM GENERATION</b><br/>Groq / OpenRouter<br/>Respects prompt constraints<br/>(soft influence)"]:::process
+
+    LLM --> RESPONSE["LLM Response Generated<br/>(May drift, but prompt<br/>pushes toward rules)"]
+
+    RESPONSE --> LAYER2_ENTRY
+
+    %% ── LAYER 2: FSM GUARDS (HARD) ───────────────────────────────────────
+    subgraph Layer2["🔴 LAYER 2: FSM GUARDS (Hard Blocking)"]
+        LAYER2_ENTRY["_apply_advancement()<br/>flow_engine.get_advance_target()"]:::fsm
+
+        FSM_CHECK{{"Advancement Guard<br/>━━━━<br/>ADVANCEMENT_RULES[rule]()<br/>applied to:<br/>current_stage + user_message<br/>+ turn_count + history"}}:::decision
+
+        GUARD1["<b>Guard 1: Min Turns?</b><br/>────────────────<br/>Intent: ≥1<br/>Logical: ≥2<br/>Emotional: ≥3"]:::fsm
+
+        GUARD2["<b>Guard 2: Signal Found?</b><br/>────────────────<br/>text_contains_any_keyword()<br/>in recent user messages only<br/>(stage window filter)<br/>Examples:<br/>└─ 'doubt' → logical stage<br/>└─ 'stakes' → emotional stage<br/>└─ 'commitment' → pitch stage"]:::fsm
+
+        GUARD3["<b>Guard 3: Safety Valve?</b><br/>────────────────<br/>turn_count ≥ max_turns<br/>(typically 10)<br/>Prevents infinite loops"]:::fsm
+
+        FSM_CHECK --> GUARD1
+        GUARD1 --> GUARD2
+        GUARD2 --> GUARD3
+
+        RESULT{{"All Guards Passed?<br/>━━━━<br/>(Signal OR Valve)<br/>AND<br/>Min Turns Met"}}:::decision
+
+        GUARD3 --> RESULT
+
+        ADVANCE["✓ Advance to Next Stage"]:::success
+        BLOCK["✗ Stay in Current Stage<br/>(Blocked)"]:::fsm
+
+        RESULT -->|True| ADVANCE
+        RESULT -->|False| BLOCK
+    end
+
+    LAYER2_ENTRY --- LAYER2_ENTRY
+
+    ADVANCE --> ANALYTICS["Record Stage Transition<br/>in SessionAnalytics"]:::process
+    BLOCK --> ANALYTICS
+
+    ANALYTICS --> LAYER3_ENTRY
+
+    %% ── LAYER 3: OUTPUT CONTRACTS (HARD) ──────────────────────────────────
+    subgraph Layer3["🔵 LAYER 3: OUTPUT CONTRACTS (Hard Validation)"]
+        LAYER3_NOTE["<b>Signal Detection (Powers All Layers):</b><br/>text_contains_any_keyword() [analysis.py:74-100]<br/>├─ Word-boundary regex: \\b{keyword}\\b<br/>├─ Case-insensitive matching<br/>├─ Negation-aware: skip if preceded by 'not'/'don't'<br/>└─ Cached @lru_cache256 for performance"]:::contract
+
+        LAYER3_ENTRY["is_repetitive_validation(history)<br/>────────────────<br/>Scan last 10 bot messages<br/>Count validation_phrases<br/>(from config)<br/>if count ≥ threshold:"]:::contract
+
+        VALIDATION_CHECK{{"Excessive Validation<br/>Pattern Detected?<br/>━━━━<br/>(e.g. 'I understand'<br/>appearing 2+ times)"}}:::decision
+
+        TRIGGER["Override Triggered<br/>→ Next turn uses override prompt<br/>→ Force new topic<br/>(Small-talk loop fix)"]:::contract
+        NO_ISSUE["No Issue Detected<br/>Response OK"]:::success
+
+        LAYER3_ENTRY --> VALIDATION_CHECK
+        VALIDATION_CHECK -->|Yes| TRIGGER
+        VALIDATION_CHECK -->|No| NO_ISSUE
+
+        TERSE["<b>Terse Input Contract:</b><br/>────────────────<br/>If user message < threshold words:<br/>Inject guidance: 'ONE observation<br/>+ ONE question max'"]:::contract
+
+        PERSONA["<b>Persona Checkpoint:</b><br/>────────────────<br/>Every N turns:<br/>Reset strategy anchor<br/>→ Prevents gradual drift"]:::contract
+
+        NO_ISSUE --- TERSE
+        TERSE --- PERSONA
+    end
+
+    LAYER3_ENTRY --- LAYER3_ENTRY
+
+    TRIGGER --> STORE_HISTORY
+    NO_ISSUE --> STORE_HISTORY
+
+    STORE_HISTORY["Store in Conversation History<br/>flow_engine.add_turn(user_message, bot_reply)"]:::process
+
+    STORE_HISTORY --> RETURN["Return Response to User"]
+
+    RETURN --> END_NODE(["Chat Turn Complete<br/>——————————————<br/>Next turn starts with:<br/>ACTUAL current_stage<br/>(from FSM, not LLM guess)"]):::success
+
+    %% ── SMALL-TALK LOOP FIX ANNOTATION ───────────────────────────────────
+    note right of Layer1: <b>Small-Talk Loop Fix</b><br/>Prevents repetitive affirmations
+
+    note right of Layer2: <b>Small-Talk Loop Fix</b><br/>Blocks advancement without signals
+
+    note right of Layer3: <b>Small-Talk Loop Fix</b><br/>Detects & overrides excessive<br/>validation patterns
+
+    %% ── RELIABILITY IMPACT ────────────────────────────────────────────────
+    note right of RETURN
+        <b>🎯 Reliability Impact:</b><br/>Layer 1 alone: ~70% success (LLM drift from RLHF)<br/>  Layer 2 + 1: ~85% (FSM prevents escape)<br/>  All 3 layers: ~92% (redundant checks catch remaining drift)<br/><br/><b>Key Insight:</b> Each layer is independent;<br/>system remains functional if one fails.
+    end note

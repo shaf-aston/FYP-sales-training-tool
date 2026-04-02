@@ -7,9 +7,16 @@ title: System Architecture
 %%{init: {"theme": "base", "flowchart": {"nodeSpacing": 40, "rankSpacing": 40}}}%%
 
 graph TD
-    classDef junctionStyle width:0px,height:0px,stroke-width:0px,font-size:0px;
+    classDef junctionStyle stroke-width:0px,fill:transparent,font-size:1px
 
-Browser(["🌐 Browser — HTML5 SPA<br/>index.html · app.js · chat.css<br/>Web Speech API (voice input)<br/>localStorage: session_id + full history<br/>parseMarkdown() on bot messages<br/>textContent for user messages (XSS-safe)"]):::client
+Browser(["🌐 Browser — HTML5 SPA"]):::client
+note right of Browser
+    index.html · app.js · chat.css
+    Web Speech API (voice input)
+    localStorage: session_id + full history
+    parseMarkdown() on bot messages
+    textContent for user messages (XSS-safe)
+end note
 
 subgraph Flask["⚙️  Flask 3.0  ·  Python 3.10+  ·  localhost:5000 / Render cloud"]
     direction TB
@@ -55,8 +62,8 @@ end
 subgraph LLMs["☁️  External LLM APIs — 3-tier fallback chain (Groq free tier rate-limits)"]
     direction LR
     G["🟢 Groq Cloud — Primary<br/>api.groq.com/openai/v1<br/>llama-3.3-70b-versatile<br/>groq-sdk · Avg ~980 ms"]:::llm
-    OR["🟡 OpenRouter — Fallback 1<br/>openrouter.ai/api/v1<br/>llama-3.3-70b-instruct:free<br/>requests.Session · ~1200 ms"]:::llm
     SN["🟠 SambaNova — Unregistered<br/>api.sambanova.ai/v1<br/>Meta-Llama-3.1-70B-Instruct<br/>File exists · not in factory.py"]:::llm
+    OR["🟡 OpenRouter — Fallback 1<br/>openrouter.ai/api/v1<br/>llama-3.3-70b-instruct:free<br/>requests.Session · ~1200 ms"]:::llm
 end
 
 subgraph FS["💾  File System — Runtime Persistence"]
@@ -72,10 +79,10 @@ BotJ[ ]:::junctionStyle
 ObsJ[ ]:::junctionStyle
 
 %% RANK CONTROLS (Invisible Links)
-Web ~~~ Core
-Core ~~~ Features
-Features ~~~ Providers
-Providers ~~~ Obs
+Web --- Core
+Core --- Features
+Features --- Providers
+Providers --- Obs
 
 %% ── Connections ──────────────────────────────────────────────────────────────
 Browser -->|"HTTP REST · X-Session-ID header"| App
