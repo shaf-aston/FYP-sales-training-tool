@@ -4,7 +4,7 @@ title: Core Class Diagram
 %% ==========================================
 %% PURPOSE: Illustrates the primary object-oriented structure of the Sales Chatbot core, including Enumerations for State/Strategy, Session storage models, and the Flow Engine.
 %% ==========================================
-%%{init: {"theme": "base", "flowchart": {"nodeSpacing": 40, "rankSpacing": 40}}}%%
+%%{init: {"theme": "base"}}%%
 
 classDiagram
 
@@ -50,8 +50,8 @@ classDiagram
         +bool guarded
         +bool question_fatigue
         +bool decisive
-        +__getitem__(key str) Any
-        +get(key str, default) Any
+        +__getitem__(str) Any
+        +get(str, default) Any
     }
 
     %% ── Orchestrator ─────────────────────────────────────────────────────────
@@ -64,22 +64,22 @@ classDiagram
         -str _provider_name
         -str _model_name
         -str _ab_variant
-        +chat(user_message str) ChatResponse
-        +generate_training(user_msg str, bot_reply str) dict
-        +answer_training_question(question str) dict
-        +rewind(steps int) dict
-        +rewind_to_turn(turn_index int) bool
-        +replay(history list) None
+        +chat(str) ChatResponse
+        +generate_training(str, str) dict
+        +answer_training_question(str) dict
+        +rewind(int) dict
+        +rewind_to_turn(int) bool
+        +replay(list) None
         +save_session() None
-        +load_session(session_id str)$ SalesChatbot
+        +load_session(str)$ SalesChatbot
         +get_conversation_summary() dict
         +record_session_end() None
-        -_apply_advancement(user_message str) None
-        -_detect_and_switch_strategy(user_message str) bool
-        -_try_switch_to_provider(name str) bool
-        -_fallback(message str, latency_ms float, user_message str) ChatResponse
+        -_apply_advancement(str) None
+        -_detect_and_switch_strategy(str) bool
+        -_try_switch_to_provider(str) bool
+        -_fallback(str, float, str) ChatResponse
     }
-    note for SalesChatbot "chat() execution order: prompt → intent → LLM → fallback → persist → latency → FSM → objection → training<br/>_detect_and_switch_strategy(): INTENT mode only, runs post-LLM inside _apply_advancement()<br/>Module constants: _RECENT_HISTORY_WINDOW=-10 · _DEFAULT_TEMPERATURE=0.8 · _DEFAULT_MAX_TOKENS=200"
+    note for SalesChatbot "chat() execution order: prompt → intent → LLM → fallback → persist → latency → FSM → objection → training."
 
     %% ── FSM ──────────────────────────────────────────────────────────────────
     class SalesFlowEngine {
@@ -91,107 +91,107 @@ classDiagram
         +int stage_turn_count
         +str product_context
         +strategy_for_prompts Strategy
-        +get_current_prompt(user_message str) str
-        +get_advance_target(user_message str) Optional~Stage~
-        +should_advance(user_message str) bool
-        +advance(target_stage Optional~Stage~) None
-        +add_turn(user_msg str, bot_reply str) None
-        +switch_strategy(new_strategy str) bool
+        +get_current_prompt(str) str
+        +get_advance_target(str) Optional~Stage~
+        +should_advance(str) bool
+        +advance(Optional~Stage~) None
+        +add_turn(str, str) None
+        +switch_strategy(str) bool
         +reset_to_initial() None
-        +restore_state(state dict) None
+        +restore_state(dict) None
         +get_summary() dict
         +to_dict() dict
     }
-    note for SalesFlowEngine "strategy_for_prompts: INTENT → CONSULTATIVE templates · else returns actual flow_type<br/>get_advance_target() 5 evaluation paths (see 02_fsm_state_machine for full detail)<br/>ADVANCEMENT_RULES dict (module-level): maps rule name strings → rule functions"
+    note for SalesFlowEngine "strategy_for_prompts: INTENT → CONSULTATIVE templates."
 
     %% ── Provider Hierarchy ───────────────────────────────────────────────────
     class BaseLLMProvider {
         <<abstract>>
-        +chat(messages list, temperature float, max_tokens int, stage str) LLMResponse*
+        +chat(...) LLMResponse*
         +is_available() bool*
         +get_model_name() str*
     }
-    note for BaseLLMProvider "@auto_log_performance decorator wraps all concrete chat() implementations"
+    note for BaseLLMProvider "@auto_log_performance decorator wraps all concrete chat() implementations."
 
     class GroqProvider {
         -str model
         -groq.Groq client
         -threading.Lock _lock
-        +chat(messages list, temperature float, max_tokens int, stage str) LLMResponse
+        +chat(...) LLMResponse
         +is_available() bool
         +get_model_name() str
     }
-    note for GroqProvider "Default: llama-3.3-70b-versatile · Env: SAFE_GROQ_API_KEY or GROQ_API_KEY · ~980 ms avg"
+    note for GroqProvider "Default: llama-3.3-70b-versatile."
 
     class OpenRouterProvider {
         -str model
         -requests.Session session
         -threading.Lock _lock
         -str api_key
-        +chat(messages list, temperature float, max_tokens int, stage str) LLMResponse
+        +chat(...) LLMResponse
         +is_available() bool
         +get_model_name() str
     }
-    note for OpenRouterProvider "Default: llama-3.3-70b-instruct:free · Env: OPENROUTER_API_KEY · ~1200 ms · Fallback 1"
+    note for OpenRouterProvider "Default: llama-3.3-70b-instruct:free."
 
     class SambanovaProvider {
         -str model
         -openai.OpenAI client
-        +chat(messages list, temperature float, max_tokens int, stage str) LLMResponse
+        +chat(...) LLMResponse
         +is_available() bool
         +get_model_name() str
     }
-    note for SambanovaProvider "Model: Meta-Llama-3.1-70B-Instruct · Env: SAMBANOVA_API_KEY · openai SDK compat<br/>File exists but NOT registered in factory.py — not used in any active code path"
+    note for SambanovaProvider "Model: Meta-Llama-3.1-70B-Instruct."
 
     class DummyProvider {
         -str fixed_response
-        +chat(messages list, temperature float, max_tokens int, stage str) LLMResponse
+        +chat(...) LLMResponse
         +is_available() bool
         +get_model_name() str
     }
-    note for DummyProvider "Always returns 'Test response' · model='dummy' · latency_ms=0 · test suite use only"
+    note for DummyProvider "Always returns 'Test response'."
 
     class ProviderFactory {
         <<module>>
         +PROVIDERS dict$
-        +create_provider(provider_type str, model str)$ BaseLLMProvider
+        +create_provider(str, str)$ BaseLLMProvider
         +get_available_providers()$ dict
     }
-    note for ProviderFactory "PROVIDERS = {'groq': GroqProvider, 'openrouter': OpenRouterProvider, 'sambanova': SambanovaProvider, 'dummy': DummyProvider}"
+    note for ProviderFactory "PROVIDERS = {'groq': GroqProvider, 'openrouter': OpenRouterProvider, 'sambanova': SambanovaProvider, 'dummy': DummyProvider}."
 
     %% ── Observability ────────────────────────────────────────────────────────
     class SessionAnalytics {
         <<service>>
-        +record_session_start(session_id str, product_type str, strategy str, ab_variant str)$
-        +record_stage_transition(session_id str, from_stage str, to_stage str, strategy str, user_turns_in_stage int)$
-        +record_intent_classification(session_id str, intent_level str, user_turn_count int)$
-        +record_objection_classified(session_id str, objection_type str, strategy str, user_turn_count int)$
-        +record_strategy_switch(session_id str, from_strategy str, to_strategy str, reason str, user_turn_count int)$
-        +record_session_end(session_id str, final_stage str, final_strategy str, turns int)$
+        +record_session_start(...)$
+        +record_stage_transition(...)$
+        +record_intent_classification(str, str, int)$
+        +record_objection_classified(...)$
+        +record_strategy_switch(...)$
+        +record_session_end(...)$
         +get_evaluation_summary()$ dict
     }
-    note for SessionAnalytics "Writes to analytics.jsonl (project root) · rotation: 10 000 → keep 5 000 lines<br/>get_evaluation_summary() reads full file → stage reach rates · intent distribution · A/B variant split"
+    note for SessionAnalytics "Writes to analytics.jsonl (project root)."
 
     class PerformanceTracker {
         <<service>>
         +MAX_METRICS_LINES int$
-        +log_stage_latency(session_id str, stage str, strategy str, latency_ms float, provider str, model str, user_message_length int, bot_response_length int)$
+        +log_stage_latency(...)$
         +get_summary() dict$
         +get_provider_stats() dict$
     }
-    note for PerformanceTracker "Writes to metrics.jsonl (project root) under threading.Lock · MAX_METRICS_LINES=5000 → trim to 2500<br/>get_provider_stats() feeds GET /api/health response"
+    note for PerformanceTracker "Writes to metrics.jsonl (project root) under threading.Lock."
 
     class QuickMatcher {
         -dict product_config
-        +normalize(text str) str
-        +match_product(text str) tuple
-        -_match_product_normalized(text str) tuple
-        +match_signals(text str, category str) list
-        +detect_preferences(text str) dict
-        +score_text_match(text str, target str, method str) float
-        +find_best_match(text str, candidates list, threshold float) tuple
+        +normalize(str) str
+        +match_product(str) tuple
+        -_match_product_normalized(str) tuple
+        +match_signals(str, str) list
+        +detect_preferences(str) dict
+        +score_text_match(str, str, str) float
+        +find_best_match(str, list, float) tuple
     }
-    note for QuickMatcher "match_product() normalises then calls @lru_cache _match_product_normalized() — 'Cars' and 'cars' share cache<br/>Confidence tiers: exact=1.0 · alias=0.95 · fuzzy+context=0.6–0.8 · threshold ≥0.7 accepted"
+    note for QuickMatcher "match_product() normalises then calls @lru_cache _match_product_normalized() — 'Cars' and 'cars' share cache."
 
     %% ── Relationships ────────────────────────────────────────────────────────
     SalesChatbot *-- SalesFlowEngine          : flow_engine (composition)
@@ -221,7 +221,7 @@ classDiagram
     classDef dtoStyle    fill:#26C6DA,stroke:#006064,stroke-width:2.5px,color:#fff
     classDef coreStyle   fill:#FFA726,stroke:#E65100,stroke-width:2.5px,color:#fff
     classDef provStyle   fill:#EC407A,stroke:#880E4F,stroke-width:2.5px,color:#fff
-    classDef obsStyle    fill:#26C6DA,stroke:#006064,stroke-width:2.5px,color:#fff
+    classDef obsStyle    fill:#66BB6A,stroke:#1B5E20,stroke-width:2.5px,color:#fff
     classDef webStyle    fill:#42A5F5,stroke:#0D47A1,stroke-width:2.5px,color:#fff
 
     class Strategy          enumStyle

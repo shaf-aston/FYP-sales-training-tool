@@ -9,61 +9,62 @@ title: System Architecture
 graph TD
     classDef junctionStyle stroke-width:0px,fill:transparent,font-size:1px
 
-Browser(["🌐 Browser — HTML5 SPA<br/>index.html · app.js · chat.css<br/>Web Speech API (voice input)<br/>localStorage: session_id + full history<br/>parseMarkdown() on bot messages<br/>textContent for user messages (XSS-safe)"]):::client
+Browser(["🌐 Browser — HTML5 SPA"]):::client
+
 
 subgraph Flask["⚙️  Flask 3.0  ·  Python 3.10+  ·  localhost:5000 / Render cloud"]
     direction TB
 
     subgraph Web["Web Layer  (src/web/)"]
         direction LR
-        App["app.py — 31 REST routes<br/>POST /api/init · restore · reset · chat · training/ask<br/>GET+POST+DELETE /api/knowledge<br/>GET /api/quiz/question  POST /api/quiz/stage|next-move|direction<br/>POST /api/prospect/init|chat|evaluate|reset  GET /api/prospect/state<br/>GET /api/analytics/session/:id · /api/analytics/summary<br/>GET /api/voice/status  POST /api/voice/transcribe|synthesize|chat<br/>GET /api/health · /api/config<br/>GET+POST /api/debug/* (blocked unless ENABLE_DEBUG_PANEL=true)<br/>@require_session · @require_rate_limit per endpoint<br/>SessionSecurityManager ×2:<br/>  main    → MAX_SESSIONS cap · 6 h idle timeout<br/>  prospect → 100 session cap · 30 min idle timeout"]:::web
-        Sec["security.py<br/>RateLimiter: per-endpoint request caps (SecurityConfig)<br/>InputValidator: strip whitespace · max_length · injection scan<br/>PromptInjectionValidator: regex pattern matching<br/>SessionSecurityManager: capacity + idle enforcement + cleanup thread<br/>SecurityHeadersMiddleware (@after_request):<br/>  X-Content-Type-Options · X-Frame-Options · Content-Security-Policy<br/>CORS: ALLOWED_ORIGINS env var<br/>  default: fyp-sales-training-tool.onrender.com · localhost:5000"]:::web
+        App["app.py<br/>(REST API Gateway)"]:::web
+        Sec["SecurityManager<br/>(Rate Limit & Validation)"]:::web
     end
 
     subgraph Core["Chatbot Core  (src/chatbot/)"]
         direction TB
-        Bot["chatbot.py — SalesChatbot (Orchestrator)<br/>chat() 8-step order per turn:<br/>  1 get_current_prompt  2 analyze_state+record_intent  3 provider.chat (LLM)<br/>  4 fallback: sambanova → openrouter → static msg  5 add_turn+save_session<br/>  6 log_stage_latency  7 _apply_advancement  8 classify_objection (OBJECTION only)<br/>_detect_and_switch_strategy() — INTENT mode only, post-LLM<br/>_apply_advancement() — triggers FSM stage or strategy transition<br/>rewind(n) · rewind_to_turn(i) · replay(history) · save_session() · load_session()"]:::core
-        FSM["flow.py — SalesFlowEngine<br/>3 strategies: INTENT (discovery) · CONSULTATIVE (5-stage NEPQ) · TRANSACTIONAL (3-stage)<br/>strategy_for_prompts: INTENT mode → CONSULTATIVE templates<br/>get_advance_target() — 5 ordered evaluation paths:<br/>  1 commitment signal at LOGICAL/EMOTIONAL → PITCH (fast-path)<br/>  2 user_demands_directness() → PITCH<br/>  3 direct_info_requests keywords → PITCH<br/>  4 urgency_skip_to + impatience → skip stage<br/>  5 ADVANCEMENT_RULES[advance_on](history, msg, stage_turn_count)<br/>ADVANCEMENT_RULES dict: user_has_clear_intent · user_shows_doubt<br/>  user_expressed_stakes · commitment_or_objection · commitment_or_walkaway"]:::core
-        NLU["analysis.py — Pure NLU (zero LLM calls)<br/>analyze_state(history, user_message) → ConversationState {intent · guarded · fatigue · decisive}<br/>classify_intent_level(): intent lock — once 'high', never regresses<br/>detect_guardedness(): 4 priority cases + weighted scoring (evasive×0.5 · sarcasm×0.35<br/>  deflection×0.2 · defensive×0.1) + context multiplier ×1.4 if short reply to long bot msg<br/>classify_objection(): 7 types from signals.yaml (first keyword match wins)<br/>text_contains_any_keyword(): @lru_cache compiled regex · negation-aware finditer loop"]:::core
-        Content["content.py · prompts.py · overrides.py · tactics.py<br/>4-tier prompt assembly on every turn:<br/>  Tier 1 override (early-exit — skips 2–4):<br/>    direct_info_request · soft_positive at PITCH · repetitive_validation loop<br/>  Tier 2 acknowledgment injection:<br/>    full (user disclosed personal problem) · light (guarded) · none (neutral/decisive)<br/>  Tier 3 adaptive tactics:<br/>    decisive → close guidance · guarded → back-off · literal-Q → answer-first · else elicitation<br/>  Tier 4 stage assembly:<br/>    STRATEGY_PROMPTS[strategy][stage] + _SHARED_RULES + preference_context + lexical entrainment"]:::core
-        Loader["loader.py — Config Hub<br/>@lru_cache on all 9 YAML loaders — read once per process, cleared on restart<br/>QuickMatcher.match_product(): exact → alias → fuzzy (confidence ≥ 0.7 accepted)<br/>  'Cars' and 'cars' share cache entry via _match_product_normalized(@lru_cache)<br/>assign_ab_variant(session_id): MD5(session_id) mod 2 → 'variant_a' or 'variant_b' (50/50)<br/>get_tactic(category, subtype, context): random selection from tactics.yaml<br/>render_template(template, **ctx): {placeholder} substitution"]:::core
+        Bot["SalesChatbot<br/>(Session Orchestrator)"]:::core
+        FSM["SalesFlowEngine<br/>(FSM State Manager)"]:::core
+        NLU["AnalysisEngine<br/>(NLU & Signal Detection)"]:::core
+        Content["PromptEngine<br/>(4-Tier Prompt Assembly)"]:::core
+        Loader["ConfigLoader<br/>(YAML Cache & Matching)"]:::core
     end
 
     subgraph Features["Feature Modules  (src/chatbot/)"]
         direction LR
-        Trainer["trainer.py<br/>generate_training() called UNCONDITIONALLY<br/>on every /api/chat response (app.py line 376)<br/>Rubric-injected LLM call: current stage ·<br/>expected NEPQ technique · user msg · bot reply<br/>→ {stage_goal, what_bot_did, next_trigger, where_heading, watch_for}"]:::feature
-        Quiz["quiz.py<br/>Stage-ID: deterministic — matches current FSM stage<br/>Next-move: LLM-scored freetext comparison to ideal<br/>Direction: LLM-scored strategy explanation<br/>Fallback score = 50 (median) on LLM failure<br/>Config: quiz_config.yaml (question bank + answer keys)"]:::feature
-        Prospect["prospect.py — ProspectSession<br/>AI buyer — LLM generates buyer replies each turn<br/>_score_sales_message(): deterministic keyword scoring, no LLM<br/>  +2 commitment · +1 high_intent · +len bonus · +question bonus<br/>  -2 walking · -0.5 objection · -1 impatience · early-turn penalty<br/>_update_readiness(): score 4–5→+gain · 1–2→-loss · 3→+0.01<br/>End: SOLD readiness≥0.85+turns≥3 · WALKED patience exceeded or readiness≤0<br/>prospect_evaluator.py: post-session LLM rubric (NEPQ · objections · rapport · close)"]:::feature
+        Trainer["SalesTrainer<br/>(Feedback Generation)"]:::feature
+        Quiz["QuizEngine<br/>(Assessment)"]:::feature
+        Prospect["ProspectSession<br/>(AI Buyer Role-Play)"]:::feature
         WebSearch["web_search.py<br/>WebSearchService: duckduckgo_search<br/>TTL cache for objection handling context"]:::feature
         Know["knowledge.py<br/>CRUD for custom product info via /api/knowledge<br/>ALLOWED_FIELDS whitelist · MAX_FIELD_LENGTH cap per field<br/>get_custom_knowledge_text() injected into product_context<br/>at SalesChatbot.__init__ as '--- BEGIN CUSTOM PRODUCT DATA ---'"]:::feature
     end
 
     subgraph Providers["LLM Provider Layer  (src/chatbot/providers/)"]
         direction LR
-        Factory["factory.py — Registry pattern<br/>PROVIDERS dict: groq · openrouter · sambanova · dummy<br/>create_provider(type, model) → BaseLLMProvider instance<br/>SalesChatbot calls create_provider() — never imports concrete classes"]:::prov
-        ProvBase["BaseLLMProvider (ABC)<br/>@auto_log_performance: wraps chat(), measures wall-clock latency,<br/>  fills response.latency_ms if 0, logs error if response.error set<br/>LLMResponse dataclass: content · model · latency_ms · error<br/>GroqProvider:       llama-3.3-70b-versatile · groq-sdk · ~980 ms<br/>OpenRouterProvider: llama-3.3-70b-instruct:free · requests.Session · ~1200 ms<br/>SambanovaProvider:  Meta-Llama-3.1-70B-Instruct · openai SDK compat<br/>DummyProvider:      returns 'Test response' · latency_ms=0 · tests only"]:::prov
+        Factory["ProviderFactory<br/>(Registry Pattern)"]:::prov
+        ProvBase["BaseLLMProvider (ABC)<br/>(LLM Interface)"]:::prov
         VoiceProv["VoiceProvider (voice_provider.py)<br/>STT: Deepgram → fallback Groq Whisper<br/>TTS: edge-tts (async event loop in background thread)"]:::prov
     end
 
     subgraph Obs["Observability  (src/chatbot/)"]
         direction LR
-        Ana["session_analytics.py — static methods<br/>6 event types appended to analytics.jsonl:<br/>  session_start · stage_transition · intent_classification<br/>  objection_classified · strategy_switch · session_end<br/>get_evaluation_summary(): full file scan → stage reach rates<br/>  intent distribution · objection type freq · A/B variant split<br/>Rotation: trim to 5 000 newest lines when file exceeds 10 000"]:::obs
-        Perf["performance.py — static methods<br/>log_stage_latency(session_id, stage, strategy, latency_ms,<br/>  provider, model, user_message_length, bot_response_length)<br/>Writes to metrics.jsonl under threading.Lock<br/>get_provider_stats() called by GET /api/health<br/>Rotation: trim to 2 500 newest lines when file exceeds 5 000"]:::obs
+        Ana["SessionAnalytics<br/>(Event Logging)"]:::obs
+        Perf["PerformanceTracker<br/>(Latency Metrics)"]:::obs
     end
 end
 
 subgraph LLMs["☁️  External LLM APIs — 3-tier fallback chain (Groq free tier rate-limits)"]
     direction LR
     G["🟢 Groq Cloud — Primary<br/>api.groq.com/openai/v1<br/>llama-3.3-70b-versatile<br/>groq-sdk · Avg ~980 ms"]:::llm
-    SN["🟠 SambaNova — Unregistered<br/>api.sambanova.ai/v1<br/>Meta-Llama-3.1-70B-Instruct<br/>File exists · not in factory.py"]:::llm
+    SN["🟠 SambaNova — Fallback 1<br/>api.sambanova.ai/v1<br/>Meta-Llama-3.1-70B-Instruct<br/>Registered · openai SDK compat"]:::llm
     OR["🟡 OpenRouter — Fallback 1<br/>openrouter.ai/api/v1<br/>llama-3.3-70b-instruct:free<br/>requests.Session · ~1200 ms"]:::llm
 end
 
 subgraph FS["💾  File System — Runtime Persistence"]
     direction LR
-    F_S["sessions/{session_id}.json<br/>JSON snapshot written by save_session() after every turn<br/>load_session() on /api/init if server session lost<br/>Used for: crash recovery · rewind · replay(history)"]:::fs
-    F_J["analytics.jsonl — evaluation events<br/>  one JSON object per line · rotation 10 000 → 5 000<br/>metrics.jsonl — per-turn LLM latency records<br/>  one JSON object per line · rotation 5 000 → 2 500"]:::fs
-    F_Y["src/config/ — 9 YAML files (~1 400 lines total)<br/>signals.yaml · analysis_config.yaml · product_config.yaml<br/>tactics.yaml · adaptations.yaml · overrides.yaml<br/>prospect_config.yaml · quiz_config.yaml · variants.yaml<br/>All loaded via loader.py @lru_cache — Flask restart to reload"]:::fs
+    F_S["sessions/{id}.json<br/>(Session State Snapshots)"]:::fs
+    F_J["analytics.jsonl · metrics.jsonl<br/>(Event Logs)"]:::fs
+    F_Y["src/config/ (9 YAML files)<br/>(Configuration)"]:::fs
 end
 
 %% JUNCTION NODES for routing and preventing spaghetti lines
@@ -71,11 +72,8 @@ AppJ[ ]:::junctionStyle
 BotJ[ ]:::junctionStyle
 ObsJ[ ]:::junctionStyle
 
-%% RANK CONTROLS (Invisible Links)
-Web --- Core
-Core --- Features
-Features --- Providers
-Providers --- Obs
+%% ── Rank Controls (Vertical Ordering) ────────────────────────────────────
+%% Use subgraph direction TB to enforce layout; no invisible edges needed
 
 %% ── Connections ──────────────────────────────────────────────────────────────
 Browser -->|"HTTP REST · X-Session-ID header"| App

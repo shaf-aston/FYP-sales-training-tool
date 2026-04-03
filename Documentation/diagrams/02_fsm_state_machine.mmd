@@ -17,7 +17,6 @@ stateDiagram-v2
     classDef stageEmotional fill:#AB47BC,stroke:#4A148C,stroke-width:2px,color:#fff
     classDef stagePitch    fill:#FFA726,stroke:#E65100,stroke-width:2px,color:#fff
     classDef stageObj      fill:#EC407A,stroke:#880E4F,stroke-width:2px,color:#fff
-    classDef exitState     fill:#66BB6A,stroke:#1B5E20,stroke-width:2px,color:#fff
 
     [*] --> StrategyInit : POST /api/init<br/>QuickMatcher resolves product_type
 
@@ -90,13 +89,15 @@ stateDiagram-v2
         C_LOGICAL   --> C_EMOTIONAL : user_shows_doubt()<br/>doubt_keywords from analysis_config.yaml · min 2 turns
         C_EMOTIONAL --> C_PITCH     : user_expressed_stakes()<br/>stakes_keywords from analysis_config.yaml · min 3 turns
         C_PITCH     --> C_OBJECTION : commitment_or_objection()<br/>SIGNALS[commitment] OR SIGNALS[objection] · min 3 words
-        C_OBJECTION --> [*]         : commitment_or_walkaway()<br/>Outcome: SOLD (committed) or WALKED (walkaway)
+        C_OBJECTION --> SOLD_C     : SOLD<br/>(commitment_or_walkaway: committed)
+        C_OBJECTION --> WALKED_C   : WALKED<br/>(commitment_or_walkaway: walkaway)
 
-        %% Fast-path skips
-        C_LOGICAL   --> C_PITCH : FAST-A: commitment signal detected at LOGICAL<br/>(SIGNALS[commitment] keywords found)
-        C_EMOTIONAL --> C_PITCH : FAST-A: commitment signal detected at EMOTIONAL
-        C_LOGICAL   --> C_PITCH : FAST-B·C·D: user_demands_directness()<br/>or direct_info_requests keyword<br/>or urgency_skip_to + impatience signal
-        C_EMOTIONAL --> C_PITCH : FAST-B·C·D: same directness / urgency paths
+        C_LOGICAL   --> C_PITCH : commitment signal @ LOGICAL<br/>(SIGNALS[commitment] found)
+        C_EMOTIONAL --> C_PITCH : commitment signal @ EMOTIONAL<br/>(SIGNALS[commitment] found)
+        C_LOGICAL   --> C_PITCH : user_demands_directness()
+        C_EMOTIONAL --> C_PITCH : user_demands_directness()
+        C_LOGICAL   --> C_PITCH : direct_info_requests or impatience signal
+        C_EMOTIONAL --> C_PITCH : direct_info_requests or impatience signal
 
         %% Self-loops
         C_INTENT    --> C_INTENT    : still discovering
@@ -116,11 +117,13 @@ stateDiagram-v2
 
         state "Stage.OBJECTION<br/>Classify → Reframe (same 7 types)<br/>Transactional-specific reframe variants" as T_OBJECTION
 
-        T_INTENT    --> T_PITCH     : user_has_clear_intent()  (same rule as CONSULTATIVE)
-        T_PITCH     --> T_OBJECTION : commitment_or_objection()
-        T_OBJECTION --> [*]         : commitment_or_walkaway() · SOLD or WALKED
+        T_INTENT    --> T_PITCH : user_has_clear_intent()  (same rule as CONSULTATIVE)
+        T_INTENT    --> T_PITCH : user_demands_directness()
+        T_INTENT    --> T_PITCH : direct_info_requests or impatience signal
 
-        T_INTENT    --> T_PITCH : FAST-B·C·D: directness<br/>/ direct_info_request / impatience
+        T_PITCH     --> T_OBJECTION : commitment_or_objection()
+        T_OBJECTION --> SOLD_T     : SOLD<br/>(commitment_or_walkaway: committed)
+        T_OBJECTION --> WALKED_T   : WALKED<br/>(commitment_or_walkaway: walkaway)
 
         T_INTENT    --> T_INTENT    : still gathering
         T_OBJECTION --> T_OBJECTION : reframe cycle
@@ -145,3 +148,9 @@ stateDiagram-v2
     class ToConsultative  consultClass
     class ToTransactional transClass
     class ToConsultativeDef consultClass
+
+    %% Terminal outcome states
+    SOLD_C["[SOLD]"]:::stageObj
+    WALKED_C["[WALKED]"]:::stageObj
+    SOLD_T["[SOLD]"]:::stageObj
+    WALKED_T["[WALKED]"]:::stageObj

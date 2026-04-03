@@ -20,7 +20,7 @@ flowchart TD
     %% ── ENTRY POINT ──────────────────────────────────────────────────────────
     START(["User Message In"])
 
-    START --> ANALYSIS["<b>ANALYSIS PHASE</b><br/>classify_intent() · classify_objection()<br/>identify_sentiment() · detect_guardedness()"]:::process
+    START --> ANALYSIS["<b>ANALYSIS PHASE</b><br/>classify_intent() · classify_objection()<br/>detect_guardedness() · (sentiment from context)"]:::process
 
     ANALYSIS --> LAYER1_ENTRY
 
@@ -36,18 +36,16 @@ flowchart TD
         LAYER1_CHECK -->|Yes| OVERRIDE
         LAYER1_CHECK -->|No| STANDARD
 
-        TIERS["<b>Tier 4 — Context Assembly:</b><br/>────────────────────<br/>STRATEGY_PROMPTS[strategy][stage]<br/>+<br/>_SHARED_RULES:<br/>  P1: NO parroting exceeding 3 words<br/>  P1: NO ending pitch with '?'<br/>  P1: NO 'Would you like?' phrasing<br/>  P2: Max 1-2 questions per response<br/>  P3: Match user tone<br/>  + Terse input guidance if <threshold<br/>  + Anti-parroting rule<br/>  + Persona checkpoint every N turns"]:::prompt
+        TIERS["<b>Tier 4 — Context Assembly:</b><br/>────────────────────<br/>STRATEGY_PROMPTS[strategy][stage]<br/>+<br/>_SHARED_RULES:<br/>  P1: NO parroting exceeding 3 words<br/>  P1: NO ending pitch with '?'<br/>  P1: NO 'Would you like?' phrasing<br/>  P2: Max 1-2 questions per response<br/>  P3: Match user tone<br/>  P4: Terse input: ONE observation + ONE question<br/>  P5: Persona checkpoint every N turns<br/>  + Anti-parroting rule"]:::prompt
 
         STANDARD --> TIERS
         OVERRIDE --- TIERS
         TIERS --> PROMPT_OUT["System Prompt Generated<br/>(Constraints applied first)"]:::prompt
     end
 
-    LAYER1_ENTRY --- LAYER1_ENTRY
-
     PROMPT_OUT --> LLM["<b>LLM GENERATION</b><br/>Groq / OpenRouter<br/>Respects prompt constraints<br/>(soft influence)"]:::process
 
-    LLM --> RESPONSE["LLM Response Generated<br/>(May drift, but prompt<br/>pushes toward rules)"]
+    LLM --> RESPONSE["LLM Response Generated<br/>(May drift, but prompt<br/>pushes toward rules)"]:::process
 
     RESPONSE --> LAYER2_ENTRY
 
@@ -78,37 +76,21 @@ flowchart TD
         RESULT -->|False| BLOCK
     end
 
-    LAYER2_ENTRY --- LAYER2_ENTRY
-
-    ADVANCE --> ANALYTICS["Record Stage Transition<br/>in SessionAnalytics"]:::process
-    BLOCK --> ANALYTICS
-
-    ANALYTICS --> LAYER3_ENTRY
+    RESPONSE --> LAYER3_ENTRY
 
     %% ── LAYER 3: OUTPUT CONTRACTS (HARD) ──────────────────────────────────
     subgraph Layer3["🔵 LAYER 3: OUTPUT CONTRACTS (Hard Validation)"]
-        LAYER3_NOTE["<b>Signal Detection (Powers All Layers):</b><br/>text_contains_any_keyword() [analysis.py:74-100]<br/>├─ Word-boundary regex: \\b{keyword}\\b<br/>├─ Case-insensitive matching<br/>├─ Negation-aware: skip if preceded by 'not'/'don't'<br/>└─ Cached @lru_cache256 for performance"]:::contract
+        LAYER3_ENTRY["is_repetitive_validation(history)<br/>Scan last 10 bot messages<br/>Count excessive validation_phrases"]:::contract
 
-        LAYER3_ENTRY["is_repetitive_validation(history)<br/>────────────────<br/>Scan last 10 bot messages<br/>Count validation_phrases<br/>(from config)<br/>if count ≥ threshold:"]:::contract
+        VALIDATION_CHECK{{"Excessive Validation<br/>Pattern Detected?"}}:::decision
 
-        VALIDATION_CHECK{{"Excessive Validation<br/>Pattern Detected?<br/>━━━━<br/>(e.g. 'I understand'<br/>appearing 2+ times)"}}:::decision
-
-        TRIGGER["Override Triggered<br/>→ Next turn uses override prompt<br/>→ Force new topic<br/>(Small-talk loop fix)"]:::contract
+        TRIGGER["Override Triggered<br/>→ Next turn uses override<br/>→ Force new topic"]:::contract
         NO_ISSUE["No Issue Detected<br/>Response OK"]:::success
 
         LAYER3_ENTRY --> VALIDATION_CHECK
         VALIDATION_CHECK -->|Yes| TRIGGER
         VALIDATION_CHECK -->|No| NO_ISSUE
-
-        TERSE["<b>Terse Input Contract:</b><br/>────────────────<br/>If user message < threshold words:<br/>Inject guidance: 'ONE observation<br/>+ ONE question max'"]:::contract
-
-        PERSONA["<b>Persona Checkpoint:</b><br/>────────────────<br/>Every N turns:<br/>Reset strategy anchor<br/>→ Prevents gradual drift"]:::contract
-
-        NO_ISSUE --- TERSE
-        TERSE --- PERSONA
     end
-
-    LAYER3_ENTRY --- LAYER3_ENTRY
 
     TRIGGER --> STORE_HISTORY
     NO_ISSUE --> STORE_HISTORY
