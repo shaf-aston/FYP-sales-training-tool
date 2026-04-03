@@ -98,7 +98,6 @@ e.g. 'yes but I think...'"}:::decision
         P3 -->|"False"| WEIGHTED
 
         subgraph WeightedScore["PRIORITY 4 — Weighted Category Scoring (signals.yaml)"]
-            direction LR
             W_CAT["Score each matched category:<br/>evasive keywords    × 0.50  (e.g. 'not really', 'I don't know')<br/>sarcasm keywords    × 0.35<br/>deflection keywords × 0.20  (e.g. 'maybe', 'we'll see')<br/>defensive keywords  × 0.10  (e.g. 'fine', 'whatever')<br/>score = sum of matched category weights"]:::core
             W_CTX["Context multiplier:<br/>last_bot = last assistant message<br/>if len(last_bot.split()) > 50<br/>AND len(user_msg.split()) < 8:<br/>  score *= 1.4  (short reply to long bot response = amplified)<br/>score = min(score, 1.0)"]:::core
             W_CAT --> W_CTX
@@ -165,7 +164,12 @@ from signals.yaml — first match wins:"}:::decision
         OBJ_MATCH --> OBJ_T["think — 'let me think about it'<br/>Reframe: uncover the hidden real concern"]
         OBJ_MATCH --> OBJ_U["unknown — no keyword match from any set<br/>Reframe: open question to surface true objection"]
 
-        OBJ_OUT(["dict {type, strategy, guidance}<br/>→ content._get_stage_specific_prompt() (objection prompt injection)<br/>→ SessionAnalytics.record_objection_classified()"]):::terminal
+        %% Dashed arrows showing which analyses use KWMatch
+    I_RETURN_HIGH -.-> KW_IN
+    P1 -.-> KW_IN
+    P2 -.-> KW_IN
+    GUARD_THRESH -.-> KW_IN
+    OBJ_MATCH -.-> KW_IN(["dict {type, strategy, guidance}<br/>→ content._get_stage_specific_prompt() (objection prompt injection)<br/>→ SessionAnalytics.record_objection_classified()"]):::terminal
 
     end
 
@@ -179,7 +183,7 @@ from signals.yaml — first match wins:"}:::decision
     OBJ_U --- J_AUTO_3
     J_AUTO_3 --> OBJ_OUT
 
-    STATE_OUT --> OBJ_IN
+    STATE_OUT -.->|"OBJECTION stage only"| OBJ_IN
 
     %% ── Keyword Matching Engine (shared by all functions above) ──────────────
     subgraph KWMatch["Keyword Matching Engine — text_contains_any_keyword()  (shared utility)"]

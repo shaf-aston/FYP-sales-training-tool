@@ -28,7 +28,7 @@ sequenceDiagram
     end
 
     %% ── Session Start ────────────────────────────────────────────────────────
-    Br->>App: POST /api/prospect/start
+    Br->>App: POST /api/prospect/init
     Note right of App: {product_type, difficulty, persona, session_id}
     App->>PS: ProspectSession(provider_type, product_type, difficulty, persona, session_id)
     PS->>Ldr: load_prospect_config()  [cached via @lru_cache]
@@ -94,21 +94,39 @@ sequenceDiagram
     PS-->>App: evaluation dict
     App-->>Br: JSON {evaluation, session_summary}
 
-    %% ── Training Feature (every /api/chat turn) ──────────────────────────────
-    Note over App,Pv: TRAINING FEATURE — runs on EVERY /api/chat response (NOT prospect mode)<br/>app.py calls bot.generate_training(user_message, bot_reply) UNCONDITIONALLY<br/>trainer.generate_training(provider, flow_engine, user_msg, bot_reply):<br/>System prompt includes: current FSM stage · expected NEPQ technique<br/>what user said · what bot replied<br/>LLM returns: {stage_goal, what_bot_did, next_trigger, where_heading, watch_for: list[str]}<br/>Returned to browser in every /api/chat JSON response under 'training' key
+    %% ── Training Feature (auxiliary; runs asynchronously on every /api/chat) ──────────────────────────────
+    %% TRAINING: bot.generate_training() called on each /api/chat response (NOT prospect mode)
+    %% Inputs: current FSM stage, NEPQ technique expected, user message, bot reply
+    %% Output: {stage_goal, what_bot_did, next_trigger, where_heading, watch_for: list[str]}
+    %% Returned in /api/chat JSON response under 'training' key
 
-    %% ── Quiz Feature ─────────────────────────────────────────────────────────
-    opt Trainee requests quiz
-        Br->>App: GET /api/quiz/question?type={stage|next-move|direction}       
+    %% ── Quiz Feature — 3 Independent Endpoints ─────────────────────────────────
+    opt Trainee requests stage-ID quiz
+        Br->>App: GET /api/quiz/question?type=stage
         App-->>Br: question text from quiz_config.yaml
-
         Br->>App: POST /api/quiz/stage  {answer}
-        Note over App: Stage-ID quiz is DETERMINISTIC:<br/>compare answer to current FSM stage name — no LLM
-        App-->>Br: {correct: bool, correct_answer: str, explanation: str}       
+        Note over App: Deterministic comparison:<br/>answer vs. current FSM stage name<br/>No LLM call
+        App-->>Br: {correct: bool, correct_answer: str, explanation: str}
+    end
 
-        Br->>App: POST /api/quiz/next-move  {response, last_user_message}       
-        Note over App: Next-move quiz is LLM-scored:<br/>compare user's response to ideal next technique
-        App->>Pv: LLM evaluation call
-        Pv-->>App: score + feedback
+    opt Trainee requests next-move quiz
+        Br->>App: GET /api/quiz/question?type=next-move
+        App-->>Br: question text
+        Br->>App: POST /api/quiz/next-move  {response, last_user_message}
+        Note over App: LLM-scored comparison:<br/>user response vs. ideal NEPQ technique<br/>Uses provider.chat() for evaluation
+        App->>Pv: Send evaluation prompt
+        Pv->>API: HTTPS request
+        API-->>Pv: score + feedback
+        Pv-->>App: structured response
         App-->>Br: {score: int, feedback: str, ideal_response: str}
+    end
+
+    opt Trainee requests direction quiz
+        Br->>App: GET /api/quiz/question?type=direction
+        App-->>Br: question about conversation direction
+        Br->>App: POST /api/quiz/direction  {answer}
+        Note over App: LLM-assisted evaluation:<br/>assess trainee's strategic thinking<br/>compare to NEPQ expectations
+        App->>Pv: Evaluation prompt
+        Pv-->>App: score + pedagogical feedback
+        App-->>Br: {score: int, feedback: str}
     end

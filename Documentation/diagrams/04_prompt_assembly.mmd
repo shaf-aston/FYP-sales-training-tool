@@ -78,38 +78,27 @@ flowchart TD
     T3_ELICIT --- T3J
     T3J --> T4_ENTRY
 
-    %% ── TIER 4: Stage Assembly ───────────────────────────────────────────────
-    subgraph Tier4["TIER 4 — Stage Assembly"]
-        T4_ENTRY["prompts.get_base_prompt(product_context)"]:::stage
-        T4_LOW_CHECK{"state.intent == 'low'?"}:::stage
-        T4_ENTRY --> T4_LOW_CHECK
+    %% ── TIER 4: Stage Assembly (Strategy-Specific) ──────────────────────────
+    subgraph Tier4["TIER 4 — Base Prompt + Shared Rules"]
+        T4_ENTRY["loader.get_base_prompt(<br/>  product_context, strategy, history<br/>)"]:::stage
+        
+        T4_ROUTE{"strategy == ?"}:::stage
+        
+        T4_CONSULT["CONSULTATIVE[stage]<br/>+ _SHARED_RULES<br/>+ Tier 2–3 context"]:::stage
+        T4_TRANS["TRANSACTIONAL[stage]<br/>+ _SHARED_RULES<br/>+ Tier 2–3 context"]:::stage
+        
+        T4_SHARED["_SHARED_RULES (shared across strategies):<br/>  P1: NO parroting > 3 words<br/>  P1: NO pitch ending with '?'<br/>  P2: Max 1–2 questions/response<br/>  P3: Match user tone<br/>  P4: Terse input guidance<br/>  P5: Persona checkpoint"]:::stage
+        
+        T4_PREFS["lexical_entrainment +<br/>preference_context +<br/>intent_level variations"]:::stage
 
-        T4_INTENT_LOW["STRATEGY_PROMPTS[strategy]['intent_low']"]:::stage
-        T4_ROUTE["Stage routing table (Consultative vs Transactional)"]:::stage
-
-        T4_LOW_CHECK -->|"True"| T4_INTENT_LOW
-        T4_LOW_CHECK -->|"False"| T4_ROUTE
-
-        T4_OBJ_CHECK{"OBJECTION stage only:<br/>commitment_or_walkaway()"}:::stage
-        T4_WALK["Skip objection reframe injection"]:::stage
-        T4_OBJ_INJECT["Inject classify_objection() result"]:::stage
-
-        T4_ROUTE -->|"objection stage"| T4_OBJ_CHECK
-        T4_ROUTE -->|"non-objection stages"| T4_SHARED
-
-        T4_OBJ_CHECK -->|"Walk detected"| T4_WALK
-        T4_OBJ_CHECK -->|"No walk"| T4_OBJ_INJECT
-
-        T4_SHARED["_SHARED_RULES (universal constraints)<br/>Never list > 3 items"]:::stage
-        T4_PREFS["_get_preference_and_keyword_context(history)<br/>lexical entrainment"]:::stage
-
-        T4_INTENT_LOW --- T4J1[ ]:::junctionStyle
-        T4_WALK --- T4J1
-        T4_OBJ_INJECT --- T4J1
-        T4_SHARED --- T4J1
-        T4J1 --> T4_PREFS
+        T4_ENTRY --> T4_ROUTE
+        T4_ROUTE -->|CONSULTATIVE| T4_CONSULT
+        T4_ROUTE -->|TRANSACTIONAL| T4_TRANS
+        T4_CONSULT --> T4_SHARED
+        T4_TRANS --> T4_SHARED
+        T4_SHARED --> T4_PREFS
     end
 
     Tier3 --- Tier4
 
-    T4_PREFS --> FINAL_PROMPT["String Concatenation:<br/>override OR (tier2 + tier3 + tier4_stage + shared_rules + preferences + lexical)<br/>→ yield assembled_prompt"]:::final
+    T4_PREFS --> FINAL_PROMPT["System Prompt Complete<br/>(override OR assembled)<br/>→ Ready for LLM call"]:::final

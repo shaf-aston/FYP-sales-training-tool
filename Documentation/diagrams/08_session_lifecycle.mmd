@@ -27,7 +27,10 @@ in localStorage?"}:::decision
     %% ═══════════════════════════════════════════════════════════════
     %% PATH A — New session, no product known
     %% ═══════════════════════════════════════════════════════════════
-    HAS_ID -->|"No — first visit<br/>(no session_id stored)"| A_REQ
+    HAS_ID -->|"No"| MSG_CHECK{"user_message<br/>present?"}:::decision
+
+    MSG_CHECK -->|"Empty or null<br/>(first visit)"| A_REQ
+    MSG_CHECK -->|"Contains product hint<br/>(auto-detect)"| B_REQ
 
     subgraph PathA["Path A — New Session (unknown product)"]
         A_REQ["POST /api/init<br/>{product_type: null, user_message: ''}"]:::web
@@ -43,8 +46,6 @@ in localStorage?"}:::decision
     %% ═══════════════════════════════════════════════════════════════
     %% PATH B — New session, product auto-detected from first message
     %% ═══════════════════════════════════════════════════════════════
-    HAS_ID -->|"No — user typed first message<br/>(product hint in text)"| B_REQ
-
     subgraph PathB["Path B — Product Auto-Detection"]
         B_REQ["POST /api/init<br/>{product_type: null, user_message: 'I want to buy a car'}"]:::web
         B_QM["QuickMatcher.match_product(user_message)<br/>exact key → alias → fuzzy + context scoring<br/>Returns (product_key, confidence)"]:::core
@@ -86,8 +87,8 @@ disk backup exists?"}:::decision
     D_DISK -->|"No — no backup either"| E_ERR
 
     subgraph PathE["Path E — Replay from localStorage  (disaster recovery)"]
-        E_ERR["App returns: {error: 'Session not found', code: 'SESSION_EXPIRED'}<br/>Browser reads localStorage.history = &#91;{role,content} × N&#93;"]:::feature
-        E_REQ["Browser sends POST /api/restore<br/>{history: &#91;{role,content}×N&#93;, product_type, provider}"]:::feature
+        E_ERR["App returns: {error: 'Session not found', code: 'SESSION_EXPIRED'}<br/>Browser reads localStorage.history = &#91;{role,content} × N&#93;"]:::web
+        E_REQ["Browser sends POST /api/restore<br/>{history: &#91;{role,content}×N&#93;, product_type, provider}"]:::web
         E_NEW_ID["new_session_id = secrets.token_hex(16)<br/>SalesChatbot(provider, product_type, new_session_id)"]:::feature
         E_REPLAY["bot.replay(history):<br/>  Iterates turn pairs in history<br/>  Calls FSM advancement logic on each pair<br/>  Reconstructs current_stage + strategy<br/>  NO LLM calls — purely deterministic reconstruction"]:::feature
         E_STORE["session_manager.set(new_session_id, bot)<br/>localStorage.session_id = new_session_id<br/>Return: {success:true, session_id:new_id, stage, strategy}"]:::feature
@@ -97,6 +98,8 @@ disk backup exists?"}:::decision
     %% ═══════════════════════════════════════════════════════════════
     %% FORCE STRATEGY — Developer override
     %% ═══════════════════════════════════════════════════════════════
+    HAS_ID -->|"force_strategy param<br/>in POST body"| FORCE_REQ
+
     FORCE_REQ["POST /api/init  {force_strategy: 'consultative', product_type: 'cars'}<br/>Sets _initial_flow_type = 'consultative'<br/>flow_engine.switch_strategy('consultative')<br/>Bypasses INTENT discovery — starts directly in CONSULTATIVE/INTENT"]:::fs
 
     %% ═══════════════════════════════════════════════════════════════
@@ -115,4 +118,5 @@ disk backup exists?"}:::decision
     D_LOAD --> ACTIVE
     E_STORE --> ACTIVE
     FORCE_REQ --> ACTIVE
+    ACTIVE -->|"developer / user<br/>clicks Reset"| RESET_REQ
     RESET_REQ -->|"→ re-init"| PAGE_LOAD

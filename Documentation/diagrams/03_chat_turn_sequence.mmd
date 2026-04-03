@@ -11,7 +11,7 @@ title: Chat Turn Sequence (with 3-Layer Control Architecture Highlighted)
 %%{init: {"theme": "base", "sequence": {"actorMargin": 30, "messageMargin": 25}}}%%
 
 sequenceDiagram
-    autonumber
+    %% autonumber disabled — see manual step headers below
 
     box rgba(102,187,106,0.15) Client
         participant Br  as Browser
@@ -36,11 +36,11 @@ sequenceDiagram
     end
 
     Br->>App: POST /api/chat  {message: "..."}  X-Session-ID header
-    Note over App: require_rate_limit('chat')<br/>InputValidator.validate_message():<br/>strip whitespace · max_length=SecurityConfig.MAX_MESSAGE_LENGTH<br/>PromptInjectionValidator pattern scan<br/>require_session(): session_manager.get(session_id)  OR  400 SESSION_EXPIRED
+    Note over App: 🟪 LAYER 1: PROMPT CONSTRAINTS (Soft)<br/>require_rate_limit('chat')<br/>InputValidator.validate_message():<br/>strip whitespace · max_length · injection scan<br/>require_session() — 400 if SESSION_EXPIRED
 
     App->>Bot: bot.chat(user_message)
 
-    %% ── STEP 1: Prompt Assembly ──────────────────────────────────────────────
+    %% ── STEP 1: Prompt Assembly (Layer 1) ──────────────────────────────────
     Note over Bot: recent_history = conversation_history[-10:]<br/>chatbot.py lines 104–108: prompt assembled BEFORE intent recording
 
     Bot->>FSM: flow_engine.get_current_prompt(user_message)
