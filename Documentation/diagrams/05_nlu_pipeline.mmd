@@ -1,201 +1,74 @@
----
-title: NLU Analysis Pipeline
----
-%% ==========================================
-%% PURPOSE: Breaks down the purely programmatic (Zero LLM) logic used to determine User Intent, identify guardedness, calculate fatigue limits, and detect decisiveness.
-%% ==========================================
-%%{init: {"theme": "base", "flowchart": {"nodeSpacing": 40, "rankSpacing": 40}}}%%
-
+%%{init: {"theme": "base", "flowchart": {"nodeSpacing": 32, "rankSpacing": 32}}}%%
 flowchart TD
-    classDef junctionStyle stroke-width:0px,fill:transparent,font-size:1px
-    classDef terminal fill:#37474F,stroke:#263238,stroke-width:2.5px,color:#fff
-    classDef core     fill:#FFA726,stroke:#E65100,stroke-width:2.5px,color:#fff
-    classDef decision fill:#29B6F6,stroke:#0277BD,stroke-width:2px,color:#000
-    classDef result   fill:#66BB6A,stroke:#1B5E20,stroke-width:2.5px,color:#fff
-    classDef objClass fill:#EC407A,stroke:#880E4F,stroke-width:2.5px,color:#fff
-    classDef kwClass  fill:#26C6DA,stroke:#006064,stroke-width:2.5px,color:#fff
+  INPUT([Analyze message + history])
 
-    INPUT(["analyze_state(<br/>  history: list[dict],<br/>  user_message: str,<br/>  signal_keywords: dict | None  ← loads load_signals() if None<br/>)"]):::terminal
+  subgraph IntentFlow[Intent Classification]
+    I_CHECK{Has user stated goal?}
+    I_SIGNAL{Match vs intent sets}
+    I_HIGH[Intent: HIGH<br/>lock for session]
+    I_LOW[Intent: LOW]
+    I_MED[Intent: MEDIUM]
+  end
 
-    %% ── Intent Classification ────────────────────────────────────────────────
-    subgraph IntentPath["Intent Classification — classify_intent_level()"]
-        I_EMPTY{"user_message empty<br/>AND history empty?"}:::decision
-        I_EMPTY -->|"Yes"| I_MED0["return 'medium'  (default for empty input)"]:::result
-        I_EMPTY -->|"No"| I_GOAL
+  subgraph GuardedFlow[Guardedness Scoring]
+    G_ENTRY[Detect guardedness]
+    G_RULES{Apply checks:<br/>agreement, dismissal, elaboration}
+    G_WEIGHT[Compute weighted score]
+    G_TRUE[guarded: TRUE]
+    G_FALSE[guarded: FALSE]
+  end
 
-        I_GOAL{"_has_user_stated_clear_goal(history)
-Checks BOTH:
-  1) text_contains_any_keyword(recent_user_msgs[-window:],
-       analysis_config.yaml:goal_indicators)
-  2) regex: r'\\b(?:want to|need to|trying to)\\s+\\w+\\s+\\w+'
-  window = thresholds['recent_history_window']"}:::decision
+  subgraph ObjFlow[Objection Classification]
+    OBJ_IN[Classify objection]
+    OBJ_MATCH{Match vs objection sets}
+    OBJ_S[smokescreen]
+    OBJ_M[money]
+    OBJ_F[fear]
+    OBJ_P[partner]
+    OBJ_L[logistical]
+    OBJ_T[think]
+    OBJ_U[unknown]
+  end
 
-        I_GOAL -->|"True → Intent Lock fires<br/>once locked, never regresses"| I_HIGH_LOCK["return 'high'<br/>(intent lock — irreversible for this session)"]:::result
+  subgraph KWEngine[Keyword Matching Engine]
+    KW_BUILD[Compile regex pattern]
+    KW_FIND[Find matches]
+    KW_NEG[Negation check]
+    KW_RESULT[Return non-negated match]
+    KW_BUILD --> KW_FIND --> KW_NEG --> KW_RESULT
+  end
 
-        I_GOAL -->|"False — no clear goal stated"| I_RECENT["Build recent_text:<br/>user_message + ' ' + _extract_recent_user_text(history, 2)<br/>.lower()"]:::core
+  INPUT --> I_CHECK
+  I_CHECK -->|Yes| I_HIGH
+  I_CHECK -->|No| I_SIGNAL
+  I_SIGNAL -->|High| I_HIGH
+  I_SIGNAL -->|Low| I_LOW
+  I_SIGNAL -->|None| I_MED
 
-        I_RECENT --> I_LOW{"text_contains_any_keyword(
-  recent_text,
-  signal_keywords['low_intent']
-)"}:::decision
-        I_LOW -->|"Match"| I_RETURN_LOW["return 'low'"]:::result
-        I_LOW -->|"No match"| I_HIGH{"text_contains_any_keyword(
-  recent_text,
-  signal_keywords['high_intent']
-)"}:::decision
-        I_HIGH -->|"Match"| I_RETURN_HIGH["return 'high'"]:::result
-        I_HIGH -->|"No match"| I_RETURN_MED["return 'medium'  (default — no signals detected)"]:::result
-    end
+  IntentFlow --> G_ENTRY
+  G_ENTRY --> G_RULES
+  G_RULES -->|Above threshold| G_TRUE
+  G_RULES -->|Below threshold| G_FALSE
 
-    INPUT --> I_EMPTY
+  INPUT --> OBJ_IN
+  OBJ_IN --> OBJ_MATCH
+  OBJ_MATCH --> OBJ_S
+  OBJ_MATCH --> OBJ_M
+  OBJ_MATCH --> OBJ_F
+  OBJ_MATCH --> OBJ_P
+  OBJ_MATCH --> OBJ_L
+  OBJ_MATCH --> OBJ_T
+  OBJ_MATCH --> OBJ_U
 
-    
-    J_AUTO_1[ ]:::junctionStyle
-    I_MED0 --- J_AUTO_1
-    I_HIGH_LOCK --- J_AUTO_1
-    I_RETURN_LOW --- J_AUTO_1
-    I_RETURN_HIGH --- J_AUTO_1
-    I_RETURN_MED --- J_AUTO_1
-    J_AUTO_1 --> GUARD_ENTRY
+  OBJ_MATCH -.->|negation-aware| KW_BUILD
 
+  GuardedFlow --> OUT[ConversationState]
+  ObjFlow --> OUT
+  KWEngine --> OUT
 
-    %% ── Guardedness Scoring ──────────────────────────────────────────────────
-    subgraph GuardPath["Guardedness Detection — detect_guardedness()  →  float [0.0, 1.0]  →  bool"]
-        GUARD_ENTRY["detect_guardedness(user_message, history)<br/>  if not user_message: return 0.0"]:::core
+  OUT([Final: intent, guarded, question_fatigue, decisive])
 
-        P1{"PRIORITY 1
-Single agreement word?
-msg_lower in _AGREEMENT_WORDS
-(ok, yes, sure, fine, alright...)
-AND len(history) ≥ 2"}:::decision
-
-        P1_CTX{"Agreement Context Check:
-recent_msgs = history[-4:]
-has_substantive_user: any user msg ≥ 8 words?
-has_bot_question: any assistant msg with '?'?
-Both required to confirm genuine agreement"}:::decision
-
-        P2{"PRIORITY 2
-Single dismissal word?
-msg_lower in _DISMISSAL_WORDS
-(no, nope, whatever, not interested...)"}:::decision
-
-        P3{"PRIORITY 3
-Agreement + elaboration?
-split_msg[0] in _AGREEMENT_WORDS
-AND msg_length > 3 words
-e.g. 'yes but I think...'"}:::decision
-        GUARD_ENTRY --> P1
-        P1 -->|"True — is agreement word"| P1_CTX
-        P1_CTX -->|"Both present<br/>→ genuine agreement"| G_0a["return 0.0  (not guarded)"]:::result
-        P1_CTX -->|"Not both → ambiguous"| P2
-        P1 -->|"False — not agreement word"| P2
-
-        P2 -->|"True"| G_09["return 0.9  (strongly guarded)"]:::result
-        P2 -->|"False"| P3
-
-        P3 -->|"True"| G_01["return 0.1  (low — not guarded)"]:::result
-        P3 -->|"False"| WEIGHTED
-
-        subgraph WeightedScore["PRIORITY 4 — Weighted Category Scoring (signals.yaml)"]
-            W_CAT["Score each matched category:<br/>evasive keywords    × 0.50  (e.g. 'not really', 'I don't know')<br/>sarcasm keywords    × 0.35<br/>deflection keywords × 0.20  (e.g. 'maybe', 'we'll see')<br/>defensive keywords  × 0.10  (e.g. 'fine', 'whatever')<br/>score = sum of matched category weights"]:::core
-            W_CTX["Context multiplier:<br/>last_bot = last assistant message<br/>if len(last_bot.split()) > 50<br/>AND len(user_msg.split()) < 8:<br/>  score *= 1.4  (short reply to long bot response = amplified)<br/>score = min(score, 1.0)"]:::core
-            W_CAT --> W_CTX
-        end
-
-        WEIGHTED --> W_CAT
-        W_CTX --> GUARD_THRESH{"score > 0.4?"}:::decision
-        GUARD_THRESH -->|"Yes"| G_TRUE["guarded = True"]:::result
-        GUARD_THRESH -->|"No"| G_FALSE["guarded = False"]:::result
-    end
-
-    %% ── Question Fatigue + Decisiveness ──────────────────────────────────────
-    subgraph FatDec["Question Fatigue + Decisiveness — inline in analyze_state()"]
-        direction LR
-
-        subgraph FatPath["Question Fatigue"]
-            F_COUNT["Count '?' in last 4 assistant messages:<br/>recent_bot = [m['content'] for m in history[-4:]<br/>              if m['role'] == 'assistant']<br/>count = sum(1 for msg in recent_bot if '?' in msg)"]:::core
-            F_CHECK{"count ≥ thresholds
-['question_fatigue_threshold']
-(analysis_config.yaml)"}:::decision
-            F_COUNT --> F_CHECK
-            F_CHECK -->|"Yes"| QF_T["question_fatigue = True"]:::result
-            F_CHECK -->|"No"| QF_F["question_fatigue = False"]:::result
-        end
-
-        subgraph DecPath["Decisiveness"]
-            D_CHECK["(commitment signal OR high_intent signal)<br/>AND NOT guarded<br/>→ decisive = True  (user signalling readiness to close)<br/>else decisive = False"]:::core
-        end
-    end
-
-    
-    J_AUTO_2[ ]:::junctionStyle
-    G_0a --- J_AUTO_2
-    G_09 --- J_AUTO_2
-    G_01 --- J_AUTO_2
-    G_TRUE --- J_AUTO_2
-    G_FALSE --- J_AUTO_2
-    J_AUTO_2 --> FatDec
-
-
-    %% ── Output ───────────────────────────────────────────────────────────────
-    COMPOSE["ConversationState(<br/>  intent          = classify_intent_level() result,<br/>  guarded         = detect_guardedness() > 0.4,<br/>  question_fatigue = count ≥ threshold,<br/>  decisive        = (commitment OR high_intent) AND NOT guarded<br/>)"]:::core
-
-    FatDec --> COMPOSE
-
-    STATE_OUT(["ConversationState returned to caller<br/>Used by:<br/>  Tier 2 (acknowledgment injection — full/light/none)<br/>  Tier 3 (tactical guidance — decisive/guarded/literal-Q)<br/>  content.py assembly (intent_low template selection)<br/>  chatbot.chat() analytics recording (intent_level only)"]):::terminal
-
-    COMPOSE --> STATE_OUT
-
-    %% ── Objection Classification (separate call, OBJECTION stage only) ───────
-    subgraph ObjPath["Objection Classification — classify_objection()  (separate call from OBJECTION stage only)"]
-        OBJ_IN["classify_objection(user_message, history)<br/>Loads signals.yaml keyword sets at call time"]:::core
-
-        OBJ_MATCH{"Match against 7 type keyword sets
-from signals.yaml — first match wins:"}:::decision
-
-        OBJ_IN --> OBJ_MATCH
-
-        OBJ_MATCH --> OBJ_S["smokescreen — 'need to think / not ready / maybe later'<br/>Reframe: explore what is really blocking them"]
-        OBJ_MATCH --> OBJ_M["money — 'too expensive / can't afford / out of budget'<br/>Reframe: ROI framing / total value justification"]
-        OBJ_MATCH --> OBJ_F["fear — 'not sure it will work / risky / never tried'<br/>Reframe: social proof / specific case study"]
-        OBJ_MATCH --> OBJ_P["partner — 'need to check with spouse / boss / partner'<br/>Reframe: include decision-maker in conversation"]
-        OBJ_MATCH --> OBJ_L["logistical — 'bad timing / too busy / not now'<br/>Reframe: urgency / cost of further delay"]
-        OBJ_MATCH --> OBJ_T["think — 'let me think about it'<br/>Reframe: uncover the hidden real concern"]
-        OBJ_MATCH --> OBJ_U["unknown — no keyword match from any set<br/>Reframe: open question to surface true objection"]
-
-        %% Dashed arrows showing which analyses use KWMatch
-    I_RETURN_HIGH -.-> KW_IN
-    P1 -.-> KW_IN
-    P2 -.-> KW_IN
-    GUARD_THRESH -.-> KW_IN
-    OBJ_MATCH -.-> KW_IN(["dict {type, strategy, guidance}<br/>→ content._get_stage_specific_prompt() (objection prompt injection)<br/>→ SessionAnalytics.record_objection_classified()"]):::terminal
-
-    end
-
-    J_AUTO_3[ ]:::junctionStyle
-    OBJ_S --- J_AUTO_3
-    OBJ_M --- J_AUTO_3
-    OBJ_F --- J_AUTO_3
-    OBJ_P --- J_AUTO_3
-    OBJ_L --- J_AUTO_3
-    OBJ_T --- J_AUTO_3
-    OBJ_U --- J_AUTO_3
-    J_AUTO_3 --> OBJ_OUT
-
-    STATE_OUT -.->|"OBJECTION stage only"| OBJ_IN
-
-    %% ── Keyword Matching Engine (shared by all functions above) ──────────────
-    subgraph KWMatch["Keyword Matching Engine — text_contains_any_keyword()  (shared utility)"]
-        direction LR
-        KW_IN(["(text: str, keywords: list | tuple)"]):::terminal
-        KW_G{"text empty<br/>OR keywords empty?"}:::decision
-        KW_CACHE["_build_union_pattern(tuple(keywords))<br/>@lru_cache(maxsize=256)<br/>Compiles: r'\\b(?:kw1|kw2|...)\\b' re.IGNORECASE<br/>Cached per unique keyword tuple — compiled once"]:::core
-        KW_ITER["pattern.finditer(text)<br/>Iterate ALL matches (not just first)<br/>→ negated first match cannot block later valid match<br/>e.g. 'don't need X but I want Y'<br/>  'need' negated → skip · 'want' not negated → True"]:::kwClass
-        KW_NEG["Per match:<br/>preceding = text[:match.start()].split()<br/>if preceding[-1].lower() in _NEGATIONS: skip<br/>_NEGATIONS = {not, don't, doesn't, no, never, can't, won't}<br/>else: return True"]:::kwClass
-        KW_OUT(["True if any non-negated match found<br/>False if all matches negated or no match at all"]):::terminal
-
-        KW_IN --> KW_G
-        KW_G -->|"Either empty"| KW_FALSE["return False"]:::result
-        KW_G -->|"Both present"| KW_CACHE --> KW_ITER --> KW_NEG --> KW_OUT
-    end
+  style INPUT fill:#FFF3E0,stroke:#E65100,color:#000
+  style OUT fill:#FFF3E0,stroke:#E65100,color:#000
+  style G_TRUE fill:#66BB6A,stroke:#1B5E20,color:#fff
+  style G_FALSE fill:#66BB6A,stroke:#1B5E20,color:#fff
