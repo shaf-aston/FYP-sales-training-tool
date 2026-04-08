@@ -3,16 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Knowledge Base - Sales Chatbot</title>
+    <title>Knowledge Base | FYP Sales Chatbot</title>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='knowledge.css') }}">
   </head>
   <body>
     <div class="container">
       <div class="header">
-        <h1>Knowledge Base</h1>
+          <h1 class="text-3xl font-bold text-gray-900 mb-2">Knowledge Base</h1>
         <div class="header-r">
           <span class="status" id="st"></span>
-          <a href="/" class="nav-btn">Back to Chat</a>
+            <a href="{{ '/prospect' if mode == 'prospect' else '/' }}" class="nav-btn">{{ 'Back to Prospect' if mode == 'prospect' else 'Back to Chat' }}</a>
         </div>
       </div>
       <div class="kb-body">
@@ -35,6 +36,7 @@
       </div>
     </div>
     <script>
+      const MODE = "{{ 'prospect' if mode == 'prospect' else '' }}";
       const F = [
         {
           id: "product_name",
@@ -221,7 +223,8 @@
 
       // CRUD
       function load() {
-        fetch("/api/knowledge")
+        const suffix = MODE ? '?mode=' + encodeURIComponent(MODE) : '';
+        fetch('/api/knowledge' + suffix)
           .then((r) => r.json())
           .then((d) => {
             if (d.success && d.data)
@@ -256,7 +259,8 @@
           )
         )
           return;
-        fetch("/api/knowledge", {
+        const suffix = MODE ? '?mode=' + encodeURIComponent(MODE) : '';
+        fetch('/api/knowledge' + suffix, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(p),
@@ -272,7 +276,8 @@
 
       function clearAll() {
         if (!confirm("Clear all knowledge base data?")) return;
-        fetch("/api/knowledge", { method: "DELETE" })
+        const suffix = MODE ? '?mode=' + encodeURIComponent(MODE) : '';
+        fetch('/api/knowledge' + suffix, { method: "DELETE" })
           .then((r) => r.json())
           .then((d) => {
             if (d.success) {

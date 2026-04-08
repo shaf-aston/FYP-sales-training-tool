@@ -1,3 +1,6 @@
+# Documentation Status: ACTIVE
+<!-- APPLICABILITY: System architecture and module responsibilities; primary reference for developers and reviewers. -->
+
 # Sales Roleplay Chatbot — System Architecture
 
 **Document Version:** 3.0
@@ -77,7 +80,7 @@ An AI-powered sales roleplay chatbot that trains users in consultative and trans
 
 ### 1.4 System at a Glance
 
-> **Note on Code Metrics:** SLOC (Source Lines of Code) metrics have been intentionally removed from this document. Line counts are poor indicators of architectural quality, complexity, or maintainability. Focus is placed instead on design patterns, module responsibilities, and data flow.
+> **Note on Code Metrics:** Source-lines or code-size metrics have been intentionally removed from this document. Line counts are poor indicators of architectural quality, complexity, or maintainability. Focus is placed instead on design patterns, module responsibilities, and data flow.
 
 | Metric | Value |
 |--------|-------|
@@ -86,6 +89,55 @@ An AI-powered sales roleplay chatbot that trains users in consultative and trans
 | REST API endpoints | 31 |
 | Design patterns | Factory, FSM, Strategy, Decorator, Observer, Template Method |
 | Test coverage | 96.2% (150/156 passing) |
+
+### 1.5 Core Architecture & Module Map
+
+#### Module Responsibilities & Design Rationale
+
+| Module | Responsibility | Design Rationale |
+|--------|-----------------|------------------|
+| `chatbot.py` | Session orchestrator: turn handling, provider dispatch, session state | Thin orchestrator per SRP; delegates logic to specialised modules |
+| `flow.py` | FSM engine: stage definitions, transition guards, advancement rules | Deterministic control layer; blocks LLM-driven stage drift |
+| `prompts.py` | Prompt templates: P1/P2/P3 constraint hierarchy, `_SHARED_RULES`, stage-specific scaffolds | Separates template mgmt from orchestration; enables prompt iteration |
+| `analysis.py` | NLU pipeline: intent classification, guardedness detection, keyword extraction, persona detection | Pure-function design for testability; no side effects |
+| `content.py` | Prompt assembly orchestrator: calls prompts.py, injects dynamic context (user keywords, stage state) | Thin wrapper; maintains SRP by delegating templates to prompts.py |
+| `security.py` | SessionSecurityManager: rate limiting, CORS, input validation, request validation | Isolated security concerns; STRIDE controls implementation |
+| `prospect.py` | Prospect mode: bot-as-prospect simulation, difficulty levels, deterministic scoring | Major feature: enables user-as-salesperson practice mode |
+| `prospect_evaluator.py` | Post-session evaluation: rule-based scoring of user responses | Separates scoring logic from conversation for testability |
+| `loader.py` | YAML loading: product config, A/B variants, knowledge base matching, signal extraction | Centralises config loading; validates schema at startup |
+| `knowledge.py` | Knowledge base mgmt: product data injection, context window optimisation | Lightweight; focused on data retrieval, not business logic |
+| `quiz.py` | Methodology assessment: stage-identification, direction scoring, 26/26 passing tests | Reuses FSM stage semantics for trainee evaluation |
+| `trainer.py` | Coaching assistant: context-aware Q&A, hint generation, replay support | Shares analysis context; does not bypass drift controls |
+| `providers/*` | Provider abstraction: factory pattern for Groq/OpenRouter; interface consistency | Prevents architecture lock-in; enables fallback testing |
+| `web/app.py` | Flask API: routing, session lifecycle, security hooks, frontend serving | Separates web concerns from core logic |
+| `session_analytics.py` | Observability: stage transitions, intent distribution, evaluation data collection | Enables FYP evaluation chapter without coupling to core FSM |
+| `performance.py` | Latency tracking: per-turn metrics for observability and provider benchmarking | Supports operational monitoring without affecting message flow |
+
+#### Core Features
+
+- **FSM-driven flows** — 5-stage consultative (NEPQ) + 3-stage transactional (NEEDS→MATCH→CLOSE) with explicit stage gating
+- **Stage-aware prompt generation** — P1/P2/P3 constraint hierarchy; stage-specific scaffolds enforce methodology without fine-tuning
+- **NLU signal pipeline** — Deterministic progression guards via intent, objection, and sentiment classification
+- **Multi-provider abstraction** — Hot-swap Groq (primary, ~980ms) ↔ OpenRouter (backup, ~1200ms) at runtime
+- **Browser chat UI** — Session reset, message rewind/replay, training panel, responsive design
+- **Training features** — Real-time coaching Q&A, insight generation per turn, technique validation against NEPQ
+- **Prospect Mode** — AI acts as buyer; user practises as salesperson; rule-based scoring of sales technique
+- **Assessment quizzes** — Stage identification, next-move reasoning, directional understanding validation
+- **Knowledge management** — User-configurable product context injected into prompts without code changes
+- **Security framework** — SessionSecurityManager, input sanitisation, rate limiting, CORS enforcement
+- **Evaluation data collection** — Session analytics (stage transitions, intent distribution, objection types) for FYP validation
+
+#### NEPQ Stage Mapping
+
+| Stage | Purpose | System Realisation |
+|-------|---------|-------------------|
+| **Intent** | Establish relevance and engagement | Intent detection + adaptive elicitation; locks intent level after 4-6 turns |
+| **Logical** | Surface current-state friction and problems | Doubt-signal gating + probing questions; requires clear user-expressed doubt |
+| **Emotional** | Surface personal stakes and internal motivation | Identity/future-cost framing; requires explicit stakes disclosure from user |
+| **Pitch** | Present constrained solution narrative | Stage-specific pitch with anti-permission rules; blocks premature price/feature details |
+| **Objection** | Resolve resistance and progress toward commitment | Classify objection type → recall → connect → reframe scaffold |
+
+> **Quiz module support:** Stage identification questions, "what next" reasoning checks, directional understanding validation; includes fallback behaviour for non-deterministic LLM-scored outputs.
 
 ---
 
@@ -105,7 +157,7 @@ An AI-powered sales roleplay chatbot that trains users in consultative and trans
 ## 3. System Scope & Context
 
 ### 3.1 Business Context
-
+OK This file is made up. It's made upOK This file is made up. It's made up youOK This file is made up. It's made up you needOK This file is made up. It's madeOK this file is made up. It's made up. Need to make sure that there is within the architecture file. 
 **Figure 1 — System Context Diagram (C4 Level 1):** Shows all actors, system boundaries, external dependencies, communication protocols, and data exchanged. This is the highest-level architectural view.
 
 ```mermaid
@@ -176,6 +228,20 @@ graph TD
 │  YAML (9 config files, @lru_cache)              │
 └─────────────────────────────────────────────────┘
 ```
+
+### 4.3 Drift-Containment Stack
+
+LLM outputs are non-deterministic. Without explicit controls, the model can skip stages, over-validate, or produce permission-seeking responses that undermine sales methodology. Five layered mechanisms counteract this:
+
+| Layer | Mechanism | Drift Type Addressed |
+|-------|-----------|----------------------|
+| **FSM Guards** | Stage transitions only on explicit user-signal detection — no LLM vote | Stage drift |
+| **Intent Gating** | LOW/MEDIUM/HIGH classification blocks premature advancement to pitch | Intent drift |
+| **Objection Scaffold** | CLASSIFY → RECALL → REFRAME → RESPOND structure enforced at objection stage | Topic drift during objection handling |
+| **Lexical Entrainment** | `extract_user_keywords()` injects the prospect's own terms into the prompt | Mechanical parroting / generic phrasing |
+| **Constraint Hierarchy** | P1/P2/P3 rules override RLHF politeness defaults (e.g. no permission questions, no pitch-closing "?") | Permission question drift |
+
+These layers are cumulative: FSM guards prevent premature stage movement; intent gating adds a second check within a stage; the objection scaffold structures what is said once objection stage is reached; lexical entrainment and the constraint hierarchy shape phrasing at generation time.
 
 ---
 
@@ -585,7 +651,7 @@ get_available_providers() → dict  # Check all providers' is_available()
 
 > `sambanova_provider.py` exists in the providers directory but is **not registered** in `factory.py` and not used by any active code path.
 
-**VoiceProvider** (`voice_provider.py` — 361 SLOC, separate from `BaseLLMProvider`):
+**VoiceProvider** (`voice_provider.py`, separate from `BaseLLMProvider`):
 
 | Component | Technology | Purpose |
 |-----------|-----------|---------|
@@ -1992,31 +2058,31 @@ QuickMatcher.match_product()
 ```
 src/
 ├── chatbot/
-│   ├── chatbot.py          (371 SLOC)   Orchestrator
-│   ├── flow.py             (322 SLOC)   FSM state machine
-│   ├── analysis.py         (466 SLOC)   NLU signal detection
-│   ├── content.py          (157 SLOC)   Prompt orchestration
-│   ├── prompts.py          (473 SLOC)   Stage templates & shared rules
-│   ├── overrides.py        (43 SLOC)    Early-exit conditions
-│   ├── tactics.py          (39 SLOC)    Adaptive guidance
-│   ├── loader.py           (613 SLOC)   Config loading & caching
-│   ├── prospect.py         (473 SLOC)   Buyer simulation
-│   ├── prospect_evaluator.py (135 SLOC) Post-session evaluation
-│   ├── trainer.py          (137 SLOC)   Coaching feedback
-│   ├── quiz.py             (359 SLOC)   Assessment system
-│   ├── knowledge.py        (93 SLOC)    Custom product knowledge
-│   ├── session_analytics.py (234 SLOC)  Evaluation analytics
-│   ├── performance.py      (108 SLOC)   Latency metrics
-│   ├── utils.py            (59 SLOC)    Enums & helpers
-│   ├── web_search.py       (94 SLOC)    Web search enrichment (objection-time context)
+│   ├── chatbot.py          Orchestrator
+│   ├── flow.py             FSM state machine
+│   ├── analysis.py         NLU signal detection
+│   ├── content.py          Prompt orchestration
+│   ├── prompts.py          Stage templates & shared rules
+│   ├── overrides.py        Early-exit conditions
+│   ├── tactics.py          Adaptive guidance
+│   ├── loader.py           Config loading & caching
+│   ├── prospect.py         Buyer simulation
+│   ├── prospect_evaluator.py Post-session evaluation
+│   ├── trainer.py          Coaching feedback
+│   ├── quiz.py             Assessment system
+│   ├── knowledge.py        Custom product knowledge
+│   ├── session_analytics.py Evaluation analytics
+│   ├── performance.py      Latency metrics
+│   ├── utils.py            Enums & helpers
+│   ├── web_search.py       Web search enrichment (objection-time context)
 │   └── providers/
-│       ├── base.py         (51 SLOC)    BaseLLMProvider (ABC)
-│       ├── factory.py      (37 SLOC)    Provider factory
-│       ├── groq_provider.py (67 SLOC)        Groq Cloud API (~980 ms · primary)
-│       ├── openrouter_provider.py (92 SLOC)  OpenRouter (~1200 ms · auto-fallback on 429)
-│       ├── sambanova_provider.py (86 SLOC)   SambaNova API (openai SDK compat · unregistered)
-│       ├── voice_provider.py (361 SLOC)      Deepgram STT (primary) + Groq Whisper (backup) + Edge TTS
-│       └── dummy_provider.py (30 SLOC)       Testing stub (latency=0)
+│       ├── base.py         BaseLLMProvider (ABC)
+│       ├── factory.py      Provider factory
+│       ├── groq_provider.py Groq Cloud API (~980 ms · primary)
+│       ├── openrouter_provider.py OpenRouter (~1200 ms · auto-fallback on 429)
+│       ├── sambanova_provider.py  SambaNova API (openai SDK compat · unregistered)
+│       ├── voice_provider.py      Deepgram STT (primary) + Groq Whisper (backup) + Edge TTS
+│       └── dummy_provider.py      Testing stub (latency=0)
 │
 ├── config/
 │   ├── signals.yaml        (~400 lines) Behavioural keywords
@@ -2030,8 +2096,8 @@ src/
 │   └── variants.yaml       (~35 lines)  A/B prompt variants
 │
 └── web/
-    ├── app.py              (890 SLOC)   Flask routes & session mgmt
-    ├── security.py         (587 SLOC)   Security infrastructure
+    ├── app.py              Flask routes & session mgmt
+    ├── security.py         Security infrastructure
     ├── templates/
     │   ├── index.html      (500+ lines) Chat UI (SPA)
     │   └── knowledge.html               Knowledge editor

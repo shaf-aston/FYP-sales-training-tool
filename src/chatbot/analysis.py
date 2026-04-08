@@ -11,6 +11,7 @@ from typing import Any
 
 from .loader import load_analysis_config, load_signals
 from .constants import MAX_USER_KEYWORDS
+from .utils import contains_nonnegated_keyword
 
 
 @dataclass
@@ -69,12 +70,6 @@ _GUARDEDNESS_WEIGHTS = {
 
 # --- Core keyword matching ---
 
-@lru_cache(maxsize=256)
-def _build_union_pattern(keyword_tuple) -> re.Pattern:
-    """Compile keywords into a single alternation regex. Cached by keyword set."""
-    parts = [rf'\b{re.escape(k)}\b' for k in keyword_tuple]
-    return re.compile('|'.join(parts), re.IGNORECASE)
-
 
 def text_contains_any_keyword(text, keywords) -> bool:
     """Return True if text contains any non-negated keyword (word-boundary, case-insensitive).
@@ -82,14 +77,8 @@ def text_contains_any_keyword(text, keywords) -> bool:
     Iterates all matches so a negated first match doesn't block a valid later one.
     E.g. "don't need X but I want Y" — "need" is negated, "want" is not -> True.
     """
-    if not text or not keywords:
-        return False
-    pattern = _build_union_pattern(tuple(keywords))
-    for match in pattern.finditer(text):
-        preceding = text[:match.start()].split()
-        if not preceding or preceding[-1].lower() not in _NEGATIONS:
-            return True
-    return False
+    # Delegate to shared helper in utils for consistent behavior.
+    return contains_nonnegated_keyword(text, keywords)
 
 
 # --- State analysis ---
@@ -112,6 +101,24 @@ def _has_user_stated_clear_goal(history) -> bool:
     return any(_GOAL_VERB_PATTERN.search(msg) for msg in recent_user_msgs)
 
 
+def _flatten_keywords(keywords):
+    """Flatten a nested keyword structure (lists/dicts) into a single list.
+
+    Some signal categories in `signals.yaml` are nested dicts (e.g. guardedness).
+    This helper returns a flat list of strings for uniform checking.
+    """
+    if not keywords:
+        return []
+    if isinstance(keywords, list):
+        return keywords
+    if isinstance(keywords, dict):
+        out = []
+        for v in keywords.values():
+            out.extend(_flatten_keywords(v))
+        return out
+    return []
+
+
 def classify_intent_level(history, user_message="", signal_keywords=None) -> str:
     """Classify current intent level as "low", "medium", or "high".
 
@@ -128,9 +135,32 @@ def classify_intent_level(history, user_message="", signal_keywords=None) -> str
         return "medium"
 
     recent_text = (user_message + " " + _extract_recent_user_text(history, 2)).lower()
-    if text_contains_any_keyword(recent_text, signal_keywords["low_intent"]):
+
+    # Respect configured signal priority when resolving intent-sensitive
+    # categories. `signal_priority` is an optional list in signals.yaml that
+    # orders categories to check first. Fall back to checking high_intent
+    # before low_intent when no priority is provided.
+    priority = signal_keywords.get("signal_priority", ["high_intent", "low_intent"]) or ["high_intent", "low_intent"]
+
+    HIGH_INTENT_CATS = {"high_intent", "commitment", "demand_directness", "impatience", "urgency", "price_sensitivity"}
+    LOW_INTENT_CATS = {"low_intent"}
+
+    for cat in priority:
+        if cat not in signal_keywords:
+            continue
+        keywords = _flatten_keywords(signal_keywords.get(cat))
+        if not keywords:
+            continue
+        if text_contains_any_keyword(recent_text, keywords):
+            if cat in HIGH_INTENT_CATS:
+                return "high"
+            if cat in LOW_INTENT_CATS:
+                return "low"
+
+    # Fallback to conservative checks if nothing matched in prioritized pass
+    if text_contains_any_keyword(recent_text, _flatten_keywords(signal_keywords.get("low_intent", []))):
         return "low"
-    if text_contains_any_keyword(recent_text, signal_keywords["high_intent"]):
+    if text_contains_any_keyword(recent_text, _flatten_keywords(signal_keywords.get("high_intent", []))):
         return "high"
     return "medium"
 
@@ -289,8 +319,20 @@ def is_literal_question(user_message) -> bool:
     starters = patterns.get("starters", [])
     rhetorical = patterns.get("rhetorical_markers", [])
 
+    # Basic question detection: starts with interrogative words or ends with '?'
     is_question = any(msg.startswith(w) for w in starters) or msg.endswith("?")
-    is_rhetorical = text_contains_any_keyword(msg, rhetorical)
+
+    # Rhetorical marker detection: normalize punctuation to improve matching
+    # e.g. "that's obvious, right?" should match rhetorical marker "right?"
+    msg_norm = re.sub(r"[^\w\s']", " ", msg)
+    msg_norm = re.sub(r"\s+", " ", msg_norm).strip()
+
+    def _norm(s: str) -> str:
+        s2 = re.sub(r"[^\w\s']", " ", s.lower())
+        return re.sub(r"\s+", " ", s2).strip()
+
+    is_rhetorical = any(_norm(rmk) and _norm(rmk) in msg_norm for rmk in rhetorical)
+
     return is_question and not is_rhetorical
 
 

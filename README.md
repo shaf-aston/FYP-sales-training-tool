@@ -57,14 +57,14 @@ python -m flask run
 
 | Document | Purpose | For Whom |
 |----------|---------|----------|
-| [**Project-doc.md**](Documentation/Project-doc.md) | Complete project overview, literature review, innovation narrative | Stakeholders, academic reviewers, FYP markers |
-| [**ARCHITECTURE.md**](Documentation/ARCHITECTURE.md) | System design, module responsibilities, phase-by-phase fixes | Developers, architects |
-| [**technical_decisions.md**](Documentation/technical_decisions.md) | Design rationale for YAML config, FSM+LLM, inline imports | Technical leads, code reviewers |
-| [**API_REFERENCE.md**](API_REFERENCE.md) | Flask endpoints, request/response formats, error handling | Frontend devs, API users |
-| [**DEVELOPMENT_GUIDE.md**](DEVELOPMENT_GUIDE.md) | Code conventions, testing patterns, git workflow | Contributors, developers |
-| [**TESTING_STRATEGY.md**](TESTING_STRATEGY.md) | Comprehensive testing framework, academic basis, implementation roadmap | QA engineers, researchers |
-| [**DOCUMENTATION_AUDIT.md**](DOCUMENTATION_AUDIT.md) | Documentation assessment, gaps, improvement roadmap | Documentation team |
-| [**TROUBLESHOOTING.md**](TROUBLESHOOTING.md) | Common errors, debugging, FAQs | End users, support |
+| [Documentation/ARCHITECTURE_CONSOLIDATED.md](Documentation/ARCHITECTURE_CONSOLIDATED.md#L1) | System design, module responsibilities, FSM details | Developers, architects |
+| [Documentation/technical_decisions.md](Documentation/technical_decisions.md#L1) | Design rationale and trade-offs | Technical leads |
+| [Documentation/Security-Analysis.md](Documentation/Security-Analysis.md#L1) | STRIDE threat model & controls | Security reviewers |
+| [Documentation/UAT/UAT-Strategy-and-Execution.md](Documentation/UAT/UAT-Strategy-and-Execution.md#L1) | Ethics-approved testing protocol & learning outcome metrics | Evaluators |
+| [Documentation/Appendix-Iteration-Log.md](Documentation/Appendix-Iteration-Log.md#L1) | Measured improvements by iteration with academic grounding | Reviewers |
+| [Documentation/_archive/Quiz-Feature-Development.md](Documentation/_archive/Quiz-Feature-Development.md#L1) | Quiz assessment feature: TDD approach & test cases | Educators |
+| [Documentation/_archive/Training-Feature-Roadmap.md](Documentation/_archive/Training-Feature-Roadmap.md#L1) | Active feature prioritisation (F1–F12) | Product owner |
+| [Documentation/_archive/technical_audit.md](Documentation/_archive/technical_audit.md#L1) | Code quality audit: 3 bugs fixed, 4 deferred, rationale | Maintainers |
 
 ---
 
@@ -306,7 +306,7 @@ Code reviews follow standards in [DEVELOPMENT_GUIDE.md](DEVELOPMENT_GUIDE.md).
 
 ## 📜 Licence
 
-[Specify licence: MIT, Apache 2.0, etc.]
+This repository is licensed under the MIT License. See LICENSE.
 
 ---
 

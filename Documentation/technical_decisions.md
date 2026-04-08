@@ -1,4 +1,5 @@
-# DONT REMOVE THIS FILE
+# Documentation Status: ACTIVE
+<!-- APPLICABILITY: Core architecture and design decisions. Keep this in Documentation root; update when changing architecture or analysis configs. -->
 
 # Technical Decisions: Rationale and Trade-offs
 
@@ -103,13 +104,6 @@ This allows both modules to load successfully. The import occurs at function exe
 - Planned extraction to `prompt_builder.py` in Future Recommendations
 - Runtime testing covers the happy path, so deferred import errors would surface immediately in testing
 
-### Information Density Check (Rules of Engagement)
-
-This section anchors each decision to:
-- **Specific frameworks/terms**: Mealy/Moore FSM (decision 2), YAML/JSON/SQLite (decision 1), circular import pattern (decision 3)
-- **Exact metrics**: 350 keywords, 12 parameters (decision 1); 25 doubt_keywords in config (decision 2); `lru_cache` and line numbers (decision 3)
-- **Synthesis vs. listing**: Trade-offs are evaluated with explicit mitigation strategies, not just listed
-
 ---
 
 ## Question Fatigue Detection (Technical Clarification)
@@ -163,3 +157,4 @@ Consistency matters here because guardedness detection feeds directly into ackno
 ### Trade-off
 
 `text_contains_any_keyword()` performs negation detection, which changes behaviour for negated guardedness phrases: "I'm not being evasive" previously scored 0.5 (evasive category hit); now scores 0.0. This is the correct outcome semantically. No mitigation needed.
+What I did is fine what I need.What I did is fine what I need toWhat I did is fine what I need to doWhat I did is fine.What I did is fine. What I need to do? OK this file is made up it's

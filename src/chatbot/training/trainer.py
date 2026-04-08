@@ -8,6 +8,7 @@ import logging
 import re
 
 from .quiz import get_stage_rubric
+from ..utils import extract_json_from_llm
 
 logger = logging.getLogger(__name__)
 
@@ -29,38 +30,20 @@ def generate_training(provider, flow_engine, user_msg, bot_reply):
 
     rubric = get_stage_rubric(stage, flow_type)
 
-    history = flow_engine.conversation_history
-    recent = history[-6:]
-
-    context = "\n".join(
-        f"{m['role'].upper()}: {m['content']}"
-        for m in recent
-    ) if recent else "No prior context"
-
-    rubric_context = (
-        f"Stage Goal: {rubric['goal']}\n"
-        f"Advance When: {rubric['advance_when']}\n"
-        f"Key Concepts: {', '.join(rubric.get('key_concepts', []))}"
-    )
-
     system_prompt = (
-        f"You're a sales coach analyzing this exchange. Reply with JSON only:\n\n"
-        f"CONTEXT: {flow_type} sales | Stage: {stage}\n"
-        f"{rubric_context}\n\n"
-        f"Recent conversation:\n{context}\n\n"
-        f"Current:\nUSER: {user_msg}\nBOT: {bot_reply}\n\n"
-        "Return JSON:\n"
+        "Sales coach. JSON only. Ultra-brief. Quote from the exchange. No generics.\n\n"
+        f"Stage: {stage} ({flow_type})\n"
+        f"Goal: {rubric['goal'][:100]}\n"
+        f"Advance when: {rubric['advance_when'][:100]}\n"
+        f"USER said: \"{user_msg[:250]}\"\n"
+        f"BOT replied: \"{bot_reply[:250]}\"\n\n"
+        "Return JSON with EXACTLY this level of specificity:\n"
         "{\n"
-        '  "stage_goal": "What this stage aims to achieve",\n'
-        '  "what_bot_did": "Technique used here",\n'
-        '  "next_trigger": "What signal advances to next stage",\n'
-        '  "where_heading": "Next conversational move",\n'
-        '  "watch_for": ["Warning 1", "Warning 2"]\n'
+        '  "what_happened": "Technique + brief quote, e.g. \'Used future-pacing — asked about life after solving X\'",\n'
+        '  "next_move": "Exact signal needed, e.g. \'Disclose a real cost or consequence of staying stuck\'",\n'
+        '  "watch_for": ["One concrete pitfall at this stage", "One more if needed"]\n'
         "}"
     )
-
-    if flow_type == "consultative" and stage not in ["pitch", "objection"]:
-        system_prompt += "\nNOTE: Don't recommend pricing talk unless prospect asks or stage is 'pitch'."
 
     messages = [
         {"role": "system", "content": system_prompt},
@@ -68,26 +51,25 @@ def generate_training(provider, flow_engine, user_msg, bot_reply):
     ]
 
     try:
-        llm_response = provider.chat(messages, temperature=0.3, max_tokens=350, stage=stage)
+        llm_response = provider.chat(messages, temperature=0.3, max_tokens=150, stage=stage)
         if llm_response.error or not llm_response.content:
             raise ValueError("Empty or error response")
 
-        raw = llm_response.content.strip()
-        raw = re.sub(r"^```(?:json)?\s*", "", raw)
-        raw = re.sub(r"\s*```$", "", raw)
-
-        result = json.loads(raw)
+        result = extract_json_from_llm(llm_response.content)
+        if not result:
+            raise ValueError("Empty or invalid JSON response")
         if not isinstance(result.get("watch_for"), list):
             result["watch_for"] = []
         return result
 
     except Exception as e:
         logger.warning(f"Training generation failed: {e}")
+        # Fallback: provide structured coaching fields derived from the rubric
         return {
-            "stage_goal": rubric["goal"],
+            "stage_goal": rubric.get("goal", "—"),
             "what_bot_did": "—",
-            "next_trigger": rubric["advance_when"],
-            "where_heading": "—",
+            "next_trigger": rubric.get("advance_when", "—"),
+            "where_heading": rubric.get("goal", ""),
             "watch_for": [],
         }
 
@@ -114,12 +96,22 @@ def answer_training_question(provider, flow_engine, question):
         for m in recent
     )
 
+    rubric = get_stage_rubric(stage, flow_type)
+    key_concepts = ", ".join(rubric.get("key_concepts", []))
+    stage_goal = rubric.get("goal", "")
+    advance_when = rubric.get("advance_when", "")
+
+    methodology = "NEPQ (Neuro-Emotional Persuasion Questioning)" if flow_type == "consultative" else "NEEDS → MATCH → CLOSE"
+
     system_prompt = (
-        f"You're a sales coach answering a trainee's question during roleplay.\n"
-        f"Strategy: {flow_type} | Stage: {stage}\n\n"
-        f"Recent conversation:\n{conversation}\n\n"
-        "Answer specifically about THIS conversation, not generic advice. "
-        "Be direct and concrete. 2-3 sentences."
+        f"You are an elite cognitive-behavioral sales strategy coach. The trainee is practising {flow_type} sales using {methodology}.\n"
+        f"Current stage: {stage} — Goal: {stage_goal}\n"
+        f"Advance when: {advance_when}\n"
+        f"Key concepts at this stage: {key_concepts}\n\n"
+        f"Conversation so far:\n{conversation}\n\n"
+        "Your job: answer the trainee's question by applying stark, rigorous psychology-based sales strategy tied to THIS conversation. "
+        "Reference exact conversational behaviors. Use cognitive psychology terminology (e.g., 'lexical entrainment', 'vulnerability signaling', 'status framing'). "
+        "Explain WHY a technique works psychologically, not just WHAT to do. Never give generic or fluffy advice. Be direct, authoritative, and analytical."
     )
 
     messages = [
@@ -128,7 +120,7 @@ def answer_training_question(provider, flow_engine, question):
     ]
 
     try:
-        llm_response = provider.chat(messages, temperature=0.5, max_tokens=250, stage=stage)
+        llm_response = provider.chat(messages, temperature=0.4, max_tokens=350, stage=stage)
         if llm_response.error or not llm_response.content:
             return {"answer": "Couldn't generate an answer right now. Try rephrasing your question."}
         return {"answer": llm_response.content.strip()}
@@ -229,7 +221,7 @@ def score_session(session_id: str) -> dict:
     # 2. Signal detection (Max 25)
     # If they transitioned, how many were via signal vs timeout?
     if total_transitions > 0:
-        ratio = signal_transitions / total_transitions
+        ratio = min(1.0, signal_transitions / total_transitions)
         score_breakdown["signal_detection"] = int(25 * ratio)
     else:
         # If no transitions occurred, no signal detected score
@@ -252,7 +244,7 @@ def score_session(session_id: str) -> dict:
     else:
         score_breakdown["conversation_length"] = 5
         
-    total = sum(score_breakdown.values())
+    total = min(100, max(0, sum(score_breakdown.values())))
     
     return {
         "total_score": total,

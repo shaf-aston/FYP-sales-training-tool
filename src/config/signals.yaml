@@ -107,8 +107,6 @@ guardedness_keywords:
   # Defensive statements
   defensive:
     - "it's fine"
-    - "no problem"
-    - "all good"
     - "don't worry"
     - "i'm fine"
     - "i don't need"
@@ -639,3 +637,15 @@ rapport_negative:
   - "frustrating"
   - "annoying"
   - "pushy"
+
+# Signal priority controls which categories are checked first during
+# intent/signal resolution. Categories earlier in this list take precedence
+# when multiple categories match the same user text. Update with care.
+signal_priority:
+  - "high_intent"
+  - "commitment"
+  - "demand_directness"
+  - "impatience"
+  - "urgency"
+  - "price_sensitivity"
+  - "low_intent"

@@ -1,6 +1,7 @@
 """Sales chatbot orchestrator — FSM flow management, LLM calls, performance tracking."""
 
 import logging
+import threading
 import time
 from dataclasses import dataclass
 from typing import Any
@@ -60,10 +61,6 @@ class ChatResponse:
 class SalesChatbot:
     """Orchestrates provider, FSM flow engine, and performance tracking."""
 
-    # ====================================================================
-    # Initialization
-    # ====================================================================
-
     def __init__(self, provider_type=None, model=None, product_type=None, session_id=None):
         self.provider = create_provider(provider_type, model=model)
         self.session_id = session_id
@@ -115,20 +112,32 @@ class SalesChatbot:
                 ab_variant=self._ab_variant
             )
 
-    # ====================================================================
-    # Core Chat API
-    # ====================================================================
+    def _try_switch_to_provider(self, new_provider_type: str) -> bool:
+        """Attempt to switch to a fallback provider mid-session."""
+        try:
+            new_provider = create_provider(new_provider_type)
+            if new_provider.is_available():
+                self.provider = new_provider
+                self.provider_type = new_provider_type
+                self._provider_name = type(self.provider).__name__.replace("Provider", "").lower()
+                self._model_name = self.provider.get_model_name()
+                self.logger.info(f"Successfully switched to fallback provider: {new_provider_type}")
+                return True
+            else:
+                self.logger.warning(f"Fallback provider {new_provider_type} is not available (missing keys?).")
+                return False
+        except Exception as e:
+            self.logger.error(f"Failed to switch to provider {new_provider_type}: {e}")
+            return False
 
     def chat(self, user_message: str) -> ChatResponse:
-        """Process user message and return ChatResponse with content + metrics."""
+        """Process user message and return ChatResponse with content + metrics.""" 
         from .analysis import analyze_state
 
         recent_history = self.flow_engine.conversation_history[-RECENT_HISTORY_WINDOW:]
 
-        # Pre-compute shared state once (used by prompt assembly + analytics)
         state = analyze_state(self.flow_engine.conversation_history, user_message)
 
-        # Pre-compute objection classification once (used by search, prompt, and analytics)
         objection_data = None
         if self.flow_engine.current_stage == Stage.OBJECTION:
             objection_data = classify_objection(user_message, self.flow_engine.conversation_history)
@@ -154,32 +163,50 @@ class SalesChatbot:
             )
 
         request_start = time.time()
+        
+        fallbacks = ["sambanova", "openrouter", "groq"]
+        if self._provider_name in fallbacks:
+            fallbacks.remove(self._provider_name)
+        providers_to_try = [self._provider_name] + fallbacks
+
+        llm_response = None
+        error_detail = "empty response"
+
         try:
-            llm_response = self.provider.chat(
-                llm_messages,
-                temperature=DEFAULT_TEMPERATURE,
-                max_tokens=DEFAULT_MAX_TOKENS,
-                stage=self.flow_engine.current_stage,
-            )
+            for provider_name in providers_to_try:
+                if provider_name != self._provider_name:
+                    if not self._try_switch_to_provider(provider_name):
+                        continue
+                        
+                llm_response = self.provider.chat(
+                    llm_messages,
+                    temperature=DEFAULT_TEMPERATURE,
+                    max_tokens=DEFAULT_MAX_TOKENS,
+                    stage=self.flow_engine.current_stage,
+                )
 
-            if llm_response.error or not llm_response.content:
+                if not llm_response.error and llm_response.content:
+                    break  # Success!
+                
                 error_detail = llm_response.error or "empty response"
+                self.logger.warning(f"Provider {provider_name} failed: {error_detail}")
 
+            if not llm_response or llm_response.error or not llm_response.content:
                 if "rate_limit_exceeded" in str(error_detail).lower() or "429" in str(error_detail):
-                    self.logger.warning(f"Rate limit hit: {error_detail}")
+                    self.logger.warning(f"Rate limit hit globally: {error_detail}")
                     return self._fallback(
                         "I'm currently receiving too many requests. Please try again in a moment.",
-                        llm_response.latency_ms, user_message,
+                        llm_response.latency_ms if llm_response else 0, user_message,
                     )
                 else:
                     return self._fallback(
                         "I'm having trouble connecting to the AI provider. Please try again.",
-                        llm_response.latency_ms, user_message,
+                        llm_response.latency_ms if llm_response else 0, user_message,
                     )
 
             bot_reply = llm_response.content
             self.flow_engine.add_turn(user_message, bot_reply)
-            self.save_session()
+            threading.Thread(target=self.save_session, daemon=True).start()
 
             if self.session_id:
                 PerformanceTracker.log_stage_latency(
@@ -238,10 +265,6 @@ class SalesChatbot:
             output_len=len(message),
         )
 
-    # ====================================================================
-    # Web Search Enrichment
-    # ====================================================================
-
     def _maybe_enrich_with_search(self, user_message: str, objection_data: dict | None = None) -> str | None:
         """Return formatted search context string, or None if not triggered.
 
@@ -291,10 +314,6 @@ class SalesChatbot:
 
         return _format_search_context(response.results)
 
-    # ====================================================================
-    # FSM Advancement Logic
-    # ====================================================================
-
     def _detect_and_switch_strategy(self, user_message) -> bool:
         """Inspect signals to detect and switch strategy. Returns True if switch occurred."""
         user_text = (user_message or "").lower()
@@ -343,10 +362,6 @@ class SalesChatbot:
                     user_turns_in_stage=self.flow_engine.stage_turn_count - 1
                 )
 
-    # ====================================================================
-    # Training API
-    # ====================================================================
-
     def generate_training(self, user_msg: str, bot_reply: str) -> dict[str, Any]:
         """Generate coaching notes for the current exchange via lightweight LLM call."""
         return trainer.generate_training(self.provider, self.flow_engine, user_msg, bot_reply)
@@ -354,10 +369,6 @@ class SalesChatbot:
     def answer_training_question(self, question: str) -> dict[str, Any]:
         """Answer a trainee's question about the current conversation and sales techniques."""
         return trainer.answer_training_question(self.provider, self.flow_engine, question)
-
-    # ====================================================================
-    # Session State Management
-    # ====================================================================
 
     def rewind(self, steps: int):
         """Rewind back by `steps` turns from the current position."""
@@ -410,10 +421,6 @@ class SalesChatbot:
         summary = self.flow_engine.get_summary()
         summary.update({"provider": self._provider_name, "model": self._model_name})
         return summary
-
-    # ====================================================================
-    # Session Persistence & Analytics
-    # ====================================================================
 
     def save_session(self):
         """Persist session state to disk using SessionPersistence."""

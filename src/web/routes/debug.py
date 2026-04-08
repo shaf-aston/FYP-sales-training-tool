@@ -1,4 +1,4 @@
-"""Debug panel endpoints — development/testing only."""
+"""Advanced options panel endpoints — development/testing only."""
 
 from flask import Blueprint, request, jsonify
 from dataclasses import asdict
@@ -19,7 +19,7 @@ def init_routes(app, require_session_func):
 
 @bp.route('/config', methods=['GET'])
 def debug_config():
-    """Return available products and providers for the dev panel dropdowns."""
+    """Return available products and providers for the advanced options dropdowns."""
     from chatbot.providers.factory import PROVIDERS
     from chatbot.loader import load_product_config
     products = load_product_config()["products"]

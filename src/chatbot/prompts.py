@@ -5,7 +5,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 STRATEGY_PROMPTS = {
-    # === CONSULTATIVE & INTENT-DISCOVERY STRATEGIES ===
     "intent": {
         "intent": """STAGE: INTENT DISCOVERY (PRODUCT DISCOVERY)
 GOAL: Discover what product/service category the user is interested in.
@@ -77,6 +76,9 @@ GOAL: Guide prospect to NAME their own problem. Create doubt in current approach
 
 KEY PRINCIPLE: The prospect must articulate the problem—you surface it via questions, never state it for them.
 
+🛑 HARD STOP: DO NOT PITCH, OFFER SOLUTIONS, OR DISCUSS PRICING THIS STAGE.
+This stage is discovery only. Pitching here violates NEPQ framework and kills deal progression.
+
 TWO-PHASE PROBE:
 
 Phase 1 — CAUSE:
@@ -100,6 +102,9 @@ ADVANCE WHEN: Prospect names a clear problem they have with current approach + d
 """,
         "emotional": """STAGE: EMOTIONAL (NEPQ Solution Awareness + Consequence of Inaction)
 GOAL: Surface deeper motivations. Shift prospect from pain of present to desire for future (and cost of staying).
+
+🛑 HARD STOP: DO NOT PITCH, OFFER SOLUTIONS, OR DISCUSS PRICING THIS STAGE.
+This stage is about emotional investment and stakes, not selling. Premature pitching kills progression.
 
 BEFORE RESPONDING:
 1. Recall goal/problem.
@@ -145,7 +150,8 @@ TRANSITION TO SOLUTION:
 - "Based on this, do you feel like this would get you to [goal]?"
 
 CLOSE:
-- "Total investment is [price]. How would you like to proceed?"
+- IF PRICING AVAILABLE IN PRODUCT DATA: Include exact price. "Total investment is [exact price from product data]. How would you like to proceed?"
+- IF PRICING NOT AVAILABLE: Say directly. "Let's talk investment—here's what clients typically see..."
 
 CHECK: No pitching to LOW intent. Statement close (no "?"). One question per turn. Connect to their goal.
 
@@ -170,7 +176,6 @@ ADVANCE WHEN: Resolved or Walk-away.
 """,
     },
 
-    # ===== TRANSACTIONAL STRATEGY (Non-NEPQ) =====
     "transactional": {
         "intent": """STAGE: INTENT (TRANSACTIONAL) — NEEDS PHASE
 FRAMEWORK: NEEDS → MATCH → CLOSE

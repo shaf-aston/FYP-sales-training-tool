@@ -4,431 +4,21 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Eloquencé FYP</title>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" />
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="{{ url_for('static', filename='speech.js') }}"></script>
-    <script src="{{ url_for('static', filename='voice.js') }}"></script>
     <link
       rel="stylesheet"
       href="{{ url_for('static', filename='chat.css') }}"
     />
-    <style>
-      /* ─── Dev Panel ─────────────────────────────────────────────────────── */
-      #devPanel {
-        position: fixed;
-        top: 12px;
-        right: 12px;
-        width: 310px;
-        max-height: calc(100vh - 24px);
-        background: rgba(4, 10, 18, 0.97);
-        border: 1px solid rgba(74, 222, 128, 0.22);
-        border-radius: 10px;
-        box-shadow:
-          0 8px 32px rgba(0, 0, 0, 0.7),
-          0 0 0 1px rgba(74, 222, 128, 0.06);
-        display: none;
-        flex-direction: column;
-        z-index: 999;
-        overflow: hidden;
-        font-size: 12px;
-        color: #c8d4c0;
-      }
-      #devPanel.open {
-        display: flex;
-      }
-
-      .dp-header {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 10px 14px;
-        border-bottom: 1px solid rgba(74, 222, 128, 0.12);
-        background: rgba(74, 222, 128, 0.05);
-        flex-shrink: 0;
-      }
-      .dp-header-title {
-        font-size: 12px;
-        font-weight: 600;
-        color: #4ade80;
-        flex: 1;
-        letter-spacing: 0.03em;
-      }
-      .dp-shortcut {
-        font-size: 10px;
-        color: #4a6a50;
-        background: rgba(74, 222, 128, 0.08);
-        border: 1px solid rgba(74, 222, 128, 0.15);
-        border-radius: 4px;
-        padding: 1px 5px;
-        font-family: monospace;
-      }
-      .dp-close {
-        background: none;
-        border: none;
-        color: #4a6a50;
-        cursor: pointer;
-        font-size: 18px;
-        line-height: 1;
-        padding: 0 2px;
-        transition: color 0.15s;
-      }
-      .dp-close:hover {
-        color: #4ade80;
-      }
-
-      .dp-body {
-        overflow-y: auto;
-        flex: 1;
-        scrollbar-width: thin;
-        scrollbar-color: rgba(74, 222, 128, 0.3) transparent;
-      }
-
-      .dp-section {
-        padding: 10px 14px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-      }
-      .dp-section-label {
-        font-size: 9px;
-        font-weight: 600;
-        color: #4ade80;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        margin-bottom: 8px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-
-      /* Session state grid */
-      .dp-kv {
-        display: grid;
-        grid-template-columns: 90px 1fr;
-        row-gap: 4px;
-      }
-      .dp-k {
-        color: #4a6a50;
-        font-size: 11px;
-      }
-      .dp-v {
-        color: #c8d4c0;
-        font-size: 11px;
-        font-weight: 500;
-      }
-      .dp-v.green {
-        color: #4ade80;
-      }
-      .dp-v.amber {
-        color: #b7791f;
-      }
-
-      /* Stage jump buttons */
-      .dp-stages {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 5px;
-      }
-      .dp-stage-btn {
-        background: rgba(255, 255, 255, 0.04);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        color: #a0b0a0;
-        border-radius: 5px;
-        padding: 4px 9px;
-        font-size: 11px;
-        cursor: pointer;
-        transition: all 0.15s;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-      }
-      .dp-stage-btn:hover {
-        background: rgba(74, 222, 128, 0.12);
-        border-color: rgba(74, 222, 128, 0.35);
-        color: #4ade80;
-      }
-      .dp-stage-btn.current {
-        background: rgba(74, 222, 128, 0.14);
-        border-color: rgba(74, 222, 128, 0.4);
-        color: #4ade80;
-        font-weight: 600;
-      }
-      .dp-stage-note {
-        font-size: 10px;
-        color: #3a5040;
-        margin-top: 6px;
-        line-height: 1.4;
-      }
-
-      /* Message analyser */
-      .dp-analyse-row {
-        display: flex;
-        gap: 6px;
-        margin-top: 6px;
-      }
-      .dp-input {
-        flex: 1;
-        background: rgba(255, 255, 255, 0.04);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 5px;
-        color: #c8d4c0;
-        font-size: 11px;
-        padding: 5px 8px;
-        font-family: inherit;
-      }
-      .dp-input:focus {
-        outline: none;
-        border-color: rgba(74, 222, 128, 0.3);
-      }
-      .dp-btn {
-        background: rgba(74, 222, 128, 0.12);
-        border: 1px solid rgba(74, 222, 128, 0.25);
-        color: #4ade80;
-        border-radius: 5px;
-        padding: 5px 10px;
-        font-size: 11px;
-        cursor: pointer;
-        white-space: nowrap;
-        transition: all 0.15s;
-      }
-      .dp-btn:hover {
-        background: rgba(74, 222, 128, 0.2);
-      }
-      .dp-btn:disabled {
-        opacity: 0.4;
-        cursor: not-allowed;
-      }
-
-      .dp-analyse-result {
-        margin-top: 8px;
-        font-size: 11px;
-        line-height: 1.5;
-      }
-      .dp-analyse-group {
-        margin-bottom: 6px;
-      }
-      .dp-analyse-group-label {
-        color: #4a6a50;
-        font-size: 10px;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        margin-bottom: 3px;
-      }
-      .dp-signal-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 2px 6px;
-      }
-      .dp-signal-item {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        font-size: 10px;
-      }
-      .dp-hit {
-        color: #4ade80;
-      }
-      .dp-miss {
-        color: #3a5040;
-      }
-      .dp-adv-box {
-        background: rgba(255, 255, 255, 0.03);
-        border-radius: 5px;
-        padding: 6px 8px;
-        margin-top: 4px;
-        font-size: 11px;
-      }
-      .dp-adv-yes {
-        color: #4ade80;
-        font-weight: 600;
-      }
-      .dp-adv-no {
-        color: #b7791f;
-      }
-      .dp-adv-null {
-        color: #4a6a50;
-      }
-
-      /* System prompt */
-      .dp-prompt-wrap {
-        background: rgba(0, 0, 0, 0.3);
-        border: 1px solid rgba(255, 255, 255, 0.06);
-        border-radius: 5px;
-        max-height: 220px;
-        overflow-y: auto;
-        margin-top: 8px;
-        scrollbar-width: thin;
-        scrollbar-color: rgba(74, 222, 128, 0.3) transparent;
-      }
-      .dp-prompt-pre {
-        margin: 0;
-        padding: 8px 10px;
-        font-size: 10px;
-        font-family: "Courier New", monospace;
-        white-space: pre-wrap;
-        word-break: break-word;
-        color: #8aa080;
-        line-height: 1.5;
-      }
-      .dp-prompt-empty {
-        color: #3a5040;
-        font-style: italic;
-      }
-      .dp-btn-row {
-        display: flex;
-        gap: 6px;
-      }
-      .dp-btn-sm {
-        background: rgba(74, 222, 128, 0.08);
-        border: 1px solid rgba(74, 222, 128, 0.18);
-        color: #4a6a50;
-        border-radius: 4px;
-        padding: 2px 7px;
-        font-size: 10px;
-        cursor: pointer;
-        transition: all 0.15s;
-      }
-      .dp-btn-sm:hover {
-        color: #4ade80;
-        border-color: rgba(74, 222, 128, 0.35);
-      }
-
-      /* Reinit */
-      .dp-field {
-        margin-bottom: 7px;
-      }
-      .dp-field label {
-        display: block;
-        color: #4a6a50;
-        font-size: 10px;
-        margin-bottom: 3px;
-      }
-      .dp-select {
-        width: 100%;
-        background: rgba(255, 255, 255, 0.04);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 5px;
-        color: #c8d4c0;
-        font-size: 11px;
-        padding: 5px 7px;
-        font-family: inherit;
-      }
-      .dp-select:focus {
-        outline: none;
-        border-color: rgba(74, 222, 128, 0.3);
-      }
-      .dp-select option {
-        background: #0a1018;
-      }
-      .dp-btn-full {
-        width: 100%;
-        background: rgba(74, 222, 128, 0.12);
-        border: 1px solid rgba(74, 222, 128, 0.3);
-        color: #4ade80;
-        border-radius: 5px;
-        padding: 7px;
-        font-size: 11px;
-        font-weight: 600;
-        cursor: pointer;
-        margin-top: 4px;
-        transition: all 0.15s;
-        letter-spacing: 0.02em;
-      }
-      .dp-btn-full:hover {
-        background: rgba(74, 222, 128, 0.2);
-      }
-
-      /* Dev toggle button in header */
-      #devToggleBtn {
-        background: transparent;
-        border: none;
-        color: #4a6460;
-        cursor: pointer;
-        font-size: 14px;
-        padding: 4px 6px;
-        border-radius: 6px;
-        opacity: 0.35;
-        transition:
-          opacity 0.15s,
-          color 0.15s;
-        line-height: 1;
-      }
-      #devToggleBtn:hover {
-        opacity: 1;
-        color: #4ade80;
-      }
-      #devToggleBtn.active {
-        opacity: 1;
-        color: #4ade80;
-      }
-
-      /* Toast inside dev panel */
-      #dp-toast {
-        position: absolute;
-        bottom: 10px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(74, 222, 128, 0.15);
-        border: 1px solid rgba(74, 222, 128, 0.3);
-        color: #4ade80;
-        border-radius: 6px;
-        padding: 4px 12px;
-        font-size: 11px;
-        opacity: 0;
-        transition: opacity 0.2s;
-        pointer-events: none;
-        white-space: nowrap;
-      }
-      #dp-toast.show {
-        opacity: 1;
-      }
-    </style>
   </head>
   <body>
     <div class="container">
       <div id="chatScreen">
         <div class="header">
           <h1>Sales Assistant</h1>
-          <div style="display: flex; gap: 12px; align-items: center">
-            <button
-              id="devToggleBtn"
-              title="Dev Panel (Ctrl+Shift+D)"
-              onclick="toggleDevPanel()"
-            >
-              ⚙
-            </button>
-            <a href="/knowledge" class="reset-btn" style="text-decoration: none"
-              >Knowledge Base</a
-            >
-            <button
-              class="reset-btn"
-              id="trainingToggleBtn"
-              onclick="toggleTrainingPanel()"
-            >
-              Training
-            </button>
-            <button
-              class="reset-btn"
-              id="quizToggleBtn"
-              onclick="toggleQuizPanel()"
-            >
-              Quiz
-            </button>
-            <button
-              class="reset-btn"
-              id="prospectToggleBtn"
-              onclick="openProspectSetup()"
-              style="border-color: rgba(6, 182, 212, 0.3); color: #06b6d4"
-            >
-              Prospect Mode
-            </button>
+          <div class="header-actions">
             <button class="reset-btn" onclick="resetChat()">Reset</button>
-            <div class="status-container">
-              <div class="status-item">
-                <span class="status-label">Strategy:</span>
-                <span class="status-value" id="strategyBadge">—</span>
-              </div>
-              <div class="status-item">
-                <span class="status-label">Stage:</span>
-                <span class="status-value" id="stageBadge">—</span>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -439,8 +29,8 @@
             class="voice-mode-btn"
             id="voiceModeBtn"
             onclick="toggleVoiceMode()"
-            title="Toggle Voice Mode (Server-based TTS/STT)"
-            aria-label="Toggle Voice Mode: Server-based text-to-speech and speech-to-text"
+            title="Conversational Mode: auto-send speech + auto-play response"
+            aria-label="Toggle conversational voice mode"
           >
             <span id="voiceModeIndicator">⌨️</span>
           </button>
@@ -451,6 +41,16 @@
             title="Voice input"
           >
             🎤
+          </button>
+          <button
+            class="interrupt-btn"
+            id="interruptBtn"
+            onclick="interruptAssistant()"
+            title="Interrupt assistant (stop playback / resume listening)"
+            aria-label="Interrupt assistant"
+            style="display:none; margin-left:6px"
+          >
+            ⛔
           </button>
           <label class="sr-only" for="messageInput">Message input</label>
           <textarea
@@ -465,6 +65,63 @@
           </button>
         </div>
       </div>
+      
+      <!-- ─── Right Sidebar ─────────────────────────────────────────── -->
+      <div class="sidebar-right">
+        <div class="sidebar-section">
+          <h3>Status</h3>
+          <div class="status-container">
+            <div class="status-item">
+              <span class="status-label">Strategy:</span>
+              <span class="status-value" id="strategyBadge">—</span>
+            </div>
+            <div class="status-item">
+              <span class="status-label">Stage:</span>
+              <span class="status-value" id="stageBadge">—</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="sidebar-section">
+          <h3>Prospect Practice</h3>
+          <div class="sidebar-actions">
+            <select id="prospectProductSelect" class="sidebar-btn">
+              <option value="default">General (Any Product)</option>
+            </select>
+            <div class="prospect-diff-buttons">
+              <button class="prospect-diff-btn" onclick="selectProspectDifficulty('easy', this)" data-diff="easy"><span class="diff-label">Easy</span></button>
+              <button class="prospect-diff-btn selected" onclick="selectProspectDifficulty('medium', this)" data-diff="medium"><span class="diff-label">Med</span></button>
+              <button class="prospect-diff-btn" onclick="selectProspectDifficulty('hard', this)" data-diff="hard"><span class="diff-label">Hard</span></button>
+            </div>
+            <button class="sidebar-btn" id="prospectStartBtn" onclick="startProspectMode()" style="justify-content:center; background: #4f46e5; color:#fff; border:none; text-align:center;">Play Prospect</button>
+          </div>
+        </div>
+
+        <div class="sidebar-section">
+          <h3>Tools</h3>
+          <div class="sidebar-actions">
+            <a id="knowledgeBaseLink" href="/knowledge{% if mode == 'prospect' %}?mode=prospect{% endif %}" class="sidebar-btn">📚 Knowledge</a>
+            <button id="trainingToggleBtn" class="sidebar-btn" onclick="toggleTrainingPanel()">🎓 Training</button>
+            <button id="quizToggleBtn" class="sidebar-btn" onclick="toggleQuizPanel()">📝 Quiz</button>
+            <button id="feedbackToggle" class="sidebar-btn" onclick="toggleFeedback()">💬 Feedback</button>
+            <label class="sidebar-btn checkbox-label" title="Auto-send voice dictation" style="cursor:pointer">
+              <input type="checkbox" id="autoSendDictationToggle" onchange="toggleAutoSend()"> Auto-send dictation
+            </label>
+            <div class="dictation-controls">
+              <label for="dictationSendModeSelect" class="dictation-label">Send mode</label>
+              <select id="dictationSendModeSelect" onchange="changeDictationSendMode(this.value)">
+                <option value="auto-send-on-stop">Auto-send on final segment</option>
+                <option value="send-after-pause">Send after pause</option>
+                <option value="manual">Manual (press Send)</option>
+              </select>
+              <input id="dictationPauseMsInput" type="number" min="200" max="5000" value="700" onchange="changeDictationPauseMs(this.value)" />
+              <span class="dictation-ms">ms</span>
+            </div>
+          </div>
+        </div>
+        <!-- devToggleBtn kept hidden for JS compatibility; panel opens via Ctrl+Shift+D -->
+        <button id="devToggleBtn" style="display: {{ 'inline-block' if debug_enabled else 'none' }}" onclick="toggleDevPanel()" aria-label="Open advanced options"></button>
+      </div>
     </div>
 
     <div id="trainingPanel">
@@ -475,71 +132,32 @@
         </button>
       </div>
       <div class="training-body">
-        <div class="training-section">
-          <div class="training-label">📍 Stage Goal</div>
-          <div class="training-value" id="tStageGoal">—</div>
+        <div class="training-section training-section--action">
+          <div class="training-label">What just happened</div>
+          <div class="training-value" id="tWhatHappened">—</div>
         </div>
-        <div class="training-section">
-          <div class="training-label">🔍 What the bot just did</div>
-          <div class="training-value" id="tWhatBotDid">—</div>
+        <div class="training-section training-section--trigger">
+          <div class="training-label">Your next move</div>
+          <div class="training-value" id="tNextMove">—</div>
         </div>
-        <div class="training-section">
-          <div class="training-label">➡ Where we're heading</div>
-          <div class="training-value" id="tWhereHeading">—</div>
-        </div>
-        <div class="training-section">
-          <div class="training-label">⚡ Advance when</div>
-          <div class="training-value" id="tNextTrigger">—</div>
-        </div>
-        <div class="training-section">
-          <div class="training-label">⚠ Watch for</div>
+        <div class="training-section training-section--warning">
+          <div class="training-label">Watch out</div>
           <ul class="training-tips" id="tWatchFor"></ul>
         </div>
-        <div class="training-section training-qa">
-          <div class="training-label">💬 Ask the coach</div>
-          <div style="display: flex; gap: 6px; margin-top: 4px">
-            <label class="sr-only" for="trainingQuestion"
-              >Training question</label
-            >
+        <div class="training-section training-section--qa">
+          <div class="training-label">Ask the coach</div>
+          <div class="training-qa-row">
+            <label class="sr-only" for="trainingQuestion">Training question</label>
             <input
               type="text"
               id="trainingQuestion"
+              class="training-qa-input"
               placeholder="e.g. What should I have said instead?"
-              style="
-                flex: 1;
-                padding: 6px 10px;
-                border: 1px solid #444;
-                border-radius: 6px;
-                background: #1a1a2e;
-                color: #e0e0e0;
-                font-size: 13px;
-              "
               onkeydown="if (event.key === 'Enter') askTrainingCoach();"
             />
-            <button
-              onclick="askTrainingCoach()"
-              style="
-                padding: 6px 12px;
-                border: none;
-                border-radius: 6px;
-                background: #4a9eff;
-                color: #fff;
-                cursor: pointer;
-                font-size: 13px;
-              "
-            >
-              Ask
-            </button>
+            <button class="training-qa-btn" onclick="askTrainingCoach()">Ask</button>
           </div>
-          <div
-            id="trainingAnswer"
-            style="
-              margin-top: 6px;
-              font-size: 13px;
-              color: #b0b0b0;
-              min-height: 18px;
-            "
-          ></div>
+          <div id="trainingAnswer" class="training-qa-answer"></div>
         </div>
       </div>
     </div>
@@ -598,7 +216,7 @@
     <!-- ─── Prospect Panel ──────────────────────────────────────────────────── -->
     <div id="prospectPanel">
       <div class="prospect-header">
-        <span>Prospect Mode</span>
+        <span>🎯 Prospect Mode</span>
         <button class="prospect-close-btn" onclick="endProspectMode()">
           ×
         </button>
@@ -608,9 +226,8 @@
           <div class="prospect-label">Prospect</div>
           <div class="prospect-value" id="prospectName">—</div>
           <div
-            class="prospect-value"
+            class="prospect-value prospect-background"
             id="prospectBackground"
-            style="font-size: 11px; color: #8b8fa3; margin-top: 2px"
           >
             —
           </div>
@@ -628,20 +245,10 @@
               style="width: 20%; background: #ef4444"
             ></div>
           </div>
-          <div
-            style="
-              display: flex;
-              justify-content: space-between;
-              margin-top: 3px;
-            "
-          >
-            <span style="font-size: 10px; color: #6b6b80">Not interested</span>
-            <span
-              style="font-size: 12px; font-weight: 600; color: #06b6d4"
-              id="prospectReadinessVal"
-              >0%</span
-            >
-            <span style="font-size: 10px; color: #6b6b80">Ready to buy</span>
+          <div class="prospect-readiness-labels">
+            <span>Not interested</span>
+            <span class="prospect-readiness-pct" id="prospectReadinessVal">0%</span>
+            <span>Ready to buy</span>
           </div>
         </div>
         <div class="prospect-section">
@@ -666,7 +273,7 @@
             class="prospect-settings-toggle"
             onclick="toggleProspectSettings()"
           >
-            Settings
+            ⚙ Settings
           </button>
           <div class="prospect-settings-body" id="prospectSettingsBody">
             <div class="prospect-setting-row">
@@ -693,67 +300,11 @@
       </div>
     </div>
 
-    <!-- ─── Prospect Setup Overlay ──────────────────────────────────────────── -->
-    <div id="prospectSetup">
-      <div class="prospect-setup-card">
-        <div class="prospect-setup-title">Start Prospect Practice</div>
-        <div class="prospect-setup-field">
-          <label>Difficulty</label>
-          <div class="prospect-diff-buttons">
-            <button
-              class="prospect-diff-btn"
-              onclick="selectProspectDifficulty('easy', this)"
-              data-diff="easy"
-            >
-              <span class="diff-label">Easy</span>
-              <span class="diff-desc">Friendly buyer</span>
-            </button>
-            <button
-              class="prospect-diff-btn selected"
-              onclick="selectProspectDifficulty('medium', this)"
-              data-diff="medium"
-            >
-              <span class="diff-label">Medium</span>
-              <span class="diff-desc">Cautious evaluator</span>
-            </button>
-            <button
-              class="prospect-diff-btn"
-              onclick="selectProspectDifficulty('hard', this)"
-              data-diff="hard"
-            >
-              <span class="diff-label">Hard</span>
-              <span class="diff-desc">Tough negotiator</span>
-            </button>
-          </div>
-        </div>
-        <div class="prospect-setup-field">
-          <label>Product</label>
-          <label class="sr-only" for="prospectProductSelect"
-            >Prospect product</label
-          >
-          <select id="prospectProductSelect">
-            <option value="default">General (any product)</option>
-          </select>
-        </div>
-        <div class="prospect-setup-actions">
-          <button class="prospect-setup-cancel" onclick="closeProspectSetup()">
-            Cancel
-          </button>
-          <button
-            class="prospect-setup-start"
-            id="prospectStartBtn"
-            onclick="startProspectMode()"
-          >
-            Start Practice
-          </button>
-        </div>
-      </div>
-    </div>
 
-    <!-- ─── Dev Panel ──────────────────────────────────────────────────────── -->
+    <!-- ─── Advanced Options Panel ───────────────────────────────────────── -->
     <div id="devPanel">
       <div class="dp-header">
-        <span class="dp-header-title">⚙ Dev Panel</span>
+        <span class="dp-header-title">⚙ Advanced Options</span>
         <kbd class="dp-shortcut">Ctrl+Shift+D</kbd>
         <button class="dp-close" onclick="toggleDevPanel()">×</button>
       </div>
@@ -779,20 +330,16 @@
           </div>
         </div>
 
-        <!-- 2. Stage Jump -->
+        <!-- 2. Jump to Stage -->
         <div class="dp-section">
           <div class="dp-section-label">Jump to Stage</div>
           <div class="dp-stages" id="dp-stage-btns"></div>
-          <div class="dp-stage-note">
-            Bypasses FSM prerequisites — next message will reply from the chosen
-            stage.
-          </div>
         </div>
 
         <!-- 3. Message Analyser -->
         <div class="dp-section">
           <div class="dp-section-label">Message Analyser</div>
-          <div style="font-size: 10px; color: #3a5040; line-height: 1.4">
+          <div class="dp-desc">
             Check what signals fire and whether this message would advance the
             current stage — without sending anything to the LLM.
           </div>
@@ -827,7 +374,7 @@
               </button>
             </div>
           </div>
-          <div style="font-size: 10px; color: #3a5040; line-height: 1.4">
+          <div class="dp-desc">
             Exact text sent to the LLM as the system message for the current
             stage.
           </div>
@@ -839,14 +386,7 @@
         <!-- 5. Reinitialise -->
         <div class="dp-section">
           <div class="dp-section-label">Reinitialise</div>
-          <div
-            style="
-              font-size: 10px;
-              color: #3a5040;
-              line-height: 1.4;
-              margin-bottom: 8px;
-            "
-          >
+          <div class="dp-desc dp-desc--spaced">
             Start a fresh session with specific settings. Resets the full
             conversation.
           </div>
@@ -878,6 +418,25 @@
       <div id="dp-toast"></div>
     </div>
 
+    <!-- ─── Feedback Dropdown ───────────────────────────────────────── -->
+    <div id="feedbackDropdown">
+      <div class="fb-title">Quick Feedback</div>
+      <div class="fb-stars" id="fbStars">
+        <button class="fb-star" data-val="1" onclick="setFbRating(1)">&#9733;</button>
+        <button class="fb-star" data-val="2" onclick="setFbRating(2)">&#9733;</button>
+        <button class="fb-star" data-val="3" onclick="setFbRating(3)">&#9733;</button>
+        <button class="fb-star" data-val="4" onclick="setFbRating(4)">&#9733;</button>
+        <button class="fb-star" data-val="5" onclick="setFbRating(5)">&#9733;</button>
+      </div>
+      <label class="sr-only" for="fbComment">Feedback comment</label>
+      <textarea id="fbComment" class="fb-comment" placeholder="Any thoughts? (optional)" maxlength="500"></textarea>
+      <button class="fb-submit" id="fbSubmitBtn" onclick="submitFeedback()">Send Feedback</button>
+    </div>
+
+    <script>
+      const PAGE_MODE = "{{ mode }}";
+      const PAGE_DEBUG = "{{ 'true' if debug_enabled else 'false' }}";
+    </script>
     <script src="{{ url_for('static', filename='app.js') }}"></script>
   </body>
 </html>

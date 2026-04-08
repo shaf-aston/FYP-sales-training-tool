@@ -6,6 +6,8 @@ title: System Architecture
 %% ==========================================
 %%{init: {"theme": "base", "flowchart": {"nodeSpacing": 40, "rankSpacing": 40}}}%%
 
+%% Diagram Type: C4-style System Architecture (flowchart / graph TD) — system & component view
+
 graph TD
     classDef junctionStyle stroke-width:0px,fill:transparent,font-size:1px
 
@@ -21,13 +23,13 @@ subgraph Flask["⚙️  Flask 3.0  ·  Python 3.10+  ·  localhost:5000 / Render
         Sec["SecurityManager<br/>(Rate Limit & Validation)"]:::web
     end
 
-    subgraph Core["Chatbot Core  (src/chatbot/)"]
+    subgraph Core["Chatbot Core  (src/chatbot/) — where conversation logic and session orchestration live"]
         direction TB
-        Bot["SalesChatbot<br/>(Session Orchestrator)"]:::core
-        FSM["SalesFlowEngine<br/>(FSM State Manager)"]:::core
-        NLU["AnalysisEngine<br/>(NLU & Signal Detection)"]:::core
-        Content["PromptEngine<br/>(4-Tier Prompt Assembly)"]:::core
-        Loader["ConfigLoader<br/>(YAML Cache & Matching)"]:::core
+        Bot["SalesChatbot<br/>(Session Orchestrator)<br/>If missing: sessions and turn orchestration would be lost; the system could not maintain conversational context."]:::core
+        FSM["SalesFlowEngine<br/>(FSM State Manager)<br/>If missing: the bot would not reliably track conversation stages or know when to advance."]:::core
+        NLU["AnalysisEngine<br/>(NLU & Signal Detection)<br/>If missing: the system would be blind to user signals (intent, objections, guardedness) and cannot adapt tone or tactics."]:::core
+        Content["PromptEngine<br/>(4-Tier Prompt Assembly)<br/>If missing: prompts would not be dynamically assembled and tone/tactics would be inconsistent."]:::core
+        Loader["ConfigLoader<br/>(YAML Cache & Matching)<br/>If missing: product and signal configuration would be hard-coded or unavailable, reducing flexibility."]:::core
     end
 
     subgraph Features["Feature Modules  (src/chatbot/)"]
@@ -39,10 +41,10 @@ subgraph Flask["⚙️  Flask 3.0  ·  Python 3.10+  ·  localhost:5000 / Render
         Know["knowledge.py<br/>CRUD for custom product info via /api/knowledge<br/>ALLOWED_FIELDS whitelist · MAX_FIELD_LENGTH cap per field<br/>get_custom_knowledge_text() injected into product_context<br/>at SalesChatbot.__init__ as '--- BEGIN CUSTOM PRODUCT DATA ---'"]:::feature
     end
 
-    subgraph Providers["LLM Provider Layer  (src/chatbot/providers/)"]
+    subgraph Providers["LLM Provider Layer  (src/chatbot/providers/) — abstracts AI services so the conversation logic is provider-agnostic"]
         direction LR
         Factory["ProviderFactory<br/>(Registry Pattern)"]:::prov
-        ProvBase["BaseLLMProvider (ABC)<br/>(LLM Interface)"]:::prov
+        ProvBase["BaseLLMProvider (ABC)<br/>(LLM Interface) — the abstraction that lets the system swap providers without changing core logic"]:::prov
         VoiceProv["VoiceProvider (voice_provider.py)<br/>STT: Deepgram → fallback Groq Whisper<br/>TTS: edge-tts (async event loop in background thread)"]:::prov
     end
 
@@ -62,22 +64,24 @@ end
 
 subgraph FS["💾  File System — Runtime Persistence"]
     direction LR
-    F_S["sessions/{id}.json<br/>(Session State Snapshots)"]:::fs
-    F_J["analytics.jsonl · metrics.jsonl<br/>(Event Logs)"]:::fs
-    F_Y["src/config/ (9 YAML files)<br/>(Configuration)"]:::fs
+    F_S["sessions/{id}.json<br/>(Session State Snapshots) — allows users to return to the same conversation state; without it continuity is lost"]:::fs
+    F_J["analytics.jsonl · metrics.jsonl<br/>(Event Logs) — used for monitoring, debugging and performance analysis; losing them prevents post-hoc investigation"]:::fs
+    F_Y["src/config/ (9 YAML files)<br/>(Configuration) — tunable knobs that change system behaviour without code changes; necessary for safe experimentation"]:::fs
 end
 
 %% JUNCTION NODES for routing and preventing spaghetti lines
 AppJ[ ]:::junctionStyle
 BotJ[ ]:::junctionStyle
 ObsJ[ ]:::junctionStyle
+LLMJ["LLM Junction (provider gateway)"]:::llm
 
 %% ── Rank Controls (Vertical Ordering) ────────────────────────────────────
 %% Use subgraph direction TB to enforce layout; no invisible edges needed
 
 %% ── Connections ──────────────────────────────────────────────────────────────
 Browser -->|"HTTP REST · X-Session-ID header"| App
-App -->|"JSON: message · stage · strategy · latency_ms · provider · model · training"| Browser
+App --> AppEdge[ ]:::junctionStyle
+AppEdge -->|"JSON: message · stage · strategy · latency_ms · provider · model · training"| Browser
 
 App --- AppJ
 AppJ --> Sec
@@ -102,9 +106,10 @@ Content --> Loader
 Loader --> F_Y
 
 Factory --> ProvBase
-ProvBase -->|"HTTPS · groq-sdk"| G
-ProvBase -.->|"HTTPS · fallback on 429 or error"| OR
-ProvBase -.->|"HTTPS · last resort"| SN
+ProvBase --> LLMJ
+LLMJ -->|"HTTPS · groq-sdk"| G
+LLMJ -.->|"HTTPS · fallback on 429 or error — auto-route to backup provider to avoid user interruption"| OR
+LLMJ -.->|"HTTPS · last resort"| SN
 
 Ana --- ObsJ
 Perf --- ObsJ

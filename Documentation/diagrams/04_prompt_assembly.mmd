@@ -1,10 +1,10 @@
----
-title: 4-Tier Prompt Assembly Pipeline
----
+%% Title: 4-Tier Prompt Assembly Pipeline
+%% Last modified: 2026-04-06
 %% ==========================================
 %% PURPOSE: Visualizes how prompts are programmatically constructed by combining exact overrides, tactical acknowledgements, adaptive advice, and core NEPQ templates.
 %% ==========================================
 %%{init: {"theme": "base", "flowchart": {"nodeSpacing": 40, "rankSpacing": 40}}}%%
+%% Diagram Type: Flowchart (flowchart TD) — 4-Tier Prompt Assembly pipeline (instruction assembly)
 
 flowchart TD
     classDef junctionStyle stroke-width:0px,fill:transparent,font-size:1px;
@@ -14,22 +14,25 @@ flowchart TD
     classDef stage fill:#1976D2,stroke:#0D47A1,stroke-width:2.5px,color:#fff
     classDef final fill:#F57F17,stroke:#E65100,stroke-width:2.5px,color:#fff
 
-    START(["flow_engine.get_current_prompt(user_message)<br/>strategy_for_prompts:<br/>  INTENT mode → CONSULTATIVE templates<br/>  else → actual flow_type (CONSULTATIVE or TRANSACTIONAL)"]):::stage
+    START(["New user message received → at the start of every bot turn the system constructs a fresh, context-aware instruction set for this turn (choose strategy based on detected intent, urgency, budget). This ensures prompts are tailored per turn."]):::stage
+    %% original: flow_engine.get_current_prompt(user_message)
+
+    %% Diagram legend: 🟪 Prompt Constraints (purple) | 🔴 FSM Guards (red) | 🔵 Output Contracts (blue)
 
     ENTRY["content.generate_stage_prompt(<br/>  strategy: str,   ← from strategy_for_prompts<br/>  stage: Stage,<br/>  product_context: str,<br/>  history: list,<br/>  user_message: str<br/>)"]:::stage
 
     START --> ENTRY
 
     %% ── TIER 1: Override Check ───────────────────────────────────────────────
-    ENTRY --> T1{{"TIER 1 — Override Check  (overrides.py)"}}:::override
+    ENTRY --> T1{{"TIER 1 — Override Check (Decides whether to replace the normal prompt pipeline with a targeted override for special situations)"}}:::override
 
-    T1 -->|"direct_info_request"| OV1["overrides.get_override_template('direct_info')"]:::override
-    T1 -->|"soft_positive at PITCH"| OV2["overrides.early_exit_prompt(stage)"]:::override
-    T1 -->|"repetitive_validation loop"| OV3["overrides.get_override_template('excessive_validation')"]:::override
+    T1 -->|"Direct info request — user demands a straight answer; use focused override and skip full assembly"| OV1["overrides.get_override_template('direct_info')"]:::override
+    T1 -->|"Soft positive at pitch — user signals interest; use early-exit template to fast-track closing"| OV2["overrides.early_exit_prompt(stage)"]:::override
+    T1 -->|"Repetitive validation loop — bot is repeating affirmations; use corrective override to break the loop"| OV3["overrides.get_override_template('excessive_validation')"]:::override
 
-    T1 -->|"None of the above"| T2_ENTRY
+    T1 -->|"None of the above — proceed with adaptive assembly"| T2_ENTRY
 
-    OVJ1[ ]:::junctionStyle
+    OVJ1([" "]):::junctionStyle
     OV1 --- OVJ1
     OV2 --- OVJ1
     OV3 --- OVJ1
@@ -39,9 +42,9 @@ flowchart TD
     subgraph Tier2["TIER 2 — Acknowledgment Guidance"]
         T2_ENTRY["analysis.analyze_state(history, user_message)"]:::ack
         T2_ACK["analysis.detect_acknowledgment_context(user_message)"]:::ack
-        T2_FULL["'full' — user disclosed personal problem"]:::ack
-        T2_LIGHT["'light' — guarded=True"]:::ack
-        T2_NONE["'none' — neutral / decisive=True"]:::ack
+        T2_FULL["'full' — user disclosed a personal or emotional problem; respond with genuine warmth and acknowledgment before continuing"]:::ack
+        T2_LIGHT["'light' — user is guarded or brief; acknowledge lightly and reduce probing"]:::ack
+        T2_NONE["'none' — user is neutral or decisive; skip emotional acknowledgment and be direct"]:::ack
 
         T2_ENTRY --> T2_ACK
         T2_ACK -->|"vulnerability"| T2_FULL
@@ -58,10 +61,10 @@ flowchart TD
     %% ── TIER 3: Adaptive Tactics ─────────────────────────────────────────────
     subgraph Tier3["TIER 3 — Adaptive Tactical Guidance"]
         T3_ENTRY["tactics.get_adaptive_guidance(state, stage, strategy)"]:::tactics
-        T3_DEC["state.decisive == True  (Focus on close)"]:::tactics
-        T3_GUARD["state.guarded == True  (Back off)"]:::tactics
-        T3_QUES["is_literal_question()  (Answer first)"]:::tactics
-        T3_ELICIT["Default — loader.get_tactic('elicitation')"]:::tactics
+        T3_DEC["Decisive — user appears ready to commit; prioritise closing moves and avoid extra probing"]:::tactics
+        T3_GUARD["Guarded — user is pulling back; reduce pressure and ask low-risk questions"]:::tactics
+        T3_QUES["Literal question — user asked a direct question; answer it clearly before any sales tactic"]:::tactics
+        T3_ELICIT["Default — focus on eliciting the missing information needed to progress"]:::tactics
 
         T3_ENTRY -->|"decisive"| T3_DEC
         T3_ENTRY -->|"guarded"| T3_GUARD
@@ -69,7 +72,7 @@ flowchart TD
         T3_ENTRY -->|"none of above"| T3_ELICIT
     end
 
-    Tier2 --- Tier3
+    %% Tier2 to Tier3 implicit via T2J -> T3_ENTRY
 
     T3J[ ]:::junctionStyle
     T3_DEC --- T3J
@@ -87,7 +90,7 @@ flowchart TD
         T4_CONSULT["CONSULTATIVE[stage]<br/>+ _SHARED_RULES<br/>+ Tier 2–3 context"]:::stage
         T4_TRANS["TRANSACTIONAL[stage]<br/>+ _SHARED_RULES<br/>+ Tier 2–3 context"]:::stage
         
-        T4_SHARED["_SHARED_RULES (shared across strategies):<br/>  P1: NO parroting > 3 words<br/>  P1: NO pitch ending with '?'<br/>  P2: Max 1–2 questions/response<br/>  P3: Match user tone<br/>  P4: Terse input guidance<br/>  P5: Persona checkpoint"]:::stage
+        T4_SHARED["_SHARED_RULES (shared across strategies):<br/>  P1: NO parroting > 3 words — echoing long spans of the user's language makes the bot sound hollow and scripted.<br/>  P2: NO pitch ending with '?' — ending a pitch with a question weakens the close.<br/>  P3: Max 1–2 questions/response — avoid question-stacking which overwhelms users and erodes trust.<br/>  P4: Match user tone — mirror brevity and formality to preserve rapport.<br/>  P5: Persona checkpoint — ensure replies remain within brand/persona and legal limits."]:::stage
         
         T4_PREFS["lexical_entrainment +<br/>preference_context +<br/>intent_level variations"]:::stage
 
@@ -99,6 +102,6 @@ flowchart TD
         T4_SHARED --> T4_PREFS
     end
 
-    Tier3 --- Tier4
+    %% Tier3 to Tier4 implicit via T3J -> T4_ENTRY
 
     T4_PREFS --> FINAL_PROMPT["System Prompt Complete<br/>(override OR assembled)<br/>→ Ready for LLM call"]:::final

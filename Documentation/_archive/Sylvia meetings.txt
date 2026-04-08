@@ -1,0 +1,103 @@
+Sylvia == SUPERVISOR_Name
+
+Sylvia meeting #1  	29.9.25
+
+
+- What is the end-product vision?
+- What are the base functional requirements?
+- What's the value of the end-product and the Why behind this?
+- Create Architectural diagram for basic blocks of the development.
+- Use Cases to show implementation of specific requirements.
+--> How do you showcase your skills as a developer compared to everyone else, Ai and a non-technical randomer? (Prompt engineering that no one else has, refining, avoiding poor Ai generation)
+
+
+
+
+Sylvia meeting #2  	07.10.25
+
+Architectural design review
+- Make more direct by clarifying buzz terms and calling things they are to ease terminologies used
+- Detail further for more clarity
+- These are 2 separates parts for ai - Training, and Dialogue conversation with user
+- Add specific links to the tools wanting to be used
+- Analysis of why you chose the tools, frameworks and technologies that you do
+- Same applies to the Use Case Diagram
+
+Requirements are heavy and may need to be cut down
+
+
+
+
+Sylvia meeting #3	20.10.25
+
+- Gone over Architectural Structure and potential different STT models other than Whisper Ai. 
+- Provide analytical reviews for decisions around which and why technologies have been used over other ones.
+- Implementation specificity, and accurate representations of the inputs vs the outputs
+- What tools or libraries being used for implementation for each of the components, and document review.
+- Try implementing with code to see how each parts' functionality
+
+
+
+
+Sylvia meeting #4	11.11.25
+
+- Ethics Form to be completed asap with secondary data and with a statement of terms of usage
+- Get permission for primary data collection just in case
+Send this to Sylvia after completion
+
+- Machine Learning: pytorch
+
+
+Sylvia meeting #6	24.11.25
+
+- Being able to analyse line-by-line to identify what's causing the unintended functionality and HOW to create the intended functionality. She suggested understanding the basics will help with this and understanding the code in front
+- Figure out your desired outcomes from specific ML Training or 
+- Researching different chatbot frameworks (she gave examples of Dialogflow or IBM Watson)
+- Marking cues in data that are the reason for leading to a particular response.
+- Making a Dialogue flow
+- Creating a Fuzzy-matching system linking to the cues
+- Reminder to use pre-made functionalities/libraries/techs 
+- Reminder to quote prompt engineering implemented
+
+- Using generational Ai as a tool, but not a replacement, as it may not be able to implement the desired outcomes - SO BE CLEAR of your desired functionality of it.
+
+
+
+Tues		17.02.2026 (Date I think)
+- Demoed current working project that uses groq api key; went through a full example sales conversation
+- Discussed strategy pattern issues with separate files per strategy such as duplication, tweaks not maintainable as they had to be copied throughout due to wrong abstraction (should decide stage by stage not upfront), hard to enforce cross stage rules
+- Reviewed architecture diagrams: cleaned up line routing and structure to show data flow better instead of weird ambiguous connections
+
+
+
+
+
+Mon 		23.02.2026
+Working on ethics approval docs
+
+
+
+
+
+Mon 		02.03.2026
+Finalised and finished ethics approval
+
+
+Tues 		18.03.2026
+- Explained high-level structure of working andd justified use and UI info of current phase
+
+Make features valuable for training purpose:
+- Can assess/test user based on what they think is best way to take forward the conversation (which is compared in similarity to the bots next move and it analyses) and what phase we are in right now
+- Include future development of the chatbot being the prospect of [Easy/Med/hard]
+- Able to track user metrics to determine
+- Architectural diagrams to make CLEAR of flow and everything etc
+
+Testing:
+- system or some other kinda testing can be used; probably not unit testing as I don't have units to test. Instead said to test some part of the system testing or load testing of Render
+- Include mentioning of Developer testing
+
+
+NEXT Meeting:
+Have ready Architectural diagrams
+Ask about Including SPM Stuff
+Try to go over a section of report

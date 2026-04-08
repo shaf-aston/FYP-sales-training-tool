@@ -6,9 +6,52 @@ let _currentStage = "intent";
 let _currentStrategy = "—";
 
 // ─── Voice Mode State ─────────────────────────────────────────
-// Server-based voice (Deepgram/Groq + Edge TTS) vs browser-based (Web Speech API)
-let voiceModeEnabled = false; // Toggle: true = server voice, false = browser speech
-let voiceModeInitialized = false;
+let handsFreeMode = false;
+let _currentTTSAudio = null;
+let autoSendDictation = localStorage.getItem("autoSendDictation") !== "false";
+// Dictation send-mode and debounce
+let dictationSendMode =
+  localStorage.getItem("dictationSendMode") || "auto-send-on-stop";
+let dictationPauseMs = parseInt(
+  localStorage.getItem("dictationPauseMs") || "700",
+  10,
+);
+let dictationPauseTimer = null;
+
+// ─── Settings toggles ─────────────────────────────────────────
+function toggleAutoSend() {
+  const checkbox = document.getElementById("autoSendDictationToggle");
+  autoSendDictation = checkbox.checked;
+  localStorage.setItem("autoSendDictation", autoSendDictation);
+  showToast(`Auto-send dictation ${autoSendDictation ? "ON" : "OFF"}`);
+}
+
+function changeDictationSendMode(mode) {
+  dictationSendMode = mode;
+  localStorage.setItem("dictationSendMode", mode);
+
+  // Keep the legacy auto-send checkbox in sync: manual -> off, others -> on
+  const cb = document.getElementById("autoSendDictationToggle");
+  if (cb) {
+    if (mode === "manual") {
+      cb.checked = false;
+      autoSendDictation = false;
+      localStorage.setItem("autoSendDictation", false);
+    } else {
+      cb.checked = true;
+      autoSendDictation = true;
+      localStorage.setItem("autoSendDictation", true);
+    }
+  }
+  showToast(`Send mode: ${mode.replace(/-/g, " ")}`, "info");
+}
+
+function changeDictationPauseMs(val) {
+  const n = parseInt(val, 10) || 700;
+  dictationPauseMs = n;
+  localStorage.setItem("dictationPauseMs", dictationPauseMs);
+  showToast(`Dictation pause timeout ${dictationPauseMs}ms`, "info");
+}
 
 // ─── Session ─────────────────────────────────────────────────
 function getSessionId() {
@@ -38,6 +81,119 @@ function clearStoredHistory() {
   localStorage.removeItem("chatHistory");
   localStorage.removeItem("chatStage");
   localStorage.removeItem("chatStrategy");
+}
+
+function getProductOptionsFromConfig(cfg) {
+  if (!cfg) return [];
+
+  // Debug endpoint shape: { products: [{id, strategy, label}, ...] }
+  if (Array.isArray(cfg.products)) return cfg.products;
+
+  // Public config shape: { product_options: [{...}] }
+  if (Array.isArray(cfg.product_options)) return cfg.product_options;
+
+  // Legacy fallback shape: { products: { available: [...] }, product_strategies: {...} }
+  const available = cfg.products?.available;
+  if (Array.isArray(available)) {
+    const strategies = cfg.product_strategies || {};
+    return available.map((id) => ({
+      id,
+      strategy: strategies[id] || "",
+      label: id,
+    }));
+  }
+
+  return [];
+}
+
+// Short, clear display names for long product labels in prospect selector.
+function formatProspectDisplay(product) {
+  const raw = ((product.label || product.id) + "").replace(/_/g, " ").trim();
+  const key = raw.toLowerCase().replace(/\s+/g, " ");
+
+  const conciseMap = {
+    "luxury vehicles": "Luxury Vehicles",
+    "personal fitness coaching and nutrition": "Fitness Coaching",
+    "life and health insurance plans": "Life & Health Insurance",
+    "fine jewellery and engagement rings": "Fine Jewellery",
+    "personal financial advisory and wealth management": "Wealth Management",
+    "$30 fragrances": "Fragrances",
+    "travel packages and accommodations": "Travel Packages",
+    "premium fashion and apparel": "Fashion & Apparel",
+    "home appliances and kitchen equipment": "Home Appliances",
+    "outdoor and sporting equipment": "Outdoor & Sporting",
+    "subscription box services": "Subscription Boxes",
+    "professional education and certification programs":
+      "Professional Education",
+    "business productivity software": "Productivity Software",
+    "residential real estate services": "Real Estate Services",
+    "concierge medicine and wellness services": "Concierge Healthcare",
+    "home improvement and renovation services": "Home Renovation",
+  };
+
+  // Remove any trailing parenthetical strategy from raw label
+  const stripped = raw.split(" (")[0].trim();
+  const rawBase =
+    conciseMap[key] || conciseMap[stripped.toLowerCase()] || stripped;
+
+  function toTitleCase(s) {
+    return String(s || "")
+      .split(/(\s+)/)
+      .map((w) =>
+        w.trim() ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : w,
+      )
+      .join("");
+  }
+
+  // Ensure consistent, readable casing for fallback labels
+  const base = toTitleCase(rawBase);
+
+  // Preserve common acronyms (CRM, SSO, API, IoT, AI, SaaS, B2B, B2C)
+  const acronyms = ["CRM", "SSO", "API", "IoT", "AI", "SaaS", "B2B", "B2C"];
+  let preserved = base;
+  acronyms.forEach((ac) => {
+    const re = new RegExp("\\b" + ac.toLowerCase() + "\\b", "gi");
+    preserved = preserved.replace(re, ac);
+  });
+
+  const stratRaw = product.strategy
+    ? String(product.strategy).toLowerCase()
+    : "";
+  const strategy = stratRaw
+    ? " (" + stratRaw.charAt(0).toUpperCase() + stratRaw.slice(1) + ")"
+    : "";
+  return preserved + strategy;
+}
+
+function syncKnowledgeBaseLink() {
+  const link = document.getElementById("knowledgeBaseLink");
+  if (!link) return;
+
+  const isProspectContext =
+    _prospectMode ||
+    (typeof PAGE_MODE !== "undefined" && PAGE_MODE === "prospect");
+
+  link.href = isProspectContext ? "/knowledge?mode=prospect" : "/knowledge";
+  link.textContent = isProspectContext
+    ? "📚 Prospect Knowledge"
+    : "📚 Knowledge";
+
+  // Ensure click navigates with correct mode even if href wasn't updated yet (race)
+  if (!link._kbClickHandlerSet) {
+    link.addEventListener("click", function (e) {
+      // Allow modifier keys / middle click to open new tab as expected
+      if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey)
+        return;
+      e.preventDefault();
+      const isProspect =
+        _prospectMode ||
+        (typeof PAGE_MODE !== "undefined" && PAGE_MODE === "prospect");
+      window.location.href = isProspect
+        ? "/knowledge?mode=prospect"
+        : "/knowledge";
+    });
+    link._kbClickHandlerSet = true;
+  }
 }
 
 // ─── Session Expiration Handler ───────────────────────────────
@@ -126,6 +282,40 @@ function showToast(message, type = "info") {
   }, 4000);
 }
 
+// Handle finalised dictation segments according to send-mode and debounce
+function _handleDictationFinal(inputEl, appendedText, alreadyParsed = false) {
+  try {
+    const toAppend = alreadyParsed
+      ? appendedText
+      : parsePunctuation(appendedText);
+    inputEl.value = (inputEl.value || "") + toAppend;
+    autoResizeTextarea(inputEl);
+
+    if (!autoSendDictation) return;
+
+    if (dictationSendMode === "manual") {
+      // user chose manual — do nothing automatically
+      return;
+    }
+
+    if (dictationSendMode === "auto-send-on-stop") {
+      if (inputEl.value.trim()) sendMessage();
+      return;
+    }
+
+    if (dictationSendMode === "send-after-pause") {
+      if (dictationPauseTimer) clearTimeout(dictationPauseTimer);
+      dictationPauseTimer = setTimeout(() => {
+        dictationPauseTimer = null;
+        if (inputEl.value.trim()) sendMessage();
+      }, dictationPauseMs);
+      return;
+    }
+  } catch (e) {
+    console.warn("Dictation handler error:", e);
+  }
+}
+
 function parsePunctuation(text) {
   return text
     .replace(/ period /g, ". ")
@@ -166,7 +356,7 @@ function escapeHtml(text) {
 
 function createMessageElement(text, sender, msgIdx, metrics = null) {
   const msg = document.createElement("div");
-  msg.className = `message ${sender}`;
+  msg.className = `message ${sender} message-enter`;
 
   if (msgIdx !== null && msgIdx !== undefined) {
     msg.setAttribute("data-msg-idx", msgIdx);
@@ -333,11 +523,13 @@ function editMessage(msgIdx, originalText, msgEl) {
           allMsgs
             .slice(startIdx)
             .forEach((el) => el.classList.remove("historical"));
-          userTurnIndex = container.querySelectorAll(".message.user").length;
+          userTurnIndex = container.querySelectorAll(
+            ".message.user:not(.historical)",
+          ).length;
           ta.disabled = false;
           saveBtn.disabled = false;
           cancelBtn.disabled = false;
-          alert("Edit failed: " + (data.error || "Unknown error"));
+          showToast("Edit failed: " + (data.error || "Unknown error"), "error");
           return;
         }
 
@@ -381,10 +573,13 @@ function editMessage(msgIdx, originalText, msgEl) {
       })
       .catch((e) => {
         rollbackEditUI(allMsgs, startIdx);
+        userTurnIndex = container.querySelectorAll(
+          ".message.user:not(.historical)",
+        ).length;
         ta.disabled = false;
         saveBtn.disabled = false;
         cancelBtn.disabled = false;
-        alert("Edit error: " + e);
+        showToast("Edit failed — please retry", "error");
       });
   };
 }
@@ -405,7 +600,7 @@ function initChatbot() {
     .then((r) => r.json())
     .then((data) => {
       if (data.error) {
-        alert("Error: " + data.error);
+        showToast(data.error, "error");
         return;
       }
 
@@ -479,20 +674,64 @@ function initChatbot() {
       }
     })
     .catch((error) => {
-      alert("Error initializing chatbot: " + error);
+      showToast("Connection error — please refresh", "error");
     });
 }
 
 window.addEventListener("DOMContentLoaded", () => {
-  initChatbot();
   const ta = document.getElementById("messageInput");
   ta.addEventListener("input", () => autoResizeTextarea(ta));
   speechRecognizer = new SpeechRecognizer();
-  // Restore training panel open state
-  if (localStorage.getItem("trainingPanelOpen") === "true") {
-    document.getElementById("trainingPanel").classList.add("open");
-    document.querySelector(".container").classList.add("panel-open");
+
+  const autoSendCheckbox = document.getElementById("autoSendDictationToggle");
+  if (autoSendCheckbox) {
+    autoSendCheckbox.checked = autoSendDictation;
   }
+
+  // Init send-mode controls
+  const sendModeSel = document.getElementById("dictationSendModeSelect");
+  if (sendModeSel) sendModeSel.value = dictationSendMode;
+  const pauseInput = document.getElementById("dictationPauseMsInput");
+  if (pauseInput) pauseInput.value = dictationPauseMs;
+
+  // Populate prospect products on both seller and prospect pages.
+  loadProspectProducts();
+  syncKnowledgeBaseLink();
+
+  if (typeof PAGE_MODE !== "undefined" && PAGE_MODE === "prospect") {
+    const savedSessionId = localStorage.getItem("prospectSessionId");
+    if (savedSessionId) {
+      fetch("/api/prospect/state", {
+        headers: { "X-Session-ID": savedSessionId },
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error("Session expired");
+          return res.json();
+        })
+        .then((data) => {
+          if (data.success && data.persona) {
+            applyProspectSessionFromServer(savedSessionId, data);
+          } else {
+            throw new Error("Invalid session state");
+          }
+        })
+        .catch((err) => {
+          console.warn("Could not restore prospect session:", err);
+          localStorage.removeItem("prospectSessionId");
+          openProspectSetup();
+        });
+    } else {
+      openProspectSetup();
+    }
+  } else {
+    initChatbot();
+    // Restore training panel open state
+    if (localStorage.getItem("trainingPanelOpen") === "true") {
+      document.getElementById("trainingPanel").classList.add("open");
+      document.querySelector(".container").classList.add("panel-open");
+    }
+  }
+
   // Dev panel keyboard shortcut
   document.addEventListener("keydown", (e) => {
     if (e.ctrlKey && e.shiftKey && e.key === "D") {
@@ -564,6 +803,9 @@ function sendMessage() {
   autoResizeTextarea(input);
   showTyping();
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 25000);
+
   fetch("/api/chat", {
     method: "POST",
     headers: {
@@ -571,14 +813,18 @@ function sendMessage() {
       "X-Session-ID": getSessionId(),
     },
     body: JSON.stringify({ message }),
+    signal: controller.signal,
   })
-    .then((r) => r.json())
+    .then((r) => {
+      clearTimeout(timeoutId);
+      return r.json();
+    })
     .then((data) => {
       hideTyping();
       if (data.error) {
         // Check if session expired using improved error detection
         if (handleServerSessionError(data)) return;
-        addMessage("Error: " + data.error, "bot");
+        showToast(data.error, "error");
         return;
       }
       const metrics = {
@@ -589,10 +835,16 @@ function sendMessage() {
       };
       addMessage(data.message, "bot", metrics);
       updateSessionUI(data);
+      if (handsFreeMode) playServerTTS(data.message);
     })
     .catch((error) => {
+      clearTimeout(timeoutId);
       hideTyping();
-      addMessage("Error: " + error, "bot");
+      const msg =
+        error.name === "AbortError"
+          ? "Response timed out — please retry"
+          : "Connection error — please retry";
+      showToast(msg, "error");
     });
 }
 
@@ -650,42 +902,57 @@ function rollbackEditUI(allMsgs, startIdx) {
   allMsgs.slice(startIdx).forEach((el) => el.classList.remove("historical"));
 }
 
+// ─── Tools dropdown removed (now in Sidebar) ──────────────────
+
+// ─── Exclusive panel management ───────────────────────────────
+function closeAllPanels() {
+  const container = document.querySelector(".container");
+  document.getElementById("trainingPanel").classList.remove("open");
+  document.getElementById("quizPanel").classList.remove("open");
+  document.getElementById("devPanel").classList.remove("open");
+  document.getElementById("devToggleBtn").classList.remove("active");
+  container.classList.remove("panel-open", "quiz-panel-open");
+}
+
 // ─── Training panel ───────────────────────────────────────────
 function toggleTrainingPanel() {
   const panel = document.getElementById("trainingPanel");
   const container = document.querySelector(".container");
-  const open = panel.classList.toggle("open");
-  container.classList.toggle("panel-open", open);
-  localStorage.setItem("trainingPanelOpen", open);
+  const willOpen = !panel.classList.contains("open");
+  closeAllPanels();
+  if (willOpen) {
+    panel.classList.add("open");
+    container.classList.add("panel-open");
+  }
+  localStorage.setItem("trainingPanelOpen", willOpen);
 }
 
 function updateTrainingPanel(training) {
   if (!training) return;
 
-  const render = (text) => {
+  const renderInline = (text) => {
     if (!text) return "—";
-    if (typeof marked !== "undefined") {
-      return marked.parse(text);
+    if (
+      typeof marked !== "undefined" &&
+      typeof marked.parseInline === "function"
+    ) {
+      return marked.parseInline(text);
     }
-    return text; // fallback to plain text if marked not loaded
+    return escapeHtml(text);
   };
 
-  document.getElementById("tStageGoal").innerHTML = render(training.stage_goal);
-  document.getElementById("tWhatBotDid").innerHTML = render(
-    training.what_bot_did,
+  document.getElementById("tWhatHappened").innerHTML = renderInline(
+    training.what_happened,
   );
-  document.getElementById("tWhereHeading").innerHTML = render(
-    training.where_heading,
-  );
-  document.getElementById("tNextTrigger").innerHTML = render(
-    training.next_trigger,
+  document.getElementById("tNextMove").innerHTML = renderInline(
+    training.next_move,
   );
 
   const ul = document.getElementById("tWatchFor");
   ul.innerHTML = "";
-  (training.watch_for || []).forEach((tip) => {
+  (training.watch_for || []).slice(0, 2).forEach((tip) => {
     const li = document.createElement("li");
-    li.innerHTML = render(tip);
+    li.innerHTML = renderInline(tip);
     ul.appendChild(li);
   });
 }
@@ -736,13 +1003,14 @@ let currentQuizType = "stage";
 function toggleQuizPanel() {
   const panel = document.getElementById("quizPanel");
   const container = document.querySelector(".container");
-  const open = panel.classList.toggle("open");
-  container.classList.toggle("quiz-panel-open", open);
-  localStorage.setItem("quizPanelOpen", open);
-
-  if (open) {
+  const willOpen = !panel.classList.contains("open");
+  closeAllPanels();
+  if (willOpen) {
+    panel.classList.add("open");
+    container.classList.add("quiz-panel-open");
     fetchQuizQuestion();
   }
+  localStorage.setItem("quizPanelOpen", willOpen);
 }
 
 function selectQuizType(type) {
@@ -948,19 +1216,21 @@ function resetChat() {
         initChatbot();
       }
     })
-    .catch((error) => alert("Error resetting chat: " + error));
+    .catch((error) => showToast("Reset failed — please retry", "error"));
 }
 
-// ─── Dev Panel ───────────────────────────────────────────────
+// ─── Advanced Options Panel ──────────────────────────────────
 let _devConfig = null;
 let _devPromptText = "";
 
 function toggleDevPanel() {
   const panel = document.getElementById("devPanel");
   const btn = document.getElementById("devToggleBtn");
-  const open = panel.classList.toggle("open");
-  btn.classList.toggle("active", open);
-  if (open) {
+  const willOpen = !panel.classList.contains("open");
+  closeAllPanels();
+  if (willOpen) {
+    panel.classList.add("open");
+    btn.classList.add("active");
     loadDevState();
     loadDevConfig();
   }
@@ -1046,7 +1316,12 @@ async function loadDevConfig() {
     return;
   }
   try {
-    const r = await fetch("/api/debug/config");
+    // Prefer debug config (richer), but fall back to the public /api/config
+    // when the debug panel is disabled or unreachable.
+    let r = await fetch("/api/debug/config");
+    if (!r.ok) {
+      r = await fetch("/api/config");
+    }
     _devConfig = await r.json();
     populateDevConfig(_devConfig);
   } catch (e) {
@@ -1057,7 +1332,7 @@ async function loadDevConfig() {
 function populateDevConfig(cfg) {
   const pSel = document.getElementById("dp-product");
   pSel.innerHTML = '<option value="">Default (auto-strategy)</option>';
-  (cfg.products || []).forEach((p) => {
+  getProductOptionsFromConfig(cfg).forEach((p) => {
     const opt = document.createElement("option");
     opt.value = p.id;
     opt.textContent = p.id + "  (" + p.strategy + ")";
@@ -1278,6 +1553,78 @@ try {
   if (saved.evalDisplay) _prospectSettings.evalDisplay = saved.evalDisplay;
 } catch {}
 
+function applyProspectSessionFromServer(sessionId, data) {
+  _prospectMode = true;
+  _prospectSessionId = sessionId;
+  _prospectDifficulty = data.difficulty || "medium";
+  syncKnowledgeBaseLink();
+
+  // Close setup overlay if open
+  closeProspectSetup();
+
+  // Hide training/quiz/dev panels
+  document.getElementById("trainingPanel").classList.remove("open");
+  document.querySelector(".container").classList.remove("panel-open");
+  document.getElementById("quizPanel").classList.remove("open");
+  document.querySelector(".container").classList.remove("quiz-panel-open");
+  document.getElementById("devPanel").classList.remove("open");
+  document.getElementById("devToggleBtn").classList.remove("active");
+
+  // Show prospect panel
+  document.getElementById("prospectPanel").classList.add("open");
+  document.querySelector(".container").classList.add("prospect-panel-open");
+
+  // Update header badges
+  document.getElementById("strategyBadge").textContent = "PROSPECT MODE";
+  document.getElementById("stageBadge").textContent =
+    _prospectDifficulty.toUpperCase();
+
+  // Hide sales mode buttons, show active prospect indicator
+  document.getElementById("trainingToggleBtn").style.display = "none";
+  document.getElementById("quizToggleBtn").style.display = "none";
+  document.getElementById("prospectStartBtn").textContent = "Exit Prospect";
+  document.getElementById("prospectStartBtn").onclick = endProspectMode;
+
+  // Update panel info
+  if (data.persona) {
+    document.getElementById("prospectName").textContent =
+      data.persona.name || "Alex";
+    document.getElementById("prospectBackground").textContent =
+      data.persona.background || "";
+  }
+  updateProspectDiffBadge(data.difficulty);
+  updateProspectPanel(data.state);
+
+  // Apply settings UI
+  document
+    .getElementById("prospectHintsToggle")
+    .classList.toggle("on", _prospectSettings.showHints);
+  document.getElementById("prospectCoachingSection").style.display =
+    _prospectSettings.showHints ? "" : "none";
+  document.getElementById("prospectEvalDisplay").value =
+    _prospectSettings.evalDisplay;
+
+  // Clear chat and restore history
+  document.getElementById("chatContainer").innerHTML = "";
+  userTurnIndex = 0;
+
+  if (data.conversation_history && data.conversation_history.length > 0) {
+    data.conversation_history.forEach((msg, idx) => {
+      const sender = msg.role === "assistant" ? "bot" : "user";
+      let metrics = null;
+      if (idx === data.conversation_history.length - 1 && data.latency_ms) {
+        metrics = {
+          latency_ms: data.latency_ms || 0,
+          provider: data.provider || "",
+          input_length: 0,
+          output_length: 0,
+        };
+      }
+      addProspectMessage(msg.content, sender, metrics);
+    });
+  }
+}
+
 function saveProspectSettings() {
   _prospectSettings.evalDisplay = document.getElementById(
     "prospectEvalDisplay",
@@ -1299,13 +1646,12 @@ function toggleProspectSettings() {
 }
 
 function openProspectSetup() {
-  // Populate product dropdown from debug config
+  // Populate product dropdown natively
   loadProspectProducts();
-  document.getElementById("prospectSetup").classList.add("open");
 }
 
 function closeProspectSetup() {
-  document.getElementById("prospectSetup").classList.remove("open");
+  // Deprecated: UI is native in sidebar
 }
 
 function selectProspectDifficulty(diff, btn) {
@@ -1320,13 +1666,15 @@ async function loadProspectProducts() {
   const sel = document.getElementById("prospectProductSelect");
   if (sel.options.length > 1) return; // already loaded
   try {
-    const r = await fetch("/api/debug/config");
+    // Use the non-debug config endpoint which is available in production
+    // and returns a safe product list for frontend consumption.
+    const r = await fetch("/api/config");
     const cfg = await r.json();
-    (cfg.products || []).forEach((p) => {
+    getProductOptionsFromConfig(cfg).forEach((p) => {
       if (p.id === "default") return;
       const opt = document.createElement("option");
       opt.value = p.id;
-      opt.textContent = p.id.replace(/_/g, " ") + " (" + p.strategy + ")";
+      opt.textContent = formatProspectDisplay(p);
       sel.appendChild(opt);
     });
   } catch {
@@ -1353,112 +1701,102 @@ async function startProspectMode() {
     const data = await r.json();
 
     if (data.error) {
-      alert("Error: " + data.error);
+      showToast(data.error, "error");
       startBtn.disabled = false;
-      startBtn.textContent = "Start Practice";
+      startBtn.textContent = "Play Prospect";
       return;
     }
 
     _prospectMode = true;
     _prospectSessionId = data.session_id;
+    localStorage.setItem("prospectSessionId", data.session_id);
+    history.replaceState(null, "", "/prospect");
 
-    // Close setup overlay
-    closeProspectSetup();
-
-    // Hide training/quiz panels
-    document.getElementById("trainingPanel").classList.remove("open");
-    document.querySelector(".container").classList.remove("panel-open");
-    document.getElementById("quizPanel").classList.remove("open");
-    document.querySelector(".container").classList.remove("quiz-panel-open");
-
-    // Show prospect panel
-    document.getElementById("prospectPanel").classList.add("open");
-    document.querySelector(".container").classList.add("prospect-panel-open");
-
-    // Update header badges
-    document.getElementById("strategyBadge").textContent = "PROSPECT MODE";
-    document.getElementById("stageBadge").textContent =
-      _prospectDifficulty.toUpperCase();
-
-    // Hide sales mode buttons, show active prospect indicator
-    document.getElementById("trainingToggleBtn").style.display = "none";
-    document.getElementById("quizToggleBtn").style.display = "none";
-    document.getElementById("prospectToggleBtn").textContent = "Exit Prospect";
-    document.getElementById("prospectToggleBtn").onclick = endProspectMode;
-
-    // Update panel info
-    document.getElementById("prospectName").textContent = data.persona.name;
-    document.getElementById("prospectBackground").textContent =
-      data.persona.background;
-    updateProspectDiffBadge(data.difficulty);
-    updateProspectPanel(data.state);
-
-    // Apply settings UI
-    document
-      .getElementById("prospectHintsToggle")
-      .classList.toggle("on", _prospectSettings.showHints);
-    document.getElementById("prospectCoachingSection").style.display =
-      _prospectSettings.showHints ? "" : "none";
-    document.getElementById("prospectEvalDisplay").value =
-      _prospectSettings.evalDisplay;
-
-    // Clear chat and show prospect's opening message
-    document.getElementById("chatContainer").innerHTML = "";
-    userTurnIndex = 0;
-
-    const metrics = {
-      latency_ms: data.latency_ms || 0,
-      provider: data.provider || "",
-      input_length: 0,
-      output_length: 0,
-    };
-    addProspectMessage(data.message, "bot", metrics);
+    // Apply UI using our new helper
+    applyProspectSessionFromServer(data.session_id, {
+      state: data.state,
+      persona: data.persona,
+      difficulty: data.difficulty,
+      conversation_history: [{ role: "assistant", content: data.message }],
+      latency_ms: data.latency_ms,
+      provider: data.provider,
+    });
+    // Re-enable the start/exit button now the UI has been applied
+    startBtn.disabled = false;
+    return; // button is now "Exit Prospect"
   } catch (e) {
-    alert("Error starting prospect mode: " + e);
+    showToast("Failed to start prospect mode", "error");
   }
   startBtn.disabled = false;
-  startBtn.textContent = "Start Practice";
+  startBtn.textContent = "Play Prospect";
 }
 
 function endProspectMode() {
-  if (_prospectMode && _prospectSessionId) {
-    fetch("/api/prospect/reset", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Session-ID": _prospectSessionId,
-      },
-    }).catch(() => {});
+  try {
+    if (_prospectMode && _prospectSessionId) {
+      // Best-effort server reset; ignore network errors but continue UI cleanup
+      fetch("/api/prospect/reset", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Session-ID": _prospectSessionId,
+        },
+      }).catch(() => {});
+    }
+  } finally {
+    // Always restore client UI state even if network call failed
+    _prospectMode = false;
+    _prospectSessionId = null;
+    syncKnowledgeBaseLink();
+    try {
+      localStorage.removeItem("prospectSessionId");
+    } catch (e) {}
+    try {
+      history.replaceState(null, "", "/");
+    } catch (e) {}
+
+    // Hide prospect panel safely
+    const prospectPanel = document.getElementById("prospectPanel");
+    if (prospectPanel) prospectPanel.classList.remove("open");
+    const containerEl = document.querySelector(".container");
+    if (containerEl) containerEl.classList.remove("prospect-panel-open");
+
+    // Restore header buttons safely
+    const trainingBtn = document.getElementById("trainingToggleBtn");
+    const quizBtn = document.getElementById("quizToggleBtn");
+    const startBtn = document.getElementById("prospectStartBtn");
+    if (trainingBtn) trainingBtn.style.display = "";
+    if (quizBtn) quizBtn.style.display = "";
+    if (startBtn) {
+      startBtn.textContent = "Play Prospect";
+      startBtn.onclick = startProspectMode;
+      startBtn.disabled = false;
+    }
+
+    // Restore badges
+    const storedStage = localStorage.getItem("chatStage");
+    const storedStrategy = localStorage.getItem("chatStrategy");
+    if (storedStage) updateStage(storedStage);
+    else updateStage("—");
+    if (storedStrategy) updateStrategy(storedStrategy);
+    else updateStrategy("—");
+
+    // Clear chat and reinit normal mode
+    const chatContainer = document.getElementById("chatContainer");
+    if (chatContainer) chatContainer.innerHTML = "";
+    userTurnIndex = 0;
+    clearStoredHistory();
+    try {
+      localStorage.removeItem("sessionId");
+    } catch (e) {}
+    sessionId = null;
+    // Reinitialize the main chatbot; safe to call even if already active
+    try {
+      initChatbot();
+    } catch (e) {
+      console.warn("Failed to re-init chatbot after exiting prospect mode:", e);
+    }
   }
-
-  _prospectMode = false;
-  _prospectSessionId = null;
-
-  // Hide prospect panel
-  document.getElementById("prospectPanel").classList.remove("open");
-  document.querySelector(".container").classList.remove("prospect-panel-open");
-
-  // Restore header buttons
-  document.getElementById("trainingToggleBtn").style.display = "";
-  document.getElementById("quizToggleBtn").style.display = "";
-  document.getElementById("prospectToggleBtn").textContent = "Prospect Mode";
-  document.getElementById("prospectToggleBtn").onclick = openProspectSetup;
-
-  // Restore badges
-  const storedStage = localStorage.getItem("chatStage");
-  const storedStrategy = localStorage.getItem("chatStrategy");
-  if (storedStage) updateStage(storedStage);
-  else updateStage("—");
-  if (storedStrategy) updateStrategy(storedStrategy);
-  else updateStrategy("—");
-
-  // Clear chat and reinit normal mode
-  document.getElementById("chatContainer").innerHTML = "";
-  userTurnIndex = 0;
-  clearStoredHistory();
-  localStorage.removeItem("sessionId");
-  sessionId = null;
-  initChatbot();
 }
 
 function updateProspectDiffBadge(diff) {
@@ -1498,6 +1836,13 @@ function addProspectMessage(text, sender, metrics = null) {
 }
 
 function sendProspectMessage() {
+  // Guard: ensure prospect session exists
+  if (!_prospectSessionId) {
+    showToast("No active prospect session. Start Prospect first.", "error");
+    openProspectSetup();
+    return;
+  }
+
   const input = document.getElementById("messageInput");
   const message = input.value.trim();
   if (!message || isTyping) return;
@@ -1506,6 +1851,9 @@ function sendProspectMessage() {
   input.value = "";
   autoResizeTextarea(input);
   showTyping();
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 25000);
 
   fetch("/api/prospect/chat", {
     method: "POST",
@@ -1517,12 +1865,16 @@ function sendProspectMessage() {
       message,
       show_hints: _prospectSettings.showHints,
     }),
+    signal: controller.signal,
   })
-    .then((r) => r.json())
+    .then((r) => {
+      clearTimeout(timeoutId);
+      return r.json();
+    })
     .then((data) => {
       hideTyping();
       if (data.error) {
-        addProspectMessage("Error: " + data.error, "bot");
+        showToast(data.error, "error");
         return;
       }
       const metrics = {
@@ -1547,8 +1899,13 @@ function sendProspectMessage() {
       }
     })
     .catch((e) => {
+      clearTimeout(timeoutId);
       hideTyping();
-      addProspectMessage("Error: " + e, "bot");
+      const msg =
+        e.name === "AbortError"
+          ? "Response timed out — please retry"
+          : "Connection error — please retry";
+      showToast(msg, "error");
     });
 }
 
@@ -1722,6 +2079,11 @@ function tryAgainProspect() {
   // Re-enable send
   document.getElementById("sendBtn").disabled = false;
 
+  // Restore start button
+  const startBtn = document.getElementById("prospectStartBtn");
+  startBtn.textContent = "Play Prospect";
+  startBtn.onclick = startProspectMode;
+
   // Open setup again
   openProspectSetup();
 }
@@ -1733,15 +2095,8 @@ function toggleMic() {
   const micBtn = document.getElementById("micBtn");
   const input = document.getElementById("messageInput");
 
-  // Use server-based voice mode if enabled
-  if (voiceModeEnabled) {
-    toggleServerVoiceMode(micBtn, input);
-    return;
-  }
-
-  // Fallback to browser-based speech recognition
-  if (!speechRecognizer) {
-    alert("Speech module loading...");
+  if (!speechRecognizer?.recognition) {
+    showToast("Speech not supported in this browser", "error");
     return;
   }
 
@@ -1756,10 +2111,25 @@ function toggleMic() {
 
   speechRecognizer.start(
     (text) => {
-      baseText += parsePunctuation(text);
+      const parsed = parsePunctuation(text);
+      baseText += parsed;
       input.value = baseText;
       autoResizeTextarea(input);
-      input.focus();
+
+      // Send-mode handling for manual mic usage
+      if (!autoSendDictation) return;
+      if (dictationSendMode === "manual") return;
+      if (dictationSendMode === "auto-send-on-stop") {
+        if (input.value.trim()) sendMessage();
+        return;
+      }
+      if (dictationSendMode === "send-after-pause") {
+        if (dictationPauseTimer) clearTimeout(dictationPauseTimer);
+        dictationPauseTimer = setTimeout(() => {
+          dictationPauseTimer = null;
+          if (input.value.trim()) sendMessage();
+        }, dictationPauseMs);
+      }
     },
     (text) => {
       input.value = baseText + text;
@@ -1767,7 +2137,16 @@ function toggleMic() {
     () => {
       micBtn.classList.remove("recording");
       micBtn.innerHTML = "🎤";
-      input.focus();
+      // On stop: if auto-send is enabled and there's content, send now.
+      if (autoSendDictation && input.value.trim()) {
+        if (dictationPauseTimer) {
+          clearTimeout(dictationPauseTimer);
+          dictationPauseTimer = null;
+        }
+        sendMessage();
+      } else {
+        input.focus();
+      }
     },
     (err) => {
       console.warn("Mic Error:", err);
@@ -1777,114 +2156,213 @@ function toggleMic() {
   );
 }
 
-/**
- * Server-based voice mode: Record audio → Deepgram/Groq → LLM → Edge TTS
- */
-async function toggleServerVoiceMode(micBtn, input) {
-  const vm = getVoiceMode();
+async function playServerTTS(text) {
+  if (!text) return;
+  stopServerTTS();
 
-  // Initialize on first use
-  if (!voiceModeInitialized) {
-    micBtn.innerHTML = "⏳";
-    const ok = await vm.init();
-    if (!ok) {
-      micBtn.innerHTML = "🎤";
-      alert("Could not access microphone. Please allow microphone access.");
-      return;
+  // Pause hands-free STT if active to avoid transcribing assistant audio
+  try {
+    if (speechRecognizer && speechRecognizer.isRecording) {
+      // use helper to stop and update UI
+      stopHandsFreeRecognition();
+      window.__speechPausedForTTS = true;
     }
-    voiceModeInitialized = true;
+  } catch (e) {}
 
-    // Set up callbacks
-    vm.onTranscription = (text) => {
-      // Add user's transcribed message to chat
-      addMessage(text, "user");
-      input.value = "";
+  try {
+    const res = await fetch("/api/voice/synthesize", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, voice: "male_us" }),
+    });
+    if (!res.ok) return;
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    _currentTTSAudio = new Audio(url);
+
+    // Show interrupt affordance while assistant is speaking
+    const interruptBtn = document.getElementById("interruptBtn");
+    if (interruptBtn) interruptBtn.style.display = "inline-block";
+
+    _currentTTSAudio.onended = () => {
+      URL.revokeObjectURL(url);
+      _currentTTSAudio = null;
+      if (interruptBtn) interruptBtn.style.display = "none";
+
+      // Resume STT only if we paused it for TTS and hands-free remains enabled
+      if (window.__speechPausedForTTS) {
+        window.__speechPausedForTTS = false;
+        if (handsFreeMode) startHandsFreeRecognition();
+      }
     };
 
-    vm.onResponse = (data) => {
-      // Add bot response with metrics
-      const metrics = {
-        latency_ms: data.latency?.total_ms || 0,
-        provider: data.provider,
-        model: data.model,
-      };
-      addMessage(data.message, "assistant", metrics);
-
-      // Update stage/strategy display
-      if (data.stage) updateStage(data.stage);
-      if (data.strategy) updateStrategy(data.strategy);
-
-      // Update training panel
-      if (data.training) updateTrainingPanel(data.training);
+    _currentTTSAudio.onerror = () => {
+      if (interruptBtn) interruptBtn.style.display = "none";
     };
 
-    vm.onError = (err) => {
-      console.error("Voice mode error:", err);
-      showToast(err, "error");
-      micBtn.classList.remove("recording");
-      micBtn.innerHTML = "🎤";
-    };
-
-    vm.onRecordingStart = () => {
-      micBtn.classList.add("recording");
-      micBtn.innerHTML = "⏹";
-    };
-
-    vm.onRecordingStop = () => {
-      micBtn.innerHTML = "⏳"; // Processing indicator
-    };
-
-    vm.onAudioPlay = () => {
-      // Optional: Visual feedback when bot is speaking
-    };
-
-    vm.onAudioEnd = () => {
-      micBtn.classList.remove("recording");
-      micBtn.innerHTML = "🎤";
-    };
-  }
-
-  // Toggle recording
-  if (vm.isRecording) {
-    vm.stopRecording();
-  } else {
-    vm.startRecording();
+    _currentTTSAudio.play().catch(() => {});
+  } catch (e) {
+    console.warn("TTS error:", e);
   }
 }
 
-/**
- * Enable/disable server-based voice mode
- */
-function setVoiceMode(enabled) {
-  voiceModeEnabled = enabled;
+function stopServerTTS() {
+  if (_currentTTSAudio) {
+    _currentTTSAudio.pause();
+    _currentTTSAudio = null;
+  }
+}
+
+// Centralised helpers for hands-free STT control
+function startHandsFreeRecognition() {
+  if (!speechRecognizer?.recognition) return false;
+  if (speechRecognizer.isRecording) return true;
+
+  const inputEl = document.getElementById("messageInput");
+  if (!inputEl) return false;
+  let committedText = inputEl.value || "";
+  const micBtn = document.getElementById("micBtn");
+  if (micBtn) {
+    micBtn.classList.add("recording");
+    micBtn.innerHTML = "⏹";
+  }
+
+  try {
+    speechRecognizer.start(
+      (text) => {
+        try {
+          const parsed = parsePunctuation(text);
+          committedText += parsed;
+          inputEl.value = committedText;
+          autoResizeTextarea(inputEl);
+
+          if (!autoSendDictation) return;
+          if (dictationSendMode === "manual") return;
+          if (dictationSendMode === "auto-send-on-stop") {
+            if (inputEl.value.trim()) sendMessage();
+            return;
+          }
+          if (dictationSendMode === "send-after-pause") {
+            if (dictationPauseTimer) clearTimeout(dictationPauseTimer);
+            dictationPauseTimer = setTimeout(() => {
+              dictationPauseTimer = null;
+              if (inputEl.value.trim()) sendMessage();
+            }, dictationPauseMs);
+          }
+        } catch (e) {}
+      },
+      (interim) => {
+        try {
+          inputEl.value = committedText + interim;
+          autoResizeTextarea(inputEl);
+        } catch (e) {}
+      },
+      () => {
+        // update mic UI
+        const mic = document.getElementById("micBtn");
+        if (mic) {
+          mic.classList.remove("recording");
+          mic.innerHTML = "🎤";
+        }
+        // gentle restart if still in hands-free mode
+        if (
+          handsFreeMode &&
+          speechRecognizer &&
+          !speechRecognizer.isRecording
+        ) {
+          setTimeout(() => {
+            try {
+              if (!speechRecognizer.isRecording) startHandsFreeRecognition();
+            } catch (e) {}
+          }, 200);
+        }
+      },
+      (err) => {
+        console.warn("Speech error:", err);
+      },
+    );
+    return true;
+  } catch (e) {
+    console.warn("startHandsFreeRecognition error:", e);
+    if (micBtn) {
+      micBtn.classList.remove("recording");
+      micBtn.innerHTML = "🎤";
+    }
+    return false;
+  }
+}
+
+function stopHandsFreeRecognition() {
+  try {
+    if (speechRecognizer && speechRecognizer.isRecording)
+      speechRecognizer.stop();
+  } catch (e) {}
+  const mic = document.getElementById("micBtn");
+  if (mic) {
+    mic.classList.remove("recording");
+    mic.innerHTML = "🎤";
+  }
+  window.__speechPausedForTTS = false;
+}
+
+function interruptAssistant() {
+  // Stop any TTS and resume listening if appropriate
+  try {
+    if (_currentTTSAudio) {
+      _currentTTSAudio.pause();
+      _currentTTSAudio = null;
+    }
+    const interruptBtn = document.getElementById("interruptBtn");
+    if (interruptBtn) interruptBtn.style.display = "none";
+    window.__speechPausedForTTS = false;
+    if (handsFreeMode) startHandsFreeRecognition();
+    else {
+      const input = document.getElementById("messageInput");
+      if (input) input.focus();
+    }
+  } catch (e) {
+    console.warn("interruptAssistant error:", e);
+  }
+}
+
+function toggleVoiceMode() {
+  handsFreeMode = !handsFreeMode;
   const btn = document.getElementById("voiceModeBtn");
   const indicator = document.getElementById("voiceModeIndicator");
-
-  if (btn) {
-    btn.classList.toggle("active", enabled);
-  }
-  if (indicator) {
-    indicator.textContent = enabled ? "🔊" : "⌨️";
-  }
-
-  // Show feedback
+  const inputArea = document.querySelector(".input-area");
+  if (btn) btn.classList.toggle("active", handsFreeMode);
+  if (indicator) indicator.textContent = handsFreeMode ? "🔊" : "⌨️";
+  if (inputArea) inputArea.classList.toggle("hands-free-active", handsFreeMode);
+  stopServerTTS();
   showToast(
-    enabled
-      ? "Voice Mode enabled (server-based)"
-      : "Voice Mode disabled (browser-based)",
+    handsFreeMode
+      ? "Conversational Mode ON — speak, auto-send, auto-play response"
+      : "Conversational Mode OFF — dictation only",
     "info",
   );
-  console.log(
-    "Voice mode:",
-    enabled ? "enabled (server)" : "disabled (browser)",
-  );
-}
 
-/**
- * Toggle voice mode on/off
- */
-function toggleVoiceMode() {
-  setVoiceMode(!voiceModeEnabled);
+  // Start/stop continuous recording when toggling hands-free
+  try {
+    if (handsFreeMode) {
+      if (!speechRecognizer || !speechRecognizer.recognition) {
+        showToast("Speech not supported in this browser", "error");
+        // revert UI toggles
+        handsFreeMode = false;
+        if (btn) btn.classList.toggle("active", false);
+        if (indicator) indicator.textContent = "⌨️";
+        if (inputArea) inputArea.classList.toggle("hands-free-active", false);
+        return;
+      }
+
+      // Start centralized hands-free recognition
+      startHandsFreeRecognition();
+    } else {
+      // Turn hands-free OFF → stop recording via helper
+      stopHandsFreeRecognition();
+    }
+  } catch (e) {
+    console.warn("toggleVoiceMode error:", e);
+  }
 }
 
 // ============================================
@@ -1892,33 +2370,35 @@ function toggleVoiceMode() {
 // ============================================
 
 async function scoreSession() {
-  const container = document.getElementById('chatContainer');
-  
+  const container = document.getElementById("chatContainer");
+
   // Show loading message
-  const loadingMsg = document.createElement('div');
-  loadingMsg.className = 'message bot';
-  loadingMsg.innerHTML = '<div class="message-bubble" style="color:#10b981">Calculating your session score...</div>';
+  const loadingMsg = document.createElement("div");
+  loadingMsg.className = "message bot";
+  loadingMsg.innerHTML =
+    '<div class="message-bubble" style="color:#10b981">Calculating your session score...</div>';
   container.appendChild(loadingMsg);
   container.scrollTop = container.scrollHeight;
 
   try {
-    const headers = { 'Content-Type': 'application/json' };
-    if (_sessionId) {
-      headers['X-Session-ID'] = _sessionId;
+    const headers = { "Content-Type": "application/json" };
+    const sid = getSessionId();
+    if (sid) {
+      headers["X-Session-ID"] = sid;
     }
 
-    const response = await fetch('/api/session/score', {
-      method: 'GET',
-      headers: headers
+    const response = await fetch("/api/score", {
+      method: "GET",
+      headers: headers,
     });
-    
+
     const data = await response.json();
     loadingMsg.remove();
-    
+
     if (data.success && data.score) {
       renderSessionScore(data.score);
     } else {
-      loadingMsg.innerHTML = `<div class="message-bubble error">Error: ${data.error || 'Failed to generate score'}</div>`;
+      loadingMsg.innerHTML = `<div class="message-bubble error">Error: ${data.error || "Failed to generate score"}</div>`;
       container.appendChild(loadingMsg);
     }
   } catch (err) {
@@ -1928,36 +2408,94 @@ async function scoreSession() {
 }
 
 function renderSessionScore(scoreData) {
-  const container = document.getElementById('chatContainer');
-  const scoreCard = document.createElement('div');
-  scoreCard.className = 'message bot';
-  
+  const container = document.getElementById("chatContainer");
+  const scoreCard = document.createElement("div");
+  scoreCard.className = "message bot";
+
   const b = scoreData.breakdown;
   const m = scoreData.metrics;
-  
-  let html = `
-    <div class="message-bubble" style="background-color: #0f172a; border: 1px solid #10b981; max-width: 80%;">
-      <h3 style="color: #10b981; margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #1e293b; padding-bottom: 5px;">Session Training Score: ${scoreData.total_score}/100</h3>
-      <p style="margin: 0 0 10px 0; font-size: 0.9em; color: #94a3b8;">Breakdown of your interaction:</p>
-      
-      <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.9em;">
-        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>Stage Progression (30):</span> <span style="color:#10b981">${b.stage_progression}</span></div>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>Signal Detection (25):</span> <span style="color:#10b981">${b.signal_detection}</span></div>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>Objection Handling (20):</span> <span style="color:#10b981">${b.objection_handling}</span></div>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>Questioning Depth (15):</span> <span style="color:#10b981">${b.questioning_depth}</span></div>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>Conv. Length (10):</span> <span style="color:#10b981">${b.conversation_length}</span></div>
+
+  scoreCard.innerHTML = `<div class="score-card">
+      <div class="score-card-title">Session Training Score: ${scoreData.total_score}/100</div>
+      <div class="score-card-subtitle">Breakdown of your interaction:</div>
+      <div class="score-breakdown">
+        <div class="score-row"><span>Stage Progression (30):</span><span>${b.stage_progression}</span></div>
+        <div class="score-row"><span>Signal Detection (25):</span><span>${b.signal_detection}</span></div>
+        <div class="score-row"><span>Objection Handling (20):</span><span>${b.objection_handling}</span></div>
+        <div class="score-row"><span>Questioning Depth (15):</span><span>${b.questioning_depth}</span></div>
+        <div class="score-row"><span>Conv. Length (10):</span><span>${b.conversation_length}</span></div>
       </div>
-      
-      <div style="margin-top: 10px; font-size: 0.85em; color: #64748b;">
-        <strong>Details:</strong> 
-        Stages Reached: ${m.stages_reached.join(', ') || 'None'}<br>
+      <div class="score-details">
+        <strong>Details:</strong>
+        Stages Reached: ${m.stages_reached.join(", ") || "None"}<br>
         Signal Ratio: ${m.signal_ratio}<br>
         Total Turns: ${m.turns}
       </div>
-    </div>
-  `;
-  
-  scoreCard.innerHTML = html;
+    </div>`;
   container.appendChild(scoreCard);
   container.scrollTop = container.scrollHeight;
+}
+
+// ─── Feedback Widget ───────────────────────────────────��─────
+let _fbRating = 0;
+
+function toggleFeedback() {
+  const dd = document.getElementById("feedbackDropdown");
+  dd.classList.toggle("open");
+}
+
+function setFbRating(val) {
+  _fbRating = val;
+  document.querySelectorAll(".fb-star").forEach((s) => {
+    s.classList.toggle("active", parseInt(s.dataset.val) <= val);
+  });
+}
+
+async function submitFeedback() {
+  const comment = document.getElementById("fbComment").value.trim();
+  if (!_fbRating && !comment) return;
+
+  const btn = document.getElementById("fbSubmitBtn");
+  btn.disabled = true;
+
+  try {
+    const r = await fetch("/api/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        rating: _fbRating || null,
+        comment: comment || null,
+        page: _prospectMode ? "prospect" : "chat",
+      }),
+    });
+    const d = await r.json();
+    if (d.success) {
+      const dd = document.getElementById("feedbackDropdown");
+      dd.innerHTML = '<div class="fb-thanks">Thanks for your feedback!</div>';
+      setTimeout(() => {
+        dd.classList.remove("open");
+        dd.innerHTML = buildFeedbackForm();
+        _fbRating = 0;
+      }, 1500);
+    }
+  } catch (e) {
+    showToast("Failed to send feedback", "error");
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function buildFeedbackForm() {
+  return `
+    <div class="fb-title">Quick Feedback</div>
+    <div class="fb-stars" id="fbStars">
+      <button class="fb-star" data-val="1" onclick="setFbRating(1)">&#9733;</button>
+      <button class="fb-star" data-val="2" onclick="setFbRating(2)">&#9733;</button>
+      <button class="fb-star" data-val="3" onclick="setFbRating(3)">&#9733;</button>
+      <button class="fb-star" data-val="4" onclick="setFbRating(4)">&#9733;</button>
+      <button class="fb-star" data-val="5" onclick="setFbRating(5)">&#9733;</button>
+    </div>
+    <label class="sr-only" for="fbComment">Feedback comment</label>
+    <textarea id="fbComment" class="fb-comment" placeholder="Any thoughts? (optional)" maxlength="500"></textarea>
+    <button class="fb-submit" id="fbSubmitBtn" onclick="submitFeedback()">Send Feedback</button>`;
 }

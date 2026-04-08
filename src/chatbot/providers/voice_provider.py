@@ -140,9 +140,7 @@ class VoiceProvider:
 
         # Groq client (backup STT via Whisper)
         self._groq_api_key = os.environ.get("GROQ_WHISPER_KEY", "").strip()
-        # Fallback to standard GROQ key if whisper-specific not set
-        if not self._groq_api_key:
-            self._groq_api_key = os.environ.get("GROQ_API_KEY", "").strip()
+        
         self._groq_client = None
         if GROQ_AVAILABLE and self._groq_api_key:
             try:

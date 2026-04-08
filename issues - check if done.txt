@@ -1,0 +1,23 @@
+ARE THESE ISSUES REALLY TACKLED?
+
+
+
+
+
+
+a few issues:
+
+@src/config/signals.yaml  - "all good" is present in defensive and low intent. idk if this is intentional or if defensive should be a subcategory just of low intent or sth like that idk , and check if there are other signals that overlap too and being smarrt with teh signals mentioned in the .yaml for highest accuracy
+
+Within this hands-free mode it's not actually dictating from my side it's just giving the response immediately from whenever a response comes. The way you should send a message for the dictating as if we speak it's like a conversation where it will use pauses and time to a conversationally human level so instead call it conversational mode - over here the entire text box please just become like a voice mode kind of thing to understand of course you have still being the same place it's an integration we have to keep it modular and best design still. 
+
+and Upon clicking on the dictate button from the mike for direct dictation, when then stopping it it just sends out the message that has been written so far. This can be convenient for some and for others you can be unconvenient so I don't know if this should be a settings where you need to be able to make that decision think of it through making this decision when have some settings for them having some concise way configuring so that is not annoying both visually and ugly and hard to find - are things not good obv
+
+The "training" panel one is not even being clicked right now, when it does maybe should be open as a panel on the left side
+And anyhow the training part the training panel looks really really bad and it doesn't even work as properly at least to be properly reviewed and cleaned up removing any redundancies it's right now I'm basically it's really bad in terms of how it looks and secondly on how it performs when you ask a question so much and it has to give what based on how the concept of what's going on and what needs to be done like has to be like a proper trainer and get me to tell someone a psychology-based strategy and just to where we're taking in while we're taking it where it was emotional commitment at this stage for example you know
+
+
+The quick feedback thing jump right on the right side could be annoying maybe maybe should jump onto the left 
+
+
+PLAN

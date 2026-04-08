@@ -6,10 +6,10 @@ This document consolidates the User Acceptance Testing (UAT) framework, ensuring
 
 **The Core Goal:** The UAT must validate **learning outcomes** and **training effectiveness**, not merely generic UX (e.g., "was the chatbot fun"). Assessors expect proof that the tool achieves its primary mission: improving sales knowledge using the NEPQ methodology.
 
-**The Constraints & Logical Workaround:** 
-- **Constraint:** Due to university ethics approval limitations, testing is strictly tied to a single-session, 35-minute protocol per participant.
+**The Constraints & Logical Workaround:**
+- **Constraint:** Due to university ethics approval limitations, testing is strictly tied to a single-session, 35-minute protocol per participant. **Sample size: N = [X] participants** (to be confirmed).
 - **Limitation Acknowledgment:** A single session cannot reliably measure longitudinal, long-term skill acquisition (e.g., the learning curve across weeks). While this is a genuine limitation, it has a compelling workaround.
-- **The Workaround Strategy:** Instead of measuring cross-session performance, the UAT captures the **rapid shift from implicit to explicit knowledge**. It measures "Baseline Knowledge vs. Post-Session Knowledge Gain", "Methodology Visibility", and "Transfer Intent." Proving a measurable bump in awareness within 35 minutes validates the system’s utility as a robust training tool.
+- **The Workaround Strategy:** Instead of measuring cross-session performance, the UAT captures the **rapid shift from implicit to explicit knowledge**. It measures three outcomes: (1) "Stage Knowledge Gain" (baseline vs. post-session NEPQ terminology), (2) "Transfer Intent" (participants citing a specific technique they’d use), and (3) "FSM Structural Reach" (did participants encounter deeper stages?). Proving measurable gains within 35 minutes validates the system’s utility as a robust training tool.
 
 ---
 
@@ -19,11 +19,11 @@ The UAT directly maps to the 5 core objectives defined in the system's design. T
 
 | Project Objective | What UAT Tests | How It Is Measured in UAT | Codebase Correlation |
 | --- | --- | --- | --- |
-| **O1: Natural Conversation** | Does it feel realistic vs. scripted? | Likert Q1: "Felt like natural partner" | Output generated via `providers` with fallback logic. |
+| **O1: Natural Conversation** | Does it feel realistic vs. scripted? | Likert Q1: "Felt like natural partner" | `content.py` (prompt assembly) and `analysis.py` (signal detection for lexical entrainment). |
 | **O2: Structured Methodology** | Does it enforce NEPQ stages? | Pre/post-test Stage Knowledge Gap. Qualitative Q4. | `flow.py` (FSM Engine) maintaining strict intent → objection paths. |
 | **O3: Adaptive Responses** | Does it detect user signals dynamically?| Likert Q2: "Adapted to what I said" | `analysis.py` identifying user sentiment and signal detection. |
 | **O4: Objection Handling** | Are objections classified and reframed?| Open-ended questions on objection realism | `analysis.py`'s `classify_objection` logic in conversational scenarios. |
-| **O5: Availability & Usability** | Is it easy to use without guidance? | Likert Q6: Usability & UI interaction | Built-in UI features like `trainer.py` real-time coaching generation. |
+| **O5: Availability & Usability** | Is it easy to use without guidance? | Likert Q6: Usability & UI interaction | `index.html`, `app.js`, and Flask routing (`src/web/app.py`) enable seamless chat interface. |
 
 ---
 
@@ -37,10 +37,10 @@ The execution strictly follows the 35-minute approved window but deliberately fr
 - **Purpose:** Establishes a raw baseline. Most novices say "opening, pitch, close" (3 generic phases). Fits easily into the 1.5 - 2 min introduction limit.
 
 ### Phase 2: Roleplay Simulation (Study Plan Sec 2, 3, 4)
-- **Scenario 1:** Fitness Prospect (7 min) 
-- **Scenario 2:** Midrange Car Buyer (7 min) - *Forces objection handling.*
-- **Scenario 3:** Free Exploration (7 min)
-- **Mid-Session Pulse Check:** Ask, *"Are you looking at the coaching panel on the right? What is it telling you right now?"* 
+- **Scenario 1:** Fitness Prospect (7 min) — Participant plays a sales rep. Bot plays a fitness coaching prospect. Goal: practice discovery and objection handling.
+- **Scenario 2:** Midrange Car Buyer (7 min) — Participant plays sales rep for a car dealership. Bot simulates a prospect with explicit price objection. Forces objection handling via `flow.py:objection` stage and `analysis.py:classify_objection()`.
+- **Scenario 3:** Free Exploration (7 min) — Participant chooses product/role (or tests the "Prospect Mode" where they play the prospect and the bot plays sales rep). Captures learning transfer: can they apply a technique they noticed?
+- **Mid-Session Pulse Check:** Ask, *"Are you looking at the coaching panel on the right? What is it telling you right now?"*
   *(This validates the `trainer.py:generate_training()` real-time function during transitions.)*
 
 ### Phase 3: Post-Session Interview (Study Plan Sec 5)
@@ -56,33 +56,41 @@ The execution strictly follows the 35-minute approved window but deliberately fr
 2. **Q8 (Methodology Recognition):** *"Did you notice specific sales techniques the chatbot was using? (e.g., digging into consequences?)"*
 3. **Q9 (Transfer Intent):** *"Could you apply something you noticed here in a real customer conversation tomorrow? Give me an example."*
 
-**Feature Priorities (Sec 5d):** 
-Users pick 3 of 6 features. Tracking votes for *"Performance feedback"* and *"Sales technique labels"* explicitly builds empirical justification for the Future Work roadmap (F1 & F4).
+**Feature Priorities (Sec 5d):**
+Participants pick 3 of 6 desired features to prioritise future development. The 6 options are:
+1. **Post-Session Scoring** — Quantified performance score with breakdown
+2. **Mistake Highlighting** — In-session alerts when repeating errors
+3. **Progress Dashboard** — Multi-session tracking and gamification
+4. **Sales Technique Labels** — Explicit coaching labels (e.g., "future pacing" pop-up)
+5. **Quiz Assessment** — Pre/post methodology quizzes
+6. **Recording & Replay** — Video/transcript archive of past sessions
+
+Tracking votes for *"Performance feedback"* (option 1) and *"Sales technique labels"* (option 4) explicitly builds empirical justification for the Future Work roadmap (F1 & F4).
 
 ---
 
 ## 4. Key Metrics and Data Interpretation
 
-By structuring the UAT this way, the resulting data natively creates clear impact statements:
+**Primary claim:** A single 35-minute session produces a measurable shift from surface-level sales knowledge (2–3 generic stages) to NEPQ-structured awareness (5 stages with rationale), evidenced by pre/post comparison of Q7 responses. The two supporting metrics below corroborate this claim from behavioural and technical angles.
 
-- **Stage Knowledge Gain:** If a user jumps from mentioning 2 stages (Baseline) to 5 stages (Post-session) representing NEPQ concepts, the UAT empirically proves methodology transfer.
-- **Transfer Intent Percentage:** Capturing instances where participants confidently cite a specific maneuver (e.g., *"I'd ask why the timeline matters instead of just listing features"*) provides concrete evidence that the simulation prepares users for real human roles.
-- **Technical Validation Evidence:** By tracking whether participants hit the **"PITCH"** or **"OBJECTION"** state in `flow.py`, you tie performance metrics directly to the FSM boundaries.
+- **Stage Knowledge Gain** *(primary metric)*: Scored by counting distinct NEPQ-labelled stages a participant can name and briefly explain before vs. after the session (Q7). A response is credited only when the participant names the stage *and* gives a rationale (e.g., "I'd ask about consequences, not just symptoms" counts; "there was a questioning part" does not). **Success threshold:** the mean gain across all N participants is ≥2 named stages. Coded independently by the researcher against a fixed rubric; no LLM scoring. Example: if N=10 and gains are [2,3,1,2,2,2,3,1,2,2], the mean is 2.0 → success.
+
+- **Transfer Intent** *(behavioural corroboration)*: The percentage of participants who, in Q9, cite a specific technique they could apply in a real conversation the next day — with an example. Scored binary per participant (yes/no): a vague "I'd ask more questions" does not qualify; a technique-plus-context answer does (e.g., "I'd use a consequence question when they mention a problem but aren't urgent"). Denominator = all participants who completed the session.
+
+- **FSM State Reach** *(technical corroboration)*: For each participant session, the researcher retrieves the final logged stage from `GET /api/analytics/session/<session_id>` and records whether the session reached PITCH or OBJECTION state (the deeper stages). Reaching OBJECTION state confirms the FSM enforced at least 4 stage transitions (intent → logical → emotional → pitch → objection), the structural backbone of NEPQ methodology. This is cross-referenced against Q4 and Q8 qualitative responses to confirm participants noticed the stage progression — i.e., methodology transfer is reflected not just in system logs but in participant awareness.
 
 ---
 
-## 5. Integrating UAT Gaps into Future Work
+## 5. Anticipated Feature Gaps & Future Work Roadmap
 
-Any UAT limitations or highly desired features discovered are logically funneled into the **Future Work** section, directly corresponding to existing components in the repository:
+Based on the UAT protocol design (and informal pilot feedback), the following features are anticipated to enhance training effectiveness. Every feature is designed strictly with learning outcomes in mind, rooted directly in backend code systems:
 
-1. **Post-Session Scoring (F1):** 
-   - *Rationale:* Users felt they didn't know an explicitly quantifiable "score". 
-   - *Architectural Grounding:* Could map `session_analytics.py` data to score progression (30% logic, 25% signal detection matches).
-2. **Mistake Highlighting (F2):** 
-   - *Rationale:* Users identified they were repeating errors. 
-   - *Architectural Grounding:* Turn-level anomaly detection extending `analysis.py`.
-3. **Progress Dashboard (F3):** 
-   - *Rationale:* Bridges the primary UAT limitation (single-session) by enabling long-term gamification. 
-   - *Architectural Grounding:* Utilizes the output of `metrics.jsonl` and `analytics.jsonl` dynamically.
-
-This structure proves that every feature is designed strictly with learning outcomes in mind, rooted directly in the backend code systems, and evaluated properly within ethical constraints.
+1. **Post-Session Scoring (F1):**
+   - *Rationale:* Anticipated that participants will want an explicit quantifiable "score" to benchmark progress.
+   - *Architectural Grounding:* Could map `session_analytics.py` data to score progression (30% logic advancement accuracy, 25% objection type matches, 25% signal detection, 20% transfer intent).
+2. **Mistake Highlighting (F2):**
+   - *Rationale:* Participants may identify they are repeating errors across scenarios and want real-time alerts.
+   - *Architectural Grounding:* Turn-level anomaly detection extending `analysis.py` with error pattern matching.
+3. **Progress Dashboard (F3):**
+   - *Rationale:* Bridges the primary UAT limitation (single-session scope) by enabling longitudinal learning tracking and gamification.
+   - *Architectural Grounding:* Utilizes dynamic output of `metrics.jsonl` and `analytics.jsonl` across multiple sessions.

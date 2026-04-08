@@ -3,6 +3,63 @@ import json
 import re
 from bisect import bisect
 from enum import Enum
+from functools import lru_cache
+
+
+# --- Negation-aware keyword matching (shared) ---
+_DEFAULT_NEGATIONS = frozenset({
+    "not",
+    "don't",
+    "doesn't",
+    "no",
+    "never",
+    "can't",
+    "won't",
+    "cannot",
+    "dont",
+    "didnt",
+    "didn't",
+    "doesnt",
+    "cant",
+})
+
+
+@lru_cache(maxsize=512)
+def _build_union_pattern_for_keywords(keyword_tuple) -> re.Pattern:
+    parts = [rf"\b{re.escape(k)}\b" for k in keyword_tuple]
+    return re.compile('|'.join(parts), re.IGNORECASE)
+
+
+def contains_nonnegated_keyword(text: str, keywords, negations=None, neg_window: int = 3) -> bool:
+    """Return True if `text` contains any keyword (word-boundary) that is
+    not negated within the `neg_window` preceding tokens.
+
+    - `keywords` may be a single string or an iterable of strings.
+    - `negations` may be provided to override default negation tokens.
+    """
+    if not text or not keywords:
+        return False
+
+    # Normalize keywords to a list
+    if isinstance(keywords, str):
+        keys = [keywords]
+    else:
+        keys = list(keywords)
+    if not keys:
+        return False
+
+    pattern = _build_union_pattern_for_keywords(tuple(keys))
+    negset = frozenset(negations) if negations is not None else _DEFAULT_NEGATIONS
+
+    for match in pattern.finditer(text):
+        preceding_words = re.findall(r"\w+", text[: match.start()])
+        if preceding_words:
+            window = [w.lower() for w in preceding_words[-neg_window:]]
+            if any(w in negset for w in window):
+                # This occurrence appears negated; skip it.
+                continue
+        return True
+    return False
 
 
 # --- Clamping ---

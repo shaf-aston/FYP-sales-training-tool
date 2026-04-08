@@ -156,7 +156,7 @@ def _detect_and_switch_strategy(self, user_message) -> bool:
 
 **Disposition: EXPLICITLY REJECTED BY USER**
 
-**Rationale:** User stated "forget about including evaluation metrics etc within documentation as the sloc and all these numbers and for tests will all be changed anyway so dont bother at all." Quantitative evaluation metrics deferred to later development phase. Not implementing at this time.
+**Rationale:** The user requested deferring ephemeral code-size and test-metric numbers from documentation because these values are expected to change during development. Quantitative evaluation metrics are deferred to a later phase. Not implementing at this time.
 
 ---
 

@@ -62,7 +62,7 @@ class SessionPersistence:
 
             filepath = os.path.join(SESSIONS_DIR, f"{session_id}.json")
             with open(filepath, "w") as f:
-                json.dump(state, f, indent=2)
+                json.dump(state, f)
 
             return True
 

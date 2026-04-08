@@ -120,6 +120,17 @@ def api_restore():
     product_type = data.get('product_type')  # None → generic default → intent-first discovery
     provider = data.get('provider', "groq")
 
+    # Validate history structure before replay to prevent corrupted localStorage crashing the bot
+    if not isinstance(history, list):
+        return jsonify({"error": "Invalid history format"}), 400
+    for entry in history:
+        if (not isinstance(entry, dict)
+                or entry.get("role") not in ("user", "assistant")
+                or not isinstance(entry.get("content"), str)):
+            return jsonify({"error": "Invalid history entry"}), 400
+    if len(history) > 200:
+        history = history[-200:]
+
     session_id = secrets.token_hex(16)
 
     try:
@@ -187,6 +198,21 @@ def api_config():
     config = load_product_config()
     products = config.get('products', {})
 
+    # Expose product options for frontend use while preserving the legacy
+    # metadata shape used by existing callers.
+    product_ids = list(products.keys())
+    product_strategies = {
+        k: v.get("strategy", "intent") for k, v in products.items()
+    }
+    product_options = [
+        {
+            "id": k,
+            "strategy": product_strategies[k],
+            "label": v.get("context", k),
+        }
+        for k, v in products.items()
+    ]
+
     return jsonify({
         "ok": True,
         "limits": {
@@ -199,9 +225,11 @@ def api_config():
             "chat": {"requests": SecurityConfig.RATE_LIMITS["chat"][0], "window_seconds": SecurityConfig.RATE_LIMITS["chat"][1]},
         },
         "products": {
-            "available": list(products.keys()),
+            "available": product_ids,
             "default": "default",
         },
+        "product_options": product_options,
+        "product_strategies": product_strategies,
         "strategies": ["consultative", "transactional", "intent"],
     })
 

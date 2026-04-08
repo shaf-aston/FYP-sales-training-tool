@@ -14,19 +14,27 @@ ALLOWED_FIELDS = {
 }
 MAX_FIELD_LENGTH = 1000
 
-KNOWLEDGE_FILE = Path(__file__).parent.parent / "config" / "custom_knowledge.yaml"
+_BASE_KNOWLEDGE_DIR = Path(__file__).parent.parent / "config"
+_DEFAULT_KNOWLEDGE_FILE = _BASE_KNOWLEDGE_DIR / "custom_knowledge.yaml"
+
+# Backwards-compatible public name expected by tests
+KNOWLEDGE_FILE = _DEFAULT_KNOWLEDGE_FILE
 
 
 def load_custom_knowledge() -> dict:
-    """Load custom knowledge from YAML. Returns empty dict if missing or invalid."""
-    if not KNOWLEDGE_FILE.exists():
+    """Load custom knowledge from YAML.
+
+    Returns empty dict if missing or invalid.
+    """
+    kf = _DEFAULT_KNOWLEDGE_FILE
+    if not kf.exists():
         return {}
     try:
-        with open(KNOWLEDGE_FILE, 'r', encoding='utf-8') as f:
+        with open(kf, 'r', encoding='utf-8') as f:
             data = yaml.safe_load(f)
         return data if isinstance(data, dict) else {}
     except (yaml.YAMLError, IOError) as e:
-        logger.warning(f"Failed to load custom knowledge: {e}")
+        logger.warning(f"Failed to load custom knowledge ({kf}): {e}")
         return {}
 
 
@@ -52,20 +60,27 @@ def _sanitize_knowledge(data: dict) -> dict:
 
 
 def save_custom_knowledge(data: dict) -> bool:
-    """Sanitize and save custom knowledge to YAML. Returns True on success."""
+    """Sanitize and save custom knowledge to YAML.
+
+    Returns True on success.
+    """
     try:
         sanitized = _sanitize_knowledge(data)
-        KNOWLEDGE_FILE.parent.mkdir(parents=True, exist_ok=True)
-        with open(KNOWLEDGE_FILE, 'w', encoding='utf-8') as f:
+        kf = _DEFAULT_KNOWLEDGE_FILE
+        kf.parent.mkdir(parents=True, exist_ok=True)
+        with open(kf, 'w', encoding='utf-8') as f:
             yaml.dump(sanitized, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
         return True
     except (IOError, yaml.YAMLError) as e:
-        logger.error(f"Failed to save custom knowledge: {e}")
+        logger.error(f"Failed to save custom knowledge ({kf}): {e}")
         return False
 
 
 def get_custom_knowledge_text() -> str:
-    """Return formatted knowledge text for prompt injection, or empty string if none."""
+    """Return formatted knowledge text for prompt injection.
+
+    Returns empty string if none.
+    """
     data = load_custom_knowledge()
     if not data:
         return ""
@@ -85,9 +100,10 @@ def get_custom_knowledge_text() -> str:
 def clear_custom_knowledge() -> bool:
     """Delete custom knowledge file. Returns True on success or if already absent."""
     try:
-        if KNOWLEDGE_FILE.exists():
-            KNOWLEDGE_FILE.unlink()
+        kf = _DEFAULT_KNOWLEDGE_FILE
+        if kf.exists():
+            kf.unlink()
         return True
     except IOError as e:
-        logger.error(f"Failed to delete custom knowledge: {e}")
+        logger.error(f"Failed to delete custom knowledge ({kf}): {e}")
         return False

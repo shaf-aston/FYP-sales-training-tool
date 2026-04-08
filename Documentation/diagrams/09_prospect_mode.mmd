@@ -5,6 +5,7 @@ title: Prospect Mode & Training Hook Sequences
 %% PURPOSE: Shows the control flow inverted where the Trainee acts as the Salesperson, mapping how the AI buyer scores readiness, combined with the quiz and training feedback hooks.
 %% ==========================================
 %%{init: {"theme": "base", "sequence": {"actorMargin": 30, "messageMargin": 25}}}%%
+%% Diagram Type: Sequence diagram (sequenceDiagram) — Prospect role-play flows and training hook sequences
 
 sequenceDiagram
     autonumber
@@ -84,7 +85,7 @@ sequenceDiagram
     App->>PS: get_evaluation()
     PS->>PE: evaluate_session(session_data, provider)
 
-    Note over PE,Pv: LLM rubric scoring — 5 dimensions:<br/>NEPQ stage coverage · objection handling<br/>rapport building · close attempt · listening
+    Note over PE,Pv: LLM rubric scoring — 5 dimensions:<br/>NEPQ stage coverage — did the bot follow the discovery stages and ask the right questions?<br/>Objection handling — quality of classification and effectiveness of the reframe?<br/>Rapport building — warmth, tone-matching and trust-building behaviours?<br/>Close attempt — appropriate and well-timed efforts to move toward commitment?<br/>Listening — accurately addressing user concerns and not repeating or ignoring signals.
 
     PE->>Pv: Send evaluation scoring request
     Pv->>API: HTTPS request

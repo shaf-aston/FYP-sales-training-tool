@@ -7,6 +7,12 @@ from chatbot.knowledge import load_custom_knowledge, save_custom_knowledge, clea
 bp = Blueprint('analytics', __name__, url_prefix='/api')
 
 
+def _parse_knowledge_mode() -> str | None:
+    """Parse and validate optional knowledge mode query parameter."""
+    mode = (request.args.get('mode') or '').strip().lower()
+    return 'prospect' if mode == 'prospect' else None
+
+
 def init_routes(app, require_session_func, bot_state_func=None):
     """Initialize analytics routes with dependency injection.
 
@@ -187,3 +193,55 @@ def get_analytics_summary():
     """
     summary = SessionAnalytics.get_evaluation_summary()
     return jsonify({"success": True, **summary})
+
+
+# ============================================================================
+# User Feedback (append-only JSONL)
+# ============================================================================
+
+import os
+import json
+from datetime import datetime
+from threading import Lock
+
+_FEEDBACK_FILE = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'feedback.jsonl')
+_feedback_lock = Lock()
+
+
+@bp.route('/feedback', methods=['POST'])
+def submit_feedback():
+    """Append user feedback to feedback.jsonl. Never resets — append-only."""
+    data = request.json or {}
+    rating = data.get('rating')
+    comment = (data.get('comment') or '').strip()
+
+    if not rating and not comment:
+        return jsonify({"error": "Rating or comment required"}), 400
+
+    if rating is not None:
+        try:
+            rating = int(rating)
+            if rating < 1 or rating > 5:
+                return jsonify({"error": "Rating must be 1-5"}), 400
+        except (TypeError, ValueError):
+            return jsonify({"error": "Rating must be a number 1-5"}), 400
+
+    if comment and len(comment) > 500:
+        comment = comment[:500]
+
+    entry = {
+        "timestamp": datetime.now().isoformat(),
+        "rating": rating,
+        "comment": comment or None,
+        "page": data.get('page', 'chat'),
+    }
+
+    with _feedback_lock:
+        try:
+            with open(_FEEDBACK_FILE, 'a', encoding='utf-8') as f:
+                f.write(json.dumps(entry) + '\n')
+        except IOError as e:
+            bp.app.logger.error(f"Failed to write feedback: {e}")  # type: ignore
+            return jsonify({"error": "Failed to save feedback"}), 500
+
+    return jsonify({"success": True})

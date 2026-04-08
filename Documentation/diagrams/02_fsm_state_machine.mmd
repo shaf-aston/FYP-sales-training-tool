@@ -2,8 +2,11 @@
 title: FSM State Machine (All Strategies)
 ---
 %%{init: {"theme": "base"}}%%
+%% Diagram Type: State diagram (stateDiagram-v2) — Finite State Machine for strategy and stage transitions
 
 stateDiagram-v2
+
+%% Diagram legend: 🟪 Prompt Constraints (purple) | 🔴 FSM Guards (red) | 🔵 Output Contracts (blue)
 
     classDef initClass      fill:#78909C,stroke:#37474F,color:#fff
     classDef intentClass    fill:#42A5F5,stroke:#0D47A1,color:#fff
@@ -47,60 +50,66 @@ stateDiagram-v2
         ToConsultativeDef --> [*]
 
         note right of ID_INTENT
-            _detect_and_switch_strategy() in chatbot.py
-            All paths call record_strategy_switch()
+            %% Description:
+            %% Short: Conversation FSM for the Sales Chatbot. Shows strategy detection,
+            %% stages, and the concrete guard criteria used by the runtime.
+            %% Audience: Developers — includes function & config references and short examples.
+            Intake phase: the system listens to initial user messages to decide which sales approach fits (consultative vs transactional). This choice is driven by signals like urgency, budget, or explicit requests; no strategy is permanently locked in at this point.
+            Implementation: _detect_and_switch_strategy() in chatbot.py; record_strategy_switch() logs the decision.
+            Examples (real utterances):
+             - consultative: "I'm tired of manual reporting — it's costing us time"
+             - transactional: "I need this next week; budget around £2k"
         end note
     }
 
     IntentDiscovery --> Consultative  : switched to CONSULTATIVE
     IntentDiscovery --> Transactional : switched to TRANSACTIONAL
 
-    state "CONSULTATIVE — 5 stages (NEPQ / Impact Formula)" as Consultative {
+    state "CONSULTATIVE — 5 stages (NEPQ — structured discovery method: ask about the user's situation before proposing solutions; Impact Formula — frame the value/impact for the user)" as Consultative {
         [*] --> C_INTENT
 
-        state "Stage.INTENT — Get tangible need + experience" as C_INTENT
-        state "Stage.LOGICAL — Two-phase probe: cause + like/dislike (min 2 turns)" as C_LOGICAL
-        state "Stage.EMOTIONAL — Identity Frame + Future Pacing + COI (min 3 turns)" as C_EMOTIONAL
-        state "Stage.PITCH — 3-pillar + assumptive close" as C_PITCH
-        state "Stage.OBJECTION — Classify + Reframe (7 types)" as C_OBJECTION
-        state "SOLD" as SOLD_C
-        state "WALKED" as WALKED_C
+        state "Stage.INTENT — Identify a real need and context (what's broken or desired)" as C_INTENT
+        state "Stage.LOGICAL — Explore causes and practical constraints (two-phase probe; clarify specifics)" as C_LOGICAL
+        state "Stage.EMOTIONAL — Explore values & outcomes (Identity Frame: how the user sees themselves; Future Pacing: imagine future outcomes; COI: Cost Of Inaction — what they lose by doing nothing)" as C_EMOTIONAL
+        state "Stage.PITCH — Short value pitch and next-step proposal (3-pillar: value, proof, next step; assumptive close: speak as if decision is near to reduce friction)" as C_PITCH
+        state "Stage.OBJECTION — Identify root objection and reframe response (classify common types to address underlying barrier)" as C_OBJECTION
+        state "SOLD — Commitment detected (conversation goal achieved)" as SOLD_C
+        state "WALKED — User opted out; end gracefully without further persuasion" as WALKED_C
 
-        C_INTENT    --> C_LOGICAL   : user_has_clear_intent()
-        C_LOGICAL   --> C_EMOTIONAL : user_shows_doubt()
-        C_EMOTIONAL --> C_PITCH     : user_expressed_stakes()
-        C_PITCH     --> C_OBJECTION : commitment_or_objection()
-        C_OBJECTION --> SOLD_C      : committed
-        C_OBJECTION --> WALKED_C    : walkaway
+        C_INTENT    --> C_LOGICAL   : User states a clear need (e.g., "I need X") — allows focused problem probing
+        C_LOGICAL   --> C_EMOTIONAL : User expresses doubt or emotional concern (hesitation, risk/values cues) — move to emotional stage to explore motivations
+        C_PITCH     --> C_OBJECTION : User replies with an objection or mixed commitment — requires reframing to resolve barriers
+        C_OBJECTION --> SOLD_C      : User gives an explicit commitment (e.g., "Yes, let's do it") — conversation goal achieved
+        C_OBJECTION --> WALKED_C    : User explicitly refuses or disengages — end conversation gracefully
 
-        C_LOGICAL   --> C_PITCH : commitment signal OR demands_directness
-        C_EMOTIONAL --> C_PITCH : commitment signal OR demands_directness
+        C_LOGICAL   --> C_PITCH : User asks price/availability or demands a direct answer — transition to pitch
+        C_EMOTIONAL --> C_PITCH : User signals readiness or asks for directness — transition to pitch
 
-        C_INTENT    --> C_INTENT    : still discovering
-        C_LOGICAL   --> C_LOGICAL   : probing — no signal yet
-        C_EMOTIONAL --> C_EMOTIONAL : eliciting — no signal yet
-        C_OBJECTION --> C_OBJECTION : reframe cycle
+        C_INTENT    --> C_INTENT    : Still discovering — continue probing (turns < 3)
+        C_LOGICAL   --> C_LOGICAL   : Still probing — no clear signal yet
+        C_EMOTIONAL --> C_EMOTIONAL : Eliciting values — no clear signal yet
+        C_OBJECTION --> C_OBJECTION : Reframing cycle — address the stated objection then reassess
 
         SOLD_C   --> [*]
         WALKED_C --> [*]
     }
 
-    state "TRANSACTIONAL — 3 stages (NEEDS → MATCH → CLOSE)" as Transactional {
+    state "TRANSACTIONAL — 3 stages (NEEDS → MATCH → CLOSE) — fast, budget/urgency focused" as Transactional {
         [*] --> T_INTENT
 
-        state "Stage.INTENT — Gather budget + use-case (max 2 turns)" as T_INTENT
-        state "Stage.PITCH — Present matching options, assumptive close" as T_PITCH
-        state "Stage.OBJECTION — Classify + Reframe (same 7 types)" as T_OBJECTION
+        state "Stage.INTENT — Gather budget and use-case quickly (max 2 turns)" as T_INTENT
+        state "Stage.PITCH — Present matching options and next step (assumptive close: reduce friction by presuming readiness)" as T_PITCH
+        state "Stage.OBJECTION — Identify and reframe objections to remove buying blockers (same common types)" as T_OBJECTION
         state "SOLD" as SOLD_T
         state "WALKED" as WALKED_T
 
-        T_INTENT    --> T_PITCH     : user_has_clear_intent() OR demands_directness
-        T_PITCH     --> T_OBJECTION : commitment_or_objection()
-        T_OBJECTION --> SOLD_T      : committed
-        T_OBJECTION --> WALKED_T    : walkaway
+        T_INTENT    --> T_PITCH     : User states clear need with budget/use-case, or asks for a direct answer — move to pitch
+        T_PITCH     --> T_OBJECTION : User raises price/feature objections or mixed commitment — requires reframe or clarification
+        T_OBJECTION --> SOLD_T      : User gives explicit commitment — sale complete
+        T_OBJECTION --> WALKED_T    : User indicates they will not proceed — end conversation
 
-        T_INTENT    --> T_INTENT    : still gathering
-        T_OBJECTION --> T_OBJECTION : reframe cycle
+        T_INTENT    --> T_INTENT    : Still gathering budget/use-case — continue
+        T_OBJECTION --> T_OBJECTION : Reframing cycle — attempt to resolve objection
 
         SOLD_T   --> [*]
         WALKED_T --> [*]
@@ -126,5 +135,5 @@ stateDiagram-v2
     class ToConsultativeDef consultClass
     class SOLD_C            terminalClass
     class SOLD_T            terminalClass
-    class WALKED_C          stageObj
-    class WALKED_T          stageObj
+    class WALKED_C          terminalClass
+    class WALKED_T          terminalClass

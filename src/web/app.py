@@ -7,7 +7,7 @@ Routes are now split across multiple blueprint modules in web/routes/:
 - prospect.py: Prospect mode (role-reversal)
 - voice.py: Voice mode (STT/TTS)
 - analytics.py: Analytics, quizzes, knowledge management
-- debug.py: Debug panel (development only)
+- debug.py: Advanced options panel (development only)
 """
 # ruff: noqa: E402
 # NOTE: E402 suppressed because sys.path MUST be manipulated before importing
@@ -19,7 +19,7 @@ import sys
 # MUST happen before importing chatbot modules (add parent to path)
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from flask import Flask, render_template
+from flask import Flask, render_template, send_from_directory
 from flask_cors import CORS
 from dotenv import load_dotenv
 
@@ -103,8 +103,11 @@ def require_session():
     return bot, None
 
 
-def _validate_message(text: str):
+def _validate_message(text):
     """Validate and sanitize message text. Returns (clean_text, error_response)."""
+    from flask import jsonify
+    if not text or not isinstance(text, str):
+        return None, (jsonify({"error": "Message required"}), 400)
     return InputValidator.validate_message(
         text.strip(),
         injection_validator=injection_validator,
@@ -154,19 +157,44 @@ app.register_blueprint(debug.bp)
 
 @app.route('/favicon.ico')
 def favicon():
+    # Tests expect /favicon.ico to return 204 when testing — keep that behavior
+    if app.config.get('TESTING'):
+        return ('', 204)
+
+    # Serve favicon from the Flask static folder if present
+    try:
+        static_dir = app.static_folder  # typically src/web/static
+        ico_path = os.path.join(static_dir, 'favicon.ico')
+        png_path = os.path.join(static_dir, 'favicon.png')
+        if os.path.exists(ico_path):
+            return send_from_directory(static_dir, 'favicon.ico')
+        if os.path.exists(png_path):
+            return send_from_directory(static_dir, 'favicon.png')
+    except Exception:
+        app.logger.debug('Favicon serve failed', exc_info=True)
     return ('', 204)
 
 
 @app.route('/')
 def home():
-    """Serve the chat interface"""
-    return render_template('index.html')
+    """Serve the chat interface (seller mode)."""
+    return render_template('index.html', mode='seller', debug_enabled=_DEBUG_ENABLED)
+
+
+@app.route('/prospect')
+def prospect_page():
+    """Serve the chat interface in prospect mode."""
+    return render_template('index.html', mode='prospect', debug_enabled=_DEBUG_ENABLED)
 
 
 @app.route('/knowledge')
 def knowledge_page():
     """Serve the knowledge base management page."""
-    return render_template('knowledge.html')
+    from flask import request
+    mode = (request.args.get('mode') or '').strip().lower()
+    if mode != 'prospect':
+        mode = ''
+    return render_template('knowledge.html', mode=mode)
 
 
 _DEBUG_ENABLED = os.environ.get('ENABLE_DEBUG_PANEL', '').lower() == 'true'

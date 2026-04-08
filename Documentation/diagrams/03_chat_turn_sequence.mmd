@@ -2,6 +2,7 @@
 title: Chat Turn Sequence (3-Layer Control Highlighted)
 ---
 %%{init: {"theme": "base", "sequence": {"actorMargin": 40, "messageMargin": 20}}}%%
+%% Diagram Type: Sequence diagram (sequenceDiagram) — chat turn execution across layers (client → web → bot → provider)
 
 sequenceDiagram
     box rgba(102,187,106,0.15) Client
@@ -23,6 +24,8 @@ sequenceDiagram
         participant Obs as Analytics
     end
 
+    %% Legend - Prompt Constraints / FSM Guards / Output Contracts
+
     Br->>App: POST /api/chat  {message}  X-Session-ID
     App->>App: validate_message() · rate_limit() · require_session()
 
@@ -31,7 +34,7 @@ sequenceDiagram
     Bot->>FSM: get_current_prompt(user_message)
     FSM->>PE: generate_stage_prompt(strategy, stage, context, history, msg)
 
-    Note over PE: 🟪 LAYER 1 — PROMPT CONSTRAINTS (Soft)
+    %% LAYER 1 - PROMPT CONSTRAINTS (Soft): instruction-level guidance the LLM should follow; this layer shapes intent and tone before generation.
     PE->>PE: Tier 1 — check_override_condition()
 
     alt Override triggered (direct_info / soft_positive / repetitive_validation)
@@ -56,21 +59,17 @@ sequenceDiagram
     Pv-->>Bot: LLMResponse
 
     alt Provider error / rate limit
+        %% If the primary provider fails (rate-limit or error), the system automatically retries with backup providers (SambaNova -> OpenRouter) to avoid user interruption.
         Bot->>Pv: switch to SambaNova → OpenRouter
         Pv-->>Bot: LLMResponse (fallback)
     end
 
     %% ── STEP 4: Layer 3 — Output Contract ────────────────────────────────
-    Note over Bot: 🔵 LAYER 3 — OUTPUT CONTRACTS (Hard)
+    %% LAYER 3 - OUTPUT CONTRACTS (Hard): hard checks enforced by code detect failure modes in the bot's own output and set corrective flags for the next turn.
     Bot->>Bot: is_repetitive_validation(history)
 
-    %% ── STEP 5: Persist ──────────────────────────────────────────────────
-    Bot->>FSM: add_turn(user_message, bot_reply)
-    Bot->>Bot: save_session() → sessions/{id}.json
-    Bot->>Obs: log_stage_latency()
-
-    %% ── STEP 6: FSM Advancement — LAYER 2 ────────────────────────────────
-    Note over Bot: 🔴 LAYER 2 — FSM GUARDS (Hard)
+    %% ── STEP 5: FSM Advancement — LAYER 2 ────────────────────────────────
+    %% LAYER 2 - FSM GUARDS (Hard): hard readiness checks enforced by code to prevent premature advancement; ensure the bot only escalates when the user is ready.
     Bot->>Bot: _apply_advancement(user_message)
 
     alt flow_type == INTENT
@@ -87,15 +86,21 @@ sequenceDiagram
         end
     end
 
+    %% ── STEP 6: Persist ──────────────────────────────────────────────────
+    Bot->>FSM: add_turn(user_message, bot_reply)
+    Bot->>Bot: save_session() → sessions/{id}.json
+    Bot->>Obs: log_stage_latency()
+
     %% ── STEP 7: Objection (if applicable) ────────────────────────────────
     opt current_stage == OBJECTION
         Bot->>PE: classify_objection(user_message, history)
-        PE-->>Bot: {type: smokescreen|money|fear|partner|logistical|think|unknown}
+        PE-->>Bot: {type: see 05_nlu_pipeline.mmd for taxonomy}
         Bot->>Obs: record_objection_classified()
     end
 
     %% ── STEP 8: Response ─────────────────────────────────────────────────
     Bot-->>App: ChatResponse {content, latency_ms, provider, model}
     App->>Bot: generate_training(user_msg, bot_reply)
+    %% Coaching/analysis step: produces internal feedback about the bot's sales technique; used for evaluation and improvement and not part of the live user-facing reply.
     Bot-->>App: {stage_goal, what_bot_did, next_trigger, watch_for}
     App-->>Br: JSON {success, message, stage, strategy, latency_ms, training}

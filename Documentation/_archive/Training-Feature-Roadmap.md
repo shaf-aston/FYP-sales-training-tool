@@ -225,7 +225,7 @@ Keep Doing:
  50|*
    +----------------------------------
     S1  S2  S3  S4  S5  S6  S7  S8  S9 S10
-
+What I did is.
 Current Average: 74/100 (↑8 from last 5 sessions)
 ```
 

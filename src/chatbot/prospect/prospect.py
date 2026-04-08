@@ -138,28 +138,53 @@ class ProspectSession:
         self.behavior_rules = behavior_rules.get(difficulty, "")
 
     def _load_product_context(self, product_type: str) -> str:
-        """Load product knowledge for the prospect's context."""
+        """Load product knowledge for the prospect's context.
+
+        Uses product_config.yaml + prospect persona data, and includes only
+        prospect-specific custom knowledge (not seller-mode custom knowledge)
+        to keep the two modes independent.
+        """
         try:
-            from .loader import load_product_config
-            from .knowledge import get_custom_knowledge_text
+            from ..loader import load_product_config
+            from ..knowledge import get_custom_knowledge_text
 
             products = load_product_config().get("products", {})
             product = products.get(product_type, products.get("default", {}))
             context = product.get("context", "various products and services")
             knowledge = product.get("knowledge", "")
 
-            # Inject custom knowledge if available
-            custom_knowledge = get_custom_knowledge_text()
-            if custom_knowledge:
-                knowledge += (
-                    "\n\n--- BEGIN CUSTOM PRODUCT DATA ---\n"
-                    f"{custom_knowledge}\n"
-                    "--- END CUSTOM PRODUCT DATA ---"
+            # Build prospect-specific context from persona data
+            persona_context = self._build_persona_product_context()
+            if persona_context:
+                knowledge = f"{knowledge}\n\n{persona_context}" if knowledge else persona_context
+
+            # Keep mode-specific separation: only inject prospect custom KB.
+            prospect_knowledge = get_custom_knowledge_text()
+            if prospect_knowledge:
+                custom_block = (
+                    "--- BEGIN CUSTOM PROSPECT DATA ---\n"
+                    f"{prospect_knowledge}\n"
+                    "--- END CUSTOM PROSPECT DATA ---"
                 )
+                knowledge = f"{knowledge}\n\n{custom_block}" if knowledge else custom_block
 
             return f"{context}\n\n{knowledge}" if knowledge else context
         except Exception:
             return "various products and services"
+
+    def _build_persona_product_context(self) -> str:
+        """Build product context from the selected persona's data."""
+        parts = []
+        needs = self.persona.get("needs", [])
+        if needs:
+            parts.append("BUYER'S KNOWN NEEDS: " + ", ".join(needs))
+        pain_points = self.persona.get("pain_points", [])
+        if pain_points:
+            parts.append("BUYER'S PAIN POINTS: " + ", ".join(pain_points))
+        budget = self.persona.get("budget")
+        if budget:
+            parts.append(f"BUYER'S BUDGET: {budget}")
+        return "\n".join(parts)
 
     def _build_system_prompt(self) -> str:
         """Render system prompt template with current state."""
@@ -310,7 +335,7 @@ class ProspectSession:
         Returns:
             int: Score from 1 (poor) to 5 (excellent)
         """
-        from .analysis import text_contains_any_keyword, classify_intent_level
+        from ..analysis import text_contains_any_keyword, classify_intent_level
 
         msg_lower = user_msg.lower()
         msg_length = len(user_msg.split())
@@ -319,6 +344,12 @@ class ProspectSession:
         score = 3.0
 
         intent_level = classify_intent_level([], user_msg, signal_keywords=_SIGNALS)
+
+        # Dominant negative: if the user is explicitly 'walking' or abandoning,
+        # treat as a failed turn immediately (do not let scattered positive
+        # keywords cancel out this strong signal).
+        if text_contains_any_keyword(msg_lower, _SIGNALS.get("walking", [])):
+            return 1
 
         # Strong positive signals (commitment, high intent)
         if text_contains_any_keyword(msg_lower, _SIGNALS.get("commitment", [])):

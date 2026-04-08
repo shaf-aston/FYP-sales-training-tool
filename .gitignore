@@ -81,5 +81,9 @@ src/config/custom_knowledge.yaml
 utils/
 SKILL.md
 # Ignore old project iterations and dumps
-Documentation/_archive/
+# Documentation/_archive/
 extra-trello-script
+
+VERIFICATION_3_LAYER_CONTROL.md
+
+

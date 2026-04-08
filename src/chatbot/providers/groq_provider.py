@@ -12,6 +12,8 @@ from .base import BaseLLMProvider, LLMResponse, auto_log_performance
 logger = logging.getLogger(__name__)
 
 GROQ_AVAILABLE = importlib.util.find_spec("groq") is not None
+if GROQ_AVAILABLE:
+    from groq import Groq
 
 
 class GroqProvider(BaseLLMProvider):
@@ -46,7 +48,8 @@ class GroqProvider(BaseLLMProvider):
                 model=self.model,
                 messages=messages,  # type: ignore[arg-type]
                 temperature=temperature,
-                max_tokens=max_tokens
+                max_tokens=max_tokens,
+                timeout=25,
             )
             latency = (time.time() - request_start_time) * 1000
             return LLMResponse(
@@ -64,7 +67,6 @@ class GroqProvider(BaseLLMProvider):
                     logger.warning(f"Groq rate limit on key {self._current_key_index + 1}, rotating to key {next_index + 1}")
                     self._current_key_index = next_index
                     self.api_key = self._api_keys[next_index]
-                    from groq import Groq
                     with self._client_lock:
                         self._client = Groq(api_key=self.api_key)
                     # Retry once with the new key
@@ -73,7 +75,8 @@ class GroqProvider(BaseLLMProvider):
                             model=self.model,
                             messages=messages,  # type: ignore[arg-type]
                             temperature=temperature,
-                            max_tokens=max_tokens
+                            max_tokens=max_tokens,
+                            timeout=25,
                         )
                         latency = (time.time() - request_start_time) * 1000
                         return LLMResponse(
@@ -95,7 +98,6 @@ class GroqProvider(BaseLLMProvider):
         return self.model
 
     def _get_client(self):
-        from groq import Groq
         with self._client_lock:
             if not self._client:
                 self._client = Groq(api_key=self.api_key)

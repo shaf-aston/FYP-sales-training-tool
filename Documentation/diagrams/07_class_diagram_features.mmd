@@ -6,7 +6,11 @@ title: Features Class Diagram
 %% ==========================================
 %%{init: {"theme": "base"}}%%
 
+%% Diagram Type: UML Class Diagram (classDiagram) — Feature modules, utilities, and analysis helpers
+
 classDiagram
+
+    %% NOTE: this diagram shows code organization (modules, classes and their relationships), not the live conversation flow. It is primarily for developers and verification; non-technical readers can skip it.
 
     %% ── Prospect Mode ────────────────────────────────────────────────────────
     class ProspectState {
@@ -47,7 +51,7 @@ classDiagram
         +process_turn(str, bool) ProspectResponse
         +get_evaluation() dict
         +to_dict() dict
-        +from_dict(dict)$ ProspectSession
+        +from_dict(dict) {classmethod} ProspectSession
         -_update_readiness(str, str) None
         -_score_sales_message(str, str) int
         -_check_end_conditions() str
@@ -57,135 +61,151 @@ classDiagram
     note for ProspectSession "_score_sales_message() is DETERMINISTIC — no LLM per turn:."
 
     class ProspectEvaluator {
-        <<module>>
-        +evaluate_session(dict, BaseLLMProvider)$ dict
-        -_score_rubric_item(str, list, provider)$ dict
+        <<utility>>
+        +evaluate_prospect_session(provider, list, ProspectState, str) {static} dict
+        -_grade_from_score(int) {static} str
     }
-    note for ProspectEvaluator "Post-session LLM rubric: NEPQ stage coverage."
+    note for ProspectEvaluator "Post-session performance scoring."
 
     %% ── Quiz ─────────────────────────────────────────────────────────────────
     class QuizModule {
-        <<module>>
-        +get_quiz_question(str)$ dict
-        +evaluate_stage_quiz(str, SalesChatbot)$ dict
-        +evaluate_next_move_quiz(str, SalesChatbot, str)$ dict
-        +evaluate_direction_quiz(str, SalesChatbot)$ dict
+        <<utility>>
+        +get_stage_rubric(str, str) {static} dict
+        +get_quiz_question(str) {static} dict
+        +evaluate_stage_quiz(str, SalesChatbot) {static} dict
     }
-    note for QuizModule "stage quiz: deterministic match to current FSM stage."
+    note for QuizModule "Assessment: stage identification, next-move, direction."
 
     %% ── Trainer ──────────────────────────────────────────────────────────────
     class TrainerModule {
-        <<module>>
-        +generate_training(...)$ dict
-        +answer_training_question(str, dict, BaseLLMProvider)$ dict
+        <<utility>>
+        +generate_training(provider, SalesFlowEngine, str, str) {static} dict
+        +answer_training_question(str, dict, provider) {static} dict
     }
-    note for TrainerModule "Called UNCONDITIONALLY on every /api/chat response."
+    note for TrainerModule "Coaching feedback on every /api/chat response."
 
     %% ── Knowledge ────────────────────────────────────────────────────────────
     class KnowledgeModule {
-        <<module>>
-        +load_custom_knowledge()$ dict
-        +save_custom_knowledge(dict)$ bool
-        +clear_custom_knowledge()$ bool
-        +get_custom_knowledge_text()$ str
-        +ALLOWED_FIELDS list$
-        +MAX_FIELD_LENGTH int$
+        <<utility>>
+        +load_custom_knowledge() {static} dict
+        +save_custom_knowledge(dict) {static} bool
+        +clear_custom_knowledge() {static} bool
+        +get_custom_knowledge_text() {static} str
     }
-    note for KnowledgeModule "get_custom_knowledge_text() injected into product_context at SalesChatbot.__init__."
+    note for KnowledgeModule "Custom product knowledge injection at session init."
 
-    %% ── NLU Module (analysis.py — all module-level functions) ────────────────
+    %% ── Analysis Module (analysis.py — module-level functions only) ─────────
     class AnalysisModule {
-        <<module>>
-        +analyze_state(list, str, dict)$ ConversationState
-        +classify_intent_level(list, str, signal_keywords)$ str
-        +detect_guardedness(str, list)$ float
-        +text_contains_any_keyword(str, keywords)$ bool
-        +is_literal_question(str)$ bool
-        +user_demands_directness(list, str)$ bool
-        +is_repetitive_validation(list, int)$ bool
-        +detect_acknowledgment_context(str, list, state)$ str
-        +extract_preferences(list)$ str
-        +extract_user_keywords(list, int)$ list
-        +classify_objection(str, list)$ dict
-        +commitment_or_walkaway(list, str)$ bool
+        <<utility>>
+        +analyze_state(list, str, dict) {static} ConversationState
+        +classify_intent_level(list, str, keywords) {static} str
+        +detect_guardedness(str, list) {static} float
+        +detect_acknowledgment_context(str, list, state) {static} str
+        +extract_preferences(list) {static} str
+        +classify_objection(str, list) {static} dict
+        +commitment_or_walkaway(list, str) {static} bool
+        +should_trigger_web_search(list) {static} bool
     }
-    note for AnalysisModule "Pure functions only — no state, no decisions, no LLM calls."
+    note for AnalysisModule "Pure analysis functions. Called by chatbot.py before prompt assembly."
 
-    %% ── Prompt System (all module-level functions) ───────────────────────────
+    %% ── Content Module (content.py — orchestrates prompt generation) ────────
     class ContentModule {
-        <<module>>
-        +generate_stage_prompt(...)$ str
-        -_get_stage_specific_prompt(...)$ str
-        -_get_preference_and_keyword_context(list, str)$ str
+        <<utility>>
+        +generate_stage_prompt(...) {static} str
+        -_get_stage_specific_prompt(...) {static} str
+        -_get_preference_and_keyword_context(list, str) {static} str
     }
-    note for ContentModule "Orchestrates 4-tier pipeline: Tier1 override → Tier2 ack → Tier3 tactics → Tier4 assembly."
+    note for ContentModule "Assembles final prompt: overrides → tactics → base."
 
+    %% ── Prompts Module (prompts.py — strategy-specific templates) ──────────
     class PromptsModule {
-        <<module>>
-        +STRATEGY_PROMPTS dict$
-        +_SHARED_RULES str$
-        +get_prompt(str, str)$ str
-        +get_base_prompt(str, str, list)$ str
-        +generate_init_greeting(str)$ dict
-        +get_acknowledgment_guidance(str)$ str
+        <<utility>>
+        +STRATEGY_PROMPTS dict {static}
+        +_SHARED_RULES str {static}
     }
-    note for PromptsModule "STRATEGY_PROMPTS keys: consultative→{intent,intent_low,logical,emotional,pitch,objection}."
+    note for PromptsModule "Template storage: {strategy}{stage} → prompt skeleton."
 
+    %% ── Overrides Module (overrides.py — early-exit conditions) ────────────
     class OverridesModule {
-        <<module>>
-        +check_override(...)$ Optional~str~
-        +is_direct_info_request(str)$ bool
-        +is_soft_positive(str, stage)$ bool
+        <<utility>>
+        +check_override_condition(...) {static} Optional~str~
     }
-    note for OverridesModule "Tier 1 early-exit — bypasses Tiers 2–4 entirely if triggered."
+    note for OverridesModule "Tier 1: Direct info request or soft positive at pitch."
 
+    %% ── Tactics Module (tactics.py — user state adaptation) ────────────────
     class TacticsModule {
-        <<module>>
-        +get_adaptive_guidance(ConversationState, stage, strategy)$ str
-        -_build_decisive_guidance(stage, strategy)$ str
-        -_build_guarded_guidance()$ str
-        -_build_question_guidance()$ str
+        <<utility>>
+        +build_tactic_guidance(ConversationState, stage, strategy) {static} str
+    }
+    note for TacticsModule "Adapts guidance based on user state: decisive, guarded, low-intent."
+
+    %% ── Flow Rules (flow.py — FSM state + advancement logic) ──────────────
+    class SalesFlowEngineModule {
+        <<utility>>
+        +user_has_clear_intent(list, str, int) {static} bool
+        +user_shows_doubt(list, str, int) {static} bool
+        +user_expressed_stakes(list, str, int) {static} bool
+        +commitment_or_objection(list, str, int) {static} bool
+    }
+    note for SalesFlowEngineModule "Advancement predicate utilities. Prefer using core `SalesFlowEngine` (Documentation/diagrams/06_class_diagram_core.mmd); consider merging predicates as static methods on `SalesFlowEngine`."
+
+    %% ── Web Search Integration ───────────────────────────────────────────────
+    class WebSearchService {
+        +search(str, int) {static} SearchResponse
+        -_fetch(str, int) {static} SearchResponse
+        -_normalize_query(str) {static} str
+        -_cache_get(str) {static} Optional~SearchResponse~
+        -_cache_set(str, SearchResponse) {static} None
+    }
+    note for WebSearchService "Caches DuckDuckGo results. See SearchResult and SearchResponse dataclasses below."
+
+    %% ── Web Search DTOs (added to satisfy relationships) ───────────────────
+    class SearchResult {
+        <<dataclass>>
+        +str title
+        +str url
+        +str snippet
     }
 
-    %% ── FSM Rules (module-level functions in flow.py) ────────────────────────
-    class AdvancementRulesModule {
-        <<module>>
-        +FLOWS dict$
-        +_COMMON_TRANSITIONS dict$
-        +ADVANCEMENT_RULES dict$
-        +user_has_clear_intent(list, str, int)$ bool
-        +user_shows_doubt(list, str, int)$ bool
-        +user_expressed_stakes(list, str, int)$ bool
-        +commitment_or_objection(list, str, int)$ bool
-        -_check_advancement_condition(...)$ bool
+    class SearchResponse {
+        <<dataclass>>
+        +list~SearchResult~ results
+        +str query
+        +bool cached
+        +float latency_ms
     }
-    note for AdvancementRulesModule "_COMMON_TRANSITIONS reused by both strategies:."
+
+    %% ── Reference Stubs / Relationships ─────────────────────────────────────
+    %% Stubs reference core classes so cross-diagram arrows have definitions.
+    class SalesChatbot {
+        <<ref>>
+    }
+
+    class QuickMatcher {
+        <<ref>>
+    }
+
+    class ConversationState {
+        <<ref>>
+    }
 
     %% ── Relationships ────────────────────────────────────────────────────────
-    ProspectSession *-- ProspectState              : state (composition)
-    ProspectSession ..> ProspectResponse           : returns
-    ProspectSession --> ProspectEvaluator          : delegates post-session eval
-    ProspectSession --> QuickMatcher               : loads prospect_config
+    ProspectSession "1" *-- "1" ProspectState              : state (composition)
+    ProspectSession "1" ..> "1" ProspectResponse           : returns
+    ProspectSession "1" --> "1" ProspectEvaluator          : evaluates performance
+    ProspectSession "1" --> "1" QuickMatcher               : loads prospect_config
 
-    ContentModule --> PromptsModule                : stage templates
-    ContentModule --> OverridesModule              : Tier 1 override check
-    ContentModule --> TacticsModule                : Tier 3 tactical guidance
-    ContentModule --> AnalysisModule               : analyze_state() + detect_ack()
+    ContentModule --> PromptsModule                : fetches templates
+    ContentModule --> OverridesModule              : checks early-exit
+    ContentModule --> TacticsModule                : gets guidance
+    ContentModule --> AnalysisModule               : calls for state
 
     AnalysisModule ..> ConversationState           : produces
 
-    AdvancementRulesModule --> AnalysisModule      : commitment_or_walkaway (avoids circular import)
-    AdvancementRulesModule --> ContentModule       : SIGNALS dict imported by content
+    SalesFlowEngineModule --> AnalysisModule       : calls for signals
+    SalesFlowEngineModule --> ContentModule        : needs signals dict
 
-    SalesChatbot --> WebSearchService              : optional search
-
-
-    class WebSearchService {
-        -_cache_ttl: int
-        -_cache: dict
-        +search(str, int) SearchResponse
-        -_fetch(str, int)
-    }
+    SalesChatbot "1" --> "0..1" WebSearchService              : optional web search
 
     %% ── Colour Scheme ────────────────────────────────────────────────────────
     classDef featureStyle fill:#AB47BC,stroke:#4A148C,stroke-width:2.5px,color:#fff
@@ -205,4 +225,14 @@ classDiagram
     class PromptsModule      coreStyle
     class OverridesModule    coreStyle
     class TacticsModule      coreStyle
-    class AdvancementRulesModule coreStyle
+    class SalesFlowEngineModule coreStyle
+
+    %% ── Legend / Notation ───────────────────────────────────────────────────
+    classDef legendStyle fill:#f7f7f7,stroke:#333,stroke-width:1px,color:#000
+    class Legend {
+        <<note>>
+        +Color legend: featureStyle = Features; coreStyle = Core; dtoStyle = DTOs
+        +Notation: {static} = static method; {classmethod} = classmethod
+        +Stereotypes: <<utility>> = stateless utility; <<ref>> = cross-diagram reference
+    }
+    class Legend legendStyle

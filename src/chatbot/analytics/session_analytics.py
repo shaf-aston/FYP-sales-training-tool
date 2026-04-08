@@ -108,7 +108,81 @@ class SessionAnalytics:
     @staticmethod
     def get_session_analytics(session_id):
         """Retrieve all analytics events for a specific session."""
-        return _writer.read_filtered("session_id", session_id)
+        events = _writer.read_filtered("session_id", session_id)
+        return SessionAnalytics.sanitize_events(events)
+
+    @staticmethod
+    def sanitize_events(events: list[dict]) -> list[dict]:
+        """Lightweight sanitization and anomaly logging for analytics events.
+
+        - Coerces numeric-like strings to ints where sensible.
+        - Replaces non-numeric anomalous fields with None.
+        - Caps wildly large numeric values to avoid downstream surprises.
+
+        This function is intentionally small and conservative to avoid
+        changing semantics: negative sentinels (e.g. -1) are preserved.
+        """
+        if not events:
+            return []
+
+        sanitized = []
+        # Keys to treat as integers if possible
+        int_keys = {
+            "user_turns_in_stage",
+            "user_turn",
+            "user_turn_count",
+            "bot_turn_count",
+            "result_count",
+        }
+
+        # Reasonable absolute cap for any numeric field to avoid float/ratio surprises
+        ABSOLUTE_CAP = 10000
+
+        for ev in events:
+            e = ev.copy()
+            for k in int_keys:
+                if k not in e:
+                    continue
+                v = e.get(k)
+                if v is None:
+                    continue
+                # If already int, keep it
+                if isinstance(v, int):
+                    iv = v
+                else:
+                    # Try to coerce numeric strings (including floats like "3.0")
+                    try:
+                        if isinstance(v, float):
+                            iv = int(v)
+                        elif isinstance(v, str):
+                            # strip whitespace
+                            s = v.strip()
+                            # allow negative numbers
+                            if s.lstrip('-').isdigit():
+                                iv = int(s)
+                            else:
+                                # try float conversion then to int
+                                try:
+                                    iv = int(float(s))
+                                except Exception:
+                                    raise ValueError
+                        else:
+                            iv = int(v)
+                    except Exception:
+                        logger.warning("Analytics anomaly: non-numeric value for %s: %r in event %s", k, v, e.get("event_type"))
+                        e[k] = None
+                        continue
+
+                # Cap implausibly large values
+                if abs(iv) > ABSOLUTE_CAP:
+                    logger.warning("Analytics anomaly: capping large value for %s: %d in event %s", k, iv, e.get("event_type"))
+                    iv = max(-ABSOLUTE_CAP, min(ABSOLUTE_CAP, iv))
+
+                e[k] = iv
+
+            sanitized.append(e)
+
+        return sanitized
 
     @staticmethod
     def get_evaluation_summary():

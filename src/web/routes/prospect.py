@@ -124,7 +124,16 @@ def prospect_state():
     if err:
         return err
     assert ps is not None
-    return jsonify({"success": True, "state": ps.state.to_dict()})
+    return jsonify({
+        "success": True, 
+        "state": ps.state.to_dict(),
+        "persona": ps.persona,
+        "difficulty": ps.state.difficulty,
+        "product_type": ps.state.product_type,
+        "conversation_history": ps.conversation_history,
+        "provider": ps.provider_name,
+        "model": ps.model_name
+    })
 
 
 @bp.route('/evaluate', methods=['POST'])

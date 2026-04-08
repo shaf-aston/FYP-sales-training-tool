@@ -6,10 +6,11 @@ Provides three quiz types:
 3. Direction Quiz - Assess strategic understanding (LLM-based)
 """
 import random
+import re
 from typing import Any
 
 from ..loader import load_yaml
-from ..utils import clamp_score, extract_json_from_llm
+from ..utils import clamp_score, extract_json_from_llm, contains_nonnegated_keyword
 
 
 _quiz_config = None
@@ -82,6 +83,9 @@ def get_quiz_question(quiz_type: str) -> str:
     return random.choice(type_questions)
 
 
+# Use central contains_nonnegated_keyword from utils
+
+
 def evaluate_stage_quiz(user_answer: str, bot: Any) -> dict:
     """Evaluate stage identification quiz.
 
@@ -105,8 +109,8 @@ def evaluate_stage_quiz(user_answer: str, bot: Any) -> dict:
     expected_strategy = bot.flow_engine.flow_type
 
     answer_lower = user_answer.strip().lower()
-    stage_correct = expected_stage.lower() in answer_lower
-    strategy_correct = expected_strategy.lower() in answer_lower
+    stage_correct = contains_nonnegated_keyword(answer_lower, expected_stage.lower())
+    strategy_correct = contains_nonnegated_keyword(answer_lower, expected_strategy.lower())
     correct = stage_correct and strategy_correct
 
     feedback = _generate_stage_feedback(

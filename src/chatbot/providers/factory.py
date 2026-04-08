@@ -2,12 +2,14 @@
 from .base import BaseLLMProvider
 from .groq_provider import GroqProvider
 from .sambanova_provider import SambaNovaProvider
+from .openrouter_provider import OpenRouterProvider
 from .dummy_provider import DummyProvider
 
 # Provider registry
 PROVIDERS = {
     "groq": GroqProvider,
     "sambanova": SambaNovaProvider,
+    "openrouter": OpenRouterProvider,
     "dummy": DummyProvider,
 }
 
