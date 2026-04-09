@@ -1,0 +1,49 @@
+# Canonical objection handling flows (sourced from: Objection Handling matrix SOP.pdf)
+# Each value is a multi-line step list; transactional overrides provide shorter, evidence-focused variants.
+sop_flows:
+  money: |-
+    1. Acknowledge: 'I hear you.'
+    2. Isolate: 'If the investment wasn't a concern, is this what you'd want?'
+    3. Let them self-solve: 'How do you think you could find the funding?'
+    4. If stuck: suggest credit or payment options
+    5. Ask ONE question
+  partner: |-
+    1. Same side: 'If your partner was here and on board, would this be the answer? What gives you the most benefit?'
+    2. If they'd proceed alone — soft close (it's often fear underneath)
+    3. If approval needed — coach them to frame it around problems/impact, not solutions
+    4. Ask ONE question
+  fear: |-
+    1. Full acknowledgment — validate the concern (they need to feel heard first)
+    2. Challenge process: 'Is your current decision-making getting you the results you want?'
+    3. Perspective shift: 'What do you feel you NEED to do to get the outcome you want?'
+    4. Ask ONE question
+  think: |-
+    1. Acknowledge: 'Totally fair.'
+    2. Drill to logistical/money FIRST: 'Is it more the investment side, or something else you're weighing up?'
+    3. Once root identified, handle as money or fear type
+    4. Ask ONE question
+  logistical: |-
+    1. Skip acknowledgment — solve the logistics directly
+    2. Remove the barrier or simplify the process
+    3. Ask ONE question
+  smokescreen: |-
+    1. Test if genuine: 'Is it the product itself, or is there something else going on?'
+    2. If no real objection — respect their time, do not push
+    3. ONE clarifying question only
+
+transactional_overrides:
+  fear: |-
+    1. Acknowledge briefly
+    2. Address with evidence: specs, warranty, return policy, or social proof
+    3. Ask ONE question
+  think: |-
+    1. Acknowledge: 'Totally fair.'
+    2. Drill to root: 'Is it more the price, or something about the product itself?'
+    3. If price — use money flow; if product doubt — provide specs/proof
+    4. Ask ONE question
+
+fallback: |-
+  1. Acknowledge
+  2. Recall stated goal
+  3. Apply reframe strategy
+  4. Ask ONE question

@@ -31,12 +31,7 @@ def _build_union_pattern_for_keywords(keyword_tuple) -> re.Pattern:
 
 
 def contains_nonnegated_keyword(text: str, keywords, negations=None, neg_window: int = 3) -> bool:
-    """Return True if `text` contains any keyword (word-boundary) that is
-    not negated within the `neg_window` preceding tokens.
-
-    - `keywords` may be a single string or an iterable of strings.
-    - `negations` may be provided to override default negation tokens.
-    """
+    """True if text contains a keyword not negated in the previous tokens."""
     if not text or not keywords:
         return False
 

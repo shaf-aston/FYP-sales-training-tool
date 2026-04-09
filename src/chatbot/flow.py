@@ -1,4 +1,4 @@
-"""Finite State Machine for sales flow — state transitions and advancement logic."""
+"""FSM engine. Manages stage transitions and advancement conditions."""
 
 from typing import Any, Optional
 
@@ -72,36 +72,28 @@ FLOWS: dict[str | Strategy, dict[str, Any]] = {
 }
 
 
-# --- Advancement Rules (Pure Functions) ---
+# --- Advancement Rules ---
+
+# phrases that signal clear buying intent regardless of signals.yaml config
+_EXPLICIT_INTENT_PHRASES = [
+    "looking for", "help with", "interested in", "price", "problem",
+    "buy", "purchase", "struggling", "have to", "ready to buy", "looking to buy",
+]
+
+# safety valve — advance from intent after this many turns even with no signal
+_INTENT_MAX_TURNS = 6
+
 
 def user_has_clear_intent(history: list[dict[str, str]], user_msg: str, turns: int) -> bool:
-    """True when buying signals, intent keywords, or max turns reached.
-
-    Intent stage is discovery - allow turn-based advancement since user may be reticent.
-    NOTE: 'want' and 'need' are deliberately excluded - they are stopwords (analysis.py)
-    and fire on generic statements ("I want to make money") that carry no buying intent.
-    """
-    explicit_intent_phrases = [
-        "looking for",
-        "help with",
-        "interested in",
-        "price",
-        "problem",
-        "buy",
-        "purchase",
-        "struggling",
-        "have to",
-        "ready to buy",
-        "looking to buy",
-    ]
-    if user_msg and text_contains_any_keyword(user_msg.lower(), explicit_intent_phrases):
+    """True when buying signals present or max turns reached."""
+    if user_msg and text_contains_any_keyword(user_msg.lower(), _EXPLICIT_INTENT_PHRASES):
         return True
 
     intent_level = classify_intent_level(history, user_msg, signal_keywords=SIGNALS)
     if intent_level == "high":
         return True
 
-    return turns >= 6
+    return turns >= _INTENT_MAX_TURNS
 
 
 def _check_advancement_condition(
@@ -111,16 +103,7 @@ def _check_advancement_condition(
     stage_name: str,
     min_turns: int = 2,
 ) -> bool:
-    """Generic advancement detector: check config keywords + safety valve.
-
-    Used by stages that require signal detection before auto-advancement.
-    FRAMEWORK: Must detect actual signal (doubt, stakes) or hit max_turns safety valve.
-    Do NOT auto-advance on turn count alone - violates consultative framework.
-
-    Args:
-        turns: Number of turns in the CURRENT stage (stage_turn_count)
-        min_turns: Minimum turns required in this stage before checking signals
-    """
+    """Generic advancement detector: check config keywords + safety valve."""
     if turns < min_turns:
         return False
 
@@ -145,25 +128,17 @@ def _check_advancement_condition(
 
 
 def user_shows_doubt(history: list[dict[str, str]], user_msg: str, turns: int) -> bool:
-    """True when user acknowledges pain points or current approach isn't working.
-
-    FRAMEWORK REQUIREMENT: Must detect actual doubt/problem acknowledgment.
-    Safety valve: After max_turns without doubt signals, assume resistant prospect and advance.
-    """
+    """True when user shows doubt/pain or safety valve triggers."""
     return _check_advancement_condition(history, user_msg, turns, 'logical', min_turns=2)
 
 
 def user_expressed_stakes(history: list[dict[str, str]], user_msg: str, turns: int) -> bool:
-    """True when user shares emotional stakes or consequences.
-
-    FRAMEWORK REQUIREMENT: Must detect actual emotional investment.
-    Safety valve: After max_turns without stakes, assume low-emotion prospect and advance.
-    """
+    """True when user shares emotional stakes or safety valve fires."""
     return _check_advancement_condition(history, user_msg, turns, 'emotional', min_turns=3)
 
 
 def commitment_or_objection(history: list[dict[str, str]], user_msg: str, turns: int) -> bool:
-    """True when user commits or objects. Short messages excluded (likely fillers)."""
+    """True when user commits or objects; short messages treated as fillers."""
     if len(user_msg.split()) < 3:
         return False
     return (text_contains_any_keyword(user_msg, SIGNALS["commitment"]) or
@@ -215,13 +190,7 @@ class SalesFlowEngine:
         return Strategy.CONSULTATIVE
 
     def get_current_prompt(self, user_message: str = "", objection_data: dict | None = None, pre_state=None) -> str:
-        """Generate system prompt for current stage via content.py.
-
-        Args:
-            user_message: The current user input
-            objection_data: Pre-computed objection classification (avoids redundant calls)
-            pre_state: Pre-computed ConversationState (avoids redundant analyze_state call)
-        """
+        """Generate system prompt for current stage."""
         return generate_stage_prompt(
             strategy=self.strategy_for_prompts,
             stage=self.current_stage,

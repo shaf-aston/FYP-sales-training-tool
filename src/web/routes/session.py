@@ -84,7 +84,7 @@ def api_init():
 
     try:
         bot = SalesChatbot(provider_type=provider, product_type=product_type, session_id=session_id)
-        # Dev: override strategy, skipping intent-detection phase entirely
+        # dev override — skip intent detection
         force_strategy = data.get('force_strategy')
         if force_strategy in ("consultative", "transactional"):
             bot.flow_engine._initial_flow_type = force_strategy
@@ -95,7 +95,7 @@ def api_init():
         bp.app.logger.exception(f"Bot init failed: {init_error}")  # type: ignore
         return jsonify({"error": "Initialization failed. Please try again."}), 500
 
-    # Generate greeting and training data from content.py — synced with STRATEGY_PROMPTS
+    # greeting + training blob, keep in sync with STRATEGY_PROMPTS
     init_data = generate_init_greeting(bot.flow_engine.flow_type)
 
     return jsonify({
@@ -120,7 +120,7 @@ def api_restore():
     product_type = data.get('product_type')  # None → generic default → intent-first discovery
     provider = data.get('provider', "groq")
 
-    # Validate history structure before replay to prevent corrupted localStorage crashing the bot
+    # reject corrupted localStorage before replay
     if not isinstance(history, list):
         return jsonify({"error": "Invalid history format"}), 400
     for entry in history:
@@ -232,6 +232,83 @@ def api_config():
         "product_strategies": product_strategies,
         "strategies": ["consultative", "transactional", "intent"],
     })
+
+
+@bp.route('/stages', methods=['GET'])
+def api_stages():
+    """Return available stages for the current session's flow."""
+    session_id = request.headers.get('X-Session-ID')
+    if not session_id:
+        return jsonify({"error": "Session ID required"}), 400
+
+    bot = bp.get_session(session_id)  # type: ignore
+    if not bot:
+        return jsonify({"error": "Session not found"}), 404
+
+    stages = bot.flow_engine.flow_config.get("stages", [])
+    return jsonify({"success": True, "stages": stages})
+
+
+@bp.route('/stage', methods=['POST'])
+def api_stage():
+    """Jump FSM to a specific stage (safe session route).
+
+    This allows authorized clients (with a valid session) to request a
+    stage jump without enabling the debug panel on the server.
+    """
+    session_id = request.headers.get('X-Session-ID')
+    if not session_id:
+        return jsonify({"error": "Session ID required"}), 400
+
+    bot = bp.get_session(session_id)  # type: ignore
+    if not bot:
+        return jsonify({"error": "Session not found"}), 404
+
+    data = request.json or {}
+    stage = data.get('stage')
+    stages = bot.flow_engine.flow_config.get("stages", [])
+    if not stage or stage not in stages:
+        return jsonify({"error": f"Invalid stage. Available: {stages}"}), 400
+
+    bot.flow_engine.advance(target_stage=stage)
+
+    # Extract bot state for client
+    from chatbot.utils import Strategy
+    stage_str = "----" if bot.flow_engine.flow_type == Strategy.INTENT else bot.flow_engine.current_stage.upper()
+    strategy_str = bot.flow_engine.flow_type.upper()
+
+    return jsonify({"success": True, "stage": stage_str, "strategy": strategy_str})
+
+
+@bp.route('/strategy', methods=['POST'])
+def api_strategy():
+    """Switch FSM strategy for the current session.
+
+    This endpoint is session-safe (no debug panel required) and resets the
+    current stage according to SalesFlowEngine.switch_strategy().
+    """
+    session_id = request.headers.get('X-Session-ID')
+    if not session_id:
+        return jsonify({"error": "Session ID required"}), 400
+
+    bot = bp.get_session(session_id)  # type: ignore
+    if not bot:
+        return jsonify({"error": "Session not found"}), 404
+
+    data = request.json or {}
+    strategy = (data.get('strategy') or '').strip().lower()
+
+    valid_strategies = {'intent', 'consultative', 'transactional'}
+    if strategy not in valid_strategies:
+        return jsonify({"error": f"Invalid strategy. Available: {sorted(valid_strategies)}"}), 400
+
+    if not bot.flow_engine.switch_strategy(strategy):
+        return jsonify({"error": "Failed to switch strategy"}), 400
+
+    # Keep rewind/reset behavior consistent after explicit manual switches.
+    bot.flow_engine._initial_flow_type = strategy
+
+    return jsonify({"success": True, **bp.bot_state(bot)})  # type: ignore
 
 
 @bp.route('/score', methods=['GET'])

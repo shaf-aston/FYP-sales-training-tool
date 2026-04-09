@@ -1,16 +1,16 @@
 """Analytics, quiz, and knowledge management endpoints."""
 
+import os
+import json
+from datetime import datetime
+from threading import Lock
+
 from flask import Blueprint, request, jsonify
 from chatbot.analytics.session_analytics import SessionAnalytics
 from chatbot.knowledge import load_custom_knowledge, save_custom_knowledge, clear_custom_knowledge, ALLOWED_FIELDS, MAX_FIELD_LENGTH
+from web.security import SecurityConfig, InputValidator
 
 bp = Blueprint('analytics', __name__, url_prefix='/api')
-
-
-def _parse_knowledge_mode() -> str | None:
-    """Parse and validate optional knowledge mode query parameter."""
-    mode = (request.args.get('mode') or '').strip().lower()
-    return 'prospect' if mode == 'prospect' else None
 
 
 def init_routes(app, require_session_func, bot_state_func=None):
@@ -53,8 +53,6 @@ def quiz_get_question():
 @bp.route('/quiz/stage', methods=['POST'])
 def quiz_stage():
     """Stage identification quiz (deterministic evaluation)."""
-    from web.security import SecurityConfig
-
     bot, err = bp.require_session()  # type: ignore
     if err:
         return err
@@ -75,8 +73,6 @@ def quiz_stage():
 @bp.route('/quiz/next-move', methods=['POST'])
 def quiz_next_move():
     """Next move quiz (LLM-evaluated comparison)."""
-    from web.security import SecurityConfig
-
     bot, err = bp.require_session()  # type: ignore
     if err:
         return err
@@ -105,8 +101,6 @@ def quiz_next_move():
 @bp.route('/quiz/direction', methods=['POST'])
 def quiz_direction():
     """Direction/strategy quiz (LLM-evaluated understanding check)."""
-    from web.security import SecurityConfig
-
     bot, err = bp.require_session()  # type: ignore
     if err:
         return err
@@ -137,11 +131,8 @@ def get_knowledge():
 @bp.route('/knowledge', methods=['POST'])
 def save_knowledge_route():
     """Save custom knowledge data with field-level validation."""
-    from web.security import InputValidator
-
     data = request.json
 
-    # Validate knowledge data (type checking, field whitelisting, length limits)
     error = InputValidator.validate_knowledge_data(
         data,
         allowed_fields=ALLOWED_FIELDS,
@@ -167,30 +158,17 @@ def clear_knowledge_route():
 
 @bp.route('/analytics/session/<session_id>', methods=['GET'])
 def get_session_analytics(session_id):
-    """Get analytics events for a specific session (for evaluation study).
-
-    Returns all recorded events: stage transitions, intent classifications,
-    objection types, strategy switches.
-    """
+    """Analytics events for a session. Caller's X-Session-ID header must match the path param."""
+    caller_id = request.headers.get('X-Session-ID', '')
+    if session_id != caller_id:
+        return jsonify({"error": "Forbidden"}), 403
     events = SessionAnalytics.get_session_analytics(session_id)
     return jsonify({"success": True, "session_id": session_id, "events": events})
 
 
 @bp.route('/analytics/summary', methods=['GET'])
 def get_analytics_summary():
-    """Get aggregated analytics summary for evaluation chapter.
-
-    Returns:
-    - stage_reach_distribution: how many sessions reached each stage
-    - intent_distribution: frequency of low/medium/high classifications
-    - objection_type_distribution: which objection types appear most
-    - initial_strategy_distribution: consultative vs transactional assigned
-    - strategy_switch_frequency: how often strategies changed
-    - ab_variant_distribution: distribution across A/B variants
-    - sessions_reached_pitch: count of sessions reaching pitch stage
-    - sessions_reached_objection: count of sessions reaching objection stage
-    - total_sessions: total session count
-    """
+    """Aggregated stats for the evaluation chapter. Same shape as get_evaluation_summary()."""
     summary = SessionAnalytics.get_evaluation_summary()
     return jsonify({"success": True, **summary})
 
@@ -198,11 +176,6 @@ def get_analytics_summary():
 # ============================================================================
 # User Feedback (append-only JSONL)
 # ============================================================================
-
-import os
-import json
-from datetime import datetime
-from threading import Lock
 
 _FEEDBACK_FILE = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'feedback.jsonl')
 _feedback_lock = Lock()
@@ -227,6 +200,7 @@ def submit_feedback():
             return jsonify({"error": "Rating must be a number 1-5"}), 400
 
     if comment and len(comment) > 500:
+        bp.app.logger.debug("feedback comment trimmed to 500 chars")  # type: ignore
         comment = comment[:500]
 
     entry = {

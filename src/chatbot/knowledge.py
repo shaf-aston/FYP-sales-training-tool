@@ -1,4 +1,4 @@
-"""User-provided custom knowledge — stored in YAML, injected into prompts at runtime."""
+"""Loads, saves, and clears user-provided knowledge from YAML. Injected into prompts at runtime."""
 
 import re
 import yaml
@@ -17,7 +17,7 @@ MAX_FIELD_LENGTH = 1000
 _BASE_KNOWLEDGE_DIR = Path(__file__).parent.parent / "config"
 _DEFAULT_KNOWLEDGE_FILE = _BASE_KNOWLEDGE_DIR / "custom_knowledge.yaml"
 
-# Backwards-compatible public name expected by tests
+# keep legacy public name for tests
 KNOWLEDGE_FILE = _DEFAULT_KNOWLEDGE_FILE
 
 

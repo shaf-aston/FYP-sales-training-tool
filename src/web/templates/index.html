@@ -6,6 +6,7 @@
     <title>Eloquencé FYP</title>
     <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" />
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
     <script src="{{ url_for('static', filename='speech.js') }}"></script>
     <link
       rel="stylesheet"
@@ -19,6 +20,46 @@
           <h1>Sales Assistant</h1>
           <div class="header-actions">
             <button class="reset-btn" onclick="resetChat()">Reset</button>
+          </div>
+        </div>
+
+        <div class="flow-controls" id="flowControls">
+          <div class="flow-controls-group">
+            <label class="flow-controls-label" for="strategySelectMain">Strategy</label>
+            <select
+              id="strategySelectMain"
+              class="flow-control-select"
+              aria-label="Select strategy"
+            >
+              <option value="">Select strategy...</option>
+              <option value="consultative">CONSULTATIVE</option>
+              <option value="transactional">TRANSACTIONAL</option>
+              <option value="intent">INTENT</option>
+            </select>
+            <button
+              class="flow-control-btn"
+              id="switchStrategyBtn"
+              onclick="switchStrategy('strategySelectMain')"
+            >
+              Switch
+            </button>
+          </div>
+          <div class="flow-controls-group">
+            <label class="flow-controls-label" for="stageSelectMain">Stage</label>
+            <select
+              id="stageSelectMain"
+              class="flow-control-select"
+              aria-label="Select stage to jump to"
+            >
+              <option value="">Loading...</option>
+            </select>
+            <button
+              class="flow-control-btn"
+              id="jumpStageMainBtn"
+              onclick="jumpStage('stageSelectMain')"
+            >
+              Jump
+            </button>
           </div>
         </div>
 
@@ -82,6 +123,16 @@
           </div>
         </div>
         
+        <div class="sidebar-section" id="sidebar-jump-stage">
+          <h3>Jump to Stage</h3>
+          <div class="sidebar-actions">
+            <select id="stageSelect" class="sidebar-btn" aria-label="Select stage to jump to">
+              <option value="">Loading…</option>
+            </select>
+            <button class="sidebar-btn" id="jumpStageBtn" onclick="jumpStage()">Jump</button>
+          </div>
+        </div>
+        
         <div class="sidebar-section">
           <h3>Prospect Practice</h3>
           <div class="sidebar-actions">
@@ -100,7 +151,7 @@
         <div class="sidebar-section">
           <h3>Tools</h3>
           <div class="sidebar-actions">
-            <a id="knowledgeBaseLink" href="/knowledge{% if mode == 'prospect' %}?mode=prospect{% endif %}" class="sidebar-btn">📚 Knowledge</a>
+            <a id="knowledgeBaseLink" href="/knowledge" class="sidebar-btn">📚 Knowledge</a>
             <button id="trainingToggleBtn" class="sidebar-btn" onclick="toggleTrainingPanel()">🎓 Training</button>
             <button id="quizToggleBtn" class="sidebar-btn" onclick="toggleQuizPanel()">📝 Quiz</button>
             <button id="feedbackToggle" class="sidebar-btn" onclick="toggleFeedback()">💬 Feedback</button>
@@ -434,8 +485,8 @@
     </div>
 
     <script>
-      const PAGE_MODE = "{{ mode }}";
-      const PAGE_DEBUG = "{{ 'true' if debug_enabled else 'false' }}";
+      const PAGE_MODE = {{ mode | tojson }};
+      const PAGE_DEBUG = {{ debug_enabled | tojson }};
     </script>
     <script src="{{ url_for('static', filename='app.js') }}"></script>
   </body>

@@ -1208,7 +1208,7 @@ graph TD
 
 ### 6.1 Chat Turn Lifecycle
 
-**Figure 6 — Chat Turn Sequence Diagram (Low-Level):** Shows the complete message flow for a single user turn, with real class names, method signatures, and timing information. Demonstrates how `app.py → SalesChatbot → SalesFlowEngine → PromptEngine → Provider → Analytics` coordinate to produce a response. See `03_chat_turn_sequence.mmd` for the full 8-step version with 8 participants.
+**Figure 6 — Chat Turn Sequence Diagram (Low-Level):** Shows the complete message flow for a single user turn, with real class names, method signatures, and timing information. Demonstrates how `app.py → SalesChatbot → SalesFlowEngine → PromptEngine → Provider → Analytics` coordinate to produce a response. See `Documentation/diagrams/01_chatbot_big_picture.mmd` for the merged beginner-first overview.
 
 ```mermaid
 sequenceDiagram
@@ -1356,7 +1356,7 @@ record_strategy_switch(reason='default_after_3_turns')"]
 
 ### 6.3 Prompt Assembly Pipeline (4-Tier System)
 
-**Figure 10 — Prompt Assembly Pipeline (Low-Level):** Shows the 4-tier assembly algorithm inside `content.generate_stage_prompt()`. Tier 1 is an early-exit override layer; Tiers 2–4 build the state-aware prompt. See `04_prompt_assembly.mmd` for full detail.
+**Figure 10 — Prompt Assembly Pipeline (Low-Level):** Shows the 4-tier assembly algorithm inside `content.generate_stage_prompt()`. Tier 1 is an early-exit override layer; Tiers 2–4 build the state-aware prompt. See `Documentation/diagrams/03_how_responses_are_built.mmd` for the merged beginner-first version.
 
 ```mermaid
 flowchart TD

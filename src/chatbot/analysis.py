@@ -16,25 +16,18 @@ from .utils import contains_nonnegated_keyword
 
 @dataclass
 class ConversationState:
-    """Analyzed state of a conversation turn.
-
-    Attributes:
-        intent: User intent level ("low", "medium", "high")
-        guarded: Whether user is showing defensive/evasive behaviour
-        question_fatigue: Whether bot has asked too many questions recently
-        decisive: Whether user is ready to make a decision (high intent + not guarded)
-    """
-    intent: str
-    guarded: bool
-    question_fatigue: bool
-    decisive: bool
+    """Analyzed state of a conversation turn."""
+    intent: str          # "low", "medium", "high"
+    guarded: bool        # defensive/evasive behaviour detected
+    question_fatigue: bool  # bot asked too many questions recently
+    decisive: bool       # high intent + not guarded
 
     def __getitem__(self, key: str):
-        """Backwards-compatible dict-style access for legacy callers/tests."""
+        # legacy callers used dict access, keep it working
         return getattr(self, key)
 
     def get(self, key: str, default=None):
-        """Backwards-compatible dict.get() style access."""
+        # legacy callers used dict access, keep it working
         return getattr(self, key, default)
 
 
@@ -72,19 +65,16 @@ _GUARDEDNESS_WEIGHTS = {
 
 
 def text_contains_any_keyword(text, keywords) -> bool:
-    """Return True if text contains any non-negated keyword (word-boundary, case-insensitive).
-
-    Iterates all matches so a negated first match doesn't block a valid later one.
-    E.g. "don't need X but I want Y" — "need" is negated, "want" is not -> True.
+    """True if text has any non-negated keyword. Alias for contains_nonnegated_keyword —
+    kept for backward compatibility with the 10+ call sites that import this name.
     """
-    # Delegate to shared helper in utils for consistent behavior.
     return contains_nonnegated_keyword(text, keywords)
 
 
 # --- State analysis ---
 
 def _has_user_stated_clear_goal(history) -> bool:
-    """Return True if user stated a clear goal recently (Intent Lock trigger)."""
+    """True if user stated a clear goal recently (intent lock)."""
     if not history:
         return False
     goal_keywords = _yaml_config["goal_indicators"]
@@ -120,11 +110,7 @@ def _flatten_keywords(keywords):
 
 
 def classify_intent_level(history, user_message="", signal_keywords=None) -> str:
-    """Classify current intent level as "low", "medium", or "high".
-
-    Uses the same intent-lock behaviour as analyze_state so all callers share
-    one consistent intent model.
-    """
+    """Classify intent level as low/medium/high. Uses intent-lock behaviour."""
     if signal_keywords is None:
         signal_keywords = load_signals()
 
@@ -166,12 +152,7 @@ def classify_intent_level(history, user_message="", signal_keywords=None) -> str
 
 
 def detect_guardedness(user_message: str, history: list[dict[str, str]]) -> float:
-    """Simplified guardedness detection using keyword matching.
-    
-    Returns float 0.0 (not guarded) to 1.0 (very guarded).
-    
-    Special case: Single-word agreement after substantive answer is NOT guarded.
-    """
+    """Guardedness score 0.0–1.0; agreement-after-answer treated as not guarded."""
     if not user_message:
         return 0.0
     
@@ -211,7 +192,7 @@ def detect_guardedness(user_message: str, history: list[dict[str, str]]) -> floa
         if text_contains_any_keyword(msg_lower, keywords):
             score += weight
     
-    # Context multiplier: Short reply to detailed question
+    # short reply to a long question bumps the score
     if history:
         last_bot = next((m.get('content', '') for m in reversed(history) if m.get('role') == 'assistant'), '')
         if len(last_bot.split()) > 50 and msg_length < 8:
@@ -225,11 +206,7 @@ def analyze_state(
     user_message: str = "",
     signal_keywords: dict[str, Any] | None = None,
 ) -> ConversationState:
-    """Return {intent, guarded, question_fatigue, decisive} for the current turn.
-
-    Implements Intent Lock (high intent sticks once stated) and uses simplified
-    guardedness detection via detect_guardedness().
-    """
+    """Return the conversation state (intent, guarded, question_fatigue, decisive)."""
     if signal_keywords is None:
         signal_keywords = load_signals()
 
@@ -311,7 +288,7 @@ def is_repetitive_validation(history, threshold=None) -> bool:
 
 
 def is_literal_question(user_message) -> bool:
-    """Return True if the user is genuinely asking for information (not rhetorical)."""
+    """True if the user is asking for information (not rhetorical)."""
     if not user_message:
         return False
     msg = user_message.lower().strip()
@@ -348,13 +325,7 @@ def detect_acknowledgment_context(
     history: list[dict[str, str]],
     state: ConversationState,
 ) -> str:
-    """Determine if/how acknowledgment is psychologically warranted this turn
-
-    Returns: "full" | "light" | "none"
-      "full"  → User shared vulnerability or emotional content — validate before moving on
-      "light" → User is guarded/evasive — brief acknowledgment lowers defences, creates openness
-      "none"  → Info request, factual question, or low-engagement filler — acknowledgment here is noise
-    """
+    """Choose acknowledgment level: 'full' | 'light' | 'none'."""
     if not user_message:
         return "none"
 
@@ -395,10 +366,7 @@ def detect_acknowledgment_context(
 
 
 def user_demands_directness(history, user_message) -> bool:
-    """Detect frustration or explicit demands for a straight answer.
-
-    Triggers pitch skip in flow.py when True.
-    """
+    """Detects frustration or demand for a straight answer."""
     demand_keywords = _SIGNALS.get("demand_directness", [])
     msg_lower = user_message.lower()
 
@@ -415,31 +383,31 @@ def user_demands_directness(history, user_message) -> bool:
 
 _REFRAME_DESCRIPTIONS = {
     "money": {
-        "isolate_funds": "Isolate the money concern: 'Setting aside the investment for a moment, is this what you want?'",
-        "self_solve": "Calculate cost of inaction: 'What's it costing you monthly to NOT solve this?'",
-        "plant_credit": "Introduce financing/payment options: 'Most clients use X to spread the cost.'",
-        "funding_options": "Explore alternative funding: 'Have you considered using Y to fund this?'",
+        "isolate_funds": "separate money from the want — 'if cost wasn't an issue, is this actually what you'd go for?'",
+        "self_solve": "Let them find the solution: 'How do you think you could resolve that? Where could you find the funding to get you where you want to go?'",
+        "plant_credit": "Introduce credit: 'Have you considered putting it on a card and paying it off with the results you get from this?'",
+        "funding_options": "Present alternatives: 'Here are a few ways other clients have funded this...'",
     },
     "partner": {
-        "same_side": "Get on their side: 'Totally understand. What do you think THEY would say about it?'",
-        "open_wallet_test": "Test real decision-maker: 'If they said yes, would YOU move forward?'",
-        "schedule_followup": "Bring partner in: 'Want to set up a call with them so they can hear it directly?'",
+        "same_side": "Get on same side: 'If your partner was here and on board, would this be the answer for you? What specifically gives you the most benefit?'",
+        "open_wallet_test": "Test real commitment: 'We can schedule a follow-up, or you can put down a commitment now — which shows you're serious going into that conversation. How do you want to proceed?'",
+        "schedule_followup": "Bring them in: 'Let's get a call when they can join — that way they hear it directly. When works?'",
     },
     "fear": {
-        "change_of_process": "Reframe risk as process: 'What's the risk of staying where you are?'",
-        "island_analogy": "Use future contrast: 'A year from now, what's worse — trying and adjusting, or staying the same?'",
-        "identity_reframe": "Connect to identity: 'You said you wanted [goal]. This is how people like you get there.'",
+        "change_of_process": "Challenge the process: 'Do you feel your current decision-making is getting you the results you want? What would happen if you kept making decisions the same way?'",
+        "island_analogy": "Perspective shift: 'All your decisions come from where you stand now. To see what's really possible, you have to pick a direction. What do you feel you NEED to do to get the outcome you want?'",
+        "identity_reframe": "Identity shift: 'The only difference between where you are and where you want to be is the decisions you make. What choices would you need to start making to get there?'",
     },
     "logistical": {
-        "solve_mechanics": "Remove the barrier: 'What if I handled [logistics]? Would that change things?'",
-        "simplify_process": "Simplify: 'It's actually just [N] steps. Here's exactly what happens next.'",
+        "solve_mechanics": "Remove the barrier: 'What if we handled [X] for you? Would that change things?'",
+        "simplify_process": "Simplify: 'It's actually straightforward — here's exactly what happens next.'",
     },
     "think": {
-        "drill_to_root": "Find the real concern: 'Totally fair. What specifically would you be weighing up?'",
-        "handle_root_type": "Address root concern: Once identified, handle as money/fear/partner type.",
+        "drill_to_root": "Drill to root — money first, then fear: 'Totally fair. Is it more the investment side of things, or something else you're weighing up?'",
+        "handle_root_type": "Once root identified, handle as money or fear type using those exact sequences.",
     },
     "smokescreen": {
-        "legitimacy_test": "Test if genuine: 'I hear you. Just so I understand — is it the product itself, or something else?'",
+        "legitimacy_test": "Test if genuine: 'I hear you — is it the product itself, or is there something else going on?'",
     },
 }
 
@@ -461,7 +429,7 @@ _OBJECTION_KEYWORDS = {
 }
 
 def classify_objection(user_message, history=None) -> dict[str, Any]:
-    """Classify objection type and return reframe strategy for the LLM prompt."""
+    """Classify objection type and pick a reframe strategy for the prompt."""
     objection_config = _yaml_config.get("objection_handling", {})
     classification_order = objection_config.get(
         "classification_order",
@@ -503,13 +471,9 @@ def should_trigger_web_search(
     user_message: str,
     config: dict,
 ) -> bool:
-    """Return True if web search enrichment should fire this turn.
-
-    Pure function — config injected as a dict so tests need no file I/O.
-    Two trigger paths:
-      1. User message contains an explicit evidence/proof phrase (any stage).
-      2. Objection stage with a trigger-eligible objection type.
-    """
+    """True if web search enrichment should fire this turn."""
+    # config injected so tests don't need file I/O
+    
     if not config.get("enabled"):
         return False
     msg_lower = user_message.lower()
@@ -525,11 +489,8 @@ def build_search_query(
     product_type: str,
     templates: dict,
 ) -> str:
-    """Build a focused search query from objection type and product context.
-
-    Pure function — templates injected for easy testing.
-    Falls back to the "explicit" template when objection_type is unknown/None.
-    """
+    """Build a focused search query from objection type and product context."""
+    # templates injected so tests don't need file I/O
     keyword = product_type or "product"
     template_key = objection_type if objection_type in templates else "explicit"
     template = templates.get(template_key, "{keyword} facts data")

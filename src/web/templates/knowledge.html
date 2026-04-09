@@ -223,7 +223,7 @@
 
       // CRUD
       function load() {
-        const suffix = MODE ? '?mode=' + encodeURIComponent(MODE) : '';
+        const suffix = '';
         fetch('/api/knowledge' + suffix)
           .then((r) => r.json())
           .then((d) => {
@@ -259,7 +259,7 @@
           )
         )
           return;
-        const suffix = MODE ? '?mode=' + encodeURIComponent(MODE) : '';
+        const suffix = '';
         fetch('/api/knowledge' + suffix, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -276,7 +276,7 @@
 
       function clearAll() {
         if (!confirm("Clear all knowledge base data?")) return;
-        const suffix = MODE ? '?mode=' + encodeURIComponent(MODE) : '';
+        const suffix = '';
         fetch('/api/knowledge' + suffix, { method: "DELETE" })
           .then((r) => r.json())
           .then((d) => {

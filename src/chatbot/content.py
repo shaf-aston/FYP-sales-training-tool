@@ -12,7 +12,7 @@ from .prompts import (
     get_acknowledgment_guidance
 )
 from .overrides import check_override_condition
-from .loader import get_adaptation_template, get_tactic
+from .loader import get_adaptation_template, get_tactic, load_objection_flows
 from .analysis import (
     analyze_state,
     extract_preferences,
@@ -83,59 +83,44 @@ Naturally embed 1-2 into your response. Do NOT replay full sentences.
     return preference_context + keyword_context
 
 
-def _get_stage_specific_prompt(strategy, stage, state, user_message, history, objection_data=None):
-    """Get stage-specific prompt with any special handling (intent_low, objection classification).
+# Load SOP flows from central YAML so the decision-matrix (PDF) can be
+# edited without changing code. The canonical source-of-truth is
+# 'Objection Handling matrix SOP.pdf' kept in the repository.
+_OFLOWS = load_objection_flows()
+_SOP_FLOWS = _OFLOWS.get("sop_flows", {})
+_SOP_FLOWS_TRANSACTIONAL = {**_SOP_FLOWS, **_OFLOWS.get("transactional_overrides", {})}
+_SOP_FLOW_FALLBACK = _OFLOWS.get("fallback", "1. Acknowledge\n2. Recall stated goal\n3. Apply reframe strategy\n4. Ask ONE question")
 
-    Args:
-        objection_data: Pre-computed objection classification (avoids redundant classify_objection calls)
-    """
+
+def _get_stage_specific_prompt(strategy, stage, state, user_message, history, objection_data=None):
+    """Pick stage prompt and build any objection context block."""
 
     # Intent stage: pick low-intent or standard prompt
     if stage == "intent":
         prompt_key = "intent_low" if state.intent == "low" else "intent"
         return get_prompt(strategy, prompt_key), ""
 
-    # Logical/Emotional stages: HARD STOP on pitching
-    # Frameworks require discovery before solution. Override to standard prompt if LLM veered off.
     if stage in ("logical", "emotional"):
-        # Return stage prompt as-is; no reframe injection here (ensures discovery, not selling)
         return get_prompt(strategy, stage), ""
 
-    # Objection stage: classify and inject reframe guidance
+    # Objection stage: classify and inject SOP-aligned reframe guidance
     if stage == "objection" and user_message:
-        # Check if user is walking — no reframe needed
         if commitment_or_walkaway(history, user_message, 0):
-            return get_prompt(strategy, stage), ""  # user is walking — no reframe needed
+            return get_prompt(strategy, stage), ""
 
-        # Use pre-computed objection_data if provided, otherwise compute
         objection_info = objection_data if objection_data else classify_objection(user_message, history)
         if objection_info["type"] != "unknown":
-            # Map type to acknowledgment instruction
-            ack_map = {
-                "fear":        "1. Full acknowledgment: validate the concern (1 sentence) — they need to feel heard before reframing",
-                "money":       "1. Light acknowledgment: 'I hear you.' — then go straight to reframe",
-                "think":       "1. Light acknowledgment: 'Totally fair.' — then drill to the real concern",
-                "partner":     "1. Light acknowledgment: 'Makes sense.' — shows respect for their process",
-                "logistical":  "1. SKIP acknowledgment — solve the logistics directly, no preamble",
-                "smokescreen": "1. SKIP acknowledgment — test if genuine first: 'Is it the product itself, or something else?'",
-            }
-            # Fallback
-            _ack_step = ack_map.get(objection_info["type"], "1. Light acknowledgment only if concern feels genuine — otherwise reframe directly")
-            
-            objection_context = f"""
-OBJECTION CLASSIFIED: {objection_info['type'].upper()}
+            flows = _SOP_FLOWS_TRANSACTIONAL if strategy == "transactional" else _SOP_FLOWS
+            steps = flows.get(objection_info["type"], _SOP_FLOW_FALLBACK)
+            objection_context = f"""OBJECTION CLASSIFIED: {objection_info['type'].upper()}
 REFRAME STRATEGY: {objection_info['strategy']}
 GUIDANCE: {objection_info['guidance']}
 
 STEPS:
-{_ack_step}
-2. Recall the user's stated goal/problem from earlier
-3. Apply the reframe strategy above
-4. Ask ONE question to move forward
+{steps}
 """
             return get_prompt(strategy, stage), objection_context
-    
-    # Default: standard stage prompt
+
     return get_prompt(strategy, stage), ""
 
 
@@ -148,18 +133,7 @@ def generate_stage_prompt(
     objection_data: dict | None = None,
     pre_state=None,
 ) -> str:
-    """Build the full system prompt for the current turn.
-
-    4-tier routing:
-    1. OVERRIDES: Direct requests, soft positives, validation loops (immediate return)
-    2. ADAPTATIONS: Decisive users, literal questions, low-intent/guarded (tactical guidance)
-    3. STAGE SELECT: intent_low vs intent, objection classification
-    4. ASSEMBLY: base + stage + adaptations + preferences + keywords
-
-    Args:
-        objection_data: Pre-computed objection classification (avoids redundant calls)
-        pre_state: Pre-computed ConversationState (avoids redundant analyze_state call)
-    """
+    """Build the full system prompt for this turn. overrides → ack → tactics → stage → state → assembly."""
     base = get_base_prompt(product_context, strategy, history)
     state = pre_state if pre_state is not None else analyze_state(history, user_message, signal_keywords=SIGNALS)
     preferences = extract_preferences(history)
@@ -195,7 +169,6 @@ Intent: {state.intent} | Guarded: {'yes' if state.guarded else 'no'}
 
     # Terse response handling — prevent over-probing short answers
     terse_guidance = ""
-    # Safe null check
     msg_len = len(user_message.split()) if user_message else 0
     if msg_len < TERSE_INPUT_THRESHOLD and stage != "intent":
         terse_guidance = "\nTERSE INPUT: Very short answer. Make ONE observation, then ONE question. Do not over-probe.\n"

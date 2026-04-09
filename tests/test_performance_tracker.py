@@ -8,7 +8,7 @@ def mock_writer(tmp_path):
     metrics_file = tmp_path / "metrics.jsonl"
     metrics_file.write_text(
         '{"session_id": "test1", "provider": "groq", "latency_ms": 100}\n'
-        '{"session_id": "test2", "provider": "openrouter", "latency_ms": 200}\n'
+        '{"session_id": "test2", "provider": "sambanova", "latency_ms": 200}\n'
     )
     return JSONLWriter(str(metrics_file), max_lines=5000, keep_after_rotation=2500)
 

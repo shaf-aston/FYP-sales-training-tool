@@ -28,7 +28,7 @@ _REQUIRED_SIGNAL_KEYS = {
 }
 
 
-@lru_cache(maxsize=None)
+@lru_cache(maxsize=16)  # ~11 config files + headroom
 def load_yaml(filename):
     """Load and cache a YAML file from CONFIG_DIR. Raises on missing file or parse error."""
     filepath = CONFIG_DIR / filename
@@ -61,6 +61,11 @@ def load_signals():
 def load_analysis_config():
     """Load analysis_config.yaml with caching via load_yaml()."""
     return load_yaml("analysis_config.yaml")
+
+
+def load_objection_flows():
+    """Load objection_flows.yaml with caching via load_yaml()."""
+    return load_yaml("objection_flows.yaml")
 
 
 def load_product_config():

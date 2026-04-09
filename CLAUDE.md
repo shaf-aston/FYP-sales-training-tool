@@ -13,7 +13,7 @@ pip install -r requirements.txt
 
 # Set up environment
 cp .env.example .env
-# Edit .env with GROQ_API_KEY and optional OPENROUTER_API_KEY
+# Edit .env with SAFE_GROQ_API_KEY (or ALTERNATIVE_GROQ_API_KEY) and SAMBANOVA_API_KEY
 export PYTHONPATH="${PYTHONPATH}:$(pwd)/src"
 ```
 
@@ -75,7 +75,7 @@ User Input → Intent Classification → FSM Advancement → Prompt Assembly →
 | `flow.py` | FSM definitions & transition logic | `SalesFlowEngine`, `FLOWS` dict |
 | `analysis.py` | Signal detection (intent, objections, sentiment) | `AnalysisEngine` (pure functions) |
 | `content.py` | Prompt assembly, rules, tactical injection | `get_response_prompt()`, `get_base_rules()` |
-| `providers/` | LLM abstraction (Groq primary, OpenRouter backup) | `GroqProvider`, `OpenRouterProvider`, `BaseLLMProvider` |
+| `providers/` | LLM abstraction (Groq primary, SambaNova backup) | `GroqProvider`, `SambaNovaProvider`, `BaseLLMProvider` |
 | `trainer.py` | Coaching feedback generation | `SalesTrainer` |
 | `session_analytics.py` | Conversation metrics for evaluation | `SessionAnalytics` |
 | `knowledge.py` | Custom product knowledge injection | `KnowledgeBase` |
@@ -131,12 +131,12 @@ The FSM (`flow.py`) defines *allowed transitions* but doesn't *store* state—th
 This is more robust than storing `current_stage` in the DB because **analysis is the source of truth**.
 
 ### 4. Provider Factory with Hot-Swapping
-Providers (`groq_provider.py`, `openrouter_provider.py`) implement `BaseLLMProvider`:
+Providers (`groq_provider.py`, `sambanova_provider.py`) implement `BaseLLMProvider`:
 - `chat()` → returns `LLMResponse` with `text`, `latency_ms`
 - `switch_provider()` in `chatbot.py` changes providers mid-session
-- Groq is primary (faster, free tier), OpenRouter is backup
+- Groq is primary (faster, free tier), SambaNova is backup
 
-Latest config: **Groq primary, OpenRouter backup** (cloud-based, zero local dependencies).
+Latest config: **Groq primary, SambaNova backup** (cloud-based, zero local dependencies).
 
 ### 5. Prompt Engineering as Behavioral Control
 Instead of fine-tuning, `content.py` assembles prompts that:
@@ -206,9 +206,9 @@ if user_sentiment == 'vulnerable':
 ### Provider Abstraction Pattern
 ```python
 # In chatbot.py:
-from chatbot.providers.factory import get_provider
+from chatbot.providers.factory import create_provider
 
-provider = get_provider('groq')  # or 'openrouter'
+provider = create_provider('groq')  # or 'sambanova'
 response = provider.chat(
     messages=conversation_history,
     system_prompt=assembled_prompt,
@@ -283,7 +283,8 @@ Both consultative and transactional flows coexist:
 Strategy is detected in `_detect_and_switch_strategy()` from user signals (mentions of budget, urgency, or specific product).
 
 ### Objection Handling
-Objections are classified into 6 types (smokescreen, money, fear, partner, logistical, indecision) in `analysis.py:classify_objection()`. Each type has a reframe pattern in `content.py:_OBJECTION_SKELETONS`.
+Objections are classified into 6 types (smokescreen, money, fear, partner, logistical, indecision) in `analysis.py:classify_objection()`.
+The canonical decision matrix is stored in the repository as `Objection Handling matrix SOP.pdf` and the implementation used by prompts lives in `content.py` as `_SOP_FLOWS` (consultative) and `_SOP_FLOWS_TRANSACTIONAL` (transactional overrides).
 
 ### Tactical Acknowledgment
 User sentiment (vulnerable vs. guarded vs. neutral) determines how we validate:
@@ -321,7 +322,7 @@ Used by `PerformanceTracker.get_summary()` for monitoring.
 3. Test with `test_acknowledgment_tactics.py`
 
 ### Swapping LLM Providers
-1. Change `.env`: `LLM_PROVIDER=openrouter` (or back to `groq`)
+1. Choose provider at session init (for example: `provider="sambanova"`)
 2. Both providers implement same `BaseLLMProvider` interface
 3. No code changes—factory pattern handles it
 
@@ -330,7 +331,7 @@ Used by `PerformanceTracker.get_summary()` for monitoring.
 ## Codebase State & Known Limitations
 
 ### Recent Improvements (March 2026)
-- **OpenRouter Integration**: Backup cloud provider (no local LLM dependency)
+- **SambaNova Backup Integration**: Backup cloud provider (no local LLM dependency)
 - **Load Testing**: 392-line load test with 4 profiles (light/medium/heavy/stress)
 - **Code Cleanup**: ~110 lines of dead code removed, section headers added
 - **Session Analytics**: Tracks stage transitions and intent distribution for evaluation
@@ -339,7 +340,7 @@ Used by `PerformanceTracker.get_summary()` for monitoring.
 - **In-Memory Sessions**: Scale limited to single server (~100 concurrent users)
 - **YAML-Only Config**: Changes require Flask restart
 - **Cold-Start Metrics Scan**: First `/api/debug/metrics` call scans full JSONL file (< 5k lines, acceptable)
-- **Provider Latency**: Groq ~900-1000ms, OpenRouter varies by selected model
+- **Provider Latency**: Groq ~900-1000ms, SambaNova varies by selected model
 
 ### Technical Debt (Deferred to Post-FYP)
 - `content.py` is 600+ lines and mixes prompts, assembly, and acknowledgment logic (SRP violation, but low risk to refactor)
@@ -414,7 +415,7 @@ python -m flask run
 ## Deployment Checklist
 
 Before pushing to Render:
-- [ ] `.env` has `GROQ_API_KEY` and `OPENROUTER_BACKUP_API_KEY`
+- [ ] `.env` has `SAFE_GROQ_API_KEY` (or `ALTERNATIVE_GROQ_API_KEY`) and `SAMBANOVA_API_KEY`
 - [ ] `LLM_PROVIDER=groq` is set as primary
 - [ ] `pytest tests/ -v` passes (all tests green)
 - [ ] `bash run_load_test.sh light` completes with <10% error rate

@@ -71,7 +71,8 @@ function saveHistoryToStorage() {
 function loadHistoryFromStorage() {
   try {
     return JSON.parse(localStorage.getItem("chatHistory") || "[]");
-  } catch {
+  } catch (e) {
+    console.warn("localStorage read failed:", e);
     return [];
   }
 }
@@ -173,7 +174,7 @@ function syncKnowledgeBaseLink() {
     _prospectMode ||
     (typeof PAGE_MODE !== "undefined" && PAGE_MODE === "prospect");
 
-  link.href = isProspectContext ? "/knowledge?mode=prospect" : "/knowledge";
+  link.href = isProspectContext ? "/knowledge" : "/knowledge";
   link.textContent = isProspectContext
     ? "📚 Prospect Knowledge"
     : "📚 Knowledge";
@@ -189,7 +190,7 @@ function syncKnowledgeBaseLink() {
         _prospectMode ||
         (typeof PAGE_MODE !== "undefined" && PAGE_MODE === "prospect");
       window.location.href = isProspect
-        ? "/knowledge?mode=prospect"
+        ? "/knowledge"
         : "/knowledge";
     });
     link._kbClickHandlerSet = true;
@@ -324,6 +325,83 @@ function parsePunctuation(text) {
     .replace(/ new line /g, "\n");
 }
 
+const _voiceStagePattern =
+  /\b(?:jump|go|move|switch)\s+(?:to\s+)?(?:the\s+)?(?:stage\s+)?(intent|logical|emotional|pitch|objection)\b/i;
+const _voiceStrategyPattern =
+  /\b(?:switch|set)\s+(?:strategy\s+)?(?:to\s+)?(intent|consultative|transactional)\b/i;
+
+function parseFlowVoiceCommand(rawText) {
+  const text = String(rawText || "").trim().toLowerCase();
+  if (!text) return null;
+
+  let match = text.match(_voiceStrategyPattern);
+  if (match) {
+    return { type: "strategy", value: match[1] };
+  }
+
+  match = text.match(_voiceStagePattern);
+  if (match) {
+    return { type: "stage", value: match[1] };
+  }
+
+  return null;
+}
+
+async function requestStageJump(stage) {
+  const sid = getSessionId();
+  if (!sid) throw new Error("No active session");
+
+  const r = await fetch("/api/stage", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Session-ID": sid },
+    body: JSON.stringify({ stage }),
+  });
+  const d = await r.json();
+  if (!d.success) throw new Error(d.error || "failed");
+  return d;
+}
+
+async function requestStrategySwitch(strategy) {
+  const sid = getSessionId();
+  if (!sid) throw new Error("No active session");
+
+  const r = await fetch("/api/strategy", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Session-ID": sid },
+    body: JSON.stringify({ strategy }),
+  });
+  const d = await r.json();
+  if (!d.success) throw new Error(d.error || "failed");
+  return d;
+}
+
+async function executeFlowVoiceCommand(command) {
+  if (!command) return false;
+
+  try {
+    if (command.type === "stage") {
+      const d = await requestStageJump(command.value);
+      updateSessionUI(d);
+      showToast("Voice: jumped -> " + command.value.toUpperCase(), "info");
+      return true;
+    }
+
+    if (command.type === "strategy") {
+      const d = await requestStrategySwitch(command.value);
+      updateSessionUI(d);
+      showToast(
+        "Voice: strategy -> " + command.value.toUpperCase(),
+        "info",
+      );
+      return true;
+    }
+  } catch (e) {
+    showToast("Voice command error: " + e, "error");
+  }
+
+  return false;
+}
+
 // ─── Message rendering ────────────────────────────────────────
 function parseMarkdown(line) {
   if (
@@ -369,7 +447,7 @@ function createMessageElement(text, sender, msgIdx, metrics = null) {
 
   if (sender === "bot" && typeof marked !== "undefined") {
     // Use marked.js for bot messages to support full markdown (lists, bold, etc)
-    bubble.innerHTML = marked.parse(safeText);
+    bubble.innerHTML = DOMPurify.sanitize(marked.parse(safeText));
   } else {
     // Fallback / User messages: preserve newlines
     bubble.innerHTML = safeText
@@ -377,7 +455,7 @@ function createMessageElement(text, sender, msgIdx, metrics = null) {
       .map((l) => {
         const s = document.createElement("span");
         if (sender === "bot") {
-          s.innerHTML = parseMarkdown(l);
+          s.innerHTML = DOMPurify.sanitize(parseMarkdown(l));
         } else {
           s.textContent = l;
         }
@@ -651,6 +729,7 @@ function initChatbot() {
                 sessionId = d.session_id;
                 localStorage.setItem("sessionId", sessionId);
                 // Stage/strategy already restored — no flicker
+                loadStageOptions();
               }
             })
             .catch((e) => {
@@ -672,6 +751,9 @@ function initChatbot() {
           }
         }
       }
+
+      loadStageOptions();
+      syncStrategySelectors(_currentStrategy);
     })
     .catch((error) => {
       showToast("Connection error — please refresh", "error");
@@ -697,6 +779,8 @@ window.addEventListener("DOMContentLoaded", () => {
   // Populate prospect products on both seller and prospect pages.
   loadProspectProducts();
   syncKnowledgeBaseLink();
+  syncStrategySelectors(localStorage.getItem("chatStrategy") || _currentStrategy);
+  loadStageOptions();
 
   if (typeof PAGE_MODE !== "undefined" && PAGE_MODE === "prospect") {
     const savedSessionId = localStorage.getItem("prospectSessionId");
@@ -881,9 +965,20 @@ function updateStage(stage) {
   document.getElementById("stageBadge").textContent = stage.toUpperCase();
 }
 
+function syncStrategySelectors(strategy) {
+  const normalized = String(strategy || "").trim().toLowerCase();
+  const known = new Set(["intent", "consultative", "transactional"]);
+  ["strategySelectMain"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.value = known.has(normalized) ? normalized : "";
+  });
+}
+
 function updateStrategy(strategy) {
   _currentStrategy = strategy;
   document.getElementById("strategyBadge").textContent = strategy.toUpperCase();
+  syncStrategySelectors(strategy);
 }
 
 // Consolidated UI update helper
@@ -894,6 +989,10 @@ function updateSessionUI(data) {
   // Keep dev panel session state in sync if it's open
   if (document.getElementById("devPanel").classList.contains("open")) {
     loadDevState();
+  }
+  // Keep stage selectors in sync (sidebar + primary controls)
+  if (document.getElementById("stageSelect") || document.getElementById("stageSelectMain")) {
+    loadStageOptions();
   }
 }
 
@@ -979,12 +1078,12 @@ function askTrainingCoach() {
     .then((data) => {
       const raw = data.answer || data.error || "No answer received.";
       if (typeof marked !== "undefined") {
-        answer.innerHTML = marked.parse(raw);
+        answer.innerHTML = DOMPurify.sanitize(marked.parse(raw));
       } else {
         answer.innerHTML = raw
           .split("\n")
           .filter((l) => l.trim())
-          .map((l) => `<div>${parseMarkdown(l)}</div>`)
+          .map((l) => `<div>${DOMPurify.sanitize(parseMarkdown(l))}</div>`)
           .join("");
       }
       input.disabled = false;
@@ -1307,6 +1406,90 @@ async function devJumpStage(stage) {
     dpToast("Jumped → " + stage.toUpperCase());
   } catch (e) {
     dpToast("Error: " + e);
+  }
+}
+
+// ─── Sidebar stage-jump helpers ─────────────────────────────
+function getStageSelectElements() {
+  const ids = ["stageSelect", "stageSelectMain"];
+  return ids.map((id) => document.getElementById(id)).filter(Boolean);
+}
+
+async function loadStageOptions() {
+  const sels = getStageSelectElements();
+  if (!sels.length) return;
+  const sid = getSessionId();
+
+  sels.forEach((sel) => {
+    sel.innerHTML = '<option value="">Loading...</option>';
+  });
+
+  if (!sid) {
+    sels.forEach((sel) => {
+      sel.innerHTML = '<option value="">No session</option>';
+    });
+    return;
+  }
+
+  try {
+    const r = await fetch("/api/stages", { headers: { "X-Session-ID": sid } });
+    const d = await r.json();
+    const stages = d.stages || [];
+
+    sels.forEach((sel) => {
+      sel.innerHTML = "";
+      stages.forEach((s) => {
+        const opt = document.createElement("option");
+        opt.value = s;
+        opt.textContent = s.toUpperCase();
+        sel.appendChild(opt);
+      });
+
+      if (!stages.length) {
+        sel.innerHTML = '<option value="">No stages</option>';
+        return;
+      }
+
+      const current = String(_currentStage || "").toLowerCase();
+      if (current && current !== "----" && stages.includes(current)) {
+        sel.value = current;
+      }
+    });
+  } catch (e) {
+    sels.forEach((sel) => {
+      sel.innerHTML = '<option value="">Error</option>';
+    });
+  }
+}
+
+async function jumpStage(selectId = "stageSelect") {
+  const sel = document.getElementById(selectId) || document.getElementById("stageSelect");
+  if (!sel) return;
+  const stage = sel.value;
+  if (!stage) return showToast("Select a stage first", "error");
+
+  try {
+    const d = await requestStageJump(stage);
+    updateSessionUI(d);
+    showToast("Jumped → " + stage.toUpperCase(), "info");
+  } catch (e) {
+    showToast("Error: " + e, "error");
+  }
+}
+
+async function switchStrategy(selectId = "strategySelectMain") {
+  const sel = document.getElementById(selectId);
+  if (!sel) return;
+
+  const strategy = String(sel.value || "").trim().toLowerCase();
+  if (!strategy) return showToast("Select a strategy first", "error");
+
+  try {
+    const d = await requestStrategySwitch(strategy);
+    updateSessionUI(d);
+    showToast("Strategy → " + strategy.toUpperCase(), "info");
+  } catch (e) {
+    showToast("Error: " + e, "error");
   }
 }
 
@@ -2231,6 +2414,18 @@ function startHandsFreeRecognition() {
     speechRecognizer.start(
       (text) => {
         try {
+          const voiceCommand = parseFlowVoiceCommand(text);
+          if (voiceCommand) {
+            if (dictationPauseTimer) {
+              clearTimeout(dictationPauseTimer);
+              dictationPauseTimer = null;
+            }
+            executeFlowVoiceCommand(voiceCommand);
+            inputEl.value = committedText;
+            autoResizeTextarea(inputEl);
+            return;
+          }
+
           const parsed = parsePunctuation(text);
           committedText += parsed;
           inputEl.value = committedText;
@@ -2249,13 +2444,17 @@ function startHandsFreeRecognition() {
               if (inputEl.value.trim()) sendMessage();
             }, dictationPauseMs);
           }
-        } catch (e) {}
+        } catch (e) {
+          console.warn("dictation final handler error:", e);
+        }
       },
       (interim) => {
         try {
           inputEl.value = committedText + interim;
           autoResizeTextarea(inputEl);
-        } catch (e) {}
+        } catch (e) {
+          console.warn("dictation interim handler error:", e);
+        }
       },
       () => {
         // update mic UI
@@ -2273,7 +2472,9 @@ function startHandsFreeRecognition() {
           setTimeout(() => {
             try {
               if (!speechRecognizer.isRecording) startHandsFreeRecognition();
-            } catch (e) {}
+            } catch (e) {
+              console.warn("hands-free restart error:", e);
+            }
           }, 200);
         }
       },
@@ -2296,7 +2497,9 @@ function stopHandsFreeRecognition() {
   try {
     if (speechRecognizer && speechRecognizer.isRecording)
       speechRecognizer.stop();
-  } catch (e) {}
+  } catch (e) {
+    console.warn("stopHandsFreeRecognition error:", e);
+  }
   const mic = document.getElementById("micBtn");
   if (mic) {
     mic.classList.remove("recording");

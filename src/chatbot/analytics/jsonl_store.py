@@ -5,6 +5,7 @@ Shared by performance.py and session_analytics.py to eliminate duplication.
 
 import json
 import logging
+import os
 from threading import Lock
 
 logger = logging.getLogger(__name__)
@@ -27,7 +28,6 @@ class JSONLWriter:
     def _get_line_count(self) -> int:
         if self._line_count < 0:
             try:
-                import os
                 if os.path.exists(self._filepath):
                     with open(self._filepath, 'r') as f:
                         self._line_count = sum(1 for _ in f)
@@ -41,7 +41,6 @@ class JSONLWriter:
         """Append a JSON record, rotating if the file exceeds max_lines."""
         with self._lock:
             try:
-                import os
                 if self._get_line_count() >= self._max_lines and os.path.exists(self._filepath):
                     with open(self._filepath, 'r') as f:
                         lines = f.readlines()

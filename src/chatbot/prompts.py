@@ -24,9 +24,7 @@ BAD:
 - "Hello, welcome. What is your name?" [too formal]
 - "So, what do you want?" [too blunt]
 
-ADVANCE WHEN:
-- User reveals product/service interest (cars, insurance, fitness, jewellery, etc).
-- OR 6 turns max (switch to default consultative strategy).
+STAY IN THIS STAGE: The system advances when product interest is detected or turn cap is reached. Keep discovering.
 """,
     },
 
@@ -48,9 +46,7 @@ BAD:
 - "That's great! Nice to meet you! So how's it going?" [too much small talk]
 - "Hello. How may I assist you today?" [too robotic]
 
-ADVANCE WHEN:
-- Clear goal + context revealed.
-- OR 4 turns max.
+STAY IN THIS STAGE: The system advances when intent signals are detected or turn cap is reached. Keep discovering.
 """,
         "intent_low": """STAGE: INTENT DISCOVERY (LOW-INTENT)
 GOAL: Build rapport via statements—NO direct questions.
@@ -67,16 +63,13 @@ STRUCTURE: ONE observation statement about their situation, then ONE soft open-e
   BAD: "Are you interested in X?" (binary — kills flow)
   BAD: Stopping after the statement alone (leaves a dead end)
 
-ADVANCE WHEN:
-- User volunteers problem/goal.
-- OR 6 turns max.
+STAY IN THIS STAGE: The system advances when intent signals are detected or turn cap is reached. Keep discovering.
 """,
         "logical": """STAGE: LOGICAL (NEPQ Problem Awareness)
 GOAL: Guide prospect to NAME their own problem. Create doubt in current approach.
 
 KEY PRINCIPLE: The prospect must articulate the problem—you surface it via questions, never state it for them.
-
-🛑 HARD STOP: DO NOT PITCH, OFFER SOLUTIONS, OR DISCUSS PRICING THIS STAGE.
+HARD STOP: DO NOT PITCH, OFFER SOLUTIONS, OR DISCUSS PRICING THIS STAGE.
 This stage is discovery only. Pitching here violates NEPQ framework and kills deal progression.
 
 TWO-PHASE PROBE:
@@ -98,7 +91,7 @@ IMPACT CHAIN (optional third phase):
 
 CHECK: Let them name the problem. Max 1 question per turn. No pitching.
 
-ADVANCE WHEN: Prospect names a clear problem they have with current approach + doubt is established.
+STAGE EXIT: Handled by the system. Do not shift to pitch language or mention solutions.
 """,
         "emotional": """STAGE: EMOTIONAL (NEPQ Solution Awareness + Consequence of Inaction)
 GOAL: Surface deeper motivations. Shift prospect from pain of present to desire for future (and cost of staying).
@@ -133,7 +126,7 @@ GUARDED USER WORKAROUND:
 
 CHECK: FP before COI. Let them articulate stakes — don't name them.
 
-ADVANCE WHEN: Prospect has expressed both what they want (FP) and consequences of inaction (COI). Emotional investment is clear.
+STAGE EXIT: Handled by the system. Do not shift to pitch language or mention solutions.
 """,
         "pitch": """STAGE: PITCH
 GOAL: Get commitment and present solution.
@@ -155,24 +148,15 @@ CLOSE:
 
 CHECK: No pitching to LOW intent. Statement close (no "?"). One question per turn. Connect to their goal.
 
-ADVANCE WHEN: Objection raised or deal closed.
+STAGE EXIT: Handled by the system when objection or commitment is detected.
 """,
         "objection": """STAGE: OBJECTION HANDLING
 GOAL: Resolve resistance.
 
-Step 1 - CLASSIFY: Price? Time? Skepticism?
-Step 2 - RECALL: Goal? Problem? Consequences?
-Step 3 - REFRAME (Consultative Approach):
-  - Price -> ROI / Cost of inaction
-  - Time -> Urgency / Pain of delay
-  - Skepticism -> User's own words
-Step 4 - GENERATE: Address concern. Recall goal. Reframe. Ask to proceed.
+Objection type and SOP handling steps are injected below — follow them exactly.
+If no type is injected: acknowledge briefly, recall their stated goal, ask what specifically is holding them back.
 
-EXAMPLE:
-User: "Expensive"
-Bot: "I hear you. You mentioned wanting $5k/month. This generates that in month one. What's actually holding you back?"
-
-ADVANCE WHEN: Resolved or Walk-away.
+STAGE EXIT: Handled by the system on commitment or walkaway.
 """,
     },
 
@@ -233,24 +217,19 @@ If user implies interest ("nice"), differentiate immediately.
 CHECK: Prices included? Connected to preferences? Assumptive close? Gap acknowledged if no matches?
 """,
         "objection": """STAGE: OBJECTION HANDLING
-GOAL: Resolve and close.
+GOAL: Resolve concern and close.
 
-Step 1 — CLASSIFY: Price? Fit? Timing?
-Step 2 — RECALL: User preferences and stated needs.
-Step 3 — REFRAME (Transactional Approach):
-  - Price -> Value comparison / alternatives
-  - Fit -> Recall stated needs
-  - Timing -> Scheduling / logistics
-Step 4 — RESPOND: Address concern. Do NOT dismiss.
+Objection type and SOP handling steps are injected below — follow them exactly.
+If no type is injected: recall user preferences, address concern directly, do NOT dismiss.
 
-ADVANCE WHEN: Resolved or Walk-away.
+STAGE EXIT: Handled by the system on commitment or walkaway.
 """,
     },
 }
 
 
 def get_prompt(strategy: str, stage: str) -> str:
-    """Retrieve the prompt for a given strategy and stage."""
+    """Look up prompt template. Warns and returns empty string on miss."""
     result = STRATEGY_PROMPTS.get(strategy, {}).get(stage, "")
     if not result:
         logger.warning("get_prompt miss: strategy=%s stage=%s", strategy, stage)
@@ -258,7 +237,7 @@ def get_prompt(strategy: str, stage: str) -> str:
 
 
 def generate_init_greeting(strategy):
-    """Generate initial greeting and training data for session start."""
+    """Build opening greeting + training context blob for new sessions."""
     greetings = {
         "consultative": {
             "message": "Hey! What brings you here today?",
@@ -346,7 +325,7 @@ CONFLICT RESOLUTION:
 
 
 def get_base_rules(strategy="consultative"):
-    """Core constraint hierarchy, scoped per strategy."""
+    """Return strategy-specific rules string. Shared rules always included."""
     if strategy == "intent":
         return """
 INTENT DISCOVERY RULES:
@@ -388,7 +367,7 @@ CONSULTATIVE P2: Extract goals, problems, consequences. Vary statement lead-ins 
 
 
 def format_conversation_context(history, max_turns=6):
-    """Format recent conversation with weighted importance (recent = more important)."""
+    """Last N turns formatted for the prompt. Recent turns weighted."""
     if not history:
         return "New conversation"
     recent = history[-max_turns:]
@@ -399,7 +378,7 @@ def format_conversation_context(history, max_turns=6):
 
 
 def get_base_prompt(product_context, strategy_type, history):
-    """Shared prompt foundation — strategy-scoped rules and guidance tables."""
+    """Assemble the full base prompt: product + strategy + history."""
     if strategy_type == "transactional":
         strategy_tables = """
 PRODUCT MATCHING:
@@ -454,7 +433,7 @@ NOW: Apply these patterns to generate your response.
 
 
 def get_acknowledgment_guidance(ack_context):
-    """Translate acknowledgment decision into a concrete LLM instruction."""
+    """Map ack level (full/light/none) to instruction string."""
     if ack_context == "full":
         return """
 ACKNOWLEDGMENT (DO THIS FIRST):

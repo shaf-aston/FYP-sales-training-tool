@@ -1,4 +1,4 @@
-"""Sales chatbot orchestrator — FSM flow management, LLM calls, performance tracking."""
+"""Main chatbot class. Wires together the provider, flow engine, and analytics."""
 
 import logging
 import threading
@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from .loader import get_product_settings, load_signals, assign_ab_variant, load_web_search_config
-from .analysis import text_contains_any_keyword, classify_objection, should_trigger_web_search, build_search_query
+from .analysis import text_contains_any_keyword, classify_objection, should_trigger_web_search, build_search_query, analyze_state
 from .web_search import WebSearchService
 from .flow import SalesFlowEngine
 from .analytics.performance import PerformanceTracker
@@ -27,6 +27,10 @@ from .constants import (
 )
 
 _base_logger = logging.getLogger(__name__)
+
+_PROVIDER_FALLBACK_ORDER = ["sambanova", "groq"]
+_MSG_RATE_LIMITED = "Getting a lot of traffic right now — give it a second and try again."
+_MSG_PROVIDER_DOWN = "I'm having trouble connecting right now. Please try again."
 
 
 def _format_search_context(results) -> str:
@@ -49,9 +53,8 @@ _USER_TRANSACTIONAL_SIGNALS = _SIGNALS.get("user_transactional_signals", [])
 
 @dataclass
 class ChatResponse:
-    """Structured response from chat() including latency metrics."""
     content: str
-    latency_ms: float | None = None
+    latency_ms: float | None = None  # ms, None if provider didn't report
     provider: str | None = None
     model: str | None = None
     input_len: int = 0
@@ -68,7 +71,7 @@ class SalesChatbot:
         self.provider_type = provider_type
         self.logger = logging.LoggerAdapter(_base_logger, {"session_id": session_id or "-"})
 
-        # Cache provider info to avoid repeated lookups
+        # grab these once so we're not calling into the provider on every turn
         self._provider_name = type(self.provider).__name__.replace("Provider", "").lower()
         self._model_name = self.provider.get_model_name()
 
@@ -88,7 +91,7 @@ class SalesChatbot:
                     "--- END CUSTOM PRODUCT DATA ---"
                 )
         except (ImportError, OSError, ValueError) as e:
-            _base_logger.debug(f"Custom knowledge not loaded: {e}")
+            _base_logger.debug(f"skipping custom knowledge: {e}")
 
         self.flow_engine = SalesFlowEngine(
             flow_type=config["strategy"],
@@ -121,7 +124,7 @@ class SalesChatbot:
                 self.provider_type = new_provider_type
                 self._provider_name = type(self.provider).__name__.replace("Provider", "").lower()
                 self._model_name = self.provider.get_model_name()
-                self.logger.info(f"Successfully switched to fallback provider: {new_provider_type}")
+                self.logger.info(f"switched to fallback provider: {new_provider_type}")
                 return True
             else:
                 self.logger.warning(f"Fallback provider {new_provider_type} is not available (missing keys?).")
@@ -131,9 +134,7 @@ class SalesChatbot:
             return False
 
     def chat(self, user_message: str) -> ChatResponse:
-        """Process user message and return ChatResponse with content + metrics.""" 
-        from .analysis import analyze_state
-
+        """Process user message and return ChatResponse with content + metrics."""
         recent_history = self.flow_engine.conversation_history[-RECENT_HISTORY_WINDOW:]
 
         state = analyze_state(self.flow_engine.conversation_history, user_message)
@@ -154,7 +155,6 @@ class SalesChatbot:
             {"role": "user", "content": user_message}
         ]
 
-        # Record intent classification on each user turn
         if self.session_id:
             SessionAnalytics.record_intent_classification(
                 session_id=self.session_id,
@@ -164,7 +164,7 @@ class SalesChatbot:
 
         request_start = time.time()
         
-        fallbacks = ["sambanova", "openrouter", "groq"]
+        fallbacks = list(_PROVIDER_FALLBACK_ORDER)
         if self._provider_name in fallbacks:
             fallbacks.remove(self._provider_name)
         providers_to_try = [self._provider_name] + fallbacks
@@ -195,12 +195,12 @@ class SalesChatbot:
                 if "rate_limit_exceeded" in str(error_detail).lower() or "429" in str(error_detail):
                     self.logger.warning(f"Rate limit hit globally: {error_detail}")
                     return self._fallback(
-                        "I'm currently receiving too many requests. Please try again in a moment.",
+                        _MSG_RATE_LIMITED,
                         llm_response.latency_ms if llm_response else 0, user_message,
                     )
                 else:
                     return self._fallback(
-                        "I'm having trouble connecting to the AI provider. Please try again.",
+                        _MSG_PROVIDER_DOWN,
                         llm_response.latency_ms if llm_response else 0, user_message,
                     )
 
@@ -250,10 +250,7 @@ class SalesChatbot:
             )
 
     def _fallback(self, message: str, latency_ms: float, user_message: str) -> ChatResponse:
-        """Build fallback ChatResponse after adding turn to history.
-
-        Append directly without incrementing stage_turn_count — error turns don't count toward FSM advancement.
-        """
+        """Builds fallback response and logs the turn. Error turns skip FSM advancement."""
         self.flow_engine.conversation_history.append({"role": "user", "content": user_message})
         self.flow_engine.conversation_history.append({"role": "assistant", "content": message})
         return ChatResponse(
@@ -266,13 +263,8 @@ class SalesChatbot:
         )
 
     def _maybe_enrich_with_search(self, user_message: str, objection_data: dict | None = None) -> str | None:
-        """Return formatted search context string, or None if not triggered.
-
-        Checks: feature enabled → rate limit → trigger condition → search → format.
-        Returns None on any failure path — conversation continues unchanged.
-
-        Args:
-            objection_data: Pre-computed objection classification (avoids re-computing)
+        """Runs web search if conditions are met, returns a formatted context block.
+        Falls back silently on any failure — the conversation just continues as-is.
         """
         if not self._ws_config.get("enabled"):
             return None
@@ -283,7 +275,7 @@ class SalesChatbot:
 
         stage = str(self.flow_engine.current_stage)
 
-        # Use pre-computed objection type if provided
+        # skip re-computing objection type if caller already has it
         objection_type = None
         if stage == "objection" and objection_data:
             objection_type = objection_data.get("type") if isinstance(objection_data, dict) else None
@@ -391,7 +383,7 @@ class SalesChatbot:
         # Reset FSM to initial state (clears history and resets to initial strategy)
         self.flow_engine.reset_to_initial()
 
-        # Return early if rewinding to turn 0 (full reset)
+        # full reset, nothing to replay
         if turn_index == 0:
             return True
 

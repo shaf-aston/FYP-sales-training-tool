@@ -818,3 +818,39 @@ class TestWebEndpoints:
                                 content_type='application/json')
         # Flask will either return 400 from our validation or 400/415 from parsing
         assert resp.status_code in [400, 415]
+
+    def test_stages_reflect_current_strategy(self):
+        """Stage list should expand after switching strategy from discovery mode."""
+        init_resp = self.client.post('/api/init', json={})
+        assert init_resp.status_code == 200
+        session_id = init_resp.get_json()["session_id"]
+        headers = {"X-Session-ID": session_id}
+
+        stages_resp = self.client.get('/api/stages', headers=headers)
+        assert stages_resp.status_code == 200
+        assert stages_resp.get_json()["stages"] == ["intent"]
+
+        switch_resp = self.client.post('/api/strategy',
+                                       json={"strategy": "consultative"},
+                                       headers=headers)
+        assert switch_resp.status_code == 200
+        switch_data = switch_resp.get_json()
+        assert switch_data["success"] is True
+        assert switch_data["strategy"] == "CONSULTATIVE"
+        assert switch_data["stage"] == "INTENT"
+
+        stages_resp_2 = self.client.get('/api/stages', headers=headers)
+        assert stages_resp_2.status_code == 200
+        assert stages_resp_2.get_json()["stages"] == [
+            "intent", "logical", "emotional", "pitch", "objection"
+        ]
+
+    def test_strategy_endpoint_rejects_invalid_strategy(self):
+        init_resp = self.client.post('/api/init', json={})
+        assert init_resp.status_code == 200
+        session_id = init_resp.get_json()["session_id"]
+
+        resp = self.client.post('/api/strategy',
+                                json={"strategy": "unsupported_mode"},
+                                headers={"X-Session-ID": session_id})
+        assert resp.status_code == 400

@@ -783,49 +783,50 @@ class TestContentP1Hierarchy:
 
 
 class TestObjectionScaffoldStructure:
-    """P1 Fix #6: Unified 4-step objection scaffold.
+    """Objection scaffold: classification and reframe strategy injected into context.
 
-    Bug mode if reverted: Consultative and transactional would have different
-    objection scaffolds — a fix to one would miss the other, and testing
-    one strategy would not validate the other.
-
-    What must hold: Both strategies' objection prompts contain the 4 steps:
-    CLASSIFY, RECALL, REFRAME, RESPOND.
+    Architecture change (SOP implementation): CLASSIFY/REFRAME/STEPS are no longer
+    hardcoded in the base prompt — they are injected as `context` by _get_stage_specific_prompt
+    when an objection type is detected. Tests now verify the full instruction (prompt + context).
     """
 
     def test_consultative_objection_has_classify_step(self):
         from chatbot.content import _get_stage_specific_prompt
         state = {"intent": "high", "guarded": False, "question_fatigue": False}
-        prompt, _ = _get_stage_specific_prompt(
+        prompt, context = _get_stage_specific_prompt(
             "consultative", "objection", state, "that's too expensive", []
         )
-        assert "CLASSIFY" in prompt or "classify" in prompt.lower(), (
-            "CLASSIFY step missing from consultative objection prompt"
+        full = prompt + context
+        assert "OBJECTION CLASSIFIED" in full or "classify" in full.lower(), (
+            "CLASSIFY step missing from consultative objection full instruction"
         )
 
     def test_consultative_objection_has_recall_step(self):
         from chatbot.content import _get_stage_specific_prompt
         state = {"intent": "high", "guarded": False, "question_fatigue": False}
-        prompt, _ = _get_stage_specific_prompt(
+        prompt, context = _get_stage_specific_prompt(
             "consultative", "objection", state, "that's too expensive", []
         )
-        assert "RECALL" in prompt or "recall" in prompt.lower()
+        full = prompt + context
+        assert "RECALL" in full or "recall" in full.lower() or "stated goal" in full.lower()
 
     def test_consultative_objection_has_reframe_step(self):
         from chatbot.content import _get_stage_specific_prompt
         state = {"intent": "high", "guarded": False, "question_fatigue": False}
-        prompt, _ = _get_stage_specific_prompt(
+        prompt, context = _get_stage_specific_prompt(
             "consultative", "objection", state, "that's too expensive", []
         )
-        assert "REFRAME" in prompt or "reframe" in prompt.lower()
+        full = prompt + context
+        assert "REFRAME" in full or "reframe" in full.lower()
 
     def test_transactional_objection_has_respond_step(self):
         from chatbot.content import _get_stage_specific_prompt
         state = {"intent": "high", "guarded": False, "question_fatigue": False}
-        prompt, _ = _get_stage_specific_prompt(
+        prompt, context = _get_stage_specific_prompt(
             "transactional", "objection", state, "that's too expensive", []
         )
-        assert "RESPOND" in prompt or "respond" in prompt.lower()
+        full = prompt + context
+        assert "STEPS:" in full or "respond" in full.lower() or "address" in full.lower()
 
 
 # =====================================================================
@@ -885,6 +886,92 @@ class TestConcurrency:
             "Possible shared FSM state between instances."
         )
         assert engine_a.flow_type != engine_b.flow_type
+
+
+class TestAnalyticsEndpointAuth:
+    """Analytics session endpoint must require the caller's session ID to match the path param.
+
+    Bug mode if reverted: any caller who knows or guesses a session ID can read its full
+    event log — stage transitions, intent classifications, objection types — without owning
+    the session.
+    """
+
+    @pytest.fixture(autouse=True)
+    def flask_client(self):
+        app_mod = _load_web_app()
+        app_mod.app.config['TESTING'] = True
+        self.client = app_mod.app.test_client()
+        resp = self.client.post('/api/init', json={})
+        data = resp.get_json()
+        self.session_id = data["session_id"]
+
+    def test_cannot_read_other_sessions_analytics(self):
+        """GET /analytics/session/<id> with mismatched X-Session-ID must return 403."""
+        resp = self.client.get(
+            f'/api/analytics/session/{self.session_id}',
+            headers={"X-Session-ID": "COMPLETELY_DIFFERENT_SESSION"}
+        )
+        assert resp.status_code == 403, (
+            "Analytics endpoint returned data for a session the caller does not own"
+        )
+
+    def test_own_session_analytics_allowed(self):
+        """GET /analytics/session/<id> succeeds when X-Session-ID header matches path param."""
+        resp = self.client.get(
+            f'/api/analytics/session/{self.session_id}',
+            headers={"X-Session-ID": self.session_id}
+        )
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["success"] is True
+        assert "events" in data
+
+    def test_missing_session_header_returns_403(self):
+        """GET /analytics/session/<id> with no header must return 403."""
+        resp = self.client.get(f'/api/analytics/session/{self.session_id}')
+        assert resp.status_code == 403
+
+
+class TestXSSPrevention:
+    """Chat API must return plain JSON — HTML rendering is done client-side with DOMPurify.
+
+    The server must never pre-render bot responses as HTML. This prevents stored XSS
+    if the response ever ends up in a context without DOMPurify.
+    """
+
+    @pytest.fixture(autouse=True)
+    def flask_client(self):
+        app_mod = _load_web_app()
+        app_mod.app.config['TESTING'] = True
+        self.client = app_mod.app.test_client()
+        resp = self.client.post('/api/init', json={})
+        data = resp.get_json()
+        self.session_id = data["session_id"]
+
+    def test_chat_response_is_json_not_html(self):
+        """Chat endpoint must return application/json, never text/html."""
+        resp = self.client.post(
+            '/api/chat',
+            json={"message": "hello"},
+            headers={"X-Session-ID": self.session_id}
+        )
+        content_type = resp.content_type or ""
+        assert "application/json" in content_type, (
+            f"Expected application/json, got: {content_type}"
+        )
+
+    def test_response_field_is_plain_string(self):
+        """The 'message' field in chat JSON must be a plain string, not pre-rendered HTML."""
+        resp = self.client.post(
+            '/api/chat',
+            json={"message": "hello"},
+            headers={"X-Session-ID": self.session_id}
+        )
+        if resp.status_code == 200:
+            data = resp.get_json()
+            assert isinstance(data.get("message"), str), (
+                "'message' field must be a string, not a pre-rendered HTML object"
+            )
 
 
 if __name__ == "__main__":

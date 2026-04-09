@@ -9,22 +9,13 @@ import re
 
 from .quiz import get_stage_rubric
 from ..utils import extract_json_from_llm
+from ..analytics.session_analytics import SessionAnalytics
 
 logger = logging.getLogger(__name__)
 
 
 def generate_training(provider, flow_engine, user_msg, bot_reply):
-    """Generate coaching notes for the current exchange via lightweight LLM call.
-    
-    Args:
-        provider: LLM provider instance with chat() method
-        flow_engine: SalesFlowEngine instance (for stage, flow_type, turn count)
-        user_msg: User's message
-        bot_reply: Bot's reply
-        
-    Returns:
-        dict: Coaching feedback with stage_goal, what_bot_did, next_trigger, where_heading, watch_for
-    """
+    """Coaching notes for the current exchange. Falls back to rubric text on LLM failure."""
     stage = flow_engine.current_stage
     flow_type = flow_engine.flow_type
 
@@ -75,16 +66,7 @@ def generate_training(provider, flow_engine, user_msg, bot_reply):
 
 
 def answer_training_question(provider, flow_engine, question):
-    """Answer a trainee's question about the current conversation and sales techniques.
-    
-    Args:
-        provider: LLM provider instance with chat() method
-        flow_engine: SalesFlowEngine instance (for history, stage, flow_type)
-        question: Trainee's question string
-        
-    Returns:
-        dict: {"answer": str} with detailed, specific coaching response
-    """
+    """Answer a trainee's question about the current conversation and sales techniques."""
     history = flow_engine.conversation_history
     stage = flow_engine.current_stage
     flow_type = flow_engine.flow_type
@@ -128,9 +110,15 @@ def answer_training_question(provider, flow_engine, question):
         logger.warning(f"Training Q&A failed: {e}")
         return {"answer": "Something went wrong generating the answer. Try again."}
 
+def _normalize_stage(raw) -> str:
+    """Strip 'Stage.' prefix from stored stage values (e.g. 'Stage.PITCH' → 'pitch')."""
+    if isinstance(raw, str) and raw:
+        return raw.lower().split('.')[-1]
+    return str(raw).lower() if raw else ""
+
+
 def score_session(session_id: str) -> dict:
     """Score a session based on the F1 Post-session scoring rubric."""
-    from ..analytics.session_analytics import SessionAnalytics
     events = SessionAnalytics.get_session_analytics(session_id)
     
     if not events:
@@ -158,23 +146,11 @@ def score_session(session_id: str) -> dict:
             max_turn = turn
 
         if event_type == "stage_transition":
-            # Normalize stage tokens: analytics may store values like 'Stage.PITCH'
-            raw_to_stage = event.get("to_stage")
-            if isinstance(raw_to_stage, str) and raw_to_stage:
-                normalized_to_stage = raw_to_stage.lower().split('.')[-1]
-            else:
-                normalized_to_stage = str(raw_to_stage).lower() if raw_to_stage else ""
-
+            normalized_to_stage = _normalize_stage(event.get("to_stage"))
             if normalized_to_stage:
                 stages_reached.add(normalized_to_stage)
 
-            # Check if transition was on signal or timeout (guard invalid values)
-            raw_from_stage = event.get("from_stage", "")
-            if isinstance(raw_from_stage, str) and raw_from_stage:
-                normalized_from_stage = raw_from_stage.lower().split('.')[-1]
-            else:
-                normalized_from_stage = str(raw_from_stage).lower() if raw_from_stage else ""
-
+            normalized_from_stage = _normalize_stage(event.get("from_stage", ""))
             turns_in_stage = event.get("user_turns_in_stage", None)
             total_transitions += 1
 
@@ -195,12 +171,7 @@ def score_session(session_id: str) -> dict:
                 intent_medium_high_count += 1
                 
         elif event_type == "session_end":
-            final_stage_raw = event.get("final_stage")
-            if isinstance(final_stage_raw, str) and final_stage_raw:
-                final_stage = final_stage_raw.lower().split('.')[-1]
-            else:
-                final_stage = str(final_stage_raw).lower() if final_stage_raw else ""
-
+            final_stage = _normalize_stage(event.get("final_stage"))
             if final_stage:
                 stages_reached.add(final_stage)
             
