@@ -1,37 +1,62 @@
-"""Prompt assembly and orchestration.
+"""Builds the final system prompt from templates, overrides, and tactics"""
 
-Combines templates (prompts.py), intervention logic (overrides.py),
-and tactical adaptations (tactics.py) into the final system prompt.
-"""
-
-from .loader import load_signals
+from .loader import loadSIGNALS, load_objection_flows
 from .prompts import (
     get_prompt,
     generate_init_greeting,
     get_base_prompt,
-    get_acknowledgment_guidance
+    get_acknowledgment_guidance,
+    format_conversation_context,
 )
 from .overrides import check_override_condition
-from .loader import get_adaptation_template, get_tactic, load_objection_flows
+from .loader import get_adaptation_template, get_tactic
 from .analysis import (
-    analyze_state,
+    analyse_state,
     extract_preferences,
     detect_acknowledgment_context,
-    classify_objection,
     extract_user_keywords,
-    commitment_or_walkaway,
     is_literal_question,
+    classify_objection,
+    commitment_or_walkaway,
 )
 from .constants import PERSONA_CHECKPOINT_TURNS, TERSE_INPUT_THRESHOLD
+
+OFLOWS = load_objection_flows()
+SOP_FLOWS = OFLOWS.get("sop_flows", {})
+SOP_FLOWS_TRANSACTIONAL = {**SOP_FLOWS, **OFLOWS.get("transactional_overrides", {})}
+SOP_FLOW_FALLBACK = OFLOWS.get(
+    "fallback",
+    "1. Acknowledge\n2. Recall stated goal\n3. Apply reframe strategy\n4. Ask ONE question",
+)
+
+
+def build_objection_context(strategy, stage, user_message, history, objection_data=None):
+    """Build SOP context block for objection stage only"""
+    stage_value = getattr(stage, "value", stage)
+    if str(stage_value).lower() != "objection" or not user_message:
+        return ""
+
+    if commitment_or_walkaway(history, user_message, 0):
+        return ""
+
+    info = objection_data if isinstance(objection_data, dict) else classify_objection(user_message, history)
+    if info.get("type") == "unknown":
+        return ""
+
+    flows = SOP_FLOWS_TRANSACTIONAL if strategy == "transactional" else SOP_FLOWS
+    steps = flows.get(info["type"], SOP_FLOW_FALLBACK)
+
+    return (
+        f"OBJECTION CLASSIFIED: {info['type'].upper()}\n"
+        f"REFRAME STRATEGY: {info['strategy']}\n"
+        f"GUIDANCE: {info['guidance']}\n\n"
+        f"STEPS:\n{steps}\n"
+    )
 from typing import Any
 
 
-# --- Tactical guidance (inlined from tactics.py to reduce one small module) ---
 def build_tactic_guidance(strategy: str, state: Any, user_message: str) -> str:
-    """Build adaptive tactic guidance based on user state and strategy.
-
-    Returns guidance string for: decisive users, literal questions, low-intent/guarded users.
-    """
+    """Tactic guidance string based on user state and strategy"""
     if state.decisive:
         return get_adaptation_template("decisive_user", strategy=strategy)
 
@@ -62,14 +87,14 @@ def build_tactic_guidance(strategy: str, state: Any, user_message: str) -> str:
     return ""
 
 # Exported signals for consumers (e.g. flow.py)
-SIGNALS = load_signals()
+SIGNALS = loadSIGNALS()
 
-# Re-export for compatibility
+# Export public symbols
 __all__ = ["generate_stage_prompt", "generate_init_greeting", "get_prompt", "SIGNALS"]
 
 
 def _get_preference_and_keyword_context(history, preferences):
-    """Extract and format user preferences and keywords for prompt context."""
+    """Extract and format user preferences and keywords for prompt context"""
     preference_context = f"\nUSER PREFERENCES: {preferences}\nUSE these to personalize your response." if preferences else ""
     user_keywords = extract_user_keywords(history)
     keyword_context = ""
@@ -83,17 +108,10 @@ Naturally embed 1-2 into your response. Do NOT replay full sentences.
     return preference_context + keyword_context
 
 
-# Load SOP flows from central YAML so the decision-matrix (PDF) can be
-# edited without changing code. The canonical source-of-truth is
-# 'Objection Handling matrix SOP.pdf' kept in the repository.
-_OFLOWS = load_objection_flows()
-_SOP_FLOWS = _OFLOWS.get("sop_flows", {})
-_SOP_FLOWS_TRANSACTIONAL = {**_SOP_FLOWS, **_OFLOWS.get("transactional_overrides", {})}
-_SOP_FLOW_FALLBACK = _OFLOWS.get("fallback", "1. Acknowledge\n2. Recall stated goal\n3. Apply reframe strategy\n4. Ask ONE question")
 
 
 def _get_stage_specific_prompt(strategy, stage, state, user_message, history, objection_data=None):
-    """Pick stage prompt and build any objection context block."""
+    """Pick stage prompt and build any objection context block"""
 
     # Intent stage: pick low-intent or standard prompt
     if stage == "intent":
@@ -103,23 +121,16 @@ def _get_stage_specific_prompt(strategy, stage, state, user_message, history, ob
     if stage in ("logical", "emotional"):
         return get_prompt(strategy, stage), ""
 
-    # Objection stage: classify and inject SOP-aligned reframe guidance
-    if stage == "objection" and user_message:
-        if commitment_or_walkaway(history, user_message, 0):
-            return get_prompt(strategy, stage), ""
-
-        objection_info = objection_data if objection_data else classify_objection(user_message, history)
-        if objection_info["type"] != "unknown":
-            flows = _SOP_FLOWS_TRANSACTIONAL if strategy == "transactional" else _SOP_FLOWS
-            steps = flows.get(objection_info["type"], _SOP_FLOW_FALLBACK)
-            objection_context = f"""OBJECTION CLASSIFIED: {objection_info['type'].upper()}
-REFRAME STRATEGY: {objection_info['strategy']}
-GUIDANCE: {objection_info['guidance']}
-
-STEPS:
-{steps}
-"""
-            return get_prompt(strategy, stage), objection_context
+    # Objection stage is delegated to chatbot.objection so the rules live in one place
+    if stage == "objection":
+        objection_context = build_objection_context(
+            strategy=strategy,
+            stage=stage,
+            user_message=user_message,
+            history=history,
+            objection_data=objection_data,
+        )
+        return get_prompt(strategy, stage), objection_context
 
     return get_prompt(strategy, stage), ""
 
@@ -133,31 +144,31 @@ def generate_stage_prompt(
     objection_data: dict | None = None,
     pre_state=None,
 ) -> str:
-    """Build the full system prompt for this turn. overrides → ack → tactics → stage → state → assembly."""
-    base = get_base_prompt(product_context, strategy, history)
-    state = pre_state if pre_state is not None else analyze_state(history, user_message, signal_keywords=SIGNALS)
+    """Build the full system prompt for this turn. overrides → ack → tactics → stage → state → assembly"""
+    base = get_base_prompt(product_context, strategy)
+    state = pre_state if pre_state is not None else analyse_state(history, user_message, signal_keywords=SIGNALS)
     preferences = extract_preferences(history)
 
-    # TIER 1: Check for override conditions (highest priority - early return)
+    # tier 1: overrides take priority — bail early if one fires
     override = check_override_condition(base, user_message, stage, history, preferences)
     if override:
         return override
 
-    # TIER 2: Acknowledgment decision (must precede stage prompt so LLM sees it first)
+    # tier 2: ack level — must come before the stage prompt
     ack_guidance = get_acknowledgment_guidance(
         detect_acknowledgment_context(user_message, history, state)
     )
 
-    # TIER 3: Build adaptive tactic guidance
+    # tier 3: tactic guidance
     tactic_guidance = build_tactic_guidance(strategy, state, user_message)
 
-    # TIER 4: Get stage-specific prompt
+    # tier 4: stage prompt
     stage_prompt, stage_context = _get_stage_specific_prompt(strategy, stage, state, user_message, history, objection_data)
 
-    # TIER 5: Assemble final prompt
+    # tier 5: assemble
     preference_keyword_context = _get_preference_and_keyword_context(history, preferences)
 
-    # TIER 6: Dynamic context injection (structured state + preprocessing)
+    # tier 6: inject turn context
     turn_count = len(history) // 2
 
     state_block = f"""
@@ -178,5 +189,11 @@ Intent: {state.intent} | Guarded: {'yes' if state.guarded else 'no'}
     if turn_count > 0 and turn_count % PERSONA_CHECKPOINT_TURNS == 0:
         persona_checkpoint = f"\n[CHECKPOINT — Turn {turn_count}]: Stay in {strategy} mode. One question per turn. Current stage: {stage}.\n"
 
-    # Strict ordering: Base -> State -> Ack -> Stage -> Strategy Specific -> Tactics -> Preferences -> Terse -> Checkpoint
-    return base + state_block + ack_guidance + stage_prompt + stage_context + tactic_guidance + preference_keyword_context + terse_guidance + persona_checkpoint
+    # Ordering rationale (positional bias):
+    # base (product/strategy/rules) anchors factual constraints via primacy
+    # stage_prompt lands late — benefits from recency, LLM reads instruction then immediately sees the conversation
+    # history injected after stage instruction — user's last words are freshest at generation time
+    history_block = f"\nRECENT CONVERSATION:\n{format_conversation_context(history)}\n"
+    return (base + state_block + ack_guidance + stage_prompt + stage_context +
+            history_block + tactic_guidance + preference_keyword_context +
+            terse_guidance + persona_checkpoint)

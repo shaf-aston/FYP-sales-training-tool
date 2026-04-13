@@ -146,7 +146,7 @@ class ProspectSession:
             if persona_context:
                 knowledge = f"{knowledge}\n\n{persona_context}" if knowledge else persona_context
 
-            # Keep mode-specific separation: only inject prospect custom KB.
+            # Keep mode-specific separation: only inject prospect custom KB
             prospect_knowledge = get_custom_knowledge_text()
             if prospect_knowledge:
                 custom_block = (
@@ -272,7 +272,7 @@ class ProspectSession:
             }
         )
 
-        # Update readiness based only on the salesperson's message.
+        # Update readiness based only on the salesperson's message
         self._update_readiness(user_message)
 
         end = self._check_end_conditions()

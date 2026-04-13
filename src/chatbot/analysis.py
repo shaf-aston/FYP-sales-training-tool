@@ -1,59 +1,117 @@
-"""Conversation analysis — intent, signals, state detection.
+"""Signal detection utilities for conversation turns"""
 
-Pure analysis only. Decisions live in flow.py, prompts in content.py.
-"""
-
-import re
 import random
+import re
 from dataclasses import dataclass
-from functools import lru_cache
 from typing import Any
 
-from .loader import load_analysis_config, load_signals
 from .constants import MAX_USER_KEYWORDS
+from .loader import loadANALYSIS_CONFIG, load_objection_flows, loadSIGNALS
 from .utils import contains_nonnegated_keyword
 
 
 @dataclass
 class ConversationState:
-    """Analyzed state of a conversation turn."""
-    intent: str          # "low", "medium", "high"
-    guarded: bool        # defensive/evasive behaviour detected
+    """Snapshot of a single conversation turn"""
+
+    intent: str  # "low", "medium", "high"
+    guarded: bool  # defensive/evasive behaviour detected
     question_fatigue: bool  # bot asked too many questions recently
-    decisive: bool       # high intent + not guarded
+    decisive: bool  # high intent + not guarded
 
     def __getitem__(self, key: str):
-        # legacy callers used dict access, keep it working
         return getattr(self, key)
 
     def get(self, key: str, default=None):
-        # legacy callers used dict access, keep it working
         return getattr(self, key, default)
 
 
-_yaml_config = load_analysis_config()
-_THRESHOLDS = _yaml_config["thresholds"]
-_SIGNALS = load_signals()
+ANALYSIS_CONFIG = loadANALYSIS_CONFIG()
+THRESHOLDS = ANALYSIS_CONFIG["thresholds"]
+SIGNALS = loadSIGNALS()
+OFLOWS = load_objection_flows()
 
-_NEGATIONS = frozenset({"not", "don't", "doesn't", "no", "never", "can't", "won't"})
+STOP_WORDS = frozenset(
+    {
+        "i",
+        "me",
+        "my",
+        "a",
+        "an",
+        "the",
+        "is",
+        "are",
+        "was",
+        "were",
+        "be",
+        "been",
+        "have",
+        "has",
+        "had",
+        "do",
+        "does",
+        "did",
+        "will",
+        "would",
+        "could",
+        "should",
+        "can",
+        "may",
+        "to",
+        "of",
+        "in",
+        "for",
+        "on",
+        "with",
+        "at",
+        "by",
+        "from",
+        "it",
+        "its",
+        "this",
+        "that",
+        "not",
+        "no",
+        "yes",
+        "just",
+        "so",
+        "but",
+        "and",
+        "or",
+        "if",
+        "then",
+        "than",
+        "too",
+        "very",
+        "really",
+        "also",
+        "like",
+        "you",
+        "your",
+        "dont",
+        "im",
+        "ive",
+        "some",
+        "what",
+        "how",
+        "about",
+        "etc",
+        "want",
+        "need",
+        "get",
+        "got",
+        "one",
+        "know",
+    }
+)
 
-_STOP_WORDS = frozenset({
-    'i', 'me', 'my', 'a', 'an', 'the', 'is', 'are', 'was', 'were', 'be', 'been',
-    'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should',
-    'can', 'may', 'to', 'of', 'in', 'for', 'on', 'with', 'at', 'by', 'from',
-    'it', 'its', 'this', 'that', 'not', 'no', 'yes', 'just', 'so', 'but', 'and',
-    'or', 'if', 'then', 'than', 'too', 'very', 'really', 'also', 'like', 'you',
-    'your', 'dont', 'im', 'ive', 'some', 'what', 'how', 'about', 'etc', 'want',
-    'need', 'get', 'got', 'one', 'know',
-})
-
-# Cached guardedness signal sets (loaded once at import)
-_AGREEMENT_WORDS = frozenset(_SIGNALS.get("guardedness_keywords", {}).get("agreement_words", []))
-_DISMISSAL_WORDS = frozenset(_SIGNALS.get("guardedness_keywords", {}).get("dismissal", []))
+# loaded once at import
+_AGREEMENT_WORDS = frozenset(SIGNALS.get("guardedness_keywords", {}).get("agreement_words", []))
+_DISMISSAL_WORDS = frozenset(SIGNALS.get("guardedness_keywords", {}).get("dismissal", []))
 
 _GOAL_VERB_PATTERN = re.compile(r"\b(?:want to|need to|trying to)\s+\w+\s+\w+")
 
-# Guardedness category weights (evasive signals strongest, defensive weakest)
+# evasive signals weigh more than defensive ones
 _GUARDEDNESS_WEIGHTS = {
     "evasive": 0.5,
     "sarcasm": 0.35,
@@ -61,42 +119,23 @@ _GUARDEDNESS_WEIGHTS = {
     "defensive": 0.1,
 }
 
-# --- Core keyword matching ---
 
-
-def text_contains_any_keyword(text, keywords) -> bool:
-    """True if text has any non-negated keyword. Alias for contains_nonnegated_keyword —
-    kept for backward compatibility with the 10+ call sites that import this name.
-    """
-    return contains_nonnegated_keyword(text, keywords)
-
-
-# --- State analysis ---
-
-def _has_user_stated_clear_goal(history) -> bool:
-    """True if user stated a clear goal recently (intent lock)."""
+def has_user_stated_clear_goal(history) -> bool:
+    """True if user stated a clear goal recently (intent lock)"""
     if not history:
         return False
-    goal_keywords = _yaml_config["goal_indicators"]
-    window = _THRESHOLDS["recent_history_window"]
-    recent_user_msgs = [
-        m.get("content", "").lower()
-        for m in history[-window:]
-        if m.get("role") == "user"
-    ]
-    if any(text_contains_any_keyword(msg, goal_keywords) for msg in recent_user_msgs):
+    goal_keywords = ANALYSIS_CONFIG["goal_indicators"]
+    window = THRESHOLDS["recent_history_window"]
+    recent_user_msgs = [m.get("content", "").lower() for m in history[-window:] if m.get("role") == "user"]
+    if any(contains_nonnegated_keyword(msg, goal_keywords) for msg in recent_user_msgs):
         return True
 
-    # Keep broad intent verbs out of config, but still detect goal phrasing in context.
+    # catch goal phrasing like "want to buy a car"
     return any(_GOAL_VERB_PATTERN.search(msg) for msg in recent_user_msgs)
 
 
-def _flatten_keywords(keywords):
-    """Flatten a nested keyword structure (lists/dicts) into a single list.
-
-    Some signal categories in `signals.yaml` are nested dicts (e.g. guardedness).
-    This helper returns a flat list of strings for uniform checking.
-    """
+def flatten_keywords(keywords):
+    """flatten nested keyword groups"""
     if not keywords:
         return []
     if isinstance(keywords, list):
@@ -104,28 +143,25 @@ def _flatten_keywords(keywords):
     if isinstance(keywords, dict):
         out = []
         for v in keywords.values():
-            out.extend(_flatten_keywords(v))
+            out.extend(flatten_keywords(v))
         return out
     return []
 
 
 def classify_intent_level(history, user_message="", signal_keywords=None) -> str:
-    """Classify intent level as low/medium/high. Uses intent-lock behaviour."""
+    """classify intent as low, medium, or high"""
     if signal_keywords is None:
-        signal_keywords = load_signals()
+        signal_keywords = SIGNALS
 
-    if _has_user_stated_clear_goal(history):
+    if has_user_stated_clear_goal(history):
         return "high"
 
     if not (user_message or history):
         return "medium"
 
-    recent_text = (user_message + " " + _extract_recent_user_text(history, 2)).lower()
+    recent_text = (user_message + " " + extract_recent_user_text(history, 2)).lower()
 
-    # Respect configured signal priority when resolving intent-sensitive
-    # categories. `signal_priority` is an optional list in signals.yaml that
-    # orders categories to check first. Fall back to checking high_intent
-    # before low_intent when no priority is provided.
+    # check categories in configured priority order
     priority = signal_keywords.get("signal_priority", ["high_intent", "low_intent"]) or ["high_intent", "low_intent"]
 
     HIGH_INTENT_CATS = {"high_intent", "commitment", "demand_directness", "impatience", "urgency", "price_sensitivity"}
@@ -134,173 +170,152 @@ def classify_intent_level(history, user_message="", signal_keywords=None) -> str
     for cat in priority:
         if cat not in signal_keywords:
             continue
-        keywords = _flatten_keywords(signal_keywords.get(cat))
+        keywords = flatten_keywords(signal_keywords.get(cat))
         if not keywords:
             continue
-        if text_contains_any_keyword(recent_text, keywords):
+        if contains_nonnegated_keyword(recent_text, keywords):
             if cat in HIGH_INTENT_CATS:
                 return "high"
             if cat in LOW_INTENT_CATS:
                 return "low"
 
-    # Fallback to conservative checks if nothing matched in prioritized pass
-    if text_contains_any_keyword(recent_text, _flatten_keywords(signal_keywords.get("low_intent", []))):
+    # fallback if nothing matched in prioritized pass
+    if contains_nonnegated_keyword(recent_text, flatten_keywords(signal_keywords.get("low_intent", []))):
         return "low"
-    if text_contains_any_keyword(recent_text, _flatten_keywords(signal_keywords.get("high_intent", []))):
+    if contains_nonnegated_keyword(recent_text, flatten_keywords(signal_keywords.get("high_intent", []))):
         return "high"
     return "medium"
 
 
 def detect_guardedness(user_message: str, history: list[dict[str, str]]) -> float:
-    """Guardedness score 0.0–1.0; agreement-after-answer treated as not guarded."""
+    """Guardedness score 0.0–1.0; agreement-after-answer treated as not guarded"""
     if not user_message:
         return 0.0
-    
+
     msg_lower = user_message.lower().strip()
     msg_length = len(user_message.split())
 
-    # PRIORITY CHECK: Agreement pattern detection
-    # Pattern: substantive user response → bot question → "ok" = agreement, NOT guarded
+    # substantive reply → bot question → "ok" = agreement, not guarded
     if msg_lower in _AGREEMENT_WORDS and len(history) >= 2:
         recent_msgs = history[-4:]
         has_substantive_user = any(
-            m.get('role') == 'user' and len(m.get('content', '').split()) >= 8
-            for m in recent_msgs
+            m.get("role") == "user" and len(m.get("content", "").split()) >= 8 for m in recent_msgs
         )
-        has_bot_question = any(
-            m.get('role') == 'assistant' and '?' in m.get('content', '')
-            for m in recent_msgs
-        )
+        has_bot_question = any(m.get("role") == "assistant" and "?" in m.get("content", "") for m in recent_msgs)
         if has_substantive_user and has_bot_question:
-            return 0.0  # Agreement pattern, not guarded
+            return 0.0
 
-    # Single-word dismissals (not in agreement_words)
+    # single-word dismissals
     if msg_lower in _DISMISSAL_WORDS:
         return 0.9
 
-    # Agreement with elaboration (NOT guarded)
-    # Guard against empty message (whitespace-only after strip)
+    # agreement with elaboration = low guardedness
     split_msg = msg_lower.split()
     if split_msg and split_msg[0] in _AGREEMENT_WORDS and msg_length > 3:
-        return 0.1  # Low guardedness for elaborated agreement
+        return 0.1
 
-    # Weighted scoring using cached guardedness weights
-    guardedness_keywords = _SIGNALS.get("guardedness_keywords", {})
+    # weighted scoring
+    guardedness_keywords = SIGNALS.get("guardedness_keywords", {})
     score = 0.0
     for category, weight in _GUARDEDNESS_WEIGHTS.items():
         keywords = guardedness_keywords.get(category, [])
-        if text_contains_any_keyword(msg_lower, keywords):
+        if contains_nonnegated_keyword(msg_lower, keywords):
             score += weight
-    
+
     # short reply to a long question bumps the score
     if history:
-        last_bot = next((m.get('content', '') for m in reversed(history) if m.get('role') == 'assistant'), '')
+        last_bot = next((m.get("content", "") for m in reversed(history) if m.get("role") == "assistant"), "")
         if len(last_bot.split()) > 50 and msg_length < 8:
             score *= 1.4
-    
+
     return min(score, 1.0)
 
 
-def analyze_state(
+def analyse_state(
     history: list[dict[str, str]],
     user_message: str = "",
     signal_keywords: dict[str, Any] | None = None,
 ) -> ConversationState:
-    """Return the conversation state (intent, guarded, question_fatigue, decisive)."""
+    """Build conversation state from the current turn"""
     if signal_keywords is None:
-        signal_keywords = load_signals()
-
-    assert signal_keywords is not None  # Type narrowing for pyright
+        signal_keywords = SIGNALS
 
     intent = classify_intent_level(history, user_message, signal_keywords=signal_keywords)
 
-    # Guardedness detection (simplified keyword matching)
+    # guardedness
     guardedness_level = 0.0
     if user_message:
         guardedness_level = detect_guardedness(user_message, history)
     guarded = guardedness_level > 0.4
 
-    # Decisiveness detection
+    # decisiveness
     decisive = False
     if user_message:
-        has_commitment = text_contains_any_keyword(
-            user_message.lower(), signal_keywords.get("commitment", [])
-        )
-        has_high_intent = text_contains_any_keyword(
-            user_message.lower(), signal_keywords.get("high_intent", [])
-        )
-        # Decisive if commitment/high-intent signals AND not guarded
+        has_commitment = contains_nonnegated_keyword(user_message.lower(), signal_keywords.get("commitment", []))
+        has_high_intent = contains_nonnegated_keyword(user_message.lower(), signal_keywords.get("high_intent", []))
         decisive = (has_commitment or has_high_intent) and not guarded
 
-    # Question fatigue
+    # question fatigue
     question_fatigue = False
     if history:
         recent_bot = [m["content"] for m in history[-4:] if m["role"] == "assistant"]
-        question_fatigue = sum(1 for msg in recent_bot if "?" in msg) >= _THRESHOLDS["question_fatigue_threshold"]
+        question_fatigue = sum(1 for msg in recent_bot if "?" in msg) >= THRESHOLDS["question_fatigue_threshold"]
 
     return ConversationState(intent=intent, guarded=guarded, question_fatigue=question_fatigue, decisive=decisive)
 
 
-# --- Preference and keyword extraction ---
-
 def extract_preferences(history) -> str:
-    """Return comma-separated preference categories mentioned by the user.
-
-    Categories defined in analysis_config.yaml (preference_keywords).
-    """
+    """Comma-separated preference categories the user mentioned"""
     if not history:
         return ""
-    pref_config = _yaml_config.get("preference_keywords", {})
+    pref_config = ANALYSIS_CONFIG.get("preference_keywords", {})
     mentioned = set()
     for msg in history:
         if msg["role"] == "user":
             text = msg["content"].lower()
             for category, keywords in pref_config.items():
-                if text_contains_any_keyword(text, keywords):
+                if contains_nonnegated_keyword(text, keywords):
                     mentioned.add(category)
     return ", ".join(sorted(mentioned)) if mentioned else ""
 
 
 def extract_user_keywords(history: list[dict[str, str]], max_keywords: int = MAX_USER_KEYWORDS) -> list[str]:
-    """Extract the user's key terms (nouns/descriptors) for lexical entrainment."""
+    """Extract the user's key terms (nouns/descriptors) for lexical entrainment"""
     keywords = []
     for msg in history:
         if msg["role"] == "user":
             for word in msg["content"].lower().split():
                 cleaned = word.strip(".,!?;:'\"")
-                if cleaned and len(cleaned) > 2 and cleaned not in _STOP_WORDS and cleaned not in keywords:
+                if cleaned and len(cleaned) > 2 and cleaned not in STOP_WORDS and cleaned not in keywords:
                     keywords.append(cleaned)
     return keywords[-max_keywords:]
 
 
-# --- Detection helpers ---
-
 def is_repetitive_validation(history, threshold=None) -> bool:
-    """Detect if the bot has been over-validating recently."""
+    """Detect if the bot has been over-validating recently"""
     if threshold is None:
-        threshold = _THRESHOLDS["validation_loop_threshold"]
+        threshold = THRESHOLDS["validation_loop_threshold"]
     if not history or len(history) < 4:
         return False
-    validation_phrases = _SIGNALS.get("validation_phrases", [])
+    validation_phrases = SIGNALS.get("validation_phrases", [])
     recent_bot = [m["content"].lower() for m in history[-10:] if m["role"] == "assistant"]
-    count = sum(1 for msg in recent_bot if text_contains_any_keyword(msg, validation_phrases))
+    count = sum(1 for msg in recent_bot if contains_nonnegated_keyword(msg, validation_phrases))
     return count >= threshold
 
 
 def is_literal_question(user_message) -> bool:
-    """True if the user is asking for information (not rhetorical)."""
+    """True if the user is asking for information (not rhetorical)"""
     if not user_message:
         return False
     msg = user_message.lower().strip()
-    patterns = _yaml_config.get("question_patterns", {})
+    patterns = ANALYSIS_CONFIG.get("question_patterns", {})
     starters = patterns.get("starters", [])
     rhetorical = patterns.get("rhetorical_markers", [])
 
-    # Basic question detection: starts with interrogative words or ends with '?'
+    # starts with interrogative word or ends with "?"
     is_question = any(msg.startswith(w) for w in starters) or msg.endswith("?")
 
-    # Rhetorical marker detection: normalize punctuation to improve matching
-    # e.g. "that's obvious, right?" should match rhetorical marker "right?"
+    # normalize punctuation so "that's obvious, right?" matches rhetorical marker
     msg_norm = re.sub(r"[^\w\s']", " ", msg)
     msg_norm = re.sub(r"\s+", " ", msg_norm).strip()
 
@@ -314,10 +329,10 @@ def is_literal_question(user_message) -> bool:
 
 
 def commitment_or_walkaway(history: list[dict[str, str]], user_msg: str, turns: int) -> bool:
-    """True when user commits or walks away — objection stage exit."""
-    # Use internal _SIGNALS loaded at module level
-    return (text_contains_any_keyword(user_msg.lower(), _SIGNALS.get("commitment", [])) or
-            text_contains_any_keyword(user_msg.lower(), _SIGNALS.get("walking", [])))
+    """True when user commits or walks away (objection stage exit)"""
+    return contains_nonnegated_keyword(user_msg.lower(), SIGNALS.get("commitment", [])) or contains_nonnegated_keyword(
+        user_msg.lower(), SIGNALS.get("walking", [])
+    )
 
 
 def detect_acknowledgment_context(
@@ -325,40 +340,39 @@ def detect_acknowledgment_context(
     history: list[dict[str, str]],
     state: ConversationState,
 ) -> str:
-    """Choose acknowledgment level: 'full' | 'light' | 'none'."""
+    """Choose acknowledgment level: 'full' | 'light' | 'none'"""
     if not user_message:
         return "none"
 
     msg_lower = user_message.lower()
 
-    # Never acknowledge direct info requests — lead with substance
-    direct_requests = _SIGNALS.get("direct_info_requests", [])
-    if text_contains_any_keyword(msg_lower, direct_requests):
+    # skip ack for direct info requests
+    direct_requests = SIGNALS.get("direct_info_requests", [])
+    if contains_nonnegated_keyword(msg_lower, direct_requests):
         return "none"
 
-    # Never acknowledge low-engagement filler (e.g. "all good", "just looking")
-    low_intent = _SIGNALS.get("low_intent", [])
-    if text_contains_any_keyword(msg_lower, low_intent) and len(user_message.split()) < 6:
+    # skip ack for low-engagement filler
+    low_intent = SIGNALS.get("low_intent", [])
+    if contains_nonnegated_keyword(msg_lower, low_intent) and len(user_message.split()) < 6:
         return "none"
 
-    # Full acknowledgment: user shared emotional content or vulnerability
-    emotional_keywords = _SIGNALS.get("emotional_disclosure", [])
-    if text_contains_any_keyword(msg_lower, emotional_keywords):
+    # full ack when user shared something emotional
+    emotional_keywords = SIGNALS.get("emotional_disclosure", [])
+    if contains_nonnegated_keyword(msg_lower, emotional_keywords):
         return "full"
 
-    # Full acknowledgment: literal question with personal emotional context in history
-    # e.g. "so what can I do?" after they shared a struggle
+    # light ack if recent emotional context + literal question now
     if history:
         recent_user = [m["content"].lower() for m in history[-4:] if m["role"] == "user"]
-        if any(text_contains_any_keyword(m, emotional_keywords) for m in recent_user):
+        if any(contains_nonnegated_keyword(m, emotional_keywords) for m in recent_user):
             if is_literal_question(user_message):
                 return "light"
 
-    # Light acknowledgment: guarded/evasive — builds comfort and openness
+    # light ack for guarded users
     if state.guarded:
         return "light"
 
-    # Short factual question — skip it
+    # short factual question, skip it
     if is_literal_question(user_message) and len(user_message.split()) < 8:
         return "none"
 
@@ -366,11 +380,11 @@ def detect_acknowledgment_context(
 
 
 def user_demands_directness(history, user_message) -> bool:
-    """Detects frustration or demand for a straight answer."""
-    demand_keywords = _SIGNALS.get("demand_directness", [])
+    """Detects frustration or demand for a straight answer"""
+    demand_keywords = SIGNALS.get("demand_directness", [])
     msg_lower = user_message.lower()
 
-    if text_contains_any_keyword(msg_lower, demand_keywords):
+    if contains_nonnegated_keyword(msg_lower, demand_keywords):
         return True
 
     if history and len(history) >= 2 and "i said" in msg_lower:
@@ -379,78 +393,30 @@ def user_demands_directness(history, user_message) -> bool:
     return False
 
 
-# --- Objection classification ---
-
-_REFRAME_DESCRIPTIONS = {
-    "money": {
-        "isolate_funds": "separate money from the want — 'if cost wasn't an issue, is this actually what you'd go for?'",
-        "self_solve": "Let them find the solution: 'How do you think you could resolve that? Where could you find the funding to get you where you want to go?'",
-        "plant_credit": "Introduce credit: 'Have you considered putting it on a card and paying it off with the results you get from this?'",
-        "funding_options": "Present alternatives: 'Here are a few ways other clients have funded this...'",
-    },
-    "partner": {
-        "same_side": "Get on same side: 'If your partner was here and on board, would this be the answer for you? What specifically gives you the most benefit?'",
-        "open_wallet_test": "Test real commitment: 'We can schedule a follow-up, or you can put down a commitment now — which shows you're serious going into that conversation. How do you want to proceed?'",
-        "schedule_followup": "Bring them in: 'Let's get a call when they can join — that way they hear it directly. When works?'",
-    },
-    "fear": {
-        "change_of_process": "Challenge the process: 'Do you feel your current decision-making is getting you the results you want? What would happen if you kept making decisions the same way?'",
-        "island_analogy": "Perspective shift: 'All your decisions come from where you stand now. To see what's really possible, you have to pick a direction. What do you feel you NEED to do to get the outcome you want?'",
-        "identity_reframe": "Identity shift: 'The only difference between where you are and where you want to be is the decisions you make. What choices would you need to start making to get there?'",
-    },
-    "logistical": {
-        "solve_mechanics": "Remove the barrier: 'What if we handled [X] for you? Would that change things?'",
-        "simplify_process": "Simplify: 'It's actually straightforward — here's exactly what happens next.'",
-    },
-    "think": {
-        "drill_to_root": "Drill to root — money first, then fear: 'Totally fair. Is it more the investment side of things, or something else you're weighing up?'",
-        "handle_root_type": "Once root identified, handle as money or fear type using those exact sequences.",
-    },
-    "smokescreen": {
-        "legitimacy_test": "Test if genuine: 'I hear you — is it the product itself, or is there something else going on?'",
-    },
-}
-
-_OBJECTION_KEYWORDS = {
-    "money": ["expensive", "cost", "price", "afford", "budget", "too much",
-              "payment", "financing", "cheaper", "discount", "can't afford",
-              "pricey", "money", "investment"],
-    "partner": ["spouse", "wife", "husband", "partner", "boss", "manager",
-                "team", "check with", "talk to", "get approval", "need to ask",
-                "run it by"],
-    "fear": ["scared", "worried", "risk", "fail", "wrong choice", "regret",
-             "what if", "nervous", "uncertain", "guarantee", "proof"],
-    "logistical": ["time", "schedule", "busy", "when", "how long", "process",
-                   "complicated", "hassle", "setup", "difficult", "steps"],
-    "think": ["think about it", "think it over", "need time", "not sure",
-              "let me think", "sleep on it", "consider", "mull it over"],
-    "smokescreen": ["not interested", "no thanks", "pass", "nah",
-                    "not for me", "i'm good", "all set"],
-}
-
 def classify_objection(user_message, history=None) -> dict[str, Any]:
-    """Classify objection type and pick a reframe strategy for the prompt."""
-    objection_config = _yaml_config.get("objection_handling", {})
+    """classify objection type and pick a reframe"""
+    objection_config = ANALYSIS_CONFIG.get("objection_handling", {})
     classification_order = objection_config.get(
         "classification_order",
         ["smokescreen", "partner", "money", "fear", "logistical", "think"],
     )
+    objection_keywords = OFLOWS.get("keywords", {})
+    reframe_guidance = OFLOWS.get("reframe_guidance", {})
 
     msg_lower = user_message.lower()
     combined = msg_lower
     if history:
         recent_user = [m["content"].lower() for m in history[-4:] if m["role"] == "user"]
-        # Deduplicate: history already contains current message as last user turn
         if recent_user and recent_user[-1] == msg_lower:
             recent_user = recent_user[:-1]
         combined = " ".join(recent_user) + " " + msg_lower
 
     for obj_type in classification_order:
-        keywords = _OBJECTION_KEYWORDS.get(obj_type, [])
-        if text_contains_any_keyword(combined, keywords):
+        keywords = objection_keywords.get(obj_type, [])
+        if contains_nonnegated_keyword(combined, keywords):
             strategies = objection_config.get("reframe_strategies", {}).get(obj_type, [])
             strategy_name = random.choice(strategies) if strategies else "general_reframe"
-            guidance = _REFRAME_DESCRIPTIONS.get(obj_type, {}).get(
+            guidance = reframe_guidance.get(obj_type, {}).get(
                 strategy_name,
                 f"Address the {obj_type} concern directly using the user's stated goals.",
             )
@@ -463,7 +429,8 @@ def classify_objection(user_message, history=None) -> dict[str, Any]:
     }
 
 
-# --- Web search trigger helpers ---
+# get_objection_data removed (unused); use `classify_objection()` directly where needed
+
 
 def should_trigger_web_search(
     stage: str,
@@ -471,9 +438,8 @@ def should_trigger_web_search(
     user_message: str,
     config: dict,
 ) -> bool:
-    """True if web search enrichment should fire this turn."""
-    # config injected so tests don't need file I/O
-    
+    """True if web search should fire this turn"""
+
     if not config.get("enabled"):
         return False
     msg_lower = user_message.lower()
@@ -489,22 +455,19 @@ def build_search_query(
     product_type: str,
     templates: dict,
 ) -> str:
-    """Build a focused search query from objection type and product context."""
-    # templates injected so tests don't need file I/O
+    """Build a search query from objection type and product context"""
     keyword = product_type or "product"
     template_key = objection_type if objection_type in templates else "explicit"
     template = templates.get(template_key, "{keyword} facts data")
     return template.replace("{keyword}", keyword)
 
 
-# --- Internal helpers ---
-
-def _extract_recent_user_text(history, max_messages=None) -> str:
-    """Combined lowercase text of the N most recent user messages."""
+def extract_recent_user_text(history, max_messages=None) -> str:
+    """Combined lowercase text of the N most recent user messages"""
     if max_messages is None:
-        max_messages = _THRESHOLDS["recent_text_messages"]
+        max_messages = THRESHOLDS["recent_text_messages"]
     if not history:
         return ""
-    recent = history[-(max_messages * 2):]
+    recent = history[-(max_messages * 2) :]
     user_msgs = [m["content"].lower() for m in recent if m["role"] == "user"]
     return " ".join(user_msgs[-max_messages:])

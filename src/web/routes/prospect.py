@@ -1,27 +1,22 @@
-"""Prospect mode endpoints — role-reversal where user plays salesperson."""
+"""Prospect mode endpoints — role-reversal where user plays salesperson"""
 
-from flask import Blueprint, request, jsonify
 import secrets
 
-bp = Blueprint('prospect', __name__, url_prefix='/api/prospect')
+from flask import Blueprint, jsonify, request
+
+bp = Blueprint("prospect", __name__, url_prefix="/api/prospect")
 
 
 def init_routes(app, prospect_session_manager_obj, validate_message_func):
-    """Initialize prospect routes with dependency injection.
-
-    Args:
-        app: Flask app (for logger access)
-        prospect_session_manager_obj: SessionSecurityManager instance for prospect sessions
-        validate_message_func: Function to validate message text
-    """
+    """hook up prospect routes"""
     bp.app = app  # type: ignore
     bp.prospect_session_manager = prospect_session_manager_obj  # type: ignore
     bp.validate_message = validate_message_func  # type: ignore
 
 
 def _require_prospect_session():
-    """Validate prospect session. Returns (prospect_session, error_response)."""
-    session_id = request.headers.get('X-Session-ID')
+    """Validate prospect session. Returns (prospect_session, error_response)"""
+    session_id = request.headers.get("X-Session-ID")
     if not session_id:
         return None, (jsonify({"error": "Session ID required"}), 400)
     ps = bp.prospect_session_manager.get(session_id)  # type: ignore
@@ -30,24 +25,25 @@ def _require_prospect_session():
     return ps, None
 
 
-@bp.route('/init', methods=['POST'])
+@bp.route("/init", methods=["POST"])
 def prospect_init():
-    """Create a prospect session. Bot plays the buyer, user plays the salesperson."""
+    """Create a prospect session. Bot plays the buyer, user plays the salesperson"""
     if not bp.prospect_session_manager.can_create():  # type: ignore
-        return jsonify({"error": "Prospect mode at capacity. Try again later."}), 503
+        return jsonify({"error": "Prospect mode is at capacity — check back in a moment."}), 503
 
     data = request.json or {}
-    difficulty = data.get('difficulty', 'medium')
-    product_type = data.get('product_type', 'default')
-    provider = data.get('provider', 'groq')
+    difficulty = data.get("difficulty", "medium")
+    product_type = data.get("product_type", "default")
+    provider = data.get("provider", "groq")
 
-    if difficulty not in ('easy', 'medium', 'hard'):
+    if difficulty not in ("easy", "medium", "hard"):
         return jsonify({"error": "Invalid difficulty. Choose: easy, medium, hard"}), 400
 
     session_id = secrets.token_hex(16)
 
     try:
         from chatbot.prospect.prospect import ProspectSession
+
         ps = ProspectSession(
             provider_type=provider,
             product_type=product_type,
@@ -58,44 +54,46 @@ def prospect_init():
         bp.prospect_session_manager.set(session_id, ps)  # type: ignore
         bp.app.logger.info(f"Prospect session: {session_id} (difficulty={difficulty}, product={product_type})")  # type: ignore
 
-        return jsonify({
-            "success": True,
-            "session_id": session_id,
-            "message": opening.content,
-            "persona": {
-                "name": ps.persona.get("name", "Unknown"),
-                "background": ps.persona.get("background", ""),
-                "personality": ps.persona.get("personality", ""),
-            },
-            "state": opening.state_snapshot,
-            "difficulty": difficulty,
-            "product_type": product_type,
-            "latency_ms": opening.latency_ms,
-            "provider": opening.provider,
-            "model": opening.model,
-        })
+        return jsonify(
+            {
+                "success": True,
+                "session_id": session_id,
+                "message": opening.content,
+                "persona": {
+                    "name": ps.persona.get("name", "Unknown"),
+                    "background": ps.persona.get("background", ""),
+                    "personality": ps.persona.get("personality", ""),
+                },
+                "state": opening.state_snapshot,
+                "difficulty": difficulty,
+                "product_type": product_type,
+                "latency_ms": opening.latency_ms,
+                "provider": opening.provider,
+                "model": opening.model,
+            }
+        )
     except Exception as e:
         bp.app.logger.exception(f"Prospect init failed: {e}")  # type: ignore
-        return jsonify({"error": "Prospect init failed. Please retry."}), 500
+        return jsonify({"error": "Couldn't set up the prospect session -- try once more"}), 500
 
 
-@bp.route('/chat', methods=['POST'])
+@bp.route("/chat", methods=["POST"])
 def prospect_chat():
-    """User sends a sales message; prospect responds."""
+    """User sends a sales message; prospect responds"""
     ps, err = _require_prospect_session()
     if err:
         return err
     assert ps is not None
 
     data = request.json or {}
-    user_message, val_err = bp.validate_message(data.get('message', ''))  # type: ignore
+    user_message, val_err = bp.validate_message(data.get("message", ""))  # type: ignore
     if val_err:
         return val_err
 
     if ps.state.has_committed or ps.state.has_walked:
         return jsonify({"error": "Session has ended. Get evaluation or reset."}), 400
 
-    show_hints = data.get('show_hints', False)
+    show_hints = data.get("show_hints", False)
 
     try:
         response = ps.process_turn(user_message, show_hints=show_hints)
@@ -114,31 +112,33 @@ def prospect_chat():
         return jsonify(result)
     except Exception as e:
         bp.app.logger.exception(f"Prospect chat error: {e}")  # type: ignore
-        return jsonify({"error": "Prospect chat failed. Please retry."}), 500
+        return jsonify({"error": "The prospect got confused -- send that again"}), 500
 
 
-@bp.route('/state', methods=['GET'])
+@bp.route("/state", methods=["GET"])
 def prospect_state():
-    """Get current prospect session state."""
+    """Get current prospect session state"""
     ps, err = _require_prospect_session()
     if err:
         return err
     assert ps is not None
-    return jsonify({
-        "success": True, 
-        "state": ps.state.to_dict(),
-        "persona": ps.persona,
-        "difficulty": ps.state.difficulty,
-        "product_type": ps.state.product_type,
-        "conversation_history": ps.conversation_history,
-        "provider": ps.provider_name,
-        "model": ps.model_name
-    })
+    return jsonify(
+        {
+            "success": True,
+            "state": ps.state.to_dict(),
+            "persona": ps.persona,
+            "difficulty": ps.state.difficulty,
+            "product_type": ps.state.product_type,
+            "conversation_history": ps.conversation_history,
+            "provider": ps.provider_name,
+            "model": ps.model_name,
+        }
+    )
 
 
-@bp.route('/evaluate', methods=['POST'])
+@bp.route("/evaluate", methods=["POST"])
 def prospect_evaluate():
-    """Generate final evaluation scorecard."""
+    """Generate final evaluation scorecard"""
     ps, err = _require_prospect_session()
     if err:
         return err
@@ -149,13 +149,13 @@ def prospect_evaluate():
         return jsonify({"success": True, **evaluation})
     except Exception as e:
         bp.app.logger.exception(f"Prospect evaluation error: {e}")  # type: ignore
-        return jsonify({"error": "Evaluation failed. Please retry."}), 500
+        return jsonify({"error": "Scoring ran into a problem -- give it another go."}), 500
 
 
-@bp.route('/reset', methods=['POST'])
+@bp.route("/reset", methods=["POST"])
 def prospect_reset():
-    """End and remove a prospect session."""
-    session_id = request.headers.get('X-Session-ID')
+    """End and remove a prospect session"""
+    session_id = request.headers.get("X-Session-ID")
     if session_id:
         bp.prospect_session_manager.delete(session_id)  # type: ignore
     return jsonify({"success": True})

@@ -1,11 +1,12 @@
-"""SambaNova cloud provider - OpenAI compatible API"""
+"""SambaNova cloud provider (OpenAI-compatible API)."""
 
-import os
-import time
 import logging
+import os
 import threading
+import time
+from typing import Dict, List
+
 import requests
-from typing import List, Dict
 
 from .base import BaseLLMProvider, LLMResponse, auto_log_performance
 
@@ -23,13 +24,12 @@ class SambaNovaProvider(BaseLLMProvider):
         self._session = None
         self._session_lock = threading.Lock()
 
-        logger.info(
-            f"SambaNovaProvider initialized | Model: {self.model} | "
-            f"Keys available: {1 if self.api_key else 0}"
-        )
+        logger.info(f"SambaNovaProvider initialized | Model: {self.model} | Keys available: {1 if self.api_key else 0}")
 
     @auto_log_performance
-    def chat(self, messages: List[Dict], temperature: float = 0.8, max_tokens: int = 200, stage: str | None = None) -> LLMResponse:
+    def chat(
+        self, messages: List[Dict], temperature: float = 0.8, max_tokens: int = 200, stage: str | None = None
+    ) -> LLMResponse:
         if not self.is_available():
             error_msg = f"SambaNova unavailable. API Key: {'Set' if self.api_key else 'Missing'}"
             logger.error(error_msg)
@@ -46,24 +46,22 @@ class SambaNovaProvider(BaseLLMProvider):
                     "temperature": temperature,
                     "max_tokens": max_tokens,
                 },
-                timeout=30
+                timeout=30,
             )
             response.raise_for_status()
 
             latency = (time.time() - request_start_time) * 1000
             data = response.json()
 
-            return LLMResponse(
-                content=data["choices"][0]["message"]["content"],
-                model=self.model,
-                latency_ms=latency
-            )
+            return LLMResponse(content=data["choices"][0]["message"]["content"], model=self.model, latency_ms=latency)
 
         except requests.exceptions.HTTPError as e:
-            error_detail = e.response.json().get("error", {}).get("message", str(e)) if e.response is not None else str(e)
+            error_detail = (
+                e.response.json().get("error", {}).get("message", str(e)) if e.response is not None else str(e)
+            )
             logger.error(f"SambaNova HTTP error: {error_detail}", exc_info=True)
             return LLMResponse(content="", model=self.model, latency_ms=0, error=error_detail)
-            
+
         except Exception as e:
             logger.error(f"SambaNova API error: {str(e)}", exc_info=True)
             return LLMResponse(content="", model=self.model, latency_ms=0, error=str(e))
@@ -79,8 +77,7 @@ class SambaNovaProvider(BaseLLMProvider):
         with self._session_lock:
             if not self._session:
                 self._session = requests.Session()
-                self._session.headers.update({
-                    "Authorization": f"Bearer {self.api_key}",
-                    "Content-Type": "application/json"
-                })
+                self._session.headers.update(
+                    {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
+                )
         return self._session

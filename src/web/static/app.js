@@ -30,7 +30,7 @@ function changeDictationSendMode(mode) {
   dictationSendMode = mode;
   localStorage.setItem("dictationSendMode", mode);
 
-  // Keep the legacy auto-send checkbox in sync: manual -> off, others -> on
+  // Keep the auto-send checkbox in sync: manual -> off, others -> on
   const cb = document.getElementById("autoSendDictationToggle");
   if (cb) {
     if (mode === "manual") {
@@ -92,17 +92,6 @@ function getProductOptionsFromConfig(cfg) {
 
   // Public config shape: { product_options: [{...}] }
   if (Array.isArray(cfg.product_options)) return cfg.product_options;
-
-  // Legacy fallback shape: { products: { available: [...] }, product_strategies: {...} }
-  const available = cfg.products?.available;
-  if (Array.isArray(available)) {
-    const strategies = cfg.product_strategies || {};
-    return available.map((id) => ({
-      id,
-      strategy: strategies[id] || "",
-      label: id,
-    }));
-  }
 
   return [];
 }
@@ -189,9 +178,7 @@ function syncKnowledgeBaseLink() {
       const isProspect =
         _prospectMode ||
         (typeof PAGE_MODE !== "undefined" && PAGE_MODE === "prospect");
-      window.location.href = isProspect
-        ? "/knowledge"
-        : "/knowledge";
+      window.location.href = isProspect ? "/knowledge" : "/knowledge";
     });
     link._kbClickHandlerSet = true;
   }
@@ -331,7 +318,9 @@ const _voiceStrategyPattern =
   /\b(?:switch|set)\s+(?:strategy\s+)?(?:to\s+)?(intent|consultative|transactional)\b/i;
 
 function parseFlowVoiceCommand(rawText) {
-  const text = String(rawText || "").trim().toLowerCase();
+  const text = String(rawText || "")
+    .trim()
+    .toLowerCase();
   if (!text) return null;
 
   let match = text.match(_voiceStrategyPattern);
@@ -389,10 +378,7 @@ async function executeFlowVoiceCommand(command) {
     if (command.type === "strategy") {
       const d = await requestStrategySwitch(command.value);
       updateSessionUI(d);
-      showToast(
-        "Voice: strategy -> " + command.value.toUpperCase(),
-        "info",
-      );
+      showToast("Voice: strategy -> " + command.value.toUpperCase(), "info");
       return true;
     }
   } catch (e) {
@@ -657,7 +643,7 @@ function editMessage(msgIdx, originalText, msgEl) {
         ta.disabled = false;
         saveBtn.disabled = false;
         cancelBtn.disabled = false;
-        showToast("Edit failed — please retry", "error");
+        showToast("Edit didn't go through -- try it again", "error");
       });
   };
 }
@@ -779,7 +765,9 @@ window.addEventListener("DOMContentLoaded", () => {
   // Populate prospect products on both seller and prospect pages.
   loadProspectProducts();
   syncKnowledgeBaseLink();
-  syncStrategySelectors(localStorage.getItem("chatStrategy") || _currentStrategy);
+  syncStrategySelectors(
+    localStorage.getItem("chatStrategy") || _currentStrategy,
+  );
   loadStageOptions();
 
   if (typeof PAGE_MODE !== "undefined" && PAGE_MODE === "prospect") {
@@ -926,8 +914,8 @@ function sendMessage() {
       hideTyping();
       const msg =
         error.name === "AbortError"
-          ? "Response timed out — please retry"
-          : "Connection error — please retry";
+          ? "Response timed out — give it another shot"
+          : "Connection dropped — try once more";
       showToast(msg, "error");
     });
 }
@@ -966,7 +954,9 @@ function updateStage(stage) {
 }
 
 function syncStrategySelectors(strategy) {
-  const normalized = String(strategy || "").trim().toLowerCase();
+  const normalized = String(strategy || "")
+    .trim()
+    .toLowerCase();
   const known = new Set(["intent", "consultative", "transactional"]);
   ["strategySelectMain"].forEach((id) => {
     const el = document.getElementById(id);
@@ -991,7 +981,10 @@ function updateSessionUI(data) {
     loadDevState();
   }
   // Keep stage selectors in sync (sidebar + primary controls)
-  if (document.getElementById("stageSelect") || document.getElementById("stageSelectMain")) {
+  if (
+    document.getElementById("stageSelect") ||
+    document.getElementById("stageSelectMain")
+  ) {
     loadStageOptions();
   }
 }
@@ -1029,21 +1022,25 @@ function toggleTrainingPanel() {
 function updateTrainingPanel(training) {
   if (!training) return;
 
-  const renderInline = (text) => {
+  const cleanText = (text) => {
     if (!text) return "—";
-    if (
-      typeof marked !== "undefined" &&
-      typeof marked.parseInline === "function"
-    ) {
-      return marked.parseInline(text);
-    }
-    return escapeHtml(text);
+    // strip markdown: bold, italic, numbered lists, bullet points
+    let clean = String(text)
+      .replace(/\*\*([^*]+)\*\*/g, "$1")
+      .replace(/\*([^*]+)\*/g, "$1")
+      .replace(/^\d+\.\s+/gm, "")
+      .replace(/^[-•]\s+/gm, "")
+      .replace(/\n/g, " ")
+      .trim();
+    // cap at 120 chars
+    if (clean.length > 120) clean = clean.slice(0, 117) + "...";
+    return escapeHtml(clean);
   };
 
-  document.getElementById("tWhatHappened").innerHTML = renderInline(
+  document.getElementById("tWhatHappened").innerHTML = cleanText(
     training.what_happened,
   );
-  document.getElementById("tNextMove").innerHTML = renderInline(
+  document.getElementById("tNextMove").innerHTML = cleanText(
     training.next_move,
   );
 
@@ -1051,7 +1048,7 @@ function updateTrainingPanel(training) {
   ul.innerHTML = "";
   (training.watch_for || []).slice(0, 2).forEach((tip) => {
     const li = document.createElement("li");
-    li.innerHTML = renderInline(tip);
+    li.innerHTML = cleanText(tip);
     ul.appendChild(li);
   });
 }
@@ -1315,7 +1312,9 @@ function resetChat() {
         initChatbot();
       }
     })
-    .catch((error) => showToast("Reset failed — please retry", "error"));
+    .catch((error) =>
+      showToast("Reset didn't stick -- try one more time", "error"),
+    );
 }
 
 // ─── Advanced Options Panel ──────────────────────────────────
@@ -1463,7 +1462,8 @@ async function loadStageOptions() {
 }
 
 async function jumpStage(selectId = "stageSelect") {
-  const sel = document.getElementById(selectId) || document.getElementById("stageSelect");
+  const sel =
+    document.getElementById(selectId) || document.getElementById("stageSelect");
   if (!sel) return;
   const stage = sel.value;
   if (!stage) return showToast("Select a stage first", "error");
@@ -1481,7 +1481,9 @@ async function switchStrategy(selectId = "strategySelectMain") {
   const sel = document.getElementById(selectId);
   if (!sel) return;
 
-  const strategy = String(sel.value || "").trim().toLowerCase();
+  const strategy = String(sel.value || "")
+    .trim()
+    .toLowerCase();
   if (!strategy) return showToast("Select a strategy first", "error");
 
   try {
@@ -1625,8 +1627,8 @@ function renderAnalysisResult(d) {
     impatience: "Impatience",
     demands_directness: "Demands Directness",
     direct_info_requests: "Direct Info Req",
-    user_consultative_signals: "→ Consultative",
-    user_transactional_signals: "→ Transactional",
+    user_consultativeSIGNALS: "→ Consultative",
+    user_transactionalSIGNALS: "→ Transactional",
   };
   const sigItems = Object.entries(sigLabels)
     .map(([k, label]) => {
@@ -1742,9 +1744,6 @@ function applyProspectSessionFromServer(sessionId, data) {
   _prospectDifficulty = data.difficulty || "medium";
   syncKnowledgeBaseLink();
 
-  // Close setup overlay if open
-  closeProspectSetup();
-
   // Hide training/quiz/dev panels
   document.getElementById("trainingPanel").classList.remove("open");
   document.querySelector(".container").classList.remove("panel-open");
@@ -1831,10 +1830,6 @@ function toggleProspectSettings() {
 function openProspectSetup() {
   // Populate product dropdown natively
   loadProspectProducts();
-}
-
-function closeProspectSetup() {
-  // Deprecated: UI is native in sidebar
 }
 
 function selectProspectDifficulty(diff, btn) {
@@ -2086,8 +2081,8 @@ function sendProspectMessage() {
       hideTyping();
       const msg =
         e.name === "AbortError"
-          ? "Response timed out — please retry"
-          : "Connection error — please retry";
+          ? "Request timed out -- send that again"
+          : "Network hiccup -- try that once more";
       showToast(msg, "error");
     });
 }
@@ -2202,7 +2197,7 @@ function buildEvaluationHTML(data) {
           ${strengthsHtml}
           ${improvementsHtml}
           ${data.summary ? `<div class="prospect-eval-summary">${data.summary}</div>` : ""}
-          <button class="prospect-try-again-btn" onclick="tryAgainProspect()">Try Again</button>
+          <button class="prospect-try-again-btn" onclick="tryAgainProspect()">Try again</button>
         `;
 }
 

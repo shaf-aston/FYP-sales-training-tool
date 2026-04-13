@@ -7,19 +7,20 @@ Covers the two previously untested areas:
 Run with: pytest tests/test_trainer_and_devpanel.py -v
 """
 
-import sys
-import os
 import json
+import os
+import sys
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
 
-from chatbot.training.trainer import generate_training, answer_training_question
-from chatbot.flow import SalesFlowEngine, ADVANCEMENT_RULES
-from chatbot.analysis import analyze_state, user_demands_directness, text_contains_any_keyword
-from chatbot.content import SIGNALS
-
+from chatbot.analysis import analyse_state, user_demands_directness  # noqa: E402
+from chatbot.content import SIGNALS  # noqa: E402
+from chatbot.flow import ADVANCEMENT_RULES, SalesFlowEngine  # noqa: E402
+from chatbot.trainer import answer_training_question, generate_training  # noqa: E402
+from chatbot.utils import contains_nonnegated_keyword  # noqa: E402
 
 # ─── Mock helpers ─────────────────────────────────────────────────────────────
+
 
 class MockLLMResponse:
     def __init__(self, content="", error=None, model="mock"):
@@ -31,6 +32,7 @@ class MockLLMResponse:
 
 class MockProvider:
     """Returns canned responses in order."""
+
     def __init__(self, responses=None):
         self._responses = responses or []
         self._call_count = 0
@@ -40,36 +42,49 @@ class MockProvider:
         self._call_count += 1
         return MockLLMResponse(content=resp)
 
-    def get_model_name(self): return "mock"
-    def is_available(self): return True
+    def get_model_name(self):
+        return "mock"
+
+    def is_available(self):
+        return True
 
 
 class MockProviderError:
     """Provider that always returns an error flag."""
+
     def chat(self, messages, **kwargs):
         r = MockLLMResponse(content="")
         r.error = "API error"
         return r
-    def get_model_name(self): return "mock"
-    def is_available(self): return True
+
+    def get_model_name(self):
+        return "mock"
+
+    def is_available(self):
+        return True
 
 
 class MockProviderRaises:
     """Provider that raises an exception."""
+
     def chat(self, messages, **kwargs):
         raise RuntimeError("connection timeout")
-    def get_model_name(self): return "mock"
-    def is_available(self): return True
+
+    def get_model_name(self):
+        return "mock"
+
+    def is_available(self):
+        return True
 
 
 # Canonical valid coaching JSON the LLM would return
-VALID_COACHING_JSON = json.dumps({
-    "stage_goal": "Uncover the underlying problem.",
-    "what_bot_did": "Asked an open-ended probe.",
-    "next_trigger": "User acknowledges current approach isn't working.",
-    "where_heading": "Deepen the pain point.",
-    "watch_for": ["Don't pitch too early", "Listen for emotional language"],
-})
+VALID_COACHING_JSON = json.dumps(
+    {
+        "what_happened": "Asked an open-ended probe about the problem.",
+        "next_move": "Get them to name what isn't working.",
+        "watch_for": ["Don't pitch too early", "Listen for emotional language"],
+    }
+)
 
 
 def _engine(stage="intent", strategy="consultative"):
@@ -81,24 +96,23 @@ def _engine(stage="intent", strategy="consultative"):
 
 # ─── generate_training ────────────────────────────────────────────────────────
 
+
 class TestGenerateTraining:
     """All paths in generate_training(): happy path, fallback, edge cases."""
 
-    def test_valid_json_returns_all_five_fields(self):
-        """Happy path: LLM returns well-formed JSON → all 5 fields present."""
+    def test_valid_json_returns_all_fields(self):
+        """Happy path: LLM returns well-formed JSON → all 3 fields present."""
         provider = MockProvider(responses=[VALID_COACHING_JSON])
         result = generate_training(provider, _engine("logical"), "I've been struggling", "I hear you.")
-        assert result["stage_goal"] == "Uncover the underlying problem."
-        assert result["what_bot_did"] == "Asked an open-ended probe."
-        assert result["next_trigger"] == "User acknowledges current approach isn't working."
-        assert result["where_heading"] == "Deepen the pain point."
+        assert result["what_happened"] == "Asked an open-ended probe about the problem."
+        assert result["next_move"] == "Get them to name what isn't working."
         assert result["watch_for"] == ["Don't pitch too early", "Listen for emotional language"]
 
     def test_malformed_json_falls_back_no_exception(self):
         """Non-JSON LLM response → fallback dict, never an exception."""
         provider = MockProvider(responses=["This is not JSON at all"])
         result = generate_training(provider, _engine("intent"), "hello", "hi")
-        assert "stage_goal" in result
+        assert "what_happened" in result
         assert "watch_for" in result
         assert isinstance(result["watch_for"], list)
 
@@ -106,43 +120,44 @@ class TestGenerateTraining:
         """Empty content from LLM → fallback, not crash."""
         provider = MockProvider(responses=[""])
         result = generate_training(provider, _engine("intent"), "hello", "hi")
-        assert "stage_goal" in result
+        assert "what_happened" in result
 
     def test_error_response_falls_back(self):
         """LLM returns error flag → fallback."""
         result = generate_training(MockProviderError(), _engine("pitch"), "ok", "great!")
-        assert "stage_goal" in result
+        assert "what_happened" in result
         assert isinstance(result["watch_for"], list)
 
     def test_provider_exception_falls_back(self):
         """Provider raises → fallback, not crash."""
         result = generate_training(MockProviderRaises(), _engine("intent"), "hello", "hi")
-        assert "stage_goal" in result
+        assert "what_happened" in result
         assert isinstance(result["watch_for"], list)
 
-    def test_fallback_stage_goal_uses_rubric_not_placeholder(self):
-        """Fallback stage_goal comes from quiz rubric, not 'Progress through X stage.'"""
+    def test_fallback_what_happened_uses_rubric(self):
+        """Fallback what_happened comes from quiz rubric goal."""
         provider = MockProvider(responses=["not json"])
         result = generate_training(provider, _engine("logical"), "ok", "ok")
-        # Old placeholder was "Progress through the logical stage."
-        assert "Progress through" not in result["stage_goal"]
-        # Rubric logical goal is meaningful text
-        assert len(result["stage_goal"]) > 10
+        assert len(result["what_happened"]) > 10
 
-    def test_fallback_next_trigger_uses_rubric_not_dash(self):
-        """Fallback next_trigger comes from rubric advance_when, not '—'."""
+    def test_fallback_next_move_uses_rubric(self):
+        """Fallback next_move comes from rubric advance_when, not '—'."""
         provider = MockProvider(responses=["not json"])
         result = generate_training(provider, _engine("emotional"), "ok", "ok")
-        assert result["next_trigger"] != "—"
-        assert len(result["next_trigger"]) > 5
+        assert result["next_move"] != "—"
+        assert len(result["next_move"]) > 5
 
     def test_watch_for_coerced_to_list_when_string(self):
         """If LLM returns watch_for as a string, it's coerced to empty list."""
-        bad_json = json.dumps({
-            "stage_goal": "X", "what_bot_did": "Y",
-            "next_trigger": "Z", "where_heading": "W",
-            "watch_for": "should be a list",
-        })
+        bad_json = json.dumps(
+            {
+                "stage_goal": "X",
+                "what_bot_did": "Y",
+                "next_trigger": "Z",
+                "where_heading": "W",
+                "watch_for": "should be a list",
+            }
+        )
         result = generate_training(MockProvider(responses=[bad_json]), _engine("intent"), "x", "y")
         assert isinstance(result["watch_for"], list)
 
@@ -150,16 +165,17 @@ class TestGenerateTraining:
         """LLM wraps JSON in ```json ... ``` → still parses correctly."""
         wrapped = f"```json\n{VALID_COACHING_JSON}\n```"
         result = generate_training(MockProvider(responses=[wrapped]), _engine("logical"), "msg", "reply")
-        assert result["stage_goal"] == "Uncover the underlying problem."
+        assert result["what_happened"] == "Asked an open-ended probe about the problem."
 
     def test_transactional_strategy_no_crash(self):
         """Transactional flow fetches rubric without error."""
         result = generate_training(
             MockProvider(responses=[VALID_COACHING_JSON]),
             _engine("pitch", "transactional"),
-            "budget is 500", "Great choice!"
+            "budget is 500",
+            "Great choice!",
         )
-        assert "stage_goal" in result
+        assert "what_happened" in result
 
     def test_rubric_context_injected_in_all_consultative_stages(self):
         """generate_training runs without error at every consultative stage."""
@@ -168,9 +184,10 @@ class TestGenerateTraining:
             result = generate_training(
                 MockProvider(responses=[VALID_COACHING_JSON]),
                 _engine(stage, "consultative"),
-                "test message", "test reply"
+                "test message",
+                "test reply",
             )
-            assert "stage_goal" in result, f"Missing stage_goal at {stage}"
+            assert "what_happened" in result, f"Missing what_happened at {stage}"
 
     def test_max_tokens_accepted_by_mock(self):
         """Provider is called — confirms max_tokens parameter doesn't cause errors."""
@@ -180,6 +197,7 @@ class TestGenerateTraining:
 
 
 # ─── answer_training_question ─────────────────────────────────────────────────
+
 
 class TestAnswerTrainingQuestion:
     """All paths in answer_training_question()."""
@@ -215,9 +233,7 @@ class TestAnswerTrainingQuestion:
     def test_empty_conversation_history_no_crash(self):
         """Works even when conversation history is empty (session start)."""
         engine = SalesFlowEngine("consultative", "cars")  # No turns yet
-        result = answer_training_question(
-            MockProvider(responses=["No history yet!"]), engine, "What's happening?"
-        )
+        result = answer_training_question(MockProvider(responses=["No history yet!"]), engine, "What's happening?")
         assert "answer" in result
 
     def test_returns_dict_not_string(self):
@@ -228,6 +244,7 @@ class TestAnswerTrainingQuestion:
 
 
 # ─── Dev panel underlying logic ───────────────────────────────────────────────
+
 
 class TestDevPanelStageJump:
     """SalesFlowEngine.advance(target_stage=...) — the function called by /api/debug/stage."""
@@ -310,31 +327,37 @@ class TestDevPanelSignalAnalysis:
         msg_lower = message.lower()
 
         signal_keys = [
-            'high_intent', 'low_intent', 'commitment', 'objection', 'walking',
-            'impatience', 'direct_info_requests',
-            'user_consultative_signals', 'user_transactional_signals',
+            "high_intent",
+            "low_intent",
+            "commitment",
+            "objection",
+            "walking",
+            "impatience",
+            "direct_info_requests",
+            "user_consultativeSIGNALS",
+            "user_transactionalSIGNALS",
         ]
-        signal_hits = {k: text_contains_any_keyword(msg_lower, SIGNALS.get(k, [])) for k in signal_keys}
-        signal_hits['demands_directness'] = user_demands_directness(engine.conversation_history, message)
+        signal_hits = {k: contains_nonnegated_keyword(msg_lower, SIGNALS.get(k, [])) for k in signal_keys}
+        signal_hits["demands_directness"] = user_demands_directness(engine.conversation_history, message)
 
-        for k in signal_keys + ['demands_directness']:
+        for k in signal_keys + ["demands_directness"]:
             assert k in signal_hits, f"Missing signal key: {k}"
 
     def test_high_intent_message_detected(self):
         """'ready to buy' triggers high_intent signal."""
-        assert text_contains_any_keyword("I'm ready to buy a car", SIGNALS.get("high_intent", []))
+        assert contains_nonnegated_keyword("I'm ready to buy a car", SIGNALS.get("high_intent", []))
 
     def test_commitment_message_detected(self):
         """Classic commitment phrase is caught."""
-        assert text_contains_any_keyword("yes let's do it", SIGNALS["commitment"])
+        assert contains_nonnegated_keyword("yes let's do it", SIGNALS["commitment"])
 
     def test_low_intent_browsing_detected(self):
         """'just browsing' triggers low_intent."""
-        assert text_contains_any_keyword("just browsing really", SIGNALS["low_intent"])
+        assert contains_nonnegated_keyword("just browsing really", SIGNALS["low_intent"])
 
     def test_state_returns_correct_structure(self):
-        """analyze_state returns ConversationState with all 4 fields."""
-        state = analyze_state([], "I need this urgently", signal_keywords=SIGNALS)
+        """analyse_state returns ConversationState with all 4 fields."""
+        state = analyse_state([], "I need this urgently", signal_keywords=SIGNALS)
         assert hasattr(state, "intent")
         assert hasattr(state, "guarded")
         assert hasattr(state, "decisive")

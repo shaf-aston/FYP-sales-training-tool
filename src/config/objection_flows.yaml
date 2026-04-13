@@ -1,5 +1,38 @@
-# Canonical objection handling flows (sourced from: Objection Handling matrix SOP.pdf)
-# Each value is a multi-line step list; transactional overrides provide shorter, evidence-focused variants.
+# objection handling flows — sourced from the SOP matrix PDF
+# edit this to update objection logic without touching Python
+
+keywords:
+  money: [expensive, cost, price, afford, budget, "too much", payment, financing, cheaper, discount, "can't afford", pricey, money, investment]
+  partner: [spouse, wife, husband, partner, boss, manager, team, "check with", "talk to", "get approval", "need to ask", "run it by"]
+  fear: [scared, worried, risk, fail, "wrong choice", regret, "what if", nervous, uncertain, guarantee, proof]
+  logistical: [time, schedule, busy, when, "how long", process, complicated, hassle, setup, difficult, steps]
+  think: ["think about it", "think it over", "need time", "not sure", "let me think", "sleep on it", consider, "mull it over"]
+  smokescreen: ["not interested", "no thanks", pass, nah, "not for me", "i'm good", "all set"]
+
+reframe_guidance:
+  money:
+    isolate_funds: "separate money from the want — 'if cost wasn't an issue, is this actually what you'd go for?'"
+    self_solve: "Let them find the solution: 'How do you think you could resolve that? Where could you find the funding to get you where you want to go?'"
+    plant_credit: "Introduce credit: 'Have you considered putting it on a card and paying it off with the results you get from this?'"
+    funding_options: "Present alternatives: 'Here are a few ways other clients have funded this...'"
+  partner:
+    same_side: "Get on same side: 'If your partner was here and on board, would this be the answer for you? What specifically gives you the most benefit?'"
+    open_wallet_test: "Test real commitment: 'We can schedule a follow-up, or you can put down a commitment now — which shows you're serious going into that conversation. How do you want to proceed?'"
+    schedule_followup: "Bring them in: 'Let's get a call when they can join — that way they hear it directly. When works?'"
+  fear:
+    change_of_process: "Challenge the process: 'Do you feel your current decision-making is getting you the results you want? What would happen if you kept making decisions the same way?'"
+    island_analogy: "Perspective shift: 'All your decisions come from where you stand now. To see what's really possible, you have to pick a direction. What do you feel you NEED to do to get the outcome you want?'"
+    identity_reframe: "Identity shift: 'The only difference between where you are and where you want to be is the decisions you make. What choices would you need to start making to get there?'"
+  logistical:
+    solve_mechanics: "Remove the barrier: 'What if we handled [X] for you? Would that change things?'"
+    simplify_process: "Simplify: 'It's actually straightforward — here's exactly what happens next.'"
+  think:
+    drill_to_root: "Drill to root — money first, then fear: 'Totally fair. Is it more the investment side of things, or something else you're weighing up?'"
+    handle_root_type: "Once root identified, handle as money or fear type using those exact sequences."
+  smokescreen:
+    legitimacy_test: "Test if genuine: 'I hear you — is it the product itself, or is there something else going on?'"
+
+# sop flows per type, injected at objection stage
 sop_flows:
   money: |-
     1. Acknowledge: 'I hear you.'

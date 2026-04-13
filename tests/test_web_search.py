@@ -5,21 +5,21 @@ All tests mock duckduckgo_search at the module level — no network calls.
 
 import time
 
-from chatbot.web_search import WebSearchService, SearchResult, SearchResponse
-from chatbot.analysis import should_trigger_web_search, build_search_query
-
+from chatbot.analysis import build_search_query, should_trigger_web_search
+from chatbot.web_search import SearchResponse, SearchResult, WebSearchService
 
 # ---------------------------------------------------------------------------
 # WebSearchService tests
 # ---------------------------------------------------------------------------
 
-class TestWebSearchService:
 
+class TestWebSearchService:
     def _make_service(self) -> WebSearchService:
         return WebSearchService(cache_ttl=1800)
 
     def test_graceful_failure_on_network_error(self, monkeypatch):
         """search() must return SearchResponse(error=...) and never raise."""
+
         def bad_fetch(*args, **kwargs):
             raise ConnectionError("no network")
 
@@ -100,12 +100,13 @@ class TestWebSearchService:
 # Rate-limit test via SalesChatbot._maybe_enrich_with_search
 # ---------------------------------------------------------------------------
 
-class TestRateLimit:
 
+class TestRateLimit:
     def _make_chatbot(self, monkeypatch):
         """Create a SalesChatbot with mocked provider and search disabled by default."""
         monkeypatch.setenv("GROQ_API_KEY", "test-key")
         from chatbot.chatbot import SalesChatbot
+
         bot = SalesChatbot(provider_type=None, product_type=None, session_id=None)
         return bot
 
@@ -113,11 +114,11 @@ class TestRateLimit:
         """_maybe_enrich_with_search returns None when called within rate-limit window."""
         monkeypatch.setenv("GROQ_API_KEY", "test-key")
         from chatbot.chatbot import SalesChatbot
+
         bot = SalesChatbot(provider_type=None, product_type=None, session_id=None)
 
         # Set last search to 5 seconds ago (well within 30s window)
-        bot._last_search_time = time.time() - 5
-        # Force stage to objection and a money objection trigger phrase
+        bot.last_search_time = time.time() - 5
         bot.flow_engine.current_stage = "objection"
 
         result = bot._maybe_enrich_with_search("can you show me proof of ROI")
@@ -130,12 +131,12 @@ class TestRateLimit:
 
         bot = SalesChatbot(provider_type=None, product_type=None, session_id=None)
         # Simulate search happening 60 seconds ago
-        bot._last_search_time = time.time() - 60
+        bot.last_search_time = time.time() - 60
         bot.flow_engine.current_stage = "objection"
 
-        # Mock the search service to return a successful result
         from chatbot.web_search import SearchResponse, SearchResult
-        bot._web_search.search = lambda query, max_results=3: SearchResponse(
+
+        bot.web_search.search = lambda query, max_results=3: SearchResponse(
             results=[SearchResult(title="T", snippet="Cost savings proven.", url="u")],
             query=query,
             cached=False,
@@ -159,7 +160,6 @@ _BASE_CONFIG = {
 
 
 class TestShouldTriggerWebSearch:
-
     def test_money_objection_at_objection_stage(self):
         result = should_trigger_web_search("objection", "money", "it's too expensive", _BASE_CONFIG)
         assert result is True
@@ -192,8 +192,8 @@ class TestShouldTriggerWebSearch:
 # Query building tests
 # ---------------------------------------------------------------------------
 
-class TestBuildSearchQuery:
 
+class TestBuildSearchQuery:
     _TEMPLATES = {
         "money": "ROI statistics {keyword} cost savings",
         "fear": "success rate {keyword} risk case study",

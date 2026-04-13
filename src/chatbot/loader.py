@@ -1,4 +1,4 @@
-"""Load and cache YAML configuration files."""
+"""Load and cache YAML configuration files"""
 
 import hashlib
 import random
@@ -33,7 +33,7 @@ _REQUIRED_SIGNAL_KEYS = {
 
 @lru_cache(maxsize=16)  # ~11 config files + headroom
 def load_yaml(filename):
-    """Load and cache a YAML file from CONFIG_DIR."""
+    """Load and cache a YAML file from CONFIG_DIR"""
     filepath = CONFIG_DIR / filename
 
     if not filepath.exists():
@@ -44,7 +44,7 @@ def load_yaml(filename):
 
 
 def loadSIGNALS():
-    """Load signals.yaml with key validation."""
+    """Load signals.yaml with key validation"""
     signals = load_yaml("signals.yaml")
     missing = _REQUIRED_SIGNAL_KEYS - signals.keys()
     if missing:
@@ -54,22 +54,22 @@ def loadSIGNALS():
 
 
 def loadANALYSIS_CONFIG():
-    """Load analysis_config.yaml (cached)."""
+    """Load analysis_config.yaml (cached)"""
     return load_yaml("analysis_config.yaml")
 
 
 def load_objection_flows():
-    """Load objection_flows.yaml (cached)."""
+    """Load objection_flows.yaml (cached)"""
     return load_yaml("objection_flows.yaml")
 
 
 def load_product_config():
-    """Load product_config.yaml (cached)."""
+    """Load product_config.yaml (cached)"""
     return load_yaml("product_config.yaml")
 
 
 def load_prospect_config():
-    """Load prospect_config.yaml (cached)."""
+    """Load prospect_config.yaml (cached)"""
     return load_yaml("prospect_config.yaml")
 
 
@@ -85,7 +85,7 @@ def _build_alias_map():
 
 
 def get_product_settings(product_type):
-    """Return product config for the given type or alias, falling back to default."""
+    """Return product config for the given type or alias, falling back to default"""
     config = load_product_config()
     products = config["products"]
 
@@ -107,27 +107,27 @@ def get_product_settings(product_type):
 
 
 def load_tactics():
-    """Load tactics.yaml (cached)."""
+    """Load tactics.yaml (cached)"""
     return load_yaml("tactics.yaml")
 
 
 def load_overrides():
-    """Load overrides.yaml (cached)."""
+    """Load overrides.yaml (cached)"""
     return load_yaml("overrides.yaml")
 
 
 def load_adaptations():
-    """Load adaptations.yaml (cached)."""
+    """Load adaptations.yaml (cached)"""
     return load_yaml("adaptations.yaml")
 
 
 def load_web_search_config():
-    """Load web_search_config.yaml (cached)."""
+    """Load web_search_config.yaml (cached)"""
     return load_yaml("web_search_config.yaml")
 
 
 def get_tactic(category="elicitation", subtype=None, context=""):
-    """Pick a random tactic string from the given category/subtype."""
+    """Pick a random tactic string from the given category/subtype"""
     tactics = load_tactics()
 
     if category not in tactics:
@@ -151,7 +151,7 @@ def get_tactic(category="elicitation", subtype=None, context=""):
 
 
 def render_template(template_str, **kwargs):
-    """Replace {placeholders} in template_str with kwargs."""
+    """Replace {placeholders} in template_str with kwargs"""
     # defaults for common placeholders
     defaults = {
         "preferences": "not yet specified",
@@ -174,7 +174,7 @@ def render_template(template_str, **kwargs):
 
 
 def get_override_template(override_type, **kwargs):
-    """Render an override template, or None if type not found."""
+    """Render an override template, or None if type not found"""
     overrides = load_overrides()
 
     if override_type not in overrides:
@@ -185,7 +185,7 @@ def get_override_template(override_type, **kwargs):
 
 
 def get_adaptation_template(adaptation_type, strategy=None, **kwargs):
-    """Render an adaptation template for the given type and strategy."""
+    """Render an adaptation template for the given type and strategy"""
     adaptations = load_adaptations()
 
     if adaptation_type not in adaptations:
@@ -215,27 +215,27 @@ def get_adaptation_template(adaptation_type, strategy=None, **kwargs):
 
 
 class QuickMatcher:
-    """Fuzzy text-to-product matching: exact, alias, keyword, then difflib."""
+    """Fuzzy text-to-product matching: exact, alias, keyword, then difflib"""
 
     FUZZY_THRESHOLD = 0.7
 
     @staticmethod
     def normalize(text):
-        """Lowercase, strip, collapse whitespace."""
+        """Lowercase, strip, collapse whitespace"""
         if not text:
             return ""
         return re.sub(r"\s+", " ", text.lower().strip())
 
     @classmethod
     def match_product(cls, text):
-        """Match free-form text to a product key. Returns (key, confidence) or (None, 0.0)."""
+        """Match free-form text to a product key. Returns (key, confidence) or (None, 0.0)"""
         normalized = cls.normalize(text)
         return cls._match_product_normalized(normalized)
 
     @classmethod
     @lru_cache(maxsize=128)
     def _match_product_normalized(cls, normalized):
-        """Cached inner method. Normalized input ensures "Cars" and "cars" share cache."""
+        """Cached inner method. Normalized input ensures "Cars" and "cars" share cache"""
         if not normalized:
             return (None, 0.0)
 
@@ -279,7 +279,7 @@ class QuickMatcher:
 
 
 def assign_ab_variant(session_id):
-    """Hash-based deterministic A/B assignment. Same session always gets same variant."""
+    """Hash-based deterministic A/B assignment. Same session always gets same variant"""
     if not session_id:
         return "variant_a"  # default if no session_id
 

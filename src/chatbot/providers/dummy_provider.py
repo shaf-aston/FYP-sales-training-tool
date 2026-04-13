@@ -1,11 +1,12 @@
-"""Deterministic test provider — never calls external APIs."""
+"""Test-only provider. Returns canned responses, no network calls."""
 
-from typing import List, Dict, Optional
+from typing import Dict, List, Optional
+
 from .base import BaseLLMProvider, LLMResponse
 
 
 class DummyProvider(BaseLLMProvider):
-    """Deterministic test provider used in tests (no external calls)."""
+    """Returns a fixed reply every time. Used in tests."""
 
     def __init__(self, model: Optional[str] = None):
         self._model = model or "dummy-model"

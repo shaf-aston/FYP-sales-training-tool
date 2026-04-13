@@ -96,7 +96,7 @@ class SalesChatbot:
             )
 
     def _try_switch_to_provider(self, new_provider_type: str) -> bool:
-        """Try switching to a fallback provider."""
+        """Try switching to a fallback provider"""
         try:
             new_provider = create_provider(new_provider_type)
             if new_provider.is_available():
@@ -114,7 +114,16 @@ class SalesChatbot:
             return False
 
     def chat(self, user_message: str) -> ChatResponse:
-        """Handle a user message and return a ChatResponse."""
+        """
+        Processes a conversation turn and updates the bot's state
+
+        Coordinates the full pipeline: analyzes input, chooses the next step, 
+        fetches an AI response, saves the conversation history
+        
+        :param user_message: The text input from the user
+        :return: A ChatResponse containing the reply and turn metadata (e.g performance, provider, state info)
+        """
+        
         recent_history = self.flow_engine.conversation_history[-RECENT_HISTORY_WINDOW:]
 
         state = analyse_state(self.flow_engine.conversation_history, user_message)
@@ -236,7 +245,7 @@ class SalesChatbot:
             )
 
     def _fallback(self, message: str, latency_ms: float, user_message: str) -> ChatResponse:
-        """Fallback response; log the turn and skip FSM advancement."""
+        """Fallback response; log the turn and skip FSM advancement"""
         self.flow_engine.conversation_history.append({"role": "user", "content": user_message})
         self.flow_engine.conversation_history.append({"role": "assistant", "content": message})
         return ChatResponse(
@@ -297,7 +306,7 @@ class SalesChatbot:
         )
 
     def _detect_and_switch_strategy(self, user_message) -> bool:
-        """Check user signals and switch strategy if needed."""
+        """Check user signals and switch strategy if needed"""
         user_text = (user_message or "").lower()
         has_cons_user = contains_nonnegated_keyword(user_text, USER_CONSULTATIVESIGNALS)
         has_trans_user = contains_nonnegated_keyword(user_text, USER_TRANSACTIONALSIGNALS)
@@ -314,7 +323,7 @@ class SalesChatbot:
         return False
 
     def _apply_advancement(self, user_message: str) -> None:
-        """Check and apply FSM stage advancement."""
+        """Check and apply FSM stage advancement"""
         if self.flow_engine.flow_type == Strategy.INTENT:
             old_strategy = Strategy.INTENT
             if self._detect_and_switch_strategy(user_message):
@@ -343,15 +352,15 @@ class SalesChatbot:
                 )
 
     def generate_training(self, user_msg: str, bot_reply: str) -> dict[str, Any]:
-        """Coaching notes for the current exchange."""
+        """Coaching notes for the current exchange"""
         return trainer.generate_training(self.provider, self.flow_engine, user_msg, bot_reply)
 
     def answer_training_question(self, question: str) -> dict[str, Any]:
-        """Answer a trainee's question about sales techniques."""
+        """Answer a trainee's question about sales techniques"""
         return trainer.answer_training_question(self.provider, self.flow_engine, question)
 
     def rewind_to_turn(self, turn_index: int) -> bool:
-        """Rewind to turn_index by resetting FSM and replaying history."""
+        """Rewind to turn_index by resetting FSM and replaying history"""
         max_turns = len(self.flow_engine.conversation_history) // 2
         if turn_index < 0 or turn_index > max_turns:
             self.logger.warning(f"Invalid turn_index {turn_index}, max is {max_turns}")
@@ -377,7 +386,7 @@ class SalesChatbot:
         return True
 
     def replay(self, history: list[dict[str, str]]) -> None:
-        """Replay history into a fresh bot with strategy-switch detection."""
+        """Replay history into a fresh bot with strategy-switch detection"""
         for user_msg_dict, bot_msg_dict in zip(history[::2], history[1::2]):
             user_msg = user_msg_dict.get("content", "")
             bot_msg = bot_msg_dict.get("content", "")
@@ -385,13 +394,13 @@ class SalesChatbot:
             self._apply_advancement(user_msg)
 
     def get_conversation_summary(self):
-        """FSM state summary with provider info."""
+        """FSM state summary with provider info"""
         summary = self.flow_engine.get_summary()
         summary.update({"provider": self.provider_name, "model": self.model_name})
         return summary
 
     def save_session(self):
-        """Persist session state to disk."""
+        """Persist session state to disk"""
         if not self.session_id:
             return
 
@@ -408,7 +417,7 @@ class SalesChatbot:
 
     @staticmethod
     def load_session(session_id):
-        """Load session from disk if it exists."""
+        """Load session from disk if it exists"""
         state = SessionPersistence.load(session_id)
 
         if not state:

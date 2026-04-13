@@ -892,10 +892,13 @@ textarea::-webkit-scrollbar-thumb:hover,
 }
 
 .training-value {
-  font-size: 13px;
+  font-size: 12px;
   color: #d8d8e8;
-  line-height: 1.45;
+  line-height: 1.4;
   font-weight: 400;
+  max-height: 3.5em;
+  overflow: hidden;
+  word-break: break-word;
 }
 
 .training-tips {

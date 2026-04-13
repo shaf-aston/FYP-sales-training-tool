@@ -7,19 +7,20 @@ Verifies:
 
 Run: pytest tests/test_objection_sop.py -v
 """
-import pytest
-from chatbot.analysis import classify_objection
-from chatbot.content import _SOP_FLOWS, _get_stage_specific_prompt
 
+import pytest
+
+from chatbot.analysis import classify_objection
+from chatbot.content import SOP_FLOWS, _get_stage_specific_prompt
 
 # --- Canonical trigger phrases per type ---
 _TRIGGER_PHRASES = {
-    "money":      "I can't afford it, it's too expensive for me",
-    "partner":    "I need to check with my wife first before deciding",
-    "fear":       "I'm worried it might not work and I'd regret it",
-    "think":      "Let me think about it and sleep on it",
+    "money": "I can't afford it, it's too expensive for me",
+    "partner": "I need to check with my wife first before deciding",
+    "fear": "I'm worried it might not work and I'd regret it",
+    "think": "Let me think about it and sleep on it",
     "logistical": "Not sure about the timing and the whole setup process",
-    "smokescreen":"Not interested, I'm good thanks, not for me",
+    "smokescreen": "Not interested, I'm good thanks, not for me",
 }
 
 
@@ -27,9 +28,7 @@ class TestClassifyObjection:
     @pytest.mark.parametrize("obj_type,phrase", list(_TRIGGER_PHRASES.items()))
     def test_classifies_correct_type(self, obj_type, phrase):
         result = classify_objection(phrase)
-        assert result["type"] == obj_type, (
-            f"Expected '{obj_type}' for: '{phrase}', got '{result['type']}'"
-        )
+        assert result["type"] == obj_type, f"Expected '{obj_type}' for: '{phrase}', got '{result['type']}'"
 
     @pytest.mark.parametrize("obj_type,phrase", list(_TRIGGER_PHRASES.items()))
     def test_guidance_is_populated(self, obj_type, phrase):
@@ -42,19 +41,19 @@ class TestSopFlowsContent:
     """SOP flows must encode the key step from the matrix for each type."""
 
     def test_money_contains_self_solve(self):
-        assert "funding" in _SOP_FLOWS["money"].lower()
+        assert "funding" in SOP_FLOWS["money"].lower()
 
     def test_partner_contains_same_side(self):
-        assert "same side" in _SOP_FLOWS["partner"].lower() or "on board" in _SOP_FLOWS["partner"].lower()
+        assert "same side" in SOP_FLOWS["partner"].lower() or "on board" in SOP_FLOWS["partner"].lower()
 
     def test_fear_contains_perspective_shift(self):
-        assert "decision" in _SOP_FLOWS["fear"].lower()
+        assert "decision" in SOP_FLOWS["fear"].lower()
 
     def test_think_addresses_logistical_first(self):
-        assert "investment" in _SOP_FLOWS["think"].lower() or "logistical" in _SOP_FLOWS["think"].lower()
+        assert "investment" in SOP_FLOWS["think"].lower() or "logistical" in SOP_FLOWS["think"].lower()
 
     def test_smokescreen_tests_legitimacy(self):
-        assert "genuine" in _SOP_FLOWS["smokescreen"].lower() or "product itself" in _SOP_FLOWS["smokescreen"].lower()
+        assert "genuine" in SOP_FLOWS["smokescreen"].lower() or "product itself" in SOP_FLOWS["smokescreen"].lower()
 
 
 class TestStagePromptInjectsSopSteps:
@@ -90,4 +89,30 @@ class TestStagePromptInjectsSopSteps:
     def test_smokescreen_returns_empty_context(self):
         # Smokescreen phrases trigger walkaway guard → no reframe injected (correct SOP behaviour)
         context = self._run(_TRIGGER_PHRASES["smokescreen"])
+        assert context == ""
+
+
+class TestObjectionIsolation:
+    """Objection context must stay isolated to objection stage."""
+
+    class _FakeState:
+        intent = "high"
+
+    def test_non_objection_stage_does_not_call_objection_builder(self, monkeypatch):
+        import chatbot.content as content_mod
+
+        def _boom(*args, **kwargs):
+            raise AssertionError("objection builder should not run outside objection stage")
+
+        monkeypatch.setattr(content_mod, "build_objection_context", _boom)
+
+        prompt, context = content_mod._get_stage_specific_prompt(
+            strategy="consultative",
+            stage="logical",
+            state=self._FakeState(),
+            user_message="I am still figuring this out",
+            history=[{"role": "user", "content": "I am still figuring this out"}],
+        )
+
+        assert prompt
         assert context == ""

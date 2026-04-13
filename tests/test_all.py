@@ -1,78 +1,82 @@
-"""Test suite for sales chatbot — FSM, analysis, advancement rules, and config.
+"""Test suite for sales chatbot — signals, preferences, config, knowledge, and aliases.
 
 Covers the Verification stage of the software lifecycle (CS3IP Section 1.2).
-Tests are grouped by module and test behaviour, not just initial state.
+Tests here cover modules NOT already tested in dedicated files.
+
+Dedicated test files handle:
+- FSM flow/advancement: test_regression_and_security.py
+- Objection classification: test_objection_sop.py
+- Intent lock / literal questions / frustration: test_priority_fixes.py
+- Acknowledgment tactics: test_acknowledgment_tactics.py
+- Provider architecture: test_regression_and_security.py
+- Web endpoints / security: test_regression_and_security.py
 """
 
-import sys
-import os
 import pytest
 
 from chatbot.analysis import (
-    text_contains_any_keyword,
-    analyze_state,
     extract_preferences,
-    user_demands_directness,
-    is_literal_question,
     extract_user_keywords,
-    classify_objection,
+    user_demands_directness,
 )
-from chatbot.content import SIGNALS
-from chatbot.flow import (
-    SalesFlowEngine,
-    user_has_clear_intent,
-    user_shows_doubt,
-    commitment_or_objection,
-    commitment_or_walkaway,
-)
-from chatbot.loader import load_signals, load_product_config, get_product_settings
 from chatbot.chatbot import SalesChatbot
-from chatbot.providers.base import BaseLLMProvider, LLMResponse
-from chatbot.providers.factory import create_provider, PROVIDERS
-from chatbot.providers.groq_provider import GroqProvider
+from chatbot.content import SIGNALS
 from chatbot.knowledge import (
+    KNOWLEDGE_FILE,
+    clear_custom_knowledge,
+    get_custom_knowledge_text,
     load_custom_knowledge,
     save_custom_knowledge,
-    get_custom_knowledge_text,
-    clear_custom_knowledge,
-    KNOWLEDGE_FILE,
 )
-
+from chatbot.loader import get_product_settings, load_product_config, loadSIGNALS
+from chatbot.providers.base import BaseLLMProvider, LLMResponse
+from chatbot.providers.factory import PROVIDERS, create_provider
+from chatbot.providers.groq_provider import GroqProvider
+from chatbot.utils import contains_nonnegated_keyword
 
 # ====================================================================
 # SECTION 1 — Keyword & Signal Utilities (analysis.py)
 # ====================================================================
+
 
 class TestKeywordMatching:
     """Word-boundary keyword detection — the foundation of signal analysis."""
 
     def test_case_insensitive_match(self):
         """Impatience signals should match regardless of case."""
-        assert text_contains_any_keyword("JUST SHOW ME something", SIGNALS["impatience"])
+        assert contains_nonnegated_keyword("JUST SHOW ME something", SIGNALS["impatience"])
 
     def test_word_boundary_no_false_positive(self):
         """'just' must NOT match inside 'justice' (word boundary regex)."""
-        assert not text_contains_any_keyword("justice is served", ["just"])
+        assert not contains_nonnegated_keyword("justice is served", ["just"])
 
     def test_empty_text_returns_false(self):
-        assert not text_contains_any_keyword("", SIGNALS["impatience"])
+        assert not contains_nonnegated_keyword("", SIGNALS["impatience"])
 
     def test_none_text_returns_false(self):
-        assert not text_contains_any_keyword(None, SIGNALS["impatience"])
+        assert not contains_nonnegated_keyword(None, SIGNALS["impatience"])
 
     def test_commitment_signal(self):
-        assert text_contains_any_keyword("yes let's do it", SIGNALS["commitment"])
+        assert contains_nonnegated_keyword("yes let's do it", SIGNALS["commitment"])
 
     def test_no_match_on_unrelated_text(self):
-        assert not text_contains_any_keyword("the weather is nice today", SIGNALS["impatience"])
+        assert not contains_nonnegated_keyword("the weather is nice today", SIGNALS["impatience"])
 
 
 class TestSignalsConfig:
     """Verify the SIGNALS dictionary loaded from signals.yaml."""
 
     def test_expected_categories_exist(self):
-        required = ["impatience", "commitment", "objection", "walking",
-                     "low_intent", "high_intent", "guarded", "direct_info_requests"]
+        required = [
+            "impatience",
+            "commitment",
+            "objection",
+            "walking",
+            "low_intent",
+            "high_intent",
+            "guardedness_keywords",
+            "direct_info_requests",
+        ]
         for cat in required:
             assert cat in SIGNALS, f"Missing signal category: {cat}"
 
@@ -82,49 +86,8 @@ class TestSignalsConfig:
 
 
 # ====================================================================
-# SECTION 2 — State Analysis (analysis.py)
+# SECTION 2 — Preference & Directness Detection (analysis.py)
 # ====================================================================
-
-class TestAnalyzeState:
-    """Intent, guardedness, and question-fatigue detection."""
-
-    def test_high_intent_keyword(self):
-        result = analyze_state([], user_message="I need help with my car")
-        assert result["intent"] == "high"
-
-    def test_low_intent_keyword(self):
-        result = analyze_state([], user_message="just browsing really")
-        assert result["intent"] == "low"
-
-    def test_medium_intent_default(self):
-        result = analyze_state([], user_message="hello there")
-        assert result["intent"] == "medium"
-
-    def test_guarded_short_defensive(self):
-        """Short + guarded keyword after a bot question → guarded=True."""
-        history = [{"role": "assistant", "content": "What brings you in today?"}]
-        result = analyze_state(history, user_message="idk")
-        assert result["guarded"] is True
-
-    def test_not_guarded_on_substantive_reply(self):
-        """If user previously gave a long answer then says 'ok', that's agreement not guardedness."""
-        history = [
-            {"role": "user", "content": "I have been looking for something reliable and safe for my family to drive every day"},
-            {"role": "assistant", "content": "That makes sense, safety is important?"},
-        ]
-        result = analyze_state(history, user_message="ok")
-        assert result["guarded"] is False
-
-    def test_question_fatigue(self):
-        """2+ consecutive bot questions should trigger question fatigue."""
-        history = [
-            {"role": "assistant", "content": "What are you looking for?"},
-            {"role": "user", "content": "a car"},
-            {"role": "assistant", "content": "What's your budget?"},
-            {"role": "user", "content": "not sure"},
-        ]
-        result = analyze_state(history, user_message="ugh")
-        assert result["question_fatigue"] is True
 
 
 class TestPreferenceExtraction:
@@ -173,7 +136,7 @@ class TestUserKeywords:
         assert "reliable" in keywords
         assert "sedan" in keywords
 
-    def test_filters_stop_words(self):
+    def test_filtersSTOP_WORDS(self):
         history = [{"role": "user", "content": "I want to get a car"}]
         keywords = extract_user_keywords(history)
         assert "want" not in keywords  # stop word
@@ -181,151 +144,9 @@ class TestUserKeywords:
 
 
 # ====================================================================
-# SECTION 3 — FSM Flow Engine (flow.py)
+# SECTION 3 — Chatbot Init & Rewind (chatbot.py)
 # ====================================================================
 
-class TestFlowInit:
-    """SalesFlowEngine initialisation and configuration."""
-
-    def test_consultative_has_five_stages(self):
-        engine = SalesFlowEngine("consultative", "luxury vehicles")
-        assert engine.flow_config["stages"] == ["intent", "logical", "emotional", "pitch", "objection"]
-        assert engine.current_stage == "intent"
-
-    def test_transactional_has_three_stages(self):
-        engine = SalesFlowEngine("transactional", "$30 fragrances")
-        assert engine.flow_config["stages"] == ["intent", "pitch", "objection"]
-        assert engine.current_stage == "intent"
-
-    def test_invalid_flow_raises(self):
-        with pytest.raises(ValueError):
-            SalesFlowEngine("unknown_flow", "context")
-
-
-class TestFlowStateManagement:
-    """Turn tracking, advancement, and terminal state."""
-
-    def test_add_turn_updates_history_and_counter(self):
-        engine = SalesFlowEngine("consultative", "products")
-        engine.add_turn("hi", "Hello! How can I help?")
-        assert len(engine.conversation_history) == 2
-        assert engine.stage_turn_count == 1
-
-    def test_sequential_advance_full_consultative(self):
-        """Advance through all 5 consultative stages in order."""
-        engine = SalesFlowEngine("consultative", "products")
-        expected = ["logical", "emotional", "pitch", "objection"]
-        for stage in expected:
-            engine.advance()
-            assert engine.current_stage == stage
-
-    def test_direct_jump_to_pitch(self):
-        engine = SalesFlowEngine("consultative", "products")
-        engine.advance(target_stage="pitch")
-        assert engine.current_stage == "pitch"
-
-    def test_advance_at_terminal_stays(self):
-        """Advancing at the last stage (objection) should not crash or change stage."""
-        engine = SalesFlowEngine("transactional", "products")
-        # Move to objection (terminal)
-        engine.advance()  # intent → pitch
-        engine.advance()  # pitch → objection
-        assert engine.current_stage == "objection"
-        engine.advance()  # should stay
-        assert engine.current_stage == "objection"
-
-    def test_advance_resets_turn_count(self):
-        engine = SalesFlowEngine("consultative", "products")
-        engine.add_turn("hi", "hey")
-        engine.add_turn("hello", "hi there")
-        assert engine.stage_turn_count == 2
-        engine.advance()
-        assert engine.stage_turn_count == 0
-
-    def test_get_summary(self):
-        engine = SalesFlowEngine("consultative", "products")
-        engine.add_turn("hi", "hello")
-        summary = engine.get_summary()
-        assert summary["flow_type"] == "consultative"
-        assert summary["current_stage"] == "intent"
-        assert summary["total_turns"] == 1
-
-
-# ====================================================================
-# SECTION 4 — Advancement Rules (flow.py)
-# ====================================================================
-
-class TestAdvancementRules:
-    """Pure-function advancement rules that drive FSM transitions."""
-
-    def test_intent_advance_on_buy(self):
-        assert user_has_clear_intent([], "I want to buy a car", 0)
-
-    def test_intent_advance_on_need(self):
-        assert user_has_clear_intent([], "I need help with something", 0)
-
-    def test_intent_no_advance_on_greeting(self):
-        assert not user_has_clear_intent([], "hello there", 0)
-
-    def test_intent_no_advance_on_generic_want(self):
-        """'want' alone is a stopword — generic desire ≠ buying intent."""
-        assert not user_has_clear_intent([], "i want to make more money", 0)
-
-    def test_intent_no_advance_on_generic_need(self):
-        """'need' alone is a stopword — 'I need more' has no buying signal."""
-        assert not user_has_clear_intent([], "i need more revenue", 0)
-
-    def test_intent_advance_on_max_turns(self):
-        """Even without keywords, intent advances after max turns."""
-        assert user_has_clear_intent([], "still thinking", 6)
-
-    def test_doubt_advance_on_keyword(self):
-        """Doubt keywords in history (not current msg) trigger advancement."""
-        history = [
-            {"role": "user", "content": "it's not working for me"}, {"role": "assistant", "content": "I see"},
-            {"role": "user", "content": "yeah I'm struggling"}, {"role": "assistant", "content": "ok"},
-        ]
-        assert user_shows_doubt(history, "what should I do", 3)
-
-    def test_commitment_advances_pitch(self):
-        assert commitment_or_objection([], "yes let's do it", 0)
-
-    def test_objection_advances_pitch(self):
-        assert commitment_or_objection([], "but that seems too much", 0)
-
-    def test_neutral_does_not_advance_pitch(self):
-        assert not commitment_or_objection([], "tell me more about it", 0)
-
-    def test_walkaway_ends_objection(self):
-        assert commitment_or_walkaway([], "no thanks, not interested", 0)
-
-    def test_commitment_ends_objection(self):
-        assert commitment_or_walkaway([], "yes I'm in", 0)
-
-
-class TestShouldAdvance:
-    """Integration: should_advance on the engine (frustration, urgency, rules)."""
-
-    def test_impatience_skips_to_pitch(self):
-        engine = SalesFlowEngine("consultative", "products")
-        engine.advance()  # intent → logical (has urgency_skip_to)
-        result = engine.should_advance("just show me the options already")
-        assert result == "pitch"
-
-    def test_frustration_override_jumps_to_pitch(self):
-        engine = SalesFlowEngine("consultative", "products")
-        result = engine.should_advance("just tell me the price, stop wasting my time")
-        assert result == "pitch"
-
-    def test_no_advance_on_neutral(self):
-        engine = SalesFlowEngine("consultative", "products")
-        result = engine.should_advance("hello")
-        assert result is False
-
-
-# ====================================================================
-# SECTION 5 — Chatbot Integration (chatbot.py)
-# ====================================================================
 
 class TestChatbotInit:
     """SalesChatbot initialisation via product config."""
@@ -379,14 +200,15 @@ class TestChatbotRewind:
 
 
 # ====================================================================
-# SECTION 6 — Config Loading (config_loader.py)
+# SECTION 4 — Config Loading (config_loader.py)
 # ====================================================================
+
 
 class TestConfigLoading:
     """YAML config files load correctly and contain expected data."""
 
-    def test_signals_returns_dict(self):
-        signals = load_signals()
+    def testSIGNALS_returns_dict(self):
+        signals = loadSIGNALS()
         assert isinstance(signals, dict)
         assert "impatience" in signals
 
@@ -407,127 +229,9 @@ class TestConfigLoading:
 
 
 # ====================================================================
-# SECTION 7 — Literal Question Detection (analysis.py)
+# SECTION 5 — Product Knowledge Config (config_loader.py)
 # ====================================================================
 
-class TestLiteralQuestion:
-    """is_literal_question — Speech Act Theory classification."""
-
-    def test_question_word_detected(self):
-        assert is_literal_question("What options do you have?")
-
-    def test_question_mark_detected(self):
-        assert is_literal_question("Is this available?")
-
-    def test_rhetorical_excluded(self):
-        assert not is_literal_question("That's great, don't you think?")
-
-    def test_statement_not_question(self):
-        assert not is_literal_question("I want something reliable")
-
-    def test_empty_returns_false(self):
-        assert not is_literal_question("")
-
-
-# ====================================================================
-# SECTION 8 — Objection Classification (analysis.py)
-# ====================================================================
-
-class TestObjectionClassification:
-    """classify_objection — maps objections to reframe strategies."""
-
-    def test_money_objection_detected(self):
-        result = classify_objection("that's too expensive for me")
-        assert result["type"] == "money"
-        assert result["strategy"] in ["isolate_funds", "self_solve", "plant_credit", "funding_options"]
-
-    def test_partner_objection_detected(self):
-        result = classify_objection("I need to check with my wife first")
-        assert result["type"] == "partner"
-        assert result["strategy"] in ["same_side", "open_wallet_test", "schedule_followup"]
-
-    def test_fear_objection_detected(self):
-        result = classify_objection("I'm worried this might not work for me")
-        assert result["type"] == "fear"
-        assert result["strategy"] in ["change_of_process", "island_analogy", "identity_reframe"]
-
-    def test_logistical_objection_detected(self):
-        result = classify_objection("the setup process seems too complicated")
-        assert result["type"] == "logistical"
-        assert result["strategy"] in ["solve_mechanics", "simplify_process"]
-
-    def test_think_objection_detected(self):
-        result = classify_objection("let me think about it")
-        assert result["type"] == "think"
-        assert result["strategy"] in ["drill_to_root", "handle_root_type"]
-
-    def test_smokescreen_detected(self):
-        result = classify_objection("no thanks, not for me")
-        assert result["type"] == "smokescreen"
-        assert result["strategy"] == "legitimacy_test"
-
-    def test_unknown_objection_returns_general(self):
-        result = classify_objection("hmm I see")
-        assert result["type"] == "unknown"
-        assert result["strategy"] == "general_reframe"
-
-    def test_guidance_is_non_empty(self):
-        """Every classification should return actionable guidance."""
-        result = classify_objection("that's too expensive")
-        assert len(result["guidance"]) > 10
-
-    def test_classification_uses_history_context(self):
-        """Objection classification should check recent history, not just current message."""
-        history = [
-            {"role": "user", "content": "how much does it cost?"},
-            {"role": "assistant", "content": "The investment is $5,000"},
-        ]
-        result = classify_objection("hmm that's a lot", history)
-        assert result["type"] == "money"  # "cost" in history + "a lot" signals money
-
-
-# ====================================================================
-# SECTION 9 — Intent Lock & Goal Priming (analysis.py)
-# ====================================================================
-
-class TestIntentLock:
-    """Intent Lock with Goal Priming (Chartrand & Bargh, 1996)."""
-
-    def test_goal_priming_detects_explicit_goals(self):
-        """Goal stated in history → analyze_state returns high intent."""
-        history = [
-            {"role": "user", "content": "I want to lose weight"},
-            {"role": "assistant", "content": "Great! How much weight?"},
-        ]
-        state = analyze_state(history, user_message="tell me more")
-        assert state["intent"] == "high"
-
-    def test_goal_priming_empty_history(self):
-        state = analyze_state([], user_message="hello")
-        assert state["intent"] == "medium"
-
-    def test_intent_lock_prevents_reversion(self):
-        """Turn 14-16 scenario: goal stated, then short 'idk' — intent stays HIGH."""
-        history = [
-            {"role": "user", "content": "I want to lose weight"},
-            {"role": "assistant", "content": "How much weight do you want to lose?"},
-        ]
-        state = analyze_state(history, "idk")
-        assert state["intent"] == "high"
-
-    def test_agreement_pattern_not_guarded(self):
-        """'ok' after bot question + substantive user answer = agreement, not guarded."""
-        history = [
-            {"role": "user", "content": "I want to lose about twenty pounds this year"},
-            {"role": "assistant", "content": "That sounds achievable. Would you like to see some options?"},
-        ]
-        state = analyze_state(history, "ok")
-        assert state["guarded"] is False
-
-
-# ====================================================================
-# SECTION 10 — Product Knowledge Config (config_loader.py)
-# ====================================================================
 
 class TestProductKnowledge:
     """Product config with enriched knowledge field."""
@@ -554,71 +258,7 @@ class TestProductKnowledge:
 
 
 # ====================================================================
-# SECTION 11 — Provider Architecture (providers/)
-# ====================================================================
-
-
-class TestProviderBase:
-    """Abstract base class and LLMResponse dataclass."""
-
-    def test_abc_cannot_instantiate(self):
-        """BaseLLMProvider is abstract — direct instantiation must fail."""
-        with pytest.raises(TypeError):
-            BaseLLMProvider()
-
-    def test_llm_response_fields(self):
-        """LLMResponse dataclass stores content, model, latency, optional error."""
-        resp = LLMResponse(content="hello", model="test", latency_ms=42.5)
-        assert resp.content == "hello"
-        assert resp.model == "test"
-        assert resp.latency_ms == 42.5
-        assert resp.error is None
-
-    def test_llm_response_with_error(self):
-        resp = LLMResponse(content="", model="test", latency_ms=0, error="timeout")
-        assert resp.error == "timeout"
-
-
-class TestGroqProviderConfig:
-    """GroqProvider initialisation (no live API calls)."""
-
-    def test_default_model(self):
-        provider = GroqProvider()
-        assert "llama" in provider.model or "versatile" in provider.model
-
-    def test_no_api_key_means_unavailable(self):
-        """Without SAFE_GROQ_API_KEY, provider should report unavailable."""
-        old = os.environ.pop("SAFE_GROQ_API_KEY", None)
-        try:
-            provider = GroqProvider()
-            provider.api_key = ""
-            assert provider.is_available() is False
-        finally:
-            if old is not None:
-                os.environ["SAFE_GROQ_API_KEY"] = old
-
-
-class TestProviderFactory:
-    """create_provider factory function."""
-
-    def test_create_groq(self):
-        provider = create_provider("groq")
-        assert isinstance(provider, GroqProvider)
-
-    def test_unknown_raises_valueerror(self):
-        with pytest.raises(ValueError, match="Unknown provider"):
-            create_provider("openai")
-
-    def test_case_insensitive(self):
-        provider = create_provider("GROQ")
-        assert isinstance(provider, GroqProvider)
-
-    def test_registry_has_expected_providers(self):
-        assert "groq" in PROVIDERS
-
-
-# ====================================================================
-# SECTION 12 — Knowledge Base (knowledge.py)
+# SECTION 6 — Knowledge Base (knowledge.py)
 # ====================================================================
 
 
@@ -677,8 +317,9 @@ class TestKnowledgeBase:
 
 
 # ====================================================================
-# SECTION 13 — Product Alias Resolution (config_loader.py)
+# SECTION 7 — Product Alias Resolution (config_loader.py)
 # ====================================================================
+
 
 class TestProductAliases:
     """Alias resolution in get_product_settings()."""
@@ -727,130 +368,36 @@ class TestProductAliases:
 
 
 # ====================================================================
-# SECTION 14 — Web Endpoints (app.py)
+# SECTION 8 — Provider Architecture (providers/)
 # ====================================================================
 
-class TestWebEndpoints:
-    """Flask route tests with test client."""
 
-    @pytest.fixture(autouse=True)
-    def setup_client(self):
-        """Create Flask test client."""
-        # Import app fresh
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src', 'web'))
-        from app import app
-        app.config['TESTING'] = True
-        self.client = app.test_client()
+class TestProviderBase:
+    def test_abc_cannot_instantiate(self):
+        with pytest.raises(TypeError):
+            BaseLLMProvider()
 
-    def test_home_returns_200(self):
-        resp = self.client.get('/')
-        assert resp.status_code == 200
+    def test_llm_response_fields(self):
+        resp = LLMResponse(content="hello", model="test", latency_ms=42.5)
+        assert resp.content == "hello"
+        assert resp.latency_ms == 42.5
+        assert resp.error is None
 
-    def test_health_returns_ok(self):
-        resp = self.client.get('/api/health')
-        assert resp.status_code == 200
-        data = resp.get_json()
-        assert data["ok"] is True
+    def test_llm_response_with_error(self):
+        resp = LLMResponse(content="", model="test", latency_ms=0, error="timeout")
+        assert resp.error == "timeout"
 
-    def test_init_creates_session(self):
-        resp = self.client.post('/api/init', json={})
-        assert resp.status_code == 200
-        data = resp.get_json()
-        assert data["success"] is True
-        assert "session_id" in data
-        assert data["stage"] == "----"
 
-    def test_chat_requires_session_header(self):
-        resp = self.client.post('/api/chat', json={"message": "hello"})
-        assert resp.status_code == 400
+class TestProviderFactory:
+    def test_create_groq(self):
+        assert isinstance(create_provider("groq"), GroqProvider)
 
-    def test_chat_rejects_empty_message(self):
-        resp = self.client.post('/api/chat',
-                                json={"message": ""},
-                                headers={"X-Session-ID": "test123"})
-        assert resp.status_code == 400
+    def test_unknown_raises(self):
+        with pytest.raises(ValueError, match="Unknown provider"):
+            create_provider("openai")
 
-    def test_chat_rejects_long_message(self):
-        resp = self.client.post('/api/chat',
-                                json={"message": "x" * 1500},
-                                headers={"X-Session-ID": "test123"})
-        assert resp.status_code == 400
+    def test_case_insensitive(self):
+        assert isinstance(create_provider("GROQ"), GroqProvider)
 
-    def test_favicon_returns_204(self):
-        resp = self.client.get('/favicon.ico')
-        assert resp.status_code == 204
-
-    def test_knowledge_page_returns_200(self):
-        resp = self.client.get('/knowledge')
-        assert resp.status_code == 200
-
-    def test_knowledge_api_get(self):
-        resp = self.client.get('/api/knowledge')
-        assert resp.status_code == 200
-        data = resp.get_json()
-        assert data["success"] is True
-
-    def test_knowledge_api_post_and_get(self):
-        """Save knowledge, then retrieve it."""
-        payload = {"product_name": "Test Product", "pricing": "$10/mo"}
-        resp = self.client.post('/api/knowledge',
-                                json=payload,
-                                content_type='application/json')
-        assert resp.status_code == 200
-        data = resp.get_json()
-        assert data["success"] is True
-
-        # Verify it persisted
-        resp2 = self.client.get('/api/knowledge')
-        data2 = resp2.get_json()
-        assert data2["data"]["product_name"] == "Test Product"
-
-    def test_knowledge_api_delete(self):
-        resp = self.client.delete('/api/knowledge')
-        assert resp.status_code == 200
-        data = resp.get_json()
-        assert data["success"] is True
-
-    def test_knowledge_api_post_empty_body(self):
-        """POST with no JSON body should return 400."""
-        resp = self.client.post('/api/knowledge',
-                                data='',
-                                content_type='application/json')
-        # Flask will either return 400 from our validation or 400/415 from parsing
-        assert resp.status_code in [400, 415]
-
-    def test_stages_reflect_current_strategy(self):
-        """Stage list should expand after switching strategy from discovery mode."""
-        init_resp = self.client.post('/api/init', json={})
-        assert init_resp.status_code == 200
-        session_id = init_resp.get_json()["session_id"]
-        headers = {"X-Session-ID": session_id}
-
-        stages_resp = self.client.get('/api/stages', headers=headers)
-        assert stages_resp.status_code == 200
-        assert stages_resp.get_json()["stages"] == ["intent"]
-
-        switch_resp = self.client.post('/api/strategy',
-                                       json={"strategy": "consultative"},
-                                       headers=headers)
-        assert switch_resp.status_code == 200
-        switch_data = switch_resp.get_json()
-        assert switch_data["success"] is True
-        assert switch_data["strategy"] == "CONSULTATIVE"
-        assert switch_data["stage"] == "INTENT"
-
-        stages_resp_2 = self.client.get('/api/stages', headers=headers)
-        assert stages_resp_2.status_code == 200
-        assert stages_resp_2.get_json()["stages"] == [
-            "intent", "logical", "emotional", "pitch", "objection"
-        ]
-
-    def test_strategy_endpoint_rejects_invalid_strategy(self):
-        init_resp = self.client.post('/api/init', json={})
-        assert init_resp.status_code == 200
-        session_id = init_resp.get_json()["session_id"]
-
-        resp = self.client.post('/api/strategy',
-                                json={"strategy": "unsupported_mode"},
-                                headers={"X-Session-ID": session_id})
-        assert resp.status_code == 400
+    def test_registry_has_groq(self):
+        assert "groq" in PROVIDERS

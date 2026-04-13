@@ -1,20 +1,14 @@
-"""Chat conversation endpoints — main chat, edit, summary, training."""
+"""Chat conversation endpoints — main chat, edit, summary, training"""
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, jsonify, request
 
-bp = Blueprint('chat', __name__, url_prefix='/api')
+from web.security import require_rate_limit
+
+bp = Blueprint("chat", __name__, url_prefix="/api")
 
 
 def init_routes(app, get_session_func, require_session_func, validate_message_func, bot_state_func):
-    """Initialize chat routes with dependency injection.
-
-    Args:
-        app: Flask app (for logger access)
-        get_session_func: Function to get chatbot session by ID
-        require_session_func: Function to validate and return (bot, error)
-        validate_message_func: Function to validate message text
-        bot_state_func: Function to extract bot state dict
-    """
+    """hook up chat routes"""
     # Store dependencies in blueprint context
     bp.app = app  # type: ignore[attr-defined]
     bp.require_session = require_session_func  # type: ignore[attr-defined]
@@ -22,12 +16,13 @@ def init_routes(app, get_session_func, require_session_func, validate_message_fu
     bp.bot_state = bot_state_func  # type: ignore[attr-defined]
 
 
-@bp.route('/chat', methods=['POST'])
+@bp.route("/chat", methods=["POST"])
+@require_rate_limit("chat")
 def chat():
-    """Handle chat messages. Bot must be initialized via /api/init first."""
+    """Handle chat messages. Bot must be initialized via /api/init first"""
 
     data = request.json
-    user_message, err = bp.validate_message(data.get('message', ''))  # type: ignore
+    user_message, err = bp.validate_message(data.get("message", ""))  # type: ignore
     if err:
         return err
 
@@ -40,31 +35,31 @@ def chat():
         training = bot.generate_training(user_message, response.content)
 
         # Extract content and metrics from ChatResponse
-        return jsonify({
-            "success": True,
-            "message": response.content,
-            **bp.bot_state(bot),  # type: ignore
-            "latency_ms": round(response.latency_ms, 1),
-            "provider": response.provider,
-            "model": response.model,
-            "metrics": {
-                "input_length": response.input_len,
-                "output_length": response.output_len
-            },
-            "training": training,
-        })
+        return jsonify(
+            {
+                "success": True,
+                "message": response.content,
+                **bp.bot_state(bot),  # type: ignore
+                "latency_ms": round(response.latency_ms, 1),
+                "provider": response.provider,
+                "model": response.model,
+                "metrics": {"input_length": response.input_len, "output_length": response.output_len},
+                "training": training,
+            }
+        )
 
     except Exception as e:
         bp.app.logger.exception(f"Chat error: {e}")  # type: ignore
-        return jsonify({"error": "Chat request failed. Please retry."}), 500
+        return jsonify({"error": "Something broke on our end -- give it another go"}), 500
 
 
-@bp.route('/edit', methods=['POST'])
+@bp.route("/edit", methods=["POST"])
+@require_rate_limit("chat")
 def edit_message():
     """Edit user message and regenerate from that point"""
     data = request.json or {}
-    msg_index = data.get('index')
-    new_message, err = bp.validate_message(data.get('message', ''))  # type: ignore
+    msg_index = data.get("index")
+    new_message, err = bp.validate_message(data.get("message", ""))  # type: ignore
 
     bot, bot_err = bp.require_session()  # type: ignore
     if bot_err:
@@ -96,37 +91,37 @@ def edit_message():
         response = bot.chat(new_message)
         training = bot.generate_training(new_message, response.content)
 
-        return jsonify({
-            "success": True,
-            "message": response.content,
-            "history": [{"role": m["role"], "content": m["content"]} for m in bot.flow_engine.conversation_history],
-            **bp.bot_state(bot),  # type: ignore
-            "latency_ms": round(response.latency_ms, 1),
-            "provider": response.provider,
-            "model": response.model,
-            "training": training,
-        })
+        return jsonify(
+            {
+                "success": True,
+                "message": response.content,
+                "history": [{"role": m["role"], "content": m["content"]} for m in bot.flow_engine.conversation_history],
+                **bp.bot_state(bot),  # type: ignore
+                "latency_ms": round(response.latency_ms, 1),
+                "provider": response.provider,
+                "model": response.model,
+                "training": training,
+            }
+        )
     except Exception as e:
         bp.app.logger.exception(f"Edit error: {e}")  # type: ignore
-        return jsonify({"error": "Edit failed. Please retry."}), 500
+        return jsonify({"error": "Couldn't apply that edit -- try again in a sec"}), 500
 
 
-@bp.route('/summary', methods=['GET'])
+@bp.route("/summary", methods=["GET"])
 def get_summary():
     """Get conversation summary"""
     bot, err = bp.require_session()  # type: ignore
     if err:
         return err
 
-    return jsonify({
-        "success": True,
-        "summary": bot.get_conversation_summary()
-    })
+    return jsonify({"success": True, "summary": bot.get_conversation_summary()})
 
 
-@bp.route('/training/ask', methods=['POST'])
+@bp.route("/training/ask", methods=["POST"])
+@require_rate_limit("chat")
 def training_ask():
-    """Answer a trainee's question about the conversation and sales techniques."""
+    """Answer a trainee's question about the conversation and sales techniques"""
     from web.security import SecurityConfig
 
     bot, err = bp.require_session()  # type: ignore
@@ -134,7 +129,7 @@ def training_ask():
         return err
 
     data = request.json or {}
-    question = (data.get('question') or '').strip()
+    question = (data.get("question") or "").strip()
     if not question:
         return jsonify({"error": "Question required"}), 400
     if len(question) > SecurityConfig.MAX_MESSAGE_LENGTH:

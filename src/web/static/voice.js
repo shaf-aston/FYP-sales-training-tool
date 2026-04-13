@@ -112,7 +112,7 @@ class VoiceMode {
       return "Microphone access denied. Please allow microphone access in your browser settings.";
     }
     if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
-      return "No microphone found. Please connect a microphone and try again.";
+      return "No microphone detected — please connect one and try again.";
     }
     if (err.name === "NotReadableError" || err.name === "TrackStartError") {
       return "Microphone is in use by another application.";
@@ -235,7 +235,8 @@ class VoiceMode {
       }
     } catch (err) {
       console.error("Voice chat error:", err);
-      if (this.onError) this.onError("Voice request failed. Please try again.");
+      if (this.onError)
+        this.onError("Voice request didn't work -- give it another shot");
     }
   }
 

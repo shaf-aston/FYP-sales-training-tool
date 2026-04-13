@@ -11,15 +11,15 @@ Options:
 """
 
 import argparse
-import time
 import random
-import threading
 import statistics
 import sys
+import threading
+import time
 from collections import defaultdict
 from datetime import datetime
-import requests
 
+import requests
 
 # ====================================================================
 # Configuration & Test Data
@@ -35,7 +35,7 @@ TEST_MESSAGES = [
     "How does it compare to competitors?",
     "I need to discuss with my partner",
     "What's the best you can do on price?",
-    "Okay, I'm interested"
+    "Okay, I'm interested",
 ]
 
 PRODUCT_QUERIES = [
@@ -43,13 +43,14 @@ PRODUCT_QUERIES = [
     "I want a family SUV",
     "Looking for something sporty",
     "Need a reliable sedan",
-    "What do you have in my budget?"
+    "What do you have in my budget?",
 ]
 
 
 # ====================================================================
 # Load Test Runner
 # ====================================================================
+
 
 class LoadTestMetrics:
     """Thread-safe metrics collector"""
@@ -90,7 +91,7 @@ class LoadTestMetrics:
                 "response_time_min": min(self.response_times) if self.response_times else 0,
                 "response_time_max": max(self.response_times) if self.response_times else 0,
                 "status_codes": dict(self.status_codes),
-                "sample_errors": self.errors[:5]
+                "sample_errors": self.errors[:5],
             }
 
 
@@ -99,7 +100,7 @@ class VirtualUser:
 
     def __init__(self, user_id: int, base_url: str, metrics: LoadTestMetrics):
         self.user_id = user_id
-        self.base_url = base_url.rstrip('/')
+        self.base_url = base_url.rstrip("/")
         self.metrics = metrics
         self.session = requests.Session()
         self.session_id = None
@@ -108,11 +109,7 @@ class VirtualUser:
     def start_session(self):
         """Initialize a new chat session"""
         try:
-            response = self.session.post(
-                f"{self.base_url}/api/init",
-                json={},
-                timeout=15
-            )
+            response = self.session.post(f"{self.base_url}/api/init", json={}, timeout=15)
             if response.status_code == 200:
                 data = response.json()
                 self.session_id = data.get("session_id")
@@ -134,7 +131,7 @@ class VirtualUser:
                 f"{self.base_url}/api/chat",
                 json={"message": message},
                 headers={"X-Session-ID": self.session_id},
-                timeout=30
+                timeout=30,
             )
 
             response_time = (time.time() - start_time) * 1000  # ms
@@ -142,11 +139,7 @@ class VirtualUser:
             if response.status_code == 200:
                 self.metrics.record_request(200, response_time)
             else:
-                self.metrics.record_request(
-                    response.status_code,
-                    response_time,
-                    f"HTTP {response.status_code}"
-                )
+                self.metrics.record_request(response.status_code, response_time, f"HTTP {response.status_code}")
 
         except requests.exceptions.Timeout:
             self.metrics.record_request(0, 0, "Timeout")
@@ -191,15 +184,15 @@ class VirtualUser:
 def run_load_test(base_url: str, num_users: int, duration: int, ramp_up: int):
     """Execute load test with specified parameters"""
 
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("LOAD TEST CONFIGURATION")
-    print("="*70)
+    print("=" * 70)
     print(f"Target URL:       {base_url}")
     print(f"Concurrent Users: {num_users}")
     print(f"Test Duration:    {duration}s")
     print(f"Ramp-up Time:     {ramp_up}s")
     print(f"Start Time:       {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print("="*70 + "\n")
+    print("=" * 70 + "\n")
 
     # Health check (skipped - not critical)
     print("Starting load test...\n")
@@ -230,9 +223,11 @@ def run_load_test(base_url: str, num_users: int, duration: int, ramp_up: int):
         time.sleep(5)
         elapsed = time.time() - start_time
         summary = metrics.get_summary()
-        print(f"[{elapsed:.0f}s] Requests: {summary['completed']} | "
-              f"Avg Response: {summary.get('response_time_avg', 0):.0f}ms | "
-              f"Errors: {summary.get('failed', summary.get('errors', 0))}")
+        print(
+            f"[{elapsed:.0f}s] Requests: {summary['completed']} | "
+            f"Avg Response: {summary.get('response_time_avg', 0):.0f}ms | "
+            f"Errors: {summary.get('failed', summary.get('errors', 0))}"
+        )
 
     # Wait for all threads to finish
     for thread in threads:
@@ -245,22 +240,23 @@ def run_load_test(base_url: str, num_users: int, duration: int, ramp_up: int):
 # Results Display
 # ====================================================================
 
+
 def print_results(metrics: LoadTestMetrics, duration: int):
     """Display formatted test results"""
     summary = metrics.get_summary()
 
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("LOAD TEST RESULTS")
-    print("="*70)
+    print("=" * 70)
 
     print("\n[STATS] Request Statistics:")
     print(f"   Total Sent:       {summary['total_requests']}")
     print(f"   Completed:        {summary['completed']}")
     print(f"   Successful:       {summary['successful']}")
     print(f"   Failed:           {summary['failed']}")
-    print(f"   Error Rate:       {summary['error_rate']*100:.1f}%")
+    print(f"   Error Rate:       {summary['error_rate'] * 100:.1f}%")
 
-    if summary['successful'] > 0:
+    if summary["successful"] > 0:
         print("\n Response Times (ms):")
         print(f"   Average:          {summary['response_time_avg']:.2f}")
         print(f"   Median:           {summary['response_time_median']:.2f}")
@@ -272,21 +268,21 @@ def print_results(metrics: LoadTestMetrics, duration: int):
     print(f"   Requests/sec:     {summary['completed'] / duration:.2f}")
 
     print("\n Status Codes:")
-    for code, count in sorted(summary['status_codes'].items()):
+    for code, count in sorted(summary["status_codes"].items()):
         print(f"   {code}: {count}")
 
-    if summary['sample_errors']:
+    if summary["sample_errors"]:
         print("\n Sample Errors:")
-        for error in summary['sample_errors']:
+        for error in summary["sample_errors"]:
             print(f"   - {error}")
 
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
 
     # Pass/fail criteria
-    if summary['error_rate'] > 0.1:  # >10% error rate
+    if summary["error_rate"] > 0.1:  # >10% error rate
         print(" TEST FAILED: Error rate exceeds 10%")
         return False
-    elif summary.get('response_time_p95', 0) > 5000:  # >5s p95
+    elif summary.get("response_time_p95", 0) > 5000:  # >5s p95
         print(" WARNING: 95th percentile response time exceeds 5s")
         print("[PASS] TEST PASSED (with warnings)")
         return True
@@ -299,46 +295,25 @@ def print_results(metrics: LoadTestMetrics, duration: int):
 # CLI Entry Point
 # ====================================================================
 
+
 def main():
     parser = argparse.ArgumentParser(
         description="Load test the Sales Roleplay Chatbot API",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=__doc__
+        epilog=__doc__,
     )
 
     parser.add_argument(
-        "--url",
-        default="http://localhost:5000",
-        help="Base URL of the application (default: http://localhost:5000)"
+        "--url", default="http://localhost:5000", help="Base URL of the application (default: http://localhost:5000)"
     )
-    parser.add_argument(
-        "--users",
-        type=int,
-        default=5,
-        help="Number of concurrent users (default: 5)"
-    )
-    parser.add_argument(
-        "--duration",
-        type=int,
-        default=30,
-        help="Test duration in seconds (default: 30)"
-    )
-    parser.add_argument(
-        "--ramp-up",
-        type=int,
-        default=5,
-        help="Ramp-up time in seconds (default: 5)"
-    )
+    parser.add_argument("--users", type=int, default=5, help="Number of concurrent users (default: 5)")
+    parser.add_argument("--duration", type=int, default=30, help="Test duration in seconds (default: 30)")
+    parser.add_argument("--ramp-up", type=int, default=5, help="Ramp-up time in seconds (default: 5)")
 
     args = parser.parse_args()
 
     try:
-        metrics = run_load_test(
-            base_url=args.url,
-            num_users=args.users,
-            duration=args.duration,
-            ramp_up=args.ramp_up
-        )
+        metrics = run_load_test(base_url=args.url, num_users=args.users, duration=args.duration, ramp_up=args.ramp_up)
 
         success = print_results(metrics, args.duration)
         sys.exit(0 if success else 1)

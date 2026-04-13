@@ -36,9 +36,9 @@ objection_handling:
 # Goal indicator keywords for intent locking
 # Removed near-universal verbs ("want to", "need to", "trying", "fix", "solve",
 # "improve", "upgrade", "replace", "better", "ready to", "time to") — fire on
-# unrelated utterances, causing premature intent lock.
+# unrelated utterances, causing premature intent lock
 # Removed duplicates with high_intent (signals.yaml): "struggling", "trying to",
-# "problem", "shopping for" — kept in high_intent only (per-turn detection).
+# "problem", "shopping for" — kept in high_intent only (per-turn detection)
 goal_indicators:
   # Core intent indicators (domain-agnostic)
   - "lose weight"
@@ -154,9 +154,9 @@ preference_keywords:
     - "save on gas"
   
   # COMFORT & LUXURY - Lifestyle/lifestyle upgrade
-  # NOTE: "luxury" also appears in luxury_cars product context (product_config.yaml line ~21).
+  # NOTE: "luxury" also appears in luxury_cars product context (product_config.yaml line ~21)
   # In automotive/transactional sessions, "luxury" triggers preference extraction (comfort) rather than
-  # product matching. This is intentional (transactional = direct to pitch) but worth noting.
+  # product matching. This is intentional (transactional = direct to pitch) but worth noting
   comfort:
     - "comfortable"
     - "comfort"
@@ -214,9 +214,9 @@ preference_keywords:
     - "fit in"
   
   # WARRANTY & SUPPORT - Long-term confidence
-  # NOTE: "coverage" also appears in insurance product aliases (product_config.yaml).
-  # In cross-domain sessions, "coverage" may trigger both preference extraction AND product detection.
-  # This is acceptable (coverage is semantically related to both), but worth noting for debugging.
+  # NOTE: "coverage" also appears in insurance product aliases (product_config.yaml)
+  # In cross-domain sessions, "coverage" may trigger both preference extraction AND product detection
+  # This is acceptable (coverage is semantically related to both), but worth noting for debugging
   warranty:
     - "warranty"
     - "guarantee"
@@ -468,8 +468,8 @@ advancement:
     min_matches: 1
     # Doubt signal keywords
     # NOTE: Removed single-word generics ("bad", "worse", "slow", "wrong", "miss",
-    # "mistake", "error", "confusion", "unsure") — they fire on unrelated contexts.
-    # Examples: "wrong person", "slow weather", "mistake yesterday" =/= problem doubt.
+    # "mistake", "error", "confusion", "unsure") — they fire on unrelated contexts
+    # Examples: "wrong person", "slow weather", "mistake yesterday" =/= problem doubt
     doubt_keywords:
       - "not working"
       - "struggling"

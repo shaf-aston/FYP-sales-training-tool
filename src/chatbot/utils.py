@@ -1,41 +1,44 @@
-"""Shared utilities — extracted to eliminate cross-module duplication."""
+"""Shared helper utilities used across chatbot modules"""
+
 import json
 import re
 from bisect import bisect
 from enum import Enum
 from functools import lru_cache
 
+# frozenset() used negations are unordered hashed, so O(1) and immutatble
 
-# --- Negation-aware keyword matching (shared) ---
-_DEFAULT_NEGATIONS = frozenset({
-    "not",
-    "don't",
-    "doesn't",
-    "no",
-    "never",
-    "can't",
-    "won't",
-    "cannot",
-    "dont",
-    "didnt",
-    "didn't",
-    "doesnt",
-    "cant",
-})
+DEFAULT_NEGATIONS = frozenset(
+    {
+        "not",
+        "don't",
+        "doesn't",
+        "no",
+        "never",
+        "can't",
+        "won't",
+        "cannot",
+        "dont",
+        "didnt",
+        "didn't",
+        "doesnt",
+        "cant",
+    }
+)
 
 
 @lru_cache(maxsize=512)
 def _build_union_pattern_for_keywords(keyword_tuple) -> re.Pattern:
     parts = [rf"\b{re.escape(k)}\b" for k in keyword_tuple]
-    return re.compile('|'.join(parts), re.IGNORECASE)
+    return re.compile("|".join(parts), re.IGNORECASE)
 
 
 def contains_nonnegated_keyword(text: str, keywords, negations=None, neg_window: int = 3) -> bool:
-    """True if text contains a keyword not negated in the previous tokens."""
+    """Check whether text contains a keyword not negated by nearby words"""
     if not text or not keywords:
         return False
 
-    # Normalize keywords to a list
+    # normalize keywords to a list
     if isinstance(keywords, str):
         keys = [keywords]
     else:
@@ -44,23 +47,21 @@ def contains_nonnegated_keyword(text: str, keywords, negations=None, neg_window:
         return False
 
     pattern = _build_union_pattern_for_keywords(tuple(keys))
-    negset = frozenset(negations) if negations is not None else _DEFAULT_NEGATIONS
+    negset = frozenset(negations) if negations is not None else DEFAULT_NEGATIONS
 
     for match in pattern.finditer(text):
         preceding_words = re.findall(r"\w+", text[: match.start()])
         if preceding_words:
             window = [w.lower() for w in preceding_words[-neg_window:]]
             if any(w in negset for w in window):
-                # This occurrence appears negated; skip it.
+                # appears negated — skip
                 continue
         return True
     return False
 
 
-# --- Clamping ---
-
 def clamp_score(value, default=50) -> int:
-    """Clamp LLM-returned score to 0–100 int range."""
+    """Clamp LLM-returned score to 0–100 int range"""
     try:
         return max(0, min(100, int(value)))
     except (TypeError, ValueError):
@@ -68,14 +69,12 @@ def clamp_score(value, default=50) -> int:
 
 
 def clamp(value: float, lo: float = 0.0, hi: float = 1.0) -> float:
-    """Clamp float to [lo, hi]."""
+    """Clamp float to [lo, hi]"""
     return max(lo, min(hi, value))
 
 
-# --- LLM response parsing ---
-
 def extract_json_from_llm(content: str) -> dict | None:
-    """Extract first JSON object from LLM response text. Returns None on failure."""
+    """Extract the first JSON object from LLM response text — falls back to None if parsing fails"""
     match = re.search(r"\{[\s\S]*\}", content)
     if match:
         try:
@@ -85,17 +84,13 @@ def extract_json_from_llm(content: str) -> dict | None:
     return None
 
 
-# --- Range-to-label mapping ---
-
 def range_label(value, thresholds, labels):
-    """Map a numeric value to a label via bisect.
-    len(labels) must equal len(thresholds) + 1.
+    """Map a numeric value to a label via bisect
+    len(labels) must equal len(thresholds) + 1
     Example: range_label(85, [60,70,80,90], ["F","D","C","B","A"]) → "B"
     """
     return labels[bisect(thresholds, value)]
 
-
-# --- Enums (str subclass so == "consultative" still works) ---
 
 class Strategy(str, Enum):
     CONSULTATIVE = "consultative"

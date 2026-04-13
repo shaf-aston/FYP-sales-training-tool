@@ -1,46 +1,31 @@
-"""Post-session scoring for Prospect Mode.
+"""Post-session scoring for prospect mode (5 criteria, single LLM call)."""
 
-Evaluates the user's sales performance across 5 criteria using a single LLM call
-with the full conversation history.
-"""
 from ..loader import load_prospect_config
 from ..utils import clamp_score, extract_json_from_llm, range_label
 
-_GRADE_THRESHOLDS = [60, 70, 80, 90]
+_GRADETHRESHOLDS = [60, 70, 80, 90]
 _GRADE_LABELS = ["F", "D", "C", "B", "A"]
 
 
 def _grade_from_score(score: int) -> str:
-    return range_label(score, _GRADE_THRESHOLDS, _GRADE_LABELS)
+    return range_label(score, _GRADETHRESHOLDS, _GRADE_LABELS)
 
 
 def evaluate_prospect_session(provider, conversation_history, prospect_state, product_context) -> dict:
-    """Evaluate the user's sales performance in a prospect session.
-
-    Args:
-        provider: LLM provider instance
-        conversation_history: List of {role, content} dicts
-        prospect_state: ProspectState instance
-        product_context: Product knowledge string
-
-    Returns:
-        Evaluation dict with scores, feedback, and grade.
-    """
+    """Score the user's sales performance and return grades + feedback."""
     config = load_prospect_config()
     criteria = config.get("evaluation", {}).get("criteria", {})
 
     # Build conversation transcript
     transcript = "\n".join(
-        f"{'SALESPERSON' if m['role'] == 'user' else 'PROSPECT'}: {m['content']}"
-        for m in conversation_history
+        f"{'SALESPERSON' if m['role'] == 'user' else 'PROSPECT'}: {m['content']}" for m in conversation_history
     )
 
     outcome = prospect_state.status
 
     # Build criteria descriptions for prompt
     criteria_text = "\n".join(
-        f"- {name}: {info['description']} (weight: {info['weight']})"
-        for name, info in criteria.items()
+        f"- {name}: {info['description']} (weight: {info['weight']})" for name, info in criteria.items()
     )
 
     eval_prompt = f"""You are an expert sales coach evaluating a trainee's performance in a practice session.
@@ -123,13 +108,13 @@ def _fallback_evaluation(outcome: str) -> dict:
         "grade": "C",
         "outcome": outcome,
         "criteria_scores": {
-            "needs_discovery": {"score": 50, "feedback": "Could not evaluate — try again."},
-            "rapport_building": {"score": 50, "feedback": "Could not evaluate — try again."},
-            "objection_handling": {"score": 50, "feedback": "Could not evaluate — try again."},
-            "solution_presentation": {"score": 50, "feedback": "Could not evaluate — try again."},
-            "conversation_flow": {"score": 50, "feedback": "Could not evaluate — try again."},
+            "needs_discovery": {"score": 50, "feedback": "Evaluation unavailable — try running it again."},
+            "rapport_building": {"score": 50, "feedback": "Rapport scoring stopped — give it one more try."},
+            "objection_handling": {"score": 50, "feedback": "Objection handling evaluation failed — run it again?"},
+            "solution_presentation": {"score": 50, "feedback": "Solution presentation scoring hiccup — take another shot."},
+            "conversation_flow": {"score": 50, "feedback": "Conversation flow scoring didn't finish — give it another go."},
         },
         "strengths": [],
-        "improvements": ["Session could not be fully evaluated. Please try again."],
-        "summary": "Evaluation could not be completed. Please try again.",
+        "improvements": ["Couldn't finish the evaluation this time around."],
+        "summary": "The evaluation didn't complete — re-run it when ready.",
     }

@@ -12,34 +12,37 @@ Framework: AAA pattern (Arrange-Act-Assert)
 import pytest
 
 from chatbot.analysis import (
+    analyse_state,
     detect_acknowledgment_context,
-    analyze_state,
 )
-from chatbot.prompts import get_acknowledgment_guidance as _get_acknowledgment_guidance
 from chatbot.content import SIGNALS
-
+from chatbot.prompts import get_acknowledgment_guidance as _get_acknowledgment_guidance
 
 # ====================================================================
 # SECTION 1 — Acknowledgment Context Detection (Full/Light/None)
 # ====================================================================
 
+
 class TestAcknowledgmentContextFull:
     """Detect "full" acknowledgment context when user shares vulnerability/emotion."""
 
-    @pytest.mark.parametrize("emotional_phrase", [
-        "I'm really struggling with this",
-        "I had an accident last week",
-        "This is frustrating me so much",
-        "I'm really worried about money",
-        "I feel stuck and lost right now",
-        "I've been through a lot",
-        "This is overwhelming",
-        "I'm exhausted from dealing with this",
-    ])
+    @pytest.mark.parametrize(
+        "emotional_phrase",
+        [
+            "I'm really struggling with this",
+            "I had an accident last week",
+            "This is frustrating me so much",
+            "I'm really worried about money",
+            "I feel stuck and lost right now",
+            "I've been through a lot",
+            "This is overwhelming",
+            "I'm exhausted from dealing with this",
+        ],
+    )
     def test_full_context_on_emotional_disclosure(self, emotional_phrase):
         """User shares emotional content → detect_acknowledgment_context returns 'full'."""
         # ARRANGE
-        state = analyze_state([], emotional_phrase)
+        state = analyse_state([], emotional_phrase)
 
         # ACT
         context = detect_acknowledgment_context(emotional_phrase, [], state)
@@ -54,7 +57,7 @@ class TestAcknowledgmentContextFull:
             {"role": "user", "content": "I had an accident and lost my job"},
             {"role": "assistant", "content": "That sounds tough"},
         ]
-        state = analyze_state(history, "what can help?")
+        state = analyse_state(history, "what can help?")
 
         # ACT
         context = detect_acknowledgment_context("what can help?", history, state)
@@ -67,17 +70,20 @@ class TestAcknowledgmentContextFull:
 class TestAcknowledgmentContextLight:
     """Detect "light" acknowledgment context when user is guarded/evasive."""
 
-    @pytest.mark.parametrize("guarded_phrase,setup_history", [
-        ("idk", [{"role": "assistant", "content": "What brings you here?"}]),
-        # Note: "I don't know", "maybe", "I guess so" are short defensive phrases
-        # but need more history context to be detected as "guarded" by the analyzer
-        # These are tested in edge cases with fuller context
-    ])
+    @pytest.mark.parametrize(
+        "guarded_phrase,setup_history",
+        [
+            ("idk", [{"role": "assistant", "content": "What brings you here?"}]),
+            # Note: "I don't know", "maybe", "I guess so" are short defensive phrases
+            # but need more history context to be detected as "guarded" by the analyser
+            # These are tested in edge cases with fuller context
+        ],
+    )
     def test_light_context_on_guarded_response(self, guarded_phrase, setup_history):
         """Guarded response to bot question → "light" acknowledgment."""
         # ARRANGE
         history = setup_history
-        state = analyze_state(history, guarded_phrase)
+        state = analyse_state(history, guarded_phrase)
 
         # ACT
         context = detect_acknowledgment_context(guarded_phrase, history, state)
@@ -92,7 +98,7 @@ class TestAcknowledgmentContextLight:
             {"role": "user", "content": "I lost my job and I'm scared"},
             {"role": "assistant", "content": "I understand that's tough"},
         ]
-        state = analyze_state(history, "how much does it cost?")
+        state = analyse_state(history, "how much does it cost?")
 
         # ACT
         context = detect_acknowledgment_context("how much does it cost?", history, state)
@@ -104,19 +110,22 @@ class TestAcknowledgmentContextLight:
 class TestAcknowledgmentContextNone:
     """Detect "none" context when acknowledgment would be noise/annoyance."""
 
-    @pytest.mark.parametrize("direct_request", [
-        "what options do you have",
-        "show me the prices",
-        "give me recommendations",
-        "what's available",
-        "tell me about your products",
-        "show options",
-        "list your features",
-    ])
+    @pytest.mark.parametrize(
+        "direct_request",
+        [
+            "what options do you have",
+            "show me the prices",
+            "give me recommendations",
+            "what's available",
+            "tell me about your products",
+            "show options",
+            "list your features",
+        ],
+    )
     def test_none_context_on_direct_info_request(self, direct_request):
         """Direct info request → "none" (skip acknowledgment)."""
         # ARRANGE
-        state = analyze_state([], direct_request)
+        state = analyse_state([], direct_request)
 
         # ACT
         context = detect_acknowledgment_context(direct_request, [], state)
@@ -124,17 +133,20 @@ class TestAcknowledgmentContextNone:
         # ASSERT
         assert context == "none", f"Should skip ack for: {direct_request}"
 
-    @pytest.mark.parametrize("low_intent_phrase", [
-        "all good",
-        "just browsing",
-        "just looking",
-        "everything's fine",
-        "no problem",
-    ])
+    @pytest.mark.parametrize(
+        "low_intent_phrase",
+        [
+            "all good",
+            "just browsing",
+            "just looking",
+            "everything's fine",
+            "no problem",
+        ],
+    )
     def test_none_context_on_low_intent_short(self, low_intent_phrase):
         """Low-intent + short message → "none"."""
         # ARRANGE
-        state = analyze_state([], low_intent_phrase)
+        state = analyse_state([], low_intent_phrase)
 
         # ACT
         context = detect_acknowledgment_context(low_intent_phrase, [], state)
@@ -142,17 +154,20 @@ class TestAcknowledgmentContextNone:
         # ASSERT
         assert context == "none"
 
-    @pytest.mark.parametrize("short_factual_q", [
-        "when?",
-        "how?",
-        "where?",
-        "who?",
-        "really?",
-    ])
+    @pytest.mark.parametrize(
+        "short_factual_q",
+        [
+            "when?",
+            "how?",
+            "where?",
+            "who?",
+            "really?",
+        ],
+    )
     def test_none_context_on_short_factual_question(self, short_factual_q):
         """Very short factual question (<8 words) → "none"."""
         # ARRANGE
-        state = analyze_state([], short_factual_q)
+        state = analyse_state([], short_factual_q)
 
         # ACT
         context = detect_acknowledgment_context(short_factual_q, [], state)
@@ -164,6 +179,7 @@ class TestAcknowledgmentContextNone:
 # ====================================================================
 # SECTION 2 — Acknowledgment Guidance Generation
 # ====================================================================
+
 
 class TestAcknowledgmentGuidanceFull:
     """Guidance for 'full' acknowledgment should be actionable."""
@@ -239,12 +255,13 @@ class TestAcknowledgmentGuidanceNone:
 # SECTION 3 — Edge Cases & Integration
 # ====================================================================
 
+
 class TestAcknowledgmentEdgeCases:
     """Edge cases in acknowledgment detection."""
 
     def test_empty_message_returns_none(self):
         """Empty message → "none"."""
-        state = analyze_state([], "")
+        state = analyse_state([], "")
         context = detect_acknowledgment_context("", [], state)
         assert context == "none"
 
@@ -254,7 +271,7 @@ class TestAcknowledgmentEdgeCases:
             {"role": "user", "content": "I've been looking for something reliable and safe"},
             {"role": "assistant", "content": "Great. What features matter most?"},
         ]
-        state = analyze_state(history, "ok")
+        state = analyse_state(history, "ok")
         # State should show NOT guarded
         assert state["guarded"] is False
         # So acknowledgment should be "none" (info already shared)
@@ -271,7 +288,7 @@ class TestAcknowledgmentEdgeCases:
     def test_multiple_emotional_keywords_in_message(self):
         """Message with multiple emotional keywords → "full"."""
         msg = "I'm stressed and overwhelmed about this decision"
-        state = analyze_state([], msg)
+        state = analyse_state([], msg)
         context = detect_acknowledgment_context(msg, [], state)
         assert context == "full"
 
@@ -281,7 +298,7 @@ class TestAcknowledgmentEdgeCases:
             {"role": "user", "content": "I'm really worried about this"},
             {"role": "assistant", "content": "I understand your concern"},
         ]
-        state = analyze_state(history, "what are the options?")
+        state = analyse_state(history, "what are the options?")
         context = detect_acknowledgment_context("what are the options?", history, state)
         # Direct info request ("what are the options") → "none"
         # Emotional history context is secondary to direct request
@@ -291,13 +308,13 @@ class TestAcknowledgmentEdgeCases:
 class TestAcknowledgmentSignalLoading:
     """Verify signals.yaml emotional_disclosure category is loaded."""
 
-    def test_emotional_disclosure_signals_loaded(self):
+    def test_emotional_disclosureSIGNALS_loaded(self):
         """emotional_disclosure should be in SIGNALS."""
         assert "emotional_disclosure" in SIGNALS
         assert isinstance(SIGNALS["emotional_disclosure"], list)
         assert len(SIGNALS["emotional_disclosure"]) > 5
 
-    def test_emotional_signals_contain_expected_words(self):
+    def test_emotionalSIGNALS_contain_expected_words(self):
         """Verify key emotional words are in the list."""
         emotional = SIGNALS["emotional_disclosure"]
         assert any("struggle" in w or "struggling" in w for w in emotional)
@@ -309,36 +326,36 @@ class TestAcknowledgmentSignalLoading:
 # SECTION 4 — Parametrization: Comprehensive Scenarios
 # ====================================================================
 
+
 class TestAcknowledgmentComprehensiveScenarios:
     """Parametrized tests covering many real-world scenarios."""
 
-    @pytest.mark.parametrize("user_msg,history_setup,expected_context", [
-        # Emotional disclosure scenarios
-        ("I've been struggling with this for months", [], "full"),
-        ("I had a car accident", [], "full"),
-        ("I'm really worried about the cost", [], "full"),
-
-        # Guarded scenarios (require history context)
-        ("idk", [{"role": "assistant", "content": "What's your preference?"}], "light"),
-
-        # Info request scenarios
-        ("what options do you have", [], "none"),
-        ("show me prices", [], "none"),
-        ("what's available", [], "none"),
-
-        # Low-intent scenarios
-        ("all good", [], "none"),
-        ("just browsing", [], "none"),
-
-        # Short factual questions
-        ("when?", [], "none"),
-        ("where?", [], "none"),
-    ])
+    @pytest.mark.parametrize(
+        "user_msg,history_setup,expected_context",
+        [
+            # Emotional disclosure scenarios
+            ("I've been struggling with this for months", [], "full"),
+            ("I had a car accident", [], "full"),
+            ("I'm really worried about the cost", [], "full"),
+            # Guarded scenarios (require history context)
+            ("idk", [{"role": "assistant", "content": "What's your preference?"}], "light"),
+            # Info request scenarios
+            ("what options do you have", [], "none"),
+            ("show me prices", [], "none"),
+            ("what's available", [], "none"),
+            # Low-intent scenarios
+            ("all good", [], "none"),
+            ("just browsing", [], "none"),
+            # Short factual questions
+            ("when?", [], "none"),
+            ("where?", [], "none"),
+        ],
+    )
     def test_comprehensive_scenarios(self, user_msg, history_setup, expected_context):
         """Parametrized test covering diverse real-world acknowledgment scenarios."""
         # ARRANGE
         history = history_setup
-        state = analyze_state(history, user_msg)
+        state = analyse_state(history, user_msg)
 
         # ACT
         context = detect_acknowledgment_context(user_msg, history, state)
@@ -350,6 +367,7 @@ class TestAcknowledgmentComprehensiveScenarios:
 # ====================================================================
 # SECTION 5 — Integration with Content.py
 # ====================================================================
+
 
 class TestAcknowledgmentInPromptGeneration:
     """Verify acknowledgment guidance is properly injected into prompts."""

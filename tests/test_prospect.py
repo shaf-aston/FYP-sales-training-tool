@@ -8,11 +8,13 @@ Run: pytest tests/test_prospect.py -v
 # Config Tests (Deterministic)
 # =============================================================================
 
+
 class TestProspectConfig:
     """Test prospect_config.yaml structure and validity."""
 
     def test_all_difficulties_present(self):
         from chatbot.loader import load_prospect_config
+
         config = load_prospect_config()
         profiles = config["difficulty_profiles"]
         assert "easy" in profiles
@@ -21,6 +23,7 @@ class TestProspectConfig:
 
     def test_behavior_params_valid(self):
         from chatbot.loader import load_prospect_config
+
         config = load_prospect_config()
         for diff, profile in config["difficulty_profiles"].items():
             b = profile["behavior"]
@@ -32,6 +35,7 @@ class TestProspectConfig:
 
     def test_personas_have_required_fields(self):
         from chatbot.loader import load_prospect_config
+
         config = load_prospect_config()
         personas = config["personas"]
         required = {"name", "background", "needs", "budget", "pain_points", "personality"}
@@ -42,6 +46,7 @@ class TestProspectConfig:
 
     def test_evaluation_weights_sum_to_one(self):
         from chatbot.loader import load_prospect_config
+
         config = load_prospect_config()
         criteria = config["evaluation"]["criteria"]
         total = sum(c["weight"] for c in criteria.values())
@@ -49,18 +54,21 @@ class TestProspectConfig:
 
     def test_easy_readiness_higher_than_hard(self):
         from chatbot.loader import load_prospect_config
+
         config = load_prospect_config()
         profiles = config["difficulty_profiles"]
         assert profiles["easy"]["behavior"]["initial_readiness"] > profiles["hard"]["behavior"]["initial_readiness"]
 
     def test_hard_has_more_objections_than_easy(self):
         from chatbot.loader import load_prospect_config
+
         config = load_prospect_config()
         profiles = config["difficulty_profiles"]
         assert profiles["hard"]["behavior"]["max_objections"] > profiles["easy"]["behavior"]["max_objections"]
 
     def test_objection_bank_not_empty(self):
         from chatbot.loader import load_prospect_config
+
         config = load_prospect_config()
         for diff, profile in config["difficulty_profiles"].items():
             bank = profile.get("objection_bank", [])
@@ -68,6 +76,7 @@ class TestProspectConfig:
 
     def test_system_prompt_template_exists(self):
         from chatbot.loader import load_prospect_config
+
         config = load_prospect_config()
         template = config.get("system_prompt_template", "")
         assert len(template) > 50, "system_prompt_template too short or missing"
@@ -79,12 +88,14 @@ class TestProspectConfig:
 # ProspectState Tests (Deterministic)
 # =============================================================================
 
+
 class TestProspectState:
     """Test ProspectState data structure behavior."""
 
     def test_initial_readiness_matches_difficulty(self):
-        from chatbot.prospect.prospect import ProspectState
         from chatbot.loader import load_prospect_config as _load_prospect_config
+        from chatbot.prospect.prospect import ProspectState
+
         config = _load_prospect_config()
         for diff, profile in config["difficulty_profiles"].items():
             state = ProspectState(
@@ -95,29 +106,35 @@ class TestProspectState:
 
     def test_readiness_clamped_at_zero(self):
         from chatbot.utils import clamp as _clamp
+
         assert _clamp(-0.5) == 0.0
 
     def test_readiness_clamped_at_one(self):
         from chatbot.utils import clamp as _clamp
+
         assert _clamp(1.5) == 1.0
 
     def test_status_active(self):
         from chatbot.prospect.prospect import ProspectState
+
         state = ProspectState(readiness=0.5)
         assert state.status == "active"
 
     def test_status_sold(self):
         from chatbot.prospect.prospect import ProspectState
+
         state = ProspectState(readiness=0.9, has_committed=True)
         assert state.status == "sold"
 
     def test_status_walked(self):
         from chatbot.prospect.prospect import ProspectState
+
         state = ProspectState(readiness=0.1, has_walked=True)
         assert state.status == "walked"
 
     def test_to_dict(self):
         from chatbot.prospect.prospect import ProspectState
+
         state = ProspectState(
             readiness=0.65,
             objections_raised=2,
@@ -137,17 +154,20 @@ class TestProspectState:
 # Persona Selection Tests (Deterministic)
 # =============================================================================
 
+
 class TestPersonaSelection:
     """Test persona selection logic."""
 
     def test_general_personas_returned(self):
         from chatbot.prospect.prospect import select_persona
+
         persona = select_persona("nonexistent_product", "easy")
         assert "name" in persona
         assert "needs" in persona
 
     def test_product_specific_persona_exists(self):
         from chatbot.prospect.prospect import select_persona
+
         persona = select_persona("luxury_cars", "medium")
         assert "name" in persona
         # Should get a luxury car persona, not a general one
@@ -158,15 +178,23 @@ class TestPersonaSelection:
 # Prompt Building Tests (Deterministic)
 # =============================================================================
 
+
 class TestPromptBuilding:
     """Test system prompt construction."""
 
     def test_persona_name_in_prompt(self):
         from chatbot.prospect.prospect import ProspectSession
+
         # We need to mock the provider to avoid actual LLM calls
         session = ProspectSession.__new__(ProspectSession)
-        session.persona = {"name": "TestUser", "background": "Test", "personality": "Nice",
-                          "needs": ["speed"], "pain_points": ["slow"], "budget": "$100"}
+        session.persona = {
+            "name": "TestUser",
+            "background": "Test",
+            "personality": "Nice",
+            "needs": ["speed"],
+            "pain_points": ["slow"],
+            "budget": "$100",
+        }
         session.product_type = "default"
         session.product_context = "test products"
         session.state = __import__("chatbot.prospect.prospect", fromlist=["ProspectState"]).ProspectState(
@@ -180,13 +208,20 @@ class TestPromptBuilding:
         assert "TestUser" in prompt
 
     def test_difficulty_rules_in_prompt(self):
-        from chatbot.prospect.prospect import ProspectSession, ProspectState
         from chatbot.loader import load_prospect_config
+        from chatbot.prospect.prospect import ProspectSession, ProspectState
+
         config = load_prospect_config()
 
         session = ProspectSession.__new__(ProspectSession)
-        session.persona = {"name": "Alex", "background": "Test", "personality": "Nice",
-                          "needs": ["speed"], "pain_points": ["slow"], "budget": "$100"}
+        session.persona = {
+            "name": "Alex",
+            "background": "Test",
+            "personality": "Nice",
+            "needs": ["speed"],
+            "pain_points": ["slow"],
+            "budget": "$100",
+        }
         session.product_type = "default"
         session.product_context = "test"
         session.state = ProspectState(readiness=0.2, difficulty="hard", persona=session.persona)
@@ -201,23 +236,28 @@ class TestPromptBuilding:
 # Score Clamping Tests (Deterministic)
 # =============================================================================
 
+
 class TestScoreClamping:
     """Test score clamping utility."""
 
     def test_valid_score(self):
         from chatbot.utils import clamp_score as _clamp_score
+
         assert _clamp_score(75) == 75
 
     def test_negative_clamped(self):
         from chatbot.utils import clamp_score as _clamp_score
+
         assert _clamp_score(-10) == 0
 
     def test_over_100_clamped(self):
         from chatbot.utils import clamp_score as _clamp_score
+
         assert _clamp_score(200) == 100
 
     def test_non_numeric_default(self):
         from chatbot.utils import clamp_score as _clamp_score
+
         assert _clamp_score("abc") == 50
         assert _clamp_score(None) == 50
 
@@ -226,11 +266,13 @@ class TestScoreClamping:
 # Evaluator Tests (Deterministic)
 # =============================================================================
 
+
 class TestEvaluator:
     """Test evaluation utilities."""
 
     def test_grade_from_score(self):
         from chatbot.prospect.prospect_evaluator import _grade_from_score
+
         assert _grade_from_score(95) == "A"
         assert _grade_from_score(85) == "B"
         assert _grade_from_score(75) == "C"
@@ -239,6 +281,7 @@ class TestEvaluator:
 
     def test_fallback_evaluation(self):
         from chatbot.prospect.prospect_evaluator import _fallback_evaluation
+
         result = _fallback_evaluation("walked")
         assert result["overall_score"] == 50
         assert result["grade"] == "C"
@@ -246,8 +289,9 @@ class TestEvaluator:
         assert len(result["criteria_scores"]) == 5
 
     def test_build_evaluation_weights(self):
-        from chatbot.prospect.prospect_evaluator import _build_evaluation
         from chatbot.loader import load_prospect_config
+        from chatbot.prospect.prospect_evaluator import _build_evaluation
+
         config = load_prospect_config()
         criteria = config["evaluation"]["criteria"]
 
@@ -269,7 +313,7 @@ class TestEvaluator:
         assert 0 <= result["overall_score"] <= 100
         assert result["grade"] in ("A", "B", "C", "D", "F")
         # Verify weighted calculation
-        expected = (80*0.25 + 70*0.20 + 60*0.20 + 90*0.20 + 75*0.15)
+        expected = 80 * 0.25 + 70 * 0.20 + 60 * 0.20 + 90 * 0.20 + 75 * 0.15
         assert result["overall_score"] == round(expected)
 
 
@@ -277,11 +321,13 @@ class TestEvaluator:
 # Serialization Tests (Deterministic)
 # =============================================================================
 
+
 class TestSerialization:
     """Test ProspectState and session serialization."""
 
     def test_state_roundtrip(self):
         from chatbot.prospect.prospect import ProspectState
+
         state = ProspectState(
             readiness=0.75,
             objections_raised=2,
@@ -300,4 +346,5 @@ class TestSerialization:
 
 if __name__ == "__main__":
     import pytest
+
     pytest.main([__file__, "-v"])

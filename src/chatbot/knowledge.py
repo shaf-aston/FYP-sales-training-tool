@@ -1,36 +1,38 @@
-"""Loads, saves, and clears user-provided knowledge from YAML. Injected into prompts at runtime."""
+"""Manage custom product knowledge stored in YAML files"""
 
-import re
-import yaml
-from pathlib import Path
 import logging
+import re
+from pathlib import Path
+
+import yaml
+
+from .constants import MAX_FIELD_LENGTH
 
 logger = logging.getLogger(__name__)
 
-# Only these keys are accepted from the frontend form
 ALLOWED_FIELDS = {
-    "product_name", "pricing", "specifications",
-    "company_info", "selling_points", "additional_notes",
+    "product_name",
+    "pricing",
+    "specifications",
+    "company_info",
+    "selling_points",
+    "additional_notes",
 }
-MAX_FIELD_LENGTH = 1000
 
-_BASE_KNOWLEDGE_DIR = Path(__file__).parent.parent / "config"
-_DEFAULT_KNOWLEDGE_FILE = _BASE_KNOWLEDGE_DIR / "custom_knowledge.yaml"
-
-# keep legacy public name for tests
-KNOWLEDGE_FILE = _DEFAULT_KNOWLEDGE_FILE
+KNOWLEDGE_DIR = Path(__file__).parent.parent / "config"
+KNOWLEDGE_FILE = KNOWLEDGE_DIR / "custom_knowledge.yaml"
 
 
 def load_custom_knowledge() -> dict:
-    """Load custom knowledge from YAML.
+    """Load custom knowledge from YAML
 
-    Returns empty dict if missing or invalid.
+    Returns empty dict if missing or invalid
     """
-    kf = _DEFAULT_KNOWLEDGE_FILE
+    kf = KNOWLEDGE_FILE
     if not kf.exists():
         return {}
     try:
-        with open(kf, 'r', encoding='utf-8') as f:
+        with open(kf, "r", encoding="utf-8") as f:
             data = yaml.safe_load(f)
         return data if isinstance(data, dict) else {}
     except (yaml.YAMLError, IOError) as e:
@@ -38,37 +40,37 @@ def load_custom_knowledge() -> dict:
         return {}
 
 
-def _clean_value(value: str) -> str:
-    """Normalize user input: collapse whitespace, enforce length cap."""
+def clean_value(value: str) -> str:
+    """Normalize user input: collapse whitespace, enforce length cap"""
     value = value.strip()
-    value = re.sub(r'[ \t]+', ' ', value)          # collapse spaces/tabs (preserve newlines)
-    value = re.sub(r'\n{3,}', '\n\n', value)       # cap consecutive blank lines
+    value = re.sub(r"[ \t]+", " ", value)  # collapse spaces/tabs (preserve newlines)
+    value = re.sub(r"\n{3,}", "\n\n", value)  # cap consecutive blank lines
     return value[:MAX_FIELD_LENGTH]
 
 
-def _sanitize_knowledge(data: dict) -> dict:
-    """Whitelist fields and clean values before storage."""
+def sanitize_knowledge(data: dict) -> dict:
+    """Whitelist fields and clean values before storage"""
     cleaned = {}
     for key, value in data.items():
         if key not in ALLOWED_FIELDS:
             continue
         if isinstance(value, str):
-            v = _clean_value(value)
+            v = clean_value(value)
             if v:
                 cleaned[key] = v
     return cleaned
 
 
 def save_custom_knowledge(data: dict) -> bool:
-    """Sanitize and save custom knowledge to YAML.
+    """Sanitize and save custom knowledge to YAML
 
-    Returns True on success.
+    Returns True on success
     """
+    kf = KNOWLEDGE_FILE
     try:
-        sanitized = _sanitize_knowledge(data)
-        kf = _DEFAULT_KNOWLEDGE_FILE
+        sanitized = sanitize_knowledge(data)
         kf.parent.mkdir(parents=True, exist_ok=True)
-        with open(kf, 'w', encoding='utf-8') as f:
+        with open(kf, "w", encoding="utf-8") as f:
             yaml.dump(sanitized, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
         return True
     except (IOError, yaml.YAMLError) as e:
@@ -77,9 +79,9 @@ def save_custom_knowledge(data: dict) -> bool:
 
 
 def get_custom_knowledge_text() -> str:
-    """Return formatted knowledge text for prompt injection.
+    """Return formatted knowledge text for prompt injection
 
-    Returns empty string if none.
+    Returns empty string if none
     """
     data = load_custom_knowledge()
     if not data:
@@ -98,9 +100,9 @@ def get_custom_knowledge_text() -> str:
 
 
 def clear_custom_knowledge() -> bool:
-    """Delete custom knowledge file. Returns True on success or if already absent."""
+    """Delete custom knowledge file. Returns True on success or if already absent"""
+    kf = KNOWLEDGE_FILE
     try:
-        kf = _DEFAULT_KNOWLEDGE_FILE
         if kf.exists():
             kf.unlink()
         return True

@@ -1,4 +1,4 @@
-"""Save and load chatbot session state to disk."""
+"""Save and load chatbot session state to disk"""
 
 import json
 import logging
