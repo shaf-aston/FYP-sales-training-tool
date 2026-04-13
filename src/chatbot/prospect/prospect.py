@@ -1,26 +1,22 @@
-"""Prospect Mode — Bot plays a realistic buyer, user practises sales skills.
+"""Prospect mode: bot plays a buyer for sales practice."""
 
-The bot's behaviour is governed by a readiness score + difficulty parameters,
-creating emergent buyer dynamics rather than scripted FSM stages.
-"""
 import random
 import time
 from dataclasses import dataclass, field
 
-from ..loader import load_prospect_config, load_signals
+from ..loader import load_prospect_config, loadSIGNALS
 from ..providers.factory import create_provider
 from ..utils import clamp, range_label
 
-# Module-level signal loading (cached via @lru_cache in loader)
-_SIGNALS = load_signals()
+SIGNALS = loadSIGNALS()
 
-_READINESS_THRESHOLDS = [0.2, 0.4, 0.6, 0.8]
-_READINESS_LABELS = [
-    "Very skeptical — not convinced at all",
-    "Unconvinced — needs more persuasion",
-    "Neutral — somewhat interested but not committed",
-    "Interested — seeing value but has remaining concerns",
-    "Nearly ready to buy — just needs final reassurance",
+READINESSTHRESHOLDS = [0.2, 0.4, 0.6, 0.8]
+READINESS_LABELS = [
+    "Not buying it at all",
+    "Still needs convincing",
+    "On the fence — some interest but not sold",
+    "Getting there, but a few things are holding them back",
+    "Almost there — just needs one more good reason",
 ]
 
 
@@ -69,10 +65,7 @@ class ProspectResponse:
 
 
 def select_persona(product_type: str, difficulty: str) -> dict:
-    """Select a persona for the prospect session.
-
-    Picks from product-specific personas if available, otherwise from general.
-    """
+    """Pick a persona for this session; prefer product-specific ones if present."""
     config = load_prospect_config()
     personas = config.get("personas", {})
 
@@ -95,7 +88,7 @@ def select_persona(product_type: str, difficulty: str) -> dict:
 
 
 class ProspectSession:
-    """Manages a single prospect-mode conversation."""
+    """Manage a prospect-mode conversation."""
 
     def __init__(
         self,
@@ -138,15 +131,10 @@ class ProspectSession:
         self.behavior_rules = behavior_rules.get(difficulty, "")
 
     def _load_product_context(self, product_type: str) -> str:
-        """Load product knowledge for the prospect's context.
-
-        Uses product_config.yaml + prospect persona data, and includes only
-        prospect-specific custom knowledge (not seller-mode custom knowledge)
-        to keep the two modes independent.
-        """
+        """Load product context for the prospect; inject prospect-specific custom knowledge only."""
         try:
-            from ..loader import load_product_config
             from ..knowledge import get_custom_knowledge_text
+            from ..loader import load_product_config
 
             products = load_product_config().get("products", {})
             product = products.get(product_type, products.get("default", {}))
@@ -162,9 +150,7 @@ class ProspectSession:
             prospect_knowledge = get_custom_knowledge_text()
             if prospect_knowledge:
                 custom_block = (
-                    "--- BEGIN CUSTOM PROSPECT DATA ---\n"
-                    f"{prospect_knowledge}\n"
-                    "--- END CUSTOM PROSPECT DATA ---"
+                    f"--- BEGIN CUSTOM PROSPECT DATA ---\n{prospect_knowledge}\n--- END CUSTOM PROSPECT DATA ---"
                 )
                 knowledge = f"{knowledge}\n\n{custom_block}" if knowledge else custom_block
 
@@ -173,7 +159,7 @@ class ProspectSession:
             return "various products and services"
 
     def _build_persona_product_context(self) -> str:
-        """Build product context from the selected persona's data."""
+        """Build product context from persona data."""
         parts = []
         needs = self.persona.get("needs", [])
         if needs:
@@ -187,14 +173,14 @@ class ProspectSession:
         return "\n".join(parts)
 
     def _build_system_prompt(self) -> str:
-        """Render system prompt template with current state."""
+        """Render system prompt template using the current state."""
         config = load_prospect_config()
         template = config.get("system_prompt_template", "")
 
         behavior = self.difficulty_profile["behavior"]
         persona = self.persona
 
-        readiness_desc = range_label(self.state.readiness, _READINESS_THRESHOLDS, _READINESS_LABELS)
+        readiness_desc = range_label(self.state.readiness, READINESSTHRESHOLDS, READINESS_LABELS)
 
         needs = persona.get("needs", [])
         pain_points = persona.get("pain_points", [])
@@ -203,7 +189,9 @@ class ProspectSession:
 
         product_knowledge = ""
         if self.product_context:
-            product_knowledge = f"PRODUCT INFORMATION (you may know some of this as a buyer doing research):\n{self.product_context}"
+            product_knowledge = (
+                f"PRODUCT INFORMATION (you may know some of this as a buyer doing research):\n{self.product_context}"
+            )
 
         prompt = template.format(
             name=persona.get("name", "Alex"),
@@ -223,15 +211,15 @@ class ProspectSession:
         return prompt
 
     def get_opening_message(self) -> ProspectResponse:
-        """Generate the prospect's opening message."""
+        """Return the prospect's opening message."""
         system_prompt = self._build_system_prompt()
         persona_name = self.persona.get("name", "Alex")
 
         opening_instruction = (
             f"You are {persona_name}. Start the conversation naturally as a potential "
-            f"customer. Introduce yourself briefly and mention what brought you here "
-            f"or what you're generally looking for. Keep it to 1-2 sentences. "
-            f"Do NOT reveal all your needs upfront."
+            f"customer. Introduce yourself briefly and say what brought you in today. "
+            f"Keep it to 1-2 sentences. "
+            f"Don't lay out everything you want straight away."
         )
 
         messages = [
@@ -243,10 +231,12 @@ class ProspectSession:
         response = self.provider.chat(messages, temperature=0.7, max_tokens=150)
         latency = (time.time() - start) * 1000
 
-        self.conversation_history.append({
-            "role": "assistant",
-            "content": response.content,
-        })
+        self.conversation_history.append(
+            {
+                "role": "assistant",
+                "content": response.content,
+            }
+        )
 
         return ProspectResponse(
             content=response.content,
@@ -257,13 +247,15 @@ class ProspectSession:
         )
 
     def process_turn(self, user_message: str, show_hints: bool = False) -> ProspectResponse:
-        """Process one user (salesperson) message and return prospect's response."""
+        """Process a salesperson message and return the prospect's response."""
         self.state.turn_count += 1
 
-        self.conversation_history.append({
-            "role": "user",
-            "content": user_message,
-        })
+        self.conversation_history.append(
+            {
+                "role": "user",
+                "content": user_message,
+            }
+        )
 
         system_prompt = self._build_system_prompt()
         messages = [{"role": "system", "content": system_prompt}]
@@ -273,12 +265,15 @@ class ProspectSession:
         response = self.provider.chat(messages, temperature=0.7, max_tokens=250)
         latency = (time.time() - start) * 1000
 
-        self.conversation_history.append({
-            "role": "assistant",
-            "content": response.content,
-        })
+        self.conversation_history.append(
+            {
+                "role": "assistant",
+                "content": response.content,
+            }
+        )
 
-        self._update_readiness(user_message, response.content)
+        # Update readiness based only on the salesperson's message.
+        self._update_readiness(user_message)
 
         end = self._check_end_conditions()
         if end == "sold":
@@ -300,16 +295,12 @@ class ProspectSession:
             coaching=coaching,
         )
 
-    def _update_readiness(self, user_msg: str, bot_response: str):
-        """Rate user's sales message and update readiness score.
-
-        Uses deterministic scoring based on keyword signals, message quality,
-        and turn context. Eliminates second LLM call that doubled latency.
-        """
+    def _update_readiness(self, user_msg: str):
+        """Update readiness score deterministically from the salesperson's message."""
         behavior = self.difficulty_profile["behavior"]
 
-        # Deterministic scoring based on signals
-        rating = self._score_sales_message(user_msg, bot_response)
+        # deterministic scoring using only the user message
+        rating = self._score_sales_message(user_msg)
 
         gain = behavior["readiness_gain_per_good_turn"]
         loss = behavior["readiness_loss_per_bad_turn"]
@@ -323,36 +314,25 @@ class ProspectSession:
 
         self.state.readiness = clamp(self.state.readiness + delta)
 
-    def _score_sales_message(self, user_msg: str, bot_response: str) -> int:
-        """Deterministic scoring of sales message quality (1-5).
-
-        Scoring criteria:
-        - Commitment/high-intent signals → 4-5 (advancing the sale)
-        - Objection/walking signals → 1-2 (losing the prospect)
-        - Demand for directness → 2 (pressure, not rapport)
-        - Message length and turn context → modifiers
-
-        Returns:
-            int: Score from 1 (poor) to 5 (excellent)
-        """
-        from ..analysis import text_contains_any_keyword, classify_intent_level
+    def _score_sales_message(self, user_msg: str) -> int:
+        """Score message 1–5 using keyword signals; higher means stronger buying signals."""
+        from ..analysis import classify_intent_level
+        from ..utils import contains_nonnegated_keyword
 
         msg_lower = user_msg.lower()
         msg_length = len(user_msg.split())
 
-        # Base score starts at 3 (neutral)
+        # base score starts at 3 (neutral)
         score = 3.0
 
-        intent_level = classify_intent_level([], user_msg, signal_keywords=_SIGNALS)
+        intent_level = classify_intent_level([], user_msg, signal_keywords=SIGNALS)
 
-        # Dominant negative: if the user is explicitly 'walking' or abandoning,
-        # treat as a failed turn immediately (do not let scattered positive
-        # keywords cancel out this strong signal).
-        if text_contains_any_keyword(msg_lower, _SIGNALS.get("walking", [])):
+        # dominant negative: walking signal wins — don't let positives cancel it
+        if contains_nonnegated_keyword(msg_lower, SIGNALS.get("walking", [])):
             return 1
 
-        # Strong positive signals (commitment, high intent)
-        if text_contains_any_keyword(msg_lower, _SIGNALS.get("commitment", [])):
+        # strong positive signals (commitment, high intent)
+        if contains_nonnegated_keyword(msg_lower, SIGNALS.get("commitment", [])):
             score += 2.0  # 5
         elif intent_level == "high":
             score += 1.0  # 4
@@ -360,25 +340,23 @@ class ProspectSession:
         if intent_level == "low":
             score -= 0.5
 
-        # Negative signals (objection, walking, impatience)
-        if text_contains_any_keyword(msg_lower, _SIGNALS.get("walking", [])):
-            score -= 2.0  # 1
-        elif text_contains_any_keyword(msg_lower, _SIGNALS.get("objection", [])):
+        # negative signals (objection, impatience)
+        if contains_nonnegated_keyword(msg_lower, SIGNALS.get("objection", [])):
             score -= 0.5  # 2.5
-        elif text_contains_any_keyword(msg_lower, _SIGNALS.get("impatience", [])):
+        elif contains_nonnegated_keyword(msg_lower, SIGNALS.get("impatience", [])):
             score -= 1.0  # 2
 
-        # Demand for directness (pressure without rapport)
-        if text_contains_any_keyword(msg_lower, _SIGNALS.get("demand_directness", [])):
+        # demand for directness (pressure without rapport)
+        if contains_nonnegated_keyword(msg_lower, SIGNALS.get("demand_directness", [])):
             score -= 1.0  # 2
 
-        # Message quality factors
-        # Very short messages (< 5 words) are likely low-effort
+        # message quality factors
+        # very short messages (< 5 words) are likely low-effort
         if msg_length < 5:
             score -= 0.5
 
         # Questions are good (discovery)
-        if '?' in user_msg:
+        if "?" in user_msg:
             score += 0.3
 
         # Early turns should focus on discovery, not pitching
@@ -390,9 +368,8 @@ class ProspectSession:
         # Clamp to 1-5 range
         return max(1, min(5, round(score)))
 
-
     def _check_end_conditions(self) -> str | None:
-        """Check if the session should end. Returns 'sold', 'walked', or None."""
+        """Return 'sold', 'walked', or None if the session should end."""
         behavior = self.difficulty_profile["behavior"]
 
         # Prospect commits
@@ -400,8 +377,7 @@ class ProspectSession:
             return "sold"
 
         # Prospect walks — out of patience
-        if (self.state.turn_count >= behavior["patience_turns"]
-                and self.state.readiness < 0.4):
+        if self.state.turn_count >= behavior["patience_turns"] and self.state.readiness < 0.4:
             return "walked"
 
         # Prospect walks — readiness dropped to zero
@@ -411,7 +387,7 @@ class ProspectSession:
         return None
 
     def _generate_coaching_hint(self, user_message: str) -> dict:
-        """Generate a coaching hint for the user (optional, off by default)."""
+        """Generate an optional one-sentence coaching hint for the user."""
         r = self.state.readiness
         behavior = self.difficulty_profile["behavior"]
         turns_left = behavior["patience_turns"] - self.state.turn_count
@@ -423,9 +399,8 @@ The prospect's current readiness: {r:.2f} (0=hostile, 1=ready to buy)
 Turns remaining before prospect leaves: {turns_left}
 Difficulty: {self.state.difficulty}
 
-Give ONE brief coaching tip (1 sentence max) about what the salesperson should focus on next.
-Do NOT reveal the prospect's hidden needs directly.
-Focus on technique: rapport, questioning, objection handling, etc."""
+Give one coaching tip — one sentence. Focus on what they should do next.
+Don't give away what the prospect actually wants."""
 
         try:
             messages = [
@@ -435,11 +410,12 @@ Focus on technique: rapport, questioning, objection handling, etc."""
             resp = self.provider.chat(messages, temperature=0.5, max_tokens=80)
             return {"hint": resp.content.strip()}
         except Exception:
-            return {"hint": "Focus on understanding the prospect's needs before pitching."}
+            return {"hint": "Find out more before pitching anything."}
 
     def get_evaluation(self) -> dict:
         """Generate final evaluation (delegates to evaluator module)."""
         from .prospect_evaluator import evaluate_prospect_session
+
         return evaluate_prospect_session(
             provider=self.provider,
             conversation_history=self.conversation_history,
@@ -447,37 +423,3 @@ Focus on technique: rapport, questioning, objection handling, etc."""
             product_context=self.product_context,
         )
 
-    def to_dict(self) -> dict:
-        """Serialize session for persistence."""
-        return {
-            "session_id": self.session_id,
-            "provider_name": self.provider_name,
-            "product_type": self.product_type,
-            "difficulty": self.state.difficulty,
-            "persona": self.persona,
-            "state": self.state.to_dict(),
-            "conversation_history": self.conversation_history,
-            "behavior_rules": self.behavior_rules,
-        }
-
-    @classmethod
-    def from_dict(cls, data: dict) -> "ProspectSession":
-        """Deserialize session from dict."""
-        session = cls(
-            provider_type=data.get("provider_name", "groq"),
-            product_type=data.get("product_type", "default"),
-            difficulty=data.get("difficulty", "medium"),
-            persona=data.get("persona"),
-            session_id=data.get("session_id", ""),
-        )
-        # Restore state
-        state_data = data.get("state", {})
-        session.state.readiness = state_data.get("readiness", session.state.readiness)
-        session.state.objections_raised = state_data.get("objections_raised", 0)
-        session.state.turn_count = state_data.get("turn_count", 0)
-        session.state.needs_disclosed = state_data.get("needs_disclosed", [])
-        session.state.has_committed = state_data.get("has_committed", False)
-        session.state.has_walked = state_data.get("has_walked", False)
-        # Restore history
-        session.conversation_history = data.get("conversation_history", [])
-        return session

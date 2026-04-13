@@ -1,21 +1,42 @@
-"""Session persistence — save/load chatbot state to disk."""
+"""Save and load chatbot session state to disk."""
 
 import json
-import os
 import logging
+import os
+import re
+import tempfile
 from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-SESSIONS_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'sessions')
+SESSIONS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "sessions"))
+
+
+def _is_valid_session_id(session_id: str) -> bool:
+    """check session id format"""
+    if not isinstance(session_id, str) or not session_id:
+        return False
+    return bool(re.match(r"^[A-Za-z0-9_-]+$", session_id))
+
+
+def _session_filepath(session_id: str) -> Optional[str]:
+    """build a safe absolute filepath for a session id"""
+    if not _is_valid_session_id(session_id):
+        logger.warning("Rejected invalid session_id: %r", session_id)
+        return None
+
+    filepath = os.path.abspath(os.path.join(SESSIONS_DIR, f"{session_id}.json"))
+
+    safe_prefix = os.path.abspath(SESSIONS_DIR) + os.sep
+    if not filepath.startswith(safe_prefix):
+        logger.warning("Blocked session path: %r", filepath)
+        return None
+
+    return filepath
 
 
 class SessionPersistence:
-    """Handles saving and loading chatbot sessions to/from disk.
-
-    Provides a clean separation between session orchestration (chatbot.py)
-    and persistence logic. Sessions are stored as JSON files in sessions/ directory.
-    """
+    """persist chatbot sessions as json files"""
 
     @staticmethod
     def save(
@@ -26,26 +47,14 @@ class SessionPersistence:
         current_stage: str,
         stage_turn_count: int,
         conversation_history: list[dict[str, str]],
-        initial_flow_type: str
+        initial_flow_type: str,
     ) -> bool:
-        """Save session state to disk.
-
-        Args:
-            session_id: Unique session identifier
-            product_type: Product context identifier
-            provider_type: LLM provider name
-            flow_type: Current strategy (consultative/transactional/intent)
-            current_stage: Current FSM stage
-            stage_turn_count: Number of turns in current stage
-            conversation_history: Full message history
-            initial_flow_type: Original strategy at session start
-
-        Returns:
-            True if save succeeded, False otherwise
-        """
-        if not session_id:
+        """write session state to disk"""
+        filepath = _session_filepath(session_id)
+        if filepath is None:
             return False
 
+        tmp_path = None
         try:
             os.makedirs(SESSIONS_DIR, exist_ok=True)
 
@@ -57,76 +66,44 @@ class SessionPersistence:
                 "current_stage": current_stage,
                 "stage_turn_count": stage_turn_count,
                 "conversation_history": conversation_history,
-                "initial_flow_type": initial_flow_type
+                "initial_flow_type": initial_flow_type,
             }
 
-            filepath = os.path.join(SESSIONS_DIR, f"{session_id}.json")
-            with open(filepath, "w") as f:
-                json.dump(state, f)
+            # atomic write
+            dirpath = os.path.dirname(filepath)
+            fd, tmp_path = tempfile.mkstemp(prefix=session_id + ".", dir=dirpath)
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(state, f, ensure_ascii=False)
+                f.flush()
+                os.fsync(f.fileno())
 
+            os.replace(tmp_path, filepath)
             return True
 
         except Exception as e:
-            logger.error(f"Failed to save session {session_id}: {e}")
+            logger.error("Failed to save session %s: %s", session_id, e)
+            try:
+                if tmp_path and os.path.exists(tmp_path):
+                    os.remove(tmp_path)
+            except Exception:
+                pass
             return False
 
     @staticmethod
     def load(session_id: str) -> Optional[dict]:
-        """Load session state from disk.
+        """read session state from disk"""
+        filepath = _session_filepath(session_id)
+        if filepath is None:
+            return None
 
-        Args:
-            session_id: Unique session identifier
-
-        Returns:
-            Dict with session state, or None if not found/failed
-        """
         try:
-            filepath = os.path.join(SESSIONS_DIR, f"{session_id}.json")
-
             if not os.path.exists(filepath):
                 return None
 
-            with open(filepath, "r") as f:
-                state = json.load(f)
-
-            return state
+            with open(filepath, "r", encoding="utf-8") as f:
+                return json.load(f)
 
         except Exception as e:
-            logger.error(f"Failed to load session {session_id}: {e}")
+            logger.error("Failed to load session %s: %s", session_id, e)
             return None
 
-    @staticmethod
-    def delete(session_id: str) -> bool:
-        """Delete session file from disk.
-
-        Args:
-            session_id: Unique session identifier
-
-        Returns:
-            True if deletion succeeded, False otherwise
-        """
-        try:
-            filepath = os.path.join(SESSIONS_DIR, f"{session_id}.json")
-
-            if os.path.exists(filepath):
-                os.remove(filepath)
-                return True
-
-            return False
-
-        except Exception as e:
-            logger.error(f"Failed to delete session {session_id}: {e}")
-            return False
-
-    @staticmethod
-    def exists(session_id: str) -> bool:
-        """Check if session file exists on disk.
-
-        Args:
-            session_id: Unique session identifier
-
-        Returns:
-            True if session file exists, False otherwise
-        """
-        filepath = os.path.join(SESSIONS_DIR, f"{session_id}.json")
-        return os.path.exists(filepath)
