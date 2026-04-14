@@ -1,4 +1,4 @@
-"""Voice mode: Deepgram STT (primary), Groq Whisper (backup), Edge TTS."""
+"""Voice mode: Deepgram STT, Edge TTS."""
 
 import asyncio
 import atexit
@@ -61,13 +61,6 @@ except ImportError:
     DEEPGRAM_AVAILABLE = False
     logger.warning("Deepgram SDK not installed. Run: pip install deepgram-sdk")
 
-# Check for Groq SDK (for Whisper backup)
-try:
-    from groq import Groq
-
-    GROQ_AVAILABLE = True
-except ImportError:
-    GROQ_AVAILABLE = False
 
 # Check for Edge TTS
 EDGE_TTS_AVAILABLE = importlib.util.find_spec("edge_tts") is not None
@@ -81,7 +74,7 @@ class TranscriptionResult:
 
     text: str
     latency_ms: float
-    provider: str  # "deepgram" or "groq_whisper"
+    provider: str  # "deepgram" or "none"
     error: Optional[str] = None
 
 
@@ -97,7 +90,7 @@ class SynthesisResult:
 
 
 class VoiceProvider:
-    """STT: Deepgram first, Groq Whisper backup. TTS: Edge (free neural voices)."""
+    """STT: Deepgram. TTS: Edge (free neural voices)."""
 
     # Edge TTS voice options (professional sales training)
     VOICES = {
@@ -111,9 +104,8 @@ class VoiceProvider:
     # Rate limit cooldown (seconds)
     RATE_LIMIT_COOLDOWN = 60
 
-    def __init__(self, whisper_model: str = "whisper-large-v3-turbo"):
+    def __init__(self):
         """Set up STT + TTS backends."""
-        self._whisper_model = whisper_model
 
         # Deepgram client (primary STT)
         self._deepgram_api_key = os.environ.get("DEEPGRAM_API", "").strip()
@@ -125,16 +117,6 @@ class VoiceProvider:
             except Exception as e:
                 logger.warning(f"Deepgram init failed: {e}")
 
-        # Groq client (backup STT via Whisper)
-        self._groq_api_key = os.environ.get("GROQ_WHISPER_KEY", "").strip()
-
-        self._groq_client = None
-        if GROQ_AVAILABLE and self._groq_api_key:
-            try:
-                self._groq_client = Groq(api_key=self._groq_api_key)  # type: ignore
-                logger.info("Groq Whisper STT initialized (backup)")
-            except Exception as e:
-                logger.warning(f"Groq Whisper init failed: {e}")
 
         # Rate limit tracking
         self._deepgram_rate_limited_until: float = 0
@@ -146,9 +128,7 @@ class VoiceProvider:
     def _log_availability(self) -> None:
         status = []
         if self._deepgram_client:
-            status.append("Deepgram (primary)")
-        if self._groq_client:
-            status.append("Groq Whisper (backup)")
+            status.append("Deepgram")
         if EDGE_TTS_AVAILABLE:
             status.append("Edge TTS")
 
@@ -158,7 +138,7 @@ class VoiceProvider:
             logger.error("VoiceProvider: No providers available!")
 
     def is_stt_available(self) -> bool:
-        return self._deepgram_client is not None or self._groq_client is not None
+        return self._deepgram_client is not None
 
     def is_tts_available(self) -> bool:
         return EDGE_TTS_AVAILABLE
@@ -173,31 +153,25 @@ class VoiceProvider:
             logger.warning(f"Deepgram rate-limited, cooling down for {self.RATE_LIMIT_COOLDOWN}s")
 
     def transcribe(self, audio_bytes: bytes, filename: str = "audio.webm") -> TranscriptionResult:
-        """Transcribe audio via Deepgram, falling back to Groq Whisper."""
+        """Transcribe audio via Deepgram."""
         if not self.is_stt_available():
             return TranscriptionResult(
                 text="",
                 latency_ms=0,
                 provider="none",
-                error="No STT providers available. Check DEEPGRAM_API or GROQ_WHISPER_KEY env vars.",
+                error="Deepgram not available. Check DEEPGRAM_API env var.",
             )
 
-        # try Deepgram first
         if self._deepgram_client and not self._is_deepgram_rate_limited():
             result = self._transcribe_deepgram(audio_bytes, filename)
             if result.error is None:
                 return result
             if "rate" in result.error.lower() or "429" in result.error:
                 self._mark_deepgram_rate_limited()
-            else:
-                logger.warning(f"Deepgram failed ({result.error}), trying Groq Whisper")
-
-        # fall back to Groq Whisper
-        if self._groq_client:
-            return self._transcribe_groq_whisper(audio_bytes, filename)
+            return result
 
         return TranscriptionResult(
-            text="", latency_ms=0, provider="none", error="All STT providers failed or unavailable"
+            text="", latency_ms=0, provider="none", error="Deepgram rate-limited or unavailable"
         )
 
     def _transcribe_deepgram(self, audio_bytes: bytes, filename: str) -> TranscriptionResult:
@@ -234,27 +208,6 @@ class VoiceProvider:
             logger.error(f"Deepgram transcription error: {e}")
             return TranscriptionResult(
                 text="", latency_ms=(time.time() - start) * 1000, provider="deepgram", error=str(e)
-            )
-
-    def _transcribe_groq_whisper(self, audio_bytes: bytes, filename: str) -> TranscriptionResult:
-        """Backup STT via Groq Whisper."""
-        assert self._groq_client is not None
-        start = time.time()
-        try:
-            response = self._groq_client.audio.transcriptions.create(
-                file=(filename, audio_bytes), model=self._whisper_model, response_format="text"
-            )
-
-            latency = (time.time() - start) * 1000
-            text = response.strip() if isinstance(response, str) else str(response).strip()
-            logger.info(f"Groq Whisper transcription: {latency:.0f}ms, {len(text)} chars")
-
-            return TranscriptionResult(text=text, latency_ms=latency, provider="groq_whisper")
-
-        except Exception as e:
-            logger.error(f"Groq Whisper transcription error: {e}")
-            return TranscriptionResult(
-                text="", latency_ms=(time.time() - start) * 1000, provider="groq_whisper", error=str(e)
             )
 
     def synthesize(self, text: str, voice: str | None = None) -> SynthesisResult:
@@ -328,7 +281,6 @@ class VoiceProvider:
     def get_status(self) -> dict:
         return {
             "stt_deepgram": self._deepgram_client is not None,
-            "stt_groq_whisper": self._groq_client is not None,
             "stt_deepgram_rate_limited": self._is_deepgram_rate_limited(),
             "tts_edge": EDGE_TTS_AVAILABLE,
             "stt_available": self.is_stt_available(),

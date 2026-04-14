@@ -7,7 +7,7 @@ import threading
 import time
 from typing import Any, Dict, List
 
-from .base import BaseLLMProvider, LLMResponse, auto_log_performance
+from .base import BaseLLMProvider, LLMResponse, auto_log_performance, RATE_LIMIT, UNAVAILABLE, PROVIDER_ERROR
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +44,7 @@ class GroqProvider(BaseLLMProvider):
         if not self.is_available():
             error_msg = f"Groq unavailable. Library: {GROQ_AVAILABLE}, API Key: {'Set' if self.api_key else 'Missing'}"
             logger.error(error_msg)
-            return LLMResponse(content="", model=self.model, latency_ms=0, error=error_msg)
+            return LLMResponse(content="", model=self.model, latency_ms=0, error=error_msg, error_code=UNAVAILABLE)
 
         request_start_time = time.time()
         try:
@@ -86,11 +86,14 @@ class GroqProvider(BaseLLMProvider):
                             content=response.choices[0].message.content or "", model=self.model, latency_ms=latency
                         )
                     except Exception as retry_e:
+                        retry_e_str = str(retry_e).lower()
+                        err_code = RATE_LIMIT if "429" in retry_e_str or "rate limit" in retry_e_str else PROVIDER_ERROR
                         logger.error(f"Groq retry also failed: {retry_e}")
-                        return LLMResponse(content="", model=self.model, latency_ms=0, error=str(retry_e))
+                        return LLMResponse(content="", model=self.model, latency_ms=0, error=str(retry_e), error_code=err_code)
 
+            err_code = RATE_LIMIT if "429" in error_str.lower() or "rate limit" in error_str.lower() else PROVIDER_ERROR
             logger.error(f"Groq API error: {error_str}", exc_info=True)
-            return LLMResponse(content="", model=self.model, latency_ms=0, error=error_str)
+            return LLMResponse(content="", model=self.model, latency_ms=0, error=error_str, error_code=err_code)
 
     def is_available(self) -> bool:
         return GROQ_AVAILABLE and bool(self.api_key)

@@ -10,6 +10,13 @@ from typing import Dict, List, Optional
 logger = logging.getLogger(__name__)
 
 
+# Canonical Error Codes
+RATE_LIMIT = "RATE_LIMIT"
+UNAVAILABLE = "UNAVAILABLE"
+TIMEOUT = "TIMEOUT"
+AUTH_ERROR = "AUTH_ERROR"
+PROVIDER_ERROR = "PROVIDER_ERROR"
+
 @dataclass
 class LLMResponse:
     """Standardized response from any LLM provider"""
@@ -18,6 +25,7 @@ class LLMResponse:
     model: str
     latency_ms: float
     error: Optional[str] = None
+    error_code: Optional[str] = None
 
 
 def auto_log_performance(chat_method):

@@ -8,7 +8,7 @@ from typing import Dict, List
 
 import requests
 
-from .base import BaseLLMProvider, LLMResponse, auto_log_performance
+from .base import BaseLLMProvider, LLMResponse, auto_log_performance, RATE_LIMIT, UNAVAILABLE, AUTH_ERROR, PROVIDER_ERROR, TIMEOUT
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ class SambaNovaProvider(BaseLLMProvider):
         if not self.is_available():
             error_msg = f"SambaNova unavailable. API Key: {'Set' if self.api_key else 'Missing'}"
             logger.error(error_msg)
-            return LLMResponse(content="", model=self.model, latency_ms=0, error=error_msg)
+            return LLMResponse(content="", model=self.model, latency_ms=0, error=error_msg, error_code=UNAVAILABLE)
 
         request_start_time = time.time()
         try:
@@ -57,14 +57,22 @@ class SambaNovaProvider(BaseLLMProvider):
 
         except requests.exceptions.HTTPError as e:
             error_detail = (
-                e.response.json().get("error", {}).get("message", str(e)) if e.response is not None else str(e)
+                e.response.json().get("error", {}).get("message", str(e)) if hasattr(e, 'response') and e.response is not None else str(e)
             )
+            err_code = PROVIDER_ERROR
+            if hasattr(e, 'response') and e.response is not None:
+                if e.response.status_code == 429:
+                    err_code = RATE_LIMIT
+                elif e.response.status_code in (401, 403):
+                    err_code = AUTH_ERROR
             logger.error(f"SambaNova HTTP error: {error_detail}", exc_info=True)
-            return LLMResponse(content="", model=self.model, latency_ms=0, error=error_detail)
-
+            return LLMResponse(content="", model=self.model, latency_ms=0, error=error_detail, error_code=err_code)
+        except requests.exceptions.Timeout as e:
+            logger.error(f"SambaNova Timeout error: {str(e)}", exc_info=True)
+            return LLMResponse(content="", model=self.model, latency_ms=0, error=str(e), error_code=TIMEOUT)
         except Exception as e:
             logger.error(f"SambaNova API error: {str(e)}", exc_info=True)
-            return LLMResponse(content="", model=self.model, latency_ms=0, error=str(e))
+            return LLMResponse(content="", model=self.model, latency_ms=0, error=str(e), error_code=PROVIDER_ERROR)
 
     def is_available(self) -> bool:
         return bool(self.api_key)
