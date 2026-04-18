@@ -19,18 +19,17 @@ MAX_METRICS_LINES = 5000
 METRICS_KEEP_AFTER_ROTATION = 2500
 MAX_ANALYTICS_LINES = 10000
 ANALYTICS_KEEP_AFTER_ROTATION = 5000
-SESSION_IDLE_MINUTES = 360  # 6 hours
-MAX_SESSIONS = 200
 MAX_PROSPECT_SESSIONS = 100
 PROSPECT_IDLE_MINUTES = 30
+# Note: SESSION_IDLE_MINUTES and MAX_SESSIONS are defined in web/security.py (SSoT)
 
 # input validation
-MAX_MESSAGE_LENGTH = 2000
 MAX_FIELD_LENGTH = 5000
 TERSE_INPUT_THRESHOLD = 3
+# Note: MAX_MESSAGE_LENGTH is defined in web/security.py (SSoT)
 
-# strategy detection
-MIN_TURNS_BEFORE_STRATEGY_FALLBACK = 3
+# strategy detection - any more than 3 turns can be frustrating for the user
+MIN_TURNS_BEFORE_ADVANCE = 3
 
 # LLM provider
 DEFAULT_TEMPERATURE = 0.8
@@ -38,7 +37,13 @@ DEFAULT_MAX_TOKENS = 200
 
 # scoring and evaluation
 SCORING_RUBRIC = {
-    "stage_points": {"objection": 30, "pitch": 22, "emotional": 15, "logical": 10, "intent": 5},
+    "stage_points": {
+        "objection": 30,
+        "pitch": 22,
+        "emotional": 15,
+        "logical": 10,
+        "intent": 5,
+    },
     "signal_detection_max": 25,
     "objection_handling_max": 20,
     "questioning_depth_max": 15,
@@ -47,4 +52,10 @@ SCORING_RUBRIC = {
     "sweet_spot_turns": (7, 12),
 }
 
-STAGE_TIMEOUTTHRESHOLDS = {"intent": 6, "logical": 10, "emotional": 10}
+STAGE_TIMEOUTTHRESHOLDS = {
+    "intent": 6,
+    "logical": 10,
+    "emotional": 10,
+    "pitch": 8,
+    "objection": 6,
+}

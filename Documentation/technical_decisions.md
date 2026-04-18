@@ -57,6 +57,12 @@ The FSM provides three guarantees that prompt instructions alone cannot:
 
 **Evidence**: The old `turns >= 5` rule is a counterexample. It is completely decoupled from conversational content—a test case would show it fails. The new hybrid FSM enforces methodology semantics.
 
+**Concrete measured failures** (Appendix C.2):
+- **False Stage Advancement**: Intent keywords like "want", "need", "trying" fired on generic statements (e.g., "I want to make money"), triggering stage advancement regardless of context. Baseline: 40% false positives → 92% accuracy post-fix.
+- **Premature Advancement (FSM Logic)**: FSM jumped LOGICAL → EMOTIONAL before prospect acknowledged any problem, rendering emotional questions (Future Pacing, Consequence of Inaction) semantically out of place. Baseline: 40% false advances → 94% accuracy post-fix.
+
+Both failures documented across 25 developer-executed test scenarios. Regression test output (see `pytest_output.txt`, failing `_check_advancement_condition` tests) also captured these issues. Motion for hardening: commits `a16c9cd`, `a9afd7b`.
+
 ### Trade-offs
 
 **Rigidity**: The FSM enforces a fixed stage sequence (intent → logical → emotional → pitch → objection). An atypical conversation that explores consequences before naming a problem cannot express that non-linear path.
@@ -157,4 +163,67 @@ Consistency matters here because guardedness detection feeds directly into ackno
 ### Trade-off
 
 `text_contains_any_keyword()` performs negation detection, which changes behaviour for negated guardedness phrases: "I'm not being evasive" previously scored 0.5 (evasive category hit); now scores 0.0. This is the correct outcome semantically. No mitigation needed.
-What I did is fine what I need.What I did is fine what I need toWhat I did is fine what I need to doWhat I did is fine.What I did is fine. What I need to do? OK this file is made up it's
+
+## LLM Input Processing
+
+- Recommendation: Do not add Snowball stemming to the runtime LLM input; keep raw user text for generation.
+- Rationale: External stemming can distort BPE/subword tokenization and remove semantic cues (tense/negation), reducing generation quality.
+- Evidence: See Documentation/LLM_PREPROCESSING_RESEARCH.md for experiment notes and vendor guidance.
+
+---
+
+## Decision 4: Stage-gated objection handling (modularize and enforce at-callsite)
+
+### Summary
+
+Move objection classification and SOP injection out of inline prompt assembly and into a dedicated, stage-gated module so that objection detection and the injection of any scripted SOP steps only occur when the FSM (or caller) explicitly indicates the `objection` stage. This preserves stage isolation, reduces accidental SOP leakage across stages, and centralizes objection SOP data and guards for easier testing and review.
+
+### Alternatives Considered
+
+- Keep objection logic inline inside `content.py` (status-quo prior to modularization).
+- Rely purely on LLM/system-prompt constraints to avoid leaking SOP into other stages (pure prompt enforcement).
+- Use a decorator or event pipeline to guard objection handling at runtime rather than an explicit module API.
+
+### Rationale
+
+Evidence from the codebase and recent work shows the project benefits from centralizing stage-sensitive behavior:
+
+- Objection classification and SOP assembly are implemented (currently in `src/chatbot/content.py` via `build_objection_context()`), and driven by `objection_flows.yaml`.
+- Tests were added to lock the behavior: `tests/test_objection_sop.py` includes `TestStagePromptInjectsSopSteps` and `TestObjectionIsolation` which assert SOP steps are injected only during the objection stage and that the objection builder is not invoked outside the objection stage.
+- The FSM and prompt assembly have been hardened in recent commits (see commits such as `a16c9cd` "fix(fsm): harden LOGICAL/EMOTIONAL stages against premature pitching" and `a9afd7b` "refactor(content.py): align to NEPQ methodology, remove prompt redundancies") which demonstrates a repo-level focus on stage correctness and deterministic flow. Centralizing objection handling aligns with this engineering direction.
+
+Centralization improves auditability (single place to inspect how objections are classified and which SOP flows are used), reduces duplication (no multiple inline implementations), and makes it straightforward to add regression tests that prevent accidental behavioral regressions.
+
+### Trade-offs
+
+- Slight indirection: callers must call `build_objection_context()` rather than relying on implicit inline behavior; this increases the number of module boundaries to reason about.
+- Risk of circular imports if the caller/import pattern is naive — mitigated by explicit, runtime imports or simple API design (the codebase already uses deferred imports in some places to avoid cycles).
+- Requires maintainers to keep the `SOP_FLOWS` YAML and `objection.py` in sync; this is manageable with the existing `load_objection_flows()` loader and tests.
+
+### Implementation Notes / Evidence
+
+- Files: `src/chatbot/content.py` (provides `build_objection_context()` used in `_get_stage_specific_prompt()`), `tests/test_objection_sop.py` (regression tests ensuring isolation), and `src/config/objection_flows.yaml` (SOP data).
+- Tests: `TestStagePromptInjectsSopSteps`, `TestObjectionIsolation` — these are the canonical regression guards for this decision.
+- Relevant recent commits (context and rationale): `a16c9cd` (FSM hardening), `a9afd7b` (content refactor), `0aad6a1` (initial documentation and decisions scaffold).
+
+### Recommendation
+
+Keep the modular, stage-gated approach. Enforce this with the following practices:
+
+- Maintain `tests/test_objection_sop.py` and expand it when new objection types or SOP steps are added.
+- Keep `SOP_FLOWS` data YAML-driven and version-controlled so non-engineers can update SOP language without touching code.
+- Add a short note in developer onboarding (README or `ARCHITECTURE_CONSOLIDATED.md`) describing the contract: "Objection classification and SOP injection must only occur via `src/chatbot/content.py` (`build_objection_context()`) and only when the FSM stage == 'objection'."
+
+---
+
+## Consolidated configuration map and intent-summary
+
+Below is a single, concise table linking runtime subsystems to their YAML sources, handlers, and a plain-language description of why each exists.
+
+| Subsystem | YAML source | Handler(s) | Purpose (plain) |
+|---|---|---|---|
+| Keyword detection | `signals.yaml` | `analysis.py`, `flow.py` | Curated keyword lists used to detect intent, objections and signals so FSM transitions are deterministic and auditable. |
+| Objection handling | `objection_flows.yaml` | `content.py` | Centralized objection SOPs that are injected only during the `objection` stage to avoid scripted responses leaking into other stages. |
+| Prompt assembly | `adaptations.yaml`, `overrides.yaml` | `loader.py`, `overrides.py` | Layer prompt instructions in a fixed order (overrides → adaptations → baseline) to resolve conflicts and prevent prompt contamination. |
+| Prospect simulation | `product_config.yaml`, `prospect_config.yaml` | `prospect.py`, `chatbot.py` | Present product data differently per role (bot: spec; simulated prospect: buyer-research) to avoid ground-truth leakage and preserve realistic discovery. |
+| A/B variant assignment | `variants.yaml` | `loader.py` | Deterministic, session-locked variant selection (hash session ID) so users see the same variant across reconnects without a database. |

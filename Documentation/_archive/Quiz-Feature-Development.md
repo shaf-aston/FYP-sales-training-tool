@@ -1,9 +1,13 @@
 # Quiz Assessment Feature — Development Documentation
 
-**Date Completed:** 18 March 2026
+**Status:** Archived — Original design doc (Feb 2026); current implementation (April 2026) is partial
 **Development Methodology:** TDD (deterministic logic) + Feature-First (LLM evaluation)
-**Lines of Code:** ~370 (quiz.py) + ~105 (config) + ~410 (API/UI/CSS) + ~295 (tests) = ~1,180 total
-**Test Coverage:** 26 automated tests; 100% pass rate
+**Lines of Code (Current State — April 2026):** 247 (quiz.py) + 106 (config) = 353 total
+**Implementation Status:** Core evaluation logic present; tests deleted; API/UI endpoints not implemented
+
+---
+
+> **⚠️ Note on This Document:** This captures the original design & rationale for the quiz feature. However, the implementation has diverged: tests are deleted, API routes not wired, and UI not implemented. See below for current vs. planned state.
 
 ---
 
@@ -81,18 +85,19 @@ PHASE 2 — Feature-First (LLM Quizzes)
 
 ## 3. Implementation Structure
 
-### Files Created
+### Files Created / Current State (April 2026)
 
-| File | LOC | Purpose | Methodology |
-|------|-----|---------|-------------|
-| `src/chatbot/quiz.py` | 372 | Core evaluation + validation | TDD (stage) / Feature-first (LLM) |
-| `src/config/quiz_config.yaml` | 106 | Stage rubrics & questions | Data-driven |
-| `tests/test_quiz.py` | 296 | 26 unit tests | TDD |
-| `src/web/app.py` (additions) | ~80 | 4 new API endpoints | Feature-first |
-| `src/web/templates/index.html` (additions) | ~180 | Quiz panel UI | Component-based |
-| `src/web/static/chat.css` (additions) | ~150 | Quiz panel styling | CSS |
+| File | LOC | Purpose | Status |
+|------|-----|---------|--------|
+| `src/chatbot/quiz.py` | 247 | Core evaluation + validation | ✓ Present (refactored; uses shared utils) |
+| `src/config/quiz_config.yaml` | 106 | Stage rubrics & questions | ✓ Present |
+| `tests/test_quiz.py` | — | 26 unit tests | ✗ Deleted |
+| `src/web/app.py` (quiz routes) | — | 4 API endpoints | ✗ Not implemented |
+| Quiz UI/CSS | — | Quiz panel UI + styling | ✗ Not implemented |
 
-**Total: ~888 lines of production code + 296 lines of tests**
+**Current Total: 353 lines of production code**
+
+**Note:** Initial design called for 888 lines + 296 tests, but implementation was streamlined. Tests removed in later refactoring; API endpoints not wired into Flask app.
 
 ---
 
@@ -488,6 +493,33 @@ src/chatbot/quiz.py
 
 ---
 
+## 13.5. Implementation Status vs. Plan (April 2026)
+
+### What Was Built
+- ✓ **`evaluate_stage_quiz()`** — Deterministic evaluation of stage + strategy identification
+- ✓ **`evaluate_next_move_quiz()`** — LLM-scored evaluation of proposed responses with alignment feedback
+- ✓ **`evaluate_direction_quiz()`** — LLM-scored evaluation of strategic understanding
+- ✓ **`quiz_config.yaml`** — Complete stage rubrics and question bank
+
+### What Was Not Implemented
+- ✗ **Unit tests** — 26 tests were written per TDD methodology but later deleted (Apr 2026 refactoring)
+- ✗ **Flask API routes** — 4 endpoints (`/api/quiz/question`, `/api/quiz/stage`, `/api/quiz/next-move`, `/api/quiz/direction`) designed but not wired into `app.py`
+- ✗ **Frontend UI** — Quiz panel, type selector buttons, answer input, and feedback display not added to `index.html`
+- ✗ **CSS styling** — Quiz panel styles not added to `chat.css`
+
+### Code Refactoring (Apr 2026)
+The quiz.py module was refactored to use shared utility functions:
+- `clamp_score()` moved to `utils.py`
+- `extract_json_from_llm()` moved to `utils.py`
+- `contains_nonnegated_keyword()` moved to `utils.py` (from analysis.py)
+
+This reduced `quiz.py` from ~370 LOC to 247 LOC, eliminating duplication with other modules.
+
+### Decision Rationale (Why Tests Deleted?)
+Per user directive ("forget about including evaluation metrics... will all be changed anyway"), the quiz feature was deprioritized as a training evaluation mechanism. Tests were removed in the cleanup pass; the core evaluation functions remain available for future use if needed.
+
+---
+
 ## 14. Conclusion: Why This Approach
 
 **TDD for Stage Quiz** — the matching logic has non-obvious edge cases (case sensitivity, partial answers, natural language wrapping). Test-first forced these to be explicit design decisions before implementation, eliminating the discover-and-patch cycle.
@@ -496,4 +528,4 @@ src/chatbot/quiz.py
 
 **The split is structural, not arbitrary:** deterministic logic gets TDD because the acceptance criteria are fully specifiable in advance; empirical logic gets feature-first with runtime validation because the outputs are not.
 
-**Verification:** All design decisions implemented in `src/chatbot/quiz.py`, `src/config/quiz_config.yaml`, and `tests/test_quiz.py` — reviewable and auditable.
+**Verification (Apr 2026):** Core design decisions verified in `src/chatbot/quiz.py` and `src/config/quiz_config.yaml`. Tests deleted; API/UI not implemented. See §13.5 for current status breakdown.

@@ -117,7 +117,6 @@ class VoiceProvider:
             except Exception as e:
                 logger.warning(f"Deepgram init failed: {e}")
 
-
         # Rate limit tracking
         self._deepgram_rate_limited_until: float = 0
         self._rate_limit_lock = threading.Lock()
@@ -150,9 +149,13 @@ class VoiceProvider:
     def _mark_deepgram_rate_limited(self) -> None:
         with self._rate_limit_lock:
             self._deepgram_rate_limited_until = time.time() + self.RATE_LIMIT_COOLDOWN
-            logger.warning(f"Deepgram rate-limited, cooling down for {self.RATE_LIMIT_COOLDOWN}s")
+            logger.warning(
+                f"Deepgram rate-limited, cooling down for {self.RATE_LIMIT_COOLDOWN}s"
+            )
 
-    def transcribe(self, audio_bytes: bytes, filename: str = "audio.webm") -> TranscriptionResult:
+    def transcribe(
+        self, audio_bytes: bytes, filename: str = "audio.webm"
+    ) -> TranscriptionResult:
         """Transcribe audio via Deepgram."""
         if not self.is_stt_available():
             return TranscriptionResult(
@@ -171,10 +174,15 @@ class VoiceProvider:
             return result
 
         return TranscriptionResult(
-            text="", latency_ms=0, provider="none", error="Deepgram rate-limited or unavailable"
+            text="",
+            latency_ms=0,
+            provider="none",
+            error="Deepgram rate-limited or unavailable",
         )
 
-    def _transcribe_deepgram(self, audio_bytes: bytes, filename: str) -> TranscriptionResult:
+    def _transcribe_deepgram(
+        self, audio_bytes: bytes, filename: str
+    ) -> TranscriptionResult:
         """Primary STT via Deepgram nova-2."""
         assert self._deepgram_client is not None
         start = time.time()
@@ -202,12 +210,17 @@ class VoiceProvider:
             latency = (time.time() - start) * 1000
             logger.info(f"Deepgram transcription: {latency:.0f}ms, {len(text)} chars")
 
-            return TranscriptionResult(text=text.strip(), latency_ms=latency, provider="deepgram")
+            return TranscriptionResult(
+                text=text.strip(), latency_ms=latency, provider="deepgram"
+            )
 
         except Exception as e:
             logger.error(f"Deepgram transcription error: {e}")
             return TranscriptionResult(
-                text="", latency_ms=(time.time() - start) * 1000, provider="deepgram", error=str(e)
+                text="",
+                latency_ms=(time.time() - start) * 1000,
+                provider="deepgram",
+                error=str(e),
             )
 
     def synthesize(self, text: str, voice: str | None = None) -> SynthesisResult:
@@ -223,21 +236,32 @@ class VoiceProvider:
 
         if not text or not text.strip():
             return SynthesisResult(
-                audio_bytes=b"", content_type="audio/mpeg", latency_ms=0, voice="", error="Empty text provided"
+                audio_bytes=b"",
+                content_type="audio/mpeg",
+                latency_ms=0,
+                voice="",
+                error="Empty text provided",
             )
 
         voice_key = voice or self.DEFAULT_VOICE
-        voice_name = self.VOICES.get(voice_key, voice_key)  # Allow direct voice names too
+        voice_name = self.VOICES.get(
+            voice_key, voice_key
+        )  # Allow direct voice names too
 
         start = time.time()
         try:
             audio_bytes = _run_async(self._generate_audio(text, voice_name))
             latency = (time.time() - start) * 1000
 
-            logger.info(f"Edge TTS synthesis: {latency:.0f}ms, {len(audio_bytes)} bytes, voice={voice_name}")
+            logger.info(
+                f"Edge TTS synthesis: {latency:.0f}ms, {len(audio_bytes)} bytes, voice={voice_name}"
+            )
 
             return SynthesisResult(
-                audio_bytes=audio_bytes, content_type="audio/mpeg", latency_ms=latency, voice=voice_name
+                audio_bytes=audio_bytes,
+                content_type="audio/mpeg",
+                latency_ms=latency,
+                voice=voice_name,
             )
 
         except Exception as e:

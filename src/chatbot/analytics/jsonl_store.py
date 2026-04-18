@@ -26,7 +26,10 @@ class JSONLWriter:
                         self.line_count = sum(1 for _ in f)
                 else:
                     self.line_count = 0
-            except Exception:
+            except OSError as e:
+                logger.warning(
+                    "Couldn't count lines in %s (%s); defaulting to 0", self.filepath, e
+                )
                 self.line_count = 0
         return self.line_count
 
@@ -34,7 +37,9 @@ class JSONLWriter:
         """Append a JSON record, rotating if file exceeds max_lines."""
         with self.file_lock:
             try:
-                if self.get_line_count() >= self.max_lines and os.path.exists(self.filepath):
+                if self.get_line_count() >= self.max_lines and os.path.exists(
+                    self.filepath
+                ):
                     with open(self.filepath, "r") as f:
                         lines = f.readlines()
                     tail = lines[-self.keep :]
@@ -47,7 +52,9 @@ class JSONLWriter:
                 if self.line_count >= 0:
                     self.line_count += 1
             except Exception as e:
-                logger.warning("Failed to write JSONL record to %s: %s", self.filepath, e)
+                logger.warning(
+                    "Failed to write JSONL record to %s: %s", self.filepath, e
+                )
 
     def read_all(self) -> list[dict]:
         """Read and parse all records."""
@@ -58,7 +65,12 @@ class JSONLWriter:
                     for line in f:
                         try:
                             records.append(json.loads(line))
-                        except json.JSONDecodeError:
+                        except json.JSONDecodeError as e:
+                            logger.warning(
+                                "Skipped malformed JSONL record in %s: %s",
+                                self.filepath,
+                                e,
+                            )
                             continue
             except FileNotFoundError:
                 pass

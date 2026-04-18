@@ -10,29 +10,40 @@ from .jsonl_store import JSONLWriter
 
 logger = logging.getLogger(__name__)
 
-METRICS_FILE = os.path.join(os.path.dirname(__file__), "..", "..", "..", "metrics.jsonl")
+METRICS_FILE = os.path.join(
+    os.path.dirname(__file__), "..", "..", "..", "metrics.jsonl"
+)
+APP_ENV = os.getenv("APP_ENV", "local")
 
-writer = JSONLWriter(METRICS_FILE, MAX_METRICS_LINES, METRICS_KEEP_AFTER_ROTATION)
+_writer = JSONLWriter(METRICS_FILE, MAX_METRICS_LINES, METRICS_KEEP_AFTER_ROTATION)
 
 # cached provider stats so we don't rescan the file on every health check
-stats_cache: dict = {"data": {}, "ts": 0.0}
+_stats_cache: dict = {"data": {}, "ts": 0.0}
 STATS_CACHE_TTL = 30.0  # seconds
 
 
 def get_writer() -> JSONLWriter:
     """Return the active writer. Indirection lets tests swap it out."""
-    return writer
+    return _writer
 
 
 class PerformanceTracker:
     @staticmethod
     def log_stage_latency(
-        session_id, stage, strategy, latency_ms, provider, model, user_message_length=0, bot_response_length=0
+        session_id,
+        stage,
+        strategy,
+        latency_ms,
+        provider,
+        model,
+        user_message_length=0,
+        bot_response_length=0,
     ):
         get_writer().append(
             {
                 "timestamp": datetime.now().isoformat(),
-                "session_id": session_id,
+                "session_id": session_id or "unknown",
+                "environment": APP_ENV,
                 "stage": stage,
                 "strategy": strategy,
                 "provider": provider,
@@ -47,8 +58,8 @@ class PerformanceTracker:
     def get_provider_stats():
         """Aggregate metrics by provider (cached with TTL)."""
         now = time.time()
-        if now - stats_cache["ts"] < STATS_CACHE_TTL and stats_cache["data"]:
-            return dict(stats_cache["data"])
+        if now - _stats_cache["ts"] < STATS_CACHE_TTL and _stats_cache["data"]:
+            return dict(_stats_cache["data"])
 
         stats: dict = {}
         for metric in get_writer().read_all():
@@ -60,9 +71,10 @@ class PerformanceTracker:
                 stats[provider]["total_latency"] += metric.get("latency_ms", 0)
 
         for data in stats.values():
-            data["avg_latency_ms"] = data["total_latency"] / data["count"] if data["count"] > 0 else 0
+            data["avg_latency_ms"] = (
+                data["total_latency"] / data["count"] if data["count"] > 0 else 0
+            )
 
-        stats_cache["data"] = stats
-        stats_cache["ts"] = now
+        _stats_cache["data"] = stats
+        _stats_cache["ts"] = now
         return stats
-

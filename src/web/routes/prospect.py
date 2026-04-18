@@ -4,6 +4,8 @@ import secrets
 
 from flask import Blueprint, jsonify, request
 
+from web.messages import PROSPECT_ERROR, PROSPECT_SCORING_ERROR
+
 bp = Blueprint("prospect", __name__, url_prefix="/api/prospect")
 
 
@@ -21,7 +23,10 @@ def _require_prospect_session():
         return None, (jsonify({"error": "Session ID required"}), 400)
     ps = bp.prospect_session_manager.get(session_id)  # type: ignore
     if not ps:
-        return None, (jsonify({"error": "Prospect session not found", "code": "SESSION_EXPIRED"}), 400)
+        return None, (
+            jsonify({"error": "Prospect session not found", "code": "SESSION_EXPIRED"}),
+            400,
+        )
     return ps, None
 
 
@@ -29,7 +34,9 @@ def _require_prospect_session():
 def prospect_init():
     """Create a prospect session. Bot plays the buyer, user plays the salesperson"""
     if not bp.prospect_session_manager.can_create():  # type: ignore
-        return jsonify({"error": "Prospect mode is at capacity — check back in a moment."}), 503
+        return jsonify(
+            {"error": "Prospect mode is at capacity — check back in a moment."}
+        ), 503
 
     data = request.json or {}
     difficulty = data.get("difficulty", "medium")
@@ -42,7 +49,7 @@ def prospect_init():
     session_id = secrets.token_hex(16)
 
     try:
-        from chatbot.prospect.prospect import ProspectSession
+        from chatbot.prospect import ProspectSession
 
         ps = ProspectSession(
             provider_type=provider,
@@ -52,7 +59,9 @@ def prospect_init():
         )
         opening = ps.get_opening_message()
         bp.prospect_session_manager.set(session_id, ps)  # type: ignore
-        bp.app.logger.info(f"Prospect session: {session_id} (difficulty={difficulty}, product={product_type})")  # type: ignore
+        bp.app.logger.info(
+            f"Prospect session: {session_id} (difficulty={difficulty}, product={product_type})"
+        )  # type: ignore
 
         return jsonify(
             {
@@ -74,7 +83,9 @@ def prospect_init():
         )
     except Exception as e:
         bp.app.logger.exception(f"Prospect init failed: {e}")  # type: ignore
-        return jsonify({"error": "Couldn't set up the prospect session -- try once more"}), 500
+        return jsonify(
+            {"error": "Couldn't set up the prospect session -- try once more"}
+        ), 500
 
 
 @bp.route("/chat", methods=["POST"])
@@ -112,7 +123,7 @@ def prospect_chat():
         return jsonify(result)
     except Exception as e:
         bp.app.logger.exception(f"Prospect chat error: {e}")  # type: ignore
-        return jsonify({"error": "The prospect got confused -- send that again"}), 500
+        return jsonify({"error": PROSPECT_ERROR}), 500
 
 
 @bp.route("/state", methods=["GET"])
@@ -149,7 +160,7 @@ def prospect_evaluate():
         return jsonify({"success": True, **evaluation})
     except Exception as e:
         bp.app.logger.exception(f"Prospect evaluation error: {e}")  # type: ignore
-        return jsonify({"error": "Scoring ran into a problem -- give it another go."}), 500
+        return jsonify({"error": PROSPECT_SCORING_ERROR}), 500
 
 
 @bp.route("/reset", methods=["POST"])

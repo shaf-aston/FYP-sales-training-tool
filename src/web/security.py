@@ -11,6 +11,7 @@ from functools import wraps
 from typing import Any, Callable, Dict, Optional, Tuple
 
 from chatbot.constants import MAX_FIELD_LENGTH as CHATBOT_MAX_FIELD_LENGTH
+from web.messages import RATE_LIMIT_ERROR
 
 logger = logging.getLogger(__name__)
 
@@ -84,8 +85,8 @@ def require_rate_limit(bucket: str) -> Callable:
                 return f(*args, **kwargs)
 
             ip = ClientIPExtractor.get_ip(request)
-            if rate_limiter is not None and rate_limiter.is_limited(ip, bucket):
-                return jsonify({"error": "Whoa, too many requests -- ease up for a sec"}), 429
+            if _rate_limiter is not None and _rate_limiter.is_limited(ip, bucket):
+                return jsonify({"error": RATE_LIMIT_ERROR}), 429
 
             return f(*args, **kwargs)
 
@@ -95,7 +96,7 @@ def require_rate_limit(bucket: str) -> Callable:
 
 
 # Global rate limiter instance (initialized after class definition)
-rate_limiter: Optional[RateLimiter] = None
+_rate_limiter: Optional[RateLimiter] = None
 
 
 # Privileged mutation guard decorator
@@ -113,8 +114,12 @@ def require_privileged_mutation(f: Callable) -> Callable:
         from flask import current_app, jsonify, request
 
         # Feature flag: prefer explicit app config, otherwise check env var
-        env_flag = os.environ.get("REQUIRE_ADMIN_FOR_STAGE_MUTATION", "").lower() == "true"
-        require_admin = current_app.config.get("REQUIRE_ADMIN_FOR_STAGE_MUTATION", env_flag)
+        env_flag = (
+            os.environ.get("REQUIRE_ADMIN_FOR_STAGE_MUTATION", "").lower() == "true"
+        )
+        require_admin = current_app.config.get(
+            "REQUIRE_ADMIN_FOR_STAGE_MUTATION", env_flag
+        )
 
         # If not enabled, no-op
         if not require_admin:
@@ -124,8 +129,12 @@ def require_privileged_mutation(f: Callable) -> Callable:
         if current_app.config.get("TESTING"):
             return f(*args, **kwargs)
 
-        token_header = request.headers.get("X-Admin-Token") or request.headers.get("Authorization")
-        admin_token = os.environ.get("ADMIN_TOKEN") or current_app.config.get("ADMIN_TOKEN")
+        token_header = request.headers.get("X-Admin-Token") or request.headers.get(
+            "Authorization"
+        )
+        admin_token = os.environ.get("ADMIN_TOKEN") or current_app.config.get(
+            "ADMIN_TOKEN"
+        )
 
         if not admin_token or not token_header:
             return jsonify({"error": "Admin token required"}), 403
@@ -186,7 +195,9 @@ class InputValidator:
 
     @staticmethod
     def validate_message(
-        text: str, injection_validator: PromptInjectionValidator, max_length: int = SecurityConfig.MAX_MESSAGE_LENGTH
+        text: str,
+        injection_validator: PromptInjectionValidator,
+        max_length: int = SecurityConfig.MAX_MESSAGE_LENGTH,
     ) -> Tuple[Optional[str], Optional[Tuple]]:
         """clean and length-check a message"""
         from flask import jsonify
@@ -200,13 +211,19 @@ class InputValidator:
 
         # Check length
         if len(text) > max_length:
-            return None, (jsonify({"error": f"Message too long (max {max_length} characters)"}), 400)
+            return None, (
+                jsonify({"error": f"Message too long (max {max_length} characters)"}),
+                400,
+            )
 
         return text, None
 
     @staticmethod
     def validate_knowledge_field(
-        key: str, value: Any, allowed_fields: set, max_field_length: int = SecurityConfig.MAX_FIELD_LENGTH
+        key: str,
+        value: Any,
+        allowed_fields: set,
+        max_field_length: int = SecurityConfig.MAX_FIELD_LENGTH,
     ) -> Optional[Tuple]:
         """validate one knowledge field"""
         from flask import jsonify
@@ -221,13 +238,17 @@ class InputValidator:
 
         # Check length
         if len(value) > max_field_length:
-            return jsonify({"error": f"Field '{key}' exceeds {max_field_length} characters"}), 400
+            return jsonify(
+                {"error": f"Field '{key}' exceeds {max_field_length} characters"}
+            ), 400
 
         return None
 
     @staticmethod
     def validate_knowledge_data(
-        data: Any, allowed_fields: set, max_field_length: int = SecurityConfig.MAX_FIELD_LENGTH
+        data: Any,
+        allowed_fields: set,
+        max_field_length: int = SecurityConfig.MAX_FIELD_LENGTH,
     ) -> Optional[Tuple]:
         """validate all knowledge fields at once"""
         from flask import jsonify
@@ -243,7 +264,9 @@ class InputValidator:
 
         # Validate each field
         for key, value in data.items():
-            error = InputValidator.validate_knowledge_field(key, value, allowed_fields, max_field_length)
+            error = InputValidator.validate_knowledge_field(
+                key, value, allowed_fields, max_field_length
+            )
             if error:
                 return error
 
@@ -308,13 +331,15 @@ class SessionSecurityManager:
         with self._lock:
             return len(self._sessions)
 
-    def cleanup_expired(self) -> int:
+    def _cleanup_expired(self) -> int:
         """Delete idle sessions. Returns count of sessions removed"""
         with self._lock:
             now = datetime.now()
             max_idle = timedelta(minutes=self.idle_minutes)
 
-            expired_ids = [sid for sid, s in self._sessions.items() if now - s["ts"] > max_idle]
+            expired_ids = [
+                sid for sid, s in self._sessions.items() if now - s["ts"] > max_idle
+            ]
 
             for sid in expired_ids:
                 del self._sessions[sid]
@@ -331,26 +356,28 @@ class SessionSecurityManager:
             while True:
                 try:
                     time.sleep(self.cleanup_interval)
-                    self.cleanup_expired()
+                    self._cleanup_expired()
                 except Exception as e:
                     logger.error(f"Cleanup thread error: {e}")
 
         thread = threading.Thread(target=cleanup_loop, daemon=True)
         thread.start()
-        logger.info(f"Started background cleanup thread (interval: {self.cleanup_interval}s)")
+        logger.info(
+            f"Started background cleanup thread (interval: {self.cleanup_interval}s)"
+        )
 
 
 def initialize_security(
     app_logger=None,
 ) -> Tuple[RateLimiter, SessionSecurityManager, PromptInjectionValidator]:
     """init security singletons (call once at startup)"""
-    global rate_limiter
+    global _rate_limiter
 
     if app_logger:
         logger.handlers = app_logger.handlers
         logger.setLevel(app_logger.level)
 
-    rate_limiter = RateLimiter(SecurityConfig.RATE_LIMITS)
+    _rate_limiter = RateLimiter(SecurityConfig.RATE_LIMITS)
     session_manager = SessionSecurityManager(
         max_sessions=SecurityConfig.MAX_SESSIONS,
         idle_minutes=SecurityConfig.SESSION_IDLE_MINUTES,
@@ -358,4 +385,4 @@ def initialize_security(
     )
     injection_validator = PromptInjectionValidator()
 
-    return rate_limiter, session_manager, injection_validator
+    return _rate_limiter, session_manager, injection_validator

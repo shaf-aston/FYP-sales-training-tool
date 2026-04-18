@@ -1,10 +1,13 @@
 """Quiz assessment: stage ID (deterministic), next-move and direction (LLM-scored)"""
 
+import logging
 import random
 from typing import Any
 
 from .loader import load_yaml
 from .utils import clamp_score, contains_nonnegated_keyword, extract_json_from_llm
+
+logger = logging.getLogger(__name__)
 
 _quiz_config = None
 
@@ -71,7 +74,9 @@ def evaluate_stage_quiz(user_answer: str, bot: Any) -> dict:
 
     answer_lower = user_answer.strip().lower()
     stage_correct = contains_nonnegated_keyword(answer_lower, expected_stage.lower())
-    strategy_correct = contains_nonnegated_keyword(answer_lower, expected_strategy.lower())
+    strategy_correct = contains_nonnegated_keyword(
+        answer_lower, expected_strategy.lower()
+    )
     correct = stage_correct and strategy_correct
 
     feedback = _generate_stage_feedback(
@@ -167,8 +172,8 @@ Return your evaluation as JSON:
                 "strengths": result.get("strengths", []),
                 "improvements": result.get("improvements", []),
             }
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"Failed to evaluate stage quiz response: {e}")
 
     return {
         "score": None,
@@ -227,13 +232,15 @@ Return your evaluation as JSON:
             understanding = result.get("understanding")
             return {
                 "score": clamp_score(result.get("score", 50)),
-                "understanding": understanding if understanding in _UNDERSTANDING_VALUES else "partial",
+                "understanding": understanding
+                if understanding in _UNDERSTANDING_VALUES
+                else "partial",
                 "feedback": result.get("feedback", "Unable to evaluate."),
                 "key_concepts_got": result.get("key_concepts_got", []),
                 "key_concepts_missed": result.get("key_concepts_missed", []),
             }
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"Failed to evaluate direction quiz: {e}")
 
     return {
         "score": None,

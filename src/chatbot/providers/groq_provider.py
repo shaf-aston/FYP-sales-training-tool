@@ -7,7 +7,14 @@ import threading
 import time
 from typing import Any, Dict, List
 
-from .base import BaseLLMProvider, LLMResponse, auto_log_performance, RATE_LIMIT, UNAVAILABLE, PROVIDER_ERROR
+from .base import (
+    BaseLLMProvider,
+    LLMResponse,
+    auto_log_performance,
+    RATE_LIMIT,
+    UNAVAILABLE,
+    PROVIDER_ERROR,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -35,16 +42,28 @@ class GroqProvider(BaseLLMProvider):
         self._current_key_index = 0
         self._client = None
         self._client_lock = threading.Lock()
-        logger.info(f"GroqProvider initialized with model: {self.model}, API keys available: {len(self._api_keys)}")
+        logger.info(
+            f"GroqProvider initialized with model: {self.model}, API keys available: {len(self._api_keys)}"
+        )
 
     @auto_log_performance
     def chat(
-        self, messages: List[Dict], temperature: float = 0.8, max_tokens: int = 200, stage: str | None = None
+        self,
+        messages: List[Dict],
+        temperature: float = 0.8,
+        max_tokens: int = 200,
+        stage: str | None = None,
     ) -> LLMResponse:
         if not self.is_available():
             error_msg = f"Groq unavailable. Library: {GROQ_AVAILABLE}, API Key: {'Set' if self.api_key else 'Missing'}"
             logger.error(error_msg)
-            return LLMResponse(content="", model=self.model, latency_ms=0, error=error_msg, error_code=UNAVAILABLE)
+            return LLMResponse(
+                content="",
+                model=self.model,
+                latency_ms=0,
+                error=error_msg,
+                error_code=UNAVAILABLE,
+            )
 
         request_start_time = time.time()
         try:
@@ -57,12 +76,18 @@ class GroqProvider(BaseLLMProvider):
                 timeout=25,
             )
             latency = (time.time() - request_start_time) * 1000
-            return LLMResponse(content=response.choices[0].message.content or "", model=self.model, latency_ms=latency)
+            return LLMResponse(
+                content=response.choices[0].message.content or "",
+                model=self.model,
+                latency_ms=latency,
+            )
 
         except Exception as e:
             error_str = str(e)
             # On rate limit, try rotating to the next Groq API key before giving up
-            if ("rate_limit" in error_str.lower() or "429" in error_str) and len(self._api_keys) > 1:
+            if ("rate_limit" in error_str.lower() or "429" in error_str) and len(
+                self._api_keys
+            ) > 1:
                 next_index = (self._current_key_index + 1) % len(self._api_keys)
                 if next_index != self._current_key_index:
                     logger.warning(
@@ -83,17 +108,39 @@ class GroqProvider(BaseLLMProvider):
                         )
                         latency = (time.time() - request_start_time) * 1000
                         return LLMResponse(
-                            content=response.choices[0].message.content or "", model=self.model, latency_ms=latency
+                            content=response.choices[0].message.content or "",
+                            model=self.model,
+                            latency_ms=latency,
                         )
                     except Exception as retry_e:
                         retry_e_str = str(retry_e).lower()
-                        err_code = RATE_LIMIT if "429" in retry_e_str or "rate limit" in retry_e_str else PROVIDER_ERROR
+                        err_code = (
+                            RATE_LIMIT
+                            if "429" in retry_e_str or "rate limit" in retry_e_str
+                            else PROVIDER_ERROR
+                        )
                         logger.error(f"Groq retry also failed: {retry_e}")
-                        return LLMResponse(content="", model=self.model, latency_ms=0, error=str(retry_e), error_code=err_code)
+                        return LLMResponse(
+                            content="",
+                            model=self.model,
+                            latency_ms=0,
+                            error=str(retry_e),
+                            error_code=err_code,
+                        )
 
-            err_code = RATE_LIMIT if "429" in error_str.lower() or "rate limit" in error_str.lower() else PROVIDER_ERROR
+            err_code = (
+                RATE_LIMIT
+                if "429" in error_str.lower() or "rate limit" in error_str.lower()
+                else PROVIDER_ERROR
+            )
             logger.error(f"Groq API error: {error_str}", exc_info=True)
-            return LLMResponse(content="", model=self.model, latency_ms=0, error=error_str, error_code=err_code)
+            return LLMResponse(
+                content="",
+                model=self.model,
+                latency_ms=0,
+                error=error_str,
+                error_code=err_code,
+            )
 
     def is_available(self) -> bool:
         return GROQ_AVAILABLE and bool(self.api_key)

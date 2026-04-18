@@ -11,14 +11,26 @@ from chatbot.chatbot import SalesChatbot
 from chatbot.content import generate_init_greeting
 from chatbot.loader import QuickMatcher
 from chatbot.providers import get_available_providers
-from web.security import PromptInjectionValidator, SecurityConfig, require_privileged_mutation, require_rate_limit
+from web.security import (
+    PromptInjectionValidator,
+    SecurityConfig,
+    require_privileged_mutation,
+    require_rate_limit,
+)
 
 logger = logging.getLogger(__name__)
 
 bp: Any = Blueprint("session", __name__, url_prefix="/api")
 
 
-def init_routes(app, session_manager_obj, get_session_func, set_session_func, delete_session_func, bot_state_func):
+def init_routes(
+    app,
+    session_manager_obj,
+    get_session_func,
+    set_session_func,
+    delete_session_func,
+    bot_state_func,
+):
     """hook up session routes"""
     bp.app = app  # type: ignore
     bp.session_manager = session_manager_obj  # type: ignore
@@ -45,8 +57,13 @@ def api_init():
                 bp.set_session(existing_id, bot)  # type: ignore
                 bp.app.logger.info(f"Restored session from disk: {existing_id}")  # type: ignore
         if bot:
-            history = [{"role": m["role"], "content": m["content"]} for m in bot.flow_engine.conversation_history]
-            bp.app.logger.info(f"Restored session: {existing_id} ({len(history)} messages)")  # type: ignore
+            history = [
+                {"role": m["role"], "content": m["content"]}
+                for m in bot.flow_engine.conversation_history
+            ]
+            bp.app.logger.info(
+                f"Restored session: {existing_id} ({len(history)} messages)"
+            )  # type: ignore
             return jsonify(
                 {
                     "success": True,
@@ -62,11 +79,15 @@ def api_init():
         bp.app.logger.warning(  # type: ignore
             f"Session cap ({SecurityConfig.MAX_SESSIONS}) reached — rejecting new init"
         )
-        return jsonify({"error": "Server is currently full — please check back in a moment"}), 503
+        return jsonify(
+            {"error": "Server is currently full — please check back in a moment"}
+        ), 503
 
     # Create new session with eager bot initialization
     session_id = secrets.token_hex(16)
-    product_type = data.get("product_type")  # None → generic default → intent-first discovery
+    product_type = data.get(
+        "product_type"
+    )  # None → generic default → intent-first discovery
     user_message = data.get("user_message", "")
     provider = data.get("provider", "groq")
 
@@ -75,10 +96,14 @@ def api_init():
         detected_product, confidence = QuickMatcher.match_product(user_message)
         if detected_product and confidence >= 0.7:
             product_type = detected_product
-            bp.app.logger.info(f"Auto-detected product: {product_type} (confidence: {confidence:.2f})")  # type: ignore
+            bp.app.logger.info(
+                f"Auto-detected product: {product_type} (confidence: {confidence:.2f})"
+            )  # type: ignore
 
     try:
-        bot = SalesChatbot(provider_type=provider, product_type=product_type, session_id=session_id)
+        bot = SalesChatbot(
+            provider_type=provider, product_type=product_type, session_id=session_id
+        )
         # dev override — skip intent detection
         force_strategy = data.get("force_strategy")
         if force_strategy in ("consultative", "transactional"):
@@ -90,7 +115,9 @@ def api_init():
         )  # type: ignore
     except Exception as init_error:
         bp.app.logger.exception(f"Bot init failed: {init_error}")  # type: ignore
-        return jsonify({"error": "Setup didn't complete — please try initializing again."}), 500
+        return jsonify(
+            {"error": "Setup didn't complete — please try initializing again."}
+        ), 500
 
     # greeting + training blob, keep in sync with STRATEGY_PROMPTS
     init_data = generate_init_greeting(bot.flow_engine.flow_type)
@@ -113,7 +140,9 @@ def api_restore():
     """Rebuild bot from client history after a server restart. No LLM calls"""
     data = request.json or {}
     history = data.get("history", [])  # [{role, content}, ...]
-    product_type = data.get("product_type")  # None → generic default → intent-first discovery
+    product_type = data.get(
+        "product_type"
+    )  # None → generic default → intent-first discovery
     provider = data.get("provider", "groq")
 
     # reject corrupted localStorage before replay
@@ -131,7 +160,11 @@ def api_restore():
     for entry in history:
         content = entry.get("content", "")
         if len(content) > max_restore_entry_chars:
-            return jsonify({"error": f"History entry too long (max {max_restore_entry_chars} characters)"}), 400
+            return jsonify(
+                {
+                    "error": f"History entry too long (max {max_restore_entry_chars} characters)"
+                }
+            ), 400
         sanitized_history.append(
             {
                 "role": entry["role"],
@@ -144,18 +177,26 @@ def api_restore():
     session_id = secrets.token_hex(16)
 
     try:
-        bot = SalesChatbot(provider_type=provider, product_type=product_type, session_id=session_id)
+        bot = SalesChatbot(
+            provider_type=provider, product_type=product_type, session_id=session_id
+        )
 
         # Replay history into bot — reconstructs FSM state and strategy switches
         if history:
             bot.replay(history)
 
         bp.set_session(session_id, bot)  # type: ignore
-        bp.app.logger.info(f"Restored session: {session_id} ({len(history)} messages replayed)")  # type: ignore
+        bp.app.logger.info(
+            f"Restored session: {session_id} ({len(history)} messages replayed)"
+        )  # type: ignore
 
     except Exception as e:
         bp.app.logger.exception(f"Restore failed: {e}")  # type: ignore
-        return jsonify({"error": "Couldn't restore that session — you can start a new one or try again."}), 500
+        return jsonify(
+            {
+                "error": "Couldn't restore that session — you can start a new one or try again."
+            }
+        ), 500
 
     return jsonify(
         {
@@ -206,7 +247,6 @@ def api_config():
     products = config.get("products", {})
 
     # Expose product options for frontend use
-    product_ids = list(products.keys())
     product_strategies = {k: v.get("strategy", "intent") for k, v in products.items()}
     product_options = [
         {
@@ -260,6 +300,8 @@ def api_stages():
 @require_privileged_mutation
 def api_stage():
     """Jump FSM to a specific stage. No debug panel required"""
+    from web.stage_ops import advance_to_stage
+
     session_id = request.headers.get("X-Session-ID")
     if not session_id:
         return jsonify({"error": "Session ID required"}), 400
@@ -269,20 +311,7 @@ def api_stage():
         return jsonify({"error": "Session not found"}), 404
 
     data = request.json or {}
-    stage = data.get("stage")
-    stages = bot.flow_engine.flow_config.get("stages", [])
-    if not stage or stage not in stages:
-        return jsonify({"error": f"Invalid stage. Available: {stages}"}), 400
-
-    bot.flow_engine.advance(target_stage=stage)
-
-    # Extract bot state for client
-    from chatbot.utils import Strategy
-
-    stage_str = "----" if bot.flow_engine.flow_type == Strategy.INTENT else bot.flow_engine.current_stage.upper()
-    strategy_str = bot.flow_engine.flow_type.upper()
-
-    return jsonify({"success": True, "stage": stage_str, "strategy": strategy_str})
+    return advance_to_stage(bot, data.get("stage"))
 
 
 @bp.route("/strategy", methods=["POST"])
@@ -302,12 +331,14 @@ def api_strategy():
 
     valid_strategies = {"intent", "consultative", "transactional"}
     if strategy not in valid_strategies:
-        return jsonify({"error": f"Invalid strategy. Available: {sorted(valid_strategies)}"}), 400
+        return jsonify(
+            {"error": f"Invalid strategy. Available: {sorted(valid_strategies)}"}
+        ), 400
 
     if not bot.flow_engine.switch_strategy(strategy):
         return jsonify({"error": "Failed to switch strategy"}), 400
 
-    # Keep rewind/reset behavior consistent after explicit manual switches
+    # Keep rewind/reset behaviour consistent after explicit manual switches
     bot.flow_engine.initial_flow_type = strategy
 
     return jsonify({"success": True, **bp.bot_state(bot)})  # type: ignore

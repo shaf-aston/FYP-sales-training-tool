@@ -65,6 +65,10 @@
 
         <div class="chat-container" id="chatContainer"></div>
 
+        <div id="ttsSpeakingBanner" class="tts-speaking-banner" style="display:none">
+          🔊 Coach speaking — mic paused
+        </div>
+        <div id="dictationPreview" class="dictation-preview" style="display:none"></div>
         <div class="input-area">
           <button
             class="voice-mode-btn"
@@ -155,19 +159,9 @@
             <button id="trainingToggleBtn" class="sidebar-btn" onclick="toggleTrainingPanel()">🎓 Training</button>
             <button id="quizToggleBtn" class="sidebar-btn" onclick="toggleQuizPanel()">📝 Quiz</button>
             <button id="feedbackToggle" class="sidebar-btn" onclick="toggleFeedback()">💬 Feedback</button>
-            <label class="sidebar-btn checkbox-label" title="Auto-send voice dictation" style="cursor:pointer">
-              <input type="checkbox" id="autoSendDictationToggle" onchange="toggleAutoSend()"> Auto-send dictation
+            <label class="sidebar-btn checkbox-label" title="Send voice message automatically after you stop speaking" style="cursor:pointer">
+              <input type="checkbox" id="autoSendDictationToggle" onchange="toggleAutoSend()"> Auto-send after pause
             </label>
-            <div class="dictation-controls">
-              <label for="dictationSendModeSelect" class="dictation-label">Send mode</label>
-              <select id="dictationSendModeSelect" onchange="changeDictationSendMode(this.value)">
-                <option value="auto-send-on-stop">Auto-send on final segment</option>
-                <option value="send-after-pause">Send after pause</option>
-                <option value="manual">Manual (press Send)</option>
-              </select>
-              <input id="dictationPauseMsInput" type="number" min="200" max="5000" value="700" onchange="changeDictationPauseMs(this.value)" />
-              <span class="dictation-ms">ms</span>
-            </div>
           </div>
         </div>
         <!-- devToggleBtn hidden; panel opens via Ctrl+Shift+D -->
@@ -197,6 +191,14 @@
         </div>
         <div class="training-section training-section--qa">
           <div class="training-label">Ask the coach</div>
+          <div class="training-qa-style-row">
+            <label class="sr-only" for="trainingStyle">Coach style</label>
+            <select id="trainingStyle" class="training-qa-style" onchange="changeTrainingStyle(this.value)">
+              <option value="tactical">Tactical (direct)</option>
+              <option value="socratic">Socratic (ask back)</option>
+              <option value="teacher">Teacher (explain)</option>
+            </select>
+          </div>
           <div class="training-qa-row">
             <label class="sr-only" for="trainingQuestion">Training question</label>
             <input

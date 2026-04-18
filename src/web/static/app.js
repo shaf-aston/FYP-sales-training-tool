@@ -9,48 +9,26 @@ let _currentStrategy = "—";
 let handsFreeMode = false;
 let _currentTTSAudio = null;
 let autoSendDictation = localStorage.getItem("autoSendDictation") !== "false";
-// Dictation send-mode and debounce
-let dictationSendMode =
-  localStorage.getItem("dictationSendMode") || "auto-send-on-stop";
-let dictationPauseMs = parseInt(
-  localStorage.getItem("dictationPauseMs") || "700",
-  10,
-);
+// Single send mode: auto-send after N ms of silence (hard-coded for predictability).
+const DICTATION_PAUSE_MS = 1200;
+const TTS_RESUME_WATCHDOG_MS = 15000;
 let dictationPauseTimer = null;
+let _ttsResumeWatchdog = null;
 
 // ─── Settings toggles ─────────────────────────────────────────
 function toggleAutoSend() {
   const checkbox = document.getElementById("autoSendDictationToggle");
   autoSendDictation = checkbox.checked;
   localStorage.setItem("autoSendDictation", autoSendDictation);
-  showToast(`Auto-send dictation ${autoSendDictation ? "ON" : "OFF"}`);
+  showToast(`Auto-send after pause ${autoSendDictation ? "ON" : "OFF"}`);
 }
 
-function changeDictationSendMode(mode) {
-  dictationSendMode = mode;
-  localStorage.setItem("dictationSendMode", mode);
+// ─── Training coach style ─────────────────────────────────────
+let trainingStyle = localStorage.getItem("trainingStyle") || "tactical";
 
-  // Keep the auto-send checkbox in sync: manual -> off, others -> on
-  const cb = document.getElementById("autoSendDictationToggle");
-  if (cb) {
-    if (mode === "manual") {
-      cb.checked = false;
-      autoSendDictation = false;
-      localStorage.setItem("autoSendDictation", false);
-    } else {
-      cb.checked = true;
-      autoSendDictation = true;
-      localStorage.setItem("autoSendDictation", true);
-    }
-  }
-  showToast(`Send mode: ${mode.replace(/-/g, " ")}`, "info");
-}
-
-function changeDictationPauseMs(val) {
-  const n = parseInt(val, 10) || 700;
-  dictationPauseMs = n;
-  localStorage.setItem("dictationPauseMs", dictationPauseMs);
-  showToast(`Dictation pause timeout ${dictationPauseMs}ms`, "info");
+function changeTrainingStyle(val) {
+  trainingStyle = val;
+  localStorage.setItem("trainingStyle", val);
 }
 
 // ─── Session ─────────────────────────────────────────────────
@@ -270,7 +248,7 @@ function showToast(message, type = "info") {
   }, 4000);
 }
 
-// Handle finalised dictation segments according to send-mode and debounce
+// Handle finalised dictation segments: append and schedule pause-based auto-send.
 function _handleDictationFinal(inputEl, appendedText, alreadyParsed = false) {
   try {
     const toAppend = alreadyParsed
@@ -281,27 +259,31 @@ function _handleDictationFinal(inputEl, appendedText, alreadyParsed = false) {
 
     if (!autoSendDictation) return;
 
-    if (dictationSendMode === "manual") {
-      // user chose manual — do nothing automatically
-      return;
-    }
-
-    if (dictationSendMode === "auto-send-on-stop") {
+    if (dictationPauseTimer) clearTimeout(dictationPauseTimer);
+    dictationPauseTimer = setTimeout(() => {
+      dictationPauseTimer = null;
       if (inputEl.value.trim()) sendMessage();
-      return;
-    }
-
-    if (dictationSendMode === "send-after-pause") {
-      if (dictationPauseTimer) clearTimeout(dictationPauseTimer);
-      dictationPauseTimer = setTimeout(() => {
-        dictationPauseTimer = null;
-        if (inputEl.value.trim()) sendMessage();
-      }, dictationPauseMs);
-      return;
-    }
+    }, DICTATION_PAUSE_MS);
   } catch (e) {
     console.warn("Dictation handler error:", e);
   }
+}
+
+function _setDictationPreview(text) {
+  const el = document.getElementById("dictationPreview");
+  if (!el) return;
+  if (text && text.trim()) {
+    el.textContent = text;
+    el.style.display = "";
+  } else {
+    el.textContent = "";
+    el.style.display = "none";
+  }
+}
+
+function _showTTSBanner(on) {
+  const el = document.getElementById("ttsSpeakingBanner");
+  if (el) el.style.display = on ? "" : "none";
 }
 
 function parsePunctuation(text) {
@@ -757,10 +739,8 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   // Init send-mode controls
-  const sendModeSel = document.getElementById("dictationSendModeSelect");
-  if (sendModeSel) sendModeSel.value = dictationSendMode;
-  const pauseInput = document.getElementById("dictationPauseMsInput");
-  if (pauseInput) pauseInput.value = dictationPauseMs;
+  const styleSel = document.getElementById("trainingStyle");
+  if (styleSel) styleSel.value = trainingStyle;
 
   // Populate prospect products on both seller and prospect pages.
   loadProspectProducts();
@@ -1069,20 +1049,16 @@ function askTrainingCoach() {
       "Content-Type": "application/json",
       "X-Session-ID": getSessionId(),
     },
-    body: JSON.stringify({ question }),
+    body: JSON.stringify({ question, style: trainingStyle }),
   })
     .then((r) => r.json())
     .then((data) => {
       const raw = data.answer || data.error || "No answer received.";
-      if (typeof marked !== "undefined") {
-        answer.innerHTML = DOMPurify.sanitize(marked.parse(raw));
-      } else {
-        answer.innerHTML = raw
-          .split("\n")
-          .filter((l) => l.trim())
-          .map((l) => `<div>${DOMPurify.sanitize(parseMarkdown(l))}</div>`)
-          .join("");
-      }
+      answer.innerHTML = raw
+        .split(/\n+/)
+        .filter((l) => l.trim())
+        .map((l) => `<p>${DOMPurify.sanitize(parseMarkdown(l))}</p>`)
+        .join("");
       input.disabled = false;
       input.value = "";
       input.focus();
@@ -2289,42 +2265,30 @@ function toggleMic() {
 
   speechRecognizer.start(
     (text) => {
+      if (_currentTTSAudio) return; // echo guard: ignore while bot is speaking
       const parsed = parsePunctuation(text);
       baseText += parsed;
       input.value = baseText;
       autoResizeTextarea(input);
+      _setDictationPreview("");
 
-      // Send-mode handling for manual mic usage
       if (!autoSendDictation) return;
-      if (dictationSendMode === "manual") return;
-      if (dictationSendMode === "auto-send-on-stop") {
+      if (dictationPauseTimer) clearTimeout(dictationPauseTimer);
+      dictationPauseTimer = setTimeout(() => {
+        dictationPauseTimer = null;
         if (input.value.trim()) sendMessage();
-        return;
-      }
-      if (dictationSendMode === "send-after-pause") {
-        if (dictationPauseTimer) clearTimeout(dictationPauseTimer);
-        dictationPauseTimer = setTimeout(() => {
-          dictationPauseTimer = null;
-          if (input.value.trim()) sendMessage();
-        }, dictationPauseMs);
-      }
+      }, DICTATION_PAUSE_MS);
     },
     (text) => {
-      input.value = baseText + text;
+      if (_currentTTSAudio) return;
+      _setDictationPreview(text);
     },
     () => {
       micBtn.classList.remove("recording");
       micBtn.innerHTML = "🎤";
-      // On stop: if auto-send is enabled and there's content, send now.
-      if (autoSendDictation && input.value.trim()) {
-        if (dictationPauseTimer) {
-          clearTimeout(dictationPauseTimer);
-          dictationPauseTimer = null;
-        }
-        sendMessage();
-      } else {
-        input.focus();
-      }
+      _setDictationPreview("");
+      // On stop: let the pause-timer fire naturally; only flush if user typed.
+      input.focus();
     },
     (err) => {
       console.warn("Mic Error:", err);
@@ -2338,10 +2302,8 @@ async function playServerTTS(text) {
   if (!text) return;
   stopServerTTS();
 
-  // Pause hands-free STT if active to avoid transcribing assistant audio
   try {
     if (speechRecognizer && speechRecognizer.isRecording) {
-      // use helper to stop and update UI
       stopHandsFreeRecognition();
       window.__speechPausedForTTS = true;
     }
@@ -2353,34 +2315,61 @@ async function playServerTTS(text) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text, voice: "male_us" }),
     });
-    if (!res.ok) return;
+    if (!res.ok) {
+      _resumeFromTTS();
+      return;
+    }
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     _currentTTSAudio = new Audio(url);
 
-    // Show interrupt affordance while assistant is speaking
     const interruptBtn = document.getElementById("interruptBtn");
     if (interruptBtn) interruptBtn.style.display = "inline-block";
+    _showTTSBanner(true);
 
-    _currentTTSAudio.onended = () => {
+    // Watchdog: if onended never fires (browser tab hidden, audio error), force-resume.
+    if (_ttsResumeWatchdog) clearTimeout(_ttsResumeWatchdog);
+    _ttsResumeWatchdog = setTimeout(() => {
+      _ttsResumeWatchdog = null;
+      if (_currentTTSAudio) {
+        console.warn("TTS watchdog: forcing resume");
+        try {
+          _currentTTSAudio.pause();
+        } catch (e) {}
+        URL.revokeObjectURL(url);
+        _currentTTSAudio = null;
+        _resumeFromTTS();
+      }
+    }, TTS_RESUME_WATCHDOG_MS);
+
+    const cleanup = () => {
+      if (_ttsResumeWatchdog) {
+        clearTimeout(_ttsResumeWatchdog);
+        _ttsResumeWatchdog = null;
+      }
       URL.revokeObjectURL(url);
       _currentTTSAudio = null;
       if (interruptBtn) interruptBtn.style.display = "none";
-
-      // Resume STT only if we paused it for TTS and hands-free remains enabled
-      if (window.__speechPausedForTTS) {
-        window.__speechPausedForTTS = false;
-        if (handsFreeMode) startHandsFreeRecognition();
-      }
+      _showTTSBanner(false);
+      _resumeFromTTS();
     };
 
-    _currentTTSAudio.onerror = () => {
-      if (interruptBtn) interruptBtn.style.display = "none";
-    };
+    _currentTTSAudio.onended = cleanup;
+    _currentTTSAudio.onerror = cleanup;
 
-    _currentTTSAudio.play().catch(() => {});
+    _currentTTSAudio.play().catch(() => {
+      cleanup();
+    });
   } catch (e) {
     console.warn("TTS error:", e);
+    _resumeFromTTS();
+  }
+}
+
+function _resumeFromTTS() {
+  if (window.__speechPausedForTTS) {
+    window.__speechPausedForTTS = false;
+    if (handsFreeMode) startHandsFreeRecognition();
   }
 }
 
@@ -2409,6 +2398,7 @@ function startHandsFreeRecognition() {
     speechRecognizer.start(
       (text) => {
         try {
+          if (_currentTTSAudio) return; // echo guard: bot is speaking
           const voiceCommand = parseFlowVoiceCommand(text);
           if (voiceCommand) {
             if (dictationPauseTimer) {
@@ -2418,6 +2408,7 @@ function startHandsFreeRecognition() {
             executeFlowVoiceCommand(voiceCommand);
             inputEl.value = committedText;
             autoResizeTextarea(inputEl);
+            _setDictationPreview("");
             return;
           }
 
@@ -2425,28 +2416,22 @@ function startHandsFreeRecognition() {
           committedText += parsed;
           inputEl.value = committedText;
           autoResizeTextarea(inputEl);
+          _setDictationPreview("");
 
           if (!autoSendDictation) return;
-          if (dictationSendMode === "manual") return;
-          if (dictationSendMode === "auto-send-on-stop") {
+          if (dictationPauseTimer) clearTimeout(dictationPauseTimer);
+          dictationPauseTimer = setTimeout(() => {
+            dictationPauseTimer = null;
             if (inputEl.value.trim()) sendMessage();
-            return;
-          }
-          if (dictationSendMode === "send-after-pause") {
-            if (dictationPauseTimer) clearTimeout(dictationPauseTimer);
-            dictationPauseTimer = setTimeout(() => {
-              dictationPauseTimer = null;
-              if (inputEl.value.trim()) sendMessage();
-            }, dictationPauseMs);
-          }
+          }, DICTATION_PAUSE_MS);
         } catch (e) {
           console.warn("dictation final handler error:", e);
         }
       },
       (interim) => {
         try {
-          inputEl.value = committedText + interim;
-          autoResizeTextarea(inputEl);
+          if (_currentTTSAudio) return;
+          _setDictationPreview(interim);
         } catch (e) {
           console.warn("dictation interim handler error:", e);
         }
@@ -2500,7 +2485,7 @@ function stopHandsFreeRecognition() {
     mic.classList.remove("recording");
     mic.innerHTML = "🎤";
   }
-  window.__speechPausedForTTS = false;
+  _setDictationPreview("");
 }
 
 function interruptAssistant() {

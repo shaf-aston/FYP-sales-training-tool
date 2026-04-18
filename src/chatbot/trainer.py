@@ -10,6 +10,12 @@ from .utils import extract_json_from_llm
 logger = logging.getLogger(__name__)
 
 
+def _truncate_words(text: str, max_words: int) -> str:
+    """Truncate text to max_words, preserving word boundaries"""
+    words = str(text).split()
+    return " ".join(words[:max_words]) if len(words) > max_words else text
+
+
 def generate_training(provider, flow_engine, user_msg, bot_reply):
     """Coaching notes for the current exchange. Falls back to rubric text on LLM failure"""
     stage = flow_engine.current_stage
@@ -38,7 +44,9 @@ def generate_training(provider, flow_engine, user_msg, bot_reply):
     ]
 
     try:
-        llm_response = provider.chat(messages, temperature=0.3, max_tokens=150, stage=stage)
+        llm_response = provider.chat(
+            messages, temperature=0.3, max_tokens=150, stage=stage
+        )
         if llm_response.error or not llm_response.content:
             raise ValueError("Empty or error response")
 
@@ -47,18 +55,44 @@ def generate_training(provider, flow_engine, user_msg, bot_reply):
             raise ValueError("Empty or invalid JSON response")
         if not isinstance(result.get("watch_for"), list):
             result["watch_for"] = []
+
+        result["what_happened"] = _truncate_words(result.get("what_happened", ""), 15)
+        result["next_move"] = _truncate_words(result.get("next_move", ""), 15)
+        result["watch_for"] = [
+            _truncate_words(tip, 8) for tip in result.get("watch_for", [])
+        ]
         return result
 
     except Exception as e:
         logger.warning(f"Training generation failed: {e}")
-        return {
-            "what_happened": rubric.get("goal", "—"),
-            "next_move": rubric.get("advance_when", "—"),
+        fallback = {
+            "what_happened": _truncate_words(rubric.get("goal", "—"), 15),
+            "next_move": _truncate_words(rubric.get("advance_when", "—"), 15),
             "watch_for": [],
         }
+        return fallback
 
 
-def answer_training_question(provider, flow_engine, question):
+COACH_STYLES = {
+    "tactical": (
+        "Style: tactical and direct. Reply in 2-3 plain sentences. "
+        "Give the specific move the trainee should make next. "
+        "No markdown, no lists, no headings, no bold."
+    ),
+    "socratic": (
+        "Style: Socratic. Reply in 2-3 plain sentences. "
+        "Ask one sharp question that makes the trainee see the gap themselves, "
+        "then hint at what to look for. No markdown, no lists, no headings."
+    ),
+    "teacher": (
+        "Style: teacher. Reply in 3-4 plain sentences. "
+        "Name the technique, explain briefly why it works, reference the exchange. "
+        "No markdown, no lists, no headings, no bold."
+    ),
+}
+
+
+def answer_training_question(provider, flow_engine, question, style: str = "tactical"):
     """Answer a trainee's question about the current conversation and sales techniques"""
     history = flow_engine.conversation_history
     stage = flow_engine.current_stage
@@ -74,18 +108,20 @@ def answer_training_question(provider, flow_engine, question):
     advance_when = rubric.get("advance_when", "")
 
     methodology = (
-        "NEPQ (Neuro-Emotional Persuasion Questioning)" if flow_type == "consultative" else "NEEDS → MATCH → CLOSE"
+        "NEPQ (Neuro-Emotional Persuasion Questioning)"
+        if flow_type == "consultative"
+        else "NEEDS → MATCH → CLOSE"
     )
 
+    style_guide = COACH_STYLES.get(style, COACH_STYLES["tactical"])
+
     system_prompt = (
-        f"You're an experienced sales coach. The trainee is practising {flow_type} sales using {methodology}.\n"
-        f"Current stage: {stage} — Goal: {stage_goal}\n"
+        f"You're a sales coach. Trainee is practising {flow_type} sales using {methodology}.\n"
+        f"Stage: {stage} — Goal: {stage_goal}\n"
         f"Advance when: {advance_when}\n"
-        f"Key concepts at this stage: {key_concepts}\n\n"
-        f"Conversation so far:\n{conversation}\n\n"
-        "Answer the trainee's question with reference to specific moments in the conversation. "
-        "Use sales technique names where useful. Explain why a technique works, not just what it is. "
-        "Be direct. Specific is better than general."
+        f"Key concepts: {key_concepts}\n\n"
+        f"Recent exchange:\n{conversation}\n\n"
+        f"{style_guide}"
     )
 
     messages = [
@@ -94,9 +130,13 @@ def answer_training_question(provider, flow_engine, question):
     ]
 
     try:
-        llm_response = provider.chat(messages, temperature=0.4, max_tokens=350, stage=stage)
+        llm_response = provider.chat(
+            messages, temperature=0.4, max_tokens=150, stage=stage
+        )
         if llm_response.error or not llm_response.content:
-            return {"answer": "Couldn't get an answer that time — try asking it differently."}
+            return {
+                "answer": "Couldn't get an answer that time — try asking it differently."
+            }
         return {"answer": llm_response.content.strip()}
     except Exception as e:
         logger.warning(f"Training Q&A failed: {e}")
@@ -147,7 +187,11 @@ def score_session(session_id: str) -> dict:
 
             timeout_thresh = STAGE_TIMEOUTTHRESHOLDS.get(normalized_from_stage, 99)
 
-            if isinstance(turns_in_stage, int) and turns_in_stage >= 0 and turns_in_stage < timeout_thresh:
+            if (
+                isinstance(turns_in_stage, int)
+                and turns_in_stage >= 0
+                and turns_in_stage < timeout_thresh
+            ):
                 signal_transitions += 1
 
         elif event_type == "objection_classified":
@@ -169,11 +213,15 @@ def score_session(session_id: str) -> dict:
 
     if total_transitions > 0:
         ratio = min(1.0, signal_transitions / total_transitions)
-        score_breakdown["signal_detection"] = int(SCORING_RUBRIC["signal_detection_max"] * ratio)
+        score_breakdown["signal_detection"] = int(
+            SCORING_RUBRIC["signal_detection_max"] * ratio
+        )
     else:
         score_breakdown["signal_detection"] = 0
 
-    score_breakdown["objection_handling"] = SCORING_RUBRIC["objection_handling_max"] if objection_handled else 0
+    score_breakdown["objection_handling"] = (
+        SCORING_RUBRIC["objection_handling_max"] if objection_handled else 0
+    )
 
     score_breakdown["questioning_depth"] = min(
         SCORING_RUBRIC["questioning_depth_max"],

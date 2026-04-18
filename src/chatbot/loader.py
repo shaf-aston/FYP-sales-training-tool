@@ -43,7 +43,7 @@ def load_yaml(filename):
         return yaml.safe_load(f)
 
 
-def loadSIGNALS():
+def load_signals():
     """Load signals.yaml with key validation"""
     signals = load_yaml("signals.yaml")
     missing = _REQUIRED_SIGNAL_KEYS - signals.keys()
@@ -53,7 +53,7 @@ def loadSIGNALS():
     return signals
 
 
-def loadANALYSIS_CONFIG():
+def load_analysis_config():
     """Load analysis_config.yaml (cached)"""
     return load_yaml("analysis_config.yaml")
 
@@ -103,7 +103,9 @@ def get_product_settings(product_type):
         return products["default"]
 
     # no default either
-    raise ValueError(f"Product type '{product_type}' not found and no default config available")
+    raise ValueError(
+        f"Product type '{product_type}' not found and no default config available"
+    )
 
 
 def load_tactics():
@@ -288,5 +290,3 @@ def assign_ab_variant(session_id):
     variant_index = hash_val % 2
 
     return "variant_a" if variant_index == 0 else "variant_b"
-
-

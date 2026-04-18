@@ -19,7 +19,13 @@ class ProbeProvider(BaseLLMProvider):
     def __init__(self, model: Optional[str] = None):
         self._model = model or "probe-model"
 
-    def chat(self, messages: List[Dict], temperature: float = 0.8, max_tokens: int = 200, stage: str | None = None) -> LLMResponse:
+    def chat(
+        self,
+        messages: List[Dict],
+        temperature: float = 0.8,
+        max_tokens: int = 200,
+        stage: str | None = None,
+    ) -> LLMResponse:
         # Create a readable dump: include the first system prompt and then the messages list
         system = next((m for m in messages if m.get("role") == "system"), {})
         dump = {

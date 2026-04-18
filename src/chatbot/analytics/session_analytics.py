@@ -9,17 +9,23 @@ from .jsonl_store import JSONLWriter
 
 logger = logging.getLogger(__name__)
 
-ANALYTICS_FILE = os.path.join(os.path.dirname(__file__), "..", "..", "..", "analytics.jsonl")
+ANALYTICS_FILE = os.path.join(
+    os.path.dirname(__file__), "..", "..", "..", "analytics.jsonl"
+)
 
-writer = JSONLWriter(ANALYTICS_FILE, MAX_ANALYTICS_LINES, ANALYTICS_KEEP_AFTER_ROTATION)
+_writer = JSONLWriter(
+    ANALYTICS_FILE, MAX_ANALYTICS_LINES, ANALYTICS_KEEP_AFTER_ROTATION
+)
 
 
 class SessionAnalytics:
     """records conversation events for evaluation"""
 
     @staticmethod
-    def record_stage_transition(session_id, from_stage, to_stage, strategy, user_turns_in_stage):
-        writer.append(
+    def record_stage_transition(
+        session_id, from_stage, to_stage, strategy, user_turns_in_stage
+    ):
+        _writer.append(
             {
                 "timestamp": datetime.now().isoformat(),
                 "session_id": session_id,
@@ -33,7 +39,7 @@ class SessionAnalytics:
 
     @staticmethod
     def record_intent_classification(session_id, intent_level, user_turn_count):
-        writer.append(
+        _writer.append(
             {
                 "timestamp": datetime.now().isoformat(),
                 "session_id": session_id,
@@ -44,8 +50,10 @@ class SessionAnalytics:
         )
 
     @staticmethod
-    def record_objection_classified(session_id, objection_type, strategy, user_turn_count):
-        writer.append(
+    def record_objection_classified(
+        session_id, objection_type, strategy, user_turn_count
+    ):
+        _writer.append(
             {
                 "timestamp": datetime.now().isoformat(),
                 "session_id": session_id,
@@ -57,8 +65,10 @@ class SessionAnalytics:
         )
 
     @staticmethod
-    def record_strategy_switch(session_id, from_strategy, to_strategy, reason, user_turn_count):
-        writer.append(
+    def record_strategy_switch(
+        session_id, from_strategy, to_strategy, reason, user_turn_count
+    ):
+        _writer.append(
             {
                 "timestamp": datetime.now().isoformat(),
                 "session_id": session_id,
@@ -71,8 +81,10 @@ class SessionAnalytics:
         )
 
     @staticmethod
-    def record_session_start(session_id, product_type, initial_strategy, ab_variant=None):
-        writer.append(
+    def record_session_start(
+        session_id, product_type, initial_strategy, ab_variant=None
+    ):
+        _writer.append(
             {
                 "timestamp": datetime.now().isoformat(),
                 "session_id": session_id,
@@ -84,8 +96,10 @@ class SessionAnalytics:
         )
 
     @staticmethod
-    def record_web_search(session_id: str, query: str, result_count: int, cached: bool) -> None:
-        writer.append(
+    def record_web_search(
+        session_id: str, query: str, result_count: int, cached: bool
+    ) -> None:
+        _writer.append(
             {
                 "timestamp": datetime.now().isoformat(),
                 "session_id": session_id,
@@ -99,11 +113,11 @@ class SessionAnalytics:
     @staticmethod
     def get_session_analytics(session_id):
         """Retrieve all analytics events for a specific session."""
-        events = writer.read_filtered("session_id", session_id)
-        return SessionAnalytics.sanitize_events(events)
+        events = _writer.read_filtered("session_id", session_id)
+        return SessionAnalytics._sanitize_events(events)
 
     @staticmethod
-    def sanitize_events(events: list[dict]) -> list[dict]:
+    def _sanitize_events(events: list[dict]) -> list[dict]:
         """normalize numeric fields and null invalid values"""
         if not events:
             return []
@@ -130,8 +144,14 @@ class SessionAnalytics:
                         iv = int(v.strip())
                     else:
                         iv = int(float(v))
-                except Exception:
-                    logger.warning("bad type for %s in %s event", k, e.get("event_type"))
+                except (TypeError, ValueError) as coerce_err:
+                    logger.warning(
+                        "bad type for %s in %s event (%r): %s",
+                        k,
+                        e.get("event_type"),
+                        v,
+                        coerce_err,
+                    )
                     e[k] = None
                     continue
 
@@ -159,7 +179,7 @@ class SessionAnalytics:
         }
 
         sessions: dict = {}
-        for event in writer.read_all():
+        for event in _writer.read_all():
             session_id = event.get("session_id")
             event_type = event.get("event_type")
 
@@ -169,15 +189,21 @@ class SessionAnalytics:
             if event_type == "session_start":
                 summary["total_sessions"] += 1
                 strat = event.get("initial_strategy", "unknown")
-                summary["initial_strategy"][strat] = summary["initial_strategy"].get(strat, 0) + 1
+                summary["initial_strategy"][strat] = (
+                    summary["initial_strategy"].get(strat, 0) + 1
+                )
                 variant = event.get("ab_variant")
                 if variant:
-                    summary["ab_variants"][variant] = summary["ab_variants"].get(variant, 0) + 1
+                    summary["ab_variants"][variant] = (
+                        summary["ab_variants"].get(variant, 0) + 1
+                    )
 
             elif event_type == "stage_transition":
                 to_stage = event.get("to_stage")
                 sessions[session_id]["stages"].add(to_stage)
-                summary["stage_reach"][to_stage] = summary["stage_reach"].get(to_stage, 0) + 1
+                summary["stage_reach"][to_stage] = (
+                    summary["stage_reach"].get(to_stage, 0) + 1
+                )
 
             elif event_type == "intent_classification":
                 intent = event.get("intent_level", "unknown")
@@ -186,7 +212,9 @@ class SessionAnalytics:
 
             elif event_type == "objection_classified":
                 obj_type = event.get("objection_type", "unknown")
-                summary["objection_types"][obj_type] = summary["objection_types"].get(obj_type, 0) + 1
+                summary["objection_types"][obj_type] = (
+                    summary["objection_types"].get(obj_type, 0) + 1
+                )
 
             elif event_type == "strategy_switch":
                 summary["strategy_switches"] += 1

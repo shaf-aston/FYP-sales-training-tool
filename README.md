@@ -2,29 +2,45 @@
 
 **An AI-powered sales assistant combining LLM fluency with explicit sales methodology control.**
 
-Implements IMPACT/NEPQ frameworks via FSM-based stage management, achieving 92% stage-appropriate progression without fine-tuning. Built for training scenarios and conversational AI research.
+Implements the IMPACT/NEPQ frameworks via FSM-based stage management; internal evaluations show up to 92% stage-appropriate progression without model fine-tuning. Built for training scenarios and conversational AI research.
 
 ---
 
 ## ⚡ Quick Start (5 Minutes)
 
 ### Prerequisites
-- Python 3.10+
-- Groq API key (free tier: [groq.com](https://groq.com)) OR Ollama (local)
+- Python 3.10+ (recommended)
+- Groq API key (cloud) or Ollama (local model)
 
-### Setup
+### Setup (POSIX)
 ```bash
-# Clone and install
+# Clone repository and create virtualenv
 git clone <repo>
 cd "Sales roleplay chatbot"
+python -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 
-# Set up environment
+# Copy example env and edit values
 cp .env.example .env
-# Edit .env: add GROQ_API_KEY or OLLAMA_BASE_URL
+# Edit .env: set GROQ_API_KEY or OLLAMA_BASE_URL (for Ollama)
+```
 
-# Run
-python -m flask run
+### Setup (Windows PowerShell)
+```powershell
+git clone <repo>
+cd "Sales roleplay chatbot"
+python -m venv .venv
+.venv\\Scripts\\Activate.ps1
+pip install -r requirements.txt
+Copy-Item .env.example .env
+# Edit .env: set GROQ_API_KEY or OLLAMA_BASE_URL
+```
+
+### Run (development)
+```bash
+# From repository root
+python src/web/app.py
 # Open http://localhost:5000
 ```
 
@@ -41,7 +57,7 @@ python -m flask run
 ✅ **Multi-Strategy Sales Flow** — Automatically detects strategy (consultative 5-stage or transactional 3-stage)
 ✅ **NEPQ Framework** — Consultative conversations follow Neuro-Emotional Persuasion Questioning
 ✅ **Objection Handling** — Classifies objections (fear, money, partner, logistical, indecision, smokescreen) + reframes
-✅ **Tactical Acknowledgment** — Context-aware validation (full for vulnerability, light for guardedness, none for info requests)
+✅ **Tactical Ack** — Context-aware validation (full for vulnerability, light for guardedness, none for info requests)
 ✅ **Provider Abstraction** — Hot-switch between Groq (cloud) and Ollama (local) at runtime
 ✅ **Training Mode** — Generate coaching feedback and answer trainee questions
 ✅ **Custom Knowledge** — Web interface to add product data without code changes
@@ -49,7 +65,7 @@ python -m flask run
 ### Academic Innovation
 🔬 **Prompt Engineering as Behavioural Constraint** — Natural language specifications guide LLM output without fine-tuning (92% stage accuracy)
 🔬 **Hybrid FSM + LLM** — Deterministic state transitions + probabilistic response generation = auditable methodology adherence
-🔬 **Tactical Acknowledgment** — Conditional validation based on psychological readiness (emotional disclosure vs. guarded response)
+🔬 **Tactical Ack** — Conditional validation based on psychological readiness (emotional disclosure vs. guarded response)
 
 ---
 
@@ -67,6 +83,17 @@ python -m flask run
 | [Documentation/_archive/technical_audit.md](Documentation/_archive/technical_audit.md#L1) | Code quality audit: 3 bugs fixed, 4 deferred, rationale | Maintainers |
 
 ---
+
+### Canonical Diagrams for Submission
+
+For final reports and thesis submissions we recommend including only the three canonical diagrams that together cover system design, control flow, and runtime execution (this reduces redundancy and improves clarity):
+
+- `Documentation/diagrams/01_chatbot_big_picture.mmd` — System architecture overview.
+- `Documentation/diagrams/02_fsm_state_flow.mmd` — FSM state transitions (corrected; no "NEGOTIATION" sub-stage).
+- `Documentation/diagrams/02_sequence_full_flow.mmd` — Runtime execution sequence for a single chat turn.
+
+Other diagrams remain in the repository for developer reference and are archived in `Documentation/_archive/` where appropriate.
+
 
 ## 🏗 Architecture Overview
 
@@ -108,7 +135,7 @@ Flow: User Message → FSM Decision → Content Generation → LLM Call → Resp
 pytest tests/ -v --cov=src/chatbot
 
 # Run specific test suite
-pytest tests/test_acknowledgment_tactics.py -v
+pytest tests/test_ack_tactics.py -v
 
 # Run with coverage report
 pytest tests/ --cov=src/chatbot --cov-report=html
@@ -128,8 +155,13 @@ See [TESTING_STRATEGY.md](TESTING_STRATEGY.md) for full framework.
 
 ### Local Development
 ```bash
+# POSIX / macOS
 export GROQ_API_KEY="your-key-here"
-python -m flask run  # Runs on localhost:5000
+python src/web/app.py  # Runs on localhost:5000
+
+# Windows (PowerShell)
+setx GROQ_API_KEY "your-key-here"
+python src\web\app.py
 ```
 
 ### Production (Example: Heroku)
@@ -284,7 +316,7 @@ See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for more solutions.
 
 | Metric | Value | Target |
 |--------|-------|--------|
-| Stage Accuracy | 92% | ≥85% ✅ |
+| Stage Accuracy | Up to 92% (internal evaluation) | ≥85% ✅ |
 | Avg Response Latency | <1s | <2s ✅ |
 | Unit Test Pass Rate | 100% | ≥95% ✅ |
 | Code Coverage | 78% | ≥70% ✅ |
@@ -328,6 +360,6 @@ This repository is licensed under the MIT License. See LICENSE.
 
 ---
 
-**Last Updated**: March 11, 2025
-**Version**: 1.0 (Production)
+**Last Updated**: April 18, 2026
+**Version**: 1.1
 **Status**: ✅ Active Development & Maintenance

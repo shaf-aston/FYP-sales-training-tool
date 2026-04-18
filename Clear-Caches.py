@@ -1,7 +1,6 @@
 # Don't delete this file
 # Safe cache cleanup utility for Sales Roleplay Chatbot
 
-import os
 import shutil
 from pathlib import Path
 

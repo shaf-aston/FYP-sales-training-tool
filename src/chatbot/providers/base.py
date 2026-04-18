@@ -17,6 +17,7 @@ TIMEOUT = "TIMEOUT"
 AUTH_ERROR = "AUTH_ERROR"
 PROVIDER_ERROR = "PROVIDER_ERROR"
 
+
 @dataclass
 class LLMResponse:
     """Standardized response from any LLM provider"""
@@ -38,7 +39,9 @@ def auto_log_performance(chat_method):
         if response.latency_ms == 0:
             response.latency_ms = (time.time() - start) * 1000
         stage = kwargs.get("stage", "unknown")
-        logger.info(f"LLM Response | Model: {response.model} | Latency: {response.latency_ms:.0f}ms | Stage: {stage}")
+        logger.info(
+            f"LLM Response | Model: {response.model} | Latency: {response.latency_ms:.0f}ms | Stage: {stage}"
+        )
         if response.error:
             logger.error(f"LLM Error: {response.error}")
         return response
@@ -51,7 +54,11 @@ class BaseLLMProvider(ABC):
 
     @abstractmethod
     def chat(
-        self, messages: List[Dict], temperature: float = 0.8, max_tokens: int = 200, stage: str | None = None
+        self,
+        messages: List[Dict],
+        temperature: float = 0.8,
+        max_tokens: int = 200,
+        stage: str | None = None,
     ) -> LLMResponse:
         """Generate response from LLM. Implementations should use @auto_log_performance."""
         pass

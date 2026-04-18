@@ -9,7 +9,9 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-SESSIONS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "sessions"))
+SESSIONS_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "sessions")
+)
 
 
 def _is_valid_session_id(session_id: str) -> bool:
@@ -82,11 +84,13 @@ class SessionPersistence:
 
         except Exception as e:
             logger.error("Failed to save session %s: %s", session_id, e)
-            try:
-                if tmp_path and os.path.exists(tmp_path):
+            if tmp_path and os.path.exists(tmp_path):
+                try:
                     os.remove(tmp_path)
-            except Exception:
-                pass
+                except Exception as cleanup_err:
+                    logger.warning(
+                        "Failed to clean up temp file %s: %s", tmp_path, cleanup_err
+                    )
             return False
 
     @staticmethod
@@ -106,4 +110,3 @@ class SessionPersistence:
         except Exception as e:
             logger.error("Failed to load session %s: %s", session_id, e)
             return None
-

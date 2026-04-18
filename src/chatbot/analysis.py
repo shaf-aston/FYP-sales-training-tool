@@ -3,10 +3,10 @@
 import random
 import re
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, TypedDict, NotRequired
 
 from .constants import MAX_USER_KEYWORDS
-from .loader import loadANALYSIS_CONFIG, load_objection_flows, loadSIGNALS
+from .loader import load_analysis_config, load_objection_flows, load_signals
 from .utils import contains_nonnegated_keyword
 
 
@@ -26,9 +26,45 @@ class ConversationState:
         return getattr(self, key, default)
 
 
-ANALYSIS_CONFIG = loadANALYSIS_CONFIG()
+class ObjectionPathway(TypedDict):
+    """Rich objection analysis including pathway, reframes, entry questions.
+
+    Base keys (backward compatible with classify_objection):
+    - type: Original 6-type classification (money, partner, fear, etc.)
+    - strategy: Reframe strategy name (isolate_funds, etc.)
+    - guidance: LLM-ready guidance text
+
+    Enhanced keys (new pathway structure):
+    - category: Barrier classification (resource, stakeholder, internal, unclear)
+    - subtype: Specific barrier within category (funding, approval, fear, etc.)
+    - entry_question: Type-specific initial question
+    - reframes: Ordered reframe sequence (R1, R2, R3)
+    - reframe_descriptions: Detailed dialogue for each reframe
+    - funding_options: Explicit options for resource pathway
+    - open_wallet_applicable: Whether Open Wallet Test applies
+    - is_primary_objection: Main barrier vs. secondary
+    """
+
+    # Base keys (always present)
+    type: str
+    strategy: str
+    guidance: str
+
+    # Enhanced keys (new pathway metadata)
+    category: NotRequired[str]  # "resource", "stakeholder", "internal", "unclear"
+    subtype: NotRequired[str]
+    entry_question: NotRequired[str]
+    reframes: NotRequired[list[str]]
+    reframe_descriptions: NotRequired[dict[str, dict[str, str]]]
+    funding_options: NotRequired[list[str]]
+    open_wallet_applicable: NotRequired[bool]
+    dialogue_guidance: NotRequired[str]
+    is_primary_objection: NotRequired[bool]
+
+
+ANALYSIS_CONFIG = load_analysis_config()
 THRESHOLDS = ANALYSIS_CONFIG["thresholds"]
-SIGNALS = loadSIGNALS()
+SIGNALS = load_signals()
 OFLOWS = load_objection_flows()
 
 STOP_WORDS = frozenset(
@@ -106,8 +142,12 @@ STOP_WORDS = frozenset(
 )
 
 # loaded once at import
-_AGREEMENT_WORDS = frozenset(SIGNALS.get("guardedness_keywords", {}).get("agreement_words", []))
-_DISMISSAL_WORDS = frozenset(SIGNALS.get("guardedness_keywords", {}).get("dismissal", []))
+_AGREEMENT_WORDS = frozenset(
+    SIGNALS.get("guardedness_keywords", {}).get("agreement_words", [])
+)
+_DISMISSAL_WORDS = frozenset(
+    SIGNALS.get("guardedness_keywords", {}).get("dismissal", [])
+)
 
 _GOAL_VERB_PATTERN = re.compile(r"\b(?:want to|need to|trying to)\s+\w+\s+\w+")
 
@@ -126,7 +166,11 @@ def has_user_stated_clear_goal(history) -> bool:
         return False
     goal_keywords = ANALYSIS_CONFIG["goal_indicators"]
     window = THRESHOLDS["recent_history_window"]
-    recent_user_msgs = [m.get("content", "").lower() for m in history[-window:] if m.get("role") == "user"]
+    recent_user_msgs = [
+        m.get("content", "").lower()
+        for m in history[-window:]
+        if m.get("role") == "user"
+    ]
     if any(contains_nonnegated_keyword(msg, goal_keywords) for msg in recent_user_msgs):
         return True
 
@@ -162,9 +206,18 @@ def classify_intent_level(history, user_message="", signal_keywords=None) -> str
     recent_text = (user_message + " " + extract_recent_user_text(history, 2)).lower()
 
     # check categories in configured priority order
-    priority = signal_keywords.get("signal_priority", ["high_intent", "low_intent"]) or ["high_intent", "low_intent"]
+    priority = signal_keywords.get(
+        "signal_priority", ["high_intent", "low_intent"]
+    ) or ["high_intent", "low_intent"]
 
-    HIGH_INTENT_CATS = {"high_intent", "commitment", "demand_directness", "impatience", "urgency", "price_sensitivity"}
+    HIGH_INTENT_CATS = {
+        "high_intent",
+        "commitment",
+        "demand_directness",
+        "impatience",
+        "urgency",
+        "price_sensitivity",
+    }
     LOW_INTENT_CATS = {"low_intent"}
 
     for cat in priority:
@@ -179,10 +232,14 @@ def classify_intent_level(history, user_message="", signal_keywords=None) -> str
             if cat in LOW_INTENT_CATS:
                 return "low"
 
-    # fallback if nothing matched in prioritized pass
-    if contains_nonnegated_keyword(recent_text, flatten_keywords(signal_keywords.get("low_intent", []))):
+    # fallback if nothing matched in prioritised pass
+    if contains_nonnegated_keyword(
+        recent_text, flatten_keywords(signal_keywords.get("low_intent", []))
+    ):
         return "low"
-    if contains_nonnegated_keyword(recent_text, flatten_keywords(signal_keywords.get("high_intent", []))):
+    if contains_nonnegated_keyword(
+        recent_text, flatten_keywords(signal_keywords.get("high_intent", []))
+    ):
         return "high"
     return "medium"
 
@@ -199,9 +256,13 @@ def detect_guardedness(user_message: str, history: list[dict[str, str]]) -> floa
     if msg_lower in _AGREEMENT_WORDS and len(history) >= 2:
         recent_msgs = history[-4:]
         has_substantive_user = any(
-            m.get("role") == "user" and len(m.get("content", "").split()) >= 8 for m in recent_msgs
+            m.get("role") == "user" and len(m.get("content", "").split()) >= 8
+            for m in recent_msgs
         )
-        has_bot_question = any(m.get("role") == "assistant" and "?" in m.get("content", "") for m in recent_msgs)
+        has_bot_question = any(
+            m.get("role") == "assistant" and "?" in m.get("content", "")
+            for m in recent_msgs
+        )
         if has_substantive_user and has_bot_question:
             return 0.0
 
@@ -224,7 +285,14 @@ def detect_guardedness(user_message: str, history: list[dict[str, str]]) -> floa
 
     # short reply to a long question bumps the score
     if history:
-        last_bot = next((m.get("content", "") for m in reversed(history) if m.get("role") == "assistant"), "")
+        last_bot = next(
+            (
+                m.get("content", "")
+                for m in reversed(history)
+                if m.get("role") == "assistant"
+            ),
+            "",
+        )
         if len(last_bot.split()) > 50 and msg_length < 8:
             score *= 1.4
 
@@ -240,7 +308,9 @@ def analyse_state(
     if signal_keywords is None:
         signal_keywords = SIGNALS
 
-    intent = classify_intent_level(history, user_message, signal_keywords=signal_keywords)
+    intent = classify_intent_level(
+        history, user_message, signal_keywords=signal_keywords
+    )
 
     # guardedness
     guardedness_level = 0.0
@@ -250,18 +320,30 @@ def analyse_state(
 
     # decisiveness
     decisive = False
-    if user_message:
-        has_commitment = contains_nonnegated_keyword(user_message.lower(), signal_keywords.get("commitment", []))
-        has_high_intent = contains_nonnegated_keyword(user_message.lower(), signal_keywords.get("high_intent", []))
+    if user_message and signal_keywords:
+        has_commitment = contains_nonnegated_keyword(
+            user_message.lower(), signal_keywords.get("commitment", [])
+        )
+        has_high_intent = contains_nonnegated_keyword(
+            user_message.lower(), signal_keywords.get("high_intent", [])
+        )
         decisive = (has_commitment or has_high_intent) and not guarded
 
     # question fatigue
     question_fatigue = False
     if history:
         recent_bot = [m["content"] for m in history[-4:] if m["role"] == "assistant"]
-        question_fatigue = sum(1 for msg in recent_bot if "?" in msg) >= THRESHOLDS["question_fatigue_threshold"]
+        question_fatigue = (
+            sum(1 for msg in recent_bot if "?" in msg)
+            >= THRESHOLDS["question_fatigue_threshold"]
+        )
 
-    return ConversationState(intent=intent, guarded=guarded, question_fatigue=question_fatigue, decisive=decisive)
+    return ConversationState(
+        intent=intent,
+        guarded=guarded,
+        question_fatigue=question_fatigue,
+        decisive=decisive,
+    )
 
 
 def extract_preferences(history) -> str:
@@ -279,16 +361,46 @@ def extract_preferences(history) -> str:
     return ", ".join(sorted(mentioned)) if mentioned else ""
 
 
-def extract_user_keywords(history: list[dict[str, str]], max_keywords: int = MAX_USER_KEYWORDS) -> list[str]:
+def extract_user_keywords(
+    history: list[dict[str, str]], max_keywords: int = MAX_USER_KEYWORDS
+) -> list[str]:
     """Extract the user's key terms (nouns/descriptors) for lexical entrainment"""
     keywords = []
     for msg in history:
         if msg["role"] == "user":
             for word in msg["content"].lower().split():
                 cleaned = word.strip(".,!?;:'\"")
-                if cleaned and len(cleaned) > 2 and cleaned not in STOP_WORDS and cleaned not in keywords:
+                if (
+                    cleaned
+                    and len(cleaned) > 2
+                    and cleaned not in STOP_WORDS
+                    and cleaned not in keywords
+                ):
                     keywords.append(cleaned)
     return keywords[-max_keywords:]
+
+
+def detect_topic_drift(user_message: str, stage: str) -> str:
+    """Return a course-correction directive if the user drifted from the stage goal, else ''."""
+    drift_cfg = ANALYSIS_CONFIG.get("drift_detection", {})
+    if stage not in drift_cfg.get("stages", []):
+        return ""
+    if len(user_message.split()) < drift_cfg.get("min_message_words", 8):
+        return ""
+
+    anchor_key = "doubt_keywords" if stage == "logical" else "stakes_keywords"
+    anchors = ANALYSIS_CONFIG.get("advancement", {}).get(stage, {}).get(anchor_key, [])
+    if not anchors or contains_nonnegated_keyword(user_message.lower(), anchors):
+        return ""
+
+    redirect = drift_cfg.get("redirect_phrase", {}).get(stage, "")
+    if not redirect:
+        return ""
+
+    return (
+        f"\nSTAGE FOCUS: The user's message may not engage with the current discovery goal. "
+        f"If so, briefly acknowledge what they said and naturally guide back to {redirect}.\n"
+    )
 
 
 def is_repetitive_validation(history, threshold=None) -> bool:
@@ -298,8 +410,14 @@ def is_repetitive_validation(history, threshold=None) -> bool:
     if not history or len(history) < 4:
         return False
     validation_phrases = SIGNALS.get("validation_phrases", [])
-    recent_bot = [m["content"].lower() for m in history[-10:] if m["role"] == "assistant"]
-    count = sum(1 for msg in recent_bot if contains_nonnegated_keyword(msg, validation_phrases))
+    recent_bot = [
+        m["content"].lower()
+        for m in history[-THRESHOLDS["recent_history_window"] :]
+        if m["role"] == "assistant"
+    ]
+    count = sum(
+        1 for msg in recent_bot if contains_nonnegated_keyword(msg, validation_phrases)
+    )
     return count >= threshold
 
 
@@ -328,19 +446,21 @@ def is_literal_question(user_message) -> bool:
     return is_question and not is_rhetorical
 
 
-def commitment_or_walkaway(history: list[dict[str, str]], user_msg: str, turns: int) -> bool:
+def commitment_or_walkaway(
+    history: list[dict[str, str]], user_msg: str, turns: int
+) -> bool:
     """True when user commits or walks away (objection stage exit)"""
-    return contains_nonnegated_keyword(user_msg.lower(), SIGNALS.get("commitment", [])) or contains_nonnegated_keyword(
-        user_msg.lower(), SIGNALS.get("walking", [])
-    )
+    return contains_nonnegated_keyword(
+        user_msg.lower(), SIGNALS.get("commitment", [])
+    ) or contains_nonnegated_keyword(user_msg.lower(), SIGNALS.get("walking", []))
 
 
-def detect_acknowledgment_context(
+def detect_ack_context(
     user_message: str,
     history: list[dict[str, str]],
     state: ConversationState,
 ) -> str:
-    """Choose acknowledgment level: 'full' | 'light' | 'none'"""
+    """Choose ack level: 'full' | 'light' | 'none'"""
     if not user_message:
         return "none"
 
@@ -353,7 +473,10 @@ def detect_acknowledgment_context(
 
     # skip ack for low-engagement filler
     low_intent = SIGNALS.get("low_intent", [])
-    if contains_nonnegated_keyword(msg_lower, low_intent) and len(user_message.split()) < 6:
+    if (
+        contains_nonnegated_keyword(msg_lower, low_intent)
+        and len(user_message.split()) < 6
+    ):
         return "none"
 
     # full ack when user shared something emotional
@@ -363,7 +486,9 @@ def detect_acknowledgment_context(
 
     # light ack if recent emotional context + literal question now
     if history:
-        recent_user = [m["content"].lower() for m in history[-4:] if m["role"] == "user"]
+        recent_user = [
+            m["content"].lower() for m in history[-4:] if m["role"] == "user"
+        ]
         if any(contains_nonnegated_keyword(m, emotional_keywords) for m in recent_user):
             if is_literal_question(user_message):
                 return "light"
@@ -393,40 +518,7 @@ def user_demands_directness(history, user_message) -> bool:
     return False
 
 
-def classify_objection(user_message, history=None) -> dict[str, Any]:
-    """classify objection type and pick a reframe"""
-    objection_config = ANALYSIS_CONFIG.get("objection_handling", {})
-    classification_order = objection_config.get(
-        "classification_order",
-        ["smokescreen", "partner", "money", "fear", "logistical", "think"],
-    )
-    objection_keywords = OFLOWS.get("keywords", {})
-    reframe_guidance = OFLOWS.get("reframe_guidance", {})
-
-    msg_lower = user_message.lower()
-    combined = msg_lower
-    if history:
-        recent_user = [m["content"].lower() for m in history[-4:] if m["role"] == "user"]
-        if recent_user and recent_user[-1] == msg_lower:
-            recent_user = recent_user[:-1]
-        combined = " ".join(recent_user) + " " + msg_lower
-
-    for obj_type in classification_order:
-        keywords = objection_keywords.get(obj_type, [])
-        if contains_nonnegated_keyword(combined, keywords):
-            strategies = objection_config.get("reframe_strategies", {}).get(obj_type, [])
-            strategy_name = random.choice(strategies) if strategies else "general_reframe"
-            guidance = reframe_guidance.get(obj_type, {}).get(
-                strategy_name,
-                f"Address the {obj_type} concern directly using the user's stated goals.",
-            )
-            return {"type": obj_type, "strategy": strategy_name, "guidance": guidance}
-
-    return {
-        "type": "unknown",
-        "strategy": "general_reframe",
-        "guidance": "Acknowledge the concern. Recall the user's stated goal. Ask what specifically is holding them back.",
-    }
+from .objection import classify_objection, ObjectionPathway, analyze_objection_pathway, get_reframe_sequence
 
 
 # get_objection_data removed (unused); use `classify_objection()` directly where needed
@@ -445,7 +537,9 @@ def should_trigger_web_search(
     msg_lower = user_message.lower()
     if any(phrase in msg_lower for phrase in config.get("trigger_phrases", [])):
         return True
-    if stage == "objection" and objection_type in config.get("trigger_objection_types", []):
+    if stage == "objection" and objection_type in config.get(
+        "trigger_objection_types", []
+    ):
         return True
     return False
 

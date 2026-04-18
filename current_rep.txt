@@ -1,0 +1,1233 @@
+AI AGENTS ARE NOT ALLOWED TO EDIT THIS FILE
+
+
+Project (12,700 words - Friday start)
+
+Note for examiner: Word-based headings have been made so that navigation within the Word document is easy. To access the navigation panel, Control + F  Headings, is a good shortcut to use.
+
+
+960 words code
+1500 words start
+1100words end
+200 words heading redundancy (approx..)
+=  3760 words
+
+15,000 – 3760 = 11,200 words
+
+
+12,000 – 1350 = 10,650 words !!! Saturday
+
+
+
+
+
+
+
+
+
+TABLE OF CONTENTS
+1. Contextual Investigation & Background Research
+Mark Scheme Focus: Answers "What is the project trying to achieve, why is it important, and what makes it different?"
+1.1 Problem Domain & Business Context
+•	Main Content: Explains why sales training is expensive, hard to scale, and often forgotten. Uses real data and lists who will actually use the tool.
+•	Important Part (Mark Scheme Link): Shows you didn’t just guess the problem exists. The mark scheme gives high marks for proving the problem with real research and clearly stating who it affects.
+1.2 Sales Structure Foundation
+•	Main Content: Breaks down the sales methods you studied (like NEPQ and SPIN) and explains exactly why NEPQ was picked.
+•	Important Part (Mark Scheme Link): Proves you can compare different ideas and pick the best one. The rubric rewards clear reasons for choosing a specific framework over others.
+1.3 Business Analysis & Competitive Differentiation
+•	Main Content: A side-by-side table comparing your tool to existing AI sales trainers, highlighting your unique rule-enforcing approach.
+•	Important Part (Mark Scheme Link): Directly answers "what makes it different?" The mark scheme expects you to show market awareness and prove your tool fills a real gap.
+1.4 Theoretical Foundations
+•	Main Content: Explains known AI chatbot flaws (like being too agreeable or drifting off-topic) and why strict sales steps are needed to fix them.
+•	Important Part (Mark Scheme Link): Shows deep understanding of the research space. High marks go to students who place their work in context and justify why the problem needs solving.
+1.5 Requirements Definition
+•	Main Content: Lists what the system must do, what it shouldn’t do, and explains which planned features were dropped and why.
+•	Important Part (Mark Scheme Link): Covers the Requirements stage of the software lifecycle. Dropping features and explaining why proves you can manage scope, which is key for LO1 (independent project work).
+1.6 Development Strategy & Architectural Evolution
+•	Main Content: Tells the story of your failed prototypes, hardware limits, and how you pivoted to the final cloud-based design.
+•	Important Part (Mark Scheme Link): Proves you worked independently, tested ideas, and adapted. The mark scheme highly values showing how you managed setbacks and learned from them.
+________________________________________
+2. Architectural Design
+Mark Scheme Focus: Answers "How did you plan to achieve the deliverable?" Covers Design stage & professionalism.
+2.1 Design Options - Why a FSM?
+•	Main Content: Compares four other AI design choices, explains why each was rejected, and shows a table picking the best option.
+•	Important Part (Mark Scheme Link): Shows critical decision-making. The rubric gives top marks for explaining why you chose your tools and why you discarded others.
+2.2 System Context Diagram
+•	Main Content: A big-picture diagram showing how the user, website, backend, and AI connect to each other.
+•	Important Part (Mark Scheme Link): Covers the Design stage of the lifecycle. Clear, captioned diagrams score highly for professional presentation (Exposition band).
+2.3 Sequence Diagram – Main Path Execution
+•	Main Content: Shows the exact step-by-step flow of one message through the system’s three control layers.
+•	Important Part (Mark Scheme Link): Proves your system has a clear, logical control flow. The mark scheme rewards showing how different parts work together correctly and reliably.
+2.4 UML Class Diagram
+•	Main Content: A blueprint of your code files and how they link together without overlapping jobs.
+•	Important Part (Mark Scheme Link): Shows "Separation of Concerns" (a professional coding habit). The rubric looks for evidence of clean, high-quality technical planning.
+2.5 Drift Design
+•	Main Content: Explains how three separate safety layers work together to stop the AI from going off-topic or breaking rules.
+•	Important Part (Mark Scheme Link): Shows systematic problem-solving. Mark scheme rewards designs that catch and fix errors using multiple, independent checks.
+2.6 Voice Mode
+•	Main Content: Explains how speech turns into text and back, including a backup plan if the main tool fails or slows down.
+•	Important Part (Mark Scheme Link): Shows reliability planning. The mark scheme values considering what could go wrong and building in automatic safety features.
+2.7 Security
+•	Main Content: Lists how you stop hackers and bad inputs using a standard security checklist (STRIDE) and specific code guards.
+•	Important Part (Mark Scheme Link): Covers professional practice and risk management. The rubric gives points for identifying real threats and applying proper, documented fixes.
+2.8 Provider Integration & Abstraction
+•	Main Content: Explains how the system swaps between different AI companies without breaking the code, using a flexible design pattern.
+•	Important Part (Mark Scheme Link): Shows advanced design skills. High marks come from building systems that are easy to update, test, or swap later without rewriting everything.
+2.9 Professional Practice Principles
+•	Main Content: Covers how you managed the project using Git, task boards, supervisor meetings, and automatic code checkers.
+•	Important Part (Mark Scheme Link): Directly hits the Project Process & Professionalism mark scheme aspect. Proves you worked like a real developer and kept track of your work.
+________________________________________
+3. Implementation
+Mark Scheme Focus: Answers "What did the project produce?" Covers Implementation stage & deliverable quality.
+3.1 Core Implementation (Seller Mode)
+•	Main Content: Shows the main working parts of the chatbot, including short code snippets and how each file handles a specific job.
+•	Important Part (Mark Scheme Link): Covers the Implementation stage. The mark scheme requires clean, working code examples and proof that the core system actually runs.
+3.2 Advanced Features Implementation
+•	Main Content: Covers extra features like the practice mode (AI acts as a buyer), custom knowledge uploads, and live web searches.
+•	Important Part (Mark Scheme Link): Shows your deliverable goes beyond basics. High marks come from adding useful, well-tested features that solve real user problems.
+3.3 Assessment & Training Modules
+•	Main Content: Explains the quiz and coaching tools that grade practice sessions using strict rules instead of random AI guesses.
+•	Important Part (Mark Scheme Link): Proves your system gives reliable, repeatable feedback. The mark scheme values clear, rule-based evaluation over unpredictable AI scoring.
+________________________________________
+4. Evaluation And Reflection
+Mark Scheme Focus: Answers "How do we know the deliverable met its goals?" Covers Verification, Evaluation & Reflection.
+4.1 Test Strategy and Methodology
+•	Main Content: Explains the mix of automatic tests, manual checks, and real user testing used to verify the system.
+•	Important Part (Mark Scheme Link): Covers the Verification stage. The rubric requires a clear plan for how you know your work is correct before calling it finished.
+4.2 Automated and Regression Testing
+•	Main Content: Covers tools that check code quality and run automatic checks to catch bugs before they reach users.
+•	Important Part (Mark Scheme Link): Shows professional standards. Mark scheme rewards using industry tools to maintain code quality and prevent old bugs from returning.
+4.3 Developer-Executed Manual Testing
+•	Main Content: Documents four major testing cycles where bugs were found, fixed, and re-tested, with clear before/after results.
+•	Important Part (Mark Scheme Link): Provides hard evidence of improvement. The rubric highly values showing measurable fixes and honest testing logs.
+4.4 Usability Test
+•	Main Content: Shares real feedback from 26 users, including survey scores, direct quotes, and what they liked or struggled with.
+•	Important Part (Mark Scheme Link): Directly answers "how do we know it met its goals?" The mark scheme requires real user feedback to prove the system works in practice.
+4.5 System Limitations and Failure Boundaries
+•	Main Content: Honestly lists what the system cannot do yet and separates AI limits from project time limits.
+•	Important Part (Mark Scheme Link): Shows maturity and critical reflection. The rubric rewards admitting weaknesses clearly and planning realistic next steps.
+4.6 Evaluation Against Project Objectives
+•	Main Content: Compares your original goals to what was actually achieved, using a clear table with direct evidence.
+•	Important Part (Mark Scheme Link): Crucial for 60%+ marks. The mark scheme explicitly requires systematic comparison of outcomes vs. original aims.
+4.7 Personal Reflection
+•	Main Content: A personal look at your time management, one technical choice you’d change, and how you grew as a developer.
+•	Important Part (Mark Scheme Link): Covers the Reflection band. Shows you learned from the process and improved as a computer science professional (LO3/LO4).
+4.8 Ethics
+•	Main Content: Discusses privacy, bias, and safety rules, following professional conduct guidelines (BCS Code).
+•	Important Part (Mark Scheme Link): Shows responsible practice. The mark scheme values awareness of how technology affects users and society, which pushes you into higher bands.
+________________________________________
+5. References
+•	Main Content: A complete, alphabetized list of all books, papers, and websites cited in the report.
+•	Important Part (Mark Scheme Link): Missing or messy references can lose up to 30% of your marks. Proper Harvard style is strictly required for the Exposition band.
+________________________________________
+Appendices
+•	Main Content: Extra proof like bug logs, survey data, meeting notes, system diagrams, and your weekly project diary.
+•	Important Part (Mark Scheme Link): Proves you worked independently over time. The mark scheme specifically asks for a project diary and clear evidence of the full development lifecycle (Requirements → Design → Implementation → Verification → Maintenance).
+
+
+
+LIST OF ACRONYMS
+
+Acronym	Full Form
+AI	Artificial Intelligence
+API	Application Programming Interface
+ATD	Association for Talent Development
+BANT	Budget, Authority, Need, Timeline
+CoT	Chain-of-Thought
+CORS	Cross-Origin Resource Sharing
+CPU	Central Processing Unit
+CRM	Customer Relationship Management
+EOS	End-Of-Sequence
+FSM	Finite State Machine
+FR	Functional Requirement
+GPU	Graphics Processing Unit
+JS	JavaScript
+L&D	Learning and Development
+LLM	Large Language Model
+LOC	Lines of Code
+LMS	Learning Management System
+LoRA	Low-Rank Adaptation
+MEDDIC	Metrics, Economic Buyer, Decision Criteria, Decision Process, Identify Pain, Champion
+NEPQ	Neuro-Emotional Persuasion Questioning
+NFR	Non-Functional Requirement
+NLP	Natural Language Processing
+PII	Personally Identifiable Information
+P1/P2/P3	Priority 1 / Priority 2 / Priority 3
+RAM	Random Access Memory
+RBAC	Role-Based Access Control
+ReAct	Reason + Act
+RLHF	Reinforcement Learning from Human Feedback
+SME	Small and Medium Enterprise
+SPIN	Situation, Problem, Implication, Need-Payoff
+SRP	Single Responsibility Principle
+STT	Speech-to-Text
+STRIDE	Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, Elevation of Privilege
+TLS	Transport Layer Security
+TTS	Text-to-Speech
+UAT	User Acceptance Testing
+USD	United States Dollar
+VRAM	Video Random Access Memory
+YAML	YAML Ain't Markup Language
+Scl signal classification layer
+
+
+ABSTRACT
+Objective: Sales training is effective but expensive and difficult to scale. Existing AI roleplay alternatives cannot reliably enforce structured sales methodologies. This project builds a chatbot that simulates a sales prospect, enabling salespeople to practise on demand.
+Methods: Three architectural approaches were prototyped and eliminated through empirical failure before settling on a hybrid architecture coupling a deterministic Finite State Machine for stage gating with a cloud LLM provider layer for natural language generation.
+Measured Outcomes: False stage advancement dropped from over 40% to under 8% following FSM implementation. UAT across 26 participants rated usability at 4.69/5. The system comprises approximately 6,600 lines of Python/HTML/JS and 1,050 lines of YAML, deployed at zero cost.
+Conclusions: FSM stage gating combined with constrained LLM generation can enforce sales methodology adherence without fine-tuning or proprietary models, proving that separating control flow from content generation produces a more reliable training tool than probabilistic generation alone.
+
+
+1. Contextual investigation & background research (~2300)
+1.1 Problem Domain & Business Context
+1.1.1 Research Process
+The research process began with a landscape audit of commercial sales training SaaS platforms - including Gong, Second Nature, and Hyperbound - to establish the current capability boundary of the market and identify unmet requirements. This was followed by an academic literature review via Google Scholar and the ACM Digital Library, targeting three intersecting domains: LLM behavioural alignment (Bai et al., 2022), deterministic dialogue management, and foundational sales methodology theory (Rackham, 1988; Miner and Acuff, 2023). Industry reports from the ATD, Verified Market Research, and The Bridge Group (2020–2024) were used to quantify the business-side problem and validate the scale of the gap identified. Search terms included ‘conversational AI roleplay training’, ‘LLM dialogue control’, and ‘sales methodology adherence’.
+Problem Identification Without structured practice and real-time corrective feedback, sales representatives develop entrenched methodology gaps that compound across the sales cycle, reducing conversion rates and revenue. Human-led coaching is constrained by a 1:1 ratio: a 50-person team requires 50 concurrent sessions, making on-demand access logistically and financially prohibitive. With median training spend at roughly £1,000 per salesperson annually (ATD, 2023), this model is often unsustainable for SMEs.
+Market Context The commercial scale of this gap is substantial:
+•	Knowledge decay: 67% of representatives forget learned techniques within 30 days (Sales Readiness Group, 2024).
+•	Implementation gap: Only 20% of organisations use roleplay consistently (Janek Performance Group, 2023).
+•	Market size: The global sales training market is valued at $10.32 billion (Verified Market Research, 2024).
+•	Productivity lag: Median ramp-up time for B2B Account Executives is 5.3 months (The Bridge Group, 2024).
+Group-based and passive e-learning lower deployment costs but fundamentally compromise efficacy. Completion rates for unstructured online training programmes frequently fall below 15%, and passive formats generate substantially worse learning outcomes: a meta-analysis of 225 studies published in PNAS found that students in traditional lecture-based formats were 55% more likely to fail than those in active learning environments, with mean failure rates of 33.8% versus 21.8% respectively (Freeman et al., 2014) - see Figure 1. Treating sales as static, script-based knowledge fails to build dynamic competency for the same structural reason: technique must be forged under the cognitive load of a live objection. Observing a conversation is categorically inferior to participating in one - the performance gap is not marginal, it is systemic.
+
+
+ 
+https://www.pnas.org/doi/10.1073/pnas.1319030111
+Figure 1: Changes in failure rate under active versus lecture-based learning. Panel A shows percent change in failure rate with active learning across 67 studies (mean: 12% decrease). Panel B shows kernel density plots of failure rates by classroom type; mean failure rates were 21.8% (active) and 33.8% (lecture). From Freeman et al. (2014), PNAS, 111(23), p. 8410. doi:10.1073/pnas.1319030111.
+
+1.1.2 User Stories
+The following user stories were derived from role taxonomies and pain-point profiles documented in the ATD (2023) State of the Industry Report and The Bridge Group (2024) SaaS AE Metrics & Compensation Report, which collectively identify skill retention, coaching scalability, and methodology consistency as the primary unmet needs across sales organisations.
+•	As a Junior Sales Representative, I want to practise objection handling without risking live deals, so that I can build technique under realistic pressure and improve my conversion rate independently of my manager's schedule.
+•	As a Sales Manager, I want deterministic, methodology-adherent scoring of my team's practice sessions, so that I can assign targeted coaching based on objective evidence rather than subjective observation.
+•	As an L&D Coordinator, I want a configurable training tool that enforces our specific sales framework without requiring code changes, so that I can deploy consistent methodology training across distributed cohorts at minimal cost.
+Stakeholders The solution targets three groups, each facing a distinct dimension of the scalability problem identified above. SME sales teams require low-cost, repeatable practice without dependency on trainer availability. Corporate L&D teams require consistent, measurable methodology quality across distributed cohorts. Individual sales professionals require self-directed, on-demand rehearsal with objective feedback independent of managerial scheduling. All three groups are addressed by the platform's zero-cost deployment model and YAML-based configurability, which eliminates both financial and technical barriers to adoption.
+
+
+1.2 Sales Structure Foundation (179 words)
+The system partitions sales interactions into Transactional or Consultative strategies based on product complexity and buyer psychology. The Transactional model serves straightforward products where the buyer has a clear requirement, prioritising efficiency, specifications, and logistics over deep exploration. The Consultative model manages high-value solutions where the buyer's challenges are not yet fully articulated, requiring systematic discovery before any solution is offered.
+The project integrates the NEPQ framework (Miner and Acuff, 2023) because its strictly phased progression - logical situational awareness → emotional discovery → solution - maps cleanly onto deterministic state machine control. Alternative frameworks such as BANT (Budget, Authority, Need, Timeline) were considered but rejected: BANT's qualification-focused structure collapses into a checklist that does not prescribe sequenced conversational behaviour, making it unsuitable for FSM stage-gating. MEDDIC similarly targets pipeline qualification rather than in-call technique, offering no pedagogical sequence to enforce. SPIN Selling (Rackham, 1988) provided the academic foundation for consultative questioning but lacks the explicit emotional progression that NEPQ formalises, making NEPQ the strongest candidate for deterministic implementation. 
+Refer to Appendix NEPQ for sales framework details
+
+
+1.3 Business Analysis & Competitive Differentiation - #tighten
+The contemporary sales enablement landscape comprises several distinct software categories, ranging from passive Learning Management Systems (LMS) to call intelligence platforms (e.g., Gong, Chorus) and emerging AI roleplay systems (e.g., Second Nature, Hyperbound). However, existing solutions fundamentally fail to balance deployment cost, configurability, and rigid methodology enforcement simultaneously.
+
+ 
+
+A critical differentiator in conversational sales training is the mechanism of pedagogical enforcement. Generative AI roleplay competitors such as Hyperbound and Second Nature rely almost exclusively on probabilistic LLM generation. While this produces conversational authenticity, probabilistic generation cannot rigidly enforce specific sales frameworks without hallucination or arbitrary deviation. This platform diverges from market standards by employing a deterministic Finite State Machine architecture, guaranteeing rigid framework adherence - transitioning deterministically through NEPQ phases (NEEDS → MATCH → CLOSE) - while scoring user inputs against predefined criteria.
+Table 1: Competitive analysis based on published product documentation (2024).
+Solution	On-demand	Active practice	Live feedback	Dynamic objections	Methodology Enforcement	Free / low cost	Best for
+LMS / e-learning (Litmos, SalesHood)	Yes	No	No	No	None (Passive consumption)	No	Compliance / onboarding
+Call intelligence (Gong, Chorus)	Yes	No	Retrospective only	No	Probabilistic (Post-call AI)	No	Post-call coaching
+AI roleplay (Second Nature, Rehearsal)	Yes	Yes	Partial	Partial	Probabilistic (LLM-driven scoring)	No	Enterprise pitch practice
+Hyperbound	Yes	Yes	Yes	Yes	Probabilistic (Generative dialogue)	No	Outbound SDR ramping
+Showpad Coach	Yes	Yes	Partial	Partial	Probabilistic (AI & human review)	No	Enterprise LMS integration
+Manager-led roleplay	No	Yes	Partial	Partial	Deterministic (Human enforced)	Staff cost	Ad hoc coaching
+This platform (FYP)	Yes	Yes	Yes (in-session)	Yes	Deterministic (FSM enforcement)	Yes	Rigorous methodology training
+Table 1 reveals that no existing free or low-cost solution combines active practice, live feedback, and deterministic methodology enforcement. Platforms such as Rehearsal rely on delayed, human-led grading of video submissions, failing the live feedback requirement. Call intelligence tools such as Gong operate strictly retrospectively on live client calls, introducing real revenue risk. Notably, the academic literature on conversational AI training is dominated by healthcare and customer service dialogue contexts (Pérez-Rosas et al., 2019), leaving sales methodology enforcement as a largely unexplored domain - further justifying the need for this work.
+
+1.4 Theoretical Foundations
+The architectural design of this system is grounded in documented failure modes of generative language models. LLMs tuned via Reinforcement Learning from Human Feedback (RLHF) exhibit a strong behavioural bias toward helpfulness and agreeableness (Bai et al., 2022). In a sales training context, this manifests as premature capitulation: the model fails to challenge the user or sustain the psychological tension necessary for realistic objection practice. Furthermore, while frameworks such as ReAct (Yao et al., 2023) attempt to bridge reasoning and action in LLM agents, they rely on probabilistic routing, creating a reasoning-action gap in which structured methodology is abandoned when the model encounters semantic ambiguity. Dialogue systems must therefore incorporate robust self-righting mechanisms - drawing on Schegloff's (1992) principles of conversational repair - to actively redirect users back to the intended framework when deviation occurs.
+Professional sales methodologies are, by contrast, inherently rigid and sequence-dependent. Rackham's SPIN (1988) and Miner's NEPQ (2022) both rely on strictly phased progressions: logical situational awareness precedes emotional discovery, which precedes any solution proposition. If a trainee attempts to pitch before establishing the Consequence of Inaction (COI), the methodology fails. Generative models naturally collapse these phases due to their conversational priors. The core architectural challenge of this project is therefore not dialogue generation per se, but the mathematical enforcement of pedagogical sequencing against the probabilistic decay and RLHF-induced agreeableness identified by Bai et al. (2022) and Yao et al. (2023). This theoretical tension directly motivates the FSM-constrained hybrid architecture described in Section 2.
+
+Refer to Appendix NEPQ
+1.5 Requirements Definition
+
+1. Requirements Summary & Evolution
+Project requirements evolved iteratively during development, directly shaped by early-phase technical limits and observed failures. Initial hardware constraints exposed the unviability of local-inference models, forcing a pivot to a cloud-first provider strategy supported by a robust fallback abstraction model. Furthermore, initial testing revealed that simple conversational detection was too fragile; these unreliable progressions necessitated the introduction of strict, deterministic stage control. This evolution also resulted in feature culling; following technical feasibility reviews in Phase 1, the planned voice pipeline and local-only inference modules were completely dropped to preserve system latency. Conversely, new requirements-such as urgency overrides and session rewind/replay functionalities-were explicitly added to resolve friction observed during user testing. Finally, manual configuration risks were mitigated by introducing non-code behaviour tuning. All requirements were met or largely met; full evidence detail and traceability are available in the appendix (Refer to Appendix requirements_doc.docx)
+
+Prioritizing "Seller Mode"
+Building the foundational "Seller Mode" first was a strict functional prerequisite as this would generate the operational leverage required to build further features like “Prospect Mode”. By establishing a working baseline where the AI successfully outputted dialogue, it became possible to physically observe user interaction. This live conversational data was mandatory for designing the scoring logic, heuristic detection, and analysis metrics found in the "Prospect," "Training," and "Quiz" modes.
+Without building the Seller Mode first to produce this interaction data, the evaluation modules would have lacked conversational outcomes to grade. The conversational generator had to be built before the evaluator could be validated.
+
+
+1.6 Development Strategy & Architectural Evolution (<450 words) 
+Prototyping Strategy and Rationale
+After understanding the market positioning, an Extreme Programming (XP) approach was adopted to mitigate architectural uncertainty. Generative AI was utilised to assemble initial prototypes, allowing for immediate empirical testing of the NEPQ framework. While this enabled rapid conceptual validation, early iterations produced a high degree of architectural coupling.
+Iteration 1: Local Model Failure
+The initial strategy of a local Qwen 2.5-1.5B model had two fatal categories of failure. First, hardware constraints below a 6GB VRAM threshold imposed a 300-second latency. This delay negated the real-time feedback loop necessary for professional training. Second, the model demonstrated insufficient neural capacity to resolve multi-constraint instructions. This manifested as “instruction bleed” (ElevenLabs, 2024 ), where the model failed to distinguish between system-level methodology and conversational inputs. The ability to manage these competing priorities is strictly limited by parameter count (Kaplan et al., 2020). Consequently, the system consistently abandoned its persona or ignored the sales framework. Due to these compounding limitations in hardware and cognitive stability, the localized model was discarded for a deterministic cloud architecture.
+Iteration 2: Keyword-Driven Rigidity
+ To mitigate Phase 1 latency and complexities, the system was pivoted to a deterministic keyword-matching architecture using a label-and-lookup mechanism. While achieving sub-second latency, this design failed to interpret semantic intent. Transitions were triggered by string presence, ignoring conversational context. For example, the input “I’d want something affordable” was mapped to a [Price-Intent] label, triggering a premature pitch on the second turn. This violated the NEPQ requirement for verified qualification before stage advancement.
+
+2. Architectural Design (2000 words) – MUST give What and Why designed in this way #TODO
+Minimal code snippets in this section plz – unless really needed
+Can get nice exposition marks here
+Ensure every design choice has a "why" linked to research.
+
+2.1 Design Options - Why a FSM? (467 words)
+Having eliminated approaches from Section 1.6, four further architectural options were evaluated and discarded before committing to the final design:
+Option A - Pure LLM (prompt-only, no control structure)
+The simplest approach: instruct the LLM via a long system prompt to follow the NEPQ framework. This was prototyped in the first week and discarded immediately because without hard guards, it experiences significant drift. (See Section 1.4 for “drift”)
+
+Option B - LangChain Agent
+Its Reasoning and Acting (ReAct) loop uses probabilistic routing, prioritising semantic relevance over structural constraints, so any mention of pricing or features is likely to trigger the "Pitch" tool and bypass the mandatory Logical and Emotional stages. Because stage transitions happen inside the model's inference rather than in explicit code, the execution path cannot be enforced or verified, making defects difficult to isolate.
+
+Option C: Fine-Tuning
+ Training a custom model on labelled sales conversations was considered but discarded due to high computational resource requirements and time constraints. Furthermore, there was the necessity of trial-and-error retraining for optimisations in which the scope of this project did not prove as the best use of resources as there are alternatives of existing models. Also, there was no sufficiently labelled dataset found during extensive research for NEPQ-specific conversations and creating such would not be the appropriate usage of time too.
+
+Option D: Managed Dialogue Platforms (Dialogflow, IBM Watson Assistant)
+These platforms use slot-filling dialogue: they detect user intent and advance accordingly. This is the opposite of what NEPQ needs - gated progression that holds users in a stage regardless of readiness signals, enforcing the methodology would mean replacing the platform's core routing logic. Practically, both also create external dependency (Watson enterprise-priced; Dialogflow metered per API call), and without local-execution fallback, either introduces unacceptable reliability risk on a student budget.
+
+Table 2.1 - Architectural Options Comparison
+Approach	Stage Control	NEPQ Compliance	Complexity	Computer Power Needed	Key Decision Factors (Real-World Fit)	Selected?
+Pure LLM (prompt-only)	None - LLM decides	Not guaranteed	Low	Very Light (just sends messages)	Hard to keep on track; skips steps or jumps to selling too fast	No
+LangChain Agent	Non-deterministic	Not guaranteed	High	Light (more API calls due to agent loop)	Too unpredictable; hard to debug; overcomplicates a fixed-step methodology	No
+Fine-tuning	Implicit	Opaque	Very High	Very Heavy (requires GPUs and long training cycles)	Requires labelled dataset that does not exist; expensive and time-consuming for project scope	No
+Managed Dialogue Platforms (Dialogflow, IBM Watson)	Reactive (intent-driven)	Not enforced	High (core routing override)	Very Light (cloud-managed; metered/API-based)	Architecturally incompatible with NEPQ gating; external dependency; enterprise pricing; no local fallback introduces reliability risk	No
+Custom FSM + LLM	Explicit guard functions	Enforced	Medium	Very Light (simple rules + standard LLM calls)	Deterministic control; easy to test and debug; aligns with strict sequencing requirements; fits time and budget constraints	Yes
+
+
+2.2 System Context Diagram
+ 
+01_chatbot_big_picture.mmd
+
+The system follows a clear separation of concerns: the backend (Flask API, FSM, LLM orchestration) handles all business logic and state management, while the frontend (HTML/JS/CSS) is simply only responsible for rendering the chat interface and capturing user input. Communication occurs exclusively via REST JSON over HTTPS
+INCLUDE: Why you chose REST JSON over WebSockets (simpler, stateless, easier to test) and why Flask rather than a heavier framework. Those "whys" are invisible in the diagram and earn marks.
+
+2.3 Sequence Diagram – Main path execution
+The diagram below shows the execution path of a single user message, from client request to system response. It identifies all main participating components and the exact order of operations across the three control layers: prompt construction, LLM generation and FSM validation.
+
+ 	
+02_sequence_full_flow.mmd
+
+Figure 3: UML Sequence Diagram - Lifecycle of a single chat turn across Prompt Constraints (Layer 1), FSM Guards (Layer 2), and Output Contracts (Layer 3).
+What to add instead: a short paragraph on the design significance - specifically, why the FSM evaluation point happens after LLM generation rather than before (i.e., you can't gate without a response to evaluate), and the fallback chain significance. That's design insight that isn't shown in the sequence.
+
+
+2.4 UML Class Diagram
+What this shows: This is like a blueprint of all the building blocks in the code - what they are called, what data they hold, and how they connect to each other.
+Figure 4: UML Class Diagram - Core module hierarchy showing SalesChatbot (orchestrator), SalesFlowEngine (FSM), BaseLLMProvider hierarchy (Strategy pattern), and supporting DTOs.
+
+
+
+2.5 Drift Design (420 words) #Refactor 
+Building on the FSM, its core purpose is maintaining control over distinct conversational subsections and preventing drift.
+Unsuitable drift handling ways were considered. The FSM enforces progression on discrete, predefined signals but is blind to semantic nuance - it cannot interpret emotional shifts or contextual contradiction on its own. Relied on alone, it is a rigid flowchart that can be tricked by word choice. Post-processing filters are similarly insufficient: they catch syntactic violations like character limits but cannot correct flawed reasoning that has already occurred.
+Three structural root causes were identified:
+Problem	Observation	Root Cause 
+The LLM is too helpful	Trained to be agreeable; struggles to challenge or guide	RLHF behavioural priors override explicit instructions in edge cases
+Keywords trick the system	"Price" misread as buying intent	Keyword matching without semantic context triggers false-positive stage advancement
+Conversations are messy	Users contradict themselves, shift tone, or mean one thing while saying another	LLMs lack persistent state; earlier-stage signals leak into later decisions
+No single mechanism addresses all three. The architecture deploys three independent layers, each catching what the others miss.
+ 
+
+
+Layer	Purpose	Limitation
+Prompt constraints	Bias behaviour within a defined role and stage context	Non-deterministic; instructions may degrade under ambiguity or long context
+FSM control	Enforce strict stage progression; prevent invalid transitions	Limited semantic understanding; depends on predefined transition signals
+Output contracts	Validate and restrict final response structure before return	Post-generation only; cannot prevent internal reasoning drift
+Because the layers are independent, failure in one does not cascade. A drifted response cannot derail progression: the FSM holds the current stage until a valid signal is confirmed, and structural violations are caught before the user sees them. §3.1.4 applies this architecture against each concrete failure mode.
+
+
+
+2.6 Voice Mode #TODO - improve
+For the Voice Mode features, the core design principle is modality equivalence  : voice and typed input converge into the same text-based chatbot pipeline, ensuring consistent follow-on actions (state tracking, response generation) regardless of input method.
+Most important design choice was creating the clear separation of concerns. This is done by taking every voice command through a five-stage sequential pipeline built on a layered architecture:
+This modular separation allows voice processing to fail or evolve independently, without affecting core conversation logic.
+graph LR
+    %% Styling to reflect the warm/beige aesthetic from your document
+    classDef stage fill:#fdf8ec,stroke:#bda07b,stroke-width:2px,color:#222,shadow:true;
+
+    A["`**1. Audio Capture**
+    ---
+    • **Goal:** Isolate mic to prevent downstream failures
+    • **Tech:** Web Speech API (*speech.js*)
+    • **Class:** SpeechRecognizer
+    • Continuous + interimResults
+    • Auto-restart on end`"]:::stage
+
+    B["`**2. Transcription**
+    ---
+    • **Goal:** Reliable latency & mitigate error risk
+    • **Tech:** Deepgram SDK (*voice_provider.py*)
+    • **Model:** Nova-2 STT (*smart_format: true*)
+    • HTTP 429 → 60s cooldown
+    • Falls back to none`"]:::stage
+
+    C["`**3. Routing & Validation**
+    ---
+    • **Goal:** HTTP layer for sanitisation & dispatchment
+    • **Tech:** Flask Blueprint (*voice.py*)
+    • **/api/voice/*** endpoints
+    • *validate_message()*
+    • Rate-limit & MIME inference`"]:::stage
+
+    D["`**4. Response Generation**
+    ---
+    • **Goal:** Prompt assembly & state tracking
+    • **Tech:** SalesChatbot (*bot.chat()*)
+    • FSM-driven chatbot
+    • *generate_training()*
+    • POST **/api/chat**`"]:::stage
+
+    E["`**5. TTS Output**
+    ---
+    • **Goal:** Async → sync bridge on daemon thread
+    • **Tech:** Edge TTS (*voice_provider.py*)
+    • Optional playback (*en-US-GuyNeural*)
+    • Mic paused during play`"]:::stage
+
+    A --> B --> C --> D --> E
+
+CREATE A BETTER DIAGRAM THAT WILL ALLOW REMOVING THE BULLET POINTS BELOW – making below just 2 sentences of prose
+•	Audio capture: isolated microphone so browser API changes or failures don't affect anything later-on in the pipeline. Uses Web Speech API (SpeechRecognizer / speech.js).
+•	Transcription: uses Deepgram SDK (nova-2 / voice_provider.py) to mitigate transcription-error risk and for reliable latency
+•	Routing & validation: Dedicated HTTP layer enforces sanitisation and dispatchment to correct handlers before it touches business logic. Uses Flask blueprint (voice.py).
+•	Response generation: Assembles prompt using SalesChatbot (bot.chat()) 
+•	TTS output - Uses Edge TTS (voice_provider.py) via an async-to-sync bridge on a daemon thread.
+def _transcribe_deepgram …(omitted)…
+… (omitted) …
+            options = {
+                "model": "nova-2",
+                "smart_format": True,
+                "language": "en",
+            }
+…
+Deepgram chosen for some inbuilt capabilities like enabling “smart_format” provides formatting and normalisation (e.g., punctuation, phone numbers, currency).
+
+
+2.7.2 STT Fallback 
+STT fallback is an important reliability feature in Voice Mode. The system uses Deepgram first, then falls back to Groq Whisper if transcription fails, times out, or is rate-limited. That keeps the voice feature available without forcing the user to restart the whole conversation.
+
+ 
+This fallback is hidden inside the main architecture diagram on purpose, because it is part of the STT service boundary rather than a separate subsystem. In the report, the detail diagram can be used immediately after the architecture overview to show how resilience is handled. 
+
+
+
+2.7 Security (266 words)
+
+The system's security posture is governed by a single principle: defence-in-depth proportionate to the deployment context. This is a single-instance academic tool with no persistent user store and no financial data. Full enterprise hardening would be both architecturally disproportionate and incompatible with the zero-cost, low-latency requirements. Controls were therefore selected to eliminate the most probable attack vectors, with residual risks explicitly accepted rather than overlooked.
+All security primitives are centralised in src/web/security.py. Route handlers consume them through decorators and middleware rather than inline logic - one file to audit is simpler to verify than checks scattered across multiple route files.
+Threat identification was conducted using the STRIDE framework (Shostack, 2014), mapping each threat category to a specific attack vector before selecting a mitigation. The full threat matrix is documented in the Security Appendix.
+Implemented controls span four layers:
+Layer	Control	Threat addressed
+Input	PromptInjectionValidator - regex strips known adversarial phrases silently	Prompt injection
+Input	InputValidator - messages over 1,000 characters rejected at ingress	Payload-based DoS
+Session	SessionSecurityManager - 200-session cap, 60-minute idle TTL, 15-minute sweep	Memory exhaustion
+Transport	SecurityHeadersMiddleware - X-Frame-Options, X-Content-Type-Options injected on every response	Clickjacking, MIME sniffing
+Injection phrases are replaced with the literal string [removed] rather than rejected outright. Outright rejection signals to an attacker that a filter triggered; silent replacement removes the attack without providing that feedback.
+Two residual risks are consciously accepted: the absence of a structured audit trail (appropriate for an academic tool, not a production one) and the lack of full RBAC (the system operates in a single-user-role context). Both are documented in the Security Appendix alongside the complete STRIDE matrix and verification procedures.
+
+
+
+2.8 Provider Integration & Abstraction #Done - 560 words 
+The LLM Provider module manages the connection between the application and third-party language model APIs (e.g., Groq, SambaNova). This section explains how the system uses abstraction to prevent dependency on a single provider and to guarantee continuous operation during API outages.
+The Problem: Single-Provider Dependency #strengthen slightly
+Initially, the chatbot was connected to just one API provider (Groq) and experienced service interruptions. Groq's free-tier rate-limits were hit over 3 conversations in manual testing to explicitly flag the issue. This is a high-impact and high-probability risk as it completely stops response generation mid-conversation until API-limit reset and manual testing concluded a high probability. Rate Limits: https://console.groq.com/docs/rate-limits
+
+The Solution: Abstract Interface with a Factory
+To resolve this, the system was restructured to connect to a shared interface called BaseLLMProvider. Any provider that implements this interface can be used interchangeably, without the rest of the application being aware of which one is active.
+
+classDiagram
+    direction TB
+
+    class SalesChatbot {
+        -provider : BaseLLMProvider
+        +chat(user_message) ChatResponse
+    }
+
+    class ProviderFactory {
+        <<utility>>
+        +create_provider(type, model) BaseLLMProvider
+    }
+
+    class BaseLLMProvider {
+        <<interface>>
+        +chat(messages) LLMResponse
+        +is_available() bool
+        +get_model_name() str
+    }
+
+    class LLMResponse {
+        <<dataclass>>
+        +content : str
+        +model : str
+        +latency_ms : float
+        +error : str
+    }
+
+    class GroqProvider {
+        <<production>>
+        +chat()
+    }
+
+    class SambaNovaProvider {
+        <<production>>
+        +chat()
+    }
+
+    class DummyProvider {
+        <<testing>>
+        +chat()
+    }
+
+    class ProbeProvider {
+        <<experimentation>>
+        +chat()
+    }
+
+    SalesChatbot ..> ProviderFactory : requests provider at init
+    ProviderFactory ..> BaseLLMProvider : returns concrete instance
+    SalesChatbot --> BaseLLMProvider : chat() - auto-fallback on error
+    BaseLLMProvider ..> LLMResponse : returns
+    BaseLLMProvider <|.. GroqProvider
+    BaseLLMProvider <|.. SambaNovaProvider
+    BaseLLMProvider <|.. DummyProvider
+    BaseLLMProvider <|.. ProbeProvider
+ 
+Figure X: The chatbot orchestrator depends only on the shared interface. It is unaware of which specific API is resolving its request at runtime.
+
+Design Pattern Context
+This structure follows the Strategy design pattern (Gamma et al., 1994): A dedicated Factory pattern handles provider selection at instantiation. The SalesChatbot remains provider-indifferent, as it receives its configuration passed via the constructor rather than declaring a static, hardcoded reference to a specific LLM provider.
+
+Practical Design Achievements
+The chatbot defines an automatic fallback order upon failure in chatbot.py (On each user message, if the active provider returns an error (e.g., a rate limit or timeout), the system automatically attempts the next provider in the list before returning an error to the user. Both times Groq's rate limits were hit during the project, SambaNova handled the request transparently - no manual intervention was needed and the user saw no interruption. Additionally, the Groq provider itself rotates between two API keys (SAFE_GROQ_API_KEY and ALTERNATIVE_GROQ_API_KEY) on rate-limit errors before escalating to the cross-provider fallback.
+Furthermore, this accommodates future extensibility: additional providers or LLM modules can be integrated by implementing the existing interface, requiring no extensive refactoring of the core chatbot logic. This design mitigates risks associated of: 
+•	Service disruption or connectivity loss 
+•	External API deprecation or termination 
+•	Tight coupling to one provider and model 
+
+Provider Comparison
+Provider	Strength	Limitation	Role in System
+Groq	~980ms avg latency, runs llama-3.3-70b-versatile	External API dependency; strict rate limits	Primary
+SambaNova	Alternative free-tier cloud; no rate issues observed in testing	Separate API key required	Fallback
+Dummy	Zero latency; no network or API key requirement	Returns a fixed string (no actual LLM reasoning)	Test suite on business logic
+Probe	Zero latency; Validates prompt variants are different	No LLM reasoning; output is raw prompt data	Prompt experimentation
+
+
+
+2.9 Professional Practice Principles (433 words)
+Version Control
+All source code was managed through a Git repository on GitHub across two branches. master was the stable, deployment-ready version connected to Render for automatic redeployment on merge. A separate working branch isolated all active development, meaning experimental changes such as the Prospect Mode and evaluation modules could be built and verified without risking the live application. 
+During the final refinement phase, structured commit messages were adopted (e.g., fix(fsm):, refactor(diagrams):) to document the purpose of each change against a specific system component.
+[INSERT: git log --oneline output - 4-6 lines showing structured commit messages]
+________________________________________
+Task Management (Kanban)
+A Trello Kanban board managed technical direction across six active columns, providing backlog visualisation and enabling rapid reprioritisation when needed. 
+Figure X: Trello board nearing project close
+Task generation was driven by retrospective analysis rather than upfront assumption. At each sprint boundary, emergent technical risks identified through developer testing were converted directly into explicit deficiency cards (e.g., "Documentation for previous methods" and "Eval & reflection = Missing"). This ensured the backlog reflected the true, observed state of the system.
+This agility was critical during the core architectural pivot. When the Strategy Pattern proved unable to enforce stage-by-stage rules, the backlog was aggressively restructured. The blocking ticket "Strategy switch entanglement" was moved to DISCARDED and logged as "SWITCHED TO FSM". Backed by project diary metrics-which recorded a massive reduction in execution logic from 855 to 319 LOC-this clean-up ensured the board remained strictly aligned with the new FSM architecture, preventing the accumulation of dead legacy tasks.
+Supervisor Reviews
+Supervisor meetings served as structured review points at key development stages - full notes are in Appendix A. Rather than following a fixed schedule, sessions were called when a decision needed validation before work could continue. Key outcomes included specifying the system architecture in October and formally adopting the FSM approach in February after a live demo revealed a fundamental limitation in the Strategy Pattern.
+
+Code Quality
+Three static analysis tools were applied consistently to maintain code integrity across modules:
+Tool	Function	Detected
+Pyright	Static type checking	Type mismatches and unsafe module interfaces
+Ruff	Linting & import order	Unused imports, whitespace violations, style inconsistencies
+Flake8	PEP 8 compliance	Deviations from Python's official style specification
+
+
+Left: flake8, right: ruff
+
+
+Disaster Recovery
+Sensitive credentials were stored exclusively in local .env files, excluded from version control via .gitignore. Periodic full-project archives were saved to a 2FA-protected Google Drive. Three independent backup layers were maintained throughout development:
+•	GitHub - continuous off-site version history
+•	Local device - immediate working copy
+•	Google Drive - encrypted, 2FA-protected full-project zip archives
+
+
+3. Implementation (3300 words)
+3.1 Core Implementation (seller mode)
+
+3.1.1 Module Responsibility
+A modular design was achieved after first categorising segments of code by SLOC, functional relationships and variables. Strategic brainstorming against common design patterns and refactoring techniques assisted with design-decision making. To retain modularity, additions were thought around how to remov
+
+Module	Single Responsibility	Key Public Interface	Dependency Boundary
+chatbot.py	Session orchestration: turn dispatch, provider calls, session persistence	chat(), rewind(), generate_training()	Depends on all core modules; must NOT contain prompt logic or FSM rules directly
+flow.py	FSM: stage definitions, guard functions, advancement logic	get_advance_target(), advance(), switch_strategy()	Independent control layer; must not depend on LLM providers or prompt assembly
+prompts.py	Prompt templates: P1/P2/P3 constraint hierarchy, stage-specific scaffolds	STRATEGY_PROMPTS, get_base_rules(), get_acknowledgment_guidance()	Pure configuration layer; no runtime state or decision logic
+analysis.py	SCL: intent classification, guardedness detection, keyword extraction	classify_intent_level(), detect_guardedness(), analyse_state()	Stateless analysis layer; cannot mutate FSM or session state
+content.py	Prompt assembly: calls prompts.py, injects dynamic context	generate_stage_prompt()	Depends on prompts.py + analysis.py only; no FSM transitions allowed
+prospect.py	Prospect mode: bot-as-prospect with difficulty levels	ProspectChatbot, score_sales_message()	Sandbox module; must not affect production FSM state
+loader.py	YAML loading: cached config, A/B variant assignment	load_signals(), assign_ab_variant()	Configuration-only layer; no runtime decision-making allowed
+quiz.py	Methodology assessment: stage-ID and next-move questions	QuizEngine	Read-only access to FSM state; cannot trigger transitions
+providers/*	LLM abstraction: factory + concrete providers	create_provider(), BaseLLMProvider.chat()	External interface layer; must not import application logic
+web/app.py	Flask routing, session lifecycle, security hooks	REST endpoints	Top-level entry point; only module allowed to orchestrate request lifecycle
+security.py	Input sanitisation, rate limiting, CORS enforcement	SessionSecurityManager	Isolated pre-processing layer; cannot access chatbot state or LLM providers
+Consistent with PEP 257 conventions, each module contains a high-level docstring describing its responsibility and dependency boundary as defined in Table 2.4.
+
+
+The consultative flow maps directly to the NEPQ methodology as follows:
+Table 2.5 – NEPQ Stage Mapping (Consultative Flow)
+FSM Stage	NEPQ Purpose	System Realisation
+Intent	Establish relevance and engagement	Intent detection, elicitation statements, 6-turn safety valve
+Logical	Surface current-state friction	Doubt-signal gating (user_shows_doubt()), problem-probing prompts, 10-turn cap
+Emotional	Surface personal stakes and consequences	Identity/future-cost framing (user_expressed_stakes()), 10-turn cap
+Pitch	Present constrained solution narrative	Stage-specific pitch template, anti-permission rules, assumptive close
+Objection	Resolve resistance and progress	CLASSIFY → RECALL → CONNECT → REFRAME scaffold (objection_flows.yaml)
+
+
+3.1.2 Chatbot Orchestrator
+
+The SalesChatbot orchestrator (chatbot.py) is a high-level controller facilitating the below flow:
+ 
+SalesChatbot Orchestrator - Turn Flow (Mermaid)
+flowchart TD
+    A([chat receives message]) --> B
+
+    B["Analyse state\nIntent · objections · sentiment"]:::purple --> C
+    C["FlowEngine\nStage + system prompt"]:::teal --> D
+    D["Web search enrichment\nStage-gated · optional"]:::amber --> E
+    E[Assemble LLM input] --> F
+    F["Provider call\nPrimary → fallback loop"]:::coral --> G
+
+    G{Valid response?}
+    G -->|Yes| H["Record turn\nUpdate conversation history"]
+    G -->|No| ERR([Return fallback]):::coral
+
+    H --> I["Apply advancement\nFSM stage transition"]:::teal
+    I --> Z([Return ChatResponse])
+
+    H -. async .-> P[("Persist session\nWrite-through · JSONL")]
+    I -. async .-> M[("Emit metrics\nPerformanceTracker")]
+
+    R([rewind · generate_training]) -. replay .-> H
+
+    classDef purple fill:#EEEDFE,stroke:#534AB7,color:#26215C
+    classDef teal   fill:#E1F5EE,stroke:#0F6E56,color:#04342C
+    classDef amber  fill:#FAEEDA,stroke:#854F0B,color:#412402
+    classDef coral  fill:#FAECE7,stroke:#993C1D,color:#4A1B0C
+Figure: SalesChatbot Orchestrator - Turn Flow
+This orchestrator focuses on control flow and delegates lower-level logic (e.g., prompt construction and transition rules) to their respective modules:
+def chat(self, user_message: str) -> ChatResponse:
+    state = analyse_state(self.flow_engine.conversation_history, user_message)
+    system_prompt = self.flow_engine.get_current_prompt(user_message, pre_state=state)
+    llm_messages = [{"role": "system", "content": system_prompt}, ...]  # + history + user msg
+    llm_response = self.provider.chat(llm_messages, stage=self.flow_engine.current_stage)
+
+    if not llm_response.error and llm_response.content:
+        self.flow_engine.add_turn(user_message, llm_response.content)
+        self._apply_advancement(user_message)
+        # ... [Analytics, threading, session persistence omitted] ...
+    return ChatResponse(content=llm_response.content)
+Snippet 3.1: chat() method – turn orchestration
+The provider call and FSM advancement are synchronous - the ChatResponse cannot be returned until _apply_advancement completes. Session persistence and analytics are dispatched on detached daemon threads so I/O latency cannot block the user response. The in-memory history is authoritative for the live session; the on-disk JSONL is a replay artefact, not a recovery log. Session identity is carried by a UUID assigned at Flask-layer init and stored on the SalesChatbot instance - one instance per active session, held in the Flask session registry.
+rewind(n) pops the last n turn-pairs from the FSM's conversation_history and rolls current_stage back using a snapshot stack maintained per advancement. It does not re-invoke the provider, so the operation is O(1) with no LLM cost.
+generate_training() bypasses the chat pipeline entirely: it reads the completed conversation_history post-hoc and dispatches it to training_coach.score_session(), reusing only the analysis layer - reaching neither the FSM nor the provider.
+
+3.1.3 FSM Engine (flow.py) – careful no overlaps with Sect2.3 FSM Diagram #TODO
+This section is the implementation of the design from section 2.3 
+This section covers the implementation of the FSM design established in section 2.3. Three mutator methods drive the engine forward.
+get_advance_target() acts as the transition gateway. It reads the current stage's advance_on parameter from the config, runs the corresponding guard function, and returns the next stage name if the guard passes - or None to hold the current stage.
+   
+
+advance(target_stage) performs the state update: it writes the new stage to self.current_stage and resets self.stage_turn_count to zero, locking the next LLM call into the new prompt context.
+switch_strategy() adapts the flow mid-conversation. If the user signals a specific budget or product early, the engine shifts to a collapsed 3-stage Transactional flow, bypassing the full Logical and Emotional discovery sequence.
+Guard functions control when transitions are permitted. user_shows_doubt() governs Logical → Emotional, passing only when the user explicitly acknowledges their current approach is failing. user_expressed_stakes() governs Emotional → Pitch, passing only when the user articulates personal or financial consequences of inaction. Each stage also carries a turn cap - if a user fails to organically trigger a guard, the cap forces progression to prevent the conversation stalling.
+Guards are bound to config strings via a static ADVANCEMENT_RULES dictionary, eliminating sprawling conditionals:
+transition = self.flow_config["transitions"].get(self.current_stage)
+rule_name = transition.get("advance_on")
+if rule_name and rule_name in ADVANCEMENT_RULES:
+    if ADVANCEMENT_RULES[rule_name](self.conversation_history, user_message, self.stage_turn_count):
+        return transition.get("next")
+A key problem this solves: naive keyword matching would cause false-positive transitions - for example, advancing stage because a user said "I am not struggling." To prevent this, guard evaluation uses word-boundary regex with a retrospective negation window. For each keyword match, the three preceding words are checked against a negation list. If any are negating terms, the match is discarded and the stage is held:
+pattern = re.compile(rf"\b{re.escape(keyword)}\b", re.IGNORECASE)
+for match in pattern.finditer(user_msg):
+    preceding_words = re.findall(r"\w+", user_msg[: match.start()])
+    window = [w.lower() for w in preceding_words[-3:]]
+    if any(w in DEFAULT_NEGATIONS for w in window):
+        continue
+    return True
+This ensures a stage only advances on a semantically affirmative signal from the user.
+
+
+
+
+3.1.4 Drift Mitigation in Practice
+The three-layer architecture defined in §2.6 is deployed differently against each observed failure mode. Four distinct drift types surfaced during iteration (§1.5); each is neutralised by a specific combination of layers.
+Stage drift - methodological prematurity. The model's dominant failure in early testing was pitching a solution before NEPQ's discovery prerequisites were satisfied. The FSM layer handles this by gating advancement on deterministic lexical signals rather than model intuition: flow.py:_check_advancement_condition() evaluates user_shows_doubt() using the word-boundary negation window implemented in §3.1.3, so phrasings such as "I am not struggling" do not trigger false advancement. The prompt layer reinforces this with a HARD STOP block in the Logical and Emotional stage templates, preventing pitch-framing context from assembling unless current_stage == Stage.PITCH.
+
+Topic drift - semantic divergence: When users introduce tangents, generative agents follow them off-methodology. To operationalise the conversational repair mechanisms established in §1.4, analysis.py:extract_user_keywords() extracts thematic anchors each turn and validates them against the active stage's goals. When a deviation threshold is crossed, the prompt layer injects a hidden course-correction directive to steer dialogue back.
+
+Intent drift - signal misclassification: Treating a casual inquiry as a buying signal produces an overly aggressive response. To counter the reasoning-action gaps of standard probabilistic routing (§1.4), an Intent Gate is operationalised in flow.py. It explicitly pre-classifies each turn as HIGH, MED, or LOW before prompt assembly.
+
+Tone drift - persona decay. In long sessions, the agent defaults to a sterile register. The prompt engine counters this through lexical entrainment: user phrasing is re-sampled each turn and injected as few-shot mirroring examples via content.py. A persona checkpoint runs every PERSONA_CHECKPOINT_TURNS = 6 to re-anchor voice before drift compounds.
+The four failure modes map back to the architectural layers as follows:
+Failure mode	Prompt layer	FSM layer	Output layer
+Stage drift	Hard-stop block	Negation-aware guards	Stage field validated
+Topic drift	Corrective directive injection	-	-
+Intent drift	Tier-specific prompt variant	Intent Gate pre-classification	-
+Tone drift	Lexical entrainment + persona checkpoint	-	-
+
+
+
+3.1.5 Prompt Assembly Engine 
+The prompt assembly engine constructs a deterministic, stage-aware system prompt on every conversational turn, ensuring consistent LLM behaviour without reliance on static prompts or long-range context accumulation. This design directly addresses variability and drift by enforcing a structured input pipeline.
+Prompt construction is performed in content.py via generate_stage_prompt(), which composes a complete system prompt before each dispatch to the model. Construction follows a deterministic 11-component pipeline ordered deliberately for positional bias. A simplified view of the assembly:
+def generate_stage_prompt(...):
+
+    base  = get_base_prompt(...)          # primacy anchor
+    state = analyse_state(...)            # or pre_state if supplied
+
+    # Component 1 — Override (early exit)
+    override = check_override_condition(...)
+    if override:
+        return override
+
+    # Component 2 — Acknowledgment tone
+    ack_guidance = get_ack_guidance(...)
+
+    # Component 3 — Tactic adaptation
+    tactic_guidance = _build_tactic_guidance(...)
+
+    # Component 4 — Stage prompt + 4b stage_context
+    stage_prompt, stage_context = _get_stage_specific_prompt(...)
+
+    # Components 5–10 assembled below
+    drift_note                 = detect_topic_drift(...)
+    history_block              = format_conversation_context(...)
+    preference_keyword_context = _get_preference_and_keyword_context(...)
+    terse_guidance             = ...  # if word count < TERSE_INPUT_THRESHOLD
+    persona_checkpoint         = ...  # every PERSONA_CHECKPOINT_TURNS turns
+    state_block                = ...  # turn metadata
+
+    # Final assembly: Deliberate Order
+    return ( base + ack_guidance + tactic_guidance + stage_prompt + stage_context + drift_note + history_block + preference_keyword_context + terse_guidance + persona_checkpoint + state_block)
+
+
+ 
+ 
+The full 11-component pipeline and the conditions governing each component's inclusion are summarised below: 
+Order	Component	Function	When Invoked
+0	base	Factual product/strategy context; establishes hard constraints	Always - primacy anchor
+exit	Override	Short-circuits on direct info request, soft positive at pitch, or excessive validation	Early exit if triggered; nothing else runs
+2	ack_guidance	Tone alignment - verbose, concise, or neutral register	Always; precedes stage logic so adaptation informs the FSM instruction
+3	tactic_guidance	Interaction-style adaptation: decisive user, low intent, guarded, question fatigue	Conditionally - if state condition met
+4	stage_prompt	Stage-specific FSM instruction	Always; positioned after tactics so adaptation already frames it
+4b	stage_context	Objection SOP block (type, reframe strategy, step-by-step flow)	Objection stage only; empty string otherwise
+5	drift_note	Topic-drift correction directive	If semantic deviation threshold exceeded
+6	history_block	Recent conversation window	Always - placed late for recency bias
+7	preference_keyword_context	User-stated preferences + lexical entrainment keywords	If preferences extracted from history
+8	terse_guidance	"Don't over-probe" constraint for very short user replies	If input word count < TERSE_INPUT_THRESHOLD and stage != intent
+9	persona_checkpoint	Strategy + stage reinforcement anchor	Every PERSONA_CHECKPOINT_TURNS turns
+10	state_block	Turn metadata: stage, strategy, turn count, intent level, guarded flag	Always - appended last for maximum recency influence
+
+The ordering is deliberate and exploits positional bias in both directions: base anchors hard constraints via primacy; history, terse guidance, and state_block are placed last to leverage recency, so the LLM weights context closer to generation more heavily. High-priority constraints (overrides, tone) precede stage logic so adaptation already frames the FSM instruction before it lands________________________________________
+3.1.6 Prompt Templates
+Stage-specific instructions are stored in a two-dimensional nested dictionary keyed first by strategy, then by stage:
+STRATEGY_PROMPTS[strategy][stage] → prompt_text
+
+
+
+The get_prompt(strategy, stage) accessor performs two chained dictionary lookups - O(1) - and logs a warning on a cache miss, degrading gracefully to an empty string rather than raising.
+Anti-Parroting Constraints
+A known failure mode of instruction-tuned LLMs is verbatim echo: repeating the user's input as a preamble before adding content. SHARED_RULES addresses this with a dedicated ANTI-PARROTING block:
+•	Extract, do not replay: embed 1–2 keywords (nouns, adjectives) from the user's message, not the full phrase.
+•	Hard repetition limit: never replay more than 3 consecutive words from the user's prior message.
+Manual testing showed rule statements alone were insufficient - the model requires concrete examples to distinguish compliant from non-compliant output. Few-Shot Contrastive Examples were therefore adopted, pairing each rule with inline GOOD/BAD responses:
+CONTRASTIVE EXAMPLES:
+User: "I had an accident and need a new car"
+BAD:  "So the accident pushed you to look for a new car" (verbatim replay)
+GOOD: "What kind of car were you driving before?" (moves forward)
+GOOD: "Was anyone hurt? That changes what you might prioritise in the new one."
+      (embeds "new one" — user's term — without replaying the sentence)
+
+SHARED_RULES = """
+...
+Hard rules:
+Never close on a question mark.
+Don't echo their words back directly - rephrase to show you listened.
+Always quote a price with the product.
+Don't ask yes/no questions.
+P2 PREFERENCES: Match user tone immediately. Keep responses 20-40 words.
+P3 GUIDELINES: Max 1-2 questions per response. Don't correct typos.
+When rules conflict: hard rules win over preferences, preferences win over guidelines.
+"""
+Core constraint strings decoupled from application logic , enforcing the P1/P2/P3 execution priority order.
+
+
+
+Component	Programmatic Format	Behaviour	Structural Purpose
+STRATEGY_PROMPTS	Nested Python Dictionary	FSM stage → prompt lookup (O(1))	Maps the active FSM state to its instruction set, decoupled from runtime execution logic
+SHARED_RULES	Multi-line String Constant	Global constraint injection across all prompts	Enforces universal behavioural boundaries (e.g., anti-parroting, tone constraints) regardless of stage
+get_acknowledgment_guidance()	Conditional Function	Label → instruction selection	Controls response verbosity via discrete policy outputs based on pre-classified intent
+
+Rationale: Decoupling prompt material from the execution engine (chatbot.py, content.py) enforces modularity - modifying a stage's linguistic constraints cannot introduce regressions in the application state manager.
+
+Academic Prompting Techniques - Implementation Summary
+Technique	Source Origin	Implementation Locus within prompts.py
+Zero-Shot Chain-of-Thought	Wei et al. (2022)	BEFORE RESPONDING internal reasoning checklists (shared rules + per-phase block).
+Few-Shot Contrastive	Brown et al. (2020); Zhang et al. (2023)	Grounded GOOD/BAD paired examples preventing state hallucinations in each stage payload.
+Role Prompting + Reinforcement	Shanahan et al. (2023)	Initial persona assignment and the periodic [CHECKPOINT - Turn N] checkpoint anchor.
+Structured Output	Li et al. (2023)	Explicit structural limits and anti-formatting rules (e.g., forbidding Markdown fences).
+Instruction Hierarchy	Wallace et al. (2024)	The immutable P1/P2/P3 priority tiers establishing deterministic rule resolution bounds.
+Grounding	Shuster et al. (2021)	The GROUNDING RULES block enforcing exact-match price quoting and banning estimation.
+Self-Verification	Weng et al. (2022); Wang et al. (2022)	The CHECK criteria anchored at the termination of each phase prompt.
+
+
+3.1.6 YAML Configuration Architecture and Implementation (311words)
+A core architectural decision separates execution logic from behavioural instruction entirely. Python functions as a runtime engine only - it reads, transports, and applies configuration. Every cognitive parameter (keyword classifications, FSM thresholds, prompt structures) lives in external YAML files. Changing how the system behaves requires no code changes.
+This is not a configuration pattern for ambient settings like ports or database strings. YAML stores raw semantic instruction blocks that are injected directly into the LLM context window at runtime. The table below maps each subsystem to its source file and execution handler:
+Subsystem	YAML source	Handler(s)
+Keyword detection	signals.yaml	analysis.py, flow.py
+Objection handling	objection_flows.yaml	content.py
+Prompt assembly	adaptations.yaml, overrides.yaml	loader.py, overrides.py
+Prospect simulation	product_config.yaml, prospect_config.yaml	prospect.py, chatbot.py
+A/B variant assignment	variants.yaml	loader.py
+Several mechanisms are worth noting for their design intent:
+Several mechanisms are worth noting for their design intent:
+Mechanism	How it works	Benefit
+Fixed-order instruction layering	generate_stage_prompt() resolves conflicting instructions in a fixed order: overrides fire first, adaptations append additively, stage baseline loads last	Prevents prompt contamination when multiple conversational conditions fire simultaneously
+Context-specific parameter reuse	The same token (e.g. budget) appears across multiple YAML files intentionally, each serving a distinct execution path - profiling, FSM mutation, preference extraction, objection handling	Modifying its classification in one domain produces no side-effects in another
+Role-specific information framing	chatbot.py and prospect.py both read product_config.yaml but with inverse framings - the prospect receives product data prefixed as buyer research, not specification	Without inversion, the simulated prospect leaks ground-truth specs and prices, destroying the discovery dynamic and inflating evaluation metrics by masking failures like premature pitching
+Session-locked variant selection	Variant selection hashes the session ID with MD5 and applies modulo 2	The same user receives the same variant across reconnections without any database tracking
+The result is a system where behavioural complexity scales through configuration, not code - adding a new objection type, tactic, or FSM stage requires only a YAML edit; the execution layer requires no modification.
+
+
+
+
+3.2 Advanced Features Implementation #tighten 
+3.2.1 Prospect Mode: Deterministic Scoring Architecture – 770 words
+Role Reversal and Initialisation
+Prospect mode inverts the standard conversational roles: the user practises as the salesperson, and the LLM is constrained to behave as a realistic buyer. The core design challenge this creates is consistency - an unconstrained LLM will improvise a buyer persona differently each turn, breaking the simulation's internal logic. The solution is to bind all mutable buyer state to a Python dataclass and rebuild the LLM's system prompt from that state on every turn, keeping the LLM's behaviour anchored to the same persona throughout the session.
+On initialisation, ProspectSession selects a persona using select_persona(), which draws randomly from a product-specific pool defined in prospect_config.yaml (covering domains such as luxury_cars, b2b_saas, fitness, insurance, and others), falling back to general-purpose personas when the product type is unrecognised. Each persona is a structured dictionary specifying the buyer's name, professional background, known needs, pain points, budget ceiling, and personality style:
+- name: "Nina"
+  background: "Operations lead scaling a 60-person services company"
+  needs: ["workflow automation", "reporting visibility", "smooth onboarding"]
+  budget: "$20-$40 per user/month"
+  pain_points: ["tool sprawl", "manual reporting", "slow team adoption"]
+  personality: "Pragmatic evaluator, asks direct ROI and implementation questions"
+These attributes are injected into the LLM's system prompt by _build_system_prompt(), which populates a template with persona details, a readiness label (an indexed mapping of the current readiness float to a phrase such as "On the fence - some interest but not sold"), and difficulty-level behaviour rules. Because the system prompt is rebuilt each turn from the current ProspectState, the LLM's contextual awareness stays synchronised with the simulation's internal state without requiring the LLM to track any of it independently.
+@dataclass
+class ProspectState:
+    readiness: float
+    objections_raised: int = 0
+    turn_count: int = 0
+    needs_disclosed: list = field(default_factory=list)
+    has_committed: bool = False
+    has_walked: bool = False
+    persona: dict = field(default_factory=dict)
+    difficulty: str = "medium"
+    product_type: str = "default"
+readiness runs from 0.0 to 1.0. The terminal flags has_committed and has_walked are set at most once, making session termination an irreversible state transition rather than a condition re-evaluated each turn.
+________________________________________
+Difficulty Scaling
+The three difficulty levels encode distinct buyer archetypes, grounded in buyer typology research cited in the configuration (Merrill & Reid, 1981; Dixon & Adamson, 2011):
+Parameter	Easy - Friendly Buyer	Medium - Cautious Evaluator	Hard - Tough Negotiator
+Initial readiness	0.50	0.20	0.10
+Gain per good turn	0.12	0.08	0.06
+Loss per bad turn	0.05	0.08	0.10
+Max objections	1	3	5
+Patience turns	15	12	10
+Difficulty modulates these four parameters deterministically without LLM involvement; the LLM's injected behaviour rules vary in parallel (e.g., a Hard prospect is instructed to "challenge claims, use comparison leverage, and give short non-committal answers initially").
+________________________________________
+Turn Scoring
+At each turn, after the LLM has generated the prospect's response, _score_sales_message() combines rule-based keyword matching via contains_nonnegated_keyword() with NLU intent classification via classify_intent_level() to rate the salesperson's message from 1 to 5 - avoiding a second LLM call per turn and the inconsistent judgements that would produce.
+def _score_sales_message(self, user_msg: str) -> int:
+    score = 3.0  # Neutral baseline
+
+    if contains_nonnegated_keyword(msg_lower, SIGNALS.get("walking", [])):
+        return 1  # Dominant negative — short-circuits all other rules
+
+    if contains_nonnegated_keyword(msg_lower, SIGNALS.get("commitment", [])):
+        score += 2.0
+    elif intent_level == "high":
+        score += 1.0
+    if intent_level == "low":
+        score -= 0.5
+
+    if contains_nonnegated_keyword(msg_lower, SIGNALS.get("objection", [])):
+        score -= 0.5
+    elif contains_nonnegated_keyword(msg_lower, SIGNALS.get("impatience", [])):
+        score -= 1.0
+
+    if contains_nonnegated_keyword(msg_lower, SIGNALS.get("demand_directness", [])):
+        score -= 1.0
+
+    if msg_length < 5:
+        score -= 0.5
+    if "?" in user_msg:
+        score += 0.3
+
+    if self.state.turn_count <= 2:
+        if any(w in msg_lower for w in ["price", "cost", "payment", "buy", "purchase"]):
+            score -= 0.5
+
+    return max(1, min(5, round(score)))
+Signal lists are loaded from signals.yaml - the same file used across the main chatbot's FSM, keeping vocabulary consistent throughout the system. The 1–5 rating is then converted to a readiness delta by _update_readiness():
+delta = gain * (rating - 3)    if rating ≥ 4
+delta = -loss * (3 - rating)   if rating ≤ 2
+delta = 0.01                   otherwise
+Since gain and loss vary by difficulty (Easy: 0.12 / 0.05; Hard: 0.06 / 0.10), the same message quality produces asymmetric readiness shifts: a rating of 5 yields +0.24 on Easy but only +0.12 on Hard; a rating of 1 costs −0.10 on Easy but −0.20 on Hard. This asymmetry is hardcoded via the gain and loss constants, making difficulty separation precise and fully deterministic.
+________________________________________
+Session Termination
+After every turn, _check_end_conditions() evaluates two terminal outcomes:
+def _check_end_conditions(self) -> str | None:
+    if self.state.readiness >= 0.85 and self.state.turn_count >= 3:
+        return "sold"
+    if self.state.turn_count >= behaviour["patience_turns"] and self.state.readiness < 0.4:
+        return "walked"
+    if self.state.readiness <= 0.0:
+        return "walked"
+    return None
+The sold path requires both a readiness threshold (≥ 0.85) and a minimum turn count of 3, preventing a single strong commitment keyword in the opening message from ending the session prematurely. The walked path fires on either patience expiry or complete disengagement (readiness ≤ 0.0). Both branches set the corresponding terminal flag on ProspectState, after which further processing in process_turn() is suppressed.
+________________________________________
+Post-Session Evaluation
+Once a session terminates, get_evaluation() delegates to evaluate_prospect_session() in prospect_evaluator.py, submitting the full transcript and outcome to the LLM for retrospective assessment across five weighted criteria:
+Criterion	Weight
+Needs discovery	25%
+Rapport building	20%
+Objection handling	20%
+Solution presentation	20%
+Conversation flow	15%
+The weighted total produces an overall score (0–100) and letter grade (F–A), with per-criterion written feedback. Retrospective holistic evaluation is deliberately delegated to the LLM; live readiness decisions are deliberately kept deterministic - each task is assigned to the component best suited to it.
+
+
+________________________________________
+Mermaid diagram - turn processing loop:
+flowchart TD
+    A([User sends message]) --> B[turn_count++<br/>Append to history]
+    B --> C[Rebuild system prompt<br/>from current ProspectState]
+    C --> D[LLM generates<br/>prospect reply]
+    D --> E[_score_sales_message<br/>returns rating 1–5]
+    E --> F[_update_readiness<br/>applies difficulty-scaled delta]
+    F --> G{_check_end_conditions}
+
+    G -- sold / walked --> H[Set terminal flag<br/>on ProspectState]
+    H --> I[get_evaluation<br/>→ 5-criterion LLM scoring]
+    I --> J([Return evaluation report<br/>to user])
+
+    G -- None --> K{show_hints?}
+    K -- Yes --> L[_generate_coaching_hint<br/>one LLM call]
+    K -- No --> M([Return ProspectResponse<br/>with state_snapshot])
+    L --> M
+
+    %% Styling
+    classDef startEnd fill:#d9f2ff,stroke:#0077b6,stroke-width:1px;
+    classDef process fill:#e6ffe6,stroke:#2b9348,stroke-width:1px;
+    classDef decision fill:#fff4cc,stroke:#ff8800,stroke-width:1px;
+
+    class A,J,M startEnd;
+    class B,C,D,E,F,H,I,L process;
+    class G,K decision;
+
+ 
+
+
+
+
+COULD TALK ABOUT THE ANALYSIS/FEEDBACK FEATURE FOR PROSPECT MODE?
+
+3.2.2 Custom Knowledge Base Architecture
+As shown in the diagram, user-submitted product data is cleaned and injected into the model's context.
+Diagram illustrates the one-way journey of custom product data. Both modes are slightly different 
+
+Data Cleaning
+The system is designed not to trust the user’s input format. Before saving the text to a file, clean_value() forces the text through strict rules:
+•	Replaces multiple spaces or tabs with a single space.
+•	Replaces large gaps (3 or more blank lines) with just a normal paragraph break.
+•	It forcefully cuts the text off at a hard character limit (MAX_FIELD_LENGTH). Additionally, if the user submits a data field that is not in the approved list (ALLOWED_FIELDS), the system deletes it. This prevents pasting of a massive document that crashes the AI's memory limits.
+
+Converting to Text 
+AI models read plain text much faster than they read nested code structures (like JSON or dictionaries).  Instead of handing the AI a dictionary, get_custom_knowledge_text() reads the saved data and formats it into a normal text string by combining the field name (key) and its content into single lines. Lists are automatically formatted with bullet points. 
+
+Prompt Injection
+The sequence diagram illustrates the flow; the implementation uses two isolation strategies. In chatbot.py, custom product data is wrapped and passed directly:
+context_block = (
+    "\n\n--- BEGIN CUSTOM PRODUCT DATA ---\n"
+    f"{custom_knowledge}\n"
+    "--- END CUSTOM PRODUCT DATA ---"
+)
+product_context += context_block
+In prospect.py, the same pattern applies but with a framing instruction to prevent the model from assuming prior technical knowledge:
+custom_block = (
+    f"--- BEGIN CUSTOM PROSPECT DATA ---\n{prospect_knowledge}\n--- END CUSTOM PROSPECT DATA ---\n"
+    "(You may know some of this as buyer research—do not assume full technical knowledge.)"
+)
+knowledge = f"{knowledge}\n\n{custom_block}" if knowledge else custom_block
+The delimiters (--- BEGIN/END ---) prevent instruction bleed by creating a hard semantic boundary that signals to the model: "treat this as factual context, not commands." Token safety is enforced upstream in clean_value() (knowledge.py), which strips injection patterns and truncates at MAX_FIELD_LENGTH before the data ever reaches the prompt assembly pipeline. This is "defense in depth"-filtering injection attempts at ingestion prevents them from ever reaching the LLM.
+
+3.3 Assessment & Training Modules
+3.3.1 Quiz Engine #TODO
+The quiz engine separates questions with objectively correct answers from those requiring human judgement - applying the same evaluation method to both would either waste resources or produce unreliable results. Three functions handle this accordingly.
+evaluate_stage_quiz is entirely local. It strips whitespace, lowercases the input, and tests it against the expected keyword. Both stage and strategy identification must pass:
+answer_lower = user_answer.strip().lower()
+stage_correct = contains_nonnegated_keyword(answer_lower, expected_stage.lower())
+correct = stage_correct and strategy_correct
+evaluate_next_move_quiz handles live sales lines - responses code cannot reliably score. The input is sent to the LLM alongside the stage's YAML rubric. The returned score is clamped to 0–100; the alignment field is forced to one of three values only: strong, partial, or weak.
+evaluate_direction_quiz tests strategic foresight. Rather than a pass/fail, the LLM returns two arrays - key_concepts_got and key_concepts_missed - exposing exactly which psychological triggers were or were not deployed.
+________________________________________
+3.3.2 Training Coach # TODO
+The Training Coach is an in-session coaching panel embedded in the sales roleplay system. It runs three distinct sub-systems, each with a clearly bounded responsibility, so that no single component carries more than one job.
+Sub-system	When it runs	Scored by
+Live coaching (generate_training)	After every exchange	LLM → JSON
+Trainee Q&A (answer_training_question)	On user question mid-session	LLM (deeper profile)
+Post-session scoring (score_session)	End of session	Code only - no LLM
+Live coaching returns a structured JSON object after each exchange, with every field capped at 15 words. This constraint is deliberate: it keeps the trainee focused on the conversation, not on reading generated paragraphs. If the LLM call fails, the system does not crash but falls back to a static payload drawn from the current stage's YAML config.
+Post-session scoring deliberately avoids the LLM entirely. A sentiment-based LLM evaluation would produce impressionistic results a trainee could not act on. Instead, the score is computed from two logged ratios:
+# Signal detection - up to 25 pts
+ratio = signal_transitions / total_transitions
+score["signal_detection"] = int(25 * ratio)
+
+# Session length - up to 10 pts (target: 7–12 turns)
+score["session_length"] = 10 if 7 <= turns <= 12 else penalty
+Signal detection penalises the trainee for advancing stages by patience timeout rather than by extracting genuine intent signals from the prospect. Session length rewards conversations that stay within a window of 7–12 turns - too short suggests rapport was not established; too long indicates poor conversational control.
+The governing design principle across all three sub-systems is the same: any evaluation that can be resolved with deterministic code is resolved with code. The LLM is used only where structured logic cannot - grading open-ended human responses against a rubric. This keeps per-turn latency low and makes the final score mathematically traceable rather than impressionistic.
+
+
+
+4. Evaluation And Reflection [Testing & Validation (incl. UAT)]
+Test metrics referenced in this section are documented in full in testing-metrics.md.
+
+4.1 Test Strategy and Methodology
+The verification strategy adopted a layered approach combining automated regression testing, structured developer-executed manual scenario testing, and planned User Acceptance Testing (UAT). This mirrors the multi-layered control architecture of the system itself: just as prompt constraints, FSM guards, and post-processors each provide redundant behavioural control, the verification strategy does not rely on any single method in isolation. Manual scenario testing was prioritised during active development given the iterative and LLM-dependent nature of the system; the non-deterministic output of language models means automated testing alone cannot capture the full range of behavioural edge cases.
+~96 words
+________________________________________
+4.2 Automated and Regression Testing
+
+~64 words
+________________________________________
+4.2.5 Static Analysis and Pre-Deployment Risk Assessment
+Prior to final build, a structured pre-deployment risk assessment was conducted to identify logical gaps in the FSM control architecture. The table below records each identified risk, the challenge it presents, and the mitigation applied. All high-risk items were resolved before the final build was frozen.
+Logical risk	Challenge	Mitigation applied
+Advancement pipeline conflict (Row 3 vs Row 6)	Both filter stage progression; FSM may stall or contradict itself if lexical match passes but doubt signal is absent.	Strict execution order enforced: Lexical Match → Context Validation → Intent Gate → Doubt Signal Check → Advance/Cooldown. Fail-fast at first failing layer.
+Regex fragility	\bword\b fails on synonyms, typos, or semantic intent; 92% accuracy implies 8% production drift.	Word-boundary enforcement retained; semantic fallback flagged as future work.
+Tone-lock rigidity	Locking tone after message #1 ignores mid-thread conversational shifts.	Periodic re-evaluation every 3–4 turns with confidence threshold drop to neutral-professional below 0.7.
+Safety valve ambiguity	10-turn safety valve lacked explicit fallback behaviour - risk of infinite loop or forced false advance.	Explicit transition defined: COOLDOWN_EXPIRED → NEEDS_CLARIFICATION → HUMAN_HANDOFF.
+Metric transparency	100% compliance figures suggest synthetic-only validation; real-world phrasing will degrade binary claims.	Metrics reframed as developer-assessed baselines; confidence intervals identified as future instrumentation target.
+~46 words + table
+________________________________________
+4.3 Developer-Executed Manual Testing
+Manual scenario testing was the primary verification mechanism during iterative development. Each test cycle identified a concrete failure mode, informed a targeted fix, and was re-executed to confirm resolution.
+
+4.3.1 Four (Iterations) That Shaped the Architecture 
+Iteration 1 - Permission questions disrupting conversational authority
+Early testing revealed a persistent pattern of deferential closings - for example, "Would you like to hear more?" - attributable to RLHF-trained politeness rather than intentional design. Prior research identifies this pattern as damaging to sales authority before value has been established (Bai et al., 2022). Remediation applied a three-layer constraint: a soft prohibition within prompts.py:_SHARED_RULES; an FSM guard preventing premature pitch-context injection; and a regex post-processor as a final fallback, reflecting the Constitutional AI principle that explicit instruction-level constraints can override default RLHF tendencies (Bai et al., 2022).
+Iteration 2 - False stage advancement on weak lexical signals
+analysis_config.yaml was initially populated with incomplete intent phrases - "want to", "need to", "trying" - which carry no semantic weight in isolation, causing the FSM to advance from Intent to Logical after a single turn. This violates SPIN Selling's requirement to verify intent through situational questioning before moving to problem identification (Rackham, 1988). Remediation removed the weak phrases, enforced word-boundary regex (\b...\b) in analysis.py:text_contains_any_keyword() to prevent substring collisions, and introduced a negation-aware pipeline to handle phrasings such as "I'm not struggling." Vague-intent conversations now sustain three to four turns in the Intent stage before any advancement occurs.
+Iteration 3 - Over-probing and the interrogation effect
+Without a question-frequency constraint, the model generated two to three questions per response during the Logical stage, which testers described as interrogative. Conversational Repair theory identifies rapid-fire questioning as a turn-taking violation that triggers defensiveness (Schegloff, 1992). The fix introduced a BE HUMAN rule in _SHARED_RULES: one declarative observation must precede any question, with a hard cap of one question per response enforced.
+Iteration 4 - Premature pitching at Logical and Emotional stages
+Product-adjacent keywords caused the model to present product features before emotional stakes had been established, bypassing NEPQ's Consequence of Inaction requirement (Miner, 2022). A HARD STOP block was embedded in the Logical and Emotional stage prompts, and a generate_stage_prompt() guard in content.py ensures pitch-framing context is assembled only when current_stage == Stage.PITCH.
+Problem	Theory applied	Fix layer	Artefact
+Permission questions	Constitutional AI (Bai et al., 2022)	Prompt + code + regex	prompts.py:_SHARED_RULES
+False advancement on weak keywords	SPIN Selling (Rackham, 1988)	Config + word-boundary regex	analysis_config.yaml + analysis.py
+Over-probing / interrogation effect	Conversational Repair (Schegloff, 1992)	Prompt rule	prompts.py:_SHARED_RULES
+Premature pitching	NEPQ / COI (Miner, 2022)	Prompt hard-stop + FSM guard	prompts.py + content.py
+Unconditioned solution dumping	ReAct (Yao et al., 2023)	Intent gate	flow.py:user_has_clear_intent()
+Objection handling complexity	Chain-of-Thought (Wei et al., 2022)	CoT scaffolding	prompts.py objection stage
+~385 words
+ 
+
+Refer to appendix Diary and Git_Logs.md for evidence of iterative approach 
+
+
+4.3.2 Measurable Impact of the FSM Control Architecture
+Prior to FSM implementation, stage advancement relied on a turn-count heuristic. Under this design, a user stating "I'm happy, nothing needs fixing" after five turns would still advance to the Emotional stage regardless of conversational content - developer testing recorded false advancement in over 40% of test scenarios.
+Following implementation of flow.py:_check_advancement_condition(), advancement is governed by keyword-gated logic. The function user_shows_doubt() reads from analysis_config.yaml:advancement.logical.doubt_keywords and fires only on verified signals such as "not working", "struggling", or "broken". The negation-aware pipeline in analysis.py:text_contains_any_keyword() (lines 79–92) ensures phrasings such as "I'm not struggling" do not trigger advancement. A context-window guard additionally prevents signals from prior stages leaking into current-stage evaluation.
+Across 25 developer-executed test scenarios, false advancement dropped from over 40% to under 8% - a reduction of approximately 32 percentage points. Stage accuracy was calculated as correct FSM transitions divided by total observed transitions, where "correct" required both that no stage advanced without satisfying the rules in _check_advancement_condition() and that no stage was skipped without meeting prerequisite signals. FSM evaluation latency was consistently measured at 700–900 ms per call.
+4.3.3 Developer Bias and Verification Limits
+A material limitation of the testing approach is that all behavioural metrics were produced by a single developer evaluating a system of their own construction. A developer familiar with a system's edge cases may unconsciously avoid them during scenario design, inflating apparent accuracy. 
+
+
+4.4 Usability Test
+
+Study Plan
+The methodological choices were deliberately structured to balance ecological validity with measurable system validation. Remote Microsoft Teams sessions reduce Hawthorne effect bias by allowing participants their own environment; screen-share recording captures passive UI friction (cursor hesitation, pause patterns) that verbal-only feedback masks. Post-scenario interviews replace think-aloud protocol to prevent cognitive load contamination of natural task behaviour. Two fixed scenarios establish controlled conditions for comparable data; the third open-ended scenario deliberately surfaces edge-case behaviour that scripted prompts cannot expose. A sample of 25 is grounded in Nielsen's Law (~85% of usability issues surface by N=5; diminishing returns beyond). The deliberate split between sales-experienced and non-sales participants counters practitioner normalisation bias-experienced reps instinctively compensate for system gaps, while non-sales users reveal genuine usability and realism friction points. This exploratory, qualitative orientation prioritises depth of perceived usability insight over statistical significance benchmarks. Collectively, these choices create a structure where FSM progression, signal detection, and adaptive behaviour are observable both through system logs (Section 2 metrics) and participant experience.
+Analysis
+ 
+ 
+ 
+
+Ratings - a mixed picture. Usability was near-perfect (4.69/5) and the sales structure scored well (4.08/5), meaning the interface and conversation flow are solid. But the chatbot struggles where it counts most: adapting dynamically to what users say (2.92) and actually moving conversations toward a close (2.96). Half the participants said the bot missed a moment to advance the sale.
+Who took part. The group skews young (62% aged 18–24) and is evenly split - 13 with sales/prior experience, 13 without. Almost all lacked formal sales training. The no-experience half found it especially useful, which aligns with the headline finding that 73% think it's best suited for beginners.
+The top feature request is almost unanimous. End-of-session feedback was chosen by 25 of 26 people - effectively everyone. After that, sales technique labels and multiple prospect personas were the next most wanted. Difficulty settings and real-time coaching followed. Progress tracking across sessions was the least requested.
+Qualitative themes - what stood out:
+•	Praised: Objection handling, not caving on price, technique labels, and the non-judgmental tone were the most cited positives. Several said they "forgot it was a chatbot" for a stretch.
+•	Frustrated: Predictable response patterns (users could sense the "rotation" of replies after ~10 mins), voice input auto-sending mid-sentence, responses that were too long or too formal, and jargon-heavy feedback terms.
+•	Chatbot's edge: Zero judgment, 24/7 availability, instant restart, and being able to pause and think are things a human practice partner can't replicate.
+•	Chatbot's gap: Reading body language, real stakes, emotional warmth, unpredictable prospect behaviour, and industry-specific knowledge are things a real person brings that text can't.
+
+
+
+4.5 System Limitations and Failure Boundaries
+The following limitations are distinguished by addressability: inherent limitations arise from the probabilistic nature of large language models and cannot be fully engineered away; scope-bounded limitations are addressable given additional time or resources and represent reasonable future work.
+Inherent limitations
+LLM non-determinism. Despite staged constraints, output variance is inherent to the architecture. Identical prompts may yield different responses across runs; no deterministic guarantee of behavioural conformance therefore exists.
+Residual dialogue drift. The layered control architecture substantially reduces conversational drift but cannot eliminate it during extended or mixed-intent conversations - an inherent property of probabilistic language models operating within finite context windows.
+Scope-bounded limitations
+The following trade-offs are documented to support honest assessment of the system's confidence boundaries and to inform the priority order of next-step development.
+Trade-off	What was gained	What was lost
+Security posture	Adequate for academic scope	Below production expectations for broad external deployment
+Intent classification boundaries	Deterministic classification for clear signals	Some ambiguous phrasings remain misclassified
+Observability	Metrics file and developer panel	No structured end-to-end tracing solution
+Additional scope-bounded gaps include: absence of retry orchestration for provider-side failures; partial prompt injection mitigation relying on pattern-based filters only; single-instance deployment limiting horizontal scalability; in-memory session lifecycle unsuitable for persistent production use; and regression coverage gaps in certain behavioural validations currently reliant on manual scenario testing alone. All behavioural metrics in this report are developer-assessed; external tester observations and missed edge cases will be incorporated following UAT data lock.
+~205 words
+________________________________________
+4.6 Evaluation Against Project Objectives
+STUDENT TO COMPLETE - ~150 words available here.
+
+Pull your original objectives from Section 1 / your Project Definition Form. For each, state: Met / Partially met / Not met, then cite one piece of evidence from earlier in this report (e.g. "False advancement reduced to <8% - Section 4.3.2"). This is a high mark-weight item per the mark scheme's 60–69% band ("systematic evaluation… comparison of outcome against objectives").
+~150 words budgeted
+________________________________________
+4.7 Personal Reflection
+STUDENT TO COMPLETE - ~120 words available here. First person permitted.
+
+Must include: (1) one time-management observation, (2) one technical decision you would revisit and why, (3) one statement of growth as a computer science professional. Do not generalise - be specific about this project. Mark scheme 70–79% band requires "substantial reflection… leading to exposition of insights."
+~120 words budgeted
+________________________________________
+4.8 Ethics
+The deployment of an automated conversational sales agent raises three ethical considerations. First, privacy risk: session audio captured during practice should be deleted immediately upon completion; indefinite retention creates a permanent failure record and conflicts with the BCS Code of Conduct obligation to respect individual privacy. Second, algorithmic bias in scoring: systems trained on historical sales data risk rewarding coercive interaction styles; scoring rubrics require manual auditing to penalise pressure techniques and reward active listening. Third, limited emotional intelligence: prolonged use of a deterministic simulator risks conditioning trainees to treat genuine customer concerns as logical patterns; the system is therefore positioned as a supplementary practice tool only, consistent with the BCS obligation to consider wider societal implications of deployed systems.
+
+
+5. References
+(Note: Please review the exact URLs for ElevenLabs and Harvard Business Review, as I have provided standard URLs for those exact publishers since the specific links were missing from your initial draft).
+
+Association for Talent Development (ATD) (2023) State of the Industry Report. Alexandria, VA: ATD Press.
+Bai, Y., Jones, A., Ndousse, K., Askell, A., Chen, A., DasSarma, N., Drain, D., Fort, S., Ganguli, D., Henighan, T., Joseph, N., Kadavath, S., Kernion, J., Conerly, T., El-Showk, S., Elhage, N., Hatfield-Dodds, Z., Hernandez, D., Hume, T., Johnston, S., Kravec, S., Lovitt, L., Nanda, N., Olsson, C., Amodei, D., Brown, T., Clark, J., McCandlish, S., Olah, C., Mann, B. and Kaplan, J. (2022a) 'Training a helpful and harmless assistant with reinforcement learning from human feedback', arXiv preprint arXiv:2204.05862. Available at: https://arxiv.org/abs/2204.05862 (Accessed: 14 January 2024).
+Bai, Y., Jones, A., Ndousse, K., Askell, A., Chen, A., DasSarma, N., Drain, D., Fort, S., Ganguli, D., Henighan, T. and Joseph, N. (2022b) 'Constitutional AI: Harmlessness from AI feedback', arXiv preprint arXiv:2212.08073. Available at: https://arxiv.org/abs/2212.08073 (Accessed: 14 January 2024).
+Brown, T.B., Mann, B., Ryder, N., Subbiah, M., Kaplan, J., Dhariwal, P., Neelakantan, A., Shyam, P., Sastry, G., Askell, A. and Amodei, D. (2020) 'Language models are few-shot learners', Advances in Neural Information Processing Systems, 33, pp. 1877–1901. Available at: https://arxiv.org/abs/2005.14165.
+Dixon, M. and Adamson, B. (2011) The Challenger Sale: Taking Control of the Customer Conversation. New York, NY: Portfolio/Penguin.
+ElevenLabs (2024) ElevenLabs Prompting Guide. Available at: https://elevenlabs.io/docs (Accessed: 18 February 2024).
+Fowler, M. (1999) Refactoring: Improving the design of existing code. Boston, MA: Addison-Wesley.
+Freeman, S., Eddy, S.L., McDonough, M., Smith, M.K., Okoroafor, N., Jordt, H. and Wenderoth, M.P. (2014) 'Active learning increases student performance in science, engineering, and mathematics', Proceedings of the National Academy of Sciences, 111(23), pp. 8410–8415. doi:10.1073/pnas.1319030111.
+Harvard Business Review (2023) 'The Crisis in Corporate E-Learning', Harvard Business Review. Available at: https://hbr.org (Accessed: 18 February 2024).
+Janek Performance Group (2023) The State of Sales Training. Las Vegas, NV: Janek Performance Group. Available at: https://www.janek.com/research (Accessed: 18 February 2024).
+Kaplan, J., McCandlish, S., Henighan, T., Brown, T.B., Chess, B., Child, R., Gray, S., Radford, A., Wu, J. and Amodei, D. (2020) 'Scaling laws for neural language models', arXiv preprint arXiv:2001.08361. Available at: https://arxiv.org/abs/2001.08361.
+Lewis, P., Perez, E., Piktus, A., Petroni, F., Karpukhin, V., Goyal, N., Küttler, H., Lewis, M., Yih, W.T., Rocktäschel, T. and Riedel, S. (2020) 'Retrieval-augmented generation for knowledge-intensive NLP tasks', Advances in Neural Information Processing Systems, 33, pp. 9459–9474.
+Li, Y., Lin, Z., Zhang, S., Fu, Q., Chen, B., Lou, J.G. and Chen, W. (2023) 'Making Large Language Models Better Reasoners with Step-Aware Verifier', Proceedings of the 61st Annual Meeting of the Association for Computational Linguistics, pp. 5315–5333.
+Merrill, D.W. and Reid, R.H. (1981) Personal Styles & Effective Performance: Make Your Style Work for You. Radnor, PA: Chilton Book Company.
+Miner, J. and Acuff, J. (2023) The New Model of Selling: Selling to an Unsellable Generation. New York, NY: Morgan James Publishing.
+Pérez-Rosas, V., Wu, X., Resnicow, K. and Mihalcea, R. (2019) 'What makes a good counselor? Learning to distinguish between high-quality and low-quality counseling conversations', Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics. Florence, Italy, 28 July–2 August. Stroudsburg, PA: Association for Computational Linguistics, pp. 926–935.
+Rackham, N. (1988) SPIN Selling. New York, NY: McGraw-Hill.
+Sales Readiness Group (2024) Sales Training Retention and Impact Report. Seattle, WA: SRG.
+Schegloff, E.A. (1992) 'Repair after next turn: The last structurally provided defense of intersubjectivity in conversation', American Journal of Sociology, 97(5), pp. 1295–1345. doi:10.1086/229903.
+Shanahan, M., McDonell, K. and Reynolds, L. (2023) 'Role play with large language models', Nature, 623(7987), pp. 493–498.
+Shostack, A. (2014) Threat Modeling: Designing for Security. Indianapolis, IN: John Wiley & Sons.
+Shuster, K., Poff, S., Chen, M., Kiela, D. and Weston, J. (2021) 'Retrieval augmentation reduces hallucination in conversation', Findings of the Association for Computational Linguistics: EMNLP 2021, pp. 3784–3803.
+The Bridge Group (2024) SaaS AE Metrics & Compensation Report. Hudson, MA: The Bridge Group.
+Verified Market Research (2024) Global Sales Training Market Size, Share and Forecast. Lewes, DE: Verified Market Research. Available at: https://www.verifiedmarketresearch.com (Accessed: 18 February 2024).
+Wallace, E., Xiao, C., Leike, J. and Sutskever, I. (2024) 'The Instruction Hierarchy: Training LLMs to Prioritize Privileged Instructions', arXiv preprint arXiv:2404.13208.
+Wang, X., Wei, J., Schuurmans, D., Le, Q., Chi, E., Narang, S., Chowdhery, A. and Cui, P. (2022) 'Self-consistency improves chain of thought reasoning in language models', arXiv preprint arXiv:2203.11171.
+Wei, J., Wang, X., Schuurmans, D., Bosma, M., Xia, F., Chi, E., Le, Q.V. and Zhou, D. (2022) 'Chain of Thought Prompting Elicits Reasoning in Large Language Models', Advances in Neural Information Processing Systems, 35, pp. 24824–24837. Available at: https://arxiv.org/abs/2201.11903.
+Weng, Y., Min, Y., Song, M., Qiu, X. and Zhang, Y. (2022) 'Large language models are reasoners with self-verification', arXiv preprint arXiv:2212.09561.
+Yao, S., Zhao, J., Yu, D., Du, N., Shafran, I., Narasimhan, K. and Cao, Y. (2023) 'ReAct: Synergizing reasoning and acting in language models', Proceedings of the 11th International Conference on Learning Representations (ICLR 2023). Kigali, Rwanda, 1–5 May. Available at: https://arxiv.org/abs/2210.03629 (Accessed: 20 January 2024).
+Zhang, Y., Feng, Y. and DP, X. (2023) 'In-context learning with contrastive demonstrations', arXiv preprint arXiv:2303.00001.
+
+
+Appendices
+
+Appendix A: Requirements_doc.docx
+
+Appendix : Weekly to bi-weekly Supervisor meetings
+Appendix B: Git commit logs
+
+
+Appendix : NEPQ Framework
+NEPQ_Framework.pdf, accessed via https://7thlevelhq.com/free-resources/  https://7thlevelhq.com/the-nepq-framework/
+NEPQ_cheat_sheet.webp
+https://7thlevelhq.com/free-resources/  https://7thlevelhq.com/nepq-cheat-sheet-2/
+
+
+
+Appendix : Iterative Case Studies
+Detailed failure-to-fix traces and code snippets supporting Section 2.3.
+Appendix C: UAT Supporting Data
+Questionnaire instrument, raw responses, summary statistics, and transcript excerpts.
+Appendix D: Project Development Diary
+Chronological development log in Documentation/Diary.md.
+
+Appendix : analytics.json and metrics.json
+
+
+
+
+Contextual investigation/ Background research :
+-	Proper literature review- NEPQ, SPIN, CoT, entrainment critically review  why did you choose what you did?
+-	Formal Requirements document with rationale
+
+Deliverable and project professionalism:
+-	Formal Requirements document with rationale
+-	Working Chatbot (Clearly present)
+-	ARCHITECTURE_CONSOLIDATED.md
+-	Diagrams/
+-	Security-Analysis.md
+-	Quiz-Feature-Development.md (only supplementary)
+-	Technical_decisions.md
+-	strategies_comparison.md – must use
+Evaluation & Reflection:
+-	UAT.md
+-	Diary.md- is too brief rn
+-	failed_conversation.md- shows conversation failing and why- honest evaluation as ms rewards acknowledging limitations  worth referencing in section 4.3 Weakness
+
+Exposition:
+-	Harvard bibliography
+-	Add UI screenshots to docs
+
+Sylvia Meetings.txt - include this as an appendix or cite dates from it in your diary/process section. Supervisor meetings are evidence of professional practice and project management.
+
+BCS lifecycle requirement - the mark scheme calls this out specifically (Requirements → Design → Implementation → Verification → Maintenance). Your Artifact-Traceability.md already maps 30 artifacts to SDLC phases, which directly addresses this. Make sure your report explicitly names each phase - assessors are looking for that language.
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+UAT data analysis:
+ 
+
+
+
+
+
+
+
+
+
+
+This doesn’t effect word count:
+Diagram captions must be self-explanatory to a reader who has not read the surrounding text (exposition quality) Figure 2 (FSM State Machine) caption currently reads: "UML State Machine - Consultative sales flow with explicit transition guards. Each arrow is labelled with the guard condition that must return True before the FSM advances. GUARDS AND HAS STATES". The last three words are a dev note that must be removed. More importantly, the caption should specify the entry state, terminal state, and the two strategy paths. Replace with: "Figure 2: UML State Machine Diagram - Consultative sales pipeline (Intent → Logical → Emotional → Pitch → Objection). Each transition is conditioned on a named guard function (e.g., user_shows_doubt() for Logical → Emotional). Safety-valve turn caps force progression if organic signals are not triggered."
+Apply the same principle to all other figure captions: each must state what the figure shows structurally, what the colour encoding or notation means, and what key architectural insight a reader should extract from it. A caption that says only "Figure 3: Sequence Diagram" is insufficient for a 60%+ exposition mark.
+
+
+This doesn’t effect word count:
+🏆 Golden Rules for >80% Visuals in CS3IP:
+1.	Never dump a raw, uncaptioned image: Every single diagram, snippet, and screenshot MUST have a formal caption (e.g., Figure 4: UML Sequence Diagram illustrating the FSM-to-LLM handoff).
+2.	Explicitly refer to them in the text: Never put a screenshot in without writing, "As demonstrated in Figure 4..." in the preceding paragraph.
+3.	No "wall of code": Code snippets should never be longer than 20 lines. If it's longer, truncate the boring parts with ... or put the full script in Appendix A.
+4.	Syntax Highlighting: Ensure your code snippets have proper syntax highlighting and use a monospace font (like Consolas or Courier) so they look professional.
+If you include these specific visuals, you make it virtually impossible for the assessor to dispute that you engineered a complex, considered, and successful system.
+
+How to use this draft
+•	Every [INSERT FIGURE X] marker = paste or render the corresponding .mmd file there in your word processor / LaTeX. Add the caption below it exactly as written.
+•	Every [INSERT SCREENSHOT X] = replace with an actual screenshot from the running app.
+•	Every [INSERT LOG X] = paste the terminal output from that test run.
+•	All code blocks are taken verbatim from the source files - do not change them.
+•	Citations are in Harvard style; add them to your reference list.
+
+
+
+
+
+
+Quick wins / housekeeping (~150 words total)
+These are free cuts - no design content lost:
+Item	Words saved	Reason
+Delete all [GRAPH PLACEHOLDER], #TODO, #improve, #tighten, #Done, #EDITING markers	~30	Meta-text, unprofessional
+Delete "What this shows: This is like a blueprint…" in 2.4	~25	Trivialising; assessor knows what UML is
+Delete the bracketed [IS 'BRIDGE' PARAGRAPH NEEDED HERE?] at end of 1.4	~10	Meta note
+Delete *strategies_comparison.md contains deeper comparison #will use this*	~10	Internal note
+Delete the duplicated **Snippet 3.6** caption in 3.1.6	~20	Genuine dupe
+Delete "The diagram below shows the execution path…" in 2.3 - caption already shows this	~30	Pre-figure description redundant when caption exists
+Delete "What to add instead: a short paragraph on the design significance…" in 2.3	~40	This is a note-to-self; assessors will deduct marks
+These alone save ~165 words and remove embarrassing artefacts. Do these first.
+
+
+

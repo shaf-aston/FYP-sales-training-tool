@@ -8,6 +8,7 @@ from threading import Lock
 from flask import Blueprint, jsonify, request
 
 from chatbot.analytics.session_analytics import SessionAnalytics
+from web.security import require_privileged_mutation, require_rate_limit
 from chatbot.knowledge import (
     ALLOWED_FIELDS,
     MAX_FIELD_LENGTH,
@@ -122,12 +123,16 @@ def quiz_direction():
 
 
 @bp.route("/knowledge", methods=["GET"])
+@require_privileged_mutation
+@require_rate_limit("knowledge")
 def get_knowledge():
     """Retrieve current custom knowledge"""
     return jsonify({"success": True, "data": load_custom_knowledge()})
 
 
 @bp.route("/knowledge", methods=["POST"])
+@require_privileged_mutation
+@require_rate_limit("knowledge")
 def save_knowledge_route():
     """Save custom knowledge data with field-level validation"""
     data = request.json or {}
@@ -145,6 +150,8 @@ def save_knowledge_route():
 
 
 @bp.route("/knowledge", methods=["DELETE"])
+@require_privileged_mutation
+@require_rate_limit("knowledge")
 def clear_knowledge_route():
     """Clear all custom knowledge"""
     success = clear_custom_knowledge()
@@ -168,7 +175,9 @@ def get_analytics_summary():
     return jsonify({"success": True, **summary})
 
 
-_FEEDBACK_FILE = os.path.join(os.path.dirname(__file__), "..", "..", "..", "feedback.jsonl")
+_FEEDBACK_FILE = os.path.join(
+    os.path.dirname(__file__), "..", "..", "..", "feedback.jsonl"
+)
 _feedback_lock = Lock()
 
 

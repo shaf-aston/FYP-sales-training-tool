@@ -21,7 +21,6 @@ from dotenv import load_dotenv  # noqa: E402
 from flask import Flask, render_template, send_from_directory  # noqa: E402
 from flask_cors import CORS  # noqa: E402
 
-# Load environment variables from .env file
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", ".env"))
 
 from chatbot.constants import MAX_PROSPECT_SESSIONS, PROSPECT_IDLE_MINUTES  # noqa: E402
@@ -36,10 +35,8 @@ from web.security import (  # noqa: E402
     initialize_security,
 )
 
-# Disable .pyc file generation
 sys.dont_write_bytecode = True
 
-# Initialize Flask app
 app = Flask(__name__)
 
 # CORS: restrict to configured origins (default: Render deployment + localhost dev)
@@ -47,14 +44,17 @@ app = Flask(__name__)
 _allowed_origins = [
     o.strip()
     for o in os.environ.get(
-        "ALLOWED_ORIGINS", "https://fyp-sales-training-tool.onrender.com,http://localhost:5000"
+        "ALLOWED_ORIGINS",
+        "https://fyp-sales-training-tool.onrender.com,http://localhost:5000",
     ).split(",")
     if o.strip()
 ]
 CORS(app, origins=_allowed_origins)
 
 
-rate_limiter, session_manager, injection_validator = initialize_security(app_logger=app.logger)
+rate_limiter, session_manager, injection_validator = initialize_security(
+    app_logger=app.logger
+)
 
 app.after_request(SecurityHeadersMiddleware.apply)
 session_manager.start_background_cleanup()
@@ -68,31 +68,34 @@ prospect_session_manager = SessionSecurityManager(
 prospect_session_manager.start_background_cleanup()
 
 
-def get_session(session_id):
+def _get_session(session_id):
     """Get chatbot, updating timestamp. Returns bot or None"""
     return session_manager.get(session_id)
 
 
-def set_session(session_id, chatbot):
+def _set_session(session_id, chatbot):
     """Store chatbot in memory"""
     session_manager.set(session_id, chatbot)
 
 
-def delete_session(session_id):
+def _delete_session(session_id):
     """Remove session from memory"""
     session_manager.delete(session_id)
 
 
-def require_session():
+def _require_session():
     """Pull the bot for this session, or return an error response if the session is missing"""
     from flask import jsonify, request
 
     session_id = request.headers.get("X-Session-ID")
     if not session_id:
         return None, (jsonify({"error": "Session ID required"}), 400)
-    bot = get_session(session_id)
+    bot = _get_session(session_id)
     if not bot:
-        return None, (jsonify({"error": "Session not found", "code": "SESSION_EXPIRED"}), 400)
+        return None, (
+            jsonify({"error": "Session not found", "code": "SESSION_EXPIRED"}),
+            400,
+        )
     return bot, None
 
 
@@ -103,7 +106,9 @@ def _validate_message(text):
     if not text or not isinstance(text, str):
         return None, (jsonify({"error": "Message required"}), 400)
     return InputValidator.validate_message(
-        text.strip(), injection_validator=injection_validator, max_length=SecurityConfig.MAX_MESSAGE_LENGTH
+        text.strip(),
+        injection_validator=injection_validator,
+        max_length=SecurityConfig.MAX_MESSAGE_LENGTH,
     )
 
 
@@ -113,7 +118,11 @@ def _bot_state(bot):
 
     # In discovery mode (intent strategy), stage is unset since real flow isn't determined yet
     # Once switched to consultative/transactional, show actual stage
-    stage = "----" if bot.flow_engine.flow_type == Strategy.INTENT else bot.flow_engine.current_stage.upper()
+    stage = (
+        "----"
+        if bot.flow_engine.flow_type == Strategy.INTENT
+        else bot.flow_engine.current_stage.upper()
+    )
     strategy = bot.flow_engine.flow_type.upper()
 
     return {"stage": stage, "strategy": strategy}
@@ -124,12 +133,14 @@ def _bot_state(bot):
 
 from web.routes import analytics, chat, debug, prospect, session, voice  # noqa: E402
 
-session.init_routes(app, session_manager, get_session, set_session, delete_session, _bot_state)
-chat.init_routes(app, get_session, require_session, _validate_message, _bot_state)
+session.init_routes(
+    app, session_manager, _get_session, _set_session, _delete_session, _bot_state
+)
+chat.init_routes(app, _get_session, _require_session, _validate_message, _bot_state)
 prospect.init_routes(app, prospect_session_manager, _validate_message)
-voice.init_routes(app, require_session, _validate_message, _bot_state)
-analytics.init_routes(app, require_session, _bot_state)
-debug.init_routes(app, require_session)
+voice.init_routes(app, _require_session, _validate_message, _bot_state)
+analytics.init_routes(app, _require_session, _bot_state)
+debug.init_routes(app, _require_session)
 
 app.register_blueprint(session.bp)
 app.register_blueprint(chat.bp)

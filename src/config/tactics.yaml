@@ -1,5 +1,5 @@
 # Conversational Tactics
-# Used by template_loader.py for adaptive prompt generation
+# Used by loader.py for adaptive prompt generation
 
 elicitation:
   presumptive:
@@ -38,30 +38,3 @@ elicitation:
     - "I'd guess you've seen a few versions of this before. What's been missing from what you've already tried?"
     - "Sounds like you're weighing a few things up. What's the one thing that would make this a no-brainer?"
     - "I don't know if it's been on your radar for a while—what finally made you start looking properly?"
-
-# FUTURE: lead_ins are not currently injected by get_tactic() — reserved for future use
-lead_ins:
-  summarizing:
-    - "Okay, so the main thing is—"
-    - "Got it—"
-    - "Right, so—"
-  
-  contextualizing:
-    - "I ask because most people overlook this—"
-    - "The reason I bring it up is—"
-    - "This usually matters more than people think—"
-  
-  transitioning:
-    - "That makes sense. On a related note—"
-    - "Fair enough. Slightly different angle—"
-    - "Got it. Zooming out a bit—"
-  
-  validating:
-    - "That sounds frustrating."
-    - "Makes sense you'd feel that way."
-    - "Yeah, that's a tough spot."
-  
-  framing:
-    - "This is usually the deciding factor—"
-    - "Here's what tends to separate people who succeed—"
-    - "The thing most people miss—"

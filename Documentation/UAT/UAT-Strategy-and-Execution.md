@@ -79,18 +79,3 @@ Tracking votes for *"Performance feedback"* (option 1) and *"Sales technique lab
 
 - **FSM State Reach** *(technical corroboration)*: For each participant session, the researcher retrieves the final logged stage from `GET /api/analytics/session/<session_id>` and records whether the session reached PITCH or OBJECTION state (the deeper stages). Reaching OBJECTION state confirms the FSM enforced at least 4 stage transitions (intent → logical → emotional → pitch → objection), the structural backbone of NEPQ methodology. This is cross-referenced against Q4 and Q8 qualitative responses to confirm participants noticed the stage progression — i.e., methodology transfer is reflected not just in system logs but in participant awareness.
 
----
-
-## 5. Anticipated Feature Gaps & Future Work Roadmap
-
-Based on the UAT protocol design (and informal pilot feedback), the following features are anticipated to enhance training effectiveness. Every feature is designed strictly with learning outcomes in mind, rooted directly in backend code systems:
-
-1. **Post-Session Scoring (F1):**
-   - *Rationale:* Anticipated that participants will want an explicit quantifiable "score" to benchmark progress.
-   - *Architectural Grounding:* Could map `session_analytics.py` data to score progression (30% logic advancement accuracy, 25% objection type matches, 25% signal detection, 20% transfer intent).
-2. **Mistake Highlighting (F2):**
-   - *Rationale:* Participants may identify they are repeating errors across scenarios and want real-time alerts.
-   - *Architectural Grounding:* Turn-level anomaly detection extending `analysis.py` with error pattern matching.
-3. **Progress Dashboard (F3):**
-   - *Rationale:* Bridges the primary UAT limitation (single-session scope) by enabling longitudinal learning tracking and gamification.
-   - *Architectural Grounding:* Utilizes dynamic output of `metrics.jsonl` and `analytics.jsonl` across multiple sessions.

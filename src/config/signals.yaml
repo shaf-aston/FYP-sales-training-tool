@@ -1,4 +1,4 @@
-# Behavioral Signals - Keyword Detection Patterns
+# behavioural Signals - Keyword Detection Patterns
 # Used by analysis.py for intent classification and state detection
 
 # Impatience signals (user wants to skip discovery and see options)
@@ -132,6 +132,17 @@ guardedness_keywords:
     - "sure"
     - "fine"
     - "alright"
+
+# Intent classification priority order (controls which categories are checked first in classify_intent_level)
+# Categories in HIGH_INTENT_CATS → return "high"; LOW_INTENT_CATS → return "low"
+signal_priority:
+  - high_intent
+  - commitment
+  - demand_directness
+  - impatience
+  - urgency
+  - price_sensitivity
+  - low_intent
 
 # High intent signals (user actively wants to buy or solve a problem)
 # NOTE: "want" and "need" removed — they are stopwords that fire on casual statements

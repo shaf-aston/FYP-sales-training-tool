@@ -2,12 +2,15 @@
 
 from flask import Blueprint, jsonify, request
 
+from web.messages import GENERIC_ERROR
 from web.security import require_rate_limit
 
 bp = Blueprint("chat", __name__, url_prefix="/api")
 
 
-def init_routes(app, get_session_func, require_session_func, validate_message_func, bot_state_func):
+def init_routes(
+    app, get_session_func, require_session_func, validate_message_func, bot_state_func
+):
     """hook up chat routes"""
     # Store dependencies in blueprint context
     bp.app = app  # type: ignore[attr-defined]
@@ -43,14 +46,17 @@ def chat():
                 "latency_ms": round(response.latency_ms, 1),
                 "provider": response.provider,
                 "model": response.model,
-                "metrics": {"input_length": response.input_len, "output_length": response.output_len},
+                "metrics": {
+                    "input_length": response.input_len,
+                    "output_length": response.output_len,
+                },
                 "training": training,
             }
         )
 
     except Exception as e:
         bp.app.logger.exception(f"Chat error: {e}")  # type: ignore
-        return jsonify({"error": "Something broke on our end -- give it another go"}), 500
+        return jsonify({"error": GENERIC_ERROR}), 500
 
 
 @bp.route("/edit", methods=["POST"])
@@ -95,7 +101,10 @@ def edit_message():
             {
                 "success": True,
                 "message": response.content,
-                "history": [{"role": m["role"], "content": m["content"]} for m in bot.flow_engine.conversation_history],
+                "history": [
+                    {"role": m["role"], "content": m["content"]}
+                    for m in bot.flow_engine.conversation_history
+                ],
                 **bp.bot_state(bot),  # type: ignore
                 "latency_ms": round(response.latency_ms, 1),
                 "provider": response.provider,
@@ -130,13 +139,16 @@ def training_ask():
 
     data = request.json or {}
     question = (data.get("question") or "").strip()
+    style = (data.get("style") or "tactical").strip().lower()
+    if style not in ("tactical", "socratic", "teacher"):
+        style = "tactical"
     if not question:
         return jsonify({"error": "Question required"}), 400
     if len(question) > SecurityConfig.MAX_MESSAGE_LENGTH:
         return jsonify({"error": "Question too long"}), 400
 
     try:
-        result = bot.answer_training_question(question)
+        result = bot.answer_training_question(question, style=style)
         return jsonify({"success": True, **result})
     except Exception as e:
         bp.app.logger.exception(f"Training Q&A error: {e}")  # type: ignore

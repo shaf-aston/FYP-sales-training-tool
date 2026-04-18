@@ -364,8 +364,8 @@ preference_keywords:
     - "plug and play"
     - "turnkey"
 
-  # CUSTOMIZATION - Personalization preferences
-  customization:
+  # CUSTOMISATION - Personalization preferences
+  customisation:
     - "custom"
     - "personalized"
     - "tailored"
@@ -522,3 +522,13 @@ advancement:
       - "urgent"
       - "exhausted"
       - "fed up"
+
+# Drift detection — fires only for consultative deep-discovery stages
+drift_detection:
+  min_message_words: 8  # ignore terse inputs (they're naturally vague)
+  stages:
+    - logical
+    - emotional
+  redirect_phrase:
+    logical: "understanding what is not working in their current situation"
+    emotional: "what this problem means for them personally"

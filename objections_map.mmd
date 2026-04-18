@@ -1,0 +1,87 @@
+graph TD
+    Start([Resistance Detected]) --> ID["🔍 Identify Barrier Type"]
+    ID --> Type{Barrier Type?}
+
+    %% ===== RESOURCE (LOGISTICAL: MONEY) =====
+    Type -->|Resource<br/>💰 Funding| R0["Signal: 'I don't have funds'<br/>Q: 'Without budget limit,<br/>right for you?'"]
+    R0 --> R1{Sees<br/>Value?}
+    R1 -->|No| Re1["Reclassify<br/>→ Fear/Internal"]
+    Re1 --> Type
+
+    R1 -->|Yes| R2["Explore Funding<br/>Savings / Credit /<br/>Staged / Profit Sources"]
+    R2 --> R3{Viable<br/>Solution?}
+    R3 -->|Yes| Proceed1["✅ Proceed"]
+    R3 -->|No| R4["Offer Alternatives<br/>PayPal / Staged Payment"]
+    R4 --> R5{Accepts?}
+    R5 -->|Yes| Proceed1
+    R5 -->|No| Exit1
+
+    %% ===== FEAR/INTERNAL (PSYCHOLOGICAL) =====
+    Type -->|Internal<br/>💭 Hesitation| I0["Signal: 'Need to think<br/>about it' (despite clarity)<br/>Q: 'How's that serving you?'"]
+    I0 --> I1["Apply Perspective Reframes<br/>1: Mindset→Results<br/>2: Island↔Mountain<br/>3: Identity Loop"]
+    I1 --> I2{Perspective<br/>Shifted?}
+    I2 -->|Yes| Proceed2["✅ Proceed"]
+    I2 -->|No| I3["Clarify Specifics<br/>'What exactly<br/>holds you back?'"]
+    I3 --> I4{Resolved?}
+    I4 -->|Yes| Proceed2
+    I4 -->|No| FollowUp1
+
+    %% ===== STAKEHOLDER (PARTNER APPROVAL) =====
+    Type -->|Stakeholder<br/>👥 Partner| S0["Signal: 'Need partner<br/>approval'<br/>Q: 'Independent,<br/>right for you?'"]
+    S0 --> S1{Personal<br/>Buy-in?}
+    S1 -->|No| Re2["Reclassify<br/>→ Fear/Internal"]
+    Re2 --> Type
+
+    S1 -->|Yes| S2{Approval<br/>Required<br/>to Proceed?}
+    S2 -->|No| Proceed3["✅ Proceed"]
+    S2 -->|Yes| S3["Open Wallet Test<br/>or Joint Discussion"]
+    S3 --> S4{Both<br/>Committed?}
+    S4 -->|Yes| Proceed3
+    S4 -->|No| FollowUp1
+
+    %% ===== UNCLEAR/SMOKESCREEN =====
+    Type -->|Unclear<br/>❓ Vague| U0["Pattern: Shifting concerns<br/>Multiple objections<br/>Q: 'What specifically<br/>blocks you?'"]
+    U0 --> U1{Specific<br/>Objection<br/>Surfaces?}
+    U1 -->|Yes| Type
+    U1 -->|No| U2{Genuine<br/>Fit<br/>Detected?}
+
+    U2 -->|Yes| U3["Autonomy Offer<br/>'What needs<br/>to change?'"]
+    U3 --> U4{Re-engaged?}
+    U4 -->|Yes| U1
+    U4 -->|No| Exit1
+
+    U2 -->|No| Exit1["🚪 Respectful Exit<br/>Door Open"]
+
+    %% ===== OUTCOME MERGER =====
+    Proceed1 --> MergeClose["✅ PROCEED"]
+    Proceed2 --> MergeClose
+    Proceed3 --> MergeClose
+    FollowUp1 --> MergePending["📅 FOLLOW-UP"]
+    Exit1 --> MergeExit["⛔ EXIT"]
+
+    %% ===== TERMINAL STATES =====
+    MergeClose --> Success["Commitment Secured<br/>Next Steps Defined"]
+    MergePending --> Pending["Scheduled Checkpoint<br/>Door Remains Open"]
+    MergeExit --> End["Respectfully Concluded<br/>Not Current Fit<br/>Door Remains Open"]
+
+    %% ===== STYLING =====
+    classDef barrier fill:#fff3e0,stroke:#e65100,stroke-width:3px,color:#000,font-weight:bold
+    classDef process fill:#e3f2fd,stroke:#1565c0,stroke-width:2px,color:#000
+    classDef decision fill:#fff9c4,stroke:#f57f17,stroke-width:2px,color:#000
+    classDef entrySignal fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px,color:#000,font-style:italic
+    classDef exploration fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#000
+    classDef proceed fill:#a5d6a7,stroke:#1b5e20,stroke-width:2px,color:#000,font-weight:bold
+    classDef merger fill:#ffd54f,stroke:#f57c00,stroke-width:2px,color:#000,font-weight:bold
+    classDef success fill:#81c784,stroke:#1b5e20,stroke-width:3px,color:#000,font-weight:bold
+    classDef exit fill:#ef9a9a,stroke:#c62828,stroke-width:2px,color:#000
+    classDef pending fill:#64b5f6,stroke:#0d47a1,stroke-width:2px,color:#000
+
+    class Type decision
+    class R0,S0,I0,U0 entrySignal
+    class R1,R3,R5,S1,S2,S4,I2,I4,U1,U2,U4 decision
+    class R2,R4,I1,I3,S3,U3 exploration
+    class Proceed1,Proceed2,Proceed3 proceed
+    class MergeClose,MergePending,MergeExit merger
+    class Success success
+    class Exit1,End exit
+    class Pending pending

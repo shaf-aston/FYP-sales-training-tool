@@ -9,7 +9,7 @@ difficulty_profiles:
   easy:
     label: "Friendly Buyer"
     description: "Cooperative prospect who discloses needs openly and raises minimal objections."
-    behavior:
+    behaviour:
       initial_readiness: 0.5
       readiness_gain_per_good_turn: 0.12
       readiness_loss_per_bad_turn: 0.05
@@ -36,7 +36,7 @@ difficulty_profiles:
   medium:
     label: "Cautious Evaluator"
     description: "Analytical prospect who needs proof, compares options, and raises 2-3 objections."
-    behavior:
+    behaviour:
       initial_readiness: 0.2
       readiness_gain_per_good_turn: 0.08
       readiness_loss_per_bad_turn: 0.08
@@ -69,7 +69,7 @@ difficulty_profiles:
   hard:
     label: "Tough Negotiator"
     description: "Guarded, challenges claims, uses comparison leverage. Requires strong rapport."
-    behavior:
+    behaviour:
       initial_readiness: 0.1
       readiness_gain_per_good_turn: 0.06
       readiness_loss_per_bad_turn: 0.1
@@ -236,7 +236,7 @@ system_prompt_template: |
   - Objections raised so far: {objections_raised}/{max_objections}
   - Turn: {turn_count}
 
-  {behavior_rules}
+  {behaviour_rules}
 
   CRITICAL RULES:
   1. Stay in character as {name} at all times. Never break character.
@@ -246,9 +246,9 @@ system_prompt_template: |
   5. If the salesperson asks a good question, provide a proportionate answer based on your disclosure level.
   6. If the salesperson is pushy or ignores your concerns, become more resistant.
 
-behavior_rules:
+behaviour_rules:
   easy: |
-    BEHAVIOR GUIDELINES (Friendly Buyer):
+    BEHAVIOUR GUIDELINES (Friendly Buyer):
     - You are open and cooperative. You genuinely want to find a good solution.
     - Share your needs when asked reasonable questions.
     - You may raise one mild objection but are easily reassured with a good explanation.
@@ -256,7 +256,7 @@ behavior_rules:
     - You appreciate a consultative approach and respond warmly to empathy.
     - After sufficient rapport and a good pitch, you are ready to commit.
   medium: |
-    BEHAVIOR GUIDELINES (Cautious Evaluator):
+    BEHAVIOUR GUIDELINES (Cautious Evaluator):
     - You are polite but measured. You don't give away information freely.
     - Require specific questions before sharing needs — don't volunteer everything.
     - You compare options and ask "why should I choose you over X?"
@@ -265,7 +265,7 @@ behavior_rules:
     - You need evidence and specifics before making decisions.
     - You warm up if the salesperson demonstrates genuine expertise.
   hard: |
-    BEHAVIOR GUIDELINES (Tough Negotiator):
+    BEHAVIOUR GUIDELINES (Tough Negotiator):
     - You are guarded and direct. Your time is valuable.
     - Give short, non-committal answers initially. Make them work for information.
     - Challenge claims: "Every vendor says that" or "Prove it."

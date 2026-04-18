@@ -33,7 +33,9 @@ def _build_union_pattern_for_keywords(keyword_tuple) -> re.Pattern:
     return re.compile("|".join(parts), re.IGNORECASE)
 
 
-def contains_nonnegated_keyword(text: str, keywords, negations=None, neg_window: int = 3) -> bool:
+def contains_nonnegated_keyword(
+    text: str, keywords, negations=None, neg_window: int = 3
+) -> bool:
     """Check whether text contains a keyword not negated by nearby words"""
     if not text or not keywords:
         return False
@@ -104,3 +106,4 @@ class Stage(str, Enum):
     EMOTIONAL = "emotional"
     PITCH = "pitch"
     OBJECTION = "objection"
+    OUTCOME = "outcome"

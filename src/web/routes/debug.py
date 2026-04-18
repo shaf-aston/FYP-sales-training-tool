@@ -17,15 +17,17 @@ def init_routes(app, require_session_func):
 def debug_config():
     """Return available products and providers for the advanced options dropdowns"""
     from chatbot.loader import load_product_config
-    from chatbot.providers.factory import PROVIDERS
+    from chatbot.providers.factory import _get_providers_registry
 
     products = load_product_config()["products"]
+    providers_registry = _get_providers_registry()
     return jsonify(
         {
             "products": [
-                {"id": k, "strategy": v["strategy"], "label": v.get("context", k)} for k, v in products.items()
+                {"id": k, "strategy": v["strategy"], "label": v.get("context", k)}
+                for k, v in products.items()
             ],
-            "providers": list(PROVIDERS.keys()),
+            "providers": list(providers_registry.keys()),
         }
     )
 
@@ -48,24 +50,13 @@ def debug_prompt():
 @bp.route("/stage", methods=["POST"])
 def debug_stage():
     """Jump FSM to a specific stage, bypassing advancement rules"""
+    from web.stage_ops import advance_to_stage
+
     bot, err = bp.require_session()  # type: ignore
     if err:
         return err
     data = request.json or {}
-    stage = data.get("stage")
-    stages = bot.flow_engine.flow_config["stages"]
-    if not stage or stage not in stages:
-        return jsonify({"error": f"Invalid stage. Available: {stages}"}), 400
-
-    bot.flow_engine.advance(target_stage=stage)
-
-    # Extract bot state
-    from chatbot.utils import Strategy
-
-    stage_str = "----" if bot.flow_engine.flow_type == Strategy.INTENT else bot.flow_engine.current_stage.upper()
-    strategy_str = bot.flow_engine.flow_type.upper()
-
-    return jsonify({"success": True, "stage": stage_str, "strategy": strategy_str})
+    return advance_to_stage(bot, data.get("stage"))
 
 
 @bp.route("/analyse", methods=["POST"])
@@ -103,14 +94,23 @@ def debug_analyse():
         "user_transactionalSIGNALS",
     ]
     msg_lower = message.lower()
-    signal_hits = {k: contains_nonnegated_keyword(msg_lower, SIGNALS.get(k, [])) for k in signal_keys}
+    signal_hits = {
+        k: contains_nonnegated_keyword(msg_lower, SIGNALS.get(k, []))
+        for k in signal_keys
+    }
     signal_hits["demands_directness"] = user_demands_directness(history, message)
 
-    transition = bot.flow_engine.flow_config["transitions"].get(bot.flow_engine.current_stage)
+    transition = bot.flow_engine.flow_config["transitions"].get(
+        bot.flow_engine.current_stage
+    )
     rule_name = transition.get("advance_on") if transition else None
     would_advance = None
     if rule_name and rule_name in ADVANCEMENT_RULES:
-        would_advance = bool(ADVANCEMENT_RULES[rule_name](history, message, bot.flow_engine.stage_turn_count))
+        would_advance = bool(
+            ADVANCEMENT_RULES[rule_name](
+                history, message, bot.flow_engine.stage_turn_count
+            )
+        )
 
     return jsonify(
         {

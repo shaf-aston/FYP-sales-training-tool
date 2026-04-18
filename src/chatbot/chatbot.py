@@ -1,69 +1,93 @@
-"""Sales chatbot orchestrator — FSM flow management, LLM calls, performance tracking."""
+"""Main chatbot class. Wires the provider, FSM engine, and analytics together."""
 
 import json
 import logging
 import os
 import time
 from dataclasses import dataclass
-from typing import Any
 
-from .loader import get_product_settings, load_signals, assign_ab_variant
-from .analysis import text_contains_any_keyword, classify_objection
+from typing import Any, Optional
+
+from .loader import (
+    get_product_settings,
+    load_signals,
+    assign_ab_variant,
+    load_web_search_config,
+)
+from .analysis import (
+    analyse_state,
+    build_search_query,
+    should_trigger_web_search,
+)
+from .objection import _get_objection_pathway_safe
+from .constants import (
+    MAX_SEARCH_RESULTS,
+    MIN_SECONDS_BETWEEN_SEARCHES,
+    SEARCH_CACHE_TTL_SECONDS,
+    RECENT_HISTORY_WINDOW,
+    DEFAULT_TEMPERATURE,
+    DEFAULT_MAX_TOKENS,
+    MIN_TURNS_BEFORE_ADVANCE,
+)
 from .flow import SalesFlowEngine
-from .performance import PerformanceTracker
-from .session_analytics import SessionAnalytics
-from .providers import create_provider, RATE_LIMIT
-from .providers.base import LLMResponse
-from .utils import Strategy, Stage
+from .analytics.performance import PerformanceTracker
+from .analytics.session_analytics import SessionAnalytics
+from .providers import create_provider
+from .providers.base import RATE_LIMIT, LLMResponse
+from .utils import Strategy, Stage, contains_nonnegated_keyword
+from .web_search import WebSearchService
 from . import trainer
+from .session_persistence import SessionPersistence
 
 _base_logger = logging.getLogger(__name__)
 
-# Load strategy detection keywords from config
 _SIGNALS = load_signals()
 _TRANSACTIONAL_INDICATORS = _SIGNALS.get("transactional_bot_indicators", [])
 _CONSULTATIVE_INDICATORS = _SIGNALS.get("consultative_bot_indicators", [])
-_USER_CONSULTATIVE_SIGNALS = _SIGNALS.get("user_consultative_signals", [])
-_USER_TRANSACTIONAL_SIGNALS = _SIGNALS.get("user_transactional_signals", [])
+_USER_CONSULTATIVE_SIGNALS = _SIGNALS.get("user_consultativeSIGNALS", [])
+_USER_TRANSACTIONAL_SIGNALS = _SIGNALS.get("user_transactionalSIGNALS", [])
 
 
 @dataclass
 class ChatResponse:
-    """Structured response from chat() including latency metrics."""
     content: str
-    latency_ms: float = None
-    provider: str = None
-    model: str = None
+    latency_ms: Optional[float] = None  # ms; None if provider didn't report
+    provider: Optional[str] = None
+    model: Optional[str] = None
     input_len: int = 0
     output_len: int = 0
 
 
 class SalesChatbot:
-    """Orchestrates provider, FSM flow engine, and performance tracking."""
+    """Ties the LLM provider to the FSM flow engine and logs each turn."""
 
-    # ====================================================================
-    # Initialization
-    # ====================================================================
-
-    def __init__(self, provider_type=None, model=None, product_type=None, session_id=None):
+    def __init__(
+        self, provider_type=None, model=None, product_type=None, session_id=None
+    ):
         self.provider = create_provider(provider_type, model=model)
         self.session_id = session_id
         self.product_type = product_type
         self.provider_type = provider_type
-        self.logger = logging.LoggerAdapter(_base_logger, {"session_id": session_id or "-"})
+        self.logger = logging.LoggerAdapter(
+            _base_logger, {"session_id": session_id or "-"}
+        )
 
-        # Cache provider info to avoid repeated lookups
-        self._provider_name = type(self.provider).__name__.replace("Provider", "").lower()
+        self._provider_name = (
+            type(self.provider).__name__.replace("Provider", "").lower()
+        )
         self._model_name = self.provider.get_model_name()
 
         config = get_product_settings(product_type or "")
 
         product_context = config["context"]
         if "knowledge" in config:
-            product_context = f"{config['context']}\n\nPRODUCT KNOWLEDGE:\n{config['knowledge']}"
+            product_context = (
+                f"{config['context']}\n\nPRODUCT KNOWLEDGE:\n{config['knowledge']}"
+            )
 
         try:
             from .knowledge import get_custom_knowledge_text
+
             custom_knowledge = get_custom_knowledge_text()
             if custom_knowledge:
                 product_context += (
@@ -79,54 +103,69 @@ class SalesChatbot:
             product_context=product_context,
         )
 
-        # A/B variant assignment for prompt testing (deterministic per session)
+        self.ws_config = load_web_search_config()
+        self.web_search = WebSearchService(
+            cache_ttl=self.ws_config.get("cache_ttl_seconds", SEARCH_CACHE_TTL_SECONDS)
+        )
+        self.last_search_time: float = 0.0
+
         self._ab_variant = assign_ab_variant(session_id) if session_id else None
 
-        # Record session start for evaluation analytics
         if session_id:
             SessionAnalytics.record_session_start(
                 session_id=session_id,
                 product_type=product_type or "unknown",
                 initial_strategy=str(self.flow_engine.flow_type),
-                ab_variant=self._ab_variant
+                ab_variant=self._ab_variant,
             )
 
-    # ====================================================================
-    # Core Chat API
-    # ====================================================================
-
     def chat(self, user_message: str) -> ChatResponse:
-        """Process user message and return ChatResponse with content + metrics."""
-        recent_history = self.flow_engine.conversation_history[-10:]
-        llm_messages = [
-            {"role": "system", "content": self.flow_engine.get_current_prompt(user_message)}
-        ] + recent_history + [
-            {"role": "user", "content": user_message}
-        ]
+        """Run one turn — returns reply content plus latency/provider metrics."""
+        recent_history = self.flow_engine.conversation_history[-RECENT_HISTORY_WINDOW:]
 
-        # Record intent classification on each user turn
+        objection_data = None
+        if str(self.flow_engine.current_stage).lower() == "objection" and user_message:
+            objection_data = _get_objection_pathway_safe(
+                user_message, self.flow_engine.conversation_history
+            )
+
+        system_prompt = self.flow_engine.get_current_prompt(
+            user_message, objection_data=objection_data
+        )
+        search_context = self._maybe_enrich_with_search(
+            user_message, objection_data=objection_data
+        )
+        if search_context:
+            system_prompt += search_context
+
+        llm_messages = (
+            [{"role": "system", "content": system_prompt}]
+            + recent_history
+            + [{"role": "user", "content": user_message}]
+        )
+
         if self.session_id:
-            from .analysis import analyze_state
-            state = analyze_state(self.flow_engine.conversation_history, user_message)
-            intent_level = state.intent
-            user_turn_count = len([m for m in self.flow_engine.conversation_history if m["role"] == "user"]) + 1
+            state = analyse_state(self.flow_engine.conversation_history, user_message)
+            # history doesn't include this turn yet; count the message we're about to add
             SessionAnalytics.record_intent_classification(
                 session_id=self.session_id,
-                intent_level=intent_level,
-                user_turn_count=user_turn_count
+                intent_level=state.intent,
+                user_turn_count=self.flow_engine.user_turn_count + 1,
             )
 
         request_start = time.time()
         try:
             llm_response = self.provider.chat(
                 llm_messages,
-                temperature=0.8,
-                max_tokens=200,
+                temperature=DEFAULT_TEMPERATURE,
+                max_tokens=DEFAULT_MAX_TOKENS,
                 stage=self.flow_engine.current_stage,
             )
 
             if llm_response.error or not llm_response.content:
-                return self._handle_provider_error(llm_response, llm_messages, user_message)
+                return self._handle_provider_error(
+                    llm_response, llm_messages, user_message
+                )
 
             bot_reply = llm_response.content
             self.flow_engine.add_turn(user_message, bot_reply)
@@ -146,142 +185,180 @@ class SalesChatbot:
 
             self._apply_advancement(user_message)
 
-            # Record objection classification if at OBJECTION stage
             if self.session_id and self.flow_engine.current_stage == Stage.OBJECTION:
-                objection_data = classify_objection(user_message, self.flow_engine.conversation_history)
-                objection_type = objection_data.get("type", "unknown") if isinstance(objection_data, dict) else "unknown"
-                user_turn_count = len([m for m in self.flow_engine.conversation_history if m["role"] == "user"])
+                if objection_data is None:
+                    objection_data = _get_objection_pathway_safe(
+                        user_message, self.flow_engine.conversation_history
+                    )
+                objection_type = (
+                    objection_data.get("type", "unknown")
+                    if isinstance(objection_data, dict)
+                    else "unknown"
+                )
                 SessionAnalytics.record_objection_classified(
                     session_id=self.session_id,
                     objection_type=objection_type,
                     strategy=str(self.flow_engine.flow_type),
-                    user_turn_count=user_turn_count
+                    user_turn_count=self.flow_engine.user_turn_count,
                 )
 
-            return ChatResponse(
-                content=bot_reply,
-                latency_ms=llm_response.latency_ms,
-                provider=self._provider_name,
-                model=self._model_name,
-                input_len=len(user_message),
-                output_len=len(bot_reply),
+            return self._build_response(
+                bot_reply, llm_response.latency_ms, user_message
             )
 
-        except Exception as e:
+        except Exception:
             self.logger.exception("Unexpected error")
             return self._fallback(
                 "Something went wrong. Can you try again?",
-                (time.time() - request_start) * 1000, user_message,
+                (time.time() - request_start) * 1000,
+                user_message,
             )
 
-    def _handle_provider_error(self, llm_response: LLMResponse, llm_messages: list, user_message: str) -> ChatResponse:
-        """Centralized fallback logic when a provider returns an error."""
-        error_detail = llm_response.error or "empty response"
-        error_code = getattr(llm_response, "error_code", None)
-        
-        is_rate_limit = error_code == RATE_LIMIT or "rate_limit_exceeded" in str(error_detail).lower() or "429" in str(error_detail)
-        
-        if is_rate_limit:
-            self.logger.warning(f"Rate limit hit, attempting provider fallback: {error_detail}")
-            
-            # Simple fallback sequence (could be loaded from config)
-            fallback_sequence = ["openrouter", "dummy"]
-            current_type = self._provider_name.lower()
-            
-            for next_provider in fallback_sequence:
-                if next_provider == current_type:
-                    continue
-                    
-                self.logger.info(f"Attempting to switch to {next_provider}...")
-                try:
-                    new_provider = create_provider(next_provider)
-                    if new_provider.is_available():
-                        self.provider = new_provider
-                        self._provider_name = next_provider
-                        self._model_name = new_provider.get_model_name()
-                        
-                        # Retry the call
-                        new_llm_response = self.provider.chat(
-                            llm_messages,
-                            temperature=0.8,
-                            max_tokens=200,
-                            stage=self.flow_engine.current_stage,
-                        )
-                        
-                        if not new_llm_response.error and new_llm_response.content:
-                            self.logger.info(f"Successfully switched to {next_provider} after error")
-                            bot_reply = new_llm_response.content
-                            self.flow_engine.add_turn(user_message, bot_reply)
-                            self.save_session()
-                            return ChatResponse(
-                                content=bot_reply,
-                                latency_ms=new_llm_response.latency_ms,
-                                provider=self._provider_name,
-                                model=self._model_name,
-                                input_len=len(user_message),
-                                output_len=len(bot_reply),
-                            )
-                except Exception as e:
-                    self.logger.error(f"Fallback to {next_provider} failed: {e}")
-                    
-            return self._fallback(
-                "I'm currently receiving too many requests. Please try again in a moment.",
-                llm_response.latency_ms, user_message,
-            )
-            
-        # Generic error handler
-        return self._fallback(
-            "I'm having trouble connecting to the AI provider. Please try again.",
-            llm_response.latency_ms, user_message,
-        )
-
-    def _fallback(self, message: str, latency_ms: float, user_message: str) -> ChatResponse:
-        """Build fallback ChatResponse after adding turn to history.
-
-        Append directly without incrementing stage_turn_count — error turns don't count toward FSM advancement.
-        """
-        self.flow_engine.conversation_history.append({"role": "user", "content": user_message})
-        self.flow_engine.conversation_history.append({"role": "assistant", "content": message})
+    def _build_response(
+        self, content: str, latency_ms: float | None, user_message: str
+    ) -> ChatResponse:
         return ChatResponse(
-            content=message,
+            content=content,
             latency_ms=latency_ms,
             provider=self._provider_name,
             model=self._model_name,
             input_len=len(user_message),
-            output_len=len(message),
+            output_len=len(content),
         )
 
-    # ====================================================================
-    # FSM Advancement Logic
-    # ====================================================================
+    @staticmethod
+    def _is_rate_limit(llm_response: LLMResponse) -> bool:
+        if getattr(llm_response, "error_code", None) == RATE_LIMIT:
+            return True
+        detail = str(llm_response.error or "").lower()
+        return "rate_limit_exceeded" in detail or "429" in detail
 
-    def _try_switch_to_openrouter(self) -> bool:
-        """Attempt to switch to OpenRouter provider with backup API key. Returns True if successful."""
-        try:
-            from .providers import create_provider
-            
-            # Create OpenRouter provider instance
-            openrouter_provider = create_provider("openrouter", model=os.environ.get("openrouter_model1", "meta-llama/llama-3.3-70b-instruct:free"))
-            
-            if openrouter_provider.is_available():
-                self.provider = openrouter_provider
-                self._provider_name = "openrouter"
-                self._model_name = openrouter_provider.get_model_name()
-                self.logger.info(f"Switched to OpenRouter with model: {self._model_name}")
-                return True
-            else:
-                self.logger.error("OpenRouter provider not available (missing API key)")
-                return False
-        except Exception as e:
-            self.logger.error(f"Failed to switch to OpenRouter: {e}")
-            return False
+    def _handle_provider_error(
+        self, llm_response: LLMResponse, llm_messages: list, user_message: str
+    ) -> ChatResponse:
+        if self._is_rate_limit(llm_response):
+            self.logger.warning(
+                f"rate limit on {self._provider_name}: {llm_response.error}"
+            )
+            retry = self._try_fallback_providers(llm_messages, user_message)
+            if retry is not None:
+                return retry
+            return self._fallback(
+                "Too much traffic right now — give it a second and try that again.",
+                llm_response.latency_ms,
+                user_message,
+            )
+
+        return self._fallback(
+            "Can't reach the AI right now — give it another go.",
+            llm_response.latency_ms,
+            user_message,
+        )
+
+    def _try_fallback_providers(
+        self, llm_messages: list, user_message: str
+    ) -> ChatResponse | None:
+        from .providers.factory import list_providers
+
+        current = self._provider_name.lower()
+        for next_name in (p for p in list_providers() if p != current):
+            try:
+                alt = create_provider(next_name)
+                if not alt.is_available():
+                    continue
+                resp = alt.chat(
+                    llm_messages,
+                    temperature=DEFAULT_TEMPERATURE,
+                    max_tokens=DEFAULT_MAX_TOKENS,
+                    stage=self.flow_engine.current_stage,
+                )
+                if resp.error or not resp.content:
+                    continue
+                self.provider = alt
+                self._provider_name = next_name
+                self._model_name = alt.get_model_name()
+                self.logger.info(f"switched to {next_name} after error")
+                self.flow_engine.add_turn(user_message, resp.content)
+                self.save_session()
+                return self._build_response(resp.content, resp.latency_ms, user_message)
+            except Exception as e:
+                self.logger.error(f"fallback to {next_name} failed: {e}")
+        return None
+
+    def _fallback(
+        self, message: str, latency_ms: float, user_message: str
+    ) -> ChatResponse:
+        # error turns are logged but don't advance the FSM
+        self.flow_engine.conversation_history.append(
+            {"role": "user", "content": user_message}
+        )
+        self.flow_engine.conversation_history.append(
+            {"role": "assistant", "content": message}
+        )
+        return self._build_response(message, latency_ms, user_message)
+
+    def _maybe_enrich_with_search(
+        self, user_message: str, objection_data: dict | None = None
+    ) -> str | None:
+        """Run a search and return an appended system-prompt block, or None."""
+        if not self.ws_config.get("enabled"):
+            return None
+
+        now = time.time()
+        min_gap = self.ws_config.get(
+            "min_seconds_between_searches", MIN_SECONDS_BETWEEN_SEARCHES
+        )
+        if now - self.last_search_time < min_gap:
+            return None
+
+        stage = str(self.flow_engine.current_stage)
+        objection_type = None
+        if stage == "objection" and isinstance(objection_data, dict):
+            objection_type = objection_data.get("type")
+
+        if not should_trigger_web_search(
+            stage, objection_type, user_message, self.ws_config
+        ):
+            return None
+
+        query = build_search_query(
+            objection_type=objection_type,
+            product_type=self.product_type or "",
+            templates=self.ws_config.get("query_templates", {}),
+        )
+
+        response = self.web_search.search(
+            query, max_results=self.ws_config.get("max_results", MAX_SEARCH_RESULTS)
+        )
+        if response.error or not response.results:
+            return None
+
+        self.last_search_time = now
+
+        if self.session_id:
+            SessionAnalytics.record_web_search(
+                session_id=self.session_id,
+                query=query,
+                result_count=len(response.results),
+                cached=response.cached,
+            )
+
+        snippets = "\n".join(f"- {r.snippet}" for r in response.results if r.snippet)
+        return (
+            "\n\n[WEB SEARCH CONTEXT — external validation only, do not quote URLs directly]\n"
+            f"{snippets}\n"
+            "[Use this to support your reframe. Integrate naturally. Do not present as the primary argument.]\n"
+        )
 
     def _detect_and_switch_strategy(self, user_message) -> bool:
         """Inspect signals to detect and switch strategy. Returns True if switch occurred."""
-        history = self.flow_engine.conversation_history
         user_text = (user_message or "").lower()
-        has_cons_user = text_contains_any_keyword(user_text, _USER_CONSULTATIVE_SIGNALS)
-        has_trans_user = text_contains_any_keyword(user_text, _USER_TRANSACTIONAL_SIGNALS)
+        has_cons_user = contains_nonnegated_keyword(
+            user_text, _USER_CONSULTATIVE_SIGNALS
+        )
+        has_trans_user = contains_nonnegated_keyword(
+            user_text, _USER_TRANSACTIONAL_SIGNALS
+        )
 
         if has_cons_user:
             self.flow_engine.switch_strategy(Strategy.CONSULTATIVE)
@@ -289,7 +366,7 @@ class SalesChatbot:
         elif has_trans_user:
             self.flow_engine.switch_strategy(Strategy.TRANSACTIONAL)
             return True
-        elif self.flow_engine.stage_turn_count >= 3:
+        elif self.flow_engine.stage_turn_count >= MIN_TURNS_BEFORE_ADVANCE:
             self.flow_engine.switch_strategy(Strategy.CONSULTATIVE)
             return True
         return False
@@ -306,7 +383,7 @@ class SalesChatbot:
                         from_strategy=str(old_strategy),
                         to_strategy=str(self.flow_engine.flow_type),
                         reason="signal_detection",
-                        user_turn_count=len([m for m in self.flow_engine.conversation_history if m["role"] == "user"])
+                        user_turn_count=self.flow_engine.user_turn_count,
                     )
                 return
 
@@ -322,24 +399,22 @@ class SalesChatbot:
                     from_stage=str(old_stage),
                     to_stage=str(self.flow_engine.current_stage),
                     strategy=str(self.flow_engine.flow_type),
-                    user_turns_in_stage=self.flow_engine.stage_turn_count - 1
+                    user_turns_in_stage=self.flow_engine.stage_turn_count - 1,
                 )
-
-    # ====================================================================
-    # Training API
-    # ====================================================================
 
     def generate_training(self, user_msg: str, bot_reply: str) -> dict[str, Any]:
         """Generate coaching notes for the current exchange via lightweight LLM call."""
-        return trainer.generate_training(self.provider, self.flow_engine, user_msg, bot_reply)
+        return trainer.generate_training(
+            self.provider, self.flow_engine, user_msg, bot_reply
+        )
 
-    def answer_training_question(self, question: str) -> dict[str, Any]:
+    def answer_training_question(
+        self, question: str, style: str = "tactical"
+    ) -> dict[str, Any]:
         """Answer a trainee's question about the current conversation and sales techniques."""
-        return trainer.answer_training_question(self.provider, self.flow_engine, question)
-
-    # ====================================================================
-    # Session State Management
-    # ====================================================================
+        return trainer.answer_training_question(
+            self.provider, self.flow_engine, question, style
+        )
 
     def rewind(self, steps: int):
         """Rewind back by `steps` turns from the current position."""
@@ -359,14 +434,11 @@ class SalesChatbot:
 
         old_history = self.flow_engine.conversation_history[:history_length]
 
-        # Reset FSM to initial state (clears history and resets to initial strategy)
         self.flow_engine.reset_to_initial()
 
-        # Return early if rewinding to turn 0 (full reset)
         if turn_index == 0:
             return True
 
-        # Replay history with strategy-switch handling (calls _apply_advancement per turn)
         for user_msg_dict, bot_msg_dict in zip(old_history[::2], old_history[1::2]):
             user_msg = user_msg_dict.get("content", "")
             bot_msg = bot_msg_dict.get("content", "")
@@ -393,41 +465,39 @@ class SalesChatbot:
         summary.update({"provider": self._provider_name, "model": self._model_name})
         return summary
 
-    # ====================================================================
-    # Session Persistence & Analytics
-    # ====================================================================
-
     def save_session(self):
-        """Session Persistence state to disk."""
+        """Persist session state to disk using SessionPersistence.
+
+        Uses the atomic, validated writer in `session_persistence.py` so
+        filepaths are checked and writes are atomic.
+        """
         if not self.session_id:
             return
-        os.makedirs('sessions', exist_ok=True)
-        state = {
-            "session_id": self.session_id,
-            "product_type": self.product_type,
-            "provider_type": self.provider_type,
-            "flow_type": self.flow_engine.flow_type,
-            "current_stage": self.flow_engine.current_stage,
-            "stage_turn_count": self.flow_engine.stage_turn_count,
-            "conversation_history": self.flow_engine.conversation_history,
-            "initial_flow_type": self.flow_engine._initial_flow_type
-        }
-        with open(f"sessions/{self.session_id}.json", "w") as f:
-            json.dump(state, f)
+        try:
+            success = SessionPersistence.save(
+                session_id=self.session_id,
+                product_type=self.product_type,
+                provider_type=self.provider_type,
+                flow_type=self.flow_engine.flow_type,
+                current_stage=self.flow_engine.current_stage,
+                stage_turn_count=self.flow_engine.stage_turn_count,
+                conversation_history=self.flow_engine.conversation_history,
+                initial_flow_type=self.flow_engine.initial_flow_type,
+            )
+            if not success:
+                self.logger.warning(
+                    "Failed to persist session %s via SessionPersistence",
+                    self.session_id,
+                )
+        except Exception as e:
+            self.logger.exception("Exception while saving session %s: %s", self.session_id, e)
 
     def record_session_end(self):
         """Record session completion for evaluation analytics."""
         if not self.session_id:
             return
-        user_turn_count = len([m for m in self.flow_engine.conversation_history if m["role"] == "user"])
-        bot_turn_count = len([m for m in self.flow_engine.conversation_history if m["role"] == "assistant"])
-        SessionAnalytics.record_session_end(
-            session_id=self.session_id,
-            final_stage=str(self.flow_engine.current_stage),
-            final_strategy=str(self.flow_engine.flow_type),
-            user_turn_count=user_turn_count,
-            bot_turn_count=bot_turn_count
-        )
+        # Session events (start, stage transitions, strategy switches) are
+        # recorded throughout the conversation lifecycle via SessionAnalytics.
 
     @staticmethod
     def load_session(session_id):
@@ -441,10 +511,12 @@ class SalesChatbot:
             bot = SalesChatbot(
                 provider_type=state.get("provider_type"),
                 product_type=state.get("product_type"),
-                session_id=session_id
+                session_id=session_id,
             )
             bot.flow_engine.restore_state(state)
             return bot
         except Exception as e:
-            logging.getLogger(__name__).error(f"Failed to load session {session_id}: {e}")
+            logging.getLogger(__name__).error(
+                f"Failed to load session {session_id}: {e}"
+            )
             return None
