@@ -12,4 +12,5 @@ pytest>=8.0
 pytest-cov>=4.0
 
 # Voice mode dependencies
-# edge-tts and deepgram-sdk removed completely since audio is now processed via Puter.js in the browser
+edge-tts>=6.1.0         # Microsoft neural TTS (free, unlimited)
+deepgram-sdk>=3.0.0     # Deepgram STT (primary provider)

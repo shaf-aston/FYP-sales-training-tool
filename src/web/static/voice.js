@@ -200,37 +200,48 @@ class VoiceMode {
       return;
     }
 
-// Perform Speech-to-Text using Puter.js
-      let transcriptionText = "";
-      try {
+// 1. Primary: Puter.js directly in frontend
+    let transcriptionText = null;
+    try {
+      if (typeof puter !== 'undefined' && puter.ai) {
         const result = await puter.ai.speech2txt(audioBlob);
         transcriptionText = result.text || result;
-      } catch (err) {
-        console.error("Puter.js STT error:", err);
-        if (this.onError) this.onError("Speech-to-text failed");
-        return;
+      } else {
+        throw new Error("Puter.js not loaded on page");
       }
+    } catch (err) {
+      console.warn("Puter.js STT failed, falling back to backend Deepgram STT:", err);
+      // Fallback flow
+      return this._fallbackBackendChat(audioBlob, sessionId);
+    }
 
-      if (!transcriptionText || transcriptionText.trim() === "") {
-        console.log("No speech detected");
-        if (this.onError) this.onError("No speech detected");
-        return;
-      }
+    if (!transcriptionText || transcriptionText.trim() === "") {
+      console.log("No speech detected");
+      if (this.onError) this.onError("No speech detected");
+      return;
+    }
 
-      // Build JSON data
-      const payload = {
-        message: transcriptionText,
-        voice: this.voice
-      };
+    // Process via Chat JSON endpoint
+    this._processViaJsonChat(transcriptionText, sessionId);
+  }
 
-      try {
-        const response = await fetch("/api/voice/chat", {
-          method: "POST",
-          headers: { 
-            "X-Session-ID": sessionId,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(payload),
+  /**
+   * Helper to process the JSON-based chat once speech is transcribed to text.
+   */
+  async _processViaJsonChat(transcriptionText, sessionId) {
+    const payload = {
+      message: transcriptionText,
+      voice: this.voice
+    };
+
+    try {
+      const response = await fetch("/api/voice/chat", {
+        method: "POST",
+        headers: { 
+          "X-Session-ID": sessionId,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();
@@ -250,12 +261,52 @@ class VoiceMode {
         this.onResponse(data);
       }
 
-      // Auto-play audio response
+      // Note: Data won't have base64 audio if we use the JSON route, handled externally in app.js
+    } catch (err) {
+      console.error("Voice chat error:", err);
+      if (this.onError)
+        this.onError("Voice request didn't work -- give it another shot");
+    }
+  }
+
+  /**
+   * Fallback to the old form-data flow, passing the audio blob all the way to backend for STT directly.
+   */
+  async _fallbackBackendChat(audioBlob, sessionId) {
+    const formData = new FormData();
+    formData.append("audio", audioBlob, "recording.webm");
+    formData.append("voice", this.voice);
+
+    try {
+      const response = await fetch("/api/voice/chat", {
+        method: "POST",
+        headers: { "X-Session-ID": sessionId },
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        if (this.onError) this.onError(data.error || "Voice request failed");
+        return;
+      }
+
+      // Callback with transcription (user's message)
+      if (this.onTranscription) {
+        this.onTranscription(data.transcription);
+      }
+
+      // Callback with full response
+      if (this.onResponse) {
+        this.onResponse(data);
+      }
+
+      // Audio might be returned here if backend handles TTS fallback directly
       if (this.autoPlay && data.audio) {
         this.playAudio(data.audio, data.audio_type);
       }
     } catch (err) {
-      console.error("Voice chat error:", err);
+      console.error("Backend fallback voice chat error:", err);
       if (this.onError)
         this.onError("Voice request didn't work -- give it another shot");
     }

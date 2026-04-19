@@ -2309,13 +2309,55 @@ async function playServerTTS(text) {
     }
   } catch (e) {}
 
-  try {
-    // Free, Unlimited Text-to-Speech API using Puter.js
-    // https://developer.puter.com/tutorials/free-unlimited-text-to-speech-api/
-    _currentTTSAudio = await puter.ai.txt2speech(text, {
-      engine: "neural",
-      language: "en-US",
-    });
+    let tryBackendTTS = false;
+    try {
+      // 1. Primary: Puter.js directly in frontend
+      if (typeof puter !== 'undefined' && puter.ai) {
+        let ttsAudioResponse = await puter.ai.txt2speech(text, {
+          engine: "neural",
+          language: "en-US",
+        });
+        
+        // Handle Puter.js return type gracefully (it returns an HTMLAudioElement usually)
+        if (ttsAudioResponse instanceof HTMLAudioElement) {
+          _currentTTSAudio = ttsAudioResponse;
+        } else {
+          // Fallback if Puter.js changes their return type
+          tryBackendTTS = true;
+        }
+      } else {
+        throw new Error("Puter.js not loaded on page");
+      }
+    } catch (e) {
+      console.warn("Puter.js TTS error, falling back to backend Edge TTS:", e);
+      tryBackendTTS = true;
+    }
+
+    if (tryBackendTTS) {
+      try {
+        const response = await fetch("/api/voice/synthesize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: text, voice: "male_us" }),
+        });
+        if (!response.ok) throw new Error("Fallback Backend TTS failed");
+        
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        _currentTTSAudio = new Audio(url);
+        _currentTTSAudio._blobUrl = url; // Save for cleanup
+      } catch (backendError) {
+        console.error("Backend TTS fallback also failed:", backendError);
+        _resumeFromTTS();
+        return;
+      }
+    }
+
+    if (!_currentTTSAudio) {
+      console.warn("Failed to generate TTS audio.");
+      _resumeFromTTS();
+      return;
+    }
 
     const interruptBtn = document.getElementById("interruptBtn");
     if (interruptBtn) interruptBtn.style.display = "inline-block";
@@ -2330,8 +2372,7 @@ async function playServerTTS(text) {
         try {
           _currentTTSAudio.pause();
         } catch (e) {}
-        _currentTTSAudio = null;
-        _resumeFromTTS();
+        cleanup();
       }
     }, TTS_RESUME_WATCHDOG_MS);
 
@@ -2340,6 +2381,11 @@ async function playServerTTS(text) {
         clearTimeout(_ttsResumeWatchdog);
         _ttsResumeWatchdog = null;
       }
+      
+      if (_currentTTSAudio && _currentTTSAudio._blobUrl) {
+         URL.revokeObjectURL(_currentTTSAudio._blobUrl);
+      }
+      
       _currentTTSAudio = null;
       if (interruptBtn) interruptBtn.style.display = "none";
       _showTTSBanner(false);
@@ -2352,21 +2398,6 @@ async function playServerTTS(text) {
     _currentTTSAudio.play().catch(() => {
       cleanup();
     });
-  } catch (e) {
-    console.warn("TTS error:", e);
-    _resumeFromTTS();
-  }
-}
-
-function _resumeFromTTS() {
-  if (window.__speechPausedForTTS) {
-    window.__speechPausedForTTS = false;
-    if (handsFreeMode) startHandsFreeRecognition();
-  }
-}
-
-function stopServerTTS() {
-  if (_currentTTSAudio) {
     _currentTTSAudio.pause();
     _currentTTSAudio = null;
   }

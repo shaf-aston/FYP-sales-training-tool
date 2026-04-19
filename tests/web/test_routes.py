@@ -48,74 +48,87 @@ class TestVoiceStatus:
 
     def test_voice_status_success(self, client):
         """Should return voice provider status."""
-        response = client.get("/api/voice/status")
-        assert response.status_code == 200
+        with patch("web.routes.voice.get_voice_provider") as mock_get_provider:
+            mock_provider = MagicMock()
+            mock_provider.is_stt_available.return_value = True
+            mock_provider.is_tts_available.return_value = True
+            mock_provider.get_status.return_value = {
+                "stt_deepgram": True,
+                "tts_edge": True,
+            }
+            mock_provider.get_available_voices.return_value = {
+                "male_us": "en-US-GuyNeural"
+            }
+            mock_get_provider.return_value = mock_provider
+
+            response = client.get("/api/voice/status")
+            assert response.status_code == 200
 
 
-# class TestVoiceTranscribe:
-#     """Test POST /api/voice/transcribe endpoint."""
-# 
-#     def test_transcribe_no_audio_file(self, client):
-#         """Should reject request with no audio file."""
-#         response = client.post("/api/voice/transcribe", data={})
-#         assert response.status_code == 400
-# 
-#     def test_transcribe_success(self, client):
-#         """Should transcribe audio successfully."""
-#         with patch("web.routes.voice.get_voice_provider") as mock_get_provider:
-#             from chatbot.providers.voice_provider import TranscriptionResult
-# 
-#             mock_provider = MagicMock()
-#             mock_provider.transcribe.return_value = TranscriptionResult(
-#                 text="I want to buy this", latency_ms=500.0, provider="deepgram"
-#             )
-#             mock_get_provider.return_value = mock_provider
-# 
-#             response = client.post(
-#                 "/api/voice/transcribe",
-#                 data={"audio": (BytesIO(b"fake_audio"), "audio.webm")},
-#             )
-#             assert response.status_code == 200
-# 
-# 
-# # class TestVoiceSynthesize:
-# #     """Test POST /api/voice/synthesize endpoint."""
-# # 
-# #     def test_synthesize_no_text(self, client):
-# #         """Should reject request with no text."""
-# #         response = client.post(
-# #             "/api/voice/synthesize",
-# #             data=json.dumps({"text": ""}),
-# #             content_type="application/json",
-# #         )
-# #         assert response.status_code == 400
-# # 
-# # 
-# # class TestProspectInit:
-#     """Test POST /api/prospect/init endpoint."""
-# 
-#     def test_prospect_init_invalid_difficulty(self, client):
-#         """Should reject invalid difficulty."""
-#         response = client.post(
-#             "/api/prospect/init",
-#             data=json.dumps({"difficulty": "impossible"}),
-#             content_type="application/json",
-#         )
-#         assert response.status_code == 400
-# 
-#     def test_prospect_init_at_capacity(self, client):
-#         """Should return 503 when at capacity."""
-#         with patch("web.routes.prospect.bp.prospect_session_manager") as mock_mgr:
-#             mock_mgr.can_create.return_value = False
-#             response = client.post(
-#                 "/api/prospect/init",
-#                 data=json.dumps({}),
-#                 content_type="application/json",
-#             )
-#             assert response.status_code == 503
-# 
-# 
-# class TestProspectChat:
+class TestVoiceTranscribe:
+    """Test POST /api/voice/transcribe endpoint."""
+
+    def test_transcribe_no_audio_file(self, client):
+        """Should reject request with no audio file."""
+        response = client.post("/api/voice/transcribe", data={})
+        assert response.status_code == 400
+
+    def test_transcribe_success(self, client):
+        """Should transcribe audio successfully."""
+        with patch("web.routes.voice.get_voice_provider") as mock_get_provider:
+            from chatbot.providers.voice_provider import TranscriptionResult
+
+            mock_provider = MagicMock()
+            mock_provider.transcribe.return_value = TranscriptionResult(
+                text="I want to buy this", latency_ms=500.0, provider="deepgram"
+            )
+            mock_get_provider.return_value = mock_provider
+
+            response = client.post(
+                "/api/voice/transcribe",
+                data={"audio": (BytesIO(b"fake_audio"), "audio.webm")},
+            )
+            assert response.status_code == 200
+
+
+class TestVoiceSynthesize:
+    """Test POST /api/voice/synthesize endpoint."""
+
+    def test_synthesize_no_text(self, client):
+        """Should reject request with no text."""
+        response = client.post(
+            "/api/voice/synthesize",
+            data=json.dumps({"text": ""}),
+            content_type="application/json",
+        )
+        assert response.status_code == 400
+
+
+class TestProspectInit:
+    """Test POST /api/prospect/init endpoint."""
+
+    def test_prospect_init_invalid_difficulty(self, client):
+        """Should reject invalid difficulty."""
+        response = client.post(
+            "/api/prospect/init",
+            data=json.dumps({"difficulty": "impossible"}),
+            content_type="application/json",
+        )
+        assert response.status_code == 400
+
+    def test_prospect_init_at_capacity(self, client):
+        """Should return 503 when at capacity."""
+        with patch("web.routes.prospect.bp.prospect_session_manager") as mock_mgr:
+            mock_mgr.can_create.return_value = False
+            response = client.post(
+                "/api/prospect/init",
+                data=json.dumps({}),
+                content_type="application/json",
+            )
+            assert response.status_code == 503
+
+
+class TestProspectChat:
     """Test POST /api/prospect/chat endpoint."""
 
     def test_prospect_chat_missing_session_id(self, client):
