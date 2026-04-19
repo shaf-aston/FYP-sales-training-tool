@@ -49,6 +49,23 @@ def auto_log_performance(chat_method):
     return wrapper
 
 
+def map_http_status_to_error_code(status_code: int) -> str:
+    """Map HTTP status code to canonical error code."""
+    if status_code == 429:
+        return RATE_LIMIT
+    elif status_code in (401, 403):
+        return AUTH_ERROR
+    elif status_code >= 500:
+        return UNAVAILABLE
+    else:
+        return PROVIDER_ERROR
+
+
+def error_response(model: str, error_msg: str, error_code: str) -> LLMResponse:
+    """Create standardised error response."""
+    return LLMResponse(content="", model=model, latency_ms=0, error=error_msg, error_code=error_code)
+
+
 class BaseLLMProvider(ABC):
     """Contract: All LLM providers must implement these methods"""
 

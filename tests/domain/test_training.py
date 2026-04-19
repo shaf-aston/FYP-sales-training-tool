@@ -15,11 +15,11 @@ sys.path.insert(
     0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src"))
 )
 
-from chatbot.analysis import analyse_state, user_demands_directness  # noqa: E402
-from chatbot.content import SIGNALS  # noqa: E402
-from chatbot.flow import ADVANCEMENT_RULES, SalesFlowEngine  # noqa: E402
-from chatbot.trainer import answer_training_question, generate_training  # noqa: E402
-from chatbot.utils import contains_nonnegated_keyword  # noqa: E402
+from chatbot.analysis import analyse_state, user_demands_directness 
+from chatbot.content import SIGNALS 
+from chatbot.flow import ADVANCEMENT_RULES, SalesFlowEngine 
+from chatbot.trainer import answer_training_question, generate_training 
+from chatbot.utils import contains_nonnegated_keyword 
 
 # ─── Mock helpers ─────────────────────────────────────────────────────────────
 

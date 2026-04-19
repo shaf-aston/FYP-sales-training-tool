@@ -17,16 +17,16 @@ import sys
 # adds src/ to path so chatbot imports resolve
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from dotenv import load_dotenv  # noqa: E402
-from flask import Flask, render_template, send_from_directory  # noqa: E402
-from flask_cors import CORS  # noqa: E402
+from dotenv import load_dotenv 
+from flask import Flask, render_template, send_from_directory 
+from flask_cors import CORS 
 
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", ".env"))
 
-from chatbot.constants import MAX_PROSPECT_SESSIONS, PROSPECT_IDLE_MINUTES  # noqa: E402
+from chatbot.constants import MAX_PROSPECT_SESSIONS, PROSPECT_IDLE_MINUTES 
 
-# Security module (centralized security controls)
-from web.security import (  # noqa: E402
+# Security module (centralised security controls)
+from web.security import ( 
     ClientIPExtractor,
     InputValidator,
     SecurityConfig,
@@ -131,7 +131,7 @@ def _bot_state(bot):
 # Blueprint modules must be imported AFTER app initialization (app needs to exist)
 # E402 suppressed because this is an intentional Flask pattern
 
-from web.routes import analytics, chat, debug, prospect, session, voice  # noqa: E402
+from web.routes import analytics, chat, debug, prospect, session, voice 
 
 session.init_routes(
     app, session_manager, _get_session, _set_session, _delete_session, _bot_state

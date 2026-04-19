@@ -11,6 +11,7 @@ from .base import (
     BaseLLMProvider,
     LLMResponse,
     auto_log_performance,
+    error_response,
     RATE_LIMIT,
     UNAVAILABLE,
     PROVIDER_ERROR,
@@ -55,14 +56,10 @@ class GroqProvider(BaseLLMProvider):
         stage: str | None = None,
     ) -> LLMResponse:
         if not self.is_available():
-            error_msg = f"Groq unavailable. Library: {GROQ_AVAILABLE}, API Key: {'Set' if self.api_key else 'Missing'}"
-            logger.error(error_msg)
-            return LLMResponse(
-                content="",
-                model=self.model,
-                latency_ms=0,
-                error=error_msg,
-                error_code=UNAVAILABLE,
+            return error_response(
+                self.model,
+                f"Groq unavailable. Library: {GROQ_AVAILABLE}, API Key: {'Set' if self.api_key else 'Missing'}",
+                UNAVAILABLE,
             )
 
         request_start_time = time.time()
@@ -70,7 +67,7 @@ class GroqProvider(BaseLLMProvider):
             client = self._get_client()
             response = client.chat.completions.create(
                 model=self.model,
-                messages=messages,  # type: ignore[arg-type]
+                messages=messages,
                 temperature=temperature,
                 max_tokens=max_tokens,
                 timeout=25,
@@ -83,64 +80,41 @@ class GroqProvider(BaseLLMProvider):
             )
 
         except Exception as e:
-            error_str = str(e)
-            # On rate limit, try rotating to the next Groq API key before giving up
-            if ("rate_limit" in error_str.lower() or "429" in error_str) and len(
-                self._api_keys
-            ) > 1:
-                next_index = (self._current_key_index + 1) % len(self._api_keys)
-                if next_index != self._current_key_index:
-                    logger.warning(
-                        f"Groq rate limit on key {self._current_key_index + 1}, rotating to key {next_index + 1}"
-                    )
-                    self._current_key_index = next_index
-                    self.api_key = self._api_keys[next_index]
-                    with self._client_lock:
-                        self._client = Groq(api_key=self.api_key)
-                    # Retry once with the new key
-                    try:
-                        response = self._client.chat.completions.create(
-                            model=self.model,
-                            messages=messages,  # type: ignore[arg-type]
-                            temperature=temperature,
-                            max_tokens=max_tokens,
-                            timeout=25,
-                        )
-                        latency = (time.time() - request_start_time) * 1000
-                        return LLMResponse(
-                            content=response.choices[0].message.content or "",
-                            model=self.model,
-                            latency_ms=latency,
-                        )
-                    except Exception as retry_e:
-                        retry_e_str = str(retry_e).lower()
-                        err_code = (
-                            RATE_LIMIT
-                            if "429" in retry_e_str or "rate limit" in retry_e_str
-                            else PROVIDER_ERROR
-                        )
-                        logger.error(f"Groq retry also failed: {retry_e}")
-                        return LLMResponse(
-                            content="",
-                            model=self.model,
-                            latency_ms=0,
-                            error=str(retry_e),
-                            error_code=err_code,
-                        )
+            error_str = str(e).lower()
+            # On rate limit, try rotating to next Groq API key before giving up
+            if ("rate_limit" in error_str or "429" in error_str) and len(self._api_keys) > 1:
+                return self._retry_with_next_key(messages, temperature, max_tokens, request_start_time)
 
-            err_code = (
-                RATE_LIMIT
-                if "429" in error_str.lower() or "rate limit" in error_str.lower()
-                else PROVIDER_ERROR
-            )
-            logger.error(f"Groq API error: {error_str}", exc_info=True)
-            return LLMResponse(
-                content="",
+            err_code = RATE_LIMIT if ("rate_limit" in error_str or "429" in error_str) else PROVIDER_ERROR
+            logger.error(f"Groq API error: {str(e)}", exc_info=True)
+            return error_response(self.model, str(e), err_code)
+
+    def _retry_with_next_key(self, messages: List[Dict], temperature: float, max_tokens: int, request_start_time: float) -> LLMResponse:
+        """Retry chat with next API key after rate limit."""
+        next_index = (self._current_key_index + 1) % len(self._api_keys)
+        if next_index == self._current_key_index:
+            return error_response(self.model, "No alternative API keys available", RATE_LIMIT)
+
+        logger.warning(f"Groq rate limit on key {self._current_key_index + 1}, rotating to key {next_index + 1}")
+        self._current_key_index = next_index
+        self.api_key = self._api_keys[next_index]
+        with self._client_lock:
+            self._client = Groq(api_key=self.api_key)
+
+        try:
+            response = self._client.chat.completions.create(
                 model=self.model,
-                latency_ms=0,
-                error=error_str,
-                error_code=err_code,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                timeout=25,
             )
+            latency = (time.time() - request_start_time) * 1000
+            return LLMResponse(content=response.choices[0].message.content or "", model=self.model, latency_ms=latency)
+        except Exception as retry_e:
+            err_code = RATE_LIMIT if ("rate_limit" in str(retry_e).lower() or "429" in str(retry_e)) else PROVIDER_ERROR
+            logger.error(f"Groq retry also failed: {retry_e}")
+            return error_response(self.model, str(retry_e), err_code)
 
     def is_available(self) -> bool:
         return GROQ_AVAILABLE and bool(self.api_key)

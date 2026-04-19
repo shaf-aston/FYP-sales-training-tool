@@ -2310,18 +2310,12 @@ async function playServerTTS(text) {
   } catch (e) {}
 
   try {
-    const res = await fetch("/api/voice/synthesize", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, voice: "male_us" }),
+    // Free, Unlimited Text-to-Speech API using Puter.js
+    // https://developer.puter.com/tutorials/free-unlimited-text-to-speech-api/
+    _currentTTSAudio = await puter.ai.txt2speech(text, {
+      engine: "neural",
+      language: "en-US",
     });
-    if (!res.ok) {
-      _resumeFromTTS();
-      return;
-    }
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    _currentTTSAudio = new Audio(url);
 
     const interruptBtn = document.getElementById("interruptBtn");
     if (interruptBtn) interruptBtn.style.display = "inline-block";
@@ -2336,7 +2330,6 @@ async function playServerTTS(text) {
         try {
           _currentTTSAudio.pause();
         } catch (e) {}
-        URL.revokeObjectURL(url);
         _currentTTSAudio = null;
         _resumeFromTTS();
       }
@@ -2347,7 +2340,6 @@ async function playServerTTS(text) {
         clearTimeout(_ttsResumeWatchdog);
         _ttsResumeWatchdog = null;
       }
-      URL.revokeObjectURL(url);
       _currentTTSAudio = null;
       if (interruptBtn) interruptBtn.style.display = "none";
       _showTTSBanner(false);

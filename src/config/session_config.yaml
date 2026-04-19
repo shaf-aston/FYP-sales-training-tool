@@ -1,0 +1,5 @@
+# Session persistence configuration (optional)
+autosave_interval_turns: 5
+retention_days: 90
+store_utterances: true
+sessions_path: sessions

@@ -23,8 +23,6 @@ from .analysis import (
     extract_user_keywords,
     detect_topic_drift,
     is_literal_question,
-    classify_objection,
-    commitment_or_walkaway,
     is_repetitive_validation,
 )
 from .constants import PERSONA_CHECKPOINT_TURNS, TERSE_INPUT_THRESHOLD
@@ -69,7 +67,6 @@ def _build_tactic_guidance(strategy: str, state: Any, user_message: str) -> str:
 
     return ""
 
-
 # Exported signals for consumers (e.g. flow.py)
 SIGNALS = load_signals()
 # Backwards-compatible alias used by older tests and modules
@@ -85,7 +82,6 @@ __all__ = [
     "SIGNALS",
     "SOP_FLOWS",
 ]
-
 
 def _get_preference_and_keyword_context(history, preferences):
     """Extract user preferences and keywords, then inject into prompt context.
@@ -109,7 +105,6 @@ Naturally embed 1-2 into your response. Do NOT replay full sentences.
 """
 
     return preference_context + keyword_context
-
 
 def _get_stage_specific_prompt(
     strategy, stage, state, user_message, history, objection_data=None
@@ -142,7 +137,6 @@ def _get_stage_specific_prompt(
         return get_prompt(strategy, stage), objection_context
 
     return get_prompt(strategy, stage), ""
-
 
 def check_override_condition(base_prompt, user_message, stage, history, preferences):
     """Return an override prompt if user input matches a high-priority signal, else None.
@@ -184,7 +178,6 @@ def check_override_condition(base_prompt, user_message, stage, history, preferen
         )
 
     return None
-
 
 def generate_stage_prompt(
     strategy: str,

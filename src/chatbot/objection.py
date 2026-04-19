@@ -50,7 +50,6 @@ class ObjectionPathway(TypedDict):
     dialogue_guidance: str
     is_primary_objection: bool
 
-
 def classify_objection(user_message: str, history: Optional[list[dict]] = None) -> dict[str, Any]:
     """classify objection type and pick a reframe"""
     objection_config = ANALYSIS_CONFIG.get("objection_handling", {})
@@ -90,7 +89,6 @@ def classify_objection(user_message: str, history: Optional[list[dict]] = None) 
         "strategy": "general_reframe",
         "guidance": "Acknowledge the concern. Recall the user's stated goal. Ask what specifically is holding them back.",
     }
-
 
 # ============================================================================
 # PATHWAY ANALYSIS
@@ -277,7 +275,6 @@ def get_reframe_sequence(
         "is_final_reframe": current_reframe_index >= len(reframes) - 1 if current_reframe else False,
     }
 
-
 def _get_objection_pathway_safe(
     user_message: str, history: list[dict]
 ) -> dict[str, Any]:
@@ -291,12 +288,11 @@ def _get_objection_pathway_safe(
         _base_logger.debug(f"Pathway analysis failed, falling back: {e}")
         return classify_objection(user_message, history)
 
-
 def _build_objection_context(
     strategy, stage, user_message, history, objection_data=None
 ):
     from .analysis import commitment_or_walkaway
-    
+
     stage_value = getattr(stage, "value", stage)
     if str(stage_value).lower() != "objection" or not user_message:
         return ""
@@ -332,7 +328,7 @@ def _build_objection_context(
         if reframes:
             reframe_names = ", ".join(reframes)
             context += f"REFRAME SEQUENCE: {reframe_names}\n"
-            
+
             reframe_descs = info.get("reframe_descriptions", {})
             if reframe_descs:
                 context += "REFRAME DIALOGUE EXAMPLES:\n"

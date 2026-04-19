@@ -12,10 +12,10 @@ from .base import (
     BaseLLMProvider,
     LLMResponse,
     auto_log_performance,
+    error_response,
+    map_http_status_to_error_code,
     RATE_LIMIT,
     UNAVAILABLE,
-    AUTH_ERROR,
-    PROVIDER_ERROR,
     TIMEOUT,
 )
 
@@ -48,14 +48,10 @@ class SambaNovaProvider(BaseLLMProvider):
         stage: str | None = None,
     ) -> LLMResponse:
         if not self.is_available():
-            error_msg = f"SambaNova unavailable. API Key: {'Set' if self.api_key else 'Missing'}"
-            logger.error(error_msg)
-            return LLMResponse(
-                content="",
-                model=self.model,
-                latency_ms=0,
-                error=error_msg,
-                error_code=UNAVAILABLE,
+            return error_response(
+                self.model,
+                f"SambaNova unavailable. API Key: {'Set' if self.api_key else 'Missing'}",
+                UNAVAILABLE,
             )
 
         request_start_time = time.time()
@@ -72,54 +68,35 @@ class SambaNovaProvider(BaseLLMProvider):
                 timeout=30,
             )
             response.raise_for_status()
-
             latency = (time.time() - request_start_time) * 1000
             data = response.json()
-
             return LLMResponse(
                 content=data["choices"][0]["message"]["content"],
                 model=self.model,
                 latency_ms=latency,
             )
 
+        except requests.exceptions.Timeout as e:
+            logger.error(f"SambaNova Timeout: {str(e)}", exc_info=True)
+            return error_response(self.model, str(e), TIMEOUT)
+
         except requests.exceptions.HTTPError as e:
             error_detail = (
                 e.response.json().get("error", {}).get("message", str(e))
-                if hasattr(e, "response") and e.response is not None
+                if hasattr(e, "response") and e.response
                 else str(e)
             )
-            err_code = PROVIDER_ERROR
-            if hasattr(e, "response") and e.response is not None:
-                if e.response.status_code == 429:
-                    err_code = RATE_LIMIT
-                elif e.response.status_code in (401, 403):
-                    err_code = AUTH_ERROR
+            err_code = (
+                map_http_status_to_error_code(e.response.status_code)
+                if hasattr(e, "response") and e.response
+                else "PROVIDER_ERROR"
+            )
             logger.error(f"SambaNova HTTP error: {error_detail}", exc_info=True)
-            return LLMResponse(
-                content="",
-                model=self.model,
-                latency_ms=0,
-                error=error_detail,
-                error_code=err_code,
-            )
-        except requests.exceptions.Timeout as e:
-            logger.error(f"SambaNova Timeout error: {str(e)}", exc_info=True)
-            return LLMResponse(
-                content="",
-                model=self.model,
-                latency_ms=0,
-                error=str(e),
-                error_code=TIMEOUT,
-            )
+            return error_response(self.model, error_detail, err_code)
+
         except Exception as e:
             logger.error(f"SambaNova API error: {str(e)}", exc_info=True)
-            return LLMResponse(
-                content="",
-                model=self.model,
-                latency_ms=0,
-                error=str(e),
-                error_code=PROVIDER_ERROR,
-            )
+            return error_response(self.model, str(e), "PROVIDER_ERROR")
 
     def is_available(self) -> bool:
         return bool(self.api_key)

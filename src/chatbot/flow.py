@@ -65,7 +65,6 @@ FLOWS: dict[str | Strategy, dict[str, Any]] = {
     },
 }
 
-
 # Phrases signalling clear buying intent, checked before consulting signals.yaml
 EXPLICIT_INTENT_PHRASES = [
     "looking for",
@@ -85,7 +84,6 @@ EXPLICIT_INTENT_PHRASES = [
 # Calibrated against test sessions (intent signals typically appear between turns 2-5).
 INTENT_MAX_TURNS = 6
 
-
 def _user_has_clear_intent(
     history: list[dict[str, str]], user_msg: str, turns: int
 ) -> bool:
@@ -104,7 +102,6 @@ def _user_has_clear_intent(
         return True
 
     return turns >= INTENT_MAX_TURNS
-
 
 def _check_advancement_condition(
     history: list[dict[str, str]],
@@ -142,13 +139,11 @@ def _check_advancement_condition(
     # Safety valve: auto-advance when max_turns exceeded (resistant prospect).
     return has_signal or turns >= max_turns
 
-
 def _user_shows_doubt(history: list[dict[str, str]], user_msg: str, turns: int) -> bool:
     """True when user shows doubt/pain or safety valve triggers"""
     return _check_advancement_condition(
         history, user_msg, turns, "logical", min_turns=2
     )
-
 
 def _user_expressed_stakes(
     history: list[dict[str, str]], user_msg: str, turns: int
@@ -158,7 +153,6 @@ def _user_expressed_stakes(
     return _check_advancement_condition(
         history, user_msg, turns, "emotional", min_turns=3
     )
-
 
 def _commitment_or_objection(
     history: list[dict[str, str]], user_msg: str, turns: int
@@ -171,9 +165,7 @@ def _commitment_or_objection(
         user_msg, SIGNALS["commitment"]
     ) or contains_nonnegated_keyword(user_msg, SIGNALS["objection"])
 
-
 # commitment_or_walkaway moved to analysis.py to avoid circular imports
-
 
 ADVANCEMENT_RULES = {
     "user_has_clear_intent": _user_has_clear_intent,
@@ -183,6 +175,35 @@ ADVANCEMENT_RULES = {
     "commitment_or_walkaway": commitment_or_walkaway,
 }
 
+def _check_priority_overrides(flow_config, current_stage, user_message, history) -> Optional[str]:
+    """Check for high-priority signals that jump the FSM immediately."""
+    transition = flow_config["transitions"].get(current_stage)
+    if not transition:
+        return None
+
+    has_pitch_stage = Stage.PITCH in flow_config["stages"]
+    msg_lower = user_message.lower()
+
+    # Explicit commitment during discovery
+    if has_pitch_stage and current_stage in (Stage.LOGICAL, Stage.EMOTIONAL):
+        commitment_terms = SIGNALS.get("commitment", []) + ["sign up"]
+        if contains_nonnegated_keyword(msg_lower, commitment_terms):
+            return Stage.PITCH
+
+    # User demands directness or direct info request
+    if has_pitch_stage:
+        if user_demands_directness(history, user_message):
+            return Stage.PITCH
+        direct_requests = SIGNALS.get("direct_info_requests", [])
+        if contains_nonnegated_keyword(msg_lower, direct_requests):
+            return Stage.PITCH
+
+    # Impatience override (usually skips to a specific transition stage, e.g. pitch)
+    if transition.get("urgency_skip_to"):
+        if contains_nonnegated_keyword(msg_lower, SIGNALS.get("impatience", [])):
+            return transition["urgency_skip_to"]
+
+    return None
 
 class SalesFlowEngine:
     """Finite state machine managing stage progression and prompt context.
@@ -234,35 +255,20 @@ class SalesFlowEngine:
     def get_advance_target(self, user_message: str) -> Optional[str]:
         """Determine next stage or None if staying in current stage.
 
-        Priority order: explicit commitment, user demands directness, direct info request,
-        impatience override, advancement rule. Returns first match or None.
+        Priority order: high-priority overrides (commitments, demands), then standard advancement rule.
         """
         transition = self.flow_config["transitions"].get(self.current_stage)
         if not transition:
             return None
 
-        has_pitch_stage = Stage.PITCH in self.flow_config["stages"]
+        # 1. Check declarative high-priority override paths
+        override_target = _check_priority_overrides(
+            self.flow_config, self.current_stage, user_message, self.conversation_history
+        )
+        if override_target:
+            return override_target
 
-        # Explicit commitment during discovery jumps directly to pitch (high-priority signal).
-        if has_pitch_stage and self.current_stage in (Stage.LOGICAL, Stage.EMOTIONAL):
-            commitment_terms = SIGNALS.get("commitment", []) + ["sign up"]
-            if contains_nonnegated_keyword(user_message.lower(), commitment_terms):
-                return Stage.PITCH
-
-        # User demands directness or direct info request: skip to pitch immediately.
-        if has_pitch_stage:
-            if user_demands_directness(self.conversation_history, user_message):
-                return Stage.PITCH
-
-            direct_requests = SIGNALS.get("direct_info_requests", [])
-            if contains_nonnegated_keyword(user_message, direct_requests):
-                return Stage.PITCH
-
-        # Impatience override: urgency_skip_to only applies in consultative.
-        if transition.get("urgency_skip_to"):
-            if contains_nonnegated_keyword(user_message, SIGNALS.get("impatience", [])):
-                return transition["urgency_skip_to"]
-
+        # 2. Check standard FSM transition rules
         rule_name = transition.get("advance_on")
         if rule_name and rule_name in ADVANCEMENT_RULES:
             if ADVANCEMENT_RULES[rule_name](

@@ -27,10 +27,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from chatbot.analysis import (
+from chatbot.objection import (
     analyze_objection_pathway,
     classify_objection,
     get_reframe_sequence,
+)
+from chatbot.analysis import (
     should_trigger_web_search,
 )
 from chatbot.chatbot import SalesChatbot

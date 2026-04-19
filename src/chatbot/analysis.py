@@ -1,6 +1,5 @@
 """Signal detection utilities for conversation turns"""
 
-import random
 import re
 from dataclasses import dataclass
 from typing import Any, TypedDict, NotRequired
@@ -8,7 +7,6 @@ from typing import Any, TypedDict, NotRequired
 from .constants import MAX_USER_KEYWORDS
 from .loader import load_analysis_config, load_objection_flows, load_signals
 from .utils import contains_nonnegated_keyword
-
 
 @dataclass
 class ConversationState:
@@ -24,7 +22,6 @@ class ConversationState:
 
     def get(self, key: str, default=None):
         return getattr(self, key, default)
-
 
 class ObjectionPathway(TypedDict):
     """Rich objection analysis including pathway, reframes, entry questions.
@@ -60,7 +57,6 @@ class ObjectionPathway(TypedDict):
     open_wallet_applicable: NotRequired[bool]
     dialogue_guidance: NotRequired[str]
     is_primary_objection: NotRequired[bool]
-
 
 ANALYSIS_CONFIG = load_analysis_config()
 THRESHOLDS = ANALYSIS_CONFIG["thresholds"]
@@ -159,7 +155,6 @@ _GUARDEDNESS_WEIGHTS = {
     "defensive": 0.1,
 }
 
-
 def has_user_stated_clear_goal(history) -> bool:
     """True if user stated a clear goal recently (intent lock)"""
     if not history:
@@ -177,7 +172,6 @@ def has_user_stated_clear_goal(history) -> bool:
     # catch goal phrasing like "want to buy a car"
     return any(_GOAL_VERB_PATTERN.search(msg) for msg in recent_user_msgs)
 
-
 def flatten_keywords(keywords):
     """flatten nested keyword groups"""
     if not keywords:
@@ -190,7 +184,6 @@ def flatten_keywords(keywords):
             out.extend(flatten_keywords(v))
         return out
     return []
-
 
 def classify_intent_level(history, user_message="", signal_keywords=None) -> str:
     """classify intent as low, medium, or high"""
@@ -242,7 +235,6 @@ def classify_intent_level(history, user_message="", signal_keywords=None) -> str
     ):
         return "high"
     return "medium"
-
 
 def detect_guardedness(user_message: str, history: list[dict[str, str]]) -> float:
     """Guardedness score 0.0–1.0; agreement-after-answer treated as not guarded"""
@@ -298,7 +290,6 @@ def detect_guardedness(user_message: str, history: list[dict[str, str]]) -> floa
 
     return min(score, 1.0)
 
-
 def analyse_state(
     history: list[dict[str, str]],
     user_message: str = "",
@@ -345,7 +336,6 @@ def analyse_state(
         decisive=decisive,
     )
 
-
 def extract_preferences(history) -> str:
     """Comma-separated preference categories the user mentioned"""
     if not history:
@@ -359,7 +349,6 @@ def extract_preferences(history) -> str:
                 if contains_nonnegated_keyword(text, keywords):
                     mentioned.add(category)
     return ", ".join(sorted(mentioned)) if mentioned else ""
-
 
 def extract_user_keywords(
     history: list[dict[str, str]], max_keywords: int = MAX_USER_KEYWORDS
@@ -378,7 +367,6 @@ def extract_user_keywords(
                 ):
                     keywords.append(cleaned)
     return keywords[-max_keywords:]
-
 
 def detect_topic_drift(user_message: str, stage: str) -> str:
     """Return a course-correction directive if the user drifted from the stage goal, else ''."""
@@ -402,7 +390,6 @@ def detect_topic_drift(user_message: str, stage: str) -> str:
         f"If so, briefly acknowledge what they said and naturally guide back to {redirect}.\n"
     )
 
-
 def is_repetitive_validation(history, threshold=None) -> bool:
     """Detect if the bot has been over-validating recently"""
     if threshold is None:
@@ -419,7 +406,6 @@ def is_repetitive_validation(history, threshold=None) -> bool:
         1 for msg in recent_bot if contains_nonnegated_keyword(msg, validation_phrases)
     )
     return count >= threshold
-
 
 def is_literal_question(user_message) -> bool:
     """True if the user is asking for information (not rhetorical)"""
@@ -445,7 +431,6 @@ def is_literal_question(user_message) -> bool:
 
     return is_question and not is_rhetorical
 
-
 def commitment_or_walkaway(
     history: list[dict[str, str]], user_msg: str, turns: int
 ) -> bool:
@@ -453,7 +438,6 @@ def commitment_or_walkaway(
     return contains_nonnegated_keyword(
         user_msg.lower(), SIGNALS.get("commitment", [])
     ) or contains_nonnegated_keyword(user_msg.lower(), SIGNALS.get("walking", []))
-
 
 def detect_ack_context(
     user_message: str,
@@ -503,7 +487,6 @@ def detect_ack_context(
 
     return "none"
 
-
 def user_demands_directness(history, user_message) -> bool:
     """Detects frustration or demand for a straight answer"""
     demand_keywords = SIGNALS.get("demand_directness", [])
@@ -517,12 +500,7 @@ def user_demands_directness(history, user_message) -> bool:
 
     return False
 
-
-from .objection import classify_objection, ObjectionPathway, analyze_objection_pathway, get_reframe_sequence
-
-
-# get_objection_data removed (unused); use `classify_objection()` directly where needed
-
+# get_objection_data removed (unused); use objection.py:classify_objection() directly where needed
 
 def should_trigger_web_search(
     stage: str,
@@ -543,7 +521,6 @@ def should_trigger_web_search(
         return True
     return False
 
-
 def build_search_query(
     objection_type: str | None,
     product_type: str,
@@ -554,7 +531,6 @@ def build_search_query(
     template_key = objection_type if objection_type in templates else "explicit"
     template = templates.get(template_key, "{keyword} facts data")
     return template.replace("{keyword}", keyword)
-
 
 def extract_recent_user_text(history, max_messages=None) -> str:
     """Combined lowercase text of the N most recent user messages"""

@@ -11,167 +11,112 @@ import yaml
 
 CONFIG_DIR = Path(__file__).parent.parent / "config"
 
-# required keys — catch typos in signals.yaml early
+# Signal keys that must exist in signals.yaml. Typo here → runtime error.
 _REQUIRED_SIGNAL_KEYS = {
-    "commitment",
-    "objection",
-    "walking",
-    "impatience",
-    "low_intent",
-    "high_intent",
-    "guardedness_keywords",
-    "demand_directness",
-    "direct_info_requests",
-    "soft_positive",
-    "validation_phrases",
-    "transactional_bot_indicators",
-    "consultative_bot_indicators",
-    "user_consultativeSIGNALS",
-    "user_transactionalSIGNALS",
+    "commitment", "objection", "walking", "impatience", "low_intent", "high_intent",
+    "guardedness_keywords", "demand_directness", "direct_info_requests", "soft_positive",
+    "validation_phrases", "transactional_bot_indicators", "consultative_bot_indicators",
+    "user_consultativeSIGNALS", "user_transactionalSIGNALS",
 }
 
 
-@lru_cache(maxsize=16)  # ~11 config files + headroom
+@lru_cache(maxsize=16)
 def load_yaml(filename):
-    """Load and cache a YAML file from CONFIG_DIR"""
+    """Load and cache YAML from CONFIG_DIR. Raises FileNotFoundError if missing."""
     filepath = CONFIG_DIR / filename
-
     if not filepath.exists():
         raise FileNotFoundError(f"Config file not found: {filepath}")
-
     with open(filepath, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 
 def load_signals():
-    """Load signals.yaml with key validation"""
+    """Load signals.yaml and verify all required keys exist."""
     signals = load_yaml("signals.yaml")
     missing = _REQUIRED_SIGNAL_KEYS - signals.keys()
     if missing:
-        raise ValueError(f"signals.yaml missing required keys: {sorted(missing)}")
-
+        raise ValueError(f"signals.yaml missing: {sorted(missing)}")
     return signals
 
 
 def load_analysis_config():
-    """Load analysis_config.yaml (cached)"""
     return load_yaml("analysis_config.yaml")
 
 
 def load_objection_flows():
-    """Load objection_flows.yaml (cached)"""
     return load_yaml("objection_flows.yaml")
 
 
 def load_product_config():
-    """Load product_config.yaml (cached)"""
     return load_yaml("product_config.yaml")
 
 
 def load_prospect_config():
-    """Load prospect_config.yaml (cached)"""
     return load_yaml("prospect_config.yaml")
 
 
-@lru_cache(maxsize=1)
-def _build_alias_map():
-    """Build alias→settings map once for fast lookups."""
-    config = load_product_config()
-    alias_map = {}
-    for settings in config["products"].values():
-        for alias in settings.get("aliases", []):
-            alias_map[alias] = settings
-    return alias_map
-
-
 def get_product_settings(product_type):
-    """Return product config for the given type or alias, falling back to default"""
+    """Return product config for the given type, alias, or default. Raises ValueError if none found."""
     config = load_product_config()
     products = config["products"]
-
-    # direct match
+    
     if product_type in products:
         return products[product_type]
-
-    # alias lookup
-    aliased = _build_alias_map().get(product_type)
-    if aliased:
-        return aliased
-
-    # fall back to default
+    
+    # Check aliases
+    for settings in products.values():
+        if product_type in settings.get("aliases", []):
+            return settings
+    
+    # Fall back to default
     if "default" in products:
         return products["default"]
-
-    # no default either
-    raise ValueError(
-        f"Product type '{product_type}' not found and no default config available"
-    )
+    
+    raise ValueError(f"Product '{product_type}' not found and no default available")
 
 
 def load_tactics():
-    """Load tactics.yaml (cached)"""
     return load_yaml("tactics.yaml")
 
 
 def load_overrides():
-    """Load overrides.yaml (cached)"""
     return load_yaml("overrides.yaml")
 
 
 def load_adaptations():
-    """Load adaptations.yaml (cached)"""
     return load_yaml("adaptations.yaml")
 
 
 def load_web_search_config():
-    """Load web_search_config.yaml (cached)"""
     return load_yaml("web_search_config.yaml")
 
 
 def get_tactic(category="elicitation", subtype=None, context=""):
-    """Pick a random tactic string from the given category/subtype"""
+    """Pick a random tactic string from category/subtype. Returns empty string if not found."""
     tactics = load_tactics()
-
     if category not in tactics:
         return ""
-
+    
     cat_dict = tactics[category]
-
     if subtype and subtype in cat_dict:
         options = cat_dict[subtype]
     elif isinstance(cat_dict, dict):
-        # No subtype specified, pick from first available subtype
-        first_key = next(iter(cat_dict.keys()))
-        options = cat_dict[first_key]
+        options = cat_dict[next(iter(cat_dict.keys()))]
     else:
         options = cat_dict
-
-    if not options:
-        return ""
-
-    return random.choice(options)
+    
+    return random.choice(options) if options else ""
 
 
 def render_template(template_str, **kwargs):
-    """Replace {placeholders} in template_str with kwargs"""
-    # defaults for common placeholders
-    defaults = {
-        "preferences": "not yet specified",
-        "user_message": "",
-        "reason": "",
-        "advance_note": "",
-        "elicitation_example": "",
-        "base": "",
-    }
-
+    """Replace {placeholders} in template_str with kwargs, using sensible defaults."""
+    defaults = {"preferences": "not yet specified", "user_message": "", "reason": "",
+                "advance_note": "", "elicitation_example": "", "base": ""}
     merged = {**defaults, **kwargs}
-
+    
     result = template_str
     for key, value in merged.items():
-        placeholder = "{" + key + "}"
-        if placeholder in result:
-            result = result.replace(placeholder, str(value))
-
+        result = result.replace("{" + key + "}", str(value))
     return result
 
 
@@ -217,76 +162,60 @@ def get_adaptation_template(adaptation_type, strategy=None, **kwargs):
 
 
 class QuickMatcher:
-    """Fuzzy text-to-product matching: exact, alias, keyword, then difflib"""
-
+    """Match free-form text to product keys: exact → alias → keywords → fuzzy."""
     FUZZY_THRESHOLD = 0.7
-
+    
     @staticmethod
-    def normalize(text):
-        """Lowercase, strip, collapse whitespace"""
-        if not text:
-            return ""
-        return re.sub(r"\s+", " ", text.lower().strip())
-
+    def normalise(text):
+        """Lowercase, strip, collapse whitespace."""
+        return re.sub(r"\s+", " ", text.lower().strip()) if text else ""
+    
     @classmethod
     def match_product(cls, text):
-        """Match free-form text to a product key. Returns (key, confidence) or (None, 0.0)"""
-        normalized = cls.normalize(text)
-        return cls._match_product_normalized(normalized)
-
+        """Match free-form text to product key. Returns (key, confidence) or (None, 0.0)."""
+        return cls._match_product_normalised(cls.normalise(text))
+    
     @classmethod
     @lru_cache(maxsize=128)
-    def _match_product_normalized(cls, normalized):
-        """Cached inner method. Normalized input ensures "Cars" and "cars" share cache"""
-        if not normalized:
+    def _match_product_normalised(cls, normalised):
+        """Cached lookup ensures 'Cars' and 'cars' share cache hit."""
+        if not normalised:
             return (None, 0.0)
-
+        
         config = load_product_config()
-        products = config["products"]
-
-        best_match = None
-        best_score = 0.0
-
-        for product_key, settings in products.items():
+        best_match, best_score = None, 0.0
+        
+        for product_key, settings in config["products"].items():
             if product_key == "default":
                 continue
-
-            # exact key match
-            if product_key in normalized:
+            
+            # Exact key match
+            if product_key in normalised:
                 return (product_key, 1.0)
-
-            # aliases
-            aliases = settings.get("aliases", [])
-            for alias in aliases:
-                alias_norm = cls.normalize(alias)
-                if alias_norm in normalized:
+            
+            # Alias match
+            for alias in settings.get("aliases", []):
+                alias_norm = cls.normalise(alias)
+                if alias_norm in normalised:
                     return (product_key, 0.95)
-                # fuzzy match
-                ratio = SequenceMatcher(None, alias_norm, normalized).ratio()
+                ratio = SequenceMatcher(None, alias_norm, normalised).ratio()
                 if ratio > best_score and ratio >= cls.FUZZY_THRESHOLD:
-                    best_score = ratio
-                    best_match = product_key
-
-            # context keywords
-            context = cls.normalize(settings.get("context", ""))
-            context_words = context.split()
-            matches = sum(1 for word in context_words if word in normalized)
-            if context_words and matches > 0:
-                context_score = matches / len(context_words) * 0.8
+                    best_score, best_match = ratio, product_key
+            
+            # Context keyword match
+            context_words = cls.normalise(settings.get("context", "")).split()
+            if context_words:
+                matches = sum(1 for word in context_words if word in normalised)
+                context_score = (matches / len(context_words)) * 0.8
                 if context_score > best_score:
-                    best_score = context_score
-                    best_match = product_key
-
+                    best_score, best_match = context_score, product_key
+        
         return (best_match, best_score) if best_match else (None, 0.0)
 
 
 def assign_ab_variant(session_id):
-    """Hash-based deterministic A/B assignment. Same session always gets same variant"""
+    """Deterministic A/B assignment via MD5 hash. Same session_id → same variant always."""
     if not session_id:
-        return "variant_a"  # default if no session_id
-
-    # md5 mod 2 → even split
+        return "variant_a"
     hash_val = int(hashlib.md5(session_id.encode()).hexdigest(), 16)
-    variant_index = hash_val % 2
-
-    return "variant_a" if variant_index == 0 else "variant_b"
+    return "variant_a" if (hash_val % 2) == 0 else "variant_b"

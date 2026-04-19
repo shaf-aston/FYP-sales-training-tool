@@ -10,7 +10,7 @@ Run: pytest tests/test_objection_sop.py -v
 
 import pytest
 
-from chatbot.analysis import classify_objection
+from chatbot.objection import classify_objection
 from chatbot.content import SOP_FLOWS, _get_stage_specific_prompt
 
 # --- Canonical trigger phrases per type ---
@@ -143,7 +143,7 @@ class TestPathwayAnalysis:
 
     def test_analyze_objection_pathway_returns_dict_with_base_keys(self):
         """analyze_objection_pathway wraps classify_objection; must have base 3 keys."""
-        from chatbot.analysis import analyze_objection_pathway
+        from chatbot.objection import analyze_objection_pathway
 
         pathway = analyze_objection_pathway("I can't afford it")
 
@@ -155,7 +155,7 @@ class TestPathwayAnalysis:
 
     def test_analyze_objection_pathway_returns_pathway_keys(self):
         """analyze_objection_pathway adds new pathway keys."""
-        from chatbot.analysis import analyze_objection_pathway
+        from chatbot.objection import analyze_objection_pathway
 
         pathway = analyze_objection_pathway("I can't afford it")
 
@@ -169,7 +169,7 @@ class TestPathwayAnalysis:
 
     def test_pathway_keys_are_populated_for_money(self):
         """Money objection returns populated pathway structure."""
-        from chatbot.analysis import analyze_objection_pathway
+        from chatbot.objection import analyze_objection_pathway
 
         pathway = analyze_objection_pathway("It's too expensive")
 
@@ -182,7 +182,7 @@ class TestPathwayAnalysis:
 
     def test_pathway_keys_populated_for_partner(self):
         """Partner objection returns stakeholder pathway."""
-        from chatbot.analysis import analyze_objection_pathway
+        from chatbot.objection import analyze_objection_pathway
 
         pathway = analyze_objection_pathway("I need to check with my husband")
 
@@ -193,7 +193,7 @@ class TestPathwayAnalysis:
 
     def test_reframe_descriptions_present_for_resource(self):
         """Reframe descriptions include dialogue and examples."""
-        from chatbot.analysis import analyze_objection_pathway
+        from chatbot.objection import analyze_objection_pathway
 
         pathway = analyze_objection_pathway("I don't have the money")
 
@@ -213,7 +213,7 @@ class TestReframeSequencing:
 
     def test_get_reframe_sequence_returns_correct_structure(self):
         """get_reframe_sequence returns dict with sequence info."""
-        from chatbot.analysis import analyze_objection_pathway, get_reframe_sequence
+        from chatbot.objection import analyze_objection_pathway, get_reframe_sequence
 
         pathway = analyze_objection_pathway("I need to think about it")
         seq = get_reframe_sequence(pathway, current_turn_in_stage=0, history=[])
@@ -226,7 +226,7 @@ class TestReframeSequencing:
 
     def test_first_reframe_is_change_of_process(self):
         """First reframe in sequence should be change_of_process (R1)."""
-        from chatbot.analysis import analyze_objection_pathway, get_reframe_sequence
+        from chatbot.objection import analyze_objection_pathway, get_reframe_sequence
 
         pathway = analyze_objection_pathway("I need to think about it")
         seq = get_reframe_sequence(pathway, current_turn_in_stage=0, history=[])
@@ -237,7 +237,7 @@ class TestReframeSequencing:
 
     def test_reframe_sequence_with_prior_attempts(self):
         """Track reframe attempts via history markers."""
-        from chatbot.analysis import analyze_objection_pathway, get_reframe_sequence
+        from chatbot.objection import analyze_objection_pathway, get_reframe_sequence
 
         pathway = analyze_objection_pathway("I'm worried")
 
@@ -255,7 +255,7 @@ class TestReframeSequencing:
 
     def test_reframe_check_question_populated(self):
         """Each reframe has a check question."""
-        from chatbot.analysis import analyze_objection_pathway, get_reframe_sequence
+        from chatbot.objection import analyze_objection_pathway, get_reframe_sequence
 
         pathway = analyze_objection_pathway("I need to think about it")
         seq = get_reframe_sequence(pathway, current_turn_in_stage=0, history=[])
@@ -286,7 +286,7 @@ class TestBackwardCompatibility:
 
     def test_analyze_pathway_includes_base_keys(self):
         """analyze_objection_pathway returns all base keys."""
-        from chatbot.analysis import analyze_objection_pathway
+        from chatbot.objection import analyze_objection_pathway
 
         pathway = analyze_objection_pathway("I can't afford it")
 
@@ -310,14 +310,14 @@ class TestResourceVsStakeholder:
     )
     def test_category_classification(self, phrase, expected_category):
         """Money/partner objections classified to resource/stakeholder."""
-        from chatbot.analysis import analyze_objection_pathway
+        from chatbot.objection import analyze_objection_pathway
 
         pathway = analyze_objection_pathway(phrase)
         assert pathway.get("category") == expected_category
 
     def test_resource_has_funding_options(self):
         """Resource pathway includes funding options list."""
-        from chatbot.analysis import analyze_objection_pathway
+        from chatbot.objection import analyze_objection_pathway
 
         pathway = analyze_objection_pathway("Too expensive, can't afford it")
 
@@ -329,7 +329,7 @@ class TestResourceVsStakeholder:
 
     def test_stakeholder_has_no_funding_options(self):
         """Stakeholder pathway has empty funding options."""
-        from chatbot.analysis import analyze_objection_pathway
+        from chatbot.objection import analyze_objection_pathway
 
         pathway = analyze_objection_pathway("My wife needs to decide")
 
@@ -337,7 +337,7 @@ class TestResourceVsStakeholder:
 
     def test_resource_subtype_detection(self):
         """Detect specific funding subtype."""
-        from chatbot.analysis import analyze_objection_pathway
+        from chatbot.objection import analyze_objection_pathway
 
         pathway = analyze_objection_pathway("I can't afford the price")
 
@@ -351,7 +351,7 @@ class TestEntryQuestions:
 
     def test_resource_entry_question_includes_budget(self):
         """Resource entry question asks about budget."""
-        from chatbot.analysis import analyze_objection_pathway
+        from chatbot.objection import analyze_objection_pathway
 
         pathway = analyze_objection_pathway("Too expensive")
 
@@ -360,7 +360,7 @@ class TestEntryQuestions:
 
     def test_stakeholder_entry_question_asks_independent(self):
         """Stakeholder entry question asks about independence."""
-        from chatbot.analysis import analyze_objection_pathway
+        from chatbot.objection import analyze_objection_pathway
 
         pathway = analyze_objection_pathway("My spouse needs to agree")
 
@@ -369,7 +369,7 @@ class TestEntryQuestions:
 
     def test_internal_entry_question_asks_about_decision_making(self):
         """Internal (fear) entry question asks about decision-making."""
-        from chatbot.analysis import analyze_objection_pathway
+        from chatbot.objection import analyze_objection_pathway
 
         pathway = analyze_objection_pathway("I need to think about it")
 
@@ -378,7 +378,7 @@ class TestEntryQuestions:
 
     def test_entry_questions_differ_by_category(self):
         """Entry questions are unique per category."""
-        from chatbot.analysis import analyze_objection_pathway
+        from chatbot.objection import analyze_objection_pathway
 
         resource_pw = analyze_objection_pathway("Can't afford it")
         stakeholder_pw = analyze_objection_pathway("Partner needs approval")

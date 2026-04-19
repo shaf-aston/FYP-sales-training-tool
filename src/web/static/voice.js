@@ -200,16 +200,37 @@ class VoiceMode {
       return;
     }
 
-    // Build form data
-    const formData = new FormData();
-    formData.append("audio", audioBlob, "recording.webm");
-    formData.append("voice", this.voice);
+// Perform Speech-to-Text using Puter.js
+      let transcriptionText = "";
+      try {
+        const result = await puter.ai.speech2txt(audioBlob);
+        transcriptionText = result.text || result;
+      } catch (err) {
+        console.error("Puter.js STT error:", err);
+        if (this.onError) this.onError("Speech-to-text failed");
+        return;
+      }
 
-    try {
-      const response = await fetch("/api/voice/chat", {
-        method: "POST",
-        headers: { "X-Session-ID": sessionId },
-        body: formData,
+      if (!transcriptionText || transcriptionText.trim() === "") {
+        console.log("No speech detected");
+        if (this.onError) this.onError("No speech detected");
+        return;
+      }
+
+      // Build JSON data
+      const payload = {
+        message: transcriptionText,
+        voice: this.voice
+      };
+
+      try {
+        const response = await fetch("/api/voice/chat", {
+          method: "POST",
+          headers: { 
+            "X-Session-ID": sessionId,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload),
       });
 
       const data = await response.json();
