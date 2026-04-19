@@ -16,32 +16,32 @@ class TestStageQuizEvaluation:
 
     def test_exact_match_correct(self):
         """User provides exact stage and strategy - should be correct."""
-        from chatbot.quiz import evaluate_stage_quiz
+        from chatbot.quiz import test_quiz_stage
 
         bot = MockBot(stage="logical", strategy="consultative")
 
-        result = evaluate_stage_quiz("logical consultative", bot)
+        result = test_quiz_stage("logical consultative", bot)
 
         assert result["correct"] is True
         assert result["score"] == 1
 
     def test_case_insensitive(self):
         """Stage matching should be case-insensitive."""
-        from chatbot.quiz import evaluate_stage_quiz
+        from chatbot.quiz import test_quiz_stage
 
         bot = MockBot(stage="logical", strategy="consultative")
 
-        result = evaluate_stage_quiz("LOGICAL CONSULTATIVE", bot)
+        result = test_quiz_stage("LOGICAL CONSULTATIVE", bot)
 
         assert result["correct"] is True
 
     def test_natural_language_accepted(self):
         """User can provide natural language answer containing keywords."""
-        from chatbot.quiz import evaluate_stage_quiz
+        from chatbot.quiz import test_quiz_stage
 
         bot = MockBot(stage="emotional", strategy="consultative")
 
-        result = evaluate_stage_quiz(
+        result = test_quiz_stage(
             "We're in the emotional stage using a consultative approach", bot
         )
 
@@ -49,11 +49,11 @@ class TestStageQuizEvaluation:
 
     def test_stage_only_is_partial(self):
         """Providing only stage (no strategy) should be partial/incorrect."""
-        from chatbot.quiz import evaluate_stage_quiz
+        from chatbot.quiz import test_quiz_stage
 
         bot = MockBot(stage="pitch", strategy="transactional")
 
-        result = evaluate_stage_quiz("pitch", bot)
+        result = test_quiz_stage("pitch", bot)
 
         # Must include both stage AND strategy to be correct
         assert result["correct"] is False
@@ -61,64 +61,64 @@ class TestStageQuizEvaluation:
 
     def test_wrong_stage_incorrect(self):
         """Wrong stage should be incorrect even with right strategy."""
-        from chatbot.quiz import evaluate_stage_quiz
+        from chatbot.quiz import test_quiz_stage
 
         bot = MockBot(stage="logical", strategy="consultative")
 
-        result = evaluate_stage_quiz("pitch consultative", bot)
+        result = test_quiz_stage("pitch consultative", bot)
 
         assert result["correct"] is False
 
     def test_wrong_strategy_incorrect(self):
         """Wrong strategy should be incorrect even with right stage."""
-        from chatbot.quiz import evaluate_stage_quiz
+        from chatbot.quiz import test_quiz_stage
 
         bot = MockBot(stage="pitch", strategy="consultative")
 
-        result = evaluate_stage_quiz("pitch transactional", bot)
+        result = test_quiz_stage("pitch transactional", bot)
 
         assert result["correct"] is False
 
     def test_expected_values_returned(self):
         """Expected stage and strategy should always be returned."""
-        from chatbot.quiz import evaluate_stage_quiz
+        from chatbot.quiz import test_quiz_stage
 
         bot = MockBot(stage="objection", strategy="transactional")
 
-        result = evaluate_stage_quiz("wrong answer", bot)
+        result = test_quiz_stage("wrong answer", bot)
 
         assert result["expected"]["stage"] == "objection"
         assert result["expected"]["strategy"] == "transactional"
 
     def test_feedback_on_correct(self):
         """Correct answer should have positive feedback with stage info."""
-        from chatbot.quiz import evaluate_stage_quiz
+        from chatbot.quiz import test_quiz_stage
 
         bot = MockBot(stage="intent", strategy="consultative")
 
-        result = evaluate_stage_quiz("intent consultative", bot)
+        result = test_quiz_stage("intent consultative", bot)
 
         assert "Right" in result["feedback"] or "right" in result["feedback"].lower()
         assert "INTENT" in result["feedback"] or "intent" in result["feedback"].lower()
 
     def test_feedback_on_incorrect(self):
         """Incorrect answer should reveal correct answer in feedback."""
-        from chatbot.quiz import evaluate_stage_quiz
+        from chatbot.quiz import test_quiz_stage
 
         bot = MockBot(stage="logical", strategy="consultative")
 
-        result = evaluate_stage_quiz("pitch transactional", bot)
+        result = test_quiz_stage("pitch transactional", bot)
 
         assert "logical" in result["feedback"].lower()
         assert "consultative" in result["feedback"].lower()
 
     def test_user_answer_preserved(self):
         """Original user answer should be included in result."""
-        from chatbot.quiz import evaluate_stage_quiz
+        from chatbot.quiz import test_quiz_stage
 
         bot = MockBot()
 
-        result = evaluate_stage_quiz("my custom answer", bot)
+        result = test_quiz_stage("my custom answer", bot)
 
         assert result["user_answer"] == "my custom answer"
 
@@ -128,31 +128,31 @@ class TestStageQuizAllStates:
 
     def test_consultative_all_stages(self):
         """Quiz works for all consultative stages."""
-        from chatbot.quiz import evaluate_stage_quiz
+        from chatbot.quiz import test_quiz_stage
 
         stages = ["intent", "logical", "emotional", "pitch", "objection"]
         for stage in stages:
             bot = MockBot(stage=stage, strategy="consultative")
-            result = evaluate_stage_quiz(f"{stage} consultative", bot)
+            result = test_quiz_stage(f"{stage} consultative", bot)
             assert result["correct"] is True, f"Failed for {stage}"
 
     def test_transactional_all_stages(self):
         """Quiz works for all transactional stages."""
-        from chatbot.quiz import evaluate_stage_quiz
+        from chatbot.quiz import test_quiz_stage
 
         stages = ["intent", "pitch", "objection"]
         for stage in stages:
             bot = MockBot(stage=stage, strategy="transactional")
-            result = evaluate_stage_quiz(f"{stage} transactional", bot)
+            result = test_quiz_stage(f"{stage} transactional", bot)
             assert result["correct"] is True, f"Failed for {stage}"
 
     def test_intent_discovery_mode(self):
         """Quiz works for intent discovery mode (before strategy set)."""
-        from chatbot.quiz import evaluate_stage_quiz
+        from chatbot.quiz import test_quiz_stage
 
         bot = MockBot(stage="intent", strategy="intent")
 
-        result = evaluate_stage_quiz("intent intent", bot)
+        result = test_quiz_stage("intent intent", bot)
 
         assert result["correct"] is True
 
@@ -280,15 +280,15 @@ class TestEnumValidation:
 
     def test_valid_alignment_values(self):
         """All valid alignment values are accepted."""
-        from chatbot.quiz import _ALIGNMENT_VALUES
+        from chatbot.quiz import _ENUMS
 
-        assert _ALIGNMENT_VALUES == {"strong", "partial", "weak"}
+        assert _ENUMS["alignment"] == {"strong", "partial", "weak"}
 
     def test_valid_understanding_values(self):
         """All valid understanding values are accepted."""
-        from chatbot.quiz import _UNDERSTANDING_VALUES
+        from chatbot.quiz import _ENUMS
 
-        assert _UNDERSTANDING_VALUES == {"excellent", "good", "partial", "needs_work"}
+        assert _ENUMS["understanding"] == {"excellent", "good", "partial", "needs_work"}
 
 
 if __name__ == "__main__":
