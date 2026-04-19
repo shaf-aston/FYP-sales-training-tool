@@ -1102,7 +1102,7 @@ function fetchQuizQuestion() {
   const questionEl = document.getElementById("quizQuestion");
   questionEl.textContent = "Loading question...";
 
-  fetch(`/api/quiz/question?type=${currentQuizType}`, {
+  fetch(`/api/test/question?type=${currentQuizType}`, {
     headers: { "X-Session-ID": getSessionId() },
   })
     .then((r) => r.json())
@@ -1135,13 +1135,13 @@ function submitQuiz() {
   let endpoint = "";
   if (currentQuizType === "stage") {
     body = { answer };
-    endpoint = "/api/quiz/stage";
+    endpoint = "/api/test/stage";
   } else if (currentQuizType === "next_move") {
     body = { response: answer };
-    endpoint = "/api/quiz/next-move";
+    endpoint = "/api/test/next-move";
   } else {
     body = { explanation: answer };
-    endpoint = "/api/quiz/direction";
+    endpoint = "/api/test/direction";
   }
 
   fetch(endpoint, {
@@ -2309,98 +2309,97 @@ async function playServerTTS(text) {
     }
   } catch (e) {}
 
-    let tryBackendTTS = false;
-    try {
-      // 1. Primary: Puter.js directly in frontend
-      if (typeof puter !== 'undefined' && puter.ai) {
-        let ttsAudioResponse = await puter.ai.txt2speech(text, {
-          engine: "neural",
-          language: "en-US",
-        });
-        
-        // Handle Puter.js return type gracefully (it returns an HTMLAudioElement usually)
-        if (ttsAudioResponse instanceof HTMLAudioElement) {
-          _currentTTSAudio = ttsAudioResponse;
-        } else {
-          // Fallback if Puter.js changes their return type
-          tryBackendTTS = true;
-        }
+  let tryBackendTTS = false;
+  try {
+    // 1. Primary: Puter.js directly in frontend
+    if (typeof puter !== "undefined" && puter.ai) {
+      let ttsAudioResponse = await puter.ai.txt2speech(text, {
+        engine: "neural",
+        language: "en-US",
+      });
+
+      // Handle Puter.js return type gracefully (it returns an HTMLAudioElement usually)
+      if (ttsAudioResponse instanceof HTMLAudioElement) {
+        _currentTTSAudio = ttsAudioResponse;
       } else {
-        throw new Error("Puter.js not loaded on page");
+        // Fallback if Puter.js changes their return type
+        tryBackendTTS = true;
       }
-    } catch (e) {
-      console.warn("Puter.js TTS error, falling back to backend Edge TTS:", e);
-      tryBackendTTS = true;
+    } else {
+      throw new Error("Puter.js not loaded on page");
     }
+  } catch (e) {
+    console.warn("Puter.js TTS error, falling back to backend Edge TTS:", e);
+    tryBackendTTS = true;
+  }
 
-    if (tryBackendTTS) {
-      try {
-        const response = await fetch("/api/voice/synthesize", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: text, voice: "male_us" }),
-        });
-        if (!response.ok) throw new Error("Fallback Backend TTS failed");
-        
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-        _currentTTSAudio = new Audio(url);
-        _currentTTSAudio._blobUrl = url; // Save for cleanup
-      } catch (backendError) {
-        console.error("Backend TTS fallback also failed:", backendError);
-        _resumeFromTTS();
-        return;
-      }
-    }
+  if (tryBackendTTS) {
+    try {
+      const response = await fetch("/api/voice/synthesize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: text, voice: "male_us" }),
+      });
+      if (!response.ok) throw new Error("Fallback Backend TTS failed");
 
-    if (!_currentTTSAudio) {
-      console.warn("Failed to generate TTS audio.");
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      _currentTTSAudio = new Audio(url);
+      _currentTTSAudio._blobUrl = url; // Save for cleanup
+    } catch (backendError) {
+      console.error("Backend TTS fallback also failed:", backendError);
       _resumeFromTTS();
       return;
     }
-
-    const interruptBtn = document.getElementById("interruptBtn");
-    if (interruptBtn) interruptBtn.style.display = "inline-block";
-    _showTTSBanner(true);
-
-    // Watchdog: if onended never fires (browser tab hidden, audio error), force-resume.
-    if (_ttsResumeWatchdog) clearTimeout(_ttsResumeWatchdog);
-    _ttsResumeWatchdog = setTimeout(() => {
-      _ttsResumeWatchdog = null;
-      if (_currentTTSAudio) {
-        console.warn("TTS watchdog: forcing resume");
-        try {
-          _currentTTSAudio.pause();
-        } catch (e) {}
-        cleanup();
-      }
-    }, TTS_RESUME_WATCHDOG_MS);
-
-    const cleanup = () => {
-      if (_ttsResumeWatchdog) {
-        clearTimeout(_ttsResumeWatchdog);
-        _ttsResumeWatchdog = null;
-      }
-      
-      if (_currentTTSAudio && _currentTTSAudio._blobUrl) {
-         URL.revokeObjectURL(_currentTTSAudio._blobUrl);
-      }
-      
-      _currentTTSAudio = null;
-      if (interruptBtn) interruptBtn.style.display = "none";
-      _showTTSBanner(false);
-      _resumeFromTTS();
-    };
-
-    _currentTTSAudio.onended = cleanup;
-    _currentTTSAudio.onerror = cleanup;
-
-    _currentTTSAudio.play().catch(() => {
-      cleanup();
-    });
-    _currentTTSAudio.pause();
-    _currentTTSAudio = null;
   }
+
+  if (!_currentTTSAudio) {
+    console.warn("Failed to generate TTS audio.");
+    _resumeFromTTS();
+    return;
+  }
+
+  const interruptBtn = document.getElementById("interruptBtn");
+  if (interruptBtn) interruptBtn.style.display = "inline-block";
+  _showTTSBanner(true);
+
+  // Watchdog: if onended never fires (browser tab hidden, audio error), force-resume.
+  if (_ttsResumeWatchdog) clearTimeout(_ttsResumeWatchdog);
+  _ttsResumeWatchdog = setTimeout(() => {
+    _ttsResumeWatchdog = null;
+    if (_currentTTSAudio) {
+      console.warn("TTS watchdog: forcing resume");
+      try {
+        _currentTTSAudio.pause();
+      } catch (e) {}
+      cleanup();
+    }
+  }, TTS_RESUME_WATCHDOG_MS);
+
+  const cleanup = () => {
+    if (_ttsResumeWatchdog) {
+      clearTimeout(_ttsResumeWatchdog);
+      _ttsResumeWatchdog = null;
+    }
+
+    if (_currentTTSAudio && _currentTTSAudio._blobUrl) {
+      URL.revokeObjectURL(_currentTTSAudio._blobUrl);
+    }
+
+    _currentTTSAudio = null;
+    if (interruptBtn) interruptBtn.style.display = "none";
+    _showTTSBanner(false);
+    _resumeFromTTS();
+  };
+
+  _currentTTSAudio.onended = cleanup;
+  _currentTTSAudio.onerror = cleanup;
+
+  _currentTTSAudio.play().catch(() => {
+    cleanup();
+  });
+  _currentTTSAudio.pause();
+  _currentTTSAudio = null;
 }
 
 // Centralised helpers for hands-free STT control

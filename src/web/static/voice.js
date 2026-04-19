@@ -200,17 +200,20 @@ class VoiceMode {
       return;
     }
 
-// 1. Primary: Puter.js directly in frontend
+    // 1. Primary: Puter.js directly in frontend
     let transcriptionText = null;
     try {
-      if (typeof puter !== 'undefined' && puter.ai) {
+      if (typeof puter !== "undefined" && puter.ai) {
         const result = await puter.ai.speech2txt(audioBlob);
         transcriptionText = result.text || result;
       } else {
         throw new Error("Puter.js not loaded on page");
       }
     } catch (err) {
-      console.warn("Puter.js STT failed, falling back to backend Deepgram STT:", err);
+      console.warn(
+        "Puter.js STT failed, falling back to backend Deepgram STT:",
+        err,
+      );
       // Fallback flow
       return this._fallbackBackendChat(audioBlob, sessionId);
     }
@@ -231,15 +234,15 @@ class VoiceMode {
   async _processViaJsonChat(transcriptionText, sessionId) {
     const payload = {
       message: transcriptionText,
-      voice: this.voice
+      voice: this.voice,
     };
 
     try {
       const response = await fetch("/api/voice/chat", {
         method: "POST",
-        headers: { 
+        headers: {
           "X-Session-ID": sessionId,
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
       });

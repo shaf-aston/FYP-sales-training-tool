@@ -28,8 +28,8 @@ def init_routes(app, require_session_func, bot_state_func=None):
     bp.bot_state = bot_state_func  # type: ignore[attr-defined]
 
 
-@bp.route("/quiz/question", methods=["GET"])
-def quiz_get_question():
+@bp.route("/test/question", methods=["GET"])
+def get_test_question():
     """Get a quiz question for the specified type"""
 
     bot, err = bp.require_session()  # type: ignore
@@ -51,8 +51,8 @@ def quiz_get_question():
     )
 
 
-@bp.route("/quiz/stage", methods=["POST"])
-def quiz_stage():
+@bp.route("/test/stage", methods=["POST"])
+def test_stage():
     """Stage identification quiz (deterministic evaluation)"""
     bot, err = bp.require_session()  # type: ignore
     if err:
@@ -65,15 +65,15 @@ def quiz_stage():
     if len(answer) > SecurityConfig.MAX_MESSAGE_LENGTH:
         return jsonify({"error": "Answer too long"}), 400
 
-    from chatbot.quiz import evaluate_stage_quiz
+    from chatbot.quiz import test_quiz_stage_answer
 
-    result = evaluate_stage_quiz(answer, bot)
+    result = test_quiz_stage_answer(answer, bot)
 
     return jsonify({"success": True, **result, **bp.bot_state(bot)})  # type: ignore[misc]
 
 
-@bp.route("/quiz/next-move", methods=["POST"])
-def quiz_next_move():
+@bp.route("/test/next-move", methods=["POST"])
+def test_next_move():
     """Next move quiz (LLM-evaluated comparison)"""
     bot, err = bp.require_session()  # type: ignore
     if err:
@@ -94,15 +94,15 @@ def quiz_next_move():
             last_user_msg = msg.get("content", "")
             break
 
-    from chatbot.quiz import evaluate_next_move_quiz
+    from chatbot.quiz import test_quiz_next_move
 
-    result = evaluate_next_move_quiz(response, bot, last_user_msg)
+    result = test_quiz_next_move(response, bot, last_user_msg)
 
     return jsonify({"success": True, **result, **bp.bot_state(bot)})  # type: ignore[misc]
 
 
-@bp.route("/quiz/direction", methods=["POST"])
-def quiz_direction():
+@bp.route("/test/direction", methods=["POST"])
+def test_direction():
     """Direction/strategy quiz (LLM-evaluated understanding check)"""
     bot, err = bp.require_session()  # type: ignore
     if err:
@@ -115,9 +115,9 @@ def quiz_direction():
     if len(explanation) > SecurityConfig.MAX_MESSAGE_LENGTH:
         return jsonify({"error": "Explanation too long"}), 400
 
-    from chatbot.quiz import evaluate_direction_quiz
+    from chatbot.quiz import test_quiz_direction
 
-    result = evaluate_direction_quiz(explanation, bot)
+    result = test_quiz_direction(explanation, bot)
 
     return jsonify({"success": True, **result, **bp.bot_state(bot)})  # type: ignore[misc]
 

@@ -58,16 +58,20 @@ def get_quiz_question(quiz_type: str) -> str:
     return fallbacks.get(normalized_type, "How would you proceed?")
 
 
-def test_quiz_stage(user_answer: str, bot: Any) -> dict:
-    """Deterministic: did the user correctly ID the current stage and strategy?"""
+def test_quiz_stage_answer(user_answer: str, bot: Any) -> dict:
+    """Deterministic: did the user correctly ID the current stage and strategy?
+
+    Renamed from `test_quiz_stage` to make the purpose clearer in call sites
+    and test names (`test_quiz_stage_answer`). Behavior is unchanged.
+    """
     expected_stage = bot.flow_engine.current_stage
     expected_strategy = bot.flow_engine.flow_type
     answer_lower = user_answer.strip().lower()
-    
+
     stage_ok = contains_nonnegated_keyword(answer_lower, expected_stage.lower())
     strategy_ok = contains_nonnegated_keyword(answer_lower, expected_strategy.lower())
     correct = stage_ok and strategy_ok
-    
+
     # Build feedback based on what user got right
     feedback_map = {
         (True, True): f"Right — {expected_stage.upper()}, {expected_strategy.upper()} strategy.",
@@ -76,7 +80,7 @@ def test_quiz_stage(user_answer: str, bot: Any) -> dict:
         (True, False): f"Stage is right ({expected_stage.upper()}), but this is {expected_strategy.upper()} strategy.",
     }
     feedback = feedback_map[(stage_ok, strategy_ok)]
-    
+
     return {
         "correct": correct,
         "score": 1 if correct else 0,

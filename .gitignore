@@ -80,6 +80,7 @@ update_factory.py
 Clear-Caches.py
 Documentation/What i did strat.md
 Aston Docs/
+kit/
 src/config/custom_knowledge.yaml
 .ruff_cache
 utils/

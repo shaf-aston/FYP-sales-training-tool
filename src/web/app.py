@@ -9,7 +9,6 @@ Routes are now split across multiple blueprint modules in web/routes/
 - analytics.py: Analytics, quizzes, knowledge management
 - debug.py: Advanced options panel (development only)
 """
-# ruff: noqa: E402 — sys.path must be set before any chatbot imports
 
 import os
 import sys
@@ -68,21 +67,6 @@ prospect_session_manager = SessionSecurityManager(
 prospect_session_manager.start_background_cleanup()
 
 
-def _get_session(session_id):
-    """Get chatbot, updating timestamp. Returns bot or None"""
-    return session_manager.get(session_id)
-
-
-def _set_session(session_id, chatbot):
-    """Store chatbot in memory"""
-    session_manager.set(session_id, chatbot)
-
-
-def _delete_session(session_id):
-    """Remove session from memory"""
-    session_manager.delete(session_id)
-
-
 def _require_session():
     """Pull the bot for this session, or return an error response if the session is missing"""
     from flask import jsonify, request
@@ -90,7 +74,7 @@ def _require_session():
     session_id = request.headers.get("X-Session-ID")
     if not session_id:
         return None, (jsonify({"error": "Session ID required"}), 400)
-    bot = _get_session(session_id)
+    bot = session_manager.get(session_id)
     if not bot:
         return None, (
             jsonify({"error": "Session not found", "code": "SESSION_EXPIRED"}),
@@ -134,9 +118,9 @@ def _bot_state(bot):
 from web.routes import analytics, chat, debug, prospect, session, voice 
 
 session.init_routes(
-    app, session_manager, _get_session, _set_session, _delete_session, _bot_state
+    app, session_manager, session_manager.get, session_manager.set, session_manager.delete, _bot_state
 )
-chat.init_routes(app, _get_session, _require_session, _validate_message, _bot_state)
+chat.init_routes(app, session_manager.get, _require_session, _validate_message, _bot_state)
 prospect.init_routes(app, prospect_session_manager, _validate_message)
 voice.init_routes(app, _require_session, _validate_message, _bot_state)
 analytics.init_routes(app, _require_session, _bot_state)

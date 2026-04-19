@@ -14,7 +14,7 @@ ALLOWED_FIELDS = {"product_name", "pricing", "specifications", "company_info", "
 
 KNOWLEDGE_DIR = Path(__file__).parent.parent / "config"
 KNOWLEDGE_FILE = KNOWLEDGE_DIR / "custom_knowledge.yaml"
-KNOWLEDGE_CONFIG_FILE = KNOWLEDGE_DIR / "knowledge_sanitization.yaml"
+KNOWLEDGE_CONFIG_FILE = KNOWLEDGE_DIR / "knowledge_sanitisation.yaml"
 
 # Patterns that indicate prompt-injection attempts (e.g., "ignore previous instructions")
 DEFAULT_INJECTION_PATTERNS = [
@@ -30,7 +30,7 @@ DEFAULT_LABEL_MAP = {
 }
 
 
-def _load_kb_sanitization_config():
+def _load_kb_sanitisation_config():
     """Load injection-pattern list and label map from config. Falls back to defaults."""
     try:
         if KNOWLEDGE_CONFIG_FILE.exists():
@@ -39,11 +39,11 @@ def _load_kb_sanitization_config():
             label_map = {str(k): str(v) for k, v in (cfg.get("label_map", DEFAULT_LABEL_MAP) or {}).items()}
             return patterns, label_map
     except Exception as e:
-        logger.warning("Failed to load KB sanitization config (%s): %s", KNOWLEDGE_CONFIG_FILE, e)
+        logger.warning("Failed to load KB sanitisation config (%s): %s", KNOWLEDGE_CONFIG_FILE, e)
     return DEFAULT_INJECTION_PATTERNS, DEFAULT_LABEL_MAP
 
 
-INJECTION_PATTERNS, LABEL_MAP = _load_kb_sanitization_config()
+INJECTION_PATTERNS, LABEL_MAP = _load_kb_sanitisation_config()
 
 
 def load_custom_knowledge() -> dict:
@@ -90,7 +90,7 @@ def clean_value(value: str) -> str:
     return value[:MAX_FIELD_LENGTH]
 
 
-def sanitize_knowledge(data: dict) -> dict:
+def sanitise_knowledge(data: dict) -> dict:
     """Whitelist fields and clean values. Returns only valid entries."""
     cleaned = {}
     for key, value in data.items():
@@ -112,7 +112,7 @@ def sanitize_knowledge(data: dict) -> dict:
 def save_custom_knowledge(data: dict) -> bool:
     """Sanitize and save custom knowledge to YAML. Returns True on success."""
     try:
-        sanitized = sanitize_knowledge(data)
+        sanitized = sanitise_knowledge(data)
         KNOWLEDGE_FILE.parent.mkdir(parents=True, exist_ok=True)
         with open(KNOWLEDGE_FILE, "w", encoding="utf-8") as f:
             yaml.dump(sanitized, f, default_flow_style=False, allow_unicode=True, sort_keys=False)

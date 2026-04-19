@@ -222,7 +222,7 @@ def _build_pathway_metadata(base_dict: dict[str, Any], user_message: str) -> Obj
 
     return pathway
 
-def analyze_objection_pathway(
+def analyse_objection_pathway(
     user_message: str,
     history: Optional[list[dict]] = None,
     attempt_count: int = 0,
@@ -280,10 +280,10 @@ def _get_objection_pathway_safe(
 ) -> dict[str, Any]:
     """
     Get objection pathway with graceful fallback.
-    Tries analyze_objection_pathway first; falls back to classify_objection if it fails.
+    Tries analyse_objection_pathway first; falls back to classify_objection if it fails.
     """
     try:
-        return analyze_objection_pathway(user_message, history)
+        return analyse_objection_pathway(user_message, history)
     except Exception as e:
         _base_logger.debug(f"Pathway analysis failed, falling back: {e}")
         return classify_objection(user_message, history)
