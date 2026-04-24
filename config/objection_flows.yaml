@@ -1,0 +1,104 @@
+keywords:
+  money:
+    - expensive
+    - too expensive
+    - can't afford
+    - cannot afford
+    - budget
+    - price
+    - pricing
+    - cost
+  partner:
+    - partner
+    - wife
+    - husband
+    - spouse
+    - boss
+    - manager
+    - team
+    - approval
+  fear:
+    - worried
+    - nervous
+    - risk
+    - risky
+    - fail
+    - mistake
+  logistical:
+    - schedule
+    - timing
+    - right now
+    - too busy
+    - calendar
+    - this month
+  think:
+    - think about it
+    - need to think
+    - not sure
+    - uncertain
+    - let me think
+  smokescreen:
+    - send me information
+    - send me some information
+    - just browsing
+    - not interested
+    - maybe later
+
+reframe_guidance:
+  money:
+    general_reframe: "Treat the money concern as a readiness test, reconnect to the cost of staying the same, and keep the next step practical."
+  partner:
+    general_reframe: "Anchor the prospect in their own conviction first, then help them prepare for the stakeholder conversation."
+  fear:
+    general_reframe: "Slow the pace, isolate the exact risk, and reframe the cost of inaction before moving forward."
+  logistical:
+    general_reframe: "Clarify whether logistics are the true blocker and shrink the next step until it feels workable."
+  think:
+    general_reframe: "Unpack what they still need certainty on, then bring the conversation back to consequences and priorities."
+  smokescreen:
+    general_reframe: "Do not force a pitch. Use one clean question to surface the real objection underneath the vague response."
+
+sop_flows:
+  money: |
+    1. Acknowledge the concern without defending price.
+    2. Reconnect to the problem they want solved.
+    3. Test whether money is the real blocker.
+    4. Reframe with cost-of-inaction logic.
+    5. Ask one concise next-step question.
+  partner: |
+    1. Acknowledge the outside stakeholder.
+    2. Clarify what that person is likely to push back on.
+    3. Strengthen the prospect's own reasons first.
+    4. Prepare a simple, buyer-led way to continue.
+  fear: |
+    1. Acknowledge the hesitation.
+    2. Isolate the specific risk or uncertainty.
+    3. Contrast the risk of action with the risk of staying the same.
+    4. Ask one question that moves the conversation forward.
+  logistical: |
+    1. Clarify the practical blocker.
+    2. Test whether timing is the real issue.
+    3. Reduce the next step to something manageable.
+    4. Ask for a concrete commitment.
+  think: |
+    1. Acknowledge the need to think.
+    2. Clarify what is still unresolved.
+    3. Reconnect to the consequence of delay.
+    4. Ask one question that sharpens the decision.
+  smokescreen: |
+    1. Avoid pitching or over-explaining.
+    2. Clarify what feels unresolved.
+    3. Surface the real blocker before continuing.
+
+transactional_overrides:
+  money: |
+    1. Acknowledge the price concern directly.
+    2. Clarify whether price or timing is the blocker.
+    3. Keep the response short and practical.
+    4. Ask for the simplest viable next step.
+
+fallback: |
+  1. Acknowledge the concern.
+  2. Recall the user's goal.
+  3. Apply the best-fit reframe.
+  4. Ask one question only.

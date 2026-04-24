@@ -1,0 +1,62 @@
+# Signals configuration - NLU keyword groups for intent/strategy detection
+commitment:
+  - ready
+  - let's go
+  - interested
+
+objection:
+  - but
+  - however
+  - concerned
+
+walking:
+  - not interested
+  - not for me
+
+impatience:
+  - hurry
+  - quickly
+
+low_intent:
+  - just browsing
+
+high_intent:
+  - need to buy
+
+guardedness_keywords:
+  agreement_words:
+    - agree
+    - yes
+    - sure
+
+demand_directness:
+  - get to the point
+  - just tell me
+
+direct_info_requests:
+  - how much
+  - price
+
+soft_positive:
+  - that's nice
+  - sounds good
+
+validation_phrases:
+  - makes sense
+  - I understand
+
+transactional_bot_indicators:
+  - direct
+  - quick
+
+consultative_bot_indicators:
+  - explore
+  - understand
+
+user_consultativeSIGNALS:
+  - tell me more
+  - explain
+
+user_transactionalSIGNALS:
+  - just show me
+  - quick answer

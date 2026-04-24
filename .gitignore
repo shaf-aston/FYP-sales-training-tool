@@ -1,0 +1,40 @@
+# Python caches and test/tooling artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.pyright/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# Local virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Local environment/config files
+.env
+.env.*
+!.env.example
+
+# Project runtime data
+.tmp/
+sessions/
+feedback.jsonl
+.claude/
+
+# Editor and OS noise
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.log
+
+Documentation/
+Mark-Scheme-FYP-2025-6.pdf

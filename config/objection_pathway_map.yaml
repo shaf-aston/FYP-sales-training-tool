@@ -1,0 +1,89 @@
+type_to_category_mapping:
+  money: resource
+  logistical: resource
+  partner: stakeholder
+  fear: internal
+  think: internal
+  smokescreen: unclear
+  unknown: unclear
+
+category_mapping:
+  resource:
+    description: "Budget, access, or practical constraints that block movement."
+    entry_question: "If the money or logistics were handled, would anything else stop you?"
+    reframes:
+      - change_of_process
+      - island_mountain
+      - identity_loop
+    funding_options:
+      - "split payment"
+      - "short-term bridge plan"
+      - "start-small implementation"
+    open_wallet_applicable: true
+    dialogue_guidance: |
+      Treat the resource objection as a readiness test rather than a dead end.
+      Confirm whether the constraint is the real blocker before staying on price.
+      If the prospect is otherwise ready, keep the next step concrete and simple.
+    subtypes:
+      - id: cash_flow
+        indicators: ["cash flow", "budget", "can't afford", "too expensive", "price"]
+      - id: timing_logistics
+        indicators: ["timing", "busy", "schedule", "right now", "this month"]
+
+  stakeholder:
+    description: "A decision depends on another person or team."
+    entry_question: "When you picture that conversation with them, what do you think they would push back on most?"
+    reframes:
+      - change_of_process
+      - identity_loop
+      - island_mountain
+    dialogue_guidance: |
+      Keep the user anchored in their own conviction before coaching them on the outside stakeholder.
+      Help them clarify the decision criteria and prepare one concise reason to move forward.
+    subtypes:
+      - id: spouse_partner
+        indicators: ["partner", "wife", "husband", "spouse"]
+      - id: business_signoff
+        indicators: ["boss", "team", "manager", "director", "approval"]
+
+  internal:
+    description: "Internal hesitation, uncertainty, or fear of making the wrong move."
+    entry_question: "What feels riskiest or least certain to you about moving forward?"
+    reframes:
+      - island_mountain
+      - change_of_process
+      - identity_loop
+    dialogue_guidance: |
+      Slow the conversation down and isolate the specific fear.
+      Reframe the cost of staying the same before asking for a decision.
+    subtypes:
+      - id: fear_of_failure
+        indicators: ["worried", "nervous", "risk", "fail", "mistake"]
+      - id: needs_more_certainty
+        indicators: ["need to think", "think about it", "not sure", "uncertain"]
+
+  unclear:
+    description: "The objection signal is weak, indirect, or likely a smokescreen."
+    entry_question: "What part feels most off or unresolved for you right now?"
+    reframes: []
+    dialogue_guidance: |
+      Do not force a reframe yet. Clarify the real objection with one direct question first.
+
+reframe_descriptions:
+  change_of_process:
+    title: "Change of Process"
+    dialogue: "What if the real issue is not whether you can do it, but whether your current approach keeps producing the same result?"
+    example: "Staying with the same process may feel safer, but it usually preserves the exact bottleneck you want to fix."
+    check_question: "Does it feel like the current process is the part that actually needs to change?"
+
+  island_mountain:
+    title: "Island to Mountain"
+    dialogue: "It can help to zoom out from today's friction and look at the larger cost of leaving this unsolved."
+    example: "The short-term discomfort of change is often smaller than the long-term cost of carrying the same problem forward."
+    check_question: "When you compare the short-term effort with the long-term cost, what stands out most?"
+
+  identity_loop:
+    title: "Identity Loop"
+    dialogue: "People usually follow through when a decision matches the kind of person or team they want to be."
+    example: "If being proactive and decisive matters here, delaying the choice can pull you away from that identity."
+    check_question: "What would the decisive version of you want to do next?"

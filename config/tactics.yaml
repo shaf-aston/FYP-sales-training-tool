@@ -1,0 +1,26 @@
+# Sales tactics for different conversation stages
+tactics:
+  discovery:
+    - Listen and ask open questions
+    - Identify customer pain points
+    - Build rapport
+
+  logical:
+    - Present feature benefits
+    - Address specific concerns
+    - Provide evidence
+
+  emotional:
+    - Connect on values
+    - Share success stories
+    - Build urgency
+
+  pitch:
+    - Clear value proposition
+    - Call to action
+    - Handle final objections
+
+  close:
+    - Confirm decision
+    - Next steps
+    - Thank customer
