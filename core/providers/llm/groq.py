@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import time
+from typing import Any, cast
 
 from groq import Groq, APIConnectionError, RateLimitError, AuthenticationError
 
@@ -19,7 +20,8 @@ class GroqProvider(BaseLLMProvider):
     def __init__(self, model: str | None = None):
         self.model = model or get_groq_llm_model()
         self.api_keys = get_groq_api_keys()
-        self.clients = [Groq(api_key=key) for key in self.api_keys]
+        groq_client = cast(Any, Groq)
+        self.clients = [groq_client(api_key=key) for key in self.api_keys]
 
     def is_available(self) -> bool:
         return bool(self.api_keys)
@@ -45,7 +47,8 @@ class GroqProvider(BaseLLMProvider):
                     temperature=temperature,
                     max_tokens=max_tokens,
                 )
-                content = response.choices[0].message.content.strip()
+                message_content = response.choices[0].message.content or ""
+                content = message_content.strip()
                 return LLMResponse(
                     content=content,
                     latency_ms=(time.time() - start) * 1000,

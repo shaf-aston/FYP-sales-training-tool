@@ -212,7 +212,7 @@ def test_deepgram_provider_applies_rate_limit_cooldown(monkeypatch):
     result = provider.transcribe(b"audio-bytes", filename="sample.webm")
 
     assert result.rate_limited is True
-    assert result.error.startswith("Deepgram HTTP 429")
+    assert (result.error or "").startswith("Deepgram HTTP 429")
     assert provider.is_available() is False
     DeepgramSTTProvider._rate_limit_until = 0.0
 

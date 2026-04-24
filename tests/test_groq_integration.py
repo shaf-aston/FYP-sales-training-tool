@@ -52,7 +52,7 @@ def test_voice_parameter_propagation():
     ))
     
     # Replace builder with mock
-    voice_provider._build_tts_provider = lambda _: mock_provider
+    voice_provider._build_tts_provider = lambda provider_name: mock_provider
     
     # Call synthesize with voice parameter
     result = voice_provider.synthesize("Hello", voice="female_us", rate=10)
