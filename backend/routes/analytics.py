@@ -20,6 +20,7 @@ from core.knowledge import (
     load_custom_knowledge,
     save_custom_knowledge,
 )
+from core.quiz import get_quiz_question
 from ..security import SecurityConfig
 
 bp = Blueprint("analytics", __name__, url_prefix="/api")
@@ -41,8 +42,6 @@ def get_test_question():
         return error
 
     quiz_type = request.args.get("type", "stage")
-    from core.quiz import get_quiz_question
-
     question = get_quiz_question(quiz_type)
 
     return jsonify(
@@ -69,9 +68,7 @@ def test_stage():
     if len(answer) > SecurityConfig.MAX_MESSAGE_LENGTH:
         return jsonify({"error": "Answer too long"}), 400
 
-    from core.quiz import test_quiz_stage_answer
-
-    result = test_quiz_stage_answer(answer, session_bot)
+    result = session_bot.run_quiz_stage_answer(answer)
 
     return jsonify({"success": True, **result, **bp.bot_state(session_bot)})  # type: ignore[misc]
 
@@ -90,17 +87,7 @@ def test_next_move():
     if len(response) > SecurityConfig.MAX_MESSAGE_LENGTH:
         return jsonify({"error": "Response too long"}), 400
 
-    # Get last user message from history for context
-    history = session_bot.flow_engine.conversation_history
-    last_user_msg = ""
-    for message in reversed(history):
-        if message.get("role") == "user":
-            last_user_msg = message.get("content", "")
-            break
-
-    from core.quiz import test_quiz_next_move
-
-    result = test_quiz_next_move(response, session_bot, last_user_msg)
+    result = session_bot.run_quiz_next_move(response)
 
     return jsonify({"success": True, **result, **bp.bot_state(session_bot)})  # type: ignore[misc]
 
@@ -119,9 +106,7 @@ def test_direction():
     if len(explanation) > SecurityConfig.MAX_MESSAGE_LENGTH:
         return jsonify({"error": "Explanation too long"}), 400
 
-    from core.quiz import test_quiz_direction
-
-    result = test_quiz_direction(explanation, session_bot)
+    result = session_bot.run_quiz_direction(explanation)
 
     return jsonify({"success": True, **result, **bp.bot_state(session_bot)})  # type: ignore[misc]
 

@@ -1,3 +1,4 @@
+"""Tests for voice system architecture and speech I/O integration."""
 from io import BytesIO
 from pathlib import Path
 

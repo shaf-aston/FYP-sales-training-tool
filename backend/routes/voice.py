@@ -6,6 +6,7 @@ import os
 from flask import Blueprint, Response, jsonify, request
 
 from core.constants import MAX_AUDIO_SIZE_BYTES, MAX_TTS_TEXT_LENGTH
+from ._utils import safe_latency_ms, sum_latency_ms
 from ..messages import VOICE_ERROR, VOICE_TTS_ERROR
 from ..security import require_rate_limit
 
@@ -137,7 +138,7 @@ def voice_transcribe():
             {
                 "success": True,
                 "text": result.text,
-                "latency_ms": round(result.latency_ms, 1),
+                "latency_ms": safe_latency_ms(result.latency_ms),
                 "provider": result.provider,
             }
         )
@@ -178,13 +179,15 @@ def voice_synthesize():
                 }
             ), 500
 
+        latency_ms = safe_latency_ms(result.latency_ms)
+
         return Response(
             result.audio_bytes,
             mimetype=result.content_type,
             headers={
                 "Content-Disposition": "inline",
-                "X-Latency-Ms": str(round(result.latency_ms, 1)),
                 "X-Voice": result.voice,
+                **({"X-Latency-Ms": f"{latency_ms}"} if latency_ms is not None else {}),
             },
         )
 
@@ -260,15 +263,14 @@ def voice_chat():
                     "tts_provider": synthesis.provider,
                     "tts_fallback_recommended": synthesis.fallback_recommended,
                     "latency": {
-                        "transcription_ms": round(transcription.latency_ms, 1),
+                        "transcription_ms": safe_latency_ms(transcription.latency_ms),
                         "transcription_provider": transcription.provider,
-                        "llm_ms": round(response.latency_ms, 1),
-                        "synthesis_ms": round(synthesis.latency_ms, 1),
-                        "total_ms": round(
-                            transcription.latency_ms
-                            + response.latency_ms
-                            + synthesis.latency_ms,
-                            1,
+                        "llm_ms": safe_latency_ms(response.latency_ms),
+                        "synthesis_ms": safe_latency_ms(synthesis.latency_ms),
+                        "total_ms": sum_latency_ms(
+                            transcription.latency_ms,
+                            response.latency_ms,
+                            synthesis.latency_ms,
                         ),
                     },
                     "training": training,
@@ -291,13 +293,14 @@ def voice_chat():
                 "voice": synthesis.voice,
                 "tts_fallback_recommended": synthesis.fallback_recommended,
                 "latency": {
-                    "transcription_ms": round(transcription.latency_ms, 1),
+                    "transcription_ms": safe_latency_ms(transcription.latency_ms),
                     "transcription_provider": transcription.provider,
-                    "llm_ms": round(response.latency_ms, 1),
-                    "synthesis_ms": round(synthesis.latency_ms, 1),
-                    "total_ms": round(
-                        transcription.latency_ms + response.latency_ms + synthesis.latency_ms,
-                        1,
+                    "llm_ms": safe_latency_ms(response.latency_ms),
+                    "synthesis_ms": safe_latency_ms(synthesis.latency_ms),
+                    "total_ms": sum_latency_ms(
+                        transcription.latency_ms,
+                        response.latency_ms,
+                        synthesis.latency_ms,
                     ),
                 },
                 "provider": response.provider,

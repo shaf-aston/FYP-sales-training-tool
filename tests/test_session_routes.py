@@ -1,3 +1,4 @@
+"""Tests for session management API routes."""
 from flask import Flask
 
 from backend.routes import session as session_routes

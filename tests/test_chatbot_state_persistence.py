@@ -1,3 +1,4 @@
+"""Tests for chatbot state persistence and recovery."""
 import logging
 from pathlib import Path
 from typing import Any, cast

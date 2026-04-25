@@ -1,3 +1,4 @@
+"""Tests for objection pathway configuration and validation."""
 from backend.security import SessionSecurityManager
 from core.objection import analyse_objection_pathway, validate_pathway_config
 

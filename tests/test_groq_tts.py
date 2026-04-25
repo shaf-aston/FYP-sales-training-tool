@@ -3,7 +3,6 @@
 import os
 
 import pytest
-import requests
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -15,6 +14,8 @@ pytestmark = pytest.mark.smoke
     reason="Set RUN_SMOKE_TESTS=1 to run live Groq TTS smoke tests.",
 )
 def test_groq_tts_smoke():
+    import requests
+
     key = os.environ.get("ALTERNATIVE_GROQ_API_KEY", "").split("#")[0].strip()
     if not key:
         pytest.skip("ALTERNATIVE_GROQ_API_KEY is not configured.")

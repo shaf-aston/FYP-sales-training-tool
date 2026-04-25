@@ -1,3 +1,4 @@
+"""Tests for provider selection and routing contract."""
 from pathlib import Path
 from typing import Any, cast
 

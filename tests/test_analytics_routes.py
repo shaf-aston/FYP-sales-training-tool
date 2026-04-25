@@ -1,3 +1,4 @@
+"""Tests for analytics API routes."""
 import json
 from pathlib import Path
 
@@ -21,6 +22,22 @@ class _DummyBot:
     def __init__(self):
         self.flow_engine = _DummyFlowEngine()
 
+    def run_quiz_stage_answer(self, answer):
+        from core.quiz import test_quiz_stage_answer
+        return test_quiz_stage_answer(answer, self.flow_engine.current_stage, self.flow_engine.flow_type)
+
+    def run_quiz_next_move(self, response):
+        from core.quiz import test_quiz_next_move
+        history = self.flow_engine.conversation_history
+        last_user_msg = next(
+            (m.get("content", "") for m in reversed(history) if m.get("role") == "user"), ""
+        )
+        return test_quiz_next_move(response, None, self.flow_engine.current_stage, self.flow_engine.flow_type, last_user_msg)
+
+    def run_quiz_direction(self, explanation):
+        from core.quiz import test_quiz_direction
+        return test_quiz_direction(explanation, None, self.flow_engine.current_stage, self.flow_engine.flow_type)
+
 
 def _make_analytics_app(monkeypatch, testing=True):
     app = Flask(__name__)
@@ -41,7 +58,7 @@ def _make_analytics_app(monkeypatch, testing=True):
 
 def test_test_question_returns_question_and_bot_state(monkeypatch):
     app = _make_analytics_app(monkeypatch)
-    monkeypatch.setattr("core.quiz.get_quiz_question", lambda quiz_type: {"prompt": quiz_type})
+    monkeypatch.setattr("backend.routes.analytics.get_quiz_question", lambda quiz_type: {"prompt": quiz_type})
 
     response = app.test_client().get("/api/test/question?type=next-move")
 
@@ -64,22 +81,21 @@ def test_test_stage_rejects_missing_answer(monkeypatch):
     assert response.get_json()["error"] == "Answer required"
 
 
-def test_next_move_uses_last_user_message(monkeypatch):
-    app = _make_analytics_app(monkeypatch)
+def test_next_move_returns_score(monkeypatch):
     captured = {}
 
-    def _fake_next_move(response, bot, last_user_msg):
+    def _fake_run_quiz_next_move(self, response):
         captured["response"] = response
-        captured["last_user_msg"] = last_user_msg
         return {"score": 9}
 
-    monkeypatch.setattr("core.quiz.test_quiz_next_move", _fake_next_move)
+    monkeypatch.setattr(_DummyBot, "run_quiz_next_move", _fake_run_quiz_next_move)
+    app = _make_analytics_app(monkeypatch)
 
     response = app.test_client().post("/api/test/next-move", json={"response": "Ask about impact"})
 
     assert response.status_code == 200
     assert response.get_json()["score"] == 9
-    assert captured == {"response": "Ask about impact", "last_user_msg": "I need something reliable"}
+    assert captured == {"response": "Ask about impact"}
 
 
 def test_knowledge_route_rejects_unknown_fields(monkeypatch):

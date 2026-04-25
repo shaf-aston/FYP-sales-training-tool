@@ -1,3 +1,4 @@
+"""Tests for security using STRIDE threat modeling methodology."""
 from flask import Flask, jsonify, request
 
 from backend.routes import session as session_routes

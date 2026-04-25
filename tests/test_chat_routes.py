@@ -1,3 +1,4 @@
+"""Tests for chat API routes."""
 from flask import Flask
 
 from backend.routes import chat as chat_routes
