@@ -331,7 +331,10 @@ class ProspectSession:
 
         product_knowledge = ""
         if self.product_context:
-            product_knowledge = f"PRODUCT INFORMATION (you may know some of this as a buyer doing research):\n{self.product_context}"
+            product_knowledge = (
+                f"PRODUCT INFORMATION (you may know some of this as a buyer doing research):\n"
+                f"{self.product_context}"
+            )
 
         prompt = template.format(
             name=persona.get("name", "Alex"),
@@ -598,7 +601,7 @@ class ProspectSession:
         phrase_count = sum(
             1
             for phrase in ("help me understand", "what matters most", "what are you hoping",
-                          "what's most important", "tell me more")
+                           "what's most important", "tell me more")
             if phrase in msg_lower
         )
         repeated_punctuation = len([c for c in user_msg if c == "?"]) > 2

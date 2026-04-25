@@ -149,14 +149,19 @@ class APITester:
             # Mock dependency functions
             def mock_get(key):
                 return None
+
             def mock_set(key, val):
                 pass
+
             def mock_delete(key):
                 pass
+
             def mock_validate_message(msg):
                 return msg, None
+
             def mock_require_session():
                 return None, ("error", 400)
+
             def mock_bot_state(bot):
                 return {}
 

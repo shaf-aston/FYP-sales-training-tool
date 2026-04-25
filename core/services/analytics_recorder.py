@@ -106,4 +106,3 @@ class AnalyticsRecorder:
             user_message_length=user_message_length,
             bot_response_length=bot_response_length,
         )
-

@@ -1,3 +1,4 @@
+"""Tests for acknowledgment logic and context detection."""
 from core.analysis import analyse_state, detect_ack_context
 
 

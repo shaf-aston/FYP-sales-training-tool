@@ -257,7 +257,7 @@ RULES:
 - PROCESS COMMITMENT: If agreed, present final logistic check (e.g. payment link, card info, address).
 - NOT BUYING: Simply say thanks and goodbye without pushing further.
 
-KEEP IT CONCISE: No discovery, no long winded validation. 
+KEEP IT CONCISE: No discovery, no long winded validation.
 """,
     },
 }

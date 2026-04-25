@@ -1,3 +1,4 @@
+"""Tests for output guardrails and content filtering."""
 from core.response_guardrails import apply_layer3_output_checks
 from core.utils import Stage
 

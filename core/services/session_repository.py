@@ -35,4 +35,3 @@ class SessionRepository:
 
     def load_chatbot_state(self, session_id: str) -> dict | None:
         return SessionPersistence.load(session_id)
-

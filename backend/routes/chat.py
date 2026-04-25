@@ -2,6 +2,7 @@
 
 from flask import Blueprint, jsonify, request
 
+from ._utils import safe_latency_ms
 from ..messages import GENERIC_ERROR
 from ..security import require_rate_limit
 
@@ -43,7 +44,7 @@ def chat():
                 "success": True,
                 "message": response.content,
                 **bp.bot_state(session_bot),  # type: ignore
-                "latency_ms": round(response.latency_ms, 1),
+                "latency_ms": safe_latency_ms(response.latency_ms),
                 "provider": response.provider,
                 "model": response.model,
                 "metrics": {
@@ -105,7 +106,7 @@ def edit_message():
                     for message in session_bot.flow_engine.conversation_history
                 ],
                 **bp.bot_state(session_bot),  # type: ignore
-                "latency_ms": round(response.latency_ms, 1),
+                "latency_ms": safe_latency_ms(response.latency_ms),
                 "provider": response.provider,
                 "model": response.model,
                 "training": training,

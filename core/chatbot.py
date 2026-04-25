@@ -28,10 +28,9 @@ from .providers import list_fallback_providers  # re-export for tests/patching
 from .providers.base import ACCESS_DENIED, RATE_LIMIT, LLMResponse
 from .response_guardrails import Layer3CheckResult, apply_layer3_output_checks
 from .utils import Strategy, Stage
-from . import trainer
+from . import trainer, quiz
 
 _base_logger = logging.getLogger(__name__)
-
 
 
 @dataclass
@@ -297,7 +296,8 @@ class SalesChatbot:
                 llm_response.error,
             )
             return self._fallback(
-                f"{self._provider_name.capitalize()} is rejecting this request (access denied). Check the API key, VPN/proxy, firewall, or provider-side security rules, then try again.",
+                f"{self._provider_name.capitalize()} is rejecting this request (access denied). "
+                "Check the API key, VPN/proxy, firewall, or provider-side security rules, then try again.",
                 llm_response.latency_ms,
                 user_message,
             )
@@ -443,6 +443,26 @@ class SalesChatbot:
         """Answer a trainee's question about the current conversation and sales techniques."""
         return trainer.answer_training_question(
             self.provider, self.flow_engine, question, style
+        )
+
+    def run_quiz_stage_answer(self, answer: str) -> dict:
+        return quiz.test_quiz_stage_answer(
+            answer, self.flow_engine.current_stage, self.flow_engine.flow_type
+        )
+
+    def run_quiz_next_move(self, response: str) -> dict:
+        history = self.flow_engine.conversation_history
+        last_user_msg = next(
+            (m.get("content", "") for m in reversed(history) if m.get("role") == "user"),
+            "",
+        )
+        return quiz.test_quiz_next_move(
+            response, self.provider, self.flow_engine.current_stage, self.flow_engine.flow_type, last_user_msg
+        )
+
+    def run_quiz_direction(self, explanation: str) -> dict:
+        return quiz.test_quiz_direction(
+            explanation, self.provider, self.flow_engine.current_stage, self.flow_engine.flow_type
         )
 
     def _capture_turn_snapshot(self) -> dict:

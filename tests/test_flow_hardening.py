@@ -1,3 +1,4 @@
+"""Tests for FSM flow hardening and state machine correctness."""
 import pytest
 
 import core.flow as flow

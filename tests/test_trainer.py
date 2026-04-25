@@ -1,3 +1,4 @@
+"""Tests for training coach scoring and feedback generation."""
 from types import SimpleNamespace
 
 from core import trainer

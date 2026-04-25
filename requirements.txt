@@ -9,8 +9,9 @@ gunicorn>=21.0.0
 
 # Testing
 pytest>=7.0.0
+pytest-cov>=7.0.0
 
-# Developer tooling (optional)
+# Linters (optional)
 ruff>=0.1.0
 flake8>=5.0.0
 pyright>=1.1.0

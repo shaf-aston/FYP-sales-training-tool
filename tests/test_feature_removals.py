@@ -1,3 +1,4 @@
+"""Tests for removed features and dead code verification."""
 from pathlib import Path
 
 

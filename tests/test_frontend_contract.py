@@ -1,3 +1,4 @@
+"""Tests for frontend API contract and response format validation."""
 import re
 from pathlib import Path
 

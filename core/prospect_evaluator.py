@@ -264,10 +264,12 @@ def evaluate_prospect_session(provider, conversation_history, prospect_state, pr
         return text
 
     if feedback_style in ("strict", "tough", "hard"):
-        deterministic_pack["strengths"] = [f"{s}".replace("Strong ", "Good ").strip() for s in deterministic_pack["strengths"]]
+        deterministic_pack["strengths"] = [
+            f"{s}".replace("Strong ", "Good ").strip() for s in deterministic_pack["strengths"]
+        ]
         deterministic_pack["improvements"] = [_apply_style(s) for s in deterministic_pack["improvements"]]
         deterministic_pack["coach_tip"] = _apply_style(deterministic_pack.get("coach_tip", ""))
-    
+
     # Build conversation transcript and metadata
     transcript = "\n".join(
         f"{'SALESPERSON' if message['role'] == 'user' else 'PROSPECT'}: {message['content']}"
@@ -277,7 +279,7 @@ def evaluate_prospect_session(provider, conversation_history, prospect_state, pr
         f"- {name}: {info['description']} (weight: {info['weight']})"
         for name, info in criteria.items()
     )
-    
+
     prompt = f"""You are a sales coach. Evaluate this trainee's performance.
 
 TRANSCRIPT:
@@ -303,7 +305,7 @@ Return JSON:
     "improvements": ["<imp1>", "<imp2>"],
     "summary": "<2-3 sentence overall assessment>"
 }}"""
-    
+
     if scoring_enabled and provider is not None:
         try:
             response = provider.chat(
@@ -321,7 +323,7 @@ Return JSON:
                 )
         except Exception:
             pass
-    
+
     return _fallback_evaluation(
         prospect_state.status,
         criteria=criteria,
@@ -340,7 +342,7 @@ def _build_evaluation(
     weighted_total = 0.0
 
     deterministic_scores = (deterministic or {}).get("criteria_scores", {})
-    
+
     for name, info in criteria.items():
         raw = result.get("criteria_scores", {}).get(name, {})
         raw = raw if isinstance(raw, dict) else {}
@@ -358,9 +360,9 @@ def _build_evaluation(
         )
         criteria_scores[name] = {"score": score, "feedback": feedback}
         weighted_total += score * info["weight"]
-    
+
     overall_score = clamp_score(round(weighted_total))
-    
+
     strengths = result.get("strengths", [])
     improvements = result.get("improvements", [])
     summary = result.get("summary", "")
@@ -416,8 +418,8 @@ def _fallback_evaluation(
         "outcome": outcome,
         "criteria_scores": {
             name: defaults
-            for name in ["needs_discovery", "rapport_building", "objection_handling", 
-                        "solution_presentation", "conversation_flow"]
+            for name in ["needs_discovery", "rapport_building", "objection_handling",
+                         "solution_presentation", "conversation_flow"]
         },
         "strengths": [],
         "improvements": ["Couldn't finish the evaluation - re-run it when ready."],

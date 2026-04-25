@@ -95,4 +95,3 @@ class GroqTTSProvider(BaseTTSProvider):
             error=f"Groq rate limit reached: {last_error}",
             latency_ms=(time.time() - start) * 1000,
         )
-

@@ -15,7 +15,7 @@ ALLOWED_FIELDS = {"product_name", "pricing", "specifications", "company_info", "
 KNOWLEDGE_DIR = Path(__file__).parent.parent / "config"
 KNOWLEDGE_FILE = KNOWLEDGE_DIR / "custom_instructions.yaml"
 LEGACY_KNOWLEDGE_FILE = KNOWLEDGE_DIR / "custom_knowledge.yaml"
-KNOWLEDGE_CONFIG_FILE = KNOWLEDGE_DIR / "knowledge_sanitisation.yaml"
+KNOWLEDGE_CONFIG_FILE = KNOWLEDGE_DIR / "knowledge_sanitization.yaml"
 
 # Patterns that indicate prompt-injection attempts (e.g., "ignore previous instructions")
 DEFAULT_INJECTION_PATTERNS = [
@@ -35,8 +35,17 @@ def _load_kb_sanitisation_config():
     """Load injection-pattern list and label map from config. Falls back to defaults."""
     try:
         if KNOWLEDGE_CONFIG_FILE.exists():
-            cfg = yaml.safe_load(open(KNOWLEDGE_CONFIG_FILE, "r", encoding="utf-8")) or {}
-            patterns = [p.lower() for p in cfg.get("injection_patterns", DEFAULT_INJECTION_PATTERNS) if isinstance(p, str)]
+            with open(KNOWLEDGE_CONFIG_FILE, "r", encoding="utf-8") as f:
+                cfg = yaml.safe_load(f) or {}
+            patterns_source = cfg.get(
+                "suspicious_patterns",
+                cfg.get("injection_patterns", DEFAULT_INJECTION_PATTERNS),
+            )
+            if isinstance(patterns_source, str):
+                patterns_source = [patterns_source]
+            elif not isinstance(patterns_source, list):
+                patterns_source = DEFAULT_INJECTION_PATTERNS
+            patterns = [p.lower() for p in patterns_source if isinstance(p, str)]
             label_map = {str(k): str(v) for k, v in (cfg.get("label_map", DEFAULT_LABEL_MAP) or {}).items()}
             return patterns, label_map
     except Exception as e:
@@ -98,7 +107,7 @@ def sanitise_knowledge(data: dict) -> dict:
     for key, value in data.items():
         if key not in ALLOWED_FIELDS:
             continue
-        
+
         if isinstance(value, str):
             v = clean_value(value)
             if v:
@@ -107,7 +116,7 @@ def sanitise_knowledge(data: dict) -> dict:
             out_list = [clean_value(item) for item in value if isinstance(item, str)]
             if out_list:
                 cleaned[key] = [v for v in out_list if v]
-    
+
     return cleaned
 
 

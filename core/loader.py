@@ -366,19 +366,19 @@ def get_product_settings(product_type):
     """Return product config for the given type, alias, or default. Raises ValueError if none found."""
     config = load_product_config()
     products = config["products"]
-    
+
     if product_type in products:
         return products[product_type]
-    
+
     # Check aliases
     for settings in products.values():
         if product_type in settings.get("aliases", []):
             return settings
-    
+
     # Fall back to default
     if "default" in products:
         return products["default"]
-    
+
     raise ValueError(f"Product '{product_type}' not found and no default available")
 
 
@@ -414,7 +414,7 @@ def render_template(template_str, **kwargs):
     defaults = {"preferences": "not yet specified", "user_message": "", "reason": "",
                 "advance_note": "", "elicitation_example": "", "base": ""}
     merged = {**defaults, **kwargs}
-    
+
     result = template_str
     for key, value in merged.items():
         result = result.replace("{" + key + "}", str(value))
@@ -454,35 +454,35 @@ def get_adaptation_template(adaptation_type, strategy=None, **kwargs):
 class QuickMatcher:
     """Match free-form text to product keys: exact → alias → keywords → fuzzy."""
     FUZZY_THRESHOLD = 0.7
-    
+
     @staticmethod
     def normalise(text):
         """Lowercase, strip, collapse whitespace."""
         return re.sub(r"\s+", " ", text.lower().strip()) if text else ""
-    
+
     @classmethod
     def match_product(cls, text):
         """Match free-form text to product key. Returns (key, confidence) or (None, 0.0)."""
         return cls._match_product_normalised(cls.normalise(text))
-    
+
     @classmethod
     @lru_cache(maxsize=128)
     def _match_product_normalised(cls, normalised):
         """Cached lookup ensures 'Cars' and 'cars' share cache hit."""
         if not normalised:
             return (None, 0.0)
-        
+
         config = load_product_config()
         best_match, best_score = None, 0.0
-        
+
         for product_key, settings in config["products"].items():
             if product_key == "default":
                 continue
-            
+
             # Exact key match
             if product_key in normalised:
                 return (product_key, 1.0)
-            
+
             # Alias match
             for alias in settings.get("aliases", []):
                 alias_norm = cls.normalise(alias)
@@ -491,7 +491,7 @@ class QuickMatcher:
                 ratio = SequenceMatcher(None, alias_norm, normalised).ratio()
                 if ratio > best_score and ratio >= cls.FUZZY_THRESHOLD:
                     best_score, best_match = ratio, product_key
-            
+
             # Context keyword match
             context_words = cls.normalise(settings.get("context", "")).split()
             if context_words:
@@ -499,7 +499,7 @@ class QuickMatcher:
                 context_score = (matches / len(context_words)) * 0.8
                 if context_score > best_score:
                     best_score, best_match = context_score, product_key
-        
+
         return (best_match, best_score) if best_match else (None, 0.0)
 
 

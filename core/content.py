@@ -37,7 +37,6 @@ from .analysis import (
     is_literal_question,
 )
 from .constants import PERSONA_CHECKPOINT_TURNS, TERSE_INPUT_THRESHOLD
-from .utils import contains_nonnegated_keyword
 
 from .objection import _build_objection_context
 
@@ -47,9 +46,10 @@ ELICITATION_TACTICS = [
     "I'm guessing this isn't urgent, but there's something nudging you to look at alternatives. What is it?",
 ]
 
+
 def _build_tactic_guidance(strategy: str, state: Any, user_message: str) -> str:
     """Generate adaptive bot guidance based on user state.
-    
+
     Applies different strategies for decisive vs. guarded users. Returns empty
     string if no special adaptation needed (user is engaged and open).
     """
@@ -82,6 +82,7 @@ def _build_tactic_guidance(strategy: str, state: Any, user_message: str) -> str:
 
     return ""
 
+
 # Exported signals for consumers (e.g. flow.py)
 SIGNALS = load_signals()
 # Backwards-compatible alias used by older tests and modules
@@ -97,6 +98,7 @@ __all__ = [
     "SIGNALS",
     "SOP_FLOWS",
 ]
+
 
 def _get_preference_and_keyword_context(history, preferences):
     """Extract user preferences and keywords, then inject into prompt context.
@@ -120,6 +122,7 @@ Naturally embed 1-2 into your response. Do NOT replay full sentences.
 """
 
     return preference_context + keyword_context
+
 
 def _get_stage_specific_prompt(
     strategy, stage, state, user_message, history, objection_data=None
@@ -152,6 +155,7 @@ def _get_stage_specific_prompt(
         return get_prompt(strategy, stage), objection_context
 
     return get_prompt(strategy, stage), ""
+
 
 def generate_stage_prompt(
     strategy: str,
@@ -211,7 +215,10 @@ def generate_stage_prompt(
     # Periodic persona reinforcement: anchor every N turns using the constants
     persona_checkpoint = ""
     if turn_count > 0 and turn_count % PERSONA_CHECKPOINT_TURNS == 0:
-        persona_checkpoint = f"\n[CHECKPOINT - Turn {turn_count}]: Stay in {strategy} mode. One question per turn. Current stage: {stage}.\n"
+        persona_checkpoint = (
+            f"\n[CHECKPOINT - Turn {turn_count}]: Stay in {strategy} mode. "
+            f"One question per turn. Current stage: {stage}.\n"
+        )
 
     # Ordering rationale (effect of order):
     # - base anchors factual constraints via primacy.

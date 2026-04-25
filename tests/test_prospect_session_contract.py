@@ -1,3 +1,4 @@
+"""Tests for prospect session API contract and behavior."""
 from backend.app import app
 from backend.messages import PROSPECT_SESSION_NOT_FOUND
 from core.providers.base import LLMResponse

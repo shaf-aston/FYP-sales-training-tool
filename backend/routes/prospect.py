@@ -21,6 +21,7 @@ def _bp_state() -> Any:
     """Access blueprint-attached state through a typed escape hatch."""
     return cast(Any, bp)
 
+
 def init_routes(app, prospect_session_manager_obj, validate_message_func):
     """Initialize prospect routes with Flask app and callback functions"""
     state = _bp_state()
@@ -130,7 +131,8 @@ def prospect_init():
         state.prospect_session_manager.set(session_id, ps)
         ps.save_session()
         state.app.logger.info(
-            f"Prospect session: {session_id} (difficulty={difficulty}, product={product_type}, provider={ps.provider_name})"
+            f"Prospect session: {session_id} "
+            f"(difficulty={difficulty}, product={product_type}, provider={ps.provider_name})"
         )
 
         return jsonify(

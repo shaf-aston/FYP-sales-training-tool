@@ -18,15 +18,19 @@ MESSAGE_REQUIRED = "Message required"
 INVALID_HISTORY_FORMAT = "Invalid history format"
 INVALID_HISTORY_ENTRY = "Invalid history entry"
 
+
 def history_entry_too_long(max_chars: int) -> str:
     return f"History entry too long (max {max_chars} characters)"
+
 
 # FSM state mutations
 def invalid_stage(available_stages: list) -> str:
     return f"Invalid stage. Available: {available_stages}"
 
+
 def invalid_strategy(available_strategies: set) -> str:
     return f"Invalid strategy. Available: {sorted(available_strategies)}"
+
 
 STRATEGY_SWITCH_FAILED = "Failed to switch strategy"
 BOT_INIT_FAILED = "Setup didn't complete - please try initializing again."

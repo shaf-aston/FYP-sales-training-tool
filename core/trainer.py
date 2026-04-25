@@ -16,6 +16,7 @@ def _normalize_stage_name(stage_text: str) -> str:
         return ""
     return stage_text.lower().split(".")[-1]
 
+
 # Truncate text to max_words, preserving word boundaries
 def _truncate_words(text: str, max_words: int) -> str:
     words = str(text).split()
@@ -30,7 +31,8 @@ def generate_training(provider, flow_engine, user_msg, bot_reply):
     rubric = get_stage_rubric(stage, flow_type)
 
     system_prompt = (
-        "You're a sales coach. Reply with JSON only. Keep each field to one short sentence - 15 words max. Plain sentences only - no markdown, no lists.\n\n"
+        "You're a sales coach. Reply with JSON only. "
+        "Keep each field to one short sentence - 15 words max. Plain sentences only - no markdown, no lists.\n\n"
         f"Stage: {stage} ({flow_type})\n"
         f"Goal: {rubric['goal'][:100]}\n"
         f"Advance when: {rubric['advance_when'][:100]}\n"
@@ -107,9 +109,13 @@ def answer_training_question(provider, flow_engine, question, style: str = "tact
     rubric = get_stage_rubric(stage, flow_type)
 
     history = getattr(flow_engine, "conversation_history", []) or []
-    recent = "\n".join(f"{message.get('role','').upper()}: {message.get('content','')}" for message in history[-8:])
+    recent = "\n".join(f"{message.get('role', '').upper()}: {message.get('content', '')}" for message in history[-8:])
 
-    methodology = "NEPQ (Neuro-Emotional Persuasion Questioning)" if flow_type == "consultative" else "NEEDS → MATCH → CLOSE"
+    methodology = (
+        "NEPQ (Neuro-Emotional Persuasion Questioning)"
+        if flow_type == "consultative"
+        else "NEEDS → MATCH → CLOSE"
+    )
     style_guide = COACH_STYLES.get(style if style in COACH_STYLES else "tactical")
     concepts = ", ".join(rubric.get("key_concepts", []))
 
@@ -125,7 +131,11 @@ def answer_training_question(provider, flow_engine, question, style: str = "tact
             [{"role": "system", "content": system_prompt}, {"role": "user", "content": question}],
             temperature=0.4, max_tokens=150, stage=stage
         )
-        answer = response.content.strip() if response.content and not response.error else "Couldn't get an answer that time - try asking differently."
+        answer = (
+            response.content.strip()
+            if response.content and not response.error
+            else "Couldn't get an answer that time - try asking differently."
+        )
         if style == "socratic":
             answer = _strip_question_marks(answer)
         return {"answer": answer}
@@ -139,32 +149,36 @@ def score_session(session_id: str) -> dict:
     events = SessionAnalytics.get_session_analytics(session_id)
     if not events:
         return {"total_score": 0, "breakdown": {}}
-    
+
     # Initialize accumulators
-    stages_reached, score_breakdown = set(), {category_key: 0 for category_key in ["stage_progression", "signal_detection", "objection_handling", "questioning_depth", "conversation_length"]}
+    stages_reached, score_breakdown = set(), {
+        category_key: 0
+        for category_key in ["stage_progression", "signal_detection", "objection_handling",
+                             "questioning_depth", "conversation_length"]
+    }
     total_transitions = signal_transitions = intent_medium_high_count = max_turn = 0
     objection_handled = False
-    
+
     # Single pass through events
     for event in events:
         event_type = event.get("event_type") or event.get("type")
         turn = max(event.get("user_turn") or 0, event.get("user_turn_count") or 0)
         max_turn = max(max_turn, turn)
-        
+
         if event_type == "stage_transition":
             to_stage = _normalize_stage_name(event.get("to_stage"))
             from_stage = _normalize_stage_name(event.get("from_stage", ""))
             turns_in_stage = event.get("user_turns_in_stage")
-            
+
             if to_stage:
                 stages_reached.add(to_stage)
-            
+
             total_transitions += 1
-            
+
             # Signal-gated transition (didn't timeout in stage)
             if isinstance(turns_in_stage, int) and 0 <= turns_in_stage < STAGE_TIMEOUTTHRESHOLDS.get(from_stage, 99):
                 signal_transitions += 1
-        
+
         elif event_type == "objection_classified":
             objection_handled = True
         elif event_type == "intent_classification" and event.get("intent_level") in ["medium", "high"]:
@@ -173,23 +187,24 @@ def score_session(session_id: str) -> dict:
             final_stage = _normalize_stage_name(event.get("final_stage"))
             if final_stage:
                 stages_reached.add(final_stage)
-    
+
     # Compute scores
     score_breakdown["stage_progression"] = next(
         (points for stage_name, points in SCORING_RUBRIC["stage_points"].items() if stage_name in stages_reached),
         0
     )
-    
+
     score_breakdown["signal_detection"] = int(
-        SCORING_RUBRIC["signal_detection_max"] * min(1.0, signal_transitions / total_transitions if total_transitions > 0 else 0)
+        SCORING_RUBRIC["signal_detection_max"]
+        * min(1.0, signal_transitions / total_transitions if total_transitions > 0 else 0)
     )
-    
+
     score_breakdown["objection_handling"] = SCORING_RUBRIC["objection_handling_max"] if objection_handled else 0
     score_breakdown["questioning_depth"] = min(
         SCORING_RUBRIC["questioning_depth_max"],
         intent_medium_high_count * SCORING_RUBRIC["questioning_depth_per_hit"]
     )
-    
+
     # Conversation length scoring based on sweet spot
     sweet_min, sweet_max = SCORING_RUBRIC["sweet_spot_turns"]
     conv_max = SCORING_RUBRIC["conversation_length_max"]
@@ -201,9 +216,9 @@ def score_session(session_id: str) -> dict:
         score_breakdown["conversation_length"] = int(conv_max * 0.8)
     else:
         score_breakdown["conversation_length"] = conv_max // 2
-    
+
     total = min(100, max(0, sum(score_breakdown.values())))
-    
+
     return {
         "total_score": total,
         "breakdown": score_breakdown,

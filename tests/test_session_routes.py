@@ -1,3 +1,4 @@
+"""Tests for session management API routes."""
 from flask import Flask
 
 from backend.routes import session as session_routes
@@ -142,7 +143,10 @@ def test_health_returns_active_provider_and_performance(monkeypatch):
     bot = _DummyBot(session_id="abc12345")
     manager.set("abc12345", bot)
 
-    monkeypatch.setattr(session_routes, "get_available_providers", lambda: [{"name": "probe", "available": True, "model": "probe-model"}])
+    monkeypatch.setattr(
+        session_routes, "get_available_providers",
+        lambda: [{"name": "probe", "available": True, "model": "probe-model"}]
+    )
     monkeypatch.setattr(
         session_routes.PerformanceTracker,
         "get_provider_stats",

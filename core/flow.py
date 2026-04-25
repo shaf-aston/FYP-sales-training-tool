@@ -27,6 +27,7 @@ from .utils import Stage, Strategy, contains_nonnegated_keyword
 SIGNALS = load_signals()
 ANALYSIS_CONFIG = load_analysis_config()
 
+
 # User signal keywords for consultative/transactional detection
 def _get_signal_terms(*keys: str) -> list[str]:
     """Return the first configured signal list for the given candidate keys."""
@@ -35,6 +36,7 @@ def _get_signal_terms(*keys: str) -> list[str]:
         if isinstance(values, list):
             return values
     return []
+
 
 USER_CONSULTATIVE_SIGNALS = _get_signal_terms(
     "user_consultative_signals",
@@ -141,6 +143,7 @@ def _user_signals_specific_budget_or_product(user_message: str) -> bool:
     matched_product, confidence = QuickMatcher.match_product(user_message)
     return bool(matched_product and confidence >= 0.9)
 
+
 def _user_has_clear_intent(
     history: list[dict[str, str]], user_msg: str, turns: int
 ) -> bool:
@@ -159,6 +162,7 @@ def _user_has_clear_intent(
         return True
 
     return turns >= INTENT_MAX_TURNS
+
 
 def _check_advancement_condition(
     history: list[dict[str, str]],
@@ -199,11 +203,13 @@ def _check_advancement_condition(
     # Safety valve: auto-advance when max_turns exceeded (resistant prospect).
     return has_signal or turns >= max_turns
 
+
 def _user_shows_doubt(history: list[dict[str, str]], user_msg: str, turns: int) -> bool:
     """True when user shows doubt/pain or safety valve triggers"""
     return _check_advancement_condition(
         history, user_msg, turns, "logical", min_turns=2
     )
+
 
 def _user_expressed_stakes(
     history: list[dict[str, str]], user_msg: str, turns: int
@@ -213,6 +219,7 @@ def _user_expressed_stakes(
     return _check_advancement_condition(
         history, user_msg, turns, "emotional", min_turns=3
     )
+
 
 def _commitment_or_objection(
     history: list[dict[str, str]], user_msg: str, turns: int
@@ -225,6 +232,7 @@ def _commitment_or_objection(
 
 # commitment_or_walkaway moved to analysis.py to avoid circular imports
 
+
 ADVANCEMENT_RULES = {
     "user_has_clear_intent": _user_has_clear_intent,
     "user_shows_doubt": _user_shows_doubt,
@@ -232,6 +240,7 @@ ADVANCEMENT_RULES = {
     "commitment_or_objection": _commitment_or_objection,
     "commitment_or_walkaway": commitment_or_walkaway,
 }
+
 
 def _check_priority_overrides(flow_config, current_stage, user_message, history) -> Optional[str]:
     """Check for high-priority signals that jump the FSM immediately."""
@@ -269,6 +278,7 @@ def _check_priority_overrides(flow_config, current_stage, user_message, history)
 
     return None
 
+
 def _detect_and_switch_strategy(flow_engine, user_message: str) -> bool:
     """Inspect user signals to detect and switch strategy. Returns True if switch occurred.
 
@@ -299,6 +309,7 @@ def _detect_and_switch_strategy(flow_engine, user_message: str) -> bool:
         return True
     return False
 
+
 def _default_strategy_after_intent_probe(flow_engine, user_message: str) -> str:
     """Select deterministic fallback strategy after intent probing turns are exhausted."""
     user_text = (user_message or "").lower()
@@ -319,6 +330,7 @@ def _default_strategy_after_intent_probe(flow_engine, user_message: str) -> str:
     if has_directness_demand or intent_level == "high":
         return Strategy.TRANSACTIONAL
     return Strategy.CONSULTATIVE
+
 
 class SalesFlowEngine:
     """Finite state machine managing stage progression and prompt context.

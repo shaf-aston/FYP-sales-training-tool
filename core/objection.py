@@ -25,6 +25,7 @@ OBJECTION_FLOW_FALLBACK = OBJECTION_FLOWS_CONFIG.get(
     "1. Acknowledge\n2. Recall stated goal\n3. Apply reframe strategy\n4. Ask ONE question",
 )
 
+
 class ObjectionPathway(TypedDict):
     """Result of objection analysis with type, strategy and reframe pathway.
 
@@ -42,6 +43,7 @@ class ObjectionPathway(TypedDict):
     open_wallet_applicable: bool
     dialogue_guidance: str
     is_primary_objection: bool
+
 
 def _extract_recent_user_messages(
     history: Optional[list[dict]], max_messages: int = 2
@@ -109,12 +111,16 @@ def classify_objection(
     return {
         "type": ObjectionType.UNKNOWN,
         "strategy": "general_reframe",
-        "guidance": "Acknowledge the concern. Recall the user's stated goal. Ask what specifically is holding them back.",
+        "guidance": (
+            "Acknowledge the concern. Recall the user's stated goal. "
+            "Ask what specifically is holding them back."
+        ),
     }
 
 # ============================================================================
 # PATHWAY ANALYSIS
 # ============================================================================
+
 
 _PATHWAY_CONFIG = None
 
@@ -183,6 +189,7 @@ def _validate_on_import():
             category=UserWarning,
         )
 
+
 _validate_on_import()
 
 
@@ -208,6 +215,7 @@ def _detect_subtype(category: str, user_message: str, objection_type: str) -> st
         best_match = subtypes[0].get("id", "unknown")
 
     return best_match or "unspecified"
+
 
 def _build_pathway_metadata(base_dict: dict[str, Any], user_message: str) -> ObjectionPathway:
     pathway_config = _load_pathway_config()
@@ -260,6 +268,7 @@ def _build_pathway_metadata(base_dict: dict[str, Any], user_message: str) -> Obj
 
     return pathway
 
+
 def analyse_objection_pathway(
     user_message: str,
     history: Optional[list[dict]] = None,
@@ -269,6 +278,7 @@ def analyse_objection_pathway(
     base_dict = classify_objection(user_message, history)
     pathway = _build_pathway_metadata(base_dict, user_message)
     return pathway
+
 
 def _count_reframe_usages(
     reframes: list[str],
@@ -366,6 +376,7 @@ def get_reframe_sequence(
             current_index >= len(reframes) - 1 if current_reframe else False
         ),
     }
+
 
 def _get_objection_pathway_safe(
     user_message: str, history: list[dict]

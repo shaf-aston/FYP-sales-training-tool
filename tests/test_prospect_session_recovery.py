@@ -1,3 +1,4 @@
+"""Tests for prospect session recovery and persistence."""
 from flask import Flask
 
 from backend.routes import prospect as prospect_routes

@@ -143,7 +143,8 @@ def api_init():
         bp.set_session(session_id, bot)  # type: ignore
         active_provider = getattr(bot, "provider_name", provider or "auto")
         bp.app.logger.info(
-            f"New session: {session_id} (product={product_type}, strategy={bot.flow_engine.flow_type}, provider={active_provider})"
+            f"New session: {session_id} "
+            f"(product={product_type}, strategy={bot.flow_engine.flow_type}, provider={active_provider})"
         )  # type: ignore
     except Exception as init_error:
         bp.app.logger.exception(f"Bot init failed: {init_error}")  # type: ignore
