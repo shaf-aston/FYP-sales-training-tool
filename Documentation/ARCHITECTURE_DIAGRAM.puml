@@ -1,0 +1,130 @@
+@startuml Sales_Roleplay_Chatbot_Architecture
+
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam componentStyle uml2
+skinparam linetype ortho
+skinparam nodesep 60
+skinparam ranksep 100
+
+title Sales Roleplay Chatbot - System Architecture
+note top
+Three-layer defense-in-depth: signal detection -> FSM advancement -> prompt assembly & output validation
+end note
+
+component "Sales Rep\n(Trainee)" as User
+
+package "Frontend" {
+  component "Web Browser\nChat Interface" as UI
+}
+
+package "HTTP Server" {
+  component "Flask Routes\n(Request Handler)" as Backend
+  note right of Backend
+    /api/chat, /api/session, /api/analytics
+  end note
+}
+
+package "Core Decision Engine" {
+  component "Chatbot Orchestrator\n(chatbot.py)" as Chatbot
+
+  package "LAYER 1: Signal Detection" {
+    component "Intent Classifier\n(analysis.py)" as Analysis
+    component "Objection Classifier\n(objection.py)" as Objection
+  }
+
+  package "LAYER 2: FSM Advancement" {
+    component "State Machine\n(flow.py)" as FSM
+  }
+
+  package "LAYER 3: Prompt Assembly\n& Output Validation" {
+    component "Prompt Rules\n(content.py)" as Content
+    component "Output Guardrails\n(response_guardrails.py)" as Guardrails
+  }
+
+  note right of Chatbot
+    Execution order per turn:
+    1. Analyze user signals
+    2. Check FSM advancement
+    3. Assemble prompt rules
+    4. Call LLM -> validate output
+  end note
+}
+
+package "Parallel: Prospect Mode" {
+  component "Prospect Chatbot\n(prospect_session.py)" as ProspectBot
+  component "Prospect Evaluator\n(prospect_evaluator.py)" as ProspectEval
+  note right of ProspectBot
+    Sandbox: user plays bot,
+    bot plays prospect
+  end note
+}
+
+package "Evaluation & Training" {
+  component "Training Coach\n(trainer.py)" as Trainer
+  component "Quiz Engine\n(quiz.py)" as Quiz
+  component "Session Analytics\n(session_analytics.py)" as Analytics
+  component "Performance Logger\n(performance.py)" as Perf
+}
+
+package "Data & Knowledge" {
+  component "Session Manager\n(session_repository.py)" as Sessions
+  component "Knowledge Base\n(knowledge.py)" as KB
+  note right of KB
+    Products, sales patterns,
+    objection responses
+  end note
+}
+
+package "LLM Providers" {
+  component "Provider Router\n(provider_router.py)" as Router
+  component "Groq" as GroqAPI
+  component "Sambanova" as SambanovaAPI
+  note right of Router
+    Select primary or fallback
+  end note
+}
+
+' Main flow
+User --> UI : Message
+UI --> Backend : HTTP POST
+Backend --> Chatbot : chat()
+
+' Three-layer execution
+Chatbot --> Analysis : 1. Classify intent,\ndetect guardedness
+Chatbot --> Objection : 1. Classify objection\n(if applicable)
+Analysis --> FSM : 2. Check advancement\nconditions
+FSM --> Content : 3. Assemble prompt\nrules for stage
+Content --> Guardrails : 4. Pass LLM output\nthrough rules
+Guardrails --> Router : Valid? -> Request LLM
+
+' LLM interaction
+Router --> GroqAPI : Primary provider
+Router --> SambanovaAPI : Fallback
+
+' Feedback loops
+GroqAPI --> Guardrails : LLM response
+Guardrails --> Chatbot : Final message + latency
+
+' Parallel evaluation
+Chatbot --> Sessions : Save session
+Chatbot --> Analytics : Log metrics
+Chatbot --> Trainer : Update training state
+Chatbot --> Perf : Record latency
+
+' Prospect mode parallel flow
+Chatbot --> ProspectBot : Parallel: prospect mode active
+ProspectBot --> ProspectEval
+ProspectEval --> Chatbot : Score if evaluating
+
+' Data dependencies
+Content --> KB : Load context
+Analysis --> KB : Check patterns
+FSM --> KB : Validate thresholds
+
+' Response back
+Chatbot --> Backend : ChatResponse
+Backend --> UI : JSON
+UI --> User : Display message
+
+@enduml
