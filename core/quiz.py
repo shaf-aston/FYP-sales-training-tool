@@ -382,7 +382,6 @@ def test_quiz_next_move(
 Goal: {rubric["goal"]} | Concepts: {concepts}
 Customer: "{last_user_message}" | Response: "{user_response}"
 JSON: {{"score": <0-100>, "alignment": "strong|partial|weak", "feedback": "<brief>", "strengths": ["..."], "improvements": ["..."]}}"""
-
     llm_result = _score_with_llm(provider, prompt, {
         "score": 50,
         "alignment": "partial",
@@ -410,7 +409,6 @@ def test_quiz_direction(user_explanation: str, provider: Any, current_stage: str
 Goal: {rubric["goal"]} | Advance: {rubric["advance_when"]} | Concepts: {concepts}
 Trainee: "{user_explanation}"
 JSON: {{"score": <0-100>, "understanding": "excellent|good|partial|needs_work", "feedback": "<brief>", "key_concepts_got": ["..."], "key_concepts_missed": ["..."]}}"""
-
     llm_result = _score_with_llm(provider, prompt, {
         "score": 50,
         "understanding": "partial",
