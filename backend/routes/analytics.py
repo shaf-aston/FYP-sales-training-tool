@@ -1,4 +1,4 @@
-"""Analytics, quiz, and knowledge management endpoints"""
+"""Analytics, quiz and knowledge management endpoints"""
 
 import json
 from datetime import datetime
@@ -10,7 +10,6 @@ from flask import Blueprint, jsonify, request
 from core.analytics.session_analytics import SessionAnalytics
 from ..security import (
     InputValidator,
-    require_privileged_mutation,
     require_rate_limit,
     require_strict_admin_token,
 )
@@ -135,7 +134,6 @@ def get_knowledge():
 
 
 @bp.route("/knowledge", methods=["POST"])
-@require_privileged_mutation
 @require_rate_limit("knowledge")
 def save_knowledge_route():
     """Save custom knowledge data with field-level validation"""
@@ -154,7 +152,6 @@ def save_knowledge_route():
 
 
 @bp.route("/knowledge", methods=["DELETE"])
-@require_privileged_mutation
 @require_rate_limit("knowledge")
 def clear_knowledge_route():
     """Clear all custom knowledge"""

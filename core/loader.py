@@ -242,9 +242,9 @@ _DEFAULT_PROSPECT_CONFIG = {
         },
     },
     "behaviour_rules": {
-        "easy": "Be friendly, open, and reasonably receptive.",
+        "easy": "Be friendly, open and reasonably receptive.",
         "medium": "Be cautious and ask practical follow-up questions.",
-        "hard": "Be skeptical, brief, and harder to convince.",
+        "hard": "Be skeptical, brief and harder to convince.",
     },
     "personas": {
         "general": [
@@ -392,10 +392,12 @@ def load_adaptations():
 
 def get_tactic(category="elicitation", subtype=None, context=""):
     """Pick a random tactic string from category/subtype. Returns empty string if not found."""
-    tactics = load_tactics()
+    raw_tactics = load_tactics()
+    # Unwrap nested 'tactics' key if present (YAML structure: tactics: { elicitation: {...} })
+    tactics = raw_tactics.get("tactics", raw_tactics)
     if category not in tactics:
         return ""
-    
+
     cat_dict = tactics[category]
     if subtype and subtype in cat_dict:
         options = cat_dict[subtype]
@@ -403,7 +405,7 @@ def get_tactic(category="elicitation", subtype=None, context=""):
         options = cat_dict[next(iter(cat_dict.keys()))]
     else:
         options = cat_dict
-    
+
     return random.choice(options) if options else ""
 
 

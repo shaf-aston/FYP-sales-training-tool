@@ -1,4 +1,4 @@
-"""Manage custom product knowledge stored in YAML. Filters out prompt-injection attempts."""
+"""Manage custom instructions stored in YAML. Filters out prompt-injection attempts."""
 
 import logging
 import re
@@ -13,7 +13,8 @@ logger = logging.getLogger(__name__)
 ALLOWED_FIELDS = {"product_name", "pricing", "specifications", "company_info", "selling_points", "additional_notes"}
 
 KNOWLEDGE_DIR = Path(__file__).parent.parent / "config"
-KNOWLEDGE_FILE = KNOWLEDGE_DIR / "custom_knowledge.yaml"
+KNOWLEDGE_FILE = KNOWLEDGE_DIR / "custom_instructions.yaml"
+LEGACY_KNOWLEDGE_FILE = KNOWLEDGE_DIR / "custom_knowledge.yaml"
 KNOWLEDGE_CONFIG_FILE = KNOWLEDGE_DIR / "knowledge_sanitisation.yaml"
 
 # Patterns that indicate prompt-injection attempts (e.g., "ignore previous instructions")
@@ -47,20 +48,21 @@ INJECTION_PATTERNS, LABEL_MAP = _load_kb_sanitisation_config()
 
 
 def load_custom_knowledge() -> dict:
-    """Load custom knowledge from YAML
+    """Load custom knowledge from YAML.
 
     Returns empty dict if missing or invalid
     """
-    kf = KNOWLEDGE_FILE
-    if not kf.exists():
-        return {}
-    try:
-        with open(kf, "r", encoding="utf-8") as f:
-            data = yaml.safe_load(f)
-        return data if isinstance(data, dict) else {}
-    except (yaml.YAMLError, IOError) as e:
-        logger.warning(f"Failed to load custom knowledge ({kf}): {e}")
-        return {}
+    for kf in (KNOWLEDGE_FILE, LEGACY_KNOWLEDGE_FILE):
+        if not kf.exists():
+            continue
+        try:
+            with open(kf, "r", encoding="utf-8") as f:
+                data = yaml.safe_load(f)
+            return data if isinstance(data, dict) else {}
+        except (yaml.YAMLError, IOError) as e:
+            logger.warning(f"Failed to load custom knowledge ({kf}): {e}")
+            return {}
+    return {}
 
 
 def clean_value(value: str) -> str:
@@ -146,10 +148,11 @@ def get_custom_knowledge_text() -> str:
 
 
 def clear_custom_knowledge() -> bool:
-    """Delete custom knowledge file. Returns True on success or if already absent."""
+    """Delete custom knowledge file(s). Returns True on success or if already absent."""
     try:
-        if KNOWLEDGE_FILE.exists():
-            KNOWLEDGE_FILE.unlink()
+        for path in (KNOWLEDGE_FILE, LEGACY_KNOWLEDGE_FILE):
+            if path.exists():
+                path.unlink()
         return True
     except IOError as e:
         logger.error(f"Failed to delete custom knowledge ({KNOWLEDGE_FILE}): {e}")

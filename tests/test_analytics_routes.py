@@ -4,6 +4,7 @@ from pathlib import Path
 from flask import Flask
 
 from backend.routes import analytics as analytics_routes
+import core.knowledge as knowledge_module
 
 
 class _DummyFlowEngine:
@@ -105,6 +106,50 @@ def test_knowledge_get_is_public(monkeypatch):
         "success": True,
         "data": {"product_name": "Acme Pro"},
     }
+
+
+def test_knowledge_post_saves_to_yaml_file(monkeypatch):
+    app = _make_analytics_app(monkeypatch)
+    knowledge_dir = Path.cwd() / ".tmp" / "test-knowledge"
+    knowledge_dir.mkdir(parents=True, exist_ok=True)
+    knowledge_file = knowledge_dir / "custom_instructions.yaml"
+    legacy_file = knowledge_dir / "custom_knowledge.yaml"
+    for path in (knowledge_file, legacy_file):
+        if path.exists():
+            path.unlink()
+
+    monkeypatch.setattr(knowledge_module, "KNOWLEDGE_FILE", knowledge_file)
+    monkeypatch.setattr(knowledge_module, "LEGACY_KNOWLEDGE_FILE", legacy_file)
+
+    response = app.test_client().post(
+        "/api/knowledge",
+        json={"product_name": "Acme Pro", "additional_notes": "Fast setup"},
+    )
+
+    assert response.status_code == 200
+    assert response.get_json() == {"success": True}
+    assert knowledge_file.exists()
+    assert "Acme Pro" in knowledge_file.read_text(encoding="utf-8")
+
+
+def test_knowledge_delete_clears_yaml_file(monkeypatch):
+    app = _make_analytics_app(monkeypatch)
+    knowledge_dir = Path.cwd() / ".tmp" / "test-knowledge-clear"
+    knowledge_dir.mkdir(parents=True, exist_ok=True)
+    knowledge_file = knowledge_dir / "custom_instructions.yaml"
+    legacy_file = knowledge_dir / "custom_knowledge.yaml"
+    knowledge_file.write_text("product_name: Acme Pro\n", encoding="utf-8")
+    legacy_file.write_text("product_name: Legacy\n", encoding="utf-8")
+
+    monkeypatch.setattr(knowledge_module, "KNOWLEDGE_FILE", knowledge_file)
+    monkeypatch.setattr(knowledge_module, "LEGACY_KNOWLEDGE_FILE", legacy_file)
+
+    response = app.test_client().delete("/api/knowledge")
+
+    assert response.status_code == 200
+    assert response.get_json() == {"success": True}
+    assert not knowledge_file.exists()
+    assert not legacy_file.exists()
 
 
 def test_session_analytics_forbids_header_path_mismatch(monkeypatch):

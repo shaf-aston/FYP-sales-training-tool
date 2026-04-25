@@ -164,8 +164,8 @@ GOAL: Bring the conversation to a professional close based on the user's final d
 
 RULES:
 - IF COMMITMENT: Summarize next steps and securely process their commitment (e.g. "Great, let's get you set up. I'll need your card details to finalize").
-- IF PENDING/FOLLOW-UP: Acknowledge politely, don't pressure, and confirm the specific time/channel for the follow-up.
-- IF EXIT/NO DEAL: Respectfully conclude, wish them the best, and leave the door open for the future.
+- IF PENDING/FOLLOW-UP: Acknowledge politely, don't pressure and confirm the specific time/channel for the follow-up.
+- IF EXIT/NO DEAL: Respectfully conclude, wish them the best and leave the door open for the future.
 
 NO MORE DISCOVERY: Do not ask big open-ended questions about their goals here. Keep it concise.
 """,

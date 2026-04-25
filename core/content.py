@@ -1,4 +1,4 @@
-"""Builds the final system prompt from templates, overrides, and tactics"""
+"""Builds the final system prompt from templates, overrides and tactics"""
 
 from typing import Any
 

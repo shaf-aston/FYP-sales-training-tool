@@ -1,4 +1,4 @@
-"""Rate limiting, input validation, and session management"""
+"""Rate limiting, input validation and session management"""
 
 import hmac
 import logging

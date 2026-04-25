@@ -401,7 +401,7 @@ class ProspectSession:
             show_hints: If True, generate an optional coaching hint for the user.
 
         Returns:
-            ProspectResponse with prospect's reply, latency, and state snapshot.
+            ProspectResponse with prospect's reply, latency and state snapshot.
         """
         if self.state.has_committed or self.state.has_walked:
             return ProspectResponse(
@@ -702,7 +702,7 @@ Don't give away what the prospect actually wants."""
         """Generate a final evaluation of the salesperson's performance.
 
         Returns:
-            Dictionary containing scores, grades, feedback, and assessment.
+            Dictionary containing scores, grades, feedback and assessment.
         """
         from .prospect_evaluator import evaluate_prospect_session
 

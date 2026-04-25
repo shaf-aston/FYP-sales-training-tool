@@ -1,4 +1,4 @@
-"""Main chatbot class. Wires the provider, FSM engine, and analytics together."""
+"""Main chatbot class. Wires the provider, FSM engine and analytics together."""
 
 import logging
 import time
@@ -385,6 +385,7 @@ class SalesChatbot:
         objection_data: dict[str, Any] | None = None,
     ) -> ChatResponse:
         """Finalize a successful reply so normal and fallback paths stay consistent."""
+        # Layer 3: Validate reply before returning.
         guardrail_result = self._apply_layer3_checks(bot_reply, user_message)
         bot_reply = guardrail_result.content
 

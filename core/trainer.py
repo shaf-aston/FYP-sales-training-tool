@@ -85,8 +85,8 @@ COACH_STYLES = {
     ),
     "socratic": (
         "Style: Socratic. Reply in 2-3 plain sentences. "
-        "Ask one sharp question that makes the trainee see the gap themselves, "
-        "then hint at what to look for. No markdown, no lists, no headings."
+        "Use one sharp, simple prompt that points out the gap. "
+        "Do not use question marks. No markdown, no lists, no headings."
     ),
     "teacher": (
         "Style: teacher. Reply in 3-4 plain sentences. "
@@ -94,6 +94,11 @@ COACH_STYLES = {
         "No markdown, no lists, no headings, no bold."
     ),
 }
+
+
+def _strip_question_marks(text: str) -> str:
+    """Remove question marks while keeping the answer readable."""
+    return " ".join(text.replace("?", "").split())
 
 
 def answer_training_question(provider, flow_engine, question, style: str = "tactical"):
@@ -121,6 +126,8 @@ def answer_training_question(provider, flow_engine, question, style: str = "tact
             temperature=0.4, max_tokens=150, stage=stage
         )
         answer = response.content.strip() if response.content and not response.error else "Couldn't get an answer that time - try asking differently."
+        if style == "socratic":
+            answer = _strip_question_marks(answer)
         return {"answer": answer}
     except Exception as error:
         logger.warning(f"Training Q&A failed: {error}")

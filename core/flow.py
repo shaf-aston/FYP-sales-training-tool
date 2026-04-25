@@ -311,7 +311,7 @@ def _default_strategy_after_intent_probe(flow_engine, user_message: str) -> str:
 class SalesFlowEngine:
     """Finite state machine managing stage progression and prompt context.
 
-    Tracks current stage, turn count per stage, and conversation history.
+    Tracks current stage, turn count per stage and conversation history.
     Provides advancement detection and strategy switching for mid-session pivots.
     """
 

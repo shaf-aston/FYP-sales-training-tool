@@ -26,7 +26,7 @@ class ConversationState:
 class ObjectionPathway(TypedDict):
     """Result of objection analysis with classification and reframe sequence.
     
-    Includes objection type, recommended strategy, and reframe guidance.
+    Includes objection type, recommended strategy and reframe guidance.
     """
 
     # Base keys (always present)

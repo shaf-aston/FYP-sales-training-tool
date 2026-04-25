@@ -1,4 +1,4 @@
-"""Objection analysis engine: classification, pathway detection, and reframe sequencing."""
+"""Objection analysis engine: classification, pathway detection and reframe sequencing."""
 
 import logging
 import warnings
@@ -26,7 +26,7 @@ OBJECTION_FLOW_FALLBACK = OBJECTION_FLOWS_CONFIG.get(
 )
 
 class ObjectionPathway(TypedDict):
-    """Result of objection analysis with type, strategy, and reframe pathway.
+    """Result of objection analysis with type, strategy and reframe pathway.
 
     Contains both the objection classification and the recommended reframe sequence.
     """
@@ -332,7 +332,7 @@ def get_reframe_sequence(
         history: Conversation history
 
     Returns:
-        Dictionary with current reframe, index, attempts, and guidance
+        Dictionary with current reframe, index, attempts and guidance
     """
     reframes = pathway.get("reframes", [])
     reframe_descriptions = pathway.get("reframe_descriptions", {})

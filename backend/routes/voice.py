@@ -1,4 +1,4 @@
-"""Voice endpoints: speech-to-text (STT), text-to-speech (TTS), and full voice chat"""
+"""Voice endpoints: speech-to-text (STT), text-to-speech (TTS) and full voice chat"""
 
 import base64
 import os

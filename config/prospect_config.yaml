@@ -35,7 +35,7 @@ difficulty_profiles:
 
   medium:
     label: "Cautious Evaluator"
-    description: "Analytical prospect who needs proof, compares options, and raises 2-3 objections."
+    description: "Analytical prospect who needs proof, compares options and raises 2-3 objections."
     behaviour:
       initial_readiness: 0.2
       readiness_gain_per_good_turn: 0.08
@@ -350,7 +350,7 @@ evaluation:
       description: "Was the solution presented clearly and tailored to the prospect's needs?"
     conversation_flow:
       weight: 0.15
-      description: "Was the conversation natural, well-paced, and professionally conducted?"
+      description: "Was the conversation natural, well-paced and professionally conducted?"
 
 system_prompt_template: |
   You are {name}, a potential customer with the following background:
