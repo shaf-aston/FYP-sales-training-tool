@@ -122,11 +122,11 @@ class SalesChatbot:
         """Run one turn - returns reply content plus latency/provider metrics."""
         recent_history = self.flow_engine.conversation_history[-RECENT_HISTORY_WINDOW:]
 
-        # Layer 2: state control and advancement gating.
-        # Compute conversation state once and reuse for analytics + prompt assembly.
+        # Signal Detection (prerequisite): Analyze user state for all downstream layers.
         pre_state = analyse_state(self.flow_engine.conversation_history, user_message)
 
-        # Advance stage before LLM so the correct stage prompt is used this turn.
+        # LAYER 1 (Stage-Gating): Check advancement conditions via FSM.
+        # Prevents skipping stages and enforces conversation pacing.
         advanced_this_turn = False
         if self.flow_engine.flow_type != Strategy.INTENT:
             old_stage = self.flow_engine.current_stage
@@ -149,7 +149,8 @@ class SalesChatbot:
                 user_message, self.flow_engine.conversation_history
             )
 
-        # Layer 1: prompt rules and stage-specific instructions.
+        # LAYER 2 (Prompt Rules): Assemble system prompt with stage-specific rules.
+        # Rules guide LLM to self-constrain during generation.
         system_prompt = self.flow_engine.get_current_prompt(
             user_message,
             objection_data=objection_data,
@@ -218,8 +219,9 @@ class SalesChatbot:
         user_message: str,
         provider_name: str | None = None,
     ) -> Layer3CheckResult:
-        """Run deterministic output checks for Layer 3.
+        """Run LAYER 3 (Response Validation) checks on LLM output.
 
+        Detects and blocks rule violations before sending response to user.
         Probe provider returns JSON payloads for tests and must remain unmodified.
         """
         active_provider = (provider_name or self._provider_name or "").lower()
@@ -385,7 +387,7 @@ class SalesChatbot:
         objection_data: dict[str, Any] | None = None,
     ) -> ChatResponse:
         """Finalize a successful reply so normal and fallback paths stay consistent."""
-        # Layer 3: Validate reply before returning.
+        # LAYER 3 (Response Validation): Final guardrail check before sending to user.
         guardrail_result = self._apply_layer3_checks(bot_reply, user_message)
         bot_reply = guardrail_result.content
 

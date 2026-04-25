@@ -1,0 +1,122 @@
+@startuml Sales_Roleplay_Chatbot_FSM
+
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam state {
+  BackgroundColor #E8F4F8
+  BorderColor #333333
+  ArrowColor #333333
+}
+skinparam nodesep 100
+skinparam ranksep 100
+
+title Finite State Machine - Sales Flow States & Transitions
+
+state "INTENT" as INTENT {
+  INTENT : Establish customer need & urgency
+  INTENT : [Consultative] Get tangible & experience
+  INTENT : [Transactional] 2-turn max: budget + use-case
+}
+
+state "LOGICAL" as LOGICAL {
+  LOGICAL : Probe root causes & impact
+  LOGICAL : [Consultative] Two-phase: cause detection
+  LOGICAL : [Transactional] Present matching options
+}
+
+state "EMOTIONAL" as EMOTIONAL {
+  EMOTIONAL : Build commitment through identity
+  EMOTIONAL : [Consultative] Identity Frame → COI
+  EMOTIONAL : [Transactional] Skip (transactional only)
+}
+
+state "PITCH" as PITCH {
+  PITCH : Solution alignment & commitment
+  PITCH : [Consultative] 3-pillar framework
+  PITCH : [Transactional] Assumptive close
+}
+
+state "OBJECTION" as OBJECTION {
+  OBJECTION : Handle concerns & reframe
+  OBJECTION : Classify (smokescreen/fear/money/etc)
+  OBJECTION : [Consultative] NEPQ reframe
+  OBJECTION : [Transactional] Brief address & close
+}
+
+state "CLOSED" as CLOSED {
+  CLOSED : Session complete or walkaway
+}
+
+'' Transitions with conditions
+INTENT --> LOGICAL : user_shows_intent()\n[medium/high intent detected]
+
+LOGICAL --> EMOTIONAL : user_has_clear_intent()\n[Consultative only]
+
+LOGICAL --> PITCH : objective_clear()\n[Transactional only]
+
+EMOTIONAL --> PITCH : user_ready_for_pitch()\n[commitment + future vision]
+
+PITCH --> OBJECTION : user_expressed_doubt()\n[objection/concern raised]
+
+PITCH --> CLOSED : assumptive_close_accepted()\n[agreement/next steps]
+
+OBJECTION --> PITCH : reframe_successful()\n[objection addressed]
+
+OBJECTION --> CLOSED : user_walks_away()\n[rejection/disengagement]\n[max reframes exceeded]
+
+INTENT --> CLOSED : customer_not_qualified()\n[walk-away signals]
+
+LOGICAL --> CLOSED : customer_not_qualified()\n[walk-away signals]
+
+EMOTIONAL --> CLOSED : customer_not_qualified()\n[walk-away signals]
+
+PITCH --> CLOSED : customer_not_qualified()\n[walk-away signals]
+
+OBJECTION --> OBJECTION : objection_remains()\n[current reframe failed]
+
+[*] --> INTENT : Session Start\n[Product identified]
+
+CLOSED --> [*] : Persist Session\n[Analytics recorded]
+
+note bottom of INTENT
+  Entry criteria: Product recognized
+  Exit criteria: Medium+ intent detected
+  Timeout: 3-4 turns
+end note
+
+note bottom of LOGICAL
+  Entry criteria: Intent confirmed
+  Exit criteria: Root cause + impact identified
+  Timeout: 2-3 turns (consultative)
+               1 turn (transactional)
+end note
+
+note bottom of EMOTIONAL
+  Entry criteria: Clear objective identified
+  Exit criteria: Identity frame + COI accepted
+  Note: SKIPPED in transactional flow
+  Timeout: 1-2 turns
+end note
+
+note bottom of PITCH
+  Entry criteria: Emotional investment (consultative)
+  Exit criteria: Objection raised OR agreement secured
+  Timeout: 1-2 turns
+end note
+
+note bottom of OBJECTION
+  Entry criteria: Objection raised
+  Exit criteria: Resolved OR max reframes exceeded
+  Max reframes: 2
+  Timeout: 1-2 turns per reframe
+end note
+
+note bottom of CLOSED
+  Final state
+  Records: Final stage reached
+          Conversation length
+          Outcome (agreement/walkaway)
+  Cleans up session
+end note
+
+@enduml

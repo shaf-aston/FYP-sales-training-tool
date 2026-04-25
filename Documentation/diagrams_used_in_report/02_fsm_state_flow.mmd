@@ -1,0 +1,84 @@
+stateDiagram-v2
+
+    [*] --> SIGNAL_CLASSIFY
+    SIGNAL_CLASSIFY --> INTENT
+    INTENT --> INTENT_LEVEL
+
+    state INTENT_LEVEL <<choice>>
+    INTENT_LEVEL --> INTENT : LOW_retry
+    INTENT_LEVEL --> END : LOW_max_retries
+    INTENT_LEVEL --> STRATEGY_CHOICE : MED_HIGH
+
+    %% ================= STRATEGY =================
+    state STRATEGY_CHOICE <<choice>>
+    STRATEGY_CHOICE --> CONSULTATIVE : consultative
+    STRATEGY_CHOICE --> TRANSACTIONAL : transactional
+
+    %% ================= CONSULTATIVE =================
+    state CONSULTATIVE {
+        [*] --> LOGICAL
+
+        LOGICAL --> LOGICAL_GUARD
+        state LOGICAL_GUARD <<choice>>
+
+        LOGICAL_GUARD --> LOGICAL : unclear
+        LOGICAL_GUARD --> EMOTIONAL : doubt
+
+        EMOTIONAL --> EMOTIONAL_GUARD
+        state EMOTIONAL_GUARD <<choice>>
+
+        EMOTIONAL_GUARD --> EMOTIONAL : weak_stakes
+        EMOTIONAL_GUARD --> PITCH_ENTRY : strong_stakes
+    }
+
+    %% ================= TRANSACTIONAL =================
+    state TRANSACTIONAL {
+        [*] --> PITCH_TRANSACTIONAL
+        PITCH_TRANSACTIONAL --> T_OBJ_ENTRY : commitment_or_objection
+    }
+
+    %% ================= FLOW =================
+    PITCH_ENTRY --> PITCH
+    PITCH_TRANSACTIONAL --> PITCH
+    T_OBJ_ENTRY --> OBJECTION
+
+    %% ================= PITCH =================
+    PITCH --> PITCH_GUARD
+    state PITCH_GUARD <<choice>>
+
+    PITCH_GUARD --> PITCH : continue
+    PITCH_GUARD --> OBJECTION : resistance
+
+    %% ================= OBJECTION =================
+    OBJECTION --> OBJECTION_GUARD
+    state OBJECTION_GUARD <<choice>>
+
+    OBJECTION_GUARD --> OBJECTION : unresolved
+    OBJECTION_GUARD --> PITCH : resolved
+    OBJECTION_GUARD --> LOGICAL : requalify
+    OBJECTION_GUARD --> END : exit
+
+    %% ================= END =================
+    state END
+    END --> [*]
+
+    %% ================= COLORS =================
+    style SIGNAL_CLASSIFY fill:#E3F2FD,stroke:#1E88E5,color:#0D47A1
+    style INTENT fill:#E8F5E9,stroke:#43A047,color:#1B5E20
+    style INTENT_LEVEL fill:#E8F5E9,stroke:#43A047,color:#1B5E20
+
+    style STRATEGY_CHOICE fill:#FFF3E0,stroke:#FB8C00,color:#E65100
+    style LOGICAL fill:#FFF3E0,stroke:#FB8C00,color:#E65100
+    style LOGICAL_GUARD fill:#FFF3E0,stroke:#FB8C00,color:#E65100
+    style EMOTIONAL fill:#FFF3E0,stroke:#FB8C00,color:#E65100
+    style EMOTIONAL_GUARD fill:#FFF3E0,stroke:#FB8C00,color:#E65100
+
+    style PITCH fill:#FFEBEE,stroke:#E53935,color:#B71C1C
+    style PITCH_GUARD fill:#FFEBEE,stroke:#E53935,color:#B71C1C
+    style PITCH_TRANSACTIONAL fill:#FFEBEE,stroke:#E53935,color:#B71C1C
+
+    style OBJECTION fill:#F3E5F5,stroke:#8E24AA,color:#4A148C
+    style OBJECTION_GUARD fill:#F3E5F5,stroke:#8E24AA,color:#4A148C
+    style T_OBJ_ENTRY fill:#F3E5F5,stroke:#8E24AA,color:#4A148C
+
+    style END fill:#ECEFF1,stroke:#546E7A,color:#263238

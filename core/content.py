@@ -1,4 +1,17 @@
-"""Builds the final system prompt from templates, overrides and tactics"""
+"""LAYER 2: Prompt Rules - Constrains LLM generation via system prompt rules.
+
+Assembles stage-specific rules that are embedded in the system prompt before the LLM
+sees the user message. Rules guide the LLM to self-constrain during generation:
+- "No closing questions in INTENT stage"
+- "Do not mention price until PITCH stage"
+- "Ask one question per turn maximum"
+- Strategy-specific rules (e.g., consultative/transactional prompts)
+
+Uses signal detections from analysis.py to select which rules apply.
+Execution order: 3rd (after signal detection and FSM advancement check in chatbot.chat()).
+Conceptually: Middle defensive layer (constrains bad generation before it happens).
+See three_layer_architecture.puml for full defense-in-depth diagram.
+"""
 
 import random
 from typing import Any

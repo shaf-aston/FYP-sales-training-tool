@@ -1,4 +1,15 @@
-"""Signal detection utilities for conversation turns"""
+"""Signal Detection Engine - Prerequisite for all defensive layers.
+
+Analyzes incoming user messages to extract intent, emotional state, objection types,
+and other conversational signals. These detections are the input to:
+- LAYER 1 (flow.py): FSM checks advancement conditions
+- LAYER 2 (content.py): Injects stage-specific prompt rules
+- LAYER 3 (response_guardrails.py): Validates output constraints
+
+Execution order: 1st (before any layers run).
+This module is the sensor that feeds all three defensive layers.
+See three_layer_architecture.puml for full defense-in-depth diagram.
+"""
 
 import re
 from dataclasses import dataclass

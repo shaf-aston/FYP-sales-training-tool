@@ -1,0 +1,129 @@
+@startuml
+
+skinparam backgroundColor #FAFAFA
+skinparam borderColor #333333
+skinparam arrowColor #FF6B6B
+
+title Three-Layer Defense-in-Depth Architecture
+
+note as ArchNote
+  **IMPORTANT CLARITY:**
+  Layers numbered by DEFENSIVE PURPOSE (1=prevention, 2=constraint, 3=catch-all),
+  **NOT** execution order.
+
+  Execution order:
+  → Signal Detection (Step 2)
+  → Layer 1/FSM gating (Step 3) ← prevents stage skipping
+  → Layer 2/Prompt rules (Step 4) ← prevents bad outputs via constraints
+  → LLM (Step 5)
+  → Layer 3/Validation (Step 6) ← catches violations
+
+  Layer 1 is "outermost defense" (prevents wrong state), hence numbered first.
+end note
+
+package "SIGNAL DETECTION (Prerequisite)" #F5F5F5 {
+
+rectangle "MODULE: analysis.py\nFunction: analyse_state(), classify_intent(), etc.\n\nPURPOSE: Sensor that feeds all three layers" as SIG_Module
+
+rectangle "EXTRACTS:\n• Intent level (low/medium/high)\n• Emotional state (guarded, decisive, etc.)\n• Objection types (money, fear, smokescreen, etc.)\n• User keywords and signals" as SIG_What
+
+rectangle "EXECUTION: 1st\n(before any defensive layers)\n\nFEEDS TO:\n→ Layer 1 (for advancement checks)\n→ Layer 2 (for rule selection)\n→ Layer 3 (for validation)" as SIG_Timing
+}
+
+package "LAYER 1: STAGE-GATING (FSM)" #FFE0E0 {
+
+rectangle "MODULE: flow.py\nFunctions: should_advance(), advance(), SalesFlowEngine\n\nPURPOSE: Outermost gate - prevent bad state progressions" as L1_Module
+
+rectangle "PREVENTS:\n• Skipping stages (e.g., INTENT → PITCH without LOGICAL)\n• Advancing without user intent\n• Reaching PITCH without emotional commitment\n• Entering OBJECTION on smokescreen (false objections)" as L1_Prevents
+
+rectangle "ADVANCEMENT CONDITIONS (uses signal detections):\n• INTENT → LOGICAL: Need 2+ problem statements\n• LOGICAL → EMOTIONAL: Need doubt/skepticism signals\n• EMOTIONAL → PITCH: Need expressed stakes/consequences\n• PITCH → OBJECTION: Need real objection (not smokescreen)\n• OBJECTION → OUTCOME: Need walkaway or commitment" as L1_Conditions
+
+rectangle "EXECUTION: 2nd\nACCURACY: ~100% (hard gate - blocks or allows)\nFALLBACK: Stay in current stage if conditions not met" as L1_Timing
+}
+
+package "LAYER 2: PROMPT RULES" #E1F5FF {
+
+rectangle "MODULE: content.py\nFunction: generate_stage_prompt()\n\nPURPOSE: Mid-layer - constrain LLM generation via prompt injection" as L2_Module
+
+rectangle "EMBEDS IN SYSTEM PROMPT:\n• Stage-specific rules ('No pitch in INTENT')\n• Strategy rules (consultative vs transactional)\n• Persona guidance\n• Acknowledgment rules\n• Objection reframe sequences" as L2_Embeds
+
+rectangle "EXAMPLE RULES:\nINTENT stage: Ask about pain points, do not pitch, no closing questions\nLOGICAL stage: Explore root causes, no price mention yet\nPITCH stage: Assumptive close, three-pillar summary\nOBJECTION: Classify → Reframe → Respond (no new selling)" as L2_Rules
+
+rectangle "EXECUTION: 3rd\n(after Layer 1 decides stage,before LLM sees prompt)\nACCURACY: ~95% (LLM usually follows prompt guidance)\nFALLBACK: Layer 3 catches violations" as L2_Timing
+}
+
+package "LAYER 3: RESPONSE VALIDATION" #E8F5E9 {
+
+rectangle "MODULE: response_guardrails.py\nFunction: apply_layer3_output_checks()\n\nPURPOSE: Innermost layer - catch violations post-generation (safety net)" as L3_Module
+
+rectangle "DETECTS & BLOCKS:\n• Pricing leakage in INTENT/LOGICAL stages\n• Empty responses (LLM failure)\n• Stage-specific constraint violations\n• Manipulation patterns (future: if added)" as L3_Detects
+
+rectangle "EXAMPLE CHECKS:\nINTENT stage: Reject any price mention\nLOGICAL stage: Reject price (unless user asked about it)\nPITCH stage: Allow price in context of value proposition\nOBJECTION stage: Validate objection reframe structure" as L3_Checks
+
+rectangle "EXECUTION: 5th\n(after LLM generates, before response sent)\nACCURACY: ~80% (regex may miss subtle violations)\nFALLBACK: Block & return fallback response" as L3_Timing
+}
+
+package "ACTUAL EXECUTION FLOW" #FFFDE7 {
+
+rectangle "1. USER SENDS MESSAGE" as STEP1
+rectangle "2. SIGNAL DETECTION (analysis.py)\nAnalyze intent, state, signals" as STEP2
+rectangle "3. LAYER 1: FSM CHECK (flow.py)\nCheck if ready to advance to next stage" as STEP3
+rectangle "4. LAYER 2: BUILD PROMPT (content.py)\nEmbed stage-specific rules in system prompt" as STEP4
+rectangle "5. PASS TO LLM\nWith system prompt containing rules" as STEP5
+rectangle "6. LAYER 3: VALIDATE OUTPUT (response_guardrails.py)\nCheck response for rule violations" as STEP6
+rectangle "7. RESPONSE TO USER" as STEP7
+}
+
+STEP1 --> STEP2
+STEP2 --> STEP3
+STEP3 --> STEP4
+STEP4 --> STEP5
+STEP5 --> STEP6
+STEP6 --> STEP7
+
+SIG_Timing -.-> STEP2
+L1_Timing -.-> STEP3
+L2_Timing -.-> STEP4
+L3_Timing -.-> STEP6
+
+note right of STEP1
+User: "I'm using the old system and it's slow"
+end note
+
+note right of STEP2
+Signals detected:
+problem + frustration = HIGH intent
+Current stage: INTENT
+end note
+
+note right of STEP3
+FSM check: User showed clear intent?
+✓ Yes → Allow staying in INTENT
+  (Need more problem info before LOGICAL)
+end note
+
+note right of STEP4
+Layer 2 rules for INTENT stage:
+"Ask about pain points, do not pitch, max 1 question"
+end note
+
+note right of STEP5
+LLM sees system prompt with rules:
+"You are a consultative sales expert.
+[rules embedded]
+Respond to: 'I'm using the old system and it's slow'"
+end note
+
+note right of STEP6
+Layer 3 validates:
+✓ One question? Yes
+✓ No price mention? Yes
+✓ Valid for INTENT? Yes
+→ Send to user
+end note
+
+note right of STEP7
+Response: "That sounds frustrating. What part of the system is slowing you down?"
+end note
+
+@enduml

@@ -1,0 +1,214 @@
+@startuml name
+
+skinparam backgroundColor white
+skinparam defaultFontSize 10
+skinparam packageFontSize 11
+skinparam packageFontStyle bold
+skinparam noteBorderColor #999999
+skinparam noteBackgroundColor #FFFFF0
+skinparam arrowColor #333333
+skinparam shadowing false
+
+title Testing Strategy - Sales Roleplay Chatbot (22 Tests)
+
+' =========================
+' LAYER 1: AUTOMATED TESTS
+' =========================
+package "LAYER 1: AUTOMATED SAFETY CHECKS" as L1 #F8F8F8 {
+
+  package "A. Regression Guards (4 tests)" as BehaviorLock #FFE6E6 {
+
+    rectangle FSM [
+      test_flow_hardening.py
+      - Stage progression (intent → logical → emotional)
+      - Advancement conditions
+      - Flow contracts intact
+    ]
+
+    rectangle ACK [
+      test_ack_logic.py
+      - Acknowledgment patterns
+      - State detection
+      - Context sensitivity
+    ]
+
+    rectangle STATE [
+      test_chatbot_state_persistence.py
+      - Conversation memory
+      - Session continuity
+      - Context preserved
+    ]
+
+    rectangle REMOVED [
+      test_feature_removals.py
+      - Old features removed
+      - No dead code
+      - Clean pathways
+    ]
+
+    note bottom
+      Guard rails: fail immediately if behavior breaks.
+    end note
+  }
+
+  package "B. Component Tests (6 tests)" as Components #E6F3FF {
+
+    rectangle FLOW_CONFIG [
+      test_objection_pathway_config.py
+      - Objection pathway validation
+      - Config structure checks
+      - Stage transitions
+    ]
+
+    rectangle TRAINER_LOGIC [
+      test_trainer.py
+      - Scoring calculations
+      - Training domain logic
+      - Response evaluation
+    ]
+
+    rectangle ROUTES_CORE [
+      test_chat_routes.py
+      test_session_routes.py
+      test_analytics_routes.py
+      - Endpoint routing
+      - Request/response handling
+      - Session management
+    ]
+
+    note bottom
+      Each component works independently.
+    end note
+  }
+
+  package "C. Integration Tests (6 tests)" as Connections #E6FFE6 {
+
+    rectangle PROSPECT [
+      test_prospect_routes.py
+      test_prospect_session_contract.py
+      test_prospect_session_recovery.py
+      - End-to-end prospect flow
+      - Session recovery logic
+      - Contract validation
+    ]
+
+    rectangle OUTPUT [
+      test_frontend_contract.py
+      test_layer3_output_checks.py
+      - Response format validation
+      - Frontend compatibility
+      - Output guardrails
+    ]
+
+    rectangle PROVIDER [
+      test_provider_selection_contract.py
+      - LLM provider switching
+      - Fallback gracefully
+      - Contract integrity
+    ]
+
+    note bottom
+      Systems work together correctly.
+    end note
+  }
+
+  package "D. External Services (6 tests)" as External #FFF4E6 {
+
+    rectangle LLM [
+      test_groq_integration.py
+      test_groq_response.py
+      - LLM API connectivity
+      - Response parsing
+      - Error handling
+    ]
+
+    rectangle VOICE [
+      test_groq_tts.py
+      test_voice_architecture.py
+      - Text-to-speech pipeline
+      - Audio format validation
+      - Voice service integration
+    ]
+
+    rectangle SECURITY [
+      test_security_stride.py
+      test_api_connectivity.py
+      - STRIDE threat analysis
+      - API security checks
+      - Authentication/authorization
+    ]
+
+    note bottom
+      External dependencies & security.
+    end note
+  }
+}
+
+' =========================
+' LAYER 2: MANUAL TESTING
+' =========================
+package "LAYER 2: DEVELOPER TESTING (Parallel)" as L2 #F0E6FF {
+
+  rectangle DEV [
+    test_detailed.py (Manual Explorer)
+    - Observe conversation flow
+    - Natural responses
+    - Objection handling
+    - Context continuity
+    - Strategy switching visibility
+
+    Purpose:
+    automation checks correctness
+    human checks experience
+  ]
+
+  note bottom
+    Runs in parallel with automated tests.
+  end note
+}
+
+' =========================
+' LAYER 3: USER VALIDATION
+' =========================
+package "LAYER 3: USER VALIDATION" as L3 #E6FFFF {
+
+  rectangle USER [
+    Real User Sessions
+    - naturalness
+    - clarity
+    - trust
+    - usefulness
+
+    Metrics:
+    - ratings
+    - completion rate
+    - satisfaction
+  ]
+}
+
+' =========================
+' FLOW
+' =========================
+BehaviorLock -right-> Components
+Components -right-> Connections
+Connections -right-> External
+
+L1 -down-> L2 : parallel
+L1 -down-> L3 : feeds into
+L2 -down-> L3 : feeds into
+
+note bottom of L3
+  Final validation from real users.
+end note
+
+legend right
+  Color Key:
+  |<#FFE6E6> Regression Guards (4)|
+  |<#E6F3FF> Component Tests (6)|
+  |<#E6FFE6> Integration Tests (6)|
+  |<#FFF4E6> External Services (6)|
+  |<#F0E6FF> Manual Testing (1)|
+  |<#E6FFFF> User Validation|
+end legend
+
+@enduml

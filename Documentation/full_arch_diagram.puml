@@ -1,0 +1,157 @@
+@startuml
+title Sales Roleplay Chatbot - Big Picture System Architecture
+
+left to right direction
+skinparam shadowing false
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam roundcorner 10
+skinparam defaultTextAlignment center
+skinparam ArrowColor #55606E
+skinparam BackgroundColor white
+
+skinparam package {
+  BorderColor #94A3B8
+  FontColor #1F2937
+  BackgroundColor #F8FAFC
+}
+
+skinparam component {
+  BackgroundColor #FFFFFF
+  BorderColor #64748B
+  FontColor #111827
+}
+
+skinparam database {
+  BackgroundColor #EEF2FF
+  BorderColor #6366F1
+  FontColor #1E1B4B
+}
+
+skinparam note {
+  BackgroundColor #FFF7D6
+  BorderColor #B59F3B
+  FontColor #4B5563
+}
+
+legend right
+  <b>Color key</b>
+  Blue-gray: web / API layer
+  Orange: seller training core
+  Teal: prospect simulation
+  Purple: provider adapters
+  Indigo: config and persistence
+endlegend
+
+package "Client" {
+  component "Browser UI\nfrontend/templates/index.html\nfrontend/static/app.js" as UI
+  component "Voice controls\nMic, dictation, playback" as VOICE_UI
+}
+
+package "Web / API Layer" {
+  component "backend/app.py\nFlask app + CORS + security" as APP
+  component "Session routes\n/api/init, /api/restore,\n/api/stage, /api/reset" as SESSION_ROUTE
+  component "Chat routes\n/api/chat, /api/edit,\n/api/summary, /api/training/ask" as CHAT_ROUTE
+  component "Prospect routes\n/api/prospect/*" as PROSPECT_ROUTE
+  component "Analytics routes\n/api/test/*, /api/analytics/*,\n/api/knowledge, /api/feedback" as ANALYTICS_ROUTE
+  component "Voice routes\n/api/voice/*" as VOICE_ROUTE
+  component "Security + validation\nrate limits, session checks,\nmessage sanitizing" as SECURITY
+}
+
+package "Seller Training Core" {
+  component "SalesChatbot\nturn orchestration" as BOT
+  component "SalesFlowEngine\nFSM stage + strategy" as FLOW
+  component "analysis.py\nsignals, state, objections" as ANALYSIS
+  component "loader.py\nYAML config + matching" as LOADER
+  component "content.py / trainer.py / quiz.py\nprompts, coaching, quizzes" as TRAINING
+  component "SessionAnalytics\nturn metrics + evaluation summary" as SESSION_ANALYTICS
+}
+
+package "Prospect Simulation Core" {
+  component "ProspectSession\nbuyer roleplay engine" as PROSPECT_SESSION
+  component "ProspectState\nreadiness, objections, endings" as PROSPECT_STATE
+  component "ProspectEvaluator\nfinal scorecard" as PROSPECT_EVAL
+  component "ProspectSessionPersistence\nsession recovery" as PROSPECT_PERSIST
+}
+
+package "Provider Layer" {
+  component "ProviderRouter" as ROUTER
+  component "Provider factory\ncreate_provider()" as FACTORY
+  component "LLM providers\nGroq, SambaNova,\nprobe / fallback providers" as LLM_PROVIDERS
+  component "VoiceProvider\nSTT + TTS" as VOICE_PROVIDER
+}
+
+package "Config + Storage" {
+  database "config/*.yaml\nproducts, signals, tactics,\nprospect config, objections" as YAML
+  database "sessions/*.json\nseller session snapshots" as SELLER_SESSIONS
+  database "prospect sessions/*.json\nbuyer roleplay snapshots" as PROSPECT_SESSIONS
+  database "feedback.jsonl\nappend-only feedback log" as FEEDBACK
+  database "analytics / metrics store\nsession analytics, latency, summary" as METRICS
+}
+
+note bottom of APP
+  The Flask app wires the blueprints together and injects shared
+  dependencies such as session lookup, validation, and state helpers.
+end note
+
+note bottom of BOT
+  Seller mode is a closed loop:
+  analyze -> advance FSM -> build prompt -> call provider ->
+  validate output -> persist session -> log analytics.
+end note
+
+note bottom of PROSPECT_SESSION
+  Prospect mode is separate from seller mode.
+  It simulates the buyer, tracks readiness, and ends with a scorecard.
+end note
+
+UI --> APP : HTTP / browser UI
+VOICE_UI --> VOICE_ROUTE : audio upload / playback
+
+APP --> SECURITY
+APP --> SESSION_ROUTE
+APP --> CHAT_ROUTE
+APP --> PROSPECT_ROUTE
+APP --> ANALYTICS_ROUTE
+APP --> VOICE_ROUTE
+
+SESSION_ROUTE --> BOT : create / restore session
+CHAT_ROUTE --> BOT : process one turn
+VOICE_ROUTE --> BOT : same chat core after STT
+PROSPECT_ROUTE --> PROSPECT_SESSION : buyer roleplay
+ANALYTICS_ROUTE --> SESSION_ANALYTICS : reports / quiz / feedback
+ANALYTICS_ROUTE --> FEEDBACK : append feedback
+
+BOT --> FLOW
+BOT --> ANALYSIS
+BOT --> LOADER
+BOT --> TRAINING
+BOT --> ROUTER
+BOT --> SELLER_SESSIONS
+BOT --> METRICS
+
+FLOW --> YAML : stage rules, tactics, strategy map
+ANALYSIS --> YAML : signal keywords + thresholds
+LOADER --> YAML : product and prospect config
+TRAINING --> YAML : prompts, objections, quizzes
+TRAINING --> SESSION_ANALYTICS : quiz and coaching outputs
+
+ROUTER --> FACTORY
+FACTORY --> LLM_PROVIDERS
+VOICE_ROUTE --> VOICE_PROVIDER
+VOICE_PROVIDER --> LLM_PROVIDERS : shared provider backends
+
+PROSPECT_SESSION --> PROSPECT_STATE
+PROSPECT_SESSION --> PROSPECT_EVAL
+PROSPECT_SESSION --> PROSPECT_PERSIST
+PROSPECT_PERSIST --> PROSPECT_SESSIONS
+PROSPECT_EVAL --> METRICS
+PROSPECT_SESSION --> YAML : personas, difficulty profiles
+
+SESSION_ANALYTICS --> METRICS
+
+CHAT_ROUTE ..> TRAINING : returns training pack
+SESSION_ROUTE ..> YAML : product selection / config metadata
+PROSPECT_ROUTE ..> YAML : personas / product options
+
+@enduml

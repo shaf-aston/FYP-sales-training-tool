@@ -1,0 +1,88 @@
+@startuml
+title Provider Abstraction with Factory
+
+top to bottom direction
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+skinparam class {
+  BackgroundColor #F8FAFC
+  BorderColor #5F6B7A
+  FontColor #1F2933
+  ArrowColor #48525E
+}
+
+skinparam note {
+  BackgroundColor #FFF7D6
+  BorderColor #B59F3B
+}
+
+class SalesChatbot {
+  -provider : BaseLLMProvider
+  +chat(user_message) : ChatResponse
+}
+
+class ProviderFactory <<utility>> {
+  +create_provider(type, model) : BaseLLMProvider
+}
+
+abstract class BaseLLMProvider <<interface-like contract>> {
+  +chat(messages) : LLMResponse
+  +is_available() : bool
+  +get_model_name() : str
+}
+
+class LLMResponse <<dataclass>> {
+  +content : str
+  +model : str
+  +latency_ms : float
+  +error : str
+}
+
+class GroqProvider <<production>> {
+  +chat()
+}
+
+class SambaNovaProvider <<production>> {
+  +chat()
+}
+
+class DummyProvider <<testing>> {
+  +chat()
+}
+
+class ProbeProvider <<experimentation>> {
+  +chat()
+}
+
+SalesChatbot ..> ProviderFactory : requests provider\nat initialization
+ProviderFactory ..> BaseLLMProvider : returns concrete instance
+SalesChatbot --> BaseLLMProvider : uses active provider\nfor chat()
+BaseLLMProvider ..> LLMResponse : returns
+
+BaseLLMProvider <|-- GroqProvider
+BaseLLMProvider <|-- SambaNovaProvider
+BaseLLMProvider <|-- DummyProvider
+BaseLLMProvider <|-- ProbeProvider
+
+note bottom of BaseLLMProvider
+The rest of the application talks to one shared provider contract,
+so concrete providers can be swapped without changing SalesChatbot.
+end note
+
+note right of ProviderFactory
+In code this is implemented by
+src/chatbot/providers/factory.py
+via create_provider(...).
+end note
+
+note bottom of SalesChatbot
+Fallback remains in SalesChatbot:
+it can switch to another provider implementation
+without changing the caller-facing chatbot API.
+end note
+
+@enduml

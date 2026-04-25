@@ -1,0 +1,82 @@
+---
+title: Runtime Control Flow - Chat Decision Loop
+---
+
+%% Single-turn control flow with explicit ownership boundaries.
+%% SalesFlowEngine is the single source of truth for seller-mode stage decisions.
+
+sequenceDiagram
+    autonumber
+
+    participant User as User
+    participant ChatAPI as ChatController (/api/chat)
+    participant SessionSvc as SessionService
+    participant ChatSvc as ChatService (SalesChatbot facade)
+    participant Analysis as AnalysisEngine
+    participant Flow as SalesFlowEngine
+    participant Prompt as PromptBuilder
+    participant Router as ProviderRouter
+    participant Provider as BaseLLMProvider
+    participant Parser as ResponseParser
+    participant Store as SessionPersistence
+    participant Perf as PerformanceTracker
+    participant Analytics as SessionAnalytics
+
+    User ->> ChatAPI: POST /api/chat {session_id, message}
+    ChatAPI ->> SessionSvc: load(session_id)
+    SessionSvc -->> ChatAPI: SessionSnapshot
+    ChatAPI ->> ChatSvc: handle_turn(session_id, user_message)
+
+    ChatSvc ->> Analysis: analyse_state(history, user_message)
+    Analysis -->> ChatSvc: ConversationState
+
+    ChatSvc ->> Flow: get_priority_override_target(user_message)
+    Flow -->> ChatSvc: override_stage or None
+
+    opt override_stage exists
+        ChatSvc ->> Flow: advance(override_stage)
+        ChatSvc ->> Analytics: record_stage_transition(...)
+    end
+
+    ChatSvc ->> Prompt: build_system_prompt(stage, state, history, context)
+    Prompt -->> ChatSvc: system_prompt
+
+    ChatSvc ->> Router: send(messages, stage)
+    Router ->> Provider: chat(messages, temperature, max_tokens, stage)
+
+    alt primary provider success
+        Provider -->> Router: raw provider payload
+    else rate limit / timeout / provider error
+        Router ->> Router: fallback(error, messages, stage)
+        Router ->> Provider: chat(...) on next provider
+        Provider -->> Router: raw fallback payload
+    end
+
+    Router ->> Parser: parse(raw_payload)
+    Parser -->> Router: LLMResponse
+    Router -->> ChatSvc: LLMResponse
+
+    alt valid LLM response
+        ChatSvc ->> Flow: add_turn(user_message, bot_reply)
+        ChatSvc ->> Flow: get_advance_target(user_message)
+        Flow -->> ChatSvc: target_stage or None
+
+        opt target_stage exists
+            ChatSvc ->> Flow: advance(target_stage)
+            ChatSvc ->> Analytics: record_stage_transition(...)
+        end
+
+        ChatSvc ->> SessionSvc: save(SessionSnapshot)
+        SessionSvc ->> Store: save(...)
+        Store -->> SessionSvc: success
+
+        ChatSvc ->> Perf: log_stage_latency(...)
+        ChatSvc ->> Analytics: record_intent_classification(...)
+        ChatSvc -->> ChatAPI: ChatResponse
+    else response invalid after retries
+        ChatSvc -->> ChatAPI: ErrorEnvelope + graceful fallback message
+    end
+
+    ChatAPI -->> User: HTTP 200 JSON response
+
+    Note over User,Analytics: Voice mode uses the same decision loop after STT and before TTS.

@@ -1,0 +1,74 @@
+@startuml training_coach_subsystems
+title Training Coach — Sub-system Overview
+
+skinparam defaultFontName Helvetica
+skinparam defaultFontSize 11
+skinparam backgroundColor #FFFFFF
+skinparam ArrowColor #424242
+skinparam rectangleBorderColor #616161
+skinparam packageBorderColor #757575
+skinparam noteBorderColor #888888
+skinparam noteBackgroundColor #FFFDE7
+
+' ── TRIGGERS ──────────────────────────────────────────────
+rectangle "Conversation Lifecycle" #F5F5F5 {
+  component "After every turn" as T1
+  component "Trainee asks question" as T2
+  component "Session ends" as T3
+}
+
+' ── THREE SUB-SYSTEMS ─────────────────────────────────────
+rectangle "Training Coach  (trainer.py)" #E8F5E9 {
+
+  rectangle "generate_training()" as GT #C8E6C9 {
+    component "Stage rubric\n(goal + advance_when)" as R1
+    component "LLM call\ntemp=0.3 · max_tokens=150" as L1
+    component "_truncate_words()\nenforces 15-word cap" as TW
+  }
+
+  rectangle "answer_training_question()" as ATQ #DCEDC8 {
+    component "Last 8 turns\n+ key_concepts" as H1
+    component "Coaching style\ntactical / socratic / teacher" as CS
+    component "LLM call\ntemp=0.4 · max_tokens=150" as L2
+  }
+
+  rectangle "score_session()" as SS #B2DFDB {
+    component "Analytics events\n(JSONL)" as AE
+    component "5 scoring dimensions\n(code only — no LLM)" as SD
+    component "SCORING_RUBRIC\n(constants.py)" as RC
+  }
+}
+
+' ── OUTPUTS ───────────────────────────────────────────────
+rectangle "Outputs" #FFF9C4 {
+  component "JSON coaching card\n{what_happened, next_move,\nwatch_for}" as O1
+  component "Prose coaching answer\n(2-4 sentences)" as O2
+  component "Scored breakdown\n(5 dimensions + total)" as O3
+}
+
+' ── CONNECTIONS ───────────────────────────────────────────
+T1 --> GT : triggers
+T2 --> ATQ : triggers
+T3 --> SS : triggers
+
+R1 -down-> L1 : injected into prompt
+L1 -down-> TW : raw JSON → truncated
+TW --> O1
+
+H1 -down-> L2 : injected into prompt
+CS -down-> L2 : selects style prompt
+L2 --> O2
+
+AE -down-> SD : event stream
+RC -down-> SD : thresholds + weights
+SD --> O3
+
+' ── FALLBACK NOTE ─────────────────────────────────────────
+note bottom of GT
+  On LLM failure:
+  fallback uses rubric goal
+  and advance_when text.
+  No second API call.
+end note
+
+@enduml

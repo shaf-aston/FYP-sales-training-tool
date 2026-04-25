@@ -1,4 +1,16 @@
-"""FSM transitions and advancement rules for conversation flow"""
+"""LAYER 1: Stage-Gating (FSM) - Enforces conversation pacing via state machine.
+
+Manages conversation stages (INTENT → LOGICAL → EMOTIONAL → PITCH → OBJECTION → OUTCOME).
+Prevents stage progression until user signals meet advancement thresholds:
+- To leave INTENT: Need 2+ problem statements (user_has_clear_intent)
+- To reach PITCH: Need emotional commitment signals
+- To reach OBJECTION: Need buyer objection, not smokescreen
+
+Uses signal detections from analysis.py to make advancement decisions.
+Execution order: 2nd (after signal detection in chatbot.chat()).
+Conceptually: Outermost defensive layer (prevents bad state progressions earliest).
+See three_layer_architecture.puml for full defense-in-depth diagram.
+"""
 
 from copy import deepcopy
 from typing import Any, Optional

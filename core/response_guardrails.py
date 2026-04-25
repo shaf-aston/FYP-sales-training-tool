@@ -1,4 +1,21 @@
-"""Layer 3 output checks for assistant replies."""
+"""LAYER 3: Response Validation - Post-generation guardrails (safety net).
+
+Scans LLM-generated responses for rule violations before sending to user.
+Detects and corrects/blocks:
+- Price mentions in INTENT/LOGICAL stages (premature pricing)
+- Empty responses (LLM generation failure)
+- Stage-specific constraint violations
+
+Execution step: 6th (after LLM generates response, before user sees it).
+Defensive role: Innermost/catch-all layer — safety net that catches violations
+bypassing Layer 1 (FSM gating) and Layer 2 (prompt constraints).
+Accuracy: ~80% (regex-based; catches explicit violations, misses nuanced language).
+
+Layer numbering note: Layers numbered by DEFENSIVE PURPOSE (1=prevention, 2=constraint, 3=catch),
+NOT execution order. Layer 1 is "outermost" (prevents wrong state), Layer 3 is "innermost" (catches leaks).
+
+See Documentation/three_layer_architecture.puml for full defense-in-depth diagram.
+"""
 
 from dataclasses import dataclass, field
 
@@ -34,7 +51,7 @@ DIRECT_PRICING_REQUEST_KEYWORDS = [
 
 @dataclass
 class Layer3CheckResult:
-    """Output of Layer 3 checks."""
+    """Output of LAYER 3 (Response Validation) checks."""
 
     content: str
     was_corrected: bool = False
@@ -82,8 +99,9 @@ def apply_layer3_output_checks(
     stage: str | Stage,
     user_message: str,
 ) -> Layer3CheckResult:
-    """Run Layer 3 checks and return corrected or blocked content.
+    """Run LAYER 3 (Response Validation) checks and return corrected or blocked content.
 
+    Scans LLM output for rule violations before sending to user.
     Checks are deterministic and stage-aware:
     1) Reject pricing leakage in logical and emotional stages.
     """
