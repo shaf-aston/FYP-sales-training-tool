@@ -441,7 +441,7 @@ When user is defensive/evasive, use statements instead of direct questions. Type
 | Curiosity | Want to understand without pressure | Express genuine curiosity with "no pressure" |
 | Combined | Full low-intent turn | Observation + one soft follow-up (from tactics.yaml) |
 
-NOTE: Specific examples are randomly selected from tactics.yaml at runtime via get_tactic("elicitation", type).
+NOTE: Elicitation examples are randomly selected from ELICITATION_TACTICS in content.py at runtime.
 """
 
     return f"""PRODUCT: {product_context}

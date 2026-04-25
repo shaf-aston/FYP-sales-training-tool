@@ -1,12 +1,12 @@
 """Builds the final system prompt from templates, overrides and tactics"""
 
+import random
 from typing import Any
 
 from .loader import (
     load_signals,
     load_objection_flows,
     get_adaptation_template,
-    get_tactic,
 )
 from .prompts import (
     get_prompt,
@@ -27,6 +27,12 @@ from .constants import PERSONA_CHECKPOINT_TURNS, TERSE_INPUT_THRESHOLD
 from .utils import contains_nonnegated_keyword
 
 from .objection import _build_objection_context
+
+ELICITATION_TACTICS = [
+    "Most people in your situation feel trapped between their current setup and exploring new options. What's kept you from making a move so far?",
+    "You've probably tried handling this yourself already. What's made that approach work for you up until now?",
+    "I'm guessing this isn't urgent, but there's something nudging you to look at alternatives. What is it?",
+]
 
 def _build_tactic_guidance(strategy: str, state: Any, user_message: str) -> str:
     """Generate adaptive bot guidance based on user state.
@@ -52,7 +58,7 @@ def _build_tactic_guidance(strategy: str, state: Any, user_message: str) -> str:
         # Get elicitation example if consultative
         elicitation_example = ""
         if strategy == "consultative":
-            elicitation_example = get_tactic("elicitation", "combined")
+            elicitation_example = random.choice(ELICITATION_TACTICS)
 
         return get_adaptation_template(
             "low_intent_guarded",
