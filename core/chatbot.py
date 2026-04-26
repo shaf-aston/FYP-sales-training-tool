@@ -354,13 +354,9 @@ class SalesChatbot:
     def _fallback(
         self, message: str, latency_ms: float, user_message: str
     ) -> ChatResponse:
-        # error turns are logged but don't advance the FSM
-        self.flow_engine.conversation_history.append(
-            {"role": "user", "content": user_message}
-        )
-        self.flow_engine.conversation_history.append(
-            {"role": "assistant", "content": message}
-        )
+        # Don't append fallback messages to conversation_history to avoid corrupting
+        # FSM context. The error message is returned in ChatResponse for UI display,
+        # but must not be processed by the LLM on the next turn.
         return self._build_response(message, latency_ms, user_message)
 
     def _apply_advancement(self, user_message: str) -> None:
