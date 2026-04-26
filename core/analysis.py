@@ -406,7 +406,7 @@ def extract_user_keywords(
     history: list[dict[str, str]], max_keywords: int = MAX_USER_KEYWORDS
 ) -> list[str]:
     """Extract the user's key terms (nouns/descriptors) for lexical entrainment"""
-    keywords = []
+    keywords = set()
     for msg in history:
         if msg["role"] == "user":
             for word in msg["content"].lower().split():
@@ -417,8 +417,8 @@ def extract_user_keywords(
                     and cleaned not in STOP_WORDS
                     and cleaned not in keywords
                 ):
-                    keywords.append(cleaned)
-    return keywords[-max_keywords:]
+                    keywords.add(cleaned)
+    return list(keywords)[-max_keywords:]
 
 
 def detect_topic_drift(user_message: str, stage: str) -> str:
