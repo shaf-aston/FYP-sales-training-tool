@@ -1,26 +1,19 @@
-"""LAYER 3: Response Validation - Post-generation guardrails (safety net).
+"""LAYER 3: Response Validation - post-generation safety net.
 
-Scans LLM-generated responses for rule violations before sending to user.
-Detects and corrects/blocks:
-- Price mentions in INTENT/LOGICAL stages (premature pricing)
-- Empty responses (LLM generation failure)
-- Stage-specific constraint violations
+Catches violations that bypass Layer 1 (FSM gating) and Layer 2 (prompt constraints):
+- Pricing leakage in intent/logical/emotional stages
+- Empty, degenerate, or oversized responses
 
-Execution step: 6th (after LLM generates response, before user sees it).
-Defensive role: Innermost/catch-all layer — safety net that catches violations
-bypassing Layer 1 (FSM gating) and Layer 2 (prompt constraints).
-Accuracy: ~80% (regex-based; catches explicit violations, misses nuanced language).
-
-Layer numbering note: Layers numbered by DEFENSIVE PURPOSE (1=prevention, 2=constraint, 3=catch),
-NOT execution order. Layer 1 is "outermost" (prevents wrong state), Layer 3 is "innermost" (catches leaks).
-
-See Documentation/three_layer_architecture.puml for full defense-in-depth diagram.
+Strips offending sentences first; uses a stage-specific fallback only when stripping
+leaves fewer than MIN_RESPONSE_CHARS characters.
 """
 
+import re
 from dataclasses import dataclass, field
 
 from .utils import Stage, contains_nonnegated_keyword
-
+MIN_RESPONSE_CHARS = 40
+MAX_RESPONSE_CHARS = 1500
 
 # Stage-level guardrail keywords for pricing leakage during discovery.
 PRICING_KEYWORDS = [
@@ -32,6 +25,10 @@ PRICING_KEYWORDS = [
     "fee",
     "investment",
     "per month",
+    "per year",
+    "per week",
+    "per annum",
+    "annually",
     "monthly",
     "$",
 ]
@@ -48,6 +45,8 @@ DIRECT_PRICING_REQUEST_KEYWORDS = [
     "quote",
 ]
 
+_SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
+
 
 @dataclass
 class Layer3CheckResult:
@@ -58,11 +57,9 @@ class Layer3CheckResult:
     was_blocked: bool = False
     applied_rules: list[str] = field(default_factory=list)
 
-
 def _normalize_stage_name(stage: str | Stage) -> str:
     stage_text = str(stage)
     if "." in stage_text:
-        # Handles enum-style text like "Stage.LOGICAL".
         stage_text = stage_text.split(".", 1)[1]
     return stage_text.lower()
 
@@ -75,6 +72,13 @@ def _user_requested_pricing(user_message: str) -> bool:
 
 def _contains_pricing_language(reply_text: str) -> bool:
     return contains_nonnegated_keyword((reply_text or "").lower(), PRICING_KEYWORDS)
+
+
+def _strip_pricing_sentences(text: str) -> str:
+    """Remove sentences containing pricing language; return remaining text."""
+    sentences = _SENTENCE_SPLIT.split(text)
+    clean = [s for s in sentences if s and not _contains_pricing_language(s)]
+    return " ".join(clean).strip()
 
 
 def _fallback_for_stage(stage_name: str) -> str:
@@ -101,31 +105,44 @@ def apply_layer3_output_checks(
 ) -> Layer3CheckResult:
     """Run LAYER 3 (Response Validation) checks and return corrected or blocked content.
 
-    Scans LLM output for rule violations before sending to user.
-    Checks are deterministic and stage-aware:
-    1) Reject pricing leakage in logical and emotional stages.
+    Checks (in order):
+    1) Degenerate output — empty, too short, or oversized.
+    2) Pricing leakage in intent/logical/emotional stages:
+       a) Attempt sentence-level stripping first (was_corrected).
+       b) Full fallback only when stripping leaves too little (was_blocked).
     """
     stage_name = _normalize_stage_name(stage)
     text = (reply_text or "").strip()
 
-    if not text:
+    if not text or len(text) < MIN_RESPONSE_CHARS:
         return Layer3CheckResult(
             content=_fallback_for_stage(stage_name),
             was_blocked=True,
             applied_rules=["empty_output_fallback"],
         )
 
-    if stage_name in (Stage.LOGICAL.value, Stage.EMOTIONAL.value):
+    if len(text) > MAX_RESPONSE_CHARS:
+        return Layer3CheckResult(
+            content=_fallback_for_stage(stage_name),
+            was_blocked=True,
+            applied_rules=["oversized_output_fallback"],
+        )
+
+    if stage_name in (Stage.INTENT.value, Stage.LOGICAL.value, Stage.EMOTIONAL.value):
         if _contains_pricing_language(text) and not _user_requested_pricing(user_message):
+            corrected = _strip_pricing_sentences(text)
+            if len(corrected) >= MIN_RESPONSE_CHARS:
+                return Layer3CheckResult(
+                    content=corrected,
+                    was_corrected=True,
+                    applied_rules=["corrected_pricing_in_discovery"],
+                )
             return Layer3CheckResult(
                 content=_fallback_for_stage(stage_name),
                 was_blocked=True,
                 applied_rules=["blocked_pricing_in_discovery"],
             )
 
-    return Layer3CheckResult(
-        content=text,
-        was_corrected=False,
-        was_blocked=False,
-        applied_rules=[],
-    )
+    return Layer3CheckResult(content=text)
+
+

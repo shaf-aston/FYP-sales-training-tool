@@ -2,8 +2,6 @@
 
 import json
 from datetime import datetime
-from pathlib import Path
-from threading import Lock
 
 from flask import Blueprint, jsonify, request
 
@@ -166,14 +164,10 @@ def get_analytics_summary():
     return jsonify({"success": True, **summary})
 
 
-_FEEDBACK_FILE = str(Path(__file__).resolve().parents[2] / "feedback.jsonl")
-_feedback_lock = Lock()
-
-
 @bp.route("/feedback", methods=["POST"])
 @require_rate_limit("feedback")
 def submit_feedback():
-    """Append user feedback to feedback.jsonl. Never resets - append-only"""
+    """Log user feedback for monitoring."""
     data = request.json or {}
     rating = data.get("rating")
     comment = (data.get("comment") or "").strip()
@@ -200,12 +194,6 @@ def submit_feedback():
         "page": data.get("page", "chat"),
     }
 
-    with _feedback_lock:
-        try:
-            with open(_FEEDBACK_FILE, "a", encoding="utf-8") as f:
-                f.write(json.dumps(entry) + "\n")
-        except IOError as e:
-            bp.app.logger.error(f"Failed to write feedback: {e}")  # type: ignore
-            return jsonify({"error": "Failed to save feedback"}), 500
+    bp.app.logger.info("feedback_event %s", json.dumps(entry, ensure_ascii=False))  # type: ignore
 
     return jsonify({"success": True})

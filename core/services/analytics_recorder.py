@@ -1,4 +1,8 @@
-"""Analytics adapter to reduce tight coupling in SalesChatbot."""
+"""Analytics adapter used by `SalesChatbot`.
+
+This is intentionally thin: it keeps `SalesChatbot` readable while ensuring
+analytics is a simple one-liner at each call site.
+"""
 
 from __future__ import annotations
 
@@ -7,6 +11,9 @@ from ..analytics.session_analytics import SessionAnalytics
 
 
 class AnalyticsRecorder:
+    def record(self, *, session_id: str, event: str, **payload) -> None:
+        SessionAnalytics.record(session_id=session_id, event=event, **payload)
+
     def record_session_start(
         self,
         *,
@@ -15,8 +22,9 @@ class AnalyticsRecorder:
         initial_strategy: str,
         ab_variant: str | None,
     ) -> None:
-        SessionAnalytics.record_session_start(
+        self.record(
             session_id=session_id,
+            event="session_start",
             product_type=product_type,
             initial_strategy=initial_strategy,
             ab_variant=ab_variant,
@@ -29,8 +37,9 @@ class AnalyticsRecorder:
         intent_level,
         user_turn_count: int,
     ) -> None:
-        SessionAnalytics.record_intent_classification(
+        self.record(
             session_id=session_id,
+            event="intent_classification",
             intent_level=intent_level,
             user_turn_count=user_turn_count,
         )
@@ -44,8 +53,9 @@ class AnalyticsRecorder:
         strategy: str,
         user_turns_in_stage: int,
     ) -> None:
-        SessionAnalytics.record_stage_transition(
+        self.record(
             session_id=session_id,
+            event="stage_transition",
             from_stage=from_stage,
             to_stage=to_stage,
             strategy=strategy,
@@ -61,8 +71,9 @@ class AnalyticsRecorder:
         reason: str,
         user_turn_count: int,
     ) -> None:
-        SessionAnalytics.record_strategy_switch(
+        self.record(
             session_id=session_id,
+            event="strategy_switch",
             from_strategy=from_strategy,
             to_strategy=to_strategy,
             reason=reason,
@@ -77,8 +88,9 @@ class AnalyticsRecorder:
         strategy: str,
         user_turn_count: int,
     ) -> None:
-        SessionAnalytics.record_objection_classified(
+        self.record(
             session_id=session_id,
+            event="objection_classified",
             objection_type=objection_type,
             strategy=strategy,
             user_turn_count=user_turn_count,

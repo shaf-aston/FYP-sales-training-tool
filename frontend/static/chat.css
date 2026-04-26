@@ -2016,9 +2016,10 @@ textarea::-webkit-scrollbar-thumb:hover,
     width: 100%;
     min-width: 0;
     flex: 0 0 auto;
-    max-height: 42dvh;
-    padding: 12px;
-    gap: 12px;
+    max-height: 34dvh;
+    overflow-y: auto;
+    padding: 10px 12px;
+    gap: 8px;
     border-top: 1px solid rgba(255, 255, 255, 0.04);
   }
 
@@ -2040,25 +2041,63 @@ textarea::-webkit-scrollbar-thumb:hover,
   }
 
   .flow-controls {
-    padding: 10px 12px;
-    gap: 6px;
+    padding: 8px 12px;
+    gap: 8px;
+    flex-wrap: nowrap;
   }
 
   .flow-controls-group {
-    flex-direction: column;
-    align-items: stretch;
+    flex-direction: row;
+    align-items: center;
     gap: 6px;
+    flex: 1;
+  }
+
+  .flow-controls-label {
+    display: none;
   }
 
   .flow-control-select {
     min-width: 0;
-    width: 100%;
-    flex: 1 1 auto;
+    width: auto;
+    flex: 1;
+    font-size: 11px;
+    padding: 7px 8px;
   }
 
   .flow-control-btn {
-    padding: 8px 10px;
-    width: 100%;
+    padding: 7px 10px;
+    width: auto;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  .sidebar-section {
+    padding-bottom: 8px;
+  }
+
+  .sidebar-section h3 {
+    font-size: 9px;
+    margin-bottom: 6px;
+  }
+
+  .sidebar-btn {
+    padding: 7px 10px;
+    font-size: 12px;
+  }
+
+  .sidebar-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  #prospectProductSelect,
+  #prospectStartBtn,
+  .prospect-diff-buttons,
+  .checkbox-label,
+  .tts-speed-control {
+    grid-column: 1 / -1;
   }
 
   .header>div {

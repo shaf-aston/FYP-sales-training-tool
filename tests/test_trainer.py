@@ -32,7 +32,7 @@ class _DummyFlowEngine:
     ]
 
 
-def test_socratic_training_answer_removes_question_marks():
+def test_socratic_training_answer_preserves_question_marks():
     provider = _DummyProvider(content="What is the real gap? Why now?")
 
     result = trainer.answer_training_question(
@@ -42,7 +42,7 @@ def test_socratic_training_answer_removes_question_marks():
         style="socratic",
     )
 
-    assert result == {"answer": "What is the real gap Why now"}
+    assert result == {"answer": "What is the real gap? Why now?"}
     assert provider.calls[0]["stage"] == Stage.LOGICAL
 
 

@@ -103,7 +103,6 @@ if _should_start_background_cleanup():
 def _require_session():
     """Pull the bot for this session, or return an error response if the session is missing"""
     from flask import jsonify, request
-    from core.chatbot import SalesChatbot
 
     session_id = request.headers.get("X-Session-ID")
     session_error = InputValidator.validate_session_id(session_id)
@@ -112,16 +111,10 @@ def _require_session():
     assert isinstance(session_id, str)
     bot = session_manager.get(session_id)
     if not bot:
-        # Fall back to disk (handles server restarts and Render cold starts)
-        bot = SalesChatbot.load_session(session_id)
-        if bot:
-            session_manager.set(session_id, bot)
-            app.logger.info(f"Recovered session from disk: {session_id}")
-        else:
-            return None, (
-                jsonify({"error": SESSION_NOT_FOUND, "code": "SESSION_EXPIRED"}),
-                400,
-            )
+        return None, (
+            jsonify({"error": SESSION_NOT_FOUND, "code": "SESSION_EXPIRED"}),
+            400,
+        )
     return bot, None
 
 
@@ -221,13 +214,17 @@ def _prospect_product_options():
 
 def _render_index(mode: str):
     """Render the chat page; product dropdown is populated server-side."""
+    # Keep UI flow-controls consistent with the privileged-mutation guard in `backend/security.py`.
+    require_admin = app.config.get(
+        "REQUIRE_ADMIN_FOR_STAGE_MUTATION",
+        os.environ.get("REQUIRE_ADMIN_FOR_STAGE_MUTATION", "").strip().lower()
+        in {"1", "true", "yes", "on"},
+    )
     return render_template(
         "index.html",
         mode=mode,
         prospect_products=_prospect_product_options(),
-        flow_controls_enabled=not SecurityConfig.require_admin_for_stage_mutation(
-            app.config
-        ),
+        flow_controls_enabled=not require_admin,
     )
 
 

@@ -1,5 +1,7 @@
 """Prospect mode: bot plays a buyer for sales practice roleplay training."""
 
+import json
+import logging
 import random
 import time
 from dataclasses import dataclass, field
@@ -8,6 +10,8 @@ from .loader import load_prospect_config, load_signals
 from .prospect_session_persistence import ProspectSessionPersistence
 from .providers.factory import create_provider, list_fallback_providers
 from .utils import clamp, range_label
+
+logger = logging.getLogger(__name__)
 
 SIGNALS = load_signals()
 
@@ -210,43 +214,17 @@ class ProspectSession:
         }
 
     def save_session(self) -> bool:
-        """Persist the current prospect session to disk."""
+        """Log the current prospect session state."""
         if not self.session_id:
             return False
         return ProspectSessionPersistence.save(self.session_id, self.to_dict())
 
     @classmethod
     def load_session(cls, session_id: str) -> "ProspectSession | None":
-        """Restore a prospect session from disk."""
-        payload = ProspectSessionPersistence.load(session_id)
-        if not payload:
-            return None
+        """Disk recovery is disabled; prospect sessions are in-memory only."""
 
-        session = cls(
-            provider_type=payload.get("provider_type"),
-            product_type=payload.get("product_type", "default"),
-            difficulty=payload.get("difficulty", "medium"),
-            persona=payload.get("persona"),
-            session_id=payload.get("session_id", session_id),
-        )
-        session.conversation_history = payload.get("conversation_history", [])
-
-        state_data = payload.get("state", {})
-        session.state.readiness = float(state_data.get("readiness", session.state.readiness))
-        session.state.objections_raised = int(
-            state_data.get("objections_raised", session.state.objections_raised)
-        )
-        session.state.turn_count = int(state_data.get("turn_count", session.state.turn_count))
-        session.state.needs_disclosed = list(
-            state_data.get("needs_disclosed", session.state.needs_disclosed)
-        )
-        session.state.has_committed = bool(
-            state_data.get("has_committed", session.state.has_committed)
-        )
-        session.state.has_walked = bool(
-            state_data.get("has_walked", session.state.has_walked)
-        )
-        return session
+        ProspectSessionPersistence.load(session_id)
+        return None
 
     def _load_product_context(self, product_type: str) -> str:
         """Load product context with prospect-specific knowledge.
@@ -384,6 +362,7 @@ class ProspectSession:
                 "content": response.content,
             }
         )
+        self._log_turn_event(None, response.content, turn_index=0)
         self.save_session()
 
         return ProspectResponse(
@@ -478,6 +457,7 @@ class ProspectSession:
                 "content": response.content,
             }
         )
+        self._log_turn_event(user_message, response.content, turn_index=self.state.turn_count)
         self.save_session()
 
         # Optional coaching hint
@@ -700,6 +680,26 @@ Don't give away what the prospect actually wants."""
             return {"hint": resp.content.strip()}
         except Exception:
             return {"hint": "Find out more before pitching anything."}
+
+    def _log_turn_event(
+        self, user_message: str | None, assistant_message: str, turn_index: int
+    ) -> None:
+        """Emit the full prospect exchange to the application log."""
+
+        if not self.session_id:
+            return
+
+        payload = {
+            "session_id": self.session_id,
+            "turn_index": turn_index,
+            "difficulty": self.state.difficulty,
+            "product_type": self.product_type,
+            "current_readiness": round(self.state.readiness, 3),
+            "user_message": user_message,
+            "assistant_message": assistant_message,
+            "persona_name": self.persona.get("name", "Alex"),
+        }
+        logger.info("prospect_conversation_turn %s", json.dumps(payload, ensure_ascii=False))
 
     def get_evaluation(self) -> dict:
         """Generate a final evaluation of the salesperson's performance.

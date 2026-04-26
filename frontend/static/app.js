@@ -1,6 +1,32 @@
 let isTyping = false,
   userTurnIndex = 0,
   sessionId = null;
+
+// Persist/restore session across refresh/navigation (server still enforces idle TTL).
+const SESSION_STORAGE_KEY = "salesRoleplaySessionId";
+
+function getStoredSessionId() {
+  try {
+    const sid = localStorage.getItem(SESSION_STORAGE_KEY);
+    return typeof sid === "string" && sid.trim() ? sid.trim() : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function storeSessionId(sid) {
+  try {
+    if (typeof sid === "string" && sid.trim()) {
+      localStorage.setItem(SESSION_STORAGE_KEY, sid.trim());
+    }
+  } catch (_) {}
+}
+
+function clearStoredSessionId() {
+  try {
+    localStorage.removeItem(SESSION_STORAGE_KEY);
+  } catch (_) {}
+}
 // Module-level state to avoid circular DOM reads
 let _currentStage = "intent";
 let _currentStrategy = "-";
@@ -103,7 +129,6 @@ function changeTrainingStyle(val) {
 
 // Session Managementâ”€â”€â”€â”€
 function getSessionId() {
-  if (!sessionId) sessionId = localStorage.getItem("sessionId");
   return sessionId;
 }
 
@@ -111,49 +136,24 @@ function hasProspectContext() {
   return (
     _prospectMode ||
     isDedicatedProspectPage() ||
-    Boolean(_prospectSessionId || localStorage.getItem("prospectSessionId"))
+    Boolean(_prospectSessionId)
   );
 }
 
-// LocalStorage History
-// Maintains a mirror of the conversation for reload persistence.
+// In-memory history only. Sessions are intentionally not restored after refresh.
 // Stored as [{role:"user"|"assistant", content:str}]
 let _cachedHistory = [];
 
-function saveHistoryToStorage() {
+function trimHistoryCache() {
   const MAX_HISTORY = 100;
   if (_cachedHistory.length > MAX_HISTORY) {
     _cachedHistory = _cachedHistory.slice(-MAX_HISTORY);
-  }
-  try {
-    localStorage.setItem("chatHistory", JSON.stringify(_cachedHistory));
-  } catch (e) {
-    if (e.name === "QuotaExceededError") {
-      _cachedHistory = _cachedHistory.slice(-Math.floor(MAX_HISTORY / 2));
-      try {
-        localStorage.setItem("chatHistory", JSON.stringify(_cachedHistory));
-      } catch (_) {
-        console.warn("localStorage full, chat history not saved");
-      }
-    }
-  }
-}
-
-function loadHistoryFromStorage() {
-  try {
-    return JSON.parse(localStorage.getItem("chatHistory") || "[]");
-  } catch (e) {
-    console.warn("localStorage read failed:", e);
-    return [];
   }
 }
 
 function clearStoredHistory() {
   _cachedHistory = [];
   _loadedStagesForStrategy = null;
-  localStorage.removeItem("chatHistory");
-  localStorage.removeItem("chatStage");
-  localStorage.removeItem("chatStrategy");
 }
 
 function normalizeConversationHistory(history) {
@@ -202,20 +202,23 @@ function renderHistory(history) {
 
 function replaceConversationHistory(history) {
   _cachedHistory = normalizeConversationHistory(history);
-  saveHistoryToStorage();
-  renderHistory(_cachedHistory);
+  trimHistoryCache();
+  const container = document.getElementById("chatContainer");
+  container.innerHTML = "";
+  userTurnIndex = 0;
+  if (Array.isArray(history)) {
+    history.forEach((m) => renderMessage(m.content, m.role === "user" ? "user" : "bot"));
+  }
 }
 
-function loadRestorableHistoryFromStorage() {
-  const stored = loadHistoryFromStorage();
-  const normalized = normalizeConversationHistory(stored);
-
-  if (normalized.length !== stored.length) {
-    _cachedHistory = normalized;
-    saveHistoryToStorage();
-  }
-
-  return normalized;
+function resetConversationState() {
+  clearStoredHistory();
+  sessionId = null;
+  _currentStage = "intent";
+  _currentStrategy = "-";
+  updateStage("intent");
+  updateStrategy("-");
+  syncModeChrome();
 }
 
 // NOTE: The prospect product dropdown (#prospectProductSelect) is populated
@@ -237,8 +240,9 @@ function isDedicatedProspectPage() {
 }
 
 function syncModeChrome() {
+  const isProspectContext = isDedicatedProspectPage() || _prospectMode;
   const flowControls = document.getElementById("flowControls");
-  const showFlowControls = _flowControlsEnabled && Boolean(getSessionId());
+  const showFlowControls = _flowControlsEnabled && !isProspectContext;
 
   if (flowControls) {
     flowControls.style.display = showFlowControls ? "" : "none";
@@ -263,9 +267,9 @@ function syncModeChrome() {
 // Session Expiration Handler
 function handleSessionExpired() {
   // Clear all stored data
-  localStorage.removeItem("sessionId");
   clearStoredHistory();
   sessionId = null;
+  clearStoredSessionId();
 
   // Clear the chat container
   const container = document.getElementById("chatContainer");
@@ -294,7 +298,6 @@ function handleServerSessionError(data) {
         data.error.toLowerCase().includes("no active")))
   ) {
     console.warn("Server lost session memory. Re-initializing...");
-    localStorage.removeItem("sessionId"); // Clear ghost ID
     clearStoredHistory();
     sessionId = null;
     initChatbot();
@@ -318,7 +321,6 @@ function isProspectSessionExpired(data) {
 function clearProspectSessionState() {
   _prospectMode = false;
   _prospectSessionId = null;
-  localStorage.removeItem("prospectSessionId");
   clearProspectEvaluationPanel();
   syncKnowledgeBaseLink();
   syncModeChrome();
@@ -942,7 +944,7 @@ function editMessage(msgIdx, originalText, msgEl) {
           role: m.role,
           content: m.content,
         }));
-        saveHistoryToStorage();
+        trimHistoryCache();
         _editInProgress = false;
 
         updateSessionUI(data);
@@ -963,83 +965,39 @@ function editMessage(msgIdx, originalText, msgEl) {
 
 // Initialization and Page Reload Restoration
 function initChatbot() {
-  const existingId = localStorage.getItem("sessionId");
-
+  const storedSid = getStoredSessionId();
   fetch("/api/init", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      session_id: existingId,
-      // provider can also be sent here
-      // They fall back to environment variables if not provided
-    }),
+    // If the server still has the session in memory (within idle TTL),
+    // this restores the conversation after refresh/navigation.
+    body: JSON.stringify(storedSid ? { session_id: storedSid } : {}),
   })
     .then((r) => r.json())
     .then((data) => {
       if (data.error) {
         showToast(data.error, "error");
+        // Stored session might have expired server-side; clear and try fresh once.
+        if (storedSid) {
+          clearStoredSessionId();
+          initChatbot();
+        }
         return;
       }
 
       sessionId = data.session_id;
-      localStorage.setItem("sessionId", sessionId);
+      storeSessionId(sessionId);
       userTurnIndex = 0;
+      clearStoredHistory();
 
-      if (data.history && data.history.length > 0) {
-        // Server restored live session
+      // New sessions return a greeting in `message`.
+      // Restored in-memory sessions return `message: null` and provide the greeting in `history`.
+      if (typeof data.message === "string" && data.message.trim()) {
+        addMessage(data.message, "bot");
+      } else if (Array.isArray(data.history) && data.history.length) {
         replaceConversationHistory(data.history);
-        updateStage(data.stage);
-        if (data.strategy) {
-          updateStrategy(data.strategy);
-          localStorage.setItem("chatStrategy", data.strategy);
-        }
-      } else {
-        // New session - check localStorage for visual restore
-        const stored = loadRestorableHistoryFromStorage();
-        if (stored.length > 0) {
-          // Server has no live session (restarted), silently reconstruct
-          renderHistory(stored);
-          const storedStage = localStorage.getItem("chatStage");
-          if (storedStage) updateStage(storedStage);
-          const storedStrategy = localStorage.getItem("chatStrategy");
-          if (storedStrategy) updateStrategy(storedStrategy);
-
-          // Rebuild server session silently (no user-facing message)
-          fetch("/api/restore", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              history: stored,
-            }),
-          })
-            .then((r) => r.json())
-            .then((d) => {
-              if (d.success) {
-                sessionId = d.session_id;
-                localStorage.setItem("sessionId", sessionId);
-                // Stage/strategy already restored - no flicker
-                loadStageOptions();
-              }
-            })
-            .catch((e) => {
-              // Restore failed - user needs to refresh to continue
-              console.error("Restore failed:", e);
-              const notice = document.createElement("div");
-              notice.className = "edit-divider";
-              notice.textContent =
-                "Connection issue - please refresh to continue";
-              notice.style.color = "#d4a373";
-              document.getElementById("chatContainer").appendChild(notice);
-              document.getElementById("sendBtn").disabled = true;
-            });
-        } else {
-          addMessage(data.message, "bot");
-          updateSessionUI(data);
-          if (data.strategy) {
-            localStorage.setItem("chatStrategy", data.strategy);
-          }
-        }
       }
+      updateSessionUI(data);
 
       loadStageOptions();
       syncStrategySelectors(_currentStrategy);
@@ -1066,21 +1024,10 @@ window.addEventListener("DOMContentLoaded", () => {
   // Prospect product dropdown is rendered server-side (see index.html).
   syncKnowledgeBaseLink();
   syncModeChrome();
-  syncStrategySelectors(
-    localStorage.getItem("chatStrategy") || _currentStrategy,
-  );
+  syncStrategySelectors(_currentStrategy);
 
   if (isDedicatedProspectPage()) {
-    const savedSessionId = localStorage.getItem("prospectSessionId");
-    if (savedSessionId) {
-      restoreProspectSession(savedSessionId).catch((err) => {
-        console.warn("Could not restore prospect session:", err);
-        clearProspectSessionState();
-        openProspectSetup();
-      });
-    } else {
-      openProspectSetup();
-    }
+    openProspectSetup();
   } else {
     initChatbot();
     // Restore training panel open state
@@ -1126,14 +1073,11 @@ function addMessage(text, sender, metrics = null) {
   // Then update cache (unique to addMessage, not called during restore)
   if (sender === "user") {
     _cachedHistory.push({ role: "user", content: text });
-    saveHistoryToStorage();
   } else {
     // Cache all bot responses (including initial greeting)
     _cachedHistory.push({ role: "assistant", content: text });
-    saveHistoryToStorage();
-    localStorage.setItem("chatStage", _currentStage);
-    localStorage.setItem("chatStrategy", _currentStrategy);
   }
+  trimHistoryCache();
 }
 
 function restorePendingInput(message) {
@@ -1673,8 +1617,8 @@ function resetChat() {
         document.getElementById("chatContainer").innerHTML = "";
         userTurnIndex = 0;
         clearStoredHistory();
-        localStorage.removeItem("sessionId");
         sessionId = null;
+        clearStoredSessionId();
         updateStage("intent");
         updateStrategy("-");
         initChatbot();
@@ -1686,8 +1630,7 @@ function resetChat() {
 }
 
 async function resetProspectSession() {
-  const oldSessionId =
-    _prospectSessionId || localStorage.getItem("prospectSessionId");
+  const oldSessionId = _prospectSessionId;
   try {
     const r = await fetch("/api/prospect/init", {
       method: "POST",
@@ -1735,7 +1678,6 @@ function applyProspectSessionFromServer(sessionId, data) {
   _prospectMaxTurns = data.max_turns ?? null;
   _prospectScoringEnabled = data.scoring_enabled ?? true;
   _prospectFeedbackStyle = data.feedback_style || "coaching";
-  localStorage.setItem("prospectSessionId", sessionId);
   syncKnowledgeBaseLink();
   syncModeChrome();
   clearProspectEvaluationPanel();
@@ -1922,22 +1864,11 @@ function endProspectMode() {
       startBtn.disabled = false;
     }
 
-    // Restore badges
-    const storedStage = localStorage.getItem("chatStage");
-    const storedStrategy = localStorage.getItem("chatStrategy");
-    if (storedStage) updateStage(storedStage);
-    else updateStage("-");
-    if (storedStrategy) updateStrategy(storedStrategy);
-    else updateStrategy("-");
-
     // Clear chat and reinit normal mode
     const chatContainer = document.getElementById("chatContainer");
     if (chatContainer) chatContainer.innerHTML = "";
     userTurnIndex = 0;
     clearStoredHistory();
-    try {
-      localStorage.removeItem("sessionId");
-    } catch (e) {}
     sessionId = null;
     syncModeChrome();
     // Reinitialize the main chatbot; safe to call even if already active

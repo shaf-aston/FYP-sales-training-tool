@@ -29,51 +29,6 @@
                     </div>
                 </div>
 
-                <div class="flow-controls" id="flowControls">
-                    <div class="flow-controls-group">
-                        <label
-                            class="flow-controls-label"
-                            for="strategySelectMain"
-                            >Strategy</label
-                        >
-                        <select
-                            id="strategySelectMain"
-                            class="flow-control-select"
-                            aria-label="Select strategy"
-                        >
-                            <option value="">Select strategy...</option>
-                            <option value="consultative">CONSULTATIVE</option>
-                            <option value="transactional">TRANSACTIONAL</option>
-                            <option value="intent">INTENT</option>
-                        </select>
-                        <button
-                            class="flow-control-btn"
-                            id="switchStrategyBtn"
-                            onclick="switchStrategy('strategySelectMain')"
-                        >
-                            Switch
-                        </button>
-                    </div>
-                    <div class="flow-controls-group">
-                        <label class="flow-controls-label" for="stageSelectMain"
-                            >Stage</label
-                        >
-                        <select
-                            id="stageSelectMain"
-                            class="flow-control-select"
-                            aria-label="Select stage to jump to"
-                        >
-                            <option value="">Loading...</option>
-                        </select>
-                        <button
-                            class="flow-control-btn"
-                            id="jumpStageMainBtn"
-                            onclick="jumpStage('stageSelectMain')"
-                        >
-                            Jump
-                        </button>
-                    </div>
-                </div>
 
                 <div class="chat-container" id="chatContainer"></div>
 
@@ -152,6 +107,30 @@
                             <span class="status-label">Stage:</span>
                             <span class="status-value" id="stageBadge">-</span>
                         </div>
+                    </div>
+                </div>
+
+                <div class="sidebar-section" id="flowControls" style="display: none;">
+                    <h3>Flow Controls</h3>
+                    <div class="sidebar-actions">
+                        <select id="strategySelectMain" class="sidebar-btn" aria-label="Select strategy">
+                            <option value="">Select strategy...</option>
+                            <option value="consultative">CONSULTATIVE</option>
+                            <option value="transactional">TRANSACTIONAL</option>
+                            <option value="intent">INTENT</option>
+                        </select>
+                        <button class="sidebar-btn" id="switchStrategyBtn" onclick="switchStrategy('strategySelectMain')" style="justify-content: center; color: var(--accent-gold);">
+                            Switch Strategy
+                        </button>
+                        
+                        <div style="height: 4px;"></div>
+                        
+                        <select id="stageSelectMain" class="sidebar-btn" aria-label="Select stage to jump to">
+                            <option value="">Loading...</option>
+                        </select>
+                        <button class="sidebar-btn" id="jumpStageMainBtn" onclick="jumpStage('stageSelectMain')" style="justify-content: center; color: var(--accent-gold);">
+                            Jump Stage
+                        </button>
                     </div>
                 </div>
 

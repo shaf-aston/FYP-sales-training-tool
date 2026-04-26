@@ -1,5 +1,6 @@
 """Tests for chatbot state persistence and recovery."""
 import logging
+import shutil
 from pathlib import Path
 from typing import Any, cast
 
@@ -196,7 +197,7 @@ def test_fallback_provider_runs_post_turn_hooks(monkeypatch):
     assert bot._analytics.latency_calls[0]["provider"] == "sambanova"
 
 
-def test_save_session_uses_session_persistence_payload(monkeypatch):
+def test_save_session_logs_state_snapshot(caplog):
     bot = _build_bot()
     bot.flow_engine.flow_type = "consultative"
     bot.flow_engine.current_stage = "pitch"
@@ -207,35 +208,20 @@ def test_save_session_uses_session_persistence_payload(monkeypatch):
         {"role": "assistant", "content": "a1"},
     ]
     bot._turn_snapshots = [{"flow_type": "consultative"}]
-    captured = {}
+    caplog.set_level(logging.INFO)
 
-    def _fake_save(**kwargs):
-        captured.update(kwargs)
-        return True
-
-    monkeypatch.setattr(SessionPersistence, "save", staticmethod(_fake_save))
-    bot.save_session()
-
-    assert captured == {
-        "session_id": "session123",
-        "product_type": "default",
-        "provider_type": "probe",
-        "flow_type": "consultative",
-        "current_stage": "pitch",
-        "stage_turn_count": 3,
-        "conversation_history": [
-            {"role": "user", "content": "u1"},
-            {"role": "assistant", "content": "a1"},
-        ],
-        "initial_flow_type": "consultative",
-        "turn_snapshots": [{"flow_type": "consultative"}],
-    }
+    assert bot.save_session() is None
+    assert any(
+        "session_snapshot" in record.message and "session123" in record.message
+        for record in caplog.records
+    )
 
 
-def test_session_persistence_round_trips_in_temp_directory(monkeypatch):
+def test_session_persistence_is_log_only(monkeypatch, caplog):
     temp_dir = Path.cwd() / ".tmp" / "session-persistence"
+    shutil.rmtree(temp_dir, ignore_errors=True)
     temp_dir.mkdir(parents=True, exist_ok=True)
-    monkeypatch.setattr("core.session_persistence.SESSIONS_DIR", str(temp_dir))
+    caplog.set_level(logging.INFO)
 
     saved = SessionPersistence.save(
         session_id="persist123",
@@ -250,27 +236,21 @@ def test_session_persistence_round_trips_in_temp_directory(monkeypatch):
     )
 
     assert saved is True
-    assert SessionPersistence.load("persist123") == {
-        "session_id": "persist123",
-        "product_type": "default",
-        "provider_type": "probe",
-        "flow_type": "intent",
-        "current_stage": "intent",
-        "stage_turn_count": 0,
-        "conversation_history": [{"role": "user", "content": "hello"}],
-        "initial_flow_type": "intent",
-        "turn_snapshots": [{"flow_type": "intent"}],
-    }
+    assert SessionPersistence.load("persist123") is None
+    assert not any(temp_dir.iterdir())
+    assert any("session_state" in record.message for record in caplog.records)
 
 
-def test_prospect_session_persistence_saves_loads_and_deletes(monkeypatch):
+def test_prospect_session_persistence_is_log_only(caplog):
     temp_dir = Path.cwd() / ".tmp" / "prospect-persistence"
+    shutil.rmtree(temp_dir, ignore_errors=True)
     temp_dir.mkdir(parents=True, exist_ok=True)
-    monkeypatch.setattr("core.prospect_session_persistence.SESSIONS_DIR", str(temp_dir))
+    caplog.set_level(logging.INFO)
 
     state = {"difficulty": "medium", "history": ["hello"]}
 
     assert ProspectSessionPersistence.save("prospect123", state) is True
-    assert ProspectSessionPersistence.load("prospect123") == state
-    assert ProspectSessionPersistence.delete("prospect123") is True
     assert ProspectSessionPersistence.load("prospect123") is None
+    assert ProspectSessionPersistence.delete("prospect123") is True
+    assert not any(temp_dir.iterdir())
+    assert any("prospect_session_state" in record.message for record in caplog.records)

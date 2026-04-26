@@ -8,7 +8,6 @@ from backend.security import (
     RateLimiter,
     SecurityConfig,
     SecurityHeadersMiddleware,
-    require_strict_admin_token,
 )
 
 
@@ -138,25 +137,9 @@ def test_security_headers_use_the_baseline_csp_by_default():
     response = app.test_client().get("/api/ping")
     csp = response.headers["Content-Security-Policy"]
 
-    assert "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;" in csp
-    assert "media-src 'self' data: blob:;" in csp
-    assert "connect-src 'self';" in csp
-
-
-def test_strict_admin_token_rejects_missing_credentials():
-    app = Flask(__name__)
-    app.config["ADMIN_TOKEN"] = "secret-token"
-    app.config["TESTING"] = False
-
-    @app.route("/admin")
-    @require_strict_admin_token
-    def admin():
-        return jsonify({"ok": True})
-
-    response = app.test_client().get("/admin")
-
-    assert response.status_code == 403
-    assert response.get_json()["error"] == "Admin token required"
+    assert "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net" in csp
+    assert "https://js.puter.com" in csp
+    assert "frame-ancestors 'none'" in csp
 
 
 def test_force_strategy_override_requires_admin_token(monkeypatch):

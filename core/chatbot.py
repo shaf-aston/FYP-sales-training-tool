@@ -1,5 +1,6 @@
 """Main chatbot class. Wires the provider, FSM engine and analytics together."""
 
+import json
 import logging
 import time
 from dataclasses import dataclass
@@ -22,7 +23,6 @@ from .constants import (
 from .flow import SalesFlowEngine
 from .services.analytics_recorder import AnalyticsRecorder
 from .services.provider_router import ProviderRouter
-from .services.session_repository import SessionRepository
 from .providers import create_provider
 from .providers import list_fallback_providers  # re-export for tests/patching
 from .providers.base import ACCESS_DENIED, RATE_LIMIT, LLMResponse
@@ -68,7 +68,6 @@ class SalesChatbot:
         self._model_name = self._router.model_name
 
         self._analytics = AnalyticsRecorder()
-        self._sessions = SessionRepository()
 
         config = get_product_settings(product_type or "")
 
@@ -116,6 +115,29 @@ class SalesChatbot:
     def model_name(self) -> str:
         """Public model name used by route/status helpers."""
         return self._model_name
+
+    def _log_turn_event(self, user_message: str, bot_reply: str) -> None:
+        """Emit the full exchange to application logs for monitoring."""
+
+        if not self.session_id:
+            return
+
+        turn_count = getattr(
+            self.flow_engine,
+            "user_turn_count",
+            sum(1 for m in getattr(self.flow_engine, "conversation_history", []) if m.get("role") == "user"),
+        )
+
+        payload = {
+            "session_id": self.session_id,
+            "turn_index": turn_count,
+            "flow_type": self.flow_engine.flow_type,
+            "current_stage": self.flow_engine.current_stage,
+            "strategy": self.flow_engine.flow_type,
+            "user_message": user_message,
+            "assistant_message": bot_reply,
+        }
+        self.logger.info("conversation_turn %s", json.dumps(payload, ensure_ascii=False))
 
     def chat(self, user_message: str) -> ChatResponse:
         """Run one turn - returns reply content plus latency/provider metrics."""
@@ -385,6 +407,7 @@ class SalesChatbot:
         bot_reply = guardrail_result.content
 
         self.flow_engine.add_turn(user_message, bot_reply)
+        self._log_turn_event(user_message, bot_reply)
 
         if self.session_id:
             self._analytics.log_stage_latency(
@@ -538,33 +561,36 @@ class SalesChatbot:
         return summary
 
     def save_session(self):
-        """Persist session state to disk using SessionPersistence.
-
-        Uses the atomic, validated writer in `session_persistence.py` so
-        filepaths are checked and writes are atomic.
-        """
+        """Emit a durable log snapshot of the current session state."""
         if not self.session_id:
             return
         try:
-            sessions = getattr(self, "_sessions", None) or SessionRepository()
-            success = sessions.save_chatbot_state(
-                session_id=self.session_id,
-                product_type=self.product_type,
-                provider_type=self.provider_type,
-                flow_type=self.flow_engine.flow_type,
-                current_stage=self.flow_engine.current_stage,
-                stage_turn_count=self.flow_engine.stage_turn_count,
-                conversation_history=self.flow_engine.conversation_history,
-                initial_flow_type=self.flow_engine.initial_flow_type,
-                turn_snapshots=self._turn_snapshots,
+            self.logger.info(
+                "session_snapshot %s",
+                json.dumps(
+                    {
+                        "session_id": self.session_id,
+                        "product_type": self.product_type,
+                        "provider_type": self.provider_type,
+                        "flow_type": self.flow_engine.flow_type,
+                        "current_stage": self.flow_engine.current_stage,
+                        "stage_turn_count": self.flow_engine.stage_turn_count,
+                        "initial_flow_type": self.flow_engine.initial_flow_type,
+                        "turn_count": getattr(
+                            self.flow_engine,
+                            "user_turn_count",
+                            sum(1 for m in getattr(self.flow_engine, "conversation_history", []) if m.get("role") == "user"),
+                        ),
+                        "message_count": len(self.flow_engine.conversation_history),
+                    },
+                    ensure_ascii=False,
+                    default=str,
+                ),
             )
-            if not success:
-                self.logger.warning(
-                    "Failed to persist session %s via SessionPersistence",
-                    self.session_id,
-                )
         except Exception as e:
-            self.logger.exception("Exception while saving session %s: %s", self.session_id, e)
+            self.logger.exception(
+                "Exception while logging session %s: %s", self.session_id, e
+            )
 
     def record_session_end(self):
         """Record session completion for evaluation analytics."""
@@ -575,22 +601,7 @@ class SalesChatbot:
 
     @staticmethod
     def load_session(session_id):
-        """Load session from disk if exists. Returns SalesChatbot or None."""
-        try:
-            state = SessionRepository().load_chatbot_state(session_id)
-            if not state:
-                return None
-            bot = SalesChatbot(
-                provider_type=state.get("provider_type"),
-                product_type=state.get("product_type"),
-                session_id=session_id,
-                record_session_start=False,
-            )
-            bot.flow_engine.restore_state(state)
-            bot._turn_snapshots = state.get("turn_snapshots", [])
-            return bot
-        except Exception as e:
-            logging.getLogger(__name__).error(
-                f"Failed to load session {session_id}: {e}"
-            )
-            return None
+        """Disk recovery is disabled; in-memory sessions are the only live state."""
+
+        logging.getLogger(__name__).debug("session_load_disabled session_id=%s", session_id)
+        return None

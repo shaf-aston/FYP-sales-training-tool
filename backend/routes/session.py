@@ -1,5 +1,6 @@
 """Session lifecycle endpoints - init, restore, reset, health, config"""
 
+import json
 import logging
 import secrets
 from typing import Any
@@ -13,13 +14,15 @@ from core.loader import QuickMatcher
 from core.providers import get_available_providers
 from core.providers.factory import supported_provider_names
 from ..messages import (
-    SERVER_FULL, BOT_INIT_FAILED, INVALID_HISTORY_FORMAT, INVALID_HISTORY_ENTRY,
-    SESSION_RESTORE_FAILED, SESSION_NOT_FOUND,
-    invalid_stage, invalid_strategy, STRATEGY_SWITCH_FAILED, history_entry_too_long,
-    SCORE_CALCULATION_FAILED
+    SERVER_FULL,
+    BOT_INIT_FAILED,
+    SESSION_NOT_FOUND,
+    invalid_stage,
+    invalid_strategy,
+    STRATEGY_SWITCH_FAILED,
+    SCORE_CALCULATION_FAILED,
 )
 from ..security import (
-    PromptInjectionValidator,
     SecurityConfig,
     InputValidator,
     has_valid_admin_token,
@@ -52,22 +55,16 @@ def init_routes(
 @bp.route("/init", methods=["POST"])
 @require_rate_limit("init")
 def api_init():
-    """Initialize or restore session. Creates bot eagerly to avoid first-message latency"""
+    """Initialize or restore an in-memory session. Creates bot eagerly to avoid first-message latency."""
     data = request.json or {}
     existing_id = data.get("session_id")
 
-    # Restore existing session if still alive on server
+    # Restore existing session only if it is still in memory on this process.
     if existing_id:
         session_error = InputValidator.validate_session_id(existing_id)
         if session_error:
             return session_error
         bot = bp.get_session(existing_id)  # type: ignore
-        if not bot:
-            # Try loading from disk if not in memory
-            bot = SalesChatbot.load_session(existing_id)
-            if bot:
-                bp.set_session(existing_id, bot)  # type: ignore
-                bp.app.logger.info(f"Restored session from disk: {existing_id}")  # type: ignore
         if bot:
             history = [
                 {"role": m["role"], "content": m["content"]}
@@ -141,7 +138,7 @@ def api_init():
                     request.path,
                 )
         bp.set_session(session_id, bot)  # type: ignore
-        bot.save_session()  # persist immediately so restarts can recover this session
+        bot.save_session()  # log the initial state snapshot for monitoring
         active_provider = getattr(bot, "provider_name", provider or "auto")
         bp.app.logger.info(
             f"New session: {session_id} "
@@ -161,6 +158,21 @@ def api_init():
     bot.flow_engine.conversation_history.append(
         {"role": "assistant", "content": init_data["message"]}
     )
+    bp.app.logger.info(
+        "conversation_turn %s",
+        json.dumps(
+            {
+                "session_id": session_id,
+                "turn_index": 0,
+                "flow_type": bot.flow_engine.flow_type,
+                "current_stage": bot.flow_engine.current_stage,
+                "strategy": bot.flow_engine.flow_type,
+                "user_message": None,
+                "assistant_message": init_data["message"],
+            },
+            ensure_ascii=False,
+        ),
+    )
     bot.save_session()
 
     return jsonify(
@@ -178,91 +190,16 @@ def api_init():
 @bp.route("/restore", methods=["POST"])
 @require_rate_limit("init")
 def api_restore():
-    """Rebuild bot from client history after a server restart. No LLM calls"""
-    data = request.json or {}
-    history = data.get("history", [])  # [{role, content}, ...]
-    product_type = data.get(
-        "product_type"
-    )  # None → generic default → intent-first discovery
-    provider = InputValidator.normalize_provider(data.get("provider"))
-    if provider is not None and provider not in supported_provider_names(include_non_production=False):
-        return (
-            jsonify(
-                {
-                    "error": "Unsupported provider",
-                    "code": "UNSUPPORTED_PROVIDER",
-                    "supported_providers": supported_provider_names(
-                        include_non_production=False
-                    ),
-                }
-            ),
-            400,
-        )
+    """Legacy replay endpoint intentionally disabled in logs-only mode."""
 
-    # reject corrupted localStorage before replay
-    if not isinstance(history, list):
-        return jsonify({"error": INVALID_HISTORY_FORMAT}), 400
-    for entry in history:
-        if (
-            not isinstance(entry, dict)
-            or entry.get("role") not in ("user", "assistant")
-            or not isinstance(entry.get("content"), str)
-        ):
-            return jsonify({"error": INVALID_HISTORY_ENTRY}), 400
-    if len(history) % 2 != 0:
-        return jsonify({"error": "History must contain complete user/assistant turns"}), 400
-    for idx in range(0, len(history), 2):
-        if history[idx].get("role") != "user" or history[idx + 1].get("role") != "assistant":
-            return jsonify({"error": "History must alternate user and assistant turns"}), 400
-    max_restore_entry_chars = SecurityConfig.MAX_MESSAGE_LENGTH * 4
-    sanitized_history = []
-    for entry in history:
-        content = entry.get("content", "")
-        if len(content) > max_restore_entry_chars:
-            return jsonify(
-                {
-                    "error": history_entry_too_long(max_restore_entry_chars)
-                }
-            ), 400
-        sanitized_history.append(
+    return (
+        jsonify(
             {
-                "role": entry["role"],
-                "content": PromptInjectionValidator.sanitize(content),
+                "error": "Session replay is disabled. Start a new session instead.",
+                "code": "SESSION_REPLAY_DISABLED",
             }
-        )
-
-    history = sanitized_history[-200:]
-
-    session_id = secrets.token_hex(16)
-
-    try:
-        bot = SalesChatbot(
-            provider_type=provider, product_type=product_type, session_id=session_id
-        )
-
-        # Replay history into bot - reconstructs FSM state and strategy switches
-        if history:
-            bot.replay(history)
-
-        bp.set_session(session_id, bot)  # type: ignore
-        bp.app.logger.info(
-            f"Restored session: {session_id} ({len(history)} messages replayed)"
-        )  # type: ignore
-
-    except Exception as e:
-        bp.app.logger.exception(f"Restore failed: {e}")  # type: ignore
-        return jsonify(
-            {
-                "error": SESSION_RESTORE_FAILED
-            }
-        ), 500
-
-    return jsonify(
-        {
-            "success": True,
-            "session_id": session_id,
-            **bp.bot_state(bot),  # type: ignore
-        }
+        ),
+        410,
     )
 
 
@@ -337,9 +274,7 @@ def api_config():
             "product_options": product_options,
             "strategies": ["consultative", "transactional", "intent"],
             "features": {
-                "flow_controls_enabled": not SecurityConfig.require_admin_for_stage_mutation(
-                    bp.app.config  # type: ignore[attr-defined]
-                ),
+                "flow_controls_enabled": True,
             },
         }
     )

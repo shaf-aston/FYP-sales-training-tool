@@ -1,5 +1,5 @@
 """Tests for analytics API routes."""
-import json
+import logging
 from pathlib import Path
 
 from flask import Flask
@@ -187,14 +187,9 @@ def test_session_analytics_forbids_header_path_mismatch(monkeypatch):
     assert response.get_json()["error"] == "Forbidden"
 
 
-def test_feedback_route_trims_comment_and_appends_jsonl(monkeypatch):
+def test_feedback_route_logs_without_persisting(monkeypatch, caplog):
     app = _make_analytics_app(monkeypatch)
-    feedback_dir = Path.cwd() / ".tmp" / "test-feedback"
-    feedback_dir.mkdir(parents=True, exist_ok=True)
-    feedback_file = feedback_dir / "feedback.jsonl"
-    if feedback_file.exists():
-        feedback_file.unlink()
-    monkeypatch.setattr(analytics_routes, "_FEEDBACK_FILE", str(feedback_file))
+    caplog.set_level(logging.INFO)
 
     response = app.test_client().post(
         "/api/feedback",
@@ -203,18 +198,8 @@ def test_feedback_route_trims_comment_and_appends_jsonl(monkeypatch):
 
     assert response.status_code == 200
     assert response.get_json() == {"success": True}
-
-    lines = feedback_file.read_text(encoding="utf-8").splitlines()
-    assert len(lines) == 1
-    entry = json.loads(lines[0])
-    assert entry["rating"] == 5
-    assert entry["page"] == "knowledge"
-    assert len(entry["comment"]) == 500
-
-
-def test_feedback_file_stays_within_repo_root():
-    repo_root = Path(__file__).resolve().parent.parent
-    assert Path(analytics_routes._FEEDBACK_FILE).resolve() == repo_root / "feedback.jsonl"
+    assert any("feedback_event" in record.message for record in caplog.records)
+    assert any("x" * 500 in record.message for record in caplog.records)
 
 
 def test_analytics_summary_is_public(monkeypatch):

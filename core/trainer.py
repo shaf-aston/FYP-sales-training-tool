@@ -31,18 +31,17 @@ def generate_training(provider, flow_engine, user_msg, bot_reply):
     rubric = get_stage_rubric(stage, flow_type)
 
     system_prompt = (
-        "You're a sales coach. Reply with JSON only. "
-        "Keep each field to one short sentence - 15 words max. Plain sentences only - no markdown, no lists.\n\n"
+        "You're a sales coach. Reply with JSON only. No markdown, no lists.\n\n"
         f"Stage: {stage} ({flow_type})\n"
-        f"Goal: {rubric['goal'][:100]}\n"
-        f"Advance when: {rubric['advance_when'][:100]}\n"
+        f"Goal: {rubric['goal'][:120]}\n"
+        f"Advance when: {rubric['advance_when'][:120]}\n"
         f'USER said: "{user_msg[:200]}"\n'
         f'BOT replied: "{bot_reply[:200]}"\n\n'
-        "Return JSON:\n"
+        "Return JSON with exactly these fields:\n"
         "{\n"
-        '  "what_happened": "e.g. \'Used future-pacing to surface desired outcome\'",\n'
-        '  "next_move": "e.g. \'Get them to name a real cost of staying stuck\'",\n'
-        '  "watch_for": ["8 words max", "8 words max"]\n'
+        '  "what_happened": "Name the specific technique or move the bot just made (20 words max). Be precise - name the pattern, not just the topic.",\n'
+        '  "next_move": "One clear, actionable coaching instruction for the next turn (20 words max). Start with a verb.",\n'
+        '  "watch_for": ["Specific risk to avoid (10 words max)", "Another specific pitfall (10 words max)"]\n'
         "}"
     )
 
@@ -62,10 +61,10 @@ def generate_training(provider, flow_engine, user_msg, bot_reply):
         if not result:
             raise ValueError("Empty or invalid JSON response")
 
-        result["what_happened"] = _truncate_words(result.get("what_happened", ""), 15)
-        result["next_move"] = _truncate_words(result.get("next_move", ""), 15)
+        result["what_happened"] = _truncate_words(result.get("what_happened", ""), 20)
+        result["next_move"] = _truncate_words(result.get("next_move", ""), 20)
         result["watch_for"] = [
-            _truncate_words(tip, 8) for tip in (result.get("watch_for") or [])
+            _truncate_words(tip, 10) for tip in (result.get("watch_for") or [])
         ]
         return result
 
@@ -87,8 +86,8 @@ COACH_STYLES = {
     ),
     "socratic": (
         "Style: Socratic. Reply in 2-3 plain sentences. "
-        "Use one sharp, simple prompt that points out the gap. "
-        "Do not use question marks. No markdown, no lists, no headings."
+        "Use a sharp question that exposes the gap or surfaces what the trainee hasn't considered. "
+        "No markdown, no lists, no headings."
     ),
     "teacher": (
         "Style: teacher. Reply in 3-4 plain sentences. "
@@ -96,11 +95,6 @@ COACH_STYLES = {
         "No markdown, no lists, no headings, no bold."
     ),
 }
-
-
-def _strip_question_marks(text: str) -> str:
-    """Remove question marks while keeping the answer readable."""
-    return " ".join(text.replace("?", "").split())
 
 
 def answer_training_question(provider, flow_engine, question, style: str = "tactical"):
@@ -136,8 +130,6 @@ def answer_training_question(provider, flow_engine, question, style: str = "tact
             if response.content and not response.error
             else "Couldn't get an answer that time - try asking differently."
         )
-        if style == "socratic":
-            answer = _strip_question_marks(answer)
         return {"answer": answer}
     except Exception as error:
         logger.warning(f"Training Q&A failed: {error}")

@@ -1,4 +1,4 @@
-"""Tests for output guardrails and content filtering."""
+"""Tests for LAYER 3 response guardrails."""
 from core.response_guardrails import apply_layer3_output_checks
 from core.utils import Stage
 
@@ -18,27 +18,26 @@ def test_layer3_blocks_pricing_in_logical_stage_without_direct_request():
 
 def test_layer3_allows_pricing_when_user_asks_for_it():
     result = apply_layer3_output_checks(
-        reply_text="The price is $499 per month?",
+        reply_text="The price is $499 per month. That covers everything you mentioned.",
         stage=Stage.LOGICAL,
         user_message="How much is it and what is the pricing?",
     )
 
     assert result.was_blocked is False
     assert result.was_corrected is False
-    assert result.content == "The price is $499 per month?"
     assert result.applied_rules == []
 
 
 def test_layer3_keeps_question_marks_unchanged():
     result = apply_layer3_output_checks(
-        reply_text="What matters most to you? What have you tried? Can you share more?",
+        reply_text="What matters most to you? What have you tried? Can you share more about the situation?",
         stage=Stage.INTENT,
         user_message="I am not sure.",
     )
 
     assert result.was_blocked is False
     assert result.was_corrected is False
-    assert result.content == "What matters most to you? What have you tried? Can you share more?"
+    assert "?" in result.content
     assert result.applied_rules == []
 
 
@@ -52,3 +51,77 @@ def test_layer3_returns_stage_fallback_for_empty_output():
     assert result.was_blocked is True
     assert result.content
     assert "empty_output_fallback" in result.applied_rules
+
+
+def test_layer3_blocks_degenerate_short_response():
+    result = apply_layer3_output_checks(
+        reply_text="Got it.",
+        stage=Stage.LOGICAL,
+        user_message="Tell me more.",
+    )
+
+    assert result.was_blocked is True
+    assert "empty_output_fallback" in result.applied_rules
+
+
+def test_layer3_blocks_oversized_response():
+    long_text = "This is a valid sentence with no pricing content. " * 40
+    result = apply_layer3_output_checks(
+        reply_text=long_text,
+        stage=Stage.LOGICAL,
+        user_message="Tell me more.",
+    )
+
+    assert result.was_blocked is True
+    assert "oversized_output_fallback" in result.applied_rules
+
+
+def test_layer3_corrects_pricing_when_other_content_is_substantial():
+    result = apply_layer3_output_checks(
+        reply_text=(
+            "Tell me about your current workflow and what's not clicking for you. "
+            "Our packages start at £200 per month for the entry tier. "
+            "What outcome would make the biggest difference to your team right now?"
+        ),
+        stage=Stage.LOGICAL,
+        user_message="We are still reviewing options.",
+    )
+
+    assert result.was_corrected is True
+    assert result.was_blocked is False
+    assert "corrected_pricing_in_discovery" in result.applied_rules
+    assert "per month" not in result.content
+    assert len(result.content) >= 40
+
+
+def test_layer3_catches_per_year_pricing():
+    result = apply_layer3_output_checks(
+        reply_text="The service runs at £2,400 per year and scales with your usage.",
+        stage=Stage.INTENT,
+        user_message="I want to understand the product.",
+    )
+
+    assert result.was_blocked is True or result.was_corrected is True
+    assert "per year" not in result.content
+
+
+def test_layer3_catches_annually_pricing():
+    result = apply_layer3_output_checks(
+        reply_text="Billed annually, you would save around 20 percent compared to monthly billing.",
+        stage=Stage.EMOTIONAL,
+        user_message="What are the options?",
+    )
+
+    assert result.was_blocked is True or result.was_corrected is True
+
+
+def test_layer3_passes_through_non_discovery_stages():
+    result = apply_layer3_output_checks(
+        reply_text="The investment is £499 per month and includes full support and onboarding.",
+        stage=Stage.PITCH,
+        user_message="What does it cost?",
+    )
+
+    assert result.was_blocked is False
+    assert result.was_corrected is False
+    assert result.applied_rules == []

@@ -35,3 +35,19 @@ def test_prospect_frontend_state_is_declared():
         "let _prospectSettings = {",
     ):
         assert required_declaration in js
+
+
+def test_frontend_does_not_persist_transcripts_or_sessions():
+    js = (ROOT / "frontend" / "static" / "app.js").read_text(encoding="utf-8")
+
+    for forbidden in (
+        'localStorage.setItem("chatHistory"',
+        'localStorage.getItem("chatHistory"',
+        'localStorage.setItem("sessionId"',
+        'localStorage.getItem("sessionId"',
+        'localStorage.setItem("prospectSessionId"',
+        'localStorage.getItem("prospectSessionId"',
+        'localStorage.setItem("chatStage"',
+        'localStorage.setItem("chatStrategy"',
+    ):
+        assert forbidden not in js

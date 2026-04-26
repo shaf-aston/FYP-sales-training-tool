@@ -1,4 +1,4 @@
-"""Tests for prospect session recovery and persistence."""
+"""Tests for prospect session lifecycle without replay recovery."""
 from flask import Flask
 
 from backend.routes import prospect as prospect_routes
@@ -21,47 +21,11 @@ class _DummyProspectSessionManager:
         return True
 
 
-class _RecoveredProspectSession:
-    def __init__(self):
-        self.state = type("State", (), {"has_committed": False, "has_walked": False})()
-
-    def get_evaluation(self):
-        return {"overall_score": 88, "grade": "B", "outcome": "sold"}
-
-
-class _RecoveredProspectState:
-    difficulty = "medium"
-    product_type = "default"
-
-    def to_dict(self):
-        return {
-            "readiness": 0.42,
-            "objections_raised": 1,
-            "turn_count": 2,
-            "needs_disclosed": [],
-            "has_committed": False,
-            "has_walked": False,
-            "difficulty": self.difficulty,
-            "product_type": self.product_type,
-            "persona_name": "Alex",
-        }
-
-
-class _RecoveredProspectStateSession:
-    def __init__(self):
-        self.state = _RecoveredProspectState()
-        self.persona = {"name": "Alex", "background": "Professional considering a purchase"}
-        self.provider_name = "stub"
-        self.model_name = "stub-model"
-        self.conversation_history = [
-            {"role": "assistant", "content": "Hi, I'm Alex. I'm looking into options today."}
-        ]
-
-
-def test_prospect_evaluate_recovers_persisted_session(monkeypatch):
+def test_prospect_evaluate_requires_in_memory_session(monkeypatch):
     app = Flask(__name__)
     app.config["TESTING"] = True
     manager = _DummyProspectSessionManager()
+    load_calls = {"count": 0}
 
     prospect_routes.init_routes(
         app,
@@ -70,10 +34,12 @@ def test_prospect_evaluate_recovers_persisted_session(monkeypatch):
     )
     app.register_blueprint(prospect_routes.bp)
 
-    recovered = _RecoveredProspectSession()
     monkeypatch.setattr(
         "core.prospect_session.ProspectSession.load_session",
-        classmethod(lambda cls, session_id: recovered if session_id == "a" * 32 else None),
+        classmethod(
+            lambda cls, session_id: load_calls.__setitem__("count", load_calls["count"] + 1)
+            or None
+        ),
     )
 
     response = app.test_client().post(
@@ -81,15 +47,16 @@ def test_prospect_evaluate_recovers_persisted_session(monkeypatch):
         headers={"X-Session-ID": "a" * 32},
     )
 
-    assert response.status_code == 200
-    assert response.get_json()["success"] is True
-    assert manager.get("a" * 32) is recovered
+    assert response.status_code == 400
+    assert response.get_json()["code"] == "SESSION_EXPIRED"
+    assert load_calls["count"] == 0
 
 
-def test_prospect_state_recovers_persisted_session(monkeypatch):
+def test_prospect_state_requires_in_memory_session(monkeypatch):
     app = Flask(__name__)
     app.config["TESTING"] = True
     manager = _DummyProspectSessionManager()
+    load_calls = {"count": 0}
 
     prospect_routes.init_routes(
         app,
@@ -98,10 +65,12 @@ def test_prospect_state_recovers_persisted_session(monkeypatch):
     )
     app.register_blueprint(prospect_routes.bp)
 
-    recovered = _RecoveredProspectStateSession()
     monkeypatch.setattr(
         "core.prospect_session.ProspectSession.load_session",
-        classmethod(lambda cls, session_id: recovered if session_id == "b" * 32 else None),
+        classmethod(
+            lambda cls, session_id: load_calls.__setitem__("count", load_calls["count"] + 1)
+            or None
+        ),
     )
 
     response = app.test_client().get(
@@ -109,9 +78,6 @@ def test_prospect_state_recovers_persisted_session(monkeypatch):
         headers={"X-Session-ID": "b" * 32},
     )
 
-    payload = response.get_json()
-    assert response.status_code == 200
-    assert payload["success"] is True
-    assert payload["persona"]["name"] == "Alex"
-    assert payload["conversation_history"] == recovered.conversation_history
-    assert manager.get("b" * 32) is recovered
+    assert response.status_code == 400
+    assert response.get_json()["code"] == "SESSION_EXPIRED"
+    assert load_calls["count"] == 0

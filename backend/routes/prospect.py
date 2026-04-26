@@ -50,12 +50,6 @@ def _require_prospect_session():
     assert isinstance(session_id, str)
     ps = _bp_state().prospect_session_manager.get(session_id)
     if not ps:
-        from core.prospect_session import ProspectSession
-
-        ps = ProspectSession.load_session(session_id)
-        if ps:
-            _bp_state().prospect_session_manager.set(session_id, ps)
-    if not ps:
         return None, (
             jsonify({"error": PROSPECT_SESSION_NOT_FOUND, "code": "SESSION_EXPIRED"}),
             400,
