@@ -145,17 +145,21 @@ def _user_signals_specific_budget_or_product(user_message: str) -> bool:
 
 
 def _user_has_clear_intent(
-    history: list[dict[str, str]], user_msg: str, turns: int
+    history: list[dict[str, str]], user_msg: str, turns: int, pre_state=None
 ) -> bool:
     """Return True if user signals buying intent or safety valve (max turns) triggers.
 
-    Checks explicit phrases first, then NLU classification. Safety valve prevents
-    getting stuck in intent stage with hard-to-read prospects.
+    Checks explicit phrases first, then pre-computed intent from pre_state (avoids
+    re-running classify_intent_level when analysis has already run this turn).
+    Safety valve prevents getting stuck in intent stage with hard-to-read prospects.
     """
     if user_msg and contains_nonnegated_keyword(
         user_msg.lower(), EXPLICIT_INTENT_PHRASES
     ):
         return True
+
+    if pre_state is not None:
+        return pre_state.intent == "high" or turns >= INTENT_MAX_TURNS
 
     intent_level = classify_intent_level(history, user_msg, signal_keywords=SIGNALS)
     if intent_level == "high":
@@ -170,22 +174,31 @@ def _check_advancement_condition(
     turns: int,
     stage_name: str,
     min_turns: int = 2,
+    pre_state=None,
 ) -> bool:
     """Return True if advancement signal detected or safety valve (max_turns) triggers.
 
     Enforces min_turns guard to ensure adequate rapport before advancing.
+    Consumes pre-computed doubt/stakes flags from pre_state when available to avoid
+    re-running keyword matching that analyse_state() already performed this turn.
     Tolerant when turns exceed available history (supports direct test calls).
     """
     if turns < min_turns:
         return False
 
     stage_config = ANALYSIS_CONFIG.get("advancement", {}).get(stage_name, {})
+    max_turns = stage_config.get("max_turns", 10)
+
+    # Consume pre-computed signal flag when available — avoids duplicate keyword scan.
+    if pre_state is not None:
+        flag = {"logical": "doubt", "emotional": "stakes"}.get(stage_name)
+        if flag is not None:
+            return getattr(pre_state, flag, False) or turns >= max_turns
+
     keyword_key = {"logical": "doubt_keywords", "emotional": "stakes_keywords"}.get(
         stage_name, f"{stage_name}_keywords"
     )
-
     keywords = stage_config.get(keyword_key, [])
-    max_turns = stage_config.get("max_turns", 10)
 
     # Slice to current-stage messages only (ignore earlier stages if switched).
     user_msgs = [m["content"].lower() for m in history if m.get("role") == "user"]
@@ -204,25 +217,26 @@ def _check_advancement_condition(
     return has_signal or turns >= max_turns
 
 
-def _user_shows_doubt(history: list[dict[str, str]], user_msg: str, turns: int) -> bool:
+def _user_shows_doubt(
+    history: list[dict[str, str]], user_msg: str, turns: int, pre_state=None
+) -> bool:
     """True when user shows doubt/pain or safety valve triggers"""
     return _check_advancement_condition(
-        history, user_msg, turns, "logical", min_turns=2
+        history, user_msg, turns, "logical", min_turns=2, pre_state=pre_state
     )
 
 
 def _user_expressed_stakes(
-    history: list[dict[str, str]], user_msg: str, turns: int
+    history: list[dict[str, str]], user_msg: str, turns: int, pre_state=None
 ) -> bool:
     """True when user shares emotional stakes or safety valve fires"""
-    # emotional needs more rapport before advancing
     return _check_advancement_condition(
-        history, user_msg, turns, "emotional", min_turns=3
+        history, user_msg, turns, "emotional", min_turns=3, pre_state=pre_state
     )
 
 
 def _commitment_or_objection(
-    history: list[dict[str, str]], user_msg: str, turns: int
+    history: list[dict[str, str]], user_msg: str, turns: int, pre_state=None
 ) -> bool:
     """True when user commits or objects."""
     msg_lower = user_msg.lower()
@@ -384,12 +398,13 @@ class SalesFlowEngine:
             include_history=include_history,
         )
 
-    def should_advance(self, user_message: str) -> Optional[str]:
+    def should_advance(self, user_message: str, pre_state=None) -> Optional[str]:
         """Return target stage if FSM should advance, else None.
 
         Priority overrides (commitment, directness, impatience) are checked
         first so high-signal turns immediately use the correct stage prompt.
-        Standard guard-based rules follow.
+        Standard guard-based rules follow. pre_state carries pre-computed
+        signal flags from analyse_state() to avoid duplicate keyword scanning.
         """
         override = _check_priority_overrides(
             self.flow_config,
@@ -406,14 +421,17 @@ class SalesFlowEngine:
         rule_name = transition.get("advance_on")
         if rule_name and rule_name in ADVANCEMENT_RULES:
             if ADVANCEMENT_RULES[rule_name](
-                self.conversation_history, user_message, self.stage_turn_count
+                self.conversation_history,
+                user_message,
+                self.stage_turn_count,
+                pre_state=pre_state,
             ):
                 return transition.get("next")
         return None
 
-    def get_advance_target(self, user_message: str) -> Optional[str]:
+    def get_advance_target(self, user_message: str, pre_state=None) -> Optional[str]:
         """Backward-compatible alias for should_advance."""
-        return self.should_advance(user_message)
+        return self.should_advance(user_message, pre_state=pre_state)
 
     def evaluate_strategy_switch(self, user_message: str) -> bool:
         """Check if INTENT strategy should switch to CONSULTATIVE or TRANSACTIONAL.

@@ -129,7 +129,7 @@ class SalesChatbot:
         advanced_this_turn = False
         if self.flow_engine.flow_type != Strategy.INTENT:
             old_stage = self.flow_engine.current_stage
-            target = self.flow_engine.should_advance(user_message)
+            target = self.flow_engine.should_advance(user_message, pre_state=pre_state)
             if target and target != old_stage:
                 self.flow_engine.advance(target_stage=target)
                 advanced_this_turn = True
@@ -308,6 +308,17 @@ class SalesChatbot:
             user_message,
         )
 
+    def _sync_provider_from_router(self, alt_provider, next_name: str) -> None:
+        """Update all provider references after switching to a fallback provider."""
+        self.provider = alt_provider
+        self.provider_type = next_name
+        self._provider_name = next_name
+        self._model_name = alt_provider.get_model_name()
+        if self._router is not None:
+            self._router.provider = alt_provider
+            self._router.provider_name = next_name
+            self._router.model_name = self._model_name
+
     def _try_fallback_providers(
         self, llm_messages: list, user_message: str
     ) -> ChatResponse | None:
@@ -325,25 +336,11 @@ class SalesChatbot:
                 if resp.error or not resp.content:
                     continue
 
-                checked_reply = self._apply_layer3_checks(
-                    reply_text=resp.content,
-                    user_message=user_message,
-                    provider_name=next_name,
-                ).content
-
-                self.provider = alt
-                self.provider_type = next_name
-                self._provider_name = next_name
-                self._model_name = alt.get_model_name()
-                router = getattr(self, "_router", None)
-                if router is not None:
-                    router.provider = alt
-                    router.provider_name = next_name
-                    router.model_name = self._model_name
+                self._sync_provider_from_router(alt, next_name)
                 self.logger.info(f"switched to {next_name} after error")
                 return self._complete_successful_turn(
                     user_message=user_message,
-                    bot_reply=checked_reply,
+                    bot_reply=resp.content,
                     latency_ms=resp.latency_ms,
                     advanced_this_turn=False,
                 )

@@ -28,6 +28,8 @@ class ConversationState:
     guarded: bool  # defensive/evasive behaviour detected
     question_fatigue: bool  # bot asked too many questions recently
     decisive: bool  # high intent + not guarded
+    doubt: bool = False   # user shows doubt/pain → feeds logical stage advancement
+    stakes: bool = False  # user expresses emotional stakes → feeds emotional stage advancement
 
     def __getitem__(self, key: str):
         return getattr(self, key)
@@ -355,11 +357,28 @@ def analyse_state(
             >= THRESHOLDS["question_fatigue_threshold"]
         )
 
+    adv = ANALYSIS_CONFIG.get("advancement", {})
+    user_lower = (user_message or "").lower()
+    doubt = bool(
+        user_message
+        and contains_nonnegated_keyword(
+            user_lower, adv.get("logical", {}).get("doubt_keywords", [])
+        )
+    )
+    stakes = bool(
+        user_message
+        and contains_nonnegated_keyword(
+            user_lower, adv.get("emotional", {}).get("stakes_keywords", [])
+        )
+    )
+
     return ConversationState(
         intent=intent,
         guarded=guarded,
         question_fatigue=question_fatigue,
         decisive=decisive,
+        doubt=doubt,
+        stakes=stakes,
     )
 
 
@@ -451,7 +470,7 @@ def is_literal_question(user_message) -> bool:
 
 
 def commitment_or_walkaway(
-    history: list[dict[str, str]], user_msg: str, turns: int
+    history: list[dict[str, str]], user_msg: str, turns: int, pre_state=None
 ) -> bool:
     """True when user commits or walks away (objection stage exit)"""
     return contains_nonnegated_keyword(
