@@ -30,7 +30,7 @@ if __package__ in (None, ""):
         SessionSecurityManager,
         initialize_security,
     )
-    from backend.routes import analytics, chat, prospect, session, voice
+    from backend.routes import analytics, chat, prospect, session
 else:
     from core.constants import MAX_PROSPECT_SESSIONS, PROSPECT_IDLE_MINUTES
     from .messages import (
@@ -45,7 +45,7 @@ else:
         SessionSecurityManager,
         initialize_security,
     )
-    from .routes import analytics, chat, prospect, session, voice
+    from .routes import analytics, chat, prospect, session
 
 UNDETERMINED_STAGE = "----"
 
@@ -103,6 +103,7 @@ if _should_start_background_cleanup():
 def _require_session():
     """Pull the bot for this session, or return an error response if the session is missing"""
     from flask import jsonify, request
+    from core.chatbot import SalesChatbot
 
     session_id = request.headers.get("X-Session-ID")
     session_error = InputValidator.validate_session_id(session_id)
@@ -111,10 +112,16 @@ def _require_session():
     assert isinstance(session_id, str)
     bot = session_manager.get(session_id)
     if not bot:
-        return None, (
-            jsonify({"error": SESSION_NOT_FOUND, "code": "SESSION_EXPIRED"}),
-            400,
-        )
+        # Fall back to disk (handles server restarts and Render cold starts)
+        bot = SalesChatbot.load_session(session_id)
+        if bot:
+            session_manager.set(session_id, bot)
+            app.logger.info(f"Recovered session from disk: {session_id}")
+        else:
+            return None, (
+                jsonify({"error": SESSION_NOT_FOUND, "code": "SESSION_EXPIRED"}),
+                400,
+            )
     return bot, None
 
 
@@ -152,13 +159,11 @@ session.init_routes(
 )
 chat.init_routes(app, session_manager.get, _require_session, _validate_message, _bot_state)
 prospect.init_routes(app, prospect_session_manager, _validate_message)
-voice.init_routes(app, _require_session, _validate_message, _bot_state)
 analytics.init_routes(app, _require_session, _bot_state)
 
 app.register_blueprint(session.bp)
 app.register_blueprint(chat.bp)
 app.register_blueprint(prospect.bp)
-app.register_blueprint(voice.bp)
 app.register_blueprint(analytics.bp)
 
 # Note: Rate limiting is applied via @require_rate_limit decorators in blueprint files

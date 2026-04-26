@@ -25,6 +25,7 @@ ENV/
 # Project runtime data
 .tmp/
 sessions/
+analytics/
 feedback.jsonl
 .claude/
 

@@ -35,6 +35,9 @@ class _DummyBot:
     def load_session(_session_id):
         return None
 
+    def save_session(self):
+        pass
+
 
 class _DummySessionManager:
     def __init__(self):

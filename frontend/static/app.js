@@ -15,14 +15,10 @@ let _prospectSettings = {
   evalDisplay: "inline",
 };
 let _flowControlsEnabled = false;
-let _browserTtsFallbackEnabled = false;
 
 const _serverEnv = document.getElementById("server-env")?.dataset || {};
 if (_serverEnv.flowControlsEnabled === "true") {
   _flowControlsEnabled = true;
-}
-if (_serverEnv.browserTtsFallbackEnabled === "true") {
-  _browserTtsFallbackEnabled = true;
 }
 
 try {
@@ -163,8 +159,15 @@ function clearStoredHistory() {
 function normalizeConversationHistory(history) {
   if (!Array.isArray(history)) return [];
 
+  // Skip any leading assistant messages (e.g. the opening greeting stored before
+  // the first user turn). The loop below expects strict user/assistant pairs.
+  let start = 0;
+  while (start < history.length && history[start]?.role !== "user") {
+    start++;
+  }
+
   const normalized = [];
-  for (let idx = 0; idx + 1 < history.length; idx += 2) {
+  for (let idx = start; idx + 1 < history.length; idx += 2) {
     const userEntry = history[idx];
     const botEntry = history[idx + 1];
 
@@ -2282,8 +2285,13 @@ function toggleMic() {
   const micBtn = document.getElementById("micBtn");
   const input = document.getElementById("messageInput");
 
-  if (!speechRecognizer?.recognition) {
+  if (!speechRecognizer) {
     showToast("Speech not supported in this browser", "error");
+    return;
+  }
+
+  if (speechRecognizer.isTranscribing) {
+    showToast("Transcribing, please wait", "info");
     return;
   }
 
@@ -2307,12 +2315,23 @@ function toggleMic() {
     },
     (text) => {
       if (currentTtsAudio) return;
-      _setDictationPreview(text);
+      if (!speechRecognizer.usePuterFallback) {
+        _setDictationPreview(text);
+      }
     },
-    () => {
+    (state) => {
       micBtn.classList.remove("recording");
       micBtn.innerHTML = "🎤";
-      _setDictationPreview("");
+      if (state?.canceled) {
+        _setDictationPreview("");
+        input.focus();
+        return;
+      }
+      if (speechRecognizer.usePuterFallback || state?.transcribing) {
+        _setDictationPreview("Transcribing...");
+      } else {
+        _setDictationPreview("");
+      }
       // On stop: let the pause-timer fire naturally; only flush if user typed.
       input.focus();
     },
@@ -2320,6 +2339,8 @@ function toggleMic() {
       console.warn("Mic Error:", err);
       micBtn.classList.remove("recording");
       micBtn.innerHTML = "🎤";
+      _setDictationPreview("");
+      showToast(String(err || "Microphone error"), "error");
     },
   );
 }
@@ -2363,22 +2384,51 @@ function stopTtsPlayback({ resumeVoiceInput = false } = {}) {
   }
 }
 
-async function createEdgeTtsAudio(text) {
-  const response = await fetch("/api/voice/synthesize", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text, voice: "male_us", rate: ttsPlaybackSpeed }),
-  });
+function _nativeSpeechRate() {
+  const rate = 1 + ttsPlaybackSpeed / 100;
+  return Math.min(10, Math.max(0.1, rate));
+}
 
-  if (!response.ok) {
-    throw new Error(`Edge TTS request failed (${response.status})`);
+function createNativeTtsHandle(text) {
+  if (!("speechSynthesis" in window) || !window.SpeechSynthesisUtterance) {
+    return null;
   }
 
-  const blob = await response.blob();
-  const blobUrl = URL.createObjectURL(blob);
-  const audio = new Audio(blobUrl);
-  audio._blobUrl = blobUrl;
-  return audio;
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = "en-US";
+  utterance.rate = _nativeSpeechRate();
+
+  let onended = null;
+  let onerror = null;
+
+  utterance.onend = () => {
+    if (onended) onended();
+  };
+  utterance.onerror = () => {
+    if (onerror) onerror();
+  };
+
+  return {
+    kind: "native",
+    pause() {
+      speechSynthesis.cancel();
+    },
+    play() {
+      try {
+        speechSynthesis.cancel();
+        speechSynthesis.speak(utterance);
+        return Promise.resolve();
+      } catch (err) {
+        return Promise.reject(err);
+      }
+    },
+    set onended(fn) {
+      onended = fn;
+    },
+    set onerror(fn) {
+      onerror = fn;
+    },
+  };
 }
 
 function ensurePuterSdkLoaded() {
@@ -2422,28 +2472,22 @@ async function createPuterFallbackAudio(text) {
     return puterAudio;
   }
 
+  if (puterAudio instanceof Blob) {
+    const blobUrl = URL.createObjectURL(puterAudio);
+    const audio = new Audio(blobUrl);
+    audio._blobUrl = blobUrl;
+    return audio;
+  }
+
+  if (typeof puterAudio === "string") {
+    return new Audio(puterAudio);
+  }
+
+  if (puterAudio && typeof puterAudio.src === "string") {
+    return new Audio(puterAudio.src);
+  }
+
   throw new Error("Puter.js returned an unexpected format");
-}
-
-async function createTtsAudioWithFallback(text) {
-  // Primary path: backend Edge TTS (no browser auth/login prompts).
-  try {
-    return await createEdgeTtsAudio(text);
-  } catch (backendError) {
-    console.warn("Edge TTS failed:", backendError);
-  }
-
-  if (!_browserTtsFallbackEnabled) {
-    return null;
-  }
-
-  // Fallback path: load Puter only if primary fails and the server allows it.
-  try {
-    return await createPuterFallbackAudio(text);
-  } catch (puterError) {
-    console.error("Puter TTS fallback failed:", puterError);
-    return null;
-  }
 }
 
 async function playAssistantTts(text) {
@@ -2457,9 +2501,16 @@ async function playAssistantTts(text) {
     }
   } catch (e) {}
 
-  currentTtsAudio = await createTtsAudioWithFallback(text);
+  let usedNativeAudio = false;
+  currentTtsAudio = createNativeTtsHandle(text);
+  if (currentTtsAudio) {
+    usedNativeAudio = true;
+  } else {
+    currentTtsAudio = await createPuterFallbackAudio(text);
+  }
   if (!currentTtsAudio) {
     console.warn("Failed to generate TTS audio.");
+    showToast("Voice playback is unavailable", "error");
     resumeVoiceInputAfterTts();
     return;
   }
@@ -2486,14 +2537,39 @@ async function playAssistantTts(text) {
   currentTtsAudio.onended = finishPlayback;
   currentTtsAudio.onerror = finishPlayback;
 
-  currentTtsAudio.play().catch(() => {
+  try {
+    await currentTtsAudio.play();
+  } catch (error) {
+    console.warn("TTS playback failed:", error);
+    if (usedNativeAudio) {
+      try {
+        currentTtsAudio.pause();
+      } catch (e) {}
+
+      try {
+        currentTtsAudio = await createPuterFallbackAudio(text);
+        currentTtsAudio.onended = finishPlayback;
+        currentTtsAudio.onerror = finishPlayback;
+        await currentTtsAudio.play();
+        return;
+      } catch (fallbackError) {
+        console.warn("Puter TTS fallback after native failure failed:", fallbackError);
+      }
+    }
+    showToast("Could not play the assistant voice", "error");
     finishPlayback();
-  });
+  }
 }
 
 // Centralised helpers for hands-free STT control
 function startHandsFreeRecognition() {
-  if (!speechRecognizer?.recognition) return false;
+  if (!speechRecognizer?.recognition || speechRecognizer.usePuterFallback) {
+    showToast(
+      "Hands-free mode needs native speech recognition. Use the mic button instead.",
+      "info",
+    );
+    return false;
+  }
   if (speechRecognizer.isRecording) return true;
 
   const inputEl = document.getElementById("messageInput");
@@ -2620,11 +2696,24 @@ function toggleVoiceMode() {
     clearVoiceSilenceTimer();
     _handsFreeRestartAttempts = 0;
   }
+
+  if (handsFreeMode && speechRecognizer?.usePuterFallback) {
+    handsFreeMode = false;
+    if (btn) btn.classList.toggle("active", false);
+    if (indicator) indicator.textContent = "⌨️";
+    if (inputArea) inputArea.classList.toggle("hands-free-active", false);
+    showToast(
+      "Hands-free mode needs native speech recognition. Use the mic button instead.",
+      "info",
+    );
+    return;
+  }
+
   showToast(
     handsFreeMode
       ? "Conversational Mode ON - speak, auto-send, auto-play response"
       : "Conversational Mode OFF - dictation only",
-    "info",
+      "info",
   );
 
   // Start/stop continuous recording when toggling hands-free

@@ -11,6 +11,7 @@ class _DummyFlowEngine:
         self.initial_flow_type = "intent"
         self.current_stage = "intent"
         self.flow_config = {"stages": ["logical", "pitch", "outcome"]}
+        self.conversation_history = []
 
     def advance(self, target_stage):
         self.current_stage = target_stage
@@ -265,3 +266,77 @@ def test_stage_route_requires_admin_token_by_default_outside_tests(monkeypatch):
 
     assert response.status_code == 403
     assert response.get_json()["error"] == "Admin token required"
+
+
+# --- /api/init path tests ---
+
+def test_init_creates_new_session_and_returns_greeting(monkeypatch):
+    """New session: returns greeting message and empty history."""
+    app, manager = _make_session_app(monkeypatch)
+
+    response = app.test_client().post("/api/init", json={})
+    payload = response.get_json()
+
+    assert response.status_code == 200
+    assert payload["success"] is True
+    assert payload["message"] == "hello"
+    assert payload["history"] == []
+    assert payload["session_id"] is not None
+    # Greeting must be stored in the bot so the LLM sees it as context
+    sid = payload["session_id"]
+    bot = manager.get(sid)
+    assert any(
+        m["role"] == "assistant" and m["content"] == "hello"
+        for m in bot.flow_engine.conversation_history
+    )
+
+
+def test_init_restores_live_session_from_memory(monkeypatch):
+    """Existing session in memory: returns full history, no new greeting."""
+    app, manager = _make_session_app(monkeypatch)
+
+    bot = _DummyBot(session_id="live0001")
+    bot.flow_engine.conversation_history = [
+        {"role": "assistant", "content": "hello"},
+        {"role": "user", "content": "Hi"},
+        {"role": "assistant", "content": "Great"},
+    ]
+    manager.set("live0001", bot)
+
+    response = app.test_client().post("/api/init", json={"session_id": "live0001"})
+    payload = response.get_json()
+
+    assert response.status_code == 200
+    assert payload["success"] is True
+    assert payload["message"] is None
+    assert len(payload["history"]) == 3
+
+
+def test_init_restores_session_from_disk_when_not_in_memory(monkeypatch):
+    """Disk fallback: session not in memory but found via load_session → restored and cached."""
+    app, manager = _make_session_app(monkeypatch)
+
+    disk_bot = _DummyBot(session_id="disk0001")
+    disk_bot.flow_engine.conversation_history = [
+        {"role": "assistant", "content": "hello"},
+        {"role": "user", "content": "Hi"},
+        {"role": "assistant", "content": "Good"},
+    ]
+
+    class _BotWithDisk(_DummyBot):
+        @staticmethod
+        def load_session(sid):
+            return disk_bot if sid == "disk0001" else None
+
+    monkeypatch.setattr("backend.routes.session.SalesChatbot", _BotWithDisk)
+
+    response = app.test_client().post("/api/init", json={"session_id": "disk0001"})
+    payload = response.get_json()
+
+    assert response.status_code == 200
+    assert payload["success"] is True
+    assert payload["message"] is None
+    assert payload["session_id"] == "disk0001"
+    assert len(payload["history"]) == 3
+    # Session is now in memory so subsequent chat requests don't need disk again
+    assert manager.get("disk0001") is disk_bot

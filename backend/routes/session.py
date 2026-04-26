@@ -141,6 +141,7 @@ def api_init():
                     request.path,
                 )
         bp.set_session(session_id, bot)  # type: ignore
+        bot.save_session()  # persist immediately so restarts can recover this session
         active_provider = getattr(bot, "provider_name", provider or "auto")
         bp.app.logger.info(
             f"New session: {session_id} "
@@ -154,6 +155,13 @@ def api_init():
 
     # greeting + training blob, keep in sync with STRATEGY_PROMPTS
     init_data = generate_init_greeting(bot.flow_engine.flow_type)
+
+    # Add greeting to conversation history so the LLM knows the conversation has started.
+    # Without this, the LLM sees an empty history on the first user turn and re-greets.
+    bot.flow_engine.conversation_history.append(
+        {"role": "assistant", "content": init_data["message"]}
+    )
+    bot.save_session()
 
     return jsonify(
         {
