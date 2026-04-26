@@ -1,9 +1,0 @@
-[flake8]
-max-line-length = 120
-extend-ignore = E203
-per-file-ignores =
-    core/prompts.py: E501
-    core/content.py: E501
-    core/quiz.py: E501
-    tests/test_ack_logic.py: E501
-    tests/test_groq_integration.py: E402

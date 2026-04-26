@@ -1,27 +1,73 @@
 /**
- * Speech Recognition helper.
+ * Speech helpers.
  *
- * Native browser recognition is used when available. When it is not, the
- * class falls back to a MediaRecorder + Puter transcription flow.
+ * STT keeps the native browser recognizer first because it preserves live
+ * interim dictation. Puter speech2txt is the fallback when the browser API is
+ * not available.
  */
+
+const STT_FALLBACK_ORDER = ["native", "puter"];
+
+function _hasNativeSpeechRecognition() {
+  return Boolean(window.SpeechRecognition || window.webkitSpeechRecognition);
+}
+
+function _hasPuterSpeechRecognition() {
+  return Boolean(
+    window.puter?.ai?.speech2txt &&
+      navigator.mediaDevices?.getUserMedia &&
+      window.MediaRecorder,
+  );
+}
+
+function _pickAudioMimeType() {
+  if (!window.MediaRecorder || typeof window.MediaRecorder.isTypeSupported !== "function") {
+    return "";
+  }
+
+  const preferredTypes = [
+    "audio/webm;codecs=opus",
+    "audio/webm",
+    "audio/ogg;codecs=opus",
+    "audio/ogg",
+  ];
+
+  for (const type of preferredTypes) {
+    if (window.MediaRecorder.isTypeSupported(type)) {
+      return type;
+    }
+  }
+
+  return "";
+}
+
+function _disposeAudioStream(stream) {
+  if (!stream || typeof stream.getTracks !== "function") return;
+  stream.getTracks().forEach((track) => {
+    try {
+      track.stop();
+    } catch (e) {
+      // Ignore cleanup errors.
+    }
+  });
+}
 
 class SpeechRecognizer {
   constructor(language = "en-US") {
-    const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
-
     this.language = language;
-    this.usePuterFallback = !SpeechRecognition;
-    this.recognition = null;
-    this.mediaRecorder = null;
-    this.mediaStream = null;
-    this.recordingChunks = [];
     this.isRecording = false;
     this.isTranscribing = false;
     this.ignoreOnEnd = false;
     this.maxRecordingMs = 60000;
     this.maxRecordingTimer = null;
     this._stopRequested = false;
+    this._activeMode = null;
+    this._nativeRecognition = null;
+    this._puterRecognitionShim = null;
+    this._puterStream = null;
+    this._puterRecorder = null;
+    this._puterChunks = [];
+    this._puterMimeType = "";
 
     // Callbacks
     this.onFinalText = null;
@@ -29,16 +75,67 @@ class SpeechRecognizer {
     this.onStop = null;
     this.onError = null;
 
-    if (this.usePuterFallback) {
-      return;
+    if (this._supportsNativeRecognition()) {
+      this._ensureNativeRecognition();
+    } else if (this._supportsPuterRecognition()) {
+      this._ensurePuterRecognitionShim();
+    }
+  }
+
+  get isSupported() {
+    return Boolean(this.recognition);
+  }
+
+  get recognition() {
+    if (this._activeMode === "native" && this._nativeRecognition) {
+      return this._nativeRecognition;
+    }
+    if (this._activeMode === "puter" && this._puterRecognitionShim) {
+      return this._puterRecognitionShim;
     }
 
-    this.recognition = new SpeechRecognition();
-    this.recognition.continuous = true;
-    this.recognition.interimResults = true;
-    this.recognition.lang = language;
+    if (this._supportsNativeRecognition()) {
+      return this._ensureNativeRecognition();
+    }
+    if (this._supportsPuterRecognition()) {
+      return this._ensurePuterRecognitionShim();
+    }
+    return null;
+  }
 
-    this.recognition.onresult = (event) => {
+  _supportsNativeRecognition() {
+    return _hasNativeSpeechRecognition();
+  }
+
+  _supportsPuterRecognition() {
+    return _hasPuterSpeechRecognition();
+  }
+
+  _clearMaxRecordingTimer() {
+    if (this.maxRecordingTimer) {
+      clearTimeout(this.maxRecordingTimer);
+      this.maxRecordingTimer = null;
+    }
+  }
+
+  _ensureNativeRecognition() {
+    if (!this._supportsNativeRecognition()) {
+      return null;
+    }
+
+    if (this._nativeRecognition) {
+      this._nativeRecognition.lang = this.language;
+      return this._nativeRecognition;
+    }
+
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = this.language;
+
+    recognition.onresult = (event) => {
       let interimTranscript = "";
 
       for (let i = event.resultIndex; i < event.results.length; ++i) {
@@ -55,11 +152,11 @@ class SpeechRecognizer {
       }
     };
 
-    this.recognition.onend = () => {
+    recognition.onend = () => {
       if (this.isRecording && !this.ignoreOnEnd) {
         setTimeout(() => {
           try {
-            this.recognition.start();
+            recognition.start();
           } catch (e) {
             // Ignore restart errors and let the UI recover naturally.
           }
@@ -68,10 +165,11 @@ class SpeechRecognizer {
       }
 
       this.isRecording = false;
+      this._activeMode = null;
       if (this.onStop) this.onStop({ mode: "native", transcribing: false });
     };
 
-    this.recognition.onerror = (event) => {
+    recognition.onerror = (event) => {
       if (event.error === "no-speech") {
         return;
       }
@@ -84,75 +182,159 @@ class SpeechRecognizer {
       console.warn("Speech recognition error", event.error);
       if (this.onError) this.onError(event.error);
     };
+
+    this._nativeRecognition = recognition;
+    return recognition;
   }
 
-  async _loadPuterSdk() {
-    if (typeof puter !== "undefined" && puter.ai) {
-      return;
+  _ensurePuterRecognitionShim() {
+    if (!this._supportsPuterRecognition()) {
+      return null;
     }
 
-    if (window.__puterSdkLoadPromise) {
-      return window.__puterSdkLoadPromise;
+    if (!this._puterRecognitionShim) {
+      this._puterRecognitionShim = { provider: "puter" };
+    }
+    return this._puterRecognitionShim;
+  }
+
+  _resetPuterState() {
+    this._puterRecorder = null;
+    this._puterChunks = [];
+    this._puterMimeType = "";
+    _disposeAudioStream(this._puterStream);
+    this._puterStream = null;
+  }
+
+  async _transcribeWithPuter() {
+    if (!this._supportsPuterRecognition()) {
+      throw new Error("Puter speech transcription is unavailable");
     }
 
-    window.__puterSdkLoadPromise = new Promise((resolve, reject) => {
-      const script = document.createElement("script");
-      script.src = "https://js.puter.com/v2/";
-      script.async = true;
-      script.dataset.sdk = "puter";
-      script.onload = () => resolve();
-      script.onerror = () => reject(new Error("Failed to load Puter SDK"));
-      document.head.appendChild(script);
-    }).catch((err) => {
-      window.__puterSdkLoadPromise = null;
-      throw err;
+    const puter = window.puter?.ai;
+    const blob = new Blob(this._puterChunks, {
+      type: this._puterMimeType || "audio/webm",
     });
-
-    return window.__puterSdkLoadPromise;
-  }
-
-  async _transcribeWithPuter(blob) {
-    await this._loadPuterSdk();
-
-    if (typeof puter === "undefined" || !puter.ai) {
-      throw new Error("Puter SDK loaded but puter.ai is unavailable");
+    if (!blob.size) {
+      throw new Error("No audio captured for transcription");
     }
 
-    const result = await puter.ai.speech2txt(blob, {
+    const result = await puter.speech2txt({
+      file: blob,
       model: "gpt-4o-mini-transcribe",
     });
-
-    if (typeof result === "string") {
-      return result;
-    }
-
-    if (result && typeof result.text === "string") {
-      return result.text;
-    }
-
-    throw new Error("Unexpected transcription result from Puter");
-  }
-
-  _clearMaxRecordingTimer() {
-    if (this.maxRecordingTimer) {
-      clearTimeout(this.maxRecordingTimer);
-      this.maxRecordingTimer = null;
+    const transcript = String(result?.text || result || "").trim();
+    if (transcript && this.onFinalText) {
+      this.onFinalText(`${transcript} `);
     }
   }
 
-  _cleanupStream() {
-    if (this.mediaStream) {
-      this.mediaStream.getTracks().forEach((track) => track.stop());
-      this.mediaStream = null;
+  _startNativeRecording() {
+    const recognition = this._ensureNativeRecognition();
+    if (!recognition) {
+      return false;
     }
-  }
 
-  _resetFallbackState() {
-    this.mediaRecorder = null;
-    this.recordingChunks = [];
+    this.isRecording = true;
     this.isTranscribing = false;
-    this._clearMaxRecordingTimer();
-    this._cleanupStream();
+    this.ignoreOnEnd = false;
+    this._stopRequested = false;
+    this._activeMode = "native";
+
+    try {
+      recognition.start();
+    } catch (e) {
+      this.isRecording = false;
+      this._activeMode = null;
+      console.error(e);
+      return false;
+    }
+
+    this.maxRecordingTimer = setTimeout(() => {
+      if (this.isRecording) {
+        this.stop();
+      }
+    }, this.maxRecordingMs);
+
+    return true;
+  }
+
+  _startPuterRecording() {
+    if (!this._supportsPuterRecognition()) {
+      return false;
+    }
+
+    this._ensurePuterRecognitionShim();
+    this.isRecording = true;
+    this.isTranscribing = false;
+    this.ignoreOnEnd = false;
+    this._stopRequested = false;
+    this._activeMode = "puter";
+
+    (async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        if (!this.isRecording) {
+          _disposeAudioStream(stream);
+          return;
+        }
+
+        this._puterStream = stream;
+        this._puterChunks = [];
+        this._puterMimeType = _pickAudioMimeType();
+
+        const options = this._puterMimeType ? { mimeType: this._puterMimeType } : {};
+        this._puterRecorder = new MediaRecorder(stream, options);
+        this._puterRecorder.ondataavailable = (event) => {
+          if (event.data && event.data.size) {
+            this._puterChunks.push(event.data);
+          }
+        };
+        this._puterRecorder.onstop = async () => {
+          this._clearMaxRecordingTimer();
+          this.isTranscribing = true;
+          try {
+            await this._transcribeWithPuter();
+          } catch (error) {
+            console.warn("Puter speech transcription failed", error);
+            if (this.onError) this.onError(error?.message || "Speech transcription failed");
+          } finally {
+            this.isTranscribing = false;
+            this.isRecording = false;
+            this._activeMode = null;
+            this._resetPuterState();
+            if (this.onStop) {
+              this.onStop({
+                mode: "puter",
+                transcribing: false,
+                canceled: this._stopRequested,
+              });
+            }
+          }
+        };
+
+        this._puterRecorder.start();
+        if (this.onInterimText) {
+          this.onInterimText("Recording...");
+        }
+      } catch (error) {
+        console.warn("Puter speech recording failed", error);
+        this.isRecording = false;
+        this._activeMode = null;
+        this._resetPuterState();
+        if (this.onError) {
+          this.onError(error?.message || "Voice recording is not supported in this browser");
+        }
+      }
+    })();
+
+    this.maxRecordingTimer = setTimeout(() => {
+      if (this.isRecording) {
+        this.stop();
+      }
+    }, this.maxRecordingMs);
+
+    return true;
   }
 
   /**
@@ -170,152 +352,63 @@ class SpeechRecognizer {
     this.onStop = onStop;
     this.onError = onError;
 
-    this.isRecording = true;
-    this.ignoreOnEnd = false;
-    this._stopRequested = false;
-
-    if (!this.usePuterFallback) {
-      try {
-        this.recognition.start();
-        return true;
-      } catch (e) {
-        this.isRecording = false;
-        console.error(e);
-        return false;
+    for (const mode of STT_FALLBACK_ORDER) {
+      if (mode === "native" && this._supportsNativeRecognition()) {
+        return this._startNativeRecording();
+      }
+      if (mode === "puter" && this._supportsPuterRecognition()) {
+        return this._startPuterRecording();
       }
     }
 
-    if (
-      !navigator.mediaDevices ||
-      !navigator.mediaDevices.getUserMedia ||
-      typeof MediaRecorder === "undefined"
-    ) {
-      this.isRecording = false;
-      if (this.onError) {
-        this.onError("Voice recording is not supported in this browser");
-      }
-      return false;
+    this.isRecording = false;
+    if (this.onError) {
+      this.onError("Voice recording is not supported in this browser");
     }
-
-    navigator.mediaDevices
-      .getUserMedia({ audio: true })
-      .then((stream) => {
-        if (!this.isRecording || this._stopRequested) {
-          stream.getTracks().forEach((track) => track.stop());
-          this.isRecording = false;
-          return;
-        }
-
-        this.mediaStream = stream;
-        this.recordingChunks = [];
-
-        const recorder = new MediaRecorder(stream);
-        this.mediaRecorder = recorder;
-
-        recorder.ondataavailable = (event) => {
-          if (event.data && event.data.size > 0) {
-            this.recordingChunks.push(event.data);
-          }
-        };
-
-        recorder.onerror = (event) => {
-          console.warn("MediaRecorder error", event);
-          this._resetFallbackState();
-          this.isRecording = false;
-          if (this.onError) {
-            this.onError(event?.error?.message || "Recording failed");
-          }
-        };
-
-        recorder.onstop = async () => {
-          this.isRecording = false;
-          this.isTranscribing = true;
-
-          if (this.onStop) {
-            this.onStop({ mode: "puter", transcribing: true });
-          }
-
-          try {
-            const blob = new Blob(this.recordingChunks, {
-              type: recorder.mimeType || "audio/webm",
-            });
-            const text = await this._transcribeWithPuter(blob);
-            if (text && this.onFinalText) {
-              this.onFinalText(`${String(text).trim()} `);
-            }
-          } catch (err) {
-            console.warn("Puter transcription failed", err);
-            if (this.onError) {
-              this.onError(err?.message || "Transcription failed");
-            }
-          } finally {
-            this._resetFallbackState();
-          }
-        };
-
-        try {
-          recorder.start();
-        } catch (err) {
-          this._resetFallbackState();
-          this.isRecording = false;
-          if (this.onError) {
-            this.onError(err?.message || "Could not start recording");
-          }
-          return;
-        }
-
-        this.maxRecordingTimer = setTimeout(() => {
-          if (this.isRecording) {
-            this.stop();
-          }
-        }, this.maxRecordingMs);
-      })
-      .catch((err) => {
-        this.isRecording = false;
-        if (this.onError) {
-          this.onError(err?.message || "Microphone access failed");
-        }
-      });
-
-    return true;
+    return false;
   }
 
   stop() {
-    if (!this.isRecording) return;
+    if (!this.isRecording && !this.isTranscribing) return;
 
-    this.isRecording = false;
-    this.ignoreOnEnd = true;
     this._stopRequested = true;
     this._clearMaxRecordingTimer();
 
-    if (this.recognition) {
+    if (this._activeMode === "native" && this._nativeRecognition) {
+      this.isRecording = false;
+      this.ignoreOnEnd = true;
       try {
-        this.recognition.stop();
+        this._nativeRecognition.stop();
       } catch (e) {
         console.warn("Speech recognition stop failed", e);
       }
       return;
     }
 
-    if (this.mediaRecorder && this.mediaRecorder.state !== "inactive") {
+    if (this._activeMode === "puter" && this._puterRecorder) {
+      if (this.isTranscribing) {
+        return;
+      }
       try {
-        this.mediaRecorder.stop();
+        this._puterRecorder.stop();
       } catch (e) {
-        console.warn("MediaRecorder stop failed", e);
+        console.warn("Puter speech recorder stop failed", e);
       }
       return;
     }
 
-    this._resetFallbackState();
+    this.isRecording = false;
+    this.isTranscribing = false;
+    this._activeMode = null;
     if (this.onStop) {
-      this.onStop({ mode: "puter", transcribing: false, canceled: true });
+      this.onStop({ mode: "native", transcribing: false, canceled: true });
     }
   }
 
   setLanguage(lang) {
     this.language = lang;
-    if (this.recognition) {
-      this.recognition.lang = lang;
+    if (this._nativeRecognition) {
+      this._nativeRecognition.lang = lang;
     }
   }
 }

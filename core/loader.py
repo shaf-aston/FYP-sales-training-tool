@@ -326,10 +326,11 @@ def _load_yaml_cached(filename):
 
 
 def load_yaml(filename):
-    """Return a defensive copy of cached YAML so callers can't mutate cache state."""
-    return copy.deepcopy(_load_yaml_cached(filename))
+    """Return cached YAML. Safe because configs are read-only at runtime."""
+    return _load_yaml_cached(filename)
 
 
+@lru_cache(maxsize=1)
 def load_signals():
     """Load signals.yaml and verify all required keys exist."""
     signals = _deep_merge(_DEFAULT_SIGNALS, load_yaml("signals.yaml"))
@@ -346,6 +347,7 @@ def load_signals():
     return signals
 
 
+@lru_cache(maxsize=1)
 def load_analysis_config():
     return _deep_merge(_DEFAULT_ANALYSIS_CONFIG, load_yaml("analysis_config.yaml"))
 
@@ -354,10 +356,12 @@ def load_objection_flows():
     return load_yaml("objection_flows.yaml")
 
 
+@lru_cache(maxsize=1)
 def load_product_config():
     return _deep_merge(_DEFAULT_PRODUCT_CONFIG, load_yaml("product_config.yaml"))
 
 
+@lru_cache(maxsize=1)
 def load_prospect_config():
     return _deep_merge(_DEFAULT_PROSPECT_CONFIG, load_yaml("prospect_config.yaml"))
 

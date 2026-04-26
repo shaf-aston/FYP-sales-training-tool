@@ -12,17 +12,22 @@ load_dotenv(ROOT_DIR / ".env")
 
 DEFAULT_LLM_PROVIDER_ORDER = ["groq", "sambanova", "dummy", "probe"]
 DEFAULT_LLM_FALLBACK_ORDER = DEFAULT_LLM_PROVIDER_ORDER[:]
-DEFAULT_STT_PROVIDER_ORDER = ["deepgram"]
-DEFAULT_TTS_PROVIDER_ORDER = ["edge"]
+DEFAULT_STT_PROVIDER_ORDER = ["deepgram", "puter"]
+DEFAULT_TTS_PROVIDER_ORDER = ["edge", "puter"]
 
 DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile"
 DEFAULT_SAMBANOVA_MODEL = "Meta-Llama-3.3-70B-Instruct"
 DEFAULT_GROQ_STT_MODEL = "whisper-large-v3-turbo"
 DEFAULT_SAMBANOVA_STT_MODEL = "Whisper-Large-v3"
 DEFAULT_DEEPGRAM_STT_MODEL = "nova-2"
+DEFAULT_PUTER_STT_MODEL = "gpt-4o-mini-transcribe"
 DEFAULT_GROQ_TTS_MODEL = "canopylabs/orpheus-v1-english"
 DEFAULT_GROQ_TTS_VOICE = "hannah"
 DEFAULT_GROQ_TTS_FORMAT = "wav"
+DEFAULT_PUTER_TTS_PROVIDER = "aws-polly"
+DEFAULT_PUTER_TTS_VOICE = "Joanna"
+DEFAULT_PUTER_TTS_LANGUAGE = "en-US"
+DEFAULT_PUTER_TTS_ENGINE = "standard"
 
 DEFAULT_GROQ_BASE_URL = "https://api.groq.com/openai/v1"
 DEFAULT_SAMBANOVA_BASE_URL = "https://api.sambanova.ai/v1"

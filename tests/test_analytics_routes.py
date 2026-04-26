@@ -217,11 +217,10 @@ def test_feedback_file_stays_within_repo_root():
     assert Path(analytics_routes._FEEDBACK_FILE).resolve() == repo_root / "feedback.jsonl"
 
 
-def test_analytics_summary_requires_admin_token_when_not_testing(monkeypatch):
+def test_analytics_summary_is_public(monkeypatch):
     app = _make_analytics_app(monkeypatch, testing=False)
-    app.config["ADMIN_TOKEN"] = "secret-token"
 
     response = app.test_client().get("/api/analytics/summary")
 
-    assert response.status_code == 403
-    assert response.get_json()["error"] == "Admin token required"
+    assert response.status_code == 200
+    assert response.get_json()["success"] is True

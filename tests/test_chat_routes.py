@@ -7,8 +7,8 @@ from backend.routes import chat as chat_routes
 class _DummyFlowEngine:
     def __init__(self):
         self.conversation_history = [
-            {"role": "user", "content": "Old question"},
             {"role": "assistant", "content": "Old answer"},
+            {"role": "user", "content": "Old question"},
         ]
 
 

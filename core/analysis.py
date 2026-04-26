@@ -406,7 +406,7 @@ def extract_user_keywords(
     history: list[dict[str, str]], max_keywords: int = MAX_USER_KEYWORDS
 ) -> list[str]:
     """Extract the user's key terms (nouns/descriptors) for lexical entrainment"""
-    keywords = set()
+    keywords: dict[str, None] = {}
     for msg in history:
         if msg["role"] == "user":
             for word in msg["content"].lower().split():
@@ -417,7 +417,7 @@ def extract_user_keywords(
                     and cleaned not in STOP_WORDS
                     and cleaned not in keywords
                 ):
-                    keywords.add(cleaned)
+                    keywords[cleaned] = None
     return list(keywords)[-max_keywords:]
 
 

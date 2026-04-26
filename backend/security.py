@@ -70,14 +70,7 @@ class SecurityConfig:
         return cls._config_flag(
             config_obj,
             "REQUIRE_ADMIN_FOR_STAGE_MUTATION",
-            default=True,
-        )
-
-    @classmethod
-    def browser_tts_fallback_enabled(cls, config_obj=None) -> bool:
-        return cls._config_flag(
-            config_obj,
-            "ENABLE_BROWSER_TTS_FALLBACK",
+            # Keep stage jumping available in local/dev unless explicitly locked down.
             default=False,
         )
 
@@ -86,13 +79,6 @@ class SecurityConfig:
         script_src = ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"]
         media_src = ["'self'", "data:", "blob:"]
         connect_src = ["'self'"]
-
-        if cls.browser_tts_fallback_enabled(config_obj):
-            script_src.append("https://js.puter.com")
-            media_src.extend(["https://puter.com", "https://*.puter.com"])
-            connect_src.extend(
-                ["https://js.puter.com", "https://puter.com", "https://*.puter.com"]
-            )
 
         return (
             "default-src 'self'; "

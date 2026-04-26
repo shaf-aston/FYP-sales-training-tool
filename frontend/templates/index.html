@@ -10,6 +10,7 @@
         />
         <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+        <script src="https://js.puter.com/v2/" defer></script>
         <script src="{{ url_for('static', filename='speech.js') }}"></script>
         <link
             rel="stylesheet"
@@ -151,26 +152,6 @@
                             <span class="status-label">Stage:</span>
                             <span class="status-value" id="stageBadge">-</span>
                         </div>
-                    </div>
-                </div>
-
-                <div class="sidebar-section" id="sidebar-jump-stage">
-                    <h3>Jump to Stage</h3>
-                    <div class="sidebar-actions">
-                        <select
-                            id="stageSelect"
-                            class="sidebar-btn"
-                            aria-label="Select stage to jump to"
-                        >
-                            <option value="">Loading…</option>
-                        </select>
-                        <button
-                            class="sidebar-btn"
-                            id="jumpStageBtn"
-                            onclick="jumpStage()"
-                        >
-                            Jump
-                        </button>
                     </div>
                 </div>
 
@@ -562,7 +543,6 @@
             id="server-env"
             data-mode="{{ mode }}"
             data-flow-controls-enabled="{{ 'true' if flow_controls_enabled else 'false' }}"
-            data-browser-tts-fallback-enabled="{{ 'true' if browser_tts_fallback_enabled else 'false' }}"
         />
         <script>
             const env = document.getElementById("server-env").dataset;

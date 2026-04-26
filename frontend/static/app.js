@@ -50,10 +50,10 @@ let shouldAutoSendAfterSilence =
   localStorage.getItem("autoSendDictation") !== "false";
 const VOICE_SILENCE_DELAY_MS = 500; // Wait for 0.5 seconds of silence before auto-send
 const TTS_RESUME_WATCHDOG_MS = 15000;
-const PUTER_SDK_URL = "https://js.puter.com/v2/";
 let voiceSilenceTimer = null;
 let ttsResumeWatchdogTimer = null;
-let puterSdkLoadPromise = null;
+let ttsPlaybackGeneration = 0;
+let ttsPlaybackPending = false;
 let _handsFreeRestartAttempts = 0;
 
 // Settings Toggles
@@ -237,16 +237,11 @@ function isDedicatedProspectPage() {
 }
 
 function syncModeChrome() {
-  const isProspectContext = isDedicatedProspectPage() || _prospectMode;
   const flowControls = document.getElementById("flowControls");
-  const jumpStageSection = document.getElementById("sidebar-jump-stage");
-  const showFlowControls = _flowControlsEnabled && !isProspectContext;
+  const showFlowControls = _flowControlsEnabled && Boolean(getSessionId());
 
   if (flowControls) {
     flowControls.style.display = showFlowControls ? "" : "none";
-  }
-  if (jumpStageSection) {
-    jumpStageSection.style.display = showFlowControls ? "" : "none";
   }
 
   if (!showFlowControls) {
@@ -380,13 +375,12 @@ async function restoreProspectSession(sessionId) {
 
 // Text-to-Speech Functions
 const tts = {
-  speak: (t) =>
-    "speechSynthesis" in window &&
-    (speechSynthesis.cancel(),
-    speechSynthesis.speak(new SpeechSynthesisUtterance(t)),
-    true),
-  stop: () => "speechSynthesis" in window && speechSynthesis.cancel(),
-  isSpeaking: () => "speechSynthesis" in window && speechSynthesis.speaking,
+  speak: (t) => playAssistantTts(t).then(() => true),
+  stop: () => stopTtsPlayback(),
+  isSpeaking: () =>
+    ttsPlaybackPending ||
+    Boolean(currentTtsAudio) ||
+    ("speechSynthesis" in window && speechSynthesis.speaking),
 };
 
 // Toast Notifications
@@ -573,7 +567,7 @@ function populateStageSelects(stages, selectedStage = "") {
 }
 
 async function loadStageOptions() {
-  if (_prospectMode || !_flowControlsEnabled) {
+  if (!_flowControlsEnabled) {
     populateStageSelects([]);
     setFlowControlsEnabled(false);
     return [];
@@ -763,12 +757,9 @@ function createMessageElement(text, sender, msgIdx, metrics = null) {
         tts.stop();
         btn.classList.remove("speaking");
       } else {
-        speechSynthesis.cancel();
-        const utter = new SpeechSynthesisUtterance(text);
-        btn.classList.add("speaking");
-        utter.onend = () => btn.classList.remove("speaking");
-        utter.onerror = () => btn.classList.remove("speaking");
-        speechSynthesis.speak(utter);
+        playAssistantTts(text, {
+          onStart: () => btn.classList.add("speaking"),
+        });
       }
     };
     actions.appendChild(btn);
@@ -1382,8 +1373,12 @@ function toggleTrainingPanel() {
   const container = document.querySelector(".container");
   const willOpen = !panel.classList.contains("open");
   if (willOpen) {
+    closeAllPanels();
     panel.classList.add("open");
     container.classList.add("panel-open");
+  } else {
+    panel.classList.remove("open");
+    container.classList.remove("panel-open");
   }
   localStorage.setItem("trainingPanelOpen", willOpen);
 }
@@ -2315,9 +2310,7 @@ function toggleMic() {
     },
     (text) => {
       if (currentTtsAudio) return;
-      if (!speechRecognizer.usePuterFallback) {
-        _setDictationPreview(text);
-      }
+      _setDictationPreview(text);
     },
     (state) => {
       micBtn.classList.remove("recording");
@@ -2327,11 +2320,7 @@ function toggleMic() {
         input.focus();
         return;
       }
-      if (speechRecognizer.usePuterFallback || state?.transcribing) {
-        _setDictationPreview("Transcribing...");
-      } else {
-        _setDictationPreview("");
-      }
+      _setDictationPreview("");
       // On stop: let the pause-timer fire naturally; only flush if user typed.
       input.focus();
     },
@@ -2357,6 +2346,9 @@ function resumeVoiceInputAfterTts() {
 }
 
 function stopTtsPlayback({ resumeVoiceInput = false } = {}) {
+  ttsPlaybackGeneration += 1;
+  ttsPlaybackPending = false;
+
   if (ttsResumeWatchdogTimer) {
     clearTimeout(ttsResumeWatchdogTimer);
     ttsResumeWatchdogTimer = null;
@@ -2375,6 +2367,10 @@ function stopTtsPlayback({ resumeVoiceInput = false } = {}) {
     currentTtsAudio = null;
   }
 
+  document.querySelectorAll(".tts-btn.speaking").forEach((btn) => {
+    btn.classList.remove("speaking");
+  });
+
   const interruptBtn = document.getElementById("interruptBtn");
   if (interruptBtn) interruptBtn.style.display = "none";
   _showTTSBanner(false);
@@ -2387,6 +2383,65 @@ function stopTtsPlayback({ resumeVoiceInput = false } = {}) {
 function _nativeSpeechRate() {
   const rate = 1 + ttsPlaybackSpeed / 100;
   return Math.min(10, Math.max(0.1, rate));
+}
+
+function _hasPuterTts() {
+  return Boolean(window.puter?.ai?.txt2speech);
+}
+
+async function createPuterTtsHandle(text) {
+  if (!_hasPuterTts()) {
+    return null;
+  }
+
+  try {
+    const audio = await window.puter.ai.txt2speech(text, {
+      language: "en-US",
+      engine: "neural",
+    });
+
+    if (!audio || typeof audio.play !== "function") {
+      return null;
+    }
+
+    let onended = null;
+    let onerror = null;
+    const finish = () => {
+      if (onended) onended();
+    };
+    const fail = () => {
+      if (onerror) onerror();
+    };
+
+    if (typeof audio.addEventListener === "function") {
+      audio.addEventListener("ended", finish, { once: true });
+      audio.addEventListener("error", fail, { once: true });
+    } else {
+      audio.onended = finish;
+      audio.onerror = fail;
+    }
+
+    return {
+      kind: "puter",
+      pause() {
+        try {
+          audio.pause();
+        } catch (e) {}
+      },
+      play() {
+        return Promise.resolve(audio.play());
+      },
+      set onended(fn) {
+        onended = fn;
+      },
+      set onerror(fn) {
+        onerror = fn;
+      },
+    };
+  } catch (error) {
+    console.warn("Puter TTS failed:", error);
+    return null;
+  }
 }
 
 function createNativeTtsHandle(text) {
@@ -2431,68 +2486,34 @@ function createNativeTtsHandle(text) {
   };
 }
 
-function ensurePuterSdkLoaded() {
-  if (typeof puter !== "undefined" && puter.ai) {
-    return Promise.resolve();
+async function createAssistantTtsHandle(text) {
+  if (ttsPlaybackSpeed === 0) {
+    const puterHandle = await createPuterTtsHandle(text);
+    if (puterHandle) {
+      return puterHandle;
+    }
   }
 
-  if (puterSdkLoadPromise) {
-    return puterSdkLoadPromise;
+  const nativeHandle = createNativeTtsHandle(text);
+  if (nativeHandle) {
+    return nativeHandle;
   }
 
-  puterSdkLoadPromise = new Promise((resolve, reject) => {
-    const script = document.createElement("script");
-    script.src = PUTER_SDK_URL;
-    script.async = true;
-    script.dataset.sdk = "puter";
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Failed to load Puter SDK"));
-    document.head.appendChild(script);
-  }).catch((err) => {
-    puterSdkLoadPromise = null;
-    throw err;
-  });
+  if (ttsPlaybackSpeed !== 0) {
+    const puterHandle = await createPuterTtsHandle(text);
+    if (puterHandle) {
+      return puterHandle;
+    }
+  }
 
-  return puterSdkLoadPromise;
+  return null;
 }
 
-async function createPuterFallbackAudio(text) {
-  await ensurePuterSdkLoaded();
-
-  if (typeof puter === "undefined" || !puter.ai) {
-    throw new Error("Puter SDK loaded but puter.ai is unavailable");
-  }
-
-  const puterAudio = await puter.ai.txt2speech(text, {
-    engine: "neural",
-    language: "en-US",
-  });
-
-  if (puterAudio instanceof HTMLAudioElement) {
-    return puterAudio;
-  }
-
-  if (puterAudio instanceof Blob) {
-    const blobUrl = URL.createObjectURL(puterAudio);
-    const audio = new Audio(blobUrl);
-    audio._blobUrl = blobUrl;
-    return audio;
-  }
-
-  if (typeof puterAudio === "string") {
-    return new Audio(puterAudio);
-  }
-
-  if (puterAudio && typeof puterAudio.src === "string") {
-    return new Audio(puterAudio.src);
-  }
-
-  throw new Error("Puter.js returned an unexpected format");
-}
-
-async function playAssistantTts(text) {
+async function playAssistantTts(text, { onStart } = {}) {
   if (!text) return;
   stopTtsPlayback();
+  const playbackGeneration = ttsPlaybackGeneration;
+  ttsPlaybackPending = true;
 
   try {
     if (speechRecognizer && speechRecognizer.isRecording) {
@@ -2501,18 +2522,28 @@ async function playAssistantTts(text) {
     }
   } catch (e) {}
 
-  let usedNativeAudio = false;
-  currentTtsAudio = createNativeTtsHandle(text);
-  if (currentTtsAudio) {
-    usedNativeAudio = true;
-  } else {
-    currentTtsAudio = await createPuterFallbackAudio(text);
+  const handle = await createAssistantTtsHandle(text);
+  if (playbackGeneration !== ttsPlaybackGeneration) {
+    ttsPlaybackPending = false;
+    try {
+      handle?.pause?.();
+    } catch (e) {}
+    return;
   }
+
+  ttsPlaybackPending = false;
+  currentTtsAudio = handle;
   if (!currentTtsAudio) {
     console.warn("Failed to generate TTS audio.");
     showToast("Voice playback is unavailable", "error");
     resumeVoiceInputAfterTts();
     return;
+  }
+
+  if (onStart) {
+    try {
+      onStart(currentTtsAudio);
+    } catch (e) {}
   }
 
   const interruptBtn = document.getElementById("interruptBtn");
@@ -2541,21 +2572,6 @@ async function playAssistantTts(text) {
     await currentTtsAudio.play();
   } catch (error) {
     console.warn("TTS playback failed:", error);
-    if (usedNativeAudio) {
-      try {
-        currentTtsAudio.pause();
-      } catch (e) {}
-
-      try {
-        currentTtsAudio = await createPuterFallbackAudio(text);
-        currentTtsAudio.onended = finishPlayback;
-        currentTtsAudio.onerror = finishPlayback;
-        await currentTtsAudio.play();
-        return;
-      } catch (fallbackError) {
-        console.warn("Puter TTS fallback after native failure failed:", fallbackError);
-      }
-    }
     showToast("Could not play the assistant voice", "error");
     finishPlayback();
   }
@@ -2563,7 +2579,7 @@ async function playAssistantTts(text) {
 
 // Centralised helpers for hands-free STT control
 function startHandsFreeRecognition() {
-  if (!speechRecognizer?.recognition || speechRecognizer.usePuterFallback) {
+  if (!speechRecognizer?.recognition) {
     showToast(
       "Hands-free mode needs native speech recognition. Use the mic button instead.",
       "info",
@@ -2695,18 +2711,6 @@ function toggleVoiceMode() {
   if (!handsFreeMode) {
     clearVoiceSilenceTimer();
     _handsFreeRestartAttempts = 0;
-  }
-
-  if (handsFreeMode && speechRecognizer?.usePuterFallback) {
-    handsFreeMode = false;
-    if (btn) btn.classList.toggle("active", false);
-    if (indicator) indicator.textContent = "⌨️";
-    if (inputArea) inputArea.classList.toggle("hands-free-active", false);
-    showToast(
-      "Hands-free mode needs native speech recognition. Use the mic button instead.",
-      "info",
-    );
-    return;
   }
 
   showToast(

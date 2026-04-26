@@ -340,9 +340,6 @@ def api_config():
                 "flow_controls_enabled": not SecurityConfig.require_admin_for_stage_mutation(
                     bp.app.config  # type: ignore[attr-defined]
                 ),
-                "browser_tts_fallback_enabled": SecurityConfig.browser_tts_fallback_enabled(
-                    bp.app.config  # type: ignore[attr-defined]
-                ),
             },
         }
     )

@@ -11,7 +11,6 @@ from core.analytics.session_analytics import SessionAnalytics
 from ..security import (
     InputValidator,
     require_rate_limit,
-    require_strict_admin_token,
 )
 from core.knowledge import (
     ALLOWED_FIELDS,
@@ -161,7 +160,6 @@ def get_session_analytics(session_id):
 
 
 @bp.route("/analytics/summary", methods=["GET"])
-@require_strict_admin_token
 def get_analytics_summary():
     """Aggregated stats for the evaluation chapter. Same shape as get_evaluation_summary()"""
     summary = SessionAnalytics.get_evaluation_summary()

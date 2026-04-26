@@ -228,9 +228,6 @@ def _render_index(mode: str):
         flow_controls_enabled=not SecurityConfig.require_admin_for_stage_mutation(
             app.config
         ),
-        browser_tts_fallback_enabled=SecurityConfig.browser_tts_fallback_enabled(
-            app.config
-        ),
     )
 
 

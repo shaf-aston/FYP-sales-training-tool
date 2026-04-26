@@ -2002,6 +2002,24 @@ textarea::-webkit-scrollbar-thumb:hover,
     max-height: none;
     border-radius: 0;
     box-shadow: none;
+    flex-direction: column;
+  }
+
+  #chatScreen {
+    height: auto;
+    flex: 1 1 auto;
+    border-right: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  }
+
+  .sidebar-right {
+    width: 100%;
+    min-width: 0;
+    flex: 0 0 auto;
+    max-height: 42dvh;
+    padding: 12px;
+    gap: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
   }
 
   .input-area {
@@ -2027,16 +2045,20 @@ textarea::-webkit-scrollbar-thumb:hover,
   }
 
   .flow-controls-group {
-    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
   }
 
   .flow-control-select {
-    min-width: 140px;
-    flex: 1 1 140px;
+    min-width: 0;
+    width: 100%;
+    flex: 1 1 auto;
   }
 
   .flow-control-btn {
     padding: 8px 10px;
+    width: 100%;
   }
 
   .header>div {

@@ -188,8 +188,7 @@ def test_config_returns_limits_and_product_options(monkeypatch):
         {"id": "solar", "strategy": "consultative", "label": "Solar package"},
     ]
     assert payload["features"] == {
-        "flow_controls_enabled": False,
-        "browser_tts_fallback_enabled": False,
+        "flow_controls_enabled": True,
     }
 
 
@@ -253,7 +252,7 @@ def test_stage_route_requires_admin_token_when_enabled(monkeypatch):
     assert response.get_json()["error"] == "Admin token required"
 
 
-def test_stage_route_requires_admin_token_by_default_outside_tests(monkeypatch):
+def test_stage_route_is_open_by_default_outside_tests(monkeypatch):
     app, manager = _make_session_app(monkeypatch, testing=False)
     app.config["ADMIN_TOKEN"] = "secret-token"
     manager.set("e" * 8, _DummyBot(session_id="e" * 8))
@@ -264,8 +263,8 @@ def test_stage_route_requires_admin_token_by_default_outside_tests(monkeypatch):
         json={"stage": "pitch"},
     )
 
-    assert response.status_code == 403
-    assert response.get_json()["error"] == "Admin token required"
+    assert response.status_code == 200
+    assert response.get_json() == {"success": True, "stage": "----", "strategy": "INTENT"}
 
 
 # --- /api/init path tests ---

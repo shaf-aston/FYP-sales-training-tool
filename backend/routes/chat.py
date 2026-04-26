@@ -88,6 +88,9 @@ def edit_message():
     if message_index < 0 or message_index > max_index:
         return jsonify({"error": f"Invalid index. Valid range: 0-{max_index}"}), 400
 
+    if session_bot.flow_engine.conversation_history[message_index].get("role") != "user":
+        return jsonify({"error": "Can only edit user messages"}), 400
+
     try:
         # Rewind to turn BEFORE the edit, then replay with new message
         turn_index = message_index // 2  # Convert message index to turn index

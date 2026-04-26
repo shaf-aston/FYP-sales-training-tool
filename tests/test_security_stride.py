@@ -127,9 +127,8 @@ def test_security_headers_add_no_store_for_api_routes():
     assert "frame-ancestors 'none'" in response.headers["Content-Security-Policy"]
 
 
-def test_security_headers_allow_puter_when_browser_tts_fallback_enabled():
+def test_security_headers_use_the_baseline_csp_by_default():
     app = Flask(__name__)
-    app.config["ENABLE_BROWSER_TTS_FALLBACK"] = True
     app.after_request(SecurityHeadersMiddleware.apply)
 
     @app.route("/api/ping")
@@ -139,9 +138,9 @@ def test_security_headers_allow_puter_when_browser_tts_fallback_enabled():
     response = app.test_client().get("/api/ping")
     csp = response.headers["Content-Security-Policy"]
 
-    assert "https://js.puter.com" in csp
-    assert "https://*.puter.com" in csp
-    assert SecurityConfig.browser_tts_fallback_enabled(app.config) is True
+    assert "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;" in csp
+    assert "media-src 'self' data: blob:;" in csp
+    assert "connect-src 'self';" in csp
 
 
 def test_strict_admin_token_rejects_missing_credentials():
