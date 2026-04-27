@@ -34,12 +34,16 @@ class _DummyBot:
         self.model_name = "probe-model"
         self.flow_engine = _DummyFlowEngine()
         self.saved = False
+        self.snapshot_refreshed = False
 
     def replay(self, history):
         type(self).replayed_history = history
 
     def save_session(self):
         self.saved = True
+
+    def refresh_current_turn_snapshot(self):
+        self.snapshot_refreshed = True
 
     @staticmethod
     def load_session(session_id):
@@ -189,7 +193,8 @@ def test_strategy_route_switches_and_persists(monkeypatch):
     assert response.status_code == 200
     assert response.get_json() == {"success": True, "stage": "LOGICAL", "strategy": "CONSULTATIVE"}
     assert bot.saved is True
-    assert bot.flow_engine.initial_flow_type == "consultative"
+    assert bot.flow_engine.initial_flow_type == "intent"
+    assert bot.snapshot_refreshed is True
 
 
 def test_reset_route_deletes_existing_session(monkeypatch):

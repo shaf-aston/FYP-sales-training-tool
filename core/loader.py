@@ -49,6 +49,23 @@ _DEFAULT_ANALYSIS_CONFIG = {
             ],
             "max_turns": 10,
         },
+        "negotiation": {
+            "terms_keywords": [
+                "price",
+                "pricing",
+                "cost",
+                "quote",
+                "budget",
+                "payment",
+                "payment plan",
+                "monthly",
+                "per month",
+                "terms",
+                "deposit",
+                "finance",
+            ],
+            "max_turns": 8,
+        },
         "emotional": {
             "stakes_keywords": [
                 "stress", "frustrated", "wasting", "costing", "important",
@@ -326,8 +343,12 @@ def _load_yaml_cached(filename):
 
 
 def load_yaml(filename):
-    """Return cached YAML. Safe because configs are read-only at runtime."""
-    return _load_yaml_cached(filename)
+    """Return a cached YAML snapshot as a deep copy.
+
+    The underlying parse result stays cached, but callers receive their own copy so
+    accidental in-place mutations cannot leak across modules.
+    """
+    return copy.deepcopy(_load_yaml_cached(filename))
 
 
 @lru_cache(maxsize=1)
@@ -344,25 +365,39 @@ def load_signals():
     missing = _REQUIRED_SIGNAL_KEYS - signals.keys()
     if missing:
         raise ValueError(f"signals.yaml missing: {sorted(missing)}")
+
+    signal_priority = signals.get("signal_priority", [])
+    if signal_priority:
+        if not isinstance(signal_priority, list):
+            raise ValueError("signals.yaml signal_priority must be a list")
+        unknown = [key for key in signal_priority if key not in signals]
+        if unknown:
+            raise ValueError(
+                f"signals.yaml signal_priority references unknown keys: {unknown}"
+            )
     return signals
 
 
 @lru_cache(maxsize=1)
 def load_analysis_config():
+    """Load and merge analysis configuration with safe defaults."""
     return _deep_merge(_DEFAULT_ANALYSIS_CONFIG, load_yaml("analysis_config.yaml"))
 
 
 def load_objection_flows():
+    """Load objection flow definitions exactly as stored in YAML."""
     return load_yaml("objection_flows.yaml")
 
 
 @lru_cache(maxsize=1)
 def load_product_config():
+    """Load and merge product configuration with built-in defaults."""
     return _deep_merge(_DEFAULT_PRODUCT_CONFIG, load_yaml("product_config.yaml"))
 
 
 @lru_cache(maxsize=1)
 def load_prospect_config():
+    """Load and merge prospect mode configuration with built-in defaults."""
     return _deep_merge(_DEFAULT_PROSPECT_CONFIG, load_yaml("prospect_config.yaml"))
 
 
@@ -387,10 +422,12 @@ def get_product_settings(product_type):
 
 
 def load_tactics():
+    """Load conversation tactic templates from YAML."""
     return load_yaml("tactics.yaml")
 
 
 def load_adaptations():
+    """Load prompt adaptation templates from YAML."""
     return load_yaml("adaptations.yaml")
 
 

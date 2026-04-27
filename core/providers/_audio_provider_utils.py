@@ -6,6 +6,7 @@ from typing import Any
 
 
 def normalize_provider_name(raw_name: str | None) -> str | None:
+    """Normalise an audio provider name to lowercase or return None."""
     if raw_name is None:
         return None
     cleaned = raw_name.strip().lower()
@@ -17,6 +18,7 @@ def ordered_provider_names(
     default_names: list[str],
     registry: dict[str, type[Any]],
 ) -> list[str]:
+    """Build a valid provider order from config and known defaults."""
     ordered: list[str] = []
     seen: set[str] = set()
 
@@ -36,6 +38,7 @@ def fallback_provider_names(
     ordered_names: list[str],
     current_provider: str | None = None,
 ) -> list[str]:
+    """Return the ordered fallback list excluding the current provider."""
     current_name = normalize_provider_name(current_provider)
     return [name for name in ordered_names if name != current_name]
 
@@ -46,6 +49,7 @@ def create_audio_provider(
     provider_type: str | None = None,
     model: str | None = None,
 ):
+    """Create the requested audio provider or auto-pick the first available one."""
     requested_name = normalize_provider_name(provider_type)
 
     if requested_name:
@@ -69,6 +73,7 @@ def available_provider_metadata(
     registry: dict[str, type[Any]],
     ordered_names: list[str],
 ) -> list[dict[str, Any]]:
+    """Return simple availability metadata for each audio provider."""
     providers = []
     for provider_name in ordered_names:
         provider = registry[provider_name]()

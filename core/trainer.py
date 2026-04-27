@@ -19,6 +19,7 @@ def _normalize_stage_name(stage_text: str) -> str:
 
 # Truncate text to max_words, preserving word boundaries
 def _truncate_words(text: str, max_words: int) -> str:
+    """Shorten text to a maximum word count without breaking words apart."""
     words = str(text).split()
     return " ".join(words[:max_words]) if len(words) > max_words else text
 
@@ -39,9 +40,9 @@ def generate_training(provider, flow_engine, user_msg, bot_reply):
         f'BOT replied: "{bot_reply[:200]}"\n\n'
         "Return JSON with exactly these fields:\n"
         "{\n"
-        '  "what_happened": "Name the specific technique or move the bot just made (20 words max). Be precise - name the pattern, not just the topic.",\n'
-        '  "next_move": "One clear, actionable coaching instruction for the next turn (20 words max). Start with a verb.",\n'
-        '  "watch_for": ["Specific risk to avoid (10 words max)", "Another specific pitfall (10 words max)"]\n'
+        '  "what_happened": "Name the specific technique or move the bot just made (15 words max). Be precise - name the pattern, not just the topic.",\n'
+        '  "next_move": "One clear, actionable coaching instruction for the next turn (15 words max). Start with a verb.",\n'
+        '  "watch_for": ["Specific risk to avoid (8 words max)", "Another specific pitfall (8 words max)"]\n'
         "}"
     )
 
@@ -61,10 +62,10 @@ def generate_training(provider, flow_engine, user_msg, bot_reply):
         if not result:
             raise ValueError("Empty or invalid JSON response")
 
-        result["what_happened"] = _truncate_words(result.get("what_happened", ""), 20)
-        result["next_move"] = _truncate_words(result.get("next_move", ""), 20)
+        result["what_happened"] = _truncate_words(result.get("what_happened", ""), 15)
+        result["next_move"] = _truncate_words(result.get("next_move", ""), 15)
         result["watch_for"] = [
-            _truncate_words(tip, 10) for tip in (result.get("watch_for") or [])
+            _truncate_words(tip, 8) for tip in (result.get("watch_for") or [])
         ]
         return result
 
@@ -108,7 +109,7 @@ def answer_training_question(provider, flow_engine, question, style: str = "tact
     methodology = (
         "NEPQ (Neuro-Emotional Persuasion Questioning)"
         if flow_type == "consultative"
-        else "NEEDS → MATCH → CLOSE"
+        else "NEEDS -> MATCH -> CLOSE"
     )
     style_guide = COACH_STYLES.get(style if style in COACH_STYLES else "tactical")
     concepts = ", ".join(rubric.get("key_concepts", []))

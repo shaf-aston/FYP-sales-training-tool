@@ -18,6 +18,7 @@ class ProviderChatResult:
 
 class ProviderRouter:
     def __init__(self, provider_type: str | None = None, model: str | None = None):
+        """Resolve and store the active provider for chat requests."""
         provider, resolution = create_provider_with_trace(provider_type, model=model)
         self.provider = provider
         self.resolution = resolution
@@ -25,6 +26,7 @@ class ProviderRouter:
         self.model_name = provider.get_model_name()
 
     def chat(self, llm_messages: list, *, stage=None) -> ProviderChatResult:
+        """Send a chat request through the currently active provider."""
         resp = self.provider.chat(
             llm_messages,
             temperature=DEFAULT_TEMPERATURE,
@@ -38,6 +40,7 @@ class ProviderRouter:
         )
 
     def chat_with_fallback(self, llm_messages: list, *, stage=None) -> ProviderChatResult:
+        """Retry the chat request with fallback providers when the first call fails."""
         first = self.chat(llm_messages, stage=stage)
         if not first.response.error and (first.response.content or "").strip():
             return first

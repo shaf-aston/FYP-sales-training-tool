@@ -18,18 +18,22 @@ class GroqProvider(BaseLLMProvider):
     provider_name = "groq"
 
     def __init__(self, model: str | None = None):
+        """Initialise the Groq client pool and chosen model name."""
         self.model = model or get_groq_llm_model()
         self.api_keys = get_groq_api_keys()
         groq_client = cast(Any, Groq)
         self.clients = [groq_client(api_key=key) for key in self.api_keys]
 
     def is_available(self) -> bool:
+        """Return True when at least one Groq API key is configured."""
         return bool(self.api_keys)
 
     def get_model_name(self) -> str:
+        """Return the active Groq model name."""
         return self.model
 
     def chat(self, messages, temperature=0.8, max_tokens=200, stage=None) -> LLMResponse:
+        """Send the chat request to Groq, retrying across configured API keys."""
         start = time.time()
         if not self.clients:
             return LLMResponse(

@@ -3,7 +3,7 @@
 import json
 import logging
 import time
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 
 from typing import Any, Optional
 
@@ -12,6 +12,7 @@ from .loader import (
     assign_ab_variant,
 )
 from .analysis import (
+    ConversationState,
     analyse_state,
 )
 from .objection import _get_objection_pathway_safe
@@ -54,6 +55,7 @@ class SalesChatbot:
         session_id=None,
         record_session_start: bool = True,
     ):
+        """Set up the provider, product context, flow engine, and analytics hooks."""
         self._router = ProviderRouter(provider_type=provider_type, model=model)
         self.provider = self._router.provider
         self.provider_resolution = self._router.resolution
@@ -108,16 +110,13 @@ class SalesChatbot:
 
     @property
     def provider_name(self) -> str:
-        """Public provider name used by route/status helpers."""
         return self._provider_name
 
     @property
     def model_name(self) -> str:
-        """Public model name used by route/status helpers."""
         return self._model_name
 
     def _log_turn_event(self, user_message: str, bot_reply: str) -> None:
-        """Emit the full exchange to application logs for monitoring."""
 
         if not self.session_id:
             return
@@ -144,14 +143,14 @@ class SalesChatbot:
         recent_history = self.flow_engine.conversation_history[-RECENT_HISTORY_WINDOW:]
 
         # Signal Detection (prerequisite): Analyze user state for all downstream layers.
-        pre_state = analyse_state(self.flow_engine.conversation_history, user_message)
+        turn_state = analyse_state(self.flow_engine.conversation_history, user_message)
 
         # LAYER 1 (Stage-Gating): Check advancement conditions via FSM.
         # Prevents skipping stages and enforces conversation pacing.
         advanced_this_turn = False
         if self.flow_engine.flow_type != Strategy.INTENT:
             old_stage = self.flow_engine.current_stage
-            target = self.flow_engine.should_advance(user_message, pre_state=pre_state)
+            target = self.flow_engine.should_advance(user_message, turn_state=turn_state)
             if target and target != old_stage:
                 self.flow_engine.advance(target_stage=target)
                 advanced_this_turn = True
@@ -175,7 +174,7 @@ class SalesChatbot:
         system_prompt = self.flow_engine.get_current_prompt(
             user_message,
             objection_data=objection_data,
-            pre_state=pre_state,
+            turn_state=turn_state,
             include_history=False,
         )
         llm_messages = (
@@ -188,7 +187,7 @@ class SalesChatbot:
             # history doesn't include this turn yet; count the message we're about to add
             self._analytics.record_intent_classification(
                 session_id=self.session_id,
-                intent_level=pre_state.intent,
+                intent_level=turn_state.intent,
                 user_turn_count=self.flow_engine.user_turn_count + 1,
             )
 
@@ -212,6 +211,7 @@ class SalesChatbot:
                 latency_ms=llm_response.latency_ms,
                 advanced_this_turn=advanced_this_turn,
                 objection_data=objection_data,
+                turn_state=turn_state,
             )
 
         except Exception:
@@ -225,6 +225,7 @@ class SalesChatbot:
     def _build_response(
         self, content: str, latency_ms: float | None, user_message: str
     ) -> ChatResponse:
+        """Build the standard response payload returned to the UI."""
         return ChatResponse(
             content=content,
             latency_ms=latency_ms,
@@ -253,6 +254,8 @@ class SalesChatbot:
             reply_text=reply_text,
             stage=self.flow_engine.current_stage,
             user_message=user_message,
+            flow_type=self.flow_engine.flow_type,
+            history=self.flow_engine.conversation_history,
         )
 
         if result.was_blocked or result.was_corrected:
@@ -265,6 +268,7 @@ class SalesChatbot:
 
     @staticmethod
     def _is_rate_limit(llm_response: LLMResponse) -> bool:
+        """Return True when the provider error looks like rate limiting."""
         if getattr(llm_response, "error_code", None) == RATE_LIMIT:
             return True
         detail = str(llm_response.error or "").lower()
@@ -272,6 +276,7 @@ class SalesChatbot:
 
     @staticmethod
     def _is_network_access_denied(llm_response: LLMResponse) -> bool:
+        """Return True when the provider or network is rejecting the request."""
         if getattr(llm_response, "error_code", None) == ACCESS_DENIED:
             return True
         detail = str(llm_response.error or "").lower()
@@ -289,6 +294,7 @@ class SalesChatbot:
     def _handle_provider_error(
         self, llm_response: LLMResponse, llm_messages: list, user_message: str
     ) -> ChatResponse:
+        """Handle provider failures and try fallback routes when it makes sense."""
         if self._is_rate_limit(llm_response):
             self.logger.warning(
                 f"rate limit on {self._provider_name}: {llm_response.error}"
@@ -325,7 +331,7 @@ class SalesChatbot:
             )
 
         return self._fallback(
-            "Can't reach the AI right now - give it another go.",
+            "Can't reach the Bot right now - give it another go.",
             llm_response.latency_ms,
             user_message,
         )
@@ -344,6 +350,7 @@ class SalesChatbot:
     def _try_fallback_providers(
         self, llm_messages: list, user_message: str
     ) -> ChatResponse | None:
+        """Try other configured providers until one returns a usable reply."""
         for next_name in list_fallback_providers(self._provider_name):
             try:
                 alt = create_provider(next_name)
@@ -365,6 +372,7 @@ class SalesChatbot:
                     bot_reply=resp.content,
                     latency_ms=resp.latency_ms,
                     advanced_this_turn=False,
+                    turn_state=analyse_state(self.flow_engine.conversation_history, user_message),
                 )
             except Exception as e:
                 self.logger.error(f"fallback to {next_name} failed: {e}")
@@ -373,6 +381,7 @@ class SalesChatbot:
     def _fallback(
         self, message: str, latency_ms: float, user_message: str
     ) -> ChatResponse:
+        """Return a UI-safe fallback reply without mutating conversation history."""
         # Don't append fallback messages to conversation_history to avoid corrupting
         # FSM context. The error message is returned in ChatResponse for UI display,
         # but must not be processed by the LLM on the next turn.
@@ -393,6 +402,31 @@ class SalesChatbot:
                     user_turn_count=self.flow_engine.user_turn_count,
                 )
 
+    def _replay_turn(
+        self,
+        user_message: str,
+        bot_reply: str,
+        turn_state: dict[str, Any] | None = None,
+    ) -> None:
+        """Reconstruct one completed turn using the same advancement order as live chat."""
+        if turn_state is None:
+            state = analyse_state(self.flow_engine.conversation_history, user_message)
+        else:
+            state = ConversationState(**turn_state)
+
+        advanced_this_turn = False
+        if self.flow_engine.flow_type != Strategy.INTENT:
+            old_stage = self.flow_engine.current_stage
+            target = self.flow_engine.should_advance(user_message, turn_state=state)
+            if target and target != old_stage:
+                self.flow_engine.advance(target_stage=target)
+                advanced_this_turn = True
+
+        self.flow_engine.add_turn(user_message, bot_reply)
+
+        if not advanced_this_turn:
+            self._apply_advancement(user_message)
+
     def _complete_successful_turn(
         self,
         user_message: str,
@@ -400,6 +434,7 @@ class SalesChatbot:
         latency_ms: float | None,
         advanced_this_turn: bool,
         objection_data: dict[str, Any] | None = None,
+        turn_state=None,
     ) -> ChatResponse:
         """Finalize a successful reply so normal and fallback paths stay consistent."""
         # LAYER 3 (Response Validation): Final guardrail check before sending to user.
@@ -426,7 +461,7 @@ class SalesChatbot:
 
         # Persist post-advancement state so stage/strategy changes are durable.
         self.save_session()
-        self._save_turn_snapshot()
+        self._save_turn_snapshot(turn_state=turn_state)
 
         if self.session_id and self.flow_engine.current_stage == Stage.OBJECTION:
             if objection_data is None:
@@ -462,11 +497,13 @@ class SalesChatbot:
         )
 
     def run_quiz_stage_answer(self, answer: str) -> dict:
+        """Check whether the user picked the right stage for the current moment."""
         return quiz.test_quiz_stage_answer(
             answer, self.flow_engine.current_stage, self.flow_engine.flow_type
         )
 
     def run_quiz_next_move(self, response: str) -> dict:
+        """Score the user's suggested next move for the live conversation."""
         history = self.flow_engine.conversation_history
         last_user_msg = next(
             (m.get("content", "") for m in reversed(history) if m.get("role") == "user"),
@@ -477,22 +514,35 @@ class SalesChatbot:
         )
 
     def run_quiz_direction(self, explanation: str) -> dict:
+        """Score the user's explanation of why the conversation should move next."""
         return quiz.test_quiz_direction(
             explanation, self.provider, self.flow_engine.current_stage, self.flow_engine.flow_type
         )
 
-    def _capture_turn_snapshot(self) -> dict:
+    def _capture_turn_snapshot(self, turn_state=None) -> dict:
         """Capture current FSM state for snapshot-based rewinding."""
         return {
             "flow_type": self.flow_engine.flow_type,
             "current_stage": self.flow_engine.current_stage,
             "stage_turn_count": self.flow_engine.stage_turn_count,
             "initial_flow_type": self.flow_engine.initial_flow_type,
+            "turn_state": asdict(turn_state) if turn_state is not None else None,
         }
 
-    def _save_turn_snapshot(self) -> None:
+    def _save_turn_snapshot(self, turn_state=None) -> None:
         """Save FSM snapshot after processing a turn (used for rewinding)."""
-        self._turn_snapshots.append(self._capture_turn_snapshot())
+        self._turn_snapshots.append(self._capture_turn_snapshot(turn_state=turn_state))
+
+    def refresh_current_turn_snapshot(self) -> None:
+        """Refresh the snapshot for the current turn after an out-of-band FSM mutation."""
+        current_turns = len(self.flow_engine.conversation_history) // 2
+        if current_turns <= 0:
+            return
+        snapshot = self._capture_turn_snapshot()
+        if len(self._turn_snapshots) >= current_turns:
+            self._turn_snapshots[current_turns - 1] = snapshot
+        else:
+            self._turn_snapshots.append(snapshot)
 
     def rewind(self, steps: int):
         """Rewind back by `steps` turns from the current position."""
@@ -526,11 +576,25 @@ class SalesChatbot:
         else:
             self.logger.warning(f"Snapshot not available for turn {turn_index}, falling back to replay")
             self.flow_engine.reset_to_initial()
-            for user_msg_dict, bot_msg_dict in zip(old_history[::2], old_history[1::2]):
+            saved_snapshots = list(self._turn_snapshots)
+            self._turn_snapshots = []
+            for idx, (user_msg_dict, bot_msg_dict) in enumerate(
+                zip(old_history[::2], old_history[1::2]),
+                start=1,
+            ):
                 user_msg = user_msg_dict.get("content", "")
                 bot_msg = bot_msg_dict.get("content", "")
-                self.flow_engine.add_turn(user_msg, bot_msg)
-                self._apply_advancement(user_msg)
+                snapshot = (
+                    saved_snapshots[idx - 1]
+                    if idx - 1 < len(saved_snapshots)
+                    else None
+                )
+                turn_state = None
+                if snapshot:
+                    # fall back to old key for snapshots persisted before the rename
+                    turn_state = snapshot.get("turn_state", snapshot.get("pre_state"))
+                self._replay_turn(user_msg, bot_msg, turn_state=turn_state)
+                self._save_turn_snapshot(turn_state=turn_state)
 
         self.save_session()
         return True
@@ -551,8 +615,7 @@ class SalesChatbot:
                 raise ValueError("History must alternate user and assistant turns")
             user_msg = user_msg_dict.get("content", "")
             bot_msg = bot_msg_dict.get("content", "")
-            self.flow_engine.add_turn(user_msg, bot_msg)
-            self._apply_advancement(user_msg)
+            self._replay_turn(user_msg, bot_msg)
 
     def get_conversation_summary(self):
         """Return FSM state summary with provider info."""

@@ -4,6 +4,7 @@ import shutil
 from pathlib import Path
 from typing import Any, cast
 
+from core.analysis import ConversationState
 from core.chatbot import SalesChatbot
 from core.providers.base import LLMResponse
 from core.prospect_session_persistence import ProspectSessionPersistence
@@ -104,6 +105,73 @@ def test_rewind_to_turn_restores_snapshot_when_available(monkeypatch):
     ]
     assert bot.flow_engine.restored == bot._turn_snapshots[0]
     assert len(bot._turn_snapshots) == 1
+
+
+def test_save_turn_snapshot_includes_pre_state():
+    bot = _build_bot()
+    pre_state = ConversationState(
+        intent="high",
+        guarded=False,
+        question_fatigue=False,
+        decisive=True,
+        doubt=True,
+        stakes=False,
+    )
+
+    bot._save_turn_snapshot(turn_state=pre_state)
+
+    assert bot._turn_snapshots == [
+        {
+            "flow_type": "intent",
+            "current_stage": "intent",
+            "stage_turn_count": 0,
+            "initial_flow_type": "intent",
+            "turn_state": {
+                "intent": "high",
+                "guarded": False,
+                "question_fatigue": False,
+                "decisive": True,
+                "terms": False,
+                "doubt": True,
+                "stakes": False,
+            },
+        }
+    ]
+
+
+def test_refresh_current_turn_snapshot_updates_latest_state():
+    bot = _build_bot()
+    bot.flow_engine.conversation_history = [
+        {"role": "user", "content": "u1"},
+        {"role": "assistant", "content": "a1"},
+        {"role": "user", "content": "u2"},
+        {"role": "assistant", "content": "a2"},
+    ]
+    bot._turn_snapshots = [
+        {
+            "flow_type": "intent",
+            "current_stage": "intent",
+            "stage_turn_count": 1,
+            "initial_flow_type": "intent",
+            "turn_state": None,
+        },
+        {
+            "flow_type": "intent",
+            "current_stage": "intent",
+            "stage_turn_count": 2,
+            "initial_flow_type": "intent",
+            "turn_state": None,
+        },
+    ]
+    bot.flow_engine.flow_type = "consultative"
+    bot.flow_engine.current_stage = "logical"
+    bot.flow_engine.stage_turn_count = 0
+
+    bot.refresh_current_turn_snapshot()
+
+    assert bot._turn_snapshots[1]["flow_type"] == "consultative"
+    assert bot._turn_snapshots[1]["current_stage"] == "logical"
+    assert bot._turn_snapshots[1]["initial_flow_type"] == "intent"
 
 
 def test_replay_calls_apply_advancement_for_each_turn():

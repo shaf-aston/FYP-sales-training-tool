@@ -35,6 +35,7 @@ DEFAULT_DEEPGRAM_BASE_URL = "https://api.deepgram.com/v1"
 
 
 def _clean_env_value(value: str | None) -> str | None:
+    """Strip comments and whitespace from an env var value."""
     if not value:
         return None
     cleaned = value.split("#")[0].strip()
@@ -42,6 +43,7 @@ def _clean_env_value(value: str | None) -> str | None:
 
 
 def _split_env_list(raw_value: str | None, fallback: list[str]) -> list[str]:
+    """Parse a comma-separated provider list and fall back when empty."""
     if not raw_value:
         return fallback[:]
     values = [item.strip().lower() for item in raw_value.split(",")]
@@ -50,6 +52,7 @@ def _split_env_list(raw_value: str | None, fallback: list[str]) -> list[str]:
 
 
 def get_llm_provider_order() -> list[str]:
+    """Return the configured LLM provider preference order."""
     return _split_env_list(
         os.environ.get("LLM_PROVIDER_ORDER"),
         DEFAULT_LLM_PROVIDER_ORDER,
@@ -71,14 +74,17 @@ def get_llm_fallback_order() -> list[str]:
 
 
 def get_stt_provider_order() -> list[str]:
+    """Return the configured STT provider preference order."""
     return _split_env_list(os.environ.get("STT_PROVIDER_ORDER"), DEFAULT_STT_PROVIDER_ORDER)
 
 
 def get_tts_provider_order() -> list[str]:
+    """Return the configured TTS provider preference order."""
     return _split_env_list(os.environ.get("TTS_PROVIDER_ORDER"), DEFAULT_TTS_PROVIDER_ORDER)
 
 
 def get_groq_llm_model() -> str:
+    """Return the preferred Groq chat model, honoring env overrides."""
     return (
         _clean_env_value(os.environ.get("GROQ_LLM_MODEL"))
         or _clean_env_value(os.environ.get("GROQ_MODEL"))
@@ -134,8 +140,10 @@ def get_voice_groq_api_keys() -> list[str]:
 
 
 def get_deepgram_api_key() -> str | None:
+    """Return the Deepgram API key if configured."""
     return _clean_env_value(os.environ.get("DEEPGRAM_API_KEY"))
 
 
 def get_sambanova_api_key() -> str | None:
+    """Return the SambaNova API key if configured."""
     return _clean_env_value(os.environ.get("SAMBANOVA_API_KEY"))

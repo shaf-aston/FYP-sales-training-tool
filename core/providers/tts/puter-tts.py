@@ -22,18 +22,22 @@ class PuterTTSProvider(BaseTTSProvider):
     provider_name = "puter"
 
     def __init__(self, model: str | None = None):
+        """Store the configured browser-side Puter TTS settings."""
         self.model = model or os.environ.get("PUTER_TTS_PROVIDER") or DEFAULT_PUTER_TTS_PROVIDER
         self.voice = os.environ.get("PUTER_TTS_VOICE") or DEFAULT_PUTER_TTS_VOICE
         self.language = os.environ.get("PUTER_TTS_LANGUAGE") or DEFAULT_PUTER_TTS_LANGUAGE
         self.engine = os.environ.get("PUTER_TTS_ENGINE") or DEFAULT_PUTER_TTS_ENGINE
 
     def is_available(self) -> bool:
+        """Return False because Puter TTS is only available in the browser."""
         return False
 
     def get_model_name(self) -> str:
+        """Return the configured Puter TTS provider label."""
         return self.model
 
     def synthesize(self, text: str, voice: str = "male_us", rate: int = 0) -> SynthesisResult:
+        """Return a backend-unavailable result for browser-only Puter TTS."""
         start = time.time()
         return SynthesisResult(
             provider=self.provider_name,

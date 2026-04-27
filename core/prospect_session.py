@@ -7,6 +7,7 @@ import time
 from dataclasses import dataclass, field
 
 from .loader import load_prospect_config, load_signals
+from .analysis import classify_intent_level
 from .prospect_session_persistence import ProspectSessionPersistence
 from .providers.factory import create_provider, list_fallback_providers
 from .utils import clamp, range_label
@@ -169,6 +170,7 @@ class ProspectSession:
         self.behaviour_rules = behaviour_rules.get(difficulty, "")
 
     def public_config(self) -> dict:
+        """Return the frontend-facing prospect mode settings for this session."""
         return {
             "max_turns": self.max_turns,
             "scoring_enabled": self.scoring_enabled,
@@ -420,10 +422,10 @@ class ProspectSession:
         # Update readiness and outcomes before generation so the response matches end state.
         self._update_readiness(user_message)
 
-        end = self._check_end_conditions()
-        if end == "sold":
+        session_outcome = self._check_end_conditions()
+        if session_outcome == "sold":
             self.state.has_committed = True
-        elif end == "walked":
+        elif session_outcome == "walked":
             self.state.has_walked = True
 
         if self.state.has_committed or self.state.has_walked:
@@ -508,24 +510,25 @@ class ProspectSession:
         self.state.readiness = clamp(self.state.readiness + readiness_change)
 
     def _score_sales_message(self, user_msg: str) -> int:
-        """Score a salesperson's message 1-5 using keyword signals + semantic validation.
+        """Score a salesperson message from 1 to 5 using deterministic signals.
 
-        A higher score indicates stronger sales technique. High scores are validated
-        with a lightweight LLM check to prevent gaming via keyword stuffing.
-
-        Args:
-            user_msg: The salesperson's message to score.
-
-        Returns:
-            Integer score from 1 (poor) to 5 (excellent).
+        The score is keyword-based on purpose so readiness changes stay predictable
+        and fast without needing an extra LLM call.
         """
         from .utils import contains_nonnegated_keyword
 
         msg_lower = user_msg.lower()
         msg_length = len(user_msg.split())
+        intent_level = classify_intent_level(
+            self.conversation_history, user_msg, signal_keywords=SIGNALS
+        )
 
         # Base score starts at 3 (neutral)
         score = 3.0
+
+        # Walking away or shutting down ends the session quickly.
+        if contains_nonnegated_keyword(msg_lower, SIGNALS.get("walking", [])):
+            return 1
 
         # Pushy/urgent language reduces quality.
         if contains_nonnegated_keyword(msg_lower, SIGNALS.get("impatience", [])):
@@ -534,6 +537,13 @@ class ProspectSession:
         # Demand for directness (pressure without rapport)
         if contains_nonnegated_keyword(msg_lower, SIGNALS.get("demand_directness", [])):
             score -= 1.0
+
+        if contains_nonnegated_keyword(msg_lower, SIGNALS.get("commitment", [])):
+            score += 2.0
+        elif intent_level == "high":
+            score += 1.0
+        elif intent_level == "low":
+            score -= 0.5
 
         # Message quality factors
         # Very short messages (< 5 words) are likely low-effort
@@ -566,55 +576,7 @@ class ProspectSession:
             ):
                 score -= 0.5
 
-        score = max(1, min(5, round(score)))
-
-        if score >= 4 and self._should_validate_semantically(user_msg):
-            validated_score = self._validate_message_semantics(user_msg)
-            score = min(score, validated_score)
-
-        return score
-
-    def _should_validate_semantically(self, user_msg: str) -> bool:
-        """Determine if a message needs semantic validation (catch keyword stuffing)."""
-        msg_lower = user_msg.lower()
-        question_count = user_msg.count("?")
-        phrase_count = sum(
-            1
-            for phrase in ("help me understand", "what matters most", "what are you hoping",
-                           "what's most important", "tell me more")
-            if phrase in msg_lower
-        )
-        repeated_punctuation = len([c for c in user_msg if c == "?"]) > 2
-        return repeated_punctuation or (question_count >= 2 and phrase_count >= 2)
-
-    def _validate_message_semantics(self, user_msg: str) -> int:
-        """Use LLM to validate semantic coherence of high-scoring messages.
-
-        Returns downrated score (1-3) if message lacks coherence, else returns 4-5.
-        """
-        try:
-            validation_prompt = f"""You are evaluating a salesperson's message to a prospect.
-
-Message: "{user_msg}"
-
-Context: This is turn {self.state.turn_count} of a sales conversation.
-The prospect's current receptiveness: {self.state.readiness:.2f}
-
-Does this message make coherent, contextual sense? Rate 1-5:
-1 = gibberish/spam, 2 = incoherent, 3 = ok but awkward, 4 = good, 5 = excellent
-Respond with ONLY the number."""
-
-            messages = [
-                {"role": "system", "content": "You are a concise message quality evaluator."},
-                {"role": "user", "content": validation_prompt},
-            ]
-            resp = self._get_chat_with_fallback(messages, temperature=0.3, max_tokens=10)
-            try:
-                return int(resp.content.strip()[:1])
-            except (ValueError, IndexError):
-                return 3
-        except Exception:
-            return 3
+        return max(1, min(5, round(score)))
 
     def _check_end_conditions(self) -> str | None:
         """Check if the session should end and determine the outcome.
@@ -652,7 +614,7 @@ Respond with ONLY the number."""
         Returns:
             Dict with optional 'hint' key containing coaching feedback.
         """
-        r = self.state.readiness
+        readiness = self.state.readiness
         behaviour = self.difficulty_profile["behaviour"]
         turns_left = behaviour["patience_turns"] - self.state.turn_count
 
@@ -664,7 +626,7 @@ Respond with ONLY the number."""
         hint_prompt = f"""You are a sales coach observing a practice session. {tone}
 
 The salesperson just said: "{user_message}"
-The prospect's current readiness: {r:.2f} (0=hostile, 1=ready to buy)
+The prospect's current readiness: {readiness:.2f} (0=hostile, 1=ready to buy)
 Turns remaining before prospect leaves: {turns_left}
 Difficulty: {self.state.difficulty}
 

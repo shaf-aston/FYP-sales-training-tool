@@ -8,10 +8,12 @@
 
 const STT_FALLBACK_ORDER = ["native", "puter"];
 
+// Prefer the browser recognizer when live interim text is available.
 function _hasNativeSpeechRecognition() {
   return Boolean(window.SpeechRecognition || window.webkitSpeechRecognition);
 }
 
+// Fall back to Puter speech-to-text when native recognition is missing.
 function _hasPuterSpeechRecognition() {
   return Boolean(
     window.puter?.ai?.speech2txt &&
@@ -20,6 +22,7 @@ function _hasPuterSpeechRecognition() {
   );
 }
 
+// Pick the first recording format the browser can actually produce.
 function _pickAudioMimeType() {
   if (!window.MediaRecorder || typeof window.MediaRecorder.isTypeSupported !== "function") {
     return "";
@@ -41,6 +44,7 @@ function _pickAudioMimeType() {
   return "";
 }
 
+// Stop every live audio track so the microphone is released cleanly.
 function _disposeAudioStream(stream) {
   if (!stream || typeof stream.getTracks !== "function") return;
   stream.getTracks().forEach((track) => {

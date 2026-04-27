@@ -12,6 +12,7 @@ from ..analytics.session_analytics import SessionAnalytics
 
 class AnalyticsRecorder:
     def record(self, *, session_id: str, event: str, **payload) -> None:
+        """Forward one generic analytics event to the shared session store."""
         SessionAnalytics.record(session_id=session_id, event=event, **payload)
 
     def record_session_start(
@@ -22,6 +23,7 @@ class AnalyticsRecorder:
         initial_strategy: str,
         ab_variant: str | None,
     ) -> None:
+        """Record the first event for a newly created chatbot session."""
         self.record(
             session_id=session_id,
             event="session_start",
@@ -37,6 +39,7 @@ class AnalyticsRecorder:
         intent_level,
         user_turn_count: int,
     ) -> None:
+        """Record the latest intent classification for the current turn."""
         self.record(
             session_id=session_id,
             event="intent_classification",
@@ -53,6 +56,7 @@ class AnalyticsRecorder:
         strategy: str,
         user_turns_in_stage: int,
     ) -> None:
+        """Record a stage transition inside the conversation flow."""
         self.record(
             session_id=session_id,
             event="stage_transition",
@@ -71,6 +75,7 @@ class AnalyticsRecorder:
         reason: str,
         user_turn_count: int,
     ) -> None:
+        """Record when the chatbot switches between strategies."""
         self.record(
             session_id=session_id,
             event="strategy_switch",
@@ -88,6 +93,7 @@ class AnalyticsRecorder:
         strategy: str,
         user_turn_count: int,
     ) -> None:
+        """Record which objection type was classified for the user turn."""
         self.record(
             session_id=session_id,
             event="objection_classified",
@@ -108,6 +114,7 @@ class AnalyticsRecorder:
         user_message_length: int,
         bot_response_length: int,
     ) -> None:
+        """Record latency metrics for the completed stage response."""
         PerformanceTracker.log_stage_latency(
             session_id=session_id,
             stage=stage,

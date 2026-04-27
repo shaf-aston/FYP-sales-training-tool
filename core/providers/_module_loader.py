@@ -10,6 +10,7 @@ from types import ModuleType
 
 @lru_cache(maxsize=None)
 def load_module_from_path(module_name: str, file_path: str) -> ModuleType:
+    """Load a Python module from an explicit file path and cache the result."""
     path = Path(file_path)
     spec = util.spec_from_file_location(module_name, path)
     if spec is None or spec.loader is None:

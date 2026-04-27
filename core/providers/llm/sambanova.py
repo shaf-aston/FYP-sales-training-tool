@@ -19,6 +19,7 @@ class SambaNovaProvider(BaseLLMProvider):
     provider_name = "sambanova"
 
     def __init__(self, model: str | None = None):
+        """Initialise the SambaNova model name, base URL, and API key."""
         self.model = model or os.environ.get("SAMBANOVA_MODEL") or DEFAULT_SAMBANOVA_MODEL
         self.base_url = (
             os.environ.get("SAMBANOVA_BASE_URL") or DEFAULT_SAMBANOVA_BASE_URL
@@ -26,12 +27,15 @@ class SambaNovaProvider(BaseLLMProvider):
         self.api_key = get_sambanova_api_key()
 
     def is_available(self) -> bool:
+        """Return True when a SambaNova API key is configured."""
         return bool(self.api_key)
 
     def get_model_name(self) -> str:
+        """Return the active SambaNova model name."""
         return self.model
 
     def chat(self, messages, temperature=0.8, max_tokens=200, stage=None) -> LLMResponse:
+        """Send one chat completion request to the SambaNova HTTP API."""
         start = time.time()
         if not self.api_key:
             return LLMResponse(

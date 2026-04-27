@@ -22,6 +22,7 @@ STT_PROVIDER_TYPES = {
 
 @lru_cache(maxsize=1)
 def _load_puter_provider():
+    """Load the optional Puter STT provider module on demand."""
     module_path = Path(__file__).with_name("puter-stt.py")
     module = load_module_from_path(
         "core.providers.stt.puter_fallback",
@@ -35,15 +36,18 @@ def _load_puter_provider():
 
 
 def _provider_registry() -> dict[str, type]:
+    """Return the full STT provider registry, including optional providers."""
     _load_puter_provider()
     return STT_PROVIDER_TYPES
 
 
 def supported_stt_provider_names() -> list[str]:
+    """Return the STT provider names exposed by this factory."""
     return list_stt_providers()
 
 
 def list_stt_providers() -> list[str]:
+    """Return STT providers in configured preference order."""
     return ordered_provider_names(
         get_stt_provider_order(),
         DEFAULT_STT_PROVIDER_ORDER,
@@ -52,10 +56,12 @@ def list_stt_providers() -> list[str]:
 
 
 def list_stt_fallback_providers(current_provider: str | None = None) -> list[str]:
+    """Return fallback STT providers after removing the current one."""
     return fallback_provider_names(list_stt_providers(), current_provider)
 
 
 def create_stt_provider(provider_type: str | None = None, model: str | None = None):
+    """Create the requested STT provider or auto-pick the first available one."""
     return create_audio_provider(
         _provider_registry(),
         list_stt_providers(),
@@ -65,4 +71,5 @@ def create_stt_provider(provider_type: str | None = None, model: str | None = No
 
 
 def get_available_stt_providers() -> list[dict[str, object]]:
+    """Return simple availability metadata for each STT provider."""
     return available_provider_metadata(_provider_registry(), list_stt_providers())

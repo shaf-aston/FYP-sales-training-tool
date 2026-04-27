@@ -26,6 +26,7 @@ from .prompts import (
     generate_init_greeting,
     get_base_prompt,
     get_ack_guidance,
+    check_override_condition,
     format_conversation_context,
 )
 from .analysis import (
@@ -37,6 +38,7 @@ from .analysis import (
     is_literal_question,
 )
 from .constants import PERSONA_CHECKPOINT_TURNS, TERSE_INPUT_THRESHOLD
+from .utils import Stage, Strategy
 
 from .objection import _build_objection_context
 
@@ -48,10 +50,10 @@ ELICITATION_TACTICS = [
 
 
 def _build_tactic_guidance(strategy: str, state: Any, user_message: str) -> str:
-    """Generate adaptive bot guidance based on user state.
+    """Return an adaptation block when user state calls for a tactical shift.
 
-    Applies different strategies for decisive vs. guarded users. Returns empty
-    string if no special adaptation needed (user is engaged and open).
+    Returns an empty string when the user is already engaged and no adaptation
+    is needed.
     """
     if state.decisive:
         return get_adaptation_template("decisive_user", strategy=strategy)
@@ -60,7 +62,6 @@ def _build_tactic_guidance(strategy: str, state: Any, user_message: str) -> str:
         if is_literal_question(user_message):
             return get_adaptation_template("literal_question")
 
-        # Determine reason for adaptation
         if state.intent == "low":
             reason = "low intent"
         elif state.guarded:
@@ -68,9 +69,8 @@ def _build_tactic_guidance(strategy: str, state: Any, user_message: str) -> str:
         else:
             reason = "question fatigue (2+ recent questions)"
 
-        # Get elicitation example if consultative
         elicitation_example = ""
-        if strategy == "consultative":
+        if strategy == Strategy.CONSULTATIVE:
             elicitation_example = random.choice(ELICITATION_TACTICS)
 
         return get_adaptation_template(
@@ -124,27 +124,38 @@ Naturally embed 1-2 into your response. Do NOT replay full sentences.
     return preference_context + keyword_context
 
 
+def _get_recent_assistant_question(history) -> str:
+    """Return the most recent assistant question, if any."""
+    if not history:
+        return ""
+    for msg in reversed(history):
+        if msg.get("role") != "assistant":
+            continue
+        content = msg.get("content", "").strip()
+        if "?" in content:
+            return content
+    return ""
+
+
 def _get_stage_specific_prompt(
     strategy, stage, state, user_message, history, objection_data=None
 ):
-    """Select stage-specific prompt and optionally build objection context.
+    """Select the stage prompt and, for objections, build the separate context block.
 
-    Intent stage uses low-intent variant if state indicates low buying signal.
-    Objection stage is handled via _build_objection_context so SOP logic is centralized
-    and reusable. Returns (prompt_string, context_block) so stage_context can be
-    injected separately during final assembly (supports positional bias).
+    Returns:
+        tuple[str, str]: (stage_prompt, stage_context)
+            stage_prompt: The instruction template for the active stage.
+            stage_context: Extra objection SOP text, or an empty string for non-objection stages.
     """
 
-    # Intent stage: pick low-intent or standard prompt
-    if stage == "intent":
+    if stage == Stage.INTENT:
         prompt_key = "intent_low" if state.intent == "low" else "intent"
         return get_prompt(strategy, prompt_key), ""
 
-    if stage in ("logical", "emotional"):
+    if stage in (Stage.LOGICAL, Stage.EMOTIONAL):
         return get_prompt(strategy, stage), ""
 
-    # Objection stage is delegated to chatbot.objection so the rules live in one place
-    if stage == "objection":
+    if stage == Stage.OBJECTION:
         objection_context = _build_objection_context(
             strategy=strategy,
             stage=stage,
@@ -164,22 +175,38 @@ def generate_stage_prompt(
     history: list[dict[str, str]],
     user_message: str = "",
     objection_data: dict | None = None,
-    pre_state=None,
+    turn_state=None,
     include_history: bool = True,
 ) -> str:
     """Build the full system prompt for this turn.
-    Assembly order: base+rules -> ack -> tactics -> stage_prompt -> stage_context
-                    -> drift_note -> history -> preferences -> terse -> checkpoint -> state_block
-    Tactics precede the stage prompt so adaptation guidance informs stage behaviour.
-    History and terse guidance sit late (recency bias).
+
+    Assembly order and rationale:
+        1. base+rules - anchor factual constraints first for primacy
+        2. ack - keep acknowledgement guidance before stage instructions
+        3. tactics - adaptation context should shape how the stage runs
+        4. stage_prompt - the main instruction for the active stage
+        5. stage_context - objection SOP details directly below the stage prompt
+        6. drift_note - correction if the user drifted away from the stage goal
+        7. history - late for recency bias
+        8. preferences - user's own language near generation
+        9. terse - keep brevity constraints close to the output
+        10. checkpoint - periodic persona reinforcement
+        11. state_block - session metadata appended last
     """
     base = get_base_prompt(product_context, strategy)
     state = (
-        pre_state
-        if pre_state is not None
+        turn_state
+        if turn_state is not None
         else analyse_state(history, user_message, signal_keywords=SIGNALS)
     )
     preferences = extract_preferences(history)
+
+    # Tier 1: Override (early exit)
+    override = check_override_condition(
+        base, user_message, stage, history, preferences
+    )
+    if override:
+        return override
 
     # ack level - must appear before the stage prompt
     ack_guidance = get_ack_guidance(detect_ack_context(user_message, history, state))
@@ -197,6 +224,14 @@ def generate_stage_prompt(
     preference_keyword_context = _get_preference_and_keyword_context(
         history, preferences
     )
+    recent_assistant_question = _get_recent_assistant_question(history)
+    repetition_guard = ""
+    if stage == Stage.INTENT and recent_assistant_question:
+        repetition_guard = (
+            "\nRECENT ASSISTANT QUESTION: "
+            f"{recent_assistant_question}\n"
+            "Do not repeat that question. Move forward with a fresh, natural question.\n"
+        )
 
     # tier 6: compute turn metadata (used later when injecting final state block)
     turn_count = len(history) // 2
@@ -205,11 +240,10 @@ def generate_stage_prompt(
     # Keep terse guidance close to generation.
     terse_guidance = ""
     msg_len = len(user_message.split()) if user_message else 0
-    if msg_len < TERSE_INPUT_THRESHOLD and stage != "intent":
+    if msg_len < TERSE_INPUT_THRESHOLD and stage != Stage.INTENT:
         terse_guidance = (
-            "\nTERSE INPUT: Very short answer. Match their brevity. "
-            "Use one short sentence or one short open question. "
-            "No padded validation, no layered follow-up, no over-probing.\n"
+            "\nTERSE INPUT: Very short answer. Make ONE observation, then ONE question. "
+            "Do not over-probe.\n"
         )
 
     # Periodic persona reinforcement: anchor every N turns using the constants
@@ -247,6 +281,7 @@ Intent: {state.intent} | Guarded: {"yes" if state.guarded else "no"}
         + stage_prompt
         + stage_context
         + drift_note
+        + repetition_guard
         + history_block
         + preference_keyword_context
         + terse_guidance

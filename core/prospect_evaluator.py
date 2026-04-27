@@ -55,15 +55,18 @@ _SOLUTION_HINTS = [
 
 
 def _tokenize(text: str) -> list[str]:
+    """Split text into simple lowercase word tokens for rule-based scoring."""
     return re.findall(r"[a-z0-9']+", (text or "").lower())
 
 
 def _contains_any(text: str, hints: list[str]) -> bool:
+    """Return True when any hint phrase appears in the text."""
     lowered = (text or "").lower()
     return any(hint in lowered for hint in hints)
 
 
 def _weighted_overall(criteria_scores: dict, criteria: dict) -> int:
+    """Combine criterion scores into one weighted overall percentage."""
     total = 0.0
     for name, info in criteria.items():
         score = clamp_score(criteria_scores.get(name, {}).get("score", 50))
@@ -72,6 +75,7 @@ def _weighted_overall(criteria_scores: dict, criteria: dict) -> int:
 
 
 def _merge_unique_items(primary: list[str], secondary: list[str], max_items: int = 3) -> list[str]:
+    """Merge two short feedback lists without duplicates or empty entries."""
     seen = set()
     merged = []
     for source in (primary or [], secondary or []):
@@ -193,6 +197,7 @@ def _build_deterministic_criteria_scores(conversation_history: list[dict], crite
 
 
 def _build_deterministic_coaching(criteria_scores: dict) -> tuple[list[str], list[str], str]:
+    """Turn criterion scores into strengths, improvements, and one coach tip."""
     labels = {
         "needs_discovery": "needs discovery",
         "rapport_building": "rapport building",
@@ -225,6 +230,7 @@ def _build_deterministic_coaching(criteria_scores: dict) -> tuple[list[str], lis
 
 
 def _build_deterministic_summary(overall_score: int, outcome: str) -> str:
+    """Summarise the session in one short sentence based on score band."""
     if overall_score >= 80:
         return f"Solid session with clear control and progression. Outcome: {outcome}."
     if overall_score >= 65:
@@ -259,6 +265,7 @@ def evaluate_prospect_session(provider, conversation_history, prospect_state, pr
     }
 
     def _apply_style(text: str) -> str:
+        """Tighten feedback wording when strict coaching mode is active."""
         if feedback_style in ("strict", "tough", "hard"):
             return text.replace("Try to", "Do").replace("Add", "Add").strip()
         return text

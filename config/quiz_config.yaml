@@ -67,13 +67,23 @@ stages:
 
     pitch:
       goal: "Present matching options with assumptive close"
-      advance_when: "User commits or raises objection"
-      next_stage: "objection"
+      advance_when: "User asks about terms, commits, or raises objection"
+      next_stage: "negotiation"
       key_concepts:
         - "Match to stated needs"
         - "Sensory language"
         - "Price and availability included"
-        - "Lead to action"
+        - "Lead into terms discussion"
+
+    negotiation:
+      goal: "Resolve remaining terms before objection handling"
+      advance_when: "Budget, payment, or other terms are clarified"
+      next_stage: "objection"
+      key_concepts:
+        - "Keep terms discussion concise"
+        - "Use exact price and payment details"
+        - "No emotional probing"
+        - "One question only"
 
     objection:
       goal: "Address concerns directly and redirect to value"

@@ -19,6 +19,7 @@ class SessionRepository:
         initial_flow_type,
         turn_snapshots: list,
     ) -> bool:
+        """Persist the minimum chatbot state needed for session recovery."""
         return bool(
             SessionPersistence.save(
                 session_id=session_id,
@@ -34,4 +35,5 @@ class SessionRepository:
         )
 
     def load_chatbot_state(self, session_id: str) -> dict | None:
+        """Load a saved chatbot session state if one exists."""
         return SessionPersistence.load(session_id)

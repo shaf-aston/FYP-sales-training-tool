@@ -489,6 +489,24 @@ advancement:
       - "unreliable"
       - "inconsistent"
 
+  # Negotiation stage (transactional)
+  negotiation:
+    max_turns: 8  # Safety valve for terms discussion
+    min_matches: 1
+    terms_keywords:
+      - "price"
+      - "pricing"
+      - "cost"
+      - "quote"
+      - "budget"
+      - "payment"
+      - "payment plan"
+      - "monthly"
+      - "per month"
+      - "terms"
+      - "deposit"
+      - "finance"
+
   # Emotional certainty stage (consultative)
   emotional:
     max_turns: 10  # Safety valve (was 6, updated to enforce framework)

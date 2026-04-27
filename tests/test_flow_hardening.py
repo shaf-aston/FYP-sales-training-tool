@@ -72,6 +72,18 @@ def test_common_transitions_are_not_shared_between_flows():
     assert consultative_pitch is not transactional_pitch
 
 
+def test_transactional_flow_includes_negotiation_stage():
+    assert flow.FLOWS[Strategy.TRANSACTIONAL]["stages"] == [
+        Stage.INTENT,
+        Stage.PITCH,
+        Stage.NEGOTIATION,
+        Stage.OBJECTION,
+        Stage.OUTCOME,
+    ]
+    assert flow.FLOWS[Strategy.TRANSACTIONAL]["transitions"][Stage.PITCH]["next"] == Stage.NEGOTIATION
+    assert flow.FLOWS[Strategy.TRANSACTIONAL]["transitions"][Stage.NEGOTIATION]["next"] == Stage.OBJECTION
+
+
 def test_commitment_or_walkaway_rule_signature_matches_fsm_contract():
     assert flow.commitment_or_walkaway([], "not now", 1) in {True, False}
 
@@ -140,7 +152,7 @@ def test_intent_strategy_switches_to_transactional_for_budget_signal(monkeypatch
 
     assert engine.evaluate_strategy_switch("My budget is 500 a month") is True
     assert engine.flow_type == Strategy.TRANSACTIONAL
-    assert engine.current_stage == Stage.PITCH
+    assert engine.current_stage == Stage.INTENT
 
 
 def test_directness_override_does_not_regress_from_objection_to_pitch(monkeypatch):
@@ -159,3 +171,70 @@ def test_directness_override_does_not_regress_from_objection_to_pitch(monkeypatc
     engine.current_stage = Stage.OBJECTION
 
     assert engine.should_advance("What's the price?") is None
+
+
+def test_consultative_logical_does_not_jump_to_pitch_on_price_request(monkeypatch):
+    monkeypatch.setattr(
+        flow,
+        "SIGNALS",
+        {
+            "commitment": [],
+            "direct_info_requests": ["price"],
+            "impatience": ["now"],
+        },
+    )
+    monkeypatch.setattr(flow, "user_demands_directness", lambda *_args: True)
+
+    engine = SalesFlowEngine(Strategy.CONSULTATIVE, "test product")
+    engine.current_stage = Stage.LOGICAL
+
+    assert engine.should_advance("What's the price now?") is None
+
+
+def test_transactional_pitch_advances_to_negotiation_on_terms_request(monkeypatch):
+    monkeypatch.setattr(
+        flow,
+        "SIGNALS",
+        {
+            "commitment": [],
+            "objection": [],
+            "walking": [],
+            "impatience": [],
+            "demand_directness": [],
+            "direct_info_requests": ["how much"],
+            "high_intent": [],
+            "low_intent": [],
+            "signal_priority": ["high_intent", "low_intent"],
+            "user_transactionalSIGNALS": [],
+        },
+    )
+    monkeypatch.setattr(
+        flow,
+        "ANALYSIS_CONFIG",
+        {
+            "advancement": {
+                "negotiation": {"terms_keywords": ["how much"], "max_turns": 8},
+            },
+            "preference_keywords": {"budget": ["budget"]},
+        },
+    )
+
+    engine = SalesFlowEngine(Strategy.TRANSACTIONAL, "test product")
+    engine.current_stage = Stage.PITCH
+    engine.stage_turn_count = 1
+
+    assert engine.should_advance("How much is it?") == Stage.NEGOTIATION
+
+
+def test_commitment_at_pitch_advances_directly_to_outcome():
+    engine = SalesFlowEngine(Strategy.CONSULTATIVE, "test product")
+    engine.current_stage = Stage.PITCH
+
+    assert engine.should_advance("Let's go") == Stage.OUTCOME
+
+
+def test_commitment_at_negotiation_advances_directly_to_outcome():
+    engine = SalesFlowEngine(Strategy.TRANSACTIONAL, "test product")
+    engine.current_stage = Stage.NEGOTIATION
+
+    assert engine.should_advance("Let's go") == Stage.OUTCOME

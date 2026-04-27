@@ -28,13 +28,16 @@ class ConversationState:
     guarded: bool  # defensive/evasive behaviour detected
     question_fatigue: bool  # bot asked too many questions recently
     decisive: bool  # high intent + not guarded
+    terms: bool = False  # user discusses budget / payment / terms
     doubt: bool = False   # user shows doubt/pain → feeds logical stage advancement
     stakes: bool = False  # user expresses emotional stakes → feeds emotional stage advancement
 
     def __getitem__(self, key: str):
+        """Allow dict-style access for older call sites that expect a mapping."""
         return getattr(self, key)
 
     def get(self, key: str, default=None):
+        """Mirror `dict.get` so state reads stay concise in legacy helpers."""
         return getattr(self, key, default)
 
 
@@ -64,7 +67,7 @@ class ObjectionPathway(TypedDict):
 ANALYSIS_CONFIG = load_analysis_config()
 THRESHOLDS = ANALYSIS_CONFIG["thresholds"]
 SIGNALS = load_signals()
-OFLOWS = load_objection_flows()
+OBJECTION_FLOWS = load_objection_flows()
 
 STOP_WORDS = frozenset(
     {
@@ -198,7 +201,6 @@ def has_user_stated_clear_goal(history) -> bool:
 
 
 def flatten_keywords(keywords):
-    """Flatten nested keyword groups"""
     if not keywords:
         return []
     if isinstance(keywords, list):
@@ -212,7 +214,6 @@ def flatten_keywords(keywords):
 
 
 def classify_intent_level(history, user_message="", signal_keywords=None) -> str:
-    """Classify intent as low, medium, or high"""
     if signal_keywords is None:
         signal_keywords = SIGNALS
 
@@ -357,18 +358,26 @@ def analyse_state(
             >= THRESHOLDS["question_fatigue_threshold"]
         )
 
-    adv = ANALYSIS_CONFIG.get("advancement", {})
+    advancement_config = ANALYSIS_CONFIG.get("advancement", {})
     user_lower = (user_message or "").lower()
+    terms = bool(
+        user_message
+        and contains_nonnegated_keyword(
+            user_lower,
+            advancement_config.get("negotiation", {}).get("terms_keywords", []),
+        )
+    )
     doubt = bool(
         user_message
         and contains_nonnegated_keyword(
-            user_lower, adv.get("logical", {}).get("doubt_keywords", [])
+            user_lower, advancement_config.get("logical", {}).get("doubt_keywords", [])
         )
     )
     stakes = bool(
         user_message
         and contains_nonnegated_keyword(
-            user_lower, adv.get("emotional", {}).get("stakes_keywords", [])
+            user_lower,
+            advancement_config.get("emotional", {}).get("stakes_keywords", []),
         )
     )
 
@@ -377,6 +386,7 @@ def analyse_state(
         guarded=guarded,
         question_fatigue=question_fatigue,
         decisive=decisive,
+        terms=terms,
         doubt=doubt,
         stakes=stakes,
     )
@@ -406,19 +416,25 @@ def extract_user_keywords(
     history: list[dict[str, str]], max_keywords: int = MAX_USER_KEYWORDS
 ) -> list[str]:
     """Extract the user's key terms (nouns/descriptors) for lexical entrainment"""
-    keywords: dict[str, None] = {}
-    for msg in history:
-        if msg["role"] == "user":
-            for word in msg["content"].lower().split():
-                cleaned = word.strip(".,!?;:'\"")
-                if (
-                    cleaned
-                    and len(cleaned) > 2
-                    and cleaned not in STOP_WORDS
-                    and cleaned not in keywords
-                ):
-                    keywords[cleaned] = None
-    return list(keywords)[-max_keywords:]
+    recent_keywords: list[str] = []
+    seen: set[str] = set()
+    for msg in reversed(history):
+        if msg["role"] != "user":
+            continue
+        words = msg["content"].lower().split()
+        for word in reversed(words):
+            cleaned = word.strip(".,!?;:'\"")
+            if (
+                cleaned
+                and len(cleaned) > 2
+                and cleaned not in STOP_WORDS
+                and cleaned not in seen
+            ):
+                seen.add(cleaned)
+                recent_keywords.append(cleaned)
+                if len(recent_keywords) >= max_keywords:
+                    return list(reversed(recent_keywords))
+    return list(reversed(recent_keywords))
 
 
 def detect_topic_drift(user_message: str, stage: str) -> str:
@@ -445,7 +461,6 @@ def detect_topic_drift(user_message: str, stage: str) -> str:
 
 
 def is_literal_question(user_message) -> bool:
-    """True if the user is asking for information (not rhetorical)"""
     if not user_message:
         return False
     msg = user_message.lower().strip()
@@ -461,6 +476,7 @@ def is_literal_question(user_message) -> bool:
     msg_norm = re.sub(r"\s+", " ", msg_norm).strip()
 
     def _norm(s: str) -> str:
+        """Normalise punctuation and spacing before rhetorical marker checks."""
         s2 = re.sub(r"[^\w\s']", " ", s.lower())
         return re.sub(r"\s+", " ", s2).strip()
 
@@ -470,9 +486,10 @@ def is_literal_question(user_message) -> bool:
 
 
 def commitment_or_walkaway(
-    history: list[dict[str, str]], user_msg: str, turns: int, pre_state=None
+    history: list[dict[str, str]], user_msg: str, turns: int, turn_state=None
 ) -> bool:
     """True when user commits or walks away (objection stage exit)"""
+    # turn_state parameter exists to match the FSM dispatch table calling convention
     return contains_nonnegated_keyword(
         user_msg.lower(), SIGNALS.get("commitment", [])
     ) or contains_nonnegated_keyword(user_msg.lower(), SIGNALS.get("walking", []))

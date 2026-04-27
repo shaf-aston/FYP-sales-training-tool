@@ -5,6 +5,7 @@ let isTyping = false,
 // Persist/restore session across refresh/navigation (server still enforces idle TTL).
 const SESSION_STORAGE_KEY = "salesRoleplaySessionId";
 
+// Read the saved session id so a refresh can reconnect to the same chat.
 function getStoredSessionId() {
   try {
     const sid = localStorage.getItem(SESSION_STORAGE_KEY);
@@ -14,14 +15,16 @@ function getStoredSessionId() {
   }
 }
 
-function storeSessionId(sid) {
+// Save the active session id after the server creates or restores it.
+function storeSessionId(sessionIdValue) {
   try {
-    if (typeof sid === "string" && sid.trim()) {
-      localStorage.setItem(SESSION_STORAGE_KEY, sid.trim());
+    if (typeof sessionIdValue === "string" && sessionIdValue.trim()) {
+      localStorage.setItem(SESSION_STORAGE_KEY, sessionIdValue.trim());
     }
   } catch (_) {}
 }
 
+// Remove the saved session id when a session is reset or expires.
 function clearStoredSessionId() {
   try {
     localStorage.removeItem(SESSION_STORAGE_KEY);
@@ -36,11 +39,83 @@ let _prospectMode = false;
 let _prospectSessionId = null;
 let _prospectDifficulty = "medium";
 let _prospectProductType = "default";
+let _prospectMaxTurns = null;
+let _prospectScoringEnabled = true;
+let _prospectFeedbackStyle = "coaching";
 let _prospectSettings = {
   showHints: true,
   evalDisplay: "inline",
 };
 let _flowControlsEnabled = false;
+let _sidebarTab = localStorage.getItem("sidebarTab") || "session";
+let _lastTrainingHintToast = "";
+
+const STRATEGY_META = {
+  "-": {
+    label: "Not started",
+    note: "Begin the conversation to start tracking the flow.",
+  },
+  intent: {
+    label: "Discovery check-in",
+    note: "You are still confirming what the buyer actually wants.",
+  },
+  consultative: {
+    label: "Guided discovery",
+    note: "This path explores needs, doubts, stakes, and then the offer.",
+  },
+  transactional: {
+    label: "Direct style",
+    note: "This path moves quickly toward fit, pitch, and objections.",
+  },
+  "prospect mode": {
+    label: "Prospect practice",
+    note: "You are in roleplay mode with a live buyer persona.",
+  },
+};
+
+const FLOW_STAGE_META = {
+  intent: {
+    label: "Discovery",
+    note: "Learn what the buyer needs before you push a solution.",
+  },
+  logical: {
+    label: "Qualification",
+    note: "Surface doubts, constraints, and practical decision criteria.",
+  },
+  emotional: {
+    label: "Buyer stakes",
+    note: "Find the personal or business consequence behind the need.",
+  },
+  pitch: {
+    label: "Proposal",
+    note: "Tie the offer directly to the buyer's priorities.",
+  },
+  objection: {
+    label: "Objection handling",
+    note: "Address concerns without losing momentum.",
+  },
+  outcome: {
+    label: "Close",
+    note: "Confirm the next step, commitment, or clear outcome.",
+  },
+  default: {
+    label: "Not started",
+    note: "Begin the conversation to start tracking the flow.",
+  },
+};
+
+const FLOW_STAGE_ORDER = {
+  consultative: [
+    "intent",
+    "logical",
+    "emotional",
+    "pitch",
+    "objection",
+    "outcome",
+  ],
+  transactional: ["intent", "pitch", "objection", "outcome"],
+  intent: ["intent"],
+};
 
 const _serverEnv = document.getElementById("server-env")?.dataset || {};
 if (_serverEnv.flowControlsEnabled === "true") {
@@ -66,7 +141,7 @@ try {
   console.warn("prospect settings restore failed:", e);
 }
 
-// Voice Mode State
+// Voice mode state
 let handsFreeMode = false;
 let currentTtsAudio = null;
 let ttsPlaybackSpeed = parseInt(
@@ -82,7 +157,7 @@ let ttsPlaybackGeneration = 0;
 let ttsPlaybackPending = false;
 let _handsFreeRestartAttempts = 0;
 
-// Settings Toggles
+// Voice settings helpers.
 function toggleAutoSend() {
   const checkbox = document.getElementById("autoSendDictationToggle");
   shouldAutoSendAfterSilence = checkbox.checked;
@@ -92,8 +167,8 @@ function toggleAutoSend() {
   );
 }
 
-function updateTtsSpeed(value) {
-  ttsPlaybackSpeed = parseInt(value);
+function updateTtsSpeed(speedValue) {
+  ttsPlaybackSpeed = parseInt(speedValue);
   const speedValue = document.getElementById("ttsSpeedValue");
   const speedPercent = document.getElementById("ttsSpeedPercent");
 
@@ -110,7 +185,7 @@ function updateTtsSpeed(value) {
   localStorage.setItem("ttsPlaybackSpeed", ttsPlaybackSpeed);
 }
 
-// Initialize TTS speed slider from localStorage
+// Restore the saved TTS speed into the slider and label.
 function initTtsSpeedControl() {
   const slider = document.getElementById("ttsSpeedSlider");
   if (slider) {
@@ -119,15 +194,15 @@ function initTtsSpeedControl() {
   }
 }
 
-// Training Style
+// Keep the selected training answer style in sync with local storage.
 let trainingStyle = localStorage.getItem("trainingStyle") || "tactical";
 
-function changeTrainingStyle(val) {
-  trainingStyle = val;
-  localStorage.setItem("trainingStyle", val);
+function changeTrainingStyle(nextStyle) {
+  trainingStyle = nextStyle;
+  localStorage.setItem("trainingStyle", nextStyle);
 }
 
-// Session Managementâ”€â”€â”€â”€
+// Small session state accessors used across the UI.
 function getSessionId() {
   return sessionId;
 }
@@ -140,7 +215,7 @@ function hasProspectContext() {
   );
 }
 
-// In-memory history only. Sessions are intentionally not restored after refresh.
+// Keep only the in-memory conversation copy used by the UI.
 // Stored as [{role:"user"|"assistant", content:str}]
 let _cachedHistory = [];
 
@@ -154,6 +229,103 @@ function trimHistoryCache() {
 function clearStoredHistory() {
   _cachedHistory = [];
   _loadedStagesForStrategy = null;
+}
+
+function normalizeKey(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase();
+}
+
+function appendChatMessage(
+  text,
+  sender,
+  metrics = null,
+  { updateCache = true } = {},
+) {
+  const container = document.getElementById("chatContainer");
+  setIntroVisibility(true);
+  let msgIdx = null;
+  if (sender === "user") {
+    msgIdx = userTurnIndex * 2;
+    userTurnIndex += 1;
+  }
+
+  const el = createMessageElement(text, sender, msgIdx, metrics);
+  container.appendChild(el);
+  requestAnimationFrame(() => {
+    container.scrollTop = container.scrollHeight;
+  });
+
+  if (!updateCache) return;
+
+  _cachedHistory.push({
+    role: sender === "user" ? "user" : "assistant",
+    content: text,
+  });
+  trimHistoryCache();
+}
+
+function getStrategyMeta(strategy) {
+  const key = normalizeKey(strategy);
+  return STRATEGY_META[key] || {
+    label: key ? key.replace(/\b\w/g, (m) => m.toUpperCase()) : "Not started",
+    note: STRATEGY_META["-"].note,
+  };
+}
+
+function getStageMeta(stage) {
+  const key = normalizeKey(stage);
+  return FLOW_STAGE_META[key] || FLOW_STAGE_META.default;
+}
+
+function getCurrentFlowOrder() {
+  const key = normalizeKey(_currentStrategy);
+  return FLOW_STAGE_ORDER[key] || FLOW_STAGE_ORDER.consultative;
+}
+
+function updateWorkflowProgress() {
+  const progressEl = document.getElementById("workflowProgress");
+  if (!progressEl) return;
+
+  if (_prospectMode || normalizeKey(_currentStrategy) === "prospect mode") {
+    progressEl.innerHTML = `
+      <div class="progress-step current">
+        <span class="progress-dot" aria-hidden="true"></span>
+        <span class="progress-label">Prospect practice live</span>
+      </div>
+    `;
+    return;
+  }
+
+  const stages = getCurrentFlowOrder();
+  const currentStageKey = normalizeKey(_currentStage);
+  const currentIdx = stages.indexOf(currentStageKey);
+
+  progressEl.innerHTML = "";
+  stages.forEach((stage, idx) => {
+    const meta = getStageMeta(stage);
+    const step = document.createElement("div");
+    const isCurrent = stage === currentStageKey;
+    const isCompleted = currentIdx >= 0 && idx < currentIdx;
+    step.className = `progress-step${isCurrent ? " current" : ""}${isCompleted ? " completed" : ""}`;
+    step.innerHTML = `
+      <span class="progress-dot" aria-hidden="true"></span>
+      <span class="progress-label">${meta.label}</span>
+    `;
+    progressEl.appendChild(step);
+  });
+}
+
+function updateStatusNote(note) {
+  const noteEl = document.getElementById("stageStatusNote");
+  if (noteEl) noteEl.textContent = note;
+}
+
+function setIntroVisibility(hidden) {
+  const intro = document.getElementById("chatIntroCard");
+  if (!intro) return;
+  intro.classList.toggle("hidden", hidden);
 }
 
 function normalizeConversationHistory(history) {
@@ -191,21 +363,13 @@ function normalizeConversationHistory(history) {
   return normalized;
 }
 
-function renderHistory(history) {
-  const container = document.getElementById("chatContainer");
-  container.innerHTML = "";
-  userTurnIndex = 0;
-  history.forEach((m) =>
-    renderMessage(m.content, m.role === "user" ? "user" : "bot"),
-  );
-}
-
 function replaceConversationHistory(history) {
   _cachedHistory = normalizeConversationHistory(history);
   trimHistoryCache();
   const container = document.getElementById("chatContainer");
   container.innerHTML = "";
   userTurnIndex = 0;
+  setIntroVisibility(Array.isArray(history) && history.length > 0);
   if (Array.isArray(history)) {
     history.forEach((m) => renderMessage(m.content, m.role === "user" ? "user" : "bot"));
   }
@@ -218,6 +382,7 @@ function resetConversationState() {
   _currentStrategy = "-";
   updateStage("intent");
   updateStrategy("-");
+  setIntroVisibility(false);
   syncModeChrome();
 }
 
@@ -232,7 +397,16 @@ function syncKnowledgeBaseLink() {
   const isProspectContext = isDedicatedProspectPage() || _prospectMode;
 
   link.href = isProspectContext ? "/knowledge?mode=prospect" : "/knowledge";
-  link.textContent = isProspectContext ? "Prospect Knowledge" : "Knowledge";
+  const title = link.querySelector(".tool-title");
+  const copy = link.querySelector(".tool-copy");
+  if (title) {
+    title.textContent = isProspectContext ? "Prospect knowledge" : "Knowledge";
+  }
+  if (copy) {
+    copy.textContent = isProspectContext
+      ? "Review notes tied to your prospect roleplay."
+      : "Browse notes and product details.";
+  }
 }
 
 function isDedicatedProspectPage() {
@@ -322,6 +496,7 @@ function clearProspectSessionState() {
   _prospectMode = false;
   _prospectSessionId = null;
   clearProspectEvaluationPanel();
+  setTrainingPanelEmptyState();
   syncKnowledgeBaseLink();
   syncModeChrome();
 }
@@ -375,7 +550,7 @@ async function restoreProspectSession(sessionId) {
   });
 }
 
-// Text-to-Speech Functions
+// Text-to-speech helpers
 const tts = {
   speak: (t) => playAssistantTts(t).then(() => true),
   stop: () => stopTtsPlayback(),
@@ -400,9 +575,22 @@ function showToast(message, type = "info") {
     left: 50%;
     transform: translateX(-50%);
     padding: 12px 24px;
-    border-radius: 8px;
-    background: ${type === "error" ? "#dc2626" : type === "success" ? "#16a34a" : "#2563eb"};
-    color: white;
+    border-radius: 16px;
+    background: ${
+      type === "error"
+        ? "#7f2727"
+        : type === "success"
+          ? "#43592a"
+          : "#5c4220"
+    };
+    border: 1px solid ${
+      type === "error"
+        ? "rgba(232, 90, 90, 0.45)"
+        : type === "success"
+          ? "rgba(196, 232, 138, 0.4)"
+          : "rgba(232, 180, 90, 0.4)"
+    };
+    color: #f1e8da;
     font-size: 14px;
     z-index: 10000;
     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
@@ -519,9 +707,7 @@ async function postSessionJson(url, body) {
 
 function setFlowControlsEnabled(enabled) {
   [
-    "stageSelect",
     "stageSelectMain",
-    "jumpStageBtn",
     "jumpStageMainBtn",
     "strategySelectMain",
     "switchStrategyBtn",
@@ -536,36 +722,32 @@ function populateStageSelects(stages, selectedStage = "") {
     .trim()
     .toLowerCase();
 
-  ["stageSelect", "stageSelectMain"].forEach((id) => {
-    const select = document.getElementById(id);
-    if (!select) return;
+  const select = document.getElementById("stageSelectMain");
+  if (!select) return;
 
-    select.innerHTML = "";
+  select.innerHTML = "";
 
-    const placeholder = document.createElement("option");
-    placeholder.value = "";
-    placeholder.textContent = stages.length
-      ? "Select stage..."
-      : "No stages available";
-    select.appendChild(placeholder);
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = stages.length
+    ? "Select stage..."
+    : "No stages available";
+  select.appendChild(placeholder);
 
-    stages.forEach((stage) => {
-      const normalizedStage = String(stage || "")
-        .trim()
-        .toLowerCase();
-      if (!normalizedStage) return;
+  stages.forEach((stage) => {
+    const normalizedStage = String(stage || "")
+      .trim()
+      .toLowerCase();
+    if (!normalizedStage) return;
 
-      const option = document.createElement("option");
-      option.value = normalizedStage;
-      option.textContent = normalizedStage.toUpperCase();
-      select.appendChild(option);
-    });
-
-    select.value = stages.includes(normalizedSelected)
-      ? normalizedSelected
-      : "";
-    select.disabled = stages.length === 0;
+    const option = document.createElement("option");
+    option.value = normalizedStage;
+    option.textContent = getStageMeta(normalizedStage).label;
+    select.appendChild(option);
   });
+
+  select.value = stages.includes(normalizedSelected) ? normalizedSelected : "";
+  select.disabled = stages.length === 0;
 }
 
 async function loadStageOptions() {
@@ -608,14 +790,14 @@ async function loadStageOptions() {
   } catch (error) {
     console.warn("Stage options unavailable:", error);
     populateStageSelects([]);
-    setFlowControlsEnabled(false);
+    // Keep strategy controls usable even if the stage list cannot be loaded.
+    setFlowControlsEnabled(Boolean(getSessionId()));
     return [];
   }
 }
 
-async function jumpStage(selectId = "stageSelect") {
-  const select =
-    document.getElementById(selectId) || document.getElementById("stageSelect");
+async function jumpStage(selectId = "stageSelectMain") {
+  const select = document.getElementById(selectId);
   const stage = String(select?.value || "")
     .trim()
     .toLowerCase();
@@ -629,7 +811,7 @@ async function jumpStage(selectId = "stageSelect") {
     const data = await requestStageJump(stage);
     updateSessionUI(data);
     await loadStageOptions();
-    showToast(`Jumped to ${stage.toUpperCase()}`, "success");
+    showToast(`Moved to ${getStageMeta(stage).label}`, "success");
   } catch (error) {
     showToast(error.message || "Stage jump failed", "error");
   }
@@ -639,9 +821,22 @@ async function switchStrategy(selectId = "strategySelectMain") {
   const select =
     document.getElementById(selectId) ||
     document.getElementById("strategySelectMain");
-  const strategy = String(select?.value || "")
+  const availableStrategies = Array.from(select?.options || [])
+    .map((opt) => String(opt?.value || "").trim().toLowerCase())
+    .filter(Boolean);
+  let strategy = String(select?.value || "")
     .trim()
     .toLowerCase();
+
+  if (!strategy) {
+    strategy =
+      availableStrategies.find((option) => option !== _currentStrategy) ||
+      availableStrategies[0] ||
+      "";
+    if (select && strategy) {
+      select.value = strategy;
+    }
+  }
 
   if (!strategy) {
     showToast("Pick a strategy first", "info");
@@ -652,7 +847,7 @@ async function switchStrategy(selectId = "strategySelectMain") {
     const data = await requestStrategySwitch(strategy);
     updateSessionUI(data);
     await loadStageOptions();
-    showToast(`Strategy set to ${strategy.toUpperCase()}`, "success");
+    showToast(`Approach set to ${getStrategyMeta(strategy).label}`, "success");
   } catch (error) {
     syncStrategySelectors(_currentStrategy);
     showToast(error.message || "Strategy switch failed", "error");
@@ -664,16 +859,19 @@ async function executeFlowVoiceCommand(command) {
 
   try {
     if (command.type === "stage") {
-      const d = await requestStageJump(command.value);
-      updateSessionUI(d);
-      showToast("Voice: jumped -> " + command.value.toUpperCase(), "info");
+      const stageData = await requestStageJump(command.value);
+      updateSessionUI(stageData);
+      showToast(`Voice: moved to ${getStageMeta(command.value).label}`, "info");
       return true;
     }
 
     if (command.type === "strategy") {
-      const d = await requestStrategySwitch(command.value);
-      updateSessionUI(d);
-      showToast("Voice: strategy -> " + command.value.toUpperCase(), "info");
+      const strategyData = await requestStrategySwitch(command.value);
+      updateSessionUI(strategyData);
+      showToast(
+        `Voice: approach set to ${getStrategyMeta(command.value).label}`,
+        "info",
+      );
       return true;
     }
   } catch (e) {
@@ -734,13 +932,13 @@ function createMessageElement(text, sender, msgIdx, metrics = null) {
     bubble.innerHTML = safeText
       .split("\n")
       .map((l) => {
-        const s = document.createElement("span");
+        const textSpan = document.createElement("span");
         if (sender === "bot") {
-          s.innerHTML = DOMPurify.sanitize(parseMarkdown(l));
+          textSpan.innerHTML = DOMPurify.sanitize(parseMarkdown(l));
         } else {
-          s.textContent = l;
+          textSpan.textContent = l;
         }
-        return s.outerHTML;
+        return textSpan.outerHTML;
       })
       .join("<br>");
   }
@@ -751,8 +949,8 @@ function createMessageElement(text, sender, msgIdx, metrics = null) {
   if (sender === "bot") {
     const btn = Object.assign(document.createElement("button"), {
       className: "tts-btn",
-      innerHTML: "🔊",
-      title: "Read aloud",
+      innerHTML: "Listen",
+      title: "Listen to this response",
     });
     btn.onclick = () => {
       if (tts.isSpeaking()) {
@@ -768,7 +966,7 @@ function createMessageElement(text, sender, msgIdx, metrics = null) {
   } else {
     const btn = Object.assign(document.createElement("button"), {
       className: "edit-btn",
-      innerHTML: "âœï¸ Edit",
+      innerHTML: "Edit",
     });
     btn.textContent = "Edit";
     if (_prospectMode) {
@@ -787,16 +985,12 @@ function createMessageElement(text, sender, msgIdx, metrics = null) {
   if (metrics && sender === "bot") {
     const metricsDiv = document.createElement("div");
     metricsDiv.className = "message-metrics";
-    let t = `${metrics.latency_ms.toFixed(1)}ms`;
-    if (metrics.provider) t += ` • ${metrics.provider}`;
+    const latencyMs = Number(metrics.latency_ms || 0);
+    let metricsText = `${latencyMs.toFixed(1)}ms`;
+    if (metrics.provider) metricsText += ` - ${metrics.provider}`;
     if (metrics.input_length || metrics.output_length)
-      t += ` • ${metrics.input_length}→${metrics.output_length}`;
-    t = `${metrics.latency_ms.toFixed(1)}ms`;
-    if (metrics.provider) t += ` - ${metrics.provider}`;
-    if (metrics.input_length || metrics.output_length) {
-      t += ` - ${metrics.input_length}->${metrics.output_length}`;
-    }
-    metricsDiv.textContent = t;
+      metricsText += ` - ${metrics.input_length}->${metrics.output_length}`;
+    metricsDiv.textContent = metricsText;
     msg.appendChild(metricsDiv);
   }
 
@@ -1011,6 +1205,8 @@ window.addEventListener("DOMContentLoaded", () => {
   const ta = document.getElementById("messageInput");
   ta.addEventListener("input", () => autoResizeTextarea(ta));
   speechRecognizer = new SpeechRecognizer();
+  setSidebarTab(_sidebarTab);
+  updateWorkflowProgress();
 
   const autoSendCheckbox = document.getElementById("autoSendDictationToggle");
   if (autoSendCheckbox) {
@@ -1025,6 +1221,7 @@ window.addEventListener("DOMContentLoaded", () => {
   syncKnowledgeBaseLink();
   syncModeChrome();
   syncStrategySelectors(_currentStrategy);
+  setTrainingPanelEmptyState();
 
   if (isDedicatedProspectPage()) {
     openProspectSetup();
@@ -1032,52 +1229,46 @@ window.addEventListener("DOMContentLoaded", () => {
     initChatbot();
     // Restore training panel open state
     if (localStorage.getItem("trainingPanelOpen") === "true") {
-      document.getElementById("trainingPanel").classList.add("open");
-      document.querySelector(".container").classList.add("panel-open");
+      toggleTrainingPanel();
     }
   }
+
+  window.addEventListener("resize", syncPanelShellState);
+
+  document.addEventListener("click", (event) => {
+    const target = event.target;
+    if (
+      !target.closest(".overflow-menu") &&
+      !target.closest("#feedbackDropdown") &&
+      !target.closest(".feedback-pill")
+    ) {
+      closeResetMenu();
+      if (!target.closest("#feedbackDropdown")) {
+        document.getElementById("feedbackDropdown")?.classList.remove("open");
+      }
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeResetMenu();
+      closeResetModal();
+      document.getElementById("feedbackDropdown")?.classList.remove("open");
+    }
+  });
+
+  syncPanelShellState();
 });
 
 // renderMessage Function
 // Render-only (no cache side effects). Used during history restore.
 function renderMessage(text, sender) {
-  const container = document.getElementById("chatContainer");
-  let msgIdx = null;
-  if (sender === "user") {
-    msgIdx = userTurnIndex * 2;
-    userTurnIndex += 1;
-  }
-  const el = createMessageElement(text, sender, msgIdx, null);
-  container.appendChild(el);
-  requestAnimationFrame(() => {
-    container.scrollTop = container.scrollHeight;
-  });
+  appendChatMessage(text, sender, null, { updateCache: false });
 }
 
 // addMessage Function
 function addMessage(text, sender, metrics = null) {
-  // Render to DOM first (without cache side effects)
-  const container = document.getElementById("chatContainer");
-  let msgIdx = null;
-  if (sender === "user") {
-    msgIdx = userTurnIndex * 2;
-    userTurnIndex += 1;
-  }
-
-  const el = createMessageElement(text, sender, msgIdx, metrics);
-  container.appendChild(el);
-  requestAnimationFrame(() => {
-    container.scrollTop = container.scrollHeight;
-  });
-
-  // Then update cache (unique to addMessage, not called during restore)
-  if (sender === "user") {
-    _cachedHistory.push({ role: "user", content: text });
-  } else {
-    // Cache all bot responses (including initial greeting)
-    _cachedHistory.push({ role: "assistant", content: text });
-  }
-  trimHistoryCache();
+  appendChatMessage(text, sender, metrics);
 }
 
 function restorePendingInput(message) {
@@ -1095,7 +1286,7 @@ function rollbackOptimisticUserMessage(message) {
   if (lastEntry?.role === "user" && lastEntry.content === message) {
     replaceConversationHistory(_cachedHistory.slice(0, -1));
   } else {
-    renderHistory(_cachedHistory);
+    replaceConversationHistory(_cachedHistory);
   }
   restorePendingInput(message);
 }
@@ -1234,10 +1425,14 @@ function hideTyping() {
   document.getElementById("sendBtn").disabled = false;
 }
 
-// Badge Helper Functions
+// Stage and strategy badge helpers
 function updateStage(stage) {
-  _currentStage = stage;
-  document.getElementById("stageBadge").textContent = stage.toUpperCase();
+  _currentStage = normalizeKey(stage || "intent");
+  const meta = getStageMeta(_currentStage);
+  const badge = document.getElementById("stageBadge");
+  if (badge) badge.textContent = meta.label;
+  updateStatusNote(meta.note);
+  updateWorkflowProgress();
 }
 
 function syncStrategySelectors(strategy) {
@@ -1253,28 +1448,33 @@ function syncStrategySelectors(strategy) {
 }
 
 function updateStrategy(strategy) {
-  _currentStrategy = strategy;
-  document.getElementById("strategyBadge").textContent = strategy.toUpperCase();
+  _currentStrategy = normalizeKey(strategy || "-");
+  const meta = getStrategyMeta(_currentStrategy);
+  const badge = document.getElementById("strategyBadge");
+  if (badge) badge.textContent = meta.label;
   syncStrategySelectors(strategy);
+  if (_currentStrategy === "-" || _currentStrategy === "prospect mode") {
+    updateStatusNote(meta.note);
+  }
+  updateWorkflowProgress();
 }
 
-// Consolidated UI update helper
+// Update the stage and strategy UI in one place
 function updateSessionUI(data) {
+  const stageSelectSource = document.getElementById("stageSelectMain");
+
   if (data.stage) updateStage(data.stage);
   if (data.strategy) {
-    const strategyChanged = data.strategy !== _currentStrategy;
+    const strategyChanged = normalizeKey(data.strategy) !== _currentStrategy;
     updateStrategy(data.strategy);
-    if (
-      document.getElementById("stageSelect") ||
-      document.getElementById("stageSelectMain")
-    ) {
+    if (document.getElementById("stageSelectMain")) {
       if (strategyChanged || _loadedStagesForStrategy === null) {
-        _loadedStagesForStrategy = data.strategy;
+        _loadedStagesForStrategy = normalizeKey(data.strategy);
         loadStageOptions();
       } else {
         // Strategy unchanged - just sync the selected value without an API call
         populateStageSelects(
-          [...(document.getElementById("stageSelect")?.options ?? [])]
+          [...(stageSelectSource?.options ?? [])]
             .map((o) => o.value)
             .filter(Boolean),
           data.stage || _currentStage,
@@ -1284,7 +1484,7 @@ function updateSessionUI(data) {
   } else if (data.stage) {
     // Stage changed but strategy didn't come back - sync select value only
     populateStageSelects(
-      [...(document.getElementById("stageSelect")?.options ?? [])]
+      [...(stageSelectSource?.options ?? [])]
         .map((o) => o.value)
         .filter(Boolean),
       data.stage,
@@ -1300,44 +1500,121 @@ function rollbackEditUI(allMsgs, startIdx) {
 // Tools dropdown moved to Sidebar
 
 // Exclusive Panel Management
+function updateToolCardStates() {
+  document
+    .getElementById("trainingToggleBtn")
+    ?.classList.toggle(
+      "active",
+      document.getElementById("trainingPanel")?.classList.contains("open"),
+    );
+  document
+    .getElementById("quizToggleBtn")
+    ?.classList.toggle(
+      "active",
+      document.getElementById("quizPanel")?.classList.contains("open"),
+    );
+}
+
+function isMobilePanelLayout() {
+  return window.matchMedia("(max-width: 860px)").matches;
+}
+
+function syncPanelShellState() {
+  const container = document.querySelector(".container");
+  const trainingOpen = document
+    .getElementById("trainingPanel")
+    ?.classList.contains("open");
+  const quizOpen = document
+    .getElementById("quizPanel")
+    ?.classList.contains("open");
+  const prospectOpen = document
+    .getElementById("prospectPanel")
+    ?.classList.contains("open");
+
+  container?.classList.toggle("panel-open", !!trainingOpen);
+  container?.classList.toggle("quiz-panel-open", !!quizOpen);
+  container?.classList.toggle("prospect-panel-open", !!prospectOpen);
+
+  const anyPanelOpen = !!(trainingOpen || quizOpen || prospectOpen);
+  const lockBody = anyPanelOpen && isMobilePanelLayout();
+  document.body.classList.toggle("panel-open", lockBody);
+  document.body.style.overflow = lockBody ? "hidden" : "";
+
+  updateToolCardStates();
+}
+
+function closePanelStorageFlags() {
+  localStorage.setItem("trainingPanelOpen", "false");
+  localStorage.setItem("quizPanelOpen", "false");
+}
+
+function setSidebarTab(tabName) {
+  _sidebarTab = tabName;
+  localStorage.setItem("sidebarTab", tabName);
+  document.querySelectorAll(".sidebar-tab").forEach((tab) => {
+    tab.classList.toggle("active", tab.dataset.sidebarTab === tabName);
+  });
+  document.querySelectorAll(".sidebar-panel").forEach((panel) => {
+    panel.classList.toggle("active", panel.dataset.sidebarPanel === tabName);
+  });
+}
+
 function closeAllPanels() {
   const container = document.querySelector(".container");
   ["trainingPanel", "quizPanel", "prospectPanel"].forEach((panelId) => {
     document.getElementById(panelId)?.classList.remove("open");
   });
+  closePanelStorageFlags();
   container?.classList.remove(
     "panel-open",
     "quiz-panel-open",
     "prospect-panel-open",
   );
+  syncPanelShellState();
 }
 
 function toggleTrainingPanel() {
   const panel = document.getElementById("trainingPanel");
-  const container = document.querySelector(".container");
   const willOpen = !panel.classList.contains("open");
   if (willOpen) {
     closeAllPanels();
     panel.classList.add("open");
-    container.classList.add("panel-open");
+    setSidebarTab("tools");
   } else {
     panel.classList.remove("open");
-    container.classList.remove("panel-open");
   }
   localStorage.setItem("trainingPanelOpen", willOpen);
+  syncPanelShellState();
 }
 
 function updateTrainingPanel(training) {
-  if (!training) return;
+  const sections = [
+    document.querySelector(".training-section--action"),
+    document.querySelector(".training-section--trigger"),
+    document.querySelector(".training-section--warning"),
+  ];
+
+  if (!training) {
+    sections.forEach((section) => section?.classList.add("is-hidden"));
+    const whatHappened = document.getElementById("tWhatHappened");
+    const nextMove = document.getElementById("tNextMove");
+    const watchFor = document.getElementById("tWatchFor");
+    if (whatHappened) whatHappened.textContent = "";
+    if (nextMove) nextMove.textContent = "";
+    if (watchFor) watchFor.innerHTML = "";
+    return;
+  }
+
+  sections.forEach((section) => section?.classList.remove("is-hidden"));
 
   const cleanText = (text) => {
-    if (!text) return "-";
+    if (!text) return "";
     // strip markdown: bold, italic, numbered lists, bullet points
     let clean = String(text)
       .replace(/\*\*([^*]+)\*\*/g, "$1")
       .replace(/\*([^*]+)\*/g, "$1")
       .replace(/^\d+\.\s+/gm, "")
-      .replace(/^[-•]\s+/gm, "")
+      .replace(/^[-*]\s+/gm, "")
       .replace(/\n/g, " ")
       .trim();
     // cap at 120 chars
@@ -1354,11 +1631,44 @@ function updateTrainingPanel(training) {
 
   const ul = document.getElementById("tWatchFor");
   ul.innerHTML = "";
-  (training.watch_for || []).slice(0, 2).forEach((tip) => {
+  const watchItems = (training.watch_for || []).slice(0, 2);
+  if (!watchItems.length) {
+    const li = document.createElement("li");
+    li.textContent = "No risks flagged yet. Keep the buyer talking.";
+    ul.appendChild(li);
+    return;
+  }
+  watchItems.forEach((tip) => {
     const li = document.createElement("li");
     li.innerHTML = cleanText(tip);
     ul.appendChild(li);
   });
+
+  if (
+    !document.getElementById("trainingPanel")?.classList.contains("open") &&
+    training.next_move
+  ) {
+    const nextMove = String(training.next_move).replace(/\s+/g, " ").trim();
+    if (nextMove && nextMove !== _lastTrainingHintToast) {
+      _lastTrainingHintToast = nextMove;
+      showToast(`Coach hint: ${nextMove.slice(0, 80)}`, "info");
+    }
+  }
+}
+
+function setTrainingPanelEmptyState() {
+  [
+    document.querySelector(".training-section--action"),
+    document.querySelector(".training-section--trigger"),
+    document.querySelector(".training-section--warning"),
+  ].forEach((section) => section?.classList.add("is-hidden"));
+
+  const whatHappened = document.getElementById("tWhatHappened");
+  const nextMove = document.getElementById("tNextMove");
+  const watchFor = document.getElementById("tWatchFor");
+  if (whatHappened) whatHappened.textContent = "";
+  if (nextMove) nextMove.textContent = "";
+  if (watchFor) watchFor.innerHTML = "";
 }
 
 // Training Q&A
@@ -1402,15 +1712,15 @@ let currentQuizType = "stage";
 
 function toggleQuizPanel() {
   const panel = document.getElementById("quizPanel");
-  const container = document.querySelector(".container");
   const willOpen = !panel.classList.contains("open");
   closeAllPanels();
   if (willOpen) {
     panel.classList.add("open");
-    container.classList.add("quiz-panel-open");
+    setSidebarTab("tools");
     fetchQuizQuestion();
   }
   localStorage.setItem("quizPanelOpen", willOpen);
+  syncPanelShellState();
 }
 
 function selectQuizType(type) {
@@ -1597,8 +1907,11 @@ function handleKeyDown(event) {
 
 // Reset Session
 function resetChat() {
-  if (!confirm("Reset conversation? This will clear all history.")) return;
+  openResetModal();
+}
 
+function confirmResetChat() {
+  closeResetModal();
   if (hasProspectContext()) {
     resetProspectSession();
     return;
@@ -1616,6 +1929,7 @@ function resetChat() {
       if (data.success) {
         document.getElementById("chatContainer").innerHTML = "";
         userTurnIndex = 0;
+        setIntroVisibility(false);
         clearStoredHistory();
         sessionId = null;
         clearStoredSessionId();
@@ -1632,7 +1946,7 @@ function resetChat() {
 async function resetProspectSession() {
   const oldSessionId = _prospectSessionId;
   try {
-    const r = await fetch("/api/prospect/init", {
+    const response = await fetch("/api/prospect/init", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -1640,7 +1954,7 @@ async function resetProspectSession() {
         product_type: _prospectProductType,
       }),
     });
-    const data = await r.json();
+    const data = await response.json();
     if (data.error) {
       showToast(data.error, "error");
       return;
@@ -1686,17 +2000,19 @@ function applyProspectSessionFromServer(sessionId, data) {
 
   // Show prospect panel
   document.getElementById("prospectPanel")?.classList.add("open");
-  document.querySelector(".container")?.classList.add("prospect-panel-open");
+  syncPanelShellState();
 
   // Update header badges
-  document.getElementById("strategyBadge").textContent = "PROSPECT MODE";
-  document.getElementById("stageBadge").textContent =
-    _prospectDifficulty.toUpperCase();
+  updateStrategy("prospect mode");
+  updateStage("default");
+  updateStatusNote(
+    "Practice this buyer persona and watch readiness change as you respond.",
+  );
 
   // Hide sales mode buttons, show active prospect indicator
   document.getElementById("trainingToggleBtn").style.display = "none";
   document.getElementById("quizToggleBtn").style.display = "none";
-  document.getElementById("prospectStartBtn").textContent = "Exit Prospect";
+  document.getElementById("prospectStartBtn").textContent = "Exit prospect practice";
   document.getElementById("prospectStartBtn").onclick = endProspectMode;
 
   // Update panel info
@@ -1709,7 +2025,7 @@ function applyProspectSessionFromServer(sessionId, data) {
   updateProspectDiffBadge(data.difficulty);
   updateProspectPanel(data.state);
 
-  // Apply settings UI
+  // Apply the saved prospect settings to the UI
   document
     .getElementById("prospectHintsToggle")
     .classList.toggle("on", _prospectSettings.showHints);
@@ -1725,6 +2041,7 @@ function applyProspectSessionFromServer(sessionId, data) {
   // Clear chat and restore history
   document.getElementById("chatContainer").innerHTML = "";
   userTurnIndex = 0;
+  setIntroVisibility(false);
 
   const conversationHistory = normalizeProspectConversationHistory(data);
   if (conversationHistory.length > 0) {
@@ -1765,7 +2082,7 @@ function toggleProspectSettings() {
 }
 
 function openProspectSetup() {
-  // Product dropdown is already populated server-side; just sync UI chrome.
+  // The product dropdown is already rendered by the server, so only sync the UI.
   syncModeChrome();
   document.getElementById("sendBtn").disabled = false;
   document.getElementById("prospectCoachingHint").textContent =
@@ -1773,6 +2090,20 @@ function openProspectSetup() {
 }
 
 function selectProspectDifficulty(diff, btn) {
+  if (_prospectMode && diff !== _prospectDifficulty) {
+    const confirmed = confirm(
+      "Changing difficulty resets the current prospect practice. Continue?",
+    );
+    if (!confirmed) return;
+    _prospectDifficulty = diff;
+    document
+      .querySelectorAll(".prospect-diff-btn")
+      .forEach((b) =>
+        b.classList.toggle("selected", b.dataset.diff === diff),
+      );
+    resetProspectSession();
+    return;
+  }
   _prospectDifficulty = diff;
   document
     .querySelectorAll(".prospect-diff-btn")
@@ -1789,7 +2120,7 @@ async function startProspectMode() {
   _prospectProductType = product;
 
   try {
-    const r = await fetch("/api/prospect/init", {
+    const response = await fetch("/api/prospect/init", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -1797,12 +2128,12 @@ async function startProspectMode() {
         product_type: product,
       }),
     });
-    const data = await r.json();
+    const data = await response.json();
 
     if (data.error) {
       showToast(data.error, "error");
       startBtn.disabled = false;
-      startBtn.textContent = "Play Prospect";
+      startBtn.textContent = "Start prospect practice";
       return;
     }
 
@@ -1817,20 +2148,20 @@ async function startProspectMode() {
       latency_ms: data.latency_ms,
       provider: data.provider,
     });
-    // Re-enable the start/exit button now the UI has been applied
+    // Re-enable the start/exit button after the UI is updated
     startBtn.disabled = false;
     return; // button is now "Exit Prospect"
   } catch (e) {
     showToast("Failed to start prospect mode", "error");
   }
   startBtn.disabled = false;
-  startBtn.textContent = "Play Prospect";
+  startBtn.textContent = "Start prospect practice";
 }
 
 function endProspectMode() {
   try {
     if (_prospectMode && _prospectSessionId) {
-      // Best-effort server reset; ignore network errors but continue UI cleanup
+      // Best-effort server reset; keep cleaning up the UI even if it fails
       fetch("/api/prospect/reset", {
         method: "POST",
         headers: {
@@ -1840,17 +2171,14 @@ function endProspectMode() {
       }).catch(() => {});
     }
   } finally {
-    // Always restore client UI state even if network call failed
+    // Restore the client UI even if the network call fails
     clearProspectSessionState();
     try {
       history.replaceState(null, "", "/");
     } catch (e) {}
 
     // Hide prospect panel safely
-    const prospectPanel = document.getElementById("prospectPanel");
-    if (prospectPanel) prospectPanel.classList.remove("open");
-    const containerEl = document.querySelector(".container");
-    if (containerEl) containerEl.classList.remove("prospect-panel-open");
+    closeAllPanels();
 
     // Restore header buttons safely
     const trainingBtn = document.getElementById("trainingToggleBtn");
@@ -1859,7 +2187,7 @@ function endProspectMode() {
     if (trainingBtn) trainingBtn.style.display = "";
     if (quizBtn) quizBtn.style.display = "";
     if (startBtn) {
-      startBtn.textContent = "Play Prospect";
+      startBtn.textContent = "Start prospect practice";
       startBtn.onclick = startProspectMode;
       startBtn.disabled = false;
     }
@@ -1868,6 +2196,7 @@ function endProspectMode() {
     const chatContainer = document.getElementById("chatContainer");
     if (chatContainer) chatContainer.innerHTML = "";
     userTurnIndex = 0;
+    setIntroVisibility(false);
     clearStoredHistory();
     sessionId = null;
     syncModeChrome();
@@ -1891,7 +2220,7 @@ function updateProspectPanel(state) {
   const fill = document.getElementById("prospectReadinessFill");
   fill.style.width = Math.max(2, readiness) + "%";
 
-  // Color: red → yellow → green
+  // Color: red -> yellow -> green
   if (readiness < 30) fill.style.background = "#ef4444";
   else if (readiness < 60) fill.style.background = "#eab308";
   else fill.style.background = "#22c55e";
@@ -1905,18 +2234,7 @@ function updateProspectPanel(state) {
 }
 
 function addProspectMessage(text, sender, metrics = null) {
-  // Reuse the existing message rendering
-  const container = document.getElementById("chatContainer");
-  let msgIdx = null;
-  if (sender === "user") {
-    msgIdx = userTurnIndex * 2;
-    userTurnIndex += 1;
-  }
-  const el = createMessageElement(text, sender, msgIdx, metrics);
-  container.appendChild(el);
-  requestAnimationFrame(() => {
-    container.scrollTop = container.scrollHeight;
-  });
+  appendChatMessage(text, sender, metrics, { updateCache: false });
 }
 
 function sendProspectMessage() {
@@ -2021,19 +2339,19 @@ async function requestProspectEvaluation() {
   const loadingMsg = document.createElement("div");
   loadingMsg.className = "message bot";
   loadingMsg.innerHTML =
-    '<div class="message-bubble" style="color:#06b6d4">Generating evaluation...</div>';
+    '<div class="message-bubble" style="color:#5f8cff">Generating evaluation...</div>';
   container.appendChild(loadingMsg);
   container.scrollTop = container.scrollHeight;
 
   try {
-    const r = await fetch("/api/prospect/evaluate", {
+    const response = await fetch("/api/prospect/evaluate", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-Session-ID": _prospectSessionId,
       },
     });
-    const data = await r.json();
+    const data = await response.json();
     loadingMsg.remove();
 
     if (!data.success) {
@@ -2068,13 +2386,6 @@ function renderEvaluation(data, displayMode) {
 function buildEvaluationHTML(data) {
   const gradeClass = "grade-" + (data.grade || "c").toLowerCase();
   const outcomeClass = data.outcome || "incomplete";
-  const escapeHtml = (value) =>
-    String(value ?? "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#39;");
 
   let criteriaHtml = "";
   if (data.criteria_scores) {
@@ -2189,22 +2500,21 @@ function tryAgainProspect() {
 
   // Restore prospect panel body
   clearProspectEvaluationPanel();
-  document.getElementById("prospectPanel").classList.remove("open");
-  document.querySelector(".container").classList.remove("prospect-panel-open");
+  closeAllPanels();
 
   // Re-enable send
   document.getElementById("sendBtn").disabled = false;
 
   // Restore start button
   const startBtn = document.getElementById("prospectStartBtn");
-  startBtn.textContent = "Play Prospect";
+  startBtn.textContent = "Start prospect practice";
   startBtn.onclick = startProspectMode;
 
   // Open setup again
   openProspectSetup();
 }
 
-// â”€â”€â”€ Speech module â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Speech module
 let speechRecognizer;
 
 function toggleMic() {
@@ -2227,7 +2537,7 @@ function toggleMic() {
   }
 
   micBtn.classList.add("recording");
-  micBtn.innerHTML = "â¹";
+  micBtn.innerHTML = "Stop";
 
   speechRecognizer.start(
     (text) => {
@@ -2245,7 +2555,7 @@ function toggleMic() {
     },
     (state) => {
       micBtn.classList.remove("recording");
-      micBtn.innerHTML = "🎤";
+      micBtn.innerHTML = "Mic";
       if (state?.canceled) {
         _setDictationPreview("");
         input.focus();
@@ -2258,7 +2568,7 @@ function toggleMic() {
     (err) => {
       console.warn("Mic Error:", err);
       micBtn.classList.remove("recording");
-      micBtn.innerHTML = "🎤";
+      micBtn.innerHTML = "Mic";
       _setDictationPreview("");
       showToast(String(err || "Microphone error"), "error");
     },
@@ -2508,7 +2818,7 @@ async function playAssistantTts(text, { onStart } = {}) {
   }
 }
 
-// Centralised helpers for hands-free STT control
+// Helpers for hands-free speech-to-text control
 function startHandsFreeRecognition() {
   if (!speechRecognizer?.recognition) {
     showToast(
@@ -2524,7 +2834,7 @@ function startHandsFreeRecognition() {
   const micBtn = document.getElementById("micBtn");
   if (micBtn) {
     micBtn.classList.add("recording");
-    micBtn.innerHTML = "â¹";
+    micBtn.innerHTML = "Stop";
   }
 
   try {
@@ -2560,11 +2870,11 @@ function startHandsFreeRecognition() {
         }
       },
       () => {
-        // update mic UI
+        // Update the mic button state
         const mic = document.getElementById("micBtn");
         if (mic) {
           mic.classList.remove("recording");
-          mic.innerHTML = "🎤";
+          mic.innerHTML = "Mic";
         }
         // gentle restart if still in hands-free mode
         if (
@@ -2600,7 +2910,7 @@ function startHandsFreeRecognition() {
     console.warn("startHandsFreeRecognition error:", e);
     if (micBtn) {
       micBtn.classList.remove("recording");
-      micBtn.innerHTML = "🎤";
+      micBtn.innerHTML = "Mic";
     }
     return false;
   }
@@ -2616,7 +2926,7 @@ function stopHandsFreeRecognition() {
   const mic = document.getElementById("micBtn");
   if (mic) {
     mic.classList.remove("recording");
-    mic.innerHTML = "🎤";
+    mic.innerHTML = "Mic";
   }
   _setDictationPreview("");
 }
@@ -2636,7 +2946,7 @@ function toggleVoiceMode() {
   const indicator = document.getElementById("voiceModeIndicator");
   const inputArea = document.querySelector(".input-area");
   if (btn) btn.classList.toggle("active", handsFreeMode);
-  if (indicator) indicator.textContent = handsFreeMode ? "🔊" : "⌨️";
+  if (indicator) indicator.textContent = handsFreeMode ? "Voice" : "Text";
   if (inputArea) inputArea.classList.toggle("hands-free-active", handsFreeMode);
   stopTtsPlayback();
   if (!handsFreeMode) {
@@ -2656,10 +2966,10 @@ function toggleVoiceMode() {
     if (handsFreeMode) {
       if (!speechRecognizer || !speechRecognizer.recognition) {
         showToast("Speech not supported in this browser", "error");
-        // revert UI toggles
+        // Restore the toggle state
         handsFreeMode = false;
         if (btn) btn.classList.toggle("active", false);
-        if (indicator) indicator.textContent = "⌨️";
+        if (indicator) indicator.textContent = "Text";
         if (inputArea) inputArea.classList.toggle("hands-free-active", false);
         return;
       }
@@ -2667,7 +2977,7 @@ function toggleVoiceMode() {
       // Start centralized hands-free recognition
       startHandsFreeRecognition();
     } else {
-      // Turn hands-free OFF → stop recording via helper
+      // Turn hands-free OFF -> stop recording via helper
       stopHandsFreeRecognition();
     }
   } catch (e) {
@@ -2676,7 +2986,7 @@ function toggleVoiceMode() {
 }
 
 // ============================================
-// TRAINING SCORE UI
+// Training score UI
 // ============================================
 
 async function scoreSession() {
@@ -2722,35 +3032,71 @@ function renderSessionScore(scoreData) {
   const scoreCard = document.createElement("div");
   scoreCard.className = "message bot";
 
-  const b = scoreData.breakdown;
-  const m = scoreData.metrics;
+  const breakdown = scoreData.breakdown || {};
+  const metrics = scoreData.metrics || {};
+  const stagesReached = Array.isArray(metrics.stages_reached)
+    ? metrics.stages_reached
+    : [];
 
   scoreCard.innerHTML = `<div class="score-card">
       <div class="score-card-title">Session Training Score: ${scoreData.total_score}/100</div>
       <div class="score-card-subtitle">Breakdown of your interaction:</div>
       <div class="score-breakdown">
-        <div class="score-row"><span>Stage Progression (30):</span><span>${b.stage_progression}</span></div>
-        <div class="score-row"><span>Signal Detection (25):</span><span>${b.signal_detection}</span></div>
-        <div class="score-row"><span>Objection Handling (20):</span><span>${b.objection_handling}</span></div>
-        <div class="score-row"><span>Questioning Depth (15):</span><span>${b.questioning_depth}</span></div>
-        <div class="score-row"><span>Conv. Length (10):</span><span>${b.conversation_length}</span></div>
+        <div class="score-row"><span>Stage Progression (30):</span><span>${breakdown.stage_progression ?? "-"}</span></div>
+        <div class="score-row"><span>Signal Detection (25):</span><span>${breakdown.signal_detection ?? "-"}</span></div>
+        <div class="score-row"><span>Objection Handling (20):</span><span>${breakdown.objection_handling ?? "-"}</span></div>
+        <div class="score-row"><span>Questioning Depth (15):</span><span>${breakdown.questioning_depth ?? "-"}</span></div>
+        <div class="score-row"><span>Conv. Length (10):</span><span>${breakdown.conversation_length ?? "-"}</span></div>
       </div>
       <div class="score-details">
         <strong>Details:</strong>
-        Stages Reached: ${m.stages_reached.join(", ") || "None"}<br>
-        Signal Ratio: ${m.signal_ratio}<br>
-        Total Turns: ${m.turns}
+        Stages Reached: ${stagesReached.join(", ") || "None"}<br>
+        Signal Ratio: ${metrics.signal_ratio ?? "-"}<br>
+        Total Turns: ${metrics.turns ?? "-"}
       </div>
     </div>`;
   container.appendChild(scoreCard);
   container.scrollTop = container.scrollHeight;
 }
 
-// â”€â”€â”€ Feedback Widget â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ï¿½ï¿½â”€â”€â”€â”€â”€
+function toggleResetMenu() {
+  const menu = document.getElementById("resetMenu");
+  const btn = document.querySelector(".overflow-btn");
+  const willOpen = !menu?.classList.contains("open");
+  menu?.classList.toggle("open", willOpen);
+  btn?.setAttribute("aria-expanded", willOpen ? "true" : "false");
+}
+
+function closeResetMenu() {
+  const menu = document.getElementById("resetMenu");
+  const btn = document.querySelector(".overflow-btn");
+  menu?.classList.remove("open");
+  btn?.setAttribute("aria-expanded", "false");
+}
+
+function openResetModal() {
+  closeResetMenu();
+  document.getElementById("resetModal")?.classList.add("open");
+  document.getElementById("resetModal")?.setAttribute("aria-hidden", "false");
+}
+
+function closeResetModal() {
+  document.getElementById("resetModal")?.classList.remove("open");
+  document.getElementById("resetModal")?.setAttribute("aria-hidden", "true");
+}
+
+function handleResetBackdrop(event) {
+  if (event.target?.id === "resetModal") {
+    closeResetModal();
+  }
+}
+
+// Feedback Widget
 let _fbRating = 0;
 
 function toggleFeedback() {
   const dd = document.getElementById("feedbackDropdown");
+  closeResetMenu();
   dd.classList.toggle("open");
 }
 
@@ -2769,7 +3115,7 @@ async function submitFeedback() {
   btn.disabled = true;
 
   try {
-    const r = await fetch("/api/feedback", {
+    const response = await fetch("/api/feedback", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -2778,13 +3124,14 @@ async function submitFeedback() {
         page: _prospectMode ? "prospect" : "chat",
       }),
     });
-    const d = await r.json();
-    if (d.success) {
-      const dd = document.getElementById("feedbackDropdown");
-      dd.innerHTML = '<div class="fb-thanks">Thanks for your feedback!</div>';
+    const result = await response.json();
+    if (result.success) {
+      const feedbackDropdown = document.getElementById("feedbackDropdown");
+      feedbackDropdown.innerHTML =
+        '<div class="fb-thanks">Thanks for your feedback!</div>';
       setTimeout(() => {
-        dd.classList.remove("open");
-        dd.innerHTML = buildFeedbackForm();
+        feedbackDropdown.classList.remove("open");
+        feedbackDropdown.innerHTML = buildFeedbackForm();
         _fbRating = 0;
       }, 1500);
     }
@@ -2810,7 +3157,7 @@ function buildFeedbackForm() {
     <button class="fb-submit" id="fbSubmitBtn" onclick="submitFeedback()">Send Feedback</button>`;
 }
 
-// â”€â”€â”€ Page Load Initialization â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Page Load Initialization
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", () => {
     initTtsSpeedControl();
@@ -2819,3 +3166,4 @@ if (document.readyState === "loading") {
   // DOM is already loaded
   initTtsSpeedControl();
 }
+

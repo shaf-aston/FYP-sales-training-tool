@@ -33,6 +33,7 @@ class ProviderResolution:
 
 
 def normalize_provider_name(raw_name: str | None) -> str | None:
+    """Normalise user or env provider names into canonical provider ids."""
     name = (raw_name or "").strip().lower()
     if not name:
         return None
@@ -40,12 +41,14 @@ def normalize_provider_name(raw_name: str | None) -> str | None:
 
 
 def supported_provider_names(include_non_production: bool = True) -> list[str]:
+    """Return provider names exposed by this factory."""
     return list_providers(include_non_production=include_non_production)
 
 
 def _ordered_provider_names(
     configured_names: list[str], *, include_non_production: bool
 ) -> list[str]:
+    """Build a clean provider order from config plus safe defaults."""
     seen = set()
     ordered = []
     for provider_name in configured_names:
@@ -71,6 +74,7 @@ def _ordered_provider_names(
 
 
 def list_providers(include_non_production: bool = True) -> list[str]:
+    """Return providers in the order they should be considered."""
     return _ordered_provider_names(
         get_llm_provider_order(),
         include_non_production=include_non_production,
@@ -96,6 +100,7 @@ def list_fallback_providers(current_provider: str | None = None) -> list[str]:
 
 
 def get_available_providers():
+    """Return basic availability metadata for each known provider."""
     providers = []
     for provider_name in list_providers():
         provider = create_provider(provider_name)
@@ -156,12 +161,14 @@ def resolve_provider(
 
 
 def create_provider_with_trace(provider_type: str | None = None, model: str | None = None):
+    """Create a provider and return the resolution trace used to pick it."""
     trace = resolve_provider(provider_type, model=model)
     provider = create_provider(trace.selected, model=model)
     return provider, trace
 
 
 def create_provider(provider_type=None, model=None):
+    """Create the requested provider or auto-select the first available one."""
     requested = normalize_provider_name(provider_type)
     if requested:
         if requested not in LLM_PROVIDER_TYPES:

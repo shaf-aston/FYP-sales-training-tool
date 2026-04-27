@@ -22,6 +22,7 @@ TTS_PROVIDER_TYPES = {
 
 @lru_cache(maxsize=1)
 def _load_puter_provider():
+    """Load the optional Puter TTS provider module on demand."""
     module_path = Path(__file__).with_name("puter-tts.py")
     module = load_module_from_path(
         "core.providers.tts.puter_fallback",
@@ -35,15 +36,18 @@ def _load_puter_provider():
 
 
 def _provider_registry() -> dict[str, type]:
+    """Return the full TTS provider registry, including optional providers."""
     _load_puter_provider()
     return TTS_PROVIDER_TYPES
 
 
 def supported_tts_provider_names() -> list[str]:
+    """Return the TTS provider names exposed by this factory."""
     return list_tts_providers()
 
 
 def list_tts_providers() -> list[str]:
+    """Return TTS providers in configured preference order."""
     return ordered_provider_names(
         get_tts_provider_order(),
         DEFAULT_TTS_PROVIDER_ORDER,
@@ -52,10 +56,12 @@ def list_tts_providers() -> list[str]:
 
 
 def list_tts_fallback_providers(current_provider: str | None = None) -> list[str]:
+    """Return fallback TTS providers after removing the current one."""
     return fallback_provider_names(list_tts_providers(), current_provider)
 
 
 def create_tts_provider(provider_type: str | None = None, model: str | None = None):
+    """Create the requested TTS provider or auto-pick the first available one."""
     return create_audio_provider(
         _provider_registry(),
         list_tts_providers(),
@@ -65,4 +71,5 @@ def create_tts_provider(provider_type: str | None = None, model: str | None = No
 
 
 def get_available_tts_providers() -> list[dict[str, object]]:
+    """Return simple availability metadata for each TTS provider."""
     return available_provider_metadata(_provider_registry(), list_tts_providers())

@@ -6,7 +6,6 @@ from backend.security import (
     ClientIPExtractor,
     InputValidator,
     RateLimiter,
-    SecurityConfig,
     SecurityHeadersMiddleware,
 )
 

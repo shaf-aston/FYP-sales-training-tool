@@ -29,6 +29,7 @@ DEFAULT_NEGATIONS = frozenset(
 
 @lru_cache(maxsize=512)
 def _build_union_pattern_for_keywords(keyword_tuple) -> re.Pattern:
+    """Compile one regex that matches any keyword in the given tuple."""
     parts = [rf"\b{re.escape(k)}\b" for k in keyword_tuple]
     return re.compile("|".join(parts), re.IGNORECASE)
 
@@ -87,9 +88,11 @@ def extract_json_from_llm(content: str) -> dict | None:
 
 
 def range_label(value, thresholds, labels):
-    """Map a numeric value to a label via bisect
-    len(labels) must equal len(thresholds) + 1
-    Example: range_label(85, [60,70,80,90], ["F","D","C","B","A"]) → "B"
+    """Map a numeric value to the label for the threshold band it falls into.
+
+    `thresholds` defines the band boundaries, and `labels` must contain one
+    label for each band plus one extra label above the final threshold.
+    Example: range_label(85, [60,70,80,90], ["F","D","C","B","A"]) -> "B"
     """
     return labels[bisect(thresholds, value)]
 
@@ -105,5 +108,8 @@ class Stage(str, Enum):
     LOGICAL = "logical"
     EMOTIONAL = "emotional"
     PITCH = "pitch"
+    NEGOTIATION = "negotiation"
     OBJECTION = "objection"
     OUTCOME = "outcome"
+
+

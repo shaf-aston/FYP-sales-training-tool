@@ -28,9 +28,8 @@ SIGNALS = load_signals()
 ANALYSIS_CONFIG = load_analysis_config()
 
 
-# User signal keywords for consultative/transactional detection
 def _get_signal_terms(*keys: str) -> list[str]:
-    """Return the first configured signal list for the given candidate keys."""
+    """Return the first configured signal list for the given keys."""
     for key in keys:
         values = SIGNALS.get(key)
         if isinstance(values, list):
@@ -48,7 +47,14 @@ USER_TRANSACTIONAL_SIGNALS = _get_signal_terms(
 )
 
 COMMON_TRANSITIONS = {
-    Stage.PITCH: {"next": Stage.OBJECTION, "advance_on": "commitment_or_objection"},
+    Stage.PITCH: {"next": Stage.OBJECTION, "advance_on": "objection_only"},
+    Stage.OBJECTION: {"next": Stage.OUTCOME, "advance_on": "commitment_or_walkaway"},
+    Stage.OUTCOME: {"next": None, "advance_on": None},
+}
+
+TRANSACTIONAL_TRANSITIONS = {
+    Stage.PITCH: {"next": Stage.NEGOTIATION, "advance_on": "terms_requested_or_resolved"},
+    Stage.NEGOTIATION: {"next": Stage.OBJECTION, "advance_on": "objection_only"},
     Stage.OBJECTION: {"next": Stage.OUTCOME, "advance_on": "commitment_or_walkaway"},
     Stage.OUTCOME: {"next": None, "advance_on": None},
 }
@@ -80,7 +86,6 @@ FLOWS: dict[str | Strategy, dict[str, Any]] = {
             Stage.LOGICAL: {
                 "next": Stage.EMOTIONAL,
                 "advance_on": "user_shows_doubt",
-                "urgency_skip_to": Stage.PITCH,
             },
             Stage.EMOTIONAL: {
                 "next": Stage.PITCH,
@@ -90,10 +95,10 @@ FLOWS: dict[str | Strategy, dict[str, Any]] = {
         },
     },
     Strategy.TRANSACTIONAL: {
-        "stages": [Stage.INTENT, Stage.PITCH, Stage.OBJECTION, Stage.OUTCOME],
+        "stages": [Stage.INTENT, Stage.PITCH, Stage.NEGOTIATION, Stage.OBJECTION, Stage.OUTCOME],
         "transitions": {
             Stage.INTENT: {"next": Stage.PITCH, "advance_on": "user_has_clear_intent"},
-            **deepcopy(COMMON_TRANSITIONS),
+            **deepcopy(TRANSACTIONAL_TRANSITIONS),
         },
     },
 }
@@ -119,12 +124,7 @@ INTENT_MAX_TURNS = 6
 
 
 def _user_signals_specific_budget_or_product(user_message: str) -> bool:
-    """True when the user already sounds ready for a direct transactional path.
-
-    This catches early specificity such as explicit pricing/budget language or a
-    recognisable product mention, which makes a collapsed transactional flow a
-    better fit than extended consultative discovery.
-    """
+    """Return True when the user already sounds ready for a direct path."""
     user_text = (user_message or "").lower()
     if not user_text:
         return False
@@ -145,21 +145,16 @@ def _user_signals_specific_budget_or_product(user_message: str) -> bool:
 
 
 def _user_has_clear_intent(
-    history: list[dict[str, str]], user_msg: str, turns: int, pre_state=None
+    history: list[dict[str, str]], user_msg: str, turns: int, turn_state=None
 ) -> bool:
-    """Return True if user signals buying intent or safety valve (max turns) triggers.
-
-    Checks explicit phrases first, then pre-computed intent from pre_state (avoids
-    re-running classify_intent_level when analysis has already run this turn).
-    Safety valve prevents getting stuck in intent stage with hard-to-read prospects.
-    """
+    """Return True when the user shows intent or the turn cap is reached."""
     if user_msg and contains_nonnegated_keyword(
         user_msg.lower(), EXPLICIT_INTENT_PHRASES
     ):
         return True
 
-    if pre_state is not None:
-        return pre_state.intent == "high" or turns >= INTENT_MAX_TURNS
+    if turn_state is not None:
+        return turn_state.intent == "high" or turns >= INTENT_MAX_TURNS
 
     intent_level = classify_intent_level(history, user_msg, signal_keywords=SIGNALS)
     if intent_level == "high":
@@ -174,75 +169,99 @@ def _check_advancement_condition(
     turns: int,
     stage_name: str,
     min_turns: int = 2,
-    pre_state=None,
+    turn_state=None,
 ) -> bool:
-    """Return True if advancement signal detected or safety valve (max_turns) triggers.
-
-    Enforces min_turns guard to ensure adequate rapport before advancing.
-    Consumes pre-computed doubt/stakes flags from pre_state when available to avoid
-    re-running keyword matching that analyse_state() already performed this turn.
-    Tolerant when turns exceed available history (supports direct test calls).
-    """
+    """Return True when the signal appears or the stage turn cap is reached."""
     if turns < min_turns:
         return False
 
     stage_config = ANALYSIS_CONFIG.get("advancement", {}).get(stage_name, {})
     max_turns = stage_config.get("max_turns", 10)
 
-    # Consume pre-computed signal flag when available — avoids duplicate keyword scan.
-    if pre_state is not None:
-        flag = {"logical": "doubt", "emotional": "stakes"}.get(stage_name)
-        if flag is not None:
-            return getattr(pre_state, flag, False) or turns >= max_turns
+    # Use precomputed flags when available.
+    if turn_state is not None:
+        state_signal_attribute = {
+            Stage.LOGICAL: "doubt",
+            Stage.EMOTIONAL: "stakes",
+        }.get(stage_name)
+        if state_signal_attribute is not None:
+            return getattr(turn_state, state_signal_attribute, False) or turns >= max_turns
 
-    keyword_key = {"logical": "doubt_keywords", "emotional": "stakes_keywords"}.get(
-        stage_name, f"{stage_name}_keywords"
-    )
+    keyword_key = {
+        Stage.LOGICAL: "doubt_keywords",
+        Stage.EMOTIONAL: "stakes_keywords",
+    }.get(stage_name, f"{stage_name}_keywords")
     keywords = stage_config.get(keyword_key, [])
 
-    # Slice to current-stage messages only (ignore earlier stages if switched).
+    # Only inspect messages from the current stage window.
     user_msgs = [m["content"].lower() for m in history if m.get("role") == "user"]
     current_msg = (user_msg or "").lower().strip()
     if current_msg and (not user_msgs or user_msgs[-1] != current_msg):
         user_msgs.append(current_msg)
 
-    # Tolerant when turns exceed available messages. Supports direct test calls
-    # where helper is used without full engine context.
+    # Allow direct tests that pass more turns than available messages.
     available_turns = min(turns, len(user_msgs))
     current_stage_window = user_msgs[-available_turns:] if available_turns > 0 else []
     recent_text = " ".join(current_stage_window)
     has_signal = contains_nonnegated_keyword(recent_text, keywords)
 
-    # Safety valve: auto-advance when max_turns exceeded (resistant prospect).
+    # Auto-advance once the stage limit is reached.
     return has_signal or turns >= max_turns
 
 
 def _user_shows_doubt(
-    history: list[dict[str, str]], user_msg: str, turns: int, pre_state=None
+    history: list[dict[str, str]], user_msg: str, turns: int, turn_state=None
 ) -> bool:
-    """True when user shows doubt/pain or safety valve triggers"""
+    """Return True when the user shows doubt or the limit is reached."""
     return _check_advancement_condition(
-        history, user_msg, turns, "logical", min_turns=2, pre_state=pre_state
+        history, user_msg, turns, Stage.LOGICAL, min_turns=2, turn_state=turn_state
     )
 
 
 def _user_expressed_stakes(
-    history: list[dict[str, str]], user_msg: str, turns: int, pre_state=None
+    history: list[dict[str, str]], user_msg: str, turns: int, turn_state=None
 ) -> bool:
-    """True when user shares emotional stakes or safety valve fires"""
+    """Return True when the user shows stakes or the limit is reached."""
     return _check_advancement_condition(
-        history, user_msg, turns, "emotional", min_turns=3, pre_state=pre_state
+        history, user_msg, turns, Stage.EMOTIONAL, min_turns=3, turn_state=turn_state
     )
 
 
 def _commitment_or_objection(
-    history: list[dict[str, str]], user_msg: str, turns: int, pre_state=None
+    history: list[dict[str, str]], user_msg: str, turns: int, turn_state=None
 ) -> bool:
-    """True when user commits or objects."""
+    """Return True when the user commits or objects."""
     msg_lower = user_msg.lower()
     return contains_nonnegated_keyword(
         msg_lower, SIGNALS.get("commitment", [])
     ) or contains_nonnegated_keyword(msg_lower, SIGNALS.get("objection", []))
+
+
+def _objection_only(
+    history: list[dict[str, str]], user_msg: str, turns: int, turn_state=None
+) -> bool:
+    """Return True when the user raises a genuine objection."""
+    return contains_nonnegated_keyword(user_msg.lower(), SIGNALS.get("objection", []))
+
+
+def _terms_requested_or_resolved(
+    history: list[dict[str, str]], user_msg: str, turns: int, turn_state=None
+) -> bool:
+    """Return True when transactional terms discussion is underway."""
+    if turn_state is not None and getattr(turn_state, "terms", False):
+        return True
+
+    if _user_signals_specific_budget_or_product(user_msg):
+        return True
+
+    msg_lower = user_msg.lower()
+    if contains_nonnegated_keyword(msg_lower, SIGNALS.get("direct_info_requests", [])):
+        return True
+    if contains_nonnegated_keyword(msg_lower, SIGNALS.get("demand_directness", [])):
+        return True
+    if turn_state is not None and getattr(turn_state, "decisive", False):
+        return True
+    return False
 
 # commitment_or_walkaway moved to analysis.py to avoid circular imports
 
@@ -251,13 +270,17 @@ ADVANCEMENT_RULES = {
     "user_has_clear_intent": _user_has_clear_intent,
     "user_shows_doubt": _user_shows_doubt,
     "user_expressed_stakes": _user_expressed_stakes,
+    "terms_requested_or_resolved": _terms_requested_or_resolved,
     "commitment_or_objection": _commitment_or_objection,
+    "objection_only": _objection_only,
     "commitment_or_walkaway": commitment_or_walkaway,
 }
 
 
-def _check_priority_overrides(flow_config, current_stage, user_message, history) -> Optional[str]:
-    """Check for high-priority signals that jump the FSM immediately."""
+def _check_priority_overrides(
+    flow_type, flow_config, current_stage, user_message, history
+) -> Optional[str]:
+    """Return an override stage for high-priority signals, if any."""
     transition = flow_config["transitions"].get(current_stage)
     if not transition:
         return None
@@ -271,21 +294,27 @@ def _check_priority_overrides(flow_config, current_stage, user_message, history)
         current_idx = stages.index(current_stage)
         pitch_is_ahead = current_idx < pitch_idx
 
-    # Explicit commitment during discovery
+    # Let commitment jump discovery when it appears early.
     if has_pitch_stage and current_stage in (Stage.LOGICAL, Stage.EMOTIONAL):
         commitment_terms = SIGNALS.get("commitment", []) + ["sign up"]
         if contains_nonnegated_keyword(msg_lower, commitment_terms):
             return Stage.PITCH
 
-    # User demands directness or direct info request
-    if pitch_is_ahead:
+    if has_pitch_stage and current_stage in (Stage.PITCH, Stage.NEGOTIATION):
+        if contains_nonnegated_keyword(msg_lower, SIGNALS.get("commitment", [])):
+            return Stage.OUTCOME
+        if contains_nonnegated_keyword(msg_lower, SIGNALS.get("objection", [])):
+            return Stage.OBJECTION
+
+    # Transactional flows can jump to pitch on direct requests.
+    if flow_type == Strategy.TRANSACTIONAL and pitch_is_ahead:
         if user_demands_directness(history, user_message):
             return Stage.PITCH
         direct_requests = SIGNALS.get("direct_info_requests", [])
         if contains_nonnegated_keyword(msg_lower, direct_requests):
             return Stage.PITCH
 
-    # Impatience override (usually skips to a specific transition stage, e.g. pitch)
+    # Impatience can skip to the configured stage.
     if transition.get("urgency_skip_to"):
         if contains_nonnegated_keyword(msg_lower, SIGNALS.get("impatience", [])):
             return transition["urgency_skip_to"]
@@ -294,12 +323,7 @@ def _check_priority_overrides(flow_config, current_stage, user_message, history)
 
 
 def _detect_and_switch_strategy(flow_engine, user_message: str) -> bool:
-    """Inspect user signals to detect and switch strategy. Returns True if switch occurred.
-
-    Called during INTENT strategy to detect whether user prefers consultative or
-    transactional engagement. Checks explicit user signals first, then applies
-    safety valve (min turns) to force a decision.
-    """
+    """Switch strategy from INTENT when the user's preference is clear."""
     user_text = (user_message or "").lower()
     has_cons_user = contains_nonnegated_keyword(
         user_text, USER_CONSULTATIVE_SIGNALS
@@ -325,7 +349,7 @@ def _detect_and_switch_strategy(flow_engine, user_message: str) -> bool:
 
 
 def _default_strategy_after_intent_probe(flow_engine, user_message: str) -> str:
-    """Select deterministic fallback strategy after intent probing turns are exhausted."""
+    """Pick a fallback strategy after the probing window ends."""
     user_text = (user_message or "").lower()
     if _user_signals_specific_budget_or_product(user_message):
         return Strategy.TRANSACTIONAL
@@ -347,13 +371,10 @@ def _default_strategy_after_intent_probe(flow_engine, user_message: str) -> str:
 
 
 class SalesFlowEngine:
-    """Finite state machine managing stage progression and prompt context.
-
-    Tracks current stage, turn count per stage and conversation history.
-    Provides advancement detection and strategy switching for mid-session pivots.
-    """
+    """FSM for stage progression, turn tracking, and strategy switching."""
 
     def __init__(self, flow_type: str, product_context: str) -> None:
+        """Start a flow engine at the first stage of the chosen strategy."""
         if flow_type not in FLOWS:
             raise ValueError(f"Invalid flow_type: {flow_type}")
         self.initial_flow_type = flow_type  # Track initial strategy for rewind
@@ -366,15 +387,11 @@ class SalesFlowEngine:
 
     @property
     def user_turn_count(self) -> int:
-        """Number of user messages in conversation history"""
         return sum(1 for m in self.conversation_history if m.get("role") == "user")
 
     @property
     def _strategy_for_prompts(self):
-        """Map flow_type to strategy used by content.py prompts.
-
-        Intent flow uses consultative style (open discovery) not transactional.
-        """
+        """Return the strategy used when building prompts."""
         if self.flow_type in (Strategy.CONSULTATIVE, Strategy.TRANSACTIONAL):
             return self.flow_type
         return Strategy.CONSULTATIVE
@@ -383,10 +400,10 @@ class SalesFlowEngine:
         self,
         user_message: str = "",
         objection_data: dict | None = None,
-        pre_state=None,
+        turn_state=None,
         include_history: bool = True,
     ) -> str:
-        """Generate system prompt for current stage"""
+        """Generate the system prompt for the current stage."""
         return generate_stage_prompt(
             strategy=self._strategy_for_prompts,
             stage=self.current_stage,
@@ -394,19 +411,14 @@ class SalesFlowEngine:
             history=self.conversation_history,
             user_message=user_message,
             objection_data=objection_data,
-            pre_state=pre_state,
+            turn_state=turn_state,
             include_history=include_history,
         )
 
-    def should_advance(self, user_message: str, pre_state=None) -> Optional[str]:
-        """Return target stage if FSM should advance, else None.
-
-        Priority overrides (commitment, directness, impatience) are checked
-        first so high-signal turns immediately use the correct stage prompt.
-        Standard guard-based rules follow. pre_state carries pre-computed
-        signal flags from analyse_state() to avoid duplicate keyword scanning.
-        """
+    def should_advance(self, user_message: str, turn_state=None) -> Optional[str]:
+        """Return the next stage when the FSM should advance, otherwise None."""
         override = _check_priority_overrides(
+            self.flow_type,
             self.flow_config,
             self.current_stage,
             user_message,
@@ -424,27 +436,23 @@ class SalesFlowEngine:
                 self.conversation_history,
                 user_message,
                 self.stage_turn_count,
-                pre_state=pre_state,
+                turn_state=turn_state,
             ):
                 return transition.get("next")
         return None
 
-    def get_advance_target(self, user_message: str, pre_state=None) -> Optional[str]:
-        """Backward-compatible alias for should_advance."""
-        return self.should_advance(user_message, pre_state=pre_state)
+    def get_advance_target(self, user_message: str, turn_state=None) -> Optional[str]:
+        """Backward-compatible alias for `should_advance`."""
+        return self.should_advance(user_message, turn_state=turn_state)
 
     def evaluate_strategy_switch(self, user_message: str) -> bool:
-        """Check if INTENT strategy should switch to CONSULTATIVE or TRANSACTIONAL.
-
-        Only valid when flow_type is INTENT. Returns True if a switch occurred.
-        Uses user signals (explicit preferences) and safety valve (min turns) logic.
-        """
+        """Return True when INTENT should switch to another strategy."""
         if self.flow_type != Strategy.INTENT:
             return False
         return _detect_and_switch_strategy(self, user_message)
 
     def advance(self, target_stage: Optional[str] = None) -> None:
-        """Advance to target_stage (jump) or next sequential stage"""
+        """Advance to a target stage or the next stage in sequence."""
         stages = self.flow_config["stages"]
         if target_stage is not None:
             if target_stage not in stages:
@@ -461,36 +469,25 @@ class SalesFlowEngine:
             self.stage_turn_count = 0
 
     def add_turn(self, user_message: str, bot_response: str) -> None:
-        """Append user and assistant messages to history and increment stage turn counter."""
+        """Append a turn to history and increment the stage counter."""
         self.conversation_history.append({"role": "user", "content": user_message})
         self.conversation_history.append({"role": "assistant", "content": bot_response})
         self.stage_turn_count += 1
 
     def switch_strategy(self, new_strategy: str) -> bool:
-        """Switch FSM to a different strategy, advancing past INTENT stage.
-        After INTENT discovery phase, skip INTENT for new strategy to avoid
-        re-questioning the user about intent they already expressed.
-        Return False if strategy is invalid.
-        """
+        """Switch to a new strategy and restart the new flow at INTENT."""
         if new_strategy not in FLOWS:
             return False
         self.flow_type = new_strategy
         self.flow_config = FLOWS[new_strategy]
 
-        # Advance past INTENT stage for the new strategy
-        # User already indicated intent during INTENT discovery phase
-        stages = self.flow_config["stages"]
-        if len(stages) > 1:
-            self.current_stage = stages[1]  # Skip INTENT, go to next stage
-        else:
-            self.current_stage = stages[0]
+        # Always restart at INTENT so the new strategy establishes intent first.
+        self.current_stage = self.flow_config["stages"][0]
         self.stage_turn_count = 0
         return True
 
     def reset_to_initial(self) -> None:
-        """Reset FSM to initial flow type and clear conversation history.
-        Used to rewind after mid-session strategy switches.
-        """
+        """Reset the FSM to its initial flow and clear history."""
         self.flow_type = self.initial_flow_type
         self.flow_config = FLOWS[self.initial_flow_type]
         self.current_stage = self.flow_config["stages"][0]
@@ -498,7 +495,7 @@ class SalesFlowEngine:
         self.conversation_history = []
 
     def get_summary(self) -> dict[str, Any]:
-        """Return current FSM state as a dict"""
+        """Return the current FSM state as a dict."""
         return {
             "flow_type": self.flow_type,
             "display_strategy": self._strategy_for_prompts,
@@ -508,7 +505,7 @@ class SalesFlowEngine:
         }
 
     def restore_state(self, state: dict[str, Any]) -> None:
-        """Restore FSM from serialized state dict (e.g., from session persistence)."""
+        """Restore the FSM from a saved state dict."""
         flow_type = state["flow_type"]
         if flow_type not in FLOWS:
             raise ValueError(f"Invalid flow_type in saved state: {flow_type}")

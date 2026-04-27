@@ -18,6 +18,7 @@ DEFAULT_VOICE_MAP = {
 
 class _AsyncWorker:
     def __init__(self):
+        """Start a dedicated asyncio loop for background Edge TTS work."""
         self._loop = asyncio.new_event_loop()
         self._thread = threading.Thread(
             target=self._run_loop,
@@ -27,10 +28,12 @@ class _AsyncWorker:
         self._thread.start()
 
     def _run_loop(self):
+        """Run the worker event loop forever on the background thread."""
         asyncio.set_event_loop(self._loop)
         self._loop.run_forever()
 
     def run(self, coro):
+        """Execute one coroutine on the worker loop and wait for the result."""
         future = asyncio.run_coroutine_threadsafe(coro, self._loop)
         return future.result()
 
@@ -39,15 +42,18 @@ class EdgeTTSProvider(BaseTTSProvider):
     provider_name = "edge"
 
     def __init__(self, model: str | None = None):
+        """Initialise the Edge TTS provider and lazy worker state."""
         self._worker: _AsyncWorker | None = None
         self.model = model or "edge-tts"
 
     def _ensure_worker(self) -> _AsyncWorker:
+        """Create the background async worker on first use."""
         if self._worker is None:
             self._worker = _AsyncWorker()
         return self._worker
 
     async def _synthesize_async(self, text: str, voice_name: str, rate: int):
+        """Run the Edge TTS streaming API and collect audio bytes."""
         edge_tts = importlib.import_module("edge_tts")
         audio_buffer = BytesIO()
         communicate = edge_tts.Communicate(
@@ -61,6 +67,7 @@ class EdgeTTSProvider(BaseTTSProvider):
         return audio_buffer.getvalue()
 
     def is_available(self) -> bool:
+        """Return True when the optional `edge_tts` package is installed."""
         try:
             importlib.import_module("edge_tts")
             return True
@@ -68,9 +75,11 @@ class EdgeTTSProvider(BaseTTSProvider):
             return False
 
     def get_model_name(self) -> str:
+        """Return the model label reported for Edge TTS."""
         return self.model
 
     def synthesize(self, text: str, voice: str = "male_us", rate: int = 0) -> SynthesisResult:
+        """Generate speech audio with Edge TTS and return it as bytes."""
         start = time.time()
         voice_name = DEFAULT_VOICE_MAP.get(voice, DEFAULT_VOICE_MAP["male_us"])
         if not self.is_available():

@@ -17,6 +17,7 @@ class ProspectSessionPersistence:
 
     @staticmethod
     def save(session_id: str, state: dict) -> bool:
+        """Log a compact prospect session snapshot instead of writing to disk."""
         logger.info(
             "prospect_session_state %s",
             json.dumps(
@@ -36,10 +37,12 @@ class ProspectSessionPersistence:
 
     @staticmethod
     def load(session_id: str) -> Optional[dict]:
+        """Return None because prospect session disk recovery is disabled."""
         logger.debug("prospect_session_load_disabled session_id=%s", session_id)
         return None
 
     @staticmethod
     def delete(session_id: str) -> bool:
+        """Acknowledge delete requests without touching disk state."""
         logger.info("prospect_session_delete_disabled session_id=%s", session_id)
         return True

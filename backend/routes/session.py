@@ -358,8 +358,9 @@ def api_strategy():
     if not bot.flow_engine.switch_strategy(strategy):
         return jsonify({"error": STRATEGY_SWITCH_FAILED}), 400
 
-    # Keep rewind/reset behaviour consistent after explicit manual switches
-    bot.flow_engine.initial_flow_type = strategy
+    # Preserve the original reset baseline, but keep rewind snapshots aligned
+    # with the current turn after this out-of-band strategy change.
+    bot.refresh_current_turn_snapshot()
     bot.save_session()
 
     return jsonify({"success": True, **bp.bot_state(bot)})  # type: ignore

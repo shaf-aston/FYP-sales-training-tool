@@ -16,300 +16,304 @@
     <body>
         <div class="container">
             <div class="header">
-                <h1 class="text-3xl font-bold text-gray-900 mb-2">
-                    Knowledge Base
-                </h1>
+                <div>
+                    <p class="page-kicker">Knowledge workspace</p>
+                    <h1>Product Knowledge</h1>
+                    <p class="page-subtitle">
+                        Add the details that make your practice scenario feel
+                        real. Keep it specific to your product or offer.
+                    </p>
+                </div>
                 <div class="header-r">
                     <span class="status" id="st"></span>
                     <a
                         href="{{ '/prospect' if mode == 'prospect' else '/' }}"
                         class="nav-btn"
-                        >{{ 'Back to Prospect' if mode == 'prospect' else 'Back
-                        to Chat' }}</a
                     >
+                        {{ 'Back to Prospect' if mode == 'prospect' else 'Back to Chat' }}
+                    </a>
                 </div>
             </div>
             <div class="kb-body">
                 <nav class="side" id="nav"></nav>
                 <div class="scroll" id="scroll">
-                    <p class="note">
-                        Appended to every session's system prompt as custom
-                        product data. Don't repeat built-in product knowledge -
-                        add details specific to your scenario. Changes take
-                        effect after resetting the chat.
-                    </p>
+                    <div class="note">
+                        These notes are added to the chatbot's session prompt as
+                        custom product data. Focus on details unique to your
+                        scenario. Changes take effect after you reset the chat
+                        session.
+                    </div>
                 </div>
             </div>
             <details class="preview" id="preview">
-                <summary>Preview what the chatbot sees</summary>
+                <summary>Preview the product brief the assistant will read</summary>
                 <pre id="previewText">(no data entered)</pre>
             </details>
             <div class="actions">
-                <button class="btn-save" onclick="save()">Save</button>
+                <button class="btn-save" onclick="save()">Save details</button>
                 <button class="btn-clear" onclick="clearAll()">
-                    Clear All
+                    Clear all
                 </button>
             </div>
         </div>
         <script>
-            const MODE = "{{ 'prospect' if mode == 'prospect' else '' }}";
-            const F = [
+            const KNOWLEDGE_FIELDS = [
                 {
                     id: "product_name",
-                    icon: "\u{1F4E6}",
+                    icon: "Box",
                     label: "Product",
-                    title: "Product / Service Name",
-                    hint: "The name of the product or service.",
+                    title: "Product or service name",
+                    hint: "What the buyer should hear you call the product.",
                     max: 100,
                     tag: "input",
-                    ph: "e.g., BMW 5 Series, Pro CRM Plan, Dark Oud Fragrance",
+                    placeholder:
+                        "e.g., BMW 5 Series, Pro CRM Plan, Dark Oud Fragrance",
                 },
                 {
                     id: "pricing",
-                    icon: "\u{1F4B0}",
+                    icon: "Price",
                     label: "Pricing",
-                    title: "Pricing Information",
-                    hint: "Tiers, per-unit pricing, discounts. The chatbot quotes this exactly.",
+                    title: "Pricing details",
+                    hint: "Add exact prices, tiers, discounts, and packaging.",
                     max: 1000,
                     tag: "textarea",
-                    ph: "e.g., Starter: $29/user/mo, Pro: $79/user/mo\nBase $22k, Sport $26k, Premium $30k",
+                    placeholder: "e.g., Starter: $29/user/mo, Pro: $79/user/mo",
                 },
                 {
                     id: "specifications",
-                    icon: "\u2699\uFE0F",
+                    icon: "Specs",
                     label: "Features",
-                    title: "Specifications / Features",
-                    hint: "Key specs, technical details, capacity limits.",
+                    title: "Key features or specifications",
+                    hint: "Highlight the details that matter in real sales conversations.",
                     max: 1000,
                     tag: "textarea",
-                    ph: "e.g., 335hp twin-turbo, leather interior, 26 MPG\nAPI access, unlimited storage, SSO",
+                    placeholder: "e.g., API access, unlimited storage, SSO",
                 },
                 {
                     id: "company_info",
-                    icon: "\u{1F3E2}",
+                    icon: "Team",
                     label: "Company",
-                    title: "Company Information",
-                    hint: "Background the chatbot can reference about your company.",
+                    title: "Company background",
+                    hint: "Anything about your company that strengthens credibility.",
                     max: 1000,
                     tag: "textarea",
-                    ph: "e.g., Founded 2018, 500+ clients served\nAuthorized dealer, award-winning support",
+                    placeholder: "e.g., Founded 2018, 500+ clients served",
                 },
                 {
                     id: "selling_points",
-                    icon: "\u2B50",
-                    label: "Selling Pts",
-                    title: "Key Selling Points",
-                    hint: "Unique value propositions and differentiators vs competitors.",
+                    icon: "Value",
+                    label: "Value",
+                    title: "Best selling points",
+                    hint: "What makes this stand out against competitors?",
                     max: 1000,
                     tag: "textarea",
-                    ph: "e.g., Best resale value in class, 10-year warranty\nMoney-back guarantee, 24/7 support",
+                    placeholder: "e.g., Best resale value in class, 10-year warranty",
                 },
                 {
                     id: "additional_notes",
-                    icon: "\u{1F4DD}",
+                    icon: "Notes",
                     label: "Notes",
-                    title: "Additional Notes",
-                    hint: "Target audience, common objections, seasonal offers.",
+                    title: "Buyer notes and objections",
+                    hint: "Capture common objections, audiences, offers, and context.",
                     max: 1000,
                     tag: "textarea",
-                    ph: "e.g., Target: first-time buyers, enterprise teams\nCommon objection: 'too expensive' \u2014 counter with ROI",
+                    placeholder: "e.g., Common objection: 'too expensive' - counter with ROI",
                 },
             ];
 
-            const nav = document.getElementById("nav"),
-                scroll = document.getElementById("scroll");
+            const sidebarNav = document.getElementById("nav");
+            const contentScroll = document.getElementById("scroll");
 
-            // Build DOM from field config - no repeated HTML
-            F.forEach((f) => {
-                const a = document.createElement("a");
-                a.href = "#s-" + f.id;
-                a.dataset.id = f.id;
-                a.innerHTML =
-                    f.icon +
-                    " " +
-                    f.label +
+            KNOWLEDGE_FIELDS.forEach((field) => {
+                const navLink = document.createElement("a");
+                navLink.href = "#s-" + field.id;
+                navLink.dataset.id = field.id;
+                navLink.innerHTML =
+                    '<span class="nav-label">' +
+                    field.icon +
+                    "</span>" +
+                    '<span class="nav-copy">' +
+                    field.label +
+                    "</span>" +
                     '<span class="dot" id="d-' +
-                    f.id +
+                    field.id +
                     '"></span>';
-                a.addEventListener("click", (e) => {
-                    e.preventDefault();
+                navLink.addEventListener("click", (event) => {
+                    event.preventDefault();
                     document
-                        .getElementById("s-" + f.id)
+                        .getElementById("s-" + field.id)
                         .scrollIntoView({ behavior: "smooth" });
                 });
-                nav.appendChild(a);
+                sidebarNav.appendChild(navLink);
 
-                const div = document.createElement("div");
-                div.className = "field";
-                div.id = "s-" + f.id;
-                const inp =
-                    f.tag === "input"
+                const fieldCard = document.createElement("div");
+                fieldCard.className = "field";
+                fieldCard.id = "s-" + field.id;
+                const inputMarkup =
+                    field.tag === "input"
                         ? '<input id="' +
-                          f.id +
+                          field.id +
                           '" maxlength="' +
-                          f.max +
+                          field.max +
                           '" placeholder="' +
-                          f.ph +
+                          field.placeholder +
                           '">'
                         : '<textarea id="' +
-                          f.id +
+                          field.id +
                           '" maxlength="' +
-                          f.max +
+                          field.max +
                           '" placeholder="' +
-                          f.ph +
+                          field.placeholder +
                           '"></textarea>';
-                div.innerHTML =
+                fieldCard.innerHTML =
                     "<label>" +
-                    f.title +
+                    field.title +
                     '</label><span class="hint">' +
-                    f.hint +
+                    field.hint +
                     "</span>" +
-                    inp +
+                    inputMarkup +
                     '<span class="cc" id="c-' +
-                    f.id +
+                    field.id +
                     '">0 / ' +
-                    f.max +
+                    field.max +
                     "</span>";
-                scroll.appendChild(div);
+                contentScroll.appendChild(fieldCard);
             });
 
-            // Live updates: char count + filled dots + preview
-            function updPreview() {
-                const lines = [];
-                F.forEach((f) => {
-                    const v = document.getElementById(f.id).value.trim();
-                    if (v) lines.push(f.id + ": " + v);
+            function updatePreview() {
+                const previewLines = [];
+                KNOWLEDGE_FIELDS.forEach((field) => {
+                    const value = document.getElementById(field.id).value.trim();
+                    if (value) previewLines.push(field.id + ": " + value);
                 });
-                const pre = document.getElementById("previewText");
-                if (lines.length) {
-                    pre.textContent =
+                const previewText = document.getElementById("previewText");
+                if (previewLines.length) {
+                    previewText.textContent =
                         "--- BEGIN CUSTOM PRODUCT DATA ---\n" +
-                        lines.join("\n") +
+                        previewLines.join("\n") +
                         "\n--- END CUSTOM PRODUCT DATA ---";
                 } else {
-                    pre.textContent = "(no data entered)";
+                    previewText.textContent = "(no data entered)";
                 }
             }
-            function upd() {
-                updPreview();
-                F.forEach((f) => {
-                    const el = document.getElementById(f.id),
-                        cc = document.getElementById("c-" + f.id),
-                        dot = document.getElementById("d-" + f.id);
-                    if (!el) return;
-                    const len = el.value.length;
-                    cc.textContent = len + " / " + f.max;
-                    cc.className =
+
+            function updateFieldState() {
+                updatePreview();
+                KNOWLEDGE_FIELDS.forEach((field) => {
+                    const inputEl = document.getElementById(field.id);
+                    const charCountEl = document.getElementById("c-" + field.id);
+                    const dotEl = document.getElementById("d-" + field.id);
+                    if (!inputEl) return;
+                    const length = inputEl.value.length;
+                    charCountEl.textContent = length + " / " + field.max;
+                    charCountEl.className =
                         "cc" +
-                        (len > f.max * 0.9
-                            ? len >= f.max
+                        (length > field.max * 0.9
+                            ? length >= field.max
                                 ? " over"
                                 : " warn"
                             : "");
-                    dot.classList.toggle("on", el.value.trim().length > 0);
+                    dotEl.classList.toggle("on", inputEl.value.trim().length > 0);
                 });
             }
-            F.forEach((f) => {
-                const el = document.getElementById(f.id);
-                if (el) el.addEventListener("input", upd);
+
+            KNOWLEDGE_FIELDS.forEach((field) => {
+                const inputEl = document.getElementById(field.id);
+                if (inputEl) inputEl.addEventListener("input", updateFieldState);
             });
 
-            // Scroll-spy: highlight sidebar link for visible section
-            const obs = new IntersectionObserver(
+            const sectionObserver = new IntersectionObserver(
                 (entries) => {
-                    entries.forEach((e) => {
-                        if (e.isIntersecting)
-                            nav.querySelectorAll("a").forEach((a) =>
-                                a.classList.toggle(
+                    entries.forEach((entry) => {
+                        if (entry.isIntersecting)
+                            sidebarNav.querySelectorAll("a").forEach((link) =>
+                                link.classList.toggle(
                                     "active",
-                                    a.dataset.id ===
-                                        e.target.id.replace("s-", ""),
+                                    link.dataset.id ===
+                                        entry.target.id.replace("s-", ""),
                                 ),
                             );
                     });
                 },
-                { root: scroll, threshold: 0.4 },
+                { root: contentScroll, threshold: 0.4 },
             );
-            F.forEach((f) => obs.observe(document.getElementById("s-" + f.id)));
+            KNOWLEDGE_FIELDS.forEach((field) =>
+                sectionObserver.observe(document.getElementById("s-" + field.id)),
+            );
 
-            // Status toast
-            function msg(t, err) {
-                const el = document.getElementById("st");
-                el.textContent = t;
-                el.className = "status " + (err ? "err" : "ok");
-                setTimeout(() => (el.textContent = ""), 3000);
+            function showStatus(message, isError) {
+                const statusEl = document.getElementById("st");
+                statusEl.textContent = message;
+                statusEl.className = "status " + (isError ? "err" : "ok");
+                setTimeout(() => (statusEl.textContent = ""), 3000);
             }
 
-            // CRUD
             function load() {
-                const suffix = "";
-                fetch("/api/knowledge" + suffix)
+                fetch("/api/knowledge")
                     .then((r) => r.json())
                     .then((d) => {
                         if (d.success && d.data)
-                            F.forEach((f) => {
-                                const el = document.getElementById(f.id);
-                                if (el && d.data[f.id]) el.value = d.data[f.id];
+                            KNOWLEDGE_FIELDS.forEach((field) => {
+                                const inputEl = document.getElementById(field.id);
+                                if (inputEl && d.data[field.id]) inputEl.value = d.data[field.id];
                             });
-                        upd();
+                        updateFieldState();
                     })
                     .catch(() => {});
             }
 
             function save() {
-                const p = {};
-                let has = false,
-                    short = [];
-                F.forEach((f) => {
-                    const v = document.getElementById(f.id).value.trim();
-                    if (v) {
-                        p[f.id] = v;
-                        has = true;
-                        if (v.length < 10 && f.id !== "product_name")
-                            short.push(f.title);
+                const payload = {};
+                let hasAnyValue = false;
+                const shortFields = [];
+                KNOWLEDGE_FIELDS.forEach((field) => {
+                    const value = document.getElementById(field.id).value.trim();
+                    if (value) {
+                        payload[field.id] = value;
+                        hasAnyValue = true;
+                        if (value.length < 10 && field.id !== "product_name")
+                            shortFields.push(field.title);
                     }
                 });
-                if (!has) return msg("Fill in at least one field", true);
+                if (!hasAnyValue) return showStatus("Add at least one detail", true);
                 if (
-                    short.length &&
+                    shortFields.length &&
                     !confirm(
-                        "These fields have very little detail:\n\n" +
-                            short.join(", ") +
+                        "These sections look very short:\n\n" +
+                            shortFields.join(", ") +
                             "\n\nSave anyway?",
                     )
                 )
                     return;
-                const suffix = "";
-                fetch("/api/knowledge" + suffix, {
+                fetch("/api/knowledge", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(p),
+                    body: JSON.stringify(payload),
                 })
                     .then((r) => r.json())
                     .then((d) =>
                         d.success
-                            ? msg("Saved", false)
-                            : msg("Failed: " + (d.error || "Unknown"), true),
+                            ? showStatus("Saved", false)
+                            : showStatus("Failed: " + (d.error || "Unknown"), true),
                     )
-                    .catch((e) => msg("Error: " + e, true));
+                    .catch((e) => showStatus("Error: " + e, true));
             }
 
             function clearAll() {
-                if (!confirm("Clear all knowledge base data?")) return;
-                const suffix = "";
-                fetch("/api/knowledge" + suffix, { method: "DELETE" })
+                if (!confirm("Clear all saved product knowledge?")) return;
+                fetch("/api/knowledge", { method: "DELETE" })
                     .then((r) => r.json())
                     .then((d) => {
                         if (d.success) {
-                            F.forEach(
-                                (f) =>
-                                    (document.getElementById(f.id).value = ""),
+                            KNOWLEDGE_FIELDS.forEach(
+                                (field) =>
+                                    (document.getElementById(field.id).value = ""),
                             );
-                            upd();
-                            msg("Cleared", false);
-                        } else msg("Failed to clear", true);
+                            updateFieldState();
+                            showStatus("Cleared", false);
+                        } else showStatus("Failed to clear", true);
                     })
-                    .catch((e) => msg("Error: " + e, true));
+                    .catch((e) => showStatus("Error: " + e, true));
             }
 
             document.addEventListener("DOMContentLoaded", load);

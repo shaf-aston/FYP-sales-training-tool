@@ -27,6 +27,7 @@ class SessionAnalytics:
 
     @classmethod
     def _jsonl_path(cls) -> str | None:
+        """Read the optional JSONL sink path from the environment."""
         path = os.environ.get("METRICS_JSONL_PATH")
         if not path:
             return None
@@ -35,6 +36,7 @@ class SessionAnalytics:
 
     @classmethod
     def _write_jsonl(cls, entry: dict) -> None:
+        """Append one analytics entry to the optional JSONL sink."""
         path = cls._jsonl_path()
         if not path:
             return
@@ -55,6 +57,7 @@ class SessionAnalytics:
 
     @classmethod
     def _record(cls, session_id: str, event_type: str, **payload) -> None:
+        """Store one analytics event in memory, logs, and optional JSONL."""
         if not session_id:
             return
 
@@ -77,26 +80,32 @@ class SessionAnalytics:
 
     @classmethod
     def record_session_start(cls, session_id: str, **payload):
+        """Record the first event for a new chatbot session."""
         cls._record(session_id, "session_start", **payload)
 
     @classmethod
     def record_stage_transition(cls, session_id: str, **payload):
+        """Record a stage change inside the conversation flow."""
         cls._record(session_id, "stage_transition", **payload)
 
     @classmethod
     def record_intent_classification(cls, session_id: str, **payload):
+        """Record the latest detected intent level for the user."""
         cls._record(session_id, "intent_classification", **payload)
 
     @classmethod
     def record_objection_classified(cls, session_id: str, **payload):
+        """Record the objection type detected on a user turn."""
         cls._record(session_id, "objection_classified", **payload)
 
     @classmethod
     def record_strategy_switch(cls, session_id: str, **payload):
+        """Record a switch between conversation strategies."""
         cls._record(session_id, "strategy_switch", **payload)
 
     @classmethod
     def get_session_analytics(cls, session_id: str):
+        """Return a safe copy of all analytics events for one session."""
         with _LOCK:
             return deepcopy(cls._events.get(session_id, []))
 

@@ -18,504 +18,746 @@
         />
     </head>
     <body>
-        <div class="container">
-            <div id="chatScreen">
-                <div class="header">
-                    <h1>Sales Assistant</h1>
-                    <div class="header-actions">
-                        <button class="reset-btn" onclick="resetChat()">
-                            Reset
+        <div class="app-shell">
+            <div class="container">
+                <div id="trainingPanel">
+                    <div class="training-header">
+                        <div>
+                            <span class="panel-kicker">Live coaching</span>
+                            <span class="panel-title">Coach guidance</span>
+                        </div>
+                        <button
+                            class="panel-close-btn"
+                            onclick="toggleTrainingPanel()"
+                            aria-label="Close coaching panel"
+                        >
+                            Close
+                        </button>
+                    </div>
+                    <div class="training-body">
+                        <details class="training-section training-section--action is-hidden">
+                            <summary class="training-summary">
+                                <span class="training-tag">What changed</span>
+                                <span class="training-summary-text">
+                                    Recent moment
+                                </span>
+                            </summary>
+                            <div class="training-section-body">
+                                <div class="training-value" id="tWhatHappened"></div>
+                            </div>
+                        </details>
+                        <section class="training-section training-section--trigger is-hidden">
+                            <div class="training-tag">Next move</div>
+                            <div class="training-value" id="tNextMove"></div>
+                        </section>
+                        <section class="training-section training-section--warning is-hidden">
+                            <div class="training-tag training-tag--warning">
+                                Watch out
+                            </div>
+                            <ul class="training-tips" id="tWatchFor"></ul>
+                        </section>
+                        <section class="training-section training-section--qa">
+                            <div class="training-tag training-tag--coach">
+                                Ask the coach
+                            </div>
+                            <p class="training-support">
+                                Ask for a rewrite, a better question, or help
+                                understanding the buyer's signal.
+                            </p>
+                            <div class="training-qa-style-row">
+                                <label class="sr-only" for="trainingStyle">
+                                    Coach style
+                                </label>
+                                <select
+                                    id="trainingStyle"
+                                    class="training-qa-style"
+                                    onchange="changeTrainingStyle(this.value)"
+                                >
+                                    <option value="tactical">
+                                        Direct coaching style
+                                    </option>
+                                    <option value="socratic">
+                                        Ask me back
+                                    </option>
+                                    <option value="teacher">
+                                        Explain it clearly
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="training-qa-row">
+                                <label class="sr-only" for="trainingQuestion">
+                                    Training question
+                                </label>
+                                <input
+                                    type="text"
+                                    id="trainingQuestion"
+                                    class="training-qa-input"
+                                    placeholder="What should I say instead?"
+                                    onkeydown="if (event.key === 'Enter') askTrainingCoach();"
+                                />
+                                <button
+                                    class="training-qa-btn"
+                                    onclick="askTrainingCoach()"
+                                >
+                                    Ask coach
+                                </button>
+                            </div>
+                            <div
+                                id="trainingAnswer"
+                                class="training-qa-answer"
+                            ></div>
+                        </section>
+                    </div>
+                </div>
+
+                <div id="chatScreen">
+                    <div class="header">
+                        <div class="header-copy">
+                            <p class="eyebrow">Practice workspace</p>
+                            <h1>Sales Assistant</h1>
+                            <p class="header-subtitle">
+                                Run a practice conversation, watch your stage
+                                progress, and ask for live coaching when you
+                                need it.
+                            </p>
+                        </div>
+                        <div class="header-actions">
+                            <button
+                                class="feedback-pill"
+                                id="feedbackToggle"
+                                onclick="toggleFeedback()"
+                                title="Share quick product feedback"
+                            >
+                                Feedback
+                            </button>
+                            <div class="overflow-menu">
+                                <button
+                                    class="overflow-btn"
+                                    type="button"
+                                    onclick="toggleResetMenu()"
+                                    aria-expanded="false"
+                                    aria-controls="resetMenu"
+                                >
+                                    More
+                                </button>
+                                <div id="resetMenu" class="overflow-panel">
+                                    <button
+                                        class="overflow-item danger"
+                                        type="button"
+                                        onclick="openResetModal()"
+                                    >
+                                        Reset session
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="chat-frame">
+                        <div class="chat-intro-card" id="chatIntroCard">
+                            <span class="intro-badge">Try this first</span>
+                            <h2>Start with a short opener.</h2>
+                            <p>
+                                Example: "Hi, I’d love to learn what you’re
+                                looking for today." The coach will track the
+                                conversation stage and suggest your next move.
+                            </p>
+                        </div>
+
+                        <div class="chat-container" id="chatContainer"></div>
+                    </div>
+
+                    <div
+                        id="ttsSpeakingBanner"
+                        class="tts-speaking-banner"
+                        style="display: none"
+                    >
+                        Coach speaking. Microphone paused for clarity.
+                    </div>
+                    <div
+                        id="dictationPreview"
+                        class="dictation-preview"
+                        style="display: none"
+                    ></div>
+                    <div class="input-area">
+                        <button
+                            class="voice-mode-btn"
+                            id="voiceModeBtn"
+                            onclick="toggleVoiceMode()"
+                            title="Conversational mode: auto-send speech and auto-play replies"
+                            aria-label="Toggle conversational voice mode"
+                        >
+                            <span id="voiceModeIndicator">Text</span>
+                        </button>
+                        <button
+                            class="mic-btn"
+                            id="micBtn"
+                            onclick="toggleMic()"
+                            title="Voice input"
+                        >
+                            Mic
+                        </button>
+                        <button
+                            class="interrupt-btn"
+                            id="interruptBtn"
+                            onclick="interruptAssistant()"
+                            title="Stop playback and resume listening"
+                            aria-label="Interrupt assistant"
+                            style="display: none"
+                        >
+                            Stop
+                        </button>
+                        <label class="sr-only" for="messageInput">
+                            Message input
+                        </label>
+                        <textarea
+                            id="messageInput"
+                            placeholder="Type your opener here... (Shift+Enter for a new line)"
+                            onkeydown="handleKeyDown(event)"
+                            rows="1"
+                            autocomplete="off"
+                        ></textarea>
+                        <button
+                            class="send-btn"
+                            id="sendBtn"
+                            onclick="sendMessage()"
+                        >
+                            Send
                         </button>
                     </div>
                 </div>
 
+                <aside class="sidebar-right">
+                    <div class="sidebar-top">
+                        <div class="status-card">
+                            <div class="status-card-top">
+                                <span class="status-eyebrow">Session status</span>
+                                <span class="status-strategy" id="strategyBadge">
+                                    Not started
+                                </span>
+                            </div>
+                            <div class="status-stage-row">
+                                <div>
+                                    <div class="status-stage-label">
+                                        Current stage
+                                    </div>
+                                    <div class="status-stage-value" id="stageBadge">
+                                        Not started
+                                    </div>
+                                </div>
+                                <div class="status-stage-note" id="stageStatusNote">
+                                    Begin the conversation to start tracking the
+                                    flow.
+                                </div>
+                            </div>
+                            <div
+                                class="workflow-progress"
+                                id="workflowProgress"
+                                aria-label="Sales workflow progress"
+                            ></div>
+                        </div>
 
-                <div class="chat-container" id="chatContainer"></div>
+                        <div class="sidebar-tabbar" role="tablist">
+                            <button
+                                type="button"
+                                class="sidebar-tab active"
+                                data-sidebar-tab="session"
+                                onclick="setSidebarTab('session')"
+                            >
+                                Session
+                            </button>
+                            <button
+                                type="button"
+                                class="sidebar-tab"
+                                data-sidebar-tab="mode"
+                                onclick="setSidebarTab('mode')"
+                            >
+                                Mode
+                            </button>
+                            <button
+                                type="button"
+                                class="sidebar-tab"
+                                data-sidebar-tab="tools"
+                                onclick="setSidebarTab('tools')"
+                            >
+                                Tools
+                            </button>
+                            <button
+                                type="button"
+                                class="sidebar-tab"
+                                data-sidebar-tab="settings"
+                                onclick="setSidebarTab('settings')"
+                            >
+                                Settings
+                            </button>
+                        </div>
+                    </div>
 
-                <div
-                    id="ttsSpeakingBanner"
-                    class="tts-speaking-banner"
-                    style="display: none"
-                >
-                    🔊 Coach speaking - mic paused
+                    <div class="sidebar-panels">
+                        <section
+                            class="sidebar-panel active"
+                            data-sidebar-panel="session"
+                        >
+                            <div class="sidebar-section" id="flowControls" style="display: none;">
+                                <div class="section-heading">
+                                    <h3>Conversation flow</h3>
+                                    <p>
+                                        Skip ahead or change approach when you
+                                        need to test a specific scenario.
+                                    </p>
+                                </div>
+                                <div class="sidebar-actions">
+                                    <label class="field-label" for="strategySelectMain">
+                                        Change approach
+                                    </label>
+                                    <select
+                                        id="strategySelectMain"
+                                        class="sidebar-btn"
+                                        aria-label="Select approach"
+                                    >
+                                        <option value="">Choose an approach</option>
+                                        <option value="consultative">
+                                            Guided discovery
+                                        </option>
+                                        <option value="transactional">
+                                            Direct style
+                                        </option>
+                                        <option value="intent">
+                                            Discovery check-in
+                                        </option>
+                                    </select>
+                                    <button
+                                        class="sidebar-btn secondary-action"
+                                        id="switchStrategyBtn"
+                                        onclick="switchStrategy('strategySelectMain')"
+                                    >
+                                        Apply approach
+                                    </button>
+
+                                    <label class="field-label" for="stageSelectMain">
+                                        Skip to stage
+                                    </label>
+                                    <select
+                                        id="stageSelectMain"
+                                        class="sidebar-btn"
+                                        aria-label="Select stage to jump to"
+                                    >
+                                        <option value="">Loading stages...</option>
+                                    </select>
+                                    <button
+                                        class="sidebar-btn secondary-action"
+                                        id="jumpStageMainBtn"
+                                        onclick="jumpStage('stageSelectMain')"
+                                    >
+                                        Move to stage
+                                    </button>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="sidebar-panel" data-sidebar-panel="mode">
+                            <div class="sidebar-section">
+                                <div class="section-heading">
+                                    <h3>Practice session</h3>
+                                    <p>
+                                        Pick a product, choose the challenge
+                                        level, then start a prospect roleplay.
+                                    </p>
+                                </div>
+                                <div class="sidebar-actions">
+                                    <label class="field-label" for="prospectProductSelect">
+                                        Product scenario
+                                    </label>
+                                    <select id="prospectProductSelect" class="sidebar-btn">
+                                        <option value="default">General practice</option>
+                                        {% for p in prospect_products %}
+                                        <option value="{{ p.id }}">{{ p.label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="field-label">Difficulty</div>
+                                    <div class="prospect-diff-buttons">
+                                        <button
+                                            class="prospect-diff-btn"
+                                            onclick="selectProspectDifficulty('easy', this)"
+                                            data-diff="easy"
+                                        >
+                                            Easy
+                                        </button>
+                                        <button
+                                            class="prospect-diff-btn selected"
+                                            onclick="selectProspectDifficulty('medium', this)"
+                                            data-diff="medium"
+                                        >
+                                            Medium
+                                        </button>
+                                        <button
+                                            class="prospect-diff-btn"
+                                            onclick="selectProspectDifficulty('hard', this)"
+                                            data-diff="hard"
+                                        >
+                                            Hard
+                                        </button>
+                                    </div>
+                                    <button
+                                        class="sidebar-btn primary-action"
+                                        id="prospectStartBtn"
+                                        onclick="startProspectMode()"
+                                    >
+                                        Start prospect practice
+                                    </button>
+                                    <p class="prospect-flow-note">
+                                        Stage controls are not available in prospect practice.
+                                    </p>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="sidebar-panel" data-sidebar-panel="tools">
+                            <div class="sidebar-section">
+                                <div class="section-heading">
+                                    <h3>Learning tools</h3>
+                                    <p>
+                                        Open the resource you need without
+                                        leaving the session flow.
+                                    </p>
+                                </div>
+                                <div class="tool-grid">
+                                    <a
+                                        id="knowledgeBaseLink"
+                                        href="/knowledge"
+                                        class="tool-card"
+                                        title="Browse product notes and best practices"
+                                    >
+                                        <span class="tool-icon">Book</span>
+                                        <span class="tool-title">Knowledge</span>
+                                        <span class="tool-copy">
+                                            Browse notes and product details.
+                                        </span>
+                                    </a>
+                                    <button
+                                        id="trainingToggleBtn"
+                                        class="tool-card"
+                                        onclick="toggleTrainingPanel()"
+                                        title="Open live coaching guidance"
+                                    >
+                                        <span class="tool-icon">Target</span>
+                                        <span class="tool-title">Coaching</span>
+                                        <span class="tool-copy">
+                                            Get guided next-step advice.
+                                        </span>
+                                    </button>
+                                    <button
+                                        id="quizToggleBtn"
+                                        class="tool-card"
+                                        onclick="toggleQuizPanel()"
+                                        title="Practice with quiz questions"
+                                    >
+                                        <span class="tool-icon">Quiz</span>
+                                        <span class="tool-title">Quiz</span>
+                                        <span class="tool-copy">
+                                            Test stage and response judgment.
+                                        </span>
+                                    </button>
+                                    <button
+                                        class="tool-card"
+                                        onclick="toggleFeedback()"
+                                        title="Share product feedback"
+                                    >
+                                        <span class="tool-icon">Chart</span>
+                                        <span class="tool-title">Feedback</span>
+                                        <span class="tool-copy">
+                                            Rate the session and suggest fixes.
+                                        </span>
+                                    </button>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="sidebar-panel" data-sidebar-panel="settings">
+                            <div class="sidebar-section">
+                                <div class="section-heading">
+                                    <h3>Voice settings</h3>
+                                    <p>
+                                        Tune dictation and playback to match how
+                                        you like to practice.
+                                    </p>
+                                </div>
+                                <div class="sidebar-actions">
+                                    <label
+                                        class="checkbox-card"
+                                        title="Send the voice message automatically after you stop speaking"
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            id="autoSendDictationToggle"
+                                            onchange="toggleAutoSend()"
+                                        />
+                                        <span>
+                                            Auto-send after you pause speaking
+                                        </span>
+                                    </label>
+                                    <div class="tts-speed-control">
+                                        <label for="ttsSpeedSlider">
+                                            Coach voice speed
+                                            <span id="ttsSpeedValue">Normal</span>
+                                        </label>
+                                        <input
+                                            type="range"
+                                            id="ttsSpeedSlider"
+                                            min="-50"
+                                            max="50"
+                                            value="0"
+                                            step="5"
+                                            title="Adjust assistant speech speed"
+                                            onchange="updateTtsSpeed(this.value)"
+                                        />
+                                        <div class="slider-caption">
+                                            Playback change:
+                                            <span id="ttsSpeedPercent">0%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </aside>
+            </div>
+
+            <div id="quizPanel">
+                <div class="quiz-header">
+                    <div>
+                        <span class="panel-kicker">Quiz mode</span>
+                        <span class="panel-title">Skill check</span>
+                    </div>
+                    <button
+                        class="panel-close-btn"
+                        onclick="toggleQuizPanel()"
+                        aria-label="Close quiz panel"
+                    >
+                        Close
+                    </button>
                 </div>
-                <div
-                    id="dictationPreview"
-                    class="dictation-preview"
-                    style="display: none"
-                ></div>
-                <div class="input-area">
-                    <button
-                        class="voice-mode-btn"
-                        id="voiceModeBtn"
-                        onclick="toggleVoiceMode()"
-                        title="Conversational Mode: auto-send speech + auto-play response"
-                        aria-label="Toggle conversational voice mode"
-                    >
-                        <span id="voiceModeIndicator">⌨️</span>
-                    </button>
-                    <button
-                        class="mic-btn"
-                        id="micBtn"
-                        onclick="toggleMic()"
-                        title="Voice input"
-                    >
-                        🎤
-                    </button>
-                    <button
-                        class="interrupt-btn"
-                        id="interruptBtn"
-                        onclick="interruptAssistant()"
-                        title="Interrupt assistant (stop playback / resume listening)"
-                        aria-label="Interrupt assistant"
-                        style="display: none; margin-left: 6px"
-                    >
-                        ⛔
-                    </button>
-                    <label class="sr-only" for="messageInput"
-                        >Message input</label
-                    >
-                    <textarea
-                        id="messageInput"
-                        placeholder="Type your message… (Shift+Enter for new line)"
-                        onkeydown="handleKeyDown(event)"
-                        rows="1"
-                        autocomplete="off"
-                    ></textarea>
-                    <button
-                        class="send-btn"
-                        id="sendBtn"
-                        onclick="sendMessage()"
-                    >
-                        Send
-                    </button>
+                <div class="quiz-body">
+                    <div class="quiz-type-buttons">
+                        <button
+                            class="quiz-type-btn active"
+                            onclick="selectQuizType('stage')"
+                            id="quiz-btn-stage"
+                        >
+                            Stage
+                        </button>
+                        <button
+                            class="quiz-type-btn"
+                            onclick="selectQuizType('next_move')"
+                            id="quiz-btn-next_move"
+                        >
+                            Next move
+                        </button>
+                        <button
+                            class="quiz-type-btn"
+                            onclick="selectQuizType('direction')"
+                            id="quiz-btn-direction"
+                        >
+                            Direction
+                        </button>
+                    </div>
+                    <div class="quiz-question" id="quizQuestion">
+                        Select a quiz type and load a question to begin.
+                    </div>
+                    <div class="quiz-answer-area">
+                        <textarea
+                            id="quizAnswer"
+                            class="quiz-answer-input"
+                            placeholder="Type your answer here..."
+                        ></textarea>
+                        <button
+                            class="quiz-submit-btn"
+                            onclick="submitQuiz()"
+                            id="quizSubmitBtn"
+                        >
+                            Submit answer
+                        </button>
+                    </div>
+                    <div id="quizFeedback"></div>
                 </div>
             </div>
 
-            <!-- â”€â”€â”€ Right Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
-            <div class="sidebar-right">
-                <div class="sidebar-section">
-                    <h3>Status</h3>
-                    <div class="status-container">
-                        <div class="status-item">
-                            <span class="status-label">Strategy:</span>
-                            <span class="status-value" id="strategyBadge"
-                                >-</span
-                            >
-                        </div>
-                        <div class="status-item">
-                            <span class="status-label">Stage:</span>
-                            <span class="status-value" id="stageBadge">-</span>
+            <div id="prospectPanel">
+                <div class="prospect-header">
+                    <div>
+                        <span class="panel-kicker">Prospect practice</span>
+                        <span class="panel-title">Live buyer profile</span>
+                    </div>
+                    <button
+                        class="panel-close-btn"
+                        onclick="endProspectMode()"
+                        aria-label="Close prospect mode"
+                    >
+                        Exit
+                    </button>
+                </div>
+                <div class="prospect-body">
+                    <div class="prospect-section">
+                        <div class="prospect-label">Prospect</div>
+                        <div class="prospect-value" id="prospectName">-</div>
+                        <div
+                            class="prospect-value prospect-background"
+                            id="prospectBackground"
+                        >
+                            -
                         </div>
                     </div>
-                </div>
-
-                <div class="sidebar-section" id="flowControls" style="display: none;">
-                    <h3>Flow Controls</h3>
-                    <div class="sidebar-actions">
-                        <select id="strategySelectMain" class="sidebar-btn" aria-label="Select strategy">
-                            <option value="">Select strategy...</option>
-                            <option value="consultative">CONSULTATIVE</option>
-                            <option value="transactional">TRANSACTIONAL</option>
-                            <option value="intent">INTENT</option>
-                        </select>
-                        <button class="sidebar-btn" id="switchStrategyBtn" onclick="switchStrategy('strategySelectMain')" style="justify-content: center; color: var(--accent-gold);">
-                            Switch Strategy
-                        </button>
-                        
-                        <div style="height: 4px;"></div>
-                        
-                        <select id="stageSelectMain" class="sidebar-btn" aria-label="Select stage to jump to">
-                            <option value="">Loading...</option>
-                        </select>
-                        <button class="sidebar-btn" id="jumpStageMainBtn" onclick="jumpStage('stageSelectMain')" style="justify-content: center; color: var(--accent-gold);">
-                            Jump Stage
-                        </button>
+                    <div class="prospect-section">
+                        <div class="prospect-label">Difficulty</div>
+                        <div id="prospectDiffBadge"></div>
                     </div>
-                </div>
-
-                <div class="sidebar-section">
-                    <h3>Prospect Practice</h3>
-                    <div class="sidebar-actions">
-                        <select id="prospectProductSelect" class="sidebar-btn">
-                            <option value="default">General (Any Product)</option>
-                            {% for p in prospect_products %}
-                            <option value="{{ p.id }}">{{ p.label }}</option>
-                            {% endfor %}
-                        </select>
-                        <div class="prospect-diff-buttons">
-                            <button
-                                class="prospect-diff-btn"
-                                onclick="selectProspectDifficulty('easy', this)"
-                                data-diff="easy"
-                            >
-                                <span class="diff-label">Easy</span>
-                            </button>
-                            <button
-                                class="prospect-diff-btn selected"
-                                onclick="
-                                    selectProspectDifficulty('medium', this)
-                                "
-                                data-diff="medium"
-                            >
-                                <span class="diff-label">Med</span>
-                            </button>
-                            <button
-                                class="prospect-diff-btn"
-                                onclick="selectProspectDifficulty('hard', this)"
-                                data-diff="hard"
-                            >
-                                <span class="diff-label">Hard</span>
-                            </button>
-                        </div>
-                        <button
-                            class="sidebar-btn"
-                            id="prospectStartBtn"
-                            onclick="startProspectMode()"
-                            style="
-                                justify-content: center;
-                                background: #4f46e5;
-                                color: #fff;
-                                border: none;
-                                text-align: center;
-                            "
-                        >
-                            Prospect Mode
-                        </button>
-                    </div>
-                </div>
-
-                <div class="sidebar-section">
-                    <h3>Tools</h3>
-                    <div class="sidebar-actions">
-                        <a
-                            id="knowledgeBaseLink"
-                            href="/knowledge"
-                            class="sidebar-btn"
-                            >Knowledge</a
-                        >
-                        <button
-                            id="trainingToggleBtn"
-                            class="sidebar-btn"
-                            onclick="toggleTrainingPanel()"
-                        >
-                            🎓 Training
-                        </button>
-                        <button
-                            id="quizToggleBtn"
-                            class="sidebar-btn"
-                            onclick="toggleQuizPanel()"
-                        >
-                            Quiz
-                        </button>
-                        <button
-                            id="feedbackToggle"
-                            class="sidebar-btn"
-                            onclick="toggleFeedback()"
-                        >
-                            💬 Feedback
-                        </button>
-                        <label
-                            class="sidebar-btn checkbox-label"
-                            title="Send voice message automatically after you stop speaking"
-                            style="cursor: pointer"
-                        >
-                            <input
-                                type="checkbox"
-                                id="autoSendDictationToggle"
-                                onchange="toggleAutoSend()"
-                            />
-                            Dictation: Pause to Auto-send
-                        </label>
-                        <div class="sidebar-btn tts-speed-control">
-                            <label
-                                for="ttsSpeedSlider"
-                                style="
-                                    display: block;
-                                    margin-bottom: 6px;
-                                    font-weight: 500;
-                                "
-                            >
-                                Voice Speed:
-                                <span id="ttsSpeedValue">Normal</span>
-                            </label>
-                            <input
-                                type="range"
-                                id="ttsSpeedSlider"
-                                min="-50"
-                                max="50"
-                                value="0"
-                                step="5"
-                                title="Adjust assistant speech speed (-50% slower to +50% faster)"
-                                onchange="updateTtsSpeed(this.value)"
-                                style="width: 100%; cursor: pointer"
-                            />
+                    <div class="prospect-section">
+                        <div class="prospect-label">Buying readiness</div>
+                        <div class="prospect-readiness-bar">
                             <div
-                                style="
-                                    font-size: 11px;
-                                    color: #666;
-                                    margin-top: 4px;
-                                    text-align: center;
-                                "
+                                class="prospect-readiness-fill"
+                                id="prospectReadinessFill"
+                                style="width: 20%; background: #ef4444"
+                            ></div>
+                        </div>
+                        <div class="prospect-readiness-labels">
+                            <span>Not interested</span>
+                            <span
+                                class="prospect-readiness-pct"
+                                id="prospectReadinessVal"
                             >
-                                <span id="ttsSpeedPercent">0%</span>
+                                0%
+                            </span>
+                            <span>Ready to buy</span>
+                        </div>
+                    </div>
+                    <div class="prospect-section">
+                        <div class="prospect-label">Turn</div>
+                        <div class="prospect-value" id="prospectTurnCount">0</div>
+                    </div>
+                    <div
+                        class="prospect-section"
+                        id="prospectCoachingSection"
+                        style="display: none"
+                    >
+                        <div class="prospect-label">Coaching hint</div>
+                        <div class="prospect-coaching" id="prospectCoachingHint">
+                            -
+                        </div>
+                    </div>
+                    <div class="prospect-section">
+                        <button class="prospect-btn danger" onclick="endAndScore()">
+                            End and score
+                        </button>
+                    </div>
+                    <div class="prospect-settings">
+                        <button
+                            class="prospect-settings-toggle"
+                            onclick="toggleProspectSettings()"
+                        >
+                            Practice settings
+                        </button>
+                        <div
+                            class="prospect-settings-body"
+                            id="prospectSettingsBody"
+                        >
+                            <div class="prospect-setting-row">
+                                <span>Show hints</span>
+                                <div
+                                    class="toggle-switch"
+                                    id="prospectHintsToggle"
+                                    onclick="toggleProspectHints()"
+                                ></div>
+                            </div>
+                            <div class="prospect-setting-row">
+                                <span>Evaluation display</span>
+                                <select
+                                    id="prospectEvalDisplay"
+                                    onchange="saveProspectSettings()"
+                                >
+                                    <option value="inline">Inline</option>
+                                    <option value="modal">Modal</option>
+                                    <option value="panel">Panel</option>
+                                </select>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <div id="trainingPanel">
-            <div class="training-header">
-                <span>🎓 Training</span>
+            <div id="feedbackDropdown">
+                <div class="fb-title">Quick feedback</div>
+                <div class="fb-stars" id="fbStars">
+                    <button class="fb-star" data-val="1" onclick="setFbRating(1)">
+                        &#9733;
+                    </button>
+                    <button class="fb-star" data-val="2" onclick="setFbRating(2)">
+                        &#9733;
+                    </button>
+                    <button class="fb-star" data-val="3" onclick="setFbRating(3)">
+                        &#9733;
+                    </button>
+                    <button class="fb-star" data-val="4" onclick="setFbRating(4)">
+                        &#9733;
+                    </button>
+                    <button class="fb-star" data-val="5" onclick="setFbRating(5)">
+                        &#9733;
+                    </button>
+                </div>
+                <label class="sr-only" for="fbComment">Feedback comment</label>
+                <textarea
+                    id="fbComment"
+                    class="fb-comment"
+                    placeholder="What worked well? What should feel easier?"
+                    maxlength="500"
+                ></textarea>
                 <button
-                    class="training-close-btn"
-                    onclick="toggleTrainingPanel()"
+                    class="fb-submit"
+                    id="fbSubmitBtn"
+                    onclick="submitFeedback()"
                 >
-                    ×
+                    Send feedback
                 </button>
             </div>
-            <div class="training-body">
-                <div class="training-section training-section--action">
-                    <div class="training-label">What just happened</div>
-                    <div class="training-value" id="tWhatHappened">-</div>
-                </div>
-                <div class="training-section training-section--trigger">
-                    <div class="training-label">Your next move</div>
-                    <div class="training-value" id="tNextMove">-</div>
-                </div>
-                <div class="training-section training-section--warning">
-                    <div class="training-label">Watch out</div>
-                    <ul class="training-tips" id="tWatchFor"></ul>
-                </div>
-                <div class="training-section training-section--qa">
-                    <div class="training-label">Ask the coach</div>
-                    <div class="training-qa-style-row">
-                        <label class="sr-only" for="trainingStyle"
-                            >Coach style</label
-                        >
-                        <select
-                            id="trainingStyle"
-                            class="training-qa-style"
-                            onchange="changeTrainingStyle(this.value)"
-                        >
-                            <option value="tactical">Tactical (direct)</option>
-                            <option value="socratic">
-                                Socratic (ask back)
-                            </option>
-                            <option value="teacher">Teacher (explain)</option>
-                        </select>
+
+            <div
+                id="resetModal"
+                class="modal-backdrop"
+                aria-hidden="true"
+                onclick="handleResetBackdrop(event)"
+            >
+                <div
+                    class="modal-card"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="resetModalTitle"
+                >
+                    <div class="modal-copy">
+                        <p class="modal-kicker">Reset session</p>
+                        <h2 id="resetModalTitle">Clear this practice session?</h2>
+                        <p>
+                            This removes the current conversation history and
+                            stage progress. You cannot undo it.
+                        </p>
                     </div>
-                    <div class="training-qa-row">
-                        <label class="sr-only" for="trainingQuestion"
-                            >Training question</label
-                        >
-                        <input
-                            type="text"
-                            id="trainingQuestion"
-                            class="training-qa-input"
-                            placeholder="e.g. What should I have said instead?"
-                            onkeydown="
-                                if (event.key === 'Enter') askTrainingCoach();
-                            "
-                        />
+                    <div class="modal-actions">
                         <button
-                            class="training-qa-btn"
-                            onclick="askTrainingCoach()"
+                            type="button"
+                            class="modal-btn modal-btn-secondary"
+                            onclick="closeResetModal()"
                         >
-                            Ask
+                            Keep session
+                        </button>
+                        <button
+                            type="button"
+                            class="modal-btn modal-btn-danger"
+                            onclick="confirmResetChat()"
+                        >
+                            Reset session
                         </button>
                     </div>
-                    <div id="trainingAnswer" class="training-qa-answer"></div>
                 </div>
             </div>
-        </div>
-
-        <!-- â”€â”€â”€ Quiz Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
-        <div id="quizPanel">
-            <div class="quiz-header">
-                <span>Quiz Mode</span>
-                <button class="quiz-close-btn" onclick="toggleQuizPanel()">
-                    ×
-                </button>
-            </div>
-            <div class="quiz-body">
-                <div class="quiz-type-buttons">
-                    <button
-                        class="quiz-type-btn active"
-                        onclick="selectQuizType('stage')"
-                        id="quiz-btn-stage"
-                    >
-                        Stage
-                    </button>
-                    <button
-                        class="quiz-type-btn"
-                        onclick="selectQuizType('next_move')"
-                        id="quiz-btn-next_move"
-                    >
-                        Next Move
-                    </button>
-                    <button
-                        class="quiz-type-btn"
-                        onclick="selectQuizType('direction')"
-                        id="quiz-btn-direction"
-                    >
-                        Direction
-                    </button>
-                </div>
-                <div class="quiz-question" id="quizQuestion">
-                    Select a quiz type and click "Get Question" to start.
-                </div>
-                <div class="quiz-answer-area">
-                    <textarea
-                        id="quizAnswer"
-                        class="quiz-answer-input"
-                        placeholder="Type your answer here..."
-                    ></textarea>
-                    <button
-                        class="quiz-submit-btn"
-                        onclick="submitQuiz()"
-                        id="quizSubmitBtn"
-                    >
-                        Submit Answer
-                    </button>
-                </div>
-                <div id="quizFeedback"></div>
-            </div>
-        </div>
-
-        <!-- â”€â”€â”€ Prospect Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
-        <div id="prospectPanel">
-            <div class="prospect-header">
-                <span>Prospect Mode</span>
-                <button class="prospect-close-btn" onclick="endProspectMode()">
-                    ×
-                </button>
-            </div>
-            <div class="prospect-body">
-                <div class="prospect-section">
-                    <div class="prospect-label">Prospect</div>
-                    <div class="prospect-value" id="prospectName">-</div>
-                    <div
-                        class="prospect-value prospect-background"
-                        id="prospectBackground"
-                    >
-                        -
-                    </div>
-                </div>
-                <div class="prospect-section">
-                    <div class="prospect-label">Difficulty</div>
-                    <div id="prospectDiffBadge"></div>
-                </div>
-                <div class="prospect-section">
-                    <div class="prospect-label">Buying Readiness</div>
-                    <div class="prospect-readiness-bar">
-                        <div
-                            class="prospect-readiness-fill"
-                            id="prospectReadinessFill"
-                            style="width: 20%; background: #ef4444"
-                        ></div>
-                    </div>
-                    <div class="prospect-readiness-labels">
-                        <span>Not interested</span>
-                        <span
-                            class="prospect-readiness-pct"
-                            id="prospectReadinessVal"
-                            >0%</span
-                        >
-                        <span>Ready to buy</span>
-                    </div>
-                </div>
-                <div class="prospect-section">
-                    <div class="prospect-label">Turn</div>
-                    <div class="prospect-value" id="prospectTurnCount">0</div>
-                </div>
-                <div
-                    class="prospect-section"
-                    id="prospectCoachingSection"
-                    style="display: none"
-                >
-                    <div class="prospect-label">Coaching Hint</div>
-                    <div class="prospect-coaching" id="prospectCoachingHint">
-                        -
-                    </div>
-                </div>
-                <div class="prospect-section">
-                    <button class="prospect-btn danger" onclick="endAndScore()">
-                        End &amp; Score
-                    </button>
-                </div>
-                <div class="prospect-settings">
-                    <button
-                        class="prospect-settings-toggle"
-                        onclick="toggleProspectSettings()"
-                    >
-                        ⚙ Settings
-                    </button>
-                    <div
-                        class="prospect-settings-body"
-                        id="prospectSettingsBody"
-                    >
-                        <div class="prospect-setting-row">
-                            <span>Show hints</span>
-                            <div
-                                class="toggle-switch"
-                                id="prospectHintsToggle"
-                                onclick="toggleProspectHints()"
-                            ></div>
-                        </div>
-                        <div class="prospect-setting-row">
-                            <span>Evaluation display</span>
-                            <select
-                                id="prospectEvalDisplay"
-                                onchange="saveProspectSettings()"
-                            >
-                                <option value="inline">Inline</option>
-                                <option value="modal">Modal</option>
-                                <option value="panel">Panel</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-
-        <!-- â”€â”€â”€ Feedback Dropdown â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
-        <div id="feedbackDropdown">
-            <div class="fb-title">Quick Feedback</div>
-            <div class="fb-stars" id="fbStars">
-                <button class="fb-star" data-val="1" onclick="setFbRating(1)">
-                    &#9733;
-                </button>
-                <button class="fb-star" data-val="2" onclick="setFbRating(2)">
-                    &#9733;
-                </button>
-                <button class="fb-star" data-val="3" onclick="setFbRating(3)">
-                    &#9733;
-                </button>
-                <button class="fb-star" data-val="4" onclick="setFbRating(4)">
-                    &#9733;
-                </button>
-                <button class="fb-star" data-val="5" onclick="setFbRating(5)">
-                    &#9733;
-                </button>
-            </div>
-            <label class="sr-only" for="fbComment">Feedback comment</label>
-            <textarea
-                id="fbComment"
-                class="fb-comment"
-                placeholder="Any thoughts? (optional)"
-                maxlength="500"
-            ></textarea>
-            <button
-                class="fb-submit"
-                id="fbSubmitBtn"
-                onclick="submitFeedback()"
-            >
-                Send Feedback
-            </button>
         </div>
 
         <meta

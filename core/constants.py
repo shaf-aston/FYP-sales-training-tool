@@ -34,6 +34,7 @@ DEFAULT_MAX_TOKENS = 200
 SCORING_RUBRIC = {
     "stage_points": {
         "objection": 30,
+        "negotiation": 26,
         "pitch": 22,
         "emotional": 15,
         "logical": 10,
@@ -52,5 +53,6 @@ STAGE_TIMEOUTTHRESHOLDS = {
     "logical": 10,
     "emotional": 10,
     "pitch": 8,
+    "negotiation": 8,
     "objection": 6,
 }

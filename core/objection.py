@@ -7,7 +7,7 @@ from typing import Any, Optional, TypedDict
 from .constants_enums import MessageRole, ObjectionType
 from .helpers import HistoryHelper
 from .loader import load_analysis_config, load_objection_flows, load_yaml
-from .utils import contains_nonnegated_keyword
+from .utils import Stage, Strategy, contains_nonnegated_keyword
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +75,7 @@ def classify_objection(
     reframe_guidance = OBJECTION_FLOWS_CONFIG.get("reframe_guidance", {})
 
     def _classify_text(text: str) -> Optional[dict[str, Any]]:
+        """Return the first objection match found in priority order."""
         for obj_type in classification_order:
             keywords = objection_keywords.get(obj_type, [])
             if not contains_nonnegated_keyword(text, keywords):
@@ -126,6 +127,7 @@ _PATHWAY_CONFIG = None
 
 
 def _load_pathway_config() -> dict[str, Any]:
+    """Load objection pathway mapping once and keep it cached in memory."""
     global _PATHWAY_CONFIG
     if _PATHWAY_CONFIG is None:
         try:
@@ -137,6 +139,7 @@ def _load_pathway_config() -> dict[str, Any]:
 
 
 def validate_pathway_config() -> tuple[bool, list[str]]:
+    """Check that the pathway map contains the minimum required structure."""
     pathway_config = _load_pathway_config()
     errors = []
 
@@ -182,6 +185,7 @@ def validate_pathway_config() -> tuple[bool, list[str]]:
 
 
 def _validate_on_import():
+    """Warn early if the objection pathway config is incomplete or malformed."""
     is_valid, errors = validate_pathway_config()
     if not is_valid:
         warnings.warn(
@@ -194,6 +198,7 @@ _validate_on_import()
 
 
 def _detect_subtype(category: str, user_message: str, objection_type: str) -> str:
+    """Pick the best subtype match inside an objection category."""
     pathway_config = _load_pathway_config()
     category_data = pathway_config.get("category_mapping", {}).get(category, {})
     subtypes = category_data.get("subtypes", [])
@@ -218,6 +223,7 @@ def _detect_subtype(category: str, user_message: str, objection_type: str) -> st
 
 
 def _build_pathway_metadata(base_dict: dict[str, Any], user_message: str) -> ObjectionPathway:
+    """Expand a basic objection classification into full pathway metadata."""
     pathway_config = _load_pathway_config()
     type_to_category = pathway_config.get("type_to_category_mapping", {})
     category_mapping = pathway_config.get("category_mapping", {})
@@ -275,6 +281,7 @@ def analyse_objection_pathway(
     attempt_count: int = 0,
     conversation_context: Optional[dict] = None,
 ) -> ObjectionPathway:
+    """Return the full objection pathway used by prompt assembly."""
     base_dict = classify_objection(user_message, history)
     pathway = _build_pathway_metadata(base_dict, user_message)
     return pathway
@@ -414,21 +421,27 @@ def _count_objection_attempts(history: list[dict] | None, obj_type: str) -> int:
     )
 
 
-def _build_resource_block(info: dict) -> str:
+def _build_resource_block(pathway: dict) -> str:
+    """Build the extra instruction block for resource and funding objections."""
     block = "\n=== RESOURCE PATHWAY ===\n"
-    dialogue_guidance = info.get("dialogue_guidance", "")
+    dialogue_guidance = pathway.get("dialogue_guidance", "")
     if dialogue_guidance:
         block += dialogue_guidance.strip() + "\n"
-    funding_options = info.get("funding_options", [])
+    funding_options = pathway.get("funding_options", [])
     if funding_options:
         block += f"Options: {', '.join(funding_options)}\n"
-    if info.get("open_wallet_applicable"):
+    if pathway.get("open_wallet_applicable"):
         block += "[OPEN WALLET TEST: Confirm readiness is genuine aside from funds.]\n"
     return block
 
 
-def _build_consultative_reframe_block(info: dict, attempt: int) -> str:
+def _build_consultative_reframe_block(pathway: dict, attempt: int) -> str:
     """
+    Build the consultative reframe block for the current objection attempt.
+
+    The first attempt asks only the entry question. Later attempts unlock
+    sequential reframes so the response stays concise and predictable.
+
     CONSULTATIVE DECISION MATRIX
     ─────────────────────────────────────────────────────────────
     attempt 0  →  Acknowledge + Entry Question only  (no reframe)
@@ -438,9 +451,9 @@ def _build_consultative_reframe_block(info: dict, attempt: int) -> str:
     attempt 4+ →  All reframes used - final decision offer
     ─────────────────────────────────────────────────────────────
     """
-    entry_question = info.get("entry_question", "")
-    reframes = info.get("reframes", [])
-    reframe_descriptions = info.get("reframe_descriptions", {})
+    entry_question = pathway.get("entry_question", "")
+    reframes = pathway.get("reframes", [])
+    reframe_descriptions = pathway.get("reframe_descriptions", {})
 
     if attempt == 0:
         block = "\n[FIRST HIT - Acknowledge and ask the entry question. Do NOT reframe yet.]\n"
@@ -465,14 +478,19 @@ def _build_consultative_reframe_block(info: dict, attempt: int) -> str:
     block += f"EXAMPLE: {reframe_desc.get('example', '').strip()}\n"
     block += f"CHECK QUESTION: {reframe_desc.get('check_question', '').strip()}\n"
 
-    if info.get("category") == "resource":
-        block += _build_resource_block(info)
+    if pathway.get("category") == "resource":
+        block += _build_resource_block(pathway)
 
     return block
 
 
-def _build_transactional_reframe_block(info: dict, attempt: int) -> str:
+def _build_transactional_reframe_block(pathway: dict, attempt: int) -> str:
     """
+    Build the transactional reframe block for the current objection attempt.
+
+    The transactional path stays tighter than the consultative version:
+    acknowledge the blocker, give one concise reframe, then move to a direct close.
+
     TRANSACTIONAL DECISION MATRIX
     ─────────────────────────────────────────────────────────────
     attempt 0  →  Acknowledge + clarify blocker + concise next step  (no reframe)
@@ -480,8 +498,8 @@ def _build_transactional_reframe_block(info: dict, attempt: int) -> str:
     attempt 2+ →  Final direct close attempt
     ─────────────────────────────────────────────────────────────
     """
-    reframes = info.get("reframes", [])
-    reframe_descriptions = info.get("reframe_descriptions", {})
+    reframes = pathway.get("reframes", [])
+    reframe_descriptions = pathway.get("reframe_descriptions", {})
 
     if attempt == 0:
         return "\n[TRANSACTIONAL - Keep short. Acknowledge, clarify the blocker, offer the next step.]\n"
@@ -502,10 +520,10 @@ def _build_transactional_reframe_block(info: dict, attempt: int) -> str:
 def _build_objection_context(
     strategy, stage, user_message, history, objection_data=None
 ):
+    """Build the objection SOP block that sits below the stage prompt."""
     from .analysis import commitment_or_walkaway
 
-    stage_value = getattr(stage, "value", stage)
-    if str(stage_value).lower() != "objection" or not user_message:
+    if stage != Stage.OBJECTION or not user_message:
         return ""
 
     if commitment_or_walkaway(history, user_message, 0):
@@ -513,32 +531,33 @@ def _build_objection_context(
 
     # Use full pathway so category/reframes/entry_question are always available.
     if isinstance(objection_data, dict) and "category" in objection_data:
-        info = objection_data
+        pathway = objection_data
     else:
-        info = _get_objection_pathway_safe(user_message, history)
+        pathway = _get_objection_pathway_safe(user_message, history)
 
-    obj_type = info.get("type", ObjectionType.UNKNOWN)
+    obj_type = pathway.get("type", ObjectionType.UNKNOWN)
     if obj_type == ObjectionType.UNKNOWN:
         return (
             "OBJECTION SIGNAL: UNCLEAR\n"
             "GUIDANCE: Do not reframe yet. Ask one direct question to surface the real concern.\n"
         )
 
-    flows = OBJECTION_FLOWS_TRANSACTIONAL if strategy == "transactional" else OBJECTION_FLOWS
+    flows = OBJECTION_FLOWS_TRANSACTIONAL if strategy == Strategy.TRANSACTIONAL else OBJECTION_FLOWS
     sop_steps = flows.get(obj_type, OBJECTION_FLOW_FALLBACK)
     attempt = _count_objection_attempts(history, obj_type)
 
     context = (
         f"OBJECTION: {obj_type.upper()}\n"
-        f"CATEGORY: {info.get('category', '').upper()}\n"
-        f"STRATEGY: {info.get('strategy', 'general_reframe')}\n"
-        f"GUIDANCE: {info.get('guidance', '')}\n\n"
+        f"CATEGORY: {pathway.get('category', '').upper()}\n"
+        f"STRATEGY: {pathway.get('strategy', 'general_reframe')}\n"
+        f"GUIDANCE: {pathway.get('guidance', '')}\n\n"
         f"SOP STEPS:\n{sop_steps}\n"
     )
 
-    if strategy == "transactional":
-        context += _build_transactional_reframe_block(info, attempt)
+    if strategy == Strategy.TRANSACTIONAL:
+        context += _build_transactional_reframe_block(pathway, attempt)
     else:
-        context += _build_consultative_reframe_block(info, attempt)
+        context += _build_consultative_reframe_block(pathway, attempt)
 
     return context
+

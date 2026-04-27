@@ -20,26 +20,32 @@ class DeepgramSTTProvider(BaseSTTProvider):
     _rate_limit_until = 0.0
 
     def __init__(self, model: str | None = None):
+        """Initialise the Deepgram model, base URL, and API key."""
         self.model = model or os.environ.get("DEEPGRAM_STT_MODEL") or DEFAULT_DEEPGRAM_STT_MODEL
         self.base_url = (os.environ.get("DEEPGRAM_BASE_URL") or DEFAULT_DEEPGRAM_BASE_URL).rstrip("/")
         self.api_key = get_deepgram_api_key()
 
     @classmethod
     def _apply_rate_limit_cooldown(cls):
+        """Pause future requests briefly after a rate limit response."""
         cls._rate_limit_until = time.time() + 60
 
     @classmethod
     def _is_rate_limited(cls) -> bool:
+        """Return True while the temporary rate-limit cooldown is active."""
         return time.time() < cls._rate_limit_until
 
     def is_available(self) -> bool:
+        """Return True when Deepgram is configured and not cooling down."""
         return bool(self.api_key) and not self._is_rate_limited()
 
     def get_model_name(self) -> str:
+        """Return the active Deepgram STT model name."""
         return self.model
 
     @staticmethod
     def infer_content_type(filename: str | None) -> str:
+        """Infer the upload content type from the audio filename."""
         if not filename:
             return "audio/webm"
         _, ext = os.path.splitext(filename.lower())
@@ -54,6 +60,7 @@ class DeepgramSTTProvider(BaseSTTProvider):
 
     @staticmethod
     def _extract_transcript(body: dict) -> str:
+        """Extract the primary transcript text from a Deepgram response body."""
         results = body.get("results") or {}
         channels = results.get("channels") or []
         if not channels:
@@ -64,6 +71,7 @@ class DeepgramSTTProvider(BaseSTTProvider):
         return (alternatives[0].get("transcript") or "").strip()
 
     def transcribe(self, audio_bytes: bytes, filename: str = "audio.webm") -> TranscriptionResult:
+        """Send audio bytes to Deepgram and return the transcript result."""
         start = time.time()
         if not self.api_key:
             return TranscriptionResult(

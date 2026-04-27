@@ -1,6 +1,6 @@
 """Tests for LAYER 3 response guardrails."""
 from core.response_guardrails import apply_layer3_output_checks
-from core.utils import Stage
+from core.utils import Stage, Strategy
 
 
 def test_layer3_blocks_pricing_in_logical_stage_without_direct_request():
@@ -21,6 +21,30 @@ def test_layer3_allows_pricing_when_user_asks_for_it():
         reply_text="The price is $499 per month. That covers everything you mentioned.",
         stage=Stage.LOGICAL,
         user_message="How much is it and what is the pricing?",
+    )
+
+    assert result.was_blocked is False
+    assert result.was_corrected is False
+    assert result.applied_rules == []
+
+
+def test_layer3_blocks_pricing_in_transactional_pitch():
+    result = apply_layer3_output_checks(
+        reply_text="The investment is Â£499 per month and includes full support and onboarding.",
+        stage=Stage.PITCH,
+        user_message="What does it cost?",
+        flow_type=Strategy.TRANSACTIONAL,
+    )
+
+    assert result.was_blocked is True or result.was_corrected is True
+    assert "price" not in result.content.lower()
+
+
+def test_layer3_passes_through_negotiation_stage():
+    result = apply_layer3_output_checks(
+        reply_text="The total is Â£499 per month, and we can talk through payment timing now.",
+        stage=Stage.NEGOTIATION,
+        user_message="Can we look at payment options?",
     )
 
     assert result.was_blocked is False
@@ -125,3 +149,15 @@ def test_layer3_passes_through_non_discovery_stages():
     assert result.was_blocked is False
     assert result.was_corrected is False
     assert result.applied_rules == []
+
+
+def test_layer3_preserves_consequence_of_inaction_language_in_emotional_stage():
+    result = apply_layer3_output_checks(
+        reply_text="What would the cost of staying the same be day to day for your team?",
+        stage=Stage.EMOTIONAL,
+        user_message="We're not asking about pricing here.",
+    )
+
+    assert result.was_blocked is False
+    assert result.was_corrected is False
+    assert "cost of staying the same" in result.content.lower()
