@@ -105,7 +105,7 @@ def test_get_advance_target_uses_guard_mapping(monkeypatch):
         },
     )
 
-    assert engine.get_advance_target("I am confused") == Stage.EMOTIONAL
+    assert engine.should_advance("I am confused") == Stage.EMOTIONAL
 
 
 def test_turn_cap_forces_progress_when_signal_never_appears(monkeypatch):

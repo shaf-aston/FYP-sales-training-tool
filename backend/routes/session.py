@@ -187,22 +187,6 @@ def api_init():
     )
 
 
-@bp.route("/restore", methods=["POST"])
-@require_rate_limit("init")
-def api_restore():
-    """Legacy replay endpoint intentionally disabled in logs-only mode."""
-
-    return (
-        jsonify(
-            {
-                "error": "Session replay is disabled. Start a new session instead.",
-                "code": "SESSION_REPLAY_DISABLED",
-            }
-        ),
-        410,
-    )
-
-
 @bp.route("/health", methods=["GET"])
 def api_health():
     """Health check: provider availability and performance stats"""

@@ -458,10 +458,6 @@ class SalesFlowEngine:
                 return transition.get("next")
         return None
 
-    def get_advance_target(self, user_message: str, turn_state=None) -> Optional[str]:
-        """Backward-compatible alias for `should_advance`."""
-        return self.should_advance(user_message, turn_state=turn_state)
-
     def evaluate_strategy_switch(self, user_message: str) -> bool:
         """Return True when INTENT should switch to another strategy."""
         if self.flow_type != Strategy.INTENT:
