@@ -226,12 +226,33 @@ def generate_stage_prompt(
     )
     recent_assistant_question = _get_recent_assistant_question(history)
     repetition_guard = ""
+    budget_only_guard = ""
     if stage == Stage.INTENT and recent_assistant_question:
         repetition_guard = (
             "\nRECENT ASSISTANT QUESTION: "
             f"{recent_assistant_question}\n"
             "Do not repeat that question. Move forward with a fresh, natural question.\n"
         )
+    
+    # CRITICAL GUARD: Prevent pitching when user only mentioned budget/price without stating needs
+    if stage == Stage.INTENT and user_message:
+        user_text = user_message.lower()
+        from .utils import contains_nonnegated_keyword
+        has_budget_keywords = contains_nonnegated_keyword(
+            user_text, ["budget", "price", "cost", "afford", "payment", "fee"]
+        )
+        has_problem_keywords = contains_nonnegated_keyword(
+            user_text, ["need", "problem", "issue", "struggling", "looking for", "help with", "interested in"]
+        )
+        if has_budget_keywords and not has_problem_keywords:
+            budget_only_guard = (
+                "\nBUDGET-ONLY GUARD: User mentioned budget/price but has NOT stated their actual need or problem yet. "
+                "Do NOT jump to product suggestions. Ask clarifying questions to understand:\n"
+                "1. What problem/need brought them here\n"
+                "2. What they're currently using/doing\n"
+                "3. What's not working\n"
+                "Only suggest products after you understand their situation.\n"
+            )
 
     # tier 6: compute turn metadata (used later when injecting final state block)
     turn_count = len(history) // 2
@@ -280,6 +301,7 @@ Intent: {state.intent} | Guarded: {"yes" if state.guarded else "no"}
         + tactic_guidance
         + stage_prompt
         + stage_context
+        + budget_only_guard
         + drift_note
         + repetition_guard
         + history_block

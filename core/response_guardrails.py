@@ -12,6 +12,7 @@ import re
 import random
 from dataclasses import dataclass, field
 
+from .prompts import INTENT_FALLBACKS
 from .utils import Stage, Strategy, contains_nonnegated_keyword
 MIN_RESPONSE_CHARS = 40
 MAX_RESPONSE_CHARS = 1500
@@ -52,13 +53,6 @@ _EXPLICIT_PRICE_REFERENCE = re.compile(
     re.IGNORECASE,
 )
 
-_INTENT_FALLBACKS = [
-    "What would you like help with first?",
-    "What are you hoping to sort out today?",
-    "What kind of outcome are you after?",
-    "What brought you in today?",
-]
-
 _LOGICAL_FALLBACKS = [
     "What part of the current approach is not working?",
     "What feels most stuck right now?",
@@ -96,6 +90,7 @@ class Layer3CheckResult:
     was_blocked: bool = False
     applied_rules: list[str] = field(default_factory=list)
 
+
 def _normalize_stage_name(stage: str | Stage) -> str:
     """Normalise a stage enum or string into a lowercase plain stage name."""
     stage_text = str(stage)
@@ -112,7 +107,6 @@ def _normalize_flow_type(flow_type: str | Stage | None) -> str:
     if "." in flow_text:
         flow_text = flow_text.split(".", 1)[1]
     return flow_text.lower()
-
 
 def _user_requested_pricing(user_message: str) -> bool:
     """Return True when the user's message explicitly asks about price or terms."""
@@ -134,6 +128,31 @@ def _contains_consequence_of_inaction(text: str) -> bool:
 def _contains_explicit_price_reference(text: str) -> bool:
     """Return True when the text contains a concrete price reference."""
     return bool(_EXPLICIT_PRICE_REFERENCE.search(text or ""))
+
+
+def _strip_prompt_markers(text: str) -> str:
+    """Remove BEGIN/END CUSTOM PRODUCT DATA markers from response text.
+    
+    These markers are for internal system prompt context only and should never
+    leak into the user-facing response.
+    """
+    # Remove marker blocks and their content
+    text = re.sub(
+        r"---\s*BEGIN\s+CUSTOM\s+PRODUCT\s+DATA\s*---.*?---\s*END\s+CUSTOM\s+PRODUCT\s+DATA\s*---",
+        "",
+        text,
+        flags=re.DOTALL | re.IGNORECASE
+    )
+    # Remove standalone marker lines
+    text = re.sub(
+        r"---\s*(BEGIN|END)\s+CUSTOM\s+PRODUCT\s+DATA\s*---",
+        "",
+        text,
+        flags=re.IGNORECASE
+    )
+    # Clean up excessive whitespace left behind
+    text = re.sub(r"\n\s*\n\s*\n+", "\n\n", text)
+    return text.strip()
 
 
 def _strip_pricing_sentences(text: str, stage_name: str = "") -> str:
@@ -174,7 +193,7 @@ def _fallback_for_stage(stage_name: str, history: list[dict[str, str]] | None = 
     if stage_name == Stage.EMOTIONAL.value:
         return _pick_varied_fallback(_EMOTIONAL_FALLBACKS, history)
     if stage_name == Stage.INTENT.value:
-        return _pick_varied_fallback(_INTENT_FALLBACKS, history)
+        return _pick_varied_fallback(INTENT_FALLBACKS, history)
     return _pick_varied_fallback(_GENERIC_FALLBACKS, history)
 
 
@@ -188,6 +207,7 @@ def apply_layer3_output_checks(
     """Run LAYER 3 (Response Validation) checks and return corrected or blocked content.
 
     Checks (in order):
+    0) Strip internal system prompt markers (BEGIN/END CUSTOM PRODUCT DATA).
     1) Degenerate output — empty, too short, or oversized.
     2) Pricing leakage in intent/logical/emotional stages, plus transactional pitch:
        a) Attempt sentence-level stripping first (was_corrected).
@@ -196,6 +216,10 @@ def apply_layer3_output_checks(
     stage_name = _normalize_stage_name(stage)
     flow_name = _normalize_flow_type(flow_type)
     text = (reply_text or "").strip()
+    
+    # CRITICAL: Always strip marker leakage first
+    if "--- BEGIN CUSTOM PRODUCT DATA ---" in text or "--- END CUSTOM PRODUCT DATA ---" in text:
+        text = _strip_prompt_markers(text)
 
     if not text or len(text) < MIN_RESPONSE_CHARS:
         return Layer3CheckResult(

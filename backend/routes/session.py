@@ -272,7 +272,7 @@ def api_config():
                 },
             },
             "product_options": product_options,
-            "strategies": ["consultative", "transactional", "intent"],
+            "strategies": ["consultative", "transactional"],
             "features": {
                 "flow_controls_enabled": True,
             },
@@ -309,7 +309,10 @@ def api_stage():
 
     bot = bp.get_session(session_id)  # type: ignore
     if not bot:
-        return jsonify({"error": SESSION_NOT_FOUND}), 404
+        bp.app.logger.warning(f"Stage jump failed: session not found for ID {session_id[:8]}...")  # type: ignore
+        return jsonify(
+            {"error": SESSION_NOT_FOUND, "code": "SESSION_EXPIRED", "detail": "Session may have expired due to inactivity. Please refresh and try again."}
+        ), 404
 
     data = request.json or {}
     stage = data.get("stage")
@@ -328,6 +331,10 @@ def api_stage():
         if bot.flow_engine.flow_type == Strategy.INTENT
         else bot.flow_engine.current_stage.upper()
     )
+    
+    bp.app.logger.info(f"Stage jumped for session {session_id[:8]}... to {stage}")  # type: ignore
+    bot.save_session()  # Persist the stage change
+    
     return jsonify(
         {"success": True, "stage": stage_str, "strategy": bot.flow_engine.flow_type.upper()}
     ), 200
@@ -344,7 +351,10 @@ def api_strategy():
 
     bot = bp.get_session(session_id)  # type: ignore
     if not bot:
-        return jsonify({"error": SESSION_NOT_FOUND}), 404
+        bp.app.logger.warning(f"Strategy switch failed: session not found for ID {session_id[:8]}...")  # type: ignore
+        return jsonify(
+            {"error": SESSION_NOT_FOUND, "code": "SESSION_EXPIRED", "detail": "Session may have expired due to inactivity. Please refresh and try again."}
+        ), 404
 
     data = request.json or {}
     strategy = (data.get("strategy") or "").strip().lower()
@@ -356,12 +366,15 @@ def api_strategy():
         ), 400
 
     if not bot.flow_engine.switch_strategy(strategy):
+        bp.app.logger.warning(f"Strategy switch failed for session {session_id[:8]}... to strategy {strategy}")  # type: ignore
         return jsonify({"error": STRATEGY_SWITCH_FAILED}), 400
 
     # Preserve the original reset baseline, but keep rewind snapshots aligned
     # with the current turn after this out-of-band strategy change.
     bot.refresh_current_turn_snapshot()
     bot.save_session()
+    
+    bp.app.logger.info(f"Strategy switched for session {session_id[:8]}... to {strategy}")  # type: ignore
 
     return jsonify({"success": True, **bp.bot_state(bot)})  # type: ignore
 

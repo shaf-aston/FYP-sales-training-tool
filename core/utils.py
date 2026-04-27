@@ -113,3 +113,12 @@ class Stage(str, Enum):
     OUTCOME = "outcome"
 
 
+def normalize_enum_name(value) -> str:
+    """Normalize a Stage/Strategy enum or string into lowercase plain name.
+
+    Handles None, dotted enum paths (Stage.LOGICAL -> 'logical'), and plain strings.
+    """
+    if value is None:
+        return ""
+    text = str(value)
+    return text.split(".")[-1].lower() if text else ""

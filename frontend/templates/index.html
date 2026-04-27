@@ -307,22 +307,19 @@
                                 </div>
                                 <div class="sidebar-actions">
                                     <label class="field-label" for="strategySelectMain">
-                                        Change approach
+                                        Switch strategy
                                     </label>
                                     <select
                                         id="strategySelectMain"
                                         class="sidebar-btn"
                                         aria-label="Select approach"
                                     >
-                                        <option value="">Choose an approach</option>
+                                        <option value="">Choose a strategy</option>
                                         <option value="consultative">
-                                            Guided discovery
+                                            CONSULTATIVE
                                         </option>
                                         <option value="transactional">
-                                            Direct style
-                                        </option>
-                                        <option value="intent">
-                                            Discovery check-in
+                                            TRANSACTIONAL
                                         </option>
                                     </select>
                                     <button
@@ -359,17 +356,35 @@
                                 <div class="section-heading">
                                     <h3>Practice session</h3>
                                     <p>
-                                        Pick a product, choose the challenge
-                                        level, then start a prospect roleplay.
+                                        Pick a transactional or consultative
+                                        product, choose the challenge level,
+                                        then start a prospect roleplay.
                                     </p>
                                 </div>
                                 <div class="sidebar-actions">
-                                    <label class="field-label" for="prospectProductSelect">
-                                        Product scenario
+                                    <label class="field-label" for="prospectTransactionalSelect">
+                                        Transactional products
                                     </label>
-                                    <select id="prospectProductSelect" class="sidebar-btn">
+                                    <select
+                                        id="prospectTransactionalSelect"
+                                        class="sidebar-btn"
+                                        onchange="selectProspectProduct('transactional', this)"
+                                    >
                                         <option value="default">General practice</option>
-                                        {% for p in prospect_products %}
+                                        {% for p in prospect_product_groups.transactional %}
+                                        <option value="{{ p.id }}">{{ p.label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <label class="field-label" for="prospectConsultativeSelect">
+                                        Consultative products
+                                    </label>
+                                    <select
+                                        id="prospectConsultativeSelect"
+                                        class="sidebar-btn"
+                                        onchange="selectProspectProduct('consultative', this)"
+                                    >
+                                        <option value="default">General practice</option>
+                                        {% for p in prospect_product_groups.consultative %}
                                         <option value="{{ p.id }}">{{ p.label }}</option>
                                         {% endfor %}
                                     </select>
@@ -454,7 +469,7 @@
                                         <span class="tool-icon">Quiz</span>
                                         <span class="tool-title">Quiz</span>
                                         <span class="tool-copy">
-                                            Test stage and response judgment.
+                                            Test FSM stage and response judgment.
                                         </span>
                                     </button>
                                     <button

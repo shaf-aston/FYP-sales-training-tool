@@ -87,70 +87,56 @@ products:
       Key differentiators: Starter=accessible/automated, Premium=personalised/hands-on, Private Wealth=bespoke/comprehensive.
       Additional context: SEC-registered investment adviser. Average 8.2% annual net returns over past decade. Fiduciary duty - legally obligated to act in your best interest. SIPC insured up to $500,000. Fee-based model (no commissions).
 
+  high_ticket_sales_mentorship:
+    name: "High-Ticket Sales Mentorship"
+    strategy: "consultative"
+    context: "high-ticket sales mentorship and closing coaching"
+    aliases: ["mentorship", "sales mentorship", "sales coaching", "high-ticket coaching", "closer coaching"]
+    knowledge: |
+      Available mentorship tracks:
+      - Foundation Track: $5,000. 8-week 1:1 setup, offer positioning review, discovery call structure, weekly implementation check-ins, call review feedback. Best for: coaches, consultants, and solo service providers who need a cleaner sales process.
+      - Scale Track: $9,500. 12-week private mentorship, weekly roleplays, objection handling frameworks, pipeline review, conversion audit, direct message support. Best for: established sellers who want more consistency and stronger close rates.
+      - Elite Closer Track: $15,000. 16-week private mentorship, live call shadowing, personalised script refinement, CRM and follow-up optimisation, priority feedback within 24 hours. Best for: high earners, founders, and experienced closers ready for a premium, hands-on partnership.
+      Key differentiators: Foundation=structure, Scale=execution, Elite=full private support.
+      Additional context: Results focus on cleaner discovery, stronger confidence, and a repeatable closing process rather than theory alone.
+
   # ─── Transactional - direct, price-driven ───────────────────────────────────
 
-  budget_fragrances:
-    name: "Premium Fragrances"
-    strategy: "transactional"
-    context: "$30 fragrances"
-    aliases: ["fragrance", "fragrances", "perfume", "cologne"]
-    knowledge: |
-      Available fragrances:
-      - Fresh Sport: $25. Citrus top notes, aquatic heart, cedar base. Lasts 4-6 hours. Best for: daytime, office, gym.
-      - Dark Oud: $30. Oud, amber, vanilla, musk base. Lasts 8-10 hours. Best for: evening, dates, winter.
-      - Classic Woody: $28. Bergamot, lavender, sandalwood, vetiver. Lasts 6-8 hours. Best for: everyday, versatile.
-      Key differentiators: Fresh Sport=light/daytime, Dark Oud=bold/evening, Classic Woody=versatile/all-occasion.
-
   watches:
-    name: "Timepieces"
+    name: "Luxury Watches"
     strategy: "transactional"
-    context: "watches"
-    aliases: ["watch", "timepiece", "timepieces"]
+    context: "luxury watches and timepieces"
+    aliases: ["watch", "timepiece", "timepieces", "luxury_watch", "luxury_watches"]
     knowledge: |
       Available watches:
-      - Chrono Sport: $180. Stainless steel, 42mm, chronograph, 100m water resistance, leather strap. Style: sporty/casual.
-      - Classic Dress: $220. Rose gold case, 38mm, sapphire crystal, slim profile, mesh bracelet. Style: formal/elegant.
-      - Diver Pro: $250. Titanium, 44mm, automatic movement, 300m water resistance, rotating bezel, rubber strap. Style: adventure/sport.
-      Key differentiators: Chrono=everyday sport, Classic=formal occasions, Diver=serious water/adventure use.
+      - Heritage Automatic: $5,200. Swiss automatic movement, 41mm stainless steel case, sapphire crystal, 100m water resistance, leather or bracelet strap. Best for: everyday luxury, first mechanical watch, understated style.
+      - Executive Chronograph: $7,800. Chronograph movement, 18k rose gold accents, ceramic bezel, sapphire caseback, premium presentation box. Best for: business gifts, statement pieces, collectors who want function and presence.
+      - Master Diver: $11,500. Titanium case, high-legibility dial, anti-magnetic movement, 300m water resistance, integrated bracelet. Best for: travel, sport-luxury, serious watch enthusiasts.
+      Key differentiators: Heritage=entry luxury, Executive=refined statement, Master=technical prestige.
 
   automotive:
     name: "Vehicles"
     strategy: "transactional"
-    context: "automotive purchase"
+    context: "vehicle purchase"
     aliases: ["car", "cars", "vehicle", "vehicles", "auto", "automobile"]
     knowledge: |
       Available vehicles:
-      - Toyota Corolla: $22,000-$28,000. 2.0L 4-cylinder, 169hp, 8.0" touchscreen, Toyota Safety Sense, 40 MPG highway. Best for: reliability, fuel economy, commuting.
-      - Honda Civic: $24,000-$30,000. 1.5L turbo, 180hp, 9.0" touchscreen, Honda Sensing, 37 MPG highway. Best for: driving fun, tech features, resale value.
-      - Hyundai Elantra: $21,000-$27,000. 2.0L 4-cylinder, 147hp, 10.25" touchscreen, SmartSense safety, 37 MPG highway. Best for: value, warranty (10yr/100k), features per dollar.
-      Key differentiators: Corolla=reliability king, Civic=driver's choice, Elantra=best value.
+      - Toyota Highlander Hybrid: $51,000-$58,000. 2.5L hybrid, AWD, 12.3" touchscreen, Toyota Safety Sense, three-row seating. Best for: family versatility, reliability, efficiency.
+      - BMW X5: $67,000-$85,000. Turbocharged six-cylinder, xDrive AWD, curved display, adaptive suspension, premium audio. Best for: luxury commuting, performance, status.
+      - Mercedes-Benz E-Class: $62,000-$78,000. Mild-hybrid powertrain, MBUX, ambient lighting, driver-assist suite, refined cabin. Best for: executive travel, comfort, technology.
+      Key differentiators: Highlander=practical premium, X5=performance luxury, E-Class=executive comfort.
 
   premium_electronics:
     name: "Premium Electronics"
     strategy: "transactional"
-    context: "premium electronics"
-    aliases: ["electronics", "laptop", "laptops", "tech", "computer", "computers", "phone", "phones"]
+    context: "high-end electronics and workstation bundles"
+    aliases: ["electronics", "laptop", "laptops", "tech", "computer", "computers", "phone", "phones", "workstation"]
     knowledge: |
       Available products:
-      - MacBook Pro 14": $1,999-$2,499. Apple M3 Pro chip, 18GB RAM, 512GB-1TB SSD, 14.2" Liquid Retina XDR display, 18hr battery, MagSafe charging. Best for: creative professionals, developers, Apple ecosystem users.
-      - Dell XPS 15: $1,499-$2,199. Intel Core i7-13700H, 16-32GB RAM, 512GB-1TB SSD, 15.6" OLED 3.5K display, Thunderbolt 4. Best for: Windows power users, business professionals, versatility.
-      - Samsung Galaxy S24 Ultra: $1,299-$1,419. Snapdragon 8 Gen 3, 12GB RAM, 256GB-1TB, 6.8" QHD+ AMOLED, S Pen, 200MP camera, 5000mAh battery. Best for: Android enthusiasts, photography, productivity on the go.
-      Key differentiators: MacBook=ecosystem/battery/build quality, XPS=Windows versatility/display, Galaxy=mobile photography/S Pen.
-
-  # ─── Additional Consultative Products ─────────────────────────────────────────
-
-  real_estate:
-    name: "Real Estate Services"
-    strategy: "consultative"
-    context: "residential real estate services"
-    aliases: ["property", "home", "house", "apartment", "condo", "housing", "realtor"]
-    knowledge: |
-      Available services:
-      - Buyer Representation: 2.5-3% commission (paid by seller typically). Full MLS access, offer negotiation, inspection coordination, closing support. Best for: first-time buyers, relocators, anyone wanting guidance through purchase.
-      - Seller Listing: 5-6% total commission (split with buyer's agent). Professional photography, MLS listing, open houses, staging consultation, offer management. Average days on market: 28 in our area. Best for: maximizing sale price, handling complexity.
-      - Investment Property Advisory: Flat fee $2,500 or 1% of purchase. Cap rate analysis, cash flow projections, tenant acquisition support, property management referrals. Best for: rental investors, portfolio builders.
-      Market context: 2026 median home price nationally $420,000. Interest rates averaging 6.2%. Inventory remains tight in most metros (2.1 months supply vs. 6 months balanced). First-time buyers face 20% down payment challenge - average $84,000.
-      Key differentiators: We specialise in [area] market with 15+ years experience. 98% client satisfaction rating. Average 3.2% above asking price for seller clients.
+      - Mac Studio Creator Bundle: $5,499. Apple Silicon Max chip, 64GB RAM, 2TB SSD, 27" 5K display, studio-grade peripherals. Best for: editors, designers, and creative teams.
+      - Dell Precision Mobile Workstation: $6,200. Intel Core Ultra workstation CPU, 64GB RAM, 2TB SSD, RTX professional graphics, ISV certifications. Best for: engineers, architects, CAD users.
+      - Samsung Smart Office Suite: $5,800. Foldable flagship phone, tablet, earbuds, docking station, enterprise protection plan, extended support. Best for: mobile executives and productivity-heavy users.
+      Key differentiators: Mac=creative ecosystem, Precision=heavy-duty Windows power, Samsung Suite=mobile productivity.
 
   b2b_saas:
     name: "Business Software"
@@ -205,69 +191,50 @@ products:
       Comparison: Traditional healthcare averages 18-day wait for appointments. Our average: same-day for urgent, 48 hours for routine. Insurance coordination available - many visits covered by HSA/FSA.
       Outcomes: Members average 40% fewer ER visits, 25% better chronic condition management.
 
-  # ─── Additional Transactional Products ───────────────────────────────────────
-
   travel:
     name: "Travel & Vacation Packages"
     strategy: "transactional"
-    context: "travel packages and accommodations"
-    aliases: ["vacation", "trip", "hotel", "flight", "travel_package", "holiday"]
+    context: "luxury travel packages and accommodations"
+    aliases: ["vacation", "trip", "hotel", "flight", "travel_package", "holiday", "travel"]
     knowledge: |
       Available packages:
-      - Weekend Getaway: $299-$599/person. 2-night stay, boutique hotel (4-star), airport transfers, breakfast included. Destinations: Miami, Vegas, NYC, Austin. Best for: quick escapes, couples.
-      - All-Inclusive Resort: $1,200-$2,500/person (5 nights). Beachfront resort, unlimited dining/drinks, activities, airport transfers. Destinations: Cancun, Punta Cana, Jamaica. Best for: relaxation, families, hassle-free.
-      - Adventure Package: $1,800-$3,500/person (7 nights). Guided activities, boutique lodging, expert local guides, equipment included. Destinations: Costa Rica, Iceland, Peru. Best for: active travelers, bucket-list experiences.
-      Booking advantages: Price match guarantee (110% refund difference). Flexible cancellation up to 48 hours before. Loyalty points: 1 point/$1 spent, 500 points = $50 credit.
-      Timing: Book 60+ days out for best rates. Last-minute deals: 15-30% off unsold inventory.
+      - Signature Escape: $5,500-$7,500 total. 5 nights, five-star resort or boutique villa, private transfers, breakfast, concierge support, curated excursions. Best for: anniversaries, milestone trips, premium comfort.
+      - Expedition Journey: $6,800-$9,500 total. 7 nights, premium lodging, expert local guides, private airport transfers, equipment or activity planning. Best for: active travellers who want a seamless experience.
+      - Ultra-Luxury Retreat: $12,000-$20,000+ total. Private villa, business-class or first-class coordination, bespoke itinerary planning, 24/7 concierge, priority problem-solving. Best for: high-spend clients and once-in-a-lifetime trips.
+      Booking advantages: Concierge support from planning to return, flexible deposit options, and itinerary adjustments before final confirmation.
 
   fashion:
     name: "Premium Fashion"
     strategy: "transactional"
-    context: "premium fashion and apparel"
-    aliases: ["clothing", "clothes", "apparel", "suit", "dress", "shoes", "accessories"]
+    context: "premium fashion, tailoring, and wardrobe packages"
+    aliases: ["clothing", "clothes", "apparel", "suit", "dress", "shoes", "accessories", "wardrobe"]
     knowledge: |
       Available categories:
-      - Business Professional: $150-$800. Tailored suits ($350-$800), dress shirts ($65-$120), leather shoes ($180-$350). Fit guarantee: free alterations within 30 days.
-      - Smart Casual: $50-$250. Chinos ($75-$120), polo shirts ($50-$85), casual blazers ($175-$275), loafers ($150-$220). Mix-and-match guidance included.
-      - Accessories: $35-$350. Leather belts ($65-$120), ties/pocket squares ($45-$85), watches ($150-$450), briefcases/bags ($200-$400). Gift wrapping available.
-      Quality: Premium materials (Italian wool, Egyptian cotton). Ethically sourced. 1-year quality guarantee. Free repairs for stitching/hardware.
-      Sizing: Detailed measurement guide online. Free exchange for size (no restocking fee). Personal styling consultation: $50 (credited toward purchase).
+      - Executive Wardrobe Build: $5,000-$8,000. 2 tailored suits, shirts, shoes, belts, and essential accessories with fitting appointments. Best for: client-facing professionals and promotions.
+      - Occasion Wardrobe Set: $5,500-$9,000. Event-ready looks, tailoring, styling consult, premium fabrics, coordinated accessories. Best for: weddings, public speaking, high-visibility moments.
+      - Signature Capsule: $7,500-$12,000. Multi-look wardrobe planning, bespoke tailoring, personal styling session, wardrobe refresh plan. Best for: busy clients who want a polished, repeatable style.
+      Quality: Premium materials, tailoring support, and fit adjustments are included.
 
   home_appliances:
     name: "Home Appliances"
     strategy: "transactional"
-    context: "home appliances and kitchen equipment"
-    aliases: ["appliance", "appliances", "refrigerator", "washer", "dryer", "dishwasher", "oven"]
+    context: "home appliances and whole-home equipment packages"
+    aliases: ["appliance", "appliances", "refrigerator", "washer", "dryer", "dishwasher", "oven", "kitchen"]
     knowledge: |
       Available categories:
-      - Kitchen Major: Refrigerators ($800-$3,500), ranges/ovens ($600-$2,800), dishwashers ($400-$1,200), microwaves ($150-$600). Energy Star certified options available (+$100-300, saves $50-100/year).
-      - Laundry: Washers ($500-$1,500), dryers ($450-$1,300), combo units ($1,200-$2,000). Steam features, smart connectivity, large capacity (5.0+ cu ft) options.
-      - Small Kitchen: Stand mixers ($200-$450), coffee machines ($100-$800), air fryers ($80-$250), blenders ($50-$450). Brand lineup: KitchenAid, Breville, Ninja, Vitamix.
-      Delivery: Free delivery on orders $499+. Installation available ($99-$199). Haul-away of old appliance: $25.
-      Protection: Extended warranty options: 2-year ($79), 5-year ($149). Covers mechanical failure, power surge damage. Price match within 30 days of purchase.
+      - Premium Kitchen Package: $5,500-$9,500. Refrigerator, range, dishwasher, microwave, haul-away, and installation planning. Best for: full kitchen refreshes and renovation handoffs.
+      - Laundry Suite: $5,000-$7,500. High-capacity washer, smart dryer, pedestal storage, delivery and setup. Best for: busy households and new home setups.
+      - Whole-Home Upgrade Bundle: $8,000-$15,000. Kitchen and laundry coordination, extended warranty, installation scheduling, appliance protection plan. Best for: clients replacing multiple items at once.
+      Delivery and installation are coordinated as part of the package.
 
   outdoor_equipment:
     name: "Outdoor & Sports Equipment"
     strategy: "transactional"
-    context: "outdoor and sporting equipment"
-    aliases: ["outdoor", "camping", "hiking", "sports", "bike", "bicycle", "fitness_equipment"]
+    context: "premium outdoor and sporting equipment packages"
+    aliases: ["outdoor", "camping", "hiking", "sports", "bike", "bicycle", "fitness_equipment", "home_gym"]
     knowledge: |
       Available categories:
-      - Camping: Tents (2-person $80-$200, 4-person $150-$400, 6-person $250-$600), sleeping bags ($50-$300), cookware sets ($40-$150). Brands: REI, Coleman, Big Agnes.
-      - Cycling: Road bikes ($500-$3,000), mountain bikes ($600-$4,000), e-bikes ($1,200-$4,500), accessories (helmets $40-$200, locks $30-$120). Free tune-up at 30 days.
-      - Hiking: Boots ($80-$280), backpacks (daypack $60-$150, multi-day $150-$400), trekking poles ($40-$180). Sizing guarantee: exchange within 60 days if fit isn't right.
-      - Home Fitness: Treadmills ($400-$3,000), exercise bikes ($300-$2,500), rowing machines ($300-$1,500), dumbbells/weights ($1-3/lb).
-      Returns: 1-year satisfaction guarantee on all gear. Used return policy: 50% credit if returned within 90 days (cleaned, functional).
-
-  subscription_boxes:
-    name: "Subscription Boxes"
-    strategy: "transactional"
-    context: "subscription box services"
-    aliases: ["subscription", "box", "monthly_box", "subscription_service"]
-    knowledge: |
-      Available subscriptions:
-      - Gourmet Food Box: $45/month. 6-8 artisan products, seasonal themes, recipes included, dietary preferences accommodated (vegetarian, gluten-free, etc.). Ships monthly, skip anytime.
-      - Beauty Box: $25-$60/month. 5-6 full or deluxe sample products, personalized to skin type/preferences. $25 tier (samples), $60 tier (full-size). Valued at $100-$200.
-      - Book Club Box: $35/month. Curated hardcover + themed extras (bookmark, snacks, exclusive content). Genres: fiction, mystery, romance, sci-fi. First edition options.
-      - Coffee Subscription: $18-$35/month. 12oz or 24oz freshly roasted beans, single origin or blends, grind preference (whole, drip, espresso). Roaster partnerships from 15 countries.
-      Flexibility: Pause, skip, or cancel anytime. No commitment. Gift subscriptions: 3/6/12 months prepaid option. First box ships within 3 business days.
+      - Elite Home Gym: $5,500-$12,000. Treadmill, rower, bike, strength rack, flooring, delivery, and setup. Best for: serious fitness at home.
+      - Premium Cycling Package: $5,000-$9,500. Road or e-bike, accessories, fitting consultation, warranty, and tune-up support. Best for: commuters and enthusiasts.
+      - Adventure Gear Kit: $5,000-$8,500. Multi-person tent system, packs, sleeping systems, cookware, and premium safety gear. Best for: families and frequent outdoor travellers.
+      Delivery, assembly, and aftercare are coordinated as part of the purchase.

@@ -1,0 +1,73 @@
+graph TD
+    Start(["Chat receives message"]) --> GetHistory["Get recent history<br/><RECENT_HISTORY_WINDOW>"]
+    GetHistory --> AnalyseState["Analyse state<br/>(intent, guardedness,<br/>question_fatigue)"]
+
+    AnalyseState --> CheckFlowType{flow_type<br/>== INTENT?}
+    CheckFlowType -->|No| CheckAdvance["LAYER 1: Check FSM advancement<br/>should_advance?"]
+    CheckFlowType -->|Yes| GetObjection
+
+    CheckAdvance --> AdvanceNeeded{Target stage<br/>!= current?}
+    AdvanceNeeded -->|Yes| DoAdvance["Advance to target stage<br/>Record stage_transition<br/>analytics"]
+    AdvanceNeeded -->|No| GetObjection
+    DoAdvance --> GetObjection["Get objection_data<br/>(if current_stage<br/>== OBJECTION)"]
+
+    GetObjection --> BuildPrompt["LAYER 2: Assemble system prompt<br/>get_current_prompt"]
+    BuildPrompt --> BuildMessages["Build llm_messages<br/>= [system] + history<br/>+ [user_message]"]
+
+    BuildMessages --> RecordIntent["Record intent_classification<br/>analytics"]
+    RecordIntent --> TryProvider["LLM Request<br/>(primary provider only)"]
+
+    TryProvider --> CheckResponse{LLMResponse<br/>has error OR<br/>no content?}
+
+    CheckResponse -->|Yes| HandleError["_handle_provider_error"]
+    CheckResponse -->|No| IsRateLimit{is_rate_limit?}
+
+    HandleError --> CheckRateLimit{is_rate_limit?}
+    CheckRateLimit -->|Yes| TryFallback["Try fallback_providers<br/>loop"]
+    CheckRateLimit -->|No| TryFallback
+
+    TryFallback --> FallbackWorks{Fallback<br/>succeeded?}
+    FallbackWorks -->|Yes| SyncProvider["Sync provider state<br/>to alt provider"]
+    FallbackWorks -->|No| AllFail["All providers failed"]
+
+    AllFail --> ReturnFallback["Return fallback message<br/>Too much traffic / Network error"]
+
+    IsRateLimit -->|No| CompleteSuccess["_complete_successful_turn"]
+    SyncProvider --> CompleteSuccess
+
+    CompleteSuccess --> Layer3["LAYER 3: Apply guardrail checks<br/>apply_layer3_output_checks"]
+    Layer3 --> AddTurn["Add turn to conversation_history<br/>flow_engine.add_turn"]
+
+    AddTurn --> LogTurn["Log turn event<br/>_log_turn_event"]
+    LogTurn --> RecordLatency["Record latency + metrics<br/>log_stage_latency"]
+
+    RecordLatency --> CheckIntentStrategy{flow_type<br/>== INTENT?}
+    CheckIntentStrategy -->|No| SaveSession["Save session snapshot<br/>_save_turn_snapshot"]
+    CheckIntentStrategy -->|Yes| ApplyAdvance["_apply_advancement<br/>(strategy switch detection)"]
+    ApplyAdvance --> CheckStrategySwitch{Strategy<br/>switched?}
+    CheckStrategySwitch -->|Yes| RecordSwitch["Record strategy_switch<br/>analytics"]
+    CheckStrategySwitch -->|No| SaveSession
+    RecordSwitch --> SaveSession
+
+    SaveSession --> CheckObjectionStage{current_stage<br/>== OBJECTION?}
+    CheckObjectionStage -->|Yes| RecordObjection["Record objection_classified<br/>analytics"]
+    CheckObjectionStage -->|No| BuildReply
+    RecordObjection --> BuildReply["Build ChatResponse<br/>(content, latency,<br/>provider, model)"]
+
+    BuildReply --> ReturnChat["Return ChatResponse"]
+    ReturnFallback --> Done(["End"])
+    ReturnChat --> Done
+
+    TryProvider -.Exception.-> CatchException["Exception caught<br/>in try-except"]
+    CatchException --> ReturnFallback
+
+    style Start fill:#e1f5ff
+    style Done fill:#e1f5ff
+    style Layer3 fill:#fff3e0
+    style CheckAdvance fill:#f3e5f5
+    style BuildPrompt fill:#f3e5f5
+    style TryProvider fill:#ffebee
+    style RecordIntent fill:#e8f5e9
+    style RecordLatency fill:#e8f5e9
+    style RecordSwitch fill:#e8f5e9
+    style RecordObjection fill:#e8f5e9

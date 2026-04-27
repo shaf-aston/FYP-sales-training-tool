@@ -630,15 +630,18 @@ textarea::-webkit-scrollbar-thumb,
 }
 
 .workflow-progress {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  display: flex;
   gap: 8px;
+  align-items: flex-start;
 }
 
 .progress-step {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 6px;
-  justify-items: center;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
 }
 
 .progress-dot {
@@ -675,29 +678,34 @@ textarea::-webkit-scrollbar-thumb,
 }
 
 .sidebar-tab {
-  border: 0;
+  border: 1px solid transparent;
   border-radius: 12px;
   background: transparent;
   color: var(--text-muted);
   padding: 12px 8px;
   font-size: 12px;
   font-weight: 700;
+  line-height: 1.1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   transition:
     background 160ms ease,
     color 160ms ease,
-    box-shadow 160ms ease,
+    border-color 160ms ease,
     transform 160ms ease;
 }
 
 .sidebar-tab.active {
   background: rgba(232, 180, 90, 0.14);
   color: var(--accent);
-  box-shadow: inset 0 -3px 0 var(--accent);
+  border-color: rgba(232, 180, 90, 0.52);
 }
 
 .sidebar-tab:hover {
   background: rgba(232, 180, 90, 0.08);
+  border-color: rgba(232, 180, 90, 0.28);
   color: var(--text-primary);
 }
 
@@ -1455,6 +1463,7 @@ textarea::-webkit-scrollbar-thumb,
 }
 
 @keyframes typing {
+
   0%,
   80%,
   100% {

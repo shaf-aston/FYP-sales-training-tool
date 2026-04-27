@@ -104,11 +104,12 @@ FLOWS: dict[str | Strategy, dict[str, Any]] = {
 }
 
 # Phrases signalling clear buying intent, checked before consulting signals.yaml
+# NOTE: "price" and "budget" are NOT intent signals—they indicate transactional preference.
+# Actual intent requires BOTH a specific need/problem statement AND transactional signals.
 EXPLICIT_INTENT_PHRASES = [
     "looking for",
     "help with",
     "interested in",
-    "price",
     "problem",
     "buy",
     "purchase",
@@ -147,17 +148,32 @@ def _user_signals_specific_budget_or_product(user_message: str) -> bool:
 def _user_has_clear_intent(
     history: list[dict[str, str]], user_msg: str, turns: int, turn_state=None
 ) -> bool:
-    """Return True when the user shows intent or the turn cap is reached."""
+    """Return True when the user shows intent or the turn cap is reached.
+    
+    NOTE: Budget/price mention alone is NOT intent—it's a transactional signal.
+    Clear intent requires explicit problem/need statement.
+    """
     if user_msg and contains_nonnegated_keyword(
         user_msg.lower(), EXPLICIT_INTENT_PHRASES
     ):
         return True
 
     if turn_state is not None:
+        # High intent must come from explicit intent phrases, not just budget mention
         return turn_state.intent == "high" or turns >= INTENT_MAX_TURNS
 
     intent_level = classify_intent_level(history, user_msg, signal_keywords=SIGNALS)
+    # Only advance on "high" intent if it's not just a budget/price mention
     if intent_level == "high":
+        user_text = (user_msg or "").lower()
+        # If user only mentioned budget/price without a problem statement, don't advance
+        # Force confirmation of actual needs first
+        has_budget_only = (
+            contains_nonnegated_keyword(user_text, ["budget", "price", "cost", "afford"])
+            and not contains_nonnegated_keyword(user_text, EXPLICIT_INTENT_PHRASES)
+        )
+        if has_budget_only:
+            return False
         return True
 
     return turns >= INTENT_MAX_TURNS

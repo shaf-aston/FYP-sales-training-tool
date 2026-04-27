@@ -49,6 +49,7 @@ let _prospectSettings = {
 let _flowControlsEnabled = false;
 let _sidebarTab = localStorage.getItem("sidebarTab") || "session";
 let _lastTrainingHintToast = "";
+let _sessionRecoveryInProgress = false;
 
 const STRATEGY_META = {
   "-": {
@@ -56,16 +57,16 @@ const STRATEGY_META = {
     note: "Begin the conversation to start tracking the flow.",
   },
   intent: {
-    label: "Discovery check-in",
-    note: "You are still confirming what the buyer actually wants.",
+    label: "INTENT",
+    note: "FSM start state before strategy selection is resolved.",
   },
   consultative: {
-    label: "Guided discovery",
-    note: "This path explores needs, doubts, stakes, and then the offer.",
+    label: "CONSULTATIVE",
+    note: "FSM consultative path: INTENT -> LOGICAL -> EMOTIONAL -> PITCH -> OBJECTION -> OUTCOME.",
   },
   transactional: {
-    label: "Direct style",
-    note: "This path moves quickly toward fit, pitch, and objections.",
+    label: "TRANSACTIONAL",
+    note: "FSM transactional path: INTENT -> PITCH -> NEGOTIATION -> OBJECTION -> OUTCOME.",
   },
   "prospect mode": {
     label: "Prospect practice",
@@ -75,28 +76,32 @@ const STRATEGY_META = {
 
 const FLOW_STAGE_META = {
   intent: {
-    label: "Discovery",
-    note: "Learn what the buyer needs before you push a solution.",
+    label: "INTENT",
+    note: "Confirm user intent before advancing or switching strategy.",
   },
   logical: {
-    label: "Qualification",
-    note: "Surface doubts, constraints, and practical decision criteria.",
+    label: "LOGICAL",
+    note: "Surface doubt and clarify the user's current problem.",
   },
   emotional: {
-    label: "Buyer stakes",
-    note: "Find the personal or business consequence behind the need.",
+    label: "EMOTIONAL",
+    note: "Surface stakes, consequences, and motivation to change.",
   },
   pitch: {
-    label: "Proposal",
-    note: "Tie the offer directly to the buyer's priorities.",
+    label: "PITCH",
+    note: "Present the offer only when the FSM has reached pitch.",
+  },
+  negotiation: {
+    label: "NEGOTIATION",
+    note: "Resolve terms before objection handling in the transactional flow.",
   },
   objection: {
-    label: "Objection handling",
-    note: "Address concerns without losing momentum.",
+    label: "OBJECTION",
+    note: "Handle the current objection without leaving the FSM path.",
   },
   outcome: {
-    label: "Close",
-    note: "Confirm the next step, commitment, or clear outcome.",
+    label: "OUTCOME",
+    note: "Confirm commitment, walk-away, or final session outcome.",
   },
   default: {
     label: "Not started",
@@ -209,10 +214,12 @@ function getSessionId() {
 
 function hasProspectContext() {
   return (
-    _prospectMode ||
-    isDedicatedProspectPage() ||
-    Boolean(_prospectSessionId)
+    _prospectMode || isDedicatedProspectPage() || Boolean(_prospectSessionId)
   );
+}
+
+function shouldShowAutoCoachHints() {
+  return _prospectMode || isDedicatedProspectPage();
 }
 
 // Keep only the in-memory conversation copy used by the UI.
@@ -240,10 +247,9 @@ function clearStaleOverlayState() {
   if (!isDedicatedProspectPage()) {
     document.getElementById("prospectPanel")?.classList.remove("open");
   }
-  document.querySelector(".container")?.classList.remove(
-    "quiz-panel-open",
-    "prospect-panel-open",
-  );
+  document
+    .querySelector(".container")
+    ?.classList.remove("quiz-panel-open", "prospect-panel-open");
   localStorage.setItem("quizPanelOpen", "false");
   document.body.classList.remove("panel-open");
   document.body.style.overflow = "";
@@ -259,13 +265,12 @@ function appendChatMessage(
   text,
   sender,
   metrics = null,
-  { updateCache = true } = {},
+  { updateCache = true, msgIdx = null } = {},
 ) {
   const container = document.getElementById("chatContainer");
   setIntroVisibility(true);
-  let msgIdx = null;
-  if (sender === "user") {
-    msgIdx = userTurnIndex * 2;
+  if (sender === "user" && msgIdx === null) {
+    msgIdx = updateCache ? _cachedHistory.length : userTurnIndex * 2;
     userTurnIndex += 1;
   }
 
@@ -286,10 +291,12 @@ function appendChatMessage(
 
 function getStrategyMeta(strategy) {
   const key = normalizeKey(strategy);
-  return STRATEGY_META[key] || {
-    label: key ? key.replace(/\b\w/g, (m) => m.toUpperCase()) : "Not started",
-    note: STRATEGY_META["-"].note,
-  };
+  return (
+    STRATEGY_META[key] || {
+      label: key ? key.replace(/\b\w/g, (m) => m.toUpperCase()) : "Not started",
+      note: STRATEGY_META["-"].note,
+    }
+  );
 }
 
 function getStageMeta(stage) {
@@ -389,7 +396,9 @@ function replaceConversationHistory(history) {
   userTurnIndex = 0;
   setIntroVisibility(Array.isArray(history) && history.length > 0);
   if (Array.isArray(history)) {
-    history.forEach((m) => renderMessage(m.content, m.role === "user" ? "user" : "bot"));
+    history.forEach((m, idx) =>
+      renderMessage(m.content, m.role === "user" ? "user" : "bot", idx),
+    );
   }
 }
 
@@ -404,9 +413,43 @@ function resetConversationState() {
   syncModeChrome();
 }
 
-// NOTE: The prospect product dropdown (#prospectProductSelect) is populated
-// server-side by Flask/Jinja in index.html from backend.app._prospect_product_options().
-// No JS fetch is needed -- options are already in the HTML on page load.
+// NOTE: Prospect product dropdowns are populated server-side by Flask/Jinja in
+// index.html from backend.app._prospect_product_groups(). No JS fetch is needed.
+
+function syncProspectProductSelects(productType) {
+  const transactionalSelect = document.getElementById(
+    "prospectTransactionalSelect",
+  );
+  const consultativeSelect = document.getElementById(
+    "prospectConsultativeSelect",
+  );
+
+  if (transactionalSelect) {
+    transactionalSelect.value =
+      transactionalSelect.querySelector(`option[value="${productType}"]`)
+        ? productType
+        : "default";
+  }
+  if (consultativeSelect) {
+    consultativeSelect.value =
+      consultativeSelect.querySelector(`option[value="${productType}"]`)
+        ? productType
+        : "default";
+  }
+}
+
+function selectProspectProduct(category, selectEl) {
+  const otherSelectId =
+    category === "transactional"
+      ? "prospectConsultativeSelect"
+      : "prospectTransactionalSelect";
+  const otherSelect = document.getElementById(otherSelectId);
+
+  if (selectEl.value !== "default" && otherSelect && otherSelect.value !== "default") {
+    otherSelect.value = "default";
+  }
+  _prospectProductType = selectEl.value;
+}
 
 function syncKnowledgeBaseLink() {
   const link = document.getElementById("knowledgeBaseLink");
@@ -479,23 +522,34 @@ function handleSessionExpired() {
   initChatbot();
 }
 
-// If server reports session loss, clear client state and re-init
-function handleServerSessionError(data) {
+// If server reports session loss, clear client state and re-init once.
+function handleServerSessionError(data, { notify = true } = {}) {
   if (!data) return false;
-  // Check for error code first (reliable), then fallback to error message matching
-  if (
+  const errorText = String(data.error || "").toLowerCase();
+  const isSessionExpired =
     data.code === "SESSION_EXPIRED" ||
-    (data.error &&
-      (data.error.toLowerCase().includes("session") ||
-        data.error.toLowerCase().includes("no active")))
-  ) {
-    console.warn("Server lost session memory. Re-initializing...");
-    clearStoredHistory();
-    sessionId = null;
-    initChatbot();
+    errorText.includes("session not found") ||
+    errorText.includes("no active") ||
+    errorText.includes("session expired");
+
+  if (!isSessionExpired) return false;
+
+  if (_sessionRecoveryInProgress) {
     return true;
   }
-  return false;
+
+  _sessionRecoveryInProgress = true;
+
+  // Check for error code first (reliable), then fallback to error message matching
+  console.warn("Server lost session memory. Re-initializing...");
+  clearStoredHistory();
+  sessionId = null;
+  clearStoredSessionId();
+  if (notify) {
+    showToast("Session expired - reconnecting...", "info");
+  }
+  initChatbot();
+  return true;
 }
 
 function isProspectSessionExpired(data) {
@@ -595,11 +649,7 @@ function showToast(message, type = "info") {
     padding: 12px 24px;
     border-radius: 16px;
     background: ${
-      type === "error"
-        ? "#7f2727"
-        : type === "success"
-          ? "#43592a"
-          : "#5c4220"
+      type === "error" ? "#7f2727" : type === "success" ? "#43592a" : "#5c4220"
     };
     border: 1px solid ${
       type === "error"
@@ -717,6 +767,14 @@ async function postSessionJson(url, body) {
     body: JSON.stringify(body),
   });
   const data = await response.json().catch(() => ({}));
+
+  // Handle session errors consistently across flow-control requests.
+  if (response.status === 404 || response.status === 400) {
+    if (handleServerSessionError(data, { notify: true })) {
+      throw new Error(data.error || "Session expired - please try again");
+    }
+  }
+
   if (!response.ok || !data.success) {
     throw new Error(data.error || "Request failed");
   }
@@ -789,6 +847,9 @@ async function loadStageOptions() {
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok || !data.success) {
+      if (handleServerSessionError(data, { notify: false })) {
+        return [];
+      }
       throw new Error(data.error || "Failed to load stages");
     }
 
@@ -815,6 +876,13 @@ async function loadStageOptions() {
 }
 
 async function jumpStage(selectId = "stageSelectMain") {
+  // Verify session is still active before attempting jump
+  if (!getSessionId()) {
+    showToast("Session lost - reinitializing...", "info");
+    initChatbot();
+    return;
+  }
+
   const select = document.getElementById(selectId);
   const stage = String(select?.value || "")
     .trim()
@@ -831,16 +899,31 @@ async function jumpStage(selectId = "stageSelectMain") {
     await loadStageOptions();
     showToast(`Moved to ${getStageMeta(stage).label}`, "success");
   } catch (error) {
+    // Recovery may already be in progress after a session-expired response.
+    if (!getSessionId()) {
+      return;
+    }
     showToast(error.message || "Stage jump failed", "error");
   }
 }
 
 async function switchStrategy(selectId = "strategySelectMain") {
+  // Verify session is still active before attempting switch
+  if (!getSessionId()) {
+    showToast("Session lost - reinitializing...", "info");
+    initChatbot();
+    return;
+  }
+
   const select =
     document.getElementById(selectId) ||
     document.getElementById("strategySelectMain");
   const availableStrategies = Array.from(select?.options || [])
-    .map((opt) => String(opt?.value || "").trim().toLowerCase())
+    .map((opt) =>
+      String(opt?.value || "")
+        .trim()
+        .toLowerCase(),
+    )
     .filter(Boolean);
   let strategy = String(select?.value || "")
     .trim()
@@ -867,6 +950,10 @@ async function switchStrategy(selectId = "strategySelectMain") {
     await loadStageOptions();
     showToast(`Approach set to ${getStrategyMeta(strategy).label}`, "success");
   } catch (error) {
+    // Recovery may already be in progress after a session-expired response.
+    if (!getSessionId()) {
+      return;
+    }
     syncStrategySelectors(_currentStrategy);
     showToast(error.message || "Strategy switch failed", "error");
   }
@@ -1194,6 +1281,7 @@ function initChatbot() {
           clearStoredSessionId();
           initChatbot();
         }
+        _sessionRecoveryInProgress = false;
         return;
       }
 
@@ -1213,8 +1301,10 @@ function initChatbot() {
 
       loadStageOptions();
       syncStrategySelectors(_currentStrategy);
+      _sessionRecoveryInProgress = false;
     })
     .catch((error) => {
+      _sessionRecoveryInProgress = false;
       showToast("Connection error - please refresh", "error");
     });
 }
@@ -1282,8 +1372,8 @@ window.addEventListener("DOMContentLoaded", () => {
 
 // renderMessage Function
 // Render-only (no cache side effects). Used during history restore.
-function renderMessage(text, sender) {
-  appendChatMessage(text, sender, null, { updateCache: false });
+function renderMessage(text, sender, msgIdx = null) {
+  appendChatMessage(text, sender, null, { updateCache: false, msgIdx });
 }
 
 // addMessage Function
@@ -1459,7 +1549,7 @@ function syncStrategySelectors(strategy) {
   const normalized = String(strategy || "")
     .trim()
     .toLowerCase();
-  const known = new Set(["intent", "consultative", "transactional"]);
+  const known = new Set(["consultative", "transactional"]);
   ["strategySelectMain"].forEach((id) => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -1665,6 +1755,7 @@ function updateTrainingPanel(training) {
   });
 
   if (
+    shouldShowAutoCoachHints() &&
     !document.getElementById("trainingPanel")?.classList.contains("open") &&
     training.next_move
   ) {
@@ -1840,9 +1931,12 @@ function displayQuizFeedback(data) {
   let score, feedbackClass, feedbackText;
 
   if (currentQuizType === "stage") {
-    // Stage quiz: correct/incorrect
-    score = data.correct ? "100%" : "0%";
-    feedbackClass = data.correct ? "correct" : "incorrect";
+    // Stage quiz: numeric score with partial credit
+    const numScore = Math.round(data.score * 100);
+    score = numScore + "%";
+    if (numScore >= 100) feedbackClass = "correct";
+    else if (numScore >= 50) feedbackClass = "partial";
+    else feedbackClass = "incorrect";
     feedbackText = data.feedback;
   } else {
     // LLM-based quizzes: 0-100 score
@@ -2032,7 +2126,8 @@ function applyProspectSessionFromServer(sessionId, data) {
   // Hide sales mode buttons, show active prospect indicator
   document.getElementById("trainingToggleBtn").style.display = "none";
   document.getElementById("quizToggleBtn").style.display = "none";
-  document.getElementById("prospectStartBtn").textContent = "Exit prospect practice";
+  document.getElementById("prospectStartBtn").textContent =
+    "Exit prospect practice";
   document.getElementById("prospectStartBtn").onclick = endProspectMode;
 
   // Update panel info
@@ -2042,6 +2137,7 @@ function applyProspectSessionFromServer(sessionId, data) {
     document.getElementById("prospectBackground").textContent =
       data.persona.background || "";
   }
+  syncProspectProductSelects(_prospectProductType);
   updateProspectDiffBadge(data.difficulty);
   updateProspectPanel(data.state);
 
@@ -2118,9 +2214,7 @@ function selectProspectDifficulty(diff, btn) {
     _prospectDifficulty = diff;
     document
       .querySelectorAll(".prospect-diff-btn")
-      .forEach((b) =>
-        b.classList.toggle("selected", b.dataset.diff === diff),
-      );
+      .forEach((b) => b.classList.toggle("selected", b.dataset.diff === diff));
     resetProspectSession();
     return;
   }
@@ -2136,8 +2230,20 @@ async function startProspectMode() {
   startBtn.disabled = true;
   startBtn.textContent = "Starting...";
 
-  const product = document.getElementById("prospectProductSelect").value;
+  const transactionalSelect = document.getElementById(
+    "prospectTransactionalSelect",
+  );
+  const consultativeSelect = document.getElementById(
+    "prospectConsultativeSelect",
+  );
+  const product =
+    transactionalSelect?.value && transactionalSelect.value !== "default"
+      ? transactionalSelect.value
+      : consultativeSelect?.value && consultativeSelect.value !== "default"
+        ? consultativeSelect.value
+        : "default";
   _prospectProductType = product;
+  syncProspectProductSelects(product);
 
   try {
     const response = await fetch("/api/prospect/init", {
@@ -2978,7 +3084,7 @@ function toggleVoiceMode() {
     handsFreeMode
       ? "Conversational Mode ON - speak, auto-send, auto-play response"
       : "Conversational Mode OFF - dictation only",
-      "info",
+    "info",
   );
 
   // Start/stop continuous recording when toggling hands-free
@@ -3186,4 +3292,3 @@ if (document.readyState === "loading") {
   // DOM is already loaded
   initTtsSpeedControl();
 }
-

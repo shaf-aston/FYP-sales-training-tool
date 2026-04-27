@@ -5,16 +5,9 @@ import logging
 from .analytics.session_analytics import SessionAnalytics
 from .constants import SCORING_RUBRIC, STAGE_TIMEOUTTHRESHOLDS
 from .quiz import get_stage_rubric
-from .utils import extract_json_from_llm
+from .utils import extract_json_from_llm, normalize_enum_name
 
 logger = logging.getLogger(__name__)
-
-
-def _normalize_stage_name(stage_text: str) -> str:
-    """Extract normalized stage name (e.g. 'LOGICAL_STAGE' -> 'logical')"""
-    if not isinstance(stage_text, str) or not stage_text:
-        return ""
-    return stage_text.lower().split(".")[-1]
 
 
 # Truncate text to max_words, preserving word boundaries
@@ -159,8 +152,8 @@ def score_session(session_id: str) -> dict:
         max_turn = max(max_turn, turn)
 
         if event_type == "stage_transition":
-            to_stage = _normalize_stage_name(event.get("to_stage"))
-            from_stage = _normalize_stage_name(event.get("from_stage", ""))
+            to_stage = normalize_enum_name(event.get("to_stage"))
+            from_stage = normalize_enum_name(event.get("from_stage", ""))
             turns_in_stage = event.get("user_turns_in_stage")
 
             if to_stage:
@@ -177,14 +170,14 @@ def score_session(session_id: str) -> dict:
         elif event_type == "intent_classification" and event.get("intent_level") in ["medium", "high"]:
             intent_medium_high_count += 1
         elif event_type == "session_end":
-            final_stage = _normalize_stage_name(event.get("final_stage"))
+            final_stage = normalize_enum_name(event.get("final_stage"))
             if final_stage:
                 stages_reached.add(final_stage)
 
     # Compute scores
-    score_breakdown["stage_progression"] = next(
+    score_breakdown["stage_progression"] = max(
         (points for stage_name, points in SCORING_RUBRIC["stage_points"].items() if stage_name in stages_reached),
-        0
+        default=0
     )
 
     score_breakdown["signal_detection"] = int(

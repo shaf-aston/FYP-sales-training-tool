@@ -190,6 +190,52 @@ def _prospect_product_options():
         return []
 
 
+def _prospect_product_groups():
+    """Build curated prospect-mode dropdown groups split by sales motion."""
+    try:
+        from core.loader import load_product_config, load_prospect_config
+
+        personas = load_prospect_config().get("personas", {})
+        products = load_product_config().get("products", {})
+
+        curated_ids = {
+            "transactional": [
+                "luxury_cars",
+                "premium_electronics",
+                "watches",
+                "travel",
+                "fashion",
+            ],
+            "consultative": [
+                "b2b_saas",
+                "high_ticket_sales_mentorship",
+                "financial_services",
+                "education",
+                "healthcare_services",
+            ],
+        }
+
+        grouped_options = {}
+        for strategy, product_ids in curated_ids.items():
+            options = []
+            for product_id in product_ids:
+                if product_id not in personas or not personas.get(product_id):
+                    continue
+                product_info = products.get(product_id, {})
+                options.append(
+                    {
+                        "id": product_id,
+                        "label": product_info.get("name")
+                        or product_id.replace("_", " ").title(),
+                    }
+                )
+            grouped_options[strategy] = options
+        return grouped_options
+    except Exception:
+        app.logger.exception("Failed to build prospect product groups")
+        return {"transactional": [], "consultative": []}
+
+
 def _render_index(mode: str):
     """Render the chat page; product dropdown is populated server-side."""
     # Keep UI flow-controls consistent with the privileged-mutation guard in `backend/security.py`.
@@ -202,6 +248,7 @@ def _render_index(mode: str):
         "index.html",
         mode=mode,
         prospect_products=_prospect_product_options(),
+        prospect_product_groups=_prospect_product_groups(),
         flow_controls_enabled=not require_admin,
     )
 

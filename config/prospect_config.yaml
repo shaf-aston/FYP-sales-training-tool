@@ -180,13 +180,13 @@ personas:
       pain_points: ["tool sprawl", "manual reporting", "slow team adoption"]
       personality: "Pragmatic evaluator, asks direct ROI and implementation questions"
 
-  real_estate:
-    - name: "Ethan"
-      background: "First-time home buyer relocating for work"
-      needs: ["clear buying roadmap", "safe neighborhood", "payment certainty"]
-      budget: "$380,000-$450,000"
-      pain_points: ["limited inventory", "rate anxiety", "fear of overpaying"]
-      personality: "Curious but cautious, opens up when guided step-by-step"
+  high_ticket_sales_mentorship:
+    - name: "Ava"
+      background: "Independent coach and creator who knows her craft but wants a more consistent way to close premium clients"
+      needs: ["clean discovery structure", "confident objection handling", "more qualified conversions"]
+      budget: "$5,000-$12,000"
+      pain_points: ["calls feel too unstructured", "she over-explains instead of closing", "lead flow is there but conversions are inconsistent"]
+      personality: "Ambitious, self-aware, and practical - responds well to clear frameworks and direct feedback"
 
   education:
     - name: "Maya"
@@ -241,49 +241,41 @@ personas:
       pain_points: ["GP only has 10 minutes per appointment", "confused by conflicting advice online", "wife is worried about his health"]
       personality: "Open and cooperative, responds well to empathy and clear explanations, wants a long-term health partner"
 
-  budget_fragrances:
-    - name: "Jake"
-      background: "28-year-old who wants a signature everyday scent without spending designer prices"
-      needs: ["all-day longevity", "versatile scent", "affordable price point"]
-      budget: "$25-$35"
-      pain_points: ["bought an expensive cologne that didn't suit him", "not sure how to choose a fragrance blind", "worried about projection"]
-      personality: "Casual and friendly, open to recommendations, wants to be guided rather than overwhelmed"
-
   watches:
     - name: "Hannah"
-      background: "30-year-old buying a birthday gift for her partner who recently started a professional job"
-      needs: ["smart styling for work and weekends", "quality without luxury price", "reliable brand"]
-      budget: "$180-$250"
-      pain_points: ["doesn't know watch terminology", "wants it to look more expensive than it is", "worried about sizing"]
+      background: "30-year-old buying a luxury watch as a milestone gift for her partner"
+      needs: ["smart styling for work and weekends", "quality and craftsmanship", "reliable brand"]
+      budget: "$5,000-$8,000"
+      pain_points: ["doesn't know watch terminology", "wants it to feel meaningful rather than flashy", "worried about sizing"]
       personality: "Friendly and appreciative of patient guidance, responds well to clear comparisons and reassurance"
 
   automotive:
     - name: "Ben"
-      background: "26-year-old landing his first full-time job and buying his first car to replace a commute by public transport"
+      background: "26-year-old landing his first full-time job and buying a premium SUV for a longer commute and family use"
       needs: ["reliability", "fuel economy", "modern safety features", "manageable monthly payments"]
-      budget: "$22,000-$28,000"
+      budget: "$50,000-$70,000"
       pain_points: ["anxious about ongoing costs like insurance and maintenance", "doesn't want to over-commit", "parents are pushing him toward a different brand"]
-      personality: "Thoughtful and slightly nervous first-time buyer, responds well to reassurance and concrete cost breakdowns"
+      personality: "Thoughtful and slightly nervous first-time premium buyer, responds well to reassurance and concrete cost breakdowns"
 
     - name: "Sarah"
       background: "34-year-old whose 8-year-old hatchback failed its MOT and needs replacing quickly"
       needs: ["reliable daily driver", "good boot space for family shopping", "quick availability"]
-      budget: "$24,000-$30,000"
+      budget: "$55,000-$75,000"
       pain_points: ["needs the car within 2 weeks", "current car is off the road", "husband wants a different model"]
       personality: "Practical and slightly stressed by the urgency, responds to efficiency and clear availability timelines"
 
   premium_electronics:
     - name: "Rachel"
-      background: "33-year-old graphic designer whose 5-year-old laptop crashes regularly in Adobe Premiere and Photoshop"
+      background: "33-year-old graphic designer whose workstation needs a major upgrade for 3D and video editing"
       needs: ["performance for creative work", "colour-accurate display", "light enough to carry to clients"]
-      budget: "$1,800-$2,500"
+      budget: "$5,000-$7,500"
       pain_points: ["losing billable hours to lag and crashes", "doesn't want to switch ecosystems (Mac user)", "worried about data migration"]
       personality: "Detail-oriented about specs, responds to performance benchmarks and real-world creative use cases"
 
     - name: "Tom"
-      background: "41-year-old operations manager who needs to replace his work laptop before an overseas project next month"
+      background: "41-year-old operations manager who needs to replace his work setup before an overseas project next month"
       needs: ["business durability", "long battery life", "compatibility with company tools (Windows)"]
-      budget: "$1,400-$2,000"
+      budget: "$5,000-$6,500"
       pain_points: ["last laptop had thermal throttling on video calls", "IT department is picky about compatibility", "needs it fast"]
       personality: "Pragmatic and deadline-driven, wants minimal faff - tells him what he needs and why"
 
@@ -291,14 +283,14 @@ personas:
     - name: "Carlos"
       background: "37-year-old planning a 10th anniversary trip with his wife - first big holiday in 4 years"
       needs: ["romantic destination", "stress-free all-inclusive", "good cancellation policy"]
-      budget: "$4,000-$6,000 total for two"
+      budget: "$5,500-$8,500 total for two"
       pain_points: ["last holiday was self-catered and exhausting to plan", "wife had a bad experience with a resort before", "nervous about hidden costs"]
       personality: "Wants to impress his wife but is cautious after past holiday disappointments - reassurance matters"
 
     - name: "Priya"
       background: "29-year-old planning a solo adventure trip for her 30th birthday"
       needs: ["unique experience", "safety as a solo female traveller", "value for money"]
-      budget: "$2,000-$3,500"
+      budget: "$5,000-$7,500"
       pain_points: ["generic package tours feel uninspiring", "solo travel safety is a real concern", "friends keep changing their minds about joining"]
       personality: "Adventurous and independent, responds to authenticity and specific destination details"
 
@@ -306,7 +298,7 @@ personas:
     - name: "Zara"
       background: "29-year-old just promoted to a client-facing account manager role - wardrobe is too casual"
       needs: ["professional capsule pieces", "versatile for office and evening", "quality that lasts"]
-      budget: "$600-$1,200 for an initial wardrobe update"
+      budget: "$5,000-$9,000 for an initial wardrobe update"
       pain_points: ["overwhelmed by choice", "doesn't know what to invest in first", "worried about spending a lot and it not working"]
       personality: "Ambitious but fashion-unsure, responds well to guided editing and styling rationale"
 
@@ -314,7 +306,7 @@ personas:
     - name: "Mike"
       background: "41-year-old who just moved into a 1980s house - almost every appliance needs replacing"
       needs: ["reliable brands", "energy-efficient models", "quick delivery and installation"]
-      budget: "$2,500-$4,000 total across multiple appliances"
+      budget: "$5,000-$9,000 total across multiple appliances"
       pain_points: ["overwhelmed by the number of decisions", "previous house had a fridge that died after 2 years", "needs everything coordinated so he can move in"]
       personality: "Practical and slightly frazzled by the volume of decisions, responds well to clear recommendations and bundled deals"
 
@@ -322,17 +314,9 @@ personas:
     - name: "Theo"
       background: "32-year-old software developer who wants to get into hiking and camping after years at a desk"
       needs: ["starter gear that won't let him down", "expert guidance on what's essential vs. optional", "good value"]
-      budget: "$400-$700 to start"
+      budget: "$5,000-$8,000 to start"
       pain_points: ["doesn't know what he actually needs vs. what's just marketing", "worried about buying cheap kit that fails on a trail", "partner is sceptical about how serious he'll be"]
       personality: "Analytical and researchy, responds to honest comparisons and specific product recommendations with reasoning"
-
-  subscription_boxes:
-    - name: "Emma"
-      background: "26-year-old looking for a thoughtful ongoing gift for her mum who lives alone"
-      needs: ["curated quality", "appropriate for a 60-year-old woman", "easy to manage and cancel if needed"]
-      budget: "$35-$55/month"
-      pain_points: ["gave gift cards last year and it felt impersonal", "mum has dietary restrictions", "worried about committing to a subscription she can't cancel easily"]
-      personality: "Warm and considerate, responds to product descriptions that paint a picture of the recipient's experience"
 
 evaluation:
   criteria:

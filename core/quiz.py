@@ -334,7 +334,7 @@ def get_quiz_question(quiz_type: str) -> str:
         return random.choice(type_questions)
 
     fallbacks = {
-        "stage": "What stage and strategy are we currently in?",
+        "stage": "What FSM stage and strategy are we currently in?",
         "next_move": "What would you say next to this customer?",
         "direction": "Where are you taking this conversation and why?",
     }
@@ -345,6 +345,8 @@ def test_quiz_stage_answer(user_answer: str, current_stage: str, flow_type: str)
     """Deterministic: did the user correctly ID the current stage and strategy?"""
     expected_stage = current_stage
     expected_strategy = flow_type
+    expected_stage_label = str(expected_stage).upper()
+    expected_strategy_label = str(expected_strategy).upper()
     answer_lower = user_answer.strip().lower()
 
     stage_ok = contains_nonnegated_keyword(answer_lower, expected_stage.lower())
@@ -353,18 +355,26 @@ def test_quiz_stage_answer(user_answer: str, current_stage: str, flow_type: str)
 
     # Build feedback based on what user got right
     feedback_map = {
-        (True, True): f"Right - {expected_stage.upper()}, {expected_strategy.upper()} strategy.",
-        (False, False): f"Close, but not quite - it's {expected_stage.upper()} stage, {expected_strategy.upper()} strategy.",
-        (False, True): f"Strategy's right ({expected_strategy.upper()}), but you're in {expected_stage.upper()} stage now.",
-        (True, False): f"Stage is right ({expected_stage.upper()}), but this is {expected_strategy.upper()} strategy.",
+        (True, True): f"Right - {expected_stage_label}, {expected_strategy_label} strategy.",
+        (False, False): f"Close, but not quite - it's {expected_stage_label} stage, {expected_strategy_label} strategy.",
+        (False, True): f"Strategy's right ({expected_strategy_label}), but you're in {expected_stage_label} stage now.",
+        (True, False): f"Stage is right ({expected_stage_label}), but this is {expected_strategy_label} strategy.",
     }
     feedback = feedback_map[(stage_ok, strategy_ok)]
 
+    # Partial credit: 50% for stage OR strategy, 100% for both
+    if correct:
+        score = 1
+    elif stage_ok or strategy_ok:
+        score = 0.5
+    else:
+        score = 0
+
     return {
         "correct": correct,
-        "score": 1 if correct else 0,
+        "score": score,
         "user_answer": user_answer,
-        "expected": {"stage": expected_stage, "strategy": expected_strategy},
+        "expected": {"stage": expected_stage_label, "strategy": expected_strategy_label},
         "feedback": feedback,
     }
 

@@ -51,3 +51,13 @@ def test_frontend_does_not_persist_transcripts_or_sessions():
         'localStorage.setItem("chatStrategy"',
     ):
         assert forbidden not in js
+
+
+def test_flow_controls_reuse_shared_session_recovery_path():
+    js = (ROOT / "frontend" / "static" / "app.js").read_text(encoding="utf-8")
+
+    assert "let _sessionRecoveryInProgress = false;" in js
+    assert "function handleServerSessionError(data, { notify = true } = {})" in js
+    assert "if (_sessionRecoveryInProgress) {" in js
+    assert "if (handleServerSessionError(data, { notify: true })) {" in js
+    assert "if (handleServerSessionError(data, { notify: false })) {" in js
