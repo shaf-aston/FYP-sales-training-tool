@@ -13,7 +13,7 @@ See three_layer_architecture.puml for full defense-in-depth diagram.
 
 import re
 from dataclasses import dataclass
-from typing import Any, TypedDict, NotRequired
+from typing import Any
 
 from .constants import MAX_USER_KEYWORDS
 from .loader import load_analysis_config, load_objection_flows, load_signals
@@ -39,29 +39,6 @@ class ConversationState:
     def get(self, key: str, default=None):
         """Mirror `dict.get` so state reads stay concise in legacy helpers."""
         return getattr(self, key, default)
-
-
-class ObjectionPathway(TypedDict):
-    """Result of objection analysis with classification and reframe sequence.
-
-    Includes objection type, recommended strategy and reframe guidance.
-    """
-
-    # Base keys (always present)
-    type: str
-    strategy: str
-    guidance: str
-
-    # Enhanced keys (new pathway metadata)
-    category: NotRequired[str]  # "resource", "stakeholder", "internal", "unclear"
-    subtype: NotRequired[str]
-    entry_question: NotRequired[str]
-    reframes: NotRequired[list[str]]
-    reframe_descriptions: NotRequired[dict[str, dict[str, str]]]
-    funding_options: NotRequired[list[str]]
-    open_wallet_applicable: NotRequired[bool]
-    dialogue_guidance: NotRequired[str]
-    is_primary_objection: NotRequired[bool]
 
 
 ANALYSIS_CONFIG = load_analysis_config()
@@ -577,6 +554,6 @@ def extract_recent_user_text(history, max_messages=None) -> str:
         max_messages = THRESHOLDS["recent_text_messages"]
     if not history:
         return ""
-    recent = history[-(max_messages * 2) :]
+    recent = history[-(max_messages * 2):]
     user_msgs = [m["content"].lower() for m in recent if m["role"] == "user"]
     return " ".join(user_msgs[-max_messages:])
