@@ -363,6 +363,11 @@ class SalesChatbot:
                     stage=self.flow_engine.current_stage,
                 )
                 if resp.error or not resp.content:
+                    self.logger.warning(
+                        "fallback provider %s unavailable: %s",
+                        next_name,
+                        resp.error or "empty response",
+                    )
                     continue
 
                 self._sync_provider_from_router(alt, next_name)

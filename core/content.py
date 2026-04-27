@@ -233,7 +233,7 @@ def generate_stage_prompt(
             f"{recent_assistant_question}\n"
             "Do not repeat that question. Move forward with a fresh, natural question.\n"
         )
-    
+
     # CRITICAL GUARD: Prevent pitching when user only mentioned budget/price without stating needs
     if stage == Stage.INTENT and user_message:
         user_text = user_message.lower()

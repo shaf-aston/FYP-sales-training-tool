@@ -10,6 +10,13 @@ class _DummyProvider:
         self.content = content
         self.error = error
         self.calls = []
+        self.provider_name = "groq"
+
+    def is_available(self):
+        return True
+
+    def get_model_name(self):
+        return self.provider_name
 
     def chat(self, messages, temperature, max_tokens, stage):
         self.calls.append(
@@ -57,3 +64,33 @@ def test_tactical_training_answer_keeps_original_punctuation():
     )
 
     assert result == {"answer": "Ask them what hurts most?"}
+
+
+def test_generate_training_uses_fallback_provider_when_primary_fails(monkeypatch):
+    primary = _DummyProvider(content="", error=True)
+    fallback = _DummyProvider(
+        content=(
+            '{"what_happened": "Asked a clear question", '
+            '"next_move": "Probe the blocker", '
+            '"watch_for": ["Over-probing", "Pitching too early"]}'
+        ),
+        error=False,
+    )
+    fallback.provider_name = "sambanova"
+
+    monkeypatch.setattr(trainer, "list_fallback_providers", lambda current: ["sambanova"])
+    monkeypatch.setattr(
+        trainer,
+        "create_provider",
+        lambda name: fallback if name == "sambanova" else primary,
+    )
+
+    flow_engine = _DummyFlowEngine()
+
+    result = trainer.generate_training(primary, flow_engine, "Need help", "Sure")
+
+    assert primary.calls
+    assert fallback.calls
+    assert result["what_happened"] == "Asked a clear question"
+    assert result["next_move"] == "Probe the blocker"
+    assert result["watch_for"] == ["Over-probing", "Pitching too early"]
