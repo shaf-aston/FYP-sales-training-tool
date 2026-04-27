@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
-from flask import Flask, render_template, send_from_directory
+from flask import Flask, render_template
 from flask_cors import CORS
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -17,7 +17,7 @@ if __package__ in (None, ""):
     if str(ROOT_DIR) not in sys.path:
         sys.path.insert(0, str(ROOT_DIR))
 
-    from core.constants import MAX_PROSPECT_SESSIONS, PROSPECT_IDLE_MINUTES
+    from core.constants import MAX_PROSPECT_SESSIONS, PROSPECT_IDLE_MINUTES, UNDETERMINED_STAGE
     from backend.messages import (
         INTERNAL_SERVER_ERROR,
         MESSAGE_REQUIRED,
@@ -32,7 +32,7 @@ if __package__ in (None, ""):
     )
     from backend.routes import analytics, chat, prospect, session
 else:
-    from core.constants import MAX_PROSPECT_SESSIONS, PROSPECT_IDLE_MINUTES
+    from core.constants import MAX_PROSPECT_SESSIONS, PROSPECT_IDLE_MINUTES, UNDETERMINED_STAGE
     from .messages import (
         INTERNAL_SERVER_ERROR,
         MESSAGE_REQUIRED,
@@ -46,8 +46,6 @@ else:
         initialize_security,
     )
     from .routes import analytics, chat, prospect, session
-
-UNDETERMINED_STAGE = "----"
 
 app = Flask(
     __name__,
@@ -108,7 +106,6 @@ def _require_session():
     session_error = InputValidator.validate_session_id(session_id)
     if session_error:
         return None, session_error
-    assert isinstance(session_id, str)
     bot = session_manager.get(session_id)
     if not bot:
         return None, (

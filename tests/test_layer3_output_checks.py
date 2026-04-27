@@ -88,7 +88,7 @@ def test_layer3_blocks_degenerate_short_response():
     assert "empty_output_fallback" in result.applied_rules
 
 
-def test_layer3_blocks_oversized_response():
+def test_layer3_truncates_oversized_response():
     long_text = "This is a valid sentence with no pricing content. " * 40
     result = apply_layer3_output_checks(
         reply_text=long_text,
@@ -96,8 +96,10 @@ def test_layer3_blocks_oversized_response():
         user_message="Tell me more.",
     )
 
-    assert result.was_blocked is True
-    assert "oversized_output_fallback" in result.applied_rules
+    assert result.was_corrected is True
+    assert result.was_blocked is False
+    assert len(result.content) <= 1500
+    assert "oversized_output_truncated" in result.applied_rules
 
 
 def test_layer3_corrects_pricing_when_other_content_is_substantial():

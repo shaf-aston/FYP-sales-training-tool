@@ -2,6 +2,7 @@
 
 import json
 import logging
+import os
 import secrets
 from typing import Any
 
@@ -9,6 +10,7 @@ from flask import Blueprint, jsonify, request
 
 from core.analytics.performance import PerformanceTracker
 from core.chatbot import SalesChatbot
+from core.constants import UNDETERMINED_STAGE
 from core.content import generate_init_greeting
 from core.loader import QuickMatcher
 from core.providers import get_available_providers
@@ -258,7 +260,12 @@ def api_config():
             "product_options": product_options,
             "strategies": ["consultative", "transactional"],
             "features": {
-                "flow_controls_enabled": True,
+                "flow_controls_enabled": not bool(
+                    bp.app.config.get(  # type: ignore[attr-defined]
+                        "REQUIRE_ADMIN_FOR_STAGE_MUTATION",
+                        os.environ.get("REQUIRE_ADMIN_FOR_STAGE_MUTATION", False),
+                    )
+                ),
             },
         }
     )
@@ -309,9 +316,8 @@ def api_stage():
     # Advance FSM to target stage
     bot.flow_engine.advance(target_stage=stage)
 
-    # Format response: show "----" for intent-first discovery, otherwise stage name
     stage_str = (
-        "----"
+        UNDETERMINED_STAGE
         if bot.flow_engine.flow_type == Strategy.INTENT
         else bot.flow_engine.current_stage.upper()
     )
@@ -395,7 +401,7 @@ def reset():
 
     bot = bp.get_session(session_id)  # type: ignore
     if not bot:
-        return jsonify({"error": SESSION_NOT_FOUND}), 400
+        return jsonify({"error": SESSION_NOT_FOUND}), 404
 
     bp.delete_session(session_id)  # type: ignore
     return jsonify({"success": True})

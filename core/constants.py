@@ -1,5 +1,12 @@
 """All magic numbers and limits live here"""
 
+# stage display
+UNDETERMINED_STAGE = "----"  # shown when intent strategy hasn't resolved yet
+
+# response validation (Layer 3)
+MIN_RESPONSE_CHARS = 40
+MAX_RESPONSE_CHARS = 1500
+
 # conversation context
 RECENT_HISTORY_WINDOW = 10
 PERSONA_CHECKPOINT_TURNS = 6

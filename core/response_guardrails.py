@@ -8,14 +8,16 @@ Strips offending sentences first; uses a stage-specific fallback only when strip
 leaves fewer than MIN_RESPONSE_CHARS characters.
 """
 
-import re
+import logging
 import random
+import re
 from dataclasses import dataclass, field
 
+from .constants import MIN_RESPONSE_CHARS, MAX_RESPONSE_CHARS
 from .prompts import INTENT_FALLBACKS
 from .utils import Stage, Strategy, contains_nonnegated_keyword
-MIN_RESPONSE_CHARS = 40
-MAX_RESPONSE_CHARS = 1500
+
+logger = logging.getLogger(__name__)
 
 # Stage-level guardrail keywords for pricing leakage during discovery.
 PRICING_KEYWORDS = [
@@ -47,7 +49,7 @@ DIRECT_PRICING_REQUEST_KEYWORDS = [
     "quote",
 ]
 
-_SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
+_SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+|\n+")
 _EXPLICIT_PRICE_REFERENCE = re.compile(
     r"(?:[$£€]\s*\d|\b\d+(?:[.,]\d+)?\s*(?:per\s+(?:month|week|year)|monthly|annually|annual|per\s+annum|fee|cost|price|pricing))",
     re.IGNORECASE,
@@ -108,6 +110,7 @@ def _normalize_flow_type(flow_type: str | Stage | None) -> str:
         flow_text = flow_text.split(".", 1)[1]
     return flow_text.lower()
 
+
 def _user_requested_pricing(user_message: str) -> bool:
     """Return True when the user's message explicitly asks about price or terms."""
     return contains_nonnegated_keyword(
@@ -132,7 +135,7 @@ def _contains_explicit_price_reference(text: str) -> bool:
 
 def _strip_prompt_markers(text: str) -> str:
     """Remove BEGIN/END CUSTOM PRODUCT DATA markers from response text.
-    
+
     These markers are for internal system prompt context only and should never
     leak into the user-facing response.
     """
@@ -175,15 +178,10 @@ def _strip_pricing_sentences(text: str, stage_name: str = "") -> str:
 
 
 def _pick_varied_fallback(candidates: list[str], history: list[dict[str, str]] | None) -> str:
-    """Pick a fallback that rotates naturally across turns."""
+    """Pick a random fallback from the candidate list."""
     if not candidates:
         return ""
-
-    assistant_turns = 0
-    if history:
-        assistant_turns = sum(1 for msg in history if msg.get("role") == "assistant")
-
-    return candidates[assistant_turns % len(candidates)]
+    return random.choice(candidates)
 
 
 def _fallback_for_stage(stage_name: str, history: list[dict[str, str]] | None = None) -> str:
@@ -216,7 +214,7 @@ def apply_layer3_output_checks(
     stage_name = _normalize_stage_name(stage)
     flow_name = _normalize_flow_type(flow_type)
     text = (reply_text or "").strip()
-    
+
     # CRITICAL: Always strip marker leakage first
     if "--- BEGIN CUSTOM PRODUCT DATA ---" in text or "--- END CUSTOM PRODUCT DATA ---" in text:
         text = _strip_prompt_markers(text)
@@ -229,10 +227,19 @@ def apply_layer3_output_checks(
         )
 
     if len(text) > MAX_RESPONSE_CHARS:
+        truncated = text[:MAX_RESPONSE_CHARS]
+        last_boundary = max(
+            truncated.rfind(". "),
+            truncated.rfind("? "),
+            truncated.rfind("! "),
+        )
+        if last_boundary > 0:
+            truncated = truncated[:last_boundary + 1]
+        logger.debug("layer3: oversized response truncated (%d → %d chars)", len(text), len(truncated))
         return Layer3CheckResult(
-            content=_fallback_for_stage(stage_name, history),
-            was_blocked=True,
-            applied_rules=["oversized_output_fallback"],
+            content=truncated.strip(),
+            was_corrected=True,
+            applied_rules=["oversized_output_truncated"],
         )
 
     if stage_name in (Stage.INTENT.value, Stage.LOGICAL.value, Stage.EMOTIONAL.value):
@@ -245,11 +252,13 @@ def apply_layer3_output_checks(
         if _contains_pricing_language(text) and not _user_requested_pricing(user_message):
             corrected = _strip_pricing_sentences(text, stage_name=stage_name)
             if len(corrected) >= MIN_RESPONSE_CHARS:
+                logger.debug("layer3: corrected pricing leak in %s stage", stage_name)
                 return Layer3CheckResult(
                     content=corrected,
                     was_corrected=True,
                     applied_rules=["corrected_pricing_in_discovery"],
                 )
+            logger.debug("layer3: blocked pricing leak in %s stage (nothing left after strip)", stage_name)
             return Layer3CheckResult(
                 content=_fallback_for_stage(stage_name, history),
                 was_blocked=True,
@@ -260,11 +269,13 @@ def apply_layer3_output_checks(
         if _contains_pricing_language(text):
             corrected = _strip_pricing_sentences(text)
             if len(corrected) >= MIN_RESPONSE_CHARS:
+                logger.debug("layer3: corrected pricing in transactional pitch")
                 return Layer3CheckResult(
                     content=corrected,
                     was_corrected=True,
                     applied_rules=["corrected_pricing_in_transactional_pitch"],
                 )
+            logger.debug("layer3: blocked pricing in transactional pitch (nothing left after strip)")
             return Layer3CheckResult(
                 content=_fallback_for_stage(stage_name, history),
                 was_blocked=True,
@@ -272,5 +283,3 @@ def apply_layer3_output_checks(
             )
 
     return Layer3CheckResult(content=text)
-
-

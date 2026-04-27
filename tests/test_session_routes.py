@@ -96,7 +96,7 @@ def _make_session_app(monkeypatch, testing=True):
     return app, manager
 
 
-def test_restore_endpoint_is_disabled(monkeypatch):
+def test_restore_endpoint_removed(monkeypatch):
     app, _manager = _make_session_app(monkeypatch)
     client = app.test_client()
 
@@ -104,10 +104,8 @@ def test_restore_endpoint_is_disabled(monkeypatch):
         "/api/restore",
         json={"history": [{"role": "user", "content": "Hi"}]},
     )
-    payload = response.get_json()
 
-    assert response.status_code == 410
-    assert payload["code"] == "SESSION_REPLAY_DISABLED"
+    assert response.status_code == 404
 
 
 def test_health_returns_active_provider_and_performance(monkeypatch):
