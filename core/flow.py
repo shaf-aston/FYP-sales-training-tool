@@ -310,8 +310,9 @@ def _check_priority_overrides(
         current_idx = stages.index(current_stage)
         pitch_is_ahead = current_idx < pitch_idx
 
-    # Let commitment jump discovery when it appears early.
-    if has_pitch_stage and current_stage in (Stage.LOGICAL, Stage.EMOTIONAL):
+    # Let commitment jump to pitch from EMOTIONAL stage (skip objection handling if ready).
+    # Do NOT apply from LOGICAL - must build emotional context first.
+    if has_pitch_stage and current_stage == Stage.EMOTIONAL:
         commitment_terms = SIGNALS.get("commitment", []) + ["sign up"]
         if contains_nonnegated_keyword(msg_lower, commitment_terms):
             return Stage.PITCH

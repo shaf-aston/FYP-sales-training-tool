@@ -165,8 +165,11 @@ def has_valid_admin_token(request_obj, config_obj) -> bool:
     if isinstance(token, str) and token.lower().startswith("bearer "):
         token = token.split(None, 1)[1]
     if not admin_token or not token:
+        logger.debug(f"Auth check failed: admin_token={bool(admin_token)}, token={bool(token)}, token_value={token[:20] if token else 'none'}")
         return False
-    return hmac.compare_digest(str(token), str(admin_token))
+    result = hmac.compare_digest(str(token), str(admin_token))
+    logger.debug(f"Auth check: token_valid={result}, admin_token_set={bool(admin_token)}")
+    return result
 
 
 class PromptInjectionValidator:
