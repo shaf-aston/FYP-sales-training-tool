@@ -431,7 +431,7 @@ textarea::-webkit-scrollbar-thumb,
 }
 
 .input-area textarea {
-  min-height: 56px;
+  min-height: 72px;
   max-height: 160px;
   padding: 16px 18px;
   resize: none;

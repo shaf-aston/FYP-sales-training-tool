@@ -167,8 +167,8 @@ function toggleAutoSend() {
   );
 }
 
-function updateTtsSpeed(speedValue) {
-  ttsPlaybackSpeed = parseInt(speedValue);
+function updateTtsSpeed(speedValueInput) {
+  ttsPlaybackSpeed = parseInt(speedValueInput);
   const speedValue = document.getElementById("ttsSpeedValue");
   const speedPercent = document.getElementById("ttsSpeedPercent");
 
@@ -229,6 +229,24 @@ function trimHistoryCache() {
 function clearStoredHistory() {
   _cachedHistory = [];
   _loadedStagesForStrategy = null;
+}
+
+function clearStaleOverlayState() {
+  closeResetModal();
+  closeResetMenu();
+  document.getElementById("feedbackDropdown")?.classList.remove("open");
+  document.getElementById("prospectEvalModal")?.remove();
+  document.getElementById("quizPanel")?.classList.remove("open");
+  if (!isDedicatedProspectPage()) {
+    document.getElementById("prospectPanel")?.classList.remove("open");
+  }
+  document.querySelector(".container")?.classList.remove(
+    "quiz-panel-open",
+    "prospect-panel-open",
+  );
+  localStorage.setItem("quizPanelOpen", "false");
+  document.body.classList.remove("panel-open");
+  document.body.style.overflow = "";
 }
 
 function normalizeKey(value) {
@@ -1202,8 +1220,10 @@ function initChatbot() {
 }
 
 window.addEventListener("DOMContentLoaded", () => {
+  clearStaleOverlayState();
   const ta = document.getElementById("messageInput");
   ta.addEventListener("input", () => autoResizeTextarea(ta));
+  autoResizeTextarea(ta);
   speechRecognizer = new SpeechRecognizer();
   setSidebarTab(_sidebarTab);
   updateWorkflowProgress();

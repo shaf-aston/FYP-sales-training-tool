@@ -1,4 +1,4 @@
-"""Prospect mode: bot plays a buyer for sales practice roleplay training."""
+"""Prospect mode: Boot plays a buyer for sales practice roleplay training."""
 
 import json
 import logging
@@ -255,7 +255,7 @@ class ProspectSession:
                     else persona_context
                 )
 
-            # Keep mode-specific separation: only inject prospect custom KB
+            # This KB injection only for prospect-mode
             prospect_knowledge = get_custom_knowledge_text()
             if prospect_knowledge:
                 custom_block = (

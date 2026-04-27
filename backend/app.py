@@ -162,28 +162,6 @@ app.register_blueprint(analytics.bp)
 # Note: Rate limiting is applied via @require_rate_limit decorators in blueprint files
 
 
-@app.route("/favicon.ico")
-def favicon():
-    # Tests expect /favicon.ico to return 204 when testing - keep that behavior
-    if app.config.get("TESTING"):
-        return ("", 204)
-
-    # Serve favicon from the Flask static folder if present
-    try:
-        static_dir = app.static_folder
-        if not static_dir:
-            return ("", 204)
-        ico_path = os.path.join(static_dir, "favicon.ico")
-        png_path = os.path.join(static_dir, "favicon.png")
-        if os.path.exists(ico_path):
-            return send_from_directory(static_dir, "favicon.ico")
-        if os.path.exists(png_path):
-            return send_from_directory(static_dir, "favicon.png")
-    except Exception:
-        app.logger.debug("Favicon serve failed", exc_info=True)
-    return ("", 204)
-
-
 def _prospect_product_options():
     """Build the list of {id, label} dicts for the prospect-practice dropdown.
 
