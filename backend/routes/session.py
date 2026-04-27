@@ -331,10 +331,10 @@ def api_stage():
         if bot.flow_engine.flow_type == Strategy.INTENT
         else bot.flow_engine.current_stage.upper()
     )
-    
+
     bp.app.logger.info(f"Stage jumped for session {session_id[:8]}... to {stage}")  # type: ignore
     bot.save_session()  # Persist the stage change
-    
+
     return jsonify(
         {"success": True, "stage": stage_str, "strategy": bot.flow_engine.flow_type.upper()}
     ), 200
@@ -373,7 +373,7 @@ def api_strategy():
     # with the current turn after this out-of-band strategy change.
     bot.refresh_current_turn_snapshot()
     bot.save_session()
-    
+
     bp.app.logger.info(f"Strategy switched for session {session_id[:8]}... to {strategy}")  # type: ignore
 
     return jsonify({"success": True, **bp.bot_state(bot)})  # type: ignore
@@ -394,7 +394,6 @@ def get_score():
     from core.trainer import score_session
 
     try:
-        assert isinstance(session_id, str)
         score_data = score_session(session_id)
         return jsonify({"success": True, "score": score_data})
     except Exception as e:

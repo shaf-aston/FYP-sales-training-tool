@@ -30,7 +30,7 @@ def test_layer3_allows_pricing_when_user_asks_for_it():
 
 def test_layer3_blocks_pricing_in_transactional_pitch():
     result = apply_layer3_output_checks(
-        reply_text="The investment is Â£499 per month and includes full support and onboarding.",
+        reply_text="The investment is £499 per month and includes full support and onboarding.",
         stage=Stage.PITCH,
         user_message="What does it cost?",
         flow_type=Strategy.TRANSACTIONAL,
@@ -42,7 +42,7 @@ def test_layer3_blocks_pricing_in_transactional_pitch():
 
 def test_layer3_passes_through_negotiation_stage():
     result = apply_layer3_output_checks(
-        reply_text="The total is Â£499 per month, and we can talk through payment timing now.",
+        reply_text="The total is £499 per month, and we can talk through payment timing now.",
         stage=Stage.NEGOTIATION,
         user_message="Can we look at payment options?",
     )
@@ -139,11 +139,12 @@ def test_layer3_catches_annually_pricing():
     assert result.was_blocked is True or result.was_corrected is True
 
 
-def test_layer3_passes_through_non_discovery_stages():
+def test_layer3_passes_through_consultative_pitch():
     result = apply_layer3_output_checks(
         reply_text="The investment is £499 per month and includes full support and onboarding.",
         stage=Stage.PITCH,
         user_message="What does it cost?",
+        flow_type=Strategy.CONSULTATIVE,
     )
 
     assert result.was_blocked is False

@@ -278,8 +278,6 @@ def _build_pathway_metadata(base_dict: dict[str, Any], user_message: str) -> Obj
 def analyse_objection_pathway(
     user_message: str,
     history: Optional[list[dict]] = None,
-    attempt_count: int = 0,
-    conversation_context: Optional[dict] = None,
 ) -> ObjectionPathway:
     """Return the full objection pathway used by prompt assembly."""
     base_dict = classify_objection(user_message, history)
@@ -560,4 +558,3 @@ def _build_objection_context(
         context += _build_consultative_reframe_block(pathway, attempt)
 
     return context
-

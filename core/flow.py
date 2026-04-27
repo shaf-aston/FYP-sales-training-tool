@@ -1,6 +1,6 @@
 """LAYER 1: Stage-Gating (FSM) - Enforces conversation pacing via state machine.
 
-Manages conversation stages (INTENT → LOGICAL → EMOTIONAL → PITCH → OBJECTION → OUTCOME).
+Manages conversation stages (INTENT -> LOGICAL -> EMOTIONAL -> PITCH -> OBJECTION -> OUTCOME).
 Prevents stage progression until user signals meet advancement thresholds:
 - To leave INTENT: Need 2+ problem statements (user_has_clear_intent)
 - To reach PITCH: Need emotional commitment signals
@@ -104,7 +104,7 @@ FLOWS: dict[str | Strategy, dict[str, Any]] = {
 }
 
 # Phrases signalling clear buying intent, checked before consulting signals.yaml
-# NOTE: "price" and "budget" are NOT intent signals—they indicate transactional preference.
+# NOTE: "price" and "budget" are NOT intent signals; they indicate transactional preference.
 # Actual intent requires BOTH a specific need/problem statement AND transactional signals.
 EXPLICIT_INTENT_PHRASES = [
     "looking for",
@@ -149,9 +149,9 @@ def _user_has_clear_intent(
     history: list[dict[str, str]], user_msg: str, turns: int, turn_state=None
 ) -> bool:
     """Return True when the user shows intent or the turn cap is reached.
-    
-    NOTE: Budget/price mention alone is NOT intent—it's a transactional signal.
-    Clear intent requires explicit problem/need statement.
+
+    NOTE: Budget/price mention alone is not intent; it is a transactional signal.
+    Clear intent requires explicit problem or need statement.
     """
     if user_msg and contains_nonnegated_keyword(
         user_msg.lower(), EXPLICIT_INTENT_PHRASES
@@ -183,7 +183,7 @@ def _check_advancement_condition(
     history: list[dict[str, str]],
     user_msg: str,
     turns: int,
-    stage_name: str,
+    stage_name: Stage,
     min_turns: int = 2,
     turn_state=None,
 ) -> bool:
@@ -534,7 +534,7 @@ class SalesFlowEngine:
             raise ValueError(
                 f"Invalid current_stage '{self.current_stage}' for flow '{self.flow_type}'"
             )
-        self.stage_turn_count = state["stage_turn_count"]
+        self.stage_turn_count = state.get("stage_turn_count", 0)
         self.conversation_history = state.get("conversation_history", [])
         self.initial_flow_type = state.get("initial_flow_type", self.flow_type)
         if self.initial_flow_type not in FLOWS:
