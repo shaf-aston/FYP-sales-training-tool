@@ -1,6 +1,7 @@
 [flake8]
 max-line-length = 120
 extend-ignore = E203
+extend-exclude = .venv,.tmp
 per-file-ignores =
     core/prompts.py: E501
     core/content.py: E501
