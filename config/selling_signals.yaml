@@ -24,16 +24,24 @@ thresholds:
   mirroring_min_overlap: 2   # distinct buyer words echoed back to count as listening
   discovery_turns: 2         # pitching before this many completed turns is premature
 
-# Words that begin a genuinely open question. Matched only when the turn asks something.
-open_question_openers:
+# Two ways a seller opens someone up.
+# question_words only count when the turn actually asks something ("?").
+question_words:
   - what
   - how
   - why
+  - where
+  - when
+
+# Invitations are open questions without a question mark - "walk me through it"
+# is discovery even though it is phrased as an instruction.
+invitations:
   - tell me
   - walk me through
-  - help me understand
   - talk me through
+  - help me understand
   - describe
+  - explain
 
 acknowledgement:
   - that makes sense

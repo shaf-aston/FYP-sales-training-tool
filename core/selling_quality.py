@@ -14,7 +14,7 @@ import re
 from dataclasses import dataclass, field
 
 from .loader import load_yaml
-from .utils import contains_nonnegated_keyword, tokenize
+from .utils import clamp, contains_nonnegated_keyword, tokenize
 
 NEUTRAL_RATING = 3.0
 
@@ -47,11 +47,21 @@ def load_selling_signals() -> dict:
     return load_yaml("selling_signals.yaml") or {}
 
 
-def _asks_open_question(message: str, openers) -> bool:
-    if "?" not in message:
-        return False
+def _count_openings(message: str, question_words, invitations) -> int:
+    """How many times the seller tried to open the buyer up in one turn.
+
+    Counts each invitation ("walk me through it"), which opens someone up without
+    asking a question, plus question marks when the turn uses a question word.
+    """
     lowered = message.lower()
-    return any(re.search(rf"\b{re.escape(opener)}\b", lowered) for opener in openers)
+    count = sum(
+        len(re.findall(rf"\b{re.escape(phrase)}\b", lowered)) for phrase in invitations
+    )
+    if "?" in message and any(
+        re.search(rf"\b{re.escape(word)}\b", lowered) for word in question_words
+    ):
+        count += message.count("?")
+    return count
 
 
 def _mirrored_words(message: str, buyer_message: str, stopwords) -> list[str]:
@@ -88,7 +98,8 @@ def score_seller_turn(
     words = text.split()
     fired: list[str] = []
 
-    if _asks_open_question(text, cfg.get("open_question_openers", [])):
+    openings = _count_openings(text, cfg.get("question_words", []), cfg.get("invitations", []))
+    if openings:
         fired.append("open_question")
 
     overlap = _mirrored_words(text, buyer_message, cfg.get("mirroring_stopwords", []))
@@ -109,7 +120,7 @@ def score_seller_turn(
         if seller_pitched and not buyer_asked:
             fired.append("premature_pitch")
 
-    if text.count("?") >= limits.get("question_stacking_count", 3):
+    if openings >= limits.get("question_stacking_count", 3):
         fired.append("question_stacking")
 
     if len(words) > limits.get("monologue_words", 90):
@@ -124,3 +135,23 @@ def score_seller_turn(
         signals=fired,
         reasons=[REASONS[name] for name in fired if name in REASONS],
     )
+
+
+def readiness_delta(rating: int, behaviour: dict) -> float:
+    """How far a turn of this quality moves the buyer's readiness.
+
+    Kept here so live play and the after-the-fact replay in session_review use the
+    same formula - two copies would let a review disagree with what the learner saw.
+    """
+    gain = behaviour.get("readiness_gain_per_good_turn", 0.0)
+    loss = behaviour.get("readiness_loss_per_bad_turn", 0.0)
+    if rating >= 4:
+        return gain * (rating - 3)  # 4->gain, 5->2*gain
+    if rating <= 2:
+        return -loss * (3 - rating)  # 2->-loss, 1->-2*loss
+    return 0.01  # neutral turns drift very slightly upward
+
+
+def apply_readiness(current: float, rating: int, behaviour: dict) -> float:
+    """Readiness after a turn of this quality, clamped to 0-1."""
+    return clamp(current + readiness_delta(rating, behaviour))

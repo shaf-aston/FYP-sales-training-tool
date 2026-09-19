@@ -25,10 +25,32 @@ def test_harmless_sentence_is_not_read_as_the_seller_walking_out():
     assert "low_effort" not in score.signals
 
 
-def test_stringing_magic_phrases_together_earns_nothing():
-    score = score_seller_turn("help me understand what matters most tell me more what are you hoping")
+def test_stringing_magic_phrases_together_does_not_beat_real_discovery():
+    """Honest limit: a keyword rule cannot see incoherence, so phrase-stuffing still
+    scores something. It must not reach the top, which needs the buyer's own words."""
+    salad = score_seller_turn("help me understand what matters most tell me more what are you hoping")
+    real = score_seller_turn(
+        "What made the reliability of your van start to matter?",
+        buyer_message="My van keeps breaking down and reliability matters",
+    )
 
-    assert score.rating <= 3
+    assert salad.rating < real.rating
+
+
+def test_an_invitation_counts_as_discovery_without_a_question_mark():
+    """"Walk me through it" is an open question phrased as an instruction."""
+    score = score_seller_turn("Walk me through what a bad week looks like.")
+
+    assert "open_question" in score.signals
+
+
+def test_too_many_openings_at_once_cancels_the_credit():
+    stacked = score_seller_turn(
+        "What is driving this? When do you need it? Who else decides? Why now?"
+    )
+
+    assert {"open_question", "question_stacking"} <= set(stacked.signals)
+    assert stacked.rating <= 3
 
 
 def test_echoing_the_buyers_own_words_scores_highest():
@@ -70,7 +92,6 @@ def test_pressure_language_lowers_the_rating():
     "message, expected",
     [
         ("Sure.", "low_effort"),
-        ("What is driving this? When do you need it? Who else decides? Why now?", "question_stacking"),
         ("word " * 120, "monologue"),
     ],
 )
@@ -102,6 +123,7 @@ def test_config_weights_and_thresholds_are_all_present():
         "low_effort_words", "monologue_words", "question_stacking_count",
         "mirroring_min_overlap", "discovery_turns",
     }
+    assert cfg["question_words"] and cfg["invitations"]
     # YAML reads bare on/no/yes as booleans - stopwords must stay text.
     assert all(isinstance(word, str) for word in cfg["mirroring_stopwords"])
 

@@ -9,8 +9,9 @@ from dataclasses import dataclass, field
 from .loader import load_prospect_config
 from .prospect_session_persistence import ProspectSessionPersistence
 from .providers.factory import create_provider, list_fallback_providers
-from .selling_quality import score_seller_turn
-from .utils import clamp, range_label
+from .selling_quality import apply_readiness, score_seller_turn
+from .session_review import build_review
+from .utils import range_label
 
 logger = logging.getLogger(__name__)
 
@@ -487,6 +488,37 @@ class ProspectSession:
             return "I don't think this is the right fit for me right now."
         return "This roleplay session has ended."
 
+    def rewind_to_turn(self, turn_index: int) -> bool:
+        """Put the session back to just before turn `turn_index` was sent.
+
+        This is what lets a learner redo a turn and get a real reply from the same
+        buyer at the same point, instead of being told what they should have said.
+        The buyer's readiness is replayed from the kept transcript rather than
+        remembered, so a rewound session is identical to one that had gone that way
+        from the start.
+
+        Returns False when that turn does not exist.
+        """
+        if turn_index < 1:
+            return False
+        seller_turns = [
+            position
+            for position, entry in enumerate(self.conversation_history)
+            if entry.get("role") == "user"
+        ]
+        if turn_index > len(seller_turns):
+            return False
+
+        self.conversation_history = self.conversation_history[: seller_turns[turn_index - 1]]
+        replay = build_review(self.conversation_history, self.difficulty_profile["behaviour"])
+        self.state.turn_count = replay["summary"]["turn_count"]
+        self.state.readiness = replay["readiness_curve"][-1]
+        self.state.has_committed = False
+        self.state.has_walked = False
+        self.last_turn_score = None
+        self.save_session()
+        return True
+
     def _last_buyer_message(self) -> str:
         """The buyer's most recent line, used to tell listening apart from luck."""
         for entry in reversed(self.conversation_history):
@@ -510,17 +542,7 @@ class ProspectSession:
         )
         rating = self.last_turn_score.rating
 
-        gain = behaviour["readiness_gain_per_good_turn"]
-        loss = behaviour["readiness_loss_per_bad_turn"]
-
-        if rating >= 4:
-            readiness_change = gain * (rating - 3)  # 4->gain, 5->2*gain
-        elif rating <= 2:
-            readiness_change = -loss * (3 - rating)  # 2->-loss, 1->-2*loss
-        else:
-            readiness_change = 0.01  # Slight gain for neutral
-
-        self.state.readiness = clamp(self.state.readiness + readiness_change)
+        self.state.readiness = apply_readiness(self.state.readiness, rating, behaviour)
 
     def _check_end_conditions(self) -> str | None:
         """Check if the session should end and determine the outcome.
