@@ -21,17 +21,28 @@ class _DummyProspectSessionManager:
         return True
 
 
+def _wire_routes(monkeypatch, app, manager):
+    """Point the prospect blueprint at this test's app and manager.
+
+    Via monkeypatch, not init_routes: the blueprint is module-global, so calling
+    init_routes here would leave a permissive message validator in place for every
+    test that runs afterwards in the same process.
+    """
+    for name, value in (
+        ("app", app),
+        ("prospect_session_manager", manager),
+        ("validate_message", lambda message: (message, None)),
+    ):
+        monkeypatch.setattr(prospect_routes.bp, name, value, raising=False)
+
+
 def test_prospect_evaluate_requires_in_memory_session(monkeypatch):
     app = Flask(__name__)
     app.config["TESTING"] = True
     manager = _DummyProspectSessionManager()
     load_calls = {"count": 0}
 
-    prospect_routes.init_routes(
-        app,
-        manager,
-        lambda message: (message, None),
-    )
+    _wire_routes(monkeypatch, app, manager)
     app.register_blueprint(prospect_routes.bp)
 
     monkeypatch.setattr(
@@ -58,11 +69,7 @@ def test_prospect_state_requires_in_memory_session(monkeypatch):
     manager = _DummyProspectSessionManager()
     load_calls = {"count": 0}
 
-    prospect_routes.init_routes(
-        app,
-        manager,
-        lambda message: (message, None),
-    )
+    _wire_routes(monkeypatch, app, manager)
     app.register_blueprint(prospect_routes.bp)
 
     monkeypatch.setattr(

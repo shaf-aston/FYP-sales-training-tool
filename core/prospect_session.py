@@ -16,6 +16,10 @@ from .utils import range_label
 logger = logging.getLogger(__name__)
 
 
+class ProviderUnavailable(RuntimeError):
+    """Every LLM provider failed or came back empty, so there is no buyer to talk to."""
+
+
 READINESS_THRESHOLDS = [0.2, 0.4, 0.6, 0.8]
 READINESS_LABELS = [
     "Not buying it at all",
@@ -180,7 +184,12 @@ class ProspectSession:
         }
 
     def _get_chat_with_fallback(self, messages, temperature=0.8, max_tokens=200):
-        """Get chat response with automatic fallback to other providers on error."""
+        """Get chat response with automatic fallback to other providers on error.
+
+        Raises ProviderUnavailable when no provider produced anything. Returning the
+        empty response instead showed the learner a blank bubble and an HTTP 200,
+        which looks like the buyer ignoring them rather than an outage.
+        """
         response = self.provider.chat(messages, temperature=temperature, max_tokens=max_tokens)
         if response.error or not (response.content or "").strip():
             for provider_name in list_fallback_providers(self.provider_name):
@@ -196,6 +205,14 @@ class ProspectSession:
                     self.provider_name = provider_name
                     self.model_name = fallback.get_model_name()
                     break
+
+        if response.error or not (response.content or "").strip():
+            logger.error(
+                "No provider answered (last=%s): %s",
+                self.provider_name,
+                response.error or "empty response",
+            )
+            raise ProviderUnavailable(response.error or "No provider returned a reply.")
         return response
 
     def to_dict(self) -> dict:

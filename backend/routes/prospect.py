@@ -7,12 +7,16 @@ from flask import Blueprint, jsonify, request
 
 from ..messages import (
     PROSPECT_ERROR,
+    PROSPECT_REVIEW_ERROR,
+    PROSPECT_UNAVAILABLE,
     PROSPECT_SCORING_ERROR,
     PROSPECT_SESSION_NOT_FOUND,
 )
 from ..security import InputValidator, require_rate_limit
 from ._utils import make_require_session, validate_provider
 from core.prospect_session_persistence import ProspectSessionPersistence
+from core.prospect_session import ProviderUnavailable
+from core.session_review import build_review
 
 bp = Blueprint("prospect", __name__, url_prefix="/api/prospect")
 
@@ -131,6 +135,9 @@ def prospect_init():
                 "model": opening.model,
             }
         )
+    except ProviderUnavailable:
+        state.prospect_session_manager.delete(session_id)
+        return jsonify({"error": PROSPECT_UNAVAILABLE, "code": "PROVIDER_UNAVAILABLE"}), 503
     except Exception as e:
         state.app.logger.exception(f"Prospect init failed: {e}")
         return jsonify(
@@ -172,6 +179,8 @@ def prospect_chat():
         if response.coaching:
             result["coaching"] = response.coaching
         return jsonify(result)
+    except ProviderUnavailable:
+        return jsonify({"error": PROSPECT_UNAVAILABLE, "code": "PROVIDER_UNAVAILABLE"}), 503
     except Exception as e:
         _bp_state().app.logger.exception(f"Prospect chat error: {e}")
         return jsonify({"error": PROSPECT_ERROR}), 500
@@ -214,6 +223,69 @@ def prospect_evaluate():
     except Exception as e:
         _bp_state().app.logger.exception(f"Prospect evaluation error: {e}")
         return jsonify({"error": PROSPECT_SCORING_ERROR}), 500
+
+
+@bp.route("/review", methods=["GET"])
+def prospect_review():
+    """Walk the session back turn by turn, with the reason behind every rating.
+
+    Rebuilt from the transcript on each request, so it also works on a session
+    that was recovered from disk.
+    """
+    ps, err = _require_prospect_session()
+    if err:
+        return err
+    assert ps is not None
+
+    try:
+        review = build_review(
+            ps.conversation_history, ps.difficulty_profile["behaviour"]
+        )
+        return jsonify({"success": True, "persona": ps.persona, **review})
+    except Exception as e:
+        _bp_state().app.logger.exception(f"Prospect review error: {e}")
+        return jsonify({"error": PROSPECT_REVIEW_ERROR}), 500
+
+
+@bp.route("/redo", methods=["POST"])
+@require_rate_limit("prospect")
+def prospect_redo():
+    """Rewind to a turn and say it differently, for a real reply from the same buyer."""
+    ps, err = _require_prospect_session()
+    if err:
+        return err
+    assert ps is not None
+
+    data = request.json or {}
+    turn_index = InputValidator.parse_positive_int(data.get("turn"))
+    if turn_index is None:
+        return jsonify({"error": "A turn number is required.", "code": "INVALID_TURN"}), 400
+
+    user_message, err = _bp_state().validate_message(data.get("message", ""))
+    if err:
+        return err
+
+    if not ps.rewind_to_turn(turn_index):
+        return jsonify({"error": "That turn is not part of this session.", "code": "INVALID_TURN"}), 400
+
+    try:
+        response = ps.process_turn(user_message)
+        return jsonify(
+            {
+                "success": True,
+                "turn": turn_index,
+                "message": response.content,
+                "state": response.state_snapshot,
+                "provider": response.provider,
+                "model": response.model,
+                "outcome": ps.state.status,
+            }
+        )
+    except ProviderUnavailable:
+        return jsonify({"error": PROSPECT_UNAVAILABLE, "code": "PROVIDER_UNAVAILABLE"}), 503
+    except Exception as e:
+        _bp_state().app.logger.exception(f"Prospect redo error: {e}")
+        return jsonify({"error": PROSPECT_ERROR}), 500
 
 
 @bp.route("/reset", methods=["POST"])

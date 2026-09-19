@@ -1654,3 +1654,249 @@ textarea::-webkit-scrollbar-thumb,
   }
 
 }
+/* --- Session review: walk the conversation back ------------------------- */
+
+.prospect-eval-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.review-open-btn,
+.review-redo-btn {
+  background: var(--accent);
+  color: var(--bg-page);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 9px 16px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.review-open-btn:hover,
+.review-redo-btn:hover {
+  background: var(--accent-strong);
+}
+
+.review-overlay {
+  position: fixed;
+  inset: 0;
+  /* Above the prospect panel (1002), which otherwise clips the card's right edge. */
+  z-index: 1100;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  overflow-y: auto;
+  padding: 32px 16px;
+  background: rgba(0, 0, 0, 0.72);
+}
+
+.review-card {
+  position: relative;
+  width: 100%;
+  max-width: 620px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 26px 26px 30px;
+}
+
+.review-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.review-close:hover {
+  color: var(--text-primary);
+}
+
+.review-head h3 {
+  color: var(--text-primary);
+  font-size: 1.25rem;
+  margin-bottom: 6px;
+}
+
+.review-intro {
+  color: var(--text-body);
+  font-size: 0.95rem;
+}
+
+.review-stats {
+  color: var(--text-subtle);
+  font-size: 0.82rem;
+  margin-top: 4px;
+}
+
+.review-turns {
+  list-style: none;
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.review-turn {
+  background: var(--bg-card-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+}
+
+.review-turn.pivotal {
+  border-color: var(--accent);
+  background: var(--bg-card);
+}
+
+.review-turn-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.review-turn-no {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.review-rating {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.review-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--border-strong);
+}
+
+.review-dot.on {
+  background: var(--accent);
+}
+
+.review-drift {
+  margin-left: auto;
+  font-size: 0.78rem;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.review-drift.up {
+  color: var(--success);
+  background: var(--success-soft);
+}
+
+.review-drift.down {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.review-said {
+  color: var(--text-body);
+  font-size: 0.92rem;
+  margin-bottom: 6px;
+}
+
+.review-said.buyer {
+  color: var(--text-muted);
+}
+
+.review-who {
+  display: inline-block;
+  min-width: 46px;
+  color: var(--text-subtle);
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.review-reasons {
+  margin: 10px 0 0 18px;
+  color: var(--text-body);
+  font-size: 0.88rem;
+}
+
+.review-reasons li {
+  margin-bottom: 3px;
+}
+
+.review-reasons-empty,
+.review-empty {
+  color: var(--text-subtle);
+  font-size: 0.88rem;
+  margin-top: 8px;
+}
+
+.review-redo {
+  margin-top: 12px;
+}
+
+.review-redo-label {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  margin-bottom: 6px;
+}
+
+.review-redo-input {
+  width: 100%;
+  background: var(--bg-shell);
+  color: var(--text-primary);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 9px 11px;
+  font: inherit;
+  font-size: 0.92rem;
+  resize: vertical;
+  margin-bottom: 8px;
+}
+
+.review-redo-input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.review-redo-waiting,
+.review-redo-note {
+  color: var(--text-subtle);
+  font-size: 0.85rem;
+}
+
+.review-redo-error {
+  color: var(--danger);
+  font-size: 0.88rem;
+  margin-bottom: 8px;
+}
+
+.review-redo-result {
+  border-left: 2px solid var(--accent);
+  padding-left: 12px;
+  margin-top: 10px;
+}
+
+.review-redo-note {
+  margin-top: 6px;
+}
+
+.review-turn.superseded {
+  opacity: 0.45;
+}
+
+.review-superseded-note {
+  color: var(--text-subtle);
+  font-size: 0.82rem;
+  font-style: italic;
+  padding: 2px 4px;
+}
