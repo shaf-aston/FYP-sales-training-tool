@@ -2,6 +2,7 @@
 from flask import Flask, jsonify, request
 
 from backend.routes import session as session_routes
+from backend.routes._utils import make_require_session
 from backend.security import (
     ClientIPExtractor,
     InputValidator,
@@ -82,6 +83,7 @@ def _make_session_app(monkeypatch):
         manager.set,
         manager.delete,
         bot_state,
+        make_require_session(manager.get),
     )
     app.register_blueprint(session_routes.bp)
     return app

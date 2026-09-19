@@ -11,8 +11,8 @@ from ..messages import (
     PROSPECT_SESSION_NOT_FOUND,
 )
 from ..security import InputValidator, require_rate_limit
+from ._utils import make_require_session, validate_provider
 from core.prospect_session_persistence import ProspectSessionPersistence
-from core.providers.factory import supported_provider_names
 
 bp = Blueprint("prospect", __name__, url_prefix="/api/prospect")
 
@@ -41,20 +41,14 @@ def _public_config(ps: Any) -> dict:
     return {}
 
 
-def _require_prospect_session():
-    """Validate prospect session. Returns (prospect_session, error_response)"""
-    session_id = request.headers.get("X-Session-ID")
-    session_error = InputValidator.validate_session_id(session_id)
-    if session_error:
-        return None, session_error
-    assert isinstance(session_id, str)
-    ps = _bp_state().prospect_session_manager.get(session_id)
-    if not ps:
-        return None, (
-            jsonify({"error": PROSPECT_SESSION_NOT_FOUND, "code": "SESSION_EXPIRED"}),
-            400,
-        )
-    return ps, None
+def _lookup_prospect_session(session_id):
+    """Return the live prospect session for this id, or None."""
+    return _bp_state().prospect_session_manager.get(session_id)
+
+
+_require_prospect_session = make_require_session(
+    _lookup_prospect_session, PROSPECT_SESSION_NOT_FOUND
+)
 
 
 @bp.route("/products", methods=["GET"])
@@ -92,20 +86,9 @@ def prospect_init():
     data = request.json or {}
     difficulty = data.get("difficulty", "medium")
     product_type = data.get("product_type", "default")
-    provider = InputValidator.normalize_provider(data.get("provider"))
-    if provider is not None and provider not in supported_provider_names(include_non_production=False):
-        return (
-            jsonify(
-                {
-                    "error": "Unsupported provider",
-                    "code": "UNSUPPORTED_PROVIDER",
-                    "supported_providers": supported_provider_names(
-                        include_non_production=False
-                    ),
-                }
-            ),
-            400,
-        )
+    provider, provider_error = validate_provider(data)
+    if provider_error:
+        return provider_error
 
     if difficulty not in ("easy", "medium", "hard"):
         return jsonify({"error": "Invalid difficulty. Choose: easy, medium, hard"}), 400

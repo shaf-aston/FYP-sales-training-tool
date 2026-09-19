@@ -21,7 +21,6 @@ if __package__ in (None, ""):
     from backend.messages import (
         INTERNAL_SERVER_ERROR,
         MESSAGE_REQUIRED,
-        SESSION_NOT_FOUND,
     )
     from backend.security import (
         InputValidator,
@@ -31,12 +30,12 @@ if __package__ in (None, ""):
         initialize_security,
     )
     from backend.routes import analytics, chat, prospect, session
+    from backend.routes._utils import make_require_session
 else:
     from core.constants import MAX_PROSPECT_SESSIONS, PROSPECT_IDLE_MINUTES, UNDETERMINED_STAGE
     from .messages import (
         INTERNAL_SERVER_ERROR,
         MESSAGE_REQUIRED,
-        SESSION_NOT_FOUND,
     )
     from .security import (
         InputValidator,
@@ -46,6 +45,7 @@ else:
         initialize_security,
     )
     from .routes import analytics, chat, prospect, session
+    from .routes._utils import make_require_session
 
 app = Flask(
     __name__,
@@ -98,21 +98,7 @@ if _should_start_background_cleanup():
     prospect_session_manager.start_background_cleanup()
 
 
-def _require_session():
-    """Pull the bot for this session, or return an error response if the session is missing"""
-    from flask import jsonify, request
-
-    session_id = request.headers.get("X-Session-ID")
-    session_error = InputValidator.validate_session_id(session_id)
-    if session_error:
-        return None, session_error
-    bot = session_manager.get(session_id)
-    if not bot:
-        return None, (
-            jsonify({"error": SESSION_NOT_FOUND, "code": "SESSION_EXPIRED"}),
-            400,
-        )
-    return bot, None
+_require_session = make_require_session(session_manager.get)
 
 
 def _validate_message(message_text):
@@ -145,7 +131,8 @@ def _bot_state(session_bot):
 
 
 session.init_routes(
-    app, session_manager, session_manager.get, session_manager.set, session_manager.delete, _bot_state
+    app, session_manager, session_manager.get, session_manager.set, session_manager.delete,
+    _bot_state, _require_session,
 )
 chat.init_routes(app, session_manager.get, _require_session, _validate_message, _bot_state)
 prospect.init_routes(app, prospect_session_manager, _validate_message)

@@ -1,9 +1,14 @@
 """Post-session evaluation for prospect mode with 5-criterion scoring."""
 
-import re
 
 from .loader import load_prospect_config
-from .utils import clamp_score, extract_json_from_llm, range_label
+from .utils import (
+    clamp_score,
+    extract_json_from_llm,
+    merge_unique_items,
+    range_label,
+    tokenize,
+)
 
 _GRADE_THRESHOLDS = [60, 70, 80, 90]
 _GRADE_LABELS = ["F", "D", "C", "B", "A"]
@@ -54,11 +59,6 @@ _SOLUTION_HINTS = [
 ]
 
 
-def _tokenize(text: str) -> list[str]:
-    """Split text into simple lowercase word tokens for rule-based scoring."""
-    return re.findall(r"[a-z0-9']+", (text or "").lower())
-
-
 def _contains_any(text: str, hints: list[str]) -> bool:
     """Return True when any hint phrase appears in the text."""
     lowered = (text or "").lower()
@@ -72,25 +72,6 @@ def _weighted_overall(criteria_scores: dict, criteria: dict) -> int:
         score = clamp_score(criteria_scores.get(name, {}).get("score", 50))
         total += score * info.get("weight", 0.0)
     return clamp_score(round(total))
-
-
-def _merge_unique_items(primary: list[str], secondary: list[str], max_items: int = 3) -> list[str]:
-    """Merge two short feedback lists without duplicates or empty entries."""
-    seen = set()
-    merged = []
-    for source in (primary or [], secondary or []):
-        for item in source:
-            text = str(item).strip()
-            if not text:
-                continue
-            key = text.lower()
-            if key in seen:
-                continue
-            seen.add(key)
-            merged.append(text)
-            if len(merged) >= max_items:
-                return merged
-    return merged
 
 
 def _build_deterministic_criteria_scores(conversation_history: list[dict], criteria: dict) -> dict:
@@ -107,7 +88,7 @@ def _build_deterministic_criteria_scores(conversation_history: list[dict], crite
 
     sales_count = len(sales_turns)
     prospect_count = len(prospect_turns)
-    avg_words = sum(len(_tokenize(turn)) for turn in sales_turns) / max(1, sales_count)
+    avg_words = sum(len(tokenize(turn)) for turn in sales_turns) / max(1, sales_count)
 
     question_turns = sum(1 for turn in sales_turns if "?" in turn)
     open_question_turns = sum(
@@ -376,8 +357,8 @@ def _build_evaluation(
     coach_tip = ""
 
     if deterministic:
-        strengths = _merge_unique_items(strengths, deterministic.get("strengths", []))
-        improvements = _merge_unique_items(
+        strengths = merge_unique_items(strengths, deterministic.get("strengths", []))
+        improvements = merge_unique_items(
             improvements, deterministic.get("improvements", [])
         )
         summary = summary or deterministic.get("summary", "Evaluation complete.")

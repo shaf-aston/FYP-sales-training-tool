@@ -1,4 +1,4 @@
-﻿"""Prompt templates and base rules for assembling LLM prompts and stage guidance."""
+"""Prompt templates and base rules for assembling LLM prompts and stage guidance."""
 
 import logging
 import random
@@ -523,7 +523,7 @@ Use opening statements ONLY when strategically necessary for a specific purpose:
 RULE: Most turns should lead directly with a question or insight. Do NOT open with affirmation/summary of what the user said.
 
 ELICITATION (use instead of questions when user is guarded/defensive):
-When user is defensive/evasive, use statements instead of direct questions. Types defined below (examples loaded from tactics.yaml at runtime):
+When user is defensive/evasive, use statements instead of direct questions. Types defined below:
 
 | Type | When | Pattern |
 |------|------|---------|
@@ -532,7 +532,7 @@ When user is defensive/evasive, use statements instead of direct questions. Type
 | Reflective | User gives minimal response | Mirror their situation; pause (no follow-up) |
 | Shared Observation | User feels unique/stuck | Normalize with "most people..." statement |
 | Curiosity | Want to understand without pressure | Express genuine curiosity with "no pressure" |
-| Combined | Full low-intent turn | Observation + one soft follow-up (from tactics.yaml) |
+| Combined | Full low-intent turn | Observation + one soft follow-up |
 
 NOTE: Elicitation examples are randomly selected from ELICITATION_TACTICS in content.py at runtime.
 """

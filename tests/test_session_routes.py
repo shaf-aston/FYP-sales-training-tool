@@ -2,6 +2,7 @@
 from flask import Flask
 
 from backend.routes import session as session_routes
+from backend.routes._utils import make_require_session
 from backend.security import SecurityConfig
 
 
@@ -92,6 +93,9 @@ def _make_session_app(monkeypatch, testing=True):
     monkeypatch.setattr(session_routes.bp, "set_session", manager.set, raising=False)
     monkeypatch.setattr(session_routes.bp, "delete_session", manager.delete, raising=False)
     monkeypatch.setattr(session_routes.bp, "bot_state", bot_state, raising=False)
+    monkeypatch.setattr(
+        session_routes.bp, "require_session", make_require_session(manager.get), raising=False
+    )
     app.register_blueprint(session_routes.bp)
     return app, manager
 
@@ -296,3 +300,59 @@ def test_init_starts_fresh_session_when_missing_from_memory(monkeypatch):
     assert payload["history"] == []
     assert _DummyBot.loaded_session_id is None
     assert manager.get(payload["session_id"]) is not None
+
+
+def test_stages_route_returns_the_flow_stages(monkeypatch):
+    app, manager = _make_session_app(monkeypatch)
+    manager.set("d" * 8, _DummyBot(session_id="d" * 8))
+
+    response = app.test_client().get("/api/stages", headers={"X-Session-ID": "d" * 8})
+
+    assert response.status_code == 200
+    assert response.get_json() == {
+        "success": True,
+        "stages": ["logical", "pitch", "outcome"],
+    }
+
+
+def test_score_route_returns_the_session_score(monkeypatch):
+    app, manager = _make_session_app(monkeypatch)
+    manager.set("e" * 8, _DummyBot(session_id="e" * 8))
+    monkeypatch.setattr("core.trainer.score_session", lambda _sid: {"total": 7})
+
+    response = app.test_client().get("/api/score", headers={"X-Session-ID": "e" * 8})
+
+    assert response.status_code == 200
+    assert response.get_json() == {"success": True, "score": {"total": 7}}
+
+
+def test_score_route_reports_a_failed_calculation_instead_of_crashing(monkeypatch):
+    app, manager = _make_session_app(monkeypatch)
+    manager.set("e" * 8, _DummyBot(session_id="e" * 8))
+
+    def _explode(_sid):
+        raise RuntimeError("analytics unavailable")
+
+    monkeypatch.setattr("core.trainer.score_session", _explode)
+
+    response = app.test_client().get("/api/score", headers={"X-Session-ID": "e" * 8})
+
+    assert response.status_code == 500
+
+
+def test_every_session_route_answers_a_dead_session_the_same_way(monkeypatch):
+    """One seam, one contract: the frontend recovers on code == SESSION_EXPIRED."""
+    app, _manager = _make_session_app(monkeypatch)
+    client = app.test_client()
+    headers = {"X-Session-ID": "f" * 8}
+
+    responses = [
+        client.get("/api/stages", headers=headers),
+        client.get("/api/score", headers=headers),
+        client.post("/api/stage", headers=headers, json={"stage": "pitch"}),
+        client.post("/api/strategy", headers=headers, json={"strategy": "consultative"}),
+        client.post("/api/reset", headers=headers),
+    ]
+
+    assert [r.status_code for r in responses] == [400] * 5
+    assert all(r.get_json()["code"] == "SESSION_EXPIRED" for r in responses)

@@ -66,11 +66,12 @@ def test_save_custom_knowledge_sanitizes_and_writes_primary_file(monkeypatch):
     }
 
     knowledge_text = knowledge.get_custom_knowledge_text()
-    # Keep the text checks readable instead of over-asserting the full block.
-    assert "product_name: Acme Pro" in knowledge_text
+    # Each field is injected once, under its human label, with real line breaks.
+    assert "\\n" not in knowledge_text  # literal backslash-n, not a line break
     assert "Product name: Acme Pro" in knowledge_text
-    assert "selling_points:\\n  - Fast setup\\n  - Custom support" in knowledge_text
-    assert "Selling points:\\n  - Fast setup\\n  - Custom support" in knowledge_text
+    assert "Selling points:\n  - Fast setup\n  - Custom support" in knowledge_text
+    assert knowledge_text.count("Acme Pro") == 1
+    assert "product_name:" not in knowledge_text
 
 
 def test_clear_custom_knowledge_removes_primary_and_legacy_files(monkeypatch):

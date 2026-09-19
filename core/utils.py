@@ -122,3 +122,31 @@ def normalize_enum_name(value) -> str:
         return ""
     text = str(value)
     return text.split(".")[-1].lower() if text else ""
+
+
+def tokenize(text: str) -> list[str]:
+    """Split text into simple lowercase word tokens for rule-based scoring."""
+    return re.findall(r"[a-z0-9']+", (text or "").lower())
+
+
+def merge_unique_items(*lists: list[str], max_items: int = 3) -> list[str]:
+    """Merge list items in order, dropping duplicates (case-insensitive) and blanks.
+
+    Stops after `max_items` so feedback lists stay short. Earlier lists win when
+    deduplication trims the result.
+    """
+    seen = set()
+    merged = []
+    for items in lists:
+        for item in items or []:
+            text = str(item).strip()
+            if not text:
+                continue
+            key = text.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            merged.append(text)
+            if len(merged) >= max_items:
+                return merged
+    return merged

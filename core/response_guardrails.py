@@ -51,7 +51,7 @@ DIRECT_PRICING_REQUEST_KEYWORDS = [
 
 _SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+|\n+")
 _EXPLICIT_PRICE_REFERENCE = re.compile(
-    r"(?:[$£€]\s*\d|\b\d+(?:[.,]\d+)?\s*(?:per\s+(?:month|week|year)|monthly|annually|annual|per\s+annum|fee|cost|price|pricing))",
+    r"(?:[$£€]\s*\d|\b\d+(?:[.,]\d+)?\s*(?:per\s+(?:month|week|year)|monthly|annually|annual|per\s+annum|fee|cost|price|pricing))",  # noqa: E501
     re.IGNORECASE,
 )
 

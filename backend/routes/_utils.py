@@ -1,16 +1,85 @@
-"""Shared helpers for route-layer response serialization."""
+"""Shared route-layer helpers: session lookup, provider validation, serialization."""
 
 from __future__ import annotations
 
-from numbers import Real
+from functools import wraps
+
+from flask import jsonify, request
+
+from ..messages import SESSION_NOT_FOUND
+from ..security import InputValidator
+
+
+def make_require_session(get_session, not_found_message=SESSION_NOT_FOUND):
+    """Build the one session-lookup seam.
+
+    ``get_session`` takes a session id and returns the live object or None. Every
+    route that needs a session uses the result of this factory, so the validation,
+    the error body, the error code and the status code are defined in one place.
+    """
+
+    def require_session():
+        session_id = request.headers.get("X-Session-ID")
+        session_error = InputValidator.validate_session_id(session_id)
+        if session_error:
+            return None, session_error
+
+        found = get_session(session_id)
+        if not found:
+            from flask import current_app
+
+            current_app.logger.warning(
+                "Session not found for %s (id=%s...)", request.path, str(session_id)[:8]
+            )
+            return None, (
+                jsonify({"error": not_found_message, "code": "SESSION_EXPIRED"}),
+                400,
+            )
+        return found, None
+
+    return require_session
+
+
+def with_session(bp):
+    """Route decorator: pass the session object to the handler, or return the error."""
+
+    def decorator(view):
+        @wraps(view)
+        def wrapper(*args, **kwargs):
+            session_bot, error = bp.require_session()
+            if error:
+                return error
+            return view(session_bot, *args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+def validate_provider(data):
+    """Return (provider, error). Error is a ready response when the provider is unknown."""
+    from core.providers.factory import supported_provider_names
+
+    provider = InputValidator.normalize_provider(data.get("provider"))
+    supported = supported_provider_names(include_non_production=False)
+    if provider is not None and provider not in supported:
+        return None, (
+            jsonify(
+                {
+                    "error": "Unsupported provider",
+                    "code": "UNSUPPORTED_PROVIDER",
+                    "supported_providers": supported,
+                }
+            ),
+            400,
+        )
+    return provider, None
 
 
 def safe_latency_ms(value) -> float | None:
     """Round latency values for JSON responses without crashing on None."""
     if value is None:
         return None
-    if isinstance(value, Real):
-        return round(float(value), 1)
     try:
         return round(float(value), 1)
     except (TypeError, ValueError):
@@ -19,18 +88,10 @@ def safe_latency_ms(value) -> float | None:
 
 def sum_latency_ms(*values) -> float | None:
     """Sum latency values only when every component is present and numeric."""
-    numeric_values = []
+    total = 0.0
     for value in values:
-        if value is None:
+        component = safe_latency_ms(value)
+        if component is None:
             return None
-        if isinstance(value, Real):
-            numeric_values.append(float(value))
-            continue
-        try:
-            numeric_values.append(float(value))
-        except (TypeError, ValueError):
-            return None
-
-    if not numeric_values:
-        return None
-    return round(sum(numeric_values), 1)
+        total += component
+    return round(total, 1)

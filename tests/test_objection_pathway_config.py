@@ -1,6 +1,6 @@
 """Tests for objection pathway configuration and validation."""
 from backend.security import SessionSecurityManager
-from core.objection import analyse_objection_pathway, validate_pathway_config
+from core.objection import get_objection_pathway, validate_pathway_config
 
 
 def test_pathway_config_validates_cleanly():
@@ -11,7 +11,7 @@ def test_pathway_config_validates_cleanly():
 
 
 def test_money_objection_maps_to_resource_pathway():
-    pathway = analyse_objection_pathway("It is too expensive for me right now.")
+    pathway = get_objection_pathway("It is too expensive for me right now.")
 
     assert pathway["type"] == "money"
     assert pathway["category"] == "resource"

@@ -2,11 +2,16 @@
 
 import logging
 import random
-import re
 from typing import Any
 
 from .loader import load_yaml
-from .utils import clamp_score, contains_nonnegated_keyword, extract_json_from_llm
+from .utils import (
+    clamp_score,
+    contains_nonnegated_keyword,
+    extract_json_from_llm,
+    merge_unique_items,
+    tokenize,
+)
 
 logger = logging.getLogger(__name__)
 _quiz_config = None
@@ -50,20 +55,15 @@ _STOPWORDS = {
 _OPEN_QUESTION_WORDS = ("what", "how", "why", "which", "where", "when", "who")
 
 
-def _tokenize(text: str) -> list[str]:
-    """Tokenize text into lowercase alphanumeric words."""
-    return re.findall(r"[a-z0-9']+", (text or "").lower())
-
-
 def _detect_concept_coverage(answer: str, concepts: list[str]) -> tuple[list[str], list[str]]:
     """Return (concepts_got, concepts_missed) using keyword overlap per concept."""
-    answer_tokens = set(_tokenize(answer))
+    answer_tokens = set(tokenize(answer))
     matched_concepts, unmatched_concepts = [], []
 
     for concept in concepts:
         concept_tokens = [
             token
-            for token in _tokenize(concept)
+            for token in tokenize(concept)
             if len(token) > 3 and token not in _STOPWORDS
         ]
         matched = bool(concept_tokens) and any(token in answer_tokens for token in concept_tokens)
@@ -95,29 +95,6 @@ def _understanding_from_score(score: int) -> str:
     return "needs_work"
 
 
-def _merge_unique_items(*lists: list[str], max_items: int = 4) -> list[str]:
-    """Merge list items in insertion order, removing duplicates and empty values.
-
-    Stops after `max_items` so feedback lists stay short and readable. Earlier
-    lists take priority when deduplication trims the final result.
-    """
-    seen = set()
-    merged = []
-    for items in lists:
-        for item in items or []:
-            text = str(item).strip()
-            if not text:
-                continue
-            key = text.lower()
-            if key in seen:
-                continue
-            seen.add(key)
-            merged.append(text)
-            if len(merged) >= max_items:
-                return merged
-    return merged
-
-
 def _build_coach_tip(missed_concepts: list[str], mode: str) -> str:
     """Create one clear coaching tip based on the highest-value missed concept."""
     if missed_concepts:
@@ -138,7 +115,7 @@ def _deterministic_open_ended_assessment(
     lower = text.lower()
     concepts = rubric.get("key_concepts", []) or []
 
-    words = _tokenize(text)
+    words = tokenize(text)
     word_count = len(words)
     length_score = 15 if word_count >= 10 else 8 if word_count >= 6 else 2
 
@@ -176,7 +153,7 @@ def _deterministic_open_ended_assessment(
         if last_user_message:
             customer_tokens = {
                 token
-                for token in _tokenize(last_user_message)
+                for token in tokenize(last_user_message)
                 if len(token) > 3 and token not in _STOPWORDS
             }
             overlap = customer_tokens.intersection(set(words))
@@ -206,8 +183,8 @@ def _deterministic_open_ended_assessment(
         return {
             "score": score,
             "feedback": feedback,
-            "strengths": _merge_unique_items(strengths, max_items=3),
-            "improvements": _merge_unique_items(improvements, max_items=3),
+            "strengths": merge_unique_items(strengths, max_items=3),
+            "improvements": merge_unique_items(improvements, max_items=3),
             "key_concepts_got": matched_concepts,
             "key_concepts_missed": unmatched_concepts,
             "coach_tip": _build_coach_tip(unmatched_concepts, mode),
@@ -247,8 +224,8 @@ def _deterministic_open_ended_assessment(
     return {
             "score": score,
             "feedback": feedback,
-            "strengths": _merge_unique_items(strengths, max_items=3),
-            "improvements": _merge_unique_items(improvements, max_items=3),
+            "strengths": merge_unique_items(strengths, max_items=3),
+            "improvements": merge_unique_items(improvements, max_items=3),
             "key_concepts_got": matched_concepts,
             "key_concepts_missed": unmatched_concepts,
             "coach_tip": _build_coach_tip(unmatched_concepts, mode),
@@ -273,11 +250,11 @@ def _merge_open_ended_result(mode: str, deterministic: dict, llm_result: dict) -
     merged = {
         "score": final_score,
         "feedback": feedback,
-        "strengths": _merge_unique_items(
-            deterministic.get("strengths", []), llm_result.get("strengths", [])
+        "strengths": merge_unique_items(
+            deterministic.get("strengths", []), llm_result.get("strengths", []), max_items=4
         ),
-        "improvements": _merge_unique_items(
-            deterministic.get("improvements", []), llm_result.get("improvements", [])
+        "improvements": merge_unique_items(
+            deterministic.get("improvements", []), llm_result.get("improvements", []), max_items=4
         ),
         "key_concepts_got": deterministic.get("key_concepts_got", []),
         "key_concepts_missed": deterministic.get("key_concepts_missed", []),

@@ -14,11 +14,10 @@ from core.constants import UNDETERMINED_STAGE
 from core.content import generate_init_greeting
 from core.loader import QuickMatcher
 from core.providers import get_available_providers
-from core.providers.factory import supported_provider_names
+from ._utils import validate_provider, with_session
 from ..messages import (
     SERVER_FULL,
     BOT_INIT_FAILED,
-    SESSION_NOT_FOUND,
     invalid_stage,
     invalid_strategy,
     STRATEGY_SWITCH_FAILED,
@@ -44,11 +43,13 @@ def init_routes(
     set_session_func,
     delete_session_func,
     bot_state_func,
+    require_session_func,
 ):
     """Initialize session routes with Flask app and callback functions"""
     bp.app = app  # type: ignore
     bp.session_manager = session_manager_obj  # type: ignore
     bp.get_session = get_session_func  # type: ignore
+    bp.require_session = require_session_func  # type: ignore
     bp.set_session = set_session_func  # type: ignore
     bp.delete_session = delete_session_func  # type: ignore
     bp.bot_state = bot_state_func  # type: ignore
@@ -100,20 +101,9 @@ def api_init():
         "product_type"
     )  # None → generic default → intent-first discovery
     user_message = data.get("user_message", "")
-    provider = InputValidator.normalize_provider(data.get("provider"))
-    if provider is not None and provider not in supported_provider_names(include_non_production=False):
-        return (
-            jsonify(
-                {
-                    "error": "Unsupported provider",
-                    "code": "UNSUPPORTED_PROVIDER",
-                    "supported_providers": supported_provider_names(
-                        include_non_production=False
-                    ),
-                }
-            ),
-            400,
-        )
+    provider, provider_error = validate_provider(data)
+    if provider_error:
+        return provider_error
 
     # Auto-detect product from user message if not explicitly provided
     if (not product_type or product_type == "default") and user_message:
@@ -272,38 +262,19 @@ def api_config():
 
 
 @bp.route("/stages", methods=["GET"])
-def api_stages():
+@with_session(bp)
+def api_stages(bot):
     """Return available stages for the current session's flow"""
-    session_id = request.headers.get("X-Session-ID")
-    session_error = InputValidator.validate_session_id(session_id)
-    if session_error:
-        return session_error
-
-    bot = bp.get_session(session_id)  # type: ignore
-    if not bot:
-        return jsonify({"error": SESSION_NOT_FOUND}), 404
-
     stages = bot.flow_engine.flow_config.get("stages", [])
     return jsonify({"success": True, "stages": stages})
 
 
 @bp.route("/stage", methods=["POST"])
 @require_privileged_mutation
-def api_stage():
+@with_session(bp)
+def api_stage(bot):
     """Jump FSM to a specific stage. Admin/test only (requires privileged auth)."""
     from core.utils import Strategy
-
-    session_id = request.headers.get("X-Session-ID")
-    session_error = InputValidator.validate_session_id(session_id)
-    if session_error:
-        return session_error
-
-    bot = bp.get_session(session_id)  # type: ignore
-    if not bot:
-        bp.app.logger.warning(f"Stage jump failed: session not found for ID {session_id[:8]}...")  # type: ignore
-        return jsonify(
-            {"error": SESSION_NOT_FOUND, "code": "SESSION_EXPIRED", "detail": "Session may have expired due to inactivity. Please refresh and try again."}
-        ), 404
 
     data = request.json or {}
     stage = data.get("stage")
@@ -322,7 +293,7 @@ def api_stage():
         else bot.flow_engine.current_stage.upper()
     )
 
-    bp.app.logger.info(f"Stage jumped for session {session_id[:8]}... to {stage}")  # type: ignore
+    bp.app.logger.info(f"Stage jumped to {stage}")  # type: ignore
     bot.save_session()  # Persist the stage change
 
     return jsonify(
@@ -332,20 +303,9 @@ def api_stage():
 
 @bp.route("/strategy", methods=["POST"])
 @require_privileged_mutation
-def api_strategy():
+@with_session(bp)
+def api_strategy(bot):
     """Switch FSM strategy for this session"""
-    session_id = request.headers.get("X-Session-ID")
-    session_error = InputValidator.validate_session_id(session_id)
-    if session_error:
-        return session_error
-
-    bot = bp.get_session(session_id)  # type: ignore
-    if not bot:
-        bp.app.logger.warning(f"Strategy switch failed: session not found for ID {session_id[:8]}...")  # type: ignore
-        return jsonify(
-            {"error": SESSION_NOT_FOUND, "code": "SESSION_EXPIRED", "detail": "Session may have expired due to inactivity. Please refresh and try again."}
-        ), 404
-
     data = request.json or {}
     strategy = (data.get("strategy") or "").strip().lower()
 
@@ -356,7 +316,7 @@ def api_strategy():
         ), 400
 
     if not bot.flow_engine.switch_strategy(strategy):
-        bp.app.logger.warning(f"Strategy switch failed for session {session_id[:8]}... to strategy {strategy}")  # type: ignore
+        bp.app.logger.warning(f"Strategy switch failed to strategy {strategy}")  # type: ignore
         return jsonify({"error": STRATEGY_SWITCH_FAILED}), 400
 
     # Preserve the original reset baseline, but keep rewind snapshots aligned
@@ -364,27 +324,19 @@ def api_strategy():
     bot.refresh_current_turn_snapshot()
     bot.save_session()
 
-    bp.app.logger.info(f"Strategy switched for session {session_id[:8]}... to {strategy}")  # type: ignore
+    bp.app.logger.info(f"Strategy switched to {strategy}")  # type: ignore
 
     return jsonify({"success": True, **bp.bot_state(bot)})  # type: ignore
 
 
 @bp.route("/score", methods=["GET"])
-def get_score():
+@with_session(bp)
+def get_score(bot):
     """Retrieve post-session performance score for the current roleplay session"""
-    session_id = request.headers.get("X-Session-ID")
-    session_error = InputValidator.validate_session_id(session_id)
-    if session_error:
-        return session_error
-
-    bot = bp.get_session(session_id)  # type: ignore
-    if not bot:
-        return jsonify({"error": SESSION_NOT_FOUND}), 404
-
     from core.trainer import score_session
 
     try:
-        score_data = score_session(session_id)
+        score_data = score_session(request.headers.get("X-Session-ID"))
         return jsonify({"success": True, "score": score_data})
     except Exception as e:
         logger.error(f"Error calculating session score: {e}")
@@ -392,16 +344,8 @@ def get_score():
 
 
 @bp.route("/reset", methods=["POST"])
-def reset():
+@with_session(bp)
+def reset(bot):
     """Delete the current session"""
-    session_id = request.headers.get("X-Session-ID")
-    session_error = InputValidator.validate_session_id(session_id)
-    if session_error:
-        return session_error
-
-    bot = bp.get_session(session_id)  # type: ignore
-    if not bot:
-        return jsonify({"error": SESSION_NOT_FOUND}), 404
-
-    bp.delete_session(session_id)  # type: ignore
+    bp.delete_session(request.headers.get("X-Session-ID"))  # type: ignore
     return jsonify({"success": True})

@@ -243,16 +243,6 @@ def _user_expressed_stakes(
     )
 
 
-def _commitment_or_objection(
-    history: list[dict[str, str]], user_msg: str, turns: int, turn_state=None
-) -> bool:
-    """Return True when the user commits or objects."""
-    msg_lower = user_msg.lower()
-    return contains_nonnegated_keyword(
-        msg_lower, SIGNALS.get("commitment", [])
-    ) or contains_nonnegated_keyword(msg_lower, SIGNALS.get("objection", []))
-
-
 def _objection_only(
     history: list[dict[str, str]], user_msg: str, turns: int, turn_state=None
 ) -> bool:
@@ -287,7 +277,6 @@ ADVANCEMENT_RULES = {
     "user_shows_doubt": _user_shows_doubt,
     "user_expressed_stakes": _user_expressed_stakes,
     "terms_requested_or_resolved": _terms_requested_or_resolved,
-    "commitment_or_objection": _commitment_or_objection,
     "objection_only": _objection_only,
     "commitment_or_walkaway": commitment_or_walkaway,
 }

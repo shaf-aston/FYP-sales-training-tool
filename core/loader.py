@@ -2,7 +2,6 @@
 
 import copy
 import hashlib
-import random
 import re
 from difflib import SequenceMatcher
 from functools import lru_cache
@@ -421,33 +420,9 @@ def get_product_settings(product_type):
     raise ValueError(f"Product '{product_type}' not found and no default available")
 
 
-def load_tactics():
-    """Load conversation tactic templates from YAML."""
-    return load_yaml("tactics.yaml")
-
-
 def load_adaptations():
     """Load prompt adaptation templates from YAML."""
     return load_yaml("adaptations.yaml")
-
-
-def get_tactic(category="elicitation", subtype=None, context=""):
-    """Pick a random tactic string from category/subtype. Returns empty string if not found."""
-    raw_tactics = load_tactics()
-    # Unwrap nested 'tactics' key if present (YAML structure: tactics: { elicitation: {...} })
-    tactics = raw_tactics.get("tactics", raw_tactics)
-    if category not in tactics:
-        return ""
-
-    cat_dict = tactics[category]
-    if subtype and subtype in cat_dict:
-        options = cat_dict[subtype]
-    elif isinstance(cat_dict, dict):
-        options = cat_dict[next(iter(cat_dict.keys()))]
-    else:
-        options = cat_dict
-
-    return random.choice(options) if options else ""
 
 
 def render_template(template_str, **kwargs):

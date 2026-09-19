@@ -143,15 +143,11 @@ def get_custom_knowledge_text() -> str:
     for key, value in data.items():
         label = LABEL_MAP.get(key, key)
         if isinstance(value, str) and value.strip():
-            sections.append(f"{key}: {value.strip()}")
-            if label != key:
-                sections.append(f"{label}: {value.strip()}")
+            sections.append(f"{label}: {value.strip()}")
         elif isinstance(value, list):
-            items = "\\n".join(f"  - {item}" for item in value if item)
+            items = "\n".join(f"  - {item}" for item in value if item)
             if items:
-                sections.append(f"{key}:\\n{items}")
-                if label != key:
-                    sections.append(f"{label}:\\n{items}")
+                sections.append(f"{label}:\n{items}")
 
     return "\n".join(sections) if sections else ""
 

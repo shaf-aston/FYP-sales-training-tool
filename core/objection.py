@@ -45,16 +45,6 @@ class ObjectionPathway(TypedDict):
     is_primary_objection: bool
 
 
-def _extract_recent_user_messages(
-    history: Optional[list[dict]], max_messages: int = 2
-) -> list[str]:
-    """Extract recent user messages from history.
-
-    Simplifies the common pattern of getting N most recent user message texts.
-    """
-    return HistoryHelper.get_recent_user_messages(history, count=max_messages)
-
-
 def classify_objection(
     user_message: str, history: Optional[list[dict]] = None
 ) -> dict[str, Any]:
@@ -101,7 +91,7 @@ def classify_objection(
         return current_match
 
     if history:
-        recent_user = _extract_recent_user_messages(history, max_messages=2)
+        recent_user = HistoryHelper.get_recent_user_messages(history, count=2)
         if recent_user and recent_user[-1] == user_message_lower:
             recent_user = recent_user[:-1]
         combined = HistoryHelper.combine_messages(recent_user + [user_message_lower]).strip()
@@ -275,120 +265,13 @@ def _build_pathway_metadata(base_dict: dict[str, Any], user_message: str) -> Obj
     return pathway
 
 
-def analyse_objection_pathway(
+def get_objection_pathway(
     user_message: str,
     history: Optional[list[dict]] = None,
-) -> ObjectionPathway:
-    """Return the full objection pathway used by prompt assembly."""
-    base_dict = classify_objection(user_message, history)
-    pathway = _build_pathway_metadata(base_dict, user_message)
-    return pathway
-
-
-def _count_reframe_usages(
-    reframes: list[str],
-    history: Optional[list[dict]] = None,
-) -> dict[str, int]:
-    """Count how many times each reframe has been used in conversation.
-
-    Args:
-        reframes: List of reframe IDs to track
-        history: Conversation history
-
-    Returns:
-        Dictionary mapping reframe_id to usage count
-    """
-    attempts = {reframe_id: 0 for reframe_id in reframes}
-
-    if not history:
-        return attempts
-
-    for msg in history:
-        if msg.get("role") == MessageRole.ASSISTANT:
-            content = msg.get("content", "").lower()
-            for reframe_id in reframes:
-                if f"reframe_{reframe_id}" in content:
-                    attempts[reframe_id] += 1
-
-    return attempts
-
-
-def _find_next_reframe_index(
-    reframes: list[str],
-    reframe_usages: dict[str, int],
-) -> int:
-    """Find index of next reframe to use (first unused, or end if all used).
-
-    Args:
-        reframes: List of reframe IDs in order
-        reframe_usages: Dictionary of usage counts per reframe
-
-    Returns:
-        Index of next reframe to use
-    """
-    for i, reframe_id in enumerate(reframes):
-        if reframe_usages.get(reframe_id, 0) == 0:
-            return i
-
-    # All reframes have been tried
-    return len(reframes)
-
-
-def get_reframe_sequence(
-    pathway: ObjectionPathway,
-    current_turn_in_stage: int,
-    history: Optional[list[dict]] = None,
 ) -> dict[str, Any]:
-    """Get the current reframe to use and tracking metadata.
-
-    Args:
-        pathway: Objection pathway with reframe sequence
-        current_turn_in_stage: Current turn number (for context)
-        history: Conversation history
-
-    Returns:
-        Dictionary with current reframe, index, attempts and guidance
-    """
-    reframes = pathway.get("reframes", [])
-    reframe_descriptions = pathway.get("reframe_descriptions", {})
-
-    if not reframes:
-        return {
-            "current_reframe": None,
-            "reframe_index": 0,
-            "attempts_so_far": 0,
-            "next_check_question": "Does that make sense?",
-            "is_final_reframe": False,
-        }
-
-    reframe_usages = _count_reframe_usages(reframes, history)
-    current_index = _find_next_reframe_index(reframes, reframe_usages)
-    current_reframe = reframes[current_index] if current_index < len(reframes) else None
-
-    next_check_question = ""
-    if current_reframe:
-        reframe_desc = reframe_descriptions.get(current_reframe, {})
-        next_check_question = reframe_desc.get("check_question", "Does that make sense?")
-
-    return {
-        "current_reframe": current_reframe,
-        "reframe_index": current_index,
-        "attempts_so_far": (
-            reframe_usages.get(current_reframe, 0) if current_reframe else 0
-        ),
-        "next_check_question": next_check_question,
-        "is_final_reframe": (
-            current_index >= len(reframes) - 1 if current_reframe else False
-        ),
-    }
-
-
-def _get_objection_pathway_safe(
-    user_message: str, history: list[dict]
-) -> dict[str, Any]:
-    """Get objection pathway with graceful fallback to classify_objection."""
+    """Classify the objection and build its pathway, falling back on failure."""
     try:
-        return dict(analyse_objection_pathway(user_message, history))
+        return dict(_build_pathway_metadata(classify_objection(user_message, history), user_message))
     except Exception as e:
         logger.debug(f"Pathway analysis failed, falling back: {e}")
         return classify_objection(user_message, history)
@@ -531,7 +414,7 @@ def _build_objection_context(
     if isinstance(objection_data, dict) and "category" in objection_data:
         pathway = objection_data
     else:
-        pathway = _get_objection_pathway_safe(user_message, history)
+        pathway = get_objection_pathway(user_message, history)
 
     obj_type = pathway.get("type", ObjectionType.UNKNOWN)
     if obj_type == ObjectionType.UNKNOWN:

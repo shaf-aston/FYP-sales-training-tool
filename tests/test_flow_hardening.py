@@ -2,20 +2,20 @@
 import pytest
 
 import core.flow as flow
-from core.flow import SalesFlowEngine, _check_advancement_condition, _commitment_or_objection
+from core.flow import SalesFlowEngine, _check_advancement_condition, _objection_only
 from core.utils import Stage, Strategy
 
 
 def test_short_high_signal_objection_is_not_filtered(monkeypatch):
     monkeypatch.setattr(flow, "SIGNALS", {"objection": ["too expensive"]})
 
-    assert _commitment_or_objection([], "Too expensive", 1) is True
+    assert _objection_only([], "Too expensive", 1) is True
 
 
-def test_commitment_or_objection_handles_missing_signal_keys(monkeypatch):
+def test_objection_rule_handles_missing_signal_keys(monkeypatch):
     monkeypatch.setattr(flow, "SIGNALS", {})
 
-    assert _commitment_or_objection([], "hello there", 1) is False
+    assert _objection_only([], "hello there", 1) is False
 
 
 def test_advancement_condition_uses_current_user_message_when_history_lags(monkeypatch):

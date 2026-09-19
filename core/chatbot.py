@@ -15,7 +15,7 @@ from .analysis import (
     ConversationState,
     analyse_state,
 )
-from .objection import _get_objection_pathway_safe
+from .objection import get_objection_pathway
 from .constants import (
     RECENT_HISTORY_WINDOW,
     DEFAULT_TEMPERATURE,
@@ -165,7 +165,7 @@ class SalesChatbot:
 
         objection_data = None
         if str(self.flow_engine.current_stage).lower() == "objection" and user_message:
-            objection_data = _get_objection_pathway_safe(
+            objection_data = get_objection_pathway(
                 user_message, self.flow_engine.conversation_history
             )
 
@@ -470,7 +470,7 @@ class SalesChatbot:
 
         if self.session_id and self.flow_engine.current_stage == Stage.OBJECTION:
             if objection_data is None:
-                objection_data = _get_objection_pathway_safe(
+                objection_data = get_objection_pathway(
                     user_message, self.flow_engine.conversation_history
                 )
             objection_type = (
@@ -647,7 +647,11 @@ class SalesChatbot:
                         "turn_count": getattr(
                             self.flow_engine,
                             "user_turn_count",
-                            sum(1 for m in getattr(self.flow_engine, "conversation_history", []) if m.get("role") == "user"),
+                            sum(
+                                1
+                                for m in getattr(self.flow_engine, "conversation_history", [])
+                                if m.get("role") == "user"
+                            ),
                         ),
                         "message_count": len(self.flow_engine.conversation_history),
                     },
