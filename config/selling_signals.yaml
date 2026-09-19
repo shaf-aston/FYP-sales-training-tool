@@ -1,0 +1,117 @@
+# How a SALESPERSON's turn is judged.
+#
+# Every list here describes language a SELLER uses. config/signals.yaml describes
+# language a BUYER uses. The two must never be swapped: a seller typing
+# "interested" is asking a question, a buyer typing it is a buying signal.
+#
+# Weights are added to a neutral base of 3 and the total is clamped to 1-5.
+# Raise a weight to make that behaviour matter more.
+
+weights:
+  open_question: 0.9
+  mirroring: 1.0
+  acknowledgement: 0.5
+  pressure: -1.2
+  premature_pitch: -1.0
+  question_stacking: -0.6
+  monologue: -0.5
+  low_effort: -0.9
+
+thresholds:
+  low_effort_words: 4        # fewer words than this reads as low effort
+  monologue_words: 90        # more words than this is talking, not selling
+  question_stacking_count: 3 # this many questions in one turn overwhelms a buyer
+  mirroring_min_overlap: 2   # distinct buyer words echoed back to count as listening
+  discovery_turns: 2         # pitching before this many completed turns is premature
+
+# Words that begin a genuinely open question. Matched only when the turn asks something.
+open_question_openers:
+  - what
+  - how
+  - why
+  - tell me
+  - walk me through
+  - help me understand
+  - talk me through
+  - describe
+
+acknowledgement:
+  - that makes sense
+  - i hear you
+  - i understand
+  - fair enough
+  - i can see why
+  - good point
+  - thanks for sharing
+
+pressure:
+  - act now
+  - today only
+  - limited time
+  - last one
+  - won't last
+  - wont last
+  - need to decide
+  - right now
+  - hurry
+  - before it's gone
+  - sign today
+
+# Commercial language. Fine later, premature during early discovery unless the
+# buyer raised it first.
+pitch_language:
+  - price
+  - cost
+  - discount
+  - deal
+  - offer
+  - package
+  - payment
+  - finance
+  - warranty
+  - monthly
+  - upfront
+
+# Ignored when checking whether the seller echoed the buyer's own words.
+mirroring_stopwords:
+  - "the"
+  - "and"
+  - "but"
+  - "for"
+  - "you"
+  - "your"
+  - "i'm"
+  - "im"
+  - "that"
+  - "this"
+  - "with"
+  - "have"
+  - "has"
+  - "was"
+  - "are"
+  - "is"
+  - "it"
+  - "its"
+  - "to"
+  - "of"
+  - "a"
+  - "an"
+  - "in"
+  - "on"
+  - "at"
+  - "be"
+  - "do"
+  - "so"
+  - "we"
+  - "my"
+  - "me"
+  - "just"
+  - "really"
+  - "like"
+  - "about"
+  - "would"
+  - "could"
+  - "want"
+  - "need"
+  - "know"
+  - "think"

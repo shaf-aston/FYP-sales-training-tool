@@ -1,4 +1,4 @@
-"""Prospect mode: Boot plays a buyer for sales practice roleplay training."""
+"""Prospect mode: Bot plays a buyer for sales practice roleplay training."""
 
 import json
 import logging
@@ -6,15 +6,14 @@ import random
 import time
 from dataclasses import dataclass, field
 
-from .loader import load_prospect_config, load_signals
-from .analysis import classify_intent_level
+from .loader import load_prospect_config
 from .prospect_session_persistence import ProspectSessionPersistence
 from .providers.factory import create_provider, list_fallback_providers
+from .selling_quality import score_seller_turn
 from .utils import clamp, range_label
 
 logger = logging.getLogger(__name__)
 
-SIGNALS = load_signals()
 
 READINESS_THRESHOLDS = [0.2, 0.4, 0.6, 0.8]
 READINESS_LABELS = [
@@ -165,6 +164,8 @@ class ProspectSession:
         )
 
         self.conversation_history: list[dict] = []
+        # Why the buyer last warmed up or cooled off, for the session review.
+        self.last_turn_score = None
 
         behaviour_rules = config.get("behaviour_rules", {})
         self.behaviour_rules = behaviour_rules.get(difficulty, "")
@@ -486,97 +487,40 @@ class ProspectSession:
             return "I don't think this is the right fit for me right now."
         return "This roleplay session has ended."
 
-    def _update_readiness(self, user_msg: str) -> None:
-        """Update prospect readiness score based on the salesperson's message.
+    def _last_buyer_message(self) -> str:
+        """The buyer's most recent line, used to tell listening apart from luck."""
+        for entry in reversed(self.conversation_history):
+            if entry.get("role") == "assistant":
+                return entry.get("content", "")
+        return ""
 
-        Args:
-            user_msg: The salesperson's message to evaluate.
+    def _update_readiness(self, user_msg: str) -> None:
+        """Move the buyer's readiness based on how the salesperson just sold.
+
+        Judged by core.selling_quality, which reads seller language. The reasons
+        behind the rating are kept on `last_turn_score` so the session review can
+        show the learner why the buyer warmed up or cooled off.
         """
         behaviour = self.difficulty_profile["behaviour"]
 
-        # Deterministic scoring using only the user message
-        rating = self._score_sales_message(user_msg)
+        self.last_turn_score = score_seller_turn(
+            user_msg,
+            buyer_message=self._last_buyer_message(),
+            completed_turns=max(0, self.state.turn_count - 1),
+        )
+        rating = self.last_turn_score.rating
 
         gain = behaviour["readiness_gain_per_good_turn"]
         loss = behaviour["readiness_loss_per_bad_turn"]
 
         if rating >= 4:
-            readiness_change = gain * (rating - 3)  # 4→gain, 5→2*gain
+            readiness_change = gain * (rating - 3)  # 4->gain, 5->2*gain
         elif rating <= 2:
-            readiness_change = -loss * (3 - rating)  # 2→-loss, 1→-2*loss
+            readiness_change = -loss * (3 - rating)  # 2->-loss, 1->-2*loss
         else:
             readiness_change = 0.01  # Slight gain for neutral
 
         self.state.readiness = clamp(self.state.readiness + readiness_change)
-
-    def _score_sales_message(self, user_msg: str) -> int:
-        """Score a salesperson message from 1 to 5 using deterministic signals.
-
-        The score is keyword-based on purpose so readiness changes stay predictable
-        and fast without needing an extra LLM call.
-        """
-        from .utils import contains_nonnegated_keyword
-
-        msg_lower = user_msg.lower()
-        msg_length = len(user_msg.split())
-        intent_level = classify_intent_level(
-            self.conversation_history, user_msg, signal_keywords=SIGNALS
-        )
-
-        # Base score starts at 3 (neutral)
-        score = 3.0
-
-        # Walking away or shutting down ends the session quickly.
-        if contains_nonnegated_keyword(msg_lower, SIGNALS.get("walking", [])):
-            return 1
-
-        # Pushy/urgent language reduces quality.
-        if contains_nonnegated_keyword(msg_lower, SIGNALS.get("impatience", [])):
-            score -= 1.0
-
-        # Demand for directness (pressure without rapport)
-        if contains_nonnegated_keyword(msg_lower, SIGNALS.get("demand_directness", [])):
-            score -= 1.0
-
-        if contains_nonnegated_keyword(msg_lower, SIGNALS.get("commitment", [])):
-            score += 2.0
-        elif intent_level == "high":
-            score += 1.0
-        elif intent_level == "low":
-            score -= 0.5
-
-        # Message quality factors
-        # Very short messages (< 5 words) are likely low-effort
-        if msg_length < 5:
-            score -= 0.5
-
-        # Questions are good (discovery)
-        if "?" in user_msg:
-            score += 0.3
-
-        # Discovery/consultative language indicates better probing quality.
-        if any(
-            phrase in msg_lower
-            for phrase in (
-                "help me understand",
-                "what matters most",
-                "what are you hoping",
-                "what's most important",
-                "tell me more",
-            )
-        ):
-            score += 0.7
-
-        # Early turns should focus on discovery, not pitching
-        if self.state.turn_count <= 2:
-            # Penalize price/feature mentions too early
-            if any(
-                word in msg_lower
-                for word in ["price", "cost", "payment", "buy", "purchase"]
-            ):
-                score -= 0.5
-
-        return max(1, min(5, round(score)))
 
     def _check_end_conditions(self) -> str | None:
         """Check if the session should end and determine the outcome.
