@@ -10,7 +10,9 @@
   --text-primary: #f1e8da;
   --text-body: #c4bdb2;
   --text-muted: #9b9186;
-  --text-subtle: #7a7268;
+  /* 5.3:1 on bg-panel, 5.1:1 on bg-card-soft. The old #7a7268 was 3.6:1,
+     under the 4.5:1 WCAG AA minimum at the 11-13px this token is used at. */
+  --text-subtle: #978f83;
   --accent: #e8b45a;
   --accent-strong: #d29b3c;
   --accent-soft: rgba(232, 180, 90, 0.16);
@@ -454,8 +456,7 @@ textarea::-webkit-scrollbar-thumb,
 .send-btn,
 .training-qa-btn,
 .quiz-submit-btn,
-.sidebar-btn.primary-action,
-.modal-btn-danger {
+.sidebar-btn.primary-action {
   border: 1px solid transparent;
   background: linear-gradient(180deg, #e8b45a, #d29b3c);
   color: #20170d;
@@ -473,8 +474,7 @@ textarea::-webkit-scrollbar-thumb,
 .send-btn:hover,
 .training-qa-btn:hover,
 .quiz-submit-btn:hover,
-.sidebar-btn.primary-action:hover,
-.modal-btn-danger:hover {
+.sidebar-btn.primary-action:hover {
   transform: translateY(-1px);
   box-shadow: 0 12px 28px rgba(232, 180, 90, 0.18);
 }
@@ -791,18 +791,6 @@ textarea::-webkit-scrollbar-thumb,
 .tool-card.active {
   border-color: rgba(232, 180, 90, 0.42);
   background: rgba(44, 39, 32, 0.96);
-}
-
-.tool-icon {
-  width: fit-content;
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: rgba(232, 180, 90, 0.12);
-  color: var(--accent);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .tool-title {
@@ -2010,4 +1998,76 @@ textarea::-webkit-scrollbar-thumb,
 
 .drill-again {
   color: var(--warning);
+}
+
+.prospect-eval-title {
+  color: var(--text-primary);
+  font-size: 1.15rem;
+  margin-bottom: 14px;
+}
+
+/* --- Destructive actions, and state that never relies on colour alone ----- */
+
+/* "Reset session" cannot be undone, so it must not look like Send. */
+.modal-btn-danger {
+  border: 1px solid var(--danger);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.modal-btn-danger:hover {
+  background: var(--danger);
+  color: var(--bg-page);
+}
+
+.readiness-low {
+  background: var(--danger);
+}
+
+.readiness-mid {
+  background: var(--warning);
+}
+
+.readiness-high {
+  background: var(--success);
+}
+
+.prospect-readiness-state {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.drill-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.drill-count {
+  color: var(--text-subtle);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* On a narrow screen the review and drill windows follow the same bottom-sheet
+   pattern as every other panel, instead of floating as a centred card. */
+@media (max-width: 860px) {
+  .review-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .review-card {
+    max-width: 100%;
+    max-height: 86vh;
+    overflow-y: auto;
+    border-radius: 28px 28px 0 0;
+    padding: 22px 18px 26px;
+  }
 }

@@ -1363,6 +1363,8 @@ window.addEventListener("DOMContentLoaded", () => {
     if (event.key === "Escape") {
       closeResetMenu();
       closeResetModal();
+      closeSessionReview();
+      closeDialog(document.getElementById("prospectEvalModal"));
       document.getElementById("feedbackDropdown")?.classList.remove("open");
     }
   });
@@ -2346,10 +2348,16 @@ function updateProspectPanel(state) {
   const fill = document.getElementById("prospectReadinessFill");
   fill.style.width = Math.max(2, readiness) + "%";
 
-  // Color: red -> yellow -> green
-  if (readiness < 30) fill.style.background = "#ef4444";
-  else if (readiness < 60) fill.style.background = "#eab308";
-  else fill.style.background = "#22c55e";
+  /* Colour comes from the tokens via a class, and is always paired with a word:
+     a bar that only changes colour says nothing to a colour-blind learner. */
+  const band =
+    readiness < 30 ? "low" : readiness < 60 ? "mid" : "high";
+  fill.className = "prospect-readiness-fill readiness-" + band;
+  document.getElementById("prospectReadinessState").textContent = {
+    low: "At risk",
+    mid: "Warming up",
+    high: "Ready",
+  }[band];
 
   document.getElementById("prospectReadinessVal").textContent = readiness + "%";
   const turns = state.turn_count || 0;
@@ -2549,6 +2557,7 @@ function buildEvaluationHTML(data) {
     : "";
 
   return `
+          <h3 id="evalHeading" class="prospect-eval-title">How that session went</h3>
           <div class="prospect-eval-header">
             <div class="prospect-eval-score">${data.overall_score || 0}%</div>
             <div class="prospect-eval-grade ${gradeClass}">${escapeHtml(data.grade || "?")}</div>
@@ -2589,9 +2598,9 @@ function renderEvalModal(html) {
   card.innerHTML = html;
   overlay.appendChild(card);
   overlay.onclick = (e) => {
-    if (e.target === overlay) overlay.remove();
+    if (e.target === overlay) closeDialog(overlay);
   };
-  document.body.appendChild(overlay);
+  openDialog(overlay, card, "evalHeading");
 }
 
 function renderEvalPanel(html) {
@@ -3307,7 +3316,9 @@ function ratingDots(rating) {
   for (let i = 1; i <= 5; i++) {
     dots += `<span class="review-dot${i <= rating ? " on" : ""}"></span>`;
   }
-  return `<span class="review-rating" title="Rated ${rating} out of 5">${dots}</span>`;
+  /* role="img" + a label, so the dots are read out rather than being a row of
+     shapes a screen reader skips. */
+  return `<span class="review-rating" role="img" aria-label="Rated ${rating} out of 5">${dots}</span>`;
 }
 
 function buildReviewTurnHTML(turn, isPivotal) {
@@ -3339,7 +3350,7 @@ function buildReviewTurnHTML(turn, isPivotal) {
         ${drift}
       </div>
       <p class="review-said"><span class="review-who">You</span>${escapeHtml(turn.seller)}</p>
-      ${turn.buyer ? `<p class="review-said buyer"><span class="review-who">Them</span>${escapeHtml(turn.buyer)}</p>` : ""}
+      ${turn.buyer ? `<p class="review-said buyer"><span class="review-who">Buyer</span>${escapeHtml(turn.buyer)}</p>` : ""}
       ${reasons}
       ${redo}
     </li>`;
@@ -3361,7 +3372,7 @@ function buildReviewHTML(data) {
 
   return `
     <div class="review-head">
-      <h3>Walk it back</h3>
+      <h3 id="reviewHeading">Walk it back</h3>
       <p class="review-intro">${intro}</p>
       <p class="review-stats">${summary.turn_count} turns &middot; average ${summary.average_rating} out of 5</p>
     </div>
@@ -3395,18 +3406,17 @@ function showReviewOverlay(html) {
   overlay.id = "sessionReviewOverlay";
   overlay.className = "review-overlay";
   overlay.innerHTML = `<div class="review-card">
-      <button class="review-close" onclick="closeSessionReview()" aria-label="Close review">&times;</button>
+      <button class="review-close" onclick="closeSessionReview()" aria-label="Close">&times;</button>
       <div id="reviewBody">${html}</div>
     </div>`;
   overlay.onclick = (e) => {
     if (e.target === overlay) closeSessionReview();
   };
-  document.body.appendChild(overlay);
+  openDialog(overlay, overlay.querySelector(".review-card"), "reviewHeading");
 }
 
 function closeSessionReview() {
-  const existing = document.getElementById("sessionReviewOverlay");
-  if (existing) existing.remove();
+  closeDialog(document.getElementById("sessionReviewOverlay"));
 }
 
 function startRedo(turn) {
@@ -3453,7 +3463,7 @@ async function submitRedo(turn) {
     slot.innerHTML = `
       <div class="review-redo-result">
         <p class="review-said"><span class="review-who">You</span>${escapeHtml(message)}</p>
-        <p class="review-said buyer"><span class="review-who">Them</span>${escapeHtml(data.message)}</p>
+        <p class="review-said buyer"><span class="review-who">Buyer</span>${escapeHtml(data.message)}</p>
         <p class="review-redo-note">The conversation now continues from here.</p>
       </div>`;
     markTurnsAfterRedoAsGone(turn);
@@ -3545,9 +3555,13 @@ function buildDrillHTML(drill, index) {
     }
   });
 
+  const gaps = drill.answers.length;
   return `
     <div class="drill-card" id="drillCard${index}">
-      <div class="drill-label">${escapeHtml(drill.label)}</div>
+      <div class="drill-label">
+        ${escapeHtml(drill.label)}
+        <span class="drill-count" id="drillCount${index}">0 of ${gaps} revealed</span>
+      </div>
       <p class="drill-line">${body}</p>
       <div class="drill-actions" id="drillActions${index}" hidden>
         <span class="drill-ask">Did you have it?</span>
@@ -3564,7 +3578,7 @@ async function openScriptDrills() {
     const headers = _prospectSessionId ? { "X-Session-ID": _prospectSessionId } : {};
     const response = await fetch("/api/prospect/drills", { headers: headers });
     const data = await response.json();
-    if (!data.success) return;
+    if (!data.success) throw new Error(data.error || "Drills unavailable");
 
     _drills = data.drills;
     const due = _drills
@@ -3578,15 +3592,20 @@ async function openScriptDrills() {
 
     showReviewOverlay(`
       <div class="review-head">
-        <h3>Say it from memory</h3>
+        <h3 id="reviewHeading">Say it from memory</h3>
         <p class="review-intro">Work out the missing part before you click it. ${note}</p>
       </div>
       <div class="drill-list">
         ${practising.map((item) => buildDrillHTML(item.drill, item.index)).join("")}
       </div>`);
   } catch (e) {
-    /* The drills screen is optional practice; a failure here must not disturb
-       whatever the learner was doing. */
+    /* Say so. Clicking a button and having nothing happen leaves the learner
+       unable to tell a broken screen from an empty one. */
+    showReviewOverlay(`
+      <div class="review-head">
+        <h3 id="reviewHeading">Say it from memory</h3>
+        <p class="review-intro">The drills couldn't be loaded just now. Close this and try again.</p>
+      </div>`);
   }
 }
 
@@ -3601,7 +3620,14 @@ function revealBlank(index, blankIndex) {
   button.replaceWith(answer);
 
   const card = document.getElementById(`drillCard${index}`);
-  if (card && !card.querySelector(".drill-blank")) {
+  if (!card) return;
+
+  const remaining = card.querySelectorAll(".drill-blank").length;
+  const total = drill.answers.length;
+  const counter = document.getElementById(`drillCount${index}`);
+  if (counter) counter.textContent = `${total - remaining} of ${total} revealed`;
+
+  if (!remaining) {
     const actions = document.getElementById(`drillActions${index}`);
     if (actions) actions.hidden = false;
   }
@@ -3618,4 +3644,68 @@ function gradeDrill(index, gotIt) {
       ? `<span class="drill-done">Kept. Back in a few days.</span>`
       : `<span class="drill-again">Back later today.</span>`;
   }
+}
+
+/* ---------------------------------------------------------------------------
+ * Dialogs.
+ * Every window that opens on top of the page goes through here, so Escape,
+ * focus and the screen-reader attributes are defined once instead of being
+ * re-remembered (and forgotten) per overlay.
+ * ------------------------------------------------------------------------- */
+
+const FOCUSABLE =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+let _dialogOpener = null;
+
+function openDialog(overlay, card, labelId) {
+  /* Announce it as a dialog. Without these a screen reader reads the overlay as
+     ordinary page text and never says the learner has entered a window. */
+  card.setAttribute("role", "dialog");
+  card.setAttribute("aria-modal", "true");
+  if (labelId && card.querySelector("#" + labelId)) {
+    card.setAttribute("aria-labelledby", labelId);
+  }
+  if (!card.hasAttribute("tabindex")) card.setAttribute("tabindex", "-1");
+
+  overlay.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      event.stopPropagation();
+      closeDialog(overlay);
+    } else if (event.key === "Tab") {
+      trapTab(event, card);
+    }
+  });
+
+  _dialogOpener = document.activeElement;
+  document.body.appendChild(overlay);
+  (card.querySelector(FOCUSABLE) || card).focus();
+}
+
+function trapTab(event, card) {
+  /* Keeps Tab inside the window. Without it Tab walks onto the page behind,
+     where the learner cannot see what is focused. */
+  const items = [...card.querySelectorAll(FOCUSABLE)].filter(
+    (el) => el.offsetParent !== null,
+  );
+  if (!items.length) return;
+
+  const first = items[0];
+  const last = items[items.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
+function closeDialog(overlay) {
+  if (!overlay) return;
+  overlay.remove();
+  /* Put focus back where it came from, so keyboard users are not dumped at the
+     top of the page after closing. */
+  if (_dialogOpener && document.contains(_dialogOpener)) _dialogOpener.focus();
+  _dialogOpener = null;
 }
