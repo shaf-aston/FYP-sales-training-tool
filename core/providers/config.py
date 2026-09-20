@@ -13,7 +13,10 @@ load_dotenv(ROOT_DIR / ".env")
 DEFAULT_LLM_PROVIDER_ORDER = ["groq", "sambanova", "dummy", "probe"]
 DEFAULT_LLM_FALLBACK_ORDER = DEFAULT_LLM_PROVIDER_ORDER[:]
 
-DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile"
+# Groq retires models without notice and the old default (llama-3.3-70b-versatile)
+# now 404s, which silently emptied every reply. Check `client.models.list()` against
+# the live key when replies go blank, and override with GROQ_LLM_MODEL.
+DEFAULT_GROQ_MODEL = "qwen/qwen3.8-27b"
 DEFAULT_SAMBANOVA_MODEL = "Meta-Llama-3.3-70B-Instruct"
 
 DEFAULT_GROQ_BASE_URL = "https://api.groq.com/openai/v1"

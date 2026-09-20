@@ -442,7 +442,6 @@
                                         class="tool-card"
                                         title="Browse product notes and best practices"
                                     >
-                                        <span class="tool-icon">Book</span>
                                         <span class="tool-title">Knowledge</span>
                                         <span class="tool-copy">
                                             Browse notes and product details.
@@ -454,7 +453,6 @@
                                         onclick="toggleTrainingPanel()"
                                         title="Open live coaching guidance"
                                     >
-                                        <span class="tool-icon">Target</span>
                                         <span class="tool-title">Coaching</span>
                                         <span class="tool-copy">
                                             Get guided next-step advice.
@@ -466,10 +464,20 @@
                                         onclick="toggleQuizPanel()"
                                         title="Practice with quiz questions"
                                     >
-                                        <span class="tool-icon">Quiz</span>
                                         <span class="tool-title">Quiz</span>
                                         <span class="tool-copy">
                                             Test FSM stage and response judgment.
+                                        </span>
+                                    </button>
+                                    <button
+                                        id="drillsToggleBtn"
+                                        class="tool-card"
+                                        onclick="openScriptDrills(this)"
+                                        title="Practise saying the key lines from memory"
+                                    >
+                                        <span class="tool-title">Say it from memory</span>
+                                        <span class="tool-copy">
+                                            Fill the gap before you reveal it.
                                         </span>
                                     </button>
                                     <button
@@ -477,7 +485,6 @@
                                         onclick="toggleFeedback()"
                                         title="Share product feedback"
                                     >
-                                        <span class="tool-icon">Chart</span>
                                         <span class="tool-title">Feedback</span>
                                         <span class="tool-copy">
                                             Rate the session and suggest fixes.
@@ -599,7 +606,7 @@
             <div id="prospectPanel">
                 <div class="prospect-header">
                     <div>
-                        <span class="panel-kicker">Prospect practice</span>
+                        <span class="panel-kicker">Buyer practice</span>
                         <span class="panel-title">Live buyer profile</span>
                     </div>
                     <button
@@ -612,7 +619,7 @@
                 </div>
                 <div class="prospect-body">
                     <div class="prospect-section">
-                        <div class="prospect-label">Prospect</div>
+                        <div class="prospect-label">Buyer</div>
                         <div class="prospect-value" id="prospectName">-</div>
                         <div
                             class="prospect-value prospect-background"
@@ -629,9 +636,9 @@
                         <div class="prospect-label">Buying readiness</div>
                         <div class="prospect-readiness-bar">
                             <div
-                                class="prospect-readiness-fill"
+                                class="prospect-readiness-fill readiness-low"
                                 id="prospectReadinessFill"
-                                style="width: 20%; background: #ef4444"
+                                style="width: 20%"
                             ></div>
                         </div>
                         <div class="prospect-readiness-labels">
@@ -642,6 +649,10 @@
                             >
                                 0%
                             </span>
+                            <span
+                                class="prospect-readiness-state"
+                                id="prospectReadinessState"
+                            ></span>
                             <span>Ready to buy</span>
                         </div>
                     </div>

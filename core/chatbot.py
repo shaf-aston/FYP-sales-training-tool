@@ -665,11 +665,30 @@ class SalesChatbot:
             )
 
     def record_session_end(self):
-        """Record session completion for evaluation analytics."""
+        """Record where this session actually got to.
+
+        trainer.score_session reads this event for the final stage reached, so
+        while it was never written every score silently under-counted stage
+        progression - and there was no record of anyone finishing at all.
+        """
         if not self.session_id:
             return
-        # Session events (start, stage transitions, strategy switches) are
-        # recorded throughout the conversation lifecycle via SessionAnalytics.
+        self._analytics.record(
+            session_id=self.session_id,
+            event="session_end",
+            final_stage=str(self.flow_engine.current_stage),
+            strategy=str(self.flow_engine.flow_type),
+            turn_count=getattr(
+                self.flow_engine,
+                "user_turn_count",
+                sum(
+                    1
+                    for m in getattr(self.flow_engine, "conversation_history", [])
+                    if m.get("role") == "user"
+                ),
+            ),
+            message_count=len(self.flow_engine.conversation_history),
+        )
 
     @staticmethod
     def load_session(session_id):

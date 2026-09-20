@@ -7,12 +7,17 @@ from flask import Blueprint, jsonify, request
 
 from ..messages import (
     PROSPECT_ERROR,
+    PROSPECT_REVIEW_ERROR,
+    PROSPECT_UNAVAILABLE,
     PROSPECT_SCORING_ERROR,
     PROSPECT_SESSION_NOT_FOUND,
 )
 from ..security import InputValidator, require_rate_limit
 from ._utils import make_require_session, validate_provider
+from core.analytics.session_analytics import SessionAnalytics
 from core.prospect_session_persistence import ProspectSessionPersistence
+from core.prospect_session import ProviderUnavailable
+from core.script_drills import build_drill_set
 
 bp = Blueprint("prospect", __name__, url_prefix="/api/prospect")
 
@@ -131,6 +136,9 @@ def prospect_init():
                 "model": opening.model,
             }
         )
+    except ProviderUnavailable:
+        state.prospect_session_manager.delete(session_id)
+        return jsonify({"error": PROSPECT_UNAVAILABLE, "code": "PROVIDER_UNAVAILABLE"}), 503
     except Exception as e:
         state.app.logger.exception(f"Prospect init failed: {e}")
         return jsonify(
@@ -172,6 +180,8 @@ def prospect_chat():
         if response.coaching:
             result["coaching"] = response.coaching
         return jsonify(result)
+    except ProviderUnavailable:
+        return jsonify({"error": PROSPECT_UNAVAILABLE, "code": "PROVIDER_UNAVAILABLE"}), 503
     except Exception as e:
         _bp_state().app.logger.exception(f"Prospect chat error: {e}")
         return jsonify({"error": PROSPECT_ERROR}), 500
@@ -210,10 +220,134 @@ def prospect_evaluate():
 
     try:
         evaluation = ps.get_evaluation()
+        SessionAnalytics.record(
+            session_id=request.headers.get("X-Session-ID", ""),
+            event="session_score",
+            engine="prospect",
+            difficulty=ps.state.difficulty,
+            outcome=ps.state.status,
+            total=evaluation.get("overall_score"),
+            grade=evaluation.get("grade"),
+            breakdown={
+                name: data.get("score")
+                for name, data in (evaluation.get("criteria_scores") or {}).items()
+            },
+            turn_count=ps.state.turn_count,
+        )
         return jsonify({"success": True, **evaluation})
     except Exception as e:
         _bp_state().app.logger.exception(f"Prospect evaluation error: {e}")
         return jsonify({"error": PROSPECT_SCORING_ERROR}), 500
+
+
+@bp.route("/review", methods=["GET"])
+@require_rate_limit("prospect")
+def prospect_review():
+    """Walk the session back turn by turn, with the reason behind every rating.
+
+    Rebuilt from the transcript on each request, so it also works on a session
+    that was recovered from disk.
+    """
+    ps, err = _require_prospect_session()
+    if err:
+        return err
+    assert ps is not None
+
+    try:
+        return jsonify({"success": True, "persona": ps.persona, **ps.review()})
+    except Exception as e:
+        _bp_state().app.logger.exception(f"Prospect review error: {e}")
+        return jsonify({"error": PROSPECT_REVIEW_ERROR}), 500
+
+
+@bp.route("/drills", methods=["GET"])
+@require_rate_limit("prospect")
+def prospect_drills():
+    """Lines to recall, with the move blanked out.
+
+    Works with no session at all. When a live session is supplied, that learner's
+    own strongest turns are added at the top - revising something you actually
+    said beats revising a stranger's script.
+    """
+    own_turns = []
+    session_id = request.headers.get("X-Session-ID")
+    if session_id:
+        session_error = InputValidator.validate_session_id(session_id)
+        if session_error:
+            return session_error
+        ps = _lookup_prospect_session(session_id)
+        if ps is not None:
+            own_turns = ps.review()["turns"]
+
+    return jsonify({"success": True, **build_drill_set(own_turns)})
+
+
+def _restore_after_failed_redo(ps, kept_history, kept_state):
+    """Put the turns back when the redo never reached the buyer.
+
+    Rewinding happens before the buyer is asked, so a failure here would otherwise
+    cost the learner every turn after the one they were redoing, and give them
+    nothing in return.
+    """
+    ps.conversation_history = kept_history
+    (
+        ps.state.turn_count,
+        ps.state.readiness,
+        ps.state.objections_raised,
+        ps.state.has_committed,
+        ps.state.has_walked,
+    ) = kept_state
+
+
+@bp.route("/redo", methods=["POST"])
+@require_rate_limit("prospect")
+def prospect_redo():
+    """Rewind to a turn and say it differently, for a real reply from the same buyer."""
+    ps, err = _require_prospect_session()
+    if err:
+        return err
+    assert ps is not None
+
+    data = request.json or {}
+    turn_index = InputValidator.parse_positive_int(data.get("turn"))
+    if turn_index is None:
+        return jsonify({"error": "A turn number is required.", "code": "INVALID_TURN"}), 400
+
+    user_message, err = _bp_state().validate_message(data.get("message", ""))
+    if err:
+        return err
+
+    kept_history = list(ps.conversation_history)
+    kept_state = (
+        ps.state.turn_count,
+        ps.state.readiness,
+        ps.state.objections_raised,
+        ps.state.has_committed,
+        ps.state.has_walked,
+    )
+    if not ps.rewind_to_turn(turn_index):
+        return jsonify({"error": "That turn is not part of this session.", "code": "INVALID_TURN"}), 400
+
+    try:
+        response = ps.process_turn(user_message)
+        return jsonify(
+            {
+                "success": True,
+                "turn": turn_index,
+                "message": response.content,
+                "state": response.state_snapshot,
+                "provider": response.provider,
+                "model": response.model,
+                "outcome": ps.state.status,
+            }
+        )
+    except ProviderUnavailable:
+        _restore_after_failed_redo(ps, kept_history, kept_state)
+        return jsonify({"error": PROSPECT_UNAVAILABLE, "code": "PROVIDER_UNAVAILABLE"}), 503
+    except Exception as e:
+        _restore_after_failed_redo(ps, kept_history, kept_state)
+        _bp_state().app.logger.exception(f"Prospect redo error: {e}")
+        return jsonify({"error": PROSPECT_ERROR}), 500
 
 
 @bp.route("/reset", methods=["POST"])
@@ -225,6 +359,9 @@ def prospect_reset():
         session_error = InputValidator.validate_session_id(session_id)
         if session_error:
             return session_error
+        ps = _lookup_prospect_session(session_id)
+        if ps is not None:
+            ps.record_session_end()
         _bp_state().prospect_session_manager.delete(session_id)
         ProspectSessionPersistence.delete(session_id)
     return jsonify({"success": True})

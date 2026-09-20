@@ -10,7 +10,9 @@
   --text-primary: #f1e8da;
   --text-body: #c4bdb2;
   --text-muted: #9b9186;
-  --text-subtle: #7a7268;
+  /* 5.3:1 on bg-panel, 5.1:1 on bg-card-soft. The old #7a7268 was 3.6:1,
+     under the 4.5:1 WCAG AA minimum at the 11-13px this token is used at. */
+  --text-subtle: #978f83;
   --accent: #e8b45a;
   --accent-strong: #d29b3c;
   --accent-soft: rgba(232, 180, 90, 0.16);
@@ -20,6 +22,12 @@
   --warning-soft: rgba(232, 160, 90, 0.14);
   --danger: #e85a5a;
   --danger-soft: rgba(232, 90, 90, 0.14);
+  /* Deep fills: dark enough to carry --text-primary at 4.5:1 or better. */
+  --danger-deep: #7f2727;
+  --success-deep: #43592a;
+  --accent-deep: #5c4220;
+  /* The dim behind any window that opens on top of the page. */
+  --overlay-scrim: rgba(0, 0, 0, 0.72);
   --shadow-lg: 0 24px 80px rgba(0, 0, 0, 0.38);
   --shadow-md: 0 12px 36px rgba(0, 0, 0, 0.24);
   --radius-xl: 28px;
@@ -454,8 +462,7 @@ textarea::-webkit-scrollbar-thumb,
 .send-btn,
 .training-qa-btn,
 .quiz-submit-btn,
-.sidebar-btn.primary-action,
-.modal-btn-danger {
+.sidebar-btn.primary-action {
   border: 1px solid transparent;
   background: linear-gradient(180deg, #e8b45a, #d29b3c);
   color: #20170d;
@@ -473,8 +480,7 @@ textarea::-webkit-scrollbar-thumb,
 .send-btn:hover,
 .training-qa-btn:hover,
 .quiz-submit-btn:hover,
-.sidebar-btn.primary-action:hover,
-.modal-btn-danger:hover {
+.sidebar-btn.primary-action:hover {
   transform: translateY(-1px);
   box-shadow: 0 12px 28px rgba(232, 180, 90, 0.18);
 }
@@ -791,18 +797,6 @@ textarea::-webkit-scrollbar-thumb,
 .tool-card.active {
   border-color: rgba(232, 180, 90, 0.42);
   background: rgba(44, 39, 32, 0.96);
-}
-
-.tool-icon {
-  width: fit-content;
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: rgba(232, 180, 90, 0.12);
-  color: var(--accent);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .tool-title {
@@ -1385,9 +1379,45 @@ textarea::-webkit-scrollbar-thumb,
   border-bottom: 1px solid rgba(82, 74, 63, 0.36);
 }
 
+/* Every "working on it" line reads the same, in one colour from the palette. */
+.loading-note {
+  color: var(--text-muted);
+}
+
 .toast-notification {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 24px;
   border-radius: 16px;
+  font-size: 14px;
   font-weight: 700;
+  color: var(--text-primary);
+  box-shadow: var(--shadow-md);
+  z-index: 10000;
+  animation: toastIn 0.3s ease;
+}
+
+.toast-error {
+  background: var(--danger-deep);
+  border: 1px solid var(--danger-soft);
+}
+
+.toast-success {
+  background: var(--success-deep);
+  border: 1px solid var(--success-soft);
+}
+
+.toast-info {
+  background: var(--accent-deep);
+  border: 1px solid var(--accent-soft);
+}
+
+/* The session-expired line, which is a notice rather than a plain divider. */
+.edit-divider.notice {
+  color: var(--accent);
+  margin-bottom: 12px;
 }
 
 .modal-backdrop {
@@ -1653,4 +1683,451 @@ textarea::-webkit-scrollbar-thumb,
     justify-content: stretch;
   }
 
+}
+/* --- Session review: walk the conversation back ------------------------- */
+
+.prospect-eval-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.review-open-btn,
+.review-redo-btn {
+  background: var(--accent);
+  color: var(--bg-page);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 9px 16px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.review-open-btn:hover,
+.review-redo-btn:hover {
+  background: var(--accent-strong);
+}
+
+.review-overlay {
+  position: fixed;
+  inset: 0;
+  /* Above the prospect panel (1002), which otherwise clips the card's right edge. */
+  z-index: 1100;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  overflow-y: auto;
+  padding: 32px 16px;
+  background: var(--overlay-scrim);
+}
+
+.review-card {
+  position: relative;
+  width: 100%;
+  max-width: 620px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 26px 26px 30px;
+}
+
+.review-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.review-close:hover {
+  color: var(--text-primary);
+}
+
+.review-head h3 {
+  color: var(--text-primary);
+  font-size: 1.25rem;
+  margin-bottom: 6px;
+}
+
+.review-intro {
+  color: var(--text-body);
+  font-size: 0.95rem;
+}
+
+.review-stats {
+  color: var(--text-subtle);
+  font-size: 0.82rem;
+  margin-top: 4px;
+}
+
+.review-turns {
+  list-style: none;
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.review-turn {
+  background: var(--bg-card-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+}
+
+.review-turn.pivotal {
+  border-color: var(--accent);
+  background: var(--bg-card);
+}
+
+.review-turn-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.review-turn-no {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.review-rating {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.review-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--border-strong);
+}
+
+.review-dot.on {
+  background: var(--accent);
+}
+
+.review-drift {
+  margin-left: auto;
+  font-size: 0.78rem;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.review-drift.up {
+  color: var(--success);
+  background: var(--success-soft);
+}
+
+.review-drift.down {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.review-said {
+  color: var(--text-body);
+  font-size: 0.92rem;
+  margin-bottom: 6px;
+}
+
+.review-said.buyer {
+  color: var(--text-muted);
+}
+
+.review-who {
+  display: inline-block;
+  min-width: 46px;
+  color: var(--text-subtle);
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.review-reasons {
+  margin: 10px 0 0 18px;
+  color: var(--text-body);
+  font-size: 0.88rem;
+}
+
+.review-reasons li {
+  margin-bottom: 3px;
+}
+
+.review-reasons-empty,
+.review-empty {
+  color: var(--text-subtle);
+  font-size: 0.88rem;
+  margin-top: 8px;
+}
+
+.review-redo {
+  margin-top: 12px;
+}
+
+.review-redo-label {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  margin-bottom: 6px;
+}
+
+.review-redo-input {
+  width: 100%;
+  background: var(--bg-shell);
+  color: var(--text-primary);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 9px 11px;
+  font: inherit;
+  font-size: 0.92rem;
+  resize: vertical;
+  margin-bottom: 8px;
+}
+
+.review-redo-input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.review-redo-waiting,
+.review-redo-note {
+  color: var(--text-subtle);
+  font-size: 0.85rem;
+}
+
+.eval-card {
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.review-redo-warning {
+  color: var(--warning);
+  background: var(--bg-card-soft);
+  border-left: 2px solid var(--warning);
+  border-radius: 0 8px 8px 0;
+  padding: 8px 10px;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  margin-bottom: 10px;
+}
+
+.review-redo-error {
+  color: var(--danger);
+  font-size: 0.88rem;
+  margin-bottom: 8px;
+}
+
+.review-redo-result {
+  border-left: 2px solid var(--accent);
+  padding-left: 12px;
+  margin-top: 10px;
+}
+
+.review-redo-note {
+  margin-top: 6px;
+}
+
+.review-turn.superseded {
+  opacity: 0.45;
+}
+
+.review-superseded-note {
+  color: var(--text-subtle);
+  font-size: 0.82rem;
+  font-style: italic;
+  padding: 2px 4px;
+}
+
+/* --- Script drills: recall practice ------------------------------------- */
+
+.drill-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.drill-card {
+  background: var(--bg-card-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+}
+
+.drill-label {
+  color: var(--text-subtle);
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 8px;
+}
+
+.drill-line {
+  color: var(--text-primary);
+  font-size: 1rem;
+  line-height: 1.8;
+}
+
+.drill-blank {
+  display: inline-block;
+  min-width: 68px;
+  background: var(--accent-soft);
+  border: 1px dashed var(--accent);
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  font: inherit;
+  padding: 1px 8px;
+  cursor: pointer;
+}
+
+.drill-blank:hover {
+  background: var(--accent);
+  color: var(--bg-page);
+}
+
+.drill-blank:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.drill-revealed {
+  color: var(--accent);
+  font-weight: 600;
+  border-bottom: 1px solid var(--accent-strong);
+}
+
+.drill-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* An explicit display wins over the hidden attribute, which would otherwise
+   show the self-grade buttons before the learner has revealed anything. */
+.drill-actions[hidden] {
+  display: none;
+}
+
+.drill-ask {
+  color: var(--text-muted);
+  font-size: 0.86rem;
+  margin-right: 2px;
+}
+
+.drill-got,
+.drill-missed {
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elevated);
+  color: var(--text-body);
+  border-radius: var(--radius-sm);
+  padding: 5px 12px;
+  font-size: 0.86rem;
+  cursor: pointer;
+}
+
+.drill-got:hover {
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.drill-missed:hover {
+  border-color: var(--warning);
+  color: var(--warning);
+}
+
+.drill-done,
+.drill-again {
+  font-size: 0.86rem;
+}
+
+.drill-done {
+  color: var(--success);
+}
+
+.drill-again {
+  color: var(--warning);
+}
+
+.prospect-eval-title {
+  color: var(--text-primary);
+  font-size: 1.15rem;
+  margin-bottom: 14px;
+}
+
+/* --- Destructive actions, and state that never relies on colour alone ----- */
+
+/* "Reset session" cannot be undone, so it must not look like Send. */
+.modal-btn-danger {
+  border: 1px solid var(--danger);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.modal-btn-danger:hover {
+  background: var(--danger);
+  color: var(--bg-page);
+}
+
+.readiness-low {
+  background: var(--danger);
+}
+
+.readiness-mid {
+  background: var(--warning);
+}
+
+.readiness-high {
+  background: var(--success);
+}
+
+.prospect-readiness-state {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.drill-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.drill-count {
+  color: var(--text-subtle);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* On a narrow screen the review and drill windows follow the same bottom-sheet
+   pattern as every other panel, instead of floating as a centred card. */
+@media (max-width: 860px) {
+  .review-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .review-card {
+    max-width: 100%;
+    max-height: 86vh;
+    overflow-y: auto;
+    border-radius: 28px 28px 0 0;
+    padding: 22px 18px 26px;
+  }
 }

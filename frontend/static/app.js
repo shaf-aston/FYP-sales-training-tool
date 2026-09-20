@@ -512,10 +512,8 @@ function handleSessionExpired() {
 
   // Add a notice
   const notice = document.createElement("div");
-  notice.className = "edit-divider";
+  notice.className = "edit-divider notice";
   notice.textContent = "Session expired - conversation has been reset";
-  notice.style.color = "#d4a373";
-  notice.style.marginBottom = "12px";
   container.appendChild(notice);
 
   // Reinitialize the chatbot
@@ -641,29 +639,6 @@ function showToast(message, type = "info") {
   const toast = document.createElement("div");
   toast.className = `toast-notification toast-${type}`;
   toast.textContent = message;
-  toast.style.cssText = `
-    position: fixed;
-    bottom: 100px;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 12px 24px;
-    border-radius: 16px;
-    background: ${
-      type === "error" ? "#7f2727" : type === "success" ? "#43592a" : "#5c4220"
-    };
-    border: 1px solid ${
-      type === "error"
-        ? "rgba(232, 90, 90, 0.45)"
-        : type === "success"
-          ? "rgba(196, 232, 138, 0.4)"
-          : "rgba(232, 180, 90, 0.4)"
-    };
-    color: #f1e8da;
-    font-size: 14px;
-    z-index: 10000;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    animation: toastIn 0.3s ease;
-  `;
   document.body.appendChild(toast);
 
   // Auto-remove after 4 seconds
@@ -1363,6 +1338,8 @@ window.addEventListener("DOMContentLoaded", () => {
     if (event.key === "Escape") {
       closeResetMenu();
       closeResetModal();
+      closeSessionReview();
+      closeDialog(document.getElementById("prospectEvalModal"));
       document.getElementById("feedbackDropdown")?.classList.remove("open");
     }
   });
@@ -1877,7 +1854,7 @@ function submitQuiz() {
   const submitBtn = document.getElementById("quizSubmitBtn");
   const feedbackEl = document.getElementById("quizFeedback");
   submitBtn.disabled = true;
-  feedbackEl.innerHTML = '<div style="color:#8b8fa3">Evaluating...</div>';
+  feedbackEl.innerHTML = '<div class="loading-note">Evaluating...</div>';
 
   // Build request body based on quiz type
   let body = {};
@@ -2346,10 +2323,16 @@ function updateProspectPanel(state) {
   const fill = document.getElementById("prospectReadinessFill");
   fill.style.width = Math.max(2, readiness) + "%";
 
-  // Color: red -> yellow -> green
-  if (readiness < 30) fill.style.background = "#ef4444";
-  else if (readiness < 60) fill.style.background = "#eab308";
-  else fill.style.background = "#22c55e";
+  /* Colour comes from the tokens via a class, and is always paired with a word:
+     a bar that only changes colour says nothing to a colour-blind learner. */
+  const band =
+    readiness < 30 ? "low" : readiness < 60 ? "mid" : "high";
+  fill.className = "prospect-readiness-fill readiness-" + band;
+  document.getElementById("prospectReadinessState").textContent = {
+    low: "At risk",
+    mid: "Warming up",
+    high: "Ready",
+  }[band];
 
   document.getElementById("prospectReadinessVal").textContent = readiness + "%";
   const turns = state.turn_count || 0;
@@ -2465,7 +2448,7 @@ async function requestProspectEvaluation() {
   const loadingMsg = document.createElement("div");
   loadingMsg.className = "message bot";
   loadingMsg.innerHTML =
-    '<div class="message-bubble" style="color:#5f8cff">Generating evaluation...</div>';
+    '<div class="message-bubble loading-note">Generating evaluation...</div>';
   container.appendChild(loadingMsg);
   container.scrollTop = container.scrollHeight;
 
@@ -2549,6 +2532,7 @@ function buildEvaluationHTML(data) {
     : "";
 
   return `
+          <h3 id="evalHeading" class="prospect-eval-title">How that session went</h3>
           <div class="prospect-eval-header">
             <div class="prospect-eval-score">${data.overall_score || 0}%</div>
             <div class="prospect-eval-grade ${gradeClass}">${escapeHtml(data.grade || "?")}</div>
@@ -2561,7 +2545,10 @@ function buildEvaluationHTML(data) {
           ${improvementsHtml}
           ${coachTipHtml}
           ${data.summary ? `<div class="prospect-eval-summary">${escapeHtml(data.summary)}</div>` : ""}
-          <button class="prospect-try-again-btn" onclick="tryAgainProspect()">Try again</button>
+          <div class="prospect-eval-actions">
+            <button class="review-open-btn" onclick="openSessionReview(this)">Walk it back</button>
+            <button class="prospect-try-again-btn" onclick="tryAgainProspect()">Try again</button>
+          </div>
         `;
 }
 
@@ -2577,18 +2564,15 @@ function renderEvalInline(html) {
 function renderEvalModal(html) {
   const overlay = document.createElement("div");
   overlay.id = "prospectEvalModal";
-  overlay.style.cssText =
-    "position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:300;display:flex;justify-content:center;align-items:center;overflow-y:auto;padding:20px";
+  overlay.className = "review-overlay";
   const card = document.createElement("div");
-  card.className = "prospect-evaluation";
-  card.style.cssText =
-    "max-width:500px;width:100%;max-height:90vh;overflow-y:auto";
+  card.className = "prospect-evaluation eval-card";
   card.innerHTML = html;
   overlay.appendChild(card);
   overlay.onclick = (e) => {
-    if (e.target === overlay) overlay.remove();
+    if (e.target === overlay) closeDialog(overlay);
   };
-  document.body.appendChild(overlay);
+  openDialog(overlay, card, "evalHeading");
 }
 
 function renderEvalPanel(html) {
@@ -2607,9 +2591,7 @@ function renderEvalPanel(html) {
 }
 
 function tryAgainProspect() {
-  // Remove modal if exists
-  const modal = document.getElementById("prospectEvalModal");
-  if (modal) modal.remove();
+  closeDialog(document.getElementById("prospectEvalModal"));
 
   // End current session
   if (_prospectSessionId) {
@@ -3122,7 +3104,7 @@ async function scoreSession() {
   const loadingMsg = document.createElement("div");
   loadingMsg.className = "message bot";
   loadingMsg.innerHTML =
-    '<div class="message-bubble" style="color:#10b981">Calculating your session score...</div>';
+    '<div class="message-bubble loading-note">Calculating your session score...</div>';
   container.appendChild(loadingMsg);
   container.scrollTop = container.scrollHeight;
 
@@ -3291,4 +3273,453 @@ if (document.readyState === "loading") {
 } else {
   // DOM is already loaded
   initTtsSpeedControl();
+}
+
+/* ---------------------------------------------------------------------------
+ * Session review: walk the conversation back, and say a turn differently.
+ * The buyer replies for real from that point, so a redo is practice, not a
+ * description of what you should have said.
+ * ------------------------------------------------------------------------- */
+
+function ratingDots(rating) {
+  let dots = "";
+  for (let i = 1; i <= 5; i++) {
+    dots += `<span class="review-dot${i <= rating ? " on" : ""}"></span>`;
+  }
+  /* role="img" + a label, so the dots are read out rather than being a row of
+     shapes a screen reader skips. */
+  return `<span class="review-rating" role="img" aria-label="Rated ${rating} out of 5">${dots}</span>`;
+}
+
+function buildReviewTurnHTML(turn, isPivotal) {
+  const change = turn.readiness_change;
+  const drift =
+    change === 0
+      ? ""
+      : `<span class="review-drift ${change > 0 ? "up" : "down"}">${
+          change > 0 ? "+" : ""
+        }${Math.round(change * 100)}% interest</span>`;
+
+  const reasons = turn.reasons.length
+    ? `<ul class="review-reasons">${turn.reasons
+        .map((r) => `<li>${escapeHtml(r)}</li>`)
+        .join("")}</ul>`
+    : `<p class="review-reasons-empty">Nothing here moved them either way.</p>`;
+
+  const redo = isPivotal
+    ? `<div class="review-redo" id="reviewRedo${turn.turn}">
+         <button class="review-redo-btn" onclick="startRedo(${turn.turn})">Say this differently</button>
+       </div>`
+    : "";
+
+  return `
+    <li class="review-turn${isPivotal ? " pivotal" : ""}">
+      <div class="review-turn-head">
+        <span class="review-turn-no">Turn ${turn.turn}</span>
+        ${ratingDots(turn.rating)}
+        ${drift}
+      </div>
+      <p class="review-said"><span class="review-who">You</span>${escapeHtml(turn.seller)}</p>
+      ${turn.buyer ? `<p class="review-said buyer"><span class="review-who">Buyer</span>${escapeHtml(turn.buyer)}</p>` : ""}
+      ${reasons}
+      ${redo}
+    </li>`;
+}
+
+function buildReviewHTML(data) {
+  const pivotal = new Set(data.pivotal_turns || []);
+  const summary = data.summary || {};
+
+  if (!data.turns || !data.turns.length) {
+    return `<p class="review-empty">There are no turns to review yet.</p>`;
+  }
+
+  const intro = pivotal.size
+    ? `${pivotal.size} turn${pivotal.size > 1 ? "s" : ""} cost you ground. Try ${
+        pivotal.size > 1 ? "them" : "it"
+      } again below and see what they say.`
+    : "Nothing here lost you ground. Good session.";
+
+  return `
+    <div class="review-head">
+      <h3 id="reviewHeading">Walk it back</h3>
+      <p class="review-intro">${intro}</p>
+      <p class="review-stats">${summary.turn_count} turns &middot; average ${summary.average_rating} out of 5</p>
+    </div>
+    <ol class="review-turns">
+      ${data.turns.map((t) => buildReviewTurnHTML(t, pivotal.has(t.turn))).join("")}
+    </ol>`;
+}
+
+async function openSessionReview(trigger) {
+  if (!_prospectSessionId) return;
+  setTriggerBusy(trigger, true, "Opening...");
+
+  try {
+    const response = await fetch("/api/prospect/review", {
+      headers: { "X-Session-ID": _prospectSessionId },
+    });
+    const data = await response.json();
+    if (!data.success) {
+      if (handleProspectSessionError(data)) return;
+      showReviewOverlay(reviewErrorHTML(data.error));
+      return;
+    }
+    showReviewOverlay(buildReviewHTML(data));
+  } catch (e) {
+    showReviewOverlay(reviewErrorHTML(String(e)));
+  } finally {
+    setTriggerBusy(trigger, false);
+  }
+}
+
+function reviewErrorHTML(detail) {
+  return `<h3 id="reviewHeading" class="review-heading">Walk it back</h3>
+    <p class="review-redo-error">Couldn't open the review. ${escapeHtml(detail || "")}</p>
+    <button class="review-redo-btn" onclick="closeSessionReview(); openSessionReview();">Try again</button>`;
+}
+
+function setTriggerBusy(button, busy, label) {
+  /* A button that does nothing visible for a second reads as broken. Triggers
+     here range from a plain button to a card with a heading and a description,
+     so the whole of the trigger's markup is put back, not just its text. */
+  if (!button) return;
+  if (busy) {
+    if (button.dataset.idleMarkup === undefined) {
+      button.dataset.idleMarkup = button.innerHTML;
+    }
+    button.textContent = label || "Loading...";
+  } else if (button.dataset.idleMarkup !== undefined) {
+    button.innerHTML = button.dataset.idleMarkup;
+    delete button.dataset.idleMarkup;
+  }
+  button.disabled = busy;
+  button.setAttribute("aria-busy", busy ? "true" : "false");
+}
+
+function showReviewOverlay(html) {
+  closeSessionReview();
+  const overlay = document.createElement("div");
+  overlay.id = "sessionReviewOverlay";
+  overlay.className = "review-overlay";
+  overlay.innerHTML = `<div class="review-card">
+      <button class="review-close" onclick="closeSessionReview()" aria-label="Close">&times;</button>
+      <div id="reviewBody">${html}</div>
+    </div>`;
+  overlay.onclick = (e) => {
+    if (e.target === overlay) closeSessionReview();
+  };
+  openDialog(overlay, overlay.querySelector(".review-card"), "reviewHeading");
+}
+
+function closeSessionReview() {
+  closeDialog(document.getElementById("sessionReviewOverlay"));
+}
+
+function startRedo(turn, draft) {
+  const slot = document.getElementById("reviewRedo" + turn);
+  if (!slot) return;
+  const lost = document.querySelectorAll(".review-turns > li").length - turn;
+  const warning =
+    lost > 0
+      ? `<p class="review-redo-warning">Saying this differently replaces the ${lost}
+         turn${lost === 1 ? "" : "s"} that came after it, and
+         ${lost === 1 ? "it can't" : "they can't"} be brought back.</p>`
+      : "";
+  slot.innerHTML = `
+    ${warning}
+    <label class="review-redo-label" for="reviewRedoInput${turn}">What would you say instead?</label>
+    <textarea id="reviewRedoInput${turn}" class="review-redo-input" rows="2">${escapeHtml(draft || "")}</textarea>
+    <button class="review-redo-btn" onclick="submitRedo(${turn})">Try it</button>`;
+  const input = document.getElementById("reviewRedoInput" + turn);
+  if (input) input.focus();
+}
+
+let _redoDraft = "";
+
+async function submitRedo(turn) {
+  const input = document.getElementById("reviewRedoInput" + turn);
+  const slot = document.getElementById("reviewRedo" + turn);
+  if (!input || !slot) return;
+
+  const message = input.value.trim();
+  if (!message) {
+    input.focus();
+    return;
+  }
+  _redoDraft = message;
+
+  slot.innerHTML = `<p class="review-redo-waiting" aria-live="polite">Seeing how they respond...</p>`;
+
+  try {
+    const response = await fetch("/api/prospect/redo", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Session-ID": _prospectSessionId,
+      },
+      body: JSON.stringify({ turn: turn, message: message }),
+    });
+    const data = await response.json();
+
+    if (!data.success) {
+      slot.innerHTML = `<p class="review-redo-error">${escapeHtml(data.error || "That didn't work.")}</p>
+        <button class="review-redo-btn" onclick="startRedo(${turn}, _redoDraft)">Try again</button>`;
+      return;
+    }
+
+    slot.innerHTML = `
+      <div class="review-redo-result">
+        <p class="review-said"><span class="review-who">You</span>${escapeHtml(message)}</p>
+        <p class="review-said buyer"><span class="review-who">Buyer</span>${escapeHtml(data.message)}</p>
+        <p class="review-redo-note">The conversation now continues from here.</p>
+      </div>`;
+    markTurnsAfterRedoAsGone(turn);
+  } catch (e) {
+    slot.innerHTML = `<p class="review-redo-error">${escapeHtml(String(e))}</p>
+      <button class="review-redo-btn" onclick="startRedo(${turn}, _redoDraft)">Try again</button>`;
+  }
+}
+
+function markTurnsAfterRedoAsGone(turn) {
+  /* Rewinding drops everything after this turn, so the ones still listed below
+     are no longer part of the conversation. Leaving them looking live would be
+     the review telling the learner something untrue. */
+  const list = document.querySelector(".review-turns");
+  if (!list) return;
+
+  let found = false;
+  let replaced = 0;
+  for (const item of list.querySelectorAll(".review-turn")) {
+    if (found) {
+      item.classList.add("superseded");
+      const redo = item.querySelector(".review-redo");
+      if (redo) redo.remove();
+      replaced += 1;
+    }
+    if (item.querySelector("#reviewRedo" + turn)) found = true;
+  }
+
+  if (replaced && !list.querySelector(".review-superseded-note")) {
+    const note = document.createElement("li");
+    note.className = "review-superseded-note";
+    note.textContent =
+      "The turns below came after the one you changed, so they are no longer part of this conversation.";
+    const firstGone = list.querySelector(".review-turn.superseded");
+    list.insertBefore(note, firstGone);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Script drills: recall practice.
+ * The line appears with the move missing. You produce it in your head, click to
+ * check, then say whether you had it. Missed ones come back sooner.
+ * Scheduling lives in this browser only - no account, nothing sent anywhere.
+ * ------------------------------------------------------------------------- */
+
+const DRILL_STORE_KEY = "drillSchedule.v1";
+const DRILL_INTERVALS_DAYS = [0, 1, 3, 7, 21];
+const DAY_MS = 86400000;
+
+function loadDrillSchedule() {
+  try {
+    return JSON.parse(localStorage.getItem(DRILL_STORE_KEY) || "{}") || {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveDrillSchedule(schedule) {
+  try {
+    localStorage.setItem(DRILL_STORE_KEY, JSON.stringify(schedule));
+  } catch (e) {
+    /* Private window or storage full: drilling still works, it just won't be
+       remembered next visit. Not worth interrupting the learner over. */
+  }
+}
+
+function scheduleDrill(id, gotIt) {
+  const schedule = loadDrillSchedule();
+  const current = schedule[id] || { level: 0 };
+  const level = gotIt
+    ? Math.min(current.level + 1, DRILL_INTERVALS_DAYS.length - 1)
+    : 0;
+  schedule[id] = { level: level, due: Date.now() + DRILL_INTERVALS_DAYS[level] * DAY_MS };
+  saveDrillSchedule(schedule);
+}
+
+function isDrillDue(id) {
+  const entry = loadDrillSchedule()[id];
+  return !entry || !entry.due || entry.due <= Date.now();
+}
+
+function buildDrillHTML(drill, index) {
+  let body = "";
+  drill.segments.forEach((segment, i) => {
+    body += escapeHtml(segment);
+    if (i < drill.answers.length) {
+      body += `<button class="drill-blank" id="drillBlank${index}_${i}"
+                 onclick="revealBlank(${index}, ${i})"
+                 aria-label="Reveal the missing words">&nbsp;?&nbsp;</button>`;
+    }
+  });
+
+  const gaps = drill.answers.length;
+  return `
+    <div class="drill-card" id="drillCard${index}">
+      <div class="drill-label">
+        ${escapeHtml(drill.label)}
+        <span class="drill-count" id="drillCount${index}" aria-live="polite">0 of ${gaps} revealed</span>
+      </div>
+      <p class="drill-line">${body}</p>
+      <div class="drill-actions" id="drillActions${index}" aria-live="polite" hidden>
+        <span class="drill-ask">Did you have it?</span>
+        <button class="drill-got" onclick="gradeDrill(${index}, true)">Yes</button>
+        <button class="drill-missed" onclick="gradeDrill(${index}, false)">Not quite</button>
+      </div>
+    </div>`;
+}
+
+let _drills = [];
+
+async function openScriptDrills(trigger) {
+  setTriggerBusy(trigger, true, "Opening...");
+  try {
+    const headers = _prospectSessionId ? { "X-Session-ID": _prospectSessionId } : {};
+    const response = await fetch("/api/prospect/drills", { headers: headers });
+    const data = await response.json();
+    if (!data.success) throw new Error(data.error || "Drills unavailable");
+
+    _drills = data.drills;
+    const due = _drills
+      .map((d, i) => ({ drill: d, index: i }))
+      .filter((item) => isDrillDue(item.drill.id));
+    const practising = due.length ? due : _drills.map((d, i) => ({ drill: d, index: i }));
+
+    const note = !_drills.length
+      ? "There are no lines to practise yet."
+      : due.length
+      ? `${due.length} to practise.`
+      : "Nothing is due - here they all are anyway.";
+
+    showReviewOverlay(`
+      <div class="review-head">
+        <h3 id="reviewHeading">Say it from memory</h3>
+        <p class="review-intro">Work out the missing part before you click it. ${note}</p>
+      </div>
+      <div class="drill-list">
+        ${practising.map((item) => buildDrillHTML(item.drill, item.index)).join("")}
+      </div>`);
+  } catch (e) {
+    /* Say so. Clicking a button and having nothing happen leaves the learner
+       unable to tell a broken screen from an empty one. */
+    showReviewOverlay(`
+      <div class="review-head">
+        <h3 id="reviewHeading">Say it from memory</h3>
+        <p class="review-intro">The drills couldn't be loaded just now. Close this and try again.</p>
+      </div>`);
+  } finally {
+    setTriggerBusy(trigger, false);
+  }
+}
+
+function revealBlank(index, blankIndex) {
+  const drill = _drills[index];
+  const button = document.getElementById(`drillBlank${index}_${blankIndex}`);
+  if (!drill || !button) return;
+
+  const answer = document.createElement("span");
+  answer.className = "drill-revealed";
+  answer.textContent = drill.answers[blankIndex];
+  button.replaceWith(answer);
+
+  const card = document.getElementById(`drillCard${index}`);
+  if (!card) return;
+
+  const remaining = card.querySelectorAll(".drill-blank").length;
+  const total = drill.answers.length;
+  const counter = document.getElementById(`drillCount${index}`);
+  if (counter) counter.textContent = `${total - remaining} of ${total} revealed`;
+
+  if (!remaining) {
+    const actions = document.getElementById(`drillActions${index}`);
+    if (actions) actions.hidden = false;
+  }
+}
+
+function gradeDrill(index, gotIt) {
+  const drill = _drills[index];
+  if (!drill) return;
+  scheduleDrill(drill.id, gotIt);
+
+  const actions = document.getElementById(`drillActions${index}`);
+  if (actions) {
+    actions.innerHTML = gotIt
+      ? `<span class="drill-done">Kept. Back in a few days.</span>`
+      : `<span class="drill-again">Back later today.</span>`;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Dialogs.
+ * Every window that opens on top of the page goes through here, so Escape,
+ * focus and the screen-reader attributes are defined once instead of being
+ * re-remembered (and forgotten) per overlay.
+ * ------------------------------------------------------------------------- */
+
+const FOCUSABLE =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+let _dialogOpener = null;
+
+function openDialog(overlay, card, labelId) {
+  /* Announce it as a dialog. Without these a screen reader reads the overlay as
+     ordinary page text and never says the learner has entered a window. */
+  card.setAttribute("role", "dialog");
+  card.setAttribute("aria-modal", "true");
+  if (labelId && card.querySelector("#" + labelId)) {
+    card.setAttribute("aria-labelledby", labelId);
+  }
+  if (!card.hasAttribute("tabindex")) card.setAttribute("tabindex", "-1");
+
+  overlay.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      event.stopPropagation();
+      closeDialog(overlay);
+    } else if (event.key === "Tab") {
+      trapTab(event, card);
+    }
+  });
+
+  _dialogOpener = document.activeElement;
+  document.body.appendChild(overlay);
+  (card.querySelector(FOCUSABLE) || card).focus();
+}
+
+function trapTab(event, card) {
+  /* Keeps Tab inside the window. Without it Tab walks onto the page behind,
+     where the learner cannot see what is focused. */
+  const items = [...card.querySelectorAll(FOCUSABLE)].filter(
+    (el) => el.offsetParent !== null,
+  );
+  if (!items.length) return;
+
+  const first = items[0];
+  const last = items[items.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
+function closeDialog(overlay) {
+  if (!overlay) return;
+  overlay.remove();
+  /* Put focus back where it came from, so keyboard users are not dumped at the
+     top of the page after closing. */
+  if (_dialogOpener && document.contains(_dialogOpener)) _dialogOpener.focus();
+  _dialogOpener = null;
 }

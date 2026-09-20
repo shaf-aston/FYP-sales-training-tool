@@ -1,20 +1,26 @@
-"""Prospect mode: Boot plays a buyer for sales practice roleplay training."""
+"""Prospect mode: Bot plays a buyer for sales practice roleplay training."""
 
 import json
 import logging
 import random
+import secrets
 import time
 from dataclasses import dataclass, field
 
-from .loader import load_prospect_config, load_signals
-from .analysis import classify_intent_level
+from .analytics.session_analytics import SessionAnalytics
+from .loader import load_prospect_config
 from .prospect_session_persistence import ProspectSessionPersistence
 from .providers.factory import create_provider, list_fallback_providers
-from .utils import clamp, range_label
+from .selling_quality import apply_readiness, score_seller_turn
+from .session_review import build_review
+from .utils import range_label
 
 logger = logging.getLogger(__name__)
 
-SIGNALS = load_signals()
+
+class ProviderUnavailable(RuntimeError):
+    """Every LLM provider failed or came back empty, so there is no buyer to talk to."""
+
 
 READINESS_THRESHOLDS = [0.2, 0.4, 0.6, 0.8]
 READINESS_LABELS = [
@@ -33,7 +39,6 @@ class ProspectState:
     readiness: float
     objections_raised: int = 0
     turn_count: int = 0
-    needs_disclosed: list = field(default_factory=list)
     has_committed: bool = False
     has_walked: bool = False
     persona: dict = field(default_factory=dict)
@@ -46,7 +51,6 @@ class ProspectState:
             "readiness": round(self.readiness, 3),
             "objections_raised": self.objections_raised,
             "turn_count": self.turn_count,
-            "needs_disclosed": self.needs_disclosed,
             "has_committed": self.has_committed,
             "has_walked": self.has_walked,
             "difficulty": self.difficulty,
@@ -131,7 +135,9 @@ class ProspectSession:
             persona: Optional persona dict; randomly selected if None.
             session_id: Optional session identifier.
         """
-        self.session_id = session_id
+        # An id-less session saves nothing, logs nothing, and shares its objection
+        # dice with every other id-less session. One owner of the id, never blank.
+        self.session_id = session_id or secrets.token_hex(16)
         self.provider_type = provider_type
         self.provider = create_provider(provider_type)
         self.provider_name = getattr(self.provider, "provider_name", "unknown")
@@ -165,9 +171,22 @@ class ProspectSession:
         )
 
         self.conversation_history: list[dict] = []
+        # Why the buyer last warmed up or cooled off, for the session review.
+        self.last_turn_score = None
 
         behaviour_rules = config.get("behaviour_rules", {})
         self.behaviour_rules = behaviour_rules.get(difficulty, "")
+
+        # Counted at the start as well as the end, or the two can never be
+        # compared and "did anyone finish?" stays unanswerable.
+        SessionAnalytics.record(
+            session_id=self.session_id,
+            event="session_start",
+            engine="prospect",
+            difficulty=difficulty,
+            product_type=product_type,
+            persona_name=persona.get("name", "Alex"),
+        )
 
     def public_config(self) -> dict:
         """Return the frontend-facing prospect mode settings for this session."""
@@ -178,7 +197,12 @@ class ProspectSession:
         }
 
     def _get_chat_with_fallback(self, messages, temperature=0.8, max_tokens=200):
-        """Get chat response with automatic fallback to other providers on error."""
+        """Get chat response with automatic fallback to other providers on error.
+
+        Raises ProviderUnavailable when no provider produced anything. Returning the
+        empty response instead showed the learner a blank bubble and an HTTP 200,
+        which looks like the buyer ignoring them rather than an outage.
+        """
         response = self.provider.chat(messages, temperature=temperature, max_tokens=max_tokens)
         if response.error or not (response.content or "").strip():
             for provider_name in list_fallback_providers(self.provider_name):
@@ -194,6 +218,14 @@ class ProspectSession:
                     self.provider_name = provider_name
                     self.model_name = fallback.get_model_name()
                     break
+
+        if response.error or not (response.content or "").strip():
+            logger.error(
+                "No provider answered (last=%s): %s",
+                self.provider_name,
+                response.error or "empty response",
+            )
+            raise ProviderUnavailable(response.error or "No provider returned a reply.")
         return response
 
     def to_dict(self) -> dict:
@@ -207,9 +239,7 @@ class ProspectSession:
             "conversation_history": self.conversation_history,
             "state": {
                 "readiness": self.state.readiness,
-                "objections_raised": self.state.objections_raised,
                 "turn_count": self.state.turn_count,
-                "needs_disclosed": self.state.needs_disclosed,
                 "has_committed": self.state.has_committed,
                 "has_walked": self.state.has_walked,
             },
@@ -410,6 +440,16 @@ class ProspectSession:
                 state_snapshot=self.state.to_dict(),
             )
 
+        # If no provider answers, this turn must leave no trace. Otherwise resending
+        # the same line counts it twice and the transcript keeps a seller turn the
+        # buyer never replied to - which the review would then replay as real.
+        before_turn = (
+            self.state.turn_count,
+            self.state.readiness,
+            self.state.objections_raised,
+            len(self.conversation_history),
+            self.last_turn_score,
+        )
         self.state.turn_count += 1
 
         self.conversation_history.append(
@@ -445,13 +485,30 @@ class ProspectSession:
                 state_snapshot=self.state.to_dict(),
             )
 
+        objection = self._objection_for_turn(self.state.turn_count)
+        self.state.objections_raised = self._objections_raised_by(self.state.turn_count - 1)
+
         system_prompt = self._build_system_prompt()
+        if objection:
+            system_prompt += (
+                "\n\n"
+                f"THIS TURN: raise your {objection['type']} concern, in your own "
+                f"words and in character. Do not quote it back word for word. "
+                f"The concern is: {objection['text']}"
+            )
         messages = [{"role": "system", "content": system_prompt}]
         messages.extend(self.conversation_history)
 
         start = time.time()
-        response = self._get_chat_with_fallback(messages, temperature=0.7, max_tokens=250)
+        try:
+            response = self._get_chat_with_fallback(messages, temperature=0.7, max_tokens=250)
+        except ProviderUnavailable:
+            self._restore(before_turn)
+            raise
         latency = (time.time() - start) * 1000
+
+        if objection:
+            self.state.objections_raised += 1
 
         self.conversation_history.append(
             {
@@ -486,97 +543,127 @@ class ProspectSession:
             return "I don't think this is the right fit for me right now."
         return "This roleplay session has ended."
 
-    def _update_readiness(self, user_msg: str) -> None:
-        """Update prospect readiness score based on the salesperson's message.
+    def rewind_to_turn(self, turn_index: int) -> bool:
+        """Put the session back to just before turn `turn_index` was sent.
 
-        Args:
-            user_msg: The salesperson's message to evaluate.
+        This is what lets a learner redo a turn and get a real reply from the same
+        buyer at the same point, instead of being told what they should have said.
+        The buyer's readiness is replayed from the kept transcript rather than
+        remembered, so a rewound session is identical to one that had gone that way
+        from the start.
+
+        Returns False when that turn does not exist.
+        """
+        if turn_index < 1:
+            return False
+        seller_turns = [
+            position
+            for position, entry in enumerate(self.conversation_history)
+            if entry.get("role") == "user"
+        ]
+        if turn_index > len(seller_turns):
+            return False
+
+        self.conversation_history = self.conversation_history[: seller_turns[turn_index - 1]]
+        replay = self.review()
+        self.state.turn_count = replay["summary"]["turn_count"]
+        self.state.objections_raised = self._objections_raised_by(self.state.turn_count)
+        self.state.readiness = replay["readiness_exact"]
+        self.state.has_committed = False
+        self.state.has_walked = False
+        self.last_turn_score = None
+        self.save_session()
+        return True
+
+    def _turn_dice(self, turn: int) -> float:
+        """A fixed roll for a given turn of this session.
+
+        Seeded from the session id and the turn number, so replaying the same
+        session always rolls the same numbers. Without that, redoing a turn would
+        quietly change which objections the buyer raises later on.
+        """
+        return random.Random(f"{self.session_id}|{turn}").random()
+
+    def _objection_cap(self) -> int:
+        """How many objections this buyer may raise before letting it go."""
+        behaviour = self.difficulty_profile["behaviour"]
+        bank = self.difficulty_profile.get("objection_bank", [])
+        return min(int(behaviour.get("max_objections", 0)), len(bank))
+
+    def _objections_raised_by(self, turn: int) -> int:
+        """Count the objections issued up to and including `turn`.
+
+        Derived, never stored: the same turn number always gives the same answer,
+        so a rewound session matches one that had gone that way from the start.
+        """
+        behaviour = self.difficulty_profile["behaviour"]
+        probability = float(behaviour.get("objection_probability", 0.0))
+        cap = self._objection_cap()
+        raised = 0
+        for past_turn in range(1, max(0, turn) + 1):
+            if raised >= cap:
+                break
+            if self._turn_dice(past_turn) < probability:
+                raised += 1
+        return raised
+
+    def _objection_for_turn(self, turn: int) -> dict | None:
+        """The objection the buyer should raise this turn, if any.
+
+        The difficulty profile says how often this buyer pushes back
+        (objection_probability) and what they push back about (objection_bank).
+        Before this, both were ignored and the buyer's resistance was whatever the
+        model felt like, so "hard" and "easy" played much the same.
+        """
+        already = self._objections_raised_by(turn - 1)
+        if already >= self._objection_cap():
+            return None
+        probability = float(
+            self.difficulty_profile["behaviour"].get("objection_probability", 0.0)
+        )
+        if self._turn_dice(turn) >= probability:
+            return None
+        return self.difficulty_profile["objection_bank"][already]
+
+    def _restore(self, snapshot: tuple) -> None:
+        """Undo a turn that never reached the buyer."""
+        (
+            self.state.turn_count,
+            self.state.readiness,
+            self.state.objections_raised,
+            history_length,
+            self.last_turn_score,
+        ) = snapshot
+        del self.conversation_history[history_length:]
+
+    def review(self) -> dict:
+        """The walkable review of this session, rebuilt from the transcript."""
+        return build_review(self.conversation_history, self.difficulty_profile["behaviour"])
+
+    def _last_buyer_message(self) -> str:
+        """The buyer's most recent line, used to tell listening apart from luck."""
+        for entry in reversed(self.conversation_history):
+            if entry.get("role") == "assistant":
+                return entry.get("content", "")
+        return ""
+
+    def _update_readiness(self, user_msg: str) -> None:
+        """Move the buyer's readiness based on how the salesperson just sold.
+
+        Judged by core.selling_quality, which reads seller language. The reasons
+        behind the rating are kept on `last_turn_score` so the session review can
+        show the learner why the buyer warmed up or cooled off.
         """
         behaviour = self.difficulty_profile["behaviour"]
 
-        # Deterministic scoring using only the user message
-        rating = self._score_sales_message(user_msg)
-
-        gain = behaviour["readiness_gain_per_good_turn"]
-        loss = behaviour["readiness_loss_per_bad_turn"]
-
-        if rating >= 4:
-            readiness_change = gain * (rating - 3)  # 4→gain, 5→2*gain
-        elif rating <= 2:
-            readiness_change = -loss * (3 - rating)  # 2→-loss, 1→-2*loss
-        else:
-            readiness_change = 0.01  # Slight gain for neutral
-
-        self.state.readiness = clamp(self.state.readiness + readiness_change)
-
-    def _score_sales_message(self, user_msg: str) -> int:
-        """Score a salesperson message from 1 to 5 using deterministic signals.
-
-        The score is keyword-based on purpose so readiness changes stay predictable
-        and fast without needing an extra LLM call.
-        """
-        from .utils import contains_nonnegated_keyword
-
-        msg_lower = user_msg.lower()
-        msg_length = len(user_msg.split())
-        intent_level = classify_intent_level(
-            self.conversation_history, user_msg, signal_keywords=SIGNALS
+        self.last_turn_score = score_seller_turn(
+            user_msg,
+            buyer_message=self._last_buyer_message(),
+            completed_turns=max(0, self.state.turn_count - 1),
         )
+        rating = self.last_turn_score.rating
 
-        # Base score starts at 3 (neutral)
-        score = 3.0
-
-        # Walking away or shutting down ends the session quickly.
-        if contains_nonnegated_keyword(msg_lower, SIGNALS.get("walking", [])):
-            return 1
-
-        # Pushy/urgent language reduces quality.
-        if contains_nonnegated_keyword(msg_lower, SIGNALS.get("impatience", [])):
-            score -= 1.0
-
-        # Demand for directness (pressure without rapport)
-        if contains_nonnegated_keyword(msg_lower, SIGNALS.get("demand_directness", [])):
-            score -= 1.0
-
-        if contains_nonnegated_keyword(msg_lower, SIGNALS.get("commitment", [])):
-            score += 2.0
-        elif intent_level == "high":
-            score += 1.0
-        elif intent_level == "low":
-            score -= 0.5
-
-        # Message quality factors
-        # Very short messages (< 5 words) are likely low-effort
-        if msg_length < 5:
-            score -= 0.5
-
-        # Questions are good (discovery)
-        if "?" in user_msg:
-            score += 0.3
-
-        # Discovery/consultative language indicates better probing quality.
-        if any(
-            phrase in msg_lower
-            for phrase in (
-                "help me understand",
-                "what matters most",
-                "what are you hoping",
-                "what's most important",
-                "tell me more",
-            )
-        ):
-            score += 0.7
-
-        # Early turns should focus on discovery, not pitching
-        if self.state.turn_count <= 2:
-            # Penalize price/feature mentions too early
-            if any(
-                word in msg_lower
-                for word in ["price", "cost", "payment", "buy", "purchase"]
-            ):
-                score -= 0.5
-
-        return max(1, min(5, round(score)))
+        self.state.readiness = apply_readiness(self.state.readiness, rating, behaviour)
 
     def _check_end_conditions(self) -> str | None:
         """Check if the session should end and determine the outcome.
@@ -662,6 +749,26 @@ Don't give away what the prospect actually wants."""
             "persona_name": self.persona.get("name", "Alex"),
         }
         logger.info("prospect_conversation_turn %s", json.dumps(payload, ensure_ascii=False))
+
+    def record_session_end(self) -> None:
+        """Record where this session actually got to.
+
+        Sessions were counted at the start and never at the end, so there was no
+        way to tell whether anyone finished one, let alone improved.
+        """
+        if not self.session_id:
+            return
+        SessionAnalytics.record(
+            session_id=self.session_id,
+            event="session_end",
+            engine="prospect",
+            outcome=self.state.status,
+            difficulty=self.state.difficulty,
+            product_type=self.product_type,
+            turn_count=self.state.turn_count,
+            objections_raised=self.state.objections_raised,
+            final_readiness=round(self.state.readiness, 3),
+        )
 
     def get_evaluation(self) -> dict:
         """Generate a final evaluation of the salesperson's performance.

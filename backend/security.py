@@ -303,6 +303,17 @@ class InputValidator:
         v = raw.strip().lower()
         return None if (not v or v == "auto") else v
 
+    @staticmethod
+    def parse_positive_int(raw: Any, maximum: int = 1000) -> int | None:
+        """Whole number above zero, or None. Rejects floats, bools and huge values."""
+        if isinstance(raw, bool) or isinstance(raw, float):
+            return None
+        try:
+            value = int(raw)
+        except (TypeError, ValueError):
+            return None
+        return value if 0 < value <= maximum else None
+
 
 class ClientIPExtractor:
     """Extract the real client IP address"""

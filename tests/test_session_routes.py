@@ -36,6 +36,10 @@ class _DummyBot:
         self.flow_engine = _DummyFlowEngine()
         self.saved = False
         self.snapshot_refreshed = False
+        self.session_ended = False
+
+    def record_session_end(self):
+        self.session_ended = True
 
     def replay(self, history):
         type(self).replayed_history = history
@@ -324,6 +328,16 @@ def test_score_route_returns_the_session_score(monkeypatch):
 
     assert response.status_code == 200
     assert response.get_json() == {"success": True, "score": {"total": 7}}
+    # The score must be kept, not only shown - otherwise there is no record of
+    # whether anyone is improving.
+    from core.analytics.session_analytics import SessionAnalytics
+
+    scored = [
+        e
+        for e in SessionAnalytics.get_session_analytics("e" * 8)
+        if e.get("event_type") == "session_score"
+    ]
+    assert [e["total"] for e in scored] == [7]
 
 
 def test_score_route_reports_a_failed_calculation_instead_of_crashing(monkeypatch):

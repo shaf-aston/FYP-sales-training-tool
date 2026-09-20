@@ -1,0 +1,64 @@
+# Lines worth knowing by heart, for recall practice.
+#
+# Square brackets mark the blank: the part the learner has to produce from memory
+# before revealing it. Blank the load-bearing part - the move itself - not a
+# random word. "Tell me what losing those two days actually [cost you]" trains
+# something; "Tell me what [losing] those two days actually cost you" does not.
+#
+# Groups match the five criteria the session evaluation already scores, so the
+# drill and the feedback use the same words.
+
+groups:
+  - id: needs_discovery
+    label: Finding out what they need
+    why: >-
+      You cannot recommend anything until you know what they are actually trying
+      to fix. These lines buy you the room to ask.
+    lines:
+      - "Before I suggest anything, [tell me what's actually slowing your team down]."
+      - "What made this [start to matter now], rather than six months ago?"
+      - "Walk me through [what a bad week looks like] when this goes wrong."
+      - "Tell me what that delay [actually cost you] last time."
+      - "Who else [feels this problem] besides you?"
+
+  - id: rapport_building
+    label: Earning trust
+    why: >-
+      People buy from someone who was listening. These lines prove you were,
+      using their own words rather than your script.
+    lines:
+      - "[Fair enough], I moved too fast there."
+      - "So if I've got this right, [the real issue is the downtime, not the price]."
+      - "That makes sense - [most people in your position would say the same]."
+      - "I'd rather [get this wrong now than after you've paid for it]."
+
+  - id: objection_handling
+    label: Handling pushback
+    why: >-
+      An objection is information, not rejection. These lines keep the
+      conversation open instead of turning it into an argument.
+    lines:
+      - "That's a fair concern. [What would need to be true] for it not to be one?"
+      - "When you say it's too expensive, [is it the number, or what you'd be giving up elsewhere]?"
+      - "I'd rather you [took your time than regretted it]."
+      - "If price weren't part of this, [would the rest of it work for you]?"
+      - "You're right to push on that. [Here's what I actually know, and what I don't]."
+
+  - id: solution_presentation
+    label: Putting it to them
+    why: >-
+      Tie every feature to something they already told you hurts, in their words,
+      or it is just a list.
+    lines:
+      - "You said [losing two days cost you a customer] - this is the part that stops that."
+      - "I'm not going to list everything. [The one thing that matters for you is this]."
+      - "Based on what you've told me, [I'd actually start smaller than you asked for]."
+
+  - id: conversation_flow
+    label: Keeping it moving
+    why: >-
+      Pace and permission. These lines move things forward without pushing.
+    lines:
+      - "Before we go further - [is this even the right conversation to be having]?"
+      - "What would [a sensible next step] look like from where you're sitting?"
+      - "I've asked a lot. [What would you want to ask me]?"

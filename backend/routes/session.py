@@ -9,6 +9,7 @@ from typing import Any
 from flask import Blueprint, jsonify, request
 
 from core.analytics.performance import PerformanceTracker
+from core.analytics.session_analytics import SessionAnalytics
 from core.chatbot import SalesChatbot
 from core.constants import UNDETERMINED_STAGE
 from core.content import generate_init_greeting
@@ -336,7 +337,14 @@ def get_score(bot):
     from core.trainer import score_session
 
     try:
-        score_data = score_session(request.headers.get("X-Session-ID"))
+        session_id = request.headers.get("X-Session-ID")
+        score_data = score_session(session_id)
+        SessionAnalytics.record(
+            session_id=session_id,
+            event="session_score",
+            total=score_data.get("total"),
+            breakdown=score_data.get("breakdown"),
+        )
         return jsonify({"success": True, "score": score_data})
     except Exception as e:
         logger.error(f"Error calculating session score: {e}")
@@ -347,5 +355,10 @@ def get_score(bot):
 @with_session(bp)
 def reset(bot):
     """Delete the current session"""
+    # Telemetry must never be the reason a learner cannot end their session.
+    try:
+        bot.record_session_end()
+    except Exception:
+        logger.exception("Could not record the end of this session")
     bp.delete_session(request.headers.get("X-Session-ID"))  # type: ignore
     return jsonify({"success": True})
