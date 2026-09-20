@@ -14,6 +14,7 @@ from ..messages import (
 )
 from ..security import InputValidator, require_rate_limit
 from ._utils import make_require_session, validate_provider
+from core.analytics.session_analytics import SessionAnalytics
 from core.prospect_session_persistence import ProspectSessionPersistence
 from core.prospect_session import ProviderUnavailable
 from core.script_drills import build_drill_set
@@ -219,6 +220,20 @@ def prospect_evaluate():
 
     try:
         evaluation = ps.get_evaluation()
+        SessionAnalytics.record(
+            session_id=request.headers.get("X-Session-ID", ""),
+            event="session_score",
+            engine="prospect",
+            difficulty=ps.state.difficulty,
+            outcome=ps.state.status,
+            total=evaluation.get("overall_score"),
+            grade=evaluation.get("grade"),
+            breakdown={
+                name: data.get("score")
+                for name, data in (evaluation.get("criteria_scores") or {}).items()
+            },
+            turn_count=ps.state.turn_count,
+        )
         return jsonify({"success": True, **evaluation})
     except Exception as e:
         _bp_state().app.logger.exception(f"Prospect evaluation error: {e}")
@@ -344,6 +359,9 @@ def prospect_reset():
         session_error = InputValidator.validate_session_id(session_id)
         if session_error:
             return session_error
+        ps = _lookup_prospect_session(session_id)
+        if ps is not None:
+            ps.record_session_end()
         _bp_state().prospect_session_manager.delete(session_id)
         ProspectSessionPersistence.delete(session_id)
     return jsonify({"success": True})

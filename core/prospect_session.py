@@ -7,6 +7,7 @@ import secrets
 import time
 from dataclasses import dataclass, field
 
+from .analytics.session_analytics import SessionAnalytics
 from .loader import load_prospect_config
 from .prospect_session_persistence import ProspectSessionPersistence
 from .providers.factory import create_provider, list_fallback_providers
@@ -175,6 +176,17 @@ class ProspectSession:
 
         behaviour_rules = config.get("behaviour_rules", {})
         self.behaviour_rules = behaviour_rules.get(difficulty, "")
+
+        # Counted at the start as well as the end, or the two can never be
+        # compared and "did anyone finish?" stays unanswerable.
+        SessionAnalytics.record(
+            session_id=self.session_id,
+            event="session_start",
+            engine="prospect",
+            difficulty=difficulty,
+            product_type=product_type,
+            persona_name=persona.get("name", "Alex"),
+        )
 
     def public_config(self) -> dict:
         """Return the frontend-facing prospect mode settings for this session."""
@@ -737,6 +749,26 @@ Don't give away what the prospect actually wants."""
             "persona_name": self.persona.get("name", "Alex"),
         }
         logger.info("prospect_conversation_turn %s", json.dumps(payload, ensure_ascii=False))
+
+    def record_session_end(self) -> None:
+        """Record where this session actually got to.
+
+        Sessions were counted at the start and never at the end, so there was no
+        way to tell whether anyone finished one, let alone improved.
+        """
+        if not self.session_id:
+            return
+        SessionAnalytics.record(
+            session_id=self.session_id,
+            event="session_end",
+            engine="prospect",
+            outcome=self.state.status,
+            difficulty=self.state.difficulty,
+            product_type=self.product_type,
+            turn_count=self.state.turn_count,
+            objections_raised=self.state.objections_raised,
+            final_readiness=round(self.state.readiness, 3),
+        )
 
     def get_evaluation(self) -> dict:
         """Generate a final evaluation of the salesperson's performance.

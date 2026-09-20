@@ -512,10 +512,8 @@ function handleSessionExpired() {
 
   // Add a notice
   const notice = document.createElement("div");
-  notice.className = "edit-divider";
+  notice.className = "edit-divider notice";
   notice.textContent = "Session expired - conversation has been reset";
-  notice.style.color = "#d4a373";
-  notice.style.marginBottom = "12px";
   container.appendChild(notice);
 
   // Reinitialize the chatbot
@@ -641,29 +639,6 @@ function showToast(message, type = "info") {
   const toast = document.createElement("div");
   toast.className = `toast-notification toast-${type}`;
   toast.textContent = message;
-  toast.style.cssText = `
-    position: fixed;
-    bottom: 100px;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 12px 24px;
-    border-radius: 16px;
-    background: ${
-      type === "error" ? "#7f2727" : type === "success" ? "#43592a" : "#5c4220"
-    };
-    border: 1px solid ${
-      type === "error"
-        ? "rgba(232, 90, 90, 0.45)"
-        : type === "success"
-          ? "rgba(196, 232, 138, 0.4)"
-          : "rgba(232, 180, 90, 0.4)"
-    };
-    color: #f1e8da;
-    font-size: 14px;
-    z-index: 10000;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    animation: toastIn 0.3s ease;
-  `;
   document.body.appendChild(toast);
 
   // Auto-remove after 4 seconds
@@ -1879,7 +1854,7 @@ function submitQuiz() {
   const submitBtn = document.getElementById("quizSubmitBtn");
   const feedbackEl = document.getElementById("quizFeedback");
   submitBtn.disabled = true;
-  feedbackEl.innerHTML = '<div style="color:#8b8fa3">Evaluating...</div>';
+  feedbackEl.innerHTML = '<div class="loading-note">Evaluating...</div>';
 
   // Build request body based on quiz type
   let body = {};
@@ -2473,7 +2448,7 @@ async function requestProspectEvaluation() {
   const loadingMsg = document.createElement("div");
   loadingMsg.className = "message bot";
   loadingMsg.innerHTML =
-    '<div class="message-bubble" style="color:#5f8cff">Generating evaluation...</div>';
+    '<div class="message-bubble loading-note">Generating evaluation...</div>';
   container.appendChild(loadingMsg);
   container.scrollTop = container.scrollHeight;
 
@@ -3129,7 +3104,7 @@ async function scoreSession() {
   const loadingMsg = document.createElement("div");
   loadingMsg.className = "message bot";
   loadingMsg.innerHTML =
-    '<div class="message-bubble" style="color:#10b981">Calculating your session score...</div>';
+    '<div class="message-bubble loading-note">Calculating your session score...</div>';
   container.appendChild(loadingMsg);
   container.scrollTop = container.scrollHeight;
 
