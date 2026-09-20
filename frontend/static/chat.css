@@ -1900,3 +1900,114 @@ textarea::-webkit-scrollbar-thumb,
   font-style: italic;
   padding: 2px 4px;
 }
+
+/* --- Script drills: recall practice ------------------------------------- */
+
+.drill-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.drill-card {
+  background: var(--bg-card-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+}
+
+.drill-label {
+  color: var(--text-subtle);
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 8px;
+}
+
+.drill-line {
+  color: var(--text-primary);
+  font-size: 1rem;
+  line-height: 1.8;
+}
+
+.drill-blank {
+  display: inline-block;
+  min-width: 68px;
+  background: var(--accent-soft);
+  border: 1px dashed var(--accent);
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  font: inherit;
+  padding: 1px 8px;
+  cursor: pointer;
+}
+
+.drill-blank:hover {
+  background: var(--accent);
+  color: var(--bg-page);
+}
+
+.drill-blank:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.drill-revealed {
+  color: var(--accent);
+  font-weight: 600;
+  border-bottom: 1px solid var(--accent-strong);
+}
+
+.drill-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* An explicit display wins over the hidden attribute, which would otherwise
+   show the self-grade buttons before the learner has revealed anything. */
+.drill-actions[hidden] {
+  display: none;
+}
+
+.drill-ask {
+  color: var(--text-muted);
+  font-size: 0.86rem;
+  margin-right: 2px;
+}
+
+.drill-got,
+.drill-missed {
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elevated);
+  color: var(--text-body);
+  border-radius: var(--radius-sm);
+  padding: 5px 12px;
+  font-size: 0.86rem;
+  cursor: pointer;
+}
+
+.drill-got:hover {
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.drill-missed:hover {
+  border-color: var(--warning);
+  color: var(--warning);
+}
+
+.drill-done,
+.drill-again {
+  font-size: 0.86rem;
+}
+
+.drill-done {
+  color: var(--success);
+}
+
+.drill-again {
+  color: var(--warning);
+}

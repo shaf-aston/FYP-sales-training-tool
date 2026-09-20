@@ -16,6 +16,7 @@ from ..security import InputValidator, require_rate_limit
 from ._utils import make_require_session, validate_provider
 from core.prospect_session_persistence import ProspectSessionPersistence
 from core.prospect_session import ProviderUnavailable
+from core.script_drills import build_drill_set
 from core.session_review import build_review
 
 bp = Blueprint("prospect", __name__, url_prefix="/api/prospect")
@@ -245,6 +246,26 @@ def prospect_review():
     except Exception as e:
         _bp_state().app.logger.exception(f"Prospect review error: {e}")
         return jsonify({"error": PROSPECT_REVIEW_ERROR}), 500
+
+
+@bp.route("/drills", methods=["GET"])
+def prospect_drills():
+    """Lines to recall, with the move blanked out.
+
+    Works with no session at all. When a live session is supplied, that learner's
+    own strongest turns are added at the top - revising something you actually
+    said beats revising a stranger's script.
+    """
+    own_turns = []
+    session_id = request.headers.get("X-Session-ID")
+    if session_id and not InputValidator.validate_session_id(session_id):
+        ps = _lookup_prospect_session(session_id)
+        if ps is not None:
+            own_turns = build_review(
+                ps.conversation_history, ps.difficulty_profile["behaviour"]
+            )["turns"]
+
+    return jsonify({"success": True, **build_drill_set(own_turns)})
 
 
 @bp.route("/redo", methods=["POST"])

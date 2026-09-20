@@ -103,3 +103,30 @@ def test_redo_still_validates_the_message(client, played_session):
     )
 
     assert response.status_code == 400
+
+
+def test_drills_work_without_any_session(client):
+    response = client.get("/api/prospect/drills")
+    payload = response.get_json()
+
+    assert response.status_code == 200
+    assert payload["success"] is True
+    assert payload["drills"]
+    assert all(d["source"] == "authored" for d in payload["drills"])
+
+
+def test_drills_add_your_own_lines_when_a_session_is_supplied(client, played_session):
+    response = client.get("/api/prospect/drills", headers=played_session)
+    payload = response.get_json()
+
+    assert response.status_code == 200
+    assert payload["groups"][0]["id"] == "your_own_lines"
+    assert payload["drills"][0]["source"] == "own_turn"
+
+
+def test_drills_ignore_a_session_id_that_is_not_live(client):
+    response = client.get("/api/prospect/drills", headers={"X-Session-ID": "a" * 32})
+    payload = response.get_json()
+
+    assert response.status_code == 200
+    assert all(d["source"] == "authored" for d in payload["drills"])
