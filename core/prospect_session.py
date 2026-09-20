@@ -37,7 +37,6 @@ class ProspectState:
     readiness: float
     objections_raised: int = 0
     turn_count: int = 0
-    needs_disclosed: list = field(default_factory=list)
     has_committed: bool = False
     has_walked: bool = False
     persona: dict = field(default_factory=dict)
@@ -50,7 +49,6 @@ class ProspectState:
             "readiness": round(self.readiness, 3),
             "objections_raised": self.objections_raised,
             "turn_count": self.turn_count,
-            "needs_disclosed": self.needs_disclosed,
             "has_committed": self.has_committed,
             "has_walked": self.has_walked,
             "difficulty": self.difficulty,
@@ -228,7 +226,6 @@ class ProspectSession:
                 "readiness": self.state.readiness,
                 "objections_raised": self.state.objections_raised,
                 "turn_count": self.state.turn_count,
-                "needs_disclosed": self.state.needs_disclosed,
                 "has_committed": self.state.has_committed,
                 "has_walked": self.state.has_walked,
             },
@@ -464,7 +461,17 @@ class ProspectSession:
                 state_snapshot=self.state.to_dict(),
             )
 
+        objection = self._objection_for_turn(self.state.turn_count)
+        self.state.objections_raised = self._objections_raised_by(self.state.turn_count)
+
         system_prompt = self._build_system_prompt()
+        if objection:
+            system_prompt += (
+                "\n\n"
+                f"THIS TURN: raise your {objection['type']} concern, in your own "
+                f"words and in character. Do not quote it back word for word. "
+                f"The concern is: {objection['text']}"
+            )
         messages = [{"role": "system", "content": system_prompt}]
         messages.extend(self.conversation_history)
 
@@ -529,12 +536,63 @@ class ProspectSession:
         self.conversation_history = self.conversation_history[: seller_turns[turn_index - 1]]
         replay = build_review(self.conversation_history, self.difficulty_profile["behaviour"])
         self.state.turn_count = replay["summary"]["turn_count"]
+        self.state.objections_raised = self._objections_raised_by(self.state.turn_count)
         self.state.readiness = replay["readiness_curve"][-1]
         self.state.has_committed = False
         self.state.has_walked = False
         self.last_turn_score = None
         self.save_session()
         return True
+
+    def _turn_dice(self, turn: int) -> float:
+        """A fixed roll for a given turn of this session.
+
+        Seeded from the session id and the turn number, so replaying the same
+        session always rolls the same numbers. Without that, redoing a turn would
+        quietly change which objections the buyer raises later on.
+        """
+        return random.Random(f"{self.session_id}|{turn}").random()
+
+    def _objection_cap(self) -> int:
+        """How many objections this buyer may raise before letting it go."""
+        behaviour = self.difficulty_profile["behaviour"]
+        bank = self.difficulty_profile.get("objection_bank", [])
+        return min(int(behaviour.get("max_objections", 0)), len(bank))
+
+    def _objections_raised_by(self, turn: int) -> int:
+        """Count the objections issued up to and including `turn`.
+
+        Derived, never stored: the same turn number always gives the same answer,
+        so a rewound session matches one that had gone that way from the start.
+        """
+        behaviour = self.difficulty_profile["behaviour"]
+        probability = float(behaviour.get("objection_probability", 0.0))
+        cap = self._objection_cap()
+        raised = 0
+        for past_turn in range(1, max(0, turn) + 1):
+            if raised >= cap:
+                break
+            if self._turn_dice(past_turn) < probability:
+                raised += 1
+        return raised
+
+    def _objection_for_turn(self, turn: int) -> dict | None:
+        """The objection the buyer should raise this turn, if any.
+
+        The difficulty profile says how often this buyer pushes back
+        (objection_probability) and what they push back about (objection_bank).
+        Before this, both were ignored and the buyer's resistance was whatever the
+        model felt like, so "hard" and "easy" played much the same.
+        """
+        already = self._objections_raised_by(turn - 1)
+        if already >= self._objection_cap():
+            return None
+        probability = float(
+            self.difficulty_profile["behaviour"].get("objection_probability", 0.0)
+        )
+        if self._turn_dice(turn) >= probability:
+            return None
+        return self.difficulty_profile["objection_bank"][already]
 
     def _last_buyer_message(self) -> str:
         """The buyer's most recent line, used to tell listening apart from luck."""
