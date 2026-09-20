@@ -17,7 +17,6 @@ from ._utils import make_require_session, validate_provider
 from core.prospect_session_persistence import ProspectSessionPersistence
 from core.prospect_session import ProviderUnavailable
 from core.script_drills import build_drill_set
-from core.session_review import build_review
 
 bp = Blueprint("prospect", __name__, url_prefix="/api/prospect")
 
@@ -227,6 +226,7 @@ def prospect_evaluate():
 
 
 @bp.route("/review", methods=["GET"])
+@require_rate_limit("prospect")
 def prospect_review():
     """Walk the session back turn by turn, with the reason behind every rating.
 
@@ -239,16 +239,14 @@ def prospect_review():
     assert ps is not None
 
     try:
-        review = build_review(
-            ps.conversation_history, ps.difficulty_profile["behaviour"]
-        )
-        return jsonify({"success": True, "persona": ps.persona, **review})
+        return jsonify({"success": True, "persona": ps.persona, **ps.review()})
     except Exception as e:
         _bp_state().app.logger.exception(f"Prospect review error: {e}")
         return jsonify({"error": PROSPECT_REVIEW_ERROR}), 500
 
 
 @bp.route("/drills", methods=["GET"])
+@require_rate_limit("prospect")
 def prospect_drills():
     """Lines to recall, with the move blanked out.
 
@@ -258,14 +256,32 @@ def prospect_drills():
     """
     own_turns = []
     session_id = request.headers.get("X-Session-ID")
-    if session_id and not InputValidator.validate_session_id(session_id):
+    if session_id:
+        session_error = InputValidator.validate_session_id(session_id)
+        if session_error:
+            return session_error
         ps = _lookup_prospect_session(session_id)
         if ps is not None:
-            own_turns = build_review(
-                ps.conversation_history, ps.difficulty_profile["behaviour"]
-            )["turns"]
+            own_turns = ps.review()["turns"]
 
     return jsonify({"success": True, **build_drill_set(own_turns)})
+
+
+def _restore_after_failed_redo(ps, kept_history, kept_state):
+    """Put the turns back when the redo never reached the buyer.
+
+    Rewinding happens before the buyer is asked, so a failure here would otherwise
+    cost the learner every turn after the one they were redoing, and give them
+    nothing in return.
+    """
+    ps.conversation_history = kept_history
+    (
+        ps.state.turn_count,
+        ps.state.readiness,
+        ps.state.objections_raised,
+        ps.state.has_committed,
+        ps.state.has_walked,
+    ) = kept_state
 
 
 @bp.route("/redo", methods=["POST"])
@@ -286,6 +302,14 @@ def prospect_redo():
     if err:
         return err
 
+    kept_history = list(ps.conversation_history)
+    kept_state = (
+        ps.state.turn_count,
+        ps.state.readiness,
+        ps.state.objections_raised,
+        ps.state.has_committed,
+        ps.state.has_walked,
+    )
     if not ps.rewind_to_turn(turn_index):
         return jsonify({"error": "That turn is not part of this session.", "code": "INVALID_TURN"}), 400
 
@@ -303,8 +327,10 @@ def prospect_redo():
             }
         )
     except ProviderUnavailable:
+        _restore_after_failed_redo(ps, kept_history, kept_state)
         return jsonify({"error": PROSPECT_UNAVAILABLE, "code": "PROVIDER_UNAVAILABLE"}), 503
     except Exception as e:
+        _restore_after_failed_redo(ps, kept_history, kept_state)
         _bp_state().app.logger.exception(f"Prospect redo error: {e}")
         return jsonify({"error": PROSPECT_ERROR}), 500
 

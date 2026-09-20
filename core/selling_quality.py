@@ -149,7 +149,9 @@ def readiness_delta(rating: int, behaviour: dict) -> float:
         return gain * (rating - 3)  # 4->gain, 5->2*gain
     if rating <= 2:
         return -loss * (3 - rating)  # 2->-loss, 1->-2*loss
-    return 0.01  # neutral turns drift very slightly upward
+    # A turn that neither helps nor hurts still buys a little patience. How much
+    # is a difficulty knob, not a constant - a tough buyer should drift less.
+    return float(behaviour.get("readiness_drift_per_neutral_turn", 0.01))
 
 
 def apply_readiness(current: float, rating: int, behaviour: dict) -> float:

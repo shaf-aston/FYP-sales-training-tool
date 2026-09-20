@@ -107,8 +107,13 @@ def drills_from_own_turns(review_turns: list[dict], limit: int = 3) -> list[Dril
     ]
     strong.sort(key=lambda turn: (-turn.get("rating", 0), turn.get("turn", 0)))
 
+    # Walk the whole list, not the first `limit` of it: a line too short to split
+    # would otherwise silently cost the learner a drill instead of being skipped
+    # in favour of their next best line.
     drills = []
-    for turn in strong[:limit]:
+    for turn in strong:
+        if len(drills) >= limit:
+            break
         split = _split_point(turn["seller"])
         if split is None:
             continue

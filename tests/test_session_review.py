@@ -123,3 +123,25 @@ def test_rewinding_to_a_turn_that_never_happened_is_refused(transcript):
     assert session.rewind_to_turn(9) is False
     assert session.rewind_to_turn(0) is False
     assert len(session.conversation_history) == len(transcript)
+
+
+def test_only_the_worst_turns_are_offered_for_a_redo():
+    """More costly turns than slots: the learner is pointed at the worst ones."""
+    turns = [
+        {"turn": 1, "rating": 2, "readiness_change": -0.05},
+        {"turn": 2, "rating": 1, "readiness_change": -0.20},
+        {"turn": 3, "rating": 2, "readiness_change": -0.16},
+        {"turn": 4, "rating": 1, "readiness_change": -0.30},
+        {"turn": 5, "rating": 5, "readiness_change": 0.16},
+    ]
+
+    assert pick_pivotal_turns(turns, count=3) == [2, 3, 4]
+
+
+def test_when_two_turns_cost_the_same_the_weaker_one_is_picked_first():
+    turns = [
+        {"turn": 1, "rating": 4, "readiness_change": -0.10},
+        {"turn": 2, "rating": 1, "readiness_change": -0.10},
+    ]
+
+    assert pick_pivotal_turns(turns, count=1) == [2]

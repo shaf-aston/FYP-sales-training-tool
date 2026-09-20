@@ -1,8 +1,11 @@
 """The review and redo endpoints that make a finished session walkable."""
 
+from unittest import mock
+
 import pytest
 
 from backend.app import app
+from core.prospect_session import ProviderUnavailable
 from core.providers.base import LLMResponse
 
 
@@ -130,3 +133,30 @@ def test_drills_ignore_a_session_id_that_is_not_live(client):
 
     assert response.status_code == 200
     assert all(d["source"] == "authored" for d in payload["drills"])
+
+
+def test_a_bad_session_id_on_drills_is_rejected_not_ignored(client):
+    """Silently serving generic drills hides the caller's mistake from them."""
+    response = client.get("/api/prospect/drills", headers={"X-Session-ID": "not a real id!"})
+
+    assert response.status_code == 400
+
+
+def test_a_redo_that_cannot_reach_the_buyer_gives_the_turns_back(client, played_session):
+    """The rewind happens before the buyer is asked. If the ask fails, the learner
+    must not lose the turns they had and get nothing in return."""
+    before = client.get("/api/prospect/review", headers=played_session).get_json()
+
+    def dead(*_args, **_kwargs):
+        raise ProviderUnavailable("every provider is down")
+
+    with mock.patch.object(StubProspectProvider, "chat", dead):
+        response = client.post(
+            "/api/prospect/redo",
+            json={"turn": 1, "message": "Walk me through a bad week with the van."},
+            headers=played_session,
+        )
+
+    assert response.status_code == 503
+    after = client.get("/api/prospect/review", headers=played_session).get_json()
+    assert after["turns"] == before["turns"]

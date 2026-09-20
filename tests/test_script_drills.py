@@ -98,3 +98,33 @@ def test_without_a_session_only_the_authored_lines_show():
 
     assert OWN_LINE_GROUP not in [g["id"] for g in result["groups"]]
     assert all(d["source"] == "authored" for d in result["drills"])
+
+
+def test_a_line_too_short_to_split_costs_the_next_best_line_its_place():
+    """Skipping must not silently shrink the deck - it should fall through to the
+    learner's next strongest line instead."""
+    turns = [
+        {"turn": 1, "rating": 5, "seller": "Tell me more."},  # too short to split
+        {"turn": 2, "rating": 5, "seller": "Walk me through what a bad week looks like."},
+        {"turn": 3, "rating": 5, "seller": "Tell me what that delay actually cost you."},
+        {"turn": 4, "rating": 4, "seller": "What made that start to matter to you now?"},
+        {"turn": 5, "rating": 4, "seller": "Which of those would you fix first, and why?"},
+    ]
+
+    drills = drills_from_own_turns(turns, limit=3)
+
+    assert len(drills) == 3
+    assert not any("Tell me more" in "".join(d.segments) for d in drills)
+
+
+def test_only_the_strongest_lines_make_the_cut():
+    turns = [
+        {"turn": n, "rating": 5 if n <= 2 else 4,
+         "seller": f"Walk me through what problem number {n} actually costs you."}
+        for n in range(1, 6)
+    ]
+
+    drills = drills_from_own_turns(turns, limit=2)
+
+    assert len(drills) == 2
+    assert [d.id for d in drills] == [f"{OWN_LINE_GROUP}:1", f"{OWN_LINE_GROUP}:2"]

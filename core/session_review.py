@@ -90,6 +90,10 @@ def build_review(
         "turns": turns,
         "pivotal_turns": pick_pivotal_turns(turns, pivotal_count),
         "readiness_curve": curve,
+        # The curve is rounded for display. A rewind must restore the exact value
+        # live play was carrying, or redoing a turn nudges the buyer a fraction
+        # closer to (or further from) buying than it should.
+        "readiness_exact": readiness,
         "summary": summarise(turns),
     }
 

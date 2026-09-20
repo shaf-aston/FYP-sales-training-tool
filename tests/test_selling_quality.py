@@ -151,3 +151,12 @@ def test_prospect_readiness_falls_when_the_seller_pressures():
     session._update_readiness("You need to decide right now, today only.")
 
     assert session.state.readiness < start
+
+
+@pytest.mark.parametrize("message", ["", "   ", "\n\t "])
+def test_an_empty_turn_is_scored_without_blowing_up(message):
+    """A learner can send whitespace; it must be judged, not crash the session."""
+    score = score_seller_turn(message, buyer_message="My van keeps breaking down.")
+
+    assert 1 <= score.rating <= 5
+    assert isinstance(score.signals, list)

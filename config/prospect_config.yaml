@@ -12,6 +12,7 @@ difficulty_profiles:
     behaviour:
       initial_readiness: 0.5
       readiness_gain_per_good_turn: 0.12
+      readiness_drift_per_neutral_turn: 0.02
       readiness_loss_per_bad_turn: 0.05
       disclosure_level: "high"
       objection_probability: 0.2
@@ -39,6 +40,7 @@ difficulty_profiles:
     behaviour:
       initial_readiness: 0.2
       readiness_gain_per_good_turn: 0.08
+      readiness_drift_per_neutral_turn: 0.01
       readiness_loss_per_bad_turn: 0.08
       disclosure_level: "medium"
       objection_probability: 0.45
@@ -72,6 +74,7 @@ difficulty_profiles:
     behaviour:
       initial_readiness: 0.1
       readiness_gain_per_good_turn: 0.06
+      readiness_drift_per_neutral_turn: 0.005
       readiness_loss_per_bad_turn: 0.1
       disclosure_level: "low"
       objection_probability: 0.7

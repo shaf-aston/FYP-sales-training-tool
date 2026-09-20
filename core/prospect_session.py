@@ -3,6 +3,7 @@
 import json
 import logging
 import random
+import secrets
 import time
 from dataclasses import dataclass, field
 
@@ -133,7 +134,9 @@ class ProspectSession:
             persona: Optional persona dict; randomly selected if None.
             session_id: Optional session identifier.
         """
-        self.session_id = session_id
+        # An id-less session saves nothing, logs nothing, and shares its objection
+        # dice with every other id-less session. One owner of the id, never blank.
+        self.session_id = session_id or secrets.token_hex(16)
         self.provider_type = provider_type
         self.provider = create_provider(provider_type)
         self.provider_name = getattr(self.provider, "provider_name", "unknown")
@@ -224,7 +227,6 @@ class ProspectSession:
             "conversation_history": self.conversation_history,
             "state": {
                 "readiness": self.state.readiness,
-                "objections_raised": self.state.objections_raised,
                 "turn_count": self.state.turn_count,
                 "has_committed": self.state.has_committed,
                 "has_walked": self.state.has_walked,
@@ -426,6 +428,16 @@ class ProspectSession:
                 state_snapshot=self.state.to_dict(),
             )
 
+        # If no provider answers, this turn must leave no trace. Otherwise resending
+        # the same line counts it twice and the transcript keeps a seller turn the
+        # buyer never replied to - which the review would then replay as real.
+        before_turn = (
+            self.state.turn_count,
+            self.state.readiness,
+            self.state.objections_raised,
+            len(self.conversation_history),
+            self.last_turn_score,
+        )
         self.state.turn_count += 1
 
         self.conversation_history.append(
@@ -462,7 +474,7 @@ class ProspectSession:
             )
 
         objection = self._objection_for_turn(self.state.turn_count)
-        self.state.objections_raised = self._objections_raised_by(self.state.turn_count)
+        self.state.objections_raised = self._objections_raised_by(self.state.turn_count - 1)
 
         system_prompt = self._build_system_prompt()
         if objection:
@@ -476,8 +488,15 @@ class ProspectSession:
         messages.extend(self.conversation_history)
 
         start = time.time()
-        response = self._get_chat_with_fallback(messages, temperature=0.7, max_tokens=250)
+        try:
+            response = self._get_chat_with_fallback(messages, temperature=0.7, max_tokens=250)
+        except ProviderUnavailable:
+            self._restore(before_turn)
+            raise
         latency = (time.time() - start) * 1000
+
+        if objection:
+            self.state.objections_raised += 1
 
         self.conversation_history.append(
             {
@@ -534,10 +553,10 @@ class ProspectSession:
             return False
 
         self.conversation_history = self.conversation_history[: seller_turns[turn_index - 1]]
-        replay = build_review(self.conversation_history, self.difficulty_profile["behaviour"])
+        replay = self.review()
         self.state.turn_count = replay["summary"]["turn_count"]
         self.state.objections_raised = self._objections_raised_by(self.state.turn_count)
-        self.state.readiness = replay["readiness_curve"][-1]
+        self.state.readiness = replay["readiness_exact"]
         self.state.has_committed = False
         self.state.has_walked = False
         self.last_turn_score = None
@@ -593,6 +612,21 @@ class ProspectSession:
         if self._turn_dice(turn) >= probability:
             return None
         return self.difficulty_profile["objection_bank"][already]
+
+    def _restore(self, snapshot: tuple) -> None:
+        """Undo a turn that never reached the buyer."""
+        (
+            self.state.turn_count,
+            self.state.readiness,
+            self.state.objections_raised,
+            history_length,
+            self.last_turn_score,
+        ) = snapshot
+        del self.conversation_history[history_length:]
+
+    def review(self) -> dict:
+        """The walkable review of this session, rebuilt from the transcript."""
+        return build_review(self.conversation_history, self.difficulty_profile["behaviour"])
 
     def _last_buyer_message(self) -> str:
         """The buyer's most recent line, used to tell listening apart from luck."""

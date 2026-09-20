@@ -134,9 +134,17 @@ def test_a_live_turn_tells_the_buyer_to_raise_the_objection_and_counts_it():
     for _ in range(turn):
         prospect.process_turn("What matters most to you here?")
 
+    # A session that sold or walked early stops recording prompts, which would
+    # otherwise surface as a bare IndexError if difficulty tuning ever changed.
+    assert len(prompts) >= turn, (
+        f"the buyer ended the session at turn {len(prompts)}, before the objection "
+        f"due at turn {turn} - retune the fixture, not the assertion"
+    )
     assert "THIS TURN: raise your" in prompts[turn - 1]
-    assert prospect.state.objections_raised >= 1
-    assert f"Objections raised so far: {prospect.state.objections_raised}" in prompts[turn - 1]
+    # "So far" means before this turn: the buyer is not told it has already raised
+    # the objection it is only now being asked to raise.
+    assert "Objections raised so far: 0" in prompts[turn - 1]
+    assert prospect.state.objections_raised == 1
 
 
 def test_the_dead_needs_list_is_gone():
@@ -145,3 +153,58 @@ def test_the_dead_needs_list_is_gone():
 
     assert "needs_disclosed" not in prospect.state.to_dict()
     assert "needs_disclosed" not in prospect.to_dict()["state"]
+
+
+def test_a_turn_that_never_reached_the_buyer_leaves_no_trace():
+    """An outage must not count the turn, move readiness, or leave a half turn
+    in the transcript - otherwise resending the same line banks it twice."""
+    from core.prospect_session import ProviderUnavailable
+
+    prospect = session("medium", "outage")
+    prospect.conversation_history = [{"role": "assistant", "content": "Hi there."}]
+    before = (
+        prospect.state.turn_count,
+        prospect.state.readiness,
+        prospect.state.objections_raised,
+        list(prospect.conversation_history),
+    )
+
+    def dead(messages, **kw):
+        raise ProviderUnavailable("every provider is down")
+
+    prospect.provider.chat = dead
+
+    with pytest.raises(ProviderUnavailable):
+        prospect.process_turn("Walk me through what a bad week looks like.")
+
+    assert (
+        prospect.state.turn_count,
+        prospect.state.readiness,
+        prospect.state.objections_raised,
+        prospect.conversation_history,
+    ) == before
+
+
+def test_a_session_always_gets_an_id_of_its_own():
+    """A blank id saves nothing, logs nothing, and shares its dice with every
+    other blank-id session."""
+    first = ProspectSession(difficulty="hard", session_id="")
+    second = ProspectSession(difficulty="hard", session_id="")
+
+    assert first.session_id and second.session_id
+    assert first.session_id != second.session_id
+
+
+def test_a_rewind_restores_the_exact_readiness_not_the_rounded_one():
+    prospect = session("medium", "precision")
+    prospect.conversation_history = [
+        {"role": "assistant", "content": "Hi."},
+        {"role": "user", "content": "What made that start to matter to you?"},
+        {"role": "assistant", "content": "It costs me time."},
+        {"role": "user", "content": "Buy now, today only."},
+        {"role": "assistant", "content": "Hm."},
+    ]
+    prospect.state.turn_count = 2
+
+    assert prospect.rewind_to_turn(2) is True
+    assert prospect.state.readiness == prospect.review()["readiness_exact"]

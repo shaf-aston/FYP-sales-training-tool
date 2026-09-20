@@ -2571,7 +2571,7 @@ function buildEvaluationHTML(data) {
           ${coachTipHtml}
           ${data.summary ? `<div class="prospect-eval-summary">${escapeHtml(data.summary)}</div>` : ""}
           <div class="prospect-eval-actions">
-            <button class="review-open-btn" onclick="openSessionReview()">Walk it back</button>
+            <button class="review-open-btn" onclick="openSessionReview(this)">Walk it back</button>
             <button class="prospect-try-again-btn" onclick="tryAgainProspect()">Try again</button>
           </div>
         `;
@@ -2589,12 +2589,9 @@ function renderEvalInline(html) {
 function renderEvalModal(html) {
   const overlay = document.createElement("div");
   overlay.id = "prospectEvalModal";
-  overlay.style.cssText =
-    "position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:300;display:flex;justify-content:center;align-items:center;overflow-y:auto;padding:20px";
+  overlay.className = "review-overlay";
   const card = document.createElement("div");
-  card.className = "prospect-evaluation";
-  card.style.cssText =
-    "max-width:500px;width:100%;max-height:90vh;overflow-y:auto";
+  card.className = "prospect-evaluation eval-card";
   card.innerHTML = html;
   overlay.appendChild(card);
   overlay.onclick = (e) => {
@@ -2619,9 +2616,7 @@ function renderEvalPanel(html) {
 }
 
 function tryAgainProspect() {
-  // Remove modal if exists
-  const modal = document.getElementById("prospectEvalModal");
-  if (modal) modal.remove();
+  closeDialog(document.getElementById("prospectEvalModal"));
 
   // End current session
   if (_prospectSessionId) {
@@ -3381,8 +3376,9 @@ function buildReviewHTML(data) {
     </ol>`;
 }
 
-async function openSessionReview() {
+async function openSessionReview(trigger) {
   if (!_prospectSessionId) return;
+  setTriggerBusy(trigger, true, "Opening...");
 
   try {
     const response = await fetch("/api/prospect/review", {
@@ -3391,13 +3387,39 @@ async function openSessionReview() {
     const data = await response.json();
     if (!data.success) {
       if (handleProspectSessionError(data)) return;
-      addProspectMessage("Couldn't open the review: " + (data.error || ""), "bot");
+      showReviewOverlay(reviewErrorHTML(data.error));
       return;
     }
     showReviewOverlay(buildReviewHTML(data));
   } catch (e) {
-    addProspectMessage("Couldn't open the review: " + e, "bot");
+    showReviewOverlay(reviewErrorHTML(String(e)));
+  } finally {
+    setTriggerBusy(trigger, false);
   }
+}
+
+function reviewErrorHTML(detail) {
+  return `<h3 id="reviewHeading" class="review-heading">Walk it back</h3>
+    <p class="review-redo-error">Couldn't open the review. ${escapeHtml(detail || "")}</p>
+    <button class="review-redo-btn" onclick="closeSessionReview(); openSessionReview();">Try again</button>`;
+}
+
+function setTriggerBusy(button, busy, label) {
+  /* A button that does nothing visible for a second reads as broken. Triggers
+     here range from a plain button to a card with a heading and a description,
+     so the whole of the trigger's markup is put back, not just its text. */
+  if (!button) return;
+  if (busy) {
+    if (button.dataset.idleMarkup === undefined) {
+      button.dataset.idleMarkup = button.innerHTML;
+    }
+    button.textContent = label || "Loading...";
+  } else if (button.dataset.idleMarkup !== undefined) {
+    button.innerHTML = button.dataset.idleMarkup;
+    delete button.dataset.idleMarkup;
+  }
+  button.disabled = busy;
+  button.setAttribute("aria-busy", busy ? "true" : "false");
 }
 
 function showReviewOverlay(html) {
@@ -3419,16 +3441,26 @@ function closeSessionReview() {
   closeDialog(document.getElementById("sessionReviewOverlay"));
 }
 
-function startRedo(turn) {
+function startRedo(turn, draft) {
   const slot = document.getElementById("reviewRedo" + turn);
   if (!slot) return;
+  const lost = document.querySelectorAll(".review-turns > li").length - turn;
+  const warning =
+    lost > 0
+      ? `<p class="review-redo-warning">Saying this differently replaces the ${lost}
+         turn${lost === 1 ? "" : "s"} that came after it, and
+         ${lost === 1 ? "it can't" : "they can't"} be brought back.</p>`
+      : "";
   slot.innerHTML = `
+    ${warning}
     <label class="review-redo-label" for="reviewRedoInput${turn}">What would you say instead?</label>
-    <textarea id="reviewRedoInput${turn}" class="review-redo-input" rows="2"></textarea>
+    <textarea id="reviewRedoInput${turn}" class="review-redo-input" rows="2">${escapeHtml(draft || "")}</textarea>
     <button class="review-redo-btn" onclick="submitRedo(${turn})">Try it</button>`;
   const input = document.getElementById("reviewRedoInput" + turn);
   if (input) input.focus();
 }
+
+let _redoDraft = "";
 
 async function submitRedo(turn) {
   const input = document.getElementById("reviewRedoInput" + turn);
@@ -3440,8 +3472,9 @@ async function submitRedo(turn) {
     input.focus();
     return;
   }
+  _redoDraft = message;
 
-  slot.innerHTML = `<p class="review-redo-waiting">Seeing how they respond...</p>`;
+  slot.innerHTML = `<p class="review-redo-waiting" aria-live="polite">Seeing how they respond...</p>`;
 
   try {
     const response = await fetch("/api/prospect/redo", {
@@ -3456,7 +3489,7 @@ async function submitRedo(turn) {
 
     if (!data.success) {
       slot.innerHTML = `<p class="review-redo-error">${escapeHtml(data.error || "That didn't work.")}</p>
-        <button class="review-redo-btn" onclick="startRedo(${turn})">Try again</button>`;
+        <button class="review-redo-btn" onclick="startRedo(${turn}, _redoDraft)">Try again</button>`;
       return;
     }
 
@@ -3468,7 +3501,8 @@ async function submitRedo(turn) {
       </div>`;
     markTurnsAfterRedoAsGone(turn);
   } catch (e) {
-    slot.innerHTML = `<p class="review-redo-error">${escapeHtml(String(e))}</p>`;
+    slot.innerHTML = `<p class="review-redo-error">${escapeHtml(String(e))}</p>
+      <button class="review-redo-btn" onclick="startRedo(${turn}, _redoDraft)">Try again</button>`;
   }
 }
 
@@ -3560,10 +3594,10 @@ function buildDrillHTML(drill, index) {
     <div class="drill-card" id="drillCard${index}">
       <div class="drill-label">
         ${escapeHtml(drill.label)}
-        <span class="drill-count" id="drillCount${index}">0 of ${gaps} revealed</span>
+        <span class="drill-count" id="drillCount${index}" aria-live="polite">0 of ${gaps} revealed</span>
       </div>
       <p class="drill-line">${body}</p>
-      <div class="drill-actions" id="drillActions${index}" hidden>
+      <div class="drill-actions" id="drillActions${index}" aria-live="polite" hidden>
         <span class="drill-ask">Did you have it?</span>
         <button class="drill-got" onclick="gradeDrill(${index}, true)">Yes</button>
         <button class="drill-missed" onclick="gradeDrill(${index}, false)">Not quite</button>
@@ -3573,7 +3607,8 @@ function buildDrillHTML(drill, index) {
 
 let _drills = [];
 
-async function openScriptDrills() {
+async function openScriptDrills(trigger) {
+  setTriggerBusy(trigger, true, "Opening...");
   try {
     const headers = _prospectSessionId ? { "X-Session-ID": _prospectSessionId } : {};
     const response = await fetch("/api/prospect/drills", { headers: headers });
@@ -3586,7 +3621,9 @@ async function openScriptDrills() {
       .filter((item) => isDrillDue(item.drill.id));
     const practising = due.length ? due : _drills.map((d, i) => ({ drill: d, index: i }));
 
-    const note = due.length
+    const note = !_drills.length
+      ? "There are no lines to practise yet."
+      : due.length
       ? `${due.length} to practise.`
       : "Nothing is due - here they all are anyway.";
 
@@ -3606,6 +3643,8 @@ async function openScriptDrills() {
         <h3 id="reviewHeading">Say it from memory</h3>
         <p class="review-intro">The drills couldn't be loaded just now. Close this and try again.</p>
       </div>`);
+  } finally {
+    setTriggerBusy(trigger, false);
   }
 }
 

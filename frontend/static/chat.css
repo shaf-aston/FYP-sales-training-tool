@@ -22,6 +22,8 @@
   --warning-soft: rgba(232, 160, 90, 0.14);
   --danger: #e85a5a;
   --danger-soft: rgba(232, 90, 90, 0.14);
+  /* The dim behind any window that opens on top of the page. */
+  --overlay-scrim: rgba(0, 0, 0, 0.72);
   --shadow-lg: 0 24px 80px rgba(0, 0, 0, 0.38);
   --shadow-md: 0 12px 36px rgba(0, 0, 0, 0.24);
   --radius-xl: 28px;
@@ -1677,7 +1679,7 @@ textarea::-webkit-scrollbar-thumb,
   align-items: flex-start;
   overflow-y: auto;
   padding: 32px 16px;
-  background: rgba(0, 0, 0, 0.72);
+  background: var(--overlay-scrim);
 }
 
 .review-card {
@@ -1860,6 +1862,24 @@ textarea::-webkit-scrollbar-thumb,
 .review-redo-note {
   color: var(--text-subtle);
   font-size: 0.85rem;
+}
+
+.eval-card {
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.review-redo-warning {
+  color: var(--warning);
+  background: var(--bg-card-soft);
+  border-left: 2px solid var(--warning);
+  border-radius: 0 8px 8px 0;
+  padding: 8px 10px;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  margin-bottom: 10px;
 }
 
 .review-redo-error {
