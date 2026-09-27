@@ -27,6 +27,8 @@ ENV/
 sessions/
 analytics/
 feedback.jsonl
+analytics.jsonl
+metrics.jsonl
 .claude/
 
 # Editor and OS noise
