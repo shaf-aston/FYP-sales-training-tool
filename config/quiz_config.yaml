@@ -95,13 +95,33 @@ stages:
         - "Simple, direct answers"
         - "No over-elaboration"
 
+# Plain-English names for stage and strategy ids. The only place they are defined;
+# everything the learner reads (quiz feedback, expected answers) goes through these.
+stage_names:
+  intent: "Finding out what they want"
+  logical: "Understanding the problem"
+  emotional: "Making it personal"
+  pitch: "Presenting the solution"
+  negotiation: "Agreeing the terms"
+  objection: "Handling concerns"
+  outcome: "Closing"
+
+strategy_names:
+  consultative: "Consultative"
+  transactional: "Quick sale"
+  intent: "Intent-led"
+
+# Prospect mode: the learner is the seller, so the quiz replays one of their own
+# turns. {turn} and {line} are filled in from their session.
+prospect_question: 'On turn {turn} you said: "{line}" - what would you say instead to get the buyer talking?'
+
 # Quiz question templates by type
 questions:
   stage:
-    - "What FSM stage are we in right now?"
-    - "Based on the conversation so far, which FSM stage and strategy are active?"
-    - "Can you identify the current FSM stage and strategy?"
-    - "Where are we in the FSM (stage and strategy)?"
+    - "Which stage of the sale are we in right now?"
+    - "Based on the conversation so far, which stage of the sale and which approach are active?"
+    - "Can you identify the current stage of the sale and the approach?"
+    - "Where are we in the sale (stage and approach)?"
 
   next_move:
     - "What would you say next to this customer?"

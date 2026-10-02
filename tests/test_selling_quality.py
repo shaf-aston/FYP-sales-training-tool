@@ -116,12 +116,12 @@ def test_config_weights_and_thresholds_are_all_present():
     weights, limits = cfg["weights"], cfg["thresholds"]
 
     assert set(weights) == {
-        "open_question", "mirroring", "acknowledgement", "pressure",
+        "open_question", "on_topic", "generic_question", "closed_question", "mirroring", "acknowledgement", "pressure",
         "premature_pitch", "question_stacking", "monologue", "low_effort",
     }
     assert set(limits) == {
         "low_effort_words", "monologue_words", "question_stacking_count",
-        "mirroring_min_overlap", "discovery_turns",
+        "mirroring_min_overlap", "discovery_turns", "praise_min_average",
     }
     assert cfg["question_words"] and cfg["invitations"]
     # YAML reads bare on/no/yes as booleans - stopwords must stay text.

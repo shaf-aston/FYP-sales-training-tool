@@ -4,6 +4,9 @@
  * description of what you should have said.
  * ------------------------------------------------------------------------- */
 
+/* Letter grade of the last finished session, set when its score card is built. */
+let _lastSessionGrade = "";
+
 function ratingDots(rating) {
   let dots = "";
   for (let i = 1; i <= 5; i++) {
@@ -57,11 +60,19 @@ function buildReviewHTML(data) {
     return `<p class="review-empty">There are no turns to review yet.</p>`;
   }
 
-  const intro = pivotal.size
-    ? `${pivotal.size} turn${pivotal.size > 1 ? "s" : ""} cost you ground. Try ${
-        pivotal.size > 1 ? "them" : "it"
-      } again below and see what they say.`
-    : "Nothing here lost you ground. Good session.";
+  /* Praise needs the review's own verdict AND a passing session grade, so the
+     card above and this line can never disagree. */
+  const failingGrade = ["D", "F"].includes(_lastSessionGrade);
+  let intro;
+  if (pivotal.size) {
+    intro = `${pivotal.size} turn${pivotal.size > 1 ? "s" : ""} cost you ground. Try ${
+      pivotal.size > 1 ? "them" : "it"
+    } again below and see what they say.`;
+  } else if (summary.went_well && !failingGrade) {
+    intro = "Nothing here lost you ground. Good session.";
+  } else {
+    intro = `No single turn cost you ground, but the session did not land. Work on this: ${escapeHtml(summary.work_on || "")}`;
+  }
 
   return `
     <div class="review-head">
