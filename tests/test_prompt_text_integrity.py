@@ -45,3 +45,39 @@ def test_direct_info_override_waits_for_pitch_and_keeps_the_stage_prompt():
     assert "IMMEDIATE ACTION REQUIRED" in at_pitch
     assert "STAGE: PITCH" in at_pitch
     assert "|---" not in at_pitch
+
+
+def test_direct_info_override_does_not_fire_at_objection():
+    from core.content import generate_stage_prompt
+
+    ask = "what are the options and price?"
+    prompt = generate_stage_prompt("consultative", "objection", "Acme", [], ask)
+
+    assert "IMMEDIATE ACTION REQUIRED" not in prompt
+    assert "OBJECTION HANDLING" in prompt
+
+
+def test_consultative_pre_pitch_prompt_has_no_prices_immediately_instruction():
+    from core.content import generate_stage_prompt
+
+    for stage in ("intent", "logical", "emotional"):
+        prompt = generate_stage_prompt("consultative", stage, "Acme", [], "what are the options?")
+        assert "IMMEDIATELY" not in prompt
+        assert "NO products or prices" in prompt
+
+
+def test_budget_guard_is_consultative_only():
+    from core.content import generate_stage_prompt
+
+    msg = "my budget is 500"
+    assert "BUDGET-ONLY GUARD" in generate_stage_prompt("consultative", "intent", "Acme", [], msg)
+    assert "BUDGET-ONLY GUARD" not in generate_stage_prompt("transactional", "intent", "Acme", [], msg)
+
+
+def test_decisive_user_only_pushes_to_pitch_at_pitch():
+    from core.loader import get_adaptation_template
+
+    for stage in ("intent", "objection", "negotiation", "outcome"):
+        text = get_adaptation_template("decisive_user", strategy="transactional", stage=stage)
+        assert "to the pitch" not in text
+    assert "to the pitch" in get_adaptation_template("decisive_user", strategy="transactional", stage="pitch")

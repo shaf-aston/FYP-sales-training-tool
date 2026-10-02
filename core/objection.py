@@ -336,9 +336,9 @@ def _build_consultative_reframe_block(pathway: dict, attempt: int) -> str:
     reframe_descriptions = pathway.get("reframe_descriptions", {})
 
     if attempt == 0:
-        block = "\n[FIRST HIT - Acknowledge and ask the entry question. Do NOT reframe yet.]\n"
+        block = "\n[FIRST HIT - Acknowledge, then ask the entry question. Do NOT reframe yet.]\n"
         if entry_question:
-            block += f"ENTRY QUESTION: {entry_question}\n"
+            block += f"ENTRY QUESTION (the only question this turn): {entry_question}\n"
         return block
 
     reframe_idx = attempt - 1
@@ -356,7 +356,7 @@ def _build_consultative_reframe_block(pathway: dict, attempt: int) -> str:
     block += f"REFRAME: {reframe_desc.get('title', current_reframe_id)}\n"
     block += f"DIALOGUE: {reframe_desc.get('dialogue', '').strip()}\n"
     block += f"EXAMPLE: {reframe_desc.get('example', '').strip()}\n"
-    block += f"CHECK QUESTION: {reframe_desc.get('check_question', '').strip()}\n"
+    block += f"CHECK QUESTION (the only question this turn): {reframe_desc.get('check_question', '').strip()}\n"
 
     if pathway.get("category") == "resource":
         block += _build_resource_block(pathway)
@@ -382,18 +382,17 @@ def _build_transactional_reframe_block(pathway: dict, attempt: int) -> str:
     reframe_descriptions = pathway.get("reframe_descriptions", {})
 
     if attempt == 0:
-        return "\n[TRANSACTIONAL - Keep short. Acknowledge, clarify the blocker, offer the next step.]\n"
+        return "\n[TRANSACTIONAL - Keep short. Acknowledge, then ask ONE question that clarifies the blocker.]\n"
 
     if attempt >= 2 or not reframes:
-        return "\n[TRANSACTIONAL FINAL - Direct close attempt or acknowledge a clear no.]\n"
+        return "\n[TRANSACTIONAL FINAL - One direct close question, or acknowledge a clear no.]\n"
 
     current_reframe_id = reframes[0]
     reframe_desc = reframe_descriptions.get(current_reframe_id, {})
 
     block = "\n[TRANSACTIONAL REFRAME - keep concise]\n"
     block += f"REFRAME: {reframe_desc.get('title', current_reframe_id)}\n"
-    block += f"DIALOGUE: {reframe_desc.get('dialogue', '').strip()}\n"
-    block += f"CHECK QUESTION: {reframe_desc.get('check_question', '').strip()}\n"
+    block += f"CHECK QUESTION (the only question this turn): {reframe_desc.get('check_question', '').strip()}\n"
     return block
 
 
@@ -426,12 +425,15 @@ def _build_objection_context(
     sop_steps = flows.get(obj_type, OBJECTION_FLOW_FALLBACK)
     attempt = _count_objection_attempts(history, obj_type)
 
-    context = (
-        f"OBJECTION: {obj_type.upper()}\n"
-        f"CATEGORY: {pathway.get('category', '').upper()}\n"
-        f"STRATEGY: {pathway.get('strategy', 'general_reframe')}\n"
-        f"GUIDANCE: {pathway.get('guidance', '')}\n\n"
-        f"SOP STEPS:\n{sop_steps}\n"
+    context = f"OBJECTION: {obj_type.upper()}\n"
+    if strategy != Strategy.TRANSACTIONAL:  # its guidance leans on cost-of-inaction framing
+        context += (
+            f"CATEGORY: {pathway.get('category', '').upper()}\n"
+            f"STRATEGY: {pathway.get('strategy', 'general_reframe')}\n"
+            f"GUIDANCE: {pathway.get('guidance', '')}\n"
+        )
+    context += (
+        f"\nSOP GOALS:\n{sop_steps}\n"
     )
 
     if strategy == Strategy.TRANSACTIONAL:

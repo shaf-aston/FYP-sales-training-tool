@@ -58,47 +58,59 @@ reframe_guidance:
   smokescreen:
     general_reframe: "Do not force a pitch. Use one clean question to surface the real objection underneath the vague response."
 
+# SOP steps are goals; the attempt block in core/objection.py sets the turn's action and its one question.
 sop_flows:
   money: |
     1. Acknowledge the concern without defending price.
     2. Reconnect to the problem they want solved.
-    3. Test whether money is the real blocker.
-    4. Reframe with cost-of-inaction logic.
-    5. Ask one concise next-step question.
+    3. Find out whether money is the real blocker.
+    4. Use cost-of-inaction logic only when the attempt block supplies a reframe.
   partner: |
     1. Acknowledge the outside stakeholder.
     2. Clarify what that person is likely to push back on.
     3. Strengthen the prospect's own reasons first.
-    4. Prepare a simple, buyer-led way to continue.
+    4. Keep the next step buyer-led.
   fear: |
     1. Acknowledge the hesitation.
     2. Isolate the specific risk or uncertainty.
-    3. Contrast the risk of action with the risk of staying the same.
-    4. Ask one question that moves the conversation forward.
+    3. Contrast the risk of action with the risk of staying the same, once a reframe is supplied.
   logistical: |
     1. Clarify the practical blocker.
-    2. Test whether timing is the real issue.
+    2. Find out whether timing is the real issue.
     3. Reduce the next step to something manageable.
-    4. Ask for a concrete commitment.
   think: |
     1. Acknowledge the need to think.
     2. Clarify what is still unresolved.
-    3. Reconnect to the consequence of delay.
-    4. Ask one question that sharpens the decision.
+    3. Reconnect to the consequence of delay, once a reframe is supplied.
   smokescreen: |
     1. Avoid pitching or over-explaining.
     2. Clarify what feels unresolved.
     3. Surface the real blocker before continuing.
 
+# Transactional: practical and factual only - no cost-of-delay or emotional-stakes language.
 transactional_overrides:
   money: |
     1. Acknowledge the price concern directly.
     2. Clarify whether price or timing is the blocker.
     3. Keep the response short and practical.
-    4. Ask for the simplest viable next step.
+  think: |
+    1. Acknowledge the need to think.
+    2. Find out which detail is still unclear (price, specs, availability).
+    3. Answer it factually and keep it short.
+  fear: |
+    1. Acknowledge the concern.
+    2. Isolate the specific doubt.
+    3. Answer with evidence (specs, warranty, reviews).
+  partner: |
+    1. Acknowledge the other decision-maker.
+    2. Find out what they need to see to say yes.
+    3. Offer a simple way to share the details.
+  logistical: |
+    1. Clarify the practical blocker (date, delivery, payment).
+    2. Offer the simplest workable option.
+    3. Keep the next step concrete.
 
 fallback: |
   1. Acknowledge the concern.
   2. Recall the user's goal.
-  3. Apply the best-fit reframe.
-  4. Ask one question only.
+  3. Follow the attempt block.
