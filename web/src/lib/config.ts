@@ -9,6 +9,7 @@ export const config = {
   maxMessageLength: 1_000,
   maxFeedbackLength: 500,
   historyCap: 100,
+  countUpMs: 800,
   voice: {
     silenceDelayMs: 500,
     ttsWatchdogMs: 15_000,

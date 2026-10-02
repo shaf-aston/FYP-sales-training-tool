@@ -16,7 +16,7 @@ export class ApiError extends Error {
 
   /** The server forgot this session (restart or idle timeout). */
   get sessionExpired(): boolean {
-    return this.code === "SESSION_EXPIRED" || /session not found|no active|session expired|prospect session/i.test(this.message);
+    return this.code === "SESSION_EXPIRED";
   }
 
   get timedOut(): boolean {
@@ -55,7 +55,9 @@ async function request<R>(path: string, opts: RequestOptions = {}): Promise<R> {
 
   const data = await res.json().catch(() => null);
   if (!res.ok || !data || data.error || data.success === false) {
-    throw new ApiError(data?.error ?? `Request failed (${res.status})`, res.status, data?.code);
+    // Server faults get a plain message so internals never reach the screen.
+    const message = res.status >= 500 && !data?.code ? "Something went wrong on our side. Try again in a moment." : data?.error;
+    throw new ApiError(message ?? `Request failed (${res.status})`, res.status, data?.code);
   }
   return data as R;
 }
@@ -85,7 +87,7 @@ export function createHttpApi() {
     },
 
     // Prospect practice
-    productGroups: () => request<{ ok: true; groups: T.ProductGroups }>("/api/prospect/product-groups"),
+    productGroups: () => request<{ success: true; groups: T.ProductGroups }>("/api/prospect/product-groups"),
     prospectInit: (difficulty: T.Difficulty, productType: string) =>
       request<T.ProspectInitRes>("/api/prospect/init", { body: { difficulty, product_type: productType }, timeoutMs: chat }),
     prospectChat: (sid: string, message: string, showHints: boolean) =>

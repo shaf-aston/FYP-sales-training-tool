@@ -2,7 +2,7 @@
 
 // The one store for the conversation: which mode we're in, the messages, the
 // seller-bot session (stage, strategy, coaching) and the prospect session.
-// Features read it with useSession(); only this file talks to the chat endpoints.
+// Features read it with useSession(). Pure history helpers live in ./history.ts.
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { api, ApiError } from "@/lib/api/client";
@@ -11,20 +11,11 @@ import { config, storageKeys } from "@/lib/config";
 import { readString, writeString } from "@/lib/storage";
 import { useStoredState } from "@/lib/useStoredState";
 import { useToast } from "@/components/ui";
+import { fromHistory, newId, nextIndex, parseSettings, type ChatMessage, type ProspectSettings } from "./history";
+
+export type { ChatMessage, ProspectSettings };
 
 export type Mode = "seller" | "prospect";
-
-export interface ChatMessage {
-  id: string;
-  role: "user" | "assistant" | "divider";
-  content: string;
-  /** Position in the server's history; used by edit. -1 for dividers. */
-  historyIndex: number;
-  /** Debug line (latency · provider), shown only with ?debug=1. */
-  meta?: string;
-  /** Greyed out: replaced by an edit. */
-  historical?: boolean;
-}
 
 export interface ProspectSession {
   sessionId: string;
@@ -37,11 +28,6 @@ export interface ProspectSession {
   ended: boolean;
   outcome: Outcome;
   hint: string;
-}
-
-export interface ProspectSettings {
-  showHints: boolean;
-  evalDisplay: "inline" | "modal" | "panel";
 }
 
 interface SendResult {
@@ -77,9 +63,6 @@ interface SessionValue {
 
 const SessionContext = createContext<SessionValue | null>(null);
 
-let seq = 0;
-const newId = () => `m${Date.now().toString(36)}${(seq++).toString(36)}`;
-
 const debugOn = () => {
   if (typeof window === "undefined") return false;
   return new URLSearchParams(location.search).get("debug") === "1" || readString(storageKeys.debug) === "1";
@@ -87,21 +70,6 @@ const debugOn = () => {
 
 const metaLine = (latency: number | null | undefined, provider?: string) =>
   debugOn() && latency != null ? `${Math.round(latency)}ms · ${provider ?? "?"}` : undefined;
-
-function fromHistory(history: ChatMsg[], offset = 0): ChatMessage[] {
-  return history.slice(-config.historyCap).map((m, i) => ({ id: newId(), role: m.role, content: m.content, historyIndex: offset + i }));
-}
-
-const liveCount = (msgs: ChatMessage[]) => msgs.filter((m) => m.role !== "divider" && !m.historical).length;
-
-const parseSettings = (raw: string): ProspectSettings | undefined => {
-  try {
-    const v = JSON.parse(raw);
-    return { showHints: v.showHints !== false, evalDisplay: ["inline", "modal", "panel"].includes(v.evalDisplay) ? v.evalDisplay : "inline" };
-  } catch {
-    return undefined;
-  }
-};
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const toast = useToast();
@@ -120,6 +88,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     parseSettings,
   );
   const recovering = useRef(false);
+  /** True while a send or edit is in flight; blocks a second one before React re-renders. */
+  const busy = useRef(false);
+  /** Bumped whenever the conversation is replaced, so late replies from the old one are dropped. */
+  const epoch = useRef(0);
+  const started = useRef(false);
 
   const adopt = useCallback((res: { session_id: string; message: string | null; history: ChatMsg[]; training?: Training } & BotState) => {
     setSessionId(res.session_id);
@@ -127,7 +100,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setBot({ stage: res.stage, strategy: res.strategy });
     setTraining(res.training ?? null);
     const history = res.history?.length ? res.history : res.message ? [{ role: "assistant" as const, content: res.message }] : [];
-    setMessages(fromHistory(history));
+    setMessages(fromHistory(history, config.historyCap));
   }, []);
 
   /** Start or restore a seller-bot session. Retries once without the saved id. */
@@ -140,7 +113,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           adopt(await api.init(id));
           break;
         } catch (err) {
-          if (id) {
+          // Only a refused id is thrown away; a network blip keeps it for the next try.
+          if (id && err instanceof ApiError && err.status === 400) {
             writeString(storageKeys.sessionId, null);
             continue;
           }
@@ -153,8 +127,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
+    if (started.current) return; // StrictMode mounts twice in dev; connect once.
+    started.current = true;
     // Mount-time connect to the server; state is set after the request resolves.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     initSeller();
     api
       .publicConfig()
@@ -184,18 +159,21 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const send = useCallback(
     async (text: string): Promise<SendResult> => {
       const message = text.trim();
-      if (!message || typing) return { ok: false };
+      if (!message || busy.current) return { ok: false };
       if (message.length > config.maxMessageLength) {
         toast(`Keep it under ${config.maxMessageLength} characters.`, "error");
         return { ok: false, restore: text };
       }
+      busy.current = true;
+      const my = epoch.current;
       const optimisticId = newId();
-      const before = liveCount(messages);
+      const before = nextIndex(messages);
       setMessages((m) => [...m, { id: optimisticId, role: "user", content: message, historyIndex: before }]);
       setTyping(true);
       try {
         if (mode === "prospect" && prospect) {
           const res = await api.prospectChat(prospect.sessionId, message, prospectSettings.showHints);
+          if (epoch.current !== my) return { ok: true };
           setMessages((m) => [...m, { id: newId(), role: "assistant", content: res.message, historyIndex: before + 1, meta: metaLine(res.latency_ms, res.provider) }]);
           setProspect((p) =>
             p && { ...p, state: res.state, ended: res.ended, outcome: res.outcome, hint: res.coaching?.hint ?? p.hint },
@@ -203,12 +181,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         } else {
           if (!sessionId) throw new ApiError("No active session", 400, "SESSION_EXPIRED");
           const res = await api.chat(sessionId, message);
+          if (epoch.current !== my) return { ok: true };
           setMessages((m) => [...m, { id: newId(), role: "assistant", content: res.message, historyIndex: before + 1, meta: metaLine(res.latency_ms, res.provider) }]);
           setBot({ stage: res.stage, strategy: res.strategy });
           setTraining(res.training);
         }
         return { ok: true };
       } catch (err) {
+        if (epoch.current !== my) return { ok: false };
         if (handleExpired(err)) return { ok: false, restore: message };
         // The server may have accepted the message before failing; check before rolling back.
         if (mode === "seller" && sessionId) {
@@ -227,16 +207,19 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         toast(err instanceof ApiError ? err.message : "Message failed. Try again.", "error");
         return { ok: false, restore: message };
       } finally {
+        busy.current = false;
         setTyping(false);
       }
     },
-    [messages, typing, mode, prospect, prospectSettings.showHints, sessionId, handleExpired, adopt, toast],
+    [messages, mode, prospect, prospectSettings.showHints, sessionId, handleExpired, adopt, toast],
   );
 
   const edit = useCallback(
     async (historyIndex: number, text: string) => {
       const message = text.trim();
-      if (!sessionId || !message) return false;
+      if (mode !== "seller" || !sessionId || !message || busy.current) return false;
+      busy.current = true;
+      const my = epoch.current;
       const affected = new Set(
         messages.filter((x) => x.role !== "divider" && !x.historical && x.historyIndex >= historyIndex).map((x) => x.id),
       );
@@ -245,10 +228,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setTyping(true);
       try {
         const res = await api.edit(sessionId, historyIndex, message);
+        if (epoch.current !== my) return false;
         setMessages((m) => [
           ...m,
           { id: newId(), role: "divider", content: "Edited", historyIndex: -1 },
-          ...fromHistory(res.history.slice(historyIndex), historyIndex),
+          ...fromHistory(res.history.slice(historyIndex), config.historyCap, historyIndex),
         ]);
         setBot({ stage: res.stage, strategy: res.strategy });
         setTraining(res.training);
@@ -259,15 +243,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         toast(err instanceof ApiError ? `Edit failed: ${err.message}` : "Edit didn't go through. Try again.", "error");
         return false;
       } finally {
+        busy.current = false;
         setTyping(false);
       }
     },
-    [messages, sessionId, handleExpired, toast],
+    [mode, messages, sessionId, handleExpired, toast],
   );
 
   const startProspect = useCallback(
     async (difficulty: Difficulty, productType: string) => {
       // Block sends while the buyer loads; a message sent now would be wiped when it arrives.
+      epoch.current++;
       setTyping(true);
       try {
         const res = await api.prospectInit(difficulty, productType);
@@ -302,9 +288,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setProspect(null);
     setMode("seller");
     setMessages([]);
-    writeString(storageKeys.sessionId, null);
+    epoch.current++;
+    // Go back to the seller chat the user had before practising.
     setTyping(true);
-    await initSeller(false);
+    await initSeller(true);
     setTyping(false);
   }, [prospect, initSeller]);
 
@@ -322,6 +309,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       }
     }
     writeString(storageKeys.sessionId, null);
+    epoch.current++;
     setMessages([]);
     setBot({ stage: "intent", strategy: "-" as BotState["strategy"] });
     setTraining(null);

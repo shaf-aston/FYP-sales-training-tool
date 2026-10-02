@@ -253,7 +253,7 @@ def prospect_product_groups():
     """Curated prospect dropdown groups as JSON (the React app has no Jinja)."""
     from flask import jsonify
 
-    return jsonify({"ok": True, "groups": _prospect_product_groups()})
+    return jsonify({"success": True, "groups": _prospect_product_groups()})
 
 
 WEB_BUILD_DIR = ROOT_DIR / "web" / "out"
@@ -264,13 +264,15 @@ WEB_BUILD_DIR = ROOT_DIR / "web" / "out"
 def web_app(path: str):
     """Serve the static Next.js build (web/out). `npm run build` in web/ creates it."""
     from flask import abort, send_from_directory
+    from werkzeug.exceptions import NotFound
 
     if not WEB_BUILD_DIR.is_dir():
         abort(404)
-    target = WEB_BUILD_DIR / path
-    if path == "" or target.is_dir():
-        path = f"{path.rstrip('/')}/index.html".lstrip("/")
-    return send_from_directory(WEB_BUILD_DIR, path)
+    # send_from_directory rejects traversal; a folder request falls back to its index.html.
+    try:
+        return send_from_directory(WEB_BUILD_DIR, path or "index.html")
+    except NotFound:
+        return send_from_directory(WEB_BUILD_DIR, f"{path.rstrip('/')}/index.html")
 
 
 @app.errorhandler(Exception)

@@ -6,7 +6,7 @@ import { useUi } from "@/features/shell/UiContext";
 import type { Evaluation, Outcome } from "@/lib/api/types";
 import { Confetti } from "./Confetti";
 import { prospectConfig } from "./prospectConfig";
-import { useCountUp } from "./useCountUp";
+import { useCountUp } from "@/lib/useCountUp";
 import { useEvaluation } from "./useEvaluation";
 import s from "./EvaluationCard.module.css";
 
@@ -36,7 +36,7 @@ function Bullets({ title, items }: { title: string; items: string[] }) {
 function Result({ ev }: { ev: Evaluation }) {
   const { prospect, startProspect } = useSession();
   const { openDialog, closeDialog } = useUi();
-  const score = useCountUp(ev.overall_score || 0, prospectConfig.countUpMs);
+  const score = useCountUp(ev.overall_score || 0);
   const grade = (ev.grade || "?").toUpperCase();
   const outcome = OUTCOME[ev.outcome] ?? OUTCOME.incomplete;
   const celebrate = ev.outcome === "sold" || (prospectConfig.celebrateGrades as readonly string[]).includes(grade);

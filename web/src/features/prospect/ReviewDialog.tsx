@@ -6,6 +6,7 @@ import { useSession } from "@/features/session/SessionContext";
 import { useUi } from "@/features/shell/UiContext";
 import { api, ApiError } from "@/lib/api/client";
 import type { RedoRes, Review, ReviewTurn } from "@/lib/api/types";
+import { config } from "@/lib/config";
 import { gradeOf, useEvalState } from "./evalStore";
 import s from "./ReviewDialog.module.css";
 
@@ -87,7 +88,7 @@ function Redo({ turn, laterTurns, done, onDone }: RedoProps) {
       <p className={s.warn}>
         Saying this differently replaces the {laterTurns} turn{laterTurns === 1 ? "" : "s"} that came after it. The buyer will reply for real from here.
       </p>
-      <TextArea label="What would you say instead?" rows={3} value={draft} onChange={(e) => setDraft(e.target.value)} disabled={waiting} />
+      <TextArea label="What would you say instead?" rows={3} maxLength={config.maxMessageLength} count={draft.length} value={draft} onChange={(e) => setDraft(e.target.value)} disabled={waiting} />
       <div aria-live="polite">{waiting && <Notice kind="loading">Seeing how they respond…</Notice>}</div>
       {error && (
         <Notice kind="error">

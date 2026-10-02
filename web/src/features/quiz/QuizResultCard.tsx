@@ -4,7 +4,7 @@ import { Badge, Card, Eyebrow, Markdown } from "@/components/ui";
 import type { QuizResult } from "@/lib/api/types";
 import { stageMeta, strategyMeta } from "@/lib/labels";
 import { scoreBand, scorePercent, type QuizKind } from "./scoring";
-import { useCountUp } from "./useCountUp";
+import { useCountUp } from "@/lib/useCountUp";
 import s from "./quiz.module.css";
 
 function Block({ title, children }: { title: string; children: React.ReactNode }) {
