@@ -58,10 +58,10 @@ def with_session(bp):
 
 def validate_provider(data):
     """Return (provider, error). Error is a ready response when the provider is unknown."""
-    from core.providers.factory import supported_provider_names
+    from core.providers import list_providers
 
     provider = InputValidator.normalize_provider(data.get("provider"))
-    supported = supported_provider_names(include_non_production=False)
+    supported = list_providers()
     if provider is not None and provider not in supported:
         return None, (
             jsonify(

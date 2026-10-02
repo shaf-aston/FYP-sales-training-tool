@@ -13,7 +13,6 @@ from .buyer_prompt import build_product_context, build_system_prompt
 from .buyer_rules import ObjectionPacer, end_outcome
 from .real_calls import pick_bank
 from .services.provider_router import ProviderRouter
-from .prospect_session_persistence import ProspectSessionPersistence
 from .selling_quality import apply_readiness, score_seller_turn
 from .session_review import build_review
 
@@ -237,11 +236,22 @@ class ProspectSession:
             },
         }
 
-    def save_session(self) -> bool:
-        """Log the current prospect session state."""
+    def save_session(self) -> None:
+        """Log a compact snapshot of the prospect session."""
         if not self.session_id:
-            return False
-        return ProspectSessionPersistence.save(self.session_id, self.to_dict())
+            return
+        logger.info(
+            "prospect_session_state %s",
+            json.dumps(
+                {
+                    "session_id": self.session_id,
+                    "difficulty": self.state.difficulty,
+                    "turn_count": self.state.turn_count,
+                    "message_count": len(self.conversation_history),
+                },
+                ensure_ascii=False,
+            ),
+        )
 
     def get_opening_message(self) -> ProspectResponse:
         """Generate the prospect's opening message to start the conversation.

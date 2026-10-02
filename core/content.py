@@ -25,7 +25,7 @@ from .prompts import (
     generate_init_greeting,
     get_base_prompt,
     get_ack_guidance,
-    check_override_condition,
+    get_override_guidance,
     format_conversation_context,
 )
 from .analysis import (
@@ -110,9 +110,9 @@ def _get_preference_and_keyword_context(history, preferences):
     keyword_context = ""
     if user_keywords:
         keyword_context = f"""
-USER'S OWN WORDS (embed keywords, don't replay sentences):
+USER'S OWN WORDS:
 Terms the user has used: {", ".join(user_keywords)}
-Naturally embed 1-2 into your response. Do NOT replay full sentences.
+Naturally embed 1-2 into a new thought in your response.
 """
 
     return preference_context + keyword_context
@@ -134,32 +134,16 @@ def _get_recent_assistant_question(history) -> str:
 def _get_stage_specific_prompt(
     strategy, stage, state, user_message, history, objection_data=None
 ):
-    """Select the stage prompt and, for objections, build the separate context block.
-
-    Returns:
-        tuple[str, str]: (stage_prompt, stage_context)
-            stage_prompt: The instruction template for the active stage.
-            stage_context: Extra objection SOP text, or an empty string for non-objection stages.
-    """
-
-    if stage == Stage.INTENT:
-        prompt_key = "intent_low" if state.intent == "low" else "intent"
-        return get_prompt(strategy, prompt_key), ""
-
-    if stage in (Stage.LOGICAL, Stage.EMOTIONAL):
-        return get_prompt(strategy, stage), ""
-
-    if stage == Stage.OBJECTION:
-        objection_context = _build_objection_context(
-            strategy=strategy,
-            stage=stage,
-            user_message=user_message,
-            history=history,
-            objection_data=objection_data,
-        )
-        return get_prompt(strategy, stage), objection_context
-
-    return get_prompt(strategy, stage), ""
+    """Return (stage_prompt, stage_context); context is the objection SOP, empty outside OBJECTION."""
+    prompt_key = "intent_low" if stage == Stage.INTENT and state.intent == "low" else stage
+    stage_context = _build_objection_context(
+        strategy=strategy,
+        stage=stage,
+        user_message=user_message,
+        history=history,
+        objection_data=objection_data,
+    )
+    return get_prompt(strategy, prompt_key), stage_context
 
 
 def generate_stage_prompt(
@@ -195,12 +179,7 @@ def generate_stage_prompt(
     )
     preferences = extract_preferences(history)
 
-    # Tier 1: Override (early exit)
-    override = check_override_condition(
-        base, user_message, stage, history, preferences
-    )
-    if override:
-        return override
+    override = get_override_guidance(user_message, stage, history, preferences)
 
     # ack level - must appear before the stage prompt
     ack_guidance = get_ack_guidance(detect_ack_context(user_message, history, state))
@@ -295,6 +274,7 @@ Intent: {state.intent} | Guarded: {"yes" if state.guarded else "no"}
         + tactic_guidance
         + stage_prompt
         + stage_context
+        + override
         + budget_only_guard
         + drift_note
         + repetition_guard

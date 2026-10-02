@@ -5,6 +5,9 @@ from core.providers.base import LLMResponse
 
 
 class StubProspectProvider:
+    def is_available(self):
+        return True
+
     provider_name = "stub"
 
     def get_model_name(self):
@@ -22,8 +25,8 @@ def test_prospect_init_returns_opening_message_and_history(monkeypatch):
     client = app.test_client()
 
     monkeypatch.setattr(
-        "core.services.provider_router.create_provider_with_trace",
-        lambda *_args, **_kwargs: (StubProspectProvider(), None),
+        "core.services.provider_router.create_provider",
+        lambda *_args, **_kwargs: StubProspectProvider(),
     )
 
     response = client.post(
@@ -97,8 +100,8 @@ def test_prospect_init_supports_high_ticket_sales_mentorship(monkeypatch):
     client = app.test_client()
 
     monkeypatch.setattr(
-        "core.services.provider_router.create_provider_with_trace",
-        lambda *_args, **_kwargs: (StubProspectProvider(), None),
+        "core.services.provider_router.create_provider",
+        lambda *_args, **_kwargs: StubProspectProvider(),
     )
 
     response = client.post(

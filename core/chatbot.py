@@ -52,7 +52,6 @@ class SalesChatbot:
     ):
         """Set up the provider, product context, flow engine, and analytics hooks."""
         self._router = ProviderRouter(provider_type=provider_type, model=model)
-        self.provider_resolution = self._router.resolution
         self.session_id = session_id
         self.product_type = product_type
         self.logger = logging.LoggerAdapter(
@@ -99,10 +98,6 @@ class SalesChatbot:
             )
 
     @property
-    def provider(self):
-        return self._router.provider
-
-    @property
     def provider_name(self) -> str:
         return self._router.provider_name
 
@@ -115,11 +110,7 @@ class SalesChatbot:
         if not self.session_id:
             return
 
-        turn_count = getattr(
-            self.flow_engine,
-            "user_turn_count",
-            sum(1 for m in getattr(self.flow_engine, "conversation_history", []) if m.get("role") == "user"),
-        )
+        turn_count = self.flow_engine.user_turn_count
 
         payload = {
             "session_id": self.session_id,
@@ -230,17 +221,11 @@ class SalesChatbot:
         self,
         reply_text: str,
         user_message: str,
-        provider_name: str | None = None,
     ) -> Layer3CheckResult:
         """Run LAYER 3 (Response Validation) checks on LLM output.
 
         Detects and blocks rule violations before sending response to user.
-        Probe provider returns JSON payloads for tests and must remain unmodified.
         """
-        active_provider = (provider_name or self.provider_name or "").lower()
-        if active_provider == "probe":
-            return Layer3CheckResult(content=reply_text)
-
         result = apply_layer3_output_checks(
             reply_text=reply_text,
             stage=self.flow_engine.current_stage,
@@ -409,7 +394,7 @@ class SalesChatbot:
     def generate_training(self, user_msg: str, bot_reply: str) -> dict[str, Any]:
         """Generate coaching notes for the current exchange via lightweight LLM call."""
         return trainer.generate_training(
-            self.provider, self.flow_engine, user_msg, bot_reply
+            self._router, self.flow_engine, user_msg, bot_reply
         )
 
     def answer_training_question(
@@ -417,7 +402,7 @@ class SalesChatbot:
     ) -> dict[str, Any]:
         """Answer a trainee's question about the current conversation and sales techniques."""
         return trainer.answer_training_question(
-            self.provider, self.flow_engine, question, style
+            self._router, self.flow_engine, question, style
         )
 
     def run_quiz_stage_answer(self, answer: str) -> dict:
@@ -434,13 +419,13 @@ class SalesChatbot:
             "",
         )
         return quiz.test_quiz_next_move(
-            response, self.provider, self.flow_engine.current_stage, self.flow_engine.flow_type, last_user_msg
+            response, self._router, self.flow_engine.current_stage, self.flow_engine.flow_type, last_user_msg
         )
 
     def run_quiz_direction(self, explanation: str) -> dict:
         """Score the user's explanation of why the conversation should move next."""
         return quiz.test_quiz_direction(
-            explanation, self.provider, self.flow_engine.current_stage, self.flow_engine.flow_type
+            explanation, self._router, self.flow_engine.current_stage, self.flow_engine.flow_type
         )
 
     def _capture_turn_snapshot(self, turn_state=None) -> dict:
@@ -467,11 +452,6 @@ class SalesChatbot:
             self._turn_snapshots[current_turns - 1] = snapshot
         else:
             self._turn_snapshots.append(snapshot)
-
-    def rewind(self, steps: int):
-        """Rewind back by `steps` turns from the current position."""
-        current_turns = len(self.flow_engine.conversation_history) // 2
-        return self.rewind_to_turn(max(0, current_turns - steps))
 
     def rewind_to_turn(self, turn_index: int) -> bool:
         """Rewind to turn_index by loading FSM snapshot instead of replaying."""
@@ -551,37 +531,19 @@ class SalesChatbot:
         """Emit a durable log snapshot of the current session state."""
         if not self.session_id:
             return
-        try:
-            self.logger.info(
-                "session_snapshot %s",
-                json.dumps(
-                    {
-                        "session_id": self.session_id,
-                        "product_type": self.product_type,
-                        "provider_type": self.provider_name,
-                        "flow_type": self.flow_engine.flow_type,
-                        "current_stage": self.flow_engine.current_stage,
-                        "stage_turn_count": self.flow_engine.stage_turn_count,
-                        "initial_flow_type": self.flow_engine.initial_flow_type,
-                        "turn_count": getattr(
-                            self.flow_engine,
-                            "user_turn_count",
-                            sum(
-                                1
-                                for m in getattr(self.flow_engine, "conversation_history", [])
-                                if m.get("role") == "user"
-                            ),
-                        ),
-                        "message_count": len(self.flow_engine.conversation_history),
-                    },
-                    ensure_ascii=False,
-                    default=str,
-                ),
-            )
-        except Exception as e:
-            self.logger.exception(
-                "Exception while logging session %s: %s", self.session_id, e
-            )
+        fe = self.flow_engine
+        snapshot = {
+            "session_id": self.session_id,
+            "product_type": self.product_type,
+            "provider_type": self.provider_name,
+            "flow_type": fe.flow_type,
+            "current_stage": fe.current_stage,
+            "stage_turn_count": fe.stage_turn_count,
+            "initial_flow_type": fe.initial_flow_type,
+            "turn_count": fe.user_turn_count,
+            "message_count": len(fe.conversation_history),
+        }
+        self.logger.info("session_snapshot %s", json.dumps(snapshot, default=str))
 
     def record_session_end(self):
         """Record where this session actually got to, so finished sessions are counted."""
@@ -592,14 +554,6 @@ class SalesChatbot:
             event="session_end",
             final_stage=str(self.flow_engine.current_stage),
             strategy=str(self.flow_engine.flow_type),
-            turn_count=getattr(
-                self.flow_engine,
-                "user_turn_count",
-                sum(
-                    1
-                    for m in getattr(self.flow_engine, "conversation_history", [])
-                    if m.get("role") == "user"
-                ),
-            ),
+            turn_count=self.flow_engine.user_turn_count,
             message_count=len(self.flow_engine.conversation_history),
         )

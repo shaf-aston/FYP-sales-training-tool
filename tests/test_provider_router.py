@@ -22,19 +22,18 @@ class _Provider:
 
 @pytest.fixture
 def router(monkeypatch):
-    fallbacks = {
+    providers = {
+        "groq": _Provider("groq", error="429 rate_limit_exceeded"),
         "down": _Provider("down", available=False),
         "empty": _Provider("empty", reply="   "),
         "good": _Provider("good", reply="hi there"),
     }
     monkeypatch.setattr(
-        "core.services.provider_router.create_provider_with_trace",
-        lambda *_a, **_k: (_Provider("groq", error="429 rate_limit_exceeded"), None),
+        "core.services.provider_router.list_providers", lambda fallback=False: list(providers)
     )
     monkeypatch.setattr(
-        "core.services.provider_router.list_fallback_providers", lambda _n: list(fallbacks)
+        "core.services.provider_router.create_provider", lambda name, model=None: providers[name]
     )
-    monkeypatch.setattr("core.services.provider_router.create_provider", fallbacks.__getitem__)
     return ProviderRouter()
 
 
@@ -45,7 +44,7 @@ def test_skips_unavailable_and_empty_then_switches_to_first_good(router):
 
 
 def test_all_fail_returns_first_error_and_keeps_provider(router, monkeypatch):
-    monkeypatch.setattr("core.services.provider_router.list_fallback_providers", lambda _n: [])
+    monkeypatch.setattr("core.services.provider_router.list_providers", lambda fallback=False: ["groq"])
     result = router.chat_with_fallback([])
     assert not result.ok and "429" in result.response.error
     assert router.provider_name == "groq"

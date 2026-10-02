@@ -13,6 +13,9 @@ from core.providers.base import LLMResponse
 
 
 class StubProspectProvider:
+    def is_available(self):
+        return True
+
     provider_name = "stub"
 
     def get_model_name(self):
@@ -26,8 +29,8 @@ class StubProspectProvider:
 def client(monkeypatch):
     app.config["TESTING"] = True
     monkeypatch.setattr(
-        "core.services.provider_router.create_provider_with_trace",
-        lambda *_args, **_kwargs: (StubProspectProvider(), None),
+        "core.services.provider_router.create_provider",
+        lambda *_args, **_kwargs: StubProspectProvider(),
     )
     return app.test_client()
 

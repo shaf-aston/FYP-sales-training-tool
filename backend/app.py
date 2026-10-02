@@ -1,6 +1,5 @@
 """Flask application entrypoint."""
 
-import os
 import sys
 from pathlib import Path
 
@@ -29,6 +28,7 @@ if __package__ in (None, ""):
         SessionSecurityManager,
         initialize_security,
     )
+    from backend import settings
     from backend.routes import analytics, chat, prospect, session
     from backend.routes._utils import make_require_session
 else:
@@ -44,6 +44,7 @@ else:
         SessionSecurityManager,
         initialize_security,
     )
+    from . import settings
     from .routes import analytics, chat, prospect, session
     from .routes._utils import make_require_session
 
@@ -55,15 +56,7 @@ app = Flask(
 
 # CORS: restrict to configured origins (default: Render deployment + localhost dev)
 # Override via ALLOWED_ORIGINS env var (comma-separated) for other deployments
-_allowed_origins = [
-    o.strip()
-    for o in os.environ.get(
-        "ALLOWED_ORIGINS",
-        "https://fyp-sales-training-tool.onrender.com,http://localhost:5000",
-    ).split(",")
-    if o.strip()
-]
-CORS(app, origins=_allowed_origins)
+CORS(app, origins=settings.allowed_origins())
 
 
 rate_limiter, session_manager, injection_validator = initialize_security(
@@ -86,11 +79,10 @@ def _should_start_background_cleanup() -> bool:
     if app.config.get("TESTING"):
         return False
 
-    is_debug_mode = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
-    if not is_debug_mode:
+    if not settings.is_flask_debug():
         return True
 
-    return os.environ.get("WERKZEUG_RUN_MAIN") == "true"
+    return settings.is_reloader_child()
 
 
 if _should_start_background_cleanup():
@@ -223,11 +215,7 @@ def _prospect_product_groups():
 def _render_index(mode: str):
     """Render the chat page; product dropdown is populated server-side."""
     # Keep UI flow-controls consistent with the privileged-mutation guard in `backend/security.py`.
-    require_admin = app.config.get(
-        "REQUIRE_ADMIN_FOR_STAGE_MUTATION",
-        os.environ.get("REQUIRE_ADMIN_FOR_STAGE_MUTATION", "").strip().lower()
-        in {"1", "true", "yes", "on"},
-    )
+    require_admin = settings.require_admin_for_stage_mutation(app.config)
     return render_template(
         "index.html",
         mode=mode,
@@ -273,4 +261,4 @@ def handle_unexpected_error(e):
 
 
 if __name__ == "__main__":
-    app.run(debug=os.environ.get("FLASK_DEBUG", "false").lower() == "true", port=5000)
+    app.run(debug=settings.is_flask_debug(), port=5000)

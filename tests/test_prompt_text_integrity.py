@@ -32,3 +32,16 @@ def test_knowledge_block_is_empty_when_nothing_is_stored(monkeypatch):
     monkeypatch.setattr(knowledge, "load_custom_knowledge", lambda: {})
 
     assert knowledge.get_custom_knowledge_text() == ""
+
+
+def test_direct_info_override_waits_for_pitch_and_keeps_the_stage_prompt():
+    from core.content import generate_stage_prompt
+
+    ask = "what are the options and price?"
+    early = generate_stage_prompt("consultative", "logical", "Acme", [], ask)
+    at_pitch = generate_stage_prompt("consultative", "pitch", "Acme", [], ask)
+
+    assert "IMMEDIATE ACTION REQUIRED" not in early
+    assert "IMMEDIATE ACTION REQUIRED" in at_pitch
+    assert "STAGE: PITCH" in at_pitch
+    assert "|---" not in at_pitch

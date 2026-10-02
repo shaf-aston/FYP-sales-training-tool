@@ -28,23 +28,8 @@ SIGNALS = load_signals()
 ANALYSIS_CONFIG = load_analysis_config()
 
 
-def _get_signal_terms(*keys: str) -> list[str]:
-    """Return the first configured signal list for the given keys."""
-    for key in keys:
-        values = SIGNALS.get(key)
-        if isinstance(values, list):
-            return values
-    return []
-
-
-USER_CONSULTATIVE_SIGNALS = _get_signal_terms(
-    "user_consultative_signals",
-    "user_consultativeSIGNALS",
-)
-USER_TRANSACTIONAL_SIGNALS = _get_signal_terms(
-    "user_transactional_signals",
-    "user_transactionalSIGNALS",
-)
+USER_CONSULTATIVE_SIGNALS = SIGNALS.get("user_consultativeSIGNALS", [])
+USER_TRANSACTIONAL_SIGNALS = SIGNALS.get("user_transactionalSIGNALS", [])
 
 COMMON_TRANSITIONS = {
     Stage.PITCH: {"next": Stage.OBJECTION, "advance_on": "objection_only"},
@@ -180,67 +165,29 @@ def _user_has_clear_intent(
 
 
 def _check_advancement_condition(
-    history: list[dict[str, str]],
-    user_msg: str,
-    turns: int,
-    stage_name: Stage,
-    min_turns: int = 2,
-    turn_state=None,
+    turns: int, stage_name: Stage, min_turns: int, turn_state
 ) -> bool:
-    """Return True when the signal appears or the stage turn cap is reached."""
+    """Return True when the turn's signal flag is set or the stage turn cap is reached."""
     if turns < min_turns:
         return False
 
-    stage_config = ANALYSIS_CONFIG.get("advancement", {}).get(stage_name, {})
-    max_turns = stage_config.get("max_turns", 10)
-
-    # Use precomputed flags when available.
-    if turn_state is not None:
-        state_signal_attribute = {
-            Stage.LOGICAL: "doubt",
-            Stage.EMOTIONAL: "stakes",
-        }.get(stage_name)
-        if state_signal_attribute is not None:
-            return getattr(turn_state, state_signal_attribute, False) or turns >= max_turns
-
-    keyword_key = {
-        Stage.LOGICAL: "doubt_keywords",
-        Stage.EMOTIONAL: "stakes_keywords",
-    }.get(stage_name, f"{stage_name}_keywords")
-    keywords = stage_config.get(keyword_key, [])
-
-    # Only inspect messages from the current stage window.
-    user_msgs = [m["content"].lower() for m in history if m.get("role") == "user"]
-    current_msg = (user_msg or "").lower().strip()
-    if current_msg and (not user_msgs or user_msgs[-1] != current_msg):
-        user_msgs.append(current_msg)
-
-    # Allow direct tests that pass more turns than available messages.
-    available_turns = min(turns, len(user_msgs))
-    current_stage_window = user_msgs[-available_turns:] if available_turns > 0 else []
-    recent_text = " ".join(current_stage_window)
-    has_signal = contains_nonnegated_keyword(recent_text, keywords)
-
-    # Auto-advance once the stage limit is reached.
-    return has_signal or turns >= max_turns
+    max_turns = ANALYSIS_CONFIG.get("advancement", {}).get(stage_name, {}).get("max_turns", 10)
+    signal_flag = {Stage.LOGICAL: "doubt", Stage.EMOTIONAL: "stakes"}[stage_name]
+    return getattr(turn_state, signal_flag) or turns >= max_turns
 
 
 def _user_shows_doubt(
     history: list[dict[str, str]], user_msg: str, turns: int, turn_state=None
 ) -> bool:
     """Return True when the user shows doubt or the limit is reached."""
-    return _check_advancement_condition(
-        history, user_msg, turns, Stage.LOGICAL, min_turns=2, turn_state=turn_state
-    )
+    return _check_advancement_condition(turns, Stage.LOGICAL, 2, turn_state)
 
 
 def _user_expressed_stakes(
     history: list[dict[str, str]], user_msg: str, turns: int, turn_state=None
 ) -> bool:
     """Return True when the user shows stakes or the limit is reached."""
-    return _check_advancement_condition(
-        history, user_msg, turns, Stage.EMOTIONAL, min_turns=3, turn_state=turn_state
-    )
+    return _check_advancement_condition(turns, Stage.EMOTIONAL, 3, turn_state)
 
 
 def _objection_only(
@@ -319,11 +266,6 @@ def _check_priority_overrides(
         direct_requests = SIGNALS.get("direct_info_requests", [])
         if contains_nonnegated_keyword(msg_lower, direct_requests):
             return Stage.PITCH
-
-    # Impatience can skip to the configured stage.
-    if transition.get("urgency_skip_to"):
-        if contains_nonnegated_keyword(msg_lower, SIGNALS.get("impatience", [])):
-            return transition["urgency_skip_to"]
 
     return None
 

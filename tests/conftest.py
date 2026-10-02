@@ -4,10 +4,34 @@ from pathlib import Path
 
 import pytest
 
+from core.providers.base import BaseLLMProvider, LLMResponse
+from core.providers.factory import LLM_PROVIDER_TYPES
+
 
 ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+
+
+class DummyProvider(BaseLLMProvider):
+    """Offline provider with a fixed reply. Registered for tests only, never in production."""
+
+    provider_name = "dummy"
+
+    def __init__(self, model=None):
+        self.model = model or "dummy-fixed-response"
+
+    def chat(self, messages, temperature=0.8, max_tokens=200, stage=None):
+        return LLMResponse(content="Dummy provider response.")
+
+    def is_available(self):
+        return True
+
+    def get_model_name(self):
+        return self.model
+
+
+LLM_PROVIDER_TYPES["dummy"] = DummyProvider
 
 
 def pytest_configure(config):

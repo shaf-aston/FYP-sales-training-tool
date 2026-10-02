@@ -203,7 +203,6 @@ def classify_intent_level(history, user_message="", signal_keywords=None) -> str
         "high_intent",
         "commitment",
         "demand_directness",
-        "impatience",
         "urgency",
         "price_sensitivity",
     }

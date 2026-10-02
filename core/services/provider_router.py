@@ -6,7 +6,7 @@ import logging
 from dataclasses import dataclass
 
 from ..constants import DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE
-from ..providers import create_provider, create_provider_with_trace, list_fallback_providers
+from ..providers import create_provider, list_providers
 from ..providers.base import LLMResponse
 
 logger = logging.getLogger(__name__)
@@ -26,10 +26,23 @@ class ProviderChatResult:
 
 class ProviderRouter:
     def __init__(self, provider_type: str | None = None, model: str | None = None):
-        """Resolve and store the active provider for chat requests."""
-        provider, resolution = create_provider_with_trace(provider_type, model=model)
-        self.resolution = resolution
+        """Use the named provider, or the first available one when none is named."""
+        if provider_type:
+            provider = create_provider(provider_type, model=model)
+        else:
+            provider = self._first_available(model)
         self._use(provider, getattr(provider, "provider_name", "unknown"))
+
+    @staticmethod
+    def _first_available(model: str | None):
+        """First available provider in configured order, else the first configured one."""
+        first = None
+        for name in list_providers():
+            provider = create_provider(name, model=model)
+            first = first or provider
+            if provider.is_available():
+                return provider
+        return first
 
     def _use(self, provider, name: str) -> None:
         self.provider = provider
@@ -60,7 +73,9 @@ class ProviderRouter:
             return first
 
         logger.warning("provider error on %s: %s", self.provider_name, first.response.error)
-        for next_name in list_fallback_providers(self.provider_name):
+        for next_name in list_providers(fallback=True):
+            if next_name == self.provider_name:
+                continue
             try:
                 alt = create_provider(next_name)
                 if not alt.is_available():

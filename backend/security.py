@@ -2,7 +2,6 @@
 
 import hmac
 import logging
-import os
 import re
 import threading
 import time
@@ -12,6 +11,7 @@ from functools import wraps
 from typing import Any, Callable, Dict, Optional, Tuple
 
 from core.constants import MAX_FIELD_LENGTH as CHATBOT_MAX_FIELD_LENGTH
+from . import settings
 from .messages import RATE_LIMIT_ERROR
 
 logger = logging.getLogger(__name__)
@@ -67,13 +67,6 @@ class SecurityConfig:
             "base-uri 'self'; "
             "form-action 'self'"
         )
-
-
-def _env_flag(name: str, default: bool = False) -> bool:
-    raw_value = os.environ.get(name)
-    if raw_value is None:
-        return default
-    return raw_value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 class RateLimiter:
@@ -142,10 +135,7 @@ def require_privileged_mutation(f: Callable) -> Callable:
     def wrapper(*args, **kwargs):
         from flask import current_app, jsonify, request
 
-        require_admin = current_app.config.get(
-            "REQUIRE_ADMIN_FOR_STAGE_MUTATION",
-            _env_flag("REQUIRE_ADMIN_FOR_STAGE_MUTATION", False),
-        )
+        require_admin = settings.require_admin_for_stage_mutation(current_app.config)
 
         if not require_admin or current_app.config.get("TESTING"):
             return f(*args, **kwargs)
@@ -160,7 +150,7 @@ def require_privileged_mutation(f: Callable) -> Callable:
 
 
 def has_valid_admin_token(request_obj, config_obj) -> bool:
-    admin_token = os.environ.get("ADMIN_TOKEN") or config_obj.get("ADMIN_TOKEN")
+    admin_token = settings.admin_token() or config_obj.get("ADMIN_TOKEN")
     token = request_obj.headers.get("X-Admin-Token") or request_obj.headers.get("Authorization", "")
     if isinstance(token, str) and token.lower().startswith("bearer "):
         token = token.split(None, 1)[1]
@@ -321,7 +311,7 @@ class ClientIPExtractor:
 
         trust_proxy_headers = current_app.config.get(
             "TRUST_PROXY_HEADERS",
-            _env_flag("TRUST_PROXY_HEADERS", SecurityConfig.TRUST_PROXY_HEADERS),
+            settings.env_flag("TRUST_PROXY_HEADERS", SecurityConfig.TRUST_PROXY_HEADERS),
         )
         forwarded = request_obj.headers.get("X-Forwarded-For") if trust_proxy_headers else None
         if forwarded:

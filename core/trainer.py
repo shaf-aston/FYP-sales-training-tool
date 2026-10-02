@@ -2,7 +2,6 @@
 
 import logging
 
-from .providers import create_provider, list_fallback_providers
 from .quiz import get_stage_rubric
 from .utils import extract_json_from_llm
 
@@ -16,33 +15,7 @@ def _truncate_words(text: str, max_words: int) -> str:
     return " ".join(words[:max_words]) if len(words) > max_words else text
 
 
-def _call_training_provider_with_fallbacks(provider, messages, *, temperature, max_tokens, stage):
-    """Call the active provider first, then try configured fallbacks if needed."""
-    primary = provider.chat(
-        messages, temperature=temperature, max_tokens=max_tokens, stage=stage
-    )
-    if primary and not primary.error and (primary.content or "").strip():
-        return primary, getattr(provider, "provider_name", None)
-
-    current_name = getattr(provider, "provider_name", None)
-    for next_name in list_fallback_providers(current_name):
-        alt = create_provider(next_name)
-        if not alt.is_available():
-            continue
-        response = alt.chat(
-            messages, temperature=temperature, max_tokens=max_tokens, stage=stage
-        )
-        if response.error or not (response.content or "").strip():
-            continue
-        logger.info(
-            "training fallback switched to %s after provider error", next_name
-        )
-        return response, next_name
-
-    return primary, current_name
-
-
-def generate_training(provider, flow_engine, user_msg, bot_reply):
+def generate_training(router, flow_engine, user_msg, bot_reply):
     """Coaching notes for the current exchange. Falls back to rubric text on LLM failure"""
     stage = flow_engine.current_stage
     flow_type = flow_engine.flow_type
@@ -70,13 +43,9 @@ def generate_training(provider, flow_engine, user_msg, bot_reply):
     ]
 
     try:
-        llm_response, _active_provider_name = _call_training_provider_with_fallbacks(
-            provider,
-            messages,
-            temperature=0.3,
-            max_tokens=150,
-            stage=stage,
-        )
+        llm_response = router.chat_with_fallback(
+            messages, temperature=0.3, max_tokens=150, stage=stage
+        ).response
         if llm_response.error or not llm_response.content:
             raise ValueError(
                 f"Training provider failed: {getattr(llm_response, 'error', None) or 'empty response'}"
@@ -122,7 +91,7 @@ COACH_STYLES = {
 }
 
 
-def answer_training_question(provider, flow_engine, question, style: str = "tactical"):
+def answer_training_question(router, flow_engine, question, style: str = "tactical"):
     """Answer a trainee's question about the current conversation and sales techniques"""
     stage, flow_type = flow_engine.current_stage, flow_engine.flow_type
     rubric = get_stage_rubric(stage, flow_type)
@@ -149,13 +118,12 @@ def answer_training_question(provider, flow_engine, question, style: str = "tact
     )
 
     try:
-        response, _provider_name = _call_training_provider_with_fallbacks(
-            provider,
+        response = router.chat_with_fallback(
             [{"role": "system", "content": system_prompt}, {"role": "user", "content": question}],
             temperature=0.4,
             max_tokens=150,
             stage=stage,
-        )
+        ).response
         answer = (
             response.content.strip()
             if response.content and not response.error
