@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
-from flask import Flask, render_template
+from flask import Flask
 from flask_cors import CORS
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -50,8 +50,7 @@ else:
 
 app = Flask(
     __name__,
-    template_folder=str(ROOT_DIR / "frontend" / "templates"),
-    static_folder=str(ROOT_DIR / "frontend" / "static"),
+    static_folder=None,  # the web app is served by `web_app` below
 )
 
 # CORS: restrict to configured origins (default: Render deployment + localhost dev)
@@ -138,34 +137,6 @@ app.register_blueprint(analytics.bp)
 # Note: Rate limiting is applied via @require_rate_limit decorators in blueprint files
 
 
-def _prospect_product_options():
-    """Build the list of {id, label} dicts for the prospect-practice dropdown.
-
-    Source of truth: prospect_config.yaml (personas) + product_config.yaml (names).
-    Rendered directly into index.html by Jinja -- no client-side fetch needed.
-    """
-    try:
-        from core.loader import load_prospect_config, load_product_config
-
-        personas = load_prospect_config().get("personas", {})
-        products = load_product_config().get("products", {})
-
-        options = []
-        for product_id, persona_list in personas.items():
-            # Skip the generic bucket and any product that has no prospect personas defined.
-            if product_id == "general" or not persona_list:
-                continue
-            label = (
-                products.get(product_id, {}).get("name")
-                or product_id.replace("_", " ").title()
-            )
-            options.append({"id": product_id, "label": label})
-        return options
-    except Exception:
-        app.logger.exception("Failed to build prospect product options")
-        return []
-
-
 def _prospect_product_groups():
     """Build curated prospect-mode dropdown groups split by sales motion."""
     try:
@@ -212,42 +183,6 @@ def _prospect_product_groups():
         return {"transactional": [], "consultative": []}
 
 
-def _render_index(mode: str):
-    """Render the chat page; product dropdown is populated server-side."""
-    # Keep UI flow-controls consistent with the privileged-mutation guard in `backend/security.py`.
-    require_admin = settings.require_admin_for_stage_mutation(app.config)
-    return render_template(
-        "index.html",
-        mode=mode,
-        prospect_products=_prospect_product_options(),
-        prospect_product_groups=_prospect_product_groups(),
-        flow_controls_enabled=not require_admin,
-    )
-
-
-@app.route("/")
-def home():
-    """Serve the chat interface (seller mode)."""
-    return _render_index("seller")
-
-
-@app.route("/prospect")
-def prospect_page():
-    """Serve the chat interface in prospect mode."""
-    return _render_index("prospect")
-
-
-@app.route("/knowledge")
-def knowledge_page():
-    """Serve the knowledge base management page"""
-    from flask import request
-
-    mode = (request.args.get("mode") or "").strip().lower()
-    if mode != "prospect":
-        mode = ""
-    return render_template("knowledge.html", mode=mode)
-
-
 @app.route("/api/prospect/product-groups")
 def prospect_product_groups():
     """Curated prospect dropdown groups as JSON (the React app has no Jinja)."""
@@ -259,20 +194,22 @@ def prospect_product_groups():
 WEB_BUILD_DIR = ROOT_DIR / "web" / "out"
 
 
-@app.route("/app/", defaults={"path": ""})
-@app.route("/app/<path:path>")
+@app.route("/", defaults={"path": ""})
+@app.route("/<path:path>")
 def web_app(path: str):
-    """Serve the static Next.js build (web/out). `npm run build` in web/ creates it."""
+    """Serve the built Next.js app (web/out). Rebuild with `npm run build` in web/."""
     from flask import abort, send_from_directory
     from werkzeug.exceptions import NotFound
 
-    if not WEB_BUILD_DIR.is_dir():
+    if path.startswith("api/") or not WEB_BUILD_DIR.is_dir():
         abort(404)
     # send_from_directory rejects traversal; a folder request falls back to its index.html.
-    try:
-        return send_from_directory(WEB_BUILD_DIR, path or "index.html")
-    except NotFound:
-        return send_from_directory(WEB_BUILD_DIR, f"{path.rstrip('/')}/index.html")
+    for candidate in (path or "index.html", f"{path.rstrip('/')}/index.html"):
+        try:
+            return send_from_directory(WEB_BUILD_DIR, candidate)
+        except NotFound:
+            continue
+    return send_from_directory(WEB_BUILD_DIR, "404.html"), 404
 
 
 @app.errorhandler(Exception)

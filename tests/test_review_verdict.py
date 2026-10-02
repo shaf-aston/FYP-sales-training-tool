@@ -69,6 +69,6 @@ def test_a_strong_session_is_allowed_praise(behaviour):
 
 
 def test_the_review_page_praises_only_a_passing_grade():
-    js = (ROOT / "frontend/static/js/review.js").read_text(encoding="utf8")
+    tsx = (ROOT / "web/src/features/prospect/ReviewDialog.tsx").read_text(encoding="utf8")
 
-    assert "summary.went_well" in js and '["D", "F"]' in js
+    assert "summary.went_well" in tsx and '["D", "F"]' in tsx

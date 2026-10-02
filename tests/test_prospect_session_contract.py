@@ -78,21 +78,22 @@ def test_prospect_products_are_curated_and_include_mentorship():
     assert "subscription_boxes" not in ids
 
 
-def test_prospect_page_uses_separate_transactional_and_consultative_dropdowns():
+def test_product_groups_split_transactional_and_consultative():
     app.config["TESTING"] = True
     client = app.test_client()
 
-    response = client.get("/prospect")
-    html = response.get_data(as_text=True)
+    response = client.get("/api/prospect/product-groups")
+    body = response.get_json()
 
     assert response.status_code == 200
-    assert 'id="prospectTransactionalSelect"' in html
-    assert 'id="prospectConsultativeSelect"' in html
-    assert "Transactional products" in html
-    assert "Consultative products" in html
-    assert "High-Ticket Sales Mentorship" in html
-    assert "Business Software" in html
-    assert "Home Services & Renovation" not in html
+    assert body["success"] is True
+    labels = {g: [o["label"] for o in opts] for g, opts in body["groups"].items()}
+    assert set(labels) == {"transactional", "consultative"}
+    assert "High-Ticket Sales Mentorship" in labels["consultative"]
+    assert "Business Software" in labels["consultative"]
+    all_labels = labels["transactional"] + labels["consultative"]
+    assert "Home Services & Renovation" not in all_labels
+    assert len(all_labels) == len(set(all_labels)), "a product is listed twice"
 
 
 def test_prospect_init_supports_high_ticket_sales_mentorship(monkeypatch):

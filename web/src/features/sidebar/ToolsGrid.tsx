@@ -41,7 +41,7 @@ export function ToolsGrid() {
         <Tool
           title={prospect ? "Prospect knowledge" : "Knowledge"}
           copy={prospect ? "Review notes tied to your prospect roleplay." : "Browse notes and product details."}
-          href={prospect ? "/app/knowledge/?mode=prospect" : "/app/knowledge/"}
+          href={prospect ? "/knowledge/?mode=prospect" : "/knowledge/"}
         />
         {!prospect && (
           <Tool title="Coaching" copy="Get guided next-step advice." pressed={sidePanel === "coach"} onClick={() => toggleSidePanel("coach")} />

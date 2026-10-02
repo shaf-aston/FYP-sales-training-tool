@@ -1,15 +1,15 @@
 # Eloquence web app — core flow
 
-**What it does:** the practice screen for Eloquence (sales roleplay with an AI buyer and a live coach), built in Next.js and served by Flask at `/app/`.
+**What it does:** the practice screen for Eloquence (sales roleplay with an AI buyer and a live coach), built in Next.js and served by Flask at `/`.
 
 ## Run it
 ```bash
 # 1. backend (repo root) — serves the API and the built app
-python backend/app.py                 # http://localhost:5000/app/
+python backend/app.py                 # http://localhost:5000/
 # 2. frontend (web/)
 npm install
-npm run dev                           # http://localhost:3000/app/  (proxies /api to Flask)
-npm run build                         # static export to web/out, which Flask serves at /app/
+npm run dev                           # http://localhost:3000/  (proxies /api to Flask)
+npm run build                         # static export to web/out, which Flask serves at /  (commit web/out after building)
 npm run check                         # types + lint + the three logic checks
 ```
 

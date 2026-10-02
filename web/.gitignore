@@ -15,7 +15,7 @@
 
 # next.js
 /.next/
-/out/
+# web/out is committed: the server deploy has no Node, so it ships the built app.
 
 # production
 /build

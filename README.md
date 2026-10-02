@@ -53,6 +53,8 @@ echo "GROQ_API_KEY=your_key" > .env    # free key: https://console.groq.com/keys
 python backend/app.py                  # http://localhost:5000
 ```
 
+Changing the UI? Edit `web/`, then `cd web && npm run build` and commit `web/out` too (the server ships the built app).
+
 Optional: add `SAMBANOVA_API_KEY` to `.env` for the backup provider.
 
 ## 🧪 Tests
@@ -68,5 +70,5 @@ pytest
 | `backend/` | Flask app, routes, settings, security (rate limits, input checks, sessions) |
 | `core/` | conversation engine, stage machine, prompts, buyer, judge, quiz, drills |
 | `config/` | products, buyer profiles, objections, signals, drills |
-| `frontend/` | templates and static JS/CSS |
+| `web/` | Next.js + React app; built copy in `web/out` is what Flask serves (see `web/CORE-FLOW.md`) |
 | `tests/` | unit and route tests |
