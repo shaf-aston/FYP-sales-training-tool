@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { useUi } from "@/features/shell/UiContext";
-import { useDraft } from "./DraftContext";
+import { useUi } from "@/state/UiContext";
+import { useDraft } from "@/state/DraftContext";
 
 const TYPING_TAGS = ["INPUT", "TEXTAREA", "SELECT"];
 

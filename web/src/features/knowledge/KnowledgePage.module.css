@@ -3,7 +3,7 @@
   z-index: var(--z-base);
   display: grid;
   gap: var(--space-5);
-  max-width: 1000px;
+  max-width: var(--w-page);
   margin: 0 auto;
   padding: var(--space-6) var(--space-4) var(--space-7);
 }
@@ -25,7 +25,7 @@
 }
 .back:hover { border-color: var(--accent); }
 
-.body { display: grid; grid-template-columns: 180px 1fr; gap: var(--space-5); align-items: start; }
+.body { display: grid; grid-template-columns: var(--w-nav) 1fr; gap: var(--space-5); align-items: start; }
 .nav { position: sticky; top: var(--space-4); display: grid; gap: var(--space-1); z-index: var(--z-sticky); }
 .navLink {
   display: flex;
@@ -52,9 +52,9 @@
   backdrop-filter: var(--glass-blur);
   animation: pop-in var(--dur-pop) var(--ease-pop) backwards;
 }
-.field:nth-of-type(2) { animation-delay: 40ms; }
-.field:nth-of-type(3) { animation-delay: 80ms; }
-.field:nth-of-type(4) { animation-delay: 120ms; }
+.field:nth-of-type(2) { animation-delay: calc(1 * var(--stagger)); }
+.field:nth-of-type(3) { animation-delay: calc(2 * var(--stagger)); }
+.field:nth-of-type(4) { animation-delay: calc(3 * var(--stagger)); }
 
 .preview {
   padding: var(--space-3) var(--space-5);

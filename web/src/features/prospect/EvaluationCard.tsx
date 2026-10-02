@@ -2,10 +2,10 @@
 
 import { Badge, Button, Notice, ProgressBar, type Tone } from "@/components/ui";
 import { useSession } from "@/features/session/SessionContext";
-import { useUi } from "@/features/shell/UiContext";
+import { useUi } from "@/state/UiContext";
 import type { Evaluation, Outcome } from "@/lib/api/types";
 import { Confetti } from "./Confetti";
-import { prospectConfig } from "./prospectConfig";
+import { config } from "@/lib/config";
 import { useCountUp } from "@/lib/useCountUp";
 import { useEvaluation } from "./useEvaluation";
 import s from "./EvaluationCard.module.css";
@@ -39,7 +39,7 @@ function Result({ ev }: { ev: Evaluation }) {
   const score = useCountUp(ev.overall_score || 0);
   const grade = (ev.grade || "?").toUpperCase();
   const outcome = OUTCOME[ev.outcome] ?? OUTCOME.incomplete;
-  const celebrate = ev.outcome === "sold" || (prospectConfig.celebrateGrades as readonly string[]).includes(grade);
+  const celebrate = ev.outcome === "sold" || (config.prospect.celebrateGrades as readonly string[]).includes(grade);
 
   const tryAgain = async () => {
     if (!prospect) return;

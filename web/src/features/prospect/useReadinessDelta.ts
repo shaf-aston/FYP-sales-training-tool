@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { prospectConfig } from "./prospectConfig";
+import { config } from "@/lib/config";
 
 export interface Delta {
   n: number;
@@ -20,7 +20,7 @@ export function useReadinessDelta(pct: number): Delta | null {
 
   useEffect(() => {
     if (!delta) return;
-    const t = setTimeout(() => setDelta(null), prospectConfig.deltaChipMs);
+    const t = setTimeout(() => setDelta(null), config.prospect.deltaChipMs);
     return () => clearTimeout(t);
   }, [delta]);
 

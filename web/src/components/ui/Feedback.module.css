@@ -26,13 +26,13 @@
   height: 7px;
   border-radius: 50%;
   background: currentColor;
-  animation: bounce 1s infinite;
+  animation: bounce var(--dur-loop) infinite;
 }
 .dots i:nth-child(2) {
-  animation-delay: 0.15s;
+  animation-delay: var(--dur-fast);
 }
 .dots i:nth-child(3) {
-  animation-delay: 0.3s;
+  animation-delay: calc(2 * var(--dur-fast));
 }
 @keyframes bounce {
   0%,
@@ -56,19 +56,19 @@
   height: 4px;
   border-radius: 2px;
   background: var(--accent);
-  animation: wave 1s ease-in-out infinite;
+  animation: wave var(--dur-loop) ease-in-out infinite;
 }
 .wave i:nth-child(2) {
-  animation-delay: 0.12s;
+  animation-delay: calc(3 * var(--stagger));
 }
 .wave i:nth-child(3) {
-  animation-delay: 0.24s;
+  animation-delay: calc(6 * var(--stagger));
 }
 .wave i:nth-child(4) {
-  animation-delay: 0.36s;
+  animation-delay: calc(9 * var(--stagger));
 }
 .wave i:nth-child(5) {
-  animation-delay: 0.48s;
+  animation-delay: calc(12 * var(--stagger));
 }
 @keyframes wave {
   50% {

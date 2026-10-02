@@ -30,3 +30,15 @@ export function readJson<T>(key: string, fallback: T): T {
 export function writeJson(key: string, value: unknown): void {
   writeString(key, JSON.stringify(value));
 }
+
+/** False in private windows or when site data is blocked. */
+export function storageAvailable(): boolean {
+  try {
+    const probe = "__probe__";
+    localStorage.setItem(probe, probe);
+    localStorage.removeItem(probe);
+    return true;
+  } catch {
+    return false;
+  }
+}

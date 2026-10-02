@@ -6,7 +6,7 @@ import { api } from "@/lib/api/client";
 import type { QuizResult, QuizType } from "@/lib/api/types";
 import { config } from "@/lib/config";
 import { useSession } from "@/features/session/SessionContext";
-import { useUi } from "@/features/shell/UiContext";
+import { useUi } from "@/state/UiContext";
 import { QuizResultCard } from "./QuizResultCard";
 import s from "./quiz.module.css";
 
@@ -119,9 +119,7 @@ export function QuizPanel() {
               }}
             />
             {empty && (
-              <p className={s.alert} role="alert">
-                Please enter an answer.
-              </p>
+              <Notice kind="error">Please enter an answer.</Notice>
             )}
             {submitError && <Notice kind="error">{submitError}</Notice>}
             {!result && (

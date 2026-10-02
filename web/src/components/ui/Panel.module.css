@@ -41,3 +41,8 @@
   padding: var(--space-5);
   overflow-y: auto;
 }
+@media (max-width: 640px) {
+  .phoneHidden {
+    display: none;
+  }
+}

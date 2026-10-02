@@ -85,6 +85,18 @@
   --panel-width: 330px;
   --side-panel-width: 320px;
   --input-max-height: 120px;
+  --control-min-h: 96px;
+  --icon-lg: 56px;
+  --w-shell: 1560px;
+  --w-page: 1000px;
+  --w-nav: 180px;
+  --w-dialog-sm: 440px;
+  --w-dialog-md: 620px;
+  --w-dialog-lg: 860px;
+  --w-popover: 180px;
+  --w-bubble: 420px;
+  --scrim-blur: 4px;
+  --highlight: rgba(255, 255, 255, 0.4);
 
   /* Motion */
   --ease-pop: cubic-bezier(0.2, 0.9, 0.3, 1.25);
@@ -93,6 +105,10 @@
   --dur-base: 250ms;
   --dur-pop: 420ms;
   --dur-slow: 800ms;
+  --dur-loop: 1s;
+  --dur-ring: 1.4s;
+  --dur-shine: 2.4s;
+  --stagger: 40ms;
 
   /* Stacking order (lowest to highest) */
   --z-film: -1;

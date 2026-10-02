@@ -2,7 +2,7 @@
 
 import { Card, Eyebrow, Notice, Panel } from "@/components/ui";
 import { useSession } from "@/features/session/SessionContext";
-import { useUi } from "@/features/shell/UiContext";
+import { useUi } from "@/state/UiContext";
 import { AskCoach } from "./AskCoach";
 import { cleanCoachText } from "./clean";
 import s from "./coach.module.css";

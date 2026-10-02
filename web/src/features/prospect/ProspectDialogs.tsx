@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { Button, Dialog } from "@/components/ui";
 import { useSession } from "@/features/session/SessionContext";
-import { useUi } from "@/features/shell/UiContext";
+import { useUi } from "@/state/UiContext";
 import { DrillsDialog } from "./DrillsDialog";
 import { EvaluationBody } from "./EvaluationCard";
 import { evalStore } from "./evalStore";

@@ -5,14 +5,14 @@
   background: transparent;
   color: inherit;
   width: min(100% - 2 * var(--space-4), var(--w));
-  max-height: min(88vh, 900px);
+  max-height: min(88dvh, 900px);
 }
-.sm { --w: 440px; }
-.md { --w: 620px; }
-.lg { --w: 860px; }
+.sm { --w: var(--w-dialog-sm); }
+.md { --w: var(--w-dialog-md); }
+.lg { --w: var(--w-dialog-lg); }
 .dialog::backdrop {
   background: var(--overlay-scrim);
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(var(--scrim-blur));
 }
 .dialog[open] { animation: pop-in var(--dur-pop) var(--ease-pop); }
 .card {

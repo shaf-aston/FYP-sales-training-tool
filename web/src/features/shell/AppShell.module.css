@@ -1,11 +1,11 @@
 .shell {
-  min-height: 100vh;
+  min-height: 100dvh;
   padding: var(--space-4);
 }
 
 .grid {
-  width: min(1560px, 100%);
-  height: calc(100vh - 2 * var(--space-4));
+  width: min(var(--w-shell), 100%);
+  height: calc(100dvh - 2 * var(--space-4));
   margin: 0 auto;
   display: grid;
   grid-template-columns: minmax(0, 1fr) var(--panel-width);
@@ -33,7 +33,7 @@
   .withProspect,
   .withSide.withProspect {
     height: auto;
-    min-height: calc(100vh - 2 * var(--space-4));
+    min-height: calc(100dvh - 2 * var(--space-4));
     grid-template-columns: minmax(0, 1fr);
   }
 }
@@ -45,6 +45,6 @@
   .grid {
     border-radius: 0;
     border-inline: 0;
-    min-height: 100vh;
+    min-height: 100dvh;
   }
 }

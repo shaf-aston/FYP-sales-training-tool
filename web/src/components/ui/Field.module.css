@@ -20,14 +20,15 @@
   color: var(--text-primary);
   transition: border-color var(--dur-base), box-shadow var(--dur-base);
 }
-.control:focus {
-  outline: none;
+.control:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 textarea.control {
   resize: vertical;
-  min-height: 96px;
+  min-height: var(--control-min-h);
 }
 .meta {
   display: flex;

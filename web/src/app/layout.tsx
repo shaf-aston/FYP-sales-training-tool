@@ -9,6 +9,7 @@ export const metadata: Metadata = {
   description: "Practise sales conversations with an AI buyer and a live coach.",
 };
 
+// Meta tags cannot read CSS variables: this literal mirrors --bg-page in styles/tokens.css.
 export const viewport: Viewport = {
   themeColor: "#151210",
   colorScheme: "dark",

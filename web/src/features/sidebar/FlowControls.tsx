@@ -88,13 +88,14 @@ export function FlowControls() {
       <Button onClick={applyStrategy} busy={busy === "strategy"} busyLabel="Applying…" disabled={busy !== null} block>
         Apply approach
       </Button>
+      {stages === null && <Notice kind="loading">Loading stages...</Notice>}
       <Select
         label="Skip to stage"
         value={pickedStage}
         onChange={(e) => setPickedStage(e.target.value)}
-        disabled={!stages || stages.length === 0}
+        disabled={!stages?.length}
       >
-        <option value="">{stages === null ? "Loading stages..." : stages.length ? "Select stage..." : "No stages available"}</option>
+        <option value="">{stages?.length === 0 ? "No stages available" : "Select stage..."}</option>
         {stages?.map((st) => (
           <option key={st} value={st}>
             {stageMeta(st).label}

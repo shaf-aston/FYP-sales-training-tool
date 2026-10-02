@@ -3,8 +3,8 @@
 import { useEffect } from "react";
 import { Dialog } from "@/components/ui";
 import { storageKeys } from "@/lib/config";
-import { writeString } from "@/lib/storage";
-import { useUi } from "@/features/shell/UiContext";
+import { readString, storageAvailable, writeString } from "@/lib/storage";
+import { useUi } from "@/state/UiContext";
 import s from "./HelpDialog.module.css";
 
 const SECTIONS: { title: string; items: { term?: string; text: string; keys?: string }[] }[] = [
@@ -43,14 +43,10 @@ const SECTIONS: { title: string; items: { term?: string; text: string; keys?: st
 export function HelpDialog() {
   const { dialog, openDialog, closeDialog } = useUi();
 
-  // Open once per browser. If storage is blocked we cannot remember a visit, so never nag.
+  // Open once per browser (if storage is blocked the help simply shows each visit).
   useEffect(() => {
-    try {
-      if (localStorage.getItem(storageKeys.helpSeen)) return;
-    } catch {
-      return;
-    }
-    openDialog("help");
+    // Show once per browser; never nag when storage is blocked and "seen" can't be remembered.
+    if (storageAvailable() && readString(storageKeys.helpSeen) === null) openDialog("help");
   }, [openDialog]);
 
   const close = () => {

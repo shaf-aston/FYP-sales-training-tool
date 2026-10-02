@@ -1,11 +1,4 @@
-// Tunables for the prospect feature (motion timings, labels). Change behaviour here, not in components.
-
-export const prospectConfig = {
-  deltaChipMs: 1_600,
-  confetti: { count: 90, durationMs: 2_200, gravity: 0.18 },
-  /** Grades that earn the celebration (together with a sale). */
-  celebrateGrades: ["A"],
-} as const;
+// Option lists and labels shown in the prospect UI. Tunable numbers live in lib/config.ts.
 
 export const difficultyOptions = [
   { value: "easy", label: "Easy" },

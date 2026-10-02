@@ -2,7 +2,7 @@
 
 // Voice controls above the message box: voice replies toggle, dictate, stop, and a live status strip.
 
-import { Button, VoiceWave } from "@/components/ui";
+import { Button, Notice, VoiceWave } from "@/components/ui";
 import { useVoice } from "./VoiceContext";
 import s from "./VoiceBar.module.css";
 
@@ -22,7 +22,7 @@ export function VoiceBar() {
             Coach speaking. Microphone paused for clarity.
           </span>
         ) : v.transcribing ? (
-          <span className={s.status}>Transcribing, please wait...</span>
+          <Notice kind="loading">Transcribing, please wait...</Notice>
         ) : v.interim.trim() ? (
           <span className={s.status}>{v.interim}</span>
         ) : null}

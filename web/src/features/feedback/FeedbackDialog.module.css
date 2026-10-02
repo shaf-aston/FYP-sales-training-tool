@@ -7,7 +7,7 @@
   line-height: 1;
   background: transparent;
   border: 0;
-  color: var(--border-strong);
+  color: var(--text-muted);
   cursor: pointer;
   transition: transform var(--dur-base) var(--ease-pop), color var(--dur-fast);
 }
@@ -18,7 +18,7 @@
   50% { transform: scale(1.5) rotate(-8deg); }
 }
 .thanks { display: grid; justify-items: center; gap: var(--space-3); padding: var(--space-4) 0; animation: pop-in var(--dur-pop) var(--ease-pop); }
-.check { width: 56px; height: 56px; fill: none; stroke: var(--success); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.check { width: var(--icon-lg); height: var(--icon-lg); fill: none; stroke: var(--success); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
 .check circle { stroke-dasharray: 151; stroke-dashoffset: 151; animation: draw var(--dur-slow) var(--ease-out) forwards; }
 .check path { stroke-dasharray: 40; stroke-dashoffset: 40; animation: draw var(--dur-base) var(--ease-out) var(--dur-base) forwards; }
 @keyframes draw { to { stroke-dashoffset: 0; } }

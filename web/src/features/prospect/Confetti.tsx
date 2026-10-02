@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { prospectConfig } from "./prospectConfig";
+import { config } from "@/lib/config";
 import s from "./Confetti.module.css";
 
 /** A short gold burst over its parent. Decorative; skipped when the user prefers reduced motion. */
@@ -13,7 +13,7 @@ export function Confetti() {
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-    const { count, durationMs, gravity } = prospectConfig.confetti;
+    const { count, durationMs, gravity } = config.prospect.confetti;
     const css = getComputedStyle(document.documentElement);
     const colours = ["--accent", "--accent-strong", "--warning"].map((v) => css.getPropertyValue(v).trim());
     const { width, height } = canvas.getBoundingClientRect();

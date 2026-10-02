@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Button, useConfirm } from "@/components/ui";
 import { useSession } from "@/features/session/SessionContext";
-import { useUi } from "@/features/shell/UiContext";
+import { useUi } from "@/state/UiContext";
 import s from "./ChatHeader.module.css";
 
 export function ChatHeader() {

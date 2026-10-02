@@ -12,6 +12,6 @@ export function scorePercent(kind: QuizKind, score: number | null | undefined): 
 
 export function scoreBand(kind: QuizKind, percent: number | null): Band {
   if (percent === null) return "warning";
-  const { correct, partial } = kind === "stage" ? { correct: 100, partial: 50 } : config.quizBands;
+  const { correct, partial } = kind === "stage" ? config.quizBands.stage : config.quizBands;
   return percent >= correct ? "success" : percent >= partial ? "warning" : "danger";
 }

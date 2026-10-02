@@ -1,6 +1,7 @@
 // Speech-to-text. Native Web Speech first (live interim text); Puter speech2txt via MediaRecorder as fallback.
 // Plain TypeScript, no React. Browser APIs are touched only inside methods, never at import time.
 
+import { config } from "@/lib/config";
 import { loadPuter } from "./puter";
 
 interface NativeResult {
@@ -51,7 +52,6 @@ export const nativeSpeechSupported = () => nativeCtor() !== null;
 const AUDIO_TYPES = ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus", "audio/ogg"];
 const pickAudioType = () => AUDIO_TYPES.find((t) => MediaRecorder.isTypeSupported?.(t)) ?? "";
 
-const NATIVE_RESTART_MS = 100;
 const PUTER_MODEL = "gpt-4o-mini-transcribe";
 
 export class SpeechRecognizer {
@@ -159,7 +159,7 @@ export class SpeechRecognizer {
           } catch {
             /* the UI recovers when the user stops */
           }
-        }, NATIVE_RESTART_MS);
+        }, config.voice.nativeRestartMs);
         return;
       }
       this.isRecording = false;

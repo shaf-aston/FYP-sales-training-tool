@@ -2,7 +2,7 @@
 
 import { Tabs } from "@/components/ui";
 import { ProspectSetup } from "@/features/prospect/ProspectSetup";
-import { useUi } from "@/features/shell/UiContext";
+import { useUi } from "@/state/UiContext";
 import { VoiceSettings } from "@/features/voice/VoiceSettings";
 import { FlowControls } from "./FlowControls";
 import { StatusCard } from "./StatusCard";

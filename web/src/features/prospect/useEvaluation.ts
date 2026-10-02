@@ -3,7 +3,7 @@
 import { useCallback } from "react";
 import { api, ApiError } from "@/lib/api/client";
 import { useSession } from "@/features/session/SessionContext";
-import { useUi } from "@/features/shell/UiContext";
+import { useUi } from "@/state/UiContext";
 import { evalStore, useEvalState } from "./evalStore";
 
 /** Request and read the end-of-session evaluation. */

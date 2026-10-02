@@ -2,7 +2,3 @@
   display: grid;
   gap: var(--space-4);
 }
-.note {
-  font-size: var(--text-sm);
-  color: var(--text-muted);
-}

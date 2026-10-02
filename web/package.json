@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "check": "tsc --noEmit && eslint src && node --experimental-strip-types src/features/session/history.check.ts && node --experimental-strip-types src/features/voice/voiceCommands.check.ts && node --experimental-strip-types src/features/prospect/drillSchedule.check.ts"
   },
   "dependencies": {
     "dompurify": "^3.4.16",

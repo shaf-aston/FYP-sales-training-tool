@@ -18,8 +18,8 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.4) 50%, transparent 70%);
-  animation: shine 2.4s infinite;
+  background: linear-gradient(100deg, transparent 30%, var(--highlight) 50%, transparent 70%);
+  animation: shine var(--dur-shine) infinite;
 }
 @keyframes shine {
   from { transform: translateX(-100%); }

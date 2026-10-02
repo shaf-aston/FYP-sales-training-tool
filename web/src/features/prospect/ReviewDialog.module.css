@@ -22,7 +22,8 @@
   background: var(--warning-soft);
 }
 .gone {
-  opacity: 0.5;
+  color: var(--text-muted);
+  border-style: dashed;
 }
 .turnHead {
   display: flex;

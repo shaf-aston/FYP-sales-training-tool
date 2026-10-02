@@ -9,7 +9,7 @@ import { api, ApiError } from "@/lib/api/client";
 import { config, storageKeys } from "@/lib/config";
 import { stageMeta, strategyMeta } from "@/lib/labels";
 import { useStoredState } from "@/lib/useStoredState";
-import { useDraft } from "@/features/chat/DraftContext";
+import { useDraft } from "@/state/DraftContext";
 import { useSession } from "@/features/session/SessionContext";
 import { SpeechRecognizer, speechSupported, type StopState } from "./speech/recognizer";
 import { Tts, ttsSupported } from "./speech/tts";

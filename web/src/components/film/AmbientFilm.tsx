@@ -4,6 +4,7 @@
 // loads nothing and never shows people. Colours and count come from tokens.css.
 
 import { useEffect, useRef } from "react";
+import { config } from "@/lib/config";
 import s from "./AmbientFilm.module.css";
 
 interface Light {
@@ -16,8 +17,6 @@ interface Light {
   phase: number;
 }
 
-const MAX_DPR = 2;
-
 export function AmbientFilm() {
   const ref = useRef<HTMLCanvasElement>(null);
 
@@ -26,6 +25,7 @@ export function AmbientFilm() {
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
 
+    const film = config.film;
     const css = getComputedStyle(document.documentElement);
     const token = (name: string) => css.getPropertyValue(name).trim();
     const hues = token("--film-hues").split(/\s+/).map(Number);
@@ -36,16 +36,16 @@ export function AmbientFilm() {
 
     const lights: Light[] = Array.from({ length: count }, () => ({
       x: Math.random(),
-      y: 0.3 + Math.random() * 0.7,
-      r: 10 + Math.random() * 40,
-      speed: 0.00015 + Math.random() * 0.0007,
+      y: film.yMin + Math.random() * (1 - film.yMin),
+      r: film.radius.min + Math.random() * film.radius.span,
+      speed: film.speed.min + Math.random() * film.speed.span,
       hue: hues[Math.floor(Math.random() * hues.length)],
-      alpha: 0.1 + Math.random() * 0.22,
-      phase: Math.random() * 6,
+      alpha: film.alpha.min + Math.random() * film.alpha.span,
+      phase: Math.random() * film.phaseSpan,
     }));
 
     const resize = () => {
-      const dpr = Math.min(devicePixelRatio || 1, MAX_DPR);
+      const dpr = Math.min(devicePixelRatio || 1, film.maxDpr);
       canvas.width = innerWidth * dpr;
       canvas.height = innerHeight * dpr;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -60,13 +60,13 @@ export function AmbientFilm() {
       ctx.fillStyle = sky;
       ctx.fillRect(0, 0, w, h);
       for (const l of lights) {
-        if (!still) l.x = (l.x + l.speed) % 1.1;
+        if (!still) l.x = (l.x + l.speed) % film.wrapAt;
         const x = l.x * w;
         const y = l.y * h;
-        const a = l.alpha * (0.7 + 0.3 * Math.sin(t / 700 + l.phase));
+        const a = l.alpha * (film.flickerBase + film.flickerDepth * Math.sin(t / film.flickerMs + l.phase));
         const g = ctx.createRadialGradient(x, y, 0, x, y, l.r);
-        g.addColorStop(0, `hsla(${l.hue}, 90%, 65%, ${a})`);
-        g.addColorStop(1, `hsla(${l.hue}, 90%, 65%, 0)`);
+        g.addColorStop(0, `hsla(${l.hue}, ${film.lightness}, ${a})`);
+        g.addColorStop(1, `hsla(${l.hue}, ${film.lightness}, 0)`);
         ctx.fillStyle = g;
         ctx.beginPath();
         ctx.arc(x, y, l.r, 0, Math.PI * 2);

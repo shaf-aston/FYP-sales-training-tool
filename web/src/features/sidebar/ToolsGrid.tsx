@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useSession } from "@/features/session/SessionContext";
-import { useUi } from "@/features/shell/UiContext";
+import { useUi } from "@/state/UiContext";
 import s from "./Sidebar.module.css";
 
 function Tool({ title, copy, onClick, href, pressed }: { title: string; copy: string; onClick?: () => void; href?: string; pressed?: boolean }) {

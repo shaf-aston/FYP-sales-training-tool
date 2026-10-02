@@ -5,7 +5,7 @@ import { Button, Dialog, Notice, TextArea } from "@/components/ui";
 import { api } from "@/lib/api/client";
 import { config } from "@/lib/config";
 import { useSession } from "@/features/session/SessionContext";
-import { useUi } from "@/features/shell/UiContext";
+import { useUi } from "@/state/UiContext";
 import s from "./FeedbackDialog.module.css";
 
 const STARS = [1, 2, 3, 4, 5];

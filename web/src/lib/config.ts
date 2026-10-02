@@ -18,10 +18,35 @@ export const config = {
     restartBackoffMs: { base: 200, max: 5_000, attempts: 5 },
     speedRange: { min: -50, max: 50, step: 5 },
     language: "en-US",
+    nativeRestartMs: 100,
+    /** Browser speech-synthesis rate limits. */
+    rateClamp: { min: 0.1, max: 10 },
+  },
+  prospect: {
+    deltaChipMs: 1_600,
+    confetti: { count: 90, durationMs: 2_200, gravity: 0.18 },
+    /** Grades that earn the celebration (together with a sale). */
+    celebrateGrades: ["A"],
+  },
+  knowledge: { nameMax: 100, fieldMax: 1_000 },
+  coachTextMax: 120,
+  /** Night-city film: light sizes, drift speed, glow and flicker. */
+  film: {
+    maxDpr: 2,
+    yMin: 0.3,
+    radius: { min: 10, span: 40 },
+    speed: { min: 0.00015, span: 0.0007 },
+    alpha: { min: 0.1, span: 0.22 },
+    phaseSpan: 6,
+    wrapAt: 1.1,
+    flickerMs: 700,
+    flickerBase: 0.7,
+    flickerDepth: 0.3,
+    lightness: "90%, 65%",
   },
   drills: { intervalsDays: [0, 1, 3, 7, 21] },
   readinessBands: { low: 30, mid: 60 },
-  quizBands: { correct: 70, partial: 40 },
+  quizBands: { correct: 70, partial: 40, stage: { correct: 100, partial: 50 } },
 } as const;
 
 /** Every localStorage key in one place. Values kept identical to the old UI so saved state carries over. */

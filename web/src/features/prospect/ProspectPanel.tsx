@@ -5,7 +5,7 @@ import { Badge, Button, Card, Eyebrow, Panel, ProgressBar, Select, Switch } from
 import { useSession } from "@/features/session/SessionContext";
 import { config } from "@/lib/config";
 import { EvaluationBody } from "./EvaluationCard";
-import { difficultyTone, evalDisplayOptions } from "./prospectConfig";
+import { difficultyTone, evalDisplayOptions } from "./options";
 import { useEvaluation } from "./useEvaluation";
 import { useReadinessDelta } from "./useReadinessDelta";
 import s from "./ProspectPanel.module.css";
@@ -27,7 +27,7 @@ export function ProspectPanel() {
   const evaluating = forThisSession && state.status === "loading";
 
   return (
-    <Panel kicker="Prospect practice" title="Buyer profile">
+    <Panel kicker="Prospect practice" title="Buyer profile" hideHeadOnPhone>
       <button type="button" className={s.bar} aria-expanded={open} aria-controls="buyer-details" onClick={() => setOpen((o) => !o)}>
         <span>
           Buyer: {name} · {pct}% ready

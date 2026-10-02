@@ -4,3 +4,15 @@
   min-width: 0;
   min-height: 0;
 }
+/* Stacked layout: chat leads, fits the screen so the input stays in view; panels follow below. */
+@media (max-width: 1080px) {
+  .view {
+    order: -1;
+    height: calc(100dvh - 2 * var(--space-4));
+  }
+}
+@media (max-width: 640px) {
+  .view {
+    height: 100dvh;
+  }
+}

@@ -5,7 +5,7 @@ import { Button, Notice, Segmented, Select, useConfirm } from "@/components/ui";
 import { useSession } from "@/features/session/SessionContext";
 import { api, ApiError } from "@/lib/api/client";
 import type { Difficulty, ProductGroups } from "@/lib/api/types";
-import { difficultyOptions } from "./prospectConfig";
+import { difficultyOptions } from "./options";
 import s from "./ProspectSetup.module.css";
 
 const GENERAL = "default";
@@ -118,7 +118,7 @@ export function ProspectSetup() {
           Start prospect practice
         </Button>
       )}
-      <p className={s.note}>Stage controls are not available in prospect practice.</p>
+      <Notice kind="empty">Stage controls are not available in prospect practice.</Notice>
     </div>
   );
 }

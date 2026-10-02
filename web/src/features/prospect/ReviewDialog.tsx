@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Badge, Button, Card, Dialog, Notice, TextArea } from "@/components/ui";
 import { useSession } from "@/features/session/SessionContext";
-import { useUi } from "@/features/shell/UiContext";
+import { useUi } from "@/state/UiContext";
 import { api, ApiError } from "@/lib/api/client";
 import type { RedoRes, Review, ReviewTurn } from "@/lib/api/types";
 import { config } from "@/lib/config";

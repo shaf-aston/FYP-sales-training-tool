@@ -16,7 +16,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-pill);
   background: var(--glass-bg);
-  backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: var(--glass-blur);
   color: var(--text-body);
   font-size: var(--text-sm);
   animation: pop-in var(--dur-base) var(--ease-pop);
@@ -41,7 +41,7 @@
 
 /* Pulsing ring while the microphone is open. */
 .recording {
-  animation: ring 1.4s ease-out infinite;
+  animation: ring var(--dur-ring) ease-out infinite;
 }
 
 @keyframes ring {

@@ -6,7 +6,7 @@
 import { ConfirmProvider, ToastProvider } from "@/components/ui";
 import { AmbientFilm } from "@/components/film/AmbientFilm";
 import { ChatView } from "@/features/chat/ChatView";
-import { DraftProvider } from "@/features/chat/DraftContext";
+import { DraftProvider } from "@/state/DraftContext";
 import { CoachPanel } from "@/features/coach/CoachPanel";
 import { FeedbackDialog } from "@/features/feedback/FeedbackDialog";
 import { HelpDialog } from "@/features/help/HelpDialog";
@@ -16,7 +16,7 @@ import { QuizPanel } from "@/features/quiz/QuizPanel";
 import { SessionProvider, useSession } from "@/features/session/SessionContext";
 import { Sidebar } from "@/features/sidebar/Sidebar";
 import { VoiceProvider } from "@/features/voice/VoiceContext";
-import { UiProvider, useUi } from "./UiContext";
+import { UiProvider, useUi } from "@/state/UiContext";
 import s from "./AppShell.module.css";
 
 function Layout() {

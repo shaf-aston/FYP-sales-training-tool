@@ -5,7 +5,7 @@ import { Button } from "@/components/ui";
 import { config } from "@/lib/config";
 import { useSession } from "@/features/session/SessionContext";
 import { VoiceBar } from "@/features/voice/VoiceBar";
-import { useDraft } from "./DraftContext";
+import { useDraft } from "@/state/DraftContext";
 import s from "./InputBar.module.css";
 
 export function InputBar() {

@@ -1,6 +1,7 @@
 // Text-to-speech. Puter neural voice and the browser's own voice; which goes first depends on speed
 // (Puter has no speed control, so it only leads at normal speed). Plain TypeScript, no React.
 
+import { config } from "@/lib/config";
 import { loadPuter } from "./puter";
 
 interface Handle {
@@ -23,7 +24,7 @@ export interface TtsOptions {
 
 export const ttsSupported = () => typeof window !== "undefined" && "speechSynthesis" in window;
 
-const nativeRate = (speed: number) => Math.min(10, Math.max(0.1, 1 + speed / 100));
+const nativeRate = (speed: number) => Math.min(config.voice.rateClamp.max, Math.max(config.voice.rateClamp.min, 1 + speed / 100));
 
 export class Tts {
   private generation = 0;

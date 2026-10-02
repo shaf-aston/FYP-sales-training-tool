@@ -1,3 +1,4 @@
+import { config } from "@/lib/config";
 import type { KnowledgeData, KnowledgeField } from "@/lib/api/types";
 
 export interface FieldDef {
@@ -10,11 +11,11 @@ export interface FieldDef {
   multiline: boolean;
 }
 
-const LONG = 1000;
+const LONG = config.knowledge.fieldMax;
 const SHORT_SECTION_CHARS = 10;
 
 export const FIELDS: FieldDef[] = [
-  { id: "product_name", label: "Product", title: "Product or service name", hint: "What the buyer should hear you call the product.", max: 100, multiline: false, placeholder: "e.g., BMW 5 Series, Pro CRM Plan, Dark Oud Fragrance" },
+  { id: "product_name", label: "Product", title: "Product or service name", hint: "What the buyer should hear you call the product.", max: config.knowledge.nameMax, multiline: false, placeholder: "e.g., BMW 5 Series, Pro CRM Plan, Dark Oud Fragrance" },
   { id: "pricing", label: "Pricing", title: "Pricing details", hint: "Add exact prices, tiers, discounts, and packaging.", max: LONG, multiline: true, placeholder: "e.g., Starter: $29/user/mo, Pro: $79/user/mo" },
   { id: "specifications", label: "Features", title: "Key features or specifications", hint: "Highlight the details that matter in real sales conversations.", max: LONG, multiline: true, placeholder: "e.g., API access, unlimited storage, SSO" },
   { id: "company_info", label: "Company", title: "Company background", hint: "Anything about your company that strengthens credibility.", max: LONG, multiline: true, placeholder: "e.g., Founded 2018, 500+ clients served" },

@@ -37,7 +37,8 @@
   position: absolute;
   right: 0;
   top: calc(100% + var(--space-2));
-  min-width: 180px;
+  min-width: var(--w-popover);
+  max-width: calc(100vw - 2 * var(--space-4));
   padding: var(--space-1);
   background: var(--bg-elevated);
   border: 1px solid var(--border-strong);
@@ -70,5 +71,9 @@
   }
   .actions {
     flex-wrap: wrap;
+  }
+  .popover {
+    right: auto;
+    left: 0;
   }
 }

@@ -3,7 +3,7 @@
 import { Fragment, useEffect, useState } from "react";
 import { Button, Card, Dialog, Notice } from "@/components/ui";
 import { useSession } from "@/features/session/SessionContext";
-import { useUi } from "@/features/shell/UiContext";
+import { useUi } from "@/state/UiContext";
 import { api } from "@/lib/api/client";
 import type { Drill } from "@/lib/api/types";
 import { config, storageKeys } from "@/lib/config";
