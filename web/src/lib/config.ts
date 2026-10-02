@@ -12,6 +12,7 @@ export const config = {
   voice: {
     silenceDelayMs: 500,
     ttsWatchdogMs: 15_000,
+    puterLoadMs: 15_000,
     maxRecordingMs: 60_000,
     restartBackoffMs: { base: 200, max: 5_000, attempts: 5 },
     speedRange: { min: -50, max: 50, step: 5 },
