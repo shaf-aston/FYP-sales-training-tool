@@ -451,7 +451,7 @@ def get_base_prompt(product_context, strategy_type):
         strategy_block = """
 PRODUCT MATCHING:
 Present options as: [Name]: $[Price] - [2-3 key specs] - Why it fits.
-Always include price in NEGOTIATION, not PITCH. Use negotiation to resolve payment or term questions.
+Give the price in PITCH. Use negotiation to resolve payment or term questions.
 """
     else:
         strategy_block = """
