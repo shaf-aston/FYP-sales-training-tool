@@ -221,6 +221,7 @@ function applyProspectSessionFromServer(sessionId, data) {
   syncProspectProductSelects(_prospectProductType);
   updateProspectDiffBadge(data.difficulty);
   updateProspectPanel(data.state);
+  syncProspectBar();
 
   // Apply the saved prospect settings to the UI
   document
@@ -371,6 +372,23 @@ async function startProspectMode() {
   startBtn.textContent = "Start prospect practice";
 }
 
+/* Mobile: the panel collapses to one bar; this keeps its label current. */
+function syncProspectBar() {
+  const name = document.getElementById("prospectName").textContent;
+  const pct = document.getElementById("prospectReadinessVal").textContent;
+  document.getElementById("prospectBarLabel").textContent =
+    `Buyer: ${name} · ${pct} ready`;
+}
+
+function toggleProspectBar() {
+  const open = document
+    .getElementById("prospectPanel")
+    .classList.toggle("bar-open");
+  document
+    .getElementById("prospectBarToggle")
+    .setAttribute("aria-expanded", open ? "true" : "false");
+}
+
 function endProspectMode() {
   try {
     if (_prospectMode && _prospectSessionId) {
@@ -445,6 +463,7 @@ function updateProspectPanel(state) {
   }[band];
 
   document.getElementById("prospectReadinessVal").textContent = readiness + "%";
+  syncProspectBar();
   const turns = state.turn_count || 0;
   const max = _prospectMaxTurns;
   document.getElementById("prospectTurnCount").textContent = max

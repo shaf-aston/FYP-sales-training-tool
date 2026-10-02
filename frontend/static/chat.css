@@ -161,6 +161,7 @@ body {
 .mic-btn,
 .interrupt-btn,
 .prospect-settings-toggle,
+.prospect-bar-toggle,
 .reset-btn,
 .quiz-type-btn,
 .fb-submit,
@@ -188,7 +189,8 @@ body {
 .voice-mode-btn:hover,
 .mic-btn:hover,
 .interrupt-btn:hover,
-.prospect-settings-toggle:hover {
+.prospect-settings-toggle:hover,
+.prospect-bar-toggle:hover {
   background: rgba(57, 50, 42, 0.96);
   border-color: var(--border-strong);
   color: var(--text-primary);
@@ -555,8 +557,7 @@ textarea::-webkit-scrollbar-thumb,
   display: flex;
 }
 
-#quizPanel,
-#prospectPanel {
+#quizPanel {
   display: none;
   flex-direction: column;
   position: fixed;
@@ -571,9 +572,28 @@ textarea::-webkit-scrollbar-thumb,
   overflow: hidden;
 }
 
-#quizPanel.open,
+#quizPanel.open {
+  display: flex;
+}
+
+/* Prospect panel is a grid column of .container: it covers nothing. */
+#prospectPanel {
+  display: none;
+  flex-direction: column;
+  border-left: 1px solid rgba(82, 74, 63, 0.35);
+  overflow: hidden;
+}
+
 #prospectPanel.open {
   display: flex;
+}
+
+.prospect-bar-toggle {
+  display: none;
+}
+
+.container.prospect-panel-open {
+  grid-template-columns: minmax(0, 1fr) 300px 300px;
 }
 
 .sidebar-right {
@@ -1585,8 +1605,7 @@ textarea:focus-visible,
   }
 
   #trainingPanel,
-  #quizPanel,
-  #prospectPanel {
+  #quizPanel {
     position: fixed;
     left: 0;
     right: 0;
@@ -1604,9 +1623,65 @@ textarea:focus-visible,
   }
 
   #trainingPanel.open,
-  #quizPanel.open,
-  #prospectPanel.open {
+  #quizPanel.open {
     display: flex;
+  }
+
+  /* Buyer panel becomes a compact bar under the chat; tap to expand. */
+  .container.prospect-panel-open {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #chatScreen {
+    min-height: 60vh;
+  }
+
+  .container {
+    overflow: visible;
+  }
+
+  #prospectPanel {
+    order: -1;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    border-left: 0;
+    border-bottom: 1px solid rgba(82, 74, 63, 0.35);
+  }
+
+  .prospect-heading {
+    display: none;
+  }
+
+  .prospect-header {
+    align-items: center;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  .prospect-bar-toggle {
+    display: flex;
+    flex: 1;
+    min-height: var(--touch-target);
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  #prospectPanel.bar-open .prospect-bar-caret {
+    transform: rotate(180deg);
+  }
+
+  #prospectPanel:not(.bar-open) .prospect-body {
+    display: none;
+  }
+
+  #prospectPanel .prospect-body {
+    max-height: 45vh;
   }
 }
 

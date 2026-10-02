@@ -45,7 +45,7 @@ function syncPanelShellState() {
   container?.classList.toggle("prospect-panel-open", !!prospectOpen);
 
   const anyPanelOpen = !!(trainingOpen || quizOpen || prospectOpen);
-  const lockBody = anyPanelOpen && isMobilePanelLayout();
+  const lockBody = !!(trainingOpen || quizOpen) && isMobilePanelLayout();
   document.body.classList.toggle("panel-open", lockBody);
   document.body.style.overflow = lockBody ? "hidden" : "";
 

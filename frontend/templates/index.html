@@ -584,73 +584,24 @@
                         </section>
                     </div>
                 </aside>
-            </main>
-
-            <div id="quizPanel">
-                <div class="quiz-header">
-                    <div>
-                        <span class="panel-kicker">Quiz mode</span>
-                        <span class="panel-title">Skill check</span>
-                    </div>
-                    <button
-                        class="panel-close-btn"
-                        onclick="toggleQuizPanel()"
-                        aria-label="Close quiz panel"
-                    >
-                        Close
-                    </button>
-                </div>
-                <div class="quiz-body">
-                    <div class="quiz-type-buttons">
-                        <button
-                            class="quiz-type-btn active"
-                            onclick="selectQuizType('stage')"
-                            id="quiz-btn-stage"
-                        >
-                            Stage
-                        </button>
-                        <button
-                            class="quiz-type-btn"
-                            onclick="selectQuizType('next_move')"
-                            id="quiz-btn-next_move"
-                        >
-                            Next move
-                        </button>
-                        <button
-                            class="quiz-type-btn"
-                            onclick="selectQuizType('direction')"
-                            id="quiz-btn-direction"
-                        >
-                            Direction
-                        </button>
-                    </div>
-                    <div class="quiz-question" id="quizQuestion">
-                        Select a quiz type and load a question to begin.
-                    </div>
-                    <div class="quiz-answer-area">
-                        <textarea
-                            id="quizAnswer"
-                            class="quiz-answer-input"
-                            placeholder="Type your answer here..."
-                        ></textarea>
-                        <button
-                            class="quiz-submit-btn"
-                            onclick="submitQuiz()"
-                            id="quizSubmitBtn"
-                        >
-                            Submit answer
-                        </button>
-                    </div>
-                    <div id="quizFeedback"></div>
-                </div>
-            </div>
 
             <div id="prospectPanel">
                 <div class="prospect-header">
-                    <div>
+                    <div class="prospect-heading">
                         <span class="panel-kicker">Buyer practice</span>
                         <span class="panel-title">Live buyer profile</span>
                     </div>
+                    <button
+                        type="button"
+                        class="prospect-bar-toggle"
+                        id="prospectBarToggle"
+                        aria-expanded="false"
+                        aria-controls="prospectBody"
+                        onclick="toggleProspectBar()"
+                    >
+                        <span id="prospectBarLabel">Buyer profile</span>
+                        <span aria-hidden="true" class="prospect-bar-caret">&#9662;</span>
+                    </button>
                     <button
                         class="panel-close-btn"
                         onclick="endProspectMode()"
@@ -659,7 +610,7 @@
                         Exit
                     </button>
                 </div>
-                <div class="prospect-body">
+                <div class="prospect-body" id="prospectBody">
                     <div class="prospect-section">
                         <div class="prospect-label">Buyer</div>
                         <div class="prospect-value" id="prospectName">-</div>
@@ -753,6 +704,66 @@
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+            </main>
+
+            <div id="quizPanel">
+                <div class="quiz-header">
+                    <div>
+                        <span class="panel-kicker">Quiz mode</span>
+                        <span class="panel-title">Skill check</span>
+                    </div>
+                    <button
+                        class="panel-close-btn"
+                        onclick="toggleQuizPanel()"
+                        aria-label="Close quiz panel"
+                    >
+                        Close
+                    </button>
+                </div>
+                <div class="quiz-body">
+                    <div class="quiz-type-buttons">
+                        <button
+                            class="quiz-type-btn active"
+                            onclick="selectQuizType('stage')"
+                            id="quiz-btn-stage"
+                        >
+                            Stage
+                        </button>
+                        <button
+                            class="quiz-type-btn"
+                            onclick="selectQuizType('next_move')"
+                            id="quiz-btn-next_move"
+                        >
+                            Next move
+                        </button>
+                        <button
+                            class="quiz-type-btn"
+                            onclick="selectQuizType('direction')"
+                            id="quiz-btn-direction"
+                        >
+                            Direction
+                        </button>
+                    </div>
+                    <div class="quiz-question" id="quizQuestion">
+                        Select a quiz type and load a question to begin.
+                    </div>
+                    <div class="quiz-answer-area">
+                        <textarea
+                            id="quizAnswer"
+                            class="quiz-answer-input"
+                            placeholder="Type your answer here..."
+                        ></textarea>
+                        <button
+                            class="quiz-submit-btn"
+                            onclick="submitQuiz()"
+                            id="quizSubmitBtn"
+                        >
+                            Submit answer
+                        </button>
+                    </div>
+                    <div id="quizFeedback"></div>
                 </div>
             </div>
 
