@@ -37,6 +37,26 @@
   --radius-sm: 10px;
   --send-btn-width: 96px;
   --touch-target: 44px;
+  /* Night-city film: the blurred lights drawn behind the app (ambient.js reads these). */
+  --film-sky-top: #0d0c14;
+  --film-sky-bottom: #1d1510;
+  --film-hues: 38 30 8 200;
+  --film-light-count: 70;
+  /* Frosted glass laid over the film. */
+  --glass-bg: rgba(24, 20, 17, 0.62);
+  --glass-bg-strong: rgba(31, 28, 24, 0.78);
+  --glass-blur: blur(16px) saturate(1.2);
+  --z-film: -1;
+  --motion-pop: 420ms cubic-bezier(0.2, 0.9, 0.3, 1.25);
+}
+
+.ambient-film {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: var(--z-film);
+  pointer-events: none;
 }
 
 * {
@@ -82,7 +102,8 @@ body {
   min-height: calc(100vh - 36px);
   display: grid;
   grid-template-columns: minmax(0, 1fr) 330px;
-  background: linear-gradient(180deg, rgba(31, 28, 24, 0.98), rgba(22, 19, 16, 0.98));
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
   border: 1px solid rgba(82, 74, 63, 0.62);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-lg);
@@ -106,9 +127,7 @@ body {
   flex-direction: column;
   border-left: 1px solid rgba(82, 74, 63, 0.35);
   border-right: 1px solid rgba(82, 74, 63, 0.35);
-  background:
-    linear-gradient(180deg, rgba(35, 31, 26, 0.94), rgba(24, 21, 18, 0.98)),
-    linear-gradient(135deg, rgba(232, 180, 90, 0.06), transparent 40%);
+  background: linear-gradient(135deg, rgba(232, 180, 90, 0.06), transparent 40%);
 }
 
 .header {
@@ -117,7 +136,7 @@ body {
   gap: 24px;
   padding: 28px 28px 22px;
   border-bottom: 1px solid rgba(82, 74, 63, 0.45);
-  background: rgba(31, 28, 24, 0.92);
+  background: var(--glass-bg-strong);
 }
 
 .header-copy {
@@ -317,7 +336,7 @@ textarea::-webkit-scrollbar-thumb,
   display: flex;
   flex-direction: column;
   gap: 6px;
-  animation: messageEnter 180ms ease;
+  animation: messageEnter var(--motion-pop) both;
 }
 
 .message.user {
@@ -421,6 +440,33 @@ textarea::-webkit-scrollbar-thumb,
 
 .tts-speaking-banner {
   color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.voice-wave {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 18px;
+}
+
+.voice-wave i {
+  width: 3px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--accent);
+  animation: voiceWave 1s ease-in-out infinite;
+}
+
+.voice-wave i:nth-child(2) { animation-delay: 0.12s; }
+.voice-wave i:nth-child(3) { animation-delay: 0.24s; }
+.voice-wave i:nth-child(4) { animation-delay: 0.36s; }
+.voice-wave i:nth-child(5) { animation-delay: 0.48s; }
+
+@keyframes voiceWave {
+  50% { height: 16px; }
 }
 
 .input-area {
@@ -429,7 +475,7 @@ textarea::-webkit-scrollbar-thumb,
   align-items: flex-end;
   padding: 18px 24px 24px;
   border-top: 1px solid rgba(82, 74, 63, 0.45);
-  background: rgba(31, 28, 24, 0.96);
+  background: var(--glass-bg-strong);
 }
 
 .input-area textarea,
@@ -545,7 +591,7 @@ textarea::-webkit-scrollbar-thumb,
 #trainingPanel,
 #quizPanel,
 #prospectPanel {
-  background: rgba(26, 23, 19, 0.98);
+  background: var(--glass-bg-strong);
 }
 
 #trainingPanel {
@@ -1495,13 +1541,13 @@ textarea:focus-visible,
 }
 
 .message-enter {
-  animation: messageEnter 180ms ease;
+  animation: messageEnter var(--motion-pop) both;
 }
 
 @keyframes messageEnter {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(12px) scale(0.96);
   }
 
   to {
@@ -2388,4 +2434,12 @@ textarea:focus-visible,
 
 .modal-btn-primary:hover {
   background: var(--accent-strong);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .message,
+  .message-enter,
+  .voice-wave i {
+    animation: none;
+  }
 }
