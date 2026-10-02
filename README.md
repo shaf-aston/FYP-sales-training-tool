@@ -1,36 +1,51 @@
-# Eloquence: AI Sales Training Tool
+<p align="center">
+  <img src=".github/banner.svg" alt="Eloquence: AI sales training tool" width="100%">
+</p>
 
-Practise real sales conversations against an AI buyer, then see exactly where the deal was won or lost.
+<p align="center">
+  <img alt="Python" src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white">
+  <img alt="Flask" src="https://img.shields.io/badge/Flask-backend-000000?logo=flask&logoColor=white">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-pytest-0A9EDC?logo=pytest&logoColor=white">
+  <img alt="LLM" src="https://img.shields.io/badge/LLM-Groq%20%2B%20SambaNova-F55036">
+</p>
 
-Final-year project. Flask backend, plain JavaScript frontend, LLM-driven roleplay with deterministic scoring.
+<p align="center"><b>Practise real sales conversations against an AI buyer, then see exactly where the deal was won or lost.</b><br>
+Final-year project · Flask backend · plain JavaScript frontend · deterministic scoring</p>
 
-## What it does
+---
+
+## ✨ What it does
 
 | Mode | You are | The AI is |
 |---|---|---|
-| **Seller bot** | the customer | a salesperson that follows a staged sales flow |
-| **Prospect mode** | the salesperson | a buyer with its own needs, objections and patience |
+| 🤝 **Seller bot** | the customer | a salesperson following a staged sales flow |
+| 🎯 **Prospect mode** | the salesperson | a buyer with its own needs, objections and patience |
 
 After a prospect session you get:
 
-- **Turn-by-turn review**: every line rated, with the reason and how buyer readiness moved
-- **Pivotal moments**: the turns that decided the outcome
-- **Script drills**: strong lines with the key move blanked out, for recall practice
-- **Quiz**: identify the stage, the next move and the direction of the conversation
+- 🔍 **Turn-by-turn review**: every line rated, with the reason and how buyer readiness moved
+- ⚡ **Pivotal moments**: the turns that decided the outcome
+- 🧠 **Script drills**: strong lines with the key move blanked out, for recall practice
+- ✅ **Quiz**: name the stage, the next move and where the conversation is heading
 
-## How it works
+## 🧭 How a conversation flows
 
-- **Stage machine**: conversations move through Intent, Logical, Emotional, Pitch, Objection and Outcome. A stage only advances when the buyer's signals earn it.
-- **Buyer profiles**: Easy, Medium and Hard buyers, grounded in published buyer typology research. Readiness, disclosure, objections and patience are all set in config.
-- **Deterministic judge**: scoring does not depend on the LLM, so any saved session can be reviewed again with the same result.
+```mermaid
+flowchart LR
+    I[Intent] --> L[Logical] --> E[Emotional] --> P[Pitch] --> O[Objection] --> X[Outcome]
+    O -. resolved .-> P
+```
+
+A stage only advances when the buyer's signals earn it.
+
+## ⚙️ How it works
+
+- **Buyer profiles**: Easy, Medium and Hard buyers, grounded in published buyer typology research. Difficulty sets readiness, disclosure, objections and patience.
+- **Deterministic judge**: scoring does not depend on the LLM, so any saved session reviews the same way every time.
 - **Provider fallback**: Groq first, SambaNova as backup, so a session survives one provider going down.
-- **Config driven**: products, objections, signals and drills live in `config/*.yaml`. No code change needed to add a product.
+- **Config driven**: products, objections, signals and drills live in `config/*.yaml`. Adding a product needs no code change.
 
-## Stack
-
-Python, Flask, Groq and SambaNova LLM APIs, YAML config, vanilla JS with browser speech input, pytest.
-
-## Run it
+## 🚀 Run it
 
 ```bash
 pip install -r requirements.txt
@@ -38,20 +53,20 @@ echo "GROQ_API_KEY=your_key" > .env    # free key: https://console.groq.com/keys
 python backend/app.py                  # http://localhost:5000
 ```
 
-Optional: `SAMBANOVA_API_KEY` for the backup provider.
+Optional: add `SAMBANOVA_API_KEY` to `.env` for the backup provider.
 
-## Tests
+## 🧪 Tests
 
 ```bash
 pytest
 ```
 
-## Layout
+## 🗂️ Layout
 
-```
-backend/   Flask app, routes, security (rate limits, input checks, sessions)
-core/      conversation engine, stage machine, buyer, judge, quiz, drills
-config/    products, buyer profiles, objections, signals, drills
-frontend/  templates and static JS/CSS
-tests/     unit and route tests
-```
+| Folder | Holds |
+|---|---|
+| `backend/` | Flask app, routes, settings, security (rate limits, input checks, sessions) |
+| `core/` | conversation engine, stage machine, prompts, buyer, judge, quiz, drills |
+| `config/` | products, buyer profiles, objections, signals, drills |
+| `frontend/` | templates and static JS/CSS |
+| `tests/` | unit and route tests |
