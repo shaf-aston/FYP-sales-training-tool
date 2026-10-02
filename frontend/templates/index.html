@@ -123,6 +123,16 @@
                         <div class="header-actions">
                             <button
                                 class="feedback-pill"
+                                id="helpBtn"
+                                type="button"
+                                onclick="openHelp()"
+                                aria-keyshortcuts="?"
+                                title="How it works (press ?)"
+                            >
+                                Help
+                            </button>
+                            <button
+                                class="feedback-pill"
                                 id="feedbackToggle"
                                 onclick="toggleFeedback()"
                                 title="Share quick product feedback"
@@ -212,6 +222,7 @@
                         </label>
                         <textarea
                             id="messageInput"
+                            aria-keyshortcuts="/"
                             placeholder="Type your opener here... (Shift+Enter for a new line)"
                             onkeydown="handleKeyDown(event)"
                             rows="1"
@@ -821,6 +832,7 @@
         <script src="{{ url_for('static', filename='js/feedback.js') }}"></script>
         <script src="{{ url_for('static', filename='js/review.js') }}"></script>
         <script src="{{ url_for('static', filename='js/drills.js') }}"></script>
+        <script src="{{ url_for('static', filename='js/help.js') }}"></script>
         <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     </body>
 </html>

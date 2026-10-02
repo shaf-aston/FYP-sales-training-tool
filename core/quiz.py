@@ -5,7 +5,7 @@ import random
 from typing import Any
 
 from .loader import load_yaml
-from .selling_quality import NEGATIVE_SIGNALS, score_seller_turn
+from .selling_quality import NEGATIVE_SIGNALS, REASONS, score_seller_turn
 from .utils import (
     clamp_score,
     contains_nonnegated_keyword,
@@ -394,11 +394,18 @@ def score_prospect_answer(answer: str, turn: dict) -> dict:
     else:
         feedback = f"Weaker than what you said ({old} out of 5, now {new.rating})."
     pairs = list(zip(new.signals, new.reasons))
+    # The original turn's evidence, worded exactly as the turn review words it.
+    before = [
+        {"text": REASONS[sig], "good": sig not in NEGATIVE_SIGNALS}
+        for sig in turn.get("signals", [])
+        if sig in REASONS
+    ]
     return {
         "score": round((new.rating - 1) / 4 * 100),
         "feedback": feedback,
         "strengths": [r for sig, r in pairs if sig not in NEGATIVE_SIGNALS],
         "improvements": [r for sig, r in pairs if sig in NEGATIVE_SIGNALS],
+        "before": before,
     }
 
 
@@ -417,7 +424,7 @@ def test_quiz_next_move(
         last_user_message=last_user_message,
     )
 
-    prompt = f"""Grade trainee response in {stage} ({strategy}).
+    prompt = f"""Grade trainee response in {_friendly("stage_names", stage)} ({_friendly("strategy_names", strategy)}).
 Goal: {rubric["goal"]} | Concepts: {concepts}
 Customer: "{last_user_message}" | Response: "{user_response}"
 JSON: {{"score": <0-100>, "alignment": "strong|partial|weak", "feedback": "<brief>", "strengths": ["..."], "improvements": ["..."]}}"""
@@ -444,7 +451,7 @@ def test_quiz_direction(user_explanation: str, router: Any, current_stage: str, 
         mode="direction",
     )
 
-    prompt = f"""Evaluate trainee's understanding in {stage} ({strategy}).
+    prompt = f"""Evaluate trainee's understanding in {_friendly("stage_names", stage)} ({_friendly("strategy_names", strategy)}).
 Goal: {rubric["goal"]} | Advance: {rubric["advance_when"]} | Concepts: {concepts}
 Trainee: "{user_explanation}"
 JSON: {{"score": <0-100>, "understanding": "excellent|good|partial|needs_work", "feedback": "<brief>", "key_concepts_got": ["..."], "key_concepts_missed": ["..."]}}"""

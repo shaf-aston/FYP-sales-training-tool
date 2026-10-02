@@ -413,6 +413,13 @@ function displayQuizFeedback(data) {
     );
     html += "</ul></div>";
   }
+  if (data.before && data.before.length) {
+    html += '<div class="quiz-details"><strong>What you said first:</strong><ul class="quiz-signed">';
+    data.before.forEach(
+      (b) => (html += `<li>${b.good ? "+" : "-"} ${escapeHtml(b.text)}</li>`),
+    );
+    html += "</ul></div>";
+  }
   if (data.key_concepts_got && data.key_concepts_got.length) {
     html += '<div class="quiz-details"><strong>Concepts you got:</strong><ul>';
     data.key_concepts_got.forEach(
