@@ -22,6 +22,7 @@
   --warning-soft: rgba(232, 160, 90, 0.14);
   --danger: #e85a5a;
   --danger-soft: rgba(232, 90, 90, 0.14);
+  --danger-text: #ff9a9a;
   /* Deep fills: dark enough to carry --text-primary at 4.5:1 or better. */
   --danger-deep: #7f2727;
   --success-deep: #43592a;
@@ -1912,7 +1913,7 @@ textarea:focus-visible,
 }
 
 .review-drift.down {
-  color: var(--danger);
+  color: var(--danger-text);
   background: var(--danger-soft);
 }
 
