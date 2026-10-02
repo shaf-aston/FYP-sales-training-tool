@@ -1,0 +1,67 @@
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  border-left: 1px solid var(--border-faint);
+  background: var(--glass-bg-strong);
+}
+.tabs {
+  padding: 0 var(--space-4) var(--space-4);
+}
+.stack {
+  display: grid;
+  gap: var(--space-3);
+}
+.heading h2 {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  color: var(--text-primary);
+}
+.heading p {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+.toolGrid {
+  display: grid;
+  gap: var(--space-3);
+}
+.tool {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  text-decoration: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  background: var(--bg-card-soft);
+  border: 1px solid var(--border-faint);
+  border-radius: var(--radius-md);
+  transition: transform var(--dur-base) var(--ease-out), border-color var(--dur-base), box-shadow var(--dur-base);
+}
+.tool:hover,
+.tool:focus-visible {
+  transform: translateY(-2px);
+  border-color: var(--accent-line);
+  box-shadow: var(--shadow-md);
+}
+.toolOn {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.toolTitle {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.toolCopy {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+@media (max-width: 1080px) {
+  .sidebar {
+    border-left: 0;
+    border-top: 1px solid var(--border-faint);
+    overflow-y: visible;
+  }
+}

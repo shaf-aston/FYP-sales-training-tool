@@ -1,0 +1,50 @@
+.shell {
+  min-height: 100dvh;
+  padding: var(--space-4);
+}
+
+.grid {
+  width: min(var(--w-shell), 100%);
+  height: calc(100dvh - 2 * var(--space-4));
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--panel-width);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+.withSide {
+  grid-template-columns: var(--side-panel-width) minmax(0, 1fr) var(--panel-width);
+}
+.withProspect {
+  grid-template-columns: minmax(0, 1fr) var(--side-panel-width) var(--panel-width);
+}
+.withSide.withProspect {
+  grid-template-columns: var(--side-panel-width) minmax(0, 1fr) var(--side-panel-width) var(--panel-width);
+}
+
+/* Tablet and below: one column, page scrolls, panels stack under the chat. */
+@media (max-width: 1080px) {
+  .grid,
+  .withSide,
+  .withProspect,
+  .withSide.withProspect {
+    height: auto;
+    min-height: calc(100dvh - 2 * var(--space-4));
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .shell {
+    padding: 0;
+  }
+  .grid {
+    border-radius: 0;
+    border-inline: 0;
+    min-height: 100dvh;
+  }
+}

@@ -1,0 +1,18 @@
+.inline {
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--accent-line);
+  background: var(--glass-bg-strong);
+  box-shadow: var(--shadow-md);
+  animation: pop-in var(--dur-pop) var(--ease-pop);
+}
+.inlineHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+.inlineTitle {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+}

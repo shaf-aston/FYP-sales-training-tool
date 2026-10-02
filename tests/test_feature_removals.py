@@ -8,9 +8,7 @@ ROOT = Path(__file__).resolve().parent.parent
 def test_debug_panel_references_removed_from_runtime_files():
     files = [
         ROOT / "backend" / "app.py",
-        ROOT / "frontend" / "templates" / "index.html",
-        *sorted((ROOT / "frontend" / "static" / "js").glob("*.js")),
-        ROOT / "frontend" / "static" / "chat.css",
+        *sorted(p for p in (ROOT / "web" / "src").rglob("*") if p.suffix in {".ts", ".tsx", ".css"}),
     ]
     forbidden = [
         "debug_enabled",
