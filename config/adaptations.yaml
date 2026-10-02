@@ -1,8 +1,7 @@
-# Strategy Adaptations
-# Used by loader.py for adaptive tactic guidance
-# Applied after override checks but before stage-specific prompts
-# Prompt routing precedence: overrides -> adaptations -> stage/base prompt assembly
-# Use adaptations for tactical style changes, not hard behavioural forcing
+# Prompt blocks injected into the assembled prompt, loaded only by loader.get_adaptation_template.
+# Tactic adaptations (decisive_user, literal_question, low_intent_guarded) shape style.
+# Overrides (direct_info_request, soft_positive_at_pitch, excessive_validation) force behaviour
+# and are chosen by prompts.get_override_guidance.
 
 decisive_user:
   advance_note:
@@ -35,3 +34,34 @@ low_intent_guarded:
       PATTERN: [Observation statement] -> [ONE soft open-ended follow-up]
       EXAMPLE: "{elicitation_example}"
       RULES: Statement first (observation, no interrogation), then ONE open-ended follow-up. Not binary ("Do you want X?").
+
+direct_info_request:
+  template: |
+    IMMEDIATE ACTION REQUIRED (Direct Request Detected):
+    User asked for options. Provide 2-3 specific options NOW.
+
+    FORMAT:
+    [Product/Option Name]: $[Price]
+    - Key Feature 1: [spec]
+    - Key Feature 2: [spec]
+    - Why it fits: [connection to user needs]
+
+    After listing options, ask ONE decision question: "Which of these interests you most?"
+
+    FORBIDDEN: Validation phrases | asking what they're looking for | generic statements without prices/specs
+
+soft_positive_at_pitch:
+  template: |
+    SOFT POSITIVE DETECTED - ASSUMPTIVE CLOSE:
+    User signalled interest ("{user_message}"). Do NOT ask permission questions.
+
+    ACTION: Differentiate your previously presented options immediately.
+    Compare on dimensions that matter: {preferences}.
+
+    Then ask a LOGISTICS question: "Want me to check availability?" / "Which one should we look at more closely?"
+
+excessive_validation:
+  template: |
+    CONSTRAINT VIOLATION: Excessive validation (>2 in last 4 turns)
+
+    CORRECTIVE ACTION: Provide NEW information. Ask decision-advancing question. NO validation this turn.

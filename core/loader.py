@@ -434,7 +434,7 @@ def load_adaptations():
 def render_template(template_str, **kwargs):
     """Replace {placeholders} in template_str with kwargs, using sensible defaults."""
     defaults = {"preferences": "not yet specified", "user_message": "", "reason": "",
-                "advance_note": "", "elicitation_example": "", "base": ""}
+                "advance_note": "", "elicitation_example": ""}
     merged = {**defaults, **kwargs}
 
     result = template_str
@@ -444,33 +444,13 @@ def render_template(template_str, **kwargs):
 
 
 def get_adaptation_template(adaptation_type, strategy=None, **kwargs):
-    """Render an adaptation template for the given type and strategy"""
-    adaptations = load_adaptations()
-
-    if adaptation_type not in adaptations:
-        return ""
-
-    adaptation_data = adaptations[adaptation_type]
-
-    # decisive_user needs advance_note lookup
+    """Render a prompt block from adaptations.yaml. Returns "" when none matches."""
+    data = load_adaptations().get(adaptation_type)
     if adaptation_type == "decisive_user":
-        advance_note = adaptation_data["advance_note"].get(strategy, "")
-        kwargs["advance_note"] = advance_note
-        template = adaptation_data["template"]
-        return render_template(template, **kwargs)
-
-    # literal_question - simple template
-    if adaptation_type == "literal_question":
-        template = adaptation_data["template"]
-        return render_template(template, **kwargs)
-
-    # low_intent_guarded - strategy-specific
-    if adaptation_type == "low_intent_guarded":
-        if strategy and strategy in adaptation_data:
-            template = adaptation_data[strategy]["template"]
-            return render_template(template, **kwargs)
-
-    return ""
+        kwargs["advance_note"] = data["advance_note"].get(strategy, "")
+    elif adaptation_type == "low_intent_guarded":
+        data = data.get(strategy)
+    return render_template(data["template"], **kwargs) if data else ""
 
 
 class QuickMatcher:
