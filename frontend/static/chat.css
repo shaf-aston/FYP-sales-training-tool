@@ -1946,6 +1946,26 @@ textarea:focus-visible,
   margin-bottom: 3px;
 }
 
+.quiz-signed {
+  list-style: none;
+  padding-left: 0;
+}
+
+.help-card h3 {
+  margin: 18px 0 0;
+  font-size: 0.95rem;
+  color: var(--accent);
+}
+
+.help-card kbd {
+  padding: 1px 7px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-family: inherit;
+}
+
 .review-reasons-empty,
 .review-empty {
   color: var(--text-subtle);

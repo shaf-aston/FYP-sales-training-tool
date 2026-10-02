@@ -232,3 +232,17 @@ def test_prospect_quiz_asks_about_the_sellers_weakest_turn_and_scores_a_better_l
     worse = quiz.score_prospect_answer("ok", turns[0])
     assert better["score"] > worse["score"]
     assert better["feedback"].startswith("Better")
+
+
+def test_prospect_quiz_explains_why_in_the_turn_reviews_own_words():
+    from core.selling_quality import REASONS
+
+    turn = {"turn": 1, "seller": "Great weather.", "rating": 2,
+            "buyer_before": "My van keeps breaking down.", "signals": ["closed_question"]}
+
+    result = quiz.score_prospect_answer("What happens when your van keeps breaking down?", turn)
+
+    assert REASONS["open_question"] in result["strengths"]
+    assert result["before"] == [{"text": REASONS["closed_question"], "good": False}]
+    # No signals recorded (older session): nothing invented.
+    assert quiz.score_prospect_answer("ok", {**turn, "signals": []})["before"] == []
