@@ -19,7 +19,6 @@ DEFAULT_LLM_FALLBACK_ORDER = DEFAULT_LLM_PROVIDER_ORDER[:]
 DEFAULT_GROQ_MODEL = "qwen/qwen3.8-27b"
 DEFAULT_SAMBANOVA_MODEL = "Meta-Llama-3.3-70B-Instruct"
 
-DEFAULT_GROQ_BASE_URL = "https://api.groq.com/openai/v1"
 DEFAULT_SAMBANOVA_BASE_URL = "https://api.sambanova.ai/v1"
 
 
@@ -98,3 +97,13 @@ def get_groq_api_keys() -> list[str]:
 def get_sambanova_api_key() -> str | None:
     """Return the SambaNova API key if configured."""
     return _clean_env_value(os.environ.get("SAMBANOVA_API_KEY"))
+
+
+def get_sambanova_model() -> str:
+    """Return the SambaNova chat model, honoring env overrides."""
+    return os.environ.get("SAMBANOVA_MODEL") or DEFAULT_SAMBANOVA_MODEL
+
+
+def get_sambanova_base_url() -> str:
+    """Return the SambaNova API base URL, honoring env overrides."""
+    return os.environ.get("SAMBANOVA_BASE_URL") or DEFAULT_SAMBANOVA_BASE_URL

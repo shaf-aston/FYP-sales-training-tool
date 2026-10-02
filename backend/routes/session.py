@@ -2,7 +2,6 @@
 
 import json
 import logging
-import os
 import secrets
 from typing import Any
 
@@ -14,6 +13,7 @@ from core.constants import UNDETERMINED_STAGE
 from core.content import generate_init_greeting
 from core.loader import QuickMatcher
 from core.providers import get_available_providers
+from .. import settings
 from ._utils import validate_provider, with_session
 from ..messages import (
     SERVER_FULL,
@@ -249,11 +249,8 @@ def api_config():
             "product_options": product_options,
             "strategies": ["consultative", "transactional"],
             "features": {
-                "flow_controls_enabled": not bool(
-                    bp.app.config.get(  # type: ignore[attr-defined]
-                        "REQUIRE_ADMIN_FOR_STAGE_MUTATION",
-                        os.environ.get("REQUIRE_ADMIN_FOR_STAGE_MUTATION", False),
-                    )
+                "flow_controls_enabled": not settings.require_admin_for_stage_mutation(
+                    bp.app.config  # type: ignore[attr-defined]
                 ),
             },
         }

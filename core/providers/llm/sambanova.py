@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 import json
-import os
 import time
 
 from ..base import BaseLLMProvider, LLMResponse, RATE_LIMIT
 from ..config import (
-    DEFAULT_SAMBANOVA_BASE_URL,
-    DEFAULT_SAMBANOVA_MODEL,
     get_sambanova_api_key,
+    get_sambanova_base_url,
+    get_sambanova_model,
 )
 from ..http import ProviderHTTPError, post_json
 
@@ -20,10 +19,8 @@ class SambaNovaProvider(BaseLLMProvider):
 
     def __init__(self, model: str | None = None):
         """Initialise the SambaNova model name, base URL, and API key."""
-        self.model = model or os.environ.get("SAMBANOVA_MODEL") or DEFAULT_SAMBANOVA_MODEL
-        self.base_url = (
-            os.environ.get("SAMBANOVA_BASE_URL") or DEFAULT_SAMBANOVA_BASE_URL
-        ).rstrip("/")
+        self.model = model or get_sambanova_model()
+        self.base_url = get_sambanova_base_url().rstrip("/")
         self.api_key = get_sambanova_api_key()
 
     def is_available(self) -> bool:
