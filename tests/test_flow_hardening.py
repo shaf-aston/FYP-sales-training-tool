@@ -2,6 +2,7 @@
 import pytest
 
 import core.flow as flow
+from core.analysis import ConversationState
 from core.flow import SalesFlowEngine, _check_advancement_condition, _objection_only
 from core.utils import Stage, Strategy
 
@@ -16,20 +17,6 @@ def test_objection_rule_handles_missing_signal_keys(monkeypatch):
     monkeypatch.setattr(flow, "SIGNALS", {})
 
     assert _objection_only([], "hello there", 1) is False
-
-
-def test_advancement_condition_uses_current_user_message_when_history_lags(monkeypatch):
-    monkeypatch.setattr(
-        flow,
-        "ANALYSIS_CONFIG",
-        {
-            "advancement": {
-                "logical": {"doubt_keywords": ["confused"], "max_turns": 10}
-            }
-        },
-    )
-
-    assert _check_advancement_condition([], "I am confused", 2, "logical", min_turns=2) is True
 
 
 def test_advance_rejects_invalid_target_stage():
@@ -105,7 +92,8 @@ def test_get_advance_target_uses_guard_mapping(monkeypatch):
         },
     )
 
-    assert engine.should_advance("I am confused") == Stage.EMOTIONAL
+    state = ConversationState("low", False, False, False, doubt=True)
+    assert engine.should_advance("I am confused", turn_state=state) == Stage.EMOTIONAL
 
 
 def test_turn_cap_forces_progress_when_signal_never_appears(monkeypatch):
@@ -119,7 +107,7 @@ def test_turn_cap_forces_progress_when_signal_never_appears(monkeypatch):
         },
     )
 
-    assert _check_advancement_condition([], "still not saying it", 3, "logical", min_turns=2) is True
+    assert _check_advancement_condition(3, "logical", 2, ConversationState("low", False, False, False)) is True
 
 
 def test_intent_strategy_switches_to_transactional_for_budget_signal(monkeypatch):
@@ -162,7 +150,6 @@ def test_directness_override_does_not_regress_from_objection_to_pitch(monkeypatc
         {
             "commitment": [],
             "direct_info_requests": ["price"],
-            "impatience": [],
         },
     )
     monkeypatch.setattr(flow, "user_demands_directness", lambda *_args: False)
@@ -180,7 +167,6 @@ def test_consultative_logical_does_not_jump_to_pitch_on_price_request(monkeypatc
         {
             "commitment": [],
             "direct_info_requests": ["price"],
-            "impatience": ["now"],
         },
     )
     monkeypatch.setattr(flow, "user_demands_directness", lambda *_args: True)
@@ -199,7 +185,6 @@ def test_transactional_pitch_advances_to_negotiation_on_terms_request(monkeypatc
             "commitment": [],
             "objection": [],
             "walking": [],
-            "impatience": [],
             "demand_directness": [],
             "direct_info_requests": ["how much"],
             "high_intent": [],

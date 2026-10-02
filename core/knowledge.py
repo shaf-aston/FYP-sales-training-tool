@@ -69,7 +69,6 @@ def load_custom_knowledge() -> dict:
     except (yaml.YAMLError, IOError) as e:
         logger.warning(f"Failed to load custom knowledge ({KNOWLEDGE_FILE}): {e}")
         return {}
-    return {}
 
 
 def clean_value(value: str) -> str:

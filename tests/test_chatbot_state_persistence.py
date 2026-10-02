@@ -6,8 +6,6 @@ from typing import Any, cast
 
 from core.analysis import ConversationState
 from core.chatbot import SalesChatbot
-from core.prospect_session_persistence import ProspectSessionPersistence
-from core.session_persistence import SessionPersistence
 
 
 class _FakeFlowEngine:
@@ -20,6 +18,7 @@ class _FakeFlowEngine:
         self.restored = None
         self.reset_calls = 0
         self.added_turns = []
+        self.user_turn_count = 0
 
     def reset_to_initial(self):
         self.reset_calls += 1
@@ -220,42 +219,3 @@ def test_save_session_logs_state_snapshot(caplog):
         "session_snapshot" in record.message and "session123" in record.message
         for record in caplog.records
     )
-
-
-def test_session_persistence_is_log_only(monkeypatch, caplog):
-    temp_dir = Path.cwd() / ".tmp" / "session-persistence"
-    shutil.rmtree(temp_dir, ignore_errors=True)
-    temp_dir.mkdir(parents=True, exist_ok=True)
-    caplog.set_level(logging.INFO)
-
-    saved = SessionPersistence.save(
-        session_id="persist123",
-        product_type="default",
-        provider_type="probe",
-        flow_type="intent",
-        current_stage="intent",
-        stage_turn_count=0,
-        conversation_history=[{"role": "user", "content": "hello"}],
-        initial_flow_type="intent",
-        turn_snapshots=[{"flow_type": "intent"}],
-    )
-
-    assert saved is True
-    assert SessionPersistence.load("persist123") is None
-    assert not any(temp_dir.iterdir())
-    assert any("session_state" in record.message for record in caplog.records)
-
-
-def test_prospect_session_persistence_is_log_only(caplog):
-    temp_dir = Path.cwd() / ".tmp" / "prospect-persistence"
-    shutil.rmtree(temp_dir, ignore_errors=True)
-    temp_dir.mkdir(parents=True, exist_ok=True)
-    caplog.set_level(logging.INFO)
-
-    state = {"difficulty": "medium", "history": ["hello"]}
-
-    assert ProspectSessionPersistence.save("prospect123", state) is True
-    assert ProspectSessionPersistence.load("prospect123") is None
-    assert ProspectSessionPersistence.delete("prospect123") is True
-    assert not any(temp_dir.iterdir())
-    assert any("prospect_session_state" in record.message for record in caplog.records)

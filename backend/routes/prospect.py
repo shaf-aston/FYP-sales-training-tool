@@ -15,7 +15,6 @@ from ..messages import (
 from ..security import InputValidator, require_rate_limit
 from ._utils import make_require_session, validate_provider
 from core.analytics.session_analytics import SessionAnalytics
-from core.prospect_session_persistence import ProspectSessionPersistence
 from core.prospect_session import ProviderUnavailable
 from core.script_drills import build_drill_set
 
@@ -33,17 +32,6 @@ def init_routes(app, prospect_session_manager_obj, validate_message_func):
     state.app = app
     state.prospect_session_manager = prospect_session_manager_obj
     state.validate_message = validate_message_func
-
-
-def _public_config(ps: Any) -> dict:
-    fn = getattr(ps, "public_config", None)
-    if callable(fn):
-        try:
-            cfg = fn()
-            return cfg if isinstance(cfg, dict) else {}
-        except Exception:
-            return {}
-    return {}
 
 
 def _lookup_prospect_session(session_id):
@@ -130,7 +118,7 @@ def prospect_init():
                 "state": opening.state_snapshot,
                 "difficulty": difficulty,
                 "product_type": product_type,
-                **_public_config(ps),
+                **ps.public_config(),
                 "latency_ms": opening.latency_ms,
                 "provider": opening.provider,
                 "model": opening.model,
@@ -202,7 +190,7 @@ def prospect_state():
             "difficulty": ps.state.difficulty,
             "product_type": ps.state.product_type,
             "conversation_history": ps.conversation_history,
-            **_public_config(ps),
+            **ps.public_config(),
             "provider": ps.provider_name,
             "model": ps.model_name,
         }
@@ -363,5 +351,4 @@ def prospect_reset():
         if ps is not None:
             ps.record_session_end()
         _bp_state().prospect_session_manager.delete(session_id)
-        ProspectSessionPersistence.delete(session_id)
     return jsonify({"success": True})

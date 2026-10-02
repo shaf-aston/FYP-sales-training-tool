@@ -14,7 +14,7 @@ CONFIG_DIR = Path(__file__).parent.parent / "config"
 
 # Signal keys that must exist in signals.yaml. Typo here → runtime error.
 _REQUIRED_SIGNAL_KEYS = {
-    "commitment", "objection", "walking", "impatience", "low_intent", "high_intent",
+    "commitment", "objection", "walking", "low_intent", "high_intent",
     "guardedness_keywords", "demand_directness", "direct_info_requests", "soft_positive",
     "validation_phrases", "transactional_bot_indicators", "consultative_bot_indicators",
     "user_consultativeSIGNALS", "user_transactionalSIGNALS",
@@ -138,12 +138,6 @@ _DEFAULT_SIGNALS = {
         "let's stop", "i'm done", "not right now", "maybe later", "no",
         "nope", "no way", "forget it", "never", "not happening", "drop it",
         "change my mind", "not going", "won't work", "impossible",
-    ],
-    "impatience": [
-        "hurry", "quickly", "fast", "asap", "right now", "immediately",
-        "urgent", "now", "today", "tonight", "this week", "don't have time",
-        "time's running out", "tick tock", "come on", "let's go", "speed up",
-        "how long", "when", "soon", "rushed", "hurrying",
     ],
     "low_intent": [
         "just browsing", "just looking", "killing time", "wasting time",

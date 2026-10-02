@@ -35,10 +35,3 @@ low_intent_guarded:
       PATTERN: [Observation statement] -> [ONE soft open-ended follow-up]
       EXAMPLE: "{elicitation_example}"
       RULES: Statement first (observation, no interrogation), then ONE open-ended follow-up. Not binary ("Do you want X?").
-    elicitation_type: "combined"
-
-# Reason mapping for low_intent_guarded adaptations
-reason_map:
-  low: "low intent"
-  guarded: "guarded response"
-  question_fatigue: "question fatigue (2+ recent questions)"

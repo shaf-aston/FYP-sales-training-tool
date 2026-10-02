@@ -115,11 +115,7 @@ class SalesChatbot:
         if not self.session_id:
             return
 
-        turn_count = getattr(
-            self.flow_engine,
-            "user_turn_count",
-            sum(1 for m in getattr(self.flow_engine, "conversation_history", []) if m.get("role") == "user"),
-        )
+        turn_count = self.flow_engine.user_turn_count
 
         payload = {
             "session_id": self.session_id,
@@ -468,11 +464,6 @@ class SalesChatbot:
         else:
             self._turn_snapshots.append(snapshot)
 
-    def rewind(self, steps: int):
-        """Rewind back by `steps` turns from the current position."""
-        current_turns = len(self.flow_engine.conversation_history) // 2
-        return self.rewind_to_turn(max(0, current_turns - steps))
-
     def rewind_to_turn(self, turn_index: int) -> bool:
         """Rewind to turn_index by loading FSM snapshot instead of replaying."""
         max_turns = len(self.flow_engine.conversation_history) // 2
@@ -551,37 +542,19 @@ class SalesChatbot:
         """Emit a durable log snapshot of the current session state."""
         if not self.session_id:
             return
-        try:
-            self.logger.info(
-                "session_snapshot %s",
-                json.dumps(
-                    {
-                        "session_id": self.session_id,
-                        "product_type": self.product_type,
-                        "provider_type": self.provider_name,
-                        "flow_type": self.flow_engine.flow_type,
-                        "current_stage": self.flow_engine.current_stage,
-                        "stage_turn_count": self.flow_engine.stage_turn_count,
-                        "initial_flow_type": self.flow_engine.initial_flow_type,
-                        "turn_count": getattr(
-                            self.flow_engine,
-                            "user_turn_count",
-                            sum(
-                                1
-                                for m in getattr(self.flow_engine, "conversation_history", [])
-                                if m.get("role") == "user"
-                            ),
-                        ),
-                        "message_count": len(self.flow_engine.conversation_history),
-                    },
-                    ensure_ascii=False,
-                    default=str,
-                ),
-            )
-        except Exception as e:
-            self.logger.exception(
-                "Exception while logging session %s: %s", self.session_id, e
-            )
+        fe = self.flow_engine
+        snapshot = {
+            "session_id": self.session_id,
+            "product_type": self.product_type,
+            "provider_type": self.provider_name,
+            "flow_type": fe.flow_type,
+            "current_stage": fe.current_stage,
+            "stage_turn_count": fe.stage_turn_count,
+            "initial_flow_type": fe.initial_flow_type,
+            "turn_count": fe.user_turn_count,
+            "message_count": len(fe.conversation_history),
+        }
+        self.logger.info("session_snapshot %s", json.dumps(snapshot, default=str))
 
     def record_session_end(self):
         """Record where this session actually got to, so finished sessions are counted."""
@@ -592,14 +565,6 @@ class SalesChatbot:
             event="session_end",
             final_stage=str(self.flow_engine.current_stage),
             strategy=str(self.flow_engine.flow_type),
-            turn_count=getattr(
-                self.flow_engine,
-                "user_turn_count",
-                sum(
-                    1
-                    for m in getattr(self.flow_engine, "conversation_history", [])
-                    if m.get("role") == "user"
-                ),
-            ),
+            turn_count=self.flow_engine.user_turn_count,
             message_count=len(self.flow_engine.conversation_history),
         )
