@@ -16,6 +16,7 @@ from ..security import InputValidator, require_rate_limit
 from ._utils import make_require_session, validate_provider
 from core.analytics.session_analytics import SessionAnalytics
 from core.prospect_session import ProviderUnavailable
+from core.quiz import build_prospect_question, score_prospect_answer
 from core.script_drills import build_drill_set
 
 bp = Blueprint("prospect", __name__, url_prefix="/api/prospect")
@@ -246,6 +247,43 @@ def prospect_review():
     except Exception as e:
         _bp_state().app.logger.exception(f"Prospect review error: {e}")
         return jsonify({"error": PROSPECT_REVIEW_ERROR}), 500
+
+
+@bp.route("/quiz", methods=["GET"])
+@require_rate_limit("prospect")
+def prospect_quiz_question():
+    """A question about the learner's own weakest turn, not the AI salesperson's flow."""
+    ps, err = _require_prospect_session()
+    if err:
+        return err
+    assert ps is not None
+
+    question = build_prospect_question(ps.review()["turns"])
+    if question is None:
+        return jsonify({"error": "Say a few things to the buyer first - the quiz uses your own turns.", "code": "NO_TURNS"}), 400
+    return jsonify({"success": True, **question})
+
+
+@bp.route("/quiz", methods=["POST"])
+@require_rate_limit("prospect")
+def prospect_quiz_answer():
+    """Score a replacement line for one of the learner's own turns."""
+    ps, err = _require_prospect_session()
+    if err:
+        return err
+    assert ps is not None
+
+    data = request.json or {}
+    turn_index = InputValidator.parse_positive_int(data.get("turn"))
+    turns = ps.review()["turns"]
+    if turn_index is None or turn_index > len(turns):
+        return jsonify({"error": "That turn is not part of this session.", "code": "INVALID_TURN"}), 400
+
+    answer, err = _bp_state().validate_message(data.get("answer", ""))
+    if err:
+        return err
+
+    return jsonify({"success": True, **score_prospect_answer(answer, turns[turn_index - 1])})
 
 
 @bp.route("/drills", methods=["GET"])

@@ -206,7 +206,6 @@ function applyProspectSessionFromServer(sessionId, data) {
 
   // Hide sales mode buttons, show active prospect indicator
   document.getElementById("trainingToggleBtn").style.display = "none";
-  document.getElementById("quizToggleBtn").style.display = "none";
   document.getElementById("prospectStartBtn").textContent =
     "Exit prospect practice";
   document.getElementById("prospectStartBtn").onclick = endProspectMode;
@@ -605,6 +604,7 @@ function renderEvaluation(data, displayMode) {
 function buildEvaluationHTML(data) {
   const gradeClass = "grade-" + (data.grade || "c").toLowerCase();
   const outcomeClass = data.outcome || "incomplete";
+  _lastSessionGrade = (data.grade || "").toUpperCase();
 
   let criteriaHtml = "";
   if (data.criteria_scores) {

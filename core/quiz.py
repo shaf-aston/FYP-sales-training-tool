@@ -5,6 +5,7 @@ import random
 from typing import Any
 
 from .loader import load_yaml
+from .selling_quality import NEGATIVE_SIGNALS, score_seller_turn
 from .utils import (
     clamp_score,
     contains_nonnegated_keyword,
@@ -311,31 +312,43 @@ def get_quiz_question(quiz_type: str) -> str:
         return random.choice(type_questions)
 
     fallbacks = {
-        "stage": "What FSM stage and strategy are we currently in?",
+        "stage": "Which stage of the sale and which approach are we in right now?",
         "next_move": "What would you say next to this customer?",
         "direction": "Where are you taking this conversation and why?",
     }
     return fallbacks.get(normalized_type, "How would you proceed?")
 
 
+def _stage_key(value: Any) -> str:
+    return str(getattr(value, "value", value)).split(".")[-1].lower()
+
+
+def _friendly(kind: str, value: Any) -> str:
+    """Plain-English name for a stage or strategy id (enum, 'Stage.INTENT' or 'intent')."""
+    key = _stage_key(value)
+    return _load_quiz_config().get(kind, {}).get(key, key)
+
+
 def test_quiz_stage_answer(user_answer: str, current_stage: str, flow_type: str) -> dict:
-    """Deterministic: did the user correctly ID the current stage and strategy?"""
-    expected_stage = current_stage
-    expected_strategy = flow_type
-    expected_stage_label = str(expected_stage).upper()
-    expected_strategy_label = str(expected_strategy).upper()
+    """Deterministic: did the user correctly ID the current stage and strategy?
+
+    The answer may use either the id ("logical") or the plain name ("Understanding
+    the problem"). Feedback only ever shows the plain name.
+    """
+    stage_key, strategy_key = _stage_key(current_stage), _stage_key(flow_type)
+    stage_name = _friendly("stage_names", current_stage)
+    strategy_name = _friendly("strategy_names", flow_type)
     answer_lower = user_answer.strip().lower()
 
-    stage_ok = contains_nonnegated_keyword(answer_lower, expected_stage.lower())
-    strategy_ok = contains_nonnegated_keyword(answer_lower, expected_strategy.lower())
+    stage_ok = contains_nonnegated_keyword(answer_lower, [stage_key, stage_name.lower()])
+    strategy_ok = contains_nonnegated_keyword(answer_lower, [strategy_key, strategy_name.lower()])
     correct = stage_ok and strategy_ok
 
-    # Build feedback based on what user got right
     feedback_map = {
-        (True, True): f"Right - {expected_stage_label}, {expected_strategy_label} strategy.",
-        (False, False): f"Close, but not quite - it's {expected_stage_label} stage, {expected_strategy_label} strategy.",
-        (False, True): f"Strategy's right ({expected_strategy_label}), but you're in {expected_stage_label} stage now.",
-        (True, False): f"Stage is right ({expected_stage_label}), but this is {expected_strategy_label} strategy.",
+        (True, True): f"Right - {stage_name}, {strategy_name} approach.",
+        (False, False): f"Not this time - it's {stage_name} ({strategy_name} approach).",
+        (False, True): f"The approach is right ({strategy_name}), but you're in {stage_name} now.",
+        (True, False): f"The stage is right ({stage_name}), but this is the {strategy_name} approach.",
     }
     feedback = feedback_map[(stage_ok, strategy_ok)]
 
@@ -351,8 +364,41 @@ def test_quiz_stage_answer(user_answer: str, current_stage: str, flow_type: str)
         "correct": correct,
         "score": score,
         "user_answer": user_answer,
-        "expected": {"stage": expected_stage_label, "strategy": expected_strategy_label},
+        "expected": {"stage": stage_name, "strategy": strategy_name},
         "feedback": feedback,
+    }
+
+
+def build_prospect_question(turns: list[dict]) -> dict | None:
+    """Ask about the seller's own weakest turn (earliest on a tie), or None if none yet."""
+    if not turns:
+        return None
+    turn = min(turns, key=lambda t: (t["rating"], t["turn"]))
+    template = _load_quiz_config()["prospect_question"]
+    return {
+        "turn": turn["turn"],
+        "question": template.format(turn=turn["turn"], line=turn["seller"]),
+    }
+
+
+def score_prospect_answer(answer: str, turn: dict) -> dict:
+    """Rate the seller's replacement line with the same judge that rated the original."""
+    new = score_seller_turn(
+        answer, buyer_message=turn["buyer_before"], completed_turns=turn["turn"] - 1
+    )
+    old = turn["rating"]
+    if new.rating > old:
+        feedback = f"Better than what you said ({old} out of 5, now {new.rating})."
+    elif new.rating == old:
+        feedback = f"About as strong as what you said ({old} out of 5)."
+    else:
+        feedback = f"Weaker than what you said ({old} out of 5, now {new.rating})."
+    pairs = list(zip(new.signals, new.reasons))
+    return {
+        "score": round((new.rating - 1) / 4 * 100),
+        "feedback": feedback,
+        "strengths": [r for sig, r in pairs if sig not in NEGATIVE_SIGNALS],
+        "improvements": [r for sig, r in pairs if sig in NEGATIVE_SIGNALS],
     }
 
 

@@ -240,6 +240,13 @@ function askTrainingCoach() {
 
 // Quiz Panel
 let currentQuizType = "stage";
+let _prospectQuizTurn = null;
+
+/* In prospect mode the learner is the seller, so the quiz replays one of their
+   own turns instead of asking about the AI salesperson's stage. */
+function quizIsProspect() {
+  return !!(_prospectMode && _prospectSessionId);
+}
 
 function toggleQuizPanel() {
   const panel = document.getElementById("quizPanel");
@@ -248,6 +255,8 @@ function toggleQuizPanel() {
   if (willOpen) {
     panel.classList.add("open");
     setSidebarTab("tools");
+    const typeButtons = document.querySelector(".quiz-type-buttons");
+    if (typeButtons) typeButtons.hidden = quizIsProspect();
     fetchQuizQuestion();
   }
   localStorage.setItem("quizPanelOpen", willOpen);
@@ -271,12 +280,16 @@ function fetchQuizQuestion() {
   const questionEl = document.getElementById("quizQuestion");
   questionEl.textContent = "Loading question...";
 
-  fetch(`/api/test/question?type=${currentQuizType}`, {
-    headers: { "X-Session-ID": getSessionId() },
+  const url = quizIsProspect()
+    ? "/api/prospect/quiz"
+    : `/api/test/question?type=${currentQuizType}`;
+  fetch(url, {
+    headers: { "X-Session-ID": quizIsProspect() ? _prospectSessionId : getSessionId() },
   })
     .then((r) => r.json())
     .then((data) => {
       if (data.success) {
+        _prospectQuizTurn = data.turn || null;
         questionEl.textContent = data.question;
       } else {
         questionEl.textContent = data.error || "Failed to load question.";
@@ -304,7 +317,10 @@ function submitQuiz() {
   // Build request body based on quiz type
   let body = {};
   let endpoint = "";
-  if (currentQuizType === "stage") {
+  if (quizIsProspect()) {
+    body = { answer, turn: _prospectQuizTurn };
+    endpoint = "/api/prospect/quiz";
+  } else if (currentQuizType === "stage") {
     body = { answer };
     endpoint = "/api/test/stage";
   } else if (currentQuizType === "next_move") {
@@ -319,7 +335,7 @@ function submitQuiz() {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-Session-ID": getSessionId(),
+      "X-Session-ID": quizIsProspect() ? _prospectSessionId : getSessionId(),
     },
     body: JSON.stringify(body),
   })
@@ -352,7 +368,7 @@ function displayQuizFeedback(data) {
   // Determine score and class
   let score, feedbackClass, feedbackText;
 
-  if (currentQuizType === "stage") {
+  if (currentQuizType === "stage" && !quizIsProspect()) {
     // Stage quiz: numeric score with partial credit
     const numScore = Math.round(data.score * 100);
     score = numScore + "%";
@@ -418,7 +434,7 @@ function displayQuizFeedback(data) {
 
   // For stage quiz, show expected answer
   if (data.expected) {
-    html += `<div class="quiz-details"><strong>Expected:</strong> ${escapeHtml(data.expected.stage)} / ${escapeHtml(data.expected.strategy)}</div>`;
+    html += `<div class="quiz-details"><strong>Expected:</strong> ${escapeHtml(data.expected.stage)} (${escapeHtml(data.expected.strategy)} approach)</div>`;
   }
 
   html += "</div>";

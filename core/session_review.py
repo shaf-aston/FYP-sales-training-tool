@@ -9,7 +9,7 @@ the learner actually saw, because both come from the same two functions.
 
 from __future__ import annotations
 
-from .selling_quality import apply_readiness, score_seller_turn
+from .selling_quality import NEGATIVE_SIGNALS, REASONS, apply_readiness, load_selling_signals, score_seller_turn
 
 DEFAULT_PIVOTAL_TURNS = 3
 WEAK_RATING = 2
@@ -94,7 +94,7 @@ def build_review(
         # live play was carrying, or redoing a turn nudges the buyer a fraction
         # closer to (or further from) buying than it should.
         "readiness_exact": readiness,
-        "summary": summarise(turns),
+        "summary": summarise(turns, pick_pivotal_turns(turns, pivotal_count)),
     }
 
 
@@ -110,14 +110,32 @@ def pick_pivotal_turns(turns: list[dict], count: int = DEFAULT_PIVOTAL_TURNS) ->
     return sorted(t["turn"] for t in costly[:count])
 
 
-def summarise(turns: list[dict]) -> dict:
-    """Headline counts for the top of the review."""
+def _work_on(turns: list[dict]) -> str:
+    """The one thing to practise: the most repeated misstep, else the missing habit."""
+    seen = [sig for t in turns for sig in t["signals"] if sig in NEGATIVE_SIGNALS]
+    if seen:
+        return REASONS[max(sorted(set(seen)), key=seen.count)]
+    return "Ask more open questions built on the buyer's own words."
+
+
+def summarise(turns: list[dict], pivotal: list[int] | None = None) -> dict:
+    """Headline counts for the top of the review.
+
+    `went_well` is the only licence to praise the session: the average rating
+    must clear the configured bar and no turn may have cost ground. `work_on`
+    says what to practise otherwise.
+    """
     if not turns:
-        return {"turn_count": 0, "average_rating": 0.0, "strongest_turn": None, "weakest_turn": None}
+        return {"turn_count": 0, "average_rating": 0.0, "strongest_turn": None, "weakest_turn": None,
+                "went_well": False, "work_on": ""}
     ratings = [t["rating"] for t in turns]
+    average = round(sum(ratings) / len(ratings), 2)
+    bar = load_selling_signals().get("thresholds", {}).get("praise_min_average", 3.5)
     return {
         "turn_count": len(turns),
-        "average_rating": round(sum(ratings) / len(ratings), 2),
+        "average_rating": average,
         "strongest_turn": max(turns, key=lambda t: t["rating"])["turn"],
         "weakest_turn": min(turns, key=lambda t: t["rating"])["turn"],
+        "went_well": average >= bar and not pivotal,
+        "work_on": _work_on(turns),
     }

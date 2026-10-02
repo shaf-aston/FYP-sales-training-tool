@@ -8,7 +8,10 @@
 # Raise a weight to make that behaviour matter more.
 
 weights:
-  open_question: 0.9
+  open_question: 0.4
+  on_topic: 0.5
+  generic_question: -0.3
+  closed_question: -0.4
   mirroring: 1.0
   acknowledgement: 0.5
   pressure: -1.2
@@ -22,6 +25,7 @@ thresholds:
   monologue_words: 90        # more words than this is talking, not selling
   question_stacking_count: 3 # this many questions in one turn overwhelms a buyer
   mirroring_min_overlap: 2   # distinct buyer words echoed back to count as listening
+  praise_min_average: 3.5    # session average needed before the review praises it
   discovery_turns: 2         # pitching before this many completed turns is premature
 
 # Two ways a seller opens someone up.
@@ -32,6 +36,28 @@ question_words:
   - why
   - where
   - when
+
+# Questions that open nothing because they fit any buyer.
+stock_questions:
+  - how are you
+  - how's it going
+  - how can i help
+  - what do you do
+  - anything else
+
+# A question starting with one of these (and no question word) is yes/no.
+closed_starters:
+  - do
+  - does
+  - did
+  - would
+  - are
+  - is
+  - can
+  - could
+  - will
+  - have
+  - should
 
 # Invitations are open questions without a question mark - "walk me through it"
 # is discovery even though it is phrased as an instruction.
