@@ -392,7 +392,6 @@ def _build_transactional_reframe_block(pathway: dict, attempt: int) -> str:
 
     block = "\n[TRANSACTIONAL REFRAME - keep concise]\n"
     block += f"REFRAME: {reframe_desc.get('title', current_reframe_id)}\n"
-    block += f"DIALOGUE: {reframe_desc.get('dialogue', '').strip()}\n"
     block += f"CHECK QUESTION (the only question this turn): {reframe_desc.get('check_question', '').strip()}\n"
     return block
 
