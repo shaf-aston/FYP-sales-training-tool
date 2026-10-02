@@ -16,11 +16,3 @@ class ObjectionType:
     THINK = "think"
     SMOKESCREEN = "smokescreen"
     UNKNOWN = "unknown"
-
-
-class ObjectionCategory:
-    """High-level objection categories."""
-    RESOURCE = "resource"
-    STAKEHOLDER = "stakeholder"
-    INTERNAL = "internal"
-    UNCLEAR = "unclear"

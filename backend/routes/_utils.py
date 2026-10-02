@@ -84,14 +84,3 @@ def safe_latency_ms(value) -> float | None:
         return round(float(value), 1)
     except (TypeError, ValueError):
         return None
-
-
-def sum_latency_ms(*values) -> float | None:
-    """Sum latency values only when every component is present and numeric."""
-    total = 0.0
-    for value in values:
-        component = safe_latency_ms(value)
-        if component is None:
-            return None
-        total += component
-    return round(total, 1)

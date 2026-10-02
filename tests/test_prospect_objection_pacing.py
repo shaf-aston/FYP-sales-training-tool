@@ -24,8 +24,8 @@ class StubProspectProvider:
 @pytest.fixture(autouse=True)
 def stub_provider(monkeypatch):
     monkeypatch.setattr(
-        "core.prospect_session.create_provider",
-        lambda *_args, **_kwargs: StubProspectProvider(),
+        "core.services.provider_router.create_provider_with_trace",
+        lambda *_args, **_kwargs: (StubProspectProvider(), None),
     )
 
 
@@ -39,11 +39,11 @@ TURNS = 30
 @pytest.mark.parametrize("difficulty", ["easy", "medium", "hard"])
 def test_the_buyer_never_raises_more_objections_than_the_profile_allows(difficulty):
     prospect = session(difficulty)
-    cap = prospect._objection_cap()
+    cap = prospect.pacer.cap
 
     assert cap > 0
-    assert prospect._objections_raised_by(TURNS) == cap
-    assert prospect._objections_raised_by(TURNS * 10) == cap
+    assert prospect.pacer.raised_by(TURNS) == cap
+    assert prospect.pacer.raised_by(TURNS * 10) == cap
 
 
 def test_a_harder_buyer_pushes_back_sooner():
@@ -56,7 +56,7 @@ def test_a_harder_buyer_pushes_back_sooner():
             prospect = session(difficulty, sid)
             first_turns.append(
                 next(
-                    (t for t in range(1, TURNS + 1) if prospect._objection_for_turn(t)),
+                    (t for t in range(1, TURNS + 1) if prospect.pacer.for_turn(t)),
                     TURNS,
                 )
             )
@@ -70,19 +70,19 @@ def test_a_harder_buyer_pushes_back_sooner():
 
 
 def test_hard_raises_strictly_more_objections_than_easy():
-    assert session("hard")._objection_cap() > session("easy")._objection_cap()
+    assert session("hard").pacer.cap > session("easy").pacer.cap
 
 
 def test_objections_come_out_of_the_bank_in_order_and_never_repeat():
     prospect = session("hard")
     issued = [
-        prospect._objection_for_turn(turn)
+        prospect.pacer.for_turn(turn)
         for turn in range(1, TURNS + 1)
     ]
     raised = [o for o in issued if o is not None]
-    bank = prospect.difficulty_profile["objection_bank"]
+    bank = prospect.pacer.bank
 
-    assert raised == bank[: prospect._objection_cap()]
+    assert raised == bank[: prospect.pacer.cap]
     assert len(raised) == len({id(o) for o in raised})
 
 
@@ -91,15 +91,15 @@ def test_the_same_turn_always_rolls_the_same_way():
     first = session("medium", "abc")
     second = session("medium", "abc")
 
-    assert [first._turn_dice(t) for t in range(1, 10)] == [
-        second._turn_dice(t) for t in range(1, 10)
+    assert [first.pacer.dice(t) for t in range(1, 10)] == [
+        second.pacer.dice(t) for t in range(1, 10)
     ]
-    assert first._objections_raised_by(9) == second._objections_raised_by(9)
+    assert first.pacer.raised_by(9) == second.pacer.raised_by(9)
 
 
 def test_two_sessions_do_not_get_identical_objection_timing():
     timings = {
-        sid: tuple(bool(session("medium", sid)._objection_for_turn(t)) for t in range(1, 12))
+        sid: tuple(bool(session("medium", sid).pacer.for_turn(t)) for t in range(1, 12))
         for sid in ("aaa", "bbb", "ccc")
     }
 
@@ -119,7 +119,7 @@ def test_rewinding_puts_the_objection_count_back():
     prospect.state.objections_raised = 99
 
     assert prospect.rewind_to_turn(2) is True
-    assert prospect.state.objections_raised == prospect._objections_raised_by(1)
+    assert prospect.state.objections_raised == prospect.pacer.raised_by(1)
 
 
 def test_a_live_turn_tells_the_buyer_to_raise_the_objection_and_counts_it():
@@ -130,7 +130,7 @@ def test_a_live_turn_tells_the_buyer_to_raise_the_objection_and_counts_it():
         prompts.append(messages[0]["content"]) or LLMResponse(content="Go on.")
     )
 
-    turn = next(t for t in range(1, TURNS + 1) if prospect._objection_for_turn(t))
+    turn = next(t for t in range(1, TURNS + 1) if prospect.pacer.for_turn(t))
     for _ in range(turn):
         prospect.process_turn("What matters most to you here?")
 

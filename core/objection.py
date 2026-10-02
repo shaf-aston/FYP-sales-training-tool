@@ -5,7 +5,6 @@ import warnings
 from typing import Any, Optional, TypedDict
 
 from .constants_enums import MessageRole, ObjectionType
-from .helpers import HistoryHelper
 from .loader import load_analysis_config, load_objection_flows, load_yaml
 from .utils import Stage, Strategy, contains_nonnegated_keyword
 
@@ -91,10 +90,10 @@ def classify_objection(
         return current_match
 
     if history:
-        recent_user = HistoryHelper.get_recent_user_messages(history, count=2)
+        recent_user = [m["content"].lower() for m in history if m.get("role") == MessageRole.USER][-2:]
         if recent_user and recent_user[-1] == user_message_lower:
             recent_user = recent_user[:-1]
-        combined = HistoryHelper.combine_messages(recent_user + [user_message_lower]).strip()
+        combined = " ".join(recent_user + [user_message_lower]).strip()
         history_match = _classify_text(combined)
         if history_match is not None:
             return history_match

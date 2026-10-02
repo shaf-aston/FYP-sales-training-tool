@@ -46,7 +46,10 @@ def test_prospect_session_product_context_includes_persona_and_custom_data(monke
             },
         },
     )
-    monkeypatch.setattr(prospect_session, "create_provider", lambda *_args, **_kwargs: _StubProvider())
+    monkeypatch.setattr(
+        "core.services.provider_router.create_provider_with_trace",
+        lambda *_args, **_kwargs: (_StubProvider(), None),
+    )
     monkeypatch.setattr(
         loader,
         "load_product_config",

@@ -27,8 +27,6 @@ ENV/
 sessions/
 analytics/
 feedback.jsonl
-analytics.jsonl
-metrics.jsonl
 .claude/
 
 # Editor and OS noise
@@ -54,3 +52,6 @@ _section4_check.txt
 Documentation/Diary.md
 Documentation/Sylvia meetings.txt
 Diary.md
+
+# Real client quotes, rebuilt from the Fathom vault by scripts/build_real_calls.py
+config/real_objections.json

@@ -2,6 +2,7 @@
 
 import copy
 import hashlib
+import json
 import re
 from difflib import SequenceMatcher
 from functools import lru_cache
@@ -398,6 +399,17 @@ def load_product_config():
 def load_prospect_config():
     """Load and merge prospect mode configuration with built-in defaults."""
     return _deep_merge(_DEFAULT_PROSPECT_CONFIG, load_yaml("prospect_config.yaml"))
+
+
+@lru_cache(maxsize=1)
+def load_real_objections():
+    """Real-call objection pool, or [] when disabled or not built yet."""
+    cfg = load_prospect_config().get("real_objections", {})
+    path = CONFIG_DIR / cfg.get("file", "")
+    if not cfg.get("enabled") or not path.is_file():
+        return []
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
 
 
 def get_product_settings(product_type):

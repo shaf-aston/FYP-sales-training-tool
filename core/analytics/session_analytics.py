@@ -49,59 +49,25 @@ class SessionAnalytics:
 
     @classmethod
     def record(cls, *, session_id: str, event: str, **payload) -> None:
-        """Record an analytics event.
-
-        Prefer this method in new code. Legacy `record_*` helpers remain for callers/tests.
-        """
-        cls._record(session_id, event, **payload)
-
-    @classmethod
-    def _record(cls, session_id: str, event_type: str, **payload) -> None:
         """Store one analytics event in memory, logs, and optional JSONL."""
         if not session_id:
             return
 
-        # Keep both keys for backward compatibility with any log parsers.
-        event = {"event_type": event_type, "type": event_type, **payload}
+        entry = {"event_type": event, **payload}
 
         with _LOCK:
-            cls._events[session_id].append(event)
+            cls._events[session_id].append(entry)
 
-        cls._write_jsonl({"session_id": session_id, **event})
+        cls._write_jsonl({"session_id": session_id, **entry})
 
         logger.info(
             "session_analytics %s",
             json.dumps(
-                {"session_id": session_id, **event},
+                {"session_id": session_id, **entry},
                 ensure_ascii=False,
                 default=str,
             ),
         )
-
-    @classmethod
-    def record_session_start(cls, session_id: str, **payload):
-        """Record the first event for a new chatbot session."""
-        cls._record(session_id, "session_start", **payload)
-
-    @classmethod
-    def record_stage_transition(cls, session_id: str, **payload):
-        """Record a stage change inside the conversation flow."""
-        cls._record(session_id, "stage_transition", **payload)
-
-    @classmethod
-    def record_intent_classification(cls, session_id: str, **payload):
-        """Record the latest detected intent level for the user."""
-        cls._record(session_id, "intent_classification", **payload)
-
-    @classmethod
-    def record_objection_classified(cls, session_id: str, **payload):
-        """Record the objection type detected on a user turn."""
-        cls._record(session_id, "objection_classified", **payload)
-
-    @classmethod
-    def record_strategy_switch(cls, session_id: str, **payload):
-        """Record a switch between conversation strategies."""
-        cls._record(session_id, "strategy_switch", **payload)
 
     @classmethod
     def get_session_analytics(cls, session_id: str):
@@ -119,7 +85,7 @@ class SessionAnalytics:
 
         for session_id in sorted(session_ids):
             for event in cls.get_session_analytics(session_id):
-                event_name = event.get("event_type") or event.get("type")
+                event_name = event.get("event_type")
                 if event_name:
                     event_counts[event_name] += 1
 

@@ -14,7 +14,6 @@ ALLOWED_FIELDS = {"product_name", "pricing", "specifications", "company_info", "
 
 KNOWLEDGE_DIR = Path(__file__).parent.parent / "config"
 KNOWLEDGE_FILE = KNOWLEDGE_DIR / "custom_instructions.yaml"
-LEGACY_KNOWLEDGE_FILE = KNOWLEDGE_DIR / "custom_knowledge.yaml"
 KNOWLEDGE_CONFIG_FILE = KNOWLEDGE_DIR / "knowledge_sanitization.yaml"
 
 # Patterns that indicate prompt-injection attempts (e.g., "ignore previous instructions")
@@ -61,16 +60,15 @@ def load_custom_knowledge() -> dict:
 
     Returns empty dict if missing or invalid
     """
-    for kf in (KNOWLEDGE_FILE, LEGACY_KNOWLEDGE_FILE):
-        if not kf.exists():
-            continue
-        try:
-            with open(kf, "r", encoding="utf-8") as f:
-                data = yaml.safe_load(f)
-            return data if isinstance(data, dict) else {}
-        except (yaml.YAMLError, IOError) as e:
-            logger.warning(f"Failed to load custom knowledge ({kf}): {e}")
-            return {}
+    if not KNOWLEDGE_FILE.exists():
+        return {}
+    try:
+        with open(KNOWLEDGE_FILE, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+        return data if isinstance(data, dict) else {}
+    except (yaml.YAMLError, IOError) as e:
+        logger.warning(f"Failed to load custom knowledge ({KNOWLEDGE_FILE}): {e}")
+        return {}
     return {}
 
 
@@ -155,9 +153,7 @@ def get_custom_knowledge_text() -> str:
 def clear_custom_knowledge() -> bool:
     """Delete custom knowledge file(s). Returns True on success or if already absent."""
     try:
-        for path in (KNOWLEDGE_FILE, LEGACY_KNOWLEDGE_FILE):
-            if path.exists():
-                path.unlink()
+        KNOWLEDGE_FILE.unlink(missing_ok=True)
         return True
     except IOError as e:
         logger.error(f"Failed to delete custom knowledge ({KNOWLEDGE_FILE}): {e}")

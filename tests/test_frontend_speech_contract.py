@@ -17,7 +17,8 @@ def test_frontend_loads_puter_sdk_before_speech_code():
 
     assert 'src="https://js.puter.com/v2/"' in html
     assert 'src="{{ url_for(\'static\', filename=\'speech.js\') }}"' in html
-    assert 'src="{{ url_for(\'static\', filename=\'app.js\') }}"' in html
+    assert 'src="{{ url_for(\'static\', filename=\'js/voice.js\') }}"' in html
+    assert html.index("filename='speech.js'") < html.index("filename='js/voice.js'")
 
 
 def test_speech_js_uses_native_first_then_puter_fallback():
@@ -29,8 +30,8 @@ def test_speech_js_uses_native_first_then_puter_fallback():
     assert "window.puter.speech2txt" not in js
 
 
-def test_app_js_uses_puter_tts_then_native_fallback_when_needed():
-    js = _read("frontend/static/app.js")
+def test_voice_js_uses_puter_tts_then_native_fallback_when_needed():
+    js = _read("frontend/static/js/voice.js")
 
     assert "window.puter?.ai?.txt2speech" in js
     assert "async function createPuterTtsHandle(text)" in js

@@ -8,28 +8,20 @@ import time
 from dataclasses import dataclass, field
 
 from .analytics.session_analytics import SessionAnalytics
-from .loader import load_prospect_config
+from .loader import load_prospect_config, load_real_objections
+from .buyer_prompt import build_product_context, build_system_prompt
+from .buyer_rules import ObjectionPacer, end_outcome
+from .real_calls import pick_bank
+from .services.provider_router import ProviderRouter
 from .prospect_session_persistence import ProspectSessionPersistence
-from .providers.factory import create_provider, list_fallback_providers
 from .selling_quality import apply_readiness, score_seller_turn
 from .session_review import build_review
-from .utils import range_label
 
 logger = logging.getLogger(__name__)
 
 
 class ProviderUnavailable(RuntimeError):
     """Every LLM provider failed or came back empty, so there is no buyer to talk to."""
-
-
-READINESS_THRESHOLDS = [0.2, 0.4, 0.6, 0.8]
-READINESS_LABELS = [
-    "Not buying it at all",
-    "Still needs convincing",
-    "On the fence - some interest but not sold",
-    "Getting there, but a few things are holding them back",
-    "Almost there - just needs one more good reason",
-]
 
 
 @dataclass
@@ -138,11 +130,7 @@ class ProspectSession:
         # An id-less session saves nothing, logs nothing, and shares its objection
         # dice with every other id-less session. One owner of the id, never blank.
         self.session_id = session_id or secrets.token_hex(16)
-        self.provider_type = provider_type
-        self.provider = create_provider(provider_type)
-        self.provider_name = getattr(self.provider, "provider_name", "unknown")
-        self.provider_type = self.provider_name
-        self.model_name = self.provider.get_model_name()
+        self._router = ProviderRouter(provider_type=provider_type)
 
         config = load_prospect_config()
         mode_cfg = config.get("prospect_mode", {}) if isinstance(config, dict) else {}
@@ -155,13 +143,21 @@ class ProspectSession:
             difficulty = "medium"
         self.difficulty_profile = profiles[difficulty]
         behaviour = self.difficulty_profile["behaviour"]
+        # Real objections from recorded calls when built; the profile's own bank otherwise.
+        profile_bank = self.difficulty_profile.get("objection_bank", [])
+        real_pool = load_real_objections()
+        self.pacer = ObjectionPacer(
+            self.session_id,
+            behaviour,
+            pick_bank(real_pool, self.session_id, len(profile_bank)) if real_pool else profile_bank,
+        )
 
         if persona is None:
             persona = select_persona(product_type)
         self.persona = persona
 
         self.product_type = product_type
-        self.product_context = self._load_product_context(product_type)
+        self.product_context = build_product_context(product_type, persona)
 
         self.state = ProspectState(
             readiness=behaviour["initial_readiness"],
@@ -196,43 +192,39 @@ class ProspectSession:
             "feedback_style": self.feedback_style,
         }
 
+    @property
+    def provider(self):
+        return self._router.provider
+
+    @property
+    def provider_name(self) -> str:
+        return self._router.provider_name
+
+    @property
+    def model_name(self) -> str:
+        return self._router.model_name
+
     def _get_chat_with_fallback(self, messages, temperature=0.8, max_tokens=200):
-        """Get chat response with automatic fallback to other providers on error.
+        """Ask the buyer's AI provider, falling back to others on failure.
 
         Raises ProviderUnavailable when no provider produced anything. Returning the
         empty response instead showed the learner a blank bubble and an HTTP 200,
         which looks like the buyer ignoring them rather than an outage.
         """
-        response = self.provider.chat(messages, temperature=temperature, max_tokens=max_tokens)
-        if response.error or not (response.content or "").strip():
-            for provider_name in list_fallback_providers(self.provider_name):
-                fallback = create_provider(provider_name)
-                if not fallback.is_available():
-                    continue
-                response = fallback.chat(
-                    messages, temperature=temperature, max_tokens=max_tokens
-                )
-                if not response.error and (response.content or "").strip():
-                    self.provider = fallback
-                    self.provider_type = provider_name
-                    self.provider_name = provider_name
-                    self.model_name = fallback.get_model_name()
-                    break
-
-        if response.error or not (response.content or "").strip():
-            logger.error(
-                "No provider answered (last=%s): %s",
-                self.provider_name,
-                response.error or "empty response",
-            )
-            raise ProviderUnavailable(response.error or "No provider returned a reply.")
-        return response
+        result = self._router.chat_with_fallback(
+            messages, temperature=temperature, max_tokens=max_tokens
+        )
+        if not result.ok:
+            error = result.response.error or "empty response"
+            logger.error("No provider answered (last=%s): %s", self.provider_name, error)
+            raise ProviderUnavailable(result.response.error or "No provider returned a reply.")
+        return result.response
 
     def to_dict(self) -> dict:
         """Serialize enough state to recover the session after a reload."""
         return {
             "session_id": self.session_id,
-            "provider_type": self.provider_type,
+            "provider_type": self.provider_name,
             "product_type": self.product_type,
             "difficulty": self.state.difficulty,
             "persona": self.persona,
@@ -251,125 +243,13 @@ class ProspectSession:
             return False
         return ProspectSessionPersistence.save(self.session_id, self.to_dict())
 
-    @classmethod
-    def load_session(cls, session_id: str) -> "ProspectSession | None":
-        """Disk recovery is disabled; prospect sessions are in-memory only."""
-
-        ProspectSessionPersistence.load(session_id)
-        return None
-
-    def _load_product_context(self, product_type: str) -> str:
-        """Load product context with prospect-specific knowledge.
-
-        Args:
-            product_type: The type of product being sold.
-
-        Returns:
-            Product context string for use in prompts.
-        """
-        try:
-            from .knowledge import get_custom_knowledge_text
-            from .loader import load_product_config
-
-            products = load_product_config().get("products", {})
-            product = products.get(product_type, products.get("default", {}))
-            context = product.get("context", "various products and services")
-            knowledge = product.get("knowledge", "")
-
-            # Build prospect-specific context from persona data
-            persona_context = self._build_persona_product_context()
-            if persona_context:
-                knowledge = (
-                    f"{knowledge}\n\n{persona_context}"
-                    if knowledge
-                    else persona_context
-                )
-
-            # This KB injection only for prospect-mode
-            prospect_knowledge = get_custom_knowledge_text()
-            if prospect_knowledge:
-                custom_block = (
-                    f"--- BEGIN CUSTOM PROSPECT DATA ---\n{prospect_knowledge}\n--- END CUSTOM PROSPECT DATA ---\n"
-                    "(You may know some of this as buyer research-do not assume full technical knowledge.)"
-                )
-                knowledge = (
-                    f"{knowledge}\n\n{custom_block}" if knowledge else custom_block
-                )
-
-            return f"{context}\n\n{knowledge}" if knowledge else context
-        except Exception:
-            return "various products and services"
-
-    def _build_persona_product_context(self) -> str:
-        """Build product context from persona needs and pain points.
-
-        Returns:
-            Formatted persona context string.
-        """
-        parts = []
-        needs = self.persona.get("needs", [])
-        if needs:
-            parts.append("BUYER'S KNOWN NEEDS: " + ", ".join(needs))
-        pain_points = self.persona.get("pain_points", [])
-        if pain_points:
-            parts.append("BUYER'S PAIN POINTS: " + ", ".join(pain_points))
-        budget = self.persona.get("budget")
-        if budget:
-            parts.append(f"BUYER'S BUDGET: {budget}")
-        return "\n".join(parts)
-
-    def _build_system_prompt(self) -> str:
-        """Build the system prompt for the prospect LLM.
-
-        Returns:
-            Formatted system prompt with current state and persona details.
-        """
-        config = load_prospect_config()
-        template = config.get("system_prompt_template", "")
-
-        behaviour = self.difficulty_profile["behaviour"]
-        persona = self.persona
-
-        readiness_desc = range_label(
-            self.state.readiness, READINESS_THRESHOLDS, READINESS_LABELS
-        )
-
-        needs = persona.get("needs", [])
-        pain_points = persona.get("pain_points", [])
-        needs_formatted = "\n".join(f"  - {n}" for n in needs)
-        pain_points_formatted = "\n".join(f"  - {p}" for p in pain_points)
-
-        product_knowledge = ""
-        if self.product_context:
-            product_knowledge = (
-                f"PRODUCT INFORMATION (you may know some of this as a buyer doing research):\n"
-                f"{self.product_context}"
-            )
-
-        prompt = template.format(
-            name=persona.get("name", "Alex"),
-            background=persona.get("background", ""),
-            personality=persona.get("personality", ""),
-            needs_formatted=needs_formatted,
-            pain_points_formatted=pain_points_formatted,
-            budget=persona.get("budget", "mid-range"),
-            product_context=self.product_type.replace("_", " "),
-            product_knowledge=product_knowledge,
-            readiness_description=readiness_desc,
-            objections_raised=self.state.objections_raised,
-            max_objections=behaviour["max_objections"],
-            turn_count=self.state.turn_count,
-            behaviour_rules=self.behaviour_rules,
-        )
-        return prompt
-
     def get_opening_message(self) -> ProspectResponse:
         """Generate the prospect's opening message to start the conversation.
 
         Returns:
             ProspectResponse with the opening message and state snapshot.
         """
-        system_prompt = self._build_system_prompt()
+        system_prompt = self._system_prompt()
         persona_name = self.persona.get("name", "Alex")
 
         opening_instruction = (
@@ -462,7 +342,12 @@ class ProspectSession:
         # Update readiness and outcomes before generation so the response matches end state.
         self._update_readiness(user_message)
 
-        session_outcome = self._check_end_conditions()
+        session_outcome = end_outcome(
+            self.state.readiness,
+            self.state.turn_count,
+            self.difficulty_profile["behaviour"],
+            self.max_turns,
+        )
         if session_outcome == "sold":
             self.state.has_committed = True
         elif session_outcome == "walked":
@@ -485,10 +370,10 @@ class ProspectSession:
                 state_snapshot=self.state.to_dict(),
             )
 
-        objection = self._objection_for_turn(self.state.turn_count)
-        self.state.objections_raised = self._objections_raised_by(self.state.turn_count - 1)
+        objection = self.pacer.for_turn(self.state.turn_count)
+        self.state.objections_raised = self.pacer.raised_by(self.state.turn_count - 1)
 
-        system_prompt = self._build_system_prompt()
+        system_prompt = self._system_prompt()
         if objection:
             system_prompt += (
                 "\n\n"
@@ -567,7 +452,7 @@ class ProspectSession:
         self.conversation_history = self.conversation_history[: seller_turns[turn_index - 1]]
         replay = self.review()
         self.state.turn_count = replay["summary"]["turn_count"]
-        self.state.objections_raised = self._objections_raised_by(self.state.turn_count)
+        self.state.objections_raised = self.pacer.raised_by(self.state.turn_count)
         self.state.readiness = replay["readiness_exact"]
         self.state.has_committed = False
         self.state.has_walked = False
@@ -575,55 +460,19 @@ class ProspectSession:
         self.save_session()
         return True
 
-    def _turn_dice(self, turn: int) -> float:
-        """A fixed roll for a given turn of this session.
-
-        Seeded from the session id and the turn number, so replaying the same
-        session always rolls the same numbers. Without that, redoing a turn would
-        quietly change which objections the buyer raises later on.
-        """
-        return random.Random(f"{self.session_id}|{turn}").random()
-
-    def _objection_cap(self) -> int:
-        """How many objections this buyer may raise before letting it go."""
-        behaviour = self.difficulty_profile["behaviour"]
-        bank = self.difficulty_profile.get("objection_bank", [])
-        return min(int(behaviour.get("max_objections", 0)), len(bank))
-
-    def _objections_raised_by(self, turn: int) -> int:
-        """Count the objections issued up to and including `turn`.
-
-        Derived, never stored: the same turn number always gives the same answer,
-        so a rewound session matches one that had gone that way from the start.
-        """
-        behaviour = self.difficulty_profile["behaviour"]
-        probability = float(behaviour.get("objection_probability", 0.0))
-        cap = self._objection_cap()
-        raised = 0
-        for past_turn in range(1, max(0, turn) + 1):
-            if raised >= cap:
-                break
-            if self._turn_dice(past_turn) < probability:
-                raised += 1
-        return raised
-
-    def _objection_for_turn(self, turn: int) -> dict | None:
-        """The objection the buyer should raise this turn, if any.
-
-        The difficulty profile says how often this buyer pushes back
-        (objection_probability) and what they push back about (objection_bank).
-        Before this, both were ignored and the buyer's resistance was whatever the
-        model felt like, so "hard" and "easy" played much the same.
-        """
-        already = self._objections_raised_by(turn - 1)
-        if already >= self._objection_cap():
-            return None
-        probability = float(
-            self.difficulty_profile["behaviour"].get("objection_probability", 0.0)
+    def _system_prompt(self) -> str:
+        """The buyer's instructions for this turn."""
+        return build_system_prompt(
+            load_prospect_config().get("system_prompt_template", ""),
+            persona=self.persona,
+            behaviour=self.difficulty_profile["behaviour"],
+            readiness=self.state.readiness,
+            objections_raised=self.state.objections_raised,
+            turn_count=self.state.turn_count,
+            product_type=self.product_type,
+            product_context=self.product_context,
+            behaviour_rules=self.behaviour_rules,
         )
-        if self._turn_dice(turn) >= probability:
-            return None
-        return self.difficulty_profile["objection_bank"][already]
 
     def _restore(self, snapshot: tuple) -> None:
         """Undo a turn that never reached the buyer."""
@@ -664,33 +513,6 @@ class ProspectSession:
         rating = self.last_turn_score.rating
 
         self.state.readiness = apply_readiness(self.state.readiness, rating, behaviour)
-
-    def _check_end_conditions(self) -> str | None:
-        """Check if the session should end and determine the outcome.
-
-        Returns:
-            'sold' if prospect commits, 'walked' if prospect leaves, None otherwise.
-        """
-        behaviour = self.difficulty_profile["behaviour"]
-
-        # Prospect commits
-        if self.state.readiness >= 0.85 and self.state.turn_count >= 3:
-            return "sold"
-
-        # Prospect walks - out of patience
-        if self.max_turns is not None and self.state.turn_count >= self.max_turns:
-            return "walked"
-        if (
-            self.state.turn_count >= behaviour["patience_turns"]
-            and self.state.readiness < 0.4
-        ):
-            return "walked"
-
-        # Prospect walks - readiness dropped to zero
-        if self.state.readiness <= 0.0:
-            return "walked"
-
-        return None
 
     def _generate_coaching_hint(self, user_message: str) -> dict:
         """Generate a one-sentence coaching hint for the salesperson.

@@ -9,7 +9,7 @@ def test_debug_panel_references_removed_from_runtime_files():
     files = [
         ROOT / "backend" / "app.py",
         ROOT / "frontend" / "templates" / "index.html",
-        ROOT / "frontend" / "static" / "app.js",
+        *sorted((ROOT / "frontend" / "static" / "js").glob("*.js")),
         ROOT / "frontend" / "static" / "chat.css",
     ]
     forbidden = [

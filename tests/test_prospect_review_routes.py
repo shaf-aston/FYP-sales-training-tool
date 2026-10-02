@@ -26,8 +26,8 @@ class StubProspectProvider:
 def client(monkeypatch):
     app.config["TESTING"] = True
     monkeypatch.setattr(
-        "core.prospect_session.create_provider",
-        lambda *_args, **_kwargs: StubProspectProvider(),
+        "core.services.provider_router.create_provider_with_trace",
+        lambda *_args, **_kwargs: (StubProspectProvider(), None),
     )
     return app.test_client()
 
