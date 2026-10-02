@@ -125,7 +125,7 @@ function toggleMic() {
   }
 
   micBtn.classList.add("recording");
-  micBtn.innerHTML = "Stop";
+  setMicLabel(micBtn, true);
 
   speechRecognizer.start(
     (text) => {
@@ -143,7 +143,7 @@ function toggleMic() {
     },
     (state) => {
       micBtn.classList.remove("recording");
-      micBtn.innerHTML = "Mic";
+      setMicLabel(micBtn, false);
       if (state?.canceled) {
         _setDictationPreview("");
         input.focus();
@@ -156,7 +156,7 @@ function toggleMic() {
     (err) => {
       console.warn("Mic Error:", err);
       micBtn.classList.remove("recording");
-      micBtn.innerHTML = "Mic";
+      setMicLabel(micBtn, false);
       _setDictationPreview("");
       showToast(String(err || "Microphone error"), "error");
     },
@@ -422,7 +422,7 @@ function startHandsFreeRecognition() {
   const micBtn = document.getElementById("micBtn");
   if (micBtn) {
     micBtn.classList.add("recording");
-    micBtn.innerHTML = "Stop";
+    setMicLabel(micBtn, true);
   }
 
   try {
@@ -462,7 +462,7 @@ function startHandsFreeRecognition() {
         const mic = document.getElementById("micBtn");
         if (mic) {
           mic.classList.remove("recording");
-          mic.innerHTML = "Mic";
+          setMicLabel(mic, false);
         }
         // gentle restart if still in hands-free mode
         if (
@@ -498,7 +498,7 @@ function startHandsFreeRecognition() {
     console.warn("startHandsFreeRecognition error:", e);
     if (micBtn) {
       micBtn.classList.remove("recording");
-      micBtn.innerHTML = "Mic";
+      setMicLabel(micBtn, false);
     }
     return false;
   }
@@ -514,7 +514,7 @@ function stopHandsFreeRecognition() {
   const mic = document.getElementById("micBtn");
   if (mic) {
     mic.classList.remove("recording");
-    mic.innerHTML = "Mic";
+    setMicLabel(mic, false);
   }
   _setDictationPreview("");
 }
@@ -528,13 +528,22 @@ function interruptAssistant() {
   }
 }
 
+function setMicLabel(btn, recording) {
+  btn.textContent = recording ? "Stop" : "Dictate";
+  btn.setAttribute("aria-pressed", String(recording));
+}
+
 function toggleVoiceMode() {
   handsFreeMode = !handsFreeMode;
   const btn = document.getElementById("voiceModeBtn");
   const indicator = document.getElementById("voiceModeIndicator");
   const inputArea = document.querySelector(".input-area");
   if (btn) btn.classList.toggle("active", handsFreeMode);
-  if (indicator) indicator.textContent = handsFreeMode ? "Voice" : "Text";
+  if (indicator)
+    indicator.textContent = handsFreeMode
+      ? "Voice replies: on"
+      : "Voice replies: off";
+  if (btn) btn.setAttribute("aria-pressed", String(handsFreeMode));
   if (inputArea) inputArea.classList.toggle("hands-free-active", handsFreeMode);
   stopTtsPlayback();
   if (!handsFreeMode) {
@@ -557,7 +566,8 @@ function toggleVoiceMode() {
         // Restore the toggle state
         handsFreeMode = false;
         if (btn) btn.classList.toggle("active", false);
-        if (indicator) indicator.textContent = "Text";
+        if (indicator) indicator.textContent = "Voice replies: off";
+        if (btn) btn.setAttribute("aria-pressed", "false");
         if (inputArea) inputArea.classList.toggle("hands-free-active", false);
         return;
       }

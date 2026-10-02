@@ -45,7 +45,7 @@ function syncPanelShellState() {
   container?.classList.toggle("prospect-panel-open", !!prospectOpen);
 
   const anyPanelOpen = !!(trainingOpen || quizOpen || prospectOpen);
-  const lockBody = anyPanelOpen && isMobilePanelLayout();
+  const lockBody = !!(trainingOpen || quizOpen) && isMobilePanelLayout();
   document.body.classList.toggle("panel-open", lockBody);
   document.body.style.overflow = lockBody ? "hidden" : "";
 
@@ -61,11 +61,32 @@ function setSidebarTab(tabName) {
   _sidebarTab = tabName;
   localStorage.setItem("sidebarTab", tabName);
   document.querySelectorAll(".sidebar-tab").forEach((tab) => {
-    tab.classList.toggle("active", tab.dataset.sidebarTab === tabName);
+    const on = tab.dataset.sidebarTab === tabName;
+    tab.classList.toggle("active", on);
+    tab.setAttribute("aria-selected", on ? "true" : "false");
+    tab.tabIndex = on ? 0 : -1;
   });
   document.querySelectorAll(".sidebar-panel").forEach((panel) => {
     panel.classList.toggle("active", panel.dataset.sidebarPanel === tabName);
   });
+}
+
+function handleSidebarTabKey(event) {
+  /* Arrow keys move between tabs (WAI-ARIA tabs pattern); only the active tab
+     is in the Tab order. */
+  const keys = { ArrowRight: 1, ArrowLeft: -1 };
+  const step = keys[event.key];
+  const home = event.key === "Home" ? 0 : event.key === "End" ? -1 : null;
+  if (!step && home === null) return;
+  const tabs = [...document.querySelectorAll(".sidebar-tab")];
+  const i = tabs.indexOf(document.activeElement);
+  if (i < 0) return;
+  event.preventDefault();
+  const next = step
+    ? tabs[(i + step + tabs.length) % tabs.length]
+    : tabs.at(home);
+  setSidebarTab(next.dataset.sidebarTab);
+  next.focus();
 }
 
 function closeAllPanels() {
@@ -219,6 +240,13 @@ function askTrainingCoach() {
 
 // Quiz Panel
 let currentQuizType = "stage";
+let _prospectQuizTurn = null;
+
+/* In prospect mode the learner is the seller, so the quiz replays one of their
+   own turns instead of asking about the AI salesperson's stage. */
+function quizIsProspect() {
+  return !!(_prospectMode && _prospectSessionId);
+}
 
 function toggleQuizPanel() {
   const panel = document.getElementById("quizPanel");
@@ -227,6 +255,8 @@ function toggleQuizPanel() {
   if (willOpen) {
     panel.classList.add("open");
     setSidebarTab("tools");
+    const typeButtons = document.querySelector(".quiz-type-buttons");
+    if (typeButtons) typeButtons.hidden = quizIsProspect();
     fetchQuizQuestion();
   }
   localStorage.setItem("quizPanelOpen", willOpen);
@@ -250,12 +280,16 @@ function fetchQuizQuestion() {
   const questionEl = document.getElementById("quizQuestion");
   questionEl.textContent = "Loading question...";
 
-  fetch(`/api/test/question?type=${currentQuizType}`, {
-    headers: { "X-Session-ID": getSessionId() },
+  const url = quizIsProspect()
+    ? "/api/prospect/quiz"
+    : `/api/test/question?type=${currentQuizType}`;
+  fetch(url, {
+    headers: { "X-Session-ID": quizIsProspect() ? _prospectSessionId : getSessionId() },
   })
     .then((r) => r.json())
     .then((data) => {
       if (data.success) {
+        _prospectQuizTurn = data.turn || null;
         questionEl.textContent = data.question;
       } else {
         questionEl.textContent = data.error || "Failed to load question.";
@@ -269,7 +303,9 @@ function fetchQuizQuestion() {
 function submitQuiz() {
   const answer = document.getElementById("quizAnswer").value.trim();
   if (!answer) {
-    alert("Please enter an answer.");
+    document.getElementById("quizFeedback").innerHTML =
+      '<div class="loading-note" role="alert">Please enter an answer.</div>';
+    document.getElementById("quizAnswer").focus();
     return;
   }
 
@@ -281,7 +317,10 @@ function submitQuiz() {
   // Build request body based on quiz type
   let body = {};
   let endpoint = "";
-  if (currentQuizType === "stage") {
+  if (quizIsProspect()) {
+    body = { answer, turn: _prospectQuizTurn };
+    endpoint = "/api/prospect/quiz";
+  } else if (currentQuizType === "stage") {
     body = { answer };
     endpoint = "/api/test/stage";
   } else if (currentQuizType === "next_move") {
@@ -296,7 +335,7 @@ function submitQuiz() {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-Session-ID": getSessionId(),
+      "X-Session-ID": quizIsProspect() ? _prospectSessionId : getSessionId(),
     },
     body: JSON.stringify(body),
   })
@@ -329,7 +368,7 @@ function displayQuizFeedback(data) {
   // Determine score and class
   let score, feedbackClass, feedbackText;
 
-  if (currentQuizType === "stage") {
+  if (currentQuizType === "stage" && !quizIsProspect()) {
     // Stage quiz: numeric score with partial credit
     const numScore = Math.round(data.score * 100);
     score = numScore + "%";
@@ -395,7 +434,7 @@ function displayQuizFeedback(data) {
 
   // For stage quiz, show expected answer
   if (data.expected) {
-    html += `<div class="quiz-details"><strong>Expected:</strong> ${escapeHtml(data.expected.stage)} / ${escapeHtml(data.expected.strategy)}</div>`;
+    html += `<div class="quiz-details"><strong>Expected:</strong> ${escapeHtml(data.expected.stage)} (${escapeHtml(data.expected.strategy)} approach)</div>`;
   }
 
   html += "</div>";

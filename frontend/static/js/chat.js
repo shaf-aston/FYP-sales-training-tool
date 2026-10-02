@@ -16,7 +16,7 @@ function clearStoredHistory() {
 }
 
 function clearStaleOverlayState() {
-  closeResetModal();
+  closeDialog(document.getElementById("resetModal"));
   closeResetMenu();
   document.getElementById("feedbackDropdown")?.classList.remove("open");
   document.getElementById("prospectEvalModal")?.remove();
@@ -280,7 +280,7 @@ function createMessageElement(text, sender, msgIdx, metrics = null) {
     msg.appendChild(actions);
   }
 
-  if (metrics && sender === "bot") {
+  if (metrics && sender === "bot" && isDebugOn()) {
     const metricsDiv = document.createElement("div");
     metricsDiv.className = "message-metrics";
     const latencyMs = Number(metrics.latency_ms || 0);
@@ -349,7 +349,7 @@ function editMessage(msgIdx, originalText, msgEl) {
       return;
     }
     if (newText.length > 1000) {
-      alert("Message too long (max 1000 characters)");
+      showToast("Message too long (max 1000 characters)", "error");
       return;
     }
 
@@ -641,6 +641,8 @@ async function sendMessage() {
 }
 
 // Typing Indicator
+const SLOW_REPLY_MS = 5000;
+let _slowReplyTimer = null;
 function showTyping() {
   isTyping = true;
   const container = document.getElementById("chatContainer");
@@ -659,9 +661,16 @@ function showTyping() {
   container.appendChild(typingDiv);
   container.scrollTop = container.scrollHeight;
   document.getElementById("sendBtn").disabled = true;
+  _slowReplyTimer = setTimeout(() => {
+    const note = document.createElement("span");
+    note.className = "typing-note";
+    note.textContent = "Still thinking…";
+    document.getElementById("typingIndicator")?.querySelector(".message-bubble")?.appendChild(note);
+  }, SLOW_REPLY_MS);
 }
 
 function hideTyping() {
+  clearTimeout(_slowReplyTimer);
   isTyping = false;
   document.getElementById("typingIndicator")?.remove();
   document.getElementById("sendBtn").disabled = false;
@@ -756,7 +765,6 @@ function handleKeyDown(event) {
 }
 
 function confirmResetChat() {
-  closeResetModal();
   if (hasProspectContext()) {
     resetProspectSession();
     return;
@@ -803,20 +811,16 @@ function closeResetMenu() {
   btn?.setAttribute("aria-expanded", "false");
 }
 
-function openResetModal() {
+async function openResetModal() {
   closeResetMenu();
-  document.getElementById("resetModal")?.classList.add("open");
-  document.getElementById("resetModal")?.setAttribute("aria-hidden", "false");
+  const confirmed = await confirmDialog({
+    id: "resetModal",
+    kicker: "Reset session",
+    title: "Clear this practice session?",
+    body: "This removes the current conversation history and stage progress. You cannot undo it.",
+    confirmLabel: "Reset session",
+    cancelLabel: "Keep session",
+    danger: true,
+  });
+  if (confirmed) confirmResetChat();
 }
-
-function closeResetModal() {
-  document.getElementById("resetModal")?.classList.remove("open");
-  document.getElementById("resetModal")?.setAttribute("aria-hidden", "true");
-}
-
-function handleResetBackdrop(event) {
-  if (event.target?.id === "resetModal") {
-    closeResetModal();
-  }
-}
-

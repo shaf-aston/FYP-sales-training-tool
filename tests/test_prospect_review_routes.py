@@ -45,7 +45,7 @@ def played_session(client):
 
     for message in (
         "You need to decide right now, today only.",
-        "What made the reliability of your van start to matter so much?",
+        "What made that matter so much? Tell me more about it.",
     ):
         client.post("/api/prospect/chat", json={"message": message}, headers=headers)
     return headers
@@ -163,3 +163,23 @@ def test_a_redo_that_cannot_reach_the_buyer_gives_the_turns_back(client, played_
     assert response.status_code == 503
     after = client.get("/api/prospect/review", headers=played_session).get_json()
     assert after["turns"] == before["turns"]
+
+
+def test_prospect_quiz_asks_about_your_own_turn_and_scores_the_answer(client, played_session):
+    asked = client.get("/api/prospect/quiz", headers=played_session).get_json()
+
+    assert asked["success"] is True
+    assert asked["turn"] == 1  # the pushy opener is the weakest turn
+    assert "decide right now" in asked["question"]
+
+    scored = client.post(
+        "/api/prospect/quiz",
+        json={"turn": asked["turn"], "answer": "What made that van start to matter so much?"},
+        headers=played_session,
+    ).get_json()
+    assert scored["success"] is True and scored["feedback"].startswith("Better")
+
+    bad = client.post(
+        "/api/prospect/quiz", json={"turn": 99, "answer": "hello there"}, headers=played_session
+    )
+    assert bad.status_code == 400

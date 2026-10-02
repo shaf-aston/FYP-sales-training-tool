@@ -81,19 +81,19 @@ def test_get_quiz_question_prefers_configured_list_and_fallbacks(monkeypatch):
             "We are in the logical stage and the consultative strategy.",
             "logical",
             "consultative",
-            (True, 1, "Right - LOGICAL, CONSULTATIVE strategy."),
+            (True, 1, "Right - Understanding the problem, Consultative approach."),
         ),
         (
             "It is not logical, but it is transactional.",
             "logical",
             "transactional",
-            (False, 0.5, "Strategy's right (TRANSACTIONAL), but you're in LOGICAL stage now."),
+            (False, 0.5, "The approach is right (Quick sale), but you're in Understanding the problem now."),
         ),
         (
             "This is not logical and not transactional.",
             "logical",
             "transactional",
-            (False, 0, "Close, but not quite - it's LOGICAL stage, TRANSACTIONAL strategy."),
+            (False, 0, "Not this time - it's Understanding the problem (Quick sale approach)."),
         ),
     ],
 )
@@ -106,8 +106,8 @@ def test_stage_answer_scores_partial_credit_and_respects_negation(
     assert result["score"] == expected[1]
     assert result["feedback"] == expected[2]
     assert result["expected"] == {
-        "stage": current_stage.upper(),
-        "strategy": flow_type.upper(),
+        "stage": "Understanding the problem",
+        "strategy": "Quick sale" if flow_type == "transactional" else "Consultative",
     }
 
 
@@ -193,3 +193,42 @@ def test_direction_falls_back_to_deterministic_scoring_when_llm_fails(monkeypatc
     assert result["feedback"] == "Strong strategic direction for this stage."
     assert result["key_concepts_got"] == ["Why the problem matters", "Next steps"]
     assert result["key_concepts_missed"] == []
+
+
+def test_stage_feedback_never_shows_raw_enums_or_jargon():
+    from core.utils import Stage
+
+    result = quiz.test_quiz_stage_answer("no idea", Stage.INTENT, "intent")
+
+    assert "STAGE." not in result["feedback"].upper() and "FSM" not in result["feedback"].upper()
+    assert result["expected"]["stage"] == "Finding out what they want"
+    assert "Close" not in result["feedback"]
+
+
+def test_the_plain_stage_name_is_accepted_as_an_answer():
+    result = quiz.test_quiz_stage_answer(
+        "Understanding the problem, consultative", "logical", "consultative"
+    )
+
+    assert result["correct"] is True
+
+
+def test_no_quiz_question_mentions_fsm():
+    config = quiz._load_quiz_config()
+    assert not any("FSM" in q for qs in config["questions"].values() for q in qs)
+
+
+def test_prospect_quiz_asks_about_the_sellers_weakest_turn_and_scores_a_better_line():
+    turns = [
+        {"turn": 1, "seller": "Great weather.", "rating": 2, "buyer_before": "My van keeps breaking down."},
+        {"turn": 2, "seller": "What breaks?", "rating": 4, "buyer_before": "Hmm."},
+    ]
+
+    asked = quiz.build_prospect_question(turns)
+    assert asked["turn"] == 1 and "Great weather." in asked["question"]
+    assert quiz.build_prospect_question([]) is None
+
+    better = quiz.score_prospect_answer("What happens when your van keeps breaking down?", turns[0])
+    worse = quiz.score_prospect_answer("ok", turns[0])
+    assert better["score"] > worse["score"]
+    assert better["feedback"].startswith("Better")

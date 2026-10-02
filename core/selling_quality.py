@@ -20,6 +20,9 @@ NEUTRAL_RATING = 3.0
 
 REASONS = {
     "open_question": "Asked an open question that invites them to explain.",
+    "on_topic": "Built the question on something they actually said.",
+    "generic_question": "Asked a stock question that could be put to anyone.",
+    "closed_question": "Asked a yes-or-no question, which gets a one-word answer.",
     "mirroring": "Used the buyer's own words back to them - shows you were listening.",
     "acknowledgement": "Acknowledged what they said before moving on.",
     "pressure": "Used urgency or scarcity language, which reads as pushy.",
@@ -28,6 +31,12 @@ REASONS = {
     "monologue": "Long enough that the buyer stops reading.",
     "low_effort": "Too short to move the conversation anywhere.",
 }
+
+# Signals that cost the seller ground.
+NEGATIVE_SIGNALS = (
+    "pressure", "premature_pitch", "question_stacking", "monologue",
+    "low_effort", "generic_question", "closed_question",
+)
 
 
 @dataclass(frozen=True)
@@ -47,21 +56,42 @@ def load_selling_signals() -> dict:
     return load_yaml("selling_signals.yaml") or {}
 
 
-def _count_openings(message: str, question_words, invitations) -> int:
+def _sentences(message: str) -> list[str]:
+    return [p for p in re.split(r"(?<=[.!?])\s+", message.strip()) if p]
+
+
+def _has_word(text: str, words) -> bool:
+    return any(re.search(rf"\b{re.escape(w)}\b", text) for w in words)
+
+
+def _count_openings(message: str, question_words, invitations, stock_questions=()) -> int:
     """How many times the seller tried to open the buyer up in one turn.
 
     Counts each invitation ("walk me through it"), which opens someone up without
-    asking a question, plus question marks when the turn uses a question word.
+    asking a question, plus each sentence that is itself a question using a
+    question word. Judged per sentence: a pitch that ends "what do you think?"
+    has one open question, not an open turn. Stock questions ("how are you?")
+    do not count - they open nothing.
     """
     lowered = message.lower()
-    count = sum(
-        len(re.findall(rf"\b{re.escape(phrase)}\b", lowered)) for phrase in invitations
-    )
-    if "?" in message and any(
-        re.search(rf"\b{re.escape(word)}\b", lowered) for word in question_words
-    ):
-        count += message.count("?")
+    count = sum(len(re.findall(rf"\b{re.escape(p)}\b", lowered)) for p in invitations)
+    for sentence in _sentences(lowered):
+        if sentence.endswith("?") and _has_word(sentence, question_words) and not _has_word(
+            sentence, stock_questions
+        ):
+            count += 1
     return count
+
+
+def _is_closed_question(message: str, question_words, closed_starters) -> bool:
+    """A question sentence that starts with a yes/no verb and has no question word."""
+    for sentence in _sentences(message.lower()):
+        first = re.findall(r"[a-z']+", sentence)[:1]
+        if sentence.endswith("?") and first and first[0] in closed_starters and not _has_word(
+            sentence, question_words
+        ):
+            return True
+    return False
 
 
 def _mirrored_words(message: str, buyer_message: str, stopwords) -> list[str]:
@@ -98,11 +128,19 @@ def score_seller_turn(
     words = text.split()
     fired: list[str] = []
 
-    openings = _count_openings(text, cfg.get("question_words", []), cfg.get("invitations", []))
+    question_words = cfg.get("question_words", [])
+    stock = cfg.get("stock_questions", [])
+    openings = _count_openings(text, question_words, cfg.get("invitations", []), stock)
+    overlap = _mirrored_words(text, buyer_message, cfg.get("mirroring_stopwords", []))
     if openings:
         fired.append("open_question")
+        if overlap:
+            fired.append("on_topic")
+    elif _has_word(text.lower(), stock) and "?" in text:
+        fired.append("generic_question")
+    elif _is_closed_question(text, question_words, cfg.get("closed_starters", [])):
+        fired.append("closed_question")
 
-    overlap = _mirrored_words(text, buyer_message, cfg.get("mirroring_stopwords", []))
     if len(overlap) >= limits.get("mirroring_min_overlap", 2):
         fired.append("mirroring")
 
