@@ -61,11 +61,32 @@ function setSidebarTab(tabName) {
   _sidebarTab = tabName;
   localStorage.setItem("sidebarTab", tabName);
   document.querySelectorAll(".sidebar-tab").forEach((tab) => {
-    tab.classList.toggle("active", tab.dataset.sidebarTab === tabName);
+    const on = tab.dataset.sidebarTab === tabName;
+    tab.classList.toggle("active", on);
+    tab.setAttribute("aria-selected", on ? "true" : "false");
+    tab.tabIndex = on ? 0 : -1;
   });
   document.querySelectorAll(".sidebar-panel").forEach((panel) => {
     panel.classList.toggle("active", panel.dataset.sidebarPanel === tabName);
   });
+}
+
+function handleSidebarTabKey(event) {
+  /* Arrow keys move between tabs (WAI-ARIA tabs pattern); only the active tab
+     is in the Tab order. */
+  const keys = { ArrowRight: 1, ArrowLeft: -1 };
+  const step = keys[event.key];
+  const home = event.key === "Home" ? 0 : event.key === "End" ? -1 : null;
+  if (!step && home === null) return;
+  const tabs = [...document.querySelectorAll(".sidebar-tab")];
+  const i = tabs.indexOf(document.activeElement);
+  if (i < 0) return;
+  event.preventDefault();
+  const next = step
+    ? tabs[(i + step + tabs.length) % tabs.length]
+    : tabs.at(home);
+  setSidebarTab(next.dataset.sidebarTab);
+  next.focus();
 }
 
 function closeAllPanels() {
@@ -269,7 +290,9 @@ function fetchQuizQuestion() {
 function submitQuiz() {
   const answer = document.getElementById("quizAnswer").value.trim();
   if (!answer) {
-    alert("Please enter an answer.");
+    document.getElementById("quizFeedback").innerHTML =
+      '<div class="loading-note" role="alert">Please enter an answer.</div>';
+    document.getElementById("quizAnswer").focus();
     return;
   }
 

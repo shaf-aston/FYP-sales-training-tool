@@ -51,7 +51,6 @@ window.addEventListener("DOMContentLoaded", () => {
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       closeResetMenu();
-      closeResetModal();
       closeSessionReview();
       closeDialog(document.getElementById("prospectEvalModal"));
       document.getElementById("feedbackDropdown")?.classList.remove("open");

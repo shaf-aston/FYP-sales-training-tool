@@ -297,8 +297,86 @@ function trapTab(event, card) {
 function closeDialog(overlay) {
   if (!overlay) return;
   overlay.remove();
+  overlay.dispatchEvent(new Event("dialog-close"));
   /* Put focus back where it came from, so keyboard users are not dumped at the
      top of the page after closing. */
   if (_dialogOpener && document.contains(_dialogOpener)) _dialogOpener.focus();
   _dialogOpener = null;
+}
+
+function confirmDialog({
+  id = "",
+  kicker = "",
+  title,
+  body = "",
+  confirmLabel = "Continue",
+  cancelLabel = "Cancel",
+  danger = false,
+}) {
+  /* Replaces the browser's confirm(): same Escape, focus and Tab handling as
+     every other window. Resolves true only when the learner confirms. */
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.className = "modal-backdrop open";
+    if (id) overlay.id = id;
+    const card = document.createElement("div");
+    card.className = "modal-card";
+
+    const copy = document.createElement("div");
+    copy.className = "modal-copy";
+    if (kicker) {
+      const k = document.createElement("p");
+      k.className = "modal-kicker";
+      k.textContent = kicker;
+      copy.appendChild(k);
+    }
+    const h = document.createElement("h2");
+    h.id = "confirmDialogTitle";
+    h.textContent = title;
+    copy.appendChild(h);
+    if (body) {
+      const p = document.createElement("p");
+      p.textContent = body;
+      copy.appendChild(p);
+    }
+
+    const actions = document.createElement("div");
+    actions.className = "modal-actions";
+    const cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.className = "modal-btn modal-btn-secondary";
+    cancel.textContent = cancelLabel;
+    const ok = document.createElement("button");
+    ok.type = "button";
+    ok.className = "modal-btn " + (danger ? "modal-btn-danger" : "modal-btn-primary");
+    ok.textContent = confirmLabel;
+    actions.append(cancel, ok);
+    card.append(copy, actions);
+    overlay.appendChild(card);
+
+    let answer = false;
+    overlay.addEventListener("dialog-close", () => resolve(answer));
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) closeDialog(overlay);
+    });
+    cancel.onclick = () => closeDialog(overlay);
+    ok.onclick = () => {
+      answer = true;
+      closeDialog(overlay);
+    };
+    openDialog(overlay, card, "confirmDialogTitle");
+  });
+}
+
+/* Developer-only detail (reply latency, provider) stays hidden unless asked for:
+   open the page with ?debug=1, or set localStorage "debug" to "1". */
+function isDebugOn() {
+  try {
+    return (
+      new URLSearchParams(location.search).get("debug") === "1" ||
+      localStorage.getItem("debug") === "1"
+    );
+  } catch (e) {
+    return false;
+  }
 }

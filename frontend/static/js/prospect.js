@@ -226,6 +226,9 @@ function applyProspectSessionFromServer(sessionId, data) {
   document
     .getElementById("prospectHintsToggle")
     .classList.toggle("on", _prospectSettings.showHints);
+  document
+    .getElementById("prospectHintsToggle")
+    .setAttribute("aria-checked", String(_prospectSettings.showHints));
   document.getElementById("prospectCoachingSection").style.display =
     _prospectSettings.showHints ? "" : "none";
   document.getElementById("prospectEvalDisplay").value =
@@ -269,6 +272,7 @@ function toggleProspectHints() {
   const toggle = document.getElementById("prospectHintsToggle");
   _prospectSettings.showHints = !_prospectSettings.showHints;
   toggle.classList.toggle("on", _prospectSettings.showHints);
+  toggle.setAttribute("aria-checked", String(_prospectSettings.showHints));
   document.getElementById("prospectCoachingSection").style.display =
     _prospectSettings.showHints ? "" : "none";
   localStorage.setItem("prospectSettings", JSON.stringify(_prospectSettings));
@@ -286,11 +290,13 @@ function openProspectSetup() {
     "Hints will appear after the next prospect reply.";
 }
 
-function selectProspectDifficulty(diff, btn) {
+async function selectProspectDifficulty(diff, btn) {
   if (_prospectMode && diff !== _prospectDifficulty) {
-    const confirmed = confirm(
-      "Changing difficulty resets the current prospect practice. Continue?",
-    );
+    const confirmed = await confirmDialog({
+      title: "Change difficulty?",
+      body: "Changing difficulty resets the current prospect practice. Continue?",
+      confirmLabel: "Reset and change",
+    });
     if (!confirmed) return;
     _prospectDifficulty = diff;
     document
@@ -636,7 +642,7 @@ function buildEvaluationHTML(data) {
     : "";
 
   return `
-          <h3 id="evalHeading" class="prospect-eval-title">How that session went</h3>
+          <h2 id="evalHeading" class="prospect-eval-title">How that session went</h2>
           <div class="prospect-eval-header">
             <div class="prospect-eval-score">${data.overall_score || 0}%</div>
             <div class="prospect-eval-grade ${gradeClass}">${escapeHtml(data.grade || "?")}</div>
