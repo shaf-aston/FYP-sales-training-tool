@@ -57,16 +57,16 @@ const STRATEGY_META = {
     note: "Begin the conversation to start tracking the flow.",
   },
   intent: {
-    label: "INTENT",
-    note: "FSM start state before strategy selection is resolved.",
+    label: "Finding out what they want",
+    note: "The salesperson is working out what you need before choosing an approach.",
   },
   consultative: {
-    label: "CONSULTATIVE",
-    note: "FSM consultative path: INTENT -> LOGICAL -> EMOTIONAL -> PITCH -> OBJECTION -> OUTCOME.",
+    label: "Consultative",
+    note: "Advice-led sale: what you want, the problem, why it matters, the solution, concerns, closing.",
   },
   transactional: {
-    label: "TRANSACTIONAL",
-    note: "FSM transactional path: INTENT -> PITCH -> NEGOTIATION -> OBJECTION -> OUTCOME.",
+    label: "Transactional",
+    note: "Quick sale: what you want, the solution, agreeing the terms, concerns, closing.",
   },
   "prospect mode": {
     label: "Prospect practice",
@@ -76,32 +76,32 @@ const STRATEGY_META = {
 
 const FLOW_STAGE_META = {
   intent: {
-    label: "INTENT",
-    note: "Confirm user intent before advancing or switching strategy.",
+    label: "Finding out what they want",
+    note: "Working out what you are looking for.",
   },
   logical: {
-    label: "LOGICAL",
-    note: "Surface doubt and clarify the user's current problem.",
+    label: "Understanding the problem",
+    note: "Digging into what is not working for you today.",
   },
   emotional: {
-    label: "EMOTIONAL",
-    note: "Surface stakes, consequences, and motivation to change.",
+    label: "Making it personal",
+    note: "Why it matters to you and what happens if nothing changes.",
   },
   pitch: {
-    label: "PITCH",
-    note: "Present the offer only when the FSM has reached pitch.",
+    label: "Presenting the solution",
+    note: "Showing the offer and its price.",
   },
   negotiation: {
-    label: "NEGOTIATION",
-    note: "Resolve terms before objection handling in the transactional flow.",
+    label: "Agreeing the terms",
+    note: "Settling payment and terms.",
   },
   objection: {
-    label: "OBJECTION",
-    note: "Handle the current objection without leaving the FSM path.",
+    label: "Handling concerns",
+    note: "Answering your doubts before moving on.",
   },
   outcome: {
-    label: "OUTCOME",
-    note: "Confirm commitment, walk-away, or final session outcome.",
+    label: "Closing",
+    note: "You decide: buy, walk away, or think it over.",
   },
   default: {
     label: "Not started",
