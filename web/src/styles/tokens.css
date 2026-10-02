@@ -1,0 +1,105 @@
+/* The only place colours, spacing, radius, type, motion and stacking are defined.
+   Components read these through var(--name); no literal values in components. */
+:root {
+  color-scheme: dark;
+
+  /* Surfaces */
+  --bg-page: #151210;
+  --bg-panel: #1f1c18;
+  --bg-card: #2a2620;
+  --bg-card-soft: #24201b;
+  --bg-elevated: #312b24;
+  --border: #3d3830;
+  --border-strong: #524a3f;
+  --border-faint: rgba(82, 74, 63, 0.45);
+
+  /* Text */
+  --text-primary: #f1e8da;
+  --text-body: #c4bdb2;
+  --text-muted: #9b9186;
+  --text-subtle: #978f83; /* 5.1:1 on card-soft, AA at small sizes */
+  --text-on-accent: #221a10;
+
+  /* Accent + meaning */
+  --accent: #e8b45a;
+  --accent-strong: #d29b3c;
+  --accent-soft: rgba(232, 180, 90, 0.16);
+  --accent-line: rgba(232, 180, 90, 0.4);
+  --accent-deep: #5c4220;
+  --success: #c4e88a;
+  --success-soft: rgba(196, 232, 138, 0.14);
+  --success-deep: #43592a;
+  --warning: #e8a05a;
+  --warning-soft: rgba(232, 160, 90, 0.14);
+  --danger: #e85a5a;
+  --danger-soft: rgba(232, 90, 90, 0.14);
+  --danger-text: #ff9a9a;
+  --danger-deep: #7f2727;
+
+  /* Glass laid over the night-city film */
+  --glass-bg: rgba(24, 20, 17, 0.62);
+  --glass-bg-strong: rgba(31, 28, 24, 0.78);
+  --glass-blur: blur(16px) saturate(1.2);
+  --overlay-scrim: rgba(0, 0, 0, 0.72);
+
+  /* Night-city film (read by AmbientFilm) */
+  --film-sky-top: #0d0c14;
+  --film-sky-bottom: #1d1510;
+  --film-hues: 38 30 8 200;
+  --film-light-count: 70;
+
+  /* Type */
+  --font-ui: "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-display: var(--font-fraunces), Georgia, serif;
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-md: 0.9375rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 2rem;
+  --tracking-label: 0.12em;
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+
+  /* Radius */
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-pill: 999px;
+
+  /* Elevation */
+  --shadow-md: 0 12px 36px rgba(0, 0, 0, 0.24);
+  --shadow-lg: 0 24px 80px rgba(0, 0, 0, 0.38);
+  --shadow-accent: 0 10px 24px rgba(232, 180, 90, 0.22);
+
+  /* Sizes */
+  --touch-target: 44px;
+  --panel-width: 330px;
+  --side-panel-width: 320px;
+  --input-max-height: 120px;
+
+  /* Motion */
+  --ease-pop: cubic-bezier(0.2, 0.9, 0.3, 1.25);
+  --ease-out: cubic-bezier(0.2, 0.9, 0.3, 1);
+  --dur-fast: 150ms;
+  --dur-base: 250ms;
+  --dur-pop: 420ms;
+  --dur-slow: 800ms;
+
+  /* Stacking order (lowest to highest) */
+  --z-film: -1;
+  --z-base: 0;
+  --z-sticky: 10;
+  --z-panel: 100;
+  --z-popover: 200;
+  --z-dialog: 300;
+  --z-toast: 400;
+}

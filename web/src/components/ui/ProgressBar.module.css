@@ -1,0 +1,28 @@
+.wrap { display: grid; gap: var(--space-1); }
+.track {
+  height: 10px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-card);
+  overflow: hidden;
+}
+.fill {
+  position: relative;
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  overflow: hidden;
+  background: linear-gradient(90deg, var(--warning), var(--accent), var(--success));
+  transition: width var(--dur-slow) var(--ease-out);
+}
+.fill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.4) 50%, transparent 70%);
+  animation: shine 2.4s infinite;
+}
+@keyframes shine {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+.caption { font-size: var(--text-xs); color: var(--text-subtle); text-align: center; }

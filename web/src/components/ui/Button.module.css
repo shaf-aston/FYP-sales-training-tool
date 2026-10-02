@@ -1,0 +1,61 @@
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--touch-target);
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  transition: transform var(--dur-fast) var(--ease-out), background var(--dur-base), border-color var(--dur-base);
+}
+.btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.block {
+  width: 100%;
+}
+.primary {
+  background: linear-gradient(180deg, var(--accent), var(--accent-strong));
+  border-color: transparent;
+  color: var(--text-on-accent);
+  box-shadow: var(--shadow-accent);
+}
+.primary:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+.secondary {
+  background: var(--bg-card-soft);
+  color: var(--text-primary);
+}
+.secondary:hover:not(:disabled),
+.ghost:hover:not(:disabled),
+.pill:hover:not(:disabled) {
+  border-color: var(--accent-line);
+}
+.ghost {
+  background: transparent;
+  color: var(--text-body);
+  border-color: transparent;
+}
+.danger {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+  color: var(--danger-text);
+}
+.pill {
+  border-radius: var(--radius-pill);
+  background: var(--glass-bg-strong);
+  color: var(--text-body);
+}
+.on {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}

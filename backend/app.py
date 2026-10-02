@@ -248,6 +248,31 @@ def knowledge_page():
     return render_template("knowledge.html", mode=mode)
 
 
+@app.route("/api/prospect/product-groups")
+def prospect_product_groups():
+    """Curated prospect dropdown groups as JSON (the React app has no Jinja)."""
+    from flask import jsonify
+
+    return jsonify({"ok": True, "groups": _prospect_product_groups()})
+
+
+WEB_BUILD_DIR = ROOT_DIR / "web" / "out"
+
+
+@app.route("/app/", defaults={"path": ""})
+@app.route("/app/<path:path>")
+def web_app(path: str):
+    """Serve the static Next.js build (web/out). `npm run build` in web/ creates it."""
+    from flask import abort, send_from_directory
+
+    if not WEB_BUILD_DIR.is_dir():
+        abort(404)
+    target = WEB_BUILD_DIR / path
+    if path == "" or target.is_dir():
+        path = f"{path.rstrip('/')}/index.html".lstrip("/")
+    return send_from_directory(WEB_BUILD_DIR, path)
+
+
 @app.errorhandler(Exception)
 def handle_unexpected_error(e):
     """Catch-all for unhandled exceptions. HTTP exceptions pass through unchanged"""
