@@ -48,14 +48,14 @@ ELICITATION_TACTICS = [
 ]
 
 
-def _build_tactic_guidance(strategy: str, state: Any, user_message: str) -> str:
+def _build_tactic_guidance(strategy: str, state: Any, user_message: str, stage: str) -> str:
     """Return an adaptation block when user state calls for a tactical shift.
 
     Returns an empty string when the user is already engaged and no adaptation
     is needed.
     """
     if state.decisive:
-        return get_adaptation_template("decisive_user", strategy=strategy)
+        return get_adaptation_template("decisive_user", strategy=strategy, stage=stage)
 
     if state.intent == "low" or state.guarded or state.question_fatigue:
         if is_literal_question(user_message):
@@ -75,6 +75,7 @@ def _build_tactic_guidance(strategy: str, state: Any, user_message: str) -> str:
         return get_adaptation_template(
             "low_intent_guarded",
             strategy=strategy,
+            stage=stage,
             reason=reason,
             elicitation_example=elicitation_example,
         )
@@ -185,7 +186,7 @@ def generate_stage_prompt(
     ack_guidance = get_ack_guidance(detect_ack_context(user_message, history, state))
 
     # tactic guidance (adaptation for low-intent / guarded / decisive users)
-    tactic_guidance = _build_tactic_guidance(strategy, state, user_message)
+    tactic_guidance = _build_tactic_guidance(strategy, state, user_message, stage)
 
     # stage-specific prompt and optional context block (e.g. objection SOP)
     stage_prompt, stage_context = _get_stage_specific_prompt(
@@ -208,7 +209,7 @@ def generate_stage_prompt(
         )
 
     # CRITICAL GUARD: Prevent pitching when user only mentioned budget/price without stating needs
-    if stage == Stage.INTENT and user_message:
+    if stage == Stage.INTENT and strategy == Strategy.CONSULTATIVE and user_message:
         user_text = user_message.lower()
         from .utils import contains_nonnegated_keyword
         has_budget_keywords = contains_nonnegated_keyword(
@@ -220,11 +221,8 @@ def generate_stage_prompt(
         if has_budget_keywords and not has_problem_keywords:
             budget_only_guard = (
                 "\nBUDGET-ONLY GUARD: User mentioned budget/price but has NOT stated their actual need or problem yet. "
-                "Do NOT jump to product suggestions. Ask clarifying questions to understand:\n"
-                "1. What problem/need brought them here\n"
-                "2. What they're currently using/doing\n"
-                "3. What's not working\n"
-                "Only suggest products after you understand their situation.\n"
+                "Do NOT jump to product suggestions. Ask what need brought them here, "
+                "what they use now and what is not working.\n"
             )
 
     # tier 6: compute turn metadata (used later when injecting final state block)
@@ -234,15 +232,12 @@ def generate_stage_prompt(
     # Keep terse guidance close to generation.
     terse_guidance = ""
     msg_len = len(user_message.split()) if user_message else 0
-    if msg_len < TERSE_INPUT_THRESHOLD and stage != Stage.INTENT:
-        terse_guidance = (
-            "\nTERSE INPUT: Very short answer. Make ONE observation, then ONE question. "
-            "Do not over-probe.\n"
-        )
+    if msg_len < TERSE_INPUT_THRESHOLD and stage not in (Stage.INTENT, Stage.OUTCOME):
+        terse_guidance = "\nTERSE INPUT: Very short answer. Ask ONE question, do not over-probe.\n"
 
     # Periodic persona reinforcement: anchor every N turns using the constants
     persona_checkpoint = ""
-    if turn_count > 0 and turn_count % PERSONA_CHECKPOINT_TURNS == 0:
+    if turn_count > 0 and turn_count % PERSONA_CHECKPOINT_TURNS == 0 and stage != Stage.OUTCOME:
         persona_checkpoint = (
             f"\n[CHECKPOINT - Turn {turn_count}]: Stay in {strategy} mode. "
             f"One question per turn. Current stage: {stage}.\n"

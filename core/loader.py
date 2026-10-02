@@ -434,7 +434,7 @@ def load_adaptations():
 def render_template(template_str, **kwargs):
     """Replace {placeholders} in template_str with kwargs, using sensible defaults."""
     defaults = {"preferences": "not yet specified", "user_message": "", "reason": "",
-                "advance_note": "", "elicitation_example": ""}
+                "advance_note": "", "next_step": "", "elicitation_example": ""}
     merged = {**defaults, **kwargs}
 
     result = template_str
@@ -443,13 +443,20 @@ def render_template(template_str, **kwargs):
     return result
 
 
-def get_adaptation_template(adaptation_type, strategy=None, **kwargs):
+def _by_stage(notes, stage):
+    """Pick the note for this stage, else the "default" note."""
+    return (notes or {}).get(stage, (notes or {}).get("default", ""))
+
+
+def get_adaptation_template(adaptation_type, strategy=None, stage=None, **kwargs):
     """Render a prompt block from adaptations.yaml. Returns "" when none matches."""
     data = load_adaptations().get(adaptation_type)
     if adaptation_type == "decisive_user":
-        kwargs["advance_note"] = data["advance_note"].get(strategy, "")
+        kwargs["advance_note"] = _by_stage(data["advance_note"].get(strategy), stage)
     elif adaptation_type == "low_intent_guarded":
         data = data.get(strategy)
+        if data:
+            kwargs["next_step"] = _by_stage(data.get("next_step"), stage)
     return render_template(data["template"], **kwargs) if data else ""
 
 

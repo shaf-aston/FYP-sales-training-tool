@@ -4,9 +4,14 @@
 # and are chosen by prompts.get_override_guidance.
 
 decisive_user:
+  # Picked by stage, else "default". Only PITCH may push toward the pitch.
   advance_note:
-    transactional: "Move directly to pitch."
-    consultative: "Acknowledge and move forward - don't re-ask or loop."
+    transactional:
+      intent: "Ask the one question you still need (budget or use-case); options come at PITCH."
+      pitch: "Move directly to the pitch."
+      default: "Do not re-pitch. Deal with what they raised and move toward the close."
+    consultative:
+      default: "Acknowledge and move forward - don't re-ask or loop."
   template: |
     DECISIVE USER DETECTED:
     Short response with commitment/high-intent signal. This is action, not hesitation.
@@ -17,15 +22,18 @@ decisive_user:
 literal_question:
   template: |
     LITERAL QUESTION DETECTED:
-    User asked a direct question. ANSWER IT with specific information.
+    User asked a direct question. Answer it briefly and directly, following INFO REQUESTS and the stage rules.
     Do NOT respond with an elicitation statement - that would ignore their request.
 
 low_intent_guarded:
   # Used when state["intent"] == "low" OR state["guarded"] OR state["question_fatigue"]
   transactional:
+    next_step:
+      pitch: "show the most relevant option"
+      default: "move toward this stage's next step without presenting options"
     template: |
       ADAPTATION ({reason}): Keep it brief and natural.
-      Make one short observation, then show the most relevant option. No interrogation or multiple questions.
+      Make one short observation, then {next_step}. No interrogation or multiple questions.
 
   consultative:
     template: |
@@ -33,7 +41,7 @@ low_intent_guarded:
       REASON: {reason}
       PATTERN: [Observation statement] -> [ONE soft open-ended follow-up]
       EXAMPLE: "{elicitation_example}"
-      RULES: Statement first (observation, no interrogation), then ONE open-ended follow-up. Not binary ("Do you want X?").
+      RULES: ONE new observation (never a comment on their words), then ONE open-ended follow-up. Not binary ("Do you want X?").
 
 direct_info_request:
   template: |
@@ -58,10 +66,10 @@ soft_positive_at_pitch:
     ACTION: Differentiate your previously presented options immediately.
     Compare on dimensions that matter: {preferences}.
 
-    Then ask a LOGISTICS question: "Want me to check availability?" / "Which one should we look at more closely?"
+    Then ask a LOGISTICS question: "I'll check availability on that one - when would suit you?" / "Which one should we look at more closely?"
 
 excessive_validation:
   template: |
-    CONSTRAINT VIOLATION: Excessive validation (>2 in last 4 turns)
+    CONSTRAINT VIOLATION: validation budget exceeded (see VALIDATION)
 
     CORRECTIVE ACTION: Provide NEW information. Ask decision-advancing question. NO validation this turn.
