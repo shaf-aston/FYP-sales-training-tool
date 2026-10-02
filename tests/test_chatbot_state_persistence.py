@@ -1,7 +1,5 @@
 """Tests for chatbot state persistence and recovery."""
 import logging
-import shutil
-from pathlib import Path
 from typing import Any, cast
 
 from core.analysis import ConversationState

@@ -357,7 +357,7 @@ def test_quiz_stage_answer(user_answer: str, current_stage: str, flow_type: str)
 
 
 def test_quiz_next_move(
-    user_response: str, provider: Any, current_stage: str, flow_type: str, last_user_message: str = ""
+    user_response: str, router: Any, current_stage: str, flow_type: str, last_user_message: str = ""
 ) -> dict:
     """Hybrid-scored: deterministic rubric fit blended with LLM judgment."""
     stage, strategy = current_stage, flow_type
@@ -375,7 +375,7 @@ def test_quiz_next_move(
 Goal: {rubric["goal"]} | Concepts: {concepts}
 Customer: "{last_user_message}" | Response: "{user_response}"
 JSON: {{"score": <0-100>, "alignment": "strong|partial|weak", "feedback": "<brief>", "strengths": ["..."], "improvements": ["..."]}}"""
-    llm_result = _score_with_llm(provider, prompt, {
+    llm_result = _score_with_llm(router, prompt, {
         "score": 50,
         "alignment": "partial",
         "feedback": "Unable to evaluate.",
@@ -386,7 +386,7 @@ JSON: {{"score": <0-100>, "alignment": "strong|partial|weak", "feedback": "<brie
     return _merge_open_ended_result("next_move", deterministic, llm_result)
 
 
-def test_quiz_direction(user_explanation: str, provider: Any, current_stage: str, flow_type: str) -> dict:
+def test_quiz_direction(user_explanation: str, router: Any, current_stage: str, flow_type: str) -> dict:
     """Hybrid-scored: deterministic strategy clarity blended with LLM judgment."""
     stage, strategy = current_stage, flow_type
     rubric = get_stage_rubric(stage, strategy)
@@ -402,7 +402,7 @@ def test_quiz_direction(user_explanation: str, provider: Any, current_stage: str
 Goal: {rubric["goal"]} | Advance: {rubric["advance_when"]} | Concepts: {concepts}
 Trainee: "{user_explanation}"
 JSON: {{"score": <0-100>, "understanding": "excellent|good|partial|needs_work", "feedback": "<brief>", "key_concepts_got": ["..."], "key_concepts_missed": ["..."]}}"""
-    llm_result = _score_with_llm(provider, prompt, {
+    llm_result = _score_with_llm(router, prompt, {
         "score": 50,
         "understanding": "partial",
         "feedback": "Unable to evaluate.",
@@ -413,10 +413,12 @@ JSON: {{"score": <0-100>, "understanding": "excellent|good|partial|needs_work", 
     return _merge_open_ended_result("direction", deterministic, llm_result)
 
 
-def _score_with_llm(provider: Any, prompt: str, defaults: dict) -> dict:
+def _score_with_llm(router: Any, prompt: str, defaults: dict) -> dict:
     """Unified LLM scoring: validates enums, clamps scores, handles fallbacks."""
     try:
-        response = provider.chat([{"role": "system", "content": prompt}], temperature=0.3, max_tokens=300)
+        response = router.chat_with_fallback(
+            [{"role": "system", "content": prompt}], temperature=0.3, max_tokens=300
+        ).response
         parsed = extract_json_from_llm(response.content) if response.content else None
         result = parsed if isinstance(parsed, dict) else {}
 

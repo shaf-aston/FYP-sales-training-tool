@@ -52,7 +52,6 @@ class SalesChatbot:
     ):
         """Set up the provider, product context, flow engine, and analytics hooks."""
         self._router = ProviderRouter(provider_type=provider_type, model=model)
-        self.provider_resolution = self._router.resolution
         self.session_id = session_id
         self.product_type = product_type
         self.logger = logging.LoggerAdapter(
@@ -97,10 +96,6 @@ class SalesChatbot:
                 initial_strategy=str(self.flow_engine.flow_type),
                 ab_variant=self._ab_variant,
             )
-
-    @property
-    def provider(self):
-        return self._router.provider
 
     @property
     def provider_name(self) -> str:
@@ -226,17 +221,11 @@ class SalesChatbot:
         self,
         reply_text: str,
         user_message: str,
-        provider_name: str | None = None,
     ) -> Layer3CheckResult:
         """Run LAYER 3 (Response Validation) checks on LLM output.
 
         Detects and blocks rule violations before sending response to user.
-        Probe provider returns JSON payloads for tests and must remain unmodified.
         """
-        active_provider = (provider_name or self.provider_name or "").lower()
-        if active_provider == "probe":
-            return Layer3CheckResult(content=reply_text)
-
         result = apply_layer3_output_checks(
             reply_text=reply_text,
             stage=self.flow_engine.current_stage,
@@ -405,7 +394,7 @@ class SalesChatbot:
     def generate_training(self, user_msg: str, bot_reply: str) -> dict[str, Any]:
         """Generate coaching notes for the current exchange via lightweight LLM call."""
         return trainer.generate_training(
-            self.provider, self.flow_engine, user_msg, bot_reply
+            self._router, self.flow_engine, user_msg, bot_reply
         )
 
     def answer_training_question(
@@ -413,7 +402,7 @@ class SalesChatbot:
     ) -> dict[str, Any]:
         """Answer a trainee's question about the current conversation and sales techniques."""
         return trainer.answer_training_question(
-            self.provider, self.flow_engine, question, style
+            self._router, self.flow_engine, question, style
         )
 
     def run_quiz_stage_answer(self, answer: str) -> dict:
@@ -430,13 +419,13 @@ class SalesChatbot:
             "",
         )
         return quiz.test_quiz_next_move(
-            response, self.provider, self.flow_engine.current_stage, self.flow_engine.flow_type, last_user_msg
+            response, self._router, self.flow_engine.current_stage, self.flow_engine.flow_type, last_user_msg
         )
 
     def run_quiz_direction(self, explanation: str) -> dict:
         """Score the user's explanation of why the conversation should move next."""
         return quiz.test_quiz_direction(
-            explanation, self.provider, self.flow_engine.current_stage, self.flow_engine.flow_type
+            explanation, self._router, self.flow_engine.current_stage, self.flow_engine.flow_type
         )
 
     def _capture_turn_snapshot(self, turn_state=None) -> dict:

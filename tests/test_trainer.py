@@ -2,7 +2,20 @@
 from types import SimpleNamespace
 
 from core import trainer
+from core.services.provider_router import ProviderRouter
 from core.utils import Stage, Strategy
+
+
+def _router(monkeypatch, *providers):
+    """A real router over stub providers; the first one is the active provider."""
+    by_name = {p.provider_name: p for p in providers}
+    monkeypatch.setattr(
+        "core.services.provider_router.create_provider", lambda name, model=None: by_name[name]
+    )
+    monkeypatch.setattr(
+        "core.services.provider_router.list_providers", lambda fallback=False: list(by_name)
+    )
+    return ProviderRouter(providers[0].provider_name)
 
 
 class _DummyProvider:
@@ -39,11 +52,11 @@ class _DummyFlowEngine:
     ]
 
 
-def test_socratic_training_answer_preserves_question_marks():
+def test_socratic_training_answer_preserves_question_marks(monkeypatch):
     provider = _DummyProvider(content="What is the real gap? Why now?")
 
     result = trainer.answer_training_question(
-        provider,
+        _router(monkeypatch, provider),
         _DummyFlowEngine(),
         "What should I do next",
         style="socratic",
@@ -53,11 +66,11 @@ def test_socratic_training_answer_preserves_question_marks():
     assert provider.calls[0]["stage"] == Stage.LOGICAL
 
 
-def test_tactical_training_answer_keeps_original_punctuation():
+def test_tactical_training_answer_keeps_original_punctuation(monkeypatch):
     provider = _DummyProvider(content="Ask them what hurts most?")
 
     result = trainer.answer_training_question(
-        provider,
+        _router(monkeypatch, provider),
         _DummyFlowEngine(),
         "What should I do next",
         style="tactical",
@@ -78,16 +91,9 @@ def test_generate_training_uses_fallback_provider_when_primary_fails(monkeypatch
     )
     fallback.provider_name = "sambanova"
 
-    monkeypatch.setattr(trainer, "list_fallback_providers", lambda current: ["sambanova"])
-    monkeypatch.setattr(
-        trainer,
-        "create_provider",
-        lambda name: fallback if name == "sambanova" else primary,
-    )
-
     flow_engine = _DummyFlowEngine()
 
-    result = trainer.generate_training(primary, flow_engine, "Need help", "Sure")
+    result = trainer.generate_training(_router(monkeypatch, primary, fallback), flow_engine, "Need help", "Sure")
 
     assert primary.calls
     assert fallback.calls

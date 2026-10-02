@@ -6,10 +6,11 @@ import pytest
 
 import core.quiz as quiz
 from core.providers.base import LLMResponse
+from core.services.provider_router import ProviderChatResult
 
 
 class _RaisingProvider:
-    def chat(self, *_args, **_kwargs):
+    def chat_with_fallback(self, *_args, **_kwargs):
         raise RuntimeError("provider unavailable")
 
 
@@ -17,8 +18,8 @@ class _JsonProvider:
     def __init__(self, content: str):
         self._content = content
 
-    def chat(self, *_args, **_kwargs):
-        return LLMResponse(content=self._content)
+    def chat_with_fallback(self, *_args, **_kwargs):
+        return ProviderChatResult(LLMResponse(content=self._content), "stub", "stub-model")
 
 
 def test_get_stage_rubric_uses_configured_values_and_falls_back(monkeypatch):

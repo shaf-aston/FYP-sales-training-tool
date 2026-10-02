@@ -10,8 +10,7 @@ from dotenv import load_dotenv
 ROOT_DIR = Path(__file__).resolve().parents[2]
 load_dotenv(ROOT_DIR / ".env")
 
-DEFAULT_LLM_PROVIDER_ORDER = ["groq", "sambanova", "dummy", "probe"]
-DEFAULT_LLM_FALLBACK_ORDER = DEFAULT_LLM_PROVIDER_ORDER[:]
+DEFAULT_LLM_PROVIDER_ORDER = ["groq", "sambanova"]
 
 # Groq retires models without notice and the old default (llama-3.3-70b-versatile)
 # now 404s, which silently emptied every reply. Check `client.models.list()` against
