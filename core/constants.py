@@ -37,29 +37,3 @@ MIN_TURNS_BEFORE_ADVANCE = 3
 DEFAULT_TEMPERATURE = 0.8
 DEFAULT_MAX_TOKENS = 200
 
-# scoring and evaluation
-SCORING_RUBRIC = {
-    "stage_points": {
-        "objection": 30,
-        "negotiation": 26,
-        "pitch": 22,
-        "emotional": 15,
-        "logical": 10,
-        "intent": 5,
-    },
-    "signal_detection_max": 25,
-    "objection_handling_max": 20,
-    "questioning_depth_max": 15,
-    "questioning_depth_per_hit": 5,
-    "conversation_length_max": 10,
-    "sweet_spot_turns": (7, 12),
-}
-
-STAGE_TIMEOUTTHRESHOLDS = {
-    "intent": 6,
-    "logical": 10,
-    "emotional": 10,
-    "pitch": 8,
-    "negotiation": 8,
-    "objection": 6,
-}

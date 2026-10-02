@@ -5,6 +5,21 @@
 #   Medium = "Analytical" (Cialdini, 2006)
 #   Hard = "Driver" (Dixon & Adamson, 2011)
 
+# Real objections from recorded sales calls (Fathom), built by
+# `python scripts/build_real_calls.py`. When the file exists, each session's
+# buyer raises real objections instead of the difficulty profile's bank.
+real_objections:
+  enabled: true
+  file: "real_objections.json"   # in config/
+  vault_dir: "../GRWTH OS/vault/raw/fathom"  # relative to this project folder
+  type_map:                      # vault type -> buyer concern type
+    price: "price"
+    trust/legit: "skepticism"
+    think-about-it: "timing"
+    time: "timing"
+    partner/spouse: "partner"
+    fear/ability: "fear"
+
 difficulty_profiles:
   easy:
     label: "Friendly Buyer"

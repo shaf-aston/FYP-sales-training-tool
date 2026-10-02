@@ -16,16 +16,11 @@ from .analysis import (
     analyse_state,
 )
 from .objection import get_objection_pathway
-from .constants import (
-    RECENT_HISTORY_WINDOW,
-    DEFAULT_TEMPERATURE,
-    DEFAULT_MAX_TOKENS,
-)
+from .constants import RECENT_HISTORY_WINDOW
 from .flow import SalesFlowEngine
-from .services.analytics_recorder import AnalyticsRecorder
+from .analytics.performance import PerformanceTracker
+from .analytics.session_analytics import SessionAnalytics
 from .services.provider_router import ProviderRouter
-from .providers import create_provider
-from .providers import list_fallback_providers  # re-export for tests/patching
 from .providers.base import ACCESS_DENIED, RATE_LIMIT, LLMResponse
 from .response_guardrails import Layer3CheckResult, apply_layer3_output_checks
 from .utils import Strategy, Stage
@@ -57,19 +52,13 @@ class SalesChatbot:
     ):
         """Set up the provider, product context, flow engine, and analytics hooks."""
         self._router = ProviderRouter(provider_type=provider_type, model=model)
-        self.provider = self._router.provider
         self.provider_resolution = self._router.resolution
         self.session_id = session_id
         self.product_type = product_type
-        self.provider_type = getattr(self.provider, "provider_name", provider_type)
         self.logger = logging.LoggerAdapter(
             _base_logger, {"session_id": session_id or "-"}
         )
 
-        self._provider_name = self._router.provider_name
-        self._model_name = self._router.model_name
-
-        self._analytics = AnalyticsRecorder()
 
         config = get_product_settings(product_type or "")
 
@@ -101,7 +90,8 @@ class SalesChatbot:
         self._turn_snapshots = []
 
         if session_id and record_session_start:
-            self._analytics.record_session_start(
+            SessionAnalytics.record(
+                event="session_start",
                 session_id=session_id,
                 product_type=product_type or "unknown",
                 initial_strategy=str(self.flow_engine.flow_type),
@@ -109,12 +99,16 @@ class SalesChatbot:
             )
 
     @property
+    def provider(self):
+        return self._router.provider
+
+    @property
     def provider_name(self) -> str:
-        return self._provider_name
+        return self._router.provider_name
 
     @property
     def model_name(self) -> str:
-        return self._model_name
+        return self._router.model_name
 
     def _log_turn_event(self, user_message: str, bot_reply: str) -> None:
 
@@ -155,7 +149,8 @@ class SalesChatbot:
                 self.flow_engine.advance(target_stage=target)
                 advanced_this_turn = True
                 if self.session_id:
-                    self._analytics.record_stage_transition(
+                    SessionAnalytics.record(
+                        event="stage_transition",
                         session_id=self.session_id,
                         from_stage=str(old_stage),
                         to_stage=str(self.flow_engine.current_stage),
@@ -185,7 +180,8 @@ class SalesChatbot:
 
         if self.session_id:
             # history doesn't include this turn yet; count the message we're about to add
-            self._analytics.record_intent_classification(
+            SessionAnalytics.record(
+                event="intent_classification",
                 session_id=self.session_id,
                 intent_level=turn_state.intent,
                 user_turn_count=self.flow_engine.user_turn_count + 1,
@@ -193,17 +189,12 @@ class SalesChatbot:
 
         request_start = time.time()
         try:
-            llm_response = self.provider.chat(
-                llm_messages,
-                temperature=DEFAULT_TEMPERATURE,
-                max_tokens=DEFAULT_MAX_TOKENS,
-                stage=self.flow_engine.current_stage,
+            result = self._router.chat_with_fallback(
+                llm_messages, stage=self.flow_engine.current_stage
             )
-
-            if llm_response.error or not llm_response.content:
-                return self._handle_provider_error(
-                    llm_response, llm_messages, user_message
-                )
+            llm_response = result.response
+            if not result.ok:
+                return self._provider_failure_reply(llm_response, user_message)
 
             return self._complete_successful_turn(
                 user_message=user_message,
@@ -229,8 +220,8 @@ class SalesChatbot:
         return ChatResponse(
             content=content,
             latency_ms=latency_ms,
-            provider=self._provider_name,
-            model=self._model_name,
+            provider=self.provider_name,
+            model=self.model_name,
             input_len=len(user_message),
             output_len=len(content),
         )
@@ -246,7 +237,7 @@ class SalesChatbot:
         Detects and blocks rule violations before sending response to user.
         Probe provider returns JSON payloads for tests and must remain unmodified.
         """
-        active_provider = (provider_name or self._provider_name or "").lower()
+        active_provider = (provider_name or self.provider_name or "").lower()
         if active_provider == "probe":
             return Layer3CheckResult(content=reply_text)
 
@@ -291,97 +282,23 @@ class SalesChatbot:
             )
         )
 
-    def _handle_provider_error(
-        self, llm_response: LLMResponse, llm_messages: list, user_message: str
+    def _provider_failure_reply(
+        self, llm_response: LLMResponse, user_message: str
     ) -> ChatResponse:
-        """Handle provider failures and try fallback routes when it makes sense."""
+        """Explain an outage after every provider (primary and fallbacks) failed."""
         if self._is_rate_limit(llm_response):
-            self.logger.warning(
-                f"rate limit on {self._provider_name}: {llm_response.error}"
-            )
-            retry = self._try_fallback_providers(llm_messages, user_message)
-            if retry is not None:
-                return retry
-            return self._fallback(
-                "Too much traffic right now - give it a second and try that again.",
-                llm_response.latency_ms,
-                user_message,
-            )
-
-        self.logger.warning(
-            "provider error on %s: %s",
-            self._provider_name,
-            llm_response.error,
-        )
-        retry = self._try_fallback_providers(llm_messages, user_message)
-        if retry is not None:
-            return retry
-
-        if self._is_network_access_denied(llm_response):
+            message = "Too much traffic right now - give it a second and try that again."
+        elif self._is_network_access_denied(llm_response):
             self.logger.error(
-                "network access denied for %s: %s",
-                self._provider_name,
-                llm_response.error,
+                "network access denied for %s: %s", self.provider_name, llm_response.error
             )
-            return self._fallback(
-                f"{self._provider_name.capitalize()} is rejecting this request (access denied). "
-                "Check the API key, VPN/proxy, firewall, or provider-side security rules, then try again.",
-                llm_response.latency_ms,
-                user_message,
+            message = (
+                f"{self.provider_name.capitalize()} is rejecting this request (access denied). "
+                "Check the API key, VPN/proxy, firewall, or provider-side security rules, then try again."
             )
-
-        return self._fallback(
-            "Can't reach the Bot right now - give it another go.",
-            llm_response.latency_ms,
-            user_message,
-        )
-
-    def _sync_provider_from_router(self, alt_provider, next_name: str) -> None:
-        """Update all provider references after switching to a fallback provider."""
-        self.provider = alt_provider
-        self.provider_type = next_name
-        self._provider_name = next_name
-        self._model_name = alt_provider.get_model_name()
-        if self._router is not None:
-            self._router.provider = alt_provider
-            self._router.provider_name = next_name
-            self._router.model_name = self._model_name
-
-    def _try_fallback_providers(
-        self, llm_messages: list, user_message: str
-    ) -> ChatResponse | None:
-        """Try other configured providers until one returns a usable reply."""
-        for next_name in list_fallback_providers(self._provider_name):
-            try:
-                alt = create_provider(next_name)
-                if not alt.is_available():
-                    continue
-                resp = alt.chat(
-                    llm_messages,
-                    temperature=DEFAULT_TEMPERATURE,
-                    max_tokens=DEFAULT_MAX_TOKENS,
-                    stage=self.flow_engine.current_stage,
-                )
-                if resp.error or not resp.content:
-                    self.logger.warning(
-                        "fallback provider %s unavailable: %s",
-                        next_name,
-                        resp.error or "empty response",
-                    )
-                    continue
-
-                self._sync_provider_from_router(alt, next_name)
-                self.logger.info(f"switched to {next_name} after error")
-                return self._complete_successful_turn(
-                    user_message=user_message,
-                    bot_reply=resp.content,
-                    latency_ms=resp.latency_ms,
-                    advanced_this_turn=False,
-                    turn_state=analyse_state(self.flow_engine.conversation_history, user_message),
-                )
-            except Exception as e:
-                self.logger.error(f"fallback to {next_name} failed: {e}")
-        return None
+        else:
+            message = "Can't reach the Bot right now - give it another go."
+        return self._fallback(message, llm_response.latency_ms, user_message)
 
     def _fallback(
         self, message: str, latency_ms: float, user_message: str
@@ -399,7 +316,8 @@ class SalesChatbot:
         old_strategy = self.flow_engine.flow_type
         if self.flow_engine.evaluate_strategy_switch(user_message):
             if self.session_id and old_strategy != self.flow_engine.flow_type:
-                self._analytics.record_strategy_switch(
+                SessionAnalytics.record(
+                    event="strategy_switch",
                     session_id=self.session_id,
                     from_strategy=str(old_strategy),
                     to_strategy=str(self.flow_engine.flow_type),
@@ -450,13 +368,13 @@ class SalesChatbot:
         self._log_turn_event(user_message, bot_reply)
 
         if self.session_id:
-            self._analytics.log_stage_latency(
+            PerformanceTracker.log_stage_latency(
                 session_id=self.session_id,
                 stage=self.flow_engine.current_stage,
                 strategy=self.flow_engine.flow_type,
                 latency_ms=latency_ms,
-                provider=self._provider_name,
-                model=self._model_name,
+                provider=self.provider_name,
+                model=self.model_name,
                 user_message_length=len(user_message),
                 bot_response_length=len(bot_reply),
             )
@@ -478,7 +396,8 @@ class SalesChatbot:
                 if isinstance(objection_data, dict)
                 else "unknown"
             )
-            self._analytics.record_objection_classified(
+            SessionAnalytics.record(
+                event="objection_classified",
                 session_id=self.session_id,
                 objection_type=objection_type,
                 strategy=str(self.flow_engine.flow_type),
@@ -625,7 +544,7 @@ class SalesChatbot:
     def get_conversation_summary(self):
         """Return FSM state summary with provider info."""
         summary = self.flow_engine.get_summary()
-        summary.update({"provider": self._provider_name, "model": self._model_name})
+        summary.update({"provider": self.provider_name, "model": self.model_name})
         return summary
 
     def save_session(self):
@@ -639,7 +558,7 @@ class SalesChatbot:
                     {
                         "session_id": self.session_id,
                         "product_type": self.product_type,
-                        "provider_type": self.provider_type,
+                        "provider_type": self.provider_name,
                         "flow_type": self.flow_engine.flow_type,
                         "current_stage": self.flow_engine.current_stage,
                         "stage_turn_count": self.flow_engine.stage_turn_count,
@@ -665,15 +584,10 @@ class SalesChatbot:
             )
 
     def record_session_end(self):
-        """Record where this session actually got to.
-
-        trainer.score_session reads this event for the final stage reached, so
-        while it was never written every score silently under-counted stage
-        progression - and there was no record of anyone finishing at all.
-        """
+        """Record where this session actually got to, so finished sessions are counted."""
         if not self.session_id:
             return
-        self._analytics.record(
+        SessionAnalytics.record(
             session_id=self.session_id,
             event="session_end",
             final_stage=str(self.flow_engine.current_stage),
@@ -689,10 +603,3 @@ class SalesChatbot:
             ),
             message_count=len(self.flow_engine.conversation_history),
         )
-
-    @staticmethod
-    def load_session(session_id):
-        """Disk recovery is disabled; in-memory sessions are the only live state."""
-
-        logging.getLogger(__name__).debug("session_load_disabled session_id=%s", session_id)
-        return None

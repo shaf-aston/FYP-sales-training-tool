@@ -9,7 +9,6 @@ from typing import Any
 from flask import Blueprint, jsonify, request
 
 from core.analytics.performance import PerformanceTracker
-from core.analytics.session_analytics import SessionAnalytics
 from core.chatbot import SalesChatbot
 from core.constants import UNDETERMINED_STAGE
 from core.content import generate_init_greeting
@@ -22,7 +21,6 @@ from ..messages import (
     invalid_stage,
     invalid_strategy,
     STRATEGY_SWITCH_FAILED,
-    SCORE_CALCULATION_FAILED,
 )
 from ..security import (
     SecurityConfig,
@@ -328,27 +326,6 @@ def api_strategy(bot):
     bp.app.logger.info(f"Strategy switched to {strategy}")  # type: ignore
 
     return jsonify({"success": True, **bp.bot_state(bot)})  # type: ignore
-
-
-@bp.route("/score", methods=["GET"])
-@with_session(bp)
-def get_score(bot):
-    """Retrieve post-session performance score for the current roleplay session"""
-    from core.trainer import score_session
-
-    try:
-        session_id = request.headers.get("X-Session-ID")
-        score_data = score_session(session_id)
-        SessionAnalytics.record(
-            session_id=session_id,
-            event="session_score",
-            total=score_data.get("total"),
-            breakdown=score_data.get("breakdown"),
-        )
-        return jsonify({"success": True, "score": score_data})
-    except Exception as e:
-        logger.error(f"Error calculating session score: {e}")
-        return jsonify({"error": SCORE_CALCULATION_FAILED}), 500
 
 
 @bp.route("/reset", methods=["POST"])

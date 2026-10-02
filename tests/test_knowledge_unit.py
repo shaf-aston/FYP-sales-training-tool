@@ -32,14 +32,10 @@ def test_save_custom_knowledge_sanitizes_and_writes_primary_file(monkeypatch):
     temp_dir = Path.cwd() / ".tmp" / "knowledge-unit"
     temp_dir.mkdir(parents=True, exist_ok=True)
     primary = temp_dir / "custom_instructions.yaml"
-    legacy = temp_dir / "custom_knowledge.yaml"
     if primary.exists():
         primary.unlink()
-    if legacy.exists():
-        legacy.unlink()
 
     monkeypatch.setattr(knowledge, "KNOWLEDGE_FILE", primary)
-    monkeypatch.setattr(knowledge, "LEGACY_KNOWLEDGE_FILE", legacy)
 
     saved = knowledge.save_custom_knowledge(
         {
@@ -56,7 +52,6 @@ def test_save_custom_knowledge_sanitizes_and_writes_primary_file(monkeypatch):
 
     assert saved is True
     assert primary.exists()
-    assert not legacy.exists()
 
     loaded = knowledge.load_custom_knowledge()
     assert loaded == {
@@ -74,17 +69,13 @@ def test_save_custom_knowledge_sanitizes_and_writes_primary_file(monkeypatch):
     assert "product_name:" not in knowledge_text
 
 
-def test_clear_custom_knowledge_removes_primary_and_legacy_files(monkeypatch):
+def test_clear_custom_knowledge_removes_file(monkeypatch):
     temp_dir = Path.cwd() / ".tmp" / "knowledge-unit-clear"
     temp_dir.mkdir(parents=True, exist_ok=True)
     primary = temp_dir / "custom_instructions.yaml"
-    legacy = temp_dir / "custom_knowledge.yaml"
     primary.write_text("product_name: Acme Pro\n", encoding="utf-8")
-    legacy.write_text("product_name: Legacy\n", encoding="utf-8")
 
     monkeypatch.setattr(knowledge, "KNOWLEDGE_FILE", primary)
-    monkeypatch.setattr(knowledge, "LEGACY_KNOWLEDGE_FILE", legacy)
 
     assert knowledge.clear_custom_knowledge() is True
     assert not primary.exists()
-    assert not legacy.exists()

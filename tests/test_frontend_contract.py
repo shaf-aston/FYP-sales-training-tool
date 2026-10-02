@@ -6,11 +6,18 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def test_index_inline_handlers_exist_in_app_js():
+def _app_js() -> str:
+    return "\n".join(
+        f.read_text(encoding="utf-8")
+        for f in sorted((ROOT / "frontend" / "static" / "js").glob("*.js"))
+    )
+
+
+def test_index_inline_handlers_exist_in_frontend_js():
     html = (ROOT / "frontend" / "templates" / "index.html").read_text(
         encoding="utf-8"
     )
-    js = (ROOT / "frontend" / "static" / "app.js").read_text(encoding="utf-8")
+    js = _app_js()
 
     handlers = set(re.findall(r'onclick="\s*([A-Za-z_][A-Za-z0-9_]*)\(', html))
     defined_functions = set(
@@ -20,13 +27,13 @@ def test_index_inline_handlers_exist_in_app_js():
     missing_handlers = handlers - defined_functions
 
     assert not missing_handlers, (
-        "Inline frontend handlers referenced by index.html must exist in app.js. "
+        "Inline frontend handlers referenced by index.html must exist in frontend/static/js/*.js. "
         f"Missing: {sorted(missing_handlers)}"
     )
 
 
 def test_prospect_frontend_state_is_declared():
-    js = (ROOT / "frontend" / "static" / "app.js").read_text(encoding="utf-8")
+    js = _app_js()
 
     for required_declaration in (
         "let _prospectMode = false;",
@@ -38,7 +45,7 @@ def test_prospect_frontend_state_is_declared():
 
 
 def test_frontend_does_not_persist_transcripts_or_sessions():
-    js = (ROOT / "frontend" / "static" / "app.js").read_text(encoding="utf-8")
+    js = _app_js()
 
     for forbidden in (
         'localStorage.setItem("chatHistory"',
@@ -54,7 +61,7 @@ def test_frontend_does_not_persist_transcripts_or_sessions():
 
 
 def test_flow_controls_reuse_shared_session_recovery_path():
-    js = (ROOT / "frontend" / "static" / "app.js").read_text(encoding="utf-8")
+    js = _app_js()
 
     assert "let _sessionRecoveryInProgress = false;" in js
     assert "function handleServerSessionError(data, { notify = true } = {})" in js

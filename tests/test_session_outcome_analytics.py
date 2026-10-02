@@ -2,8 +2,7 @@
 
 The log held 1,485 session_start events against 83 session_end, and no score was
 ever recorded, so there was no evidence anyone ever finished a session or got
-better at it. trainer.score_session also reads session_end for the final stage
-reached, so while it was never written every score under-counted progression.
+better at it.
 """
 
 import pytest
@@ -27,8 +26,8 @@ class StubProspectProvider:
 def client(monkeypatch):
     app.config["TESTING"] = True
     monkeypatch.setattr(
-        "core.prospect_session.create_provider",
-        lambda *_args, **_kwargs: StubProspectProvider(),
+        "core.services.provider_router.create_provider_with_trace",
+        lambda *_args, **_kwargs: (StubProspectProvider(), None),
     )
     return app.test_client()
 
@@ -101,7 +100,7 @@ def test_resetting_a_session_that_is_already_gone_records_nothing(client):
 
 
 def test_ending_a_seller_bot_session_records_where_it_got_to():
-    """The event trainer.score_session reads for the final stage reached."""
+    """Ending a session records the final stage reached."""
     from core.chatbot import SalesChatbot
 
     class _Engine:
@@ -113,10 +112,6 @@ def test_ending_a_seller_bot_session_records_where_it_got_to():
     bot = SalesChatbot.__new__(SalesChatbot)
     bot.session_id = "c" * 32
     bot.flow_engine = _Engine()
-    from core.services.analytics_recorder import AnalyticsRecorder
-
-    bot._analytics = AnalyticsRecorder()
-
     bot.record_session_end()
 
     ended = events_for(bot.session_id, "session_end")

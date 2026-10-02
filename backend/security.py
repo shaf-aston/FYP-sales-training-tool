@@ -196,9 +196,6 @@ class PromptInjectionValidator:
             log_fn("Prompt injection stripped from message")
         return sanitized
 
-    @staticmethod
-    def contains_injection(text: str) -> bool:
-        return bool(PromptInjectionValidator.INJECTION_PATTERN.search(text))
 
 
 class SecurityHeadersMiddleware:

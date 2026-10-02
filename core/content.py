@@ -18,7 +18,6 @@ from typing import Any
 
 from .loader import (
     load_signals,
-    load_objection_flows,
     get_adaptation_template,
 )
 from .prompts import (
@@ -85,10 +84,6 @@ def _build_tactic_guidance(strategy: str, state: Any, user_message: str) -> str:
 
 # Exported signals for consumers (e.g. flow.py)
 SIGNALS = load_signals()
-# Backwards-compatible alias used by older tests and modules
-_OBJECTION_FLOWS_RAW = load_objection_flows()
-# expose only the `sop_flows` section for backward compatibility with tests
-SOP_FLOWS = _OBJECTION_FLOWS_RAW.get("sop_flows", {})
 
 # Export public symbols
 __all__ = [
@@ -96,7 +91,6 @@ __all__ = [
     "generate_init_greeting",
     "get_prompt",
     "SIGNALS",
-    "SOP_FLOWS",
 ]
 
 

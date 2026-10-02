@@ -22,8 +22,8 @@ def test_prospect_init_returns_opening_message_and_history(monkeypatch):
     client = app.test_client()
 
     monkeypatch.setattr(
-        "core.prospect_session.create_provider",
-        lambda *_args, **_kwargs: StubProspectProvider(),
+        "core.services.provider_router.create_provider_with_trace",
+        lambda *_args, **_kwargs: (StubProspectProvider(), None),
     )
 
     response = client.post(
@@ -97,8 +97,8 @@ def test_prospect_init_supports_high_ticket_sales_mentorship(monkeypatch):
     client = app.test_client()
 
     monkeypatch.setattr(
-        "core.prospect_session.create_provider",
-        lambda *_args, **_kwargs: StubProspectProvider(),
+        "core.services.provider_router.create_provider_with_trace",
+        lambda *_args, **_kwargs: (StubProspectProvider(), None),
     )
 
     response = client.post(

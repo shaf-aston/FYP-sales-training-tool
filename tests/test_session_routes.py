@@ -319,41 +319,6 @@ def test_stages_route_returns_the_flow_stages(monkeypatch):
     }
 
 
-def test_score_route_returns_the_session_score(monkeypatch):
-    app, manager = _make_session_app(monkeypatch)
-    manager.set("e" * 8, _DummyBot(session_id="e" * 8))
-    monkeypatch.setattr("core.trainer.score_session", lambda _sid: {"total": 7})
-
-    response = app.test_client().get("/api/score", headers={"X-Session-ID": "e" * 8})
-
-    assert response.status_code == 200
-    assert response.get_json() == {"success": True, "score": {"total": 7}}
-    # The score must be kept, not only shown - otherwise there is no record of
-    # whether anyone is improving.
-    from core.analytics.session_analytics import SessionAnalytics
-
-    scored = [
-        e
-        for e in SessionAnalytics.get_session_analytics("e" * 8)
-        if e.get("event_type") == "session_score"
-    ]
-    assert [e["total"] for e in scored] == [7]
-
-
-def test_score_route_reports_a_failed_calculation_instead_of_crashing(monkeypatch):
-    app, manager = _make_session_app(monkeypatch)
-    manager.set("e" * 8, _DummyBot(session_id="e" * 8))
-
-    def _explode(_sid):
-        raise RuntimeError("analytics unavailable")
-
-    monkeypatch.setattr("core.trainer.score_session", _explode)
-
-    response = app.test_client().get("/api/score", headers={"X-Session-ID": "e" * 8})
-
-    assert response.status_code == 500
-
-
 def test_every_session_route_answers_a_dead_session_the_same_way(monkeypatch):
     """One seam, one contract: the frontend recovers on code == SESSION_EXPIRED."""
     app, _manager = _make_session_app(monkeypatch)
@@ -362,11 +327,10 @@ def test_every_session_route_answers_a_dead_session_the_same_way(monkeypatch):
 
     responses = [
         client.get("/api/stages", headers=headers),
-        client.get("/api/score", headers=headers),
         client.post("/api/stage", headers=headers, json={"stage": "pitch"}),
         client.post("/api/strategy", headers=headers, json={"strategy": "consultative"}),
         client.post("/api/reset", headers=headers),
     ]
 
-    assert [r.status_code for r in responses] == [400] * 5
+    assert [r.status_code for r in responses] == [400] * 4
     assert all(r.get_json()["code"] == "SESSION_EXPIRED" for r in responses)

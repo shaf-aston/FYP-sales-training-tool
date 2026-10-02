@@ -580,8 +580,7 @@ textarea::-webkit-scrollbar-thumb,
 .quiz-feedback,
 .prospect-section,
 .prospect-settings,
-#feedbackDropdown,
-.score-card {
+#feedbackDropdown {
   background: rgba(42, 38, 32, 0.9);
   border: 1px solid rgba(82, 74, 63, 0.56);
   border-radius: 20px;
@@ -1349,36 +1348,6 @@ textarea::-webkit-scrollbar-thumb,
   font-weight: 700;
 }
 
-.score-card {
-  max-width: min(82%, 620px);
-  padding: 18px;
-}
-
-.score-card-title {
-  color: var(--success);
-  font-size: 20px;
-  font-weight: 800;
-}
-
-.score-card-subtitle {
-  margin-top: 8px;
-  color: var(--text-muted);
-}
-
-.score-breakdown,
-.score-details {
-  margin-top: 14px;
-  color: var(--text-body);
-}
-
-.score-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 6px 0;
-  border-bottom: 1px solid rgba(82, 74, 63, 0.36);
-}
-
 /* Every "working on it" line reads the same, in one colour from the palette. */
 .loading-note {
   color: var(--text-muted);
@@ -1577,8 +1546,7 @@ textarea::-webkit-scrollbar-thumb,
     align-items: center;
   }
 
-  .message-bubble,
-  .score-card {
+  .message-bubble {
     max-width: 92%;
   }
 

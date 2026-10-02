@@ -131,13 +131,9 @@ def test_knowledge_post_saves_to_yaml_file(monkeypatch):
     knowledge_dir = Path.cwd() / ".tmp" / "test-knowledge"
     knowledge_dir.mkdir(parents=True, exist_ok=True)
     knowledge_file = knowledge_dir / "custom_instructions.yaml"
-    legacy_file = knowledge_dir / "custom_knowledge.yaml"
-    for path in (knowledge_file, legacy_file):
-        if path.exists():
-            path.unlink()
+    knowledge_file.unlink(missing_ok=True)
 
     monkeypatch.setattr(knowledge_module, "KNOWLEDGE_FILE", knowledge_file)
-    monkeypatch.setattr(knowledge_module, "LEGACY_KNOWLEDGE_FILE", legacy_file)
 
     response = app.test_client().post(
         "/api/knowledge",
@@ -155,19 +151,15 @@ def test_knowledge_delete_clears_yaml_file(monkeypatch):
     knowledge_dir = Path.cwd() / ".tmp" / "test-knowledge-clear"
     knowledge_dir.mkdir(parents=True, exist_ok=True)
     knowledge_file = knowledge_dir / "custom_instructions.yaml"
-    legacy_file = knowledge_dir / "custom_knowledge.yaml"
     knowledge_file.write_text("product_name: Acme Pro\n", encoding="utf-8")
-    legacy_file.write_text("product_name: Legacy\n", encoding="utf-8")
 
     monkeypatch.setattr(knowledge_module, "KNOWLEDGE_FILE", knowledge_file)
-    monkeypatch.setattr(knowledge_module, "LEGACY_KNOWLEDGE_FILE", legacy_file)
 
     response = app.test_client().delete("/api/knowledge")
 
     assert response.status_code == 200
     assert response.get_json() == {"success": True}
     assert not knowledge_file.exists()
-    assert not legacy_file.exists()
 
 
 def test_session_analytics_forbids_header_path_mismatch(monkeypatch):

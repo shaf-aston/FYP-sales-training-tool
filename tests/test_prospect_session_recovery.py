@@ -40,18 +40,9 @@ def test_prospect_evaluate_requires_in_memory_session(monkeypatch):
     app = Flask(__name__)
     app.config["TESTING"] = True
     manager = _DummyProspectSessionManager()
-    load_calls = {"count": 0}
 
     _wire_routes(monkeypatch, app, manager)
     app.register_blueprint(prospect_routes.bp)
-
-    monkeypatch.setattr(
-        "core.prospect_session.ProspectSession.load_session",
-        classmethod(
-            lambda cls, session_id: load_calls.__setitem__("count", load_calls["count"] + 1)
-            or None
-        ),
-    )
 
     response = app.test_client().post(
         "/api/prospect/evaluate",
@@ -60,25 +51,15 @@ def test_prospect_evaluate_requires_in_memory_session(monkeypatch):
 
     assert response.status_code == 400
     assert response.get_json()["code"] == "SESSION_EXPIRED"
-    assert load_calls["count"] == 0
 
 
 def test_prospect_state_requires_in_memory_session(monkeypatch):
     app = Flask(__name__)
     app.config["TESTING"] = True
     manager = _DummyProspectSessionManager()
-    load_calls = {"count": 0}
 
     _wire_routes(monkeypatch, app, manager)
     app.register_blueprint(prospect_routes.bp)
-
-    monkeypatch.setattr(
-        "core.prospect_session.ProspectSession.load_session",
-        classmethod(
-            lambda cls, session_id: load_calls.__setitem__("count", load_calls["count"] + 1)
-            or None
-        ),
-    )
 
     response = app.test_client().get(
         "/api/prospect/state",
@@ -87,4 +68,3 @@ def test_prospect_state_requires_in_memory_session(monkeypatch):
 
     assert response.status_code == 400
     assert response.get_json()["code"] == "SESSION_EXPIRED"
-    assert load_calls["count"] == 0

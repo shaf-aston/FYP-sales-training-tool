@@ -4,7 +4,6 @@ import logging
 import random
 from .loader import (
     load_analysis_config,
-    load_objection_flows,
     load_signals,
     load_yaml,
     render_template,
@@ -16,9 +15,6 @@ logger = logging.getLogger(__name__)
 SIGNALS = load_signals()
 _ANALYSIS_CONFIG = load_analysis_config()
 _OVERRIDE_CONFIG = load_yaml("overrides.yaml")
-_OBJECTION_FLOWS_RAW = load_objection_flows()
-# expose only the `sop_flows` section for backward compatibility with tests
-SOP_FLOWS = _OBJECTION_FLOWS_RAW.get("sop_flows", {})
 
 INTENT_FALLBACKS = [
     "What would you like help with first?",

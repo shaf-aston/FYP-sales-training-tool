@@ -6,7 +6,6 @@ from typing import Any, cast
 
 from core.analysis import ConversationState
 from core.chatbot import SalesChatbot
-from core.providers.base import LLMResponse
 from core.prospect_session_persistence import ProspectSessionPersistence
 from core.session_persistence import SessionPersistence
 
@@ -52,7 +51,7 @@ def _build_bot() -> Any:
     bot._turn_snapshots = []
     bot.session_id = "session123"
     bot.product_type = "default"
-    bot.provider_type = "probe"
+    bot._router = type("Router", (), {"provider": None, "provider_name": "probe", "model_name": "probe-model"})()
     bot.logger = logging.getLogger("test-chatbot")
     return bot
 
@@ -201,68 +200,6 @@ def test_replay_rejects_incomplete_history():
         assert False, "Expected replay to reject incomplete history"
     except ValueError as exc:
         assert "complete user/assistant turns" in str(exc)
-
-
-def test_fallback_provider_runs_post_turn_hooks(monkeypatch):
-    bot = _build_bot()
-    bot._provider_name = "groq"
-    bot._model_name = "primary-model"
-    bot.provider = object()
-    bot._router = type(
-        "Router",
-        (),
-        {"provider": None, "provider_name": "groq", "model_name": "primary-model"},
-    )()
-    bot._apply_layer3_checks = lambda reply_text, user_message, provider_name=None: type(
-        "GuardrailResult",
-        (),
-        {"content": reply_text},
-    )()
-    bot._apply_advancement = lambda user_message: setattr(
-        bot.flow_engine, "flow_type", "consultative"
-    )
-    saved = []
-    bot.save_session = lambda: saved.append(True)
-
-    class _Analytics:
-        def __init__(self):
-            self.latency_calls = []
-
-        def log_stage_latency(self, **kwargs):
-            self.latency_calls.append(kwargs)
-
-        def record_objection_classified(self, **kwargs):
-            pass
-
-    bot._analytics = _Analytics()
-
-    class FallbackProvider:
-        provider_name = "sambanova"
-
-        def is_available(self):
-            return True
-
-        def get_model_name(self):
-            return "fallback-model"
-
-        def chat(self, *_args, **_kwargs):
-            return LLMResponse(content="fallback reply", latency_ms=7.0)
-
-    monkeypatch.setattr("core.chatbot.list_fallback_providers", lambda _name: ["sambanova"])
-    monkeypatch.setattr("core.chatbot.create_provider", lambda _name: FallbackProvider())
-
-    response = bot._try_fallback_providers([], "hello")
-
-    assert response is not None
-    assert response.content == "fallback reply"
-    assert bot.provider_type == "sambanova"
-    assert bot._provider_name == "sambanova"
-    assert bot._model_name == "fallback-model"
-    assert bot.flow_engine.added_turns == [("hello", "fallback reply")]
-    assert bot.flow_engine.flow_type == "consultative"
-    assert len(bot._turn_snapshots) == 1
-    assert saved == [True]
-    assert bot._analytics.latency_calls[0]["provider"] == "sambanova"
 
 
 def test_save_session_logs_state_snapshot(caplog):

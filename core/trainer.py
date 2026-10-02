@@ -2,11 +2,9 @@
 
 import logging
 
-from .analytics.session_analytics import SessionAnalytics
-from .constants import SCORING_RUBRIC, STAGE_TIMEOUTTHRESHOLDS
 from .providers import create_provider, list_fallback_providers
 from .quiz import get_stage_rubric
-from .utils import extract_json_from_llm, normalize_enum_name
+from .utils import extract_json_from_llm
 
 logger = logging.getLogger(__name__)
 
@@ -167,89 +165,3 @@ def answer_training_question(provider, flow_engine, question, style: str = "tact
     except Exception as error:
         logger.warning(f"Training Q&A fell back to generic answer: {error}")
         return {"answer": "Sorry, that didn't work. Give it another go."}
-
-
-def score_session(session_id: str) -> dict:
-    """Score a session based on the F1 Post-session scoring rubric"""
-    events = SessionAnalytics.get_session_analytics(session_id)
-    if not events:
-        return {"total_score": 0, "breakdown": {}}
-
-    # Initialize accumulators
-    stages_reached, score_breakdown = set(), {
-        category_key: 0
-        for category_key in ["stage_progression", "signal_detection", "objection_handling",
-                             "questioning_depth", "conversation_length"]
-    }
-    total_transitions = signal_transitions = intent_medium_high_count = max_turn = 0
-    objection_handled = False
-
-    # Single pass through events
-    for event in events:
-        event_type = event.get("event_type") or event.get("type")
-        turn = max(event.get("user_turn") or 0, event.get("user_turn_count") or 0)
-        max_turn = max(max_turn, turn)
-
-        if event_type == "stage_transition":
-            to_stage = normalize_enum_name(event.get("to_stage"))
-            from_stage = normalize_enum_name(event.get("from_stage", ""))
-            turns_in_stage = event.get("user_turns_in_stage")
-
-            if to_stage:
-                stages_reached.add(to_stage)
-
-            total_transitions += 1
-
-            # Signal-gated transition (didn't timeout in stage)
-            if isinstance(turns_in_stage, int) and 0 <= turns_in_stage < STAGE_TIMEOUTTHRESHOLDS.get(from_stage, 99):
-                signal_transitions += 1
-
-        elif event_type == "objection_classified":
-            objection_handled = True
-        elif event_type == "intent_classification" and event.get("intent_level") in ["medium", "high"]:
-            intent_medium_high_count += 1
-        elif event_type == "session_end":
-            final_stage = normalize_enum_name(event.get("final_stage"))
-            if final_stage:
-                stages_reached.add(final_stage)
-
-    # Compute scores
-    score_breakdown["stage_progression"] = max(
-        (points for stage_name, points in SCORING_RUBRIC["stage_points"].items() if stage_name in stages_reached),
-        default=0
-    )
-
-    score_breakdown["signal_detection"] = int(
-        SCORING_RUBRIC["signal_detection_max"]
-        * min(1.0, signal_transitions / total_transitions if total_transitions > 0 else 0)
-    )
-
-    score_breakdown["objection_handling"] = SCORING_RUBRIC["objection_handling_max"] if objection_handled else 0
-    score_breakdown["questioning_depth"] = min(
-        SCORING_RUBRIC["questioning_depth_max"],
-        intent_medium_high_count * SCORING_RUBRIC["questioning_depth_per_hit"]
-    )
-
-    # Conversation length scoring based on sweet spot
-    sweet_min, sweet_max = SCORING_RUBRIC["sweet_spot_turns"]
-    conv_max = SCORING_RUBRIC["conversation_length_max"]
-    if sweet_min <= max_turn <= sweet_max:
-        score_breakdown["conversation_length"] = conv_max
-    elif max_turn < sweet_min:
-        score_breakdown["conversation_length"] = conv_max // 2
-    elif max_turn <= sweet_max + 3:
-        score_breakdown["conversation_length"] = int(conv_max * 0.8)
-    else:
-        score_breakdown["conversation_length"] = conv_max // 2
-
-    total = min(100, max(0, sum(score_breakdown.values())))
-
-    return {
-        "total_score": total,
-        "breakdown": score_breakdown,
-        "metrics": {
-            "turns": max_turn,
-            "stages_reached": sorted(stages_reached),
-            "signal_ratio": f"{signal_transitions}/{total_transitions}" if total_transitions > 0 else "0/0",
-        },
-    }

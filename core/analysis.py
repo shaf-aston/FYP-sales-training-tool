@@ -32,14 +32,6 @@ class ConversationState:
     doubt: bool = False   # user shows doubt/pain → feeds logical stage advancement
     stakes: bool = False  # user expresses emotional stakes → feeds emotional stage advancement
 
-    def __getitem__(self, key: str):
-        """Allow dict-style access for older call sites that expect a mapping."""
-        return getattr(self, key)
-
-    def get(self, key: str, default=None):
-        """Mirror `dict.get` so state reads stay concise in legacy helpers."""
-        return getattr(self, key, default)
-
 
 ANALYSIS_CONFIG = load_analysis_config()
 THRESHOLDS = ANALYSIS_CONFIG["thresholds"]
