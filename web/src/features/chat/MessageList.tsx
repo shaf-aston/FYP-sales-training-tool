@@ -5,6 +5,7 @@ import { Badge, Button, Markdown, TextArea, TypingDots, useToast } from "@/compo
 import { config } from "@/lib/config";
 import { useSession, type ChatMessage } from "@/features/session/SessionContext";
 import { ListenButton } from "@/features/voice/VoiceBar";
+import { InlineEvaluation } from "@/features/prospect/ProspectDialogs";
 import s from "./MessageList.module.css";
 
 function TypingBubble() {
@@ -113,13 +114,15 @@ export function MessageList() {
   const { messages, typing, mode, edit } = useSession();
   const toast = useToast();
   const [editingId, setEditingId] = useState<string | null>(null);
-  const endRef = useRef<HTMLDivElement>(null);
+  const frameRef = useRef<HTMLDivElement>(null);
   const started = messages.some((m) => m.role === "user");
 
-  // Scroll to the newest line; smooth unless the user prefers reduced motion.
+  // Pin to the newest line after the browser lays it out; smooth unless reduced motion.
   useEffect(() => {
+    const frame = frameRef.current;
+    if (!frame) return;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    endRef.current?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "end" });
+    frame.scrollTo({ top: frame.scrollHeight, behavior: reduced ? "auto" : "smooth" });
   }, [messages, typing]);
 
   const startEdit = (id: string) => {
@@ -132,7 +135,7 @@ export function MessageList() {
   };
 
   return (
-    <div className={s.frame}>
+    <div className={s.frame} ref={frameRef}>
       {!started && (
         <div className={s.intro}>
           <Badge tone="accent">Try this first</Badge>
@@ -156,7 +159,7 @@ export function MessageList() {
           />
         ))}
         {typing && <TypingBubble />}
-        <div ref={endRef} />
+        <InlineEvaluation />
       </div>
     </div>
   );

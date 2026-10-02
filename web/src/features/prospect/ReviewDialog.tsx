@@ -161,7 +161,7 @@ function ReviewBody() {
     <div className={s.body}>
       <p>{intro(review, gradeOf(evalState))}</p>
       <p className={s.muted}>
-        {review.summary.turn_count} turns · average {review.summary.average_rating} out of 5
+        {review.summary.turn_count} {review.summary.turn_count === 1 ? "turn" : "turns"} · average {review.summary.average_rating} out of 5
       </p>
       {redoneTurns.length > 0 && (
         <Card tone="warning" role="status">

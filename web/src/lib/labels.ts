@@ -36,5 +36,9 @@ export const STAGE_ORDER: Record<string, string[]> = {
 export const key = (value: string | null | undefined) => (value ?? "").trim().toLowerCase();
 
 export const strategyMeta = (s: string) => STRATEGY_META[key(s)] ?? STRATEGY_META["-"];
-export const stageMeta = (s: string) => STAGE_META[key(s)] ?? { label: s, note: "" };
+/** The server sends "----" while it is still working out the strategy; show that as the intent stage. */
+const UNDETERMINED_STAGE = "----";
+
+export const stageMeta = (s: string) =>
+  STAGE_META[key(s)] ?? (s === UNDETERMINED_STAGE ? STAGE_META.intent : { label: s, note: "" });
 export const stagesFor = (strategy: string) => STAGE_ORDER[key(strategy)] ?? STAGE_ORDER.consultative;

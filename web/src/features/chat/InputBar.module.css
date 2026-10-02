@@ -20,6 +20,8 @@
   padding: var(--space-3) var(--space-4);
   resize: none;
   font: inherit;
+  line-height: 1.4;
+  scrollbar-width: thin;
   color: var(--text-primary);
   background: var(--bg-card-soft);
   border: 1px solid var(--border-strong);

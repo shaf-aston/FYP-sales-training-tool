@@ -267,6 +267,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const startProspect = useCallback(
     async (difficulty: Difficulty, productType: string) => {
+      // Block sends while the buyer loads; a message sent now would be wiped when it arrives.
+      setTyping(true);
       try {
         const res = await api.prospectInit(difficulty, productType);
         if (prospect) api.prospectReset(prospect.sessionId).catch(() => {});
@@ -288,6 +290,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       } catch (err) {
         toast(err instanceof ApiError ? err.message : "Couldn't start prospect practice.", "error");
         return false;
+      } finally {
+        setTyping(false);
       }
     },
     [prospect, toast],
@@ -299,7 +303,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setMode("seller");
     setMessages([]);
     writeString(storageKeys.sessionId, null);
+    setTyping(true);
     await initSeller(false);
+    setTyping(false);
   }, [prospect, initSeller]);
 
   const reset = useCallback(async () => {
@@ -319,7 +325,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setMessages([]);
     setBot({ stage: "intent", strategy: "-" as BotState["strategy"] });
     setTraining(null);
+    setTyping(true);
     await initSeller(false);
+    setTyping(false);
   }, [mode, prospect, sessionId, startProspect, handleExpired, toast, initSeller]);
 
   const applyBotState = useCallback((s: Partial<BotState> & { training?: Training }) => {

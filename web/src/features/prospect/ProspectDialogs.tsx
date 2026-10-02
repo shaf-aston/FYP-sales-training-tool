@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Button, Dialog } from "@/components/ui";
 import { useSession } from "@/features/session/SessionContext";
 import { useUi } from "@/features/shell/UiContext";
@@ -15,7 +15,7 @@ import s from "./ProspectDialogs.module.css";
 export function ProspectDialogs() {
   const { prospect } = useSession();
   const { dialog, closeDialog } = useUi();
-  const { state, run, display } = useEvaluation();
+  const { state, run } = useEvaluation();
   const sid = prospect?.sessionId ?? null;
   const ended = !!prospect?.ended;
 
@@ -32,27 +32,40 @@ export function ProspectDialogs() {
     if (ended && state.sessionId !== sid) run();
   }, [ended, sid, state.sessionId, run]);
 
-  const mine = state.sessionId !== null && state.sessionId === sid;
-  const showInline = display === "inline" && mine && state.status !== "idle" && !state.dismissed;
-
   return (
     <>
       <Dialog open={dialog === "evaluation"} onClose={closeDialog} kicker="Prospect practice" title="How that session went" size="lg">
         {dialog === "evaluation" && <EvaluationBody />}
       </Dialog>
-      {showInline && (
-        <aside className={s.inline} aria-label="How that session went">
-          <div className={s.inlineHead}>
-            <h2 className={s.inlineTitle}>How that session went</h2>
-            <Button variant="ghost" onClick={evalStore.dismiss}>
-              Close
-            </Button>
-          </div>
-          <EvaluationBody />
-        </aside>
-      )}
       <ReviewDialog />
       <DrillsDialog />
     </>
+  );
+}
+
+/** Evaluation shown as a card at the end of the chat when "Inline" display is chosen. */
+export function InlineEvaluation() {
+  const { prospect } = useSession();
+  const { state, display } = useEvaluation();
+  const ref = useRef<HTMLElement>(null);
+  const mine = state.sessionId !== null && state.sessionId === (prospect?.sessionId ?? null);
+  const visible = display === "inline" && mine && state.status !== "idle" && !state.dismissed;
+
+  // Bring the result into view when it arrives at the end of the chat.
+  useEffect(() => {
+    if (visible) ref.current?.scrollIntoView({ block: "nearest" });
+  }, [visible, state.status]);
+
+  if (display !== "inline" || !mine || state.status === "idle" || state.dismissed) return null;
+  return (
+    <aside ref={ref} className={s.inline} aria-label="How that session went">
+      <div className={s.inlineHead}>
+        <h2 className={s.inlineTitle}>How that session went</h2>
+        <Button variant="ghost" onClick={evalStore.dismiss}>
+          Hide
+        </Button>
+      </div>
+      <EvaluationBody />
+    </aside>
   );
 }
