@@ -67,6 +67,10 @@ banned_phrases:
   - card number
   - payment details
   - bank details
+  - "can't process payment"
+  - "cannot process payment"
+  - "don't have specific pricing"
+  - "don't have pricing"
 
 # Seller replies: drop a sentence already said in this many of the bot's last replies.
 repeat_lookback: 2

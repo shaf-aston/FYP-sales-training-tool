@@ -99,6 +99,11 @@ EXPLICIT_INTENT_PHRASES = [
     "buy",
     "purchase",
     "struggling",
+    "slipping",
+    "losing",
+    "we lost",
+    "not working",
+    "falling behind",
     "have to",
     "ready to buy",
     "looking to buy",
@@ -425,9 +430,11 @@ class SalesFlowEngine:
         self.flow_type = new_strategy
         self.flow_config = FLOWS[new_strategy]
 
-        # Always restart at INTENT so the new strategy establishes intent first.
+        # Restart at INTENT. Probe turns already spent in INTENT count toward its
+        # turn cap, so the buyer doesn't sit through discovery twice.
+        if self.current_stage != Stage.INTENT:
+            self.stage_turn_count = 0
         self.current_stage = self.flow_config["stages"][0]
-        self.stage_turn_count = 0
         return True
 
     def reset_to_initial(self) -> None:

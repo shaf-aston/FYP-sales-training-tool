@@ -160,7 +160,7 @@ def apply_layer3_output_checks(
     said = _recent_bot_sentences(history)
 
     def stale(sentence: str) -> bool:
-        lowered = sentence.lower()
+        lowered = sentence.lower().replace(chr(0x2019), "'")  # curly apostrophe
         return any(p in lowered for p in _BANNED) or _norm(sentence) in said
 
     if any(stale(s) for s in _SENTENCE_SPLIT.split(text)):
