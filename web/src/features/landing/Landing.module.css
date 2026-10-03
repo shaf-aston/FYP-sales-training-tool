@@ -103,23 +103,27 @@
   padding-block: var(--space-8);
   isolation: isolate;
 }
-/* Light that follows the pointer */
+/* Light that follows the pointer: moved by transform only, so it never repaints. */
 .hero::before {
   content: "";
   position: absolute;
-  inset: 0 calc(-1 * var(--space-8));
+  top: 0;
+  left: 0;
+  width: 840px;
+  aspect-ratio: 1;
   z-index: -1;
   pointer-events: none;
-  background: radial-gradient(420px circle at var(--mx, 30%) var(--my, 40%), var(--accent-soft), transparent 70%);
-  transition: background var(--dur-fast);
+  background: radial-gradient(circle, var(--accent-soft), transparent 70%);
+  transform: translate(calc(var(--mx, 400px) - 50%), calc(var(--my, 300px) - 50%));
+  transition: transform var(--dur-base) var(--ease-out);
+  will-change: transform;
 }
 .orbs {
   position: absolute;
   inset: 0;
   z-index: -2;
   pointer-events: none;
-  filter: blur(60px);
-  opacity: 0.55;
+  opacity: 0.4;
 }
 .orbs span {
   position: absolute;
@@ -128,20 +132,21 @@
   max-width: 100%;
   border-radius: 50%;
   animation: drift var(--dur-sweep) ease-in-out infinite alternate;
+  will-change: transform;
 }
 .orbs span:nth-child(1) {
-  background: var(--neon-magenta);
+  background: radial-gradient(circle, var(--neon-magenta), transparent 65%);
   top: -10%;
   left: -10%;
 }
 .orbs span:nth-child(2) {
-  background: var(--neon-cyan);
+  background: radial-gradient(circle, var(--neon-cyan), transparent 65%);
   bottom: -15%;
   right: 0;
   animation-delay: -3s;
 }
 .orbs span:nth-child(3) {
-  background: var(--neon-coral);
+  background: radial-gradient(circle, var(--neon-coral), transparent 65%);
   top: 30%;
   left: 40%;
   width: 20vmax;
@@ -194,8 +199,7 @@
   min-height: 340px;
   padding: var(--space-5);
   border-radius: var(--radius-xl);
-  background: var(--glass-bg-strong);
-  backdrop-filter: var(--glass-blur);
+  background: var(--bg-panel);
   border: 1px solid var(--border-strong);
   box-shadow: var(--shadow-lg), var(--neon-glow);
   animation: float var(--dur-float) ease-in-out infinite;
@@ -284,17 +288,11 @@
   white-space: nowrap;
   border: 1px solid currentColor;
 }
-.chip:nth-child(4n + 1) {
+.chip {
   color: var(--neon-amber);
 }
-.chip:nth-child(4n + 2) {
-  color: var(--neon-magenta);
-}
-.chip:nth-child(4n + 3) {
+.chip:nth-child(even) {
   color: var(--neon-cyan);
-}
-.chip:nth-child(4n + 4) {
-  color: var(--neon-coral);
 }
 
 /* ---- Reveal on scroll ---- */
@@ -333,7 +331,7 @@
   color: var(--neon-amber);
 }
 .step:nth-child(2) .tag {
-  color: var(--neon-magenta);
+  color: var(--neon-coral);
 }
 .step:nth-child(3) .tag {
   color: var(--neon-cyan);
@@ -526,8 +524,7 @@
   gap: var(--space-4);
   padding: var(--space-6) max(var(--space-4), calc((100% - var(--w-landing)) / 2));
   border-top: 1px solid var(--border-faint);
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
+  background: var(--bg-page);
 }
 .footer .links a:not([class]) {
   display: inline;

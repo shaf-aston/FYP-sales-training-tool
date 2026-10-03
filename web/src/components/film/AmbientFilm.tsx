@@ -51,7 +51,11 @@ export function AmbientFilm() {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
 
+    let last = 0;
     const draw = (t: number) => {
+      // Capped so lights do not jump after the tab was hidden.
+      const steps = last ? Math.min((t - last) / film.baseFrameMs, film.frameMs / film.baseFrameMs * 2) : 0;
+      last = t;
       const w = innerWidth;
       const h = innerHeight;
       const sky = ctx.createLinearGradient(0, 0, 0, h);
@@ -60,7 +64,7 @@ export function AmbientFilm() {
       ctx.fillStyle = sky;
       ctx.fillRect(0, 0, w, h);
       for (const l of lights) {
-        if (!still) l.x = (l.x + l.speed) % film.wrapAt;
+        if (!still) l.x = (l.x + l.speed * steps) % film.wrapAt;
         const x = l.x * w;
         const y = l.y * h;
         const a = l.alpha * (film.flickerBase + film.flickerDepth * Math.sin(t / film.flickerMs + l.phase));
@@ -76,7 +80,7 @@ export function AmbientFilm() {
 
     let frame = 0;
     const loop = (t: number) => {
-      if (!document.hidden) draw(t);
+      if (!document.hidden && t - last >= film.frameMs) draw(t);
       frame = requestAnimationFrame(loop);
     };
     const onResize = () => {

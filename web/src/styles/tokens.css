@@ -54,7 +54,7 @@
   --neon-magenta: #e05bff;
   --neon-cyan: #3fd8ff;
   --neon-lime: #b8f05a;
-  --neon-sweep: linear-gradient(100deg, var(--neon-amber), var(--neon-coral), var(--neon-magenta), var(--neon-cyan), var(--neon-lime), var(--neon-amber));
+  --neon-sweep: linear-gradient(100deg, var(--neon-amber), var(--neon-coral), var(--neon-magenta), var(--neon-amber));
   --neon-glow: 0 0 32px rgba(224, 91, 255, 0.35), 0 0 64px rgba(63, 216, 255, 0.18);
 
   /* Type */

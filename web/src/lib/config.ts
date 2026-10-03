@@ -32,7 +32,11 @@ export const config = {
   coachTextMax: 120,
   /** Night-city film: light sizes, drift speed, glow and flicker. */
   film: {
-    maxDpr: 2,
+    /** Lights are soft blurs, so 1x pixels look the same and cost a quarter. */
+    maxDpr: 1,
+    /** Redraw at most this often (~30fps); speeds are per 60fps frame. */
+    frameMs: 33,
+    baseFrameMs: 1000 / 60,
     yMin: 0.3,
     radius: { min: 10, span: 40 },
     speed: { min: 0.00015, span: 0.0007 },

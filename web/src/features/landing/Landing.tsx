@@ -24,12 +24,17 @@ function useTicker(length: number, ms: number, still = 0) {
   return i;
 }
 
-/** Writes the pointer position into CSS variables so styles can follow it. */
+/** Writes the pointer position (px inside the element) into CSS variables, at most once per frame. */
+let pending = 0;
 function trackPointer(e: PointerEvent<HTMLElement>) {
   const el = e.currentTarget;
-  const r = el.getBoundingClientRect();
-  el.style.setProperty("--mx", `${((e.clientX - r.left) / r.width) * 100}%`);
-  el.style.setProperty("--my", `${((e.clientY - r.top) / r.height) * 100}%`);
+  const { clientX, clientY } = e;
+  cancelAnimationFrame(pending);
+  pending = requestAnimationFrame(() => {
+    const r = el.getBoundingClientRect();
+    el.style.setProperty("--mx", `${clientX - r.left}px`);
+    el.style.setProperty("--my", `${clientY - r.top}px`);
+  });
 }
 
 function LiveDemo() {
