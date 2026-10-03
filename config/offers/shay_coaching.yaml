@@ -1,0 +1,31 @@
+# The offer being sold. Method scripts take their blanks from here.
+# draft: true = answer is not verbatim from the trainer's source and needs the trainer's wording.
+months: 6
+price: "$5k"
+context: b2c   # b2c or b2b
+pillars:
+  - "Education & curriculum"
+  - "Mentorship"
+  - "Accountability"
+facts:
+  price:
+    examples:
+      - "how much does it cost"
+      - "what's the price"
+      - "what do you charge"
+      - "can you give me a ballpark figure"
+    answer: "I'm happy to share a range, but first a couple of questions to make sure we can even help you."
+  length:
+    draft: true
+    examples:
+      - "how long is the programme"
+      - "how many months does it run"
+      - "how long does it last"
+    answer: "It's a 6-month process."
+  location:
+    examples:
+      - "where are you based"
+      - "do you work with people in my country"
+      - "is this only for people in the UK"
+      - "can I join from abroad"
+    answer: "We work with people all around the world."

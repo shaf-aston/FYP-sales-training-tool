@@ -1,0 +1,148 @@
+# Impact Formula: the app's consultative flow (intent, problem, stakes, pitch) as a script.
+# Questions are ported from core/prompts.py and config/objection_pathway_map.yaml.
+# draft: true = a line on that step is not verbatim from the source and needs a trainer's wording.
+first: "intent"
+steps:
+  "intent":
+    ui_stage: intent
+    say: "What would you like help with first?"
+    capture: goal
+    listen:
+      any: {then: "problem"}
+  "problem":
+    ui_stage: logical
+    say: "What's felt hardest to figure out so far?"
+    capture: problem
+    listen:
+      any: {then: "duration"}
+  "duration":
+    ui_stage: logical
+    say: "How long have you been dealing with that?"
+    capture: duration
+    listen:
+      any: {then: "change"}
+  "change":
+    ui_stage: logical
+    say: "What would you change about {problem}, if you could?"
+    capture: change
+    listen:
+      any: {then: "impact"}
+  "impact":
+    ui_stage: logical
+    say: "Has {problem} had an impact on {goal}?"
+    capture: impact
+    listen:
+      any: {then: "why_now"}
+  "why_now":
+    ui_stage: emotional
+    say: "What's shifted now?"
+    capture: why_now
+    listen:
+      any: {then: "future"}
+  "future":
+    ui_stage: emotional
+    say: "Let's say there was a way to help you solve {problem}... what would tangibly be different for you at that point?"
+    capture: future
+    listen:
+      any: {then: "inaction"}
+  "inaction":
+    ui_stage: emotional
+    say: "So on the flip side... what happens if you don't change? Like, if we continue down the current path with {problem} for 2 weeks, 2 months, 2 years even?"
+    capture: cost
+    listen:
+      any: {then: "feeling"}
+  "feeling":
+    ui_stage: emotional
+    say: "And how would you feel at that point?"
+    listen:
+      any: {then: "commit"}
+  "commit":
+    ui_stage: pitch
+    say: "Why now? Why actually make that change?"
+    capture: reason
+    listen:
+      any: {then: "present"}
+  "present":
+    ui_stage: pitch
+    draft: true
+    say: "Based on {goal} and {problem}, here's why this fits: {pillar_1}, {pillar_2} and {pillar_3}. How does this get you to {goal}?"
+    listen:
+      any: {then: "check"}
+  "check":
+    ui_stage: pitch
+    draft: true  # no source probe: repeats the check
+    say: "Does that all make sense?"
+    listen:
+      yes:
+        examples:
+          - "yes that makes sense"
+          - "yeah it all makes sense"
+          - "yes, clear"
+          - "got it, makes sense"
+        then: "close"
+  "close":
+    ui_stage: pitch
+    draft: true  # no source probe: repeats the close
+    say: "Do you see yourself jumping in, or how do you feel?"
+    listen:
+      yes:
+        examples:
+          - "yes I'm ready to jump in"
+          - "yes let's do it"
+          - "I'm in, I can see myself doing this"
+          - "yes I see myself taking the jump"
+        then: "payment"
+  "payment":
+    ui_stage: outcome
+    say: "How would you like to process the investment? Credit or debit?"
+
+# Loop twice, third time direct. Loop lines are the app's own objection-path questions.
+objections:
+  money:
+    examples:
+      - "it's too expensive"
+      - "I can't afford that right now"
+      - "that's more than I have"
+      - "I don't have the money"
+      - "the timing is bad for me financially"
+    loop:
+      - "If the money or logistics were handled, would anything else stop you?"
+      - "Does it feel like the current process is the part that actually needs to change?"
+    direct: "Are you going to keep thinking about it, or are you going to make a change?"
+    draft: true
+  partner:
+    examples:
+      - "I need to speak to my partner first"
+      - "I have to talk to my wife about it"
+      - "my husband would need to agree"
+      - "I need approval from my boss"
+      - "I need to check with my team"
+    loop:
+      - "When you picture that conversation with them, what do you think they would push back on most?"
+      - "What would the decisive version of you want to do next?"
+    direct: "Are you going to keep thinking about it, or are you going to make a change?"
+    draft: true
+  fear:
+    examples:
+      - "I'm nervous it won't work for me"
+      - "what if I fail"
+      - "I'm worried about the risk"
+      - "I'm scared of making the wrong choice"
+      - "I'm afraid of making a mistake"
+    loop:
+      - "What feels riskiest or least certain to you about moving forward?"
+      - "When you compare the short-term effort with the long-term cost, what stands out most?"
+    direct: "Are you going to keep thinking about it, or are you going to make a change?"
+    draft: true
+  think:
+    examples:
+      - "I need to think about it"
+      - "let me do some more research first"
+      - "send me some information"
+      - "now isn't the right time"
+      - "maybe later"
+    loop:
+      - "What part feels most off or unresolved for you right now?"
+      - "When you compare the short-term effort with the long-term cost, what stands out most?"
+    direct: "Are you going to keep thinking about it, or are you going to make a change?"
+    draft: true

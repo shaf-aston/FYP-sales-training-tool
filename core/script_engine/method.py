@@ -27,7 +27,7 @@ class Step:
     say_plain: str
     capture: str        # slot name that stores the prospect's reply
     probe: str          # asked when no route matched; empty = repeat `say`
-    draft: bool         # probe is not from the source script
+    draft: bool         # some line here is not verbatim from the source
     listen: tuple       # of Route
 
 
@@ -53,6 +53,7 @@ class Fact:
     topic: str
     examples: tuple
     answer: str
+    draft: bool
 
 
 @dataclass(frozen=True)
@@ -74,6 +75,20 @@ class _StrictLoader(yaml.SafeLoader):
         if dupes:
             raise ValueError(f"duplicate keys in YAML: {sorted(map(str, dupes))}")
         return super().construct_mapping(node, deep)
+
+
+@dataclass(frozen=True)
+class Interruption:
+    name: str
+    examples: tuple
+    reply: str
+    draft: bool
+
+
+@dataclass(frozen=True)
+class CommonSense:
+    bring_back: str
+    interruptions: dict
 
 
 def _read(directory, name):
@@ -128,7 +143,7 @@ def parse_method(name, data):
 
 def parse_offer(name, data):
     facts = {
-        k: Fact(k, tuple(v.get("examples") or ()), v["answer"])
+        k: Fact(k, tuple(v.get("examples") or ()), v["answer"], bool(v.get("draft")))
         for k, v in (data.get("facts") or {}).items()
     }
     return Offer(
@@ -137,9 +152,21 @@ def parse_offer(name, data):
     )
 
 
+def parse_common_sense(data):
+    items = {
+        k: Interruption(k, tuple(v["examples"]), v["reply"], bool(v.get("draft")))
+        for k, v in data["interruptions"].items()
+    }
+    return CommonSense(data["bring_back"], items)
+
+
 def load_method(name, directory=CONFIG_DIR / "methods"):
     return parse_method(name, _read(directory, name))
 
 
 def load_offer(name, directory=CONFIG_DIR / "offers"):
     return parse_offer(name, _read(directory, name))
+
+
+def load_common_sense(name="common_sense", directory=CONFIG_DIR / "script"):
+    return parse_common_sense(_read(directory, name))

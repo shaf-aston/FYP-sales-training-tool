@@ -1,0 +1,24 @@
+# Small interruptions answered in one line, then the script resumes.
+# All replies are drafts: the source scripts have no wording for these.
+bring_back: "So, as you mentioned {last_point}, "
+interruptions:
+  pause:
+    draft: true
+    examples:
+      - "hold on a second"
+      - "sorry, give me a moment"
+      - "one sec, someone's at the door"
+    reply: "No problem, take your time."
+  repeat:
+    draft: true
+    examples:
+      - "sorry, can you say that again"
+      - "I didn't catch that"
+      - "what was the question"
+    reply: "Of course, let me ask that again."
+  thanks:
+    draft: true
+    examples:
+      - "thanks for your time"
+      - "thank you, that's helpful"
+    reply: "You're welcome."
