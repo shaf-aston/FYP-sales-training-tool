@@ -134,11 +134,16 @@ steps:
       any: {then: "18"}
   "18":
     ui_stage: pitch
-    draft: true  # no source probe: repeats the check
+    draft: true  # probe is ours: the source says "unclear -> simplify, re-check"
     say: "That's everything in a nutshell. Does that make sense?"
+    probe: "Put simply: a step-by-step plan, someone in your corner, and someone holding you to it. Does that make sense?"
     listen:
       agrees:
         examples:
+          - "yes"
+          - "yeah, sure"
+          - "fine, yes let's do it"
+          - "sounds good to me"
           - "yes that makes sense"
           - "yeah it all makes sense"
           - "yes, clear"
@@ -149,6 +154,9 @@ steps:
         examples:
           - "no, that doesn't make sense"
           - "not really, I'm confused"
+          - "kind of"
+          - "sort of, I think"
+          - "mostly, I guess"
           - "I'm not sure I follow"
           - "can you explain that again"
           - "I didn't understand that"
@@ -156,8 +164,9 @@ steps:
         then: "18"
   "19":
     ui_stage: pitch
-    draft: true  # no source probe: repeats the close
+    draft: true  # probe is ours: no source line for a second ask
     say: "Do you see yourself jumping in?"
+    probe: "Where are you at with it right now?"
     listen:
       agrees:
         examples:
@@ -184,12 +193,19 @@ steps:
   "21":
     ui_stage: outcome
     draft: true
+    run_on: true   # leads straight into the payment question
     say: "You're on your way to building the freedom you've been aiming for."
     listen:
       any: {then: "22"}
   "22":
     ui_stage: outcome
     say: "How would you like to process the investment? Credit or debit?"
+    listen:
+      any: {then: "end"}
+  "end":
+    ui_stage: outcome
+    draft: true  # no source line for after payment
+    say: "Perfect. I'll send everything over now. Welcome aboard."
 
 # Said after the loop lines and the direct line have all been used. The trainer's FAQ says to
 # book the follow-up and leave on a good note; it gives no wording.
@@ -211,6 +227,7 @@ objections:
       - "How much do you have now?"
       - "What can we do together to come up with the funds?"
     direct: "Are you going to keep thinking about it, or are you going to make a change?"
+    normalise: "Okay. There are ways to make the investment work as long as you're willing to make it work."   # draft: the play says "normalise" with no wording
     draft: true
   partner:
     examples:
@@ -223,6 +240,7 @@ objections:
       - "Who makes the decisions at home?"
       - "When you picture that conversation with them, what do you think they would push back on most?"
     direct: "Are you going to keep thinking about it, or are you going to make a change?"
+    normalise: "That makes sense, it's a big decision."   # draft: the play says "normalise" with no wording
     draft: true
   fear:
     examples:
@@ -235,18 +253,33 @@ objections:
       - "What's causing you to put time and space between you and the decision?"
       - "Is that the main thing, or is there something else behind it?"
     direct: "Are you going to keep thinking about it, or are you going to make a change?"
+    normalise: "That's completely normal. It's exciting, but terrifying, because it's outside your comfort zone."   # draft: the play says "normalise" with no wording
     draft: true
-  think:
+  think:   # Procrastinator: "I need to think about it" (buyer-profiles play)
     examples:
       - "I need to think about it"
-      - "let me do some more research first"
       - "I'll get back to you"
       - "now isn't the right time"
       - "can I sleep on it"
+      - "maybe later, not right now"
     loop:
-      - "How long have you been researching? Two months turns into four, eight, sixteen."
+      - "Have you heard of procrastination? What does it mean to you?"
       - "Is there a reason we can't do it as soon as possible? Spots are limited."
     direct: "Are you going to keep thinking about it, or are you going to make a change?"
+    normalise: "Exactly, and that's completely normal. Most people we work with felt the same before they started."   # draft: the play says "normalise" with no wording
+    draft: true
+  research:   # Analyser: still researching, needs more info (buyer-profiles play)
+    examples:
+      - "let me do some more research first"
+      - "I want to look at a few other options"
+      - "I need more information before I decide"
+      - "I'm still comparing programmes"
+      - "I want to read some reviews first"
+    loop:
+      - "Have you heard of analysis paralysis? What does it mean to you?"
+      - "How long have you been researching? Two months turns into four, eight, sixteen."
+    direct: "Are you going to keep thinking about it, or are you going to make a change?"
+    normalise: "That's normal. Most people who come to us have been stuck researching too."   # draft: the play says "normalise" with no wording
     draft: true
   scam:
     examples:
@@ -259,4 +292,5 @@ objections:
       - "You're right, there's a lot of shady things online."
       - "Do you want to find out or keep the door closed?"
     direct: "Are you going to keep thinking about it, or are you going to make a change?"
+    normalise: "Fair enough, it pays to be careful."   # draft: the play says "normalise" with no wording
     draft: true

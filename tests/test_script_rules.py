@@ -175,7 +175,8 @@ def test_price_after_price_step_is_stated(seller):
 
 @pytest.mark.parametrize("name, said, lines", [
     ("money", "it's too expensive", ["How much do you have now?"]),
-    ("think", "I need to think about it", ["How long have you been researching?"]),
+    ("think", "I need to think about it", ["Have you heard of procrastination?"]),
+    ("research", "let me do some more research first", ["Have you heard of analysis paralysis?"]),
 ])
 def test_objection_loops_twice_then_direct_then_follow_up(seller, name, said, lines):
     method = seller.method
@@ -281,7 +282,7 @@ def test_close_call_with_ai_down_probes_instead(seller):
     s = at(_close_call_seller(down), "18")
     text, _ = s.reply("hmm")
     assert s.state.step == "18"
-    assert text == "That's everything in a nutshell. Does that make sense?"
+    assert text == s.method.steps["18"].probe  # asked again in simpler words, not repeated
 
 
 def test_replay_gives_the_same_lines(fake_embedder):
@@ -471,8 +472,10 @@ def test_question_detection_uses_phrases_or_a_question_mark(fake_embedder, text,
 
 def test_bring_back_lowercases_the_question_unless_it_starts_with_i(fake_embedder):
     s = at(make_seller(fake_embedder), "03", why="more time with my kids")
+    s.reply("hold on a second")
     assert s.reply("ok I'm back")[0].endswith("how long have you been thinking about this?")
     s = at(make_seller(fake_embedder), "00", why="more time with my kids")
+    s.reply("hold on a second")
     assert "So, as you mentioned" in (text := s.reply("ok I'm back")[0])
     assert text.endswith("I've read your application but I don't like to assume anything.")
 
@@ -501,4 +504,20 @@ def test_a_line_asked_again_is_filled_the_same_way_without_new_ai_calls(fake_emb
     again = s.reply("ok I'm back")[0]
     asked = calls.copy()
     assert first[0] == "No problem, take your time."
+    s.reply("hold on a second")
     assert s.reply("ok I'm back")[0] == again and calls == asked
+
+
+def test_im_back_is_an_answer_unless_they_stepped_away(fake_embedder):
+    s = at(make_seller(fake_embedder), "03", why="more time with my kids")
+    s.reply("ok I'm back")
+    assert s.state.step != "03"  # step 03 takes any answer, so the script moved on
+
+
+def test_answer_to_an_objection_play_is_normalised_then_the_close_asked_again(seller):
+    s = at(seller, "19")
+    assert s.reply("I need to think about it")[0].startswith("Have you heard of procrastination?")
+    text, _ = s.reply("yes, it means putting things off")
+    think = s.method.objections["think"]
+    assert text == f"{think.normalise} {s.method.steps['19'].say}"
+    assert s.state.step == "19" and not s.state.play

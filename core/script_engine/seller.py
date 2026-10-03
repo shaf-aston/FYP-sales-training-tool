@@ -3,6 +3,7 @@
 import json
 import logging
 import re
+from dataclasses import replace
 from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
 from pathlib import Path
@@ -59,6 +60,7 @@ class ScriptSeller:
         self.cfg, self.method, self.offer, self.sense = cfg, method, offer, sense
         self._embedder, self._llm = embedder, llm
         self._ai_ok = True
+        self._waiting = False  # last reply was a `wait` reply: they stepped away
         self._said = {}  # filled lines: the same line with the same answers is said the same way
         self._opening = start(method)
         self.state = self._opening.state
@@ -94,13 +96,15 @@ class ScriptSeller:
     def reply(self, text):
         """Answer one prospect message. Returns (text, ui_stage)."""
         self._ai_ok = True
+        waiting, self._waiting = self._waiting, False
         step = self.method.steps[self.state.step]
         opened = price_open(self.method, self.state.step)
-        kind, name = self._interrupt(text, step, opened)
+        kind, name = self._interrupt(text, step, opened, waiting)
 
         if kind == "sense":
             said = self.sense.interruptions[name]
             if said.wait:
+                self._waiting = True
                 return said.reply, step.ui_stage
             return self._then_ask(said.reply, bring_back=True), step.ui_stage
         if kind == "objection":
@@ -112,6 +116,11 @@ class ScriptSeller:
             answer = f.late_answer if opened and f.late_answer else f.answer
             lead = fill_line(answer, {}, self.offer, self.cfg, self._ask)
             return self._then_ask(lead), step.ui_stage
+        if self.state.play:
+            # they answered the objection play's question: normalise, then ask the step again
+            objection = self.method.objections[self.state.play]
+            self.state = replace(self.state, play="")
+            return self._then_ask(objection.normalise), step.ui_stage
         if self._is_question(text):
             return self._then_ask(self._answer_uncovered(text, opened), bring_back=True), step.ui_stage
 
@@ -124,10 +133,11 @@ class ScriptSeller:
         return recognise(text, labels, self._embedder, c["threshold"], c["margin"],
                          c["close_call_k"], c["near_miss"])
 
-    def _interrupt(self, text, step, opened):
+    def _interrupt(self, text, step, opened, waiting):
         """An everyday interruption, product question or objection - only when it clearly beats
         reading the reply as an answer to the step's own question, like a human closer would."""
-        labels = {f"sense:{k}": i.examples for k, i in self.sense.interruptions.items()}
+        labels = {f"sense:{k}": i.examples for k, i in self.sense.interruptions.items()
+                  if waiting or not i.after_wait}
         if self._is_question(text):
             labels.update({f"fact:{k}": f.examples for k, f in self.offer.facts.items()})
         if opened:

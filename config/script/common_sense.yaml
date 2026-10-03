@@ -18,6 +18,7 @@ interruptions:
     reply: "No problem, take your time."
   back:
     draft: true
+    after_wait: true
     examples:
       - "ok I'm back"
       - "sorry about that, I'm back"

@@ -39,6 +39,7 @@ class Objection:
     loop: tuple
     direct: str
     draft: bool
+    normalise: str = ""  # said once they answer a loop line, before the step's question again
 
 
 @dataclass(frozen=True)
@@ -88,6 +89,7 @@ class Interruption:
     reply: str
     draft: bool
     wait: bool = False  # say the reply and wait; don't ask the question again yet
+    after_wait: bool = False  # only makes sense right after a `wait` reply ("ok, I'm back")
 
 
 @dataclass(frozen=True)
@@ -132,7 +134,7 @@ def _step(step_id, data):
 def _objection(name, data):
     return Objection(
         name, tuple(data["examples"]), tuple(data["loop"]),
-        data["direct"], bool(data.get("draft")),
+        data["direct"], bool(data.get("draft")), data.get("normalise", ""),
     )
 
 
@@ -171,7 +173,7 @@ def parse_offer(name, data):
 def parse_common_sense(data):
     items = {
         k: Interruption(k, tuple(v["examples"]), v["reply"], bool(v.get("draft")),
-                        bool(v.get("wait")))
+                        bool(v.get("wait")), bool(v.get("after_wait")))
         for k, v in data["interruptions"].items()
     }
     return CommonSense(data["bring_back"], items)

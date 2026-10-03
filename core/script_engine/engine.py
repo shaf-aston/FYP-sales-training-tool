@@ -11,6 +11,7 @@ class ScriptState:
     slots: dict = field(default_factory=dict)
     objection_counts: dict = field(default_factory=dict)
     last_point: str = ""
+    play: str = ""      # objection whose loop/direct line was just asked; the next reply answers it
 
 
 @dataclass(frozen=True)
@@ -57,6 +58,10 @@ def advance(method, state, signal, reply=""):
     if step.capture and reply:
         slots = {**slots, step.capture: reply}
         last_point = reply
+    if route.then == state.step and step.probe:
+        # asked again: a person rephrases rather than repeating themselves word for word
+        return Move(step.probe, replace(state, slots=slots, last_point=last_point), step.ui_stage,
+                    ack=route.ack)
     moved = _speak(method, replace(state, step=route.then, slots=slots, last_point=last_point))
     return replace(moved, ack=route.ack)
 
@@ -79,4 +84,5 @@ def object_to(method, state, name, loops):
         line = method.follow_up
     counts = {**state.objection_counts, name: seen + 1}
     step = method.steps[state.step]
-    return Move(line, replace(state, objection_counts=counts), step.ui_stage, seen > loops)
+    play = name if seen <= loops else ""
+    return Move(line, replace(state, objection_counts=counts, play=play), step.ui_stage, seen > loops)
