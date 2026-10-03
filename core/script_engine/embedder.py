@@ -16,14 +16,15 @@ class Embedder(Protocol):
 class FastEmbedEmbedder:
     """Local ONNX sentence embeddings. Only the script's examples are remembered, never replies."""
 
-    def __init__(self, model, cache_dir):
+    def __init__(self, model, cache_dir, threads, batch_size):
         from fastembed import TextEmbedding  # heavy import, only when really used
 
-        self._model = TextEmbedding(model_name=model, cache_dir=str(cache_dir))
+        self._model = TextEmbedding(model_name=model, cache_dir=str(cache_dir), threads=threads)
+        self._batch_size = batch_size
         self._seen = {}
 
     def _compute(self, texts):
-        return [v.tolist() for v in self._model.embed(texts)]
+        return [v.tolist() for v in self._model.embed(texts, batch_size=self._batch_size)]
 
     def warm(self, texts):
         new = [t for t in dict.fromkeys(texts) if t not in self._seen]
@@ -38,4 +39,5 @@ class FastEmbedEmbedder:
 
 def make_embedder(cfg, root):
     """cfg = selling.yaml. Only place that knows which engine is behind the Embedder seam."""
-    return FastEmbedEmbedder(cfg["embed_model"], root / cfg["embed_cache_dir"])
+    return FastEmbedEmbedder(cfg["embed_model"], root / cfg["embed_cache_dir"],
+                             cfg["embed_threads"], cfg["embed_batch_size"])
