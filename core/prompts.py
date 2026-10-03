@@ -15,12 +15,6 @@ SIGNALS = load_signals()
 _ANALYSIS_CONFIG = load_analysis_config()
 DIRECT_INFO_STAGES = (Stage.PITCH, Stage.NEGOTIATION)
 
-INTENT_FALLBACKS = [
-    "What would you like help with first?",
-    "What kind of outcome are you after?",
-    "What brought you in today?",
-]
-
 STRATEGY_PROMPTS = {
     "consultative": {
         "intent": """[PERSONA: Sales Advisor]

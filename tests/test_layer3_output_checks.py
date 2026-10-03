@@ -12,7 +12,7 @@ def test_layer3_blocks_pricing_in_logical_stage_without_direct_request():
 
     assert result.was_blocked is True
     assert result.was_corrected is False
-    assert "blocked_pricing_in_discovery" in result.applied_rules
+    assert "early_price" in result.applied_rules
     assert "price" not in result.content.lower()
 
 
@@ -28,16 +28,72 @@ def test_layer3_allows_pricing_when_user_asks_for_it():
     assert result.applied_rules == []
 
 
-def test_layer3_blocks_pricing_in_transactional_pitch():
+def test_layer3_strips_unasked_pricing_in_transactional_pitch():
     result = apply_layer3_output_checks(
         reply_text="The investment is £499 per month and includes full support and onboarding.",
         stage=Stage.PITCH,
-        user_message="What does it cost?",
+        user_message="Sounds good, tell me about onboarding.",
         flow_type=Strategy.TRANSACTIONAL,
     )
 
     assert result.was_blocked is True or result.was_corrected is True
-    assert "price" not in result.content.lower()
+    assert "499" not in result.content
+
+
+def test_layer3_answers_price_when_asked_in_transactional_pitch():
+    """The buyer asked; dodging the price is the bug, not the fix."""
+    reply = "It's £499 per month, which includes full support and onboarding for your team."
+    result = apply_layer3_output_checks(
+        reply_text=reply,
+        stage=Stage.PITCH,
+        user_message="ok fine, what does it cost?",
+        flow_type=Strategy.TRANSACTIONAL,
+        product_context="Plans: £499 per month.",
+    )
+
+    assert result.content == reply
+    assert result.applied_rules == []
+
+
+def test_layer3_strips_invented_price_at_any_stage():
+    result = apply_layer3_output_checks(
+        reply_text=(
+            "Great, signing up takes two minutes on our website. "
+            "The Essential Plan is $99/month and Professional is $199/month."
+        ),
+        stage=Stage.OUTCOME,
+        user_message="let's do it, how do I sign up?",
+        product_context="Foundation Plan: $199/month.",
+    )
+
+    assert "invented_price" in result.applied_rules
+    assert "99" not in result.content.replace("199", "")
+    assert "signing up takes two minutes" in result.content
+
+
+def test_layer3_price_question_fallback_never_restarts_discovery():
+    """Nothing left after stripping + buyer asked price -> a price-aware line, not 'what brought you in'."""
+    result = apply_layer3_output_checks(
+        reply_text="It's $99 per month for everything.",
+        stage=Stage.INTENT,
+        user_message="What does it cost?",
+        product_context="No prices listed.",
+    )
+
+    assert result.was_blocked is True
+    assert "brought you in" not in result.content
+    assert "depends" in result.content.lower()
+
+
+def test_layer3_allows_budget_question_in_discovery():
+    reply = "That makes sense. What budget range were you planning for this, roughly?"
+    result = apply_layer3_output_checks(
+        reply_text=reply,
+        stage=Stage.INTENT,
+        user_message="Honestly that seems too expensive for us",
+    )
+
+    assert result.content == reply
 
 
 def test_layer3_passes_through_negotiation_stage():
@@ -115,7 +171,7 @@ def test_layer3_corrects_pricing_when_other_content_is_substantial():
 
     assert result.was_corrected is True
     assert result.was_blocked is False
-    assert "corrected_pricing_in_discovery" in result.applied_rules
+    assert "early_price" in result.applied_rules
     assert "per month" not in result.content
     assert len(result.content) >= 40
 

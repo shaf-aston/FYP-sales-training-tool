@@ -1,86 +1,36 @@
 """LAYER 3: Response Validation - post-generation safety net.
 
 Catches violations that bypass Layer 1 (FSM gating) and Layer 2 (prompt constraints):
-- Pricing leakage in intent/logical/emotional stages
+- Prices the product data does not contain (invented), at any stage
+- Price talk in discovery stages, or transactional pitch, before the buyer asks
 - Empty, degenerate, or oversized responses
 
-Strips offending sentences first; uses a stage-specific fallback only when stripping
-leaves fewer than MIN_RESPONSE_CHARS characters.
+Strips offending sentences first; uses a fallback line from config/guardrails.yaml only
+when stripping leaves fewer than MIN_RESPONSE_CHARS characters.
 """
 
 import logging
-import random
 import re
 from dataclasses import dataclass, field
 
 from .constants import MIN_RESPONSE_CHARS, MAX_RESPONSE_CHARS
-from .prompts import INTENT_FALLBACKS
+from .loader import load_signals, load_yaml
 from .utils import Stage, Strategy, contains_nonnegated_keyword
 
 logger = logging.getLogger(__name__)
 
-# Stage-level guardrail keywords for pricing leakage during discovery.
-PRICING_KEYWORDS = [
-    "price",
-    "pricing",
-    "cost",
-    "budget",
-    "payment",
-    "fee",
-    "investment",
-    "per month",
-    "per year",
-    "per week",
-    "per annum",
-    "annually",
-    "monthly",
-    "$",
-]
-
-# If the user asks for pricing directly, pricing mention is allowed.
-DIRECT_PRICING_REQUEST_KEYWORDS = [
-    "price",
-    "pricing",
-    "cost",
-    "how much",
-    "budget",
-    "payment",
-    "fee",
-    "quote",
-]
+_CONFIG = load_yaml("guardrails.yaml")
+_BILLING_TERMS = _CONFIG["billing_terms"]
+_NO_PRICE_STAGES = set(_CONFIG["no_price_stages"])
+_FALLBACKS = _CONFIG["fallback_lines"]
+_PRICE_REQUESTS = load_signals()["direct_info_requests"]
 
 _SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+|\n+")
-_EXPLICIT_PRICE_REFERENCE = re.compile(
-    r"(?:[$£€]\s*\d|\b\d+(?:[.,]\d+)?\s*(?:per\s+(?:month|week|year)|monthly|annually|annual|per\s+annum|fee|cost|price|pricing))",  # noqa: E501
+# A money figure: "$99", "£2,400", "99 dollars", "49 pounds".
+_MONEY = re.compile(
+    r"[$£€]\s*(\d[\d,]*(?:\.\d+)?)|\b(\d[\d,]*(?:\.\d+)?)\s*(?:dollars|pounds|euros|usd|gbp|eur)\b",
     re.IGNORECASE,
 )
-
-_LOGICAL_FALLBACKS = [
-    "What part of the current approach is not working?",
-    "What feels most stuck right now?",
-    "Where is the biggest gap showing up?",
-]
-
-_EMOTIONAL_FALLBACKS = [
-    "What changed that made this feel urgent now?",
-    "What would be different if this stayed the same?",
-    "What is this costing you day to day?",
-]
-
-_EMOTIONAL_COI_PHRASES = [
-    "staying the same",
-    "stay the same",
-    "what would happen if you don't change",
-    "what would happen if nothing changed",
-    "day to day",
-    "continue down the current path",
-    "costing you day to day",
-]
-
-_GENERIC_FALLBACKS = [
-    "What should we focus on next?",
-    "What would help most right now?",
-]
 
 
 @dataclass
@@ -93,193 +43,115 @@ class Layer3CheckResult:
     applied_rules: list[str] = field(default_factory=list)
 
 
-def _normalize_stage_name(stage: str | Stage) -> str:
-    """Normalise a stage enum or string into a lowercase plain stage name."""
-    stage_text = str(stage)
-    if "." in stage_text:
-        stage_text = stage_text.split(".", 1)[1]
-    return stage_text.lower()
+def _plain_name(value) -> str:
+    """Lowercase plain name for a Stage/Strategy enum or string ('Stage.PITCH' -> 'pitch')."""
+    text = str(value or "")
+    return text.split(".", 1)[-1].lower()
 
 
-def _normalize_flow_type(flow_type: str | Stage | None) -> str:
-    """Normalise a strategy enum or string into a lowercase plain strategy name."""
-    if flow_type is None:
-        return ""
-    flow_text = str(flow_type)
-    if "." in flow_text:
-        flow_text = flow_text.split(".", 1)[1]
-    return flow_text.lower()
+def _money_amounts(text: str) -> set[str]:
+    """Every money figure in the text, commas removed."""
+    return {(a or b).replace(",", "") for a, b in _MONEY.findall(text or "")}
 
 
-def _user_requested_pricing(user_message: str) -> bool:
-    """Return True when the user's message explicitly asks about price or terms."""
-    return contains_nonnegated_keyword(
-        (user_message or "").lower(), DIRECT_PRICING_REQUEST_KEYWORDS
+def _talks_price(sentence: str) -> bool:
+    """True when a sentence quotes a money figure or states billing terms."""
+    return bool(_MONEY.search(sentence)) or contains_nonnegated_keyword(
+        sentence.lower(), _BILLING_TERMS
     )
 
 
-def _contains_pricing_language(reply_text: str) -> bool:
-    """Return True when a reply contains pricing language or money terms."""
-    return contains_nonnegated_keyword((reply_text or "").lower(), PRICING_KEYWORDS)
-
-
-def _contains_consequence_of_inaction(text: str) -> bool:
-    """Return True when the text talks about the cost of staying the same."""
-    return contains_nonnegated_keyword((text or "").lower(), _EMOTIONAL_COI_PHRASES)
-
-
-def _contains_explicit_price_reference(text: str) -> bool:
-    """Return True when the text contains a concrete price reference."""
-    return bool(_EXPLICIT_PRICE_REFERENCE.search(text or ""))
-
-
 def _strip_prompt_markers(text: str) -> str:
-    """Remove BEGIN/END CUSTOM PRODUCT DATA markers from response text.
-
-    These markers are for internal system prompt context only and should never
-    leak into the user-facing response.
-    """
-    # Remove marker blocks and their content
+    """Remove BEGIN/END CUSTOM PRODUCT DATA blocks; they are internal prompt context."""
     text = re.sub(
         r"---\s*BEGIN\s+CUSTOM\s+PRODUCT\s+DATA\s*---.*?---\s*END\s+CUSTOM\s+PRODUCT\s+DATA\s*---",
         "",
         text,
-        flags=re.DOTALL | re.IGNORECASE
+        flags=re.DOTALL | re.IGNORECASE,
     )
-    # Remove standalone marker lines
-    text = re.sub(
-        r"---\s*(BEGIN|END)\s+CUSTOM\s+PRODUCT\s+DATA\s*---",
-        "",
-        text,
-        flags=re.IGNORECASE
-    )
-    # Clean up excessive whitespace left behind
-    text = re.sub(r"\n\s*\n\s*\n+", "\n\n", text)
-    return text.strip()
+    text = re.sub(r"---\s*(BEGIN|END)\s+CUSTOM\s+PRODUCT\s+DATA\s*---", "", text, flags=re.IGNORECASE)
+    return re.sub(r"\n\s*\n\s*\n+", "\n\n", text).strip()
 
 
-def _strip_pricing_sentences(text: str, stage_name: str = "") -> str:
-    """Remove sentences containing pricing language; return remaining text."""
-    sentences = _SENTENCE_SPLIT.split(text)
-    clean = []
-    for sentence in sentences:
-        if not sentence:
-            continue
-        if (
-            stage_name == Stage.EMOTIONAL.value
-            and _contains_consequence_of_inaction(sentence)
-            and not _contains_explicit_price_reference(sentence)
-        ):
-            clean.append(sentence)
-            continue
-        if not _contains_pricing_language(sentence):
-            clean.append(sentence)
-    return " ".join(clean).strip()
+def _keep_sentences(text: str, drop) -> str:
+    """Join the sentences for which drop(sentence) is False."""
+    return " ".join(s for s in _SENTENCE_SPLIT.split(text) if s and not drop(s)).strip()
 
 
-def _pick_varied_fallback(candidates: list[str], history: list[dict[str, str]] | None) -> str:
-    """Pick a random fallback from the candidate list."""
-    if not candidates:
-        return ""
-    return random.choice(candidates)
-
-
-def _fallback_for_stage(stage_name: str, history: list[dict[str, str]] | None = None) -> str:
-    """Return deterministic fallback text for blocked replies."""
-    if stage_name == Stage.LOGICAL.value:
-        return _pick_varied_fallback(_LOGICAL_FALLBACKS, history)
-    if stage_name == Stage.EMOTIONAL.value:
-        return _pick_varied_fallback(_EMOTIONAL_FALLBACKS, history)
-    if stage_name == Stage.INTENT.value:
-        return _pick_varied_fallback(INTENT_FALLBACKS, history)
-    return _pick_varied_fallback(_GENERIC_FALLBACKS, history)
+def _fallback(stage_name: str, price_asked: bool, history) -> str:
+    """Pick a fallback line in turn order, so a replayed chat gets the same line."""
+    if price_asked:
+        lines = _FALLBACKS["price_question"]
+    else:
+        lines = _FALLBACKS.get(stage_name) or _FALLBACKS["default"]
+    turn = len(history or []) // 2
+    return lines[turn % len(lines)]
 
 
 def apply_layer3_output_checks(
     reply_text: str,
-    stage: str | Stage,
+    stage,
     user_message: str,
-    flow_type: str | Stage | None = None,
+    flow_type=None,
     history: list[dict[str, str]] | None = None,
+    product_context: str | None = None,
 ) -> Layer3CheckResult:
-    """Run LAYER 3 (Response Validation) checks and return corrected or blocked content.
+    """Run LAYER 3 checks and return corrected or blocked content.
 
     Checks (in order):
-    0) Strip internal system prompt markers (BEGIN/END CUSTOM PRODUCT DATA).
-    1) Degenerate output — empty, too short, or oversized.
-    2) Pricing leakage in intent/logical/emotional stages, plus transactional pitch:
-       a) Attempt sentence-level stripping first (was_corrected).
-       b) Full fallback only when stripping leaves too little (was_blocked).
+    0) Strip internal prompt markers.
+    1) Degenerate output: empty, too short, or oversized.
+    2) Invented prices: a money figure not found in product_context (skipped when None).
+    3) Early price talk: in no_price_stages and transactional pitch, unless the buyer asked.
+    Each price check strips sentences first and falls back only when too little is left.
     """
-    stage_name = _normalize_stage_name(stage)
-    flow_name = _normalize_flow_type(flow_type)
+    stage_name = _plain_name(stage)
+    flow_name = _plain_name(flow_type)
+    price_asked = contains_nonnegated_keyword((user_message or "").lower(), _PRICE_REQUESTS)
     text = (reply_text or "").strip()
 
-    # CRITICAL: Always strip marker leakage first
-    if "--- BEGIN CUSTOM PRODUCT DATA ---" in text or "--- END CUSTOM PRODUCT DATA ---" in text:
+    if "CUSTOM PRODUCT DATA" in text:
         text = _strip_prompt_markers(text)
 
-    if not text or len(text) < MIN_RESPONSE_CHARS:
+    if len(text) < MIN_RESPONSE_CHARS:
         return Layer3CheckResult(
-            content=_fallback_for_stage(stage_name, history),
+            content=_fallback(stage_name, price_asked, history),
             was_blocked=True,
             applied_rules=["empty_output_fallback"],
         )
 
     if len(text) > MAX_RESPONSE_CHARS:
         truncated = text[:MAX_RESPONSE_CHARS]
-        last_boundary = max(
-            truncated.rfind(". "),
-            truncated.rfind("? "),
-            truncated.rfind("! "),
-        )
-        if last_boundary > 0:
-            truncated = truncated[:last_boundary + 1]
-        logger.debug("layer3: oversized response truncated (%d → %d chars)", len(text), len(truncated))
+        boundary = max(truncated.rfind(". "), truncated.rfind("? "), truncated.rfind("! "))
+        if boundary > 0:
+            truncated = truncated[: boundary + 1]
         return Layer3CheckResult(
             content=truncated.strip(),
             was_corrected=True,
             applied_rules=["oversized_output_truncated"],
         )
 
-    if stage_name in (Stage.INTENT.value, Stage.LOGICAL.value, Stage.EMOTIONAL.value):
-        if (
-            stage_name == Stage.EMOTIONAL.value
-            and _contains_consequence_of_inaction(text)
-            and not _contains_explicit_price_reference(text)
-        ):
-            return Layer3CheckResult(content=text)
-        if _contains_pricing_language(text) and not _user_requested_pricing(user_message):
-            corrected = _strip_pricing_sentences(text, stage_name=stage_name)
-            if len(corrected) >= MIN_RESPONSE_CHARS:
-                logger.debug("layer3: corrected pricing leak in %s stage", stage_name)
-                return Layer3CheckResult(
-                    content=corrected,
-                    was_corrected=True,
-                    applied_rules=["corrected_pricing_in_discovery"],
-                )
-            logger.debug("layer3: blocked pricing leak in %s stage (nothing left after strip)", stage_name)
-            return Layer3CheckResult(
-                content=_fallback_for_stage(stage_name, history),
-                was_blocked=True,
-                applied_rules=["blocked_pricing_in_discovery"],
-            )
+    rules = []
+    if product_context is not None:
+        known = _money_amounts(product_context)
+        if _money_amounts(text) - known:
+            text = _keep_sentences(text, lambda s: bool(_money_amounts(s) - known))
+            rules.append("invented_price")
 
-    if flow_name == Strategy.TRANSACTIONAL.value and stage_name == Stage.PITCH.value:
-        if _contains_pricing_language(text):
-            corrected = _strip_pricing_sentences(text)
-            if len(corrected) >= MIN_RESPONSE_CHARS:
-                logger.debug("layer3: corrected pricing in transactional pitch")
-                return Layer3CheckResult(
-                    content=corrected,
-                    was_corrected=True,
-                    applied_rules=["corrected_pricing_in_transactional_pitch"],
-                )
-            logger.debug("layer3: blocked pricing in transactional pitch (nothing left after strip)")
-            return Layer3CheckResult(
-                content=_fallback_for_stage(stage_name, history),
-                was_blocked=True,
-                applied_rules=["blocked_pricing_in_transactional_pitch"],
-            )
+    early = stage_name in _NO_PRICE_STAGES or (
+        flow_name == Strategy.TRANSACTIONAL.value and stage_name == Stage.PITCH.value
+    )
+    if early and not price_asked and any(_talks_price(s) for s in _SENTENCE_SPLIT.split(text)):
+        text = _keep_sentences(text, _talks_price)
+        rules.append("early_price")
 
-    return Layer3CheckResult(content=text)
+    if not rules:
+        return Layer3CheckResult(content=text)
+    logger.debug("layer3: %s in %s stage", rules, stage_name)
+    if len(text) >= MIN_RESPONSE_CHARS:
+        return Layer3CheckResult(content=text, was_corrected=True, applied_rules=rules)
+    return Layer3CheckResult(
+        content=_fallback(stage_name, price_asked, history),
+        was_blocked=True,
+        applied_rules=rules,
+    )

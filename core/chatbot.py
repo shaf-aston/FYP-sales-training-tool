@@ -232,6 +232,7 @@ class SalesChatbot:
             user_message=user_message,
             flow_type=self.flow_engine.flow_type,
             history=self.flow_engine.conversation_history,
+            product_context=self.flow_engine.product_context,
         )
 
         if result.was_blocked or result.was_corrected:

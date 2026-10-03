@@ -1,0 +1,41 @@
+# Reply checks run on every bot reply before the user sees it (core/response_guardrails.py).
+
+# Words that state billing terms. A sentence with one of these, or with a money figure,
+# counts as talking price. Plain discovery words ("budget", "cost") are allowed:
+# asking about the buyer's budget is good selling, quoting ours too early is not.
+billing_terms:
+  - per month
+  - per year
+  - per week
+  - per annum
+  - a month
+  - a year
+  - annually
+  - monthly
+  - billed
+  - billing
+
+# Stages where the bot must not quote price unless the buyer asked for it.
+no_price_stages: [intent, logical, emotional]
+
+# Shown only when a reply is empty or nothing is left after removing price talk.
+# Picked in turn order, so the same chat always gets the same line.
+fallback_lines:
+  price_question:
+    - "It depends on what you need. How many people would be using it?"
+    - "Pricing depends on the setup. What matters most to you in a plan?"
+  intent:
+    - "What would you like help with first?"
+    - "What kind of outcome are you after?"
+  logical:
+    - "What part of the current approach is not working?"
+    - "Where is the biggest gap showing up?"
+  emotional:
+    - "What changed that made this feel urgent now?"
+    - "What would be different if this stayed the same?"
+  objection:
+    - "That's fair. What would you need to see to feel sure about it?"
+    - "Understood. What's the main thing holding you back?"
+  default:
+    - "What should we focus on next?"
+    - "What would help most right now?"
