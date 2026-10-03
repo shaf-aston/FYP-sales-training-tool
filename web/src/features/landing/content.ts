@@ -23,7 +23,7 @@ export const demoChat = [
 
 export const steps = [
   { tag: "01", title: "Pick a buyer", text: "Choose the product, the buyer's mood and how tough they are. Every run plays out differently.", scene: "lights" },
-  { tag: "02", title: "Talk it through", text: "Type or speak. The buyer pushes back, goes quiet, changes their mind — like a real call.", scene: "wave" },
+  { tag: "02", title: "Talk it through", text: "Type or speak. The buyer pushes back, goes quiet, changes their mind, like a real call.", scene: "wave" },
   { tag: "03", title: "Get coached live", text: "A coach watches each turn, names the stage you're in and scores the moves that worked.", scene: "meter" },
 ] as const;
 
@@ -40,8 +40,8 @@ export const features = [
 export const challenge = {
   buyer: "“We're happy with our current supplier.”",
   options: [
-    { text: "Our product is much better than theirs.", score: 20, verdict: "Attacks their choice — buyers defend what they picked. Ask instead of argue." },
-    { text: "Great — what do you like most about them?", score: 90, verdict: "Opens them up. Now you learn what matters and where the gap is." },
+    { text: "Our product is much better than theirs.", score: 20, verdict: "Attacks their choice; buyers defend what they picked. Ask instead of argue." },
+    { text: "Great, what do you like most about them?", score: 90, verdict: "Opens them up. Now you learn what matters and where the gap is." },
     { text: "No problem, I'll call back later.", score: 35, verdict: "Polite, but you gave up the call without learning anything." },
   ],
 };

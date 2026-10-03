@@ -87,7 +87,7 @@ function Challenge() {
             <p>{chosen.verdict}</p>
           </>
         ) : (
-          <p>Pick a reply — the coach scores it instantly.</p>
+          <p>Pick a reply: the coach scores it instantly.</p>
         )}
       </div>
     </div>

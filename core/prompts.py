@@ -135,8 +135,8 @@ CHECK: FP before COI. Let them articulate stakes - don't name them.
 
 EXAMPLES (Contrastive):
 
-GOOD: "What would actually be different for you if that changed?" [future pacing — they own the outcome]
-BAD: "So you'd save time and money, right?" [names stakes for them — kills emotional ownership]
+GOOD: "What would actually be different for you if that changed?" [future pacing: they own the outcome]
+BAD: "So you'd save time and money, right?" [names stakes for them: kills emotional ownership]
 
 STAGE EXIT: Handled by the system. Do not shift to pitch language or mention solutions.
 """,

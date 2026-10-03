@@ -73,6 +73,12 @@ def _strip_prompt_markers(text: str) -> str:
     return re.sub(r"\n\s*\n\s*\n+", "\n\n", text).strip()
 
 
+def _no_dashes(text: str) -> str:
+    """House style: no em or en dashes in replies; a spaced dash becomes a comma."""
+    text = re.sub(r"\s*[20142013]\s*(?=\w)", ", ", text)
+    return re.sub(r"\s*[20142013]\s*", " ", text).strip()
+
+
 def _keep_sentences(text: str, drop) -> str:
     """Join the sentences for which drop(sentence) is False."""
     return " ".join(s for s in _SENTENCE_SPLIT.split(text) if s and not drop(s)).strip()
@@ -108,7 +114,7 @@ def apply_layer3_output_checks(
     stage_name = _plain_name(stage)
     flow_name = _plain_name(flow_type)
     price_asked = contains_nonnegated_keyword((user_message or "").lower(), _PRICE_REQUESTS)
-    text = (reply_text or "").strip()
+    text = _no_dashes(reply_text or "")
 
     if "CUSTOM PRODUCT DATA" in text:
         text = _strip_prompt_markers(text)
@@ -168,7 +174,7 @@ def check_buyer_reply(reply_text: str, turn: int) -> Layer3CheckResult:
     Drops sentences that commit or step out of character, then caps the length.
     Falls back to a config line, picked by turn, when too little is left.
     """
-    text = (reply_text or "").strip()
+    text = _no_dashes(reply_text or "")
     rules = []
 
     def bad(sentence: str) -> bool:
