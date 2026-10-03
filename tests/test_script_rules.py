@@ -63,7 +63,7 @@ def test_fill_uses_a_phrase_from_the_prospect():
     assert _fill(lambda p, n: "financial") == "How much do you need to be making to feel financial freedom?"
 
 
-@pytest.mark.parametrize("phrase", ["my financial", "I financial", "financial me", "I'm financial"])
+@pytest.mark.parametrize("phrase", ["my financial", "I financial", "financial me", "I'm financial", "own financial"])
 def test_fill_rejects_the_prospects_own_pronouns(phrase):
     # "the reason you haven't got to my own business" - the bot must never speak as the prospect
     assert _fill(lambda p, n: phrase, {"outcome": "I want my financial freedom me"}) == STEP_PLAIN

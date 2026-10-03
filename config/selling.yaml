@@ -19,7 +19,7 @@ objection_loops: 2     # loop twice, third time go direct
 slot_words: 4          # longest phrase the AI may put into a script blank
 stop_words: [a, an, the, i, i'm, i've, my, me, to, of, and, or, in, on, at, for, is, am, are, be, it, that, this, so, with, as, by, we, you, your]
 question_starts: ["how much", "how long is", "how long does", "how many", "do you", "does it", "does the", "is it", "is there", "are there", "are you", "can i", "can you", "will i", "will it", "what does it", "what do you", "what is the", "where are you", "when does", "who is"]   # phrases that open a question
-bad_phrase_starts: [to, stop, quit, be, make, get, have, want, need, start, being, making, getting, working, just]   # a blank phrase starting like this breaks the sentence
+bad_phrase_starts: [own, to, stop, quit, be, make, get, have, want, need, start, being, making, getting, working, just]   # a blank phrase starting like this breaks the sentence
 prospect_pronouns: [i, "i'm", "i've", "i'd", me, my, mine, myself]   # the bot would be speaking as the prospect
 slot_tokens: 20        # max_tokens for a blank-filling call
 judge_tokens: 10       # max_tokens for a close-call judge
