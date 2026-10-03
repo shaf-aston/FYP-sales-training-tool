@@ -78,30 +78,34 @@ class ScriptSeller:
     def _turn(self, text, llm):
         step = self.method.steps[self.state.step]
         stage = step.ui_stage
-        sense = self._match(text, {k: i.examples for k, i in self.sense.interruptions.items()})
-        if sense:
-            return self._then_ask(self.sense.interruptions[sense].reply, llm), stage
-
         opened = price_open(self.method, self.state.step)
-        if opened:
-            objection = self._match(text, {k: o.examples for k, o in self.method.objections.items()})
-            if objection:
-                move = object_to(self.method, self.state, objection, self.cfg["objection_loops"])
-                self.state = move.state
-                return move.say, move.ui_stage
+        kind, name = self._interrupt(text, opened)
 
-        fact = self._match(text, {k: f.examples for k, f in self.offer.facts.items()})
-        if fact:
-            f = self.offer.facts[fact]
+        if kind == "sense":
+            return self._then_ask(self.sense.interruptions[name].reply, llm), stage
+        if kind == "objection":
+            move = object_to(self.method, self.state, name, self.cfg["objection_loops"])
+            self.state = move.state
+            return move.say, move.ui_stage
+        if kind == "fact":
+            f = self.offer.facts[name]
             answer = f.late_answer if opened and f.late_answer else f.answer
             return self._then_ask(fill_line(answer, {}, self.offer, self.cfg, llm), llm), stage
-
         if self._is_question(text):
             return self._then_ask(self._answer_uncovered(text, opened, llm), llm), stage
 
         move = self._listen(text, step, llm)
         self.state = move.state
         return (self._render(move, llm) if llm else ""), move.ui_stage
+
+    def _interrupt(self, text, opened):
+        """Best confident match among everyday interruptions, objections and product facts."""
+        labels = {f"sense:{k}": i.examples for k, i in self.sense.interruptions.items()}
+        labels.update({f"fact:{k}": f.examples for k, f in self.offer.facts.items()})
+        if opened:
+            labels.update({f"objection:{k}": o.examples for k, o in self.method.objections.items()})
+        label = self._match(text, labels)
+        return label.split(":", 1) if label else (None, None)
 
     def _match(self, text, labels):
         """A confident label for `text`, or None (a close call does not count here)."""

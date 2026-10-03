@@ -101,3 +101,30 @@ def test_latency(results, capsys):
     with capsys.disabled():
         print(f"\nmedian recognise {median:.1f} ms")
     assert median <= MAX_MEDIAN_MS
+
+
+def test_combined_interruption_set_picks_the_right_group(capsys):
+    """The seller matches interruptions, facts and objections in one pass: groups must not steal."""
+    cfg = load_yaml("selling.yaml")
+    embedder = make_embedder(cfg, ROOT)
+    ctxs = _contexts()
+    labels = {}
+    for group, key in (("sense", "common_sense"), ("fact", "facts"), ("objection", "objections_cat")):
+        labels.update({f"{group}:{k}": v for k, v in ctxs[key].items()})
+    data = yaml.safe_load((ROOT / "tests/data/script_replies.yaml").read_text(encoding="utf-8"))
+    rows = [
+        (f"{group}:{label}", reply)
+        for group, key in (("sense", "common_sense"), ("fact", "facts"), ("objection", "objections_cat"))
+        for label, replies in data[key].items() if label != "none"
+        for reply in replies
+    ]
+    hits = 0
+    for expected, reply in rows:
+        m = recognise(reply, labels, embedder, cfg["threshold"], cfg["margin"], cfg["close_call_k"])
+        hits += m.label == expected or m.close
+        if m.label != expected and not m.close:
+            with capsys.disabled():
+                print("  MIXED UP", reply, "->", m.label, "expected", expected)
+    with capsys.disabled():
+        print(f"\ncombined {hits}/{len(rows)}")
+    assert hits / len(rows) >= MIN_ACCURACY
