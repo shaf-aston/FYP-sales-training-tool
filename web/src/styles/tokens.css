@@ -48,6 +48,15 @@
   --film-hues: 38 30 8 200;
   --film-light-count: 70;
 
+  /* Neon spectrum: the landing page's moving colour (city signs at night) */
+  --neon-amber: #ffb648;
+  --neon-coral: #ff6b5a;
+  --neon-magenta: #e05bff;
+  --neon-cyan: #3fd8ff;
+  --neon-lime: #b8f05a;
+  --neon-sweep: linear-gradient(100deg, var(--neon-amber), var(--neon-coral), var(--neon-magenta), var(--neon-cyan), var(--neon-lime), var(--neon-amber));
+  --neon-glow: 0 0 32px rgba(224, 91, 255, 0.35), 0 0 64px rgba(63, 216, 255, 0.18);
+
   /* Type */
   --font-ui: "Segoe UI", system-ui, -apple-system, sans-serif;
   --font-display: var(--font-fraunces), Georgia, serif;
@@ -57,6 +66,8 @@
   --text-lg: 1.125rem;
   --text-xl: 1.5rem;
   --text-2xl: 2rem;
+  --text-3xl: clamp(2rem, 4vw, 3rem);
+  --text-hero: clamp(2.6rem, 6vw, 4.75rem);
   --tracking-label: 0.12em;
 
   /* Spacing scale */
@@ -67,6 +78,8 @@
   --space-5: 20px;
   --space-6: 24px;
   --space-7: 28px;
+  --space-8: 48px;
+  --space-9: 96px;
 
   /* Radius */
   --radius-sm: 10px;
@@ -89,6 +102,8 @@
   --icon-lg: 56px;
   --w-shell: 1560px;
   --w-page: 1000px;
+  --w-landing: 1200px;
+  --w-prose: 65ch;
   --w-nav: 180px;
   --w-dialog-sm: 440px;
   --w-dialog-md: 620px;
@@ -109,6 +124,9 @@
   --dur-ring: 1.4s;
   --dur-shine: 2.4s;
   --stagger: 40ms;
+  --dur-sweep: 8s;
+  --dur-marquee: 40s;
+  --dur-float: 6s;
 
   /* Stacking order (lowest to highest) */
   --z-film: -1;

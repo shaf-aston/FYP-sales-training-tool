@@ -14,7 +14,7 @@ npm run check                         # types + lint + the three logic checks
 ```
 
 ## Core flow
-1. **Page opens** — `src/app/page.tsx` renders `AppShell`, which stacks the providers and lays out panels (`src/features/shell/AppShell.tsx`). Why: one place decides layout.
+1. **Page opens** — `/` is the landing page (`src/features/landing/`, copy in `content.ts`); `/practice/` (`src/app/practice/page.tsx`) renders `AppShell`, which stacks the providers and lays out panels (`src/features/shell/AppShell.tsx`). Why: one place decides layout.
 2. **Connect** — `SessionProvider` restores the saved session or starts a new one (`src/features/session/SessionContext.tsx`). Why: the one owner of conversation state.
 3. **Talk to the server** — every request goes through `api.*` (`src/lib/api/client.ts`). Why: one swappable seam; nothing else calls `fetch`.
 4. **Type or speak** — the message box text lives in `DraftContext` (`src/state/DraftContext.tsx`); voice writes into it (`src/features/voice/`). Why: keyboard and mic share one draft.

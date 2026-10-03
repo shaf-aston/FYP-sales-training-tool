@@ -9,6 +9,7 @@
   border: 1px solid var(--border);
   font-size: var(--text-sm);
   font-weight: 600;
+  text-decoration: none;
   transition: transform var(--dur-fast) var(--ease-out), background var(--dur-base), border-color var(--dur-base);
 }
 .btn:active:not(:disabled) {

@@ -1,5 +1,5 @@
-import { AppShell } from "@/features/shell/AppShell";
+import { Landing } from "@/features/landing/Landing";
 
 export default function Home() {
-  return <AppShell />;
+  return <Landing />;
 }
