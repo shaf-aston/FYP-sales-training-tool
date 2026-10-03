@@ -22,6 +22,8 @@ from .analytics.performance import PerformanceTracker
 from .analytics.session_analytics import SessionAnalytics
 from .services.provider_router import ProviderRouter
 from .providers.base import ACCESS_DENIED, RATE_LIMIT, LLMResponse
+from .script_engine.engine import ScriptState
+from .script_engine.seller import build_seller, selling_config
 from .response_guardrails import Layer3CheckResult, apply_layer3_output_checks
 from .utils import Strategy, Stage
 from . import trainer, quiz
@@ -41,6 +43,8 @@ class ChatResponse:
 
 class SalesChatbot:
     """Ties the LLM provider to the FSM flow engine and logs each turn."""
+
+    seller = None  # set in __init__ for scripted consultative calls
 
     def __init__(
         self,
@@ -85,6 +89,9 @@ class SalesChatbot:
             product_context=product_context,
         )
 
+        self.seller = None
+        self._sync_seller()
+
         self._ab_variant = assign_ab_variant(session_id) if session_id else None
         self._turn_snapshots = []
 
@@ -123,8 +130,56 @@ class SalesChatbot:
         }
         self.logger.info("conversation_turn %s", json.dumps(payload, ensure_ascii=False))
 
+    def _sync_seller(self) -> bool:
+        """Scripted selling runs only while the flow is consultative; True when it just switched on."""
+        scripted = selling_config()["enabled"] and self.flow_engine.flow_type == Strategy.CONSULTATIVE
+        if not scripted:
+            self.seller = None
+            return False
+        if self.seller:
+            return False
+        self.seller = build_seller(self._router)
+        return True
+
+    def script_opening(self) -> str | None:
+        """First line of a scripted call (also sets its stage), or None when not scripted."""
+        if not self.seller:
+            return None
+        text, ui_stage = self.seller.opening()
+        self._show_stage(ui_stage)
+        return text
+
+    def _show_stage(self, ui_stage: str) -> None:
+        if self.flow_engine.current_stage != ui_stage:
+            self.flow_engine.advance(target_stage=Stage(ui_stage))
+
+    def _scripted_chat(self, user_message: str) -> ChatResponse:
+        """One scripted turn: the seller picks the line, the usual turn bookkeeping follows."""
+        start = time.time()
+        text, ui_stage = self.seller.reply(user_message)
+        self._show_stage(ui_stage)
+        return self._complete_successful_turn(
+            user_message=user_message,
+            bot_reply=text,
+            latency_ms=(time.time() - start) * 1000,
+            advanced_this_turn=True,  # the script, not the FSM, moves the stage
+            turn_state=self.seller.state,  # saved in the snapshot so a rewind restores the script
+        )
+
     def chat(self, user_message: str) -> ChatResponse:
         """Run one turn - returns reply content plus latency/provider metrics."""
+        if self._sync_seller():
+            # the flow turned consultative mid-call (intent detection or a strategy switch): open the script
+            start = time.time()
+            return self._complete_successful_turn(
+                user_message=user_message,
+                bot_reply=self.script_opening(),
+                latency_ms=(time.time() - start) * 1000,
+                advanced_this_turn=True,
+                turn_state=self.seller.state,
+            )
+        if self.seller:
+            return self._scripted_chat(user_message)
         recent_history = self.flow_engine.conversation_history[-RECENT_HISTORY_WINDOW:]
 
         # Signal Detection (prerequisite): Analyze user state for all downstream layers.
@@ -317,6 +372,12 @@ class SalesChatbot:
         turn_state: dict[str, Any] | None = None,
     ) -> None:
         """Reconstruct one completed turn using the same advancement order as live chat."""
+        if self.seller:
+            if turn_state is not None:
+                self.seller.reset(ScriptState(**turn_state))
+            self._show_stage(self.method_stage())
+            self.flow_engine.add_turn(user_message, bot_reply)
+            return
         if turn_state is None:
             state = analyse_state(self.flow_engine.conversation_history, user_message)
         else:
@@ -346,8 +407,10 @@ class SalesChatbot:
     ) -> ChatResponse:
         """Finalize a successful reply so normal and fallback paths stay consistent."""
         # LAYER 3 (Response Validation): Final guardrail check before sending to user.
-        guardrail_result = self._apply_layer3_checks(bot_reply, user_message)
-        bot_reply = guardrail_result.content
+        # Scripted lines skip it: they are the trainer's words, and any AI piece in them was
+        # already checked by the script engine. Layer 3 would swap them for generic lines.
+        if not self.seller:
+            bot_reply = self._apply_layer3_checks(bot_reply, user_message).content
 
         self.flow_engine.add_turn(user_message, bot_reply)
         self._log_turn_event(user_message, bot_reply)
@@ -393,6 +456,8 @@ class SalesChatbot:
 
     def generate_training(self, user_msg: str, bot_reply: str) -> dict[str, Any]:
         """Generate coaching notes for the current exchange via lightweight LLM call."""
+        if self.seller:
+            return self.seller.training()  # scripted call: the step itself is the coaching note
         return trainer.generate_training(
             self._router, self.flow_engine, user_msg, bot_reply
         )
@@ -428,15 +493,24 @@ class SalesChatbot:
             explanation, self._router, self.flow_engine.current_stage, self.flow_engine.flow_type
         )
 
+    def method_stage(self) -> str:
+        """The UI stage of the script step the call is on."""
+        return self.seller.method.steps[self.seller.state.step].ui_stage
+
     def _capture_turn_snapshot(self, turn_state=None) -> dict:
         """Capture current FSM state for snapshot-based rewinding."""
-        return {
+        if turn_state is None and self.seller:
+            turn_state = self.seller.state
+        if turn_state is not None and not isinstance(turn_state, dict):
+            turn_state = asdict(turn_state)
+        snapshot = {
             "flow_type": self.flow_engine.flow_type,
             "current_stage": self.flow_engine.current_stage,
             "stage_turn_count": self.flow_engine.stage_turn_count,
             "initial_flow_type": self.flow_engine.initial_flow_type,
-            "turn_state": asdict(turn_state) if turn_state is not None else None,
+            "turn_state": turn_state,
         }
+        return snapshot
 
     def _save_turn_snapshot(self, turn_state=None) -> None:
         """Save FSM snapshot after processing a turn (used for rewinding)."""
@@ -469,6 +543,8 @@ class SalesChatbot:
 
         if turn_index == 0:
             self.flow_engine.reset_to_initial()
+            if self.seller:
+                self.seller.reset()
             self._turn_snapshots = []
             self.save_session()
             return True
@@ -476,10 +552,15 @@ class SalesChatbot:
         if turn_index <= len(self._turn_snapshots):
             snapshot = self._turn_snapshots[turn_index - 1]
             self.flow_engine.restore_state(snapshot)
+            if self.seller:
+                saved = snapshot.get("turn_state")
+                self.seller.reset(ScriptState(**saved) if saved else None)
             self._turn_snapshots = self._turn_snapshots[:turn_index]
         else:
             self.logger.warning(f"Snapshot not available for turn {turn_index}, falling back to replay")
             self.flow_engine.reset_to_initial()
+            if self.seller:
+                self.seller.reset()
             saved_snapshots = list(self._turn_snapshots)
             self._turn_snapshots = []
             for idx, (user_msg_dict, bot_msg_dict) in enumerate(

@@ -1,0 +1,32 @@
+first: "a"
+price_step: "b"
+steps:
+  "a":
+    ui_stage: logical
+    say: "What would you like to achieve?"
+    capture: goal
+    draft: true
+    listen:
+      clear:
+        examples: ["I want to grow my business", "I want more freedom"]
+        then: "silent"
+  "silent":
+    ui_stage: logical
+    listen:
+      any: {then: "b"}
+  "b":
+    ui_stage: pitch
+    say: "So you want {goal}. Does that make sense?"
+    listen:
+      agrees:
+        examples: ["yes that makes sense", "yes"]
+        then: "c"
+        ack: "Good."
+  "c":
+    ui_stage: outcome
+    say: "Great, next steps."
+objections:
+  money:
+    examples: ["it is too expensive"]
+    loop: ["What does that cost you?"]
+    direct: "Will you keep thinking or change?"

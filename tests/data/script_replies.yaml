@@ -1,0 +1,197 @@
+# Public labelled prospect replies for the recogniser accuracy check.
+# context -> expected label -> replies. Label `none` = must NOT match any label (off-script).
+# Written from the trainer's FAQ, the CAT script and the objection paths; none are copied
+# from private call transcripts.
+step_01:   # CAT step 01: labels freedom
+  freedom:
+    - "honestly I just want freedom, to not answer to a boss anymore"
+    - "I want to be able to work from a beach if I feel like it"
+    - "financial freedom for me and my family"
+    - "I'm tired of my 9 to 5 and want to be in control of my own time"
+    - "to be location independent and not tied to a desk"
+    - "I want to build something of my own so I can leave my job"
+    - "freedom to spend my days how I choose"
+    - "I want my time back"
+  none:
+    - "I'm not really sure"
+    - "just more money I guess"
+    - "I don't know, I saw an ad"
+    - "my friend told me to apply"
+    - "no idea honestly"
+    - "can you tell me about the programme first"
+step_18:   # temp check: labels agrees / unclear
+  agrees:
+    - "yes, that all makes sense"
+    - "yeah I follow you"
+    - "makes sense to me"
+    - "yep, totally clear"
+    - "sure, I understand"
+    - "yes that is clear, thank you"
+    - "got it, all good"
+    - "yeah no problem, I see it"
+    - "that makes total sense"
+    - "yes I'm with you"
+  unclear:
+    - "hmm that does not really make sense to me"
+    - "I'm a bit confused by the second part"
+    - "no I don't get it"
+    - "sorry, could you go over that once more"
+    - "I did not follow any of that"
+    - "that wasn't clear at all"
+    - "I'm not sure what you mean"
+    - "can you simplify it for me"
+    - "not really, no"
+    - "you lost me a bit"
+  none:
+    - "what time is it where you are"
+    - "my phone keeps buzzing"
+    - "how long have you been doing this"
+step_19:   # soft close: labels agrees / hesitant
+  agrees:
+    - "yes I do, I'm ready"
+    - "absolutely, let's get started"
+    - "yeah I can see myself doing it"
+    - "I'm in"
+    - "yes, let's go ahead"
+    - "I think I'm ready to take the jump"
+    - "definitely, count me in"
+    - "yes, I want to do this"
+    - "I'm ready, where do I sign"
+    - "yeah let's do it"
+  hesitant:
+    - "I'm not so sure about that"
+    - "honestly I don't think I'm ready"
+    - "no, I can't picture that right now"
+    - "I'd rather not rush into it"
+    - "I don't know about this"
+    - "not at the moment, no"
+    - "I'm not convinced yet"
+    - "hmm, I'm not certain I see it"
+    - "I don't think so"
+    - "I'm unsure, to be honest"
+  none:
+    - "what time is it where you are"
+    - "my phone keeps buzzing"
+    - "how long have you been doing this"
+objections_cat:
+  money:
+    - "that's a lot of money for me"
+    - "I just don't have that kind of cash"
+    - "I can't afford five thousand dollars"
+    - "money's really tight right now"
+    - "it's out of my budget"
+    - "I'd need to find the funds first"
+  partner:
+    - "I'd have to ask my wife"
+    - "my husband and I make these decisions together"
+    - "I need to discuss it with my partner"
+    - "I have to run it past my girlfriend first"
+    - "my business partner has to be on board"
+    - "I'll talk to my spouse tonight"
+  fear:
+    - "I'm scared it won't work for me"
+    - "what if I put the money in and fail"
+    - "I'm nervous about taking such a risk"
+    - "I've tried things before and got burned"
+    - "I'm worried I'll make the wrong decision"
+    - "it feels risky"
+  think:
+    - "I need to think it over"
+    - "let me have a think and get back to you"
+    - "I want to do a bit more research first"
+    - "can I sleep on it"
+    - "it's not the right time for me"
+    - "I'll come back to you later"
+  scam:
+    - "is this some kind of scam"
+    - "this all sounds too good to be true"
+    - "can you guarantee I'll make money"
+    - "how do I know you're legit"
+    - "there are so many fake gurus out there"
+    - "what proof do you have that this works"
+  none:
+    - "what's the weather like where you are"
+    - "my dog is barking, sorry"
+    - "did you see the match last night"
+    - "I love your background"
+    - "how was your weekend"
+    - "that sounds great"
+objections_impact:
+  money:
+    - "that's a lot of money for me"
+    - "I just don't have that kind of cash"
+    - "I can't afford it at the moment"
+    - "money's tight"
+    - "it's out of my budget"
+  partner:
+    - "I'd have to ask my wife"
+    - "my husband and I decide together"
+    - "I need approval from my manager"
+    - "I need to discuss it with my team"
+    - "I'll talk to my spouse tonight"
+  fear:
+    - "I'm scared it won't work for me"
+    - "what if I fail"
+    - "I'm nervous about the risk"
+    - "I'm worried I'll make the wrong decision"
+    - "it feels risky"
+  think:
+    - "I need to think it over"
+    - "let me have a think"
+    - "can you send me some information"
+    - "it's not the right time"
+    - "maybe later"
+  none:
+    - "what's the weather like where you are"
+    - "my dog is barking, sorry"
+    - "did you see the match last night"
+    - "I love your background"
+    - "how was your weekend"
+facts:
+  price:
+    - "so what does it cost"
+    - "how much is it"
+    - "what's your price"
+    - "can you give me a rough number"
+    - "what are you charging for this"
+  length:
+    - "how long does the programme last"
+    - "how many months is it"
+    - "how long would I be in it for"
+    - "what's the duration"
+  location:
+    - "do you work with people in Dubai"
+    - "I'm in Australia, can I still join"
+    - "do you take clients outside the US"
+    - "where are you guys located"
+    - "is it open to people overseas"
+  none:
+    - "my dog is barking, sorry"
+    - "I need to think about it"
+    - "I want freedom"
+    - "did you see the match last night"
+    - "what colour is your car"
+common_sense:
+  pause:
+    - "sorry, my kid is yelling, one second"
+    - "can you hold on a moment"
+    - "give me a sec, I need to grab a pen"
+    - "bear with me, someone's calling me"
+    - "just a minute please"
+  repeat:
+    - "sorry, you cut out, what was that"
+    - "can you repeat the question"
+    - "the line's bad, I missed that"
+    - "come again?"
+    - "what did you just ask"
+  thanks:
+    - "thanks so much for your time"
+    - "appreciate it, thank you"
+    - "that was really helpful, cheers"
+    - "thank you for explaining"
+  none:
+    - "I need to think about it"
+    - "I want freedom"
+    - "how much does it cost"
+    - "I'm worried about the risk"
+    - "I'd have to ask my wife"
