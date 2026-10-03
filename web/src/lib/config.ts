@@ -44,6 +44,9 @@ export const config = {
     flickerDepth: 0.3,
     lightness: "90%, 65%",
   },
+  /** Page addresses, so links never hard-code paths. */
+  routes: { home: "/", practice: "/practice/", knowledge: "/knowledge/" },
+  landing: { wordRotateMs: 2_200, demoStepMs: 1_800, revealThreshold: 0.15 },
   drills: { intervalsDays: [0, 1, 3, 7, 21] },
   readinessBands: { low: 30, mid: 60 },
   quizBands: { correct: 70, partial: 40, stage: { correct: 100, partial: 50 } },

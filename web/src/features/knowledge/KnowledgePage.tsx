@@ -1,5 +1,6 @@
 "use client";
 
+import { config } from "@/lib/config";
 import Link from "next/link";
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
@@ -16,7 +17,7 @@ const SECTION_IDS = FIELDS.map((f) => sectionId(f.id));
 function BackLink() {
   const prospect = useSearchParams().get("mode") === "prospect";
   return (
-    <Link href="/" className={s.back}>
+    <Link href={config.routes.practice} className={s.back}>
       ← {prospect ? "Back to prospect practice" : "Back to chat"}
     </Link>
   );
@@ -113,7 +114,7 @@ export function KnowledgePage() {
               <h1 className={s.title}>Product Knowledge</h1>
               <p className={s.subtitle}>Add the details that make your practice scenario feel real. Keep it specific to your product or offer.</p>
             </div>
-            <Suspense fallback={<Link href="/" className={s.back}>← Back to chat</Link>}>
+            <Suspense fallback={<Link href={config.routes.practice} className={s.back}>← Back to chat</Link>}>
               <BackLink />
             </Suspense>
           </header>

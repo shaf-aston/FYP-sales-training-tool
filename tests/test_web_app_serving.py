@@ -18,6 +18,7 @@ def test_build_is_committed():
     # The server deploy has no Node, so the built app must be in the repo.
     assert (OUT / "index.html").is_file(), "run `npm run build` in web/ and commit web/out"
     assert (OUT / "knowledge" / "index.html").is_file()
+    assert (OUT / "practice" / "index.html").is_file()
 
 
 def test_root_serves_the_app(client):
@@ -28,6 +29,7 @@ def test_root_serves_the_app(client):
 
 def test_folder_paths_serve_their_index(client):
     assert client.get("/knowledge/").status_code == 200
+    assert client.get("/practice/").status_code == 200
 
 
 def test_unknown_page_is_404(client):

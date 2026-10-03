@@ -1,5 +1,5 @@
 export { Badge, type Tone } from "./Badge";
-export { Button } from "./Button";
+export { Button, buttonClass } from "./Button";
 export { Card, Eyebrow } from "./Card";
 export { ConfirmProvider, useConfirm } from "./Confirm";
 export { Dialog } from "./Dialog";

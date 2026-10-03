@@ -1,5 +1,6 @@
 "use client";
 
+import { config } from "@/lib/config";
 import type { ReactNode } from "react";
 import { useSession } from "@/features/session/SessionContext";
 import { useUi } from "@/state/UiContext";
@@ -41,7 +42,7 @@ export function ToolsGrid() {
         <Tool
           title={prospect ? "Prospect knowledge" : "Knowledge"}
           copy={prospect ? "Review notes tied to your prospect roleplay." : "Browse notes and product details."}
-          href={prospect ? "/knowledge/?mode=prospect" : "/knowledge/"}
+          href={prospect ? `${config.routes.knowledge}?mode=prospect` : config.routes.knowledge}
         />
         {!prospect && (
           <Tool title="Coaching" copy="Get guided next-step advice." pressed={sidePanel === "coach"} onClick={() => toggleSidePanel("coach")} />
