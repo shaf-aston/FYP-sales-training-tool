@@ -1,0 +1,11 @@
+# Script engine knobs. The engine reads these; it never hardcodes them.
+enabled: false
+method: cat
+offer: shay_coaching
+embed_model: BAAI/bge-small-en-v1.5
+threshold: 0.65        # lowest similarity that counts as a match
+margin: 0.03           # top two labels closer than this = close call
+close_call_k: 3        # candidates handed to the judge on a close call
+max_words: 30          # longest sentence the AI may write
+ai_retries: 1
+objection_loops: 2     # loop twice, third time go direct
