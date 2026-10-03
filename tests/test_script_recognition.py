@@ -177,3 +177,16 @@ def test_real_price_question_still_gets_the_early_answer():
     seller.reply("I want freedom")
     text, _ = seller.reply("wait, sorry, what's this going to cost me?")
     assert "first a couple of questions" in text and seller.state.step == "02"
+
+
+@pytest.mark.parametrize("step", ["03", "04", "05", "18"])
+def test_a_pause_is_a_pause_on_any_step(step):
+    from core.script_engine.engine import ScriptState
+    from core.script_engine.seller import ScriptSeller
+
+    cfg = load_yaml("selling.yaml")
+    seller = ScriptSeller(cfg, load_method("cat"), load_offer(cfg["offer"]), load_common_sense(),
+                          make_embedder(cfg, ROOT), _down)
+    seller.reset(ScriptState(step=step))
+    assert seller.reply("sorry hold on, my kid is yelling")[0] == "No problem, take your time."
+    assert seller.state.step == step

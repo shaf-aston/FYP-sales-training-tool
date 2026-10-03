@@ -407,8 +407,10 @@ class SalesChatbot:
     ) -> ChatResponse:
         """Finalize a successful reply so normal and fallback paths stay consistent."""
         # LAYER 3 (Response Validation): Final guardrail check before sending to user.
-        guardrail_result = self._apply_layer3_checks(bot_reply, user_message)
-        bot_reply = guardrail_result.content
+        # Scripted lines skip it: they are the trainer's words, and any AI piece in them was
+        # already checked by the script engine. Layer 3 would swap them for generic lines.
+        if not self.seller:
+            bot_reply = self._apply_layer3_checks(bot_reply, user_message).content
 
         self.flow_engine.add_turn(user_message, bot_reply)
         self._log_turn_event(user_message, bot_reply)

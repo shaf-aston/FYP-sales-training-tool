@@ -74,8 +74,8 @@ steps:
   "present":
     ui_stage: pitch
     draft: true
-    say: "Based on {goal} and {problem}, here's why this fits: {pillar_1}, {pillar_2} and {pillar_3}. How does this get you to {goal}?"
-    say_plain: "Here's why this fits: {pillar_1}, {pillar_2} and {pillar_3}. How does this get you to where you want to be?"
+    say: "Based on {goal} and {problem}, here's why this fits: {pillar_1}, {pillar_2} and {pillar_3}. It's a {months}-month process and the investment is {price}. How does this get you to {goal}?"
+    say_plain: "Here's why this fits: {pillar_1}, {pillar_2} and {pillar_3}. It's a {months}-month process and the investment is {price}. How does this get you to where you want to be?"
     listen:
       any: {then: "check"}
   "check":

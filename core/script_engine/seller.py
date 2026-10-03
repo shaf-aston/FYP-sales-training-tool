@@ -172,7 +172,11 @@ class ScriptSeller:
         if found.label.startswith("fact:"):
             return found.label.split(":", 1)  # a product question is never an answer
         answers = {r.signal: list(r.examples) for r in step.listen if r.examples}
-        bar = self._recognise(text, answers).score if answers else self.cfg["interrupt_threshold"]
+        if answers:
+            as_answer = self._recognise(text, answers)
+            bar = as_answer.score if as_answer.label else 0.0  # only a real answer competes
+        else:
+            bar = self.cfg["interrupt_threshold"]
         return found.label.split(":", 1) if found.score > bar else (None, None)
 
     def _listen(self, text, step):

@@ -84,3 +84,16 @@ def test_script_takes_over_when_the_call_turns_consultative(client):
     opened = _say(client, headers, "I want a mentor to help me leave my job")
     assert opened["message"].endswith("What do you want to specifically achieve by making money online?")
     assert _say(client, headers, "I want financial freedom")["message"].startswith("How much")
+
+
+
+def test_script_lines_reach_the_user_word_for_word(client, monkeypatch):
+    from core.response_guardrails import Layer3CheckResult
+
+    # the prompt-driven path's guardrail rewrites lines; scripted lines must never go through it
+    monkeypatch.setattr(
+        "core.chatbot.apply_layer3_output_checks",
+        lambda **kw: Layer3CheckResult(content="What should we focus on next?", was_corrected=True),
+    )
+    _, headers = _init(client)
+    assert _say(client, headers, "I want financial freedom")["message"].startswith("How much")
