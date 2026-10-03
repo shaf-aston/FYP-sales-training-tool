@@ -82,7 +82,8 @@ def test_redo_replaces_the_turn_and_gets_a_real_reply(client, played_session):
 
     assert response.status_code == 200
     assert payload["turn"] == 1
-    assert payload["message"] == "Can you tell me a bit more about that?"
+    # The AI answer comes first; a scripted objection may follow on some turns.
+    assert payload["message"].startswith("Can you tell me a bit more about that?")
 
     # The pushy turn is gone and the session now holds only the redone one.
     review = client.get("/api/prospect/review", headers=played_session).get_json()

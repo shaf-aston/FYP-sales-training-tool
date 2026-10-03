@@ -383,14 +383,6 @@ class ProspectSession:
         self.state.objections_raised = self.pacer.raised_by(self.state.turn_count - 1)
 
         system_prompt = self._system_prompt()
-        if objection:
-            system_prompt += (
-                "\n\n"
-                f"THIS TURN: first answer what the salesperson just asked in one "
-                f"short sentence, then raise your {objection['type']} concern in your "
-                f"own words and in character. Do not quote it back word for word. "
-                f"The concern is: {objection['text']}"
-            )
         messages = [{"role": "system", "content": system_prompt}]
         messages.extend(self.conversation_history)
 
@@ -410,6 +402,10 @@ class ProspectSession:
         if checked.applied_rules:
             logger.info("buyer reply checks applied: %s", ", ".join(checked.applied_rules))
         reply = checked.content
+        # The rules own objections: the AI answers the seller, then the scripted
+        # concern is added word for word, so it always comes after an answer.
+        if objection:
+            reply = f"{reply} {objection['text']}"
 
         self.conversation_history.append(
             {
