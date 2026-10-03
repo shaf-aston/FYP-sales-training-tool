@@ -1,5 +1,5 @@
 """Tests for LAYER 3 response guardrails."""
-from core.response_guardrails import apply_layer3_output_checks
+from core.response_guardrails import apply_layer3_output_checks, check_buyer_reply
 from core.utils import Stage, Strategy
 
 
@@ -220,3 +220,30 @@ def test_layer3_preserves_consequence_of_inaction_language_in_emotional_stage():
     assert result.was_blocked is False
     assert result.was_corrected is False
     assert "cost of staying the same" in result.content.lower()
+
+
+def test_buyer_reply_cannot_close_the_deal_itself():
+    """Only the session rules decide a sale; the AI buyer saying yes is stripped."""
+    result = check_buyer_reply(
+        "That helps a lot. Let's do it, send the agreement over today. I still want the onboarding details.",
+        turn=5,
+    )
+
+    assert "buyer_committed" in result.applied_rules
+    assert "let's do it" not in result.content.lower()
+    assert "onboarding details" in result.content
+
+
+def test_buyer_reply_out_of_character_falls_back():
+    result = check_buyer_reply("As an AI language model, I can't buy software.", turn=2)
+
+    assert result.was_blocked is True
+    assert "ai" not in result.content.lower().split()
+
+
+def test_buyer_reply_normal_answer_passes_untouched():
+    reply = "We use spreadsheets right now. Leads slip through when someone is off sick."
+    result = check_buyer_reply(reply, turn=1)
+
+    assert result.content == reply
+    assert result.applied_rules == []

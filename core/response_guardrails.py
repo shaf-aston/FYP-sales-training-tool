@@ -155,3 +155,44 @@ def apply_layer3_output_checks(
         was_blocked=True,
         applied_rules=rules,
     )
+
+
+_BUYER = _CONFIG["buyer"]
+_BUYER_COMMITS = load_signals()["commitment"]
+
+
+def check_buyer_reply(reply_text: str, turn: int) -> Layer3CheckResult:
+    """Run LAYER 3 checks on an AI-buyer reply (prospect mode).
+
+    The session rules own the outcome, so the buyer may not agree to buy on its own.
+    Drops sentences that commit or step out of character, then caps the length.
+    Falls back to a config line, picked by turn, when too little is left.
+    """
+    text = (reply_text or "").strip()
+    rules = []
+
+    def bad(sentence: str) -> bool:
+        lowered = sentence.lower()
+        if contains_nonnegated_keyword(lowered, _BUYER["out_of_character"]):
+            rules.append("buyer_out_of_character")
+            return True
+        if contains_nonnegated_keyword(lowered, _BUYER_COMMITS):
+            rules.append("buyer_committed")
+            return True
+        return False
+
+    sentences = [s for s in _SENTENCE_SPLIT.split(text) if s and not bad(s)]
+    if len(sentences) > _BUYER["max_sentences"]:
+        sentences = sentences[: _BUYER["max_sentences"]]
+        rules.append("buyer_too_long")
+    text = " ".join(sentences).strip()
+
+    if not text or (rules and len(text) < MIN_RESPONSE_CHARS // 2):
+        lines = _BUYER["fallback_lines"]
+        return Layer3CheckResult(
+            content=lines[turn % len(lines)],
+            was_blocked=True,
+            applied_rules=rules or ["empty_output_fallback"],
+        )
+    rules = list(dict.fromkeys(rules))
+    return Layer3CheckResult(content=text, was_corrected=bool(rules), applied_rules=rules)

@@ -12,6 +12,7 @@ from .loader import load_prospect_config, load_real_objections
 from .buyer_prompt import build_product_context, build_system_prompt
 from .buyer_rules import ObjectionPacer, end_outcome
 from .real_calls import pick_bank
+from .response_guardrails import check_buyer_reply
 from .services.provider_router import ProviderRouter
 from .selling_quality import apply_readiness, score_seller_turn
 from .session_review import build_review
@@ -387,8 +388,9 @@ class ProspectSession:
         if objection:
             system_prompt += (
                 "\n\n"
-                f"THIS TURN: raise your {objection['type']} concern, in your own "
-                f"words and in character. Do not quote it back word for word. "
+                f"THIS TURN: first answer what the salesperson just asked in one "
+                f"short sentence, then raise your {objection['type']} concern in your "
+                f"own words and in character. Do not quote it back word for word. "
                 f"The concern is: {objection['text']}"
             )
         messages = [{"role": "system", "content": system_prompt}]
@@ -405,13 +407,19 @@ class ProspectSession:
         if objection:
             self.state.objections_raised += 1
 
+        # LAYER 3: the buyer's words pass the same kind of check as the seller's.
+        checked = check_buyer_reply(response.content, self.state.turn_count)
+        if checked.applied_rules:
+            logger.info("buyer reply checks applied: %s", ", ".join(checked.applied_rules))
+        reply = checked.content
+
         self.conversation_history.append(
             {
                 "role": "assistant",
-                "content": response.content,
+                "content": reply,
             }
         )
-        self._log_turn_event(user_message, response.content, turn_index=self.state.turn_count)
+        self._log_turn_event(user_message, reply, turn_index=self.state.turn_count)
         self.save_session()
 
         # Optional coaching hint
@@ -420,7 +428,7 @@ class ProspectSession:
             coaching = self._generate_coaching_hint(user_message)
 
         return ProspectResponse(
-            content=response.content,
+            content=reply,
             latency_ms=round(latency, 1),
             provider=self.provider_name,
             model=self.model_name,

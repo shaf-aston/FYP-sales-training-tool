@@ -143,7 +143,7 @@ def test_a_live_turn_tells_the_buyer_to_raise_the_objection_and_counts_it():
         f"the buyer ended the session at turn {len(prompts)}, before the objection "
         f"due at turn {turn} - retune the fixture, not the assertion"
     )
-    assert "THIS TURN: raise your" in prompts[turn - 1]
+    assert "THIS TURN:" in prompts[turn - 1] and "raise your" in prompts[turn - 1]
     # "So far" means before this turn: the buyer is not told it has already raised
     # the objection it is only now being asked to raise.
     assert "Objections raised so far: 0" in prompts[turn - 1]

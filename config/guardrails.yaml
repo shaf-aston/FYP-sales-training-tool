@@ -39,3 +39,19 @@ fallback_lines:
   default:
     - "What should we focus on next?"
     - "What would help most right now?"
+
+# AI-buyer replies (prospect mode). The rules own the outcome, so the buyer may not
+# agree to buy on its own, step out of character, or ramble.
+buyer:
+  max_sentences: 4
+  out_of_character:
+    - as an ai
+    - language model
+    - i'm an ai
+    - i am an ai
+    - readiness score
+    - this turn
+    - roleplay
+  fallback_lines:
+    - "Hmm. Tell me more about how that would work for us."
+    - "I'm still weighing it up. What else should I know?"
