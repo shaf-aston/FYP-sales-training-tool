@@ -32,5 +32,6 @@ MIN_TURNS_BEFORE_ADVANCE = 3
 DEFAULT_TEMPERATURE = 0.4
 # The AI buyer gets a little more variety so personas don't all sound alike.
 BUYER_TEMPERATURE = 0.6
-DEFAULT_MAX_TOKENS = 200
+# Replies run 12-80 tokens; Groq charges the requested cap against the free per-minute budget.
+DEFAULT_MAX_TOKENS = 150
 

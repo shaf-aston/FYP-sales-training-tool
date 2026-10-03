@@ -8,7 +8,7 @@ import time
 from dataclasses import dataclass, field
 
 from .analytics.session_analytics import SessionAnalytics
-from .constants import BUYER_TEMPERATURE
+from .constants import BUYER_TEMPERATURE, DEFAULT_MAX_TOKENS
 from .loader import load_prospect_config, load_real_objections
 from .buyer_prompt import build_product_context, build_system_prompt
 from .buyer_rules import ObjectionPacer, end_outcome
@@ -202,7 +202,7 @@ class ProspectSession:
     def model_name(self) -> str:
         return self._router.model_name
 
-    def _get_chat_with_fallback(self, messages, temperature=BUYER_TEMPERATURE, max_tokens=200):
+    def _get_chat_with_fallback(self, messages, temperature=BUYER_TEMPERATURE, max_tokens=DEFAULT_MAX_TOKENS):
         """Ask the buyer's AI provider, falling back to others on failure.
 
         Raises ProviderUnavailable when no provider produced anything. Returning the
@@ -380,7 +380,7 @@ class ProspectSession:
 
         start = time.time()
         try:
-            response = self._get_chat_with_fallback(messages, max_tokens=250)
+            response = self._get_chat_with_fallback(messages)
         except ProviderUnavailable:
             self._restore(before_turn)
             raise

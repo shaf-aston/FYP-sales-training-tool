@@ -55,3 +55,18 @@ buyer:
   fallback_lines:
     - "Hmm. Tell me more about how that would work for us."
     - "I'm still weighing it up. What else should I know?"
+
+# Seller replies: drop any sentence containing one of these (lowercase match).
+# Self-talk about the bot's own data or rules, and asks for payment it cannot take.
+banned_phrases:
+  - inventory
+  - my instructions
+  - my guidelines
+  - my system prompt
+  - card details
+  - card number
+  - payment details
+  - bank details
+
+# Seller replies: drop a sentence already said in this many of the bot's last replies.
+repeat_lookback: 2

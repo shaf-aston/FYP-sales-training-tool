@@ -247,3 +247,22 @@ def test_buyer_reply_normal_answer_passes_untouched():
 
     assert result.content == reply
     assert result.applied_rules == []
+
+
+def test_repeated_sentence_and_self_talk_are_dropped():
+    history = [
+        {"role": "user", "content": "how much is it"},
+        {"role": "assistant", "content": "I don't have specific pricing in my inventory. Does the current process feel slow?"},
+        {"role": "user", "content": "kind of"},
+    ]
+    reply = "Does the current process feel slow? I don't have pricing in my inventory. What slows your team down most on a normal week?"
+    result = apply_layer3_output_checks(reply, "logical", "kind of", history=history)
+    assert result.content == "What slows your team down most on a normal week?"
+    assert "banned_or_repeated" in result.applied_rules
+
+
+def test_payment_ask_is_dropped_at_close():
+    reply = "Great, you're on the Team plan. I'll need your card details to finalise. Your onboarding call is next."
+    result = apply_layer3_output_checks(reply, "outcome", "yes let's do it")
+    assert "card" not in result.content
+    assert "onboarding call" in result.content

@@ -24,6 +24,8 @@ _BILLING_TERMS = _CONFIG["billing_terms"]
 _NO_PRICE_STAGES = set(_CONFIG["no_price_stages"])
 _FALLBACKS = _CONFIG["fallback_lines"]
 _PRICE_REQUESTS = load_signals()["direct_info_requests"]
+_BANNED = _CONFIG["banned_phrases"]
+_REPEAT_LOOKBACK = _CONFIG["repeat_lookback"]
 
 _SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+|\n+")
 # A money figure: "$99", "£2,400", "99 dollars", "49 pounds".
@@ -87,6 +89,19 @@ def _keep_sentences(text: str, drop) -> str:
     return " ".join(s for s in _SENTENCE_SPLIT.split(text) if s and not drop(s)).strip()
 
 
+def _norm(sentence: str) -> str:
+    """Lowercase letters and digits only, so punctuation changes don't hide a repeat."""
+    return re.sub(r"[^a-z0-9 ]", "", sentence.lower()).strip()
+
+
+def _recent_bot_sentences(history) -> set[str]:
+    """Normalised sentences from the bot's last few replies."""
+    replies = [m.get("content", "") for m in (history or []) if m.get("role") == "assistant"]
+    return {
+        _norm(s) for r in replies[-_REPEAT_LOOKBACK:] for s in _SENTENCE_SPLIT.split(r) if s.strip()
+    }
+
+
 def _fallback(stage_name: str, price_asked: bool, history) -> str:
     """Pick a fallback line in turn order, so a replayed chat gets the same line."""
     if price_asked:
@@ -110,8 +125,9 @@ def apply_layer3_output_checks(
     Checks (in order):
     0) Strip internal prompt markers.
     1) Degenerate output: empty, too short, or oversized.
-    2) Invented prices: a money figure not found in product_context (skipped when None).
-    3) Early price talk: in no_price_stages and transactional pitch, unless the buyer asked.
+    2) Banned phrases (self-talk, payment asks) and sentences repeated from recent replies.
+    3) Invented prices: a money figure not found in product_context (skipped when None).
+    4) Early price talk: in no_price_stages and transactional pitch, unless the buyer asked.
     Each price check strips sentences first and falls back only when too little is left.
     """
     stage_name = _plain_name(stage)
@@ -141,6 +157,16 @@ def apply_layer3_output_checks(
         )
 
     rules = []
+    said = _recent_bot_sentences(history)
+
+    def stale(sentence: str) -> bool:
+        lowered = sentence.lower()
+        return any(p in lowered for p in _BANNED) or _norm(sentence) in said
+
+    if any(stale(s) for s in _SENTENCE_SPLIT.split(text)):
+        text = _keep_sentences(text, stale)
+        rules.append("banned_or_repeated")
+
     if product_context is not None:
         known = _money_amounts(product_context)
         if _money_amounts(text) - known:
