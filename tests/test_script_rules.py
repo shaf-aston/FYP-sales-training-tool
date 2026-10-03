@@ -391,8 +391,15 @@ def test_slow_ai_is_abandoned():
             time.sleep(0.5)
 
     assert CFG["ai_timeout_seconds"] > 0
+    llm = make_llm(Slow(), 0.05, 60)
     with pytest.raises(TimeoutError):
-        make_llm(Slow(), 0.05)("hi", 5)
+        llm("hi", 5)
+    started = time.monotonic()
+    with pytest.raises(RuntimeError, match="resting"):
+        llm("hi", 5)  # after a failure the AI is skipped at once, not waited on again
+    assert time.monotonic() - started < 0.05
+    from core.script_engine import seller
+    seller._ai_resting_until[0] = 0.0
 
 
 def test_uncovered_answer_is_fenced_and_must_stay_inside_the_facts(fake_embedder):

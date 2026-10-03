@@ -11,6 +11,7 @@ margin: 0.03           # top two labels closer than this = close call
 close_call_k: 3        # candidates handed to the judge on a close call
 max_words: 30          # longest sentence the AI may write
 ai_retries: 1
+ai_rest_seconds: 60    # after an AI failure, skip the AI this long (plain script lines meanwhile)
 ai_timeout_seconds: 2   # a slow AI call is abandoned; the turn uses the script line
 objection_loops: 2     # loop twice, third time go direct
 slot_words: 4          # longest phrase the AI may put into a script blank

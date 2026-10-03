@@ -3,6 +3,7 @@
 import json
 import logging
 import re
+import time
 from dataclasses import replace
 from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
@@ -23,8 +24,12 @@ uncovered_log = logging.getLogger("script_engine.uncovered")
 _pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="script-ai")
 
 
-def make_llm(router, timeout):
-    """Adapt the provider router to llm(prompt, max_tokens) -> text. Raises on failure or timeout."""
+_ai_resting_until = [0.0]  # shared by every call: one rate limit covers the whole server
+
+
+def make_llm(router, timeout, rest_seconds):
+    """Adapt the provider router to llm(prompt, max_tokens) -> text. Raises on failure or timeout.
+    After a failure the AI is left alone for `rest_seconds`, so no turn waits on a dead provider."""
 
     def call(prompt, max_tokens):
         result = router.chat_with_fallback(
@@ -34,7 +39,16 @@ def make_llm(router, timeout):
             raise RuntimeError(result.response.error or "provider failed")
         return result.response.content
 
-    return lambda prompt, max_tokens: _pool.submit(call, prompt, max_tokens).result(timeout)
+    def guarded(prompt, max_tokens):
+        if time.monotonic() < _ai_resting_until[0]:
+            raise RuntimeError("AI resting after a recent failure")
+        try:
+            return _pool.submit(call, prompt, max_tokens).result(timeout)
+        except Exception:
+            _ai_resting_until[0] = time.monotonic() + rest_seconds
+            raise
+
+    return guarded
 
 
 def selling_config():
@@ -51,7 +65,7 @@ def build_seller(router, embedder=None):
     cfg = selling_config()
     return ScriptSeller(
         cfg, load_method(cfg["method"]), load_offer(cfg["offer"]), load_common_sense(),
-        embedder or shared_embedder(), make_llm(router, cfg["ai_timeout_seconds"]),
+        embedder or shared_embedder(), make_llm(router, cfg["ai_timeout_seconds"], cfg["ai_rest_seconds"]),
     )
 
 
