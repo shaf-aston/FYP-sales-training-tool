@@ -143,6 +143,9 @@ def api_init():
 
     # greeting + training blob, keep in sync with STRATEGY_PROMPTS
     init_data = generate_init_greeting(bot.flow_engine.flow_type)
+    opening = bot.script_opening()  # a scripted call opens with the script's first line
+    if opening:
+        init_data = {**init_data, "message": opening}
 
     # Add greeting to conversation history so the LLM knows the conversation has started.
     # Without this, the LLM sees an empty history on the first user turn and re-greets.

@@ -37,6 +37,9 @@ class _DummyBot:
     def save_session(self):
         pass
 
+    def script_opening(self):
+        return None
+
 
 class _DummySessionManager:
     def __init__(self):

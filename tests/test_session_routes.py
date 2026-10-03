@@ -50,6 +50,9 @@ class _DummyBot:
     def refresh_current_turn_snapshot(self):
         self.snapshot_refreshed = True
 
+    def script_opening(self):
+        return None
+
     @staticmethod
     def load_session(session_id):
         _DummyBot.loaded_session_id = session_id

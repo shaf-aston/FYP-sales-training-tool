@@ -33,14 +33,18 @@ def make_llm(router):
     return llm
 
 
+def selling_config():
+    return load_yaml("selling.yaml")
+
+
 @lru_cache(maxsize=1)
 def shared_embedder():
     """One model per process: loading it is the slow part."""
-    return make_embedder(load_yaml("selling.yaml"), ROOT)
+    return make_embedder(selling_config(), ROOT)
 
 
 def build_seller(router, embedder=None):
-    cfg = load_yaml("selling.yaml")
+    cfg = selling_config()
     return ScriptSeller(
         cfg, load_method(cfg["method"]), load_offer(cfg["offer"]), load_common_sense(),
         embedder or shared_embedder(), make_llm(router),
