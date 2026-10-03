@@ -454,6 +454,8 @@ class SalesChatbot:
 
     def generate_training(self, user_msg: str, bot_reply: str) -> dict[str, Any]:
         """Generate coaching notes for the current exchange via lightweight LLM call."""
+        if self.seller:
+            return self.seller.training()  # scripted call: the step itself is the coaching note
         return trainer.generate_training(
             self._router, self.flow_engine, user_msg, bot_reply
         )

@@ -5,6 +5,7 @@ first: "00"
 price_step: "14"
 steps:
   "00":
+    name: "Frame"
     ui_stage: logical
     draft: true
     run_on: true   # the frame leads straight into step 01's question
@@ -13,6 +14,8 @@ steps:
     listen:
       any: {then: "01"}
   "01":
+    name: "End outcome"
+    note: 'FREEDOM. Vague → loop back, dig till freedom'
     ui_stage: logical
     say: "What do you want to specifically achieve by making money online?"
     capture: outcome
@@ -27,6 +30,7 @@ steps:
           - "freedom to do what I want with my days"
         then: "02"
   "02":
+    name: "Number"
     ui_stage: logical
     draft: true
     say: "How much do you need to be making to feel {outcome} freedom?"
@@ -35,18 +39,23 @@ steps:
     listen:
       any: {then: "03"}
   "03":
+    name: "Time"
     ui_stage: logical
     say: "How long have you been thinking about this?"
     capture: years
     listen:
       any: {then: "04"}
   "04":
+    name: "Contextualise"
+    note: 'emotional why. Let them talk'
     ui_stage: emotional
     say: "If this has been on your mind for so many nights, months and years, why can't you just ignore it?"
     capture: why
     listen:
       any: {then: "05"}
   "05":
+    name: "Blocker"
+    note: 'externalising: time, money, market, "still researching", "haven''t found the right thing"'
     ui_stage: emotional
     draft: true
     say: "What's the reason you haven't got to {outcome}?"
@@ -55,6 +64,8 @@ steps:
     listen:
       any: {then: "06"}
   "06":
+    name: "Challenge"
+    note: 'little/no action = gap confirmed'
     ui_stage: emotional
     draft: true
     say: "What are you doing now to make {outcome} a reality and not just a dream?"
@@ -63,10 +74,14 @@ steps:
     listen:
       any: {then: "07"}
   "07":  # profile spotted silently, never said
+    name: "Profile"
+    note: 'Analyser / Procrastinator / Sceptic / Magpie'
     ui_stage: emotional
     listen:
       any: {then: "08"}
   "08":
+    name: "Identity gap"
+    note: 'they name gap: risk, decisions, responsibility, action'
     ui_stage: emotional
     say: "We love working with people going from 9-5er to business owner... exciting, but terrifying, because it's outside your comfort zone. What's the main difference between a successful business owner and a 9-5er like you?"
     capture: gap
@@ -75,10 +90,14 @@ steps:
         then: "09"
         ack: "What makes you successful as an employee doesn't make you successful in business."
   "09":  # profile play (pattern break) is not wired in this slice
+    name: "Break pattern"
+    note: 'run their profile play'
     ui_stage: emotional
     listen:
       any: {then: "10"}
   "10":
+    name: "Consequence"
+    note: 'they paint bad future themselves'
     ui_stage: emotional
     say: "What happens to people who say they want freedom but don't push past the fear?"
     capture: future
@@ -87,11 +106,13 @@ steps:
         then: "willing"
         ack: "You could settle like everyone else. You already have for {years} years."
   "willing":
+    name: "Willingness"
     ui_stage: emotional
     say: "Are you willing to keep settling for being average? Nothing wrong with that, I'm not here to judge"
     listen:
       any: {then: "11"}
   "11":
+    name: "Why not?"
     ui_stage: emotional
     say: "What makes you so different from everyone else?"
     listen:
@@ -99,40 +120,51 @@ steps:
         then: "12"
         ack: "No one's potential is determined by what they say but what they choose to do."
   "12":
+    name: "Commit"
     ui_stage: emotional
     say: "What are you going to do differently from today to step into the shoes of a business owner who builds his own freedom?"
     capture: commitment
     listen:
       any: {then: "13"}
   "13":
+    name: "Bridge"
     ui_stage: pitch
     say: "We can give you the tools and directions, but you're the one who needs to drive with full gas on the pedal, aren't you?"
     listen:
       any: {then: "14"}
   "14":
+    name: "Investment"
+    note: 'pre-handle sticker shock → refocus on transformation for future self + people they care about'
     ui_stage: pitch
     say: "{months}-month process, investment is {price}. There are ways to make the investment work as long as you're willing to make it work."
     listen:
       any: {then: "15"}
   "15":
+    name: "Pillar 01 Education & curriculum"
+    note: 'structured, step by step. No wasted time piecing together'
     ui_stage: pitch
     draft: true
     say: "{pillar_1}: structured, step by step, so there's no wasted time piecing it together."
     listen:
       any: {then: "16"}
   "16":
+    name: "Pillar 02 Mentorship"
+    note: 'direct coaching, tailored feedback, avoid landmines'
     ui_stage: pitch
     draft: true
     say: "{pillar_2}: direct coaching and tailored feedback to avoid the landmines. You mentioned you've been stuck and unsure for years... we put that frustration to bed."
     listen:
       any: {then: "17"}
   "17":
+    name: "Pillar 03 Accountability"
     ui_stage: pitch
     draft: true
     say: "{pillar_3}: we tell you what you NEED to hear... hold your feet to the fire. Open to being called out?"
     listen:
       any: {then: "18"}
   "18":
+    name: "Temp check"
+    note: 'need clear yes. Confused buyer = "I need to think about it". Unclear → simplify, re-check'
     ui_stage: pitch
     draft: true  # probe is ours: the source says "unclear -> simplify, re-check"
     say: "That's everything in a nutshell. Does that make sense?"
@@ -163,6 +195,8 @@ steps:
           - "I'm lost"
         then: "18"
   "19":
+    name: "Soft close"
+    note: 'objection → match profile → reuse its pattern break → re-ask soft close'
     ui_stage: pitch
     draft: true  # probe is ours: no source line for a second ask
     say: "Do you see yourself jumping in?"
@@ -185,12 +219,15 @@ steps:
           - "maybe, I'm not sure yet"
         then: "19"
   "20":
+    name: "Self-resell"
+    note: 'they sell themselves, own words'
     ui_stage: outcome
     say: "What makes you say that?"
     capture: reason
     listen:
       any: {then: "21"}
   "21":
+    name: "Next steps"
     ui_stage: outcome
     draft: true
     run_on: true   # leads straight into the payment question
@@ -198,11 +235,13 @@ steps:
     listen:
       any: {then: "22"}
   "22":
+    name: "Payment"
     ui_stage: outcome
     say: "How would you like to process the investment? Credit or debit?"
     listen:
       any: {then: "end"}
   "end":
+    name: "Welcome"
     ui_stage: outcome
     draft: true  # no source line for after payment
     say: "Perfect. I'll send everything over now. Welcome aboard."

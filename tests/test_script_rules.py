@@ -528,3 +528,13 @@ def test_answer_to_an_objection_play_is_normalised_then_the_close_asked_again(se
     think = s.method.objections["think"]
     assert text == f"{think.normalise} {s.method.steps['19'].say}"
     assert s.state.step == "19" and not s.state.play
+
+
+def test_scripted_coaching_note_comes_from_the_step_without_ai(fake_embedder):
+    def no_ai(prompt, n):
+        raise AssertionError("coaching notes must not call the AI")
+
+    s = at(make_seller(fake_embedder, no_ai), "05")
+    notes = s.training()
+    assert notes["what_happened"] == "Script step 05 Blocker."
+    assert notes["next_move"].startswith("Listen for: externalising")

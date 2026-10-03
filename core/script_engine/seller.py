@@ -142,6 +142,16 @@ class ScriptSeller:
         self.state = move.state
         return self._render(move), move.ui_stage
 
+    def training(self):
+        """Notes for the trainee, straight from the script step - no AI, instant."""
+        step = self.method.steps[self.state.step]
+        title = f"{step.id} {step.name}".strip() if step.name else step.id
+        return {
+            "what_happened": f"Script step {title}.",
+            "next_move": f"Listen for: {step.note}" if step.note else "Listen to their answer.",
+            "watch_for": [],
+        }
+
     def _recognise(self, text, labels):
         c = self.cfg
         return recognise(text, labels, self._embedder, c["threshold"], c["margin"],

@@ -30,6 +30,8 @@ class Step:
     draft: bool         # some line here is not verbatim from the source
     listen: tuple       # of Route
     run_on: bool = False  # said, then straight on to the next step without waiting for a reply
+    name: str = ""      # the step's name in the source script, shown to the trainee
+    note: str = ""      # the source's "listen for" note: what the trainee should notice next
 
 
 @dataclass(frozen=True)
@@ -128,6 +130,7 @@ def _step(step_id, data):
         step_id, stage, data.get("say", ""), data.get("say_plain", ""),
         data.get("capture", ""), data.get("probe", ""),
         bool(data.get("draft")), listen, bool(data.get("run_on")),
+        data.get("name", ""), data.get("note", ""),
     )
 
 
