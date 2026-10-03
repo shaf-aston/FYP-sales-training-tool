@@ -44,8 +44,10 @@ class Objection:
 class Method:
     name: str
     first: str
-    steps: dict
+    steps: dict         # in script order
     objections: dict
+    price_step: str     # the price may be said from this step on
+    follow_up: str      # said once an objection has been looped and met directly
 
 
 @dataclass(frozen=True)
@@ -53,6 +55,7 @@ class Fact:
     topic: str
     examples: tuple
     answer: str
+    late_answer: str    # used once the price step is reached; empty = same answer
     draft: bool
 
 
@@ -140,12 +143,19 @@ def parse_method(name, data):
             if route.then not in steps:
                 raise ValueError(f"step {step.id}: unknown then {route.then!r}")
     objections = {k: _objection(k, v) for k, v in (data.get("objections") or {}).items()}
-    return Method(name, first, steps, objections)
+    price_step = str(data.get("price_step", ""))
+    if price_step not in steps:
+        raise ValueError(f"method {name}: price_step {price_step!r} not defined")
+    follow_up = (data.get("follow_up") or {}).get("say", "")
+    return Method(name, first, steps, objections, price_step, follow_up)
 
 
 def parse_offer(name, data):
     facts = {
-        k: Fact(k, tuple(v.get("examples") or ()), v["answer"], bool(v.get("draft")))
+        k: Fact(
+            k, tuple(v.get("examples") or ()), v["answer"],
+            v.get("late_answer", ""), bool(v.get("draft")),
+        )
         for k, v in (data.get("facts") or {}).items()
     }
     return Offer(

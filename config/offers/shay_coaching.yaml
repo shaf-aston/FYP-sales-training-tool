@@ -9,12 +9,21 @@ pillars:
   - "Accountability"
 facts:
   price:
+    draft: true  # late_answer is not from the trainer's source
     examples:
       - "how much does it cost"
       - "what's the price"
       - "what do you charge"
       - "can you give me a ballpark figure"
     answer: "I'm happy to share a range, but first a couple of questions to make sure we can even help you."
+    late_answer: "It's a {months}-month process and the investment is {price}."
+  what_we_do:
+    draft: true
+    examples:
+      - "what do you do"
+      - "what is this about"
+      - "what exactly are you offering"
+    answer: "We coach people through a 6-month programme to build their own business. First, a couple of questions to make sure we can even help you."
   length:
     draft: true
     examples:

@@ -2,6 +2,7 @@
 # Questions are ported from core/prompts.py and config/objection_pathway_map.yaml.
 # draft: true = a line on that step is not verbatim from the source and needs a trainer's wording.
 first: "intent"
+price_step: "present"
 steps:
   "intent":
     ui_stage: intent
@@ -23,13 +24,17 @@ steps:
       any: {then: "change"}
   "change":
     ui_stage: logical
+    draft: true
     say: "What would you change about {problem}, if you could?"
+    say_plain: "What would you change about that, if you could?"
     capture: change
     listen:
       any: {then: "impact"}
   "impact":
     ui_stage: logical
+    draft: true
     say: "Has {problem} had an impact on {goal}?"
+    say_plain: "Has that had an impact on what you are after?"
     capture: impact
     listen:
       any: {then: "why_now"}
@@ -41,13 +46,17 @@ steps:
       any: {then: "future"}
   "future":
     ui_stage: emotional
+    draft: true
     say: "Let's say there was a way to help you solve {problem}... what would tangibly be different for you at that point?"
+    say_plain: "Let's say there was a way to help you solve that... what would tangibly be different for you at that point?"
     capture: future
     listen:
       any: {then: "inaction"}
   "inaction":
     ui_stage: emotional
+    draft: true
     say: "So on the flip side... what happens if you don't change? Like, if we continue down the current path with {problem} for 2 weeks, 2 months, 2 years even?"
+    say_plain: "So on the flip side... what happens if you don't change? Like, if we continue down the current path for 2 weeks, 2 months, 2 years even?"
     capture: cost
     listen:
       any: {then: "feeling"}
@@ -66,6 +75,7 @@ steps:
     ui_stage: pitch
     draft: true
     say: "Based on {goal} and {problem}, here's why this fits: {pillar_1}, {pillar_2} and {pillar_3}. How does this get you to {goal}?"
+    say_plain: "Here's why this fits: {pillar_1}, {pillar_2} and {pillar_3}. How does this get you to where you want to be?"
     listen:
       any: {then: "check"}
   "check":
@@ -114,6 +124,12 @@ steps:
   "payment":
     ui_stage: outcome
     say: "How would you like to process the investment? Credit or debit?"
+
+# Said after the loop lines and the direct line have all been used. The trainer's FAQ says to
+# book the follow-up and leave on a good note; it gives no wording.
+follow_up:
+  draft: true
+  say: "No problem. Let's book a follow-up call so you can decide properly, and I'll leave it there for today."
 
 # Loop twice, third time direct. Loop lines are the app's own objection-path questions.
 objections:

@@ -15,10 +15,15 @@ class ScriptState:
 
 @dataclass(frozen=True)
 class Move:
-    text_template: str  # still contains {blanks}; fill.py resolves them
+    say: str            # still contains {blanks}; fill.py resolves them
     state: ScriptState
     ui_stage: str
     done: bool = False  # landed on a step with nothing left to listen for
+    ack: str = ""       # short fixed lead-in from the route taken
+
+    @property
+    def text_template(self):
+        return f"{self.ack} {self.say}".strip()
 
 
 def _speak(method, state):
@@ -50,6 +55,25 @@ def advance(method, state, signal, reply=""):
         slots = {**slots, step.capture: reply}
         last_point = reply
     moved = _speak(method, replace(state, step=route.then, slots=slots, last_point=last_point))
-    if route.ack:
-        return replace(moved, text_template=f"{route.ack} {moved.text_template}")
-    return moved
+    return replace(moved, ack=route.ack)
+
+
+def price_open(method, step_id):
+    """True once the script has reached the step where the price may be said."""
+    order = list(method.steps)
+    return order.index(step_id) >= order.index(method.price_step)
+
+
+def object_to(method, state, name, loops):
+    """Answer an objection: loop lines first, then the direct line, then the follow-up."""
+    objection = method.objections[name]
+    seen = state.objection_counts.get(name, 0)
+    if seen < loops:
+        line = objection.loop[min(seen, len(objection.loop) - 1)]
+    elif seen == loops:
+        line = objection.direct
+    else:
+        line = method.follow_up
+    counts = {**state.objection_counts, name: seen + 1}
+    step = method.steps[state.step]
+    return Move(line, replace(state, objection_counts=counts), step.ui_stage, seen > loops)

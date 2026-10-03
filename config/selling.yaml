@@ -10,3 +10,6 @@ close_call_k: 3        # candidates handed to the judge on a close call
 max_words: 30          # longest sentence the AI may write
 ai_retries: 1
 objection_loops: 2     # loop twice, third time go direct
+slot_words: 6          # longest phrase the AI may put into a script blank
+stop_words: [a, an, the, i, i'm, i've, my, me, to, of, and, or, in, on, at, for, is, am, are, be, it, that, this, so, with, as, by, we, you, your]
+question_starts: [do, does, did, can, could, is, are, will, would, should, what, how, why, when, where, who, which]

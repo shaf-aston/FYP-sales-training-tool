@@ -1,4 +1,5 @@
 first: "a"
+price_step: "b"
 steps:
   "a":
     ui_stage: logical

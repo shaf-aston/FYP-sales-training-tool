@@ -2,10 +2,13 @@
 # {blank} = filled from the prospect's own answers (the script's XYZ) or from the offer.
 # draft: true = a line on that step is not verbatim from the source and needs a trainer's wording.
 first: "00"
+price_step: "14"
 steps:
   "00":
     ui_stage: logical
+    draft: true
     say: "I believe you had a chat with {setter} setter... I've read your application but I don't like to assume anything"
+    say_plain: "I've read your application but I don't like to assume anything."
     listen:
       any: {then: "01"}
   "01":
@@ -24,7 +27,9 @@ steps:
         then: "02"
   "02":
     ui_stage: logical
+    draft: true
     say: "How much do you need to be making to feel {outcome} freedom?"
+    say_plain: "How much do you need to be making to feel that freedom?"
     capture: number
     listen:
       any: {then: "03"}
@@ -42,13 +47,17 @@ steps:
       any: {then: "05"}
   "05":
     ui_stage: emotional
+    draft: true
     say: "What's the reason you haven't got to {outcome}?"
+    say_plain: "What's the reason you haven't got there yet?"
     capture: blocker
     listen:
       any: {then: "06"}
   "06":
     ui_stage: emotional
+    draft: true
     say: "What are you doing now to make {outcome} a reality and not just a dream?"
+    say_plain: "What are you doing now to make that a reality and not just a dream?"
     capture: action
     listen:
       any: {then: "07"}
@@ -180,6 +189,12 @@ steps:
   "22":
     ui_stage: outcome
     say: "How would you like to process the investment? Credit or debit?"
+
+# Said after the loop lines and the direct line have all been used. The trainer's FAQ says to
+# book the follow-up and leave on a good note; it gives no wording.
+follow_up:
+  draft: true
+  say: "No problem. Let's book a follow-up call so you can decide properly, and I'll leave it there for today."
 
 # Objection loop (after the soft close). Loop twice, third time direct.
 # Loop lines: the trainer's FAQ and the generic objection page.
