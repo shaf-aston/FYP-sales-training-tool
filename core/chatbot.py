@@ -9,7 +9,6 @@ from typing import Any, Optional
 
 from .loader import (
     get_product_settings,
-    assign_ab_variant,
 )
 from .analysis import (
     ConversationState,
@@ -85,7 +84,6 @@ class SalesChatbot:
             product_context=product_context,
         )
 
-        self._ab_variant = assign_ab_variant(session_id) if session_id else None
         self._turn_snapshots = []
 
         if session_id and record_session_start:
@@ -94,7 +92,6 @@ class SalesChatbot:
                 session_id=session_id,
                 product_type=product_type or "unknown",
                 initial_strategy=str(self.flow_engine.flow_type),
-                ab_variant=self._ab_variant,
             )
 
     @property

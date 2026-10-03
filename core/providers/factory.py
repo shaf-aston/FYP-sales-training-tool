@@ -3,17 +3,13 @@
 from __future__ import annotations
 
 from .config import DEFAULT_LLM_PROVIDER_ORDER, get_llm_fallback_order, get_llm_provider_order
-from .llm import GroqProvider, SambaNovaProvider
+from .llm import GroqProvider
 
 LLM_PROVIDER_TYPES = {
     "groq": GroqProvider,
-    "sambanova": SambaNovaProvider,
 }
 
 _PROVIDER_ALIASES = {
-    "samba": "sambanova",
-    "samba-nova": "sambanova",
-    "samba_nova": "sambanova",
     "groqcloud": "groq",
 }
 

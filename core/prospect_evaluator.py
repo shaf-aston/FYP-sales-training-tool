@@ -4,7 +4,6 @@
 from .loader import load_prospect_config
 from .utils import (
     clamp_score,
-    merge_unique_items,
     range_label,
     tokenize,
 )

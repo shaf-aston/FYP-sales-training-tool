@@ -10,15 +10,12 @@ from dotenv import load_dotenv
 ROOT_DIR = Path(__file__).resolve().parents[2]
 load_dotenv(ROOT_DIR / ".env")
 
-DEFAULT_LLM_PROVIDER_ORDER = ["groq", "sambanova"]
+DEFAULT_LLM_PROVIDER_ORDER = ["groq"]
 
 # Groq retires models without notice and the old default (llama-3.3-70b-versatile)
 # now 404s, which silently emptied every reply. Check `client.models.list()` against
 # the live key when replies go blank, and override with GROQ_LLM_MODEL.
 DEFAULT_GROQ_MODEL = "qwen/qwen3.8-27b"
-DEFAULT_SAMBANOVA_MODEL = "Meta-Llama-3.3-70B-Instruct"
-
-DEFAULT_SAMBANOVA_BASE_URL = "https://api.sambanova.ai/v1"
 
 
 def _clean_env_value(value: str | None) -> str | None:
@@ -91,18 +88,3 @@ def get_groq_api_keys() -> list[str]:
         seen.add(cleaned)
         deduped.append(cleaned)
     return deduped
-
-
-def get_sambanova_api_key() -> str | None:
-    """Return the SambaNova API key if configured."""
-    return _clean_env_value(os.environ.get("SAMBANOVA_API_KEY"))
-
-
-def get_sambanova_model() -> str:
-    """Return the SambaNova chat model, honoring env overrides."""
-    return os.environ.get("SAMBANOVA_MODEL") or DEFAULT_SAMBANOVA_MODEL
-
-
-def get_sambanova_base_url() -> str:
-    """Return the SambaNova API base URL, honoring env overrides."""
-    return os.environ.get("SAMBANOVA_BASE_URL") or DEFAULT_SAMBANOVA_BASE_URL

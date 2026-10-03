@@ -12,6 +12,7 @@ products:
 
   default:
     name: "Multi-product Assistant"
+    aliases: ["generic", "standard"]
     strategy: "intent"
     context: "various products and services"
     knowledge: |

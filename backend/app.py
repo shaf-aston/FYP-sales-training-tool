@@ -11,42 +11,22 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 
 load_dotenv(ROOT_DIR / ".env")
 
-if __package__ in (None, ""):
-    # Support direct execution: `python backend/app.py`
-    if str(ROOT_DIR) not in sys.path:
-        sys.path.insert(0, str(ROOT_DIR))
+# Makes `backend` and `core` importable when run directly: `python backend/app.py`
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
 
-    from core.constants import MAX_PROSPECT_SESSIONS, PROSPECT_IDLE_MINUTES, UNDETERMINED_STAGE
-    from backend.messages import (
-        INTERNAL_SERVER_ERROR,
-        MESSAGE_REQUIRED,
-    )
-    from backend.security import (
-        InputValidator,
-        SecurityConfig,
-        SecurityHeadersMiddleware,
-        SessionSecurityManager,
-        initialize_security,
-    )
-    from backend import settings
-    from backend.routes import analytics, chat, prospect, session
-    from backend.routes._utils import make_require_session
-else:
-    from core.constants import MAX_PROSPECT_SESSIONS, PROSPECT_IDLE_MINUTES, UNDETERMINED_STAGE
-    from .messages import (
-        INTERNAL_SERVER_ERROR,
-        MESSAGE_REQUIRED,
-    )
-    from .security import (
-        InputValidator,
-        SecurityConfig,
-        SecurityHeadersMiddleware,
-        SessionSecurityManager,
-        initialize_security,
-    )
-    from . import settings
-    from .routes import analytics, chat, prospect, session
-    from .routes._utils import make_require_session
+from core.constants import MAX_PROSPECT_SESSIONS, PROSPECT_IDLE_MINUTES, UNDETERMINED_STAGE  # noqa: E402
+from backend.messages import INTERNAL_SERVER_ERROR, MESSAGE_REQUIRED  # noqa: E402
+from backend.security import (  # noqa: E402
+    InputValidator,
+    SecurityConfig,
+    SecurityHeadersMiddleware,
+    SessionSecurityManager,
+    initialize_security,
+)
+from backend import settings  # noqa: E402
+from backend.routes import analytics, chat, prospect, session  # noqa: E402
+from backend.routes._utils import make_require_session  # noqa: E402
 
 app = Flask(
     __name__,
