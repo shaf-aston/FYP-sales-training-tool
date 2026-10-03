@@ -42,6 +42,8 @@ def _phrase(line, blank, reply, cfg, llm):
         said = words(phrase)
         if said and said[0] in cfg["bad_phrase_starts"]:
             broken.append("starts_like_a_verb")  # "feel to stop working ..." breaks the line
+        if set(said) & set(cfg["prospect_pronouns"]):
+            broken.append("speaks_as_prospect")  # "got to my own business"
         before, _, after = sentence.partition("____")
         if said and (said[-1:] == words(after)[:1] or said[:1] == words(before)[-1:]):
             broken.append("repeats_next_word")  # "feel travel X X"
