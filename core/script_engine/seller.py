@@ -4,8 +4,8 @@ import json
 import logging
 import re
 import time
-from dataclasses import replace
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import replace
 from functools import lru_cache
 from pathlib import Path
 
