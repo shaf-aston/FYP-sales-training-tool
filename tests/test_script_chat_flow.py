@@ -77,7 +77,7 @@ def test_script_takes_over_when_the_call_turns_consultative(client):
     # a call that opens with no product starts in intent mode, the prompt-driven way
     response = client.post("/api/init", json={})
     headers = {"X-Session-ID": response.get_json()["session_id"]}
-    from backend.app import session_manager  # noqa: PLC0415
+    from backend.app import session_manager
     bot = session_manager.get(headers["X-Session-ID"])
     assert bot.seller is None
     bot.flow_engine.switch_strategy("consultative")
