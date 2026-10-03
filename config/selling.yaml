@@ -4,6 +4,8 @@ method: cat
 offer: shay_coaching
 embed_model: BAAI/bge-small-en-v1.5
 embed_cache_dir: .cache/fastembed   # model files; relative to the project root, gitignored
+embed_threads: 1       # CPU threads for the model; more threads use much more memory (free hosts have 512 MB)
+embed_batch_size: 16   # texts embedded at once; smaller keeps peak memory low
 threshold: 0.65        # lowest similarity that counts as a match
 interrupt_threshold: 0.8   # on a step that takes any answer, an interruption must score this high
 near_miss: 0.1         # a top score this far under the threshold is a close call too
