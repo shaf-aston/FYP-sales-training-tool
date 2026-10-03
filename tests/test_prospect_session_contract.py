@@ -37,7 +37,10 @@ def test_prospect_init_returns_opening_message_and_history(monkeypatch):
     payload = response.get_json()
     assert response.status_code == 200
     assert payload["success"] is True
-    assert payload["message"] == "Hi, I'm Alex. I'm looking into options today."
+    # The opening line is filled from config, not written by the AI.
+    opening = payload["message"]
+    assert opening != "Hi, I'm Alex. I'm looking into options today."
+    assert payload["persona"]["name"] in opening
 
     state_response = client.get(
         "/api/prospect/state",
@@ -48,7 +51,7 @@ def test_prospect_init_returns_opening_message_and_history(monkeypatch):
     assert state_response.status_code == 200
     assert state_payload["success"] is True
     assert state_payload["conversation_history"] == [
-        {"role": "assistant", "content": "Hi, I'm Alex. I'm looking into options today."}
+        {"role": "assistant", "content": opening}
     ]
 
 

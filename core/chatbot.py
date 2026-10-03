@@ -393,10 +393,8 @@ class SalesChatbot:
         return self._build_response(bot_reply, latency_ms, user_message)
 
     def generate_training(self, user_msg: str, bot_reply: str) -> dict[str, Any]:
-        """Generate coaching notes for the current exchange via lightweight LLM call."""
-        return trainer.generate_training(
-            self._router, self.flow_engine, user_msg, bot_reply
-        )
+        """Coach notes for the current exchange, from config (no AI call)."""
+        return trainer.generate_training(self.flow_engine, user_msg)
 
     def answer_training_question(
         self, question: str, style: str = "tactical"

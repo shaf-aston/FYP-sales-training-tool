@@ -88,7 +88,7 @@ def test_redo_replaces_the_turn_and_gets_a_real_reply(client, played_session):
     review = client.get("/api/prospect/review", headers=played_session).get_json()
     assert len(review["turns"]) == 1
     assert "pressure" not in review["turns"][0]["signals"]
-    assert review["turns"][0]["rating"] > 3
+    assert "open_question" in review["turns"][0]["signals"]
 
 
 @pytest.mark.parametrize("bad_turn", [0, -1, 99, "two", 1.5, True, None])

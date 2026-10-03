@@ -8,13 +8,19 @@ import time
 from dataclasses import dataclass, field
 
 from .analytics.session_analytics import SessionAnalytics
+from .constants import BUYER_TEMPERATURE
 from .loader import load_prospect_config, load_real_objections
 from .buyer_prompt import build_product_context, build_system_prompt
 from .buyer_rules import ObjectionPacer, end_outcome
 from .real_calls import pick_bank
 from .response_guardrails import check_buyer_reply
 from .services.provider_router import ProviderRouter
-from .selling_quality import apply_readiness, score_seller_turn
+from .selling_quality import (
+    NEGATIVE_SIGNALS,
+    apply_readiness,
+    load_selling_signals,
+    score_seller_turn,
+)
 from .session_review import build_review
 
 logger = logging.getLogger(__name__)
@@ -204,7 +210,7 @@ class ProspectSession:
     def model_name(self) -> str:
         return self._router.model_name
 
-    def _get_chat_with_fallback(self, messages, temperature=0.8, max_tokens=200):
+    def _get_chat_with_fallback(self, messages, temperature=BUYER_TEMPERATURE, max_tokens=200):
         """Ask the buyer's AI provider, falling back to others on failure.
 
         Raises ProviderUnavailable when no provider produced anything. Returning the
@@ -255,41 +261,33 @@ class ProspectSession:
         )
 
     def get_opening_message(self) -> ProspectResponse:
-        """Generate the prospect's opening message to start the conversation.
+        """The prospect's opening line, filled from opening_lines in config (no AI).
 
         Returns:
             ProspectResponse with the opening message and state snapshot.
         """
-        system_prompt = self._system_prompt()
-        persona_name = self.persona.get("name", "Alex")
-
-        opening_instruction = (
-            f"You are {persona_name}. Start the conversation naturally as a potential "
-            f"customer. Introduce yourself briefly and say what brought you in today. "
-            f"Keep it to 1-2 sentences. "
-            f"Don't lay out everything you want straight away."
+        persona = self.persona
+        background = str(persona.get("background", "")).strip()
+        lines = load_prospect_config()["opening_lines"][self.state.difficulty]
+        line = random.Random(self.session_id or "").choice(lines)
+        content = line.format(
+            name=persona.get("name", "Alex"),
+            background=background[:1].lower() + background[1:],
+            background_cap=background,
+            need=(persona.get("needs") or ["this"])[0],
         )
-
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": opening_instruction},
-        ]
-
-        start = time.time()
-        response = self._get_chat_with_fallback(messages, temperature=0.7, max_tokens=150)
-        latency = (time.time() - start) * 1000
-
+        latency = 0.0
         self.conversation_history.append(
             {
                 "role": "assistant",
-                "content": response.content,
+                "content": content,
             }
         )
-        self._log_turn_event(None, response.content, turn_index=0)
+        self._log_turn_event(None, content, turn_index=0)
         self.save_session()
 
         return ProspectResponse(
-            content=response.content,
+            content=content,
             latency_ms=round(latency, 1),
             provider=self.provider_name,
             model=self.model_name,
@@ -398,7 +396,7 @@ class ProspectSession:
 
         start = time.time()
         try:
-            response = self._get_chat_with_fallback(messages, temperature=0.7, max_tokens=250)
+            response = self._get_chat_with_fallback(messages, max_tokens=250)
         except ProviderUnavailable:
             self._restore(before_turn)
             raise
@@ -533,42 +531,18 @@ class ProspectSession:
         self.state.readiness = apply_readiness(self.state.readiness, rating, behaviour)
 
     def _generate_coaching_hint(self, user_message: str) -> dict:
-        """Generate a one-sentence coaching hint for the salesperson.
+        """One-line tip for the seller, picked from selling_signals.yaml hints (no AI).
 
-        Args:
-            user_message: The salesperson's message to coach on.
-
-        Returns:
-            Dict with optional 'hint' key containing coaching feedback.
+        Uses the signals this turn's score already found: the first problem wins,
+        then the first strength, then the default line.
         """
-        readiness = self.state.readiness
-        behaviour = self.difficulty_profile["behaviour"]
-        turns_left = behaviour["patience_turns"] - self.state.turn_count
-
-        tone = (
-            "Be direct and strict."
-            if self.feedback_style.lower() in ("strict", "tough", "hard")
-            else "Be supportive and coaching-oriented."
-        )
-        hint_prompt = f"""You are a sales coach observing a practice session. {tone}
-
-The salesperson just said: "{user_message}"
-The prospect's current readiness: {readiness:.2f} (0=hostile, 1=ready to buy)
-Turns remaining before prospect leaves: {turns_left}
-Difficulty: {self.state.difficulty}
-
-Give one coaching tip - one sentence. Focus on what they should do next.
-Don't give away what the prospect actually wants."""
-
-        try:
-            messages = [
-                {"role": "system", "content": hint_prompt},
-                {"role": "user", "content": "Give a coaching tip."},
-            ]
-            resp = self._get_chat_with_fallback(messages, temperature=0.5, max_tokens=80)
-            return {"hint": resp.content.strip()}
-        except Exception:
-            return {"hint": "Find out more before pitching anything."}
+        hints = load_selling_signals()["hints"]
+        fired = self.last_turn_score.signals if self.last_turn_score else []
+        ordered = [s for s in NEGATIVE_SIGNALS if s in fired] + [
+            s for s in fired if s not in NEGATIVE_SIGNALS
+        ]
+        key = next((s for s in ordered if s in hints), "default")
+        return {"hint": hints[key]}
 
     def _log_turn_event(
         self, user_message: str | None, assistant_message: str, turn_index: int
@@ -618,18 +592,4 @@ Don't give away what the prospect actually wants."""
         """
         from .prospect_evaluator import evaluate_prospect_session
 
-        if not self.scoring_enabled:
-            # Return deterministic evaluation-only pack (no LLM call) but keep API shape stable.
-            return evaluate_prospect_session(
-                provider=None,
-                conversation_history=self.conversation_history,
-                prospect_state=self.state,
-                product_context=self.product_context,
-            )
-
-        return evaluate_prospect_session(
-            provider=self.provider,
-            conversation_history=self.conversation_history,
-            prospect_state=self.state,
-            product_context=self.product_context,
-        )
+        return evaluate_prospect_session(self.conversation_history, self.state)

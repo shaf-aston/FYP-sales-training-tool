@@ -1,0 +1,71 @@
+# Live coach notes shown beside each bot reply (core/trainer.py generate_training).
+# No AI: a buyer move below wins; otherwise the note for the current stage is used.
+# Keep what_happened and next_move to 15 words or fewer, watch_for items to 8.
+
+# Buyer moves, checked in this order against the buyer's message (signals.yaml lists).
+moves:
+  walking:
+    what_happened: "Buyer is leaving. The bot respects the exit instead of chasing."
+    next_move: "Leave the door open with one low-pressure next step."
+    watch_for: ["Begging or last-minute discounts", "Arguing with their decision"]
+  commitment:
+    what_happened: "Buyer said yes. The bot confirms and moves to the next step."
+    next_move: "Stop selling. Confirm the details and how to get started."
+    watch_for: ["Talking past the close", "Adding new doubts or options"]
+  objection:
+    what_happened: "Buyer pushed back. The bot acknowledges before answering."
+    next_move: "Ask what sits behind the concern before you answer it."
+    watch_for: ["Arguing with the objection", "Dropping price straight away"]
+  direct_info_requests:
+    what_happened: "Buyer asked about price. The bot answers plainly, then ties it to value."
+    next_move: "Give the number, then link it to the problem they named."
+    watch_for: ["Dodging the price question", "Quoting a price that isn't real"]
+
+# Per stage, when no buyer move above matched.
+stages:
+  consultative:
+    intent:
+      what_happened: "Opening discovery. The bot asks what brought them here."
+      next_move: "Ask one open question about what they want to change."
+      watch_for: ["Pitching before you know the need", "Several questions at once"]
+    logical:
+      what_happened: "Digging into the problem. The bot asks what isn't working."
+      next_move: "Ask what they've tried and why it fell short."
+      watch_for: ["Naming the problem for them", "Moving on before doubt appears"]
+    emotional:
+      what_happened: "Raising the stakes. The bot asks what staying the same costs."
+      next_move: "Ask what would be different if this were fixed."
+      watch_for: ["Pushing on feelings too hard", "Skipping straight to the pitch"]
+    pitch:
+      what_happened: "Presenting the offer, tied to the goals the buyer stated."
+      next_move: "Link each benefit to something they said, then ask for a decision."
+      watch_for: ["Listing features they never asked about", "Ending on a vague question"]
+    objection:
+      what_happened: "Handling a concern by reframing it around their goals."
+      next_move: "Recall their stated goal and show how this protects it."
+      watch_for: ["Arguing or pressuring", "Ignoring the real concern"]
+    outcome:
+      what_happened: "Closing out. The decision is made either way."
+      next_move: "Confirm next steps clearly and end on good terms."
+      watch_for: ["Reopening the sale", "Leaving next steps vague"]
+  transactional:
+    intent:
+      what_happened: "Quick discovery. The bot checks the use-case and budget."
+      next_move: "Confirm what they need it for, then move to the options."
+      watch_for: ["Long discovery for a quick buyer", "Guessing their budget"]
+    pitch:
+      what_happened: "Matching an option to what the buyer asked for."
+      next_move: "Recommend one option and say why it fits."
+      watch_for: ["Too many options at once", "Burying the price"]
+    negotiation:
+      what_happened: "Working out terms the buyer can say yes to."
+      next_move: "Trade, don't give: any discount gets something back."
+      watch_for: ["Discounting without being asked", "Changing the offer twice"]
+    objection:
+      what_happened: "Handling a concern so the deal can move forward."
+      next_move: "Answer the concern directly, then ask if it's settled."
+      watch_for: ["Arguing with the buyer", "Over-explaining"]
+    outcome:
+      what_happened: "Closing out. The decision is made either way."
+      next_move: "Confirm next steps clearly and end on good terms."
+      watch_for: ["Reopening the sale", "Leaving next steps vague"]

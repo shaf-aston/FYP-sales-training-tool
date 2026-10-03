@@ -121,6 +121,19 @@ difficulty_profiles:
       - type: "price"
         text: "I need to see a detailed cost breakdown before I consider this."
 
+# The buyer's first line (no AI). One is picked per session, the same one every
+# replay. Fields: {name}, {background} (first letter lowered), {need} (first need).
+opening_lines:
+  easy:
+    - "Hi, I'm {name} - {background}. I'm hoping to find something that helps with {need}."
+    - "Hello! {name} here, {background}. I've been meaning to look into {need}."
+  medium:
+    - "Hi, {name} here - {background}. I'm looking at options around {need}, but I'm not committing to anything today."
+    - "I'm {name}, {background}. I've got a few minutes. We're weighing a few options - {need} is top of my list."
+  hard:
+    - "{name}. {background_cap}. I've got ten minutes - what have you got?"
+    - "I'm {name}, {background}. I've heard a lot of pitches about {need}. Make it quick."
+
 personas:
   general:
     - name: "Alex"

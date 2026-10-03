@@ -149,3 +149,20 @@ mirroring_stopwords:
   - "need"
   - "know"
   - "think"
+
+# One-line tip shown after a seller turn when hints are on (prospect mode, no AI).
+# The first negative signal that fired picks the tip; otherwise the first positive one;
+# otherwise `default`. Keys match the signal names in core/selling_quality.py.
+hints:
+  pressure: "Drop the urgency. Ask what would make now the right time for them."
+  premature_pitch: "Hold the pitch. Ask one more question about what they need first."
+  monologue: "Cut it to two sentences and end with a question."
+  question_stacking: "Ask one question and wait for the answer."
+  low_effort: "Give them more to react to: a question about their situation."
+  closed_question: "Turn that into a how or what question so they explain."
+  generic_question: "Ask about something they actually said, not a stock question."
+  mirroring: "Good listening. Now ask what that costs them day to day."
+  on_topic: "Good follow-up. Keep building on their words."
+  acknowledgement: "Nice acknowledgement. Follow it with one open question."
+  open_question: "Good open question. Next, tie it to something they told you."
+  default: "Find out more before pitching anything."

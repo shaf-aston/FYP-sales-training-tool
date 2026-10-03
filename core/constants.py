@@ -33,7 +33,9 @@ TERSE_INPUT_THRESHOLD = 3
 # strategy detection - any more than 3 turns can be frustrating for the user
 MIN_TURNS_BEFORE_ADVANCE = 3
 
-# LLM provider
-DEFAULT_TEMPERATURE = 0.8
+# LLM provider. Lower = steadier wording across chats; rules already pick what to say.
+DEFAULT_TEMPERATURE = 0.4
+# The AI buyer gets a little more variety so personas don't all sound alike.
+BUYER_TEMPERATURE = 0.6
 DEFAULT_MAX_TOKENS = 200
 
