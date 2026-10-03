@@ -13,7 +13,7 @@ import { HelpDialog } from "@/features/help/HelpDialog";
 import { ProspectDialogs } from "@/features/prospect/ProspectDialogs";
 import { ProspectPanel } from "@/features/prospect/ProspectPanel";
 import { QuizPanel } from "@/features/quiz/QuizPanel";
-import { SessionProvider, useSession } from "@/features/session/SessionContext";
+import { SessionProvider, useSession, type LearnerRole } from "@/features/session/SessionContext";
 import { Sidebar } from "@/features/sidebar/Sidebar";
 import { VoiceProvider } from "@/features/voice/VoiceContext";
 import { UiProvider, useUi } from "@/state/UiContext";
@@ -39,12 +39,13 @@ function Layout() {
   );
 }
 
-export function AppShell() {
+/** `role` is the learner's seat: /practice/ plays the buyer, /practice/sell/ does the selling. */
+export function AppShell({ role }: { role: LearnerRole }) {
   return (
     <ToastProvider>
       <ConfirmProvider>
         <UiProvider>
-          <SessionProvider>
+          <SessionProvider role={role}>
             <DraftProvider>
               <VoiceProvider>
                 <AmbientFilm />

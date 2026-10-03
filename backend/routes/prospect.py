@@ -15,6 +15,7 @@ from ..messages import (
 from ..security import InputValidator, require_rate_limit
 from ._utils import make_require_session, validate_provider
 from core.analytics.session_analytics import SessionAnalytics
+from core.constants import MAX_CHOSEN_OBJECTION_CHARS, MAX_PERSONA_NAME_CHARS
 from core.prospect_session import ProviderUnavailable
 from core.quiz import build_prospect_question, score_prospect_answer
 from core.script_drills import build_drill_set
@@ -67,6 +68,31 @@ def prospect_products():
     return jsonify({"ok": True, "products": result})
 
 
+@bp.route("/personas", methods=["GET"])
+def prospect_personas():
+    """The buyer personas a learner can pick for one product."""
+    from core.prospect_session import personas_for
+
+    product_type = request.args.get("product_type", "default")
+    return jsonify({
+        "ok": True,
+        "personas": [
+            {"name": p["name"], "background": p.get("background", ""), "personality": p.get("personality", "")}
+            for p in personas_for(product_type)
+        ],
+    })
+
+
+def _optional_text(data: dict, field: str, limit: int):
+    """A stripped optional string field, or an error response when it is the wrong shape."""
+    value = data.get(field)
+    if value in (None, ""):
+        return None, None
+    if not isinstance(value, str) or len(value.strip()) > limit:
+        return None, (jsonify({"error": f"{field} must be text up to {limit} characters"}), 400)
+    return value.strip() or None, None
+
+
 @bp.route("/init", methods=["POST"])
 @require_rate_limit("prospect")
 def prospect_init():
@@ -86,17 +112,30 @@ def prospect_init():
 
     if difficulty not in ("easy", "medium", "hard"):
         return jsonify({"error": "Invalid difficulty. Choose: easy, medium, hard"}), 400
+    persona_name, error = _optional_text(data, "persona", MAX_PERSONA_NAME_CHARS)
+    if error:
+        return error
+    objection, error = _optional_text(data, "objection", MAX_CHOSEN_OBJECTION_CHARS)
+    if error:
+        return error
+
+    from core.prospect_session import ProspectSession, select_persona
+
+    try:
+        persona = select_persona(product_type, persona_name)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
 
     session_id = secrets.token_hex(16)
 
     try:
-        from core.prospect_session import ProspectSession
-
         ps = ProspectSession(
             provider_type=provider,
             product_type=product_type,
             difficulty=difficulty,
+            persona=persona,
             session_id=session_id,
+            objection=objection,
         )
         opening = ps.get_opening_message()
         state.prospect_session_manager.set(session_id, ps)

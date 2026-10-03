@@ -6,6 +6,9 @@
   padding: var(--space-5) var(--space-6) var(--space-3);
 }
 .eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
   font-size: var(--text-xs);
   font-weight: 700;
   letter-spacing: var(--tracking-label);
@@ -32,6 +35,12 @@
 }
 .menu {
   position: relative;
+}
+.switch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  text-decoration: none;
 }
 .popover {
   position: absolute;

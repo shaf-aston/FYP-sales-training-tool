@@ -78,35 +78,24 @@ class ProspectResponse:
     coaching: dict | None = None
 
 
-def select_persona(product_type: str) -> dict:
-    """Select a persona for the prospect based on product type.
+def personas_for(product_type: str) -> list[dict]:
+    """The buyer personas available for a product (its own, else the general pool)."""
+    personas = load_prospect_config()["personas"]
+    return personas.get(product_type) or personas["general"]
 
-    Args:
-        product_type: The type of product being sold.
 
-    Returns:
-        A dictionary containing persona details (name, background, needs, etc.).
+def select_persona(product_type: str, name: str | None = None) -> dict:
+    """The named persona for this product, or a random one when no name is given.
+
+    Raises ValueError for a name that is not in this product's pool.
     """
-    config = load_prospect_config()
-    personas = config.get("personas", {})
-
-    product_personas = personas.get(product_type)
-    if product_personas:
-        return random.choice(product_personas)
-
-    general = personas.get("general", [])
-    if general:
-        return random.choice(general)
-
-    # Fallback default persona
-    return {
-        "name": "Alex",
-        "background": "Professional considering a purchase",
-        "needs": ["value", "quality", "reliability"],
-        "budget": "mid-range",
-        "pain_points": ["current solution isn't meeting needs"],
-        "personality": "Practical and straightforward",
-    }
+    pool = personas_for(product_type)
+    if not name:
+        return random.choice(pool)
+    for persona in pool:
+        if persona["name"].lower() == name.strip().lower():
+            return persona
+    raise ValueError(f"Unknown persona '{name}' for product '{product_type}'")
 
 
 class ProspectSession:
@@ -123,6 +112,7 @@ class ProspectSession:
         difficulty: str = "medium",
         persona: dict | None = None,
         session_id: str = "",
+        objection: str | None = None,
     ):
         """Initialize a prospect session.
 
@@ -132,6 +122,7 @@ class ProspectSession:
             difficulty: Session difficulty level (default: 'medium').
             persona: Optional persona dict; randomly selected if None.
             session_id: Optional session identifier.
+            objection: Optional objection the learner wants to practise; raised on turn 1.
         """
         # An id-less session saves nothing, logs nothing, and shares its objection
         # dice with every other id-less session. One owner of the id, never blank.
@@ -156,6 +147,7 @@ class ProspectSession:
             self.session_id,
             behaviour,
             pick_bank(real_pool, self.session_id, len(profile_bank)) if real_pool else profile_bank,
+            first={"type": "chosen", "text": objection} if objection else None,
         )
 
         if persona is None:

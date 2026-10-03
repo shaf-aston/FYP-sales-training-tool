@@ -29,6 +29,18 @@ export const config = {
     celebrateGrades: ["A"],
   },
   knowledge: { nameMax: 100, fieldMax: 1_000 },
+  /** Prospect setup: the learner's own objection (server caps at the same length) and quick picks. */
+  chosenObjection: {
+    max: 200,
+    picks: [
+      "It's too expensive for us right now.",
+      "We already use someone for this.",
+      "Call me back next quarter.",
+      "I need to run it by my business partner.",
+      "Just send me a brochure.",
+      "We tried something like this before and it didn't work.",
+    ],
+  },
   coachTextMax: 120,
   /** Night-city film: light sizes, drift speed, glow and flicker. */
   film: {
@@ -49,7 +61,7 @@ export const config = {
     lightness: "90%, 65%",
   },
   /** Page addresses, so links never hard-code paths. */
-  routes: { home: "/", practice: "/practice/", knowledge: "/knowledge/" },
+  routes: { home: "/", practice: "/practice/", sell: "/practice/sell/", knowledge: "/knowledge/" },
   landing: { wordRotateMs: 2_200, demoStepMs: 1_800, revealThreshold: 0.15 },
   drills: { intervalsDays: [0, 1, 3, 7, 21] },
   readinessBands: { low: 30, mid: 60 },

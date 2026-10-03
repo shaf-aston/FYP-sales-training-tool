@@ -14,6 +14,9 @@ MAX_USER_KEYWORDS = 6
 
 # session & performance
 MAX_PROSPECT_SESSIONS = 100
+# A learner-chosen objection to practise, and a persona name, as typed in prospect setup.
+MAX_CHOSEN_OBJECTION_CHARS = 200
+MAX_PERSONA_NAME_CHARS = 40
 PROSPECT_IDLE_MINUTES = 30
 # Note: SESSION_IDLE_MINUTES and MAX_SESSIONS are defined in web/security.py (SSoT)
 

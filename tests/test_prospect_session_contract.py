@@ -135,3 +135,44 @@ def test_missing_prospect_session_returns_expired_contract():
         "error": PROSPECT_SESSION_NOT_FOUND,
         "code": "SESSION_EXPIRED",
     }
+
+
+def _stub(monkeypatch):
+    app.config["TESTING"] = True
+    monkeypatch.setattr(
+        "core.services.provider_router.create_provider",
+        lambda *_args, **_kwargs: StubProspectProvider(),
+    )
+    return app.test_client()
+
+
+def test_learner_picks_the_buyer_and_the_objection_to_practise(monkeypatch):
+    """Chosen persona is used; chosen objection comes in the buyer's first reply, after the answer."""
+    client = _stub(monkeypatch)
+    names = [p["name"] for p in client.get("/api/prospect/personas?product_type=default").get_json()["personas"]]
+    objection = "We signed a two-year deal with someone else last month."
+
+    init = client.post(
+        "/api/prospect/init",
+        json={"difficulty": "easy", "product_type": "default", "persona": names[-1].upper(), "objection": objection},
+    ).get_json()
+    reply = client.post(
+        "/api/prospect/chat",
+        json={"message": "What made you take this call?"},
+        headers={"X-Session-ID": init["session_id"]},
+    ).get_json()
+
+    assert init["persona"]["name"] == names[-1]
+    assert reply["message"] == f"Can you tell me a bit more about that? {objection}"
+
+
+def test_prospect_init_rejects_unknown_persona_and_oversized_objection(monkeypatch):
+    client = _stub(monkeypatch)
+
+    unknown = client.post("/api/prospect/init", json={"persona": "Nobody"})
+    too_long = client.post("/api/prospect/init", json={"objection": "x" * 201})
+    wrong_type = client.post("/api/prospect/init", json={"objection": ["list"]})
+
+    assert unknown.status_code == 400
+    assert too_long.status_code == 400
+    assert wrong_type.status_code == 400

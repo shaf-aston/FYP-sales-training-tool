@@ -69,3 +69,26 @@
     transform: scale(1.2);
   }
 }
+.jump {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: var(--touch-target);
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.jump:hover .label,
+.jump:focus-visible .label {
+  color: var(--text-primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.jump:disabled {
+  cursor: progress;
+}

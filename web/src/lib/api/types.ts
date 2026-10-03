@@ -103,6 +103,12 @@ export interface Persona {
   personality: string;
 }
 
+/** What the learner chose in setup. Empty fields mean "pick for me". */
+export interface ProspectPick {
+  persona?: string;
+  objection?: string;
+}
+
 export interface ProspectInitRes {
   success: true;
   session_id: string;

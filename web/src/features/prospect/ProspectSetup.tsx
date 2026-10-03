@@ -1,18 +1,21 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Button, Notice, Segmented, Select, useConfirm } from "@/components/ui";
+import { Button, Icon, Notice, Segmented, Select, TextArea, useConfirm } from "@/components/ui";
 import { useSession } from "@/features/session/SessionContext";
 import { api, ApiError } from "@/lib/api/client";
-import type { Difficulty, ProductGroups } from "@/lib/api/types";
+import type { Difficulty, Persona, ProductGroups } from "@/lib/api/types";
+import { config } from "@/lib/config";
 import { difficultyOptions } from "./options";
 import s from "./ProspectSetup.module.css";
 
 const GENERAL = "default";
+/** Select value meaning "let the server pick the buyer". */
+const SURPRISE = "";
 
 type Groups = { status: "loading" } | { status: "error"; message: string } | { status: "ready"; groups: ProductGroups };
 
-/** Mode tab: pick a product and difficulty, then start (or exit) prospect practice. */
+/** Selling seat setup: product, difficulty, which buyer, and an objection to practise. */
 export function ProspectSetup() {
   const { prospect, startProspect, exitProspect } = useSession();
   const confirm = useConfirm();
@@ -21,7 +24,12 @@ export function ProspectSetup() {
   const [transactional, setTransactional] = useState(GENERAL);
   const [consultative, setConsultative] = useState(GENERAL);
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
+  const [personas, setPersonas] = useState<Persona[]>([]);
+  const [persona, setPersona] = useState(SURPRISE);
+  const [objection, setObjection] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const product = transactional !== GENERAL ? transactional : consultative;
 
   useEffect(() => {
     let live = true;
@@ -34,18 +42,40 @@ export function ProspectSetup() {
     };
   }, [attempt]);
 
+  // Each product has its own buyers; reload them and clear a pick that no longer exists.
+  useEffect(() => {
+    let live = true;
+    api
+      .personas(product)
+      .then((r) => {
+        if (!live) return;
+        setPersonas(r.personas);
+        setPersona((p) => (r.personas.some((x) => x.name === p) ? p : SURPRISE));
+      })
+      .catch(() => live && setPersonas([]));
+    return () => {
+      live = false;
+    };
+  }, [product]);
+
   const retry = useCallback(() => {
     setGroups({ status: "loading" });
     setAttempt((n) => n + 1);
   }, []);
 
-  const product = transactional !== GENERAL ? transactional : consultative;
   const shown = prospect?.difficulty ?? difficulty;
+  const picked = personas.find((p) => p.name === persona);
 
   const start = async (d: Difficulty) => {
     setBusy(true);
-    await startProspect(d, product);
+    await startProspect(d, product, { persona: persona || undefined, objection: objection.trim() || undefined });
     setBusy(false);
+  };
+
+  const roll = () => {
+    const others = personas.filter((p) => p.name !== persona);
+    const pool = others.length ? others : personas;
+    if (pool.length) setPersona(pool[Math.floor(Math.random() * pool.length)].name);
   };
 
   const changeDifficulty = async (d: Difficulty) => {
@@ -109,16 +139,58 @@ export function ProspectSetup() {
         {options(groups.groups.consultative)}
       </Select>
       <Segmented label="Difficulty" options={[...difficultyOptions]} value={shown} onChange={changeDifficulty} />
-      {prospect ? (
-        <Button onClick={exitProspect} block>
-          Exit prospect practice
+
+      <div className={s.personaRow}>
+        <Select label="Buyer" value={persona} onChange={(e) => setPersona(e.target.value)}>
+          <option value={SURPRISE}>Surprise me</option>
+          {personas.map((p) => (
+            <option key={p.name} value={p.name}>
+              {p.name}
+            </option>
+          ))}
+        </Select>
+        <Button onClick={roll} disabled={!personas.length} aria-label="Pick a random buyer" title="Pick a random buyer">
+          <Icon name="dice" />
         </Button>
+      </div>
+      {picked && (
+        <p className={s.personaNote}>
+          <strong>{picked.name}</strong> · {picked.background}. {picked.personality}
+        </p>
+      )}
+
+      <TextArea
+        label="Objection to practise (optional)"
+        hint="The buyer raises it in their first reply."
+        rows={2}
+        maxLength={config.chosenObjection.max}
+        count={objection.length}
+        value={objection}
+        placeholder="Leave empty and the buyer objects when they choose."
+        onChange={(e) => setObjection(e.target.value)}
+      />
+      <div className={s.chips} role="group" aria-label="Common objections">
+        {config.chosenObjection.picks.map((o) => (
+          <button key={o} type="button" className={s.chip} aria-pressed={objection === o} onClick={() => setObjection(objection === o ? "" : o)}>
+            {o}
+          </button>
+        ))}
+      </div>
+
+      {prospect ? (
+        <div className={s.actions}>
+          <Button variant="primary" block busy={busy} busyLabel="Starting…" onClick={() => start(shown)}>
+            New buyer with these settings
+          </Button>
+          <Button onClick={exitProspect} block>
+            End this buyer
+          </Button>
+        </div>
       ) : (
         <Button variant="primary" block busy={busy} busyLabel="Starting…" onClick={() => start(difficulty)}>
-          Start prospect practice
+          Start selling
         </Button>
       )}
-      <Notice kind="empty">Stage controls are not available in prospect practice.</Notice>
     </div>
   );
 }

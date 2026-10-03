@@ -29,7 +29,7 @@ export const STAGE_META: Record<string, Meta> = {
 
 export const STAGE_ORDER: Record<string, string[]> = {
   consultative: ["intent", "logical", "emotional", "pitch", "objection", "outcome"],
-  transactional: ["intent", "pitch", "objection", "outcome"],
+  transactional: ["intent", "pitch", "negotiation", "objection", "outcome"],
   intent: ["intent"],
 };
 

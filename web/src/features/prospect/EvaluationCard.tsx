@@ -44,7 +44,7 @@ function Result({ ev }: { ev: Evaluation }) {
   const tryAgain = async () => {
     if (!prospect) return;
     closeDialog();
-    await startProspect(prospect.difficulty, prospect.productType);
+    await startProspect(prospect.difficulty, prospect.productType, prospect.pick);
   };
 
   return (

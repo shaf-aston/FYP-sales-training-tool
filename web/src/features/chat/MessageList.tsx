@@ -139,11 +139,23 @@ export function MessageList() {
       {!started && (
         <div className={s.intro}>
           <Badge tone="accent">Try this first</Badge>
-          <h2>Start with a short opener.</h2>
-          <p>
-            Example: &ldquo;Hi, I&rsquo;d love to learn what you&rsquo;re looking for today.&rdquo; The coach will track the conversation
-            stage and suggest your next move.
-          </p>
+          {mode === "prospect" ? (
+            <>
+              <h2>Open the call.</h2>
+              <p>
+                Example: &ldquo;Thanks for your time. What made you take this call today?&rdquo; Hints and the buyer&rsquo;s
+                readiness update after each message.
+              </p>
+            </>
+          ) : (
+            <>
+              <h2>Tell the salesperson what you need.</h2>
+              <p>
+                Example: &ldquo;I&rsquo;m looking for a CRM for my small team.&rdquo; Then push back, ask about price, or say
+                you need to think. The coach explains each move the salesperson makes.
+              </p>
+            </>
+          )}
         </div>
       )}
       <div className={s.list} role="log" aria-live="polite" aria-relevant="additions" aria-label="Conversation">

@@ -17,7 +17,8 @@ const band = (pct: number) =>
 export function ProspectPanel() {
   const { prospect, prospectSettings, setProspectSettings } = useSession();
   const { state, run, display, forThisSession } = useEvaluation();
-  const [open, setOpen] = useState(false);
+  // Open by default: knowing who you are selling to is the point of the panel.
+  const [open, setOpen] = useState(true);
   const pct = Math.round((prospect?.state.readiness ?? 0) * 100);
   const delta = useReadinessDelta(pct);
 
@@ -44,6 +45,12 @@ export function ProspectPanel() {
             <Badge tone={difficultyTone[prospect.difficulty]}>{prospect.difficulty}</Badge>
           </div>
           <p className={s.background}>{prospect.persona.background}</p>
+          {prospect.persona.personality && <p className={s.background}>{prospect.persona.personality}</p>}
+          {prospect.pick.objection && (
+            <p className={s.background}>
+              <strong>Practising:</strong> “{prospect.pick.objection}”
+            </p>
+          )}
         </section>
 
         <section className={s.readiness}>

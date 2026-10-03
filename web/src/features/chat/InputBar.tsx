@@ -12,6 +12,14 @@ export function InputBar() {
   const { draft, setDraft, submit, inputRef } = useDraft();
   const { typing, prospect, mode } = useSession();
   const ended = mode === "prospect" && !!prospect?.ended;
+  const noBuyer = mode === "prospect" && !prospect;
+  const placeholder = noBuyer
+    ? "Set up your buyer first, then start selling."
+    : ended
+      ? "This practice has ended. Reset to start again."
+      : mode === "prospect"
+        ? "Write your next line as the seller... (Shift+Enter for a new line)"
+        : "Reply as the buyer... (Shift+Enter for a new line)";
 
   // Grow with the text; CSS caps the height at --input-max-height and scrolls beyond.
   useLayoutEffect(() => {
@@ -24,7 +32,7 @@ export function InputBar() {
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
-      if (!typing && !ended) void submit();
+      if (!typing && !ended && !noBuyer) void submit();
     }
   };
 
@@ -42,13 +50,13 @@ export function InputBar() {
           rows={1}
           value={draft}
           maxLength={config.maxMessageLength}
-          placeholder={ended ? "This practice has ended. Reset to start again." : "Type your opener here... (Shift+Enter for a new line)"}
+          placeholder={placeholder}
           aria-keyshortcuts="/"
-          disabled={ended}
+          disabled={ended || noBuyer}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={onKeyDown}
         />
-        <Button variant="primary" onClick={() => void submit()} disabled={typing || ended || !draft.trim()}>
+        <Button variant="primary" onClick={() => void submit()} disabled={typing || ended || noBuyer || !draft.trim()}>
           Send
         </Button>
       </div>
