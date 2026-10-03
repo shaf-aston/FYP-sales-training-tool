@@ -29,6 +29,7 @@ class Step:
     probe: str          # asked when no route matched; empty = repeat `say`
     draft: bool         # some line here is not verbatim from the source
     listen: tuple       # of Route
+    run_on: bool = False  # said, then straight on to the next step without waiting for a reply
 
 
 @dataclass(frozen=True)
@@ -118,10 +119,12 @@ def _step(step_id, data):
     listen = tuple(_route(step_id, k, v) for k, v in (data.get("listen") or {}).items())
     if not data.get("say") and not any(r.signal == ANY for r in listen):
         raise ValueError(f"step {step_id}: silent step needs an '{ANY}' route")
+    if data.get("run_on") and not any(r.signal == ANY for r in listen):
+        raise ValueError(f"step {step_id}: run_on step needs an '{ANY}' route")
     return Step(
         step_id, stage, data.get("say", ""), data.get("say_plain", ""),
         data.get("capture", ""), data.get("probe", ""),
-        bool(data.get("draft")), listen,
+        bool(data.get("draft")), listen, bool(data.get("run_on")),
     )
 
 

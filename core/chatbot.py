@@ -89,10 +89,8 @@ class SalesChatbot:
             product_context=product_context,
         )
 
-        # Scripted selling: only for consultative products; the script picks every line.
         self.seller = None
-        if selling_config()["enabled"] and self.flow_engine.flow_type == Strategy.CONSULTATIVE:
-            self.seller = build_seller(self._router)
+        self._sync_seller()
 
         self._ab_variant = assign_ab_variant(session_id) if session_id else None
         self._turn_snapshots = []
@@ -132,6 +130,17 @@ class SalesChatbot:
         }
         self.logger.info("conversation_turn %s", json.dumps(payload, ensure_ascii=False))
 
+    def _sync_seller(self) -> bool:
+        """Scripted selling runs only while the flow is consultative; True when it just switched on."""
+        scripted = selling_config()["enabled"] and self.flow_engine.flow_type == Strategy.CONSULTATIVE
+        if not scripted:
+            self.seller = None
+            return False
+        if self.seller:
+            return False
+        self.seller = build_seller(self._router)
+        return True
+
     def script_opening(self) -> str | None:
         """First line of a scripted call (also sets its stage), or None when not scripted."""
         if not self.seller:
@@ -159,6 +168,16 @@ class SalesChatbot:
 
     def chat(self, user_message: str) -> ChatResponse:
         """Run one turn - returns reply content plus latency/provider metrics."""
+        if self._sync_seller():
+            # the flow turned consultative mid-call (intent detection or a strategy switch): open the script
+            start = time.time()
+            return self._complete_successful_turn(
+                user_message=user_message,
+                bot_reply=self.script_opening(),
+                latency_ms=(time.time() - start) * 1000,
+                advanced_this_turn=True,
+                turn_state=self.seller.state,
+            )
         if self.seller:
             return self._scripted_chat(user_message)
         recent_history = self.flow_engine.conversation_history[-RECENT_HISTORY_WINDOW:]

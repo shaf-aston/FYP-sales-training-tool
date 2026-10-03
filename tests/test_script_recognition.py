@@ -144,3 +144,36 @@ def test_only_script_examples_are_remembered_never_replies():
     embedder.warm(["I want freedom"])
     embedder.embed(["I want freedom", "a prospect reply nobody will ever warm"])
     assert list(embedder._seen) == ["I want freedom"]
+
+
+def _down(prompt, max_tokens):
+    raise RuntimeError("AI down")
+
+
+@pytest.mark.parametrize("replies, expected_step", [
+    # plain answers to the step's own question: never an interruption or a product question
+    (["I just want freedom, to stop working for someone else and travel", "maybe 8k a month"], "03"),
+    (["I want freedom", "10k a month", "about two years now"], "04"),
+    (["I want freedom", "10k a month", "two years", "because I hate missing time with my kids"], "05"),
+    (["I want freedom", "ok cool, about 10k", "three years"], "04"),
+])
+def test_answers_move_the_script_on(replies, expected_step):
+    from core.script_engine.seller import ScriptSeller
+
+    cfg = load_yaml("selling.yaml")
+    seller = ScriptSeller(cfg, load_method("cat"), load_offer(cfg["offer"]), load_common_sense(),
+                          make_embedder(cfg, ROOT), _down)
+    for text in replies:
+        seller.reply(text)
+    assert seller.state.step == expected_step
+
+
+def test_real_price_question_still_gets_the_early_answer():
+    from core.script_engine.seller import ScriptSeller
+
+    cfg = load_yaml("selling.yaml")
+    seller = ScriptSeller(cfg, load_method("cat"), load_offer(cfg["offer"]), load_common_sense(),
+                          make_embedder(cfg, ROOT), _down)
+    seller.reply("I want freedom")
+    text, _ = seller.reply("wait, sorry, what's this going to cost me?")
+    assert "first a couple of questions" in text and seller.state.step == "02"

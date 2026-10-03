@@ -95,7 +95,7 @@ class ScriptSeller:
         self._ai_ok = True
         step = self.method.steps[self.state.step]
         opened = price_open(self.method, self.state.step)
-        kind, name = self._interrupt(text, opened)
+        kind, name = self._interrupt(text, step, opened)
 
         if kind == "sense":
             return self._then_ask(self.sense.interruptions[name].reply), step.ui_stage
@@ -120,14 +120,22 @@ class ScriptSeller:
         return recognise(text, labels, self._embedder, c["threshold"], c["margin"],
                          c["close_call_k"], c["near_miss"])
 
-    def _interrupt(self, text, opened):
-        """Best confident match among everyday interruptions, product facts and objections."""
+    def _interrupt(self, text, step, opened):
+        """An everyday interruption, product question or objection - only when it clearly beats
+        reading the reply as an answer to the step's own question, like a human closer would."""
         labels = {f"sense:{k}": i.examples for k, i in self.sense.interruptions.items()}
-        labels.update({f"fact:{k}": f.examples for k, f in self.offer.facts.items()})
+        if self._is_question(text):
+            labels.update({f"fact:{k}": f.examples for k, f in self.offer.facts.items()})
         if opened:
             labels.update({f"objection:{k}": o.examples for k, o in self.method.objections.items()})
         found = self._recognise(text, labels)
-        return found.label.split(":", 1) if found.label and not found.close else (None, None)
+        if not found.label or found.close:
+            return None, None
+        if found.label.startswith("fact:"):
+            return found.label.split(":", 1)  # a product question is never an answer
+        answers = {r.signal: list(r.examples) for r in step.listen if r.examples}
+        bar = self._recognise(text, answers).score if answers else self.cfg["interrupt_threshold"]
+        return found.label.split(":", 1) if found.score > bar else (None, None)
 
     def _listen(self, text, step):
         labels = {r.signal: list(r.examples) for r in step.listen if r.examples}
@@ -200,6 +208,12 @@ class ScriptSeller:
         return " ".join(part.strip() for part in (lead, back, question) if part)
 
     def _render(self, move):
+        said = []
+        for step_id in move.lead:
+            lead = self.method.steps[step_id]
+            said.append(fill_step(lead.say, "", lead.say_plain, move.state.slots, self.offer,
+                                  self.cfg, self._ask))
         step = self.method.steps[move.state.step]
-        return fill_step(move.say, move.ack, step.say_plain, move.state.slots, self.offer,
-                         self.cfg, self._ask)
+        said.append(fill_step(move.say, move.ack, step.say_plain, move.state.slots, self.offer,
+                              self.cfg, self._ask))
+        return " ".join(said)

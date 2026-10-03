@@ -20,6 +20,7 @@ class Move:
     ui_stage: str
     done: bool = False  # landed on a step with nothing left to listen for
     ack: str = ""       # short fixed lead-in from the route taken
+    lead: tuple = ()    # run_on step ids said first, in order
 
     @property
     def text_template(self):
@@ -27,12 +28,14 @@ class Move:
 
 
 def _speak(method, state):
-    """Walk past silent steps, then say the step we land on."""
-    step = method.steps[state.step]
-    while not step.say:
+    """Walk past silent steps, say any run_on steps, then say the step we land on."""
+    step, lead = method.steps[state.step], ()
+    while not step.say or step.run_on:
+        if step.say:
+            lead += (step.id,)
         state = replace(state, step=_route(step, ANY).then)
         step = method.steps[state.step]
-    return Move(step.say, state, step.ui_stage, not step.listen)
+    return Move(step.say, state, step.ui_stage, not step.listen, lead=lead)
 
 
 def _route(step, signal):

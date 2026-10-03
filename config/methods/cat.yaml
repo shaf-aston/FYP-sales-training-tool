@@ -7,6 +7,7 @@ steps:
   "00":
     ui_stage: logical
     draft: true
+    run_on: true   # the frame leads straight into step 01's question
     say: "I believe you had a chat with {setter} setter... I've read your application but I don't like to assume anything"
     say_plain: "I've read your application but I don't like to assume anything."
     listen:
