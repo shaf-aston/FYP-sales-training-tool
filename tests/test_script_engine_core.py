@@ -110,3 +110,10 @@ def test_engine_code_names_no_method_or_offer():
     banned = re.compile(r"\b(cat|impact|formula|shay|coaching|freedom|pillar)\b", re.IGNORECASE)
     for path in ENGINE_DIR.glob("*.py"):
         assert not banned.search(path.read_text(encoding="utf-8")), path.name
+
+
+def test_loader_rejects_yaml_boolean_route_names():
+    data = yaml.safe_load((FIXTURES / "mini.yaml").read_text(encoding="utf-8"))
+    data["steps"]["b"]["listen"][True] = data["steps"]["b"]["listen"].pop("agrees")
+    with pytest.raises(TypeError, match="not text"):
+        parse_method("bad", data)

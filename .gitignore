@@ -55,3 +55,6 @@ Diary.md
 
 # Real client quotes, rebuilt from the Fathom vault by scripts/build_real_calls.py
 config/real_objections.json
+
+# Local embedding model files
+.cache/

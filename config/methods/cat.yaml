@@ -127,25 +127,44 @@ steps:
     draft: true  # no source probe: repeats the check
     say: "That's everything in a nutshell. Does that make sense?"
     listen:
-      yes:
+      agrees:
         examples:
           - "yes that makes sense"
           - "yeah it all makes sense"
           - "yes, clear"
           - "got it, makes sense"
+          - "yeah, I am following you"
         then: "19"
+      unclear:
+        examples:
+          - "no, that doesn't make sense"
+          - "not really, I'm confused"
+          - "I'm not sure I follow"
+          - "can you explain that again"
+          - "I didn't understand that"
+          - "I'm lost"
+        then: "18"
   "19":
     ui_stage: pitch
     draft: true  # no source probe: repeats the close
     say: "Do you see yourself jumping in?"
     listen:
-      yes:
+      agrees:
         examples:
           - "yes I'm ready to jump in"
           - "yes let's do it"
           - "I'm in, I can see myself doing this"
           - "yes I see myself taking the jump"
         then: "20"
+      hesitant:
+        examples:
+          - "no, not really"
+          - "I'm not sure I'm ready"
+          - "I don't see myself doing this"
+          - "not right now"
+          - "I can't see that happening"
+          - "maybe, I'm not sure yet"
+        then: "19"
   "20":
     ui_stage: outcome
     say: "What makes you say that?"

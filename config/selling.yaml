@@ -3,6 +3,7 @@ enabled: false
 method: cat
 offer: shay_coaching
 embed_model: BAAI/bge-small-en-v1.5
+embed_cache_dir: .cache/fastembed   # model files; relative to the project root, gitignored
 threshold: 0.65        # lowest similarity that counts as a match
 margin: 0.03           # top two labels closer than this = close call
 close_call_k: 3        # candidates handed to the judge on a close call

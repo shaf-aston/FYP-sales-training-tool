@@ -17,7 +17,7 @@ steps:
     ui_stage: pitch
     say: "So you want {goal}. Does that make sense?"
     listen:
-      yes:
+      agrees:
         examples: ["yes that makes sense", "yes"]
         then: "c"
         ack: "Good."

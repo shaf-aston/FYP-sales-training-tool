@@ -98,6 +98,8 @@ def _read(directory, name):
 
 
 def _route(step_id, signal, data):
+    if not isinstance(signal, str):
+        raise TypeError(f"step {step_id}: route name {signal!r} is not text (quote yes/no)")
     examples = tuple(data.get("examples") or ())
     if signal == ANY and examples:
         raise ValueError(f"step {step_id}: '{ANY}' route takes no examples")

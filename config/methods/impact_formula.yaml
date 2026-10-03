@@ -73,25 +73,44 @@ steps:
     draft: true  # no source probe: repeats the check
     say: "Does that all make sense?"
     listen:
-      yes:
+      agrees:
         examples:
           - "yes that makes sense"
           - "yeah it all makes sense"
           - "yes, clear"
           - "got it, makes sense"
+          - "yeah, I am following you"
         then: "close"
+      unclear:
+        examples:
+          - "no, that doesn't make sense"
+          - "not really, I'm confused"
+          - "I'm not sure I follow"
+          - "can you explain that again"
+          - "I didn't understand that"
+          - "I'm lost"
+        then: "check"
   "close":
     ui_stage: pitch
     draft: true  # no source probe: repeats the close
     say: "Do you see yourself jumping in, or how do you feel?"
     listen:
-      yes:
+      agrees:
         examples:
           - "yes I'm ready to jump in"
           - "yes let's do it"
           - "I'm in, I can see myself doing this"
           - "yes I see myself taking the jump"
         then: "payment"
+      hesitant:
+        examples:
+          - "no, not really"
+          - "I'm not sure I'm ready"
+          - "I don't see myself doing this"
+          - "not right now"
+          - "I can't see that happening"
+          - "maybe, I'm not sure yet"
+        then: "close"
   "payment":
     ui_stage: outcome
     say: "How would you like to process the investment? Credit or debit?"
