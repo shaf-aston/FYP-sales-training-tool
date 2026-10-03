@@ -218,7 +218,7 @@ def test_uncovered_product_question_is_answered_logged_then_back_to_script(selle
     with caplog.at_level(logging.INFO, logger="script_engine.uncovered"):
         text, _ = seller.reply("will refunds exist?")
     assert text.startswith("Yes, we offer mentorship.")
-    assert text.endswith("How long have you been thinking about this?")
+    assert text.endswith("how long have you been thinking about this?")
     assert "So, as you mentioned" in text
     assert json.loads(caplog.records[0].message)["question"] == "will refunds exist?"
     assert seller.state.step == "03"
@@ -251,7 +251,7 @@ def test_ai_down_never_blocks_a_turn(seller):
 def test_common_sense_interruption_then_bring_back(seller):
     text, stage = at(seller, "03", why="more time with my kids").reply("hold on a second")
     assert text.startswith("No problem, take your time.")
-    assert text.endswith("How long have you been thinking about this?")
+    assert text.endswith("how long have you been thinking about this?")
     assert stage == "logical" and seller.state.step == "03"
 
 
@@ -452,5 +452,23 @@ def test_uncovered_question_is_logged_even_when_the_ai_is_down(fake_embedder, ca
 
 
 def test_a_question_word_without_a_question_mark_still_counts(fake_embedder):
-    text, _ = at(make_seller(fake_embedder), "03").reply("will refunds exist")
+    text, _ = at(make_seller(fake_embedder), "03").reply("are there refunds")
     assert text.startswith("Yes, we offer mentorship.")
+
+
+@pytest.mark.parametrize("text, expected", [
+    ("what I want is freedom", False),
+    ("why can't I ignore it, because it keeps me up", False),
+    ("how much is it", True),
+    ("will refunds exist?", True),
+])
+def test_question_detection_uses_phrases_or_a_question_mark(fake_embedder, text, expected):
+    assert make_seller(fake_embedder)._is_question(text) is expected
+
+
+def test_bring_back_lowercases_the_question_unless_it_starts_with_i(fake_embedder):
+    s = at(make_seller(fake_embedder), "03", why="more time with my kids")
+    assert s.reply("hold on a second")[0].endswith("how long have you been thinking about this?")
+    s = at(make_seller(fake_embedder), "00", why="more time with my kids")
+    assert "So, as you mentioned" in (text := s.reply("hold on a second")[0])
+    assert text.endswith("I've read your application but I don't like to assume anything.")

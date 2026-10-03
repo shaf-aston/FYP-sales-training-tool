@@ -2,6 +2,7 @@
 
 import json
 import logging
+import re
 from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
 from pathlib import Path
@@ -141,8 +142,10 @@ class ScriptSeller:
         return advance(self.method, self.state, signal, text)
 
     def _is_question(self, text):
-        first = (words(text) or [""])[0].split("'")[0]
-        return first in self.cfg["question_starts"]
+        spoken = " ".join(words(text)) + " "
+        return text.strip().endswith("?") or any(
+            spoken.startswith(phrase + " ") for phrase in self.cfg["question_starts"]
+        )
 
     def _answer_uncovered(self, question, opened):
         """One short line for a product question nothing covers. Always checked, always logged."""
@@ -192,6 +195,8 @@ class ScriptSeller:
         if self.state.last_point:
             back = fill_line(self.sense.bring_back, {"last_point": self.state.last_point},
                              self.offer, self.cfg, self._ask) or ""
+        if back and not re.match(r"I( |')", question):
+            question = question[:1].lower() + question[1:]
         return " ".join(part.strip() for part in (lead, back, question) if part)
 
     def _render(self, move):
