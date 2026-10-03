@@ -75,8 +75,8 @@ def _strip_prompt_markers(text: str) -> str:
 
 def _no_dashes(text: str) -> str:
     """House style: no em or en dashes in replies; a spaced dash becomes a comma."""
-    text = re.sub(r"\s*[20142013]\s*(?=\w)", ", ", text)
-    return re.sub(r"\s*[20142013]\s*", " ", text).strip()
+    text = re.sub(r"\s*[—–]\s*(?=\w)", ", ", text)
+    return re.sub(r"\s*[—–]\s*", " ", text).strip()
 
 
 def _keep_sentences(text: str, drop) -> str:
