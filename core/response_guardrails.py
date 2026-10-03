@@ -73,10 +73,13 @@ def _strip_prompt_markers(text: str) -> str:
     return re.sub(r"\n\s*\n\s*\n+", "\n\n", text).strip()
 
 
+_DASH = f"[{chr(0x2014)}{chr(0x2013)}]"  # em and en dash
+
+
 def _no_dashes(text: str) -> str:
     """House style: no em or en dashes in replies; a spaced dash becomes a comma."""
-    text = re.sub(r"\s*[—–]\s*(?=\w)", ", ", text)
-    return re.sub(r"\s*[—–]\s*", " ", text).strip()
+    text = re.sub(r"\s*" + _DASH + r"\s*(?=\w)", ", ", text)
+    return re.sub(r"\s*" + _DASH + r"\s*", " ", text).strip()
 
 
 def _keep_sentences(text: str, drop) -> str:
