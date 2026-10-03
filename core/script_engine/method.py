@@ -87,6 +87,7 @@ class Interruption:
     examples: tuple
     reply: str
     draft: bool
+    wait: bool = False  # say the reply and wait; don't ask the question again yet
 
 
 @dataclass(frozen=True)
@@ -169,7 +170,8 @@ def parse_offer(name, data):
 
 def parse_common_sense(data):
     items = {
-        k: Interruption(k, tuple(v["examples"]), v["reply"], bool(v.get("draft")))
+        k: Interruption(k, tuple(v["examples"]), v["reply"], bool(v.get("draft")),
+                        bool(v.get("wait")))
         for k, v in data["interruptions"].items()
     }
     return CommonSense(data["bring_back"], items)

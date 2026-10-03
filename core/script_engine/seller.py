@@ -59,6 +59,7 @@ class ScriptSeller:
         self.cfg, self.method, self.offer, self.sense = cfg, method, offer, sense
         self._embedder, self._llm = embedder, llm
         self._ai_ok = True
+        self._said = {}  # filled lines: the same line with the same answers is said the same way
         self._opening = start(method)
         self.state = self._opening.state
         embedder.warm(self._script_examples())
@@ -98,7 +99,10 @@ class ScriptSeller:
         kind, name = self._interrupt(text, step, opened)
 
         if kind == "sense":
-            return self._then_ask(self.sense.interruptions[name].reply), step.ui_stage
+            said = self.sense.interruptions[name]
+            if said.wait:
+                return said.reply, step.ui_stage
+            return self._then_ask(said.reply, bring_back=True), step.ui_stage
         if kind == "objection":
             move = object_to(self.method, self.state, name, self.cfg["objection_loops"])
             self.state = move.state
@@ -109,7 +113,7 @@ class ScriptSeller:
             lead = fill_line(answer, {}, self.offer, self.cfg, self._ask)
             return self._then_ask(lead), step.ui_stage
         if self._is_question(text):
-            return self._then_ask(self._answer_uncovered(text, opened)), step.ui_stage
+            return self._then_ask(self._answer_uncovered(text, opened), bring_back=True), step.ui_stage
 
         move = self._listen(text, step)
         self.state = move.state
@@ -194,26 +198,30 @@ class ScriptSeller:
             }))
         return answer or c["uncovered_fallback"]
 
-    def _then_ask(self, lead):
-        """`lead`, then a bring-back to their last point, then the current question again."""
+    def _then_ask(self, lead, bring_back=False):
+        """`lead`, then (after an interruption or a made-up answer) a bring-back to their last point, then the
+        current question again."""
         step = self.method.steps[self.state.step]
-        question = fill_step(step.say, "", step.say_plain, self.state.slots, self.offer,
-                             self.cfg, self._ask)
+        question = self._fill(step.say, "", step.say_plain, self.state.slots)
         back = ""
-        if self.state.last_point:
+        if bring_back and self.state.last_point:
             back = fill_line(self.sense.bring_back, {"last_point": self.state.last_point},
                              self.offer, self.cfg, self._ask) or ""
         if back and not re.match(r"I( |')", question):
             question = question[:1].lower() + question[1:]
         return " ".join(part.strip() for part in (lead, back, question) if part)
 
+    def _fill(self, say, ack, say_plain, slots):
+        key = (say, ack, tuple(sorted(slots.items())))
+        if key not in self._said:
+            self._said[key] = fill_step(say, ack, say_plain, slots, self.offer, self.cfg, self._ask)
+        return self._said[key]
+
     def _render(self, move):
         said = []
         for step_id in move.lead:
             lead = self.method.steps[step_id]
-            said.append(fill_step(lead.say, "", lead.say_plain, move.state.slots, self.offer,
-                                  self.cfg, self._ask))
+            said.append(self._fill(lead.say, "", lead.say_plain, move.state.slots))
         step = self.method.steps[move.state.step]
-        said.append(fill_step(move.say, move.ack, step.say_plain, move.state.slots, self.offer,
-                              self.cfg, self._ask))
+        said.append(self._fill(move.say, move.ack, step.say_plain, move.state.slots))
         return " ".join(said)

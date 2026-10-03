@@ -249,10 +249,13 @@ def test_ai_down_never_blocks_a_turn(seller):
 
 
 def test_common_sense_interruption_then_bring_back(seller):
-    text, stage = at(seller, "03", why="more time with my kids").reply("hold on a second")
-    assert text.startswith("No problem, take your time.")
+    s = at(seller, "03", why="more time with my kids")
+    # a pause gets a short reply and the bot waits, like a person would
+    assert s.reply("hold on a second") == ("No problem, take your time.", "logical")
+    text, stage = s.reply("ok I'm back")
+    assert text.startswith("No worries.")
     assert text.endswith("how long have you been thinking about this?")
-    assert stage == "logical" and seller.state.step == "03"
+    assert stage == "logical" and s.state.step == "03"
 
 
 def _close_call_seller(llm):
@@ -468,7 +471,34 @@ def test_question_detection_uses_phrases_or_a_question_mark(fake_embedder, text,
 
 def test_bring_back_lowercases_the_question_unless_it_starts_with_i(fake_embedder):
     s = at(make_seller(fake_embedder), "03", why="more time with my kids")
-    assert s.reply("hold on a second")[0].endswith("how long have you been thinking about this?")
+    assert s.reply("ok I'm back")[0].endswith("how long have you been thinking about this?")
     s = at(make_seller(fake_embedder), "00", why="more time with my kids")
-    assert "So, as you mentioned" in (text := s.reply("hold on a second")[0])
+    assert "So, as you mentioned" in (text := s.reply("ok I'm back")[0])
     assert text.endswith("I've read your application but I don't like to assume anything.")
+
+
+@pytest.mark.parametrize("phrase", ["travel freedom", "to stop working", "NONE"])
+def test_blank_phrase_that_breaks_the_sentence_falls_back(phrase):
+    from core.loader import load_yaml
+    from core.script_engine.fill import _phrase
+
+    cfg = load_yaml("selling.yaml")
+    line = "How much do you need to be making to feel {outcome} freedom?"
+    reply = "I want freedom, to stop working for someone else and travel"
+    assert _phrase(line, "outcome", reply, cfg, lambda prompt, n: phrase) is None
+    assert _phrase(line, "outcome", reply, cfg, lambda prompt, n: "travel") == "travel"
+
+
+def test_a_line_asked_again_is_filled_the_same_way_without_new_ai_calls(fake_embedder):
+    calls = []
+
+    def llm(prompt, n):
+        calls.append(prompt)
+        return ["travel", "more money"][len(calls) % 2 - 1]
+
+    s = at(make_seller(fake_embedder, llm), "05", outcome="I want to travel the world")
+    first = s.reply("hold on a second")
+    again = s.reply("ok I'm back")[0]
+    asked = calls.copy()
+    assert first[0] == "No problem, take your time."
+    assert s.reply("ok I'm back")[0] == again and calls == asked
