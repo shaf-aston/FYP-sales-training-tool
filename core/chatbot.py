@@ -22,6 +22,7 @@ from .analytics.performance import PerformanceTracker
 from .analytics.session_analytics import SessionAnalytics
 from .services.provider_router import ProviderRouter
 from .providers.base import ACCESS_DENIED, RATE_LIMIT, LLMResponse
+from .script_engine.engine import ScriptState
 from .script_engine.seller import build_seller, selling_config
 from .response_guardrails import Layer3CheckResult, apply_layer3_output_checks
 from .utils import Strategy, Stage
@@ -153,6 +154,7 @@ class SalesChatbot:
             bot_reply=text,
             latency_ms=(time.time() - start) * 1000,
             advanced_this_turn=True,  # the script, not the FSM, moves the stage
+            turn_state=self.seller.state,  # saved in the snapshot so a rewind restores the script
         )
 
     def chat(self, user_message: str) -> ChatResponse:
@@ -352,7 +354,8 @@ class SalesChatbot:
     ) -> None:
         """Reconstruct one completed turn using the same advancement order as live chat."""
         if self.seller:
-            self.seller.observe(user_message)
+            if turn_state is not None:
+                self.seller.reset(ScriptState(**turn_state))
             self._show_stage(self.method_stage())
             self.flow_engine.add_turn(user_message, bot_reply)
             return
@@ -473,15 +476,17 @@ class SalesChatbot:
 
     def _capture_turn_snapshot(self, turn_state=None) -> dict:
         """Capture current FSM state for snapshot-based rewinding."""
+        if turn_state is None and self.seller:
+            turn_state = self.seller.state
+        if turn_state is not None and not isinstance(turn_state, dict):
+            turn_state = asdict(turn_state)
         snapshot = {
             "flow_type": self.flow_engine.flow_type,
             "current_stage": self.flow_engine.current_stage,
             "stage_turn_count": self.flow_engine.stage_turn_count,
             "initial_flow_type": self.flow_engine.initial_flow_type,
-            "turn_state": asdict(turn_state) if turn_state is not None else None,
+            "turn_state": turn_state,
         }
-        if self.seller:
-            snapshot["script_state"] = self.seller.state
         return snapshot
 
     def _save_turn_snapshot(self, turn_state=None) -> None:
@@ -525,7 +530,8 @@ class SalesChatbot:
             snapshot = self._turn_snapshots[turn_index - 1]
             self.flow_engine.restore_state(snapshot)
             if self.seller:
-                self.seller.reset(snapshot.get("script_state"))
+                saved = snapshot.get("turn_state")
+                self.seller.reset(ScriptState(**saved) if saved else None)
             self._turn_snapshots = self._turn_snapshots[:turn_index]
         else:
             self.logger.warning(f"Snapshot not available for turn {turn_index}, falling back to replay")

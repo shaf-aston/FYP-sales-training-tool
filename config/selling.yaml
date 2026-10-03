@@ -5,11 +5,21 @@ offer: shay_coaching
 embed_model: BAAI/bge-small-en-v1.5
 embed_cache_dir: .cache/fastembed   # model files; relative to the project root, gitignored
 threshold: 0.65        # lowest similarity that counts as a match
+near_miss: 0.1         # a top score this far under the threshold is a close call too
 margin: 0.03           # top two labels closer than this = close call
 close_call_k: 3        # candidates handed to the judge on a close call
 max_words: 30          # longest sentence the AI may write
 ai_retries: 1
+ai_timeout_seconds: 8   # a slow AI call is abandoned; the turn uses the script line
 objection_loops: 2     # loop twice, third time go direct
 slot_words: 6          # longest phrase the AI may put into a script blank
 stop_words: [a, an, the, i, i'm, i've, my, me, to, of, and, or, in, on, at, for, is, am, are, be, it, that, this, so, with, as, by, we, you, your]
 question_starts: [do, does, did, can, could, is, are, will, would, should, what, how, why, when, where, who, which]
+slot_tokens: 20        # max_tokens for a blank-filling call
+judge_tokens: 10       # max_tokens for a close-call judge
+answer_tokens: 60      # max_tokens for an uncovered product answer
+answer_filler_words: ["yes", "no", we, can, will, help, you, work, with, offer, also, all, your, our, is, are, the, a, an, to, of, and, for, in, on, it]
+banned_words: [ignore, instruction, instructions, prompt, system, assistant, password, token, http, https, www]
+uncovered_fallback: "Good question, I'll confirm that for you after the call."   # draft wording
+log_uncovered: true    # write uncovered product questions to the log
+log_text_chars: 120    # longest piece of prospect text ever logged

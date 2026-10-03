@@ -8,9 +8,13 @@ class Embedder(Protocol):
         """Return one unit-length vector per text, all the same length."""
         ...
 
+    def warm(self, texts: list[str]) -> None:
+        """Pre-compute and remember vectors for the script's fixed examples."""
+        ...
+
 
 class FastEmbedEmbedder:
-    """Local ONNX sentence embeddings. Repeated texts (the script's examples) are cached."""
+    """Local ONNX sentence embeddings. Only the script's examples are remembered, never replies."""
 
     def __init__(self, model, cache_dir):
         from fastembed import TextEmbedding  # heavy import, only when really used
@@ -18,11 +22,18 @@ class FastEmbedEmbedder:
         self._model = TextEmbedding(model_name=model, cache_dir=str(cache_dir))
         self._seen = {}
 
-    def embed(self, texts):
+    def _compute(self, texts):
+        return [v.tolist() for v in self._model.embed(texts)]
+
+    def warm(self, texts):
         new = [t for t in dict.fromkeys(texts) if t not in self._seen]
         if new:
-            self._seen.update(zip(new, (v.tolist() for v in self._model.embed(new))))
-        return [self._seen[t] for t in texts]
+            self._seen.update(zip(new, self._compute(new)))
+
+    def embed(self, texts):
+        fresh = [t for t in dict.fromkeys(texts) if t not in self._seen]
+        got = dict(zip(fresh, self._compute(fresh))) if fresh else {}
+        return [self._seen[t] if t in self._seen else got[t] for t in texts]
 
 
 def make_embedder(cfg, root):

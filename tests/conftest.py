@@ -65,6 +65,9 @@ class BagOfWordsEmbedder:
 
     DIM = 256
 
+    def warm(self, texts):
+        pass
+
     def embed(self, texts):
         import math
         import zlib

@@ -6,6 +6,7 @@ from dataclasses import dataclass
 BLANK = re.compile(r"\{\w+\}")
 WORD = re.compile(r"[a-z0-9']+")
 CURRENCY = re.compile(r"[$£€]\s?\d")
+LINK = re.compile(r"https?://|www\.|@|\.(com|net|org|io)\b", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -16,10 +17,16 @@ class CheckContext:
     price: str = ""                # the offer price, as written
     prospect_words: frozenset = None   # when set, every word must come from here or stop_words
     stop_words: frozenset = frozenset()
+    banned_words: frozenset = frozenset()
 
 
 def words(text):
     return WORD.findall(text.lower())
+
+
+def clip(text, limit):
+    """Cut prospect text before it reaches a log."""
+    return text if len(text) <= limit else text[:limit] + "..."
 
 
 def check(text, ctx):
@@ -40,6 +47,10 @@ def check(text, ctx):
         broken.append("unfilled_blank")
     if not text.strip() or len(words(text)) > ctx.max_words:
         broken.append("length")
+    if LINK.search(text):
+        broken.append("link")
+    if ctx.banned_words & set(words(text)):
+        broken.append("banned_word")
     if ctx.prospect_words is not None:
         foreign = set(words(text)) - ctx.prospect_words - ctx.stop_words
         if foreign:

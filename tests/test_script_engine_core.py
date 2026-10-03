@@ -24,7 +24,7 @@ def _labels(method, step_id):
 
 def _turn(method, state, reply, embedder):
     labels = _labels(method, state.step)
-    signal = recognise(reply, labels, embedder, 0.5, 0.03, 3).label if labels else None
+    signal = recognise(reply, labels, embedder, 0.5, 0.03, 3, 0.1).label if labels else None
     return advance(method, state, signal, reply)
 
 
@@ -98,11 +98,11 @@ def test_offer_loads():
 
 def test_recognise_close_call_and_threshold(fake_embedder):
     labels = {"yes": ["yes sounds good"], "no": ["no not for me"]}
-    hit = recognise("yes sounds good", labels, fake_embedder, 0.65, 0.03, 3)
+    hit = recognise("yes sounds good", labels, fake_embedder, 0.65, 0.03, 3, 0.1)
     assert hit.label == "yes" and not hit.close and hit.candidates[0] == "yes"
-    miss = recognise("purple banana", labels, fake_embedder, 0.65, 0.03, 3)
+    miss = recognise("purple banana", labels, fake_embedder, 0.65, 0.03, 3, 0.1)
     assert miss.label is None
-    both = recognise("yes not", {"a": ["yes x"], "b": ["not x"]}, fake_embedder, 0.1, 0.5, 3)
+    both = recognise("yes not", {"a": ["yes x"], "b": ["not x"]}, fake_embedder, 0.1, 0.5, 3, 0.1)
     assert both.close
 
 
