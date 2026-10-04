@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Badge, Button, Markdown, TextArea, TypingDots, useToast } from "@/components/ui";
+import { Button, Markdown, TextArea, TypingDots, useToast } from "@/components/ui";
 import { config } from "@/lib/config";
 import { useSession, type ChatMessage } from "@/features/session/SessionContext";
 import { ListenButton } from "@/features/voice/VoiceBar";
@@ -138,11 +138,9 @@ export function MessageList() {
     <div className={s.frame} ref={frameRef}>
       {!started && (
         <div className={s.intro}>
-          <Badge tone="accent">Try this first</Badge>
           <h2>Start with a short opener.</h2>
           <p>
-            Example: &ldquo;Hi, I&rsquo;d love to learn what you&rsquo;re looking for today.&rdquo; The coach will track the conversation
-            stage and suggest your next move.
+            Example: &ldquo;Hi, I&rsquo;d love to learn what you&rsquo;re looking for today.&rdquo;
           </p>
         </div>
       )}

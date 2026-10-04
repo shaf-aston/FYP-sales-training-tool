@@ -85,7 +85,7 @@ export function QuizPanel() {
   const canAnswer = !loading && !loadError && !needsTurn && !!question;
 
   return (
-    <Panel kicker="Quiz mode" title="Skill check" onClose={closeSidePanel}>
+    <Panel title="Skill check" onClose={closeSidePanel}>
       <div className={s.stack}>
         {!isProspect && <Segmented label="Quiz type" options={TYPES} value={type} onChange={setType} />}
         {loading && <Notice kind="loading">Loading question…</Notice>}

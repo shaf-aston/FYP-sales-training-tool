@@ -1,71 +1,9 @@
 .card {
   margin: var(--space-4);
 }
-.badges {
-  display: flex;
-  gap: var(--space-2);
-}
-.stage {
-  animation: fade-in var(--dur-base) var(--ease-out);
-}
-.caption {
-  font-size: var(--text-xs);
-  color: var(--text-muted);
-}
 .stageName {
   font-family: var(--font-display);
   font-size: var(--text-lg);
   color: var(--text-primary);
-}
-.note {
-  font-size: var(--text-sm);
-  color: var(--text-body);
-}
-.stepper {
-  list-style: none;
-  display: grid;
-  gap: var(--space-2);
-  margin: 0;
-  padding: 0;
-}
-.step {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  font-size: var(--text-sm);
-  color: var(--text-muted);
-  transition: color var(--dur-base) var(--ease-out);
-}
-.dot {
-  width: 10px;
-  height: 10px;
-  flex-shrink: 0;
-  border-radius: var(--radius-pill);
-  background: var(--border-strong);
-  transition: background var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-pop);
-}
-.done {
-  color: var(--success);
-}
-.done .dot {
-  background: var(--success);
-}
-.current {
-  color: var(--text-primary);
-  font-weight: 600;
-}
-.current .dot {
-  background: var(--accent);
-  animation: pulse 1.8s ease-in-out infinite;
-}
-@keyframes pulse {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 var(--accent-line);
-    transform: scale(1);
-  }
-  50% {
-    box-shadow: 0 0 0 6px transparent;
-    transform: scale(1.2);
-  }
+  animation: fade-in var(--dur-base) var(--ease-out);
 }

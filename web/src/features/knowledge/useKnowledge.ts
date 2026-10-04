@@ -48,7 +48,6 @@ export function useKnowledge() {
     const thin = shortSections(payload);
     if (thin.length) {
       const ok = await confirm({
-        kicker: "Check before saving",
         title: "These sections look very short",
         body: `${thin.join(", ")}. A little more detail makes the practice buyer more realistic. Save anyway?`,
         confirmLabel: "Save anyway",
