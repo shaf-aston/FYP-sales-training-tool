@@ -3,7 +3,6 @@
 import json
 import re
 from bisect import bisect
-from enum import Enum
 from functools import lru_cache
 
 # frozenset negations are unordered and hashed for O(1) lookup and immutability
@@ -95,22 +94,6 @@ def range_label(value, thresholds, labels):
     Example: range_label(85, [60,70,80,90], ["F","D","C","B","A"]) -> "B"
     """
     return labels[bisect(thresholds, value)]
-
-
-class Strategy(str, Enum):
-    CONSULTATIVE = "consultative"
-    TRANSACTIONAL = "transactional"
-    INTENT = "intent"
-
-
-class Stage(str, Enum):
-    INTENT = "intent"
-    LOGICAL = "logical"
-    EMOTIONAL = "emotional"
-    PITCH = "pitch"
-    NEGOTIATION = "negotiation"
-    OBJECTION = "objection"
-    OUTCOME = "outcome"
 
 
 def tokenize(text: str) -> list[str]:

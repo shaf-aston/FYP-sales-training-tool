@@ -4,7 +4,7 @@ import pytest
 import core.flow as flow
 from core.analysis import ConversationState
 from core.flow import SalesFlowEngine, _check_advancement_condition, _objection_only
-from core.utils import Stage, Strategy
+from core.enums import Stage, Strategy
 
 
 def test_short_high_signal_objection_is_not_filtered(monkeypatch):

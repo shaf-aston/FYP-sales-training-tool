@@ -2,6 +2,7 @@
 
 import logging
 
+from .constants import COACH_SENTENCE_WORDS, COACH_TIP_WORDS, LLM
 from .quiz import get_stage_rubric
 from .utils import extract_json_from_llm
 
@@ -44,7 +45,7 @@ def generate_training(router, flow_engine, user_msg, bot_reply):
 
     try:
         llm_response = router.chat_with_fallback(
-            messages, temperature=0.3, max_tokens=150, stage=stage
+            messages, **LLM["coach_feedback"], stage=stage
         ).response
         if llm_response.error or not llm_response.content:
             raise ValueError(
@@ -55,18 +56,18 @@ def generate_training(router, flow_engine, user_msg, bot_reply):
         if not result:
             raise ValueError("Empty or invalid JSON response")
 
-        result["what_happened"] = _truncate_words(result.get("what_happened", ""), 15)
-        result["next_move"] = _truncate_words(result.get("next_move", ""), 15)
+        result["what_happened"] = _truncate_words(result.get("what_happened", ""), COACH_SENTENCE_WORDS)
+        result["next_move"] = _truncate_words(result.get("next_move", ""), COACH_SENTENCE_WORDS)
         result["watch_for"] = [
-            _truncate_words(tip, 8) for tip in (result.get("watch_for") or [])
+            _truncate_words(tip, COACH_TIP_WORDS) for tip in (result.get("watch_for") or [])
         ]
         return result
 
     except Exception as error:
         logger.warning(f"Training generation fell back to rubric text: {error}")
         fallback = {
-            "what_happened": _truncate_words(rubric.get("goal", "-"), 15),
-            "next_move": _truncate_words(rubric.get("advance_when", "-"), 15),
+            "what_happened": _truncate_words(rubric.get("goal", "-"), COACH_SENTENCE_WORDS),
+            "next_move": _truncate_words(rubric.get("advance_when", "-"), COACH_SENTENCE_WORDS),
             "watch_for": [],
         }
         return fallback
@@ -120,8 +121,7 @@ def answer_training_question(router, flow_engine, question, style: str = "tactic
     try:
         response = router.chat_with_fallback(
             [{"role": "system", "content": system_prompt}, {"role": "user", "content": question}],
-            temperature=0.4,
-            max_tokens=150,
+            **LLM["coach_answer"],
             stage=stage,
         ).response
         answer = (

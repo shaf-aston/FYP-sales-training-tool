@@ -81,7 +81,7 @@ def _make_session_app(monkeypatch, testing=True):
     app.config["TESTING"] = testing
     manager = _DummySessionManager()
 
-    monkeypatch.setattr(session_routes, "SalesChatbot", _DummyBot)
+    monkeypatch.setattr(session_routes, "SellerBot", _DummyBot)
     monkeypatch.setattr(
         session_routes,
         "generate_init_greeting",
@@ -138,7 +138,7 @@ def test_health_returns_active_provider_and_performance(monkeypatch):
 
     assert response.status_code == 200
     assert response.get_json() == {
-        "ok": True,
+        "success": True,
         "active": {"provider": "probe", "model": "probe-model"},
         "available_providers": [{"name": "probe", "available": True, "model": "probe-model"}],
         "performance_stats": {"probe": {"count": 1}},
@@ -161,7 +161,7 @@ def test_config_returns_limits_and_product_options(monkeypatch):
     payload = response.get_json()
 
     assert response.status_code == 200
-    assert payload["ok"] is True
+    assert payload["success"] is True
     assert payload["limits"]["max_message_length"] == SecurityConfig.MAX_MESSAGE_LENGTH
     assert payload["product_options"] == [
         {"id": "default", "strategy": "intent", "label": "Default product"},

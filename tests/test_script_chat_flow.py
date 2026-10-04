@@ -92,7 +92,7 @@ def test_script_lines_reach_the_user_word_for_word(client, monkeypatch):
 
     # the prompt-driven path's guardrail rewrites lines; scripted lines must never go through it
     monkeypatch.setattr(
-        "core.chatbot.apply_layer3_output_checks",
+        "core.seller_bot.apply_layer3_output_checks",
         lambda **kw: Layer3CheckResult(content="What should we focus on next?", was_corrected=True),
     )
     _, headers = _init(client)
