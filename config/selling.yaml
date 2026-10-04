@@ -1,7 +1,10 @@
 # Script engine knobs. The engine reads these; it never hardcodes them.
-enabled: true          # scripted selling for consultative products
+enabled: true          # scripted selling for the products listed below
 method: cat
-offer: shay_coaching
+# Which practice products the script sells, and the offer (config/offers/<name>.yaml) it sells for each.
+# A product not listed here keeps the AI-written sales talk.
+products:
+  high_ticket_sales_mentorship: shay_coaching
 embed_model: BAAI/bge-small-en-v1.5
 embed_cache_dir: .cache/fastembed   # model files; relative to the project root, gitignored
 embed_threads: 1       # CPU threads for the model; more threads use much more memory (free hosts have 512 MB)

@@ -362,7 +362,7 @@ def _uncovered_records(caplog):
 def test_a_judged_close_call_survives_rewind_and_replay(scripted_selling):
     from core.chatbot import SalesChatbot
 
-    bot = SalesChatbot(provider_type="dummy", product_type="luxury_cars")
+    bot = SalesChatbot(provider_type="dummy", product_type="high_ticket_sales_mentorship")
     bot.seller = at(_close_call_seller(lambda p, n: "agrees"), "18")
     bot.chat("hmm")                       # borderline: the judge says "agrees" -> step 19
     assert bot.seller.state.step == "19"
