@@ -34,7 +34,7 @@ export function ProspectDialogs() {
 
   return (
     <>
-      <Dialog open={dialog === "evaluation"} onClose={closeDialog} kicker="Prospect practice" title="How that session went" size="lg">
+      <Dialog open={dialog === "evaluation"} onClose={closeDialog} title="How that session went" size="lg">
         {dialog === "evaluation" && <EvaluationBody />}
       </Dialog>
       <ReviewDialog />

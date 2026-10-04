@@ -27,7 +27,7 @@ def test_debug_panel_references_removed_from_runtime_files():
 def test_web_search_references_removed_from_core_runtime_files():
     files = [
         ROOT / "core" / "analysis.py",
-        ROOT / "core" / "chatbot.py",
+        ROOT / "core" / "seller_bot.py",
         ROOT / "core" / "constants.py",
         ROOT / "core" / "loader.py",
     ]

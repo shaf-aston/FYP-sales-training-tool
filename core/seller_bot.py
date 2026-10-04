@@ -25,7 +25,7 @@ from .providers.base import ACCESS_DENIED, RATE_LIMIT, LLMResponse
 from .script_engine.engine import ScriptState
 from .script_engine.seller import build_seller, selling_config
 from .response_guardrails import Layer3CheckResult, apply_layer3_output_checks
-from .utils import Strategy, Stage
+from .enums import Stage, Strategy
 from . import trainer, quiz
 
 _base_logger = logging.getLogger(__name__)
@@ -41,7 +41,7 @@ class ChatResponse:
     output_len: int = 0
 
 
-class SalesChatbot:
+class SellerBot:
     """Ties the LLM provider to the FSM flow engine and logs each turn."""
 
     seller = None  # set in __init__ for scripted consultative calls

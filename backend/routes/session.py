@@ -8,7 +8,7 @@ from typing import Any
 from flask import Blueprint, jsonify, request
 
 from core.analytics.performance import PerformanceTracker
-from core.chatbot import SalesChatbot
+from core.seller_bot import SellerBot
 from core.constants import UNDETERMINED_STAGE
 from core.content import generate_init_greeting
 from core.loader import QuickMatcher
@@ -114,7 +114,7 @@ def api_init():
             )  # type: ignore
 
     try:
-        bot = SalesChatbot(
+        bot = SellerBot(
             provider_type=provider, product_type=product_type, session_id=session_id
         )
         # dev override - skip intent detection
@@ -203,7 +203,7 @@ def api_health():
 
     return jsonify(
         {
-            "ok": True,
+            "success": True,
             "active": {"provider": active_provider, "model": active_model},
             "available_providers": provider_status,
             "performance_stats": perf_stats,
@@ -233,7 +233,7 @@ def api_config():
 
     return jsonify(
         {
-            "ok": True,
+            "success": True,
             "limits": {
                 "max_message_length": SecurityConfig.MAX_MESSAGE_LENGTH,
                 "max_field_length": SecurityConfig.MAX_FIELD_LENGTH,
@@ -273,7 +273,7 @@ def api_stages(bot):
 @with_session(bp)
 def api_stage(bot):
     """Jump FSM to a specific stage. Admin/test only (requires privileged auth)."""
-    from core.utils import Strategy
+    from core.enums import Strategy
 
     data = request.json or {}
     stage = data.get("stage")

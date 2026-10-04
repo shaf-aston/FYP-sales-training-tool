@@ -3,7 +3,7 @@ import logging
 from typing import Any, cast
 
 from core.analysis import ConversationState
-from core.chatbot import SalesChatbot
+from core.seller_bot import SellerBot
 
 
 class _FakeFlowEngine:
@@ -43,7 +43,7 @@ class _FakeFlowEngine:
 
 
 def _build_bot() -> Any:
-    bot = cast(Any, SalesChatbot.__new__(SalesChatbot))
+    bot = cast(Any, SellerBot.__new__(SellerBot))
     bot.flow_engine = _FakeFlowEngine()
     bot._turn_snapshots = []
     bot.session_id = "session123"

@@ -33,3 +33,6 @@
   gap: var(--space-4);
   animation: fade-in var(--dur-base);
 }
+.panel[hidden] {
+  display: none;
+}

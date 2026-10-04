@@ -3,12 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import { Button, useConfirm } from "@/components/ui";
 import { useSession } from "@/features/session/SessionContext";
+import { MODE_META } from "@/lib/labels";
 import { useUi } from "@/state/UiContext";
 import s from "./ChatHeader.module.css";
 
 export function ChatHeader() {
   const { openDialog } = useUi();
-  const { reset } = useSession();
+  const { mode, reset } = useSession();
+  const modeInfo = MODE_META[mode];
   const confirm = useConfirm();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -30,7 +32,6 @@ export function ChatHeader() {
   const onReset = async () => {
     setMenuOpen(false);
     const ok = await confirm({
-      kicker: "Reset session",
       title: "Clear this practice session?",
       body: "This wipes the conversation and starts again. You cannot undo it.",
       confirmLabel: "Reset session",
@@ -43,11 +44,9 @@ export function ChatHeader() {
   return (
     <header className={s.header}>
       <div className={s.copy}>
-        <p className={s.eyebrow}>Practice workspace</p>
-        <h1 className={s.title}>Eloquence</h1>
-        <p className={s.subtitle}>
-          Run a practice conversation, watch your stage progress, and ask for live coaching when you need it.
-        </p>
+        <p className={s.eyebrow}>Eloquence</p>
+        <h1 className={s.title}>{modeInfo.label}</h1>
+        <p className={s.subtitle}>{modeInfo.note}</p>
       </div>
       <div className={s.actions}>
         <Button variant="pill" onClick={() => openDialog("help")} aria-keyshortcuts="?" title="How it works (press ?)">

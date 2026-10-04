@@ -7,7 +7,7 @@ was stuck at 0 forever.
 
 import pytest
 
-from core.prospect_session import ProspectSession
+from core.buyer_session import BuyerSession
 from core.providers.base import LLMResponse
 
 
@@ -33,7 +33,7 @@ def stub_provider(monkeypatch):
 
 
 def session(difficulty, session_id="s1"):
-    return ProspectSession(difficulty=difficulty, session_id=session_id)
+    return BuyerSession(difficulty=difficulty, session_id=session_id)
 
 
 TURNS = 30
@@ -161,7 +161,7 @@ def test_the_dead_needs_list_is_gone():
 def test_a_turn_that_never_reached_the_buyer_leaves_no_trace():
     """An outage must not count the turn, move readiness, or leave a half turn
     in the transcript - otherwise resending the same line banks it twice."""
-    from core.prospect_session import ProviderUnavailable
+    from core.buyer_session import ProviderUnavailable
 
     prospect = session("medium", "outage")
     prospect.conversation_history = [{"role": "assistant", "content": "Hi there."}]
@@ -191,8 +191,8 @@ def test_a_turn_that_never_reached_the_buyer_leaves_no_trace():
 def test_a_session_always_gets_an_id_of_its_own():
     """A blank id saves nothing, logs nothing, and shares its dice with every
     other blank-id session."""
-    first = ProspectSession(difficulty="hard", session_id="")
-    second = ProspectSession(difficulty="hard", session_id="")
+    first = BuyerSession(difficulty="hard", session_id="")
+    second = BuyerSession(difficulty="hard", session_id="")
 
     assert first.session_id and second.session_id
     assert first.session_id != second.session_id

@@ -113,7 +113,7 @@ def _validate_message(message_text):
 
 def _bot_state(session_bot):
     """Common stage/strategy fields for JSON responses"""
-    from core.utils import Strategy
+    from core.enums import Strategy
 
     # In discovery mode (intent strategy), stage is unset since real flow isn't determined yet
     # Once switched to consultative/transactional, show actual stage

@@ -5,7 +5,6 @@ import { Button } from "./Button";
 import { Dialog } from "./Dialog";
 
 interface ConfirmOptions {
-  kicker?: string;
   title: string;
   body: string;
   confirmLabel: string;
@@ -42,7 +41,6 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
         open={!!opts}
         onClose={() => finish(false)}
         size="sm"
-        kicker={opts?.kicker}
         title={opts?.title ?? ""}
         actions={
           <>

@@ -1,0 +1,64 @@
+# Every tunable number in the app. core/constants.py is the only reader.
+# All numbers must be > 0; the app refuses to start otherwise.
+
+response:            # Layer 3 output checks
+  min_chars: 40
+  max_chars: 1500
+
+context:
+  recent_history_window: 10
+  persona_checkpoint_turns: 6
+  max_user_keywords: 6
+  terse_input_threshold: 3
+  min_turns_before_advance: 3   # more than 3 turns per stage frustrates the user
+
+voice:
+  max_audio_bytes: 26214400      # 25 MB
+  max_tts_text_length: 5000
+
+logs:                # JSONL rotation
+  metrics_max_lines: 5000
+  metrics_keep_after_rotation: 2500
+  analytics_max_lines: 10000
+  analytics_keep_after_rotation: 5000
+
+sessions:
+  seller_max: 200
+  seller_idle_minutes: 60
+  buyer_max: 100
+  buyer_idle_minutes: 30
+  cleanup_interval_seconds: 900
+
+input:
+  max_message_length: 1000
+  max_field_length: 5000
+
+rate_limits:         # [max_requests, window_seconds]
+  init: [10, 60]
+  chat: [60, 60]
+  knowledge: [10, 60]
+  prospect: [30, 60]
+  feedback: [5, 300]
+
+llm:                 # one profile per kind of call; pass as **LLM["name"]
+  default:        {temperature: 0.8, max_tokens: 200}
+  buyer_opener:   {temperature: 0.7, max_tokens: 150}
+  buyer_reply:    {temperature: 0.7, max_tokens: 250}
+  buyer_hint:     {temperature: 0.5, max_tokens: 80}
+  evaluation:     {temperature: 0.3, max_tokens: 800}
+  quiz:           {temperature: 0.3, max_tokens: 300}
+  coach_feedback: {temperature: 0.3, max_tokens: 150}
+  coach_answer:   {temperature: 0.4, max_tokens: 150}
+
+coach:               # word caps on coaching text
+  sentence_words: 15
+  tip_words: 8
+
+buyer:
+  sold_readiness: 0.85    # this keen, this many turns in, says yes
+  sold_min_turns: 3
+  walk_readiness: 0.4     # still this cold when patience runs out, walks
+
+grades:
+  thresholds: [60, 70, 80, 90]
+  labels: [F, D, C, B, A]

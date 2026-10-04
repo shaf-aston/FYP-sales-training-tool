@@ -17,7 +17,7 @@ export function CoachPanel() {
   const risks = (training?.watch_for ?? []).slice(0, 2).map((r) => cleanCoachText(r)).filter(Boolean);
 
   return (
-    <Panel kicker="Live coaching" title="Coach guidance" onClose={closeSidePanel}>
+    <Panel title="Coach guidance" onClose={closeSidePanel}>
       <div className={s.stack}>
         {!training ? (
           <Notice kind="empty">Send your first message and the coach will start guiding you here.</Notice>
