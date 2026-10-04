@@ -35,7 +35,11 @@ Seller-bot mode: `chat.py` → `SellerBot.chat` → `flow.py` (stage machine) ·
 
 ## Config
 
-`core/loader.py` reads `signals`, `analysis_config`, `objection_flows`, `product_config`, `prospect_config`, `adaptations`. The module that owns a feature reads its own file: `objection.py` → `objection_pathway_map`, `quiz.py` → `quiz_config`, `script_drills.py` → `script_drills`, `selling_quality.py` → `selling_signals`, `knowledge.py` → `knowledge_sanitization`. Limits live in `core/constants.py` and `backend/security.py`.
+Every tunable number lives in `config/limits.yaml`; `core/constants.py` is its only reader and refuses zero or negative values at start-up. LLM calls take a named profile from it (`**LLM["buyer_reply"]`), never literal numbers.
+
+`core/loader.py` reads `signals`, `analysis_config`, `objection_flows`, `product_config`, `prospect_config`, `adaptations`. The module that owns a feature reads its own file: `objection.py` → `objection_pathway_map`, `quiz.py` → `quiz_config`, `script_drills.py` → `script_drills`, `selling_quality.py` → `selling_signals`, `knowledge.py` → `knowledge_sanitization`.
+
+Environment: `backend/settings.py` reads app env (origins, debug, admin token); `core/providers/config.py` reads LLM keys and models. No other module touches the environment, except `METRICS_JSONL_PATH` in `core/analytics/session_analytics.py`.
 
 ## Glossary (the words the code uses)
 

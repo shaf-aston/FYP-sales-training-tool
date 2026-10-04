@@ -8,6 +8,7 @@ import time
 from dataclasses import dataclass, field
 
 from .analytics.session_analytics import SessionAnalytics
+from .constants import LLM
 from .loader import load_prospect_config, load_real_objections
 from .buyer_prompt import build_product_context, build_system_prompt
 from .buyer_rules import ObjectionPacer, end_outcome
@@ -275,7 +276,7 @@ class BuyerSession:
         ]
 
         start = time.time()
-        response = self._get_chat_with_fallback(messages, temperature=0.7, max_tokens=150)
+        response = self._get_chat_with_fallback(messages, **LLM["buyer_opener"])
         latency = (time.time() - start) * 1000
 
         self.conversation_history.append(
@@ -396,7 +397,7 @@ class BuyerSession:
 
         start = time.time()
         try:
-            response = self._get_chat_with_fallback(messages, temperature=0.7, max_tokens=250)
+            response = self._get_chat_with_fallback(messages, **LLM["buyer_reply"])
         except ProviderUnavailable:
             self._restore(before_turn)
             raise
@@ -557,7 +558,7 @@ Don't give away what the prospect actually wants."""
                 {"role": "system", "content": hint_prompt},
                 {"role": "user", "content": "Give a coaching tip."},
             ]
-            resp = self._get_chat_with_fallback(messages, temperature=0.5, max_tokens=80)
+            resp = self._get_chat_with_fallback(messages, **LLM["buyer_hint"])
             return {"hint": resp.content.strip()}
         except Exception:
             return {"hint": "Find out more before pitching anything."}

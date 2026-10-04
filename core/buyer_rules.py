@@ -5,11 +5,7 @@ Pure logic, no AI calls, no I/O. BuyerSession asks; this module answers.
 
 import random
 
-# A buyer this keen, this many turns in, says yes.
-SOLD_READINESS = 0.85
-SOLD_MIN_TURNS = 3
-# A buyer still this cold once their patience runs out walks away.
-WALK_READINESS = 0.4
+from .constants import SOLD_MIN_TURNS, SOLD_READINESS, WALK_READINESS
 
 
 class ObjectionPacer:
