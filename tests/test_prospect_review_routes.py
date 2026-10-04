@@ -5,7 +5,7 @@ from unittest import mock
 import pytest
 
 from backend.app import app
-from core.prospect_session import ProviderUnavailable
+from core.buyer_session import ProviderUnavailable
 from core.providers.base import LLMResponse
 
 

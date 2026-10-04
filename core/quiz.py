@@ -4,6 +4,7 @@ import logging
 import random
 from typing import Any
 
+from .constants import LLM
 from .loader import load_yaml
 from .selling_quality import NEGATIVE_SIGNALS, REASONS, score_seller_turn
 from .utils import (
@@ -465,7 +466,7 @@ def _score_with_llm(router: Any, prompt: str, defaults: dict) -> dict:
     """Unified LLM scoring: validates enums, clamps scores, handles fallbacks."""
     try:
         response = router.chat_with_fallback(
-            [{"role": "system", "content": prompt}], temperature=0.3, max_tokens=300
+            [{"role": "system", "content": prompt}], **LLM["quiz"]
         ).response
         parsed = extract_json_from_llm(response.content) if response.content else None
         result = parsed if isinstance(parsed, dict) else {}

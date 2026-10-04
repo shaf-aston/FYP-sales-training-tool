@@ -1,15 +1,13 @@
 """Post-session evaluation for prospect mode with 5-criterion scoring."""
 
 
+from .constants import GRADE_LABELS, GRADE_THRESHOLDS
 from .loader import load_prospect_config
 from .utils import (
     clamp_score,
     range_label,
     tokenize,
 )
-
-_GRADE_THRESHOLDS = [60, 70, 80, 90]
-_GRADE_LABELS = ["F", "D", "C", "B", "A"]
 
 _OPEN_QUESTION_HINTS = ["what", "how", "why", "which", "where", "tell me"]
 _RAPPORT_HINTS = [
@@ -219,7 +217,7 @@ def _build_deterministic_summary(overall_score: int, outcome: str) -> str:
 
 def _grade_from_score(score: int) -> str:
     """Convert numeric score (0-100) to letter grade (F-A)."""
-    return range_label(score, _GRADE_THRESHOLDS, _GRADE_LABELS)
+    return range_label(score, GRADE_THRESHOLDS, GRADE_LABELS)
 
 
 def evaluate_prospect_session(conversation_history, prospect_state) -> dict:

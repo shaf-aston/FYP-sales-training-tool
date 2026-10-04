@@ -128,7 +128,7 @@ export function DrillsDialog() {
   const { dialog, closeDialog } = useUi();
   const open = dialog === "drills";
   return (
-    <Dialog open={open} onClose={closeDialog} kicker="Tools" title="Say it from memory" size="lg">
+    <Dialog open={open} onClose={closeDialog} title="Say it from memory" size="lg">
       {open && <DrillsBody />}
     </Dialog>
   );

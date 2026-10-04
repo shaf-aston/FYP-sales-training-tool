@@ -76,10 +76,6 @@ export function FlowControls() {
 
   return (
     <div className={s.stack}>
-      <div className={s.heading}>
-        <h2>Conversation flow</h2>
-        <p>Skip ahead or change approach when you need to test a specific scenario.</p>
-      </div>
       <Select label="Switch strategy" value={pickedStrategy} onChange={(e) => setPickedStrategy(e.target.value)}>
         <option value="">Choose a strategy</option>
         <option value="consultative">Consultative (advice-led)</option>

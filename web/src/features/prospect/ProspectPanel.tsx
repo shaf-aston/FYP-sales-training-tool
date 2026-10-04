@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Badge, Button, Card, Eyebrow, Panel, ProgressBar, Select, Switch } from "@/components/ui";
+import { Badge, Button, Card, Panel, ProgressBar, Select, Switch } from "@/components/ui";
 import { useSession } from "@/features/session/SessionContext";
 import { config } from "@/lib/config";
 import { EvaluationBody } from "./EvaluationCard";
@@ -28,7 +28,7 @@ export function ProspectPanel() {
   const evaluating = forThisSession && state.status === "loading";
 
   return (
-    <Panel kicker="Prospect practice" title="Buyer profile" hideHeadOnPhone>
+    <Panel title="Buyer profile" hideHeadOnPhone>
       <button type="button" className={s.bar} aria-expanded={open} aria-controls="buyer-details" onClick={() => setOpen((o) => !o)}>
         <span>
           Buyer: {name} · {pct}% ready
@@ -54,7 +54,6 @@ export function ProspectPanel() {
         </section>
 
         <section className={s.readiness}>
-          <Eyebrow>Buying readiness</Eyebrow>
           <ProgressBar value={pct} label="Buying readiness" caption={`${pct}% · ${band(pct)}`} />
           {delta && (
             <span key={delta.key} className={`${s.delta} ${delta.n > 0 ? s.up : s.down}`} aria-hidden="true">
@@ -70,7 +69,6 @@ export function ProspectPanel() {
 
         {prospectSettings.showHints && (
           <Card tone="accent" aria-live="polite">
-            <Eyebrow>Coaching hint</Eyebrow>
             <p className={s.hint}>{prospect.hint || "Hints will appear after the next prospect reply."}</p>
           </Card>
         )}

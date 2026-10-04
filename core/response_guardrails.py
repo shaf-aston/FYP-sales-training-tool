@@ -15,7 +15,8 @@ from dataclasses import dataclass, field
 
 from .constants import MIN_RESPONSE_CHARS, MAX_RESPONSE_CHARS
 from .loader import load_signals, load_yaml
-from .utils import Stage, Strategy, contains_nonnegated_keyword
+from .enums import Stage, Strategy
+from .utils import contains_nonnegated_keyword
 
 logger = logging.getLogger(__name__)
 

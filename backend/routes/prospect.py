@@ -16,7 +16,7 @@ from ..security import InputValidator, require_rate_limit
 from ._utils import make_require_session, validate_provider
 from core.analytics.session_analytics import SessionAnalytics
 from core.constants import MAX_CHOSEN_OBJECTION_CHARS, MAX_PERSONA_NAME_CHARS
-from core.prospect_session import ProviderUnavailable
+from core.buyer_session import ProviderUnavailable
 from core.quiz import build_prospect_question, score_prospect_answer
 from core.script_drills import build_drill_set
 
@@ -65,13 +65,13 @@ def prospect_products():
             "strategy": product_info.get("strategy", "consultative"),
         })
 
-    return jsonify({"ok": True, "products": result})
+    return jsonify({"success": True, "products": result})
 
 
 @bp.route("/personas", methods=["GET"])
 def prospect_personas():
     """The buyer personas a learner can pick for one product."""
-    from core.prospect_session import personas_for
+    from core.buyer_session import personas_for
 
     product_type = request.args.get("product_type", "default")
     return jsonify({
@@ -119,7 +119,7 @@ def prospect_init():
     if error:
         return error
 
-    from core.prospect_session import ProspectSession, select_persona
+    from core.buyer_session import BuyerSession, select_persona
 
     try:
         persona = select_persona(product_type, persona_name)
@@ -129,7 +129,7 @@ def prospect_init():
     session_id = secrets.token_hex(16)
 
     try:
-        ps = ProspectSession(
+        ps = BuyerSession(
             provider_type=provider,
             product_type=product_type,
             difficulty=difficulty,

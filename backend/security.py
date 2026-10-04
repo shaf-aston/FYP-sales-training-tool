@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from functools import wraps
 from typing import Any, Callable, Dict, Optional, Tuple
 
-from core.constants import MAX_FIELD_LENGTH as CHATBOT_MAX_FIELD_LENGTH
+from core import constants as limits
 from . import settings
 from .messages import RATE_LIMIT_ERROR
 
@@ -23,24 +23,17 @@ class SecurityConfig:
     SESSION_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{8,128}$")
 
     # Session management
-    MAX_SESSIONS = 200
-    SESSION_IDLE_MINUTES = 60
-    CLEANUP_INTERVAL_SECONDS = 900  # 15 minutes
+    MAX_SESSIONS = limits.MAX_SESSIONS
+    SESSION_IDLE_MINUTES = limits.SESSION_IDLE_MINUTES
+    CLEANUP_INTERVAL_SECONDS = limits.CLEANUP_INTERVAL_SECONDS
     TRUST_PROXY_HEADERS = False
 
     # Message validation
-    MAX_MESSAGE_LENGTH = 1000
-
-    MAX_FIELD_LENGTH = CHATBOT_MAX_FIELD_LENGTH
+    MAX_MESSAGE_LENGTH = limits.MAX_MESSAGE_LENGTH
+    MAX_FIELD_LENGTH = limits.MAX_FIELD_LENGTH
 
     # Rate limiting: (max_requests, window_seconds)
-    RATE_LIMITS = {
-        "init": (10, 60),
-        "chat": (60, 60),
-        "knowledge": (10, 60),
-        "prospect": (30, 60),
-        "feedback": (5, 300),
-    }
+    RATE_LIMITS = limits.RATE_LIMITS
 
     # Security headers
     SECURITY_HEADERS = {

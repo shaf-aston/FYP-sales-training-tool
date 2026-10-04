@@ -2,6 +2,7 @@
 
 import logging
 
+from .constants import LLM
 from .loader import load_signals, load_yaml
 from .quiz import get_stage_rubric
 from .utils import contains_nonnegated_keyword
@@ -77,8 +78,7 @@ def answer_training_question(router, flow_engine, question, style: str = "tactic
     try:
         response = router.chat_with_fallback(
             [{"role": "system", "content": system_prompt}, {"role": "user", "content": question}],
-            temperature=0.4,
-            max_tokens=150,
+            **LLM["coach_answer"],
             stage=stage,
         ).response
         answer = (

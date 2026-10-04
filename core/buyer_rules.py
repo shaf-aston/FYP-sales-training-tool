@@ -1,17 +1,11 @@
 """The buyer's rules: when they object, and when the session ends.
 
-Pure logic, no AI calls, no I/O. ProspectSession asks; this module answers.
+Pure logic, no AI calls, no I/O. BuyerSession asks; this module answers.
 """
 
 import random
 
-# A buyer this keen, this many turns in, says yes.
-SOLD_READINESS = 0.85
-SOLD_MIN_TURNS = 3
-# A buyer never walks before this many turns; one weak opener is not a lost sale.
-WALK_MIN_TURNS = 3
-# A buyer still this cold once their patience runs out walks away.
-WALK_READINESS = 0.4
+from .constants import SOLD_MIN_TURNS, SOLD_READINESS, WALK_MIN_TURNS, WALK_READINESS
 
 
 class ObjectionPacer:

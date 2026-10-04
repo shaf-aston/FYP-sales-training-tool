@@ -2,36 +2,32 @@
 
 interface Meta {
   label: string;
-  note: string;
 }
 
 export const STRATEGY_META: Record<string, Meta> = {
-  "-": { label: "Not started", note: "Begin the conversation to start tracking the flow." },
-  intent: { label: "Finding out what they want", note: "The salesperson is working out what you need before choosing an approach." },
-  consultative: {
-    label: "Consultative",
-    note: "Advice-led sale: what you want, the problem, why it matters, the solution, concerns, closing.",
-  },
-  transactional: { label: "Transactional", note: "Quick sale: what you want, the solution, agreeing the terms, concerns, closing." },
-  prospect: { label: "Prospect practice", note: "You are in roleplay mode with a live buyer persona." },
+  "-": { label: "Not started" },
+  intent: { label: "Finding out what they want" },
+  consultative: { label: "Consultative" },
+  transactional: { label: "Transactional" },
+  prospect: { label: "Prospect practice" },
 };
 
 export const STAGE_META: Record<string, Meta> = {
-  intent: { label: "Finding out what they want", note: "Working out what you are looking for." },
-  logical: { label: "Understanding the problem", note: "Digging into what is not working for you today." },
-  emotional: { label: "Making it personal", note: "Why it matters to you and what happens if nothing changes." },
-  pitch: { label: "Presenting the solution", note: "Showing the offer and its price." },
-  negotiation: { label: "Agreeing the terms", note: "Settling payment and terms." },
-  objection: { label: "Handling concerns", note: "Answering your doubts before moving on." },
-  outcome: { label: "Closing", note: "You decide: buy, walk away, or think it over." },
-  default: { label: "Not started", note: "Begin the conversation to start tracking the flow." },
+  intent: { label: "Finding out what they want" },
+  logical: { label: "Understanding the problem" },
+  emotional: { label: "Making it personal" },
+  pitch: { label: "Presenting the solution" },
+  negotiation: { label: "Agreeing the terms" },
+  objection: { label: "Handling concerns" },
+  outcome: { label: "Closing" },
+  default: { label: "Not started" },
 };
 
-export const STAGE_ORDER: Record<string, string[]> = {
-  consultative: ["intent", "logical", "emotional", "pitch", "objection", "outcome"],
-  transactional: ["intent", "pitch", "negotiation", "objection", "outcome"],
-  intent: ["intent"],
-};
+/** The two practice modes: heading + one-line "who does what". */
+export const MODE_META = {
+  seller: { label: "Seller bot", note: "You're the customer → an AI salesperson sells to you" },
+  prospect: { label: "Prospect practice", note: "You're the salesperson → an AI buyer answers" },
+} as const;
 
 export const key = (value: string | null | undefined) => (value ?? "").trim().toLowerCase();
 
@@ -40,5 +36,4 @@ export const strategyMeta = (s: string) => STRATEGY_META[key(s)] ?? STRATEGY_MET
 const UNDETERMINED_STAGE = "----";
 
 export const stageMeta = (s: string) =>
-  STAGE_META[key(s)] ?? (s === UNDETERMINED_STAGE ? STAGE_META.intent : { label: s, note: "" });
-export const stagesFor = (strategy: string) => STAGE_ORDER[key(strategy)] ?? STAGE_ORDER.consultative;
+  STAGE_META[key(s)] ?? (s === UNDETERMINED_STAGE ? STAGE_META.intent : { label: s });

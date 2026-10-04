@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { AmbientFilm } from "@/components/film/AmbientFilm";
-import { Button, Card, ConfirmProvider, Eyebrow, Notice, TextArea, TextInput, ToastProvider } from "@/components/ui";
+import { Button, Card, ConfirmProvider, Notice, TextArea, TextInput, ToastProvider } from "@/components/ui";
 import { FIELDS } from "./fields";
 import { useKnowledge } from "./useKnowledge";
 import { useScrollSpy } from "./useScrollSpy";
@@ -64,7 +64,7 @@ function Editor() {
         </nav>
         <div className={s.fields}>
           <Card tone="accent" className={s.note}>
-            These notes are added to the chatbot&apos;s session prompt as custom product data. Focus on details unique to your scenario. Changes apply after you reset the chat session.
+            Changes apply after you reset the chat.
           </Card>
           {FIELDS.map((f) => {
             const common = {
@@ -110,9 +110,7 @@ export function KnowledgePage() {
         <main className={s.page}>
           <header className={s.header}>
             <div>
-              <Eyebrow>Knowledge workspace</Eyebrow>
               <h1 className={s.title}>Product Knowledge</h1>
-              <p className={s.subtitle}>Add the details that make your practice scenario feel real. Keep it specific to your product or offer.</p>
             </div>
             <Suspense fallback={<Link href={config.routes.practice} className={s.back}>← Back to chat</Link>}>
               <BackLink />

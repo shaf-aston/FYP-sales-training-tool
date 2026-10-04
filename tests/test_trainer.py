@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 from core import trainer
 from core.services.provider_router import ProviderRouter
-from core.utils import Stage, Strategy
+from core.enums import Stage, Strategy
 
 
 def _router(monkeypatch, *providers):
@@ -81,7 +81,7 @@ def test_tactical_training_answer_keeps_original_punctuation(monkeypatch):
 
 def test_generate_training_makes_no_ai_call_and_follows_buyer_move():
     """Coach notes are a config lookup: an objection gets the objection note, every time."""
-    from core.utils import Stage, Strategy
+    from core.enums import Stage, Strategy
 
     class Engine:
         flow_type = Strategy.TRANSACTIONAL

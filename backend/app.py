@@ -1,6 +1,7 @@
 """Flask application entrypoint."""
 
 import sys
+import threading
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -16,6 +17,7 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 from core.constants import MAX_PROSPECT_SESSIONS, PROSPECT_IDLE_MINUTES, UNDETERMINED_STAGE  # noqa: E402
+from core.script_engine.seller import selling_config, shared_embedder  # noqa: E402
 from backend.messages import INTERNAL_SERVER_ERROR, MESSAGE_REQUIRED  # noqa: E402
 from backend.security import (  # noqa: E402
     InputValidator,
@@ -67,6 +69,9 @@ def _should_start_background_cleanup() -> bool:
 if _should_start_background_cleanup():
     session_manager.start_background_cleanup()
     prospect_session_manager.start_background_cleanup()
+    if selling_config()["enabled"]:
+        # load the local meaning model now, so the first scripted call doesn't wait ~2 s for it
+        threading.Thread(target=shared_embedder, daemon=True, name="embedder-warmup").start()
 
 
 _require_session = make_require_session(session_manager.get)
@@ -87,7 +92,7 @@ def _validate_message(message_text):
 
 def _bot_state(session_bot):
     """Common stage/strategy fields for JSON responses"""
-    from core.utils import Strategy
+    from core.enums import Strategy
 
     # In discovery mode (intent strategy), stage is unset since real flow isn't determined yet
     # Once switched to consultative/transactional, show actual stage

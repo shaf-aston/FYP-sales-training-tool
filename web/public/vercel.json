@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "https://140-238-102-50.sslip.io/api/:path*" }
+  ]
+}

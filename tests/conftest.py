@@ -58,3 +58,51 @@ def _no_session_leak_between_tests():
     for manager in (backend_app.prospect_session_manager, backend_app.session_manager):
         with manager._lock:
             manager._sessions.clear()
+
+
+class BagOfWordsEmbedder:
+    """Offline stand-in for the real embedder: hashed word counts, unit length."""
+
+    DIM = 256
+
+    def warm(self, texts):
+        pass
+
+    def embed(self, texts):
+        import math
+        import zlib
+
+        out = []
+        for text in texts:
+            vec = [0.0] * self.DIM
+            for word in text.lower().split():
+                vec[zlib.crc32(word.strip(".,!?").encode()) % self.DIM] += 1.0
+            norm = math.sqrt(sum(x * x for x in vec)) or 1.0
+            out.append([x / norm for x in vec])
+        return out
+
+
+@pytest.fixture
+def fake_embedder():
+    return BagOfWordsEmbedder()
+
+
+@pytest.fixture(autouse=True)
+def _scripted_selling_off(monkeypatch):
+    """Existing tests exercise the prompt-driven flow; scripted selling is opted into per test."""
+    from core.loader import load_yaml
+
+    monkeypatch.setattr(
+        "core.seller_bot.selling_config", lambda: {**load_yaml("selling.yaml"), "enabled": False}
+    )
+
+
+@pytest.fixture
+def scripted_selling(monkeypatch, fake_embedder):
+    """Turn scripted selling on with the offline embedder (no model download)."""
+    from core.loader import load_yaml
+
+    monkeypatch.setattr(
+        "core.seller_bot.selling_config", lambda: {**load_yaml("selling.yaml"), "enabled": True}
+    )
+    monkeypatch.setattr("core.script_engine.seller.shared_embedder", lambda: fake_embedder)

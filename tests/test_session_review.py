@@ -3,7 +3,7 @@
 import pytest
 
 from core.loader import load_prospect_config
-from core.prospect_session import ProspectSession
+from core.buyer_session import BuyerSession
 from core.session_review import build_review, pick_pivotal_turns
 
 
@@ -82,7 +82,7 @@ def test_an_empty_session_reviews_without_crashing(behaviour):
 
 def test_replayed_readiness_matches_what_the_learner_saw_live(behaviour, transcript):
     """A review that disagreed with the live session would be worse than none."""
-    session = ProspectSession(provider_type="dummy", product_type="general", difficulty="medium")
+    session = BuyerSession(provider_type="dummy", product_type="general", difficulty="medium")
     session.conversation_history.append(transcript[0])
 
     for entry in transcript[1:]:
@@ -98,7 +98,7 @@ def test_replayed_readiness_matches_what_the_learner_saw_live(behaviour, transcr
 
 
 def test_rewinding_restores_the_buyer_to_that_exact_point(behaviour, transcript):
-    session = ProspectSession(provider_type="dummy", product_type="general", difficulty="medium")
+    session = BuyerSession(provider_type="dummy", product_type="general", difficulty="medium")
     session.conversation_history = list(transcript)
     session.state.turn_count = 3
     session.state.has_walked = True
@@ -117,7 +117,7 @@ def test_rewinding_restores_the_buyer_to_that_exact_point(behaviour, transcript)
 
 
 def test_rewinding_to_a_turn_that_never_happened_is_refused(transcript):
-    session = ProspectSession(provider_type="dummy", product_type="general", difficulty="medium")
+    session = BuyerSession(provider_type="dummy", product_type="general", difficulty="medium")
     session.conversation_history = list(transcript)
 
     assert session.rewind_to_turn(9) is False

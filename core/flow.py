@@ -22,7 +22,8 @@ from .analysis import (
 )
 from .content import generate_stage_prompt
 from .loader import QuickMatcher, load_analysis_config, load_signals
-from .utils import Stage, Strategy, contains_nonnegated_keyword
+from .enums import Stage, Strategy
+from .utils import contains_nonnegated_keyword
 
 SIGNALS = load_signals()
 ANALYSIS_CONFIG = load_analysis_config()

@@ -104,7 +104,7 @@ def test_resetting_a_session_that_is_already_gone_records_nothing(client):
 
 def test_ending_a_seller_bot_session_records_where_it_got_to():
     """Ending a session records the final stage reached."""
-    from core.chatbot import SalesChatbot
+    from core.seller_bot import SellerBot
 
     class _Engine:
         current_stage = "DISCOVERY"
@@ -112,7 +112,7 @@ def test_ending_a_seller_bot_session_records_where_it_got_to():
         user_turn_count = 4
         conversation_history = [{"role": "user"}, {"role": "assistant"}]
 
-    bot = SalesChatbot.__new__(SalesChatbot)
+    bot = SellerBot.__new__(SellerBot)
     bot.session_id = "c" * 32
     bot.flow_engine = _Engine()
     bot.record_session_end()
@@ -124,9 +124,9 @@ def test_ending_a_seller_bot_session_records_where_it_got_to():
 
 
 def test_a_session_with_no_id_records_nothing():
-    from core.chatbot import SalesChatbot
+    from core.seller_bot import SellerBot
 
-    bot = SalesChatbot.__new__(SalesChatbot)
+    bot = SellerBot.__new__(SellerBot)
     bot.session_id = ""
 
     bot.record_session_end()  # must not raise

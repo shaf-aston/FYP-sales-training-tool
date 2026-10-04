@@ -7,7 +7,8 @@ from .loader import (
     load_analysis_config,
     load_signals,
 )
-from .utils import Stage, contains_nonnegated_keyword
+from .enums import Stage
+from .utils import contains_nonnegated_keyword
 
 logger = logging.getLogger(__name__)
 

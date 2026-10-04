@@ -82,7 +82,6 @@ export function ProspectSetup() {
     if (d === shown) return;
     if (!prospect) return setDifficulty(d);
     const ok = await confirm({
-      kicker: "Prospect practice",
       title: "Change difficulty?",
       body: "This ends the current conversation and starts a new one at the new difficulty.",
       confirmLabel: "Reset and change",

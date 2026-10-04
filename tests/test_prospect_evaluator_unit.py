@@ -2,7 +2,7 @@
 
 
 import core.prospect_evaluator as evaluator
-from core.prospect_session import ProspectState
+from core.buyer_session import BuyerState
 
 
 def _config(scoring_enabled=True, feedback_style="coaching"):
@@ -34,7 +34,7 @@ def test_deterministic_scores_default_to_neutral_when_no_sales_history():
 
 def test_evaluate_prospect_session_uses_deterministic_fallback_when_scoring_disabled(monkeypatch):
     monkeypatch.setattr(evaluator, "load_prospect_config", lambda: _config(scoring_enabled=False))
-    state = ProspectState(readiness=0.2, difficulty="easy", product_type="default")
+    state = BuyerState(readiness=0.2, difficulty="easy", product_type="default")
 
     result = evaluator.evaluate_prospect_session([], state)
 

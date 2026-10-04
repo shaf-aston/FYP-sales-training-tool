@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Badge, Button, Markdown, TextArea, TypingDots, useToast } from "@/components/ui";
+import { Button, Markdown, TextArea, TypingDots, useToast } from "@/components/ui";
 import { config } from "@/lib/config";
 import { useSession, type ChatMessage } from "@/features/session/SessionContext";
 import { ListenButton } from "@/features/voice/VoiceBar";
@@ -138,22 +138,15 @@ export function MessageList() {
     <div className={s.frame} ref={frameRef}>
       {!started && (
         <div className={s.intro}>
-          <Badge tone="accent">Try this first</Badge>
           {mode === "prospect" ? (
             <>
               <h2>Open the call.</h2>
-              <p>
-                Example: &ldquo;Thanks for your time. What made you take this call today?&rdquo; Hints and the buyer&rsquo;s
-                readiness update after each message.
-              </p>
+              <p>Example: &ldquo;Thanks for your time. What made you take this call today?&rdquo;</p>
             </>
           ) : (
             <>
               <h2>Tell the salesperson what you need.</h2>
-              <p>
-                Example: &ldquo;I&rsquo;m looking for a CRM for my small team.&rdquo; Then push back, ask about price, or say
-                you need to think. The coach explains each move the salesperson makes.
-              </p>
+              <p>Example: &ldquo;I&rsquo;m looking for a CRM for my small team.&rdquo;</p>
             </>
           )}
         </div>

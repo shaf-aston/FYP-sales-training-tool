@@ -196,7 +196,7 @@ def test_direction_falls_back_to_deterministic_scoring_when_llm_fails(monkeypatc
 
 
 def test_stage_feedback_never_shows_raw_enums_or_jargon():
-    from core.utils import Stage
+    from core.enums import Stage
 
     result = quiz.test_quiz_stage_answer("no idea", Stage.INTENT, "intent")
 

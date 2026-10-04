@@ -8,7 +8,7 @@ import time
 from dataclasses import dataclass, field
 
 from .analytics.session_analytics import SessionAnalytics
-from .constants import BUYER_TEMPERATURE, DEFAULT_MAX_TOKENS
+from .constants import LLM
 from .loader import load_prospect_config, load_real_objections
 from .buyer_prompt import build_product_context, build_system_prompt
 from .buyer_rules import ObjectionPacer, end_outcome
@@ -31,7 +31,7 @@ class ProviderUnavailable(RuntimeError):
 
 
 @dataclass
-class ProspectState:
+class BuyerState:
     """Represents the current state of a prospect in a sales roleplay session."""
 
     readiness: float
@@ -67,7 +67,7 @@ class ProspectState:
 
 
 @dataclass
-class ProspectResponse:
+class BuyerResponse:
     """Response from the prospect in a turn of the conversation."""
 
     content: str
@@ -98,7 +98,7 @@ def select_persona(product_type: str, name: str | None = None) -> dict:
     raise ValueError(f"Unknown persona '{name}' for product '{product_type}'")
 
 
-class ProspectSession:
+class BuyerSession:
     """Manages a prospect-mode conversation for sales roleplay training.
 
     The session simulates a buyer (prospect) with evolving readiness to purchase
@@ -157,7 +157,7 @@ class ProspectSession:
         self.product_type = product_type
         self.product_context = build_product_context(product_type, persona)
 
-        self.state = ProspectState(
+        self.state = BuyerState(
             readiness=behaviour["initial_readiness"],
             persona=persona,
             difficulty=difficulty,
@@ -202,7 +202,7 @@ class ProspectSession:
     def model_name(self) -> str:
         return self._router.model_name
 
-    def _get_chat_with_fallback(self, messages, temperature=BUYER_TEMPERATURE, max_tokens=DEFAULT_MAX_TOKENS):
+    def _get_chat_with_fallback(self, messages, temperature, max_tokens):
         """Ask the buyer's AI provider, falling back to others on failure.
 
         Raises ProviderUnavailable when no provider produced anything. Returning the
@@ -252,11 +252,11 @@ class ProspectSession:
             ),
         )
 
-    def get_opening_message(self) -> ProspectResponse:
+    def get_opening_message(self) -> BuyerResponse:
         """The prospect's opening line, filled from opening_lines in config (no AI).
 
         Returns:
-            ProspectResponse with the opening message and state snapshot.
+            BuyerResponse with the opening message and state snapshot.
         """
         persona = self.persona
         background = str(persona.get("background", "")).strip()
@@ -278,7 +278,7 @@ class ProspectSession:
         self._log_turn_event(None, content, turn_index=0)
         self.save_session()
 
-        return ProspectResponse(
+        return BuyerResponse(
             content=content,
             latency_ms=round(latency, 1),
             provider=self.provider_name,
@@ -288,7 +288,7 @@ class ProspectSession:
 
     def process_turn(
         self, user_message: str, show_hints: bool = False
-    ) -> ProspectResponse:
+    ) -> BuyerResponse:
         """Process a salesperson message and return the prospect's response.
 
         Args:
@@ -296,10 +296,10 @@ class ProspectSession:
             show_hints: If True, generate an optional coaching hint for the user.
 
         Returns:
-            ProspectResponse with prospect's reply, latency and state snapshot.
+            BuyerResponse with prospect's reply, latency and state snapshot.
         """
         if self.state.has_committed or self.state.has_walked:
-            return ProspectResponse(
+            return BuyerResponse(
                 content=self._terminal_outcome_message(),
                 latency_ms=0.0,
                 provider=self.provider_name,
@@ -313,7 +313,7 @@ class ProspectSession:
             terminal_content = self._terminal_outcome_message()
             self.conversation_history.append({"role": "assistant", "content": terminal_content})
             self.save_session()
-            return ProspectResponse(
+            return BuyerResponse(
                 content=terminal_content,
                 latency_ms=0.0,
                 provider=self.provider_name,
@@ -363,7 +363,7 @@ class ProspectSession:
                 }
             )
             self.save_session()
-            return ProspectResponse(
+            return BuyerResponse(
                 content=terminal_content,
                 latency_ms=0.0,
                 provider=self.provider_name,
@@ -380,7 +380,7 @@ class ProspectSession:
 
         start = time.time()
         try:
-            response = self._get_chat_with_fallback(messages)
+            response = self._get_chat_with_fallback(messages, **LLM["buyer_reply"])
         except ProviderUnavailable:
             self._restore(before_turn)
             raise
@@ -413,7 +413,7 @@ class ProspectSession:
         if show_hints and not self.state.has_committed and not self.state.has_walked:
             coaching = self._generate_coaching_hint(user_message)
 
-        return ProspectResponse(
+        return BuyerResponse(
             content=reply,
             latency_ms=round(latency, 1),
             provider=self.provider_name,

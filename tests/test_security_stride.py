@@ -37,6 +37,9 @@ class _DummyBot:
     def save_session(self):
         pass
 
+    def script_opening(self):
+        return None
+
 
 class _DummySessionManager:
     def __init__(self):
@@ -61,7 +64,7 @@ def _make_session_app(monkeypatch):
     app.config["ADMIN_TOKEN"] = "secret-token"
     manager = _DummySessionManager()
 
-    monkeypatch.setattr(session_routes, "SalesChatbot", _DummyBot)
+    monkeypatch.setattr(session_routes, "SellerBot", _DummyBot)
     monkeypatch.setattr(
         session_routes,
         "generate_init_greeting",
@@ -76,6 +79,9 @@ def _make_session_app(monkeypatch):
             "strategy": bot.flow_engine.flow_type.upper(),
         }
 
+    # init_routes rewires the shared blueprint; let monkeypatch put the real wiring back.
+    for attr in ("app", "session_manager", "get_session", "require_session", "set_session", "delete_session", "bot_state"):
+        monkeypatch.setattr(session_routes.bp, attr, getattr(session_routes.bp, attr, None), raising=False)
     session_routes.init_routes(
         app,
         manager,

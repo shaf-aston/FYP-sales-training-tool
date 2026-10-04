@@ -21,8 +21,8 @@ import s from "./AppShell.module.css";
 
 function Layout() {
   const { sidePanel } = useUi();
-  const { mode } = useSession();
-  const cls = [s.grid, sidePanel && s.withSide, mode === "prospect" && s.withProspect].filter(Boolean).join(" ");
+  const { mode, prospect } = useSession();
+  const cls = [s.grid, sidePanel && s.withSide, mode === "prospect" && prospect && s.withProspect].filter(Boolean).join(" ");
   return (
     <div className={s.shell}>
       <main className={cls}>

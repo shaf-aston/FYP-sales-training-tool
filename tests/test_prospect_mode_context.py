@@ -2,7 +2,7 @@
 
 import core.knowledge as knowledge_module
 import core.loader as loader
-import core.prospect_session as prospect_session
+import core.buyer_session as prospect_session
 
 
 class _StubProvider:
@@ -71,7 +71,7 @@ def test_prospect_session_product_context_includes_persona_and_custom_data(monke
         lambda: "product_name: Acme Pro\nAdditional notes: buyer research",
     )
 
-    session = prospect_session.ProspectSession(
+    session = prospect_session.BuyerSession(
         provider_type="stub",
         product_type="b2b_saas",
         difficulty="easy",

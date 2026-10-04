@@ -2,7 +2,7 @@
 
 import pytest
 
-from core.prospect_session import ProspectSession
+from core.buyer_session import BuyerSession
 from core.selling_quality import load_selling_signals, score_seller_turn
 
 
@@ -129,7 +129,7 @@ def test_config_weights_and_thresholds_are_all_present():
 
 
 def test_prospect_readiness_moves_on_selling_quality_and_records_why():
-    session = ProspectSession(provider_type="dummy", product_type="general", difficulty="medium")
+    session = BuyerSession(provider_type="dummy", product_type="general", difficulty="medium")
     session.conversation_history.append(
         {"role": "assistant", "content": "My van keeps breaking down and reliability matters"}
     )
@@ -144,7 +144,7 @@ def test_prospect_readiness_moves_on_selling_quality_and_records_why():
 
 
 def test_prospect_readiness_falls_when_the_seller_pressures():
-    session = ProspectSession(provider_type="dummy", product_type="general", difficulty="medium")
+    session = BuyerSession(provider_type="dummy", product_type="general", difficulty="medium")
     start = session.state.readiness
     session.state.turn_count = 3
 
@@ -166,10 +166,10 @@ def test_hint_names_the_worst_problem_without_ai():
     """A pushy, early pitch gets the pressure tip: problems outrank strengths."""
     from types import SimpleNamespace
 
-    from core.prospect_session import ProspectSession
+    from core.buyer_session import BuyerSession
 
     score = score_seller_turn("Act now, this is limited time and the price goes up, so hurry.", completed_turns=0)
-    hint = ProspectSession._generate_coaching_hint(SimpleNamespace(last_turn_score=score), "")
+    hint = BuyerSession._generate_coaching_hint(SimpleNamespace(last_turn_score=score), "")
 
     assert "pressure" in score.signals
     assert hint == {"hint": "Drop the urgency. Ask what would make now the right time for them."}

@@ -1,0 +1,44 @@
+# Small interruptions answered in one line, then the script resumes.
+# All replies are drafts: the source scripts have no wording for these.
+# wait: true = say the reply and wait for them; the question comes back when they return.
+bring_back: "So, as you mentioned {last_point}, "
+park: "That's fair, and we'll come back to it once we know this is even a fit."   # objection before the price: acknowledge, keep going
+interruptions:
+  pause:
+    draft: true
+    wait: true
+    examples:
+      - "hold on a second"
+      - "sorry, give me a moment"
+      - "one sec, someone's at the door"
+      - "sorry, my kid is yelling"
+      - "hang on, my kids need me"
+      - "sorry, the dog is going mad"
+      - "can you give me two minutes"
+      - "brb"
+    reply: "No problem, take your time."
+  back:
+    draft: true
+    after_wait: true
+    examples:
+      - "ok I'm back"
+      - "sorry about that, I'm back"
+      - "right, where were we"
+      - "ok sorted, carry on"
+    reply: "No worries."
+  repeat:
+    draft: true
+    examples:
+      - "sorry, can you say that again"
+      - "I didn't catch that"
+      - "what was the question"
+      - "can you hear me?"
+      - "you're breaking up"
+      - "sorry, the line is bad"
+    reply: "Of course, let me ask that again."
+  thanks:
+    draft: true
+    examples:
+      - "thanks for your time"
+      - "thank you, that's helpful"
+    reply: "You're welcome."

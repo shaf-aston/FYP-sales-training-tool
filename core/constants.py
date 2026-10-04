@@ -1,37 +1,76 @@
-"""All magic numbers and limits live here"""
+"""Every tunable number, read once from config/limits.yaml and validated."""
+
+from .loader import load_yaml
+
+
+def _check_positive(node, path="limits"):
+    """Fail loud on any zero or negative number anywhere in the tree."""
+    if isinstance(node, bool):
+        return
+    if isinstance(node, (int, float)):
+        if node <= 0:
+            raise ValueError(f"{path} must be > 0, got {node}")
+    elif isinstance(node, dict):
+        for key, value in node.items():
+            _check_positive(value, f"{path}.{key}")
+    elif isinstance(node, list):
+        for i, value in enumerate(node):
+            _check_positive(value, f"{path}[{i}]")
+
+
+_L = load_yaml("limits.yaml")
+_check_positive(_L)
 
 # stage display
 UNDETERMINED_STAGE = "----"  # shown when intent strategy hasn't resolved yet
 
 # response validation (Layer 3)
-MIN_RESPONSE_CHARS = 40
-MAX_RESPONSE_CHARS = 1500
+MIN_RESPONSE_CHARS = _L["response"]["min_chars"]
+MAX_RESPONSE_CHARS = _L["response"]["max_chars"]
 
 # conversation context
-RECENT_HISTORY_WINDOW = 10
-PERSONA_CHECKPOINT_TURNS = 6
-MAX_USER_KEYWORDS = 6
+RECENT_HISTORY_WINDOW = _L["context"]["recent_history_window"]
+PERSONA_CHECKPOINT_TURNS = _L["context"]["persona_checkpoint_turns"]
+MAX_USER_KEYWORDS = _L["context"]["max_user_keywords"]
+TERSE_INPUT_THRESHOLD = _L["context"]["terse_input_threshold"]
+MIN_TURNS_BEFORE_ADVANCE = _L["context"]["min_turns_before_advance"]
 
-# session & performance
-MAX_PROSPECT_SESSIONS = 100
-# A learner-chosen objection to practise, and a persona name, as typed in prospect setup.
-MAX_CHOSEN_OBJECTION_CHARS = 200
-MAX_PERSONA_NAME_CHARS = 40
-PROSPECT_IDLE_MINUTES = 30
-# Note: SESSION_IDLE_MINUTES and MAX_SESSIONS are defined in web/security.py (SSoT)
+# voice mode
+MAX_AUDIO_SIZE_BYTES = _L["voice"]["max_audio_bytes"]
+MAX_TTS_TEXT_LENGTH = _L["voice"]["max_tts_text_length"]
+
+# log rotation
+MAX_METRICS_LINES = _L["logs"]["metrics_max_lines"]
+METRICS_KEEP_AFTER_ROTATION = _L["logs"]["metrics_keep_after_rotation"]
+MAX_ANALYTICS_LINES = _L["logs"]["analytics_max_lines"]
+ANALYTICS_KEEP_AFTER_ROTATION = _L["logs"]["analytics_keep_after_rotation"]
+
+# sessions
+MAX_SESSIONS = _L["sessions"]["seller_max"]
+SESSION_IDLE_MINUTES = _L["sessions"]["seller_idle_minutes"]
+MAX_PROSPECT_SESSIONS = _L["sessions"]["buyer_max"]
+PROSPECT_IDLE_MINUTES = _L["sessions"]["buyer_idle_minutes"]
+CLEANUP_INTERVAL_SECONDS = _L["sessions"]["cleanup_interval_seconds"]
 
 # input validation
-MAX_FIELD_LENGTH = 5000
-TERSE_INPUT_THRESHOLD = 3
-# Note: MAX_MESSAGE_LENGTH is defined in web/security.py (SSoT)
+MAX_MESSAGE_LENGTH = _L["input"]["max_message_length"]
+MAX_FIELD_LENGTH = _L["input"]["max_field_length"]
+MAX_CHOSEN_OBJECTION_CHARS = _L["input"]["max_chosen_objection_chars"]
+MAX_PERSONA_NAME_CHARS = _L["input"]["max_persona_name_chars"]
+RATE_LIMITS = {route: tuple(limit) for route, limit in _L["rate_limits"].items()}
 
-# strategy detection - any more than 3 turns can be frustrating for the user
-MIN_TURNS_BEFORE_ADVANCE = 3
+# LLM call profiles: router.chat_with_fallback(messages, **LLM["buyer_reply"])
+LLM = _L["llm"]
+DEFAULT_TEMPERATURE = LLM["default"]["temperature"]
+DEFAULT_MAX_TOKENS = LLM["default"]["max_tokens"]
 
-# LLM provider. Lower = steadier wording across chats; rules already pick what to say.
-DEFAULT_TEMPERATURE = 0.4
-# The AI buyer gets a little more variety so personas don't all sound alike.
-BUYER_TEMPERATURE = 0.6
-# Replies run 12-80 tokens; Groq charges the requested cap against the free per-minute budget.
-DEFAULT_MAX_TOKENS = 150
 
+# buyer end rules
+SOLD_READINESS = _L["buyer"]["sold_readiness"]
+SOLD_MIN_TURNS = _L["buyer"]["sold_min_turns"]
+WALK_MIN_TURNS = _L["buyer"]["walk_min_turns"]
+WALK_READINESS = _L["buyer"]["walk_readiness"]
+
+# grading
+GRADE_THRESHOLDS = _L["grades"]["thresholds"]
+GRADE_LABELS = _L["grades"]["labels"]
