@@ -32,6 +32,7 @@ class Step:
     run_on: bool = False  # said, then straight on to the next step without waiting for a reply
     name: str = ""      # the step's name in the source script, shown to the trainee
     note: str = ""      # the source's "listen for" note: what the trainee should notice next
+    doubts_answer: bool = False  # the question asks what holds them back: "money's tight" is the answer
 
 
 @dataclass(frozen=True)
@@ -97,6 +98,7 @@ class Interruption:
 @dataclass(frozen=True)
 class CommonSense:
     bring_back: str
+    park: str
     interruptions: dict
 
 
@@ -130,7 +132,7 @@ def _step(step_id, data):
         step_id, stage, data.get("say", ""), data.get("say_plain", ""),
         data.get("capture", ""), data.get("probe", ""),
         bool(data.get("draft")), listen, bool(data.get("run_on")),
-        data.get("name", ""), data.get("note", ""),
+        data.get("name", ""), data.get("note", ""), bool(data.get("doubts_answer")),
     )
 
 
@@ -179,7 +181,7 @@ def parse_common_sense(data):
                         bool(v.get("wait")), bool(v.get("after_wait")))
         for k, v in data["interruptions"].items()
     }
-    return CommonSense(data["bring_back"], items)
+    return CommonSense(data["bring_back"], data["park"], items)
 
 
 def load_method(name, directory=CONFIG_DIR / "methods"):

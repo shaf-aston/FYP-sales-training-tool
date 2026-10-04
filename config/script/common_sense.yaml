@@ -2,6 +2,7 @@
 # All replies are drafts: the source scripts have no wording for these.
 # wait: true = say the reply and wait for them; the question comes back when they return.
 bring_back: "So, as you mentioned {last_point}, "
+park: "That's fair, and we'll come back to it once we know this is even a fit."   # objection before the price: acknowledge, keep going
 interruptions:
   pause:
     draft: true
