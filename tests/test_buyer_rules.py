@@ -15,7 +15,7 @@ PATIENT = {"patience_turns": 10}
         (0.5, 20, 20, "walked"),      # session turn limit hit
         (0.39, 10, None, "walked"),   # out of patience and still cold
         (0.4, 10, None, None),        # out of patience but warm enough to stay
-        (0.0, 1, None, "walked"),     # lost all interest
+        (0.0, 3, None, "walked"),     # lost all interest, after the grace turns
     ],
 )
 def test_end_outcome(readiness, turns, max_turns, expected):

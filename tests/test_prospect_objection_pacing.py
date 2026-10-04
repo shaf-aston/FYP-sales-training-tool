@@ -212,3 +212,11 @@ def test_a_rewind_restores_the_exact_readiness_not_the_rounded_one():
 
     assert prospect.rewind_to_turn(2) is True
     assert prospect.state.readiness == prospect.review()["readiness_exact"]
+
+
+def test_buyer_does_not_walk_on_first_weak_turn():
+    from core.buyer_rules import end_outcome
+
+    behaviour = {"patience_turns": 10}
+    assert end_outcome(0.0, 1, behaviour, None) is None
+    assert end_outcome(0.0, 3, behaviour, None) == "walked"
