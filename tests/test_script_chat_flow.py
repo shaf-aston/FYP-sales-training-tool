@@ -45,6 +45,13 @@ def test_call_opens_with_the_script_and_follows_it(client):
     assert plain == "How long have you been thinking about this?"
 
 
+def test_opening_question_is_the_intent_stage_not_the_problem(client):
+    opened, headers = _init(client)
+    assert opened["stage"].lower() == "intent"
+    # a vague answer keeps digging on the same opening question
+    assert _say(client, headers, "not sure really")["stage"].lower() == "intent"
+
+
 def test_stage_comes_from_the_script_step(client):
     _, headers = _init(client)
     reply = _say(client, headers, "I want to be free from my 9-5 and work from anywhere")

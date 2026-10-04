@@ -6,7 +6,7 @@ price_step: "14"
 steps:
   "00":
     name: "Frame"
-    ui_stage: logical
+    ui_stage: intent
     draft: true
     run_on: true   # the frame leads straight into step 01's question
     say: "I believe you had a chat with {setter} setter... I've read your application but I don't like to assume anything"
@@ -16,7 +16,7 @@ steps:
   "01":
     name: "End outcome"
     note: 'FREEDOM. Vague → loop back, dig till freedom'
-    ui_stage: logical
+    ui_stage: intent
     say: "What do you want to specifically achieve by making money online?"
     capture: outcome
     probe: "What are you actually hoping to achieve?"
