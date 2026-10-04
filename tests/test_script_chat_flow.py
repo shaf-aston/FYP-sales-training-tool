@@ -3,7 +3,7 @@ import pytest
 
 from backend.app import app
 
-CONSULTATIVE_PRODUCT = "luxury_cars"
+SCRIPT_PRODUCT = "high_ticket_sales_mentorship"  # listed under `products:` in selling.yaml
 
 
 @pytest.fixture
@@ -16,7 +16,7 @@ def client(scripted_selling, monkeypatch):
 
 def _init(client):
     response = client.post(
-        "/api/init", json={"product_type": CONSULTATIVE_PRODUCT}
+        "/api/init", json={"product_type": SCRIPT_PRODUCT}
     )
     body = response.get_json()
     assert response.status_code == 200, body
@@ -80,18 +80,17 @@ def test_edit_rewinds_the_script_too(client):
     assert edited["history"][0]["content"] == "I want financial freedom"
 
 
-def test_script_takes_over_when_the_call_turns_consultative(client):
-    # a call that opens with no product starts in intent mode, the prompt-driven way
-    response = client.post("/api/init", json={})
-    headers = {"X-Session-ID": response.get_json()["session_id"]}
+@pytest.mark.parametrize("product", ["financial_services", "healthcare_services", "luxury_cars", None])
+def test_products_not_listed_never_get_the_coaching_script(client, product):
+    # live: a Wealth Management trainee was pitched online-business coaching
     from backend.app import session_manager
-    bot = session_manager.get(headers["X-Session-ID"])
-    assert bot.seller is None
-    bot.flow_engine.switch_strategy("consultative")
-    opened = _say(client, headers, "I want a mentor to help me leave my job")
-    assert opened["message"].endswith("What do you want to specifically achieve by making money online?")
-    assert _say(client, headers, "I want financial freedom")["message"].startswith("How much")
 
+    body = client.post("/api/init", json={"product_type": product} if product else {}).get_json()
+    bot = session_manager.get(body["session_id"])
+    bot.flow_engine.switch_strategy("consultative")
+    headers = {"X-Session-ID": body["session_id"]}
+    reply = _say(client, headers, "I want a mentor to help me leave my job")["message"]
+    assert bot.seller is None and "making money online" not in reply
 
 
 def test_script_lines_reach_the_user_word_for_word(client, monkeypatch):

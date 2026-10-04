@@ -161,7 +161,7 @@ def test_answers_move_the_script_on(replies, expected_step):
     from core.script_engine.seller import ScriptSeller
 
     cfg = load_yaml("selling.yaml")
-    seller = ScriptSeller(cfg, load_method("cat"), load_offer(cfg["offer"]), load_common_sense(),
+    seller = ScriptSeller(cfg, load_method("cat"), load_offer(cfg["products"]["high_ticket_sales_mentorship"]), load_common_sense(),
                           make_embedder(cfg, ROOT), _down)
     for text in replies:
         seller.reply(text)
@@ -172,7 +172,7 @@ def test_real_price_question_still_gets_the_early_answer():
     from core.script_engine.seller import ScriptSeller
 
     cfg = load_yaml("selling.yaml")
-    seller = ScriptSeller(cfg, load_method("cat"), load_offer(cfg["offer"]), load_common_sense(),
+    seller = ScriptSeller(cfg, load_method("cat"), load_offer(cfg["products"]["high_ticket_sales_mentorship"]), load_common_sense(),
                           make_embedder(cfg, ROOT), _down)
     seller.reply("I want freedom")
     text, _ = seller.reply("wait, sorry, what's this going to cost me?")
@@ -183,7 +183,7 @@ def _real_seller():
     from core.script_engine.seller import ScriptSeller
 
     cfg = load_yaml("selling.yaml")
-    return ScriptSeller(cfg, load_method("cat"), load_offer(cfg["offer"]), load_common_sense(),
+    return ScriptSeller(cfg, load_method("cat"), load_offer(cfg["products"]["high_ticket_sales_mentorship"]), load_common_sense(),
                         make_embedder(cfg, ROOT), _down)
 
 
@@ -196,6 +196,13 @@ def test_open_question_takes_an_objection_shaped_reply_as_its_answer(said):
     seller.reset(ScriptState(step="05", slots={"outcome": "financial freedom"}))
     text, _ = seller.reply(said)
     assert seller.sense.park not in text and seller.state.step != "05"
+
+
+@pytest.mark.parametrize("said", ["I want more time with my kids", "to spend time with my family"])
+def test_family_time_goal_is_an_answer_not_a_pause(said):
+    seller = _real_seller()
+    text, _ = seller.reply(said)
+    assert seller.state.step == "02" and "take your time" not in text
 
 
 @pytest.mark.parametrize("said", ["this sounds like a scam honestly", "I need to talk to my wife first",
@@ -213,7 +220,7 @@ def test_a_pause_is_a_pause_on_any_step(step):
     from core.script_engine.seller import ScriptSeller
 
     cfg = load_yaml("selling.yaml")
-    seller = ScriptSeller(cfg, load_method("cat"), load_offer(cfg["offer"]), load_common_sense(),
+    seller = ScriptSeller(cfg, load_method("cat"), load_offer(cfg["products"]["high_ticket_sales_mentorship"]), load_common_sense(),
                           make_embedder(cfg, ROOT), _down)
     seller.reset(ScriptState(step=step))
     assert seller.reply("sorry hold on, my kid is yelling")[0] == "No problem, take your time."

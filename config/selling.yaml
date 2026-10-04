@@ -1,7 +1,10 @@
 # Script engine knobs. The engine reads these; it never hardcodes them.
-enabled: true          # scripted selling for consultative products
+enabled: true          # scripted selling for the products listed below
 method: cat
-offer: shay_coaching
+# Which practice products the script sells, and the offer (config/offers/<name>.yaml) it sells for each.
+# A product not listed here keeps the AI-written sales talk.
+products:
+  high_ticket_sales_mentorship: shay_coaching
 embed_model: BAAI/bge-small-en-v1.5
 embed_cache_dir: .cache/fastembed   # model files; relative to the project root, gitignored
 embed_threads: 1       # CPU threads for the model; more threads use much more memory (free hosts have 512 MB)
@@ -19,6 +22,7 @@ objection_loops: 2     # loop twice, third time go direct
 slot_words: 4          # longest phrase the AI may put into a script blank
 stop_words: [a, an, the, i, i'm, i've, my, me, to, of, and, or, in, on, at, for, is, am, are, be, it, that, this, so, with, as, by, we, you, your]
 question_starts: ["how much", "how long is", "how long does", "how many", "do you", "does it", "does the", "is it", "is there", "are there", "are you", "can i", "can you", "will i", "will it", "what does it", "what do you", "what is the", "where are you", "when does", "who is"]   # phrases that open a question
+ai_fill_blanks: false   # AI fills {blanks} from the prospect's words; off = always the plain line (live tests: AI phrases often read wrong)
 bad_phrase_starts: [own, to, stop, quit, be, make, get, have, want, need, start, being, making, getting, working, just]   # a blank phrase starting like this breaks the sentence
 prospect_pronouns: [i, "i'm", "i've", "i'd", me, my, mine, myself]   # the bot would be speaking as the prospect
 slot_tokens: 20        # max_tokens for a blank-filling call

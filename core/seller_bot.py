@@ -131,14 +131,16 @@ class SellerBot:
         self.logger.info("conversation_turn %s", json.dumps(payload, ensure_ascii=False))
 
     def _sync_seller(self) -> bool:
-        """Scripted selling runs only while the flow is consultative; True when it just switched on."""
-        scripted = selling_config()["enabled"] and self.flow_engine.flow_type == Strategy.CONSULTATIVE
-        if not scripted:
+        """Scripted selling runs only for a product listed in selling.yaml, while the flow is
+        consultative; True when it just switched on."""
+        cfg = selling_config()
+        offer = cfg["products"].get(self.product_type or "")
+        if not (cfg["enabled"] and offer and self.flow_engine.flow_type == Strategy.CONSULTATIVE):
             self.seller = None
             return False
         if self.seller:
             return False
-        self.seller = build_seller(self._router)
+        self.seller = build_seller(self._router, offer)
         return True
 
     def script_opening(self) -> str | None:

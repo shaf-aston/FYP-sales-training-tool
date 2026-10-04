@@ -61,10 +61,10 @@ def shared_embedder():
     return make_embedder(selling_config(), ROOT)
 
 
-def build_seller(router, embedder=None):
+def build_seller(router, offer, embedder=None):
     cfg = selling_config()
     return ScriptSeller(
-        cfg, load_method(cfg["method"]), load_offer(cfg["offer"]), load_common_sense(),
+        cfg, load_method(cfg["method"]), load_offer(offer), load_common_sense(),
         embedder or shared_embedder(), make_llm(router, cfg["ai_timeout_seconds"], cfg["ai_rest_seconds"]),
     )
 
