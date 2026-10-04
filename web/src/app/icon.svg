@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Eloquence: an "E" in a speech bubble, drawn on a 4-unit grid so it stays sharp at 16px.
+       Colours mirror the accent and page tokens in styles/tokens.css. -->
+  <path fill="#e8b45a" d="M16 4h32a12 12 0 0 1 12 12v20a12 12 0 0 1-12 12H28l-16 12V47.4A12 12 0 0 1 4 36V16A12 12 0 0 1 16 4z"/>
+  <path fill="#151210" d="M20 12h24v8H28v4h12v8H28v4h16v8H20z"/>
+</svg>
