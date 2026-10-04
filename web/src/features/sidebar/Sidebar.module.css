@@ -13,15 +13,6 @@
   display: grid;
   gap: var(--space-3);
 }
-.heading h2 {
-  font-family: var(--font-display);
-  font-size: var(--text-lg);
-  color: var(--text-primary);
-}
-.heading p {
-  font-size: var(--text-sm);
-  color: var(--text-muted);
-}
 .toolGrid {
   display: grid;
   gap: var(--space-3);

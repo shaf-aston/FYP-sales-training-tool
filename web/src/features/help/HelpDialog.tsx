@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { Dialog } from "@/components/ui";
 import { storageKeys } from "@/lib/config";
+import { MODE_META } from "@/lib/labels";
 import { readString, storageAvailable, writeString } from "@/lib/storage";
 import { useUi } from "@/state/UiContext";
 import s from "./HelpDialog.module.css";
@@ -11,8 +12,8 @@ const SECTIONS: { title: string; items: { term?: string; text: string; keys?: st
   {
     title: "Two ways to practise",
     items: [
-      { term: "Seller bot", text: "you are the customer. An AI salesperson talks to you, and you can quiz yourself on what stage the sale is in." },
-      { term: "Prospect practice", text: "you are the salesperson. An AI buyer answers you." },
+      { term: MODE_META.seller.label, text: "you are the customer. An AI salesperson talks to you, and you can quiz yourself on what stage the sale is in." },
+      { term: MODE_META.prospect.label, text: "you are the salesperson. An AI buyer answers you." },
     ],
   },
   {

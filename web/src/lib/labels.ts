@@ -23,6 +23,12 @@ export const STAGE_META: Record<string, Meta> = {
   default: { label: "Not started" },
 };
 
+/** The two practice modes: heading + one-line "who does what". */
+export const MODE_META = {
+  seller: { label: "Seller bot", note: "You're the customer → an AI salesperson sells to you" },
+  prospect: { label: "Prospect practice", note: "You're the salesperson → an AI buyer answers" },
+} as const;
+
 export const key = (value: string | null | undefined) => (value ?? "").trim().toLowerCase();
 
 export const strategyMeta = (s: string) => STRATEGY_META[key(s)] ?? STRATEGY_META["-"];

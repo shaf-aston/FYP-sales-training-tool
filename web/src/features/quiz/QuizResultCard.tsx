@@ -1,6 +1,6 @@
 "use client";
 
-import { Badge, Card, Eyebrow, Markdown } from "@/components/ui";
+import { Card, Eyebrow, Markdown } from "@/components/ui";
 import type { QuizResult } from "@/lib/api/types";
 import { stageMeta, strategyMeta } from "@/lib/labels";
 import { scoreBand, scorePercent, type QuizKind } from "./scoring";
@@ -42,7 +42,6 @@ export function QuizResultCard({ result, kind }: { result: QuizResult; kind: Qui
     <Card tone={band} className={s.result} aria-live="polite">
       <div className={s.head}>
         <span className={s.score}>{label}</span>
-        <Badge tone={band}>{percent === null ? "Unavailable" : `${percent}%`}</Badge>
       </div>
       {result.feedback && <Markdown className={s.body} text={result.feedback} />}
       <List title="Strengths" items={result.strengths} />

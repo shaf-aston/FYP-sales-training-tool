@@ -3,7 +3,7 @@
 // Settings tab: auto-send after a pause, and how fast the coach talks.
 
 import { useId } from "react";
-import { Switch, useToast } from "@/components/ui";
+import { Switch } from "@/components/ui";
 import { config } from "@/lib/config";
 import { useVoice } from "./VoiceContext";
 import s from "./VoiceSettings.module.css";
@@ -12,7 +12,6 @@ const speedCaption = (n: number) => (n < 0 ? `Slower (${n}%)` : n > 0 ? `Faster 
 
 export function VoiceSettings() {
   const { autoSend, setAutoSend, speed, setSpeed, ttsSupported } = useVoice();
-  const toast = useToast();
   const id = useId();
   const { min, max, step } = config.voice.speedRange;
 
@@ -23,7 +22,6 @@ export function VoiceSettings() {
         checked={autoSend}
         onChange={(on) => {
           setAutoSend(on);
-          toast(`Auto-send after pause ${on ? "ON" : "OFF"}`, "info");
         }}
       />
       <div className={s.speed}>

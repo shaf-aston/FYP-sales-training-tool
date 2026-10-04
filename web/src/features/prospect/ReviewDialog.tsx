@@ -228,7 +228,7 @@ export function ReviewDialog() {
   const { dialog, closeDialog } = useUi();
   const open = dialog === "review";
   return (
-    <Dialog open={open} onClose={closeDialog} kicker="Prospect practice" title="Walk it back" size="lg">
+    <Dialog open={open} onClose={closeDialog} title="Walk it back" size="lg">
       {open && <ReviewBody />}
     </Dialog>
   );
