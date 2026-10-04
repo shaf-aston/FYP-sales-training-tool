@@ -121,6 +121,8 @@ class ScriptSeller:
                 self._waiting = True
                 return said.reply, step.ui_stage
             return self._then_ask(said.reply, bring_back=True), step.ui_stage
+        if kind == "objection" and not opened:
+            return self._then_ask(self.sense.park), step.ui_stage
         if kind == "objection":
             move = object_to(self.method, self.state, name, self.cfg["objection_loops"])
             self.state = move.state
@@ -162,16 +164,17 @@ class ScriptSeller:
         reading the reply as an answer to the step's own question, like a human closer would."""
         labels = {f"sense:{k}": i.examples for k, i in self.sense.interruptions.items()
                   if waiting or not i.after_wait}
-        if self._is_question(text):
+        asking = self._is_question(text)
+        if asking:
             labels.update({f"fact:{k}": f.examples for k, f in self.offer.facts.items()})
-        if opened:
+        answers = {r.signal: list(r.examples) for r in step.listen if r.examples}
+        if opened or not (asking or step.doubts_answer):
             labels.update({f"objection:{k}": o.examples for k, o in self.method.objections.items()})
         found = self._recognise(text, labels)
         if not found.label or found.close:
             return None, None
         if found.label.startswith("fact:"):
             return found.label.split(":", 1)  # a product question is never an answer
-        answers = {r.signal: list(r.examples) for r in step.listen if r.examples}
         if answers:
             as_answer = self._recognise(text, answers)
             bar = as_answer.score if as_answer.label else 0.0  # only a real answer competes

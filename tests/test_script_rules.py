@@ -196,6 +196,14 @@ def test_objection_loops_twice_then_direct_then_follow_up(seller, name, said, li
     assert lines[0] in said_lines[0]
 
 
+def test_objection_before_the_price_is_acknowledged_then_the_question_comes_back(seller):
+    # live call: "I need to think about it" mid-discovery got the next question as if unheard
+    text, _ = at(seller, "03", outcome="I want financial freedom").reply("I need to think about it")
+    assert text.startswith(seller.sense.park)
+    assert text.endswith("How long have you been thinking about this?")
+    assert seller.state.step == "03" and not seller.state.play
+
+
 def test_objections_are_counted_separately(seller):
     at(seller, "19")
     seller.reply("it's too expensive")

@@ -61,6 +61,7 @@ steps:
     say: "What's the reason you haven't got to {outcome}?"
     say_plain: "What's the reason you haven't got there yet?"
     capture: blocker
+    doubts_answer: true   # money, time, fear are the answer here, not objections
     listen:
       any: {then: "06"}
   "06":

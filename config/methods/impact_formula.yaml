@@ -14,6 +14,7 @@ steps:
     ui_stage: logical
     say: "What's felt hardest to figure out so far?"
     capture: problem
+    doubts_answer: true   # money, time, fear are the answer here, not objections
     listen:
       any: {then: "duration"}
   "duration":

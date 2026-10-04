@@ -179,6 +179,34 @@ def test_real_price_question_still_gets_the_early_answer():
     assert "first a couple of questions" in text and seller.state.step == "02"
 
 
+def _real_seller():
+    from core.script_engine.seller import ScriptSeller
+
+    cfg = load_yaml("selling.yaml")
+    return ScriptSeller(cfg, load_method("cat"), load_offer(cfg["offer"]), load_common_sense(),
+                        make_embedder(cfg, ROOT), _down)
+
+
+@pytest.mark.parametrize("said", ["money is tight and I don't have time", "I'm scared it won't work for me"])
+def test_open_question_takes_an_objection_shaped_reply_as_its_answer(said):
+    # "What's the reason you haven't got there?" - "money is tight" IS the answer, not an objection
+    from core.script_engine.engine import ScriptState
+
+    seller = _real_seller()
+    seller.reset(ScriptState(step="05", slots={"outcome": "financial freedom"}))
+    text, _ = seller.reply(said)
+    assert seller.sense.park not in text and seller.state.step != "05"
+
+
+@pytest.mark.parametrize("said", ["this sounds like a scam honestly", "I need to talk to my wife first",
+                                  "I can't afford it right now"])
+def test_objection_mid_discovery_is_acknowledged(said):
+    seller = _real_seller()
+    seller.reply("I want financial freedom")
+    text, _ = seller.reply(said)
+    assert text.startswith(seller.sense.park) and seller.state.step == "02"
+
+
 @pytest.mark.parametrize("step", ["03", "04", "05", "18"])
 def test_a_pause_is_a_pause_on_any_step(step):
     from core.script_engine.engine import ScriptState
