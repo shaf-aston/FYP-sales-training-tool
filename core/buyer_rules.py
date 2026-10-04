@@ -8,6 +8,8 @@ import random
 # A buyer this keen, this many turns in, says yes.
 SOLD_READINESS = 0.85
 SOLD_MIN_TURNS = 3
+# A buyer never walks before this many turns; one weak opener is not a lost sale.
+WALK_MIN_TURNS = 3
 # A buyer still this cold once their patience runs out walks away.
 WALK_READINESS = 0.4
 
@@ -64,6 +66,6 @@ def end_outcome(readiness: float, turn_count: int, behaviour: dict, max_turns: i
         return "walked"
     if turn_count >= behaviour["patience_turns"] and readiness < WALK_READINESS:
         return "walked"
-    if readiness <= 0.0:
+    if readiness <= 0.0 and turn_count >= WALK_MIN_TURNS:
         return "walked"
     return None
