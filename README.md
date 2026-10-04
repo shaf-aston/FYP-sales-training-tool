@@ -65,6 +65,8 @@ pytest
 
 ## 🗂️ Layout
 
+Start with [`CORE-FLOW.md`](CORE-FLOW.md): the one core flow, file by file, and the glossary.
+
 | Folder | Holds |
 |---|---|
 | `backend/` | Flask app, routes, settings, security (rate limits, input checks, sessions) |

@@ -15,7 +15,7 @@ from ..messages import (
 from ..security import InputValidator, require_rate_limit
 from ._utils import make_require_session, validate_provider
 from core.analytics.session_analytics import SessionAnalytics
-from core.prospect_session import ProviderUnavailable
+from core.buyer_session import ProviderUnavailable
 from core.quiz import build_prospect_question, score_prospect_answer
 from core.script_drills import build_drill_set
 
@@ -64,7 +64,7 @@ def prospect_products():
             "strategy": product_info.get("strategy", "consultative"),
         })
 
-    return jsonify({"ok": True, "products": result})
+    return jsonify({"success": True, "products": result})
 
 
 @bp.route("/init", methods=["POST"])
@@ -90,9 +90,9 @@ def prospect_init():
     session_id = secrets.token_hex(16)
 
     try:
-        from core.prospect_session import ProspectSession
+        from core.buyer_session import BuyerSession
 
-        ps = ProspectSession(
+        ps = BuyerSession(
             provider_type=provider,
             product_type=product_type,
             difficulty=difficulty,

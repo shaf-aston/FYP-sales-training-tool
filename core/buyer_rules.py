@@ -1,6 +1,6 @@
 """The buyer's rules: when they object, and when the session ends.
 
-Pure logic, no AI calls, no I/O. ProspectSession asks; this module answers.
+Pure logic, no AI calls, no I/O. BuyerSession asks; this module answers.
 """
 
 import random

@@ -24,7 +24,7 @@ class ProviderUnavailable(RuntimeError):
 
 
 @dataclass
-class ProspectState:
+class BuyerState:
     """Represents the current state of a prospect in a sales roleplay session."""
 
     readiness: float
@@ -60,7 +60,7 @@ class ProspectState:
 
 
 @dataclass
-class ProspectResponse:
+class BuyerResponse:
     """Response from the prospect in a turn of the conversation."""
 
     content: str
@@ -102,7 +102,7 @@ def select_persona(product_type: str) -> dict:
     }
 
 
-class ProspectSession:
+class BuyerSession:
     """Manages a prospect-mode conversation for sales roleplay training.
 
     The session simulates a buyer (prospect) with evolving readiness to purchase
@@ -158,7 +158,7 @@ class ProspectSession:
         self.product_type = product_type
         self.product_context = build_product_context(product_type, persona)
 
-        self.state = ProspectState(
+        self.state = BuyerState(
             readiness=behaviour["initial_readiness"],
             persona=persona,
             difficulty=difficulty,
@@ -253,11 +253,11 @@ class ProspectSession:
             ),
         )
 
-    def get_opening_message(self) -> ProspectResponse:
+    def get_opening_message(self) -> BuyerResponse:
         """Generate the prospect's opening message to start the conversation.
 
         Returns:
-            ProspectResponse with the opening message and state snapshot.
+            BuyerResponse with the opening message and state snapshot.
         """
         system_prompt = self._system_prompt()
         persona_name = self.persona.get("name", "Alex")
@@ -287,7 +287,7 @@ class ProspectSession:
         self._log_turn_event(None, response.content, turn_index=0)
         self.save_session()
 
-        return ProspectResponse(
+        return BuyerResponse(
             content=response.content,
             latency_ms=round(latency, 1),
             provider=self.provider_name,
@@ -297,7 +297,7 @@ class ProspectSession:
 
     def process_turn(
         self, user_message: str, show_hints: bool = False
-    ) -> ProspectResponse:
+    ) -> BuyerResponse:
         """Process a salesperson message and return the prospect's response.
 
         Args:
@@ -305,10 +305,10 @@ class ProspectSession:
             show_hints: If True, generate an optional coaching hint for the user.
 
         Returns:
-            ProspectResponse with prospect's reply, latency and state snapshot.
+            BuyerResponse with prospect's reply, latency and state snapshot.
         """
         if self.state.has_committed or self.state.has_walked:
-            return ProspectResponse(
+            return BuyerResponse(
                 content=self._terminal_outcome_message(),
                 latency_ms=0.0,
                 provider=self.provider_name,
@@ -322,7 +322,7 @@ class ProspectSession:
             terminal_content = self._terminal_outcome_message()
             self.conversation_history.append({"role": "assistant", "content": terminal_content})
             self.save_session()
-            return ProspectResponse(
+            return BuyerResponse(
                 content=terminal_content,
                 latency_ms=0.0,
                 provider=self.provider_name,
@@ -372,7 +372,7 @@ class ProspectSession:
                 }
             )
             self.save_session()
-            return ProspectResponse(
+            return BuyerResponse(
                 content=terminal_content,
                 latency_ms=0.0,
                 provider=self.provider_name,
@@ -419,7 +419,7 @@ class ProspectSession:
         if show_hints and not self.state.has_committed and not self.state.has_walked:
             coaching = self._generate_coaching_hint(user_message)
 
-        return ProspectResponse(
+        return BuyerResponse(
             content=response.content,
             latency_ms=round(latency, 1),
             provider=self.provider_name,

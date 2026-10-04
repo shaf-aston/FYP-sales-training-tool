@@ -3,7 +3,7 @@
 import json
 
 import core.prospect_evaluator as evaluator
-from core.prospect_session import ProspectState
+from core.buyer_session import BuyerState
 from core.providers.base import LLMResponse
 
 
@@ -105,7 +105,7 @@ def test_evaluate_prospect_session_blends_llm_with_deterministic_pack(monkeypatc
             "summary": "",
         }
     )
-    state = ProspectState(readiness=0.2, difficulty="easy", product_type="default")
+    state = BuyerState(readiness=0.2, difficulty="easy", product_type="default")
 
     result = evaluator.evaluate_prospect_session(provider, [], state, "Default context")
 
@@ -128,7 +128,7 @@ def test_evaluate_prospect_session_blends_llm_with_deterministic_pack(monkeypatc
 
 def test_evaluate_prospect_session_uses_deterministic_fallback_when_scoring_disabled(monkeypatch):
     monkeypatch.setattr(evaluator, "load_prospect_config", lambda: _config(scoring_enabled=False))
-    state = ProspectState(readiness=0.2, difficulty="easy", product_type="default")
+    state = BuyerState(readiness=0.2, difficulty="easy", product_type="default")
 
     result = evaluator.evaluate_prospect_session(_RaisingProvider(), [], state, "Default context")
 

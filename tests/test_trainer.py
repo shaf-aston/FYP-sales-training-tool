@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 from core import trainer
 from core.services.provider_router import ProviderRouter
-from core.utils import Stage, Strategy
+from core.enums import Stage, Strategy
 
 
 def _router(monkeypatch, *providers):

@@ -64,7 +64,7 @@ def _make_session_app(monkeypatch):
     app.config["ADMIN_TOKEN"] = "secret-token"
     manager = _DummySessionManager()
 
-    monkeypatch.setattr(session_routes, "SalesChatbot", _DummyBot)
+    monkeypatch.setattr(session_routes, "SellerBot", _DummyBot)
     monkeypatch.setattr(
         session_routes,
         "generate_init_greeting",

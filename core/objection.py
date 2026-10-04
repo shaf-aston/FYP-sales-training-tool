@@ -4,9 +4,10 @@ import logging
 import warnings
 from typing import Any, Optional, TypedDict
 
-from .constants_enums import MessageRole, ObjectionType
+from .enums import MessageRole, ObjectionType
 from .loader import load_analysis_config, load_objection_flows, load_yaml
-from .utils import Stage, Strategy, contains_nonnegated_keyword
+from .enums import Stage, Strategy
+from .utils import contains_nonnegated_keyword
 
 logger = logging.getLogger(__name__)
 
@@ -396,7 +397,7 @@ def _build_transactional_reframe_block(pathway: dict, attempt: int) -> str:
     return block
 
 
-def _build_objection_context(
+def build_objection_context(
     strategy, stage, user_message, history, objection_data=None
 ):
     """Build the objection SOP block that sits below the stage prompt."""

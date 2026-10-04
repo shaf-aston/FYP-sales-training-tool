@@ -1,6 +1,6 @@
 """Tests for LAYER 3 response guardrails."""
 from core.response_guardrails import apply_layer3_output_checks
-from core.utils import Stage, Strategy
+from core.enums import Stage, Strategy
 
 
 def test_layer3_blocks_pricing_in_logical_stage_without_direct_request():

@@ -37,9 +37,9 @@ from .analysis import (
     is_literal_question,
 )
 from .constants import PERSONA_CHECKPOINT_TURNS, TERSE_INPUT_THRESHOLD
-from .utils import Stage, Strategy
+from .enums import Stage, Strategy
 
-from .objection import _build_objection_context
+from .objection import build_objection_context
 
 ELICITATION_TACTICS = [
     "Most people in your situation feel trapped between their current setup and exploring new options. What's kept you from making a move so far?",
@@ -137,7 +137,7 @@ def _get_stage_specific_prompt(
 ):
     """Return (stage_prompt, stage_context); context is the objection SOP, empty outside OBJECTION."""
     prompt_key = "intent_low" if stage == Stage.INTENT and state.intent == "low" else stage
-    stage_context = _build_objection_context(
+    stage_context = build_objection_context(
         strategy=strategy,
         stage=stage,
         user_message=user_message,

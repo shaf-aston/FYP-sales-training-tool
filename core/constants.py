@@ -23,12 +23,12 @@ MAX_ANALYTICS_LINES = 10000
 ANALYTICS_KEEP_AFTER_ROTATION = 5000
 MAX_PROSPECT_SESSIONS = 100
 PROSPECT_IDLE_MINUTES = 30
-# Note: SESSION_IDLE_MINUTES and MAX_SESSIONS are defined in web/security.py (SSoT)
+# Note: SESSION_IDLE_MINUTES and MAX_SESSIONS are defined in backend/security.py (SSoT)
 
 # input validation
 MAX_FIELD_LENGTH = 5000
 TERSE_INPUT_THRESHOLD = 3
-# Note: MAX_MESSAGE_LENGTH is defined in web/security.py (SSoT)
+# Note: MAX_MESSAGE_LENGTH is defined in backend/security.py (SSoT)
 
 # strategy detection - any more than 3 turns can be frustrating for the user
 MIN_TURNS_BEFORE_ADVANCE = 3
