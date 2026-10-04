@@ -13,12 +13,15 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
   block?: boolean;
 }
 
+/** Button look for elements that are not buttons, e.g. a link styled as a call to action. */
+export const buttonClass = (variant: Variant = "secondary", extra?: string) => [s.btn, s[variant], extra].filter(Boolean).join(" ");
+
 export function Button({ variant = "secondary", busy, busyLabel, pressed, block, className, children, disabled, ...rest }: Props) {
   return (
     <button
       type="button"
       {...rest}
-      className={[s.btn, s[variant], block && s.block, pressed && s.on, className].filter(Boolean).join(" ")}
+      className={buttonClass(variant, [block && s.block, pressed && s.on, className].filter(Boolean).join(" "))}
       aria-pressed={pressed}
       aria-busy={busy || undefined}
       disabled={disabled || busy}

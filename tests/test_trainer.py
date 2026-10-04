@@ -79,24 +79,20 @@ def test_tactical_training_answer_keeps_original_punctuation(monkeypatch):
     assert result == {"answer": "Ask them what hurts most?"}
 
 
-def test_generate_training_uses_fallback_provider_when_primary_fails(monkeypatch):
-    primary = _DummyProvider(content="", error=True)
-    fallback = _DummyProvider(
-        content=(
-            '{"what_happened": "Asked a clear question", '
-            '"next_move": "Probe the blocker", '
-            '"watch_for": ["Over-probing", "Pitching too early"]}'
-        ),
-        error=False,
-    )
-    fallback.provider_name = "sambanova"
+def test_generate_training_makes_no_ai_call_and_follows_buyer_move():
+    """Coach notes are a config lookup: an objection gets the objection note, every time."""
+    from core.enums import Stage, Strategy
 
-    flow_engine = _DummyFlowEngine()
+    class Engine:
+        flow_type = Strategy.TRANSACTIONAL
+        current_stage = Stage.PITCH
 
-    result = trainer.generate_training(_router(monkeypatch, primary, fallback), flow_engine, "Need help", "Sure")
+    objection = trainer.generate_training(Engine(), "Honestly that seems too expensive for us")
+    again = trainer.generate_training(Engine(), "Honestly that seems too expensive for us")
+    plain = trainer.generate_training(Engine(), "Tell me about onboarding")
 
-    assert primary.calls
-    assert fallback.calls
-    assert result["what_happened"] == "Asked a clear question"
-    assert result["next_move"] == "Probe the blocker"
-    assert result["watch_for"] == ["Over-probing", "Pitching too early"]
+    assert objection == again
+    assert "pushed back" in objection["what_happened"]
+    assert plain["what_happened"].startswith("Matching an option")
+    assert len(plain["watch_for"]) == 2
+

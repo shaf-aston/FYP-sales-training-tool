@@ -13,7 +13,7 @@ import { HelpDialog } from "@/features/help/HelpDialog";
 import { ProspectDialogs } from "@/features/prospect/ProspectDialogs";
 import { ProspectPanel } from "@/features/prospect/ProspectPanel";
 import { QuizPanel } from "@/features/quiz/QuizPanel";
-import { SessionProvider, useSession } from "@/features/session/SessionContext";
+import { SessionProvider, useSession, type LearnerRole } from "@/features/session/SessionContext";
 import { Sidebar } from "@/features/sidebar/Sidebar";
 import { VoiceProvider } from "@/features/voice/VoiceContext";
 import { UiProvider, useUi } from "@/state/UiContext";
@@ -21,8 +21,8 @@ import s from "./AppShell.module.css";
 
 function Layout() {
   const { sidePanel } = useUi();
-  const { mode } = useSession();
-  const cls = [s.grid, sidePanel && s.withSide, mode === "prospect" && s.withProspect].filter(Boolean).join(" ");
+  const { mode, prospect } = useSession();
+  const cls = [s.grid, sidePanel && s.withSide, mode === "prospect" && prospect && s.withProspect].filter(Boolean).join(" ");
   return (
     <div className={s.shell}>
       <main className={cls}>
@@ -39,12 +39,13 @@ function Layout() {
   );
 }
 
-export function AppShell() {
+/** `role` is the learner's seat: /practice/ plays the buyer, /practice/sell/ does the selling. */
+export function AppShell({ role }: { role: LearnerRole }) {
   return (
     <ToastProvider>
       <ConfirmProvider>
         <UiProvider>
-          <SessionProvider>
+          <SessionProvider role={role}>
             <DraftProvider>
               <VoiceProvider>
                 <AmbientFilm />

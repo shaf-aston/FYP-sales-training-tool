@@ -235,14 +235,9 @@ def _deterministic_open_ended_assessment(
 
 
 def _merge_open_ended_result(mode: str, deterministic: dict, llm_result: dict) -> dict:
-    """Merge deterministic marks with LLM output for stable but nuanced grading."""
+    """Rules set the score; the LLM may only add wording (feedback, strengths, improvements)."""
     llm_used = bool(llm_result.get("_used_llm"))
-    llm_score = llm_result.get("score", deterministic["score"])
-
-    if llm_used:
-        final_score = clamp_score(round(deterministic["score"] * 0.65 + llm_score * 0.35))
-    else:
-        final_score = deterministic["score"]
+    final_score = deterministic["score"]
 
     llm_feedback = (llm_result.get("feedback") or "").strip()
     feedback = deterministic["feedback"]

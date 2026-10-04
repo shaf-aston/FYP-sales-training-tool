@@ -1,7 +1,6 @@
 """Load and cache YAML configuration files"""
 
 import copy
-import hashlib
 import json
 import re
 from difflib import SequenceMatcher
@@ -16,315 +15,9 @@ CONFIG_DIR = Path(__file__).parent.parent / "config"
 _REQUIRED_SIGNAL_KEYS = {
     "commitment", "objection", "walking", "low_intent", "high_intent",
     "guardedness_keywords", "demand_directness", "direct_info_requests", "soft_positive",
-    "validation_phrases", "transactional_bot_indicators", "consultative_bot_indicators",
+    "validation_phrases", "emotional_disclosure",
     "user_consultativeSIGNALS", "user_transactionalSIGNALS",
 }
-
-_DEFAULT_ANALYSIS_CONFIG = {
-    "thresholds": {
-        "recent_history_window": 6,
-        "question_fatigue_threshold": 2,
-        "validation_loop_threshold": 2,
-        "recent_text_messages": 2,
-    },
-    "goal_indicators": [
-        "want to",
-        "need to",
-        "trying to",
-        "looking for",
-        "interested in",
-        "buy",
-        "purchase",
-    ],
-    "advancement": {
-        "logical": {
-            "doubt_keywords": [
-                "struggling", "problem", "issue", "stuck", "difficult",
-                "not working", "broken", "failing", "doesn't work", "can't",
-                "challenge", "obstacle", "bottleneck", "pain point", "weakness",
-                "insufficient", "inadequate", "lacking", "missing", "gap",
-                "errors", "bugs", "glitches", "slow", "inefficient",
-                "why", "how", "doesn't", "shouldn't", "can't seem",
-                "tried", "attempts", "haven't been able", "can't figure out",
-            ],
-            "max_turns": 10,
-        },
-        "negotiation": {
-            "terms_keywords": [
-                "price",
-                "pricing",
-                "cost",
-                "quote",
-                "budget",
-                "payment",
-                "payment plan",
-                "monthly",
-                "per month",
-                "terms",
-                "deposit",
-                "finance",
-            ],
-            "max_turns": 8,
-        },
-        "emotional": {
-            "stakes_keywords": [
-                "stress", "frustrated", "wasting", "costing", "important",
-                "worried", "anxious", "concerned", "afraid", "scared",
-                "impact", "consequence", "at stake", "depends on", "critical",
-                "urgent", "pressure", "deadline", "time sensitive", "rush",
-                "losing money", "wasting time", "losing business", "miss out",
-                "affects", "matters", "difference", "significant", "deal breaker",
-                "must have", "need", "can't live without", "absolutely necessary",
-            ],
-            "max_turns": 10,
-        },
-    },
-    "preference_keywords": {
-        "budget": ["cheap", "affordable", "budget"],
-        "quality": ["quality", "reliable", "premium"],
-        "speed": ["fast", "quick", "immediate"],
-    },
-    "drift_detection": {
-        "stages": ["logical", "emotional"],
-        "min_message_words": 8,
-        "redirect_phrase": {
-            "logical": "what is not working in their current approach",
-            "emotional": "the impact this problem is having on them",
-        },
-    },
-    "question_patterns": {
-        "starters": ["what", "how", "why", "when", "where", "who", "is", "are"],
-        "rhetorical_markers": ["right", "isn't it", "don't you think"],
-    },
-    "objection_handling": {
-        "classification_order": [
-            "smokescreen",
-            "partner",
-            "money",
-            "fear",
-            "logistical",
-            "think",
-        ],
-        "reframe_strategies": {
-            "smokescreen": ["general_reframe"],
-            "partner": ["general_reframe"],
-            "money": ["general_reframe"],
-            "fear": ["general_reframe"],
-            "logistical": ["general_reframe"],
-            "think": ["general_reframe"],
-        },
-    },
-}
-
-_DEFAULT_SIGNALS = {
-    "commitment": [
-        "ready", "let's go", "interested", "yes", "i'm in", "i'm interested",
-        "let's proceed", "let's do this", "i'll take it", "sign me up",
-        "that works for me", "sounds great", "i'm ready", "count me in",
-        "absolutely", "definitely", "for sure", "i want it", "let's get started",
-        "ok", "okay", "sure", "alright", "perfect", "great", "i'm down",
-        "let's move forward", "i'm committed", "i agree", "sounds perfect",
-        "exactly", "that's right", "i'm sold", "let's make it happen",
-    ],
-    "objection": [
-        "but", "however", "concerned", "worried", "afraid", "skeptical",
-        "not sure", "hesitant", "doubt", "question", "unsure", "reluctant",
-        "nervous", "anxious", "issue", "problem", "concern", "trouble",
-        "difficulty", "challenge", "drawback", "downside", "con",
-    ],
-    "walking": [
-        "not interested", "not for me", "pass", "no thanks", "skip",
-        "doesn't work for me", "i'm out", "can't do it", "moving on",
-        "let's stop", "i'm done", "not right now", "maybe later", "no",
-        "nope", "no way", "forget it", "never", "not happening", "drop it",
-        "change my mind", "not going", "won't work", "impossible",
-    ],
-    "low_intent": [
-        "just browsing", "just looking", "killing time", "wasting time",
-        "having fun", "curious", "not sure yet", "maybe later", "window shopping",
-        "casual", "no hurry", "not urgent", "whenever", "someday", "eventually",
-        "i'll think about it", "no pressure", "just exploring",
-    ],
-    "high_intent": [
-        "need to buy", "looking for", "trying to find", "need to find",
-        "trying to", "want to", "interested in", "looking to", "shopping for",
-        "considering", "evaluating", "comparing", "evaluating", "need help",
-        "searching for", "hunting for", "seeking", "looking to purchase",
-        "ready to buy", "in the market", "looking to get", "wanting to",
-    ],
-    "emotional_disclosure": [
-        "frustrated", "stressed", "worried", "concerned", "anxious",
-        "overwhelmed", "struggling", "desperate", "upset", "angry",
-        "disappointed", "exhausted", "tired", "burnt out", "at wit's end",
-        "fed up", "can't take it", "losing sleep", "pressure", "tension",
-        "difficult time", "hard time", "tough situation", "pain", "hurt",
-    ],
-    "guardedness_keywords": {
-        "agreement_words": [
-            "ok", "okay", "sure", "alright", "yes", "yep", "yeah",
-            "sounds good", "that's fine", "works for me", "uh-huh"
-        ],
-        "dismissal": [
-            "fine", "whatever", "nope", "no", "nah", "forget it",
-            "doesn't matter", "nevermind", "skip it", "never mind"
-        ],
-        "evasive": [
-            "maybe", "not sure", "possibly", "perhaps", "might",
-            "could be", "i guess", "sort of", "kind of", "probably"
-        ],
-        "sarcasm": [
-            "yeah right", "obviously", "sure", "right", "oh yeah",
-            "great", "wonderful", "fantastic", "lovely", "perfect"
-        ],
-        "deflection": [
-            "depends", "hard to say", "difficult", "complicated",
-            "depends on", "case by case", "varies", "it depends"
-        ],
-        "defensive": [
-            "that's not what i meant", "i already said", "i said before",
-            "you don't understand", "that's not fair", "you're wrong",
-            "i didn't mean that", "look", "listen"
-        ],
-    },
-    "demand_directness": [
-        "get to the point", "just tell me", "bottom line", "cut to the chase",
-        "what's the bottom line", "just answer", "straight answer", "be direct",
-        "stop beating around", "no sugar coating", "the truth", "honestly",
-    ],
-    "direct_info_requests": [
-        "how much", "price", "cost", "what's the price", "how much does",
-        "what do you charge", "pricing", "how much will it cost", "price tag",
-        "what's it cost", "rate", "fee", "payment", "how much is it",
-    ],
-    "soft_positive": [
-        "that's nice", "sounds good", "cool", "interesting", "okay",
-        "alright", "good point", "fair point", "makes sense", "i see"
-    ],
-    "validation_phrases": [
-        "makes sense", "i understand", "i get it", "i see", "right",
-        "understood", "got it", "that's fair", "i hear you", "clearly"
-    ],
-    "transactional_bot_indicators": ["direct", "quick", "fast", "efficient"],
-    "consultative_bot_indicators": ["explore", "understand", "discuss", "dive deeper"],
-    "user_consultativeSIGNALS": ["tell me more", "explain", "why", "help me understand"],
-    "user_transactionalSIGNALS": ["just show me", "quick answer", "get straight", "what's the price"],
-}
-
-_DEFAULT_PRODUCT_CONFIG = {
-    "products": {
-        "default": {
-            "name": "Default Product",
-            "aliases": ["generic", "standard"],
-            "strategy": "consultative",
-            "context": "You are a sales representative helping customers find the right product.",
-            "knowledge": "Standard product information and features.",
-        }
-    }
-}
-
-_DEFAULT_PROSPECT_CONFIG = {
-    "difficulty_profiles": {
-        "easy": {
-            "behaviour": {
-                "initial_readiness": 0.5,
-                "readiness_gain_per_good_turn": 0.12,
-                "readiness_loss_per_bad_turn": 0.05,
-                "max_objections": 1,
-                "patience_turns": 15,
-            }
-        },
-        "medium": {
-            "behaviour": {
-                "initial_readiness": 0.2,
-                "readiness_gain_per_good_turn": 0.08,
-                "readiness_loss_per_bad_turn": 0.08,
-                "max_objections": 3,
-                "patience_turns": 12,
-            }
-        },
-        "hard": {
-            "behaviour": {
-                "initial_readiness": 0.1,
-                "readiness_gain_per_good_turn": 0.06,
-                "readiness_loss_per_bad_turn": 0.10,
-                "max_objections": 5,
-                "patience_turns": 10,
-            }
-        },
-    },
-    "behaviour_rules": {
-        "easy": "Be friendly, open and reasonably receptive.",
-        "medium": "Be cautious and ask practical follow-up questions.",
-        "hard": "Be skeptical, brief and harder to convince.",
-    },
-    "personas": {
-        "general": [
-            {
-                "name": "Alex",
-                "background": "Professional considering a purchase",
-                "needs": ["value", "quality", "reliability"],
-                "budget": "mid-range",
-                "pain_points": ["current solution isn't meeting needs"],
-                "personality": "Practical and straightforward",
-            }
-        ]
-    },
-    "system_prompt_template": (
-        "You are {name}, a realistic buyer in a sales roleplay.\n"
-        "Background: {background}\n"
-        "Personality: {personality}\n"
-        "Needs:\n{needs_formatted}\n"
-        "Pain points:\n{pain_points_formatted}\n"
-        "Budget: {budget}\n"
-        "Product area: {product_context}\n"
-        "{product_knowledge}\n"
-        "Current readiness: {readiness_description}\n"
-        "Objections raised so far: {objections_raised}/{max_objections}\n"
-        "Turn count: {turn_count}\n"
-        "Behaviour rules: {behaviour_rules}\n"
-        "Stay in character and reply as the buyer."
-    ),
-    "evaluation": {
-        "criteria": {
-            "needs_discovery": {
-                "weight": 0.25,
-                "description": "Ability to ask discovery questions and uncover customer needs"
-            },
-            "rapport_building": {
-                "weight": 0.20,
-                "description": "Ability to build trust and demonstrate empathy"
-            },
-            "objection_handling": {
-                "weight": 0.20,
-                "description": "Ability to address prospect concerns and overcome objections"
-            },
-            "solution_presentation": {
-                "weight": 0.20,
-                "description": "Ability to present solutions that match customer needs"
-            },
-            "conversation_flow": {
-                "weight": 0.15,
-                "description": "Overall conversation clarity and balance"
-            },
-        }
-    },
-}
-
-
-def _deep_merge(base, override):
-    """Recursively merge override values into a deep copy of base."""
-    result = copy.deepcopy(base)
-    for key, value in (override or {}).items():
-        if (
-            key in result
-            and isinstance(result[key], dict)
-            and isinstance(value, dict)
-        ):
-            result[key] = _deep_merge(result[key], value)
-        else:
-            result[key] = copy.deepcopy(value)
-    return result
-
 
 @lru_cache(maxsize=16)
 def _load_yaml_cached(filename):
@@ -348,14 +41,9 @@ def load_yaml(filename):
 @lru_cache(maxsize=1)
 def load_signals():
     """Load signals.yaml and verify all required keys exist."""
-    signals = _deep_merge(_DEFAULT_SIGNALS, load_yaml("signals.yaml"))
-    guardedness = signals.get("guardedness_keywords")
-    if not isinstance(guardedness, dict):
-        signals["guardedness_keywords"] = copy.deepcopy(
-            _DEFAULT_SIGNALS["guardedness_keywords"]
-        )
-        if isinstance(guardedness, list):
-            signals["guardedness_keywords"]["defensive"] = guardedness
+    signals = load_yaml("signals.yaml")
+    if not isinstance(signals.get("guardedness_keywords"), dict):
+        raise ValueError("signals.yaml guardedness_keywords must be a mapping")
     missing = _REQUIRED_SIGNAL_KEYS - signals.keys()
     if missing:
         raise ValueError(f"signals.yaml missing: {sorted(missing)}")
@@ -374,8 +62,8 @@ def load_signals():
 
 @lru_cache(maxsize=1)
 def load_analysis_config():
-    """Load and merge analysis configuration with safe defaults."""
-    return _deep_merge(_DEFAULT_ANALYSIS_CONFIG, load_yaml("analysis_config.yaml"))
+    """Load analysis_config.yaml."""
+    return load_yaml("analysis_config.yaml")
 
 
 def load_objection_flows():
@@ -385,14 +73,14 @@ def load_objection_flows():
 
 @lru_cache(maxsize=1)
 def load_product_config():
-    """Load and merge product configuration with built-in defaults."""
-    return _deep_merge(_DEFAULT_PRODUCT_CONFIG, load_yaml("product_config.yaml"))
+    """Load product_config.yaml."""
+    return load_yaml("product_config.yaml")
 
 
 @lru_cache(maxsize=1)
 def load_prospect_config():
-    """Load and merge prospect mode configuration with built-in defaults."""
-    return _deep_merge(_DEFAULT_PROSPECT_CONFIG, load_yaml("prospect_config.yaml"))
+    """Load prospect_config.yaml."""
+    return load_yaml("prospect_config.yaml")
 
 
 @lru_cache(maxsize=1)
@@ -510,11 +198,3 @@ class QuickMatcher:
                     best_score, best_match = context_score, product_key
 
         return (best_match, best_score) if best_match else (None, 0.0)
-
-
-def assign_ab_variant(session_id):
-    """Deterministic A/B assignment via MD5 hash. Same session_id → same variant always."""
-    if not session_id:
-        return "variant_a"
-    hash_val = int(hashlib.md5(session_id.encode()).hexdigest(), 16)
-    return "variant_a" if (hash_val % 2) == 0 else "variant_b"

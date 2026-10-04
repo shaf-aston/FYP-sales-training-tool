@@ -125,7 +125,7 @@ def test_rewinding_puts_the_objection_count_back():
     assert prospect.state.objections_raised == prospect.pacer.raised_by(1)
 
 
-def test_a_live_turn_tells_the_buyer_to_raise_the_objection_and_counts_it():
+def test_a_live_turn_answers_first_then_adds_the_scripted_objection_and_counts_it():
     """The wiring: the helpers above are useless if process_turn ignores them."""
     prospect = session("hard", "wiring")
     prompts = []
@@ -134,8 +134,7 @@ def test_a_live_turn_tells_the_buyer_to_raise_the_objection_and_counts_it():
     )
 
     turn = next(t for t in range(1, TURNS + 1) if prospect.pacer.for_turn(t))
-    for _ in range(turn):
-        prospect.process_turn("What matters most to you here?")
+    replies = [prospect.process_turn("What matters most to you here?").content for _ in range(turn)]
 
     # A session that sold or walked early stops recording prompts, which would
     # otherwise surface as a bare IndexError if difficulty tuning ever changed.
@@ -143,7 +142,9 @@ def test_a_live_turn_tells_the_buyer_to_raise_the_objection_and_counts_it():
         f"the buyer ended the session at turn {len(prompts)}, before the objection "
         f"due at turn {turn} - retune the fixture, not the assertion"
     )
-    assert "THIS TURN: raise your" in prompts[turn - 1]
+    objection = prospect.pacer.for_turn(turn)
+    assert replies[turn - 1] == f"Go on. {objection['text']}"
+    assert "THIS TURN" not in prompts[turn - 1]
     # "So far" means before this turn: the buyer is not told it has already raised
     # the objection it is only now being asked to raise.
     assert "Objections raised so far: 0" in prompts[turn - 1]
@@ -211,3 +212,11 @@ def test_a_rewind_restores_the_exact_readiness_not_the_rounded_one():
 
     assert prospect.rewind_to_turn(2) is True
     assert prospect.state.readiness == prospect.review()["readiness_exact"]
+
+
+def test_buyer_does_not_walk_on_first_weak_turn():
+    from core.buyer_rules import end_outcome
+
+    behaviour = {"patience_turns": 10}
+    assert end_outcome(0.0, 1, behaviour, None) is None
+    assert end_outcome(0.0, 3, behaviour, None) == "walked"

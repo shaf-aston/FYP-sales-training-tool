@@ -15,7 +15,6 @@ def test_session_analytics_stays_in_memory_and_logs(caplog):
     SessionAnalytics.record(event="session_start", session_id="session123",
         product_type="default",
         initial_strategy="intent",
-        ab_variant="A",
     )
     SessionAnalytics.record(event="stage_transition", session_id="session123",
         from_stage="intent",

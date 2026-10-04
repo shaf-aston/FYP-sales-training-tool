@@ -100,6 +100,11 @@ EXPLICIT_INTENT_PHRASES = [
     "buy",
     "purchase",
     "struggling",
+    "slipping",
+    "losing",
+    "we lost",
+    "not working",
+    "falling behind",
     "have to",
     "ready to buy",
     "looking to buy",
@@ -247,9 +252,9 @@ def _check_priority_overrides(
         current_idx = stages.index(current_stage)
         pitch_is_ahead = current_idx < pitch_idx
 
-    # Let commitment jump to pitch from EMOTIONAL stage (skip objection handling if ready).
-    # Do NOT apply from LOGICAL - must build emotional context first.
-    if has_pitch_stage and current_stage == Stage.EMOTIONAL:
+    # A buyer who commits during discovery is ready: jump to PITCH so the bot
+    # presents and confirms instead of asking more questions.
+    if has_pitch_stage and current_stage in (Stage.LOGICAL, Stage.EMOTIONAL):
         commitment_terms = SIGNALS.get("commitment", []) + ["sign up"]
         if contains_nonnegated_keyword(msg_lower, commitment_terms):
             return Stage.PITCH
@@ -426,9 +431,11 @@ class SalesFlowEngine:
         self.flow_type = new_strategy
         self.flow_config = FLOWS[new_strategy]
 
-        # Always restart at INTENT so the new strategy establishes intent first.
+        # Restart at INTENT. Probe turns already spent in INTENT count toward its
+        # turn cap, so the buyer doesn't sit through discovery twice.
+        if self.current_stage != Stage.INTENT:
+            self.stage_turn_count = 0
         self.current_stage = self.flow_config["stages"][0]
-        self.stage_turn_count = 0
         return True
 
     def reset_to_initial(self) -> None:

@@ -29,7 +29,7 @@ Open the engine for the mode you are working on. Nothing else decides the turn.
 | 3 | Engine runs the turn | `core/buyer_session.py` `BuyerSession.process_turn` | Orchestrates: rate the line, move readiness, pick objection pacing, store history, save. |
 | 4 | Pure rules decide | `core/selling_quality.py` (rating), `core/buyer_rules.py` (sold / walked), `core/buyer_prompt.py` (buyer system prompt) | Deterministic. No I/O, no HTTP, easy to test. |
 | 5 | Router picks a provider | `core/services/provider_router.py` `chat_with_fallback` | Tries providers in order, falls back on failure. |
-| 6 | Provider calls the LLM | `core/providers/factory.py` → `providers/llm/groq.py` or `sambanova.py` behind `providers/base.py` | Swap seam: every provider has the same interface. |
+| 6 | Provider calls the LLM | `core/providers/factory.py` → `providers/llm/groq.py` behind `providers/base.py` | Swap seam: every provider has the same interface. |
 | 7 | Review and analytics | `core/session_review.py` (per-turn replay), `core/prospect_evaluator.py` (final score + grade), `core/analytics/session_analytics.py` (events to JSONL) | Everything shown after the session is rebuilt from the saved transcript. |
 
 Seller-bot mode: `chat.py` → `SellerBot.chat` → `core/script_engine/` (scripted lines for products in `config/selling.yaml`, AI only fills small gaps) or else `flow.py` (stage machine) · `analysis.py` (buyer signals) · `content.py` + `prompts.py` (prompt build) · `response_guardrails.py` (output checks) → same router. Coaching comes from `trainer.py`.

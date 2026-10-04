@@ -1,5 +1,6 @@
 "use client";
 
+import { config } from "@/lib/config";
 import Link from "next/link";
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
@@ -16,8 +17,8 @@ const SECTION_IDS = FIELDS.map((f) => sectionId(f.id));
 function BackLink() {
   const prospect = useSearchParams().get("mode") === "prospect";
   return (
-    <Link href="/" className={s.back}>
-      ← {prospect ? "Back to prospect practice" : "Back to chat"}
+    <Link href={prospect ? config.routes.sell : config.routes.practice} className={s.back}>
+      ← {prospect ? "Back to selling" : "Back to chat"}
     </Link>
   );
 }
@@ -111,7 +112,7 @@ export function KnowledgePage() {
             <div>
               <h1 className={s.title}>Product Knowledge</h1>
             </div>
-            <Suspense fallback={<Link href="/" className={s.back}>← Back to chat</Link>}>
+            <Suspense fallback={<Link href={config.routes.practice} className={s.back}>← Back to chat</Link>}>
               <BackLink />
             </Suspense>
           </header>

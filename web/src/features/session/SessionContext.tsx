@@ -6,7 +6,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { api, ApiError } from "@/lib/api/client";
-import type { BotState, ChatMsg, Difficulty, Outcome, Persona, ProspectState, Training } from "@/lib/api/types";
+import type { BotState, ChatMsg, Difficulty, Outcome, Persona, ProspectPick, ProspectState, Training } from "@/lib/api/types";
 import { config, storageKeys } from "@/lib/config";
 import { readString, writeString } from "@/lib/storage";
 import { useStoredState } from "@/lib/useStoredState";
@@ -15,7 +15,10 @@ import { fromHistory, newId, nextIndex, parseSettings, type ChatMessage, type Pr
 
 export type { ChatMessage, ProspectSettings };
 
+/** "seller" mode: the bot sells, the learner is the buyer. "prospect" mode: the learner sells. */
 export type Mode = "seller" | "prospect";
+/** The learner's seat. Each has its own page, so the address says which one you are in. */
+export type LearnerRole = "buyer" | "seller";
 
 export interface ProspectSession {
   sessionId: string;
@@ -23,6 +26,8 @@ export interface ProspectSession {
   state: ProspectState;
   difficulty: Difficulty;
   productType: string;
+  /** What the learner picked in setup, so "play again" keeps the same buyer and objection. */
+  pick: ProspectPick;
   maxTurns: number | null;
   scoringEnabled: boolean;
   ended: boolean;
@@ -37,6 +42,7 @@ interface SendResult {
 }
 
 interface SessionValue {
+  role: LearnerRole;
   mode: Mode;
   ready: boolean;
   sessionId: string | null;
@@ -55,8 +61,9 @@ interface SessionValue {
   reset: () => Promise<void>;
   /** Apply a stage/strategy change made by the flow controls. */
   applyBotState: (s: Partial<BotState> & { training?: Training }) => void;
-  startProspect: (difficulty: Difficulty, productType: string) => Promise<boolean>;
-  exitProspect: () => Promise<void>;
+  startProspect: (difficulty: Difficulty, productType: string, pick?: ProspectPick) => Promise<boolean>;
+  /** End the current buyer and go back to setup. */
+  exitProspect: () => void;
   /** Called when a prospect request reports the session is gone. */
   handleExpired: (err: unknown) => boolean;
 }
@@ -71,10 +78,11 @@ const debugOn = () => {
 const metaLine = (latency: number | null | undefined, provider?: string) =>
   debugOn() && latency != null ? `${Math.round(latency)}ms · ${provider ?? "?"}` : undefined;
 
-export function SessionProvider({ children }: { children: ReactNode }) {
+export function SessionProvider({ children, role }: { children: ReactNode; role: LearnerRole }) {
   const toast = useToast();
-  const [mode, setMode] = useState<Mode>("seller");
-  const [ready, setReady] = useState(false);
+  const mode: Mode = role === "seller" ? "prospect" : "seller";
+  // The selling page has nothing to load before setup, so it is ready at once.
+  const [ready, setReady] = useState(role === "seller");
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [bot, setBot] = useState<BotState>({ stage: "intent", strategy: "-" as BotState["strategy"] });
   const [training, setTraining] = useState<Training | null>(null);
@@ -127,6 +135,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
+    // The selling page starts at setup: no bot session, and no stage controls to unlock.
+    if (role !== "buyer") return;
     if (started.current) return; // StrictMode mounts twice in dev; connect once.
     started.current = true;
     // Mount-time connect to the server; state is set after the request resolves.
@@ -135,7 +145,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       .publicConfig()
       .then((c) => setFlowControls(c.features.flow_controls_enabled))
       .catch(() => setFlowControls(false));
-  }, [initSeller]);
+  }, [initSeller, role]);
 
   const handleExpired = useCallback(
     (err: unknown) => {
@@ -159,7 +169,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const send = useCallback(
     async (text: string): Promise<SendResult> => {
       const message = text.trim();
-      if (!message || busy.current) return { ok: false };
+      // The selling seat has no one to talk to until a buyer is set up.
+      if (!message || busy.current || (mode === "prospect" && !prospect)) return { ok: false };
       if (message.length > config.maxMessageLength) {
         toast(`Keep it under ${config.maxMessageLength} characters.`, "error");
         return { ok: false, restore: text };
@@ -251,12 +262,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   );
 
   const startProspect = useCallback(
-    async (difficulty: Difficulty, productType: string) => {
+    async (difficulty: Difficulty, productType: string, pick: ProspectPick = {}) => {
       // Block sends while the buyer loads; a message sent now would be wiped when it arrives.
       epoch.current++;
       setTyping(true);
       try {
-        const res = await api.prospectInit(difficulty, productType);
+        const res = await api.prospectInit(difficulty, productType, pick);
         if (prospect) api.prospectReset(prospect.sessionId).catch(() => {});
         setProspect({
           sessionId: res.session_id,
@@ -264,6 +275,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           state: res.state,
           difficulty: res.difficulty,
           productType: res.product_type,
+          pick,
           maxTurns: res.max_turns,
           scoringEnabled: res.scoring_enabled,
           ended: false,
@@ -271,7 +283,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           hint: "",
         });
         setMessages([{ id: newId(), role: "assistant", content: res.message, historyIndex: 0, meta: metaLine(res.latency_ms, res.provider) }]);
-        setMode("prospect");
         return true;
       } catch (err) {
         toast(err instanceof ApiError ? err.message : "Couldn't start prospect practice.", "error");
@@ -283,21 +294,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [prospect, toast],
   );
 
-  const exitProspect = useCallback(async () => {
+  const exitProspect = useCallback(() => {
     if (prospect) api.prospectReset(prospect.sessionId).catch(() => {});
     setProspect(null);
-    setMode("seller");
     setMessages([]);
     epoch.current++;
-    // Go back to the seller chat the user had before practising.
-    setTyping(true);
-    await initSeller(true);
-    setTyping(false);
-  }, [prospect, initSeller]);
+  }, [prospect]);
 
   const reset = useCallback(async () => {
     if (mode === "prospect" && prospect) {
-      await startProspect(prospect.difficulty, prospect.productType);
+      await startProspect(prospect.difficulty, prospect.productType, prospect.pick);
       return;
     }
     try {
@@ -325,6 +331,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<SessionValue>(
     () => ({
+      role,
       mode,
       ready,
       sessionId,
@@ -345,7 +352,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       exitProspect,
       handleExpired,
     }),
-    [mode, ready, sessionId, bot, training, messages, typing, flowControls, prospect, prospectSettings, setProspectSettings, send, edit, reset, applyBotState, startProspect, exitProspect, handleExpired],
+    [role, mode, ready, sessionId, bot, training, messages, typing, flowControls, prospect, prospectSettings, setProspectSettings, send, edit, reset, applyBotState, startProspect, exitProspect, handleExpired],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

@@ -55,6 +55,8 @@ CLEANUP_INTERVAL_SECONDS = _L["sessions"]["cleanup_interval_seconds"]
 # input validation
 MAX_MESSAGE_LENGTH = _L["input"]["max_message_length"]
 MAX_FIELD_LENGTH = _L["input"]["max_field_length"]
+MAX_CHOSEN_OBJECTION_CHARS = _L["input"]["max_chosen_objection_chars"]
+MAX_PERSONA_NAME_CHARS = _L["input"]["max_persona_name_chars"]
 RATE_LIMITS = {route: tuple(limit) for route, limit in _L["rate_limits"].items()}
 
 # LLM call profiles: router.chat_with_fallback(messages, **LLM["buyer_reply"])
@@ -62,13 +64,11 @@ LLM = _L["llm"]
 DEFAULT_TEMPERATURE = LLM["default"]["temperature"]
 DEFAULT_MAX_TOKENS = LLM["default"]["max_tokens"]
 
-# coaching text caps
-COACH_SENTENCE_WORDS = _L["coach"]["sentence_words"]
-COACH_TIP_WORDS = _L["coach"]["tip_words"]
 
 # buyer end rules
 SOLD_READINESS = _L["buyer"]["sold_readiness"]
 SOLD_MIN_TURNS = _L["buyer"]["sold_min_turns"]
+WALK_MIN_TURNS = _L["buyer"]["walk_min_turns"]
 WALK_READINESS = _L["buyer"]["walk_readiness"]
 
 # grading

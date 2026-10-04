@@ -147,7 +147,7 @@ def test_next_move_merges_llm_feedback_and_uses_score_fallback(monkeypatch):
         last_user_message="We need a faster solution.",
     )
 
-    assert result["score"] == 65
+    assert result["score"] == 46  # rules only: the LLM's 110 never moves the score
     assert result["alignment"] == "partial"
     assert result["feedback"] == "Partly aligned, but tighten stage focus. Great focus."
     assert result["strengths"] == [

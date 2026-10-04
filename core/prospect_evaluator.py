@@ -1,12 +1,10 @@
 """Post-session evaluation for prospect mode with 5-criterion scoring."""
 
 
-from .constants import GRADE_LABELS, GRADE_THRESHOLDS, LLM
+from .constants import GRADE_LABELS, GRADE_THRESHOLDS
 from .loader import load_prospect_config
 from .utils import (
     clamp_score,
-    extract_json_from_llm,
-    merge_unique_items,
     range_label,
     tokenize,
 )
@@ -222,12 +220,11 @@ def _grade_from_score(score: int) -> str:
     return range_label(score, GRADE_THRESHOLDS, GRADE_LABELS)
 
 
-def evaluate_prospect_session(provider, conversation_history, prospect_state, product_context) -> dict:
-    """Evaluate salesperson's prospect-mode session across 5 criteria using LLM."""
+def evaluate_prospect_session(conversation_history, prospect_state) -> dict:
+    """Score the salesperson's prospect-mode session across 5 criteria, by rules only."""
     config = load_prospect_config()
     criteria = config.get("evaluation", {}).get("criteria", {})
     mode_cfg = config.get("prospect_mode", {}) if isinstance(config, dict) else {}
-    scoring_enabled = bool(mode_cfg.get("scoring_enabled", True))
     feedback_style = str(mode_cfg.get("feedback_style", "coaching") or "coaching").lower()
 
     deterministic_scores = _build_deterministic_criteria_scores(conversation_history, criteria)
@@ -246,7 +243,7 @@ def evaluate_prospect_session(provider, conversation_history, prospect_state, pr
     def _apply_style(text: str) -> str:
         """Tighten feedback wording when strict coaching mode is active."""
         if feedback_style in ("strict", "tough", "hard"):
-            return text.replace("Try to", "Do").replace("Add", "Add").strip()
+            return text.replace("Try to", "Do").strip()
         return text
 
     if feedback_style in ("strict", "tough", "hard"):
@@ -256,129 +253,19 @@ def evaluate_prospect_session(provider, conversation_history, prospect_state, pr
         deterministic_pack["improvements"] = [_apply_style(s) for s in deterministic_pack["improvements"]]
         deterministic_pack["coach_tip"] = _apply_style(deterministic_pack.get("coach_tip", ""))
 
-    # Build conversation transcript and metadata
-    transcript = "\n".join(
-        f"{'SALESPERSON' if message['role'] == 'user' else 'PROSPECT'}: {message['content']}"
-        for message in conversation_history
-    )
-    criteria_text = "\n".join(
-        f"- {name}: {info['description']} (weight: {info['weight']})"
-        for name, info in criteria.items()
-    )
-
-    prompt = f"""You are a sales coach. Evaluate this trainee's performance.
-
-TRANSCRIPT:
-{transcript}
-
-OUTCOME: {prospect_state.status} | DIFFICULTY: {prospect_state.difficulty}
-TURNS: {prospect_state.turn_count} | PROSPECT READINESS: {prospect_state.readiness:.2f}
-PRODUCT CONTEXT: {product_context}
-
-CRITERIA:
-{criteria_text}
-
-Return JSON:
-{{
-    "criteria_scores": {{
-        "needs_discovery": {{"score": <0-100>, "feedback": "<feedback>"}},
-        "rapport_building": {{"score": <0-100>, "feedback": "<feedback>"}},
-        "objection_handling": {{"score": <0-100>, "feedback": "<feedback>"}},
-        "solution_presentation": {{"score": <0-100>, "feedback": "<feedback>"}},
-        "conversation_flow": {{"score": <0-100>, "feedback": "<feedback>"}}
-    }},
-    "strengths": ["<str1>", "<str2>"],
-    "improvements": ["<imp1>", "<imp2>"],
-    "summary": "<2-3 sentence overall assessment>"
-}}"""
-
-    if scoring_enabled and provider is not None:
-        try:
-            response = provider.chat(
-                [{"role": "system", "content": prompt}],
-                **LLM["evaluation"],
-            )
-            result = extract_json_from_llm(response.content)
-            if result:
-                return _build_evaluation(
-                    result,
-                    criteria,
-                    prospect_state.status,
-                    deterministic=deterministic_pack,
-                )
-        except Exception:
-            pass
-
-    return _fallback_evaluation(
+    return _assemble_evaluation(
         prospect_state.status,
         criteria=criteria,
         deterministic=deterministic_pack,
     )
 
 
-def _build_evaluation(
-    result: dict,
-    criteria: dict,
-    outcome: str,
-    deterministic: dict | None = None,
-) -> dict:
-    """Build structured evaluation from LLM response."""
-    criteria_scores = {}
-    weighted_total = 0.0
-
-    deterministic_scores = (deterministic or {}).get("criteria_scores", {})
-
-    for name, info in criteria.items():
-        raw = result.get("criteria_scores", {}).get(name, {})
-        raw = raw if isinstance(raw, dict) else {}
-
-        llm_score = clamp_score(raw.get("score", 50))
-        det_score = clamp_score(deterministic_scores.get(name, {}).get("score", llm_score))
-
-        if deterministic:
-            score = clamp_score(round(llm_score * 0.7 + det_score * 0.3))
-        else:
-            score = llm_score
-
-        feedback = raw.get("feedback") or deterministic_scores.get(name, {}).get(
-            "feedback", "No feedback."
-        )
-        criteria_scores[name] = {"score": score, "feedback": feedback}
-        weighted_total += score * info["weight"]
-
-    overall_score = clamp_score(round(weighted_total))
-
-    strengths = result.get("strengths", [])
-    improvements = result.get("improvements", [])
-    summary = result.get("summary", "")
-    coach_tip = ""
-
-    if deterministic:
-        strengths = merge_unique_items(strengths, deterministic.get("strengths", []))
-        improvements = merge_unique_items(
-            improvements, deterministic.get("improvements", [])
-        )
-        summary = summary or deterministic.get("summary", "Evaluation complete.")
-        coach_tip = deterministic.get("coach_tip", "")
-
-    return {
-        "overall_score": overall_score,
-        "grade": _grade_from_score(overall_score),
-        "outcome": outcome,
-        "criteria_scores": criteria_scores,
-        "strengths": strengths,
-        "improvements": improvements,
-        "summary": summary or "Evaluation complete.",
-        "coach_tip": coach_tip,
-    }
-
-
-def _fallback_evaluation(
+def _assemble_evaluation(
     outcome: str,
     criteria: dict | None = None,
     deterministic: dict | None = None,
 ) -> dict:
-    """Return neutral fallback when LLM evaluation fails."""
+    """Build the final evaluation dict (scores, grade, feedback) from the rules pack."""
     if deterministic and criteria:
         criteria_scores = deterministic.get("criteria_scores", {})
         overall_score = _weighted_overall(criteria_scores, criteria)

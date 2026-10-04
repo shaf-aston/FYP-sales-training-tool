@@ -2,75 +2,32 @@
 
 import logging
 
-from .constants import COACH_SENTENCE_WORDS, COACH_TIP_WORDS, LLM
+from .constants import LLM
+from .loader import load_signals, load_yaml
 from .quiz import get_stage_rubric
-from .utils import extract_json_from_llm
+from .utils import contains_nonnegated_keyword
 
 logger = logging.getLogger(__name__)
 
 
-# Truncate text to max_words, preserving word boundaries
-def _truncate_words(text: str, max_words: int) -> str:
-    """Shorten text to a maximum word count without breaking words apart."""
-    words = str(text).split()
-    return " ".join(words[:max_words]) if len(words) > max_words else text
+_NOTES = load_yaml("coach_notes.yaml")
+_SIGNALS = load_signals()
 
 
-def generate_training(router, flow_engine, user_msg, bot_reply):
-    """Coaching notes for the current exchange. Falls back to rubric text on LLM failure"""
-    stage = flow_engine.current_stage
-    flow_type = flow_engine.flow_type
+def generate_training(flow_engine, user_msg):
+    """Coach notes for the current exchange, looked up from coach_notes.yaml (no AI).
 
-    rubric = get_stage_rubric(stage, flow_type)
-
-    system_prompt = (
-        "You're a sales coach. Reply with JSON only. No markdown, no lists.\n\n"
-        f"Stage: {stage} ({flow_type})\n"
-        f"Goal: {rubric['goal'][:120]}\n"
-        f"Advance when: {rubric['advance_when'][:120]}\n"
-        f'USER said: "{user_msg[:200]}"\n'
-        f'BOT replied: "{bot_reply[:200]}"\n\n'
-        "Return JSON with exactly these fields:\n"
-        "{\n"
-        '  "what_happened": "Name the specific technique or move the bot just made (15 words max). Be precise - name the pattern, not just the topic.",\n'
-        '  "next_move": "One clear, actionable coaching instruction for the next turn (15 words max). Start with a verb.",\n'
-        '  "watch_for": ["Specific risk to avoid (8 words max)", "Another specific pitfall (8 words max)"]\n'
-        "}"
-    )
-
-    messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": "Analyse and provide coaching JSON."},
-    ]
-
-    try:
-        llm_response = router.chat_with_fallback(
-            messages, **LLM["coach_feedback"], stage=stage
-        ).response
-        if llm_response.error or not llm_response.content:
-            raise ValueError(
-                f"Training provider failed: {getattr(llm_response, 'error', None) or 'empty response'}"
-            )
-
-        result = extract_json_from_llm(llm_response.content)
-        if not result:
-            raise ValueError("Empty or invalid JSON response")
-
-        result["what_happened"] = _truncate_words(result.get("what_happened", ""), COACH_SENTENCE_WORDS)
-        result["next_move"] = _truncate_words(result.get("next_move", ""), COACH_SENTENCE_WORDS)
-        result["watch_for"] = [
-            _truncate_words(tip, COACH_TIP_WORDS) for tip in (result.get("watch_for") or [])
-        ]
-        return result
-
-    except Exception as error:
-        logger.warning(f"Training generation fell back to rubric text: {error}")
-        fallback = {
-            "what_happened": _truncate_words(rubric.get("goal", "-"), COACH_SENTENCE_WORDS),
-            "next_move": _truncate_words(rubric.get("advance_when", "-"), COACH_SENTENCE_WORDS),
-            "watch_for": [],
-        }
-        return fallback
+    A buyer move in the message (walking, commitment, objection, price question) wins;
+    otherwise the note for the current stage is used.
+    """
+    text = (user_msg or "").lower()
+    for move, note in _NOTES["moves"].items():
+        if contains_nonnegated_keyword(text, _SIGNALS[move]):
+            return dict(note)
+    strategy = "transactional" if flow_engine.flow_type == "transactional" else "consultative"
+    stage = str(flow_engine.current_stage).split(".")[-1].lower()
+    stages = _NOTES["stages"][strategy]
+    return dict(stages.get(stage) or stages["intent"])
 
 
 COACH_STYLES = {

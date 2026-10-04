@@ -6,7 +6,7 @@
   <img alt="Python" src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white">
   <img alt="Flask" src="https://img.shields.io/badge/Flask-backend-000000?logo=flask&logoColor=white">
   <img alt="Tests" src="https://img.shields.io/badge/tests-pytest-0A9EDC?logo=pytest&logoColor=white">
-  <img alt="LLM" src="https://img.shields.io/badge/LLM-Groq%20%2B%20SambaNova-F55036">
+  <img alt="LLM" src="https://img.shields.io/badge/LLM-Groq-F55036">
 </p>
 
 <p align="center"><b>Practise real sales conversations against an AI buyer, then see exactly where the deal was won or lost.</b><br>
@@ -42,7 +42,7 @@ A stage only advances when the buyer's signals earn it.
 
 - **Buyer profiles**: Easy, Medium and Hard buyers, grounded in published buyer typology research. Difficulty sets readiness, disclosure, objections and patience.
 - **Deterministic judge**: scoring does not depend on the LLM, so any saved session reviews the same way every time.
-- **Provider fallback**: Groq first, SambaNova as backup, so a session survives one provider going down.
+- **Rules first**: stage moves, objections, scores, coach notes and tips come from `config/*.yaml`; the AI (Groq, free tier) only words the replies.
 - **Config driven**: products, objections, signals and drills live in `config/*.yaml`. Adding a product needs no code change.
 
 ## 🚀 Run it
@@ -54,8 +54,6 @@ python backend/app.py                  # http://localhost:5000
 ```
 
 Changing the UI? Edit `web/`, then `cd web && npm run build` and commit `web/out` too (the server ships the built app).
-
-Optional: add `SAMBANOVA_API_KEY` to `.env` for the backup provider.
 
 ## 🧪 Tests
 

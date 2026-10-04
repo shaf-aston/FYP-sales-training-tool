@@ -13,8 +13,14 @@ from .loader import load_prospect_config, load_real_objections
 from .buyer_prompt import build_product_context, build_system_prompt
 from .buyer_rules import ObjectionPacer, end_outcome
 from .real_calls import pick_bank
+from .response_guardrails import check_buyer_reply
 from .services.provider_router import ProviderRouter
-from .selling_quality import apply_readiness, score_seller_turn
+from .selling_quality import (
+    NEGATIVE_SIGNALS,
+    apply_readiness,
+    load_selling_signals,
+    score_seller_turn,
+)
 from .session_review import build_review
 
 logger = logging.getLogger(__name__)
@@ -72,35 +78,24 @@ class BuyerResponse:
     coaching: dict | None = None
 
 
-def select_persona(product_type: str) -> dict:
-    """Select a persona for the prospect based on product type.
+def personas_for(product_type: str) -> list[dict]:
+    """The buyer personas available for a product (its own, else the general pool)."""
+    personas = load_prospect_config()["personas"]
+    return personas.get(product_type) or personas["general"]
 
-    Args:
-        product_type: The type of product being sold.
 
-    Returns:
-        A dictionary containing persona details (name, background, needs, etc.).
+def select_persona(product_type: str, name: str | None = None) -> dict:
+    """The named persona for this product, or a random one when no name is given.
+
+    Raises ValueError for a name that is not in this product's pool.
     """
-    config = load_prospect_config()
-    personas = config.get("personas", {})
-
-    product_personas = personas.get(product_type)
-    if product_personas:
-        return random.choice(product_personas)
-
-    general = personas.get("general", [])
-    if general:
-        return random.choice(general)
-
-    # Fallback default persona
-    return {
-        "name": "Alex",
-        "background": "Professional considering a purchase",
-        "needs": ["value", "quality", "reliability"],
-        "budget": "mid-range",
-        "pain_points": ["current solution isn't meeting needs"],
-        "personality": "Practical and straightforward",
-    }
+    pool = personas_for(product_type)
+    if not name:
+        return random.choice(pool)
+    for persona in pool:
+        if persona["name"].lower() == name.strip().lower():
+            return persona
+    raise ValueError(f"Unknown persona '{name}' for product '{product_type}'")
 
 
 class BuyerSession:
@@ -117,6 +112,7 @@ class BuyerSession:
         difficulty: str = "medium",
         persona: dict | None = None,
         session_id: str = "",
+        objection: str | None = None,
     ):
         """Initialize a prospect session.
 
@@ -126,6 +122,7 @@ class BuyerSession:
             difficulty: Session difficulty level (default: 'medium').
             persona: Optional persona dict; randomly selected if None.
             session_id: Optional session identifier.
+            objection: Optional objection the learner wants to practise; raised on turn 1.
         """
         # An id-less session saves nothing, logs nothing, and shares its objection
         # dice with every other id-less session. One owner of the id, never blank.
@@ -150,6 +147,7 @@ class BuyerSession:
             self.session_id,
             behaviour,
             pick_bank(real_pool, self.session_id, len(profile_bank)) if real_pool else profile_bank,
+            first={"type": "chosen", "text": objection} if objection else None,
         )
 
         if persona is None:
@@ -204,7 +202,7 @@ class BuyerSession:
     def model_name(self) -> str:
         return self._router.model_name
 
-    def _get_chat_with_fallback(self, messages, temperature=0.8, max_tokens=200):
+    def _get_chat_with_fallback(self, messages, temperature, max_tokens):
         """Ask the buyer's AI provider, falling back to others on failure.
 
         Raises ProviderUnavailable when no provider produced anything. Returning the
@@ -255,41 +253,33 @@ class BuyerSession:
         )
 
     def get_opening_message(self) -> BuyerResponse:
-        """Generate the prospect's opening message to start the conversation.
+        """The prospect's opening line, filled from opening_lines in config (no AI).
 
         Returns:
             BuyerResponse with the opening message and state snapshot.
         """
-        system_prompt = self._system_prompt()
-        persona_name = self.persona.get("name", "Alex")
-
-        opening_instruction = (
-            f"You are {persona_name}. Start the conversation naturally as a potential "
-            f"customer. Introduce yourself briefly and say what brought you in today. "
-            f"Keep it to 1-2 sentences. "
-            f"Don't lay out everything you want straight away."
+        persona = self.persona
+        background = str(persona.get("background", "")).strip()
+        lines = load_prospect_config()["opening_lines"][self.state.difficulty]
+        line = random.Random(self.session_id or "").choice(lines)
+        content = line.format(
+            name=persona.get("name", "Alex"),
+            background=background[:1].lower() + background[1:],
+            background_cap=background,
+            need=(persona.get("needs") or ["this"])[0],
         )
-
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": opening_instruction},
-        ]
-
-        start = time.time()
-        response = self._get_chat_with_fallback(messages, **LLM["buyer_opener"])
-        latency = (time.time() - start) * 1000
-
+        latency = 0.0
         self.conversation_history.append(
             {
                 "role": "assistant",
-                "content": response.content,
+                "content": content,
             }
         )
-        self._log_turn_event(None, response.content, turn_index=0)
+        self._log_turn_event(None, content, turn_index=0)
         self.save_session()
 
         return BuyerResponse(
-            content=response.content,
+            content=content,
             latency_ms=round(latency, 1),
             provider=self.provider_name,
             model=self.model_name,
@@ -385,13 +375,6 @@ class BuyerSession:
         self.state.objections_raised = self.pacer.raised_by(self.state.turn_count - 1)
 
         system_prompt = self._system_prompt()
-        if objection:
-            system_prompt += (
-                "\n\n"
-                f"THIS TURN: raise your {objection['type']} concern, in your own "
-                f"words and in character. Do not quote it back word for word. "
-                f"The concern is: {objection['text']}"
-            )
         messages = [{"role": "system", "content": system_prompt}]
         messages.extend(self.conversation_history)
 
@@ -406,13 +389,23 @@ class BuyerSession:
         if objection:
             self.state.objections_raised += 1
 
+        # LAYER 3: the buyer's words pass the same kind of check as the seller's.
+        checked = check_buyer_reply(response.content, self.state.turn_count)
+        if checked.applied_rules:
+            logger.info("buyer reply checks applied: %s", ", ".join(checked.applied_rules))
+        reply = checked.content
+        # The rules own objections: the AI answers the seller, then the scripted
+        # concern is added word for word, so it always comes after an answer.
+        if objection:
+            reply = f"{reply} {objection['text']}"
+
         self.conversation_history.append(
             {
                 "role": "assistant",
-                "content": response.content,
+                "content": reply,
             }
         )
-        self._log_turn_event(user_message, response.content, turn_index=self.state.turn_count)
+        self._log_turn_event(user_message, reply, turn_index=self.state.turn_count)
         self.save_session()
 
         # Optional coaching hint
@@ -421,7 +414,7 @@ class BuyerSession:
             coaching = self._generate_coaching_hint(user_message)
 
         return BuyerResponse(
-            content=response.content,
+            content=reply,
             latency_ms=round(latency, 1),
             provider=self.provider_name,
             model=self.model_name,
@@ -526,42 +519,18 @@ class BuyerSession:
         self.state.readiness = apply_readiness(self.state.readiness, rating, behaviour)
 
     def _generate_coaching_hint(self, user_message: str) -> dict:
-        """Generate a one-sentence coaching hint for the salesperson.
+        """One-line tip for the seller, picked from selling_signals.yaml hints (no AI).
 
-        Args:
-            user_message: The salesperson's message to coach on.
-
-        Returns:
-            Dict with optional 'hint' key containing coaching feedback.
+        Uses the signals this turn's score already found: the first problem wins,
+        then the first strength, then the default line.
         """
-        readiness = self.state.readiness
-        behaviour = self.difficulty_profile["behaviour"]
-        turns_left = behaviour["patience_turns"] - self.state.turn_count
-
-        tone = (
-            "Be direct and strict."
-            if self.feedback_style.lower() in ("strict", "tough", "hard")
-            else "Be supportive and coaching-oriented."
-        )
-        hint_prompt = f"""You are a sales coach observing a practice session. {tone}
-
-The salesperson just said: "{user_message}"
-The prospect's current readiness: {readiness:.2f} (0=hostile, 1=ready to buy)
-Turns remaining before prospect leaves: {turns_left}
-Difficulty: {self.state.difficulty}
-
-Give one coaching tip - one sentence. Focus on what they should do next.
-Don't give away what the prospect actually wants."""
-
-        try:
-            messages = [
-                {"role": "system", "content": hint_prompt},
-                {"role": "user", "content": "Give a coaching tip."},
-            ]
-            resp = self._get_chat_with_fallback(messages, **LLM["buyer_hint"])
-            return {"hint": resp.content.strip()}
-        except Exception:
-            return {"hint": "Find out more before pitching anything."}
+        hints = load_selling_signals()["hints"]
+        fired = self.last_turn_score.signals if self.last_turn_score else []
+        ordered = [s for s in NEGATIVE_SIGNALS if s in fired] + [
+            s for s in fired if s not in NEGATIVE_SIGNALS
+        ]
+        key = next((s for s in ordered if s in hints), "default")
+        return {"hint": hints[key]}
 
     def _log_turn_event(
         self, user_message: str | None, assistant_message: str, turn_index: int
@@ -611,18 +580,4 @@ Don't give away what the prospect actually wants."""
         """
         from .prospect_evaluator import evaluate_prospect_session
 
-        if not self.scoring_enabled:
-            # Return deterministic evaluation-only pack (no LLM call) but keep API shape stable.
-            return evaluate_prospect_session(
-                provider=None,
-                conversation_history=self.conversation_history,
-                prospect_state=self.state,
-                product_context=self.product_context,
-            )
-
-        return evaluate_prospect_session(
-            provider=self.provider,
-            conversation_history=self.conversation_history,
-            prospect_state=self.state,
-            product_context=self.product_context,
-        )
+        return evaluate_prospect_session(self.conversation_history, self.state)

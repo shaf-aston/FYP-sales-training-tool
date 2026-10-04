@@ -63,7 +63,7 @@ def test_consultative_pre_pitch_prompt_has_no_prices_immediately_instruction():
     for stage in ("intent", "logical", "emotional"):
         prompt = generate_stage_prompt("consultative", stage, "Acme", [], "what are the options?")
         assert "IMMEDIATELY" not in prompt
-        assert "NO products or prices" in prompt
+        assert "Never mention products or prices before the PITCH stage" in prompt
 
 
 def test_budget_guard_is_consultative_only():

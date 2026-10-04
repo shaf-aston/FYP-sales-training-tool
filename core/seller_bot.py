@@ -9,7 +9,6 @@ from typing import Any, Optional
 
 from .loader import (
     get_product_settings,
-    assign_ab_variant,
 )
 from .analysis import (
     ConversationState,
@@ -92,7 +91,6 @@ class SellerBot:
         self.seller = None
         self._sync_seller()
 
-        self._ab_variant = assign_ab_variant(session_id) if session_id else None
         self._turn_snapshots = []
 
         if session_id and record_session_start:
@@ -101,7 +99,6 @@ class SellerBot:
                 session_id=session_id,
                 product_type=product_type or "unknown",
                 initial_strategy=str(self.flow_engine.flow_type),
-                ab_variant=self._ab_variant,
             )
 
     @property
@@ -289,6 +286,7 @@ class SellerBot:
             user_message=user_message,
             flow_type=self.flow_engine.flow_type,
             history=self.flow_engine.conversation_history,
+            product_context=self.flow_engine.product_context,
         )
 
         if result.was_blocked or result.was_corrected:
@@ -457,12 +455,10 @@ class SellerBot:
         return self._build_response(bot_reply, latency_ms, user_message)
 
     def generate_training(self, user_msg: str, bot_reply: str) -> dict[str, Any]:
-        """Generate coaching notes for the current exchange via lightweight LLM call."""
+        """Coach notes for the current exchange: the script step, else config (no AI call)."""
         if self.seller:
             return self.seller.training()  # scripted call: the step itself is the coaching note
-        return trainer.generate_training(
-            self._router, self.flow_engine, user_msg, bot_reply
-        )
+        return trainer.generate_training(self.flow_engine, user_msg)
 
     def answer_training_question(
         self, question: str, style: str = "tactical"

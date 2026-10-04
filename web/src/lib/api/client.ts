@@ -88,8 +88,13 @@ export function createHttpApi() {
 
     // Prospect practice
     productGroups: () => request<{ success: true; groups: T.ProductGroups }>("/api/prospect/product-groups"),
-    prospectInit: (difficulty: T.Difficulty, productType: string) =>
-      request<T.ProspectInitRes>("/api/prospect/init", { body: { difficulty, product_type: productType }, timeoutMs: chat }),
+    personas: (productType: string) =>
+      request<{ ok: true; personas: T.Persona[] }>(`/api/prospect/personas?product_type=${encodeURIComponent(productType)}`),
+    prospectInit: (difficulty: T.Difficulty, productType: string, pick: T.ProspectPick = {}) =>
+      request<T.ProspectInitRes>("/api/prospect/init", {
+        body: { difficulty, product_type: productType, persona: pick.persona, objection: pick.objection },
+        timeoutMs: chat,
+      }),
     prospectChat: (sid: string, message: string, showHints: boolean) =>
       request<T.ProspectChatRes>("/api/prospect/chat", { body: { message, show_hints: showHints }, sessionId: sid, timeoutMs: chat }),
     prospectReset: (sid: string) => request<{ success: true }>("/api/prospect/reset", { body: {}, sessionId: sid }),

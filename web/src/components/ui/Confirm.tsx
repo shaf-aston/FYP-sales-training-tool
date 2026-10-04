@@ -14,7 +14,7 @@ interface ConfirmOptions {
 
 const ConfirmContext = createContext<(o: ConfirmOptions) => Promise<boolean>>(async () => false);
 
-/** `const ok = await confirm({...})` — an in-page replacement for window.confirm. */
+/** `const ok = await confirm({...})`: an in-page replacement for window.confirm. */
 export function ConfirmProvider({ children }: { children: ReactNode }) {
   const [opts, setOpts] = useState<ConfirmOptions | null>(null);
   const resolver = useRef<(ok: boolean) => void>(undefined);

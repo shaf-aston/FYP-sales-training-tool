@@ -48,8 +48,52 @@ h3 {
   outline-offset: 2px;
 }
 
+/* Element defaults: plain HTML looks on-brand before any component styles it. */
 a {
   color: var(--accent);
+  text-underline-offset: 3px;
+}
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  line-height: 1.1;
+  color: var(--text-primary);
+}
+p {
+  color: var(--text-body);
+}
+img,
+video,
+canvas {
+  max-width: 100%;
+  display: block;
+}
+code,
+kbd {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.9em;
+  padding: 0.1em 0.4em;
+  border-radius: var(--radius-sm);
+  background: var(--bg-card-soft);
+  border: 1px solid var(--border);
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--border-faint);
+}
+::selection {
+  background: var(--accent-soft);
+  color: var(--text-primary);
+}
+/* Shared text effect: the neon sweep running through the letters. */
+.neon-text {
+  background: var(--neon-sweep);
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: sweep var(--dur-sweep) linear infinite;
 }
 
 .sr-only {
@@ -71,6 +115,12 @@ a {
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+@keyframes sweep {
+  to {
+    background-position: 300% 0;
   }
 }
 

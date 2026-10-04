@@ -138,10 +138,17 @@ export function MessageList() {
     <div className={s.frame} ref={frameRef}>
       {!started && (
         <div className={s.intro}>
-          <h2>Start with a short opener.</h2>
-          <p>
-            Example: &ldquo;Hi, I&rsquo;d love to learn what you&rsquo;re looking for today.&rdquo;
-          </p>
+          {mode === "prospect" ? (
+            <>
+              <h2>Open the call.</h2>
+              <p>Example: &ldquo;Thanks for your time. What made you take this call today?&rdquo;</p>
+            </>
+          ) : (
+            <>
+              <h2>Tell the salesperson what you need.</h2>
+              <p>Example: &ldquo;I&rsquo;m looking for a CRM for my small team.&rdquo;</p>
+            </>
+          )}
         </div>
       )}
       <div className={s.list} role="log" aria-live="polite" aria-relevant="additions" aria-label="Conversation">

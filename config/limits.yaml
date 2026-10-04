@@ -32,6 +32,8 @@ sessions:
 input:
   max_message_length: 1000
   max_field_length: 5000
+  max_chosen_objection_chars: 200   # learner-typed objection to practise
+  max_persona_name_chars: 40
 
 rate_limits:         # [max_requests, window_seconds]
   init: [10, 60]
@@ -41,22 +43,15 @@ rate_limits:         # [max_requests, window_seconds]
   feedback: [5, 300]
 
 llm:                 # one profile per kind of call; pass as **LLM["name"]
-  default:        {temperature: 0.8, max_tokens: 200}
-  buyer_opener:   {temperature: 0.7, max_tokens: 150}
-  buyer_reply:    {temperature: 0.7, max_tokens: 250}
-  buyer_hint:     {temperature: 0.5, max_tokens: 80}
-  evaluation:     {temperature: 0.3, max_tokens: 800}
+  default:        {temperature: 0.4, max_tokens: 150}   # low = steady wording; replies run 12-80 tokens
+  buyer_reply:    {temperature: 0.6, max_tokens: 150}   # a little variety so personas differ
   quiz:           {temperature: 0.3, max_tokens: 300}
-  coach_feedback: {temperature: 0.3, max_tokens: 150}
   coach_answer:   {temperature: 0.4, max_tokens: 150}
-
-coach:               # word caps on coaching text
-  sentence_words: 15
-  tip_words: 8
 
 buyer:
   sold_readiness: 0.85    # this keen, this many turns in, says yes
   sold_min_turns: 3
+  walk_min_turns: 3       # never walks before this; one weak opener is not a lost sale
   walk_readiness: 0.4     # still this cold when patience runs out, walks
 
 grades:
