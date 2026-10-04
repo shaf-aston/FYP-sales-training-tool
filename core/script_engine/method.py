@@ -6,7 +6,7 @@ from pathlib import Path
 import yaml
 
 from core.loader import CONFIG_DIR
-from core.utils import Stage
+from core.enums import Stage
 
 ANY = "any"  # listen route with no examples: taken for any reply
 

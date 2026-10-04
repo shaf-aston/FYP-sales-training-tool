@@ -93,7 +93,7 @@ def _scripted_selling_off(monkeypatch):
     from core.loader import load_yaml
 
     monkeypatch.setattr(
-        "core.chatbot.selling_config", lambda: {**load_yaml("selling.yaml"), "enabled": False}
+        "core.seller_bot.selling_config", lambda: {**load_yaml("selling.yaml"), "enabled": False}
     )
 
 
@@ -103,6 +103,6 @@ def scripted_selling(monkeypatch, fake_embedder):
     from core.loader import load_yaml
 
     monkeypatch.setattr(
-        "core.chatbot.selling_config", lambda: {**load_yaml("selling.yaml"), "enabled": True}
+        "core.seller_bot.selling_config", lambda: {**load_yaml("selling.yaml"), "enabled": True}
     )
     monkeypatch.setattr("core.script_engine.seller.shared_embedder", lambda: fake_embedder)

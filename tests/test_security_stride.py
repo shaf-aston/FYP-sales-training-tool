@@ -79,6 +79,9 @@ def _make_session_app(monkeypatch):
             "strategy": bot.flow_engine.flow_type.upper(),
         }
 
+    # init_routes rewires the shared blueprint; let monkeypatch put the real wiring back.
+    for attr in ("app", "session_manager", "get_session", "require_session", "set_session", "delete_session", "bot_state"):
+        monkeypatch.setattr(session_routes.bp, attr, getattr(session_routes.bp, attr, None), raising=False)
     session_routes.init_routes(
         app,
         manager,

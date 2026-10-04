@@ -10,7 +10,7 @@
 </p>
 
 <p align="center"><b>Practise real sales conversations against an AI buyer, then see exactly where the deal was won or lost.</b><br>
-Final-year project · Flask backend · plain JavaScript frontend · deterministic scoring</p>
+Final-year project · Flask backend · Next.js frontend · deterministic scoring</p>
 
 ---
 

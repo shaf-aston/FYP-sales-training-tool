@@ -7,7 +7,8 @@ Practise a sales conversation against an AI, then see each turn rated and why.
 ```bash
 pip install -r requirements.txt
 python backend/app.py        # http://localhost:5000
-pytest                       # 236 tests, ~2 s
+pytest
+cd web && npm run build    # UI lives in web/ (Next.js); Flask serves the built web/out
 ```
 
 ## Two modes, two engines
@@ -23,7 +24,7 @@ Open the engine for the mode you are working on. Nothing else decides the turn.
 
 | # | Step | File | Why it exists |
 |---|---|---|---|
-| 1 | Browser posts the salesperson's line | `frontend/static/js/prospect.js` `sendProspectMessage` | Prospect-mode UI only; `chat.js` is the seller-bot UI. |
+| 1 | Browser posts the salesperson's line | `web/src/lib/api/client.ts` (`/api/prospect/chat`) | The one place the UI talks to the API. |
 | 2 | Route checks rate limit, message, session | `backend/routes/prospect.py` `prospect_chat` | Transport. Shapes JSON, holds no sales logic. |
 | 3 | Engine runs the turn | `core/buyer_session.py` `BuyerSession.process_turn` | Orchestrates: rate the line, move readiness, pick objection pacing, store history, save. |
 | 4 | Pure rules decide | `core/selling_quality.py` (rating), `core/buyer_rules.py` (sold / walked), `core/buyer_prompt.py` (buyer system prompt) | Deterministic. No I/O, no HTTP, easy to test. |
@@ -31,7 +32,7 @@ Open the engine for the mode you are working on. Nothing else decides the turn.
 | 6 | Provider calls the LLM | `core/providers/factory.py` → `providers/llm/groq.py` or `sambanova.py` behind `providers/base.py` | Swap seam: every provider has the same interface. |
 | 7 | Review and analytics | `core/session_review.py` (per-turn replay), `core/prospect_evaluator.py` (final score + grade), `core/analytics/session_analytics.py` (events to JSONL) | Everything shown after the session is rebuilt from the saved transcript. |
 
-Seller-bot mode: `chat.py` → `SellerBot.chat` → `flow.py` (stage machine) · `analysis.py` (buyer signals) · `content.py` + `prompts.py` (prompt build) · `response_guardrails.py` (output checks) → same router. Coaching comes from `trainer.py`.
+Seller-bot mode: `chat.py` → `SellerBot.chat` → `core/script_engine/` (scripted lines for products in `config/selling.yaml`, AI only fills small gaps) or else `flow.py` (stage machine) · `analysis.py` (buyer signals) · `content.py` + `prompts.py` (prompt build) · `response_guardrails.py` (output checks) → same router. Coaching comes from `trainer.py`.
 
 ## Config
 
