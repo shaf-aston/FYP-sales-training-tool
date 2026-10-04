@@ -59,7 +59,7 @@ def fill_line(line, slots, offer, cfg, llm):
     values = offer_blanks(offer)
     for blank in set(NAME.findall(line)) - values.keys():
         reply = slots.get(blank)
-        phrase = _phrase(line, blank, reply, cfg, llm) if reply else None
+        phrase = _phrase(line, blank, reply, cfg, llm) if reply and cfg["ai_fill_blanks"] else None
         if phrase is None:
             return None
         values[blank] = phrase

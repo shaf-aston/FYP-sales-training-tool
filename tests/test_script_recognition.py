@@ -198,6 +198,13 @@ def test_open_question_takes_an_objection_shaped_reply_as_its_answer(said):
     assert seller.sense.park not in text and seller.state.step != "05"
 
 
+@pytest.mark.parametrize("said", ["I want more time with my kids", "to spend time with my family"])
+def test_family_time_goal_is_an_answer_not_a_pause(said):
+    seller = _real_seller()
+    text, _ = seller.reply(said)
+    assert seller.state.step == "02" and "take your time" not in text
+
+
 @pytest.mark.parametrize("said", ["this sounds like a scam honestly", "I need to talk to my wife first",
                                   "I can't afford it right now"])
 def test_objection_mid_discovery_is_acknowledged(said):

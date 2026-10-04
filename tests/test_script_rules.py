@@ -13,7 +13,7 @@ from core.script_engine.judge import VAGUE, judge
 from core.script_engine.method import load_common_sense, load_method, load_offer
 from core.script_engine.seller import ScriptSeller
 
-CFG = load_yaml("selling.yaml")
+CFG = {**load_yaml("selling.yaml"), "ai_fill_blanks": True}  # these tests cover the AI fill path
 OFFER = load_offer("shay_coaching")
 
 
@@ -67,6 +67,15 @@ def test_fill_uses_a_phrase_from_the_prospect():
 def test_fill_rejects_the_prospects_own_pronouns(phrase):
     # "the reason you haven't got to my own business" - the bot must never speak as the prospect
     assert _fill(lambda p, n: phrase, {"outcome": "I want my financial freedom me"}) == STEP_PLAIN
+
+
+def test_fill_with_ai_blanks_off_uses_plain_line_without_asking_ai():
+    # live: the AI wrote "feel your job freedom", "got to your 9 to 5" - plain lines always read right
+    calls = []
+    cfg = {**CFG, "ai_fill_blanks": False}
+    out = fill_step(STEP_SAY, "", STEP_PLAIN, {"outcome": "I want financial freedom"}, OFFER, cfg,
+                    lambda p, n: calls.append(p) or "financial")
+    assert out == STEP_PLAIN and calls == []
 
 
 def test_fill_retries_once_then_uses_plain_line(caplog):

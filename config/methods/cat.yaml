@@ -28,6 +28,8 @@ steps:
           - "I want time freedom so I can travel and choose my own schedule"
           - "I want to quit my job and be my own boss"
           - "freedom to do what I want with my days"
+          - "I want more time with my kids and family"
+          - "to spend more time with my family"
         then: "02"
   "02":
     name: "Number"
