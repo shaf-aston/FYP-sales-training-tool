@@ -33,13 +33,26 @@ export function ChatHeader() {
   const seat = ROLES[role];
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!menuOpen) return;
     const onDown = (e: MouseEvent) => {
       if (!menuRef.current?.contains(e.target as Node)) setMenuOpen(false);
     };
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setMenuOpen(false);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setMenuOpen(false);
+        triggerRef.current?.focus();
+      } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        const items = [...(menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])];
+        const at = items.indexOf(document.activeElement as HTMLElement);
+        const step = e.key === "ArrowDown" ? 1 : -1;
+        items[(at + step + items.length) % items.length]?.focus();
+        e.preventDefault();
+      }
+    };
+    menuRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
     document.addEventListener("mousedown", onDown);
     document.addEventListener("keydown", onKey);
     return () => {
@@ -47,6 +60,11 @@ export function ChatHeader() {
       document.removeEventListener("keydown", onKey);
     };
   }, [menuOpen]);
+
+  const pick = (dialog: "help" | "feedback") => {
+    setMenuOpen(false);
+    openDialog(dialog);
+  };
 
   const onReset = async () => {
     setMenuOpen(false);
@@ -98,25 +116,32 @@ export function ChatHeader() {
         >
           Panels
         </Button>
-        <Button variant="pill" onClick={() => openDialog("help")} aria-keyshortcuts="?" title="How it works (press ?)">
-          Help
-        </Button>
-        <Button variant="pill" onClick={() => openDialog("feedback")} title="Share quick product feedback">
-          Feedback
-        </Button>
         <div className={s.menu} ref={menuRef}>
-          <Button
-            variant="pill"
+          <button
+            type="button"
+            ref={triggerRef}
+            className={s.more}
             onClick={() => setMenuOpen((o) => !o)}
+            aria-label="More options"
             aria-expanded={menuOpen}
-            aria-controls="reset-menu"
-            aria-haspopup="true"
+            aria-controls="more-menu"
+            aria-haspopup="menu"
           >
-            More
-          </Button>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <circle cx="5" cy="12" r="2" />
+              <circle cx="12" cy="12" r="2" />
+              <circle cx="19" cy="12" r="2" />
+            </svg>
+          </button>
           {menuOpen && (
-            <div id="reset-menu" className={s.popover}>
-              <button type="button" className={s.item} onClick={onReset}>
+            <div id="more-menu" role="menu" aria-label="More options" className={s.popover}>
+              <button type="button" role="menuitem" className={s.item} aria-keyshortcuts="?" onClick={() => pick("help")}>
+                Help
+              </button>
+              <button type="button" role="menuitem" className={s.item} onClick={() => pick("feedback")}>
+                Feedback
+              </button>
+              <button type="button" role="menuitem" className={`${s.item} ${s.danger}`} onClick={onReset}>
                 Reset session
               </button>
             </div>
