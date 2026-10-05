@@ -32,6 +32,15 @@
   gap: var(--space-2);
   flex-shrink: 0;
 }
+/* Panels sit below the chat once the layout stacks (1080px); the button is only needed then. */
+.panels {
+  display: none;
+}
+@media (max-width: 1080px) {
+  .panels {
+    display: inline-flex;
+  }
+}
 .menu {
   position: relative;
 }

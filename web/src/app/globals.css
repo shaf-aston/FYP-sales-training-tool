@@ -63,6 +63,11 @@ h3 {
 p {
   color: var(--text-body);
 }
+/* Bubbles set their own colour; the global p/li colour must not override it. */
+[data-bubble] p,
+[data-bubble] li {
+  color: inherit;
+}
 img,
 video,
 canvas {

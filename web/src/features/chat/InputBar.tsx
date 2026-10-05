@@ -18,8 +18,8 @@ export function InputBar() {
     : ended
       ? "This practice has ended. Reset to start again."
       : mode === "prospect"
-        ? "Write your next line as the seller... (Shift+Enter for a new line)"
-        : "Reply as the buyer... (Shift+Enter for a new line)";
+        ? "Type your reply… (Shift+Enter for a new line)"
+        : "Type your reply… (Shift+Enter for a new line)";
 
   // Grow with the text; CSS caps the height at --input-max-height and scrolls beyond.
   useLayoutEffect(() => {

@@ -16,7 +16,11 @@
   transform: scale(0.95);
 }
 .btn:disabled {
-  opacity: 0.55;
+  background: var(--bg-elevated);
+  background-image: none;
+  border-color: var(--border-strong);
+  color: var(--text-muted);
+  box-shadow: none;
   cursor: not-allowed;
 }
 .block {
