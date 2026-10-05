@@ -5,6 +5,7 @@ method: cat
 # A product not listed here keeps the AI-written sales talk.
 products:
   high_ticket_sales_mentorship: shay_coaching
+default_product: high_ticket_sales_mentorship   # used when a session starts with no product (the web UI never picks one)
 embed_model: BAAI/bge-small-en-v1.5
 embed_cache_dir: .cache/fastembed   # model files; relative to the project root, gitignored
 embed_threads: 1       # CPU threads for the model; more threads use much more memory (free hosts have 512 MB)
