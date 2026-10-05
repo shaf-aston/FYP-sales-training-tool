@@ -9,14 +9,10 @@ RATE_LIMIT_ERROR = "Too much traffic right now - hold on a second and try again.
 SERVER_FULL = "Server is currently full - please check back in a moment"
 
 # Session management
-SESSION_ID_REQUIRED = "Session ID required"
 SESSION_NOT_FOUND = "Session not found"
-SESSION_RESTORE_FAILED = "Couldn't restore that session - you can start a new one or try again."
 
 # Message validation
 MESSAGE_REQUIRED = "Message required"
-INVALID_HISTORY_FORMAT = "Invalid history format"
-INVALID_HISTORY_ENTRY = "Invalid history entry"
 
 
 # FSM state mutations
@@ -30,10 +26,6 @@ def invalid_strategy(available_strategies: set) -> str:
 
 STRATEGY_SWITCH_FAILED = "Failed to switch strategy"
 BOT_INIT_FAILED = "Setup didn't complete - please try initializing again."
-
-# Voice module
-VOICE_ERROR = "Voice mode ran into trouble - try that again."
-VOICE_TTS_ERROR = "Speech generation didn't work - try that again."
 
 # Prospect module
 PROSPECT_ERROR = "The prospect got confused - send that again."
