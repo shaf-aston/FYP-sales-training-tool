@@ -47,9 +47,6 @@ class _DummyBot:
         self.flow_engine.conversation_history = []
         return True
 
-    def get_conversation_summary(self):
-        return {"turns": len(self.flow_engine.conversation_history) // 2}
-
     def answer_training_question(self, question, style="tactical"):
         self.training_question_calls.append((question, style))
         return {"answer": f"{style}:{question}"}
@@ -132,15 +129,6 @@ def test_edit_route_rejects_invalid_index_format(monkeypatch):
 
     assert response.status_code == 400
     assert response.get_json()["error"] == "Invalid index format"
-
-
-def test_summary_route_returns_bot_summary(monkeypatch):
-    app, _bot = _make_chat_app(monkeypatch)
-
-    response = app.test_client().get("/api/summary")
-
-    assert response.status_code == 200
-    assert response.get_json() == {"success": True, "summary": {"turns": 1}}
 
 
 def test_training_ask_defaults_unknown_style_to_tactical(monkeypatch):

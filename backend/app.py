@@ -170,7 +170,7 @@ def _prospect_product_groups():
 
 @app.route("/api/prospect/product-groups")
 def prospect_product_groups():
-    """Curated prospect dropdown groups as JSON (the React app has no Jinja)."""
+    """Curated prospect dropdown groups as JSON (curated dropdown groups)."""
     from flask import jsonify
 
     return jsonify({"success": True, "groups": _prospect_product_groups()})

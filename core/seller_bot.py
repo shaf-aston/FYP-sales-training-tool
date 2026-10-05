@@ -600,12 +600,6 @@ class SellerBot:
             bot_msg = bot_msg_dict.get("content", "")
             self._replay_turn(user_msg, bot_msg)
 
-    def get_conversation_summary(self):
-        """Return FSM state summary with provider info."""
-        summary = self.flow_engine.get_summary()
-        summary.update({"provider": self.provider_name, "model": self.model_name})
-        return summary
-
     def save_session(self):
         """Emit a durable log snapshot of the current session state."""
         if not self.session_id:

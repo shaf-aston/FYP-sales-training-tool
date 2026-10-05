@@ -46,26 +46,6 @@ _require_prospect_session = make_require_session(
 )
 
 
-@bp.route("/products", methods=["GET"])
-def prospect_products():
-    """Return product types that have prospect personas defined in prospect_config.yaml."""
-    from core.loader import load_prospect_config, load_product_config
-
-    personas = load_prospect_config().get("personas", {})
-    products = load_product_config().get("products", {})
-
-    result = []
-    for persona_type, persona_list in personas.items():
-        if persona_type == "general" or not persona_list:
-            continue
-        product_info = products.get(persona_type, {})
-        result.append({
-            "id": persona_type,
-            "label": product_info.get("name") or persona_type.replace("_", " ").title(),
-            "strategy": product_info.get("strategy", "consultative"),
-        })
-
-    return jsonify({"success": True, "products": result})
 
 
 @bp.route("/personas", methods=["GET"])

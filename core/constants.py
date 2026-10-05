@@ -35,16 +35,6 @@ MAX_USER_KEYWORDS = _L["context"]["max_user_keywords"]
 TERSE_INPUT_THRESHOLD = _L["context"]["terse_input_threshold"]
 MIN_TURNS_BEFORE_ADVANCE = _L["context"]["min_turns_before_advance"]
 
-# voice mode
-MAX_AUDIO_SIZE_BYTES = _L["voice"]["max_audio_bytes"]
-MAX_TTS_TEXT_LENGTH = _L["voice"]["max_tts_text_length"]
-
-# log rotation
-MAX_METRICS_LINES = _L["logs"]["metrics_max_lines"]
-METRICS_KEEP_AFTER_ROTATION = _L["logs"]["metrics_keep_after_rotation"]
-MAX_ANALYTICS_LINES = _L["logs"]["analytics_max_lines"]
-ANALYTICS_KEEP_AFTER_ROTATION = _L["logs"]["analytics_keep_after_rotation"]
-
 # sessions
 MAX_SESSIONS = _L["sessions"]["seller_max"]
 SESSION_IDLE_MINUTES = _L["sessions"]["seller_idle_minutes"]

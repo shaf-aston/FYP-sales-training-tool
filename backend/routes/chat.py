@@ -120,14 +120,6 @@ def edit_message():
         return jsonify({"error": "Couldn't apply that edit -- try again in a sec"}), 500
 
 
-@bp.route("/summary", methods=["GET"])
-def get_summary():
-    """Get conversation summary"""
-    session_bot, error = bp.require_session()  # type: ignore
-    if error:
-        return error
-
-    return jsonify({"success": True, "summary": session_bot.get_conversation_summary()})
 
 
 @bp.route("/training/ask", methods=["POST"])

@@ -55,31 +55,6 @@ def test_prospect_init_returns_opening_message_and_history(monkeypatch):
     ]
 
 
-def test_prospect_products_are_curated_and_include_mentorship():
-    app.config["TESTING"] = True
-    client = app.test_client()
-
-    response = client.get("/api/prospect/products")
-    payload = response.get_json()
-    products = payload["products"]
-    ids = {product["id"] for product in products}
-    transactional_ids = {
-        product["id"] for product in products if product["strategy"] == "transactional"
-    }
-
-    mentorship = next(
-        product for product in products if product["id"] == "high_ticket_sales_mentorship"
-    )
-
-    assert response.status_code == 200
-    assert len(transactional_ids) == 7
-    assert "high_ticket_sales_mentorship" in ids
-    assert mentorship["label"] == "High-Ticket Sales Mentorship"
-    assert mentorship["strategy"] == "consultative"
-    assert "real_estate" not in ids
-    assert "budget_fragrances" not in ids
-    assert "subscription_boxes" not in ids
-
 
 def test_product_groups_split_transactional_and_consultative():
     app.config["TESTING"] = True
