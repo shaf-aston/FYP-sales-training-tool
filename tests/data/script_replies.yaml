@@ -12,12 +12,13 @@ step_01:   # CAT step 01: labels freedom
     - "I want to build something of my own so I can leave my job"
     - "freedom to spend my days how I choose"
     - "I want my time back"
-  none:
+  vague:
     - "I'm not really sure"
     - "just more money I guess"
     - "I don't know, I saw an ad"
-    - "my friend told me to apply"
     - "no idea honestly"
+  none:
+    - "my friend told me to apply"
     - "can you tell me about the programme first"
 step_18:   # temp check: labels agrees / unclear
   agrees:
