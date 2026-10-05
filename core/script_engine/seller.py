@@ -198,7 +198,8 @@ class ScriptSeller:
 
     def _is_question(self, text):
         spoken = " ".join(words(text)) + " "
-        return text.strip().endswith("?") or any(
+        tagged = any(spoken.endswith(" " + tag + " ") for tag in self.cfg["filler_tags"])
+        return (text.strip().endswith("?") and not tagged) or any(
             spoken.startswith(phrase + " ") for phrase in self.cfg["question_starts"]
         )
 

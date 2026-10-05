@@ -80,6 +80,13 @@ def test_edit_rewinds_the_script_too(client):
     assert edited["history"][0]["content"] == "I want financial freedom"
 
 
+def test_slang_tag_is_not_a_product_question(client):
+    # live: "you get me?" read as "what do you do" -> programme pitched at step 01
+    _, headers = _init(client)
+    reply = _say(client, headers, "Just want to make money bro, you get me?")["message"]
+    assert "programme" not in reply
+
+
 def test_init_without_product_runs_the_script(client):
     # live: the web UI never picks a product, so the CAT script never ran
     body = client.post("/api/init", json={}).get_json()
