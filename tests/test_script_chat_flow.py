@@ -109,3 +109,28 @@ def test_script_lines_reach_the_user_word_for_word(client, monkeypatch):
     )
     _, headers = _init(client)
     assert _say(client, headers, "I want financial freedom")["message"].startswith("How much")
+
+
+def test_vague_opening_answer_is_dug_into_not_deflected(client):
+    _, headers = _init(client)
+    text = _say(client, headers, "I want to make money online")["message"]
+    assert "That's fair" not in text and text == "What are you actually hoping to achieve?"
+
+
+def test_a_failed_past_attempt_is_acknowledged_before_going_on(client):
+    _, headers = _init(client)
+    _say(client, headers, "I want financial freedom")
+    _say(client, headers, "ten thousand a month")
+    text = _say(client, headers, "I tried dropshipping and it failed")["message"]
+    assert text.startswith("Sorry to hear that") and "why can't you just ignore it" in text
+
+
+def test_a_product_can_run_its_own_method(client, monkeypatch):
+    from core.loader import load_yaml
+
+    cfg = load_yaml("selling.yaml")
+    cfg["products"][SCRIPT_PRODUCT]["method"] = "impact_formula"
+    monkeypatch.setattr("core.seller_bot.selling_config", lambda: {**cfg, "enabled": True})
+    monkeypatch.setattr("core.script_engine.seller.selling_config", lambda: {**cfg, "enabled": True})
+    opened, _ = _init(client)
+    assert opened["message"] == "What would you like help with first?"

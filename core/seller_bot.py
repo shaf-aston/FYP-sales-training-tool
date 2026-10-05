@@ -131,13 +131,13 @@ class SellerBot:
         """Scripted selling runs only for a product listed in selling.yaml, while the flow is
         consultative; True when it just switched on."""
         cfg = selling_config()
-        offer = cfg["products"].get(self.product_type or "")
-        if not (cfg["enabled"] and offer and self.flow_engine.flow_type == Strategy.CONSULTATIVE):
+        scripted = (self.product_type or "") in cfg["products"]
+        if not (cfg["enabled"] and scripted and self.flow_engine.flow_type == Strategy.CONSULTATIVE):
             self.seller = None
             return False
         if self.seller:
             return False
-        self.seller = build_seller(self._router, offer)
+        self.seller = build_seller(self._router, self.product_type)
         return True
 
     def script_opening(self) -> str | None:

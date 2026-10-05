@@ -15,7 +15,7 @@ from core.script_engine.embedder import make_embedder
 from core.script_engine.engine import advance, object_to, price_open, start
 from core.script_engine.fill import fill_line, fill_step
 from core.script_engine.judge import VAGUE, judge
-from core.script_engine.method import load_common_sense, load_method, load_offer
+from core.script_engine.method import ANY, load_common_sense, load_method, load_offer
 from core.script_engine.recognise import recognise
 
 ROOT = Path(__file__).resolve().parent.parent.parent
@@ -61,10 +61,11 @@ def shared_embedder():
     return make_embedder(selling_config(), ROOT)
 
 
-def build_seller(router, offer, embedder=None):
+def build_seller(router, product, embedder=None):
     cfg = selling_config()
+    entry = cfg["products"][product]
     return ScriptSeller(
-        cfg, load_method(cfg["method"]), load_offer(offer), load_common_sense(),
+        cfg, load_method(entry.get("method", cfg["method"])), load_offer(entry["offer"]), load_common_sense(),
         embedder or shared_embedder(), make_llm(router, cfg["ai_timeout_seconds"], cfg["ai_rest_seconds"]),
     )
 
@@ -175,11 +176,12 @@ class ScriptSeller:
             return None, None
         if found.label.startswith("fact:"):
             return found.label.split(":", 1)  # a product question is never an answer
+        bar = 0.0 if answers else self.cfg["interrupt_threshold"]
         if answers:
             as_answer = self._recognise(text, answers)
             bar = as_answer.score if as_answer.label else 0.0  # only a real answer competes
-        else:
-            bar = self.cfg["interrupt_threshold"]
+        if any(r.signal == ANY for r in step.listen):
+            bar = max(bar, self.cfg["interrupt_threshold"])  # any reply is an answer: interrupt only when sure
         return found.label.split(":", 1) if found.score > bar else (None, None)
 
     def _listen(self, text, step):

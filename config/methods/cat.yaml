@@ -31,6 +31,15 @@ steps:
           - "I want more time with my kids and family"
           - "to spend more time with my family"
         then: "02"
+      vague:   # restates the question or names no outcome: dig, never take it as freedom
+        examples:
+          - "I want to make money online"
+          - "I just want to make money"
+          - "make more money"
+          - "I want to earn online"
+          - "not sure really"
+          - "I don't know"
+        then: "01"
   "02":
     name: "Number"
     ui_stage: logical
@@ -46,6 +55,14 @@ steps:
     say: "How long have you been thinking about this?"
     capture: years
     listen:
+      failed_before:   # a past failed attempt is acknowledged before the script goes on
+        examples:
+          - "I tried dropshipping and it failed"
+          - "I've tried a few things online and lost money"
+          - "I started a business before but it didn't work out"
+          - "I gave it a go and it flopped"
+        then: "04"
+        ack: "Sorry to hear that, plenty of people have a first attempt that doesn't work out."
       any: {then: "04"}
   "04":
     name: "Contextualise"
