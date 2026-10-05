@@ -80,12 +80,18 @@ def test_edit_rewinds_the_script_too(client):
     assert edited["history"][0]["content"] == "I want financial freedom"
 
 
-@pytest.mark.parametrize("product", ["financial_services", "healthcare_services", "luxury_cars", None])
+def test_init_without_product_runs_the_script(client):
+    # live: the web UI never picks a product, so the CAT script never ran
+    body = client.post("/api/init", json={}).get_json()
+    assert "making money online" in body["message"]
+
+
+@pytest.mark.parametrize("product", ["financial_services", "healthcare_services", "luxury_cars"])
 def test_products_not_listed_never_get_the_coaching_script(client, product):
     # live: a Wealth Management trainee was pitched online-business coaching
     from backend.app import session_manager
 
-    body = client.post("/api/init", json={"product_type": product} if product else {}).get_json()
+    body = client.post("/api/init", json={"product_type": product}).get_json()
     bot = session_manager.get(body["session_id"])
     bot.flow_engine.switch_strategy("consultative")
     headers = {"X-Session-ID": body["session_id"]}

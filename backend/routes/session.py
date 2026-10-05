@@ -12,6 +12,7 @@ from core.seller_bot import SellerBot
 from core.constants import UNDETERMINED_STAGE
 from core.content import generate_init_greeting
 from core.loader import QuickMatcher
+from core.script_engine.seller import selling_config
 from core.providers import get_available_providers
 from .. import settings
 from ._utils import validate_provider, with_session
@@ -98,7 +99,7 @@ def api_init():
     session_id = secrets.token_hex(16)
     product_type = data.get(
         "product_type"
-    )  # None → generic default → intent-first discovery
+    )  # None → selling.yaml default_product (scripted call)
     user_message = data.get("user_message", "")
     provider, provider_error = validate_provider(data)
     if provider_error:
@@ -112,6 +113,9 @@ def api_init():
             bp.app.logger.info(
                 f"Auto-detected product: {product_type} (confidence: {confidence:.2f})"
             )  # type: ignore
+
+    if not product_type or product_type == "default":
+        product_type = selling_config().get("default_product")
 
     try:
         bot = SellerBot(
