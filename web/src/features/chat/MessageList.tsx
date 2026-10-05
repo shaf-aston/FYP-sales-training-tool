@@ -84,7 +84,7 @@ function Item({ m, canEdit, editing, onEdit, onSave, onCancel }: ItemProps) {
   const user = m.role === "user";
   return (
     <div className={`${s.row} ${user ? s.user : s.bot} ${m.historical ? s.historical : ""}`}>
-      <div className={s.bubble}>
+      <div className={s.bubble} data-bubble>
         {user ? (
           editing ? (
             <Editor initial={m.content} onSave={onSave} onCancel={onCancel} />

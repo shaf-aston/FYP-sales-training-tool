@@ -35,7 +35,7 @@ export function Sidebar() {
   const { sidebarTab, setSidebarTab } = useUi();
   const { role } = useSession();
   return (
-    <aside className={s.sidebar} aria-label="Session sidebar">
+    <aside id={config.ids.panels} className={s.sidebar} aria-label="Session sidebar" tabIndex={-1}>
       <StatusCard />
       <div className={s.tabs}>
         <Tabs

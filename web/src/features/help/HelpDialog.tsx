@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { Dialog } from "@/components/ui";
+import { Button, Dialog } from "@/components/ui";
 import { storageKeys } from "@/lib/config";
 import { MODE_META } from "@/lib/labels";
 import { readString, storageAvailable, writeString } from "@/lib/storage";
@@ -56,7 +56,16 @@ export function HelpDialog() {
   };
 
   return (
-    <Dialog open={dialog === "help"} onClose={close} title="How it works">
+    <Dialog
+      open={dialog === "help"}
+      onClose={close}
+      title="How it works"
+      actions={
+        <Button variant="primary" onClick={close}>
+          Got it
+        </Button>
+      }
+    >
       <div className={s.sections}>
         {SECTIONS.map((sec) => (
           <section key={sec.title}>

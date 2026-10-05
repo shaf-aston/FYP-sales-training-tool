@@ -3,6 +3,8 @@
 export const config = {
   /** API lives on the same origin (Flask serves the built app; dev proxies /api). */
   apiBase: "",
+  /** DOM id of the session/mode/tools/settings sidebar (target of the mobile "Panels" button). */
+  ids: { panels: "session-panels" },
   chatTimeoutMs: 25_000,
   slowReplyMs: 5_000,
   toastMs: 4_000,

@@ -86,6 +86,18 @@ export function ChatHeader() {
         <Link href={seat.switchTo} className={buttonClass("pill", s.switch)} onClick={onSwitch}>
           <Icon name="swap" size={16} /> {seat.switchLabel}
         </Link>
+        <Button
+          variant="pill"
+          className={s.panels}
+          aria-controls={config.ids.panels}
+          onClick={() => {
+            const el = document.getElementById(config.ids.panels);
+            el?.scrollIntoView({ behavior: "smooth", block: "start" });
+            el?.focus({ preventScroll: true });
+          }}
+        >
+          Panels
+        </Button>
         <Button variant="pill" onClick={() => openDialog("help")} aria-keyshortcuts="?" title="How it works (press ?)">
           Help
         </Button>

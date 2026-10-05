@@ -29,6 +29,7 @@
 .close {
   min-width: var(--touch-target);
   min-height: var(--touch-target);
+  color: var(--text-primary);
   border-radius: var(--radius-pill);
   border: 1px solid var(--border);
   background: var(--bg-card-soft);
