@@ -464,6 +464,38 @@ class BuyerSession:
         self.save_session()
         return True
 
+    def redo(self, turn_index: int, user_message: str) -> BuyerResponse | None:
+        """Rewind to turn `turn_index` and send `user_message` in its place.
+
+        Returns None when that turn does not exist. If the buyer is never reached,
+        every rewound turn is put back and the error is raised, so a failed redo
+        costs the learner nothing.
+        """
+        kept = (
+            list(self.conversation_history),
+            self.state.turn_count,
+            self.state.readiness,
+            self.state.objections_raised,
+            self.state.has_committed,
+            self.state.has_walked,
+            self.last_turn_score,
+        )
+        if not self.rewind_to_turn(turn_index):
+            return None
+        try:
+            return self.process_turn(user_message)
+        except Exception:
+            (
+                self.conversation_history,
+                self.state.turn_count,
+                self.state.readiness,
+                self.state.objections_raised,
+                self.state.has_committed,
+                self.state.has_walked,
+                self.last_turn_score,
+            ) = kept
+            raise
+
     def _system_prompt(self) -> str:
         """The buyer's instructions for this turn."""
         return build_system_prompt(

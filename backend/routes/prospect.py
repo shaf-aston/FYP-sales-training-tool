@@ -327,23 +327,6 @@ def prospect_drills():
     return jsonify({"success": True, **build_drill_set(own_turns)})
 
 
-def _restore_after_failed_redo(ps, kept_history, kept_state):
-    """Put the turns back when the redo never reached the buyer.
-
-    Rewinding happens before the buyer is asked, so a failure here would otherwise
-    cost the learner every turn after the one they were redoing, and give them
-    nothing in return.
-    """
-    ps.conversation_history = kept_history
-    (
-        ps.state.turn_count,
-        ps.state.readiness,
-        ps.state.objections_raised,
-        ps.state.has_committed,
-        ps.state.has_walked,
-    ) = kept_state
-
-
 @bp.route("/redo", methods=["POST"])
 @require_rate_limit("prospect")
 def prospect_redo():
@@ -362,19 +345,10 @@ def prospect_redo():
     if err:
         return err
 
-    kept_history = list(ps.conversation_history)
-    kept_state = (
-        ps.state.turn_count,
-        ps.state.readiness,
-        ps.state.objections_raised,
-        ps.state.has_committed,
-        ps.state.has_walked,
-    )
-    if not ps.rewind_to_turn(turn_index):
-        return jsonify({"error": "That turn is not part of this session.", "code": "INVALID_TURN"}), 400
-
     try:
-        response = ps.process_turn(user_message)
+        response = ps.redo(turn_index, user_message)
+        if response is None:
+            return jsonify({"error": "That turn is not part of this session.", "code": "INVALID_TURN"}), 400
         return jsonify(
             {
                 "success": True,
@@ -387,10 +361,8 @@ def prospect_redo():
             }
         )
     except ProviderUnavailable:
-        _restore_after_failed_redo(ps, kept_history, kept_state)
         return jsonify({"error": PROSPECT_UNAVAILABLE, "code": "PROVIDER_UNAVAILABLE"}), 503
     except Exception as e:
-        _restore_after_failed_redo(ps, kept_history, kept_state)
         _bp_state().app.logger.exception(f"Prospect redo error: {e}")
         return jsonify({"error": PROSPECT_ERROR}), 500
 

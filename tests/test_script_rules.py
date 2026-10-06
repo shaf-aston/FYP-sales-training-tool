@@ -561,3 +561,19 @@ def test_scripted_coaching_note_comes_from_the_step_without_ai(fake_embedder):
     notes = s.training()
     assert notes["what_happened"] == "Script step 05 Blocker."
     assert notes["next_move"].startswith("Listen for: externalising")
+
+
+def test_checked_line_retries_then_gives_up_on_rule_breaking_ai():
+    """Every AI sentence goes through one loop: a bad line is retried, never used."""
+    from core.script_engine.ai_line import checked_line
+    from core.script_engine.checks import CheckContext
+
+    cfg = {"ai_retries": 1, "log_text_chars": 50}
+    ctx = CheckContext(max_words=10, questions=0, price_ok=False, price="£3000")
+    answers = iter(["It costs £3000?", "It is a six month programme."])
+    assert checked_line(lambda p, n: next(answers), "q", 20, ctx, cfg, "t") == "It is a six month programme."
+    assert checked_line(lambda p, n: "It costs £3000.", "q", 20, ctx, cfg, "t") is None
+
+    def down(p, n):
+        raise RuntimeError("offline")
+    assert checked_line(down, "q", 20, ctx, cfg, "t") is None
