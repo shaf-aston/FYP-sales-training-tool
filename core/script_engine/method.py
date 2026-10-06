@@ -26,13 +26,18 @@ class Step:
     say: str            # empty = silent step, never spoken
     say_plain: str
     capture: str        # slot name that stores the prospect's reply
-    probe: str          # asked when no route matched; empty = repeat `say`
+    probes: tuple       # asked in turn when no route moves on, before `stuck`; empty = `say` once
     draft: bool         # some line here is not verbatim from the source
     listen: tuple       # of Route
     run_on: bool = False  # said, then straight on to the next step without waiting for a reply
     name: str = ""      # the step's name in the source script, shown to the trainee
     note: str = ""      # the source's "listen for" note: what the trainee should notice next
     doubts_answer: bool = False  # the question asks what holds them back: "money's tight" is the answer
+    stuck: Route = None  # taken once the step has been asked again enough; every step with no `any` route has one
+
+    @property
+    def routes(self):
+        return self.listen + ((self.stuck,) if self.stuck else ())
 
 
 @dataclass(frozen=True)
@@ -124,15 +129,19 @@ def _step(step_id, data):
     if stage not in {s.value for s in Stage}:
         raise ValueError(f"step {step_id}: unknown ui_stage {stage!r}")
     listen = tuple(_route(step_id, k, v) for k, v in (data.get("listen") or {}).items())
+    probes = data.get("probe") or ()
+    probes = (probes,) if isinstance(probes, str) else tuple(probes)
+    stuck = _route(step_id, ANY, data["stuck"]) if data.get("stuck") else None
     if not data.get("say") and not any(r.signal == ANY for r in listen):
         raise ValueError(f"step {step_id}: silent step needs an '{ANY}' route")
     if data.get("run_on") and not any(r.signal == ANY for r in listen):
         raise ValueError(f"step {step_id}: run_on step needs an '{ANY}' route")
     return Step(
         step_id, stage, data.get("say", ""), data.get("say_plain", ""),
-        data.get("capture", ""), data.get("probe", ""),
+        data.get("capture", ""), probes,
         bool(data.get("draft")), listen, bool(data.get("run_on")),
         data.get("name", ""), data.get("note", ""), bool(data.get("doubts_answer")),
+        stuck,
     )
 
 
@@ -150,9 +159,11 @@ def parse_method(name, data):
     if first not in steps:
         raise ValueError(f"method {name}: first step {first!r} not defined")
     for step in steps.values():
-        for route in step.listen:
+        for route in step.routes:
             if route.then not in steps:
                 raise ValueError(f"step {step.id}: unknown then {route.then!r}")
+        if step.listen and not step.stuck and not any(r.signal == ANY for r in step.listen):
+            raise ValueError(f"step {step.id}: can be asked again, so it needs a 'stuck' route")
     objections = {k: _objection(k, v) for k, v in (data.get("objections") or {}).items()}
     price_step = str(data.get("price_step", ""))
     if price_step not in steps:

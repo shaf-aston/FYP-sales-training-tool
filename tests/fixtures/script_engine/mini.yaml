@@ -6,6 +6,7 @@ steps:
     say: "What would you like to achieve?"
     capture: goal
     draft: true
+    stuck: {then: "silent"}
     listen:
       clear:
         examples: ["I want to grow my business", "I want more freedom"]
@@ -17,6 +18,8 @@ steps:
   "b":
     ui_stage: pitch
     say: "So you want {goal}. Does that make sense?"
+    probe: ["Put simply: does that make sense?"]
+    stuck: {then: "c"}
     listen:
       agrees:
         examples: ["yes that makes sense", "yes"]

@@ -18,12 +18,12 @@ def _reachable(method):
         step_id = todo.pop()
         if step_id not in seen:
             seen.add(step_id)
-            todo += [r.then for r in method.steps[step_id].listen]
+            todo += [r.then for r in method.steps[step_id].routes]
     return seen
 
 
 def _lines(step):
-    return [step.say, step.probe, *(r.ack for r in step.listen)]
+    return [step.say, *step.probes, *(r.ack for r in step.routes)]
 
 
 @pytest.mark.parametrize("name", METHODS)
