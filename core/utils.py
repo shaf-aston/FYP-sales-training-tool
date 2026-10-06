@@ -101,6 +101,17 @@ def tokenize(text: str) -> list[str]:
     return re.findall(r"[a-z0-9']+", (text or "").lower())
 
 
+def is_question(text: str, starters, filler_tags) -> bool:
+    """A line asks something: it ends in "?" (unless it ends on a filler tag like
+    "you get me?" or "right?") or it opens with a question phrase. Both lists come from config."""
+    spoken = " ".join(tokenize(text)) + " "
+    tags = (" ".join(tokenize(tag)) for tag in filler_tags)
+    tagged = any(tag and (" " + spoken).endswith(" " + tag + " ") for tag in tags)
+    return ((text or "").strip().endswith("?") and not tagged) or any(
+        spoken.startswith(phrase + " ") for phrase in starters
+    )
+
+
 def merge_unique_items(*lists: list[str], max_items: int = 3) -> list[str]:
     """Merge list items in order, dropping duplicates (case-insensitive) and blanks.
 

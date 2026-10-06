@@ -11,7 +11,8 @@ from pathlib import Path
 
 from core.loader import load_yaml
 from core.script_engine.ai_line import checked_line
-from core.script_engine.checks import CheckContext, clip, words
+from core.script_engine.checks import CheckContext, clip
+from core.utils import is_question, tokenize
 from core.script_engine.embedder import make_embedder
 from core.script_engine.engine import advance, object_to, price_open, start
 from core.script_engine.fill import fill_line, fill_step
@@ -197,11 +198,7 @@ class ScriptSeller:
         return advance(self.method, self.state, signal, text)
 
     def _is_question(self, text):
-        spoken = " ".join(words(text)) + " "
-        tagged = any(spoken.endswith(" " + tag + " ") for tag in self.cfg["filler_tags"])
-        return (text.strip().endswith("?") and not tagged) or any(
-            spoken.startswith(phrase + " ") for phrase in self.cfg["question_starts"]
-        )
+        return is_question(text, self.cfg["question_starts"], self.cfg["filler_tags"])
 
     def _answer_uncovered(self, question, opened):
         """One short line for a product question nothing covers. Always checked, always logged."""
@@ -218,7 +215,7 @@ class ScriptSeller:
         )
         ctx = CheckContext(
             c["max_words"], 0, opened, offer.price,
-            prospect_words=frozenset(words(facts)),
+            prospect_words=frozenset(tokenize(facts)),
             stop_words=frozenset(c["stop_words"]) | frozenset(c["answer_filler_words"]),
             banned_words=frozenset(c["banned_words"]),
         )

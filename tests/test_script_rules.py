@@ -577,3 +577,14 @@ def test_checked_line_retries_then_gives_up_on_rule_breaking_ai():
     def down(p, n):
         raise RuntimeError("offline")
     assert checked_line(down, "q", 20, ctx, cfg, "t") is None
+
+
+def test_both_conversation_paths_share_one_question_rule():
+    """'whatever' is not 'what ...', and a tag like 'right?' is talk, on the stage path too."""
+    from core.analysis import is_literal_question
+
+    assert is_literal_question("What does it cost")
+    assert is_literal_question("How long is it?")
+    assert not is_literal_question("whatever, fine")
+    assert not is_literal_question("That's obvious, right?")
+    assert not is_literal_question("")

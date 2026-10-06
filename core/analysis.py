@@ -17,7 +17,7 @@ from typing import Any
 
 from .constants import MAX_USER_KEYWORDS
 from .loader import load_analysis_config, load_objection_flows, load_signals
-from .utils import contains_nonnegated_keyword
+from .utils import contains_nonnegated_keyword, is_question
 
 
 @dataclass
@@ -429,28 +429,10 @@ def detect_topic_drift(user_message: str, stage: str) -> str:
 
 
 def is_literal_question(user_message) -> bool:
-    if not user_message:
-        return False
-    msg = user_message.lower().strip()
     patterns = ANALYSIS_CONFIG.get("question_patterns", {})
-    starters = patterns.get("starters", [])
-    rhetorical = patterns.get("rhetorical_markers", [])
-
-    # starts with interrogative word or ends with "?"
-    is_question = any(msg.startswith(w) for w in starters) or msg.endswith("?")
-
-    # normalize punctuation so "that's obvious, right?" matches rhetorical marker
-    msg_norm = re.sub(r"[^\w\s']", " ", msg)
-    msg_norm = re.sub(r"\s+", " ", msg_norm).strip()
-
-    def _norm(s: str) -> str:
-        """Normalise punctuation and spacing before rhetorical marker checks."""
-        s2 = re.sub(r"[^\w\s']", " ", s.lower())
-        return re.sub(r"\s+", " ", s2).strip()
-
-    is_rhetorical = any(_norm(rmk) and _norm(rmk) in msg_norm for rmk in rhetorical)
-
-    return is_question and not is_rhetorical
+    return bool(user_message) and is_question(
+        user_message, patterns.get("starters", []), patterns.get("rhetorical_markers", [])
+    )
 
 
 def commitment_or_walkaway(

@@ -4,7 +4,8 @@ import logging
 import re
 
 from core.script_engine.ai_line import checked_line
-from core.script_engine.checks import BLANK, CheckContext, words
+from core.script_engine.checks import BLANK, CheckContext
+from core.utils import tokenize
 
 logger = logging.getLogger("script_engine.fallback")
 NAME = re.compile(r"\{(\w+)\}")
@@ -28,7 +29,7 @@ def _phrase(line, blank, reply, cfg, llm):
     )
     ctx = CheckContext(
         max_words=cfg["slot_words"], questions=0, price_ok=True,
-        prospect_words=frozenset(words(reply)), stop_words=frozenset(cfg["stop_words"]),
+        prospect_words=frozenset(tokenize(reply)), stop_words=frozenset(cfg["stop_words"]),
         banned_words=frozenset(cfg["banned_words"]),
     )
     before, _, after = sentence.partition("____")
@@ -38,12 +39,12 @@ def _phrase(line, blank, reply, cfg, llm):
         return None if phrase.upper() == "NONE" else phrase
 
     def fits_the_line(phrase):
-        said, broken = words(phrase), []
+        said, broken = tokenize(phrase), []
         if said and said[0] in cfg["bad_phrase_starts"]:
             broken.append("starts_like_a_verb")  # "feel to stop working ..." breaks the line
         if set(said) & set(cfg["prospect_pronouns"]):
             broken.append("speaks_as_prospect")  # "got to my own business"
-        if said and (said[-1:] == words(after)[:1] or said[:1] == words(before)[-1:]):
+        if said and (said[-1:] == tokenize(after)[:1] or said[:1] == tokenize(before)[-1:]):
             broken.append("repeats_next_word")  # "feel travel X X"
         return broken
 
