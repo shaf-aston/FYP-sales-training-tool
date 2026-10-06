@@ -124,6 +124,13 @@ def test_vague_opening_answer_is_dug_into_not_deflected(client):
     assert "That's fair" not in text and text == "What are you actually hoping to achieve?"
 
 
+def test_a_vague_prospect_hears_new_questions_then_the_call_moves_on(client):
+    _, headers = _init(client)
+    said = [_say(client, headers, "more money")["message"] for _ in range(4)]
+    assert len(set(said[:3])) == 3  # each dig is worded differently
+    assert said[3].startswith("Fair enough.") and "How much" in said[3]
+
+
 def test_a_failed_past_attempt_is_acknowledged_before_going_on(client):
     _, headers = _init(client)
     _say(client, headers, "I want financial freedom")

@@ -81,8 +81,10 @@ steps:
       any: {then: "check"}
   "check":
     ui_stage: pitch
-    draft: true  # no source probe: repeats the check
+    draft: true  # probe is ours: the source has no second wording
     say: "Does that all make sense?"
+    probe: "Put simply: a step-by-step plan, someone in your corner, and someone holding you to it. Does that make sense?"
+    stuck: {then: "close"}   # still unclear: go to the close, objections handle doubt there
     listen:
       agrees:
         examples:
@@ -103,8 +105,10 @@ steps:
         then: "check"
   "close":
     ui_stage: pitch
-    draft: true  # no source probe: repeats the close
+    draft: true  # probe is ours: the source has no second wording
     say: "Do you see yourself jumping in, or how do you feel?"
+    probe: "Where are you at with it right now?"
+    stuck: {then: "later"}   # still hesitant: book the follow-up, don't keep pushing
     listen:
       agrees:
         examples:
@@ -125,12 +129,17 @@ steps:
   "payment":
     ui_stage: outcome
     say: "How would you like to process the investment? Credit or debit?"
+  "later":
+    name: "Follow-up"
+    ui_stage: outcome
+    draft: true  # the follow_up line below, as an ending step `stuck` can lead to
+    say: &follow_up "No problem. Let's book a follow-up call so you can decide properly, and I'll leave it there for today."
 
 # Said after the loop lines and the direct line have all been used. The trainer's FAQ says to
 # book the follow-up and leave on a good note; it gives no wording.
 follow_up:
   draft: true
-  say: "No problem. Let's book a follow-up call so you can decide properly, and I'll leave it there for today."
+  say: *follow_up
 
 # Loop twice, third time direct. Loop lines are the app's own objection-path questions.
 objections:

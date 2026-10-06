@@ -12,6 +12,7 @@ class ScriptState:
     objection_counts: dict = field(default_factory=dict)
     last_point: str = ""
     play: str = ""      # objection whose loop/direct line was just asked; the next reply answers it
+    asks: int = 0       # times the current step has been asked again
 
 
 @dataclass(frozen=True)
@@ -36,7 +37,7 @@ def _speak(method, state):
             lead += (step.id,)
         state = replace(state, step=_route(step, ANY).then)
         step = method.steps[state.step]
-    return Move(step.say, state, step.ui_stage, not step.listen, lead=lead)
+    return Move(step.say, replace(state, asks=0), step.ui_stage, not step.listen, lead=lead)
 
 
 def _route(step, signal):
@@ -48,22 +49,30 @@ def start(method):
 
 
 def advance(method, state, signal, reply=""):
-    """signal = recognised label or None. Unmatched reply repeats the step as a probe."""
+    """signal = recognised label or None. Unmatched reply asks the step again."""
     step = method.steps[state.step]
     route = _route(step, signal) if signal else None
     route = route or _route(step, ANY)
     if route is None:
-        return Move(step.probe or step.say, state, step.ui_stage, not step.listen)
-    slots, last_point = state.slots, state.last_point
+        return _ask_again(method, state, step)
     if step.capture and reply:
-        slots = {**slots, step.capture: reply}
-        last_point = reply
-    if route.then == state.step and step.probe:
-        # asked again: a person rephrases rather than repeating themselves word for word
-        return Move(step.probe, replace(state, slots=slots, last_point=last_point), step.ui_stage,
-                    ack=route.ack)
-    moved = _speak(method, replace(state, step=route.then, slots=slots, last_point=last_point))
-    return replace(moved, ack=route.ack)
+        state = replace(state, slots={**state.slots, step.capture: reply}, last_point=reply)
+    if route.then == state.step:
+        return _ask_again(method, state, step, route.ack)
+    return _take(method, state, route)
+
+
+def _take(method, state, route):
+    return replace(_speak(method, replace(state, step=route.then)), ack=route.ack)
+
+
+def _ask_again(method, state, step, ack=""):
+    """A person rephrases rather than repeating themselves, and moves on rather than asking forever."""
+    lines = step.probes or (step.say,)
+    if step.stuck and state.asks >= len(lines):
+        return _take(method, state, step.stuck)
+    line = lines[min(state.asks, len(lines) - 1)]
+    return Move(line, replace(state, asks=state.asks + 1), step.ui_stage, not step.listen, ack=ack)
 
 
 def price_open(method, step_id):

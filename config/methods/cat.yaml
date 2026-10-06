@@ -17,9 +17,14 @@ steps:
     name: "End outcome"
     note: 'FREEDOM. Vague → loop back, dig till freedom'
     ui_stage: intent
+    draft: true  # probes 2-3 and the stuck ack are ours: the source only says "dig till freedom"
     say: "What do you want to specifically achieve by making money online?"
     capture: outcome
-    probe: "What are you actually hoping to achieve?"
+    probe:   # asked in turn; then `stuck` moves on instead of asking forever
+      - "What are you actually hoping to achieve?"
+      - "What would that money actually give you?"
+      - "If money wasn't a problem, what would your days look like?"
+    stuck: {then: "02", ack: "Fair enough."}
     listen:
       freedom:
         examples:
@@ -189,6 +194,7 @@ steps:
     draft: true  # probe is ours: the source says "unclear -> simplify, re-check"
     say: "That's everything in a nutshell. Does that make sense?"
     probe: "Put simply: a step-by-step plan, someone in your corner, and someone holding you to it. Does that make sense?"
+    stuck: {then: "19"}   # still unclear after the simpler version: go to the close, objections handle doubt there
     listen:
       agrees:
         examples:
@@ -221,6 +227,7 @@ steps:
     draft: true  # probe is ours: no source line for a second ask
     say: "Do you see yourself jumping in?"
     probe: "Where are you at with it right now?"
+    stuck: {then: "later"}   # still hesitant: book the follow-up, don't keep pushing
     listen:
       agrees:
         examples:
@@ -265,12 +272,17 @@ steps:
     ui_stage: outcome
     draft: true  # no source line for after payment
     say: "Perfect. I'll send everything over now. Welcome aboard."
+  "later":
+    name: "Follow-up"
+    ui_stage: outcome
+    draft: true  # the follow_up line below, as an ending step `stuck` can lead to
+    say: &follow_up "No problem. Let's book a follow-up call so you can decide properly, and I'll leave it there for today."
 
 # Said after the loop lines and the direct line have all been used. The trainer's FAQ says to
 # book the follow-up and leave on a good note; it gives no wording.
 follow_up:
   draft: true
-  say: "No problem. Let's book a follow-up call so you can decide properly, and I'll leave it there for today."
+  say: *follow_up
 
 # Objection loop (after the soft close). Loop twice, third time direct.
 # Loop lines: the trainer's FAQ and the generic objection page.

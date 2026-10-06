@@ -305,7 +305,7 @@ def test_close_call_with_ai_down_probes_instead(seller):
     s = at(_close_call_seller(down), "18")
     text, _ = s.reply("hmm")
     assert s.state.step == "18"
-    assert text == s.method.steps["18"].probe  # asked again in simpler words, not repeated
+    assert text == s.method.steps["18"].probes[0]  # asked again in simpler words, not repeated
 
 
 def test_replay_gives_the_same_lines(fake_embedder):

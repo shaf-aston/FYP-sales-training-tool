@@ -57,6 +57,17 @@ def test_unmatched_reply_repeats_step(mini, fake_embedder):
     assert move.state.step == "a" and not move.state.slots
 
 
+def test_probes_are_asked_in_turn_then_stuck_moves_on(mini, fake_embedder):
+    state = ScriptState(step="b")
+    texts = []
+    for _ in range(2):
+        move = _turn(mini, state, "purple banana", fake_embedder)
+        state = move.state
+        texts.append(move.text_template)
+    assert texts == ["Put simply: does that make sense?", "Great, next steps."]
+    assert state.step == "c" and state.asks == 0
+
+
 def test_replay_is_deterministic(mini, fake_embedder):
     replies = ["purple banana", "I want more freedom", "yes"]
     assert _run(mini, replies, fake_embedder)[0] == _run(mini, replies, fake_embedder)[0]
@@ -75,6 +86,8 @@ def test_loader_rejects_broken_graphs():
         (lambda d: d["steps"]["a"]["listen"]["clear"].update(then="nope"), "unknown then"),
         (lambda d: d["steps"]["a"].update(ui_stage="bogus"), "ui_stage"),
         (lambda d: d["steps"]["silent"].update(listen={}), "silent step"),
+        (lambda d: d["steps"]["a"].pop("stuck"), "needs a 'stuck' route"),
+        (lambda d: d["steps"]["a"]["stuck"].update(then="nope"), "unknown then"),
     ]:
         data = yaml.safe_load(yaml.safe_dump(good))
         mutate(data)
