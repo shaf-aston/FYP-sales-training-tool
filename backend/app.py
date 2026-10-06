@@ -39,7 +39,7 @@ app = Flask(
 CORS(app, origins=settings.allowed_origins())
 
 
-rate_limiter, session_manager, _ = initialize_security(
+rate_limiter, session_manager = initialize_security(
     app_logger=app.logger
 )
 
