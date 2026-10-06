@@ -1,6 +1,5 @@
 """Session lifecycle endpoints - init, restore, reset, health, config"""
 
-import json
 import logging
 import secrets
 from typing import Any
@@ -151,27 +150,7 @@ def api_init():
     if opening:
         init_data = {**init_data, "message": opening}
 
-    # Add greeting to conversation history so the LLM knows the conversation has started.
-    # Without this, the LLM sees an empty history on the first user turn and re-greets.
-    bot.flow_engine.conversation_history.append(
-        {"role": "assistant", "content": init_data["message"]}
-    )
-    bp.app.logger.info(
-        "conversation_turn %s",
-        json.dumps(
-            {
-                "session_id": session_id,
-                "turn_index": 0,
-                "flow_type": bot.flow_engine.flow_type,
-                "current_stage": bot.flow_engine.current_stage,
-                "strategy": bot.flow_engine.flow_type,
-                "user_message": None,
-                "assistant_message": init_data["message"],
-            },
-            ensure_ascii=False,
-        ),
-    )
-    bot.save_session()
+    bot.open_with(init_data["message"])
 
     return jsonify(
         {

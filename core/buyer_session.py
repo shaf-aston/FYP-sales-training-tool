@@ -567,22 +567,22 @@ class BuyerSession:
     def _log_turn_event(
         self, user_message: str | None, assistant_message: str, turn_index: int
     ) -> None:
-        """Emit the full prospect exchange to the application log."""
+        """Record the full prospect exchange as an analytics event."""
 
         if not self.session_id:
             return
 
-        payload = {
-            "session_id": self.session_id,
-            "turn_index": turn_index,
-            "difficulty": self.state.difficulty,
-            "product_type": self.product_type,
-            "current_readiness": round(self.state.readiness, 3),
-            "user_message": user_message,
-            "assistant_message": assistant_message,
-            "persona_name": self.persona.get("name", "Alex"),
-        }
-        logger.info("prospect_conversation_turn %s", json.dumps(payload, ensure_ascii=False))
+        SessionAnalytics.record(
+            session_id=self.session_id,
+            event="prospect_conversation_turn",
+            turn_index=turn_index,
+            difficulty=self.state.difficulty,
+            product_type=self.product_type,
+            current_readiness=round(self.state.readiness, 3),
+            user_message=user_message,
+            assistant_message=assistant_message,
+            persona_name=self.persona.get("name", "Alex"),
+        )
 
     def record_session_end(self) -> None:
         """Record where this session actually got to.

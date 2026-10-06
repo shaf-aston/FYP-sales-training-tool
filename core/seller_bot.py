@@ -109,23 +109,26 @@ class SellerBot:
     def model_name(self) -> str:
         return self._router.model_name
 
-    def _log_turn_event(self, user_message: str, bot_reply: str) -> None:
+    def open_with(self, greeting: str) -> None:
+        """Put the opening line in the history (so the AI never re-greets) and record it as turn 0."""
+        self.flow_engine.conversation_history.append({"role": "assistant", "content": greeting})
+        self._log_turn_event(None, greeting)
+        self.save_session()
+
+    def _log_turn_event(self, user_message: str | None, bot_reply: str) -> None:
 
         if not self.session_id:
             return
 
-        turn_count = self.flow_engine.user_turn_count
-
-        payload = {
-            "session_id": self.session_id,
-            "turn_index": turn_count,
-            "flow_type": self.flow_engine.flow_type,
-            "current_stage": self.flow_engine.current_stage,
-            "strategy": self.flow_engine.flow_type,
-            "user_message": user_message,
-            "assistant_message": bot_reply,
-        }
-        self.logger.info("conversation_turn %s", json.dumps(payload, ensure_ascii=False))
+        SessionAnalytics.record(
+            session_id=self.session_id,
+            event="conversation_turn",
+            turn_index=self.flow_engine.user_turn_count,
+            strategy=self.flow_engine.flow_type,
+            current_stage=self.flow_engine.current_stage,
+            user_message=user_message,
+            assistant_message=bot_reply,
+        )
 
     def _sync_seller(self) -> bool:
         """Scripted selling runs only for a product listed in selling.yaml, while the flow is
