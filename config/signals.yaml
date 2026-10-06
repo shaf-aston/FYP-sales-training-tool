@@ -211,3 +211,25 @@ user_transactionalSIGNALS:
   - quick answer
   - get straight
   - what's the price
+
+# Buyer states a real need. Checked before signal scoring moves INTENT on.
+# "price" and "budget" are not intent: see price_mention.
+explicit_intent:
+  - looking for
+  - help with
+  - interested in
+  - problem
+  - buy
+  - purchase
+  - struggling
+  - slipping
+  - losing
+  - we lost
+  - not working
+  - falling behind
+  - have to
+  - ready to buy
+  - looking to buy
+
+# Buyer only mentions money. Alone, this does not move INTENT on.
+price_mention: [budget, price, cost, afford]
