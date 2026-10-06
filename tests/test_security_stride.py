@@ -40,6 +40,9 @@ class _DummyBot:
     def script_opening(self):
         return None
 
+    def open_with(self, greeting):
+        self.flow_engine.conversation_history.append({"role": "assistant", "content": greeting})
+
 
 class _DummySessionManager:
     def __init__(self):

@@ -53,6 +53,9 @@ class _DummyBot:
     def script_opening(self):
         return None
 
+    def open_with(self, greeting):
+        self.flow_engine.conversation_history.append({"role": "assistant", "content": greeting})
+
     @staticmethod
     def load_session(session_id):
         _DummyBot.loaded_session_id = session_id
