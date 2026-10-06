@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build && node scripts/flatten-segments.mjs",
     "start": "next start",
     "lint": "eslint",
     "check": "tsc --noEmit && eslint src && node --experimental-strip-types src/features/session/history.check.ts && node --experimental-strip-types src/features/voice/voiceCommands.check.ts && node --experimental-strip-types src/features/prospect/drillSchedule.check.ts"
