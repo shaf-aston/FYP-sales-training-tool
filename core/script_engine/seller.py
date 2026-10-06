@@ -146,6 +146,10 @@ class ScriptSeller:
         self.state = move.state
         return self._render(move), move.ui_stage
 
+    def ui_stage(self):
+        """The UI stage of the step the call is on."""
+        return self.method.steps[self.state.step].ui_stage
+
     def training(self):
         """Notes for the trainee, straight from the script step - no AI, instant."""
         step = self.method.steps[self.state.step]

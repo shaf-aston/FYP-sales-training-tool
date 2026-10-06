@@ -375,7 +375,7 @@ class SellerBot:
         if self.seller:
             if turn_state is not None:
                 self.seller.reset(ScriptState(**turn_state))
-            self._show_stage(self.method_stage())
+            self._show_stage(self.seller.ui_stage())
             self.flow_engine.add_turn(user_message, bot_reply)
             return
         if turn_state is None:
@@ -490,10 +490,6 @@ class SellerBot:
         return quiz.test_quiz_direction(
             explanation, self._router, self.flow_engine.current_stage, self.flow_engine.flow_type
         )
-
-    def method_stage(self) -> str:
-        """The UI stage of the script step the call is on."""
-        return self.seller.method.steps[self.seller.state.step].ui_stage
 
     def _capture_turn_snapshot(self, turn_state=None) -> dict:
         """Capture current FSM state for snapshot-based rewinding."""
