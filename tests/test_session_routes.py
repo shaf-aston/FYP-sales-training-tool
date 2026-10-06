@@ -50,6 +50,22 @@ class _DummyBot:
     def refresh_current_turn_snapshot(self):
         self.snapshot_refreshed = True
 
+    def jump_to_stage(self, stage):
+        if stage not in self.flow_engine.flow_config["stages"]:
+            return False
+        self.flow_engine.advance(stage)
+        self.saved = True
+        return True
+
+    def change_strategy(self, strategy):
+        self.flow_engine.switch_strategy(strategy)
+        self.snapshot_refreshed = True
+        self.saved = True
+        return True
+
+    def force_strategy(self, strategy):
+        self.flow_engine.switch_strategy(strategy)
+
     def script_opening(self):
         return None
 

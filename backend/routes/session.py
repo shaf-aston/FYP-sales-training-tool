@@ -7,7 +7,6 @@ from flask import Blueprint, current_app, jsonify, request
 
 from core.analytics.performance import PerformanceTracker
 from core.seller_bot import SellerBot
-from core.constants import UNDETERMINED_STAGE
 from core.content import generate_init_greeting
 from core.loader import QuickMatcher
 from core.script_engine.seller import selling_config
@@ -104,8 +103,7 @@ def api_init():
         force_strategy = data.get("force_strategy")
         if force_strategy in ("consultative", "transactional"):
             if has_valid_admin_token(request, current_app.config):
-                bot.flow_engine.initial_flow_type = force_strategy
-                bot.flow_engine.switch_strategy(force_strategy)
+                bot.force_strategy(force_strategy)
             else:
                 current_app.logger.warning(
                     "Ignored unauthorized force_strategy override for path %s",
@@ -236,31 +234,16 @@ def api_stages(bot):
 @with_session
 def api_stage(bot):
     """Jump FSM to a specific stage. Admin/test only (requires privileged auth)."""
-    from core.enums import Strategy
-
     data = request.json or {}
     stage = data.get("stage")
 
-    # Validate stage against available stages
-    stages = bot.flow_engine.flow_config.get("stages", [])
-    if not stage or stage not in stages:
+    if not bot.jump_to_stage(stage):
+        stages = bot.flow_engine.flow_config.get("stages", [])
         return jsonify({"error": invalid_stage(stages)}), 400
 
-    # Advance FSM to target stage
-    bot.flow_engine.advance(target_stage=stage)
-
-    stage_str = (
-        UNDETERMINED_STAGE
-        if bot.flow_engine.flow_type == Strategy.INTENT
-        else bot.flow_engine.current_stage.upper()
-    )
-
     current_app.logger.info(f"Stage jumped to {stage}")
-    bot.save_session()  # Persist the stage change
 
-    return jsonify(
-        {"success": True, "stage": stage_str, "strategy": bot.flow_engine.flow_type.upper()}
-    ), 200
+    return jsonify({"success": True, **bot_state(bot)}), 200
 
 
 @bp.route("/strategy", methods=["POST"])
@@ -277,14 +260,9 @@ def api_strategy(bot):
             {"error": invalid_strategy(valid_strategies)}
         ), 400
 
-    if not bot.flow_engine.switch_strategy(strategy):
+    if not bot.change_strategy(strategy):
         current_app.logger.warning(f"Strategy switch failed to strategy {strategy}")
         return jsonify({"error": STRATEGY_SWITCH_FAILED}), 400
-
-    # Preserve the original reset baseline, but keep rewind snapshots aligned
-    # with the current turn after this out-of-band strategy change.
-    bot.refresh_current_turn_snapshot()
-    bot.save_session()
 
     current_app.logger.info(f"Strategy switched to {strategy}")
 

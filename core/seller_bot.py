@@ -599,6 +599,43 @@ class SellerBot:
             bot_msg = bot_msg_dict.get("content", "")
             self._replay_turn(user_msg, bot_msg)
 
+    def edit_turn(self, message_index: int, new_text: str):
+        """Rewind to the user message at message_index and replay it as new_text.
+
+        Raises ValueError (message safe to show) for a bad index or a non-user
+        message; returns None if the rewind fails, else the new ChatResponse.
+        """
+        history = self.flow_engine.conversation_history
+        max_index = len(history) - 1
+        if message_index < 0 or message_index > max_index:
+            raise ValueError(f"Invalid index. Valid range: 0-{max_index}")
+        if history[message_index].get("role") != "user":
+            raise ValueError("Can only edit user messages")
+        if not self.rewind_to_turn(message_index // 2):
+            return None
+        return self.chat(new_text)
+
+    def force_strategy(self, strategy: str) -> None:
+        """Admin override: pin the strategy as the baseline and switch to it."""
+        self.flow_engine.initial_flow_type = strategy
+        self.flow_engine.switch_strategy(strategy)
+
+    def change_strategy(self, strategy: str) -> bool:
+        """Switch strategy mid-session, keep rewind snapshots aligned, and log."""
+        if not self.flow_engine.switch_strategy(strategy):
+            return False
+        self.refresh_current_turn_snapshot()
+        self.save_session()
+        return True
+
+    def jump_to_stage(self, stage: str) -> bool:
+        """Move the FSM to a stage of the current flow; False if it isn't one."""
+        if not stage or stage not in self.flow_engine.flow_config.get("stages", []):
+            return False
+        self.flow_engine.advance(target_stage=stage)
+        self.save_session()
+        return True
+
     def save_session(self):
         """Emit a durable log snapshot of the current session state."""
         if not self.session_id:

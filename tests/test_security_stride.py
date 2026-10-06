@@ -37,6 +37,10 @@ class _DummyBot:
     def save_session(self):
         pass
 
+    def force_strategy(self, strategy):
+        self.flow_engine.initial_flow_type = strategy
+        self.flow_engine.switch_strategy(strategy)
+
     def script_opening(self):
         return None
 

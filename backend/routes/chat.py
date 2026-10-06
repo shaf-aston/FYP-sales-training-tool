@@ -72,21 +72,10 @@ def edit_message():
     except (TypeError, ValueError):
         return jsonify({"error": "Invalid index format"}), 400
 
-    # Validate index is within bounds
-    max_index = len(session_bot.flow_engine.conversation_history) - 1
-    if message_index < 0 or message_index > max_index:
-        return jsonify({"error": f"Invalid index. Valid range: 0-{max_index}"}), 400
-
-    if session_bot.flow_engine.conversation_history[message_index].get("role") != "user":
-        return jsonify({"error": "Can only edit user messages"}), 400
-
     try:
-        # Rewind to turn BEFORE the edit, then replay with new message
-        turn_index = message_index // 2  # Convert message index to turn index
-        if not session_bot.rewind_to_turn(turn_index):
+        response = session_bot.edit_turn(message_index, new_message)
+        if response is None:
             return jsonify({"error": "Rewind failed"}), 500
-
-        response = session_bot.chat(new_message)
         training = session_bot.generate_training(new_message, response.content)
 
         return jsonify(
@@ -104,6 +93,8 @@ def edit_message():
                 "training": training,
             }
         )
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
     except Exception as e:
         current_app.logger.exception(f"Edit error: {e}")
         return jsonify({"error": "Couldn't apply that edit -- try again in a sec"}), 500
