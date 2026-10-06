@@ -51,9 +51,8 @@ def _make_analytics_app(monkeypatch, testing=True):
     def bot_state(_bot):
         return {"stage": "LOGICAL", "strategy": "CONSULTATIVE"}
 
-    monkeypatch.setattr(analytics_routes.bp, "app", app, raising=False)
-    monkeypatch.setattr(analytics_routes.bp, "require_session", require_session, raising=False)
-    monkeypatch.setattr(analytics_routes.bp, "bot_state", bot_state, raising=False)
+    monkeypatch.setattr(analytics_routes, "require_session", require_session)
+    monkeypatch.setattr(analytics_routes, "bot_state", bot_state)
     app.register_blueprint(analytics_routes.bp)
     return app
 

@@ -3,8 +3,9 @@
 import re
 from dataclasses import dataclass
 
+from core.utils import tokenize
+
 BLANK = re.compile(r"\{\w+\}")
-WORD = re.compile(r"[a-z0-9']+")
 CURRENCY = re.compile(r"[$£€]\s?\d")
 LINK = re.compile(r"https?://|www\.|@|\.(com|net|org|io)\b", re.IGNORECASE)
 
@@ -18,10 +19,6 @@ class CheckContext:
     prospect_words: frozenset = None   # when set, every word must come from here or stop_words
     stop_words: frozenset = frozenset()
     banned_words: frozenset = frozenset()
-
-
-def words(text):
-    return WORD.findall(text.lower())
 
 
 def clip(text, limit):
@@ -45,14 +42,14 @@ def check(text, ctx):
         broken.append("early_price")
     if BLANK.search(text):
         broken.append("unfilled_blank")
-    if not text.strip() or len(words(text)) > ctx.max_words:
+    if not text.strip() or len(tokenize(text)) > ctx.max_words:
         broken.append("length")
     if LINK.search(text):
         broken.append("link")
-    if ctx.banned_words & set(words(text)):
+    if ctx.banned_words & set(tokenize(text)):
         broken.append("banned_word")
     if ctx.prospect_words is not None:
-        foreign = set(words(text)) - ctx.prospect_words - ctx.stop_words
+        foreign = set(tokenize(text)) - ctx.prospect_words - ctx.stop_words
         if foreign:
             broken.append("not_prospect_words")
     return broken

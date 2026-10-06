@@ -16,7 +16,7 @@ _REQUIRED_SIGNAL_KEYS = {
     "commitment", "objection", "walking", "low_intent", "high_intent",
     "guardedness_keywords", "demand_directness", "direct_info_requests", "soft_positive",
     "validation_phrases", "emotional_disclosure",
-    "user_consultativeSIGNALS", "user_transactionalSIGNALS",
+    "user_consultativeSIGNALS", "user_transactionalSIGNALS", "explicit_intent", "price_mention",
 }
 
 @lru_cache(maxsize=16)

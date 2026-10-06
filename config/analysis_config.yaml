@@ -459,8 +459,7 @@ question_patterns:
 advancement:
   # Intent discovery stage
   intent:
-    low_intent_max_turns: 6
-    high_intent_max_turns: 4
+    max_turns: 6  # safety valve: leave INTENT after this many turns with no signal (signals appear turns 2-5)
 
   # Logical certainty stage (consultative)
   logical:

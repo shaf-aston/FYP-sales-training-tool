@@ -16,11 +16,10 @@ load_dotenv(ROOT_DIR / ".env")
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from core.constants import MAX_PROSPECT_SESSIONS, PROSPECT_IDLE_MINUTES, UNDETERMINED_STAGE  # noqa: E402
+from core.constants import MAX_PROSPECT_SESSIONS, PROSPECT_IDLE_MINUTES  # noqa: E402
 from core.script_engine.seller import selling_config, shared_embedder  # noqa: E402
-from backend.messages import INTERNAL_SERVER_ERROR, MESSAGE_REQUIRED  # noqa: E402
+from backend.messages import INTERNAL_SERVER_ERROR  # noqa: E402
 from backend.security import (  # noqa: E402
-    InputValidator,
     SecurityConfig,
     SecurityHeadersMiddleware,
     SessionSecurityManager,
@@ -28,7 +27,7 @@ from backend.security import (  # noqa: E402
 )
 from backend import settings  # noqa: E402
 from backend.routes import analytics, chat, prospect, session  # noqa: E402
-from backend.routes._utils import make_require_session  # noqa: E402
+from backend.routes._utils import Sessions  # noqa: E402
 
 app = Flask(
     __name__,
@@ -40,7 +39,7 @@ app = Flask(
 CORS(app, origins=settings.allowed_origins())
 
 
-rate_limiter, session_manager, injection_validator = initialize_security(
+rate_limiter, session_manager = initialize_security(
     app_logger=app.logger
 )
 
@@ -74,45 +73,7 @@ if _should_start_background_cleanup():
         threading.Thread(target=shared_embedder, daemon=True, name="embedder-warmup").start()
 
 
-_require_session = make_require_session(session_manager.get)
-
-
-def _validate_message(message_text):
-    """Validate and sanitize message text. Returns (clean_text, error_response)"""
-    from flask import jsonify
-
-    if not message_text or not isinstance(message_text, str):
-        return None, (jsonify({"error": MESSAGE_REQUIRED}), 400)
-    return InputValidator.validate_message(
-        message_text.strip(),
-        injection_validator=injection_validator,
-        max_length=SecurityConfig.MAX_MESSAGE_LENGTH,
-    )
-
-
-def _bot_state(session_bot):
-    """Common stage/strategy fields for JSON responses"""
-    from core.enums import Strategy
-
-    # In discovery mode (intent strategy), stage is unset since real flow isn't determined yet
-    # Once switched to consultative/transactional, show actual stage
-    stage = (
-        UNDETERMINED_STAGE
-        if session_bot.flow_engine.flow_type == Strategy.INTENT
-        else session_bot.flow_engine.current_stage.upper()
-    )
-    strategy = session_bot.flow_engine.flow_type.upper()
-
-    return {"stage": stage, "strategy": strategy}
-
-
-session.init_routes(
-    app, session_manager, session_manager.get, session_manager.set, session_manager.delete,
-    _bot_state, _require_session,
-)
-chat.init_routes(app, session_manager.get, _require_session, _validate_message, _bot_state)
-prospect.init_routes(app, prospect_session_manager, _validate_message)
-analytics.init_routes(app, _require_session, _bot_state)
+app.extensions["sessions"] = Sessions(seller=session_manager, buyer=prospect_session_manager)
 
 app.register_blueprint(session.bp)
 app.register_blueprint(chat.bp)

@@ -3,7 +3,9 @@
 import logging
 import re
 
-from core.script_engine.checks import BLANK, CheckContext, check, clip, words
+from core.script_engine.ai_line import checked_line
+from core.script_engine.checks import BLANK, CheckContext
+from core.utils import tokenize
 
 logger = logging.getLogger("script_engine.fallback")
 NAME = re.compile(r"\{(\w+)\}")
@@ -27,31 +29,26 @@ def _phrase(line, blank, reply, cfg, llm):
     )
     ctx = CheckContext(
         max_words=cfg["slot_words"], questions=0, price_ok=True,
-        prospect_words=frozenset(words(reply)), stop_words=frozenset(cfg["stop_words"]),
+        prospect_words=frozenset(tokenize(reply)), stop_words=frozenset(cfg["stop_words"]),
         banned_words=frozenset(cfg["banned_words"]),
     )
-    for _ in range(1 + cfg["ai_retries"]):
-        try:
-            phrase = llm(prompt, cfg["slot_tokens"]).strip().strip("\"'.")
-        except Exception as exc:  # noqa: BLE001 - any AI failure means fall back
-            logger.warning("blank %s: AI unavailable: %s", blank, exc)
-            return None
-        if phrase.upper() == "NONE":
-            return None
-        broken = check(phrase, ctx)
-        said = words(phrase)
+    before, _, after = sentence.partition("____")
+
+    def clean(raw):
+        phrase = raw.strip().strip("\"'.")
+        return None if phrase.upper() == "NONE" else phrase
+
+    def fits_the_line(phrase):
+        said, broken = tokenize(phrase), []
         if said and said[0] in cfg["bad_phrase_starts"]:
             broken.append("starts_like_a_verb")  # "feel to stop working ..." breaks the line
         if set(said) & set(cfg["prospect_pronouns"]):
             broken.append("speaks_as_prospect")  # "got to my own business"
-        before, _, after = sentence.partition("____")
-        if said and (said[-1:] == words(after)[:1] or said[:1] == words(before)[-1:]):
+        if said and (said[-1:] == tokenize(after)[:1] or said[:1] == tokenize(before)[-1:]):
             broken.append("repeats_next_word")  # "feel travel X X"
-        if not broken:
-            return phrase
-        logger.warning("blank %s: AI phrase %r broke %s", blank,
-                       clip(phrase, cfg["log_text_chars"]), broken)
-    return None
+        return broken
+
+    return checked_line(llm, prompt, cfg["slot_tokens"], ctx, cfg, f"blank {blank}", clean, fits_the_line)
 
 
 def fill_line(line, slots, offer, cfg, llm):

@@ -2,6 +2,7 @@
 from flask import Flask
 
 from backend.routes import prospect as prospect_routes
+from backend.routes._utils import Sessions
 
 
 class _DummyProspectSessionManager:
@@ -22,18 +23,9 @@ class _DummyProspectSessionManager:
 
 
 def _wire_routes(monkeypatch, app, manager):
-    """Point the prospect blueprint at this test's app and manager.
-
-    Via monkeypatch, not init_routes: the blueprint is module-global, so calling
-    init_routes here would leave a permissive message validator in place for every
-    test that runs afterwards in the same process.
-    """
-    for name, value in (
-        ("app", app),
-        ("prospect_session_manager", manager),
-        ("validate_message", lambda message: (message, None)),
-    ):
-        monkeypatch.setattr(prospect_routes.bp, name, value, raising=False)
+    """Give this test's app its own buyer registry and a permissive message validator."""
+    app.extensions["sessions"] = Sessions(seller=None, buyer=manager)
+    monkeypatch.setattr(prospect_routes, "validate_message", lambda message: (message, None))
 
 
 def test_prospect_evaluate_requires_in_memory_session(monkeypatch):

@@ -217,3 +217,21 @@ def test_save_session_logs_state_snapshot(caplog):
         "session_snapshot" in record.message and "session123" in record.message
         for record in caplog.records
     )
+
+
+def test_edit_turn_rejects_bad_index_and_assistant_message_without_rewinding():
+    bot = _build_bot()
+    bot.flow_engine.conversation_history = [
+        {"role": "user", "content": "u1"},
+        {"role": "assistant", "content": "a1"},
+    ]
+    bot.chat = lambda text: (_ for _ in ()).throw(AssertionError("must not replay"))
+
+    for index, message in ((5, "Invalid index. Valid range: 0-1"), (1, "Can only edit user messages")):
+        try:
+            bot.edit_turn(index, "new")
+        except ValueError as error:
+            assert str(error) == message
+        else:
+            raise AssertionError("expected ValueError")
+    assert len(bot.flow_engine.conversation_history) == 2

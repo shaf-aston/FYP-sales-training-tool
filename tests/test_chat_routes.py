@@ -47,6 +47,10 @@ class _DummyBot:
         self.flow_engine.conversation_history = []
         return True
 
+    def edit_turn(self, message_index, new_text):
+        self.rewind_to_turn(message_index // 2)
+        return self.chat(new_text)
+
     def answer_training_question(self, question, style="tactical"):
         self.training_question_calls.append((question, style))
         return {"answer": f"{style}:{question}"}
@@ -71,10 +75,9 @@ def _make_chat_app(monkeypatch, bot=None):
     def bot_state(_bot):
         return {"stage": "INTENT", "strategy": "CONSULTATIVE"}
 
-    monkeypatch.setattr(chat_routes.bp, "app", app, raising=False)
-    monkeypatch.setattr(chat_routes.bp, "require_session", require_session, raising=False)
-    monkeypatch.setattr(chat_routes.bp, "validate_message", validate_message, raising=False)
-    monkeypatch.setattr(chat_routes.bp, "bot_state", bot_state, raising=False)
+    monkeypatch.setattr(chat_routes, "require_session", require_session)
+    monkeypatch.setattr(chat_routes, "validate_message", validate_message)
+    monkeypatch.setattr(chat_routes, "bot_state", bot_state)
     app.register_blueprint(chat_routes.bp)
     return app, bot
 

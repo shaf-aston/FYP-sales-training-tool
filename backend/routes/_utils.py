@@ -2,58 +2,85 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from functools import wraps
+from typing import Any
 
-from flask import jsonify, request
+from flask import current_app, jsonify, request
 
-from ..messages import SESSION_NOT_FOUND
-from ..security import InputValidator
+from core.constants import UNDETERMINED_STAGE
+from core.enums import Strategy
+
+from ..messages import MESSAGE_REQUIRED, SESSION_NOT_FOUND
+from ..security import InputValidator, PromptInjectionValidator, SecurityConfig
 
 
-def make_require_session(get_session, not_found_message=SESSION_NOT_FOUND):
-    """Build the one session-lookup seam.
+@dataclass(frozen=True)
+class Sessions:
+    """The two live-session registries, stored once on ``app.extensions["sessions"]``."""
 
-    ``get_session`` takes a session id and returns the live object or None. Every
-    route that needs a session uses the result of this factory, so the validation,
-    the error body, the error code and the status code are defined in one place.
+    seller: Any
+    buyer: Any
+
+
+def require_session(kind="seller", not_found_message=SESSION_NOT_FOUND):
+    """Look up the caller's live session: returns (session, None) or (None, error response).
+
+    ``kind`` is "seller" or "buyer". Validation, error body, code and status live here only.
     """
+    session_id = request.headers.get("X-Session-ID")
+    session_error = InputValidator.validate_session_id(session_id)
+    if session_error:
+        return None, session_error
 
-    def require_session():
-        session_id = request.headers.get("X-Session-ID")
-        session_error = InputValidator.validate_session_id(session_id)
-        if session_error:
-            return None, session_error
-
-        found = get_session(session_id)
-        if not found:
-            from flask import current_app
-
-            current_app.logger.warning(
-                "Session not found for %s (id=%s...)", request.path, str(session_id)[:8]
-            )
-            return None, (
-                jsonify({"error": not_found_message, "code": "SESSION_EXPIRED"}),
-                400,
-            )
-        return found, None
-
-    return require_session
+    found = getattr(current_app.extensions["sessions"], kind).get(session_id)
+    if not found:
+        current_app.logger.warning(
+            "Session not found for %s (id=%s...)", request.path, str(session_id)[:8]
+        )
+        return None, (
+            jsonify({"error": not_found_message, "code": "SESSION_EXPIRED"}),
+            400,
+        )
+    return found, None
 
 
-def with_session(bp):
+def with_session(view):
     """Route decorator: pass the session object to the handler, or return the error."""
 
-    def decorator(view):
-        @wraps(view)
-        def wrapper(*args, **kwargs):
-            session_bot, error = bp.require_session()
-            if error:
-                return error
-            return view(session_bot, *args, **kwargs)
+    @wraps(view)
+    def wrapper(*args, **kwargs):
+        session_bot, error = require_session()
+        if error:
+            return error
+        return view(session_bot, *args, **kwargs)
 
-        return wrapper
+    return wrapper
 
-    return decorator
+
+def validate_message(message_text):
+    """Validate and sanitize message text. Returns (clean_text, error_response)"""
+    if not message_text or not isinstance(message_text, str):
+        return None, (jsonify({"error": MESSAGE_REQUIRED}), 400)
+    return InputValidator.validate_message(
+        message_text.strip(),
+        injection_validator=PromptInjectionValidator(),
+        max_length=SecurityConfig.MAX_MESSAGE_LENGTH,
+    )
+
+
+def bot_state(session_bot):
+    """Common stage/strategy fields for JSON responses"""
+    # In discovery mode (intent strategy), stage is unset since real flow isn't determined yet
+    # Once switched to consultative/transactional, show actual stage
+    stage = (
+        UNDETERMINED_STAGE
+        if session_bot.flow_engine.flow_type == Strategy.INTENT
+        else session_bot.flow_engine.current_stage.upper()
+    )
+    strategy = session_bot.flow_engine.flow_type.upper()
+
+    return {"stage": stage, "strategy": strategy}
 
 
 def validate_provider(data):

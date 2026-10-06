@@ -89,30 +89,10 @@ FLOWS: dict[str | Strategy, dict[str, Any]] = {
     },
 }
 
-# Phrases signalling clear buying intent, checked before consulting signals.yaml
-# NOTE: "price" and "budget" are NOT intent signals; they indicate transactional preference.
-# Actual intent requires BOTH a specific need/problem statement AND transactional signals.
-EXPLICIT_INTENT_PHRASES = [
-    "looking for",
-    "help with",
-    "interested in",
-    "problem",
-    "buy",
-    "purchase",
-    "struggling",
-    "slipping",
-    "losing",
-    "we lost",
-    "not working",
-    "falling behind",
-    "have to",
-    "ready to buy",
-    "looking to buy",
-]
-
-# Safety valve: auto-advance from intent after this many turns if no signal detected.
-# Calibrated against test sessions (intent signals typically appear between turns 2-5).
-INTENT_MAX_TURNS = 6
+# Intent and price words live in signals.yaml; the turn cap in analysis_config.yaml.
+EXPLICIT_INTENT_PHRASES = SIGNALS["explicit_intent"]
+PRICE_MENTION = SIGNALS["price_mention"]
+INTENT_MAX_TURNS = ANALYSIS_CONFIG["advancement"]["intent"]["max_turns"]
 
 
 def _user_signals_specific_budget_or_product(user_message: str) -> bool:
@@ -160,7 +140,7 @@ def _user_has_clear_intent(
         # If user only mentioned budget/price without a problem statement, don't advance
         # Force confirmation of actual needs first
         has_budget_only = (
-            contains_nonnegated_keyword(user_text, ["budget", "price", "cost", "afford"])
+            contains_nonnegated_keyword(user_text, PRICE_MENTION)
             and not contains_nonnegated_keyword(user_text, EXPLICIT_INTENT_PHRASES)
         )
         if has_budget_only:
@@ -255,8 +235,7 @@ def _check_priority_overrides(
     # A buyer who commits during discovery is ready: jump to PITCH so the bot
     # presents and confirms instead of asking more questions.
     if has_pitch_stage and current_stage in (Stage.LOGICAL, Stage.EMOTIONAL):
-        commitment_terms = SIGNALS.get("commitment", []) + ["sign up"]
-        if contains_nonnegated_keyword(msg_lower, commitment_terms):
+        if contains_nonnegated_keyword(msg_lower, SIGNALS.get("commitment", [])):
             return Stage.PITCH
 
     if has_pitch_stage and current_stage in (Stage.PITCH, Stage.NEGOTIATION):

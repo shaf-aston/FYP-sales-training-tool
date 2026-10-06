@@ -2,7 +2,7 @@
 from flask import Flask
 
 from backend.routes import session as session_routes
-from backend.routes._utils import make_require_session
+from backend.routes._utils import Sessions
 from backend.security import SecurityConfig
 
 
@@ -50,8 +50,27 @@ class _DummyBot:
     def refresh_current_turn_snapshot(self):
         self.snapshot_refreshed = True
 
+    def jump_to_stage(self, stage):
+        if stage not in self.flow_engine.flow_config["stages"]:
+            return False
+        self.flow_engine.advance(stage)
+        self.saved = True
+        return True
+
+    def change_strategy(self, strategy):
+        self.flow_engine.switch_strategy(strategy)
+        self.snapshot_refreshed = True
+        self.saved = True
+        return True
+
+    def force_strategy(self, strategy):
+        self.flow_engine.switch_strategy(strategy)
+
     def script_opening(self):
         return None
+
+    def open_with(self, greeting):
+        self.flow_engine.conversation_history.append({"role": "assistant", "content": greeting})
 
     @staticmethod
     def load_session(session_id):
@@ -88,21 +107,7 @@ def _make_session_app(monkeypatch, testing=True):
         lambda _strategy: {"message": "hello", "training": {"tip": "x"}},
     )
 
-    def bot_state(bot):
-        return {
-            "stage": "----" if bot.flow_engine.flow_type == "intent" else bot.flow_engine.current_stage.upper(),
-            "strategy": bot.flow_engine.flow_type.upper(),
-        }
-
-    monkeypatch.setattr(session_routes.bp, "app", app, raising=False)
-    monkeypatch.setattr(session_routes.bp, "session_manager", manager, raising=False)
-    monkeypatch.setattr(session_routes.bp, "get_session", manager.get, raising=False)
-    monkeypatch.setattr(session_routes.bp, "set_session", manager.set, raising=False)
-    monkeypatch.setattr(session_routes.bp, "delete_session", manager.delete, raising=False)
-    monkeypatch.setattr(session_routes.bp, "bot_state", bot_state, raising=False)
-    monkeypatch.setattr(
-        session_routes.bp, "require_session", make_require_session(manager.get), raising=False
-    )
+    app.extensions["sessions"] = Sessions(seller=manager, buyer=None)
     app.register_blueprint(session_routes.bp)
     return app, manager
 

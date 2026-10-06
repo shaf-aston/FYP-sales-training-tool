@@ -2,7 +2,7 @@
 from flask import Flask, jsonify, request
 
 from backend.routes import session as session_routes
-from backend.routes._utils import make_require_session
+from backend.routes._utils import Sessions
 from backend.security import (
     ClientIPExtractor,
     InputValidator,
@@ -37,8 +37,15 @@ class _DummyBot:
     def save_session(self):
         pass
 
+    def force_strategy(self, strategy):
+        self.flow_engine.initial_flow_type = strategy
+        self.flow_engine.switch_strategy(strategy)
+
     def script_opening(self):
         return None
+
+    def open_with(self, greeting):
+        self.flow_engine.conversation_history.append({"role": "assistant", "content": greeting})
 
 
 class _DummySessionManager:
@@ -71,26 +78,7 @@ def _make_session_app(monkeypatch):
         lambda _strategy: {"message": "hello", "training": {"ok": True}},
     )
 
-    def bot_state(bot):
-        return {
-            "stage": "----"
-            if bot.flow_engine.flow_type == "intent"
-            else bot.flow_engine.current_stage.upper(),
-            "strategy": bot.flow_engine.flow_type.upper(),
-        }
-
-    # init_routes rewires the shared blueprint; let monkeypatch put the real wiring back.
-    for attr in ("app", "session_manager", "get_session", "require_session", "set_session", "delete_session", "bot_state"):
-        monkeypatch.setattr(session_routes.bp, attr, getattr(session_routes.bp, attr, None), raising=False)
-    session_routes.init_routes(
-        app,
-        manager,
-        manager.get,
-        manager.set,
-        manager.delete,
-        bot_state,
-        make_require_session(manager.get),
-    )
+    app.extensions["sessions"] = Sessions(seller=manager, buyer=None)
     app.register_blueprint(session_routes.bp)
     return app
 

@@ -25,20 +25,22 @@ Open the engine for the mode you are working on. Nothing else decides the turn.
 | # | Step | File | Why it exists |
 |---|---|---|---|
 | 1 | Browser posts the salesperson's line | `web/src/lib/api/client.ts` (`/api/prospect/chat`) | The one place the UI talks to the API. |
-| 2 | Route checks rate limit, message, session | `backend/routes/prospect.py` `prospect_chat` | Transport. Shapes JSON, holds no sales logic. |
-| 3 | Engine runs the turn | `core/buyer_session.py` `BuyerSession.process_turn` | Orchestrates: rate the line, move readiness, pick objection pacing, store history, save. |
+| 2 | Route checks rate limit, message, session | `backend/routes/prospect.py` `prospect_chat`; `backend/routes/_utils.py` `require_session` / `validate_message` | Transport. Shapes JSON, holds no sales logic. Sessions live in `app.extensions["sessions"]` (`Sessions(seller, buyer)`). |
+| 3 | Engine runs the turn | `core/buyer_session.py` `BuyerSession.process_turn` (and `redo`, which rolls itself back on failure) | Orchestrates: rate the line, move readiness, pick objection pacing, store history, save. |
 | 4 | Pure rules decide | `core/selling_quality.py` (rating), `core/buyer_rules.py` (sold / walked), `core/buyer_prompt.py` (buyer system prompt) | Deterministic. No I/O, no HTTP, easy to test. |
 | 5 | Router picks a provider | `core/services/provider_router.py` `chat_with_fallback` | Tries providers in order, falls back on failure. |
 | 6 | Provider calls the LLM | `core/providers/factory.py` → `providers/llm/groq.py` behind `providers/base.py` | Swap seam: every provider has the same interface. |
 | 7 | Review and analytics | `core/session_review.py` (per-turn replay), `core/prospect_evaluator.py` (final score + grade), `core/analytics/session_analytics.py` (events to JSONL) | Everything shown after the session is rebuilt from the saved transcript. |
 
-Seller-bot mode: `chat.py` → `SellerBot.chat` → `core/script_engine/` (scripted lines for products in `config/selling.yaml`, AI only fills small gaps) or else `flow.py` (stage machine) · `analysis.py` (buyer signals) · `content.py` + `prompts.py` (prompt build) · `response_guardrails.py` (output checks) → same router. Coaching comes from `trainer.py`.
+Seller-bot mode: `chat.py` → `SellerBot.chat` → `core/script_engine/` (scripted lines for products in `config/selling.yaml`, AI only fills small gaps; every AI sentence goes through `ai_line.py` `checked_line`) or else `flow.py` (stage machine) · `analysis.py` (buyer signals) · `content.py` + `prompts.py` (prompt build) · `response_guardrails.py` (output checks) → same router. Coaching comes from `trainer.py`.
 
 ## Config
 
 Every tunable number lives in `config/limits.yaml`; `core/constants.py` is its only reader and refuses zero or negative values at start-up. LLM calls take a named profile from it (`**LLM["buyer_reply"]`), never literal numbers.
 
 `core/loader.py` reads `signals`, `analysis_config`, `objection_flows`, `product_config`, `prospect_config`, `adaptations`. The module that owns a feature reads its own file: `objection.py` → `objection_pathway_map`, `quiz.py` → `quiz_config`, `script_drills.py` → `script_drills`, `selling_quality.py` → `selling_signals`, `knowledge.py` → `knowledge_sanitization`.
+
+Questions: `core/utils.py` `is_question` is the one rule for both modes (word lists from config). Analytics: every event goes through `SessionAnalytics.record`.
 
 Environment: `backend/settings.py` reads app env (origins, debug, admin token); `core/providers/config.py` reads LLM keys and models. No other module touches the environment, except `METRICS_JSONL_PATH` in `core/analytics/session_analytics.py`.
 

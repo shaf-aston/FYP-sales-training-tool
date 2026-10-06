@@ -1,7 +1,6 @@
 """Objection analysis engine: classification, pathway detection and reframe sequencing."""
 
 import logging
-import warnings
 from typing import Any, Optional, TypedDict
 
 from .enums import MessageRole, ObjectionType
@@ -113,19 +112,9 @@ def classify_objection(
 # ============================================================================
 
 
-_PATHWAY_CONFIG = None
-
-
 def _load_pathway_config() -> dict[str, Any]:
-    """Load objection pathway mapping once and keep it cached in memory."""
-    global _PATHWAY_CONFIG
-    if _PATHWAY_CONFIG is None:
-        try:
-            _PATHWAY_CONFIG = load_yaml("objection_pathway_map.yaml")
-        except Exception as e:
-            warnings.warn(f"Failed to load objection_pathway_map.yaml: {e}")
-            _PATHWAY_CONFIG = {"category_mapping": {}, "reframe_descriptions": {}}
-    return _PATHWAY_CONFIG
+    """The objection pathway map. A missing or broken file stops start-up."""
+    return load_yaml("objection_pathway_map.yaml")
 
 
 def validate_pathway_config() -> tuple[bool, list[str]]:
@@ -175,13 +164,10 @@ def validate_pathway_config() -> tuple[bool, list[str]]:
 
 
 def _validate_on_import():
-    """Warn early if the objection pathway config is incomplete or malformed."""
+    """Refuse to start when the objection pathway config is incomplete or malformed."""
     is_valid, errors = validate_pathway_config()
     if not is_valid:
-        warnings.warn(
-            "Pathway config validation errors: " + "; ".join(errors),
-            category=UserWarning,
-        )
+        raise ValueError("objection_pathway_map.yaml: " + "; ".join(errors))
 
 
 _validate_on_import()

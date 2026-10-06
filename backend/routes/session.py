@@ -1,21 +1,18 @@
 """Session lifecycle endpoints - init, restore, reset, health, config"""
 
-import json
 import logging
 import secrets
-from typing import Any
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 
 from core.analytics.performance import PerformanceTracker
 from core.seller_bot import SellerBot
-from core.constants import UNDETERMINED_STAGE
 from core.content import generate_init_greeting
 from core.loader import QuickMatcher
 from core.script_engine.seller import selling_config
 from core.providers import get_available_providers
 from .. import settings
-from ._utils import validate_provider, with_session
+from ._utils import bot_state, validate_provider, with_session
 from ..messages import (
     SERVER_FULL,
     BOT_INIT_FAILED,
@@ -33,26 +30,7 @@ from ..security import (
 
 logger = logging.getLogger(__name__)
 
-bp: Any = Blueprint("session", __name__, url_prefix="/api")
-
-
-def init_routes(
-    app,
-    session_manager_obj,
-    get_session_func,
-    set_session_func,
-    delete_session_func,
-    bot_state_func,
-    require_session_func,
-):
-    """Initialize session routes with Flask app and callback functions"""
-    bp.app = app  # type: ignore
-    bp.session_manager = session_manager_obj  # type: ignore
-    bp.get_session = get_session_func  # type: ignore
-    bp.require_session = require_session_func  # type: ignore
-    bp.set_session = set_session_func  # type: ignore
-    bp.delete_session = delete_session_func  # type: ignore
-    bp.bot_state = bot_state_func  # type: ignore
+bp = Blueprint("session", __name__, url_prefix="/api")
 
 
 @bp.route("/init", methods=["POST"])
@@ -67,28 +45,28 @@ def api_init():
         session_error = InputValidator.validate_session_id(existing_id)
         if session_error:
             return session_error
-        bot = bp.get_session(existing_id)  # type: ignore
+        bot = current_app.extensions["sessions"].seller.get(existing_id)
         if bot:
             history = [
                 {"role": m["role"], "content": m["content"]}
                 for m in bot.flow_engine.conversation_history
             ]
-            bp.app.logger.info(
+            current_app.logger.info(
                 f"Restored session: {existing_id} ({len(history)} messages)"
-            )  # type: ignore
+            )
             return jsonify(
                 {
                     "success": True,
                     "session_id": existing_id,
                     "message": None,
-                    **bp.bot_state(bot),  # type: ignore
+                    **bot_state(bot),
                     "history": history,
                 }
             )
 
     # Session count ceiling: reject new sessions when server is full
-    if not bp.session_manager.can_create():  # type: ignore
-        bp.app.logger.warning(  # type: ignore
+    if not current_app.extensions["sessions"].seller.can_create():
+        current_app.logger.warning(
             f"Session cap ({SecurityConfig.MAX_SESSIONS}) reached - rejecting new init"
         )
         return jsonify(
@@ -110,9 +88,9 @@ def api_init():
         detected_product, confidence = QuickMatcher.match_product(user_message)
         if detected_product and confidence >= 0.7:
             product_type = detected_product
-            bp.app.logger.info(
+            current_app.logger.info(
                 f"Auto-detected product: {product_type} (confidence: {confidence:.2f})"
-            )  # type: ignore
+            )
 
     if not product_type or product_type == "default":
         product_type = selling_config().get("default_product")
@@ -124,23 +102,22 @@ def api_init():
         # dev override - skip intent detection
         force_strategy = data.get("force_strategy")
         if force_strategy in ("consultative", "transactional"):
-            if has_valid_admin_token(request, bp.app.config):  # type: ignore[attr-defined]
-                bot.flow_engine.initial_flow_type = force_strategy
-                bot.flow_engine.switch_strategy(force_strategy)
+            if has_valid_admin_token(request, current_app.config):
+                bot.force_strategy(force_strategy)
             else:
-                bp.app.logger.warning(  # type: ignore[attr-defined]
+                current_app.logger.warning(
                     "Ignored unauthorized force_strategy override for path %s",
                     request.path,
                 )
-        bp.set_session(session_id, bot)  # type: ignore
+        current_app.extensions["sessions"].seller.set(session_id, bot)
         bot.save_session()  # log the initial state snapshot for monitoring
         active_provider = getattr(bot, "provider_name", provider or "auto")
-        bp.app.logger.info(
+        current_app.logger.info(
             f"New session: {session_id} "
             f"(product={product_type}, strategy={bot.flow_engine.flow_type}, provider={active_provider})"
-        )  # type: ignore
+        )
     except Exception as init_error:
-        bp.app.logger.exception(f"Bot init failed: {init_error}")  # type: ignore
+        current_app.logger.exception(f"Bot init failed: {init_error}")
         return jsonify(
             {"error": BOT_INIT_FAILED}
         ), 500
@@ -151,34 +128,14 @@ def api_init():
     if opening:
         init_data = {**init_data, "message": opening}
 
-    # Add greeting to conversation history so the LLM knows the conversation has started.
-    # Without this, the LLM sees an empty history on the first user turn and re-greets.
-    bot.flow_engine.conversation_history.append(
-        {"role": "assistant", "content": init_data["message"]}
-    )
-    bp.app.logger.info(
-        "conversation_turn %s",
-        json.dumps(
-            {
-                "session_id": session_id,
-                "turn_index": 0,
-                "flow_type": bot.flow_engine.flow_type,
-                "current_stage": bot.flow_engine.current_stage,
-                "strategy": bot.flow_engine.flow_type,
-                "user_message": None,
-                "assistant_message": init_data["message"],
-            },
-            ensure_ascii=False,
-        ),
-    )
-    bot.save_session()
+    bot.open_with(init_data["message"])
 
     return jsonify(
         {
             "success": True,
             "session_id": session_id,
             "message": init_data["message"],
-            **bp.bot_state(bot),  # type: ignore
+            **bot_state(bot),
             "history": [],
             "training": init_data["training"],
         }
@@ -194,7 +151,7 @@ def api_health():
     active_provider = None
     active_model = None
     if session_id:
-        bot = bp.get_session(session_id)  # type: ignore
+        bot = current_app.extensions["sessions"].seller.get(session_id)
         if bot:
             active_provider = bot.provider_name
             active_model = bot.model_name
@@ -257,7 +214,7 @@ def api_config():
             "strategies": ["consultative", "transactional"],
             "features": {
                 "flow_controls_enabled": not settings.require_admin_for_stage_mutation(
-                    bp.app.config  # type: ignore[attr-defined]
+                    current_app.config
                 ),
             },
         }
@@ -265,7 +222,7 @@ def api_config():
 
 
 @bp.route("/stages", methods=["GET"])
-@with_session(bp)
+@with_session
 def api_stages(bot):
     """Return available stages for the current session's flow"""
     stages = bot.flow_engine.flow_config.get("stages", [])
@@ -274,39 +231,24 @@ def api_stages(bot):
 
 @bp.route("/stage", methods=["POST"])
 @require_privileged_mutation
-@with_session(bp)
+@with_session
 def api_stage(bot):
     """Jump FSM to a specific stage. Admin/test only (requires privileged auth)."""
-    from core.enums import Strategy
-
     data = request.json or {}
     stage = data.get("stage")
 
-    # Validate stage against available stages
-    stages = bot.flow_engine.flow_config.get("stages", [])
-    if not stage or stage not in stages:
+    if not bot.jump_to_stage(stage):
+        stages = bot.flow_engine.flow_config.get("stages", [])
         return jsonify({"error": invalid_stage(stages)}), 400
 
-    # Advance FSM to target stage
-    bot.flow_engine.advance(target_stage=stage)
+    current_app.logger.info(f"Stage jumped to {stage}")
 
-    stage_str = (
-        UNDETERMINED_STAGE
-        if bot.flow_engine.flow_type == Strategy.INTENT
-        else bot.flow_engine.current_stage.upper()
-    )
-
-    bp.app.logger.info(f"Stage jumped to {stage}")  # type: ignore
-    bot.save_session()  # Persist the stage change
-
-    return jsonify(
-        {"success": True, "stage": stage_str, "strategy": bot.flow_engine.flow_type.upper()}
-    ), 200
+    return jsonify({"success": True, **bot_state(bot)}), 200
 
 
 @bp.route("/strategy", methods=["POST"])
 @require_privileged_mutation
-@with_session(bp)
+@with_session
 def api_strategy(bot):
     """Switch FSM strategy for this session"""
     data = request.json or {}
@@ -318,22 +260,17 @@ def api_strategy(bot):
             {"error": invalid_strategy(valid_strategies)}
         ), 400
 
-    if not bot.flow_engine.switch_strategy(strategy):
-        bp.app.logger.warning(f"Strategy switch failed to strategy {strategy}")  # type: ignore
+    if not bot.change_strategy(strategy):
+        current_app.logger.warning(f"Strategy switch failed to strategy {strategy}")
         return jsonify({"error": STRATEGY_SWITCH_FAILED}), 400
 
-    # Preserve the original reset baseline, but keep rewind snapshots aligned
-    # with the current turn after this out-of-band strategy change.
-    bot.refresh_current_turn_snapshot()
-    bot.save_session()
+    current_app.logger.info(f"Strategy switched to {strategy}")
 
-    bp.app.logger.info(f"Strategy switched to {strategy}")  # type: ignore
-
-    return jsonify({"success": True, **bp.bot_state(bot)})  # type: ignore
+    return jsonify({"success": True, **bot_state(bot)})
 
 
 @bp.route("/reset", methods=["POST"])
-@with_session(bp)
+@with_session
 def reset(bot):
     """Delete the current session"""
     # Telemetry must never be the reason a learner cannot end their session.
@@ -341,5 +278,5 @@ def reset(bot):
         bot.record_session_end()
     except Exception:
         logger.exception("Could not record the end of this session")
-    bp.delete_session(request.headers.get("X-Session-ID"))  # type: ignore
+    current_app.extensions["sessions"].seller.delete(request.headers.get("X-Session-ID"))
     return jsonify({"success": True})

@@ -7,6 +7,7 @@ from pathlib import Path
 import yaml
 
 from .constants import MAX_FIELD_LENGTH
+from .loader import load_yaml
 
 logger = logging.getLogger(__name__)
 
@@ -14,42 +15,14 @@ ALLOWED_FIELDS = {"product_name", "pricing", "specifications", "company_info", "
 
 KNOWLEDGE_DIR = Path(__file__).parent.parent / "config"
 KNOWLEDGE_FILE = KNOWLEDGE_DIR / "custom_instructions.yaml"
-KNOWLEDGE_CONFIG_FILE = KNOWLEDGE_DIR / "knowledge_sanitization.yaml"
-
-# Patterns that indicate prompt-injection attempts (e.g., "ignore previous instructions")
-DEFAULT_INJECTION_PATTERNS = [
-    "ignore previous", "ignore the previous", "disregard previous", "disregard the previous",
-    "override the system", "override previous", "follow instructions", "follow these instructions",
-    "system prompt", "assistant:", "system:", "begin custom product data", "end custom product data",
-]
-
-DEFAULT_LABEL_MAP = {
-    "product_name": "Product name", "pricing": "Pricing", "specifications": "Specifications",
-    "company_info": "Company information", "selling_points": "Selling points",
-    "additional_notes": "Additional notes",
-}
-
 
 def _load_kb_sanitisation_config():
-    """Load injection-pattern list and label map from config. Falls back to defaults."""
-    try:
-        if KNOWLEDGE_CONFIG_FILE.exists():
-            with open(KNOWLEDGE_CONFIG_FILE, "r", encoding="utf-8") as f:
-                cfg = yaml.safe_load(f) or {}
-            patterns_source = cfg.get(
-                "suspicious_patterns",
-                cfg.get("injection_patterns", DEFAULT_INJECTION_PATTERNS),
-            )
-            if isinstance(patterns_source, str):
-                patterns_source = [patterns_source]
-            elif not isinstance(patterns_source, list):
-                patterns_source = DEFAULT_INJECTION_PATTERNS
-            patterns = [p.lower() for p in patterns_source if isinstance(p, str)]
-            label_map = {str(k): str(v) for k, v in (cfg.get("label_map", DEFAULT_LABEL_MAP) or {}).items()}
-            return patterns, label_map
-    except Exception as e:
-        logger.warning("Failed to load KB sanitisation config (%s): %s", KNOWLEDGE_CONFIG_FILE, e)
-    return DEFAULT_INJECTION_PATTERNS, DEFAULT_LABEL_MAP
+    """Injection patterns and field labels. Config is the only copy; a broken file stops start-up."""
+    cfg = load_yaml("knowledge_sanitization.yaml")
+    patterns = [p.lower() for p in cfg["suspicious_patterns"]]
+    if not patterns:
+        raise ValueError("knowledge_sanitization.yaml: suspicious_patterns is empty")
+    return patterns, {str(k): str(v) for k, v in cfg["label_map"].items()}
 
 
 INJECTION_PATTERNS, LABEL_MAP = _load_kb_sanitisation_config()

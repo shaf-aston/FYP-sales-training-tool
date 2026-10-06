@@ -109,23 +109,26 @@ class SellerBot:
     def model_name(self) -> str:
         return self._router.model_name
 
-    def _log_turn_event(self, user_message: str, bot_reply: str) -> None:
+    def open_with(self, greeting: str) -> None:
+        """Put the opening line in the history (so the AI never re-greets) and record it as turn 0."""
+        self.flow_engine.conversation_history.append({"role": "assistant", "content": greeting})
+        self._log_turn_event(None, greeting)
+        self.save_session()
+
+    def _log_turn_event(self, user_message: str | None, bot_reply: str) -> None:
 
         if not self.session_id:
             return
 
-        turn_count = self.flow_engine.user_turn_count
-
-        payload = {
-            "session_id": self.session_id,
-            "turn_index": turn_count,
-            "flow_type": self.flow_engine.flow_type,
-            "current_stage": self.flow_engine.current_stage,
-            "strategy": self.flow_engine.flow_type,
-            "user_message": user_message,
-            "assistant_message": bot_reply,
-        }
-        self.logger.info("conversation_turn %s", json.dumps(payload, ensure_ascii=False))
+        SessionAnalytics.record(
+            session_id=self.session_id,
+            event="conversation_turn",
+            turn_index=self.flow_engine.user_turn_count,
+            strategy=self.flow_engine.flow_type,
+            current_stage=self.flow_engine.current_stage,
+            user_message=user_message,
+            assistant_message=bot_reply,
+        )
 
     def _sync_seller(self) -> bool:
         """Scripted selling runs only for a product listed in selling.yaml, while the flow is
@@ -375,7 +378,7 @@ class SellerBot:
         if self.seller:
             if turn_state is not None:
                 self.seller.reset(ScriptState(**turn_state))
-            self._show_stage(self.method_stage())
+            self._show_stage(self.seller.ui_stage())
             self.flow_engine.add_turn(user_message, bot_reply)
             return
         if turn_state is None:
@@ -491,10 +494,6 @@ class SellerBot:
             explanation, self._router, self.flow_engine.current_stage, self.flow_engine.flow_type
         )
 
-    def method_stage(self) -> str:
-        """The UI stage of the script step the call is on."""
-        return self.seller.method.steps[self.seller.state.step].ui_stage
-
     def _capture_turn_snapshot(self, turn_state=None) -> dict:
         """Capture current FSM state for snapshot-based rewinding."""
         if turn_state is None and self.seller:
@@ -599,6 +598,43 @@ class SellerBot:
             user_msg = user_msg_dict.get("content", "")
             bot_msg = bot_msg_dict.get("content", "")
             self._replay_turn(user_msg, bot_msg)
+
+    def edit_turn(self, message_index: int, new_text: str):
+        """Rewind to the user message at message_index and replay it as new_text.
+
+        Raises ValueError (message safe to show) for a bad index or a non-user
+        message; returns None if the rewind fails, else the new ChatResponse.
+        """
+        history = self.flow_engine.conversation_history
+        max_index = len(history) - 1
+        if message_index < 0 or message_index > max_index:
+            raise ValueError(f"Invalid index. Valid range: 0-{max_index}")
+        if history[message_index].get("role") != "user":
+            raise ValueError("Can only edit user messages")
+        if not self.rewind_to_turn(message_index // 2):
+            return None
+        return self.chat(new_text)
+
+    def force_strategy(self, strategy: str) -> None:
+        """Admin override: pin the strategy as the baseline and switch to it."""
+        self.flow_engine.initial_flow_type = strategy
+        self.flow_engine.switch_strategy(strategy)
+
+    def change_strategy(self, strategy: str) -> bool:
+        """Switch strategy mid-session, keep rewind snapshots aligned, and log."""
+        if not self.flow_engine.switch_strategy(strategy):
+            return False
+        self.refresh_current_turn_snapshot()
+        self.save_session()
+        return True
+
+    def jump_to_stage(self, stage: str) -> bool:
+        """Move the FSM to a stage of the current flow; False if it isn't one."""
+        if not stage or stage not in self.flow_engine.flow_config.get("stages", []):
+            return False
+        self.flow_engine.advance(target_stage=stage)
+        self.save_session()
+        return True
 
     def save_session(self):
         """Emit a durable log snapshot of the current session state."""

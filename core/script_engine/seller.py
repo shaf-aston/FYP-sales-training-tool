@@ -10,7 +10,9 @@ from functools import lru_cache
 from pathlib import Path
 
 from core.loader import load_yaml
-from core.script_engine.checks import CheckContext, check, clip, words
+from core.script_engine.ai_line import checked_line
+from core.script_engine.checks import CheckContext, clip
+from core.utils import is_question, tokenize
 from core.script_engine.embedder import make_embedder
 from core.script_engine.engine import advance, object_to, price_open, start
 from core.script_engine.fill import fill_line, fill_step
@@ -19,7 +21,6 @@ from core.script_engine.method import ANY, load_common_sense, load_method, load_
 from core.script_engine.recognise import recognise
 
 ROOT = Path(__file__).resolve().parent.parent.parent
-fallback_log = logging.getLogger("script_engine.fallback")
 uncovered_log = logging.getLogger("script_engine.uncovered")
 _pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="script-ai")
 
@@ -145,6 +146,10 @@ class ScriptSeller:
         self.state = move.state
         return self._render(move), move.ui_stage
 
+    def ui_stage(self):
+        """The UI stage of the step the call is on."""
+        return self.method.steps[self.state.step].ui_stage
+
     def training(self):
         """Notes for the trainee, straight from the script step - no AI, instant."""
         step = self.method.steps[self.state.step]
@@ -197,11 +202,7 @@ class ScriptSeller:
         return advance(self.method, self.state, signal, text)
 
     def _is_question(self, text):
-        spoken = " ".join(words(text)) + " "
-        tagged = any(spoken.endswith(" " + tag + " ") for tag in self.cfg["filler_tags"])
-        return (text.strip().endswith("?") and not tagged) or any(
-            spoken.startswith(phrase + " ") for phrase in self.cfg["question_starts"]
-        )
+        return is_question(text, self.cfg["question_starts"], self.cfg["filler_tags"])
 
     def _answer_uncovered(self, question, opened):
         """One short line for a product question nothing covers. Always checked, always logged."""
@@ -218,23 +219,11 @@ class ScriptSeller:
         )
         ctx = CheckContext(
             c["max_words"], 0, opened, offer.price,
-            prospect_words=frozenset(words(facts)),
+            prospect_words=frozenset(tokenize(facts)),
             stop_words=frozenset(c["stop_words"]) | frozenset(c["answer_filler_words"]),
             banned_words=frozenset(c["banned_words"]),
         )
-        answer = None
-        for _ in range(1 + c["ai_retries"]):
-            try:
-                candidate = self._ask(prompt, c["answer_tokens"]).strip()
-            except Exception as exc:  # noqa: BLE001 - any AI failure means the fixed line
-                fallback_log.warning("product answer: AI unavailable: %s", exc)
-                break
-            broken = check(candidate, ctx)
-            if not broken:
-                answer = candidate
-                break
-            fallback_log.warning("product answer %r broke %s", clip(candidate, c["log_text_chars"]),
-                                 broken)
+        answer = checked_line(self._ask, prompt, c["answer_tokens"], ctx, c, "product answer")
         if c["log_uncovered"]:
             uncovered_log.info(json.dumps({
                 "question": clip(question, c["log_text_chars"]),

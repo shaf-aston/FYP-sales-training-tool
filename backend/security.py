@@ -388,7 +388,7 @@ class SessionSecurityManager:
 
 def initialize_security(
     app_logger=None,
-) -> Tuple[RateLimiter, SessionSecurityManager, PromptInjectionValidator]:
+) -> Tuple[RateLimiter, SessionSecurityManager]:
     """Initialize security singletons (call once at startup)"""
     global _rate_limiter
 
@@ -403,6 +403,4 @@ def initialize_security(
         cleanup_interval=SecurityConfig.CLEANUP_INTERVAL_SECONDS,
         manager_name="chat sessions",
     )
-    injection_validator = PromptInjectionValidator()
-
-    return _rate_limiter, session_manager, injection_validator
+    return _rate_limiter, session_manager
