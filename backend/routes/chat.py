@@ -1,23 +1,12 @@
 """Chat conversation endpoints - main chat, edit, summary, training"""
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 
-from ._utils import safe_latency_ms
+from ._utils import bot_state, require_session, safe_latency_ms, validate_message
 from ..messages import GENERIC_ERROR
 from ..security import require_rate_limit
 
 bp = Blueprint("chat", __name__, url_prefix="/api")
-
-
-def init_routes(
-    app, get_session_func, require_session_func, validate_message_func, bot_state_func
-):
-    """Initialize chat routes with Flask app and callback functions"""
-    # Store dependencies in blueprint context
-    bp.app = app  # type: ignore[attr-defined]
-    bp.require_session = require_session_func  # type: ignore[attr-defined]
-    bp.validate_message = validate_message_func  # type: ignore[attr-defined]
-    bp.bot_state = bot_state_func  # type: ignore[attr-defined]
 
 
 @bp.route("/chat", methods=["POST"])
@@ -26,11 +15,11 @@ def chat():
     """Handle chat messages. Bot must be initialized via /api/init first"""
 
     data = request.get_json(silent=True) or {}
-    user_message, error = bp.validate_message(data.get("message", ""))  # type: ignore
+    user_message, error = validate_message(data.get("message", ""))
     if error:
         return error
 
-    session_bot, error = bp.require_session()  # type: ignore
+    session_bot, error = require_session()
     if error:
         return error
 
@@ -43,7 +32,7 @@ def chat():
             {
                 "success": True,
                 "message": response.content,
-                **bp.bot_state(session_bot),  # type: ignore
+                **bot_state(session_bot),
                 "latency_ms": safe_latency_ms(response.latency_ms),
                 "provider": response.provider,
                 "model": response.model,
@@ -56,7 +45,7 @@ def chat():
         )
 
     except Exception as e:
-        bp.app.logger.exception(f"Chat error: {e}")  # type: ignore
+        current_app.logger.exception(f"Chat error: {e}")
         return jsonify({"error": GENERIC_ERROR}), 500
 
 
@@ -66,11 +55,11 @@ def edit_message():
     """Edit user message and regenerate from that point"""
     data = request.json or {}
     message_index = data.get("index")
-    new_message, error = bp.validate_message(data.get("message", ""))  # type: ignore
+    new_message, error = validate_message(data.get("message", ""))
     if error:
         return error
 
-    session_bot, error = bp.require_session()  # type: ignore
+    session_bot, error = require_session()
     if error:
         return error
 
@@ -108,7 +97,7 @@ def edit_message():
                     {"role": message["role"], "content": message["content"]}
                     for message in session_bot.flow_engine.conversation_history
                 ],
-                **bp.bot_state(session_bot),  # type: ignore
+                **bot_state(session_bot),
                 "latency_ms": safe_latency_ms(response.latency_ms),
                 "provider": response.provider,
                 "model": response.model,
@@ -116,7 +105,7 @@ def edit_message():
             }
         )
     except Exception as e:
-        bp.app.logger.exception(f"Edit error: {e}")  # type: ignore
+        current_app.logger.exception(f"Edit error: {e}")
         return jsonify({"error": "Couldn't apply that edit -- try again in a sec"}), 500
 
 
@@ -128,7 +117,7 @@ def training_ask():
     """Answer a trainee's question about the conversation and sales techniques"""
     from ..security import SecurityConfig
 
-    session_bot, error = bp.require_session()  # type: ignore
+    session_bot, error = require_session()
     if error:
         return error
 
@@ -146,5 +135,5 @@ def training_ask():
         result = session_bot.answer_training_question(question, style=style)
         return jsonify({"success": True, **result})
     except Exception as e:
-        bp.app.logger.exception(f"Training Q&A error: {e}")  # type: ignore
+        current_app.logger.exception(f"Training Q&A error: {e}")
         return jsonify({"error": "Failed to generate answer"}), 500

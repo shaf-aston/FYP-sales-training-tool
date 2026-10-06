@@ -2,7 +2,7 @@
 from flask import Flask
 
 from backend.routes import session as session_routes
-from backend.routes._utils import make_require_session
+from backend.routes._utils import Sessions
 from backend.security import SecurityConfig
 
 
@@ -91,21 +91,7 @@ def _make_session_app(monkeypatch, testing=True):
         lambda _strategy: {"message": "hello", "training": {"tip": "x"}},
     )
 
-    def bot_state(bot):
-        return {
-            "stage": "----" if bot.flow_engine.flow_type == "intent" else bot.flow_engine.current_stage.upper(),
-            "strategy": bot.flow_engine.flow_type.upper(),
-        }
-
-    monkeypatch.setattr(session_routes.bp, "app", app, raising=False)
-    monkeypatch.setattr(session_routes.bp, "session_manager", manager, raising=False)
-    monkeypatch.setattr(session_routes.bp, "get_session", manager.get, raising=False)
-    monkeypatch.setattr(session_routes.bp, "set_session", manager.set, raising=False)
-    monkeypatch.setattr(session_routes.bp, "delete_session", manager.delete, raising=False)
-    monkeypatch.setattr(session_routes.bp, "bot_state", bot_state, raising=False)
-    monkeypatch.setattr(
-        session_routes.bp, "require_session", make_require_session(manager.get), raising=False
-    )
+    app.extensions["sessions"] = Sessions(seller=manager, buyer=None)
     app.register_blueprint(session_routes.bp)
     return app, manager
 

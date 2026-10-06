@@ -3,7 +3,7 @@
 import json
 from datetime import datetime
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 
 from core.analytics.session_analytics import SessionAnalytics
 from ..security import (
@@ -19,22 +19,16 @@ from core.knowledge import (
 )
 from core.quiz import get_quiz_question
 from ..security import SecurityConfig
+from ._utils import bot_state, require_session
 
 bp = Blueprint("analytics", __name__, url_prefix="/api")
-
-
-def init_routes(app, require_session_func, bot_state_func=None):
-    """Initialize analytics routes with Flask app and callback functions"""
-    bp.app = app  # type: ignore[attr-defined]
-    bp.require_session = require_session_func  # type: ignore[attr-defined]
-    bp.bot_state = bot_state_func  # type: ignore[attr-defined]
 
 
 @bp.route("/test/question", methods=["GET"])
 def get_test_question():
     """Get a quiz question for the specified type"""
 
-    session_bot, error = bp.require_session()  # type: ignore
+    session_bot, error = require_session()
     if error:
         return error
 
@@ -46,7 +40,7 @@ def get_test_question():
             "success": True,
             "question": question,
             "type": quiz_type,
-            **bp.bot_state(session_bot),  # type: ignore[misc]
+            **bot_state(session_bot),
         }
     )
 
@@ -54,7 +48,7 @@ def get_test_question():
 @bp.route("/test/stage", methods=["POST"])
 def test_stage():
     """Stage identification quiz (deterministic evaluation)"""
-    session_bot, error = bp.require_session()  # type: ignore
+    session_bot, error = require_session()
     if error:
         return error
 
@@ -67,13 +61,13 @@ def test_stage():
 
     result = session_bot.run_quiz_stage_answer(answer)
 
-    return jsonify({"success": True, **result, **bp.bot_state(session_bot)})  # type: ignore[misc]
+    return jsonify({"success": True, **result, **bot_state(session_bot)})
 
 
 @bp.route("/test/next-move", methods=["POST"])
 def test_next_move():
     """Next move quiz (LLM-evaluated comparison)"""
-    session_bot, error = bp.require_session()  # type: ignore
+    session_bot, error = require_session()
     if error:
         return error
 
@@ -86,13 +80,13 @@ def test_next_move():
 
     result = session_bot.run_quiz_next_move(response)
 
-    return jsonify({"success": True, **result, **bp.bot_state(session_bot)})  # type: ignore[misc]
+    return jsonify({"success": True, **result, **bot_state(session_bot)})
 
 
 @bp.route("/test/direction", methods=["POST"])
 def test_direction():
     """Direction/strategy quiz (LLM-evaluated understanding check)"""
-    session_bot, error = bp.require_session()  # type: ignore
+    session_bot, error = require_session()
     if error:
         return error
 
@@ -105,7 +99,7 @@ def test_direction():
 
     result = session_bot.run_quiz_direction(explanation)
 
-    return jsonify({"success": True, **result, **bp.bot_state(session_bot)})  # type: ignore[misc]
+    return jsonify({"success": True, **result, **bot_state(session_bot)})
 
 
 @bp.route("/knowledge", methods=["GET"])
@@ -184,7 +178,7 @@ def submit_feedback():
             return jsonify({"error": "Rating must be a number 1-5"}), 400
 
     if comment and len(comment) > 500:
-        bp.app.logger.debug("feedback comment trimmed to 500 chars")  # type: ignore
+        current_app.logger.debug("feedback comment trimmed to 500 chars")
         comment = comment[:500]
 
     entry = {
@@ -194,6 +188,6 @@ def submit_feedback():
         "page": data.get("page", "chat"),
     }
 
-    bp.app.logger.info("feedback_event %s", json.dumps(entry, ensure_ascii=False))  # type: ignore
+    current_app.logger.info("feedback_event %s", json.dumps(entry, ensure_ascii=False))
 
     return jsonify({"success": True})

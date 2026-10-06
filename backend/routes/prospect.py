@@ -1,9 +1,8 @@
 """Prospect mode endpoints - role-reversal where user plays salesperson"""
 
 import secrets
-from typing import Any, cast
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 
 from ..messages import (
     PROSPECT_ERROR,
@@ -13,7 +12,7 @@ from ..messages import (
     PROSPECT_SESSION_NOT_FOUND,
 )
 from ..security import InputValidator, require_rate_limit
-from ._utils import make_require_session, validate_provider
+from ._utils import require_session, validate_message, validate_provider
 from core.analytics.session_analytics import SessionAnalytics
 from core.constants import MAX_CHOSEN_OBJECTION_CHARS, MAX_PERSONA_NAME_CHARS
 from core.buyer_session import ProviderUnavailable
@@ -21,31 +20,6 @@ from core.quiz import build_prospect_question, score_prospect_answer
 from core.script_drills import build_drill_set
 
 bp = Blueprint("prospect", __name__, url_prefix="/api/prospect")
-
-
-def _bp_state() -> Any:
-    """Access blueprint-attached state through a typed escape hatch."""
-    return cast(Any, bp)
-
-
-def init_routes(app, prospect_session_manager_obj, validate_message_func):
-    """Initialize prospect routes with Flask app and callback functions"""
-    state = _bp_state()
-    state.app = app
-    state.prospect_session_manager = prospect_session_manager_obj
-    state.validate_message = validate_message_func
-
-
-def _lookup_prospect_session(session_id):
-    """Return the live prospect session for this id, or None."""
-    return _bp_state().prospect_session_manager.get(session_id)
-
-
-_require_prospect_session = make_require_session(
-    _lookup_prospect_session, PROSPECT_SESSION_NOT_FOUND
-)
-
-
 
 
 @bp.route("/personas", methods=["GET"])
@@ -77,8 +51,7 @@ def _optional_text(data: dict, field: str, limit: int):
 @require_rate_limit("prospect")
 def prospect_init():
     """Create a prospect session. Bot plays the buyer, user plays the salesperson"""
-    state = _bp_state()
-    if not state.prospect_session_manager.can_create():
+    if not current_app.extensions["sessions"].buyer.can_create():
         return jsonify(
             {"error": "Prospect mode is at capacity - check back in a moment."}
         ), 503
@@ -118,9 +91,9 @@ def prospect_init():
             objection=objection,
         )
         opening = ps.get_opening_message()
-        state.prospect_session_manager.set(session_id, ps)
+        current_app.extensions["sessions"].buyer.set(session_id, ps)
         ps.save_session()
-        state.app.logger.info(
+        current_app.logger.info(
             f"Prospect session: {session_id} "
             f"(difficulty={difficulty}, product={product_type}, provider={ps.provider_name})"
         )
@@ -145,10 +118,10 @@ def prospect_init():
             }
         )
     except ProviderUnavailable:
-        state.prospect_session_manager.delete(session_id)
+        current_app.extensions["sessions"].buyer.delete(session_id)
         return jsonify({"error": PROSPECT_UNAVAILABLE, "code": "PROVIDER_UNAVAILABLE"}), 503
     except Exception as e:
-        state.app.logger.exception(f"Prospect init failed: {e}")
+        current_app.logger.exception(f"Prospect init failed: {e}")
         return jsonify(
             {"error": "Couldn't set up the prospect session -- try once more"}
         ), 500
@@ -158,13 +131,13 @@ def prospect_init():
 @require_rate_limit("prospect")
 def prospect_chat():
     """User sends a sales message; prospect responds"""
-    ps, err = _require_prospect_session()
+    ps, err = require_session("buyer", PROSPECT_SESSION_NOT_FOUND)
     if err:
         return err
     assert ps is not None
 
     data = request.json or {}
-    user_message, err = _bp_state().validate_message(data.get("message", ""))
+    user_message, err = validate_message(data.get("message", ""))
     if err:
         return err
 
@@ -191,14 +164,14 @@ def prospect_chat():
     except ProviderUnavailable:
         return jsonify({"error": PROSPECT_UNAVAILABLE, "code": "PROVIDER_UNAVAILABLE"}), 503
     except Exception as e:
-        _bp_state().app.logger.exception(f"Prospect chat error: {e}")
+        current_app.logger.exception(f"Prospect chat error: {e}")
         return jsonify({"error": PROSPECT_ERROR}), 500
 
 
 @bp.route("/state", methods=["GET"])
 def prospect_state():
     """Get current prospect session state"""
-    ps, err = _require_prospect_session()
+    ps, err = require_session("buyer", PROSPECT_SESSION_NOT_FOUND)
     if err:
         return err
     assert ps is not None
@@ -221,7 +194,7 @@ def prospect_state():
 @require_rate_limit("prospect")
 def prospect_evaluate():
     """Generate final evaluation scorecard"""
-    ps, err = _require_prospect_session()
+    ps, err = require_session("buyer", PROSPECT_SESSION_NOT_FOUND)
     if err:
         return err
     assert ps is not None
@@ -244,7 +217,7 @@ def prospect_evaluate():
         )
         return jsonify({"success": True, **evaluation})
     except Exception as e:
-        _bp_state().app.logger.exception(f"Prospect evaluation error: {e}")
+        current_app.logger.exception(f"Prospect evaluation error: {e}")
         return jsonify({"error": PROSPECT_SCORING_ERROR}), 500
 
 
@@ -256,7 +229,7 @@ def prospect_review():
     Rebuilt from the transcript on each request, so it also works on a session
     that was recovered from disk.
     """
-    ps, err = _require_prospect_session()
+    ps, err = require_session("buyer", PROSPECT_SESSION_NOT_FOUND)
     if err:
         return err
     assert ps is not None
@@ -264,7 +237,7 @@ def prospect_review():
     try:
         return jsonify({"success": True, "persona": ps.persona, **ps.review()})
     except Exception as e:
-        _bp_state().app.logger.exception(f"Prospect review error: {e}")
+        current_app.logger.exception(f"Prospect review error: {e}")
         return jsonify({"error": PROSPECT_REVIEW_ERROR}), 500
 
 
@@ -272,7 +245,7 @@ def prospect_review():
 @require_rate_limit("prospect")
 def prospect_quiz_question():
     """A question about the learner's own weakest turn, not the AI salesperson's flow."""
-    ps, err = _require_prospect_session()
+    ps, err = require_session("buyer", PROSPECT_SESSION_NOT_FOUND)
     if err:
         return err
     assert ps is not None
@@ -287,7 +260,7 @@ def prospect_quiz_question():
 @require_rate_limit("prospect")
 def prospect_quiz_answer():
     """Score a replacement line for one of the learner's own turns."""
-    ps, err = _require_prospect_session()
+    ps, err = require_session("buyer", PROSPECT_SESSION_NOT_FOUND)
     if err:
         return err
     assert ps is not None
@@ -298,7 +271,7 @@ def prospect_quiz_answer():
     if turn_index is None or turn_index > len(turns):
         return jsonify({"error": "That turn is not part of this session.", "code": "INVALID_TURN"}), 400
 
-    answer, err = _bp_state().validate_message(data.get("answer", ""))
+    answer, err = validate_message(data.get("answer", ""))
     if err:
         return err
 
@@ -320,7 +293,7 @@ def prospect_drills():
         session_error = InputValidator.validate_session_id(session_id)
         if session_error:
             return session_error
-        ps = _lookup_prospect_session(session_id)
+        ps = current_app.extensions["sessions"].buyer.get(session_id)
         if ps is not None:
             own_turns = ps.review()["turns"]
 
@@ -331,7 +304,7 @@ def prospect_drills():
 @require_rate_limit("prospect")
 def prospect_redo():
     """Rewind to a turn and say it differently, for a real reply from the same buyer."""
-    ps, err = _require_prospect_session()
+    ps, err = require_session("buyer", PROSPECT_SESSION_NOT_FOUND)
     if err:
         return err
     assert ps is not None
@@ -341,7 +314,7 @@ def prospect_redo():
     if turn_index is None:
         return jsonify({"error": "A turn number is required.", "code": "INVALID_TURN"}), 400
 
-    user_message, err = _bp_state().validate_message(data.get("message", ""))
+    user_message, err = validate_message(data.get("message", ""))
     if err:
         return err
 
@@ -363,7 +336,7 @@ def prospect_redo():
     except ProviderUnavailable:
         return jsonify({"error": PROSPECT_UNAVAILABLE, "code": "PROVIDER_UNAVAILABLE"}), 503
     except Exception as e:
-        _bp_state().app.logger.exception(f"Prospect redo error: {e}")
+        current_app.logger.exception(f"Prospect redo error: {e}")
         return jsonify({"error": PROSPECT_ERROR}), 500
 
 
@@ -376,8 +349,8 @@ def prospect_reset():
         session_error = InputValidator.validate_session_id(session_id)
         if session_error:
             return session_error
-        ps = _lookup_prospect_session(session_id)
+        ps = current_app.extensions["sessions"].buyer.get(session_id)
         if ps is not None:
             ps.record_session_end()
-        _bp_state().prospect_session_manager.delete(session_id)
+        current_app.extensions["sessions"].buyer.delete(session_id)
     return jsonify({"success": True})
