@@ -374,3 +374,136 @@ def test_loader_rejects_an_unknown_after():
             "interruptions": {"x": {"examples": ["x"], "reply": "ok", "after": "sing"}}}
     with pytest.raises(ValueError, match="after"):
         parse_common_sense(data)
+
+
+# ---- C11 payment: only a way to pay ends the call (review follow-up 1) -----------------------
+
+WELCOME = CAT.steps["end"].say
+SOFT_CLOSE = CAT.steps["19"].say
+BACK_OUT = CAT.steps["22"].listen[1].ack
+
+
+@pytest.mark.parametrize("step", ["20", "22"])
+@pytest.mark.parametrize("text", ["actually no, forget it", "no, I changed my mind", "no"])
+def test_backing_out_goes_back_to_the_soft_close(fake_embedder, step, text):
+    s = seller(fake_embedder, step=step)
+    reply, _ = s.reply(text)
+    assert reply == f"{BACK_OUT} {SOFT_CLOSE}"
+    assert s.state.step == "19"
+
+
+@pytest.mark.parametrize("text", ["credit", "debit please", "card"])
+def test_a_way_to_pay_ends_the_call(fake_embedder, text):
+    s = seller(fake_embedder, step="22")
+    reply, _ = s.reply(text)
+    assert reply == WELCOME and s.state.step == "end"
+
+
+def test_an_unclear_payment_reply_is_asked_again_then_goes_back_never_welcomed(fake_embedder):
+    s = seller(fake_embedder, step="22")
+    reply, _ = s.reply("hmm")
+    assert reply == CAT.steps["22"].probes[0]
+    reply, _ = s.reply("hmm")
+    assert reply == SOFT_CLOSE and WELCOME not in reply
+
+
+def test_a_worry_at_payment_is_still_looped(fake_embedder):
+    s = seller(fake_embedder, step="22")
+    reply, _ = s.reply("I need to think about it")
+    assert reply == CAT.objections["think"].loop[0]
+
+
+def test_a_reason_at_self_resell_still_moves_on(fake_embedder):
+    s = seller(fake_embedder, step="20")
+    reply, _ = s.reply("because I'm sick of my job")
+    assert reply.endswith(PAY_Q) and s.state.slots["reason"] == "because I'm sick of my job"
+
+
+def test_keen_buyer_who_backs_out_at_payment_is_not_welcomed(fake_embedder):
+    s = seller(fake_embedder)
+    s.reply("i'm in, send the payment link")
+    s.reply("yes")
+    reply, _ = s.reply("actually no, forget it")
+    assert WELCOME not in reply and s.state.step == "19"
+
+
+# ---- C12 a question that still answers the step (review follow-up 2) -------------------------
+
+def test_an_answer_with_a_question_in_it_is_an_answer(fake_embedder):
+    s = seller(fake_embedder, step="18")
+    reply, _ = s.reply("yeah makes sense, what's next?")
+    assert reply == SOFT_CLOSE and s.state.step == "19"
+    assert CFG["uncovered_fallback"] not in reply
+
+
+def test_a_real_product_question_is_still_answered(fake_embedder):
+    ai = Recorder("NOT_COVERED")
+    s = seller(fake_embedder, ai, step="18")
+    reply, _ = s.reply("yeah but how long is it?")
+    assert reply.startswith(CFG["uncovered_fallback"]) and s.state.step == "18"
+    assert any("<question>" in p for p in ai.prompts)
+
+
+class ByPrompt:
+    """A fake AI that answers product questions with `answer` and everything else with "NONE"."""
+
+    def __init__(self, answer):
+        self.answer, self.prompts = answer, []
+
+    def __call__(self, prompt, max_tokens):
+        self.prompts.append(prompt)
+        return self.answer if "<facts>" in prompt else "NONE"
+
+
+def test_an_answer_with_a_product_question_gets_both(fake_embedder):
+    s = seller(fake_embedder, ByPrompt("You just need a laptop and wifi."), step="18")
+    reply, _ = s.reply("yeah it all makes sense, do I need a laptop?")
+    assert reply == f"You just need a laptop and wifi. {SOFT_CLOSE}" and s.state.step == "19"
+
+
+def test_an_answer_with_a_question_the_facts_dont_cover_just_moves_on(fake_embedder):
+    s = seller(fake_embedder, ByPrompt("NOT_COVERED"), step="18")
+    reply, _ = s.reply("yeah makes sense, what's next?")
+    assert CFG["uncovered_fallback"] not in reply and s.state.step == "19"
+
+
+def test_a_near_miss_answer_with_a_question_stays_a_question(fake_embedder):
+    s = seller(fake_embedder, step="18")   # under the threshold: their question is never dropped on a guess
+    reply, _ = s.reply("yes that makes sense, but do I need a laptop?")
+    assert reply.startswith(CFG["uncovered_fallback"]) and s.state.step == "18"
+
+
+def test_a_mixed_payment_reply_is_judged_never_welcomed_on_a_guess(fake_embedder):
+    s = seller(fake_embedder, step="22")   # "no, credit?": pays and backs out too close to call, AI down
+    reply, _ = s.reply("no, credit?")
+    assert reply == CAT.steps["22"].probes[0] and s.state.step == "22"
+
+
+GO_ON = SENSE.interruptions["go_on"].reply
+
+
+@pytest.mark.parametrize("step, then", [("15", "16"), ("16", "17")])
+def test_whats_next_on_a_pitch_line_moves_on(fake_embedder, step, then):
+    s = seller(fake_embedder, step=step)
+    reply, _ = s.reply("ok, what's next?")
+    assert reply.startswith(f"{GO_ON} ") and reply.endswith(CAT.steps[then].say.split(":", 1)[1])
+    assert s.state.step == then
+
+
+@pytest.mark.parametrize("step", ["18", "19", "22"])
+def test_whats_next_on_a_step_that_needs_an_answer_asks_it_another_way(fake_embedder, step):
+    s = seller(fake_embedder, step=step)
+    reply, _ = s.reply("what's next?")
+    assert reply == f"{GO_ON} {CAT.steps[step].probes[0]}" and s.state.step == step
+
+
+def test_whats_next_is_never_saved_as_an_answer(fake_embedder):
+    s = seller(fake_embedder, step="20")
+    s.reply("what's next?")
+    assert "reason" not in s.state.slots and s.state.step == "22"
+
+
+def test_whats_next_asks_no_ai(fake_embedder):
+    ai = Recorder()
+    seller(fake_embedder, ai, step="15").reply("ok, what's next?")
+    assert ai.prompts == []

@@ -5,7 +5,7 @@ import pytest
 
 from core.loader import CONFIG_DIR
 from core.script_engine.engine import advance, start
-from core.script_engine.method import load_common_sense, load_method, load_offer
+from core.script_engine.method import ANY, load_common_sense, load_method, load_offer
 
 METHODS = sorted(p.stem for p in (CONFIG_DIR / "methods").glob("*.yaml"))
 OFFER_BLANKS = {"months", "price", "setter", "pillar_1", "pillar_2", "pillar_3"}
@@ -52,7 +52,8 @@ def test_walk_to_the_end(name, fake_embedder):
         if move.done:
             break
         step = method.steps[move.state.step]
-        signal = next((r.signal for r in step.listen if r.examples), None)
+        takes_any = any(r.signal == ANY for r in step.listen)  # a plain answer; labelled routes may turn back
+        signal = None if takes_any else next((r.signal for r in step.listen if r.examples), None)
         move = advance(method, move.state, signal, "an answer")
     assert move.done
 

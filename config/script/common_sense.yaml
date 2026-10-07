@@ -83,3 +83,16 @@ interruptions:
       - "whatever"
       - "f*** off with the questions"
     reply: "Fair enough, I'll keep this quick."
+  go_on:   # live: "yeah makes sense, what's next?" got "I don't know that one offhand"; a nudge, never an answer
+    draft: true
+    after: rephrase_else_move_on   # a pitch line moves on; a question still needing an answer is asked another way
+    min_score: 0.75   # "what's next for me after the programme?" is a real question
+    examples:
+      - "what's next?"
+      - "ok, what's next"
+      - "and then what?"
+      - "go on"
+      - "keep going"
+      - "what's the next bit?"
+      - "ok and?"
+    reply: "Sure."

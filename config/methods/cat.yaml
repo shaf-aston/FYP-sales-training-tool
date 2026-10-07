@@ -225,6 +225,7 @@ steps:
           - "yes, clear"
           - "got it, makes sense"
           - "yeah, I am following you"
+          - "yeah makes sense"
         then: "19"
       unclear:
         examples:
@@ -267,9 +268,22 @@ steps:
     name: "Self-resell"
     note: 'they sell themselves, own words'
     ui_stage: outcome
+    draft: true  # the back-out ack is ours: no source line for someone who changes their mind
     say: "What makes you say that?"
     capture: reason
     listen:
+      backs_out: &backs_out   # live: "actually no, forget it" got "Welcome aboard"; back to the soft close
+        examples:
+          - "actually no, forget it"
+          - "no, I changed my mind"
+          - "I don't want to do this anymore"
+          - "no, I'm not doing this"
+          - "never mind, I'm out"
+          - "wait, I'm not sure anymore"
+          - "no thanks, I'll pass"
+          - "no"
+        then: "19"
+        ack: "No pressure at all."
       any: {then: "21"}
   "21":
     name: "Next steps"
@@ -282,9 +296,28 @@ steps:
   "22":
     name: "Payment"
     ui_stage: outcome
+    draft: true  # probe and back-out are ours: the source only has the question
     say: "How would you like to process the investment? Credit or debit?"
+    probe: "Which works better for you, credit or debit?"
+    stuck: {then: "19"}   # still no way to pay after asking twice: back to the soft close, never "welcome aboard"
     listen:
-      any: {then: "end"}
+      pays:   # only a way to pay ends the call: "no, forget it" must never get "Welcome aboard"
+        examples:
+          - "credit"
+          - "debit"
+          - "credit card"
+          - "debit card please"
+          - "card"
+          - "I'll pay by debit card"
+          - "let's do credit"
+          - "visa"
+          - "paypal"
+          - "bank transfer"
+          - "either is fine"
+          - "whichever is easier"
+          - "yes, let's do it"
+        then: "end"
+      backs_out: *backs_out
   "end":
     name: "Welcome"
     ui_stage: outcome
