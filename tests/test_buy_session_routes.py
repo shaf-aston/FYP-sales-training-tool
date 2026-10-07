@@ -1,7 +1,8 @@
-"""Tests for session management API routes."""
+"""Tests for buy-mode session start/end routes, and the shared health check."""
 from flask import Flask
 
-from backend.routes import session as session_routes
+from backend.routes import buy as buy_routes
+from backend.routes import monitoring as monitoring_routes
 from backend.routes._utils import Sessions
 
 
@@ -68,10 +69,11 @@ def _make_session_app(monkeypatch, testing=True):
     app.config["TESTING"] = testing
     manager = _DummySessionManager()
 
-    monkeypatch.setattr(session_routes, "SellerBot", _DummyBot)
+    monkeypatch.setattr(buy_routes, "SellerBot", _DummyBot)
 
     app.extensions["sessions"] = Sessions(seller=manager, buyer=None)
-    app.register_blueprint(session_routes.bp)
+    app.register_blueprint(buy_routes.bp)
+    app.register_blueprint(monitoring_routes.bp)
     return app, manager
 
 
@@ -83,11 +85,11 @@ def test_removed_endpoints_are_gone(monkeypatch):
     headers = {"X-Session-ID": "a" * 8}
 
     responses = [
-        client.post("/api/restore", json={"history": [{"role": "user", "content": "Hi"}]}),
-        client.post("/api/strategy", headers=headers, json={"strategy": "transactional"}),
-        client.post("/api/stage", headers=headers, json={"stage": "pitch"}),
-        client.get("/api/stages", headers=headers),
-        client.get("/api/config"),
+        client.post("/api/buy/restore", json={"history": [{"role": "user", "content": "Hi"}]}),
+        client.post("/api/buy/strategy", headers=headers, json={"strategy": "transactional"}),
+        client.post("/api/buy/stage", headers=headers, json={"stage": "pitch"}),
+        client.get("/api/buy/stages", headers=headers),
+        client.get("/api/buy/config"),
     ]
 
     assert [r.status_code for r in responses] == [404] * 5
@@ -99,11 +101,11 @@ def test_health_returns_active_provider_and_performance(monkeypatch):
     manager.set("abc12345", bot)
 
     monkeypatch.setattr(
-        session_routes, "get_available_providers",
+        monitoring_routes, "get_available_providers",
         lambda: [{"name": "probe", "available": True, "model": "probe-model"}]
     )
     monkeypatch.setattr(
-        session_routes.PerformanceTracker,
+        monitoring_routes.PerformanceTracker,
         "get_provider_stats",
         staticmethod(lambda: {"probe": {"count": 1}}),
     )
@@ -123,20 +125,20 @@ def test_reset_route_deletes_existing_session(monkeypatch):
     app, manager = _make_session_app(monkeypatch)
     manager.set("c" * 8, _DummyBot(session_id="c" * 8))
 
-    response = app.test_client().post("/api/reset", headers={"X-Session-ID": "c" * 8})
+    response = app.test_client().post("/api/buy/reset", headers={"X-Session-ID": "c" * 8})
 
     assert response.status_code == 200
     assert response.get_json() == {"success": True}
     assert manager.get("c" * 8) is None
 
 
-# --- /api/init path tests ---
+# --- /api/buy/init path tests ---
 
 def test_init_creates_new_session_and_returns_greeting(monkeypatch):
     """New session: returns greeting message and empty history."""
     app, manager = _make_session_app(monkeypatch)
 
-    response = app.test_client().post("/api/init", json={})
+    response = app.test_client().post("/api/buy/init", json={})
     payload = response.get_json()
 
     assert response.status_code == 200
@@ -165,7 +167,7 @@ def test_init_restores_live_session_from_memory(monkeypatch):
     ]
     manager.set("live0001", bot)
 
-    response = app.test_client().post("/api/init", json={"session_id": "live0001"})
+    response = app.test_client().post("/api/buy/init", json={"session_id": "live0001"})
     payload = response.get_json()
 
     assert response.status_code == 200
@@ -180,7 +182,7 @@ def test_init_starts_fresh_session_when_missing_from_memory(monkeypatch):
 
     _DummyBot.loaded_session_id = None
 
-    response = app.test_client().post("/api/init", json={"session_id": "disk0001"})
+    response = app.test_client().post("/api/buy/init", json={"session_id": "disk0001"})
     payload = response.get_json()
 
     assert response.status_code == 200
@@ -198,7 +200,7 @@ def test_every_session_route_answers_a_dead_session_the_same_way(monkeypatch):
     headers = {"X-Session-ID": "f" * 8}
 
     responses = [
-        client.post("/api/reset", headers=headers),
+        client.post("/api/buy/reset", headers=headers),
     ]
 
     assert [r.status_code for r in responses] == [400]

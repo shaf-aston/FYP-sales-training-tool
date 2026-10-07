@@ -128,7 +128,7 @@ def test_config_weights_and_thresholds_are_all_present():
     assert all(isinstance(word, str) for word in cfg["mirroring_stopwords"])
 
 
-def test_prospect_readiness_moves_on_selling_quality_and_records_why():
+def test_sell_readiness_moves_on_selling_quality_and_records_why():
     session = BuyerSession(provider_type="dummy", product_type="general", difficulty="medium")
     session.conversation_history.append(
         {"role": "assistant", "content": "My van keeps breaking down and reliability matters"}
@@ -143,7 +143,7 @@ def test_prospect_readiness_moves_on_selling_quality_and_records_why():
     assert session.last_turn_score.reasons
 
 
-def test_prospect_readiness_falls_when_the_seller_pressures():
+def test_sell_readiness_falls_when_the_seller_pressures():
     session = BuyerSession(provider_type="dummy", product_type="general", difficulty="medium")
     start = session.state.readiness
     session.state.turn_count = 3

@@ -365,19 +365,19 @@ def test_quiz_stage_answer(user_answer: str, current_stage: str, flow_type: str)
     }
 
 
-def build_prospect_question(turns: list[dict]) -> dict | None:
+def build_sell_question(turns: list[dict]) -> dict | None:
     """Ask about the seller's own weakest turn (earliest on a tie), or None if none yet."""
     if not turns:
         return None
     turn = min(turns, key=lambda t: (t["rating"], t["turn"]))
-    template = _load_quiz_config()["prospect_question"]
+    template = _load_quiz_config()["sell_question"]
     return {
         "turn": turn["turn"],
         "question": template.format(turn=turn["turn"], line=turn["seller"]),
     }
 
 
-def score_prospect_answer(answer: str, turn: dict) -> dict:
+def score_sell_answer(answer: str, turn: dict) -> dict:
     """Rate the seller's replacement line with the same judge that rated the original."""
     new = score_seller_turn(
         answer, buyer_message=turn["buyer_before"], completed_turns=turn["turn"] - 1

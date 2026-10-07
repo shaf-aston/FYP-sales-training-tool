@@ -14,7 +14,11 @@ from ..security import InputValidator, SecurityConfig
 
 @dataclass(frozen=True)
 class Sessions:
-    """The two live-session registries, stored once on ``app.extensions["sessions"]``."""
+    """The two live-session registries, stored once on ``app.extensions["sessions"]``.
+
+    Named for the AI's side: ``seller`` holds buy mode's SellerBots, ``buyer`` holds
+    sell mode's BuyerSessions.
+    """
 
     seller: Any
     buyer: Any
@@ -23,7 +27,7 @@ class Sessions:
 def require_session(kind="seller", not_found_message=SESSION_NOT_FOUND):
     """Look up the caller's live session: returns (session, None) or (None, error response).
 
-    ``kind`` is "seller" or "buyer". Validation, error body, code and status live here only.
+    ``kind`` is "seller" (buy mode) or "buyer" (sell mode). Validation, error body, code and status live here only.
     """
     session_id = request.headers.get("X-Session-ID")
     session_error = InputValidator.validate_session_id(session_id)

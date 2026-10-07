@@ -9,7 +9,7 @@ from core.buyer_session import ProviderUnavailable
 from core.providers.base import LLMResponse
 
 
-class StubProspectProvider:
+class StubBuyerProvider:
     def is_available(self):
         return True
 
@@ -30,7 +30,7 @@ def client(monkeypatch):
     app.config["TESTING"] = True
     monkeypatch.setattr(
         "core.services.provider_router.create_provider",
-        lambda *_args, **_kwargs: StubProspectProvider(),
+        lambda *_args, **_kwargs: StubBuyerProvider(),
     )
     return app.test_client()
 
@@ -39,7 +39,7 @@ def client(monkeypatch):
 def played_session(client):
     """A session with a pushy turn and a good one, so a review has something to say."""
     started = client.post(
-        "/api/prospect/init", json={"difficulty": "medium", "product_type": "default"}
+        "/api/sell/init", json={"difficulty": "medium", "product_type": "default"}
     ).get_json()
     headers = {"X-Session-ID": started["session_id"]}
 
@@ -47,12 +47,12 @@ def played_session(client):
         "You need to decide right now, today only.",
         "What made that matter so much? Tell me more about it.",
     ):
-        client.post("/api/prospect/chat", json={"message": message}, headers=headers)
+        client.post("/api/sell/chat", json={"message": message}, headers=headers)
     return headers
 
 
 def test_review_annotates_each_turn_with_its_evidence(client, played_session):
-    response = client.get("/api/prospect/review", headers=played_session)
+    response = client.get("/api/sell/review", headers=played_session)
     payload = response.get_json()
 
     assert response.status_code == 200
@@ -66,7 +66,7 @@ def test_review_annotates_each_turn_with_its_evidence(client, played_session):
 
 
 def test_review_needs_a_live_session(client):
-    response = client.get("/api/prospect/review", headers={"X-Session-ID": "a" * 32})
+    response = client.get("/api/sell/review", headers={"X-Session-ID": "a" * 32})
 
     assert response.status_code == 400
     assert response.get_json()["code"] == "SESSION_EXPIRED"
@@ -74,7 +74,7 @@ def test_review_needs_a_live_session(client):
 
 def test_redo_replaces_the_turn_and_gets_a_real_reply(client, played_session):
     response = client.post(
-        "/api/prospect/redo",
+        "/api/sell/redo",
         json={"turn": 1, "message": "Walk me through what a bad week with the van looks like."},
         headers=played_session,
     )
@@ -86,7 +86,7 @@ def test_redo_replaces_the_turn_and_gets_a_real_reply(client, played_session):
     assert payload["message"].startswith("Can you tell me a bit more about that?")
 
     # The pushy turn is gone and the session now holds only the redone one.
-    review = client.get("/api/prospect/review", headers=played_session).get_json()
+    review = client.get("/api/sell/review", headers=played_session).get_json()
     assert len(review["turns"]) == 1
     assert "pressure" not in review["turns"][0]["signals"]
     assert "open_question" in review["turns"][0]["signals"]
@@ -95,7 +95,7 @@ def test_redo_replaces_the_turn_and_gets_a_real_reply(client, played_session):
 @pytest.mark.parametrize("bad_turn", [0, -1, 99, "two", 1.5, True, None])
 def test_redo_rejects_a_turn_number_it_cannot_use(client, played_session, bad_turn):
     response = client.post(
-        "/api/prospect/redo",
+        "/api/sell/redo",
         json={"turn": bad_turn, "message": "What matters most to you here?"},
         headers=played_session,
     )
@@ -106,14 +106,14 @@ def test_redo_rejects_a_turn_number_it_cannot_use(client, played_session, bad_tu
 
 def test_redo_still_validates_the_message(client, played_session):
     response = client.post(
-        "/api/prospect/redo", json={"turn": 1, "message": ""}, headers=played_session
+        "/api/sell/redo", json={"turn": 1, "message": ""}, headers=played_session
     )
 
     assert response.status_code == 400
 
 
 def test_drills_work_without_any_session(client):
-    response = client.get("/api/prospect/drills")
+    response = client.get("/api/sell/drills")
     payload = response.get_json()
 
     assert response.status_code == 200
@@ -123,7 +123,7 @@ def test_drills_work_without_any_session(client):
 
 
 def test_drills_add_your_own_lines_when_a_session_is_supplied(client, played_session):
-    response = client.get("/api/prospect/drills", headers=played_session)
+    response = client.get("/api/sell/drills", headers=played_session)
     payload = response.get_json()
 
     assert response.status_code == 200
@@ -132,7 +132,7 @@ def test_drills_add_your_own_lines_when_a_session_is_supplied(client, played_ses
 
 
 def test_drills_ignore_a_session_id_that_is_not_live(client):
-    response = client.get("/api/prospect/drills", headers={"X-Session-ID": "a" * 32})
+    response = client.get("/api/sell/drills", headers={"X-Session-ID": "a" * 32})
     payload = response.get_json()
 
     assert response.status_code == 200
@@ -141,7 +141,7 @@ def test_drills_ignore_a_session_id_that_is_not_live(client):
 
 def test_a_bad_session_id_on_drills_is_rejected_not_ignored(client):
     """Silently serving generic drills hides the caller's mistake from them."""
-    response = client.get("/api/prospect/drills", headers={"X-Session-ID": "not a real id!"})
+    response = client.get("/api/sell/drills", headers={"X-Session-ID": "not a real id!"})
 
     assert response.status_code == 400
 
@@ -149,38 +149,38 @@ def test_a_bad_session_id_on_drills_is_rejected_not_ignored(client):
 def test_a_redo_that_cannot_reach_the_buyer_gives_the_turns_back(client, played_session):
     """The rewind happens before the buyer is asked. If the ask fails, the learner
     must not lose the turns they had and get nothing in return."""
-    before = client.get("/api/prospect/review", headers=played_session).get_json()
+    before = client.get("/api/sell/review", headers=played_session).get_json()
 
     def dead(*_args, **_kwargs):
         raise ProviderUnavailable("every provider is down")
 
-    with mock.patch.object(StubProspectProvider, "chat", dead):
+    with mock.patch.object(StubBuyerProvider, "chat", dead):
         response = client.post(
-            "/api/prospect/redo",
+            "/api/sell/redo",
             json={"turn": 1, "message": "Walk me through a bad week with the van."},
             headers=played_session,
         )
 
     assert response.status_code == 503
-    after = client.get("/api/prospect/review", headers=played_session).get_json()
+    after = client.get("/api/sell/review", headers=played_session).get_json()
     assert after["turns"] == before["turns"]
 
 
-def test_prospect_quiz_asks_about_your_own_turn_and_scores_the_answer(client, played_session):
-    asked = client.get("/api/prospect/quiz", headers=played_session).get_json()
+def test_sell_quiz_asks_about_your_own_turn_and_scores_the_answer(client, played_session):
+    asked = client.get("/api/sell/quiz", headers=played_session).get_json()
 
     assert asked["success"] is True
     assert asked["turn"] == 1  # the pushy opener is the weakest turn
     assert "decide right now" in asked["question"]
 
     scored = client.post(
-        "/api/prospect/quiz",
+        "/api/sell/quiz",
         json={"turn": asked["turn"], "answer": "What made that van start to matter so much?"},
         headers=played_session,
     ).get_json()
     assert scored["success"] is True and scored["feedback"].startswith("Better")
 
     bad = client.post(
-        "/api/prospect/quiz", json={"turn": 99, "answer": "hello there"}, headers=played_session
+        "/api/sell/quiz", json={"turn": 99, "answer": "hello there"}, headers=played_session
     )
     assert bad.status_code == 400

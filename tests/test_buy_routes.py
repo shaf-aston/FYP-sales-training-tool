@@ -1,7 +1,7 @@
-"""Tests for chat API routes."""
+"""Tests for buy-mode chat, edit and coach routes."""
 from flask import Flask
 
-from backend.routes import chat as chat_routes
+from backend.routes import buy as buy_routes
 
 
 class _DummyFlowEngine:
@@ -75,17 +75,17 @@ def _make_chat_app(monkeypatch, bot=None):
     def bot_state(_bot):
         return {"stage": "INTENT", "strategy": "CONSULTATIVE"}
 
-    monkeypatch.setattr(chat_routes, "require_session", require_session)
-    monkeypatch.setattr(chat_routes, "validate_message", validate_message)
-    monkeypatch.setattr(chat_routes, "bot_state", bot_state)
-    app.register_blueprint(chat_routes.bp)
+    monkeypatch.setattr(buy_routes, "require_session", require_session)
+    monkeypatch.setattr(buy_routes, "validate_message", validate_message)
+    monkeypatch.setattr(buy_routes, "bot_state", bot_state)
+    app.register_blueprint(buy_routes.bp)
     return app, bot
 
 
 def test_chat_route_returns_metrics_and_training_blob(monkeypatch):
     app, bot = _make_chat_app(monkeypatch)
 
-    response = app.test_client().post("/api/chat", json={"message": "Hi"})
+    response = app.test_client().post("/api/buy/chat", json={"message": "Hi"})
     payload = response.get_json()
 
     assert response.status_code == 200
@@ -100,7 +100,7 @@ def test_chat_route_handles_missing_json_body(monkeypatch):
     app, _bot = _make_chat_app(monkeypatch)
 
     response = app.test_client().post(
-        "/api/chat",
+        "/api/buy/chat",
         data="",
         content_type="text/plain",
     )
@@ -112,7 +112,7 @@ def test_chat_route_handles_missing_json_body(monkeypatch):
 def test_edit_route_rewinds_before_regenerating_response(monkeypatch):
     app, bot = _make_chat_app(monkeypatch)
 
-    response = app.test_client().post("/api/edit", json={"index": 1, "message": "Updated"})
+    response = app.test_client().post("/api/buy/edit", json={"index": 1, "message": "Updated"})
     payload = response.get_json()
 
     assert response.status_code == 200
@@ -128,17 +128,17 @@ def test_edit_route_rewinds_before_regenerating_response(monkeypatch):
 def test_edit_route_rejects_invalid_index_format(monkeypatch):
     app, _bot = _make_chat_app(monkeypatch)
 
-    response = app.test_client().post("/api/edit", json={"index": "abc", "message": "Updated"})
+    response = app.test_client().post("/api/buy/edit", json={"index": "abc", "message": "Updated"})
 
     assert response.status_code == 400
     assert response.get_json()["error"] == "Invalid index format"
 
 
-def test_training_ask_defaults_unknown_style_to_tactical(monkeypatch):
+def test_coach_defaults_unknown_style_to_tactical(monkeypatch):
     app, bot = _make_chat_app(monkeypatch)
 
     response = app.test_client().post(
-        "/api/training/ask",
+        "/api/buy/coach",
         json={"question": "What should I ask next?", "style": "invalid"},
     )
     payload = response.get_json()
@@ -148,10 +148,10 @@ def test_training_ask_defaults_unknown_style_to_tactical(monkeypatch):
     assert bot.training_question_calls == [("What should I ask next?", "tactical")]
 
 
-def test_training_ask_rejects_missing_question(monkeypatch):
+def test_coach_rejects_missing_question(monkeypatch):
     app, _bot = _make_chat_app(monkeypatch)
 
-    response = app.test_client().post("/api/training/ask", json={"question": "  "})
+    response = app.test_client().post("/api/buy/coach", json={"question": "  "})
 
     assert response.status_code == 400
     assert response.get_json()["error"] == "Question required"

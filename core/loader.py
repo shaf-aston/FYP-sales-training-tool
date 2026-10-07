@@ -35,15 +35,15 @@ def load_product_config():
 
 
 @lru_cache(maxsize=1)
-def load_prospect_config():
-    """Load prospect_config.yaml."""
-    return load_yaml("prospect_config.yaml")
+def load_sell_config():
+    """Load sell_config.yaml: the AI buyer's personas and behaviour, and sell-mode scoring."""
+    return load_yaml("sell_config.yaml")
 
 
 @lru_cache(maxsize=1)
 def load_real_objections():
     """Real-call objection pool, or [] when disabled or not built yet."""
-    cfg = load_prospect_config().get("real_objections", {})
+    cfg = load_sell_config().get("real_objections", {})
     path = CONFIG_DIR / cfg.get("file", "")
     if not cfg.get("enabled") or not path.is_file():
         return []

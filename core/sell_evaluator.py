@@ -1,8 +1,8 @@
-"""Post-session evaluation for prospect mode with 5-criterion scoring."""
+"""Post-session evaluation for sell mode with 5-criterion scoring."""
 
 
 from .constants import GRADE_LABELS, GRADE_THRESHOLDS
-from .loader import load_prospect_config
+from .loader import load_sell_config
 from .utils import (
     clamp_score,
     range_label,
@@ -73,7 +73,7 @@ def _weighted_overall(criteria_scores: dict, criteria: dict) -> int:
 def _build_deterministic_criteria_scores(conversation_history: list[dict], criteria: dict) -> dict:
     """Stable deterministic scoring from transcript quality signals."""
     sales_turns = [message.get("content", "") for message in conversation_history if message.get("role") == "user"]
-    prospect_turns = [message.get("content", "") for message in conversation_history if message.get("role") != "user"]
+    buyer_turns = [message.get("content", "") for message in conversation_history if message.get("role") != "user"]
 
     default_feedback = "Not enough evidence to score this criterion yet."
     if not sales_turns:
@@ -83,7 +83,7 @@ def _build_deterministic_criteria_scores(conversation_history: list[dict], crite
         }
 
     sales_count = len(sales_turns)
-    prospect_count = len(prospect_turns)
+    buyer_count = len(buyer_turns)
     avg_words = sum(len(tokenize(turn)) for turn in sales_turns) / max(1, sales_count)
 
     question_turns = sum(1 for turn in sales_turns if "?" in turn)
@@ -98,7 +98,7 @@ def _build_deterministic_criteria_scores(conversation_history: list[dict], crite
     rapport_turns = sum(1 for turn in sales_turns if _contains_any(turn, _RAPPORT_HINTS))
     rapport_ratio = min(1.0, rapport_turns / max(1, sales_count))
 
-    objection_turns = sum(1 for turn in prospect_turns if _contains_any(turn, _OBJECTION_HINTS))
+    objection_turns = sum(1 for turn in buyer_turns if _contains_any(turn, _OBJECTION_HINTS))
     objection_response_turns = sum(
         1 for turn in sales_turns if _contains_any(turn, _OBJECTION_RESPONSE_HINTS)
     )
@@ -112,7 +112,7 @@ def _build_deterministic_criteria_scores(conversation_history: list[dict], crite
         length_fit = 0.7
     else:
         length_fit = 0.4
-    turn_balance = min(1.0, prospect_count / max(1, sales_count))
+    turn_balance = min(1.0, buyer_count / max(1, sales_count))
 
     computed = {
         "needs_discovery": {
@@ -220,11 +220,11 @@ def _grade_from_score(score: int) -> str:
     return range_label(score, GRADE_THRESHOLDS, GRADE_LABELS)
 
 
-def evaluate_prospect_session(conversation_history, prospect_state) -> dict:
-    """Score the salesperson's prospect-mode session across 5 criteria, by rules only."""
-    config = load_prospect_config()
+def evaluate_sell_session(conversation_history, buyer_state) -> dict:
+    """Score the salesperson's sell-mode session across 5 criteria, by rules only."""
+    config = load_sell_config()
     criteria = config.get("evaluation", {}).get("criteria", {})
-    mode_cfg = config.get("prospect_mode", {}) if isinstance(config, dict) else {}
+    mode_cfg = config.get("sell_mode", {}) if isinstance(config, dict) else {}
     feedback_style = str(mode_cfg.get("feedback_style", "coaching") or "coaching").lower()
 
     deterministic_scores = _build_deterministic_criteria_scores(conversation_history, criteria)
@@ -236,7 +236,7 @@ def evaluate_prospect_session(conversation_history, prospect_state) -> dict:
         "criteria_scores": deterministic_scores,
         "strengths": deterministic_strengths,
         "improvements": deterministic_improvements,
-        "summary": _build_deterministic_summary(deterministic_overall, prospect_state.status),
+        "summary": _build_deterministic_summary(deterministic_overall, buyer_state.status),
         "coach_tip": deterministic_tip,
     }
 
@@ -254,7 +254,7 @@ def evaluate_prospect_session(conversation_history, prospect_state) -> dict:
         deterministic_pack["coach_tip"] = _apply_style(deterministic_pack.get("coach_tip", ""))
 
     return _assemble_evaluation(
-        prospect_state.status,
+        buyer_state.status,
         criteria=criteria,
         deterministic=deterministic_pack,
     )

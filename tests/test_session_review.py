@@ -2,14 +2,14 @@
 
 import pytest
 
-from core.loader import load_prospect_config
+from core.loader import load_sell_config
 from core.buyer_session import BuyerSession
 from core.session_review import build_review, pick_pivotal_turns
 
 
 @pytest.fixture
 def behaviour():
-    return load_prospect_config()["difficulty_profiles"]["medium"]["behaviour"]
+    return load_sell_config()["difficulty_profiles"]["medium"]["behaviour"]
 
 
 @pytest.fixture

@@ -1,8 +1,8 @@
-# Tests for prospect-mode context assembly and custom knowledge injection.
+# Tests for sell-mode context assembly and custom knowledge injection.
 
 import core.knowledge as knowledge_module
 import core.loader as loader
-import core.buyer_session as prospect_session
+from core import buyer_session
 
 
 class _StubProvider:
@@ -24,11 +24,11 @@ class _StubProvider:
         return "stub-model"
 
 
-def test_prospect_session_prompt_has_product_custom_data_and_persona_once(monkeypatch):
+def test_sell_session_prompt_has_product_custom_data_and_persona_once(monkeypatch):
     # Product and custom notes form the context; the persona is stated once, by the template.
     monkeypatch.setattr(
-        prospect_session,
-        "load_prospect_config",
+        buyer_session,
+        "load_sell_config",
         lambda: {
             "difficulty_profiles": {
                 "easy": {
@@ -42,7 +42,7 @@ def test_prospect_session_prompt_has_product_custom_data_and_persona_once(monkey
                 }
             },
             "behaviour_rules": {"easy": "Be friendly."},
-            "prospect_mode": {
+            "sell_mode": {
                 "max_turns": 5,
                 "scoring_enabled": True,
                 "feedback_style": "coaching",
@@ -71,7 +71,7 @@ def test_prospect_session_prompt_has_product_custom_data_and_persona_once(monkey
         lambda: "product_name: Acme Pro\nAdditional notes: buyer research",
     )
 
-    session = prospect_session.BuyerSession(
+    session = buyer_session.BuyerSession(
         provider_type="stub",
         product_type="b2b_saas",
         difficulty="easy",
@@ -83,7 +83,7 @@ def test_prospect_session_prompt_has_product_custom_data_and_persona_once(monkey
             "background": "Ops lead",
             "personality": "Pragmatic",
         },
-        session_id="prospect123",
+        session_id="sell123",
     )
 
     assert session.public_config() == {
@@ -97,10 +97,10 @@ def test_prospect_session_prompt_has_product_custom_data_and_persona_once(monkey
     assert "product_name: Acme Pro" in session.product_context
     assert "Additional notes: buyer research" in session.product_context
     from core.buyer_prompt import build_system_prompt
-    from core.loader import load_prospect_config
+    from core.loader import load_sell_config
 
     prompt = build_system_prompt(
-        load_prospect_config()["system_prompt_template"],
+        load_sell_config()["system_prompt_template"],
         persona=session.persona,
         readiness=0.5,
         product_context=session.product_context,

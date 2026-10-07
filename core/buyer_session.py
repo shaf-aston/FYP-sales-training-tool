@@ -1,4 +1,4 @@
-"""Prospect mode: Bot plays a buyer for sales practice roleplay training."""
+"""Sell mode: the AI plays a buyer and the learner practises selling to it."""
 
 import json
 import logging
@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 
 from .analytics.session_analytics import SessionAnalytics
 from .constants import LLM
-from .loader import load_prospect_config, load_real_objections
+from .loader import load_sell_config, load_real_objections
 from .buyer_prompt import build_product_context, build_system_prompt
 from .buyer_rules import ObjectionPacer, end_outcome
 from .real_calls import pick_bank
@@ -32,7 +32,7 @@ class ProviderUnavailable(RuntimeError):
 
 @dataclass
 class BuyerState:
-    """Represents the current state of a prospect in a sales roleplay session."""
+    """Represents the current state of the AI buyer in a sell-mode session."""
 
     readiness: float
     objections_raised: int = 0
@@ -68,7 +68,7 @@ class BuyerState:
 
 @dataclass
 class BuyerResponse:
-    """Response from the prospect in a turn of the conversation."""
+    """Response from the AI buyer in a turn of the conversation."""
 
     content: str
     latency_ms: float
@@ -80,7 +80,7 @@ class BuyerResponse:
 
 def personas_for(product_type: str) -> list[dict]:
     """The buyer personas available for a product (its own, else the general pool)."""
-    personas = load_prospect_config()["personas"]
+    personas = load_sell_config()["personas"]
     return personas.get(product_type) or personas["general"]
 
 
@@ -99,9 +99,9 @@ def select_persona(product_type: str, name: str | None = None) -> dict:
 
 
 class BuyerSession:
-    """Manages a prospect-mode conversation for sales roleplay training.
+    """Manages a sell-mode conversation for sales roleplay training.
 
-    The session simulates a buyer (prospect) with evolving readiness to purchase
+    The session simulates a buyer with evolving readiness to purchase
     and tracks the salesperson's performance throughout the conversation.
     """
 
@@ -114,7 +114,7 @@ class BuyerSession:
         session_id: str = "",
         objection: str | None = None,
     ):
-        """Initialize a prospect session.
+        """Initialize a sell session.
 
         Args:
             provider_type: LLM provider to use (default: backend-selected order).
@@ -129,8 +129,8 @@ class BuyerSession:
         self.session_id = session_id or secrets.token_hex(16)
         self._router = ProviderRouter(provider_type=provider_type)
 
-        config = load_prospect_config()
-        mode_cfg = config.get("prospect_mode", {}) if isinstance(config, dict) else {}
+        config = load_sell_config()
+        mode_cfg = config.get("sell_mode", {}) if isinstance(config, dict) else {}
         self.max_turns = int(mode_cfg.get("max_turns", 0) or 0) or None
         self.scoring_enabled = bool(mode_cfg.get("scoring_enabled", True))
         self.feedback_style = str(mode_cfg.get("feedback_style", "coaching") or "coaching")
@@ -176,14 +176,14 @@ class BuyerSession:
         SessionAnalytics.record(
             session_id=self.session_id,
             event="session_start",
-            engine="prospect",
+            engine="sell",
             difficulty=difficulty,
             product_type=product_type,
             persona_name=persona.get("name", "Alex"),
         )
 
     def public_config(self) -> dict:
-        """Return the frontend-facing prospect mode settings for this session."""
+        """Return the frontend-facing sell mode settings for this session."""
         return {
             "max_turns": self.max_turns,
             "scoring_enabled": self.scoring_enabled,
@@ -236,11 +236,11 @@ class BuyerSession:
         }
 
     def save_session(self) -> None:
-        """Log a compact snapshot of the prospect session."""
+        """Log a compact snapshot of the sell session."""
         if not self.session_id:
             return
         logger.info(
-            "prospect_session_state %s",
+            "buyer_session_state %s",
             json.dumps(
                 {
                     "session_id": self.session_id,
@@ -253,14 +253,14 @@ class BuyerSession:
         )
 
     def get_opening_message(self) -> BuyerResponse:
-        """The prospect's opening line, filled from opening_lines in config (no AI).
+        """The buyer's opening line, filled from opening_lines in config (no AI).
 
         Returns:
             BuyerResponse with the opening message and state snapshot.
         """
         persona = self.persona
         background = str(persona.get("background", "")).strip()
-        lines = load_prospect_config()["opening_lines"][self.state.difficulty]
+        lines = load_sell_config()["opening_lines"][self.state.difficulty]
         line = random.Random(self.session_id or "").choice(lines)
         content = line.format(
             name=persona.get("name", "Alex"),
@@ -289,14 +289,14 @@ class BuyerSession:
     def process_turn(
         self, user_message: str, show_hints: bool = False
     ) -> BuyerResponse:
-        """Process a salesperson message and return the prospect's response.
+        """Process a salesperson message and return the buyer's response.
 
         Args:
             user_message: The salesperson's message in this turn.
             show_hints: If True, generate an optional coaching hint for the user.
 
         Returns:
-            BuyerResponse with prospect's reply, latency and state snapshot.
+            BuyerResponse with the buyer's reply, latency and state snapshot.
         """
         if self.state.has_committed or self.state.has_walked:
             return BuyerResponse(
@@ -499,7 +499,7 @@ class BuyerSession:
     def _system_prompt(self) -> str:
         """The buyer's instructions for this turn."""
         return build_system_prompt(
-            load_prospect_config().get("system_prompt_template", ""),
+            load_sell_config().get("system_prompt_template", ""),
             persona=self.persona,
             readiness=self.state.readiness,
             product_context=self.product_context,
@@ -563,14 +563,14 @@ class BuyerSession:
     def _log_turn_event(
         self, user_message: str | None, assistant_message: str, turn_index: int
     ) -> None:
-        """Record the full prospect exchange as an analytics event."""
+        """Record the full sell-mode exchange as an analytics event."""
 
         if not self.session_id:
             return
 
         SessionAnalytics.record(
             session_id=self.session_id,
-            event="prospect_conversation_turn",
+            event="sell_conversation_turn",
             turn_index=turn_index,
             difficulty=self.state.difficulty,
             product_type=self.product_type,
@@ -591,7 +591,7 @@ class BuyerSession:
         SessionAnalytics.record(
             session_id=self.session_id,
             event="session_end",
-            engine="prospect",
+            engine="sell",
             outcome=self.state.status,
             difficulty=self.state.difficulty,
             product_type=self.product_type,
@@ -606,6 +606,6 @@ class BuyerSession:
         Returns:
             Dictionary containing scores, grades, feedback and assessment.
         """
-        from .prospect_evaluator import evaluate_prospect_session
+        from .sell_evaluator import evaluate_sell_session
 
-        return evaluate_prospect_session(self.conversation_history, self.state)
+        return evaluate_sell_session(self.conversation_history, self.state)

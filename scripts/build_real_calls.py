@@ -12,12 +12,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from core.loader import CONFIG_DIR, load_prospect_config  # noqa: E402
+from core.loader import CONFIG_DIR, load_sell_config  # noqa: E402
 from core.real_calls import extract_objections  # noqa: E402
 
 
 def main() -> None:
-    cfg = load_prospect_config()["real_objections"]
+    cfg = load_sell_config()["real_objections"]
     vault = (ROOT / cfg["vault_dir"]).resolve()
     with open(vault / "grwth" / "extracted.json", encoding="utf-8") as f:
         extracted = json.load(f)

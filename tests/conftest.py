@@ -55,7 +55,7 @@ def _no_session_leak_between_tests():
     yield
     from backend import app as backend_app
 
-    for manager in (backend_app.prospect_session_manager, backend_app.session_manager):
+    for manager in (backend_app.buyer_session_manager, backend_app.session_manager):
         with manager._lock:
             manager._sessions.clear()
 

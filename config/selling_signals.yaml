@@ -149,7 +149,7 @@ mirroring_stopwords:
   - "know"
   - "think"
 
-# One-line tip shown after a seller turn when hints are on (prospect mode, no AI).
+# One-line tip shown after a seller turn when hints are on (sell mode, no AI).
 # The first negative signal that fired picks the tip; otherwise the first positive one;
 # otherwise `default`. Keys match the signal names in core/selling_quality.py.
 hints:

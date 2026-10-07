@@ -1,29 +1,30 @@
-"""Prospect mode endpoints - role-reversal where user plays salesperson"""
+"""Sell mode endpoints (/api/sell): the learner is the salesperson, the AI (BuyerSession) buys."""
 
 import secrets
 
 from flask import Blueprint, current_app, jsonify, request
 
+from core.analytics.session_analytics import SessionAnalytics
+from core.buyer_session import ProviderUnavailable
+from core.constants import MAX_CHOSEN_OBJECTION_CHARS, MAX_PERSONA_NAME_CHARS
+from core.quiz import build_sell_question, score_sell_answer
+from core.script_drills import build_drill_set
+
 from ..messages import (
-    PROSPECT_ERROR,
-    PROSPECT_REVIEW_ERROR,
-    PROSPECT_UNAVAILABLE,
-    PROSPECT_SCORING_ERROR,
-    PROSPECT_SESSION_NOT_FOUND,
+    SELL_ERROR,
+    SELL_REVIEW_ERROR,
+    SELL_SCORING_ERROR,
+    SELL_SESSION_NOT_FOUND,
+    SELL_UNAVAILABLE,
 )
 from ..security import InputValidator, require_rate_limit
 from ._utils import require_session, validate_message, validate_provider
-from core.analytics.session_analytics import SessionAnalytics
-from core.constants import MAX_CHOSEN_OBJECTION_CHARS, MAX_PERSONA_NAME_CHARS
-from core.buyer_session import ProviderUnavailable
-from core.quiz import build_prospect_question, score_prospect_answer
-from core.script_drills import build_drill_set
 
-bp = Blueprint("prospect", __name__, url_prefix="/api/prospect")
+bp = Blueprint("sell", __name__, url_prefix="/api/sell")
 
 
 @bp.route("/personas", methods=["GET"])
-def prospect_personas():
+def personas():
     """The buyer personas a learner can pick for one product."""
     from core.buyer_session import personas_for
 
@@ -37,6 +38,60 @@ def prospect_personas():
     })
 
 
+# The products offered in the sell-mode picker, split by sales motion.
+_PRODUCT_GROUPS = {
+    "transactional": [
+        "luxury_cars",
+        "premium_electronics",
+        "watches",
+        "travel",
+        "fashion",
+    ],
+    "consultative": [
+        "b2b_saas",
+        "high_ticket_sales_mentorship",
+        "financial_services",
+        "education",
+        "healthcare_services",
+    ],
+}
+
+
+def _product_groups() -> dict:
+    """Curated picker groups; a product with no buyer personas is left out."""
+    try:
+        from core.loader import load_product_config, load_sell_config
+
+        personas = load_sell_config().get("personas", {})
+        products = load_product_config().get("products", {})
+
+        grouped_options = {}
+        for strategy, product_ids in _PRODUCT_GROUPS.items():
+            options = []
+            for product_id in product_ids:
+                if not personas.get(product_id):
+                    continue
+                product_info = products.get(product_id, {})
+                options.append(
+                    {
+                        "id": product_id,
+                        "label": product_info.get("name")
+                        or product_id.replace("_", " ").title(),
+                    }
+                )
+            grouped_options[strategy] = options
+        return grouped_options
+    except Exception:
+        current_app.logger.exception("Failed to build sell product groups")
+        return {strategy: [] for strategy in _PRODUCT_GROUPS}
+
+
+@bp.route("/product-groups", methods=["GET"])
+def product_groups():
+    """Curated product picker groups as JSON."""
+    return jsonify({"success": True, "groups": _product_groups()})
+
+
 def _optional_text(data: dict, field: str, limit: int):
     """A stripped optional string field, or an error response when it is the wrong shape."""
     value = data.get(field)
@@ -48,12 +103,12 @@ def _optional_text(data: dict, field: str, limit: int):
 
 
 @bp.route("/init", methods=["POST"])
-@require_rate_limit("prospect")
-def prospect_init():
-    """Create a prospect session. Bot plays the buyer, user plays the salesperson"""
+@require_rate_limit("sell")
+def init():
+    """Create a sell session. The AI plays the buyer, the learner plays the salesperson"""
     if not current_app.extensions["sessions"].buyer.can_create():
         return jsonify(
-            {"error": "Prospect mode is at capacity - check back in a moment."}
+            {"error": "Sell mode is at capacity - check back in a moment."}
         ), 503
 
     data = request.json or {}
@@ -94,7 +149,7 @@ def prospect_init():
         current_app.extensions["sessions"].buyer.set(session_id, ps)
         ps.save_session()
         current_app.logger.info(
-            f"Prospect session: {session_id} "
+            f"Sell session: {session_id} "
             f"(difficulty={difficulty}, product={product_type}, provider={ps.provider_name})"
         )
 
@@ -119,19 +174,19 @@ def prospect_init():
         )
     except ProviderUnavailable:
         current_app.extensions["sessions"].buyer.delete(session_id)
-        return jsonify({"error": PROSPECT_UNAVAILABLE, "code": "PROVIDER_UNAVAILABLE"}), 503
+        return jsonify({"error": SELL_UNAVAILABLE, "code": "PROVIDER_UNAVAILABLE"}), 503
     except Exception as e:
-        current_app.logger.exception(f"Prospect init failed: {e}")
+        current_app.logger.exception(f"Sell init failed: {e}")
         return jsonify(
-            {"error": "Couldn't set up the prospect session -- try once more"}
+            {"error": "Couldn't set up the buyer -- try once more"}
         ), 500
 
 
 @bp.route("/chat", methods=["POST"])
-@require_rate_limit("prospect")
-def prospect_chat():
-    """User sends a sales message; prospect responds"""
-    ps, err = require_session("buyer", PROSPECT_SESSION_NOT_FOUND)
+@require_rate_limit("sell")
+def chat():
+    """The learner sends a sales message; the AI buyer responds"""
+    ps, err = require_session("buyer", SELL_SESSION_NOT_FOUND)
     if err:
         return err
     assert ps is not None
@@ -162,16 +217,16 @@ def prospect_chat():
             result["coaching"] = response.coaching
         return jsonify(result)
     except ProviderUnavailable:
-        return jsonify({"error": PROSPECT_UNAVAILABLE, "code": "PROVIDER_UNAVAILABLE"}), 503
+        return jsonify({"error": SELL_UNAVAILABLE, "code": "PROVIDER_UNAVAILABLE"}), 503
     except Exception as e:
-        current_app.logger.exception(f"Prospect chat error: {e}")
-        return jsonify({"error": PROSPECT_ERROR}), 500
+        current_app.logger.exception(f"Sell chat error: {e}")
+        return jsonify({"error": SELL_ERROR}), 500
 
 
 @bp.route("/state", methods=["GET"])
-def prospect_state():
-    """Get current prospect session state"""
-    ps, err = require_session("buyer", PROSPECT_SESSION_NOT_FOUND)
+def state():
+    """Get current sell session state"""
+    ps, err = require_session("buyer", SELL_SESSION_NOT_FOUND)
     if err:
         return err
     assert ps is not None
@@ -191,10 +246,10 @@ def prospect_state():
 
 
 @bp.route("/evaluate", methods=["POST"])
-@require_rate_limit("prospect")
-def prospect_evaluate():
+@require_rate_limit("sell")
+def evaluate():
     """Generate final evaluation scorecard"""
-    ps, err = require_session("buyer", PROSPECT_SESSION_NOT_FOUND)
+    ps, err = require_session("buyer", SELL_SESSION_NOT_FOUND)
     if err:
         return err
     assert ps is not None
@@ -204,7 +259,7 @@ def prospect_evaluate():
         SessionAnalytics.record(
             session_id=request.headers.get("X-Session-ID", ""),
             event="session_score",
-            engine="prospect",
+            engine="sell",
             difficulty=ps.state.difficulty,
             outcome=ps.state.status,
             total=evaluation.get("overall_score"),
@@ -217,19 +272,19 @@ def prospect_evaluate():
         )
         return jsonify({"success": True, **evaluation})
     except Exception as e:
-        current_app.logger.exception(f"Prospect evaluation error: {e}")
-        return jsonify({"error": PROSPECT_SCORING_ERROR}), 500
+        current_app.logger.exception(f"Sell evaluation error: {e}")
+        return jsonify({"error": SELL_SCORING_ERROR}), 500
 
 
 @bp.route("/review", methods=["GET"])
-@require_rate_limit("prospect")
-def prospect_review():
+@require_rate_limit("sell")
+def review():
     """Walk the session back turn by turn, with the reason behind every rating.
 
     Rebuilt from the transcript on each request, so it also works on a session
     that was recovered from disk.
     """
-    ps, err = require_session("buyer", PROSPECT_SESSION_NOT_FOUND)
+    ps, err = require_session("buyer", SELL_SESSION_NOT_FOUND)
     if err:
         return err
     assert ps is not None
@@ -237,30 +292,30 @@ def prospect_review():
     try:
         return jsonify({"success": True, "persona": ps.persona, **ps.review()})
     except Exception as e:
-        current_app.logger.exception(f"Prospect review error: {e}")
-        return jsonify({"error": PROSPECT_REVIEW_ERROR}), 500
+        current_app.logger.exception(f"Sell review error: {e}")
+        return jsonify({"error": SELL_REVIEW_ERROR}), 500
 
 
 @bp.route("/quiz", methods=["GET"])
-@require_rate_limit("prospect")
-def prospect_quiz_question():
+@require_rate_limit("sell")
+def quiz_question():
     """A question about the learner's own weakest turn, not the AI salesperson's flow."""
-    ps, err = require_session("buyer", PROSPECT_SESSION_NOT_FOUND)
+    ps, err = require_session("buyer", SELL_SESSION_NOT_FOUND)
     if err:
         return err
     assert ps is not None
 
-    question = build_prospect_question(ps.review()["turns"])
+    question = build_sell_question(ps.review()["turns"])
     if question is None:
         return jsonify({"error": "Say a few things to the buyer first - the quiz uses your own turns.", "code": "NO_TURNS"}), 400
     return jsonify({"success": True, **question})
 
 
 @bp.route("/quiz", methods=["POST"])
-@require_rate_limit("prospect")
-def prospect_quiz_answer():
+@require_rate_limit("sell")
+def quiz_answer():
     """Score a replacement line for one of the learner's own turns."""
-    ps, err = require_session("buyer", PROSPECT_SESSION_NOT_FOUND)
+    ps, err = require_session("buyer", SELL_SESSION_NOT_FOUND)
     if err:
         return err
     assert ps is not None
@@ -275,12 +330,12 @@ def prospect_quiz_answer():
     if err:
         return err
 
-    return jsonify({"success": True, **score_prospect_answer(answer, turns[turn_index - 1])})
+    return jsonify({"success": True, **score_sell_answer(answer, turns[turn_index - 1])})
 
 
 @bp.route("/drills", methods=["GET"])
-@require_rate_limit("prospect")
-def prospect_drills():
+@require_rate_limit("sell")
+def drills():
     """Lines to recall, with the move blanked out.
 
     Works with no session at all. When a live session is supplied, that learner's
@@ -301,10 +356,10 @@ def prospect_drills():
 
 
 @bp.route("/redo", methods=["POST"])
-@require_rate_limit("prospect")
-def prospect_redo():
+@require_rate_limit("sell")
+def redo():
     """Rewind to a turn and say it differently, for a real reply from the same buyer."""
-    ps, err = require_session("buyer", PROSPECT_SESSION_NOT_FOUND)
+    ps, err = require_session("buyer", SELL_SESSION_NOT_FOUND)
     if err:
         return err
     assert ps is not None
@@ -334,16 +389,16 @@ def prospect_redo():
             }
         )
     except ProviderUnavailable:
-        return jsonify({"error": PROSPECT_UNAVAILABLE, "code": "PROVIDER_UNAVAILABLE"}), 503
+        return jsonify({"error": SELL_UNAVAILABLE, "code": "PROVIDER_UNAVAILABLE"}), 503
     except Exception as e:
-        current_app.logger.exception(f"Prospect redo error: {e}")
-        return jsonify({"error": PROSPECT_ERROR}), 500
+        current_app.logger.exception(f"Sell redo error: {e}")
+        return jsonify({"error": SELL_ERROR}), 500
 
 
 @bp.route("/reset", methods=["POST"])
-@require_rate_limit("prospect")
-def prospect_reset():
-    """End and remove a prospect session"""
+@require_rate_limit("sell")
+def reset():
+    """End and remove a sell session"""
     session_id = request.headers.get("X-Session-ID")
     if session_id:
         session_error = InputValidator.validate_session_id(session_id)

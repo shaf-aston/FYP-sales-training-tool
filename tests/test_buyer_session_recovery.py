@@ -1,11 +1,11 @@
-"""Tests for prospect session lifecycle without replay recovery."""
+"""Tests for sell session lifecycle without replay recovery."""
 from flask import Flask
 
-from backend.routes import prospect as prospect_routes
+from backend.routes import sell as sell_routes
 from backend.routes._utils import Sessions
 
 
-class _DummyProspectSessionManager:
+class _DummyBuyerSessionManager:
     def __init__(self):
         self._sessions = {}
 
@@ -25,19 +25,19 @@ class _DummyProspectSessionManager:
 def _wire_routes(monkeypatch, app, manager):
     """Give this test's app its own buyer registry and a permissive message validator."""
     app.extensions["sessions"] = Sessions(seller=None, buyer=manager)
-    monkeypatch.setattr(prospect_routes, "validate_message", lambda message: (message, None))
+    monkeypatch.setattr(sell_routes, "validate_message", lambda message: (message, None))
 
 
-def test_prospect_evaluate_requires_in_memory_session(monkeypatch):
+def test_sell_evaluate_requires_in_memory_session(monkeypatch):
     app = Flask(__name__)
     app.config["TESTING"] = True
-    manager = _DummyProspectSessionManager()
+    manager = _DummyBuyerSessionManager()
 
     _wire_routes(monkeypatch, app, manager)
-    app.register_blueprint(prospect_routes.bp)
+    app.register_blueprint(sell_routes.bp)
 
     response = app.test_client().post(
-        "/api/prospect/evaluate",
+        "/api/sell/evaluate",
         headers={"X-Session-ID": "a" * 32},
     )
 
@@ -45,16 +45,16 @@ def test_prospect_evaluate_requires_in_memory_session(monkeypatch):
     assert response.get_json()["code"] == "SESSION_EXPIRED"
 
 
-def test_prospect_state_requires_in_memory_session(monkeypatch):
+def test_sell_state_requires_in_memory_session(monkeypatch):
     app = Flask(__name__)
     app.config["TESTING"] = True
-    manager = _DummyProspectSessionManager()
+    manager = _DummyBuyerSessionManager()
 
     _wire_routes(monkeypatch, app, manager)
-    app.register_blueprint(prospect_routes.bp)
+    app.register_blueprint(sell_routes.bp)
 
     response = app.test_client().get(
-        "/api/prospect/state",
+        "/api/sell/state",
         headers={"X-Session-ID": "b" * 32},
     )
 

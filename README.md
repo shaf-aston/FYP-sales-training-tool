@@ -18,10 +18,12 @@ Final-year project · Flask backend · Next.js frontend · deterministic scoring
 
 | Mode | You are | The AI is |
 |---|---|---|
-| 🤝 **Seller bot** | the customer | a salesperson reading a real sales script |
-| 🎯 **Prospect mode** | the salesperson | a buyer with its own needs, objections and patience |
+| 🎯 **Sell mode** (`/sell/`) | the salesperson | a buyer with its own needs, objections and patience |
+| 🤝 **Buy mode** (`/buy/`) | the customer | a salesperson reading a real sales script |
 
-After a prospect session you get:
+Each mode has its own API: `/api/sell/*` and `/api/buy/*`.
+
+After a sell session you get:
 
 - 🔍 **Turn-by-turn review**: every line rated, with the reason and how buyer readiness moved
 - ⚡ **Pivotal moments**: the turns that decided the outcome

@@ -218,31 +218,31 @@ def test_no_quiz_question_mentions_fsm():
     assert not any("FSM" in q for qs in config["questions"].values() for q in qs)
 
 
-def test_prospect_quiz_asks_about_the_sellers_weakest_turn_and_scores_a_better_line():
+def test_sell_quiz_asks_about_the_sellers_weakest_turn_and_scores_a_better_line():
     turns = [
         {"turn": 1, "seller": "Great weather.", "rating": 2, "buyer_before": "My van keeps breaking down."},
         {"turn": 2, "seller": "What breaks?", "rating": 4, "buyer_before": "Hmm."},
     ]
 
-    asked = quiz.build_prospect_question(turns)
+    asked = quiz.build_sell_question(turns)
     assert asked["turn"] == 1 and "Great weather." in asked["question"]
-    assert quiz.build_prospect_question([]) is None
+    assert quiz.build_sell_question([]) is None
 
-    better = quiz.score_prospect_answer("What happens when your van keeps breaking down?", turns[0])
-    worse = quiz.score_prospect_answer("ok", turns[0])
+    better = quiz.score_sell_answer("What happens when your van keeps breaking down?", turns[0])
+    worse = quiz.score_sell_answer("ok", turns[0])
     assert better["score"] > worse["score"]
     assert better["feedback"].startswith("Better")
 
 
-def test_prospect_quiz_explains_why_in_the_turn_reviews_own_words():
+def test_sell_quiz_explains_why_in_the_turn_reviews_own_words():
     from core.selling_quality import REASONS
 
     turn = {"turn": 1, "seller": "Great weather.", "rating": 2,
             "buyer_before": "My van keeps breaking down.", "signals": ["closed_question"]}
 
-    result = quiz.score_prospect_answer("What happens when your van keeps breaking down?", turn)
+    result = quiz.score_sell_answer("What happens when your van keeps breaking down?", turn)
 
     assert REASONS["open_question"] in result["strengths"]
     assert result["before"] == [{"text": REASONS["closed_question"], "good": False}]
     # No signals recorded (older session): nothing invented.
-    assert quiz.score_prospect_answer("ok", {**turn, "signals": []})["before"] == []
+    assert quiz.score_sell_answer("ok", {**turn, "signals": []})["before"] == []

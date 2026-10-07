@@ -1,5 +1,5 @@
-# Prospect Mode Configuration
-# Bot plays realistic buyer; user practises sales skills
+# Sell mode: the AI plays a realistic buyer; the learner practises selling.
+# Personas, difficulty profiles, opening lines, buyer prompt and scoring criteria.
 # Difficulty levels grounded in buyer typology research:
 #   Easy = "Amiable" (Merrill & Reid, 1981)
 #   Medium = "Analytical" (Cialdini, 2006)

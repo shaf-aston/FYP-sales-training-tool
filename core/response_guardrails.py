@@ -1,4 +1,4 @@
-"""Checks on AI-buyer replies (prospect mode) before the user sees them.
+"""Checks on AI-buyer replies (sell mode) before the user sees them.
 
 The session rules own the outcome, so the buyer may not agree to buy on its own: sentences
 that commit are dropped, and a config line is used only when nothing is left.
