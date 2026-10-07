@@ -34,6 +34,14 @@ Open the engine for the mode you are working on. Nothing else decides the turn.
 
 Seller-bot mode: `chat.py` → `SellerBot.chat` → `core/script_engine/` (scripted lines for the products in `config/selling.yaml`; any other product gets `default_product`. AI only fills small gaps, and every AI sentence goes through `ai_line.py` `checked_line`). `flow.py` keeps the call's history and stage. Coach notes come from the script step; `trainer.py` answers the trainee's questions.
 
+One seller turn (`script_engine/seller.py` `ScriptSeller.reply`; the moves are pure functions in `engine.py`, every word and list in YAML):
+1. A reply that says nothing ("ok") is heard as an answer only.
+2. `hear_ahead`: an answer to a later step given early (a step's `answered_by`, e.g. "I want 5k a month") is kept, and that step is skipped when reached.
+3. One recognise pass over interruptions (`script/common_sense.yaml`), product facts, objections and the keen-buyer `ready` examples. Each must beat reading the reply as the step's own answer; `ready` and items with `min_score` must also clear their floor.
+4. Keen buyer → `jump` to the method's `ready.then` (open plays and parked worries dropped). Interruption → its reply, then its `after`: ask the step again in the words last used (`asked_line`), wait, rephrase, or (frustration on a step with no other words) `move_on` without saving or acking. Objection → parked before the price, looped after. Fact → its answer.
+5. Uncovered product question → one AI answer from the offer's `about` and what they told us, checked (no new numbers, `answer_banned_words`, no early price, `NOT_COVERED` → `uncovered_fallback`).
+6. Otherwise the reply answers the step. The "I heard you" line is one checked AI sentence that may link to earlier answers. Any AI call can fail: the plain script line is said, and the AI rests server-wide only after `ai_fail_limit` failures in a row.
+
 ## Config
 
 Every tunable number lives in `config/limits.yaml`; `core/constants.py` is its only reader and refuses zero or negative values at start-up. LLM calls take a named profile from it (`**LLM["buyer_reply"]`), never literal numbers.

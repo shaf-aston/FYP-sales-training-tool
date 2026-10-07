@@ -3,18 +3,21 @@
 import json
 import logging
 import re
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
-from functools import lru_cache
+from functools import cache, lru_cache
 from pathlib import Path
 
 from core.loader import load_yaml
 from core.script_engine.ai_line import checked_line
-from core.script_engine.checks import CheckContext, clip
+from core.script_engine.checks import NUMBER, CheckContext, clip
 from core.utils import is_question, tokenize
 from core.script_engine.embedder import make_embedder
-from core.script_engine.engine import advance, ask_again, object_to, park, price_open, start
+from core.script_engine.engine import (
+    advance, ask_again, asked_line, hear_ahead, jump, move_on, object_to, park, price_open, ready_open, start,
+)
 from core.script_engine.fill import fill_line, fill_step
 from core.script_engine.judge import VAGUE, judge
 from core.script_engine.method import ANY, load_common_sense, load_method, load_offer
@@ -22,15 +25,45 @@ from core.script_engine.recognise import recognise
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 uncovered_log = logging.getLogger("script_engine.uncovered")
-_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="script-ai")
 
 
-_ai_resting_until = [0.0]  # shared by every call: one rate limit covers the whole server
+class _Breaker:
+    """Shared by every call: one rate limit covers the whole server. Opens after `limit` failures
+    in a row, so one slow call doesn't silence the AI for every user."""
+
+    def __init__(self):
+        self._lock = threading.Lock()
+        self.fails = 0
+        self.resting_until = 0.0
+
+    def resting(self):
+        with self._lock:
+            return time.monotonic() < self.resting_until
+
+    def failed(self, limit, rest_seconds):
+        with self._lock:
+            self.fails += 1
+            if self.fails >= limit:
+                self.fails = 0
+                self.resting_until = time.monotonic() + rest_seconds
+
+    def worked(self):
+        with self._lock:
+            self.fails = 0
 
 
-def make_llm(router, timeout, rest_seconds):
+_breaker = _Breaker()
+
+
+@cache
+def _pool(workers):
+    return ThreadPoolExecutor(max_workers=workers, thread_name_prefix="script-ai")
+
+
+def make_llm(router, timeout, rest_seconds, fail_limit, workers):
     """Adapt the provider router to llm(prompt, max_tokens) -> text. Raises on failure or timeout.
-    After a failure the AI is left alone for `rest_seconds`, so no turn waits on a dead provider."""
+    After `fail_limit` failures in a row the AI is left alone for `rest_seconds`, so no turn waits on
+    a dead provider."""
 
     def call(prompt, max_tokens):
         result = router.chat_with_fallback(
@@ -41,13 +74,15 @@ def make_llm(router, timeout, rest_seconds):
         return result.response.content
 
     def guarded(prompt, max_tokens):
-        if time.monotonic() < _ai_resting_until[0]:
-            raise RuntimeError("AI resting after a recent failure")
+        if _breaker.resting():
+            raise RuntimeError("AI resting after repeated failures")
         try:
-            return _pool.submit(call, prompt, max_tokens).result(timeout)
+            text = _pool(workers).submit(call, prompt, max_tokens).result(timeout)
         except Exception:
-            _ai_resting_until[0] = time.monotonic() + rest_seconds
+            _breaker.failed(fail_limit, rest_seconds)
             raise
+        _breaker.worked()
+        return text
 
     return guarded
 
@@ -67,7 +102,8 @@ def build_seller(router, product, embedder=None):
     entry = cfg["products"][product]
     return ScriptSeller(
         cfg, load_method(entry.get("method", cfg["method"])), load_offer(entry["offer"]), load_common_sense(),
-        embedder or shared_embedder(), make_llm(router, cfg["ai_timeout_seconds"], cfg["ai_rest_seconds"]),
+        embedder or shared_embedder(),
+        make_llm(router, cfg["ai_timeout_seconds"], cfg["ai_rest_seconds"], cfg["ai_fail_limit"], cfg["ai_workers"]),
     )
 
 
@@ -87,6 +123,7 @@ class ScriptSeller:
         found += [e for f in self.offer.facts.values() for e in f.examples]
         found += [e for o in self.method.objections.values() for e in o.examples]
         found += [e for s in self.method.steps.values() for r in s.listen for e in r.examples]
+        found += list(self.method.ready.examples) if self.method.ready else []
         return found
 
     def reset(self, state=None):
@@ -120,25 +157,18 @@ class ScriptSeller:
             move = self._listen(text, step, empty=True)
             self.state = move.state
             return self._render(move), move.ui_stage
+        self.state = hear_ahead(self.method, self.state, text)  # kept whatever else the reply turns out to be
         kind, name = self._interrupt(text, step, opened, waiting)
 
+        if kind == "ready":
+            return self._go(jump(self.method, self.state, self.method.ready.then))
         if kind == "sense":
-            said = self.sense.interruptions[name]
-            if said.wait:
-                self._waiting = True
-                return said.reply, step.ui_stage
-            if said.rephrase:
-                move = ask_again(self.method, self.state)
-                self.state = move.state
-                return f"{said.reply} {self._render(move)}", move.ui_stage
-            return self._then_ask(said.reply, bring_back=True), step.ui_stage
+            return self._sense(self.sense.interruptions[name], step)
         if kind == "objection" and not opened:
             self.state = park(self.state, name)
             return self._then_ask(self.method.objections[name].early or self.sense.park), step.ui_stage
         if kind == "objection":
-            move = object_to(self.method, self.state, name, self.cfg["objection_loops"])
-            self.state = move.state
-            return self._render(move), move.ui_stage
+            return self._go(object_to(self.method, self.state, name, self.cfg["objection_loops"]))
         if kind == "fact":
             f = self.offer.facts[name]
             answer = f.late_answer if opened and f.late_answer else f.answer
@@ -155,9 +185,30 @@ class ScriptSeller:
         move = self._listen(text, step)
         if self._hesitates(move):
             return self._revisit(), step.ui_stage
+        earlier = {k: v for k, v in self.state.slots.items() if k != step.capture}
         self.state = move.state
-        heard = "" if move.ack else self._acknowledge(text, step, opened)  # after the judge: a failed ack can't cost it
+        # after the judge: a failed ack can't cost it
+        heard = "" if move.ack else self._acknowledge(text, step, opened, earlier)
         return self._render(move, heard), move.ui_stage
+
+    def _go(self, move):
+        """Take a move as it is: no "I heard you" line in front of it."""
+        self.state = move.state
+        return self._render(move), move.ui_stage
+
+    def _sense(self, said, step):
+        """An everyday interruption: its reply, then what its `after` says."""
+        if said.after == "wait":
+            self._waiting = True
+            return said.reply, step.ui_stage
+        if said.after == "ask":
+            return self._then_ask(said.reply, bring_back=True), step.ui_stage
+        if said.after == "rephrase" or step.probes:
+            move = ask_again(self.method, self.state)
+        else:  # rephrase_else_move_on on a step with no other words: don't say the same line again
+            move = move_on(self.method, self.state)
+        text, stage = self._go(move)
+        return f"{said.reply} {text}", stage
 
     def _hesitates(self, move):
         """They held back at the revisit step while a worry from earlier is still unanswered."""
@@ -206,18 +257,30 @@ class ScriptSeller:
         elif not opened and asking:
             objections = [(k, o) for k, o in objections if o.early]  # "is this a scam?" gets an honest early line
         labels.update({f"objection:{k}": o.examples for k, o in objections})
+        if ready_open(self.method, self.state.step):
+            labels["ready:buyer"] = self.method.ready.examples
         found = self._recognise(text, labels)
         if not found.label or found.close:
             return None, None
-        if found.label.startswith("fact:"):
-            return found.label.split(":", 1)  # a product question is never an answer
+        kind, name = found.label.split(":", 1)
+        if kind == "fact":
+            return kind, name  # a product question is never an answer
         bar = 0.0 if answers else self.cfg["interrupt_threshold"]
         if answers:
             as_answer = self._recognise(text, answers)
             bar = as_answer.score if as_answer.label else 0.0  # only a real answer competes
         if any(r.signal == ANY for r in step.listen):
             bar = max(bar, self.cfg["interrupt_threshold"])  # any reply is an answer: interrupt only when sure
-        return found.label.split(":", 1) if found.score > bar else (None, None)
+        bar = max(bar, self._floor(kind, name))
+        return (kind, name) if found.score > bar else (None, None)
+
+    def _floor(self, kind, name):
+        """The lowest score a label counts at on any step (0 = no floor of its own)."""
+        if kind == "ready":
+            return self.method.ready.min_score
+        if kind == "sense":
+            return self.sense.interruptions[name].min_score
+        return 0.0
 
     def _listen(self, text, step, empty=False):
         labels = {r.signal: list(r.examples) for r in step.listen if r.examples}
@@ -236,23 +299,33 @@ class ScriptSeller:
         words = set(tokenize(text))
         return bool(words) and words <= set(self.cfg["stop_words"]) | set(self.cfg["filler_words"])
 
-    def _acknowledge(self, reply, step, opened):
-        """One short checked sentence showing their answer was heard, in their own words.
-        Nothing when it fails: honest silence beats a canned line."""
+    def _told(self, slots):
+        """Their earlier answers, one per line and cut short, for an AI prompt."""
+        return "\n".join(f"- {clip(v, self.cfg['memory_chars'])}" for v in slots.values() if v)
+
+    def _acknowledge(self, reply, step, opened, earlier):
+        """One short checked sentence showing their answer was heard, in their own words; it may link to
+        something they said earlier. Nothing when it fails: honest silence beats a canned line."""
         c = self.cfg
         if not c["ack"]:
             return ""
+        told = self._told(earlier)
+        memory = (
+            f"Earlier they told you:\n<earlier>\n{told}\n</earlier>\n"
+            "If it fits naturally, link their answer to something they told you earlier.\n"
+        ) if told else ""
         prompt = (
             "You are the salesperson on a call. You asked:\n"
             f"<question>{step.say_plain or step.say}</question>\n"
             f"They answered: <reply>{reply}</reply>\n"
+            f"{memory}"
             f"Write one short sentence (at most {c['ack_max_words']} words) that shows you heard them, "
             "using their own words and speaking to them as 'you'. No question, no advice, no praise. "
             "Answer with the sentence only."
         )
         ctx = CheckContext(
             c["ack_max_words"], 0, opened, self.offer.price,
-            prospect_words=frozenset(tokenize(reply)),
+            prospect_words=frozenset(tokenize(reply)) | frozenset(tokenize(told)),
             stop_words=frozenset(c["stop_words"]) | frozenset(c["ack_words"]),
         )
         return checked_line(self._ask, prompt, c["ack_tokens"], ctx, c, "ack", retries=c["ack_retries"]) or ""
@@ -261,24 +334,36 @@ class ScriptSeller:
         return is_question(text, self.cfg["question_starts"], self.cfg["filler_tags"])
 
     def _answer_uncovered(self, question, opened):
-        """One short line for a product question nothing covers. Always checked, always logged."""
+        """A short answer to a product question nothing covers, from the offer's facts and what they told us.
+        It may say anything the facts support, never a new number, promise or price: always checked,
+        always logged, and the honest fallback when the facts don't cover it."""
         c, offer = self.cfg, self.offer
-        facts = f"{offer.name} {offer.months}-month programme; pillars: {', '.join(offer.pillars)}"
+        facts = f"{offer.about} A {offer.months}-month programme. Pillars: {', '.join(offer.pillars)}.".strip()
         if opened:
-            facts += f"; price {offer.price}"
+            facts += f" The investment is {offer.price}."
+        told = self._told(self.state.slots)
+        memory = f"What they told you earlier:\n<earlier>\n{told}\n</earlier>\n" if told else ""
         prompt = (
-            f"Programme facts: {facts}\n"
+            f"You are the salesperson on a call. Programme facts:\n<facts>{facts}</facts>\n"
+            f"{memory}"
             "A prospect asked the question below.\n"
             f"<question>{question}</question>\n"
-            "Answer in one short sentence, the way that causes least resistance and helps move "
-            "toward yes. Use only the programme facts. Do not ask a question."
+            "Answer in one or two short sentences: warm, confident and helpful toward yes, linked to what "
+            "they told you when it fits. Say only what the facts support. Never invent numbers, results, "
+            "timeframes, promises, prices or links. Do not ask a question. "
+            "If the facts don't answer it, reply with NOT_COVERED only."
         )
+        fact_words = frozenset(tokenize(facts))
         ctx = CheckContext(
             c["max_words"], 0, opened, offer.price,
-            prospect_words=frozenset(tokenize(facts)),
-            stop_words=frozenset(c["stop_words"]) | frozenset(c["answer_filler_words"]),
+            known_numbers=frozenset(NUMBER.findall(facts)),  # their own figures are not ours to repeat back as results
+            banned=frozenset(c["answer_banned_words"]) - fact_words,
         )
-        answer = checked_line(self._ask, prompt, c["answer_tokens"], ctx, c, "product answer")
+
+        def clean(raw):
+            return None if "not_covered" in raw.lower().replace(" ", "_") else raw.strip()
+
+        answer = checked_line(self._ask, prompt, c["answer_tokens"], ctx, c, "product answer", clean)
         if c["log_uncovered"]:
             uncovered_log.info(json.dumps({
                 "question": clip(question, c["log_text_chars"]),
@@ -289,8 +374,8 @@ class ScriptSeller:
     def _then_ask(self, lead, bring_back=False):
         """`lead`, then (after an interruption or a made-up answer) a bring-back to their last point, then the
         current question again."""
-        step = self.method.steps[self.state.step]
-        question = self._fill(step.say, "", step.say_plain, self.state.slots)
+        say, say_plain = asked_line(self.method, self.state)  # the words last used, not always the first
+        question = self._fill(say, "", say_plain, self.state.slots)
         back = ""
         if bring_back and self.state.last_point:
             back = fill_line(self.sense.bring_back, {"last_point": self.state.last_point},

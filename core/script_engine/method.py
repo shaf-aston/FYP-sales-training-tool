@@ -1,5 +1,6 @@
 """Load and validate sales-method and offer YAML into frozen dataclasses."""
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -9,6 +10,9 @@ from core.loader import CONFIG_DIR
 from core.enums import Stage
 
 ANY = "any"  # listen route with no examples: taken for any reply
+# What happens after an interruption's reply: ask the step again (same words), wait for them to come
+# back, ask it in other words, or (a step with no other words) move on to the next step.
+AFTER = ("ask", "wait", "rephrase", "rephrase_else_move_on")
 
 
 @dataclass(frozen=True)
@@ -34,6 +38,7 @@ class Step:
     note: str = ""      # the source's "listen for" note: what the trainee should notice next
     doubts_answer: bool = False  # the question asks what holds them back: "money's tight" is the answer
     stuck: Route = None  # taken once the step has been asked again enough; every step with no `any` route has one
+    answered_by: str = ""  # regex with an `answer` group: the step's answer given early; the step is then skipped
 
     @property
     def routes(self):
@@ -52,6 +57,15 @@ class Objection:
 
 
 @dataclass(frozen=True)
+class Ready:
+    """A keen buyer says they're in before the pitch: skip to `then` instead of making them sit through it."""
+    examples: tuple
+    then: str           # the step the call jumps to
+    until: str          # only before this step; from here on the script itself is closing
+    min_score: float    # a match must score at least this on every step ("I'm in sales" must not jump)
+
+
+@dataclass(frozen=True)
 class Method:
     name: str
     first: str
@@ -60,6 +74,7 @@ class Method:
     price_step: str     # the price may be said from this step on
     follow_up: str      # said once an objection has been looped and met directly
     revisit_step: str = ""  # an objection parked before the price is raised again when they hesitate here
+    ready: Ready = None     # keen buyer shortcut; none = every buyer hears the whole script
 
 
 @dataclass(frozen=True)
@@ -79,6 +94,7 @@ class Offer:
     pillars: tuple
     context: str
     facts: dict
+    about: str = ""     # what the AI may say when no fact covers a question; empty = never answer from it
 
 
 class _StrictLoader(yaml.SafeLoader):
@@ -98,9 +114,9 @@ class Interruption:
     examples: tuple
     reply: str
     draft: bool
-    wait: bool = False  # say the reply and wait; don't ask the question again yet
+    after: str = "ask"  # one of AFTER: what follows the reply
     after_wait: bool = False  # only makes sense right after a `wait` reply ("ok, I'm back")
-    rephrase: bool = False  # then ask the step in other words (its next probe), not the same line
+    min_score: float = 0.0  # a match must score at least this on every step (words that are often answers too)
 
 
 @dataclass(frozen=True)
@@ -140,12 +156,18 @@ def _step(step_id, data):
         raise ValueError(f"step {step_id}: silent step needs an '{ANY}' route")
     if data.get("run_on") and not any(r.signal == ANY for r in listen):
         raise ValueError(f"step {step_id}: run_on step needs an '{ANY}' route")
+    answered_by = data.get("answered_by", "")
+    if answered_by:
+        if "answer" not in re.compile(answered_by).groupindex:
+            raise ValueError(f"step {step_id}: answered_by needs an (?P<answer>...) group")
+        if not data.get("capture") or not any(r.signal == ANY for r in listen):
+            raise ValueError(f"step {step_id}: answered_by needs a capture and an '{ANY}' route")
     return Step(
         step_id, stage, data.get("say", ""), data.get("say_plain", ""),
         data.get("capture", ""), probes,
         bool(data.get("draft")), listen, bool(data.get("run_on")),
         data.get("name", ""), data.get("note", ""), bool(data.get("doubts_answer")),
-        stuck,
+        stuck, answered_by,
     )
 
 
@@ -183,7 +205,20 @@ def parse_method(name, data):
             raise ValueError(f"method {name}: revisit_step {revisit_step!r} must be a step at or after the price")
         if not steps[revisit_step].stuck:
             raise ValueError(f"method {name}: revisit_step {revisit_step!r} needs a 'stuck' route")
-    return Method(name, first, steps, objections, price_step, follow_up, revisit_step)
+    return Method(name, first, steps, objections, price_step, follow_up, revisit_step,
+                  _ready(name, data.get("ready"), steps))
+
+
+def _ready(name, data, steps):
+    if not data:
+        return None
+    ready = Ready(tuple(data["examples"]), str(data["then"]), str(data["until"]), float(data["min_score"]))
+    order = list(steps)
+    if ready.then not in steps or ready.until not in steps:
+        raise ValueError(f"method {name}: ready then/until must be defined steps")
+    if order.index(ready.then) < order.index(ready.until):
+        raise ValueError(f"method {name}: ready then must sit at or after until, or the jump could repeat")
+    return ready
 
 
 def parse_offer(name, data):
@@ -196,17 +231,20 @@ def parse_offer(name, data):
     }
     return Offer(
         name, int(data["months"]), str(data["price"]),
-        tuple(data["pillars"]), data["context"], facts,
+        tuple(data["pillars"]), data["context"], facts, (data.get("about") or {}).get("text", ""),
     )
 
 
 def parse_common_sense(data):
     items = {
         k: Interruption(k, tuple(v["examples"]), v["reply"], bool(v.get("draft")),
-                        bool(v.get("wait")), bool(v.get("after_wait")), bool(v.get("rephrase")))
+                        v.get("after", "ask"), bool(v.get("after_wait")), float(v.get("min_score", 0.0)))
         for k, v in data["interruptions"].items()
     }
-    if "?" in data["park"] or any("?" in i.reply for i in items.values() if not i.wait):
+    for i in items.values():
+        if i.after not in AFTER:
+            raise ValueError(f"interruption {i.name}: after must be one of {AFTER}")
+    if "?" in data["park"] or any("?" in i.reply for i in items.values() if i.after != "wait"):
         raise ValueError("park and interruption replies must not ask (the step's question follows)")
     return CommonSense(data["bring_back"], data["park"], data["revisit"], items)
 

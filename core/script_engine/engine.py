@@ -1,5 +1,6 @@
 """Pure script logic: given where we are and what the prospect meant, pick the next line."""
 
+import re
 from dataclasses import dataclass, field, replace
 
 from core.script_engine.method import ANY
@@ -31,14 +32,19 @@ class Move:
 
 
 def _speak(method, state):
-    """Walk past silent steps, say any run_on steps, then say the step we land on."""
+    """Walk past silent and already-answered steps, say any run_on steps, then say the step we land on."""
     step, lead = method.steps[state.step], ()
-    while not step.say or step.run_on:
-        if step.say:
+    while not step.say or step.run_on or _answered(step, state):
+        if step.say and not _answered(step, state):
             lead += (step.id,)
         state = replace(state, step=_route(step, ANY).then)
         step = method.steps[state.step]
     return Move(step.say, replace(state, asks=0), step.ui_stage, not step.listen, lead=lead)
+
+
+def _answered(step, state):
+    """They gave this step's answer before it was asked (see `hear_ahead`)."""
+    return bool(step.answered_by) and step.capture in state.slots
 
 
 def _route(step, signal):
@@ -87,10 +93,53 @@ def _ask_again(method, state, step, ack=""):
     return Move(line, replace(state, asks=state.asks + 1), step.ui_stage, not step.listen, ack=ack)
 
 
+def asked_line(method, state):
+    """The words the current step was last asked in: (line, plain line). After an ask-again that is
+    the probe said last, so a side question doesn't rewind to the first wording."""
+    step = method.steps[state.step]
+    if state.asks == 0 or not step.probes:
+        return step.say, step.say_plain
+    return step.probes[min(state.asks - 1, len(step.probes) - 1)], ""
+
+
+def move_on(method, state):
+    """Leave the step without taking their reply as its answer (they pushed back on the question).
+    No slot is saved and the route's ack is not said: it may build on an answer they never gave."""
+    step = method.steps[state.step]
+    route = _route(step, ANY) or step.stuck
+    if route is None:
+        return _ask_again(method, state, step)
+    return _speak(method, replace(state, step=route.then))
+
+
+def jump(method, state, step_id):
+    """Go straight to `step_id`. They told us where they are, so an open play and parked worries are dropped."""
+    return _speak(method, replace(state, step=step_id, play="", parked=()))
+
+
+def hear_ahead(method, state, text):
+    """Keep an answer to a later step given early ("I want 5k a month"); that step is then skipped."""
+    order = list(method.steps)
+    slots = dict(state.slots)
+    for step_id in order[order.index(state.step) + 1:]:
+        step = method.steps[step_id]
+        if step.answered_by and step.capture not in slots:
+            found = re.search(step.answered_by, text, re.IGNORECASE)
+            if found:
+                slots[step.capture] = found.group("answer").strip()
+    return state if slots == state.slots else replace(state, slots=slots)
+
+
 def price_open(method, step_id):
     """True once the script has reached the step where the price may be said."""
     order = list(method.steps)
     return order.index(step_id) >= order.index(method.price_step)
+
+
+def ready_open(method, step_id):
+    """True while a keen buyer may skip ahead: before the method's `ready.until` step."""
+    order = list(method.steps)
+    return method.ready is not None and order.index(step_id) < order.index(method.ready.until)
 
 
 def object_to(method, state, name, loops):

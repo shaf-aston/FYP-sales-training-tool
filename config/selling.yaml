@@ -16,8 +16,10 @@ margin: 0.03           # top two labels closer than this = close call
 close_call_k: 3        # candidates handed to the judge on a close call
 max_words: 30          # longest sentence the AI may write
 ai_retries: 1
-ai_rest_seconds: 60    # after an AI failure, skip the AI this long (plain script lines meanwhile)
+ai_rest_seconds: 60    # after ai_fail_limit failures in a row, skip the AI this long (plain script lines meanwhile)
+ai_fail_limit: 3       # failures in a row (any user) before the AI rests; one slow call must not silence it for everyone
 ai_timeout_seconds: 2   # a slow AI call is abandoned; the turn uses the script line
+ai_workers: 4          # AI calls in flight at once; an abandoned slow call keeps its worker until it ends
 objection_loops: 2     # loop twice, third time go direct
 slot_words: 4          # longest phrase the AI may put into a script blank
 stop_words: [a, an, the, i, i'm, i've, my, me, to, of, and, or, in, on, at, for, is, am, are, be, it, that, this, so, with, as, by, we, you, your]
@@ -30,12 +32,13 @@ prospect_pronouns: [i, "i'm", "i've", "i'd", me, my, mine, myself]   # the bot w
 slot_tokens: 20        # max_tokens for a blank-filling call
 judge_tokens: 10       # max_tokens for a close-call judge
 answer_tokens: 60      # max_tokens for an uncovered product answer
-answer_filler_words: ["yes", "no", we, can, will, help, you, work, with, offer, also, all, your, our, is, are, the, a, an, to, of, and, for, in, on, it]
 uncovered_fallback: "I don't know that one offhand, I'll find out and let you know."   # draft wording
+answer_banned_words: [guarantee, guaranteed, guarantees, promise, promises, promised, overnight, days, weeks, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, twenty, thirty, fifty, hundred, hundreds, thousand, thousands, million, millions, percent, free, trial, refund, refunds, discount, discounts, www, com, http, https]   # a product answer never promises, sizes results, sets timeframes, makes up a policy or sends links (words the offer facts use are allowed)
 ack: true             # before the next scripted line, one short AI sentence showing their answer was heard (none when it fails a check)
 ack_max_words: 12
 ack_tokens: 30
 ack_retries: 0        # one try: a turn never waits on two ack calls
+memory_chars: 120     # longest piece of an earlier answer handed to the AI as memory
 ack_words: [you, your, you're, you've, got, it, sounds, makes, sense, hear, that, tough, hard, sorry, okay, right, fair, understand, so, really, lot, see, why, must, be, can, totally, thanks, for, sharing, not, no, easy, been, there, while]   # words the ack may add to the prospect's own; neutral or kind, never "great"
 log_uncovered: true    # write uncovered product questions to the log
 log_text_chars: 120    # longest piece of prospect text ever logged

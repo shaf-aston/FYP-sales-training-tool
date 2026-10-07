@@ -7,6 +7,7 @@ from core.utils import tokenize
 
 BLANK = re.compile(r"\{\w+\}")
 CURRENCY = re.compile(r"[$£€]\s?\d")
+NUMBER = re.compile(r"\d+")
 
 
 @dataclass(frozen=True)
@@ -17,6 +18,8 @@ class CheckContext:
     price: str = ""                # the offer price, as written
     prospect_words: frozenset = None   # when set, every word must come from here or stop_words
     stop_words: frozenset = frozenset()
+    known_numbers: frozenset = None    # when set, every number must come from here (no made-up figures)
+    banned: frozenset = frozenset()    # words the sentence must not use
 
 
 def clip(text, limit):
@@ -42,6 +45,10 @@ def check(text, ctx):
         broken.append("unfilled_blank")
     if not text.strip() or len(tokenize(text)) > ctx.max_words:
         broken.append("length")
+    if ctx.known_numbers is not None and set(NUMBER.findall(text)) - ctx.known_numbers:
+        broken.append("new_number")
+    if ctx.banned & set(tokenize(text)):
+        broken.append("banned_word")
     if ctx.prospect_words is not None:
         foreign = set(tokenize(text)) - ctx.prospect_words - ctx.stop_words
         if foreign:
