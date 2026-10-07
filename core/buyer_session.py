@@ -155,7 +155,7 @@ class BuyerSession:
         self.persona = persona
 
         self.product_type = product_type
-        self.product_context = build_product_context(product_type, persona)
+        self.product_context = build_product_context(product_type)
 
         self.state = BuyerState(
             readiness=behaviour["initial_readiness"],
@@ -501,11 +501,7 @@ class BuyerSession:
         return build_system_prompt(
             load_prospect_config().get("system_prompt_template", ""),
             persona=self.persona,
-            behaviour=self.difficulty_profile["behaviour"],
             readiness=self.state.readiness,
-            objections_raised=self.state.objections_raised,
-            turn_count=self.state.turn_count,
-            product_type=self.product_type,
             product_context=self.product_context,
             behaviour_rules=self.behaviour_rules,
         )

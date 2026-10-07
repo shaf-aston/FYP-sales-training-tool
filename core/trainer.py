@@ -31,21 +31,9 @@ def generate_training(flow_engine, user_msg):
 
 
 COACH_STYLES = {
-    "tactical": (
-        "Style: tactical and direct. Reply in 2-3 plain sentences. "
-        "Give the specific move the trainee should make next. "
-        "No markdown, no lists, no headings, no bold."
-    ),
-    "socratic": (
-        "Style: Socratic. Reply in 2-3 plain sentences. "
-        "Use a sharp question that exposes the gap or surfaces what the trainee hasn't considered. "
-        "No markdown, no lists, no headings."
-    ),
-    "teacher": (
-        "Style: teacher. Reply in 3-4 plain sentences. "
-        "Name the technique, explain briefly why it works, reference the exchange. "
-        "No markdown, no lists, no headings, no bold."
-    ),
+    "tactical": "Tactical and direct, 2-3 sentences: the specific move the trainee should make next.",
+    "socratic": "Socratic, 2-3 sentences: one sharp question that exposes the gap the trainee hasn't considered.",
+    "teacher": "Teacher, 3-4 sentences: name the technique, why it works, and point to the exchange.",
 }
 
 
@@ -55,24 +43,21 @@ def answer_training_question(router, flow_engine, question, style: str = "tactic
     rubric = get_stage_rubric(stage, flow_type)
 
     history = getattr(flow_engine, "conversation_history", []) or []
-    recent = "\n".join(f"{message.get('role', '').upper()}: {message.get('content', '')}" for message in history[-8:])
-
-    methodology = (
-        "NEPQ (Neuro-Emotional Persuasion Questioning)"
-        if flow_type == "consultative"
-        else "NEEDS -> MATCH -> CLOSE"
+    speaker = {"user": "PROSPECT", "assistant": "SELLER"}
+    recent = "\n".join(
+        f"{speaker.get(message.get('role'), '?')}: {message.get('content', '')}" for message in history[-8:]
     )
+
     if style not in COACH_STYLES:
         logger.warning("Unknown coach style %r, defaulting to tactical", style)
         style = "tactical"
-    style_guide = COACH_STYLES[style]
     concepts = ", ".join(rubric.get("key_concepts", []))
 
     system_prompt = (
-        f"You're a sales coach. Trainee is practising {flow_type} using {methodology}.\n"
-        f"Stage: {stage} - Goal: {rubric.get('goal', '')}\n"
-        f"Advance when: {rubric.get('advance_when', '')} | Concepts: {concepts}\n\n"
-        f"Recent: {recent}\n\n{style_guide}"
+        f"You're a sales coach. The trainee is practising a {flow_type} sale, now at stage: {stage}.\n"
+        f"Goal: {rubric.get('goal', '')} | Advance when: {rubric.get('advance_when', '')} | Concepts: {concepts}\n\n"
+        f"Recent:\n{recent}\n\n"
+        f"Style: {COACH_STYLES[style]} Plain sentences only: no markdown, lists, headings or bold."
     )
 
     try:

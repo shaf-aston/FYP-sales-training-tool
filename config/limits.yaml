@@ -7,7 +7,6 @@ response:            # Layer 3 output checks
 
 context:
   recent_history_window: 10
-  persona_checkpoint_turns: 6
   max_user_keywords: 6
   terse_input_threshold: 3
   min_turns_before_advance: 3   # more than 3 turns per stage frustrates the user

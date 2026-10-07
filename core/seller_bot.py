@@ -218,7 +218,6 @@ class SellerBot:
             user_message,
             objection_data=objection_data,
             turn_state=turn_state,
-            include_history=False,
         )
         llm_messages = (
             [{"role": "system", "content": system_prompt}]
