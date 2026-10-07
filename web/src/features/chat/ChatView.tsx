@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, Eyebrow } from "@/components/ui";
-import { ProspectSetup } from "@/features/prospect/ProspectSetup";
+import { BuyerSetup } from "@/features/sell/BuyerSetup";
 import { useSession } from "@/features/session/SessionContext";
 import { ChatHeader } from "./ChatHeader";
 import { InputBar } from "./InputBar";
@@ -11,15 +11,15 @@ import s from "./ChatView.module.css";
 
 export function ChatView() {
   useGlobalShortcuts();
-  const { mode, prospect } = useSession();
+  const { mode, sellSession } = useSession();
   return (
     <section className={s.view} aria-label="Chat">
       <ChatHeader />
-      {mode === "prospect" && !prospect ? (
+      {mode === "sell" && !sellSession ? (
         <div className={s.setup}>
           <Card tone="accent">
             <Eyebrow>Set up your buyer</Eyebrow>
-            <ProspectSetup />
+            <BuyerSetup />
           </Card>
         </div>
       ) : (

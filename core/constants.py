@@ -24,8 +24,8 @@ _check_positive(_L)
 # sessions
 MAX_SESSIONS = _L["sessions"]["seller_max"]
 SESSION_IDLE_MINUTES = _L["sessions"]["seller_idle_minutes"]
-MAX_PROSPECT_SESSIONS = _L["sessions"]["buyer_max"]
-PROSPECT_IDLE_MINUTES = _L["sessions"]["buyer_idle_minutes"]
+MAX_BUYER_SESSIONS = _L["sessions"]["buyer_max"]
+BUYER_IDLE_MINUTES = _L["sessions"]["buyer_idle_minutes"]
 CLEANUP_INTERVAL_SECONDS = _L["sessions"]["cleanup_interval_seconds"]
 
 # input validation

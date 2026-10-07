@@ -1,53 +1,36 @@
 "use client";
 
-import Link from "next/link";
-import { buttonClass, Icon, Notice, Tabs } from "@/components/ui";
-import { ProspectSetup } from "@/features/prospect/ProspectSetup";
+import { Notice, Tabs } from "@/components/ui";
+import { BuyerSetup } from "@/features/sell/BuyerSetup";
 import { useSession } from "@/features/session/SessionContext";
 import { config } from "@/lib/config";
-import { useUi } from "@/state/UiContext";
+import { useUi, type SidebarTab } from "@/state/UiContext";
 import { VoiceSettings } from "@/features/voice/VoiceSettings";
 import { StatusCard } from "./StatusCard";
 import { ToolsGrid } from "./ToolsGrid";
 import s from "./Sidebar.module.css";
 
-/** Role tab: on the buyer page, a door to the selling page; on the selling page, the buyer setup. */
-function RoleTab() {
-  const { role, prospect } = useSession();
-  if (role === "seller") {
-    return prospect ? <ProspectSetup /> : <Notice kind="empty">Set up your buyer in the main panel to start.</Notice>;
-  }
-  return (
-    <div className={s.stack}>
-      <div className={s.heading}>
-        <h2>Want to sell instead?</h2>
-        <p>Swap seats: the AI plays the buyer, you pick who they are and what they object to.</p>
-      </div>
-      <Link href={config.routes.sell} className={buttonClass("primary", s.switchLink)}>
-        <Icon name="swap" size={16} /> Switch to selling
-      </Link>
-    </div>
-  );
+/** Sell mode only: change the AI buyer once one is live (the first setup sits in the chat area). */
+function SetupTab() {
+  const { sellSession } = useSession();
+  return sellSession ? <BuyerSetup /> : <Notice kind="empty">Buyer settings appear here once you start.</Notice>;
 }
 
 export function Sidebar() {
   const { sidebarTab, setSidebarTab } = useUi();
-  const { role } = useSession();
+  const { mode } = useSession();
+  // Buy mode needs no setup tab: the header already has the switch to selling.
+  const tabs: { key: SidebarTab; label: string; content: React.ReactNode }[] = [
+    ...(mode === "sell" ? [{ key: "setup" as const, label: "Setup", content: <SetupTab /> }] : []),
+    { key: "tools", label: "Tools", content: <ToolsGrid /> },
+    { key: "settings", label: "Settings", content: <VoiceSettings /> },
+  ];
+  // A saved tab that this mode does not have (or an old one) falls back to the first tab.
+  const active = tabs.some((t) => t.key === sidebarTab) ? sidebarTab : tabs[0].key;
   return (
     <aside id={config.ids.panels} className={s.sidebar} aria-label="Session sidebar" tabIndex={-1}>
       <StatusCard />
-      <div className={s.tabs}>
-        <Tabs
-          label="Workspace"
-          active={sidebarTab}
-          onChange={setSidebarTab}
-          tabs={[
-            { key: "mode", label: role === "seller" ? "Setup" : "Role", content: <RoleTab /> },
-            { key: "tools", label: "Tools", content: <ToolsGrid /> },
-            { key: "settings", label: "Settings", content: <VoiceSettings /> },
-          ]}
-        />
-      </div>
+      <Tabs label="Workspace" active={active} onChange={setSidebarTab} tabs={tabs} />
     </aside>
   );
 }

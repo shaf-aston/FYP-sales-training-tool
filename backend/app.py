@@ -16,7 +16,7 @@ load_dotenv(ROOT_DIR / ".env")
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from core.constants import MAX_PROSPECT_SESSIONS, PROSPECT_IDLE_MINUTES  # noqa: E402
+from core.constants import BUYER_IDLE_MINUTES, MAX_BUYER_SESSIONS  # noqa: E402
 from core.script_engine.seller import shared_embedder  # noqa: E402
 from backend.messages import INTERNAL_SERVER_ERROR  # noqa: E402
 from backend.security import (  # noqa: E402
@@ -26,7 +26,7 @@ from backend.security import (  # noqa: E402
     initialize_security,
 )
 from backend import settings  # noqa: E402
-from backend.routes import analytics, chat, prospect, session  # noqa: E402
+from backend.routes import buy, knowledge, monitoring, old_paths, sell  # noqa: E402
 from backend.routes._utils import Sessions  # noqa: E402
 
 app = Flask(
@@ -46,11 +46,12 @@ rate_limiter, session_manager = initialize_security(
 app.after_request(SecurityHeadersMiddleware.apply)
 
 
-prospect_session_manager = SessionSecurityManager(
-    max_sessions=MAX_PROSPECT_SESSIONS,
-    idle_minutes=PROSPECT_IDLE_MINUTES,
+# Sell-mode sessions (the AI buyer). `session_manager` above holds buy mode's AI sellers.
+buyer_session_manager = SessionSecurityManager(
+    max_sessions=MAX_BUYER_SESSIONS,
+    idle_minutes=BUYER_IDLE_MINUTES,
     cleanup_interval=SecurityConfig.CLEANUP_INTERVAL_SECONDS,
-    manager_name="prospect sessions",
+    manager_name="buyer sessions",
 )
 
 
@@ -67,86 +68,48 @@ def _should_start_background_cleanup() -> bool:
 
 if _should_start_background_cleanup():
     session_manager.start_background_cleanup()
-    prospect_session_manager.start_background_cleanup()
+    buyer_session_manager.start_background_cleanup()
     # load the local meaning model now, so the first call doesn't wait ~2 s for it
     threading.Thread(target=shared_embedder, daemon=True, name="embedder-warmup").start()
 
 
-app.extensions["sessions"] = Sessions(seller=session_manager, buyer=prospect_session_manager)
+app.extensions["sessions"] = Sessions(seller=session_manager, buyer=buyer_session_manager)
 
-app.register_blueprint(session.bp)
-app.register_blueprint(chat.bp)
-app.register_blueprint(prospect.bp)
-app.register_blueprint(analytics.bp)
+app.register_blueprint(buy.bp)  # /api/buy/*: learner is the customer
+app.register_blueprint(sell.bp)  # /api/sell/*: learner is the salesperson
+app.register_blueprint(knowledge.bp)  # /api/knowledge
+app.register_blueprint(monitoring.bp)  # /api/health, /api/analytics/*, /api/feedback
+
+# Old paths (/api/init, /api/test/*, /api/prospect/* ...): remove once the
+# deployed web uses /api/buy and /api/sell. See backend/routes/old_paths.py.
+old_paths.register_old_paths(app)
 
 # Note: Rate limiting is applied via @require_rate_limit decorators in blueprint files
 
 
-def _prospect_product_groups():
-    """Build curated prospect-mode dropdown groups split by sales motion."""
-    try:
-        from core.loader import load_product_config, load_prospect_config
-
-        personas = load_prospect_config().get("personas", {})
-        products = load_product_config().get("products", {})
-
-        curated_ids = {
-            "transactional": [
-                "luxury_cars",
-                "premium_electronics",
-                "watches",
-                "travel",
-                "fashion",
-            ],
-            "consultative": [
-                "b2b_saas",
-                "high_ticket_sales_mentorship",
-                "financial_services",
-                "education",
-                "healthcare_services",
-            ],
-        }
-
-        grouped_options = {}
-        for strategy, product_ids in curated_ids.items():
-            options = []
-            for product_id in product_ids:
-                if product_id not in personas or not personas.get(product_id):
-                    continue
-                product_info = products.get(product_id, {})
-                options.append(
-                    {
-                        "id": product_id,
-                        "label": product_info.get("name")
-                        or product_id.replace("_", " ").title(),
-                    }
-                )
-            grouped_options[strategy] = options
-        return grouped_options
-    except Exception:
-        app.logger.exception("Failed to build prospect product groups")
-        return {"transactional": [], "consultative": []}
-
-
-@app.route("/api/prospect/product-groups")
-def prospect_product_groups():
-    """Curated prospect dropdown groups as JSON (curated dropdown groups)."""
-    from flask import jsonify
-
-    return jsonify({"success": True, "groups": _prospect_product_groups()})
-
-
 WEB_BUILD_DIR = ROOT_DIR / "web" / "out"
+
+# Old page URLs -> their new pages (permanent redirects, query string kept).
+OLD_PAGES = {
+    "practice": "/buy/",
+    "practice/sell": "/sell/",
+}
 
 
 @app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")
 def web_app(path: str):
     """Serve the built Next.js app (web/out). Rebuild with `npm run build` in web/."""
-    from flask import abort, send_from_directory
+    from flask import abort, redirect, request, send_from_directory
     from werkzeug.exceptions import NotFound
 
-    if path.startswith("api/") or not WEB_BUILD_DIR.is_dir():
+    if path.startswith("api/"):
+        abort(404)
+    old_page = OLD_PAGES.get(path.rstrip("/"))
+    if old_page:
+        query = request.query_string.decode("utf-8", "replace")
+        return redirect(f"{old_page}?{query}" if query else old_page, 301)
+    if not WEB_BUILD_DIR.is_dir():
         abort(404)
     # send_from_directory rejects traversal; a folder request falls back to its index.html.
     for candidate in (path or "index.html", f"{path.rstrip('/')}/index.html"):

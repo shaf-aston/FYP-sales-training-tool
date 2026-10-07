@@ -1,7 +1,7 @@
-# Products the AI buyer (prospect mode) can be shopping for.
+# Products the AI buyer (sell mode) can be shopping for.
 # context and knowledge: what the buyer has read about it (core/buyer_prompt.py).
-# name: label in the prospect product dropdown.
-# Seller mode sells only the scripted products in selling.yaml.
+# name: label in the sell-mode product picker.
+# Buy mode (the AI seller) sells only the scripted products in selling.yaml.
 
 products:
 

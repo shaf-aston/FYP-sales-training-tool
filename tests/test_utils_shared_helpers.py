@@ -1,4 +1,4 @@
-"""The two helpers quiz.py and prospect_evaluator.py used to each carry a copy of."""
+"""The two helpers quiz.py and sell_evaluator.py used to each carry a copy of."""
 from core.utils import merge_unique_items, tokenize
 
 

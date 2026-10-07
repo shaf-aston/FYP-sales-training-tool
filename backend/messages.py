@@ -17,9 +17,9 @@ MESSAGE_REQUIRED = "Message required"
 
 BOT_INIT_FAILED = "Setup didn't complete - please try initializing again."
 
-# Prospect module
-PROSPECT_ERROR = "The prospect got confused - send that again."
-PROSPECT_SCORING_ERROR = "Scoring didn't work - give it another go."
-PROSPECT_SESSION_NOT_FOUND = "Prospect session not found"
-PROSPECT_UNAVAILABLE = "The AI service isn't responding right now - nothing you did. Try again shortly."
-PROSPECT_REVIEW_ERROR = "Couldn't rebuild the session review - try again."
+# Sell mode (the AI buyer)
+SELL_ERROR = "The buyer got confused - send that again."
+SELL_SCORING_ERROR = "Scoring didn't work - give it another go."
+SELL_SESSION_NOT_FOUND = "Sell session not found"
+SELL_UNAVAILABLE = "The AI service isn't responding right now - nothing you did. Try again shortly."
+SELL_REVIEW_ERROR = "Couldn't rebuild the session review - try again."

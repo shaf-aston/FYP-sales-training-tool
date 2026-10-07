@@ -1,4 +1,4 @@
-"""Slice 5: a scripted call through /api/init, /api/chat and /api/edit (offline provider)."""
+"""Slice 5: a scripted call through /api/buy/init, /api/buy/chat and /api/buy/edit (offline provider)."""
 import pytest
 
 from backend.app import app
@@ -9,14 +9,14 @@ SCRIPT_PRODUCT = "high_ticket_sales_mentorship"  # listed under `products:` in s
 @pytest.fixture
 def client(monkeypatch):
     # the route only lists real providers; the offline test provider is let through here
-    monkeypatch.setattr("backend.routes.session.validate_provider", lambda data: ("dummy", None))
+    monkeypatch.setattr("backend.routes.buy.validate_provider", lambda data: ("dummy", None))
     app.config["TESTING"] = True
     return app.test_client()
 
 
 def _init(client):
     response = client.post(
-        "/api/init", json={"product_type": SCRIPT_PRODUCT}
+        "/api/buy/init", json={"product_type": SCRIPT_PRODUCT}
     )
     body = response.get_json()
     assert response.status_code == 200, body
@@ -24,7 +24,7 @@ def _init(client):
 
 
 def _say(client, headers, text):
-    response = client.post("/api/chat", json={"message": text}, headers=headers)
+    response = client.post("/api/buy/chat", json={"message": text}, headers=headers)
     assert response.status_code == 200, response.get_json()
     return response.get_json()
 
@@ -73,7 +73,7 @@ def test_edit_rewinds_the_script_too(client):
     first = _say(client, headers, "I want financial freedom")["message"]
     _say(client, headers, "ten thousand a month")
     edited = client.post(
-        "/api/edit", json={"index": 1, "message": "I want financial freedom"}, headers=headers
+        "/api/buy/edit", json={"index": 1, "message": "I want financial freedom"}, headers=headers
     ).get_json()
     assert edited["message"] == first
     assert edited["history"][0]["content"] == "I want financial freedom"
@@ -88,16 +88,16 @@ def test_slang_tag_is_not_a_product_question(client):
 
 def test_init_without_product_runs_the_script(client):
     # live: the web UI never picks a product, so the CAT script never ran
-    body = client.post("/api/init", json={}).get_json()
+    body = client.post("/api/buy/init", json={}).get_json()
     assert "making money online" in body["message"]
 
 
 @pytest.mark.parametrize("product", ["financial_services", "luxury_cars"])
 def test_a_product_with_no_script_gets_the_default_one(client, product):
-    # seller mode is scripted only; an unscripted product never gets AI-written sales talk
+    # buy mode is scripted only; an unscripted product never gets AI-written sales talk
     from backend.app import session_manager
 
-    body = client.post("/api/init", json={"product_type": product}).get_json()
+    body = client.post("/api/buy/init", json={"product_type": product}).get_json()
     assert session_manager.get(body["session_id"]).product_type == SCRIPT_PRODUCT
     assert "making money online" in body["message"]
 

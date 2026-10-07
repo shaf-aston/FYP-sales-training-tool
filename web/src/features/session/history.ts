@@ -35,14 +35,15 @@ export function nextIndex(messages: ChatMessage[]): number {
   return live.length ? live[live.length - 1].historyIndex + 1 : 0;
 }
 
-export interface ProspectSettings {
+/** Sell-mode preferences (hints and where the score shows). */
+export interface SellSettings {
   showHints: boolean;
   evalDisplay: "inline" | "modal" | "panel";
 }
 
-const DISPLAYS: ProspectSettings["evalDisplay"][] = ["inline", "modal", "panel"];
+const DISPLAYS: SellSettings["evalDisplay"][] = ["inline", "modal", "panel"];
 
-export function parseSettings(raw: string): ProspectSettings | undefined {
+export function parseSettings(raw: string): SellSettings | undefined {
   try {
     const v = JSON.parse(raw);
     return { showHints: v?.showHints !== false, evalDisplay: DISPLAYS.includes(v?.evalDisplay) ? v.evalDisplay : "inline" };

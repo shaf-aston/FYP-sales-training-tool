@@ -64,7 +64,7 @@ export interface QuizQuestion {
   success: true;
   question: string;
   type?: string;
-  turn?: number; // prospect quiz only
+  turn?: number; // sell-mode quiz only
 }
 
 export interface QuizResult {
@@ -80,7 +80,8 @@ export interface QuizResult {
   before?: { text: string; good: boolean }[];
 }
 
-export interface ProspectState {
+/** The AI buyer's state in sell mode. */
+export interface BuyerState {
   readiness: number; // 0..1
   objections_raised: number;
   turn_count: number;
@@ -97,18 +98,18 @@ export interface Persona {
   personality: string;
 }
 
-/** What the learner chose in setup. Empty fields mean "pick for me". */
-export interface ProspectPick {
+/** Which AI buyer the learner chose in setup. Empty fields mean "pick for me". */
+export interface BuyerPick {
   persona?: string;
   objection?: string;
 }
 
-export interface ProspectInitRes {
+export interface SellInitRes {
   success: true;
   session_id: string;
   message: string;
   persona: Persona;
-  state: ProspectState;
+  state: BuyerState;
   difficulty: Difficulty;
   product_type: string;
   latency_ms: number;
@@ -119,10 +120,10 @@ export interface ProspectInitRes {
   feedback_style: string;
 }
 
-export interface ProspectChatRes {
+export interface SellChatRes {
   success: true;
   message: string;
-  state: ProspectState;
+  state: BuyerState;
   latency_ms: number;
   provider: string;
   model: string;
@@ -168,7 +169,7 @@ export interface RedoRes {
   success: true;
   turn: number;
   message: string;
-  state: ProspectState;
+  state: BuyerState;
   outcome: Outcome;
 }
 
@@ -192,5 +193,6 @@ export type KnowledgeData = Partial<Record<KnowledgeField, string>>;
 export interface FeedbackReq {
   rating: number | null;
   comment: string | null;
-  page: "chat" | "prospect";
+  /** The mode the feedback was sent from. */
+  page: "buy" | "sell";
 }

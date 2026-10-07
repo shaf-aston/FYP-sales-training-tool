@@ -18,7 +18,7 @@ rate_limits:         # [max_requests, window_seconds]
   init: [10, 60]
   chat: [60, 60]
   knowledge: [10, 60]
-  prospect: [30, 60]
+  sell: [30, 60]
   feedback: [5, 300]
 
 llm:                 # one profile per kind of call; pass as **LLM["name"]

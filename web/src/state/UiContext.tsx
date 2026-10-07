@@ -8,7 +8,8 @@ import { useStoredState } from "@/lib/useStoredState";
 
 export type SidePanel = "coach" | "quiz" | null;
 export type DialogName = "help" | "review" | "drills" | "evaluation" | "feedback" | null;
-export type SidebarTab = "mode" | "tools" | "settings";
+/** "setup" exists only in sell mode; the sidebar falls back to its first tab when the saved one is missing. */
+export type SidebarTab = "setup" | "tools" | "settings";
 
 interface UiValue {
   sidePanel: SidePanel;
@@ -23,13 +24,13 @@ interface UiValue {
 
 const UiContext = createContext<UiValue | null>(null);
 
-const TABS: SidebarTab[] = ["mode", "tools", "settings"];
+const TABS: SidebarTab[] = ["setup", "tools", "settings"];
 const parseTab = (raw: string) => (TABS.includes(raw as SidebarTab) ? (raw as SidebarTab) : undefined);
 
 export function UiProvider({ children }: { children: ReactNode }) {
   const [sidePanel, setSidePanel] = useState<SidePanel>(null);
   const [dialog, setDialog] = useState<DialogName>(null);
-  const [sidebarTab, setSidebarTab] = useStoredState<SidebarTab>(storageKeys.sidebarTab, "mode", parseTab);
+  const [sidebarTab, setSidebarTab] = useStoredState<SidebarTab>(storageKeys.sidebarTab, "setup", parseTab);
 
   const value = useMemo<UiValue>(
     () => ({

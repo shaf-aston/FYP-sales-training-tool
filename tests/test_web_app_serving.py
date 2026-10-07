@@ -18,7 +18,13 @@ def test_build_is_committed():
     # The server deploy has no Node, so the built app must be in the repo.
     assert (OUT / "index.html").is_file(), "run `npm run build` in web/ and commit web/out"
     assert (OUT / "knowledge" / "index.html").is_file()
-    assert (OUT / "practice" / "index.html").is_file()
+
+
+@pytest.mark.parametrize("page", ["buy", "sell"])
+def test_mode_pages_are_served(client, page):
+    if not (OUT / page / "index.html").is_file():
+        pytest.skip(f"web/out/{page} is not built yet")
+    assert client.get(f"/{page}/").status_code == 200
 
 
 def test_root_serves_the_app(client):
@@ -29,7 +35,27 @@ def test_root_serves_the_app(client):
 
 def test_folder_paths_serve_their_index(client):
     assert client.get("/knowledge/").status_code == 200
-    assert client.get("/practice/").status_code == 200
+
+
+@pytest.mark.parametrize(
+    "old, new",
+    [
+        ("/practice/", "/buy/"),
+        ("/practice", "/buy/"),
+        ("/practice/sell/", "/sell/"),
+        ("/practice/sell", "/sell/"),
+    ],
+)
+def test_old_practice_pages_redirect_for_good(client, old, new):
+    response = client.get(old)
+    assert response.status_code == 301
+    assert response.headers["Location"] == new
+
+
+def test_redirect_keeps_the_query_string(client):
+    response = client.get("/practice/sell/?product=watches&difficulty=hard")
+    assert response.status_code == 301
+    assert response.headers["Location"] == "/sell/?product=watches&difficulty=hard"
 
 
 def test_unknown_page_is_404(client):

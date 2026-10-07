@@ -1,4 +1,4 @@
-"""Where one seller-mode call is: its history and the stage the script last showed."""
+"""Where one buy-mode call is: its history and the stage the script last showed."""
 
 from typing import Any
 

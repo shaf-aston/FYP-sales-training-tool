@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from core.loader import load_prospect_config
+from core.loader import load_sell_config
 from core.session_review import build_review
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 @pytest.fixture
 def behaviour():
-    return load_prospect_config()["difficulty_profiles"]["medium"]["behaviour"]
+    return load_sell_config()["difficulty_profiles"]["medium"]["behaviour"]
 
 
 def test_a_strong_discovery_question_and_a_price_first_line_are_rated_differently(behaviour):
@@ -69,6 +69,8 @@ def test_a_strong_session_is_allowed_praise(behaviour):
 
 
 def test_the_review_page_praises_only_a_passing_grade():
-    tsx = (ROOT / "web/src/features/prospect/ReviewDialog.tsx").read_text(encoding="utf8")
+    # Found by name, so renaming its feature folder does not break this test.
+    [dialog] = (ROOT / "web" / "src" / "features").glob("*/ReviewDialog.tsx")
+    tsx = dialog.read_text(encoding="utf8")
 
     assert "summary.went_well" in tsx and '["D", "F"]' in tsx

@@ -14,7 +14,7 @@ READINESS_LABELS = [
 
 
 def build_product_context(product_type: str) -> str:
-    """What the buyer knows about the product: config and custom prospect data.
+    """What the buyer knows about the product: config and custom knowledge.
 
     The persona's needs, pains and budget are not repeated here; the template has them.
     """
@@ -24,11 +24,11 @@ def build_product_context(product_type: str) -> str:
         context = product.get("context", "various products and services")
         blocks = [product.get("knowledge", "")]
 
-        # This KB injection only for prospect-mode
-        prospect_knowledge = knowledge.get_custom_knowledge_text()
-        if prospect_knowledge:
+        # This KB injection only for sell mode
+        custom_knowledge = knowledge.get_custom_knowledge_text()
+        if custom_knowledge:
             blocks.append(
-                f"Your research notes (you don't know every technical detail):\n{prospect_knowledge}"
+                f"Your research notes (you don't know every technical detail):\n{custom_knowledge}"
             )
         body = "\n\n".join(b for b in blocks if b)
         return f"{context}\n\n{body}" if body else context

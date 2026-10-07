@@ -1,4 +1,4 @@
-"""Seller-mode bot: the script engine picks every line; this class keeps the call's history,
+"""Buy mode's AI seller: the script engine picks every line; this class keeps the call's history,
 rewind snapshots and analytics."""
 
 import json

@@ -1,4 +1,4 @@
-"""One fallback path for every caller: advisor chatbot and prospect buyer alike."""
+"""One fallback path for every caller: the AI seller and the AI buyer alike."""
 
 import pytest
 

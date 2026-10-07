@@ -3,7 +3,7 @@
 export const config = {
   /** API lives on the same origin (Flask serves the built app; dev proxies /api). */
   apiBase: "",
-  /** DOM id of the session/mode/tools/settings sidebar (target of the mobile "Panels" button). */
+  /** DOM id of the sidebar (target of the mobile "Panels" button). */
   ids: { panels: "session-panels" },
   chatTimeoutMs: 25_000,
   slowReplyMs: 5_000,
@@ -24,14 +24,15 @@ export const config = {
     /** Browser speech-synthesis rate limits. */
     rateClamp: { min: 0.1, max: 10 },
   },
-  prospect: {
+  /** Sell mode: readiness chip and the celebration when the AI buyer says yes. */
+  sell: {
     deltaChipMs: 1_600,
     confetti: { count: 90, durationMs: 2_200, gravity: 0.18 },
     /** Grades that earn the celebration (together with a sale). */
     celebrateGrades: ["A"],
   },
   knowledge: { nameMax: 100, fieldMax: 1_000 },
-  /** Prospect setup: the learner's own objection (server caps at the same length) and quick picks. */
+  /** Buyer setup in sell mode: the learner's own objection (server caps at the same length) and quick picks. */
   chosenObjection: {
     max: 200,
     picks: [
@@ -63,19 +64,22 @@ export const config = {
     lightness: "90%, 65%",
   },
   /** Page addresses, so links never hard-code paths. */
-  routes: { home: "/", practice: "/practice/", sell: "/practice/sell/", knowledge: "/knowledge/" },
+  routes: { home: "/", buy: "/buy/", sell: "/sell/", knowledge: "/knowledge/" },
   landing: { wordRotateMs: 2_200, demoStepMs: 1_800, revealThreshold: 0.15 },
   drills: { intervalsDays: [0, 1, 3, 7, 21] },
   readinessBands: { low: 30, mid: 60 },
   quizBands: { correct: 70, partial: 40, stage: { correct: 100, partial: 50 } },
 } as const;
 
-/** Every localStorage key in one place. Values kept identical to the old UI so saved state carries over. */
+/**
+ * Every localStorage key in one place. The key STRINGS never change, even when the names
+ * here do (e.g. sellSettings is still stored as "sellSettings"), so saved settings survive.
+ */
 export const storageKeys = {
   sessionId: "salesRoleplaySessionId",
   sidebarTab: "sidebarTab",
   trainingPanelOpen: "trainingPanelOpen",
-  prospectSettings: "prospectSettings",
+  sellSettings: "sellSettings",
   trainingStyle: "trainingStyle",
   ttsSpeed: "ttsPlaybackSpeed",
   autoSendDictation: "autoSendDictation",

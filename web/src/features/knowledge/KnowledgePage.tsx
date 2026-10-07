@@ -15,10 +15,10 @@ const sectionId = (id: string) => `s-${id}`;
 const SECTION_IDS = FIELDS.map((f) => sectionId(f.id));
 
 function BackLink() {
-  const prospect = useSearchParams().get("mode") === "prospect";
+  const sell = useSearchParams().get("mode") === "sell";
   return (
-    <Link href={prospect ? config.routes.sell : config.routes.practice} className={s.back}>
-      ← {prospect ? "Back to selling" : "Back to chat"}
+    <Link href={sell ? config.routes.sell : config.routes.buy} className={s.back}>
+      ← {sell ? "Back to selling" : "Back to buying"}
     </Link>
   );
 }
@@ -112,7 +112,7 @@ export function KnowledgePage() {
             <div>
               <h1 className={s.title}>Product Knowledge</h1>
             </div>
-            <Suspense fallback={<Link href={config.routes.practice} className={s.back}>← Back to chat</Link>}>
+            <Suspense fallback={<Link href={config.routes.buy} className={s.back}>← Back to buying</Link>}>
               <BackLink />
             </Suspense>
           </header>

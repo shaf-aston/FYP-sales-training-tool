@@ -10,27 +10,19 @@ import { MODE_META } from "@/lib/labels";
 import { useUi } from "@/state/UiContext";
 import s from "./ChatHeader.module.css";
 
-/** Each seat's icon and where the other seat lives. */
-const ROLES = {
-  buyer: {
-    icon: "buyer",
-    switchLabel: "Switch to selling",
-    switchTo: config.routes.sell,
-  },
-  seller: {
-    icon: "seller",
-    switchLabel: "Switch to buying",
-    switchTo: config.routes.practice,
-  },
+/** Each mode's icon and the page of the other mode. */
+const MODES = {
+  buy: { icon: "person", switchTo: config.routes.sell },
+  sell: { icon: "speech", switchTo: config.routes.buy },
 } as const;
 
 export function ChatHeader() {
   const { openDialog } = useUi();
-  const { mode, reset, role, prospect } = useSession();
-  const modeInfo = MODE_META[mode];
+  const { mode, reset, sellSession } = useSession();
+  const words = MODE_META[mode];
   const confirm = useConfirm();
   const router = useRouter();
-  const seat = ROLES[role];
+  const here = MODES[mode];
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -69,7 +61,7 @@ export function ChatHeader() {
   const onReset = async () => {
     setMenuOpen(false);
     const ok = await confirm({
-      title: "Clear this practice session?",
+      title: "Reset this conversation?",
       body: "This wipes the conversation and starts again. You cannot undo it.",
       confirmLabel: "Reset session",
       cancelLabel: "Keep session",
@@ -78,31 +70,31 @@ export function ChatHeader() {
     if (ok) await reset();
   };
 
-  // Leaving the selling page drops the live buyer; ask first if the learner has started.
+  // Leaving sell mode drops the live buyer; ask first if the learner has started.
   const onSwitch = async (e: ReactMouseEvent<HTMLAnchorElement>) => {
-    if (!prospect || prospect.state.turn_count < 1) return;
+    if (!sellSession || sellSession.state.turn_count < 1) return;
     e.preventDefault();
     const ok = await confirm({
-      title: "Leave this buyer?",
-      body: "Switching to the buyer seat ends this practice conversation.",
-      confirmLabel: "Switch role",
+      title: "Switch to buying?",
+      body: "This ends the conversation with your buyer.",
+      confirmLabel: "Switch to buying",
       cancelLabel: "Keep selling",
     });
-    if (ok) router.push(seat.switchTo);
+    if (ok) router.push(here.switchTo);
   };
 
   return (
     <header className={s.header}>
       <div className={s.copy}>
         <p className={s.eyebrow}>
-          <Icon name={seat.icon} size={14} /> Eloquence
+          <Icon name={here.icon} size={14} /> {words.name}
         </p>
-        <h1 className={s.title}>{modeInfo.label}</h1>
-        <p className={s.subtitle}>{modeInfo.note}</p>
+        <h1 className={s.title}>{words.heading}</h1>
+        <p className={s.subtitle}>{words.note}</p>
       </div>
       <div className={s.actions}>
-        <Link href={seat.switchTo} className={buttonClass("pill", s.switch)} onClick={onSwitch}>
-          <Icon name="swap" size={16} /> {seat.switchLabel}
+        <Link href={here.switchTo} className={buttonClass("pill", s.switch)} onClick={onSwitch}>
+          <Icon name="swap" size={16} /> {words.switchLabel}
         </Link>
         <Button
           variant="pill"

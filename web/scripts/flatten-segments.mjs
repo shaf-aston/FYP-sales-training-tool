@@ -1,8 +1,9 @@
 // Runs after `next build`. On Windows, Next 16.3's static export builds prefetch file names
 // from `path.relative` (backslashes) but `convertSegmentPathToStaticExportFilename` only turns
-// `/` into `.`, so it writes folders (practice/__next.practice/sell/__PAGE__.txt) where the
-// browser asks for one dotted name (practice/__next.practice.sell.__PAGE__.txt) → every prefetch
-// 404s. This moves each file to its dotted name. Linux/macOS output is already flat: no-op there.
+// `/` into `.`, so it writes folders (sell/__next.sell/__PAGE__.txt) where the browser asks for
+// one dotted name (sell/__next.sell.__PAGE__.txt) → every prefetch 404s. Even a one-level route
+// like /buy/ or /sell/ has a separator before __PAGE__, so this is still needed with flat routes.
+// It moves each file to its dotted name. Linux/macOS output is already flat: no-op there.
 import { readdirSync, renameSync, rmSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";

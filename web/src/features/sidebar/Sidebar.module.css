@@ -1,17 +1,13 @@
+/* One rhythm: the status card and the tabs sit --space-4 apart and --space-4 from the edges. */
 .sidebar {
   display: flex;
   flex-direction: column;
+  gap: var(--space-4);
   min-height: 0;
+  padding: var(--space-4);
   overflow-y: auto;
   border-left: 1px solid var(--border-faint);
   background: var(--glass-bg-strong);
-}
-.tabs {
-  padding: 0 var(--space-4) var(--space-4);
-}
-.stack {
-  display: grid;
-  gap: var(--space-3);
 }
 .toolGrid {
   display: grid;
@@ -55,11 +51,4 @@
     border-top: 1px solid var(--border-faint);
     overflow-y: visible;
   }
-}
-.switchLink {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  text-decoration: none;
 }

@@ -111,9 +111,9 @@ strategy_names:
   transactional: "Quick sale"
   intent: "Intent-led"
 
-# Prospect mode: the learner is the seller, so the quiz replays one of their own
+# Sell mode: the learner is the seller, so the quiz replays one of their own
 # turns. {turn} and {line} are filled in from their session.
-prospect_question: 'On turn {turn} you said: "{line}" - what would you say instead to get the buyer talking?'
+sell_question: 'On turn {turn} you said: "{line}" - what would you say instead to get the buyer talking?'
 
 # Quiz question templates by type
 questions:

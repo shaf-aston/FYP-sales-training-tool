@@ -81,7 +81,7 @@ export function FeedbackDialog() {
     setError("");
     setBusy(true);
     try {
-      await api.feedback({ rating: rating || null, comment: text || null, page: mode === "prospect" ? "prospect" : "chat" });
+      await api.feedback({ rating: rating || null, comment: text || null, page: mode });
       setSent(true);
     } catch {
       setError("Your feedback did not send. Check your connection and try again.");

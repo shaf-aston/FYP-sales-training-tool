@@ -12,7 +12,7 @@ from core.analytics.session_analytics import SessionAnalytics
 from core.providers.base import LLMResponse
 
 
-class StubProspectProvider:
+class StubBuyerProvider:
     def is_available(self):
         return True
 
@@ -30,7 +30,7 @@ def client(monkeypatch):
     app.config["TESTING"] = True
     monkeypatch.setattr(
         "core.services.provider_router.create_provider",
-        lambda *_args, **_kwargs: StubProspectProvider(),
+        lambda *_args, **_kwargs: StubBuyerProvider(),
     )
     return app.test_client()
 
@@ -46,57 +46,57 @@ def events_for(session_id, event):
 @pytest.fixture
 def played_session(client):
     started = client.post(
-        "/api/prospect/init", json={"difficulty": "medium", "product_type": "default"}
+        "/api/sell/init", json={"difficulty": "medium", "product_type": "default"}
     ).get_json()
     headers = {"X-Session-ID": started["session_id"]}
     client.post(
-        "/api/prospect/chat",
+        "/api/sell/chat",
         json={"message": "What made you start looking at this now?"},
         headers=headers,
     )
     return headers
 
 
-def test_ending_a_prospect_session_is_recorded(client, played_session):
+def test_ending_a_sell_session_is_recorded(client, played_session):
     session_id = played_session["X-Session-ID"]
 
-    client.post("/api/prospect/reset", headers=played_session)
+    client.post("/api/sell/reset", headers=played_session)
 
     ended = events_for(session_id, "session_end")
     assert len(ended) == 1
-    assert ended[0]["engine"] == "prospect"
+    assert ended[0]["engine"] == "sell"
     assert ended[0]["outcome"] in {"active", "sold", "walked"}
     assert ended[0]["turn_count"] == 1
     assert "final_readiness" in ended[0]
 
 
-def test_a_prospect_session_is_counted_at_the_start_too(client, played_session):
+def test_a_sell_session_is_counted_at_the_start_too(client, played_session):
     """Ends are only meaningful next to starts from the same engine."""
     started = events_for(played_session["X-Session-ID"], "session_start")
 
     assert len(started) == 1
-    assert started[0]["engine"] == "prospect"
+    assert started[0]["engine"] == "sell"
     assert started[0]["difficulty"] == "medium"
 
 
-def test_a_prospect_score_is_kept_not_just_shown(client, played_session):
+def test_a_sell_score_is_kept_not_just_shown(client, played_session):
     session_id = played_session["X-Session-ID"]
 
-    response = client.post("/api/prospect/evaluate", headers=played_session)
+    response = client.post("/api/sell/evaluate", headers=played_session)
 
     assert response.status_code == 200
     scored = events_for(session_id, "session_score")
     assert len(scored) == 1
     assert isinstance(scored[0]["total"], int)
     assert scored[0]["breakdown"]
-    assert scored[0]["engine"] == "prospect"
+    assert scored[0]["engine"] == "sell"
 
 
 def test_resetting_a_session_that_is_already_gone_records_nothing(client):
     """A stale id must not invent an ending for a session nobody played."""
     ghost = "b" * 32
 
-    response = client.post("/api/prospect/reset", headers={"X-Session-ID": ghost})
+    response = client.post("/api/sell/reset", headers={"X-Session-ID": ghost})
 
     assert response.status_code == 200
     assert events_for(ghost, "session_end") == []
