@@ -12,15 +12,15 @@ const SECTIONS: { title: string; items: { term?: string; text: string; keys?: st
   {
     title: "Two ways to practise",
     items: [
-      { term: MODE_META.seller.label, text: "you are the customer. An AI salesperson talks to you, and you can quiz yourself on what stage the sale is in." },
-      { term: MODE_META.prospect.label, text: "you are the salesperson. An AI buyer answers you." },
+      { term: MODE_META.buy.name, text: "you're the customer. The AI sells to you; quiz yourself on what stage the sale is in." },
+      { term: MODE_META.sell.name, text: "you're the salesperson. The AI is your buyer." },
     ],
   },
   {
     title: "Reading your progress",
     items: [
       { term: "Buying readiness bar", text: "how ready the buyer is to buy. Good questions and listening push it up; pushy or vague lines push it down." },
-      { term: "Score", text: "when you end a practice, it rates the whole conversation out of 100%." },
+      { term: "Score", text: "end a sell-mode conversation to get a mark out of 100%." },
     ],
   },
   {
@@ -36,6 +36,7 @@ const SECTIONS: { title: string; items: { term?: string; text: string; keys?: st
     items: [
       { keys: "?", text: "opens this window" },
       { keys: "/", text: "jumps to the message box" },
+      { keys: "Shift+Enter", text: "starts a new line" },
       { keys: "Esc", text: "closes any open window" },
     ],
   },

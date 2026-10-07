@@ -118,7 +118,7 @@ export function Landing() {
         <nav className={s.links}>
           <a href="#how">How it works</a>
           <a href="#try">Try it</a>
-          <Link href={routes.practice} className={buttonClass("primary")}>
+          <Link href={routes.buy} className={buttonClass("primary")}>
             Start practising
           </Link>
         </nav>
@@ -140,12 +140,12 @@ export function Landing() {
             </h1>
             <p className={s.lead}>Roleplay with an AI buyer who pushes back. A live coach scores every move. Ten minutes a day.</p>
             <div className={s.ctas}>
-              <Link href={routes.practice} className={buttonClass("primary", s.bigCta)}>
+              <Link href={routes.buy} className={buttonClass("primary", s.bigCta)}>
                 Start a practice call →
               </Link>
-              <a href="#try" className={buttonClass("pill")}>
-                Try one objection
-              </a>
+              <Link href={routes.sell} className={buttonClass("pill")}>
+                Practise selling
+              </Link>
             </div>
           </div>
           <LiveDemo />
@@ -204,16 +204,22 @@ export function Landing() {
           <h2 className={s.h1}>
             Your next buyer is <span className="neon-text">waiting.</span>
           </h2>
-          <Link href={routes.practice} className={buttonClass("primary", s.bigCta)}>
-            Start practising →
-          </Link>
+          <div className={s.ctas}>
+            <Link href={routes.buy} className={buttonClass("primary", s.bigCta)}>
+              Start practising →
+            </Link>
+            <Link href={routes.sell} className={buttonClass("pill")}>
+              Practise selling
+            </Link>
+          </div>
         </section>
       </main>
 
       <footer className={s.footer}>
         <span className={`${s.brand} neon-text`}>Eloquence</span>
         <nav className={s.links}>
-          <Link href={routes.practice}>Practice</Link>
+          <Link href={routes.buy}>Buy mode</Link>
+          <Link href={routes.sell}>Sell mode</Link>
           <Link href={routes.knowledge}>Product knowledge</Link>
           <a href="#try">Try an objection</a>
         </nav>

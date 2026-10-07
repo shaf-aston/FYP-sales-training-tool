@@ -65,42 +65,40 @@ async function request<R>(path: string, opts: RequestOptions = {}): Promise<R> {
 export function createHttpApi() {
   const chat = config.chatTimeoutMs;
   return {
-    // Seller-bot session
-    init: (sessionId?: string | null) => request<T.InitRes>("/api/init", { body: sessionId ? { session_id: sessionId } : {} }),
-    chat: (sid: string, message: string) => request<T.ChatRes>("/api/chat", { body: { message }, sessionId: sid, timeoutMs: chat }),
-    edit: (sid: string, index: number, message: string) =>
-      request<T.EditRes>("/api/edit", { body: { index, message }, sessionId: sid, timeoutMs: chat }),
-    reset: (sid: string) => request<{ success: true }>("/api/reset", { body: {}, sessionId: sid }),
+    // Buy mode: the learner is the customer, the AI seller sells.
+    buyInit: (sessionId?: string | null) => request<T.InitRes>("/api/buy/init", { body: sessionId ? { session_id: sessionId } : {} }),
+    buyChat: (sid: string, message: string) => request<T.ChatRes>("/api/buy/chat", { body: { message }, sessionId: sid, timeoutMs: chat }),
+    buyEdit: (sid: string, index: number, message: string) =>
+      request<T.EditRes>("/api/buy/edit", { body: { index, message }, sessionId: sid, timeoutMs: chat }),
+    buyReset: (sid: string) => request<{ success: true }>("/api/buy/reset", { body: {}, sessionId: sid }),
     askCoach: (sid: string, question: string, style: T.TrainingStyle) =>
-      request<{ success: true; answer: string }>("/api/training/ask", { body: { question, style }, sessionId: sid, timeoutMs: chat }),
-
-    // Quiz (seller-bot)
-    quizQuestion: (sid: string, type: T.QuizType) => request<T.QuizQuestion>(`/api/test/question?type=${type}`, { sessionId: sid }),
-    quizAnswer: (sid: string, type: T.QuizType, answer: string) => {
+      request<{ success: true; answer: string }>("/api/buy/coach", { body: { question, style }, sessionId: sid, timeoutMs: chat }),
+    buyQuizQuestion: (sid: string, type: T.QuizType) => request<T.QuizQuestion>(`/api/buy/quiz/question?type=${type}`, { sessionId: sid }),
+    buyQuizAnswer: (sid: string, type: T.QuizType, answer: string) => {
       const route = { stage: ["stage", "answer"], next_move: ["next-move", "response"], direction: ["direction", "explanation"] }[type];
-      return request<T.QuizResult>(`/api/test/${route[0]}`, { body: { [route[1]]: answer }, sessionId: sid, timeoutMs: chat });
+      return request<T.QuizResult>(`/api/buy/quiz/${route[0]}`, { body: { [route[1]]: answer }, sessionId: sid, timeoutMs: chat });
     },
 
-    // Prospect practice
-    productGroups: () => request<{ success: true; groups: T.ProductGroups }>("/api/prospect/product-groups"),
+    // Sell mode: the learner is the salesperson, the AI buyer answers.
+    productGroups: () => request<{ success: true; groups: T.ProductGroups }>("/api/sell/product-groups"),
     personas: (productType: string) =>
-      request<{ ok: true; personas: T.Persona[] }>(`/api/prospect/personas?product_type=${encodeURIComponent(productType)}`),
-    prospectInit: (difficulty: T.Difficulty, productType: string, pick: T.ProspectPick = {}) =>
-      request<T.ProspectInitRes>("/api/prospect/init", {
+      request<{ ok: true; personas: T.Persona[] }>(`/api/sell/personas?product_type=${encodeURIComponent(productType)}`),
+    sellInit: (difficulty: T.Difficulty, productType: string, pick: T.BuyerPick = {}) =>
+      request<T.SellInitRes>("/api/sell/init", {
         body: { difficulty, product_type: productType, persona: pick.persona, objection: pick.objection },
         timeoutMs: chat,
       }),
-    prospectChat: (sid: string, message: string, showHints: boolean) =>
-      request<T.ProspectChatRes>("/api/prospect/chat", { body: { message, show_hints: showHints }, sessionId: sid, timeoutMs: chat }),
-    prospectReset: (sid: string) => request<{ success: true }>("/api/prospect/reset", { body: {}, sessionId: sid }),
-    evaluate: (sid: string) => request<T.Evaluation>("/api/prospect/evaluate", { body: {}, sessionId: sid, timeoutMs: chat }),
-    review: (sid: string) => request<T.Review>("/api/prospect/review", { sessionId: sid, timeoutMs: chat }),
+    sellChat: (sid: string, message: string, showHints: boolean) =>
+      request<T.SellChatRes>("/api/sell/chat", { body: { message, show_hints: showHints }, sessionId: sid, timeoutMs: chat }),
+    sellReset: (sid: string) => request<{ success: true }>("/api/sell/reset", { body: {}, sessionId: sid }),
+    evaluate: (sid: string) => request<T.Evaluation>("/api/sell/evaluate", { body: {}, sessionId: sid, timeoutMs: chat }),
+    review: (sid: string) => request<T.Review>("/api/sell/review", { sessionId: sid, timeoutMs: chat }),
     redo: (sid: string, turn: number, message: string) =>
-      request<T.RedoRes>("/api/prospect/redo", { body: { turn, message }, sessionId: sid, timeoutMs: chat }),
-    prospectQuizQuestion: (sid: string) => request<T.QuizQuestion>("/api/prospect/quiz", { sessionId: sid }),
-    prospectQuizAnswer: (sid: string, turn: number, answer: string) =>
-      request<T.QuizResult>("/api/prospect/quiz", { body: { turn, answer }, sessionId: sid, timeoutMs: chat }),
-    drills: (sid: string | null) => request<{ success: true; drills: T.Drill[] }>("/api/prospect/drills", { sessionId: sid }),
+      request<T.RedoRes>("/api/sell/redo", { body: { turn, message }, sessionId: sid, timeoutMs: chat }),
+    sellQuizQuestion: (sid: string) => request<T.QuizQuestion>("/api/sell/quiz", { sessionId: sid }),
+    sellQuizAnswer: (sid: string, turn: number, answer: string) =>
+      request<T.QuizResult>("/api/sell/quiz", { body: { turn, answer }, sessionId: sid, timeoutMs: chat }),
+    drills: (sid: string | null) => request<{ success: true; drills: T.Drill[] }>("/api/sell/drills", { sessionId: sid }),
 
     // Shared
     feedback: (body: T.FeedbackReq) => request<{ success: true }>("/api/feedback", { body }),

@@ -10,16 +10,14 @@ import s from "./InputBar.module.css";
 
 export function InputBar() {
   const { draft, setDraft, submit, inputRef } = useDraft();
-  const { typing, prospect, mode } = useSession();
-  const ended = mode === "prospect" && !!prospect?.ended;
-  const noBuyer = mode === "prospect" && !prospect;
+  const { typing, sellSession, mode } = useSession();
+  const ended = mode === "sell" && !!sellSession?.ended;
+  const noBuyer = mode === "sell" && !sellSession;
   const placeholder = noBuyer
-    ? "Set up your buyer first, then start selling."
+    ? "Set up your buyer first."
     : ended
-      ? "This practice has ended. Reset to start again."
-      : mode === "prospect"
-        ? "Type your reply… (Shift+Enter for a new line)"
-        : "Type your reply… (Shift+Enter for a new line)";
+      ? "Conversation over. Reset to go again."
+      : "Type your reply…";
 
   // Grow with the text; CSS caps the height at --input-max-height and scrolls beyond.
   useLayoutEffect(() => {

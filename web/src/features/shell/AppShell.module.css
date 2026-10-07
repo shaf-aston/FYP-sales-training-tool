@@ -19,10 +19,10 @@
 .withSide {
   grid-template-columns: var(--side-panel-width) minmax(0, 1fr) var(--panel-width);
 }
-.withProspect {
+.withBuyer {
   grid-template-columns: minmax(0, 1fr) var(--side-panel-width) var(--panel-width);
 }
-.withSide.withProspect {
+.withSide.withBuyer {
   grid-template-columns: var(--side-panel-width) minmax(0, 1fr) var(--side-panel-width) var(--panel-width);
 }
 
@@ -30,8 +30,8 @@
 @media (max-width: 1080px) {
   .grid,
   .withSide,
-  .withProspect,
-  .withSide.withProspect {
+  .withBuyer,
+  .withSide.withBuyer {
     height: auto;
     min-height: calc(100dvh - 2 * var(--space-4));
     grid-template-columns: minmax(0, 1fr);
