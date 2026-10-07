@@ -119,6 +119,37 @@ def test_echo_says_their_words_back_in_second_person():
     assert _fill(lambda p, n: "x", long, {"outcome"}, say) == STEP_PLAIN
 
 
+CAT = load_method("cat")
+
+
+def _line(step, reply):
+    """The real script line for a step, with the buyer's step-01 answer echoed into it."""
+    never = lambda p, n: pytest.fail("AI must not be called")
+    out = Filler({**CFG, "ai_fill_blanks": False}, OFFER, never, {"outcome"}).render(
+        CAT.steps[step].say, "", CAT.steps[step].say_plain, {"outcome": reply})
+    return out
+
+
+@pytest.mark.parametrize("reply, step, expected", [
+    ("more time with my kids", "02", "to achieve more time with your kids?"),
+    ("financial freedom", "05", "haven't got to financial freedom?"),
+    ("I want to be my own boss", "02", "each month to be your own boss?"),
+    ("quit my job", "05", "haven't managed to quit your job?"),
+    ("travel the world with my wife", "06", "to travel the world with your wife rather than just dream about it?"),
+    ("financial freedom", "06", "to make financial freedom a reality and not just a dream?"),
+])
+def test_script_lines_echo_the_goal_in_noun_or_verb_form(reply, step, expected):
+    assert expected in _line(step, reply)
+
+
+@pytest.mark.parametrize("reply", [
+    "honestly it is about being able to spend more time with my kids",  # 11 words
+    "nothing", "nothing really", "I don't know", "no idea", "none",
+])
+def test_unusable_goal_gives_the_plain_line(reply):
+    assert _line("02", reply) == CAT.steps["02"].say_plain
+
+
 # ---- judge --------------------------------------------------------------------------------
 
 CANDS = {"agrees": ["yes"], "unclear": ["I am lost"]}
@@ -278,7 +309,9 @@ def test_ai_down_never_blocks_a_turn(seller):
     text, _ = at(s, "05", outcome="I want financial freedom").reply("no time")
     assert text == "What are you doing now to make financial freedom a reality and not just a dream?"  # no AI needed
     text, _ = at(s, "05", outcome="I want to be my own boss").reply("no time")
-    assert "that" in text and "{" not in text    # their words don't fit: say_plain used for step 06
+    assert text == "What are you doing now to be your own boss rather than just dream about it?"  # verb form
+    text, _ = at(s, "05", outcome="nothing really").reply("no time")
+    assert "that" in text and "{" not in text    # no goal said: say_plain used for step 06
 
 
 def test_common_sense_interruption_then_bring_back(seller):

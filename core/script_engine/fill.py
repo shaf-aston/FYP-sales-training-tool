@@ -8,7 +8,7 @@ from core.script_engine.checks import BLANK, CheckContext
 from core.utils import tokenize
 
 logger = logging.getLogger("script_engine.fallback")
-NAME = re.compile(r"\{(\w+)\}")
+NAME = re.compile(r"\{(\w+)(?:\|([^|{}]*)\|([^|{}]*))?\}")  # {name} or {name|noun form|verb form}, $ = the phrase
 WORD = re.compile(r"[A-Za-z0-9'-]+")
 
 
@@ -20,7 +20,7 @@ def offer_blanks(offer):
 
 def _phrase(line, blank, reply, cfg, llm):  # used by Filler only
     """AI shortens the reply to a phrase for one blank. Returns None if no attempt passes."""
-    sentence = BLANK.sub(lambda m: "____" if m.group(0) == "{" + blank + "}" else m.group(0), line)
+    sentence = NAME.sub(lambda m: (m.group(2) or "$").replace("$", "____") if m.group(1) == blank else m.group(0), line)
     prompt = (
         "Fill the blank so the sentence reads naturally, like a person talking. Use a short noun "
         f"phrase (at most {cfg['slot_words']} words) made only of words the prospect said. "
@@ -41,7 +41,7 @@ def _phrase(line, blank, reply, cfg, llm):  # used by Filler only
     def fits_the_line(phrase):
         said, broken = tokenize(phrase), []
         if said and said[0] in cfg["bad_phrase_starts"]:
-            broken.append("starts_like_a_verb")  # "feel to stop working ..." breaks the line
+            broken.append("starts_like_a_lead_in")  # "feel to stop working ..." breaks the line
         if set(said) & set(cfg["prospect_pronouns"]):
             broken.append("speaks_as_prospect")  # "got to my own business"
         if said and (said[-1:] == tokenize(after)[:1] or said[:1] == tokenize(before)[-1:]):
@@ -54,7 +54,7 @@ def _phrase(line, blank, reply, cfg, llm):  # used by Filler only
 def echo_phrase(reply, cfg):
     """Their own words for a blank, by rule, no AI: lead-ins like "I want" dropped ("I want more time"
     -> "more time"), first person turned to second ("my kids" -> "your kids"). None when the words would
-    not read right in the line: too long, starting like a verb, or still speaking as the prospect."""
+    not read right in the line: too long, no goal ("nothing"), or still speaking as the prospect."""
     words = WORD.findall(reply or "")
     drops = [tokenize(d) for d in cfg["echo_drop_starts"]]
     cut = True
@@ -65,13 +65,17 @@ def echo_phrase(reply, cfg):
     swap = cfg["echo_pronoun_swap"]
     words = [swap.get(w.lower(), w) for w in words]
     lower = [w.lower() for w in words]
-    bad_starts = set(cfg["bad_phrase_starts"]) | set(cfg["echo_bad_starts"])
-    if (not words or len(words) > cfg["slot_words"] or lower[0] in bad_starts
+    if (not words or len(words) > cfg["slot_words"] or lower[0] in cfg["bad_phrase_starts"]
             or set(lower) & set(cfg["prospect_pronouns"])):
         return None
     if words[0] == reply.lstrip()[:len(words[0])]:
         words[0] = words[0].lower()  # sentence case at the start of their reply, not a name
     return " ".join(words)
+
+
+def is_verb_goal(phrase, cfg):
+    """True when the phrase starts with a verb: "be your own boss", "quit your job"."""
+    return tokenize(phrase)[:1] != [] and tokenize(phrase)[0] in cfg["verb_goal_starts"]
 
 
 class Filler:
@@ -85,14 +89,17 @@ class Filler:
     def fill(self, line, slots):
         """The line with every blank filled, or None if a prospect blank can't be."""
         values = offer_blanks(self.offer)
-        for blank in set(NAME.findall(line)) - values.keys():
+        forms = {m.group(1): m.group(2, 3) for m in NAME.finditer(line)}
+        for blank in forms.keys() - values.keys():
             reply = slots.get(blank)
             phrase = echo_phrase(reply, self.cfg) if reply and blank in self.echo else None
             if phrase is None and reply and self.cfg["ai_fill_blanks"]:
                 phrase = _phrase(line, blank, reply, self.cfg, self.llm)
             if phrase is None:
                 return None
-            values[blank] = phrase
+            noun, verb = forms[blank]
+            form = (verb if is_verb_goal(phrase, self.cfg) else noun) if noun is not None else "$"
+            values[blank] = form.replace("$", phrase)
         return NAME.sub(lambda m: values.get(m.group(1), m.group(0)), line)
 
     def render(self, say, ack, say_plain, slots):

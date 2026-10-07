@@ -518,10 +518,10 @@ def test_whats_next_asks_no_ai(fake_embedder):
     ("Financial freedom!", "financial freedom"),
     ("more time with family", "more time with family"),
     ("time in Dubai", "time in Dubai"),
-    ("I want to be my own boss", None),          # starts like a verb
+    ("I want to be my own boss", "be your own boss"),  # verb goal, the line picks its verb form
     ("my own boss", "your own boss"),            # first person turned to second
     ("freedom for me and my whole family", None),  # too long
-    ("travel more", None),
+    ("travel more", "travel more"),
     ("not sure really", None),
     ("", None),
 ])

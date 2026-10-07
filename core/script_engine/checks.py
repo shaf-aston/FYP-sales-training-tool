@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from core.utils import tokenize
 
-BLANK = re.compile(r"\{\w+\}")
+BLANK = re.compile(r"\{\w+(?:\|[^{}]*)?\}")  # {name} or {name|noun form|verb form}
 CURRENCY = re.compile(r"[$£€]\s?\d")
 FIGURE = re.compile(r"(\d[\d,.]*[a-z]*)(?:[ \t-]+([a-z]+))?")  # a number and the word it counts: "6-month"
 
