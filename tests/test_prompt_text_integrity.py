@@ -66,12 +66,22 @@ def test_consultative_pre_pitch_prompt_has_no_prices_immediately_instruction():
         assert "Never mention products or prices before the PITCH stage" in prompt
 
 
-def test_budget_guard_is_consultative_only():
+def test_early_budget_talk_is_held_back_by_the_rules_not_a_keyword_list():
     from core.content import generate_stage_prompt
 
-    msg = "my budget is 500"
-    assert "BUDGET-ONLY GUARD" in generate_stage_prompt("consultative", "intent", "Acme", [], msg)
-    assert "BUDGET-ONLY GUARD" not in generate_stage_prompt("transactional", "intent", "Acme", [], msg)
+    prompt = generate_stage_prompt("consultative", "intent", "Acme", [], "my budget is 500")
+    assert "Never mention products or prices before the PITCH stage" in prompt
+    assert "Never name a product" in prompt
+
+
+def test_each_rule_is_stated_once_per_prompt():
+    from core.content import generate_stage_prompt
+
+    for strategy, stages in STRATEGY_PROMPTS.items():
+        for stage in stages:
+            prompt = generate_stage_prompt(strategy, stage.replace("_low", ""), "Acme", [], "ok")
+            assert prompt.count("You are a sales advisor") == 1
+            assert "payment details" not in prompt  # HARD RULES already bans card, payment and bank details
 
 
 def test_decisive_user_only_pushes_to_pitch_at_pitch():

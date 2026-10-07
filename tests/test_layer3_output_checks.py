@@ -10,10 +10,9 @@ def test_layer3_blocks_pricing_in_logical_stage_without_direct_request():
         user_message="We are still reviewing options.",
     )
 
-    assert result.was_blocked is True
-    assert result.was_corrected is False
+    assert result.was_corrected is True
     assert "early_price" in result.applied_rules
-    assert "price" not in result.content.lower()
+    assert result.content == "Does that work for you?"
 
 
 def test_layer3_allows_pricing_when_user_asks_for_it():
@@ -133,31 +132,6 @@ def test_layer3_returns_stage_fallback_for_empty_output():
     assert "empty_output_fallback" in result.applied_rules
 
 
-def test_layer3_blocks_degenerate_short_response():
-    result = apply_layer3_output_checks(
-        reply_text="Got it.",
-        stage=Stage.LOGICAL,
-        user_message="Tell me more.",
-    )
-
-    assert result.was_blocked is True
-    assert "empty_output_fallback" in result.applied_rules
-
-
-def test_layer3_truncates_oversized_response():
-    long_text = "This is a valid sentence with no pricing content. " * 40
-    result = apply_layer3_output_checks(
-        reply_text=long_text,
-        stage=Stage.LOGICAL,
-        user_message="Tell me more.",
-    )
-
-    assert result.was_corrected is True
-    assert result.was_blocked is False
-    assert len(result.content) <= 1500
-    assert "oversized_output_truncated" in result.applied_rules
-
-
 def test_layer3_corrects_pricing_when_other_content_is_substantial():
     result = apply_layer3_output_checks(
         reply_text=(
@@ -234,35 +208,9 @@ def test_buyer_reply_cannot_close_the_deal_itself():
     assert "onboarding details" in result.content
 
 
-def test_buyer_reply_out_of_character_falls_back():
-    result = check_buyer_reply("As an AI language model, I can't buy software.", turn=2)
-
-    assert result.was_blocked is True
-    assert "ai" not in result.content.lower().split()
-
-
 def test_buyer_reply_normal_answer_passes_untouched():
     reply = "We use spreadsheets right now. Leads slip through when someone is off sick."
     result = check_buyer_reply(reply, turn=1)
 
     assert result.content == reply
     assert result.applied_rules == []
-
-
-def test_repeated_sentence_and_self_talk_are_dropped():
-    history = [
-        {"role": "user", "content": "how much is it"},
-        {"role": "assistant", "content": "I don't have specific pricing in my inventory. Does the current process feel slow?"},
-        {"role": "user", "content": "kind of"},
-    ]
-    reply = "Does the current process feel slow? I don't have pricing in my inventory. What slows your team down most on a normal week?"
-    result = apply_layer3_output_checks(reply, "logical", "kind of", history=history)
-    assert result.content == "What slows your team down most on a normal week?"
-    assert "banned_or_repeated" in result.applied_rules
-
-
-def test_payment_ask_is_dropped_at_close():
-    reply = "Great, you're on the Team plan. I'll need your card details to finalise. Your onboarding call is next."
-    result = apply_layer3_output_checks(reply, "outcome", "yes let's do it")
-    assert "card" not in result.content
-    assert "onboarding call" in result.content

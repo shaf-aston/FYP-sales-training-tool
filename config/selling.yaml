@@ -31,7 +31,6 @@ slot_tokens: 20        # max_tokens for a blank-filling call
 judge_tokens: 10       # max_tokens for a close-call judge
 answer_tokens: 60      # max_tokens for an uncovered product answer
 answer_filler_words: ["yes", "no", we, can, will, help, you, work, with, offer, also, all, your, our, is, are, the, a, an, to, of, and, for, in, on, it]
-banned_words: [ignore, instruction, instructions, prompt, system, assistant, password, token, http, https, www]
 uncovered_fallback: "Good question, I'll confirm that for you after the call."   # draft wording
 log_uncovered: true    # write uncovered product questions to the log
 log_text_chars: 120    # longest piece of prospect text ever logged

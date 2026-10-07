@@ -334,7 +334,6 @@ class SalesFlowEngine:
         user_message: str = "",
         objection_data: dict | None = None,
         turn_state=None,
-        include_history: bool = True,
     ) -> str:
         """Generate the system prompt for the current stage."""
         return generate_stage_prompt(
@@ -345,7 +344,6 @@ class SalesFlowEngine:
             user_message=user_message,
             objection_data=objection_data,
             turn_state=turn_state,
-            include_history=include_history,
         )
 
     def should_advance(self, user_message: str, turn_state=None) -> Optional[str]:

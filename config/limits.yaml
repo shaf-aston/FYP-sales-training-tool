@@ -1,13 +1,8 @@
 # Every tunable number in the app. core/constants.py is the only reader.
 # All numbers must be > 0; the app refuses to start otherwise.
 
-response:            # Layer 3 output checks
-  min_chars: 40
-  max_chars: 1500
-
 context:
   recent_history_window: 10
-  persona_checkpoint_turns: 6
   max_user_keywords: 6
   terse_input_threshold: 3
   min_turns_before_advance: 3   # more than 3 turns per stage frustrates the user

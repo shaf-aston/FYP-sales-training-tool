@@ -41,36 +41,8 @@ fallback_lines:
     - "What would help most right now?"
 
 # AI-buyer replies (prospect mode). The rules own the outcome, so the buyer may not
-# agree to buy on its own, step out of character, or ramble.
+# agree to buy on its own.
 buyer:
-  max_sentences: 4
-  out_of_character:
-    - as an ai
-    - language model
-    - i'm an ai
-    - i am an ai
-    - readiness score
-    - this turn
-    - roleplay
   fallback_lines:
     - "Hmm. Tell me more about how that would work for us."
     - "I'm still weighing it up. What else should I know?"
-
-# Seller replies: drop any sentence containing one of these (lowercase match).
-# Self-talk about the bot's own data or rules, and asks for payment it cannot take.
-banned_phrases:
-  - inventory
-  - my instructions
-  - my guidelines
-  - my system prompt
-  - card details
-  - card number
-  - payment details
-  - bank details
-  - "can't process payment"
-  - "cannot process payment"
-  - "don't have specific pricing"
-  - "don't have pricing"
-
-# Seller replies: drop a sentence already said in this many of the bot's last replies.
-repeat_lookback: 2

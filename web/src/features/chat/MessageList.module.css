@@ -7,7 +7,22 @@
   padding: var(--space-4) var(--space-6) 0;
   overflow-y: auto;
 }
+.introFold {
+  display: grid;
+  grid-template-rows: 1fr;
+  overflow: hidden;
+  transition:
+    grid-template-rows var(--dur-base) var(--ease-out),
+    opacity var(--dur-base) var(--ease-out),
+    margin-bottom var(--dur-base) var(--ease-out);
+}
+.folded {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  margin-bottom: calc(-1 * var(--space-3)); /* give back the frame's gap too */
+}
 .intro {
+  min-height: 0;
   display: grid;
   gap: var(--space-2);
   justify-items: start;
@@ -37,7 +52,7 @@
   flex-direction: column;
   gap: var(--space-1);
   max-width: 82%;
-  animation: pop-in var(--dur-pop) var(--ease-pop);
+  animation: message-in var(--dur-base) var(--ease-out);
   transition: opacity var(--dur-base);
 }
 .user {
@@ -87,6 +102,9 @@
 .actions {
   display: flex;
   gap: var(--space-2);
+}
+.unavailable {
+  visibility: hidden;
 }
 .actions button {
   min-height: var(--touch-target);

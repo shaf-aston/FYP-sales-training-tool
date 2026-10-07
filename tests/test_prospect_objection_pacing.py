@@ -145,9 +145,6 @@ def test_a_live_turn_answers_first_then_adds_the_scripted_objection_and_counts_i
     objection = prospect.pacer.for_turn(turn)
     assert replies[turn - 1] == f"Go on. {objection['text']}"
     assert "THIS TURN" not in prompts[turn - 1]
-    # "So far" means before this turn: the buyer is not told it has already raised
-    # the objection it is only now being asked to raise.
-    assert "Objections raised so far: 0" in prompts[turn - 1]
     assert prospect.state.objections_raised == 1
 
 

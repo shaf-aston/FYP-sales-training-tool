@@ -24,8 +24,8 @@ class _StubProvider:
         return "stub-model"
 
 
-def test_prospect_session_product_context_includes_persona_and_custom_data(monkeypatch):
-    # The session should fold product, persona, and custom notes into one context.
+def test_prospect_session_prompt_has_product_custom_data_and_persona_once(monkeypatch):
+    # Product and custom notes form the context; the persona is stated once, by the template.
     monkeypatch.setattr(
         prospect_session,
         "load_prospect_config",
@@ -93,9 +93,18 @@ def test_prospect_session_product_context_includes_persona_and_custom_data(monke
     }
     assert "Workflow software" in session.product_context
     assert "Core product knowledge." in session.product_context
-    assert "BUYER'S KNOWN NEEDS: workflow automation" in session.product_context
-    assert "BUYER'S PAIN POINTS: manual reporting" in session.product_context
-    assert "BUYER'S BUDGET: $20-$40" in session.product_context
-    assert "--- BEGIN CUSTOM PROSPECT DATA ---" in session.product_context
+    assert "Your research notes (you don't know every technical detail):" in session.product_context
     assert "product_name: Acme Pro" in session.product_context
     assert "Additional notes: buyer research" in session.product_context
+    from core.buyer_prompt import build_system_prompt
+    from core.loader import load_prospect_config
+
+    prompt = build_system_prompt(
+        load_prospect_config()["system_prompt_template"],
+        persona=session.persona,
+        readiness=0.5,
+        product_context=session.product_context,
+        behaviour_rules="",
+    )
+    for persona_fact in ("workflow automation", "manual reporting", "$20-$40"):
+        assert prompt.count(persona_fact) == 1

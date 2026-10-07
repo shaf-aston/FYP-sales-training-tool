@@ -21,9 +21,7 @@ decisive_user:
 
 literal_question:
   template: |
-    LITERAL QUESTION DETECTED:
-    User asked a direct question. Answer it briefly and directly, following INFO REQUESTS and the stage rules.
-    Do NOT respond with an elicitation statement - that would ignore their request.
+    LITERAL QUESTION: answer it briefly and directly within the stage rules, not with an elicitation statement.
 
 low_intent_guarded:
   # Used when state["intent"] == "low" OR state["guarded"] OR state["question_fatigue"]
@@ -37,11 +35,8 @@ low_intent_guarded:
 
   consultative:
     template: |
-      TACTIC OVERRIDE: Use ELICITATION with soft follow-up (not a direct question)
-      REASON: {reason}
-      PATTERN: [Observation statement] -> [ONE soft open-ended follow-up]
+      ADAPTATION ({reason}): make ONE new observation (not a comment on their words), then ONE soft open-ended follow-up.
       EXAMPLE: "{elicitation_example}"
-      RULES: ONE new observation (never a comment on their words), then ONE open-ended follow-up. Not binary ("Do you want X?").
 
 direct_info_request:
   template: |
@@ -56,7 +51,7 @@ direct_info_request:
 
     After listing options, ask ONE decision question: "Which of these interests you most?"
 
-    FORBIDDEN: Validation phrases | asking what they're looking for | generic statements without prices/specs
+    Don't open with validation or ask what they're looking for.
 
 soft_positive_at_pitch:
   template: |
@@ -70,6 +65,4 @@ soft_positive_at_pitch:
 
 excessive_validation:
   template: |
-    CONSTRAINT VIOLATION: validation budget exceeded (see VALIDATION)
-
-    CORRECTIVE ACTION: Provide NEW information. Ask decision-advancing question. NO validation this turn.
+    TOO MANY ACKNOWLEDGEMENTS LATELY: none this turn. Give new information and ask a decision-advancing question.

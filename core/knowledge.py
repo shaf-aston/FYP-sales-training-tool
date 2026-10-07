@@ -1,4 +1,4 @@
-"""Manage custom instructions stored in YAML. Filters out prompt-injection attempts."""
+"""Manage custom instructions stored in YAML."""
 
 import logging
 import re
@@ -17,15 +17,12 @@ KNOWLEDGE_DIR = Path(__file__).parent.parent / "config"
 KNOWLEDGE_FILE = KNOWLEDGE_DIR / "custom_instructions.yaml"
 
 def _load_kb_sanitisation_config():
-    """Injection patterns and field labels. Config is the only copy; a broken file stops start-up."""
+    """Field labels. Config is the only copy; a broken file stops start-up."""
     cfg = load_yaml("knowledge_sanitization.yaml")
-    patterns = [p.lower() for p in cfg["suspicious_patterns"]]
-    if not patterns:
-        raise ValueError("knowledge_sanitization.yaml: suspicious_patterns is empty")
-    return patterns, {str(k): str(v) for k, v in cfg["label_map"].items()}
+    return {str(k): str(v) for k, v in cfg["label_map"].items()}
 
 
-INJECTION_PATTERNS, LABEL_MAP = _load_kb_sanitisation_config()
+LABEL_MAP = _load_kb_sanitisation_config()
 
 
 def load_custom_knowledge() -> dict:
@@ -45,24 +42,11 @@ def load_custom_knowledge() -> dict:
 
 
 def clean_value(value: str) -> str:
-    """Strip code blocks, filter injection-attempt lines, collapse whitespace, enforce length cap."""
+    """Collapse whitespace and enforce the length cap."""
     if not isinstance(value, str):
         return ""
 
-    value = value.strip()
-    # Remove all fenced code blocks (```...```)
-    value = re.sub(r"```[\s\S]*?```", "", value)
-
-    # Filter out lines containing injection patterns (e.g., "ignore previous instructions")
-    kept_lines = []
-    for line in value.splitlines():
-        s = line.strip()
-        if not any(pattern in s.lower() for pattern in INJECTION_PATTERNS):
-            kept_lines.append(s)
-        else:
-            logger.warning("Filtered injection attempt: %s", s)
-
-    value = "\n".join(kept_lines)
+    value = "\n".join(line.strip() for line in value.strip().splitlines())
     # Collapse spaces and tabs (preserve newlines)
     value = re.sub(r"[ \t]+", " ", value)
     # Limit consecutive blank lines to 2

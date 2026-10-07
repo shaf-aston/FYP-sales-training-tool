@@ -123,6 +123,14 @@ hr {
   }
 }
 
+/* A chat line settling into place: a short rise, no bounce, so a stream of them reads as one flow. */
+@keyframes message-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--space-2));
+  }
+}
+
 @keyframes sweep {
   to {
     background-position: 300% 0;

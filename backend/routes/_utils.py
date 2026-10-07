@@ -12,7 +12,7 @@ from core.constants import UNDETERMINED_STAGE
 from core.enums import Strategy
 
 from ..messages import MESSAGE_REQUIRED, SESSION_NOT_FOUND
-from ..security import InputValidator, PromptInjectionValidator, SecurityConfig
+from ..security import InputValidator, SecurityConfig
 
 
 @dataclass(frozen=True)
@@ -59,12 +59,11 @@ def with_session(view):
 
 
 def validate_message(message_text):
-    """Validate and sanitize message text. Returns (clean_text, error_response)"""
+    """Validate message text. Returns (clean_text, error_response)"""
     if not message_text or not isinstance(message_text, str):
         return None, (jsonify({"error": MESSAGE_REQUIRED}), 400)
     return InputValidator.validate_message(
         message_text.strip(),
-        injection_validator=PromptInjectionValidator(),
         max_length=SecurityConfig.MAX_MESSAGE_LENGTH,
     )
 

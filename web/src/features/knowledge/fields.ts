@@ -48,5 +48,5 @@ export function shortSections(payload: KnowledgeData): string[] {
 export function briefText(payload: KnowledgeData): string {
   const lines = FIELDS.filter((f) => payload[f.id]).map((f) => `${f.id}: ${payload[f.id]}`);
   if (!lines.length) return "(no data entered)";
-  return ["--- BEGIN CUSTOM PRODUCT DATA ---", ...lines, "--- END CUSTOM PRODUCT DATA ---"].join("\n");
+  return ["Custom product notes:", ...lines].join("\n");
 }

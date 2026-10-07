@@ -32,7 +32,7 @@ Open the engine for the mode you are working on. Nothing else decides the turn.
 | 6 | Provider calls the LLM | `core/providers/factory.py` → `providers/llm/groq.py` behind `providers/base.py` | Swap seam: every provider has the same interface. |
 | 7 | Review and analytics | `core/session_review.py` (per-turn replay), `core/prospect_evaluator.py` (final score + grade), `core/analytics/session_analytics.py` (events to JSONL) | Everything shown after the session is rebuilt from the saved transcript. |
 
-Seller-bot mode: `chat.py` → `SellerBot.chat` → `core/script_engine/` (scripted lines for products in `config/selling.yaml`, AI only fills small gaps; every AI sentence goes through `ai_line.py` `checked_line`) or else `flow.py` (stage machine) · `analysis.py` (buyer signals) · `content.py` + `prompts.py` (prompt build) · `response_guardrails.py` (output checks) → same router. Coaching comes from `trainer.py`.
+Seller-bot mode: `chat.py` → `SellerBot.chat` → `core/script_engine/` (scripted lines for products in `config/selling.yaml`, AI only fills small gaps; every AI sentence goes through `ai_line.py` `checked_line`) or else `flow.py` (stage machine) · `analysis.py` (buyer signals) · `content.py` + `prompts.py` (prompt build) · `response_guardrails.py` (price checks) → same router. Coaching comes from `trainer.py`.
 
 ## Config
 
