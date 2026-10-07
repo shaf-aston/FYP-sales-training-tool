@@ -19,10 +19,10 @@ const TYPES: { value: QuizType; label: string }[] = [
 const errText = (e: unknown, fallback: string) => (e instanceof Error && e.message ? e.message : fallback);
 
 export function QuizPanel() {
-  const { mode, sessionId, prospect, handleExpired } = useSession();
+  const { mode, sessionId, sellSession, handleExpired } = useSession();
   const { closeSidePanel } = useUi();
-  const isProspect = mode === "prospect";
-  const sid = isProspect ? prospect?.sessionId : sessionId;
+  const isSell = mode === "sell";
+  const sid = isSell ? sellSession?.sessionId : sessionId;
 
   const [type, setType] = useState<QuizType>("stage");
   const [question, setQuestion] = useState("");
@@ -44,7 +44,7 @@ export function QuizPanel() {
     setEmpty(false);
     setSubmitError("");
     try {
-      const q = isProspect ? await api.prospectQuizQuestion(sid) : await api.quizQuestion(sid, type);
+      const q = isSell ? await api.sellQuizQuestion(sid) : await api.buyQuizQuestion(sid, type);
       setQuestion(q.question);
       setTurn(q.turn);
     } catch (err) {
@@ -52,7 +52,7 @@ export function QuizPanel() {
     } finally {
       setLoading(false);
     }
-  }, [sid, isProspect, type, handleExpired]);
+  }, [sid, isSell, type, handleExpired]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch a question when the panel opens or the type changes
@@ -70,9 +70,9 @@ export function QuizPanel() {
     setSubmitError("");
     setChecking(true);
     try {
-      const res = isProspect
-        ? await api.prospectQuizAnswer(sid, turn as number, text)
-        : await api.quizAnswer(sid, type, text);
+      const res = isSell
+        ? await api.sellQuizAnswer(sid, turn as number, text)
+        : await api.buyQuizAnswer(sid, type, text);
       setResult(res);
     } catch (err) {
       if (!handleExpired(err)) setSubmitError(errText(err, "Could not check your answer. Try again."));
@@ -81,13 +81,13 @@ export function QuizPanel() {
     }
   };
 
-  const needsTurn = isProspect && !loading && !loadError && turn === undefined;
+  const needsTurn = isSell && !loading && !loadError && turn === undefined;
   const canAnswer = !loading && !loadError && !needsTurn && !!question;
 
   return (
     <Panel title="Skill check" onClose={closeSidePanel}>
       <div className={s.stack}>
-        {!isProspect && <Segmented label="Quiz type" options={TYPES} value={type} onChange={setType} />}
+        {!isSell && <Segmented label="Quiz type" options={TYPES} value={type} onChange={setType} />}
         {loading && <Notice kind="loading">Loading question…</Notice>}
         {loadError && (
           <Notice
@@ -129,7 +129,7 @@ export function QuizPanel() {
             )}
             {result && (
               <>
-                <QuizResultCard result={result} kind={isProspect ? "prospect" : type} />
+                <QuizResultCard result={result} kind={isSell ? "sell" : type} />
                 <Button variant="secondary" onClick={() => void load()}>
                   Next question
                 </Button>

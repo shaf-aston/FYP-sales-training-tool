@@ -31,20 +31,18 @@ function Tool({ title, copy, onClick, href, pressed }: { title: string; copy?: s
 export function ToolsGrid() {
   const { mode } = useSession();
   const { sidePanel, toggleSidePanel, openDialog } = useUi();
-  const prospect = mode === "prospect";
+  const sell = mode === "sell";
   return (
-    <div className={s.stack}>
-      <div className={s.toolGrid}>
-        <Tool
-          title={prospect ? "Prospect knowledge" : "Knowledge"}
-          href={prospect ? `${config.routes.knowledge}?mode=prospect` : config.routes.knowledge}
-        />
-        {!prospect && (
-          <Tool title="Coaching" pressed={sidePanel === "coach"} onClick={() => toggleSidePanel("coach")} />
-        )}
-        <Tool title="Quiz" copy="Test your read of the sale and your next move." pressed={sidePanel === "quiz"} onClick={() => toggleSidePanel("quiz")} />
-        <Tool title="Say it from memory" copy="Fill the gap before you reveal it." onClick={() => openDialog("drills")} />
-      </div>
+    <div className={s.toolGrid}>
+      <Tool title="Knowledge" copy="Your product details" href={sell ? `${config.routes.knowledge}?mode=sell` : config.routes.knowledge} />
+      {!sell && <Tool title="Coaching" copy="Ask the coach" pressed={sidePanel === "coach"} onClick={() => toggleSidePanel("coach")} />}
+      <Tool
+        title="Quiz"
+        copy={sell ? "Redo your weakest turn" : "Name the stage and next move"}
+        pressed={sidePanel === "quiz"}
+        onClick={() => toggleSidePanel("quiz")}
+      />
+      <Tool title="Say it from memory" copy="Fill in the missing line" onClick={() => openDialog("drills")} />
     </div>
   );
 }

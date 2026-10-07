@@ -5,7 +5,7 @@ import { Button, Markdown, TextArea, TypingDots, useToast } from "@/components/u
 import { config } from "@/lib/config";
 import { useSession, type ChatMessage } from "@/features/session/SessionContext";
 import { ListenButton } from "@/features/voice/VoiceBar";
-import { InlineEvaluation } from "@/features/prospect/ProspectDialogs";
+import { InlineEvaluation } from "@/features/sell/SellDialogs";
 import s from "./MessageList.module.css";
 
 function TypingBubble() {
@@ -140,7 +140,7 @@ export function MessageList() {
       {/* Folds away on the first message instead of vanishing, so the chat doesn't jump up. */}
       <div className={`${s.introFold} ${started ? s.folded : ""}`} inert={started}>
         <div className={s.intro}>
-          {mode === "prospect" ? (
+          {mode === "sell" ? (
             <>
               <h2>Open the call.</h2>
               <p>Example: &ldquo;Thanks for your time. What made you take this call today?&rdquo;</p>
@@ -158,7 +158,7 @@ export function MessageList() {
           <Item
             key={m.id}
             m={m}
-            canEdit={mode === "seller" && !typing}
+            canEdit={mode === "buy" && !typing}
             editing={editingId === m.id}
             onEdit={() => startEdit(m.id)}
             onSave={save(m)}

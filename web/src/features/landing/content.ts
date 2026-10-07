@@ -30,7 +30,7 @@ export const steps = [
 export const features = [
   { title: "Voice mode", text: "Speak out loud and hear the buyer answer back.", hue: "var(--neon-cyan)" },
   { title: "Live coach", text: "Stage, strategy and a score after every message.", hue: "var(--neon-amber)" },
-  { title: "Prospect mode", text: "Swap seats: the AI sells, you play the buyer.", hue: "var(--neon-cyan)" },
+  { title: "Sell mode", text: "You sell. The AI plays a buyer who pushes back.", hue: "var(--neon-cyan)" },
   { title: "Quick quizzes", text: "Short checks that explain why an answer works.", hue: "var(--neon-amber)" },
   { title: "Your product", text: "Load your own product notes so practice feels real.", hue: "var(--neon-cyan)" },
   { title: "Spaced drills", text: "Weak spots come back on day 1, 3, 7 and 21.", hue: "var(--neon-amber)" },
