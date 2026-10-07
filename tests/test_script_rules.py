@@ -8,7 +8,7 @@ import pytest
 from core.loader import load_yaml
 from core.script_engine.checks import CheckContext, check, clip
 from core.script_engine.engine import ScriptState
-from core.script_engine.fill import fill_step, offer_blanks
+from core.script_engine.fill import Filler, offer_blanks
 from core.script_engine.judge import VAGUE, judge
 from core.script_engine.method import load_common_sense, load_method, load_offer
 from core.script_engine.seller import ScriptSeller
@@ -54,9 +54,9 @@ STEP_SAY = "How much do you need to be making to feel {outcome} freedom?"
 STEP_PLAIN = "How much do you need to be making to feel that freedom?"
 
 
-def _fill(llm, slots=None):
+def _fill(llm, slots=None, echo=frozenset(), say=STEP_SAY, cfg=CFG):
     slots = {"outcome": "I want financial freedom"} if slots is None else slots
-    return fill_step(STEP_SAY, "", STEP_PLAIN, slots, OFFER, CFG, llm)
+    return Filler(cfg, OFFER, llm, echo).render(say, "", STEP_PLAIN, slots)
 
 
 def test_fill_uses_a_phrase_from_the_prospect():
@@ -72,9 +72,7 @@ def test_fill_rejects_the_prospects_own_pronouns(phrase):
 def test_fill_with_ai_blanks_off_uses_plain_line_without_asking_ai():
     # live: the AI wrote "feel your job freedom", "got to your 9 to 5" - plain lines always read right
     calls = []
-    cfg = {**CFG, "ai_fill_blanks": False}
-    out = fill_step(STEP_SAY, "", STEP_PLAIN, {"outcome": "I want financial freedom"}, OFFER, cfg,
-                    lambda p, n: calls.append(p) or "financial")
+    out = _fill(lambda p, n: calls.append(p) or "financial", cfg={**CFG, "ai_fill_blanks": False})
     assert out == STEP_PLAIN and calls == []
 
 
@@ -103,13 +101,22 @@ def test_fill_offer_blanks_need_no_ai():
     def never(prompt, n):
         raise AssertionError("AI must not be called")
 
-    line = fill_step("{months}-month process, investment is {price}.", "", "", {}, OFFER, CFG, never)
+    line = _fill(never, {}, say="{months}-month process, investment is {price}.")
     assert line == "6-month process, investment is $5k."
 
 
 def test_ack_with_blank_is_dropped_when_it_cannot_be_filled():
-    out = fill_step("Next?", "for {years} years.", "", {}, OFFER, CFG, lambda p, n: "x")
+    out = Filler(CFG, OFFER, lambda p, n: "x").render("Next?", "for {years} years.", "", {})
     assert out == "Next?"
+
+
+def test_echo_says_their_words_back_in_second_person():
+    never = lambda p, n: pytest.fail("AI must not be called")
+    say = "What would you do with {outcome}?"
+    out = _fill(never, {"outcome": "time with my kids"}, {"outcome"}, say)
+    assert out == "What would you do with time with your kids?"
+    long = {"outcome": "more time with my kids and my wife and my whole family"}  # over slot_words
+    assert _fill(lambda p, n: "x", long, {"outcome"}, say) == STEP_PLAIN
 
 
 # ---- judge --------------------------------------------------------------------------------

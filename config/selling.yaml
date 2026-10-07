@@ -31,6 +31,7 @@ bad_phrase_starts: [own, to, stop, quit, be, make, get, have, want, need, start,
 echo_bad_starts: [not, no, nothing, travel, leave, retire, buy, pay, spend, support, help, live, work, earn, provide, move, do, go, finally, a, an, because, idk, dunno, yes, yeah, ok, okay]   # also refused when their own words go into a blank: "to achieve travel more" reads wrong
 echo_drop_starts: ["i want", "i'd like", "i would like", "i just want", "i need", "i'm after", "honestly", "basically", "probably", "just", "mainly", "mostly", "well", "so", "um", "uh", "for", "really"]   # lead-ins dropped before their words go into a blank: "I want financial freedom" -> "financial freedom"
 prospect_pronouns: [i, "i'm", "i've", "i'd", me, my, mine, myself]   # the bot would be speaking as the prospect
+echo_pronoun_swap: {my: your, me: you, mine: yours, myself: yourself, "i'm": "you're", "i've": "you've", "i'd": "you'd", i: you}   # their first person said back to them: "my kids" -> "your kids"
 slot_tokens: 20        # max_tokens for a blank-filling call
 judge_tokens: 10       # max_tokens for a close-call judge
 answer_tokens: 60      # max_tokens for an uncovered product answer

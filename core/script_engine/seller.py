@@ -18,7 +18,7 @@ from core.script_engine.embedder import make_embedder
 from core.script_engine.engine import (
     advance, ask_again, asked_line, hear_ahead, jump, move_on, object_to, park, price_open, ready_open, start,
 )
-from core.script_engine.fill import fill_line, fill_step
+from core.script_engine.fill import Filler
 from core.script_engine.judge import VAGUE, judge
 from core.script_engine.method import ANY, load_common_sense, load_method, load_offer
 from core.script_engine.recognise import recognise
@@ -125,8 +125,7 @@ class ScriptSeller:
         self._embedder, self._llm = embedder, llm
         self._ai_ok = True
         self._waiting = False  # last reply was a `wait` reply: they stepped away
-        self._said = {}  # filled lines: the same line with the same answers is said the same way
-        self._echo = frozenset(s.capture for s in method.steps.values() if s.echo)
+        self._filler = Filler(cfg, offer, self._ask, frozenset(s.capture for s in method.steps.values() if s.echo))
         self._opening = start(method)
         self.state = self._opening.state
         embedder.warm(self._script_examples())
@@ -190,7 +189,7 @@ class ScriptSeller:
         if kind == "fact":
             f = self.offer.facts[name]
             answer = f.late_answer if opened and f.late_answer else f.answer
-            lead = fill_line(answer, {}, self.offer, self.cfg, self._ask)
+            lead = self._filler.fill(answer, {})
             return self._then_ask(lead), step.ui_stage
         if self.state.play:
             # they answered the objection play's question: normalise, then ask the step again
@@ -385,9 +384,9 @@ class ScriptSeller:
         c, offer = self.cfg, self.offer
         if not offer.about:
             return None
-        facts = fill_line(offer.about, {}, offer, c, self._ask)
+        facts = self._filler.fill(offer.about, {})
         if opened and offer.about_after_price:
-            facts += " " + fill_line(offer.about_after_price, {}, offer, c, self._ask)
+            facts += " " + self._filler.fill(offer.about_after_price, {})
         told = self._told(self.state.slots)
         memory = f"What they told you earlier:\n<earlier>\n{told}\n</earlier>\n" if told else ""
         prompt = (
@@ -422,26 +421,19 @@ class ScriptSeller:
         """`lead`, then (after an interruption or a made-up answer) a bring-back to their last point, then the
         current question again."""
         say, say_plain = asked_line(self.method, self.state)  # the words last used, not always the first
-        question = self._fill(say, "", say_plain, self.state.slots)
+        question = self._filler.render(say, "", say_plain, self.state.slots)
         back = ""
         if bring_back and self.state.last_point:
-            back = fill_line(self.sense.bring_back, {"last_point": self.state.last_point},
-                             self.offer, self.cfg, self._ask) or ""
+            back = self._filler.fill(self.sense.bring_back, {"last_point": self.state.last_point}) or ""
         if back and not re.match(r"I( |')", question):
             question = question[:1].lower() + question[1:]
         return " ".join(part.strip() for part in (lead, back, question) if part)
-
-    def _fill(self, say, ack, say_plain, slots):
-        key = (say, ack, tuple(sorted(slots.items())))
-        if key not in self._said:
-            self._said[key] = fill_step(say, ack, say_plain, slots, self.offer, self.cfg, self._ask, self._echo)
-        return self._said[key]
 
     def _render(self, move, heard=""):
         said = [heard] if heard else []
         for step_id in move.lead:
             lead = self.method.steps[step_id]
-            said.append(self._fill(lead.say, "", lead.say_plain, move.state.slots))
+            said.append(self._filler.render(lead.say, "", lead.say_plain, move.state.slots))
         step = self.method.steps[move.state.step]
-        said.append(self._fill(move.say, move.ack, step.say_plain, move.state.slots))
+        said.append(self._filler.render(move.say, move.ack, step.say_plain, move.state.slots))
         return " ".join(said)
