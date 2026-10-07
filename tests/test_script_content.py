@@ -13,7 +13,7 @@ BLANK = re.compile(r"\{(\w+)\}")
 
 
 def _reachable(method):
-    seen, todo = set(), [method.first]
+    seen, todo = set(), [method.first] + ([method.ready.then] if method.ready else [])
     while todo:
         step_id = todo.pop()
         if step_id not in seen:

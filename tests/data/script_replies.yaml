@@ -200,6 +200,11 @@ common_sense:
     - "am I speaking to a human"
     - "are you real or AI"
     - "is this an automated call"
+  frustrated:   # live: "stop with the script man", "this is stupid"
+    - "can you stop reading from a script"
+    - "this is so pointless"
+    - "stop interrogating me"
+    - "too many questions mate"
   clarify:   # live: "what do you mean freedom", "why do you keep asking"
     - "what do you mean freedom"
     - "why do you keep asking me that"
@@ -211,3 +216,31 @@ common_sense:
     - "how much does it cost"
     - "I'm worried about the risk"
     - "I'd have to ask my wife"
+# Labels with a min_score floor, heard at step 01 next to its own answers. `meant` rows must clear
+# the floor; `not_meant` rows must stay under it (a false jump or a false "you're annoyed" is worse
+# than a miss).
+floored:
+  ready:
+    meant:   # live chat A: "i'm in, send the payment link"
+      - "i'm in, send the payment link"
+      - "I'm sold, how do I pay"
+      - "sign me up, where do I pay"
+      - "I've already decided, just send me the link"
+    not_meant:
+      - "I'm in sales"
+      - "yes"
+      - "I'm in my thirties"
+      - "I want to join the people who made it"
+      - "I want to be able to pay my bills"
+  frustrated:
+    meant:
+      - "stop with the script man"
+      - "this is a waste of time"
+      - "enough questions already"
+      - "whatever"
+    not_meant:
+      - "whatever works for me"
+      - "I don't care about money, I want time"
+      - "honestly whatever pays the bills"
+      - "I want to stop working for someone else"
+      - "I'm tired of my job"

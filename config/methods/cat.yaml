@@ -4,6 +4,19 @@
 first: "00"
 price_step: "14"
 revisit_step: "19"   # an objection parked before the price comes back when they hesitate at the soft close
+# A keen buyer who says they're in before the pitch is asked one question, then shown how to pay
+# (trainer: "just send the payment link, make it easy"). From the soft close on, the script closes itself.
+ready:
+  then: "ready"
+  until: "19"
+  min_score: 0.8   # long, specific examples: "I'm in sales" or "yes" must never jump
+  examples:
+    - "I'm in, send me the payment link"
+    - "I'm ready to buy, how do I pay"
+    - "I already know I want to join, how do I pay"
+    - "where do I sign up, I want to join"
+    - "how do I sign up"
+    - "just send me the link to pay"
 steps:
   "00":
     name: "Frame"
@@ -53,6 +66,10 @@ steps:
     say: "How much would you need to be making each month for {outcome}?"
     say_plain: "How much would you need to be making each month to make that happen?"
     capture: number
+    # "I want 5k a month" said earlier answers this step, so it is skipped. Needs a want/need word,
+    # only "to make / be earning / around"-type words, then the figure and "a month": "I make 2k a month",
+    # "a job paying 2k a month", "I need to save 200 a month" and "I don't want ..." are not the goal.
+    answered_by: '(?<!n''t )(?<!not )\b(?:want|need|aim|aiming|hoping|looking|goal|target)(?:\s+(?:to|be|make|making|earn|earning|bring|bringing|in|about|around|at|least|like|roughly|for|of|is|maybe|ideally|say|minimum))*\s+(?P<answer>[$£€]?\d[\d,.]*\s*(?:k|grand|thousand)?\s*(?:a|per|each|every|/)\s*(?:month|mo)\b)'
     listen:
       any: {then: "03"}
   "03":
@@ -278,6 +295,48 @@ steps:
     ui_stage: outcome
     draft: true  # the follow_up line below, as an ending step `stuck` can lead to
     say: &follow_up "No problem. Let's book a follow-up call so you can decide properly, and I'll leave it there for today."
+  "ready":   # `ready` above jumps here; after the soft close in order, so the price may be said
+    name: "Ready buyer"
+    note: 'they said they are in: make paying easy, no pitch'
+    ui_stage: outcome
+    draft: true  # trainer's question; no source line for the lead-in
+    say: "Love that. Are you aware of the programme from beforehand?"
+    probe: "Do you already know what's in the programme?"
+    stuck: {then: "ready_brief"}   # still unclear: give them the one-line version, it costs nothing
+    listen:
+      aware:
+        examples:
+          - "yes"
+          - "yeah"
+          - "yes I know about it"
+          - "I've seen it already"
+          - "I know what it is"
+          - "yep, I've read all about it"
+        then: "ready_price"
+      unaware:
+        examples:
+          - "no"
+          - "nope"
+          - "not really"
+          - "no, tell me about it"
+          - "I don't know much about it"
+        then: "ready_brief"
+  "ready_brief":
+    name: "Ready buyer: the programme in one line"
+    ui_stage: outcome
+    draft: true
+    run_on: true
+    say: "Quick version: it's a {months}-month programme with {pillar_1}, {pillar_2} and {pillar_3}."
+    listen:
+      any: {then: "ready_price"}
+  "ready_price":
+    name: "Ready buyer: price"
+    ui_stage: outcome
+    draft: true
+    run_on: true   # straight into the payment question
+    say: "The investment is {price}."
+    listen:
+      any: {then: "22"}
 
 # Said after the loop lines and the direct line have all been used. The trainer's FAQ says to
 # book the follow-up and leave on a good note; it gives no wording.

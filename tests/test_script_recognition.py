@@ -240,3 +240,28 @@ def test_failed_past_attempt_gets_an_acknowledgement():
     seller.reset(ScriptState(step="03"))
     text, _ = seller.reply("I tried dropshipping and it failed")
     assert text.startswith("Sorry to hear that") and seller.state.step == "04"
+
+
+def test_floored_labels_clear_their_floor_only_when_meant(capsys):
+    """Keen buyer and frustration act on one message, so each has its own floor: real replies must
+    clear it when meant and never when not (heard as the seller hears them at step 01)."""
+    cfg = load_yaml("selling.yaml")
+    embedder = make_embedder(cfg, ROOT)
+    cat, sense = load_method("cat"), load_common_sense()
+    labels = {**_step_labels(cat, "01"), "ready": list(cat.ready.examples)}
+    labels.update({k: list(i.examples) for k, i in sense.interruptions.items() if not i.after_wait})
+    floors = {"ready": cat.ready.min_score, "frustrated": sense.interruptions["frustrated"].min_score}
+    data = yaml.safe_load((ROOT / "tests/data/script_replies.yaml").read_text(encoding="utf-8"))["floored"]
+    embedder.warm([e for ex in labels.values() for e in ex])
+    for label, rows in data.items():
+        def fires(reply, label=label):
+            m = recognise(reply, labels, embedder, cfg["threshold"], cfg["margin"], cfg["close_call_k"],
+                          cfg["near_miss"])
+            return m.label == label and not m.close and m.score > floors[label]
+
+        hit = [r for r in rows["meant"] if fires(r)]
+        false = [r for r in rows["not_meant"] if fires(r)]
+        with capsys.disabled():
+            print(f"\n{label}: meant {len(hit)}/{len(rows['meant'])}  false {false}")
+        assert not false
+        assert len(hit) / len(rows["meant"]) >= MIN_OFF_TOPIC

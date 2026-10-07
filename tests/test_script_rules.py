@@ -404,7 +404,15 @@ def test_ai_is_skipped_for_the_rest_of_a_turn_after_one_failure(fake_embedder):
     assert len(calls) == 2                # the next turn tries the AI again
 
 
-def test_slow_ai_is_abandoned():
+@pytest.fixture
+def breaker():
+    from core.script_engine import seller
+    seller._breaker.__init__()
+    yield seller._breaker
+    seller._breaker.__init__()
+
+
+def test_slow_ai_is_abandoned(breaker):
     import time
 
     from core.script_engine.seller import make_llm
@@ -414,15 +422,49 @@ def test_slow_ai_is_abandoned():
             time.sleep(0.5)
 
     assert CFG["ai_timeout_seconds"] > 0
-    llm = make_llm(Slow(), 0.05, 60)
+    llm = make_llm(Slow(), 0.05, 60, 1, CFG["ai_workers"])
     with pytest.raises(TimeoutError):
         llm("hi", 5)
     started = time.monotonic()
     with pytest.raises(RuntimeError, match="resting"):
-        llm("hi", 5)  # after a failure the AI is skipped at once, not waited on again
+        llm("hi", 5)  # after the limit the AI is skipped at once, not waited on again
     assert time.monotonic() - started < 0.05
-    from core.script_engine import seller
-    seller._ai_resting_until[0] = 0.0
+
+
+class _Flaky:
+    """A provider that fails while `down` is set."""
+
+    def __init__(self):
+        self.down, self.calls = True, 0
+
+    def chat_with_fallback(self, messages, max_tokens):
+        from types import SimpleNamespace
+        self.calls += 1
+        if self.down:
+            return SimpleNamespace(ok=False, response=SimpleNamespace(error="down", content=""))
+        return SimpleNamespace(ok=True, response=SimpleNamespace(error=None, content="fine"))
+
+
+def test_one_failure_does_not_rest_the_ai_for_everyone(breaker):
+    from core.script_engine.seller import make_llm
+
+    router = _Flaky()
+    llm = make_llm(router, 1, 60, 3, CFG["ai_workers"])
+    for _ in range(2):
+        with pytest.raises(RuntimeError, match="down"):
+            llm("hi", 5)
+    router.down = False
+    assert llm("hi", 5) == "fine"          # still tried after two failures, and a success resets the count
+    router.down = True
+    for _ in range(2):
+        with pytest.raises(RuntimeError, match="down"):
+            llm("hi", 5)
+    assert router.calls == 5               # two new failures: under the limit again, nothing skipped
+    with pytest.raises(RuntimeError, match="down"):
+        llm("hi", 5)                       # third in a row
+    with pytest.raises(RuntimeError, match="resting"):
+        llm("hi", 5)
+    assert router.calls == 6
 
 
 def test_uncovered_answer_is_fenced_and_must_stay_inside_the_facts(fake_embedder):
@@ -438,10 +480,13 @@ def test_uncovered_answer_is_fenced_and_must_stay_inside_the_facts(fake_embedder
     assert text.startswith(CFG["uncovered_fallback"])
 
 
-def test_checks_reject_new_numbers():
-    c = ctx(questions=0, price_ok=True, stop_words=frozenset(CFG["answer_filler_words"]),
-            prospect_words=frozenset({"programme", "month", "mentorship"}))
-    assert check("It is 6 months.", c)
+def test_checks_reject_new_numbers_and_banned_words():
+    c = ctx(questions=0, price_ok=True, known_figures=frozenset({"6 month"}), banned=frozenset({"guarantee"}))
+    assert check("It is a 6-month programme.", c) == []
+    assert check("It runs for 6 months.", c) == []
+    assert check("Most people see results in 8 weeks.", c) == ["new_number"]
+    assert check("You get 6 coaching calls.", c) == ["new_number"]   # a known number counting something new
+    assert check("We guarantee you'll love it.", c) == ["banned_word"]
 
 
 def test_fill_fences_the_reply():
