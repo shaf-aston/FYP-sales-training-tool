@@ -8,12 +8,14 @@ steps:
     ui_stage: intent
     say: "What would you like help with first?"
     capture: goal
+    echo: true   # their words go back into later lines as they said them
     listen:
       any: {then: "problem"}
   "problem":
     ui_stage: logical
     say: "What's felt hardest to figure out so far?"
     capture: problem
+    echo: true
     doubts_answer: true   # money, time, fear are the answer here, not objections
     listen:
       any: {then: "duration"}

@@ -269,7 +269,9 @@ def test_ai_down_never_blocks_a_turn(seller):
     text, _ = at(s, "02", outcome="I want financial freedom").reply("ten thousand")
     assert text == "How long have you been thinking about this?"
     text, _ = at(s, "05", outcome="I want financial freedom").reply("no time")
-    assert "that" in text and "{" not in text    # say_plain used for step 06
+    assert text == "What are you doing now to make financial freedom a reality and not just a dream?"  # no AI needed
+    text, _ = at(s, "05", outcome="I want to be my own boss").reply("no time")
+    assert "that" in text and "{" not in text    # their words don't fit: say_plain used for step 06
 
 
 def test_common_sense_interruption_then_bring_back(seller):

@@ -126,6 +126,7 @@ class ScriptSeller:
         self._ai_ok = True
         self._waiting = False  # last reply was a `wait` reply: they stepped away
         self._said = {}  # filled lines: the same line with the same answers is said the same way
+        self._echo = frozenset(s.capture for s in method.steps.values() if s.echo)
         self._opening = start(method)
         self.state = self._opening.state
         embedder.warm(self._script_examples())
@@ -164,6 +165,10 @@ class ScriptSeller:
         waiting, self._waiting = self._waiting, False
         step = self.method.steps[self.state.step]
         opened = price_open(self.method, self.state.step)
+        rest = self._unnudged(text)
+        if rest is not None and not tokenize(rest):
+            return self._carry_on(self.sense.nudge, step, rephrase=False)  # "ok, what's next?": no answer
+        text = text if rest is None else rest  # "credit, what's next?", "yeah, so what's next": the rest answers
         empty = not waiting and not self.state.play and self._says_nothing(text)
         if empty:  # listened to as an answer only: never an interruption, objection or question
             move = self._listen(text, step, empty=True)
@@ -221,12 +226,26 @@ class ScriptSeller:
             return said.reply, step.ui_stage
         if said.after == "ask":
             return self._then_ask(said.reply, bring_back=True), step.ui_stage
-        if said.after == "rephrase" or step.probes:
+        return self._carry_on(said.reply, step, rephrase=said.after == "rephrase")
+
+    def _carry_on(self, lead, step, rephrase):
+        """`lead`, then the step in other words; a step with no other words moves on instead (without
+        taking the reply as its answer), so the same line is never said twice in a row."""
+        if rephrase or step.probes:
             move = ask_again(self.method, replace(self.state, play=""))  # the step's question, not the play's
-        else:  # rephrase_else_move_on on a step with no other words: don't say the same line again
+        else:
             move = move_on(self.method, self.state)
         text, stage = self._go(move)
-        return f"{said.reply} {text}", stage
+        return f"{lead} {text}", stage
+
+    def _unnudged(self, text):
+        """The reply without a nudge on its end ("credit, what's next?" -> "credit"); None when it has none."""
+        for phrase in sorted(self.sense.nudges, key=len, reverse=True):
+            words = r"\W+".join(map(re.escape, tokenize(phrase)))
+            found = re.search(rf"(?:^|\W)(?:so\W+|ok\W+|okay\W+)?{words}\W*$", text, re.IGNORECASE)
+            if found:
+                return text[:found.start()].rstrip(" ,;:-")
+        return None
 
     def _hesitates(self, move):
         """They held back at the revisit step while a worry from earlier is still unanswered."""
@@ -413,7 +432,7 @@ class ScriptSeller:
     def _fill(self, say, ack, say_plain, slots):
         key = (say, ack, tuple(sorted(slots.items())))
         if key not in self._said:
-            self._said[key] = fill_step(say, ack, say_plain, slots, self.offer, self.cfg, self._ask)
+            self._said[key] = fill_step(say, ack, say_plain, slots, self.offer, self.cfg, self._ask, self._echo)
         return self._said[key]
 
     def _render(self, move, heard=""):

@@ -9,6 +9,13 @@
 bring_back: "So, as you mentioned {last_point}, "
 park: "That's fair, and we'll come back to it once we know this is even a fit."   # objection before the price: acknowledge, keep going
 revisit: "Coming back to what you raised earlier,"   # a parked objection, raised again when they hesitate at the close
+# A nudge to carry on ("what's next?", "go on"). Live: "yeah makes sense, what's next?" got "I don't know
+# that one offhand". Cut off the end of a reply, the rest is heard as usual ("credit, what's next?" pays).
+# A reply that is only a nudge: the reply below, then the step in other words, or the next step.
+nudge:
+  draft: true
+  reply: "Sure."
+  phrases: ["what's next", "what next", "whats next", "what now", "and then what", "then what", "and then", "go on", "keep going", "what else", "ok and", "and"]
 interruptions:
   pause:
     draft: true
@@ -83,16 +90,3 @@ interruptions:
       - "whatever"
       - "f*** off with the questions"
     reply: "Fair enough, I'll keep this quick."
-  go_on:   # live: "yeah makes sense, what's next?" got "I don't know that one offhand"; a nudge, never an answer
-    draft: true
-    after: rephrase_else_move_on   # a pitch line moves on; a question still needing an answer is asked another way
-    min_score: 0.75   # "what's next for me after the programme?" is a real question
-    examples:
-      - "what's next?"
-      - "ok, what's next"
-      - "and then what?"
-      - "go on"
-      - "keep going"
-      - "what's the next bit?"
-      - "ok and?"
-    reply: "Sure."

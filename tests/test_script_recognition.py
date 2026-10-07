@@ -244,7 +244,7 @@ def test_failed_past_attempt_gets_an_acknowledgement():
 
 
 def test_floored_labels_clear_their_floor_only_when_meant(capsys):
-    """Keen buyer, frustration and "what's next?" act on one message, so each has its own floor: real replies must
+    """Keen buyer and frustration act on one message, so each has its own floor: real replies must
     clear it when meant and never when not (heard as the seller hears them at step 01)."""
     cfg = load_yaml("selling.yaml")
     embedder = make_embedder(cfg, ROOT)

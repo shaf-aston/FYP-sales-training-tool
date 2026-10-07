@@ -479,7 +479,7 @@ def test_a_mixed_payment_reply_is_judged_never_welcomed_on_a_guess(fake_embedder
     assert reply == CAT.steps["22"].probes[0] and s.state.step == "22"
 
 
-GO_ON = SENSE.interruptions["go_on"].reply
+GO_ON = SENSE.nudge
 
 
 @pytest.mark.parametrize("step, then", [("15", "16"), ("16", "17")])
@@ -507,3 +507,95 @@ def test_whats_next_asks_no_ai(fake_embedder):
     ai = Recorder()
     seller(fake_embedder, ai, step="15").reply("ok, what's next?")
     assert ai.prompts == []
+
+
+# ---- C13 their own words in the line, by rule (no AI) ----------------------------------------
+
+@pytest.mark.parametrize("reply, phrase", [
+    ("financial freedom", "financial freedom"),
+    ("I want financial freedom", "financial freedom"),
+    ("honestly I just want freedom", "freedom"),
+    ("Financial freedom!", "financial freedom"),
+    ("more time with family", "more time with family"),
+    ("time in Dubai", "time in Dubai"),
+    ("I want to be my own boss", None),          # starts like a verb
+    ("my own boss", None),                       # speaks as the prospect
+    ("freedom for me and my whole family", None),  # too long
+    ("travel more", None),
+    ("not sure really", None),
+    ("", None),
+])
+def test_echo_phrase(reply, phrase):
+    from core.script_engine.fill import echo_phrase
+    assert echo_phrase(reply, CFG) == phrase
+
+
+def test_their_outcome_goes_back_into_the_next_question(fake_embedder):
+    s = seller(fake_embedder, step="01")
+    reply, _ = s.reply("I want financial freedom")
+    assert reply == "How much would you need to be making each month to achieve financial freedom?"
+
+
+def test_words_that_dont_fit_get_the_plain_line(fake_embedder):
+    s = seller(fake_embedder, step="01")
+    reply, _ = s.reply("I want to quit my job and be my own boss")
+    assert reply == CAT.steps["02"].say_plain
+
+
+def test_a_vague_answer_is_never_said_back(fake_embedder):
+    s = seller(fake_embedder, step="01")
+    s.reply("not sure really")
+    assert "outcome" not in s.state.slots
+
+
+def test_backing_out_is_not_kept_as_their_reason(fake_embedder):
+    s = seller(fake_embedder, step="20")
+    s.reply("actually no, forget it")
+    assert "reason" not in s.state.slots and s.state.last_point == ""
+
+
+# ---- C14 a nudge on the end of a reply (review: "yes, what's next?" lost the yes) ------------
+
+@pytest.mark.parametrize("step, text, then", [
+    ("18", "yes, what's next?", "19"),
+    ("18", "yeah, so what's next", "19"),
+    ("22", "credit, what's next?", "end"),
+    ("22", "visa, then what?", "end"),
+    ("17", "yeah, definitely open to that, what's next?", "18"),
+    ("20", "because I want freedom, what's next?", "21"),
+])
+def test_the_rest_of_a_nudged_reply_is_its_answer(fake_embedder, step, text, then):
+    s = seller(fake_embedder, step=step)
+    reply, _ = s.reply(text)
+    assert CFG["uncovered_fallback"] not in reply
+    assert s.state.step == then or (then == "21" and s.state.step == "22")  # 21 runs on into 22
+
+
+def test_a_nudged_reason_is_kept_without_the_nudge(fake_embedder):
+    s = seller(fake_embedder, step="20")
+    s.reply("because I want freedom, what's next?")
+    assert s.state.slots["reason"] == "because I want freedom"
+
+
+@pytest.mark.parametrize("text", ["what's next for me after the programme?", "I want to go on holiday more"])
+def test_a_nudge_word_inside_a_reply_is_not_a_nudge(fake_embedder, text):
+    s = seller(fake_embedder, step="15")
+    reply, _ = s.reply(text)
+    assert not reply.startswith(f"{GO_ON} ")
+
+
+@pytest.mark.parametrize("nudge, error", [
+    ({"reply": "Sure?", "phrases": ["go on"]}, "must not ask"),
+    ({"reply": "Sure."}, "both"),
+])
+def test_loader_rejects_a_bad_nudge(nudge, error):
+    from core.script_engine.method import parse_common_sense
+    data = {"bring_back": "", "park": "", "revisit": "", "interruptions": {}, "nudge": nudge}
+    with pytest.raises(ValueError, match=error):
+        parse_common_sense(data)
+
+
+def test_loader_rejects_echo_without_a_capture():
+    with pytest.raises(ValueError, match="echo"):
+        parse_method("x", {"first": "a", "price_step": "a", "steps": {
+            "a": {"ui_stage": "intent", "say": "hi", "echo": True, "listen": {"any": {"then": "a"}}}}})

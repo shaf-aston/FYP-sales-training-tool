@@ -34,6 +34,7 @@ steps:
     draft: true  # probes 2-3 are ours: the source only says "dig till freedom"
     say: "What do you want to specifically achieve by making money online?"
     capture: outcome
+    echo: true   # "financial freedom" goes back into the next lines as they said it
     probe:   # asked in turn; then `stuck` moves on instead of asking forever
       - "What are you actually hoping to achieve?"
       - "What would that money actually give you?"
@@ -59,11 +60,12 @@ steps:
           - "not sure really"
           - "I don't know"
         then: "01"
+        keep: false   # "not sure really" is not their outcome: never said back to them
   "02":
     name: "Number"
     ui_stage: logical
     draft: true
-    say: "How much would you need to be making each month for {outcome}?"
+    say: "How much would you need to be making each month to achieve {outcome}?"
     say_plain: "How much would you need to be making each month to make that happen?"
     capture: number
     # "I want 5k a month" said earlier answers this step, so it is skipped. Needs a want/need word,
@@ -284,6 +286,7 @@ steps:
           - "no"
         then: "19"
         ack: "No pressure at all."
+        keep: false   # "forget it" is not their reason: never said back or quoted later
       any: {then: "21"}
   "21":
     name: "Next steps"

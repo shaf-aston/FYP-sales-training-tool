@@ -222,11 +222,6 @@ common_sense:
     - "why do you keep asking me that"
     - "I've already told you"
     - "what do you mean by that exactly"
-  go_on:   # live: "yeah makes sense, what's next?" got "I don't know that one offhand"
-    - "ok, what's next?"
-    - "go on then"
-    - "and then?"
-    - "right, what's next"
   none:
     - "I need to think about it"
     - "I want freedom"
@@ -261,12 +256,3 @@ floored:
       - "honestly whatever pays the bills"
       - "I want to stop working for someone else"
       - "I'm tired of my job"
-  go_on:
-    meant:
-      - "ok, what's next?"
-      - "go on then"
-      - "and then what?"
-    not_meant:
-      - "what's next for me after the programme?"
-      - "next year I want to quit my job"
-      - "I want to go on holiday more"

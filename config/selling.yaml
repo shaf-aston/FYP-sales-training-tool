@@ -28,6 +28,8 @@ filler_tags: ["you get me", "you know", "you know what i mean", "innit", "right"
 question_starts: ["how much", "how long is", "how long does", "how many", "do you", "does it", "does the", "is it", "is there", "are there", "are you", "can i", "can you", "will i", "will it", "what does it", "what do you", "what is the", "what's the", "where are you", "when does", "who is", "do people", "does this", "has anyone", "will this"]   # phrases that open a question
 ai_fill_blanks: false   # AI fills {blanks} from the prospect's words; off = always the plain line (live tests: AI phrases often read wrong)
 bad_phrase_starts: [own, to, stop, quit, be, make, get, have, want, need, start, being, making, getting, working, just]   # a blank phrase starting like this breaks the sentence
+echo_bad_starts: [not, no, nothing, travel, leave, retire, buy, pay, spend, support, help, live, work, earn, provide, move, do, go, finally, a, an, because, idk, dunno, yes, yeah, ok, okay]   # also refused when their own words go into a blank: "to achieve travel more" reads wrong
+echo_drop_starts: ["i want", "i'd like", "i would like", "i just want", "i need", "i'm after", "honestly", "basically", "probably", "just", "mainly", "mostly", "well", "so", "um", "uh", "for", "really"]   # lead-ins dropped before their words go into a blank: "I want financial freedom" -> "financial freedom"
 prospect_pronouns: [i, "i'm", "i've", "i'd", me, my, mine, myself]   # the bot would be speaking as the prospect
 slot_tokens: 20        # max_tokens for a blank-filling call
 judge_tokens: 10       # max_tokens for a close-call judge
