@@ -166,6 +166,11 @@ facts:
     - "do you take clients outside the US"
     - "where are you guys located"
     - "is it open to people overseas"
+  fit:   # live: "people like me" got the location answer
+    - "do people like me actually make it work"
+    - "would this even work for someone like me"
+    - "has someone with no experience done it"
+    - "is it suitable for a total beginner"
   none:
     - "my dog is barking, sorry"
     - "I need to think about it"
@@ -190,6 +195,16 @@ common_sense:
     - "appreciate it, thank you"
     - "that was really helpful, cheers"
     - "thank you for explaining"
+  bot:   # live: "is this a bot?" was dodged
+    - "is this a bot"
+    - "am I speaking to a human"
+    - "are you real or AI"
+    - "is this an automated call"
+  clarify:   # live: "what do you mean freedom", "why do you keep asking"
+    - "what do you mean freedom"
+    - "why do you keep asking me that"
+    - "I've already told you"
+    - "what do you mean by that exactly"
   none:
     - "I need to think about it"
     - "I want freedom"

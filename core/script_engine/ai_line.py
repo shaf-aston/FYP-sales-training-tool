@@ -7,13 +7,13 @@ from core.script_engine.checks import check, clip
 logger = logging.getLogger("script_engine.fallback")
 
 
-def checked_line(llm, prompt, tokens, ctx, cfg, label, clean=str.strip, extra_rules=None):
+def checked_line(llm, prompt, tokens, ctx, cfg, label, clean=str.strip, extra_rules=None, retries=None):
     """Return the first AI answer that breaks no rule, or None.
 
     `clean` tidies the raw answer; returning None from it means the AI declined (stop now).
     `extra_rules(text)` adds caller-specific broken-rule names to the shared `check`.
     """
-    for _ in range(1 + cfg["ai_retries"]):
+    for _ in range(1 + (cfg["ai_retries"] if retries is None else retries)):
         try:
             text = clean(llm(prompt, tokens))
         except Exception as exc:  # noqa: BLE001 - any AI failure means fall back

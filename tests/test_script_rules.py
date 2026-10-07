@@ -576,3 +576,195 @@ def test_checked_line_retries_then_gives_up_on_rule_breaking_ai():
     assert checked_line(down, "q", 20, ctx, cfg, "t") is None
 
 
+
+
+# ---- listening: what the live roleplay report found -------------------------------------
+
+def test_no_scripted_line_is_a_canned_fair_enough():
+    # live: "Fair enough." came straight after the prospect said they barely see their daughter
+    for name in ("cat", "impact_formula"):
+        for step in load_method(name).steps.values():
+            assert all(r.ack != "Fair enough." for r in step.routes), step.id
+
+
+def test_people_like_me_is_answered_as_fit_not_location(seller):
+    # live: "do people like me actually make it work" got "We work with people all around the world."
+    text, _ = at(seller, "03").reply("do people like me actually make it work")
+    assert text.startswith(seller.offer.facts["fit"].answer)
+    assert "around the world" not in text
+
+
+def test_ok_to_an_open_question_is_asked_again_then_the_call_moves_on(seller):
+    # live: "ok" to "how long have you been thinking about this" was taken as the answer
+    at(seller, "03", outcome="freedom")
+    again, _ = seller.reply("ok")
+    assert seller.state.step == "03" and again == "How long have you been thinking about this?"
+    seller.reply("sure")
+    assert seller.state.step == "04" and "years" not in seller.state.slots
+
+
+def test_sure_is_not_read_as_asking_to_repeat(seller):
+    # live: "sure" got "Of course, let me ask that again."
+    text, _ = at(seller, "01").reply("sure")
+    assert seller.sense.interruptions["repeat"].reply not in text
+    assert text == seller.method.steps["01"].probes[0]
+
+
+def test_yeah_still_answers_a_yes_no_step(seller):
+    at(seller, "18").reply("yeah")
+    assert seller.state.step == "19"
+
+
+def test_no_is_a_real_answer(seller):
+    at(seller, "06").reply("no")
+    assert seller.state.step != "06"
+
+
+def test_back_after_a_pause_still_works(seller):
+    at(seller, "03")
+    seller.reply("hold on a second")
+    text, _ = seller.reply("ok I'm back")
+    assert text.startswith(seller.sense.interruptions["back"].reply)
+
+
+def test_scam_question_before_the_price_gets_an_honest_line_and_is_remembered(seller):
+    # live: "is this a scam?" got "Good question, I'll confirm that for you after the call."
+    text, _ = at(seller, "03").reply("is this a scam?")
+    assert text.startswith(seller.method.objections["scam"].early)
+    assert text.endswith("How long have you been thinking about this?")
+    assert seller.state.parked == ("scam",)
+
+
+def test_a_worry_is_parked_once(seller):
+    at(seller, "03")
+    seller.reply("I can't afford that right now")
+    seller.reply("I can't afford that right now")
+    assert seller.state.parked == ("money",)
+
+
+def test_price_question_still_gets_the_price_fact_not_the_money_worry(seller):
+    for asked in seller.offer.facts["price"].examples:
+        text, _ = at(seller, "03").reply(asked)
+        assert text.startswith(seller.offer.facts["price"].answer), asked
+        assert seller.state.parked == ()
+
+
+def test_a_parked_worry_comes_back_when_they_hesitate_at_the_close(seller):
+    # live: the scam worry was brushed off and never handled
+    at(seller, "19")
+    seller.reset(ScriptState(step="19", parked=("partner",)))
+    text, _ = seller.reply("no, not really")
+    partner = seller.method.objections["partner"]
+    assert text.startswith(seller.sense.revisit)
+    assert text.endswith(partner.loop[0][:1].lower() + partner.loop[0][1:])
+    assert seller.state.parked == () and seller.state.play == "partner" and seller.state.asks == 0
+    follow, _ = seller.reply("my wife decides")
+    assert follow.startswith(partner.normalise) and follow.endswith("Do you see yourself jumping in?")
+
+
+def test_parked_worries_survive_a_rewind_snapshot():
+    from dataclasses import asdict
+
+    state = ScriptState(step="05", parked=("scam", "money"))
+    restored = ScriptState(**asdict(state))
+    assert tuple(restored.parked) == ("scam", "money")
+
+
+@pytest.mark.parametrize("change, error", [
+    ({"revisit_step": "03"}, "revisit_step"),
+    ({"objections.money.early": "Is money the issue?"}, "early line"),
+])
+def test_broken_revisit_settings_fail_loud(change, error):
+    from core.script_engine.method import _read, parse_method, CONFIG_DIR
+
+    data = _read(CONFIG_DIR / "methods", "cat")
+    (key, value), = change.items()
+    if key.startswith("objections."):
+        _, name, field_ = key.split(".")
+        data["objections"][name][field_] = value
+    else:
+        data[key] = value
+    with pytest.raises(ValueError, match=error):
+        parse_method("cat", data)
+
+
+def test_is_this_a_bot_gets_an_honest_yes_then_the_question(seller):
+    # live: "is this a bot?" was dodged with "I'll confirm that for you after the call"
+    text, _ = at(seller, "03").reply("is this a bot?")
+    assert text.startswith(seller.sense.interruptions["bot"].reply)
+    assert text.endswith("How long have you been thinking about this?")
+
+
+def test_why_do_you_keep_asking_moves_to_other_words_and_counts_toward_moving_on(seller):
+    # live: "what do you mean freedom" / "why do you keep asking" got the same question again
+    probes = seller.method.steps["01"].probes
+    text, _ = at(seller, "01").reply("why do you keep asking the same thing")
+    assert text == f'{seller.sense.interruptions["clarify"].reply} {probes[0]}'
+    assert seller.state.asks == 1
+
+
+def test_repeat_and_unclear_still_win_their_own_phrases(seller):
+    text, _ = at(seller, "03").reply("sorry, can you say that again")
+    assert text.startswith(seller.sense.interruptions["repeat"].reply)
+    at(seller, "18").reply("can you explain that again")
+    assert seller.state.step == "18"
+
+
+def _acking(ack, calls=None):
+    """fake_llm plus an ack answer; records the prompts it was sent."""
+    def llm(prompt, n):
+        if calls is not None:
+            calls.append(prompt)
+        if "shows you heard them" in prompt:
+            return ack
+        return fake_llm(prompt, n)
+    return llm
+
+
+def test_their_words_are_heard_before_the_next_question(fake_embedder):
+    # live: "I work nights and barely see my daughter" got the next question as if unheard
+    seller = at(make_seller(fake_embedder, _acking("That sounds hard, you barely see your daughter.")), "04")
+    text, _ = seller.reply("I work nights and barely see my daughter")
+    assert text.startswith("That sounds hard, you barely see your daughter. ")
+    assert text.endswith(seller.method.steps["05"].say_plain)
+
+
+@pytest.mark.parametrize("bad", [
+    "Great, you are seeing your daughter less.",    # "great" and "seeing" are not their words
+    "Why do you barely see your daughter?",          # a question
+    "You barely see your daughter, $5k fixes that.",  # price before the price step
+])
+def test_an_ack_that_breaks_a_rule_is_left_out(fake_embedder, bad):
+    seller = at(make_seller(fake_embedder, _acking(bad)), "04")
+    text, _ = seller.reply("I work nights and barely see my daughter")
+    assert text == seller.method.steps["05"].say_plain
+
+
+def test_no_ack_call_when_the_route_has_its_own(fake_embedder):
+    calls = []
+    seller = at(make_seller(fake_embedder, _acking("You tried dropshipping.", calls)), "03")
+    text, _ = seller.reply("I tried dropshipping and it failed")
+    assert text.startswith("Sorry to hear that")
+    assert not any("shows you heard them" in p for p in calls)
+
+
+def test_no_ack_for_a_reply_that_says_nothing(fake_embedder):
+    calls = []
+    seller = at(make_seller(fake_embedder, _acking("Okay.", calls)), "03")
+    seller.reply("ok")
+    assert calls == []
+
+
+def test_ai_down_means_no_ack_and_no_canned_line(fake_embedder):
+    def down(prompt, n):
+        raise RuntimeError("offline")
+    seller = at(make_seller(fake_embedder, down), "04")
+    text, _ = seller.reply("I work nights and barely see my daughter")
+    assert text == seller.method.steps["05"].say_plain
+
+
+def test_the_ack_comes_before_run_on_lines(fake_embedder):
+    seller = at(make_seller(fake_embedder, _acking("You can see it.")), "20")
+    text, _ = seller.reply("I see myself in it")
+    assert text.startswith("You can see it. ")
+    assert seller.method.steps["21"].say in text

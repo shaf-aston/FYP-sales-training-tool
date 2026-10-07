@@ -3,6 +3,7 @@
 # draft: true = a line on that step is not verbatim from the source and needs a trainer's wording.
 first: "00"
 price_step: "14"
+revisit_step: "19"   # an objection parked before the price comes back when they hesitate at the soft close
 steps:
   "00":
     name: "Frame"
@@ -17,14 +18,14 @@ steps:
     name: "End outcome"
     note: 'FREEDOM. Vague → loop back, dig till freedom'
     ui_stage: intent
-    draft: true  # probes 2-3 and the stuck ack are ours: the source only says "dig till freedom"
+    draft: true  # probes 2-3 are ours: the source only says "dig till freedom"
     say: "What do you want to specifically achieve by making money online?"
     capture: outcome
     probe:   # asked in turn; then `stuck` moves on instead of asking forever
       - "What are you actually hoping to achieve?"
       - "What would that money actually give you?"
       - "If money wasn't a problem, what would your days look like?"
-    stuck: {then: "02", ack: "Fair enough."}
+    stuck: {then: "02"}
     listen:
       freedom:
         examples:
@@ -49,8 +50,8 @@ steps:
     name: "Number"
     ui_stage: logical
     draft: true
-    say: "How much do you need to be making to feel {outcome} freedom?"
-    say_plain: "How much do you need to be making to feel that freedom?"
+    say: "How much would you need to be making each month for {outcome}?"
+    say_plain: "How much would you need to be making each month to make that happen?"
     capture: number
     listen:
       any: {then: "03"}
@@ -177,7 +178,7 @@ steps:
     note: 'direct coaching, tailored feedback, avoid landmines'
     ui_stage: pitch
     draft: true
-    say: "{pillar_2}: direct coaching and tailored feedback to avoid the landmines. You mentioned you've been stuck and unsure for years... we put that frustration to bed."
+    say: "{pillar_2}: direct coaching and tailored feedback to avoid the landmines. If you've been stuck and unsure, we put that frustration to bed."
     listen:
       any: {then: "17"}
   "17":
@@ -258,7 +259,7 @@ steps:
     ui_stage: outcome
     draft: true
     run_on: true   # leads straight into the payment question
-    say: "You're on your way to building the freedom you've been aiming for."
+    say: "You're on your way to building what you've been aiming for."
     listen:
       any: {then: "22"}
   "22":
@@ -298,7 +299,8 @@ objections:
       - "How much do you have now?"
       - "What can we do together to come up with the funds?"
     direct: "Are you going to keep thinking about it, or are you going to make a change?"
-    normalise: "Okay. There are ways to make the investment work as long as you're willing to make it work."   # draft: the play says "normalise" with no wording
+    normalise: "Okay. There are ways to make the investment work as long as you're willing to make it work."
+    early: "I haven't mentioned a price yet, so let's first see if this is even a fit."   # draft   # draft: the play says "normalise" with no wording
     draft: true
   partner:
     examples:
@@ -363,5 +365,6 @@ objections:
       - "You're right, there's a lot of shady things online."
       - "Do you want to find out or keep the door closed?"
     direct: "Are you going to keep thinking about it, or are you going to make a change?"
-    normalise: "Fair enough, it pays to be careful."   # draft: the play says "normalise" with no wording
+    normalise: "Fair enough, it pays to be careful."
+    early: "Fair question, there's a lot of shady stuff online. This call is to see if we can even help you first."   # draft   # draft: the play says "normalise" with no wording
     draft: true

@@ -14,7 +14,7 @@ from core.script_engine.ai_line import checked_line
 from core.script_engine.checks import CheckContext, clip
 from core.utils import is_question, tokenize
 from core.script_engine.embedder import make_embedder
-from core.script_engine.engine import advance, object_to, price_open, start
+from core.script_engine.engine import advance, ask_again, object_to, park, price_open, start
 from core.script_engine.fill import fill_line, fill_step
 from core.script_engine.judge import VAGUE, judge
 from core.script_engine.method import ANY, load_common_sense, load_method, load_offer
@@ -115,6 +115,11 @@ class ScriptSeller:
         waiting, self._waiting = self._waiting, False
         step = self.method.steps[self.state.step]
         opened = price_open(self.method, self.state.step)
+        empty = not waiting and not self.state.play and self._says_nothing(text)
+        if empty:  # listened to as an answer only: never an interruption, objection or question
+            move = self._listen(text, step, empty=True)
+            self.state = move.state
+            return self._render(move), move.ui_stage
         kind, name = self._interrupt(text, step, opened, waiting)
 
         if kind == "sense":
@@ -122,9 +127,14 @@ class ScriptSeller:
             if said.wait:
                 self._waiting = True
                 return said.reply, step.ui_stage
+            if said.rephrase:
+                move = ask_again(self.method, self.state)
+                self.state = move.state
+                return f"{said.reply} {self._render(move)}", move.ui_stage
             return self._then_ask(said.reply, bring_back=True), step.ui_stage
         if kind == "objection" and not opened:
-            return self._then_ask(self.sense.park), step.ui_stage
+            self.state = park(self.state, name)
+            return self._then_ask(self.method.objections[name].early or self.sense.park), step.ui_stage
         if kind == "objection":
             move = object_to(self.method, self.state, name, self.cfg["objection_loops"])
             self.state = move.state
@@ -143,8 +153,24 @@ class ScriptSeller:
             return self._then_ask(self._answer_uncovered(text, opened), bring_back=True), step.ui_stage
 
         move = self._listen(text, step)
+        if self._hesitates(move):
+            return self._revisit(), step.ui_stage
         self.state = move.state
-        return self._render(move), move.ui_stage
+        heard = "" if move.ack else self._acknowledge(text, step, opened)  # after the judge: a failed ack can't cost it
+        return self._render(move, heard), move.ui_stage
+
+    def _hesitates(self, move):
+        """They held back at the revisit step while a worry from earlier is still unanswered."""
+        step_id = self.method.revisit_step
+        return (self.state.step == step_id and move.state.step == step_id
+                and bool(self.state.parked) and not self.state.play)
+
+    def _revisit(self):
+        """Raise the oldest parked worry now: it is likely what holds them back."""
+        move = object_to(self.method, self.state, self.state.parked[0], self.cfg["objection_loops"])
+        self.state = move.state
+        line = self._render(move)
+        return f"{self.sense.revisit} {line[:1].lower()}{line[1:]}"
 
     def ui_stage(self):
         """The UI stage of the step the call is on."""
@@ -174,8 +200,12 @@ class ScriptSeller:
         if asking:
             labels.update({f"fact:{k}": f.examples for k, f in self.offer.facts.items()})
         answers = {r.signal: list(r.examples) for r in step.listen if r.examples}
-        if opened or not (asking or step.doubts_answer):
-            labels.update({f"objection:{k}": o.examples for k, o in self.method.objections.items()})
+        objections = self.method.objections.items()
+        if not opened and step.doubts_answer:
+            objections = ()  # "money's tight" answers "what holds you back"
+        elif not opened and asking:
+            objections = [(k, o) for k, o in objections if o.early]  # "is this a scam?" gets an honest early line
+        labels.update({f"objection:{k}": o.examples for k, o in objections})
         found = self._recognise(text, labels)
         if not found.label or found.close:
             return None, None
@@ -189,7 +219,7 @@ class ScriptSeller:
             bar = max(bar, self.cfg["interrupt_threshold"])  # any reply is an answer: interrupt only when sure
         return found.label.split(":", 1) if found.score > bar else (None, None)
 
-    def _listen(self, text, step):
+    def _listen(self, text, step, empty=False):
         labels = {r.signal: list(r.examples) for r in step.listen if r.examples}
         signal = None
         if labels:
@@ -199,7 +229,33 @@ class ScriptSeller:
                 pick = judge(text, {c: labels[c] for c in found.candidates}, self._ask,
                              self.cfg["judge_tokens"])
                 signal = None if pick == VAGUE else pick
-        return advance(self.method, self.state, signal, text)
+        return advance(self.method, self.state, signal, text, empty)
+
+    def _says_nothing(self, text):
+        """"ok", "sure", "yeah": no answer to an open question, and no interruption either."""
+        words = set(tokenize(text))
+        return bool(words) and words <= set(self.cfg["stop_words"]) | set(self.cfg["filler_words"])
+
+    def _acknowledge(self, reply, step, opened):
+        """One short checked sentence showing their answer was heard, in their own words.
+        Nothing when it fails: honest silence beats a canned line."""
+        c = self.cfg
+        if not c["ack"]:
+            return ""
+        prompt = (
+            "You are the salesperson on a call. You asked:\n"
+            f"<question>{step.say_plain or step.say}</question>\n"
+            f"They answered: <reply>{reply}</reply>\n"
+            f"Write one short sentence (at most {c['ack_max_words']} words) that shows you heard them, "
+            "using their own words and speaking to them as 'you'. No question, no advice, no praise. "
+            "Answer with the sentence only."
+        )
+        ctx = CheckContext(
+            c["ack_max_words"], 0, opened, self.offer.price,
+            prospect_words=frozenset(tokenize(reply)),
+            stop_words=frozenset(c["stop_words"]) | frozenset(c["ack_words"]),
+        )
+        return checked_line(self._ask, prompt, c["ack_tokens"], ctx, c, "ack", retries=c["ack_retries"]) or ""
 
     def _is_question(self, text):
         return is_question(text, self.cfg["question_starts"], self.cfg["filler_tags"])
@@ -249,8 +305,8 @@ class ScriptSeller:
             self._said[key] = fill_step(say, ack, say_plain, slots, self.offer, self.cfg, self._ask)
         return self._said[key]
 
-    def _render(self, move):
-        said = []
+    def _render(self, move, heard=""):
+        said = [heard] if heard else []
         for step_id in move.lead:
             lead = self.method.steps[step_id]
             said.append(self._fill(lead.say, "", lead.say_plain, move.state.slots))

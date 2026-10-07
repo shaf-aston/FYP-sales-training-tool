@@ -21,8 +21,9 @@ ai_timeout_seconds: 2   # a slow AI call is abandoned; the turn uses the script 
 objection_loops: 2     # loop twice, third time go direct
 slot_words: 4          # longest phrase the AI may put into a script blank
 stop_words: [a, an, the, i, i'm, i've, my, me, to, of, and, or, in, on, at, for, is, am, are, be, it, that, this, so, with, as, by, we, you, your]
+filler_words: [ok, okay, sure, yeah, yep, yes, hmm, mm, cool, alright, right, k]   # a reply made only of these (and stop_words) says nothing; never add "no", it answers yes/no steps
 filler_tags: ["you get me", "you know", "you know what i mean", "innit", "right", "yeah", "ya know", "get me", "you feel me"]   # "...bro, you get me?" is talk, not a question
-question_starts: ["how much", "how long is", "how long does", "how many", "do you", "does it", "does the", "is it", "is there", "are there", "are you", "can i", "can you", "will i", "will it", "what does it", "what do you", "what is the", "where are you", "when does", "who is"]   # phrases that open a question
+question_starts: ["how much", "how long is", "how long does", "how many", "do you", "does it", "does the", "is it", "is there", "are there", "are you", "can i", "can you", "will i", "will it", "what does it", "what do you", "what is the", "what's the", "where are you", "when does", "who is", "do people", "does this", "has anyone", "will this"]   # phrases that open a question
 ai_fill_blanks: false   # AI fills {blanks} from the prospect's words; off = always the plain line (live tests: AI phrases often read wrong)
 bad_phrase_starts: [own, to, stop, quit, be, make, get, have, want, need, start, being, making, getting, working, just]   # a blank phrase starting like this breaks the sentence
 prospect_pronouns: [i, "i'm", "i've", "i'd", me, my, mine, myself]   # the bot would be speaking as the prospect
@@ -30,6 +31,11 @@ slot_tokens: 20        # max_tokens for a blank-filling call
 judge_tokens: 10       # max_tokens for a close-call judge
 answer_tokens: 60      # max_tokens for an uncovered product answer
 answer_filler_words: ["yes", "no", we, can, will, help, you, work, with, offer, also, all, your, our, is, are, the, a, an, to, of, and, for, in, on, it]
-uncovered_fallback: "Good question, I'll confirm that for you after the call."   # draft wording
+uncovered_fallback: "I don't know that one offhand, I'll find out and let you know."   # draft wording
+ack: true             # before the next scripted line, one short AI sentence showing their answer was heard (none when it fails a check)
+ack_max_words: 12
+ack_tokens: 30
+ack_retries: 0        # one try: a turn never waits on two ack calls
+ack_words: [you, your, you're, you've, got, it, sounds, makes, sense, hear, that, tough, hard, sorry, okay, right, fair, understand, so, really, lot, see, why, must, be, can, totally, thanks, for, sharing, not, no, easy, been, there, while]   # words the ack may add to the prospect's own; neutral or kind, never "great"
 log_uncovered: true    # write uncovered product questions to the log
 log_text_chars: 120    # longest piece of prospect text ever logged

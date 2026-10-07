@@ -48,6 +48,7 @@ class Objection:
     direct: str
     draft: bool
     normalise: str = ""  # said once they answer a loop line, before the step's question again
+    early: str = ""      # before the price: a short honest answer instead of `park`; may be raised while asking
 
 
 @dataclass(frozen=True)
@@ -58,6 +59,7 @@ class Method:
     objections: dict
     price_step: str     # the price may be said from this step on
     follow_up: str      # said once an objection has been looped and met directly
+    revisit_step: str = ""  # an objection parked before the price is raised again when they hesitate here
 
 
 @dataclass(frozen=True)
@@ -98,12 +100,14 @@ class Interruption:
     draft: bool
     wait: bool = False  # say the reply and wait; don't ask the question again yet
     after_wait: bool = False  # only makes sense right after a `wait` reply ("ok, I'm back")
+    rephrase: bool = False  # then ask the step in other words (its next probe), not the same line
 
 
 @dataclass(frozen=True)
 class CommonSense:
     bring_back: str
     park: str
+    revisit: str        # lead-in when a parked objection is raised again
     interruptions: dict
 
 
@@ -148,7 +152,7 @@ def _step(step_id, data):
 def _objection(name, data):
     return Objection(
         name, tuple(data["examples"]), tuple(data["loop"]),
-        data["direct"], bool(data.get("draft")), data.get("normalise", ""),
+        data["direct"], bool(data.get("draft")), data.get("normalise", ""), data.get("early", ""),
     )
 
 
@@ -169,7 +173,17 @@ def parse_method(name, data):
     if price_step not in steps:
         raise ValueError(f"method {name}: price_step {price_step!r} not defined")
     follow_up = (data.get("follow_up") or {}).get("say", "")
-    return Method(name, first, steps, objections, price_step, follow_up)
+    for o in objections.values():
+        if "?" in o.early:
+            raise ValueError(f"objection {o.name}: early line must not ask (the step's question follows)")
+    revisit_step = str(data.get("revisit_step", ""))
+    if revisit_step:
+        order = list(steps)
+        if revisit_step not in steps or order.index(revisit_step) < order.index(price_step):
+            raise ValueError(f"method {name}: revisit_step {revisit_step!r} must be a step at or after the price")
+        if not steps[revisit_step].stuck:
+            raise ValueError(f"method {name}: revisit_step {revisit_step!r} needs a 'stuck' route")
+    return Method(name, first, steps, objections, price_step, follow_up, revisit_step)
 
 
 def parse_offer(name, data):
@@ -189,10 +203,12 @@ def parse_offer(name, data):
 def parse_common_sense(data):
     items = {
         k: Interruption(k, tuple(v["examples"]), v["reply"], bool(v.get("draft")),
-                        bool(v.get("wait")), bool(v.get("after_wait")))
+                        bool(v.get("wait")), bool(v.get("after_wait")), bool(v.get("rephrase")))
         for k, v in data["interruptions"].items()
     }
-    return CommonSense(data["bring_back"], data["park"], items)
+    if "?" in data["park"] or any("?" in i.reply for i in items.values() if not i.wait):
+        raise ValueError("park and interruption replies must not ask (the step's question follows)")
+    return CommonSense(data["bring_back"], data["park"], data["revisit"], items)
 
 
 def load_method(name, directory=CONFIG_DIR / "methods"):

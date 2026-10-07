@@ -39,7 +39,7 @@ def test_call_opens_with_the_script_and_follows_it(client):
     # "freedom" is recognised, so the script moves to step 02. The dummy provider's blank
     # filler breaks the checks, so the plain script line is said.
     assert _say(client, headers, "I want financial freedom")["message"] == (
-        "How much do you need to be making to feel that freedom?"
+        "How much would you need to be making each month to make that happen?"
     )
     plain = _say(client, headers, "ten thousand a month")["message"]
     assert plain == "How long have you been thinking about this?"
@@ -113,7 +113,7 @@ def test_a_vague_prospect_hears_new_questions_then_the_call_moves_on(client):
     _, headers = _init(client)
     said = [_say(client, headers, "more money")["message"] for _ in range(4)]
     assert len(set(said[:3])) == 3  # each dig is worded differently
-    assert said[3].startswith("Fair enough.") and "How much" in said[3]
+    assert said[3].startswith("How much")  # moves on with no canned "Fair enough."
 
 
 def test_a_failed_past_attempt_is_acknowledged_before_going_on(client):

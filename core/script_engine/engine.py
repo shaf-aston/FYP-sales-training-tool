@@ -13,6 +13,7 @@ class ScriptState:
     last_point: str = ""
     play: str = ""      # objection whose loop/direct line was just asked; the next reply answers it
     asks: int = 0       # times the current step has been asked again
+    parked: tuple = ()  # objections raised before the price, oldest first; raised again at the revisit step
 
 
 @dataclass(frozen=True)
@@ -48,9 +49,15 @@ def start(method):
     return _speak(method, ScriptState(step=method.first))
 
 
-def advance(method, state, signal, reply=""):
-    """signal = recognised label or None. Unmatched reply asks the step again."""
+def advance(method, state, signal, reply="", empty=False):
+    """signal = recognised label or None. Unmatched reply asks the step again.
+    empty = the reply says nothing ("ok", "sure"): an open question is asked once more, then the
+    call moves on without saving it as their answer."""
     step = method.steps[state.step]
+    if empty and step.capture:
+        if state.asks < 1:
+            return _ask_again(method, state, step)
+        reply = ""
     route = _route(step, signal) if signal else None
     route = route or _route(step, ANY)
     if route is None:
@@ -64,6 +71,11 @@ def advance(method, state, signal, reply=""):
 
 def _take(method, state, route):
     return replace(_speak(method, replace(state, step=route.then)), ack=route.ack)
+
+
+def ask_again(method, state):
+    """The current step in other words (they asked what it meant)."""
+    return _ask_again(method, state, method.steps[state.step])
 
 
 def _ask_again(method, state, step, ack=""):
@@ -94,4 +106,10 @@ def object_to(method, state, name, loops):
     counts = {**state.objection_counts, name: seen + 1}
     step = method.steps[state.step]
     play = name if seen <= loops else ""
-    return Move(line, replace(state, objection_counts=counts, play=play), step.ui_stage, seen > loops)
+    parked = tuple(p for p in state.parked if p != name)
+    return Move(line, replace(state, objection_counts=counts, play=play, parked=parked), step.ui_stage, seen > loops)
+
+
+def park(state, name):
+    """Remember an objection raised before the price, once."""
+    return state if name in state.parked else replace(state, parked=(*state.parked, name))
