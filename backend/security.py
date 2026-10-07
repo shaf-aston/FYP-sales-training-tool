@@ -159,28 +159,6 @@ def has_valid_admin_token(request_obj, config_obj) -> bool:
     return result
 
 
-class PromptInjectionValidator:
-    """Strip obvious prompt injection patterns silently"""
-
-    INJECTION_PATTERN = re.compile(
-        r"\bignore\s+(all\s+)?(previous|prior|above)\s+instructions?\b"
-        r"|\bdisregard\s+.{0,30}instructions?\b"
-        r"|\bforget\s+(everything|all|your\s+(previous|prior|above|system))\b"
-        r"|\bprint\s+(your\s+)?(system\s+)?prompt\b"
-        r"|\byour\s+real\s+instructions?\b"
-        r"|\bact\s+as\s+(if\s+you\s+(are|were)|a\b)",
-        re.IGNORECASE,
-    )
-
-    @staticmethod
-    def sanitize(text: str, log_fn: Optional[Callable] = None) -> str:
-        sanitized = PromptInjectionValidator.INJECTION_PATTERN.sub("[removed]", text)
-        if sanitized != text and log_fn:
-            log_fn("Prompt injection stripped from message")
-        return sanitized
-
-
-
 class SecurityHeadersMiddleware:
     """Attach security headers to every Flask response"""
 
@@ -204,12 +182,11 @@ class InputValidator:
     @staticmethod
     def validate_message(
         text: str,
-        injection_validator: PromptInjectionValidator,
         max_length: int = SecurityConfig.MAX_MESSAGE_LENGTH,
     ) -> Tuple[Optional[str], Optional[Tuple]]:
         from flask import jsonify
 
-        text = injection_validator.sanitize(text.strip())
+        text = text.strip()
 
         if not text:
             return None, (jsonify({"error": "Message required"}), 400)

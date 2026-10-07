@@ -28,8 +28,7 @@ def build_product_context(product_type: str) -> str:
         prospect_knowledge = knowledge.get_custom_knowledge_text()
         if prospect_knowledge:
             blocks.append(
-                f"--- BEGIN CUSTOM PROSPECT DATA ---\n{prospect_knowledge}\n--- END CUSTOM PROSPECT DATA ---\n"
-                "(Buyer research: you don't know every technical detail.)"
+                f"Your research notes (you don't know every technical detail):\n{prospect_knowledge}"
             )
         body = "\n\n".join(b for b in blocks if b)
         return f"{context}\n\n{body}" if body else context

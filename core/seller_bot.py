@@ -75,11 +75,7 @@ class SellerBot:
 
             custom_knowledge = get_custom_knowledge_text()
             if custom_knowledge:
-                product_context += (
-                    "\n\n--- BEGIN CUSTOM PRODUCT DATA ---\n"
-                    f"{custom_knowledge}\n"
-                    "--- END CUSTOM PRODUCT DATA ---"
-                )
+                product_context += f"\n\nCustom product notes:\n{custom_knowledge}"
         except (ImportError, OSError, ValueError) as e:
             _base_logger.debug(f"Custom knowledge not loaded: {e}")
 

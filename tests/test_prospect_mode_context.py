@@ -93,7 +93,7 @@ def test_prospect_session_prompt_has_product_custom_data_and_persona_once(monkey
     }
     assert "Workflow software" in session.product_context
     assert "Core product knowledge." in session.product_context
-    assert "--- BEGIN CUSTOM PROSPECT DATA ---" in session.product_context
+    assert "Your research notes (you don't know every technical detail):" in session.product_context
     assert "product_name: Acme Pro" in session.product_context
     assert "Additional notes: buyer research" in session.product_context
     from core.buyer_prompt import build_system_prompt

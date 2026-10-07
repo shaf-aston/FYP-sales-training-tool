@@ -1,10 +1,6 @@
 # Every tunable number in the app. core/constants.py is the only reader.
 # All numbers must be > 0; the app refuses to start otherwise.
 
-response:            # Layer 3 output checks
-  min_chars: 40
-  max_chars: 1500
-
 context:
   recent_history_window: 10
   max_user_keywords: 6

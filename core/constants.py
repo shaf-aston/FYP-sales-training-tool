@@ -24,10 +24,6 @@ _check_positive(_L)
 # stage display
 UNDETERMINED_STAGE = "----"  # shown when intent strategy hasn't resolved yet
 
-# response validation (Layer 3)
-MIN_RESPONSE_CHARS = _L["response"]["min_chars"]
-MAX_RESPONSE_CHARS = _L["response"]["max_chars"]
-
 # conversation context
 RECENT_HISTORY_WINDOW = _L["context"]["recent_history_window"]
 MAX_USER_KEYWORDS = _L["context"]["max_user_keywords"]
