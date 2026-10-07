@@ -37,6 +37,7 @@ def _contexts():
         "step_01": _step_labels(cat, "01"),
         "step_18": _step_labels(cat, "18"),
         "step_19": _step_labels(cat, "19"),
+        "step_22": _step_labels(cat, "22"),
         "objections_cat": _objection_labels(cat),
         "objections_impact": _objection_labels(impact),
         "facts": {k: list(f.examples) for k, f in load_offer("shay_coaching").facts.items()},
@@ -250,7 +251,7 @@ def test_floored_labels_clear_their_floor_only_when_meant(capsys):
     cat, sense = load_method("cat"), load_common_sense()
     labels = {**_step_labels(cat, "01"), "ready": list(cat.ready.examples)}
     labels.update({k: list(i.examples) for k, i in sense.interruptions.items() if not i.after_wait})
-    floors = {"ready": cat.ready.min_score, "frustrated": sense.interruptions["frustrated"].min_score}
+    floors = {"ready": cat.ready.min_score, **{k: i.min_score for k, i in sense.interruptions.items()}}
     data = yaml.safe_load((ROOT / "tests/data/script_replies.yaml").read_text(encoding="utf-8"))["floored"]
     embedder.warm([e for ex in labels.values() for e in ex])
     for label, rows in data.items():

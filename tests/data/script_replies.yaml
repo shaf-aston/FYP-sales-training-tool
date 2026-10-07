@@ -148,6 +148,18 @@ objections_impact:
     - "did you see the match last night"
     - "I love your background"
     - "how was your weekend"
+step_22:   # payment: labels pays / backs_out (live: "actually no, forget it" got "Welcome aboard")
+  pays:
+    - "credit please"
+    - "I'll go with debit"
+    - "card is fine"
+    - "debit card"
+    - "let's put it on credit"
+  backs_out:
+    - "actually, I don't want to go ahead"
+    - "no, I've changed my mind"
+    - "forget it, I'm not doing it"
+    - "hmm no, I'm out"
 facts:
   price:
     - "so what does it cost"

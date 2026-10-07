@@ -68,7 +68,7 @@ def advance(method, state, signal, reply="", empty=False):
     route = route or _route(step, ANY)
     if route is None:
         return _ask_again(method, state, step)
-    if step.capture and reply:
+    if step.capture and reply and route.keep:
         state = replace(state, slots={**state.slots, step.capture: reply}, last_point=reply)
     if route.then == state.step:
         return _ask_again(method, state, step, route.ack)

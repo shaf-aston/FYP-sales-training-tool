@@ -21,6 +21,7 @@ class Route:
     examples: tuple
     then: str
     ack: str = ""
+    keep: bool = True   # false = the reply is not kept as the step's answer (a vague one restates the question)
 
 
 @dataclass(frozen=True)
@@ -39,6 +40,7 @@ class Step:
     doubts_answer: bool = False  # the question asks what holds them back: "money's tight" is the answer
     stuck: Route = None  # taken once the step has been asked again enough; every step with no `any` route has one
     answered_by: str = ""  # regex with an `answer` group: the step's answer given early; the step is then skipped
+    echo: bool = False  # their answer may be said back in their own words in a later line's {blank}
 
     @property
     def routes(self):
@@ -126,6 +128,8 @@ class CommonSense:
     park: str
     revisit: str        # lead-in when a parked objection is raised again
     interruptions: dict
+    nudge: str = ""     # said when a reply only nudges ("what's next?"), before carrying on
+    nudges: tuple = ()  # phrases that nudge, cut off the end of a reply
 
 
 def _read(directory, name):
@@ -142,7 +146,7 @@ def _route(step_id, signal, data):
         raise ValueError(f"step {step_id}: '{ANY}' route takes no examples")
     if signal != ANY and not examples:
         raise ValueError(f"step {step_id}: route '{signal}' needs examples")
-    return Route(signal, examples, str(data["then"]), data.get("ack", ""))
+    return Route(signal, examples, str(data["then"]), data.get("ack", ""), data.get("keep", True) is not False)
 
 
 def _step(step_id, data):
@@ -165,12 +169,14 @@ def _step(step_id, data):
             raise ValueError(f"step {step_id}: answered_by needs a capture and an '{ANY}' route")
         if re.search(answered_by, ""):
             raise ValueError(f"step {step_id}: answered_by must not match an empty reply")
+    if data.get("echo") and not data.get("capture"):
+        raise ValueError(f"step {step_id}: echo needs a capture")
     return Step(
         step_id, stage, data.get("say", ""), data.get("say_plain", ""),
         data.get("capture", ""), probes,
         bool(data.get("draft")), listen, bool(data.get("run_on")),
         data.get("name", ""), data.get("note", ""), bool(data.get("doubts_answer")),
-        stuck, answered_by,
+        stuck, answered_by, bool(data.get("echo")),
     )
 
 
@@ -271,9 +277,14 @@ def parse_common_sense(data):
     for i in items.values():
         if i.after not in AFTER:
             raise ValueError(f"interruption {i.name}: after must be one of {AFTER}")
-    if "?" in data["park"] or any("?" in i.reply for i in items.values() if i.after != "wait"):
-        raise ValueError("park and interruption replies must not ask (the step's question follows)")
-    return CommonSense(data["bring_back"], data["park"], data["revisit"], items)
+    nudge = data.get("nudge") or {}
+    if "?" in data["park"] or "?" in nudge.get("reply", "") or any(
+            "?" in i.reply for i in items.values() if i.after != "wait"):
+        raise ValueError("park, nudge and interruption replies must not ask (the step's question follows)")
+    if bool(nudge.get("reply")) != bool(nudge.get("phrases")):
+        raise ValueError("nudge needs both a reply and phrases")
+    return CommonSense(data["bring_back"], data["park"], data["revisit"], items,
+                       nudge.get("reply", ""), tuple(nudge.get("phrases") or ()))
 
 
 def load_method(name, directory=CONFIG_DIR / "methods"):
