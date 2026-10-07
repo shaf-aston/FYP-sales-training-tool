@@ -66,9 +66,10 @@ steps:
     say: "How much would you need to be making each month for {outcome}?"
     say_plain: "How much would you need to be making each month to make that happen?"
     capture: number
-    # "I want 5k a month" said earlier answers this step, so it is skipped. Needs a want/need word and
-    # "a month": "I make 2k a month" (today, not the goal) and "I'm 25" are not answers.
-    answered_by: '\b(?:want|need|aim|aiming|hoping|looking|goal|target)\b(?:(?!\bi\b)[^.?!,;]){0,25}?(?P<answer>[$£€]?\d[\d,.]*\s*(?:k|grand|thousand)?\s*(?:a|per|each|every|/)\s*(?:month|mo)\b)'
+    # "I want 5k a month" said earlier answers this step, so it is skipped. Needs a want/need word,
+    # only "to make / be earning / around"-type words, then the figure and "a month": "I make 2k a month",
+    # "a job paying 2k a month", "I need to save 200 a month" and "I don't want ..." are not the goal.
+    answered_by: '(?<!n''t )(?<!not )\b(?:want|need|aim|aiming|hoping|looking|goal|target)(?:\s+(?:to|be|make|making|earn|earning|bring|bringing|in|about|around|at|least|like|roughly|for|of|is|maybe|ideally|say|minimum))*\s+(?P<answer>[$£€]?\d[\d,.]*\s*(?:k|grand|thousand)?\s*(?:a|per|each|every|/)\s*(?:month|mo)\b)'
     listen:
       any: {then: "03"}
   "03":

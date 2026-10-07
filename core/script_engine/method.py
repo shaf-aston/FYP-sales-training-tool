@@ -95,6 +95,7 @@ class Offer:
     context: str
     facts: dict
     about: str = ""     # what the AI may say when no fact covers a question; empty = never answer from it
+    about_after_price: str = ""  # added to `about` from the price step on
 
 
 class _StrictLoader(yaml.SafeLoader):
@@ -162,6 +163,8 @@ def _step(step_id, data):
             raise ValueError(f"step {step_id}: answered_by needs an (?P<answer>...) group")
         if not data.get("capture") or not any(r.signal == ANY for r in listen):
             raise ValueError(f"step {step_id}: answered_by needs a capture and an '{ANY}' route")
+        if re.search(answered_by, ""):
+            raise ValueError(f"step {step_id}: answered_by must not match an empty reply")
     return Step(
         step_id, stage, data.get("say", ""), data.get("say_plain", ""),
         data.get("capture", ""), probes,
@@ -209,15 +212,31 @@ def parse_method(name, data):
                   _ready(name, data.get("ready"), steps))
 
 
+def _score(where, value):
+    if not isinstance(value, (int, float)) or not 0 < value <= 1:
+        raise ValueError(f"{where}: min_score must be a number above 0 and at most 1")
+    return float(value)
+
+
 def _ready(name, data, steps):
     if not data:
         return None
-    ready = Ready(tuple(data["examples"]), str(data["then"]), str(data["until"]), float(data["min_score"]))
+    if not data.get("examples"):
+        raise ValueError(f"method {name}: ready needs examples")
+    ready = Ready(tuple(data["examples"]), str(data.get("then", "")), str(data.get("until", "")),
+                  _score(f"method {name} ready", data.get("min_score")))
     order = list(steps)
     if ready.then not in steps or ready.until not in steps:
         raise ValueError(f"method {name}: ready then/until must be defined steps")
-    if order.index(ready.then) < order.index(ready.until):
-        raise ValueError(f"method {name}: ready then must sit at or after until, or the jump could repeat")
+    seen, todo = set(), [ready.then]  # every step the shortcut can lead to stays past `until`: no loop
+    while todo:
+        step_id = todo.pop()
+        if step_id in seen:
+            continue
+        seen.add(step_id)
+        if order.index(step_id) < order.index(ready.until):
+            raise ValueError(f"method {name}: ready leads back to step {step_id}, before until, so it could repeat")
+        todo += [r.then for r in steps[step_id].routes]
     return ready
 
 
@@ -231,14 +250,22 @@ def parse_offer(name, data):
     }
     return Offer(
         name, int(data["months"]), str(data["price"]),
-        tuple(data["pillars"]), data["context"], facts, (data.get("about") or {}).get("text", ""),
+        tuple(data["pillars"]), data["context"], facts,
+        (data.get("about") or {}).get("text", ""), (data.get("about") or {}).get("after_price", ""),
     )
 
 
+INTERRUPTION_KEYS = {"examples", "reply", "draft", "after", "after_wait", "min_score"}
+
+
 def parse_common_sense(data):
+    for k, v in data["interruptions"].items():
+        if set(v) - INTERRUPTION_KEYS:  # an old `wait: true` would silently turn a pause into a question
+            raise ValueError(f"interruption {k}: unknown keys {sorted(set(v) - INTERRUPTION_KEYS)}")
     items = {
-        k: Interruption(k, tuple(v["examples"]), v["reply"], bool(v.get("draft")),
-                        v.get("after", "ask"), bool(v.get("after_wait")), float(v.get("min_score", 0.0)))
+        k: Interruption(k, tuple(v["examples"]), v["reply"], bool(v.get("draft")), v.get("after", "ask"),
+                        bool(v.get("after_wait")),
+                        _score(f"interruption {k}", v["min_score"]) if "min_score" in v else 0.0)
         for k, v in data["interruptions"].items()
     }
     for i in items.values():

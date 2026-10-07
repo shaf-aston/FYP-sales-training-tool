@@ -7,12 +7,12 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
-from functools import cache, lru_cache
+from functools import lru_cache
 from pathlib import Path
 
 from core.loader import load_yaml
 from core.script_engine.ai_line import checked_line
-from core.script_engine.checks import NUMBER, CheckContext, clip
+from core.script_engine.checks import CheckContext, clip, figures
 from core.utils import is_question, tokenize
 from core.script_engine.embedder import make_embedder
 from core.script_engine.engine import (
@@ -55,9 +55,14 @@ class _Breaker:
 _breaker = _Breaker()
 
 
-@cache
+_pools, _pools_lock = {}, threading.Lock()
+
+
 def _pool(workers):
-    return ThreadPoolExecutor(max_workers=workers, thread_name_prefix="script-ai")
+    with _pools_lock:
+        if workers not in _pools:
+            _pools[workers] = ThreadPoolExecutor(max_workers=workers, thread_name_prefix="script-ai")
+        return _pools[workers]
 
 
 def make_llm(router, timeout, rest_seconds, fail_limit, workers):
@@ -76,9 +81,11 @@ def make_llm(router, timeout, rest_seconds, fail_limit, workers):
     def guarded(prompt, max_tokens):
         if _breaker.resting():
             raise RuntimeError("AI resting after repeated failures")
+        future = _pool(workers).submit(call, prompt, max_tokens)
         try:
-            text = _pool(workers).submit(call, prompt, max_tokens).result(timeout)
+            text = future.result(timeout)
         except Exception:
+            future.cancel()  # still queued behind a slow call: never sent
             _breaker.failed(fail_limit, rest_seconds)
             raise
         _breaker.worked()
@@ -157,7 +164,8 @@ class ScriptSeller:
             move = self._listen(text, step, empty=True)
             self.state = move.state
             return self._render(move), move.ui_stage
-        self.state = hear_ahead(self.method, self.state, text)  # kept whatever else the reply turns out to be
+        if not self._is_question(text):  # "do I need 5k a month to start?" is not their goal
+            self.state = hear_ahead(self.method, self.state, text)  # kept whatever else the reply turns out to be
         kind, name = self._interrupt(text, step, opened, waiting)
 
         if kind == "ready":
@@ -204,7 +212,7 @@ class ScriptSeller:
         if said.after == "ask":
             return self._then_ask(said.reply, bring_back=True), step.ui_stage
         if said.after == "rephrase" or step.probes:
-            move = ask_again(self.method, self.state)
+            move = ask_again(self.method, replace(self.state, play=""))  # the step's question, not the play's
         else:  # rephrase_else_move_on on a step with no other words: don't say the same line again
             move = move_on(self.method, self.state)
         text, stage = self._go(move)
@@ -338,9 +346,11 @@ class ScriptSeller:
         It may say anything the facts support, never a new number, promise or price: always checked,
         always logged, and the honest fallback when the facts don't cover it."""
         c, offer = self.cfg, self.offer
-        facts = f"{offer.about} A {offer.months}-month programme. Pillars: {', '.join(offer.pillars)}.".strip()
-        if opened:
-            facts += f" The investment is {offer.price}."
+        if not offer.about:
+            return c["uncovered_fallback"]
+        facts = fill_line(offer.about, {}, offer, c, self._ask)
+        if opened and offer.about_after_price:
+            facts += " " + fill_line(offer.about_after_price, {}, offer, c, self._ask)
         told = self._told(self.state.slots)
         memory = f"What they told you earlier:\n<earlier>\n{told}\n</earlier>\n" if told else ""
         prompt = (
@@ -356,7 +366,7 @@ class ScriptSeller:
         fact_words = frozenset(tokenize(facts))
         ctx = CheckContext(
             c["max_words"], 0, opened, offer.price,
-            known_numbers=frozenset(NUMBER.findall(facts)),  # their own figures are not ours to repeat back as results
+            known_figures=frozenset(figures(facts)),  # their own figures are not ours to repeat back as results
             banned=frozenset(c["answer_banned_words"]) - fact_words,
         )
 

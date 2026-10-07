@@ -134,10 +134,26 @@ def test_a_number_given_early_is_kept_and_its_question_skipped(fake_embedder):
 
 
 @pytest.mark.parametrize("text", ["I make 2k a month", "I'm 25", "lost 2k on a course",
-                                  "I want to quit and I make 2k a month"])
+                                  "I want to quit and I make 2k a month",
+                                  "I want to leave my job paying 2k a month",
+                                  "I need more than the 2k a month I get now",
+                                  "I don't want to pay 500 a month for a course",
+                                  "I need to save 200 a month"])
 def test_other_numbers_are_not_the_goal(text):
     state = hear_ahead(CAT, ScriptState(step="01"), text)
     assert "number" not in state.slots
+
+
+def test_a_question_about_a_figure_is_not_their_goal(fake_embedder):
+    s = seller(fake_embedder)
+    s.reply("do i need 5k a month to start?")
+    assert "number" not in s.state.slots
+
+
+@pytest.mark.parametrize("text", ["i need to stop paying 1500 a month for my car",
+                                  "i want to cancel the 300 a month gym"])
+def test_spending_is_not_the_goal(text):
+    assert "number" not in hear_ahead(CAT, ScriptState(step="01"), text).slots
 
 
 def test_the_step_itself_still_captures_normally():
@@ -203,6 +219,15 @@ def test_frustration_has_its_own_floor(fake_embedder):
     assert not text.startswith(FRUSTRATED)
 
 
+def test_frustration_drops_an_open_objection_play(fake_embedder):
+    """Live-style: they push back on a loop question; the play must not swallow their next answer."""
+    s = seller(fake_embedder, step="15", play="scam", objection_counts={"scam": 1})
+    s.reply("stop with the script man")
+    assert s.state.step == "16" and s.state.play == ""
+    s.reply("yes sounds good")
+    assert s.state.step == "17"
+
+
 def test_hostile_chat_never_says_the_same_line_twice_in_a_row(fake_embedder):
     s = seller(fake_embedder)
     said = [s.opening()[0]]
@@ -223,6 +248,9 @@ FALLBACK = CFG["uncovered_fallback"]
 
 
 @pytest.mark.parametrize("line", [
+    "You get 6 coaching calls and lifetime access.",         # a known number counting something new
+    "Our students all earn a full-time income.",             # a result
+    "No, there is no contract.",                             # a made-up policy
     "Most people make their first sale within 8 weeks.",     # a made-up number
     "We guarantee you'll make it back.",                     # a promise
     "Yes, there's a free trial for students.",               # a made-up policy
@@ -245,6 +273,22 @@ def test_a_clean_product_answer_may_go_beyond_the_fact_words(fake_embedder):
     assert "time with my kids" in llm.prompts[0]          # what they told us
     assert "piecing it together" in llm.prompts[0]        # the offer's `about`
     assert "$5k" not in llm.prompts[0]                    # no price before the price step
+
+
+def test_no_fact_sheet_means_no_ai_answer(fake_embedder):
+    from dataclasses import replace
+    llm = Recorder("Anything.")
+    s = seller(fake_embedder, llm, step="03")
+    s.offer = replace(s.offer, about="")
+    text, _ = s.reply("will refunds exist?")
+    assert text.startswith(FALLBACK) and not llm.prompts
+
+
+def test_the_price_joins_the_fact_sheet_only_once_open(fake_embedder):
+    llm = Recorder("NOT_COVERED")
+    seller(fake_embedder, llm, step="03").reply("will refunds exist?")
+    seller(fake_embedder, llm, step="15").reply("will refunds exist?")
+    assert "$5k" not in llm.prompts[0] and "The investment is $5k." in llm.prompts[1]
 
 
 # ---- C7 memory in the ack (chats D, night shift) ---------------------------------------------
@@ -290,14 +334,38 @@ def _mini(**extra):
     return {"first": "a", "price_step": "a", "steps": steps, **extra}
 
 
+READY = {"examples": ["x"], "then": "b", "until": "b", "min_score": 0.8}
+
+
 @pytest.mark.parametrize("data, error", [
     (_mini(a={"answered_by": r"\d+"}), "answer"),
+    (_mini(a={"answered_by": r"(?P<answer>\d*)"}), "empty"),
+    (_mini(ready={**READY, "examples": []}), "examples"),
+    (_mini(ready={**READY, "min_score": 5}), "min_score"),
+    (_mini(ready={k: v for k, v in READY.items() if k != "min_score"}), "min_score"),
     (_mini(a={"answered_by": r"(?P<answer>\d+)", "capture": ""}), "capture"),
     (_mini(ready={"examples": ["x"], "then": "a", "until": "b", "min_score": 0.8}), "until"),
 ])
 def test_loader_rejects_bad_shortcuts(data, error):
     with pytest.raises(ValueError, match=error):
         parse_method("bad", data)
+
+
+def test_loader_rejects_a_shortcut_that_leads_back():
+    data = _mini(ready={**READY, "until": "b"})
+    data["steps"]["b"] = {"ui_stage": "intent", "say": "B?", "listen": {"any": {"then": "a"}}}
+    data["steps"]["a"]["listen"] = {"any": {"then": "b"}}
+    with pytest.raises(ValueError, match="before until"):
+        parse_method("bad", data)
+
+
+@pytest.mark.parametrize("item", [{"after": "sing"}, {"wait": True}, {"min_score": -1}])
+def test_loader_rejects_bad_interruptions(item):
+    from core.script_engine.method import parse_common_sense
+    data = {"bring_back": "", "park": "", "revisit": "",
+            "interruptions": {"x": {"examples": ["x"], "reply": "ok", **item}}}
+    with pytest.raises(ValueError):
+        parse_common_sense(data)
 
 
 def test_loader_rejects_an_unknown_after():

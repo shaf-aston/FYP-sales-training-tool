@@ -481,9 +481,11 @@ def test_uncovered_answer_is_fenced_and_must_stay_inside_the_facts(fake_embedder
 
 
 def test_checks_reject_new_numbers_and_banned_words():
-    c = ctx(questions=0, price_ok=True, known_numbers=frozenset({"6"}), banned=frozenset({"guarantee"}))
+    c = ctx(questions=0, price_ok=True, known_figures=frozenset({"6 month"}), banned=frozenset({"guarantee"}))
     assert check("It is a 6-month programme.", c) == []
+    assert check("It runs for 6 months.", c) == []
     assert check("Most people see results in 8 weeks.", c) == ["new_number"]
+    assert check("You get 6 coaching calls.", c) == ["new_number"]   # a known number counting something new
     assert check("We guarantee you'll love it.", c) == ["banned_word"]
 
 

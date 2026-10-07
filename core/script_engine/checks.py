@@ -7,7 +7,12 @@ from core.utils import tokenize
 
 BLANK = re.compile(r"\{\w+\}")
 CURRENCY = re.compile(r"[$£€]\s?\d")
-NUMBER = re.compile(r"\d+")
+FIGURE = re.compile(r"(\d[\d,.]*[a-z]*)(?:[ \t-]+([a-z]+))?")  # a number and the word it counts: "6-month"
+
+
+def figures(text):
+    """Each number in `text` with the word it counts ("6 month"), plural or not, so "6 calls" is not "6-month"."""
+    return {f"{n} {(w or '').removesuffix('s')}".strip() for n, w in FIGURE.findall(text.lower())}
 
 
 @dataclass(frozen=True)
@@ -18,7 +23,7 @@ class CheckContext:
     price: str = ""                # the offer price, as written
     prospect_words: frozenset = None   # when set, every word must come from here or stop_words
     stop_words: frozenset = frozenset()
-    known_numbers: frozenset = None    # when set, every number must come from here (no made-up figures)
+    known_figures: frozenset = None    # when set, every number (with the word it counts) must come from here
     banned: frozenset = frozenset()    # words the sentence must not use
 
 
@@ -45,7 +50,7 @@ def check(text, ctx):
         broken.append("unfilled_blank")
     if not text.strip() or len(tokenize(text)) > ctx.max_words:
         broken.append("length")
-    if ctx.known_numbers is not None and set(NUMBER.findall(text)) - ctx.known_numbers:
+    if ctx.known_figures is not None and figures(text) - ctx.known_figures:
         broken.append("new_number")
     if ctx.banned & set(tokenize(text)):
         broken.append("banned_word")

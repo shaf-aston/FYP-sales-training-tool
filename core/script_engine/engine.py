@@ -104,8 +104,9 @@ def asked_line(method, state):
 
 def move_on(method, state):
     """Leave the step without taking their reply as its answer (they pushed back on the question).
-    No slot is saved and the route's ack is not said: it may build on an answer they never gave."""
-    step = method.steps[state.step]
+    No slot is saved and the route's ack is not said: it may build on an answer they never gave.
+    An open objection play is dropped too: its question was not answered either."""
+    step, state = method.steps[state.step], replace(state, play="")
     route = _route(step, ANY) or step.stuck
     if route is None:
         return _ask_again(method, state, step)
