@@ -26,11 +26,3 @@ def is_flask_debug() -> bool:
 def is_reloader_child() -> bool:
     return env_flag("WERKZEUG_RUN_MAIN")
 
-
-def admin_token() -> str | None:
-    return os.environ.get("ADMIN_TOKEN")
-
-
-def require_admin_for_stage_mutation(config) -> bool:
-    """App config (used by tests) wins over the env var."""
-    return bool(config.get("REQUIRE_ADMIN_FOR_STAGE_MUTATION", env_flag("REQUIRE_ADMIN_FOR_STAGE_MUTATION")))

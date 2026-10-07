@@ -7,7 +7,6 @@ import { useSession } from "@/features/session/SessionContext";
 import { config } from "@/lib/config";
 import { useUi } from "@/state/UiContext";
 import { VoiceSettings } from "@/features/voice/VoiceSettings";
-import { FlowControls } from "./FlowControls";
 import { StatusCard } from "./StatusCard";
 import { ToolsGrid } from "./ToolsGrid";
 import s from "./Sidebar.module.css";
@@ -40,10 +39,9 @@ export function Sidebar() {
       <div className={s.tabs}>
         <Tabs
           label="Workspace"
-          active={role === "seller" && sidebarTab === "session" ? "mode" : sidebarTab}
+          active={sidebarTab}
           onChange={setSidebarTab}
           tabs={[
-            ...(role === "buyer" ? [{ key: "session" as const, label: "Session", content: <FlowControls /> }] : []),
             { key: "mode", label: role === "seller" ? "Setup" : "Role", content: <RoleTab /> },
             { key: "tools", label: "Tools", content: <ToolsGrid /> },
             { key: "settings", label: "Settings", content: <VoiceSettings /> },

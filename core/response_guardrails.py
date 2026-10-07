@@ -1,64 +1,28 @@
-"""LAYER 3: Response Validation - post-generation safety net.
+"""Checks on AI-buyer replies (prospect mode) before the user sees them.
 
-Catches violations that bypass Layer 1 (FSM gating) and Layer 2 (prompt constraints):
-- Prices the product data does not contain (invented), at any stage
-- Price talk in discovery stages, or transactional pitch, before the buyer asks
-- Empty responses
-
-Strips offending sentences first; uses a fallback line from config/guardrails.yaml only
-when nothing is left.
+The session rules own the outcome, so the buyer may not agree to buy on its own: sentences
+that commit are dropped, and a config line is used only when nothing is left.
 """
 
-import logging
 import re
 from dataclasses import dataclass, field
 
-from .loader import load_signals, load_yaml
-from .enums import Stage, Strategy
+from .loader import load_yaml
 from .utils import contains_nonnegated_keyword
 
-logger = logging.getLogger(__name__)
-
-_CONFIG = load_yaml("guardrails.yaml")
-_BILLING_TERMS = _CONFIG["billing_terms"]
-_NO_PRICE_STAGES = set(_CONFIG["no_price_stages"])
-_FALLBACKS = _CONFIG["fallback_lines"]
-_PRICE_REQUESTS = load_signals()["direct_info_requests"]
+_BUYER = load_yaml("guardrails.yaml")["buyer"]
 
 _SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+|\n+")
-# A money figure: "$99", "£2,400", "99 dollars", "49 pounds".
-_MONEY = re.compile(
-    r"[$£€]\s*(\d[\d,]*(?:\.\d+)?)|\b(\d[\d,]*(?:\.\d+)?)\s*(?:dollars|pounds|euros|usd|gbp|eur)\b",
-    re.IGNORECASE,
-)
 
 
 @dataclass
 class Layer3CheckResult:
-    """Output of LAYER 3 (Response Validation) checks."""
+    """A checked reply and what was changed."""
 
     content: str
     was_corrected: bool = False
     was_blocked: bool = False
     applied_rules: list[str] = field(default_factory=list)
-
-
-def _plain_name(value) -> str:
-    """Lowercase plain name for a Stage/Strategy enum or string ('Stage.PITCH' -> 'pitch')."""
-    text = str(value or "")
-    return text.split(".", 1)[-1].lower()
-
-
-def _money_amounts(text: str) -> set[str]:
-    """Every money figure in the text, commas removed."""
-    return {(a or b).replace(",", "") for a, b in _MONEY.findall(text or "")}
-
-
-def _talks_price(sentence: str) -> bool:
-    """True when a sentence quotes a money figure or states billing terms."""
-    return bool(_MONEY.search(sentence)) or contains_nonnegated_keyword(
-        sentence.lower(), _BILLING_TERMS
-    )
 
 
 _DASH = f"[{chr(0x2014)}{chr(0x2013)}]"  # em and en dash
@@ -75,87 +39,13 @@ def _keep_sentences(text: str, drop) -> str:
     return " ".join(s for s in _SENTENCE_SPLIT.split(text) if s and not drop(s)).strip()
 
 
-def _fallback(stage_name: str, price_asked: bool, history) -> str:
-    """Pick a fallback line in turn order, so a replayed chat gets the same line."""
-    if price_asked:
-        lines = _FALLBACKS["price_question"]
-    else:
-        lines = _FALLBACKS.get(stage_name) or _FALLBACKS["default"]
-    turn = len(history or []) // 2
-    return lines[turn % len(lines)]
-
-
-def apply_layer3_output_checks(
-    reply_text: str,
-    stage,
-    user_message: str,
-    flow_type=None,
-    history: list[dict[str, str]] | None = None,
-    product_context: str | None = None,
-) -> Layer3CheckResult:
-    """Run LAYER 3 checks and return corrected or blocked content.
-
-    Checks (in order):
-    1) Empty output.
-    2) Invented prices: a money figure not found in product_context (skipped when None).
-    3) Early price talk: in no_price_stages and transactional pitch, unless the buyer asked.
-    Each price check strips sentences first and falls back only when nothing is left.
-    """
-    stage_name = _plain_name(stage)
-    flow_name = _plain_name(flow_type)
-    price_asked = contains_nonnegated_keyword((user_message or "").lower(), _PRICE_REQUESTS)
-    text = _no_dashes(reply_text or "")
-
-    if not text:
-        return Layer3CheckResult(
-            content=_fallback(stage_name, price_asked, history),
-            was_blocked=True,
-            applied_rules=["empty_output_fallback"],
-        )
-
-    rules = []
-
-    if product_context is not None:
-        known = _money_amounts(product_context)
-        if _money_amounts(text) - known:
-            text = _keep_sentences(text, lambda s: bool(_money_amounts(s) - known))
-            rules.append("invented_price")
-
-    early = stage_name in _NO_PRICE_STAGES or (
-        flow_name == Strategy.TRANSACTIONAL.value and stage_name == Stage.PITCH.value
-    )
-    if early and not price_asked and any(_talks_price(s) for s in _SENTENCE_SPLIT.split(text)):
-        text = _keep_sentences(text, _talks_price)
-        rules.append("early_price")
-
-    if not rules:
-        return Layer3CheckResult(content=text)
-    logger.debug("layer3: %s in %s stage", rules, stage_name)
-    if text:
-        return Layer3CheckResult(content=text, was_corrected=True, applied_rules=rules)
-    return Layer3CheckResult(
-        content=_fallback(stage_name, price_asked, history),
-        was_blocked=True,
-        applied_rules=rules,
-    )
-
-
-_BUYER = _CONFIG["buyer"]
-_BUYER_COMMITS = load_signals()["commitment"]
-
-
 def check_buyer_reply(reply_text: str, turn: int) -> Layer3CheckResult:
-    """Run LAYER 3 checks on an AI-buyer reply (prospect mode).
-
-    The session rules own the outcome, so the buyer may not agree to buy on its own.
-    Drops sentences that commit to buying.
-    Falls back to a config line, picked by turn, when nothing is left.
-    """
+    """Drop sentences where the buyer commits to buying; fall back by turn when nothing is left."""
     text = _no_dashes(reply_text or "")
     rules = []
 
     def bad(sentence: str) -> bool:
-        if contains_nonnegated_keyword(sentence.lower(), _BUYER_COMMITS):
+        if contains_nonnegated_keyword(sentence.lower(), _BUYER["commitment"]):
             rules.append("buyer_committed")
             return True
         return False

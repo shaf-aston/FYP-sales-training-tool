@@ -1,86 +1,13 @@
 """Tests for security using STRIDE threat modeling methodology."""
 from flask import Flask, jsonify, request
 
-from backend.routes import session as session_routes
-from backend.routes._utils import Sessions
 from backend.security import (
+    SessionSecurityManager,
     ClientIPExtractor,
     InputValidator,
     RateLimiter,
     SecurityHeadersMiddleware,
 )
-
-
-class _DummyFlowEngine:
-    def __init__(self):
-        self.flow_type = "intent"
-        self.initial_flow_type = "intent"
-        self.current_stage = "intent"
-        self.conversation_history = []
-
-    def switch_strategy(self, strategy):
-        self.flow_type = strategy
-        return True
-
-
-class _DummyBot:
-    def __init__(self, provider_type=None, product_type=None, session_id=None):
-        self.provider_type = provider_type
-        self.product_type = product_type
-        self.session_id = session_id
-        self.flow_engine = _DummyFlowEngine()
-
-    @staticmethod
-    def load_session(_session_id):
-        return None
-
-    def save_session(self):
-        pass
-
-    def force_strategy(self, strategy):
-        self.flow_engine.initial_flow_type = strategy
-        self.flow_engine.switch_strategy(strategy)
-
-    def script_opening(self):
-        return None
-
-    def open_with(self, greeting):
-        self.flow_engine.conversation_history.append({"role": "assistant", "content": greeting})
-
-
-class _DummySessionManager:
-    def __init__(self):
-        self._sessions = {}
-
-    def can_create(self):
-        return True
-
-    def get(self, session_id):
-        return self._sessions.get(session_id)
-
-    def set(self, session_id, bot):
-        self._sessions[session_id] = bot
-
-    def delete(self, session_id):
-        self._sessions.pop(session_id, None)
-
-
-def _make_session_app(monkeypatch):
-    app = Flask(__name__)
-    app.config["TESTING"] = True
-    app.config["ADMIN_TOKEN"] = "secret-token"
-    manager = _DummySessionManager()
-
-    monkeypatch.setattr(session_routes, "SellerBot", _DummyBot)
-    monkeypatch.setattr(
-        session_routes,
-        "generate_init_greeting",
-        lambda _strategy: {"message": "hello", "training": {"ok": True}},
-    )
-
-    app.extensions["sessions"] = Sessions(seller=manager, buyer=None)
-    app.register_blueprint(session_routes.bp)
-    return app
 
 
 def test_client_ip_extractor_ignores_forwarded_headers_by_default():
@@ -137,24 +64,6 @@ def test_security_headers_use_the_baseline_csp_by_default():
     assert "frame-ancestors 'none'" in csp
 
 
-def test_force_strategy_override_requires_admin_token(monkeypatch):
-    app = _make_session_app(monkeypatch)
-    client = app.test_client()
-
-    unauthorized = client.post("/api/init", json={"force_strategy": "transactional"})
-    authorized = client.post(
-        "/api/init",
-        json={"force_strategy": "transactional"},
-        headers={"X-Admin-Token": "secret-token"},
-    )
-
-    assert unauthorized.status_code == 200
-    assert unauthorized.get_json()["strategy"] == "INTENT"
-
-    assert authorized.status_code == 200
-    assert authorized.get_json()["strategy"] == "TRANSACTIONAL"
-
-
 def test_session_id_validator_rejects_malformed_identifiers():
     app = Flask(__name__)
 
@@ -173,3 +82,23 @@ def test_rate_limiter_retains_requests_until_window_expires():
     assert limiter.is_limited("1.2.3.4", "chat") is False
     assert limiter.is_limited("1.2.3.4", "chat") is False
     assert limiter.is_limited("1.2.3.4", "chat") is True
+
+
+def test_background_cleanup_is_idempotent(monkeypatch):
+    started = []
+
+    class DummyThread:
+        def __init__(self, target, daemon):
+            self.target = target
+            self.daemon = daemon
+
+        def start(self):
+            started.append((self.target, self.daemon))
+
+    monkeypatch.setattr("backend.security.threading.Thread", DummyThread)
+
+    manager = SessionSecurityManager(manager_name="test sessions")
+    manager.start_background_cleanup()
+    manager.start_background_cleanup()
+
+    assert len(started) == 1

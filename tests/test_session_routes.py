@@ -3,28 +3,16 @@ from flask import Flask
 
 from backend.routes import session as session_routes
 from backend.routes._utils import Sessions
-from backend.security import SecurityConfig
 
 
 class _DummyFlowEngine:
     def __init__(self):
-        self.flow_type = "intent"
-        self.initial_flow_type = "intent"
+        self.flow_type = "consultative"
         self.current_stage = "intent"
-        self.flow_config = {"stages": ["logical", "pitch", "outcome"]}
         self.conversation_history = []
-
-    def advance(self, target_stage):
-        self.current_stage = target_stage
-
-    def switch_strategy(self, strategy):
-        self.flow_type = strategy
-        self.current_stage = "logical"
-        return True
 
 
 class _DummyBot:
-    replayed_history = None
     loaded_session_id = None
 
     def __init__(self, provider_type=None, product_type=None, session_id=None):
@@ -35,42 +23,22 @@ class _DummyBot:
         self.model_name = "probe-model"
         self.flow_engine = _DummyFlowEngine()
         self.saved = False
-        self.snapshot_refreshed = False
         self.session_ended = False
 
     def record_session_end(self):
         self.session_ended = True
 
-    def replay(self, history):
-        type(self).replayed_history = history
-
     def save_session(self):
         self.saved = True
 
-    def refresh_current_turn_snapshot(self):
-        self.snapshot_refreshed = True
-
-    def jump_to_stage(self, stage):
-        if stage not in self.flow_engine.flow_config["stages"]:
-            return False
-        self.flow_engine.advance(stage)
-        self.saved = True
-        return True
-
-    def change_strategy(self, strategy):
-        self.flow_engine.switch_strategy(strategy)
-        self.snapshot_refreshed = True
-        self.saved = True
-        return True
-
-    def force_strategy(self, strategy):
-        self.flow_engine.switch_strategy(strategy)
-
     def script_opening(self):
-        return None
+        return "hello"
 
     def open_with(self, greeting):
         self.flow_engine.conversation_history.append({"role": "assistant", "content": greeting})
+
+    def generate_training(self, user_msg, bot_reply):
+        return {"tip": "x"}
 
     @staticmethod
     def load_session(session_id):
@@ -101,27 +69,28 @@ def _make_session_app(monkeypatch, testing=True):
     manager = _DummySessionManager()
 
     monkeypatch.setattr(session_routes, "SellerBot", _DummyBot)
-    monkeypatch.setattr(
-        session_routes,
-        "generate_init_greeting",
-        lambda _strategy: {"message": "hello", "training": {"tip": "x"}},
-    )
 
     app.extensions["sessions"] = Sessions(seller=manager, buyer=None)
     app.register_blueprint(session_routes.bp)
     return app, manager
 
 
-def test_restore_endpoint_removed(monkeypatch):
-    app, _manager = _make_session_app(monkeypatch)
+def test_removed_endpoints_are_gone(monkeypatch):
+    """Restore and the old strategy/stage switches no longer exist: the script owns the call."""
+    app, manager = _make_session_app(monkeypatch)
     client = app.test_client()
+    manager.set("a" * 8, _DummyBot(session_id="a" * 8))
+    headers = {"X-Session-ID": "a" * 8}
 
-    response = client.post(
-        "/api/restore",
-        json={"history": [{"role": "user", "content": "Hi"}]},
-    )
+    responses = [
+        client.post("/api/restore", json={"history": [{"role": "user", "content": "Hi"}]}),
+        client.post("/api/strategy", headers=headers, json={"strategy": "transactional"}),
+        client.post("/api/stage", headers=headers, json={"stage": "pitch"}),
+        client.get("/api/stages", headers=headers),
+        client.get("/api/config"),
+    ]
 
-    assert response.status_code == 404
+    assert [r.status_code for r in responses] == [404] * 5
 
 
 def test_health_returns_active_provider_and_performance(monkeypatch):
@@ -150,67 +119,6 @@ def test_health_returns_active_provider_and_performance(monkeypatch):
     }
 
 
-def test_config_returns_limits_and_product_options(monkeypatch):
-    app, _manager = _make_session_app(monkeypatch)
-    monkeypatch.setattr(
-        "core.loader.load_product_config",
-        lambda: {
-            "products": {
-                "default": {"strategy": "intent", "context": "Default product"},
-                "solar": {"strategy": "consultative", "context": "Solar package"},
-            }
-        },
-    )
-
-    response = app.test_client().get("/api/config")
-    payload = response.get_json()
-
-    assert response.status_code == 200
-    assert payload["success"] is True
-    assert payload["limits"]["max_message_length"] == SecurityConfig.MAX_MESSAGE_LENGTH
-    assert payload["product_options"] == [
-        {"id": "default", "strategy": "intent", "label": "Default product"},
-        {"id": "solar", "strategy": "consultative", "label": "Solar package"},
-    ]
-    assert payload["features"] == {
-        "flow_controls_enabled": True,
-    }
-
-
-def test_stage_route_mutates_current_stage(monkeypatch):
-    app, manager = _make_session_app(monkeypatch)
-    bot = _DummyBot(session_id="a" * 8)
-    manager.set("a" * 8, bot)
-
-    response = app.test_client().post(
-        "/api/stage",
-        headers={"X-Session-ID": "a" * 8},
-        json={"stage": "pitch"},
-    )
-
-    assert response.status_code == 200
-    assert response.get_json() == {"success": True, "stage": "----", "strategy": "INTENT"}
-    assert bot.flow_engine.current_stage == "pitch"
-
-
-def test_strategy_route_switches_and_persists(monkeypatch):
-    app, manager = _make_session_app(monkeypatch)
-    bot = _DummyBot(session_id="b" * 8)
-    manager.set("b" * 8, bot)
-
-    response = app.test_client().post(
-        "/api/strategy",
-        headers={"X-Session-ID": "b" * 8},
-        json={"strategy": "consultative"},
-    )
-
-    assert response.status_code == 200
-    assert response.get_json() == {"success": True, "stage": "LOGICAL", "strategy": "CONSULTATIVE"}
-    assert bot.saved is True
-    assert bot.flow_engine.initial_flow_type == "intent"
-    assert bot.snapshot_refreshed is True
-
-
 def test_reset_route_deletes_existing_session(monkeypatch):
     app, manager = _make_session_app(monkeypatch)
     manager.set("c" * 8, _DummyBot(session_id="c" * 8))
@@ -220,37 +128,6 @@ def test_reset_route_deletes_existing_session(monkeypatch):
     assert response.status_code == 200
     assert response.get_json() == {"success": True}
     assert manager.get("c" * 8) is None
-
-
-def test_stage_route_requires_admin_token_when_enabled(monkeypatch):
-    app, manager = _make_session_app(monkeypatch, testing=False)
-    app.config["REQUIRE_ADMIN_FOR_STAGE_MUTATION"] = True
-    app.config["ADMIN_TOKEN"] = "secret-token"
-    manager.set("d" * 8, _DummyBot(session_id="d" * 8))
-
-    response = app.test_client().post(
-        "/api/stage",
-        headers={"X-Session-ID": "d" * 8},
-        json={"stage": "pitch"},
-    )
-
-    assert response.status_code == 403
-    assert response.get_json()["error"] == "Admin token required"
-
-
-def test_stage_route_is_open_by_default_outside_tests(monkeypatch):
-    app, manager = _make_session_app(monkeypatch, testing=False)
-    app.config["ADMIN_TOKEN"] = "secret-token"
-    manager.set("e" * 8, _DummyBot(session_id="e" * 8))
-
-    response = app.test_client().post(
-        "/api/stage",
-        headers={"X-Session-ID": "e" * 8},
-        json={"stage": "pitch"},
-    )
-
-    assert response.status_code == 200
-    assert response.get_json() == {"success": True, "stage": "----", "strategy": "INTENT"}
 
 
 # --- /api/init path tests ---
@@ -314,19 +191,6 @@ def test_init_starts_fresh_session_when_missing_from_memory(monkeypatch):
     assert manager.get(payload["session_id"]) is not None
 
 
-def test_stages_route_returns_the_flow_stages(monkeypatch):
-    app, manager = _make_session_app(monkeypatch)
-    manager.set("d" * 8, _DummyBot(session_id="d" * 8))
-
-    response = app.test_client().get("/api/stages", headers={"X-Session-ID": "d" * 8})
-
-    assert response.status_code == 200
-    assert response.get_json() == {
-        "success": True,
-        "stages": ["logical", "pitch", "outcome"],
-    }
-
-
 def test_every_session_route_answers_a_dead_session_the_same_way(monkeypatch):
     """One seam, one contract: the frontend recovers on code == SESSION_EXPIRED."""
     app, _manager = _make_session_app(monkeypatch)
@@ -334,11 +198,8 @@ def test_every_session_route_answers_a_dead_session_the_same_way(monkeypatch):
     headers = {"X-Session-ID": "f" * 8}
 
     responses = [
-        client.get("/api/stages", headers=headers),
-        client.post("/api/stage", headers=headers, json={"stage": "pitch"}),
-        client.post("/api/strategy", headers=headers, json={"strategy": "consultative"}),
         client.post("/api/reset", headers=headers),
     ]
 
-    assert [r.status_code for r in responses] == [400] * 4
+    assert [r.status_code for r in responses] == [400]
     assert all(r.get_json()["code"] == "SESSION_EXPIRED" for r in responses)

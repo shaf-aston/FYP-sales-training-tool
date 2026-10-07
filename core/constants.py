@@ -21,15 +21,6 @@ def _check_positive(node, path="limits"):
 _L = load_yaml("limits.yaml")
 _check_positive(_L)
 
-# stage display
-UNDETERMINED_STAGE = "----"  # shown when intent strategy hasn't resolved yet
-
-# conversation context
-RECENT_HISTORY_WINDOW = _L["context"]["recent_history_window"]
-MAX_USER_KEYWORDS = _L["context"]["max_user_keywords"]
-TERSE_INPUT_THRESHOLD = _L["context"]["terse_input_threshold"]
-MIN_TURNS_BEFORE_ADVANCE = _L["context"]["min_turns_before_advance"]
-
 # sessions
 MAX_SESSIONS = _L["sessions"]["seller_max"]
 SESSION_IDLE_MINUTES = _L["sessions"]["seller_idle_minutes"]
