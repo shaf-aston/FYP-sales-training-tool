@@ -1,8 +1,7 @@
 """Judge one salesperson turn on what the seller actually did.
 
-Every rule here reads SELLER language. The older keyword lists in
-config/signals.yaml describe BUYER language and must not be used on a seller's
-message - a seller asking "are you interested?" is not a buying signal.
+Every rule here reads SELLER language: a seller asking "are you interested?" is not a
+buying signal.
 
 Each fired rule carries a plain-English reason so the post-session review can
 show the learner why a turn was marked the way it was, rather than a bare number.

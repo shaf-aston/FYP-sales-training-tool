@@ -1,9 +1,9 @@
-"""Tests for training coach scoring and feedback generation."""
+"""Tests for the training coach answers."""
 from types import SimpleNamespace
 
 from core import trainer
 from core.services.provider_router import ProviderRouter
-from core.enums import Stage, Strategy
+from core.enums import Stage
 
 
 def _router(monkeypatch, *providers):
@@ -45,7 +45,7 @@ class _DummyProvider:
 
 class _DummyFlowEngine:
     current_stage = Stage.LOGICAL
-    flow_type = Strategy.CONSULTATIVE
+    flow_type = "consultative"
     conversation_history = [
         {"role": "user", "content": "I need more clarity"},
         {"role": "assistant", "content": "What matters most here"},
@@ -77,22 +77,3 @@ def test_tactical_training_answer_keeps_original_punctuation(monkeypatch):
     )
 
     assert result == {"answer": "Ask them what hurts most?"}
-
-
-def test_generate_training_makes_no_ai_call_and_follows_buyer_move():
-    """Coach notes are a config lookup: an objection gets the objection note, every time."""
-    from core.enums import Stage, Strategy
-
-    class Engine:
-        flow_type = Strategy.TRANSACTIONAL
-        current_stage = Stage.PITCH
-
-    objection = trainer.generate_training(Engine(), "Honestly that seems too expensive for us")
-    again = trainer.generate_training(Engine(), "Honestly that seems too expensive for us")
-    plain = trainer.generate_training(Engine(), "Tell me about onboarding")
-
-    assert objection == again
-    assert "pushed back" in objection["what_happened"]
-    assert plain["what_happened"].startswith("Matching an option")
-    assert len(plain["watch_for"]) == 2
-

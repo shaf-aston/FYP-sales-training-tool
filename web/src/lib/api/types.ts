@@ -1,6 +1,6 @@
 // Shapes of the Flask JSON API (backend/routes/*). Field names match the server exactly.
 
-export type Strategy = "INTENT" | "CONSULTATIVE" | "TRANSACTIONAL";
+export type Strategy = "CONSULTATIVE";
 export type Difficulty = "easy" | "medium" | "hard";
 export type TrainingStyle = "tactical" | "socratic" | "teacher";
 export type QuizType = "stage" | "next_move" | "direction";
@@ -48,12 +48,6 @@ export interface EditRes extends BotState {
   provider: string;
   model: string;
   training: Training;
-}
-
-export interface PublicConfig {
-  ok: true;
-  limits: { max_message_length: number; max_field_length: number; max_sessions: number };
-  features: { flow_controls_enabled: boolean };
 }
 
 export interface ProductOption {

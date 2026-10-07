@@ -5,15 +5,13 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useToast } from "@/components/ui";
-import { api, ApiError } from "@/lib/api/client";
 import { config, storageKeys } from "@/lib/config";
-import { stageMeta, strategyMeta } from "@/lib/labels";
 import { useStoredState } from "@/lib/useStoredState";
 import { useDraft } from "@/state/DraftContext";
 import { useSession } from "@/features/session/SessionContext";
 import { SpeechRecognizer, speechSupported, type StopState } from "./speech/recognizer";
 import { Tts, ttsSupported } from "./speech/tts";
-import { parseFlowCommand, parsePunctuation, type FlowCommand } from "./voiceCommands";
+import { parsePunctuation } from "./voiceCommands";
 
 interface VoiceValue {
   /** Can this browser dictate? False until the browser has been checked. */
@@ -100,37 +98,15 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     }, config.voice.silenceDelayMs);
   }, []);
 
-  const runFlowCommand = useCallback(async (cmd: FlowCommand) => {
-    const { session: s, toast: say } = live.current;
-    if (!s.sessionId) return;
-    try {
-      if (cmd.type === "stage") {
-        s.applyBotState(await api.setStage(s.sessionId, cmd.value));
-        say(`Voice: moved to ${stageMeta(cmd.value).label}`, "info");
-      } else {
-        s.applyBotState(await api.setStrategy(s.sessionId, cmd.value));
-        say(`Voice: approach set to ${strategyMeta(cmd.value).label}`, "info");
-      }
-    } catch (e) {
-      if (!s.handleExpired(e)) say(`Voice command error: ${e instanceof ApiError ? e.message : "please try again"}`, "error");
-    }
-  }, []);
-
   const onFinal = useCallback(
     (text: string) => {
       if (tts.current?.busy) return; // echo guard: that is the coach talking, not the user
-      const { session: s, draft: d } = live.current;
+      const { draft: d } = live.current;
       setInterim("");
-      const cmd = handsFreeNow.current && s.flowControls && s.mode === "seller" ? parseFlowCommand(text) : null;
-      if (cmd) {
-        if (silenceTimer.current) clearTimeout(silenceTimer.current);
-        void runFlowCommand(cmd);
-        return;
-      }
       d.append(parsePunctuation(text));
       scheduleAutoSend();
     },
-    [runFlowCommand, scheduleAutoSend],
+    [scheduleAutoSend],
   );
 
   const onInterim = useCallback((text: string) => {

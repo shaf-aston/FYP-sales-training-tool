@@ -6,9 +6,7 @@ interface Meta {
 
 export const STRATEGY_META: Record<string, Meta> = {
   "-": { label: "Not started" },
-  intent: { label: "Finding out what they want" },
   consultative: { label: "Consultative" },
-  transactional: { label: "Transactional" },
   prospect: { label: "Prospect practice" },
 };
 
@@ -17,8 +15,6 @@ export const STAGE_META: Record<string, Meta> = {
   logical: { label: "Understanding the problem" },
   emotional: { label: "Making it personal" },
   pitch: { label: "Presenting the solution" },
-  negotiation: { label: "Agreeing the terms" },
-  objection: { label: "Handling concerns" },
   outcome: { label: "Closing" },
   default: { label: "Not started" },
 };
@@ -32,8 +28,4 @@ export const MODE_META = {
 export const key = (value: string | null | undefined) => (value ?? "").trim().toLowerCase();
 
 export const strategyMeta = (s: string) => STRATEGY_META[key(s)] ?? STRATEGY_META["-"];
-/** The server sends "----" while it is still working out the strategy; show that as the intent stage. */
-const UNDETERMINED_STAGE = "----";
-
-export const stageMeta = (s: string) =>
-  STAGE_META[key(s)] ?? (s === UNDETERMINED_STAGE ? STAGE_META.intent : { label: s });
+export const stageMeta = (s: string) => STAGE_META[key(s)] ?? { label: s };

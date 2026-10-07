@@ -8,9 +8,6 @@ from typing import Any
 
 from flask import current_app, jsonify, request
 
-from core.constants import UNDETERMINED_STAGE
-from core.enums import Strategy
-
 from ..messages import MESSAGE_REQUIRED, SESSION_NOT_FOUND
 from ..security import InputValidator, SecurityConfig
 
@@ -70,16 +67,8 @@ def validate_message(message_text):
 
 def bot_state(session_bot):
     """Common stage/strategy fields for JSON responses"""
-    # In discovery mode (intent strategy), stage is unset since real flow isn't determined yet
-    # Once switched to consultative/transactional, show actual stage
-    stage = (
-        UNDETERMINED_STAGE
-        if session_bot.flow_engine.flow_type == Strategy.INTENT
-        else session_bot.flow_engine.current_stage.upper()
-    )
-    strategy = session_bot.flow_engine.flow_type.upper()
-
-    return {"stage": stage, "strategy": strategy}
+    flow = session_bot.flow_engine
+    return {"stage": flow.current_stage.upper(), "strategy": flow.flow_type.upper()}
 
 
 def validate_provider(data):

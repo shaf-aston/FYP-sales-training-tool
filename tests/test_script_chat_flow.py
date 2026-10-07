@@ -7,7 +7,7 @@ SCRIPT_PRODUCT = "high_ticket_sales_mentorship"  # listed under `products:` in s
 
 
 @pytest.fixture
-def client(scripted_selling, monkeypatch):
+def client(monkeypatch):
     # the route only lists real providers; the offline test provider is let through here
     monkeypatch.setattr("backend.routes.session.validate_provider", lambda data: ("dummy", None))
     app.config["TESTING"] = True
@@ -93,29 +93,14 @@ def test_init_without_product_runs_the_script(client):
     assert "making money online" in body["message"]
 
 
-@pytest.mark.parametrize("product", ["financial_services", "healthcare_services", "luxury_cars"])
-def test_products_not_listed_never_get_the_coaching_script(client, product):
-    # live: a Wealth Management trainee was pitched online-business coaching
+@pytest.mark.parametrize("product", ["financial_services", "luxury_cars"])
+def test_a_product_with_no_script_gets_the_default_one(client, product):
+    # seller mode is scripted only; an unscripted product never gets AI-written sales talk
     from backend.app import session_manager
 
     body = client.post("/api/init", json={"product_type": product}).get_json()
-    bot = session_manager.get(body["session_id"])
-    bot.flow_engine.switch_strategy("consultative")
-    headers = {"X-Session-ID": body["session_id"]}
-    reply = _say(client, headers, "I want a mentor to help me leave my job")["message"]
-    assert bot.seller is None and "making money online" not in reply
-
-
-def test_script_lines_reach_the_user_word_for_word(client, monkeypatch):
-    from core.response_guardrails import Layer3CheckResult
-
-    # the prompt-driven path's guardrail rewrites lines; scripted lines must never go through it
-    monkeypatch.setattr(
-        "core.seller_bot.apply_layer3_output_checks",
-        lambda **kw: Layer3CheckResult(content="What should we focus on next?", was_corrected=True),
-    )
-    _, headers = _init(client)
-    assert _say(client, headers, "I want financial freedom")["message"].startswith("How much")
+    assert session_manager.get(body["session_id"]).product_type == SCRIPT_PRODUCT
+    assert "making money online" in body["message"]
 
 
 def test_vague_opening_answer_is_dug_into_not_deflected(client):
@@ -144,7 +129,7 @@ def test_a_product_can_run_its_own_method(client, monkeypatch):
 
     cfg = load_yaml("selling.yaml")
     cfg["products"][SCRIPT_PRODUCT]["method"] = "impact_formula"
-    monkeypatch.setattr("core.seller_bot.selling_config", lambda: {**cfg, "enabled": True})
-    monkeypatch.setattr("core.script_engine.seller.selling_config", lambda: {**cfg, "enabled": True})
+    monkeypatch.setattr("core.seller_bot.selling_config", lambda: cfg)
+    monkeypatch.setattr("core.script_engine.seller.selling_config", lambda: cfg)
     opened, _ = _init(client)
     assert opened["message"] == "What would you like help with first?"

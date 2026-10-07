@@ -88,21 +88,6 @@ def fake_embedder():
 
 
 @pytest.fixture(autouse=True)
-def _scripted_selling_off(monkeypatch):
-    """Existing tests exercise the prompt-driven flow; scripted selling is opted into per test."""
-    from core.loader import load_yaml
-
-    monkeypatch.setattr(
-        "core.seller_bot.selling_config", lambda: {**load_yaml("selling.yaml"), "enabled": False}
-    )
-
-
-@pytest.fixture
-def scripted_selling(monkeypatch, fake_embedder):
-    """Turn scripted selling on with the offline embedder (no model download)."""
-    from core.loader import load_yaml
-
-    monkeypatch.setattr(
-        "core.seller_bot.selling_config", lambda: {**load_yaml("selling.yaml"), "enabled": True}
-    )
+def _offline_embedder(monkeypatch, fake_embedder):
+    """Every SellerBot runs the script; tests use the offline embedder (no model download)."""
     monkeypatch.setattr("core.script_engine.seller.shared_embedder", lambda: fake_embedder)

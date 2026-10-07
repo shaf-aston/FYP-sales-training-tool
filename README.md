@@ -18,7 +18,7 @@ Final-year project · Flask backend · Next.js frontend · deterministic scoring
 
 | Mode | You are | The AI is |
 |---|---|---|
-| 🤝 **Seller bot** | the customer | a salesperson following a staged sales flow |
+| 🤝 **Seller bot** | the customer | a salesperson reading a real sales script |
 | 🎯 **Prospect mode** | the salesperson | a buyer with its own needs, objections and patience |
 
 After a prospect session you get:
@@ -32,18 +32,17 @@ After a prospect session you get:
 
 ```mermaid
 flowchart LR
-    I[Intent] --> L[Logical] --> E[Emotional] --> P[Pitch] --> O[Objection] --> X[Outcome]
-    O -. resolved .-> P
+    I[Intent] --> L[Logical] --> E[Emotional] --> P[Pitch] --> X[Outcome]
 ```
 
-A stage only advances when the buyer's signals earn it.
+The script moves on only when the buyer's answer fits the question.
 
 ## ⚙️ How it works
 
 - **Buyer profiles**: Easy, Medium and Hard buyers, grounded in published buyer typology research. Difficulty sets readiness, disclosure, objections and patience.
 - **Deterministic judge**: scoring does not depend on the LLM, so any saved session reviews the same way every time.
-- **Rules first**: stage moves, objections, scores, coach notes and tips come from `config/*.yaml`; the AI (Groq, free tier) only words the replies.
-- **Config driven**: products, objections, signals and drills live in `config/*.yaml`. Adding a product needs no code change.
+- **Rules first**: the seller's lines, objections, scores, coach notes and tips come from `config/*.yaml`; the AI (Groq, free tier) plays the buyer and fills small gaps.
+- **Config driven**: scripts, products, objections and drills live in `config/*.yaml`. Adding a product needs no code change.
 
 ## 🚀 Run it
 
@@ -68,7 +67,7 @@ Start with [`CORE-FLOW.md`](CORE-FLOW.md): the one core flow, file by file, and 
 | Folder | Holds |
 |---|---|
 | `backend/` | Flask app, routes, settings, security (rate limits, input checks, sessions) |
-| `core/` | conversation engine, stage machine, prompts, buyer, judge, quiz, drills |
-| `config/` | products, buyer profiles, objections, signals, drills |
+| `core/` | script engine, buyer, judge, quiz, drills |
+| `config/` | scripts, products, buyer profiles, drills |
 | `web/` | Next.js + React app; built copy in `web/out` is what Flask serves (see `web/CORE-FLOW.md`) |
 | `tests/` | unit and route tests |

@@ -1,33 +1,11 @@
-"""Training coach: generates coaching feedback and answers trainee questions"""
+"""Training coach: answers trainee questions about the live call."""
 
 import logging
 
 from .constants import LLM
-from .loader import load_signals, load_yaml
 from .quiz import get_stage_rubric
-from .utils import contains_nonnegated_keyword
 
 logger = logging.getLogger(__name__)
-
-
-_NOTES = load_yaml("coach_notes.yaml")
-_SIGNALS = load_signals()
-
-
-def generate_training(flow_engine, user_msg):
-    """Coach notes for the current exchange, looked up from coach_notes.yaml (no AI).
-
-    A buyer move in the message (walking, commitment, objection, price question) wins;
-    otherwise the note for the current stage is used.
-    """
-    text = (user_msg or "").lower()
-    for move, note in _NOTES["moves"].items():
-        if contains_nonnegated_keyword(text, _SIGNALS[move]):
-            return dict(note)
-    strategy = "transactional" if flow_engine.flow_type == "transactional" else "consultative"
-    stage = str(flow_engine.current_stage).split(".")[-1].lower()
-    stages = _NOTES["stages"][strategy]
-    return dict(stages.get(stage) or stages["intent"])
 
 
 COACH_STYLES = {

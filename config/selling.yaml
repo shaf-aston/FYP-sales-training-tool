@@ -1,11 +1,10 @@
 # Script engine knobs. The engine reads these; it never hardcodes them.
-enabled: true          # scripted selling for the products listed below
 method: cat            # default method (config/methods/<name>.yaml); a product may name its own
 # Which practice products the script sells: the offer (config/offers/<name>.yaml) and, optionally, the method for each.
-# A product not listed here keeps the AI-written sales talk.
+# A session asking for a product not listed here gets default_product.
 products:
   high_ticket_sales_mentorship: {offer: shay_coaching, method: cat}
-default_product: high_ticket_sales_mentorship   # used when a session starts with no product (the web UI never picks one)
+default_product: high_ticket_sales_mentorship   # used when a session names no listed product (the web UI never picks one)
 embed_model: BAAI/bge-small-en-v1.5
 embed_cache_dir: .cache/fastembed   # model files; relative to the project root, gitignored
 embed_threads: 1       # CPU threads for the model; more threads use much more memory (free hosts have 512 MB)

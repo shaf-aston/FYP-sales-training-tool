@@ -55,3 +55,22 @@ def test_clear_custom_knowledge_removes_file(monkeypatch):
 
     assert knowledge.clear_custom_knowledge() is True
     assert not primary.exists()
+
+
+def test_knowledge_block_uses_real_newlines_and_one_entry_per_field(monkeypatch):
+    monkeypatch.setattr(
+        knowledge,
+        "load_custom_knowledge",
+        lambda: {"product_name": "Acme", "selling_points": ["fast", "cheap"]},
+    )
+
+    text = knowledge.get_custom_knowledge_text()
+
+    assert "\\n" not in text  # literal backslash-n, not a line break
+    assert text == "Product name: Acme\nSelling points:\n  - fast\n  - cheap"
+
+
+def test_knowledge_block_is_empty_when_nothing_is_stored(monkeypatch):
+    monkeypatch.setattr(knowledge, "load_custom_knowledge", lambda: {})
+
+    assert knowledge.get_custom_knowledge_text() == ""

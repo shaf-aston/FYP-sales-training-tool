@@ -52,7 +52,6 @@ interface SessionValue {
   messages: ChatMessage[];
   typing: boolean;
   /** True once the server said the stage/strategy controls are allowed. */
-  flowControls: boolean;
   prospect: ProspectSession | null;
   prospectSettings: ProspectSettings;
   setProspectSettings: (s: ProspectSettings) => void;
@@ -60,7 +59,6 @@ interface SessionValue {
   edit: (historyIndex: number, text: string) => Promise<boolean>;
   reset: () => Promise<void>;
   /** Apply a stage/strategy change made by the flow controls. */
-  applyBotState: (s: Partial<BotState> & { training?: Training }) => void;
   startProspect: (difficulty: Difficulty, productType: string, pick?: ProspectPick) => Promise<boolean>;
   /** End the current buyer and go back to setup. */
   exitProspect: () => void;
@@ -88,7 +86,6 @@ export function SessionProvider({ children, role }: { children: ReactNode; role:
   const [training, setTraining] = useState<Training | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [typing, setTyping] = useState(false);
-  const [flowControls, setFlowControls] = useState(false);
   const [prospect, setProspect] = useState<ProspectSession | null>(null);
   const [prospectSettings, setProspectSettings] = useStoredState<ProspectSettings>(
     storageKeys.prospectSettings,
@@ -141,10 +138,6 @@ export function SessionProvider({ children, role }: { children: ReactNode; role:
     started.current = true;
     // Mount-time connect to the server; state is set after the request resolves.
     initSeller();
-    api
-      .publicConfig()
-      .then((c) => setFlowControls(c.features.flow_controls_enabled))
-      .catch(() => setFlowControls(false));
   }, [initSeller, role]);
 
   const handleExpired = useCallback(
@@ -324,11 +317,6 @@ export function SessionProvider({ children, role }: { children: ReactNode; role:
     setTyping(false);
   }, [mode, prospect, sessionId, startProspect, handleExpired, toast, initSeller]);
 
-  const applyBotState = useCallback((s: Partial<BotState> & { training?: Training }) => {
-    setBot((b) => ({ stage: s.stage ?? b.stage, strategy: s.strategy ?? b.strategy }));
-    if (s.training) setTraining(s.training);
-  }, []);
-
   const value = useMemo<SessionValue>(
     () => ({
       role,
@@ -340,19 +328,17 @@ export function SessionProvider({ children, role }: { children: ReactNode; role:
       training,
       messages,
       typing,
-      flowControls,
       prospect,
       prospectSettings,
       setProspectSettings,
       send,
       edit,
       reset,
-      applyBotState,
       startProspect,
       exitProspect,
       handleExpired,
     }),
-    [role, mode, ready, sessionId, bot, training, messages, typing, flowControls, prospect, prospectSettings, setProspectSettings, send, edit, reset, applyBotState, startProspect, exitProspect, handleExpired],
+    [role, mode, ready, sessionId, bot, training, messages, typing, prospect, prospectSettings, setProspectSettings, send, edit, reset, startProspect, exitProspect, handleExpired],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

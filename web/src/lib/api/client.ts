@@ -71,11 +71,6 @@ export function createHttpApi() {
     edit: (sid: string, index: number, message: string) =>
       request<T.EditRes>("/api/edit", { body: { index, message }, sessionId: sid, timeoutMs: chat }),
     reset: (sid: string) => request<{ success: true }>("/api/reset", { body: {}, sessionId: sid }),
-    stages: (sid: string) => request<{ success: true; stages: string[] }>("/api/stages", { sessionId: sid }),
-    setStage: (sid: string, stage: string) => request<T.BotState & { success: true }>("/api/stage", { body: { stage }, sessionId: sid }),
-    setStrategy: (sid: string, strategy: string) =>
-      request<T.BotState & { success: true }>("/api/strategy", { body: { strategy }, sessionId: sid }),
-    publicConfig: () => request<T.PublicConfig>("/api/config"),
     askCoach: (sid: string, question: string, style: T.TrainingStyle) =>
       request<{ success: true; answer: string }>("/api/training/ask", { body: { question, style }, sessionId: sid, timeoutMs: chat }),
 

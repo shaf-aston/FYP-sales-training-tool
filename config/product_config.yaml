@@ -1,10 +1,7 @@
-# Bot is the Seller
-# strategy: which FSM flow to use (consultative / transactional / intent)
-# aliases: alternative names that map to the same product
-# knowledge: injected into the LLM system prompt at runtime
-
-metadata:
-  last_updated: "2026-03-21"
+# Products the AI buyer (prospect mode) can be shopping for.
+# context and knowledge: what the buyer has read about it (core/buyer_prompt.py).
+# name: label in the prospect product dropdown.
+# Seller mode sells only the scripted products in selling.yaml.
 
 products:
 
@@ -12,8 +9,6 @@ products:
 
   default:
     name: "Multi-product Assistant"
-    aliases: ["generic", "standard"]
-    strategy: "intent"
     context: "various products and services"
     knowledge: |
       You represent a sales assistant who can help with multiple product categories.
@@ -24,9 +19,7 @@ products:
 
   luxury_cars:
     name: "Luxury Vehicles"
-    strategy: "consultative"
     context: "luxury vehicles"
-    aliases: ["luxury_car", "luxury", "premium_cars"]
     knowledge: |
       Available models:
       - BMW X3 (2026): $50,900-$65,900. Turbocharged 4-cyl 255hp (30 xDrive) or 6-cyl M50 xDrive. xDrive AWD standard, curved 12.3" display, iDrive 8, Harman Kardon audio, adaptive suspension. MPG: 28 city / 35 highway. Best for: sporty handling, tech features, driving dynamics.
@@ -37,9 +30,7 @@ products:
 
   fitness:
     name: "Personal Fitness Coaching"
-    strategy: "consultative"
     context: "personal fitness coaching and nutrition"
-    aliases: ["gym", "training", "coaching", "supplements", "personal_training", "workout"]
     knowledge: |
       Available coaching plans:
       - Foundation Plan: $99/month. 2 x 1:1 coaching sessions/week, basic meal plan template, training app access, monthly progress call. Best for: beginners, building habits, accountability.
@@ -50,9 +41,7 @@ products:
 
   insurance:
     name: "Life & Health Insurance"
-    strategy: "consultative"
     context: "life and health insurance plans"
-    aliases: ["life_insurance", "health_insurance", "coverage", "policy", "policies"]
     knowledge: |
       Available plans:
       - Essential Life: $35/month. $250,000 term life cover (20-year term), no medical exam required, digital application, coverage begins within 48 hours. Best for: young adults, first-time buyers, basic financial protection.
@@ -63,9 +52,7 @@ products:
 
   jewellery:
     name: "Fine Jewellery"
-    strategy: "consultative"
     context: "fine jewellery and engagement rings"
-    aliases: ["rings", "engagement", "diamonds", "necklace", "bracelet"]
     knowledge: |
       Available pieces:
       - Classic Solitaire Ring: $3,800-$5,500. 0.75-1.0ct round brilliant natural diamond, VS2 clarity, G colour, 14k white gold band, GIA certified. Best for: timeless elegance, traditional engagement.
@@ -77,9 +64,7 @@ products:
 
   financial_services:
     name: "Wealth Management"
-    strategy: "consultative"
     context: "personal financial advisory and wealth management"
-    aliases: ["investments", "investing", "wealth", "financial", "advisory", "portfolio"]
     knowledge: |
       Available service tiers:
       - Wealth Starter: $50,000 minimum investment. 0.75% annual management fee, diversified ETF portfolio, quarterly rebalancing, annual review meeting, online dashboard. Best for: young professionals, first-time investors, long-term wealth building.
@@ -90,9 +75,7 @@ products:
 
   high_ticket_sales_mentorship:
     name: "High-Ticket Sales Mentorship"
-    strategy: "consultative"
     context: "high-ticket sales mentorship and closing coaching"
-    aliases: ["mentorship", "sales mentorship", "sales coaching", "high-ticket coaching", "closer coaching"]
     knowledge: |
       Available mentorship tracks:
       - Foundation Track: $5,000. 8-week 1:1 setup, offer positioning review, discovery call structure, weekly implementation check-ins, call review feedback. Best for: coaches, consultants, and solo service providers who need a cleaner sales process.
@@ -105,9 +88,7 @@ products:
 
   watches:
     name: "Luxury Watches"
-    strategy: "transactional"
     context: "luxury watches and timepieces"
-    aliases: ["watch", "timepiece", "timepieces", "luxury_watch", "luxury_watches"]
     knowledge: |
       Available watches:
       - Heritage Automatic: $5,200. Swiss automatic movement, 41mm stainless steel case, sapphire crystal, 100m water resistance, leather or bracelet strap. Best for: everyday luxury, first mechanical watch, understated style.
@@ -117,9 +98,7 @@ products:
 
   automotive:
     name: "Vehicles"
-    strategy: "transactional"
     context: "vehicle purchase"
-    aliases: ["car", "cars", "vehicle", "vehicles", "auto", "automobile"]
     knowledge: |
       Available vehicles:
       - Toyota Highlander Hybrid: $51,000-$58,000. 2.5L hybrid, AWD, 12.3" touchscreen, Toyota Safety Sense, three-row seating. Best for: family versatility, reliability, efficiency.
@@ -129,9 +108,7 @@ products:
 
   premium_electronics:
     name: "Premium Electronics"
-    strategy: "transactional"
     context: "high-end electronics and workstation bundles"
-    aliases: ["electronics", "laptop", "laptops", "tech", "computer", "computers", "phone", "phones", "workstation"]
     knowledge: |
       Available products:
       - Mac Studio Creator Bundle: $5,499. Apple Silicon Max chip, 64GB RAM, 2TB SSD, 27" 5K display, studio-grade peripherals. Best for: editors, designers, and creative teams.
@@ -141,9 +118,7 @@ products:
 
   b2b_saas:
     name: "Business Software"
-    strategy: "consultative"
     context: "business productivity software"
-    aliases: ["software", "saas", "crm", "erp", "business_software", "enterprise"]
     knowledge: |
       Available solutions:
       - Team Essentials: $15/user/month (billed annually). Project management, team chat, file sharing, 10GB storage/user, email integration. Best for: small teams (5-20), startups, agencies.
@@ -154,9 +129,7 @@ products:
 
   education:
     name: "Education & Certification"
-    strategy: "consultative"
     context: "professional education and certification programs"
-    aliases: ["course", "courses", "certification", "training_program", "bootcamp", "learning"]
     knowledge: |
       Available programs:
       - Professional Certificate: $1,200-$2,500. 8-12 week programme, self-paced online, industry-recognised certification, career services. Subjects: Data Analytics, Digital Marketing, Project Management, UX Design. Best for: career changers, skill upskilling, resume enhancement.
@@ -167,9 +140,7 @@ products:
 
   home_services:
     name: "Home Services & Renovation"
-    strategy: "consultative"
     context: "home improvement and renovation services"
-    aliases: ["renovation", "remodel", "contractor", "home_improvement", "kitchen", "bathroom", "roofing"]
     knowledge: |
       Available services:
       - Kitchen Remodel: $25,000-$75,000 (average $45,000). Design consultation, cabinet installation, countertops, appliances, plumbing/electrical, project management. Timeline: 6-12 weeks. Best for: homeowners wanting modernization, increased home value.
@@ -181,9 +152,7 @@ products:
 
   healthcare_services:
     name: "Concierge Healthcare"
-    strategy: "consultative"
     context: "concierge medicine and wellness services"
-    aliases: ["doctor", "medical", "health", "wellness", "concierge_medicine", "healthcare"]
     knowledge: |
       Available memberships:
       - Essential Wellness: $150/month. Unlimited primary care visits, same-day/next-day appointments, 24/7 telehealth, annual comprehensive wellness exam, basic lab work included. Best for: individuals wanting accessible primary care.
@@ -194,9 +163,7 @@ products:
 
   travel:
     name: "Travel & Vacation Packages"
-    strategy: "transactional"
     context: "luxury travel packages and accommodations"
-    aliases: ["vacation", "trip", "hotel", "flight", "travel_package", "holiday", "travel"]
     knowledge: |
       Available packages:
       - Signature Escape: $5,500-$7,500 total. 5 nights, five-star resort or boutique villa, private transfers, breakfast, concierge support, curated excursions. Best for: anniversaries, milestone trips, premium comfort.
@@ -206,9 +173,7 @@ products:
 
   fashion:
     name: "Premium Fashion"
-    strategy: "transactional"
     context: "premium fashion, tailoring, and wardrobe packages"
-    aliases: ["clothing", "clothes", "apparel", "suit", "dress", "shoes", "accessories", "wardrobe"]
     knowledge: |
       Available categories:
       - Executive Wardrobe Build: $5,000-$8,000. 2 tailored suits, shirts, shoes, belts, and essential accessories with fitting appointments. Best for: client-facing professionals and promotions.
@@ -218,9 +183,7 @@ products:
 
   home_appliances:
     name: "Home Appliances"
-    strategy: "transactional"
     context: "home appliances and whole-home equipment packages"
-    aliases: ["appliance", "appliances", "refrigerator", "washer", "dryer", "dishwasher", "oven", "kitchen"]
     knowledge: |
       Available categories:
       - Premium Kitchen Package: $5,500-$9,500. Refrigerator, range, dishwasher, microwave, haul-away, and installation planning. Best for: full kitchen refreshes and renovation handoffs.
@@ -230,9 +193,7 @@ products:
 
   outdoor_equipment:
     name: "Outdoor & Sports Equipment"
-    strategy: "transactional"
     context: "premium outdoor and sporting equipment packages"
-    aliases: ["outdoor", "camping", "hiking", "sports", "bike", "bicycle", "fitness_equipment", "home_gym"]
     knowledge: |
       Available categories:
       - Elite Home Gym: $5,500-$12,000. Treadmill, rower, bike, strength rack, flooring, delivery, and setup. Best for: serious fitness at home.

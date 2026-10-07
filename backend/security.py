@@ -1,6 +1,5 @@
 """Rate limiting, input validation and session management"""
 
-import hmac
 import logging
 import re
 import threading
@@ -114,49 +113,6 @@ def require_rate_limit(bucket: str) -> Callable:
 
 
 _rate_limiter: Optional[RateLimiter] = None
-
-
-def require_privileged_mutation(f: Callable) -> Callable:
-    """Guard FSM mutation routes behind an optional admin token.
-
-    Enabled by REQUIRE_ADMIN_FOR_STAGE_MUTATION env var (or app config).
-    Token must be supplied in X-Admin-Token or Authorization: Bearer <token>.
-    Bypassed when Flask TESTING is true.
-    """
-
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        from flask import current_app, jsonify, request
-
-        require_admin = settings.require_admin_for_stage_mutation(current_app.config)
-
-        if not require_admin or current_app.config.get("TESTING"):
-            return f(*args, **kwargs)
-
-        if not has_valid_admin_token(request, current_app.config):
-            logger.warning("Blocked privileged mutation path=%s", request.path)
-            return jsonify({"error": "Admin token required"}), 403
-
-        return f(*args, **kwargs)
-
-    return wrapper
-
-
-def has_valid_admin_token(request_obj, config_obj) -> bool:
-    admin_token = settings.admin_token() or config_obj.get("ADMIN_TOKEN")
-    token = request_obj.headers.get("X-Admin-Token") or request_obj.headers.get("Authorization", "")
-    if isinstance(token, str) and token.lower().startswith("bearer "):
-        token = token.split(None, 1)[1]
-    if not admin_token or not token:
-        logger.debug(
-            "Auth check failed: admin_token_configured=%s, token_supplied=%s",
-            bool(admin_token),
-            bool(token),
-        )
-        return False
-    result = hmac.compare_digest(str(token), str(admin_token))
-    logger.debug(f"Auth check: token_valid={result}, admin_token_set={bool(admin_token)}")
-    return result
 
 
 class SecurityHeadersMiddleware:
