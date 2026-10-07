@@ -220,7 +220,7 @@ export function Landing() {
         <nav className={s.links}>
           <Link href={routes.buy}>Buy mode</Link>
           <Link href={routes.sell}>Sell mode</Link>
-          <Link href={routes.knowledge}>Product knowledge</Link>
+          <Link href={routes.knowledge}>Knowledge base</Link>
           <a href="#try">Try an objection</a>
         </nav>
       </footer>

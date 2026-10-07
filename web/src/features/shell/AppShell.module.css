@@ -19,19 +19,11 @@
 .withSide {
   grid-template-columns: var(--side-panel-width) minmax(0, 1fr) var(--panel-width);
 }
-.withBuyer {
-  grid-template-columns: minmax(0, 1fr) var(--side-panel-width) var(--panel-width);
-}
-.withSide.withBuyer {
-  grid-template-columns: var(--side-panel-width) minmax(0, 1fr) var(--side-panel-width) var(--panel-width);
-}
 
 /* Tablet and below: one column, page scrolls, panels stack under the chat. */
 @media (max-width: 1080px) {
   .grid,
-  .withSide,
-  .withBuyer,
-  .withSide.withBuyer {
+  .withSide {
     height: auto;
     min-height: calc(100dvh - 2 * var(--space-4));
     grid-template-columns: minmax(0, 1fr);

@@ -12,30 +12,48 @@ import s from "./BuyerSetup.module.css";
 const GENERAL = "default";
 /** Select value meaning "let the server pick the buyer". */
 const SURPRISE = "";
+/** Objection select values: the buyer picks, or the learner writes one. */
+const BUYER_CHOOSES = "";
+const OWN = "__own__";
 
 type Groups = { status: "loading" } | { status: "error"; message: string } | { status: "ready"; groups: ProductGroups };
 
+/** The product list rarely changes; keep it so the "New buyer" form opens fully drawn. */
+let loadedGroups: ProductGroups | null = null;
+
+interface Props {
+  /** Runs after a buyer starts (the Buyer tab folds the form away). */
+  onStarted?: () => void;
+  /** Shown with a live buyer: close the form without changing anything. */
+  onCancel?: () => void;
+}
+
 /** Sell mode: set up the AI buyer (product, difficulty, who they are, an objection to practise). */
-export function BuyerSetup() {
+export function BuyerSetup({ onStarted, onCancel }: Props) {
   const { sellSession, startBuyer, endBuyer } = useSession();
   const confirm = useConfirm();
-  const [groups, setGroups] = useState<Groups>({ status: "loading" });
+  const [groups, setGroups] = useState<Groups>(() => (loadedGroups ? { status: "ready", groups: loadedGroups } : { status: "loading" }));
   const [attempt, setAttempt] = useState(0);
-  const [transactional, setTransactional] = useState(GENERAL);
-  const [consultative, setConsultative] = useState(GENERAL);
+  // A new buyer starts from the current product; the first one from general practice.
+  const [product, setProduct] = useState(sellSession?.productType ?? GENERAL);
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [persona, setPersona] = useState(SURPRISE);
-  const [objection, setObjection] = useState("");
+  const [objectionPick, setObjectionPick] = useState(BUYER_CHOOSES);
+  const [ownObjection, setOwnObjection] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const product = transactional !== GENERAL ? transactional : consultative;
+  const objection = objectionPick === OWN ? ownObjection.trim() : objectionPick;
 
   useEffect(() => {
+    if (loadedGroups) return;
     let live = true;
     api
       .productGroups()
-      .then((r) => live && setGroups({ status: "ready", groups: r.groups }))
+      .then((r) => {
+        loadedGroups = r.groups;
+        if (live) setGroups({ status: "ready", groups: r.groups });
+      })
       .catch((e) => live && setGroups({ status: "error", message: e instanceof ApiError ? e.message : "Couldn't load the product list." }));
     return () => {
       live = false;
@@ -68,8 +86,9 @@ export function BuyerSetup() {
 
   const start = async (d: Difficulty) => {
     setBusy(true);
-    await startBuyer(d, product, { persona: persona || undefined, objection: objection.trim() || undefined });
+    const ok = await startBuyer(d, product, { persona: persona || undefined, objection: objection || undefined });
     setBusy(false);
+    if (ok) onStarted?.();
   };
 
   const roll = () => {
@@ -91,13 +110,6 @@ export function BuyerSetup() {
     await start(d);
   };
 
-  const options = (list: ProductGroups["transactional"]) =>
-    list.map((p) => (
-      <option key={p.id} value={p.id}>
-        {p.label}
-      </option>
-    ));
-
   if (groups.status === "loading") return <Notice kind="loading">Loading products…</Notice>;
   if (groups.status === "error")
     return (
@@ -115,75 +127,80 @@ export function BuyerSetup() {
 
   return (
     <div className={s.stack}>
-      <Select
-        label="Transactional products"
-        value={transactional}
-        onChange={(e) => {
-          setTransactional(e.target.value);
-          if (e.target.value !== GENERAL) setConsultative(GENERAL);
-        }}
-      >
+      <Select label="Product" value={product} onChange={(e) => setProduct(e.target.value)}>
         <option value={GENERAL}>General practice</option>
-        {options(groups.groups.transactional)}
+        {(["transactional", "consultative"] as const).map((kind) => (
+          <optgroup key={kind} label={kind === "transactional" ? "Transactional" : "Consultative"}>
+            {groups.groups[kind].map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.label}
+              </option>
+            ))}
+          </optgroup>
+        ))}
       </Select>
-      <Select
-        label="Consultative products"
-        value={consultative}
-        onChange={(e) => {
-          setConsultative(e.target.value);
-          if (e.target.value !== GENERAL) setTransactional(GENERAL);
-        }}
-      >
-        <option value={GENERAL}>General practice</option>
-        {options(groups.groups.consultative)}
-      </Select>
+
       <Segmented label="Difficulty" options={[...difficultyOptions]} value={shown} onChange={changeDifficulty} />
 
-      <div className={s.personaRow}>
-        <Select label="Buyer" value={persona} onChange={(e) => setPersona(e.target.value)}>
-          <option value={SURPRISE}>Surprise me</option>
-          {personas.map((p) => (
-            <option key={p.name} value={p.name}>
-              {p.name}
+      <div className={s.field}>
+        <div className={s.personaRow}>
+          <Select label="Buyer" value={persona} onChange={(e) => setPersona(e.target.value)}>
+            <option value={SURPRISE}>Surprise me</option>
+            {personas.map((p) => (
+              <option key={p.name} value={p.name}>
+                {p.name}
+              </option>
+            ))}
+          </Select>
+          <Button onClick={roll} disabled={!personas.length} aria-label="Pick a random buyer" title="Pick a random buyer">
+            <Icon name="dice" />
+          </Button>
+        </div>
+        {picked && (
+          <p className={s.personaNote} title={`${picked.background}. ${picked.personality}`}>
+            {picked.background}
+          </p>
+        )}
+      </div>
+
+      <div className={s.field}>
+        <Select label="Objection" value={objectionPick} onChange={(e) => setObjectionPick(e.target.value)}>
+          <option value={BUYER_CHOOSES}>Buyer chooses</option>
+          {config.chosenObjection.picks.map((o) => (
+            <option key={o} value={o}>
+              {o}
             </option>
           ))}
+          <option value={OWN}>Write my own…</option>
         </Select>
-        <Button onClick={roll} disabled={!personas.length} aria-label="Pick a random buyer" title="Pick a random buyer">
-          <Icon name="dice" />
-        </Button>
-      </div>
-      {picked && (
-        <p className={s.personaNote}>
-          <strong>{picked.name}</strong> · {picked.background}. {picked.personality}
-        </p>
-      )}
-
-      <TextArea
-        label="Objection to practise (optional)"
-        hint="The buyer raises it in their first reply."
-        rows={2}
-        maxLength={config.chosenObjection.max}
-        count={objection.length}
-        value={objection}
-        placeholder="Leave empty and the buyer objects when they choose."
-        onChange={(e) => setObjection(e.target.value)}
-      />
-      <div className={s.chips} role="group" aria-label="Common objections">
-        {config.chosenObjection.picks.map((o) => (
-          <button key={o} type="button" className={s.chip} aria-pressed={objection === o} onClick={() => setObjection(objection === o ? "" : o)}>
-            {o}
-          </button>
-        ))}
+        {objectionPick === OWN && (
+          <TextArea
+            label="Your objection"
+            hideLabel
+            autoFocus
+            rows={2}
+            maxLength={config.chosenObjection.max}
+            count={ownObjection.length}
+            value={ownObjection}
+            placeholder="The buyer raises it in their first reply."
+            onChange={(e) => setOwnObjection(e.target.value)}
+          />
+        )}
       </div>
 
       {sellSession ? (
         <div className={s.actions}>
           <Button variant="primary" block busy={busy} busyLabel="Starting…" onClick={() => start(shown)}>
-            New buyer with these settings
+            Start new buyer
           </Button>
-          <Button onClick={endBuyer} block>
-            End this buyer
-          </Button>
+          <div className={s.secondary}>
+            <Button variant="ghost" onClick={onCancel}>
+              Cancel
+            </Button>
+            <Button variant="ghost" onClick={endBuyer}>
+              End this buyer
+            </Button>
+          </div>
         </div>
       ) : (
         <Button variant="primary" block busy={busy} busyLabel="Starting…" onClick={() => start(difficulty)}>

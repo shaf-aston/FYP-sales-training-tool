@@ -1,7 +1,7 @@
 "use client";
 
-import { Notice, Tabs } from "@/components/ui";
-import { BuyerSetup } from "@/features/sell/BuyerSetup";
+import { Tabs } from "@/components/ui";
+import { BuyerTab } from "@/features/sell/BuyerTab";
 import { useSession } from "@/features/session/SessionContext";
 import { config } from "@/lib/config";
 import { useUi, type SidebarTab } from "@/state/UiContext";
@@ -10,18 +10,13 @@ import { StatusCard } from "./StatusCard";
 import { ToolsGrid } from "./ToolsGrid";
 import s from "./Sidebar.module.css";
 
-/** Sell mode only: change the AI buyer once one is live (the first setup sits in the chat area). */
-function SetupTab() {
-  const { sellSession } = useSession();
-  return sellSession ? <BuyerSetup /> : <Notice kind="empty">Buyer settings appear here once you start.</Notice>;
-}
-
 export function Sidebar() {
   const { sidebarTab, setSidebarTab } = useUi();
   const { mode } = useSession();
-  // Buy mode needs no setup tab: the header already has the switch to selling.
+  const sell = mode === "sell";
+  // Buy mode has no buyer tab: the header already has the switch to selling.
   const tabs: { key: SidebarTab; label: string; content: React.ReactNode }[] = [
-    ...(mode === "sell" ? [{ key: "setup" as const, label: "Setup", content: <SetupTab /> }] : []),
+    ...(sell ? [{ key: "buyer" as const, label: "Buyer", content: <BuyerTab /> }] : []),
     { key: "tools", label: "Tools", content: <ToolsGrid /> },
     { key: "settings", label: "Settings", content: <VoiceSettings /> },
   ];
@@ -29,7 +24,8 @@ export function Sidebar() {
   const active = tabs.some((t) => t.key === sidebarTab) ? sidebarTab : tabs[0].key;
   return (
     <aside id={config.ids.panels} className={s.sidebar} aria-label="Session sidebar" tabIndex={-1}>
-      <StatusCard />
+      {/* Sell mode names the buyer and their state in the Buyer tab, so the card would repeat it. */}
+      {!sell && <StatusCard />}
       <Tabs label="Workspace" active={active} onChange={setSidebarTab} tabs={tabs} />
     </aside>
   );

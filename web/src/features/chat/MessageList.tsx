@@ -6,6 +6,7 @@ import { config } from "@/lib/config";
 import { useSession, type ChatMessage } from "@/features/session/SessionContext";
 import { ListenButton } from "@/features/voice/VoiceBar";
 import { InlineEvaluation } from "@/features/sell/SellDialogs";
+import { useUi } from "@/state/UiContext";
 import s from "./MessageList.module.css";
 
 function TypingBubble() {
@@ -111,8 +112,28 @@ function Item({ m, canEdit, editing, onEdit, onSave, onCancel }: ItemProps) {
   );
 }
 
+/** Sell mode before a buyer exists: the setup lives in the sidebar's Buyer tab. */
+function SetupPointer() {
+  const { setSidebarTab } = useUi();
+  const goToSetup = () => {
+    setSidebarTab("buyer");
+    const el = document.getElementById(config.ids.panels);
+    el?.scrollIntoView({ behavior: "smooth", block: "start" });
+    el?.focus({ preventScroll: true });
+  };
+  return (
+    <>
+      <h2>Set up your buyer.</h2>
+      <p>Pick a product, difficulty and buyer in the Buyer tab, then start selling.</p>
+      <Button variant="pill" className={s.stackedOnly} onClick={goToSetup}>
+        Set up buyer
+      </Button>
+    </>
+  );
+}
+
 export function MessageList() {
-  const { messages, typing, mode, edit } = useSession();
+  const { messages, typing, mode, edit, sellSession } = useSession();
   const toast = useToast();
   const [editingId, setEditingId] = useState<string | null>(null);
   const frameRef = useRef<HTMLDivElement>(null);
@@ -140,7 +161,9 @@ export function MessageList() {
       {/* Folds away on the first message instead of vanishing, so the chat doesn't jump up. */}
       <div className={`${s.introFold} ${started ? s.folded : ""}`} inert={started}>
         <div className={s.intro}>
-          {mode === "sell" ? (
+          {mode === "sell" && !sellSession ? (
+            <SetupPointer />
+          ) : mode === "sell" ? (
             <>
               <h2>Open the call.</h2>
               <p>Example: &ldquo;Thanks for your time. What made you take this call today?&rdquo;</p>
