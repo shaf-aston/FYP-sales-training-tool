@@ -110,7 +110,7 @@ export function KnowledgePage() {
         <main className={s.page}>
           <header className={s.header}>
             <div>
-              <h1 className={s.title}>Product Knowledge</h1>
+              <h1 className={s.title}>Configure knowledge base</h1>
             </div>
             <Suspense fallback={<Link href={config.routes.buy} className={s.back}>← Back to buying</Link>}>
               <BackLink />

@@ -1,6 +1,6 @@
 "use client";
 
-// Page layout: [coach or quiz panel] | chat | [buyer panel, sell mode] | sidebar.
+// Page layout: [coach or quiz panel] | chat | sidebar (sell mode puts the buyer in its first tab).
 // Everything sits on frosted glass over the night-city film.
 
 import { ConfirmProvider, ToastProvider } from "@/components/ui";
@@ -11,9 +11,8 @@ import { CoachPanel } from "@/features/coach/CoachPanel";
 import { FeedbackDialog } from "@/features/feedback/FeedbackDialog";
 import { HelpDialog } from "@/features/help/HelpDialog";
 import { SellDialogs } from "@/features/sell/SellDialogs";
-import { BuyerPanel } from "@/features/sell/BuyerPanel";
 import { QuizPanel } from "@/features/quiz/QuizPanel";
-import { SessionProvider, useSession, type Mode } from "@/features/session/SessionContext";
+import { SessionProvider, type Mode } from "@/features/session/SessionContext";
 import { Sidebar } from "@/features/sidebar/Sidebar";
 import { VoiceProvider } from "@/features/voice/VoiceContext";
 import { UiProvider, useUi } from "@/state/UiContext";
@@ -21,15 +20,13 @@ import s from "./AppShell.module.css";
 
 function Layout() {
   const { sidePanel } = useUi();
-  const { mode, sellSession } = useSession();
-  const cls = [s.grid, sidePanel && s.withSide, mode === "sell" && sellSession && s.withBuyer].filter(Boolean).join(" ");
+  const cls = [s.grid, sidePanel && s.withSide].filter(Boolean).join(" ");
   return (
     <div className={s.shell}>
       <main className={cls}>
         {sidePanel === "coach" && <CoachPanel />}
         {sidePanel === "quiz" && <QuizPanel />}
         <ChatView />
-        {mode === "sell" && <BuyerPanel />}
         <Sidebar />
       </main>
       <HelpDialog />

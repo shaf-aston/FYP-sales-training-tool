@@ -158,3 +158,12 @@
     min-width: 0;
   }
 }
+/* Only when the sidebar sits below the chat (tablet and phone). */
+.intro .stackedOnly {
+  display: none;
+}
+@media (max-width: 1080px) {
+  .intro .stackedOnly {
+    display: inline-flex;
+  }
+}
