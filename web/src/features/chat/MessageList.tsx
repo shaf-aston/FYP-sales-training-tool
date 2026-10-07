@@ -99,8 +99,9 @@ function Item({ m, canEdit, editing, onEdit, onSave, onCancel }: ItemProps) {
       {!editing && !m.historical && (
         <div className={s.actions}>
           {!user && <ListenButton text={m.content} />}
-          {user && canEdit && (
-            <Button variant="ghost" onClick={onEdit}>
+          {/* Always laid out, only hidden while a reply is coming, so the row never grows when it lands. */}
+          {user && (
+            <Button variant="ghost" onClick={onEdit} className={canEdit ? undefined : s.unavailable}>
               Edit
             </Button>
           )}
@@ -136,7 +137,8 @@ export function MessageList() {
 
   return (
     <div className={s.frame} ref={frameRef}>
-      {!started && (
+      {/* Folds away on the first message instead of vanishing, so the chat doesn't jump up. */}
+      <div className={`${s.introFold} ${started ? s.folded : ""}`} inert={started}>
         <div className={s.intro}>
           {mode === "prospect" ? (
             <>
@@ -150,7 +152,7 @@ export function MessageList() {
             </>
           )}
         </div>
-      )}
+      </div>
       <div className={s.list} role="log" aria-live="polite" aria-relevant="additions" aria-label="Conversation">
         {messages.map((m) => (
           <Item
