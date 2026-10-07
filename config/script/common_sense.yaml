@@ -1,8 +1,10 @@
 # Small interruptions answered in one line, then the script resumes.
 # All replies are drafts: the source scripts have no wording for these.
 # wait: true = say the reply and wait for them; the question comes back when they return.
+# rephrase: true = then ask the step in other words (its next probe) instead of the same line.
 bring_back: "So, as you mentioned {last_point}, "
 park: "That's fair, and we'll come back to it once we know this is even a fit."   # objection before the price: acknowledge, keep going
+revisit: "Coming back to what you raised earlier,"   # a parked objection, raised again when they hesitate at the close
 interruptions:
   pause:
     draft: true
@@ -42,3 +44,23 @@ interruptions:
       - "thanks for your time"
       - "thank you, that's helpful"
     reply: "You're welcome."
+  bot:
+    draft: true
+    examples:
+      - "is this a bot?"
+      - "am I talking to a real person"
+      - "are you an AI"
+      - "is this automated"
+      - "are you a robot"
+    reply: "Yes, I'm an AI playing the salesperson so you can practise."   # never deny being an AI
+  clarify:
+    draft: true
+    rephrase: true
+    examples:
+      - "what do you mean"
+      - "what do you mean by that"
+      - "why do you keep asking the same thing"
+      - "I already answered that"
+      - "I just told you"
+      - "you asked me that already"
+    reply: "Fair point, let me put it another way."

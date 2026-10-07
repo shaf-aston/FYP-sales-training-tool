@@ -38,3 +38,12 @@ facts:
       - "is this only for people in the UK"
       - "can I join from abroad"
     answer: "We work with people all around the world."
+  fit:
+    draft: true
+    examples:
+      - "do people like me actually make it work"
+      - "has anyone like me done this"
+      - "will this work for me"
+      - "does this work for beginners"
+      - "is this for people with no experience"
+    answer: "That's exactly what these questions are for: to see if we can even help you."
