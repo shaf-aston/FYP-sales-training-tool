@@ -193,6 +193,6 @@ export type KnowledgeData = Partial<Record<KnowledgeField, string>>;
 export interface FeedbackReq {
   rating: number | null;
   comment: string | null;
-  /** Wire values the server expects: "chat" is buy mode, "prospect" is sell mode. */
-  page: "chat" | "prospect";
+  /** The mode the feedback was sent from. */
+  page: "buy" | "sell";
 }

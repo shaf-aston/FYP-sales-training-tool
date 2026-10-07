@@ -94,7 +94,7 @@ def submit_feedback():
         "timestamp": datetime.now().isoformat(),
         "rating": rating,
         "comment": comment or None,
-        "page": data.get("page", "chat"),
+        "page": data.get("page", "buy"),
     }
 
     current_app.logger.info("feedback_event %s", json.dumps(entry, ensure_ascii=False))
