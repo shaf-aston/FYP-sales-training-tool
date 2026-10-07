@@ -176,7 +176,8 @@ def test_real_price_question_still_gets_the_early_answer():
                           make_embedder(cfg, ROOT), _down)
     seller.reply("I want freedom")
     text, _ = seller.reply("wait, sorry, what's this going to cost me?")
-    assert "first a couple of questions" in text and seller.state.step == "02"
+    early = (seller.offer.facts["price"].answer, seller.method.objections["money"].early)
+    assert text.startswith(early) and seller.state.step == "02"
 
 
 def _real_seller():
@@ -211,7 +212,10 @@ def test_objection_mid_discovery_is_acknowledged(said):
     seller = _real_seller()
     seller.reply("I want financial freedom")
     text, _ = seller.reply(said)
-    assert text.startswith(seller.sense.park) and seller.state.step == "02"
+    names = {"this sounds like a scam honestly": "scam", "I need to talk to my wife first": "partner",
+             "I can't afford it right now": "money"}
+    expected = seller.method.objections[names[said]].early or seller.sense.park
+    assert text.startswith(expected) and seller.state.step == "02" and names[said] in seller.state.parked
 
 
 @pytest.mark.parametrize("step", ["03", "04", "05", "18"])
