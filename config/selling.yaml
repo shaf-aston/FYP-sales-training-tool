@@ -45,3 +45,26 @@ memory_chars: 120     # longest piece of an earlier answer handed to the AI as m
 ack_words: [you, your, you're, you've, got, it, sounds, makes, sense, hear, that, tough, hard, sorry, okay, right, fair, understand, so, really, lot, see, why, must, be, can, totally, thanks, for, sharing, not, no, easy, been, there, while]   # words the ack may add to the prospect's own; neutral or kind, never "great"
 log_uncovered: true    # write uncovered product questions to the log
 log_text_chars: 120    # longest piece of prospect text ever logged
+prompts:   # AI prompt templates: {name} is filled in by the seller; an empty {memory} drops that part
+  ack: |-
+    You are the salesperson on a call. You asked:
+    <question>{question}</question>
+    They answered: <reply>{reply}</reply>
+    {memory}Write one short sentence (at most {max_words} words) that shows you heard them, using their own words and speaking to them as 'you'. No question, no advice, no praise. Answer with the sentence only.
+  ack_memory: |
+    Earlier they told you:
+    <earlier>
+    {told}
+    </earlier>
+    If it fits naturally, link their answer to something they told you earlier.
+  answer: |-
+    You are the salesperson on a call. Programme facts:
+    <facts>{facts}</facts>
+    {memory}A prospect asked the question below.
+    <question>{question}</question>
+    Answer in one or two short sentences: warm, confident and helpful toward yes, linked to what they told you when it fits. Say only what the facts support. Never invent numbers, results, timeframes, promises, prices or links. Do not ask a question. If the facts don't answer it, reply with NOT_COVERED only.
+  answer_memory: |
+    What they told you earlier:
+    <earlier>
+    {told}
+    </earlier>

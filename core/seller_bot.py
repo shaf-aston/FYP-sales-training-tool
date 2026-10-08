@@ -13,7 +13,7 @@ from .analytics.performance import PerformanceTracker
 from .analytics.session_analytics import SessionAnalytics
 from .services.provider_router import ProviderRouter
 from .script_engine.engine import ScriptState
-from .script_engine.seller import build_seller, selling_config
+from .script_engine.seller import build_seller, resolve_product
 from .enums import Stage
 from . import trainer, quiz
 
@@ -43,9 +43,7 @@ class SellerBot:
     ):
         self._router = ProviderRouter(provider_type=provider_type, model=model)
         self.session_id = session_id
-        cfg = selling_config()
-        # only scripted products can be sold; anything else gets the default script
-        self.product_type = product_type if product_type in cfg["products"] else cfg["default_product"]
+        self.product_type = resolve_product(product_type)  # only scripted products can be sold
         self.logger = logging.LoggerAdapter(
             _base_logger, {"session_id": session_id or "-"}
         )

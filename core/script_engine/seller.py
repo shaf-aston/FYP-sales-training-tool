@@ -3,14 +3,12 @@
 import json
 import logging
 import re
-import threading
-import time
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from functools import lru_cache
 from pathlib import Path
 
 from core.loader import load_yaml
+from core.script_engine.ai_gate import AiGate
 from core.script_engine.ai_line import checked_line
 from core.script_engine.checks import CheckContext, clip, figures
 from core.utils import is_question, tokenize
@@ -27,73 +25,6 @@ ROOT = Path(__file__).resolve().parent.parent.parent
 uncovered_log = logging.getLogger("script_engine.uncovered")
 
 
-class _Breaker:
-    """Shared by every call: one rate limit covers the whole server. Opens after `limit` failures
-    in a row, so one slow call doesn't silence the AI for every user."""
-
-    def __init__(self):
-        self._lock = threading.Lock()
-        self.fails = 0
-        self.resting_until = 0.0
-
-    def resting(self):
-        with self._lock:
-            return time.monotonic() < self.resting_until
-
-    def failed(self, limit, rest_seconds):
-        with self._lock:
-            self.fails += 1
-            if self.fails >= limit:
-                self.fails = 0
-                self.resting_until = time.monotonic() + rest_seconds
-
-    def worked(self):
-        with self._lock:
-            self.fails = 0
-
-
-_breaker = _Breaker()
-
-
-_pools, _pools_lock = {}, threading.Lock()
-
-
-def _pool(workers):
-    with _pools_lock:
-        if workers not in _pools:
-            _pools[workers] = ThreadPoolExecutor(max_workers=workers, thread_name_prefix="script-ai")
-        return _pools[workers]
-
-
-def make_llm(router, timeout, rest_seconds, fail_limit, workers):
-    """Adapt the provider router to llm(prompt, max_tokens) -> text. Raises on failure or timeout.
-    After `fail_limit` failures in a row the AI is left alone for `rest_seconds`, so no turn waits on
-    a dead provider."""
-
-    def call(prompt, max_tokens):
-        result = router.chat_with_fallback(
-            [{"role": "user", "content": prompt}], max_tokens=max_tokens
-        )
-        if not result.ok:
-            raise RuntimeError(result.response.error or "provider failed")
-        return result.response.content
-
-    def guarded(prompt, max_tokens):
-        if _breaker.resting():
-            raise RuntimeError("AI resting after repeated failures")
-        future = _pool(workers).submit(call, prompt, max_tokens)
-        try:
-            text = future.result(timeout)
-        except Exception:
-            future.cancel()  # still queued behind a slow call: never sent
-            _breaker.failed(fail_limit, rest_seconds)
-            raise
-        _breaker.worked()
-        return text
-
-    return guarded
-
-
 def selling_config():
     return load_yaml("selling.yaml")
 
@@ -104,13 +35,24 @@ def shared_embedder():
     return make_embedder(selling_config(), ROOT)
 
 
-def build_seller(router, product, embedder=None):
+@lru_cache(maxsize=1)
+def shared_gate():
+    """One AI gate per process: its failure breaker is shared by every call on purpose."""
+    return AiGate(selling_config())
+
+
+def resolve_product(product):
+    """The product to sell: the one asked for if it is scripted, else the default."""
+    cfg = selling_config()
+    return product if product in cfg["products"] else cfg["default_product"]
+
+
+def build_seller(router, product, embedder=None, gate=None):
     cfg = selling_config()
     entry = cfg["products"][product]
     return ScriptSeller(
         cfg, load_method(entry.get("method", cfg["method"])), load_offer(entry["offer"]), load_common_sense(),
-        embedder or shared_embedder(),
-        make_llm(router, cfg["ai_timeout_seconds"], cfg["ai_rest_seconds"], cfg["ai_fail_limit"], cfg["ai_workers"]),
+        embedder or shared_embedder(), (gate or shared_gate()).llm(router),
     )
 
 
@@ -329,18 +271,9 @@ class ScriptSeller:
         if not c["ack"]:
             return ""
         told = self._told(earlier)
-        memory = (
-            f"Earlier they told you:\n<earlier>\n{told}\n</earlier>\n"
-            "If it fits naturally, link their answer to something they told you earlier.\n"
-        ) if told else ""
-        prompt = (
-            "You are the salesperson on a call. You asked:\n"
-            f"<question>{step.say_plain or step.say}</question>\n"
-            f"They answered: <reply>{reply}</reply>\n"
-            f"{memory}"
-            f"Write one short sentence (at most {c['ack_max_words']} words) that shows you heard them, "
-            "using their own words and speaking to them as 'you'. No question, no advice, no praise. "
-            "Answer with the sentence only."
+        prompt = c["prompts"]["ack"].format(
+            question=step.say_plain or step.say, reply=reply, max_words=c["ack_max_words"],
+            memory=c["prompts"]["ack_memory"].format(told=told) if told else "",
         )
         ctx = CheckContext(
             c["ack_max_words"], 0, opened, self.offer.price,
@@ -363,16 +296,9 @@ class ScriptSeller:
         if opened and offer.about_after_price:
             facts += " " + self._filler.fill(offer.about_after_price, {})
         told = self._told(self.state.slots)
-        memory = f"What they told you earlier:\n<earlier>\n{told}\n</earlier>\n" if told else ""
-        prompt = (
-            f"You are the salesperson on a call. Programme facts:\n<facts>{facts}</facts>\n"
-            f"{memory}"
-            "A prospect asked the question below.\n"
-            f"<question>{question}</question>\n"
-            "Answer in one or two short sentences: warm, confident and helpful toward yes, linked to what "
-            "they told you when it fits. Say only what the facts support. Never invent numbers, results, "
-            "timeframes, promises, prices or links. Do not ask a question. "
-            "If the facts don't answer it, reply with NOT_COVERED only."
+        prompt = c["prompts"]["answer"].format(
+            facts=facts, question=question,
+            memory=c["prompts"]["answer_memory"].format(told=told) if told else "",
         )
         fact_words = frozenset(tokenize(facts))
         ctx = CheckContext(

@@ -446,25 +446,20 @@ def test_ai_is_skipped_for_the_rest_of_a_turn_after_one_failure(fake_embedder):
     assert len(calls) == 2                # the next turn tries the AI again
 
 
-@pytest.fixture
-def breaker():
-    from core.script_engine import seller
-    seller._breaker.__init__()
-    yield seller._breaker
-    seller._breaker.__init__()
+def _gate(**override):
+    from core.script_engine.ai_gate import AiGate
+    return AiGate({**CFG, **override})
 
 
-def test_slow_ai_is_abandoned(breaker):
+def test_slow_ai_is_abandoned():
     import time
-
-    from core.script_engine.seller import make_llm
 
     class Slow:
         def chat_with_fallback(self, messages, max_tokens):
             time.sleep(0.5)
 
     assert CFG["ai_timeout_seconds"] > 0
-    llm = make_llm(Slow(), 0.05, 60, 1, CFG["ai_workers"])
+    llm = _gate(ai_timeout_seconds=0.05, ai_rest_seconds=60, ai_fail_limit=1).llm(Slow())
     with pytest.raises(TimeoutError):
         llm("hi", 5)
     started = time.monotonic()
@@ -487,11 +482,9 @@ class _Flaky:
         return SimpleNamespace(ok=True, response=SimpleNamespace(error=None, content="fine"))
 
 
-def test_one_failure_does_not_rest_the_ai_for_everyone(breaker):
-    from core.script_engine.seller import make_llm
-
+def test_one_failure_does_not_rest_the_ai_for_everyone():
     router = _Flaky()
-    llm = make_llm(router, 1, 60, 3, CFG["ai_workers"])
+    llm = _gate(ai_timeout_seconds=1, ai_rest_seconds=60, ai_fail_limit=3).llm(router)
     for _ in range(2):
         with pytest.raises(RuntimeError, match="down"):
             llm("hi", 5)

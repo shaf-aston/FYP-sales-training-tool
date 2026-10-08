@@ -128,7 +128,6 @@ def test_a_product_can_run_its_own_method(client, monkeypatch):
 
     cfg = load_yaml("selling.yaml")
     cfg["products"][SCRIPT_PRODUCT]["method"] = "impact_formula"
-    monkeypatch.setattr("core.seller_bot.selling_config", lambda: cfg)
     monkeypatch.setattr("core.script_engine.seller.selling_config", lambda: cfg)
     opened, _ = _init(client)
     assert opened["message"] == "What would you like help with first?"
