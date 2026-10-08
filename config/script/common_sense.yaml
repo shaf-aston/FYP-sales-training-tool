@@ -87,6 +87,7 @@ interruptions:
       - "why are you interrogating me"
       - "just get to the point"
       - "this is a waste of my time"
-      - "whatever"
+      - "meh, whatever"   # not bare "whatever": it pulls in "whatever works for me"
+      - "ugh whatever man"
       - "f*** off with the questions"
     reply: "Fair enough, I'll keep this quick."

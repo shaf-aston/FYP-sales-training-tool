@@ -308,6 +308,8 @@ class ScriptSeller:
             bar = as_answer.score if as_answer.label else 0.0  # only a real answer competes
         if any(r.signal == ANY for r in step.listen):
             bar = max(bar, self.cfg["interrupt_threshold"])  # any reply is an answer: interrupt only when sure
+        if asking:
+            bar = 0.0  # a question is never an answer, so it need not beat one
         bar = max(bar, self._floor(kind, name))
         return (kind, name) if found.score > bar else (None, None)
 
