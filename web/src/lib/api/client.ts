@@ -82,7 +82,7 @@ export function createHttpApi() {
     // Sell mode: the learner is the salesperson, the AI buyer answers.
     productGroups: () => request<{ success: true; groups: T.ProductGroups }>("/api/sell/product-groups"),
     personas: (productType: string) =>
-      request<{ ok: true; personas: T.Persona[] }>(`/api/sell/personas?product_type=${encodeURIComponent(productType)}`),
+      request<{ success: true; personas: T.Persona[] }>(`/api/sell/personas?product_type=${encodeURIComponent(productType)}`),
     sellInit: (difficulty: T.Difficulty, productType: string, pick: T.BuyerPick = {}) =>
       request<T.SellInitRes>("/api/sell/init", {
         body: { difficulty, product_type: productType, persona: pick.persona, objection: pick.objection },

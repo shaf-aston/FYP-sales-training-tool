@@ -20,6 +20,11 @@ real_objections:
     partner/spouse: "partner"
     fear/ability: "fear"
 
+# The sell-mode product picker, split by sales motion. A product with no personas is hidden.
+product_groups:
+  transactional: [luxury_cars, premium_electronics, watches, travel, fashion]
+  consultative: [b2b_saas, high_ticket_sales_mentorship, financial_services, education, healthcare_services]
+
 difficulty_profiles:
   easy:
     label: "Friendly Buyer"

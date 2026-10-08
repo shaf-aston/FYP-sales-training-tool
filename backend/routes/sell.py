@@ -1,21 +1,25 @@
 """Sell mode endpoints (/api/sell): the learner is the salesperson, the AI (BuyerSession) buys."""
 
-import secrets
-
 from flask import Blueprint, current_app, jsonify, request
 
 from core.analytics.session_analytics import SessionAnalytics
-from core.buyer_session import ProviderUnavailable
+from core.buyer_session import ProviderUnavailable, UnknownPersona, personas_for
 from core.constants import MAX_CHOSEN_OBJECTION_CHARS, MAX_PERSONA_NAME_CHARS
 from core.quiz import build_sell_question, score_sell_answer
 from core.script_drills import build_drill_set
+from core import sell_service
+from core.sell_service import InvalidDifficulty
 
 from ..messages import (
+    INVALID_DIFFICULTY,
     SELL_ERROR,
+    SELL_FULL,
+    SELL_SETUP_FAILED,
     SELL_REVIEW_ERROR,
     SELL_SCORING_ERROR,
     SELL_SESSION_NOT_FOUND,
     SELL_UNAVAILABLE,
+    UNKNOWN_PERSONA,
 )
 from ..security import InputValidator, require_rate_limit
 from ._utils import require_session, validate_message, validate_provider
@@ -26,11 +30,9 @@ bp = Blueprint("sell", __name__, url_prefix="/api/sell")
 @bp.route("/personas", methods=["GET"])
 def personas():
     """The buyer personas a learner can pick for one product."""
-    from core.buyer_session import personas_for
-
     product_type = request.args.get("product_type", "default")
     return jsonify({
-        "ok": True,
+        "success": True,
         "personas": [
             {"name": p["name"], "background": p.get("background", ""), "personality": p.get("personality", "")}
             for p in personas_for(product_type)
@@ -38,58 +40,10 @@ def personas():
     })
 
 
-# The products offered in the sell-mode picker, split by sales motion.
-_PRODUCT_GROUPS = {
-    "transactional": [
-        "luxury_cars",
-        "premium_electronics",
-        "watches",
-        "travel",
-        "fashion",
-    ],
-    "consultative": [
-        "b2b_saas",
-        "high_ticket_sales_mentorship",
-        "financial_services",
-        "education",
-        "healthcare_services",
-    ],
-}
-
-
-def _product_groups() -> dict:
-    """Curated picker groups; a product with no buyer personas is left out."""
-    try:
-        from core.loader import load_product_config, load_sell_config
-
-        personas = load_sell_config().get("personas", {})
-        products = load_product_config().get("products", {})
-
-        grouped_options = {}
-        for strategy, product_ids in _PRODUCT_GROUPS.items():
-            options = []
-            for product_id in product_ids:
-                if not personas.get(product_id):
-                    continue
-                product_info = products.get(product_id, {})
-                options.append(
-                    {
-                        "id": product_id,
-                        "label": product_info.get("name")
-                        or product_id.replace("_", " ").title(),
-                    }
-                )
-            grouped_options[strategy] = options
-        return grouped_options
-    except Exception:
-        current_app.logger.exception("Failed to build sell product groups")
-        return {strategy: [] for strategy in _PRODUCT_GROUPS}
-
-
 @bp.route("/product-groups", methods=["GET"])
 def product_groups():
     """Curated product picker groups as JSON."""
-    return jsonify({"success": True, "groups": _product_groups()})
+    return jsonify({"success": True, "groups": sell_service.product_groups()})
 
 
 def _optional_text(data: dict, field: str, limit: int):
@@ -106,20 +60,14 @@ def _optional_text(data: dict, field: str, limit: int):
 @require_rate_limit("sell")
 def init():
     """Create a sell session. The AI plays the buyer, the learner plays the salesperson"""
-    if not current_app.extensions["sessions"].buyer.can_create():
-        return jsonify(
-            {"error": "Sell mode is at capacity - check back in a moment."}
-        ), 503
+    buyer_sessions = current_app.extensions["sessions"].buyer
+    if not buyer_sessions.can_create():
+        return jsonify({"error": SELL_FULL}), 503
 
     data = request.json or {}
-    difficulty = data.get("difficulty", "medium")
-    product_type = data.get("product_type", "default")
     provider, provider_error = validate_provider(data)
     if provider_error:
         return provider_error
-
-    if difficulty not in ("easy", "medium", "hard"):
-        return jsonify({"error": "Invalid difficulty. Choose: easy, medium, hard"}), 400
     persona_name, error = _optional_text(data, "persona", MAX_PERSONA_NAME_CHARS)
     if error:
         return error
@@ -127,59 +75,51 @@ def init():
     if error:
         return error
 
-    from core.buyer_session import BuyerSession, select_persona
-
+    difficulty = data.get("difficulty", "medium")
+    product_type = data.get("product_type", "default")
     try:
-        persona = select_persona(product_type, persona_name)
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
-
-    session_id = secrets.token_hex(16)
-
-    try:
-        ps = BuyerSession(
-            provider_type=provider,
-            product_type=product_type,
+        started = sell_service.start_sell_session(
+            buyer_sessions,
             difficulty=difficulty,
-            persona=persona,
-            session_id=session_id,
+            product_type=product_type,
+            provider=provider,
+            persona_name=persona_name,
             objection=objection,
         )
-        opening = ps.get_opening_message()
-        current_app.extensions["sessions"].buyer.set(session_id, ps)
-        ps.save_session()
-        current_app.logger.info(
-            f"Sell session: {session_id} "
-            f"(difficulty={difficulty}, product={product_type}, provider={ps.provider_name})"
-        )
-
-        return jsonify(
-            {
-                "success": True,
-                "session_id": session_id,
-                "message": opening.content,
-                "persona": {
-                    "name": ps.persona.get("name", "Unknown"),
-                    "background": ps.persona.get("background", ""),
-                    "personality": ps.persona.get("personality", ""),
-                },
-                "state": opening.state_snapshot,
-                "difficulty": difficulty,
-                "product_type": product_type,
-                **ps.public_config(),
-                "latency_ms": opening.latency_ms,
-                "provider": opening.provider,
-                "model": opening.model,
-            }
-        )
+    except InvalidDifficulty as e:
+        return jsonify({"error": INVALID_DIFFICULTY.format(choices=", ".join(e.choices))}), 400
+    except UnknownPersona as e:
+        return jsonify({"error": UNKNOWN_PERSONA.format(name=e.name, product=e.product_type)}), 400
     except ProviderUnavailable:
-        current_app.extensions["sessions"].buyer.delete(session_id)
         return jsonify({"error": SELL_UNAVAILABLE, "code": "PROVIDER_UNAVAILABLE"}), 503
     except Exception as e:
         current_app.logger.exception(f"Sell init failed: {e}")
-        return jsonify(
-            {"error": "Couldn't set up the buyer -- try once more"}
-        ), 500
+        return jsonify({"error": SELL_SETUP_FAILED}), 500
+
+    ps, opening = started.session, started.opening
+    current_app.logger.info(
+        f"Sell session: {ps.session_id} "
+        f"(difficulty={difficulty}, product={product_type}, provider={ps.provider_name})"
+    )
+    return jsonify(
+        {
+            "success": True,
+            "session_id": ps.session_id,
+            "message": opening.content,
+            "persona": {
+                "name": ps.persona.get("name", "Unknown"),
+                "background": ps.persona.get("background", ""),
+                "personality": ps.persona.get("personality", ""),
+            },
+            "state": opening.state_snapshot,
+            "difficulty": difficulty,
+            "product_type": product_type,
+            **ps.public_config(),
+            "latency_ms": opening.latency_ms,
+            "provider": opening.provider,
+            "model": opening.model,
+        }
+    )
 
 
 @bp.route("/chat", methods=["POST"])

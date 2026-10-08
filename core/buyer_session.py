@@ -84,10 +84,18 @@ def personas_for(product_type: str) -> list[dict]:
     return personas.get(product_type) or personas["general"]
 
 
+class UnknownPersona(ValueError):
+    """The named persona is not in this product's pool."""
+
+    def __init__(self, name: str, product_type: str):
+        super().__init__(name, product_type)
+        self.name, self.product_type = name, product_type
+
+
 def select_persona(product_type: str, name: str | None = None) -> dict:
     """The named persona for this product, or a random one when no name is given.
 
-    Raises ValueError for a name that is not in this product's pool.
+    Raises UnknownPersona for a name that is not in this product's pool.
     """
     pool = personas_for(product_type)
     if not name:
@@ -95,7 +103,7 @@ def select_persona(product_type: str, name: str | None = None) -> dict:
     for persona in pool:
         if persona["name"].lower() == name.strip().lower():
             return persona
-    raise ValueError(f"Unknown persona '{name}' for product '{product_type}'")
+    raise UnknownPersona(name, product_type)
 
 
 class BuyerSession:
