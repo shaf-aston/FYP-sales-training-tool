@@ -8,17 +8,18 @@ import pytest
 from core.loader import load_yaml
 from core.script_engine.checks import CheckContext, check, clip
 from core.script_engine.engine import ScriptState
-from core.script_engine.fill import fill_step, offer_blanks
+from core.script_engine.fill import Filler, offer_blanks
 from core.script_engine.judge import VAGUE, judge
 from core.script_engine.method import load_common_sense, load_method, load_offer
-from core.script_engine.seller import ScriptSeller
+from core.script_engine.seller import ScriptSeller, _after_lead
 
 CFG = {**load_yaml("selling.yaml"), "ai_fill_blanks": True}  # these tests cover the AI fill path
 OFFER = load_offer("shay_coaching")
 
 
 def ctx(**kw):
-    base = {"max_words": 30, "questions": 1, "price_ok": False, "price": "$5k"}
+    base = {"max_words": 30, "questions": 1, "price_ok": False, "price": "$5k",
+            "banned_phrases": tuple(CFG["banned_phrases"])}
     return CheckContext(**{**base, **kw})
 
 
@@ -27,9 +28,9 @@ def ctx(**kw):
 @pytest.mark.parametrize("text, kw, rule", [
     ("Why? Really?", {}, "question_count"),
     ("Nice point.", {}, "question_count"),
-    ("It is fine but what next?", {}, "says_but"),
-    ("What did you mean when you said that?", {}, "says_you_said"),
-    ("Any questions?", {}, "any_questions"),
+    ("It is fine but what next?", {}, "banned_phrase"),
+    ("What did you mean when you said that?", {}, "banned_phrase"),
+    ("Any questions?", {}, "banned_phrase"),
     ("It is $5k, ready?", {}, "early_price"),
     ("It costs 5k, ready?", {"price": "5k"}, "early_price"),
     ("Hi {name}, ready?", {}, "unfilled_blank"),
@@ -54,9 +55,9 @@ STEP_SAY = "How much do you need to be making to feel {outcome} freedom?"
 STEP_PLAIN = "How much do you need to be making to feel that freedom?"
 
 
-def _fill(llm, slots=None):
+def _fill(llm, slots=None, echo=frozenset(), say=STEP_SAY, cfg=CFG):
     slots = {"outcome": "I want financial freedom"} if slots is None else slots
-    return fill_step(STEP_SAY, "", STEP_PLAIN, slots, OFFER, CFG, llm)
+    return Filler(cfg, OFFER, llm, echo).render(say, "", STEP_PLAIN, slots)
 
 
 def test_fill_uses_a_phrase_from_the_prospect():
@@ -72,9 +73,7 @@ def test_fill_rejects_the_prospects_own_pronouns(phrase):
 def test_fill_with_ai_blanks_off_uses_plain_line_without_asking_ai():
     # live: the AI wrote "feel your job freedom", "got to your 9 to 5" - plain lines always read right
     calls = []
-    cfg = {**CFG, "ai_fill_blanks": False}
-    out = fill_step(STEP_SAY, "", STEP_PLAIN, {"outcome": "I want financial freedom"}, OFFER, cfg,
-                    lambda p, n: calls.append(p) or "financial")
+    out = _fill(lambda p, n: calls.append(p) or "financial", cfg={**CFG, "ai_fill_blanks": False})
     assert out == STEP_PLAIN and calls == []
 
 
@@ -103,13 +102,53 @@ def test_fill_offer_blanks_need_no_ai():
     def never(prompt, n):
         raise AssertionError("AI must not be called")
 
-    line = fill_step("{months}-month process, investment is {price}.", "", "", {}, OFFER, CFG, never)
+    line = _fill(never, {}, say="{months}-month process, investment is {price}.")
     assert line == "6-month process, investment is $5k."
 
 
 def test_ack_with_blank_is_dropped_when_it_cannot_be_filled():
-    out = fill_step("Next?", "for {years} years.", "", {}, OFFER, CFG, lambda p, n: "x")
+    out = Filler(CFG, OFFER, lambda p, n: "x").render("Next?", "for {years} years.", "", {})
     assert out == "Next?"
+
+
+def test_echo_says_their_words_back_in_second_person():
+    never = lambda p, n: pytest.fail("AI must not be called")
+    say = "What would you do with {outcome}?"
+    out = _fill(never, {"outcome": "time with my kids"}, {"outcome"}, say)
+    assert out == "What would you do with time with your kids?"
+    long = {"outcome": "more time with my kids and my wife and my whole family"}  # over slot_words
+    assert _fill(lambda p, n: "x", long, {"outcome"}, say) == STEP_PLAIN
+
+
+CAT = load_method("cat")
+
+
+def _line(step, reply):
+    """The real script line for a step, with the buyer's step-01 answer echoed into it."""
+    never = lambda p, n: pytest.fail("AI must not be called")
+    out = Filler({**CFG, "ai_fill_blanks": False}, OFFER, never, {"outcome"}).render(
+        CAT.steps[step].say, "", CAT.steps[step].say_plain, {"outcome": reply})
+    return out
+
+
+@pytest.mark.parametrize("reply, step, expected", [
+    ("more time with my kids", "02", "to have more time with your kids?"),
+    ("financial freedom", "05", "don't have financial freedom yet?"),
+    ("I want to be my own boss", "02", "each month to be your own boss?"),
+    ("quit my job", "05", "haven't managed to quit your job?"),
+    ("travel the world with my wife", "06", "to travel the world with your wife rather than just dream about it?"),
+    ("financial freedom", "06", "to get financial freedom rather than just dream about it?"),
+])
+def test_script_lines_echo_the_goal_in_noun_or_verb_form(reply, step, expected):
+    assert expected in _line(step, reply)
+
+
+@pytest.mark.parametrize("reply", [
+    "honestly it is about being able to spend more time with my kids",  # 11 words
+    "nothing", "nothing really", "I don't know", "no idea", "none",
+])
+def test_unusable_goal_gives_the_plain_line(reply):
+    assert _line("02", reply) == CAT.steps["02"].say_plain
 
 
 # ---- judge --------------------------------------------------------------------------------
@@ -118,16 +157,16 @@ CANDS = {"agrees": ["yes"], "unclear": ["I am lost"]}
 
 
 def test_judge_picks_a_candidate_or_vague():
-    assert judge("hm", CANDS, lambda p, n: "Agrees.", 10) == "agrees"
-    assert judge("hm", CANDS, lambda p, n: "no idea", 10) == VAGUE
-    assert judge("hm", CANDS, lambda p, n: "vague", 10) == VAGUE
+    assert judge("hm", CANDS, lambda p, n: "Agrees.", CFG) == "agrees"
+    assert judge("hm", CANDS, lambda p, n: "no idea", CFG) == VAGUE
+    assert judge("hm", CANDS, lambda p, n: "vague", CFG) == VAGUE
 
 
 def test_judge_ai_down_counts_as_vague():
     def down(prompt, n):
         raise RuntimeError("down")
 
-    assert judge("hm", CANDS, down, 10) == VAGUE
+    assert judge("hm", CANDS, down, CFG) == VAGUE
 
 
 # ---- seller: the trainer's rules (R5) -----------------------------------------------------
@@ -252,7 +291,7 @@ def test_uncovered_question_with_a_rule_breaking_answer_is_dropped(seller, caplo
     def pushy(prompt, n):
         return "It is $5k but worth it." if "A prospect asked" in prompt else fake_llm(prompt, n)
 
-    s = at(make_seller(seller._embedder, pushy), "03")
+    s = at(make_seller(seller._listener.embedder, pushy), "03")
     with caplog.at_level(logging.WARNING, logger="script_engine.fallback"):
         text, _ = s.reply("will refunds exist?")
     assert text == f"{CFG['uncovered_fallback']} How long have you been thinking about this?"
@@ -263,15 +302,17 @@ def test_ai_down_never_blocks_a_turn(seller):
     def down(prompt, n):
         raise RuntimeError("down")
 
-    s = at(make_seller(seller._embedder, down), "03", outcome="I want financial freedom")
+    s = at(make_seller(seller._listener.embedder, down), "03", outcome="I want financial freedom")
     text, _ = s.reply("will refunds exist?")
     assert text == f"{CFG['uncovered_fallback']} How long have you been thinking about this?"
     text, _ = at(s, "02", outcome="I want financial freedom").reply("ten thousand")
     assert text == "How long have you been thinking about this?"
     text, _ = at(s, "05", outcome="I want financial freedom").reply("no time")
-    assert text == "What are you doing now to make financial freedom a reality and not just a dream?"  # no AI needed
+    assert text == "What are you doing now to get financial freedom rather than just dream about it?"  # no AI needed
     text, _ = at(s, "05", outcome="I want to be my own boss").reply("no time")
-    assert "that" in text and "{" not in text    # their words don't fit: say_plain used for step 06
+    assert text == "What are you doing now to be your own boss rather than just dream about it?"  # verb form
+    text, _ = at(s, "05", outcome="nothing really").reply("no time")
+    assert "that" in text and "{" not in text    # no goal said: say_plain used for step 06
 
 
 def test_common_sense_interruption_then_bring_back(seller):
@@ -406,25 +447,20 @@ def test_ai_is_skipped_for_the_rest_of_a_turn_after_one_failure(fake_embedder):
     assert len(calls) == 2                # the next turn tries the AI again
 
 
-@pytest.fixture
-def breaker():
-    from core.script_engine import seller
-    seller._breaker.__init__()
-    yield seller._breaker
-    seller._breaker.__init__()
+def _gate(**override):
+    from core.script_engine.ai_gate import AiGate
+    return AiGate({**CFG, **override})
 
 
-def test_slow_ai_is_abandoned(breaker):
+def test_slow_ai_is_abandoned():
     import time
-
-    from core.script_engine.seller import make_llm
 
     class Slow:
         def chat_with_fallback(self, messages, max_tokens):
             time.sleep(0.5)
 
     assert CFG["ai_timeout_seconds"] > 0
-    llm = make_llm(Slow(), 0.05, 60, 1, CFG["ai_workers"])
+    llm = _gate(ai_timeout_seconds=0.05, ai_rest_seconds=60, ai_fail_limit=1).llm(Slow())
     with pytest.raises(TimeoutError):
         llm("hi", 5)
     started = time.monotonic()
@@ -447,11 +483,9 @@ class _Flaky:
         return SimpleNamespace(ok=True, response=SimpleNamespace(error=None, content="fine"))
 
 
-def test_one_failure_does_not_rest_the_ai_for_everyone(breaker):
-    from core.script_engine.seller import make_llm
-
+def test_one_failure_does_not_rest_the_ai_for_everyone():
     router = _Flaky()
-    llm = make_llm(router, 1, 60, 3, CFG["ai_workers"])
+    llm = _gate(ai_timeout_seconds=1, ai_rest_seconds=60, ai_fail_limit=3).llm(router)
     for _ in range(2):
         with pytest.raises(RuntimeError, match="down"):
             llm("hi", 5)
@@ -504,7 +538,7 @@ def test_fill_fences_the_reply():
 
 
 def test_judge_needs_exactly_one_label():
-    assert judge("hm", CANDS, lambda p, n: "agrees or unclear", 10) == VAGUE
+    assert judge("hm", CANDS, lambda p, n: "agrees or unclear", CFG) == VAGUE
 
 
 def test_logged_prospect_text_is_clipped_and_logging_can_be_switched_off(fake_embedder, caplog):
@@ -542,6 +576,13 @@ def test_a_question_word_without_a_question_mark_still_counts(fake_embedder):
 ])
 def test_question_detection_uses_phrases_or_a_question_mark(fake_embedder, text, expected):
     assert make_seller(fake_embedder)._is_question(text) is expected
+
+
+def test_a_line_joined_to_a_lead_in_keeps_a_capital_I():
+    assert _after_lead("I'm curious, how long?") == "I'm curious, how long?"
+    assert _after_lead("I read it.") == "I read it."
+    assert _after_lead("Is it the money?") == "is it the money?"
+    assert _after_lead("Ill-fitting is not I") == "ill-fitting is not I"
 
 
 def test_bring_back_lowercases_the_question_unless_it_starts_with_i(fake_embedder):

@@ -3,14 +3,12 @@
 import json
 import logging
 import re
-import threading
-import time
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from functools import lru_cache
 from pathlib import Path
 
 from core.loader import load_yaml
+from core.script_engine.ai_gate import AiGate
 from core.script_engine.ai_line import checked_line
 from core.script_engine.checks import CheckContext, clip, figures
 from core.utils import is_question, tokenize
@@ -18,80 +16,13 @@ from core.script_engine.embedder import make_embedder
 from core.script_engine.engine import (
     advance, ask_again, asked_line, hear_ahead, jump, move_on, object_to, park, price_open, ready_open, start,
 )
-from core.script_engine.fill import fill_line, fill_step
+from core.script_engine.fill import Filler
 from core.script_engine.judge import VAGUE, judge
 from core.script_engine.method import ANY, load_common_sense, load_method, load_offer
-from core.script_engine.recognise import recognise
+from core.script_engine.recognise import Listener
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 uncovered_log = logging.getLogger("script_engine.uncovered")
-
-
-class _Breaker:
-    """Shared by every call: one rate limit covers the whole server. Opens after `limit` failures
-    in a row, so one slow call doesn't silence the AI for every user."""
-
-    def __init__(self):
-        self._lock = threading.Lock()
-        self.fails = 0
-        self.resting_until = 0.0
-
-    def resting(self):
-        with self._lock:
-            return time.monotonic() < self.resting_until
-
-    def failed(self, limit, rest_seconds):
-        with self._lock:
-            self.fails += 1
-            if self.fails >= limit:
-                self.fails = 0
-                self.resting_until = time.monotonic() + rest_seconds
-
-    def worked(self):
-        with self._lock:
-            self.fails = 0
-
-
-_breaker = _Breaker()
-
-
-_pools, _pools_lock = {}, threading.Lock()
-
-
-def _pool(workers):
-    with _pools_lock:
-        if workers not in _pools:
-            _pools[workers] = ThreadPoolExecutor(max_workers=workers, thread_name_prefix="script-ai")
-        return _pools[workers]
-
-
-def make_llm(router, timeout, rest_seconds, fail_limit, workers):
-    """Adapt the provider router to llm(prompt, max_tokens) -> text. Raises on failure or timeout.
-    After `fail_limit` failures in a row the AI is left alone for `rest_seconds`, so no turn waits on
-    a dead provider."""
-
-    def call(prompt, max_tokens):
-        result = router.chat_with_fallback(
-            [{"role": "user", "content": prompt}], max_tokens=max_tokens
-        )
-        if not result.ok:
-            raise RuntimeError(result.response.error or "provider failed")
-        return result.response.content
-
-    def guarded(prompt, max_tokens):
-        if _breaker.resting():
-            raise RuntimeError("AI resting after repeated failures")
-        future = _pool(workers).submit(call, prompt, max_tokens)
-        try:
-            text = future.result(timeout)
-        except Exception:
-            future.cancel()  # still queued behind a slow call: never sent
-            _breaker.failed(fail_limit, rest_seconds)
-            raise
-        _breaker.worked()
-        return text
-
-    return guarded
 
 
 def selling_config():
@@ -104,14 +35,30 @@ def shared_embedder():
     return make_embedder(selling_config(), ROOT)
 
 
-def build_seller(router, product, embedder=None):
+@lru_cache(maxsize=1)
+def shared_gate():
+    """One AI gate per process: its failure breaker is shared by every call on purpose."""
+    return AiGate(selling_config())
+
+
+def resolve_product(product):
+    """The product to sell: the one asked for if it is scripted, else the default."""
+    cfg = selling_config()
+    return product if product in cfg["products"] else cfg["default_product"]
+
+
+def build_seller(router, product, embedder=None, gate=None):
     cfg = selling_config()
     entry = cfg["products"][product]
     return ScriptSeller(
         cfg, load_method(entry.get("method", cfg["method"])), load_offer(entry["offer"]), load_common_sense(),
-        embedder or shared_embedder(),
-        make_llm(router, cfg["ai_timeout_seconds"], cfg["ai_rest_seconds"], cfg["ai_fail_limit"], cfg["ai_workers"]),
+        embedder or shared_embedder(), (gate or shared_gate()).llm(router),
     )
+
+
+def _after_lead(line):
+    """`line` as the tail of a longer sentence: first letter lower-cased, except "I" and "I'm"."""
+    return line if re.match(r"I( |')", line) else line[:1].lower() + line[1:]
 
 
 def _answer_labels(step):
@@ -122,11 +69,10 @@ def _answer_labels(step):
 class ScriptSeller:
     def __init__(self, cfg, method, offer, sense, embedder, llm):
         self.cfg, self.method, self.offer, self.sense = cfg, method, offer, sense
-        self._embedder, self._llm = embedder, llm
+        self._listener, self._llm = Listener(cfg, embedder), llm
         self._ai_ok = True
         self._waiting = False  # last reply was a `wait` reply: they stepped away
-        self._said = {}  # filled lines: the same line with the same answers is said the same way
-        self._echo = frozenset(s.capture for s in method.steps.values() if s.echo)
+        self._filler = Filler(cfg, offer, self._ask, frozenset(s.capture for s in method.steps.values() if s.echo))
         self._opening = start(method)
         self.state = self._opening.state
         embedder.warm(self._script_examples())
@@ -190,7 +136,7 @@ class ScriptSeller:
         if kind == "fact":
             f = self.offer.facts[name]
             answer = f.late_answer if opened and f.late_answer else f.answer
-            lead = fill_line(answer, {}, self.offer, self.cfg, self._ask)
+            lead = self._filler.fill(answer, {})
             return self._then_ask(lead), step.ui_stage
         if self.state.play:
             # they answered the objection play's question: normalise, then ask the step again
@@ -242,7 +188,8 @@ class ScriptSeller:
         """The reply without a nudge on its end ("credit, what's next?" -> "credit"); None when it has none."""
         for phrase in sorted(self.sense.nudges, key=len, reverse=True):
             words = r"\W+".join(map(re.escape, tokenize(phrase)))
-            found = re.search(rf"(?:^|\W)(?:so\W+|ok\W+|okay\W+)?{words}\W*$", text, re.IGNORECASE)
+            leads = "|".join(map(re.escape, self.cfg["nudge_leads"]))
+            found = re.search(rf"(?:^|\W)(?:(?:{leads})\W+)?{words}\W*$", text, re.IGNORECASE)
             if found:
                 return text[:found.start()].rstrip(" ,;:-")
         return None
@@ -258,7 +205,7 @@ class ScriptSeller:
         move = object_to(self.method, self.state, self.state.parked[0], self.cfg["objection_loops"])
         self.state = move.state
         line = self._render(move)
-        return f"{self.sense.revisit} {line[:1].lower()}{line[1:]}"
+        return f"{self.sense.revisit} {_after_lead(line)}"
 
     def ui_stage(self):
         """The UI stage of the step the call is on."""
@@ -268,22 +215,19 @@ class ScriptSeller:
         """Notes for the trainee, straight from the script step - no AI, instant."""
         step = self.method.steps[self.state.step]
         title = f"{step.id} {step.name}".strip() if step.name else step.id
+        notes = self.cfg["training_notes"]
         return {
-            "what_happened": f"Script step {title}.",
-            "next_move": f"Listen for: {step.note}" if step.note else "Listen to their answer.",
+            "what_happened": notes["step"].format(title=title),
+            "next_move": notes["listen"].format(note=step.note) if step.note else notes["default"],
             "watch_for": [],
         }
-
-    def _recognise(self, text, labels):
-        c = self.cfg
-        return recognise(text, labels, self._embedder, c["threshold"], c["margin"],
-                         c["close_call_k"], c["near_miss"])
 
     def _interrupt(self, text, step, opened, waiting):
         """An everyday interruption, product question or objection - only when it clearly beats
         reading the reply as an answer to the step's own question, like a human closer would."""
-        labels = {f"sense:{k}": i.examples for k, i in self.sense.interruptions.items()
-                  if waiting or not i.after_wait}
+        senses = {k: i for k, i in self.sense.interruptions.items() if waiting or not i.after_wait}
+        labels = {f"sense:{k}": i.examples for k, i in senses.items()}
+        floors = {f"sense:{k}": i.min_score for k, i in senses.items()}  # lowest score a label counts at
         asking = self._is_question(text)
         if asking:
             labels.update({f"fact:{k}": f.examples for k, f in self.offer.facts.items()})
@@ -296,46 +240,24 @@ class ScriptSeller:
         labels.update({f"objection:{k}": o.examples for k, o in objections})
         if ready_open(self.method, self.state.step):
             labels["ready:buyer"] = self.method.ready.examples
-        found = self._recognise(text, labels)
-        if not found.label or found.close:
-            return None, None
-        kind, name = found.label.split(":", 1)
-        if kind == "fact":
-            return kind, name  # a product question is never an answer
-        bar = 0.0 if answers else self.cfg["interrupt_threshold"]
-        if answers:
-            as_answer = self._recognise(text, answers)
-            bar = as_answer.score if as_answer.label else 0.0  # only a real answer competes
-        if any(r.signal == ANY for r in step.listen):
-            bar = max(bar, self.cfg["interrupt_threshold"])  # any reply is an answer: interrupt only when sure
-        if asking:
-            bar = 0.0  # a question is never an answer, so it need not beat one
-        bar = max(bar, self._floor(kind, name))
-        return (kind, name) if found.score > bar else (None, None)
-
-    def _floor(self, kind, name):
-        """The lowest score a label counts at on any step (0 = no floor of its own)."""
-        if kind == "ready":
-            return self.method.ready.min_score
-        if kind == "sense":
-            return self.sense.interruptions[name].min_score
-        return 0.0
+            floors["ready:buyer"] = self.method.ready.min_score
+        won = self._listener.interruption(text, labels, answers, any(r.signal == ANY for r in step.listen), asking, floors)
+        return tuple(won.split(":", 1)) if won else (None, None)
 
     def _answers(self, text, step):
         """The reply matches one of the step's own answers, even with a question in it ("yeah makes
         sense, what's next?" at the temp check). Two answers too close to call are judged as usual."""
         labels = _answer_labels(step)
-        return bool(labels) and self._recognise(text, labels).label is not None
+        return bool(labels) and self._listener.match(text, labels).label is not None
 
     def _listen(self, text, step, empty=False):
         labels = _answer_labels(step)
         signal = None
         if labels:
-            found = self._recognise(text, labels)
+            found = self._listener.match(text, labels)
             signal = found.label
             if found.close:
-                pick = judge(text, {c: labels[c] for c in found.candidates}, self._ask,
-                             self.cfg["judge_tokens"])
+                pick = judge(text, {c: labels[c] for c in found.candidates}, self._ask, self.cfg)
                 signal = None if pick == VAGUE else pick
         return advance(self.method, self.state, signal, text, empty)
 
@@ -355,23 +277,15 @@ class ScriptSeller:
         if not c["ack"]:
             return ""
         told = self._told(earlier)
-        memory = (
-            f"Earlier they told you:\n<earlier>\n{told}\n</earlier>\n"
-            "If it fits naturally, link their answer to something they told you earlier.\n"
-        ) if told else ""
-        prompt = (
-            "You are the salesperson on a call. You asked:\n"
-            f"<question>{step.say_plain or step.say}</question>\n"
-            f"They answered: <reply>{reply}</reply>\n"
-            f"{memory}"
-            f"Write one short sentence (at most {c['ack_max_words']} words) that shows you heard them, "
-            "using their own words and speaking to them as 'you'. No question, no advice, no praise. "
-            "Answer with the sentence only."
+        prompt = c["prompts"]["ack"].format(
+            question=step.say_plain or step.say, reply=reply, max_words=c["ack_max_words"],
+            memory=c["prompts"]["ack_memory"].format(told=told) if told else "",
         )
         ctx = CheckContext(
             c["ack_max_words"], 0, opened, self.offer.price,
             prospect_words=frozenset(tokenize(reply)) | frozenset(tokenize(told)),
             stop_words=frozenset(c["stop_words"]) | frozenset(c["ack_words"]),
+            banned_phrases=tuple(c["banned_phrases"]),
         )
         return checked_line(self._ask, prompt, c["ack_tokens"], ctx, c, "ack", retries=c["ack_retries"]) or ""
 
@@ -385,26 +299,19 @@ class ScriptSeller:
         c, offer = self.cfg, self.offer
         if not offer.about:
             return None
-        facts = fill_line(offer.about, {}, offer, c, self._ask)
+        facts = self._filler.fill(offer.about, {})
         if opened and offer.about_after_price:
-            facts += " " + fill_line(offer.about_after_price, {}, offer, c, self._ask)
+            facts += " " + self._filler.fill(offer.about_after_price, {})
         told = self._told(self.state.slots)
-        memory = f"What they told you earlier:\n<earlier>\n{told}\n</earlier>\n" if told else ""
-        prompt = (
-            f"You are the salesperson on a call. Programme facts:\n<facts>{facts}</facts>\n"
-            f"{memory}"
-            "A prospect asked the question below.\n"
-            f"<question>{question}</question>\n"
-            "Answer in one or two short sentences: warm, confident and helpful toward yes, linked to what "
-            "they told you when it fits. Say only what the facts support. Never invent numbers, results, "
-            "timeframes, promises, prices or links. Do not ask a question. "
-            "If the facts don't answer it, reply with NOT_COVERED only."
+        prompt = c["prompts"]["answer"].format(
+            facts=facts, question=question,
+            memory=c["prompts"]["answer_memory"].format(told=told) if told else "",
         )
         fact_words = frozenset(tokenize(facts))
         ctx = CheckContext(
             c["max_words"], 0, opened, offer.price,
             known_figures=frozenset(figures(facts)),  # their own figures are not ours to repeat back as results
-            banned=frozenset(c["answer_banned_words"]) - fact_words,
+            banned=frozenset(c["answer_banned_words"]) - fact_words, banned_phrases=tuple(c["banned_phrases"]),
         )
 
         def clean(raw):
@@ -422,26 +329,19 @@ class ScriptSeller:
         """`lead`, then (after an interruption or a made-up answer) a bring-back to their last point, then the
         current question again."""
         say, say_plain = asked_line(self.method, self.state)  # the words last used, not always the first
-        question = self._fill(say, "", say_plain, self.state.slots)
+        question = self._filler.render(say, "", say_plain, self.state.slots)
         back = ""
         if bring_back and self.state.last_point:
-            back = fill_line(self.sense.bring_back, {"last_point": self.state.last_point},
-                             self.offer, self.cfg, self._ask) or ""
-        if back and not re.match(r"I( |')", question):
-            question = question[:1].lower() + question[1:]
+            back = self._filler.fill(self.sense.bring_back, {"last_point": self.state.last_point}) or ""
+        if back:
+            question = _after_lead(question)
         return " ".join(part.strip() for part in (lead, back, question) if part)
-
-    def _fill(self, say, ack, say_plain, slots):
-        key = (say, ack, tuple(sorted(slots.items())))
-        if key not in self._said:
-            self._said[key] = fill_step(say, ack, say_plain, slots, self.offer, self.cfg, self._ask, self._echo)
-        return self._said[key]
 
     def _render(self, move, heard=""):
         said = [heard] if heard else []
         for step_id in move.lead:
             lead = self.method.steps[step_id]
-            said.append(self._fill(lead.say, "", lead.say_plain, move.state.slots))
+            said.append(self._filler.render(lead.say, "", lead.say_plain, move.state.slots))
         step = self.method.steps[move.state.step]
-        said.append(self._fill(move.say, move.ack, step.say_plain, move.state.slots))
+        said.append(self._filler.render(move.say, move.ack, step.say_plain, move.state.slots))
         return " ".join(said)

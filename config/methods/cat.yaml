@@ -65,7 +65,7 @@ steps:
     name: "Number"
     ui_stage: logical
     draft: true
-    say: "How much would you need to be making each month to achieve {outcome}?"
+    say: "How much would you need to be making each month {outcome|to have $|to $}?"
     say_plain: "How much would you need to be making each month to make that happen?"
     capture: number
     # "I want 5k a month" said earlier answers this step, so it is skipped. Needs a want/need word,
@@ -102,7 +102,7 @@ steps:
     note: 'externalising: time, money, market, "still researching", "haven''t found the right thing"'
     ui_stage: emotional
     draft: true
-    say: "What's the reason you haven't got to {outcome}?"
+    say: "What's the reason you {outcome|don't have $ yet|haven't managed to $}?"
     say_plain: "What's the reason you haven't got there yet?"
     capture: blocker
     doubts_answer: true   # money, time, fear are the answer here, not objections
@@ -113,7 +113,7 @@ steps:
     note: 'little/no action = gap confirmed'
     ui_stage: emotional
     draft: true
-    say: "What are you doing now to make {outcome} a reality and not just a dream?"
+    say: "What are you doing now {outcome|to get $ rather than just dream about it|to $ rather than just dream about it}?"
     say_plain: "What are you doing now to make that a reality and not just a dream?"
     capture: action
     listen:
@@ -128,7 +128,7 @@ steps:
     name: "Identity gap"
     note: 'they name gap: risk, decisions, responsibility, action'
     ui_stage: emotional
-    say: "We love working with people going from 9-5er to business owner... exciting, but terrifying, because it's outside your comfort zone. What's the main difference between a successful business owner and a 9-5er like you?"
+    say: "We love working with people going from 9-5er to business owner... exciting, but terrifying, because it's outside your comfort zone. What's the main difference between a successful business owner and an employee?"
     capture: gap
     listen:
       any:

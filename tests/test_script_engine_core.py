@@ -7,7 +7,7 @@ import yaml
 
 from core.script_engine.engine import ScriptState, advance, start
 from core.script_engine.method import load_method, load_offer, parse_method
-from core.script_engine.recognise import recognise
+from core.script_engine.recognise import Listener
 
 FIXTURES = Path(__file__).parent / "fixtures" / "script_engine"
 ENGINE_DIR = Path(__file__).parent.parent / "core" / "script_engine"
@@ -18,13 +18,18 @@ def mini():
     return load_method("mini", FIXTURES)
 
 
+def _listener(embedder, threshold, margin=0.03):
+    return Listener({"threshold": threshold, "margin": margin, "close_call_k": 3, "near_miss": 0.1,
+                     "interrupt_threshold": 0.0}, embedder)
+
+
 def _labels(method, step_id):
     return {r.signal: list(r.examples) for r in method.steps[step_id].listen if r.examples}
 
 
 def _turn(method, state, reply, embedder):
     labels = _labels(method, state.step)
-    signal = recognise(reply, labels, embedder, 0.5, 0.03, 3, 0.1).label if labels else None
+    signal = _listener(embedder, threshold=0.5).match(reply, labels).label if labels else None
     return advance(method, state, signal, reply)
 
 
@@ -111,11 +116,11 @@ def test_offer_loads():
 
 def test_recognise_close_call_and_threshold(fake_embedder):
     labels = {"yes": ["yes sounds good"], "no": ["no not for me"]}
-    hit = recognise("yes sounds good", labels, fake_embedder, 0.65, 0.03, 3, 0.1)
+    hit = _listener(fake_embedder, 0.65).match("yes sounds good", labels)
     assert hit.label == "yes" and not hit.close and hit.candidates[0] == "yes"
-    miss = recognise("purple banana", labels, fake_embedder, 0.65, 0.03, 3, 0.1)
+    miss = _listener(fake_embedder, 0.65).match("purple banana", labels)
     assert miss.label is None
-    both = recognise("yes not", {"a": ["yes x"], "b": ["not x"]}, fake_embedder, 0.1, 0.5, 3, 0.1)
+    both = _listener(fake_embedder, 0.1, margin=0.5).match("yes not", {"a": ["yes x"], "b": ["not x"]})
     assert both.close
 
 
