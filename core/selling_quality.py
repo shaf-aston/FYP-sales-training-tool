@@ -15,8 +15,6 @@ from dataclasses import dataclass, field
 from .loader import load_yaml
 from .utils import clamp, contains_nonnegated_keyword, tokenize
 
-NEUTRAL_RATING = 3.0
-
 REASONS = {
     "open_question": "Asked an open question that invites them to explain.",
     "on_topic": "Built the question on something they actually said.",
@@ -140,7 +138,7 @@ def score_seller_turn(
     elif _is_closed_question(text, question_words, cfg.get("closed_starters", [])):
         fired.append("closed_question")
 
-    if len(overlap) >= limits.get("mirroring_min_overlap", 2):
+    if len(overlap) >= limits["mirroring_min_overlap"]:
         fired.append("mirroring")
 
     if contains_nonnegated_keyword(text.lower(), cfg.get("acknowledgement", [])):
@@ -151,21 +149,21 @@ def score_seller_turn(
 
     # Commercial talk is only premature when the buyer has not raised it themselves.
     pitch_words = cfg.get("pitch_language", [])
-    if completed_turns < limits.get("discovery_turns", 2):
+    if completed_turns < limits["discovery_turns"]:
         seller_pitched = contains_nonnegated_keyword(text.lower(), pitch_words)
         buyer_asked = contains_nonnegated_keyword((buyer_message or "").lower(), pitch_words)
         if seller_pitched and not buyer_asked:
             fired.append("premature_pitch")
 
-    if openings >= limits.get("question_stacking_count", 3):
+    if openings >= limits["question_stacking_count"]:
         fired.append("question_stacking")
 
-    if len(words) > limits.get("monologue_words", 90):
+    if len(words) > limits["monologue_words"]:
         fired.append("monologue")
-    elif len(words) < limits.get("low_effort_words", 4):
+    elif len(words) < limits["low_effort_words"]:
         fired.append("low_effort")
 
-    total = NEUTRAL_RATING + sum(weights.get(name, 0.0) for name in fired)
+    total = limits["neutral_rating"] + sum(weights.get(name, 0.0) for name in fired)
     rating = max(1, min(5, round(total)))
     return SellerTurnScore(
         rating=rating,
@@ -180,15 +178,15 @@ def readiness_delta(rating: int, behaviour: dict) -> float:
     Kept here so live play and the after-the-fact replay in session_review use the
     same formula - two copies would let a review disagree with what the learner saw.
     """
-    gain = behaviour.get("readiness_gain_per_good_turn", 0.0)
-    loss = behaviour.get("readiness_loss_per_bad_turn", 0.0)
+    gain = behaviour["readiness_gain_per_good_turn"]
+    loss = behaviour["readiness_loss_per_bad_turn"]
     if rating >= 4:
         return gain * (rating - 3)  # 4->gain, 5->2*gain
     if rating <= 2:
         return -loss * (3 - rating)  # 2->-loss, 1->-2*loss
     # A turn that neither helps nor hurts still buys a little patience. How much
     # is a difficulty knob, not a constant - a tough buyer should drift less.
-    return float(behaviour.get("readiness_drift_per_neutral_turn", 0.01))
+    return float(behaviour["readiness_drift_per_neutral_turn"])
 
 
 def apply_readiness(current: float, rating: int, behaviour: dict) -> float:

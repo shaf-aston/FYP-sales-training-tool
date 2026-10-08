@@ -3,6 +3,7 @@
 
 import core.sell_evaluator as evaluator
 from core.buyer_session import BuyerState
+from core.loader import load_sell_config
 
 
 def _config(scoring_enabled=True, feedback_style="coaching"):
@@ -13,6 +14,7 @@ def _config(scoring_enabled=True, feedback_style="coaching"):
             "max_turns": 8,
         },
         "evaluation": {
+            **load_sell_config()["evaluation"],
             "criteria": {
                 "needs_discovery": {"weight": 0.6, "description": "Discovery"},
                 "rapport_building": {"weight": 0.4, "description": "Rapport"},

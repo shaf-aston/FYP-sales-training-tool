@@ -30,8 +30,8 @@ Open the engine for the mode you are working on. Nothing else decides the turn.
 |---|---|---|---|
 | 1 | Browser posts the salesperson's line | `web/src/lib/api/client.ts` (`/api/sell/chat`) | The one place the UI talks to the API. |
 | 2 | Route checks rate limit, message, session | `backend/routes/sell.py` `chat`; `backend/routes/_utils.py` `require_session` / `validate_message` | Transport. Shapes JSON, holds no sales logic. Sessions live in `app.extensions["sessions"]` (`Sessions(seller, buyer)`, named for the AI's side). |
-| 3 | Engine runs the turn | `core/buyer_session.py` `BuyerSession.process_turn` (and `redo`, which rolls itself back on failure) | Orchestrates: rate the line, move readiness, pick objection pacing, store history, save. |
-| 4 | Pure rules decide | `core/selling_quality.py` (rating), `core/buyer_rules.py` (sold / walked), `core/buyer_prompt.py` (buyer system prompt) | Deterministic. No I/O, no HTTP, easy to test. |
+| 3 | Engine runs the turn | `core/buyer_session.py` `BuyerSession.process_turn` (and `redo`, which rolls itself back on failure); setup in `core/sell_service.py`, state in `core/buyer_state.py`, logs and analytics in `core/buyer_record.py` | Orchestrates: rate the line, move readiness, pick objection pacing, store history, save. |
+| 4 | Pure rules decide | `core/selling_quality.py` (rating), `core/buyer_rules.py` (sold / walked / coaching hint), `core/buyer_prompt.py` (buyer system prompt) | Deterministic. No I/O, no HTTP, easy to test. |
 | 5 | Router picks a provider | `core/services/provider_router.py` `chat_with_fallback` | Tries providers in order, falls back on failure. |
 | 6 | Provider calls the LLM | `core/providers/factory.py` → `providers/llm/groq.py` behind `providers/base.py` | Swap seam: every provider has the same interface. |
 | 7 | Review and analytics | `core/session_review.py` (per-turn replay), `core/sell_evaluator.py` (final score + grade), `core/analytics/session_analytics.py` (events to JSONL) | Everything shown after the session is rebuilt from the saved transcript. |
@@ -48,13 +48,13 @@ One seller turn (`script_engine/seller.py` `ScriptSeller.reply`; the moves are p
 
 ## Config
 
-Every tunable number lives in `config/limits.yaml`; `core/constants.py` is its only reader and refuses zero or negative values at start-up. LLM calls take a named profile from it (`**LLM["buyer_reply"]`), never literal numbers.
+Every tunable number lives in `config/limits.yaml` (also the security headers and env-var defaults); `core/constants.py` is its only reader and refuses zero or negative values at start-up. LLM calls take a named profile from it (`**LLM["buyer_reply"]`), never literal numbers. Error text for the API lives in `backend/messages.py`.
 
-`core/loader.py` reads `product_config`, `sell_config` (the AI buyer's personas, difficulty profiles and prompt, and sell-mode scoring). The module that owns a feature reads its own file: `script_engine/` → `selling`, `methods/`, `offers/`, `script/`, `response_guardrails.py` → `guardrails`, `quiz.py` → `quiz_config`, `script_drills.py` → `script_drills`, `selling_quality.py` → `selling_signals`, `knowledge.py` → `knowledge_sanitization`.
+`core/loader.py` reads `product_config`, `sell_config` (the AI buyer's personas, difficulty profiles and prompt, and the `evaluation:` weights and word bands that `sell_evaluator.py` scores with). The module that owns a feature reads its own file: `script_engine/` → `selling`, `methods/`, `offers/`, `script/`, `response_guardrails.py` → `guardrails`, `quiz.py` → `quiz_config` (stages and `scoring:` points), `script_drills.py` → `script_drills`, `selling_quality.py` → `selling_signals`, `knowledge.py` → `knowledge_sanitization`.
 
 Questions: `core/utils.py` `is_question` is the one rule for both modes (word lists from config). Analytics: every event goes through `SessionAnalytics.record`.
 
-Environment: `backend/settings.py` reads app env (origins, debug); `core/providers/config.py` reads LLM keys and models. No other module touches the environment, except `METRICS_JSONL_PATH` in `core/analytics/session_analytics.py`.
+Environment: `core/env.py` is the only module that touches the environment (and loads `.env`); its defaults live in `config/limits.yaml`.
 
 ## Glossary (the words the code uses)
 
@@ -70,6 +70,5 @@ Environment: `backend/settings.py` reads app env (origins, debug); `core/provide
 | **turn** | One salesperson line plus the buyer's reply. 1-indexed in the API. | `core/buyer_session.py` |
 | **session** | One practice run, keyed by `session_id`, holding one engine instance. | `backend/routes/_utils.py` |
 | **review** / **evaluation** | Review = per-turn replay with reasons. Evaluation = final score and grade. | `core/session_review.py`, `core/sell_evaluator.py` |
-| **drill** / **quiz** | Practice exercises built from your own turns. | `core/script_drills.py`, `core/quiz.py` |
 
 Role names: modes are named for the learner (**sell mode**: the learner sells; **buy mode**: the learner buys), engines for the AI (`BuyerSession` is the AI buyer, `SellerBot` the AI seller). In sell mode the human is the **salesperson** and the AI the **buyer**; in buy mode the human is the **customer** and the AI the **seller**. "Prospect" in script content means the person being sold to, never a mode.

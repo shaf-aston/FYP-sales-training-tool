@@ -1,6 +1,18 @@
 # Quiz Assessment Configuration
 # Defines the stages and questions used to score training conversations
 
+# Points and score bands for the rule-based quiz scores (0-100). The rules set the score; the AI only adds wording.
+scoring:
+  alignment_bands: [45, 75]          # next-move score below the first = weak, at or above the second = strong
+  understanding_bands: [45, 70, 85]  # direction score -> needs_work / partial / good / excellent
+  coverage_good: 0.5                 # share of key concepts named before the praise line is shown
+  coverage_points: {next_move: 45, direction: 50}   # points for naming every key concept
+  length_points: {full_words: 10, full: 15, part_words: 6, part: 8, short: 2}   # by answer word count
+  next_move_points: {context: 8, open_question: 15, action: 8, neither: 2}
+  direction_points: {reasoning: 12, plan: 13, missing: 4}
+  stage_partial_credit: 0.5          # stage OR approach right, not both
+  llm_fallback_score: 50             # used when the AI gives no score
+
 # Stage descriptions and clear evaluation criteria for quiz scoring
 stages:
   consultative:

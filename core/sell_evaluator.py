@@ -9,52 +9,6 @@ from .utils import (
     tokenize,
 )
 
-_OPEN_QUESTION_HINTS = ["what", "how", "why", "which", "where", "tell me"]
-_RAPPORT_HINTS = [
-    "understand",
-    "appreciate",
-    "makes sense",
-    "hear you",
-    "fair point",
-    "thanks for sharing",
-]
-_OBJECTION_HINTS = [
-    "worried",
-    "concern",
-    "too expensive",
-    "not sure",
-    "think about",
-    "partner",
-    "team",
-    "budget",
-    "price",
-    "cost",
-    "skeptic",
-    "doubt",
-]
-_OBJECTION_RESPONSE_HINTS = [
-    "understand",
-    "fair",
-    "makes sense",
-    "let's break",
-    "option",
-    "proof",
-    "case",
-    "step",
-    "plan",
-]
-_SOLUTION_HINTS = [
-    "fit",
-    "recommend",
-    "option",
-    "plan",
-    "solution",
-    "based on",
-    "you said",
-    "so you can",
-]
-
-
 def _contains_any(text: str, hints: list[str]) -> bool:
     """Return True when any hint phrase appears in the text."""
     lowered = (text or "").lower()
@@ -72,13 +26,15 @@ def _weighted_overall(criteria_scores: dict, criteria: dict) -> int:
 
 def _build_deterministic_criteria_scores(conversation_history: list[dict], criteria: dict) -> dict:
     """Stable deterministic scoring from transcript quality signals."""
+    evaluation = load_sell_config()["evaluation"]
+    hints, scoring = evaluation["hints"], evaluation["scoring"]
     sales_turns = [message.get("content", "") for message in conversation_history if message.get("role") == "user"]
     buyer_turns = [message.get("content", "") for message in conversation_history if message.get("role") != "user"]
 
     default_feedback = "Not enough evidence to score this criterion yet."
     if not sales_turns:
         return {
-            name: {"score": 40, "feedback": default_feedback}
+            name: {"score": scoring["empty_score"], "feedback": default_feedback}
             for name in criteria
         }
 
@@ -90,53 +46,56 @@ def _build_deterministic_criteria_scores(conversation_history: list[dict], crite
     open_question_turns = sum(
         1
         for turn in sales_turns
-        if "?" in turn and _contains_any(turn, _OPEN_QUESTION_HINTS)
+        if "?" in turn and _contains_any(turn, hints["open_question"])
     )
     question_ratio = min(1.0, question_turns / max(1, sales_count))
     open_ratio = open_question_turns / max(1, question_turns)
 
-    rapport_turns = sum(1 for turn in sales_turns if _contains_any(turn, _RAPPORT_HINTS))
+    rapport_turns = sum(1 for turn in sales_turns if _contains_any(turn, hints["rapport"]))
     rapport_ratio = min(1.0, rapport_turns / max(1, sales_count))
 
-    objection_turns = sum(1 for turn in buyer_turns if _contains_any(turn, _OBJECTION_HINTS))
+    objection_turns = sum(1 for turn in buyer_turns if _contains_any(turn, hints["objection_cues"]))
     objection_response_turns = sum(
-        1 for turn in sales_turns if _contains_any(turn, _OBJECTION_RESPONSE_HINTS)
+        1 for turn in sales_turns if _contains_any(turn, hints["objection_response"])
     )
 
-    solution_turns = sum(1 for turn in sales_turns if _contains_any(turn, _SOLUTION_HINTS))
+    solution_turns = sum(1 for turn in sales_turns if _contains_any(turn, hints["solution"]))
     solution_ratio = min(1.0, solution_turns / max(1, sales_count))
 
-    if 8 <= avg_words <= 35:
-        length_fit = 1.0
-    elif 5 <= avg_words <= 45:
-        length_fit = 0.7
-    else:
-        length_fit = 0.4
+    length_fit = next(
+        (band["fit"] for band in scoring["length_fit"]["bands"]
+         if band["min_words"] <= avg_words <= band["max_words"]),
+        scoring["length_fit"]["other"],
+    )
     turn_balance = min(1.0, buyer_count / max(1, sales_count))
 
+    nd, rb, oh, sp, cf = (scoring[key] for key in (
+        "needs_discovery", "rapport_building", "objection_handling",
+        "solution_presentation", "conversation_flow",
+    ))
     computed = {
         "needs_discovery": {
-            "score": clamp_score(round(35 + 35 * question_ratio + 30 * open_ratio)),
+            "score": clamp_score(round(nd["base"] + nd["question_weight"] * question_ratio + nd["open_weight"] * open_ratio)),
             "feedback": (
                 "Strong question quality and discovery depth."
-                if open_ratio >= 0.5
+                if open_ratio >= nd["good"]
                 else "Ask more open discovery questions to uncover needs clearly."
             ),
         },
         "rapport_building": {
-            "score": clamp_score(round(45 + 55 * rapport_ratio)),
+            "score": clamp_score(round(rb["base"] + rb["rapport_weight"] * rapport_ratio)),
             "feedback": (
                 "Good empathy and trust-building language."
-                if rapport_ratio >= 0.4
+                if rapport_ratio >= rb["good"]
                 else "Add brief empathy statements before moving to the next question."
             ),
         },
         "objection_handling": {
             "score": clamp_score(
                 round(
-                    60
+                    oh["no_objection_score"]
                     if objection_turns == 0
-                    else 35 + 65 * min(1.0, objection_response_turns / max(1, objection_turns))
+                    else oh["base"] + oh["response_weight"] * min(1.0, objection_response_turns / max(1, objection_turns))
                 )
             ),
             "feedback": (
@@ -146,18 +105,18 @@ def _build_deterministic_criteria_scores(conversation_history: list[dict], crite
             ),
         },
         "solution_presentation": {
-            "score": clamp_score(round(40 + 60 * solution_ratio)),
+            "score": clamp_score(round(sp["base"] + sp["solution_weight"] * solution_ratio)),
             "feedback": (
                 "Solution language was tied to customer context."
-                if solution_ratio >= 0.35
+                if solution_ratio >= sp["good"]
                 else "Link your recommendation more explicitly to what the prospect said."
             ),
         },
         "conversation_flow": {
-            "score": clamp_score(round(40 + 35 * length_fit + 25 * turn_balance)),
+            "score": clamp_score(round(cf["base"] + cf["length_weight"] * length_fit + cf["balance_weight"] * turn_balance)),
             "feedback": (
                 "Flow was clear and balanced."
-                if length_fit >= 0.7 and turn_balance >= 0.6
+                if length_fit >= cf["good_length_fit"] and turn_balance >= cf["good_balance"]
                 else "Keep turns concise and balanced so the prospect speaks more."
             ),
         },
@@ -167,7 +126,7 @@ def _build_deterministic_criteria_scores(conversation_history: list[dict], crite
     return {
         name: computed.get(
             name,
-            {"score": 60, "feedback": "Measured with a neutral heuristic baseline."},
+            {"score": scoring["neutral_score"], "feedback": "Measured with a neutral heuristic baseline."},
         )
         for name in criteria
     }
@@ -193,7 +152,8 @@ def _build_deterministic_coaching(criteria_scores: dict) -> tuple[list[str], lis
     ranked = sorted(
         criteria_scores.items(), key=lambda item: item[1].get("score", 0), reverse=True
     )
-    strongest = [name for name, score_data in ranked if score_data.get("score", 0) >= 70][:2]
+    strong_score = load_sell_config()["evaluation"]["scoring"]["strong_score"]
+    strongest = [name for name, score_data in ranked if score_data.get("score", 0) >= strong_score][:2]
     weakest = [name for name, score_data in ranked[-2:]]
 
     strengths = [f"Strong {labels.get(name, name)}." for name in strongest]
@@ -208,9 +168,10 @@ def _build_deterministic_coaching(criteria_scores: dict) -> tuple[list[str], lis
 
 def _build_deterministic_summary(overall_score: int, outcome: str) -> str:
     """Summarise the session in one short sentence based on score band."""
-    if overall_score >= 80:
+    decent, solid = load_sell_config()["evaluation"]["scoring"]["summary_bands"]
+    if overall_score >= solid:
         return f"Solid session with clear control and progression. Outcome: {outcome}."
-    if overall_score >= 65:
+    if overall_score >= decent:
         return f"Decent session with room to sharpen execution. Outcome: {outcome}."
     return f"Foundational attempt; focus on core questioning and structure. Outcome: {outcome}."
 

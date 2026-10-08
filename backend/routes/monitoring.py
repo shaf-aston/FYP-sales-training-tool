@@ -5,10 +5,12 @@ from datetime import datetime
 
 from flask import Blueprint, current_app, jsonify, request
 
+from core.constants import MAX_FEEDBACK_COMMENT_CHARS
 from core.analytics.performance import PerformanceTracker
 from core.analytics.session_analytics import SessionAnalytics
 from core.providers import get_available_providers
 
+from ..messages import FEEDBACK_EMPTY, FORBIDDEN, RATING_NOT_NUMBER, RATING_OUT_OF_RANGE
 from ..security import InputValidator, require_rate_limit
 
 bp = Blueprint("monitoring", __name__, url_prefix="/api")
@@ -55,7 +57,7 @@ def get_session_analytics(session_id):
     if path_error:
         return path_error
     if session_id != caller_id:
-        return jsonify({"error": "Forbidden"}), 403
+        return jsonify({"error": FORBIDDEN}), 403
     events = SessionAnalytics.get_session_analytics(session_id)
     return jsonify({"success": True, "session_id": session_id, "events": events})
 
@@ -76,19 +78,19 @@ def submit_feedback():
     comment = (data.get("comment") or "").strip()
 
     if not rating and not comment:
-        return jsonify({"error": "Rating or comment required"}), 400
+        return jsonify({"error": FEEDBACK_EMPTY}), 400
 
     if rating is not None:
         try:
             rating = int(rating)
             if rating < 1 or rating > 5:
-                return jsonify({"error": "Rating must be 1-5"}), 400
+                return jsonify({"error": RATING_OUT_OF_RANGE}), 400
         except (TypeError, ValueError):
-            return jsonify({"error": "Rating must be a number 1-5"}), 400
+            return jsonify({"error": RATING_NOT_NUMBER}), 400
 
-    if comment and len(comment) > 500:
-        current_app.logger.debug("feedback comment trimmed to 500 chars")
-        comment = comment[:500]
+    if len(comment) > MAX_FEEDBACK_COMMENT_CHARS:
+        current_app.logger.debug("feedback comment trimmed to %d chars", MAX_FEEDBACK_COMMENT_CHARS)
+        comment = comment[:MAX_FEEDBACK_COMMENT_CHARS]
 
     entry = {
         "timestamp": datetime.now().isoformat(),

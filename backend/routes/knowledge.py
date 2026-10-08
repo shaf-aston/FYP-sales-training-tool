@@ -10,6 +10,7 @@ from core.knowledge import (
     save_custom_knowledge,
 )
 
+from ..messages import INVALID_PAYLOAD
 from ..security import InputValidator, require_rate_limit
 
 bp = Blueprint("knowledge", __name__, url_prefix="/api")
@@ -28,7 +29,7 @@ def save_knowledge_route():
     """Save custom knowledge data with field-level validation"""
     data = request.json or {}
     if not isinstance(data, dict):
-        return jsonify({"error": "Invalid payload"}), 400
+        return jsonify({"error": INVALID_PAYLOAD}), 400
 
     error = InputValidator.validate_knowledge_data(
         data, allowed_fields=ALLOWED_FIELDS, max_field_length=MAX_FIELD_LENGTH

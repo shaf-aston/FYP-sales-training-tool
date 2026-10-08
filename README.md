@@ -68,7 +68,7 @@ Start with [`CORE-FLOW.md`](CORE-FLOW.md): the one core flow, file by file, and 
 
 | Folder | Holds |
 |---|---|
-| `backend/` | Flask app, routes, settings, security (rate limits, input checks, sessions) |
+| `backend/` | Flask app, routes, security (rate limits, input checks, sessions) |
 | `core/` | script engine, buyer, judge, quiz, drills |
 | `config/` | scripts, products, buyer profiles, drills |
 | `web/` | Next.js + React app; built copy in `web/out` is what Flask serves (see `web/CORE-FLOW.md`) |

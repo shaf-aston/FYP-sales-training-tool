@@ -9,56 +9,40 @@ from datetime import datetime, timedelta
 from functools import wraps
 from typing import Any, Callable, Dict, Optional, Tuple
 
-from core import constants as limits
-from . import settings
-from .messages import RATE_LIMIT_ERROR
+from core.constants import (
+    API_HEADERS,
+    CLEANUP_INTERVAL_SECONDS,
+    CSP,
+    DEFAULT_TRUST_PROXY_HEADERS,
+    MAX_FIELD_LENGTH,
+    MAX_MESSAGE_LENGTH,
+    MAX_SESSIONS,
+    MAX_TURN_NUMBER,
+    RATE_LIMITS,
+    SECURITY_HEADERS,
+    SESSION_ID_MAX_CHARS,
+    SESSION_ID_MIN_CHARS,
+    SESSION_IDLE_MINUTES,
+)
+from core.env import env_flag
+from .messages import (
+    FIELD_NOT_TEXT,
+    FIELD_TOO_LONG,
+    INVALID_SESSION_ID,
+    MESSAGE_REQUIRED,
+    MESSAGE_TOO_LONG,
+    NO_DATA,
+    RATE_LIMIT_ERROR,
+    SESSION_ID_REQUIRED,
+    UNKNOWN_FIELD,
+    UNKNOWN_FIELDS,
+)
 
 logger = logging.getLogger(__name__)
 
 
-class SecurityConfig:
-    """Security thresholds and limits in one place"""
-
-    SESSION_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{8,128}$")
-
-    # Session management
-    MAX_SESSIONS = limits.MAX_SESSIONS
-    SESSION_IDLE_MINUTES = limits.SESSION_IDLE_MINUTES
-    CLEANUP_INTERVAL_SECONDS = limits.CLEANUP_INTERVAL_SECONDS
-    TRUST_PROXY_HEADERS = False
-
-    # Message validation
-    MAX_MESSAGE_LENGTH = limits.MAX_MESSAGE_LENGTH
-    MAX_FIELD_LENGTH = limits.MAX_FIELD_LENGTH
-
-    # Rate limiting: (max_requests, window_seconds)
-    RATE_LIMITS = limits.RATE_LIMITS
-
-    # Security headers
-    SECURITY_HEADERS = {
-        "X-Frame-Options": "DENY",
-        "X-Content-Type-Options": "nosniff",
-        "Referrer-Policy": "strict-origin-when-cross-origin",
-        "X-XSS-Protection": "1; mode=block",
-        "Cross-Origin-Opener-Policy": "same-origin",
-        "Cross-Origin-Resource-Policy": "same-origin",
-        "Permissions-Policy": "camera=(), microphone=(self), geolocation=()",
-    }
-
-    @staticmethod
-    def content_security_policy() -> str:
-        return (
-            "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://js.puter.com; "
-            "style-src 'self' 'unsafe-inline'; "
-            "img-src 'self' data: blob:; "
-            "media-src 'self' data: blob: https://puter.com https://*.puter.com; "
-            "connect-src 'self' https://js.puter.com https://puter.com https://*.puter.com; "
-            "font-src 'self' data:; "
-            "frame-ancestors 'none'; "
-            "base-uri 'self'; "
-            "form-action 'self'"
-        )
+SESSION_ID_PATTERN = re.compile(rf"^[A-Za-z0-9_-]{{{SESSION_ID_MIN_CHARS},{SESSION_ID_MAX_CHARS}}}$")
+CONTENT_SECURITY_POLICY = "; ".join(f"{name} {' '.join(sources)}" for name, sources in CSP.items())
 
 
 class RateLimiter:
@@ -120,15 +104,13 @@ class SecurityHeadersMiddleware:
 
     @staticmethod
     def apply(response):
-        for key, value in SecurityConfig.SECURITY_HEADERS.items():
-            response.headers[key] = value
-        response.headers["Content-Security-Policy"] = SecurityConfig.content_security_policy()
+        response.headers.update(SECURITY_HEADERS)
+        response.headers["Content-Security-Policy"] = CONTENT_SECURITY_POLICY
         if response.direct_passthrough:
             return response
         from flask import request
         if request.path.startswith("/api/"):
-            response.headers["Cache-Control"] = "no-store, max-age=0"
-            response.headers["Pragma"] = "no-cache"
+            response.headers.update(API_HEADERS)
         return response
 
 
@@ -138,18 +120,18 @@ class InputValidator:
     @staticmethod
     def validate_message(
         text: str,
-        max_length: int = SecurityConfig.MAX_MESSAGE_LENGTH,
+        max_length: int = MAX_MESSAGE_LENGTH,
     ) -> Tuple[Optional[str], Optional[Tuple]]:
         from flask import jsonify
 
         text = text.strip()
 
         if not text:
-            return None, (jsonify({"error": "Message required"}), 400)
+            return None, (jsonify({"error": MESSAGE_REQUIRED}), 400)
 
         if len(text) > max_length:
             return None, (
-                jsonify({"error": f"Message too long (max {max_length} characters)"}),
+                jsonify({"error": MESSAGE_TOO_LONG.format(max_length=max_length)}),
                 400,
             )
 
@@ -160,10 +142,10 @@ class InputValidator:
         from flask import jsonify
 
         if not isinstance(session_id, str) or not session_id.strip():
-            return jsonify({"error": "Session ID required"}), 400
+            return jsonify({"error": SESSION_ID_REQUIRED}), 400
 
-        if not SecurityConfig.SESSION_ID_PATTERN.fullmatch(session_id.strip()):
-            return jsonify({"error": "Invalid session ID format"}), 400
+        if not SESSION_ID_PATTERN.fullmatch(session_id.strip()):
+            return jsonify({"error": INVALID_SESSION_ID}), 400
 
         return None
 
@@ -172,18 +154,18 @@ class InputValidator:
         key: str,
         value: Any,
         allowed_fields: set,
-        max_field_length: int = SecurityConfig.MAX_FIELD_LENGTH,
+        max_field_length: int = MAX_FIELD_LENGTH,
     ) -> Optional[Tuple]:
         from flask import jsonify
 
         if key not in allowed_fields:
-            return jsonify({"error": f"Unknown field: {key}"}), 400
+            return jsonify({"error": UNKNOWN_FIELD.format(key=key)}), 400
 
         if not isinstance(value, str):
-            return jsonify({"error": f"Field '{key}' must be a string"}), 400
+            return jsonify({"error": FIELD_NOT_TEXT.format(key=key)}), 400
 
         if len(value) > max_field_length:
-            return jsonify({"error": f"Field '{key}' exceeds {max_field_length} characters"}), 400
+            return jsonify({"error": FIELD_TOO_LONG.format(key=key, max_length=max_field_length)}), 400
 
         return None
 
@@ -191,16 +173,16 @@ class InputValidator:
     def validate_knowledge_data(
         data: Any,
         allowed_fields: set,
-        max_field_length: int = SecurityConfig.MAX_FIELD_LENGTH,
+        max_field_length: int = MAX_FIELD_LENGTH,
     ) -> Optional[Tuple]:
         from flask import jsonify
 
         if not data or not isinstance(data, dict):
-            return jsonify({"error": "No data provided"}), 400
+            return jsonify({"error": NO_DATA}), 400
 
         unknown = set(data.keys()) - allowed_fields
         if unknown:
-            return jsonify({"error": f"Unknown fields: {', '.join(unknown)}"}), 400
+            return jsonify({"error": UNKNOWN_FIELDS.format(keys=", ".join(unknown))}), 400
 
         for key, value in data.items():
             error = InputValidator.validate_knowledge_field(key, value, allowed_fields, max_field_length)
@@ -217,7 +199,7 @@ class InputValidator:
         return None if (not v or v == "auto") else v
 
     @staticmethod
-    def parse_positive_int(raw: Any, maximum: int = 1000) -> int | None:
+    def parse_positive_int(raw: Any, maximum: int = MAX_TURN_NUMBER) -> int | None:
         """Whole number above zero, or None. Rejects floats, bools and huge values."""
         if isinstance(raw, bool) or isinstance(raw, float):
             return None
@@ -237,7 +219,7 @@ class ClientIPExtractor:
 
         trust_proxy_headers = current_app.config.get(
             "TRUST_PROXY_HEADERS",
-            settings.env_flag("TRUST_PROXY_HEADERS", SecurityConfig.TRUST_PROXY_HEADERS),
+            env_flag("TRUST_PROXY_HEADERS", DEFAULT_TRUST_PROXY_HEADERS),
         )
         forwarded = request_obj.headers.get("X-Forwarded-For") if trust_proxy_headers else None
         if forwarded:
@@ -250,9 +232,9 @@ class SessionSecurityManager:
 
     def __init__(
         self,
-        max_sessions: int = SecurityConfig.MAX_SESSIONS,
-        idle_minutes: int = SecurityConfig.SESSION_IDLE_MINUTES,
-        cleanup_interval: int = SecurityConfig.CLEANUP_INTERVAL_SECONDS,
+        max_sessions: int = MAX_SESSIONS,
+        idle_minutes: int = SESSION_IDLE_MINUTES,
+        cleanup_interval: int = CLEANUP_INTERVAL_SECONDS,
         manager_name: str = "sessions",
     ):
         self._sessions: Dict[str, Dict[str, Any]] = {}
@@ -329,11 +311,11 @@ def initialize_security(
         logger.handlers = app_logger.handlers
         logger.setLevel(app_logger.level)
 
-    _rate_limiter = RateLimiter(SecurityConfig.RATE_LIMITS)
+    _rate_limiter = RateLimiter(RATE_LIMITS)
     session_manager = SessionSecurityManager(
-        max_sessions=SecurityConfig.MAX_SESSIONS,
-        idle_minutes=SecurityConfig.SESSION_IDLE_MINUTES,
-        cleanup_interval=SecurityConfig.CLEANUP_INTERVAL_SECONDS,
+        max_sessions=MAX_SESSIONS,
+        idle_minutes=SESSION_IDLE_MINUTES,
+        cleanup_interval=CLEANUP_INTERVAL_SECONDS,
         manager_name="chat sessions",
     )
     return _rate_limiter, session_manager

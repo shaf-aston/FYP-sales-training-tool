@@ -2,20 +2,8 @@
 
 from __future__ import annotations
 
-import os
-from pathlib import Path
-
-from dotenv import load_dotenv
-
-ROOT_DIR = Path(__file__).resolve().parents[2]
-load_dotenv(ROOT_DIR / ".env")
-
-DEFAULT_LLM_PROVIDER_ORDER = ["groq"]
-
-# Groq retires models without notice and the old default (llama-3.3-70b-versatile)
-# now 404s, which silently emptied every reply. Check `client.models.list()` against
-# the live key when replies go blank, and override with GROQ_LLM_MODEL.
-DEFAULT_GROQ_MODEL = "qwen/qwen3.8-27b"
+from ..constants import DEFAULT_GROQ_MODEL, DEFAULT_LLM_PROVIDER_ORDER
+from ..env import env_str
 
 
 def _clean_env_value(value: str | None) -> str | None:
@@ -38,7 +26,7 @@ def _split_env_list(raw_value: str | None, fallback: list[str]) -> list[str]:
 def get_llm_provider_order() -> list[str]:
     """Return the configured LLM provider preference order."""
     return _split_env_list(
-        os.environ.get("LLM_PROVIDER_ORDER"),
+        env_str("LLM_PROVIDER_ORDER"),
         DEFAULT_LLM_PROVIDER_ORDER,
     )
 
@@ -51,7 +39,7 @@ def get_llm_fallback_order() -> list[str]:
     override is provided.
     """
 
-    raw_fallback = os.environ.get("LLM_PROVIDER_FALLBACK_ORDER")
+    raw_fallback = env_str("LLM_PROVIDER_FALLBACK_ORDER")
     if raw_fallback:
         return _split_env_list(raw_fallback, get_llm_provider_order())
     return get_llm_provider_order()
@@ -60,8 +48,8 @@ def get_llm_fallback_order() -> list[str]:
 def get_groq_llm_model() -> str:
     """Return the preferred Groq chat model, honoring env overrides."""
     return (
-        _clean_env_value(os.environ.get("GROQ_LLM_MODEL"))
-        or _clean_env_value(os.environ.get("GROQ_MODEL"))
+        _clean_env_value(env_str("GROQ_LLM_MODEL"))
+        or _clean_env_value(env_str("GROQ_MODEL"))
         or DEFAULT_GROQ_MODEL
     )
 
@@ -73,9 +61,9 @@ def get_groq_api_keys() -> list[str]:
     """
 
     keys = [
-        os.environ.get("SAFE_GROQ_API_KEY"),
-        os.environ.get("ALTERNATIVE_GROQ_API_KEY"),
-        os.environ.get("GROQ_API_KEY"),
+        env_str("SAFE_GROQ_API_KEY"),
+        env_str("ALTERNATIVE_GROQ_API_KEY"),
+        env_str("GROQ_API_KEY"),
     ]
     deduped = []
     seen = set()

@@ -3,15 +3,6 @@
 from . import knowledge, loader  # module refs, so tests can swap the functions
 from .utils import range_label
 
-READINESS_THRESHOLDS = [0.2, 0.4, 0.6, 0.8]
-READINESS_LABELS = [
-    "Not buying it at all",
-    "Still needs convincing",
-    "On the fence - some interest but not sold",
-    "Getting there, but a few things are holding them back",
-    "Almost there - just needs one more good reason",
-]
-
 
 def build_product_context(product_type: str) -> str:
     """What the buyer knows about the product: config and custom knowledge.
@@ -45,6 +36,7 @@ def build_system_prompt(
     behaviour_rules: str,
 ) -> str:
     """Fill the buyer's system prompt template with this turn's state."""
+    bands = loader.load_sell_config()["readiness_bands"]
     return template.format(
         name=persona.get("name", "Alex"),
         background=persona.get("background", ""),
@@ -53,6 +45,6 @@ def build_system_prompt(
         pain_points_formatted="\n".join(f"  - {p}" for p in persona.get("pain_points", [])),
         budget=persona.get("budget", "mid-range"),
         product_knowledge=product_context,
-        readiness_description=range_label(readiness, READINESS_THRESHOLDS, READINESS_LABELS),
+        readiness_description=range_label(readiness, bands["thresholds"], bands["labels"]),
         behaviour_rules=behaviour_rules,
     )

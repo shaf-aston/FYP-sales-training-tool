@@ -122,6 +122,7 @@ def test_config_weights_and_thresholds_are_all_present():
     assert set(limits) == {
         "low_effort_words", "monologue_words", "question_stacking_count",
         "mirroring_min_overlap", "discovery_turns", "praise_min_average",
+        "neutral_rating", "weak_rating", "strong_rating", "pivotal_turns",
     }
     assert cfg["question_words"] and cfg["invitations"]
     # YAML reads bare on/no/yes as booleans - stopwords must stay text.
@@ -164,12 +165,10 @@ def test_an_empty_turn_is_scored_without_blowing_up(message):
 
 def test_hint_names_the_worst_problem_without_ai():
     """A pushy, early pitch gets the pressure tip: problems outrank strengths."""
-    from types import SimpleNamespace
-
-    from core.buyer_session import BuyerSession
+    from core.buyer_rules import coaching_hint
 
     score = score_seller_turn("Act now, this is limited time and the price goes up, so hurry.", completed_turns=0)
-    hint = BuyerSession._generate_coaching_hint(SimpleNamespace(last_turn_score=score), "")
+    hint = coaching_hint(score)
 
     assert "pressure" in score.signals
     assert hint == {"hint": "Drop the urgency. Ask what would make now the right time for them."}

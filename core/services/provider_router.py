@@ -8,8 +8,13 @@ from dataclasses import dataclass
 from ..constants import DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE
 from ..providers import create_provider, list_providers
 from ..providers.base import LLMResponse
+from ..utils import extract_json_from_llm
 
 logger = logging.getLogger(__name__)
+
+
+class ProviderUnavailable(RuntimeError):
+    """Every LLM provider failed or came back empty, so there is nothing to show."""
 
 
 @dataclass(frozen=True)
@@ -91,3 +96,25 @@ class ProviderRouter:
             logger.info("switched to %s after error", next_name)
             return self._result(resp)
         return first
+
+
+def complete(router, messages: list, **profile) -> str:
+    """The reply text from `router`; raises ProviderUnavailable when no provider gave one.
+
+    Returning the empty response instead would show the learner a blank bubble and an
+    HTTP 200, which looks like the buyer ignoring them rather than an outage.
+    """
+    result = router.chat_with_fallback(messages, **profile)
+    if not result.ok:
+        error = result.response.error or "empty response"
+        logger.error("No provider answered (last=%s): %s", result.provider_name, error)
+        raise ProviderUnavailable(error)
+    return result.response.content
+
+
+def complete_json(router, messages: list, **profile) -> dict | None:
+    """The reply parsed as one JSON object, or None when the AI is down or sent no valid JSON."""
+    try:
+        return extract_json_from_llm(complete(router, messages, **profile))
+    except ProviderUnavailable:
+        return None

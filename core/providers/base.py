@@ -21,7 +21,7 @@ class BaseLLMProvider(ABC):
     provider_name = "base"
 
     @abstractmethod
-    def chat(self, messages, temperature=0.8, max_tokens=200, stage=None) -> LLMResponse:
+    def chat(self, messages, temperature, max_tokens, stage=None) -> LLMResponse:
         """Send a chat request and return the provider response wrapper."""
         raise NotImplementedError
 

@@ -8,8 +8,10 @@ from typing import Any
 
 from flask import current_app, jsonify, request
 
-from ..messages import MESSAGE_REQUIRED, SESSION_NOT_FOUND
-from ..security import InputValidator, SecurityConfig
+from core.constants import MAX_MESSAGE_LENGTH
+
+from ..messages import MESSAGE_REQUIRED, SESSION_NOT_FOUND, UNSUPPORTED_PROVIDER
+from ..security import InputValidator
 
 
 @dataclass(frozen=True)
@@ -65,7 +67,7 @@ def validate_message(message_text):
         return None, (jsonify({"error": MESSAGE_REQUIRED}), 400)
     return InputValidator.validate_message(
         message_text.strip(),
-        max_length=SecurityConfig.MAX_MESSAGE_LENGTH,
+        max_length=MAX_MESSAGE_LENGTH,
     )
 
 
@@ -85,7 +87,7 @@ def validate_provider(data):
         return None, (
             jsonify(
                 {
-                    "error": "Unsupported provider",
+                    "error": UNSUPPORTED_PROVIDER,
                     "code": "UNSUPPORTED_PROVIDER",
                     "supported_providers": supported,
                 }

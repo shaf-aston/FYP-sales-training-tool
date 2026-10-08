@@ -20,6 +20,11 @@ real_objections:
     partner/spouse: "partner"
     fear/ability: "fear"
 
+# The sell-mode product picker, split by sales motion. A product with no personas is hidden.
+product_groups:
+  transactional: [luxury_cars, premium_electronics, watches, travel, fashion]
+  consultative: [b2b_saas, high_ticket_sales_mentorship, financial_services, education, healthcare_services]
+
 difficulty_profiles:
   easy:
     label: "Friendly Buyer"
@@ -350,6 +355,31 @@ personas:
       personality: "Analytical and researchy, responds to honest comparisons and specific product recommendations with reasoning"
 
 evaluation:
+  # Phrases the rule-based session score looks for (lowercase, substring match).
+  # The seller_* lists match what the SELLER said; objection_cues matches what the BUYER said.
+  hints:
+    open_question: [what, how, why, which, where, tell me]
+    rapport: [understand, appreciate, makes sense, hear you, fair point, thanks for sharing]
+    objection_cues: [worried, concern, too expensive, not sure, think about, partner, team, budget, price, cost, skeptic, doubt]
+    objection_response: [understand, fair, makes sense, "let's break", option, proof, case, step, plan]
+    solution: [fit, recommend, option, plan, solution, based on, you said, so you can]
+  # How the rule-based score is built. Each criterion is: base + weights x ratios (all 0-1).
+  # "good" is the ratio at which that criterion's praise line replaces its advice line.
+  scoring:
+    empty_score: 40          # no salesperson turns at all
+    neutral_score: 60        # a custom criterion with no rule of its own
+    strong_score: 70         # at or above this a criterion counts as a strength
+    summary_bands: [65, 80]  # overall below the first = "foundational", at or above the second = "solid"
+    length_fit:              # average words per salesperson turn -> fit (first band that matches wins)
+      bands:
+        - {min_words: 8, max_words: 35, fit: 1.0}
+        - {min_words: 5, max_words: 45, fit: 0.7}
+      other: 0.4
+    needs_discovery: {base: 35, question_weight: 35, open_weight: 30, good: 0.5}
+    rapport_building: {base: 45, rapport_weight: 55, good: 0.4}
+    objection_handling: {no_objection_score: 60, base: 35, response_weight: 65}
+    solution_presentation: {base: 40, solution_weight: 60, good: 0.35}
+    conversation_flow: {base: 40, length_weight: 35, balance_weight: 25, good_length_fit: 0.7, good_balance: 0.6}
   criteria:
     needs_discovery:
       weight: 0.25
@@ -366,6 +396,16 @@ evaluation:
     conversation_flow:
       weight: 0.15
       description: "Was the conversation natural, well-paced and professionally conducted?"
+
+# How keen the buyer sounds to themselves: readiness below each threshold picks the next label.
+readiness_bands:
+  thresholds: [0.2, 0.4, 0.6, 0.8]
+  labels:
+    - "Not buying it at all"
+    - "Still needs convincing"
+    - "On the fence - some interest but not sold"
+    - "Getting there, but a few things are holding them back"
+    - "Almost there - just needs one more good reason"
 
 system_prompt_template: |
   You are {name}, a potential customer.

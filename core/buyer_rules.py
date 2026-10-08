@@ -6,6 +6,7 @@ Pure logic, no AI calls, no I/O. BuyerSession asks; this module answers.
 import random
 
 from .constants import SOLD_MIN_TURNS, SOLD_READINESS, WALK_MIN_TURNS, WALK_READINESS
+from .selling_quality import NEGATIVE_SIGNALS, load_selling_signals
 
 
 class ObjectionPacer:
@@ -63,3 +64,16 @@ def end_outcome(readiness: float, turn_count: int, behaviour: dict, max_turns: i
     if readiness <= 0.0 and turn_count >= WALK_MIN_TURNS:
         return "walked"
     return None
+
+
+def coaching_hint(turn_score) -> dict:
+    """One-line tip for the seller, picked from selling_signals.yaml hints (no AI).
+
+    Uses the signals the turn's score already found: the first problem wins,
+    then the first strength, then the default line.
+    """
+    hints = load_selling_signals()["hints"]
+    fired = turn_score.signals if turn_score else []
+    ordered = [s for s in NEGATIVE_SIGNALS if s in fired] + [s for s in fired if s not in NEGATIVE_SIGNALS]
+    key = next((s for s in ordered if s in hints), "default")
+    return {"hint": hints[key]}

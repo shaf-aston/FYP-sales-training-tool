@@ -8,6 +8,7 @@ from typing import Any, cast
 
 from groq import Groq, APIConnectionError, RateLimitError, AuthenticationError
 
+from ...constants import DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE
 from ..base import ACCESS_DENIED, BaseLLMProvider, LLMResponse, RATE_LIMIT
 from ..config import get_groq_api_keys, get_groq_llm_model
 
@@ -32,7 +33,7 @@ class GroqProvider(BaseLLMProvider):
         """Return the active Groq model name."""
         return self.model
 
-    def chat(self, messages, temperature=0.8, max_tokens=200, stage=None) -> LLMResponse:
+    def chat(self, messages, temperature=DEFAULT_TEMPERATURE, max_tokens=DEFAULT_MAX_TOKENS, stage=None) -> LLMResponse:
         """Send the chat request to Groq, retrying across configured API keys."""
         start = time.time()
         if not self.clients:
