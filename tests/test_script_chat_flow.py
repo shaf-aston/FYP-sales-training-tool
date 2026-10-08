@@ -38,7 +38,7 @@ def test_call_opens_with_the_script_and_follows_it(client):
     )
     # "freedom" is recognised, so the script moves to step 02, saying their own words back (no AI)
     assert _say(client, headers, "I want financial freedom")["message"] == (
-        "How much would you need to be making each month to achieve financial freedom?"
+        "How much would you need to be making each month to have financial freedom?"
     )
     plain = _say(client, headers, "ten thousand a month")["message"]
     assert plain == "How long have you been thinking about this?"

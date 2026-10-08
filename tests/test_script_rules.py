@@ -131,12 +131,12 @@ def _line(step, reply):
 
 
 @pytest.mark.parametrize("reply, step, expected", [
-    ("more time with my kids", "02", "to achieve more time with your kids?"),
-    ("financial freedom", "05", "haven't got to financial freedom?"),
+    ("more time with my kids", "02", "to have more time with your kids?"),
+    ("financial freedom", "05", "don't have financial freedom yet?"),
     ("I want to be my own boss", "02", "each month to be your own boss?"),
     ("quit my job", "05", "haven't managed to quit your job?"),
     ("travel the world with my wife", "06", "to travel the world with your wife rather than just dream about it?"),
-    ("financial freedom", "06", "to make financial freedom a reality and not just a dream?"),
+    ("financial freedom", "06", "to get financial freedom rather than just dream about it?"),
 ])
 def test_script_lines_echo_the_goal_in_noun_or_verb_form(reply, step, expected):
     assert expected in _line(step, reply)
@@ -307,7 +307,7 @@ def test_ai_down_never_blocks_a_turn(seller):
     text, _ = at(s, "02", outcome="I want financial freedom").reply("ten thousand")
     assert text == "How long have you been thinking about this?"
     text, _ = at(s, "05", outcome="I want financial freedom").reply("no time")
-    assert text == "What are you doing now to make financial freedom a reality and not just a dream?"  # no AI needed
+    assert text == "What are you doing now to get financial freedom rather than just dream about it?"  # no AI needed
     text, _ = at(s, "05", outcome="I want to be my own boss").reply("no time")
     assert text == "What are you doing now to be your own boss rather than just dream about it?"  # verb form
     text, _ = at(s, "05", outcome="nothing really").reply("no time")

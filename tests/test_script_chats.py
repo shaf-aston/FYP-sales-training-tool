@@ -533,7 +533,7 @@ def test_echo_phrase(reply, phrase):
 def test_their_outcome_goes_back_into_the_next_question(fake_embedder):
     s = seller(fake_embedder, step="01")
     reply, _ = s.reply("I want financial freedom")
-    assert reply == "How much would you need to be making each month to achieve financial freedom?"
+    assert reply == "How much would you need to be making each month to have financial freedom?"
 
 
 def test_words_that_dont_fit_get_the_plain_line(fake_embedder):
