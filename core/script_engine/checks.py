@@ -25,6 +25,7 @@ class CheckContext:
     stop_words: frozenset = frozenset()
     known_figures: frozenset = None    # when set, every number (with the word it counts) must come from here
     banned: frozenset = frozenset()    # words the sentence must not use
+    banned_phrases: tuple = ()         # words or phrases no sentence may contain (cfg banned_phrases)
 
 
 def clip(text, limit):
@@ -38,12 +39,8 @@ def check(text, ctx):
     broken = []
     if text.count("?") != ctx.questions:
         broken.append("question_count")
-    if re.search(r"\bbut\b", low):
-        broken.append("says_but")
-    if "you said" in low:
-        broken.append("says_you_said")
-    if "any questions" in low:
-        broken.append("any_questions")
+    if any(re.search(rf"\b{re.escape(p)}\b", low) for p in ctx.banned_phrases):
+        broken.append("banned_phrase")
     if not ctx.price_ok and (CURRENCY.search(text) or (ctx.price and ctx.price in text)):
         broken.append("early_price")
     if BLANK.search(text):

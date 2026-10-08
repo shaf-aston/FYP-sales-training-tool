@@ -21,16 +21,11 @@ def offer_blanks(offer):
 def _phrase(line, blank, reply, cfg, llm):  # used by Filler only
     """AI shortens the reply to a phrase for one blank. Returns None if no attempt passes."""
     sentence = NAME.sub(lambda m: (m.group(2) or "$").replace("$", "____") if m.group(1) == blank else m.group(0), line)
-    prompt = (
-        "Fill the blank so the sentence reads naturally, like a person talking. Use a short noun "
-        f"phrase (at most {cfg['slot_words']} words) made only of words the prospect said. "
-        f"If nothing fits naturally, answer NONE.\nSentence: {sentence}\n"
-        f"Prospect said: <reply>{reply}</reply>\n"
-        "Answer with the phrase only."
-    )
+    prompt = cfg["prompts"]["fill"].format(slot_words=cfg["slot_words"], sentence=sentence, reply=reply)
     ctx = CheckContext(
         max_words=cfg["slot_words"], questions=0, price_ok=True,
         prospect_words=frozenset(tokenize(reply)), stop_words=frozenset(cfg["stop_words"]),
+        banned_phrases=tuple(cfg["banned_phrases"]),
     )
     before, _, after = sentence.partition("____")
 

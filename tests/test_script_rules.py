@@ -11,14 +11,15 @@ from core.script_engine.engine import ScriptState
 from core.script_engine.fill import Filler, offer_blanks
 from core.script_engine.judge import VAGUE, judge
 from core.script_engine.method import load_common_sense, load_method, load_offer
-from core.script_engine.seller import ScriptSeller
+from core.script_engine.seller import ScriptSeller, _after_lead
 
 CFG = {**load_yaml("selling.yaml"), "ai_fill_blanks": True}  # these tests cover the AI fill path
 OFFER = load_offer("shay_coaching")
 
 
 def ctx(**kw):
-    base = {"max_words": 30, "questions": 1, "price_ok": False, "price": "$5k"}
+    base = {"max_words": 30, "questions": 1, "price_ok": False, "price": "$5k",
+            "banned_phrases": tuple(CFG["banned_phrases"])}
     return CheckContext(**{**base, **kw})
 
 
@@ -27,9 +28,9 @@ def ctx(**kw):
 @pytest.mark.parametrize("text, kw, rule", [
     ("Why? Really?", {}, "question_count"),
     ("Nice point.", {}, "question_count"),
-    ("It is fine but what next?", {}, "says_but"),
-    ("What did you mean when you said that?", {}, "says_you_said"),
-    ("Any questions?", {}, "any_questions"),
+    ("It is fine but what next?", {}, "banned_phrase"),
+    ("What did you mean when you said that?", {}, "banned_phrase"),
+    ("Any questions?", {}, "banned_phrase"),
     ("It is $5k, ready?", {}, "early_price"),
     ("It costs 5k, ready?", {"price": "5k"}, "early_price"),
     ("Hi {name}, ready?", {}, "unfilled_blank"),
@@ -156,16 +157,16 @@ CANDS = {"agrees": ["yes"], "unclear": ["I am lost"]}
 
 
 def test_judge_picks_a_candidate_or_vague():
-    assert judge("hm", CANDS, lambda p, n: "Agrees.", 10) == "agrees"
-    assert judge("hm", CANDS, lambda p, n: "no idea", 10) == VAGUE
-    assert judge("hm", CANDS, lambda p, n: "vague", 10) == VAGUE
+    assert judge("hm", CANDS, lambda p, n: "Agrees.", CFG) == "agrees"
+    assert judge("hm", CANDS, lambda p, n: "no idea", CFG) == VAGUE
+    assert judge("hm", CANDS, lambda p, n: "vague", CFG) == VAGUE
 
 
 def test_judge_ai_down_counts_as_vague():
     def down(prompt, n):
         raise RuntimeError("down")
 
-    assert judge("hm", CANDS, down, 10) == VAGUE
+    assert judge("hm", CANDS, down, CFG) == VAGUE
 
 
 # ---- seller: the trainer's rules (R5) -----------------------------------------------------
@@ -537,7 +538,7 @@ def test_fill_fences_the_reply():
 
 
 def test_judge_needs_exactly_one_label():
-    assert judge("hm", CANDS, lambda p, n: "agrees or unclear", 10) == VAGUE
+    assert judge("hm", CANDS, lambda p, n: "agrees or unclear", CFG) == VAGUE
 
 
 def test_logged_prospect_text_is_clipped_and_logging_can_be_switched_off(fake_embedder, caplog):
@@ -575,6 +576,13 @@ def test_a_question_word_without_a_question_mark_still_counts(fake_embedder):
 ])
 def test_question_detection_uses_phrases_or_a_question_mark(fake_embedder, text, expected):
     assert make_seller(fake_embedder)._is_question(text) is expected
+
+
+def test_a_line_joined_to_a_lead_in_keeps_a_capital_I():
+    assert _after_lead("I'm curious, how long?") == "I'm curious, how long?"
+    assert _after_lead("I read it.") == "I read it."
+    assert _after_lead("Is it the money?") == "is it the money?"
+    assert _after_lead("Ill-fitting is not I") == "ill-fitting is not I"
 
 
 def test_bring_back_lowercases_the_question_unless_it_starts_with_i(fake_embedder):

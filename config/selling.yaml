@@ -33,6 +33,7 @@ echo_drop_starts: ["i want", "i'd like", "i would like", "i just want", "i need"
 prospect_pronouns: [i, "i'm", "i've", "i'd", me, my, mine, myself]   # the bot would be speaking as the prospect
 echo_pronoun_swap: {my: your, me: you, mine: yours, myself: yourself, "i'm": "you're", "i've": "you've", "i'd": "you'd", i: you}   # their first person said back to them: "my kids" -> "your kids"
 slot_tokens: 20        # max_tokens for a blank-filling call
+judge_examples: 2     # examples per candidate shown to the judge
 judge_tokens: 10       # max_tokens for a close-call judge
 answer_tokens: 60      # max_tokens for an uncovered product answer
 uncovered_fallback: "I don't know that one offhand, I'll find out and let you know."   # draft wording
@@ -42,6 +43,9 @@ ack_max_words: 12
 ack_tokens: 30
 ack_retries: 0        # one try: a turn never waits on two ack calls
 memory_chars: 120     # longest piece of an earlier answer handed to the AI as memory
+banned_phrases: [but, you said, any questions]   # no AI sentence may contain these (whole words): "but" undoes what was just said, "you said" quotes them back, "any questions" ends the call
+nudge_leads: [so, ok, okay]   # words allowed before a nudge: "so, what's next?"
+training_notes: {step: "Script step {title}.", listen: "Listen for: {note}", default: "Listen to their answer."}   # the trainee's hint for each step
 ack_words: [you, your, you're, you've, got, it, sounds, makes, sense, hear, that, tough, hard, sorry, okay, right, fair, understand, so, really, lot, see, why, must, be, can, totally, thanks, for, sharing, not, no, easy, been, there, while]   # words the ack may add to the prospect's own; neutral or kind, never "great"
 log_uncovered: true    # write uncovered product questions to the log
 log_text_chars: 120    # longest piece of prospect text ever logged
@@ -68,3 +72,14 @@ prompts:   # AI prompt templates: {name} is filled in by the seller; an empty {m
     <earlier>
     {told}
     </earlier>
+  fill: |-
+    Fill the blank so the sentence reads naturally, like a person talking. Use a short noun phrase (at most {slot_words} words) made only of words the prospect said. If nothing fits naturally, answer NONE.
+    Sentence: {sentence}
+    Prospect said: <reply>{reply}</reply>
+    Answer with the phrase only.
+  judge: |-
+    A prospect replied to a sales question. Which meaning fits best?
+    {options}
+    - {vague}: none of these clearly fits
+    Prospect reply: <reply>{reply}</reply>
+    Answer with exactly one of: {answers}.

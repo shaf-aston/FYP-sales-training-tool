@@ -56,6 +56,11 @@ def build_seller(router, product, embedder=None, gate=None):
     )
 
 
+def _after_lead(line):
+    """`line` as the tail of a longer sentence: first letter lower-cased, except "I" and "I'm"."""
+    return line if re.match(r"I( |')", line) else line[:1].lower() + line[1:]
+
+
 def _answer_labels(step):
     """The step's labelled answers: {signal: [example, ...]}; empty when any reply is its answer."""
     return {r.signal: list(r.examples) for r in step.listen if r.examples}
@@ -183,7 +188,8 @@ class ScriptSeller:
         """The reply without a nudge on its end ("credit, what's next?" -> "credit"); None when it has none."""
         for phrase in sorted(self.sense.nudges, key=len, reverse=True):
             words = r"\W+".join(map(re.escape, tokenize(phrase)))
-            found = re.search(rf"(?:^|\W)(?:so\W+|ok\W+|okay\W+)?{words}\W*$", text, re.IGNORECASE)
+            leads = "|".join(map(re.escape, self.cfg["nudge_leads"]))
+            found = re.search(rf"(?:^|\W)(?:(?:{leads})\W+)?{words}\W*$", text, re.IGNORECASE)
             if found:
                 return text[:found.start()].rstrip(" ,;:-")
         return None
@@ -199,7 +205,7 @@ class ScriptSeller:
         move = object_to(self.method, self.state, self.state.parked[0], self.cfg["objection_loops"])
         self.state = move.state
         line = self._render(move)
-        return f"{self.sense.revisit} {line[:1].lower()}{line[1:]}"
+        return f"{self.sense.revisit} {_after_lead(line)}"
 
     def ui_stage(self):
         """The UI stage of the step the call is on."""
@@ -209,9 +215,10 @@ class ScriptSeller:
         """Notes for the trainee, straight from the script step - no AI, instant."""
         step = self.method.steps[self.state.step]
         title = f"{step.id} {step.name}".strip() if step.name else step.id
+        notes = self.cfg["training_notes"]
         return {
-            "what_happened": f"Script step {title}.",
-            "next_move": f"Listen for: {step.note}" if step.note else "Listen to their answer.",
+            "what_happened": notes["step"].format(title=title),
+            "next_move": notes["listen"].format(note=step.note) if step.note else notes["default"],
             "watch_for": [],
         }
 
@@ -250,8 +257,7 @@ class ScriptSeller:
             found = self._listener.match(text, labels)
             signal = found.label
             if found.close:
-                pick = judge(text, {c: labels[c] for c in found.candidates}, self._ask,
-                             self.cfg["judge_tokens"])
+                pick = judge(text, {c: labels[c] for c in found.candidates}, self._ask, self.cfg)
                 signal = None if pick == VAGUE else pick
         return advance(self.method, self.state, signal, text, empty)
 
@@ -279,6 +285,7 @@ class ScriptSeller:
             c["ack_max_words"], 0, opened, self.offer.price,
             prospect_words=frozenset(tokenize(reply)) | frozenset(tokenize(told)),
             stop_words=frozenset(c["stop_words"]) | frozenset(c["ack_words"]),
+            banned_phrases=tuple(c["banned_phrases"]),
         )
         return checked_line(self._ask, prompt, c["ack_tokens"], ctx, c, "ack", retries=c["ack_retries"]) or ""
 
@@ -304,7 +311,7 @@ class ScriptSeller:
         ctx = CheckContext(
             c["max_words"], 0, opened, offer.price,
             known_figures=frozenset(figures(facts)),  # their own figures are not ours to repeat back as results
-            banned=frozenset(c["answer_banned_words"]) - fact_words,
+            banned=frozenset(c["answer_banned_words"]) - fact_words, banned_phrases=tuple(c["banned_phrases"]),
         )
 
         def clean(raw):
@@ -326,8 +333,8 @@ class ScriptSeller:
         back = ""
         if bring_back and self.state.last_point:
             back = self._filler.fill(self.sense.bring_back, {"last_point": self.state.last_point}) or ""
-        if back and not re.match(r"I( |')", question):
-            question = question[:1].lower() + question[1:]
+        if back:
+            question = _after_lead(question)
         return " ".join(part.strip() for part in (lead, back, question) if part)
 
     def _render(self, move, heard=""):
