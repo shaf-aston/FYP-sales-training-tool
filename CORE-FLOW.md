@@ -30,8 +30,8 @@ Open the engine for the mode you are working on. Nothing else decides the turn.
 |---|---|---|---|
 | 1 | Browser posts the salesperson's line | `web/src/lib/api/client.ts` (`/api/sell/chat`) | The one place the UI talks to the API. |
 | 2 | Route checks rate limit, message, session | `backend/routes/sell.py` `chat`; `backend/routes/_utils.py` `require_session` / `validate_message` | Transport. Shapes JSON, holds no sales logic. Sessions live in `app.extensions["sessions"]` (`Sessions(seller, buyer)`, named for the AI's side). |
-| 3 | Engine runs the turn | `core/buyer_session.py` `BuyerSession.process_turn` (and `redo`, which rolls itself back on failure) | Orchestrates: rate the line, move readiness, pick objection pacing, store history, save. |
-| 4 | Pure rules decide | `core/selling_quality.py` (rating), `core/buyer_rules.py` (sold / walked), `core/buyer_prompt.py` (buyer system prompt) | Deterministic. No I/O, no HTTP, easy to test. |
+| 3 | Engine runs the turn | `core/buyer_session.py` `BuyerSession.process_turn` (and `redo`, which rolls itself back on failure); setup in `core/sell_service.py`, state in `core/buyer_state.py`, logs and analytics in `core/buyer_record.py` | Orchestrates: rate the line, move readiness, pick objection pacing, store history, save. |
+| 4 | Pure rules decide | `core/selling_quality.py` (rating), `core/buyer_rules.py` (sold / walked / coaching hint), `core/buyer_prompt.py` (buyer system prompt) | Deterministic. No I/O, no HTTP, easy to test. |
 | 5 | Router picks a provider | `core/services/provider_router.py` `chat_with_fallback` | Tries providers in order, falls back on failure. |
 | 6 | Provider calls the LLM | `core/providers/factory.py` → `providers/llm/groq.py` behind `providers/base.py` | Swap seam: every provider has the same interface. |
 | 7 | Review and analytics | `core/session_review.py` (per-turn replay), `core/sell_evaluator.py` (final score + grade), `core/analytics/session_analytics.py` (events to JSONL) | Everything shown after the session is rebuilt from the saved transcript. |

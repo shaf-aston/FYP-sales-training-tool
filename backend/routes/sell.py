@@ -3,10 +3,11 @@
 from flask import Blueprint, current_app, jsonify, request
 
 from core.analytics.session_analytics import SessionAnalytics
-from core.buyer_session import ProviderUnavailable, UnknownPersona, personas_for
+from core.buyer_state import UnknownPersona, personas_for
 from core.constants import MAX_CHOSEN_OBJECTION_CHARS, MAX_PERSONA_NAME_CHARS
 from core.quiz import build_sell_question, score_sell_answer
 from core.script_drills import build_drill_set
+from core.services.provider_router import ProviderUnavailable
 from core import sell_service
 from core.sell_service import InvalidDifficulty
 

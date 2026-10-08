@@ -6,11 +6,11 @@ from typing import Any
 
 from .constants import LLM
 from .loader import load_yaml
+from .services.provider_router import complete_json
 from .selling_quality import NEGATIVE_SIGNALS, REASONS, score_seller_turn
 from .utils import (
     clamp_score,
     contains_nonnegated_keyword,
-    extract_json_from_llm,
     merge_unique_items,
     tokenize,
 )
@@ -466,11 +466,8 @@ JSON: {{"score": <0-100>, "understanding": "excellent|good|partial|needs_work", 
 def _score_with_llm(router: Any, prompt: str, defaults: dict) -> dict:
     """Unified LLM scoring: validates enums, clamps scores, handles fallbacks."""
     try:
-        response = router.chat_with_fallback(
-            [{"role": "system", "content": prompt}], **LLM["quiz"]
-        ).response
-        parsed = extract_json_from_llm(response.content) if response.content else None
-        result = parsed if isinstance(parsed, dict) else {}
+        parsed = complete_json(router, [{"role": "system", "content": prompt}], **LLM["quiz"])
+        result = parsed or {}
 
         output = {}
         for key, default in defaults.items():
@@ -484,7 +481,7 @@ def _score_with_llm(router: Any, prompt: str, defaults: dict) -> dict:
                 val = clamp_score(int(val))
             output[key] = val
 
-        output["_used_llm"] = isinstance(parsed, dict)
+        output["_used_llm"] = parsed is not None
         return output
     except Exception as e:
         logger.warning(f"LLM scoring failed: {e}")

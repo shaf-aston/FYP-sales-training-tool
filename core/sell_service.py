@@ -3,7 +3,8 @@
 import secrets
 from dataclasses import dataclass
 
-from .buyer_session import BuyerResponse, BuyerSession, select_persona
+from .buyer_session import BuyerSession
+from .buyer_state import BuyerResponse, select_persona
 from .loader import load_product_config, load_sell_config
 
 
