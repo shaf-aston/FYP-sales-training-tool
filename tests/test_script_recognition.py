@@ -10,7 +10,7 @@ import yaml
 from core.loader import load_yaml
 from core.script_engine.embedder import make_embedder
 from core.script_engine.method import load_common_sense, load_method, load_offer
-from core.script_engine.recognise import recognise
+from core.script_engine.recognise import Listener
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("RUN_EMBED_TESTS") != "1", reason="set RUN_EMBED_TESTS=1 (downloads a model)"
@@ -51,6 +51,7 @@ def _contexts():
 def results():
     cfg = load_yaml("selling.yaml")
     embedder = make_embedder(cfg, ROOT)
+    listener = Listener(cfg, embedder)
     data = yaml.safe_load((ROOT / "tests/data/script_replies.yaml").read_text(encoding="utf-8"))
     embedder.warm([e for labels in _contexts().values() for ex in labels.values() for e in ex])
     rows, times = [], []
@@ -58,10 +59,7 @@ def results():
         for expected, replies in data[context].items():
             for reply in replies:
                 start = time.perf_counter()
-                match = recognise(
-                    reply, labels, embedder, cfg["threshold"], cfg["margin"], cfg["close_call_k"],
-                    cfg["near_miss"],
-                )
+                match = listener.match(reply, labels)
                 times.append((time.perf_counter() - start) * 1000)
                 rows.append((context, reply, expected, match))
     return rows, times
@@ -115,6 +113,7 @@ def test_combined_interruption_set_picks_the_right_group(capsys):
     """The seller matches interruptions, facts and objections in one pass: groups must not steal."""
     cfg = load_yaml("selling.yaml")
     embedder = make_embedder(cfg, ROOT)
+    listener = Listener(cfg, embedder)
     ctxs = _contexts()
     embedder.warm([e for labels in ctxs.values() for ex in labels.values() for e in ex])
     labels = {}
@@ -129,8 +128,7 @@ def test_combined_interruption_set_picks_the_right_group(capsys):
     ]
     hits = 0
     for expected, reply in rows:
-        m = recognise(reply, labels, embedder, cfg["threshold"], cfg["margin"],
-                      cfg["close_call_k"], cfg["near_miss"])
+        m = listener.match(reply, labels)
         hits += m.label == expected or m.close
         if m.label != expected and not m.close:
             with capsys.disabled():
@@ -252,6 +250,7 @@ def test_floored_labels_clear_their_floor_only_when_meant(capsys):
     clear it when meant and never when not (heard as the seller hears them at step 01)."""
     cfg = load_yaml("selling.yaml")
     embedder = make_embedder(cfg, ROOT)
+    listener = Listener(cfg, embedder)
     cat, sense = load_method("cat"), load_common_sense()
     labels = {**_step_labels(cat, "01"), "ready": list(cat.ready.examples)}
     labels.update({k: list(i.examples) for k, i in sense.interruptions.items() if not i.after_wait})
@@ -260,8 +259,7 @@ def test_floored_labels_clear_their_floor_only_when_meant(capsys):
     embedder.warm([e for ex in labels.values() for e in ex])
     for label, rows in data.items():
         def fires(reply, label=label):
-            m = recognise(reply, labels, embedder, cfg["threshold"], cfg["margin"], cfg["close_call_k"],
-                          cfg["near_miss"])
+            m = listener.match(reply, labels)
             return m.label == label and not m.close and m.score > floors[label]
 
         hit = [r for r in rows["meant"] if fires(r)]

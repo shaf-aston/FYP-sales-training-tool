@@ -21,7 +21,7 @@ from core.script_engine.engine import (
 from core.script_engine.fill import Filler
 from core.script_engine.judge import VAGUE, judge
 from core.script_engine.method import ANY, load_common_sense, load_method, load_offer
-from core.script_engine.recognise import recognise
+from core.script_engine.recognise import Listener
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 uncovered_log = logging.getLogger("script_engine.uncovered")
@@ -122,7 +122,7 @@ def _answer_labels(step):
 class ScriptSeller:
     def __init__(self, cfg, method, offer, sense, embedder, llm):
         self.cfg, self.method, self.offer, self.sense = cfg, method, offer, sense
-        self._embedder, self._llm = embedder, llm
+        self._listener, self._llm = Listener(cfg, embedder), llm
         self._ai_ok = True
         self._waiting = False  # last reply was a `wait` reply: they stepped away
         self._filler = Filler(cfg, offer, self._ask, frozenset(s.capture for s in method.steps.values() if s.echo))
@@ -273,16 +273,12 @@ class ScriptSeller:
             "watch_for": [],
         }
 
-    def _recognise(self, text, labels):
-        c = self.cfg
-        return recognise(text, labels, self._embedder, c["threshold"], c["margin"],
-                         c["close_call_k"], c["near_miss"])
-
     def _interrupt(self, text, step, opened, waiting):
         """An everyday interruption, product question or objection - only when it clearly beats
         reading the reply as an answer to the step's own question, like a human closer would."""
-        labels = {f"sense:{k}": i.examples for k, i in self.sense.interruptions.items()
-                  if waiting or not i.after_wait}
+        senses = {k: i for k, i in self.sense.interruptions.items() if waiting or not i.after_wait}
+        labels = {f"sense:{k}": i.examples for k, i in senses.items()}
+        floors = {f"sense:{k}": i.min_score for k, i in senses.items()}  # lowest score a label counts at
         asking = self._is_question(text)
         if asking:
             labels.update({f"fact:{k}": f.examples for k, f in self.offer.facts.items()})
@@ -295,42 +291,21 @@ class ScriptSeller:
         labels.update({f"objection:{k}": o.examples for k, o in objections})
         if ready_open(self.method, self.state.step):
             labels["ready:buyer"] = self.method.ready.examples
-        found = self._recognise(text, labels)
-        if not found.label or found.close:
-            return None, None
-        kind, name = found.label.split(":", 1)
-        if kind == "fact":
-            return kind, name  # a product question is never an answer
-        bar = 0.0 if answers else self.cfg["interrupt_threshold"]
-        if answers:
-            as_answer = self._recognise(text, answers)
-            bar = as_answer.score if as_answer.label else 0.0  # only a real answer competes
-        if any(r.signal == ANY for r in step.listen):
-            bar = max(bar, self.cfg["interrupt_threshold"])  # any reply is an answer: interrupt only when sure
-        if asking:
-            bar = 0.0  # a question is never an answer, so it need not beat one
-        bar = max(bar, self._floor(kind, name))
-        return (kind, name) if found.score > bar else (None, None)
-
-    def _floor(self, kind, name):
-        """The lowest score a label counts at on any step (0 = no floor of its own)."""
-        if kind == "ready":
-            return self.method.ready.min_score
-        if kind == "sense":
-            return self.sense.interruptions[name].min_score
-        return 0.0
+            floors["ready:buyer"] = self.method.ready.min_score
+        won = self._listener.interruption(text, labels, answers, any(r.signal == ANY for r in step.listen), asking, floors)
+        return tuple(won.split(":", 1)) if won else (None, None)
 
     def _answers(self, text, step):
         """The reply matches one of the step's own answers, even with a question in it ("yeah makes
         sense, what's next?" at the temp check). Two answers too close to call are judged as usual."""
         labels = _answer_labels(step)
-        return bool(labels) and self._recognise(text, labels).label is not None
+        return bool(labels) and self._listener.match(text, labels).label is not None
 
     def _listen(self, text, step, empty=False):
         labels = _answer_labels(step)
         signal = None
         if labels:
-            found = self._recognise(text, labels)
+            found = self._listener.match(text, labels)
             signal = found.label
             if found.close:
                 pick = judge(text, {c: labels[c] for c in found.candidates}, self._ask,

@@ -290,7 +290,7 @@ def test_uncovered_question_with_a_rule_breaking_answer_is_dropped(seller, caplo
     def pushy(prompt, n):
         return "It is $5k but worth it." if "A prospect asked" in prompt else fake_llm(prompt, n)
 
-    s = at(make_seller(seller._embedder, pushy), "03")
+    s = at(make_seller(seller._listener.embedder, pushy), "03")
     with caplog.at_level(logging.WARNING, logger="script_engine.fallback"):
         text, _ = s.reply("will refunds exist?")
     assert text == f"{CFG['uncovered_fallback']} How long have you been thinking about this?"
@@ -301,7 +301,7 @@ def test_ai_down_never_blocks_a_turn(seller):
     def down(prompt, n):
         raise RuntimeError("down")
 
-    s = at(make_seller(seller._embedder, down), "03", outcome="I want financial freedom")
+    s = at(make_seller(seller._listener.embedder, down), "03", outcome="I want financial freedom")
     text, _ = s.reply("will refunds exist?")
     assert text == f"{CFG['uncovered_fallback']} How long have you been thinking about this?"
     text, _ = at(s, "02", outcome="I want financial freedom").reply("ten thousand")
