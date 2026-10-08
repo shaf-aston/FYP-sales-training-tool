@@ -14,9 +14,9 @@ import re
 from dataclasses import dataclass, field
 
 from .loader import load_yaml
+from .selling_quality import load_selling_signals
 
 BLANK_PATTERN = re.compile(r"\[([^\[\]]+)\]")
-STRONG_TURN_RATING = 4
 OWN_LINE_GROUP = "your_own_lines"
 
 
@@ -100,10 +100,11 @@ def drills_from_own_turns(review_turns: list[dict], limit: int = 3) -> list[Dril
     blank is the second half of the sentence, which is where the move usually
     lands, and the drill is skipped when there is no sensible place to split.
     """
+    strong_rating = load_selling_signals()["thresholds"]["strong_rating"]
     strong = [
         turn
         for turn in review_turns or []
-        if turn.get("rating", 0) >= STRONG_TURN_RATING and turn.get("seller")
+        if turn.get("rating", 0) >= strong_rating and turn.get("seller")
     ]
     strong.sort(key=lambda turn: (-turn.get("rating", 0), turn.get("turn", 0)))
 

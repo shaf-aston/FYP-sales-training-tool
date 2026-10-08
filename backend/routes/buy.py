@@ -8,11 +8,12 @@ import secrets
 
 from flask import Blueprint, current_app, jsonify, request
 
+from core.constants import MAX_MESSAGE_LENGTH, MAX_SESSIONS
 from core.quiz import get_quiz_question
 from core.seller_bot import SellerBot
 
 from ..messages import BOT_INIT_FAILED, GENERIC_ERROR, SERVER_FULL
-from ..security import InputValidator, SecurityConfig, require_rate_limit
+from ..security import InputValidator, require_rate_limit
 from ._utils import (
     bot_state,
     require_session,
@@ -64,7 +65,7 @@ def init():
     # Session count ceiling: reject new sessions when server is full
     if not current_app.extensions["sessions"].seller.can_create():
         current_app.logger.warning(
-            f"Session cap ({SecurityConfig.MAX_SESSIONS}) reached - rejecting new init"
+            f"Session cap ({MAX_SESSIONS}) reached - rejecting new init"
         )
         return jsonify(
             {"error": SERVER_FULL}
@@ -231,7 +232,7 @@ def coach():
         style = "tactical"
     if not question:
         return jsonify({"error": "Question required"}), 400
-    if len(question) > SecurityConfig.MAX_MESSAGE_LENGTH:
+    if len(question) > MAX_MESSAGE_LENGTH:
         return jsonify({"error": "Question too long"}), 400
 
     try:
@@ -271,7 +272,7 @@ def _required_text(field: str, label: str):
     value = ((request.json or {}).get(field) or "").strip()
     if not value:
         return None, (jsonify({"error": f"{label} required"}), 400)
-    if len(value) > SecurityConfig.MAX_MESSAGE_LENGTH:
+    if len(value) > MAX_MESSAGE_LENGTH:
         return None, (jsonify({"error": f"{label} too long"}), 400)
     return value, None
 

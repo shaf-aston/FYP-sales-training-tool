@@ -9,52 +9,6 @@ from .utils import (
     tokenize,
 )
 
-_OPEN_QUESTION_HINTS = ["what", "how", "why", "which", "where", "tell me"]
-_RAPPORT_HINTS = [
-    "understand",
-    "appreciate",
-    "makes sense",
-    "hear you",
-    "fair point",
-    "thanks for sharing",
-]
-_OBJECTION_HINTS = [
-    "worried",
-    "concern",
-    "too expensive",
-    "not sure",
-    "think about",
-    "partner",
-    "team",
-    "budget",
-    "price",
-    "cost",
-    "skeptic",
-    "doubt",
-]
-_OBJECTION_RESPONSE_HINTS = [
-    "understand",
-    "fair",
-    "makes sense",
-    "let's break",
-    "option",
-    "proof",
-    "case",
-    "step",
-    "plan",
-]
-_SOLUTION_HINTS = [
-    "fit",
-    "recommend",
-    "option",
-    "plan",
-    "solution",
-    "based on",
-    "you said",
-    "so you can",
-]
-
-
 def _contains_any(text: str, hints: list[str]) -> bool:
     """Return True when any hint phrase appears in the text."""
     lowered = (text or "").lower()
@@ -82,6 +36,7 @@ def _build_deterministic_criteria_scores(conversation_history: list[dict], crite
             for name in criteria
         }
 
+    hints = load_sell_config()["evaluation"]["hints"]
     sales_count = len(sales_turns)
     buyer_count = len(buyer_turns)
     avg_words = sum(len(tokenize(turn)) for turn in sales_turns) / max(1, sales_count)
@@ -90,20 +45,20 @@ def _build_deterministic_criteria_scores(conversation_history: list[dict], crite
     open_question_turns = sum(
         1
         for turn in sales_turns
-        if "?" in turn and _contains_any(turn, _OPEN_QUESTION_HINTS)
+        if "?" in turn and _contains_any(turn, hints["open_question"])
     )
     question_ratio = min(1.0, question_turns / max(1, sales_count))
     open_ratio = open_question_turns / max(1, question_turns)
 
-    rapport_turns = sum(1 for turn in sales_turns if _contains_any(turn, _RAPPORT_HINTS))
+    rapport_turns = sum(1 for turn in sales_turns if _contains_any(turn, hints["rapport"]))
     rapport_ratio = min(1.0, rapport_turns / max(1, sales_count))
 
-    objection_turns = sum(1 for turn in buyer_turns if _contains_any(turn, _OBJECTION_HINTS))
+    objection_turns = sum(1 for turn in buyer_turns if _contains_any(turn, hints["objection_cues"]))
     objection_response_turns = sum(
-        1 for turn in sales_turns if _contains_any(turn, _OBJECTION_RESPONSE_HINTS)
+        1 for turn in sales_turns if _contains_any(turn, hints["objection_response"])
     )
 
-    solution_turns = sum(1 for turn in sales_turns if _contains_any(turn, _SOLUTION_HINTS))
+    solution_turns = sum(1 for turn in sales_turns if _contains_any(turn, hints["solution"]))
     solution_ratio = min(1.0, solution_turns / max(1, sales_count))
 
     if 8 <= avg_words <= 35:

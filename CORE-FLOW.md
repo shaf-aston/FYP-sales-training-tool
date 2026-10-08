@@ -54,7 +54,7 @@ Every tunable number lives in `config/limits.yaml`; `core/constants.py` is its o
 
 Questions: `core/utils.py` `is_question` is the one rule for both modes (word lists from config). Analytics: every event goes through `SessionAnalytics.record`.
 
-Environment: `backend/settings.py` reads app env (origins, debug); `core/providers/config.py` reads LLM keys and models. No other module touches the environment, except `METRICS_JSONL_PATH` in `core/analytics/session_analytics.py`.
+Environment: `core/env.py` is the only module that touches the environment (and loads `.env`); its defaults live in `config/limits.yaml`.
 
 ## Glossary (the words the code uses)
 

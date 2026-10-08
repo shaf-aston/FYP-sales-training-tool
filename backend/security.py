@@ -9,30 +9,24 @@ from datetime import datetime, timedelta
 from functools import wraps
 from typing import Any, Callable, Dict, Optional, Tuple
 
-from core import constants as limits
-from . import settings
+from core.constants import (
+    CLEANUP_INTERVAL_SECONDS,
+    MAX_FIELD_LENGTH,
+    MAX_MESSAGE_LENGTH,
+    MAX_SESSIONS,
+    RATE_LIMITS,
+    SESSION_IDLE_MINUTES,
+)
+from core.env import env_flag
 from .messages import RATE_LIMIT_ERROR
 
 logger = logging.getLogger(__name__)
 
 
 class SecurityConfig:
-    """Security thresholds and limits in one place"""
+    """Session-id format, response headers and CSP"""
 
     SESSION_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{8,128}$")
-
-    # Session management
-    MAX_SESSIONS = limits.MAX_SESSIONS
-    SESSION_IDLE_MINUTES = limits.SESSION_IDLE_MINUTES
-    CLEANUP_INTERVAL_SECONDS = limits.CLEANUP_INTERVAL_SECONDS
-    TRUST_PROXY_HEADERS = False
-
-    # Message validation
-    MAX_MESSAGE_LENGTH = limits.MAX_MESSAGE_LENGTH
-    MAX_FIELD_LENGTH = limits.MAX_FIELD_LENGTH
-
-    # Rate limiting: (max_requests, window_seconds)
-    RATE_LIMITS = limits.RATE_LIMITS
 
     # Security headers
     SECURITY_HEADERS = {
@@ -138,7 +132,7 @@ class InputValidator:
     @staticmethod
     def validate_message(
         text: str,
-        max_length: int = SecurityConfig.MAX_MESSAGE_LENGTH,
+        max_length: int = MAX_MESSAGE_LENGTH,
     ) -> Tuple[Optional[str], Optional[Tuple]]:
         from flask import jsonify
 
@@ -172,7 +166,7 @@ class InputValidator:
         key: str,
         value: Any,
         allowed_fields: set,
-        max_field_length: int = SecurityConfig.MAX_FIELD_LENGTH,
+        max_field_length: int = MAX_FIELD_LENGTH,
     ) -> Optional[Tuple]:
         from flask import jsonify
 
@@ -191,7 +185,7 @@ class InputValidator:
     def validate_knowledge_data(
         data: Any,
         allowed_fields: set,
-        max_field_length: int = SecurityConfig.MAX_FIELD_LENGTH,
+        max_field_length: int = MAX_FIELD_LENGTH,
     ) -> Optional[Tuple]:
         from flask import jsonify
 
@@ -237,7 +231,7 @@ class ClientIPExtractor:
 
         trust_proxy_headers = current_app.config.get(
             "TRUST_PROXY_HEADERS",
-            settings.env_flag("TRUST_PROXY_HEADERS", SecurityConfig.TRUST_PROXY_HEADERS),
+            env_flag("TRUST_PROXY_HEADERS"),
         )
         forwarded = request_obj.headers.get("X-Forwarded-For") if trust_proxy_headers else None
         if forwarded:
@@ -250,9 +244,9 @@ class SessionSecurityManager:
 
     def __init__(
         self,
-        max_sessions: int = SecurityConfig.MAX_SESSIONS,
-        idle_minutes: int = SecurityConfig.SESSION_IDLE_MINUTES,
-        cleanup_interval: int = SecurityConfig.CLEANUP_INTERVAL_SECONDS,
+        max_sessions: int = MAX_SESSIONS,
+        idle_minutes: int = SESSION_IDLE_MINUTES,
+        cleanup_interval: int = CLEANUP_INTERVAL_SECONDS,
         manager_name: str = "sessions",
     ):
         self._sessions: Dict[str, Dict[str, Any]] = {}
@@ -329,11 +323,11 @@ def initialize_security(
         logger.handlers = app_logger.handlers
         logger.setLevel(app_logger.level)
 
-    _rate_limiter = RateLimiter(SecurityConfig.RATE_LIMITS)
+    _rate_limiter = RateLimiter(RATE_LIMITS)
     session_manager = SessionSecurityManager(
-        max_sessions=SecurityConfig.MAX_SESSIONS,
-        idle_minutes=SecurityConfig.SESSION_IDLE_MINUTES,
-        cleanup_interval=SecurityConfig.CLEANUP_INTERVAL_SECONDS,
+        max_sessions=MAX_SESSIONS,
+        idle_minutes=SESSION_IDLE_MINUTES,
+        cleanup_interval=CLEANUP_INTERVAL_SECONDS,
         manager_name="chat sessions",
     )
     return _rate_limiter, session_manager

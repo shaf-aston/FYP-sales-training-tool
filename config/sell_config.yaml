@@ -350,6 +350,14 @@ personas:
       personality: "Analytical and researchy, responds to honest comparisons and specific product recommendations with reasoning"
 
 evaluation:
+  # Phrases the rule-based session score looks for (lowercase, substring match).
+  # The seller_* lists match what the SELLER said; objection_cues matches what the BUYER said.
+  hints:
+    open_question: [what, how, why, which, where, tell me]
+    rapport: [understand, appreciate, makes sense, hear you, fair point, thanks for sharing]
+    objection_cues: [worried, concern, too expensive, not sure, think about, partner, team, budget, price, cost, skeptic, doubt]
+    objection_response: [understand, fair, makes sense, "let's break", option, proof, case, step, plan]
+    solution: [fit, recommend, option, plan, solution, based on, you said, so you can]
   criteria:
     needs_discovery:
       weight: 0.25
@@ -366,6 +374,16 @@ evaluation:
     conversation_flow:
       weight: 0.15
       description: "Was the conversation natural, well-paced and professionally conducted?"
+
+# How keen the buyer sounds to themselves: readiness below each threshold picks the next label.
+readiness_bands:
+  thresholds: [0.2, 0.4, 0.6, 0.8]
+  labels:
+    - "Not buying it at all"
+    - "Still needs convincing"
+    - "On the fence - some interest but not sold"
+    - "Getting there, but a few things are holding them back"
+    - "Almost there - just needs one more good reason"
 
 system_prompt_template: |
   You are {name}, a potential customer.

@@ -21,6 +21,11 @@ def _check_positive(node, path="limits"):
 _L = load_yaml("limits.yaml")
 _check_positive(_L)
 
+# env-var defaults
+DEFAULT_ALLOWED_ORIGINS = _L["defaults"]["allowed_origins"]
+DEFAULT_LLM_PROVIDER_ORDER = _L["defaults"]["llm_provider_order"]
+DEFAULT_GROQ_MODEL = _L["defaults"]["groq_model"]
+
 # sessions
 MAX_SESSIONS = _L["sessions"]["seller_max"]
 SESSION_IDLE_MINUTES = _L["sessions"]["seller_idle_minutes"]

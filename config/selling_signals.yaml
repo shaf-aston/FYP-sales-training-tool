@@ -27,6 +27,10 @@ thresholds:
   mirroring_min_overlap: 2   # distinct buyer words echoed back to count as listening
   praise_min_average: 3.5    # session average needed before the review praises it
   discovery_turns: 2         # pitching before this many completed turns is premature
+  neutral_rating: 3          # a turn with no signals fires scores this (1-5 scale)
+  weak_rating: 2             # at or below this, a turn is offered for a redo
+  strong_rating: 4           # at or above this, a turn becomes a recall drill
+  pivotal_turns: 3           # how many costly turns the review singles out
 
 # Two ways a seller opens someone up.
 # question_words only count when the turn actually asks something ("?").

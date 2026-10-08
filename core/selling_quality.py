@@ -15,8 +15,6 @@ from dataclasses import dataclass, field
 from .loader import load_yaml
 from .utils import clamp, contains_nonnegated_keyword, tokenize
 
-NEUTRAL_RATING = 3.0
-
 REASONS = {
     "open_question": "Asked an open question that invites them to explain.",
     "on_topic": "Built the question on something they actually said.",
@@ -165,7 +163,7 @@ def score_seller_turn(
     elif len(words) < limits.get("low_effort_words", 4):
         fired.append("low_effort")
 
-    total = NEUTRAL_RATING + sum(weights.get(name, 0.0) for name in fired)
+    total = limits["neutral_rating"] + sum(weights.get(name, 0.0) for name in fired)
     rating = max(1, min(5, round(total)))
     return SellerTurnScore(
         rating=rating,

@@ -12,8 +12,9 @@ from collections import Counter, defaultdict
 from copy import deepcopy
 import json
 import logging
-import os
 from threading import Lock
+
+from ..env import env_str
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,7 @@ class SessionAnalytics:
     @classmethod
     def _jsonl_path(cls) -> str | None:
         """Read the optional JSONL sink path from the environment."""
-        path = os.environ.get("METRICS_JSONL_PATH")
+        path = env_str("METRICS_JSONL_PATH")
         if not path:
             return None
         path = path.strip()

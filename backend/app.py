@@ -4,28 +4,29 @@ import sys
 import threading
 from pathlib import Path
 
-from dotenv import load_dotenv
 from flask import Flask
 from flask_cors import CORS
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 
-load_dotenv(ROOT_DIR / ".env")
-
 # Makes `backend` and `core` importable when run directly: `python backend/app.py`
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from core.constants import BUYER_IDLE_MINUTES, MAX_BUYER_SESSIONS  # noqa: E402
+from core.constants import (  # noqa: E402
+    BUYER_IDLE_MINUTES,
+    CLEANUP_INTERVAL_SECONDS,
+    DEFAULT_ALLOWED_ORIGINS,
+    MAX_BUYER_SESSIONS,
+)
+from core.env import env_flag, env_str  # noqa: E402
 from core.script_engine.seller import shared_embedder  # noqa: E402
 from backend.messages import INTERNAL_SERVER_ERROR  # noqa: E402
 from backend.security import (  # noqa: E402
-    SecurityConfig,
     SecurityHeadersMiddleware,
     SessionSecurityManager,
     initialize_security,
 )
-from backend import settings  # noqa: E402
 from backend.routes import buy, knowledge, monitoring, old_paths, sell  # noqa: E402
 from backend.routes._utils import Sessions  # noqa: E402
 
@@ -36,7 +37,8 @@ app = Flask(
 
 # CORS: restrict to configured origins (default: Render deployment + localhost dev)
 # Override via ALLOWED_ORIGINS env var (comma-separated) for other deployments
-CORS(app, origins=settings.allowed_origins())
+allowed_origins = env_str("ALLOWED_ORIGINS", DEFAULT_ALLOWED_ORIGINS)
+CORS(app, origins=[o.strip() for o in allowed_origins.split(",") if o.strip()])
 
 
 rate_limiter, session_manager = initialize_security(
@@ -50,7 +52,7 @@ app.after_request(SecurityHeadersMiddleware.apply)
 buyer_session_manager = SessionSecurityManager(
     max_sessions=MAX_BUYER_SESSIONS,
     idle_minutes=BUYER_IDLE_MINUTES,
-    cleanup_interval=SecurityConfig.CLEANUP_INTERVAL_SECONDS,
+    cleanup_interval=CLEANUP_INTERVAL_SECONDS,
     manager_name="buyer sessions",
 )
 
@@ -60,10 +62,10 @@ def _should_start_background_cleanup() -> bool:
     if app.config.get("TESTING"):
         return False
 
-    if not settings.is_flask_debug():
+    if not env_flag("FLASK_DEBUG"):
         return True
 
-    return settings.is_reloader_child()
+    return env_flag("WERKZEUG_RUN_MAIN")
 
 
 if _should_start_background_cleanup():
@@ -133,4 +135,4 @@ def handle_unexpected_error(e):
 
 
 if __name__ == "__main__":
-    app.run(debug=settings.is_flask_debug(), port=5000)
+    app.run(debug=env_flag("FLASK_DEBUG"), port=5000)
