@@ -93,7 +93,7 @@ def group_summaries() -> list[dict]:
     ]
 
 
-def drills_from_own_turns(review_turns: list[dict], limit: int = 3) -> list[Drill]:
+def drills_from_own_turns(review_turns: list[dict], limit: int | None = None) -> list[Drill]:
     """Turn the learner's own strongest lines into drills.
 
     Revising something you actually said beats revising a stranger's script. The
@@ -101,6 +101,7 @@ def drills_from_own_turns(review_turns: list[dict], limit: int = 3) -> list[Dril
     lands, and the drill is skipped when there is no sensible place to split.
     """
     strong_rating = load_selling_signals()["thresholds"]["strong_rating"]
+    limit = limit or _own_lines()["max_drills"]
     strong = [
         turn
         for turn in review_turns or []
@@ -132,10 +133,15 @@ def drills_from_own_turns(review_turns: list[dict], limit: int = 3) -> list[Dril
     return drills
 
 
+def _own_lines() -> dict:
+    """The own-line drill limits from script_drills.yaml."""
+    return load_yaml("script_drills.yaml")["own_lines"]
+
+
 def _split_point(line: str) -> tuple[str, str] | None:
     """Split a sentence so the blank covers the move, not a stray word."""
     words = line.split()
-    if len(words) < 6:
+    if len(words) < _own_lines()["min_words"]:
         return None
     cut = len(words) // 2
     return " ".join(words[:cut]) + " ", " ".join(words[cut:])

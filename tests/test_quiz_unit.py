@@ -8,6 +8,8 @@ import core.quiz as quiz
 from core.providers.base import LLMResponse
 from core.services.provider_router import ProviderChatResult
 
+_SCORING = quiz._load_quiz_config()["scoring"]
+
 
 class _RaisingProvider:
     def chat_with_fallback(self, *_args, **_kwargs):
@@ -116,6 +118,7 @@ def test_next_move_merges_llm_feedback_and_uses_score_fallback(monkeypatch):
         quiz,
         "_quiz_config",
         {
+            "scoring": _SCORING,
             "stages": {
                 "consultative": {
                     "logical": {
@@ -167,6 +170,7 @@ def test_direction_falls_back_to_deterministic_scoring_when_llm_fails(monkeypatc
         quiz,
         "_quiz_config",
         {
+            "scoring": _SCORING,
             "stages": {
                 "consultative": {
                     "logical": {

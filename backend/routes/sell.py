@@ -13,6 +13,8 @@ from core.sell_service import InvalidDifficulty
 
 from ..messages import (
     INVALID_DIFFICULTY,
+    NO_TURNS_YET,
+    OPTIONAL_TEXT_INVALID,
     SELL_ERROR,
     SELL_FULL,
     SELL_SETUP_FAILED,
@@ -20,6 +22,9 @@ from ..messages import (
     SELL_SCORING_ERROR,
     SELL_SESSION_NOT_FOUND,
     SELL_UNAVAILABLE,
+    SESSION_ENDED,
+    TURN_NOT_IN_SESSION,
+    TURN_REQUIRED,
     UNKNOWN_PERSONA,
 )
 from ..security import InputValidator, require_rate_limit
@@ -53,7 +58,7 @@ def _optional_text(data: dict, field: str, limit: int):
     if value in (None, ""):
         return None, None
     if not isinstance(value, str) or len(value.strip()) > limit:
-        return None, (jsonify({"error": f"{field} must be text up to {limit} characters"}), 400)
+        return None, (jsonify({"error": OPTIONAL_TEXT_INVALID.format(field=field, limit=limit)}), 400)
     return value.strip() or None, None
 
 
@@ -138,7 +143,7 @@ def chat():
         return err
 
     if ps.state.has_committed or ps.state.has_walked:
-        return jsonify({"error": "Session has ended. Get evaluation or reset."}), 400
+        return jsonify({"error": SESSION_ENDED}), 400
 
     show_hints = data.get("show_hints", False)
 
@@ -248,7 +253,7 @@ def quiz_question():
 
     question = build_sell_question(ps.review()["turns"])
     if question is None:
-        return jsonify({"error": "Say a few things to the buyer first - the quiz uses your own turns.", "code": "NO_TURNS"}), 400
+        return jsonify({"error": NO_TURNS_YET, "code": "NO_TURNS"}), 400
     return jsonify({"success": True, **question})
 
 
@@ -265,7 +270,7 @@ def quiz_answer():
     turn_index = InputValidator.parse_positive_int(data.get("turn"))
     turns = ps.review()["turns"]
     if turn_index is None or turn_index > len(turns):
-        return jsonify({"error": "That turn is not part of this session.", "code": "INVALID_TURN"}), 400
+        return jsonify({"error": TURN_NOT_IN_SESSION, "code": "INVALID_TURN"}), 400
 
     answer, err = validate_message(data.get("answer", ""))
     if err:
@@ -308,7 +313,7 @@ def redo():
     data = request.json or {}
     turn_index = InputValidator.parse_positive_int(data.get("turn"))
     if turn_index is None:
-        return jsonify({"error": "A turn number is required.", "code": "INVALID_TURN"}), 400
+        return jsonify({"error": TURN_REQUIRED, "code": "INVALID_TURN"}), 400
 
     user_message, err = validate_message(data.get("message", ""))
     if err:
@@ -317,7 +322,7 @@ def redo():
     try:
         response = ps.redo(turn_index, user_message)
         if response is None:
-            return jsonify({"error": "That turn is not part of this session.", "code": "INVALID_TURN"}), 400
+            return jsonify({"error": TURN_NOT_IN_SESSION, "code": "INVALID_TURN"}), 400
         return jsonify(
             {
                 "success": True,

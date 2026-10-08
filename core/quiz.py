@@ -12,6 +12,7 @@ from .utils import (
     clamp_score,
     contains_nonnegated_keyword,
     merge_unique_items,
+    range_label,
     tokenize,
 )
 
@@ -77,24 +78,21 @@ def _detect_concept_coverage(answer: str, concepts: list[str]) -> tuple[list[str
     return matched_concepts, unmatched_concepts
 
 
+def _scoring() -> dict:
+    """The points and score bands from quiz_config.yaml."""
+    return _load_quiz_config()["scoring"]
+
+
 def _alignment_from_score(score: int) -> str:
     """Map a numeric score to a coarse alignment label."""
-    if score >= 75:
-        return "strong"
-    if score >= 45:
-        return "partial"
-    return "weak"
+    return range_label(score, _scoring()["alignment_bands"], ["weak", "partial", "strong"])
 
 
 def _understanding_from_score(score: int) -> str:
     """Map a numeric score to a coarse understanding label."""
-    if score >= 85:
-        return "excellent"
-    if score >= 70:
-        return "good"
-    if score >= 45:
-        return "partial"
-    return "needs_work"
+    return range_label(
+        score, _scoring()["understanding_bands"], ["needs_work", "partial", "good", "excellent"]
+    )
 
 
 def _build_coach_tip(missed_concepts: list[str], mode: str) -> str:
@@ -119,16 +117,22 @@ def _deterministic_open_ended_assessment(
 
     words = tokenize(text)
     word_count = len(words)
-    length_score = 15 if word_count >= 10 else 8 if word_count >= 6 else 2
+    points = _scoring()
+    length = points["length_points"]
+    length_score = (
+        length["full"] if word_count >= length["full_words"]
+        else length["part"] if word_count >= length["part_words"]
+        else length["short"]
+    )
 
     matched_concepts, unmatched_concepts = _detect_concept_coverage(text, concepts)
     coverage = len(matched_concepts) / len(concepts) if concepts else 0.0
-    base_score = 45 * coverage
+    base_score = points["coverage_points"]["next_move"] * coverage
 
     strengths: list[str] = []
     improvements: list[str] = []
 
-    if coverage >= 0.5:
+    if coverage >= points["coverage_good"]:
         strengths.append("Response referenced key stage concepts.")
     elif unmatched_concepts:
         improvements.append(f"Include this missing concept: {unmatched_concepts[0]}.")
@@ -160,14 +164,19 @@ def _deterministic_open_ended_assessment(
             }
             overlap = customer_tokens.intersection(set(words))
             if overlap:
-                context_score = 8
+                context_score = points["next_move_points"]["context"]
                 strengths.append("Response connected to the customer's stated context.")
             else:
                 improvements.append(
                     "Reference one concrete detail from the customer's last message."
                 )
 
-        move_score = 15 if has_open_question else 8 if has_action_signal else 2
+        move = points["next_move_points"]
+        move_score = (
+            move["open_question"] if has_open_question
+            else move["action"] if has_action_signal
+            else move["neither"]
+        )
         if has_open_question:
             strengths.append("Used an open question to keep discovery moving.")
         else:
@@ -175,12 +184,11 @@ def _deterministic_open_ended_assessment(
 
         score = clamp_score(round(base_score + length_score + move_score + context_score))
 
-        if score >= 75:
-            feedback = "Strong next move for this stage."
-        elif score >= 45:
-            feedback = "Partly aligned, but tighten stage focus."
-        else:
-            feedback = "This next move is too generic for the current stage."
+        feedback = range_label(score, points["alignment_bands"], [
+            "This next move is too generic for the current stage.",
+            "Partly aligned, but tighten stage focus.",
+            "Strong next move for this stage.",
+        ])
 
         return {
             "score": score,
@@ -201,8 +209,9 @@ def _deterministic_open_ended_assessment(
         ["first", "next", "then", "after that", "from there"],
     )
 
-    reasoning_score = 12 if has_reasoning else 4
-    plan_score = 13 if has_plan else 4
+    direction = points["direction_points"]
+    reasoning_score = direction["reasoning"] if has_reasoning else direction["missing"]
+    plan_score = direction["plan"] if has_plan else direction["missing"]
 
     if has_reasoning:
         strengths.append("Explained why this direction fits.")
@@ -214,14 +223,13 @@ def _deterministic_open_ended_assessment(
     else:
         improvements.append("Name a clear order for your next steps.")
 
-    score = clamp_score(round(50 * coverage + length_score + reasoning_score + plan_score))
+    score = clamp_score(round(points["coverage_points"]["direction"] * coverage + length_score + reasoning_score + plan_score))
 
-    if score >= 75:
-        feedback = "Strong strategic direction for this stage."
-    elif score >= 45:
-        feedback = "Direction is partly clear, but needs stronger stage linkage."
-    else:
-        feedback = "Direction is unclear and misses stage priorities."
+    feedback = range_label(score, points["alignment_bands"], [
+        "Direction is unclear and misses stage priorities.",
+        "Direction is partly clear, but needs stronger stage linkage.",
+        "Strong strategic direction for this stage.",
+    ])
 
     return {
             "score": score,
@@ -352,7 +360,7 @@ def test_quiz_stage_answer(user_answer: str, current_stage: str, flow_type: str)
     if correct:
         score = 1
     elif stage_ok or strategy_ok:
-        score = 0.5
+        score = _scoring()["stage_partial_credit"]
     else:
         score = 0
 
@@ -426,7 +434,7 @@ Goal: {rubric["goal"]} | Concepts: {concepts}
 <trainee>{user_response}</trainee>
 JSON: {{"score": <0-100>, "alignment": "strong|partial|weak", "feedback": "<brief>", "strengths": ["..."], "improvements": ["..."]}}"""
     llm_result = _score_with_llm(router, prompt, {
-        "score": 50,
+        "score": _scoring()["llm_fallback_score"],
         "alignment": "partial",
         "feedback": "Unable to evaluate.",
         "strengths": [],
@@ -453,7 +461,7 @@ Goal: {rubric["goal"]} | Advance: {rubric["advance_when"]} | Concepts: {concepts
 <trainee>{user_explanation}</trainee>
 JSON: {{"score": <0-100>, "understanding": "excellent|good|partial|needs_work", "feedback": "<brief>", "key_concepts_got": ["..."], "key_concepts_missed": ["..."]}}"""
     llm_result = _score_with_llm(router, prompt, {
-        "score": 50,
+        "score": _scoring()["llm_fallback_score"],
         "understanding": "partial",
         "feedback": "Unable to evaluate.",
         "key_concepts_got": [],

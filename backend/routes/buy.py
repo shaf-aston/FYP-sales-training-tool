@@ -11,8 +11,22 @@ from flask import Blueprint, current_app, jsonify, request
 from core.constants import MAX_MESSAGE_LENGTH, MAX_SESSIONS
 from core.quiz import get_quiz_question
 from core.seller_bot import SellerBot
+from core.trainer import COACH_STYLES
 
-from ..messages import BOT_INIT_FAILED, GENERIC_ERROR, SERVER_FULL
+from ..messages import (
+    BOT_INIT_FAILED,
+    COACH_FAILED,
+    EDIT_FAILED,
+    FIELD_REQUIRED,
+    GENERIC_ERROR,
+    INVALID_INDEX,
+    LABEL_TOO_LONG,
+    MISSING_INDEX,
+    QUESTION_REQUIRED,
+    QUESTION_TOO_LONG,
+    REWIND_FAILED,
+    SERVER_FULL,
+)
 from ..security import InputValidator, require_rate_limit
 from ._utils import (
     bot_state,
@@ -182,17 +196,17 @@ def edit():
 
     # Validate inputs
     if message_index is None:
-        return jsonify({"error": "Missing message index"}), 400
+        return jsonify({"error": MISSING_INDEX}), 400
 
     try:
         message_index = int(message_index)
     except (TypeError, ValueError):
-        return jsonify({"error": "Invalid index format"}), 400
+        return jsonify({"error": INVALID_INDEX}), 400
 
     try:
         response = session_bot.edit_turn(message_index, new_message)
         if response is None:
-            return jsonify({"error": "Rewind failed"}), 500
+            return jsonify({"error": REWIND_FAILED}), 500
         training = session_bot.generate_training(new_message, response.content)
 
         return jsonify(
@@ -214,7 +228,7 @@ def edit():
         return jsonify({"error": str(e)}), 400
     except Exception as e:
         current_app.logger.exception(f"Edit error: {e}")
-        return jsonify({"error": "Couldn't apply that edit -- try again in a sec"}), 500
+        return jsonify({"error": EDIT_FAILED}), 500
 
 
 @bp.route("/coach", methods=["POST"])
@@ -228,19 +242,19 @@ def coach():
     data = request.json or {}
     question = (data.get("question") or "").strip()
     style = (data.get("style") or "tactical").strip().lower()
-    if style not in ("tactical", "socratic", "teacher"):
+    if style not in COACH_STYLES:
         style = "tactical"
     if not question:
-        return jsonify({"error": "Question required"}), 400
+        return jsonify({"error": QUESTION_REQUIRED}), 400
     if len(question) > MAX_MESSAGE_LENGTH:
-        return jsonify({"error": "Question too long"}), 400
+        return jsonify({"error": QUESTION_TOO_LONG}), 400
 
     try:
         result = session_bot.answer_training_question(question, style=style)
         return jsonify({"success": True, **result})
     except Exception as e:
         current_app.logger.exception(f"Training Q&A error: {e}")
-        return jsonify({"error": "Failed to generate answer"}), 500
+        return jsonify({"error": COACH_FAILED}), 500
 
 
 # --- quiz: where is the AI seller in its script, and what should it do next ---
@@ -271,9 +285,9 @@ def _required_text(field: str, label: str):
     """A stripped required text field from the JSON body, or an error response."""
     value = ((request.json or {}).get(field) or "").strip()
     if not value:
-        return None, (jsonify({"error": f"{label} required"}), 400)
+        return None, (jsonify({"error": FIELD_REQUIRED.format(label=label)}), 400)
     if len(value) > MAX_MESSAGE_LENGTH:
-        return None, (jsonify({"error": f"{label} too long"}), 400)
+        return None, (jsonify({"error": LABEL_TOO_LONG.format(label=label)}), 400)
     return value, None
 
 

@@ -1,4 +1,4 @@
-# Every tunable number in the app, plus the defaults for env-var settings.
+# Every tunable number in the app, the defaults for env-var settings, and the response headers.
 # core/constants.py is the only reader. All numbers must be > 0; the app refuses to start otherwise.
 
 defaults:            # used when the matching env var is unset (.env overrides)
@@ -8,6 +8,10 @@ defaults:            # used when the matching env var is unset (.env overrides)
   # every reply). Check `client.models.list()` against the live key when replies go blank;
   # override with GROQ_LLM_MODEL.
   groq_model: "qwen/qwen3.8-27b"                                                        # GROQ_LLM_MODEL
+  trust_proxy_headers: false                                                            # TRUST_PROXY_HEADERS: believe X-Forwarded-For (only behind a proxy you control)
+
+server:
+  port: 5000            # `python backend/app.py`; gunicorn takes its own
 
 sessions:
   seller_max: 200
@@ -21,6 +25,10 @@ input:
   max_field_length: 5000
   max_chosen_objection_chars: 200   # learner-typed objection to practise
   max_persona_name_chars: 40
+  max_feedback_comment_chars: 500   # longer feedback comments are cut
+  max_turn_number: 1000             # largest turn number the sell routes accept
+  session_id_min_chars: 8
+  session_id_max_chars: 128
 
 rate_limits:         # [max_requests, window_seconds]
   init: [10, 60]
@@ -35,6 +43,9 @@ llm:                 # one profile per kind of call; pass as **LLM["name"]
   quiz:           {temperature: 0.3, max_tokens: 300}
   coach_answer:   {temperature: 0.4, max_tokens: 150}
 
+coach:
+  history_turns: 8        # latest turns of the call the coach is shown
+
 buyer:
   sold_readiness: 0.85    # this keen, this many turns in, says yes
   sold_min_turns: 3
@@ -44,3 +55,27 @@ buyer:
 grades:
   thresholds: [60, 70, 80, 90]
   labels: [F, D, C, B, A]
+
+security:
+  headers:             # on every response
+    X-Frame-Options: "DENY"
+    X-Content-Type-Options: "nosniff"
+    Referrer-Policy: "strict-origin-when-cross-origin"
+    X-XSS-Protection: "1; mode=block"
+    Cross-Origin-Opener-Policy: "same-origin"
+    Cross-Origin-Resource-Policy: "same-origin"
+    Permissions-Policy: "camera=(), microphone=(self), geolocation=()"
+  api_headers:         # on /api/* responses only: answers are per-learner, never cached
+    Cache-Control: "no-store, max-age=0"
+    Pragma: "no-cache"
+  csp:                 # Content-Security-Policy: directive -> allowed sources
+    default-src: ["'self'"]
+    script-src: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://js.puter.com"]
+    style-src: ["'self'", "'unsafe-inline'"]
+    img-src: ["'self'", "data:", "blob:"]
+    media-src: ["'self'", "data:", "blob:", "https://puter.com", "https://*.puter.com"]
+    connect-src: ["'self'", "https://js.puter.com", "https://puter.com", "https://*.puter.com"]
+    font-src: ["'self'", "data:"]
+    frame-ancestors: ["'none'"]
+    base-uri: ["'self'"]
+    form-action: ["'self'"]

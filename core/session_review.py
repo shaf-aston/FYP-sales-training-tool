@@ -54,7 +54,7 @@ def build_review(
     and `summary`. Every turn carries the reasons behind its rating, so no number
     is ever shown without the evidence for it.
     """
-    readiness = behaviour.get("initial_readiness", 0.5)
+    readiness = behaviour["initial_readiness"]
     previous_buyer_line = _opening_buyer_line(conversation_history)
     turns, curve = [], [round(readiness, 3)]
 
@@ -128,7 +128,7 @@ def summarise(turns: list[dict], pivotal: list[int] | None = None) -> dict:
                 "went_well": False, "work_on": ""}
     ratings = [t["rating"] for t in turns]
     average = round(sum(ratings) / len(ratings), 2)
-    bar = load_selling_signals().get("thresholds", {}).get("praise_min_average", 3.5)
+    bar = load_selling_signals()["thresholds"]["praise_min_average"]
     return {
         "turn_count": len(turns),
         "average_rating": average,

@@ -2,7 +2,7 @@
 
 import logging
 
-from .constants import LLM
+from .constants import COACH_HISTORY_TURNS, LLM
 from .quiz import get_stage_rubric
 
 logger = logging.getLogger(__name__)
@@ -23,7 +23,7 @@ def answer_training_question(router, flow_engine, question, style: str = "tactic
     history = getattr(flow_engine, "conversation_history", []) or []
     speaker = {"user": "PROSPECT", "assistant": "SELLER"}
     recent = "\n".join(
-        f"{speaker.get(message.get('role'), '?')}: {message.get('content', '')}" for message in history[-8:]
+        f"{speaker.get(message.get('role'), '?')}: {message.get('content', '')}" for message in history[-COACH_HISTORY_TURNS:]
     )
 
     if style not in COACH_STYLES:

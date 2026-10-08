@@ -48,9 +48,9 @@ One seller turn (`script_engine/seller.py` `ScriptSeller.reply`; the moves are p
 
 ## Config
 
-Every tunable number lives in `config/limits.yaml`; `core/constants.py` is its only reader and refuses zero or negative values at start-up. LLM calls take a named profile from it (`**LLM["buyer_reply"]`), never literal numbers.
+Every tunable number lives in `config/limits.yaml` (also the security headers and env-var defaults); `core/constants.py` is its only reader and refuses zero or negative values at start-up. LLM calls take a named profile from it (`**LLM["buyer_reply"]`), never literal numbers. Error text for the API lives in `backend/messages.py`.
 
-`core/loader.py` reads `product_config`, `sell_config` (the AI buyer's personas, difficulty profiles and prompt, and sell-mode scoring). The module that owns a feature reads its own file: `script_engine/` → `selling`, `methods/`, `offers/`, `script/`, `response_guardrails.py` → `guardrails`, `quiz.py` → `quiz_config`, `script_drills.py` → `script_drills`, `selling_quality.py` → `selling_signals`, `knowledge.py` → `knowledge_sanitization`.
+`core/loader.py` reads `product_config`, `sell_config` (the AI buyer's personas, difficulty profiles and prompt, and the `evaluation:` weights and word bands that `sell_evaluator.py` scores with). The module that owns a feature reads its own file: `script_engine/` → `selling`, `methods/`, `offers/`, `script/`, `response_guardrails.py` → `guardrails`, `quiz.py` → `quiz_config` (stages and `scoring:` points), `script_drills.py` → `script_drills`, `selling_quality.py` → `selling_signals`, `knowledge.py` → `knowledge_sanitization`.
 
 Questions: `core/utils.py` `is_question` is the one rule for both modes (word lists from config). Analytics: every event goes through `SessionAnalytics.record`.
 
@@ -70,6 +70,5 @@ Environment: `core/env.py` is the only module that touches the environment (and 
 | **turn** | One salesperson line plus the buyer's reply. 1-indexed in the API. | `core/buyer_session.py` |
 | **session** | One practice run, keyed by `session_id`, holding one engine instance. | `backend/routes/_utils.py` |
 | **review** / **evaluation** | Review = per-turn replay with reasons. Evaluation = final score and grade. | `core/session_review.py`, `core/sell_evaluator.py` |
-| **drill** / **quiz** | Practice exercises built from your own turns. | `core/script_drills.py`, `core/quiz.py` |
 
 Role names: modes are named for the learner (**sell mode**: the learner sells; **buy mode**: the learner buys), engines for the AI (`BuyerSession` is the AI buyer, `SellerBot` the AI seller). In sell mode the human is the **salesperson** and the AI the **buyer**; in buy mode the human is the **customer** and the AI the **seller**. "Prospect" in script content means the person being sold to, never a mode.

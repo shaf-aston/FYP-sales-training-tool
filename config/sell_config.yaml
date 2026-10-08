@@ -363,6 +363,23 @@ evaluation:
     objection_cues: [worried, concern, too expensive, not sure, think about, partner, team, budget, price, cost, skeptic, doubt]
     objection_response: [understand, fair, makes sense, "let's break", option, proof, case, step, plan]
     solution: [fit, recommend, option, plan, solution, based on, you said, so you can]
+  # How the rule-based score is built. Each criterion is: base + weights x ratios (all 0-1).
+  # "good" is the ratio at which that criterion's praise line replaces its advice line.
+  scoring:
+    empty_score: 40          # no salesperson turns at all
+    neutral_score: 60        # a custom criterion with no rule of its own
+    strong_score: 70         # at or above this a criterion counts as a strength
+    summary_bands: [65, 80]  # overall below the first = "foundational", at or above the second = "solid"
+    length_fit:              # average words per salesperson turn -> fit (first band that matches wins)
+      bands:
+        - {min_words: 8, max_words: 35, fit: 1.0}
+        - {min_words: 5, max_words: 45, fit: 0.7}
+      other: 0.4
+    needs_discovery: {base: 35, question_weight: 35, open_weight: 30, good: 0.5}
+    rapport_building: {base: 45, rapport_weight: 55, good: 0.4}
+    objection_handling: {no_objection_score: 60, base: 35, response_weight: 65}
+    solution_presentation: {base: 40, solution_weight: 60, good: 0.35}
+    conversation_flow: {base: 40, length_weight: 35, balance_weight: 25, good_length_fit: 0.7, good_balance: 0.6}
   criteria:
     needs_discovery:
       weight: 0.25

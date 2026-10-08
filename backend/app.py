@@ -18,6 +18,7 @@ from core.constants import (  # noqa: E402
     CLEANUP_INTERVAL_SECONDS,
     DEFAULT_ALLOWED_ORIGINS,
     MAX_BUYER_SESSIONS,
+    SERVER_PORT,
 )
 from core.env import env_flag, env_str  # noqa: E402
 from core.script_engine.seller import shared_embedder  # noqa: E402
@@ -135,4 +136,4 @@ def handle_unexpected_error(e):
 
 
 if __name__ == "__main__":
-    app.run(debug=env_flag("FLASK_DEBUG"), port=5000)
+    app.run(debug=env_flag("FLASK_DEBUG"), port=SERVER_PORT)

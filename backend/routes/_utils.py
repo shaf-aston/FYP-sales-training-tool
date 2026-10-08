@@ -10,7 +10,7 @@ from flask import current_app, jsonify, request
 
 from core.constants import MAX_MESSAGE_LENGTH
 
-from ..messages import MESSAGE_REQUIRED, SESSION_NOT_FOUND
+from ..messages import MESSAGE_REQUIRED, SESSION_NOT_FOUND, UNSUPPORTED_PROVIDER
 from ..security import InputValidator
 
 
@@ -87,7 +87,7 @@ def validate_provider(data):
         return None, (
             jsonify(
                 {
-                    "error": "Unsupported provider",
+                    "error": UNSUPPORTED_PROVIDER,
                     "code": "UNSUPPORTED_PROVIDER",
                     "supported_providers": supported,
                 }
