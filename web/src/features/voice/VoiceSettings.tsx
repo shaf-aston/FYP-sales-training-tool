@@ -1,6 +1,6 @@
 "use client";
 
-// Settings tab: auto-send after a pause, and how fast the coach talks.
+// Settings tab: auto-send after a pause, and how fast replies are read aloud.
 
 import { useId } from "react";
 import { Switch } from "@/components/ui";
@@ -20,13 +20,11 @@ export function VoiceSettings() {
       <Switch
         label="Auto-send after you pause speaking"
         checked={autoSend}
-        onChange={(on) => {
-          setAutoSend(on);
-        }}
+        onChange={setAutoSend}
       />
       <div className={s.speed}>
         <label htmlFor={id} className={s.label}>
-          Coach voice speed
+          Reply voice speed
         </label>
         <input
           id={id}

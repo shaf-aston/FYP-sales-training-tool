@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
-import { api, ApiError } from "@/lib/api/client";
+import { api, errorText } from "@/lib/api/client";
 import { useSession } from "@/features/session/SessionContext";
 import { useUi } from "@/state/UiContext";
 import { evalStore, useEvalState } from "./evalStore";
@@ -19,10 +19,10 @@ export function useEvaluation() {
     evalStore.begin(sid);
     if (display === "modal") openDialog("evaluation");
     try {
-      evalStore.succeed(sid, await api.evaluate(sid));
+      evalStore.succeed(sid, await api.sellEvaluate(sid));
     } catch (err) {
-      if (err instanceof ApiError && handleExpired(err)) return;
-      evalStore.fail(sid, err instanceof ApiError ? err.message : "Something went wrong while scoring.");
+      if (handleExpired(err)) return;
+      evalStore.fail(sid, errorText(err, "Something went wrong while scoring."));
     }
   }, [sid, display, openDialog, handleExpired]);
 

@@ -11,7 +11,7 @@ const PATHS = {
   speech: "M4 5h16v11H9l-5 4z",
 } as const;
 
-export type IconName = keyof typeof PATHS;
+type IconName = keyof typeof PATHS;
 
 export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
   return (

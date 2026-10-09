@@ -2,11 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useConfirm, useToast } from "@/components/ui";
-import { api } from "@/lib/api/client";
+import { api, errorText } from "@/lib/api/client";
 import type { KnowledgeField } from "@/lib/api/types";
 import { briefText, emptyValues, fromData, shortSections, toPayload, type Values } from "./fields";
 
-const reason = (e: unknown) => (e instanceof Error && e.message ? e.message : "Please try again.");
 
 /** Loads, edits, saves and clears the product knowledge. */
 export function useKnowledge() {
@@ -24,7 +23,7 @@ export function useKnowledge() {
       const res = await api.knowledge();
       setValues(fromData(res.data ?? {}));
     } catch (e) {
-      setLoadError(`Could not load your saved details. ${reason(e)}`);
+      setLoadError(`Could not load your saved details. ${errorText(e, "Please try again.")}`);
     } finally {
       setLoading(false);
     }
@@ -60,7 +59,7 @@ export function useKnowledge() {
       await api.saveKnowledge(payload);
       toast("Saved. Reset the chat session to use it.", "success");
     } catch (e) {
-      toast(`Could not save. ${reason(e)}`, "error");
+      toast(`Could not save. ${errorText(e, "Please try again.")}`, "error");
     } finally {
       setBusy(null);
     }
@@ -80,7 +79,7 @@ export function useKnowledge() {
       setValues(emptyValues());
       toast("Cleared", "success");
     } catch (e) {
-      toast(`Could not clear. ${reason(e)}`, "error");
+      toast(`Could not clear. ${errorText(e, "Please try again.")}`, "error");
     } finally {
       setBusy(null);
     }

@@ -1,12 +1,12 @@
 "use client";
 
 // The one store for the conversation: which mode we're in, the messages, the
-// buy-mode session (stage, strategy, coaching) and the sell-mode session.
+// buy-mode session (stage, coaching) and the sell-mode session.
 // Features read it with useSession(). Pure history helpers live in ./history.ts.
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { api, ApiError } from "@/lib/api/client";
-import type { BotState, BuyerPick, BuyerState, ChatMsg, Difficulty, Outcome, Persona, Training } from "@/lib/api/types";
+import { api, ApiError, errorText } from "@/lib/api/client";
+import type { BotState, BuyerPick, BuyerState, ChatMsg, CoachNotes, Difficulty, Outcome, Persona } from "@/lib/api/types";
 import { config, storageKeys } from "@/lib/config";
 import { readString, writeString } from "@/lib/storage";
 import { useStoredState } from "@/lib/useStoredState";
@@ -30,8 +30,6 @@ export interface SellSession {
   productType: string;
   /** What the learner picked in setup, so "play again" keeps the same buyer and objection. */
   pick: BuyerPick;
-  maxTurns: number | null;
-  scoringEnabled: boolean;
   ended: boolean;
   outcome: Outcome;
   hint: string;
@@ -45,12 +43,12 @@ interface SendResult {
 
 interface SessionValue {
   mode: Mode;
-  ready: boolean;
-  /** Buy-mode session id. */
-  sessionId: string | null;
+  /** Sell mode keeps its own id in sellSession. */
+  buySessionId: string | null;
+  /** Buy-mode script stage; the sidebar stage card shows it. */
   stage: string;
-  strategy: string;
-  training: Training | null;
+  /** Buy-mode coach notes for the latest turn (wire key "training"). */
+  coachNotes: CoachNotes | null;
   messages: ChatMessage[];
   typing: boolean;
   /** The AI buyer in sell mode; null until the learner sets one up. */
@@ -70,6 +68,9 @@ interface SessionValue {
 
 const SessionContext = createContext<SessionValue | null>(null);
 
+/** Every buy-mode script starts here (first stage in core/enums.py Stage). */
+const FIRST_STAGE = "intent";
+
 const debugOn = () => {
   if (typeof window === "undefined") return false;
   return new URLSearchParams(location.search).get("debug") === "1" || readString(storageKeys.debug) === "1";
@@ -80,11 +81,9 @@ const metaLine = (latency: number | null | undefined, provider?: string) =>
 
 export function SessionProvider({ children, mode }: { children: ReactNode; mode: Mode }) {
   const toast = useToast();
-  // Sell mode has nothing to load before setup, so it is ready at once.
-  const [ready, setReady] = useState(mode === "sell");
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [bot, setBot] = useState<BotState>({ stage: "intent", strategy: "-" as BotState["strategy"] });
-  const [training, setTraining] = useState<Training | null>(null);
+  const [buySessionId, setBuySessionId] = useState<string | null>(null);
+  const [stage, setStage] = useState(FIRST_STAGE);
+  const [coachNotes, setCoachNotes] = useState<CoachNotes | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [typing, setTyping] = useState(false);
   const [sellSession, setSellSession] = useState<SellSession | null>(null);
@@ -100,11 +99,11 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
   const epoch = useRef(0);
   const started = useRef(false);
 
-  const adopt = useCallback((res: { session_id: string; message: string | null; history: ChatMsg[]; training?: Training } & BotState) => {
-    setSessionId(res.session_id);
-    writeString(storageKeys.sessionId, res.session_id);
-    setBot({ stage: res.stage, strategy: res.strategy });
-    setTraining(res.training ?? null);
+  const adopt = useCallback((res: { session_id: string; message: string | null; history: ChatMsg[]; training?: CoachNotes } & BotState) => {
+    setBuySessionId(res.session_id);
+    writeString(storageKeys.buySessionId, res.session_id);
+    setStage(res.stage);
+    setCoachNotes(res.training ?? null);
     const history = res.history?.length ? res.history : res.message ? [{ role: "assistant" as const, content: res.message }] : [];
     setMessages(fromHistory(history, config.historyCap));
   }, []);
@@ -112,22 +111,21 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
   /** Start or restore a buy-mode session. Retries once without the saved id. */
   const initBuy = useCallback(
     async (useSaved = true) => {
-      const saved = useSaved ? readString(storageKeys.sessionId) : null;
-      // Try the saved session first; if the server refuses it, start a fresh one.
+      const saved = useSaved ? readString(storageKeys.buySessionId) : null;
       for (const id of saved ? [saved, null] : [null]) {
         try {
           adopt(await api.buyInit(id));
           break;
         } catch (err) {
-          // Only a refused id is thrown away; a network blip keeps it for the next try.
+          // 400 = the server refused the saved id (expired or unknown): drop it and start fresh.
+          // A network blip keeps it for the next try.
           if (id && err instanceof ApiError && err.status === 400) {
-            writeString(storageKeys.sessionId, null);
+            writeString(storageKeys.buySessionId, null);
             continue;
           }
-          toast(err instanceof ApiError ? err.message : "Connection error. Refresh the page.", "error");
+          toast(errorText(err, "Connection error. Refresh the page."), "error");
         }
       }
-      setReady(true);
     },
     [adopt, toast],
   );
@@ -137,7 +135,6 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
     if (mode !== "buy") return;
     if (started.current) return; // StrictMode mounts twice in dev; connect once.
     started.current = true;
-    // Mount-time connect to the server; state is set after the request resolves.
     initBuy();
   }, [initBuy, mode]);
 
@@ -152,7 +149,7 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
         recovering.current = false;
       } else {
         toast("Session expired. Reconnecting…", "info");
-        writeString(storageKeys.sessionId, null);
+        writeString(storageKeys.buySessionId, null);
         initBuy(false).finally(() => (recovering.current = false));
       }
       return true;
@@ -184,21 +181,22 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
             p && { ...p, state: res.state, ended: res.ended, outcome: res.outcome, hint: res.coaching?.hint ?? p.hint },
           );
         } else {
-          if (!sessionId) throw new ApiError("No active session", 400, "SESSION_EXPIRED");
-          const res = await api.buyChat(sessionId, message);
+          // No session yet (connect failed): reuse the expired path so handleExpired reconnects.
+          if (!buySessionId) throw new ApiError("No active session", 400, "SESSION_EXPIRED");
+          const res = await api.buyChat(buySessionId, message);
           if (epoch.current !== my) return { ok: true };
           setMessages((m) => [...m, { id: newId(), role: "assistant", content: res.message, historyIndex: before + 1, meta: metaLine(res.latency_ms, res.provider) }]);
-          setBot({ stage: res.stage, strategy: res.strategy });
-          setTraining(res.training);
+          setStage(res.stage);
+          setCoachNotes(res.training);
         }
         return { ok: true };
       } catch (err) {
         if (epoch.current !== my) return { ok: false };
         if (handleExpired(err)) return { ok: false, restore: message };
         // The server may have accepted the message before failing; check before rolling back.
-        if (mode === "buy" && sessionId) {
+        if (mode === "buy" && buySessionId) {
           try {
-            const server = await api.buyInit(sessionId);
+            const server = await api.buyInit(buySessionId);
             if (server.history.length > before + 1) {
               adopt(server);
               toast("Recovered the latest server state.", "info");
@@ -209,20 +207,20 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
           }
         }
         setMessages((m) => m.filter((x) => x.id !== optimisticId));
-        toast(err instanceof ApiError ? err.message : "Message failed. Try again.", "error");
+        toast(errorText(err, "Message failed. Try again."), "error");
         return { ok: false, restore: message };
       } finally {
         busy.current = false;
         setTyping(false);
       }
     },
-    [messages, mode, sellSession, sellSettings.showHints, sessionId, handleExpired, adopt, toast],
+    [messages, mode, sellSession, sellSettings.showHints, buySessionId, handleExpired, adopt, toast],
   );
 
   const edit = useCallback(
     async (historyIndex: number, text: string) => {
       const message = text.trim();
-      if (mode !== "buy" || !sessionId || !message || busy.current) return false;
+      if (mode !== "buy" || !buySessionId || !message || busy.current) return false;
       busy.current = true;
       const my = epoch.current;
       const affected = new Set(
@@ -232,27 +230,27 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
       grey(true);
       setTyping(true);
       try {
-        const res = await api.buyEdit(sessionId, historyIndex, message);
+        const res = await api.buyEdit(buySessionId, historyIndex, message);
         if (epoch.current !== my) return false;
         setMessages((m) => [
           ...m,
           { id: newId(), role: "divider", content: "Edited", historyIndex: -1 },
           ...fromHistory(res.history.slice(historyIndex), config.historyCap, historyIndex),
         ]);
-        setBot({ stage: res.stage, strategy: res.strategy });
-        setTraining(res.training);
+        setStage(res.stage);
+        setCoachNotes(res.training);
         return true;
       } catch (err) {
         if (handleExpired(err)) return false;
         grey(false);
-        toast(err instanceof ApiError ? `Edit failed: ${err.message}` : "Edit didn't go through. Try again.", "error");
+        toast(`Edit failed: ${errorText(err, "try again.")}`, "error");
         return false;
       } finally {
         busy.current = false;
         setTyping(false);
       }
     },
-    [mode, messages, sessionId, handleExpired, toast],
+    [mode, messages, buySessionId, handleExpired, toast],
   );
 
   const startBuyer = useCallback(
@@ -270,8 +268,6 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
           difficulty: res.difficulty,
           productType: res.product_type,
           pick,
-          maxTurns: res.max_turns,
-          scoringEnabled: res.scoring_enabled,
           ended: false,
           outcome: "active",
           hint: "",
@@ -279,7 +275,7 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
         setMessages([{ id: newId(), role: "assistant", content: res.message, historyIndex: 0, meta: metaLine(res.latency_ms, res.provider) }]);
         return true;
       } catch (err) {
-        toast(err instanceof ApiError ? err.message : "Couldn't start your buyer.", "error");
+        toast(errorText(err, "Couldn't start your buyer."), "error");
         return false;
       } finally {
         setTyping(false);
@@ -301,31 +297,29 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
       return;
     }
     try {
-      if (sessionId) await api.buyReset(sessionId);
+      if (buySessionId) await api.buyReset(buySessionId);
     } catch (err) {
       if (!handleExpired(err)) {
         toast("Reset didn't stick. Try one more time.", "error");
         return;
       }
     }
-    writeString(storageKeys.sessionId, null);
+    writeString(storageKeys.buySessionId, null);
     epoch.current++;
     setMessages([]);
-    setBot({ stage: "intent", strategy: "-" as BotState["strategy"] });
-    setTraining(null);
+    setStage(FIRST_STAGE);
+    setCoachNotes(null);
     setTyping(true);
     await initBuy(false);
     setTyping(false);
-  }, [mode, sellSession, sessionId, startBuyer, handleExpired, toast, initBuy]);
+  }, [mode, sellSession, buySessionId, startBuyer, handleExpired, toast, initBuy]);
 
   const value = useMemo<SessionValue>(
     () => ({
       mode,
-      ready,
-      sessionId,
-      stage: mode === "sell" ? "default" : bot.stage,
-      strategy: mode === "sell" ? "-" : bot.strategy,
-      training,
+      buySessionId,
+      stage,
+      coachNotes,
       messages,
       typing,
       sellSession,
@@ -338,7 +332,7 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
       endBuyer,
       handleExpired,
     }),
-    [mode, ready, sessionId, bot, training, messages, typing, sellSession, sellSettings, setSellSettings, send, edit, reset, startBuyer, endBuyer, handleExpired],
+    [mode, buySessionId, stage, coachNotes, messages, typing, sellSession, sellSettings, setSellSettings, send, edit, reset, startBuyer, endBuyer, handleExpired],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

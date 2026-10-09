@@ -17,7 +17,7 @@ const MODES = {
 } as const;
 
 export function ChatHeader() {
-  const { openDialog } = useUi();
+  const { openDialog, showPanels } = useUi();
   const { mode, reset, sellSession } = useSession();
   const words = MODE_META[mode];
   const confirm = useConfirm();
@@ -100,11 +100,7 @@ export function ChatHeader() {
           variant="pill"
           className={s.panels}
           aria-controls={config.ids.panels}
-          onClick={() => {
-            const el = document.getElementById(config.ids.panels);
-            el?.scrollIntoView({ behavior: "smooth", block: "start" });
-            el?.focus({ preventScroll: true });
-          }}
+          onClick={() => showPanels()}
         >
           Panels
         </Button>

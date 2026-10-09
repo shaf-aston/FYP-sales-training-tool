@@ -14,15 +14,15 @@ export class ApiError extends Error {
     super(message);
   }
 
-  /** The server forgot this session (restart or idle timeout). */
+  /** The server forgot this session (restart or idle timeout). The code comes from backend/routes/_utils.py;
+   *  TIMEOUT and NETWORK are made up here in the client. */
   get sessionExpired(): boolean {
     return this.code === "SESSION_EXPIRED";
   }
-
-  get timedOut(): boolean {
-    return this.code === "TIMEOUT";
-  }
 }
+
+/** The server's message for an API error, else the caller's fallback (never a raw JS error). */
+export const errorText = (err: unknown, fallback: string) => (err instanceof ApiError ? err.message : fallback);
 
 interface RequestOptions {
   method?: "GET" | "POST" | "DELETE";
@@ -62,6 +62,7 @@ async function request<R>(path: string, opts: RequestOptions = {}): Promise<R> {
   return data as R;
 }
 
+/** Each call is named mode + action, after its path: buyChat = /api/buy/chat, sellReview = /api/sell/review. */
 export function createHttpApi() {
   const chat = config.chatTimeoutMs;
   return {
@@ -71,17 +72,18 @@ export function createHttpApi() {
     buyEdit: (sid: string, index: number, message: string) =>
       request<T.EditRes>("/api/buy/edit", { body: { index, message }, sessionId: sid, timeoutMs: chat }),
     buyReset: (sid: string) => request<{ success: true }>("/api/buy/reset", { body: {}, sessionId: sid }),
-    askCoach: (sid: string, question: string, style: T.TrainingStyle) =>
+    buyCoach: (sid: string, question: string, style: T.CoachStyle) =>
       request<{ success: true; answer: string }>("/api/buy/coach", { body: { question, style }, sessionId: sid, timeoutMs: chat }),
     buyQuizQuestion: (sid: string, type: T.QuizType) => request<T.QuizQuestion>(`/api/buy/quiz/question?type=${type}`, { sessionId: sid }),
     buyQuizAnswer: (sid: string, type: T.QuizType, answer: string) => {
+      // Path and answer field per quiz type; must match the quiz routes in backend/routes/buy.py.
       const route = { stage: ["stage", "answer"], next_move: ["next-move", "response"], direction: ["direction", "explanation"] }[type];
       return request<T.QuizResult>(`/api/buy/quiz/${route[0]}`, { body: { [route[1]]: answer }, sessionId: sid, timeoutMs: chat });
     },
 
     // Sell mode: the learner is the salesperson, the AI buyer answers.
-    productGroups: () => request<{ success: true; groups: T.ProductGroups }>("/api/sell/product-groups"),
-    personas: (productType: string) =>
+    sellProductGroups: () => request<{ success: true; groups: T.ProductGroups }>("/api/sell/product-groups"),
+    sellPersonas: (productType: string) =>
       request<{ success: true; personas: T.Persona[] }>(`/api/sell/personas?product_type=${encodeURIComponent(productType)}`),
     sellInit: (difficulty: T.Difficulty, productType: string, pick: T.BuyerPick = {}) =>
       request<T.SellInitRes>("/api/sell/init", {
@@ -91,14 +93,14 @@ export function createHttpApi() {
     sellChat: (sid: string, message: string, showHints: boolean) =>
       request<T.SellChatRes>("/api/sell/chat", { body: { message, show_hints: showHints }, sessionId: sid, timeoutMs: chat }),
     sellReset: (sid: string) => request<{ success: true }>("/api/sell/reset", { body: {}, sessionId: sid }),
-    evaluate: (sid: string) => request<T.Evaluation>("/api/sell/evaluate", { body: {}, sessionId: sid, timeoutMs: chat }),
-    review: (sid: string) => request<T.Review>("/api/sell/review", { sessionId: sid, timeoutMs: chat }),
-    redo: (sid: string, turn: number, message: string) =>
+    sellEvaluate: (sid: string) => request<T.Evaluation>("/api/sell/evaluate", { body: {}, sessionId: sid, timeoutMs: chat }),
+    sellReview: (sid: string) => request<T.Review>("/api/sell/review", { sessionId: sid, timeoutMs: chat }),
+    sellRedo: (sid: string, turn: number, message: string) =>
       request<T.RedoRes>("/api/sell/redo", { body: { turn, message }, sessionId: sid, timeoutMs: chat }),
     sellQuizQuestion: (sid: string) => request<T.QuizQuestion>("/api/sell/quiz", { sessionId: sid }),
     sellQuizAnswer: (sid: string, turn: number, answer: string) =>
       request<T.QuizResult>("/api/sell/quiz", { body: { turn, answer }, sessionId: sid, timeoutMs: chat }),
-    drills: (sid: string | null) => request<{ success: true; drills: T.Drill[] }>("/api/sell/drills", { sessionId: sid }),
+    sellDrills: (sid: string | null) => request<{ success: true; drills: T.Drill[] }>("/api/sell/drills", { sessionId: sid }),
 
     // Shared
     feedback: (body: T.FeedbackReq) => request<{ success: true }>("/api/feedback", { body }),

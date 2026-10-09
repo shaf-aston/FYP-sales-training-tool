@@ -8,6 +8,9 @@ export const config = {
   chatTimeoutMs: 25_000,
   slowReplyMs: 5_000,
   toastMs: 4_000,
+  /** How long the feedback dialog shows "thanks" before closing. */
+  feedbackThanksMs: 1_500,
+  /** Character caps below mirror config/limits.yaml; the server enforces the same numbers. */
   maxMessageLength: 1_000,
   maxFeedbackLength: 500,
   historyCap: 100,
@@ -74,15 +77,14 @@ export const config = {
 } as const;
 
 /**
- * Every localStorage key in one place. The key STRINGS never change, even when the names
- * here do (e.g. sellSettings is still stored as "sellSettings"), so saved settings survive.
+ * Every localStorage key in one place. When a name here changes, keep the old STRING
+ * (e.g. coachStyle is stored as "trainingStyle") so learners keep their saved settings.
  */
 export const storageKeys = {
-  sessionId: "salesRoleplaySessionId",
+  buySessionId: "salesRoleplaySessionId",
   sidebarTab: "sidebarTab",
-  trainingPanelOpen: "trainingPanelOpen",
   sellSettings: "sellSettings",
-  trainingStyle: "trainingStyle",
+  coachStyle: "trainingStyle",
   ttsSpeed: "ttsPlaybackSpeed",
   autoSendDictation: "autoSendDictation",
   helpSeen: "helpSeen",

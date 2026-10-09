@@ -61,9 +61,9 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   const [speaking, setSpeaking] = useState(false);
 
   // Latest values for callbacks that outlive a render (recognizer and speech events).
-  const live = useRef({ draft, session, autoSend, speed, toast });
+  const live = useRef({ draft, autoSend, speed, toast });
   useEffect(() => {
-    live.current = { draft, session, autoSend, speed, toast };
+    live.current = { draft, autoSend, speed, toast };
   });
   const handsFreeNow = useRef(false); // set synchronously on toggle, before React re-renders
 
@@ -100,7 +100,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
 
   const onFinal = useCallback(
     (text: string) => {
-      if (tts.current?.busy) return; // echo guard: that is the coach talking, not the user
+      if (tts.current?.busy) return; // echo guard: that is the reply being read out, not the user
       const { draft: d } = live.current;
       setInterim("");
       d.append(parsePunctuation(text));
@@ -153,7 +153,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     startListening.current = begin;
   }, [begin]);
 
-  /** After the coach finishes (or is interrupted): bring the mic back, or give focus to the box. */
+  /** After a reply is read out (or interrupted): bring the mic back, or give focus to the box. */
   const resumeAfterSpeech = useCallback(() => {
     pausedForTts.current = false;
     if (handsFreeNow.current) begin();
@@ -164,7 +164,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     (text: string) => {
       const r = recognizer.current;
       if (r?.isRecording) {
-        pausedForTts.current = true; // mic off while the coach talks, so it can't hear itself
+        pausedForTts.current = true; // mic off while a reply is read out, so it can't hear itself
         r.stop();
       }
       tts.current ??= new Tts({
@@ -204,7 +204,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     restartAttempt.current = 0;
     clearTimers();
     live.current.toast(
-      on ? "Conversational Mode ON - speak, auto-send, auto-play response" : "Conversational Mode OFF - dictation only",
+      on ? "Hands-free on: speak, it sends, you hear the reply" : "Hands-free off: dictation only",
       "info",
     );
     if (on) begin();
@@ -215,7 +215,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     }
   }, [begin, clearTimers]);
 
-  // Hands-free: read each NEW coach message aloud (never the history already on screen).
+  // Hands-free: read each NEW AI reply aloud (never the history already on screen).
   const spokenId = useRef<string | undefined>(undefined);
   useEffect(() => {
     const last = [...session.messages].reverse().find((m) => m.role === "assistant" && !m.historical);

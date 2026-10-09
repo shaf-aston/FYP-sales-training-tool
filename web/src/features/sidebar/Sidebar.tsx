@@ -6,7 +6,7 @@ import { useSession } from "@/features/session/SessionContext";
 import { config } from "@/lib/config";
 import { useUi, type SidebarTab } from "@/state/UiContext";
 import { VoiceSettings } from "@/features/voice/VoiceSettings";
-import { StatusCard } from "./StatusCard";
+import { StageCard } from "./StageCard";
 import { ToolsGrid } from "./ToolsGrid";
 import s from "./Sidebar.module.css";
 
@@ -25,7 +25,7 @@ export function Sidebar() {
   return (
     <aside id={config.ids.panels} className={s.sidebar} aria-label="Session sidebar" tabIndex={-1}>
       {/* Sell mode names the buyer and their state in the Buyer tab, so the card would repeat it. */}
-      {!sell && <StatusCard />}
+      {!sell && <StageCard />}
       <Tabs label="Workspace" active={active} onChange={setSidebarTab} tabs={tabs} />
     </aside>
   );

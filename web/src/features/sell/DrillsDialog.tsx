@@ -72,7 +72,7 @@ function DrillsBody() {
   useEffect(() => {
     let live = true;
     api
-      .drills(sid)
+      .sellDrills(sid)
       .then(({ drills }) => {
         if (!live) return;
         const schedule = parseSchedule(readString(storageKeys.drillSchedule));
@@ -88,20 +88,10 @@ function DrillsBody() {
   if (load.status === "loading") return <Notice kind="loading">Loading your lines…</Notice>;
   if (load.status === "error")
     return (
-      <Notice
-        kind="error"
-        action={
-          <Button
-            variant="ghost"
-            onClick={() => {
+      <Notice kind="error" onRetry={() => {
               setLoad({ status: "loading" });
               setAttempt((n) => n + 1);
-            }}
-          >
-            Try again
-          </Button>
-        }
-      >
+            }}>
         The drills couldn&apos;t be loaded just now.
       </Notice>
     );

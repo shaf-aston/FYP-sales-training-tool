@@ -1,10 +1,10 @@
 // Holds the latest session evaluation so the panel, the dialogs and the review all read the same one.
-// A tiny external store (no provider needed: AppShell is shared and read-only).
+// A module-level store, so BuyerProfile, InlineEvaluation and the dialogs share one result without a provider.
 
 import { useSyncExternalStore } from "react";
 import type { Evaluation } from "@/lib/api/types";
 
-export interface EvalState {
+interface EvalState {
   /** The sell-mode session this evaluation belongs to. */
   sessionId: string | null;
   status: "idle" | "loading" | "ready" | "error";

@@ -3,10 +3,10 @@
 import { Card, Eyebrow } from "@/components/ui";
 import { stageMeta } from "@/lib/labels";
 import { useSession } from "@/features/session/SessionContext";
-import s from "./StatusCard.module.css";
+import s from "./StageCard.module.css";
 
 /** Buy mode: the stage the AI seller has reached. */
-export function StatusCard() {
+export function StageCard() {
   const { stage } = useSession();
   const label = stageMeta(stage).label;
 

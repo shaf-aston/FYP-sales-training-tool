@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { prefersReducedMotion } from "@/lib/motion";
 
 /** Tracks which section is in view and scrolls to one (instantly under reduced motion). */
 export function useScrollSpy(ids: string[], enabled: boolean) {
@@ -25,7 +26,7 @@ export function useScrollSpy(ids: string[], enabled: boolean) {
   }, [key, enabled]);
 
   const scrollTo = useCallback((id: string) => {
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reduce = prefersReducedMotion();
     document.getElementById(id)?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
     setActive(id);
   }, []);

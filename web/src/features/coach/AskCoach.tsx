@@ -2,24 +2,24 @@
 
 import { useState } from "react";
 import { Button, Markdown, Notice, Select, TextInput } from "@/components/ui";
-import { api } from "@/lib/api/client";
-import type { TrainingStyle } from "@/lib/api/types";
+import { api, errorText } from "@/lib/api/client";
+import type { CoachStyle } from "@/lib/api/types";
 import { storageKeys } from "@/lib/config";
 import { useStoredState } from "@/lib/useStoredState";
 import { useSession } from "@/features/session/SessionContext";
 import s from "./coach.module.css";
 
-const STYLES: { value: TrainingStyle; label: string }[] = [
+const STYLES: { value: CoachStyle; label: string }[] = [
   { value: "tactical", label: "Direct coaching style" },
   { value: "socratic", label: "Ask me back" },
   { value: "teacher", label: "Explain it clearly" },
 ];
 
-const parseStyle = (raw: string): TrainingStyle | undefined => STYLES.find((x) => x.value === raw)?.value;
+const parseStyle = (raw: string): CoachStyle | undefined => STYLES.find((x) => x.value === raw)?.value;
 
 export function AskCoach() {
-  const { sessionId, handleExpired } = useSession();
-  const [style, setStyle] = useStoredState<TrainingStyle>(storageKeys.trainingStyle, "tactical", parseStyle);
+  const { buySessionId, handleExpired } = useSession();
+  const [style, setStyle] = useStoredState<CoachStyle>(storageKeys.coachStyle, "tactical", parseStyle);
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const [error, setError] = useState("");
@@ -27,14 +27,14 @@ export function AskCoach() {
 
   const ask = async () => {
     const q = question.trim();
-    if (!q || !sessionId || busy) return;
+    if (!q || !buySessionId || busy) return;
     setBusy(true);
     setError("");
     try {
-      const res = await api.askCoach(sessionId, q, style);
+      const res = await api.buyCoach(buySessionId, q, style);
       setAnswer(res.answer);
     } catch (err) {
-      if (!handleExpired(err)) setError(err instanceof Error ? err.message : "The coach could not answer. Try again.");
+      if (!handleExpired(err)) setError(errorText(err, "The coach could not answer. Try again."));
     } finally {
       setBusy(false);
     }
@@ -48,7 +48,7 @@ export function AskCoach() {
         void ask();
       }}
     >
-      <Select label="Ask the coach" value={style} onChange={(e) => setStyle(e.target.value as TrainingStyle)}>
+      <Select label="Ask the coach" value={style} onChange={(e) => setStyle(e.target.value as CoachStyle)}>
         {STYLES.map((o) => (
           <option key={o.value} value={o.value}>
             {o.label}

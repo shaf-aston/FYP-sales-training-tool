@@ -8,6 +8,7 @@ import { ListenButton } from "@/features/voice/VoiceBar";
 import { InlineEvaluation } from "@/features/sell/SellDialogs";
 import { useUi } from "@/state/UiContext";
 import s from "./MessageList.module.css";
+import { prefersReducedMotion } from "@/lib/motion";
 
 function TypingBubble() {
   const [slow, setSlow] = useState(false);
@@ -69,7 +70,8 @@ interface ItemProps {
   m: ChatMessage;
   canEdit: boolean;
   editing: boolean;
-  onEdit: () => void;
+  /** Absent in sell mode, where turns can't be edited. */
+  onEdit?: () => void;
   onSave: (text: string) => Promise<void>;
   onCancel: () => void;
 }
@@ -100,8 +102,8 @@ function Item({ m, canEdit, editing, onEdit, onSave, onCancel }: ItemProps) {
       {!editing && !m.historical && (
         <div className={s.actions}>
           {!user && <ListenButton text={m.content} />}
-          {/* Always laid out, only hidden while a reply is coming, so the row never grows when it lands. */}
-          {user && (
+          {/* Buy mode only (no onEdit in sell). Always laid out, just hidden while a reply is coming, so the row never grows. */}
+          {user && onEdit && (
             <Button variant="ghost" onClick={onEdit} className={canEdit ? undefined : s.unavailable}>
               Edit
             </Button>
@@ -114,13 +116,8 @@ function Item({ m, canEdit, editing, onEdit, onSave, onCancel }: ItemProps) {
 
 /** Sell mode before a buyer exists: the setup lives in the sidebar's Buyer tab. */
 function SetupPointer() {
-  const { setSidebarTab } = useUi();
-  const goToSetup = () => {
-    setSidebarTab("buyer");
-    const el = document.getElementById(config.ids.panels);
-    el?.scrollIntoView({ behavior: "smooth", block: "start" });
-    el?.focus({ preventScroll: true });
-  };
+  const { showPanels } = useUi();
+  const goToSetup = () => showPanels("buyer");
   return (
     <>
       <h2>Set up your buyer.</h2>
@@ -143,7 +140,7 @@ export function MessageList() {
   useEffect(() => {
     const frame = frameRef.current;
     if (!frame) return;
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reduced = prefersReducedMotion();
     frame.scrollTo({ top: frame.scrollHeight, behavior: reduced ? "auto" : "smooth" });
   }, [messages, typing]);
 
@@ -181,9 +178,9 @@ export function MessageList() {
           <Item
             key={m.id}
             m={m}
-            canEdit={mode === "buy" && !typing}
+            canEdit={!typing}
             editing={editingId === m.id}
-            onEdit={() => startEdit(m.id)}
+            onEdit={mode === "buy" ? () => startEdit(m.id) : undefined}
             onSave={save(m)}
             onCancel={() => setEditingId(null)}
           />

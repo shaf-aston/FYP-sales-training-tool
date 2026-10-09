@@ -56,7 +56,7 @@ export function InlineEvaluation() {
     if (visible) ref.current?.scrollIntoView({ block: "nearest" });
   }, [visible, state.status]);
 
-  if (display !== "inline" || !mine || state.status === "idle" || state.dismissed) return null;
+  if (!visible) return null;
   return (
     <aside ref={ref} className={s.inline} aria-label="How that session went">
       <div className={s.inlineHead}>

@@ -25,7 +25,6 @@
   --accent-strong: #d29b3c;
   --accent-soft: rgba(232, 180, 90, 0.16);
   --accent-line: rgba(232, 180, 90, 0.4);
-  --accent-deep: #5c4220;
   --success: #c4e88a;
   --success-soft: rgba(196, 232, 138, 0.14);
   --success-deep: #43592a;
@@ -132,15 +131,13 @@
   --z-film: -1;
   --z-base: 0;
   --z-sticky: 10;
-  --z-panel: 100;
   --z-popover: 200;
-  --z-dialog: 300;
   --z-toast: 400;
 }
 
-/* Light theme: follows the OS unless the page pins data-theme="dark". */
+/* Light theme: follows the OS. */
 @media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) {
+  :root {
     color-scheme: light;
     --bg-page: #f6f0e6;
     --bg-panel: #fffaf2;
@@ -159,7 +156,6 @@
     --accent-strong: #7f4d06;
     --accent-soft: rgba(154, 95, 10, 0.12);
     --accent-line: rgba(154, 95, 10, 0.4);
-    --accent-deep: #f1d9ae;
     --success: #2f6a10;
     --success-soft: rgba(47, 106, 16, 0.12);
     --success-deep: #cfe6b4;
@@ -178,42 +174,4 @@
     --shadow-lg: 0 24px 80px rgba(60, 40, 10, 0.18);
     --shadow-accent: 0 10px 24px rgba(154, 95, 10, 0.22);
   }
-}
-:root[data-theme="light"] {
-  color-scheme: light;
-  --bg-page: #f6f0e6;
-  --bg-panel: #fffaf2;
-  --bg-card: #ffffff;
-  --bg-card-soft: #f3ebdd;
-  --bg-elevated: #ebe1ce;
-  --border: #d6c9b3;
-  --border-strong: #b9a98f;
-  --border-faint: rgba(120, 100, 70, 0.25);
-  --text-primary: #1f1a14;
-  --text-body: #3d352b;
-  --text-muted: #5c5346;
-  --text-subtle: #5f564a;
-  --text-on-accent: #ffffff;
-  --accent: #9a5f0a;
-  --accent-strong: #7f4d06;
-  --accent-soft: rgba(154, 95, 10, 0.12);
-  --accent-line: rgba(154, 95, 10, 0.4);
-  --accent-deep: #f1d9ae;
-  --success: #2f6a10;
-  --success-soft: rgba(47, 106, 16, 0.12);
-  --success-deep: #cfe6b4;
-  --warning: #9a4f0a;
-  --warning-soft: rgba(154, 79, 10, 0.12);
-  --danger: #b42323;
-  --danger-soft: rgba(180, 35, 35, 0.1);
-  --danger-text: #a01c1c;
-  --danger-deep: #f3c9c9;
-  --glass-bg: rgba(255, 250, 242, 0.72);
-  --glass-bg-strong: rgba(255, 255, 255, 0.85);
-  --overlay-scrim: rgba(40, 30, 20, 0.5);
-  --film-sky-top: #e9dfcf;
-  --film-sky-bottom: #f6ead6;
-  --shadow-md: 0 12px 36px rgba(60, 40, 10, 0.12);
-  --shadow-lg: 0 24px 80px rgba(60, 40, 10, 0.18);
-  --shadow-accent: 0 10px 24px rgba(154, 95, 10, 0.22);
 }

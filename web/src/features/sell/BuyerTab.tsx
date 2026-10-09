@@ -29,7 +29,7 @@ export function BuyerTab() {
   if (!sellSession) return <BuyerSetup onStarted={started} />;
   return (
     <div className={s.tab}>
-      <BuyerProfile session={sellSession} />
+      <BuyerProfile sellSession={sellSession} />
       {newOpen ? (
         <section ref={formRef} className={s.newBuyer} aria-labelledby="new-buyer-title">
           <h3 id="new-buyer-title" className={s.newTitle}>

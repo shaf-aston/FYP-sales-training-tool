@@ -1,13 +1,18 @@
 import type { ReactNode } from "react";
-import s from "./Feedback.module.css";
+import { Button } from "./Button";
+import s from "./Notice.module.css";
 
-/** The one look for loading, empty and error states everywhere. */
-export function Notice({ kind, children, action }: { kind: "loading" | "empty" | "error"; children: ReactNode; action?: ReactNode }) {
+/** The one look for loading, empty and error states everywhere. `onRetry` adds the "Try again" button. */
+export function Notice({ kind, children, onRetry }: { kind: "loading" | "empty" | "error"; children: ReactNode; onRetry?: () => void }) {
   return (
     <div className={`${s.notice} ${s[kind]}`} role={kind === "error" ? "alert" : "status"}>
       {kind === "loading" && <TypingDots />}
       <span>{children}</span>
-      {action}
+      {onRetry && (
+        <Button variant="ghost" onClick={onRetry}>
+          Try again
+        </Button>
+      )}
     </div>
   );
 }
@@ -22,7 +27,7 @@ export function TypingDots({ label }: { label?: string }) {
   );
 }
 
-/** Five bars that bounce while the coach is talking. Decorative. */
+/** Five bars that bounce while a reply is read aloud. Decorative. */
 export function VoiceWave() {
   return (
     <span className={s.wave} aria-hidden="true">

@@ -6,6 +6,12 @@ import { config } from "@/lib/config";
 export const readinessBand = (pct: number) =>
   pct < config.readinessBands.low ? "At risk" : pct < config.readinessBands.mid ? "Warming up" : "Ready";
 
+/** Badge colour for a letter grade (A-F from core/sell_evaluator.py). Red grades count as a weak session. */
+export const gradeTone = (g: string) => (g === "A" || g === "B" ? "success" : g === "C" ? "warning" : "danger");
+
+/** A change in points with its sign, e.g. "+5" or "-3". */
+export const signed = (n: number) => (n > 0 ? `+${n}` : `${n}`);
+
 export const difficultyOptions = [
   { value: "easy", label: "Easy" },
   { value: "medium", label: "Medium" },

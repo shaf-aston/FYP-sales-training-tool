@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { config } from "@/lib/config";
 import type { ReactNode } from "react";
 import { useSession } from "@/features/session/SessionContext";
@@ -15,10 +16,9 @@ function Tool({ title, copy, onClick, href, pressed }: { title: string; copy?: s
   );
   if (href) {
     return (
-      // Plain link: the knowledge page is a separate static page, not a route of this app.
-      <a className={s.tool} href={href}>
+      <Link className={s.tool} href={href}>
         {body}
-      </a>
+      </Link>
     );
   }
   return (
@@ -34,7 +34,7 @@ export function ToolsGrid() {
   const sell = mode === "sell";
   return (
     <div className={s.toolGrid}>
-      <Tool title="Configure knowledge base" copy="Your product details" href={sell ? `${config.routes.knowledge}?mode=sell` : config.routes.knowledge} />
+      <Tool title="Configure knowledge base" copy="Your product details" href={sell ? `${config.routes.knowledge}?mode=sell` : config.routes.knowledge /* ?mode= read by KnowledgePage */} />
       {!sell && <Tool title="Coaching" copy="Ask the coach" pressed={sidePanel === "coach"} onClick={() => toggleSidePanel("coach")} />}
       <Tool
         title="Quiz"

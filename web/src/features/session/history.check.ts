@@ -1,9 +1,10 @@
 // Run: node --experimental-strip-types web/src/features/session/history.check.ts
 import assert from "node:assert/strict";
-// @ts-expect-error -- .ts extension is required for node's type stripping
-import { fromHistory, nextIndex, parseSettings, type HistoryMsg } from "./history.ts";
+// @ts-expect-error node runs this file directly and needs the .ts extension
+import { fromHistory, nextIndex, parseSettings } from "./history.ts";
+import type { ChatMsg } from "../../lib/api/types.ts";
 
-const turns = (n: number): HistoryMsg[] => Array.from({ length: n }, (_, i) => ({ role: i % 2 ? "user" : "assistant", content: `m${i}` }));
+const turns = (n: number): ChatMsg[] => Array.from({ length: n }, (_, i) => ({ role: i % 2 ? "user" : "assistant", content: `m${i}` }));
 
 // Short history keeps 0-based indices.
 assert.deepEqual(fromHistory(turns(3), 100).map((m) => m.historyIndex), [0, 1, 2]);

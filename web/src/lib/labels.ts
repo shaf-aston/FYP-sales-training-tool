@@ -4,12 +4,12 @@ interface Meta {
   label: string;
 }
 
-export const STRATEGY_META: Record<string, Meta> = {
+const STRATEGY_META: Record<string, Meta> = {
   "-": { label: "Not started" },
   consultative: { label: "Consultative" },
 };
 
-export const STAGE_META: Record<string, Meta> = {
+const STAGE_META: Record<string, Meta> = {
   intent: { label: "Finding out what they want" },
   logical: { label: "Understanding the problem" },
   emotional: { label: "Making it personal" },
@@ -27,7 +27,7 @@ export const MODE_META = {
   sell: { name: "Sell mode", heading: "You're selling", note: "The AI is your buyer.", switchLabel: "Switch to buying" },
 } as const;
 
-export const key = (value: string | null | undefined) => (value ?? "").trim().toLowerCase();
+const key = (value: string | null | undefined) => (value ?? "").trim().toLowerCase();
 
 export const strategyMeta = (s: string) => STRATEGY_META[key(s)] ?? STRATEGY_META["-"];
 export const stageMeta = (s: string) => STAGE_META[key(s)] ?? { label: s };

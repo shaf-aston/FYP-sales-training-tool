@@ -25,7 +25,6 @@ interface NativeRecognition {
 type NativeCtor = new () => NativeRecognition;
 
 export interface StopState {
-  mode: "native" | "puter";
   canceled: boolean;
 }
 
@@ -47,7 +46,6 @@ const canRecordAudio = () =>
 
 /** True if this browser can dictate at all (natively, or by recording audio for Puter). */
 export const speechSupported = () => nativeCtor() !== null || canRecordAudio();
-export const nativeSpeechSupported = () => nativeCtor() !== null;
 
 const AUDIO_TYPES = ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus", "audio/ogg"];
 const pickAudioType = () => AUDIO_TYPES.find((t) => MediaRecorder.isTypeSupported?.(t)) ?? "";
@@ -118,7 +116,7 @@ export class SpeechRecognizer {
     this.isRecording = false;
     this.isTranscribing = false;
     this.mode = null;
-    this.onStop({ mode: "native", canceled: true });
+    this.onStop({ canceled: true });
   }
 
   private armMaxTimer() {
@@ -164,7 +162,7 @@ export class SpeechRecognizer {
       }
       this.isRecording = false;
       this.mode = null;
-      this.onStop({ mode: "native", canceled: this.stopRequested });
+      this.onStop({ canceled: this.stopRequested });
     };
     rec.onerror = (event) => {
       if (event.error === "no-speech") return;
@@ -227,7 +225,7 @@ export class SpeechRecognizer {
       this.mode = null;
       this.resetPuter();
       this.onError(error instanceof Error ? error.message : "Voice recording is not supported in this browser");
-      this.onStop({ mode: "puter", canceled: false });
+      this.onStop({ canceled: false });
     }
   }
 
@@ -250,7 +248,7 @@ export class SpeechRecognizer {
       this.mode = null;
       this.resetPuter();
       this.onTranscribing(false);
-      this.onStop({ mode: "puter", canceled: this.stopRequested });
+      this.onStop({ canceled: this.stopRequested });
     }
   }
 
