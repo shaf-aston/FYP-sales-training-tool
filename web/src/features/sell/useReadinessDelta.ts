@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { config } from "@/lib/config";
 
-export interface Delta {
+interface Delta {
   n: number;
   key: number;
 }

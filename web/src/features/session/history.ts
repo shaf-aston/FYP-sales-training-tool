@@ -1,9 +1,6 @@
 // Pure helpers for turning the server's history into on-screen messages. No React, no I/O.
 
-export interface HistoryMsg {
-  role: "user" | "assistant";
-  content: string;
-}
+import type { ChatMsg } from "../../lib/api/types";
 
 export interface ChatMessage {
   id: string;
@@ -24,7 +21,7 @@ export const newId = () => `m${Date.now().toString(36)}${(seq++).toString(36)}`;
  * Show at most `cap` of the newest messages, keeping each one's true index in the server
  * history (`start` = index of history[0]) so edits target the right turn.
  */
-export function fromHistory(history: HistoryMsg[], cap: number, start = 0): ChatMessage[] {
+export function fromHistory(history: ChatMsg[], cap: number, start = 0): ChatMessage[] {
   const skipped = Math.max(0, history.length - cap);
   return history.slice(skipped).map((m, i) => ({ id: newId(), role: m.role, content: m.content, historyIndex: start + skipped + i }));
 }

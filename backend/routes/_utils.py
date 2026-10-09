@@ -1,4 +1,4 @@
-"""Shared route-layer helpers: session lookup, provider validation, serialization."""
+"""Shared route helpers: session lookup, input validation and JSON shapes."""
 
 from __future__ import annotations
 
@@ -10,13 +10,18 @@ from flask import current_app, jsonify, request
 
 from core.constants import MAX_MESSAGE_LENGTH
 
-from ..messages import MESSAGE_REQUIRED, SESSION_NOT_FOUND, UNSUPPORTED_PROVIDER
+from ..messages import (
+    MESSAGE_REQUIRED,
+    SELL_SESSION_NOT_FOUND,
+    SESSION_NOT_FOUND,
+    UNSUPPORTED_PROVIDER,
+)
 from ..security import InputValidator
 
 
 @dataclass(frozen=True)
 class Sessions:
-    """The two live-session registries, stored once on ``app.extensions["sessions"]``.
+    """The two live-session stores, kept once on ``app.extensions["sessions"]``.
 
     Named for the AI's side: ``seller`` holds buy mode's SellerBots, ``buyer`` holds
     sell mode's BuyerSessions.
@@ -26,7 +31,10 @@ class Sessions:
     buyer: Any
 
 
-def require_session(kind="seller", not_found_message=SESSION_NOT_FOUND):
+_NOT_FOUND = {"seller": SESSION_NOT_FOUND, "buyer": SELL_SESSION_NOT_FOUND}
+
+
+def require_session(kind: str):
     """Look up the caller's live session: returns (session, None) or (None, error response).
 
     ``kind`` is "seller" (buy mode) or "buyer" (sell mode). Validation, error body, code and status live here only.
@@ -41,24 +49,30 @@ def require_session(kind="seller", not_found_message=SESSION_NOT_FOUND):
         current_app.logger.warning(
             "Session not found for %s (id=%s...)", request.path, str(session_id)[:8]
         )
-        return None, (
-            jsonify({"error": not_found_message, "code": "SESSION_EXPIRED"}),
-            400,
-        )
+        # The web app starts a new session when it sees this code.
+        return None, (jsonify({"error": _NOT_FOUND[kind], "code": "SESSION_EXPIRED"}), 400)
     return found, None
 
 
-def with_session(view):
-    """Route decorator: pass the session object to the handler, or return the error."""
+def with_session(kind: str):
+    """Route decorator: call the handler with the caller's live session, or return the lookup error."""
 
-    @wraps(view)
-    def wrapper(*args, **kwargs):
-        session_bot, error = require_session()
-        if error:
-            return error
-        return view(session_bot, *args, **kwargs)
+    def decorator(view):
+        @wraps(view)
+        def wrapper(*args, **kwargs):
+            session, error = require_session(kind)
+            if error:
+                return error
+            return view(session, *args, **kwargs)
 
-    return wrapper
+        return wrapper
+
+    return decorator
+
+
+def history_json(history: list[dict]) -> list[dict]:
+    """The transcript as the web app reads it: role and content only."""
+    return [{"role": m["role"], "content": m["content"]} for m in history]
 
 
 def validate_message(message_text):
@@ -71,10 +85,10 @@ def validate_message(message_text):
     )
 
 
-def bot_state(session_bot):
-    """Common stage/strategy fields for JSON responses"""
-    flow = session_bot.flow_engine
-    return {"stage": flow.current_stage.upper(), "strategy": flow.flow_type.upper()}
+def stage_fields(seller):
+    """The buy-mode call's stage and strategy, as every buy response carries them."""
+    call = seller.call
+    return {"stage": call.current_stage.upper(), "strategy": call.strategy.upper()}
 
 
 def validate_provider(data):

@@ -1,4 +1,4 @@
-"""Slice 1: method loading, pure engine, recognition. No model, no network."""
+"""Method loading, the pure engine and recognition. No model, no network."""
 import re
 from pathlib import Path
 
@@ -24,21 +24,26 @@ def _listener(embedder, threshold, margin=0.03):
 
 
 def _labels(method, step_id):
-    return {r.signal: list(r.examples) for r in method.steps[step_id].listen if r.examples}
+    return {r.label: list(r.examples) for r in method.steps[step_id].listen if r.examples}
 
 
 def _turn(method, state, reply, embedder):
     labels = _labels(method, state.step)
-    signal = _listener(embedder, threshold=0.5).match(reply, labels).label if labels else None
-    return advance(method, state, signal, reply)
+    label = _listener(embedder, threshold=0.5).match(reply, labels).label if labels else None
+    return advance(method, state, label, reply)
+
+
+def _text(move):
+    """The move's line with its lead-in, blanks still unfilled."""
+    return f"{move.ack} {move.say}".strip()
 
 
 def _run(method, replies, embedder):
     move = start(method)
-    texts = [move.text_template]
+    texts = [_text(move)]
     for reply in replies:
         move = _turn(method, move.state, reply, embedder)
-        texts.append(move.text_template)
+        texts.append(_text(move))
     return texts, move
 
 
@@ -58,7 +63,7 @@ def test_full_conversation(mini, fake_embedder):
 
 def test_unmatched_reply_repeats_step(mini, fake_embedder):
     move = _turn(mini, start(mini).state, "purple banana", fake_embedder)
-    assert move.text_template == "What would you like to achieve?"
+    assert _text(move) == "What would you like to achieve?"
     assert move.state.step == "a" and not move.state.slots
 
 
@@ -68,7 +73,7 @@ def test_probes_are_asked_in_turn_then_stuck_moves_on(mini, fake_embedder):
     for _ in range(2):
         move = _turn(mini, state, "purple banana", fake_embedder)
         state = move.state
-        texts.append(move.text_template)
+        texts.append(_text(move))
     assert texts == ["Put simply: does that make sense?", "Great, next steps."]
     assert state.step == "c" and state.asks == 0
 

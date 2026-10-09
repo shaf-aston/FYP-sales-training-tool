@@ -28,7 +28,7 @@ const SECTIONS: { title: string; items: { term?: string; text: string; keys?: st
     items: [
       { term: "Walk it back", text: "replay each of your turns with the reasons behind its rating, and redo one." },
       { term: "Drills", text: "fill in the missing move in lines from real sales scripts." },
-      { term: "Quiz", text: "rewrite your weakest turn and see why the new version is better or worse." },
+      { term: "Quiz", text: "buy mode: name the stage and the next move. Sell mode: rewrite one of your turns and see if it lands better." },
     ],
   },
   {
@@ -45,7 +45,6 @@ const SECTIONS: { title: string; items: { term?: string; text: string; keys?: st
 export function HelpDialog() {
   const { dialog, openDialog, closeDialog } = useUi();
 
-  // Open once per browser (if storage is blocked the help simply shows each visit).
   useEffect(() => {
     // Show once per browser; never nag when storage is blocked and "seen" can't be remembered.
     if (storageAvailable() && readString(storageKeys.helpSeen) === null) openDialog("help");

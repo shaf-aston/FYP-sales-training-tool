@@ -1,5 +1,6 @@
+// Run: node --experimental-strip-types web/src/features/sell/drillSchedule.check.ts
 import assert from "node:assert/strict";
-// @ts-expect-error node runs this file directly and needs the .ts extension; tsconfig does not allow it
+// @ts-expect-error node runs this file directly and needs the .ts extension
 import { grade, isDue, parseSchedule } from "./drillSchedule.ts";
 
 const DAY = 86_400_000;

@@ -4,17 +4,16 @@ Session start and end, chat, edit, the coach's Q&A and the stage/move quiz.
 """
 
 import logging
-import secrets
 
 from flask import Blueprint, current_app, jsonify, request
 
-from core.constants import MAX_MESSAGE_LENGTH, MAX_SESSIONS
+from core.coach import COACH_STYLES, DEFAULT_STYLE
+from core.constants import MAX_MESSAGE_LENGTH, MAX_SELLER_SESSIONS
 from core.quiz import get_quiz_question
 from core.seller_bot import SellerBot
-from core.trainer import COACH_STYLES
+from core.utils import new_session_id
 
 from ..messages import (
-    BOT_INIT_FAILED,
     COACH_FAILED,
     EDIT_FAILED,
     FIELD_REQUIRED,
@@ -25,13 +24,14 @@ from ..messages import (
     QUESTION_REQUIRED,
     QUESTION_TOO_LONG,
     REWIND_FAILED,
+    SELLER_INIT_FAILED,
     SERVER_FULL,
 )
 from ..security import InputValidator, require_rate_limit
 from ._utils import (
-    bot_state,
-    require_session,
+    history_json,
     safe_latency_ms,
+    stage_fields,
     validate_message,
     validate_provider,
     with_session,
@@ -46,91 +46,74 @@ bp = Blueprint("buy", __name__, url_prefix="/api/buy")
 
 
 @bp.route("/init", methods=["POST"])
-@require_rate_limit("init")
+@require_rate_limit("buy_init")
 def init():
-    """Initialize or restore an in-memory session. Creates bot eagerly to avoid first-message latency."""
+    """Start a session (the seller is built now, so the first message doesn't wait), or reattach to a live one."""
     data = request.json or {}
     existing_id = data.get("session_id")
+    sellers = current_app.extensions["sessions"].seller
 
     # Restore existing session only if it is still in memory on this process.
     if existing_id:
         session_error = InputValidator.validate_session_id(existing_id)
         if session_error:
             return session_error
-        bot = current_app.extensions["sessions"].seller.get(existing_id)
-        if bot:
-            history = [
-                {"role": m["role"], "content": m["content"]}
-                for m in bot.flow_engine.conversation_history
-            ]
-            current_app.logger.info(
-                f"Restored session: {existing_id} ({len(history)} messages)"
-            )
+        seller = sellers.get(existing_id)
+        if seller:
+            history = history_json(seller.call.conversation_history)
+            current_app.logger.info(f"Restored session: {existing_id} ({len(history)} messages)")
             return jsonify(
                 {
                     "success": True,
                     "session_id": existing_id,
                     "message": None,
-                    **bot_state(bot),
+                    **stage_fields(seller),
                     "history": history,
                 }
             )
 
-    # Session count ceiling: reject new sessions when server is full
-    if not current_app.extensions["sessions"].seller.can_create():
-        current_app.logger.warning(
-            f"Session cap ({MAX_SESSIONS}) reached - rejecting new init"
-        )
-        return jsonify(
-            {"error": SERVER_FULL}
-        ), 503
+    if not sellers.can_create():
+        current_app.logger.warning(f"Session cap ({MAX_SELLER_SESSIONS}) reached - rejecting new init")
+        return jsonify({"error": SERVER_FULL}), 503
 
-    # Create new session with eager bot initialization
-    session_id = secrets.token_hex(16)
-    product_type = data.get("product_type")  # unlisted or missing → selling.yaml default_product
+    session_id = new_session_id()
+    product_type = data.get("product_type")  # unlisted or missing: script/engine.yaml default_product
     provider, provider_error = validate_provider(data)
     if provider_error:
         return provider_error
 
     try:
-        bot = SellerBot(
-            provider_type=provider, product_type=product_type, session_id=session_id
-        )
-        current_app.extensions["sessions"].seller.set(session_id, bot)
-        bot.save_session()  # log the initial state snapshot for monitoring
-        active_provider = getattr(bot, "provider_name", provider or "auto")
+        seller = SellerBot(provider_type=provider, product_type=product_type, session_id=session_id)
+        sellers.set(session_id, seller)
         current_app.logger.info(
-            f"New session: {session_id} "
-            f"(product={bot.product_type}, provider={active_provider})"
+            f"New session: {session_id} (product={seller.product_type}, provider={seller.provider_name})"
         )
     except Exception as init_error:
-        current_app.logger.exception(f"Bot init failed: {init_error}")
-        return jsonify(
-            {"error": BOT_INIT_FAILED}
-        ), 500
+        current_app.logger.exception(f"Seller init failed: {init_error}")
+        return jsonify({"error": SELLER_INIT_FAILED}), 500
 
-    opening = bot.script_opening()
-    bot.open_with(opening)
+    opening = seller.script_opening()
+    seller.open_with(opening)
 
     return jsonify(
         {
             "success": True,
             "session_id": session_id,
             "message": opening,
-            **bot_state(bot),
+            **stage_fields(seller),
             "history": [],
-            "training": bot.generate_training("", opening),
+            "training": seller.coach_notes(),  # the web app reads coach notes under this key
         }
     )
 
 
 @bp.route("/reset", methods=["POST"])
-@with_session
-def reset(bot):
+@with_session("seller")
+def reset(seller):
     """Delete the current session"""
     # Telemetry must never be the reason a learner cannot end their session.
     try:
-        bot.record_session_end()
+        seller.record_session_end()
     except Exception:
         logger.exception("Could not record the end of this session")
     current_app.extensions["sessions"].seller.delete(request.headers.get("X-Session-ID"))
@@ -141,29 +124,22 @@ def reset(bot):
 
 
 @bp.route("/chat", methods=["POST"])
-@require_rate_limit("chat")
-def chat():
-    """Handle chat messages. Bot must be initialized via /api/buy/init first"""
-
+@require_rate_limit("buy_chat")
+@with_session("seller")
+def chat(seller):
+    """The learner's message; the AI seller answers."""
     data = request.get_json(silent=True) or {}
     user_message, error = validate_message(data.get("message", ""))
     if error:
         return error
 
-    session_bot, error = require_session()
-    if error:
-        return error
-
     try:
-        response = session_bot.chat(user_message)
-        training = session_bot.generate_training(user_message, response.content)
-
-        # Extract content and metrics from ChatResponse
+        response = seller.chat(user_message)
         return jsonify(
             {
                 "success": True,
                 "message": response.content,
-                **bot_state(session_bot),
+                **stage_fields(seller),
                 "latency_ms": safe_latency_ms(response.latency_ms),
                 "provider": response.provider,
                 "model": response.model,
@@ -171,57 +147,46 @@ def chat():
                     "input_length": response.input_len,
                     "output_length": response.output_len,
                 },
-                "training": training,
+                "training": seller.coach_notes(),
             }
         )
-
     except Exception as e:
         current_app.logger.exception(f"Chat error: {e}")
         return jsonify({"error": GENERIC_ERROR}), 500
 
 
 @bp.route("/edit", methods=["POST"])
-@require_rate_limit("chat")
-def edit():
-    """Edit user message and regenerate from that point"""
+@require_rate_limit("buy_chat")
+@with_session("seller")
+def edit(seller):
+    """Edit a learner message and replay the call from there."""
     data = request.json or {}
     message_index = data.get("index")
     new_message, error = validate_message(data.get("message", ""))
     if error:
         return error
 
-    session_bot, error = require_session()
-    if error:
-        return error
-
-    # Validate inputs
     if message_index is None:
         return jsonify({"error": MISSING_INDEX}), 400
-
     try:
         message_index = int(message_index)
     except (TypeError, ValueError):
         return jsonify({"error": INVALID_INDEX}), 400
 
     try:
-        response = session_bot.edit_turn(message_index, new_message)
+        response = seller.edit_turn(message_index, new_message)
         if response is None:
             return jsonify({"error": REWIND_FAILED}), 500
-        training = session_bot.generate_training(new_message, response.content)
-
         return jsonify(
             {
                 "success": True,
                 "message": response.content,
-                "history": [
-                    {"role": message["role"], "content": message["content"]}
-                    for message in session_bot.flow_engine.conversation_history
-                ],
-                **bot_state(session_bot),
+                "history": history_json(seller.call.conversation_history),
+                **stage_fields(seller),
                 "latency_ms": safe_latency_ms(response.latency_ms),
                 "provider": response.provider,
                 "model": response.model,
-                "training": training,
+                "training": seller.coach_notes(),
             }
         )
     except ValueError as e:
@@ -232,28 +197,24 @@ def edit():
 
 
 @bp.route("/coach", methods=["POST"])
-@require_rate_limit("chat")
-def coach():
-    """Answer a trainee's question about the conversation and sales techniques"""
-    session_bot, error = require_session()
-    if error:
-        return error
-
+@require_rate_limit("buy_chat")
+@with_session("seller")
+def coach(seller):
+    """Answer the learner's question about the call and sales technique."""
     data = request.json or {}
     question = (data.get("question") or "").strip()
-    style = (data.get("style") or "tactical").strip().lower()
+    style = (data.get("style") or DEFAULT_STYLE).strip().lower()
     if style not in COACH_STYLES:
-        style = "tactical"
+        style = DEFAULT_STYLE
     if not question:
         return jsonify({"error": QUESTION_REQUIRED}), 400
     if len(question) > MAX_MESSAGE_LENGTH:
         return jsonify({"error": QUESTION_TOO_LONG}), 400
 
     try:
-        result = session_bot.answer_training_question(question, style=style)
-        return jsonify({"success": True, **result})
+        return jsonify({"success": True, **seller.answer_coach_question(question, style=style)})
     except Exception as e:
-        current_app.logger.exception(f"Training Q&A error: {e}")
+        current_app.logger.exception(f"Coach answer error: {e}")
         return jsonify({"error": COACH_FAILED}), 500
 
 
@@ -261,22 +222,16 @@ def coach():
 
 
 @bp.route("/quiz/question", methods=["GET"])
-def quiz_question():
-    """Get a quiz question for the specified type"""
-
-    session_bot, error = require_session()
-    if error:
-        return error
-
+@with_session("seller")
+def quiz_question(seller):
+    """A random question for the quiz type in ?type= (stage, next-move, direction)."""
     quiz_type = request.args.get("type", "stage")
-    question = get_quiz_question(quiz_type)
-
     return jsonify(
         {
             "success": True,
-            "question": question,
+            "question": get_quiz_question(quiz_type),
             "type": quiz_type,
-            **bot_state(session_bot),
+            **stage_fields(seller),
         }
     )
 
@@ -292,42 +247,30 @@ def _required_text(field: str, label: str):
 
 
 @bp.route("/quiz/stage", methods=["POST"])
-def quiz_stage():
-    """Stage identification quiz (deterministic evaluation)"""
-    session_bot, error = require_session()
-    if error:
-        return error
+@with_session("seller")
+def quiz_stage(seller):
+    """Stage identification quiz (scored by rule)."""
     answer, error = _required_text("answer", "Answer")
     if error:
         return error
-
-    result = session_bot.run_quiz_stage_answer(answer)
-    return jsonify({"success": True, **result, **bot_state(session_bot)})
+    return jsonify({"success": True, **seller.score_stage_answer(answer), **stage_fields(seller)})
 
 
 @bp.route("/quiz/next-move", methods=["POST"])
-def quiz_next_move():
-    """Next move quiz (LLM-evaluated comparison)"""
-    session_bot, error = require_session()
-    if error:
-        return error
+@with_session("seller")
+def quiz_next_move(seller):
+    """Next move quiz (rules score it, the AI may add wording)."""
     response, error = _required_text("response", "Response")
     if error:
         return error
-
-    result = session_bot.run_quiz_next_move(response)
-    return jsonify({"success": True, **result, **bot_state(session_bot)})
+    return jsonify({"success": True, **seller.score_next_move(response), **stage_fields(seller)})
 
 
 @bp.route("/quiz/direction", methods=["POST"])
-def quiz_direction():
-    """Direction/strategy quiz (LLM-evaluated understanding check)"""
-    session_bot, error = require_session()
-    if error:
-        return error
+@with_session("seller")
+def quiz_direction(seller):
+    """Direction quiz (rules score it, the AI may add wording)."""
     explanation, error = _required_text("explanation", "Explanation")
     if error:
         return error
-
-    result = session_bot.run_quiz_direction(explanation)
-    return jsonify({"success": True, **result, **bot_state(session_bot)})
+    return jsonify({"success": True, **seller.score_direction(explanation), **stage_fields(seller)})

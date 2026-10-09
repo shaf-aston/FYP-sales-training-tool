@@ -14,11 +14,11 @@ server:
   port: 5000            # `python backend/app.py`; gunicorn takes its own
 
 sessions:
-  seller_max: 200
+  seller_max: 200             # buy mode: live AI sellers (SellerBot)
   seller_idle_minutes: 60
-  buyer_max: 100
+  buyer_max: 100              # sell mode: live AI buyers (BuyerSession)
   buyer_idle_minutes: 30
-  cleanup_interval_seconds: 900
+  cleanup_interval_seconds: 900   # both modes
 
 input:
   max_message_length: 1000
@@ -30,12 +30,12 @@ input:
   session_id_min_chars: 8
   session_id_max_chars: 128
 
-rate_limits:         # [max_requests, window_seconds]
-  init: [10, 60]
-  chat: [60, 60]
-  knowledge: [10, 60]
-  sell: [30, 60]
-  feedback: [5, 300]
+rate_limits:         # [max_requests, window_seconds] per client IP; bucket names are used in the routes
+  buy_init: [10, 60]   # buy mode: starting a session
+  buy_chat: [60, 60]   # buy mode: chat, edit and coach
+  sell: [30, 60]       # sell mode: every rate-limited sell route
+  knowledge: [10, 60]  # both modes: custom product knowledge
+  feedback: [5, 300]   # both modes: feedback form
 
 llm:                 # one profile per kind of call; pass as **LLM["name"]
   default:        {temperature: 0.4, max_tokens: 150}   # low = steady wording; replies run 12-80 tokens

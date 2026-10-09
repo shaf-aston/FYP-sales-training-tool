@@ -7,6 +7,7 @@ import type { Evaluation, Outcome } from "@/lib/api/types";
 import { Confetti } from "./Confetti";
 import { config } from "@/lib/config";
 import { useCountUp } from "@/lib/useCountUp";
+import { gradeTone } from "./options";
 import { useEvaluation } from "./useEvaluation";
 import s from "./EvaluationCard.module.css";
 
@@ -16,8 +17,6 @@ const OUTCOME: Record<Outcome, { label: string; tone: Tone }> = {
   active: { label: "Incomplete", tone: "neutral" },
   incomplete: { label: "Incomplete", tone: "neutral" },
 };
-
-const gradeTone = (g: string): Tone => (g === "A" || g === "B" ? "success" : g === "C" ? "warning" : "danger");
 
 function Bullets({ title, items }: { title: string; items: string[] }) {
   if (!items.length) return null;
@@ -34,17 +33,17 @@ function Bullets({ title, items }: { title: string; items: string[] }) {
 }
 
 function Result({ ev }: { ev: Evaluation }) {
-  const { sellSession, startBuyer } = useSession();
+  const { reset } = useSession();
   const { openDialog, closeDialog } = useUi();
   const score = useCountUp(ev.overall_score || 0);
   const grade = (ev.grade || "?").toUpperCase();
   const outcome = OUTCOME[ev.outcome] ?? OUTCOME.incomplete;
   const celebrate = ev.outcome === "sold" || (config.sell.celebrateGrades as readonly string[]).includes(grade);
 
+  // In sell mode reset() starts the same buyer again (SessionContext).
   const tryAgain = async () => {
-    if (!sellSession) return;
     closeDialog();
-    await startBuyer(sellSession.difficulty, sellSession.productType, sellSession.pick);
+    await reset();
   };
 
   return (
@@ -93,14 +92,7 @@ export function EvaluationBody() {
   if (state.status === "loading") return <Notice kind="loading">Generating evaluation…</Notice>;
   if (state.status === "error")
     return (
-      <Notice
-        kind="error"
-        action={
-          <Button variant="ghost" onClick={run}>
-            Try again
-          </Button>
-        }
-      >
+      <Notice kind="error" onRetry={run}>
         {state.error || "The evaluation failed."}
       </Notice>
     );

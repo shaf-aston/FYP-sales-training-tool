@@ -1,9 +1,9 @@
 """Shared string enums."""
 
-from enum import Enum
+from enum import StrEnum
 
 
-class Stage(str, Enum):
+class Stage(StrEnum):
     """Where the sales conversation is (the script's ui_stage)."""
     INTENT = "intent"
     LOGICAL = "logical"

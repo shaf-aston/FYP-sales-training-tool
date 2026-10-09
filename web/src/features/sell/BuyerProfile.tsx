@@ -3,7 +3,7 @@
 import { Badge, Button, Card, ProgressBar, Select, Switch } from "@/components/ui";
 import { useSession, type SellSession } from "@/features/session/SessionContext";
 import { EvaluationBody } from "./EvaluationCard";
-import { difficultyTone, evalDisplayOptions, readinessBand } from "./options";
+import { difficultyTone, evalDisplayOptions, readinessBand, signed } from "./options";
 import { useEvaluation } from "./useEvaluation";
 import { useReadinessDelta } from "./useReadinessDelta";
 import s from "./BuyerProfile.module.css";
@@ -16,15 +16,15 @@ function endLine(b: SellSession): string | null {
 }
 
 /** Top of the Buyer tab while selling: who the buyer is, how warm they are, and scoring. */
-export function BuyerProfile({ session }: { session: SellSession }) {
+export function BuyerProfile({ sellSession }: { sellSession: SellSession }) {
   const { sellSettings, setSellSettings } = useSession();
   const { state, run, display, forThisSession } = useEvaluation();
-  const pct = Math.round(session.state.readiness * 100);
+  const pct = Math.round(sellSession.state.readiness * 100);
   const delta = useReadinessDelta(pct);
 
-  const name = session.persona.name || "Alex";
-  const turns = session.state.turn_count;
-  const ended = endLine(session);
+  const name = sellSession.persona.name || "Alex"; // same unnamed-persona default as the backend
+  const turns = sellSession.state.turn_count;
+  const ended = endLine(sellSession);
   const evaluating = forThisSession && state.status === "loading";
 
   return (
@@ -32,13 +32,13 @@ export function BuyerProfile({ session }: { session: SellSession }) {
       <section className={s.persona}>
         <div className={s.nameRow}>
           <h3 className={s.name}>{name}</h3>
-          <Badge tone={difficultyTone[session.difficulty]}>{session.difficulty}</Badge>
+          <Badge tone={difficultyTone[sellSession.difficulty]}>{sellSession.difficulty}</Badge>
         </div>
-        <p className={s.background}>{session.persona.background}</p>
-        {session.persona.personality && <p className={s.background}>{session.persona.personality}</p>}
-        {session.pick.objection && (
+        <p className={s.background}>{sellSession.persona.background}</p>
+        {sellSession.persona.personality && <p className={s.background}>{sellSession.persona.personality}</p>}
+        {sellSession.pick.objection && (
           <p className={s.background}>
-            <strong>Practising:</strong> “{session.pick.objection}”
+            <strong>Practising:</strong> “{sellSession.pick.objection}”
           </p>
         )}
       </section>
@@ -47,20 +47,19 @@ export function BuyerProfile({ session }: { session: SellSession }) {
         <ProgressBar value={pct} label="Buying readiness" caption={`${pct}% · ${readinessBand(pct)}`} />
         {delta && (
           <span key={delta.key} className={`${s.delta} ${delta.n > 0 ? s.up : s.down}`} aria-hidden="true">
-            {delta.n > 0 ? "+" : ""}
-            {delta.n}%
+            {signed(delta.n)}%
           </span>
         )}
       </section>
 
       <p className={s.turns}>
-        Turn <strong>{session.maxTurns ? `${turns} / ${session.maxTurns}` : turns}</strong>
+        Turn <strong>{turns}</strong>
         {ended && <> · {ended}</>}
       </p>
 
       {sellSettings.showHints && (
         <Card tone="accent" aria-live="polite">
-          <p className={s.hint}>{session.hint || "A hint shows after the buyer's next reply."}</p>
+          <p className={s.hint}>{sellSession.hint || "A hint shows after the buyer's next reply."}</p>
         </Card>
       )}
 

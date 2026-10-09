@@ -10,6 +10,7 @@ import { buttonClass } from "@/components/ui";
 import { config } from "@/lib/config";
 import { challenge, demoChat, features, heroWords, objections, steps } from "./content";
 import s from "./Landing.module.css";
+import { prefersReducedMotion } from "@/lib/motion";
 
 const { routes, landing } = config;
 
@@ -17,7 +18,7 @@ const { routes, landing } = config;
 function useTicker(length: number, ms: number, still = 0) {
   const [i, setI] = useState(still);
   useEffect(() => {
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (prefersReducedMotion()) return;
     const id = setInterval(() => setI((n) => (n + 1) % length), ms);
     return () => clearInterval(id);
   }, [length, ms]);
@@ -119,7 +120,7 @@ export function Landing() {
           <a href="#how">How it works</a>
           <a href="#try">Try it</a>
           <Link href={routes.buy} className={buttonClass("primary")}>
-            Start practising
+            Practise buying
           </Link>
         </nav>
       </header>
@@ -138,10 +139,10 @@ export function Landing() {
               </span>
               before the real call.
             </h1>
-            <p className={s.lead}>Roleplay with an AI buyer who pushes back. A live coach scores every move. Ten minutes a day.</p>
+            <p className={s.lead}>Roleplay a sales call from either side: buy from an AI seller, or sell to an AI buyer who pushes back. Every move gets feedback. Ten minutes a day.</p>
             <div className={s.ctas}>
               <Link href={routes.buy} className={buttonClass("primary", s.bigCta)}>
-                Start a practice call →
+                Practise buying →
               </Link>
               <Link href={routes.sell} className={buttonClass("pill")}>
                 Practise selling
@@ -206,7 +207,7 @@ export function Landing() {
           </h2>
           <div className={s.ctas}>
             <Link href={routes.buy} className={buttonClass("primary", s.bigCta)}>
-              Start practising →
+              Practise buying →
             </Link>
             <Link href={routes.sell} className={buttonClass("pill")}>
               Practise selling

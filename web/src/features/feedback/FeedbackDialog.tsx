@@ -9,7 +9,6 @@ import { useUi } from "@/state/UiContext";
 import s from "./FeedbackDialog.module.css";
 
 const STARS = [1, 2, 3, 4, 5];
-const THANKS_MS = 1_500;
 
 function StarRating({ value, onChange }: { value: number; onChange: (n: number) => void }) {
   const [hover, setHover] = useState(0);
@@ -67,7 +66,7 @@ export function FeedbackDialog() {
       setSent(false);
       setRating(0);
       setComment("");
-    }, THANKS_MS);
+    }, config.feedbackThanksMs);
     return () => clearTimeout(t);
   }, [sent, closeDialog]);
 

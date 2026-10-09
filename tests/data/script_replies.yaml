@@ -1,6 +1,6 @@
 # Public labelled prospect replies for the recogniser accuracy check.
 # context -> expected label -> replies. Label `none` = must NOT match any label (off-script).
-# Written from the trainer's FAQ, the CAT script and the objection paths; none are copied
+# Written from the coach's FAQ, the CAT script and the objection paths; none are copied
 # from private call transcripts.
 step_01:   # CAT step 01: labels freedom
   freedom:

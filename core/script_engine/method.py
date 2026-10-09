@@ -6,8 +6,8 @@ from pathlib import Path
 
 import yaml
 
-from core.loader import CONFIG_DIR
 from core.enums import Stage
+from core.loader import CONFIG_DIR
 
 ANY = "any"  # listen route with no examples: taken for any reply
 # What happens after an interruption's reply: ask the step again (same words), wait for them to come
@@ -17,7 +17,7 @@ AFTER = ("ask", "wait", "rephrase", "rephrase_else_move_on")
 
 @dataclass(frozen=True)
 class Route:
-    signal: str
+    label: str          # what the reply means; matched against `examples` (ANY: every reply)
     examples: tuple
     then: str
     ack: str = ""
@@ -32,11 +32,11 @@ class Step:
     say_plain: str
     capture: str        # slot name that stores the prospect's reply
     probes: tuple       # asked in turn when no route moves on, before `stuck`; empty = `say` once
-    draft: bool         # some line here is not verbatim from the source
+    draft: bool         # some line here is not verbatim from the source (authoring marker only; nothing acts on it)
     listen: tuple       # of Route
     run_on: bool = False  # said, then straight on to the next step without waiting for a reply
-    name: str = ""      # the step's name in the source script, shown to the trainee
-    note: str = ""      # the source's "listen for" note: what the trainee should notice next
+    name: str = ""      # the step's name in the source script, shown to the learner
+    note: str = ""      # the source's "listen for" note: what the learner should notice next
     doubts_answer: bool = False  # the question asks what holds them back: "money's tight" is the answer
     stuck: Route = None  # taken once the step has been asked again enough; every step with no `any` route has one
     answered_by: str = ""  # regex with an `answer` group: the step's answer given early; the step is then skipped
@@ -60,7 +60,7 @@ class Objection:
 
 @dataclass(frozen=True)
 class Ready:
-    """A keen buyer says they're in before the pitch: skip to `then` instead of making them sit through it."""
+    """A keen prospect says they're in before the pitch: skip to `then` instead of making them sit through it."""
     examples: tuple
     then: str           # the step the call jumps to
     until: str          # only before this step; from here on the script itself is closing
@@ -76,7 +76,7 @@ class Method:
     price_step: str     # the price may be said from this step on
     follow_up: str      # said once an objection has been looped and met directly
     revisit_step: str = ""  # an objection parked before the price is raised again when they hesitate here
-    ready: Ready = None     # keen buyer shortcut; none = every buyer hears the whole script
+    ready: Ready = None     # keen prospect shortcut; none = every prospect hears the whole script
 
 
 @dataclass(frozen=True)
@@ -94,7 +94,6 @@ class Offer:
     months: int
     price: str
     pillars: tuple
-    context: str
     facts: dict
     about: str = ""     # what the AI may say when no fact covers a question; empty = never answer from it
     about_after_price: str = ""  # added to `about` from the price step on
@@ -138,15 +137,15 @@ def _read(directory, name):
         return yaml.load(f, Loader=_StrictLoader)
 
 
-def _route(step_id, signal, data):
-    if not isinstance(signal, str):
-        raise TypeError(f"step {step_id}: route name {signal!r} is not text (quote yes/no)")
+def _route(step_id, label, data):
+    if not isinstance(label, str):
+        raise TypeError(f"step {step_id}: route name {label!r} is not text (quote yes/no)")
     examples = tuple(data.get("examples") or ())
-    if signal == ANY and examples:
+    if label == ANY and examples:
         raise ValueError(f"step {step_id}: '{ANY}' route takes no examples")
-    if signal != ANY and not examples:
-        raise ValueError(f"step {step_id}: route '{signal}' needs examples")
-    return Route(signal, examples, str(data["then"]), data.get("ack", ""), data.get("keep", True) is not False)
+    if label != ANY and not examples:
+        raise ValueError(f"step {step_id}: route '{label}' needs examples")
+    return Route(label, examples, str(data["then"]), data.get("ack", ""), data.get("keep", True) is not False)
 
 
 def _step(step_id, data):
@@ -157,15 +156,15 @@ def _step(step_id, data):
     probes = data.get("probe") or ()
     probes = (probes,) if isinstance(probes, str) else tuple(probes)
     stuck = _route(step_id, ANY, data["stuck"]) if data.get("stuck") else None
-    if not data.get("say") and not any(r.signal == ANY for r in listen):
+    if not data.get("say") and not any(r.label == ANY for r in listen):
         raise ValueError(f"step {step_id}: silent step needs an '{ANY}' route")
-    if data.get("run_on") and not any(r.signal == ANY for r in listen):
+    if data.get("run_on") and not any(r.label == ANY for r in listen):
         raise ValueError(f"step {step_id}: run_on step needs an '{ANY}' route")
     answered_by = data.get("answered_by", "")
     if answered_by:
         if "answer" not in re.compile(answered_by).groupindex:
             raise ValueError(f"step {step_id}: answered_by needs an (?P<answer>...) group")
-        if not data.get("capture") or not any(r.signal == ANY for r in listen):
+        if not data.get("capture") or not any(r.label == ANY for r in listen):
             raise ValueError(f"step {step_id}: answered_by needs a capture and an '{ANY}' route")
         if re.search(answered_by, ""):
             raise ValueError(f"step {step_id}: answered_by must not match an empty reply")
@@ -197,7 +196,7 @@ def parse_method(name, data):
         for route in step.routes:
             if route.then not in steps:
                 raise ValueError(f"step {step.id}: unknown then {route.then!r}")
-        if step.listen and not step.stuck and not any(r.signal == ANY for r in step.listen):
+        if step.listen and not step.stuck and not any(r.label == ANY for r in step.listen):
             raise ValueError(f"step {step.id}: can be asked again, so it needs a 'stuck' route")
     objections = {k: _objection(k, v) for k, v in (data.get("objections") or {}).items()}
     price_step = str(data.get("price_step", ""))
@@ -256,7 +255,7 @@ def parse_offer(name, data):
     }
     return Offer(
         name, int(data["months"]), str(data["price"]),
-        tuple(data["pillars"]), data["context"], facts,
+        tuple(data["pillars"]), facts,
         (data.get("about") or {}).get("text", ""), (data.get("about") or {}).get("after_price", ""),
     )
 

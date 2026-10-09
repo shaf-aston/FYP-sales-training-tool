@@ -1,4 +1,4 @@
-"""Quiz assessment: stage ID (deterministic), next-move and direction (hybrid-scored)."""
+"""Quiz assessment: stage ID (by rule), next move and direction (rules score, the AI may add wording)."""
 
 import logging
 import random
@@ -6,8 +6,8 @@ from typing import Any
 
 from .constants import LLM
 from .loader import load_yaml
+from .turn_rating import NEGATIVE_SIGNALS, REASONS, rate_turn
 from .services.provider_router import complete_json
-from .selling_quality import NEGATIVE_SIGNALS, REASONS, score_seller_turn
 from .utils import (
     clamp_score,
     contains_nonnegated_keyword,
@@ -17,350 +17,195 @@ from .utils import (
 )
 
 logger = logging.getLogger(__name__)
-_quiz_config = None
 
-# Valid enum sets for LLM field validation
+# The labels an AI answer may use; the prompts in quiz.yaml list the same ones.
 _ENUMS = {
     "alignment": {"strong", "partial", "weak"},
     "understanding": {"excellent", "good", "partial", "needs_work"},
 }
 
-_STOPWORDS = {
-    "and",
-    "the",
-    "that",
-    "this",
-    "with",
-    "from",
-    "into",
-    "your",
-    "their",
-    "they",
-    "them",
-    "what",
-    "when",
-    "where",
-    "which",
-    "would",
-    "should",
-    "could",
-    "about",
-    "while",
-    "there",
-    "have",
-    "been",
-    "just",
-    "only",
-    "more",
-    "less",
-}
 
-_OPEN_QUESTION_WORDS = ("what", "how", "why", "which", "where", "when", "who")
+def load_quiz() -> dict:
+    return load_yaml("quiz.yaml")
 
 
-def _detect_concept_coverage(answer: str, concepts: list[str]) -> tuple[list[str], list[str]]:
-    """Return (concepts_got, concepts_missed) using keyword overlap per concept."""
+def _content_words(text: str, stopwords) -> list[str]:
+    return [token for token in tokenize(text) if len(token) > 3 and token not in stopwords]
+
+
+def _concept_coverage(answer: str, concepts: list[str], stopwords) -> tuple[list[str], list[str]]:
+    """(concepts named, concepts missed), by any content word of the concept appearing in the answer."""
     answer_tokens = set(tokenize(answer))
-    matched_concepts, unmatched_concepts = [], []
-
+    named, missed = [], []
     for concept in concepts:
-        concept_tokens = [
-            token
-            for token in tokenize(concept)
-            if len(token) > 3 and token not in _STOPWORDS
-        ]
-        matched = bool(concept_tokens) and any(token in answer_tokens for token in concept_tokens)
-        if matched:
-            matched_concepts.append(concept)
+        if any(token in answer_tokens for token in _content_words(concept, stopwords)):
+            named.append(concept)
         else:
-            unmatched_concepts.append(concept)
-
-    return matched_concepts, unmatched_concepts
-
-
-def _scoring() -> dict:
-    """The points and score bands from quiz_config.yaml."""
-    return _load_quiz_config()["scoring"]
+            missed.append(concept)
+    return named, missed
 
 
-def _alignment_from_score(score: int) -> str:
-    """Map a numeric score to a coarse alignment label."""
-    return range_label(score, _scoring()["alignment_bands"], ["weak", "partial", "strong"])
-
-
-def _understanding_from_score(score: int) -> str:
-    """Map a numeric score to a coarse understanding label."""
-    return range_label(
-        score, _scoring()["understanding_bands"], ["needs_work", "partial", "good", "excellent"]
-    )
-
-
-def _build_coach_tip(missed_concepts: list[str], mode: str) -> str:
-    """Create one clear coaching tip based on the highest-value missed concept."""
-    if missed_concepts:
-        return f"Focus next on this concept: {missed_concepts[0]}."
-    if mode == "next_move":
-        return "Keep one open question tied to the customer's last message."
-    return "State the next step and why it moves the stage forward."
-
-
-def _deterministic_open_ended_assessment(
-    user_text: str,
-    rubric: dict,
-    mode: str,
-    last_user_message: str = "",
-) -> dict:
-    """Deterministic scoring for open-ended answers based on rubric coverage and clarity."""
+def _open_ended_assessment(user_text: str, rubric: dict, mode: str, last_user_message: str = "") -> dict:
+    """Rule-based score for a next-move or direction answer: rubric coverage and clarity."""
+    config = load_quiz()
+    points, words, feedback = config["scoring"], config["words"], config["feedback"]
+    stopwords = set(words["stopwords"])
     text = (user_text or "").strip()
     lower = text.lower()
-    concepts = rubric.get("key_concepts", []) or []
+    concepts = rubric["key_concepts"]
 
-    words = tokenize(text)
-    word_count = len(words)
-    points = _scoring()
+    answer_words = tokenize(text)
     length = points["length_points"]
     length_score = (
-        length["full"] if word_count >= length["full_words"]
-        else length["part"] if word_count >= length["part_words"]
+        length["full"] if len(answer_words) >= length["full_words"]
+        else length["part"] if len(answer_words) >= length["part_words"]
         else length["short"]
     )
 
-    matched_concepts, unmatched_concepts = _detect_concept_coverage(text, concepts)
-    coverage = len(matched_concepts) / len(concepts) if concepts else 0.0
-    base_score = points["coverage_points"]["next_move"] * coverage
+    named, missed = _concept_coverage(text, concepts, stopwords)
+    coverage = len(named) / len(concepts) if concepts else 0.0
 
     strengths: list[str] = []
     improvements: list[str] = []
-
     if coverage >= points["coverage_good"]:
-        strengths.append("Response referenced key stage concepts.")
-    elif unmatched_concepts:
-        improvements.append(f"Include this missing concept: {unmatched_concepts[0]}.")
+        strengths.append(feedback["concepts_named"])
+    elif missed:
+        improvements.append(feedback["concept_missing"].format(concept=missed[0]))
 
+    mode_text = feedback[mode]
     if mode == "next_move":
-        has_open_question = "?" in text and contains_nonnegated_keyword(
-            lower, _OPEN_QUESTION_WORDS
-        )
-        has_action_signal = contains_nonnegated_keyword(
-            lower,
-            [
-                "ask",
-                "explore",
-                "clarify",
-                "understand",
-                "discover",
-                "probe",
-                "uncover",
-                "confirm",
-            ],
-        )
+        move = points["next_move_points"]
+        has_open_question = "?" in text and contains_nonnegated_keyword(lower, words["open_question"])
+        has_action = contains_nonnegated_keyword(lower, words["action"])
 
         context_score = 0
         if last_user_message:
-            customer_tokens = {
-                token
-                for token in tokenize(last_user_message)
-                if len(token) > 3 and token not in _STOPWORDS
-            }
-            overlap = customer_tokens.intersection(set(words))
-            if overlap:
-                context_score = points["next_move_points"]["context"]
-                strengths.append("Response connected to the customer's stated context.")
+            if set(_content_words(last_user_message, stopwords)) & set(answer_words):
+                context_score = move["context"]
+                strengths.append(mode_text["context_used"])
             else:
-                improvements.append(
-                    "Reference one concrete detail from the customer's last message."
-                )
+                improvements.append(mode_text["context_missing"])
 
-        move = points["next_move_points"]
+        if has_open_question:
+            strengths.append(mode_text["open_question"])
+        else:
+            improvements.append(mode_text["no_open_question"])
         move_score = (
             move["open_question"] if has_open_question
-            else move["action"] if has_action_signal
+            else move["action"] if has_action
             else move["neither"]
         )
-        if has_open_question:
-            strengths.append("Used an open question to keep discovery moving.")
-        else:
-            improvements.append("Use one open question to move the conversation forward.")
-
-        score = clamp_score(round(base_score + length_score + move_score + context_score))
-
-        feedback = range_label(score, points["alignment_bands"], [
-            "This next move is too generic for the current stage.",
-            "Partly aligned, but tighten stage focus.",
-            "Strong next move for this stage.",
-        ])
-
-        return {
-            "score": score,
-            "feedback": feedback,
-            "strengths": merge_unique_items(strengths, max_items=3),
-            "improvements": merge_unique_items(improvements, max_items=3),
-            "key_concepts_got": matched_concepts,
-            "key_concepts_missed": unmatched_concepts,
-            "coach_tip": _build_coach_tip(unmatched_concepts, mode),
-        }
-
-    has_reasoning = contains_nonnegated_keyword(
-        lower,
-        ["because", "so that", "therefore", "which means", "this helps"],
-    )
-    has_plan = contains_nonnegated_keyword(
-        lower,
-        ["first", "next", "then", "after that", "from there"],
-    )
-
-    direction = points["direction_points"]
-    reasoning_score = direction["reasoning"] if has_reasoning else direction["missing"]
-    plan_score = direction["plan"] if has_plan else direction["missing"]
-
-    if has_reasoning:
-        strengths.append("Explained why this direction fits.")
+        score = points["coverage_points"]["next_move"] * coverage + length_score + move_score + context_score
     else:
-        improvements.append("Explain why this direction fits the stage goal.")
+        direction = points["direction_points"]
+        has_reasoning = contains_nonnegated_keyword(lower, words["reasoning"])
+        has_plan = contains_nonnegated_keyword(lower, words["plan"])
+        strengths += [mode_text["reasoning"]] if has_reasoning else []
+        improvements += [] if has_reasoning else [mode_text["no_reasoning"]]
+        strengths += [mode_text["plan"]] if has_plan else []
+        improvements += [] if has_plan else [mode_text["no_plan"]]
+        score = (
+            points["coverage_points"]["direction"] * coverage
+            + length_score
+            + (direction["reasoning"] if has_reasoning else direction["missing"])
+            + (direction["plan"] if has_plan else direction["missing"])
+        )
 
-    if has_plan:
-        strengths.append("Outlined a clear next-step sequence.")
-    else:
-        improvements.append("Name a clear order for your next steps.")
-
-    score = clamp_score(round(points["coverage_points"]["direction"] * coverage + length_score + reasoning_score + plan_score))
-
-    feedback = range_label(score, points["alignment_bands"], [
-        "Direction is unclear and misses stage priorities.",
-        "Direction is partly clear, but needs stronger stage linkage.",
-        "Strong strategic direction for this stage.",
-    ])
-
+    score = clamp_score(round(score))
     return {
-            "score": score,
-            "feedback": feedback,
-            "strengths": merge_unique_items(strengths, max_items=3),
-            "improvements": merge_unique_items(improvements, max_items=3),
-            "key_concepts_got": matched_concepts,
-            "key_concepts_missed": unmatched_concepts,
-            "coach_tip": _build_coach_tip(unmatched_concepts, mode),
-        }
+        "score": score,
+        "feedback": range_label(score, points["alignment_bands"], mode_text["bands"]),
+        "strengths": merge_unique_items(strengths, max_items=3),
+        "improvements": merge_unique_items(improvements, max_items=3),
+        "key_concepts_got": named,
+        "key_concepts_missed": missed,
+        "coach_tip": (
+            feedback["coach_tip_concept"].format(concept=missed[0]) if missed else mode_text["coach_tip"]
+        ),
+    }
 
 
-def _merge_open_ended_result(mode: str, deterministic: dict, llm_result: dict) -> dict:
+def _merge_open_ended_result(mode: str, rules: dict, llm_result: dict) -> dict:
     """Rules set the score; the LLM may only add wording (feedback, strengths, improvements)."""
+    config = load_quiz()
     llm_used = bool(llm_result.get("_used_llm"))
-    final_score = deterministic["score"]
+    score = rules["score"]
 
     llm_feedback = (llm_result.get("feedback") or "").strip()
-    feedback = deterministic["feedback"]
-    if llm_used and llm_feedback and llm_feedback.lower() != "unable to evaluate.":
+    feedback = rules["feedback"]
+    if llm_used and llm_feedback and llm_feedback.lower() != config["feedback"]["ai_unavailable"].lower():
         feedback = f"{feedback} {llm_feedback}"
 
     merged = {
-        "score": final_score,
+        "score": score,
         "feedback": feedback,
-        "strengths": merge_unique_items(
-            deterministic.get("strengths", []), llm_result.get("strengths", []), max_items=4
-        ),
-        "improvements": merge_unique_items(
-            deterministic.get("improvements", []), llm_result.get("improvements", []), max_items=4
-        ),
-        "key_concepts_got": deterministic.get("key_concepts_got", []),
-        "key_concepts_missed": deterministic.get("key_concepts_missed", []),
-        "coach_tip": deterministic.get("coach_tip", ""),
+        "strengths": merge_unique_items(rules["strengths"], llm_result.get("strengths", []), max_items=4),
+        "improvements": merge_unique_items(rules["improvements"], llm_result.get("improvements", []), max_items=4),
+        "key_concepts_got": rules["key_concepts_got"],
+        "key_concepts_missed": rules["key_concepts_missed"],
+        "coach_tip": rules["coach_tip"],
     }
 
+    bands = config["scoring"]
     if mode == "next_move":
         merged["alignment"] = (
-            llm_result.get("alignment")
+            llm_result["alignment"]
             if llm_used and llm_result.get("alignment") in _ENUMS["alignment"]
-            else _alignment_from_score(final_score)
+            else range_label(score, bands["alignment_bands"], ["weak", "partial", "strong"])
         )
     else:
         merged["understanding"] = (
-            llm_result.get("understanding")
+            llm_result["understanding"]
             if llm_used and llm_result.get("understanding") in _ENUMS["understanding"]
-            else _understanding_from_score(final_score)
+            else range_label(score, bands["understanding_bands"], ["needs_work", "partial", "good", "excellent"])
         )
-
     return merged
 
 
-def _load_quiz_config() -> dict:
-    """Load quiz configuration (cached)"""
-    global _quiz_config
-    if _quiz_config is None:
-        _quiz_config = load_yaml("quiz_config.yaml")
-    return _quiz_config
-
-
 def get_stage_rubric(stage: str, strategy: str) -> dict:
-    """Rubric for a stage/strategy combo: goal, advance_when, key_concepts, next_stage"""
-    config = _load_quiz_config()
-    stages = config.get("stages", {})
-    lookup_strategy = "consultative" if strategy == "intent" else strategy
-    strategy_stages = stages.get(lookup_strategy, {})
-    rubric = strategy_stages.get(stage, None)
-
-    return rubric or {
-        "goal": f"Complete the {stage} stage",
-        "advance_when": "Stage objectives are met",
-        "key_concepts": ["Listen actively", "Ask relevant questions"],
-        "next_stage": None,
-    }
+    """Rubric for a stage: goal, advance_when, key_concepts. A stage with no rubric is a config error."""
+    return load_quiz()["stages"][str(strategy)][str(stage)]
 
 
 def get_quiz_question(quiz_type: str) -> str:
-    """Pick a random question for the given quiz type"""
-    questions = _load_quiz_config().get("questions", {})
+    """A random question for the quiz type ("stage", "next-move", "direction")."""
+    questions = load_quiz()["questions"]
     normalized_type = quiz_type.replace("-", "_").lower()
-    type_questions = questions.get(normalized_type, [])
-
-    if type_questions:
-        return random.choice(type_questions)
-
-    fallbacks = {
-        "stage": "Which stage of the sale and which approach are we in right now?",
-        "next_move": "What would you say next to this customer?",
-        "direction": "Where are you taking this conversation and why?",
-    }
-    return fallbacks.get(normalized_type, "How would you proceed?")
-
-
-def _stage_key(value: Any) -> str:
-    return str(getattr(value, "value", value)).split(".")[-1].lower()
+    return random.choice(questions.get(normalized_type) or questions["default"])
 
 
 def _friendly(kind: str, value: Any) -> str:
-    """Plain-English name for a stage or strategy id (enum, 'Stage.INTENT' or 'intent')."""
-    key = _stage_key(value)
-    return _load_quiz_config().get(kind, {}).get(key, key)
+    """Plain-English name for a stage or strategy id."""
+    key = str(value)
+    return load_quiz()[kind].get(key, key)
 
 
-def test_quiz_stage_answer(user_answer: str, current_stage: str, flow_type: str) -> dict:
-    """Deterministic: did the user correctly ID the current stage and strategy?
+def score_stage_answer(user_answer: str, current_stage: str, strategy: str) -> dict:
+    """Did the learner name the current stage and strategy? By rule, no AI.
 
     The answer may use either the id ("logical") or the plain name ("Understanding
     the problem"). Feedback only ever shows the plain name.
     """
-    stage_key, strategy_key = _stage_key(current_stage), _stage_key(flow_type)
     stage_name = _friendly("stage_names", current_stage)
-    strategy_name = _friendly("strategy_names", flow_type)
+    strategy_name = _friendly("strategy_names", strategy)
     answer_lower = user_answer.strip().lower()
 
-    stage_ok = contains_nonnegated_keyword(answer_lower, [stage_key, stage_name.lower()])
-    strategy_ok = contains_nonnegated_keyword(answer_lower, [strategy_key, strategy_name.lower()])
+    stage_ok = contains_nonnegated_keyword(answer_lower, [str(current_stage), stage_name.lower()])
+    strategy_ok = contains_nonnegated_keyword(answer_lower, [str(strategy), strategy_name.lower()])
     correct = stage_ok and strategy_ok
 
-    feedback_map = {
-        (True, True): f"Right - {stage_name}, {strategy_name} approach.",
-        (False, False): f"Not this time - it's {stage_name} ({strategy_name} approach).",
-        (False, True): f"The approach is right ({strategy_name}), but you're in {stage_name} now.",
-        (True, False): f"The stage is right ({stage_name}), but this is the {strategy_name} approach.",
-    }
-    feedback = feedback_map[(stage_ok, strategy_ok)]
+    templates = load_quiz()["feedback"]["stage"]
+    template = {
+        (True, True): templates["both_right"],
+        (False, False): templates["both_wrong"],
+        (False, True): templates["strategy_only"],
+        (True, False): templates["stage_only"],
+    }[(stage_ok, strategy_ok)]
 
-    # Partial credit: 50% for stage OR strategy, 100% for both
     if correct:
         score = 1
     elif stage_ok or strategy_ok:
-        score = _scoring()["stage_partial_credit"]
+        score = load_quiz()["scoring"]["stage_partial_credit"]
     else:
         score = 0
 
@@ -369,7 +214,7 @@ def test_quiz_stage_answer(user_answer: str, current_stage: str, flow_type: str)
         "score": score,
         "user_answer": user_answer,
         "expected": {"stage": stage_name, "strategy": strategy_name},
-        "feedback": feedback,
+        "feedback": template.format(stage=stage_name, strategy=strategy_name),
     }
 
 
@@ -378,7 +223,7 @@ def build_sell_question(turns: list[dict]) -> dict | None:
     if not turns:
         return None
     turn = min(turns, key=lambda t: (t["rating"], t["turn"]))
-    template = _load_quiz_config()["sell_question"]
+    template = load_quiz()["sell_question"]
     return {
         "turn": turn["turn"],
         "question": template.format(turn=turn["turn"], line=turn["seller"]),
@@ -387,16 +232,12 @@ def build_sell_question(turns: list[dict]) -> dict | None:
 
 def score_sell_answer(answer: str, turn: dict) -> dict:
     """Rate the seller's replacement line with the same judge that rated the original."""
-    new = score_seller_turn(
+    new = rate_turn(
         answer, buyer_message=turn["buyer_before"], completed_turns=turn["turn"] - 1
     )
     old = turn["rating"]
-    if new.rating > old:
-        feedback = f"Better than what you said ({old} out of 5, now {new.rating})."
-    elif new.rating == old:
-        feedback = f"About as strong as what you said ({old} out of 5)."
-    else:
-        feedback = f"Weaker than what you said ({old} out of 5, now {new.rating})."
+    templates = load_quiz()["sell_feedback"]
+    key = "better" if new.rating > old else "same" if new.rating == old else "worse"
     pairs = list(zip(new.signals, new.reasons))
     # The original turn's evidence, worded exactly as the turn review words it.
     before = [
@@ -406,73 +247,59 @@ def score_sell_answer(answer: str, turn: dict) -> dict:
     ]
     return {
         "score": round((new.rating - 1) / 4 * 100),
-        "feedback": feedback,
+        "feedback": templates[key].format(old=old, new=new.rating),
         "strengths": [r for sig, r in pairs if sig not in NEGATIVE_SIGNALS],
         "improvements": [r for sig, r in pairs if sig in NEGATIVE_SIGNALS],
         "before": before,
     }
 
 
-def test_quiz_next_move(
-    user_response: str, router: Any, current_stage: str, flow_type: str, last_user_message: str = ""
-) -> dict:
-    """Hybrid-scored: deterministic rubric fit blended with LLM judgment."""
-    stage, strategy = current_stage, flow_type
-    rubric = get_stage_rubric(stage, strategy)
-    concepts = ", ".join(rubric.get("key_concepts", []))
-
-    deterministic = _deterministic_open_ended_assessment(
-        user_text=user_response,
-        rubric=rubric,
-        mode="next_move",
-        last_user_message=last_user_message,
+def _prompt(kind: str, rubric: dict, stage: str, strategy: str, answer: str, customer: str = "") -> str:
+    return load_quiz()["prompts"][kind].format(
+        stage=_friendly("stage_names", stage),
+        strategy=_friendly("strategy_names", strategy),
+        goal=rubric["goal"],
+        advance_when=rubric["advance_when"],
+        concepts=", ".join(rubric["key_concepts"]),
+        customer=customer,
+        answer=answer,
     )
 
-    prompt = f"""Grade trainee response in {_friendly("stage_names", stage)} ({_friendly("strategy_names", strategy)}).
-Goal: {rubric["goal"]} | Concepts: {concepts}
-<customer>{last_user_message}</customer>
-<trainee>{user_response}</trainee>
-JSON: {{"score": <0-100>, "alignment": "strong|partial|weak", "feedback": "<brief>", "strengths": ["..."], "improvements": ["..."]}}"""
+
+def score_next_move(
+    user_response: str, router: Any, current_stage: str, strategy: str, last_user_message: str = ""
+) -> dict:
+    """Rules score how well the suggested next move fits the stage; the AI may add wording."""
+    rubric = get_stage_rubric(current_stage, strategy)
+    rules = _open_ended_assessment(user_response, rubric, "next_move", last_user_message)
+    prompt = _prompt("next_move", rubric, current_stage, strategy, user_response, last_user_message)
     llm_result = _score_with_llm(router, prompt, {
-        "score": _scoring()["llm_fallback_score"],
+        "score": load_quiz()["scoring"]["llm_fallback_score"],
         "alignment": "partial",
-        "feedback": "Unable to evaluate.",
+        "feedback": load_quiz()["feedback"]["ai_unavailable"],
         "strengths": [],
         "improvements": [],
     })
+    return _merge_open_ended_result("next_move", rules, llm_result)
 
-    return _merge_open_ended_result("next_move", deterministic, llm_result)
 
-
-def test_quiz_direction(user_explanation: str, router: Any, current_stage: str, flow_type: str) -> dict:
-    """Hybrid-scored: deterministic strategy clarity blended with LLM judgment."""
-    stage, strategy = current_stage, flow_type
-    rubric = get_stage_rubric(stage, strategy)
-    concepts = ", ".join(rubric.get("key_concepts", []))
-
-    deterministic = _deterministic_open_ended_assessment(
-        user_text=user_explanation,
-        rubric=rubric,
-        mode="direction",
-    )
-
-    prompt = f"""Evaluate trainee's understanding in {_friendly("stage_names", stage)} ({_friendly("strategy_names", strategy)}).
-Goal: {rubric["goal"]} | Advance: {rubric["advance_when"]} | Concepts: {concepts}
-<trainee>{user_explanation}</trainee>
-JSON: {{"score": <0-100>, "understanding": "excellent|good|partial|needs_work", "feedback": "<brief>", "key_concepts_got": ["..."], "key_concepts_missed": ["..."]}}"""
+def score_direction(user_explanation: str, router: Any, current_stage: str, strategy: str) -> dict:
+    """Rules score how clear the learner's strategy is; the AI may add wording."""
+    rubric = get_stage_rubric(current_stage, strategy)
+    rules = _open_ended_assessment(user_explanation, rubric, "direction")
+    prompt = _prompt("direction", rubric, current_stage, strategy, user_explanation)
     llm_result = _score_with_llm(router, prompt, {
-        "score": _scoring()["llm_fallback_score"],
+        "score": load_quiz()["scoring"]["llm_fallback_score"],
         "understanding": "partial",
-        "feedback": "Unable to evaluate.",
+        "feedback": load_quiz()["feedback"]["ai_unavailable"],
         "key_concepts_got": [],
         "key_concepts_missed": [],
     })
-
-    return _merge_open_ended_result("direction", deterministic, llm_result)
+    return _merge_open_ended_result("direction", rules, llm_result)
 
 
 def _score_with_llm(router: Any, prompt: str, defaults: dict) -> dict:
-    """Unified LLM scoring: validates enums, clamps scores, handles fallbacks."""
+    """The AI's JSON answer, keeping only known labels and a clamped score; `defaults` on any failure."""
     try:
         parsed = complete_json(router, [{"role": "system", "content": prompt}], **LLM["quiz"])
         result = parsed or {}
@@ -480,11 +307,8 @@ def _score_with_llm(router: Any, prompt: str, defaults: dict) -> dict:
         output = {}
         for key, default in defaults.items():
             val = result.get(key, default)
-            # Validate enum fields
-            if key in _ENUMS:
-                if not isinstance(val, str) or val not in _ENUMS[key]:
-                    val = default
-            # Clamp numeric scores
+            if key in _ENUMS and (not isinstance(val, str) or val not in _ENUMS[key]):
+                val = default
             if key == "score" and isinstance(val, (int, float)):
                 val = clamp_score(int(val))
             output[key] = val

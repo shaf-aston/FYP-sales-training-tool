@@ -38,6 +38,6 @@ class FastEmbedEmbedder:
 
 
 def make_embedder(cfg, root):
-    """cfg = selling.yaml. Only place that knows which engine is behind the Embedder seam."""
+    """cfg = script/engine.yaml. Only place that knows which engine is behind the Embedder seam."""
     return FastEmbedEmbedder(cfg["embed_model"], root / cfg["embed_cache_dir"],
                              cfg["embed_threads"], cfg["embed_batch_size"])

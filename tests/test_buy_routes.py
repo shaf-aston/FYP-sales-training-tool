@@ -1,91 +1,13 @@
-"""Tests for buy-mode chat, edit and coach routes."""
-from flask import Flask
+"""Buy-mode routes (/api/buy): session start and end, chat, edit, coach, and the shared health check."""
+import pytest
 
-from backend.routes import buy as buy_routes
-
-
-class _DummyFlowEngine:
-    def __init__(self):
-        self.conversation_history = [
-            {"role": "assistant", "content": "Old answer"},
-            {"role": "user", "content": "Old question"},
-        ]
+from backend.routes import monitoring as monitoring_routes
 
 
-class _DummyResponse:
-    def __init__(self, content="Reply", latency_ms=12.34, provider="probe", model="probe-model"):
-        self.content = content
-        self.latency_ms = latency_ms
-        self.provider = provider
-        self.model = model
-        self.input_len = 2
-        self.output_len = len(content)
+def test_chat_route_returns_metrics_and_coach_notes(live_seller):
+    client, _seller, headers = live_seller
 
-
-class _DummyBot:
-    def __init__(self):
-        self.flow_engine = _DummyFlowEngine()
-        self.rewind_calls = []
-        self.training_calls = []
-        self.training_question_calls = []
-
-    def chat(self, message):
-        self.flow_engine.conversation_history.extend(
-            [
-                {"role": "user", "content": message},
-                {"role": "assistant", "content": f"reply:{message}"},
-            ]
-        )
-        return _DummyResponse(content=f"reply:{message}")
-
-    def generate_training(self, user_message, bot_reply):
-        self.training_calls.append((user_message, bot_reply))
-        return {"what_happened": "ok"}
-
-    def rewind_to_turn(self, turn_index):
-        self.rewind_calls.append(turn_index)
-        self.flow_engine.conversation_history = []
-        return True
-
-    def edit_turn(self, message_index, new_text):
-        self.rewind_to_turn(message_index // 2)
-        return self.chat(new_text)
-
-    def answer_training_question(self, question, style="tactical"):
-        self.training_question_calls.append((question, style))
-        return {"answer": f"{style}:{question}"}
-
-
-def _make_chat_app(monkeypatch, bot=None):
-    app = Flask(__name__)
-    app.config["TESTING"] = True
-    bot = bot or _DummyBot()
-
-    def require_session():
-        return bot, None
-
-    def validate_message(text):
-        text = (text or "").strip()
-        if not text:
-            from flask import jsonify
-
-            return None, (jsonify({"error": "Message required"}), 400)
-        return text, None
-
-    def bot_state(_bot):
-        return {"stage": "INTENT", "strategy": "CONSULTATIVE"}
-
-    monkeypatch.setattr(buy_routes, "require_session", require_session)
-    monkeypatch.setattr(buy_routes, "validate_message", validate_message)
-    monkeypatch.setattr(buy_routes, "bot_state", bot_state)
-    app.register_blueprint(buy_routes.bp)
-    return app, bot
-
-
-def test_chat_route_returns_metrics_and_training_blob(monkeypatch):
-    app, bot = _make_chat_app(monkeypatch)
-
-    response = app.test_client().post("/api/buy/chat", json={"message": "Hi"})
+    response = client.post("/api/buy/chat", json={"message": "Hi"}, headers=headers)
     payload = response.get_json()
 
     assert response.status_code == 200
@@ -93,65 +15,160 @@ def test_chat_route_returns_metrics_and_training_blob(monkeypatch):
     assert payload["message"] == "reply:Hi"
     assert payload["metrics"] == {"input_length": 2, "output_length": len("reply:Hi")}
     assert payload["training"] == {"what_happened": "ok"}
-    assert bot.training_calls == [("Hi", "reply:Hi")]
+    assert (payload["stage"], payload["strategy"]) == ("INTENT", "CONSULTATIVE")
 
 
-def test_chat_route_handles_missing_json_body(monkeypatch):
-    app, _bot = _make_chat_app(monkeypatch)
+def test_chat_route_handles_missing_json_body(live_seller):
+    client, _seller, headers = live_seller
 
-    response = app.test_client().post(
-        "/api/buy/chat",
-        data="",
-        content_type="text/plain",
-    )
+    response = client.post("/api/buy/chat", data="", content_type="text/plain", headers=headers)
 
     assert response.status_code == 400
     assert response.get_json()["error"] == "Message required"
 
 
-def test_edit_route_rewinds_before_regenerating_response(monkeypatch):
-    app, bot = _make_chat_app(monkeypatch)
+def test_edit_route_replays_from_the_edited_message(live_seller):
+    client, seller, headers = live_seller
+    seller.call.conversation_history = [
+        {"role": "assistant", "content": "hello"},
+        {"role": "user", "content": "Old question"},
+        {"role": "assistant", "content": "Old answer"},
+    ]
 
-    response = app.test_client().post("/api/buy/edit", json={"index": 1, "message": "Updated"})
+    response = client.post("/api/buy/edit", json={"index": 1, "message": "Updated"}, headers=headers)
     payload = response.get_json()
 
     assert response.status_code == 200
-    assert payload["success"] is True
-    assert bot.rewind_calls == [0]
+    assert seller.edits == [1]
     assert payload["message"] == "reply:Updated"
     assert payload["history"] == [
+        {"role": "assistant", "content": "hello"},
         {"role": "user", "content": "Updated"},
         {"role": "assistant", "content": "reply:Updated"},
     ]
 
 
-def test_edit_route_rejects_invalid_index_format(monkeypatch):
-    app, _bot = _make_chat_app(monkeypatch)
+def test_edit_route_rejects_invalid_index_format(live_seller):
+    client, _seller, headers = live_seller
 
-    response = app.test_client().post("/api/buy/edit", json={"index": "abc", "message": "Updated"})
+    response = client.post("/api/buy/edit", json={"index": "abc", "message": "Updated"}, headers=headers)
 
     assert response.status_code == 400
     assert response.get_json()["error"] == "Invalid index format"
 
 
-def test_coach_defaults_unknown_style_to_tactical(monkeypatch):
-    app, bot = _make_chat_app(monkeypatch)
+def test_coach_defaults_unknown_style_to_tactical(live_seller):
+    client, seller, headers = live_seller
 
-    response = app.test_client().post(
-        "/api/buy/coach",
-        json={"question": "What should I ask next?", "style": "invalid"},
+    response = client.post(
+        "/api/buy/coach", json={"question": "What should I ask next?", "style": "invalid"}, headers=headers
     )
-    payload = response.get_json()
 
     assert response.status_code == 200
-    assert payload == {"success": True, "answer": "tactical:What should I ask next?"}
-    assert bot.training_question_calls == [("What should I ask next?", "tactical")]
+    assert response.get_json() == {"success": True, "answer": "tactical:What should I ask next?"}
+    assert seller.coach_questions == [("What should I ask next?", "tactical")]
 
 
-def test_coach_rejects_missing_question(monkeypatch):
-    app, _bot = _make_chat_app(monkeypatch)
+def test_coach_rejects_missing_question(live_seller):
+    client, _seller, headers = live_seller
 
-    response = app.test_client().post("/api/buy/coach", json={"question": "  "})
+    response = client.post("/api/buy/coach", json={"question": "  "}, headers=headers)
 
     assert response.status_code == 400
     assert response.get_json()["error"] == "Question required"
+
+
+def test_health_returns_active_provider_and_performance(live_seller, monkeypatch):
+    client, _seller, headers = live_seller
+    monkeypatch.setattr(
+        monitoring_routes, "get_available_providers",
+        lambda: [{"name": "probe", "available": True, "model": "probe-model"}]
+    )
+    monkeypatch.setattr(
+        monitoring_routes.PerformanceTracker,
+        "get_provider_stats",
+        staticmethod(lambda: {"probe": {"count": 1}}),
+    )
+
+    response = client.get("/api/health", headers=headers)
+
+    assert response.status_code == 200
+    assert response.get_json() == {
+        "success": True,
+        "active": {"provider": "probe", "model": "probe-model"},
+        "available_providers": [{"name": "probe", "available": True, "model": "probe-model"}],
+        "performance_stats": {"probe": {"count": 1}},
+    }
+
+
+def test_reset_route_deletes_the_session_and_records_its_end(live_seller, buy_app):
+    client, seller, headers = live_seller
+
+    response = client.post("/api/buy/reset", headers=headers)
+
+    assert response.status_code == 200
+    assert response.get_json() == {"success": True}
+    assert seller.session_ended
+    assert buy_app.extensions["sessions"].seller.get(seller.session_id) is None
+
+
+def test_init_creates_new_session_and_returns_greeting(buy_app):
+    response = buy_app.test_client().post("/api/buy/init", json={})
+    payload = response.get_json()
+
+    assert response.status_code == 200
+    assert payload["message"] == "hello"
+    assert payload["history"] == []
+    # The greeting is kept in the call so the seller never greets twice.
+    seller = buy_app.extensions["sessions"].seller.get(payload["session_id"])
+    assert seller.call.conversation_history == [{"role": "assistant", "content": "hello"}]
+
+
+def test_init_restores_live_session_from_memory(live_seller):
+    client, seller, _headers = live_seller
+    seller.call.conversation_history = [
+        {"role": "assistant", "content": "hello"},
+        {"role": "user", "content": "Hi"},
+        {"role": "assistant", "content": "Great"},
+    ]
+
+    payload = client.post("/api/buy/init", json={"session_id": seller.session_id}).get_json()
+
+    assert payload["success"] is True
+    assert payload["message"] is None
+    assert len(payload["history"]) == 3
+
+
+def test_init_starts_fresh_session_when_missing_from_memory(buy_app):
+    payload = buy_app.test_client().post("/api/buy/init", json={"session_id": "disk0001"}).get_json()
+
+    assert payload["success"] is True
+    assert payload["message"] == "hello"
+    assert payload["session_id"] != "disk0001"
+    assert buy_app.extensions["sessions"].seller.get(payload["session_id"]) is not None
+
+
+@pytest.mark.parametrize(
+    "method, path",
+    [
+        ("post", "/api/buy/reset"),
+        ("post", "/api/buy/chat"),
+        ("post", "/api/buy/edit"),
+        ("post", "/api/buy/coach"),
+        ("get", "/api/buy/quiz/question"),
+        ("post", "/api/buy/quiz/stage"),
+        ("post", "/api/buy/quiz/next-move"),
+        ("post", "/api/buy/quiz/direction"),
+    ],
+)
+def test_every_session_route_answers_a_dead_session_the_same_way(buy_app, method, path):
+    """One seam, one contract: the web app starts over on code == SESSION_EXPIRED."""
+    client = buy_app.test_client()
+    kwargs = {"headers": {"X-Session-ID": "f" * 8}}
+    if method == "post":
+        kwargs["json"] = {"message": "Hi", "index": 1, "question": "Why?", "answer": "x"}
+
+    response = getattr(client, method)(path, **kwargs)
+
+    assert response.status_code == 400
+    assert response.get_json()["code"] == "SESSION_EXPIRED"

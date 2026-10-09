@@ -4,10 +4,11 @@ import { useCallback, useEffect, useState } from "react";
 import { Badge, Button, Card, Dialog, Notice, TextArea } from "@/components/ui";
 import { useSession } from "@/features/session/SessionContext";
 import { useUi } from "@/state/UiContext";
-import { api, ApiError } from "@/lib/api/client";
+import { api, errorText } from "@/lib/api/client";
 import type { RedoRes, Review, ReviewTurn } from "@/lib/api/types";
 import { config } from "@/lib/config";
 import { gradeOf, useEvalState } from "./evalStore";
+import { gradeTone, signed } from "./options";
 import s from "./ReviewDialog.module.css";
 
 type Load = { status: "loading" } | { status: "error"; message: string } | { status: "ready"; review: Review };
@@ -25,7 +26,7 @@ function Dots({ rating }: { rating: number }) {
 function intro(review: Review, grade: string): string {
   const n = review.pivotal_turns.length;
   if (n) return `${n} turn${n > 1 ? "s" : ""} cost you ground. Try ${n > 1 ? "them" : "it"} again below and see what they say.`;
-  if (review.summary.went_well && !["D", "F"].includes(grade)) return "Nothing here lost you ground. Good session.";
+  if (review.summary.went_well && gradeTone(grade) !== "danger") return "Nothing here lost you ground. Good session.";
   return `No single turn cost you ground, but the session did not land. Work on this: ${review.summary.work_on ?? ""}`;
 }
 
@@ -49,13 +50,13 @@ function Redo({ turn, laterTurns, done, onDone }: RedoProps) {
     setWaiting(true);
     setError("");
     try {
-      const res = await api.redo(sellSession.sessionId, turn.turn, draft.trim());
+      const res = await api.sellRedo(sellSession.sessionId, turn.turn, draft.trim());
       setSent(draft.trim());
       onDone(res);
       setEditing(false);
     } catch (err) {
-      if (err instanceof ApiError && handleExpired(err)) return;
-      setError(err instanceof ApiError ? err.message : "That didn't go through.");
+      if (handleExpired(err)) return;
+      setError(errorText(err, "That didn't go through."));
     } finally {
       setWaiting(false);
     }
@@ -119,11 +120,11 @@ function ReviewBody() {
     if (!sid) return;
     let live = true;
     api
-      .review(sid)
+      .sellReview(sid)
       .then((review) => live && setLoad({ status: "ready", review }))
       .catch((err) => {
-        if (!live || (err instanceof ApiError && handleExpired(err))) return;
-        setLoad({ status: "error", message: err instanceof ApiError ? err.message : "" });
+        if (!live || handleExpired(err)) return;
+        setLoad({ status: "error", message: errorText(err, "") });
       });
     return () => {
       live = false;
@@ -139,14 +140,7 @@ function ReviewBody() {
   if (load.status === "loading") return <Notice kind="loading">Opening the review…</Notice>;
   if (load.status === "error")
     return (
-      <Notice
-        kind="error"
-        action={
-          <Button variant="ghost" onClick={retry}>
-            Try again
-          </Button>
-        }
-      >
+      <Notice kind="error" onRetry={retry}>
         Couldn&apos;t open the review. {load.message}
       </Notice>
     );
@@ -183,8 +177,7 @@ function ReviewBody() {
                 <Dots rating={t.rating} />
                 {change !== 0 && (
                   <Badge tone={change > 0 ? "success" : "danger"}>
-                    {change > 0 ? "+" : ""}
-                    {change}% interest
+                    {signed(change)}% interest
                   </Badge>
                 )}
                 {gone && <Badge>Replaced</Badge>}

@@ -1,0 +1,9 @@
+# Custom product knowledge (core/knowledge.py): field id -> label in the AI buyer's prompt.
+# The ids are the only fields the web app's knowledge form may save.
+label_map:
+  product_name: "Product name"
+  pricing: "Pricing"
+  specifications: "Specifications"
+  company_info: "Company information"
+  selling_points: "Selling points"
+  additional_notes: "Additional notes"

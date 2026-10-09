@@ -1,0 +1,30 @@
+# AI-buyer replies (sell mode), checked by core/buyer_guardrails.py before the user sees them.
+# The rules own the outcome, so the buyer may not agree to buy on its own.
+buyer:
+  # A sentence with one of these is dropped. Whole-word match; skipped when negated.
+  commitment:
+    - ready to go
+    - i'm ready
+    - let's go
+    - let's do it
+    - let's do this
+    - let's proceed
+    - let's get started
+    - let's move forward
+    - sign me up
+    - sign up
+    - i'll take it
+    - i'm in
+    - count me in
+    - i'm sold
+    - we'll go with
+    - send the agreement
+    - send over the agreement
+    - send over the contract
+    - where do i sign
+    - how do i pay
+    - how do i start
+  # Used only when nothing is left; picked in turn order.
+  fallback_lines:
+    - "Hmm. Tell me more about how that would work for us."
+    - "I'm still weighing it up. What else should I know?"

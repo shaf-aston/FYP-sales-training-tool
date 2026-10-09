@@ -3,7 +3,7 @@
 // Which panels and windows are open. Only one side panel and one dialog at a time.
 
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
-import { storageKeys } from "@/lib/config";
+import { config, storageKeys } from "@/lib/config";
 import { useStoredState } from "@/lib/useStoredState";
 
 export type SidePanel = "coach" | "quiz" | null;
@@ -20,6 +20,8 @@ interface UiValue {
   closeDialog: () => void;
   sidebarTab: SidebarTab;
   setSidebarTab: (t: SidebarTab) => void;
+  /** Scroll to the sidebar (below the chat on phones) and focus it, optionally on a tab. */
+  showPanels: (tab?: SidebarTab) => void;
 }
 
 const UiContext = createContext<UiValue | null>(null);
@@ -30,7 +32,7 @@ const parseTab = (raw: string) => (TABS.includes(raw as SidebarTab) ? (raw as Si
 export function UiProvider({ children }: { children: ReactNode }) {
   const [sidePanel, setSidePanel] = useState<SidePanel>(null);
   const [dialog, setDialog] = useState<DialogName>(null);
-  const [sidebarTab, setSidebarTab] = useStoredState<SidebarTab>(storageKeys.sidebarTab, "buyer", parseTab);
+  const [sidebarTab, setSidebarTab] = useStoredState<SidebarTab>(storageKeys.sidebarTab, "buyer", parseTab); // buy mode has no "buyer" tab, so Sidebar falls back
 
   const value = useMemo<UiValue>(
     () => ({
@@ -42,6 +44,12 @@ export function UiProvider({ children }: { children: ReactNode }) {
       closeDialog: () => setDialog(null),
       sidebarTab,
       setSidebarTab,
+      showPanels: (tab) => {
+        if (tab) setSidebarTab(tab);
+        const el = document.getElementById(config.ids.panels);
+        el?.scrollIntoView({ behavior: "smooth", block: "start" });
+        el?.focus({ preventScroll: true });
+      },
     }),
     [sidePanel, dialog, sidebarTab, setSidebarTab],
   );

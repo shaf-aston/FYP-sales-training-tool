@@ -17,20 +17,6 @@ export function writeString(key: string, value: string | null): void {
   }
 }
 
-export function readJson<T>(key: string, fallback: T): T {
-  const raw = readString(key);
-  if (!raw) return fallback;
-  try {
-    return { ...fallback, ...JSON.parse(raw) } as T;
-  } catch {
-    return fallback;
-  }
-}
-
-export function writeJson(key: string, value: unknown): void {
-  writeString(key, JSON.stringify(value));
-}
-
 /** False in private windows or when site data is blocked. */
 export function storageAvailable(): boolean {
   try {

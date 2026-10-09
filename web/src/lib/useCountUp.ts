@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { config } from "./config";
+import { prefersReducedMotion } from "@/lib/motion";
 
 /** Counts 0 -> target with an ease-out; jumps straight there under reduced motion. `null` holds at 0. */
 export function useCountUp(target: number | null, ms: number = config.countUpMs): number {
   const [value, setValue] = useState(0);
   useEffect(() => {
     if (target === null) return;
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reduced = prefersReducedMotion();
     const start = performance.now();
     let raf = 0;
     const tick = (now: number) => {

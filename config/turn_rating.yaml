@@ -1,0 +1,189 @@
+# How a SALESPERSON's turn is rated (1-5), in sell mode and its review, quiz and drills
+# (core/turn_rating.py).
+#
+# Every list here describes language a SELLER uses, never the buyer's: a seller typing
+# "interested" is asking a question, a buyer typing it would be a buying signal.
+#
+# Weights are added to a neutral base of 3 and the total is clamped to 1-5.
+# Raise a weight to make that behaviour matter more. A negative weight makes the signal
+# a misstep; missteps are listed in priority order: the first one that fired picks the hint.
+
+weights:
+  open_question: 0.4
+  on_topic: 0.5
+  mirroring: 1.0
+  acknowledgement: 0.5
+  pressure: -1.2
+  premature_pitch: -1.0
+  question_stacking: -0.6
+  monologue: -0.5
+  low_effort: -0.9
+  generic_question: -0.3
+  closed_question: -0.4
+
+# Why each signal fired, shown to the learner beside the rating. Every weight needs one.
+reasons:
+  open_question: "Asked an open question that invites them to explain."
+  on_topic: "Built the question on something they actually said."
+  generic_question: "Asked a stock question that could be put to anyone."
+  closed_question: "Asked a yes-or-no question, which gets a one-word answer."
+  mirroring: "Used the buyer's own words back to them - shows you were listening."
+  acknowledgement: "Acknowledged what they said before moving on."
+  pressure: "Used urgency or scarcity language, which reads as pushy."
+  premature_pitch: "Talked commercials before finding out what they care about."
+  question_stacking: "Asked several questions at once, so none get a real answer."
+  monologue: "Long enough that the buyer stops reading."
+  low_effort: "Too short to move the conversation anywhere."
+
+# The review's "work on" line when no misstep repeated.
+default_work_on: "Ask more open questions built on the buyer's own words."
+
+thresholds:
+  low_effort_words: 4        # fewer words than this reads as low effort
+  monologue_words: 90        # more words than this is talking, not selling
+  question_stacking_count: 3 # this many questions in one turn overwhelms a buyer
+  mirroring_min_overlap: 2   # distinct buyer words echoed back to count as listening
+  praise_min_average: 3.5    # session average needed before the review praises it
+  discovery_turns: 2         # pitching before this many completed turns is premature
+  neutral_rating: 3          # a turn with no signals fires scores this (1-5 scale)
+  weak_rating: 2             # at or below this, a turn is offered for a redo
+  strong_rating: 4           # at or above this, a turn becomes a recall drill
+  pivotal_turns: 3           # how many costly turns the review singles out
+
+# Two ways a seller opens someone up.
+# question_words only count when the turn actually asks something ("?").
+question_words:
+  - what
+  - how
+  - why
+  - where
+  - when
+
+# Questions that open nothing because they fit any buyer.
+stock_questions:
+  - how are you
+  - how's it going
+  - how can i help
+  - what do you do
+  - anything else
+
+# A question starting with one of these (and no question word) is yes/no.
+closed_starters:
+  - do
+  - does
+  - did
+  - would
+  - are
+  - is
+  - can
+  - could
+  - will
+  - have
+  - should
+
+# Invitations are open questions without a question mark - "walk me through it"
+# is discovery even though it is phrased as an instruction.
+invitations:
+  - tell me
+  - walk me through
+  - talk me through
+  - help me understand
+  - describe
+  - explain
+
+acknowledgement:
+  - that makes sense
+  - i hear you
+  - i understand
+  - fair enough
+  - i can see why
+  - good point
+  - thanks for sharing
+
+pressure:
+  - act now
+  - today only
+  - limited time
+  - last one
+  - won't last
+  - wont last
+  - need to decide
+  - hurry
+  - before it's gone
+  - sign today
+
+# Commercial language. Fine later, premature during early discovery unless the
+# buyer raised it first.
+pitch_language:
+  - price
+  - cost
+  - discount
+  - deal
+  - offer
+  - package
+  - payment
+  - finance
+  - warranty
+  - monthly
+  - upfront
+
+# Ignored when checking whether the seller echoed the buyer's own words.
+mirroring_stopwords:
+  - "the"
+  - "and"
+  - "but"
+  - "for"
+  - "you"
+  - "your"
+  - "i'm"
+  - "im"
+  - "that"
+  - "this"
+  - "with"
+  - "have"
+  - "has"
+  - "was"
+  - "are"
+  - "is"
+  - "it"
+  - "its"
+  - "to"
+  - "of"
+  - "a"
+  - "an"
+  - "in"
+  - "on"
+  - "at"
+  - "be"
+  - "do"
+  - "so"
+  - "we"
+  - "my"
+  - "me"
+  - "just"
+  - "really"
+  - "like"
+  - "about"
+  - "would"
+  - "could"
+  - "want"
+  - "need"
+  - "know"
+  - "think"
+
+# One-line tip shown after a seller turn when hints are on (sell mode, no AI).
+# The first negative signal that fired picks the tip; otherwise the first positive one;
+# otherwise `default`. Keys are the signal names in `weights`.
+hints:
+  pressure: "Drop the urgency. Ask what would make now the right time for them."
+  premature_pitch: "Hold the pitch. Ask one more question about what they need first."
+  monologue: "Cut it to two sentences and end with a question."
+  question_stacking: "Ask one question and wait for the answer."
+  low_effort: "Give them more to react to: a question about their situation."
+  closed_question: "Turn that into a how or what question so they explain."
+  generic_question: "Ask about something they actually said, not a stock question."
+  mirroring: "Good listening. Now ask what that costs them day to day."
+  on_topic: "Good follow-up. Keep building on their words."
+  acknowledgement: "Nice acknowledgement. Follow it with one open question."
+  open_question: "Good open question. Next, tie it to something they told you."
+  default: "Find out more before pitching anything."

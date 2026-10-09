@@ -1,7 +1,6 @@
 months: 3
 price: "$1k"
 pillars: ["One", "Two", "Three"]
-context: b2c
 facts:
   where:
     examples: ["where are you based"]

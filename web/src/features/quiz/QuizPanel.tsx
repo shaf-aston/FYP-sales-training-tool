@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Button, Markdown, Notice, Panel, Segmented, TextArea } from "@/components/ui";
-import { api } from "@/lib/api/client";
+import { api, errorText } from "@/lib/api/client";
 import type { QuizResult, QuizType } from "@/lib/api/types";
 import { config } from "@/lib/config";
 import { useSession } from "@/features/session/SessionContext";
@@ -16,13 +16,12 @@ const TYPES: { value: QuizType; label: string }[] = [
   { value: "direction", label: "Direction" },
 ];
 
-const errText = (e: unknown, fallback: string) => (e instanceof Error && e.message ? e.message : fallback);
 
 export function QuizPanel() {
-  const { mode, sessionId, sellSession, handleExpired } = useSession();
+  const { mode, buySessionId, sellSession, handleExpired } = useSession();
   const { closeSidePanel } = useUi();
   const isSell = mode === "sell";
-  const sid = isSell ? sellSession?.sessionId : sessionId;
+  const sid = isSell ? sellSession?.sessionId : buySessionId;
 
   const [type, setType] = useState<QuizType>("stage");
   const [question, setQuestion] = useState("");
@@ -48,7 +47,7 @@ export function QuizPanel() {
       setQuestion(q.question);
       setTurn(q.turn);
     } catch (err) {
-      if (!handleExpired(err)) setLoadError(errText(err, "Could not load a question. Try again."));
+      if (!handleExpired(err)) setLoadError(errorText(err, "Could not load a question. Try again."));
     } finally {
       setLoading(false);
     }
@@ -71,11 +70,11 @@ export function QuizPanel() {
     setChecking(true);
     try {
       const res = isSell
-        ? await api.sellQuizAnswer(sid, turn as number, text)
+        ? await api.sellQuizAnswer(sid, turn as number, text) // Submit only shows once a sell question has its turn (needsTurn)
         : await api.buyQuizAnswer(sid, type, text);
       setResult(res);
     } catch (err) {
-      if (!handleExpired(err)) setSubmitError(errText(err, "Could not check your answer. Try again."));
+      if (!handleExpired(err)) setSubmitError(errorText(err, "Could not check your answer. Try again."));
     } finally {
       setChecking(false);
     }
@@ -85,19 +84,12 @@ export function QuizPanel() {
   const canAnswer = !loading && !loadError && !needsTurn && !!question;
 
   return (
-    <Panel title="Skill check" onClose={closeSidePanel}>
+    <Panel title="Quiz" onClose={closeSidePanel}>
       <div className={s.stack}>
         {!isSell && <Segmented label="Quiz type" options={TYPES} value={type} onChange={setType} />}
         {loading && <Notice kind="loading">Loading question…</Notice>}
         {loadError && (
-          <Notice
-            kind="error"
-            action={
-              <Button variant="secondary" onClick={() => void load()}>
-                Try again
-              </Button>
-            }
-          >
+          <Notice kind="error" onRetry={() => void load()}>
             {loadError}
           </Notice>
         )}

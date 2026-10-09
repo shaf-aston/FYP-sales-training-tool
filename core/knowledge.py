@@ -2,27 +2,19 @@
 
 import logging
 import re
-from pathlib import Path
 
 import yaml
 
 from .constants import MAX_FIELD_LENGTH
-from .loader import load_yaml
+from .loader import CONFIG_DIR, load_yaml
 
 logger = logging.getLogger(__name__)
 
-ALLOWED_FIELDS = {"product_name", "pricing", "specifications", "company_info", "selling_points", "additional_notes"}
+KNOWLEDGE_FILE = CONFIG_DIR / "custom_instructions.yaml"
 
-KNOWLEDGE_DIR = Path(__file__).parent.parent / "config"
-KNOWLEDGE_FILE = KNOWLEDGE_DIR / "custom_instructions.yaml"
-
-def _load_kb_sanitisation_config():
-    """Field labels. Config is the only copy; a broken file stops start-up."""
-    cfg = load_yaml("knowledge_sanitization.yaml")
-    return {str(k): str(v) for k, v in cfg["label_map"].items()}
-
-
-LABEL_MAP = _load_kb_sanitisation_config()
+# Field id -> label in the buyer's prompt. Config is the only copy; a broken file stops start-up.
+LABEL_MAP = {str(k): str(v) for k, v in load_yaml("knowledge_fields.yaml")["label_map"].items()}
+ALLOWED_FIELDS = set(LABEL_MAP)
 
 
 def load_custom_knowledge() -> dict:

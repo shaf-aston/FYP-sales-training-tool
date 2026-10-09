@@ -1,6 +1,6 @@
 "use client";
 
-// Voice controls above the message box: voice replies toggle, dictate, stop, and a live status strip.
+// Voice controls above the message box: hands-free toggle, dictate, stop, and a live status strip.
 
 import { Button, Notice, VoiceWave } from "@/components/ui";
 import { useVoice } from "./VoiceContext";
@@ -19,7 +19,7 @@ export function VoiceBar() {
         {v.speaking ? (
           <span className={`${s.status} ${s.speaking}`}>
             <VoiceWave />
-            Coach speaking. Microphone paused for clarity.
+            Reading the reply aloud. Mic paused.
           </span>
         ) : v.transcribing ? (
           <Notice kind="loading">Transcribing, please wait...</Notice>
@@ -33,9 +33,9 @@ export function VoiceBar() {
           pressed={v.handsFree}
           disabled={micOff}
           onClick={v.toggleHandsFree}
-          title={micOff ? UNSUPPORTED_HINT : "Speak, auto-send, and hear the coach reply"}
+          title={micOff ? UNSUPPORTED_HINT : "Speak, auto-send, and hear the reply"}
         >
-          Voice replies: {v.handsFree ? "on" : "off"}
+          Hands-free: {v.handsFree ? "on" : "off"}
         </Button>
         <Button
           variant="pill"

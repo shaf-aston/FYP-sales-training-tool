@@ -1,6 +1,6 @@
 """Rebuild a walkable review of a finished practice session.
 
-Nothing is stored for this. The judge in selling_quality is deterministic, so the
+Nothing is stored for this. The judge in turn_rating is deterministic, so the
 whole review - every turn's rating, the reasons behind it, and the buyer's
 readiness as it moved - is recomputed from the transcript. That means a review
 works on any session that was ever saved, and it can never drift away from what
@@ -9,7 +9,13 @@ the learner actually saw, because both come from the same two functions.
 
 from __future__ import annotations
 
-from .selling_quality import NEGATIVE_SIGNALS, REASONS, apply_readiness, load_selling_signals, score_seller_turn
+from .turn_rating import (
+    NEGATIVE_SIGNALS,
+    REASONS,
+    apply_readiness,
+    load_turn_rating,
+    rate_turn,
+)
 
 
 def _pairs(conversation_history: list[dict]) -> list[tuple[str, str]]:
@@ -59,7 +65,7 @@ def build_review(
     turns, curve = [], [round(readiness, 3)]
 
     for index, (seller_line, buyer_reply) in enumerate(_pairs(conversation_history)):
-        score = score_seller_turn(
+        score = rate_turn(
             seller_line, buyer_message=previous_buyer_line, completed_turns=index
         )
         before = readiness
@@ -101,7 +107,7 @@ def pick_pivotal_turns(turns: list[dict], count: int | None = None) -> list[int]
     went well are never offered for a redo - there is nothing to learn from
     replaying a turn that worked.
     """
-    limits = load_selling_signals()["thresholds"]
+    limits = load_turn_rating()["thresholds"]
     count = count or limits["pivotal_turns"]
     costly = [t for t in turns if t["readiness_change"] < 0 or t["rating"] <= limits["weak_rating"]]
     costly.sort(key=lambda t: (t["readiness_change"], t["rating"]))
@@ -113,7 +119,7 @@ def _work_on(turns: list[dict]) -> str:
     seen = [sig for t in turns for sig in t["signals"] if sig in NEGATIVE_SIGNALS]
     if seen:
         return REASONS[max(sorted(set(seen)), key=seen.count)]
-    return "Ask more open questions built on the buyer's own words."
+    return load_turn_rating()["default_work_on"]
 
 
 def summarise(turns: list[dict], pivotal: list[int] | None = None) -> dict:
@@ -128,7 +134,7 @@ def summarise(turns: list[dict], pivotal: list[int] | None = None) -> dict:
                 "went_well": False, "work_on": ""}
     ratings = [t["rating"] for t in turns]
     average = round(sum(ratings) / len(ratings), 2)
-    bar = load_selling_signals()["thresholds"]["praise_min_average"]
+    bar = load_turn_rating()["thresholds"]["praise_min_average"]
     return {
         "turn_count": len(turns),
         "average_rating": average,

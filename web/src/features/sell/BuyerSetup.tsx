@@ -3,12 +3,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { Button, Icon, Notice, Segmented, Select, TextArea, useConfirm } from "@/components/ui";
 import { useSession } from "@/features/session/SessionContext";
-import { api, ApiError } from "@/lib/api/client";
+import { api, errorText } from "@/lib/api/client";
 import type { Difficulty, Persona, ProductGroups } from "@/lib/api/types";
 import { config } from "@/lib/config";
 import { difficultyOptions } from "./options";
 import s from "./BuyerSetup.module.css";
 
+/** The general product; must match the backend default product_type (backend/routes/sell.py). */
 const GENERAL = "default";
 /** Select value meaning "let the server pick the buyer". */
 const SURPRISE = "";
@@ -49,12 +50,12 @@ export function BuyerSetup({ onStarted, onCancel }: Props) {
     if (loadedGroups) return;
     let live = true;
     api
-      .productGroups()
+      .sellProductGroups()
       .then((r) => {
         loadedGroups = r.groups;
         if (live) setGroups({ status: "ready", groups: r.groups });
       })
-      .catch((e) => live && setGroups({ status: "error", message: e instanceof ApiError ? e.message : "Couldn't load the product list." }));
+      .catch((e) => live && setGroups({ status: "error", message: errorText(e, "Couldn't load the product list.") }));
     return () => {
       live = false;
     };
@@ -64,7 +65,7 @@ export function BuyerSetup({ onStarted, onCancel }: Props) {
   useEffect(() => {
     let live = true;
     api
-      .personas(product)
+      .sellPersonas(product)
       .then((r) => {
         if (!live) return;
         setPersonas(r.personas);
@@ -113,14 +114,7 @@ export function BuyerSetup({ onStarted, onCancel }: Props) {
   if (groups.status === "loading") return <Notice kind="loading">Loading products…</Notice>;
   if (groups.status === "error")
     return (
-      <Notice
-        kind="error"
-        action={
-          <Button variant="ghost" onClick={retry}>
-            Retry
-          </Button>
-        }
-      >
+      <Notice kind="error" onRetry={retry}>
         {groups.message}
       </Notice>
     );

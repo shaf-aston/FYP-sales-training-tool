@@ -27,8 +27,8 @@ After a sell session you get:
 
 - 🔍 **Turn-by-turn review**: every line rated, with the reason and how buyer readiness moved
 - ⚡ **Pivotal moments**: the turns that decided the outcome
-- 🧠 **Script drills**: strong lines with the key move blanked out, for recall practice
-- ✅ **Quiz**: name the stage, the next move and where the conversation is heading
+- 🧠 **Drills**: strong lines with the key move blanked out, brought back on a spaced schedule
+- ✅ **Quiz**: rewrite one of your turns and see if it lands better (buy mode's quiz asks for the stage and next move)
 
 ## 🧭 How a conversation flows
 
@@ -41,7 +41,7 @@ The script moves on only when the buyer's answer fits the question.
 
 ## ⚙️ How it works
 
-- **Buyer profiles**: Easy, Medium and Hard buyers, grounded in published buyer typology research. Difficulty sets readiness, disclosure, objections and patience.
+- **Buyer profiles**: Easy, Medium and Hard buyers, grounded in published buyer typology research. Difficulty sets starting readiness, objections and patience.
 - **Deterministic judge**: scoring does not depend on the LLM, so any saved session reviews the same way every time.
 - **Rules first**: the seller's lines, objections, scores, coach notes and tips come from `config/*.yaml`; the AI (Groq, free tier) plays the buyer and fills small gaps.
 - **Config driven**: scripts, products, objections and drills live in `config/*.yaml`. Adding a product needs no code change.
@@ -64,7 +64,7 @@ pytest
 
 ## 🗂️ Layout
 
-Start with [`CORE-FLOW.md`](CORE-FLOW.md): the one core flow, file by file, and the glossary.
+Start with [`CORE-FLOW.md`](CORE-FLOW.md) (the core flow, file by file) and [`GLOSSARY.md`](GLOSSARY.md) (every term and naming rule).
 
 | Folder | Holds |
 |---|---|

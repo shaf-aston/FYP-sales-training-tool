@@ -1,0 +1,27 @@
+# Buy mode's coach: answers the learner's questions about the live call (core/coach.py).
+
+default_style: tactical
+# Style id -> how the coach answers. The ids are sent by the web app's coach panel.
+styles:
+  tactical: "Tactical and direct, 2-3 sentences: the specific move the learner should make next."
+  socratic: "Socratic, 2-3 sentences: one sharp question that exposes the gap the learner hasn't considered."
+  teacher: "Teacher, 3-4 sentences: name the technique, why it works, and point to the exchange."
+
+# Speaker labels for the recent call shown to the coach. In buy mode the learner is the customer.
+speakers:
+  user: CUSTOMER
+  assistant: SELLER
+
+# {strategy}, {stage}, {goal}, {advance_when}, {concepts}, {recent} and {style} are filled in.
+prompt: |-
+  You're a sales coach. The learner is practising a {strategy} sale, now at stage: {stage}.
+  Goal: {goal} | Advance when: {advance_when} | Concepts: {concepts}
+
+  Recent:
+  {recent}
+
+  Style: {style} Plain sentences only: no markdown, lists, headings or bold.
+
+# Shown when the AI gives no answer.
+empty_answer: "Couldn't get an answer that time - try asking differently."
+failed_answer: "Sorry, that didn't work. Give it another go."

@@ -1,0 +1,171 @@
+"""Rate one sell-mode turn (1-5) on what the salesperson actually said.
+
+Rules read the salesperson's words: asking "are you interested?" is not a buying signal.
+Each fired rule carries a plain reason (config/turn_rating.yaml) so the review can show why.
+"""
+
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass, field
+
+from .loader import load_yaml
+from .utils import clamp, contains_nonnegated_keyword, tokenize
+
+
+@dataclass(frozen=True)
+class TurnRating:
+    """A 1-5 rating plus the evidence behind it."""
+
+    rating: int
+    signals: list[str] = field(default_factory=list)
+    reasons: list[str] = field(default_factory=list)
+
+
+def load_turn_rating() -> dict:
+    """The seller-language rules (turn_rating.yaml)."""
+    return load_yaml("turn_rating.yaml")
+
+
+REASONS = load_turn_rating()["reasons"]
+# Signals that cost the seller ground, in hint priority order.
+NEGATIVE_SIGNALS = tuple(name for name, weight in load_turn_rating()["weights"].items() if weight < 0)
+
+
+def _sentences(message: str) -> list[str]:
+    return [p for p in re.split(r"(?<=[.!?])\s+", message.strip()) if p]
+
+
+def _has_word(text: str, words) -> bool:
+    return any(re.search(rf"\b{re.escape(w)}\b", text) for w in words)
+
+
+def _count_openings(message: str, question_words, invitations, stock_questions=()) -> int:
+    """How many times the seller tried to open the buyer up in one turn.
+
+    Counts each invitation ("walk me through it"), which opens someone up without
+    asking a question, plus each sentence that is itself a question using a
+    question word. Judged per sentence: a pitch that ends "what do you think?"
+    has one open question, not an open turn. Stock questions ("how are you?")
+    do not count - they open nothing.
+    """
+    lowered = message.lower()
+    count = sum(len(re.findall(rf"\b{re.escape(p)}\b", lowered)) for p in invitations)
+    for sentence in _sentences(lowered):
+        if sentence.endswith("?") and _has_word(sentence, question_words) and not _has_word(
+            sentence, stock_questions
+        ):
+            count += 1
+    return count
+
+
+def _is_closed_question(message: str, question_words, closed_starters) -> bool:
+    """A question sentence that starts with a yes/no verb and has no question word."""
+    for sentence in _sentences(message.lower()):
+        first = re.findall(r"[a-z']+", sentence)[:1]
+        if sentence.endswith("?") and first and first[0] in closed_starters and not _has_word(
+            sentence, question_words
+        ):
+            return True
+    return False
+
+
+def _mirrored_words(message: str, buyer_message: str, stopwords) -> list[str]:
+    """Distinct content words the seller echoed back from the buyer's last message."""
+    if not buyer_message:
+        return []
+    ignore = {w.lower() for w in stopwords}
+    buyer_words = {w for w in tokenize(buyer_message) if len(w) > 2 and w not in ignore}
+    seller_words = {w for w in tokenize(message) if len(w) > 2 and w not in ignore}
+    return sorted(buyer_words & seller_words)
+
+
+def rate_turn(
+    message: str,
+    buyer_message: str = "",
+    completed_turns: int = 0,
+) -> TurnRating:
+    """Rate one salesperson message from 1 (poor) to 5 (strong).
+
+    Args:
+        message: what the salesperson just said.
+        buyer_message: the buyer's previous message, used to detect listening and
+            to tell an answer about price apart from an unprompted pitch.
+        completed_turns: turns finished before this one, so early pitching can be
+            told apart from pitching once discovery has happened.
+    """
+    cfg = load_turn_rating()
+    weights = cfg["weights"]
+    limits = cfg["thresholds"]
+
+    text = message or ""
+    words = text.split()
+    fired: list[str] = []
+
+    question_words = cfg.get("question_words", [])
+    stock = cfg.get("stock_questions", [])
+    openings = _count_openings(text, question_words, cfg.get("invitations", []), stock)
+    overlap = _mirrored_words(text, buyer_message, cfg.get("mirroring_stopwords", []))
+    if openings:
+        fired.append("open_question")
+        if overlap:
+            fired.append("on_topic")
+    elif _has_word(text.lower(), stock) and "?" in text:
+        fired.append("generic_question")
+    elif _is_closed_question(text, question_words, cfg.get("closed_starters", [])):
+        fired.append("closed_question")
+
+    if len(overlap) >= limits["mirroring_min_overlap"]:
+        fired.append("mirroring")
+
+    if contains_nonnegated_keyword(text.lower(), cfg.get("acknowledgement", [])):
+        fired.append("acknowledgement")
+
+    if contains_nonnegated_keyword(text.lower(), cfg.get("pressure", [])):
+        fired.append("pressure")
+
+    # Commercial talk is only premature when the buyer has not raised it themselves.
+    pitch_words = cfg.get("pitch_language", [])
+    if completed_turns < limits["discovery_turns"]:
+        seller_pitched = contains_nonnegated_keyword(text.lower(), pitch_words)
+        buyer_asked = contains_nonnegated_keyword((buyer_message or "").lower(), pitch_words)
+        if seller_pitched and not buyer_asked:
+            fired.append("premature_pitch")
+
+    if openings >= limits["question_stacking_count"]:
+        fired.append("question_stacking")
+
+    if len(words) > limits["monologue_words"]:
+        fired.append("monologue")
+    elif len(words) < limits["low_effort_words"]:
+        fired.append("low_effort")
+
+    total = limits["neutral_rating"] + sum(weights.get(name, 0.0) for name in fired)
+    rating = max(1, min(5, round(total)))
+    return TurnRating(
+        rating=rating,
+        signals=fired,
+        reasons=[cfg["reasons"][name] for name in fired],
+    )
+
+
+def readiness_delta(rating: int, behaviour: dict) -> float:
+    """How far a turn of this quality moves the buyer's readiness.
+
+    Kept here so live play and the after-the-fact replay in session_review use the
+    same formula - two copies would let a review disagree with what the learner saw.
+    """
+    gain = behaviour["readiness_gain_per_good_turn"]
+    loss = behaviour["readiness_loss_per_bad_turn"]
+    if rating >= 4:
+        return gain * (rating - 3)  # 4->gain, 5->2*gain
+    if rating <= 2:
+        return -loss * (3 - rating)  # 2->-loss, 1->-2*loss
+    # A turn that neither helps nor hurts still buys a little patience. How much
+    # is a difficulty knob, not a constant - a tough buyer should drift less.
+    return float(behaviour["readiness_drift_per_neutral_turn"])
+
+
+def apply_readiness(current: float, rating: int, behaviour: dict) -> float:
+    """Readiness after a turn of this quality, clamped to 0-1."""
+    return clamp(current + readiness_delta(rating, behaviour))

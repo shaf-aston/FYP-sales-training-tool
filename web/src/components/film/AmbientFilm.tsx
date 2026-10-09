@@ -6,6 +6,7 @@
 import { useEffect, useRef } from "react";
 import { config } from "@/lib/config";
 import s from "./AmbientFilm.module.css";
+import { prefersReducedMotion } from "@/lib/motion";
 
 interface Light {
   x: number;
@@ -32,7 +33,7 @@ export function AmbientFilm() {
     const count = Number(token("--film-light-count")) || 0;
     const skyTop = token("--film-sky-top");
     const skyBottom = token("--film-sky-bottom");
-    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const still = prefersReducedMotion();
 
     const lights: Light[] = Array.from({ length: count }, () => ({
       x: Math.random(),

@@ -4,7 +4,7 @@ import logging
 import re
 
 from core.script_engine.ai_line import checked_line
-from core.script_engine.checks import BLANK, CheckContext
+from core.script_engine.checks import CheckContext
 from core.utils import tokenize
 
 logger = logging.getLogger("script_engine.fallback")
@@ -74,7 +74,7 @@ def is_verb_goal(phrase, cfg):
 
 
 class Filler:
-    """Turns script lines into spoken text: offer blanks by code, the buyer's own words (echo blanks) by
+    """Turns script lines into spoken text: offer blanks by code, the prospect's own words (echo blanks) by
     rule, other prospect blanks by a checked AI phrase. The same line with the same answers reads the same."""
 
     def __init__(self, cfg, offer, llm, echo=frozenset()):

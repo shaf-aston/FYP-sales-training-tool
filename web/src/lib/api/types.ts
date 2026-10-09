@@ -2,7 +2,7 @@
 
 export type Strategy = "CONSULTATIVE";
 export type Difficulty = "easy" | "medium" | "hard";
-export type TrainingStyle = "tactical" | "socratic" | "teacher";
+export type CoachStyle = "tactical" | "socratic" | "teacher";
 export type QuizType = "stage" | "next_move" | "direction";
 export type Outcome = "active" | "sold" | "walked" | "incomplete";
 
@@ -11,10 +11,10 @@ export interface BotState {
   strategy: Strategy;
 }
 
-export interface Training {
+/** Buy-mode coach notes; the server sends them under the key "training". */
+export interface CoachNotes {
   what_happened: string;
   next_move: string;
-  watch_for: string[];
 }
 
 export interface ChatMsg {
@@ -27,7 +27,7 @@ export interface InitRes extends BotState {
   session_id: string;
   message: string | null; // greeting for a new session, null on restore
   history: ChatMsg[];
-  training?: Training;
+  training?: CoachNotes;
 }
 
 export interface ChatRes extends BotState {
@@ -37,7 +37,7 @@ export interface ChatRes extends BotState {
   provider: string;
   model: string;
   metrics?: { input_length: number; output_length: number };
-  training: Training;
+  training: CoachNotes;
 }
 
 export interface EditRes extends BotState {
@@ -47,7 +47,7 @@ export interface EditRes extends BotState {
   latency_ms: number | null;
   provider: string;
   model: string;
-  training: Training;
+  training: CoachNotes;
 }
 
 export interface ProductOption {
@@ -115,9 +115,6 @@ export interface SellInitRes {
   latency_ms: number;
   provider: string;
   model: string;
-  max_turns: number | null;
-  scoring_enabled: boolean;
-  feedback_style: string;
 }
 
 export interface SellChatRes {

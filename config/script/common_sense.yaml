@@ -1,5 +1,6 @@
 # Small interruptions answered in one line, then the script resumes.
 # All replies are drafts: the source scripts have no wording for these.
+# draft is an authoring marker only: the app parses it but never acts on it.
 # after: what follows the reply (default ask = the step's question again, in the words last used)
 #   wait = say the reply and wait for them; the question comes back when they return.
 #   rephrase = ask the step in other words (its next probe) instead of the same line.

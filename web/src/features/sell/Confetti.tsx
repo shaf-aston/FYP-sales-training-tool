@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { config } from "@/lib/config";
 import s from "./Confetti.module.css";
+import { prefersReducedMotion } from "@/lib/motion";
 
 /** A short gold burst over its parent. Decorative; skipped when the user prefers reduced motion. */
 export function Confetti() {
@@ -11,7 +12,7 @@ export function Confetti() {
   useEffect(() => {
     const canvas = ref.current;
     const ctx = canvas?.getContext("2d");
-    if (!canvas || !ctx || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!canvas || !ctx || prefersReducedMotion()) return;
 
     const { count, durationMs, gravity } = config.sell.confetti;
     const css = getComputedStyle(document.documentElement);

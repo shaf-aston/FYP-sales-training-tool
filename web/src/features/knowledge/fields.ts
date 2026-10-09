@@ -1,7 +1,7 @@
 import { config } from "@/lib/config";
 import type { KnowledgeData, KnowledgeField } from "@/lib/api/types";
 
-export interface FieldDef {
+interface FieldDef {
   id: KnowledgeField;
   label: string;
   title: string;
@@ -44,7 +44,7 @@ export function shortSections(payload: KnowledgeData): string[] {
   return FIELDS.filter((f) => f.id !== "product_name" && payload[f.id] && payload[f.id]!.length < SHORT_SECTION_CHARS).map((f) => f.title);
 }
 
-/** The exact brief format the assistant reads. */
+/** A plain preview of the saved notes. The AI buyer gets its own labelled version (core/knowledge.py). */
 export function briefText(payload: KnowledgeData): string {
   const lines = FIELDS.filter((f) => payload[f.id]).map((f) => `${f.id}: ${payload[f.id]}`);
   if (!lines.length) return "(no data entered)";

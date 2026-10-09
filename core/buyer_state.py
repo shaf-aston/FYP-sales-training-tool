@@ -3,7 +3,7 @@
 import random
 from dataclasses import dataclass, field
 
-from .loader import load_sell_config
+from .loader import load_buyer_config
 
 
 @dataclass
@@ -11,16 +11,16 @@ class BuyerState:
     """Represents the current state of the AI buyer in a sell-mode session."""
 
     readiness: float
+    difficulty: str
     objections_raised: int = 0
     turn_count: int = 0
     has_committed: bool = False
     has_walked: bool = False
     persona: dict = field(default_factory=dict)
-    difficulty: str = "medium"
     product_type: str = "default"
 
     def to_dict(self) -> dict:
-        """Convert the state to a dictionary representation."""
+        """The state as the web app reads it (the "state" field of every sell response)."""
         return {
             "readiness": round(self.readiness, 3),
             "objections_raised": self.objections_raised,
@@ -29,8 +29,13 @@ class BuyerState:
             "has_walked": self.has_walked,
             "difficulty": self.difficulty,
             "product_type": self.product_type,
-            "persona_name": self.persona.get("name", "Unknown"),
+            "persona_name": persona_name(self.persona),
         }
+
+    @property
+    def ended(self) -> bool:
+        """The buyer has bought or walked away."""
+        return self.has_committed or self.has_walked
 
     @property
     def status(self) -> str:
@@ -54,9 +59,13 @@ class BuyerResponse:
     coaching: dict | None = None
 
 
+def persona_name(persona: dict) -> str:
+    return persona.get("name") or load_buyer_config()["default_persona_name"]
+
+
 def personas_for(product_type: str) -> list[dict]:
     """The buyer personas available for a product (its own, else the general pool)."""
-    personas = load_sell_config()["personas"]
+    personas = load_buyer_config()["personas"]
     return personas.get(product_type) or personas["general"]
 
 

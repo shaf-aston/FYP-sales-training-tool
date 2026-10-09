@@ -30,14 +30,7 @@ function Editor() {
   if (k.loading) return <Notice kind="loading">Loading your saved details…</Notice>;
   if (k.loadError)
     return (
-      <Notice
-        kind="error"
-        action={
-          <Button onClick={k.reload}>
-            Try again
-          </Button>
-        }
-      >
+      <Notice kind="error" onRetry={k.reload}>
         {k.loadError}
       </Notice>
     );
