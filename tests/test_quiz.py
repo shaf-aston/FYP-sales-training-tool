@@ -193,7 +193,7 @@ def test_sell_quiz_asks_about_the_sellers_weakest_turn_and_scores_a_better_line(
 
 
 def test_sell_quiz_explains_why_in_the_turn_reviews_own_words():
-    from core.selling_quality import REASONS
+    from core.turn_rating import REASONS
 
     turn = {"turn": 1, "seller": "Great weather.", "rating": 2,
             "buyer_before": "My van keeps breaking down.", "signals": ["closed_question"]}

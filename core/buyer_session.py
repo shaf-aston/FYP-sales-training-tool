@@ -13,7 +13,7 @@ from .buyer_state import BuyerResponse, BuyerState, persona_name, select_persona
 from .constants import LLM
 from .loader import load_buyer_config, load_real_objections
 from .real_calls import pick_bank
-from .selling_quality import apply_readiness, score_seller_turn
+from .turn_rating import apply_readiness, rate_turn
 from .services.provider_router import ProviderRouter, ProviderUnavailable, complete
 from .session_review import build_review
 from .utils import new_session_id
@@ -280,7 +280,7 @@ class BuyerSession(BuyerRecord):
         The reasons behind the rating are kept on `last_turn_score` so the session
         review can show the learner why the buyer warmed up or cooled off.
         """
-        self.last_turn_score = score_seller_turn(
+        self.last_turn_score = rate_turn(
             user_msg,
             buyer_message=self._last_buyer_message(),
             completed_turns=max(0, self.state.turn_count - 1),

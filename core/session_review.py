@@ -1,6 +1,6 @@
 """Rebuild a walkable review of a finished practice session.
 
-Nothing is stored for this. The judge in selling_quality is deterministic, so the
+Nothing is stored for this. The judge in turn_rating is deterministic, so the
 whole review - every turn's rating, the reasons behind it, and the buyer's
 readiness as it moved - is recomputed from the transcript. That means a review
 works on any session that was ever saved, and it can never drift away from what
@@ -9,12 +9,12 @@ the learner actually saw, because both come from the same two functions.
 
 from __future__ import annotations
 
-from .selling_quality import (
+from .turn_rating import (
     NEGATIVE_SIGNALS,
     REASONS,
     apply_readiness,
     load_turn_rating,
-    score_seller_turn,
+    rate_turn,
 )
 
 
@@ -65,7 +65,7 @@ def build_review(
     turns, curve = [], [round(readiness, 3)]
 
     for index, (seller_line, buyer_reply) in enumerate(_pairs(conversation_history)):
-        score = score_seller_turn(
+        score = rate_turn(
             seller_line, buyer_message=previous_buyer_line, completed_turns=index
         )
         before = readiness

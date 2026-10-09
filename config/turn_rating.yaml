@@ -1,5 +1,5 @@
 # How a SALESPERSON's turn is rated (1-5), in sell mode and its review, quiz and drills
-# (core/selling_quality.py).
+# (core/turn_rating.py).
 #
 # Every list here describes language a SELLER uses, never the buyer's: a seller typing
 # "interested" is asking a question, a buyer typing it would be a buying signal.

@@ -14,7 +14,7 @@ import re
 from dataclasses import dataclass, field
 
 from .loader import load_yaml
-from .selling_quality import load_turn_rating
+from .turn_rating import load_turn_rating
 
 BLANK_PATTERN = re.compile(r"\[([^\[\]]+)\]")
 OWN_LINE_GROUP = "your_own_lines"

@@ -6,7 +6,7 @@ from typing import Any
 
 from .constants import LLM
 from .loader import load_yaml
-from .selling_quality import NEGATIVE_SIGNALS, REASONS, score_seller_turn
+from .turn_rating import NEGATIVE_SIGNALS, REASONS, rate_turn
 from .services.provider_router import complete_json
 from .utils import (
     clamp_score,
@@ -232,7 +232,7 @@ def build_sell_question(turns: list[dict]) -> dict | None:
 
 def score_sell_answer(answer: str, turn: dict) -> dict:
     """Rate the seller's replacement line with the same judge that rated the original."""
-    new = score_seller_turn(
+    new = rate_turn(
         answer, buyer_message=turn["buyer_before"], completed_turns=turn["turn"] - 1
     )
     old = turn["rating"]

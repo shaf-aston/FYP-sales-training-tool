@@ -1,10 +1,7 @@
-"""Judge one salesperson turn on what the seller actually did.
+"""Rate one sell-mode turn (1-5) on what the salesperson actually said.
 
-Every rule here reads SELLER language: a seller asking "are you interested?" is not a
-buying signal.
-
-Each fired rule carries a plain-English reason so the post-session review can
-show the learner why a turn was marked the way it was, rather than a bare number.
+Rules read the salesperson's words: asking "are you interested?" is not a buying signal.
+Each fired rule carries a plain reason (config/turn_rating.yaml) so the review can show why.
 """
 
 from __future__ import annotations
@@ -17,7 +14,7 @@ from .utils import clamp, contains_nonnegated_keyword, tokenize
 
 
 @dataclass(frozen=True)
-class SellerTurnScore:
+class TurnRating:
     """A 1-5 rating plus the evidence behind it."""
 
     rating: int
@@ -83,11 +80,11 @@ def _mirrored_words(message: str, buyer_message: str, stopwords) -> list[str]:
     return sorted(buyer_words & seller_words)
 
 
-def score_seller_turn(
+def rate_turn(
     message: str,
     buyer_message: str = "",
     completed_turns: int = 0,
-) -> SellerTurnScore:
+) -> TurnRating:
     """Rate one salesperson message from 1 (poor) to 5 (strong).
 
     Args:
@@ -145,7 +142,7 @@ def score_seller_turn(
 
     total = limits["neutral_rating"] + sum(weights.get(name, 0.0) for name in fired)
     rating = max(1, min(5, round(total)))
-    return SellerTurnScore(
+    return TurnRating(
         rating=rating,
         signals=fired,
         reasons=[cfg["reasons"][name] for name in fired],

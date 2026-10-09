@@ -6,7 +6,7 @@ Pure logic, no AI calls, no I/O. BuyerSession asks; this module answers.
 import random
 
 from .constants import SOLD_MIN_TURNS, SOLD_READINESS, WALK_MIN_TURNS, WALK_READINESS
-from .selling_quality import NEGATIVE_SIGNALS, load_turn_rating
+from .turn_rating import NEGATIVE_SIGNALS, load_turn_rating
 
 
 class ObjectionPacer:

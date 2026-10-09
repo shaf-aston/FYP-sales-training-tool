@@ -1,6 +1,6 @@
 # Eloquence web app: core flow
 
-**What it does:** the practice screen for Eloquence (sales roleplay with an AI buyer and a live coach), built in Next.js and served by Flask at `/`.
+**What it does:** the Eloquence app (sales roleplay in buy mode and sell mode), built in Next.js and served by Flask at `/`. Terms: [GLOSSARY](../GLOSSARY.md).
 
 ## Run it
 ```bash
@@ -20,17 +20,14 @@ npm run check                         # types + lint + the three logic checks
 4. **Type or speak**: the message box text lives in `DraftContext` (`src/state/DraftContext.tsx`); voice writes into it (`src/features/voice/`). Why: keyboard and mic share one draft.
 5. **Send**: `send()` adds the message at once, calls the API, rolls back on failure, and drops replies from a conversation that was replaced. Why: feels instant, never shows the wrong reply.
 6. **Show progress**: the sidebar's stage card (buy mode), the coach panel and the sidebar's Buyer tab (sell mode: `BuyerTab` shows the setup form, then `BuyerProfile` with a folded "New buyer" form) read the same store (`src/features/sidebar`, `coach`, `sell`). Why: one source of truth.
-7. **Learn after**: evaluation, "Walk it back", quiz and drills (`src/features/sell`, `quiz`). Why: turn a session into practice.
+7. **Learn after**: evaluation, "Walk it back", quiz and drills (`src/features/sell`, `quiz`). Why: turn a session into something to learn from.
 
-## Glossary (words the code uses)
-- **mode**: what the learner does, `"buy" | "sell"` (`Mode` in `SessionContext.tsx`). Each has its own page.
-- **buy mode** (`/buy/`, `/api/buy/*`): you are the customer; the AI seller sells to you.
-- **sell mode** (`/sell/`, `/api/sell/*`): you are the salesperson; the AI buyer answers (`sellSession`, set up in `BuyerSetup` inside the sidebar's Buyer tab).
-- **stage / strategy**: where the sale is, and which approach (`labels.ts`).
-- **training**: the coach's notes after each reply.
-- **readiness**: how close the buyer is to buying (0–1).
+## Web-only words
+Shared terms (modes, stage, readiness, coach notes...) are in [GLOSSARY](../GLOSSARY.md). Only the web has these:
 - **historyIndex**: a message's position in the server's history; edits use it.
 - **epoch**: counter bumped when the conversation is replaced; late replies with an old epoch are ignored.
+- **sellSession**: the live AI buyer in sell mode, set up in `BuyerSetup` inside the sidebar's Buyer tab.
+- **evalStore**: one shared evaluation result, read by the profile, the inline card and the dialogs.
 - **tokens**: every colour, size and timing, defined once in `src/styles/tokens.css`.
-- **ui kit**: shared components in `src/components/ui` (Button, Dialog, Notice…).
+- **ui kit**: shared components in `src/components/ui` (Button, Dialog, Notice...).
 - **config**: every tunable number and storage key, in `src/lib/config.ts`.
