@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
-from .config import DEFAULT_LLM_PROVIDER_ORDER, get_llm_fallback_order, get_llm_provider_order
+from .config import (
+    DEFAULT_LLM_PROVIDER_ORDER,
+    get_llm_fallback_order,
+    get_llm_provider_order,
+)
 from .llm import GroqProvider
 
 LLM_PROVIDER_TYPES = {

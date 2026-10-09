@@ -21,7 +21,7 @@ def answer_question(router, call, question, style: str = DEFAULT_STYLE):
     """Answer the learner's question about the live call and sales technique."""
     cfg = load_coach_config()
     stage, strategy = call.current_stage, call.strategy
-    rubric = get_stage_rubric(stage)
+    rubric = get_stage_rubric(stage, strategy)
 
     speakers = cfg["speakers"]
     recent = "\n".join(

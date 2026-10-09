@@ -11,7 +11,7 @@ def build_product_context(product_type: str) -> str:
     The persona's needs, pains and budget are not repeated here; the template has them.
     """
     products = loader.load_buyer_products()["products"]
-    product = products.get(product_type, products["default"])
+    product = products.get(product_type) or products["default"]
     blocks = [product.get("knowledge", "")]
     custom_knowledge = knowledge.get_custom_knowledge_text()
     if custom_knowledge:

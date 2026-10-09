@@ -8,12 +8,12 @@ import core.quiz as quiz
 from core.providers.base import LLMResponse
 from core.services.provider_router import ProviderChatResult
 
-_CONFIG = quiz.load_quiz_config()
+_CONFIG = quiz.load_quiz()
 
 
 def _with_stages(monkeypatch, **stages):
     """The real quiz config with only the given consultative stages."""
-    monkeypatch.setattr(quiz, "load_quiz_config", lambda: {**_CONFIG, "stages": {"consultative": stages}})
+    monkeypatch.setattr(quiz, "load_quiz", lambda: {**_CONFIG, "stages": {"consultative": stages}})
 
 
 class _RaisingProvider:
@@ -49,7 +49,7 @@ def test_every_stage_has_a_rubric_and_a_plain_name():
 def test_get_quiz_question_prefers_configured_list_and_falls_back_to_default(monkeypatch):
     monkeypatch.setattr(
         quiz,
-        "load_quiz_config",
+        "load_quiz",
         lambda: {
             "questions": {
                 "stage": ["Stage question 1", "Stage question 2"],
@@ -172,7 +172,7 @@ def test_the_plain_stage_name_is_accepted_as_an_answer():
 
 
 def test_no_quiz_question_mentions_fsm():
-    config = quiz.load_quiz_config()
+    config = quiz.load_quiz()
     assert not any("FSM" in q for qs in config["questions"].values() for q in qs)
 
 

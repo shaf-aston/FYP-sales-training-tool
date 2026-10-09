@@ -15,7 +15,7 @@ SESSION_NOT_FOUND = "Session not found"
 MESSAGE_REQUIRED = "Message required"
 
 
-BOT_INIT_FAILED = "Setup didn't complete - please try initializing again."
+SELLER_INIT_FAILED = "Setup didn't complete - please try initializing again."
 
 # Sell mode (the AI buyer)
 SELL_ERROR = "The buyer got confused - send that again."

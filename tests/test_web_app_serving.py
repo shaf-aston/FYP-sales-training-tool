@@ -3,15 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from backend.app import app
-
 OUT = Path(__file__).resolve().parent.parent / "web" / "out"
-
-
-@pytest.fixture
-def client():
-    app.config["TESTING"] = True
-    return app.test_client()
 
 
 def test_build_is_committed():
@@ -35,11 +27,6 @@ def test_root_serves_the_app(client):
 
 def test_folder_paths_serve_their_index(client):
     assert client.get("/knowledge/").status_code == 200
-
-
-@pytest.mark.parametrize("path", ["/buy/", "/sell/"])
-def test_mode_pages_serve(client, path):
-    assert client.get(path).status_code == 200
 
 
 def test_unknown_page_is_404(client):

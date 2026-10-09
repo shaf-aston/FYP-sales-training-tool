@@ -6,8 +6,8 @@ from typing import Any
 
 from .constants import LLM
 from .loader import load_yaml
-from .services.provider_router import complete_json
 from .selling_quality import NEGATIVE_SIGNALS, REASONS, score_seller_turn
+from .services.provider_router import complete_json
 from .utils import (
     clamp_score,
     contains_nonnegated_keyword,
@@ -25,7 +25,7 @@ _ENUMS = {
 }
 
 
-def load_quiz_config() -> dict:
+def load_quiz() -> dict:
     return load_yaml("quiz.yaml")
 
 
@@ -47,7 +47,7 @@ def _concept_coverage(answer: str, concepts: list[str], stopwords) -> tuple[list
 
 def _open_ended_assessment(user_text: str, rubric: dict, mode: str, last_user_message: str = "") -> dict:
     """Rule-based score for a next-move or direction answer: rubric coverage and clarity."""
-    config = load_quiz_config()
+    config = load_quiz()
     points, words, feedback = config["scoring"], config["words"], config["feedback"]
     stopwords = set(words["stopwords"])
     text = (user_text or "").strip()
@@ -127,7 +127,7 @@ def _open_ended_assessment(user_text: str, rubric: dict, mode: str, last_user_me
 
 def _merge_open_ended_result(mode: str, rules: dict, llm_result: dict) -> dict:
     """Rules set the score; the LLM may only add wording (feedback, strengths, improvements)."""
-    config = load_quiz_config()
+    config = load_quiz()
     llm_used = bool(llm_result.get("_used_llm"))
     score = rules["score"]
 
@@ -164,12 +164,12 @@ def _merge_open_ended_result(mode: str, rules: dict, llm_result: dict) -> dict:
 
 def get_stage_rubric(stage: str, strategy: str) -> dict:
     """Rubric for a stage: goal, advance_when, key_concepts. A stage with no rubric is a config error."""
-    return load_quiz_config()["stages"][str(strategy)][str(stage)]
+    return load_quiz()["stages"][str(strategy)][str(stage)]
 
 
 def get_quiz_question(quiz_type: str) -> str:
     """A random question for the quiz type ("stage", "next-move", "direction")."""
-    questions = load_quiz_config()["questions"]
+    questions = load_quiz()["questions"]
     normalized_type = quiz_type.replace("-", "_").lower()
     return random.choice(questions.get(normalized_type) or questions["default"])
 
@@ -177,7 +177,7 @@ def get_quiz_question(quiz_type: str) -> str:
 def _friendly(kind: str, value: Any) -> str:
     """Plain-English name for a stage or strategy id."""
     key = str(value)
-    return load_quiz_config()[kind].get(key, key)
+    return load_quiz()[kind].get(key, key)
 
 
 def score_stage_answer(user_answer: str, current_stage: str, strategy: str) -> dict:
@@ -194,7 +194,7 @@ def score_stage_answer(user_answer: str, current_stage: str, strategy: str) -> d
     strategy_ok = contains_nonnegated_keyword(answer_lower, [str(strategy), strategy_name.lower()])
     correct = stage_ok and strategy_ok
 
-    templates = load_quiz_config()["feedback"]["stage"]
+    templates = load_quiz()["feedback"]["stage"]
     template = {
         (True, True): templates["both_right"],
         (False, False): templates["both_wrong"],
@@ -205,7 +205,7 @@ def score_stage_answer(user_answer: str, current_stage: str, strategy: str) -> d
     if correct:
         score = 1
     elif stage_ok or strategy_ok:
-        score = load_quiz_config()["scoring"]["stage_partial_credit"]
+        score = load_quiz()["scoring"]["stage_partial_credit"]
     else:
         score = 0
 
@@ -223,7 +223,7 @@ def build_sell_question(turns: list[dict]) -> dict | None:
     if not turns:
         return None
     turn = min(turns, key=lambda t: (t["rating"], t["turn"]))
-    template = load_quiz_config()["sell_question"]
+    template = load_quiz()["sell_question"]
     return {
         "turn": turn["turn"],
         "question": template.format(turn=turn["turn"], line=turn["seller"]),
@@ -236,7 +236,7 @@ def score_sell_answer(answer: str, turn: dict) -> dict:
         answer, buyer_message=turn["buyer_before"], completed_turns=turn["turn"] - 1
     )
     old = turn["rating"]
-    templates = load_quiz_config()["sell_feedback"]
+    templates = load_quiz()["sell_feedback"]
     key = "better" if new.rating > old else "same" if new.rating == old else "worse"
     pairs = list(zip(new.signals, new.reasons))
     # The original turn's evidence, worded exactly as the turn review words it.
@@ -255,7 +255,7 @@ def score_sell_answer(answer: str, turn: dict) -> dict:
 
 
 def _prompt(kind: str, rubric: dict, stage: str, strategy: str, answer: str, customer: str = "") -> str:
-    return load_quiz_config()["prompts"][kind].format(
+    return load_quiz()["prompts"][kind].format(
         stage=_friendly("stage_names", stage),
         strategy=_friendly("strategy_names", strategy),
         goal=rubric["goal"],
@@ -274,9 +274,9 @@ def score_next_move(
     rules = _open_ended_assessment(user_response, rubric, "next_move", last_user_message)
     prompt = _prompt("next_move", rubric, current_stage, strategy, user_response, last_user_message)
     llm_result = _score_with_llm(router, prompt, {
-        "score": load_quiz_config()["scoring"]["llm_fallback_score"],
+        "score": load_quiz()["scoring"]["llm_fallback_score"],
         "alignment": "partial",
-        "feedback": load_quiz_config()["feedback"]["ai_unavailable"],
+        "feedback": load_quiz()["feedback"]["ai_unavailable"],
         "strengths": [],
         "improvements": [],
     })
@@ -289,9 +289,9 @@ def score_direction(user_explanation: str, router: Any, current_stage: str, stra
     rules = _open_ended_assessment(user_explanation, rubric, "direction")
     prompt = _prompt("direction", rubric, current_stage, strategy, user_explanation)
     llm_result = _score_with_llm(router, prompt, {
-        "score": load_quiz_config()["scoring"]["llm_fallback_score"],
+        "score": load_quiz()["scoring"]["llm_fallback_score"],
         "understanding": "partial",
-        "feedback": load_quiz_config()["feedback"]["ai_unavailable"],
+        "feedback": load_quiz()["feedback"]["ai_unavailable"],
         "key_concepts_got": [],
         "key_concepts_missed": [],
     })

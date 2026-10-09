@@ -1,12 +1,12 @@
-"""Tests for security using STRIDE threat modeling methodology."""
+"""Request security: client IP, headers, session ids, rate limits and the session store."""
 from flask import Flask, jsonify, request
 
 from backend.security import (
-    SessionSecurityManager,
     ClientIPExtractor,
     InputValidator,
     RateLimiter,
     SecurityHeadersMiddleware,
+    SessionStore,
 )
 
 
@@ -77,11 +77,11 @@ def test_session_id_validator_rejects_malformed_identifiers():
 
 
 def test_rate_limiter_retains_requests_until_window_expires():
-    limiter = RateLimiter({"chat": (2, 60)})
+    limiter = RateLimiter({"buy_chat": (2, 60)})
 
-    assert limiter.is_limited("1.2.3.4", "chat") is False
-    assert limiter.is_limited("1.2.3.4", "chat") is False
-    assert limiter.is_limited("1.2.3.4", "chat") is True
+    assert limiter.is_limited("1.2.3.4", "buy_chat") is False
+    assert limiter.is_limited("1.2.3.4", "buy_chat") is False
+    assert limiter.is_limited("1.2.3.4", "buy_chat") is True
 
 
 def test_background_cleanup_is_idempotent(monkeypatch):
@@ -97,8 +97,8 @@ def test_background_cleanup_is_idempotent(monkeypatch):
 
     monkeypatch.setattr("backend.security.threading.Thread", DummyThread)
 
-    manager = SessionSecurityManager(manager_name="test sessions")
-    manager.start_background_cleanup()
-    manager.start_background_cleanup()
+    store = SessionStore(max_sessions=1, idle_minutes=1, cleanup_interval=60, name="test sessions")
+    store.start_background_cleanup()
+    store.start_background_cleanup()
 
     assert len(started) == 1

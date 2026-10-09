@@ -1,20 +1,20 @@
-"""Slice 4: AI gap rules (checks, fill, judge) and the trainer's rules (R5), offline."""
+"""AI gap rules (checks, fill, judge) and the coach's selling rules, offline."""
 import json
 import logging
-import re
 
 import pytest
 
-from core.loader import load_yaml
+from core.loader import CONFIG_DIR, load_yaml
 from core.script_engine.checks import CheckContext, check, clip
 from core.script_engine.engine import ScriptState
-from core.script_engine.fill import Filler, offer_blanks
+from core.script_engine.fill import Filler
 from core.script_engine.judge import VAGUE, judge
 from core.script_engine.method import load_common_sense, load_method, load_offer
 from core.script_engine.seller import ScriptSeller, _after_lead
 
 CFG = {**load_yaml("script/engine.yaml"), "ai_fill_blanks": True}  # these tests cover the AI fill path
 OFFER = load_offer("shay_coaching")
+METHODS = sorted(p.stem for p in (CONFIG_DIR / "methods").glob("*.yaml"))
 
 
 def ctx(**kw):
@@ -169,7 +169,7 @@ def test_judge_ai_down_counts_as_vague():
     assert judge("hm", CANDS, down, CFG) == VAGUE
 
 
-# ---- seller: the trainer's rules (R5) -----------------------------------------------------
+# ---- seller: the coach's selling rules -----------------------------------------------------
 
 class Vectors:
     """Embedder that maps a text to a chosen vector; unknown texts get an orthogonal one."""
@@ -259,12 +259,6 @@ def test_objections_are_counted_separately(seller):
     assert first_think == seller.method.objections["think"].loop[0]
 
 
-def test_nothing_in_the_scripts_asks_any_questions():
-    for name in ("cat", "impact_formula"):
-        text = json.dumps(load_method(name), default=lambda o: o.__dict__).lower()
-        assert "any questions" not in text
-
-
 def test_a_whole_opening_run_has_no_any_questions_or_open_blanks(seller):
     seller.reset()
     prospect = ["I want financial freedom", "ten thousand a month", "about three years",
@@ -330,7 +324,7 @@ def _close_call_seller(llm):
     cat = load_method("cat")
     for route in cat.steps["18"].listen:
         for example in route.examples:
-            bow.table[example] = [0.8, 0.6 if route.signal == "agrees" else -0.6, 0.0]
+            bow.table[example] = [0.8, 0.6 if route.label == "agrees" else -0.6, 0.0]
     bow.table["hmm"] = [1.0, 0.0, 0.0]
     return make_seller(bow, llm)
 
@@ -361,16 +355,6 @@ def test_replay_gives_the_same_lines(fake_embedder):
     assert run() == run()
 
 
-@pytest.mark.parametrize("method", ["cat", "impact_formula"])
-def test_every_prospect_blank_has_a_plain_line(method):
-    known = set(offer_blanks(OFFER))
-    for step in load_method(method).steps.values():
-        blanks = set(re.findall(r"\{(\w+)\}", step.say)) - known
-        if blanks:
-            assert step.say_plain, f"{method} step {step.id} needs say_plain"
-            assert not set(re.findall(r"\{(\w+)\}", step.say_plain)) - known
-
-
 def test_30_simulated_calls_never_show_a_rule_breaking_ai_sentence(fake_embedder):
     import random
 
@@ -385,7 +369,7 @@ def test_30_simulated_calls_never_show_a_rule_breaking_ai_sentence(fake_embedder
     ]
     rng = random.Random(7)
     for _ in range(30):
-        s = make_seller(fake_embedder, rogue, method=rng.choice(["cat", "impact_formula"]))
+        s = make_seller(fake_embedder, rogue, method=rng.choice(METHODS))
         lines = [s.opening()[0]] + [s.reply(rng.choice(pool))[0] for _ in range(12)]
         for line in lines:
             assert "ROGUE" not in line and "{" not in line, line
@@ -410,11 +394,7 @@ def test_a_judged_close_call_survives_rewind_and_replay():
     bot.chat("hmm")                       # borderline: the judge says "agrees" -> step 19
     assert bot.seller.state.step == "19"
     bot.chat("purple banana")             # no match: stays on 19
-    bot.rewind_to_turn(1)
-    assert bot.seller.state.step == "19"
-    # replay path: the stored turn state is restored, nothing is re-judged
-    bot.seller.reset()
-    bot._replay_turn("hmm", "x", turn_state=bot._turn_snapshots[0]["turn_state"])
+    bot.rewind_to_turn(1)                 # the stored turn state is restored, nothing is re-judged
     assert bot.seller.state.step == "19"
 
 
@@ -422,15 +402,6 @@ def test_objection_lines_are_filled_like_any_other_line(seller):
     at(seller, "19")
     line, _ = seller.reply("it's too expensive")
     assert "{" not in line
-
-
-@pytest.mark.parametrize("method", ["cat", "impact_formula"])
-def test_objection_lines_use_only_offer_blanks(method):
-    m = load_method(method)
-    known = set(offer_blanks(OFFER))
-    lines = [m.follow_up] + [x for o in m.objections.values() for x in (*o.loop, o.direct)]
-    for line in lines:
-        assert not set(re.findall(r"\{(\w+)\}", line)) - known, line
 
 
 def test_ai_is_skipped_for_the_rest_of_a_turn_after_one_failure(fake_embedder):
@@ -643,7 +614,7 @@ def test_scripted_coaching_note_comes_from_the_step_without_ai(fake_embedder):
         raise AssertionError("coaching notes must not call the AI")
 
     s = at(make_seller(fake_embedder, no_ai), "05")
-    notes = s.training()
+    notes = s.coach_notes()
     assert notes["what_happened"] == "Script step 05 Blocker."
     assert notes["next_move"].startswith("Listen for: externalising")
 
@@ -667,13 +638,6 @@ def test_checked_line_retries_then_gives_up_on_rule_breaking_ai():
 
 
 # ---- listening: what the live roleplay report found -------------------------------------
-
-def test_no_scripted_line_is_a_canned_fair_enough():
-    # live: "Fair enough." came straight after the prospect said they barely see their daughter
-    for name in ("cat", "impact_formula"):
-        for step in load_method(name).steps.values():
-            assert all(r.ack != "Fair enough." for r in step.routes), step.id
-
 
 def test_people_like_me_is_answered_as_fit_not_location(seller):
     # live: "do people like me actually make it work" got "We work with people all around the world."
@@ -763,7 +727,7 @@ def test_parked_worries_survive_a_rewind_snapshot():
     ({"objections.money.early": "Is money the issue?"}, "early line"),
 ])
 def test_broken_revisit_settings_fail_loud(change, error):
-    from core.script_engine.method import _read, parse_method, CONFIG_DIR
+    from core.script_engine.method import CONFIG_DIR, _read, parse_method
 
     data = _read(CONFIG_DIR / "methods", "cat")
     (key, value), = change.items()

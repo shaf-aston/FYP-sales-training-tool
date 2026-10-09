@@ -22,6 +22,7 @@ from core.constants import (
     SESSION_ID_MIN_CHARS,
 )
 from core.env import env_flag
+
 from .messages import (
     FIELD_NOT_TEXT,
     FIELD_TOO_LONG,

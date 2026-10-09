@@ -6,8 +6,8 @@ from pathlib import Path
 
 import yaml
 
-from core.loader import CONFIG_DIR
 from core.enums import Stage
+from core.loader import CONFIG_DIR
 
 ANY = "any"  # listen route with no examples: taken for any reply
 # What happens after an interruption's reply: ask the step again (same words), wait for them to come

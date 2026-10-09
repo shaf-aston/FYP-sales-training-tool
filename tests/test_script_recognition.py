@@ -1,4 +1,4 @@
-"""Slice 3: the real embedder against the public labelled replies. Opt-in (downloads a model)."""
+"""The real embedder against the public labelled replies. Opt-in (downloads a model)."""
 import os
 import statistics
 import time
@@ -24,7 +24,7 @@ MAX_MEDIAN_MS = 50
 
 
 def _step_labels(method, step_id):
-    return {r.signal: list(r.examples) for r in method.steps[step_id].listen if r.examples}
+    return {r.label: list(r.examples) for r in method.steps[step_id].listen if r.examples}
 
 
 def _objection_labels(method):

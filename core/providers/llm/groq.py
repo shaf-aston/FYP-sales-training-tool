@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any, cast
 
-from groq import Groq, APIConnectionError, RateLimitError, AuthenticationError
+from groq import APIConnectionError, AuthenticationError, Groq, RateLimitError
 
 from ...constants import DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE
 from ..base import BaseLLMProvider, LLMResponse

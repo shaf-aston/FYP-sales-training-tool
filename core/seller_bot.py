@@ -5,17 +5,16 @@ import json
 import logging
 import time
 from dataclasses import asdict, dataclass
-
 from typing import Any, Optional
 
-from .flow import CallFlow
+from . import coach, quiz
 from .analytics.performance import PerformanceTracker
 from .analytics.session_analytics import SessionAnalytics
-from .services.provider_router import ProviderRouter
+from .enums import Stage
+from .flow import CallFlow
 from .script_engine.engine import ScriptState
 from .script_engine.seller import build_seller, resolve_product
-from .enums import Stage
-from . import coach, quiz
+from .services.provider_router import ProviderRouter
 
 _base_logger = logging.getLogger(__name__)
 
@@ -46,6 +45,7 @@ class SellerBot:
         if session_id:
             SessionAnalytics.record(
                 event="session_start",
+                mode="buy",
                 session_id=session_id,
                 product_type=self.product_type,
             )
@@ -70,6 +70,7 @@ class SellerBot:
         SessionAnalytics.record(
             session_id=self.session_id,
             event="conversation_turn",
+            mode="buy",
             turn_index=self.call.user_turn_count,
             strategy=self.call.strategy,
             current_stage=self.call.current_stage,
@@ -206,6 +207,7 @@ class SellerBot:
         SessionAnalytics.record(
             session_id=self.session_id,
             event="session_end",
+            mode="buy",
             final_stage=str(self.call.current_stage),
             strategy=str(self.call.strategy),
             turn_count=self.call.user_turn_count,

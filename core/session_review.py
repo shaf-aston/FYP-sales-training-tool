@@ -9,7 +9,13 @@ the learner actually saw, because both come from the same two functions.
 
 from __future__ import annotations
 
-from .selling_quality import NEGATIVE_SIGNALS, REASONS, apply_readiness, load_turn_rating, score_seller_turn
+from .selling_quality import (
+    NEGATIVE_SIGNALS,
+    REASONS,
+    apply_readiness,
+    load_turn_rating,
+    score_seller_turn,
+)
 
 
 def _pairs(conversation_history: list[dict]) -> list[tuple[str, str]]:

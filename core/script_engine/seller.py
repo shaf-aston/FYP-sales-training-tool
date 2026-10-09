@@ -11,15 +11,25 @@ from core.loader import load_yaml
 from core.script_engine.ai_gate import AiGate
 from core.script_engine.ai_line import checked_line
 from core.script_engine.checks import CheckContext, clip, figures
-from core.utils import is_question, tokenize
 from core.script_engine.embedder import make_embedder
 from core.script_engine.engine import (
-    advance, ask_again, asked_line, hear_ahead, jump, move_on, object_to, park, price_open, ready_open, start,
+    advance,
+    ask_again,
+    asked_line,
+    hear_ahead,
+    jump,
+    move_on,
+    object_to,
+    park,
+    price_open,
+    ready_open,
+    start,
 )
 from core.script_engine.fill import Filler
 from core.script_engine.judge import VAGUE, judge
 from core.script_engine.method import ANY, load_common_sense, load_method, load_offer
 from core.script_engine.recognise import Listener
+from core.utils import is_question, tokenize
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 uncovered_log = logging.getLogger("script_engine.uncovered")

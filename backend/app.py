@@ -13,6 +13,14 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
+from backend.messages import INTERNAL_SERVER_ERROR  # noqa: E402
+from backend.routes import buy, knowledge, monitoring, sell  # noqa: E402
+from backend.routes._utils import Sessions  # noqa: E402
+from backend.security import (  # noqa: E402
+    SecurityHeadersMiddleware,
+    SessionStore,
+    initialize_security,
+)
 from core.constants import (  # noqa: E402
     BUYER_IDLE_MINUTES,
     CLEANUP_INTERVAL_SECONDS,
@@ -24,14 +32,6 @@ from core.constants import (  # noqa: E402
 )
 from core.env import env_flag, env_str  # noqa: E402
 from core.script_engine.seller import shared_embedder  # noqa: E402
-from backend.messages import INTERNAL_SERVER_ERROR  # noqa: E402
-from backend.security import (  # noqa: E402
-    SecurityHeadersMiddleware,
-    SessionStore,
-    initialize_security,
-)
-from backend.routes import buy, knowledge, monitoring, sell  # noqa: E402
-from backend.routes._utils import Sessions  # noqa: E402
 
 app = Flask(
     __name__,

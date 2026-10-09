@@ -10,7 +10,12 @@ from flask import current_app, jsonify, request
 
 from core.constants import MAX_MESSAGE_LENGTH
 
-from ..messages import MESSAGE_REQUIRED, SELL_SESSION_NOT_FOUND, SESSION_NOT_FOUND, UNSUPPORTED_PROVIDER
+from ..messages import (
+    MESSAGE_REQUIRED,
+    SELL_SESSION_NOT_FOUND,
+    SESSION_NOT_FOUND,
+    UNSUPPORTED_PROVIDER,
+)
 from ..security import InputValidator
 
 

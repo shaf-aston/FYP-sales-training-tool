@@ -14,7 +14,6 @@ from core.seller_bot import SellerBot
 from core.utils import new_session_id
 
 from ..messages import (
-    BOT_INIT_FAILED,
     COACH_FAILED,
     EDIT_FAILED,
     FIELD_REQUIRED,
@@ -25,6 +24,7 @@ from ..messages import (
     QUESTION_REQUIRED,
     QUESTION_TOO_LONG,
     REWIND_FAILED,
+    SELLER_INIT_FAILED,
     SERVER_FULL,
 )
 from ..security import InputValidator, require_rate_limit
@@ -90,7 +90,7 @@ def init():
         )
     except Exception as init_error:
         current_app.logger.exception(f"Seller init failed: {init_error}")
-        return jsonify({"error": BOT_INIT_FAILED}), 500
+        return jsonify({"error": SELLER_INIT_FAILED}), 500
 
     opening = seller.script_opening()
     seller.open_with(opening)
@@ -102,7 +102,7 @@ def init():
             "message": opening,
             **stage_fields(seller),
             "history": [],
-            "training": seller.coach_notes(),
+            "training": seller.coach_notes(),  # the web app reads coach notes under this key
         }
     )
 

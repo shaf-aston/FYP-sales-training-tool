@@ -2,14 +2,14 @@
 
 from flask import Blueprint, current_app, jsonify, request
 
+from core import sell_service
 from core.analytics.session_analytics import SessionAnalytics
 from core.buyer_state import UnknownPersona, persona_name, personas_for
 from core.constants import MAX_CHOSEN_OBJECTION_CHARS, MAX_PERSONA_NAME_CHARS
 from core.drills import build_drill_set
 from core.quiz import build_sell_question, score_sell_answer
-from core.services.provider_router import ProviderUnavailable
-from core import sell_service
 from core.sell_service import InvalidDifficulty
+from core.services.provider_router import ProviderUnavailable
 
 from ..messages import (
     INVALID_DIFFICULTY,
@@ -17,9 +17,9 @@ from ..messages import (
     OPTIONAL_TEXT_INVALID,
     SELL_ERROR,
     SELL_FULL,
-    SELL_SETUP_FAILED,
     SELL_REVIEW_ERROR,
     SELL_SCORING_ERROR,
+    SELL_SETUP_FAILED,
     SELL_UNAVAILABLE,
     SESSION_ENDED,
     TURN_NOT_IN_SESSION,

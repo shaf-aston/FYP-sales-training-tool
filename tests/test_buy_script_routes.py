@@ -1,17 +1,7 @@
-"""Slice 5: a scripted call through /api/buy/init, /api/buy/chat and /api/buy/edit (offline provider)."""
+"""A scripted call through /api/buy/init, /api/buy/chat and /api/buy/edit (offline provider)."""
 import pytest
 
-from backend.app import app
-
 SCRIPT_PRODUCT = "high_ticket_sales_mentorship"  # listed under `products:` in script/engine.yaml
-
-
-@pytest.fixture
-def client(monkeypatch):
-    # the route only lists real providers; the offline test provider is let through here
-    monkeypatch.setattr("backend.routes.buy.validate_provider", lambda data: ("dummy", None))
-    app.config["TESTING"] = True
-    return app.test_client()
 
 
 def _init(client):
@@ -76,7 +66,9 @@ def test_edit_rewinds_the_script_too(client):
         "/api/buy/edit", json={"index": 1, "message": "I want financial freedom"}, headers=headers
     ).get_json()
     assert edited["message"] == first
-    assert edited["history"][0]["content"] == "I want financial freedom"
+    assert edited["history"][0]["role"] == "assistant"  # the opening greeting is kept
+    assert edited["history"][1]["content"] == "I want financial freedom"
+    assert len(edited["history"]) == 3
 
 
 def test_slang_tag_is_not_a_product_question(client):
@@ -95,10 +87,10 @@ def test_init_without_product_runs_the_script(client):
 @pytest.mark.parametrize("product", ["financial_services", "luxury_cars"])
 def test_a_product_with_no_script_gets_the_default_one(client, product):
     # buy mode is scripted only; an unscripted product never gets AI-written sales talk
-    from backend.app import session_manager
+    from backend.app import seller_sessions
 
     body = client.post("/api/buy/init", json={"product_type": product}).get_json()
-    assert session_manager.get(body["session_id"]).product_type == SCRIPT_PRODUCT
+    assert seller_sessions.get(body["session_id"]).product_type == SCRIPT_PRODUCT
     assert "making money online" in body["message"]
 
 
@@ -128,6 +120,6 @@ def test_a_product_can_run_its_own_method(client, monkeypatch):
 
     cfg = load_yaml("script/engine.yaml")
     cfg["products"][SCRIPT_PRODUCT]["method"] = "impact_formula"
-    monkeypatch.setattr("core.script_engine.seller.selling_config", lambda: cfg)
+    monkeypatch.setattr("core.script_engine.seller.engine_config", lambda: cfg)
     opened, _ = _init(client)
     assert opened["message"] == "What would you like help with first?"

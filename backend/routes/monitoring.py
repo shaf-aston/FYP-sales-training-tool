@@ -5,9 +5,9 @@ from datetime import datetime
 
 from flask import Blueprint, current_app, jsonify, request
 
-from core.constants import MAX_FEEDBACK_COMMENT_CHARS
 from core.analytics.performance import PerformanceTracker
 from core.analytics.session_analytics import SessionAnalytics
+from core.constants import MAX_FEEDBACK_COMMENT_CHARS
 from core.providers import get_available_providers
 
 from ..messages import FEEDBACK_EMPTY, FORBIDDEN, RATING_NOT_NUMBER, RATING_OUT_OF_RANGE
