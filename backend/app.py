@@ -28,7 +28,7 @@ from backend.security import (  # noqa: E402
     SessionSecurityManager,
     initialize_security,
 )
-from backend.routes import buy, knowledge, monitoring, old_paths, sell  # noqa: E402
+from backend.routes import buy, knowledge, monitoring, sell  # noqa: E402
 from backend.routes._utils import Sessions  # noqa: E402
 
 app = Flask(
@@ -83,36 +83,20 @@ app.register_blueprint(sell.bp)  # /api/sell/*: learner is the salesperson
 app.register_blueprint(knowledge.bp)  # /api/knowledge
 app.register_blueprint(monitoring.bp)  # /api/health, /api/analytics/*, /api/feedback
 
-# Old paths (/api/init, /api/test/*, /api/prospect/* ...): remove once the
-# deployed web uses /api/buy and /api/sell. See backend/routes/old_paths.py.
-old_paths.register_old_paths(app)
-
 # Note: Rate limiting is applied via @require_rate_limit decorators in blueprint files
 
 
 WEB_BUILD_DIR = ROOT_DIR / "web" / "out"
-
-# Old page URLs -> their new pages (permanent redirects, query string kept).
-OLD_PAGES = {
-    "practice": "/buy/",
-    "practice/sell": "/sell/",
-}
 
 
 @app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")
 def web_app(path: str):
     """Serve the built Next.js app (web/out). Rebuild with `npm run build` in web/."""
-    from flask import abort, redirect, request, send_from_directory
+    from flask import abort, send_from_directory
     from werkzeug.exceptions import NotFound
 
-    if path.startswith("api/"):
-        abort(404)
-    old_page = OLD_PAGES.get(path.rstrip("/"))
-    if old_page:
-        query = request.query_string.decode("utf-8", "replace")
-        return redirect(f"{old_page}?{query}" if query else old_page, 301)
-    if not WEB_BUILD_DIR.is_dir():
+    if path.startswith("api/") or not WEB_BUILD_DIR.is_dir():
         abort(404)
     # send_from_directory rejects traversal; a folder request falls back to its index.html.
     for candidate in (path or "index.html", f"{path.rstrip('/')}/index.html"):

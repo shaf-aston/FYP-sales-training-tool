@@ -20,7 +20,7 @@ Modes are named for what the learner does.
 | Sell mode (main) | salesperson | buyer | `core/buyer_session.py` `BuyerSession` | `/sell/` | `/api/sell/*` | `backend/routes/sell.py` |
 | Buy mode | customer | seller | `core/seller_bot.py` `SellerBot` | `/buy/` | `/api/buy/*` | `backend/routes/buy.py` |
 
-Shared routes: `backend/routes/knowledge.py` (`/api/knowledge`), `backend/routes/monitoring.py` (`/api/health`, `/api/analytics/*`, `/api/feedback`). Old paths (`/api/init`, `/api/test/*`, `/api/prospect/*` ...) still answer through `backend/routes/old_paths.py` until the deployed web uses the new ones; `/practice/` and `/practice/sell/` redirect to `/buy/` and `/sell/`.
+Shared routes: `backend/routes/knowledge.py` (`/api/knowledge`), `backend/routes/monitoring.py` (`/api/health`, `/api/analytics/*`, `/api/feedback`).
 
 Open the engine for the mode you are working on. Nothing else decides the turn.
 
