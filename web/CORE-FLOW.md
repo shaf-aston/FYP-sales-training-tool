@@ -26,7 +26,6 @@ npm run check                         # types + lint + the three logic checks
 - **mode**: what the learner does, `"buy" | "sell"` (`Mode` in `SessionContext.tsx`). Each has its own page.
 - **buy mode** (`/buy/`, `/api/buy/*`): you are the customer; the AI seller sells to you.
 - **sell mode** (`/sell/`, `/api/sell/*`): you are the salesperson; the AI buyer answers (`sellSession`, set up in `BuyerSetup` inside the sidebar's Buyer tab).
-- **old addresses**: `/practice/` and `/practice/sell/` redirect to `/buy/` and `/sell/` (`public/vercel.json`).
 - **stage / strategy**: where the sale is, and which approach (`labels.ts`).
 - **training**: the coach's notes after each reply.
 - **readiness**: how close the buyer is to buying (0–1).

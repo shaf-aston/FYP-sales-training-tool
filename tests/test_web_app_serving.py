@@ -37,25 +37,9 @@ def test_folder_paths_serve_their_index(client):
     assert client.get("/knowledge/").status_code == 200
 
 
-@pytest.mark.parametrize(
-    "old, new",
-    [
-        ("/practice/", "/buy/"),
-        ("/practice", "/buy/"),
-        ("/practice/sell/", "/sell/"),
-        ("/practice/sell", "/sell/"),
-    ],
-)
-def test_old_practice_pages_redirect_for_good(client, old, new):
-    response = client.get(old)
-    assert response.status_code == 301
-    assert response.headers["Location"] == new
-
-
-def test_redirect_keeps_the_query_string(client):
-    response = client.get("/practice/sell/?product=watches&difficulty=hard")
-    assert response.status_code == 301
-    assert response.headers["Location"] == "/sell/?product=watches&difficulty=hard"
+@pytest.mark.parametrize("path", ["/buy/", "/sell/"])
+def test_mode_pages_serve(client, path):
+    assert client.get(path).status_code == 200
 
 
 def test_unknown_page_is_404(client):

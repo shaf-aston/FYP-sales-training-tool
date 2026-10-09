@@ -65,6 +65,8 @@ export const config = {
   },
   /** Page addresses, so links never hard-code paths. */
   routes: { home: "/", buy: "/buy/", sell: "/sell/", knowledge: "/knowledge/" },
+  /** A missing page sends you home after this long, unless you choose to stay. */
+  notFound: { redirectSeconds: 30 },
   landing: { wordRotateMs: 2_200, demoStepMs: 1_800, revealThreshold: 0.15 },
   drills: { intervalsDays: [0, 1, 3, 7, 21] },
   readinessBands: { low: 30, mid: 60 },

@@ -1,10 +1,4 @@
 {
-  "redirects": [
-    { "source": "/practice/sell/", "destination": "/sell/", "permanent": true },
-    { "source": "/practice/sell", "destination": "/sell/", "permanent": true },
-    { "source": "/practice/", "destination": "/buy/", "permanent": true },
-    { "source": "/practice", "destination": "/buy/", "permanent": true }
-  ],
   "rewrites": [
     { "source": "/api/:path*", "destination": "https://140-238-102-50.sslip.io/api/:path*" }
   ]

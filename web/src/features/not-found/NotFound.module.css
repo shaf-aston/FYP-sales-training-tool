@@ -1,0 +1,72 @@
+.page {
+  position: relative;
+  z-index: var(--z-base);
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+}
+
+.card {
+  width: min(100%, 520px);
+  display: grid;
+  gap: var(--space-4);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  animation: pop-in var(--dur-pop) var(--ease-pop);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  line-height: 1.15;
+  color: var(--text-primary);
+}
+
+.body { color: var(--text-body); font-size: var(--text-md); }
+
+.path {
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+.track {
+  height: 4px;
+  margin-bottom: calc(-1 * var(--space-2));
+  border-radius: var(--radius-pill);
+  background: var(--border-strong);
+  overflow: hidden;
+}
+
+/* Drains smoothly (transform, no layout) instead of jumping once a second. */
+.fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transform-origin: left;
+  animation: drain linear forwards;
+}
+
+@keyframes drain {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+.timerRow { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); }
+
+.timer { font-size: var(--text-sm); color: var(--text-muted); }
+
+.timerRow > button { white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  .card { animation: none; }
+}
+
+@media (max-width: 480px) {
+  .actions > * { flex: 1 1 100%; }
+}
