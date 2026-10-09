@@ -1,13 +1,12 @@
-"""Shared helper utilities used across chatbot modules"""
+"""Small shared helpers: text matching, scores and ids."""
 
 import json
 import re
+import secrets
 from bisect import bisect
 from functools import lru_cache
 
-# frozenset negations are unordered and hashed for O(1) lookup and immutability
-
-DEFAULT_NEGATIONS = frozenset(
+NEGATIONS = frozenset(
     {
         "not",
         "don't",
@@ -33,37 +32,24 @@ def _build_union_pattern_for_keywords(keyword_tuple) -> re.Pattern:
     return re.compile("|".join(parts), re.IGNORECASE)
 
 
-def contains_nonnegated_keyword(
-    text: str, keywords, negations=None, neg_window: int = 3
-) -> bool:
-    """Check whether text contains a keyword not negated by nearby words"""
-    if not text or not keywords:
+NEGATION_WINDOW = 3  # a negation this many words before a keyword cancels it
+
+
+def contains_nonnegated_keyword(text: str, keywords) -> bool:
+    """True when text contains a keyword (whole words) with no negation just before it."""
+    keys = [keywords] if isinstance(keywords, str) else list(keywords or ())
+    if not text or not keys:
         return False
 
-    # normalize keywords to a list
-    if isinstance(keywords, str):
-        keys = [keywords]
-    else:
-        keys = list(keywords)
-    if not keys:
-        return False
-
-    pattern = _build_union_pattern_for_keywords(tuple(keys))
-    negset = frozenset(negations) if negations is not None else DEFAULT_NEGATIONS
-
-    for match in pattern.finditer(text):
+    for match in _build_union_pattern_for_keywords(tuple(keys)).finditer(text):
         preceding_words = re.findall(r"\w+", text[: match.start()])
-        if preceding_words:
-            window = [w.lower() for w in preceding_words[-neg_window:]]
-            if any(w in negset for w in window):
-                # appears negated - skip
-                continue
-        return True
+        if not any(w.lower() in NEGATIONS for w in preceding_words[-NEGATION_WINDOW:]):
+            return True
     return False
 
 
 def clamp_score(value, default=50) -> int:
-    """Clamp LLM-returned score to 0–100 int range"""
+    """Clamp a score to a 0-100 int"""
     try:
         return max(0, min(100, int(value)))
     except (TypeError, ValueError):
@@ -133,3 +119,8 @@ def merge_unique_items(*lists: list[str], max_items: int = 3) -> list[str]:
             if len(merged) >= max_items:
                 return merged
     return merged
+
+
+def new_session_id() -> str:
+    """A fresh id for a buy or sell session."""
+    return secrets.token_hex(16)

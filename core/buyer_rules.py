@@ -6,7 +6,7 @@ Pure logic, no AI calls, no I/O. BuyerSession asks; this module answers.
 import random
 
 from .constants import SOLD_MIN_TURNS, SOLD_READINESS, WALK_MIN_TURNS, WALK_READINESS
-from .selling_quality import NEGATIVE_SIGNALS, load_selling_signals
+from .selling_quality import NEGATIVE_SIGNALS, load_turn_rating
 
 
 class ObjectionPacer:
@@ -53,12 +53,10 @@ class ObjectionPacer:
         return self.bank[already]
 
 
-def end_outcome(readiness: float, turn_count: int, behaviour: dict, max_turns: int | None) -> str | None:
+def end_outcome(readiness: float, turn_count: int, behaviour: dict) -> str | None:
     """'sold', 'walked', or None while the conversation should go on."""
     if readiness >= SOLD_READINESS and turn_count >= SOLD_MIN_TURNS:
         return "sold"
-    if max_turns is not None and turn_count >= max_turns:
-        return "walked"
     if turn_count >= behaviour["patience_turns"] and readiness < WALK_READINESS:
         return "walked"
     if readiness <= 0.0 and turn_count >= WALK_MIN_TURNS:
@@ -67,12 +65,12 @@ def end_outcome(readiness: float, turn_count: int, behaviour: dict, max_turns: i
 
 
 def coaching_hint(turn_score) -> dict:
-    """One-line tip for the seller, picked from selling_signals.yaml hints (no AI).
+    """One-line tip for the seller, picked from turn_rating.yaml hints (no AI).
 
     Uses the signals the turn's score already found: the first problem wins,
     then the first strength, then the default line.
     """
-    hints = load_selling_signals()["hints"]
+    hints = load_turn_rating()["hints"]
     fired = turn_score.signals if turn_score else []
     ordered = [s for s in NEGATIVE_SIGNALS if s in fired] + [s for s in fired if s not in NEGATIVE_SIGNALS]
     key = next((s for s in ordered if s in hints), "default")

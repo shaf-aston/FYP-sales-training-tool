@@ -10,7 +10,7 @@ LLM_PROVIDER_TYPES = {
 }
 
 _PROVIDER_ALIASES = {
-    "groqcloud": "groq",
+    "groqcloud": "groq",  # kept for server env compatibility (LLM_PROVIDER_ORDER may still name it)
 }
 
 

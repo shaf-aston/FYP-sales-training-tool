@@ -13,7 +13,7 @@ from core.script_engine.judge import VAGUE, judge
 from core.script_engine.method import load_common_sense, load_method, load_offer
 from core.script_engine.seller import ScriptSeller, _after_lead
 
-CFG = {**load_yaml("selling.yaml"), "ai_fill_blanks": True}  # these tests cover the AI fill path
+CFG = {**load_yaml("script/engine.yaml"), "ai_fill_blanks": True}  # these tests cover the AI fill path
 OFFER = load_offer("shay_coaching")
 
 
@@ -600,7 +600,7 @@ def test_blank_phrase_that_breaks_the_sentence_falls_back(phrase):
     from core.loader import load_yaml
     from core.script_engine.fill import _phrase
 
-    cfg = load_yaml("selling.yaml")
+    cfg = load_yaml("script/engine.yaml")
     line = "How much do you need to be making to feel {outcome} freedom?"
     reply = "I want freedom, to stop working for someone else and travel"
     assert _phrase(line, "outcome", reply, cfg, lambda prompt, n: phrase) is None

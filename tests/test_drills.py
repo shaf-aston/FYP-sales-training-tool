@@ -2,7 +2,7 @@
 
 import pytest
 
-from core.script_drills import (
+from core.drills import (
     OWN_LINE_GROUP,
     build_drill_set,
     drills_from_own_turns,

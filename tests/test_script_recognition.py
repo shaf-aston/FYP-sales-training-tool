@@ -49,7 +49,7 @@ def _contexts():
 
 @pytest.fixture(scope="module")
 def results():
-    cfg = load_yaml("selling.yaml")
+    cfg = load_yaml("script/engine.yaml")
     embedder = make_embedder(cfg, ROOT)
     listener = Listener(cfg, embedder)
     data = yaml.safe_load((ROOT / "tests/data/script_replies.yaml").read_text(encoding="utf-8"))
@@ -111,7 +111,7 @@ def test_latency(results, capsys):
 
 def test_combined_interruption_set_picks_the_right_group(capsys):
     """The seller matches interruptions, facts and objections in one pass: groups must not steal."""
-    cfg = load_yaml("selling.yaml")
+    cfg = load_yaml("script/engine.yaml")
     embedder = make_embedder(cfg, ROOT)
     listener = Listener(cfg, embedder)
     ctxs = _contexts()
@@ -139,7 +139,7 @@ def test_combined_interruption_set_picks_the_right_group(capsys):
 
 
 def test_only_script_examples_are_remembered_never_replies():
-    embedder = make_embedder(load_yaml("selling.yaml"), ROOT)
+    embedder = make_embedder(load_yaml("script/engine.yaml"), ROOT)
     embedder.warm(["I want freedom"])
     embedder.embed(["I want freedom", "a prospect reply nobody will ever warm"])
     assert list(embedder._seen) == ["I want freedom"]
@@ -159,7 +159,7 @@ def _down(prompt, max_tokens):
 def test_answers_move_the_script_on(replies, expected_step):
     from core.script_engine.seller import ScriptSeller
 
-    cfg = load_yaml("selling.yaml")
+    cfg = load_yaml("script/engine.yaml")
     seller = ScriptSeller(cfg, load_method("cat"), load_offer(cfg["products"]["high_ticket_sales_mentorship"]["offer"]), load_common_sense(),
                           make_embedder(cfg, ROOT), _down)
     for text in replies:
@@ -170,7 +170,7 @@ def test_answers_move_the_script_on(replies, expected_step):
 def test_real_price_question_still_gets_the_early_answer():
     from core.script_engine.seller import ScriptSeller
 
-    cfg = load_yaml("selling.yaml")
+    cfg = load_yaml("script/engine.yaml")
     seller = ScriptSeller(cfg, load_method("cat"), load_offer(cfg["products"]["high_ticket_sales_mentorship"]["offer"]), load_common_sense(),
                           make_embedder(cfg, ROOT), _down)
     seller.reply("I want freedom")
@@ -182,7 +182,7 @@ def test_real_price_question_still_gets_the_early_answer():
 def _real_seller():
     from core.script_engine.seller import ScriptSeller
 
-    cfg = load_yaml("selling.yaml")
+    cfg = load_yaml("script/engine.yaml")
     return ScriptSeller(cfg, load_method("cat"), load_offer(cfg["products"]["high_ticket_sales_mentorship"]["offer"]), load_common_sense(),
                         make_embedder(cfg, ROOT), _down)
 
@@ -222,7 +222,7 @@ def test_a_pause_is_a_pause_on_any_step(step):
     from core.script_engine.engine import ScriptState
     from core.script_engine.seller import ScriptSeller
 
-    cfg = load_yaml("selling.yaml")
+    cfg = load_yaml("script/engine.yaml")
     seller = ScriptSeller(cfg, load_method("cat"), load_offer(cfg["products"]["high_ticket_sales_mentorship"]["offer"]), load_common_sense(),
                           make_embedder(cfg, ROOT), _down)
     seller.reset(ScriptState(step=step))
@@ -248,7 +248,7 @@ def test_failed_past_attempt_gets_an_acknowledgement():
 def test_floored_labels_clear_their_floor_only_when_meant(capsys):
     """Keen buyer and frustration act on one message, so each has its own floor: real replies must
     clear it when meant and never when not (heard as the seller hears them at step 01)."""
-    cfg = load_yaml("selling.yaml")
+    cfg = load_yaml("script/engine.yaml")
     embedder = make_embedder(cfg, ROOT)
     listener = Listener(cfg, embedder)
     cat, sense = load_method("cat"), load_common_sense()

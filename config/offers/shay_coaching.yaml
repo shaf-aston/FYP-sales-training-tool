@@ -1,12 +1,12 @@
 # The offer being sold. Method scripts take their blanks from here.
-# draft: true = answer is not verbatim from the trainer's source and needs the trainer's wording.
+# draft: true = answer is not verbatim from the coach's source and needs the coach's wording.
+# draft is an authoring marker only: the app parses it but never acts on it.
 months: 6
 price: "$5k"
-context: b2c   # b2c or b2b
 # What the AI may say about the programme when no fact below covers a question. Only what the
 # facts and the pitch steps already say: anything else gets the honest "I'll find out" line.
 about:
-  draft: true  # gathered from the facts and the pitch lines; needs the trainer's check
+  draft: true  # gathered from the facts and the pitch lines; needs the coach's check
   after_price: "The investment is {price}."   # added once the script has reached the price step
   text: "We coach people through a 6-month programme to build their own business. Education & curriculum: structured, step by step, so there's no wasted time piecing it together. Mentorship: direct coaching and tailored feedback to avoid the landmines. Accountability: we tell you what you need to hear and hold you to it. We work with people all around the world. Results depend on the work you put in."
 pillars:
@@ -15,7 +15,7 @@ pillars:
   - "Accountability"
 facts:
   price:
-    draft: true  # late_answer is not from the trainer's source
+    draft: true  # late_answer is not from the coach's source
     examples:
       - "how much does it cost"
       - "what's the price"

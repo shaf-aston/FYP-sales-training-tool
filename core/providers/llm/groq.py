@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 import logging
-import time
 from typing import Any, cast
 
 from groq import Groq, APIConnectionError, RateLimitError, AuthenticationError
 
 from ...constants import DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE
-from ..base import ACCESS_DENIED, BaseLLMProvider, LLMResponse, RATE_LIMIT
+from ..base import BaseLLMProvider, LLMResponse
 from ..config import get_groq_api_keys, get_groq_llm_model
 
 logger = logging.getLogger(__name__)
@@ -33,17 +32,12 @@ class GroqProvider(BaseLLMProvider):
         """Return the active Groq model name."""
         return self.model
 
-    def chat(self, messages, temperature=DEFAULT_TEMPERATURE, max_tokens=DEFAULT_MAX_TOKENS, stage=None) -> LLMResponse:
-        """Send the chat request to Groq, retrying across configured API keys."""
-        start = time.time()
+    def chat(self, messages, temperature=DEFAULT_TEMPERATURE, max_tokens=DEFAULT_MAX_TOKENS) -> LLMResponse:
+        """Send the chat request to Groq; a rate-limited key passes the request to the next key."""
         if not self.clients:
-            return LLMResponse(
-                error="Groq API keys are not configured.",
-                latency_ms=(time.time() - start) * 1000,
-            )
+            return LLMResponse(error="Groq API keys are not configured.")
 
         last_error = "Groq request failed."
-        last_error_code = None
         for client in self.clients:
             try:
                 response = client.chat.completions.create(
@@ -52,37 +46,15 @@ class GroqProvider(BaseLLMProvider):
                     temperature=temperature,
                     max_tokens=max_tokens,
                 )
-                message_content = response.choices[0].message.content or ""
-                content = message_content.strip()
-                return LLMResponse(
-                    content=content,
-                    latency_ms=(time.time() - start) * 1000,
-                )
+                return LLMResponse(content=(response.choices[0].message.content or "").strip())
             except RateLimitError as exc:
                 last_error = str(exc)
-                last_error_code = RATE_LIMIT
                 continue
             except AuthenticationError as exc:
-                last_error = str(exc)
-                return LLMResponse(
-                    error=f"Groq authentication failed: {last_error}",
-                    error_code=ACCESS_DENIED,
-                    latency_ms=(time.time() - start) * 1000,
-                )
+                return LLMResponse(error=f"Groq authentication failed: {exc}")
             except APIConnectionError as exc:
-                last_error = str(exc)
-                return LLMResponse(
-                    error=f"Groq connection error: {last_error}",
-                    latency_ms=(time.time() - start) * 1000,
-                )
+                return LLMResponse(error=f"Groq connection error: {exc}")
             except Exception as exc:
-                return LLMResponse(
-                    error=f"Groq request failed: {exc}",
-                    latency_ms=(time.time() - start) * 1000,
-                )
+                return LLMResponse(error=f"Groq request failed: {exc}")
 
-        return LLMResponse(
-            error=f"Groq rate limit reached: {last_error}",
-            error_code=last_error_code,
-            latency_ms=(time.time() - start) * 1000,
-        )
+        return LLMResponse(error=f"Groq rate limit reached: {last_error}")

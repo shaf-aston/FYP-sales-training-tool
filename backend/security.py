@@ -11,18 +11,15 @@ from typing import Any, Callable, Dict, Optional, Tuple
 
 from core.constants import (
     API_HEADERS,
-    CLEANUP_INTERVAL_SECONDS,
     CSP,
     DEFAULT_TRUST_PROXY_HEADERS,
     MAX_FIELD_LENGTH,
     MAX_MESSAGE_LENGTH,
-    MAX_SESSIONS,
     MAX_TURN_NUMBER,
     RATE_LIMITS,
     SECURITY_HEADERS,
     SESSION_ID_MAX_CHARS,
     SESSION_ID_MIN_CHARS,
-    SESSION_IDLE_MINUTES,
 )
 from core.env import env_flag
 from .messages import (
@@ -227,22 +224,16 @@ class ClientIPExtractor:
         return request_obj.remote_addr or "unknown"
 
 
-class SessionSecurityManager:
-    """In-memory session store with automatic idle cleanup"""
+class SessionStore:
+    """In-memory store of live sessions for one mode, with idle cleanup"""
 
-    def __init__(
-        self,
-        max_sessions: int = MAX_SESSIONS,
-        idle_minutes: int = SESSION_IDLE_MINUTES,
-        cleanup_interval: int = CLEANUP_INTERVAL_SECONDS,
-        manager_name: str = "sessions",
-    ):
+    def __init__(self, max_sessions: int, idle_minutes: int, cleanup_interval: int, name: str):
         self._sessions: Dict[str, Dict[str, Any]] = {}
         self._lock = threading.Lock()
         self.max_sessions = max_sessions
         self.idle_minutes = idle_minutes
         self.cleanup_interval = cleanup_interval
-        self.manager_name = manager_name
+        self.name = name
         self._cleanup_started = False
 
     def get(self, session_id: str) -> Optional[Any]:
@@ -250,12 +241,12 @@ class SessionSecurityManager:
             entry = self._sessions.get(session_id)
             if entry:
                 entry["ts"] = datetime.now()
-                return entry["bot"]
+                return entry["session"]
         return None
 
-    def set(self, session_id: str, chatbot: Any) -> None:
+    def set(self, session_id: str, session: Any) -> None:
         with self._lock:
-            self._sessions[session_id] = {"bot": chatbot, "ts": datetime.now()}
+            self._sessions[session_id] = {"session": session, "ts": datetime.now()}
 
     def delete(self, session_id: str) -> None:
         with self._lock:
@@ -264,10 +255,6 @@ class SessionSecurityManager:
     def can_create(self) -> bool:
         with self._lock:
             return len(self._sessions) < self.max_sessions
-
-    def count(self) -> int:
-        with self._lock:
-            return len(self._sessions)
 
     def _cleanup_expired(self) -> int:
         with self._lock:
@@ -279,7 +266,7 @@ class SessionSecurityManager:
             for sid in expired_ids:
                 del self._sessions[sid]
             if expired_ids:
-                logger.info("Cleaned up %d idle %s", len(expired_ids), self.manager_name)
+                logger.info("Cleaned up %d idle %s", len(expired_ids), self.name)
             return len(expired_ids)
 
     def start_background_cleanup(self) -> None:
@@ -298,13 +285,11 @@ class SessionSecurityManager:
 
         thread = threading.Thread(target=cleanup_loop, daemon=True)
         thread.start()
-        logger.info("Started cleanup thread for %s (interval: %ss)", self.manager_name, self.cleanup_interval)
+        logger.info("Started cleanup thread for %s (interval: %ss)", self.name, self.cleanup_interval)
 
 
-def initialize_security(
-    app_logger=None,
-) -> Tuple[RateLimiter, SessionSecurityManager]:
-    """Initialize security singletons (call once at startup)"""
+def initialize_security(app_logger=None) -> None:
+    """Set up the process-wide rate limiter (call once at startup)"""
     global _rate_limiter
 
     if app_logger:
@@ -312,10 +297,3 @@ def initialize_security(
         logger.setLevel(app_logger.level)
 
     _rate_limiter = RateLimiter(RATE_LIMITS)
-    session_manager = SessionSecurityManager(
-        max_sessions=MAX_SESSIONS,
-        idle_minutes=SESSION_IDLE_MINUTES,
-        cleanup_interval=CLEANUP_INTERVAL_SECONDS,
-        manager_name="chat sessions",
-    )
-    return _rate_limiter, session_manager

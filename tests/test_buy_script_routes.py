@@ -3,7 +3,7 @@ import pytest
 
 from backend.app import app
 
-SCRIPT_PRODUCT = "high_ticket_sales_mentorship"  # listed under `products:` in selling.yaml
+SCRIPT_PRODUCT = "high_ticket_sales_mentorship"  # listed under `products:` in script/engine.yaml
 
 
 @pytest.fixture
@@ -126,7 +126,7 @@ def test_a_failed_past_attempt_is_acknowledged_before_going_on(client):
 def test_a_product_can_run_its_own_method(client, monkeypatch):
     from core.loader import load_yaml
 
-    cfg = load_yaml("selling.yaml")
+    cfg = load_yaml("script/engine.yaml")
     cfg["products"][SCRIPT_PRODUCT]["method"] = "impact_formula"
     monkeypatch.setattr("core.script_engine.seller.selling_config", lambda: cfg)
     opened, _ = _init(client)

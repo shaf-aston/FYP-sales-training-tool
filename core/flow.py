@@ -10,7 +10,7 @@ STRATEGY = "consultative"  # the only selling style; shown in the UI and used by
 class CallFlow:
     """History plus the current stage; the script engine decides every move."""
 
-    flow_type = STRATEGY
+    strategy = STRATEGY
 
     def __init__(self) -> None:
         self.reset_to_initial()
@@ -23,9 +23,9 @@ class CallFlow:
         self.current_stage = Stage(target_stage)
         self.stage_turn_count = 0
 
-    def add_turn(self, user_message: str, bot_response: str) -> None:
+    def add_turn(self, user_message: str, seller_reply: str) -> None:
         self.conversation_history.append({"role": "user", "content": user_message})
-        self.conversation_history.append({"role": "assistant", "content": bot_response})
+        self.conversation_history.append({"role": "assistant", "content": seller_reply})
         self.stage_turn_count += 1
 
     def reset_to_initial(self) -> None:

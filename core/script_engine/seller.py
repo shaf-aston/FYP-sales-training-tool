@@ -25,30 +25,30 @@ ROOT = Path(__file__).resolve().parent.parent.parent
 uncovered_log = logging.getLogger("script_engine.uncovered")
 
 
-def selling_config():
-    return load_yaml("selling.yaml")
+def engine_config():
+    return load_yaml("script/engine.yaml")
 
 
 @lru_cache(maxsize=1)
 def shared_embedder():
     """One model per process: loading it is the slow part."""
-    return make_embedder(selling_config(), ROOT)
+    return make_embedder(engine_config(), ROOT)
 
 
 @lru_cache(maxsize=1)
 def shared_gate():
     """One AI gate per process: its failure breaker is shared by every call on purpose."""
-    return AiGate(selling_config())
+    return AiGate(engine_config())
 
 
 def resolve_product(product):
     """The product to sell: the one asked for if it is scripted, else the default."""
-    cfg = selling_config()
+    cfg = engine_config()
     return product if product in cfg["products"] else cfg["default_product"]
 
 
 def build_seller(router, product, embedder=None, gate=None):
-    cfg = selling_config()
+    cfg = engine_config()
     entry = cfg["products"][product]
     return ScriptSeller(
         cfg, load_method(entry.get("method", cfg["method"])), load_offer(entry["offer"]), load_common_sense(),
@@ -62,8 +62,8 @@ def _after_lead(line):
 
 
 def _answer_labels(step):
-    """The step's labelled answers: {signal: [example, ...]}; empty when any reply is its answer."""
-    return {r.signal: list(r.examples) for r in step.listen if r.examples}
+    """The step's labelled answers: {label: [example, ...]}; empty when any reply is its answer."""
+    return {r.label: list(r.examples) for r in step.listen if r.examples}
 
 
 class ScriptSeller:
@@ -211,15 +211,14 @@ class ScriptSeller:
         """The UI stage of the step the call is on."""
         return self.method.steps[self.state.step].ui_stage
 
-    def training(self):
-        """Notes for the trainee, straight from the script step - no AI, instant."""
+    def coach_notes(self):
+        """Notes for the learner, straight from the script step - no AI, instant."""
         step = self.method.steps[self.state.step]
         title = f"{step.id} {step.name}".strip() if step.name else step.id
-        notes = self.cfg["training_notes"]
+        notes = self.cfg["coach_notes"]
         return {
             "what_happened": notes["step"].format(title=title),
             "next_move": notes["listen"].format(note=step.note) if step.note else notes["default"],
-            "watch_for": [],
         }
 
     def _interrupt(self, text, step, opened, waiting):
@@ -239,9 +238,9 @@ class ScriptSeller:
             objections = [(k, o) for k, o in objections if o.early]  # "is this a scam?" gets an honest early line
         labels.update({f"objection:{k}": o.examples for k, o in objections})
         if ready_open(self.method, self.state.step):
-            labels["ready:buyer"] = self.method.ready.examples
-            floors["ready:buyer"] = self.method.ready.min_score
-        won = self._listener.interruption(text, labels, answers, any(r.signal == ANY for r in step.listen), asking, floors)
+            labels["ready:prospect"] = self.method.ready.examples
+            floors["ready:prospect"] = self.method.ready.min_score
+        won = self._listener.interruption(text, labels, answers, any(r.label == ANY for r in step.listen), asking, floors)
         return tuple(won.split(":", 1)) if won else (None, None)
 
     def _answers(self, text, step):
@@ -252,14 +251,14 @@ class ScriptSeller:
 
     def _listen(self, text, step, empty=False):
         labels = _answer_labels(step)
-        signal = None
+        label = None
         if labels:
             found = self._listener.match(text, labels)
-            signal = found.label
+            label = found.label
             if found.close:
                 pick = judge(text, {c: labels[c] for c in found.candidates}, self._ask, self.cfg)
-                signal = None if pick == VAGUE else pick
-        return advance(self.method, self.state, signal, text, empty)
+                label = None if pick == VAGUE else pick
+        return advance(self.method, self.state, label, text, empty)
 
     def _says_nothing(self, text):
         """"ok", "sure", "yeah": no answer to an open question, and no interruption either."""

@@ -30,20 +30,17 @@ class ProviderChatResult:
 
 
 class ProviderRouter:
-    def __init__(self, provider_type: str | None = None, model: str | None = None):
+    def __init__(self, provider_type: str | None = None):
         """Use the named provider, or the first available one when none is named."""
-        if provider_type:
-            provider = create_provider(provider_type, model=model)
-        else:
-            provider = self._first_available(model)
+        provider = create_provider(provider_type) if provider_type else self._first_available()
         self._use(provider, getattr(provider, "provider_name", "unknown"))
 
     @staticmethod
-    def _first_available(model: str | None):
+    def _first_available():
         """First available provider in configured order, else the first configured one."""
         first = None
         for name in list_providers():
-            provider = create_provider(name, model=model)
+            provider = create_provider(name)
             first = first or provider
             if provider.is_available():
                 return provider
@@ -61,7 +58,6 @@ class ProviderRouter:
         self,
         messages: list,
         *,
-        stage=None,
         temperature: float = DEFAULT_TEMPERATURE,
         max_tokens: int = DEFAULT_MAX_TOKENS,
     ) -> ProviderChatResult:
@@ -71,8 +67,6 @@ class ProviderRouter:
         the FIRST failure is returned, so callers can explain what went wrong.
         """
         kwargs = {"temperature": temperature, "max_tokens": max_tokens}
-        if stage is not None:
-            kwargs["stage"] = stage
         first = self._result(self.provider.chat(messages, **kwargs))
         if first.ok:
             return first

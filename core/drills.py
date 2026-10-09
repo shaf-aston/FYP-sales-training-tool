@@ -4,7 +4,7 @@ Recognising a good line is easy; producing one under pressure is the skill being
 trained. So a drill shows the line with the move removed, the learner produces it
 in their head, and only then reveals it.
 
-Two sources feed the same drill shape: lines authored in config/script_drills.yaml,
+Two sources feed the same drill shape: lines authored in config/drills.yaml,
 and the learner's own strongest turns from a session they just played.
 """
 
@@ -14,10 +14,14 @@ import re
 from dataclasses import dataclass, field
 
 from .loader import load_yaml
-from .selling_quality import load_selling_signals
+from .selling_quality import load_turn_rating
 
 BLANK_PATTERN = re.compile(r"\[([^\[\]]+)\]")
 OWN_LINE_GROUP = "your_own_lines"
+
+
+def load_drill_config() -> dict:
+    return load_yaml("drills.yaml")
 
 
 @dataclass(frozen=True)
@@ -57,11 +61,11 @@ def split_blanks(line: str) -> tuple[list[str], list[str]]:
     return segments, answers
 
 
-def load_drills() -> list[Drill]:
+def load_drills(config: dict | None = None) -> list[Drill]:
     """Every authored drill, in config order. Lines with no blank are skipped."""
-    config = load_yaml("script_drills.yaml") or {}
+    config = config or load_drill_config()
     drills = []
-    for group in config.get("groups", []):
+    for group in config["groups"]:
         group_id = group.get("id", "")
         label = group.get("label", group_id)
         for index, line in enumerate(group.get("lines", [])):
@@ -80,28 +84,31 @@ def load_drills() -> list[Drill]:
     return drills
 
 
-def group_summaries() -> list[dict]:
+def group_summaries(config: dict | None = None) -> list[dict]:
     """Group id, name and why it matters, for the drill screen's headings."""
-    config = load_yaml("script_drills.yaml") or {}
+    config = config or load_drill_config()
     return [
         {
             "id": group.get("id", ""),
             "label": group.get("label", group.get("id", "")),
             "why": (group.get("why") or "").strip(),
         }
-        for group in config.get("groups", [])
+        for group in config["groups"]
     ]
 
 
-def drills_from_own_turns(review_turns: list[dict], limit: int | None = None) -> list[Drill]:
+def drills_from_own_turns(
+    review_turns: list[dict], limit: int | None = None, config: dict | None = None
+) -> list[Drill]:
     """Turn the learner's own strongest lines into drills.
 
     Revising something you actually said beats revising a stranger's script. The
     blank is the second half of the sentence, which is where the move usually
     lands, and the drill is skipped when there is no sensible place to split.
     """
-    strong_rating = load_selling_signals()["thresholds"]["strong_rating"]
-    limit = limit or _own_lines()["max_drills"]
+    own_lines = (config or load_drill_config())["own_lines"]
+    strong_rating = load_turn_rating()["thresholds"]["strong_rating"]
+    limit = limit or own_lines["max_drills"]
     strong = [
         turn
         for turn in review_turns or []
@@ -116,7 +123,7 @@ def drills_from_own_turns(review_turns: list[dict], limit: int | None = None) ->
     for turn in strong:
         if len(drills) >= limit:
             break
-        split = _split_point(turn["seller"])
+        split = _split_point(turn["seller"], own_lines["min_words"])
         if split is None:
             continue
         visible, hidden = split
@@ -124,7 +131,7 @@ def drills_from_own_turns(review_turns: list[dict], limit: int | None = None) ->
             Drill(
                 id=f"{OWN_LINE_GROUP}:{turn.get('turn', len(drills))}",
                 group=OWN_LINE_GROUP,
-                label="Lines you got right",
+                label=own_lines["label"],
                 segments=[visible, ""],
                 answers=[hidden],
                 source="own_turn",
@@ -133,15 +140,10 @@ def drills_from_own_turns(review_turns: list[dict], limit: int | None = None) ->
     return drills
 
 
-def _own_lines() -> dict:
-    """The own-line drill limits from script_drills.yaml."""
-    return load_yaml("script_drills.yaml")["own_lines"]
-
-
-def _split_point(line: str) -> tuple[str, str] | None:
+def _split_point(line: str, min_words: int) -> tuple[str, str] | None:
     """Split a sentence so the blank covers the move, not a stray word."""
     words = line.split()
-    if len(words) < _own_lines()["min_words"]:
+    if len(words) < min_words:
         return None
     cut = len(words) // 2
     return " ".join(words[:cut]) + " ", " ".join(words[cut:])
@@ -153,17 +155,13 @@ def build_drill_set(review_turns: list[dict] | None = None) -> dict:
     The learner's own lines come first when a session supplied any, because they
     are the ones they are most likely to use again.
     """
-    own = drills_from_own_turns(review_turns or [])
-    groups = group_summaries()
+    config = load_drill_config()
+    own = drills_from_own_turns(review_turns or [], config=config)
+    groups = group_summaries(config)
     if own:
-        groups = [
-            {
-                "id": OWN_LINE_GROUP,
-                "label": "Lines you got right",
-                "why": "Your own strongest turns from the session you just played.",
-            }
-        ] + groups
+        own_lines = config["own_lines"]
+        groups = [{"id": OWN_LINE_GROUP, "label": own_lines["label"], "why": own_lines["why"]}] + groups
     return {
         "groups": groups,
-        "drills": [drill.to_dict() for drill in own + load_drills()],
+        "drills": [drill.to_dict() for drill in own + load_drills(config)],
     }

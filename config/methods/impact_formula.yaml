@@ -1,6 +1,7 @@
 # Impact Formula: the app's consultative flow (intent, problem, stakes, pitch) as a script.
-# Questions are ported from core/prompts.py and config/objection_pathway_map.yaml.
-# draft: true = a line on that step is not verbatim from the source and needs a trainer's wording.
+# Questions were ported from the app's earlier prompt-driven consultative flow.
+# draft: true = a line on that step is not verbatim from the source and needs the coach's wording.
+# draft is an authoring marker only: the app parses it but never acts on it.
 first: "intent"
 price_step: "present"
 steps:
@@ -137,7 +138,7 @@ steps:
     draft: true  # the follow_up line below, as an ending step `stuck` can lead to
     say: &follow_up "No problem. Let's book a follow-up call so you can decide properly, and I'll leave it there for today."
 
-# Said after the loop lines and the direct line have all been used. The trainer's FAQ says to
+# Said after the loop lines and the direct line have all been used. The coach's FAQ says to
 # book the follow-up and leave on a good note; it gives no wording.
 follow_up:
   draft: true

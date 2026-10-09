@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from core.loader import load_sell_config
+from core.loader import load_buyer_config
 from core.session_review import build_review
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 @pytest.fixture
 def behaviour():
-    return load_sell_config()["difficulty_profiles"]["medium"]["behaviour"]
+    return load_buyer_config()["difficulty_profiles"]["medium"]["behaviour"]
 
 
 def test_a_strong_discovery_question_and_a_price_first_line_are_rated_differently(behaviour):

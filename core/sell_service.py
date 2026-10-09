@@ -1,15 +1,14 @@
 """Sell-mode session setup, kept out of the route: the product picker and starting a session."""
 
-import secrets
 from dataclasses import dataclass
 
 from .buyer_session import BuyerSession
 from .buyer_state import BuyerResponse, select_persona
-from .loader import load_product_config, load_sell_config
+from .loader import load_buyer_config, load_buyer_products
 
 
 class InvalidDifficulty(ValueError):
-    """The requested difficulty has no profile in sell_config.yaml."""
+    """The requested difficulty has no profile in buyer.yaml."""
 
     def __init__(self, choices: list[str]):
         super().__init__(choices)
@@ -23,9 +22,9 @@ class SellStart:
 
 
 def product_groups() -> dict[str, list[dict]]:
-    """Picker groups from sell_config.yaml; a product with no buyer personas is left out."""
-    config = load_sell_config()
-    products = load_product_config().get("products", {})
+    """Picker groups from buyer.yaml; a product with no buyer personas is left out."""
+    config = load_buyer_config()
+    products = load_buyer_products()["products"]
     return {
         strategy: [
             {
@@ -41,27 +40,28 @@ def product_groups() -> dict[str, list[dict]]:
 
 
 def start_sell_session(
-    store, *, difficulty: str, product_type: str, provider: str | None,
+    store, *, difficulty: str | None, product_type: str, provider: str | None,
     persona_name: str | None, objection: str | None,
 ) -> SellStart:
-    """Build the buyer, get its opening line, register and save the session.
+    """Build the buyer, get its opening line and register the session.
 
-    Raises InvalidDifficulty or UnknownPersona for bad choices, and ProviderUnavailable
-    when no LLM answers. `store` is the live-session registry (needs `.set`).
+    `difficulty` None means the configured default. Raises InvalidDifficulty or
+    UnknownPersona for bad choices, and ProviderUnavailable when no LLM answers.
+    `store` is the live-session store (needs `.set`).
     """
-    choices = list(load_sell_config()["difficulty_profiles"])
+    config = load_buyer_config()
+    if difficulty is None:
+        difficulty = config["default_difficulty"]
+    choices = list(config["difficulty_profiles"])
     if difficulty not in choices:
         raise InvalidDifficulty(choices)
-    persona = select_persona(product_type, persona_name)
     session = BuyerSession(
         provider_type=provider,
         product_type=product_type,
         difficulty=difficulty,
-        persona=persona,
-        session_id=secrets.token_hex(16),
+        persona=select_persona(product_type, persona_name),
         objection=objection,
     )
     opening = session.get_opening_message()
     store.set(session.session_id, session)
-    session.save_session()
     return SellStart(session, opening)

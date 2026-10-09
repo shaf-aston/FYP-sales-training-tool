@@ -1,11 +1,12 @@
 # CAT call script, steps 00-22. Lines are the operator's script verbatim.
 # {blank} = filled from the prospect's own answers (the script's XYZ) or from the offer.
-# draft: true = a line on that step is not verbatim from the source and needs a trainer's wording.
+# draft: true = a line on that step is not verbatim from the source and needs the coach's wording.
+# draft is an authoring marker only: the app parses it but never acts on it.
 first: "00"
 price_step: "14"
 revisit_step: "19"   # an objection parked before the price comes back when they hesitate at the soft close
-# A keen buyer who says they're in before the pitch is asked one question, then shown how to pay
-# (trainer: "just send the payment link, make it easy"). From the soft close on, the script closes itself.
+# A keen prospect who says they're in before the pitch is asked one question, then shown how to pay
+# (coach: "just send the payment link, make it easy"). From the soft close on, the script closes itself.
 ready:
   then: "ready"
   until: "19"
@@ -335,7 +336,7 @@ steps:
     name: "Ready buyer"
     note: 'they said they are in: make paying easy, no pitch'
     ui_stage: outcome
-    draft: true  # trainer's question; no source line for the lead-in
+    draft: true  # coach's question; no source line for the lead-in
     say: "Love that. Are you aware of the programme from beforehand?"
     probe: "Do you already know what's in the programme?"
     stuck: {then: "ready_brief"}   # still unclear: give them the one-line version, it costs nothing
@@ -374,14 +375,14 @@ steps:
     listen:
       any: {then: "22"}
 
-# Said after the loop lines and the direct line have all been used. The trainer's FAQ says to
+# Said after the loop lines and the direct line have all been used. The coach's FAQ says to
 # book the follow-up and leave on a good note; it gives no wording.
 follow_up:
   draft: true
   say: *follow_up
 
 # Objection loop (after the soft close). Loop twice, third time direct.
-# Loop lines: the trainer's FAQ and the generic objection page.
+# Loop lines: the coach's FAQ and the generic objection page.
 objections:
   money:
     examples:

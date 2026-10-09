@@ -1,21 +1,17 @@
-# Products the AI buyer (sell mode) can be shopping for.
+# Products the AI buyer (sell mode) can be shopping for. Which picker group each is in
+# (transactional or consultative) is set by product_groups in buyer.yaml.
 # context and knowledge: what the buyer has read about it (core/buyer_prompt.py).
 # name: label in the sell-mode product picker.
-# Buy mode (the AI seller) sells only the scripted products in selling.yaml.
+# Buy mode (the AI seller) sells only the scripted products in script/engine.yaml.
 
 products:
-
-  # ─── Discovery (unknown product) ────────────────────────────────────────────
-
-  default:
-    name: "Multi-product Assistant"
+  default:   # used when the session names no product listed here
+    name: "Any product"
     context: "various products and services"
     knowledge: |
-      You represent a sales assistant who can help with multiple product categories.
-      When asked what you sell: briefly explain you can assist with various products and ask what they're interested in.
-      Focus on understanding their needs quickly and moving to relevant options.
-
-  # ─── Consultative - high-ticket, relationship-driven ────────────────────────
+      You don't yet know exactly what this salesperson offers.
+      If they haven't said, ask what they sell and how it would help with your needs.
+      Judge what they offer against your own needs and budget, not against a product sheet.
 
   luxury_cars:
     name: "Luxury Vehicles"
@@ -83,8 +79,6 @@ products:
       - Elite Closer Track: $15,000. 16-week private mentorship, live call shadowing, personalised script refinement, CRM and follow-up optimisation, priority feedback within 24 hours. Best for: high earners, founders, and experienced closers ready for a premium, hands-on partnership.
       Key differentiators: Foundation=structure, Scale=execution, Elite=full private support.
       Additional context: Results focus on cleaner discovery, stronger confidence, and a repeatable closing process rather than theory alone.
-
-  # ─── Transactional - direct, price-driven ───────────────────────────────────
 
   watches:
     name: "Luxury Watches"

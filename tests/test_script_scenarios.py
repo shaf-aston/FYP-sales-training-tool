@@ -15,7 +15,7 @@ from core.script_engine.method import (
 )
 from core.script_engine.seller import ScriptSeller
 
-CFG = load_yaml("selling.yaml")
+CFG = load_yaml("script/engine.yaml")
 CAT = load_method("cat")
 SENSE = load_common_sense()
 FRUSTRATED = SENSE.interruptions["frustrated"].reply

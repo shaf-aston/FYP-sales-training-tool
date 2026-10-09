@@ -21,19 +21,15 @@ def api_health():
     """Health check: provider availability and performance stats"""
     session_id = request.headers.get("X-Session-ID")
 
-    # Get active provider info
     active_provider = None
     active_model = None
     if session_id:
-        bot = current_app.extensions["sessions"].seller.get(session_id)
-        if bot:
-            active_provider = bot.provider_name
-            active_model = bot.model_name
+        seller = current_app.extensions["sessions"].seller.get(session_id)
+        if seller:
+            active_provider = seller.provider_name
+            active_model = seller.model_name
 
-    # Get available providers
     provider_status = get_available_providers()
-
-    # Get aggregate performance stats
     perf_stats = PerformanceTracker.get_provider_stats()
 
     return jsonify(

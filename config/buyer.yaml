@@ -22,62 +22,44 @@ real_objections:
 
 # The sell-mode product picker, split by sales motion. A product with no personas is hidden.
 product_groups:
-  transactional: [luxury_cars, premium_electronics, watches, travel, fashion]
-  consultative: [b2b_saas, high_ticket_sales_mentorship, financial_services, education, healthcare_services]
+  transactional: [luxury_cars, automotive, premium_electronics, watches, jewellery, travel, fashion, home_appliances, outdoor_equipment]
+  consultative: [b2b_saas, high_ticket_sales_mentorship, financial_services, insurance, education, healthcare_services, fitness, home_services]
+
+# Used when a request names none: the difficulty, and the name of a persona that has none.
+default_difficulty: medium
+default_persona_name: Alex
+
+# The buyer's last line when the session ends (no AI): sold, walked, or ended for another reason.
+end_messages:
+  sold: "You've addressed what I needed. I'm ready to move forward."
+  walked: "I don't think this is the right fit for me right now."
+  ended: "This roleplay session has ended."
 
 difficulty_profiles:
-  easy:
-    label: "Friendly Buyer"
-    description: "Cooperative prospect who discloses needs openly and raises minimal objections."
+  easy:   # Friendly Buyer
     behaviour:
       initial_readiness: 0.5
       readiness_gain_per_good_turn: 0.12
       readiness_drift_per_neutral_turn: 0.02
       readiness_loss_per_bad_turn: 0.05
-      disclosure_level: "high"
       objection_probability: 0.2
       max_objections: 1
-      reframe_acceptance_rate: 0.8
-      volunteers_needs: true
       patience_turns: 15
-      emotional_openness: "high"
-    signals:
-      - threshold: 0.6
-        signal: "Shows interest in specific features"
-      - threshold: 0.75
-        signal: "Asks about pricing and availability"
-      - threshold: 0.85
-        signal: "Ready to commit if solution fits"
     objection_bank:
       - type: "price"
         text: "That sounds a bit more than I was hoping to spend."
       - type: "timing"
         text: "I'm not in a huge rush - maybe I should think about it."
 
-  medium:
-    label: "Cautious Evaluator"
-    description: "Analytical prospect who needs proof, compares options and raises 2-3 objections."
+  medium:   # Cautious Evaluator
     behaviour:
       initial_readiness: 0.2
       readiness_gain_per_good_turn: 0.08
       readiness_drift_per_neutral_turn: 0.01
       readiness_loss_per_bad_turn: 0.08
-      disclosure_level: "medium"
       objection_probability: 0.45
       max_objections: 3
-      reframe_acceptance_rate: 0.5
-      volunteers_needs: false
       patience_turns: 12
-      emotional_openness: "medium"
-    signals:
-      - threshold: 0.4
-        signal: "Acknowledges a valid point"
-      - threshold: 0.6
-        signal: "Shares a specific need or concern"
-      - threshold: 0.75
-        signal: "Asks detailed comparison questions"
-      - threshold: 0.85
-        signal: "Leans toward a decision"
     objection_bank:
       - type: "price"
         text: "I've seen similar options for less. What justifies the premium?"
@@ -88,30 +70,15 @@ difficulty_profiles:
       - type: "timing"
         text: "I'm still comparing a few options. Why should I decide now?"
 
-  hard:
-    label: "Tough Negotiator"
-    description: "Guarded, challenges claims, uses comparison leverage. Requires strong rapport."
+  hard:   # Tough Negotiator
     behaviour:
       initial_readiness: 0.1
       readiness_gain_per_good_turn: 0.06
       readiness_drift_per_neutral_turn: 0.005
       readiness_loss_per_bad_turn: 0.1
-      disclosure_level: "low"
       objection_probability: 0.7
       max_objections: 5
-      reframe_acceptance_rate: 0.25
-      volunteers_needs: false
       patience_turns: 10
-      emotional_openness: "low"
-    signals:
-      - threshold: 0.3
-        signal: "Stops deflecting and engages directly"
-      - threshold: 0.5
-        signal: "Reveals a real concern"
-      - threshold: 0.7
-        signal: "Acknowledges value proposition"
-      - threshold: 0.85
-        signal: "Indicates willingness to proceed"
     objection_bank:
       - type: "price"
         text: "Your competitor quoted me 20% less for the same thing."
@@ -356,7 +323,7 @@ personas:
 
 evaluation:
   # Phrases the rule-based session score looks for (lowercase, substring match).
-  # The seller_* lists match what the SELLER said; objection_cues matches what the BUYER said.
+  # objection_cues match what the BUYER said; every other list matches what the salesperson said.
   hints:
     open_question: [what, how, why, which, where, tell me]
     rapport: [understand, appreciate, makes sense, hear you, fair point, thanks for sharing]
@@ -380,22 +347,51 @@ evaluation:
     objection_handling: {no_objection_score: 60, base: 35, response_weight: 65}
     solution_presentation: {base: 40, solution_weight: 60, good: 0.35}
     conversation_flow: {base: 40, length_weight: 35, balance_weight: 25, good_length_fit: 0.7, good_balance: 0.6}
+  # The five criteria (core/sell_evaluator.py scores each by name). weight: share of the overall score;
+  # label: its name in strengths; praise/advice: its feedback at or above / below its "good" ratio;
+  # tip: what to work on when it is among the weakest.
   criteria:
     needs_discovery:
       weight: 0.25
-      description: "How well did the salesperson uncover the prospect's needs and pain points?"
+      label: "needs discovery"
+      praise: "Strong question quality and discovery depth."
+      advice: "Ask more open discovery questions to uncover needs clearly."
+      tip: "Ask one open question that surfaces root cause, not symptoms."
     rapport_building:
       weight: 0.20
-      description: "Did the salesperson build trust and connection with the prospect?"
+      label: "rapport building"
+      praise: "Good empathy and trust-building language."
+      advice: "Add brief empathy statements before moving to the next question."
+      tip: "Start with a brief validation before probing deeper."
     objection_handling:
       weight: 0.20
-      description: "How effectively were objections addressed and reframed?"
+      label: "objection handling"
+      praise: "No major objections surfaced; neutral handling score."   # shown when the buyer raised none
+      advice: "Acknowledge concerns directly, then reframe toward value and next step."
+      tip: "Acknowledge the concern, then reframe with one clear proof point."
     solution_presentation:
       weight: 0.20
-      description: "Was the solution presented clearly and tailored to the prospect's needs?"
+      label: "solution presentation"
+      praise: "Solution language was tied to customer context."
+      advice: "Link your recommendation more explicitly to what the buyer said."
+      tip: "Tie each benefit directly to a pain point the buyer already shared."
     conversation_flow:
       weight: 0.15
-      description: "Was the conversation natural, well-paced and professionally conducted?"
+      label: "conversation flow"
+      praise: "Flow was clear and balanced."
+      advice: "Keep turns concise and balanced so the buyer speaks more."
+      tip: "Use shorter turns and one question at a time."
+  # Wording shared by every criterion. {label} is a criterion's label; {outcome} is sold, walked or active.
+  feedback:
+    no_evidence: "Not enough evidence to score this criterion yet."
+    neutral: "Measured with a neutral heuristic baseline."
+    strength: "Strong {label}."
+    no_strength: "Consistent baseline across criteria."
+    improve: "Improve {label}."   # a criterion with no tip of its own
+    summary:   # by summary_bands: foundational, decent, solid
+      - "Foundational attempt; focus on core questioning and structure. Outcome: {outcome}."
+      - "Decent session with room to sharpen execution. Outcome: {outcome}."
+      - "Solid session with clear control and progression. Outcome: {outcome}."
 
 # How keen the buyer sounds to themselves: readiness below each threshold picks the next label.
 readiness_bands:
@@ -406,6 +402,9 @@ readiness_bands:
     - "On the fence - some interest but not sold"
     - "Getting there, but a few things are holding them back"
     - "Almost there - just needs one more good reason"
+
+# Put before the learner's custom product knowledge in the buyer's prompt.
+research_notes_heading: "Your research notes (you don't know every technical detail):"
 
 system_prompt_template: |
   You are {name}, a potential customer.

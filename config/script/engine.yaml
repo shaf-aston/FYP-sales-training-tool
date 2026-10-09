@@ -45,7 +45,7 @@ ack_retries: 0        # one try: a turn never waits on two ack calls
 memory_chars: 120     # longest piece of an earlier answer handed to the AI as memory
 banned_phrases: [but, you said, any questions]   # no AI sentence may contain these (whole words): "but" undoes what was just said, "you said" quotes them back, "any questions" ends the call
 nudge_leads: [so, ok, okay]   # words allowed before a nudge: "so, what's next?"
-training_notes: {step: "Script step {title}.", listen: "Listen for: {note}", default: "Listen to their answer."}   # the trainee's hint for each step
+coach_notes: {step: "Script step {title}.", listen: "Listen for: {note}", default: "Listen to their answer."}   # the learner's coach note for each step (buy mode's "training" panel)
 ack_words: [you, your, you're, you've, got, it, sounds, makes, sense, hear, that, tough, hard, sorry, okay, right, fair, understand, so, really, lot, see, why, must, be, can, totally, thanks, for, sharing, not, no, easy, been, there, while]   # words the ack may add to the prospect's own; neutral or kind, never "great"
 log_uncovered: true    # write uncovered product questions to the log
 log_text_chars: 120    # longest piece of prospect text ever logged

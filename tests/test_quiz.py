@@ -1,4 +1,4 @@
-"""Focused unit tests for quiz scoring and question selection."""
+"""Quiz scoring and question selection."""
 
 import json
 
@@ -8,7 +8,12 @@ import core.quiz as quiz
 from core.providers.base import LLMResponse
 from core.services.provider_router import ProviderChatResult
 
-_SCORING = quiz._load_quiz_config()["scoring"]
+_CONFIG = quiz.load_quiz_config()
+
+
+def _with_stages(monkeypatch, **stages):
+    """The real quiz config with only the given consultative stages."""
+    monkeypatch.setattr(quiz, "load_quiz_config", lambda: {**_CONFIG, "stages": {"consultative": stages}})
 
 
 class _RaisingProvider:
@@ -24,50 +29,34 @@ class _JsonProvider:
         return ProviderChatResult(LLMResponse(content=self._content), "stub", "stub-model")
 
 
-def test_get_stage_rubric_uses_configured_values_and_falls_back(monkeypatch):
+def test_get_stage_rubric_reads_the_configured_rubric_and_fails_loud_on_a_missing_one(monkeypatch):
+    rubric = {"goal": "Confirm the goal", "advance_when": "Goal is clear", "key_concepts": ["Ask open questions"]}
+    _with_stages(monkeypatch, intent=rubric)
+
+    assert quiz.get_stage_rubric("intent", "consultative") == rubric
+    with pytest.raises(KeyError):
+        quiz.get_stage_rubric("missing", "consultative")
+
+
+def test_every_stage_has_a_rubric_and_a_plain_name():
+    from core.enums import Stage
+
+    for stage in Stage:
+        assert quiz.get_stage_rubric(stage, "consultative")["key_concepts"]
+        assert stage.value in _CONFIG["stage_names"]
+
+
+def test_get_quiz_question_prefers_configured_list_and_falls_back_to_default(monkeypatch):
     monkeypatch.setattr(
         quiz,
-        "_quiz_config",
-        {
-            "stages": {
-                "consultative": {
-                    "intent": {
-                        "goal": "Confirm the goal",
-                        "advance_when": "Goal is clear",
-                        "key_concepts": ["Ask open questions"],
-                        "next_stage": "logical",
-                    }
-                }
-            }
-        },
-        raising=False,
-    )
-
-    assert quiz.get_stage_rubric("intent", "intent") == {
-        "goal": "Confirm the goal",
-        "advance_when": "Goal is clear",
-        "key_concepts": ["Ask open questions"],
-        "next_stage": "logical",
-    }
-    assert quiz.get_stage_rubric("missing", "intent") == {
-        "goal": "Complete the missing stage",
-        "advance_when": "Stage objectives are met",
-        "key_concepts": ["Listen actively", "Ask relevant questions"],
-        "next_stage": None,
-    }
-
-
-def test_get_quiz_question_prefers_configured_list_and_fallbacks(monkeypatch):
-    monkeypatch.setattr(
-        quiz,
-        "_quiz_config",
-        {
+        "load_quiz_config",
+        lambda: {
             "questions": {
                 "stage": ["Stage question 1", "Stage question 2"],
                 "next_move": ["Next move question"],
+                "default": ["How would you proceed?"],
             }
         },
-        raising=False,
     )
     monkeypatch.setattr(quiz.random, "choice", lambda items: items[-1])
 
@@ -77,61 +66,41 @@ def test_get_quiz_question_prefers_configured_list_and_fallbacks(monkeypatch):
 
 
 @pytest.mark.parametrize(
-    "answer,current_stage,flow_type,expected",
+    "answer,expected",
     [
         (
             "We are in the logical stage and the consultative strategy.",
-            "logical",
-            "consultative",
             (True, 1, "Right - Understanding the problem, Consultative approach."),
         ),
         (
-            "It is not logical, but it is transactional.",
-            "logical",
-            "transactional",
-            (False, 0.5, "The approach is right (Quick sale), but you're in Understanding the problem now."),
+            "It is not logical, but it is consultative.",
+            (False, 0.5, "The approach is right (Consultative), but you're in Understanding the problem now."),
         ),
         (
-            "This is not logical and not transactional.",
-            "logical",
-            "transactional",
-            (False, 0, "Not this time - it's Understanding the problem (Quick sale approach)."),
+            "It is logical, but not consultative.",
+            (False, 0.5, "The stage is right (Understanding the problem), but this is the Consultative approach."),
+        ),
+        (
+            "This is not logical and not consultative.",
+            (False, 0, "Not this time - it's Understanding the problem (Consultative approach)."),
         ),
     ],
 )
-def test_stage_answer_scores_partial_credit_and_respects_negation(
-    answer, current_stage, flow_type, expected
-):
-    result = quiz.test_quiz_stage_answer(answer, current_stage, flow_type)
+def test_stage_answer_scores_partial_credit_and_respects_negation(answer, expected):
+    result = quiz.score_stage_answer(answer, "logical", "consultative")
 
     assert result["correct"] is expected[0]
     assert result["score"] == expected[1]
     assert result["feedback"] == expected[2]
-    assert result["expected"] == {
-        "stage": "Understanding the problem",
-        "strategy": "Quick sale" if flow_type == "transactional" else "Consultative",
-    }
+    assert result["expected"] == {"stage": "Understanding the problem", "strategy": "Consultative"}
 
 
 def test_next_move_merges_llm_feedback_and_uses_score_fallback(monkeypatch):
-    monkeypatch.setattr(
-        quiz,
-        "_quiz_config",
-        {
-            "scoring": _SCORING,
-            "stages": {
-                "consultative": {
-                    "logical": {
-                        "goal": "Surface the problem",
-                        "advance_when": "The problem is clear",
-                        "key_concepts": ["Ask about budget", "Use an open question"],
-                        "next_stage": "emotional",
-                    }
-                }
-            }
-        },
-        raising=False,
-    )
+    _with_stages(monkeypatch, logical={
+        "goal": "Surface the problem",
+        "advance_when": "The problem is clear",
+        "key_concepts": ["Ask about budget", "Use an open question"],
+    })
 
     llm_payload = {
         "score": 110,
@@ -142,7 +111,7 @@ def test_next_move_merges_llm_feedback_and_uses_score_fallback(monkeypatch):
     }
     provider = _JsonProvider(content=json.dumps(llm_payload))
 
-    result = quiz.test_quiz_next_move(
+    result = quiz.score_next_move(
         "How is your budget allocated today?",
         provider,
         "logical",
@@ -165,27 +134,14 @@ def test_next_move_merges_llm_feedback_and_uses_score_fallback(monkeypatch):
     assert result["coach_tip"] == "Focus next on this concept: Use an open question."
 
 
-def test_direction_falls_back_to_deterministic_scoring_when_llm_fails(monkeypatch):
-    monkeypatch.setattr(
-        quiz,
-        "_quiz_config",
-        {
-            "scoring": _SCORING,
-            "stages": {
-                "consultative": {
-                    "logical": {
-                        "goal": "Surface the problem",
-                        "advance_when": "The problem is clear",
-                        "key_concepts": ["Why the problem matters", "Next steps"],
-                        "next_stage": "emotional",
-                    }
-                }
-            }
-        },
-        raising=False,
-    )
+def test_direction_falls_back_to_rule_scoring_when_llm_fails(monkeypatch):
+    _with_stages(monkeypatch, logical={
+        "goal": "Surface the problem",
+        "advance_when": "The problem is clear",
+        "key_concepts": ["Why the problem matters", "Next steps"],
+    })
 
-    result = quiz.test_quiz_direction(
+    result = quiz.score_direction(
         "First I will ask why the problem matters, then I will outline the next steps because it fits the goal.",
         _RaisingProvider(),
         "logical",
@@ -202,7 +158,7 @@ def test_direction_falls_back_to_deterministic_scoring_when_llm_fails(monkeypatc
 def test_stage_feedback_never_shows_raw_enums_or_jargon():
     from core.enums import Stage
 
-    result = quiz.test_quiz_stage_answer("no idea", Stage.INTENT, "intent")
+    result = quiz.score_stage_answer("no idea", Stage.INTENT, "consultative")
 
     assert "STAGE." not in result["feedback"].upper() and "FSM" not in result["feedback"].upper()
     assert result["expected"]["stage"] == "Finding out what they want"
@@ -210,15 +166,13 @@ def test_stage_feedback_never_shows_raw_enums_or_jargon():
 
 
 def test_the_plain_stage_name_is_accepted_as_an_answer():
-    result = quiz.test_quiz_stage_answer(
-        "Understanding the problem, consultative", "logical", "consultative"
-    )
+    result = quiz.score_stage_answer("Understanding the problem, consultative", "logical", "consultative")
 
     assert result["correct"] is True
 
 
 def test_no_quiz_question_mentions_fsm():
-    config = quiz._load_quiz_config()
+    config = quiz.load_quiz_config()
     assert not any("FSM" in q for qs in config["questions"].values() for q in qs)
 
 

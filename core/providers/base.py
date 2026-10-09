@@ -5,23 +5,18 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
-RATE_LIMIT = "rate_limit"
-ACCESS_DENIED = "access_denied"
-
 
 @dataclass
 class LLMResponse:
     content: str = ""
-    latency_ms: float = 0.0
     error: str | None = None
-    error_code: str | None = None
 
 
 class BaseLLMProvider(ABC):
     provider_name = "base"
 
     @abstractmethod
-    def chat(self, messages, temperature, max_tokens, stage=None) -> LLMResponse:
+    def chat(self, messages, temperature, max_tokens) -> LLMResponse:
         """Send a chat request and return the provider response wrapper."""
         raise NotImplementedError
 

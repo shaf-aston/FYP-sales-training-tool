@@ -7,7 +7,7 @@ from core import constants
 
 def test_limits_file_loads_and_names_resolve():
     assert constants.LLM["buyer_reply"]["max_tokens"] > 0
-    assert constants.RATE_LIMITS["chat"] == (60, 60)
+    assert constants.RATE_LIMITS["buy_chat"] == (60, 60)
     assert len(constants.GRADE_LABELS) == len(constants.GRADE_THRESHOLDS) + 1
 
 

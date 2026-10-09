@@ -1,55 +1,59 @@
-"""Training coach: answers trainee questions about the live call."""
+"""Buy mode's coach: answers the learner's questions about the live call."""
 
 import logging
 
 from .constants import COACH_HISTORY_TURNS, LLM
+from .loader import load_yaml
 from .quiz import get_stage_rubric
 
 logger = logging.getLogger(__name__)
 
 
-COACH_STYLES = {
-    "tactical": "Tactical and direct, 2-3 sentences: the specific move the trainee should make next.",
-    "socratic": "Socratic, 2-3 sentences: one sharp question that exposes the gap the trainee hasn't considered.",
-    "teacher": "Teacher, 3-4 sentences: name the technique, why it works, and point to the exchange.",
-}
+def load_coach_config() -> dict:
+    return load_yaml("coach.yaml")
 
 
-def answer_training_question(router, flow_engine, question, style: str = "tactical"):
-    """Answer a trainee's question about the current conversation and sales techniques"""
-    stage, flow_type = flow_engine.current_stage, flow_engine.flow_type
-    rubric = get_stage_rubric(stage, flow_type)
+COACH_STYLES = load_coach_config()["styles"]
+DEFAULT_STYLE = load_coach_config()["default_style"]
 
-    history = getattr(flow_engine, "conversation_history", []) or []
-    speaker = {"user": "PROSPECT", "assistant": "SELLER"}
+
+def answer_question(router, call, question, style: str = DEFAULT_STYLE):
+    """Answer the learner's question about the live call and sales technique."""
+    cfg = load_coach_config()
+    stage, strategy = call.current_stage, call.strategy
+    rubric = get_stage_rubric(stage)
+
+    speakers = cfg["speakers"]
     recent = "\n".join(
-        f"{speaker.get(message.get('role'), '?')}: {message.get('content', '')}" for message in history[-COACH_HISTORY_TURNS:]
+        f"{speakers.get(message.get('role'), '?')}: {message.get('content', '')}"
+        for message in call.conversation_history[-COACH_HISTORY_TURNS:]
     )
 
     if style not in COACH_STYLES:
-        logger.warning("Unknown coach style %r, defaulting to tactical", style)
-        style = "tactical"
-    concepts = ", ".join(rubric.get("key_concepts", []))
+        logger.warning("Unknown coach style %r, defaulting to %s", style, DEFAULT_STYLE)
+        style = DEFAULT_STYLE
 
-    system_prompt = (
-        f"You're a sales coach. The trainee is practising a {flow_type} sale, now at stage: {stage}.\n"
-        f"Goal: {rubric.get('goal', '')} | Advance when: {rubric.get('advance_when', '')} | Concepts: {concepts}\n\n"
-        f"Recent:\n{recent}\n\n"
-        f"Style: {COACH_STYLES[style]} Plain sentences only: no markdown, lists, headings or bold."
+    system_prompt = cfg["prompt"].format(
+        strategy=strategy,
+        stage=stage,
+        goal=rubric["goal"],
+        advance_when=rubric["advance_when"],
+        concepts=", ".join(rubric["key_concepts"]),
+        recent=recent,
+        style=COACH_STYLES[style],
     )
 
     try:
         response = router.chat_with_fallback(
             [{"role": "system", "content": system_prompt}, {"role": "user", "content": question}],
             **LLM["coach_answer"],
-            stage=stage,
         ).response
         answer = (
             response.content.strip()
             if response.content and not response.error
-            else "Couldn't get an answer that time - try asking differently."
+            else cfg["empty_answer"]
         )
         return {"answer": answer}
     except Exception as error:
-        logger.warning(f"Training Q&A fell back to generic answer: {error}")
-        return {"answer": "Sorry, that didn't work. Give it another go."}
+        logger.warning(f"Coach answer fell back to a generic line: {error}")
+        return {"answer": cfg["failed_answer"]}

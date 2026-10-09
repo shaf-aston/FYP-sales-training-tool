@@ -18,6 +18,8 @@ from core.constants import (  # noqa: E402
     CLEANUP_INTERVAL_SECONDS,
     DEFAULT_ALLOWED_ORIGINS,
     MAX_BUYER_SESSIONS,
+    MAX_SELLER_SESSIONS,
+    SELLER_IDLE_MINUTES,
     SERVER_PORT,
 )
 from core.env import env_flag, env_str  # noqa: E402
@@ -25,7 +27,7 @@ from core.script_engine.seller import shared_embedder  # noqa: E402
 from backend.messages import INTERNAL_SERVER_ERROR  # noqa: E402
 from backend.security import (  # noqa: E402
     SecurityHeadersMiddleware,
-    SessionSecurityManager,
+    SessionStore,
     initialize_security,
 )
 from backend.routes import buy, knowledge, monitoring, sell  # noqa: E402
@@ -42,19 +44,21 @@ allowed_origins = env_str("ALLOWED_ORIGINS", DEFAULT_ALLOWED_ORIGINS)
 CORS(app, origins=[o.strip() for o in allowed_origins.split(",") if o.strip()])
 
 
-rate_limiter, session_manager = initialize_security(
-    app_logger=app.logger
-)
+initialize_security(app_logger=app.logger)
 
 app.after_request(SecurityHeadersMiddleware.apply)
 
-
-# Sell-mode sessions (the AI buyer). `session_manager` above holds buy mode's AI sellers.
-buyer_session_manager = SessionSecurityManager(
+seller_sessions = SessionStore(
+    max_sessions=MAX_SELLER_SESSIONS,
+    idle_minutes=SELLER_IDLE_MINUTES,
+    cleanup_interval=CLEANUP_INTERVAL_SECONDS,
+    name="seller sessions",
+)
+buyer_sessions = SessionStore(
     max_sessions=MAX_BUYER_SESSIONS,
     idle_minutes=BUYER_IDLE_MINUTES,
     cleanup_interval=CLEANUP_INTERVAL_SECONDS,
-    manager_name="buyer sessions",
+    name="buyer sessions",
 )
 
 
@@ -70,20 +74,18 @@ def _should_start_background_cleanup() -> bool:
 
 
 if _should_start_background_cleanup():
-    session_manager.start_background_cleanup()
-    buyer_session_manager.start_background_cleanup()
+    seller_sessions.start_background_cleanup()
+    buyer_sessions.start_background_cleanup()
     # load the local meaning model now, so the first call doesn't wait ~2 s for it
     threading.Thread(target=shared_embedder, daemon=True, name="embedder-warmup").start()
 
 
-app.extensions["sessions"] = Sessions(seller=session_manager, buyer=buyer_session_manager)
+app.extensions["sessions"] = Sessions(seller=seller_sessions, buyer=buyer_sessions)
 
 app.register_blueprint(buy.bp)  # /api/buy/*: learner is the customer
 app.register_blueprint(sell.bp)  # /api/sell/*: learner is the salesperson
 app.register_blueprint(knowledge.bp)  # /api/knowledge
 app.register_blueprint(monitoring.bp)  # /api/health, /api/analytics/*, /api/feedback
-
-# Note: Rate limiting is applied via @require_rate_limit decorators in blueprint files
 
 
 WEB_BUILD_DIR = ROOT_DIR / "web" / "out"

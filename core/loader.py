@@ -1,4 +1,4 @@
-"""Load and cache YAML configuration files"""
+"""Load YAML configuration from config/: each file is parsed once, and every caller gets its own copy."""
 
 import copy
 import json
@@ -9,7 +9,8 @@ import yaml
 
 CONFIG_DIR = Path(__file__).parent.parent / "config"
 
-@lru_cache(maxsize=16)
+
+@lru_cache(maxsize=None)
 def _load_yaml_cached(filename):
     """Load and cache YAML from CONFIG_DIR. Raises FileNotFoundError if missing."""
     filepath = CONFIG_DIR / filename
@@ -20,30 +21,24 @@ def _load_yaml_cached(filename):
 
 
 def load_yaml(filename):
-    """Return a cached YAML snapshot as a deep copy.
-
-    The underlying parse result stays cached, but callers receive their own copy so
-    accidental in-place mutations cannot leak across modules.
-    """
+    """A deep copy of the cached parse, so a caller's in-place change cannot leak into another module."""
     return copy.deepcopy(_load_yaml_cached(filename))
 
 
-@lru_cache(maxsize=1)
-def load_product_config():
-    """Load product_config.yaml."""
-    return load_yaml("product_config.yaml")
+def load_buyer_products():
+    """buyer_products.yaml: what the AI buyer knows about each product it can shop for."""
+    return load_yaml("buyer_products.yaml")
 
 
-@lru_cache(maxsize=1)
-def load_sell_config():
-    """Load sell_config.yaml: the AI buyer's personas and behaviour, and sell-mode scoring."""
-    return load_yaml("sell_config.yaml")
+def load_buyer_config():
+    """buyer.yaml: the AI buyer's personas and behaviour, and sell-mode scoring."""
+    return load_yaml("buyer.yaml")
 
 
 @lru_cache(maxsize=1)
 def load_real_objections():
-    """Real-call objection pool, or [] when disabled or not built yet."""
-    cfg = load_sell_config().get("real_objections", {})
+    """Real-call objection pool, or [] when disabled or not built yet. Read-only: callers sample it."""
+    cfg = load_buyer_config().get("real_objections", {})
     path = CONFIG_DIR / cfg.get("file", "")
     if not cfg.get("enabled") or not path.is_file():
         return []

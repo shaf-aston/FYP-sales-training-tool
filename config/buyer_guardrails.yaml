@@ -1,4 +1,4 @@
-# AI-buyer replies (sell mode), checked by core/response_guardrails.py before the user sees them.
+# AI-buyer replies (sell mode), checked by core/buyer_guardrails.py before the user sees them.
 # The rules own the outcome, so the buyer may not agree to buy on its own.
 buyer:
   # A sentence with one of these is dropped. Whole-word match; skipped when negated.

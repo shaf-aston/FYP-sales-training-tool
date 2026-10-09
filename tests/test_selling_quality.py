@@ -3,7 +3,7 @@
 import pytest
 
 from core.buyer_session import BuyerSession
-from core.selling_quality import load_selling_signals, score_seller_turn
+from core.selling_quality import load_turn_rating, score_seller_turn
 
 
 def test_closed_question_does_not_beat_a_real_discovery_question():
@@ -112,7 +112,7 @@ def test_every_fired_signal_carries_a_reason_for_the_learner():
 
 
 def test_config_weights_and_thresholds_are_all_present():
-    cfg = load_selling_signals()
+    cfg = load_turn_rating()
     weights, limits = cfg["weights"], cfg["thresholds"]
 
     assert set(weights) == {

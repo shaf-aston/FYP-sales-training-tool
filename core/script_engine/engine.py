@@ -26,10 +26,6 @@ class Move:
     ack: str = ""       # short fixed lead-in from the route taken
     lead: tuple = ()    # run_on step ids said first, in order
 
-    @property
-    def text_template(self):
-        return f"{self.ack} {self.say}".strip()
-
 
 def _speak(method, state):
     """Walk past silent and already-answered steps, say any run_on steps, then say the step we land on."""
@@ -47,16 +43,16 @@ def _answered(step, state):
     return bool(step.answered_by) and step.capture in state.slots
 
 
-def _route(step, signal):
-    return next((r for r in step.listen if r.signal == signal), None)
+def _route(step, label):
+    return next((r for r in step.listen if r.label == label), None)
 
 
 def start(method):
     return _speak(method, ScriptState(step=method.first))
 
 
-def advance(method, state, signal, reply="", empty=False):
-    """signal = recognised label or None. Unmatched reply asks the step again.
+def advance(method, state, label, reply="", empty=False):
+    """label = the recognised route label or None. Unmatched reply asks the step again.
     empty = the reply says nothing ("ok", "sure"): an open question is asked once more, then the
     call moves on without saving it as their answer."""
     step = method.steps[state.step]
@@ -64,7 +60,7 @@ def advance(method, state, signal, reply="", empty=False):
         if state.asks < 1:
             return _ask_again(method, state, step)
         reply = ""
-    route = _route(step, signal) if signal else None
+    route = _route(step, label) if label else None
     route = route or _route(step, ANY)
     if route is None:
         return _ask_again(method, state, step)
@@ -138,7 +134,7 @@ def price_open(method, step_id):
 
 
 def ready_open(method, step_id):
-    """True while a keen buyer may skip ahead: before the method's `ready.until` step."""
+    """True while a keen prospect may skip ahead: before the method's `ready.until` step."""
     order = list(method.steps)
     return method.ready is not None and order.index(step_id) < order.index(method.ready.until)
 

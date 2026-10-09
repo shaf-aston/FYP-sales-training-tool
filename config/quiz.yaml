@@ -1,5 +1,5 @@
-# Quiz Assessment Configuration
-# Defines the stages and questions used to score training conversations
+# Quiz: buy mode asks where the AI seller is in its script and what it should do next
+# (core/quiz.py); sell mode replays one of the learner's own turns.
 
 # Points and score bands for the rule-based quiz scores (0-100). The rules set the score; the AI only adds wording.
 scoring:
@@ -13,13 +13,22 @@ scoring:
   stage_partial_credit: 0.5          # stage OR approach right, not both
   llm_fallback_score: 50             # used when the AI gives no score
 
-# Stage descriptions and clear evaluation criteria for quiz scoring
+# Words the rule-based scoring looks for (whole words, skipped when negated).
+words:
+  # Ignored when matching key concepts and the customer's last message (only words over 3 letters count).
+  stopwords: [and, the, that, this, with, from, into, your, their, they, them, what, when, where, which,
+              would, should, could, about, while, there, have, been, just, only, more, less]
+  open_question: [what, how, why, which, where, when, who]   # with a "?", the next move is an open question
+  action: [ask, explore, clarify, understand, discover, probe, uncover, confirm]
+  reasoning: [because, so that, therefore, which means, this helps]
+  plan: [first, next, then, after that, from there]
+
+# Rubric per strategy and stage (the script's ui_stage). Every stage in core/enums.py needs one.
 stages:
   consultative:
     intent:
       goal: "Complete the INTENT stage by confirming the user's goal and context"
       advance_when: "Advance when INTENT is clear enough to switch or progress"
-      next_stage: "logical"
       key_concepts:
         - "Open-ended discovery questions"
         - "Match user's energy"
@@ -29,7 +38,6 @@ stages:
     logical:
       goal: "Complete the LOGICAL stage by surfacing a clear problem and doubt"
       advance_when: "Advance when LOGICAL conditions are met"
-      next_stage: "emotional"
       key_concepts:
         - "Two-phase probe (cause then like/dislike)"
         - "Never state problem for them"
@@ -39,7 +47,6 @@ stages:
     emotional:
       goal: "Complete the EMOTIONAL stage by surfacing stakes and consequences"
       advance_when: "Advance when EMOTIONAL stakes are clear"
-      next_stage: "pitch"
       key_concepts:
         - "Identity frame (why change now)"
         - "Future pacing (what would be different)"
@@ -49,63 +56,18 @@ stages:
     pitch:
       goal: "Complete the PITCH stage by presenting the offer at the right time"
       advance_when: "Advance when PITCH leads to commitment or objection"
-      next_stage: "objection"
       key_concepts:
         - "Get micro-commitment first"
         - "Three pillars tied to stated goals"
         - "Assumptive close"
         - "No trailing questions"
 
-    objection:
-      goal: "Complete the OBJECTION stage by handling the current objection"
-      advance_when: "Advance when OBJECTION resolves to commitment or walk-away"
-      next_stage: null
+    outcome:
+      goal: "Complete the OUTCOME stage"
+      advance_when: "Stage objectives are met"
       key_concepts:
-        - "Classify (money/partner/fear/think/smokescreen)"
-        - "Recall their stated goals"
-        - "Reframe using type-specific strategy"
-        - "Never argue or pressure"
-
-  transactional:
-    intent:
-      goal: "Complete the INTENT stage by confirming budget and use-case quickly"
-      advance_when: "Advance when transactional INTENT is clear"
-      next_stage: "pitch"
-      key_concepts:
-        - "Fast discovery"
-        - "Budget first"
-        - "Use-case second"
-        - "No emotional probing"
-
-    pitch:
-      goal: "Complete the PITCH stage by presenting matching options"
-      advance_when: "Advance when PITCH moves into NEGOTIATION, commitment, or objection"
-      next_stage: "negotiation"
-      key_concepts:
-        - "Match to stated needs"
-        - "Sensory language"
-        - "Price and availability included"
-        - "Lead into terms discussion"
-
-    negotiation:
-      goal: "Complete the NEGOTIATION stage by resolving terms"
-      advance_when: "Advance when NEGOTIATION terms are clarified"
-      next_stage: "objection"
-      key_concepts:
-        - "Keep terms discussion concise"
-        - "Use exact price and payment details"
-        - "No emotional probing"
-        - "One question only"
-
-    objection:
-      goal: "Complete the OBJECTION stage by answering the concern directly"
-      advance_when: "Advance when OBJECTION resolves to commitment or walk-away"
-      next_stage: null
-      key_concepts:
-        - "Acknowledge concern"
-        - "Redirect to benefits"
-        - "Simple, direct answers"
-        - "No over-elaboration"
+        - "Listen actively"
+        - "Ask relevant questions"
 
 # Plain-English names for stage and strategy ids. The only place they are defined;
 # everything the learner reads (quiz feedback, expected answers) goes through these.
@@ -114,20 +76,68 @@ stage_names:
   logical: "Understanding the problem"
   emotional: "Making it personal"
   pitch: "Presenting the solution"
-  negotiation: "Agreeing the terms"
-  objection: "Handling concerns"
   outcome: "Closing"
 
 strategy_names:
   consultative: "Consultative"
-  transactional: "Quick sale"
-  intent: "Intent-led"
+
+# What the learner reads after a buy-mode quiz answer. {stage}, {strategy} and {concept} are filled in.
+feedback:
+  stage:
+    both_right: "Right - {stage}, {strategy} approach."
+    both_wrong: "Not this time - it's {stage} ({strategy} approach)."
+    strategy_only: "The approach is right ({strategy}), but you're in {stage} now."
+    stage_only: "The stage is right ({stage}), but this is the {strategy} approach."
+  concepts_named: "Response referenced key stage concepts."
+  concept_missing: "Include this missing concept: {concept}."
+  coach_tip_concept: "Focus next on this concept: {concept}."
+  next_move:
+    bands:   # by alignment band: weak, partial, strong
+      - "This next move is too generic for the current stage."
+      - "Partly aligned, but tighten stage focus."
+      - "Strong next move for this stage."
+    context_used: "Response connected to the customer's stated context."
+    context_missing: "Reference one concrete detail from the customer's last message."
+    open_question: "Used an open question to keep discovery moving."
+    no_open_question: "Use one open question to move the conversation forward."
+    coach_tip: "Keep one open question tied to the customer's last message."
+  direction:
+    bands:   # by alignment band: weak, partial, strong
+      - "Direction is unclear and misses stage priorities."
+      - "Direction is partly clear, but needs stronger stage linkage."
+      - "Strong strategic direction for this stage."
+    reasoning: "Explained why this direction fits."
+    no_reasoning: "Explain why this direction fits the stage goal."
+    plan: "Outlined a clear next-step sequence."
+    no_plan: "Name a clear order for your next steps."
+    coach_tip: "State the next step and why it moves the stage forward."
+  ai_unavailable: "Unable to evaluate."   # the AI's feedback when it gave none; never shown
+
+# AI prompts for the wording the AI may add to a buy-mode quiz answer.
+# {stage}, {strategy}, {goal}, {advance_when}, {concepts}, {customer} and {answer} are filled in.
+prompts:
+  next_move: |-
+    Grade the learner's response in {stage} ({strategy}).
+    Goal: {goal} | Concepts: {concepts}
+    <customer>{customer}</customer>
+    <learner>{answer}</learner>
+    JSON: {{"score": <0-100>, "alignment": "strong|partial|weak", "feedback": "<brief>", "strengths": ["..."], "improvements": ["..."]}}
+  direction: |-
+    Evaluate the learner's understanding in {stage} ({strategy}).
+    Goal: {goal} | Advance: {advance_when} | Concepts: {concepts}
+    <learner>{answer}</learner>
+    JSON: {{"score": <0-100>, "understanding": "excellent|good|partial|needs_work", "feedback": "<brief>", "key_concepts_got": ["..."], "key_concepts_missed": ["..."]}}
 
 # Sell mode: the learner is the seller, so the quiz replays one of their own
 # turns. {turn} and {line} are filled in from their session.
 sell_question: 'On turn {turn} you said: "{line}" - what would you say instead to get the buyer talking?'
+# {old} and {new} are the 1-5 ratings of the original line and the replacement.
+sell_feedback:
+  better: "Better than what you said ({old} out of 5, now {new})."
+  same: "About as strong as what you said ({old} out of 5)."
+  worse: "Weaker than what you said ({old} out of 5, now {new})."
 
-# Quiz question templates by type
+# Quiz question templates by type. `default` is asked for a type with no list of its own.
 questions:
   stage:
     - "Which stage of the sale are we in right now?"
@@ -146,3 +156,6 @@ questions:
     - "What's your strategy for moving forward from here?"
     - "Explain your approach for the next few turns."
     - "What are you trying to achieve and how will you get there?"
+
+  default:
+    - "How would you proceed?"

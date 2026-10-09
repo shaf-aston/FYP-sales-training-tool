@@ -20,20 +20,14 @@ class PerformanceTracker:
     )
 
     @classmethod
-    def log_stage_latency(cls, **kwargs) -> None:
-        """Record latency without failing the main request path."""
-        provider = str(kwargs.get("provider") or "unknown")
-        latency_ms = kwargs.get("latency_ms")
-        model = kwargs.get("model")
-
-        stats = cls._provider_stats[provider]
+    def log_latency(cls, provider: str, model: str | None, latency_ms: float | None) -> None:
+        """Count one reply from `provider` and add its latency."""
+        stats = cls._provider_stats[provider or "unknown"]
         stats["requests"] += 1
         if isinstance(latency_ms, (int, float)):
             stats["total_latency_ms"] += float(latency_ms)
         if model:
             stats["model"] = model
-
-        return None
 
     @classmethod
     def get_provider_stats(cls) -> dict[str, object]:

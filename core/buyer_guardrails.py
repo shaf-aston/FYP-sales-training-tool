@@ -10,18 +10,16 @@ from dataclasses import dataclass, field
 from .loader import load_yaml
 from .utils import contains_nonnegated_keyword
 
-_BUYER = load_yaml("guardrails.yaml")["buyer"]
+_BUYER = load_yaml("buyer_guardrails.yaml")["buyer"]
 
 _SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+|\n+")
 
 
 @dataclass
-class Layer3CheckResult:
-    """A checked reply and what was changed."""
+class CheckedReply:
+    """A checked reply and the names of the rules that changed it."""
 
     content: str
-    was_corrected: bool = False
-    was_blocked: bool = False
     applied_rules: list[str] = field(default_factory=list)
 
 
@@ -39,7 +37,7 @@ def _keep_sentences(text: str, drop) -> str:
     return " ".join(s for s in _SENTENCE_SPLIT.split(text) if s and not drop(s)).strip()
 
 
-def check_buyer_reply(reply_text: str, turn: int) -> Layer3CheckResult:
+def check_buyer_reply(reply_text: str, turn: int) -> CheckedReply:
     """Drop sentences where the buyer commits to buying; fall back by turn when nothing is left."""
     text = _no_dashes(reply_text or "")
     rules = []
@@ -54,10 +52,5 @@ def check_buyer_reply(reply_text: str, turn: int) -> Layer3CheckResult:
 
     if not text:
         lines = _BUYER["fallback_lines"]
-        return Layer3CheckResult(
-            content=lines[turn % len(lines)],
-            was_blocked=True,
-            applied_rules=rules or ["empty_output_fallback"],
-        )
-    rules = list(dict.fromkeys(rules))
-    return Layer3CheckResult(content=text, was_corrected=bool(rules), applied_rules=rules)
+        return CheckedReply(content=lines[turn % len(lines)], applied_rules=rules or ["empty_output_fallback"])
+    return CheckedReply(content=text, applied_rules=list(dict.fromkeys(rules)))

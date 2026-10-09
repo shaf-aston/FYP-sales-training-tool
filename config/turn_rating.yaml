@@ -1,17 +1,16 @@
-# How a SALESPERSON's turn is judged.
+# How a SALESPERSON's turn is rated (1-5), in sell mode and its review, quiz and drills
+# (core/selling_quality.py).
 #
-# Every list here describes language a SELLER uses. config/signals.yaml describes
-# language a BUYER uses. The two must never be swapped: a seller typing
-# "interested" is asking a question, a buyer typing it is a buying signal.
+# Every list here describes language a SELLER uses, never the buyer's: a seller typing
+# "interested" is asking a question, a buyer typing it would be a buying signal.
 #
 # Weights are added to a neutral base of 3 and the total is clamped to 1-5.
-# Raise a weight to make that behaviour matter more.
+# Raise a weight to make that behaviour matter more. A negative weight makes the signal
+# a misstep; missteps are listed in priority order: the first one that fired picks the hint.
 
 weights:
   open_question: 0.4
   on_topic: 0.5
-  generic_question: -0.3
-  closed_question: -0.4
   mirroring: 1.0
   acknowledgement: 0.5
   pressure: -1.2
@@ -19,6 +18,25 @@ weights:
   question_stacking: -0.6
   monologue: -0.5
   low_effort: -0.9
+  generic_question: -0.3
+  closed_question: -0.4
+
+# Why each signal fired, shown to the learner beside the rating. Every weight needs one.
+reasons:
+  open_question: "Asked an open question that invites them to explain."
+  on_topic: "Built the question on something they actually said."
+  generic_question: "Asked a stock question that could be put to anyone."
+  closed_question: "Asked a yes-or-no question, which gets a one-word answer."
+  mirroring: "Used the buyer's own words back to them - shows you were listening."
+  acknowledgement: "Acknowledged what they said before moving on."
+  pressure: "Used urgency or scarcity language, which reads as pushy."
+  premature_pitch: "Talked commercials before finding out what they care about."
+  question_stacking: "Asked several questions at once, so none get a real answer."
+  monologue: "Long enough that the buyer stops reading."
+  low_effort: "Too short to move the conversation anywhere."
+
+# The review's "work on" line when no misstep repeated.
+default_work_on: "Ask more open questions built on the buyer's own words."
 
 thresholds:
   low_effort_words: 4        # fewer words than this reads as low effort
@@ -155,7 +173,7 @@ mirroring_stopwords:
 
 # One-line tip shown after a seller turn when hints are on (sell mode, no AI).
 # The first negative signal that fired picks the tip; otherwise the first positive one;
-# otherwise `default`. Keys match the signal names in core/selling_quality.py.
+# otherwise `default`. Keys are the signal names in `weights`.
 hints:
   pressure: "Drop the urgency. Ask what would make now the right time for them."
   premature_pitch: "Hold the pitch. Ask one more question about what they need first."

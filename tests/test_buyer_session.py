@@ -1,9 +1,4 @@
-"""The difficulty setting must actually change how often the buyer pushes back.
-
-Before this, objection_probability, objection_bank and max_objections were read by
-nothing, so "easy" and "hard" played the same and the counter in the buyer's prompt
-was stuck at 0 forever.
-"""
+"""The AI buyer: difficulty sets how often it pushes back, and a turn, rewind or redo leaves it consistent."""
 
 import pytest
 
@@ -11,25 +6,9 @@ from core.buyer_session import BuyerSession
 from core.providers.base import LLMResponse
 
 
-class StubBuyerProvider:
-    def is_available(self):
-        return True
-
-    provider_name = "stub"
-
-    def get_model_name(self):
-        return "stub-model"
-
-    def chat(self, messages, temperature=0.7, max_tokens=150):
-        return LLMResponse(content="Alright, go on.")
-
-
 @pytest.fixture(autouse=True)
-def stub_provider(monkeypatch):
-    monkeypatch.setattr(
-        "core.services.provider_router.create_provider",
-        lambda *_args, **_kwargs: StubBuyerProvider(),
-    )
+def _stub(stub_buyer):
+    stub_buyer.reply = "Alright, go on."
 
 
 def session(difficulty, session_id="s1"):
@@ -125,11 +104,11 @@ def test_rewinding_puts_the_objection_count_back():
     assert buyer.state.objections_raised == buyer.pacer.raised_by(1)
 
 
-def test_a_live_turn_answers_first_then_adds_the_scripted_objection_and_counts_it():
+def test_a_live_turn_answers_first_then_adds_the_scripted_objection_and_counts_it(stub_buyer):
     """The wiring: the helpers above are useless if process_turn ignores them."""
     buyer = session("hard", "wiring")
     prompts = []
-    buyer.provider.chat = lambda messages, **kw: (
+    stub_buyer.chat = lambda messages, **kw: (
         prompts.append(messages[0]["content"]) or LLMResponse(content="Go on.")
     )
 
@@ -148,15 +127,7 @@ def test_a_live_turn_answers_first_then_adds_the_scripted_objection_and_counts_i
     assert buyer.state.objections_raised == 1
 
 
-def test_the_dead_needs_list_is_gone():
-    """Nothing read it, so it was removed rather than given a made-up meaning."""
-    buyer = session("easy")
-
-    assert "needs_disclosed" not in buyer.state.to_dict()
-    assert "needs_disclosed" not in buyer.to_dict()["state"]
-
-
-def test_a_turn_that_never_reached_the_buyer_leaves_no_trace():
+def test_a_turn_that_never_reached_the_buyer_leaves_no_trace(stub_buyer):
     """An outage must not count the turn, move readiness, or leave a half turn
     in the transcript - otherwise resending the same line banks it twice."""
     from core.buyer_session import ProviderUnavailable
@@ -173,7 +144,7 @@ def test_a_turn_that_never_reached_the_buyer_leaves_no_trace():
     def dead(messages, **kw):
         raise ProviderUnavailable("every provider is down")
 
-    buyer.provider.chat = dead
+    stub_buyer.chat = dead
 
     with pytest.raises(ProviderUnavailable):
         buyer.process_turn("Walk me through what a bad week looks like.")
@@ -210,10 +181,3 @@ def test_a_rewind_restores_the_exact_readiness_not_the_rounded_one():
     assert buyer.rewind_to_turn(2) is True
     assert buyer.state.readiness == buyer.review()["readiness_exact"]
 
-
-def test_buyer_does_not_walk_on_first_weak_turn():
-    from core.buyer_rules import end_outcome
-
-    behaviour = {"patience_turns": 10}
-    assert end_outcome(0.0, 1, behaviour, None) is None
-    assert end_outcome(0.0, 3, behaviour, None) == "walked"

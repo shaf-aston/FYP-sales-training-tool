@@ -15,26 +15,6 @@ from dataclasses import dataclass, field
 from .loader import load_yaml
 from .utils import clamp, contains_nonnegated_keyword, tokenize
 
-REASONS = {
-    "open_question": "Asked an open question that invites them to explain.",
-    "on_topic": "Built the question on something they actually said.",
-    "generic_question": "Asked a stock question that could be put to anyone.",
-    "closed_question": "Asked a yes-or-no question, which gets a one-word answer.",
-    "mirroring": "Used the buyer's own words back to them - shows you were listening.",
-    "acknowledgement": "Acknowledged what they said before moving on.",
-    "pressure": "Used urgency or scarcity language, which reads as pushy.",
-    "premature_pitch": "Talked commercials before finding out what they care about.",
-    "question_stacking": "Asked several questions at once, so none get a real answer.",
-    "monologue": "Long enough that the buyer stops reading.",
-    "low_effort": "Too short to move the conversation anywhere.",
-}
-
-# Signals that cost the seller ground.
-NEGATIVE_SIGNALS = (
-    "pressure", "premature_pitch", "question_stacking", "monologue",
-    "low_effort", "generic_question", "closed_question",
-)
-
 
 @dataclass(frozen=True)
 class SellerTurnScore:
@@ -44,13 +24,15 @@ class SellerTurnScore:
     signals: list[str] = field(default_factory=list)
     reasons: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> dict:
-        return {"rating": self.rating, "signals": list(self.signals), "reasons": list(self.reasons)}
+
+def load_turn_rating() -> dict:
+    """The seller-language rules (turn_rating.yaml)."""
+    return load_yaml("turn_rating.yaml")
 
 
-def load_selling_signals() -> dict:
-    """Load the seller-language rules. Falls back to an empty config."""
-    return load_yaml("selling_signals.yaml") or {}
+REASONS = load_turn_rating()["reasons"]
+# Signals that cost the seller ground, in hint priority order.
+NEGATIVE_SIGNALS = tuple(name for name, weight in load_turn_rating()["weights"].items() if weight < 0)
 
 
 def _sentences(message: str) -> list[str]:
@@ -105,7 +87,6 @@ def score_seller_turn(
     message: str,
     buyer_message: str = "",
     completed_turns: int = 0,
-    config: dict | None = None,
 ) -> SellerTurnScore:
     """Rate one salesperson message from 1 (poor) to 5 (strong).
 
@@ -115,11 +96,10 @@ def score_seller_turn(
             to tell an answer about price apart from an unprompted pitch.
         completed_turns: turns finished before this one, so early pitching can be
             told apart from pitching once discovery has happened.
-        config: parsed selling_signals.yaml; loaded when omitted.
     """
-    cfg = config if config is not None else load_selling_signals()
-    weights = cfg.get("weights", {})
-    limits = cfg.get("thresholds", {})
+    cfg = load_turn_rating()
+    weights = cfg["weights"]
+    limits = cfg["thresholds"]
 
     text = message or ""
     words = text.split()
@@ -168,7 +148,7 @@ def score_seller_turn(
     return SellerTurnScore(
         rating=rating,
         signals=fired,
-        reasons=[REASONS[name] for name in fired if name in REASONS],
+        reasons=[cfg["reasons"][name] for name in fired],
     )
 
 

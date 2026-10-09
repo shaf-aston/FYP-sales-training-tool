@@ -8,10 +8,12 @@
 # Groups match the five criteria the session evaluation already scores, so the
 # drill and the feedback use the same words.
 
-# Drills made from the learner's own strongest turns.
+# Drills made from the learner's own strongest turns, shown as a group of their own.
 own_lines:
   max_drills: 3      # most own-line drills offered at once
   min_words: 6       # a line shorter than this has no sensible place to blank
+  label: "Lines you got right"
+  why: "Your own strongest turns from the session you just played."
 
 groups:
   - id: needs_discovery
