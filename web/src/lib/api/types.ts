@@ -1,6 +1,5 @@
 // Shapes of the Flask JSON API (backend/routes/*). Field names match the server exactly.
 
-export type Strategy = "CONSULTATIVE";
 export type Difficulty = "easy" | "medium" | "hard";
 export type CoachStyle = "tactical" | "socratic" | "teacher";
 export type QuizType = "stage" | "next_move" | "direction";
@@ -8,7 +7,6 @@ export type Outcome = "active" | "sold" | "walked" | "incomplete";
 
 export interface BotState {
   stage: string; // UPPERCASE stage id
-  strategy: Strategy;
 }
 
 /** Buy-mode coach notes; the server sends them under the key "training". */
@@ -76,7 +74,7 @@ export interface QuizResult {
   key_concepts_got?: string[];
   key_concepts_missed?: string[];
   coach_tip?: string;
-  expected?: { stage: string; strategy: string };
+  expected?: { stage: string };
   before?: { text: string; good: boolean }[];
 }
 

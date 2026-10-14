@@ -86,9 +86,9 @@ def validate_message(message_text):
 
 
 def stage_fields(seller):
-    """The buy-mode call's stage and strategy, as every buy response carries them."""
+    """The buy-mode call's stage, as every buy response carries it."""
     call = seller.call
-    return {"stage": call.current_stage.upper(), "strategy": call.strategy.upper()}
+    return {"stage": call.current_stage.upper()}
 
 
 def validate_provider(data):

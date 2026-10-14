@@ -162,9 +162,9 @@ def _merge_open_ended_result(mode: str, rules: dict, llm_result: dict) -> dict:
     return merged
 
 
-def get_stage_rubric(stage: str, strategy: str) -> dict:
+def get_stage_rubric(stage: str) -> dict:
     """Rubric for a stage: goal, advance_when, key_concepts. A stage with no rubric is a config error."""
-    return load_quiz()["stages"][str(strategy)][str(stage)]
+    return load_quiz()["stages"][str(stage)]
 
 
 def get_quiz_question(quiz_type: str) -> str:
@@ -174,47 +174,29 @@ def get_quiz_question(quiz_type: str) -> str:
     return random.choice(questions.get(normalized_type) or questions["default"])
 
 
-def _friendly(kind: str, value: Any) -> str:
-    """Plain-English name for a stage or strategy id."""
-    key = str(value)
-    return load_quiz()[kind].get(key, key)
+def _stage_name(stage: Any) -> str:
+    """Plain-English name for a stage id."""
+    key = str(stage)
+    return load_quiz()["stage_names"].get(key, key)
 
 
-def score_stage_answer(user_answer: str, current_stage: str, strategy: str) -> dict:
-    """Did the learner name the current stage and strategy? By rule, no AI.
+def score_stage_answer(user_answer: str, current_stage: str) -> dict:
+    """Did the learner name the current stage? By rule, no AI.
 
     The answer may use either the id ("logical") or the plain name ("Understanding
     the problem"). Feedback only ever shows the plain name.
     """
-    stage_name = _friendly("stage_names", current_stage)
-    strategy_name = _friendly("strategy_names", strategy)
+    stage_name = _stage_name(current_stage)
     answer_lower = user_answer.strip().lower()
-
-    stage_ok = contains_nonnegated_keyword(answer_lower, [str(current_stage), stage_name.lower()])
-    strategy_ok = contains_nonnegated_keyword(answer_lower, [str(strategy), strategy_name.lower()])
-    correct = stage_ok and strategy_ok
+    correct = contains_nonnegated_keyword(answer_lower, [str(current_stage), stage_name.lower()])
 
     templates = load_quiz()["feedback"]["stage"]
-    template = {
-        (True, True): templates["both_right"],
-        (False, False): templates["both_wrong"],
-        (False, True): templates["strategy_only"],
-        (True, False): templates["stage_only"],
-    }[(stage_ok, strategy_ok)]
-
-    if correct:
-        score = 1
-    elif stage_ok or strategy_ok:
-        score = load_quiz()["scoring"]["stage_partial_credit"]
-    else:
-        score = 0
-
     return {
         "correct": correct,
-        "score": score,
+        "score": 1 if correct else 0,
         "user_answer": user_answer,
-        "expected": {"stage": stage_name, "strategy": strategy_name},
-        "feedback": template.format(stage=stage_name, strategy=strategy_name),
+        "expected": {"stage": stage_name},
+        "feedback": templates["right" if correct else "wrong"].format(stage=stage_name),
     }
 
 
@@ -254,10 +236,9 @@ def score_sell_answer(answer: str, turn: dict) -> dict:
     }
 
 
-def _prompt(kind: str, rubric: dict, stage: str, strategy: str, answer: str, customer: str = "") -> str:
+def _prompt(kind: str, rubric: dict, stage: str, answer: str, customer: str = "") -> str:
     return load_quiz()["prompts"][kind].format(
-        stage=_friendly("stage_names", stage),
-        strategy=_friendly("strategy_names", strategy),
+        stage=_stage_name(stage),
         goal=rubric["goal"],
         advance_when=rubric["advance_when"],
         concepts=", ".join(rubric["key_concepts"]),
@@ -267,12 +248,12 @@ def _prompt(kind: str, rubric: dict, stage: str, strategy: str, answer: str, cus
 
 
 def score_next_move(
-    user_response: str, router: Any, current_stage: str, strategy: str, last_user_message: str = ""
+    user_response: str, router: Any, current_stage: str, last_user_message: str = ""
 ) -> dict:
     """Rules score how well the suggested next move fits the stage; the AI may add wording."""
-    rubric = get_stage_rubric(current_stage, strategy)
+    rubric = get_stage_rubric(current_stage)
     rules = _open_ended_assessment(user_response, rubric, "next_move", last_user_message)
-    prompt = _prompt("next_move", rubric, current_stage, strategy, user_response, last_user_message)
+    prompt = _prompt("next_move", rubric, current_stage, user_response, last_user_message)
     llm_result = _score_with_llm(router, prompt, {
         "score": load_quiz()["scoring"]["llm_fallback_score"],
         "alignment": "partial",
@@ -283,11 +264,11 @@ def score_next_move(
     return _merge_open_ended_result("next_move", rules, llm_result)
 
 
-def score_direction(user_explanation: str, router: Any, current_stage: str, strategy: str) -> dict:
-    """Rules score how clear the learner's strategy is; the AI may add wording."""
-    rubric = get_stage_rubric(current_stage, strategy)
+def score_direction(user_explanation: str, router: Any, current_stage: str) -> dict:
+    """Rules score how clear the learner's direction is; the AI may add wording."""
+    rubric = get_stage_rubric(current_stage)
     rules = _open_ended_assessment(user_explanation, rubric, "direction")
-    prompt = _prompt("direction", rubric, current_stage, strategy, user_explanation)
+    prompt = _prompt("direction", rubric, current_stage, user_explanation)
     llm_result = _score_with_llm(router, prompt, {
         "score": load_quiz()["scoring"]["llm_fallback_score"],
         "understanding": "partial",

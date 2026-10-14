@@ -26,7 +26,7 @@ def product_groups() -> dict[str, list[dict]]:
     config = load_buyer_config()
     products = load_buyer_products()["products"]
     return {
-        strategy: [
+        group: [
             {
                 "id": product_id,
                 "label": products.get(product_id, {}).get("name")
@@ -35,7 +35,7 @@ def product_groups() -> dict[str, list[dict]]:
             for product_id in product_ids
             if config["personas"].get(product_id)
         ]
-        for strategy, product_ids in config["product_groups"].items()
+        for group, product_ids in config["product_groups"].items()
     }
 
 

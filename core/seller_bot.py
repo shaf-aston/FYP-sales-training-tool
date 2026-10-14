@@ -72,7 +72,6 @@ class SellerBot:
             event="conversation_turn",
             mode="buy",
             turn_index=self.call.user_turn_count,
-            strategy=self.call.strategy,
             current_stage=self.call.current_stage,
             user_message=user_message,
             assistant_message=seller_reply,
@@ -119,7 +118,7 @@ class SellerBot:
         return coach.answer_question(self._router, self.call, question, style)
 
     def score_stage_answer(self, answer: str) -> dict:
-        return quiz.score_stage_answer(answer, self.call.current_stage, self.call.strategy)
+        return quiz.score_stage_answer(answer, self.call.current_stage)
 
     def score_next_move(self, response: str) -> dict:
         history = self.call.conversation_history
@@ -128,11 +127,11 @@ class SellerBot:
             "",
         )
         return quiz.score_next_move(
-            response, self._router, self.call.current_stage, self.call.strategy, last_user_msg
+            response, self._router, self.call.current_stage, last_user_msg
         )
 
     def score_direction(self, explanation: str) -> dict:
-        return quiz.score_direction(explanation, self._router, self.call.current_stage, self.call.strategy)
+        return quiz.score_direction(explanation, self._router, self.call.current_stage)
 
     def _capture_turn_snapshot(self) -> dict:
         turn_state = self.seller.state
@@ -209,7 +208,6 @@ class SellerBot:
             event="session_end",
             mode="buy",
             final_stage=str(self.call.current_stage),
-            strategy=str(self.call.strategy),
             turn_count=self.call.user_turn_count,
             message_count=len(self.call.conversation_history),
         )

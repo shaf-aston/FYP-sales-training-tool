@@ -12,8 +12,8 @@ _CONFIG = quiz.load_quiz()
 
 
 def _with_stages(monkeypatch, **stages):
-    """The real quiz config with only the given consultative stages."""
-    monkeypatch.setattr(quiz, "load_quiz", lambda: {**_CONFIG, "stages": {"consultative": stages}})
+    """The real quiz config with only the given stages."""
+    monkeypatch.setattr(quiz, "load_quiz", lambda: {**_CONFIG, "stages": stages})
 
 
 class _RaisingProvider:
@@ -33,16 +33,16 @@ def test_get_stage_rubric_reads_the_configured_rubric_and_fails_loud_on_a_missin
     rubric = {"goal": "Confirm the goal", "advance_when": "Goal is clear", "key_concepts": ["Ask open questions"]}
     _with_stages(monkeypatch, intent=rubric)
 
-    assert quiz.get_stage_rubric("intent", "consultative") == rubric
+    assert quiz.get_stage_rubric("intent") == rubric
     with pytest.raises(KeyError):
-        quiz.get_stage_rubric("missing", "consultative")
+        quiz.get_stage_rubric("missing")
 
 
 def test_every_stage_has_a_rubric_and_a_plain_name():
     from core.enums import Stage
 
     for stage in Stage:
-        assert quiz.get_stage_rubric(stage, "consultative")["key_concepts"]
+        assert quiz.get_stage_rubric(stage)["key_concepts"]
         assert stage.value in _CONFIG["stage_names"]
 
 
@@ -68,31 +68,19 @@ def test_get_quiz_question_prefers_configured_list_and_falls_back_to_default(mon
 @pytest.mark.parametrize(
     "answer,expected",
     [
-        (
-            "We are in the logical stage and the consultative strategy.",
-            (True, 1, "Right - Understanding the problem, Consultative approach."),
-        ),
-        (
-            "It is not logical, but it is consultative.",
-            (False, 0.5, "The approach is right (Consultative), but you're in Understanding the problem now."),
-        ),
-        (
-            "It is logical, but not consultative.",
-            (False, 0.5, "The stage is right (Understanding the problem), but this is the Consultative approach."),
-        ),
-        (
-            "This is not logical and not consultative.",
-            (False, 0, "Not this time - it's Understanding the problem (Consultative approach)."),
-        ),
+        ("We are in the logical stage.", (True, 1, "Right - Understanding the problem.")),
+        ("It is logical, I think.", (True, 1, "Right - Understanding the problem.")),
+        ("It is not logical.", (False, 0, "Not this time - it's Understanding the problem.")),
+        ("Maybe emotional?", (False, 0, "Not this time - it's Understanding the problem.")),
     ],
 )
-def test_stage_answer_scores_partial_credit_and_respects_negation(answer, expected):
-    result = quiz.score_stage_answer(answer, "logical", "consultative")
+def test_stage_answer_is_right_only_when_it_names_the_stage_and_respects_negation(answer, expected):
+    result = quiz.score_stage_answer(answer, "logical")
 
     assert result["correct"] is expected[0]
     assert result["score"] == expected[1]
     assert result["feedback"] == expected[2]
-    assert result["expected"] == {"stage": "Understanding the problem", "strategy": "Consultative"}
+    assert result["expected"] == {"stage": "Understanding the problem"}
 
 
 def test_next_move_merges_llm_feedback_and_uses_score_fallback(monkeypatch):
@@ -115,7 +103,6 @@ def test_next_move_merges_llm_feedback_and_uses_score_fallback(monkeypatch):
         "How is your budget allocated today?",
         provider,
         "logical",
-        "consultative",
         last_user_message="We need a faster solution.",
     )
 
@@ -145,7 +132,6 @@ def test_direction_falls_back_to_rule_scoring_when_llm_fails(monkeypatch):
         "First I will ask why the problem matters, then I will outline the next steps because it fits the goal.",
         _RaisingProvider(),
         "logical",
-        "consultative",
     )
 
     assert result["score"] == 90
@@ -158,7 +144,7 @@ def test_direction_falls_back_to_rule_scoring_when_llm_fails(monkeypatch):
 def test_stage_feedback_never_shows_raw_enums_or_jargon():
     from core.enums import Stage
 
-    result = quiz.score_stage_answer("no idea", Stage.INTENT, "consultative")
+    result = quiz.score_stage_answer("no idea", Stage.INTENT)
 
     assert "STAGE." not in result["feedback"].upper() and "FSM" not in result["feedback"].upper()
     assert result["expected"]["stage"] == "Finding out what they want"
@@ -166,7 +152,7 @@ def test_stage_feedback_never_shows_raw_enums_or_jargon():
 
 
 def test_the_plain_stage_name_is_accepted_as_an_answer():
-    result = quiz.score_stage_answer("Understanding the problem, consultative", "logical", "consultative")
+    result = quiz.score_stage_answer("Understanding the problem", "logical")
 
     assert result["correct"] is True
 

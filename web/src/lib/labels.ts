@@ -1,13 +1,8 @@
-// Plain-English names for strategies, stages and modes. Server sends ids; the UI shows these.
+// Plain-English names for stages and modes. Server sends ids; the UI shows these.
 
 interface Meta {
   label: string;
 }
-
-const STRATEGY_META: Record<string, Meta> = {
-  "-": { label: "Not started" },
-  consultative: { label: "Consultative" },
-};
 
 const STAGE_META: Record<string, Meta> = {
   intent: { label: "Finding out what they want" },
@@ -29,5 +24,4 @@ export const MODE_META = {
 
 const key = (value: string | null | undefined) => (value ?? "").trim().toLowerCase();
 
-export const strategyMeta = (s: string) => STRATEGY_META[key(s)] ?? STRATEGY_META["-"];
 export const stageMeta = (s: string) => STAGE_META[key(s)] ?? { label: s };

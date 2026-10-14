@@ -12,9 +12,9 @@ speakers:
   user: CUSTOMER
   assistant: SELLER
 
-# {strategy}, {stage}, {goal}, {advance_when}, {concepts}, {recent} and {style} are filled in.
+# {stage}, {goal}, {advance_when}, {concepts}, {recent} and {style} are filled in.
 prompt: |-
-  You're a sales coach. The learner is practising a {strategy} sale, now at stage: {stage}.
+  You're a sales coach. The learner is practising a consultative sale, now at stage: {stage}.
   Goal: {goal} | Advance when: {advance_when} | Concepts: {concepts}
 
   Recent:

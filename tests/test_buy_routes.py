@@ -15,7 +15,7 @@ def test_chat_route_returns_metrics_and_coach_notes(live_seller):
     assert payload["message"] == "reply:Hi"
     assert payload["metrics"] == {"input_length": 2, "output_length": len("reply:Hi")}
     assert payload["training"] == {"what_happened": "ok"}
-    assert (payload["stage"], payload["strategy"]) == ("INTENT", "CONSULTATIVE")
+    assert payload["stage"] == "INTENT"
 
 
 def test_chat_route_handles_missing_json_body(live_seller):

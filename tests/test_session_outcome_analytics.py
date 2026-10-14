@@ -63,7 +63,6 @@ def test_ending_a_buy_session_records_where_it_got_to():
 
     class _Call:
         current_stage = "pitch"
-        strategy = "consultative"
         user_turn_count = 4
         conversation_history = [{"role": "user"}, {"role": "assistant"}]
 

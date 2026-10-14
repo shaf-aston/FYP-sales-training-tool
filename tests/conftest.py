@@ -159,7 +159,6 @@ def played_session(sell_client):
 class FakeCall:
     def __init__(self):
         self.current_stage = "intent"
-        self.strategy = "consultative"
         self.conversation_history = []
 
 
@@ -206,13 +205,13 @@ class FakeSeller:
         return {"answer": f"{style}:{question}"}
 
     def score_stage_answer(self, answer):
-        return quiz.score_stage_answer(answer, self.call.current_stage, self.call.strategy)
+        return quiz.score_stage_answer(answer, self.call.current_stage)
 
     def score_next_move(self, response):
-        return quiz.score_next_move(response, None, self.call.current_stage, self.call.strategy)
+        return quiz.score_next_move(response, None, self.call.current_stage)
 
     def score_direction(self, explanation):
-        return quiz.score_direction(explanation, None, self.call.current_stage, self.call.strategy)
+        return quiz.score_direction(explanation, None, self.call.current_stage)
 
 
 @pytest.fixture

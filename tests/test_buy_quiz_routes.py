@@ -14,7 +14,6 @@ def test_quiz_question_returns_question_and_stage(live_seller, monkeypatch):
         "question": {"prompt": "next-move"},
         "type": "next-move",
         "stage": "LOGICAL",
-        "strategy": "CONSULTATIVE",
     }
 
 

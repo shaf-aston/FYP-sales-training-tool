@@ -35,7 +35,6 @@ class _RecordingProvider:
 
 class _Call:
     current_stage = Stage.LOGICAL
-    strategy = "consultative"
     conversation_history = [
         {"role": "user", "content": "I need more clarity"},
         {"role": "assistant", "content": "What matters most here"},
