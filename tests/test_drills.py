@@ -3,10 +3,9 @@
 import pytest
 
 from core.drills import (
-    OWN_LINE_GROUP,
+    OWN_LINE_ID,
     build_drill_set,
     drills_from_own_turns,
-    group_summaries,
     load_drills,
     split_blanks,
 )
@@ -51,14 +50,6 @@ def test_every_authored_line_actually_hides_something():
     assert all(any(len(a.split()) >= 2 for a in drill.answers) for drill in drills)
 
 
-def test_every_group_explains_why_it_matters():
-    groups = group_summaries()
-
-    assert groups
-    for group in groups:
-        assert group["id"] and group["label"] and group["why"]
-
-
 def test_drill_ids_are_unique():
     ids = [drill.id for drill in load_drills()]
 
@@ -74,8 +65,7 @@ def test_your_own_strongest_turns_become_drills():
 
     drills = drills_from_own_turns(turns)
 
-    assert [d.group for d in drills] == [OWN_LINE_GROUP, OWN_LINE_GROUP]
-    assert all(d.source == "own_turn" for d in drills)
+    assert [d.id.split(":")[0] for d in drills] == [OWN_LINE_ID, OWN_LINE_ID]
     # The weak turn is not worth memorising.
     assert not any("decide right now" in "".join(d.segments) for d in drills)
 
@@ -84,20 +74,20 @@ def test_a_turn_too_short_to_split_is_skipped():
     assert drills_from_own_turns([{"turn": 1, "rating": 5, "seller": "Tell me more."}]) == []
 
 
-def test_your_own_lines_come_first_and_get_their_own_group():
+def test_your_own_lines_come_first():
     result = build_drill_set(
         [{"turn": 1, "rating": 5, "seller": "Walk me through what a bad week looks like here."}]
     )
 
-    assert result["groups"][0]["id"] == OWN_LINE_GROUP
-    assert result["drills"][0]["source"] == "own_turn"
+    assert result["drills"][0]["id"].startswith(OWN_LINE_ID)
+    assert result["drills"][0]["label"] == "Lines you got right"
 
 
 def test_without_a_session_only_the_authored_lines_show():
     result = build_drill_set([])
 
-    assert OWN_LINE_GROUP not in [g["id"] for g in result["groups"]]
-    assert all(d["source"] == "authored" for d in result["drills"])
+    assert result["drills"]
+    assert not any(d["id"].startswith(OWN_LINE_ID) for d in result["drills"])
 
 
 def test_a_line_too_short_to_split_costs_the_next_best_line_its_place():
@@ -127,4 +117,4 @@ def test_only_the_strongest_lines_make_the_cut():
     drills = drills_from_own_turns(turns, limit=2)
 
     assert len(drills) == 2
-    assert [d.id for d in drills] == [f"{OWN_LINE_GROUP}:1", f"{OWN_LINE_GROUP}:2"]
+    assert [d.id for d in drills] == [f"{OWN_LINE_ID}:1", f"{OWN_LINE_ID}:2"]
