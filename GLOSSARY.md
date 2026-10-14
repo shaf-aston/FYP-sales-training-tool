@@ -62,7 +62,7 @@ Rule: modes are named for the learner; engines and stores for the AI (`seller_se
 | **ack** | One checked AI sentence showing their answer was heard. | `engine.yaml` `ack*` |
 | **close call / judge** | Two answers score too close (`margin`, `near_miss`), so an LLM picks the label. | `judge.py` |
 | **filler** | A reply that says nothing ("ok"); **filler tags** like "you know?" are not questions. | `engine.yaml` |
-| **draft** | Marks a line not taken word for word from the source script. Only these may change. | `method.py` |
+| **draft** | Marks a line not taken word for word from the source script. Only these may change. The app ignores the marker. | `config/methods/*.yaml` |
 
 ## Feedback to the learner
 
