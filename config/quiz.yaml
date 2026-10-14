@@ -10,7 +10,6 @@ scoring:
   length_points: {full_words: 10, full: 15, part_words: 6, part: 8, short: 2}   # by answer word count
   next_move_points: {context: 8, open_question: 15, action: 8, neither: 2}
   direction_points: {reasoning: 12, plan: 13, missing: 4}
-  stage_partial_credit: 0.5          # stage OR approach right, not both
   llm_fallback_score: 50             # used when the AI gives no score
 
 # Words the rule-based scoring looks for (whole words, skipped when negated).
@@ -23,53 +22,52 @@ words:
   reasoning: [because, so that, therefore, which means, this helps]
   plan: [first, next, then, after that, from there]
 
-# Rubric per strategy and stage (the script's ui_stage). Every stage in core/enums.py needs one.
+# Rubric per stage (the script's ui_stage). Every stage in core/enums.py needs one.
 stages:
-  consultative:
-    intent:
-      goal: "Complete the INTENT stage by confirming the user's goal and context"
-      advance_when: "Advance when INTENT is clear enough to switch or progress"
-      key_concepts:
-        - "Open-ended discovery questions"
-        - "Match user's energy"
-        - "No pitching yet"
-        - "Listen for tangible goals"
+  intent:
+    goal: "Complete the INTENT stage by confirming the user's goal and context"
+    advance_when: "Advance when INTENT is clear enough to switch or progress"
+    key_concepts:
+      - "Open-ended discovery questions"
+      - "Match user's energy"
+      - "No pitching yet"
+      - "Listen for tangible goals"
 
-    logical:
-      goal: "Complete the LOGICAL stage by surfacing a clear problem and doubt"
-      advance_when: "Advance when LOGICAL conditions are met"
-      key_concepts:
-        - "Two-phase probe (cause then like/dislike)"
-        - "Never state problem for them"
-        - "Create doubt in current approach"
-        - "Max 1 question per turn"
+  logical:
+    goal: "Complete the LOGICAL stage by surfacing a clear problem and doubt"
+    advance_when: "Advance when LOGICAL conditions are met"
+    key_concepts:
+      - "Two-phase probe (cause then like/dislike)"
+      - "Never state problem for them"
+      - "Create doubt in current approach"
+      - "Max 1 question per turn"
 
-    emotional:
-      goal: "Complete the EMOTIONAL stage by surfacing stakes and consequences"
-      advance_when: "Advance when EMOTIONAL stakes are clear"
-      key_concepts:
-        - "Identity frame (why change now)"
-        - "Future pacing (what would be different)"
-        - "Consequence of inaction"
-        - "Connect to personal stakes"
+  emotional:
+    goal: "Complete the EMOTIONAL stage by surfacing stakes and consequences"
+    advance_when: "Advance when EMOTIONAL stakes are clear"
+    key_concepts:
+      - "Identity frame (why change now)"
+      - "Future pacing (what would be different)"
+      - "Consequence of inaction"
+      - "Connect to personal stakes"
 
-    pitch:
-      goal: "Complete the PITCH stage by presenting the offer at the right time"
-      advance_when: "Advance when PITCH leads to commitment or objection"
-      key_concepts:
-        - "Get micro-commitment first"
-        - "Three pillars tied to stated goals"
-        - "Assumptive close"
-        - "No trailing questions"
+  pitch:
+    goal: "Complete the PITCH stage by presenting the offer at the right time"
+    advance_when: "Advance when PITCH leads to commitment or objection"
+    key_concepts:
+      - "Get micro-commitment first"
+      - "Three pillars tied to stated goals"
+      - "Assumptive close"
+      - "No trailing questions"
 
-    outcome:
-      goal: "Complete the OUTCOME stage"
-      advance_when: "Stage objectives are met"
-      key_concepts:
-        - "Listen actively"
-        - "Ask relevant questions"
+  outcome:
+    goal: "Complete the OUTCOME stage"
+    advance_when: "Stage objectives are met"
+    key_concepts:
+      - "Listen actively"
+      - "Ask relevant questions"
 
-# Plain-English names for stage and strategy ids. The only place they are defined;
+# Plain-English names for stage ids. The only place they are defined;
 # everything the learner reads (quiz feedback, expected answers) goes through these.
 stage_names:
   intent: "Finding out what they want"
@@ -78,16 +76,11 @@ stage_names:
   pitch: "Presenting the solution"
   outcome: "Closing"
 
-strategy_names:
-  consultative: "Consultative"
-
-# What the learner reads after a buy-mode quiz answer. {stage}, {strategy} and {concept} are filled in.
+# What the learner reads after a buy-mode quiz answer. {stage} and {concept} are filled in.
 feedback:
   stage:
-    both_right: "Right - {stage}, {strategy} approach."
-    both_wrong: "Not this time - it's {stage} ({strategy} approach)."
-    strategy_only: "The approach is right ({strategy}), but you're in {stage} now."
-    stage_only: "The stage is right ({stage}), but this is the {strategy} approach."
+    right: "Right - {stage}."
+    wrong: "Not this time - it's {stage}."
   concepts_named: "Response referenced key stage concepts."
   concept_missing: "Include this missing concept: {concept}."
   coach_tip_concept: "Focus next on this concept: {concept}."
@@ -114,16 +107,16 @@ feedback:
   ai_unavailable: "Unable to evaluate."   # the AI's feedback when it gave none; never shown
 
 # AI prompts for the wording the AI may add to a buy-mode quiz answer.
-# {stage}, {strategy}, {goal}, {advance_when}, {concepts}, {customer} and {answer} are filled in.
+# {stage}, {goal}, {advance_when}, {concepts}, {customer} and {answer} are filled in.
 prompts:
   next_move: |-
-    Grade the learner's response in {stage} ({strategy}).
+    Grade the learner's response in {stage}.
     Goal: {goal} | Concepts: {concepts}
     <customer>{customer}</customer>
     <learner>{answer}</learner>
     JSON: {{"score": <0-100>, "alignment": "strong|partial|weak", "feedback": "<brief>", "strengths": ["..."], "improvements": ["..."]}}
   direction: |-
-    Evaluate the learner's understanding in {stage} ({strategy}).
+    Evaluate the learner's understanding in {stage}.
     Goal: {goal} | Advance: {advance_when} | Concepts: {concepts}
     <learner>{answer}</learner>
     JSON: {{"score": <0-100>, "understanding": "excellent|good|partial|needs_work", "feedback": "<brief>", "key_concepts_got": ["..."], "key_concepts_missed": ["..."]}}
@@ -141,9 +134,9 @@ sell_feedback:
 questions:
   stage:
     - "Which stage of the sale are we in right now?"
-    - "Based on the conversation so far, which stage of the sale and which approach are active?"
-    - "Can you identify the current stage of the sale and the approach?"
-    - "Where are we in the sale (stage and approach)?"
+    - "Based on the conversation so far, which stage of the sale is active?"
+    - "Can you identify the current stage of the sale?"
+    - "Where are we in the sale?"
 
   next_move:
     - "What would you say next to this customer?"

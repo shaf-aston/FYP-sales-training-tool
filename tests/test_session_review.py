@@ -90,16 +90,13 @@ def test_replayed_readiness_matches_what_the_learner_saw_live(behaviour, transcr
     session = BuyerSession(provider_type="dummy", product_type="general", difficulty="medium")
     session.conversation_history.append(transcript[0])
 
-    for entry in transcript[1:]:
+    for entry in transcript:
         if entry["role"] == "user":
-            session.state.turn_count += 1
-            session.conversation_history.append(entry)
-            session._update_readiness(entry["content"])
-        else:
-            session.conversation_history.append(entry)
+            session.process_turn(entry["content"])
 
-    review = build_review(transcript, behaviour)
+    review = session.review()
     assert round(session.state.readiness, 3) == review["readiness_curve"][-1]
+    assert [t["seller"] for t in review["turns"]] == [e["content"] for e in transcript if e["role"] == "user"]
 
 
 def test_rewinding_restores_the_buyer_to_that_exact_point(behaviour, transcript):

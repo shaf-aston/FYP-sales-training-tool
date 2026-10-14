@@ -1,6 +1,6 @@
 # The offer being sold. Method scripts take their blanks from here.
 # draft: true = answer is not verbatim from the coach's source and needs the coach's wording.
-# draft is an authoring marker only: the app parses it but never acts on it.
+# draft is an authoring marker only: the app ignores it.
 months: 6
 price: "$5k"
 # What the AI may say about the programme when no fact below covers a question. Only what the

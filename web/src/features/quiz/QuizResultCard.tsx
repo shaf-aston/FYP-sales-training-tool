@@ -2,7 +2,7 @@
 
 import { Card, Eyebrow, Markdown } from "@/components/ui";
 import type { QuizResult } from "@/lib/api/types";
-import { stageMeta, strategyMeta } from "@/lib/labels";
+import { stageMeta } from "@/lib/labels";
 import { scoreBand, scorePercent, type QuizKind } from "./scoring";
 import { useCountUp } from "@/lib/useCountUp";
 import s from "./quiz.module.css";
@@ -67,9 +67,7 @@ export function QuizResultCard({ result, kind }: { result: QuizResult; kind: Qui
       )}
       {exp && (
         <Block title="Expected">
-          <p className={s.body}>
-            {stageMeta(exp.stage).label} ({strategyMeta(exp.strategy).label} approach)
-          </p>
+          <p className={s.body}>{stageMeta(exp.stage).label}</p>
         </Block>
       )}
     </Card>

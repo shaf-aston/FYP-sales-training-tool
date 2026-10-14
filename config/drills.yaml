@@ -13,14 +13,10 @@ own_lines:
   max_drills: 3      # most own-line drills offered at once
   min_words: 6       # a line shorter than this has no sensible place to blank
   label: "Lines you got right"
-  why: "Your own strongest turns from the session you just played."
 
 groups:
   - id: needs_discovery
     label: Finding out what they need
-    why: >-
-      You cannot recommend anything until you know what they are actually trying
-      to fix. These lines buy you the room to ask.
     lines:
       - "Before I suggest anything, [tell me what's actually slowing your team down]."
       - "What made this [start to matter now], rather than six months ago?"
@@ -30,9 +26,6 @@ groups:
 
   - id: rapport_building
     label: Earning trust
-    why: >-
-      People buy from someone who was listening. These lines prove you were,
-      using their own words rather than your script.
     lines:
       - "[Fair enough], I moved too fast there."
       - "So if I've got this right, [the real issue is the downtime, not the price]."
@@ -41,9 +34,6 @@ groups:
 
   - id: objection_handling
     label: Handling pushback
-    why: >-
-      An objection is information, not rejection. These lines keep the
-      conversation open instead of turning it into an argument.
     lines:
       - "That's a fair concern. [What would need to be true] for it not to be one?"
       - "When you say it's too expensive, [is it the number, or what you'd be giving up elsewhere]?"
@@ -53,9 +43,6 @@ groups:
 
   - id: solution_presentation
     label: Putting it to them
-    why: >-
-      Tie every feature to something they already told you hurts, in their words,
-      or it is just a list.
     lines:
       - "You said [losing two days cost you a customer] - this is the part that stops that."
       - "I'm not going to list everything. [The one thing that matters for you is this]."
@@ -63,8 +50,6 @@ groups:
 
   - id: conversation_flow
     label: Keeping it moving
-    why: >-
-      Pace and permission. These lines move things forward without pushing.
     lines:
       - "Before we go further - [is this even the right conversation to be having]?"
       - "What would [a sensible next step] look like from where you're sitting?"

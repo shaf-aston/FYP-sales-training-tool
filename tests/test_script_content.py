@@ -74,7 +74,7 @@ def test_offer_and_common_sense_load():
     assert offer.months == 6 and len(offer.pillars) == 3
     assert "all around the world" in offer.facts["location"].answer
     sense = load_common_sense()
-    assert "{last_point}" in sense.bring_back and sense.interruptions
+    assert sense.interruptions
 
 
 @pytest.mark.parametrize("name", METHODS)

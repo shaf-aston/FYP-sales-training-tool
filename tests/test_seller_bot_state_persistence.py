@@ -75,12 +75,12 @@ def test_rewind_to_turn_restores_stage_and_script_state(monkeypatch):
 
 def test_turn_snapshot_keeps_the_script_state():
     bot = _build_bot()
-    bot.seller.state = ScriptState(step="03", last_point="the money")
+    bot.seller.state = ScriptState(step="03", slots={"why": "the money"})
 
     snap = bot._capture_turn_snapshot()
     assert snap["current_stage"] == "intent"
     assert snap["turn_state"]["step"] == "03"
-    assert snap["turn_state"]["last_point"] == "the money"
+    assert snap["turn_state"]["slots"] == {"why": "the money"}
 
 
 def test_log_snapshot_logs_the_session_state(caplog):

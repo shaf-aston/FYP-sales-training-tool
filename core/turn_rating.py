@@ -150,11 +150,7 @@ def rate_turn(
 
 
 def readiness_delta(rating: int, behaviour: dict) -> float:
-    """How far a turn of this quality moves the buyer's readiness.
-
-    Kept here so live play and the after-the-fact replay in session_review use the
-    same formula - two copies would let a review disagree with what the learner saw.
-    """
+    """How far a turn of this quality moves the buyer's readiness."""
     gain = behaviour["readiness_gain_per_good_turn"]
     loss = behaviour["readiness_loss_per_bad_turn"]
     if rating >= 4:

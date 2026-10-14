@@ -37,7 +37,7 @@ export const steps = [
 
 export const features = [
   { title: "Hands-free voice", text: "Speak out loud and hear the buyer answer back.", hue: "var(--neon-cyan)" },
-  { title: "Live coach", text: "Stage, strategy and a score after every message.", hue: "var(--neon-amber)" },
+  { title: "Live coach", text: "Your stage and a coach note after every message.", hue: "var(--neon-amber)" },
   { title: "Sell mode", text: "You sell. The AI plays a buyer who pushes back.", hue: "var(--neon-cyan)" },
   { title: "Quick quizzes", text: "Short checks that explain why an answer works.", hue: "var(--neon-amber)" },
   { title: "Your product", text: "Load your own product notes so practice feels real.", hue: "var(--neon-cyan)" },

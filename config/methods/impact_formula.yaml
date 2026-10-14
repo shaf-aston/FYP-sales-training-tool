@@ -1,7 +1,7 @@
 # Impact Formula: the app's consultative flow (intent, problem, stakes, pitch) as a script.
 # Questions were ported from the app's earlier prompt-driven consultative flow.
 # draft: true = a line on that step is not verbatim from the source and needs the coach's wording.
-# draft is an authoring marker only: the app parses it but never acts on it.
+# draft is an authoring marker only: the app ignores it.
 first: "intent"
 price_step: "present"
 steps:

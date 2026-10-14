@@ -20,17 +20,8 @@ class BuyerState:
     product_type: str = "default"
 
     def to_dict(self) -> dict:
-        """The state as the web app reads it (the "state" field of every sell response)."""
-        return {
-            "readiness": round(self.readiness, 3),
-            "objections_raised": self.objections_raised,
-            "turn_count": self.turn_count,
-            "has_committed": self.has_committed,
-            "has_walked": self.has_walked,
-            "difficulty": self.difficulty,
-            "product_type": self.product_type,
-            "persona_name": persona_name(self.persona),
-        }
+        """What the web shows after each turn (the "state" field of every sell response)."""
+        return {"readiness": round(self.readiness, 3), "turn_count": self.turn_count}
 
     @property
     def ended(self) -> bool:

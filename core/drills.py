@@ -17,7 +17,7 @@ from .loader import load_yaml
 from .turn_rating import load_turn_rating
 
 BLANK_PATTERN = re.compile(r"\[([^\[\]]+)\]")
-OWN_LINE_GROUP = "your_own_lines"
+OWN_LINE_ID = "your_own_lines"  # prefix of own-line drill ids; the web keys its review schedule by drill id
 
 
 def load_drill_config() -> dict:
@@ -29,20 +29,16 @@ class Drill:
     """One line to recall, split into the visible parts and the hidden ones."""
 
     id: str
-    group: str
     label: str
     segments: list[str] = field(default_factory=list)
     answers: list[str] = field(default_factory=list)
-    source: str = "authored"
 
     def to_dict(self) -> dict:
         return {
             "id": self.id,
-            "group": self.group,
             "label": self.label,
             "segments": list(self.segments),
             "answers": list(self.answers),
-            "source": self.source,
         }
 
 
@@ -75,26 +71,12 @@ def load_drills(config: dict | None = None) -> list[Drill]:
             drills.append(
                 Drill(
                     id=f"{group_id}:{index}",
-                    group=group_id,
                     label=label,
                     segments=segments,
                     answers=answers,
                 )
             )
     return drills
-
-
-def group_summaries(config: dict | None = None) -> list[dict]:
-    """Group id, name and why it matters, for the drill screen's headings."""
-    config = config or load_drill_config()
-    return [
-        {
-            "id": group.get("id", ""),
-            "label": group.get("label", group.get("id", "")),
-            "why": (group.get("why") or "").strip(),
-        }
-        for group in config["groups"]
-    ]
 
 
 def drills_from_own_turns(
@@ -129,12 +111,10 @@ def drills_from_own_turns(
         visible, hidden = split
         drills.append(
             Drill(
-                id=f"{OWN_LINE_GROUP}:{turn.get('turn', len(drills))}",
-                group=OWN_LINE_GROUP,
+                id=f"{OWN_LINE_ID}:{turn.get('turn', len(drills))}",
                 label=own_lines["label"],
                 segments=[visible, ""],
                 answers=[hidden],
-                source="own_turn",
             )
         )
     return drills
@@ -157,11 +137,4 @@ def build_drill_set(review_turns: list[dict] | None = None) -> dict:
     """
     config = load_drill_config()
     own = drills_from_own_turns(review_turns or [], config=config)
-    groups = group_summaries(config)
-    if own:
-        own_lines = config["own_lines"]
-        groups = [{"id": OWN_LINE_GROUP, "label": own_lines["label"], "why": own_lines["why"]}] + groups
-    return {
-        "groups": groups,
-        "drills": [drill.to_dict() for drill in own + load_drills(config)],
-    }
+    return {"drills": [drill.to_dict() for drill in own + load_drills(config)]}

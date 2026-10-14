@@ -177,24 +177,6 @@ def chat(buyer):
         return jsonify({"error": SELL_ERROR}), 500
 
 
-@bp.route("/state", methods=["GET"])
-@with_session("buyer")
-def state(buyer):
-    """Get current sell session state"""
-    return jsonify(
-        {
-            "success": True,
-            "state": buyer.state.to_dict(),
-            "persona": buyer.persona,
-            "difficulty": buyer.state.difficulty,
-            "product_type": buyer.state.product_type,
-            "conversation_history": buyer.conversation_history,
-            "provider": buyer.provider_name,
-            "model": buyer.model_name,
-        }
-    )
-
-
 @bp.route("/evaluate", methods=["POST"])
 @require_rate_limit("sell")
 @with_session("buyer")
@@ -231,7 +213,9 @@ def review(buyer):
     Rebuilt from the transcript on each request, so it never drifts from what the learner saw.
     """
     try:
-        return jsonify({"success": True, "persona": buyer.persona, **buyer.review()})
+        review = buyer.review()
+        review.pop("readiness_exact")  # the exact value is for rewinding; the web shows the rounded curve
+        return jsonify({"success": True, "persona": buyer.persona, **review})
     except Exception as e:
         current_app.logger.exception(f"Sell review error: {e}")
         return jsonify({"error": SELL_REVIEW_ERROR}), 500

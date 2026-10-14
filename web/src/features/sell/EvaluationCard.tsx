@@ -15,7 +15,6 @@ const OUTCOME: Record<Outcome, { label: string; tone: Tone }> = {
   sold: { label: "Sale made", tone: "success" },
   walked: { label: "Buyer walked away", tone: "danger" },
   active: { label: "Incomplete", tone: "neutral" },
-  incomplete: { label: "Incomplete", tone: "neutral" },
 };
 
 function Bullets({ title, items }: { title: string; items: string[] }) {
@@ -37,7 +36,7 @@ function Result({ ev }: { ev: Evaluation }) {
   const { openDialog, closeDialog } = useUi();
   const score = useCountUp(ev.overall_score || 0);
   const grade = (ev.grade || "?").toUpperCase();
-  const outcome = OUTCOME[ev.outcome] ?? OUTCOME.incomplete;
+  const outcome = OUTCOME[ev.outcome] ?? OUTCOME.active;
   const celebrate = ev.outcome === "sold" || (config.sell.celebrateGrades as readonly string[]).includes(grade);
 
   // In sell mode reset() starts the same buyer again (SessionContext).

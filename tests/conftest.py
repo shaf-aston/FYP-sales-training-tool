@@ -1,4 +1,5 @@
 """Shared fixtures: offline AI providers, app clients and stand-ins for a live session."""
+import json
 import sys
 from pathlib import Path
 
@@ -40,6 +41,19 @@ def pytest_configure(config):
     # Keep pytest-randomly out of the way in this environment.
     if hasattr(config.option, "randomly_reset_seed"):
         config.option.randomly_reset_seed = False
+
+
+@pytest.fixture
+def analytics_events(tmp_path, monkeypatch):
+    """Read back the analytics events recorded during a test: `analytics_events(session_id, event=None)`."""
+    sink = tmp_path / "events.jsonl"
+    monkeypatch.setenv("METRICS_JSONL_PATH", str(sink))
+
+    def read(session_id, event=None):
+        rows = [json.loads(line) for line in sink.read_text().splitlines()] if sink.exists() else []
+        return [r for r in rows if r["session_id"] == session_id and event in (None, r["event_type"])]
+
+    return read
 
 
 @pytest.fixture(autouse=True)
@@ -159,7 +173,6 @@ def played_session(sell_client):
 class FakeCall:
     def __init__(self):
         self.current_stage = "intent"
-        self.strategy = "consultative"
         self.conversation_history = []
 
 
@@ -194,7 +207,7 @@ class FakeSeller:
             {"role": "user", "content": message},
             {"role": "assistant", "content": reply},
         ]
-        return ChatResponse(reply, 12.34, "probe", "probe-model", len(message), len(reply))
+        return ChatResponse(reply, 12.34, "probe", "probe-model")
 
     def edit_turn(self, message_index, new_text):
         self.edits.append(message_index)
@@ -206,13 +219,13 @@ class FakeSeller:
         return {"answer": f"{style}:{question}"}
 
     def score_stage_answer(self, answer):
-        return quiz.score_stage_answer(answer, self.call.current_stage, self.call.strategy)
+        return quiz.score_stage_answer(answer, self.call.current_stage)
 
     def score_next_move(self, response):
-        return quiz.score_next_move(response, None, self.call.current_stage, self.call.strategy)
+        return quiz.score_next_move(response, None, self.call.current_stage)
 
     def score_direction(self, explanation):
-        return quiz.score_direction(explanation, None, self.call.current_stage, self.call.strategy)
+        return quiz.score_direction(explanation, None, self.call.current_stage)
 
 
 @pytest.fixture

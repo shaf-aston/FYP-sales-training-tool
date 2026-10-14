@@ -85,7 +85,7 @@ app.extensions["sessions"] = Sessions(seller=seller_sessions, buyer=buyer_sessio
 app.register_blueprint(buy.bp)  # /api/buy/*: learner is the customer
 app.register_blueprint(sell.bp)  # /api/sell/*: learner is the salesperson
 app.register_blueprint(knowledge.bp)  # /api/knowledge
-app.register_blueprint(monitoring.bp)  # /api/health, /api/analytics/*, /api/feedback
+app.register_blueprint(monitoring.bp)  # /api/health, /api/feedback
 
 
 WEB_BUILD_DIR = ROOT_DIR / "web" / "out"

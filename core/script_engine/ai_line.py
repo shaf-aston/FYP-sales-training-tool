@@ -7,11 +7,10 @@ from core.script_engine.checks import check, clip
 logger = logging.getLogger("script_engine.fallback")
 
 
-def checked_line(llm, prompt, tokens, ctx, cfg, label, clean=str.strip, extra_rules=None, retries=None):
+def checked_line(llm, prompt, tokens, ctx, cfg, label, clean=str.strip, retries=None):
     """Return the first AI answer that breaks no rule, or None.
 
     `clean` tidies the raw answer; returning None from it means the AI declined (stop now).
-    `extra_rules(text)` adds caller-specific broken-rule names to the shared `check`.
     """
     for _ in range(1 + (cfg["ai_retries"] if retries is None else retries)):
         try:
@@ -21,7 +20,7 @@ def checked_line(llm, prompt, tokens, ctx, cfg, label, clean=str.strip, extra_ru
             return None
         if text is None:
             return None
-        broken = check(text, ctx) + (extra_rules(text) if extra_rules else [])
+        broken = check(text, ctx)
         if not broken:
             return text
         logger.warning("%s: AI line %r broke %s", label, clip(text, cfg["log_text_chars"]), broken)

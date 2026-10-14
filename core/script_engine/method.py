@@ -32,7 +32,6 @@ class Step:
     say_plain: str
     capture: str        # slot name that stores the prospect's reply
     probes: tuple       # asked in turn when no route moves on, before `stuck`; empty = `say` once
-    draft: bool         # some line here is not verbatim from the source (authoring marker only; nothing acts on it)
     listen: tuple       # of Route
     run_on: bool = False  # said, then straight on to the next step without waiting for a reply
     name: str = ""      # the step's name in the source script, shown to the learner
@@ -53,7 +52,6 @@ class Objection:
     examples: tuple
     loop: tuple
     direct: str
-    draft: bool
     normalise: str = ""  # said once they answer a loop line, before the step's question again
     early: str = ""      # before the price: a short honest answer instead of `park`; may be raised while asking
 
@@ -85,7 +83,6 @@ class Fact:
     examples: tuple
     answer: str
     late_answer: str    # used once the price step is reached; empty = same answer
-    draft: bool
 
 
 @dataclass(frozen=True)
@@ -115,7 +112,6 @@ class Interruption:
     name: str
     examples: tuple
     reply: str
-    draft: bool
     after: str = "ask"  # one of AFTER: what follows the reply
     after_wait: bool = False  # only makes sense right after a `wait` reply ("ok, I'm back")
     min_score: float = 0.0  # a match must score at least this on every step (words that are often answers too)
@@ -123,7 +119,6 @@ class Interruption:
 
 @dataclass(frozen=True)
 class CommonSense:
-    bring_back: str
     park: str
     revisit: str        # lead-in when a parked objection is raised again
     interruptions: dict
@@ -173,7 +168,7 @@ def _step(step_id, data):
     return Step(
         step_id, stage, data.get("say", ""), data.get("say_plain", ""),
         data.get("capture", ""), probes,
-        bool(data.get("draft")), listen, bool(data.get("run_on")),
+        listen, bool(data.get("run_on")),
         data.get("name", ""), data.get("note", ""), bool(data.get("doubts_answer")),
         stuck, answered_by, bool(data.get("echo")),
     )
@@ -182,7 +177,7 @@ def _step(step_id, data):
 def _objection(name, data):
     return Objection(
         name, tuple(data["examples"]), tuple(data["loop"]),
-        data["direct"], bool(data.get("draft")), data.get("normalise", ""), data.get("early", ""),
+        data["direct"], data.get("normalise", ""), data.get("early", ""),
     )
 
 
@@ -249,7 +244,7 @@ def parse_offer(name, data):
     facts = {
         k: Fact(
             k, tuple(v.get("examples") or ()), v["answer"],
-            v.get("late_answer", ""), bool(v.get("draft")),
+            v.get("late_answer", ""),
         )
         for k, v in (data.get("facts") or {}).items()
     }
@@ -260,7 +255,7 @@ def parse_offer(name, data):
     )
 
 
-INTERRUPTION_KEYS = {"examples", "reply", "draft", "after", "after_wait", "min_score"}
+INTERRUPTION_KEYS = {"examples", "reply", "draft", "after", "after_wait", "min_score"}  # `draft` is accepted, never read
 
 
 def parse_common_sense(data):
@@ -268,7 +263,7 @@ def parse_common_sense(data):
         if set(v) - INTERRUPTION_KEYS:  # an old `wait: true` would silently turn a pause into a question
             raise ValueError(f"interruption {k}: unknown keys {sorted(set(v) - INTERRUPTION_KEYS)}")
     items = {
-        k: Interruption(k, tuple(v["examples"]), v["reply"], bool(v.get("draft")), v.get("after", "ask"),
+        k: Interruption(k, tuple(v["examples"]), v["reply"], v.get("after", "ask"),
                         bool(v.get("after_wait")),
                         _score(f"interruption {k}", v["min_score"]) if "min_score" in v else 0.0)
         for k, v in data["interruptions"].items()
@@ -282,7 +277,7 @@ def parse_common_sense(data):
         raise ValueError("park, nudge and interruption replies must not ask (the step's question follows)")
     if bool(nudge.get("reply")) != bool(nudge.get("phrases")):
         raise ValueError("nudge needs both a reply and phrases")
-    return CommonSense(data["bring_back"], data["park"], data["revisit"], items,
+    return CommonSense(data["park"], data["revisit"], items,
                        nudge.get("reply", ""), tuple(nudge.get("phrases") or ()))
 
 

@@ -4,7 +4,7 @@ import pytest
 from backend.routes import monitoring as monitoring_routes
 
 
-def test_chat_route_returns_metrics_and_coach_notes(live_seller):
+def test_chat_route_returns_the_reply_stage_and_coach_notes(live_seller):
     client, _seller, headers = live_seller
 
     response = client.post("/api/buy/chat", json={"message": "Hi"}, headers=headers)
@@ -13,9 +13,8 @@ def test_chat_route_returns_metrics_and_coach_notes(live_seller):
     assert response.status_code == 200
     assert payload["success"] is True
     assert payload["message"] == "reply:Hi"
-    assert payload["metrics"] == {"input_length": 2, "output_length": len("reply:Hi")}
     assert payload["training"] == {"what_happened": "ok"}
-    assert (payload["stage"], payload["strategy"]) == ("INTENT", "CONSULTATIVE")
+    assert payload["stage"] == "INTENT"
 
 
 def test_chat_route_handles_missing_json_body(live_seller):
@@ -78,16 +77,11 @@ def test_coach_rejects_missing_question(live_seller):
     assert response.get_json()["error"] == "Question required"
 
 
-def test_health_returns_active_provider_and_performance(live_seller, monkeypatch):
+def test_health_returns_the_active_provider_and_what_is_available(live_seller, monkeypatch):
     client, _seller, headers = live_seller
     monkeypatch.setattr(
         monitoring_routes, "get_available_providers",
         lambda: [{"name": "probe", "available": True, "model": "probe-model"}]
-    )
-    monkeypatch.setattr(
-        monitoring_routes.PerformanceTracker,
-        "get_provider_stats",
-        staticmethod(lambda: {"probe": {"count": 1}}),
     )
 
     response = client.get("/api/health", headers=headers)
@@ -97,7 +91,6 @@ def test_health_returns_active_provider_and_performance(live_seller, monkeypatch
         "success": True,
         "active": {"provider": "probe", "model": "probe-model"},
         "available_providers": [{"name": "probe", "available": True, "model": "probe-model"}],
-        "performance_stats": {"probe": {"count": 1}},
     }
 
 

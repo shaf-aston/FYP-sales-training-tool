@@ -17,6 +17,7 @@ def test_review_annotates_each_turn_with_its_evidence(sell_client, played_sessio
     assert payload["turns"][0]["reasons"]
     assert payload["pivotal_turns"] == [1]
     assert payload["persona"]
+    assert "readiness_exact" not in payload
 
 
 def test_redo_replaces_the_turn_and_gets_a_real_reply(sell_client, played_session):
@@ -66,7 +67,7 @@ def test_drills_work_without_any_session(sell_client):
     assert response.status_code == 200
     assert payload["success"] is True
     assert payload["drills"]
-    assert all(d["source"] == "authored" for d in payload["drills"])
+    assert not any(d["id"].startswith("your_own_lines") for d in payload["drills"])
 
 
 def test_drills_add_your_own_lines_when_a_session_is_supplied(sell_client, played_session):
@@ -74,8 +75,7 @@ def test_drills_add_your_own_lines_when_a_session_is_supplied(sell_client, playe
     payload = response.get_json()
 
     assert response.status_code == 200
-    assert payload["groups"][0]["id"] == "your_own_lines"
-    assert payload["drills"][0]["source"] == "own_turn"
+    assert payload["drills"][0]["id"].startswith("your_own_lines")
 
 
 def test_drills_ignore_a_session_id_that_is_not_live(sell_client):
@@ -83,7 +83,7 @@ def test_drills_ignore_a_session_id_that_is_not_live(sell_client):
     payload = response.get_json()
 
     assert response.status_code == 200
-    assert all(d["source"] == "authored" for d in payload["drills"])
+    assert not any(d["id"].startswith("your_own_lines") for d in payload["drills"])
 
 
 def test_a_bad_session_id_on_drills_is_rejected_not_ignored(sell_client):

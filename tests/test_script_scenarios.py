@@ -362,7 +362,7 @@ def test_loader_rejects_a_shortcut_that_leads_back():
 @pytest.mark.parametrize("item", [{"after": "sing"}, {"wait": True}, {"min_score": -1}])
 def test_loader_rejects_bad_interruptions(item):
     from core.script_engine.method import parse_common_sense
-    data = {"bring_back": "", "park": "", "revisit": "",
+    data = {"park": "", "revisit": "",
             "interruptions": {"x": {"examples": ["x"], "reply": "ok", **item}}}
     with pytest.raises(ValueError):
         parse_common_sense(data)
@@ -370,7 +370,7 @@ def test_loader_rejects_bad_interruptions(item):
 
 def test_loader_rejects_an_unknown_after():
     from core.script_engine.method import parse_common_sense
-    data = {"bring_back": "", "park": "", "revisit": "",
+    data = {"park": "", "revisit": "",
             "interruptions": {"x": {"examples": ["x"], "reply": "ok", "after": "sing"}}}
     with pytest.raises(ValueError, match="after"):
         parse_common_sense(data)
@@ -551,7 +551,7 @@ def test_a_vague_answer_is_never_said_back(fake_embedder):
 def test_backing_out_is_not_kept_as_their_reason(fake_embedder):
     s = seller(fake_embedder, step="20")
     s.reply("actually no, forget it")
-    assert "reason" not in s.state.slots and s.state.last_point == ""
+    assert "reason" not in s.state.slots
 
 
 # ---- C14 a nudge on the end of a reply (review: "yes, what's next?" lost the yes) ------------
@@ -590,7 +590,7 @@ def test_a_nudge_word_inside_a_reply_is_not_a_nudge(fake_embedder, text):
 ])
 def test_loader_rejects_a_bad_nudge(nudge, error):
     from core.script_engine.method import parse_common_sense
-    data = {"bring_back": "", "park": "", "revisit": "", "interruptions": {}, "nudge": nudge}
+    data = {"park": "", "revisit": "", "interruptions": {}, "nudge": nudge}
     with pytest.raises(ValueError, match=error):
         parse_common_sense(data)
 

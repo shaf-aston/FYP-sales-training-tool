@@ -8,7 +8,6 @@ from dataclasses import asdict, dataclass
 from typing import Any, Optional
 
 from . import coach, quiz
-from .analytics.performance import PerformanceTracker
 from .analytics.session_analytics import SessionAnalytics
 from .enums import Stage
 from .flow import CallFlow
@@ -25,8 +24,6 @@ class ChatResponse:
     latency_ms: Optional[float] = None  # ms; None if provider didn't report
     provider: Optional[str] = None
     model: Optional[str] = None
-    input_len: int = 0
-    output_len: int = 0
 
 
 class SellerBot:
@@ -72,7 +69,6 @@ class SellerBot:
             event="conversation_turn",
             mode="buy",
             turn_index=self.call.user_turn_count,
-            strategy=self.call.strategy,
             current_stage=self.call.current_stage,
             user_message=user_message,
             assistant_message=seller_reply,
@@ -97,8 +93,6 @@ class SellerBot:
 
         self.call.add_turn(user_message, text)
         self._log_turn_event(user_message, text)
-        if self.session_id:
-            PerformanceTracker.log_latency(self.provider_name, self.model_name, latency_ms)
         self.log_snapshot()
         self._turn_snapshots.append(self._capture_turn_snapshot())
 
@@ -107,8 +101,6 @@ class SellerBot:
             latency_ms=latency_ms,
             provider=self.provider_name,
             model=self.model_name,
-            input_len=len(user_message),
-            output_len=len(text),
         )
 
     def coach_notes(self) -> dict[str, Any]:
@@ -119,7 +111,7 @@ class SellerBot:
         return coach.answer_question(self._router, self.call, question, style)
 
     def score_stage_answer(self, answer: str) -> dict:
-        return quiz.score_stage_answer(answer, self.call.current_stage, self.call.strategy)
+        return quiz.score_stage_answer(answer, self.call.current_stage)
 
     def score_next_move(self, response: str) -> dict:
         history = self.call.conversation_history
@@ -128,11 +120,11 @@ class SellerBot:
             "",
         )
         return quiz.score_next_move(
-            response, self._router, self.call.current_stage, self.call.strategy, last_user_msg
+            response, self._router, self.call.current_stage, last_user_msg
         )
 
     def score_direction(self, explanation: str) -> dict:
-        return quiz.score_direction(explanation, self._router, self.call.current_stage, self.call.strategy)
+        return quiz.score_direction(explanation, self._router, self.call.current_stage)
 
     def _capture_turn_snapshot(self) -> dict:
         turn_state = self.seller.state
@@ -209,7 +201,6 @@ class SellerBot:
             event="session_end",
             mode="buy",
             final_stage=str(self.call.current_stage),
-            strategy=str(self.call.strategy),
             turn_count=self.call.user_turn_count,
             message_count=len(self.call.conversation_history),
         )

@@ -20,8 +20,8 @@ DEFAULT_STYLE = load_coach_config()["default_style"]
 def answer_question(router, call, question, style: str = DEFAULT_STYLE):
     """Answer the learner's question about the live call and sales technique."""
     cfg = load_coach_config()
-    stage, strategy = call.current_stage, call.strategy
-    rubric = get_stage_rubric(stage, strategy)
+    stage = call.current_stage
+    rubric = get_stage_rubric(stage)
 
     speakers = cfg["speakers"]
     recent = "\n".join(
@@ -34,7 +34,6 @@ def answer_question(router, call, question, style: str = DEFAULT_STYLE):
         style = DEFAULT_STYLE
 
     system_prompt = cfg["prompt"].format(
-        strategy=strategy,
         stage=stage,
         goal=rubric["goal"],
         advance_when=rubric["advance_when"],

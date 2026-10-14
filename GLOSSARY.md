@@ -26,7 +26,6 @@ Rule: modes are named for the learner; engines and stores for the AI (`seller_se
 | **turn** | One learner line plus the AI reply. Counted from 1 in the API. | `BuyerState.turn_count`, `CallFlow.user_turn_count` |
 | **history** | The full transcript, greeting first. `historyIndex` (web) is a message's place in it. | `CallFlow.conversation_history`, `history_json` |
 | **stage** | Where the sale is: intent → logical → emotional → pitch → outcome. `outcome` is the closing stage, not the result. | `core/enums.py` `Stage`, step `ui_stage` |
-| **strategy** | The sales approach. Always `consultative` in buy mode. Sell mode uses it only to group products in the picker. | `core/flow.py` `STRATEGY`, `buyer.yaml` `product_groups` |
 | **product group** | Picker grouping of sell-mode products: transactional or consultative. | `config/buyer.yaml` `product_groups` |
 | **epoch** | Web counter bumped when the conversation is replaced; late replies from the old one are dropped. | `SessionContext.tsx` |
 
@@ -63,7 +62,7 @@ Rule: modes are named for the learner; engines and stores for the AI (`seller_se
 | **ack** | One checked AI sentence showing their answer was heard. | `engine.yaml` `ack*` |
 | **close call / judge** | Two answers score too close (`margin`, `near_miss`), so an LLM picks the label. | `judge.py` |
 | **filler** | A reply that says nothing ("ok"); **filler tags** like "you know?" are not questions. | `engine.yaml` |
-| **draft** | Marks a line not taken word for word from the source script. Only these may change. | `method.py` |
+| **draft** | Marks a line not taken word for word from the source script. Only these may change. The app ignores the marker. | `config/methods/*.yaml` |
 
 ## Feedback to the learner
 

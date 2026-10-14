@@ -4,13 +4,9 @@ from typing import Any
 
 from .enums import Stage
 
-STRATEGY = "consultative"  # the only selling style; shown in the UI and used by the quiz
-
 
 class CallFlow:
     """History plus the current stage; the script engine decides every move."""
-
-    strategy = STRATEGY
 
     def __init__(self) -> None:
         self.reset_to_initial()

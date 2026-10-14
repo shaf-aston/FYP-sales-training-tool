@@ -1,7 +1,7 @@
 # CAT call script, steps 00-22. Lines are the operator's script verbatim.
 # {blank} = filled from the prospect's own answers (the script's XYZ) or from the offer.
 # draft: true = a line on that step is not verbatim from the source and needs the coach's wording.
-# draft is an authoring marker only: the app parses it but never acts on it.
+# draft is an authoring marker only: the app ignores it.
 first: "00"
 price_step: "14"
 revisit_step: "19"   # an objection parked before the price comes back when they hesitate at the soft close

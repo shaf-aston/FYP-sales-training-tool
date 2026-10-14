@@ -1,10 +1,8 @@
-"""Fill {blanks} in a script line. Offer blanks by code, prospect blanks by a checked AI phrase."""
+"""Fill {blanks} in a script line: offer blanks from the offer, prospect blanks with their own words by rule."""
 
 import logging
 import re
 
-from core.script_engine.ai_line import checked_line
-from core.script_engine.checks import CheckContext
 from core.utils import tokenize
 
 logger = logging.getLogger("script_engine.fallback")
@@ -16,34 +14,6 @@ def offer_blanks(offer):
     blanks = {"months": str(offer.months), "price": offer.price}
     blanks.update({f"pillar_{i}": p for i, p in enumerate(offer.pillars, 1)})
     return blanks
-
-
-def _phrase(line, blank, reply, cfg, llm):  # used by Filler only
-    """AI shortens the reply to a phrase for one blank. Returns None if no attempt passes."""
-    sentence = NAME.sub(lambda m: (m.group(2) or "$").replace("$", "____") if m.group(1) == blank else m.group(0), line)
-    prompt = cfg["prompts"]["fill"].format(slot_words=cfg["slot_words"], sentence=sentence, reply=reply)
-    ctx = CheckContext(
-        max_words=cfg["slot_words"], questions=0, price_ok=True,
-        prospect_words=frozenset(tokenize(reply)), stop_words=frozenset(cfg["stop_words"]),
-        banned_phrases=tuple(cfg["banned_phrases"]),
-    )
-    before, _, after = sentence.partition("____")
-
-    def clean(raw):
-        phrase = raw.strip().strip("\"'.")
-        return None if phrase.upper() == "NONE" else phrase
-
-    def fits_the_line(phrase):
-        said, broken = tokenize(phrase), []
-        if said and said[0] in cfg["bad_phrase_starts"]:
-            broken.append("starts_like_a_lead_in")  # "feel to stop working ..." breaks the line
-        if set(said) & set(cfg["prospect_pronouns"]):
-            broken.append("speaks_as_prospect")  # "got to my own business"
-        if said and (said[-1:] == tokenize(after)[:1] or said[:1] == tokenize(before)[-1:]):
-            broken.append("repeats_next_word")  # "feel travel X X"
-        return broken
-
-    return checked_line(llm, prompt, cfg["slot_tokens"], ctx, cfg, f"blank {blank}", clean, fits_the_line)
 
 
 def echo_phrase(reply, cfg):
@@ -74,11 +44,11 @@ def is_verb_goal(phrase, cfg):
 
 
 class Filler:
-    """Turns script lines into spoken text: offer blanks by code, the prospect's own words (echo blanks) by
-    rule, other prospect blanks by a checked AI phrase. The same line with the same answers reads the same."""
+    """Turns script lines into spoken text: offer blanks from the offer, the prospect's own words (echo blanks)
+    by rule. No AI, so the same line with the same answers always reads the same."""
 
-    def __init__(self, cfg, offer, llm, echo=frozenset()):
-        self.cfg, self.offer, self.llm, self.echo = cfg, offer, llm, echo
+    def __init__(self, cfg, offer, echo=frozenset()):
+        self.cfg, self.offer, self.echo = cfg, offer, echo
         self._said = {}
 
     def fill(self, line, slots):
@@ -88,8 +58,6 @@ class Filler:
         for blank in forms.keys() - values.keys():
             reply = slots.get(blank)
             phrase = echo_phrase(reply, self.cfg) if reply and blank in self.echo else None
-            if phrase is None and reply and self.cfg["ai_fill_blanks"]:
-                phrase = _phrase(line, blank, reply, self.cfg, self.llm)
             if phrase is None:
                 return None
             noun, verb = forms[blank]

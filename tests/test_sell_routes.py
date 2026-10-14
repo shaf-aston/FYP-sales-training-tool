@@ -5,7 +5,7 @@ from backend.messages import SELL_SESSION_NOT_FOUND
 from core.loader import load_buyer_config, load_buyer_products
 
 
-def test_sell_init_returns_opening_message_and_history(sell_client):
+def test_sell_init_returns_the_opening_message(sell_client):
     response = sell_client.post("/api/sell/init", json={"difficulty": "easy", "product_type": "default"})
 
     payload = response.get_json()
@@ -15,12 +15,6 @@ def test_sell_init_returns_opening_message_and_history(sell_client):
     opening = payload["message"]
     assert opening != "Can you tell me a bit more about that?"
     assert payload["persona"]["name"] in opening
-
-    state_response = sell_client.get("/api/sell/state", headers={"X-Session-ID": payload["session_id"]})
-    state_payload = state_response.get_json()
-
-    assert state_response.status_code == 200
-    assert state_payload["conversation_history"] == [{"role": "assistant", "content": opening}]
 
 
 def test_sell_init_uses_the_default_difficulty_when_none_is_given(sell_client):
@@ -96,7 +90,6 @@ def test_sell_init_rejects_unknown_persona_and_oversized_objection(sell_client):
     "method, path",
     [
         ("post", "/api/sell/chat"),
-        ("get", "/api/sell/state"),
         ("post", "/api/sell/evaluate"),
         ("get", "/api/sell/review"),
         ("get", "/api/sell/quiz"),

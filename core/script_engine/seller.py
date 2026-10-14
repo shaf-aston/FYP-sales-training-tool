@@ -82,7 +82,7 @@ class ScriptSeller:
         self._listener, self._llm = Listener(cfg, embedder), llm
         self._ai_ok = True
         self._waiting = False  # last reply was a `wait` reply: they stepped away
-        self._filler = Filler(cfg, offer, self._ask, frozenset(s.capture for s in method.steps.values() if s.echo))
+        self._filler = Filler(cfg, offer, frozenset(s.capture for s in method.steps.values() if s.echo))
         self._opening = start(method)
         self.state = self._opening.state
         embedder.warm(self._script_examples())
@@ -156,7 +156,7 @@ class ScriptSeller:
         asking = self._is_question(text)
         if asking and not self._answers(text, step):
             answer = self._answer_uncovered(text, opened) or self.cfg["uncovered_fallback"]
-            return self._then_ask(answer, bring_back=True), step.ui_stage
+            return self._then_ask(answer), step.ui_stage
 
         move = self._listen(text, step)
         if self._hesitates(move):
@@ -181,7 +181,7 @@ class ScriptSeller:
             self._waiting = True
             return said.reply, step.ui_stage
         if said.after == "ask":
-            return self._then_ask(said.reply, bring_back=True), step.ui_stage
+            return self._then_ask(said.reply), step.ui_stage
         return self._carry_on(said.reply, step, rephrase=said.after == "rephrase")
 
     def _carry_on(self, lead, step, rephrase):
@@ -334,17 +334,11 @@ class ScriptSeller:
             }))
         return answer
 
-    def _then_ask(self, lead, bring_back=False):
-        """`lead`, then (after an interruption or a made-up answer) a bring-back to their last point, then the
-        current question again."""
+    def _then_ask(self, lead):
+        """`lead`, then the current question again."""
         say, say_plain = asked_line(self.method, self.state)  # the words last used, not always the first
         question = self._filler.render(say, "", say_plain, self.state.slots)
-        back = ""
-        if bring_back and self.state.last_point:
-            back = self._filler.fill(self.sense.bring_back, {"last_point": self.state.last_point}) or ""
-        if back:
-            question = _after_lead(question)
-        return " ".join(part.strip() for part in (lead, back, question) if part)
+        return f"{lead.strip()} {question.strip()}".strip()
 
     def _render(self, move, heard=""):
         said = [heard] if heard else []

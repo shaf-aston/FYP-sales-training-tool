@@ -64,14 +64,13 @@ def end_outcome(readiness: float, turn_count: int, behaviour: dict) -> str | Non
     return None
 
 
-def coaching_hint(turn_score) -> dict:
+def coaching_hint(fired: list[str]) -> dict:
     """One-line tip for the seller, picked from turn_rating.yaml hints (no AI).
 
-    Uses the signals the turn's score already found: the first problem wins,
+    `fired` is the signals the turn already showed: the first problem wins,
     then the first strength, then the default line.
     """
     hints = load_turn_rating()["hints"]
-    fired = turn_score.signals if turn_score else []
     ordered = [s for s in NEGATIVE_SIGNALS if s in fired] + [s for s in fired if s not in NEGATIVE_SIGNALS]
     key = next((s for s in ordered if s in hints), "default")
     return {"hint": hints[key]}
