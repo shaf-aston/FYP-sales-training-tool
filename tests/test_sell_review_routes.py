@@ -17,6 +17,7 @@ def test_review_annotates_each_turn_with_its_evidence(sell_client, played_sessio
     assert payload["turns"][0]["reasons"]
     assert payload["pivotal_turns"] == [1]
     assert payload["persona"]
+    assert "readiness_exact" not in payload
 
 
 def test_redo_replaces_the_turn_and_gets_a_real_reply(sell_client, played_session):

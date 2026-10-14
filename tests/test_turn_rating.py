@@ -135,21 +135,20 @@ def test_sell_readiness_moves_on_turn_rating_and_records_why():
         {"role": "assistant", "content": "My van keeps breaking down and reliability matters"}
     )
     start = session.state.readiness
-    session.state.turn_count = 3
 
-    session._update_readiness("What made the reliability of your van start to matter so much?")
+    session.process_turn("What made the reliability of your van start to matter so much?")
 
     assert session.state.readiness > start
-    assert session.last_turn_score.rating == 5
-    assert session.last_turn_score.reasons
+    turn = session.review()["turns"][-1]
+    assert turn["rating"] == 5
+    assert turn["reasons"]
 
 
 def test_sell_readiness_falls_when_the_seller_pressures():
     session = BuyerSession(provider_type="dummy", product_type="general", difficulty="medium")
     start = session.state.readiness
-    session.state.turn_count = 3
 
-    session._update_readiness("You need to decide right now, today only.")
+    session.process_turn("You need to decide right now, today only.")
 
     assert session.state.readiness < start
 
@@ -168,7 +167,7 @@ def test_hint_names_the_worst_problem_without_ai():
     from core.buyer_rules import coaching_hint
 
     score = rate_turn("Act now, this is limited time and the price goes up, so hurry.", completed_turns=0)
-    hint = coaching_hint(score)
+    hint = coaching_hint(score.signals)
 
     assert "pressure" in score.signals
     assert hint == {"hint": "Drop the urgency. Ask what would make now the right time for them."}

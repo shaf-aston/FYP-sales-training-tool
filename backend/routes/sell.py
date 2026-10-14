@@ -213,7 +213,9 @@ def review(buyer):
     Rebuilt from the transcript on each request, so it never drifts from what the learner saw.
     """
     try:
-        return jsonify({"success": True, "persona": buyer.persona, **buyer.review()})
+        review = buyer.review()
+        review.pop("readiness_exact")  # the exact value is for rewinding; the web shows the rounded curve
+        return jsonify({"success": True, "persona": buyer.persona, **review})
     except Exception as e:
         current_app.logger.exception(f"Sell review error: {e}")
         return jsonify({"error": SELL_REVIEW_ERROR}), 500

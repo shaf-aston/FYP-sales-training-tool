@@ -13,7 +13,6 @@ from .buyer_state import BuyerResponse, BuyerState, persona_name, select_persona
 from .constants import LLM
 from .loader import load_buyer_config, load_real_objections
 from .real_calls import pick_bank
-from .turn_rating import apply_readiness, rate_turn
 from .services.provider_router import ProviderRouter, ProviderUnavailable, complete
 from .session_review import build_review
 from .utils import new_session_id
@@ -69,8 +68,8 @@ class BuyerSession(BuyerRecord):
         )
 
         self.conversation_history: list[dict] = []
-        # Why the buyer last warmed up or cooled off, for the session review.
-        self.last_turn_score = None
+        # What the latest turn did (signal names), for the coaching hint.
+        self.last_turn_signals: list[str] = []
         self.behaviour_rules = config.get("behaviour_rules", {}).get(difficulty, "")
 
         # Counted at the start as well as the end, or the two can never be
@@ -132,7 +131,7 @@ class BuyerSession(BuyerRecord):
         self.conversation_history.append({"role": "user", "content": user_message})
 
         # Update readiness and outcomes before generation so the response matches end state.
-        self._update_readiness(user_message)
+        self._sync_readiness()
         outcome = end_outcome(self.state.readiness, self.state.turn_count, self.difficulty_profile["behaviour"])
         self.state.has_committed = outcome == "sold"
         self.state.has_walked = outcome == "walked"
@@ -171,7 +170,7 @@ class BuyerSession(BuyerRecord):
         self._log_turn_event(user_message, reply, turn_index=self.state.turn_count)
         self.log_snapshot()
 
-        coaching = coaching_hint(self.last_turn_score) if show_hints else None
+        coaching = coaching_hint(self.last_turn_signals) if show_hints else None
         return self._response(reply, latency, coaching)
 
     def _end_message(self) -> str:
@@ -208,7 +207,7 @@ class BuyerSession(BuyerRecord):
         self.state.readiness = replay["readiness_exact"]
         self.state.has_committed = False
         self.state.has_walked = False
-        self.last_turn_score = None
+        self.last_turn_signals = []
         self.log_snapshot()
         return True
 
@@ -238,7 +237,7 @@ class BuyerSession(BuyerRecord):
             state.objections_raised,
             state.has_committed,
             state.has_walked,
-            self.last_turn_score,
+            list(self.last_turn_signals),
         )
 
     def _restore(self, snapshot: tuple) -> None:
@@ -250,7 +249,7 @@ class BuyerSession(BuyerRecord):
             state.objections_raised,
             state.has_committed,
             state.has_walked,
-            self.last_turn_score,
+            self.last_turn_signals,
         ) = snapshot
 
     def _system_prompt(self) -> str:
@@ -267,27 +266,14 @@ class BuyerSession(BuyerRecord):
         """The walkable review of this session, rebuilt from the transcript."""
         return build_review(self.conversation_history, self.difficulty_profile["behaviour"])
 
-    def _last_buyer_message(self) -> str:
-        """The buyer's most recent line, used to tell listening apart from luck."""
-        for entry in reversed(self.conversation_history):
-            if entry.get("role") == "assistant":
-                return entry.get("content", "")
-        return ""
+    def _sync_readiness(self) -> None:
+        """Take the buyer's readiness from the transcript, the same replay the review uses.
 
-    def _update_readiness(self, user_msg: str) -> None:
-        """Move the buyer's readiness by how well the salesperson just sold.
-
-        The reasons behind the rating are kept on `last_turn_score` so the session
-        review can show the learner why the buyer warmed up or cooled off.
+        Live play and the review therefore cannot disagree: both come from `build_review`.
         """
-        self.last_turn_score = rate_turn(
-            user_msg,
-            buyer_message=self._last_buyer_message(),
-            completed_turns=max(0, self.state.turn_count - 1),
-        )
-        self.state.readiness = apply_readiness(
-            self.state.readiness, self.last_turn_score.rating, self.difficulty_profile["behaviour"]
-        )
+        review = self.review()
+        self.state.readiness = review["readiness_exact"]
+        self.last_turn_signals = review["turns"][-1]["signals"]
 
     def get_evaluation(self) -> dict:
         """Score the salesperson's whole session (rules only)."""
