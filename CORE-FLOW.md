@@ -29,7 +29,7 @@ Open the engine for the mode you are working on. Nothing else decides the turn.
 | 6 | Provider calls the LLM | `core/providers/factory.py` → `providers/llm/groq.py` behind `providers/base.py` | Swap seam: every provider has the same interface. |
 | 7 | Review and analytics | `core/session_review.py` (per-turn replay), `core/sell_evaluator.py` (final score + grade), `core/analytics/session_analytics.py` (events to JSONL) | Everything shown after the session is rebuilt from the saved transcript. |
 
-Buy mode: `buy.py` → `SellerBot.chat` → `core/script_engine/` (scripted lines for the products in `config/script/engine.yaml`; any other product gets `default_product`. AI only fills small gaps, and every AI sentence goes through `ai_line.py` `checked_line`). `flow.py` `CallFlow` keeps the call's history and stage. Coach notes come from the script step; `coach.py` answers the learner's questions.
+Buy mode: `buy.py` → `SellerBot.chat` → `core/script_engine/` (scripted lines for the products in `config/script/engine.yaml`; any other product gets `default_product`. AI only answers uncovered product questions, acknowledges what they said and judges close calls, and every AI sentence goes through `ai_line.py` `checked_line`). `flow.py` `CallFlow` keeps the call's history and stage. Coach notes come from the script step; `coach.py` answers the learner's questions.
 
 One seller turn (`script_engine/seller.py` `ScriptSeller.reply`; the moves are pure functions in `engine.py`, every word and list in YAML):
 1. A reply that says nothing ("ok") is heard as an answer only.

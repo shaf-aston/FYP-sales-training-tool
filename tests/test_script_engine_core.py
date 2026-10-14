@@ -58,7 +58,6 @@ def test_full_conversation(mini, fake_embedder):
     ]
     assert move.done and move.ui_stage == "outcome"
     assert move.state.slots["goal"] == "I want to grow my business"
-    assert move.state.last_point == "I want to grow my business"
 
 
 def test_unmatched_reply_repeats_step(mini, fake_embedder):

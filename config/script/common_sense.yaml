@@ -7,7 +7,6 @@
 #   rephrase_else_move_on = rephrase a step that has other words; otherwise go on to the next step
 #     without taking the reply as its answer.
 # min_score: a match must score at least this on every step (for words that are often real answers too).
-bring_back: "So, as you mentioned {last_point}, "
 park: "That's fair, and we'll come back to it once we know this is even a fit."   # objection before the price: acknowledge, keep going
 revisit: "Coming back to what you raised earlier,"   # a parked objection, raised again when they hesitate at the close
 # A nudge to carry on ("what's next?", "go on"). Live: "yeah makes sense, what's next?" got "I don't know

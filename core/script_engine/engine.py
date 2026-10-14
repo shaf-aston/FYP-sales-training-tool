@@ -11,7 +11,6 @@ class ScriptState:
     step: str
     slots: dict = field(default_factory=dict)
     objection_counts: dict = field(default_factory=dict)
-    last_point: str = ""
     play: str = ""      # objection whose loop/direct line was just asked; the next reply answers it
     asks: int = 0       # times the current step has been asked again
     parked: tuple = ()  # objections raised before the price, oldest first; raised again at the revisit step
@@ -65,7 +64,7 @@ def advance(method, state, label, reply="", empty=False):
     if route is None:
         return _ask_again(method, state, step)
     if step.capture and reply and route.keep:
-        state = replace(state, slots={**state.slots, step.capture: reply}, last_point=reply)
+        state = replace(state, slots={**state.slots, step.capture: reply})
     if route.then == state.step:
         return _ask_again(method, state, step, route.ack)
     return _take(method, state, route)

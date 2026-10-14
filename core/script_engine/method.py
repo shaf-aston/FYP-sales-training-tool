@@ -123,7 +123,6 @@ class Interruption:
 
 @dataclass(frozen=True)
 class CommonSense:
-    bring_back: str
     park: str
     revisit: str        # lead-in when a parked objection is raised again
     interruptions: dict
@@ -282,7 +281,7 @@ def parse_common_sense(data):
         raise ValueError("park, nudge and interruption replies must not ask (the step's question follows)")
     if bool(nudge.get("reply")) != bool(nudge.get("phrases")):
         raise ValueError("nudge needs both a reply and phrases")
-    return CommonSense(data["bring_back"], data["park"], data["revisit"], items,
+    return CommonSense(data["park"], data["revisit"], items,
                        nudge.get("reply", ""), tuple(nudge.get("phrases") or ()))
 
 
