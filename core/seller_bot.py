@@ -8,7 +8,6 @@ from dataclasses import asdict, dataclass
 from typing import Any, Optional
 
 from . import coach, quiz
-from .analytics.performance import PerformanceTracker
 from .analytics.session_analytics import SessionAnalytics
 from .enums import Stage
 from .flow import CallFlow
@@ -96,8 +95,6 @@ class SellerBot:
 
         self.call.add_turn(user_message, text)
         self._log_turn_event(user_message, text)
-        if self.session_id:
-            PerformanceTracker.log_latency(self.provider_name, self.model_name, latency_ms)
         self.log_snapshot()
         self._turn_snapshots.append(self._capture_turn_snapshot())
 

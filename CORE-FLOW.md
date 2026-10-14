@@ -13,7 +13,7 @@ Modes are named for what the learner does.
 | Sell mode | salesperson | buyer | `core/buyer_session.py` `BuyerSession` | `/sell/` | `/api/sell/*` | `backend/routes/sell.py` |
 | Buy mode | customer | seller | `core/seller_bot.py` `SellerBot` | `/buy/` | `/api/buy/*` | `backend/routes/buy.py` |
 
-Shared routes: `backend/routes/knowledge.py` (`/api/knowledge`), `backend/routes/monitoring.py` (`/api/health`, `/api/analytics/*`, `/api/feedback`).
+Shared routes: `backend/routes/knowledge.py` (`/api/knowledge`), `backend/routes/monitoring.py` (`/api/health`, `/api/feedback`).
 
 Open the engine for the mode you are working on. Nothing else decides the turn.
 
@@ -27,7 +27,7 @@ Open the engine for the mode you are working on. Nothing else decides the turn.
 | 4 | Pure rules decide | `core/turn_rating.py` (rating), `core/buyer_rules.py` (sold / walked / coaching hint), `core/buyer_prompt.py` (buyer system prompt), `core/buyer_guardrails.py` (checks each reply) | Deterministic. No I/O, no HTTP, easy to test. |
 | 5 | Router picks a provider | `core/services/provider_router.py` `complete` | Tries providers in order, falls back on failure. |
 | 6 | Provider calls the LLM | `core/providers/factory.py` → `providers/llm/groq.py` behind `providers/base.py` | Swap seam: every provider has the same interface. |
-| 7 | Review and analytics | `core/session_review.py` (per-turn replay), `core/sell_evaluator.py` (final score + grade), `core/analytics/session_analytics.py` (events to JSONL) | Everything shown after the session is rebuilt from the saved transcript. |
+| 7 | Review and analytics | `core/session_review.py` (per-turn replay), `core/sell_evaluator.py` (final score + grade), `core/analytics/session_analytics.py` (events to the log, and a JSONL file if `METRICS_JSONL_PATH` is set) | Everything shown after the session is rebuilt from the saved transcript. |
 
 Buy mode: `buy.py` → `SellerBot.chat` → `core/script_engine/` (scripted lines for the products in `config/script/engine.yaml`; any other product gets `default_product`. AI only answers uncovered product questions, acknowledges what they said and judges close calls, and every AI sentence goes through `ai_line.py` `checked_line`). `flow.py` `CallFlow` keeps the call's history and stage. Coach notes come from the script step; `coach.py` answers the learner's questions.
 

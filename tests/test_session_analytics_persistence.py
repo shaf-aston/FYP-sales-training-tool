@@ -1,54 +1,39 @@
-"""Tests for log-only session analytics storage."""
+"""Session analytics: every event is logged, and appended to a JSONL file when one is configured."""
 import logging
 
 from core.analytics.session_analytics import SessionAnalytics
 
 
-def _reset_analytics_cache():
-    SessionAnalytics._events.clear()
-
-
-def test_session_analytics_stays_in_memory_and_logs(caplog):
-    _reset_analytics_cache()
+def test_an_event_is_logged(caplog):
     caplog.set_level(logging.INFO)
 
-    SessionAnalytics.record(event="session_start", session_id="session123",
-        product_type="default",
-        initial_strategy="intent",
-    )
-    SessionAnalytics.record(event="stage_transition", session_id="session123",
-        from_stage="intent",
-        to_stage="logical",
-        strategy="consultative",
-        user_turns_in_stage=2,
-    )
+    SessionAnalytics.record(event="session_start", session_id="session123", product_type="default")
 
-    assert [event["event_type"] for event in SessionAnalytics.get_session_analytics("session123")] == [
-        "session_start",
-        "stage_transition",
-    ]
-    assert any("session_analytics" in record.message for record in caplog.records)
+    assert any("session_analytics" in r.message and "session123" in r.message for r in caplog.records)
 
 
-def test_session_analytics_summary_reads_in_memory_events(caplog):
-    _reset_analytics_cache()
+def test_events_are_appended_to_the_jsonl_file_when_configured(analytics_events):
+    SessionAnalytics.record(event="session_start", session_id="alpha", product_type="default")
+    SessionAnalytics.record(event="session_end", session_id="alpha", turn_count=2)
+    SessionAnalytics.record(event="session_start", session_id="beta")
+
+    assert [e["event_type"] for e in analytics_events("alpha")] == ["session_start", "session_end"]
+    assert analytics_events("alpha", "session_end")[0]["turn_count"] == 2
+    assert len(analytics_events("beta")) == 1
+
+
+def test_no_file_is_written_unless_configured(tmp_path, monkeypatch):
+    monkeypatch.delenv("METRICS_JSONL_PATH", raising=False)
+    monkeypatch.chdir(tmp_path)
+
+    SessionAnalytics.record(event="session_start", session_id="alpha")
+
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_an_event_without_a_session_is_ignored(analytics_events, caplog):
     caplog.set_level(logging.INFO)
 
-    SessionAnalytics.record(event="session_start", session_id="alpha", product_type="default", initial_strategy="intent")
-    SessionAnalytics.record(event="stage_transition", session_id="alpha",
-        from_stage="intent",
-        to_stage="logical",
-        strategy="consultative",
-        user_turns_in_stage=1,
-    )
-    SessionAnalytics.record(event="session_start", session_id="beta", product_type="default", initial_strategy="intent")
+    SessionAnalytics.record(event="session_start", session_id="")
 
-    summary = SessionAnalytics.get_evaluation_summary()
-
-    assert summary["total_sessions"] == 2
-    assert summary["total_events"] == 3
-    assert summary["event_counts"] == {
-        "session_start": 2,
-        "stage_transition": 1,
-    }
-    assert any("session_analytics" in record.message for record in caplog.records)
+    assert not any("session_analytics" in r.message for r in caplog.records)

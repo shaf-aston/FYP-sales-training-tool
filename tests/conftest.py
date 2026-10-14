@@ -1,4 +1,5 @@
 """Shared fixtures: offline AI providers, app clients and stand-ins for a live session."""
+import json
 import sys
 from pathlib import Path
 
@@ -40,6 +41,19 @@ def pytest_configure(config):
     # Keep pytest-randomly out of the way in this environment.
     if hasattr(config.option, "randomly_reset_seed"):
         config.option.randomly_reset_seed = False
+
+
+@pytest.fixture
+def analytics_events(tmp_path, monkeypatch):
+    """Read back the analytics events recorded during a test: `analytics_events(session_id, event=None)`."""
+    sink = tmp_path / "events.jsonl"
+    monkeypatch.setenv("METRICS_JSONL_PATH", str(sink))
+
+    def read(session_id, event=None):
+        rows = [json.loads(line) for line in sink.read_text().splitlines()] if sink.exists() else []
+        return [r for r in rows if r["session_id"] == session_id and event in (None, r["event_type"])]
+
+    return read
 
 
 @pytest.fixture(autouse=True)

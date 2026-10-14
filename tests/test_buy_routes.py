@@ -78,16 +78,11 @@ def test_coach_rejects_missing_question(live_seller):
     assert response.get_json()["error"] == "Question required"
 
 
-def test_health_returns_active_provider_and_performance(live_seller, monkeypatch):
+def test_health_returns_the_active_provider_and_what_is_available(live_seller, monkeypatch):
     client, _seller, headers = live_seller
     monkeypatch.setattr(
         monitoring_routes, "get_available_providers",
         lambda: [{"name": "probe", "available": True, "model": "probe-model"}]
-    )
-    monkeypatch.setattr(
-        monitoring_routes.PerformanceTracker,
-        "get_provider_stats",
-        staticmethod(lambda: {"probe": {"count": 1}}),
     )
 
     response = client.get("/api/health", headers=headers)
@@ -97,7 +92,6 @@ def test_health_returns_active_provider_and_performance(live_seller, monkeypatch
         "success": True,
         "active": {"provider": "probe", "model": "probe-model"},
         "available_providers": [{"name": "probe", "available": True, "model": "probe-model"}],
-        "performance_stats": {"probe": {"count": 1}},
     }
 
 

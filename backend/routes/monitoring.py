@@ -1,24 +1,22 @@
-"""Monitoring endpoints shared by both modes: health, session analytics, feedback."""
+"""Monitoring endpoints shared by both modes: health and feedback."""
 
 import json
 from datetime import datetime
 
 from flask import Blueprint, current_app, jsonify, request
 
-from core.analytics.performance import PerformanceTracker
-from core.analytics.session_analytics import SessionAnalytics
 from core.constants import MAX_FEEDBACK_COMMENT_CHARS
 from core.providers import get_available_providers
 
-from ..messages import FEEDBACK_EMPTY, FORBIDDEN, RATING_NOT_NUMBER, RATING_OUT_OF_RANGE
-from ..security import InputValidator, require_rate_limit
+from ..messages import FEEDBACK_EMPTY, RATING_NOT_NUMBER, RATING_OUT_OF_RANGE
+from ..security import require_rate_limit
 
 bp = Blueprint("monitoring", __name__, url_prefix="/api")
 
 
 @bp.route("/health", methods=["GET"])
 def api_health():
-    """Health check: provider availability and performance stats"""
+    """Health check: provider availability and the learner's active provider."""
     session_id = request.headers.get("X-Session-ID")
 
     active_provider = None
@@ -30,39 +28,14 @@ def api_health():
             active_model = seller.model_name
 
     provider_status = get_available_providers()
-    perf_stats = PerformanceTracker.get_provider_stats()
 
     return jsonify(
         {
             "success": True,
             "active": {"provider": active_provider, "model": active_model},
             "available_providers": provider_status,
-            "performance_stats": perf_stats,
         }
     )
-
-
-@bp.route("/analytics/session/<session_id>", methods=["GET"])
-def get_session_analytics(session_id):
-    """Analytics events for a session. Caller's X-Session-ID header must match the path param"""
-    caller_id = request.headers.get("X-Session-ID", "")
-    caller_error = InputValidator.validate_session_id(caller_id)
-    if caller_error:
-        return caller_error
-    path_error = InputValidator.validate_session_id(session_id)
-    if path_error:
-        return path_error
-    if session_id != caller_id:
-        return jsonify({"error": FORBIDDEN}), 403
-    events = SessionAnalytics.get_session_analytics(session_id)
-    return jsonify({"success": True, "session_id": session_id, "events": events})
-
-
-@bp.route("/analytics/summary", methods=["GET"])
-def get_analytics_summary():
-    """Aggregated stats for the evaluation chapter. Same shape as get_evaluation_summary()"""
-    summary = SessionAnalytics.get_evaluation_summary()
-    return jsonify({"success": True, **summary})
 
 
 @bp.route("/feedback", methods=["POST"])

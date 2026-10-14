@@ -79,23 +79,6 @@ def test_knowledge_delete_clears_yaml_file(monkeypatch):
     assert not knowledge_file.exists()
 
 
-def test_session_analytics_forbids_header_path_mismatch(monkeypatch):
-    app = _make_shared_app()
-    monkeypatch.setattr(
-        monitoring_routes.SessionAnalytics,
-        "get_session_analytics",
-        staticmethod(lambda _session_id: [{"type": "ignored"}]),
-    )
-
-    response = app.test_client().get(
-        "/api/analytics/session/aaaaaaaa",
-        headers={"X-Session-ID": "bbbbbbbb"},
-    )
-
-    assert response.status_code == 403
-    assert response.get_json()["error"] == "Forbidden"
-
-
 def test_feedback_route_logs_without_persisting(monkeypatch, caplog):
     app = _make_shared_app()
     caplog.set_level(logging.INFO)
@@ -109,12 +92,3 @@ def test_feedback_route_logs_without_persisting(monkeypatch, caplog):
     assert response.get_json() == {"success": True}
     assert any("feedback_event" in record.message for record in caplog.records)
     assert any("x" * 500 in record.message for record in caplog.records)
-
-
-def test_analytics_summary_is_public(monkeypatch):
-    app = _make_shared_app(testing=False)
-
-    response = app.test_client().get("/api/analytics/summary")
-
-    assert response.status_code == 200
-    assert response.get_json()["success"] is True
