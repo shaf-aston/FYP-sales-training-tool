@@ -143,10 +143,6 @@ def chat(seller):
                 "latency_ms": safe_latency_ms(response.latency_ms),
                 "provider": response.provider,
                 "model": response.model,
-                "metrics": {
-                    "input_length": response.input_len,
-                    "output_length": response.output_len,
-                },
                 "training": seller.coach_notes(),
             }
         )

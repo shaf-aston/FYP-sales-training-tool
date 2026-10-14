@@ -177,24 +177,6 @@ def chat(buyer):
         return jsonify({"error": SELL_ERROR}), 500
 
 
-@bp.route("/state", methods=["GET"])
-@with_session("buyer")
-def state(buyer):
-    """Get current sell session state"""
-    return jsonify(
-        {
-            "success": True,
-            "state": buyer.state.to_dict(),
-            "persona": buyer.persona,
-            "difficulty": buyer.state.difficulty,
-            "product_type": buyer.state.product_type,
-            "conversation_history": buyer.conversation_history,
-            "provider": buyer.provider_name,
-            "model": buyer.model_name,
-        }
-    )
-
-
 @bp.route("/evaluate", methods=["POST"])
 @require_rate_limit("sell")
 @with_session("buyer")

@@ -3,7 +3,7 @@
 export type Difficulty = "easy" | "medium" | "hard";
 export type CoachStyle = "tactical" | "socratic" | "teacher";
 export type QuizType = "stage" | "next_move" | "direction";
-export type Outcome = "active" | "sold" | "walked" | "incomplete";
+export type Outcome = "active" | "sold" | "walked";
 
 export interface BotState {
   stage: string; // UPPERCASE stage id
@@ -34,7 +34,6 @@ export interface ChatRes extends BotState {
   latency_ms: number | null;
   provider: string;
   model: string;
-  metrics?: { input_length: number; output_length: number };
   training: CoachNotes;
 }
 
@@ -81,13 +80,7 @@ export interface QuizResult {
 /** The AI buyer's state in sell mode. */
 export interface BuyerState {
   readiness: number; // 0..1
-  objections_raised: number;
   turn_count: number;
-  has_committed: boolean;
-  has_walked: boolean;
-  difficulty: Difficulty;
-  product_type: string;
-  persona_name: string;
 }
 
 export interface Persona {

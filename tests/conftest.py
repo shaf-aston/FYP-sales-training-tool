@@ -207,7 +207,7 @@ class FakeSeller:
             {"role": "user", "content": message},
             {"role": "assistant", "content": reply},
         ]
-        return ChatResponse(reply, 12.34, "probe", "probe-model", len(message), len(reply))
+        return ChatResponse(reply, 12.34, "probe", "probe-model")
 
     def edit_turn(self, message_index, new_text):
         self.edits.append(message_index)

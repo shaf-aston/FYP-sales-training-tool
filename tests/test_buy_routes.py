@@ -4,7 +4,7 @@ import pytest
 from backend.routes import monitoring as monitoring_routes
 
 
-def test_chat_route_returns_metrics_and_coach_notes(live_seller):
+def test_chat_route_returns_the_reply_stage_and_coach_notes(live_seller):
     client, _seller, headers = live_seller
 
     response = client.post("/api/buy/chat", json={"message": "Hi"}, headers=headers)
@@ -13,7 +13,6 @@ def test_chat_route_returns_metrics_and_coach_notes(live_seller):
     assert response.status_code == 200
     assert payload["success"] is True
     assert payload["message"] == "reply:Hi"
-    assert payload["metrics"] == {"input_length": 2, "output_length": len("reply:Hi")}
     assert payload["training"] == {"what_happened": "ok"}
     assert payload["stage"] == "INTENT"
 

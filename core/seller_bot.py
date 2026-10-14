@@ -24,8 +24,6 @@ class ChatResponse:
     latency_ms: Optional[float] = None  # ms; None if provider didn't report
     provider: Optional[str] = None
     model: Optional[str] = None
-    input_len: int = 0
-    output_len: int = 0
 
 
 class SellerBot:
@@ -103,8 +101,6 @@ class SellerBot:
             latency_ms=latency_ms,
             provider=self.provider_name,
             model=self.model_name,
-            input_len=len(user_message),
-            output_len=len(text),
         )
 
     def coach_notes(self) -> dict[str, Any]:
