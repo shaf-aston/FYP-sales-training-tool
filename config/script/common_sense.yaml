@@ -70,6 +70,10 @@ interruptions:
     examples:
       - "what do you mean"
       - "what do you mean by that"
+      - "not sure what you mean"
+      - "I don't understand the question"
+      - "I don't get what you're asking"
+      - "can you explain that"
       - "why do you keep asking the same thing"
       - "I already answered that"
       - "I just told you"

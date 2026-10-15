@@ -30,6 +30,9 @@ bad_phrase_starts: [own, to, not, "no", nothing, none, nope, nah, don't, dont, n
 verb_goal_starts: [be, quit, stop, make, get, have, start, build, grow, save, create, see, travel, leave, retire, buy, pay, spend, support, help, live, work, earn, provide, move, do, go]   # a phrase starting with a verb is a verb-goal: a line's {name|noun form|verb form} blank then uses its verb form ("to be your own boss")
 echo_drop_starts: ["i want", "i'd like", "i would like", "i just want", "i need", "i'm after", "honestly", "basically", "probably", "just", "mainly", "mostly", "well", "so", "um", "uh", "for", "really", "to", "want to", "wanna"]   # lead-ins dropped before their words go into a blank: "I want financial freedom" -> "financial freedom"
 prospect_pronouns: [i, "i'm", "i've", "i'd", me, my, mine, myself]   # the seller would be speaking as the prospect
+spell_cutoff: 0.85     # how close a typo must be to a known word to be fixed before it is said back
+spell_min_letters: 5   # shorter words are left alone: too easy to "fix" into the wrong word
+spell_words: [freedom, financial, family, retire, retirement, independence, business, boss, travel, wealth, security, money, income, kids, children, house, mortgage, debt, career, passive]   # extra words typos are fixed to, beside every word in the script's examples
 number_blanks:   # blanks filled with just the number they said before the unit: "about 5 years" -> {years} = 5
   years:
     units: [year, years, yr, yrs]
