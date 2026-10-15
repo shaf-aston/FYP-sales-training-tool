@@ -38,6 +38,16 @@ def echo_phrase(reply, cfg):
     return " ".join(words)
 
 
+def number_phrase(reply, rule):
+    """The number before the blank's unit, by rule: "about 5 years now" -> "5", "two years" -> "two".
+    None when no number sits right before the unit ("ages", "6 months" for a years blank)."""
+    lower = [w.lower() for w in WORD.findall(reply or "")]
+    for before, word in zip(lower, lower[1:]):
+        if word in rule["units"] and (before.isdigit() or before in rule["words"]):
+            return before
+    return None
+
+
 def is_verb_goal(phrase, cfg):
     """True when the phrase starts with a verb: "be your own boss", "quit your job"."""
     return tokenize(phrase)[:1] != [] and tokenize(phrase)[0] in cfg["verb_goal_starts"]
@@ -57,7 +67,13 @@ class Filler:
         forms = {m.group(1): m.group(2, 3) for m in NAME.finditer(line)}
         for blank in forms.keys() - values.keys():
             reply = slots.get(blank)
-            phrase = echo_phrase(reply, self.cfg) if reply and blank in self.echo else None
+            numbers = self.cfg["number_blanks"]
+            if not reply:
+                phrase = None
+            elif blank in numbers:
+                phrase = number_phrase(reply, numbers[blank])
+            else:
+                phrase = echo_phrase(reply, self.cfg) if blank in self.echo else None
             if phrase is None:
                 return None
             noun, verb = forms[blank]
