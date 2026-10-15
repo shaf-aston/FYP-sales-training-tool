@@ -599,3 +599,24 @@ def test_loader_rejects_echo_without_a_capture():
     with pytest.raises(ValueError, match="echo"):
         parse_method("x", {"first": "a", "price_step": "a", "steps": {
             "a": {"ui_stage": "intent", "say": "hi", "echo": True, "listen": {"any": {"then": "a"}}}}})
+
+
+@pytest.mark.parametrize("reply, number", [
+    ("about 5 years now", "5"),
+    ("two years", "two"),
+    ("6 months", None),      # wrong unit, the years line is dropped
+    ("ages", None),
+    ("", None),
+])
+def test_number_phrase(reply, number):
+    from core.script_engine.fill import number_phrase
+    assert number_phrase(reply, CFG["number_blanks"]["years"]) == number
+
+
+def test_years_line_fills_from_their_answer():
+    from core.script_engine.fill import Filler
+    line = "You already have for {years} years."
+    offer = type("Offer", (), {"months": 6, "price": "£1", "pillars": []})()
+    filler = Filler(CFG, offer, frozenset())
+    assert filler.fill(line, {"years": "probably 3 years"}) == "You already have for 3 years."
+    assert filler.fill(line, {"years": "a while"}) is None
