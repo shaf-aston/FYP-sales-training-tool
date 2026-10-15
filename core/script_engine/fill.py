@@ -2,6 +2,7 @@
 
 import logging
 import re
+from difflib import get_close_matches
 
 from core.utils import tokenize
 
@@ -16,7 +17,17 @@ def offer_blanks(offer):
     return blanks
 
 
-def echo_phrase(reply, cfg):
+def spell(word, vocab, cfg):
+    """A typo turned into the script word it is plainly meant to be ("financialy" -> "financial").
+    Known, short or unmatched words (names, places) stay as they are."""
+    lower = word.lower()
+    if lower in vocab or len(lower) < cfg["spell_min_letters"]:
+        return word
+    near = get_close_matches(lower, vocab, 1, cfg["spell_cutoff"])
+    return near[0] if near else word
+
+
+def echo_phrase(reply, cfg, vocab=frozenset()):
     """Their own words for a blank, by rule, no AI: lead-ins like "I want" dropped ("I want more time"
     -> "more time"), first person turned to second ("my kids" -> "your kids"). None when the words would
     not read right in the line: too long, no goal ("nothing"), or still speaking as the prospect."""
@@ -28,7 +39,7 @@ def echo_phrase(reply, cfg):
         cut = next((len(d) for d in drops if lower[:len(d)] == d), 0)
         words = words[cut:]
     swap = cfg["echo_pronoun_swap"]
-    words = [swap.get(w.lower(), w) for w in words]
+    words = [swap.get(w.lower(), spell(w, vocab, cfg)) for w in words]
     lower = [w.lower() for w in words]
     if (not words or len(words) > cfg["slot_words"] or lower[0] in cfg["bad_phrase_starts"]
             or set(lower) & set(cfg["prospect_pronouns"])):
@@ -57,8 +68,8 @@ class Filler:
     """Turns script lines into spoken text: offer blanks from the offer, the prospect's own words (echo blanks)
     by rule. No AI, so the same line with the same answers always reads the same."""
 
-    def __init__(self, cfg, offer, echo=frozenset()):
-        self.cfg, self.offer, self.echo = cfg, offer, echo
+    def __init__(self, cfg, offer, echo=frozenset(), vocab=frozenset()):
+        self.cfg, self.offer, self.echo, self.vocab = cfg, offer, echo, vocab
         self._said = {}
 
     def fill(self, line, slots):
@@ -73,7 +84,7 @@ class Filler:
             elif blank in numbers:
                 phrase = number_phrase(reply, numbers[blank])
             else:
-                phrase = echo_phrase(reply, self.cfg) if blank in self.echo else None
+                phrase = echo_phrase(reply, self.cfg, self.vocab) if blank in self.echo else None
             if phrase is None:
                 return None
             noun, verb = forms[blank]

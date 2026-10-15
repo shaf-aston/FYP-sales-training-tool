@@ -82,10 +82,12 @@ class ScriptSeller:
         self._listener, self._llm = Listener(cfg, embedder), llm
         self._ai_ok = True
         self._waiting = False  # last reply was a `wait` reply: they stepped away
-        self._filler = Filler(cfg, offer, frozenset(s.capture for s in method.steps.values() if s.echo))
         self._opening = start(method)
         self.state = self._opening.state
-        embedder.warm(self._script_examples())
+        examples = self._script_examples()
+        vocab = frozenset(w for e in examples for w in tokenize(e)) | frozenset(cfg["spell_words"])
+        self._filler = Filler(cfg, offer, frozenset(s.capture for s in method.steps.values() if s.echo), vocab)
+        embedder.warm(examples)
 
     def _script_examples(self):
         found = [e for i in self.sense.interruptions.values() for e in i.examples]

@@ -620,3 +620,14 @@ def test_years_line_fills_from_their_answer():
     filler = Filler(CFG, offer, frozenset())
     assert filler.fill(line, {"years": "probably 3 years"}) == "You already have for 3 years."
     assert filler.fill(line, {"years": "a while"}) is None
+
+
+@pytest.mark.parametrize("reply, phrase", [
+    ("financialy freedom", "financial freedom"),
+    ("I want finanical fredom", "financial freedom"),
+    ("time in Dubai", "time in Dubai"),   # a place name is not "fixed"
+    ("more time", "more time"),           # short words are left alone
+])
+def test_echo_phrase_fixes_typos(reply, phrase):
+    from core.script_engine.fill import echo_phrase
+    assert echo_phrase(reply, CFG, frozenset(CFG["spell_words"])) == phrase
