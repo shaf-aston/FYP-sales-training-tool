@@ -13,6 +13,15 @@ const STAGE_META: Record<string, Meta> = {
   default: { label: "Not started" },
 };
 
+/** The buy-mode call in order, with a one-word name each for the progress tracker. */
+export const STAGE_STEPS = [
+  { id: "intent", short: "Want" },
+  { id: "logical", short: "Problem" },
+  { id: "emotional", short: "Personal" },
+  { id: "pitch", short: "Solution" },
+  { id: "outcome", short: "Close" },
+] as const;
+
 /**
  * The two modes, named for what the learner does. Buy: you are the customer and the AI
  * seller sells to you. Sell: you are the salesperson and the AI buyer answers.
@@ -25,3 +34,6 @@ export const MODE_META = {
 const key = (value: string | null | undefined) => (value ?? "").trim().toLowerCase();
 
 export const stageMeta = (s: string) => STAGE_META[key(s)] ?? { label: s };
+
+/** Where `stage` sits in STAGE_STEPS; -1 before the call starts. */
+export const stageIndex = (s: string) => STAGE_STEPS.findIndex((step) => step.id === key(s));

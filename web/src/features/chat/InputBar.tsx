@@ -1,7 +1,7 @@
 "use client";
 
 import { useLayoutEffect, type KeyboardEvent } from "react";
-import { Button } from "@/components/ui";
+import { Button, Icon } from "@/components/ui";
 import { config } from "@/lib/config";
 import { useSession } from "@/features/session/SessionContext";
 import { VoiceBar } from "@/features/voice/VoiceBar";
@@ -36,8 +36,8 @@ export function InputBar() {
 
   return (
     <div className={s.bar}>
-      <VoiceBar />
-      <div className={s.row}>
+      <div className={s.box}>
+        <VoiceBar />
         <label htmlFor="message-input" className="sr-only">
           Your message
         </label>
@@ -54,8 +54,15 @@ export function InputBar() {
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={onKeyDown}
         />
-        <Button variant="primary" onClick={() => void submit()} disabled={typing || ended || noBuyer || !draft.trim()}>
-          Send
+        <Button
+          variant="primary"
+          className={s.send}
+          aria-label="Send"
+          title="Send (Enter)"
+          onClick={() => void submit()}
+          disabled={typing || ended || noBuyer || !draft.trim()}
+        >
+          <Icon name="send" />
         </Button>
       </div>
     </div>

@@ -8,3 +8,41 @@
   color: var(--text-primary);
   animation: fade-in var(--dur-base) var(--ease-out);
 }
+/* Five segments: done ones filled, the current one glowing, later ones faint. */
+.steps {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--space-1);
+  margin-top: var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+.steps li {
+  display: grid;
+  gap: var(--space-1);
+}
+.bar {
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--border);
+  transition: background var(--dur-base) var(--ease-out);
+}
+/* Only the current stage is named, so five short words never crowd the card. */
+.name {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+  visibility: hidden;
+}
+.done .bar {
+  background: var(--accent-line);
+}
+.now .bar {
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.now .name {
+  visibility: visible;
+  color: var(--text-primary);
+  font-weight: 600;
+}

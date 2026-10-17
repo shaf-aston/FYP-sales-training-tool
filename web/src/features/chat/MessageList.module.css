@@ -49,20 +49,40 @@
 }
 .row {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
+  align-items: flex-start;
+  gap: var(--space-2);
   max-width: 82%;
   animation: message-in var(--dur-base) var(--ease-out);
   transition: opacity var(--dur-base);
 }
 .user {
   align-self: flex-end;
-  align-items: flex-end;
 }
 .bot {
   align-self: flex-start;
-  align-items: flex-start;
 }
+/* Bubble with its icon actions beside it (not below), so hidden actions take no extra height. */
+.body {
+  min-width: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-1);
+}
+.user .body {
+  flex-direction: row-reverse;
+}
+.avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin-top: var(--space-1);
+  border-radius: var(--radius-pill);
+  background: var(--text-primary);
+  color: var(--bg-card);
+}
+
 .bubble {
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-lg);
@@ -71,14 +91,15 @@
   overflow-wrap: anywhere;
 }
 .user .bubble {
-  background: linear-gradient(180deg, var(--accent), var(--accent-strong));
-  color: var(--text-on-accent);
+  background: var(--bubble-user);
+  color: var(--bubble-user-text);
   border-bottom-right-radius: var(--space-1);
 }
 .bot .bubble {
-  background: var(--glass-bg-strong);
+  background: var(--bg-card);
   border: 1px solid var(--border-faint);
-  color: var(--text-body);
+  box-shadow: var(--shadow-sm);
+  color: var(--text-primary);
   border-bottom-left-radius: var(--space-1);
 }
 .plain {
@@ -99,16 +120,31 @@
   margin-top: var(--space-1);
   font-size: var(--text-xs);
 }
+/* Icon actions show on hover or keyboard focus; always on touch screens, which have no hover. */
 .actions {
+  flex: none;
   display: flex;
-  gap: var(--space-2);
+  gap: var(--space-1);
+  opacity: 0;
+  transition: opacity var(--dur-fast);
+}
+.row:hover .actions,
+.row:focus-within .actions {
+  opacity: 1;
+}
+@media (hover: none) {
+  .actions {
+    opacity: 1;
+  }
 }
 .unavailable {
   visibility: hidden;
 }
 .actions button {
+  width: var(--touch-target);
   min-height: var(--touch-target);
-  font-size: var(--text-xs);
+  padding: 0;
+  justify-content: center;
   color: var(--text-muted);
 }
 .typing {

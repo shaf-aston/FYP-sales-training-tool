@@ -1,8 +1,8 @@
 "use client";
 
-// Voice controls above the message box: hands-free toggle, dictate, stop, and a live status strip.
+// Voice controls inside the message box: hands-free toggle, dictate, stop, and a live status strip above it.
 
-import { Button, Notice, VoiceWave } from "@/components/ui";
+import { Button, Icon, Notice, VoiceWave } from "@/components/ui";
 import { useVoice } from "./VoiceContext";
 import s from "./VoiceBar.module.css";
 
@@ -33,26 +33,28 @@ export function VoiceBar() {
           pressed={v.handsFree}
           disabled={micOff}
           onClick={v.toggleHandsFree}
-          title={micOff ? UNSUPPORTED_HINT : "Speak, auto-send, and hear the reply"}
+          className={s.icon}
+          aria-label={v.handsFree ? "Turn hands-free off" : "Turn hands-free on"}
+          title={micOff ? UNSUPPORTED_HINT : "Hands-free: speak, auto-send, and hear the reply"}
         >
-          Hands-free: {v.handsFree ? "on" : "off"}
+          <Icon name="wave" />
         </Button>
         <Button
           variant="pill"
           pressed={v.dictating}
           disabled={micOff || busy}
           onClick={v.toggleDictation}
-          className={v.dictating ? s.recording : undefined}
-          title={micOff ? UNSUPPORTED_HINT : undefined}
+          className={`${s.icon} ${v.dictating ? s.recording : ""}`}
+          aria-label={v.dictating ? "Stop dictating" : "Dictate"}
+          title={micOff ? UNSUPPORTED_HINT : v.dictating ? "Stop dictating" : "Dictate"}
         >
-          {v.dictating ? "Stop" : "Dictate"}
+          <Icon name={v.dictating ? "stop" : "mic"} />
         </Button>
         {v.speaking && (
           <Button variant="danger" aria-label="Interrupt assistant" onClick={v.interrupt}>
             Stop
           </Button>
         )}
-        {micOff && <span className={s.hint}>{UNSUPPORTED_HINT}</span>}
       </div>
     </div>
   );
@@ -67,9 +69,10 @@ export function ListenButton({ text }: { text: string }) {
       variant="ghost"
       pressed={v.speaking}
       onClick={() => (v.speaking ? v.stop() : v.speak(text))}
-      aria-label={v.speaking ? "Stop listening" : "Listen to this message"}
+      aria-label={v.speaking ? "Stop reading aloud" : "Read this message aloud"}
+      title={v.speaking ? "Stop" : "Read aloud"}
     >
-      {v.speaking ? "Stop" : "Listen"}
+      <Icon name={v.speaking ? "stop" : "speaker"} size={16} />
     </Button>
   );
 }

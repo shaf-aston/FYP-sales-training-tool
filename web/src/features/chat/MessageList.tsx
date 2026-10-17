@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Button, Markdown, TextArea, TypingDots, useToast } from "@/components/ui";
+import { Button, Icon, Markdown, TextArea, TypingDots, useToast } from "@/components/ui";
 import { config } from "@/lib/config";
 import { useSession, type ChatMessage } from "@/features/session/SessionContext";
 import { ListenButton } from "@/features/voice/VoiceBar";
@@ -9,6 +9,16 @@ import { InlineEvaluation } from "@/features/sell/SellDialogs";
 import { useUi } from "@/state/UiContext";
 import s from "./MessageList.module.css";
 import { prefersReducedMotion } from "@/lib/motion";
+
+/** The AI's face beside its lines: the person it plays (a seller in buy mode, a buyer in sell mode). */
+function Avatar() {
+  const { mode } = useSession();
+  return (
+    <span className={s.avatar} aria-hidden="true">
+      <Icon name={mode === "buy" ? "speech" : "person"} size={16} />
+    </span>
+  );
+}
 
 function TypingBubble() {
   const [slow, setSlow] = useState(false);
@@ -18,9 +28,12 @@ function TypingBubble() {
   }, []);
   return (
     <div className={`${s.row} ${s.bot}`}>
-      <div className={`${s.bubble} ${s.typing}`}>
-        <TypingDots label="Assistant is typing" />
-        {slow && <span className={s.slow}>Still thinking…</span>}
+      <Avatar />
+      <div className={s.body}>
+        <div className={`${s.bubble} ${s.typing}`}>
+          <TypingDots label="Assistant is typing" />
+          {slow && <span className={s.slow}>Still thinking…</span>}
+        </div>
       </div>
     </div>
   );
@@ -87,6 +100,8 @@ function Item({ m, canEdit, editing, onEdit, onSave, onCancel }: ItemProps) {
   const user = m.role === "user";
   return (
     <div className={`${s.row} ${user ? s.user : s.bot} ${m.historical ? s.historical : ""}`}>
+      {!user && <Avatar />}
+      <div className={s.body}>
       <div className={s.bubble} data-bubble>
         {user ? (
           editing ? (
@@ -104,12 +119,19 @@ function Item({ m, canEdit, editing, onEdit, onSave, onCancel }: ItemProps) {
           {!user && <ListenButton text={m.content} />}
           {/* Buy mode only (no onEdit in sell). Always laid out, just hidden while a reply is coming, so the row never grows. */}
           {user && onEdit && (
-            <Button variant="ghost" onClick={onEdit} className={canEdit ? undefined : s.unavailable}>
-              Edit
+            <Button
+              variant="ghost"
+              onClick={onEdit}
+              className={canEdit ? undefined : s.unavailable}
+              aria-label="Edit this message and replay from here"
+              title="Edit"
+            >
+              <Icon name="pencil" size={16} />
             </Button>
           )}
         </div>
       )}
+      </div>
     </div>
   );
 }
@@ -167,8 +189,8 @@ export function MessageList() {
             </>
           ) : (
             <>
-              <h2>Tell the salesperson what you need.</h2>
-              <p>Example: &ldquo;I&rsquo;m looking for a CRM for my small team.&rdquo;</p>
+              <h2>You&rsquo;re the customer. The seller speaks first.</h2>
+              <p>Answer the way a real buyer would. Push back, ask questions, or go quiet, and watch how the seller handles it.</p>
             </>
           )}
         </div>

@@ -35,6 +35,10 @@
   --danger-text: #ff9a9a;
   --danger-deep: #7f2727;
 
+  /* Chat bubbles */
+  --bubble-user: linear-gradient(180deg, var(--accent), var(--accent-strong));
+  --bubble-user-text: var(--text-on-accent);
+
   /* Glass laid over the night-city film */
   --glass-bg: rgba(24, 20, 17, 0.62);
   --glass-bg-strong: rgba(31, 28, 24, 0.78);
@@ -88,6 +92,7 @@
   --radius-pill: 999px;
 
   /* Elevation */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
   --shadow-md: 0 12px 36px rgba(0, 0, 0, 0.24);
   --shadow-lg: 0 24px 80px rgba(0, 0, 0, 0.38);
   --shadow-accent: 0 10px 24px rgba(232, 180, 90, 0.22);
@@ -139,14 +144,14 @@
 @media (prefers-color-scheme: light) {
   :root {
     color-scheme: light;
-    --bg-page: #f6f0e6;
-    --bg-panel: #fffaf2;
+    --bg-page: #f6f3ee;
+    --bg-panel: #fbf9f6;
     --bg-card: #ffffff;
-    --bg-card-soft: #f3ebdd;
-    --bg-elevated: #ebe1ce;
-    --border: #d6c9b3;
-    --border-strong: #b9a98f;
-    --border-faint: rgba(120, 100, 70, 0.25);
+    --bg-card-soft: #f1ede6;
+    --bg-elevated: #e8e2d8;
+    --border: #e3ddd2;
+    --border-strong: #c9bfae;
+    --border-faint: rgba(120, 100, 70, 0.16);
     --text-primary: #1f1a14;
     --text-body: #3d352b;
     --text-muted: #5c5346;
@@ -167,10 +172,13 @@
     --danger-deep: #f3c9c9;
     --glass-bg: rgba(255, 250, 242, 0.72);
     --glass-bg-strong: rgba(255, 255, 255, 0.85);
+    --bubble-user: #1f1b16;
+    --bubble-user-text: #fbf9f6;
     --overlay-scrim: rgba(40, 30, 20, 0.5);
     --film-sky-top: #e9dfcf;
     --film-sky-bottom: #f6ead6;
-    --shadow-md: 0 12px 36px rgba(60, 40, 10, 0.12);
+    --shadow-sm: 0 1px 2px rgba(60, 40, 10, 0.06);
+    --shadow-md: 0 8px 28px rgba(60, 40, 10, 0.08);
     --shadow-lg: 0 24px 80px rgba(60, 40, 10, 0.18);
     --shadow-accent: 0 10px 24px rgba(154, 95, 10, 0.22);
   }
