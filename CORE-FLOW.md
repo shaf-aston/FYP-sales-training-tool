@@ -52,3 +52,20 @@ Environment: `core/env.py` is the only module that touches the environment (and 
 ## Words
 
 Every term, and the naming rules, live in [GLOSSARY.md](GLOSSARY.md).
+
+## Reading a conversation
+
+Every buy-mode turn writes one log line from `core/seller_bot.py`:
+
+`turn 3 | step 08 -> 08 | heard as sense:clarify | user: '...' | bot: '...'`
+
+`heard as` is the path the reply took in `ScriptSeller.reply` (`seller.last_turn`):
+`answer:<label>` / `answer:any` / `answer:unclear`, `sense:<name>`, `objection:<name>`, `fact:<name>`,
+`ready:prospect`, `question`, `nudge`, `says_nothing`, `hesitates`, `objection_answered:<name>`.
+The same fields go into the `conversation_turn` analytics event. To read a whole call:
+`python scripts/show_convo.py <log or jsonl file> [session_id]`.
+
+## Adding a product or script
+
+New offer → `config/offers/<name>.yaml`; new script → `config/methods/<name>.yaml`; then one line under
+`products:` in `config/script/engine.yaml` (`<product>: {offer: <name>, method: <name>}`). No code changes.

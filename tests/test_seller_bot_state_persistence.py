@@ -86,7 +86,7 @@ def test_turn_snapshot_keeps_the_script_state():
 def test_log_snapshot_logs_the_session_state(caplog):
     bot = _build_bot()
     bot.call.advance("pitch")
-    caplog.set_level(logging.INFO)
+    caplog.set_level(logging.DEBUG)
 
     assert bot.log_snapshot() is None
     assert any(

@@ -118,23 +118,36 @@ class ScriptSeller:
     # ---- one turn -------------------------------------------------------------------------
 
     def reply(self, text):
-        """Answer one prospect message. Returns (text, ui_stage)."""
+        """Answer one prospect message. Returns (text, ui_stage). `self.last_turn` then says what the
+        reply was heard as and where the script went, for the turn log."""
+        before = self.state.step
+        self._why = "answer"
+        said, ui_stage = self._reply(text)
+        self.last_turn = {"step_from": before, "step_to": self.state.step, "heard_as": self._why,
+                          "saved": {k: v for k, v in self.state.slots.items() if v}}
+        return said, ui_stage
+
+    def _reply(self, text):
         self._ai_ok = True
         waiting, self._waiting = self._waiting, False
         step = self.method.steps[self.state.step]
         opened = price_open(self.method, self.state.step)
         rest = self._unnudged(text)
         if rest is not None and not tokenize(rest):
+            self._why = "nudge"
             return self._carry_on(self.sense.nudge, step, rephrase=False)  # "ok, what's next?": no answer
         text = text if rest is None else rest  # "credit, what's next?", "yeah, so what's next": the rest answers
         empty = not waiting and not self.state.play and self._says_nothing(text)
         if empty:  # listened to as an answer only: never an interruption, objection or question
+            self._why = "says_nothing"
             move = self._listen(text, step, empty=True)
             self.state = move.state
             return self._render(move), move.ui_stage
         if not self._is_question(text):  # "do I need 5k a month to start?" is not their goal
             self.state = hear_ahead(self.method, self.state, text)  # kept whatever else the reply turns out to be
         kind, name = self._interrupt(text, step, opened, waiting)
+        if kind:
+            self._why = f"{kind}:{name}"
 
         if kind == "ready":
             return self._go(jump(self.method, self.state, self.method.ready.then))
@@ -151,17 +164,20 @@ class ScriptSeller:
             lead = self._filler.fill(answer, {})
             return self._then_ask(lead), step.ui_stage
         if self.state.play:
+            self._why = f"objection_answered:{self.state.play}"
             # they answered the objection play's question: normalise, then ask the step again
             objection = self.method.objections[self.state.play]
             self.state = replace(self.state, play="")
             return self._then_ask(objection.normalise), step.ui_stage
         asking = self._is_question(text)
         if asking and not self._answers(text, step):
+            self._why = "question"
             answer = self._answer_uncovered(text, opened) or self.cfg["uncovered_fallback"]
             return self._then_ask(answer), step.ui_stage
 
         move = self._listen(text, step)
         if self._hesitates(move):
+            self._why = "hesitates"
             return self._revisit(), step.ui_stage
         earlier = {k: v for k, v in self.state.slots.items() if k != step.capture}
         self.state = move.state
@@ -270,6 +286,8 @@ class ScriptSeller:
             if found.close:
                 pick = judge(text, {c: labels[c] for c in found.candidates}, self._ask, self.cfg)
                 label = None if pick == VAGUE else pick
+        if self._why == "answer":
+            self._why = f"answer:{label}" if label else ("answer:any" if not labels else "answer:unclear")
         return advance(self.method, self.state, label, text, empty)
 
     def _says_nothing(self, text):

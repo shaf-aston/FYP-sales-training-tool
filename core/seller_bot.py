@@ -61,7 +61,15 @@ class SellerBot:
         self._log_turn_event(None, greeting)
         self.log_snapshot()
 
-    def _log_turn_event(self, user_message: str | None, seller_reply: str) -> None:
+    def _log_turn_event(self, user_message: str | None, seller_reply: str, why: dict | None = None) -> None:
+        """One readable line per turn (what they said, what it was heard as, where the script went,
+        what the bot said), plus the same as a structured analytics event."""
+        why = why or {}
+        self.logger.info(
+            "turn %s | step %s -> %s | heard as %s | user: %r | bot: %r",
+            self.call.user_turn_count, why.get("step_from", "-"), why.get("step_to", "-"),
+            why.get("heard_as", "opening"), user_message, seller_reply,
+        )
         if not self.session_id:
             return
         SessionAnalytics.record(
@@ -72,6 +80,7 @@ class SellerBot:
             current_stage=self.call.current_stage,
             user_message=user_message,
             assistant_message=seller_reply,
+            **why,
         )
 
     def script_opening(self) -> str:
@@ -92,7 +101,7 @@ class SellerBot:
         latency_ms = (time.time() - start) * 1000
 
         self.call.add_turn(user_message, text)
-        self._log_turn_event(user_message, text)
+        self._log_turn_event(user_message, text, self.seller.last_turn)
         self.log_snapshot()
         self._turn_snapshots.append(self._capture_turn_snapshot())
 
@@ -190,7 +199,7 @@ class SellerBot:
             "turn_count": call.user_turn_count,
             "message_count": len(call.conversation_history),
         }
-        self.logger.info("session_snapshot %s", json.dumps(snapshot, default=str))
+        self.logger.debug("session_snapshot %s", json.dumps(snapshot, default=str))
 
     def record_session_end(self):
         """Record where this session actually got to, so finished sessions are counted."""
