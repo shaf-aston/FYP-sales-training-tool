@@ -23,8 +23,18 @@ def spell(word, vocab, cfg):
     lower = word.lower()
     if lower in vocab or len(lower) < cfg["spell_min_letters"]:
         return word
+    if any(lower.endswith(end) and lower[:-len(end)] in vocab for end in cfg["spell_word_endings"]):
+        return word  # "months", "works": a real word ending, not a typo
     near = get_close_matches(lower, vocab, 1, cfg["spell_cutoff"])
-    return near[0] if near else word
+    if not near or near[0][len(lower):] in cfg["spell_word_endings"] and near[0].startswith(lower):
+        return word  # "month" is not a typo of "months"
+    return near[0]
+
+
+def fix_typos(text, vocab, cfg):
+    """The reply with plain typos fixed before it is understood ("monthy income" -> "monthly income");
+    punctuation and every other word kept as typed."""
+    return WORD.sub(lambda m: spell(m.group(0), vocab, cfg), text or "")
 
 
 def echo_phrase(reply, cfg, vocab=frozenset()):
