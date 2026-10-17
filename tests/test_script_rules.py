@@ -757,3 +757,12 @@ def test_not_sure_what_you_mean_is_not_taken_as_the_gap_answer(seller):
     text, _ = at(seller, "08").reply("not sure what you mean")
     assert text.startswith(seller.sense.interruptions["clarify"].reply)
     assert seller.state.step == "08"
+
+
+def test_last_turn_says_what_the_reply_was_heard_as(seller):
+    at(seller, "08").reply("not sure what you mean")
+    assert seller.last_turn["heard_as"] == "sense:clarify"
+    assert seller.last_turn["step_from"] == seller.last_turn["step_to"] == "08"
+    at(seller, "08").reply("taking risks and making decisions")
+    assert seller.last_turn["heard_as"] == "answer:any"
+    assert seller.last_turn["step_from"] == "08" != seller.last_turn["step_to"]
