@@ -268,3 +268,20 @@ def test_floored_labels_clear_their_floor_only_when_meant(capsys):
             print(f"\n{label}: meant {len(hit)}/{len(rows['meant'])}  false {false}")
         assert not false
         assert len(hit) / len(rows["meant"]) >= MIN_OFF_TOPIC
+
+
+@pytest.mark.parametrize("reply, heard", [
+    ("money", "answer"),        # live: got "I haven't mentioned a price yet"
+    ("scared", "answer"),       # live: parked as a fear objection
+    ("risk I guess", "answer"),
+    ("I can't afford anything right now", "objection:money"),
+    ("I'm scared it won't work for me", "objection:fear"),
+    ("I just want to know the price", "objection:money"),
+])
+def test_before_the_price_short_answers_are_not_objections(reply, heard):
+    from core.script_engine import seller as S
+    gate = type("Down", (), {"llm": lambda self, router: None})()
+    s = S.build_seller(None, S.resolve_product(None), embedder=S.shared_embedder(), gate=gate)
+    s.opening()
+    s.reply(reply)
+    assert s.last_turn["heard_as"].startswith(heard)

@@ -265,7 +265,11 @@ class ScriptSeller:
             objections = ()  # "money's tight" answers "what holds you back"
         elif not opened and asking:
             objections = [(k, o) for k, o in objections if o.early]  # "is this a scam?" gets an honest early line
+        if not opened:
+            objections = [(k, o) for k, o in objections if k not in self.state.parked]  # parked once: never the same line twice
         labels.update({f"objection:{k}": o.examples for k, o in objections})
+        if not opened and not asking:  # "money", "scared", "risk" before the price are answers, not objections
+            floors.update({f"objection:{k}": self.cfg["early_objection_min_score"] for k, _ in objections})
         if ready_open(self.method, self.state.step):
             labels["ready:prospect"] = self.method.ready.examples
             floors["ready:prospect"] = self.method.ready.min_score
