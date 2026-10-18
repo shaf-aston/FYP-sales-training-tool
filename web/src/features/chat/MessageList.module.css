@@ -81,6 +81,8 @@
   border-radius: var(--radius-pill);
   background: var(--text-primary);
   color: var(--bg-card);
+  font-size: var(--text-xs);
+  font-weight: 700;
 }
 
 .bubble {

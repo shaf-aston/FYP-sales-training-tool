@@ -34,7 +34,8 @@ export function ToolsGrid() {
   const sell = mode === "sell";
   return (
     <div className={s.toolGrid}>
-      <Tool title="Configure knowledge base" copy="Your product details" href={sell ? `${config.routes.knowledge}?mode=sell` : config.routes.knowledge /* ?mode= read by KnowledgePage */} />
+      {/* Only the sell-mode AI buyer reads the knowledge base; buy mode's seller follows its script. */}
+      {sell && <Tool title="Configure knowledge base" copy="Your product details" href={`${config.routes.knowledge}?mode=sell`} />}
       {!sell && <Tool title="Coaching" copy="Ask the coach" pressed={sidePanel === "coach"} onClick={() => toggleSidePanel("coach")} />}
       <Tool
         title="Quiz"

@@ -3,11 +3,22 @@
 import { Card, Eyebrow } from "@/components/ui";
 import { STAGE_STEPS, stageIndex, stageMeta } from "@/lib/labels";
 import { useSession } from "@/features/session/SessionContext";
+import { useUi } from "@/state/UiContext";
 import s from "./StageCard.module.css";
 
-/** Buy mode: the stage the AI seller has reached, and where it sits in the whole call. */
+/** Buy mode: the stage the AI seller has reached, and where it sits in the whole call.
+ * Hidden while the quiz is open, so the quiz never shows its own answer. */
 export function StageCard() {
   const { stage } = useSession();
+  const { sidePanel } = useUi();
+  if (sidePanel === "quiz") {
+    return (
+      <Card tone="accent" className={s.card} aria-label="Stage of the sale">
+        <Eyebrow>Stage</Eyebrow>
+        <p className={s.hidden}>Hidden while you take the quiz.</p>
+      </Card>
+    );
+  }
   const label = stageMeta(stage).label;
   const at = stageIndex(stage);
 

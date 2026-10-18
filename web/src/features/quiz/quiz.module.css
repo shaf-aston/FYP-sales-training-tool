@@ -1,4 +1,5 @@
 .stack { display: grid; gap: var(--space-4); }
+.choices { display: grid; gap: var(--space-2); }
 .question { margin: 0; color: var(--text-primary); font-size: var(--text-md); line-height: 1.5; animation: fade-in var(--dur-base) var(--ease-out); }
 .result { animation: pop-in var(--dur-pop) var(--ease-pop); }
 .head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }

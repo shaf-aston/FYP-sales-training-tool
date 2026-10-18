@@ -19,16 +19,16 @@ const SECTIONS: { title: string; items: { term?: string; text: string; keys?: st
   {
     title: "Reading your progress",
     items: [
-      { term: "Buying readiness bar", text: "how ready the buyer is to buy. Good questions and listening push it up; pushy or vague lines push it down." },
+      { term: "Buying readiness bar", text: "sell mode: how ready the buyer is to buy. Good questions and listening push it up; pushy or vague lines push it down." },
       { term: "Score", text: "end a sell-mode conversation to get a mark out of 100%." },
     ],
   },
   {
     title: "Learning from a session",
     items: [
-      { term: "Walk it back", text: "replay each of your turns with the reasons behind its rating, and redo one." },
-      { term: "Drills", text: "fill in the missing move in lines from real sales scripts." },
-      { term: "Quiz", text: "buy mode: name the stage and the next move. Sell mode: rewrite one of your turns and see if it lands better." },
+      { term: "Walk it back", text: "sell mode, after the call: replay each of your turns with the reasons behind its rating, and redo one." },
+      { term: "Say it from memory", text: "fill in the missing move in lines from real sales scripts." },
+      { term: "Quiz", text: "buy mode: pick the stage and the next move. Sell mode: rewrite one of your turns and see if it lands better." },
     ],
   },
   {

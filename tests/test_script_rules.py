@@ -545,7 +545,7 @@ def test_scripted_coaching_note_comes_from_the_step_without_ai(fake_embedder):
 
     s = at(make_seller(fake_embedder, no_ai), "05")
     notes = s.coach_notes()
-    assert notes["what_happened"] == "Script step 05 Blocker."
+    assert notes["what_happened"] == "The seller is on step 05 Blocker."
     assert notes["next_move"].startswith("Listen for: externalising")
 
 
