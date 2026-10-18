@@ -2,14 +2,16 @@
 
 interface Meta {
   label: string;
+  /** How to recognise the stage from what the seller is saying (shown after a stage quiz pick). */
+  hint?: string;
 }
 
 const STAGE_META: Record<string, Meta> = {
-  intent: { label: "Finding out what they want" },
-  logical: { label: "Understanding the problem" },
-  emotional: { label: "Making it personal" },
-  pitch: { label: "Presenting the solution" },
-  outcome: { label: "Closing" },
+  intent: { label: "Finding out what they want", hint: "The seller asks what you want to achieve." },
+  logical: { label: "Understanding the problem", hint: "The seller asks for facts: how much, how long, what you have tried." },
+  emotional: { label: "Making it personal", hint: "The seller asks how it feels and what staying stuck would cost you." },
+  pitch: { label: "Presenting the solution", hint: "The seller explains the offer and how it fits what you said." },
+  outcome: { label: "Closing", hint: "The seller asks you to decide." },
   default: { label: "Not started" },
 };
 
@@ -33,7 +35,9 @@ export const MODE_META = {
 
 const key = (value: string | null | undefined) => (value ?? "").trim().toLowerCase();
 
-export const stageMeta = (s: string) => STAGE_META[key(s)] ?? { label: s };
+/** Meta for a stage given its id ("logical") or its plain name ("Understanding the problem"). */
+export const stageMeta = (s: string) =>
+  STAGE_META[key(s)] ?? Object.values(STAGE_META).find((m) => key(m.label) === key(s)) ?? { label: s };
 
 /** Where `stage` sits in STAGE_STEPS; -1 before the call starts. */
 export const stageIndex = (s: string) => STAGE_STEPS.findIndex((step) => step.id === key(s));

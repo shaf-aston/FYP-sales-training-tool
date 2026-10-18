@@ -31,7 +31,7 @@ function List({ title, items }: { title: string; items?: string[] }) {
   );
 }
 
-export function QuizResultCard({ result, kind }: { result: QuizResult; kind: QuizKind }) {
+export function QuizResultCard({ result, kind, picked }: { result: QuizResult; kind: QuizKind; /** stage id the learner tapped */ picked?: string }) {
   const percent = scorePercent(kind, result.score);
   const shown = useCountUp(percent);
   const band = scoreBand(kind, percent);
@@ -64,6 +64,12 @@ export function QuizResultCard({ result, kind }: { result: QuizResult; kind: Qui
       {result.coach_tip && (
         <Block title="Coach tip">
           <Markdown className={s.body} text={result.coach_tip} />
+        </Block>
+      )}
+      {kind === "stage" && exp && (
+        <Block title="How to tell">
+          {picked && !result.score && <p className={s.body}>You picked {stageMeta(picked).label}.</p>}
+          <p className={s.body}>{stageMeta(exp.stage).hint}</p>
         </Block>
       )}
       {/* A stage pick's feedback already names the right stage. */}

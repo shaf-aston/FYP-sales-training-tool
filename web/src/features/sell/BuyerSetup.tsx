@@ -147,7 +147,7 @@ export function BuyerSetup({ onStarted, onCancel }: Props) {
             ))}
           </Select>
           <Button onClick={roll} disabled={!personas.length} aria-label="Pick a random buyer" title="Pick a random buyer">
-            <Icon name="dice" />
+            <Icon name="dice" /> Random
           </Button>
         </div>
         {picked && (
