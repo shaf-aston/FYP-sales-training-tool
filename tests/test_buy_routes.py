@@ -89,6 +89,7 @@ def test_health_returns_the_active_provider_and_what_is_available(live_seller, m
     assert response.status_code == 200
     assert response.get_json() == {
         "success": True,
+        "version": monitoring_routes.VERSION,
         "active": {"provider": "probe", "model": "probe-model"},
         "available_providers": [{"name": "probe", "available": True, "model": "probe-model"}],
     }
@@ -165,3 +166,7 @@ def test_every_session_route_answers_a_dead_session_the_same_way(buy_app, method
 
     assert response.status_code == 400
     assert response.get_json()["code"] == "SESSION_EXPIRED"
+
+
+def test_health_says_which_commit_is_running(client):
+    assert client.get("/api/health").get_json()["version"]
