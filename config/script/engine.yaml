@@ -10,6 +10,7 @@ embed_cache_dir: .cache/fastembed   # model files; relative to the project root,
 embed_threads: 1       # CPU threads for the model; more threads use much more memory (free hosts have 512 MB)
 embed_batch_size: 16   # texts embedded at once; smaller keeps peak memory low
 threshold: 0.65        # lowest similarity that counts as a match
+early_objection_min_score: 0.85   # before the price, a stated objection must match this well: "money", "scared", "risk" (about 0.7-0.81) are answers; "I can't afford it" (0.9+) is an objection
 interrupt_threshold: 0.8   # on a step that takes any answer, an interruption must score this high
 near_miss: 0.1         # a top score this far under the threshold is a close call too
 margin: 0.03           # top two labels closer than this = close call

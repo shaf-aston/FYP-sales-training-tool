@@ -391,6 +391,8 @@ objections:
       - "that's more than I have"
       - "I don't have the money"
       - "I'm not sure I can cover the cost"
+      - "I just want to know the price"   # draft: a price request before the pitch gets the honest early line
+      - "just tell me what it costs"   # draft
     loop:
       - "How much do you have now?"
       - "What can we do together to come up with the funds?"
