@@ -1,6 +1,8 @@
 """Monitoring endpoints shared by both modes: health and feedback."""
 
 import json
+import os
+import subprocess
 from datetime import datetime
 
 from flask import Blueprint, current_app, jsonify, request
@@ -10,6 +12,18 @@ from core.providers import get_available_providers
 
 from ..messages import FEEDBACK_EMPTY, RATING_NOT_NUMBER, RATING_OUT_OF_RANGE
 from ..security import require_rate_limit
+
+
+def _version() -> str:
+    """The git commit this server runs, so a deploy can check it is live."""
+    try:
+        return subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True,
+                              timeout=5, cwd=os.path.dirname(__file__)).stdout.strip() or "unknown"
+    except (OSError, subprocess.SubprocessError):
+        return "unknown"
+
+
+VERSION = _version()
 
 bp = Blueprint("monitoring", __name__, url_prefix="/api")
 
@@ -32,6 +46,7 @@ def api_health():
     return jsonify(
         {
             "success": True,
+            "version": VERSION,
             "active": {"provider": active_provider, "model": active_model},
             "available_providers": provider_status,
         }
