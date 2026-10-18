@@ -66,7 +66,8 @@ export function QuizResultCard({ result, kind }: { result: QuizResult; kind: Qui
           <Markdown className={s.body} text={result.coach_tip} />
         </Block>
       )}
-      {exp && (
+      {/* A stage pick's feedback already names the right stage. */}
+      {exp && kind !== "stage" && (
         <Block title="Expected">
           <p className={s.body}>{stageMeta(exp.stage).label}</p>
         </Block>
