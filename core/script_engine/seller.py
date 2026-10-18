@@ -25,7 +25,7 @@ from core.script_engine.engine import (
     ready_open,
     start,
 )
-from core.script_engine.fill import Filler
+from core.script_engine.fill import Filler, fix_typos
 from core.script_engine.judge import VAGUE, judge
 from core.script_engine.method import ANY, load_common_sense, load_method, load_offer
 from core.script_engine.recognise import Listener
@@ -86,6 +86,7 @@ class ScriptSeller:
         self.state = self._opening.state
         examples = self._script_examples()
         vocab = frozenset(w for e in examples for w in tokenize(e)) | frozenset(cfg["spell_words"])
+        self._vocab = vocab
         self._filler = Filler(cfg, offer, frozenset(s.capture for s in method.steps.values() if s.echo), vocab)
         embedder.warm(examples)
 
@@ -122,7 +123,7 @@ class ScriptSeller:
         reply was heard as and where the script went, for the turn log."""
         before = self.state.step
         self._why = "answer"
-        said, ui_stage = self._reply(text)
+        said, ui_stage = self._reply(fix_typos(text, self._vocab, self.cfg))
         self.last_turn = {"step_from": before, "step_to": self.state.step, "heard_as": self._why,
                           "saved": {k: v for k, v in self.state.slots.items() if v}}
         return said, ui_stage

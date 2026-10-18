@@ -766,3 +766,10 @@ def test_last_turn_says_what_the_reply_was_heard_as(seller):
     at(seller, "08").reply("taking risks and making decisions")
     assert seller.last_turn["heard_as"] == "answer:any"
     assert seller.last_turn["step_from"] == "08" != seller.last_turn["step_to"]
+
+
+def test_a_typo_is_fixed_before_the_reply_is_understood(seller):
+    # live check: "financialy freedom" at 01 was heard as unclear and the question was asked again
+    at(seller, "01").reply("financialy freedom")
+    assert seller.last_turn["heard_as"] != "answer:unclear"
+    assert seller.state.slots["outcome"] == "financial freedom"

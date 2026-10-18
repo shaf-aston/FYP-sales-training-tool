@@ -32,6 +32,7 @@ echo_drop_starts: ["i want", "i'd like", "i would like", "i just want", "i need"
 prospect_pronouns: [i, "i'm", "i've", "i'd", me, my, mine, myself]   # the seller would be speaking as the prospect
 spell_cutoff: 0.85     # how close a typo must be to a known word to be fixed before it is said back
 spell_min_letters: 5   # shorter words are left alone: too easy to "fix" into the wrong word
+spell_word_endings: [s, es, ed, d, ing, er, ers, ly]   # a known word plus one of these is a real word, never "fixed"
 spell_words: [freedom, financial, family, retire, retirement, independence, business, boss, travel, wealth, security, money, income, kids, children, house, mortgage, debt, career, passive]   # extra words typos are fixed to, beside every word in the script's examples
 number_blanks:   # blanks filled with just the number they said before the unit: "about 5 years" -> {years} = 5
   years:

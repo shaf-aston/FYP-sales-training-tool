@@ -631,3 +631,15 @@ def test_years_line_fills_from_their_answer():
 def test_echo_phrase_fixes_typos(reply, phrase):
     from core.script_engine.fill import echo_phrase
     assert echo_phrase(reply, CFG, frozenset(CFG["spell_words"])) == phrase
+
+
+@pytest.mark.parametrize("text, fixed", [
+    ("financialy freedom", "financial freedom"),
+    ("5k a month", "5k a month"),          # base form of a known word, not a typo
+    ("whatever works for me", "whatever works for me"),   # known word plus an ending
+    ("time in Dubai!", "time in Dubai!"),
+])
+def test_fix_typos_keeps_real_words(text, fixed):
+    from core.script_engine.fill import fix_typos
+    vocab = frozenset(CFG["spell_words"]) | {"month", "months", "work"}
+    assert fix_typos(text, vocab, CFG) == fixed
