@@ -29,9 +29,11 @@ function DrillCard({ drill, onRated }: { drill: Drill; onRated: () => void }) {
     <Card>
       <div className={s.head}>
         <strong>{drill.label}</strong>
-        <span className={s.muted} aria-live="polite">
-          {revealed.size} of {total} revealed
-        </span>
+        {total > 1 && (
+          <span className={s.muted} aria-live="polite">
+            {revealed.size} of {total} gaps shown
+          </span>
+        )}
       </div>
       <p className={s.line}>
         {drill.segments.map((seg, i) => (
@@ -118,7 +120,7 @@ function DrillsBody() {
             <span>
               Line {at + 1} of {total}
             </span>
-            <span className={s.muted}>{rated} rated</span>
+            <span className={s.muted}>{rated} done</span>
           </div>
           <DrillCard key={`${drill.id}-${at}`} drill={drill} onRated={() => setRated((n) => n + 1)} />
           <div className={s.nav}>
@@ -128,7 +130,7 @@ function DrillsBody() {
             {last ? (
               <span className={s.muted}>That&apos;s every line. Come back tomorrow for the ones you missed.</span>
             ) : (
-              <Button variant="primary" onClick={() => setAt(at + 1)}>
+              <Button onClick={() => setAt(at + 1)}>
                 Next line
               </Button>
             )}

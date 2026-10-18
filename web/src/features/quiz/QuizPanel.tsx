@@ -34,6 +34,7 @@ export function QuizPanel() {
   const [checking, setChecking] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [result, setResult] = useState<QuizResult | null>(null);
+  const [picked, setPicked] = useState<string | undefined>();
 
   const load = useCallback(async () => {
     if (!sid) return;
@@ -62,6 +63,7 @@ export function QuizPanel() {
   // `picked`: a stage chosen from the buttons, sent as its id (the server accepts the id or the plain name).
   const submit = async (picked?: string) => {
     const text = (picked ?? answer).trim();
+    setPicked(picked);
     if (!text) {
       setEmpty(true);
       return;
@@ -136,7 +138,7 @@ export function QuizPanel() {
             )}
             {result && (
               <>
-                <QuizResultCard result={result} kind={isSell ? "sell" : type} />
+                <QuizResultCard result={result} kind={isSell ? "sell" : type} picked={picked} />
                 <Button variant="secondary" onClick={() => void load()}>
                   Next question
                 </Button>
