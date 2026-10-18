@@ -133,7 +133,14 @@ def test_a_number_given_early_is_kept_and_its_question_skipped(fake_embedder):
     assert s.state.step == "03" and text == say("03")
 
 
-@pytest.mark.parametrize("text", ["I make 2k a month", "I'm 25", "lost 2k on a course",
+@pytest.mark.parametrize("text", ["I want to quit my job, travel, and have 10k a month",
+                                  "I want to be having 8k a month"])
+def test_a_goal_sentence_with_have_keeps_the_number(text):
+    state = hear_ahead(CAT, ScriptState(step="01"), text)
+    assert state.slots.get("number", "").endswith("a month")
+
+
+@pytest.mark.parametrize("text", ["I make 2k a month", "I have 2k a month now", "I'm 25", "lost 2k on a course",
                                   "I want to quit and I make 2k a month",
                                   "I want to leave my job paying 2k a month",
                                   "I need more than the 2k a month I get now",
