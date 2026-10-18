@@ -35,7 +35,8 @@ export function QuizResultCard({ result, kind }: { result: QuizResult; kind: Qui
   const percent = scorePercent(kind, result.score);
   const shown = useCountUp(percent);
   const band = scoreBand(kind, percent);
-  const label = percent === null ? "Unavailable" : `${shown}%`;
+  // One stage pick is right or wrong, so it gets a word, not a percentage.
+  const label = percent === null ? "Unavailable" : kind === "stage" ? (result.score ? "Right" : "Not quite") : `${shown}%`;
   const exp = result.expected;
 
   return (
@@ -65,7 +66,8 @@ export function QuizResultCard({ result, kind }: { result: QuizResult; kind: Qui
           <Markdown className={s.body} text={result.coach_tip} />
         </Block>
       )}
-      {exp && (
+      {/* A stage pick's feedback already names the right stage. */}
+      {exp && kind !== "stage" && (
         <Block title="Expected">
           <p className={s.body}>{stageMeta(exp.stage).label}</p>
         </Block>

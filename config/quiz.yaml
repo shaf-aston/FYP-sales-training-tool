@@ -79,8 +79,8 @@ stage_names:
 # What the learner reads after a buy-mode quiz answer. {stage} and {concept} are filled in.
 feedback:
   stage:
-    right: "Right - {stage}."
-    wrong: "Not this time - it's {stage}."
+    right: "The seller is on {stage}."
+    wrong: "The seller is on {stage}."
   concepts_named: "Response referenced key stage concepts."
   concept_missing: "Include this missing concept: {concept}."
   coach_tip_concept: "Focus next on this concept: {concept}."

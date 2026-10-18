@@ -14,7 +14,7 @@ export function CoachPanel() {
   const next = cleanCoachText(coachNotes?.next_move);
 
   return (
-    <Panel title="Coach guidance" onClose={closeSidePanel}>
+    <Panel title="Coaching" onClose={closeSidePanel}>
       <div className={s.stack}>
         {!coachNotes ? (
           <Notice kind="empty">Send your first message and the coach will start guiding you here.</Notice>

@@ -2,11 +2,6 @@
   display: grid;
   gap: var(--space-4);
 }
-.list {
-  list-style: none;
-  display: grid;
-  gap: var(--space-3);
-}
 .head {
   display: flex;
   justify-content: space-between;
@@ -47,5 +42,18 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
+  gap: var(--space-3);
+}
+.progress {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: var(--space-3);
 }

@@ -68,10 +68,10 @@ def test_get_quiz_question_prefers_configured_list_and_falls_back_to_default(mon
 @pytest.mark.parametrize(
     "answer,expected",
     [
-        ("We are in the logical stage.", (True, 1, "Right - Understanding the problem.")),
-        ("It is logical, I think.", (True, 1, "Right - Understanding the problem.")),
-        ("It is not logical.", (False, 0, "Not this time - it's Understanding the problem.")),
-        ("Maybe emotional?", (False, 0, "Not this time - it's Understanding the problem.")),
+        ("We are in the logical stage.", (True, 1, "The seller is on Understanding the problem.")),
+        ("It is logical, I think.", (True, 1, "The seller is on Understanding the problem.")),
+        ("It is not logical.", (False, 0, "The seller is on Understanding the problem.")),
+        ("Maybe emotional?", (False, 0, "The seller is on Understanding the problem.")),
     ],
 )
 def test_stage_answer_is_right_only_when_it_names_the_stage_and_respects_negation(answer, expected):

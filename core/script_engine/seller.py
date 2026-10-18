@@ -246,7 +246,7 @@ class ScriptSeller:
         title = f"{step.id} {step.name}".strip() if step.name else step.id
         notes = self.cfg["coach_notes"]
         return {
-            "what_happened": notes["step"].format(title=title),
+            "what_happened": notes["step"].format(title=title, name=(step.name or step.id).lower()),
             "next_move": notes["listen"].format(note=step.note) if step.note else notes["default"],
         }
 

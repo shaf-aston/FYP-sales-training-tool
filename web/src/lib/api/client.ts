@@ -48,7 +48,7 @@ async function request<R>(path: string, opts: RequestOptions = {}): Promise<R> {
     });
   } catch {
     if (abort.signal.aborted) throw new ApiError("Response timed out. Give it another go.", 0, "TIMEOUT");
-    throw new ApiError("Connection dropped. Check your internet and try again.", 0, "NETWORK");
+    throw new ApiError("Connection dropped. Check your internet.", 0, "NETWORK");
   } finally {
     clearTimeout(timer);
   }

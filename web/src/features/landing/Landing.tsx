@@ -116,7 +116,7 @@ export function Landing() {
 
       <header className={s.nav}>
         <span className={`${s.brand} neon-text`}>Eloquence</span>
-        <nav className={s.links}>
+        <nav className={s.links} aria-label="Main">
           <a href="#how">How it works</a>
           <a href="#try">Try it</a>
           <Link href={routes.buy} className={buttonClass("primary")}>
@@ -218,7 +218,7 @@ export function Landing() {
 
       <footer className={s.footer}>
         <span className={`${s.brand} neon-text`}>Eloquence</span>
-        <nav className={s.links}>
+        <nav className={s.links} aria-label="Footer">
           <Link href={routes.buy}>Buy mode</Link>
           <Link href={routes.sell}>Sell mode</Link>
           <Link href={routes.knowledge}>Knowledge base</Link>

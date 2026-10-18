@@ -207,7 +207,8 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
           }
         }
         setMessages((m) => m.filter((x) => x.id !== optimisticId));
-        toast(errorText(err, "Message failed. Try again."), "error");
+        // The draft stays in the box, so say so: the learner should not wonder whether it went.
+        toast(`${errorText(err, "Message failed.")} Not sent: it's still in the box, press Send to retry.`, "error");
         return { ok: false, restore: message };
       } finally {
         busy.current = false;

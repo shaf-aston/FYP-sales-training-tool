@@ -289,10 +289,10 @@
   border: 1px solid currentColor;
 }
 .chip {
-  color: var(--neon-amber);
+  color: var(--chip-warm);
 }
 .chip:nth-child(even) {
-  color: var(--neon-cyan);
+  color: var(--chip-cool);
 }
 
 /* ---- Reveal on scroll ---- */

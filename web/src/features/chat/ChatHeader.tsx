@@ -6,7 +6,7 @@ import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 
 import { Button, buttonClass, Icon, useConfirm } from "@/components/ui";
 import { useSession } from "@/features/session/SessionContext";
 import { config } from "@/lib/config";
-import { MODE_META } from "@/lib/labels";
+import { MODE_META, STAGE_STEPS, stageIndex } from "@/lib/labels";
 import { useUi } from "@/state/UiContext";
 import s from "./ChatHeader.module.css";
 
@@ -18,7 +18,11 @@ const MODES = {
 
 export function ChatHeader() {
   const { openDialog, showPanels } = useUi();
-  const { mode, reset, sellSession } = useSession();
+  const { mode, reset, sellSession, stage } = useSession();
+  const at = stageIndex(stage);
+  // Phones and tablets: the sidebar sits below the chat, so its button carries the stage.
+  const staged = mode === "buy" && at >= 0;
+  const panelsLabel = staged ? `Stage ${at + 1}/${STAGE_STEPS.length}` : "Panels";
   const words = MODE_META[mode];
   const confirm = useConfirm();
   const router = useRouter();
@@ -101,8 +105,9 @@ export function ChatHeader() {
           className={s.panels}
           aria-controls={config.ids.panels}
           onClick={() => showPanels()}
+          aria-label={staged ? `Stage ${at + 1} of ${STAGE_STEPS.length}. Show stage and tools` : undefined}
         >
-          Panels
+          {panelsLabel}
         </Button>
         <div className={s.menu} ref={menuRef}>
           <button

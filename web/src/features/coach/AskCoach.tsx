@@ -59,7 +59,7 @@ export function AskCoach() {
         <TextInput
           label="Your question"
           hideLabel
-          placeholder="e.g. How do I handle the price objection?"
+          placeholder="Ask anything…"
           value={question}
           disabled={busy}
           onChange={(e) => setQuestion(e.target.value)}

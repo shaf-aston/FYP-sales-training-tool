@@ -46,3 +46,7 @@
   color: var(--text-primary);
   font-weight: 600;
 }
+.hidden {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}

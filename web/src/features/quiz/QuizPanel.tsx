@@ -6,6 +6,7 @@ import { api, errorText } from "@/lib/api/client";
 import type { QuizResult, QuizType } from "@/lib/api/types";
 import { config } from "@/lib/config";
 import { useSession } from "@/features/session/SessionContext";
+import { STAGE_STEPS, stageMeta } from "@/lib/labels";
 import { useUi } from "@/state/UiContext";
 import { QuizResultCard } from "./QuizResultCard";
 import s from "./quiz.module.css";
@@ -58,8 +59,9 @@ export function QuizPanel() {
     void load();
   }, [load]);
 
-  const submit = async () => {
-    const text = answer.trim();
+  // `picked`: a stage chosen from the buttons, sent as its id (the server accepts the id or the plain name).
+  const submit = async (picked?: string) => {
+    const text = (picked ?? answer).trim();
     if (!text) {
       setEmpty(true);
       return;
@@ -80,6 +82,7 @@ export function QuizPanel() {
     }
   };
 
+  const pickStage = !isSell && type === "stage"; // five fixed answers: tap one, nothing to type
   const needsTurn = isSell && !loading && !loadError && turn === undefined;
   const canAnswer = !loading && !loadError && !needsTurn && !!question;
 
@@ -98,6 +101,17 @@ export function QuizPanel() {
         {canAnswer && (
           <>
             <Markdown className={s.question} text={question} />
+            {pickStage ? (
+              !result && (
+                <div className={s.choices} role="group" aria-label="Pick the stage">
+                  {STAGE_STEPS.map((step) => (
+                    <Button key={step.id} variant="secondary" disabled={checking} onClick={() => void submit(step.id)}>
+                      {stageMeta(step.id).label}
+                    </Button>
+                  ))}
+                </div>
+              )
+            ) : (
             <TextArea
               label="Your answer"
               rows={4}
@@ -110,11 +124,12 @@ export function QuizPanel() {
                 if (empty) setEmpty(false);
               }}
             />
+            )}
             {empty && (
               <Notice kind="error">Please enter an answer.</Notice>
             )}
             {submitError && <Notice kind="error">{submitError}</Notice>}
-            {!result && (
+            {!result && !pickStage && (
               <Button variant="primary" busy={checking} busyLabel="Checking…" onClick={() => void submit()}>
                 Submit
               </Button>

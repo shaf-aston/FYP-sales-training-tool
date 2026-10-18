@@ -10,12 +10,11 @@ import { useUi } from "@/state/UiContext";
 import s from "./MessageList.module.css";
 import { prefersReducedMotion } from "@/lib/motion";
 
-/** The AI's face beside its lines: the person it plays (a seller in buy mode, a buyer in sell mode). */
+/** The AI's badge beside its lines, so it is never mistaken for the mode icons in the header. */
 function Avatar() {
-  const { mode } = useSession();
   return (
     <span className={s.avatar} aria-hidden="true">
-      <Icon name={mode === "buy" ? "speech" : "person"} size={16} />
+      AI
     </span>
   );
 }
