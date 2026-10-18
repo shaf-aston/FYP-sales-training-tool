@@ -35,7 +35,8 @@ export function QuizResultCard({ result, kind }: { result: QuizResult; kind: Qui
   const percent = scorePercent(kind, result.score);
   const shown = useCountUp(percent);
   const band = scoreBand(kind, percent);
-  const label = percent === null ? "Unavailable" : `${shown}%`;
+  // One stage pick is right or wrong, so it gets a word, not a percentage.
+  const label = percent === null ? "Unavailable" : kind === "stage" ? (result.score ? "Right" : "Not quite") : `${shown}%`;
   const exp = result.expected;
 
   return (

@@ -99,7 +99,7 @@ function DrillsBody() {
   const note = !load.shown.length
     ? "There are no lines to practise yet."
     : load.dueCount
-      ? `${load.dueCount} to practise.`
+      ? `${load.dueCount} lines to practise.`
       : "Nothing is due - here they all are anyway.";
 
   return (
