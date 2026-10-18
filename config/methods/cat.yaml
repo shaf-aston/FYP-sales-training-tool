@@ -168,7 +168,7 @@ steps:
   "12":
     name: "Commit"
     ui_stage: emotional
-    say: "What are you going to do differently from today to step into the shoes of a business owner who builds his own freedom?"
+    say: "What are you going to do differently from today to step into the shoes of a business owner who builds their own freedom?"
     capture: commitment
     listen:
       any: {then: "13"}

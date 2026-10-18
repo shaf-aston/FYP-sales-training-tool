@@ -1,0 +1,66 @@
+# Every push to master: test, update the Oracle VM, ask Vercel to redeploy,
+# then check both live sites really run this commit. Fails loudly if not.
+#
+# One-time setup (GitHub repo → Settings → Secrets and variables → Actions):
+#   secrets   VM_HOST, VM_USER, VM_SSH_KEY (private key), VERCEL_DEPLOY_HOOK
+#   variables VM_APP_DIR (repo folder on the VM), VM_RESTART (e.g. "sudo systemctl restart sales-bot"),
+#             SITE_URL (e.g. "https://your-app.vercel.app")
+name: deploy
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency: deploy
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip}
+      - run: pip install -r requirements.txt pytest
+      - run: python -m pytest -q
+
+  vm:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pull master and restart the API
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          script: |
+            set -e
+            cd "${{ vars.VM_APP_DIR }}"
+            git fetch origin master
+            git checkout master
+            git merge --ff-only origin/master
+            ${{ vars.VM_RESTART }}
+      - name: Check the API runs this commit
+        run: |
+          for i in $(seq 1 20); do
+            v=$(curl -fsS https://140-238-102-50.sslip.io/api/health | jq -r .version || true)
+            [ "$v" = "$GITHUB_SHA" ] && echo "API live on $v" && exit 0
+            sleep 6
+          done
+          echo "API still runs '$v', expected $GITHUB_SHA"; exit 1
+
+  web:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ask Vercel to redeploy
+        run: curl -fsS -X POST "${{ secrets.VERCEL_DEPLOY_HOOK }}"
+      - name: Check the site serves the current pages
+        run: |
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "${{ vars.SITE_URL }}/buy/")
+            [ "$code" = "200" ] && echo "site live" && exit 0
+            sleep 10
+          done
+          echo "/buy/ still returns $code"; exit 1
