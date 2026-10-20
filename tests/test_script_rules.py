@@ -103,6 +103,7 @@ def _line(step, reply):
     ("quit my job", "05", "haven't managed to quit your job?"),
     ("travel the world with my wife", "06", "to travel the world with your wife rather than just dream about it?"),
     ("financial freedom", "06", "to get financial freedom rather than just dream about it?"),
+    ("freedom I guess", "05", "don't have freedom yet?"),
 ])
 def test_script_lines_echo_the_goal_in_noun_or_verb_form(reply, step, expected):
     assert expected in _line(step, reply)
@@ -175,7 +176,7 @@ def at(seller, step, **slots):
 
 def test_price_early_gets_one_line_then_first_questions(seller):
     text, _ = at(seller, "03", outcome="I want financial freedom").reply("how much does it cost")
-    assert "first a couple of questions" in text
+    assert "exact price once I know what you need" in text
     assert "$5k" not in text
     assert text.endswith("How long have you been thinking about this?")
     assert seller.state.step == "03"
@@ -580,7 +581,7 @@ def test_ok_to_an_open_question_is_asked_again_then_the_call_moves_on(seller):
     # live: "ok" to "how long have you been thinking about this" was taken as the answer
     at(seller, "03", outcome="freedom")
     again, _ = seller.reply("ok")
-    assert seller.state.step == "03" and again == "How long have you been thinking about this?"
+    assert seller.state.step == "03" and again == "Roughly, is it more like months, or a few years?"
     seller.reply("sure")
     assert seller.state.step == "04" and "years" not in seller.state.slots
 

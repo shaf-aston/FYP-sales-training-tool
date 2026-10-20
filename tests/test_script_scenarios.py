@@ -195,10 +195,10 @@ def test_frustration_on_a_dig_step_asks_another_way(fake_embedder):
 
 def test_frustration_on_an_open_step_moves_on_without_saving_or_acking(fake_embedder):
     llm = Recorder("I hear that.")
-    s = seller(fake_embedder, llm, step="04")
+    s = seller(fake_embedder, llm, step="08")
     text, _ = s.reply("this is stupid")
-    assert text == f"{FRUSTRATED} {say('05')}"
-    assert "why" not in s.state.slots and not llm.prompts  # no AI call either
+    assert text == f"{FRUSTRATED} {say("09")}"
+    assert "gap" not in s.state.slots and not llm.prompts  # no AI call either
 
 
 def test_frustration_never_builds_on_an_answer_they_didnt_give(fake_embedder):
@@ -650,3 +650,13 @@ def test_fix_typos_keeps_real_words(text, fixed):
     from core.script_engine.fill import fix_typos
     vocab = frozenset(CFG["spell_words"]) | {"month", "months", "work"}
     assert fix_typos(text, vocab, CFG) == fixed
+
+
+def test_the_call_uncovers_the_limiting_belief_and_its_cost_before_the_consequence(fake_embedder):
+    s = seller(fake_embedder, step="09")
+    s.reply("I'm not smart enough for business")
+    assert s.state.step == "belief_origin" and "smart" in s.state.slots["belief"]
+    s.reply("my parents always said it")
+    assert s.state.step == "belief_cost"
+    s.reply("I'd stay stuck and miss my kids growing up")
+    assert s.state.step == "10" and "kids" in s.state.slots["belief_cost"]

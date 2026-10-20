@@ -80,6 +80,9 @@ steps:
     ui_stage: logical
     say: "How long have you been thinking about this?"
     capture: years
+    probe:   # draft: ours, so "I don't know" gets an easier question, not the same one
+      - "Roughly, is it more like months, or a few years?"
+    stuck: {then: "04"}
     listen:
       failed_before:   # a past failed attempt is acknowledged before the script goes on
         examples:
@@ -96,6 +99,9 @@ steps:
     ui_stage: emotional
     say: "If this has been on your mind for so many nights, months and years, why can't you just ignore it?"
     capture: why
+    probe:   # draft: ours, so "I don't know" gets an easier question, not the same one
+      - "What is it about where you are now that you don't want to keep living with?"
+    stuck: {then: "05"}
     listen:
       any: {then: "05"}
   "05":
@@ -117,6 +123,9 @@ steps:
     say: "What are you doing now {outcome|to get $ rather than just dream about it|to $ rather than just dream about it}?"
     say_plain: "What are you doing now to make that a reality and not just a dream?"
     capture: action
+    probe:   # draft: ours, so "I don't know" gets an easier question, not the same one
+      - "Is there anything you've tried so far, even small, like videos or courses?"
+    stuck: {then: "07"}
     listen:
       any: {then: "07"}
   "07":  # profile spotted silently, never said
@@ -135,10 +144,30 @@ steps:
       any:
         then: "09"
         ack: "What makes you successful as an employee doesn't make you successful in business."
-  "09":  # profile play (pattern break) is not wired in this slice
-    name: "Break pattern"
-    note: 'run their profile play'
+  "09":
+    name: "Limiting belief"
+    note: 'the story they tell themselves: "not smart enough", "too late", "market is saturated"'
     ui_stage: emotional
+    draft: true   # the play names the step; wording is not from the coach's source
+    say: "When you're honest with yourself, what do you believe about yourself that's held you back?"
+    capture: belief
+    listen:
+      any: {then: "belief_origin"}
+  "belief_origin":
+    name: "Where the belief came from"
+    note: 'they see it is learned, not fact'
+    ui_stage: emotional
+    draft: true
+    say: "Where do you think that belief comes from?"
+    listen:
+      any: {then: "belief_cost"}
+  "belief_cost":
+    name: "Cost of the belief"
+    note: 'personal consequence of keeping it'
+    ui_stage: emotional
+    draft: true
+    say: "If you keep believing that, what does it cost you over the next few years?"
+    capture: belief_cost
     listen:
       any: {then: "10"}
   "10":
