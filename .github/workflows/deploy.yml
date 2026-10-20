@@ -1,31 +1,25 @@
-# Every push to master: test, update the Oracle VM, ask Vercel to redeploy,
+# After CI passes on master: update the Oracle VM, ask Vercel to redeploy,
 # then check both live sites really run this commit. Fails loudly if not.
+# Skips itself until the setup below is done.
 #
-# One-time setup (GitHub repo → Settings → Secrets and variables → Actions):
+# One-time setup (GitHub repo → Settings → Secrets and variables → Actions). Full guide: docs/SETUP.md
 #   secrets   VM_HOST, VM_USER, VM_SSH_KEY (private key), VERCEL_DEPLOY_HOOK
 #   variables VM_APP_DIR (repo folder on the VM), VM_RESTART (e.g. "sudo systemctl restart sales-bot"),
 #             SITE_URL (e.g. "https://your-app.vercel.app")
 name: deploy
 
 on:
-  push:
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
     branches: [master]
   workflow_dispatch:
 
 concurrency: deploy
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: {python-version: "3.12", cache: pip}
-      - run: pip install -r requirements.txt pytest
-      - run: python -m pytest -q
-
   vm:
-    needs: test
+    if: vars.VM_APP_DIR != '' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
     steps:
       - name: Pull master and restart the API
@@ -42,16 +36,18 @@ jobs:
             git merge --ff-only origin/master
             ${{ vars.VM_RESTART }}
       - name: Check the API runs this commit
+        env:
+          SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
         run: |
           for i in $(seq 1 20); do
             v=$(curl -fsS https://140-238-102-50.sslip.io/api/health | jq -r .version || true)
-            [ "$v" = "$GITHUB_SHA" ] && echo "API live on $v" && exit 0
+            [ "$v" = "$SHA" ] && echo "API live on $v" && exit 0
             sleep 6
           done
-          echo "API still runs '$v', expected $GITHUB_SHA"; exit 1
+          echo "API still runs '$v', expected $SHA"; exit 1
 
   web:
-    needs: test
+    if: vars.SITE_URL != '' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
     steps:
       - name: Ask Vercel to redeploy
