@@ -1,0 +1,5 @@
+# This app is not hosted on Netlify (web: Vercel, API: the Oracle VM).
+# A Netlify site is still linked to the repo; this makes it skip every build
+# instead of failing checks on each PR. Unlink it in Netlify to remove it fully.
+[build]
+  ignore = "exit 0"
