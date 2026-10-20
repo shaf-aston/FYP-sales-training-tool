@@ -2,6 +2,14 @@
 // Plain TypeScript, no React. Browser APIs are touched only inside methods, never at import time.
 
 import { config } from "@/lib/config";
+
+/** Browser speech error codes in plain words. */
+const MIC_ERRORS: Record<string, string> = {
+  "not-allowed": "Microphone blocked. Allow it in your browser settings, or type instead.",
+  "service-not-allowed": "Microphone blocked. Allow it in your browser settings, or type instead.",
+  "audio-capture": "No microphone found. Plug one in, or type instead.",
+  network: "Voice needs an internet connection. Type instead for now.",
+};
 import { loadPuter } from "./puter";
 
 interface NativeResult {
@@ -170,7 +178,7 @@ export class SpeechRecognizer {
         this.ignoreOnEnd = true;
         this.isRecording = false;
       }
-      this.onError(event.error);
+      this.onError(MIC_ERRORS[event.error] ?? "The microphone stopped. Try again, or type instead.");
     };
     this.native = rec;
     return rec;
