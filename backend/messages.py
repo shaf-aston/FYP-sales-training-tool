@@ -15,6 +15,7 @@ SESSION_NOT_FOUND = "Session not found"
 MESSAGE_REQUIRED = "Message required"
 
 
+EDIT_NOT_ALLOWED = "Only your own messages in this chat can be edited."
 SELLER_INIT_FAILED = "Setup didn't complete - please try initializing again."
 
 # Sell mode (the AI buyer)
