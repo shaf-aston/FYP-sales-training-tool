@@ -9,7 +9,7 @@ interface Meta {
 const STAGE_META: Record<string, Meta> = {
   intent: { label: "Finding out what they want", hint: "The seller asks what you want to achieve." },
   logical: { label: "Understanding the problem", hint: "The seller asks for facts: how much, how long, what you have tried." },
-  emotional: { label: "Making it personal", hint: "The seller asks how it feels and what staying stuck would cost you." },
+  emotional: { label: "Making it personal", hint: "The seller looks for the belief holding you back, and what staying stuck would cost you." },
   pitch: { label: "Presenting the solution", hint: "The seller explains the offer and how it fits what you said." },
   outcome: { label: "Closing", hint: "The seller asks you to decide." },
   default: { label: "Not started" },
@@ -19,7 +19,7 @@ const STAGE_META: Record<string, Meta> = {
 export const STAGE_STEPS = [
   { id: "intent", short: "Want" },
   { id: "logical", short: "Problem" },
-  { id: "emotional", short: "Personal" },
+  { id: "emotional", short: "Belief" },
   { id: "pitch", short: "Solution" },
   { id: "outcome", short: "Close" },
 ] as const;

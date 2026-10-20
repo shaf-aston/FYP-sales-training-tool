@@ -38,7 +38,7 @@ function TypingBubble() {
   );
 }
 
-function Editor({ initial, onSave, onCancel }: { initial: string; onSave: (text: string) => Promise<void>; onCancel: () => void }) {
+function Editor({ initial, later, onSave, onCancel }: { initial: string; /** messages after this one, replaced on save */ later: number; onSave: (text: string) => Promise<void>; onCancel: () => void }) {
   const [text, setText] = useState(initial);
   const [busy, setBusy] = useState(false);
 
@@ -66,11 +66,16 @@ function Editor({ initial, onSave, onCancel }: { initial: string; onSave: (text:
           if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) void save();
         }}
       />
+      {later > 0 && (
+        <p className={s.editNote}>
+          Saving replays the chat from here. The {later} message{later === 1 ? "" : "s"} after this one will be replaced.
+        </p>
+      )}
       <div className={s.editActions}>
         <Button variant="primary" onClick={save} busy={busy} busyLabel="Saving…">
           Save
         </Button>
-        <Button variant="ghost" onClick={onCancel} disabled={busy}>
+        <Button variant="secondary" onClick={onCancel} disabled={busy}>
           Cancel
         </Button>
       </div>
@@ -82,13 +87,15 @@ interface ItemProps {
   m: ChatMessage;
   canEdit: boolean;
   editing: boolean;
+  /** Messages after this one. */
+  later: number;
   /** Absent in sell mode, where turns can't be edited. */
   onEdit?: () => void;
   onSave: (text: string) => Promise<void>;
   onCancel: () => void;
 }
 
-function Item({ m, canEdit, editing, onEdit, onSave, onCancel }: ItemProps) {
+function Item({ m, canEdit, editing, later, onEdit, onSave, onCancel }: ItemProps) {
   if (m.role === "divider") {
     return (
       <div className={s.divider} role="separator">
@@ -104,7 +111,7 @@ function Item({ m, canEdit, editing, onEdit, onSave, onCancel }: ItemProps) {
       <div className={s.bubble} data-bubble>
         {user ? (
           editing ? (
-            <Editor initial={m.content} onSave={onSave} onCancel={onCancel} />
+            <Editor initial={m.content} later={later} onSave={onSave} onCancel={onCancel} />
           ) : (
             <p className={s.plain}>{m.content}</p>
           )
@@ -195,10 +202,11 @@ export function MessageList() {
         </div>
       </div>
       <div className={s.list} role="log" aria-live="polite" aria-relevant="additions" aria-label="Conversation">
-        {messages.map((m) => (
+        {messages.map((m, i) => (
           <Item
             key={m.id}
             m={m}
+            later={messages.slice(i + 1).filter((n) => n.role !== "divider").length}
             canEdit={!typing}
             editing={editingId === m.id}
             onEdit={mode === "buy" ? () => startEdit(m.id) : undefined}

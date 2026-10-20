@@ -36,7 +36,7 @@ export function DraftProvider({ children }: { children: ReactNode }) {
     if (!text.trim()) return;
     update("");
     const res = await send(text);
-    if (!res.ok && res.restore && !draftRef.current) update(res.restore);
+    if (!res.ok && !draftRef.current) update(res.restore ?? text); // a send that never went out keeps the words
   }, [send, update]);
 
   const value = useMemo(() => ({ draft, setDraft: update, append, submit, inputRef }), [draft, update, append, submit]);
