@@ -15,7 +15,7 @@ from core.utils import new_session_id
 
 from ..messages import (
     COACH_FAILED,
-    EDIT_FAILED,
+    EDIT_NOT_ALLOWED, EDIT_FAILED,
     FIELD_REQUIRED,
     GENERIC_ERROR,
     INVALID_INDEX,
@@ -186,7 +186,8 @@ def edit(seller):
             }
         )
     except ValueError as e:
-        return jsonify({"error": str(e)}), 400
+        current_app.logger.info(f"Edit refused: {e}")
+        return jsonify({"error": EDIT_NOT_ALLOWED}), 400
     except Exception as e:
         current_app.logger.exception(f"Edit error: {e}")
         return jsonify({"error": EDIT_FAILED}), 500
