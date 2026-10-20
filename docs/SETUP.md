@@ -40,6 +40,7 @@ branch → PR (template: problem, fix, proof, risk) → **ci** green → merge t
 ### 3. Vercel
 Settings → Git → Production Branch = `master`.
 
-### 4. Netlify (only if not used)
-A Netlify site also reports checks on PRs and fails. Use it or disconnect it
-(Netlify → Site → Settings → Build & deploy → unlink repo), so PRs show only real checks.
+### 4. Netlify (not used)
+`netlify.toml` tells the linked Netlify site to skip every build, so it no longer fails PR checks.
+To remove it completely: Netlify → fyp-sales → Site configuration → Build & deploy → Unlink repository
+(or delete the site), then delete `netlify.toml`.
