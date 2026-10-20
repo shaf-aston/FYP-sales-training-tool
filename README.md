@@ -59,8 +59,10 @@ Changing the UI? Edit `web/`, then `cd web && npm run build` and commit `web/out
 ## 🧪 Tests
 
 ```bash
-pytest
+make check      # everything CI runs; `make help` lists all commands
 ```
+
+CI, deploy and one-time GitHub setup: [docs/SETUP.md](docs/SETUP.md).
 
 ## 🗂️ Layout
 
