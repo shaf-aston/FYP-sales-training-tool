@@ -110,5 +110,5 @@ export function createHttpApi() {
   };
 }
 
-export type Api = ReturnType<typeof createHttpApi>;
+type Api = ReturnType<typeof createHttpApi>;
 export const api: Api = createHttpApi();

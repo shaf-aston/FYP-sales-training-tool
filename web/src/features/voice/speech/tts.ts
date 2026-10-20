@@ -11,7 +11,7 @@ interface Handle {
   onerror: () => void;
 }
 
-export interface TtsOptions {
+interface TtsOptions {
   language: string;
   watchdogMs: number;
   puterLoadMs: number;

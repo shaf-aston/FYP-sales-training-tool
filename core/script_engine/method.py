@@ -79,7 +79,6 @@ class Method:
 
 @dataclass(frozen=True)
 class Fact:
-    topic: str
     examples: tuple
     answer: str
     late_answer: str    # used once the price step is reached; empty = same answer
@@ -243,7 +242,7 @@ def _ready(name, data, steps):
 def parse_offer(name, data):
     facts = {
         k: Fact(
-            k, tuple(v.get("examples") or ()), v["answer"],
+            tuple(v.get("examples") or ()), v["answer"],
             v.get("late_answer", ""),
         )
         for k, v in (data.get("facts") or {}).items()

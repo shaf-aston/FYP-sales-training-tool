@@ -1,6 +1,6 @@
 // Puter.js (free speech-to-text / text-to-speech fallback). Loaded once, on first use, never at page load.
 
-export interface PuterAi {
+interface PuterAi {
   speech2txt(opts: { file: Blob; model: string }): Promise<{ text?: string } | string>;
   txt2speech(text: string, opts: { language: string; engine: string }): Promise<HTMLAudioElement>;
 }

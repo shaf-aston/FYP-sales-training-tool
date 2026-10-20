@@ -36,7 +36,7 @@ export interface StopState {
   canceled: boolean;
 }
 
-export interface RecognizerOptions {
+interface RecognizerOptions {
   language: string;
   maxRecordingMs: number;
   /** How long to wait for Puter's script before giving up. */
