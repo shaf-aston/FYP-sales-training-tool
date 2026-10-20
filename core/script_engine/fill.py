@@ -38,8 +38,8 @@ def fix_typos(text, vocab, cfg):
 
 
 def echo_phrase(reply, cfg, vocab=frozenset()):
-    """Their own words for a blank, by rule, no AI: lead-ins like "I want" dropped ("I want more time"
-    -> "more time"), first person turned to second ("my kids" -> "your kids"). None when the words would
+    """Their own words for a blank, by rule, no AI: lead-ins like "I want" and hedges like "I guess" dropped
+    ("I want more time I guess" -> "more time"), first person turned to second ("my kids" -> "your kids"). None when the words would
     not read right in the line: too long, no goal ("nothing"), or still speaking as the prospect."""
     words = WORD.findall(reply or "")
     drops = [tokenize(d) for d in cfg["echo_drop_starts"]]
@@ -48,6 +48,9 @@ def echo_phrase(reply, cfg, vocab=frozenset()):
         lower = [w.lower() for w in words]
         cut = next((len(d) for d in drops if lower[:len(d)] == d), 0)
         words = words[cut:]
+    for end in (tokenize(e) for e in cfg["echo_drop_ends"]):
+        if [w.lower() for w in words[-len(end):]] == end:
+            words = words[:-len(end)]
     swap = cfg["echo_pronoun_swap"]
     words = [swap.get(w.lower(), spell(w, vocab, cfg)) for w in words]
     lower = [w.lower() for w in words]
