@@ -1,10 +1,10 @@
 // Spaced-repetition schedule for the drills. Pure functions: callers pass the intervals and the clock.
 
-export interface DrillEntry {
+interface DrillEntry {
   level: number;
   due: number;
 }
-export type DrillSchedule = Record<string, DrillEntry>;
+type DrillSchedule = Record<string, DrillEntry>;
 
 const DAY_MS = 86_400_000;
 

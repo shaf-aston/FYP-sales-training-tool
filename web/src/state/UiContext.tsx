@@ -6,8 +6,8 @@ import { createContext, useContext, useMemo, useState, type ReactNode } from "re
 import { config, storageKeys } from "@/lib/config";
 import { useStoredState } from "@/lib/useStoredState";
 
-export type SidePanel = "coach" | "quiz" | null;
-export type DialogName = "help" | "review" | "drills" | "evaluation" | "feedback" | null;
+type SidePanel = "coach" | "quiz" | null;
+type DialogName = "help" | "review" | "drills" | "evaluation" | "feedback" | null;
 /** "buyer" exists only in sell mode; the sidebar falls back to its first tab when the saved one is missing or old. */
 export type SidebarTab = "buyer" | "tools" | "settings";
 

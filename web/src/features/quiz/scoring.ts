@@ -1,7 +1,7 @@
 import { config } from "@/lib/config";
 import type { QuizType } from "@/lib/api/types";
 
-export type Band = "success" | "warning" | "danger";
+type Band = "success" | "warning" | "danger";
 export type QuizKind = QuizType | "sell";
 
 /** Percent for display, or null when the server gave no score. Stage quiz sends 0..1. */

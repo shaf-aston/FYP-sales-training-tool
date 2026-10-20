@@ -13,7 +13,7 @@ import { useStoredState } from "@/lib/useStoredState";
 import { useToast } from "@/components/ui";
 import { fromHistory, newId, nextIndex, parseSettings, type ChatMessage, type SellSettings } from "./history";
 
-export type { ChatMessage, SellSettings };
+export type { ChatMessage };
 
 /**
  * What the learner does. "buy": the learner is the customer and the AI seller sells to them.
