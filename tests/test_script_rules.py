@@ -698,6 +698,8 @@ def _acking(ack, calls=None):
     def llm(prompt, n):
         if calls is not None:
             calls.append(prompt)
+        if "<goal>" in prompt:  # the listen call: they answered, here is the ack
+            return f"ANSWERED: yes\nACK: {ack}\nPROBE: none"
         if "shows you heard them" in prompt:
             return ack
         return fake_llm(prompt, n)

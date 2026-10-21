@@ -24,7 +24,7 @@ ai_workers: 4          # AI calls in flight at once; an abandoned slow call keep
 objection_loops: 2     # loop twice, third time go direct
 slot_words: 6          # longest phrase echoed into a script blank
 stop_words: [a, an, the, i, i'm, i've, my, me, to, of, and, or, in, on, at, for, is, am, are, be, it, that, this, so, with, as, by, we, you, your]
-filler_words: [ok, okay, sure, yeah, yep, yes, hmm, mm, cool, alright, right, k]   # a reply made only of these (and stop_words) says nothing; never add "no", it answers yes/no steps
+filler_words: [ok, okay, sure, yeah, yep, yes, hmm, mm, cool, alright, right, k, kk, idk, dunno]   # a reply made only of these (and stop_words) says nothing; never add "no", it answers yes/no steps
 filler_tags: ["you get me", "you know", "you know what i mean", "innit", "right", "yeah", "ya know", "get me", "you feel me"]   # "...bro, you get me?" is talk, not a question
 question_starts: ["how much", "how long is", "how long does", "how many", "do you", "does it", "does the", "is it", "is there", "are there", "are you", "can i", "can you", "will i", "will it", "what does it", "what do you", "what is the", "what's the", "where are you", "when does", "who is", "do people", "does this", "has anyone", "will this"]   # phrases that open a question
 bad_phrase_starts: [own, to, not, "no", nothing, none, nope, nah, don't, dont, never, you, idk, dunno, "yes", yeah, ok, okay, finally, because, want, need, just, being, making, getting, working]   # a blank phrase starting like this is no goal and breaks the sentence; "nothing" is never said back
@@ -51,6 +51,10 @@ answer_tokens: 60      # max_tokens for an uncovered product answer
 uncovered_fallback: "I don't know that one offhand, I'll find out and let you know."   # draft wording
 answer_banned_words: [guarantee, guaranteed, guarantees, promise, promises, promised, overnight, days, weeks, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, twenty, thirty, fifty, hundred, hundreds, thousand, thousands, million, millions, percent, earn, earns, earned, earning, income, salary, profit, profits, revenue, free, trial, refund, refunds, discount, discounts, contract, contracts, cancel, cancellation, lifetime, module, modules, daily, weekly, monthly, www, com, http, https]   # a product answer never promises, sizes results, sets timeframes, makes up a policy or a feature, or sends links (words the offer facts use are allowed)
 ack: true             # before the next scripted line, one short AI sentence showing their answer was heard (none when it fails a check)
+listen: true          # on a step that captures an answer and takes any reply, the AI hears for the step's concept (its note): a miss gets one fresh probe for it, then the call moves on
+listen_tokens: 90     # max_tokens for the listen call (three short lines)
+probe_max_words: 18   # longest probe the AI may ask
+misses: 1             # times a step is asked again when the reply says nothing or misses its concept
 ack_max_words: 12
 ack_tokens: 30
 ack_retries: 0        # one try: a turn never waits on two ack calls
@@ -67,6 +71,14 @@ prompts:   # AI prompt templates: {name} is filled in by the seller; an empty {m
     <question>{question}</question>
     They answered: <reply>{reply}</reply>
     {memory}Write one short sentence (at most {max_words} words) that shows you heard them, using their own words and speaking to them as 'you'. No question, no advice, no praise. Answer with the sentence only.
+  listen: |-
+    You are the salesperson on a call. You are finding out: <goal>{concept}</goal>
+    You asked: <question>{question}</question>
+    They answered: <reply>{reply}</reply>
+    {memory}Reply with exactly three lines:
+    ANSWERED: yes if the reply gives you the goal, even partly or in their own words; no if it is empty, a shrug ("idk", "k"), off the point or dodges it.
+    ACK: when yes, one short sentence (at most {max_words} words) showing you heard them, using their own words, speaking to them as 'you', no question, no advice, no praise; else none.
+    PROBE: when no, one simpler, more concrete question (at most {probe_words} words) that asks for the goal another way, never the question's own wording; else none.
   ack_memory: |
     Earlier they told you:
     <earlier>
