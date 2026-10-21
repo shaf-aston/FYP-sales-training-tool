@@ -1,5 +1,6 @@
 """The one door to the AI: provider call, timeout, worker pool and failure breaker."""
 
+import contextvars
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -29,7 +30,8 @@ class AiGate:
             with self._lock:
                 if time.monotonic() < self._resting_until:
                     raise RuntimeError("AI resting after repeated failures")
-            future = self._pool.submit(call, prompt, max_tokens)
+            # copy_context: the call's timing stays nested under the turn that asked for it
+            future = self._pool.submit(contextvars.copy_context().run, call, prompt, max_tokens)
             try:
                 text = future.result(self._timeout)
             except Exception:

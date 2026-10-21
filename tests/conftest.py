@@ -43,15 +43,24 @@ def pytest_configure(config):
         config.option.randomly_reset_seed = False
 
 
+@pytest.fixture(autouse=True)
+def logs(tmp_path, monkeypatch):
+    """Every test writes its logs to its own folder: `logs("events")` reads one stream back."""
+    folder = tmp_path / "logs"
+    monkeypatch.setenv("LOGS_DIR", str(folder))
+
+    def read(stream):
+        return [json.loads(line) for f in sorted((folder / stream).glob("*.jsonl")) for line in f.read_text("utf-8").splitlines()]
+
+    return read
+
+
 @pytest.fixture
-def analytics_events(tmp_path, monkeypatch):
+def analytics_events(logs):
     """Read back the analytics events recorded during a test: `analytics_events(session_id, event=None)`."""
-    sink = tmp_path / "events.jsonl"
-    monkeypatch.setenv("METRICS_JSONL_PATH", str(sink))
 
     def read(session_id, event=None):
-        rows = [json.loads(line) for line in sink.read_text().splitlines()] if sink.exists() else []
-        return [r for r in rows if r["session_id"] == session_id and event in (None, r["event_type"])]
+        return [r for r in logs("events") if r["session_id"] == session_id and event in (None, r["event_type"])]
 
     return read
 

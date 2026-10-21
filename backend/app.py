@@ -14,6 +14,7 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 from backend.messages import INTERNAL_SERVER_ERROR  # noqa: E402
+from backend.request_log import RequestLog, configure_logging  # noqa: E402
 from backend.routes import buy, knowledge, monitoring, sell, speech  # noqa: E402
 from backend.routes._utils import Sessions  # noqa: E402
 from backend.security import (  # noqa: E402
@@ -33,6 +34,8 @@ from core.constants import (  # noqa: E402
 from core.env import env_flag, env_str  # noqa: E402
 from core.script_engine.seller import shared_embedder  # noqa: E402
 
+configure_logging()  # before Flask, so the app's logger shares the one handler
+
 app = Flask(
     __name__,
     static_folder=None,  # the web app is served by `web_app` below
@@ -45,6 +48,8 @@ CORS(app, origins=[o.strip() for o in allowed_origins.split(",") if o.strip()])
 
 
 initialize_security(app_logger=app.logger)
+
+app.wsgi_app = RequestLog(app.wsgi_app)  # times every /api request
 
 app.after_request(SecurityHeadersMiddleware.apply)
 

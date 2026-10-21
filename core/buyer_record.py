@@ -3,8 +3,8 @@
 import json
 import logging
 
-from .analytics.session_analytics import SessionAnalytics
 from .buyer_state import persona_name
+from .logs import SessionAnalytics
 
 logger = logging.getLogger(__name__)
 

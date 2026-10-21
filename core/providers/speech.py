@@ -5,11 +5,13 @@ import logging
 from groq import Groq
 
 from ..constants import SPEECH
+from ..logs import timed
 from .config import get_groq_api_keys
 
 logger = logging.getLogger(__name__)
 
 
+@timed
 def speak(text: str) -> bytes | None:
     """The text as audio, or None (no key, too long, engine failed) so the browser reads it instead."""
     keys = get_groq_api_keys()
