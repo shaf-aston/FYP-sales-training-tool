@@ -6,11 +6,20 @@ import logging
 from dataclasses import dataclass
 
 from ..constants import DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE
+from ..logs import span
 from ..providers import create_provider, list_providers
 from ..providers.base import LLMResponse
 from ..utils import extract_json_from_llm
 
 logger = logging.getLogger(__name__)
+
+
+def _ask(provider, name: str, messages: list, kwargs: dict) -> LLMResponse:
+    """One provider call, timed as an `llm` span with the provider, model and whether it answered."""
+    with span("llm", provider=name, model=provider.get_model_name(), max_tokens=kwargs.get("max_tokens")) as extra:
+        response = provider.chat(messages, **kwargs)
+        extra["answered"] = not response.error and bool((response.content or "").strip())
+        return response
 
 
 class ProviderUnavailable(RuntimeError):
@@ -67,7 +76,7 @@ class ProviderRouter:
         the FIRST failure is returned, so callers can explain what went wrong.
         """
         kwargs = {"temperature": temperature, "max_tokens": max_tokens}
-        first = self._result(self.provider.chat(messages, **kwargs))
+        first = self._result(_ask(self.provider, self.provider_name, messages, kwargs))
         if first.ok:
             return first
 
@@ -79,7 +88,7 @@ class ProviderRouter:
                 alt = create_provider(next_name)
                 if not alt.is_available():
                     continue
-                resp = alt.chat(messages, **kwargs)
+                resp = _ask(alt, next_name, messages, kwargs)
             except Exception as exc:
                 logger.error("fallback to %s failed: %s", next_name, exc)
                 continue

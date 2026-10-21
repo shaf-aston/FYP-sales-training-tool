@@ -1,13 +1,12 @@
 """Monitoring endpoints shared by both modes: health and feedback."""
 
-import json
 import os
 import subprocess
-from datetime import datetime
 
 from flask import Blueprint, current_app, jsonify, request
 
-from core.constants import MAX_FEEDBACK_COMMENT_CHARS
+from core.constants import MAX_FEEDBACK_COMMENT_CHARS, MAX_FEEDBACK_PAGE_CHARS
+from core.logs import save_feedback
 from core.providers import get_available_providers
 
 from ..messages import FEEDBACK_EMPTY, RATING_NOT_NUMBER, RATING_OUT_OF_RANGE
@@ -56,7 +55,7 @@ def api_health():
 @bp.route("/feedback", methods=["POST"])
 @require_rate_limit("feedback")
 def submit_feedback():
-    """Log user feedback for monitoring."""
+    """Check the learner's rating/comment, then keep it in the feedback stream."""
     data = request.json or {}
     rating = data.get("rating")
     comment = (data.get("comment") or "").strip()
@@ -76,13 +75,6 @@ def submit_feedback():
         current_app.logger.debug("feedback comment trimmed to %d chars", MAX_FEEDBACK_COMMENT_CHARS)
         comment = comment[:MAX_FEEDBACK_COMMENT_CHARS]
 
-    entry = {
-        "timestamp": datetime.now().isoformat(),
-        "rating": rating,
-        "comment": comment or None,
-        "page": data.get("page", "buy"),
-    }
-
-    current_app.logger.info("feedback_event %s", json.dumps(entry, ensure_ascii=False))
+    save_feedback(rating=rating, comment=comment or None, page=str(data.get("page", "buy"))[:MAX_FEEDBACK_PAGE_CHARS])
 
     return jsonify({"success": True})

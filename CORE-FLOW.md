@@ -27,7 +27,7 @@ Open the engine for the mode you are working on. Nothing else decides the turn.
 | 4 | Pure rules decide | `core/turn_rating.py` (rating), `core/buyer_rules.py` (sold / walked / coaching hint), `core/buyer_prompt.py` (buyer system prompt), `core/buyer_guardrails.py` (checks each reply) | Deterministic. No I/O, no HTTP, easy to test. |
 | 5 | Router picks a provider | `core/services/provider_router.py` `complete` | Tries providers in order, falls back on failure. |
 | 6 | Provider calls the LLM | `core/providers/factory.py` → `providers/llm/groq.py` behind `providers/base.py` | Swap seam: every provider has the same interface. |
-| 7 | Review and analytics | `core/session_review.py` (per-turn replay), `core/sell_evaluator.py` (final score + grade), `core/analytics/session_analytics.py` (events to the log, and a JSONL file if `METRICS_JSONL_PATH` is set) | Everything shown after the session is rebuilt from the saved transcript. |
+| 7 | Review and analytics | `core/session_review.py` (per-turn replay), `core/sell_evaluator.py` (final score + grade), `core/logs/events.py` (events to the log and `data/logs/events/`) | Everything shown after the session is rebuilt from the saved transcript. |
 
 Buy mode: `buy.py` → `SellerBot.chat` → `core/script_engine/` (scripted lines for the products in `config/script/engine.yaml`; any other product gets `default_product`. AI only answers uncovered product questions, acknowledges what they said and judges close calls, and every AI sentence goes through `ai_line.py` `checked_line`). `flow.py` `CallFlow` keeps the call's history and stage. Coach notes come from the script step; `coach.py` answers the learner's questions.
 
@@ -45,7 +45,7 @@ Every tunable number lives in `config/limits.yaml` (also the security headers an
 
 Each module reads its own file, named like it: `buyer_session.py` / `buyer_prompt.py` / `sell_evaluator.py` → `buyer.yaml` (personas, difficulty profiles, prompt, `evaluation:`), `buyer_products.yaml`, `buyer_guardrails.py` → `buyer_guardrails.yaml`, `turn_rating.py` → `turn_rating.yaml`, `script_engine/` → `script/engine.yaml`, `methods/`, `offers/`, `script/common_sense.yaml`, `coach.py` → `coach.yaml`, `quiz.py` → `quiz.yaml`, `drills.py` → `drills.yaml`, `knowledge.py` → `knowledge_fields.yaml`. All go through `core/loader.py` `load_yaml` (cached, returns a copy).
 
-Questions: `core/utils.py` `is_question` decides if a buy-mode reply asks something; sell-mode turn rules keep their own lists in `turn_rating.yaml`. Analytics: every event goes through `SessionAnalytics.record`, with `mode: buy | sell`.
+Questions: `core/utils.py` `is_question` decides if a buy-mode reply asks something; sell-mode turn rules keep their own lists in `turn_rating.yaml`. Analytics: every event goes through `SessionAnalytics.record`, with `mode: buy | sell`. Logs: see below.
 
 Environment: `core/env.py` is the only module that touches the environment (and loads `.env`); its defaults live in `config/limits.yaml`.
 
@@ -63,7 +63,22 @@ Every buy-mode turn writes one log line from `core/seller_bot.py`:
 `answer:<label>` / `answer:any` / `answer:unclear`, `sense:<name>`, `objection:<name>`, `fact:<name>`,
 `ready:prospect`, `question`, `nudge`, `says_nothing`, `hesitates`, `objection_answered:<name>`.
 The same fields go into the `conversation_turn` analytics event. To read a whole call:
-`python scripts/show_convo.py <log or jsonl file> [session_id]`.
+`python scripts/show_convo.py data/logs/events [session_id]`.
+
+## Logs and timings
+
+`core/logs/` is the one place the app writes down what it did. `store.py` is the only writer:
+`data/logs/<stream>/<UTC day>.jsonl` (folder: `LOGS_DIR`, default in `limits.yaml`), plus a log line.
+
+| Stream | Made by | Holds |
+|---|---|---|
+| `events/` | `events.py` `SessionAnalytics.record` | what happened in each chat |
+| `timings/` | `timing.py` `span` / `@timed` | how long each step took, nested: request > turn > script step > `llm` call |
+| `feedback/` | `feedback.py` `save_feedback` (from `/api/feedback`) | ratings and comments, with their session |
+
+`backend/request_log.py` switches logging on and wraps every `/api` request in the outer span (request id,
+session id, route, status; `Server-Timing` and `X-Request-ID` headers back to the browser). To time a new step,
+put `@timed` on it. Read the numbers: `python scripts/timings_report.py data/logs/timings [session_id]`.
 
 ## Adding a product or script
 

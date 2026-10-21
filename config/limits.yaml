@@ -12,6 +12,8 @@ defaults:            # used when the matching env var is unset (.env overrides)
   # uses max_tokens, so a short call (a 30-token ack) came back empty. Only listed models get the setting.
   groq_reasoning_effort: {"qwen/qwen3.8-27b": "none"}
   trust_proxy_headers: false                                                            # TRUST_PROXY_HEADERS: believe X-Forwarded-For (only behind a proxy you control)
+  logs_dir: "data/logs"                                                                # LOGS_DIR: events, timings and feedback land in <dir>/<stream>/<day>.jsonl
+  log_level: "INFO"                                                                     # how much reaches the server log (journalctl)
 
 server:
   port: 5000            # `python backend/app.py`; gunicorn takes its own
@@ -29,6 +31,7 @@ input:
   max_chosen_objection_chars: 200   # learner-typed objection to practise
   max_persona_name_chars: 40
   max_feedback_comment_chars: 500   # longer feedback comments are cut
+  max_feedback_page_chars: 50       # the page name sent with feedback
   max_turn_number: 1000             # largest turn number the sell routes accept
   session_id_min_chars: 8
   session_id_max_chars: 128

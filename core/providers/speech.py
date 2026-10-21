@@ -8,6 +8,7 @@ import wave
 from groq import Groq
 
 from ..constants import SPEECH
+from ..logs import timed
 from .config import get_groq_api_keys
 
 logger = logging.getLogger(__name__)
@@ -46,6 +47,7 @@ def join_wav(parts: list[bytes]) -> bytes:
     return buf.getvalue()
 
 
+@timed
 def speak(text: str) -> bytes | None:
     """The text as audio, or None (no key, empty, engine failed) so the browser reads it instead. Long text
     goes to the engine in sentence-sized pieces and comes back as one audio file."""

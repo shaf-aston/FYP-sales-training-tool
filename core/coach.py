@@ -4,6 +4,7 @@ import logging
 
 from .constants import COACH_HISTORY_TURNS, LLM
 from .loader import load_yaml
+from .logs import timed
 from .quiz import get_stage_rubric
 
 logger = logging.getLogger(__name__)
@@ -17,6 +18,7 @@ COACH_STYLES = load_coach_config()["styles"]
 DEFAULT_STYLE = load_coach_config()["default_style"]
 
 
+@timed
 def answer_question(router, call, question, style: str = DEFAULT_STYLE):
     """Answer the learner's question about the live call and sales technique."""
     cfg = load_coach_config()
