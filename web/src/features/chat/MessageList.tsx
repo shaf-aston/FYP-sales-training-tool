@@ -93,9 +93,11 @@ interface ItemProps {
   onEdit?: () => void;
   onSave: (text: string) => Promise<void>;
   onCancel: () => void;
+  /** this reply takes the typing bubble's place: only its words fade in, the bubble does not rise again */
+  swap?: boolean;
 }
 
-function Item({ m, canEdit, editing, later, onEdit, onSave, onCancel }: ItemProps) {
+function Item({ m, canEdit, editing, later, swap, onEdit, onSave, onCancel }: ItemProps) {
   if (m.role === "divider") {
     return (
       <div className={s.divider} role="separator">
@@ -105,7 +107,7 @@ function Item({ m, canEdit, editing, later, onEdit, onSave, onCancel }: ItemProp
   }
   const user = m.role === "user";
   return (
-    <div className={`${s.row} ${user ? s.user : s.bot} ${m.historical ? s.historical : ""}`}>
+    <div className={`${s.row} ${user ? s.user : s.bot} ${m.historical ? s.historical : ""} ${swap ? s.swap : ""}`}>
       {!user && <Avatar />}
       <div className={s.body}>
       <div className={s.bubble} data-bubble>
@@ -163,6 +165,13 @@ export function MessageList() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const frameRef = useRef<HTMLDivElement>(null);
   const started = messages.some((m) => m.role === "user");
+  // The reply that lands as typing stops replaces the typing bubble, so it must not animate in as a new row.
+  const [wasTyping, setWasTyping] = useState(typing);
+  const [swapId, setSwapId] = useState<string | null>(null);
+  if (typing !== wasTyping) {
+    setWasTyping(typing);
+    if (!typing) setSwapId(messages.at(-1)?.role === "assistant" ? messages.at(-1)!.id : null);
+  }
 
   // Pin to the newest line after the browser lays it out; smooth unless reduced motion.
   useEffect(() => {
@@ -208,6 +217,7 @@ export function MessageList() {
             m={m}
             later={messages.slice(i + 1).filter((n) => n.role !== "divider").length}
             canEdit={!typing}
+            swap={m.id === swapId}
             editing={editingId === m.id}
             onEdit={mode === "buy" ? () => startEdit(m.id) : undefined}
             onSave={save(m)}

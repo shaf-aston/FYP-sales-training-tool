@@ -780,3 +780,9 @@ def test_a_price_question_at_the_price_step_gets_the_price_once(seller):
     # live: "how much is it again?" got "...investment is $5k. 6-month process, investment is $5k..."
     text, _ = at(seller, "14").reply("how much is it again?")
     assert text.count("$5k") == 1
+
+
+def test_how_long_they_have_thought_about_it_is_said_back_in_months(seller):
+    # owner: "2 years" -> "24 months... Damn." on its own line, then the why question
+    text, _ = at(seller, "03").reply("2 years")
+    assert text.startswith("24 months... Damn.\n\n") and "why can't you just ignore it?" in text

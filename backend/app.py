@@ -14,7 +14,7 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 from backend.messages import INTERNAL_SERVER_ERROR  # noqa: E402
-from backend.routes import buy, knowledge, monitoring, sell  # noqa: E402
+from backend.routes import buy, knowledge, monitoring, sell, speech  # noqa: E402
 from backend.routes._utils import Sessions  # noqa: E402
 from backend.security import (  # noqa: E402
     SecurityHeadersMiddleware,
@@ -86,6 +86,7 @@ app.register_blueprint(buy.bp)  # /api/buy/*: learner is the customer
 app.register_blueprint(sell.bp)  # /api/sell/*: learner is the salesperson
 app.register_blueprint(knowledge.bp)  # /api/knowledge
 app.register_blueprint(monitoring.bp)  # /api/health, /api/feedback
+app.register_blueprint(speech.bp)  # /api/speech: replies read aloud
 
 
 WEB_BUILD_DIR = ROOT_DIR / "web" / "out"

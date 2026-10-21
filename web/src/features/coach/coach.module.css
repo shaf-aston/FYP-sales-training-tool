@@ -6,4 +6,4 @@
 .next { font-size: var(--text-md); font-weight: 600; color: var(--text-primary); margin: 0; line-height: 1.5; }
 .ask { display: grid; gap: var(--space-3); border-top: 1px solid var(--border-faint); padding-top: var(--space-4); }
 .row { display: grid; grid-template-columns: 1fr auto; gap: var(--space-2); align-items: end; }
-.answer { animation: pop-in var(--dur-pop) var(--ease-pop); color: var(--text-body); }
+.answer { animation: message-in var(--dur-base) var(--ease-out); color: var(--text-body); }

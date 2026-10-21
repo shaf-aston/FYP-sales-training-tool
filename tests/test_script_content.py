@@ -4,7 +4,7 @@ import re
 
 import pytest
 
-from core.loader import CONFIG_DIR
+from core.loader import CONFIG_DIR, load_yaml
 from core.script_engine.engine import advance, start
 from core.script_engine.fill import offer_blanks
 from core.script_engine.method import ANY, load_common_sense, load_method, load_offer
@@ -40,6 +40,8 @@ def test_method_is_connected(name):
 def test_blanks_are_known_and_captured_before_use(name):
     method = load_method(name)
     captured = {s.capture for s in method.steps.values() if s.capture}
+    numbers = load_yaml("script/engine.yaml")["number_blanks"]
+    captured |= {blank for blank, rule in numbers.items() if rule.get("from") in captured}  # "2 years" counted in months
     for step in method.steps.values():
         for line in _lines(step):
             unknown = set(BLANK.findall(line)) - captured - OFFER_BLANKS

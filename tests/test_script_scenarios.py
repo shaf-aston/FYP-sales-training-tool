@@ -302,17 +302,17 @@ def test_the_price_joins_the_fact_sheet_only_once_open(fake_embedder):
 
 def test_ack_may_link_to_an_earlier_answer(fake_embedder):
     llm = Recorder("Two years for more time with your kids.")
-    s = seller(fake_embedder, llm, step="03", slots={"outcome": "I want more time with my kids"})
-    text, _ = s.reply("two years")
+    s = seller(fake_embedder, llm, step="04", slots={"outcome": "I want more time with my kids"})
+    text, _ = s.reply("two years of the same job")
     assert "<earlier>" in llm.prompts[0] and "more time with my kids" in llm.prompts[0]
-    assert text == f"Two years for more time with your kids. {say('04')}"
+    assert text.startswith("Two years for more time with your kids. What's the reason")
 
 
 def test_ack_without_that_memory_cannot_use_those_words(fake_embedder):
     llm = Recorder("Two years for more time with your kids.")
-    s = seller(fake_embedder, llm, step="03")
-    text, _ = s.reply("two years")
-    assert text == say("04") and "<earlier>" not in llm.prompts[0]
+    s = seller(fake_embedder, llm, step="04")
+    text, _ = s.reply("two years of the same job")
+    assert text.startswith("What's the reason") and "<earlier>" not in llm.prompts[0]
 
 
 # ---- C10 the new moves cost no AI calls ------------------------------------------------------

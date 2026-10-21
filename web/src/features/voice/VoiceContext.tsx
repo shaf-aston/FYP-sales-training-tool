@@ -170,7 +170,6 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       tts.current ??= new Tts({
         language: config.voice.language,
         watchdogMs: config.voice.ttsWatchdogMs,
-        puterLoadMs: config.voice.puterLoadMs,
         onSpeaking: setSpeaking,
         onFinish: () => resumeAfterSpeech(),
         onError: (m) => live.current.toast(m, "error"),

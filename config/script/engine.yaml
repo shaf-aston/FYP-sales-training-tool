@@ -40,6 +40,10 @@ number_blanks:   # blanks filled with just the number they said before the unit:
   years:
     units: [year, years, yr, yrs]
     words: [one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, fifteen, twenty]
+  months_thinking:   # the same answer counted in months: "2 years" -> 24, "six months" -> 6
+    from: years
+    per: {year: 12, years: 12, yr: 12, yrs: 12, month: 1, months: 1}
+    words: {one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, eighteen: 18}
 echo_pronoun_swap: {my: your, me: you, mine: yours, myself: yourself, "i'm": "you're", "i've": "you've", "i'd": "you'd", i: you}   # their first person said back to them: "my kids" -> "your kids"
 judge_examples: 2     # examples per candidate shown to the judge
 judge_tokens: 10       # max_tokens for a close-call judge

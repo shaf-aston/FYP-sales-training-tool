@@ -64,11 +64,13 @@ def echo_phrase(reply, cfg, vocab=frozenset()):
 
 def number_phrase(reply, rule):
     """The number before the blank's unit, by rule: "about 5 years now" -> "5", "two years" -> "two".
-    None when no number sits right before the unit ("ages", "6 months" for a years blank)."""
+    None when no number sits right before the unit ("ages", "6 months" for a years blank).
+    With `per`, the number is converted: "2 years" -> "24" for a months blank."""
     lower = [w.lower() for w in WORD.findall(reply or "")]
+    per = rule.get("per")
     for before, word in zip(lower, lower[1:]):
-        if word in rule["units"] and (before.isdigit() or before in rule["words"]):
-            return before
+        if word in (per or rule["units"]) and (before.isdigit() or before in rule["words"]):
+            return str((int(before) if before.isdigit() else rule["words"][before]) * per[word]) if per else before
     return None
 
 
@@ -90,8 +92,8 @@ class Filler:
         values = offer_blanks(self.offer)
         forms = {m.group(1): m.group(2, 3) for m in NAME.finditer(line)}
         for blank in forms.keys() - values.keys():
-            reply = slots.get(blank)
             numbers = self.cfg["number_blanks"]
+            reply = slots.get(numbers.get(blank, {}).get("from", blank))
             if not reply:
                 phrase = None
             elif blank in numbers:

@@ -39,6 +39,7 @@ rate_limits:         # [max_requests, window_seconds] per client IP; bucket name
   sell: [30, 60]       # sell mode: every rate-limited sell route
   knowledge: [10, 60]  # both modes: custom product knowledge
   feedback: [5, 300]   # both modes: feedback form
+  speech: [40, 60]     # both modes: replies read aloud
 
 llm:                 # one profile per kind of call; pass as **LLM["name"]
   default:        {temperature: 0.4, max_tokens: 150}   # low = steady wording; replies run 12-80 tokens
@@ -82,3 +83,9 @@ security:
     frame-ancestors: ["'none'"]
     base-uri: ["'self'"]
     form-action: ["'self'"]
+
+speech:              # replies read aloud by the server, so the browser needs no sign-in. Change model/voice here.
+  model: canopylabs/orpheus-v1-english   # Groq text-to-speech; accept its terms once in the Groq console
+  voice: daniel
+  format: wav
+  max_chars: 200     # longer text is refused by the model; the browser voice reads it instead
