@@ -4,7 +4,6 @@ import logging
 import random
 import time
 
-from .analytics.session_analytics import SessionAnalytics
 from .buyer_guardrails import check_buyer_reply
 from .buyer_prompt import build_product_context, build_system_prompt
 from .buyer_record import BuyerRecord
@@ -12,6 +11,7 @@ from .buyer_rules import ObjectionPacer, coaching_hint, end_outcome
 from .buyer_state import BuyerResponse, BuyerState, persona_name, select_persona
 from .constants import LLM
 from .loader import load_buyer_config, load_real_objections
+from .logs import SessionAnalytics, tag_session, timed
 from .real_calls import pick_bank
 from .services.provider_router import ProviderRouter, ProviderUnavailable, complete
 from .session_review import build_review
@@ -38,6 +38,7 @@ class BuyerSession(BuyerRecord):
         # An id-less session logs nothing and shares its objection dice with every other
         # id-less session. One owner of the id, never blank.
         self.session_id = session_id or new_session_id()
+        tag_session(self.session_id)
         self._router = ProviderRouter(provider_type=provider_type)
 
         config = load_buyer_config()
@@ -101,6 +102,7 @@ class BuyerSession(BuyerRecord):
             coaching=coaching,
         )
 
+    @timed
     def get_opening_message(self) -> BuyerResponse:
         """The buyer's opening line, filled from opening_lines in config (no AI)."""
         persona = self.persona
@@ -118,6 +120,7 @@ class BuyerSession(BuyerRecord):
         self.log_snapshot()
         return self._response(content)
 
+    @timed
     def process_turn(self, user_message: str, show_hints: bool = False) -> BuyerResponse:
         """The salesperson's message in; the buyer's reply out. `show_hints` adds a coaching hint."""
         if self.state.ended:
@@ -211,6 +214,7 @@ class BuyerSession(BuyerRecord):
         self.log_snapshot()
         return True
 
+    @timed
     def redo(self, turn_index: int, user_message: str) -> BuyerResponse | None:
         """Rewind to turn `turn_index` and send `user_message` in its place.
 
@@ -262,6 +266,7 @@ class BuyerSession(BuyerRecord):
             behaviour_rules=self.behaviour_rules,
         )
 
+    @timed
     def review(self) -> dict:
         """The walkable review of this session, rebuilt from the transcript."""
         return build_review(self.conversation_history, self.difficulty_profile["behaviour"])
@@ -275,6 +280,7 @@ class BuyerSession(BuyerRecord):
         self.state.readiness = review["readiness_exact"]
         self.last_turn_signals = review["turns"][-1]["signals"]
 
+    @timed
     def get_evaluation(self) -> dict:
         """Score the salesperson's whole session (rules only)."""
         from .sell_evaluator import evaluate_sell_session

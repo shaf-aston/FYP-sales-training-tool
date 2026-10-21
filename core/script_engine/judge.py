@@ -4,10 +4,13 @@ import logging
 
 from core.utils import tokenize
 
+from ..logs import timed
+
 VAGUE = "vague"
 logger = logging.getLogger("script_engine.fallback")
 
 
+@timed
 def judge(reply, candidates, llm, cfg):
     """candidates: {label: [examples]}. Any AI failure counts as vague, never blocks."""
     options = "\n".join(f"- {label}: e.g. {' / '.join(ex[:cfg["judge_examples"]])}" for label, ex in candidates.items())

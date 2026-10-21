@@ -4,9 +4,12 @@ import logging
 
 from core.script_engine.checks import check, clip
 
+from ..logs import timed
+
 logger = logging.getLogger("script_engine.fallback")
 
 
+@timed
 def checked_line(llm, prompt, tokens, ctx, cfg, label, clean=str.strip, retries=None):
     """Return the first AI answer that breaks no rule, or None.
 

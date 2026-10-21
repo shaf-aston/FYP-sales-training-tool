@@ -8,9 +8,9 @@ from dataclasses import asdict, dataclass
 from typing import Any, Optional
 
 from . import coach, quiz
-from .analytics.session_analytics import SessionAnalytics
 from .enums import Stage
 from .flow import CallFlow
+from .logs import SessionAnalytics, tag_session, timed
 from .script_engine.engine import ScriptState
 from .script_engine.seller import build_seller, resolve_product
 from .services.provider_router import ProviderRouter
@@ -32,6 +32,7 @@ class SellerBot:
     def __init__(self, provider_type=None, product_type=None, session_id=None):
         self._router = ProviderRouter(provider_type=provider_type)
         self.session_id = session_id
+        tag_session(session_id)
         self.product_type = resolve_product(product_type)  # only scripted products can be sold
         self.logger = logging.LoggerAdapter(_base_logger, {"session_id": session_id or "-"})
         self.call = CallFlow()
@@ -93,6 +94,7 @@ class SellerBot:
         if self.call.current_stage != ui_stage:
             self.call.advance(target_stage=Stage(ui_stage))
 
+    @timed
     def chat(self, user_message: str) -> ChatResponse:
         """One turn: the seller picks the line, then history, analytics and the rewind snapshot."""
         start = time.time()
@@ -116,12 +118,15 @@ class SellerBot:
         """Coach notes for the current point of the call: the script step itself (no AI call)."""
         return self.seller.coach_notes()
 
+    @timed
     def answer_coach_question(self, question: str, style: str = coach.DEFAULT_STYLE) -> dict[str, Any]:
         return coach.answer_question(self._router, self.call, question, style)
 
+    @timed
     def score_stage_answer(self, answer: str) -> dict:
         return quiz.score_stage_answer(answer, self.call.current_stage)
 
+    @timed
     def score_next_move(self, response: str) -> dict:
         history = self.call.conversation_history
         last_user_msg = next(
@@ -132,6 +137,7 @@ class SellerBot:
             response, self._router, self.call.current_stage, last_user_msg
         )
 
+    @timed
     def score_direction(self, explanation: str) -> dict:
         return quiz.score_direction(explanation, self._router, self.call.current_stage)
 

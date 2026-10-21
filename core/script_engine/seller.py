@@ -31,6 +31,8 @@ from core.script_engine.method import ANY, load_common_sense, load_method, load_
 from core.script_engine.recognise import Listener
 from core.utils import is_question, tokenize
 
+from ..logs import timed
+
 ROOT = Path(__file__).resolve().parent.parent.parent
 uncovered_log = logging.getLogger("script_engine.uncovered")
 
@@ -106,6 +108,7 @@ class ScriptSeller:
         self._ai_ok = True
         return self._render(self._opening), self._opening.ui_stage
 
+    @timed
     def _ask(self, prompt, max_tokens):
         """The only door to the AI. After one failure it stays shut for the rest of the turn."""
         if not self._ai_ok:
@@ -118,6 +121,7 @@ class ScriptSeller:
 
     # ---- one turn -------------------------------------------------------------------------
 
+    @timed
     def reply(self, text):
         """Answer one prospect message. Returns (text, ui_stage). `self.last_turn` then says what the
         reply was heard as and where the script went, for the turn log."""
@@ -250,6 +254,7 @@ class ScriptSeller:
             "next_move": notes["listen"].format(note=step.note) if step.note else notes["default"],
         }
 
+    @timed
     def _interrupt(self, text, step, opened, waiting):
         """An everyday interruption, product question or objection - only when it clearly beats
         reading the reply as an answer to the step's own question, like a human closer would."""
@@ -282,6 +287,7 @@ class ScriptSeller:
         labels = _answer_labels(step)
         return bool(labels) and self._listener.match(text, labels).label is not None
 
+    @timed
     def _listen(self, text, step, empty=False):
         labels = _answer_labels(step)
         label = None
@@ -304,6 +310,7 @@ class ScriptSeller:
         """Their earlier answers, one per line and cut short, for an AI prompt."""
         return "\n".join(f"- {clip(v, self.cfg['memory_chars'])}" for v in slots.values() if v)
 
+    @timed
     def _acknowledge(self, reply, step, opened, earlier):
         """One short checked sentence showing their answer was heard, in their own words; it may link to
         something they said earlier. Nothing when it fails: honest silence beats a canned line."""
@@ -326,6 +333,7 @@ class ScriptSeller:
     def _is_question(self, text):
         return is_question(text, self.cfg["question_starts"], self.cfg["filler_tags"])
 
+    @timed
     def _answer_uncovered(self, question, opened):
         """A short answer to a product question nothing covers, from the offer's facts and what they told us.
         It may say anything the facts support, never a new number, promise or price: always checked and
