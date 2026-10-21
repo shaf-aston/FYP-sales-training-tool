@@ -17,7 +17,7 @@ export const config = {
   countUpMs: 800,
   voice: {
     silenceDelayMs: 500,
-    ttsWatchdogMs: 15_000,
+    ttsWatchdogMs: 30_000,
     puterLoadMs: 15_000,
     maxRecordingMs: 60_000,
     restartBackoffMs: { base: 200, max: 5_000, attempts: 5 },

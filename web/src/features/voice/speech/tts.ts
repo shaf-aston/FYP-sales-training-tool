@@ -1,8 +1,8 @@
-// Text-to-speech. Puter neural voice and the browser's own voice; which goes first depends on speed
-// (Puter has no speed control, so it only leads at normal speed). Plain TypeScript, no React.
+// Text-to-speech. The server's voice first (engine set in config/limits.yaml), the browser's own voice
+// when the server has none. Plain TypeScript, no React.
 
+import { api } from "@/lib/api/client";
 import { config } from "@/lib/config";
-import { loadPuter } from "./puter";
 
 interface Handle {
   pause(): void;
@@ -14,7 +14,6 @@ interface Handle {
 interface TtsOptions {
   language: string;
   watchdogMs: number;
-  puterLoadMs: number;
   /** Fires when audible playback starts (true) or ends (false). */
   onSpeaking: (on: boolean) => void;
   /** Fires when playback ended by itself (or the watchdog), so the mic can resume. Not fired by stop(). */
@@ -93,32 +92,25 @@ export class Tts {
   }
 
   private async createHandle(text: string, speed: number): Promise<Handle | null> {
-    if (speed === 0) {
-      const puter = await this.puterHandle(text);
-      if (puter) return puter;
-    }
-    const native = this.nativeHandle(text, speed);
-    if (native) return native;
-    return speed !== 0 ? this.puterHandle(text) : null;
+    return (await this.serverHandle(text, speed)) ?? this.nativeHandle(text, speed);
   }
 
-  private async puterHandle(text: string): Promise<Handle | null> {
-    try {
-      const ai = await loadPuter(this.opts.puterLoadMs);
-      const audio = await ai.txt2speech(text, { language: this.opts.language, engine: "neural" });
-      if (typeof audio?.play !== "function") return null;
-      const handle: Handle = {
-        pause: () => audio.pause(),
-        play: async () => audio.play(),
-        onended: () => {},
-        onerror: () => {},
-      };
-      audio.addEventListener("ended", () => handle.onended(), { once: true });
-      audio.addEventListener("error", () => handle.onerror(), { once: true });
-      return handle;
-    } catch {
-      return null;
-    }
+  private async serverHandle(text: string, speed: number): Promise<Handle | null> {
+    const blob = await api.speech(text);
+    if (!blob) return null;
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    audio.playbackRate = nativeRate(speed);
+    const handle: Handle = {
+      pause: () => audio.pause(),
+      play: async () => audio.play(),
+      onended: () => {},
+      onerror: () => {},
+    };
+    const done = (then: () => void) => () => { URL.revokeObjectURL(url); then(); };
+    audio.addEventListener("ended", done(() => handle.onended()), { once: true });
+    audio.addEventListener("error", done(() => handle.onerror()), { once: true });
+    return handle;
   }
 
   private nativeHandle(text: string, speed: number): Handle | null {

@@ -103,6 +103,11 @@ export function createHttpApi() {
     sellDrills: (sid: string | null) => request<{ success: true; drills: T.Drill[] }>("/api/sell/drills", { sessionId: sid }),
 
     // Shared
+    /** The text as audio, or null when the server has no voice for it (the browser reads it instead). */
+    speech: async (text: string): Promise<Blob | null> => {
+      const res = await fetch(config.apiBase + "/api/speech", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) }).catch(() => null);
+      return res?.status === 200 ? res.blob() : null;
+    },
     feedback: (body: T.FeedbackReq) => request<{ success: true }>("/api/feedback", { body }),
     knowledge: () => request<{ success: true; data: T.KnowledgeData }>("/api/knowledge"),
     saveKnowledge: (data: T.KnowledgeData) => request<{ success: true }>("/api/knowledge", { body: data }),
