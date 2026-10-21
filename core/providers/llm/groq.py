@@ -7,7 +7,7 @@ from typing import Any, cast
 
 from groq import APIConnectionError, AuthenticationError, Groq, RateLimitError
 
-from ...constants import DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE
+from ...constants import DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE, GROQ_REASONING_EFFORT
 from ..base import BaseLLMProvider, LLMResponse
 from ..config import get_groq_api_keys, get_groq_llm_model
 
@@ -37,6 +37,8 @@ class GroqProvider(BaseLLMProvider):
         if not self.clients:
             return LLMResponse(error="Groq API keys are not configured.")
 
+        # extra_body: works with any SDK version on the server, old ones lack the keyword
+        extra = {"extra_body": {"reasoning_effort": GROQ_REASONING_EFFORT[self.model]}} if self.model in GROQ_REASONING_EFFORT else {}
         last_error = "Groq request failed."
         for client in self.clients:
             try:
@@ -45,6 +47,7 @@ class GroqProvider(BaseLLMProvider):
                     messages=messages,
                     temperature=temperature,
                     max_tokens=max_tokens,
+                    **extra,
                 )
                 return LLMResponse(content=(response.choices[0].message.content or "").strip())
             except RateLimitError as exc:

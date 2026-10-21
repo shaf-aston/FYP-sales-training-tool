@@ -25,6 +25,7 @@ _check_positive(_L)
 DEFAULT_ALLOWED_ORIGINS = _L["defaults"]["allowed_origins"]
 DEFAULT_LLM_PROVIDER_ORDER = _L["defaults"]["llm_provider_order"]
 DEFAULT_GROQ_MODEL = _L["defaults"]["groq_model"]
+GROQ_REASONING_EFFORT = _L["defaults"]["groq_reasoning_effort"]
 DEFAULT_TRUST_PROXY_HEADERS = _L["defaults"]["trust_proxy_headers"]
 
 SERVER_PORT = _L["server"]["port"]

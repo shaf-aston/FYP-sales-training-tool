@@ -8,6 +8,9 @@ defaults:            # used when the matching env var is unset (.env overrides)
   # every reply). Check `client.models.list()` against the live key when replies go blank;
   # override with GROQ_LLM_MODEL.
   groq_model: "qwen/qwen3.8-27b"                                                        # GROQ_LLM_MODEL
+  # Models that think before answering by default, and the setting that stops it. Hidden thinking still
+  # uses max_tokens, so a short call (a 30-token ack) came back empty. Only listed models get the setting.
+  groq_reasoning_effort: {"qwen/qwen3.8-27b": "none"}
   trust_proxy_headers: false                                                            # TRUST_PROXY_HEADERS: believe X-Forwarded-For (only behind a proxy you control)
 
 server:

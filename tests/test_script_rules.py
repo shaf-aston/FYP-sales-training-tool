@@ -774,3 +774,9 @@ def test_a_typo_is_fixed_before_the_reply_is_understood(seller):
     at(seller, "01").reply("financialy freedom")
     assert seller.last_turn["heard_as"] != "answer:unclear"
     assert seller.state.slots["outcome"] == "financial freedom"
+
+
+def test_a_price_question_at_the_price_step_gets_the_price_once(seller):
+    # live: "how much is it again?" got "...investment is $5k. 6-month process, investment is $5k..."
+    text, _ = at(seller, "14").reply("how much is it again?")
+    assert text.count("$5k") == 1
