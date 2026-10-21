@@ -78,8 +78,9 @@ def _take(method, state, route):
 
 
 def ask_again(method, state):
-    """The current step in other words (they asked what it meant)."""
-    return _ask_again(method, state, method.steps[state.step])
+    """The current step in other words (they asked what it meant). No `reask` lead: the caller's own lead
+    (the sense's reply) goes in front."""
+    return _ask_again(method, state, method.steps[state.step], lead=False)
 
 
 def _limit(step, misses):
@@ -92,11 +93,12 @@ def asks_left(method, state, misses):
     return state.asks < _limit(method.steps[state.step], misses)
 
 
-def _ask_again(method, state, step, ack="", line="", misses=0):
+def _ask_again(method, state, step, ack="", line="", misses=0, lead=True):
     """A person rephrases rather than repeating themselves, and moves on rather than asking forever.
     `line`: the words to ask in (the AI's, or a clarifying question), dropped if already said on this step;
     else the step's next probe; once those run out, its last question again behind a `reask` lead, so no
-    line is said twice. Asked `_limit` times, then `stuck`."""
+    line is said twice. Asked `_limit` times, then `stuck`. A step that asks nothing (a closing line, a
+    statement) is said again plain: "no rush" in front of it answers a question nobody asked."""
     if step.stuck and state.asks >= _limit(step, misses):
         return _take(method, state, step.stuck)
     if line.strip().lower() in {s.strip().lower() for s in state.said}:
@@ -108,7 +110,7 @@ def _ask_again(method, state, step, ack="", line="", misses=0):
         said = step.probes[used]
     else:
         said = step.probes[-1] if step.probes else _question(step.say)
-        if method.reask and not ack:
+        if lead and method.reask and not ack and (step.probes or "?" in step.say):
             ack = method.reask[(used - len(step.probes)) % len(method.reask)]
     state = replace(state, asks=state.asks + 1, asked=line, said=state.said + (line,) if line else state.said)
     return Move(said, state, step.ui_stage, ack=ack)

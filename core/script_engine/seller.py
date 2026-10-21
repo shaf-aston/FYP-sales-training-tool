@@ -106,6 +106,8 @@ class ScriptSeller:
 
     def restore(self, saved=None):
         """Back to a `snapshot()`; None goes back to the opening."""
+        if saved:  # JSON gives lists back: tuples, so `said + (line,)` still adds up
+            saved = {**saved, "said": tuple(saved.get("said", ())), "parked": tuple(saved.get("parked", ()))}
         self.reset(ScriptState(**saved) if saved else None)
 
     def opening(self):
@@ -263,7 +265,8 @@ class ScriptSeller:
     def _question(self):
         """The step's question as it was just asked, blanks filled."""
         asked, plain = asked_line(self.method, self.state)
-        return self._filler.fill(asked, self.state.slots) or plain or asked
+        return (self._filler.fill(asked, self.state.slots) or plain
+                or self.method.steps[self.state.step].say_plain or asked)
 
     @timed
     def _answer_uncovered(self, question, opened):
