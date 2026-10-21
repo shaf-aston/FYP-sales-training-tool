@@ -174,7 +174,7 @@ def test_the_step_itself_still_captures_normally():
 
 def test_side_question_re_asks_the_probe_it_was_on(fake_embedder):
     s = seller(fake_embedder)
-    s.reply("3k")                                    # unrecognised: probe 1
+    s.reply("not sure really")                       # vague, nothing to ask about: probe 1
     text, _ = s.reply("is this a bot?")
     assert text.endswith(CAT.steps["01"].probes[0])
     assert CAT.steps["01"].say not in text

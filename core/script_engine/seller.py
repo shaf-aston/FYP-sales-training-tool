@@ -85,16 +85,18 @@ class ScriptSeller:
         self._listener, self._llm = Listener(cfg, embedder), llm
         self._ai_ok = True
         self._waiting = False  # last reply was a `wait` reply: they stepped away
+        self._heard_ahead = False  # this turn's reply answered a later step
         self._opening = start(method)
         self.state = self._opening.state
         examples = self._script_examples()
         vocab = frozenset(w for e in examples for w in tokenize(e)) | frozenset(cfg["spell_words"])
         self._vocab = vocab
-        self._filler = Filler(cfg, offer, frozenset(s.capture for s in method.steps.values() if s.echo), vocab)
+        echo = frozenset(s.capture for s in method.steps.values() if s.echo) | {"said"}  # {said}: sense.ask_meaning
+        self._filler = Filler(cfg, offer, echo, vocab)
         embedder.warm(examples)
 
     def _script_examples(self):
-        found = [e for i in self.sense.interruptions.values() for e in i.examples]
+        found = [e for i in self.sense.interruptions.values() for e in i.examples] + list(self.sense.unclear)
         found += [e for f in self.offer.facts.values() for e in f.examples]
         found += [e for o in self.method.objections.values() for e in o.examples]
         found += [e for s in self.method.steps.values() for r in s.listen for e in r.examples]
@@ -143,14 +145,16 @@ class ScriptSeller:
             self._why = "nudge"
             return self._carry_on(self.sense.nudge, step, rephrase=False)  # "ok, what's next?": no answer
         text = text if rest is None else rest  # "credit, what's next?", "yeah, so what's next": the rest answers
-        empty = not waiting and not self.state.play and self._says_nothing(text)
+        empty = not waiting and not self.state.play and self._says_nothing(text, step)
         if empty:  # listened to as an answer only: never an interruption, objection or question
             self._why = "says_nothing"
             move, _ = self._listen(text, step, opened, empty=True)
             self.state = move.state
             return self._render(move), move.ui_stage
+        self._heard_ahead = False
         if not self._is_question(text):  # "do I need 5k a month to start?" is not their goal
-            self.state = hear_ahead(self.method, self.state, text)  # kept whatever else the reply turns out to be
+            ahead = hear_ahead(self.method, self.state, text)  # kept whatever else the reply turns out to be
+            self._heard_ahead, self.state = ahead is not self.state, ahead
         kind, name = self._interrupt(text, step, opened, waiting)
         if kind:
             self._why = f"{kind}:{name}"
@@ -312,6 +316,8 @@ class ScriptSeller:
                 empty, line, ack = empty or not heard.answered, heard.probe, heard.ack
                 if not heard.answered:
                     self._why = "misses"
+        if step.capture and not line and (empty or self._on_topic(text)):
+            line = self._ask_meaning(text)  # said only if asked again; never about off-topic words ("hey")
         if self._why == "answer":
             self._why = f"answer:{label}" if label else ("answer:any" if not labels else "answer:unclear")
         return advance(self.method, self.state, label, text, empty, line, self.cfg["misses"]), ack
@@ -339,12 +345,45 @@ class ScriptSeller:
             known_figures=frozenset(figures(reply + " " + told)), banned_phrases=tuple(c["banned_phrases"]),
             banned=frozenset(c["answer_banned_words"]) - ack_ctx.prospect_words,  # a probe promises nothing
         )
-        return hear(self._ask, prompt, c["listen_tokens"], ack_ctx, probe_ctx, question, c)
+        return hear(self._ask, prompt, c["listen_tokens"], ack_ctx, probe_ctx, (question, *self.state.said), c)
 
-    def _says_nothing(self, text):
-        """"ok", "sure", "yeah": no answer to an open question, and no interruption either."""
+    def _says_nothing(self, text, step):
+        """"ok", "idk", "dunno man", "stuff I guess": no answer to an open question, and no interruption
+        either. Beyond the filler words, by meaning, only on a step whose catch-all route would keep it as the
+        answer: a step with no catch-all hears these with its own labels, and a question is never a shrug."""
         words = set(tokenize(text))
-        return bool(words) and words <= set(self.cfg["stop_words"]) | set(self.cfg["filler_words"])
+        if not words:
+            return False
+        if words <= set(self.cfg["stop_words"]) | set(self.cfg["filler_words"]):
+            return True
+        takes_any = any(r.label == ANY for r in step.listen)
+        if not step.capture or not takes_any or self._is_question(text):
+            return False
+        if words <= set(self.cfg["stop_words"]) | set(self.cfg["filler_words"]) | set(self.cfg["vague_words"]):
+            return True  # "dunno man": only shrug words, nothing the catch-all should keep
+        if not self.sense.unclear:
+            return False
+        found = self._listener.match(text, {"unclear": list(self.sense.unclear)})
+        return found.score >= self.sense.unclear_min_score
+
+    def _on_topic(self, text):
+        """The reply uses a content word of the question just asked ("I want to make money online" to "...making
+        money online?"): it is about the question, so asking what they mean makes sense. "hey" is not."""
+        asked, _ = asked_line(self.method, self.state)
+        question = self._filler.fill(asked, self.state.slots) or asked
+        plain = set(self.cfg["stop_words"]) | set(self.cfg["filler_words"]) | set(self.cfg["vague_words"])
+        return bool((set(tokenize(text)) - plain) & set(tokenize(question)))
+
+    def _ask_meaning(self, text):
+        """"What do you mean by stuff?": their own words asked about, when they said something but not the
+        answer. "" for a shrug ("dunno man"), a reply that answered a later step ("5k a month" is clear, just
+        early), words that can't be said back, or a line already asked on this step."""
+        c = self.cfg
+        shrug = set(c["stop_words"]) | set(c["filler_words"]) | set(c["vague_words"])
+        if not self.sense.ask_meaning or self._heard_ahead or set(tokenize(text)) <= shrug:
+            return ""
+        line = self._filler.fill(self.sense.ask_meaning, {"said": text})
+        return "" if line is None or line in self.state.said else line
 
     def _told(self, slots):
         """Their earlier answers, one per line and cut short, for an AI prompt."""

@@ -53,13 +53,13 @@ def test_walk_to_the_end(name, fake_embedder):
     method = load_method(name)
     move = start(method)
     for _ in range(len(method.steps)):
-        if move.done:
+        if not method.steps[move.state.step].listen:  # the end: nothing left to listen for
             break
         step = method.steps[move.state.step]
         takes_any = any(r.label == ANY for r in step.listen)  # a plain answer; labelled routes may turn back
         label = None if takes_any else next((r.label for r in step.listen if r.examples), None)
         move = advance(method, move.state, label, "an answer")
-    assert move.done
+    assert not method.steps[move.state.step].listen
 
 
 def test_cat_has_all_numbered_steps():

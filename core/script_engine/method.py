@@ -31,7 +31,7 @@ class Step:
     say: str            # empty = silent step, never spoken
     say_plain: str
     capture: str        # slot name that stores the prospect's reply
-    probes: tuple       # asked in turn when no route moves on, before `stuck`; empty = `say` once
+    probes: tuple       # asked in turn when no route moves on, before `stuck`; then a `reask` lead + the last
     listen: tuple       # of Route
     run_on: bool = False  # said, then straight on to the next step without waiting for a reply
     name: str = ""      # the step's name in the source script, shown to the learner
@@ -75,6 +75,7 @@ class Method:
     follow_up: str      # said once an objection has been looped and met directly
     revisit_step: str = ""  # an objection parked before the price is raised again when they hesitate here
     ready: Ready = None     # keen prospect shortcut; none = every prospect hears the whole script
+    reask: tuple = ()       # leads said before a question asked again once its probes ran out, in turn
 
 
 @dataclass(frozen=True)
@@ -123,6 +124,9 @@ class CommonSense:
     interruptions: dict
     nudge: str = ""     # said when a reply only nudges ("what's next?"), before carrying on
     nudges: tuple = ()  # phrases that nudge, cut off the end of a reply
+    unclear: tuple = ()  # replies that give nothing to an open question ("dunno man", "stuff I guess")
+    unclear_min_score: float = 1.0  # a reply counts as unclear when it matches `unclear` at least this well
+    ask_meaning: str = ""  # asks what they meant by their own words ({said}); empty = never asked
 
 
 def _read(directory, name):
@@ -197,6 +201,9 @@ def parse_method(name, data):
     if price_step not in steps:
         raise ValueError(f"method {name}: price_step {price_step!r} not defined")
     follow_up = (data.get("follow_up") or {}).get("say", "")
+    reask = tuple(data.get("reask") or ())
+    if any("?" in r for r in reask):
+        raise ValueError(f"method {name}: reask leads must not ask (the step's question follows)")
     for o in objections.values():
         if "?" in o.early:
             raise ValueError(f"objection {o.name}: early line must not ask (the step's question follows)")
@@ -208,7 +215,7 @@ def parse_method(name, data):
         if not steps[revisit_step].stuck:
             raise ValueError(f"method {name}: revisit_step {revisit_step!r} needs a 'stuck' route")
     return Method(name, first, steps, objections, price_step, follow_up, revisit_step,
-                  _ready(name, data.get("ready"), steps))
+                  _ready(name, data.get("ready"), steps), reask)
 
 
 def _score(where, value):
@@ -276,8 +283,14 @@ def parse_common_sense(data):
         raise ValueError("park, nudge and interruption replies must not ask (the step's question follows)")
     if bool(nudge.get("reply")) != bool(nudge.get("phrases")):
         raise ValueError("nudge needs both a reply and phrases")
+    unclear = data.get("unclear") or {}
+    ask_meaning = data.get("ask_meaning", "")
+    if ask_meaning and ("{said" not in ask_meaning or "?" not in ask_meaning):
+        raise ValueError("ask_meaning must ask (a '?') about their words (a {said} blank)")
     return CommonSense(data["park"], data["revisit"], items,
-                       nudge.get("reply", ""), tuple(nudge.get("phrases") or ()))
+                       nudge.get("reply", ""), tuple(nudge.get("phrases") or ()),
+                       tuple(unclear.get("examples") or ()),
+                       _score("unclear", unclear["min_score"]) if unclear else 1.0, ask_meaning)
 
 
 def load_method(name, directory=CONFIG_DIR / "methods"):

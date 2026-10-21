@@ -67,7 +67,7 @@ PROBE_CTX = CheckContext(18, 1, False, "$5k", known_figures=frozenset(), banned_
                          banned=frozenset(CFG["answer_banned_words"]) - frozenset({"two", "weeks"}))
 
 
-def listen(raw, asked="What holds you back?"):
+def listen(raw, asked=("What holds you back?",)):
     return hear(lambda p, n: raw, "prompt", 90, ACK_CTX, PROBE_CTX, asked, CFG)
 
 
@@ -94,7 +94,7 @@ def test_an_ack_must_use_their_words():
 def test_ai_down_or_off_format_is_none():
     def down(p, n):
         raise RuntimeError("down")
-    assert hear(down, "p", 90, ACK_CTX, PROBE_CTX, "q", CFG) is None
+    assert hear(down, "p", 90, ACK_CTX, PROBE_CTX, ("q",), CFG) is None
     assert listen("vague") is None
 
 
@@ -109,9 +109,10 @@ def test_a_shrug_gets_a_fresh_probe_not_the_same_line(fake_embedder):
     assert "<goal>Limiting belief: the story they tell themselves" in ai.prompts[0]
 
 
-def test_a_second_shrug_moves_on_without_saving_an_answer(fake_embedder):
+def test_shrugs_are_asked_again_misses_times_then_the_call_moves_on_without_an_answer(fake_embedder):
     s = seller(fake_embedder, ListenAI(), step="09")
-    s.reply("k")
+    said = [s.reply(shrug)[0] for shrug in ["k", "idk", "k"][:CFG["misses"]]]
+    assert s.state.step == "09" and len(said) == len(set(said))  # never moves on, never the same line
     text, _ = s.reply("idk")
     assert text == CAT.steps["belief_origin"].say
     assert "belief" not in s.state.slots
@@ -143,9 +144,17 @@ def test_one_ai_call_per_turn_on_a_concept_step(fake_embedder):
 def test_a_shrug_past_the_misses_costs_no_ai_call(fake_embedder):
     ai = ListenAI()
     s = seller(fake_embedder, ai, step="09")
-    s.reply("k")
-    s.reply("idk")  # advance moves on whatever the AI says: no call
-    assert len(ai.prompts) == 1
+    for _ in range(CFG["misses"] + 1):
+        s.reply("k")  # the last one: advance moves on whatever the AI says, so no call
+    assert len(ai.prompts) == CFG["misses"]
+
+
+def test_an_ai_probe_already_asked_on_the_step_is_never_asked_again(fake_embedder):
+    ai = ListenAI()  # the same probe every time
+    s = seller(fake_embedder, ai, step="09")
+    first, _ = s.reply("k")
+    second, _ = s.reply("k")
+    assert first == ai.probe and second != ai.probe
 
 
 def test_off_format_listen_output_means_no_second_call_this_turn(fake_embedder):
@@ -163,10 +172,12 @@ def test_the_old_wording_comes_back_when_the_ai_is_down(fake_embedder):
     def down(p, n):
         raise RuntimeError("down")
     s = seller(fake_embedder, down, step="09")
-    first, _ = s.reply("k")
-    assert first == CAT.steps["09"].say                 # asked once more, in the script's own words
-    second, _ = s.reply("k")
-    assert second == CAT.steps["belief_origin"].say     # then the call moves on
+    said = [s.reply("k")[0] for _ in range(CFG["misses"])]
+    lead = CAT.reask  # 09 has no probes: its own words, behind a different lead each time
+    assert said[:2] == [f"{lead[0]} {CAT.steps['09'].say}", f"{lead[1]} {CAT.steps['09'].say}"]
+    assert all(a != b for a, b in pairwise(said))
+    text, _ = s.reply("k")
+    assert text == CAT.steps["belief_origin"].say     # then the call moves on
 
 
 def test_labelled_steps_still_use_examples_not_the_listen_call(fake_embedder):
@@ -202,6 +213,64 @@ OWNER_CHAT = [
 def test_the_owners_chat_never_repeats_a_line_and_never_saves_a_shrug(fake_embedder):
     s = seller(fake_embedder, ListenAI())
     said = [s.opening()[0]] + [s.reply(line)[0] for line in OWNER_CHAT]
+    while s.state.step != "14" and len(said) < 80:  # they keep shrugging: each open step asked `misses` more times
+        said.append(s.reply("k")[0])
+    assert s.state.step == "14", said  # the price is still reached: shrugs never trap the call
     assert all(a != b for a, b in pairwise(said)), said
     assert not SHRUGS & {v.lower() for v in s.state.slots.values()}, s.state.slots
-    assert s.state.step == "14"  # the price was reached, as in the live chat, one probe per shrug
+
+
+# ---- a dead reply is never an answer (owner: "if not clear, don't move on") --------------------
+
+def _down(p, n):
+    raise RuntimeError("down")
+
+
+def test_a_shrug_beyond_the_filler_words_is_asked_again_not_saved(fake_embedder):
+    s = seller(fake_embedder, _down, step="02", slots={"outcome": "I want financial freedom"})
+    text, _ = s.reply("no clue")  # live: "dunno man" at 02 was saved as their number
+    assert s.state.step == "02" and "number" not in s.state.slots
+    assert text == f"{CAT.reask[0]} How much would you need to be making each month to have financial freedom?"
+
+
+def test_unclear_words_get_asked_what_they_mean(fake_embedder):
+    s = seller(fake_embedder, _down, step="04")
+    text, _ = s.reply("stuff I guess")
+    assert text == "What do you mean by stuff?" and "why" not in s.state.slots
+    text, _ = s.reply("stuff I guess")  # asked once: next time other words
+    assert text == CAT.steps["04"].probes[0]
+
+
+def test_a_question_is_never_heard_as_a_shrug(fake_embedder):
+    s = seller(fake_embedder, _down, step="04")
+    assert not s._says_nothing("no clue, what do you mean?", CAT.steps["04"])
+
+
+def test_a_frustrated_whatever_is_still_frustration_not_a_shrug(fake_embedder):
+    s = seller(fake_embedder, _down, step="08")
+    s.reply("meh, whatever")
+    assert s.last_turn["heard_as"] == "sense:frustrated"
+
+
+def test_every_open_question_takes_misses_shrugs_before_moving_on(fake_embedder):
+    for step in ("belief_origin", "11"):  # open questions that once moved on at the first "k"
+        s = seller(fake_embedder, _down, step=step)
+        for _ in range(CFG["misses"]):
+            s.reply("k")
+            assert s.state.step == step
+        s.reply("k")
+        assert s.state.step != step
+
+
+def test_a_shrug_on_a_step_with_labels_and_a_catch_all_is_not_saved(fake_embedder):
+    # live: "dunno man" at "how long have you been thinking about this?" was kept as the years and moved on
+    s = seller(fake_embedder, _down, step="03")
+    s.reply("dunno man")
+    assert s.state.step == "03" and "years" not in s.state.slots
+
+
+def test_a_greeting_is_never_asked_what_it_means(fake_embedder):
+    # live: "hey" got "What do you mean by hey?"; only words about the question are asked about
+    s = seller(fake_embedder, _down, step="01")
+    text, _ = s.reply("hey")
+    assert "mean by" not in text

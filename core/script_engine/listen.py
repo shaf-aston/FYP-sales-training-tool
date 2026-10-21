@@ -39,7 +39,7 @@ def parse(raw):
 
 def hear(llm, prompt, tokens, ack_ctx, probe_ctx, asked, cfg):
     """One checked listen. None when the AI fails or answers off-format (the caller falls back to rules).
-    `asked`: the words the step was asked in; a probe that repeats them is no probe."""
+    `asked`: every wording the step was asked in so far; a probe that repeats one is no probe."""
     try:
         raw = llm(prompt, tokens)
     except Exception as exc:  # noqa: BLE001 - any AI failure means fall back
@@ -56,7 +56,7 @@ def hear(llm, prompt, tokens, ack_ctx, probe_ctx, asked, cfg):
             logger.warning("listen: ack %r broke %s", clip(ack, cfg["log_text_chars"]), broken)
         return Heard(True, "" if broken else ack)
     broken = check(probe, probe_ctx) if probe else ["missing"]
-    if not broken and probe.strip().lower() == asked.strip().lower():
+    if not broken and probe.strip().lower() in {a.strip().lower() for a in asked}:
         broken = ["same_words"]
     if broken:
         logger.warning("listen: probe %r broke %s", clip(probe, cfg["log_text_chars"]), broken)

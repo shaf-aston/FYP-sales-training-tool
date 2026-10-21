@@ -1,6 +1,6 @@
 # After CI passes on master: update the Oracle VM, upload web/out to Vercel,
 # then check both live sites really run this commit. Fails loudly if not.
-# Skips itself until the setup below is done.
+# The VM job skips itself until the setup below is done; a warning then says if the live API is behind.
 #
 # One-time setup (GitHub repo → Settings → Secrets and variables → Actions). Full guide: docs/SETUP.md
 #   secrets   VM_HOST, VM_USER, VM_SSH_KEY (private key), VERCEL_TOKEN (vercel.com/account/tokens)
@@ -45,6 +45,19 @@ jobs:
             sleep 6
           done
           echo "API still runs '$v', expected $SHA"; exit 1
+
+  vm-not-set-up:
+    # without VM_APP_DIR the vm job skips and the run still reads green while the live API stays old
+    if: vars.VM_APP_DIR == '' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Warn when the live API is not this commit
+        env:
+          SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          v=$(curl -fsS https://140-238-102-50.sslip.io/api/health | jq -r .version || echo unreachable)
+          if [ "$v" = "$SHA" ]; then echo "API live on $v"; exit 0; fi
+          echo "::warning title=API not deployed::VM_APP_DIR is not set, so the VM was not updated. Live API runs '$v', master is $SHA. Deploy by hand or set the variables (docs/SETUP.md)."
 
   web:
     if: vars.SITE_URL != '' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')

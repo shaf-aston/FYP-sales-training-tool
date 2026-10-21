@@ -281,7 +281,26 @@ def test_floored_labels_clear_their_floor_only_when_meant(capsys):
 def test_before_the_price_short_answers_are_not_objections(reply, heard):
     from core.script_engine import seller as S
     gate = type("Down", (), {"llm": lambda self, router: None})()
-    s = S.build_seller(None, S.resolve_product(None), embedder=S.shared_embedder(), gate=gate)
+    real = make_embedder(load_yaml("script/engine.yaml"), ROOT)  # not S.shared_embedder: conftest swaps in the fake
+    s = S.build_seller(None, S.resolve_product(None), embedder=real, gate=gate)
     s.opening()
     s.reply(reply)
     assert s.last_turn["heard_as"].startswith(heard)
+
+
+# Live shrugs must count as unclear; real short answers (some hedged) must not. Measured on the model.
+SHRUGS = ["dunno man", "stuff i guess", "nah not sure", "i dont really know", "no clue lol", "not sure tbh",
+          "idk really", "depends", "hmm let me think", "eh", "good question", "maybe", "who knows", "umm"]
+ANSWERS = ["nothing yet", "nothing, I just watch youtube", "maybe travel", "maybe 5k", "idk maybe 5k",
+           "dunno, a couple of years", "good question, freedom probably", "let me think, probably my kids",
+           "I don't know if I can afford it", "I don't know where to start", "honestly I don't know what's stopping me",
+           "no time", "money is tight", "still researching", "2 years", "freedom", "5k a month", "my kids",
+           "whatever pays the bills", "eh, freedom I guess"]
+
+
+def test_shrugs_are_unclear_and_real_answers_are_not():
+    sense = load_common_sense()
+    listener = Listener(load_yaml("script/engine.yaml"), make_embedder(load_yaml("script/engine.yaml"), ROOT))
+    score = {t: listener.match(t, {"unclear": list(sense.unclear)}).score for t in SHRUGS + ANSWERS}
+    assert [t for t in SHRUGS if score[t] < sense.unclear_min_score] == []
+    assert [t for t in ANSWERS if score[t] >= sense.unclear_min_score] == []
