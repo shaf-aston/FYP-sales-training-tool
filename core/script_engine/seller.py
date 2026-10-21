@@ -27,6 +27,7 @@ from core.script_engine.engine import (
 )
 from core.script_engine.fill import Filler, fix_typos
 from core.script_engine.judge import VAGUE, judge
+from core.script_engine.listen import hear
 from core.script_engine.method import ANY, load_common_sense, load_method, load_offer
 from core.script_engine.recognise import Listener
 from core.utils import is_question, tokenize
@@ -141,7 +142,7 @@ class ScriptSeller:
         empty = not waiting and not self.state.play and self._says_nothing(text)
         if empty:  # listened to as an answer only: never an interruption, objection or question
             self._why = "says_nothing"
-            move = self._listen(text, step, empty=True)
+            move, _ = self._listen(text, step, opened, empty=True)
             self.state = move.state
             return self._render(move), move.ui_stage
         if not self._is_question(text):  # "do I need 5k a month to start?" is not their goal
@@ -176,18 +177,22 @@ class ScriptSeller:
             answer = self._answer_uncovered(text, opened) or self.cfg["uncovered_fallback"]
             return self._then_ask(answer), step.ui_stage
 
-        move = self._listen(text, step)
+        move, ack = self._listen(text, step, opened)
         if self._hesitates(move):
             self._why = "hesitates"
             return self._revisit(), step.ui_stage
-        earlier = {k: v for k, v in self.state.slots.items() if k != step.capture}
+        earlier = self._earlier(step)
         self.state = move.state
         # an answer with a question in it: the question gets an answer when the facts have one, else
         # nothing ("what's next?" needs none). After the judge: a failed AI line can't cost it.
         heard = self._answer_uncovered(text, opened) if asking else ""
-        if not heard and not move.ack:
-            heard = self._acknowledge(text, step, opened, earlier)
+        if not heard and not move.ack and move.state.step != step.id:
+            heard = ack if ack is not None else self._acknowledge(text, step, opened, earlier)
         return self._render(move, heard), move.ui_stage
+
+    def _earlier(self, step):
+        """Their answers to the other steps: what an AI line may link to."""
+        return {k: v for k, v in self.state.slots.items() if k != step.capture}
 
     def _go(self, move):
         """Take a move as it is: no "I heard you" line in front of it."""
@@ -282,18 +287,50 @@ class ScriptSeller:
         labels = _answer_labels(step)
         return bool(labels) and self._listener.match(text, labels).label is not None
 
-    def _listen(self, text, step, empty=False):
+    def _listen(self, text, step, opened, empty=False):
+        """Hear the reply as the step's answer: (move, ack). ack = the AI's "I heard you" line from the
+        listen call ("" when it failed a check), or None when no listen call was made."""
         labels = _answer_labels(step)
-        label = None
+        label, line, ack = None, "", None
         if labels:
             found = self._listener.match(text, labels)
             label = found.label
             if found.close:
                 pick = judge(text, {c: labels[c] for c in found.candidates}, self._ask, self.cfg)
                 label = None if pick == VAGUE else pick
+        elif self.cfg["listen"] and step.capture:  # the step is after a concept: the AI hears for it
+            heard = self._hear(text, step, opened)
+            if heard is not None:
+                empty, line, ack = empty or not heard.answered, heard.probe, heard.ack
+                if not heard.answered:
+                    self._why = "misses"
         if self._why == "answer":
             self._why = f"answer:{label}" if label else ("answer:any" if not labels else "answer:unclear")
-        return advance(self.method, self.state, label, text, empty)
+        return advance(self.method, self.state, label, text, empty, line, self.cfg["misses"]), ack
+
+    def _hear(self, reply, step, opened):
+        """One listen call for the step's concept (its note, else its name): did they give it, an ack if
+        so, a probe for it if not. None when the AI failed: rules alone then decide."""
+        c = self.cfg
+        told = self._told(self._earlier(step))
+        asked, _ = asked_line(self.method, self.state)
+        question = self._filler.fill(asked, self.state.slots) or step.say_plain or asked
+        prompt = c["prompts"]["listen"].format(
+            concept=f"{step.name}: {step.note}" if step.note else step.name, question=question, reply=reply,
+            max_words=c["ack_max_words"], probe_words=c["probe_max_words"],
+            memory=c["prompts"]["ack_memory"].format(told=told) if told else "",
+        )
+        ack_ctx = CheckContext(
+            c["ack_max_words"], 0, opened, self.offer.price,
+            prospect_words=frozenset(tokenize(reply)) | frozenset(tokenize(told)),
+            stop_words=frozenset(c["stop_words"]) | frozenset(c["ack_words"]),
+            banned_phrases=tuple(c["banned_phrases"]),
+        )
+        probe_ctx = CheckContext(
+            c["probe_max_words"], 1, opened, self.offer.price,
+            known_figures=frozenset(figures(reply + " " + told)), banned_phrases=tuple(c["banned_phrases"]),
+        )
+        return hear(self._ask, prompt, c["listen_tokens"], ack_ctx, probe_ctx, question, c)
 
     def _says_nothing(self, text):
         """"ok", "sure", "yeah": no answer to an open question, and no interruption either."""

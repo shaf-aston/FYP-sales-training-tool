@@ -13,6 +13,7 @@ class ScriptState:
     objection_counts: dict = field(default_factory=dict)
     play: str = ""      # objection whose loop/direct line was just asked; the next reply answers it
     asks: int = 0       # times the current step has been asked again
+    asked: str = ""     # the AI's own words the step was last asked in, if any (see `asked_line`)
     parked: tuple = ()  # objections raised before the price, oldest first; raised again at the revisit step
 
 
@@ -34,7 +35,7 @@ def _speak(method, state):
             lead += (step.id,)
         state = replace(state, step=_route(step, ANY).then)
         step = method.steps[state.step]
-    return Move(step.say, replace(state, asks=0), step.ui_stage, not step.listen, lead=lead)
+    return Move(step.say, replace(state, asks=0, asked=""), step.ui_stage, not step.listen, lead=lead)
 
 
 def _answered(step, state):
@@ -50,14 +51,15 @@ def start(method):
     return _speak(method, ScriptState(step=method.first))
 
 
-def advance(method, state, label, reply="", empty=False):
+def advance(method, state, label, reply="", empty=False, line="", misses=1):
     """label = the recognised route label or None. Unmatched reply asks the step again.
-    empty = the reply says nothing ("ok", "sure"): an open question is asked once more, then the
-    call moves on without saving it as their answer."""
+    empty = the reply says nothing ("ok", "sure") or misses what the step is after: an open question
+    is asked again `misses` times (in `line` when given, else its next probe), then the call moves
+    on without saving the reply as their answer."""
     step = method.steps[state.step]
     if empty and step.capture:
-        if state.asks < 1:
-            return _ask_again(method, state, step)
+        if state.asks < misses:
+            return _ask_again(method, state, step, line=line)
         reply = ""
     route = _route(step, label) if label else None
     route = route or _route(step, ANY)
@@ -79,19 +81,22 @@ def ask_again(method, state):
     return _ask_again(method, state, method.steps[state.step])
 
 
-def _ask_again(method, state, step, ack=""):
-    """A person rephrases rather than repeating themselves, and moves on rather than asking forever."""
+def _ask_again(method, state, step, ack="", line=""):
+    """A person rephrases rather than repeating themselves, and moves on rather than asking forever.
+    `line`: the words to ask in (the AI's); else the step's next probe, else its own line."""
     lines = step.probes or (step.say,)
-    if step.stuck and state.asks >= len(lines):
+    if step.stuck and state.asks >= len(lines) and not line:
         return _take(method, state, step.stuck)
-    line = lines[min(state.asks, len(lines) - 1)]
-    return Move(line, replace(state, asks=state.asks + 1), step.ui_stage, not step.listen, ack=ack)
+    said = line or lines[min(state.asks, len(lines) - 1)]
+    return Move(said, replace(state, asks=state.asks + 1, asked=line), step.ui_stage, not step.listen, ack=ack)
 
 
 def asked_line(method, state):
     """The words the current step was last asked in: (line, plain line). After an ask-again that is
     the probe said last, so a side question doesn't rewind to the first wording."""
     step = method.steps[state.step]
+    if state.asked:
+        return state.asked, ""
     if state.asks == 0 or not step.probes:
         return step.say, step.say_plain
     return step.probes[min(state.asks - 1, len(step.probes) - 1)], ""

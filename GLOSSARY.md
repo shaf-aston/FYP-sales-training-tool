@@ -60,6 +60,7 @@ Rule: modes are named for the learner; engines and stores for the AI (`seller_se
 | **ready** | Keen-buyer shortcut that jumps to payment. | method `ready` |
 | **fact / uncovered question** | A product question answered from a fact, else one checked AI line from `about`, else `uncovered_fallback`. | `seller.py`, `engine.yaml` |
 | **ack** | One checked AI sentence showing their answer was heard. | `engine.yaml` `ack*` |
+| **concept / listen call** | What a step is after (its `note`, else its name). On a step that captures an answer and takes any reply, one AI call hears for it: answered → ack; missed → one fresh **probe** for the concept, then the call moves on without an answer. AI down → the step's own probes or line, as before. | `listen.py`, `engine.yaml` `listen*`, `misses` |
 | **close call / judge** | Two answers score too close (`margin`, `near_miss`), so an LLM picks the label. | `judge.py` |
 | **filler** | A reply that says nothing ("ok"); **filler tags** like "you know?" are not questions. | `engine.yaml` |
 | **draft** | Marks a line not taken word for word from the source script. Only these may change. The app ignores the marker. | `config/methods/*.yaml` |
