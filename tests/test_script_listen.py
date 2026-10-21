@@ -290,8 +290,10 @@ def test_rewinding_past_a_brb_forgets_they_stepped_away(fake_embedder):
 
 
 def test_a_shrug_after_an_early_answer_is_still_asked_about_this_turn(fake_embedder):
-    # bug: the "answered a later step" flag was read before it was reset for this turn
-    s = seller(fake_embedder, _down, step="04")
-    s._heard_ahead = True  # left over from an earlier turn
+    # bug: the "answered a later step" flag outlived its turn; now it lives in that turn's verdict only
+    s = seller(fake_embedder, _down, step="01")
+    s.reply("I want to make 5k a month")  # answers a later step early
+    assert s.state.slots
+    s.reset(ScriptState(step="04", slots=s.state.slots))
     text, _ = s.reply("stuff I guess")
     assert text == "What do you mean by stuff?"

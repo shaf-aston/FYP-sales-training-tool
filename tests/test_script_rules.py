@@ -498,8 +498,9 @@ def test_a_question_word_without_a_question_mark_still_counts(fake_embedder):
     ("how much is it", True),
     ("will refunds exist?", True),
 ])
-def test_question_detection_uses_phrases_or_a_question_mark(fake_embedder, text, expected):
-    assert make_seller(fake_embedder)._is_question(text) is expected
+def test_question_detection_uses_phrases_or_a_question_mark(text, expected):
+    from core.utils import is_question
+    assert is_question(text, CFG["question_starts"], CFG["filler_tags"]) is expected
 
 
 def test_a_line_joined_to_a_lead_in_keeps_a_capital_I():
