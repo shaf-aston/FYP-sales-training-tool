@@ -88,4 +88,5 @@ speech:              # replies read aloud by the server, so the browser needs no
   model: canopylabs/orpheus-v1-english   # Groq text-to-speech; accept its terms once in the Groq console
   voice: daniel
   format: wav
-  max_chars: 200     # longer text is refused by the model; the browser voice reads it instead
+  max_chars: 200     # the model's limit per request; longer replies go in sentence-sized pieces, joined into one audio file
+  style: ""          # optional voice direction said before each piece, e.g. "[cheerful]" (counts toward max_chars)
