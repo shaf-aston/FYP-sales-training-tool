@@ -151,9 +151,7 @@ class Vectors:
 
 
 def fake_llm(prompt, max_tokens):
-    """Fills blanks with the prospect's first word; answers a product question in one line."""
-    if "Fill the blank" in prompt:
-        return prompt.split("<reply>")[1].split("</reply>")[0].split()[0]
+    """Answers a product question in one line; anything else is vague."""
     if "A prospect asked" in prompt:
         return "Yes, we offer mentorship."
     return "vague"

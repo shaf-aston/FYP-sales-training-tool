@@ -1,7 +1,5 @@
 """One selling turn: the script picks the line, the AI only fills small checked gaps."""
 
-import json
-import logging
 import re
 from dataclasses import asdict, replace
 from functools import lru_cache
@@ -9,8 +7,6 @@ from pathlib import Path
 
 from core.loader import load_yaml
 from core.script_engine.ai_gate import AiGate
-from core.script_engine.ai_line import checked_line
-from core.script_engine.checks import CheckContext, clip, figures
 from core.script_engine.embedder import make_embedder
 from core.script_engine.engine import (
     advance,
@@ -26,18 +22,17 @@ from core.script_engine.engine import (
     start,
 )
 from core.script_engine.fill import Filler, fix_typos
-from core.script_engine.judge import VAGUE, judge
-from core.script_engine.listen import hear
+from core.script_engine.judge import VAGUE
 from core.script_engine.method import load_common_sense, load_method, load_offer
 from core.script_engine.recognise import Listener
 from core.script_engine.shrug import Shrugs
 from core.script_engine.verdict import Ear, answer_labels
+from core.script_engine.voice import Voice
 from core.utils import tokenize
 
 from ..logs import timed
 
 ROOT = Path(__file__).resolve().parent.parent.parent
-uncovered_log = logging.getLogger("script_engine.uncovered")
 
 
 def engine_config():
@@ -78,9 +73,10 @@ def _after_lead(line):
 
 class ScriptSeller:
     def __init__(self, cfg, method, offer, sense, embedder, llm):
+        """`llm`: a `Voice`, or a plain `llm(prompt, max_tokens)` callable wrapped in one."""
         self.cfg, self.method, self.offer, self.sense = cfg, method, offer, sense
-        self._listener, self._llm = Listener(cfg, embedder), llm
-        self._ai_ok = True
+        self._listener = Listener(cfg, embedder)
+        self._voice = llm if hasattr(llm, "new_turn") else Voice(cfg, offer, llm)
         self._opening = start(method)
         self.state = self._opening.state
         examples = self._script_examples()
@@ -113,19 +109,8 @@ class ScriptSeller:
 
     def opening(self):
         """The first line of the call: (text, ui_stage)."""
-        self._ai_ok = True
+        self._voice.new_turn()
         return self._render(self._opening), self._opening.ui_stage
-
-    @timed
-    def _ask(self, prompt, max_tokens):
-        """The only door to the AI. After one failure it stays shut for the rest of the turn."""
-        if not self._ai_ok:
-            raise RuntimeError("AI skipped: it already failed this turn")
-        try:
-            return self._llm(prompt, max_tokens)
-        except Exception:
-            self._ai_ok = False
-            raise
 
     # ---- one turn -------------------------------------------------------------------------
 
@@ -141,7 +126,7 @@ class ScriptSeller:
 
     def _reply(self, text):
         """(text, ui_stage, heard_as): hear the reply, then answer what it was heard as."""
-        self._ai_ok = True
+        self._voice.new_turn()
         step = self.method.steps[self.state.step]
         opened = price_open(self.method, self.state.step)
         v = self._ear.hear(text, self.state, opened)
@@ -189,7 +174,7 @@ class ScriptSeller:
         # nothing ("what's next?" needs none). After the judge: a failed AI line can't cost it.
         heard = self._answer_uncovered(text, opened) if v.asking else ""
         if not heard and not move.ack and move.state.step != step.id:
-            heard = ack if ack is not None else self._acknowledge(text, step, opened, earlier)
+            heard = ack if ack is not None else self._voice.ack(text, step.say_plain or step.say, earlier, opened)
         return self._render(move, heard), move.ui_stage, heard_as
 
     def _earlier(self, step):
@@ -257,13 +242,12 @@ class ScriptSeller:
             found = self._listener.match(text, labels)
             label = found.label
             if found.close:
-                pick = judge(text, {c: labels[c] for c in found.candidates}, self._ask, self.cfg)
+                pick = self._voice.judge(text, {c: labels[c] for c in found.candidates})
                 label = None if pick == VAGUE else pick
         elif self.cfg["listen"] and step.capture and not (empty and not asks_left(self.method, self.state, self.cfg["misses"])):
-            heard = self._hear(text, step, opened)  # the step is after a concept: the AI hears for it
-            if heard is None:
-                self._ai_ok = False  # off-format counts as a failure: no second call (an ack) this turn
-            else:
+            concept = f"{step.name}: {step.note}" if step.note else step.name  # the AI hears for it
+            heard = self._voice.listen(text, concept, self._question(), self._earlier(step), opened)
+            if heard is not None:
                 missed = not heard.answered
                 empty, line, ack = empty or missed, heard.probe, heard.ack
         if step.capture and not line:
@@ -275,92 +259,23 @@ class ScriptSeller:
             detail = f"answer:{label}" if label else ("answer:any" if not labels else "answer:unclear")
         return advance(self.method, self.state, label, text, empty, line, self.cfg["misses"]), ack, detail
 
-    def _hear(self, reply, step, opened):
-        """One listen call for the step's concept (its note, else its name): did they give it, an ack if
-        so, a probe for it if not. None when the AI failed: rules alone then decide."""
-        c = self.cfg
-        told = self._told(self._earlier(step))
-        question = self._question()
-        prompt = c["prompts"]["listen"].format(
-            concept=f"{step.name}: {step.note}" if step.note else step.name, question=question, reply=reply,
-            max_words=c["ack_max_words"], probe_words=c["probe_max_words"],
-            memory=c["prompts"]["ack_memory"].format(told=told) if told else "",
-        )
-        ack_ctx = CheckContext(
-            c["ack_max_words"], 0, opened, self.offer.price,
-            prospect_words=frozenset(tokenize(reply)) | frozenset(tokenize(told)),
-            stop_words=frozenset(c["stop_words"]) | frozenset(c["ack_words"]),
-            banned_phrases=tuple(c["banned_phrases"]),
-        )
-        probe_ctx = CheckContext(
-            c["probe_max_words"], 1, opened, self.offer.price,
-            known_figures=frozenset(figures(reply + " " + told)), banned_phrases=tuple(c["banned_phrases"]),
-            banned=frozenset(c["answer_banned_words"]) - ack_ctx.prospect_words,  # a probe promises nothing
-        )
-        return hear(self._ask, prompt, c["listen_tokens"], ack_ctx, probe_ctx, question, c)
-
     def _question(self):
         """The step's question as it was just asked, blanks filled."""
         asked, plain = asked_line(self.method, self.state)
         return self._filler.fill(asked, self.state.slots) or plain or asked
-
-    def _told(self, slots):
-        """Their earlier answers, one per line and cut short, for an AI prompt."""
-        return "\n".join(f"- {clip(v, self.cfg['memory_chars'])}" for v in slots.values() if v)
-
-    @timed
-    def _acknowledge(self, reply, step, opened, earlier):
-        """One short checked sentence showing their answer was heard, in their own words; it may link to
-        something they said earlier. Nothing when it fails: honest silence beats a canned line."""
-        c = self.cfg
-        if not c["ack"]:
-            return ""
-        told = self._told(earlier)
-        prompt = c["prompts"]["ack"].format(
-            question=step.say_plain or step.say, reply=reply, max_words=c["ack_max_words"],
-            memory=c["prompts"]["ack_memory"].format(told=told) if told else "",
-        )
-        ctx = CheckContext(
-            c["ack_max_words"], 0, opened, self.offer.price,
-            prospect_words=frozenset(tokenize(reply)) | frozenset(tokenize(told)),
-            stop_words=frozenset(c["stop_words"]) | frozenset(c["ack_words"]),
-            banned_phrases=tuple(c["banned_phrases"]),
-        )
-        return checked_line(self._ask, prompt, c["ack_tokens"], ctx, c, "ack", retries=c["ack_retries"]) or ""
 
     @timed
     def _answer_uncovered(self, question, opened):
         """A short answer to a product question nothing covers, from the offer's facts and what they told us.
         It may say anything the facts support, never a new number, promise or price: always checked and
         logged. None when the facts don't cover it (the caller decides whether to say the fallback)."""
-        c, offer = self.cfg, self.offer
+        offer = self.offer
         if not offer.about:
             return None
         facts = self._filler.fill(offer.about, {})
         if opened and offer.about_after_price:
             facts += " " + self._filler.fill(offer.about_after_price, {})
-        told = self._told(self.state.slots)
-        prompt = c["prompts"]["answer"].format(
-            facts=facts, question=question,
-            memory=c["prompts"]["answer_memory"].format(told=told) if told else "",
-        )
-        fact_words = frozenset(tokenize(facts))
-        ctx = CheckContext(
-            c["max_words"], 0, opened, offer.price,
-            known_figures=frozenset(figures(facts)),  # their own figures are not ours to repeat back as results
-            banned=frozenset(c["answer_banned_words"]) - fact_words, banned_phrases=tuple(c["banned_phrases"]),
-        )
-
-        def clean(raw):
-            return None if "not_covered" in raw.lower().replace(" ", "_") else raw.strip()
-
-        answer = checked_line(self._ask, prompt, c["answer_tokens"], ctx, c, "product answer", clean)
-        if c["log_uncovered"]:
-            uncovered_log.info(json.dumps({
-                "question": clip(question, c["log_text_chars"]),
-                "answer": answer and clip(answer, c["log_text_chars"]),
-            }))
-        return answer
+        return self._voice.answer(question, facts, self.state.slots, opened)
 
     def _then_ask(self, lead):
         """`lead`, then the current question again. A step that asks nothing (a statement) is not
