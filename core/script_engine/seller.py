@@ -360,9 +360,12 @@ class ScriptSeller:
         return answer
 
     def _then_ask(self, lead):
-        """`lead`, then the current question again."""
+        """`lead`, then the current question again. A step that asks nothing (a statement) is not
+        said again: a fact answered at a statement step said the statement twice."""
         say, say_plain = asked_line(self.method, self.state)  # the words last used, not always the first
         question = self._filler.render(say, "", say_plain, self.state.slots)
+        if "?" not in question:
+            question = ""
         return f"{lead.strip()} {question.strip()}".strip()
 
     def _render(self, move, heard=""):
