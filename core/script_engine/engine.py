@@ -16,6 +16,7 @@ class ScriptState:
     asked: str = ""     # the AI's own words the step was last asked in, if any (see `asked_line`)
     said: tuple = ()    # every such line asked on the current step, so none is asked twice
     parked: tuple = ()  # objections raised before the price, oldest first; raised again at the revisit step
+    waiting: bool = False  # their last reply was a `wait` sense ("brb"): the next may be "I'm back"
 
 
 @dataclass(frozen=True)

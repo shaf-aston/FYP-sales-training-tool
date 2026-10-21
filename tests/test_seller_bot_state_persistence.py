@@ -12,9 +12,12 @@ class _FakeSeller:
         self.state = ScriptState(step="01")
         self.resets = []
 
-    def reset(self, state=None):
-        self.resets.append(state)
-        self.state = state or ScriptState(step="01")
+    def snapshot(self):
+        return {"step": self.state.step, "slots": self.state.slots}
+
+    def restore(self, saved=None):
+        self.resets.append(saved)
+        self.state = ScriptState(**saved) if saved else ScriptState(step="01")
 
 
 def _build_bot() -> Any:

@@ -274,3 +274,23 @@ def test_a_greeting_is_never_asked_what_it_means(fake_embedder):
     s = seller(fake_embedder, _down, step="01")
     text, _ = s.reply("hey")
     assert "mean by" not in text
+
+
+def test_rewinding_past_a_brb_forgets_they_stepped_away(fake_embedder):
+    # bug: "waiting" lived outside the saved state, so an edited turn replayed as if they had said "brb"
+    s = seller(fake_embedder, _down, step="04")
+    before = s.snapshot()
+    s.reply("brb")
+    assert s.state.waiting
+    s.restore(before)
+    assert not s.state.waiting
+    s.reply("ok")
+    assert s.last_turn["heard_as"] == "says_nothing"
+
+
+def test_a_shrug_after_an_early_answer_is_still_asked_about_this_turn(fake_embedder):
+    # bug: the "answered a later step" flag was read before it was reset for this turn
+    s = seller(fake_embedder, _down, step="04")
+    s._heard_ahead = True  # left over from an earlier turn
+    text, _ = s.reply("stuff I guess")
+    assert text == "What do you mean by stuff?"

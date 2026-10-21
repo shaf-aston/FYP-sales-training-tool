@@ -3,7 +3,7 @@
 import json
 import logging
 import re
-from dataclasses import replace
+from dataclasses import asdict, replace
 from functools import lru_cache
 from pathlib import Path
 
@@ -14,6 +14,7 @@ from core.script_engine.checks import CheckContext, clip, figures
 from core.script_engine.embedder import make_embedder
 from core.script_engine.engine import (
     advance,
+    ScriptState,
     ask_again,
     asked_line,
     hear_ahead,
@@ -84,7 +85,6 @@ class ScriptSeller:
         self.cfg, self.method, self.offer, self.sense = cfg, method, offer, sense
         self._listener, self._llm = Listener(cfg, embedder), llm
         self._ai_ok = True
-        self._waiting = False  # last reply was a `wait` reply: they stepped away
         self._heard_ahead = False  # this turn's reply answered a later step
         self._opening = start(method)
         self.state = self._opening.state
@@ -105,6 +105,14 @@ class ScriptSeller:
 
     def reset(self, state=None):
         self.state = state or self._opening.state
+
+    def snapshot(self):
+        """Everything the call needs to carry on from here, as plain data (kept per turn for rewinds)."""
+        return asdict(self.state)
+
+    def restore(self, saved=None):
+        """Back to a `snapshot()`; None goes back to the opening."""
+        self.reset(ScriptState(**saved) if saved else None)
 
     def opening(self):
         """The first line of the call: (text, ui_stage)."""
@@ -137,7 +145,9 @@ class ScriptSeller:
 
     def _reply(self, text):
         self._ai_ok = True
-        waiting, self._waiting = self._waiting, False
+        self._heard_ahead = False
+        waiting = self.state.waiting
+        self.state = replace(self.state, waiting=False)
         step = self.method.steps[self.state.step]
         opened = price_open(self.method, self.state.step)
         rest = self._unnudged(text)
@@ -151,7 +161,6 @@ class ScriptSeller:
             move, _ = self._listen(text, step, opened, empty=True)
             self.state = move.state
             return self._render(move), move.ui_stage
-        self._heard_ahead = False
         if not self._is_question(text):  # "do I need 5k a month to start?" is not their goal
             ahead = hear_ahead(self.method, self.state, text)  # kept whatever else the reply turns out to be
             self._heard_ahead, self.state = ahead is not self.state, ahead
@@ -210,7 +219,7 @@ class ScriptSeller:
     def _sense(self, said, step):
         """An everyday interruption: its reply, then what its `after` says."""
         if said.after == "wait":
-            self._waiting = True
+            self.state = replace(self.state, waiting=True)
             return said.reply, step.ui_stage
         if said.after == "ask":
             return self._then_ask(said.reply), step.ui_stage
