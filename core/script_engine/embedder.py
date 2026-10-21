@@ -1,16 +1,4 @@
-"""Swap-seam for turning text into vectors. Recognition depends on this, never on an engine."""
-
-from typing import Protocol
-
-
-class Embedder(Protocol):
-    def embed(self, texts: list[str]) -> list[list[float]]:
-        """Return one unit-length vector per text, all the same length."""
-        ...
-
-    def warm(self, texts: list[str]) -> None:
-        """Pre-compute and remember vectors for the script's fixed examples."""
-        ...
+"""Turns text into vectors. Recognition only calls embed() and warm(), so another engine can drop in here."""
 
 
 class FastEmbedEmbedder:
@@ -38,6 +26,6 @@ class FastEmbedEmbedder:
 
 
 def make_embedder(cfg, root):
-    """cfg = script/engine.yaml. Only place that knows which engine is behind the Embedder seam."""
+    """cfg = script/engine.yaml. The only place that picks the engine."""
     return FastEmbedEmbedder(cfg["embed_model"], root / cfg["embed_cache_dir"],
                              cfg["embed_threads"], cfg["embed_batch_size"])
