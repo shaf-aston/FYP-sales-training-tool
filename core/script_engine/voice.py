@@ -22,6 +22,9 @@ class Voice:
     def __init__(self, cfg, offer, llm):
         self.cfg, self.offer, self._llm = cfg, offer, llm
         self._ok = True
+        self._plain = frozenset(cfg["stop_words"]) | frozenset(cfg["ack_words"])  # never "their words"
+        self._banned = frozenset(cfg["answer_banned_words"])
+        self._banned_phrases = tuple(cfg["banned_phrases"])
 
     def new_turn(self):
         self._ok = True
@@ -46,8 +49,7 @@ class Voice:
         return CheckContext(
             c["ack_max_words"], 0, opened, self.offer.price,
             prospect_words=frozenset(tokenize(reply)) | frozenset(tokenize(told)),
-            stop_words=frozenset(c["stop_words"]) | frozenset(c["ack_words"]),
-            banned_phrases=tuple(c["banned_phrases"]),
+            stop_words=self._plain, banned_phrases=self._banned_phrases,
         )
 
     @timed
@@ -64,8 +66,8 @@ class Voice:
         ack_ctx = self._ack_ctx(reply, told, opened)
         probe_ctx = CheckContext(
             c["probe_max_words"], 1, opened, self.offer.price,
-            known_figures=frozenset(figures(reply + " " + told)), banned_phrases=tuple(c["banned_phrases"]),
-            banned=frozenset(c["answer_banned_words"]) - ack_ctx.prospect_words,  # a probe promises nothing
+            known_figures=frozenset(figures(reply + " " + told)), banned_phrases=self._banned_phrases,
+            banned=self._banned - ack_ctx.prospect_words,  # a probe promises nothing
         )
         heard = hear(self._ask, prompt, c["listen_tokens"], ack_ctx, probe_ctx, question, c)
         if heard is None:
@@ -101,8 +103,7 @@ class Voice:
         ctx = CheckContext(
             c["max_words"], 0, opened, self.offer.price,
             known_figures=frozenset(figures(facts)),  # their own figures are not ours to repeat back as results
-            banned=frozenset(c["answer_banned_words"]) - frozenset(tokenize(facts)),
-            banned_phrases=tuple(c["banned_phrases"]),
+            banned=self._banned - frozenset(tokenize(facts)), banned_phrases=self._banned_phrases,
         )
 
         def clean(raw):

@@ -7,6 +7,7 @@ from pathlib import Path
 
 from core.loader import load_yaml
 from core.script_engine.ai_gate import AiGate
+from core.script_engine.config import check
 from core.script_engine.embedder import make_embedder
 from core.script_engine.engine import (
     advance,
@@ -74,7 +75,7 @@ def _after_lead(line):
 class ScriptSeller:
     def __init__(self, cfg, method, offer, sense, embedder, llm):
         """`llm`: a `Voice`, or a plain `llm(prompt, max_tokens)` callable wrapped in one."""
-        self.cfg, self.method, self.offer, self.sense = cfg, method, offer, sense
+        self.cfg, self.method, self.offer, self.sense = check(cfg), method, offer, sense
         self._listener = Listener(cfg, embedder)
         self._voice = llm if hasattr(llm, "new_turn") else Voice(cfg, offer, llm)
         self._opening = start(method)
