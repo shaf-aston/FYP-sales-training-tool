@@ -32,7 +32,7 @@ branch → PR (template: problem, fix, proof, risk) → **ci** green → merge t
 | `VM_HOST` | secret | VM address |
 | `VM_USER` | secret | SSH user |
 | `VM_SSH_KEY` | secret | private key the VM accepts |
-| `VERCEL_DEPLOY_HOOK` | secret | Vercel → Project → Settings → Git → Deploy Hooks (branch `master`) |
+| `VERCEL_TOKEN` | secret | vercel.com/account/tokens → Create (scope: ShafBiz team) |
 | `VM_APP_DIR` | variable | repo folder on the VM |
 | `VM_RESTART` | variable | restart command, e.g. `sudo systemctl restart sales-bot` |
 | `SITE_URL` | variable | e.g. `https://your-app.vercel.app` |
