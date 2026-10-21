@@ -290,7 +290,7 @@ def parse_common_sense(data):
     return CommonSense(data["park"], data["revisit"], items,
                        nudge.get("reply", ""), tuple(nudge.get("phrases") or ()),
                        tuple(unclear.get("examples") or ()),
-                       _score("unclear", unclear["min_score"]) if unclear else 1.0, ask_meaning)
+                       _score("unclear", unclear.get("min_score")) if unclear else 1.0, ask_meaning)
 
 
 def load_method(name, directory=CONFIG_DIR / "methods"):

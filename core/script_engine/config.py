@@ -34,12 +34,13 @@ BLANKS = {
         "judge": {"options", "vague", "reply", "answers"},
         "listen": {"concept", "question", "reply", "max_words", "probe_words", "memory"},
     },
-    "coach_notes": {"step": {"title", "name"}, "listen": {"note"}, "default": set()},
+    "coach_notes": {"step": {"title", "name"}, "listen": {"note"}, "default": None},  # None: said as is, never formatted
 }
 
 
 def _blanks(template):
-    return {name for _, name, _, _ in Formatter().parse(template) if name is not None}
+    """The names a template fills: {told[0]} and {slot.x} need `told` and `slot`."""
+    return {name.split(".")[0].split("[")[0] for _, name, _, _ in Formatter().parse(template) if name is not None}
 
 
 def problems(cfg):
@@ -55,6 +56,8 @@ def problems(cfg):
             template = cfg.get(section, {}).get(name) if isinstance(cfg.get(section), dict) else None
             if not isinstance(template, str):
                 found.append(f"{section}.{name}: missing")
+                continue
+            if allowed is None:
                 continue
             try:
                 unknown = _blanks(template) - allowed

@@ -44,3 +44,23 @@ def test_a_seller_will_not_build_on_a_broken_config(fake_embedder):
     cfg["prompts"]["ack"] = "Say {reply_text}"
     with pytest.raises(ValueError, match="reply_text"):
         ScriptSeller(cfg, load_method("cat"), load_offer("shay_coaching"), load_common_sense(), fake_embedder, None)
+
+
+def test_the_unformatted_coach_default_may_hold_a_brace():
+    """coach_notes.default is said as is, so a { in it is just a character."""
+    cfg = {**CFG, "coach_notes": {**CFG["coach_notes"], "default": "Answer honestly {or not}."}}
+    assert problems(cfg) == []
+
+
+def test_an_indexed_blank_counts_as_its_name():
+    """{note[0]} and {note.x} fill from `note`, an allowed blank."""
+    cfg = {**CFG, "coach_notes": {**CFG["coach_notes"], "listen": "Listen for: {note[0]}"}}
+    assert problems(cfg) == []
+
+
+def test_an_unclear_sense_without_min_score_is_named_not_a_key_error():
+    from core.script_engine.method import parse_common_sense
+    data = load_yaml("script/common_sense.yaml")
+    data = {**data, "unclear": {k: v for k, v in data["unclear"].items() if k != "min_score"}}
+    with pytest.raises(ValueError, match="unclear: min_score"):
+        parse_common_sense(data)
