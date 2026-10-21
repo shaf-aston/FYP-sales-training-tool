@@ -59,7 +59,7 @@ def advance(method, state, label, reply="", empty=False, line="", misses=1):
     on without saving the reply as their answer. `line` is used only when the step is asked again."""
     step = method.steps[state.step]
     if empty and step.capture:
-        if state.asks < misses:
+        if asks_left(method, state, misses):
             return _ask_again(method, state, step, line=line, misses=misses)
         reply = ""
     route = _route(step, label) if label else None
@@ -82,15 +82,25 @@ def ask_again(method, state):
     return _ask_again(method, state, method.steps[state.step])
 
 
+def _limit(step, misses):
+    """How many times the step is asked again: `misses` for a step that captures an answer, else once per probe."""
+    return misses if step.capture and misses else len(step.probes or (step.say,))
+
+
+def asks_left(method, state, misses):
+    """The current step may still be asked again before it moves on."""
+    return state.asks < _limit(method.steps[state.step], misses)
+
+
 def _ask_again(method, state, step, ack="", line="", misses=0):
     """A person rephrases rather than repeating themselves, and moves on rather than asking forever.
-    `line`: the words to ask in (the AI's, or a clarifying question); else the step's next probe; once
-    those run out, its last question again behind a `reask` lead, so no line is said twice in a row.
-    A step that captures an answer is asked `misses` times before `stuck`; any other step, once per probe."""
-    lines = step.probes or (step.say,)
-    limit = misses if step.capture and misses else len(lines)
-    if step.stuck and state.asks >= limit:
+    `line`: the words to ask in (the AI's, or a clarifying question), dropped if already said on this step;
+    else the step's next probe; once those run out, its last question again behind a `reask` lead, so no
+    line is said twice. Asked `_limit` times, then `stuck`."""
+    if step.stuck and state.asks >= _limit(step, misses):
         return _take(method, state, step.stuck)
+    if line.strip().lower() in {s.strip().lower() for s in state.said}:
+        line = ""  # never the same words twice on one step
     used = state.asks - len(state.said)  # times asked in the script's words: a probe is never skipped
     if line:
         said = line

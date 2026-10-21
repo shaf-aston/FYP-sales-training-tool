@@ -31,7 +31,7 @@ def test_listen_tidy():
 def test_listen_logs(caplog):
     probe_ctx = ctx(questions=1)
     ack_ctx = ctx(questions=0)
-    def h(raw, asked=("What holds you back?",)):
+    def h(raw, asked="What holds you back?"):
         return hear(lambda p, n: raw, "p", 90, ack_ctx, probe_ctx, asked, CFG)
     with caplog.at_level(logging.WARNING, logger="script_engine.fallback"):
         h("ANSWERED: no\nPROBE: what holds you back?")

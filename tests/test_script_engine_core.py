@@ -165,6 +165,14 @@ def test_a_line_said_again_on_the_step_is_remembered_until_the_step_changes():
     assert advance(cat, move.state, None, "real answer").state.said == ()
 
 
+def test_a_line_already_said_on_the_step_falls_back_to_the_next_probe():
+    # the one place "never the same words twice" is enforced: AI probes and ask-meaning lines alike
+    cat = load_method("cat")
+    first = advance(cat, ScriptState(step="04"), None, "x", empty=True, line="What do you mean by x?", misses=3)
+    again = advance(cat, first.state, None, "x", empty=True, line="what do you mean by x? ", misses=3)
+    assert again.say == cat.steps["04"].probes[0] and again.state.said == first.state.said
+
+
 @pytest.mark.parametrize("change, error", [
     (lambda d: d.update(reask=["Still there?"]), "reask leads must not ask"),
 ])

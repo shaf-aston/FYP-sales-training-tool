@@ -67,7 +67,7 @@ PROBE_CTX = CheckContext(18, 1, False, "$5k", known_figures=frozenset(), banned_
                          banned=frozenset(CFG["answer_banned_words"]) - frozenset({"two", "weeks"}))
 
 
-def listen(raw, asked=("What holds you back?",)):
+def listen(raw, asked="What holds you back?"):
     return hear(lambda p, n: raw, "prompt", 90, ACK_CTX, PROBE_CTX, asked, CFG)
 
 
@@ -94,7 +94,7 @@ def test_an_ack_must_use_their_words():
 def test_ai_down_or_off_format_is_none():
     def down(p, n):
         raise RuntimeError("down")
-    assert hear(down, "p", 90, ACK_CTX, PROBE_CTX, ("q",), CFG) is None
+    assert hear(down, "p", 90, ACK_CTX, PROBE_CTX, "q", CFG) is None
     assert listen("vague") is None
 
 
@@ -243,7 +243,8 @@ def test_unclear_words_get_asked_what_they_mean(fake_embedder):
 
 def test_a_question_is_never_heard_as_a_shrug(fake_embedder):
     s = seller(fake_embedder, _down, step="04")
-    assert not s._says_nothing("no clue, what do you mean?", CAT.steps["04"])
+    s.reply("no clue, what do you mean?")
+    assert s.last_turn["heard_as"] != "says_nothing"
 
 
 def test_a_frustrated_whatever_is_still_frustration_not_a_shrug(fake_embedder):
