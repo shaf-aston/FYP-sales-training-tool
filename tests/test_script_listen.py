@@ -63,7 +63,8 @@ def test_parse_without_a_verdict_is_none(raw):
 ACK_CTX = CheckContext(12, 0, False, "$5k", prospect_words=frozenset({"nights", "barely", "daughter"}),
                        stop_words=frozenset(CFG["stop_words"]) | frozenset(CFG["ack_words"]),
                        banned_phrases=tuple(CFG["banned_phrases"]))
-PROBE_CTX = CheckContext(18, 1, False, "$5k", known_figures=frozenset(), banned_phrases=tuple(CFG["banned_phrases"]))
+PROBE_CTX = CheckContext(18, 1, False, "$5k", known_figures=frozenset(), banned_phrases=tuple(CFG["banned_phrases"]),
+                         banned=frozenset(CFG["answer_banned_words"]) - frozenset({"two", "weeks"}))
 
 
 def listen(raw, asked="What holds you back?"):
@@ -78,6 +79,9 @@ def test_a_probe_must_be_one_checked_question():
     assert listen("ANSWERED: no\nPROBE: Is $5k the problem?") == Heard(False)          # price too early
     assert listen("ANSWERED: no\nPROBE: Is it the 3 kids?") == Heard(False)            # a number they never said
     assert listen("ANSWERED: no\nPROBE: what holds you back?") == Heard(False)         # the same words again
+    assert listen("ANSWERED: no\nPROBE: Would a guaranteed refund help?") == Heard(False)  # a promise
+    assert listen("ANSWERED: no\nPROBE: Is it the three kids?") == Heard(False)        # a spelled-out number
+    assert listen("ANSWERED: no\nPROBE: Why two weeks?") == Heard(False, probe="Why two weeks?")  # their words
     assert listen("ANSWERED: no\nPROBE: none") == Heard(False)
 
 
@@ -134,6 +138,25 @@ def test_one_ai_call_per_turn_on_a_concept_step(fake_embedder):
     s = seller(fake_embedder, ai, step="04")
     s.reply("I work nights and barely see my daughter")
     assert len(ai.prompts) == 1
+
+
+def test_a_shrug_past_the_misses_costs_no_ai_call(fake_embedder):
+    ai = ListenAI()
+    s = seller(fake_embedder, ai, step="09")
+    s.reply("k")
+    s.reply("idk")  # advance moves on whatever the AI says: no call
+    assert len(ai.prompts) == 1
+
+
+def test_off_format_listen_output_means_no_second_call_this_turn(fake_embedder):
+    calls = []
+
+    def odd(p, n):
+        calls.append(p)
+        return "**ANSWERED:** yes"
+    s = seller(fake_embedder, odd, step="04")
+    text, _ = s.reply("I work nights and barely see my daughter")
+    assert len(calls) == 1 and text == CAT.steps["05"].say_plain  # no ack: the plain line, nothing else
 
 
 def test_the_old_wording_comes_back_when_the_ai_is_down(fake_embedder):

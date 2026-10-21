@@ -33,6 +33,8 @@ class Recorder:
 
     def __call__(self, prompt, max_tokens):
         self.prompts.append(prompt)
+        if "<goal>" in prompt:  # the listen call: they answered, `line` is the ack
+            return f"ANSWERED: yes\nACK: {self.line}\nPROBE: none"
         return self.line
 
 

@@ -298,9 +298,11 @@ class ScriptSeller:
             if found.close:
                 pick = judge(text, {c: labels[c] for c in found.candidates}, self._ask, self.cfg)
                 label = None if pick == VAGUE else pick
-        elif self.cfg["listen"] and step.capture:  # the step is after a concept: the AI hears for it
-            heard = self._hear(text, step, opened)
-            if heard is not None:
+        elif self.cfg["listen"] and step.capture and not (empty and self.state.asks >= self.cfg["misses"]):
+            heard = self._hear(text, step, opened)  # the step is after a concept: the AI hears for it
+            if heard is None:
+                self._ai_ok = False  # off-format counts as a failure: no second call (an ack) this turn
+            else:
                 empty, line, ack = empty or not heard.answered, heard.probe, heard.ack
                 if not heard.answered:
                     self._why = "misses"
@@ -329,6 +331,7 @@ class ScriptSeller:
         probe_ctx = CheckContext(
             c["probe_max_words"], 1, opened, self.offer.price,
             known_figures=frozenset(figures(reply + " " + told)), banned_phrases=tuple(c["banned_phrases"]),
+            banned=frozenset(c["answer_banned_words"]) - ack_ctx.prospect_words,  # a probe promises nothing
         )
         return hear(self._ask, prompt, c["listen_tokens"], ack_ctx, probe_ctx, question, c)
 
