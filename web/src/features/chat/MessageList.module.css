@@ -55,6 +55,12 @@
   animation: message-in var(--dur-base) var(--ease-out);
   transition: opacity var(--dur-base);
 }
+.swap {
+  animation: none;
+}
+.swap .bubble > * {
+  animation: fade-in var(--dur-base) var(--ease-out);
+}
 .user {
   align-self: flex-end;
 }
