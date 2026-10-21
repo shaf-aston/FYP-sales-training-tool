@@ -39,7 +39,7 @@ def parse(raw):
 
 def hear(llm, prompt, tokens, ack_ctx, probe_ctx, asked, cfg):
     """One checked listen. None when the AI fails or answers off-format (the caller falls back to rules).
-    `asked`: the words the step was asked in; a probe that repeats them is no probe."""
+    `asked`: the question as just asked; a probe that repeats it is no probe."""
     try:
         raw = llm(prompt, tokens)
     except Exception as exc:  # noqa: BLE001 - any AI failure means fall back

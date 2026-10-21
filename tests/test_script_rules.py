@@ -151,9 +151,7 @@ class Vectors:
 
 
 def fake_llm(prompt, max_tokens):
-    """Fills blanks with the prospect's first word; answers a product question in one line."""
-    if "Fill the blank" in prompt:
-        return prompt.split("<reply>")[1].split("</reply>")[0].split()[0]
+    """Answers a product question in one line; anything else is vague."""
     if "A prospect asked" in prompt:
         return "Yes, we offer mentorship."
     return "vague"
@@ -498,8 +496,9 @@ def test_a_question_word_without_a_question_mark_still_counts(fake_embedder):
     ("how much is it", True),
     ("will refunds exist?", True),
 ])
-def test_question_detection_uses_phrases_or_a_question_mark(fake_embedder, text, expected):
-    assert make_seller(fake_embedder)._is_question(text) is expected
+def test_question_detection_uses_phrases_or_a_question_mark(text, expected):
+    from core.utils import is_question
+    assert is_question(text, CFG["question_starts"], CFG["filler_tags"]) is expected
 
 
 def test_a_line_joined_to_a_lead_in_keeps_a_capital_I():
@@ -582,6 +581,9 @@ def test_ok_to_an_open_question_is_asked_again_then_the_call_moves_on(seller):
     at(seller, "03", outcome="freedom")
     again, _ = seller.reply("ok")
     assert seller.state.step == "03" and again == "Roughly, is it more like months, or a few years?"
+    for _ in range(CFG["misses"] - 1):  # probes ran out: its last one behind a lead, never moved on early
+        again, _ = seller.reply("sure")
+        assert seller.state.step == "03" and again.endswith("Roughly, is it more like months, or a few years?")
     seller.reply("sure")
     assert seller.state.step == "04" and "years" not in seller.state.slots
 

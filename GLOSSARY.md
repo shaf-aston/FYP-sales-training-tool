@@ -53,14 +53,17 @@ Rule: modes are named for the learner; engines and stores for the AI (`seller_se
 | **route** | One kind of answer on a step, with where it goes next (`then`). Its **label** names it. `keep: false` → the answer is never saved. | `method.py` `Route` |
 | **capture / slot** | A step's saved answer, by name. | `Step.capture` |
 | **blank / echo** | `{name}` in a later line is a blank; an `echo` step fills it with the prospect's own words by rule. | `fill.py` |
-| **probe / stuck** | Other wording when an answer is unclear; `stuck` is where it goes when probes run out. | `Step` |
+| **probe / stuck** | Other wording when an answer is unclear; `stuck` is where it goes when probes run out (on an answer step: after `misses` re-asks). | `Step` |
+| **shrug / reask / ask meaning** | A **shrug** ("dunno man", "no clue") says nothing: never kept as the answer. The step is asked again: first its probes, then the question alone with a calm **reask** lead ("No rush, even a rough idea helps."), only when the step asks a question and never on top of a sense's own lead (a rephrase). Unclear words about the question ("I want to make money online") get **ask meaning**: "What do you mean by wanting to make money online?". After `misses` re-asks the call moves on. | `shrug.py`; `engine.yaml` `filler_words`, `vague_words`, `misses`; `common_sense.yaml` `unclear`, `ask_meaning`; method `reask` |
 | **interruption / common sense** | Off-script remarks (pause, repeat, "are you a bot") answered in one line. | `config/script/common_sense.yaml` |
 | **nudge** | "what's next?", "go on": cut off the end of a reply, or answered with `nudge.reply`. | `common_sense.yaml` |
 | **park** | Before the price, an objection is acknowledged and comes back later (`revisit_step`). After the price it is **looped** (`objection_loops`), then answered directly. | `engine.py` |
 | **ready** | Keen-buyer shortcut that jumps to payment. | method `ready` |
 | **fact / uncovered question** | A product question answered from a fact, else one checked AI line from `about`, else `uncovered_fallback`. | `seller.py`, `engine.yaml` |
 | **ack** | One checked AI sentence showing their answer was heard. | `engine.yaml` `ack*` |
-| **concept / listen call** | What a step is after (its `note`, else its name). On a step that captures an answer and takes any reply, one AI call hears for it: answered → ack; missed → one fresh **probe** for the concept, then the call moves on without an answer. AI down → the step's own probes or line, as before. | `listen.py`, `engine.yaml` `listen*`, `misses` |
+| **concept / listen call** | What a step is after (its `note`, else its name). On a step that captures an answer and takes any reply, one AI call hears for it: answered → ack; missed → a fresh **probe** for the concept (never one already said), up to `misses` times, then the call moves on without an answer. AI down → the step's own probes or line, as before. | `listen.py`, `engine.yaml` `listen*`, `misses` |
+| **verdict / heard as** | What one reply was heard as (nudge, shrug, interruption, play, question, answer), decided once per turn before anything is said back. Its `heard_as` goes in the turn log. | `verdict.py` `Ear`, `Verdict` |
+| **voice** | The only door to the AI: four named calls (listen, ack, answer, judge). Owns the prompts, the checks and the per-turn breaker; tests swap in a fake. | `voice.py` |
 | **close call / judge** | Two answers score too close (`margin`, `near_miss`), so an LLM picks the label. | `judge.py` |
 | **filler** | A reply that says nothing ("ok"); **filler tags** like "you know?" are not questions. | `engine.yaml` |
 | **draft** | Marks a line not taken word for word from the source script. Only these may change. The app ignores the marker. | `config/methods/*.yaml` |

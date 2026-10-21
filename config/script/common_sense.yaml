@@ -12,6 +12,21 @@ revisit: "Coming back to what you raised earlier,"   # a parked objection, raise
 # A nudge to carry on ("what's next?", "go on"). Live: "yeah makes sense, what's next?" got "I don't know
 # that one offhand". Cut off the end of a reply, the rest is heard as usual ("credit, what's next?" pays).
 # A reply that is only a nudge: the reply below, then the step in other words, or the next step.
+# A reply that gives nothing to an open question: asked again in other words, never saved as their
+# answer, never moved on from before the step's `misses` (engine.yaml). Live: "dunno man", "stuff i guess"
+# were taken as answers and the call walked on. "whatever" and "meh" belong to `frustrated` below. Matched by meaning on steps that take any
+# reply; steps with their own labels ("vague", "unclear", "hesitant") hear these themselves.
+# min_score measured on the real model: these score 0.86+, real short answers ("nothing yet",
+# "maybe travel", "idk maybe 5k", "I don't know if I can afford it") 0.82 or less. Never add "nothing"
+# or "no": "nothing yet" answers "what are you doing now".
+unclear:
+  min_score: 0.86
+  examples: ["I don't know", "not sure", "no idea", "dunno", "idk", "stuff I guess", "things",
+             "I haven't thought about it", "hard to say", "it depends", "not sure what to say",
+             "I can't think of anything", "beats me", "no clue", "maybe", "eh", "good question",
+             "let me think", "who knows", "anything", "I guess", "umm"]
+# Their reply had words but not the answer ("stuff", "make more money"): ask what they meant by them.
+ask_meaning: "What do you mean by {said|$|wanting to $}?"   # draft: the owner's ask, our wording
 nudge:
   draft: true
   reply: "Sure."

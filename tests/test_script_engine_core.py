@@ -56,7 +56,7 @@ def test_full_conversation(mini, fake_embedder):
         "So you want {goal}. Does that make sense?",   # silent step skipped
         "Good. Great, next steps.",
     ]
-    assert move.done and move.ui_stage == "outcome"
+    assert not mini.steps[move.state.step].listen and move.ui_stage == "outcome"
     assert move.state.slots["goal"] == "I want to grow my business"
 
 
@@ -139,3 +139,45 @@ def test_loader_rejects_yaml_boolean_route_names():
     data["steps"]["b"]["listen"][True] = data["steps"]["b"]["listen"].pop("agrees")
     with pytest.raises(TypeError, match="not text"):
         parse_method("bad", data)
+
+
+def test_asked_again_after_its_probes_a_step_says_only_its_question_behind_a_lead():
+    cat = load_method("cat")
+    move = advance(cat, ScriptState(step="08"), None, "k", empty=True, misses=3)
+    assert move.say == "What's the main difference between a successful business owner and an employee?"
+    assert move.ack == cat.reask[0] and move.state.step == "08"
+
+
+def test_a_capture_step_is_not_left_by_stuck_before_its_misses():
+    cat = load_method("cat")  # 03 has one probe and a stuck route
+    state = ScriptState(step="03")
+    for _ in range(3):
+        move = advance(cat, state, None, "idk", empty=True, misses=3)
+        assert move.state.step == "03"
+        state = move.state
+    assert advance(cat, state, None, "idk", empty=True, misses=3).state.step == "04"
+
+
+def test_a_line_said_again_on_the_step_is_remembered_until_the_step_changes():
+    cat = load_method("cat")
+    move = advance(cat, ScriptState(step="04"), None, "x", empty=True, line="What do you mean by x?", misses=3)
+    assert move.state.said == ("What do you mean by x?",)
+    assert advance(cat, move.state, None, "real answer").state.said == ()
+
+
+def test_a_line_already_said_on_the_step_falls_back_to_the_next_probe():
+    # the one place "never the same words twice" is enforced: AI probes and ask-meaning lines alike
+    cat = load_method("cat")
+    first = advance(cat, ScriptState(step="04"), None, "x", empty=True, line="What do you mean by x?", misses=3)
+    again = advance(cat, first.state, None, "x", empty=True, line="what do you mean by x? ", misses=3)
+    assert again.say == cat.steps["04"].probes[0] and again.state.said == first.state.said
+
+
+@pytest.mark.parametrize("change, error", [
+    (lambda d: d.update(reask=["Still there?"]), "reask leads must not ask"),
+])
+def test_bad_reask_fails_loud(change, error):
+    data = yaml.safe_load((Path(__file__).parent / "fixtures/script_engine/mini.yaml").read_text())
+    change(data)
+    with pytest.raises(ValueError, match=error):
+        parse_method("mini", data)

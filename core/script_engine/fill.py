@@ -65,12 +65,16 @@ def echo_phrase(reply, cfg, vocab=frozenset()):
 def number_phrase(reply, rule):
     """The number before the blank's unit, by rule: "about 5 years now" -> "5", "two years" -> "two".
     None when no number sits right before the unit ("ages", "6 months" for a years blank).
-    With `per`, the number is converted: "2 years" -> "24" for a months blank."""
+    With `per`, the number is converted: "2 years" -> "24" for a months blank. With `unit` ([one, many]),
+    the unit is said after it: "1 year", "two years"."""
     lower = [w.lower() for w in WORD.findall(reply or "")]
     per = rule.get("per")
     for before, word in zip(lower, lower[1:]):
         if word in (per or rule["units"]) and (before.isdigit() or before in rule["words"]):
-            return str((int(before) if before.isdigit() else rule["words"][before]) * per[word]) if per else before
+            if per:
+                return str((int(before) if before.isdigit() else rule["words"][before]) * per[word])
+            unit = rule.get("unit")
+            return f"{before} {unit[0] if before in ('1', 'one') else unit[1]}" if unit else before
     return None
 
 
@@ -119,5 +123,6 @@ class Filler:
             if lead is None:
                 logger.warning("dropped ack for: %s", ack)
                 lead = ""
-            self._said[key] = f"{lead} {text}".strip()
+            gap = "" if lead.endswith("\n") else " "  # a lead on its own line ("Damn.\n\n") needs no space
+            self._said[key] = f"{lead}{gap}{text}".strip()
         return self._said[key]

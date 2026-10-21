@@ -38,8 +38,8 @@ class Recorder:
         return self.line
 
 
-def seller(bow, llm=down, step=None, **state):
-    s = ScriptSeller(CFG, CAT, load_offer("shay_coaching"), SENSE, bow, llm)
+def seller(bow, llm=down, step=None, method=CAT, sense=SENSE, offer=None, **state):
+    s = ScriptSeller(CFG, method, offer or load_offer("shay_coaching"), sense, bow, llm)
     if step:
         s.reset(ScriptState(step=step, **state))
     return s
@@ -114,8 +114,7 @@ def test_the_floor_holds_on_steps_whose_answers_score_low(fake_embedder):
     s = seller(fake_embedder)
     s.reply("send the payment link")                   # ~0.76 here: above the threshold, under the floor
     assert s.state.step != "ready"
-    s = seller(fake_embedder)
-    s.method = replace(CAT, ready=replace(CAT.ready, min_score=0.0))
+    s = seller(fake_embedder, method=replace(CAT, ready=replace(CAT.ready, min_score=0.0)))
     s.reply("send the payment link")
     assert s.state.step == "ready"                     # the same reply, no floor: it jumps
 
@@ -174,7 +173,7 @@ def test_the_step_itself_still_captures_normally():
 
 def test_side_question_re_asks_the_probe_it_was_on(fake_embedder):
     s = seller(fake_embedder)
-    s.reply("3k")                                    # unrecognised: probe 1
+    s.reply("not sure really")                       # vague, nothing to ask about: probe 1
     text, _ = s.reply("is this a bot?")
     assert text.endswith(CAT.steps["01"].probes[0])
     assert CAT.steps["01"].say not in text
@@ -222,8 +221,7 @@ def test_frustration_has_its_own_floor(fake_embedder):
     text, _ = s.reply("stop with the script")            # ~0.89: over the floor
     assert text.startswith(FRUSTRATED)
     calm = replace(SENSE.interruptions["frustrated"], min_score=0.95)
-    s = seller(fake_embedder)
-    s.sense = replace(SENSE, interruptions={**SENSE.interruptions, "frustrated": calm})
+    s = seller(fake_embedder, sense=replace(SENSE, interruptions={**SENSE.interruptions, "frustrated": calm}))
     text, _ = s.reply("stop with the script")
     assert not text.startswith(FRUSTRATED)
 
@@ -287,8 +285,7 @@ def test_a_clean_product_answer_may_go_beyond_the_fact_words(fake_embedder):
 def test_no_fact_sheet_means_no_ai_answer(fake_embedder):
     from dataclasses import replace
     llm = Recorder("Anything.")
-    s = seller(fake_embedder, llm, step="03")
-    s.offer = replace(s.offer, about="")
+    s = seller(fake_embedder, llm, step="03", offer=replace(load_offer("shay_coaching"), about=""))
     text, _ = s.reply("will refunds exist?")
     assert text.startswith(FALLBACK) and not llm.prompts
 

@@ -97,7 +97,9 @@ def test_a_product_with_no_script_gets_the_default_one(client, product):
 def test_vague_opening_answer_is_dug_into_not_deflected(client):
     _, headers = _init(client)
     text = _say(client, headers, "I want to make money online")["message"]
-    assert "That's fair" not in text and text == "What are you actually hoping to achieve?"
+    assert "That's fair" not in text and text == "What do you mean by wanting to make money online?"
+    text = _say(client, headers, "I don't know")["message"]  # a shrug: nothing to ask about, so a probe
+    assert text == "What are you actually hoping to achieve?"
 
 
 def test_a_vague_prospect_hears_new_questions_then_the_call_moves_on(client):

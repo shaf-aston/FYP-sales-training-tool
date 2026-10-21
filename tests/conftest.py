@@ -85,7 +85,7 @@ def _no_session_leak_between_tests():
 class BagOfWordsEmbedder:
     """Offline stand-in for the real embedder: hashed word counts, unit length."""
 
-    DIM = 256
+    DIM = 1024  # few hash collisions: a collision makes two unrelated replies look the same
 
     def warm(self, texts):
         pass

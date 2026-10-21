@@ -4,6 +4,8 @@
 # draft is an authoring marker only: the app ignores it.
 first: "intent"
 price_step: "present"
+# Said before a question asked again once its probes ran out, in turn. draft: ours.
+reask: ["No rush, even a rough idea helps.", "Just your best guess is fine."]
 steps:
   "intent":
     ui_stage: intent

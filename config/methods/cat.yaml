@@ -18,6 +18,9 @@ ready:
     - "where do I sign up, I want to join"
     - "how do I sign up"
     - "just send me the link to pay"
+# Said before a question asked again once its probes ran out, in turn: the same line twice in a row
+# reads like a bot. draft: ours, the source has no wording for this.
+reask: ["No rush, even a rough idea helps.", "Just your best guess is fine."]
 steps:
   "00":
     name: "Frame"
@@ -36,7 +39,7 @@ steps:
     say: "What do you want to specifically achieve by making money online?"
     capture: outcome
     echo: true   # "financial freedom" goes back into the next lines as they said it
-    probe:   # asked in turn; then `stuck` moves on instead of asking forever
+    probe:   # asked in turn; then `stuck` moves on after `misses` (engine.yaml) instead of asking forever
       - "What are you actually hoping to achieve?"
       - "What would that money actually give you?"
       - "If money wasn't a problem, what would your days look like?"
@@ -161,6 +164,7 @@ steps:
     ui_stage: emotional
     draft: true
     say: "Where do you think that belief comes from?"
+    capture: belief_from   # an open question: a shrug is asked again, not moved past
     listen:
       any: {then: "belief_cost"}
   "belief_cost":
@@ -181,7 +185,7 @@ steps:
     listen:
       any:
         then: "willing"
-        ack: "You could settle like everyone else. You already have for {years} years."
+        ack: "You could settle like everyone else. You already have for {years_said}."   # "1 year", "2 years": their number with the right unit
   "willing":
     name: "Willingness"
     ui_stage: emotional
@@ -192,6 +196,7 @@ steps:
     name: "Why not?"
     ui_stage: emotional
     say: "What makes you so different from everyone else?"
+    capture: different   # an open question: a shrug is asked again, not moved past
     listen:
       any:
         then: "12"

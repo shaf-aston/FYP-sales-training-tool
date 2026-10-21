@@ -4,14 +4,13 @@ rewind snapshots and analytics."""
 import json
 import logging
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from typing import Any, Optional
 
 from . import coach, quiz
 from .enums import Stage
 from .flow import CallFlow
 from .logs import SessionAnalytics, tag_session, timed
-from .script_engine.engine import ScriptState
 from .script_engine.seller import build_seller, resolve_product
 from .services.provider_router import ProviderRouter
 
@@ -142,13 +141,10 @@ class SellerBot:
         return quiz.score_direction(explanation, self._router, self.call.current_stage)
 
     def _capture_turn_snapshot(self) -> dict:
-        turn_state = self.seller.state
-        if turn_state is not None and not isinstance(turn_state, dict):
-            turn_state = asdict(turn_state)
         return {
             "current_stage": self.call.current_stage,
             "stage_turn_count": self.call.stage_turn_count,
-            "turn_state": turn_state,
+            "turn_state": self.seller.snapshot(),
         }
 
     def rewind_to_turn(self, turn_index: int) -> bool:
@@ -162,12 +158,11 @@ class SellerBot:
         kept = history[:user_positions[turn_index]] if turn_index < len(user_positions) else history
         if turn_index == 0:
             self.call.reset_to_initial()
-            self.seller.reset()
+            self.seller.restore()
         else:
             snapshot = self._turn_snapshots[turn_index - 1]
             self.call.restore_state(snapshot)
-            saved = snapshot.get("turn_state")
-            self.seller.reset(ScriptState(**saved) if saved else None)
+            self.seller.restore(snapshot.get("turn_state"))
         self.call.conversation_history = kept
         self._turn_snapshots = self._turn_snapshots[:turn_index]
         self.log_snapshot()

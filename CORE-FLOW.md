@@ -31,7 +31,9 @@ Open the engine for the mode you are working on. Nothing else decides the turn.
 
 Buy mode: `buy.py` → `SellerBot.chat` → `core/script_engine/` (scripted lines for the products in `config/script/engine.yaml`; any other product gets `default_product`. AI only answers uncovered product questions, acknowledges what they said and judges close calls, and every AI sentence goes through `ai_line.py` `checked_line`). `flow.py` `CallFlow` keeps the call's history and stage. Coach notes come from the script step; `coach.py` answers the learner's questions.
 
-One seller turn (`script_engine/seller.py` `ScriptSeller.reply`; the moves are pure functions in `engine.py`, every word and list in YAML):
+One seller turn (`script_engine/seller.py` `ScriptSeller.reply`; every word and list in YAML). Who does what:
+`verdict.py` `Ear.hear` decides what the reply was heard as, in the order below, and returns one `Verdict` → `seller.py` answers that verdict → `engine.py` (pure functions) picks the next line → `voice.py` `Voice` is the only door to the AI (listen / ack / answer / judge, every prompt and check, shut for the rest of a turn after one failure). `shrug.py` says whether a reply said nothing and how to ask what they meant. `config.py` checks `engine.yaml` when a seller is built (key types, prompt blanks) and names every problem at once.
+
 1. A reply that says nothing ("ok") is heard as an answer only.
 2. `hear_ahead` (not on questions): an answer to a later step given early (a step's `answered_by`, e.g. "I want 5k a month") is kept, and that step is skipped when reached.
 3. One recognise pass over interruptions (`script/common_sense.yaml`), product facts, objections and the keen-buyer `ready` examples. Each (except a product fact, never an answer) must beat reading the reply as the step's own answer; `ready` and items with `min_score` must also clear their floor.
@@ -61,7 +63,7 @@ Every buy-mode turn writes one log line from `core/seller_bot.py`:
 
 `heard as` is the path the reply took in `ScriptSeller.reply` (`seller.last_turn`):
 `answer:<label>` / `answer:any` / `answer:unclear`, `sense:<name>`, `objection:<name>`, `fact:<name>`,
-`ready:prospect`, `question`, `nudge`, `says_nothing`, `hesitates`, `objection_answered:<name>`.
+`ready:prospect`, `question`, `nudge`, `says_nothing`, `misses` (the listen call heard no answer), `hesitates`, `objection_answered:<name>`.
 The same fields go into the `conversation_turn` analytics event. To read a whole call:
 `python scripts/show_convo.py data/logs/events [session_id]`.
 

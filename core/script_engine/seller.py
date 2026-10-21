@@ -1,41 +1,39 @@
 """One selling turn: the script picks the line, the AI only fills small checked gaps."""
 
-import json
-import logging
 import re
-from dataclasses import replace
+from dataclasses import asdict, replace
 from functools import lru_cache
 from pathlib import Path
 
 from core.loader import load_yaml
 from core.script_engine.ai_gate import AiGate
-from core.script_engine.ai_line import checked_line
-from core.script_engine.checks import CheckContext, clip, figures
+from core.script_engine.config import check
 from core.script_engine.embedder import make_embedder
 from core.script_engine.engine import (
     advance,
+    ScriptState,
     ask_again,
     asked_line,
-    hear_ahead,
+    asks_left,
     jump,
     move_on,
     object_to,
     park,
     price_open,
-    ready_open,
     start,
 )
 from core.script_engine.fill import Filler, fix_typos
-from core.script_engine.judge import VAGUE, judge
-from core.script_engine.listen import hear
-from core.script_engine.method import ANY, load_common_sense, load_method, load_offer
+from core.script_engine.judge import VAGUE
+from core.script_engine.method import load_common_sense, load_method, load_offer
 from core.script_engine.recognise import Listener
-from core.utils import is_question, tokenize
+from core.script_engine.shrug import Shrugs
+from core.script_engine.verdict import Ear, answer_labels
+from core.script_engine.voice import Voice
+from core.utils import tokenize
 
 from ..logs import timed
 
 ROOT = Path(__file__).resolve().parent.parent.parent
-uncovered_log = logging.getLogger("script_engine.uncovered")
 
 
 def engine_config():
@@ -74,27 +72,25 @@ def _after_lead(line):
     return line if re.match(r"I( |')", line) else line[:1].lower() + line[1:]
 
 
-def _answer_labels(step):
-    """The step's labelled answers: {label: [example, ...]}; empty when any reply is its answer."""
-    return {r.label: list(r.examples) for r in step.listen if r.examples}
-
-
 class ScriptSeller:
     def __init__(self, cfg, method, offer, sense, embedder, llm):
-        self.cfg, self.method, self.offer, self.sense = cfg, method, offer, sense
-        self._listener, self._llm = Listener(cfg, embedder), llm
-        self._ai_ok = True
-        self._waiting = False  # last reply was a `wait` reply: they stepped away
+        """`llm`: a `Voice`, or a plain `llm(prompt, max_tokens)` callable wrapped in one."""
+        self.cfg, self.method, self.offer, self.sense = check(cfg), method, offer, sense
+        self._listener = Listener(cfg, embedder)
+        self._voice = llm if hasattr(llm, "new_turn") else Voice(cfg, offer, llm)
         self._opening = start(method)
         self.state = self._opening.state
         examples = self._script_examples()
         vocab = frozenset(w for e in examples for w in tokenize(e)) | frozenset(cfg["spell_words"])
         self._vocab = vocab
-        self._filler = Filler(cfg, offer, frozenset(s.capture for s in method.steps.values() if s.echo), vocab)
+        echo = frozenset(s.capture for s in method.steps.values() if s.echo) | {"said"}  # {said}: sense.ask_meaning
+        self._filler = Filler(cfg, offer, echo, vocab)
+        self._shrugs = Shrugs(cfg, sense, self._listener, self._filler.fill)
+        self._ear = Ear(cfg, method, offer, sense, self._listener, self._shrugs)
         embedder.warm(examples)
 
     def _script_examples(self):
-        found = [e for i in self.sense.interruptions.values() for e in i.examples]
+        found = [e for i in self.sense.interruptions.values() for e in i.examples] + list(self.sense.unclear)
         found += [e for f in self.offer.facts.values() for e in f.examples]
         found += [e for o in self.method.objections.values() for e in o.examples]
         found += [e for s in self.method.steps.values() for r in s.listen for e in r.examples]
@@ -104,21 +100,20 @@ class ScriptSeller:
     def reset(self, state=None):
         self.state = state or self._opening.state
 
+    def snapshot(self):
+        """Everything the call needs to carry on from here, as plain data (kept per turn for rewinds)."""
+        return asdict(self.state)
+
+    def restore(self, saved=None):
+        """Back to a `snapshot()`; None goes back to the opening."""
+        if saved:  # JSON gives lists back: tuples, so `said + (line,)` still adds up
+            saved = {**saved, "said": tuple(saved.get("said", ())), "parked": tuple(saved.get("parked", ()))}
+        self.reset(ScriptState(**saved) if saved else None)
+
     def opening(self):
         """The first line of the call: (text, ui_stage)."""
-        self._ai_ok = True
+        self._voice.new_turn()
         return self._render(self._opening), self._opening.ui_stage
-
-    @timed
-    def _ask(self, prompt, max_tokens):
-        """The only door to the AI. After one failure it stays shut for the rest of the turn."""
-        if not self._ai_ok:
-            raise RuntimeError("AI skipped: it already failed this turn")
-        try:
-            return self._llm(prompt, max_tokens)
-        except Exception:
-            self._ai_ok = False
-            raise
 
     # ---- one turn -------------------------------------------------------------------------
 
@@ -127,72 +122,63 @@ class ScriptSeller:
         """Answer one prospect message. Returns (text, ui_stage). `self.last_turn` then says what the
         reply was heard as and where the script went, for the turn log."""
         before = self.state.step
-        self._why = "answer"
-        said, ui_stage = self._reply(fix_typos(text, self._vocab, self.cfg))
-        self.last_turn = {"step_from": before, "step_to": self.state.step, "heard_as": self._why,
+        said, ui_stage, heard_as = self._reply(fix_typos(text, self._vocab, self.cfg))
+        self.last_turn = {"step_from": before, "step_to": self.state.step, "heard_as": heard_as,
                           "saved": {k: v for k, v in self.state.slots.items() if v}}
         return said, ui_stage
 
     def _reply(self, text):
-        self._ai_ok = True
-        waiting, self._waiting = self._waiting, False
+        """(text, ui_stage, heard_as): hear the reply, then answer what it was heard as."""
+        self._voice.new_turn()
         step = self.method.steps[self.state.step]
         opened = price_open(self.method, self.state.step)
-        rest = self._unnudged(text)
-        if rest is not None and not tokenize(rest):
-            self._why = "nudge"
-            return self._carry_on(self.sense.nudge, step, rephrase=False)  # "ok, what's next?": no answer
-        text = text if rest is None else rest  # "credit, what's next?", "yeah, so what's next": the rest answers
-        empty = not waiting and not self.state.play and self._says_nothing(text)
-        if empty:  # listened to as an answer only: never an interruption, objection or question
-            self._why = "says_nothing"
-            move, _ = self._listen(text, step, opened, empty=True)
+        v = self._ear.hear(text, self.state, opened)
+        self.state = replace(v.ahead or self.state, waiting=False)  # early answers are kept whatever it was
+        said, ui_stage, detail = self._respond(v, step, opened)
+        return said, ui_stage, detail or v.heard_as
+
+    def _respond(self, v, step, opened):
+        """(text, ui_stage, heard_as detail or "")."""
+        if v.kind == "nudge":
+            return *self._carry_on(self.sense.nudge, step, rephrase=False), ""
+        if v.kind == "says_nothing":
+            move, _, detail = self._listen(v, step, opened, empty=True)
             self.state = move.state
-            return self._render(move), move.ui_stage
-        if not self._is_question(text):  # "do I need 5k a month to start?" is not their goal
-            self.state = hear_ahead(self.method, self.state, text)  # kept whatever else the reply turns out to be
-        kind, name = self._interrupt(text, step, opened, waiting)
-        if kind:
-            self._why = f"{kind}:{name}"
-
-        if kind == "ready":
-            return self._go(jump(self.method, self.state, self.method.ready.then))
-        if kind == "sense":
-            return self._sense(self.sense.interruptions[name], step)
-        if kind == "objection" and not opened:
-            self.state = park(self.state, name)
-            return self._then_ask(self.method.objections[name].early or self.sense.park), step.ui_stage
-        if kind == "objection":
-            return self._go(object_to(self.method, self.state, name, self.cfg["objection_loops"]))
-        if kind == "fact":
-            f = self.offer.facts[name]
-            answer = f.late_answer if opened and f.late_answer else f.answer
-            lead = self._filler.fill(answer, {})
-            return self._then_ask(lead), step.ui_stage
-        if self.state.play:
-            self._why = f"objection_answered:{self.state.play}"
-            # they answered the objection play's question: normalise, then ask the step again
-            objection = self.method.objections[self.state.play]
+            return self._render(move), move.ui_stage, detail
+        if v.kind == "ready":
+            return *self._go(jump(self.method, self.state, self.method.ready.then)), ""
+        if v.kind == "sense":
+            return *self._sense(self.sense.interruptions[v.name], step), ""
+        if v.kind == "objection" and not opened:
+            self.state = park(self.state, v.name)
+            return self._then_ask(self.method.objections[v.name].early or self.sense.park), step.ui_stage, ""
+        if v.kind == "objection":
+            return *self._go(object_to(self.method, self.state, v.name, self.cfg["objection_loops"])), ""
+        if v.kind == "fact":
+            f = self.offer.facts[v.name]
+            lead = self._filler.fill(f.late_answer if opened and f.late_answer else f.answer, {})
+            return self._then_ask(lead), step.ui_stage, ""
+        if v.kind == "play":  # they answered the objection play's question: normalise, then ask the step again
             self.state = replace(self.state, play="")
-            return self._then_ask(objection.normalise), step.ui_stage
-        asking = self._is_question(text)
-        if asking and not self._answers(text, step):
-            self._why = "question"
-            answer = self._answer_uncovered(text, opened) or self.cfg["uncovered_fallback"]
-            return self._then_ask(answer), step.ui_stage
+            return self._then_ask(self.method.objections[v.name].normalise), step.ui_stage, "objection_answered:" + v.name
+        if v.kind == "question":
+            answer = self._answer_uncovered(v.text, opened) or self.cfg["uncovered_fallback"]
+            return self._then_ask(answer), step.ui_stage, ""
+        return self._answer(v, step, opened)
 
-        move, ack = self._listen(text, step, opened)
+    def _answer(self, v, step, opened):
+        text = v.text
+        move, ack, heard_as = self._listen(v, step, opened)
         if self._hesitates(move):
-            self._why = "hesitates"
-            return self._revisit(), step.ui_stage
+            return self._revisit(), step.ui_stage, "hesitates"
         earlier = self._earlier(step)
         self.state = move.state
         # an answer with a question in it: the question gets an answer when the facts have one, else
         # nothing ("what's next?" needs none). After the judge: a failed AI line can't cost it.
-        heard = self._answer_uncovered(text, opened) if asking else ""
+        heard = self._answer_uncovered(text, opened) if v.asking else ""
         if not heard and not move.ack and move.state.step != step.id:
-            heard = ack if ack is not None else self._acknowledge(text, step, opened, earlier)
-        return self._render(move, heard), move.ui_stage
+            heard = ack if ack is not None else self._voice.ack(text, step.say_plain or step.say, earlier, opened)
+        return self._render(move, heard), move.ui_stage, heard_as
 
     def _earlier(self, step):
         """Their answers to the other steps: what an AI line may link to."""
@@ -206,7 +192,7 @@ class ScriptSeller:
     def _sense(self, said, step):
         """An everyday interruption: its reply, then what its `after` says."""
         if said.after == "wait":
-            self._waiting = True
+            self.state = replace(self.state, waiting=True)
             return said.reply, step.ui_stage
         if said.after == "ask":
             return self._then_ask(said.reply), step.ui_stage
@@ -221,16 +207,6 @@ class ScriptSeller:
             move = move_on(self.method, self.state)
         text, stage = self._go(move)
         return f"{lead} {text}", stage
-
-    def _unnudged(self, text):
-        """The reply without a nudge on its end ("credit, what's next?" -> "credit"); None when it has none."""
-        for phrase in sorted(self.sense.nudges, key=len, reverse=True):
-            words = r"\W+".join(map(re.escape, tokenize(phrase)))
-            leads = "|".join(map(re.escape, self.cfg["nudge_leads"]))
-            found = re.search(rf"(?:^|\W)(?:(?:{leads})\W+)?{words}\W*$", text, re.IGNORECASE)
-            if found:
-                return text[:found.start()].rstrip(" ,;:-")
-        return None
 
     def _hesitates(self, move):
         """They held back at the revisit step while a worry from earlier is still unanswered."""
@@ -260,152 +236,50 @@ class ScriptSeller:
         }
 
     @timed
-    def _interrupt(self, text, step, opened, waiting):
-        """An everyday interruption, product question or objection - only when it clearly beats
-        reading the reply as an answer to the step's own question, like a human closer would."""
-        senses = {k: i for k, i in self.sense.interruptions.items() if waiting or not i.after_wait}
-        labels = {f"sense:{k}": i.examples for k, i in senses.items()}
-        floors = {f"sense:{k}": i.min_score for k, i in senses.items()}  # lowest score a label counts at
-        asking = self._is_question(text)
-        if asking:
-            labels.update({f"fact:{k}": f.examples for k, f in self.offer.facts.items()})
-        answers = _answer_labels(step)
-        objections = self.method.objections.items()
-        if not opened and step.doubts_answer:
-            objections = ()  # "money's tight" answers "what holds you back"
-        elif not opened and asking:
-            objections = [(k, o) for k, o in objections if o.early]  # "is this a scam?" gets an honest early line
-        if not opened:
-            objections = [(k, o) for k, o in objections if k not in self.state.parked]  # parked once: never the same line twice
-        labels.update({f"objection:{k}": o.examples for k, o in objections})
-        if not opened and not asking:  # "money", "scared", "risk" before the price are answers, not objections
-            floors.update({f"objection:{k}": self.cfg["early_objection_min_score"] for k, _ in objections})
-        if ready_open(self.method, self.state.step):
-            labels["ready:prospect"] = self.method.ready.examples
-            floors["ready:prospect"] = self.method.ready.min_score
-        won = self._listener.interruption(text, labels, answers, any(r.label == ANY for r in step.listen), asking, floors)
-        return tuple(won.split(":", 1)) if won else (None, None)
-
-    def _answers(self, text, step):
-        """The reply matches one of the step's own answers, even with a question in it ("yeah makes
-        sense, what's next?" at the temp check). Two answers too close to call are judged as usual."""
-        labels = _answer_labels(step)
-        return bool(labels) and self._listener.match(text, labels).label is not None
-
-    @timed
-    def _listen(self, text, step, opened, empty=False):
-        """Hear the reply as the step's answer: (move, ack). ack = the AI's "I heard you" line from the
-        listen call ("" when it failed a check), or None when no listen call was made."""
-        labels = _answer_labels(step)
-        label, line, ack = None, "", None
+    def _listen(self, v, step, opened, empty=False):
+        """Hear the reply as the step's answer: (move, ack, heard_as detail). ack = the AI's "I heard you"
+        line from the listen call ("" when it failed a check), or None when no listen call was made."""
+        text, labels = v.text, answer_labels(step)
+        label, line, ack, missed = None, "", None, False
         if labels:
             found = self._listener.match(text, labels)
             label = found.label
             if found.close:
-                pick = judge(text, {c: labels[c] for c in found.candidates}, self._ask, self.cfg)
+                pick = self._voice.judge(text, {c: labels[c] for c in found.candidates})
                 label = None if pick == VAGUE else pick
-        elif self.cfg["listen"] and step.capture and not (empty and self.state.asks >= self.cfg["misses"]):
-            heard = self._hear(text, step, opened)  # the step is after a concept: the AI hears for it
-            if heard is None:
-                self._ai_ok = False  # off-format counts as a failure: no second call (an ack) this turn
-            else:
-                empty, line, ack = empty or not heard.answered, heard.probe, heard.ack
-                if not heard.answered:
-                    self._why = "misses"
-        if self._why == "answer":
-            self._why = f"answer:{label}" if label else ("answer:any" if not labels else "answer:unclear")
-        return advance(self.method, self.state, label, text, empty, line, self.cfg["misses"]), ack
+        elif self.cfg["listen"] and step.capture and not (empty and not asks_left(self.method, self.state, self.cfg["misses"])):
+            concept = f"{step.name}: {step.note}" if step.note else step.name  # the AI hears for it
+            heard = self._voice.listen(text, concept, self._question(), self._earlier(step), opened)
+            if heard is not None:
+                missed = not heard.answered
+                empty, line, ack = empty or missed, heard.probe, heard.ack
+        if step.capture and not line:
+            line = self._shrugs.ask_meaning(text, self._question(), empty, v.ahead is not None)  # said only if asked again
+        detail = ""
+        if missed:
+            detail = "misses"
+        elif v.kind == "answer":
+            detail = f"answer:{label}" if label else ("answer:any" if not labels else "answer:unclear")
+        return advance(self.method, self.state, label, text, empty, line, self.cfg["misses"]), ack, detail
 
-    def _hear(self, reply, step, opened):
-        """One listen call for the step's concept (its note, else its name): did they give it, an ack if
-        so, a probe for it if not. None when the AI failed: rules alone then decide."""
-        c = self.cfg
-        told = self._told(self._earlier(step))
-        asked, _ = asked_line(self.method, self.state)
-        question = self._filler.fill(asked, self.state.slots) or step.say_plain or asked
-        prompt = c["prompts"]["listen"].format(
-            concept=f"{step.name}: {step.note}" if step.note else step.name, question=question, reply=reply,
-            max_words=c["ack_max_words"], probe_words=c["probe_max_words"],
-            memory=c["prompts"]["ack_memory"].format(told=told) if told else "",
-        )
-        ack_ctx = CheckContext(
-            c["ack_max_words"], 0, opened, self.offer.price,
-            prospect_words=frozenset(tokenize(reply)) | frozenset(tokenize(told)),
-            stop_words=frozenset(c["stop_words"]) | frozenset(c["ack_words"]),
-            banned_phrases=tuple(c["banned_phrases"]),
-        )
-        probe_ctx = CheckContext(
-            c["probe_max_words"], 1, opened, self.offer.price,
-            known_figures=frozenset(figures(reply + " " + told)), banned_phrases=tuple(c["banned_phrases"]),
-            banned=frozenset(c["answer_banned_words"]) - ack_ctx.prospect_words,  # a probe promises nothing
-        )
-        return hear(self._ask, prompt, c["listen_tokens"], ack_ctx, probe_ctx, question, c)
-
-    def _says_nothing(self, text):
-        """"ok", "sure", "yeah": no answer to an open question, and no interruption either."""
-        words = set(tokenize(text))
-        return bool(words) and words <= set(self.cfg["stop_words"]) | set(self.cfg["filler_words"])
-
-    def _told(self, slots):
-        """Their earlier answers, one per line and cut short, for an AI prompt."""
-        return "\n".join(f"- {clip(v, self.cfg['memory_chars'])}" for v in slots.values() if v)
-
-    @timed
-    def _acknowledge(self, reply, step, opened, earlier):
-        """One short checked sentence showing their answer was heard, in their own words; it may link to
-        something they said earlier. Nothing when it fails: honest silence beats a canned line."""
-        c = self.cfg
-        if not c["ack"]:
-            return ""
-        told = self._told(earlier)
-        prompt = c["prompts"]["ack"].format(
-            question=step.say_plain or step.say, reply=reply, max_words=c["ack_max_words"],
-            memory=c["prompts"]["ack_memory"].format(told=told) if told else "",
-        )
-        ctx = CheckContext(
-            c["ack_max_words"], 0, opened, self.offer.price,
-            prospect_words=frozenset(tokenize(reply)) | frozenset(tokenize(told)),
-            stop_words=frozenset(c["stop_words"]) | frozenset(c["ack_words"]),
-            banned_phrases=tuple(c["banned_phrases"]),
-        )
-        return checked_line(self._ask, prompt, c["ack_tokens"], ctx, c, "ack", retries=c["ack_retries"]) or ""
-
-    def _is_question(self, text):
-        return is_question(text, self.cfg["question_starts"], self.cfg["filler_tags"])
+    def _question(self):
+        """The step's question as it was just asked, blanks filled."""
+        asked, plain = asked_line(self.method, self.state)
+        return (self._filler.fill(asked, self.state.slots) or plain
+                or self.method.steps[self.state.step].say_plain or asked)
 
     @timed
     def _answer_uncovered(self, question, opened):
         """A short answer to a product question nothing covers, from the offer's facts and what they told us.
         It may say anything the facts support, never a new number, promise or price: always checked and
         logged. None when the facts don't cover it (the caller decides whether to say the fallback)."""
-        c, offer = self.cfg, self.offer
+        offer = self.offer
         if not offer.about:
             return None
         facts = self._filler.fill(offer.about, {})
         if opened and offer.about_after_price:
             facts += " " + self._filler.fill(offer.about_after_price, {})
-        told = self._told(self.state.slots)
-        prompt = c["prompts"]["answer"].format(
-            facts=facts, question=question,
-            memory=c["prompts"]["answer_memory"].format(told=told) if told else "",
-        )
-        fact_words = frozenset(tokenize(facts))
-        ctx = CheckContext(
-            c["max_words"], 0, opened, offer.price,
-            known_figures=frozenset(figures(facts)),  # their own figures are not ours to repeat back as results
-            banned=frozenset(c["answer_banned_words"]) - fact_words, banned_phrases=tuple(c["banned_phrases"]),
-        )
-
-        def clean(raw):
-            return None if "not_covered" in raw.lower().replace(" ", "_") else raw.strip()
-
-        answer = checked_line(self._ask, prompt, c["answer_tokens"], ctx, c, "product answer", clean)
-        if c["log_uncovered"]:
-            uncovered_log.info(json.dumps({
-                "question": clip(question, c["log_text_chars"]),
-                "answer": answer and clip(answer, c["log_text_chars"]),
-            }))
-        return answer
+        return self._voice.answer(question, facts, self.state.slots, opened)
 
     def _then_ask(self, lead):
         """`lead`, then the current question again. A step that asks nothing (a statement) is not

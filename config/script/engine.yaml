@@ -40,6 +40,11 @@ number_blanks:   # blanks filled with just the number they said before the unit:
   years:
     units: [year, years, yr, yrs]
     words: [one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, fifteen, twenty]
+  years_said:   # the same number with its unit, singular for one: "1 year", "two years"
+    from: years
+    units: [year, years, yr, yrs]
+    words: [one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, fifteen, twenty]
+    unit: [year, years]
   months_thinking:   # the same answer counted in months: "2 years" -> 24, "six months" -> 6
     from: years
     per: {year: 12, years: 12, yr: 12, yrs: 12, month: 1, months: 1}
@@ -51,10 +56,11 @@ answer_tokens: 60      # max_tokens for an uncovered product answer
 uncovered_fallback: "I don't know that one offhand, I'll find out and let you know."   # draft wording
 answer_banned_words: [guarantee, guaranteed, guarantees, promise, promises, promised, overnight, days, weeks, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, twenty, thirty, fifty, hundred, hundreds, thousand, thousands, million, millions, percent, earn, earns, earned, earning, income, salary, profit, profits, revenue, free, trial, refund, refunds, discount, discounts, contract, contracts, cancel, cancellation, lifetime, module, modules, daily, weekly, monthly, www, com, http, https]   # a product answer never promises, sizes results, sets timeframes, makes up a policy or a feature, or sends links (words the offer facts use are allowed)
 ack: true             # before the next scripted line, one short AI sentence showing their answer was heard (none when it fails a check)
-listen: true          # on a step that captures an answer and takes any reply, the AI hears for the step's concept (its note): a miss gets one fresh probe for it, then the call moves on
+listen: true          # on a step that captures an answer and takes any reply, the AI hears for the step's concept (its note): a miss gets a fresh probe for it, up to `misses` times, then the call moves on
 listen_tokens: 90     # max_tokens for the listen call (three short lines)
 probe_max_words: 18   # longest probe the AI may ask
-misses: 1             # times a step is asked again when the reply says nothing or misses its concept
+misses: 3             # times a step that captures an answer is asked again (each time in other words) when the reply says nothing or misses its concept; then the call moves on without saving it
+vague_words: [maybe, eh, hmm, um, umm, ummm, lol, haha, bro, man, mate, tbh, honestly, really, guess, know, sure, idea, clue, depends, think, question, good, anything, something]   # a reply made only of these (and stop/filler words) is a shrug: nothing to ask "what do you mean by". Never "whatever" or "meh": those are frustration
 ack_max_words: 12
 ack_tokens: 30
 ack_retries: 0        # one try: a turn never waits on two ack calls
@@ -78,7 +84,7 @@ prompts:   # AI prompt templates: {name} is filled in by the seller; an empty {m
     {memory}Reply with exactly three lines:
     ANSWERED: yes if the reply gives you the goal, even partly or in their own words; no if it is empty, a shrug ("idk", "k"), off the point or dodges it.
     ACK: when yes, one short sentence (at most {max_words} words) showing you heard them, using their own words, speaking to them as 'you', no question, no advice, no praise; else none.
-    PROBE: when no, one simpler, more concrete question (at most {probe_words} words) that asks for the goal another way, never the question's own wording; else none.
+    PROBE: when no, one simpler, more concrete question (at most {probe_words} words) that asks for the goal another way, or, when they said something unclear, asks what they mean by it; never the question's own wording; else none.
   ack_memory: |
     Earlier they told you:
     <earlier>
