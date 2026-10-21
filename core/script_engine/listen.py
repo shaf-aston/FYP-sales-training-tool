@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from core.script_engine.checks import check, clip
 
 logger = logging.getLogger("script_engine.fallback")
-LINE = re.compile(r"^\s*(ANSWERED|ACK|PROBE)\s*:\s*(.*?)\s*$", re.IGNORECASE | re.MULTILINE)
+KEY = re.compile(r"\b(ANSWERED|ACK|PROBE)\s*:", re.IGNORECASE)
 NONE = ("", "none", "n/a", "-")
 
 
@@ -20,12 +20,20 @@ class Heard:
 
 
 def parse(raw):
-    """The AI's three lines -> (answered, ack, probe), or None when ANSWERED is missing."""
-    found = {k.upper(): v for k, v in LINE.findall(raw)}
-    verdict = found.get("ANSWERED", "").lower()
+    """The AI's three lines -> (answered, ack, probe), or None when ANSWERED is missing. Keys may share a
+    line; the first of each key counts, so a later "ANSWERED:" inside a probe can't flip the verdict."""
+    parts = KEY.split(raw)  # [junk, key, value, key, value, ...]
+    found = {}
+    for key, value in zip(parts[1::2], parts[2::2]):
+        found.setdefault(key.upper(), value)
+    verdict = found.get("ANSWERED", "").strip().lower()
     if not verdict.startswith(("yes", "no")):
         return None
-    tidy = lambda s: "" if s.strip().strip("\"'").lower() in NONE else s.strip().strip("\"'")  # noqa: E731
+
+    def tidy(text):
+        text = text.strip().strip("`").strip().strip("\"'")
+        return "" if text.lower() in NONE else text
+
     return verdict.startswith("yes"), tidy(found.get("ACK", "")), tidy(found.get("PROBE", ""))
 
 

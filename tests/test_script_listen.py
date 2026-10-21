@@ -47,6 +47,9 @@ def seller(bow, llm, step=None, **state):
     ("answered: No\nack: -\nprobe: \"What stops you?\"", (False, "", "What stops you?")),
     ("ANSWERED: yes", (True, "", "")),
     ("Sure thing!\nANSWERED: no\nPROBE: Why not?", (False, "", "Why not?")),
+    ("ANSWERED: yes ACK: hi PROBE: none", (True, "hi", "")),                      # all on one line
+    ("ANSWERED: no\nPROBE: What stops you?\nANSWERED: yes", (False, "", "What stops you?")),  # first verdict counts
+    ("ANSWERED: no\nPROBE: ANSWERED: yes", (False, "", "")),                      # a key inside a value is no probe
 ])
 def test_parse_reads_the_three_lines_tolerantly(raw, want):
     assert parse(raw) == want
