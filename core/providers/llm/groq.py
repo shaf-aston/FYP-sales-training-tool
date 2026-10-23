@@ -7,7 +7,7 @@ from typing import Any, cast
 
 from groq import APIConnectionError, AuthenticationError, Groq, RateLimitError
 
-from ...constants import DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE, GROQ_REASONING_EFFORT
+from ...constants import DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE, GROQ_REASONING_EFFORT, PROVIDER_ATTEMPTS, PROVIDER_TIMEOUT_SECONDS
 from ..base import BaseLLMProvider, LLMResponse
 from ..config import get_groq_api_keys, get_groq_llm_model
 
@@ -22,7 +22,10 @@ class GroqProvider(BaseLLMProvider):
         self.model = model or get_groq_llm_model()
         self.api_keys = get_groq_api_keys()
         groq_client = cast(Any, Groq)
-        self.clients = [groq_client(api_key=key) for key in self.api_keys]
+        self.clients = [
+            groq_client(api_key=key, timeout=PROVIDER_TIMEOUT_SECONDS, max_retries=PROVIDER_ATTEMPTS - 1)
+            for key in self.api_keys
+        ]
 
     def is_available(self) -> bool:
         """Return True when at least one Groq API key is configured."""

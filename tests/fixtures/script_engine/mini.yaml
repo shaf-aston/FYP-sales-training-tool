@@ -1,5 +1,8 @@
 first: "a"
 price_step: "b"
+revisit_step: "b"
+objection_handling: mini_matrix
+exits: {payment: "c", follow_up: "c"}
 steps:
   "a":
     ui_stage: logical
@@ -28,8 +31,3 @@ steps:
   "c":
     ui_stage: outcome
     say: "Great, next steps."
-objections:
-  money:
-    examples: ["it is too expensive"]
-    loop: ["What does that cost you?"]
-    direct: "Will you keep thinking or change?"

@@ -52,6 +52,10 @@ SESSION_ID_MIN_CHARS = _L["input"]["session_id_min_chars"]
 SESSION_ID_MAX_CHARS = _L["input"]["session_id_max_chars"]
 RATE_LIMITS = {route: tuple(limit) for route, limit in _L["rate_limits"].items()}
 
+# provider requests
+PROVIDER_TIMEOUT_SECONDS = _L["provider"]["timeout_seconds"]
+PROVIDER_ATTEMPTS = _L["provider"]["attempts"]
+
 # LLM call profiles: router.chat_with_fallback(messages, **LLM["buyer_reply"])
 LLM = _L["llm"]
 DEFAULT_TEMPERATURE = LLM["default"]["temperature"]

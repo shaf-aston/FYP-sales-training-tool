@@ -23,12 +23,23 @@ def ear(fake_embedder):
     ("ok, what's next?", ScriptState(step="04"), "nudge"),
     ("ok", ScriptState(step="04"), "says_nothing"),
     ("brb", ScriptState(step="04"), "sense:pause"),
-    ("ok", ScriptState(step="04", play="money"), "play:money"),        # an open play is answered, not shrugged
     ("ok", ScriptState(step="04", waiting=True), "answer"),            # back from "brb": not a shrug
     ("it's my kids", ScriptState(step="04"), "answer"),
 ])
 def test_heard_as(ear, text, state, heard_as):
     assert ear.hear(text, state, opened=False).heard_as == heard_as
+
+
+def test_a_worry_already_in_its_branch_is_heard_as_the_answer(ear):
+    said = "it's too expensive"
+    assert ear.hear(said, ScriptState(step="m_funded"), opened=True).heard_as == "objection:money"
+    assert ear.hear(said, ScriptState(step="m_funded", raised=("money",)), opened=True).kind != "objection"
+
+
+def test_a_worry_the_step_asks_about_is_its_answer_not_a_new_objection(ear):
+    # "what do you need to think over: the money...?" -> "it's too expensive" names the branch, not a 2nd worry
+    v = ear.hear("it's too expensive", ScriptState(step="m_think_what", raised=("think",)), opened=True)
+    assert v.kind != "objection"
 
 
 def test_a_nudge_is_cut_off_and_the_rest_heard(ear):

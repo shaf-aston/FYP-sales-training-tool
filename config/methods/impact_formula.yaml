@@ -4,6 +4,10 @@
 # draft is an authoring marker only: the app ignores it.
 first: "intent"
 price_step: "present"
+revisit_step: "close"   # an objection parked before the price comes back when they hesitate at the close
+# Objections after the price run the shared matrix (config/script); `exits` lead back into this script.
+objection_handling: objection_matrix
+exits: {resell: "payment", payment: "payment", follow_up: "later"}
 # Said before a question asked again once its probes ran out, in turn. draft: ours.
 reask: ["No rush, even a rough idea helps.", "Just your best guess is fine."]
 steps:
@@ -113,7 +117,7 @@ steps:
     draft: true  # probe is ours: the source has no second wording
     say: "Do you see yourself jumping in, or how do you feel?"
     probe: "Where are you at with it right now?"
-    stuck: {then: "later"}   # still hesitant: book the follow-up, don't keep pushing
+    stuck: {then: "m_identify"}   # still hesitant: find what holds them back (the objection matrix)
     listen:
       agrees:
         examples:
@@ -137,62 +141,5 @@ steps:
   "later":
     name: "Follow-up"
     ui_stage: outcome
-    draft: true  # the follow_up line below, as an ending step `stuck` can lead to
-    say: &follow_up "No problem. Let's book a follow-up call so you can decide properly, and I'll leave it there for today."
-
-# Said after the loop lines and the direct line have all been used. The coach's FAQ says to
-# book the follow-up and leave on a good note; it gives no wording.
-follow_up:
-  draft: true
-  say: *follow_up
-
-# Loop twice, third time direct. Loop lines are the app's own objection-path questions.
-objections:
-  money:
-    examples:
-      - "it's too expensive"
-      - "I can't afford that right now"
-      - "that's more than I have"
-      - "I don't have the money"
-      - "the timing is bad for me financially"
-    loop:
-      - "If the money or logistics were handled, would anything else stop you?"
-      - "Does it feel like the current process is the part that actually needs to change?"
-    direct: "Are you going to keep thinking about it, or are you going to make a change?"
-    draft: true
-  partner:
-    examples:
-      - "I need to speak to my partner first"
-      - "I have to talk to my wife about it"
-      - "my husband would need to agree"
-      - "I need approval from my boss"
-      - "I need to check with my team"
-    loop:
-      - "When you picture that conversation with them, what do you think they would push back on most?"
-      - "What would the decisive version of you want to do next?"
-    direct: "Are you going to keep thinking about it, or are you going to make a change?"
-    draft: true
-  fear:
-    examples:
-      - "I'm nervous it won't work for me"
-      - "what if I fail"
-      - "I'm worried about the risk"
-      - "I'm scared of making the wrong choice"
-      - "I'm afraid of making a mistake"
-    loop:
-      - "What feels riskiest or least certain to you about moving forward?"
-      - "When you compare the short-term effort with the long-term cost, what stands out most?"
-    direct: "Are you going to keep thinking about it, or are you going to make a change?"
-    draft: true
-  think:
-    examples:
-      - "I need to think about it"
-      - "let me do some more research first"
-      - "send me some information"
-      - "now isn't the right time"
-      - "maybe later"
-    loop:
-      - "What part feels most off or unresolved for you right now?"
-      - "When you compare the short-term effort with the long-term cost, what stands out most?"
-    direct: "Are you going to keep thinking about it, or are you going to make a change?"
-    draft: true
+    draft: true  # the coach's FAQ says book the follow-up and leave on a good note; no wording
+    say: "No problem. Let's book a follow-up call so you can decide properly, and I'll leave it there for today."

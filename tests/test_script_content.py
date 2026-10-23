@@ -14,26 +14,17 @@ OFFER_BLANKS = {"months", "price", "setter", "pillar_1", "pillar_2", "pillar_3"}
 BLANK = re.compile(r"\{(\w+)\}")
 
 
-def _reachable(method):
-    seen, todo = set(), [method.first] + ([method.ready.then] if method.ready else [])
-    while todo:
-        step_id = todo.pop()
-        if step_id not in seen:
-            seen.add(step_id)
-            todo += [r.then for r in method.steps[step_id].routes]
-    return seen
-
-
 def _lines(step):
-    return [step.say, *step.probes, *(r.ack for r in step.routes)]
+    """Every line the step may say. A `say` with a plain twin is checked by the twin: its blanks
+    may be missing (the shared matrix uses CAT's answers), and then the plain line is said."""
+    return [step.say_plain or step.say, *step.probes, *(r.ack for r in step.routes)]
 
 
 @pytest.mark.parametrize("name", METHODS)
 def test_method_is_connected(name):
-    method = load_method(name)
-    assert _reachable(method) == set(method.steps)
+    method = load_method(name)  # the loader fails on a step nothing leads to
     assert any(not s.listen for s in method.steps.values()), "no ending step"
-    assert method.objections and all(len(o.loop) == 2 for o in method.objections.values())
+    assert method.objections and not method.steps[method.follow_up].listen
 
 
 @pytest.mark.parametrize("name", METHODS)
@@ -96,11 +87,10 @@ def test_every_prospect_blank_has_a_plain_line(name):
 
 
 @pytest.mark.parametrize("name", METHODS)
-def test_objection_lines_use_only_offer_blanks(name):
-    method = load_method(name)
+def test_early_objection_lines_use_only_offer_blanks(name):
+    method = load_method(name)  # said before the prospect has answered anything
     known = set(offer_blanks(load_offer("shay_coaching")))
-    lines = [method.follow_up] + [x for o in method.objections.values() for x in (*o.loop, o.direct)]
-    for line in lines:
+    for line in [o.early for o in method.objections.values()]:
         assert not set(BLANK.findall(line)) - known, line
 
 

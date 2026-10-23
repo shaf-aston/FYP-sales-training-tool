@@ -5,6 +5,9 @@
 first: "00"
 price_step: "14"
 revisit_step: "19"   # an objection parked before the price comes back when they hesitate at the soft close
+# Objections after the price run the shared matrix (config/script); `exits` lead back into this script.
+objection_handling: objection_matrix
+exits: {resell: "20", payment: "22", follow_up: "later"}
 # A keen prospect who says they're in before the pitch is asked one question, then shown how to pay
 # (coach: "just send the payment link, make it easy"). From the soft close on, the script closes itself.
 ready:
@@ -339,7 +342,7 @@ steps:
     draft: true  # probe is ours: no source line for a second ask
     say: "Do you see yourself jumping in?"
     probe: "Where are you at with it right now?"
-    stuck: {then: "later"}   # still hesitant: book the follow-up, don't keep pushing
+    stuck: {then: "m_identify"}   # still hesitant: find what holds them back (the objection matrix)
     listen:
       agrees:
         examples:
@@ -420,8 +423,8 @@ steps:
   "later":
     name: "Follow-up"
     ui_stage: outcome
-    draft: true  # the follow_up line below, as an ending step `stuck` can lead to
-    say: &follow_up "No problem. Let's book a follow-up call so you can decide properly, and I'll leave it there for today."
+    draft: true  # the coach's FAQ says book the follow-up and leave on a good note; no wording
+    say: "No problem. Let's book a follow-up call so you can decide properly, and I'll leave it there for today."
   "ready":   # `ready` above jumps here; after the soft close in order, so the price may be said
     name: "Ready buyer"
     note: 'they said they are in: make paying easy, no pitch'
@@ -464,95 +467,3 @@ steps:
     say: "The investment is {price}."
     listen:
       any: {then: "22"}
-
-# Said after the loop lines and the direct line have all been used. The coach's FAQ says to
-# book the follow-up and leave on a good note; it gives no wording.
-follow_up:
-  draft: true
-  say: *follow_up
-
-# Objection loop (after the soft close). Loop twice, third time direct.
-# Loop lines: the coach's FAQ and the generic objection page.
-objections:
-  money:
-    examples:
-      - "it's too expensive"
-      - "I can't afford that right now"
-      - "that's more than I have"
-      - "I don't have the money"
-      - "I'm not sure I can cover the cost"
-      - "I just want to know the price"   # draft: a price request before the pitch gets the honest early line
-      - "just tell me what it costs"   # draft
-    loop:
-      - "How much do you have now?"
-      - "What can we do together to come up with the funds?"
-    direct: "Are you going to keep thinking about it, or are you going to make a change?"
-    normalise: "Okay. There are ways to make the investment work as long as you're willing to make it work."
-    early: "I haven't mentioned a price yet, so let's first see if this is even a fit."   # draft   # draft: the play says "normalise" with no wording
-    draft: true
-  partner:
-    examples:
-      - "I need to speak to my partner first"
-      - "I have to talk to my wife about it"
-      - "my husband would need to agree"
-      - "I want to run it by my girlfriend"
-      - "I need to check with my business partner"
-    loop:
-      - "Who makes the decisions at home?"
-      - "When you picture that conversation with them, what do you think they would push back on most?"
-    direct: "Are you going to keep thinking about it, or are you going to make a change?"
-    normalise: "That makes sense, it's a big decision."   # draft: the play says "normalise" with no wording
-    draft: true
-  fear:
-    examples:
-      - "I'm nervous it won't work for me"
-      - "what if I fail"
-      - "I'm worried about the risk"
-      - "I've been burned before"
-      - "I'm scared of making the wrong choice"
-    loop:
-      - "What's causing you to put time and space between you and the decision?"
-      - "Is that the main thing, or is there something else behind it?"
-    direct: "Are you going to keep thinking about it, or are you going to make a change?"
-    normalise: "That's completely normal. It's exciting, but terrifying, because it's outside your comfort zone."   # draft: the play says "normalise" with no wording
-    draft: true
-  think:   # Procrastinator: "I need to think about it" (buyer-profiles play)
-    examples:
-      - "I need to think about it"
-      - "I'll get back to you"
-      - "now isn't the right time"
-      - "can I sleep on it"
-      - "maybe later, not right now"
-    loop:
-      - "Have you heard of procrastination? What does it mean to you?"
-      - "Is there a reason we can't do it as soon as possible? Spots are limited."
-    direct: "Are you going to keep thinking about it, or are you going to make a change?"
-    normalise: "Exactly, and that's completely normal. Most people we work with felt the same before they started."   # draft: the play says "normalise" with no wording
-    draft: true
-  research:   # Analyser: still researching, needs more info (buyer-profiles play)
-    examples:
-      - "let me do some more research first"
-      - "I want to look at a few other options"
-      - "I need more information before I decide"
-      - "I'm still comparing programmes"
-      - "I want to read some reviews first"
-    loop:
-      - "Have you heard of analysis paralysis? What does it mean to you?"
-      - "How long have you been researching? Two months turns into four, eight, sixteen."
-    direct: "Are you going to keep thinking about it, or are you going to make a change?"
-    normalise: "That's normal. Most people who come to us have been stuck researching too."   # draft: the play says "normalise" with no wording
-    draft: true
-  scam:
-    examples:
-      - "is this a scam"
-      - "this sounds too good to be true"
-      - "do you guarantee results"
-      - "how do I know this is legit"
-      - "there's so many rip-offs online"
-    loop:
-      - "You're right, there's a lot of shady things online."
-      - "Do you want to find out or keep the door closed?"
-    direct: "Are you going to keep thinking about it, or are you going to make a change?"
-    normalise: "Fair enough, it pays to be careful."
-    early: "Fair question, there's a lot of shady stuff online. This call is to see if we can even help you first."   # draft   # draft: the play says "normalise" with no wording
-    draft: true
