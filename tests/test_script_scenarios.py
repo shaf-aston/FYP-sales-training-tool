@@ -130,7 +130,9 @@ def test_a_number_given_early_is_kept_and_its_question_skipped(fake_embedder):
     text, _ = s.reply("honestly I want 5k a month")   # not an answer to step 01: it digs
     assert text == CAT.steps["01"].probes[0]
     assert s.state.slots["number"] == "5k a month"
-    text, _ = s.reply("I want financial freedom")
+    s.reply("I want financial freedom")              # level 1: dug into, not yet 02
+    s.reply("so I can stop stressing every time I buy something")
+    text, _ = s.reply("I'd finally be proud of myself")
     assert s.state.step == "03" and text == say("03")
 
 
@@ -181,7 +183,7 @@ def test_side_question_re_asks_the_probe_it_was_on(fake_embedder):
 
 def test_asked_line_follows_the_asks():
     assert asked_line(CAT, ScriptState(step="01")) == (CAT.steps["01"].say, "")
-    assert asked_line(CAT, ScriptState(step="01", asks=2))[0] == CAT.steps["01"].probes[1]
+    assert asked_line(CAT, ScriptState(step="01", asks=1))[0] == CAT.steps["01"].probes[0]
     assert asked_line(CAT, ScriptState(step="01", asks=9))[0] == CAT.steps["01"].probes[-1]
     assert asked_line(CAT, ScriptState(step="02", asks=1))[0] == CAT.steps["02"].say  # no probes
 
@@ -530,13 +532,66 @@ def test_echo_phrase(reply, phrase):
 def test_their_outcome_goes_back_into_the_next_question(fake_embedder):
     s = seller(fake_embedder, step="01")
     reply, _ = s.reply("I want financial freedom")
+    assert reply == "What are you hoping to achieve with financial freedom?"
+    s.reply("so I can stop stressing every time I buy something")
+    reply, _ = s.reply("I'd finally be proud of myself")
     assert reply == "How much would you need to be making each month to have financial freedom?"
+
+
+def test_a_goal_as_an_action_is_dug_into_by_being_able_to(fake_embedder):
+    s = seller(fake_embedder, step="01")
+    reply, _ = s.reply("I want to make more money")
+    assert reply == "What are you hoping to achieve by being able to make more money?"
+
+
+def test_a_goal_already_at_level_2_or_3_skips_the_rungs_it_climbed(fake_embedder):
+    s = seller(fake_embedder, step="01")
+    s.reply("so I can stop stressing every time I buy something")
+    assert s.state.step == "goal_identity"
+    s = seller(fake_embedder, step="01")
+    s.reply("I want to be someone my kids can look up to")
+    assert s.state.step == "02"
+
+
+FRUIT = parse_method("fruit", {"first": "a", "price_step": "z", "steps": {
+    "a": {"ui_stage": "intent", "say": "Which fruit?", "unsure": "apple", "stuck": {"then": "z"}, "listen": {
+        "apple": {"examples": ["red apple"], "then": "y"},
+        "pear": {"examples": ["red pear"], "then": "z"},
+        "grape": {"examples": ["green grape"], "then": "z"},
+        "plum": {"examples": ["blue plum"], "then": "a", "keep": False}}},   # the "vague, ask again" route
+    "y": {"ui_stage": "intent", "say": "Apple then."},
+    "z": {"ui_stage": "intent", "say": "Done."}}})
+
+
+@pytest.mark.parametrize("reply, step", [
+    ("red apple pear", "y"),                # apple and pear tie, both real answers: the safe one, not asked again
+    ("red apple blue plum", "a"),           # might be the ask-again route: asked again
+    ("red apple pear fig kiwi", "a"),       # nothing clears the bar: asked again
+])
+def test_a_close_call_nobody_settles(fake_embedder, reply, step):
+    s = seller(fake_embedder, method=FRUIT, step="a")   # AI down: the judge can't settle it
+    s.reply(reply)
+    assert s.state.step == step
+
+
+def test_a_close_call_that_might_be_vague_is_still_asked_again(fake_embedder):
+    s = seller(fake_embedder, step="01")
+    s.reply("more money and I want to make money online")
+    assert s.state.step == "01"
+
+
+def test_a_surface_goal_again_on_the_practical_rung_is_asked_another_way(fake_embedder):
+    s = seller(fake_embedder, step="01")
+    s.reply("more money")
+    reply, _ = s.reply("more money")
+    assert s.state.step == "goal_practical" and reply == CAT.steps["goal_practical"].probes[0]
+    assert s.state.slots["outcome"] == "more money"   # the first answer stays theirs
 
 
 def test_words_that_dont_fit_get_the_plain_line(fake_embedder):
     s = seller(fake_embedder, step="01")
     reply, _ = s.reply("I want to quit my job and be my own boss")
-    assert reply == CAT.steps["02"].say_plain
+    assert reply == CAT.steps["goal_practical"].say_plain
 
 
 def test_a_vague_answer_is_never_said_back(fake_embedder):

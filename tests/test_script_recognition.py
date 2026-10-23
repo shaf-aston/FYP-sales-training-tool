@@ -151,10 +151,11 @@ def _down(prompt, max_tokens):
 
 @pytest.mark.parametrize("replies, expected_step", [
     # plain answers to the step's own question: never an interruption or a product question
-    (["I just want freedom, to stop working for someone else and travel", "maybe 8k a month"], "03"),
-    (["I want freedom", "10k a month", "about two years now"], "04"),
-    (["I want freedom", "10k a month", "two years", "because I hate missing time with my kids"], "05"),
-    (["I want freedom", "ok cool, about 10k", "three years"], "04"),
+    # (step 01 is a goal ladder: level 1, then level 2, then level 3, then 02)
+    (["I just want freedom, to stop working for someone else and travel", "so I can stop worrying about bills", "I'd finally be proud of myself", "maybe 8k a month"], "03"),
+    (["I want freedom", "so I can stop worrying about bills", "I'd finally be proud of myself", "10k a month", "about two years now"], "04"),
+    (["I want freedom", "so I can stop worrying about bills", "I'd finally be proud of myself", "10k a month", "two years", "because I hate missing time with my kids"], "05"),
+    (["I want freedom", "so I can stop worrying about bills", "I'd finally be proud of myself", "ok cool, about 10k", "three years"], "04"),
 ])
 def test_answers_move_the_script_on(replies, expected_step):
     from core.script_engine.seller import ScriptSeller
@@ -176,7 +177,7 @@ def test_real_price_question_still_gets_the_early_answer():
     seller.reply("I want freedom")
     text, _ = seller.reply("wait, sorry, what's this going to cost me?")
     early = (seller.offer.facts["price"].answer, seller.method.objections["money"].early)
-    assert text.startswith(early) and seller.state.step == "02"
+    assert text.startswith(early) and seller.state.step == "goal_practical"
 
 
 def _real_seller():
@@ -200,9 +201,10 @@ def test_open_question_takes_an_objection_shaped_reply_as_its_answer(said):
 
 @pytest.mark.parametrize("said", ["I want more time with my kids", "to spend time with my family"])
 def test_family_time_goal_is_an_answer_not_a_pause(said):
+    # a level 2 goal: skips the formula, straight to the identity rung
     seller = _real_seller()
     text, _ = seller.reply(said)
-    assert seller.state.step == "02" and "take your time" not in text
+    assert seller.state.step == "goal_identity" and "take your time" not in text
 
 
 @pytest.mark.parametrize("said", ["this sounds like a scam honestly", "I need to talk to my wife first",
@@ -214,7 +216,7 @@ def test_objection_mid_discovery_is_acknowledged(said):
     names = {"this sounds like a scam honestly": "scam", "I need to talk to my wife first": "partner",
              "I can't afford it right now": "money"}
     expected = seller.method.objections[names[said]].early or seller.sense.park
-    assert text.startswith(expected) and seller.state.step == "02" and names[said] in seller.state.parked
+    assert text.startswith(expected) and seller.state.step == "goal_practical" and names[said] in seller.state.parked
 
 
 @pytest.mark.parametrize("step", ["03", "04", "05", "18"])

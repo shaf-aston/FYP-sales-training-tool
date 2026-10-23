@@ -36,6 +36,14 @@ def test_ask_meaning_only_about_the_question_or_after_a_shrug(fake_embedder):
     assert s.ask_meaning("I want money online", q, empty=False, heard_ahead=True) == ""  # clear, just early
 
 
+def test_an_answer_they_already_gave_is_never_asked_about(fake_embedder):
+    """"More money" again after "What are you hoping to achieve with more money?": what they meant is known."""
+    s = shrugs(fake_embedder)
+    q = "What are you hoping to achieve with more money?"
+    assert s.ask_meaning("More money", q, empty=True, heard_ahead=False, known=["more money"]) == ""
+    assert s.ask_meaning("More money", q, empty=True, heard_ahead=False, known=["financial freedom"]) != ""
+
+
 def test_ask_meaning_is_empty_when_their_words_cant_be_said_back(fake_embedder):
     s = shrugs(fake_embedder, fill=lambda t, slots: None)
     assert s.ask_meaning("stuff I guess", "Why?", empty=True, heard_ahead=False) == ""

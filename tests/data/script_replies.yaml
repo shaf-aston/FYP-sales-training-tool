@@ -2,8 +2,8 @@
 # context -> expected label -> replies. Label `none` = must NOT match any label (off-script).
 # Written from the coach's FAQ, the CAT script and the objection paths; none are copied
 # from private call transcripts.
-step_01:   # CAT step 01: labels freedom
-  freedom:
+step_01:   # CAT step 01: goal levels surface (1) / practical (2) / identity (3), or vague
+  surface:   # level 1: freedom, more money
     - "honestly I just want freedom, to not answer to a boss anymore"
     - "I want to be able to work from a beach if I feel like it"
     - "financial freedom for me and my family"
@@ -12,9 +12,20 @@ step_01:   # CAT step 01: labels freedom
     - "I want to build something of my own so I can leave my job"
     - "freedom to spend my days how I choose"
     - "I want my time back"
+    - "just more money I guess"
+  practical:   # level 2: what it does for them, day to day
+    - "so I don't have to stress about rent every month"
+    - "to stop living paycheque to paycheque"
+    - "so I can pick my kids up from school every day"
+    - "to clear my credit card for good"
+    - "so I can take my mum on holiday"
+  identity:   # level 3: who they become
+    - "to show my family I'm not a failure"
+    - "I want my kids to see me as a role model"
+    - "to become someone who actually finishes what they start"
+    - "I'd finally feel like a real provider"
   vague:
     - "I'm not really sure"
-    - "just more money I guess"
     - "I don't know, I saw an ad"
     - "no idea honestly"
   none:

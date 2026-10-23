@@ -97,6 +97,8 @@ def test_loader_rejects_broken_graphs():
         (lambda d: d["steps"]["silent"].update(listen={}), "silent step"),
         (lambda d: d["steps"]["a"].pop("stuck"), "needs a 'stuck' route"),
         (lambda d: d["steps"]["a"]["stuck"].update(then="nope"), "unknown then"),
+        (lambda d: d["steps"]["a"].update(unsure="nope"), "unsure"),
+        (lambda d: d["steps"]["a"]["listen"]["clear"].update(then="a") or d["steps"]["a"].update(unsure="clear"), "unsure"),
     ]:
         data = yaml.safe_load(yaml.safe_dump(good))
         mutate(data)

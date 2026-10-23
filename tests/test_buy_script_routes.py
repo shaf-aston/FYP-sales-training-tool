@@ -26,8 +26,12 @@ def test_call_opens_with_the_script_and_follows_it(client):
         "I've read your application but I don't like to assume anything. "
         "What do you want to specifically achieve by making money online?"
     )
-    # "freedom" is recognised, so the script moves to step 02, saying their own words back (no AI)
+    # "freedom" is a level 1 goal: dug into with their own words (no AI), then levels 2 and 3, then 02
     assert _say(client, headers, "I want financial freedom")["message"] == (
+        "What are you hoping to achieve with financial freedom?"
+    )
+    _say(client, headers, "so I can stop stressing every time I buy something")
+    assert _say(client, headers, "I'd finally be proud of myself")["message"] == (
         "How much would you need to be making each month to have financial freedom?"
     )
     plain = _say(client, headers, "ten thousand a month")["message"]
@@ -44,6 +48,9 @@ def test_opening_question_is_the_intent_stage_not_the_problem(client):
 def test_stage_comes_from_the_script_step(client):
     _, headers = _init(client)
     reply = _say(client, headers, "I want to be free from my 9-5 and work from anywhere")
+    assert reply["stage"].lower() == "intent"   # still digging the goal
+    _say(client, headers, "so I can stop stressing every time I buy something")
+    reply = _say(client, headers, "I'd finally be proud of myself")
     assert reply["stage"].lower() == "logical"
 
 
@@ -104,14 +111,17 @@ def test_vague_opening_answer_is_dug_into_not_deflected(client):
 
 def test_a_vague_prospect_hears_new_questions_then_the_call_moves_on(client):
     _, headers = _init(client)
-    said = [_say(client, headers, "more money")["message"] for _ in range(4)]
-    assert len(set(said[:3])) == 3  # each dig is worded differently
-    assert said[3].startswith("How much")  # moves on with no canned "Fair enough."
+    said = [_say(client, headers, "more money")["message"] for _ in range(6)]
+    assert said[0] == "What are you hoping to achieve with more money?"  # the formula, in their words
+    moved = next(i for i, t in enumerate(said) if t.startswith("How much"))  # moves on with no canned "Fair enough."
+    assert all(a != b for a, b in zip(said[:moved], said[1:moved]))  # never the same line twice in a row
 
 
 def test_a_failed_past_attempt_is_acknowledged_before_going_on(client):
     _, headers = _init(client)
     _say(client, headers, "I want financial freedom")
+    _say(client, headers, "so I can stop stressing every time I buy something")
+    _say(client, headers, "I'd finally be proud of myself")
     _say(client, headers, "ten thousand a month")
     text = _say(client, headers, "I tried dropshipping and it failed")["message"]
     assert text.startswith("Sorry to hear that") and "why can't you just ignore it" in text
