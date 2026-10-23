@@ -41,6 +41,7 @@ class Step:
     stuck: Route = None  # taken once the step has been asked again enough; every step with no `any` route has one
     answered_by: str = ""  # regex with an `answer` group: the step's answer given early; the step is then skipped
     echo: bool = False  # their answer may be said back in their own words in a later line's {blank}
+    unsure: str = ""    # a close call nobody settles, between answers that all move on, is heard as this one
 
     @property
     def routes(self):
@@ -167,12 +168,15 @@ def _step(step_id, data):
             raise ValueError(f"step {step_id}: answered_by must not match an empty reply")
     if data.get("echo") and not data.get("capture"):
         raise ValueError(f"step {step_id}: echo needs a capture")
+    unsure = data.get("unsure", "")
+    if unsure and not any(r.label == unsure and r.examples and r.then != step_id for r in listen):
+        raise ValueError(f"step {step_id}: unsure {unsure!r} must name one of its answers that moves on")
     return Step(
         step_id, stage, data.get("say", ""), data.get("say_plain", ""),
         data.get("capture", ""), probes,
         listen, bool(data.get("run_on")),
         data.get("name", ""), data.get("note", ""), bool(data.get("doubts_answer")),
-        stuck, answered_by, bool(data.get("echo")),
+        stuck, answered_by, bool(data.get("echo")), unsure,
     )
 
 

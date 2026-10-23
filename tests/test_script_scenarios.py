@@ -553,6 +553,33 @@ def test_a_goal_already_at_level_2_or_3_skips_the_rungs_it_climbed(fake_embedder
     assert s.state.step == "02"
 
 
+FRUIT = parse_method("fruit", {"first": "a", "price_step": "z", "steps": {
+    "a": {"ui_stage": "intent", "say": "Which fruit?", "unsure": "apple", "stuck": {"then": "z"}, "listen": {
+        "apple": {"examples": ["red apple"], "then": "y"},
+        "pear": {"examples": ["red pear"], "then": "z"},
+        "grape": {"examples": ["green grape"], "then": "z"},
+        "plum": {"examples": ["blue plum"], "then": "a", "keep": False}}},   # the "vague, ask again" route
+    "y": {"ui_stage": "intent", "say": "Apple then."},
+    "z": {"ui_stage": "intent", "say": "Done."}}})
+
+
+@pytest.mark.parametrize("reply, step", [
+    ("red apple pear", "y"),                # apple and pear tie, both real answers: the safe one, not asked again
+    ("red apple blue plum", "a"),           # might be the ask-again route: asked again
+    ("red apple pear fig kiwi", "a"),       # nothing clears the bar: asked again
+])
+def test_a_close_call_nobody_settles(fake_embedder, reply, step):
+    s = seller(fake_embedder, method=FRUIT, step="a")   # AI down: the judge can't settle it
+    s.reply(reply)
+    assert s.state.step == step
+
+
+def test_a_close_call_that_might_be_vague_is_still_asked_again(fake_embedder):
+    s = seller(fake_embedder, step="01")
+    s.reply("more money and I want to make money online")
+    assert s.state.step == "01"
+
+
 def test_a_surface_goal_again_on_the_practical_rung_is_asked_another_way(fake_embedder):
     s = seller(fake_embedder, step="01")
     s.reply("more money")

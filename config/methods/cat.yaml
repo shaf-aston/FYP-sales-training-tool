@@ -51,6 +51,7 @@ steps:
     probe:   # asked in turn; then `stuck` moves on after `misses` (engine.yaml) instead of asking forever
       - "What are you actually hoping to achieve?"
     stuck: {then: "goal_practical"}
+    unsure: surface   # too close to call between levels ("not stuck in a 9 to 5"): dig one rung, never ask again
     listen:
       surface:   # level 1: kept as their outcome, then dug into
         examples: &surface
