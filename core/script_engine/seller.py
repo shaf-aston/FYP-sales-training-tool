@@ -147,7 +147,7 @@ class ScriptSeller:
             self.state = park(self.state, v.name)
             return self._then_ask(self.method.objections[v.name].early or self.sense.park), step.ui_stage, ""
         if v.kind == "objection":
-            return *self._go(object_to(self.method, self.state, v.name, self.cfg["objection_entries"])), ""
+            return *self._object(v.name), ""
         if v.kind == "fact":
             f = self.offer.facts[v.name]
             lead = self._filler.fill(f.late_answer if opened and f.late_answer else f.answer, {})
@@ -208,9 +208,12 @@ class ScriptSeller:
 
     def _revisit(self):
         """Raise the oldest parked worry now: it is likely what holds them back."""
-        move = object_to(self.method, self.state, self.state.parked[0], self.cfg["objection_entries"])
-        self.state = move.state
-        return f"{self.sense.revisit} {self._render(move)}"
+        text, _ = self._object(self.state.parked[0])
+        return f"{self.sense.revisit} {text}"
+
+    def _object(self, name):
+        """Handle an objection after the price by its matrix branch."""
+        return self._go(object_to(self.method, self.state, name, self.cfg["objection_entries"]))
 
     def ui_stage(self):
         """The UI stage of the step the call is on."""

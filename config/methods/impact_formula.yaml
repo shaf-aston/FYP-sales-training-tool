@@ -4,6 +4,7 @@
 # draft is an authoring marker only: the app ignores it.
 first: "intent"
 price_step: "present"
+revisit_step: "close"   # an objection parked before the price comes back when they hesitate at the close
 # Objections after the price run the shared matrix (config/script); `exits` lead back into this script.
 objection_handling: objection_matrix
 exits: {resell: "payment", payment: "payment", follow_up: "later"}

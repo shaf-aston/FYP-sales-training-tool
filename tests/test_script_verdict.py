@@ -36,6 +36,12 @@ def test_a_worry_already_in_its_branch_is_heard_as_the_answer(ear):
     assert ear.hear(said, ScriptState(step="m_funded", raised=("money",)), opened=True).kind != "objection"
 
 
+def test_a_worry_the_step_asks_about_is_its_answer_not_a_new_objection(ear):
+    # "what do you need to think over: the money...?" -> "it's too expensive" names the branch, not a 2nd worry
+    v = ear.hear("it's too expensive", ScriptState(step="m_think_what", raised=("think",)), opened=True)
+    assert v.kind != "objection"
+
+
 def test_a_nudge_is_cut_off_and_the_rest_heard(ear):
     v = ear.hear("my kids, what's next?", ScriptState(step="04"), opened=False)
     assert v.text == "my kids" and v.kind == "answer"

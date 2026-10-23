@@ -177,6 +177,8 @@ def _step(step_id, data):
 
 
 def _objection(name, data):
+    if not data.get("examples"):
+        raise ValueError(f"objection {name}: needs examples, or it can never be heard")
     return Objection(name, tuple(data["examples"]), str(data["enter"]), data.get("early", ""))
 
 
@@ -245,6 +247,8 @@ def parse_method(name, data, matrix=None):
         if "?" in o.early:
             raise ValueError(f"objection {o.name}: early line must not ask (the step's question follows)")
     revisit_step = str(data.get("revisit_step", ""))
+    if objections and not revisit_step:
+        raise ValueError(f"method {name}: needs a revisit_step, or a worry parked before the price never comes back")
     if revisit_step:
         order = list(steps)
         if revisit_step not in steps or order.index(revisit_step) < order.index(price_step):
@@ -252,7 +256,7 @@ def parse_method(name, data, matrix=None):
         if not steps[revisit_step].stuck:
             raise ValueError(f"method {name}: revisit_step {revisit_step!r} needs a 'stuck' route")
     ready = _ready(name, data.get("ready"), steps)
-    _reachable(name, first, steps, [o.enter for o in objections.values()] + ([ready.then] if ready else []))
+    _reachable(name, first, steps, [o.enter for o in objections.values()] + [s for s in (follow_up, ready and ready.then) if s])
     return Method(name, first, steps, objections, price_step, follow_up, revisit_step, ready, reask)
 
 

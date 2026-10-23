@@ -640,6 +640,8 @@ def test_parked_worries_survive_a_rewind_snapshot():
 
 @pytest.mark.parametrize("change, error", [
     ({"revisit_step": "03"}, "revisit_step"),
+    ({"revisit_step": ""}, "revisit_step"),
+    ({"objections.money.examples": []}, "examples"),
     ({"objections.money.early": "Is money the issue?"}, "early line"),
 ])
 def test_broken_revisit_settings_fail_loud(change, error):

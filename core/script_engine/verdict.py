@@ -81,8 +81,9 @@ class Ear:
             objections = [(k, o) for k, o in objections if o.early]  # "is this a scam?" gets an honest early line
         if not opened:
             objections = [(k, o) for k, o in objections if k not in state.parked]  # parked once: never twice
-        else:  # a worry already being handled, said again, answers the step its branch is on
-            objections = [(k, o) for k, o in objections if k not in state.raised]
+        else:  # a worry already being handled, or one the step asks about ("the money?"), answers the step
+            asked = {r.label for r in step.listen}
+            objections = [(k, o) for k, o in objections if k not in state.raised and k not in asked]
         labels.update({f"objection:{k}": o.examples for k, o in objections})
         if not opened and not asking:  # "money", "scared", "risk" before the price are answers, not objections
             floors.update({f"objection:{k}": self.cfg["early_objection_min_score"] for k, _ in objections})

@@ -1,5 +1,6 @@
 first: "a"
 price_step: "b"
+revisit_step: "b"
 objection_handling: mini_matrix
 exits: {payment: "c", follow_up: "c"}
 steps:
