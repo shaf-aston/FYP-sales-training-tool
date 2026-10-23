@@ -1,0 +1,13 @@
+objections:
+  money:
+    enter: m_fund
+    examples: ["it is too expensive"]
+steps:
+  m_fund:
+    ui_stage: outcome
+    say: "Could you fund it?"
+    stuck: {then: follow_up}
+    listen:
+      "yes":
+        examples: ["yes I could fund it"]
+        then: payment

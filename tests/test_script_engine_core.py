@@ -15,7 +15,7 @@ ENGINE_DIR = Path(__file__).parent.parent / "core" / "script_engine"
 
 @pytest.fixture
 def mini():
-    return load_method("mini", FIXTURES)
+    return load_method("mini", FIXTURES, FIXTURES)
 
 
 def _listener(embedder, threshold, margin=0.03):
@@ -102,6 +102,24 @@ def test_loader_rejects_broken_graphs():
         mutate(data)
         with pytest.raises(ValueError, match=text):
             parse_method("bad", data)
+
+
+def test_loader_rejects_a_broken_objection_matrix():
+    good = yaml.safe_load((FIXTURES / "mini.yaml").read_text(encoding="utf-8"))
+    matrix = yaml.safe_load((FIXTURES / "mini_matrix.yaml").read_text(encoding="utf-8"))
+    for mutate, text in [
+        (lambda d, m: d.update(objections={"money": {}}), "objection_handling file"),
+        (lambda d, m: m["steps"].update(c=m["steps"]["m_fund"]), "also matrix steps"),
+        (lambda d, m: d["exits"].pop("payment"), "exits must name exactly"),
+        (lambda d, m: d["exits"].update(resell="c"), "exits must name exactly"),
+        (lambda d, m: d["exits"].update(payment="m_fund"), "method's own steps"),
+        (lambda d, m: m["objections"]["money"].update(enter="c"), "enter at a matrix step"),
+        (lambda d, m: m["objections"].clear(), "can never be reached"),
+    ]:
+        data, shared = yaml.safe_load(yaml.safe_dump(good)), yaml.safe_load(yaml.safe_dump(matrix))
+        mutate(data, shared)
+        with pytest.raises(ValueError, match=text):
+            parse_method("bad", data, shared)
 
 
 def test_loader_rejects_duplicate_step_ids(tmp_path):

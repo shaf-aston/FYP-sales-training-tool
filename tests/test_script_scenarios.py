@@ -85,13 +85,13 @@ def test_price_and_scam_questions_at_the_ready_step_are_answered(fake_embedder):
     text, _ = s.reply("what's the price")
     assert "$5k" in text and text.endswith(READY_Q)  # the jump is past the price step on purpose
     text, _ = s.reply("is this a scam")
-    assert text == CAT.objections["scam"].loop[0]
+    assert text == CAT.steps[CAT.objections["scam"].enter].say
 
 
-def test_the_jump_drops_open_plays_and_parked_worries(fake_embedder):
-    s = seller(fake_embedder, step="03", parked=("money",), play="scam")
+def test_the_jump_drops_parked_worries(fake_embedder):
+    s = seller(fake_embedder, step="03", parked=("money",))
     s.reply("i'm in, send the payment link")
-    assert (s.state.step, s.state.parked, s.state.play) == ("ready", (), "")
+    assert (s.state.step, s.state.parked) == ("ready", ())
 
 
 @pytest.mark.parametrize("step, text", [("01", "I'm in sales"), ("18", "yes")])
@@ -224,15 +224,6 @@ def test_frustration_has_its_own_floor(fake_embedder):
     s = seller(fake_embedder, sense=replace(SENSE, interruptions={**SENSE.interruptions, "frustrated": calm}))
     text, _ = s.reply("stop with the script")
     assert not text.startswith(FRUSTRATED)
-
-
-def test_frustration_drops_an_open_objection_play(fake_embedder):
-    """Live-style: they push back on a loop question; the play must not swallow their next answer."""
-    s = seller(fake_embedder, step="15", play="scam", objection_counts={"scam": 1})
-    s.reply("stop with the script man")
-    assert s.state.step == "16" and s.state.play == ""
-    s.reply("yes sounds good")
-    assert s.state.step == "17"
 
 
 def test_hostile_chat_never_says_the_same_line_twice_in_a_row(fake_embedder):
@@ -413,10 +404,10 @@ def test_an_unclear_payment_reply_is_asked_again_then_goes_back_never_welcomed(f
     assert reply == SOFT_CLOSE and WELCOME not in reply
 
 
-def test_a_worry_at_payment_is_still_looped(fake_embedder):
+def test_a_worry_at_payment_enters_its_matrix_branch(fake_embedder):
     s = seller(fake_embedder, step="22")
     reply, _ = s.reply("I need to think about it")
-    assert reply == CAT.objections["think"].loop[0]
+    assert reply == CAT.steps[CAT.objections["think"].enter].say
 
 
 def test_a_reason_at_self_resell_still_moves_on(fake_embedder):

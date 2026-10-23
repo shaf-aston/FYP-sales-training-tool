@@ -21,7 +21,7 @@ ai_rest_seconds: 60    # after ai_fail_limit failures in a row, skip the AI this
 ai_fail_limit: 3       # failures in a row (any user) before the AI rests; one slow call must not silence it for everyone
 ai_timeout_seconds: 2   # a slow AI call is abandoned; the turn uses the script line
 ai_workers: 4          # AI calls in flight at once; an abandoned slow call keeps its worker until it ends
-objection_loops: 2     # loop twice, third time go direct
+objection_entries: 2   # objections that get their matrix branch in one call; the next books the follow-up
 slot_words: 6          # longest phrase echoed into a script blank
 stop_words: [a, an, the, i, i'm, i've, my, me, to, of, and, or, in, on, at, for, is, am, are, be, it, that, this, so, with, as, by, we, you, your]
 filler_words: [ok, okay, sure, yeah, yep, yes, hmm, mm, cool, alright, right, k, kk, idk, dunno]   # a reply made only of these (and stop_words) says nothing; never add "no", it answers yes/no steps

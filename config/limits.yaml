@@ -44,6 +44,10 @@ rate_limits:         # [max_requests, window_seconds] per client IP; bucket name
   feedback: [5, 300]   # both modes: feedback form
   speech: [40, 60]     # both modes: replies read aloud
 
+provider:            # every request to an LLM provider
+  timeout_seconds: 20   # a stalled request gives up after this
+  attempts: 1           # tries per key; more lets the SDK retry rate limits, which burns quota
+
 llm:                 # one profile per kind of call; pass as **LLM["name"]
   default:        {temperature: 0.4, max_tokens: 150}   # low = steady wording; replies run 12-80 tokens
   buyer_reply:    {temperature: 0.6, max_tokens: 150}   # a little variety so personas differ

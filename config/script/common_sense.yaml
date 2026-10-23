@@ -8,7 +8,7 @@
 #     without taking the reply as its answer.
 # min_score: a match must score at least this on every step (for words that are often real answers too).
 park: "That's fair, and we'll come back to it once we know this is even a fit."   # objection before the price: acknowledge, keep going
-revisit: "Coming back to what you raised earlier,"   # a parked objection, raised again when they hesitate at the close
+revisit: "Coming back to what you raised earlier."   # a parked objection, raised again when they hesitate at the close
 # A nudge to carry on ("what's next?", "go on"). Live: "yeah makes sense, what's next?" got "I don't know
 # that one offhand". Cut off the end of a reply, the rest is heard as usual ("credit, what's next?" pays).
 # A reply that is only a nudge: the reply below, then the step in other words, or the next step.
