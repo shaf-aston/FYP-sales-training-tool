@@ -254,7 +254,8 @@ class ScriptSeller:
                 missed = not heard.answered
                 empty, line, ack = empty or missed, heard.probe, heard.ack
         if step.capture and not line:
-            line = self._shrugs.ask_meaning(text, self._question(), empty, v.ahead is not None)  # said only if asked again
+            line = self._shrugs.ask_meaning(text, self._question(), empty, v.ahead is not None,
+                                            self.state.slots.values())  # said only if asked again
         detail = ""
         if missed:
             detail = "misses"

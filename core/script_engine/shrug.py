@@ -30,13 +30,17 @@ class Shrugs:
         found = self._listener.match(text, {"unclear": list(self._sense.unclear)})
         return found.score >= self._sense.unclear_min_score
 
-    def ask_meaning(self, text, question, empty, heard_ahead):
+    def ask_meaning(self, text, question, empty, heard_ahead, known=()):
         """"What do you mean by stuff?": their own words asked about. Only for a shrug, or a miss that is about
         the question ("money online" to "...making money online?"), never off-topic words ("hey"). "" when
-        nothing can be asked: only shrug words, an early answer to a later step ("5k a month" is clear), or
-        words that can't be said back. Whether it was already said is the engine's to check."""
+        nothing can be asked: only shrug words, an early answer to a later step ("5k a month" is clear), words
+        that can't be said back, or an answer they already gave (`known`: "more money" again, after "What
+        are you hoping to achieve with more money?"): what they meant is known, so the step is asked another
+        way instead. Whether it was already said is the engine's to check."""
         words = set(tokenize(text))
-        about = bool((words - self._plain) & set(tokenize(question)))
-        if not self._sense.ask_meaning or heard_ahead or words <= self._plain or not (empty or about):
+        said = words - self._plain
+        repeated = any(said <= set(tokenize(k)) for k in known if k)
+        if (not self._sense.ask_meaning or heard_ahead or not said or repeated
+                or not (empty or said & set(tokenize(question)))):
             return ""
         return self._fill(self._sense.ask_meaning, {"said": text}) or ""

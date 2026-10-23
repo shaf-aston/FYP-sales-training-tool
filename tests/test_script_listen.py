@@ -183,7 +183,7 @@ def test_the_old_wording_comes_back_when_the_ai_is_down(fake_embedder):
 def test_labelled_steps_still_use_examples_not_the_listen_call(fake_embedder):
     ai = ListenAI()
     s = seller(fake_embedder, ai, step="01")
-    s.reply("more money")
+    s.reply("not sure really")   # labelled vague: asked again, no AI listen call
     assert ai.prompts == [] and s.state.step == "01"
 
 

@@ -31,40 +31,94 @@ steps:
     say_plain: "I've read your application but I don't like to assume anything."
     listen:
       any: {then: "01"}
+  # Goals come in three levels, and 01 digs down them one rung at a time:
+  #   1 surface   what they say first: more money, financial / time / location freedom, quit the 9-5
+  #   2 practical what that does for them day to day: no stress buying things, bills paid, time with the kids
+  #   3 identity  who it makes them, the transformation: a provider, proud of themselves, someone free
+  # A surface answer gets the formula "What are you hoping to achieve with {their words}?"; an answer
+  # already at level 2 or 3 skips the rungs it has climbed.
   "01":
     name: "End outcome"
-    note: 'FREEDOM. Vague → loop back, dig till freedom'
+    note: 'Level 1 (surface): more money, freedom. Take it, then dig to level 2 and 3'
     ui_stage: intent
-    draft: true  # probes 2-3 are ours: the source only says "dig till freedom"
+    draft: true  # the probe is ours: the source only says "dig"
     say: "What do you want to specifically achieve by making money online?"
     capture: outcome
     echo: true   # "financial freedom" goes back into the next lines as they said it
     probe:   # asked in turn; then `stuck` moves on after `misses` (engine.yaml) instead of asking forever
       - "What are you actually hoping to achieve?"
-      - "What would that money actually give you?"
-      - "If money wasn't a problem, what would your days look like?"
-    stuck: {then: "02"}
+    stuck: {then: "goal_practical"}
     listen:
-      freedom:
-        examples:
+      surface:   # level 1: kept as their outcome, then dug into
+        examples: &surface
+          - "more money"
+          - "I want to make more money"
           - "I want financial freedom"
           - "I want to be free from my 9-5 and work from anywhere"
           - "I want time freedom so I can travel and choose my own schedule"
+          - "location freedom"
+          - "travel the world"
           - "I want to quit my job and be my own boss"
           - "freedom to do what I want with my days"
+        then: "goal_practical"
+      practical:   # level 2 already: skip the formula, ask the identity rung
+        examples: &practical
+          - "so I can stop stressing every time I buy something"
+          - "to pay off my debts and stop worrying about bills"
           - "I want more time with my kids and family"
           - "to spend more time with my family"
+          - "so I can help my parents out"
+          - "to not have to check my bank balance before buying food"
+        then: "goal_identity"
+      identity:   # level 3 already: the ladder is climbed
+        examples: &identity
+          - "I want to be someone my kids can look up to"
+          - "I want to finally be proud of myself"
+          - "to be the provider for my family I always wanted to be"
+          - "to prove to myself I am capable of more"
+          - "I want to become my own person and not someone's employee"
         then: "02"
-      vague:   # restates the question or names no outcome: dig, never take it as freedom
+      vague:   # restates the question or names no outcome: ask again, never take it as their goal
         examples:
           - "I want to make money online"
-          - "I just want to make money"
-          - "make more money"
           - "I want to earn online"
           - "not sure really"
           - "I don't know"
         then: "01"
         keep: false   # "not sure really" is not their outcome: never said back to them
+  "goal_practical":
+    name: "Practical goal"
+    note: 'Level 2 (practical): what it does for them day to day, e.g. no stress buying things'
+    ui_stage: intent
+    draft: true  # the owner's formula, our probe
+    say: "What are you hoping to achieve {outcome|with $|by being able to $}?"
+    say_plain: "What are you hoping that would get you?"
+    capture: practical
+    echo: true
+    probe:
+      - "What would that actually change for you, day to day?"
+    stuck: {then: "goal_identity"}
+    listen:
+      surface:   # still level 1 ("more money" again): asked another way, not taken
+        examples: *surface
+        then: "goal_practical"
+        keep: false
+      practical: {examples: *practical, then: "goal_identity"}   # a rival label, so a level 2 answer is never heard as level 1
+      identity: {examples: *identity, then: "02"}
+      any: {then: "goal_identity"}
+  "goal_identity":
+    name: "Identity goal"
+    note: 'Level 3 (identity): who it makes them, the transformation as a person'
+    ui_stage: intent
+    draft: true  # ours: the owner named the level, not the words
+    say: "And what would that change about you, as a person?"
+    capture: identity
+    echo: true
+    probe:
+      - "Who would you be, once that's real?"
+    stuck: {then: "02"}
+    listen:
+      any: {then: "02"}
   "02":
     name: "Number"
     ui_stage: logical
