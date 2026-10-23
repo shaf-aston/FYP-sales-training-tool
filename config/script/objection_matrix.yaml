@@ -59,7 +59,11 @@ objections:
     early: "Fair question, there's a lot of shady stuff online. This call is to see if we can even help you first."   # draft
     examples:
       - "is this a scam"
-      - "this sounds too good to be true"
+      - "this is too good to be true"   # not "sounds too good": "sounds good to me" read as this (0.81)
+      - "I don't trust this"
+      - "this feels dodgy"
+      - "I've been scammed before"
+      - "this is a con"
       - "do you guarantee results"
       - "how do I know this is legit"
       - "there's so many rip-offs online"

@@ -110,10 +110,11 @@ objections_cat:
   think:
     - "I need to think it over"
     - "let me have a think and get back to you"
-    - "I want to do a bit more research first"
     - "can I sleep on it"
     - "it's not the right time for me"
     - "I'll come back to you later"
+  research:   # the coach's matrix: still researching is its own objection
+    - "I want to do a bit more research first"
   scam:
     - "is this some kind of scam"
     - "this all sounds too good to be true"
@@ -150,9 +151,10 @@ objections_impact:
   think:
     - "I need to think it over"
     - "let me have a think"
-    - "can you send me some information"
     - "it's not the right time"
     - "maybe later"
+  research:
+    - "can you send me some information"
   none:
     - "what's the weather like where you are"
     - "my dog is barking, sorry"
