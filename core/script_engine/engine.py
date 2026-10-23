@@ -10,8 +10,7 @@ from core.script_engine.method import ANY
 class ScriptState:
     step: str
     slots: dict = field(default_factory=dict)
-    objection_counts: dict = field(default_factory=dict)
-    play: str = ""      # objection whose loop/direct line was just asked; the next reply answers it
+    raised: tuple = ()  # objections handled after the price, oldest first
     asks: int = 0       # times the current step has been asked again
     asked: str = ""     # the AI's own words the step was last asked in, if any (see `asked_line`)
     said: tuple = ()    # every such line asked on the current step, so none is asked twice
@@ -136,9 +135,8 @@ def asked_line(method, state):
 
 def move_on(method, state):
     """Leave the step without taking their reply as its answer (they pushed back on the question).
-    No slot is saved and the route's ack is not said: it may build on an answer they never gave.
-    An open objection play is dropped too: its question was not answered either."""
-    step, state = method.steps[state.step], replace(state, play="")
+    No slot is saved and the route's ack is not said: it may build on an answer they never gave."""
+    step = method.steps[state.step]
     route = _route(step, ANY) or step.stuck
     if route is None:
         return _ask_again(method, state, step)
@@ -146,8 +144,8 @@ def move_on(method, state):
 
 
 def jump(method, state, step_id):
-    """Go straight to `step_id`. They told us where they are, so an open play and parked worries are dropped."""
-    return _speak(method, replace(state, step=step_id, play="", parked=()))
+    """Go straight to `step_id`. They told us where they are, so parked worries are dropped."""
+    return _speak(method, replace(state, step=step_id, parked=()))
 
 
 def hear_ahead(method, state, text):
@@ -175,21 +173,12 @@ def ready_open(method, step_id):
     return method.ready is not None and order.index(step_id) < order.index(method.ready.until)
 
 
-def object_to(method, state, name, loops):
-    """Answer an objection: loop lines first, then the direct line, then the follow-up."""
-    objection = method.objections[name]
-    seen = state.objection_counts.get(name, 0)
-    if seen < loops:
-        line = objection.loop[min(seen, len(objection.loop) - 1)]
-    elif seen == loops:
-        line = objection.direct
-    else:
-        line = method.follow_up
-    counts = {**state.objection_counts, name: seen + 1}
-    step = method.steps[state.step]
-    play = name if seen <= loops else ""
+def object_to(method, state, name, entries):
+    """Handle an objection by its matrix branch. Past `entries` objections in one call they are
+    smokescreens: book the follow-up instead."""
+    to = method.follow_up if len(state.raised) >= entries else method.objections[name].enter
     parked = tuple(p for p in state.parked if p != name)
-    return Move(line, replace(state, objection_counts=counts, play=play, parked=parked), step.ui_stage)
+    return _speak(method, replace(state, step=to, raised=(*state.raised, name), parked=parked))
 
 
 def park(state, name):

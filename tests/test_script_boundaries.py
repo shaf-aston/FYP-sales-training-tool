@@ -13,7 +13,7 @@ from core.script_engine.method import load_method
 
 CFG = load_yaml("script/engine.yaml")
 CAT = load_method("cat")
-MINI = load_method("mini", Path(__file__).parent / "fixtures" / "script_engine")
+MINI = load_method("mini", *[Path(__file__).parent / "fixtures" / "script_engine"] * 2)
 
 
 def ctx(**kw):
@@ -56,13 +56,11 @@ def test_asked_line_plain_is_empty_for_other_words():
     assert asked_line(CAT, ScriptState(step="01", asks=1)) == (CAT.steps["01"].probes[0], "")
 
 
-def test_objection_loops_more_than_lines_and_direct_keeps_play():
-    s = ScriptState(step="a")
-    m1 = object_to(MINI, s, "money", loops=2)
-    m2 = object_to(MINI, m1.state, "money", loops=2)
-    assert m2.say == "What does that cost you?"
-    m3 = object_to(MINI, m2.state, "money", loops=2)
-    assert m3.say == "Will you keep thinking or change?" and m3.state.play == "money"
+def test_an_objection_enters_its_branch_until_the_limit_then_books_the_follow_up():
+    m1 = object_to(MINI, ScriptState(step="b", parked=("money",)), "money", entries=1)
+    assert (m1.say, m1.state.raised, m1.state.parked) == ("Could you fund it?", ("money",), ())
+    m2 = object_to(MINI, m1.state, "money", entries=1)
+    assert m2.state.step == MINI.follow_up and m2.state.raised == ("money", "money")
 
 
 # speech
@@ -138,11 +136,6 @@ def test_more():
         mv = ask_again(CAT, st)
         st = mv.state
     assert mv.say == CAT.steps["00"].say and st.asks == 3
-    s = ScriptState(step="a")
-    for _ in range(4):
-        m = object_to(MINI, s, "money", loops=2)
-        s = m.state
-    assert m.state.play == ""
     assert "banned_phrase" not in check("Is that a rebut?", ctx())
 
 

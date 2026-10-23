@@ -10,8 +10,8 @@ from core.utils import is_question, tokenize
 
 @dataclass(frozen=True)
 class Verdict:
-    kind: str           # nudge | says_nothing | ready | sense | objection | fact | play | question | answer
-    name: str = ""      # which sense, objection, fact or objection play
+    kind: str           # nudge | says_nothing | ready | sense | objection | fact | question | answer
+    name: str = ""      # which sense, objection or fact
     text: str = ""      # the reply without a nudge on its end
     asking: bool = False
     ahead: object = None  # the state with answers to later steps kept ("I want 5k a month"), else None
@@ -28,7 +28,7 @@ def answer_labels(step):
 
 class Ear:
     """Hears a reply against the call so far. Order matters and lives here only: a nudge on its own, then a
-    shrug, then an interruption that clearly beats an answer, then an open objection play, then a question
+    shrug, then an interruption that clearly beats an answer, then a question
     the step's own answers don't cover, else an answer."""
 
     def __init__(self, cfg, method, offer, sense, listener, shrugs):
@@ -45,15 +45,13 @@ class Ear:
             return Verdict("nudge", text=text)  # "ok, what's next?": no answer
         text = text if rest is None else rest  # "credit, what's next?": the rest answers
         asking = self.is_question(text)
-        if not state.waiting and not state.play and self._shrugs.says_nothing(text, step, asking):
+        if not state.waiting and self._shrugs.says_nothing(text, step, asking):
             return Verdict("says_nothing", text=text, asking=asking)  # an answer only: never an interruption
         ahead = None if asking else hear_ahead(self.method, state, text)  # "do I need 5k?" is not their goal
         ahead = None if ahead is state else ahead
         kind, name = self._interrupt(text, step, ahead or state, opened, asking)
         if kind:
             return Verdict(kind, name, text, asking, ahead)
-        if state.play:
-            return Verdict("play", state.play, text, asking, ahead)
         if asking and not self._answers(text, step):
             return Verdict("question", text=text, asking=asking, ahead=ahead)
         return Verdict("answer", text=text, asking=asking, ahead=ahead)
@@ -83,6 +81,8 @@ class Ear:
             objections = [(k, o) for k, o in objections if o.early]  # "is this a scam?" gets an honest early line
         if not opened:
             objections = [(k, o) for k, o in objections if k not in state.parked]  # parked once: never twice
+        else:  # a worry already being handled, said again, answers the step its branch is on
+            objections = [(k, o) for k, o in objections if k not in state.raised]
         labels.update({f"objection:{k}": o.examples for k, o in objections})
         if not opened and not asking:  # "money", "scared", "risk" before the price are answers, not objections
             floors.update({f"objection:{k}": self.cfg["early_objection_min_score"] for k, _ in objections})

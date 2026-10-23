@@ -1,0 +1,339 @@
+# Objection Handling Matrix (Sales Sniper SOP), shared by every method that names it in `objection_handling`.
+# Its steps come after the method's own, so they count as past the price. Lines are the SOP verbatim;
+# draft: true = a line on that step is ours and needs a trainer's wording (the app ignores it).
+# Exit names (resell, payment, follow_up) are pointed at the method's own steps by its `exits:` map.
+# An objection after the price jumps to its `enter` step; past `objection_entries` (engine.yaml) in one
+# call it is a smokescreen and the call books the follow-up instead. Before the price it is parked:
+# `early` is said if it has one, else common_sense `park`.
+
+objections:
+  money:
+    enter: m_funded
+    early: "I haven't mentioned a price yet, so let's first see if this is even a fit."   # draft
+    examples:
+      - "it's too expensive"
+      - "I can't afford that right now"
+      - "that's more than I have"
+      - "I don't have the money"
+      - "I'm not sure I can cover the cost"
+      - "I just want to know the price"   # draft: a price request before the pitch gets the honest early line
+      - "just tell me what it costs"   # draft
+  partner:
+    enter: m_partner_here
+    examples:
+      - "I need to speak to my partner first"
+      - "I have to talk to my wife about it"
+      - "my husband would need to agree"
+      - "I want to run it by my girlfriend"
+      - "I need to check with my business partner"
+      - "I need approval from my boss"
+      - "I need to check with my team"
+  fear:
+    enter: m_reframe1
+    examples:
+      - "I'm nervous it won't work for me"
+      - "what if I fail"
+      - "I'm worried about the risk"
+      - "I've been burned before"
+      - "I'm scared of making the wrong choice"
+      - "I'm afraid of making a mistake"
+  think:   # Procrastinator: the SOP says handle the logistics behind it first, then fear
+    enter: m_think_what
+    examples:
+      - "I need to think about it"
+      - "I'll get back to you"
+      - "now isn't the right time"
+      - "can I sleep on it"
+      - "maybe later, not right now"
+  research:   # Analyser: still researching, needs more info
+    enter: m_think_what
+    examples:
+      - "let me do some more research first"
+      - "I want to look at a few other options"
+      - "I need more information before I decide"
+      - "I'm still comparing programmes"
+      - "I want to read some reviews first"
+      - "send me some information"
+  scam:
+    enter: m_scam
+    early: "Fair question, there's a lot of shady stuff online. This call is to see if we can even help you first."   # draft
+    examples:
+      - "is this a scam"
+      - "this sounds too good to be true"
+      - "do you guarantee results"
+      - "how do I know this is legit"
+      - "there's so many rip-offs online"
+
+steps:
+  # Identify the objection. The SOP gives no wording for this.
+  m_identify:
+    name: "Identify the objection"
+    ui_stage: outcome
+    draft: true
+    say: "What's the main thing holding you back right now?"
+    listen:
+      money:
+        examples: ["the money", "I can't afford it", "it's a lot of cash"]
+        then: m_funded
+      partner:
+        examples: ["my wife", "I need to ask my partner", "my husband handles the money"]
+        then: m_partner_here
+      think:
+        examples: ["I just need to think", "I want to look around first", "I need more time"]
+        then: m_think_what
+      any: {then: m_reframe1}   # fear, or anything else: a perspective shift
+
+  m_think_what:
+    name: "Find the logistics behind 'think about it'"
+    ui_stage: outcome
+    draft: true   # the SOP says address the logistics first; it gives no wording
+    say: "Sure. What specifically do you need to think over: the money, your partner, or something else?"
+    listen:
+      money:
+        examples: ["the money", "whether I can afford it", "my finances"]
+        then: m_funded
+      partner:
+        examples: ["my wife", "talking to my partner", "what my husband thinks"]
+        then: m_partner_here
+      any: {then: m_reframe1}
+
+  # Money objections
+  m_funded:
+    name: "Money 1: if funded"
+    ui_stage: outcome
+    say: "Tell me if you did have the funding, is this something that would work for you?"
+    stuck: {then: m_reframe1}
+    listen:
+      "yes":
+        examples: ["yes", "yeah it would", "definitely"]
+        then: m_funded_why
+      "no":
+        examples: ["no", "not really", "probably not"]
+        then: m_reframe1
+  m_funded_why:
+    name: "Money 1: why it works"
+    ui_stage: outcome
+    say: "Why do you feel it would though?"
+    listen:
+      any: {then: m_resolve}
+  m_resolve:
+    name: "Money 1: resolve it"
+    ui_stage: outcome
+    say: "Okay. So, I can see that money might be an issue from what you told me. How do you think you can resolve that? Where can you find funding to get the training and coaching to actually get you where you want to go with your business?"
+    stuck: {then: m_avenues}
+    listen:
+      found:
+        examples: ["I could use my savings", "I could borrow it from my brother", "I could put it on a card"]
+        then: payment
+      none:
+        examples: ["I don't know", "I can't think of anything", "nowhere really"]
+        then: m_avenues
+  m_avenues:
+    name: "Money 2: other avenues"
+    ui_stage: outcome
+    say: "What other avenues do you have to find funding to get your business up to {number} in the next 12 months?"
+    say_plain: "What other avenues do you have to find funding to get where you want to be in the next 12 months?"
+    stuck: {then: m_card}
+    listen:
+      found:
+        examples: ["I could use my savings", "maybe a loan", "I could ask family"]
+        then: payment
+      none:
+        examples: ["I don't know", "none really", "I've got nothing"]
+        then: m_card
+  m_card:
+    name: "Money 3: credit"
+    ui_stage: outcome
+    say: "Have you ever considered putting it on a credit card or PayPal credit and just paying it off with the extra profits you make in your business from the training here?"
+    stuck: {then: m_funding_options}
+    listen:
+      "yes":
+        examples: ["yes", "yeah I could do that", "ok let's put it on a card"]
+        then: payment
+      "no":
+        examples: ["no", "I don't do credit", "I'd rather not"]
+        then: m_funding_options
+  m_funding_options:
+    name: "Money 4: funding options"
+    ui_stage: outcome
+    draft: true   # the SOP says "bring up funding options" with no wording
+    say: "Okay. There are other ways to make the investment work, like splitting it into payments. Would that work for you?"
+    stuck: {then: m_reframe1}
+    listen:
+      "yes":
+        examples: ["yes", "that could work", "ok, payments then"]
+        then: payment
+      "no":
+        examples: ["no", "still no", "I can't do that"]
+        then: m_reframe1   # money handled, still no: it's fear
+
+  # Partner objections
+  m_partner_here:
+    name: "Partner 1: same side of the table"
+    ui_stage: outcome
+    say: "Okay. So, if your partner was here right about and all for it, then would this possibly be the answer for you?"
+    stuck: {then: m_reframe1}
+    listen:
+      "yes":
+        examples: ["yes", "yeah it would", "probably yes"]
+        then: m_partner_element
+      "no":
+        examples: ["no", "not really", "I'm not sure it would"]
+        then: m_reframe1
+  m_partner_element:
+    name: "Partner 1: the benefit"
+    ui_stage: outcome
+    say: "Okay. But why? What specifically do you think is the element that gives you most benefit?"
+    listen:
+      any: {then: m_partner_feel}
+  m_partner_feel:
+    name: "Partner 1: how they feel"
+    ui_stage: outcome
+    say: "Okay. So, How does your partner feel about you having the right skills to make sure that your business does {number} in the next 12 months?"
+    say_plain: "Okay. So, How does your partner feel about you having the right skills to get where you want to be in the next 12 months?"
+    listen:
+      any: {then: m_partner_if_not}
+  m_partner_if_not:
+    name: "Partner 1: if they say no"
+    ui_stage: outcome
+    say: "Okay. Well, what are you going to do if they don't want you to invest in the program so that you can get to that level financially in the next 12 months?"
+    listen:
+      any: {then: m_partner_skills}
+  m_partner_skills:
+    name: "Partner 1: without the skills"
+    ui_stage: outcome
+    say: "Well, how are you going to get there if you don't have these skills?"
+    listen:
+      any: {then: m_partner_proceed}
+  m_partner_proceed:
+    name: "Partner 2: on board or not"
+    ui_stage: outcome
+    draft: true   # the SOP names this fork with no wording
+    say: "So if your partner isn't fully on board, would you still go ahead?"
+    stuck: {then: m_open_wallet}
+    listen:
+      "yes":
+        examples: ["yes", "yeah I would", "it's my decision"]
+        then: m_partner_close
+      "no":
+        examples: ["no", "not without her", "I need him on board"]
+        then: m_open_wallet
+  m_partner_close:
+    name: "Partner 2: soft close"
+    ui_stage: outcome
+    say: "Do you see yourself jumping in?"   # the script's own soft close
+    stuck: {then: m_reframe1}
+    listen:
+      "yes":
+        examples: ["yes", "yes let's do it", "I'm in"]
+        then: resell
+      "no":
+        examples: ["no", "not yet", "I'm not sure"]
+        then: m_reframe1   # partner handled, still no: it's fear
+  m_open_wallet:
+    name: "Partner 2: Open Wallet test"
+    ui_stage: outcome
+    draft: true   # the SOP text, shortened: its swear word and one long aside cut
+    say: "Okay. So we have a couple of options to move forward from here. We can either schedule a follow up, or option 2 is that we put down CC numbers. We don't do this to hold your spot. We do it as an emotional commitment to moving forward on your goals. So, how would you like to proceed? What is the best way for you to know that when you hit the bed tonight, you are doing your best to hit {outcome}?"
+    say_plain: "Okay. So we have a couple of options to move forward from here. We can either schedule a follow up, or option 2 is that we put down CC numbers. We don't do this to hold your spot. We do it as an emotional commitment to moving forward on your goals. So, how would you like to proceed? What is the best way for you to know that when you hit the bed tonight, you are doing your best to hit your goal?"
+    stuck: {then: follow_up}
+    listen:
+      card:
+        examples: ["let's put the card down", "I'll put my card down", "option 2"]
+        then: payment
+      follow_up:
+        examples: ["let's schedule a follow up", "the follow up", "option 1"]
+        then: follow_up   # Partner 3: speak again with the partner there
+
+  # Scam doubt: the trainer's FAQ lines
+  m_scam:
+    name: "Scam doubt"
+    ui_stage: outcome
+    say: "You're right, there's a lot of shady things online. Do you want to find out or keep the door closed?"
+    stuck: {then: m_close1}
+    listen:
+      find_out:
+        examples: ["find out", "I want to find out", "ok, tell me more"]
+        then: m_close1
+      closed:
+        examples: ["keep it closed", "no thanks", "I'm not interested"]
+        then: follow_up
+
+  # Fear-based objections: perspective shifts
+  m_reframe1:
+    name: "Reframe 1: change of process"
+    ui_stage: outcome
+    say: "Okay. So, I can understand that this is a big move for you and that you might need to think about it or take some time. Can I ask you a question? Do you feel your mindset affects your decision-making process?"
+    listen:
+      any: {then: m_reframe1_now}
+  m_reframe1_now:
+    name: "Reframe 1: where they are"
+    ui_stage: outcome
+    say: "Okay. And are you 100% with where you are at with {outcome} right now?"
+    say_plain: "Okay. And are you 100% with where you are at right now?"
+    listen:
+      any: {then: m_reframe1_dictate}
+  m_reframe1_dictate:
+    name: "Reframe 1: dictate results"
+    ui_stage: outcome
+    say: "Okay, And do you want that decision making process to dictate your results moving forward?"
+    listen:
+      "no":
+        examples: ["no", "no I don't", "definitely not"]
+        then: m_reframe1_why
+      any: {then: m_reframe2}
+  m_reframe1_why:
+    name: "Reframe 1: why not"
+    ui_stage: outcome
+    say: "Why not?"
+    listen:
+      any: {then: m_close1}
+  m_close1:
+    name: "Reframe 1: close"
+    ui_stage: outcome
+    say: "Do you see yourself jumping in?"
+    stuck: {then: m_reframe2}
+    listen:
+      "yes":
+        examples: ["yes", "yes let's do it", "I'm in"]
+        then: resell
+      "no":
+        examples: ["no", "not yet", "I'm not sure"]
+        then: m_reframe2
+  m_reframe2:
+    name: "Reframe 2: the island"
+    ui_stage: outcome
+    say: "Maybe I can explain myself a bit better. Imagine you are on an island surrounded by water. You live there, work there, etc. All you can see around you is 17.1 miles in every direction, and all there is is water. So ALL of your decisions are made with that in mind. The perspective you have shapes your decisions. But, to see the world for what it really is, then you have to be on top of a mountain. So the REALLY difficult thing is, first, believing the mountain is there. And once you know it is, then taking the leap of faith, and picking a direction to start walking. We have been walking around the island for a while, and it might be time to pick a direction. Strap on the boots and start making decisions like the guy who is ALREADY ON THE MOUNTAIN. So, what do you feel like you NEED to do to put yourself in the best position to get the outcomes that you want?"
+    listen:
+      any: {then: m_close2}
+  m_close2:
+    name: "Reframe 2: close"
+    ui_stage: outcome
+    say: "Do you see yourself jumping in?"
+    stuck: {then: m_reframe3}
+    listen:
+      "yes":
+        examples: ["yes", "yes let's do it", "I'm in"]
+        then: resell
+      "no":
+        examples: ["no", "not yet", "I'm not sure"]
+        then: m_reframe3
+  m_reframe3:
+    name: "Reframe 3: choices"
+    ui_stage: outcome
+    say: "We all make decisions based on our perspective. But the hardest thing is making decisions based on where we WANT to be. The overweight person is only overweight because they MAKE the CHOICES that an overweight person makes. They have a fundamentally flawed decision-making process around health, fitness and nutrition. It is not UNTIL they make the decisions of a fit and healthy person that they BECOME a fit and healthy person. Do you get what I mean? So what choices do you need to start making to get the perspective that you WANT to have?"
+    listen:
+      any: {then: m_close3}
+  m_close3:
+    name: "Reframe 3: close"
+    ui_stage: outcome
+    say: "Do you see yourself jumping in?"
+    stuck: {then: follow_up}
+    listen:
+      "yes":
+        examples: ["yes", "yes let's do it", "I'm in"]
+        then: resell
+      "no":
+        examples: ["no", "not yet", "I'm not sure"]
+        then: follow_up
+

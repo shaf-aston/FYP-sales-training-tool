@@ -10,7 +10,7 @@ from core.script_engine.engine import ScriptState
 from core.script_engine.fill import Filler
 from core.script_engine.judge import VAGUE, judge
 from core.script_engine.method import load_common_sense, load_method, load_offer
-from core.script_engine.seller import ScriptSeller, _after_lead
+from core.script_engine.seller import ScriptSeller
 
 CFG = load_yaml("script/engine.yaml")
 OFFER = load_offer("shay_coaching")
@@ -191,21 +191,16 @@ def test_price_after_price_step_is_stated(seller):
     assert "$5k" in text and "6-month" in text
 
 
-@pytest.mark.parametrize("name, said, lines", [
-    ("money", "it's too expensive", ["How much do you have now?"]),
-    ("think", "I need to think about it", ["Have you heard of procrastination?"]),
-    ("research", "let me do some more research first", ["Have you heard of analysis paralysis?"]),
+@pytest.mark.parametrize("name, said", [
+    ("money", "it's too expensive"),
+    ("think", "I need to think about it"),
+    ("research", "let me do some more research first"),
 ])
-def test_objection_loops_twice_then_direct_then_follow_up(seller, name, said, lines):
-    method = seller.method
-    at(seller, "19")
-    said_lines = [seller.reply(said)[0] for _ in range(4)]
-    objection = method.objections[name]
-    assert said_lines[0] == objection.loop[0]
-    assert said_lines[1] == objection.loop[1]
-    assert said_lines[2] == objection.direct
-    assert said_lines[3] == method.follow_up
-    assert lines[0] in said_lines[0]
+def test_an_objection_at_the_close_enters_its_matrix_branch(seller, name, said):
+    enter = seller.method.objections[name].enter
+    text, _ = at(seller, "19").reply(said)
+    assert text.endswith(seller.method.steps[enter].say)
+    assert seller.state.step == enter and seller.state.raised == (name,)
 
 
 def test_objection_before_the_price_is_acknowledged_then_the_question_comes_back(seller):
@@ -213,14 +208,15 @@ def test_objection_before_the_price_is_acknowledged_then_the_question_comes_back
     text, _ = at(seller, "03", outcome="I want financial freedom").reply("I need to think about it")
     assert text.startswith(seller.sense.park)
     assert text.endswith("How long have you been thinking about this?")
-    assert seller.state.step == "03" and not seller.state.play
+    assert seller.state.step == "03" and seller.state.parked == ("think",)
 
 
-def test_objections_are_counted_separately(seller):
-    at(seller, "19")
-    seller.reply("it's too expensive")
-    first_think = seller.reply("I need to think about it")[0]
-    assert first_think == seller.method.objections["think"].loop[0]
+def test_a_new_objection_gets_its_branch_until_the_limit_then_the_follow_up_is_booked(seller):
+    at(seller, "19").reply("it's too expensive")
+    seller.reply("I need to think about it")
+    assert seller.state.step == "m_think_what" and seller.state.raised == ("money", "think")
+    seller.reply("is this a scam?")  # a third worry in one call is a smokescreen
+    assert seller.state.step == seller.method.follow_up
 
 
 def test_a_whole_opening_run_has_no_any_questions_or_open_blanks(seller):
@@ -501,13 +497,6 @@ def test_question_detection_uses_phrases_or_a_question_mark(text, expected):
     assert is_question(text, CFG["question_starts"], CFG["filler_tags"]) is expected
 
 
-def test_a_line_joined_to_a_lead_in_keeps_a_capital_I():
-    assert _after_lead("I'm curious, how long?") == "I'm curious, how long?"
-    assert _after_lead("I read it.") == "I read it."
-    assert _after_lead("Is it the money?") == "is it the money?"
-    assert _after_lead("Ill-fitting is not I") == "ill-fitting is not I"
-
-
 def test_a_line_asked_again_is_filled_the_same_way_without_new_ai_calls(fake_embedder):
     calls = []
 
@@ -530,13 +519,10 @@ def test_im_back_is_an_answer_unless_they_stepped_away(fake_embedder):
     assert s.state.step != "03"  # step 03 takes any answer, so the script moved on
 
 
-def test_answer_to_an_objection_play_is_normalised_then_the_close_asked_again(seller):
-    s = at(seller, "19")
-    assert s.reply("I need to think about it")[0].startswith("Have you heard of procrastination?")
-    text, _ = s.reply("yes, it means putting things off")
-    think = s.method.objections["think"]
-    assert text == f"{think.normalise} {s.method.steps['19'].say}"
-    assert s.state.step == "19" and not s.state.play
+def test_the_same_worry_said_again_in_its_branch_answers_the_step(seller):
+    at(seller, "19").reply("it's too expensive")
+    seller.reply("it's too expensive")  # "no, I can't afford it" answers m_funded; it is not a new objection
+    assert seller.state.raised == ("money",) and seller.state.step != seller.method.follow_up
 
 
 def test_scripted_coaching_note_comes_from_the_step_without_ai(fake_embedder):
@@ -639,12 +625,9 @@ def test_a_parked_worry_comes_back_when_they_hesitate_at_the_close(seller):
     at(seller, "19")
     seller.reset(ScriptState(step="19", parked=("partner",)))
     text, _ = seller.reply("no, not really")
-    partner = seller.method.objections["partner"]
-    assert text.startswith(seller.sense.revisit)
-    assert text.endswith(partner.loop[0][:1].lower() + partner.loop[0][1:])
-    assert seller.state.parked == () and seller.state.play == "partner" and seller.state.asks == 0
-    follow, _ = seller.reply("my wife decides")
-    assert follow.startswith(partner.normalise) and follow.endswith("Do you see yourself jumping in?")
+    enter = seller.method.objections["partner"].enter
+    assert text == f"{seller.sense.revisit} {seller.method.steps[enter].say}"
+    assert seller.state.step == enter and seller.state.parked == () and seller.state.raised == ("partner",)
 
 
 def test_parked_worries_survive_a_rewind_snapshot():
@@ -662,15 +645,15 @@ def test_parked_worries_survive_a_rewind_snapshot():
 def test_broken_revisit_settings_fail_loud(change, error):
     from core.script_engine.method import CONFIG_DIR, _read, parse_method
 
-    data = _read(CONFIG_DIR / "methods", "cat")
+    data, matrix = _read(CONFIG_DIR / "methods", "cat"), _read(CONFIG_DIR / "script", "objection_matrix")
     (key, value), = change.items()
     if key.startswith("objections."):
         _, name, field_ = key.split(".")
-        data["objections"][name][field_] = value
+        matrix["objections"][name][field_] = value
     else:
         data[key] = value
     with pytest.raises(ValueError, match=error):
-        parse_method("cat", data)
+        parse_method("cat", data, matrix)
 
 
 def test_is_this_a_bot_gets_an_honest_yes_then_the_question(seller):

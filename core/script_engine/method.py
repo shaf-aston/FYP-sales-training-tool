@@ -1,5 +1,6 @@
 """Load and validate sales-method and offer YAML into frozen dataclasses."""
 
+import copy
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -50,9 +51,7 @@ class Step:
 class Objection:
     name: str
     examples: tuple
-    loop: tuple
-    direct: str
-    normalise: str = ""  # said once they answer a loop line, before the step's question again
+    enter: str           # after the price: the matrix step its branch starts at
     early: str = ""      # before the price: a short honest answer instead of `park`; may be raised while asking
 
 
@@ -72,7 +71,7 @@ class Method:
     steps: dict         # in script order
     objections: dict
     price_step: str     # the price may be said from this step on
-    follow_up: str      # said once an objection has been looped and met directly
+    follow_up: str      # step the call ends on once too many objections came up (a smokescreen)
     revisit_step: str = ""  # an objection parked before the price is raised again when they hesitate here
     ready: Ready = None     # keen prospect shortcut; none = every prospect hears the whole script
     reask: tuple = ()       # leads said before a question asked again once its probes ran out, in turn
@@ -178,14 +177,54 @@ def _step(step_id, data):
 
 
 def _objection(name, data):
-    return Objection(
-        name, tuple(data["examples"]), tuple(data["loop"]),
-        data["direct"], data.get("normalise", ""), data.get("early", ""),
-    )
+    return Objection(name, tuple(data["examples"]), str(data["enter"]), data.get("early", ""))
 
 
-def parse_method(name, data):
-    """Build a Method from parsed YAML. Fails loud on a broken script graph."""
+def _with_matrix(name, data, matrix):
+    """The method's steps, then the objection matrix's (so they count as past the price), with the
+    matrix's exit names (resell, payment, follow_up) pointed at the method's own steps by `exits`."""
+    if data.get("objections"):
+        raise ValueError(f"method {name}: objections live in the objection_handling file")
+    if matrix is None:
+        return data, {}, ""
+    exits = {str(k): str(v) for k, v in (data.get("exits") or {}).items()}
+    mine = {str(k): v for k, v in data["steps"].items()}
+    theirs = {str(k): v for k, v in copy.deepcopy(matrix["steps"]).items()}  # its exits are rewritten
+    if set(mine) & set(theirs):
+        raise ValueError(f"method {name}: steps {sorted(set(mine) & set(theirs))} are also matrix steps")
+    used = {"follow_up"}  # an objection past the limit books it
+    for step in theirs.values():
+        for route in [*(step.get("listen") or {}).values(), *([step["stuck"]] if step.get("stuck") else [])]:
+            then = str(route["then"])
+            if then not in theirs:
+                used.add(then)
+                route["then"] = exits.get(then, then)  # an unknown name fails below as an unknown then
+    if set(exits) != used:
+        raise ValueError(f"method {name}: exits must name exactly {sorted(used)}")
+    if any(v not in mine for v in exits.values()):
+        raise ValueError(f"method {name}: exits must lead to the method's own steps")
+    objections = {k: _objection(k, v) for k, v in matrix["objections"].items()}
+    if any(o.enter not in theirs for o in objections.values()):
+        raise ValueError(f"method {name}: every objection must enter at a matrix step")
+    return {**data, "steps": {**mine, **theirs}}, objections, exits["follow_up"]
+
+
+def _reachable(name, first, steps, starts):
+    """Fails loud on a step no route, objection or shortcut can lead to: it would never be said."""
+    seen, todo = set(), [first, *starts]
+    while todo:
+        step_id = todo.pop()
+        if step_id not in seen:
+            seen.add(step_id)
+            todo += [r.then for r in steps[step_id].routes]
+    if set(steps) - seen:
+        raise ValueError(f"method {name}: steps {sorted(set(steps) - seen)} can never be reached")
+
+
+def parse_method(name, data, matrix=None):
+    """Build a Method from parsed YAML; `matrix` is its objection_handling file. Fails loud on a broken
+    script graph."""
+    data, objections, follow_up = _with_matrix(name, data, matrix)
     steps = {str(k): _step(str(k), v) for k, v in data["steps"].items()}
     first = str(data.get("first", ""))
     if first not in steps:
@@ -196,11 +235,9 @@ def parse_method(name, data):
                 raise ValueError(f"step {step.id}: unknown then {route.then!r}")
         if step.listen and not step.stuck and not any(r.label == ANY for r in step.listen):
             raise ValueError(f"step {step.id}: can be asked again, so it needs a 'stuck' route")
-    objections = {k: _objection(k, v) for k, v in (data.get("objections") or {}).items()}
     price_step = str(data.get("price_step", ""))
     if price_step not in steps:
         raise ValueError(f"method {name}: price_step {price_step!r} not defined")
-    follow_up = (data.get("follow_up") or {}).get("say", "")
     reask = tuple(data.get("reask") or ())
     if any("?" in r for r in reask):
         raise ValueError(f"method {name}: reask leads must not ask (the step's question follows)")
@@ -214,8 +251,9 @@ def parse_method(name, data):
             raise ValueError(f"method {name}: revisit_step {revisit_step!r} must be a step at or after the price")
         if not steps[revisit_step].stuck:
             raise ValueError(f"method {name}: revisit_step {revisit_step!r} needs a 'stuck' route")
-    return Method(name, first, steps, objections, price_step, follow_up, revisit_step,
-                  _ready(name, data.get("ready"), steps), reask)
+    ready = _ready(name, data.get("ready"), steps)
+    _reachable(name, first, steps, [o.enter for o in objections.values()] + ([ready.then] if ready else []))
+    return Method(name, first, steps, objections, price_step, follow_up, revisit_step, ready, reask)
 
 
 def _score(where, value):
@@ -293,8 +331,11 @@ def parse_common_sense(data):
                        _score("unclear", unclear.get("min_score")) if unclear else 1.0, ask_meaning)
 
 
-def load_method(name, directory=CONFIG_DIR / "methods"):
-    return parse_method(name, _read(directory, name))
+def load_method(name, directory=CONFIG_DIR / "methods", shared=CONFIG_DIR / "script"):
+    """`shared`: where the objection_handling file the method names lives."""
+    data = _read(directory, name)
+    handling = data.get("objection_handling")
+    return parse_method(name, data, _read(shared, handling) if handling else None)
 
 
 def load_offer(name, directory=CONFIG_DIR / "offers"):

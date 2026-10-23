@@ -1,6 +1,5 @@
 """One selling turn: the script picks the line, the AI only fills small checked gaps."""
 
-import re
 from dataclasses import asdict, replace
 from functools import lru_cache
 from pathlib import Path
@@ -67,11 +66,6 @@ def build_seller(router, product, embedder=None, gate=None):
     )
 
 
-def _after_lead(line):
-    """`line` as the tail of a longer sentence: first letter lower-cased, except "I" and "I'm"."""
-    return line if re.match(r"I( |')", line) else line[:1].lower() + line[1:]
-
-
 class ScriptSeller:
     def __init__(self, cfg, method, offer, sense, embedder, llm):
         """`llm`: a `Voice`, or a plain `llm(prompt, max_tokens)` callable wrapped in one."""
@@ -107,7 +101,7 @@ class ScriptSeller:
     def restore(self, saved=None):
         """Back to a `snapshot()`; None goes back to the opening."""
         if saved:  # JSON gives lists back: tuples, so `said + (line,)` still adds up
-            saved = {**saved, "said": tuple(saved.get("said", ())), "parked": tuple(saved.get("parked", ()))}
+            saved = {**saved, **{k: tuple(saved.get(k, ())) for k in ("said", "parked", "raised")}}
         self.reset(ScriptState(**saved) if saved else None)
 
     def opening(self):
@@ -153,14 +147,11 @@ class ScriptSeller:
             self.state = park(self.state, v.name)
             return self._then_ask(self.method.objections[v.name].early or self.sense.park), step.ui_stage, ""
         if v.kind == "objection":
-            return *self._go(object_to(self.method, self.state, v.name, self.cfg["objection_loops"])), ""
+            return *self._go(object_to(self.method, self.state, v.name, self.cfg["objection_entries"])), ""
         if v.kind == "fact":
             f = self.offer.facts[v.name]
             lead = self._filler.fill(f.late_answer if opened and f.late_answer else f.answer, {})
             return self._then_ask(lead), step.ui_stage, ""
-        if v.kind == "play":  # they answered the objection play's question: normalise, then ask the step again
-            self.state = replace(self.state, play="")
-            return self._then_ask(self.method.objections[v.name].normalise), step.ui_stage, "objection_answered:" + v.name
         if v.kind == "question":
             answer = self._answer_uncovered(v.text, opened) or self.cfg["uncovered_fallback"]
             return self._then_ask(answer), step.ui_stage, ""
@@ -202,24 +193,24 @@ class ScriptSeller:
         """`lead`, then the step in other words; a step with no other words moves on instead (without
         taking the reply as its answer), so the same line is never said twice in a row."""
         if rephrase or step.probes:
-            move = ask_again(self.method, replace(self.state, play=""))  # the step's question, not the play's
+            move = ask_again(self.method, self.state)
         else:
             move = move_on(self.method, self.state)
         text, stage = self._go(move)
         return f"{lead} {text}", stage
 
     def _hesitates(self, move):
-        """They held back at the revisit step while a worry from earlier is still unanswered."""
+        """They held back at the revisit step (asked again, or given up on) while a worry from earlier is
+        still unanswered."""
         step_id = self.method.revisit_step
-        return (self.state.step == step_id and move.state.step == step_id
-                and bool(self.state.parked) and not self.state.play)
+        return (self.state.step == step_id and bool(self.state.parked)
+                and move.state.step in (step_id, self.method.steps[step_id].stuck.then))
 
     def _revisit(self):
         """Raise the oldest parked worry now: it is likely what holds them back."""
-        move = object_to(self.method, self.state, self.state.parked[0], self.cfg["objection_loops"])
+        move = object_to(self.method, self.state, self.state.parked[0], self.cfg["objection_entries"])
         self.state = move.state
-        line = self._render(move)
-        return f"{self.sense.revisit} {_after_lead(line)}"
+        return f"{self.sense.revisit} {self._render(move)}"
 
     def ui_stage(self):
         """The UI stage of the step the call is on."""
