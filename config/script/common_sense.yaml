@@ -44,6 +44,7 @@ interruptions:
       - "sorry, the dog is going mad"
       - "can you give me two minutes"
       - "brb"
+      - "sorry, I need to take this call"   # "someone's calling me" read as "am I talking to a real person"
     reply: "No problem, take your time."
   back:
     draft: true
@@ -82,6 +83,7 @@ interruptions:
   clarify:
     draft: true
     after: rephrase
+    min_score: 0.71   # "huh?" is 0.73; "I need to think about it" (0.69) and "I'd have to ask my wife" (0.67) are not
     examples:
       - "what do you mean"
       - "what do you mean by that"

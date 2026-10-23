@@ -2,6 +2,7 @@
 import os
 import statistics
 import time
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -52,6 +53,7 @@ def results():
     cfg = load_yaml("script/engine.yaml")
     embedder = make_embedder(cfg, ROOT)
     listener = Listener(cfg, embedder)
+    floors = {k: i.min_score for k, i in load_common_sense().interruptions.items()}  # as the seller judges them
     data = yaml.safe_load((ROOT / "tests/data/script_replies.yaml").read_text(encoding="utf-8"))
     embedder.warm([e for labels in _contexts().values() for ex in labels.values() for e in ex])
     rows, times = [], []
@@ -60,6 +62,8 @@ def results():
             for reply in replies:
                 start = time.perf_counter()
                 match = listener.match(reply, labels)
+                if context == "common_sense" and match.label and match.score < floors[match.label]:
+                    match = replace(match, label=None)
                 times.append((time.perf_counter() - start) * 1000)
                 rows.append((context, reply, expected, match))
     return rows, times
