@@ -310,3 +310,14 @@ def test_shrugs_are_unclear_and_real_answers_are_not():
     score = {t: listener.match(t, {"unclear": list(sense.unclear)}, by_clause=False).score for t in SHRUGS + ANSWERS}  # as shrug.py hears it
     assert [t for t in SHRUGS if score[t] < sense.unclear_min_score] == []
     assert [t for t in ANSWERS if score[t] >= sense.unclear_min_score] == []
+
+
+@pytest.mark.parametrize("said, step", [("what happens to the card exactly?", "m_open_wallet"), ("can we do option 2?", "22")])
+def test_a_card_question_asks_and_a_sure_choice_chooses(said, step):
+    # at the wallet: asking about the card is not choosing to pay, "can we do option 2?" is
+    from core.script_engine.engine import ScriptState
+
+    seller = _real_seller()
+    seller.reset(ScriptState(step="m_open_wallet"))
+    seller.reply(said)
+    assert seller.state.step == step

@@ -23,6 +23,7 @@ class Listener:
         self.embedder = embedder
         self.threshold, self.margin, self.k = cfg["threshold"], cfg["margin"], cfg["close_call_k"]
         self.near_miss, self.interrupt_threshold = cfg["near_miss"], cfg["interrupt_threshold"]
+        self.question_answer_min_score = cfg["question_answer_min_score"]
         words = "|".join(rf"\b{re.escape(b)}\b" if b.isalpha() else re.escape(b) for b in cfg["clause_breaks"])
         self.breaks, self.clause_min_words = re.compile(words, re.I), cfg["clause_min_words"]
 
@@ -69,6 +70,15 @@ class Listener:
                 return first
         return found
 
+    def answer_score(self, reply, answers, asking):
+        """How surely the reply is one of the step's `answers`; 0.0 when it is none. A question is one only
+        when sure: "can we do option 2?" chooses, "what happens to the card?" asks about it."""
+        found = self.match(reply, answers)
+        if found.close and found.score >= self.threshold:
+            return found.score  # torn between two answers ("no, credit?") is still answering
+        bar = self.question_answer_min_score if asking else 0.0
+        return found.score if found.label and found.score >= bar else 0.0
+
     def interruption(self, reply, labels, answers, any_reply, asking, floors):
         """The label in `labels` that clearly beats reading the reply as one of the step's own `answers`,
         else None. `any_reply`: the step takes any reply as its answer, so only a sure match interrupts.
@@ -79,13 +89,11 @@ class Listener:
             return None
         if found.label.startswith("fact:"):
             return found.label
-        bar = self.interrupt_threshold
-        if answers:
-            as_answer = self.match(reply, answers)
-            bar = as_answer.score if as_answer.label else 0.0  # only a real answer competes
+        as_answer = self.answer_score(reply, answers, asking) if answers else 0.0  # only a real answer competes
+        bar = as_answer if answers else self.interrupt_threshold
         if any_reply:
             bar = max(bar, self.interrupt_threshold)
         if asking:
-            bar = 0.0  # a question is never an answer, so it need not beat one
+            bar = as_answer  # a question need beat only an answer it surely is
         bar = max(bar, floors.get(found.label, 0.0))
         return found.label if found.score > bar else None

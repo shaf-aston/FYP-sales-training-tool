@@ -254,7 +254,7 @@ steps:
         examples: ["let's put the card down", "I'll put my card down", "option 2"]
         then: payment
       follow_up:
-        examples: ["let's schedule a follow up", "the follow up", "option 1"]
+        examples: ["let's schedule a follow up", "the follow up", "option 1", "the first option", "let's talk again another day"]
         then: follow_up   # Partner 3: speak again with the partner there
 
   # Scam doubt: the trainer's FAQ lines
