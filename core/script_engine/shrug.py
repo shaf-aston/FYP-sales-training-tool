@@ -18,17 +18,15 @@ class Shrugs:
         only on a step whose catch-all route would keep it as the answer (a step with no catch-all hears these
         with its own labels), and a question is never a shrug."""
         words = set(tokenize(text))
-        if not words:
-            return False
-        if words <= self._filler:
+        if words <= self._filler:  # also no words at all: "👍", "..."
             return True
-        if not step.capture or not any(r.label == ANY for r in step.listen) or asking:
+        if not any(r.label == ANY for r in step.listen) or asking:
             return False
         if words <= self._plain:
             return True  # "dunno man": only shrug words, nothing the catch-all should keep
         if not self._sense.unclear:
             return False
-        found = self._listener.match(text, {"unclear": list(self._sense.unclear)})
+        found = self._listener.match(text, {"unclear": list(self._sense.unclear)}, by_clause=False)
         return found.score >= self._sense.unclear_min_score
 
     def ask_meaning(self, text, question, empty, heard_ahead, known=()):

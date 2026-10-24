@@ -412,6 +412,19 @@ def test_a_worry_at_payment_enters_its_matrix_branch(fake_embedder):
     assert reply == CAT.steps[CAT.objections["think"].enter].say
 
 
+def test_a_yes_with_its_reason_after_is_heard_as_yes(fake_embedder):
+    s = seller(fake_embedder, step="m_funded")
+    reply, _ = s.reply("yes, the course looks like exactly what I need right now")
+    assert reply == CAT.steps["m_funded_why"].say
+
+
+@pytest.mark.parametrize("said", ["um", "I just need some time"])
+def test_no_logistics_named_is_asked_again_never_taken_as_the_answer(fake_embedder, said):
+    s = seller(fake_embedder, step="m_think_what")
+    s.reply(said)
+    assert s.state.step == "m_think_what"
+
+
 def test_a_reason_at_self_resell_still_moves_on(fake_embedder):
     s = seller(fake_embedder, step="20")
     reply, _ = s.reply("because I'm sick of my job")
@@ -467,8 +480,8 @@ def test_an_answer_with_a_question_the_facts_dont_cover_just_moves_on(fake_embed
 
 
 def test_a_near_miss_answer_with_a_question_stays_a_question(fake_embedder):
-    s = seller(fake_embedder, step="18")   # under the threshold: their question is never dropped on a guess
-    reply, _ = s.reply("yes that makes sense, but do I need a laptop?")
+    s = seller(fake_embedder, step="18")   # a near miss, whole and by part: their question is never dropped on a guess
+    reply, _ = s.reply("sort of makes sense, do I need a laptop?")
     assert reply.startswith(CFG["uncovered_fallback"]) and s.state.step == "18"
 
 
@@ -705,3 +718,19 @@ def test_the_call_uncovers_the_limiting_belief_and_its_cost_before_the_consequen
     assert s.state.step == "belief_cost"
     s.reply("I'd stay stuck and miss my kids growing up")
     assert s.state.step == "10" and "kids" in s.state.slots["belief_cost"]
+
+
+@pytest.mark.parametrize("said", ["👍", "..."])
+def test_a_reply_with_no_words_is_asked_again_never_saved(fake_embedder, said):
+    s = seller(fake_embedder, step="03")   # an open step that keeps any reply
+    s.reply(said)
+    assert s.state.step == "03" and said not in s.state.slots.values()
+
+
+def test_what_they_meant_is_asked_once_a_step_never_twice(fake_embedder):
+    s = seller(fake_embedder, step="01")
+    s.reply("More money")
+    first, _ = s.reply("Just more money, like")
+    second, _ = s.reply("Like more money with stuff right")
+    assert "what do you mean" not in first.lower()   # their answer again, only shrug words added
+    assert "what do you mean" not in second.lower()

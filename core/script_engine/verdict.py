@@ -80,8 +80,8 @@ class Ear:
         if asking:
             labels.update({f"fact:{k}": f.examples for k, f in self.offer.facts.items()})
         objections = self.method.objections.items()
-        if not opened and step.doubts_answer:
-            objections = ()  # "money's tight" answers "what holds you back"
+        if not opened and step.doubts_answer and not asking:
+            objections = ()  # "money's tight" answers "what holds you back"; "is this a scam?" still asks
         elif not opened and asking:
             objections = [(k, o) for k, o in objections if o.early]  # "is this a scam?" gets an honest early line
         if not opened:
@@ -101,6 +101,7 @@ class Ear:
 
     def _answers(self, text, step):
         """The reply matches one of the step's own answers, even with a question in it ("yeah makes
-        sense, what's next?" at the temp check). Two answers too close to call are judged as usual."""
+        sense, what's next?" at the temp check), only when sure: "what happens to the card?" asks about the
+        card, it doesn't choose it. Two answers too close to call are judged as usual."""
         labels = answer_labels(step)
-        return bool(labels) and self._listener.match(text, labels).label is not None
+        return bool(labels) and self._listener.answer_score(text, labels, asking=True) > 0

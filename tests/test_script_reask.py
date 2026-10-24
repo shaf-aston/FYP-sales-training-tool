@@ -62,8 +62,8 @@ def test_a_question_rephrased_for_a_sense_gets_no_reask_lead():
 
 def test_each_lead_is_said_once_a_step(fake_embedder):
     s = seller(fake_embedder, "08")
-    said = [s.reply(r)[0] for r in ("yeah", "sure", "ok")]
-    assert [leads(t) for t in said] == [[lead] for lead in CAT.reask]
+    said = [s.reply(r)[0] for r in ("yeah", "sure")]  # `misses` re-asks, then the step moves on
+    assert [leads(t) for t in said] == [[lead] for lead in CAT.reask[:2]]
 
 
 def test_yes_is_a_shrug_to_an_open_question(fake_embedder):

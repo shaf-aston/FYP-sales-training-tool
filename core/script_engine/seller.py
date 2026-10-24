@@ -78,6 +78,7 @@ class ScriptSeller:
         self._voice = llm if hasattr(llm, "new_turn") else Voice(cfg, offer, llm)
         self._opening = start(method)
         self.state = self._opening.state
+        self.last_turn = {}  # what the latest reply was heard as: see `reply`
         examples = self._script_examples()
         vocab = frozenset(w for e in examples for w in tokenize(e)) | frozenset(cfg["spell_words"])
         self._vocab = vocab
@@ -272,7 +273,8 @@ class ScriptSeller:
         text, labels = v.text, answer_labels(step)
         label, line, ack, missed = None, "", None, False
         if labels:
-            found = self._listener.match(text, labels, {r.label: r.min_score for r in step.listen if r.label})
+            found = self._listener.answer(text, labels, list(self.sense.unclear),
+                                          {r.label: r.min_score for r in step.listen if r.label})
             label, near = found.label, found.candidates
             if found.close:
                 pick = self._voice.judge(text, {c: labels[c] for c in near}) if near else VAGUE
@@ -285,7 +287,7 @@ class ScriptSeller:
             if heard is not None:
                 missed = not heard.answered
                 empty, line, ack = empty or missed, heard.probe, heard.ack
-        if step.capture and not line:
+        if step.capture and not line and not self.state.said:  # their words asked about once a step, never twice
             line = self._shrugs.ask_meaning(text, self._question(), empty, v.ahead is not None,
                                             self.state.slots.values())  # said only if asked again
         detail = ""

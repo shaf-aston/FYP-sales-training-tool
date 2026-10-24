@@ -61,7 +61,10 @@ interruptions:
       - "sorry, can you say that again"
       - "I didn't catch that"
       - "what was the question"
-      - "can you hear me?"
+      - "I can't hear you"   # not "can you hear me?": "great, sounds good" read as it (0.74)
+      - "hello? you've gone quiet"
+      - "hello? you still with me?"
+      - "sorry, you cut out"
       - "you're breaking up"
       - "sorry, the line is bad"
     reply: "Of course, let me ask that again."

@@ -8,6 +8,7 @@ step_01:   # CAT step 01: goal levels surface (1) / practical (2) / identity (3)
     - "I want to be able to work from a beach if I feel like it"
     - "financial freedom for me and my family"
     - "I'm tired of my 9 to 5 and want to be in control of my own time"
+    - "i guess to travel and work from bali and never have a boss"   # whole reply 0.63, its parts 0.71: heard by clause
     - "to be location independent and not tied to a desk"
     - "I want to build something of my own so I can leave my job"
     - "freedom to spend my days how I choose"
@@ -241,6 +242,7 @@ common_sense:
     - "how much does it cost"
     - "I'm worried about the risk"
     - "I'd have to ask my wife"
+    - "great, sounds good"   # read as "can you hear me?" (0.74)
 # Labels with a min_score floor, heard at step 01 next to its own answers. `meant` rows must clear
 # the floor; `not_meant` rows must stay under it (a false jump or a false "you're annoyed" is worse
 # than a miss).

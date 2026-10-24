@@ -20,7 +20,8 @@ def mini():
 
 def _listener(embedder, threshold, margin=0.03):
     return Listener({"threshold": threshold, "margin": margin, "close_call_k": 3, "near_miss": 0.1,
-                     "interrupt_threshold": 0.0}, embedder)
+                     "interrupt_threshold": 0.0, "question_answer_min_score": 0.8,
+                     "clause_breaks": [",", "and"], "clause_min_words": 3}, embedder)
 
 
 def _labels(method, step_id):
@@ -205,6 +206,6 @@ def test_bad_reask_fails_loud(change, error):
 
 def test_a_route_under_its_floor_is_neither_the_label_nor_a_candidate(fake_embedder):
     labels = {"yes": ["yes sounds good"], "no": ["no not for me"]}
-    floored = _listener(fake_embedder, 0.65).match("yes sounds good", labels, {"yes": 1.01})
+    floored = _listener(fake_embedder, 0.65).match("yes sounds good", labels, floors={"yes": 1.01})
     assert floored.label is None and "yes" not in floored.candidates
-    assert _listener(fake_embedder, 0.65).match("yes sounds good", labels, {"no": 0.99}).label == "yes"
+    assert _listener(fake_embedder, 0.65).match("yes sounds good", labels, floors={"no": 0.99}).label == "yes"
