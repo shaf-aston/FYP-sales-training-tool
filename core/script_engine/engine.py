@@ -28,6 +28,7 @@ class Move:
     ui_stage: str
     ack: str = ""       # short fixed lead-in from the route taken
     lead: tuple = ()    # run_on step ids said first, in order
+    theirs: bool = False  # `say` was made from their reply (a clarifying question, an AI probe)
 
 
 def _speak(method, state):
@@ -115,7 +116,7 @@ def _ask_again(method, state, step, ack="", line="", misses=0, lead=True):
         if lead and method.reask and not ack and (step.probes or "?" in step.say):
             ack = method.reask[(used - len(step.probes)) % len(method.reask)]
     state = replace(state, asks=state.asks + 1, asked=line, said=state.said + (line,) if line else state.said)
-    return Move(said, state, step.ui_stage, ack=ack)
+    return Move(said, state, step.ui_stage, ack=ack, theirs=bool(line))
 
 
 def _question(say):

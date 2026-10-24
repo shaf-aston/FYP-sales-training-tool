@@ -77,3 +77,8 @@ def check(cfg):
     if found:
         raise ValueError("engine.yaml:\n  " + "\n  ".join(found))
     return cfg
+
+
+def plain_words(cfg):
+    """Words that carry no answer on their own: "the", "um", "stuff"."""
+    return frozenset(cfg["stop_words"]) | frozenset(cfg["filler_words"]) | frozenset(cfg["vague_words"])

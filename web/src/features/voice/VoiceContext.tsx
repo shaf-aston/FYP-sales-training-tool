@@ -12,7 +12,7 @@ import { useSession } from "@/features/session/SessionContext";
 import { SpeechRecognizer, speechSupported, type StopState } from "./speech/recognizer";
 import { Tts, ttsSupported } from "./speech/tts";
 import { parsePunctuation } from "./voiceCommands";
-import { speakable } from "@/features/chat/tone";
+import { speakable } from "@/lib/tone";
 
 interface VoiceValue {
   /** Can this browser dictate? False until the browser has been checked. */
@@ -175,7 +175,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
         onFinish: () => resumeAfterSpeech(),
         onError: (m) => live.current.toast(m, "error"),
       });
-      void tts.current.speak(text, live.current.speed);
+      void tts.current.speak(speakable(text), live.current.speed); // words only: the tone marks are for the screen
     },
     [resumeAfterSpeech],
   );
@@ -225,7 +225,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     }
     if (last && last.id !== spokenId.current) {
       spokenId.current = last.id;
-      speak(speakable(last.content)); // words only: the tone marks are for the screen
+      speak(last.content);
     }
   }, [session.messages, handsFree, speak]);
 

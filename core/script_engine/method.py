@@ -9,9 +9,9 @@ import yaml
 
 from core.enums import Stage
 from core.loader import CONFIG_DIR
+from core.script_engine.fill import blanks
 from core.script_engine.tone import stresses
 
-BLANK = re.compile(r"\{(\w+)")  # the name of each {blank} in a line
 ANY = "any"  # listen route with no examples: taken for any reply
 # What happens after an interruption's reply: ask the step again (same words), wait for them to come
 # back, ask it in other words, or (a step with no other words) move on to the next step.
@@ -133,21 +133,6 @@ class CommonSense:
     ask_meaning: str = ""  # asks what they meant by their own words ({said}); empty = never asked
 
 
-@dataclass(frozen=True)
-class Meaning:
-    """What an answer means, beyond its words ("my mum's relying on me": family duty), and lines that say so."""
-    name: str
-    examples: tuple
-    lines: tuple        # said in turn, each once a call; none of them asks
-
-
-@dataclass(frozen=True)
-class Meanings:
-    items: dict
-    min_score: float    # an answer means one only when it matches this well
-    min_words: int = 2  # and says this many words that carry meaning: "debt" or "for my mum" means none
-
-
 def _read(directory, name):
     path = Path(directory) / f"{name}.yaml"
     with open(path, "r", encoding="utf-8") as f:
@@ -209,11 +194,6 @@ def _one_stress(where, line):
     """A line stresses one word at most: stress everywhere is stress nowhere."""
     if stresses(line) > 1:
         raise ValueError(f"{where}: at most one stress mark (_word_ or ==words==) per line: {line!r}")
-
-
-def blanks(line):
-    """The names of the {blanks} in a line."""
-    return {m.group(1) for m in BLANK.finditer(line or "")}
 
 
 def _objection(name, data):
@@ -382,22 +362,6 @@ def parse_common_sense(data):
                        _score("unclear", unclear.get("min_score")) if unclear else 1.0, ask_meaning)
 
 
-def parse_meanings(data):
-    items = {}
-    for k, v in (data.get("meanings") or {}).items():
-        if not v.get("examples") or not v.get("lines"):
-            raise ValueError(f"meaning {k}: needs examples and lines")
-        for line in v["lines"]:
-            if "?" in line or "{" in line:
-                raise ValueError(f"meaning {k}: a line neither asks nor has blanks (the step's question follows): {line!r}")
-            _one_stress(f"meaning {k}", line)
-        items[k] = Meaning(k, tuple(v["examples"]), tuple(v["lines"]))
-    min_words = data.get("min_words", 2)
-    if not isinstance(min_words, int) or isinstance(min_words, bool) or min_words < 1:
-        raise ValueError("meanings: min_words must be a whole number of at least 1")
-    return Meanings(items, _score("meanings", data.get("min_score")), min_words)
-
-
 def load_method(name, directory=CONFIG_DIR / "methods", shared=CONFIG_DIR / "script"):
     """`shared`: where the objection_handling file the method names lives."""
     data = _read(directory, name)
@@ -411,7 +375,3 @@ def load_offer(name, directory=CONFIG_DIR / "offers"):
 
 def load_common_sense(name="common_sense", directory=CONFIG_DIR / "script"):
     return parse_common_sense(_read(directory, name))
-
-
-def load_meanings(name="meanings", directory=CONFIG_DIR / "script"):
-    return parse_meanings(_read(directory, name))

@@ -109,6 +109,45 @@ def fake_embedder():
     return BagOfWordsEmbedder()
 
 
+class MirrorAI:
+    """A fake AI whose "I heard you" line says their reply back, as the AI is told to. Counts the ack calls."""
+
+    def __init__(self):
+        self.acks = 0
+
+    def __call__(self, prompt, max_tokens):
+        reply = prompt.split("<reply>")[1].split("</reply>")[0].strip() if "<reply>" in prompt else ""
+        if "<goal>" in prompt:  # the listen call
+            return f"ANSWERED: yes\nACK: So, {reply}.\nPROBE: none"
+        if "They answered" in prompt:  # the ack call
+            self.acks += 1
+            return f"So, {reply}."
+        raise RuntimeError("only the ack and listen calls are faked")
+
+
+@pytest.fixture
+def mirror():
+    return MirrorAI()
+
+
+@pytest.fixture
+def cat_seller():
+    """Builds the cat script's seller: `cat_seller(embedder, llm=MirrorAI(), step=None, meanings=None, **state)`."""
+    from core.loader import load_yaml
+    from core.script_engine.engine import ScriptState
+    from core.script_engine.method import load_common_sense, load_method, load_offer
+    from core.script_engine.seller import ScriptSeller
+
+    def build(bow, llm=None, step=None, meanings=None, **state):
+        s = ScriptSeller(load_yaml("script/engine.yaml"), load_method("cat"), load_offer("shay_coaching"),
+                         load_common_sense(), bow, llm or MirrorAI(), meanings)
+        if step:
+            s.reset(ScriptState(step=step, **state))
+        return s
+
+    return build
+
+
 @pytest.fixture(autouse=True)
 def _offline_embedder(monkeypatch, fake_embedder):
     """Every SellerBot runs the script; tests use the offline embedder (no model download)."""

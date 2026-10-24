@@ -18,7 +18,7 @@ def plain(text):
     """The words without their marks; a pause reads as a space."""
     text = KEY.sub(r"\1", text or "")
     text = STRESS.sub(r"\1\2", text)
-    return re.sub(r"\s*¶\s*", " ", text).strip()
+    return re.sub(rf"\s*{PAUSE}\s*", " ", text).strip()
 
 
 def stresses(line):
@@ -26,7 +26,7 @@ def stresses(line):
     return len(KEY.findall(line or "")) + len(STRESS.findall(line or ""))
 
 
-def join(*parts):
-    """Lines said one after the other, each in its own bubble."""
-    parts = (p.strip().strip(PAUSE).strip() for p in parts if p)
+def join(first, then):
+    """Two lines said one after the other, each in its own bubble."""
+    parts = (p.strip().strip(PAUSE).strip() for p in (first, then) if p)
     return PAUSE.join(p for p in parts if p)

@@ -12,6 +12,11 @@ NAME = re.compile(r"\{(\w+)(?:\|([^|{}]*)\|([^|{}]*))?\}")  # {name} or {name|no
 WORD = re.compile(r"[A-Za-z0-9'-]+")
 
 
+def blanks(line):
+    """The names of the {blanks} in a line."""
+    return {m.group(1) for m in NAME.finditer(line or "")}
+
+
 def offer_blanks(offer):
     blanks = {"months": str(offer.months), "price": offer.price}
     blanks.update({f"pillar_{i}": p for i, p in enumerate(offer.pillars, 1)})
@@ -116,7 +121,7 @@ class Filler:
         """Their own phrases `line` would say back (its echo blanks, filled); [] when none, or it can't be filled."""
         if not line or self.fill(line, slots) is None:
             return []
-        names = {m.group(1) for m in NAME.finditer(line)} & self.echo
+        names = blanks(line) & self.echo
         return [echo_phrase(slots[n], self.cfg, self.vocab) for n in sorted(names) if slots.get(n)]
 
     def render(self, say, ack, say_plain, slots):

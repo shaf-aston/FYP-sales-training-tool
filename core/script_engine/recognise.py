@@ -23,8 +23,9 @@ class Listener:
         self.threshold, self.margin, self.k = cfg["threshold"], cfg["margin"], cfg["close_call_k"]
         self.near_miss, self.interrupt_threshold = cfg["near_miss"], cfg["interrupt_threshold"]
 
-    def match(self, reply, labels):
-        """labels: {name: [example, ...]}. Score = best example similarity per label."""
+    def match(self, reply, labels, floors=None):
+        """labels: {name: [example, ...]}. Score = best example similarity per label. `floors`: {name: lowest
+        score it counts at}; a name whose floor the best score misses is not a label or candidate."""
         names, examples = [], []
         for name, items in labels.items():
             names += [name] * len(items)
@@ -40,8 +41,10 @@ class Listener:
         second = ranked[1][1] if len(ranked) > 1 else -1.0
         in_band = self.threshold - self.near_miss <= top < self.threshold
         close = (top - second < self.margin and top >= self.threshold - self.near_miss) or in_band
-        label = top_name if top >= self.threshold else None
-        return Match(label, top, tuple(n for n, _ in ranked[:self.k]), close)
+        floors = floors or {}
+        candidates = tuple(n for n, _ in ranked[:self.k] if top >= floors.get(n, 0.0))
+        label = top_name if top >= self.threshold and top_name in candidates else None
+        return Match(label, top, candidates, close)
 
     def interruption(self, reply, labels, answers, any_reply, asking, floors):
         """The label in `labels` that clearly beats reading the reply as one of the step's own `answers`,

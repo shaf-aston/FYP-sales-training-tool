@@ -9,7 +9,7 @@ import { InlineEvaluation } from "@/features/sell/SellDialogs";
 import { useUi } from "@/state/UiContext";
 import s from "./MessageList.module.css";
 import { prefersReducedMotion } from "@/lib/motion";
-import { bubbles, highlighted, speakable, typingMs } from "./tone";
+import { bubbles, highlighted, typingMs } from "@/lib/tone";
 
 /** The AI's badge beside its lines, so it is never mistaken for the mode icons in the header. */
 function Avatar() {
@@ -99,7 +99,10 @@ function useReveal(parts: string[], fresh: boolean, answered: boolean, onGrow?: 
 
 /** The seller's reply: one bubble per pause in the line, the key thing highlighted. */
 function BotBubbles({ text, meta, fresh, answered, onGrow }: { text: string; meta?: string; fresh: boolean; answered: boolean; onGrow?: () => void }) {
-  const parts = useMemo(() => (bubbles(text).length ? bubbles(text) : [""]), [text]); // an empty reply still shows its meta
+  const parts = useMemo(() => {
+    const b = bubbles(text);
+    return b.length ? b : [""]; // an empty reply still shows its meta
+  }, [text]);
   const shown = useReveal(parts, fresh, answered, onGrow);
   return (
     <div className={s.stack}>
@@ -128,15 +131,13 @@ interface ItemProps {
   onEdit?: () => void;
   onSave: (text: string) => Promise<void>;
   onCancel: () => void;
-  /** this reply takes the typing bubble's place: only its words fade in, the bubble does not rise again */
+  /** this reply took the typing bubble's place: only its words faded in, the bubble did not rise again */
   swap?: boolean;
-  /** the reply just in: its bubbles show one by one */
-  fresh?: boolean;
-  /** a bubble of this reply just showed: keep the newest line in view */
+  /** set on the reply just in (its bubbles show one by one): a bubble just showed, keep the newest line in view */
   onGrow?: () => void;
 }
 
-function Item({ m, canEdit, editing, later, swap, fresh, onEdit, onSave, onCancel, onGrow }: ItemProps) {
+function Item({ m, canEdit, editing, later, swap, onEdit, onSave, onCancel, onGrow }: ItemProps) {
   if (m.role === "divider") {
     return (
       <div className={s.divider} role="separator">
@@ -159,11 +160,11 @@ function Item({ m, canEdit, editing, later, swap, fresh, onEdit, onSave, onCance
           {m.meta && <p className={s.meta}>{m.meta}</p>}
         </div>
       ) : (
-        <BotBubbles text={m.content} meta={m.meta} fresh={!!fresh} answered={later > 0} onGrow={onGrow} />
+        <BotBubbles text={m.content} meta={m.meta} fresh={!!onGrow} answered={later > 0} onGrow={onGrow} />
       )}
       {!editing && !m.historical && (
         <div className={s.actions}>
-          {!user && <ListenButton text={speakable(m.content)} />}
+          {!user && <ListenButton text={m.content} />}
           {/* Buy mode only (no onEdit in sell). Always laid out, just hidden while a reply is coming, so the row never grows. */}
           {user && onEdit && (
             <Button
@@ -262,7 +263,6 @@ export function MessageList() {
             later={messages.slice(i + 1).filter((n) => n.role !== "divider").length}
             canEdit={!typing}
             swap={swapped.has(m.id)}
-            fresh={m.id === swapId}
             onGrow={m.id === swapId ? pin : undefined}
             editing={editingId === m.id}
             onEdit={mode === "buy" ? () => startEdit(m.id) : undefined}

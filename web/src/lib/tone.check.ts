@@ -1,4 +1,4 @@
-// Run: node --experimental-strip-types web/src/features/chat/tone.check.ts
+// Run: node --experimental-strip-types web/src/lib/tone.check.ts
 import assert from "node:assert/strict";
 // @ts-expect-error node runs this file directly and needs the .ts extension
 import { bubbles, highlighted, speakable, typingMs } from "./tone.ts";

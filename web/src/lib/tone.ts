@@ -25,4 +25,6 @@ export const speakable = (text: string) =>
     .join(" ");
 
 /** How long the typing dots show before a bubble: longer lines take longer to "type", within limits. */
-export const typingMs = (bubble: string) => Math.min(2400, Math.max(600, 350 + 22 * bubble.length));
+const TYPING = { baseMs: 350, perCharMs: 22, minMs: 600, maxMs: 2400 };
+export const typingMs = (bubble: string) =>
+  Math.min(TYPING.maxMs, Math.max(TYPING.minMs, TYPING.baseMs + TYPING.perCharMs * bubble.length));
