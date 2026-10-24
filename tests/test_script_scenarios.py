@@ -467,8 +467,8 @@ def test_an_answer_with_a_question_the_facts_dont_cover_just_moves_on(fake_embed
 
 
 def test_a_near_miss_answer_with_a_question_stays_a_question(fake_embedder):
-    s = seller(fake_embedder, step="18")   # under the threshold: their question is never dropped on a guess
-    reply, _ = s.reply("yes that makes sense, but do I need a laptop?")
+    s = seller(fake_embedder, step="18")   # a near miss, whole and by part: their question is never dropped on a guess
+    reply, _ = s.reply("sort of makes sense, do I need a laptop?")
     assert reply.startswith(CFG["uncovered_fallback"]) and s.state.step == "18"
 
 

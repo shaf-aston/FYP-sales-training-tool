@@ -15,6 +15,8 @@ interrupt_threshold: 0.8   # on a step that takes any answer, an interruption mu
 near_miss: 0.1         # a top score this far under the threshold is a close call too
 margin: 0.03           # top two labels closer than this = close call
 close_call_k: 3        # candidates handed to the judge on a close call
+clause_breaks: [",", ";", ".", "!", "?", "and", "but", "so"]   # a long reply is also heard part by part, split at these: "to travel and work from bali and never have a boss" reads as its parts
+clause_min_words: 3     # a part shorter than this is too little to hear on its own
 max_words: 30          # longest sentence the AI may write
 ai_retries: 1
 ai_rest_seconds: 60    # after ai_fail_limit failures in a row, skip the AI this long (plain script lines meanwhile)

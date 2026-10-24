@@ -1,5 +1,6 @@
 """Match a prospect reply to the closest labelled meaning. Pure given an embedder."""
 
+import re
 from dataclasses import dataclass
 
 
@@ -22,17 +23,26 @@ class Listener:
         self.embedder = embedder
         self.threshold, self.margin, self.k = cfg["threshold"], cfg["margin"], cfg["close_call_k"]
         self.near_miss, self.interrupt_threshold = cfg["near_miss"], cfg["interrupt_threshold"]
+        words = "|".join(rf"\b{re.escape(b)}\b" if b.isalpha() else re.escape(b) for b in cfg["clause_breaks"])
+        self.breaks, self.clause_min_words = re.compile(words, re.I), cfg["clause_min_words"]
 
-    def match(self, reply, labels):
-        """labels: {name: [example, ...]}. Score = best example similarity per label."""
+    def _parts(self, reply):
+        """The reply, plus its clauses when it has two or more long enough to hear alone."""
+        clauses = [c.strip() for c in self.breaks.split(reply) if len(c.split()) >= self.clause_min_words]
+        return [reply] + clauses if len(clauses) > 1 else [reply]
+
+    def match(self, reply, labels, by_clause=True):
+        """labels: {name: [example, ...]}. Score = best similarity per label, of the reply or (`by_clause`) any
+        of its clauses. A meaning only the whole reply can have ("says nothing") is matched with by_clause=False."""
         names, examples = [], []
         for name, items in labels.items():
             names += [name] * len(items)
             examples += items
-        vectors = self.embedder.embed([reply] + examples)
-        best = {}
-        for name, vec in zip(names, vectors[1:]):
-            best[name] = max(best.get(name, -1.0), _dot(vectors[0], vec))
+        parts = self._parts(reply) if by_clause else [reply]
+        vectors = self.embedder.embed(parts + examples)
+        heard, best = vectors[:len(parts)], {}
+        for name, vec in zip(names, vectors[len(parts):]):
+            best[name] = max(best.get(name, -1.0), *(_dot(h, vec) for h in heard))
         ranked = sorted(best.items(), key=lambda kv: kv[1], reverse=True)
         if not ranked:
             return Match(None, 0.0, (), False)

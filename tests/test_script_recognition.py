@@ -307,6 +307,6 @@ ANSWERS = ["nothing yet", "nothing, I just watch youtube", "maybe travel", "mayb
 def test_shrugs_are_unclear_and_real_answers_are_not():
     sense = load_common_sense()
     listener = Listener(load_yaml("script/engine.yaml"), make_embedder(load_yaml("script/engine.yaml"), ROOT))
-    score = {t: listener.match(t, {"unclear": list(sense.unclear)}).score for t in SHRUGS + ANSWERS}
+    score = {t: listener.match(t, {"unclear": list(sense.unclear)}, by_clause=False).score for t in SHRUGS + ANSWERS}  # as shrug.py hears it
     assert [t for t in SHRUGS if score[t] < sense.unclear_min_score] == []
     assert [t for t in ANSWERS if score[t] >= sense.unclear_min_score] == []
