@@ -12,9 +12,12 @@ embed_batch_size: 16   # texts embedded at once; smaller keeps peak memory low
 threshold: 0.65        # lowest similarity that counts as a match
 early_objection_min_score: 0.85   # before the price, a stated objection must match this well: "money", "scared", "risk" (about 0.7-0.81) are answers; "I can't afford it" (0.9+) is an objection
 interrupt_threshold: 0.8   # on a step that takes any answer, an interruption must score this high
+question_answer_min_score: 0.8   # a question is one of the step's answers only this sure: "can we do option 2?" (0.9) chooses, "what happens to the card?" (0.74) asks
 near_miss: 0.1         # a top score this far under the threshold is a close call too
 margin: 0.03           # top two labels closer than this = close call
 close_call_k: 3        # candidates handed to the judge on a close call
+clause_breaks: [",", ";", ".", "!", "?", "and", "but", "so"]   # a long reply is also heard part by part, split at these: "to travel and work from bali and never have a boss" reads as its parts
+clause_min_words: 3     # a part shorter than this is too little to hear on its own
 max_words: 30          # longest sentence the AI may write
 ai_retries: 1
 ai_rest_seconds: 60    # after ai_fail_limit failures in a row, skip the AI this long (plain script lines meanwhile)
@@ -26,7 +29,7 @@ slot_words: 6          # longest phrase echoed into a script blank
 stop_words: [a, an, the, i, i'm, i've, my, me, to, of, and, or, in, on, at, for, is, am, are, be, it, that, this, so, with, as, by, we, you, your]
 filler_words: [ok, okay, sure, yeah, yep, yes, hmm, mm, cool, alright, right, k, kk, idk, dunno]   # a reply made only of these (and stop_words) says nothing; never add "no", it answers yes/no steps
 filler_tags: ["you get me", "you know", "you know what i mean", "innit", "right", "yeah", "ya know", "get me", "you feel me"]   # "...bro, you get me?" is talk, not a question
-question_starts: ["how much", "how long is", "how long does", "how many", "do you", "does it", "does the", "is it", "is there", "are there", "are you", "can i", "can you", "will i", "will it", "what does it", "what do you", "what is the", "what's the", "where are you", "when does", "who is", "do people", "does this", "has anyone", "will this"]   # phrases that open a question
+question_starts: ["how much", "how long is", "how long does", "how many", "do you", "does it", "does the", "is it", "is the", "is there", "are there", "are you", "can i", "can we", "can you", "will i", "will it", "what does it", "what do you", "what is the", "what's the", "where are you", "when does", "who is", "do people", "does this", "has anyone", "will this"]   # phrases that open a question
 bad_phrase_starts: [own, to, not, "no", nothing, none, nope, nah, don't, dont, never, you, idk, dunno, "yes", yeah, ok, okay, finally, because, want, need, just, being, making, getting, working]   # a blank phrase starting like this is no goal and breaks the sentence; "nothing" is never said back
 verb_goal_starts: [be, quit, stop, make, get, have, start, build, grow, save, create, see, travel, leave, retire, buy, pay, spend, support, help, live, work, earn, provide, move, do, go]   # a phrase starting with a verb is a verb-goal: a line's {name|noun form|verb form} blank then uses its verb form ("to be your own boss")
 echo_drop_starts: ["i want", "i'd like", "i would like", "i just want", "i need", "i'm after", "honestly", "basically", "probably", "just", "mainly", "mostly", "well", "so", "um", "uh", "for", "really", "to", "want to", "wanna"]   # lead-ins dropped before their words go into a blank: "I want financial freedom" -> "financial freedom"

@@ -58,3 +58,6 @@ config/real_objections.json
 
 # Local embedding model files
 .cache/
+
+# Private call transcripts (Fathom): never commit
+tests/data/private/

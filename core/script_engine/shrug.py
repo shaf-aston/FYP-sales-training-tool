@@ -21,13 +21,13 @@ class Shrugs:
             return False
         if words <= self._filler:
             return True
-        if not step.capture or not any(r.label == ANY for r in step.listen) or asking:
+        if not any(r.label == ANY for r in step.listen) or asking:
             return False
         if words <= self._plain:
             return True  # "dunno man": only shrug words, nothing the catch-all should keep
         if not self._sense.unclear:
             return False
-        found = self._listener.match(text, {"unclear": list(self._sense.unclear)})
+        found = self._listener.match(text, {"unclear": list(self._sense.unclear)}, by_clause=False)
         return found.score >= self._sense.unclear_min_score
 
     def ask_meaning(self, text, question, empty, heard_ahead, known=()):

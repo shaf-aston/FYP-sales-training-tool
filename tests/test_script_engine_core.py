@@ -20,7 +20,8 @@ def mini():
 
 def _listener(embedder, threshold, margin=0.03):
     return Listener({"threshold": threshold, "margin": margin, "close_call_k": 3, "near_miss": 0.1,
-                     "interrupt_threshold": 0.0}, embedder)
+                     "interrupt_threshold": 0.0, "question_answer_min_score": 0.8,
+                     "clause_breaks": [",", "and"], "clause_min_words": 3}, embedder)
 
 
 def _labels(method, step_id):
