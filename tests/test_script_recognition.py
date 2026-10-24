@@ -321,3 +321,14 @@ def test_a_card_question_asks_and_a_sure_choice_chooses(said, step):
     seller.reset(ScriptState(step="m_open_wallet"))
     seller.reply(said)
     assert seller.state.step == step
+
+
+def test_a_scam_question_where_doubts_are_answers_is_the_scam_worry_not_a_bot_question():
+    # live call: "is this a scam though?" at "what's stopping you" got "Yes, I'm an AI..."
+    from core.script_engine.engine import ScriptState
+
+    seller = _real_seller()
+    step = next(k for k, s in seller.method.steps.items() if s.doubts_answer)
+    seller.reset(ScriptState(step=step))
+    reply, _ = seller.reply("is this a scam though?")
+    assert "I'm an AI" not in reply

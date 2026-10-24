@@ -62,7 +62,7 @@ ack: true             # before the next scripted line, one short AI sentence sho
 listen: true          # on a step that captures an answer and takes any reply, the AI hears for the step's concept (its note): a miss gets a fresh probe for it, up to `misses` times, then the call moves on
 listen_tokens: 90     # max_tokens for the listen call (three short lines)
 probe_max_words: 18   # longest probe the AI may ask
-misses: 3             # times a step that captures an answer is asked again (each time in other words) when the reply says nothing or misses its concept; then the call moves on without saving it
+misses: 2             # times a step that captures an answer is asked again (each time in other words) when the reply says nothing or misses its concept; then the call moves on without saving it
 vague_words: [maybe, eh, hmm, um, umm, ummm, lol, haha, bro, man, mate, tbh, honestly, really, guess, know, sure, idea, clue, depends, think, question, good, anything, something, just, like]   # a reply made only of these (and stop/filler words) is a shrug: nothing to ask "what do you mean by". Never "whatever" or "meh": those are frustration
 ack_max_words: 12
 ack_tokens: 30
