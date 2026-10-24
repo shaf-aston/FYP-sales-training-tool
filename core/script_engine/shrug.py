@@ -21,7 +21,7 @@ class Shrugs:
             return False
         if words <= self._filler:
             return True
-        if not step.capture or not any(r.label == ANY for r in step.listen) or asking:
+        if not any(r.label == ANY for r in step.listen) or asking:
             return False
         if words <= self._plain:
             return True  # "dunno man": only shrug words, nothing the catch-all should keep

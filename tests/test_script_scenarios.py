@@ -418,6 +418,13 @@ def test_a_yes_with_its_reason_after_is_heard_as_yes(fake_embedder):
     assert reply == CAT.steps["m_funded_why"].say
 
 
+@pytest.mark.parametrize("said", ["um", "I just need some time"])
+def test_no_logistics_named_is_asked_again_never_taken_as_the_answer(fake_embedder, said):
+    s = seller(fake_embedder, step="m_think_what")
+    s.reply(said)
+    assert s.state.step == "m_think_what"
+
+
 def test_a_reason_at_self_resell_still_moves_on(fake_embedder):
     s = seller(fake_embedder, step="20")
     reply, _ = s.reply("because I'm sick of my job")

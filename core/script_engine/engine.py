@@ -53,11 +53,12 @@ def start(method):
 
 def advance(method, state, label, reply="", empty=False, line="", misses=1):
     """label = the recognised route label or None. Unmatched reply asks the step again.
-    empty = the reply says nothing ("ok", "idk") or misses what the step is after: an open question
-    is asked again `misses` times (in `line` when given, else its next probe), then the call moves
-    on without saving the reply as their answer. `line` is used only when the step is asked again."""
+    empty = the reply says nothing ("ok", "idk") or misses what the step is after: an open question, or a
+    step with answers of its own that heard none ("um" to "the money, your partner, or something else?"), is
+    asked again `misses` times (in `line` when given, else its next probe), then the call moves on without
+    saving the reply as their answer. `line` is used only when the step is asked again."""
     step = method.steps[state.step]
-    if empty and step.capture:
+    if empty and (step.capture or not label and any(r.label != ANY for r in step.listen)):
         if asks_left(method, state, misses):
             return _ask_again(method, state, step, line=line, misses=misses)
         reply = ""

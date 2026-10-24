@@ -75,7 +75,11 @@ steps:
     ui_stage: outcome
     draft: true
     say: "What's the main thing holding you back right now?"
+    stuck: {then: m_reframe1}
     listen:
+      vague:   # no one thing named yet: asked once more, then the perspective shift
+        examples: ["hard to say", "a bit of everything", "loads of things"]
+        then: m_identify
       money:
         examples: ["the money", "I can't afford it", "it's a lot of cash"]
         then: m_funded
@@ -92,7 +96,11 @@ steps:
     ui_stage: outcome
     draft: true   # the SOP says address the logistics first; it gives no wording
     say: "Sure. What specifically do you need to think over: the money, your partner, or something else?"
+    stuck: {then: m_reframe1}
     listen:
+      vague:   # still no logistics named: asked once more, then the perspective shift
+        examples: ["I just need some time", "it's more of a gut feeling", "nothing in particular"]
+        then: m_think_what
       money:
         examples: ["the money", "whether I can afford it", "my finances"]
         then: m_funded
