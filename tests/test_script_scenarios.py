@@ -412,6 +412,12 @@ def test_a_worry_at_payment_enters_its_matrix_branch(fake_embedder):
     assert reply == CAT.steps[CAT.objections["think"].enter].say
 
 
+def test_a_yes_with_its_reason_after_is_heard_as_yes(fake_embedder):
+    s = seller(fake_embedder, step="m_funded")
+    reply, _ = s.reply("yes, the course looks like exactly what I need right now")
+    assert reply == CAT.steps["m_funded_why"].say
+
+
 def test_a_reason_at_self_resell_still_moves_on(fake_embedder):
     s = seller(fake_embedder, step="20")
     reply, _ = s.reply("because I'm sick of my job")

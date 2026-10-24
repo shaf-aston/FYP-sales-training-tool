@@ -53,6 +53,22 @@ class Listener:
         label = top_name if top >= self.threshold else None
         return Match(label, top, tuple(n for n, _ in ranked[:self.k]), close)
 
+    def answer(self, reply, labels, unsure):
+        """As match, for the step's own answers: when the whole reply reaches no answer, a clear first clause
+        is ("nope. my other half would go mental"): a question is answered first and explained after. A reply
+        torn between two answers ("no, credit?") stays a close call: its lead never settles it. A lead nearer
+        `unsure` (examples of not knowing) than any answer is none ("dunno, he's never..."). Never for
+        interruptions, so "yeah but I need to think" still reads as an objection."""
+        found = self.match(reply, labels)
+        if found.label:
+            return found
+        lead = self.breaks.split(reply, 1)[0].strip()
+        if lead and lead != reply.strip():
+            first = self.match(lead, labels, by_clause=False)
+            if first.label and not first.close and first.score > self.match(lead, {"": unsure}, by_clause=False).score:
+                return first
+        return found
+
     def interruption(self, reply, labels, answers, any_reply, asking, floors):
         """The label in `labels` that clearly beats reading the reply as one of the step's own `answers`,
         else None. `any_reply`: the step takes any reply as its answer, so only a sure match interrupts.

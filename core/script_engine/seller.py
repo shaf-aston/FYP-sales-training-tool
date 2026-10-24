@@ -236,7 +236,7 @@ class ScriptSeller:
         text, labels = v.text, answer_labels(step)
         label, line, ack, missed = None, "", None, False
         if labels:
-            found = self._listener.match(text, labels)
+            found = self._listener.answer(text, labels, list(self.sense.unclear))
             label = found.label
             if found.close:
                 pick = self._voice.judge(text, {c: labels[c] for c in found.candidates})
