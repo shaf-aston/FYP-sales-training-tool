@@ -21,6 +21,7 @@ def test_the_shipped_config_is_fine():
     (lambda c: c["prompts"].pop("listen"), "prompts.listen: missing"),
     (lambda c: c["coach_notes"].update(step="{title} {why}"), "coach_notes.step: unknown blanks ['why']"),
     (lambda c: c.update(default_product="nope"), "default_product: 'nope' is not one of products"),
+    (lambda c: c["filler_words"].append(True), "filler_words: every item is text"),  # a bare yes in YAML
 ])
 def test_a_broken_config_is_named(change, named):
     cfg = load_yaml("script/engine.yaml")

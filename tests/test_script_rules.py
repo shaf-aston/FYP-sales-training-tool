@@ -104,6 +104,13 @@ def _line(step, reply):
     ("travel the world with my wife", "06", "to travel the world with your wife rather than just dream about it?"),
     ("financial freedom", "06", "to get financial freedom rather than just dream about it?"),
     ("freedom I guess", "05", "don't have freedom yet?"),
+    ("paying the bills", "02", "each month to pay the bills?"),             # an -ing goal is a verb goal
+    ("travelling the world", "05", "haven't managed to travel the world?"),
+    ("making more money", "06", "to make more money rather than just dream about it?"),
+    ("being able to retire early", "02", "each month to retire early?"),
+    ("debt free", "02", "each month to be debt free?"),                       # a state: "be" in front
+    ("time freedom honestly", "05", "don't have time freedom yet?"),
+    ("whatever, more money", "02", "each month to have more money?"),
 ])
 def test_script_lines_echo_the_goal_in_noun_or_verb_form(reply, step, expected):
     assert expected in _line(step, reply)
@@ -112,6 +119,7 @@ def test_script_lines_echo_the_goal_in_noun_or_verb_form(reply, step, expected):
 @pytest.mark.parametrize("reply", [
     "honestly it is about being able to spend more time with my kids",  # 11 words
     "nothing", "nothing really", "I don't know", "no idea", "none",
+    "I'm not giving you money",  # not a goal: "to have you're not giving you money"
 ])
 def test_unusable_goal_gives_the_plain_line(reply):
     assert _line("02", reply) == CAT.steps["02"].say_plain

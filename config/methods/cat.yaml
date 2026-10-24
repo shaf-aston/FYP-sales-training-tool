@@ -23,7 +23,7 @@ ready:
     - "just send me the link to pay"
 # Said before a question asked again once its probes ran out, in turn: the same line twice in a row
 # reads like a bot. draft: ours, the source has no wording for this.
-reask: ["No rush, even a rough idea helps.", "Just your best guess is fine."]
+reask: ["No rush, even a rough idea helps.", "Just your best guess is fine.", "Whatever comes to mind first."]   # draft: the third lead is ours
 steps:
   "00":
     name: "Frame"

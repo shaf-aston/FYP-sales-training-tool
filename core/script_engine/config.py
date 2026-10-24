@@ -16,8 +16,8 @@ TYPES = {
     "ack_tokens": int, "ack_retries": int, "ack_max_words": int, "probe_max_words": int, "memory_chars": int,
     "log_text_chars": int,
     "ack": bool, "listen": bool, "log_uncovered": bool,
-    "stop_words": list, "filler_words": list, "filler_tags": list, "question_starts": list,
-    "bad_phrase_starts": list, "verb_goal_starts": list, "echo_drop_starts": list, "echo_drop_ends": list,
+    "stop_words": list, "filler_words": list, "filler_tags": list, "question_starts": list, "closed_question_starts": list,
+    "bad_phrase_starts": list, "verb_goal_starts": list, "be_goal_words": list, "echo_drop_starts": list, "echo_drop_ends": list,
     "prospect_pronouns": list, "spell_word_endings": list, "spell_words": list, "answer_banned_words": list,
     "vague_words": list, "banned_phrases": list, "nudge_leads": list, "ack_words": list,
     "number_blanks": dict, "echo_pronoun_swap": dict, "coach_notes": dict, "prompts": dict,
@@ -51,6 +51,8 @@ def problems(cfg):
             found.append(f"{key}: missing")
         elif not isinstance(cfg[key], kind) or (kind is not bool and isinstance(cfg[key], bool)):
             found.append(f"{key}: expected {getattr(kind, '__name__', 'number')}, got {type(cfg[key]).__name__}")
+        elif kind is list and (odd := [w for w in cfg[key] if not isinstance(w, str)]):
+            found.append(f"{key}: every item is text; quote {odd} (YAML reads a bare yes/no/on/off as true/false)")
     for section, templates in BLANKS.items():
         for name, allowed in templates.items():
             template = cfg.get(section, {}).get(name) if isinstance(cfg.get(section), dict) else None

@@ -9,7 +9,7 @@ revisit_step: "close"   # an objection parked before the price comes back when t
 objection_handling: objection_matrix
 exits: {resell: "payment", payment: "payment", follow_up: "later"}
 # Said before a question asked again once its probes ran out, in turn. draft: ours.
-reask: ["No rush, even a rough idea helps.", "Just your best guess is fine."]
+reask: ["No rush, even a rough idea helps.", "Just your best guess is fine.", "Whatever comes to mind first."]   # draft: the third lead is ours
 steps:
   "intent":
     ui_stage: intent
