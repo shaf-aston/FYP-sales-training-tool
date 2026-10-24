@@ -37,12 +37,6 @@ class DummyProvider(BaseLLMProvider):
 LLM_PROVIDER_TYPES["dummy"] = DummyProvider
 
 
-def pytest_configure(config):
-    # Keep pytest-randomly out of the way in this environment.
-    if hasattr(config.option, "randomly_reset_seed"):
-        config.option.randomly_reset_seed = False
-
-
 @pytest.fixture(autouse=True)
 def logs(tmp_path, monkeypatch):
     """Every test writes its logs to its own folder: `logs("events")` reads one stream back."""
