@@ -5,7 +5,7 @@
 
 export const PAUSE = "¶";
 const KEY = /==(.+?)==/g;
-const STRESS = /(^|[\s("'])_(\w[^_]*?)_(?=[\s.,!?…"']|$)/g; // "_all_", never belief_cost
+const STRESS = /(^|[\s("'“‘])_(\w[^_]*?)_(?=[\s.,!?…:;)—"'”’]|$)/g; // "_all_", never belief_cost
 
 /** The bubbles one message is said in. */
 export const bubbles = (text: string) =>

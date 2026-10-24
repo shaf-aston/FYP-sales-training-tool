@@ -223,6 +223,7 @@ def test_every_script_loads_with_its_lines_checked():
 
 def test_plain_drops_the_marks():
     assert plain("So it's about ==them==.¶Taking over _all_ the bills…") == "So it's about them. Taking over all the bills…"
+    assert plain("It's _yours_: (all _of_ it) — “_now_”") == "It's yours: (all of it) — “now”"
     assert plain("the belief_cost slot") == "the belief_cost slot"  # an underscore inside a word is no stress
 
 

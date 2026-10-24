@@ -18,6 +18,7 @@ assert.equal(highlighted("_all_ of it"), "_all_ of it");
 assert.equal(speakable(line), "So this isn't really about the money. It's about them.");
 assert.equal(speakable("It's _all_ on you¶Why?"), "It's all on you. Why?");
 assert.equal(speakable("the belief_cost slot"), "the belief_cost slot.");
+assert.equal(speakable("It's _yours_: (all _of_ it) — “_now_”"), "It's yours: (all of it) — “now”.");
 
 // typing time grows with the line, within limits
 assert.equal(typingMs("ok"), 600);

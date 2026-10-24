@@ -86,21 +86,21 @@ function Editor({ initial, later, onSave, onCancel }: { initial: string; /** mes
 
 /** How many of a reply's bubbles show: all at once, or (for the reply just in) one by one, each after its
  * typing dots, so a pause in the line reads as a pause. */
-function useReveal(parts: string[], fresh: boolean, onGrow?: () => void) {
+function useReveal(parts: string[], fresh: boolean, answered: boolean, onGrow?: () => void) {
   const [shown, setShown] = useState(() => (fresh && !prefersReducedMotion() ? 1 : parts.length));
   useEffect(() => {
     if (shown > 1) onGrow?.();
-    if (shown >= parts.length) return;
+    if (shown >= parts.length || answered) return;
     const t = setTimeout(() => setShown((n) => n + 1), typingMs(parts[shown]));
     return () => clearTimeout(t);
-  }, [shown, parts, onGrow]);
-  return shown;
+  }, [shown, parts, answered, onGrow]);
+  return answered ? parts.length : shown; // they replied mid-reveal: the rest shows at once, above their line
 }
 
 /** The seller's reply: one bubble per pause in the line, the key thing highlighted. */
-function BotBubbles({ text, meta, fresh, onGrow }: { text: string; meta?: string; fresh: boolean; onGrow?: () => void }) {
-  const parts = useMemo(() => bubbles(text), [text]);
-  const shown = useReveal(parts, fresh, onGrow);
+function BotBubbles({ text, meta, fresh, answered, onGrow }: { text: string; meta?: string; fresh: boolean; answered: boolean; onGrow?: () => void }) {
+  const parts = useMemo(() => (bubbles(text).length ? bubbles(text) : [""]), [text]); // an empty reply still shows its meta
+  const shown = useReveal(parts, fresh, answered, onGrow);
   return (
     <div className={s.stack}>
       {parts.slice(0, shown).map((part, i) => (
@@ -130,11 +130,13 @@ interface ItemProps {
   onCancel: () => void;
   /** this reply takes the typing bubble's place: only its words fade in, the bubble does not rise again */
   swap?: boolean;
+  /** the reply just in: its bubbles show one by one */
+  fresh?: boolean;
   /** a bubble of this reply just showed: keep the newest line in view */
   onGrow?: () => void;
 }
 
-function Item({ m, canEdit, editing, later, swap, onEdit, onSave, onCancel, onGrow }: ItemProps) {
+function Item({ m, canEdit, editing, later, swap, fresh, onEdit, onSave, onCancel, onGrow }: ItemProps) {
   if (m.role === "divider") {
     return (
       <div className={s.divider} role="separator">
@@ -157,7 +159,7 @@ function Item({ m, canEdit, editing, later, swap, onEdit, onSave, onCancel, onGr
           {m.meta && <p className={s.meta}>{m.meta}</p>}
         </div>
       ) : (
-        <BotBubbles text={m.content} meta={m.meta} fresh={!!swap} onGrow={onGrow} />
+        <BotBubbles text={m.content} meta={m.meta} fresh={!!fresh} answered={later > 0} onGrow={onGrow} />
       )}
       {!editing && !m.historical && (
         <div className={s.actions}>
@@ -205,9 +207,13 @@ export function MessageList() {
   // The reply that lands as typing stops replaces the typing bubble, so it must not animate in as a new row.
   const [wasTyping, setWasTyping] = useState(typing);
   const [swapId, setSwapId] = useState<string | null>(null);
+  // every reply that ever took the typing bubble's place: losing .swap later would replay its rise
+  const [swapped, setSwapped] = useState<ReadonlySet<string>>(new Set());
   if (typing !== wasTyping) {
     setWasTyping(typing);
-    if (!typing) setSwapId(messages.at(-1)?.role === "assistant" ? messages.at(-1)!.id : null);
+    const id = !typing && messages.at(-1)?.role === "assistant" ? messages.at(-1)!.id : null;
+    setSwapId(id);
+    if (id) setSwapped((all) => new Set(all).add(id));
   }
 
   // Pin to the newest line after the browser lays it out; smooth unless reduced motion.
@@ -255,7 +261,8 @@ export function MessageList() {
             m={m}
             later={messages.slice(i + 1).filter((n) => n.role !== "divider").length}
             canEdit={!typing}
-            swap={m.id === swapId}
+            swap={swapped.has(m.id)}
+            fresh={m.id === swapId}
             onGrow={m.id === swapId ? pin : undefined}
             editing={editingId === m.id}
             onEdit={mode === "buy" ? () => startEdit(m.id) : undefined}

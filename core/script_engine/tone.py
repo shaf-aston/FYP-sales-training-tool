@@ -11,7 +11,7 @@ import re
 
 PAUSE = "¶"
 KEY = re.compile(r"==(.+?)==")
-STRESS = re.compile(r"(^|[\s(\"'])_(\w[^_]*?)_(?=[\s.,!?…\"']|$)")  # "_all_", never belief_cost
+STRESS = re.compile(r"(^|[\s(\"'“‘])_(\w[^_]*?)_(?=[\s.,!?…:;)—\"'”’]|$)")  # "_all_", never belief_cost
 
 
 def plain(text):
