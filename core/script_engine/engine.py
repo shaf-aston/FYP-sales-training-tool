@@ -16,6 +16,9 @@ class ScriptState:
     said: tuple = ()    # every such line asked on the current step, so none is asked twice
     parked: tuple = ()  # objections raised before the price, oldest first; raised again at the revisit step
     waiting: bool = False  # their last reply was a `wait` sense ("brb"): the next may be "I'm back"
+    quoted: bool = False   # the last message said their words back (the echo budget, echo.py)
+    echoed: tuple = ()     # their phrases said back this call, once per time said
+    meant: tuple = ()      # meaning lines said this call
 
 
 @dataclass(frozen=True)

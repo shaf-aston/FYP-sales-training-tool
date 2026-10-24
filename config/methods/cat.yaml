@@ -96,6 +96,7 @@ steps:
     ui_stage: intent
     draft: true  # the owner's formula, our probe
     say: "What are you hoping to achieve {outcome|with $|by being able to $}?"
+    moment: true   # the goal formula: their exact words, whatever the echo budget says
     say_plain: "What are you hoping that would get you?"
     capture: practical
     echo: true
@@ -146,6 +147,7 @@ steps:
     stuck: {then: "04"}
     listen:
       failed_before:   # a past failed attempt is acknowledged before the script goes on
+        min_score: 0.7   # "since my dad got sick" (0.66) is a hard time, not a failed attempt: the meaning bank answers it
         examples:
           - "I tried dropshipping and it failed"
           - "I've tried a few things online and lost money"
@@ -155,7 +157,7 @@ steps:
         ack: "Sorry to hear that, plenty of people have a first attempt that doesn't work out."
       any:
         then: "04"
-        ack: "{months_thinking} months... Damn.\n\n"   # owner's line: their time, in months, before 04 asks why
+        ack: "{months_thinking} months... Damn.¶"   # owner's line: their time, in months, before 04 asks why
   "04":
     name: "Contextualise"
     note: 'emotional why. Let them talk'

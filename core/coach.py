@@ -6,6 +6,7 @@ from .constants import COACH_HISTORY_TURNS, LLM
 from .loader import load_yaml
 from .logs import timed
 from .quiz import get_stage_rubric
+from .script_engine.tone import plain
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +28,7 @@ def answer_question(router, call, question, style: str = DEFAULT_STYLE):
 
     speakers = cfg["speakers"]
     recent = "\n".join(
-        f"{speakers.get(message.get('role'), '?')}: {message.get('content', '')}"
+        f"{speakers.get(message.get('role'), '?')}: {plain(message.get('content', ''))}"  # the AI reads words, not tone marks
         for message in call.conversation_history[-COACH_HISTORY_TURNS:]
     )
 

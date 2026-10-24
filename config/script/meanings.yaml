@@ -1,0 +1,79 @@
+# The meaning bank: what an answer means, beyond its words, and a line that says so.
+# "my mum's relying on me" and "my mam needs me" are the same meaning, so they get the same line.
+# A meaning line shows they were heard without quoting them back (see core/script_engine/echo.py):
+# said before the next question, in its own bubble, each line once a call, in turn.
+# draft: true = our wording, not the coach's; it needs the owner's approval. The app ignores it.
+# Lines never ask (the step's question follows) and have no {blanks}. Tone marks: core/script_engine/tone.py.
+min_score: 0.8   # an answer means one only when it matches an example this well: "5k a month" means none
+meanings:
+  family_duty:
+    draft: true
+    examples:
+      - "my mum's relying on me"
+      - "my mam needs me"
+      - "my family is counting on me"
+      - "my kids depend on me"
+      - "I'm the one who supports my parents"
+      - "I have to provide for my wife and kids"
+    lines:
+      - "So this isn't really about the money.¶It's about ==them==."
+      - "That's a lot of people counting on you."
+  bills_pressure:
+    draft: true
+    examples:
+      - "the bills keep piling up"
+      - "I can barely cover my bills each month"
+      - "I'm always behind on rent"
+      - "I'm drowning in debt"
+      - "money is always tight at the end of the month"
+      - "I'm stressed about paying the bills"
+    lines:
+      - "That kind of money stress wears you down."
+      - "Always one bill behind… that's exhausting."
+  no_time:
+    draft: true
+    examples:
+      - "I work two jobs and have no time"
+      - "my job takes all my time"
+      - "I'm always working, I never get a break"
+      - "by the time I get home I'm too tired to do anything"
+      - "I work long hours and never see my family"
+    lines:
+      - "No time left over for yourself. Makes sense."
+      - "When work takes everything, there's nothing left to build with."
+  health_event:
+    draft: true
+    examples:
+      - "since my dad got sick"
+      - "since my dad got sick I've had to take over everything"
+      - "it's been really hard since my mum got ill"
+      - "my mum has been ill for a while"
+      - "I had a health scare last year"
+      - "after my dad passed away"
+      - "my wife got sick and couldn't work"
+      - "I lost someone close to me"
+    lines:
+      - "I'm sorry. That's a lot to carry."
+      - "I'm sorry you've been going through that."
+  self_doubt:
+    draft: true
+    examples:
+      - "I'm not smart enough"
+      - "I don't think I'm good enough"
+      - "I always give up on things"
+      - "I'm scared I'll fail"
+      - "people like me don't make it"
+      - "I'm too old to start something new"
+    lines:
+      - "A lot of people carry that one."
+      - "That voice is loud for a lot of people."
+  past_failure:
+    draft: true
+    examples:
+      - "I tried dropshipping and it failed"
+      - "I lost money on a course before"
+      - "I've tried things before and they didn't work"
+      - "I got scammed by a guru once"
+    lines:
+      - "Getting burned once makes the next try feel riskier."
+      - "That makes sense after a bad first try."

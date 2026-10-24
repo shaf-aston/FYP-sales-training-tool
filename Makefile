@@ -15,7 +15,7 @@ test:            ## Python lint + tests
 	python -m pytest -q
 
 test-real:       ## Tests with the real embedding model (slow, downloads once)
-	RUN_EMBED_TESTS=1 python -m pytest -q tests/test_script_recognition.py
+	RUN_EMBED_TESTS=1 python -m pytest -q tests/test_script_recognition.py tests/test_script_echo.py
 
 web:             ## Web types, lint, unit checks, build
 	cd web && npm run check && npm run build

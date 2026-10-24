@@ -12,6 +12,7 @@ import { useSession } from "@/features/session/SessionContext";
 import { SpeechRecognizer, speechSupported, type StopState } from "./speech/recognizer";
 import { Tts, ttsSupported } from "./speech/tts";
 import { parsePunctuation } from "./voiceCommands";
+import { speakable } from "@/features/chat/tone";
 
 interface VoiceValue {
   /** Can this browser dictate? False until the browser has been checked. */
@@ -224,7 +225,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     }
     if (last && last.id !== spokenId.current) {
       spokenId.current = last.id;
-      speak(last.content);
+      speak(speakable(last.content)); // words only: the tone marks are for the screen
     }
   }, [session.messages, handsFree, speak]);
 

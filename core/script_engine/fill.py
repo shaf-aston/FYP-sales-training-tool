@@ -4,6 +4,7 @@ import logging
 import re
 from difflib import get_close_matches
 
+from core.script_engine.tone import PAUSE
 from core.utils import tokenize
 
 logger = logging.getLogger("script_engine.fallback")
@@ -111,6 +112,13 @@ class Filler:
             values[blank] = form.replace("$", phrase)
         return NAME.sub(lambda m: values.get(m.group(1), m.group(0)), line)
 
+    def echoes(self, line, slots):
+        """Their own phrases `line` would say back (its echo blanks, filled); [] when none, or it can't be filled."""
+        if not line or self.fill(line, slots) is None:
+            return []
+        names = {m.group(1) for m in NAME.finditer(line)} & self.echo
+        return [echo_phrase(slots[n], self.cfg, self.vocab) for n in sorted(names) if slots.get(n)]
+
     def render(self, say, ack, say_plain, slots):
         """A step's final text (ack + line). Falls back to say_plain / no ack, and says so in the log."""
         key = (say, ack, tuple(sorted(slots.items())))
@@ -123,6 +131,6 @@ class Filler:
             if lead is None:
                 logger.warning("dropped ack for: %s", ack)
                 lead = ""
-            gap = "" if lead.endswith("\n") else " "  # a lead on its own line ("Damn.\n\n") needs no space
+            gap = "" if lead.endswith(PAUSE) else " "  # a lead in its own bubble ("Damn.¶") needs no space
             self._said[key] = f"{lead}{gap}{text}".strip()
         return self._said[key]

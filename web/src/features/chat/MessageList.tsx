@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, Icon, Markdown, TextArea, TypingDots, useToast } from "@/components/ui";
 import { config } from "@/lib/config";
 import { useSession, type ChatMessage } from "@/features/session/SessionContext";
@@ -9,6 +9,7 @@ import { InlineEvaluation } from "@/features/sell/SellDialogs";
 import { useUi } from "@/state/UiContext";
 import s from "./MessageList.module.css";
 import { prefersReducedMotion } from "@/lib/motion";
+import { bubbles, highlighted, speakable, typingMs } from "./tone";
 
 /** The AI's badge beside its lines, so it is never mistaken for the mode icons in the header. */
 function Avatar() {
@@ -83,6 +84,40 @@ function Editor({ initial, later, onSave, onCancel }: { initial: string; /** mes
   );
 }
 
+/** How many of a reply's bubbles show: all at once, or (for the reply just in) one by one, each after its
+ * typing dots, so a pause in the line reads as a pause. */
+function useReveal(parts: string[], fresh: boolean, onGrow?: () => void) {
+  const [shown, setShown] = useState(() => (fresh && !prefersReducedMotion() ? 1 : parts.length));
+  useEffect(() => {
+    if (shown > 1) onGrow?.();
+    if (shown >= parts.length) return;
+    const t = setTimeout(() => setShown((n) => n + 1), typingMs(parts[shown]));
+    return () => clearTimeout(t);
+  }, [shown, parts, onGrow]);
+  return shown;
+}
+
+/** The seller's reply: one bubble per pause in the line, the key thing highlighted. */
+function BotBubbles({ text, meta, fresh, onGrow }: { text: string; meta?: string; fresh: boolean; onGrow?: () => void }) {
+  const parts = useMemo(() => bubbles(text), [text]);
+  const shown = useReveal(parts, fresh, onGrow);
+  return (
+    <div className={s.stack}>
+      {parts.slice(0, shown).map((part, i) => (
+        <div key={i} className={s.bubble} data-bubble>
+          <Markdown text={highlighted(part)} className={s.markdown} />
+          {meta && i === parts.length - 1 && <p className={s.meta}>{meta}</p>}
+        </div>
+      ))}
+      {shown < parts.length && (
+        <div className={`${s.bubble} ${s.typing}`}>
+          <TypingDots label="Assistant is typing" />
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface ItemProps {
   m: ChatMessage;
   canEdit: boolean;
@@ -95,9 +130,11 @@ interface ItemProps {
   onCancel: () => void;
   /** this reply takes the typing bubble's place: only its words fade in, the bubble does not rise again */
   swap?: boolean;
+  /** a bubble of this reply just showed: keep the newest line in view */
+  onGrow?: () => void;
 }
 
-function Item({ m, canEdit, editing, later, swap, onEdit, onSave, onCancel }: ItemProps) {
+function Item({ m, canEdit, editing, later, swap, onEdit, onSave, onCancel, onGrow }: ItemProps) {
   if (m.role === "divider") {
     return (
       <div className={s.divider} role="separator">
@@ -110,21 +147,21 @@ function Item({ m, canEdit, editing, later, swap, onEdit, onSave, onCancel }: It
     <div className={`${s.row} ${user ? s.user : s.bot} ${m.historical ? s.historical : ""} ${swap ? s.swap : ""}`}>
       {!user && <Avatar />}
       <div className={s.body}>
-      <div className={s.bubble} data-bubble>
-        {user ? (
-          editing ? (
+      {user ? (
+        <div className={s.bubble} data-bubble>
+          {editing ? (
             <Editor initial={m.content} later={later} onSave={onSave} onCancel={onCancel} />
           ) : (
             <p className={s.plain}>{m.content}</p>
-          )
-        ) : (
-          <Markdown text={m.content} className={s.markdown} />
-        )}
-        {m.meta && <p className={s.meta}>{m.meta}</p>}
-      </div>
+          )}
+          {m.meta && <p className={s.meta}>{m.meta}</p>}
+        </div>
+      ) : (
+        <BotBubbles text={m.content} meta={m.meta} fresh={!!swap} onGrow={onGrow} />
+      )}
       {!editing && !m.historical && (
         <div className={s.actions}>
-          {!user && <ListenButton text={m.content} />}
+          {!user && <ListenButton text={speakable(m.content)} />}
           {/* Buy mode only (no onEdit in sell). Always laid out, just hidden while a reply is coming, so the row never grows. */}
           {user && onEdit && (
             <Button
@@ -174,12 +211,13 @@ export function MessageList() {
   }
 
   // Pin to the newest line after the browser lays it out; smooth unless reduced motion.
-  useEffect(() => {
+  const pin = useCallback(() => {
     const frame = frameRef.current;
     if (!frame) return;
     const reduced = prefersReducedMotion();
     frame.scrollTo({ top: frame.scrollHeight, behavior: reduced ? "auto" : "smooth" });
-  }, [messages, typing]);
+  }, []);
+  useEffect(pin, [messages, typing, pin]);
 
   const startEdit = (id: string) => {
     if (editingId && editingId !== id) return toast("Finish the current edit first.", "info");
@@ -218,6 +256,7 @@ export function MessageList() {
             later={messages.slice(i + 1).filter((n) => n.role !== "divider").length}
             canEdit={!typing}
             swap={m.id === swapId}
+            onGrow={m.id === swapId ? pin : undefined}
             editing={editingId === m.id}
             onEdit={mode === "buy" ? () => startEdit(m.id) : undefined}
             onSave={save(m)}

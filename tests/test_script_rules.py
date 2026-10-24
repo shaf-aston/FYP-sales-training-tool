@@ -262,8 +262,10 @@ def test_ai_down_never_blocks_a_turn(seller):
     assert text == "How long have you been thinking about this?"
     text, _ = at(s, "05", outcome="I want financial freedom").reply("no time")
     assert text == "What are you doing now to get financial freedom rather than just dream about it?"  # no AI needed
+    text, _ = at(s, "05", outcome="I want to quit my job").reply("no time")
+    assert text == "What are you doing now to quit your job rather than just dream about it?"  # verb form
     text, _ = at(s, "05", outcome="I want to be my own boss").reply("no time")
-    assert text == "What are you doing now to be your own boss rather than just dream about it?"  # verb form
+    assert text == "What are you doing now to make that a reality and not just a dream?"  # 4 words: waits for a moment
     text, _ = at(s, "05", outcome="nothing really").reply("no time")
     assert "that" in text and "{" not in text    # no goal said: say_plain used for step 06
 
@@ -772,6 +774,6 @@ def test_a_price_question_at_the_price_step_gets_the_price_once(seller):
 
 
 def test_how_long_they_have_thought_about_it_is_said_back_in_months(seller):
-    # owner: "2 years" -> "24 months... Damn." on its own line, then the why question
+    # owner: "2 years" -> "24 months... Damn." in its own bubble, then the why question
     text, _ = at(seller, "03").reply("2 years")
-    assert text.startswith("24 months... Damn.\n\n") and "why can't you just ignore it?" in text
+    assert text.startswith("24 months... Damn.¶") and "why can't you just ignore it?" in text

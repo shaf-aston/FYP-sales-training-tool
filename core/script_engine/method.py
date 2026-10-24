@@ -9,7 +9,9 @@ import yaml
 
 from core.enums import Stage
 from core.loader import CONFIG_DIR
+from core.script_engine.tone import stresses
 
+BLANK = re.compile(r"\{(\w+)")  # the name of each {blank} in a line
 ANY = "any"  # listen route with no examples: taken for any reply
 # What happens after an interruption's reply: ask the step again (same words), wait for them to come
 # back, ask it in other words, or (a step with no other words) move on to the next step.
@@ -23,6 +25,7 @@ class Route:
     then: str
     ack: str = ""
     keep: bool = True   # false = the reply is not kept as the step's answer (a vague one restates the question)
+    min_score: float = 0.0  # a match must score at least this to take the route; under it, the reply is heard as unmatched
 
 
 @dataclass(frozen=True)
@@ -42,6 +45,7 @@ class Step:
     answered_by: str = ""  # regex with an `answer` group: the step's answer given early; the step is then skipped
     echo: bool = False  # their answer may be said back in their own words in a later line's {blank}
     unsure: str = ""    # a close call nobody settles, between answers that all move on, is heard as this one
+    moment: bool = False  # one of the call's few moments for their exact words (see echo.py); elsewhere a short term at most
 
     @property
     def routes(self):
@@ -129,6 +133,20 @@ class CommonSense:
     ask_meaning: str = ""  # asks what they meant by their own words ({said}); empty = never asked
 
 
+@dataclass(frozen=True)
+class Meaning:
+    """What an answer means, beyond its words ("my mum's relying on me": family duty), and lines that say so."""
+    name: str
+    examples: tuple
+    lines: tuple        # said in turn, each once a call; none of them asks
+
+
+@dataclass(frozen=True)
+class Meanings:
+    items: dict
+    min_score: float    # an answer means one only when it matches this well
+
+
 def _read(directory, name):
     path = Path(directory) / f"{name}.yaml"
     with open(path, "r", encoding="utf-8") as f:
@@ -143,7 +161,10 @@ def _route(step_id, label, data):
         raise ValueError(f"step {step_id}: '{ANY}' route takes no examples")
     if label != ANY and not examples:
         raise ValueError(f"step {step_id}: route '{label}' needs examples")
-    return Route(label, examples, str(data["then"]), data.get("ack", ""), data.get("keep", True) is not False)
+    if label == ANY and "min_score" in data:
+        raise ValueError(f"step {step_id}: '{ANY}' route takes no min_score")
+    floor = _score(f"step {step_id} route {label}", data["min_score"]) if "min_score" in data else 0.0
+    return Route(label, examples, str(data["then"]), data.get("ack", ""), data.get("keep", True) is not False, floor)
 
 
 def _step(step_id, data):
@@ -168,6 +189,9 @@ def _step(step_id, data):
             raise ValueError(f"step {step_id}: answered_by must not match an empty reply")
     if data.get("echo") and not data.get("capture"):
         raise ValueError(f"step {step_id}: echo needs a capture")
+    for line in (data.get("say", ""), data.get("say_plain", ""), *probes,
+                 *(r.get("ack", "") for r in [*(data.get("listen") or {}).values(), data.get("stuck") or {}])):
+        _one_stress(f"step {step_id}", line)
     unsure = data.get("unsure", "")
     if unsure and not any(r.label == unsure and r.examples and r.then != step_id for r in listen):
         raise ValueError(f"step {step_id}: unsure {unsure!r} must name one of its answers that moves on")
@@ -176,8 +200,19 @@ def _step(step_id, data):
         data.get("capture", ""), probes,
         listen, bool(data.get("run_on")),
         data.get("name", ""), data.get("note", ""), bool(data.get("doubts_answer")),
-        stuck, answered_by, bool(data.get("echo")), unsure,
+        stuck, answered_by, bool(data.get("echo")), unsure, bool(data.get("moment")),
     )
+
+
+def _one_stress(where, line):
+    """A line stresses one word at most: stress everywhere is stress nowhere."""
+    if stresses(line) > 1:
+        raise ValueError(f"{where}: at most one stress mark (_word_ or ==words==) per line: {line!r}")
+
+
+def blanks(line):
+    """The names of the {blanks} in a line."""
+    return {m.group(1) for m in BLANK.finditer(line or "")}
 
 
 def _objection(name, data):
@@ -241,6 +276,12 @@ def parse_method(name, data, matrix=None):
                 raise ValueError(f"step {step.id}: unknown then {route.then!r}")
         if step.listen and not step.stuck and not any(r.label == ANY for r in step.listen):
             raise ValueError(f"step {step.id}: can be asked again, so it needs a 'stuck' route")
+    echo = {s.capture for s in steps.values() if s.echo}
+    for step in steps.values():  # the echo budget may say a line without their words: it needs a plain one
+        if blanks(step.say) & echo and not step.say_plain:
+            raise ValueError(f"step {step.id}: a line with their words in it needs a say_plain")
+        if any(blanks(p) & echo for p in step.probes):
+            raise ValueError(f"step {step.id}: probes never say their words back (no plain line to fall back to)")
     price_step = str(data.get("price_step", ""))
     if price_step not in steps:
         raise ValueError(f"method {name}: price_step {price_step!r} not defined")
@@ -323,6 +364,7 @@ def parse_common_sense(data):
     for i in items.values():
         if i.after not in AFTER:
             raise ValueError(f"interruption {i.name}: after must be one of {AFTER}")
+        _one_stress(f"interruption {i.name}", i.reply)
     nudge = data.get("nudge") or {}
     if "?" in data["park"] or "?" in nudge.get("reply", "") or any(
             "?" in i.reply for i in items.values() if i.after != "wait"):
@@ -339,6 +381,19 @@ def parse_common_sense(data):
                        _score("unclear", unclear.get("min_score")) if unclear else 1.0, ask_meaning)
 
 
+def parse_meanings(data):
+    items = {}
+    for k, v in (data.get("meanings") or {}).items():
+        if not v.get("examples") or not v.get("lines"):
+            raise ValueError(f"meaning {k}: needs examples and lines")
+        for line in v["lines"]:
+            if "?" in line or "{" in line:
+                raise ValueError(f"meaning {k}: a line neither asks nor has blanks (the step's question follows): {line!r}")
+            _one_stress(f"meaning {k}", line)
+        items[k] = Meaning(k, tuple(v["examples"]), tuple(v["lines"]))
+    return Meanings(items, _score("meanings", data.get("min_score")))
+
+
 def load_method(name, directory=CONFIG_DIR / "methods", shared=CONFIG_DIR / "script"):
     """`shared`: where the objection_handling file the method names lives."""
     data = _read(directory, name)
@@ -352,3 +407,7 @@ def load_offer(name, directory=CONFIG_DIR / "offers"):
 
 def load_common_sense(name="common_sense", directory=CONFIG_DIR / "script"):
     return parse_common_sense(_read(directory, name))
+
+
+def load_meanings(name="meanings", directory=CONFIG_DIR / "script"):
+    return parse_meanings(_read(directory, name))
