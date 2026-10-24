@@ -52,6 +52,8 @@ def problems(cfg):
             found.append(f"{key}: missing")
         elif not isinstance(cfg[key], kind) or (kind is not bool and isinstance(cfg[key], bool)):
             found.append(f"{key}: expected {getattr(kind, '__name__', 'number')}, got {type(cfg[key]).__name__}")
+        elif kind is list and not all(isinstance(x, str) for x in cfg[key]):
+            found.append(f"{key}: every item must be quoted text (yes/no/on unquoted load as true/false)")
     for section, templates in BLANKS.items():
         for name, allowed in templates.items():
             template = cfg.get(section, {}).get(name) if isinstance(cfg.get(section), dict) else None

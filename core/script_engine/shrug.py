@@ -17,9 +17,7 @@ class Shrugs:
         only on a step whose catch-all route would keep it as the answer (a step with no catch-all hears these
         with its own labels), and a question is never a shrug."""
         words = set(tokenize(text))
-        if not words:
-            return False
-        if words <= self._filler:
+        if words <= self._filler:  # also no words at all: "👍", "..."
             return True
         if not any(r.label == ANY for r in step.listen) or asking:
             return False

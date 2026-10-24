@@ -718,3 +718,10 @@ def test_the_call_uncovers_the_limiting_belief_and_its_cost_before_the_consequen
     assert s.state.step == "belief_cost"
     s.reply("I'd stay stuck and miss my kids growing up")
     assert s.state.step == "10" and "kids" in s.state.slots["belief_cost"]
+
+
+@pytest.mark.parametrize("said", ["👍", "..."])
+def test_a_reply_with_no_words_is_asked_again_never_saved(fake_embedder, said):
+    s = seller(fake_embedder, step="03")   # an open step that keeps any reply
+    s.reply(said)
+    assert s.state.step == "03" and said not in s.state.slots.values()
