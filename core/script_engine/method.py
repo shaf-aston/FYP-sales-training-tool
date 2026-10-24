@@ -145,6 +145,7 @@ class Meaning:
 class Meanings:
     items: dict
     min_score: float    # an answer means one only when it matches this well
+    min_words: int = 2  # and says this many words that carry meaning: "debt" or "for my mum" means none
 
 
 def _read(directory, name):
@@ -391,7 +392,10 @@ def parse_meanings(data):
                 raise ValueError(f"meaning {k}: a line neither asks nor has blanks (the step's question follows): {line!r}")
             _one_stress(f"meaning {k}", line)
         items[k] = Meaning(k, tuple(v["examples"]), tuple(v["lines"]))
-    return Meanings(items, _score("meanings", data.get("min_score")))
+    min_words = data.get("min_words", 2)
+    if not isinstance(min_words, int) or isinstance(min_words, bool) or min_words < 1:
+        raise ValueError("meanings: min_words must be a whole number of at least 1")
+    return Meanings(items, _score("meanings", data.get("min_score")), min_words)
 
 
 def load_method(name, directory=CONFIG_DIR / "methods", shared=CONFIG_DIR / "script"):

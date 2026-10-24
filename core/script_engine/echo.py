@@ -21,6 +21,7 @@ class Turn:
     quoted: bool = False    # this one does
     phrases: tuple = ()     # their phrases this one says back
     meant: tuple = ()       # meaning lines this one says
+    reply: str = ""         # what they just said
 
 
 class Echo:
@@ -33,8 +34,8 @@ class Echo:
         return [e for items in self._labels.values() for e in items]
 
     @staticmethod
-    def new_turn(state):
-        return Turn(quoted_before=state.quoted)
+    def new_turn(state, reply=""):
+        return Turn(quoted_before=state.quoted, reply=reply)
 
     def may_quote(self, turn, state, phrases, moment):
         """May this message say these phrases of theirs back? `phrases` empty = a line that may say their
@@ -55,15 +56,26 @@ class Echo:
         turn.quoted = True
         turn.phrases += tuple(p.lower() for p in phrases)
 
+    def quoted(self, line, reply):
+        """Their words that carry meaning which `line` says back, in their order."""
+        said = set(tokenize(line))
+        return [w for w in dict.fromkeys(tokenize(reply)) if w not in self._plain and w in said]
+
     def quotes(self, line, reply):
         """True when `line` says their reply back: most of its words that carry meaning, or two of them."""
         theirs = set(tokenize(reply)) - self._plain
-        return bool(theirs) and len(theirs & set(tokenize(line))) >= min(2, len(theirs))
+        return bool(theirs) and len(self.quoted(line, reply)) >= min(2, len(theirs))
+
+    def count(self, turn, line):
+        """A line already in words ("What do you mean by wanting to make money online?", an AI probe) that
+        says their reply back is a quote too: counted, so the next message doesn't quote again."""
+        if line and not turn.quoted and self.quotes(line, turn.reply):
+            self.said(turn, (" ".join(self.quoted(line, turn.reply)),))
 
     def meaning(self, reply, state, turn):
         """The next unsaid line for what the reply means, or "" when it means none (or they were all said)."""
-        if not self._labels:
-            return ""
+        if not self._labels or len(set(tokenize(reply)) - self._plain) < self.meanings.min_words:
+            return ""  # too few words to mean anything this deep: "debt", "for my mum"
         found = self._listener.match(reply, self._labels)
         if found.score < self.meanings.min_score:
             return ""

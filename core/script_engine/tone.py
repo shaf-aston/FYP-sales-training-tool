@@ -11,7 +11,7 @@ import re
 
 PAUSE = "¶"
 KEY = re.compile(r"==(.+?)==")
-STRESS = re.compile(r"(^|[\s(\"'“‘])_(\w[^_]*?)_(?=[\s.,!?…:;)—\"'”’]|$)")  # "_all_", never belief_cost
+STRESS = re.compile(r"(^|[\s(\"'“‘])_(\w[^_]*?)_(?=[\s.,!?…:;)—\-\"'”’]|$)")  # "_all_", never belief_cost
 
 
 def plain(text):
@@ -28,4 +28,5 @@ def stresses(line):
 
 def join(*parts):
     """Lines said one after the other, each in its own bubble."""
-    return PAUSE.join(p.strip() for p in parts if p and p.strip())
+    parts = (p.strip().strip(PAUSE).strip() for p in parts if p)
+    return PAUSE.join(p for p in parts if p)

@@ -132,7 +132,7 @@ class ScriptSeller:
     def _reply(self, text):
         """(text, ui_stage, heard_as): hear the reply, then answer what it was heard as."""
         self._voice.new_turn()
-        self._turn = Echo.new_turn(self.state)
+        self._turn = Echo.new_turn(self.state, text)
         step = self.method.steps[self.state.step]
         opened = price_open(self.method, self.state.step)
         v = self._ear.hear(text, self.state, opened)
@@ -196,7 +196,10 @@ class ScriptSeller:
         if ack is None:
             ack = self._voice.ack(text, step.say_plain or step.say, earlier, opened)
         if ack and self._echo.quotes(ack, text):
-            self._turn.quoted = True
+            words = self._echo.quoted(ack, text)
+            if len(words) > self.cfg["echo_term_words"]:
+                return "", False  # it says a whole sentence of theirs back: that waits for a moment
+            Echo.said(self._turn, (" ".join(words),))
         return ack, False
 
     def _earlier(self, step):
@@ -265,13 +268,13 @@ class ScriptSeller:
         label, line, ack, missed = None, "", None, False
         if labels:
             found = self._listener.match(text, labels)
-            label = found.label
-            if label and found.score < next(r.min_score for r in step.listen if r.label == label):
-                label = None  # under the route's own floor: heard as no labelled answer
+            floor = {r.label: r.min_score for r in step.listen if r.label}
+            near = [c for c in found.candidates if found.score >= floor.get(c, 0)]  # none scores above the top
+            label = found.label if found.label in near else None  # under a route's own floor: not that answer
             if found.close:
-                pick = self._voice.judge(text, {c: labels[c] for c in found.candidates})
+                pick = self._voice.judge(text, {c: labels[c] for c in near}) if near else VAGUE
                 label = None if pick == VAGUE else pick
-                if found.label and not label and step.unsure and all(r.then != step.id for r in step.listen if r.label in found.candidates):
+                if found.label in near and not label and step.unsure and all(r.then != step.id for r in step.listen if r.label in near):
                     label = step.unsure  # every near meaning is a real answer: take the step's safe one, don't ask again
         elif self.cfg["listen"] and step.capture and not (empty and not asks_left(self.method, self.state, self.cfg["misses"])):
             concept = f"{step.name}: {step.note}" if step.note else step.name  # the AI hears for it
@@ -339,4 +342,7 @@ class ScriptSeller:
             slots, phrases = {k: v for k, v in slots.items() if k not in self._filler.echo}, []
         if phrases:
             Echo.said(self._turn, phrases)
-        return self._filler.render(say, ack, say_plain, slots)
+        line = self._filler.render(say, ack, say_plain, slots)
+        if say not in (step.say, *step.probes):  # a line already in their words: "What do you mean by ...?"
+            self._echo.count(self._turn, line)
+        return line

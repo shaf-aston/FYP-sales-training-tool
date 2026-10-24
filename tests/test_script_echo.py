@@ -123,6 +123,20 @@ def test_the_ai_line_is_asked_for_when_the_budget_allows(fake_embedder):
     assert "course" not in text and not s.state.quoted
 
 
+def test_an_ai_line_saying_a_whole_sentence_back_is_dropped(fake_embedder):
+    s = seller(fake_embedder, Mirror(), meanings=NO_MEANINGS, step="04")
+    text, _ = s.reply("because I hate my boss and my commute every single day")
+    assert not text.startswith("So,") and not s.state.quoted
+
+
+def test_a_line_already_in_their_words_counts_as_a_quote(fake_embedder):
+    # "What do you mean by wanting to make money online?" comes filled in: it still uses up the quote
+    s = seller(fake_embedder, meanings=NO_MEANINGS)
+    s.opening()
+    text, _ = s.reply("I want to make money online")
+    assert "make money online" in text and s.state.quoted and s.state.echoed
+
+
 def test_quotes_reads_their_words_in_a_line():
     echo = Echo(CFG, NO_MEANINGS, Listener(CFG, None))
     assert echo.quotes("Okay, money, that makes sense.", "money")
@@ -224,6 +238,7 @@ def test_every_script_loads_with_its_lines_checked():
 def test_plain_drops_the_marks():
     assert plain("So it's about ==them==.¶Taking over _all_ the bills…") == "So it's about them. Taking over all the bills…"
     assert plain("It's _yours_: (all _of_ it) — “_now_”") == "It's yours: (all of it) — “now”"
+    assert plain("it is _all_-in") == "it is all-in" and stresses("it is _all_-in") == 1
     assert plain("the belief_cost slot") == "the belief_cost slot"  # an underscore inside a word is no stress
 
 
@@ -234,6 +249,7 @@ def test_stresses_counts_both_marks():
 
 def test_join_puts_each_part_in_its_own_bubble():
     assert join("I'm sorry.", "", " Why? ") == "I'm sorry.¶Why?"
+    assert join("Damn.¶", "What?") == "Damn.¶What?"  # never an empty bubble
 
 
 def test_the_ai_reads_the_question_without_marks(fake_embedder):
@@ -279,6 +295,17 @@ def test_a_hard_time_is_met_with_sorry_not_the_failed_attempt_line(model):
 
 
 @real
+@pytest.mark.parametrize("reply", ["since my mum got ill", "since my dad got sick a while back"])
+def test_the_judge_never_picks_a_route_under_its_floor(model, reply):
+    def judge_says_failed(prompt, n):
+        if "failed_before" in prompt:
+            return "failed_before"
+        raise RuntimeError("AI off")
+    text, _ = seller(model, judge_says_failed, step="03").reply(reply)
+    assert "first attempt" not in text
+
+
+@real
 @pytest.mark.parametrize("reply", ["I tried a course and it flopped", "I tried dropshipping and it failed"])
 def test_a_real_failed_attempt_still_gets_its_line(model, reply):
     text, _ = seller(model, _down, step="03").reply(reply)
@@ -294,7 +321,9 @@ def test_time_answers_still_get_the_months_line_or_the_question(model, reply):
 
 @real
 @pytest.mark.parametrize("reply", ["5k a month", "about two years", "I watch youtube videos", "more money",
-                                   "nothing really", "risk taking", "I want to be someone my kids look up to"])
+                                   "nothing really", "risk taking", "I want to be someone my kids look up to",
+                                   "for my mum", "for my kids", "my job", "I work full time", "debt", "the bills",
+                                   "my family", "bills", "because of my kids"])
 def test_everyday_answers_mean_nothing_in_the_bank(model, reply):
     listener = Listener(CFG, model)
     echo = Echo(CFG, MEANINGS, listener)
