@@ -74,6 +74,7 @@ class ScriptSeller:
         self._voice = llm if hasattr(llm, "new_turn") else Voice(cfg, offer, llm)
         self._opening = start(method)
         self.state = self._opening.state
+        self.last_turn = {}  # what the latest reply was heard as: see `reply`
         examples = self._script_examples()
         vocab = frozenset(w for e in examples for w in tokenize(e)) | frozenset(cfg["spell_words"])
         self._vocab = vocab
