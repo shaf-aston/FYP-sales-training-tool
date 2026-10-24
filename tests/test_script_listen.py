@@ -119,11 +119,11 @@ def test_shrugs_are_asked_again_misses_times_then_the_call_moves_on_without_an_a
 
 
 def test_an_answer_after_the_probe_is_kept_and_acked(fake_embedder):
-    s = seller(fake_embedder, ListenAI(ack="So you're not smart enough."), step="09")
+    s = seller(fake_embedder, ListenAI(ack="So you're lazy."), step="09")
     s.reply("k")
-    text, _ = s.reply("I'm not smart enough")
-    assert text == f"So you're not smart enough. {CAT.steps['belief_origin'].say}"
-    assert s.state.slots["belief"] == "I'm not smart enough"
+    text, _ = s.reply("I'm lazy")  # means nothing in the meaning bank, so the AI's line is said
+    assert text == f"So you're lazy. {CAT.steps['belief_origin'].say}"
+    assert s.state.slots["belief"] == "I'm lazy"
 
 
 def test_a_side_question_after_the_probe_re_asks_the_probe_wording(fake_embedder):

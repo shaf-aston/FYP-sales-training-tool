@@ -4,6 +4,7 @@ import logging
 import re
 from difflib import get_close_matches
 
+from core.script_engine.tone import PAUSE
 from core.utils import tokenize
 
 logger = logging.getLogger("script_engine.fallback")
@@ -11,10 +12,15 @@ NAME = re.compile(r"\{(\w+)(?:\|([^|{}]*)\|([^|{}]*))?\}")  # {name} or {name|no
 WORD = re.compile(r"[A-Za-z0-9'-]+")
 
 
+def blanks(line):
+    """The names of the {blanks} in a line."""
+    return {m.group(1) for m in NAME.finditer(line or "")}
+
+
 def offer_blanks(offer):
-    blanks = {"months": str(offer.months), "price": offer.price}
-    blanks.update({f"pillar_{i}": p for i, p in enumerate(offer.pillars, 1)})
-    return blanks
+    values = {"months": str(offer.months), "price": offer.price}
+    values.update({f"pillar_{i}": p for i, p in enumerate(offer.pillars, 1)})
+    return values
 
 
 def spell(word, vocab, cfg):
@@ -37,10 +43,23 @@ def fix_typos(text, vocab, cfg):
     return WORD.sub(lambda m: spell(m.group(0), vocab, cfg), text or "")
 
 
-def echo_phrase(reply, cfg, vocab=frozenset()):
+def base_verb(word, cfg):
+    """A goal's -ing word as the verb it comes from ("paying" -> "pay", "living" -> "live", "getting" -> "get");
+    None when it is not one of the goal verbs."""
+    lower = word.lower()
+    if not lower.endswith("ing"):
+        return None
+    stem = lower[:-3]
+    doubled = stem[:-1] if len(stem) > 2 and stem[-1] == stem[-2] else None
+    return next((v for v in (stem, stem + "e", doubled) if v in cfg["verb_goal_starts"]), None)
+
+
+def echo_phrase(reply, cfg, vocab=frozenset(), verbs=False):
     """Their own words for a blank, by rule, no AI: lead-ins like "I want" and hedges like "I guess" dropped
     ("I want more time I guess" -> "more time"), first person turned to second ("my kids" -> "your kids"). None when the words would
-    not read right in the line: too long, no goal ("nothing"), or still speaking as the prospect."""
+    not read right in the line: too long, no goal ("nothing"), or still speaking as the prospect.
+    `verbs`: the blank has a verb form, so a goal they put as "-ing" or as a state is made a verb for it
+    ("paying the bills" -> "pay the bills", "debt free" -> "be debt free")."""
     words = WORD.findall(reply or "")
     drops = [tokenize(d) for d in cfg["echo_drop_starts"]]
     cut = True
@@ -51,6 +70,11 @@ def echo_phrase(reply, cfg, vocab=frozenset()):
     for end in (tokenize(e) for e in cfg["echo_drop_ends"]):
         if [w.lower() for w in words[-len(end):]] == end:
             words = words[:-len(end)]
+    if verbs and words:
+        if verb := base_verb(words[0], cfg):
+            words = [verb, *words[1:]]
+        elif words[-1].lower() in cfg["be_goal_words"] and words[0].lower() not in cfg["verb_goal_starts"]:
+            words = ["be", *words]
     swap = cfg["echo_pronoun_swap"]
     words = [swap.get(w.lower(), spell(w, vocab, cfg)) for w in words]
     lower = [w.lower() for w in words]
@@ -103,13 +127,24 @@ class Filler:
             elif blank in numbers:
                 phrase = number_phrase(reply, numbers[blank])
             else:
-                phrase = echo_phrase(reply, self.cfg, self.vocab) if blank in self.echo else None
+                phrase = self._echo(blank, forms[blank], slots) if blank in self.echo else None
             if phrase is None:
                 return None
             noun, verb = forms[blank]
             form = (verb if is_verb_goal(phrase, self.cfg) else noun) if noun is not None else "$"
             values[blank] = form.replace("$", phrase)
         return NAME.sub(lambda m: values.get(m.group(1), m.group(0)), line)
+
+    def echoes(self, line, slots):
+        """Their own phrases `line` would say back (its echo blanks, filled); [] when none, or it can't be filled."""
+        if not line or self.fill(line, slots) is None:
+            return []
+        forms = {m.group(1): m.group(2, 3) for m in NAME.finditer(line)}
+        return [self._echo(n, forms[n], slots) for n in sorted(forms.keys() & self.echo) if slots.get(n)]
+
+    def _echo(self, blank, forms, slots):
+        """Their words for one echo blank; made a verb when the blank has a verb form."""
+        return echo_phrase(slots[blank], self.cfg, self.vocab, verbs=forms[0] is not None)
 
     def render(self, say, ack, say_plain, slots):
         """A step's final text (ack + line). Falls back to say_plain / no ack, and says so in the log."""
@@ -123,6 +158,6 @@ class Filler:
             if lead is None:
                 logger.warning("dropped ack for: %s", ack)
                 lead = ""
-            gap = "" if lead.endswith("\n") else " "  # a lead on its own line ("Damn.\n\n") needs no space
+            gap = "" if lead.endswith(PAUSE) else " "  # a lead in its own bubble ("Damn.¶") needs no space
             self._said[key] = f"{lead}{gap}{text}".strip()
         return self._said[key]

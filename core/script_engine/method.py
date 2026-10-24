@@ -9,6 +9,8 @@ import yaml
 
 from core.enums import Stage
 from core.loader import CONFIG_DIR
+from core.script_engine.fill import NAME, blanks
+from core.script_engine.tone import stresses
 
 ANY = "any"  # listen route with no examples: taken for any reply
 # What happens after an interruption's reply: ask the step again (same words), wait for them to come
@@ -23,6 +25,7 @@ class Route:
     then: str
     ack: str = ""
     keep: bool = True   # false = the reply is not kept as the step's answer (a vague one restates the question)
+    min_score: float = 0.0  # a match must score at least this to take the route; under it, the reply is heard as unmatched
 
 
 @dataclass(frozen=True)
@@ -42,6 +45,7 @@ class Step:
     answered_by: str = ""  # regex with an `answer` group: the step's answer given early; the step is then skipped
     echo: bool = False  # their answer may be said back in their own words in a later line's {blank}
     unsure: str = ""    # a close call nobody settles, between answers that all move on, is heard as this one
+    moment: bool = False  # one of the call's few moments for their exact words (see echo.py); elsewhere a short term at most
 
     @property
     def routes(self):
@@ -143,7 +147,10 @@ def _route(step_id, label, data):
         raise ValueError(f"step {step_id}: '{ANY}' route takes no examples")
     if label != ANY and not examples:
         raise ValueError(f"step {step_id}: route '{label}' needs examples")
-    return Route(label, examples, str(data["then"]), data.get("ack", ""), data.get("keep", True) is not False)
+    if label == ANY and "min_score" in data:
+        raise ValueError(f"step {step_id}: '{ANY}' route takes no min_score")
+    floor = _score(f"step {step_id} route {label}", data["min_score"]) if "min_score" in data else 0.0
+    return Route(label, examples, str(data["then"]), data.get("ack", ""), data.get("keep", True) is not False, floor)
 
 
 def _step(step_id, data):
@@ -168,6 +175,11 @@ def _step(step_id, data):
             raise ValueError(f"step {step_id}: answered_by must not match an empty reply")
     if data.get("echo") and not data.get("capture"):
         raise ValueError(f"step {step_id}: echo needs a capture")
+    for line in (data.get("say", ""), data.get("say_plain", ""), *probes,
+                 *(r.get("ack", "") for r in [*(data.get("listen") or {}).values(), data.get("stuck") or {}])):
+        _one_stress(f"step {step_id}", line)
+        if line.count("{") != len(NAME.findall(line)):
+            raise ValueError(f"step {step_id}: a blank is {{name}} or {{name|noun form|verb form}}: {line!r}")
     unsure = data.get("unsure", "")
     if unsure and not any(r.label == unsure and r.examples and r.then != step_id for r in listen):
         raise ValueError(f"step {step_id}: unsure {unsure!r} must name one of its answers that moves on")
@@ -176,8 +188,14 @@ def _step(step_id, data):
         data.get("capture", ""), probes,
         listen, bool(data.get("run_on")),
         data.get("name", ""), data.get("note", ""), bool(data.get("doubts_answer")),
-        stuck, answered_by, bool(data.get("echo")), unsure,
+        stuck, answered_by, bool(data.get("echo")), unsure, bool(data.get("moment")),
     )
+
+
+def _one_stress(where, line):
+    """A line stresses one word at most: stress everywhere is stress nowhere."""
+    if stresses(line) > 1:
+        raise ValueError(f"{where}: at most one stress mark (_word_ or ==words==) per line: {line!r}")
 
 
 def _objection(name, data):
@@ -241,6 +259,12 @@ def parse_method(name, data, matrix=None):
                 raise ValueError(f"step {step.id}: unknown then {route.then!r}")
         if step.listen and not step.stuck and not any(r.label == ANY for r in step.listen):
             raise ValueError(f"step {step.id}: can be asked again, so it needs a 'stuck' route")
+    echo = {s.capture for s in steps.values() if s.echo}
+    for step in steps.values():  # the echo budget may say a line without their words: it needs a plain one
+        if blanks(step.say) & echo and not step.say_plain:
+            raise ValueError(f"step {step.id}: a line with their words in it needs a say_plain")
+        if any(blanks(p) & echo for p in step.probes):
+            raise ValueError(f"step {step.id}: probes never say their words back (no plain line to fall back to)")
     price_step = str(data.get("price_step", ""))
     if price_step not in steps:
         raise ValueError(f"method {name}: price_step {price_step!r} not defined")
@@ -323,6 +347,7 @@ def parse_common_sense(data):
     for i in items.values():
         if i.after not in AFTER:
             raise ValueError(f"interruption {i.name}: after must be one of {AFTER}")
+        _one_stress(f"interruption {i.name}", i.reply)
     nudge = data.get("nudge") or {}
     if "?" in data["park"] or "?" in nudge.get("reply", "") or any(
             "?" in i.reply for i in items.values() if i.after != "wait"):

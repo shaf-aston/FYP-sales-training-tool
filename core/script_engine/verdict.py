@@ -3,7 +3,7 @@
 import re
 from dataclasses import dataclass
 
-from core.script_engine.engine import hear_ahead, ready_open
+from core.script_engine.engine import _question, asked_line, hear_ahead, ready_open
 from core.script_engine.method import ANY
 from core.utils import is_question, tokenize
 
@@ -45,7 +45,7 @@ class Ear:
             return Verdict("nudge", text=text)  # "ok, what's next?": no answer
         text = text if rest is None else rest  # "credit, what's next?": the rest answers
         asking = self.is_question(text)
-        if not state.waiting and self._shrugs.says_nothing(text, step, asking):
+        if not state.waiting and not self._yes_or_no(state) and self._shrugs.says_nothing(text, step, asking):
             return Verdict("says_nothing", text=text, asking=asking)  # an answer only: never an interruption
         ahead = None if asking else hear_ahead(self.method, state, text)  # "do I need 5k?" is not their goal
         ahead = None if ahead is state else ahead
@@ -55,6 +55,11 @@ class Ear:
         if asking and not self._answers(text, step):
             return Verdict("question", text=text, asking=asking, ahead=ahead)
         return Verdict("answer", text=text, asking=asking, ahead=ahead)
+
+    def _yes_or_no(self, state):
+        """The step was last asked as a yes-or-no question ("Is there anything you've tried?"): "yes" answers it."""
+        words = tokenize(_question(asked_line(self.method, state)[0]))
+        return bool(words) and words[0] in self.cfg["closed_question_starts"]
 
     def _unnudged(self, text):
         """The reply without a nudge on its end ("credit, what's next?" -> "credit"); None when it has none."""

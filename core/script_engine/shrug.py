@@ -1,6 +1,7 @@
 """Did the reply say anything? A shrug ("dunno man") is never kept as an answer; unclear words about the
 question ("I want to make money online") get asked about: "What do you mean by ...?"."""
 
+from core.script_engine.config import plain_words
 from core.script_engine.method import ANY
 from core.utils import tokenize
 
@@ -9,7 +10,7 @@ class Shrugs:
     def __init__(self, cfg, sense, listener, fill):
         """`fill(template, slots)`: the Filler's, to say their words back; None when they can't be."""
         self._filler = frozenset(cfg["stop_words"]) | frozenset(cfg["filler_words"])
-        self._plain = self._filler | frozenset(cfg["vague_words"])  # words that carry no answer
+        self._plain = plain_words(cfg)
         self._sense, self._listener, self._fill = sense, listener, fill
 
     def says_nothing(self, text, step, asking):

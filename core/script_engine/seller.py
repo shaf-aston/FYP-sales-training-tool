@@ -5,12 +5,14 @@ from functools import lru_cache
 from pathlib import Path
 
 from core.loader import load_yaml
+from core.script_engine import tone
 from core.script_engine.ai_gate import AiGate
 from core.script_engine.config import check
+from core.script_engine.echo import Echo, Turn
 from core.script_engine.embedder import make_embedder
 from core.script_engine.engine import (
-    advance,
     ScriptState,
+    advance,
     ask_again,
     asked_line,
     asks_left,
@@ -23,6 +25,7 @@ from core.script_engine.engine import (
 )
 from core.script_engine.fill import Filler, fix_typos
 from core.script_engine.judge import VAGUE
+from core.script_engine.meanings import MeaningBank, load_meanings
 from core.script_engine.method import load_common_sense, load_method, load_offer
 from core.script_engine.recognise import Listener
 from core.script_engine.shrug import Shrugs
@@ -67,8 +70,9 @@ def build_seller(router, product, embedder=None, gate=None):
 
 
 class ScriptSeller:
-    def __init__(self, cfg, method, offer, sense, embedder, llm):
-        """`llm`: a `Voice`, or a plain `llm(prompt, max_tokens)` callable wrapped in one."""
+    def __init__(self, cfg, method, offer, sense, embedder, llm, meanings=None):
+        """`llm`: a `Voice`, or a plain `llm(prompt, max_tokens)` callable wrapped in one.
+        `meanings`: the meaning bank (meanings.py `Meanings`); None = the one in config/script."""
         self.cfg, self.method, self.offer, self.sense = check(cfg), method, offer, sense
         self._listener = Listener(cfg, embedder)
         self._voice = llm if hasattr(llm, "new_turn") else Voice(cfg, offer, llm)
@@ -81,7 +85,10 @@ class ScriptSeller:
         self._filler = Filler(cfg, offer, echo, vocab)
         self._shrugs = Shrugs(cfg, sense, self._listener, self._filler.fill)
         self._ear = Ear(cfg, method, offer, sense, self._listener, self._shrugs)
-        embedder.warm(examples)
+        self._echo = Echo(cfg)
+        self._meanings = MeaningBank(cfg, meanings or load_meanings(), self._listener)
+        self._turn = Turn()
+        embedder.warm(examples + self._meanings.examples())
 
     def _script_examples(self):
         found = [e for i in self.sense.interruptions.values() for e in i.examples] + list(self.sense.unclear)
@@ -101,13 +108,16 @@ class ScriptSeller:
     def restore(self, saved=None):
         """Back to a `snapshot()`; None goes back to the opening."""
         if saved:  # JSON gives lists back: tuples, so `said + (line,)` still adds up
-            saved = {**saved, **{k: tuple(saved.get(k, ())) for k in ("said", "parked", "raised")}}
+            saved = {**saved, **{k: tuple(saved.get(k, ())) for k in ("said", "parked", "raised", "echoed", "meant")}}
         self.reset(ScriptState(**saved) if saved else None)
 
     def opening(self):
         """The first line of the call: (text, ui_stage)."""
         self._voice.new_turn()
-        return self._render(self._opening), self._opening.ui_stage
+        self._turn = Turn()
+        text = self._render(self._opening)
+        self.state = Echo.settle(self.state, self._turn)
+        return text, self._opening.ui_stage
 
     # ---- one turn -------------------------------------------------------------------------
 
@@ -124,11 +134,13 @@ class ScriptSeller:
     def _reply(self, text):
         """(text, ui_stage, heard_as): hear the reply, then answer what it was heard as."""
         self._voice.new_turn()
+        self._turn = Turn(text)
         step = self.method.steps[self.state.step]
         opened = price_open(self.method, self.state.step)
         v = self._ear.hear(text, self.state, opened)
         self.state = replace(v.ahead or self.state, waiting=False)  # early answers are kept whatever it was
         said, ui_stage, detail = self._respond(v, step, opened)
+        self.state = Echo.settle(self.state, self._turn)
         return said, ui_stage, detail or v.heard_as
 
     def _respond(self, v, step, opened):
@@ -167,9 +179,33 @@ class ScriptSeller:
         # an answer with a question in it: the question gets an answer when the facts have one, else
         # nothing ("what's next?" needs none). After the judge: a failed AI line can't cost it.
         heard = self._answer_uncovered(text, opened) if v.asking else ""
-        if not heard and not move.ack and move.state.step != step.id:
-            heard = ack if ack is not None else self._voice.ack(text, step.say_plain or step.say, earlier, opened)
-        return self._render(move, heard), move.ui_stage, heard_as
+        body = self._render(move)  # first: the question may quote them, and then the AI line may not
+        acked = move.ack and self._filler.fill(move.ack, move.state.slots) is not None  # "{months} months..." needs a number
+        if heard or acked or move.state.step == step.id:
+            return (f"{heard} {body}" if heard else body), move.ui_stage, heard_as
+        line, own = self._react(text, step, ack, earlier, opened)
+        if not line:
+            return body, move.ui_stage, heard_as
+        return (tone.join(line, body) if own else f"{line} {body}"), move.ui_stage, heard_as
+
+    def _react(self, text, step, ack, earlier, opened):
+        """What shows their answer was heard: (line, own bubble). A meaning line first (no AI, and no quoting
+        them); else the AI's "I heard you" line, which says their words back, so only when the echo budget
+        allows it; else nothing."""
+        line = self._meanings.line(text, self.state.meant + self._turn.meant)
+        if line:
+            self._turn.meant += (line,)
+            return line, True
+        if not self._echo.may_quote(self._turn, self.state, (), False):
+            return "", False
+        if ack is None:
+            ack = self._voice.ack(text, step.say_plain or step.say, earlier, opened)
+        if ack and (words := self._echo.quoted(ack, text)):
+            quote = (" ".join(words),)
+            if not self._echo.may_quote(self._turn, self.state, quote, False):
+                return "", False  # a whole sentence of theirs, or a phrase said too often
+            Echo.said(self._turn, quote)
+        return ack, False
 
     def _earlier(self, step):
         """Their answers to the other steps: what an AI line may link to."""
@@ -236,12 +272,12 @@ class ScriptSeller:
         text, labels = v.text, answer_labels(step)
         label, line, ack, missed = None, "", None, False
         if labels:
-            found = self._listener.match(text, labels)
-            label = found.label
+            found = self._listener.match(text, labels, {r.label: r.min_score for r in step.listen if r.label})
+            label, near = found.label, found.candidates
             if found.close:
-                pick = self._voice.judge(text, {c: labels[c] for c in found.candidates})
+                pick = self._voice.judge(text, {c: labels[c] for c in near}) if near else VAGUE
                 label = None if pick == VAGUE else pick
-                if found.label and not label and step.unsure and all(r.then != step.id for r in step.listen if r.label in found.candidates):
+                if found.label and not label and step.unsure and all(r.then != step.id for r in step.listen if r.label in near):
                     label = step.unsure  # every near meaning is a real answer: take the step's safe one, don't ask again
         elif self.cfg["listen"] and step.capture and not (empty and not asks_left(self.method, self.state, self.cfg["misses"])):
             concept = f"{step.name}: {step.note}" if step.note else step.name  # the AI hears for it
@@ -260,10 +296,10 @@ class ScriptSeller:
         return advance(self.method, self.state, label, text, empty, line, self.cfg["misses"]), ack, detail
 
     def _question(self):
-        """The step's question as it was just asked, blanks filled."""
+        """The step's question as it was just asked, blanks filled, tone marks off."""
         asked, plain = asked_line(self.method, self.state)
-        return (self._filler.fill(asked, self.state.slots) or plain
-                or self.method.steps[self.state.step].say_plain or asked)
+        return tone.plain(self._filler.fill(asked, self.state.slots) or plain
+                          or self.method.steps[self.state.step].say_plain or asked)
 
     @timed
     def _answer_uncovered(self, question, opened):
@@ -282,16 +318,31 @@ class ScriptSeller:
         """`lead`, then the current question again. A step that asks nothing (a statement) is not
         said again: a fact answered at a statement step said the statement twice."""
         say, say_plain = asked_line(self.method, self.state)  # the words last used, not always the first
-        question = self._filler.render(say, "", say_plain, self.state.slots)
+        question = self._line(self.method.steps[self.state.step], say, "", say_plain, self.state.slots,
+                              theirs=bool(self.state.asked))
         if "?" not in question:
             question = ""
         return f"{lead.strip()} {question.strip()}".strip()
 
-    def _render(self, move, heard=""):
-        said = [heard] if heard else []
+    def _render(self, move):
+        """The message: any run_on steps, then the step's line."""
+        said = []
         for step_id in move.lead:
             lead = self.method.steps[step_id]
-            said.append(self._filler.render(lead.say, "", lead.say_plain, move.state.slots))
+            said.append(self._line(lead, lead.say, "", lead.say_plain, move.state.slots))
         step = self.method.steps[move.state.step]
-        said.append(self._filler.render(move.say, move.ack, step.say_plain, move.state.slots))
+        said.append(self._line(step, move.say, move.ack, step.say_plain, move.state.slots, move.theirs))
         return " ".join(said)
+
+    def _line(self, step, say, ack, say_plain, slots, theirs=False):
+        """One line as said, within the echo budget (echo.py): their words where it allows, else the plain
+        line. `theirs`: the line was made from their reply ("What do you mean by ...?", an AI probe)."""
+        phrases = self._filler.echoes(say, slots) + self._filler.echoes(ack, slots)
+        if phrases and not self._echo.may_quote(self._turn, self.state, phrases, step.moment):
+            slots, phrases = {k: v for k, v in slots.items() if k not in self._filler.echo}, []
+        if phrases:
+            Echo.said(self._turn, phrases)
+        line = self._filler.render(say, ack, say_plain, slots)
+        if theirs:
+            self._echo.count(self._turn, line)
+        return line

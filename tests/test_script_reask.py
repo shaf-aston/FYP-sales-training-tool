@@ -58,3 +58,22 @@ def test_a_question_rephrased_for_a_sense_gets_no_reask_lead():
     a reask lead too would be two leads in a row."""
     step = next(v for v in CAT.steps.values() if not v.probes and "?" in v.say and not v.run_on)
     assert ask_again(CAT, ScriptState(step=step.id)).ack == ""
+
+
+def test_each_lead_is_said_once_a_step(fake_embedder):
+    s = seller(fake_embedder, "08")
+    said = [s.reply(r)[0] for r in ("yeah", "sure", "ok")]
+    assert [leads(t) for t in said] == [[lead] for lead in CAT.reask]
+
+
+def test_yes_is_a_shrug_to_an_open_question(fake_embedder):
+    s = seller(fake_embedder, "09")
+    s.reply("yes")
+    assert s.state.step == "09" and s.state.asks == 1
+
+
+def test_yes_answers_a_yes_or_no_question(fake_embedder):
+    s = seller(fake_embedder, "06")
+    s.reply("idk")  # 06's probe: "Is there anything you've tried so far ...?"
+    s.reply("yes")
+    assert s.state.step != "06"

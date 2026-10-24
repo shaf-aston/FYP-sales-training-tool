@@ -8,6 +8,7 @@ from core.script_engine.ai_line import checked_line
 from core.script_engine.checks import CheckContext, clip, figures
 from core.script_engine.judge import judge
 from core.script_engine.listen import hear
+from core.script_engine.tone import plain
 from core.utils import tokenize
 
 from ..logs import timed
@@ -58,6 +59,7 @@ class Voice:
         AI failed or answered off-format: the rest of the turn then goes without it."""
         c = self.cfg
         told = self._told(earlier)
+        question = plain(question)  # the AI reads words, not tone marks
         prompt = c["prompts"]["listen"].format(
             concept=concept, question=question, reply=reply,
             max_words=c["ack_max_words"], probe_words=c["probe_max_words"],
@@ -83,7 +85,7 @@ class Voice:
             return ""
         told = self._told(earlier)
         prompt = c["prompts"]["ack"].format(
-            question=question, reply=reply, max_words=c["ack_max_words"],
+            question=plain(question), reply=reply, max_words=c["ack_max_words"],
             memory=c["prompts"]["ack_memory"].format(told=told) if told else "",
         )
         ctx = self._ack_ctx(reply, told, opened)
