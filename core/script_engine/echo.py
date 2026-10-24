@@ -38,7 +38,13 @@ class Echo:
             return False  # the message before this one did
         if any(len(p.split()) > self.cfg["echo_term_words"] for p in phrases):
             return False  # a whole sentence of theirs waits for a moment
-        return all(state.echoed.count(p.lower()) < self.cfg["echo_repeats"] for p in phrases)
+        keys = [self._key(e) for e in state.echoed]
+        return all(keys.count(self._key(p)) < self.cfg["echo_repeats"] for p in phrases)
+
+    def _key(self, phrase):
+        """A phrase by the words that carry meaning: "your bills" (a filled blank) and "bills" (an AI line's
+        quote) count as one."""
+        return tuple(w for w in tokenize(phrase) if w not in self._plain)
 
     @staticmethod
     def said(turn, phrases):

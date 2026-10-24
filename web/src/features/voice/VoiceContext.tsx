@@ -27,6 +27,7 @@ interface VoiceValue {
   handsFree: boolean;
   toggleHandsFree: () => void;
   speaking: boolean;
+  /** Say a message aloud: the tone marks (_stress_, ==key==, ¶) are dropped, they are for the screen. */
   speak: (text: string) => void;
   stop: () => void;
   /** Stop speaking and go back to listening if hands-free is on. */

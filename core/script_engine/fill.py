@@ -18,9 +18,9 @@ def blanks(line):
 
 
 def offer_blanks(offer):
-    blanks = {"months": str(offer.months), "price": offer.price}
-    blanks.update({f"pillar_{i}": p for i, p in enumerate(offer.pillars, 1)})
-    return blanks
+    values = {"months": str(offer.months), "price": offer.price}
+    values.update({f"pillar_{i}": p for i, p in enumerate(offer.pillars, 1)})
+    return values
 
 
 def spell(word, vocab, cfg):

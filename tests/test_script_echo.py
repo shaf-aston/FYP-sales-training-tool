@@ -73,6 +73,22 @@ def test_the_ai_line_is_asked_for_when_the_budget_allows(fake_embedder, cat_sell
     assert "course" not in text and not s.state.quoted
 
 
+def test_an_ai_line_never_says_a_phrase_back_past_its_cap(fake_embedder, cat_seller):
+    # the AI line quotes "because eats up", the filled blank "because it eats me up": the same phrase
+    s = cat_seller(fake_embedder, meanings=NO_MEANINGS, step="04", echoed=("because it eats me up",) * 2)
+    text, _ = s.reply("because it eats me up")
+    assert not text.startswith("So,") and not s.state.quoted
+
+
+def test_the_scripts_own_question_asked_again_is_not_a_quote(fake_embedder, cat_seller):
+    # 08 has no probes: asked again, its question comes back without the talk before it. Those words are the
+    # script's, even where they share some with the reply, so the next message may still quote them.
+    s = cat_seller(fake_embedder, meanings=NO_MEANINGS, step="08")
+    text, _ = s.reply("what do you mean by business owner employee")
+    assert text.endswith("What's the main difference between a successful business owner and an employee?")
+    assert not s.state.quoted and s.state.echoed == ()
+
+
 def test_an_ai_line_saying_a_whole_sentence_back_is_dropped(fake_embedder, cat_seller):
     s = cat_seller(fake_embedder, meanings=NO_MEANINGS, step="04")
     text, _ = s.reply("because I hate my boss and my commute every single day")
@@ -119,6 +135,7 @@ def _method(**step):
     ({"say": "So {outcome}?"}, "needs a say_plain"),
     ({"say": "Go?", "probe": ["And {outcome}?"], "stuck": {"then": "a"}}, "probes never say"),
     ({"say": "It's _all_ about ==you==?"}, "one stress"),
+    ({"say": "So {outcome }?", "say_plain": "So?"}, "a blank is"),
     ({"say": "Go?", "listen": {"any": {"then": "a", "min_score": 0.5}}}, "no min_score"),
 ])
 def test_a_line_the_budget_could_not_handle_fails_loud(step, why):

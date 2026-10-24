@@ -9,7 +9,7 @@ import yaml
 
 from core.enums import Stage
 from core.loader import CONFIG_DIR
-from core.script_engine.fill import blanks
+from core.script_engine.fill import NAME, blanks
 from core.script_engine.tone import stresses
 
 ANY = "any"  # listen route with no examples: taken for any reply
@@ -178,6 +178,8 @@ def _step(step_id, data):
     for line in (data.get("say", ""), data.get("say_plain", ""), *probes,
                  *(r.get("ack", "") for r in [*(data.get("listen") or {}).values(), data.get("stuck") or {}])):
         _one_stress(f"step {step_id}", line)
+        if line.count("{") != len(NAME.findall(line)):
+            raise ValueError(f"step {step_id}: a blank is {{name}} or {{name|noun form|verb form}}: {line!r}")
     unsure = data.get("unsure", "")
     if unsure and not any(r.label == unsure and r.examples and r.then != step_id for r in listen):
         raise ValueError(f"step {step_id}: unsure {unsure!r} must name one of its answers that moves on")
