@@ -725,3 +725,12 @@ def test_a_reply_with_no_words_is_asked_again_never_saved(fake_embedder, said):
     s = seller(fake_embedder, step="03")   # an open step that keeps any reply
     s.reply(said)
     assert s.state.step == "03" and said not in s.state.slots.values()
+
+
+def test_what_they_meant_is_asked_once_a_step_never_twice(fake_embedder):
+    s = seller(fake_embedder, step="01")
+    s.reply("More money")
+    first, _ = s.reply("Just more money, like")
+    second, _ = s.reply("Like more money with stuff right")
+    assert "what do you mean" not in first.lower()   # their answer again, only shrug words added
+    assert "what do you mean" not in second.lower()
