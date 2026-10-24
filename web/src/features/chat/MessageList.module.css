@@ -113,6 +113,24 @@
 .plain {
   white-space: pre-wrap;
 }
+/* One reply said in several bubbles (a pause in the line). */
+.stack {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+.stack > .bubble + .bubble {
+  animation: message-in var(--dur-base) var(--ease-out);
+}
+/* The key thing in a line: a soft highlight, not a shout. */
+.markdown mark {
+  background: var(--accent-soft);
+  color: inherit;
+  padding: 0 0.15em;
+  border-radius: var(--radius-sm);
+}
 .markdown > :first-child {
   margin-top: 0;
 }

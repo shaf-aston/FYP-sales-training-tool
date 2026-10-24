@@ -32,9 +32,11 @@ class Listener:
         clauses = [c.strip() for c in self.breaks.split(reply) if len(c.split()) >= self.clause_min_words]
         return [reply] + clauses if len(clauses) > 1 else [reply]
 
-    def match(self, reply, labels, by_clause=True):
+    def match(self, reply, labels, by_clause=True, floors=None):
         """labels: {name: [example, ...]}. Score = best similarity per label, of the reply or (`by_clause`) any
-        of its clauses. A meaning only the whole reply can have ("says nothing") is matched with by_clause=False."""
+        of its clauses. A meaning only the whole reply can have ("says nothing") is matched with by_clause=False.
+        `floors`: {name: lowest score it counts at}; a name whose floor the best score misses is not a label
+        or candidate."""
         names, examples = [], []
         for name, items in labels.items():
             names += [name] * len(items)
@@ -51,21 +53,23 @@ class Listener:
         second = ranked[1][1] if len(ranked) > 1 else -1.0
         in_band = self.threshold - self.near_miss <= top < self.threshold
         close = (top - second < self.margin and top >= self.threshold - self.near_miss) or in_band
-        label = top_name if top >= self.threshold else None
-        return Match(label, top, tuple(n for n, _ in ranked[:self.k]), close)
+        floors = floors or {}
+        candidates = tuple(n for n, _ in ranked[:self.k] if top >= floors.get(n, 0.0))
+        label = top_name if top >= self.threshold and top_name in candidates else None
+        return Match(label, top, candidates, close)
 
-    def answer(self, reply, labels, unsure):
+    def answer(self, reply, labels, unsure, floors=None):
         """As match, for the step's own answers: when the whole reply reaches no answer, a clear first clause
         is ("nope. my other half would go mental"): a question is answered first and explained after. A reply
         torn between two answers ("no, credit?") stays a close call: its lead never settles it. A lead nearer
         `unsure` (examples of not knowing) than any answer is none ("dunno, he's never..."). Never for
         interruptions, so "yeah but I need to think" still reads as an objection."""
-        found = self.match(reply, labels)
+        found = self.match(reply, labels, floors=floors)
         if found.label:
             return found
         lead = self.breaks.split(reply, 1)[0].strip()
         if lead and lead != reply.strip():
-            first = self.match(lead, labels, by_clause=False)
+            first = self.match(lead, labels, by_clause=False, floors=floors)
             if first.label and not first.close and first.score > self.match(lead, {"": unsure}, by_clause=False).score:
                 return first
         return found

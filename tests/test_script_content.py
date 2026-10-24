@@ -1,17 +1,15 @@
 """Every shipped script file loads, is wired end to end, and uses only known blanks."""
 import json
-import re
 
 import pytest
 
 from core.loader import CONFIG_DIR, load_yaml
 from core.script_engine.engine import advance, start
-from core.script_engine.fill import offer_blanks
+from core.script_engine.fill import blanks, offer_blanks
 from core.script_engine.method import ANY, load_common_sense, load_method, load_offer
 
 METHODS = sorted(p.stem for p in (CONFIG_DIR / "methods").glob("*.yaml"))
 OFFER_BLANKS = {"months", "price", "setter", "pillar_1", "pillar_2", "pillar_3"}
-BLANK = re.compile(r"\{(\w+)\}")
 
 
 def _lines(step):
@@ -35,7 +33,7 @@ def test_blanks_are_known_and_captured_before_use(name):
     captured |= {blank for blank, rule in numbers.items() if rule.get("from") in captured}  # "2 years" counted in months
     for step in method.steps.values():
         for line in _lines(step):
-            unknown = set(BLANK.findall(line)) - captured - OFFER_BLANKS
+            unknown = blanks(line) - captured - OFFER_BLANKS
             assert not unknown, f"{name} step {step.id}: {unknown}"
 
 
@@ -80,10 +78,10 @@ def test_nothing_in_the_script_asks_any_questions(name):
 def test_every_prospect_blank_has_a_plain_line(name):
     known = set(offer_blanks(load_offer("shay_coaching")))
     for step in load_method(name).steps.values():
-        blanks = set(BLANK.findall(step.say)) - known
-        if blanks:
+        theirs = blanks(step.say) - known
+        if theirs:
             assert step.say_plain, f"{name} step {step.id} needs say_plain"
-            assert not set(BLANK.findall(step.say_plain)) - known
+            assert not blanks(step.say_plain) - known
 
 
 @pytest.mark.parametrize("name", METHODS)
@@ -91,7 +89,7 @@ def test_early_objection_lines_use_only_offer_blanks(name):
     method = load_method(name)  # said before the prospect has answered anything
     known = set(offer_blanks(load_offer("shay_coaching")))
     for line in [o.early for o in method.objections.values()]:
-        assert not set(BLANK.findall(line)) - known, line
+        assert not blanks(line) - known, line
 
 
 @pytest.mark.parametrize("name", METHODS)

@@ -202,3 +202,10 @@ def test_bad_reask_fails_loud(change, error):
     change(data)
     with pytest.raises(ValueError, match=error):
         parse_method("mini", data)
+
+
+def test_a_route_under_its_floor_is_neither_the_label_nor_a_candidate(fake_embedder):
+    labels = {"yes": ["yes sounds good"], "no": ["no not for me"]}
+    floored = _listener(fake_embedder, 0.65).match("yes sounds good", labels, floors={"yes": 1.01})
+    assert floored.label is None and "yes" not in floored.candidates
+    assert _listener(fake_embedder, 0.65).match("yes sounds good", labels, floors={"no": 0.99}).label == "yes"

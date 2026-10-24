@@ -8,7 +8,7 @@ What changed and why this way. Wording lives in YAML/config, not code.
 - [ ] A test that fails before the fix and passes after
 - [ ] `python -m pytest -q` passes
 - [ ] `npm run check` and `npm run build` pass (if `web/` changed)
-- [ ] `RUN_EMBED_TESTS=1 pytest tests/test_script_recognition.py` passes (if the script or matching changed)
+- [ ] `make test-real` passes (if the script or matching changed)
 - [ ] Verbatim script lines unchanged, or the owner approved the change
 
 ## Risk

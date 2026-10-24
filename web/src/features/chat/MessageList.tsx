@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, Icon, Markdown, TextArea, TypingDots, useToast } from "@/components/ui";
 import { config } from "@/lib/config";
 import { useSession, type ChatMessage } from "@/features/session/SessionContext";
@@ -9,6 +9,7 @@ import { InlineEvaluation } from "@/features/sell/SellDialogs";
 import { useUi } from "@/state/UiContext";
 import s from "./MessageList.module.css";
 import { prefersReducedMotion } from "@/lib/motion";
+import { bubbles, highlighted, typingMs } from "@/lib/tone";
 
 /** The AI's badge beside its lines, so it is never mistaken for the mode icons in the header. */
 function Avatar() {
@@ -83,6 +84,43 @@ function Editor({ initial, later, onSave, onCancel }: { initial: string; /** mes
   );
 }
 
+/** How many of a reply's bubbles show: all at once, or (for the reply just in) one by one, each after its
+ * typing dots, so a pause in the line reads as a pause. */
+function useReveal(parts: string[], fresh: boolean, answered: boolean, onGrow?: () => void) {
+  const [shown, setShown] = useState(() => (fresh && !prefersReducedMotion() ? 1 : parts.length));
+  useEffect(() => {
+    if (shown > 1) onGrow?.();
+    if (shown >= parts.length || answered) return;
+    const t = setTimeout(() => setShown((n) => n + 1), typingMs(parts[shown]));
+    return () => clearTimeout(t);
+  }, [shown, parts, answered, onGrow]);
+  return answered ? parts.length : shown; // they replied mid-reveal: the rest shows at once, above their line
+}
+
+/** The seller's reply: one bubble per pause in the line, the key thing highlighted. */
+function BotBubbles({ text, meta, fresh, answered, onGrow }: { text: string; meta?: string; fresh: boolean; answered: boolean; onGrow?: () => void }) {
+  const parts = useMemo(() => {
+    const b = bubbles(text);
+    return b.length ? b : [""]; // an empty reply still shows its meta
+  }, [text]);
+  const shown = useReveal(parts, fresh, answered, onGrow);
+  return (
+    <div className={s.stack}>
+      {parts.slice(0, shown).map((part, i) => (
+        <div key={i} className={s.bubble} data-bubble>
+          <Markdown text={highlighted(part)} className={s.markdown} />
+          {meta && i === parts.length - 1 && <p className={s.meta}>{meta}</p>}
+        </div>
+      ))}
+      {shown < parts.length && (
+        <div className={`${s.bubble} ${s.typing}`}>
+          <TypingDots label="Assistant is typing" />
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface ItemProps {
   m: ChatMessage;
   canEdit: boolean;
@@ -93,11 +131,13 @@ interface ItemProps {
   onEdit?: () => void;
   onSave: (text: string) => Promise<void>;
   onCancel: () => void;
-  /** this reply takes the typing bubble's place: only its words fade in, the bubble does not rise again */
+  /** this reply took the typing bubble's place: only its words faded in, the bubble did not rise again */
   swap?: boolean;
+  /** set on the reply just in (its bubbles show one by one): a bubble just showed, keep the newest line in view */
+  onGrow?: () => void;
 }
 
-function Item({ m, canEdit, editing, later, swap, onEdit, onSave, onCancel }: ItemProps) {
+function Item({ m, canEdit, editing, later, swap, onEdit, onSave, onCancel, onGrow }: ItemProps) {
   if (m.role === "divider") {
     return (
       <div className={s.divider} role="separator">
@@ -110,18 +150,18 @@ function Item({ m, canEdit, editing, later, swap, onEdit, onSave, onCancel }: It
     <div className={`${s.row} ${user ? s.user : s.bot} ${m.historical ? s.historical : ""} ${swap ? s.swap : ""}`}>
       {!user && <Avatar />}
       <div className={s.body}>
-      <div className={s.bubble} data-bubble>
-        {user ? (
-          editing ? (
+      {user ? (
+        <div className={s.bubble} data-bubble>
+          {editing ? (
             <Editor initial={m.content} later={later} onSave={onSave} onCancel={onCancel} />
           ) : (
             <p className={s.plain}>{m.content}</p>
-          )
-        ) : (
-          <Markdown text={m.content} className={s.markdown} />
-        )}
-        {m.meta && <p className={s.meta}>{m.meta}</p>}
-      </div>
+          )}
+          {m.meta && <p className={s.meta}>{m.meta}</p>}
+        </div>
+      ) : (
+        <BotBubbles text={m.content} meta={m.meta} fresh={!!onGrow} answered={later > 0} onGrow={onGrow} />
+      )}
       {!editing && !m.historical && (
         <div className={s.actions}>
           {!user && <ListenButton text={m.content} />}
@@ -168,18 +208,23 @@ export function MessageList() {
   // The reply that lands as typing stops replaces the typing bubble, so it must not animate in as a new row.
   const [wasTyping, setWasTyping] = useState(typing);
   const [swapId, setSwapId] = useState<string | null>(null);
+  // every reply that ever took the typing bubble's place: losing .swap later would replay its rise
+  const [swapped, setSwapped] = useState<ReadonlySet<string>>(new Set());
   if (typing !== wasTyping) {
     setWasTyping(typing);
-    if (!typing) setSwapId(messages.at(-1)?.role === "assistant" ? messages.at(-1)!.id : null);
+    const id = !typing && messages.at(-1)?.role === "assistant" ? messages.at(-1)!.id : null;
+    setSwapId(id);
+    if (id) setSwapped((all) => new Set(all).add(id));
   }
 
   // Pin to the newest line after the browser lays it out; smooth unless reduced motion.
-  useEffect(() => {
+  const pin = useCallback(() => {
     const frame = frameRef.current;
     if (!frame) return;
     const reduced = prefersReducedMotion();
     frame.scrollTo({ top: frame.scrollHeight, behavior: reduced ? "auto" : "smooth" });
-  }, [messages, typing]);
+  }, []);
+  useEffect(pin, [messages, typing, pin]);
 
   const startEdit = (id: string) => {
     if (editingId && editingId !== id) return toast("Finish the current edit first.", "info");
@@ -217,7 +262,8 @@ export function MessageList() {
             m={m}
             later={messages.slice(i + 1).filter((n) => n.role !== "divider").length}
             canEdit={!typing}
-            swap={m.id === swapId}
+            swap={swapped.has(m.id)}
+            onGrow={m.id === swapId ? pin : undefined}
             editing={editingId === m.id}
             onEdit={mode === "buy" ? () => startEdit(m.id) : undefined}
             onSave={save(m)}
