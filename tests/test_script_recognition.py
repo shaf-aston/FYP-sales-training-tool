@@ -43,7 +43,7 @@ def _contexts():
         "objections_impact": _objection_labels(impact),
         "facts": {k: list(f.examples) for k, f in load_offer("shay_coaching").facts.items()},
         "common_sense": {
-            k: list(i.examples) for k, i in load_common_sense().interruptions.items()
+            k: list(i.examples) for k, i in load_common_sense().interruptions.items() if not i.after_wait  # as heard mid-step
         },
     }
 
