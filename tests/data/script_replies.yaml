@@ -241,6 +241,7 @@ common_sense:
     - "how much does it cost"
     - "I'm worried about the risk"
     - "I'd have to ask my wife"
+    - "great, sounds good"   # read as "can you hear me?" (0.74)
 # Labels with a min_score floor, heard at step 01 next to its own answers. `meant` rows must clear
 # the floor; `not_meant` rows must stay under it (a false jump or a false "you're annoyed" is worse
 # than a miss).
