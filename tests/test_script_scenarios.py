@@ -527,6 +527,7 @@ def test_whats_next_asks_no_ai(fake_embedder):
     ("financial freedom", "financial freedom"),
     ("I want financial freedom", "financial freedom"),
     ("honestly I just want freedom", "freedom"),
+    ("just like more money", "more money"),  # filler "like" is never said back
     ("Financial freedom!", "financial freedom"),
     ("more time with family", "more time with family"),
     ("time in Dubai", "time in Dubai"),
