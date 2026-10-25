@@ -22,7 +22,7 @@ facts:
       - "what's the price"
       - "what do you charge"
       - "can you give me a ballpark figure"
-    answer: "Fair question. I'll give you the exact price once I know what you need, then you decide. First, a couple of questions."
+    answer: "Fair question. I'll give you the exact price once I know what you need, then you decide."
     late_answer: "It's a {months}-month process and the investment is {price}."
   what_we_do:
     draft: true
