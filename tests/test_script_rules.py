@@ -190,7 +190,8 @@ def test_price_early_gets_one_line_then_first_questions(seller):
 
 def test_what_do_you_do_mid_call_gets_the_intro_then_the_step_question(seller):
     text, _ = at(seller, "03").reply("what do you do")
-    assert text.startswith("We coach people through a 6-month programme")
+    assert text.startswith("We help people build their own business online")
+    assert "programme" not in text and "$5k" not in text
     assert text.endswith("How long have you been thinking about this?")
 
 
