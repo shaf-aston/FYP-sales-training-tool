@@ -36,7 +36,7 @@ class Ear:
         self._listener, self._shrugs = listener, shrugs
 
     def is_question(self, text):
-        return is_question(text, self.cfg["question_starts"], self.cfg["filler_tags"])
+        return is_question(text, self.cfg)
 
     def hear(self, text, state, opened):
         step = self.method.steps[state.step]

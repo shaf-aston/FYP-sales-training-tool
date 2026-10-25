@@ -28,6 +28,7 @@ facts:
     examples:
       - "what do you do"
       - "what is this about"
+      - "who are you"
       - "what exactly are you offering"
     answer: "We coach people through a 6-month programme to build their own business. First, a couple of questions to make sure we can even help you."
   length:

@@ -110,6 +110,8 @@ interruptions:
       - "enough with the questions"
       - "why are you interrogating me"
       - "just get to the point"
+      - "this is taking too long"
+      - "can we hurry up"
       - "this is a waste of my time"
       - "meh, whatever"   # not bare "whatever": it pulls in "whatever works for me"
       - "ugh whatever man"

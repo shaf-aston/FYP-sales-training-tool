@@ -86,19 +86,21 @@ def echo_phrase(reply, cfg, vocab=frozenset(), verbs=False):
     return " ".join(words)
 
 
-def number_phrase(reply, rule):
-    """The number before the blank's unit, by rule: "about 5 years now" -> "5", "two years" -> "two".
+def number_phrase(reply, rule, cfg):
+    """The number before the blank's unit, as digits, by rule: "about 5 years now" -> "5", "a year" -> "1".
     None when no number sits right before the unit ("ages", "6 months" for a years blank).
     With `per`, the number is converted: "2 years" -> "24" for a months blank. With `unit` ([one, many]),
-    the unit is said after it: "1 year", "two years"."""
-    lower = [w.lower() for w in WORD.findall(reply or "")]
+    the unit is said after it: "1 year", "2 years". A rule with `from` and no `units` takes that rule's units."""
+    units = rule.get("units") or cfg["number_blanks"][rule["from"]]["units"]
     per = rule.get("per")
+    lower = [w.lower() for w in WORD.findall(reply or "") if w.lower() not in cfg["number_skip"]]
     for before, word in zip(lower, lower[1:]):
-        if word in (per or rule["units"]) and (before.isdigit() or before in rule["words"]):
+        count = int(before) if before.isdigit() else cfg["number_words"].get(before)
+        if count is not None and word in (per or units):
             if per:
-                return str((int(before) if before.isdigit() else rule["words"][before]) * per[word])
+                return str(count * per[word])
             unit = rule.get("unit")
-            return f"{before} {unit[0] if before in ('1', 'one') else unit[1]}" if unit else before
+            return f"{count} {unit[count != 1]}" if unit else str(count)
     return None
 
 
@@ -125,7 +127,7 @@ class Filler:
             if not reply:
                 phrase = None
             elif blank in numbers:
-                phrase = number_phrase(reply, numbers[blank])
+                phrase = number_phrase(reply, numbers[blank], self.cfg)
             else:
                 phrase = self._echo(blank, forms[blank], slots) if blank in self.echo else None
             if phrase is None:

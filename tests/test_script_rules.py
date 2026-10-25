@@ -501,10 +501,20 @@ def test_a_question_word_without_a_question_mark_still_counts(fake_embedder):
     ("why can't I ignore it, because it keeps me up", False),
     ("how much is it", True),
     ("will refunds exist?", True),
+    ("is this legit", True),
+    ("isnt this just a scam", True),
+    ("have you got any proof", True),
+    ("how do I know it works", True),
+    ("who are you", True),
+    ("what is this call about", True),
+    ("do it for my kids", False),
+    ("have a family to look after", False),
+    ("can't afford it", False),
+    ("how I see it is I need more time", False),
 ])
-def test_question_detection_uses_phrases_or_a_question_mark(text, expected):
+def test_question_detection_uses_the_opening_words_or_a_question_mark(text, expected):
     from core.utils import is_question
-    assert is_question(text, CFG["question_starts"], CFG["filler_tags"]) is expected
+    assert is_question(text, CFG) is expected
 
 
 def test_a_line_asked_again_is_filled_the_same_way_without_new_ai_calls(fake_embedder):

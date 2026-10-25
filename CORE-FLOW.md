@@ -66,6 +66,8 @@ Every buy-mode turn writes one log line from `core/seller_bot.py`:
 `heard as` is the path the reply took in `ScriptSeller.reply` (`seller.last_turn`):
 `answer:<label>` / `answer:any` / `answer:unclear`, `sense:<name>`, `objection:<name>`, `fact:<name>`,
 `ready:prospect`, `question`, `nudge`, `says_nothing`, `misses` (the listen call heard no answer), `hesitates`.
+
+Try the seller from the terminal (real recogniser, no AI, so plain script lines): `python scripts/chat_cli.py "more money" "to pay bills"`, or `--file replies.txt`.
 The same fields go into the `conversation_turn` analytics event. To read a whole call:
 `python scripts/show_convo.py data/logs/events [session_id]`.
 
