@@ -223,6 +223,27 @@ def test_objection_mid_discovery_is_acknowledged(said):
     assert text.startswith(expected) and seller.state.step == "goal_practical" and names[said] in seller.state.parked
 
 
+@pytest.mark.parametrize("step", ["01", "05", "09"])
+@pytest.mark.parametrize("said", ["isnt this just a scam", "is this legit", "have you got any proof", "how do I know it works"])
+def test_a_trust_question_gets_the_early_line_even_without_a_question_mark(step, said):
+    # step 05 takes money, time and fear as its answer; a trust question is still asked, not answered
+    from core.script_engine.engine import ScriptState
+
+    seller = _real_seller()
+    seller.reset(ScriptState(step=step))
+    text, _ = seller.reply(said)
+    assert text.startswith(seller.method.objections["scam"].early) and seller.state.step == step
+
+
+@pytest.mark.parametrize("said", ["this is taking too long", "can we hurry up"])
+def test_hurrying_the_call_up_is_frustration_not_a_pause(said):
+    from core.script_engine.engine import ScriptState
+
+    seller = _real_seller()
+    seller.reset(ScriptState(step="05"))
+    assert seller.reply(said)[0].startswith(seller.sense.interruptions["frustrated"].reply)
+
+
 @pytest.mark.parametrize("step", ["03", "04", "05", "18"])
 def test_a_pause_is_a_pause_on_any_step(step):
     from core.script_engine.engine import ScriptState

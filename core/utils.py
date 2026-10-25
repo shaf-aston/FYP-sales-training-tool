@@ -87,15 +87,21 @@ def tokenize(text: str) -> list[str]:
     return re.findall(r"[a-z0-9']+", (text or "").lower())
 
 
-def is_question(text: str, starters, filler_tags) -> bool:
-    """A line asks something: it ends in "?" (unless it ends on a filler tag like
-    "you get me?" or "right?") or it opens with a question phrase. Both lists come from config."""
-    spoken = " ".join(tokenize(text)) + " "
-    tags = (" ".join(tokenize(tag)) for tag in filler_tags)
+def is_question(text: str, cfg) -> bool:
+    """A line asks something: it ends in "?" (unless it ends on a filler tag like "you get me?" or "right?"),
+    or it opens like a question: a helper verb then a subject ("is this legit", "have you got proof"), a question
+    word then a helper verb ("how do I know", "who are you"), or one of `question_starts`. Word lists from config."""
+    words = tokenize(text)
+    spoken = " ".join(words) + " "
+    tags = (" ".join(tokenize(tag)) for tag in cfg["filler_tags"])
     tagged = any(tag and (" " + spoken).endswith(" " + tag + " ") for tag in tags)
-    return ((text or "").strip().endswith("?") and not tagged) or any(
-        spoken.startswith(phrase + " ") for phrase in starters
+    first, second = (words + ["", ""])[:2]
+    opens = (
+        (first in cfg["closed_question_starts"] and second in cfg["question_subjects"])
+        or (first in cfg["question_words"] and second in cfg["closed_question_starts"])
+        or any(spoken.startswith(phrase + " ") for phrase in cfg["question_starts"])
     )
+    return ((text or "").strip().endswith("?") and not tagged) or opens
 
 
 def merge_unique_items(*lists: list[str], max_items: int = 3) -> list[str]:

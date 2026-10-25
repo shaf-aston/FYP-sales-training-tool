@@ -31,9 +31,11 @@ echo_repeats: 2        # the same phrase of theirs is said back at most this man
 stop_words: [a, an, the, i, i'm, i've, my, me, to, of, and, or, in, "on", at, for, is, am, are, be, it, that, this, so, with, as, by, we, you, your]
 filler_words: [ok, okay, sure, yeah, yep, "yes", hmm, mm, cool, alright, right, k, kk, idk, dunno]   # a reply made only of these (and stop_words) says nothing; never add "no", it answers yes/no steps
 filler_tags: ["you get me", "you know", "you know what i mean", "innit", "right", "yeah", "ya know", "get me", "you feel me"]   # "...bro, you get me?" is talk, not a question
-question_starts: ["how much", "how long is", "how long does", "how many", "do you", "does it", "does the", "is it", "is the", "is there", "are there", "are you", "can i", "can we", "can you", "will i", "will it", "what does it", "what do you", "what is the", "what's the", "where are you", "when does", "who is", "do people", "does this", "has anyone", "will this"]   # phrases that open a question
-closed_question_starts: [is, are, do, does, did, have, has, can, could, will, would, was, were]   # a step asked this way wants a yes or no: "yes" or "ok" answers it, it is not a shrug
-bad_phrase_starts: [own, to, not, "no", nothing, none, nope, nah, don't, dont, never, you, "you're", "you've", "you'd", "you'll", whatever, idk, dunno, "yes", yeah, ok, okay, finally, because, want, need, just, being, making, getting, working]   # a blank phrase starting like this is no goal and breaks the sentence; "nothing" is never said back
+question_words: [what, who, where, when, why, which, how]   # a question word then a helper verb opens a question: "how do I know", "who are you"
+question_subjects: [you, i, we, this, that, there, they, anyone, anybody]   # a helper verb then one of these opens a question: "is this legit", "can I", "have you got proof"
+question_starts: ["is it", "does it", "will it", "can it", "was it", "how much", "how long", "how many", "how come", "is the", "does the", "can the", "will the", "what's the", "do people"]   # other phrases that open a question
+closed_question_starts: [is, are, do, does, did, have, has, can, could, will, would, was, were, am, should, isn't, isnt, aren't, arent, don't, dont, doesn't, doesnt]   # helper verbs: a step asked this way wants a yes or no ("yes" or "ok" answers it, it is not a shrug), and they open a question
+bad_phrase_starts: [it, its, "it's", "that's", "there's", own, to, not, "no", nothing, none, nope, nah, don't, dont, never, you, "you're", "you've", "you'd", "you'll", whatever, idk, dunno, "yes", yeah, ok, okay, finally, because, want, need, just, being, making, getting, working]   # a blank phrase starting like this is no goal and breaks the sentence; "nothing" is never said back
 verb_goal_starts: [be, quit, stop, make, get, have, start, build, grow, save, create, see, travel, leave, retire, buy, pay, spend, support, help, live, work, earn, provide, move, do, go]   # a phrase starting with a verb is a verb-goal: a line's {name|noun form|verb form} blank then uses its verb form ("to be your own boss")
 be_goal_words: [free, rich, happy, comfortable, secure, independent, stable, wealthy, successful]   # draft: a goal ending in a state ("debt free") is a verb-goal with "be" in front: "to be debt free", not "to have debt free"
 echo_drop_starts: ["being able to", "be able to", "i want", "i'd like", "i would like", "i just want", "i need", "i'm after", "honestly", "basically", "probably", "just", "mainly", "mostly", "well", "so", "um", "uh", "for", "really", "to", "want to", "wanna", "whatever", "like"]   # lead-ins dropped before their words go into a blank: "I want financial freedom" -> "financial freedom"
@@ -43,19 +45,17 @@ spell_cutoff: 0.85     # how close a typo must be to a known word to be fixed be
 spell_min_letters: 5   # shorter words are left alone: too easy to "fix" into the wrong word
 spell_word_endings: [s, es, ed, d, ing, er, ers, ly]   # a known word plus one of these is a real word, never "fixed"
 spell_words: [freedom, financial, family, retire, retirement, independence, business, boss, travel, wealth, security, money, income, kids, children, house, mortgage, debt, career, passive]   # extra words typos are fixed to, beside every word in the script's examples
-number_blanks:   # blanks filled with just the number they said before the unit: "about 5 years" -> {years} = 5
+number_words: {a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, eighteen: 18, fifteen: 15, twenty: 20, couple: 2}   # a number said in words: "a year", "two years", "a couple of years"
+number_skip: [of]   # dropped before a number is read, so "a couple of years" reads "a couple years"
+number_blanks:   # blanks filled with the number they said before a unit, as digits: "about 5 years" -> {years} = 5
   years:
     units: [year, years, yr, yrs]
-    words: [one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, fifteen, twenty]
-  years_said:   # the same number with its unit, singular for one: "1 year", "two years"
+  years_said:   # the same number with its unit, singular for one: "1 year", "2 years"
     from: years
-    units: [year, years, yr, yrs]
-    words: [one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, fifteen, twenty]
     unit: [year, years]
   months_thinking:   # the same answer counted in months: "2 years" -> 24, "six months" -> 6
     from: years
     per: {year: 12, years: 12, yr: 12, yrs: 12, month: 1, months: 1}
-    words: {one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, eighteen: 18}
 echo_pronoun_swap: {my: your, me: you, mine: yours, myself: yourself, "i'm": "you're", "i've": "you've", "i'd": "you'd", i: you}   # their first person said back to them: "my kids" -> "your kids"
 judge_examples: 2     # examples per candidate shown to the judge
 judge_tokens: 10       # max_tokens for a close-call judge

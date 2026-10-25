@@ -669,14 +669,23 @@ def test_loader_rejects_echo_without_a_capture():
 
 @pytest.mark.parametrize("reply, number", [
     ("about 5 years now", "5"),
-    ("two years", "two"),
+    ("two years", "2"),
+    ("a year", "1"),
+    ("about a year now", "1"),
+    ("a couple of years", "2"),
     ("6 months", None),      # wrong unit, the years line is dropped
     ("ages", None),
     ("", None),
 ])
 def test_number_phrase(reply, number):
     from core.script_engine.fill import number_phrase
-    assert number_phrase(reply, CFG["number_blanks"]["years"]) == number
+    assert number_phrase(reply, CFG["number_blanks"]["years"], CFG) == number
+
+
+@pytest.mark.parametrize("reply, months", [("a year", "12"), ("a couple of years", "24"), ("six months", "6"), ("a month", "1"), ("ages", None)])
+def test_months_thinking_counts_the_answer_in_months(reply, months):
+    from core.script_engine.fill import number_phrase
+    assert number_phrase(reply, CFG["number_blanks"]["months_thinking"], CFG) == months
 
 
 def test_years_line_fills_from_their_answer():
