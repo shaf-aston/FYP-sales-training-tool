@@ -30,7 +30,8 @@ facts:
       - "what is this about"
       - "who are you"
       - "what exactly are you offering"
-    answer: "We coach people through a 6-month programme to build their own business. First, a couple of questions to make sure we can even help you."
+    bridge: true   # at the very start, a getting-to-know-you question follows (the step's `bridge`)
+    answer: "We coach people through a 6-month programme to build their own business.¶Step by step lessons, direct coaching, and someone holding you accountable."
   length:
     draft: true
     examples:

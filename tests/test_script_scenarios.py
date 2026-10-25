@@ -744,3 +744,28 @@ def test_what_they_meant_is_asked_once_a_step_never_twice(fake_embedder):
     second, _ = s.reply("Like more money with stuff right")
     assert "what do you mean" not in first.lower()   # their answer again, only shrug words added
     assert "what do you mean" not in second.lower()
+
+
+# ---- "who are you" at the very start: a short intro, then a getting-to-know-you question -------------
+
+def test_who_are_you_at_the_start_is_a_short_intro_then_a_question_about_them(fake_embedder):
+    s = seller(fake_embedder)
+    s.opening()
+    text, _ = s.reply("who are you")
+    intro = load_offer("shay_coaching").facts["what_we_do"].answer
+    assert text == f"{intro} {CAT.steps['01'].bridge}" and s.state.step == "01" and s.state.bridged
+
+
+def test_their_reply_to_that_question_is_heard_not_saved_and_the_goal_question_follows(fake_embedder):
+    s = seller(fake_embedder)
+    s.opening()
+    s.reply("who are you")
+    text, _ = s.reply("yeah I tried dropshipping")
+    assert text == f"{CFG['bridge_ack']} {say('01')}" and s.state.step == "01" and not s.state.bridged
+    assert not any(s.state.slots.values())
+
+
+def test_who_are_you_later_in_the_call_goes_back_to_the_question_without_a_bridge(fake_embedder):
+    s = seller(fake_embedder, step="goal_practical", slots={"outcome": "more money"})
+    text, _ = s.reply("who are you")
+    assert CAT.steps["01"].bridge not in text and not s.state.bridged and "What are you hoping" in text

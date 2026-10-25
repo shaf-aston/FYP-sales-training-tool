@@ -139,7 +139,10 @@ class ScriptSeller:
         step = self.method.steps[self.state.step]
         opened = price_open(self.method, self.state.step)
         v = self._ear.hear(text, self.state, opened)
-        self.state = replace(v.ahead or self.state, waiting=False)  # early answers are kept whatever it was
+        bridged = self.state.bridged
+        self.state = replace(v.ahead or self.state, waiting=False, bridged=False)  # early answers are kept whatever it was
+        if bridged and v.kind in ("answer", "says_nothing"):  # their reply to the getting-to-know-you question
+            return self._then_ask(self.cfg["bridge_ack"]), step.ui_stage, "bridge"
         said, ui_stage, detail = self._respond(v, step, opened)
         self.state = Echo.settle(self.state, self._turn)
         return said, ui_stage, detail or v.heard_as
@@ -164,6 +167,9 @@ class ScriptSeller:
         if v.kind == "fact":
             f = self.offer.facts[v.name]
             lead = self._filler.fill(f.late_answer if opened and f.late_answer else f.answer, {})
+            if f.bridge and step.bridge:
+                self.state = replace(self.state, bridged=True)
+                return f"{lead} {step.bridge}", step.ui_stage, ""
             return self._then_ask(lead), step.ui_stage, ""
         if v.kind == "question":
             answer = self._answer_uncovered(v.text, opened) or self.cfg["uncovered_fallback"]

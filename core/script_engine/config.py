@@ -22,7 +22,7 @@ TYPES = {
     "prospect_pronouns": list, "spell_word_endings": list, "spell_words": list, "answer_banned_words": list,
     "vague_words": list, "banned_phrases": list, "nudge_leads": list, "ack_words": list,
     "number_blanks": dict, "number_words": dict, "number_skip": list, "echo_pronoun_swap": dict, "coach_notes": dict, "prompts": dict,
-    "uncovered_fallback": str,
+    "uncovered_fallback": str, "bridge_ack": str,
 }
 
 # the blanks the code fills in each template; a template may leave any of them out, never add one
