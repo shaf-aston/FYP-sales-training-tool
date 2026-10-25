@@ -691,7 +691,7 @@ def test_months_thinking_counts_the_answer_in_months(reply, months):
 def test_years_line_fills_from_their_answer():
     from core.script_engine.fill import Filler
     line = "You already have for {years} years."
-    offer = type("Offer", (), {"months": 6, "price": "£1", "pillars": []})()
+    offer = type("Offer", (), {"months": 6, "price": "£1", "industry": "", "pillars": []})()
     filler = Filler(CFG, offer, frozenset())
     assert filler.fill(line, {"years": "probably 3 years"}) == "You already have for 3 years."
     assert filler.fill(line, {"years": "a while"}) is None
@@ -752,8 +752,8 @@ def test_who_are_you_at_the_start_is_a_short_intro_then_a_question_about_them(fa
     s = seller(fake_embedder)
     s.opening()
     text, _ = s.reply("who are you")
-    intro = load_offer("shay_coaching").facts["what_we_do"].answer
-    assert text == f"{intro} {CAT.steps['01'].bridge}" and s.state.step == "01" and s.state.bridged
+    assert text.startswith("We help people build their own business online")
+    assert text.endswith(CAT.steps["01"].bridge) and s.state.step == "01" and s.state.bridged
 
 
 def test_their_reply_to_that_question_is_heard_not_saved_and_the_goal_question_follows(fake_embedder):

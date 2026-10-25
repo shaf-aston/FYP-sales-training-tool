@@ -18,7 +18,7 @@ def blanks(line):
 
 
 def offer_blanks(offer):
-    values = {"months": str(offer.months), "price": offer.price}
+    values = {"months": str(offer.months), "price": offer.price, "industry": offer.industry}
     values.update({f"pillar_{i}": p for i, p in enumerate(offer.pillars, 1)})
     return values
 
