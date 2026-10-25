@@ -188,9 +188,9 @@ def test_price_early_gets_one_line_then_first_questions(seller):
     assert seller.state.step == "03"
 
 
-def test_what_do_you_do_early_gets_one_line_then_first_questions(seller):
+def test_what_do_you_do_mid_call_gets_the_intro_then_the_step_question(seller):
     text, _ = at(seller, "03").reply("what do you do")
-    assert "First, a couple of questions" in text
+    assert text.startswith("We coach people through a 6-month programme")
     assert text.endswith("How long have you been thinking about this?")
 
 

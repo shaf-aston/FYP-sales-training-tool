@@ -46,6 +46,7 @@ class Step:
     echo: bool = False  # their answer may be said back in their own words in a later line's {blank}
     unsure: str = ""    # a close call nobody settles, between answers that all move on, is heard as this one
     moment: bool = False  # one of the call's few moments for their exact words (see echo.py); elsewhere a short term at most
+    bridge: str = ""    # a getting-to-know-you question that follows a short intro of who we are (a fact with `bridge`); their reply is not saved
 
     @property
     def routes(self):
@@ -87,6 +88,7 @@ class Fact:
     examples: tuple
     answer: str
     late_answer: str    # used once the price step is reached; empty = same answer
+    bridge: bool = False  # the step's `bridge` question follows the answer, in place of the step's own question
 
 
 @dataclass(frozen=True)
@@ -188,7 +190,7 @@ def _step(step_id, data):
         data.get("capture", ""), probes,
         listen, bool(data.get("run_on")),
         data.get("name", ""), data.get("note", ""), bool(data.get("doubts_answer")),
-        stuck, answered_by, bool(data.get("echo")), unsure, bool(data.get("moment")),
+        stuck, answered_by, bool(data.get("echo")), unsure, bool(data.get("moment")), data.get("bridge", ""),
     )
 
 
@@ -320,7 +322,7 @@ def parse_offer(name, data):
     facts = {
         k: Fact(
             tuple(v.get("examples") or ()), v["answer"],
-            v.get("late_answer", ""),
+            v.get("late_answer", ""), bool(v.get("bridge")),
         )
         for k, v in (data.get("facts") or {}).items()
     }

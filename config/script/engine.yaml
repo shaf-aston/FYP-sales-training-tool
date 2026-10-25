@@ -60,6 +60,7 @@ echo_pronoun_swap: {my: your, me: you, mine: yours, myself: yourself, "i'm": "yo
 judge_examples: 2     # examples per candidate shown to the judge
 judge_tokens: 10       # max_tokens for a close-call judge
 answer_tokens: 60      # max_tokens for an uncovered product answer
+bridge_ack: "Good to know."   # draft wording: said after their reply to a step's `bridge` question, before the step's own question
 uncovered_fallback: "I don't know that one offhand, I'll find out and let you know."   # draft wording
 answer_banned_words: [guarantee, guaranteed, guarantees, promise, promises, promised, overnight, days, weeks, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, twenty, thirty, fifty, hundred, hundreds, thousand, thousands, million, millions, percent, earn, earns, earned, earning, income, salary, profit, profits, revenue, free, trial, refund, refunds, discount, discounts, contract, contracts, cancel, cancellation, lifetime, module, modules, daily, weekly, monthly, www, com, http, https]   # a product answer never promises, sizes results, sets timeframes, makes up a policy or a feature, or sends links (words the offer facts use are allowed)
 ack: true             # before the next scripted line, one short AI sentence showing their answer was heard (none when it fails a check)

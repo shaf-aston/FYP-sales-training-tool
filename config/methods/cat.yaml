@@ -46,6 +46,7 @@ steps:
     ui_stage: intent
     draft: true  # the probe is ours: the source only says "dig"
     say: "What do you want to specifically achieve by making money online?"
+    bridge: "Just out of curiosity, have you tried making money online before?"   # draft: asked after a short "who are you" answer at the very start; the owner's wording to follow
     capture: outcome
     echo: true   # "financial freedom" goes back into the next lines as they said it
     probe:   # asked in turn; then `stuck` moves on after `misses` (engine.yaml) instead of asking forever
