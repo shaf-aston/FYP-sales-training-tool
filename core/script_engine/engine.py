@@ -19,6 +19,7 @@ class ScriptState:
     quoted: bool = False   # the last message said their words back (the echo budget, echo.py)
     echoed: tuple = ()     # their phrases said back this call, once per time said
     meant: tuple = ()      # meaning lines said this call
+    told: tuple = ()       # facts answered before the price this call: asked again, a short reminder
     bridged: bool = False  # the last message ended on a step's `bridge` question: the next reply to it is heard, not saved
 
 
@@ -116,8 +117,9 @@ def _ask_again(method, state, step, ack="", line="", misses=0, lead=True):
     else:
         said = step.probes[-1] if step.probes else _question(step.say)
         turn = used - len(step.probes)  # each lead once a step: a third "No rush" sounds like a loop
-        if lead and turn < len(method.reask) and not ack and (step.probes or "?" in step.say):
-            ack = method.reask[turn]
+        leads = step.reask or method.reask
+        if lead and turn < len(leads) and not ack and (step.probes or "?" in step.say):
+            ack = leads[turn]
     state = replace(state, asks=state.asks + 1, asked=line, said=state.said + (line,) if line else state.said)
     return Move(said, state, step.ui_stage, ack=ack, theirs=bool(line))
 

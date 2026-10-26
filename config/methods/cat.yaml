@@ -103,6 +103,8 @@ steps:
     echo: true
     probe:
       - "What would that actually change for you, day to day?"
+    # "financial freedom" again is a real answer, just not deeper: "No rush" would read as if they said nothing
+    reask: ["Picture you already had it."]   # draft: ours
     stuck: {then: "goal_identity"}
     listen:
       surface:   # still level 1 ("more money" again): asked another way, not taken
@@ -132,6 +134,11 @@ steps:
     say: "How much would you need to be making each month {outcome|to have $|to $}?"
     say_plain: "How much would you need to be making each month to make that happen?"
     capture: number
+    # A reply with no figure ("I don't know where to start") is not the answer: asked again, then moved on unsaved.
+    needs: '\d|\b(?:two|three|four|five|six|seven|eight|nine|ten|twenty|thirty|forty|fifty|hundred|thousand|grand|million)\b'   # not "one": "no one knows" is no figure
+    probe:   # draft: ours, so a reply with no figure gets an easier question, not the same one
+      - "If you had to put a number on it, what would you want coming in each month?"
+    stuck: {then: "03"}
     # "I want 5k a month" said earlier answers this step, so it is skipped. Needs a want/need word,
     # only "to make / be earning / around"-type words, then the figure and "a month": "I make 2k a month",
     # "a job paying 2k a month", "I need to save 200 a month" and "I don't want ..." are not the goal.

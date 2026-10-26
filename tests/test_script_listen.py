@@ -230,7 +230,7 @@ def test_a_shrug_beyond_the_filler_words_is_asked_again_not_saved(fake_embedder)
     s = seller(fake_embedder, _down, step="02", slots={"outcome": "I want financial freedom"})
     text, _ = s.reply("no clue")  # live: "dunno man" at 02 was saved as their number
     assert s.state.step == "02" and "number" not in s.state.slots
-    assert text == f"{CAT.reask[0]} How much would you need to be making each month to have financial freedom?"
+    assert text == CAT.steps["02"].probes[0]
 
 
 def test_unclear_words_get_asked_what_they_mean(fake_embedder):

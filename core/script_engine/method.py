@@ -14,8 +14,8 @@ from core.script_engine.tone import stresses
 
 ANY = "any"  # listen route with no examples: taken for any reply
 # What happens after an interruption's reply: ask the step again (same words), wait for them to come
-# back, ask it in other words, or (a step with no other words) move on to the next step.
-AFTER = ("ask", "wait", "rephrase", "rephrase_else_move_on")
+# back, ask it in other words, (a step with no other words) move on to the next step, or book the follow-up.
+AFTER = ("ask", "wait", "rephrase", "rephrase_else_move_on", "follow_up")
 
 
 @dataclass(frozen=True)
@@ -47,6 +47,8 @@ class Step:
     unsure: str = ""    # a close call nobody settles, between answers that all move on, is heard as this one
     moment: bool = False  # one of the call's few moments for their exact words (see echo.py); elsewhere a short term at most
     bridge: str = ""    # a getting-to-know-you question that follows a short intro of who we are (a fact with `bridge`); their reply is not saved
+    reask: tuple = ()   # this step's own `reask` leads, in place of the method's ("more money" again is an answer, not a blank)
+    needs: str = ""     # regex an answer must match ("how much a month?" needs a figure); a reply without it is asked again
 
     @property
     def routes(self):
@@ -89,6 +91,7 @@ class Fact:
     answer: str
     late_answer: str    # used once the price step is reached; empty = same answer
     bridge: bool = False  # the step's `bridge` question follows the answer, in place of the step's own question
+    again: str = ""     # before the price, asked a second time: a short reminder, not the same long answer twice
 
 
 @dataclass(frozen=True)
@@ -134,6 +137,7 @@ class CommonSense:
     unclear: tuple = ()  # replies that give nothing to an open question ("dunno man", "stuff I guess")
     unclear_min_score: float = 1.0  # a reply counts as unclear when it matches `unclear` at least this well
     ask_meaning: str = ""  # asks what they meant by their own words ({said}); empty = never asked
+    told_again: str = ""  # a fact asked a second time with no `again` of its own; empty = the answer again
 
 
 def _read(directory, name):
@@ -176,9 +180,15 @@ def _step(step_id, data):
             raise ValueError(f"step {step_id}: answered_by needs a capture and an '{ANY}' route")
         if re.search(answered_by, ""):
             raise ValueError(f"step {step_id}: answered_by must not match an empty reply")
+    needs = data.get("needs", "")
+    reask = tuple(data.get("reask") or ())
+    if any("?" in r for r in reask):
+        raise ValueError(f"step {step_id}: reask leads must not ask (the step's question follows)")
+    if needs and (not data.get("capture") or re.search(needs, "")):
+        raise ValueError(f"step {step_id}: needs takes a capture and must not match an empty reply")
     if data.get("echo") and not data.get("capture"):
         raise ValueError(f"step {step_id}: echo needs a capture")
-    for line in (data.get("say", ""), data.get("say_plain", ""), *probes,
+    for line in (data.get("say", ""), data.get("say_plain", ""), *probes, *reask,
                  *(r.get("ack", "") for r in [*(data.get("listen") or {}).values(), data.get("stuck") or {}])):
         _one_stress(f"step {step_id}", line)
         if line.count("{") != len(NAME.findall(line)):
@@ -192,6 +202,7 @@ def _step(step_id, data):
         listen, bool(data.get("run_on")),
         data.get("name", ""), data.get("note", ""), bool(data.get("doubts_answer")),
         stuck, answered_by, bool(data.get("echo")), unsure, bool(data.get("moment")), data.get("bridge", ""),
+        reask, needs,
     )
 
 
@@ -323,7 +334,7 @@ def parse_offer(name, data):
     facts = {
         k: Fact(
             tuple(v.get("examples") or ()), v["answer"],
-            v.get("late_answer", ""), bool(v.get("bridge")),
+            v.get("late_answer", ""), bool(v.get("bridge")), v.get("again", ""),
         )
         for k, v in (data.get("facts") or {}).items()
     }
@@ -352,7 +363,7 @@ def parse_common_sense(data):
             raise ValueError(f"interruption {i.name}: after must be one of {AFTER}")
         _one_stress(f"interruption {i.name}", i.reply)
     nudge = data.get("nudge") or {}
-    if "?" in data["park"] or "?" in nudge.get("reply", "") or any(
+    if "?" in data["park"] or "?" in data.get("told_again", "") or "?" in nudge.get("reply", "") or any(
             "?" in i.reply for i in items.values() if i.after != "wait"):
         raise ValueError("park, nudge and interruption replies must not ask (the step's question follows)")
     if bool(nudge.get("reply")) != bool(nudge.get("phrases")):
@@ -364,7 +375,8 @@ def parse_common_sense(data):
     return CommonSense(data["park"], data["revisit"], items,
                        nudge.get("reply", ""), tuple(nudge.get("phrases") or ()),
                        tuple(unclear.get("examples") or ()),
-                       _score("unclear", unclear.get("min_score")) if unclear else 1.0, ask_meaning)
+                       _score("unclear", unclear.get("min_score")) if unclear else 1.0, ask_meaning,
+                       data.get("told_again", ""))
 
 
 def load_method(name, directory=CONFIG_DIR / "methods", shared=CONFIG_DIR / "script"):

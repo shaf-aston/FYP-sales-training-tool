@@ -1,5 +1,6 @@
 """One selling turn: the script picks the line, the AI only fills small checked gaps."""
 
+import re
 from dataclasses import asdict, replace
 from functools import lru_cache
 from pathlib import Path
@@ -109,7 +110,7 @@ class ScriptSeller:
     def restore(self, saved=None):
         """Back to a `snapshot()`; None goes back to the opening."""
         if saved:  # JSON gives lists back: tuples, so `said + (line,)` still adds up
-            saved = {**saved, **{k: tuple(saved.get(k, ())) for k in ("said", "parked", "raised", "echoed", "meant")}}
+            saved = {**saved, **{k: tuple(saved.get(k, ())) for k in ("said", "parked", "raised", "echoed", "meant", "told")}}
         self.reset(ScriptState(**saved) if saved else None)
 
     def opening(self):
@@ -166,7 +167,13 @@ class ScriptSeller:
             return *self._object(v.name), ""
         if v.kind == "fact":
             f = self.offer.facts[v.name]
-            lead = self._filler.fill(f.late_answer if opened and f.late_answer else f.answer, {})
+            late = opened and f.late_answer
+            if not late and v.name in self.state.told:  # "who is this?" then "what is this about?"
+                again = self._filler.fill(f.again or self.sense.told_again or f.answer, {})
+                return self._then_ask(again), step.ui_stage, ""
+            if not late:
+                self.state = replace(self.state, told=(*self.state.told, v.name))
+            lead = self._filler.fill(f.late_answer if late else f.answer, {})
             if f.bridge and step.bridge:
                 self.state = replace(self.state, bridged=True)
                 return f"{lead} {step.bridge}", step.ui_stage, ""
@@ -228,6 +235,9 @@ class ScriptSeller:
         if said.after == "wait":
             self.state = replace(self.state, waiting=True)
             return said.reply, step.ui_stage
+        if said.after == "follow_up":  # "bye": book the follow-up, never carry on as if they stayed
+            text, stage = self._go(jump(self.method, self.state, self.method.follow_up))
+            return f"{said.reply} {text}".strip(), stage
         if said.after == "ask":
             return self._then_ask(said.reply), step.ui_stage
         return self._carry_on(said.reply, step, rephrase=said.after == "rephrase")
@@ -278,7 +288,10 @@ class ScriptSeller:
         line from the listen call ("" when it failed a check), or None when no listen call was made."""
         text, labels = v.text, answer_labels(step)
         label, line, ack, missed = None, "", None, False
-        if labels:
+        short = step.needs and not re.search(step.needs, text, re.IGNORECASE)
+        if short:
+            empty, missed = True, True  # "I don't know where to start" to "how much a month?": no figure in it
+        elif labels:
             found = self._listener.answer(text, labels, list(self.sense.unclear),
                                           {r.label: r.min_score for r in step.listen if r.label})
             label, near = found.label, found.candidates
@@ -293,7 +306,7 @@ class ScriptSeller:
             if heard is not None:
                 missed = not heard.answered
                 empty, line, ack = empty or missed, heard.probe, heard.ack
-        if step.capture and not line and not self.state.said:  # their words asked about once a step, never twice
+        if step.capture and not line and not self.state.said and not short:  # their words asked about once a step, never twice
             line = self._shrugs.ask_meaning(text, self._question(), empty, v.ahead is not None,
                                             self.state.slots.values())  # said only if asked again
         detail = ""

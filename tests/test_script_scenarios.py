@@ -1,6 +1,7 @@
 """Live test chats A-E (round 2) as scenario tests: keen buyer, early number, re-ask wording,
 frustration, safe product answers, memory in the ack. Offline: bag-of-words embedder, fake AI.
 These prove the wiring; how well the real model hears each phrase is test_script_recognition's job."""
+import json
 from itertools import pairwise
 
 import pytest
@@ -185,7 +186,7 @@ def test_asked_line_follows_the_asks():
     assert asked_line(CAT, ScriptState(step="01")) == (CAT.steps["01"].say, "")
     assert asked_line(CAT, ScriptState(step="01", asks=1))[0] == CAT.steps["01"].probes[0]
     assert asked_line(CAT, ScriptState(step="01", asks=9))[0] == CAT.steps["01"].probes[-1]
-    assert asked_line(CAT, ScriptState(step="02", asks=1))[0] == CAT.steps["02"].say  # no probes
+    assert asked_line(CAT, ScriptState(step="05", asks=1))[0] == CAT.steps["05"].say  # no probes
 
 
 # ---- C5 frustration (chat C) -----------------------------------------------------------------
@@ -769,3 +770,77 @@ def test_who_are_you_later_in_the_call_goes_back_to_the_question_without_a_bridg
     s = seller(fake_embedder, step="goal_practical", slots={"outcome": "more money"})
     text, _ = s.reply("who are you")
     assert CAT.steps["01"].bridge not in text and not s.state.bridged and "What are you hoping" in text
+
+
+# ---- replayed calls, round 2 -----------------------------------------------------------------
+
+def test_the_money_question_needs_a_figure(fake_embedder):
+    s = seller(fake_embedder, step="02", slots={"outcome": "more money"})
+    text, _ = s.reply("I don't know where to start")  # live: taken as their number, and {number} said it later
+    assert s.state.step == "02" and "number" not in s.state.slots
+    assert text == CAT.steps["02"].probes[0]
+    s.reply("about 3k")
+    assert s.state.step == "03" and s.state.slots["number"] == "about 3k"
+
+
+def test_no_figure_after_the_asks_moves_on_unsaved(fake_embedder):
+    s = seller(fake_embedder, step="02", slots={"outcome": "more money"})
+    for reply in ("financial freedom", "enough to quit", "loads"):
+        s.reply(reply)
+    assert s.state.step == "03" and "number" not in s.state.slots
+
+
+def test_a_figure_in_words_is_a_figure(fake_embedder):
+    s = seller(fake_embedder, step="02", slots={"outcome": "more money"})
+    s.reply("five grand")
+    assert s.state.slots["number"] == "five grand"
+
+
+def test_a_shallow_goal_again_is_not_treated_as_no_answer(fake_embedder):
+    s = seller(fake_embedder, step="goal_practical", slots={"outcome": "financial freedom"})
+    s.reply("financial freedom")
+    text, _ = s.reply("more money")
+    assert not any(r in text for r in CAT.reask), text  # "No rush" reads as if they said nothing
+    assert text.startswith(CAT.steps["goal_practical"].reask[0])
+
+
+def test_the_same_fact_twice_gets_a_short_reminder(fake_embedder):
+    s = seller(fake_embedder, step="03")
+    first, _ = s.reply("what do you do")
+    again, _ = s.reply("who are you")
+    what = load_offer("shay_coaching").facts["what_we_do"]
+    assert what.again and what.again in again and first.split("¶")[0] not in again
+
+
+def test_a_fact_with_no_reminder_of_its_own_uses_the_shared_one(fake_embedder):
+    s = seller(fake_embedder, step="03")
+    s.reply("where are you based")
+    again, _ = s.reply("where are you based")
+    assert again.startswith(SENSE.told_again)
+
+
+def test_the_price_after_the_pitch_is_said_again_in_full(fake_embedder):
+    s = seller(fake_embedder, step="14", told=("price",))
+    text, _ = s.reply("how much does it cost")
+    assert load_offer("shay_coaching").facts["price"].again not in text
+
+
+def test_bye_books_the_follow_up(fake_embedder):
+    s = seller(fake_embedder, step="04")
+    text, _ = s.reply("bye")
+    assert s.state.step == CAT.follow_up and text == CAT.steps[CAT.follow_up].say
+
+
+def test_a_told_fact_survives_a_saved_call(fake_embedder):
+    s = seller(fake_embedder, step="03")
+    s.reply("where are you based")
+    saved = json.loads(json.dumps(s.snapshot()))
+    s.restore(saved)
+    assert s.state.told == ("location",)
+
+
+@pytest.mark.parametrize("reply", ["no one knows", "k", "I'd love to take a look"])
+def test_words_that_only_look_like_a_figure_are_not_one(fake_embedder, reply):
+    s = seller(fake_embedder, step="02", slots={"outcome": "more money"})
+    s.reply(reply)
+    assert "number" not in s.state.slots
