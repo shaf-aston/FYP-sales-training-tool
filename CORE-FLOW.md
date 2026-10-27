@@ -13,9 +13,7 @@ Modes are named for what the learner does.
 | Sell mode | salesperson | buyer | `core/sell_mode/buyer_session.py` `BuyerSession` | `/sell/` | `/api/sell/*` | `backend/routes/sell.py` |
 | Buy mode | customer | seller | `core/buy_mode/seller_bot.py` `SellerBot` | `/buy/` | `/api/buy/*` | `backend/routes/buy.py` |
 
-Shared routes: `backend/routes/knowledge.py` (`/api/knowledge`), `backend/routes/monitoring.py` (`/api/health`, `/api/feedback`).
-
-Open the engine for the mode you are working on. Nothing else decides the turn.
+Shared routes: `backend/routes/knowledge.py` (`/api/knowledge`), `backend/routes/monitoring.py` (`/api/health`, `/api/feedback`). Open the engine for the mode you are working on. Nothing else decides the turn.
 
 ## Where things live
 
@@ -70,10 +68,6 @@ Questions: `core/infra/utils.py` `is_question` decides if a buy-mode reply asks 
 
 Environment: `core/infra/env.py` is the only module that touches the environment (and loads `.env`); its defaults live in `config/limits.yaml`.
 
-## Words
-
-Every term, and the naming rules, live in [GLOSSARY.md](GLOSSARY.md).
-
 ## Reading a conversation
 
 Every buy-mode turn writes one log line from `core/buy_mode/seller_bot.py`:
@@ -85,13 +79,11 @@ Every buy-mode turn writes one log line from `core/buy_mode/seller_bot.py`:
 `ready:prospect`, `question`, `nudge`, `says_nothing`, `misses` (the listen call heard no answer), `hesitates`.
 
 Try the seller from the terminal (real recogniser, no AI, so plain script lines): `python scripts/chat_cli.py "more money" "to pay bills"`, or `--file replies.txt`.
-The same fields go into the `conversation_turn` analytics event. To read a whole call:
-`python scripts/show_convo.py data/logs/events [session_id]`.
+The same fields go into the `conversation_turn` analytics event. To read a whole call: `python scripts/show_convo.py data/logs/events [session_id]`.
 
 ## Logs and timings
 
-`core/infra/logs/` is the one place the app writes down what it did. `store.py` is the only writer:
-`data/logs/<stream>/<UTC day>.jsonl` (folder: `LOGS_DIR`, default in `limits.yaml`), plus a log line.
+`core/infra/logs/` is the one place the app writes down what it did. `store.py` is the only writer: `data/logs/<stream>/<UTC day>.jsonl` (folder: `LOGS_DIR`, default in `limits.yaml`), plus a log line.
 
 | Stream | Made by | Holds |
 |---|---|---|
@@ -99,11 +91,8 @@ The same fields go into the `conversation_turn` analytics event. To read a whole
 | `timings/` | `timing.py` `span` / `@timed` | how long each step took, nested: request > turn > script step > `llm` call |
 | `feedback/` | `feedback.py` `save_feedback` (from `/api/feedback`) | ratings and comments, with their session |
 
-`backend/request_log.py` switches logging on and wraps every `/api` request in the outer span (request id,
-session id, route, status; `Server-Timing` and `X-Request-ID` headers back to the browser). To time a new step,
-put `@timed` on it. Read the numbers: `python scripts/timings_report.py data/logs/timings [session_id]`.
+`backend/request_log.py` switches logging on and wraps every `/api` request in the outer span (request id, session id, route, status; `Server-Timing` and `X-Request-ID` headers back to the browser). To time a new step, put `@timed` on it. Read the numbers: `python scripts/timings_report.py data/logs/timings [session_id]`.
 
 ## Adding a product or script
 
-New offer → `config/offers/<name>.yaml`; new script → `config/methods/<name>.yaml`; then one line under
-`products:` in `config/script/engine.yaml` (`<product>: {offer: <name>, method: <name>}`). No code changes.
+New offer → `config/offers/<name>.yaml`; new script → `config/methods/<name>.yaml`; then one line under `products:` in `config/script/engine.yaml` (`<product>: {offer: <name>, method: <name>}`). No code changes.
