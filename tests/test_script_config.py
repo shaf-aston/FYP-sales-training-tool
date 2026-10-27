@@ -1,8 +1,8 @@
 """engine.yaml fails loudly when a seller is built, naming the key, not mid-call."""
 import pytest
 
-from core.loader import load_yaml
-from core.script_engine.config import check, problems
+from core.infra.loader import load_yaml
+from core.buy_mode.script_engine.config import check, problems
 
 CFG = load_yaml("script/engine.yaml")
 
@@ -38,8 +38,8 @@ def test_check_lists_every_problem_at_once():
 
 
 def test_a_seller_will_not_build_on_a_broken_config(fake_embedder):
-    from core.script_engine.method import load_common_sense, load_method, load_offer
-    from core.script_engine.seller import ScriptSeller
+    from core.buy_mode.script_engine.method import load_common_sense, load_method, load_offer
+    from core.buy_mode.script_engine.seller import ScriptSeller
 
     cfg = load_yaml("script/engine.yaml")
     cfg["prompts"]["ack"] = "Say {reply_text}"
@@ -60,7 +60,7 @@ def test_an_indexed_blank_counts_as_its_name():
 
 
 def test_an_unclear_sense_without_min_score_is_named_not_a_key_error():
-    from core.script_engine.method import parse_common_sense
+    from core.buy_mode.script_engine.method import parse_common_sense
     data = load_yaml("script/common_sense.yaml")
     data = {**data, "unclear": {k: v for k, v in data["unclear"].items() if k != "min_score"}}
     with pytest.raises(ValueError, match="unclear: min_score"):

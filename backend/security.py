@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from functools import wraps
 from typing import Any, Callable, Dict, Optional, Tuple
 
-from core.constants import (
+from core.infra.constants import (
     API_HEADERS,
     CSP,
     DEFAULT_TRUST_PROXY_HEADERS,
@@ -21,7 +21,7 @@ from core.constants import (
     SESSION_ID_MAX_CHARS,
     SESSION_ID_MIN_CHARS,
 )
-from core.env import env_flag
+from core.infra.env import env_flag
 
 from .messages import (
     FIELD_NOT_TEXT,

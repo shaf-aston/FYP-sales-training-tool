@@ -1,17 +1,17 @@
 """Buy mode's coach answers the learner's questions about the live call."""
 from types import SimpleNamespace
 
-from core import coach
-from core.enums import Stage
-from core.services.provider_router import ProviderRouter
+from core.buy_mode import coach
+from core.buy_mode.stage import Stage
+from core.infra.providers.router import ProviderRouter
 
 
 def _router(monkeypatch, *providers):
     """A real router over stub providers; the first one is the active provider."""
     by_name = {p.provider_name: p for p in providers}
-    monkeypatch.setattr("core.services.provider_router.create_provider", lambda name: by_name[name])
+    monkeypatch.setattr("core.infra.providers.router.create_provider", lambda name: by_name[name])
     monkeypatch.setattr(
-        "core.services.provider_router.list_providers", lambda fallback=False: list(by_name)
+        "core.infra.providers.router.list_providers", lambda fallback=False: list(by_name)
     )
     return ProviderRouter(providers[0].provider_name)
 

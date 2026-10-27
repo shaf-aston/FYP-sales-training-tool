@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from core.loader import load_yaml
+from core.infra.loader import load_yaml
 
 CONFIG = Path(__file__).resolve().parent.parent / "config"
 BUYER = load_yaml("buyer.yaml")

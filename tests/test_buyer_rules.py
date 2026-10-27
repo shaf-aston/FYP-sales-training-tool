@@ -2,7 +2,7 @@
 
 import pytest
 
-from core.buyer_rules import end_outcome
+from core.sell_mode.buyer_rules import end_outcome
 
 PATIENT = {"patience_turns": 10}
 

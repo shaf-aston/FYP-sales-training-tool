@@ -3,10 +3,10 @@ import json
 
 import pytest
 
-from core.loader import CONFIG_DIR, load_yaml
-from core.script_engine.engine import advance, start
-from core.script_engine.fill import blanks, offer_blanks
-from core.script_engine.method import ANY, load_common_sense, load_method, load_offer
+from core.infra.loader import CONFIG_DIR, load_yaml
+from core.buy_mode.script_engine.engine import advance, start
+from core.buy_mode.script_engine.words.fill import blanks, offer_blanks
+from core.buy_mode.script_engine.method import ANY, load_common_sense, load_method, load_offer
 
 METHODS = sorted(p.stem for p in (CONFIG_DIR / "methods").glob("*.yaml"))
 OFFER_BLANKS = {"months", "price", "setter", "pillar_1", "pillar_2", "pillar_3"}

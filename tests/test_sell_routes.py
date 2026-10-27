@@ -2,7 +2,7 @@
 import pytest
 
 from backend.messages import SELL_SESSION_NOT_FOUND
-from core.loader import load_buyer_config, load_buyer_products
+from core.infra.loader import load_buyer_config, load_buyer_products
 
 
 def test_sell_init_returns_the_opening_message(sell_client):

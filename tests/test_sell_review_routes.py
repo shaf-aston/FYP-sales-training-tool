@@ -2,7 +2,7 @@
 
 import pytest
 
-from core.buyer_session import ProviderUnavailable
+from core.sell_mode.buyer_session import ProviderUnavailable
 
 
 def test_review_annotates_each_turn_with_its_evidence(sell_client, played_session):

@@ -40,7 +40,7 @@ def test_debug_panel_references_removed_from_runtime_files():
 
 
 def test_web_search_references_removed_from_core_runtime_files():
-    files = [ROOT / "core" / "seller_bot.py", ROOT / "core" / "constants.py", ROOT / "core" / "loader.py"]
+    files = [ROOT / "core" / "buy_mode" / "seller_bot.py", ROOT / "core" / "infra" / "constants.py", ROOT / "core" / "infra" / "loader.py"]
     forbidden = [
         "load_web_search_config",
         "should_trigger_web_search",
@@ -64,6 +64,6 @@ def test_deleted_feature_files_are_absent():
 
 def test_the_dead_needs_list_is_gone():
     """Nothing read it, so it was removed rather than given a made-up meaning."""
-    from core.buyer_state import BuyerState
+    from core.sell_mode.buyer_state import BuyerState
 
     assert "needs_disclosed" not in BuyerState(readiness=0.5, difficulty="easy").to_dict()

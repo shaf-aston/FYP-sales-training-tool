@@ -1,12 +1,12 @@
 """The verdict: what a reply was heard as, checked without saying anything back."""
 import pytest
 
-from core.loader import load_yaml
-from core.script_engine.engine import ScriptState
-from core.script_engine.method import load_common_sense, load_method, load_offer
-from core.script_engine.recognise import Listener
-from core.script_engine.shrug import Shrugs
-from core.script_engine.verdict import Ear
+from core.infra.loader import load_yaml
+from core.buy_mode.script_engine.engine import ScriptState
+from core.buy_mode.script_engine.method import load_common_sense, load_method, load_offer
+from core.buy_mode.script_engine.hear.recognise import Listener
+from core.buy_mode.script_engine.hear.shrug import Shrugs
+from core.buy_mode.script_engine.hear.verdict import Ear
 
 CFG = load_yaml("script/engine.yaml")
 CAT = load_method("cat")

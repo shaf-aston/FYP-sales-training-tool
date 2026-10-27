@@ -2,7 +2,7 @@
 
 import pytest
 
-from core import constants
+from core.infra import constants
 
 
 def test_limits_file_loads_and_names_resolve():

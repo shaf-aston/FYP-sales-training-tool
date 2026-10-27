@@ -128,10 +128,10 @@ def test_a_failed_past_attempt_is_acknowledged_before_going_on(client):
 
 
 def test_a_product_can_run_its_own_method(client, monkeypatch):
-    from core.loader import load_yaml
+    from core.infra.loader import load_yaml
 
     cfg = load_yaml("script/engine.yaml")
     cfg["products"][SCRIPT_PRODUCT]["method"] = "impact_formula"
-    monkeypatch.setattr("core.script_engine.seller.engine_config", lambda: cfg)
+    monkeypatch.setattr("core.buy_mode.script_engine.seller.engine_config", lambda: cfg)
     opened, _ = _init(client)
     assert opened["message"] == "What would you like help with first?"

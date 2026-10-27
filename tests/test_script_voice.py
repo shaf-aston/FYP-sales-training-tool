@@ -1,12 +1,12 @@
 """The AI port: the seller only calls named operations, so a fake voice drives it without prompts."""
 import pytest
 
-from core.loader import load_yaml
-from core.script_engine.engine import ScriptState
-from core.script_engine.listen import Heard
-from core.script_engine.method import load_common_sense, load_method, load_offer
-from core.script_engine.seller import ScriptSeller
-from core.script_engine.voice import Voice
+from core.infra.loader import load_yaml
+from core.buy_mode.script_engine.engine import ScriptState
+from core.buy_mode.script_engine.ai.listen import Heard
+from core.buy_mode.script_engine.method import load_common_sense, load_method, load_offer
+from core.buy_mode.script_engine.seller import ScriptSeller
+from core.buy_mode.script_engine.ai.voice import Voice
 
 CFG = load_yaml("script/engine.yaml")
 OFFER = load_offer("shay_coaching")

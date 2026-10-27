@@ -7,11 +7,11 @@ import logging
 
 from flask import Blueprint, current_app, jsonify, request
 
-from core.coach import COACH_STYLES, DEFAULT_STYLE
-from core.constants import MAX_MESSAGE_LENGTH, MAX_SELLER_SESSIONS
-from core.quiz import get_quiz_question
-from core.seller_bot import SellerBot
-from core.utils import new_session_id
+from core.buy_mode.coach import COACH_STYLES, DEFAULT_STYLE
+from core.infra.constants import MAX_MESSAGE_LENGTH, MAX_SELLER_SESSIONS
+from core.training.quiz import get_quiz_question
+from core.buy_mode.seller_bot import SellerBot
+from core.infra.utils import new_session_id
 
 from ..messages import (
     COACH_FAILED,

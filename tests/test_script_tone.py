@@ -1,6 +1,6 @@
 """Tone marks (tone.py): drawn by the screen, never read by the AI. The web twin is tone.check.ts."""
-from core.script_engine.meanings import parse_meanings
-from core.script_engine.tone import join, plain, stresses
+from core.buy_mode.script_engine.hear.meanings import parse_meanings
+from core.buy_mode.script_engine.words.tone import join, plain, stresses
 
 
 def test_plain_drops_the_marks():

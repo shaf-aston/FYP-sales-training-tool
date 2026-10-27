@@ -5,10 +5,10 @@ from pathlib import Path
 
 import pytest
 
-from core.loader import load_yaml
-from core.script_engine.meanings import MeaningBank, load_meanings, parse_meanings
-from core.script_engine.recognise import Listener
-from core.script_engine.tone import stresses
+from core.infra.loader import load_yaml
+from core.buy_mode.script_engine.hear.meanings import MeaningBank, load_meanings, parse_meanings
+from core.buy_mode.script_engine.hear.recognise import Listener
+from core.buy_mode.script_engine.words.tone import stresses
 
 CFG = load_yaml("script/engine.yaml")
 MEANINGS = load_meanings()
@@ -68,7 +68,7 @@ real = pytest.mark.skipif(os.environ.get("RUN_EMBED_TESTS") != "1", reason="set 
 
 @pytest.fixture(scope="module")
 def model():
-    from core.script_engine.embedder import make_embedder
+    from core.buy_mode.script_engine.hear.embedder import make_embedder
     return make_embedder(CFG, Path(__file__).parent.parent)
 
 

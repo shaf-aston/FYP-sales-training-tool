@@ -347,7 +347,7 @@ evaluation:
     objection_handling: {no_objection_score: 60, base: 35, response_weight: 65}
     solution_presentation: {base: 40, solution_weight: 60, good: 0.35}
     conversation_flow: {base: 40, length_weight: 35, balance_weight: 25, good_length_fit: 0.7, good_balance: 0.6}
-  # The five criteria (core/sell_evaluator.py scores each by name). weight: share of the overall score;
+  # The five criteria (core/sell_mode/sell_evaluator.py scores each by name). weight: share of the overall score;
   # label: its name in strengths; praise/advice: its feedback at or above / below its "good" ratio;
   # tip: what to work on when it is among the weakest.
   criteria:

@@ -5,9 +5,9 @@ import subprocess
 
 from flask import Blueprint, current_app, jsonify, request
 
-from core.constants import MAX_FEEDBACK_COMMENT_CHARS, MAX_FEEDBACK_PAGE_CHARS
-from core.logs import save_feedback
-from core.providers import get_available_providers
+from core.infra.constants import MAX_FEEDBACK_COMMENT_CHARS, MAX_FEEDBACK_PAGE_CHARS
+from core.infra.logs import save_feedback
+from core.infra.providers import get_available_providers
 
 from ..messages import FEEDBACK_EMPTY, RATING_NOT_NUMBER, RATING_OUT_OF_RANGE
 from ..security import require_rate_limit

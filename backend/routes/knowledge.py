@@ -2,7 +2,7 @@
 
 from flask import Blueprint, jsonify, request
 
-from core.knowledge import (
+from core.sell_mode.knowledge import (
     ALLOWED_FIELDS,
     MAX_FIELD_LENGTH,
     clear_custom_knowledge,
