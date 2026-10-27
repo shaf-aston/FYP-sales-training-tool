@@ -3,7 +3,7 @@
 import re
 from dataclasses import dataclass
 
-from core.buy_mode.script_engine.engine import _question, asked_line, hear_ahead, ready_open
+from core.buy_mode.script_engine.engine import asked_line, question_of, hear_ahead, ready_open
 from core.buy_mode.script_engine.method import ANY
 from core.infra.utils import is_question, tokenize
 
@@ -31,9 +31,10 @@ class Ear:
     shrug, then an interruption that clearly beats an answer, then a question
     the step's own answers don't cover, else an answer."""
 
-    def __init__(self, cfg, method, offer, sense, listener, shrugs):
+    def __init__(self, cfg, method, offer, sense, listener, shrugs, judge):
+        """`judge(reply, {name: [examples]})`: the AI's pick of one name, or VAGUE."""
         self.cfg, self.method, self.offer, self.sense = cfg, method, offer, sense
-        self._listener, self._shrugs = listener, shrugs
+        self._listener, self._shrugs, self._judge = listener, shrugs, judge
 
     def is_question(self, text):
         return is_question(text, self.cfg)
@@ -58,7 +59,7 @@ class Ear:
 
     def _yes_or_no(self, state):
         """The step was last asked as a yes-or-no question ("Is there anything you've tried?"): "yes" answers it."""
-        words = tokenize(_question(asked_line(self.method, state)[0]))
+        words = tokenize(question_of(asked_line(self.method, state)[0]))
         return bool(words) and words[0] in self.cfg["closed_question_starts"]
 
     def _unnudged(self, text):
@@ -97,7 +98,21 @@ class Ear:
             floors["ready:prospect"] = self.method.ready.min_score
         takes_any = any(r.label == ANY for r in step.listen)
         won = self._listener.interruption(text, labels, answer_labels(step), takes_any, asking, floors)
+        if not won and not opened and not asking:
+            won = self._judged_objection(text, step, dict(objections))
         return tuple(won.split(":", 1)) if won else (None, "")
+
+    def _judged_objection(self, text, step, objections):
+        """An objection that scored in the grey band before the price ("10k seems like a lot", 0.81): too close
+        to the step's answers for the embedder alone, so the AI picks objection or answer. AI down = answer."""
+        found = self._listener.match(text, {k: o.examples for k, o in objections.items()})
+        if not found.label or found.score < self.cfg["early_objection_judge_score"]:
+            return None
+        answers = [f"answering '{question_of(step.say_plain or step.say)}'"]  # the question asked, so the AI judges in context
+        examples = objections[found.label].examples
+        nearest = self._listener.match(text, {e: [e] for e in examples}).candidates  # the AI sees the closest ones
+        pick = self._judge(text, {f"{found.label} objection": list(nearest) or examples, "answer": answers})
+        return f"objection:{found.label}" if pick == f"{found.label} objection" else None
 
     def _answers(self, text, step):
         """The reply matches one of the step's own answers, even with a question in it ("yeah makes

@@ -21,6 +21,7 @@ class Turn:
     reply: str = ""         # what they just said
     phrases: tuple = ()     # their phrases this one says back
     meant: tuple = ()       # meaning lines this one says
+    side: bool = False      # a side reply (fact, parked worry) that said the step again
 
 
 class Echo:

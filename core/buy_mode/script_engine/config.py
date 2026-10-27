@@ -8,7 +8,7 @@ NUMBER = (int, float)
 TYPES = {
     "method": str, "products": dict, "default_product": str,
     "embed_model": str, "embed_cache_dir": str, "embed_threads": int, "embed_batch_size": int,
-    "threshold": NUMBER, "early_objection_min_score": NUMBER, "interrupt_threshold": NUMBER,
+    "threshold": NUMBER, "early_objection_min_score": NUMBER, "early_objection_judge_score": NUMBER, "interrupt_threshold": NUMBER,
     "question_answer_min_score": NUMBER, "clause_min_words": int, "clause_breaks": list,
     "near_miss": NUMBER, "margin": NUMBER, "close_call_k": int, "spell_cutoff": NUMBER,
     "max_words": int, "slot_words": int, "echo_term_words": int, "echo_repeats": int, "objection_entries": int, "misses": int, "spell_min_letters": int,
