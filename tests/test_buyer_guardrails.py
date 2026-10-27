@@ -1,5 +1,5 @@
 """AI-buyer replies may not close the deal on their own."""
-from core.buyer_guardrails import check_buyer_reply
+from core.sell_mode.buyer_guardrails import check_buyer_reply
 
 
 def test_buyer_reply_cannot_close_the_deal_itself():

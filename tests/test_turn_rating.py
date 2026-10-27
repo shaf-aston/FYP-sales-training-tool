@@ -2,8 +2,8 @@
 
 import pytest
 
-from core.buyer_session import BuyerSession
-from core.turn_rating import load_turn_rating, rate_turn
+from core.sell_mode.buyer_session import BuyerSession
+from core.training.turn_rating import load_turn_rating, rate_turn
 
 
 def test_closed_question_does_not_beat_a_real_discovery_question():
@@ -164,7 +164,7 @@ def test_an_empty_turn_is_scored_without_blowing_up(message):
 
 def test_hint_names_the_worst_problem_without_ai():
     """A pushy, early pitch gets the pressure tip: problems outrank strengths."""
-    from core.buyer_rules import coaching_hint
+    from core.sell_mode.buyer_rules import coaching_hint
 
     score = rate_turn("Act now, this is limited time and the price goes up, so hurry.", completed_turns=0)
     hint = coaching_hint(score.signals)

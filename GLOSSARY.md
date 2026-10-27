@@ -12,9 +12,9 @@ New idea → add it here first, then name things after it. A word in the "never"
 | **sell mode** | The learner sells. The AI is the **buyer** and pushes back. | page `/sell/`, API `/api/sell/*`, `backend/routes/sell.py`, `Mode = "sell"` |
 | **customer** | The learner in buy mode. | coach prompt label `CUSTOMER` (`config/coach.yaml`) |
 | **salesperson** | The learner in sell mode. | "your turn", `rate_turn` |
-| **seller** | The AI in buy mode. | `SellerBot` (`core/seller_bot.py`), route variable `seller` |
-| **buyer** | The AI in sell mode. | `BuyerSession` (`core/buyer_session.py`), route variable `buyer` |
-| **prospect** | The person being sold to, **inside the buy-mode script only** (`config/methods/`, `core/script_engine/`). Never a mode. | `prospect_pronouns`, label `ready:prospect` |
+| **seller** | The AI in buy mode. | `SellerBot` (`core/buy_mode/seller_bot.py`), route variable `seller` |
+| **buyer** | The AI in sell mode. | `BuyerSession` (`core/sell_mode/buyer_session.py`), route variable `buyer` |
+| **prospect** | The person being sold to, **inside the buy-mode script only** (`config/methods/`, `core/buy_mode/script_engine/`). Never a mode. | `prospect_pronouns`, label `ready:prospect` |
 
 Rule: modes are named for the learner; engines and stores for the AI (`seller_sessions` hold buy-mode sessions).
 
@@ -22,10 +22,10 @@ Rule: modes are named for the learner; engines and stores for the AI (`seller_se
 
 | Term | Meaning | Owner |
 |---|---|---|
-| **session** | One practice run, keyed by `session_id`, holding one engine. Sent as the `X-Session-ID` header. | `core/utils.py` `new_session_id`, `backend/security.py` `SessionStore` |
+| **session** | One practice run, keyed by `session_id`, holding one engine. Sent as the `X-Session-ID` header. | `core/infra/utils.py` `new_session_id`, `backend/security.py` `SessionStore` |
 | **turn** | One learner line plus the AI reply. Counted from 1 in the API. | `BuyerState.turn_count`, `CallFlow.user_turn_count` |
 | **history** | The full transcript, greeting first. `historyIndex` (web) is a message's place in it. | `CallFlow.conversation_history`, `history_json` |
-| **stage** | Where the sale is: intent → logical → emotional → pitch → outcome. `outcome` is the closing stage, not the result. | `core/enums.py` `Stage`, step `ui_stage` |
+| **stage** | Where the sale is: intent → logical → emotional → pitch → outcome. `outcome` is the closing stage, not the result. | `core/buy_mode/stage.py` `Stage`, step `ui_stage` |
 | **product group** | Picker grouping of sell-mode products: transactional or consultative. | `config/buyer.yaml` `product_groups` |
 | **epoch** | Web counter bumped when the conversation is replaced; late replies from the old one are dropped. | `SessionContext.tsx` |
 
@@ -40,8 +40,8 @@ Rule: modes are named for the learner; engines and stores for the AI (`seller_se
 | **outcome** | How a sell session ended: `sold`, `walked`, or `active` (not over). | `buyer_rules.end_outcome`, `BuyerState.ended` |
 | **patience** | Turns a cold buyer waits before walking (`patience_turns`). | `buyer.yaml` |
 | **objection** | Buyer pushback. Sell mode draws from an **objection bank**, paced by `ObjectionPacer`; **real objections** come from recorded calls; a **chosen objection** is one the learner typed in setup. | `buyer_rules.py`, `buyer.yaml` |
-| **guardrail** | Check on each AI buyer reply (e.g. no early "yes, I'll buy"). | `core/buyer_guardrails.py` `CheckedReply` |
-| **knowledge** | The learner's own product notes, given to the AI buyer as research notes. | `core/knowledge.py`, `config/knowledge_fields.yaml`, page `/knowledge/` |
+| **guardrail** | Check on each AI buyer reply (e.g. no early "yes, I'll buy"). | `core/sell_mode/buyer_guardrails.py` `CheckedReply` |
+| **knowledge** | The learner's own product notes, given to the AI buyer as research notes. | `core/sell_mode/knowledge.py`, `config/knowledge_fields.yaml`, page `/knowledge/` |
 
 ## Buy mode (the scripted seller)
 
@@ -80,23 +80,23 @@ Rule: modes are named for the learner; engines and stores for the AI (`seller_se
 
 | Term | Meaning | Owner |
 |---|---|---|
-| **rating** | 1 to 5, one sell-mode turn. | `core/turn_rating.py` `rate_turn`, `config/turn_rating.yaml` |
+| **rating** | 1 to 5, one sell-mode turn. | `core/training/turn_rating.py` `rate_turn`, `config/turn_rating.yaml` |
 | **signal** | A named thing a turn did (open question, mirroring...) with a weight. Only this meaning. | `turn_rating.yaml` `weights` |
-| **score** | 0 to 100, one whole session; also most quiz answers (the stage quiz scores 0, partial or 1; the web shows all as %). | `core/sell_evaluator.py`, `core/quiz.py`, web `quiz/scoring.ts` |
+| **score** | 0 to 100, one whole session; also most quiz answers (the stage quiz scores 0, partial or 1; the web shows all as %). | `core/sell_mode/sell_evaluator.py`, `core/training/quiz.py`, web `quiz/scoring.ts` |
 | **grade** | Letter from the score. | `sell_evaluator.py`, web `gradeTone` |
 | **criterion** | One weighted area of the session score. | `buyer.yaml` `evaluation.criteria` |
 | **evaluation** | Final score, grade and outcome. Shown inline, as a modal or in the panel (`evalDisplay`). | `evaluate_sell_session` |
-| **review** ("Walk it back") | Turn-by-turn replay with reasons. A **pivotal turn** cost ground. **Redo** retries one. | `core/session_review.py`, `BuyerSession.redo` |
+| **review** ("Walk it back") | Turn-by-turn replay with reasons. A **pivotal turn** cost ground. **Redo** retries one. | `core/sell_mode/session_review.py`, `BuyerSession.redo` |
 | **hint** | One-line sell-mode tip after a turn. | `buyer_rules.coaching_hint` |
-| **coach** | Buy-mode guidance: **coach notes** per step and answers to "Ask the coach" in a **coach style** (tactical, socratic, teacher). Wire key is still `training`. | `core/coach.py`, `config/coach.yaml` |
-| **quiz** | Buy mode: name the stage, next move, direction. Sell mode: rewrite one of your turns. | `core/quiz.py`, `config/quiz.yaml` |
-| **drill** | A strong line with its key move blanked, brought back on a spaced schedule. | `core/drills.py`, `config/drills.yaml` |
+| **coach** | Buy-mode guidance: **coach notes** per step and answers to "Ask the coach" in a **coach style** (tactical, socratic, teacher). Wire key is still `training`. | `core/buy_mode/coach.py`, `config/coach.yaml` |
+| **quiz** | Buy mode: name the stage, next move, direction. Sell mode: rewrite one of your turns. | `core/training/quiz.py`, `config/quiz.yaml` |
+| **drill** | A strong line with its key move blanked, brought back on a spaced schedule. | `core/training/drills.py`, `config/drills.yaml` |
 
 ## Plumbing
 
 | Term | Meaning | Owner |
 |---|---|---|
-| **provider** | One LLM service behind the shared interface. **Router** tries them in order. **LLM profile**: named call settings, `**LLM["buyer_reply"]`. | `core/providers/`, `core/services/provider_router.py`, `config/limits.yaml` |
+| **provider** | One LLM service behind the shared interface. **Router** tries them in order. **LLM profile**: named call settings, `**LLM["buyer_reply"]`. | `core/infra/providers/`, `core/infra/providers/router.py`, `config/limits.yaml` |
 | **session store** | Live sessions with an idle timeout: `seller_sessions`, `buyer_sessions`. | `backend/security.py` `SessionStore` |
 | **rate bucket** | Request limit per route group: `buy_init`, `buy_chat`, `sell`. | `limits.yaml` `rate_limits` |
 | **hands-free** | Speak, it sends, the reply is read aloud. | web `handsFree` |
@@ -108,7 +108,7 @@ Rule: modes are named for the learner; engines and stores for the AI (`seller_se
 - Files `snake_case.py`, named for what they own: `buyer_*` = sell-mode AI buyer, `seller_*` / `script_engine/` = buy-mode AI seller, `sell_*` = sell-mode services.
 - Functions: `load_*` read YAML, `build_*` assemble a result, `rate_*` / `score_*` grade, `_name` private. Classes are nouns (`BuyerState`, `SessionStore`); exceptions say what went wrong (`UnknownPersona`).
 - Session variables are named for the AI: `seller` (buy), `buyer` (sell). Ids are `session_id`.
-- Constants `UPPER_CASE`, only read from config: tunable numbers come from `config/limits.yaml` via `core/constants.py`.
+- Constants `UPPER_CASE`, only read from config: tunable numbers come from `config/limits.yaml` via `core/infra/constants.py`.
 
 **Config** (`config/`)
 - One file per owner, named like its module: `buyer.yaml` → `buyer_session.py`, `turn_rating.yaml` → `turn_rating.py`, `quiz.yaml` → `quiz.py`, `coach.yaml` → `coach.py`, `drills.yaml` → `drills.py`, `script/engine.yaml` → `script_engine/`.

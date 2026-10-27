@@ -4,9 +4,9 @@ import json
 
 import pytest
 
-import core.quiz as quiz
-from core.providers.base import LLMResponse
-from core.services.provider_router import ProviderChatResult
+import core.training.quiz as quiz
+from core.infra.providers.base import LLMResponse
+from core.infra.providers.router import ProviderChatResult
 
 _CONFIG = quiz.load_quiz()
 
@@ -39,7 +39,7 @@ def test_get_stage_rubric_reads_the_configured_rubric_and_fails_loud_on_a_missin
 
 
 def test_every_stage_has_a_rubric_and_a_plain_name():
-    from core.enums import Stage
+    from core.buy_mode.stage import Stage
 
     for stage in Stage:
         assert quiz.get_stage_rubric(stage)["key_concepts"]
@@ -142,7 +142,7 @@ def test_direction_falls_back_to_rule_scoring_when_llm_fails(monkeypatch):
 
 
 def test_stage_feedback_never_shows_raw_enums_or_jargon():
-    from core.enums import Stage
+    from core.buy_mode.stage import Stage
 
     result = quiz.score_stage_answer("no idea", Stage.INTENT)
 
@@ -179,7 +179,7 @@ def test_sell_quiz_asks_about_the_sellers_weakest_turn_and_scores_a_better_line(
 
 
 def test_sell_quiz_explains_why_in_the_turn_reviews_own_words():
-    from core.turn_rating import REASONS
+    from core.training.turn_rating import REASONS
 
     turn = {"turn": 1, "seller": "Great weather.", "rating": 2,
             "buyer_before": "My van keeps breaking down.", "signals": ["closed_question"]}

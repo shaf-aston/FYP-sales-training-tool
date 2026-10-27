@@ -1,8 +1,8 @@
 """Shrugs: what counts as saying nothing, and when their words are asked about."""
-from core.loader import load_yaml
-from core.script_engine.method import load_common_sense, load_method
-from core.script_engine.recognise import Listener
-from core.script_engine.shrug import Shrugs
+from core.infra.loader import load_yaml
+from core.buy_mode.script_engine.method import load_common_sense, load_method
+from core.buy_mode.script_engine.hear.recognise import Listener
+from core.buy_mode.script_engine.hear.shrug import Shrugs
 
 CFG = load_yaml("script/engine.yaml")
 CAT = load_method("cat")

@@ -71,7 +71,7 @@ Start with [`CORE-FLOW.md`](CORE-FLOW.md) (the core flow, file by file) and [`GL
 | Folder | Holds |
 |---|---|
 | `backend/` | Flask app, routes, security (rate limits, input checks, sessions) |
-| `core/` | script engine, buyer, judge, quiz, drills |
+| `core/` | `buy_mode/` (scripted seller), `sell_mode/` (AI buyer), `training/` (quiz, drills, rating), `infra/` (config, logs, AI providers) |
 | `config/` | scripts, products, buyer profiles, drills |
 | `web/` | Next.js + React app; built copy in `web/out` is what Flask serves (see `web/CORE-FLOW.md`) |
 | `tests/` | unit and route tests |

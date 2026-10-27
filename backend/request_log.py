@@ -9,8 +9,8 @@ import logging
 import time
 import uuid
 
-from core.constants import LOG_LEVEL, SESSION_ID_MAX_CHARS
-from core.logs import request_context, span
+from core.infra.constants import LOG_LEVEL, SESSION_ID_MAX_CHARS
+from core.infra.logs import request_context, span
 
 logger = logging.getLogger(__name__)
 _MAX_PATH_CHARS = 200  # paths are learner-controlled; keep log lines short

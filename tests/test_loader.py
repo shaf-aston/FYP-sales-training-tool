@@ -1,6 +1,6 @@
 """Tests for loader hardening and config isolation."""
 
-import core.loader as loader
+import core.infra.loader as loader
 
 
 def test_load_yaml_returns_independent_copies():

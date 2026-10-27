@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from core.buyer_session import BuyerSession
-from core.loader import load_buyer_config
-from core.session_review import build_review, pick_pivotal_turns
+from core.sell_mode.buyer_session import BuyerSession
+from core.infra.loader import load_buyer_config
+from core.sell_mode.session_review import build_review, pick_pivotal_turns
 
 ROOT = Path(__file__).resolve().parent.parent
 

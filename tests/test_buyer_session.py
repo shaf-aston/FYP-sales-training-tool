@@ -2,8 +2,8 @@
 
 import pytest
 
-from core.buyer_session import BuyerSession
-from core.providers.base import LLMResponse
+from core.sell_mode.buyer_session import BuyerSession
+from core.infra.providers.base import LLMResponse
 
 
 @pytest.fixture(autouse=True)
@@ -130,7 +130,7 @@ def test_a_live_turn_answers_first_then_adds_the_scripted_objection_and_counts_i
 def test_a_turn_that_never_reached_the_buyer_leaves_no_trace(stub_buyer):
     """An outage must not count the turn, move readiness, or leave a half turn
     in the transcript - otherwise resending the same line banks it twice."""
-    from core.buyer_session import ProviderUnavailable
+    from core.sell_mode.buyer_session import ProviderUnavailable
 
     buyer = session("medium", "outage")
     buyer.conversation_history = [{"role": "assistant", "content": "Hi there."}]

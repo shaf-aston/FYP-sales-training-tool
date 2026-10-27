@@ -4,13 +4,13 @@ import logging
 
 import pytest
 
-from core.loader import CONFIG_DIR, load_yaml
-from core.script_engine.checks import CheckContext, check, clip
-from core.script_engine.engine import ScriptState
-from core.script_engine.fill import Filler
-from core.script_engine.judge import VAGUE, judge
-from core.script_engine.method import load_common_sense, load_method, load_offer
-from core.script_engine.seller import ScriptSeller
+from core.infra.loader import CONFIG_DIR, load_yaml
+from core.buy_mode.script_engine.ai.checks import CheckContext, check, clip
+from core.buy_mode.script_engine.engine import ScriptState
+from core.buy_mode.script_engine.words.fill import Filler
+from core.buy_mode.script_engine.ai.judge import VAGUE, judge
+from core.buy_mode.script_engine.method import load_common_sense, load_method, load_offer
+from core.buy_mode.script_engine.seller import ScriptSeller
 
 CFG = load_yaml("script/engine.yaml")
 OFFER = load_offer("shay_coaching")
@@ -357,7 +357,7 @@ def _uncovered_records(caplog):
 
 
 def test_a_judged_close_call_survives_rewind_and_replay():
-    from core.seller_bot import SellerBot
+    from core.buy_mode.seller_bot import SellerBot
 
     bot = SellerBot(provider_type="dummy", product_type="high_ticket_sales_mentorship")
     bot.seller = at(_close_call_seller(lambda p, n: "agrees"), "18")
@@ -389,7 +389,7 @@ def test_ai_is_skipped_for_the_rest_of_a_turn_after_one_failure(fake_embedder):
 
 
 def _gate(**override):
-    from core.script_engine.ai_gate import AiGate
+    from core.buy_mode.script_engine.ai.gate import AiGate
     return AiGate({**CFG, **override})
 
 
@@ -514,7 +514,7 @@ def test_a_question_word_without_a_question_mark_still_counts(fake_embedder):
     ("how I see it is I need more time", False),
 ])
 def test_question_detection_uses_the_opening_words_or_a_question_mark(text, expected):
-    from core.utils import is_question
+    from core.infra.utils import is_question
     assert is_question(text, CFG) is expected
 
 
@@ -558,8 +558,8 @@ def test_scripted_coaching_note_comes_from_the_step_without_ai(fake_embedder):
 
 def test_checked_line_retries_then_gives_up_on_rule_breaking_ai():
     """Every AI sentence goes through one loop: a bad line is retried, never used."""
-    from core.script_engine.ai_line import checked_line
-    from core.script_engine.checks import CheckContext
+    from core.buy_mode.script_engine.ai.line import checked_line
+    from core.buy_mode.script_engine.ai.checks import CheckContext
 
     cfg = {"ai_retries": 1, "log_text_chars": 50}
     ctx = CheckContext(max_words=10, questions=0, price_ok=False, price="£3000")
@@ -666,7 +666,7 @@ def test_parked_worries_survive_a_rewind_snapshot():
     ({"objections.money.early": "Is money the issue?"}, "early line"),
 ])
 def test_broken_revisit_settings_fail_loud(change, error):
-    from core.script_engine.method import CONFIG_DIR, _read, parse_method
+    from core.buy_mode.script_engine.method import CONFIG_DIR, _read, parse_method
 
     data, matrix = _read(CONFIG_DIR / "methods", "cat"), _read(CONFIG_DIR / "script", "objection_matrix")
     (key, value), = change.items()

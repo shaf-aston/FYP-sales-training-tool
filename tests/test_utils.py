@@ -1,5 +1,5 @@
 """The two helpers quiz.py and sell_evaluator.py used to each carry a copy of."""
-from core.utils import merge_unique_items, tokenize
+from core.infra.utils import merge_unique_items, tokenize
 
 
 def test_tokenize_lowercases_and_keeps_apostrophes():

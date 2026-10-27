@@ -13,7 +13,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from core.script_engine.seller import build_seller, resolve_product  # noqa: E402
+from core.buy_mode.script_engine.seller import build_seller, resolve_product  # noqa: E402
 
 
 class NoAi:

@@ -1,7 +1,7 @@
 """The logs a real chat leaves behind: events per session, and timings nested under each request."""
 import pytest
 
-from core.logs import SessionAnalytics, span
+from core.infra.logs import SessionAnalytics, span
 
 SCRIPT_PRODUCT = "high_ticket_sales_mentorship"
 

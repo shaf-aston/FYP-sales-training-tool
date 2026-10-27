@@ -22,7 +22,7 @@ from backend.security import (  # noqa: E402
     SessionStore,
     initialize_security,
 )
-from core.constants import (  # noqa: E402
+from core.infra.constants import (  # noqa: E402
     BUYER_IDLE_MINUTES,
     CLEANUP_INTERVAL_SECONDS,
     DEFAULT_ALLOWED_ORIGINS,
@@ -31,8 +31,8 @@ from core.constants import (  # noqa: E402
     SELLER_IDLE_MINUTES,
     SERVER_PORT,
 )
-from core.env import env_flag, env_str  # noqa: E402
-from core.script_engine.seller import shared_embedder  # noqa: E402
+from core.infra.env import env_flag, env_str  # noqa: E402
+from core.buy_mode.script_engine.seller import shared_embedder  # noqa: E402
 
 configure_logging()  # before Flask, so the app's logger shares the one handler
 

@@ -12,8 +12,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from core.loader import CONFIG_DIR, load_buyer_config  # noqa: E402
-from core.real_calls import extract_objections  # noqa: E402
+from core.infra.loader import CONFIG_DIR, load_buyer_config  # noqa: E402
+from core.sell_mode.real_calls import extract_objections  # noqa: E402
 
 
 def main() -> None:
