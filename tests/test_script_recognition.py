@@ -263,6 +263,14 @@ def test_vague_opening_answer_gets_a_dig_not_an_objection_line():
     assert seller.sense.park not in text and seller.state.step == "01"
 
 
+@pytest.mark.parametrize("reply", ["I'm not paying you anything", "you're not getting my money"])
+def test_refusing_to_pay_at_the_start_is_the_money_worry_not_a_goal(reply):
+    seller = _real_seller()
+    text, _ = seller.reply(reply)  # live: "I'm not giving you money" was dug into as their goal
+    assert text.startswith(seller.method.objections["money"].early) and seller.state.step == "01"
+    assert "outcome" not in seller.state.slots
+
+
 def test_failed_past_attempt_gets_an_acknowledgement():
     from core.script_engine.engine import ScriptState
 

@@ -34,6 +34,8 @@ Buy mode: `buy.py` → `SellerBot.chat` → `core/script_engine/` (scripted line
 One seller turn (`script_engine/seller.py` `ScriptSeller.reply`; every word and list in YAML). Who does what:
 `verdict.py` `Ear.hear` decides what the reply was heard as, in the order below, and returns one `Verdict` → `seller.py` answers that verdict → `engine.py` (pure functions) picks the next line → `voice.py` `Voice` is the only door to the AI (listen / ack / answer / judge, every prompt and check, shut for the rest of a turn after one failure). `shrug.py` says whether a reply said nothing and how to ask what they meant. `config.py` checks `engine.yaml` when a seller is built (key types, prompt blanks) and names every problem at once.
 
+Once the call has ended (a step with nowhere to go: paid, or the follow-up booked) every reply gets `ended`.
+
 1. A reply that says nothing ("ok") is heard as an answer only.
 2. `hear_ahead` (not on questions): an answer to a later step given early (a step's `answered_by`, e.g. "I want 5k a month") is kept, and that step is skipped when reached.
 3. One recognise pass over interruptions (`script/common_sense.yaml`), product facts, objections and the keen-buyer `ready` examples. Each (except a product fact, never an answer) must beat reading the reply as the step's own answer; `ready` and items with `min_score` must also clear their floor.

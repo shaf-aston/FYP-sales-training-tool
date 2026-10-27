@@ -844,3 +844,11 @@ def test_words_that_only_look_like_a_figure_are_not_one(fake_embedder, reply):
     s = seller(fake_embedder, step="02", slots={"outcome": "more money"})
     s.reply(reply)
     assert "number" not in s.state.slots
+
+
+@pytest.mark.parametrize("end", ["later", "end"])
+def test_after_the_call_has_ended_every_reply_gets_the_sign_off(fake_embedder, end):
+    s = seller(fake_embedder, step=end)
+    for reply in ("bye", "ok thanks", "how much was it again?"):
+        text, _ = s.reply(reply)  # live: "bye" after the follow-up line said that line again
+        assert text == SENSE.ended and s.state.step == end

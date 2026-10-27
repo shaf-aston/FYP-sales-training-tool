@@ -138,6 +138,8 @@ class ScriptSeller:
         self._voice.new_turn()
         self._turn = Turn(text)
         step = self.method.steps[self.state.step]
+        if not step.routes and self.sense.ended:  # the call is over: "bye" again never re-books the follow-up
+            return self.sense.ended, step.ui_stage, "ended"
         opened = price_open(self.method, self.state.step)
         v = self._ear.hear(text, self.state, opened)
         bridged = self.state.bridged

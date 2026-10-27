@@ -26,6 +26,7 @@ unclear:
              "I haven't thought about it", "hard to say", "it depends", "not sure what to say",
              "I can't think of anything", "beats me", "no clue", "maybe", "eh", "good question",
              "let me think", "who knows", "anything", "I guess", "umm"]
+ended: "Speak soon."   # draft: any reply once the call has ended (booked the follow-up, or paid)
 told_again: "Like I said a moment ago."   # draft: a fact asked a second time with no `again` of its own
 # Their reply had words but not the answer ("stuff", "make more money"): ask what they meant by them.
 ask_meaning: "What do you mean by {said|$|wanting to $}?"   # draft: the owner's ask, our wording
