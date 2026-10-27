@@ -3,7 +3,7 @@
 import re
 from dataclasses import dataclass
 
-from core.buy_mode.script_engine.engine import _question, asked_line, hear_ahead, ready_open
+from core.buy_mode.script_engine.engine import asked_line, question_of, hear_ahead, ready_open
 from core.buy_mode.script_engine.method import ANY
 from core.infra.utils import is_question, tokenize
 
@@ -59,7 +59,7 @@ class Ear:
 
     def _yes_or_no(self, state):
         """The step was last asked as a yes-or-no question ("Is there anything you've tried?"): "yes" answers it."""
-        words = tokenize(_question(asked_line(self.method, state)[0]))
+        words = tokenize(question_of(asked_line(self.method, state)[0]))
         return bool(words) and words[0] in self.cfg["closed_question_starts"]
 
     def _unnudged(self, text):
@@ -108,7 +108,7 @@ class Ear:
         found = self._listener.match(text, {k: o.examples for k, o in objections.items()})
         if not found.label or found.score < self.cfg["early_objection_judge_score"]:
             return None
-        answers = [f"answering '{_question(step.say_plain or step.say)}'"]  # the question asked, so the AI judges in context
+        answers = [f"answering '{question_of(step.say_plain or step.say)}'"]  # the question asked, so the AI judges in context
         examples = objections[found.label].examples
         nearest = self._listener.match(text, {e: [e] for e in examples}).candidates  # the AI sees the closest ones
         pick = self._judge(text, {f"{found.label} objection": list(nearest) or examples, "answer": answers})

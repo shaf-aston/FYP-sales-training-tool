@@ -13,11 +13,10 @@ from core.buy_mode.script_engine.hear.embedder import make_embedder
 from core.buy_mode.script_engine.engine import (
     ScriptState,
     advance,
-    ask_again,
+    carry_on,
     asked_line,
     asks_left,
     jump,
-    move_on,
     object_to,
     park,
     price_open,
@@ -88,7 +87,6 @@ class ScriptSeller:
         self._echo = Echo(cfg)
         self._meanings = MeaningBank(cfg, meanings or load_meanings(), self._listener)
         self._turn = Turn()
-        self._repeated = False  # this turn began right after a side reply re-asked the step: see `_then_ask`
         embedder.warm(examples + self._meanings.examples())
 
     def _script_examples(self):
@@ -139,18 +137,18 @@ class ScriptSeller:
         step = self.method.steps[self.state.step]
         opened = price_open(self.method, self.state.step)
         v = self._ear.hear(text, self.state, opened)
-        bridged, self._repeated = self.state.bridged, self.state.repeated
-        self.state = replace(v.ahead or self.state, waiting=False, bridged=False, repeated=False)  # early answers are kept whatever it was
+        bridged = self.state.bridged
+        self.state = replace(v.ahead or self.state, waiting=False, bridged=False)  # early answers are kept whatever it was
         if bridged and v.kind in ("answer", "says_nothing"):  # their reply to the getting-to-know-you question
             return self._then_ask(self.cfg["bridge_ack"]), step.ui_stage, "bridge"
         said, ui_stage, detail = self._respond(v, step, opened)
-        self.state = Echo.settle(self.state, self._turn)
+        self.state = replace(Echo.settle(self.state, self._turn), repeated=self._turn.side)
         return said, ui_stage, detail or v.heard_as
 
     def _respond(self, v, step, opened):
         """(text, ui_stage, heard_as detail or "")."""
         if v.kind == "nudge":
-            return *self._carry_on(self.sense.nudge, step, rephrase=False), ""
+            return *self._carry_on(self.sense.nudge), ""
         if v.kind == "says_nothing":
             move, _, detail = self._listen(v, step, opened, empty=True)
             self.state = move.state
@@ -230,16 +228,12 @@ class ScriptSeller:
             return said.reply, step.ui_stage
         if said.after == "ask":
             return self._then_ask(said.reply), step.ui_stage
-        return self._carry_on(said.reply, step, rephrase=said.after == "rephrase")
+        return self._carry_on(said.reply, rephrase=said.after == "rephrase")
 
-    def _carry_on(self, lead, step, rephrase):
+    def _carry_on(self, lead, rephrase=False):
         """`lead`, then the step in other words; a step with no other words moves on instead (without
         taking the reply as its answer), so the same line is never said twice in a row."""
-        if rephrase or step.probes:
-            move = ask_again(self.method, self.state)
-        else:
-            move = move_on(self.method, self.state)
-        text, stage = self._go(move)
+        text, stage = self._go(carry_on(self.method, self.state, rephrase))
         return f"{lead} {text}", stage
 
     def _hesitates(self, move):
@@ -289,12 +283,12 @@ class ScriptSeller:
                     label = step.unsure  # every near meaning is a real answer: take the step's safe one, don't ask again
         elif self.cfg["listen"] and step.capture and not (empty and not asks_left(self.method, self.state, self.cfg["misses"])):
             concept = f"{step.name}: {step.note}" if step.note else step.name  # the AI hears for it
-            heard = self._voice.listen(text, concept, self._question(), self._earlier(step), opened)
+            heard = self._voice.listen(text, concept, self._asked_text(), self._earlier(step), opened)
             if heard is not None:
                 missed = not heard.answered
                 empty, line, ack = empty or missed, heard.probe, heard.ack
         if step.capture and not line and not self.state.said:  # their words asked about once a step, never twice
-            line = self._shrugs.ask_meaning(text, self._question(), empty, v.ahead is not None,
+            line = self._shrugs.ask_meaning(text, self._asked_text(), empty, v.ahead is not None,
                                             self.state.slots.values())  # said only if asked again
         detail = ""
         if missed:
@@ -303,7 +297,7 @@ class ScriptSeller:
             detail = f"answer:{label}" if label else ("answer:any" if not labels else "answer:unclear")
         return advance(self.method, self.state, label, text, empty, line, self.cfg["misses"]), ack, detail
 
-    def _question(self):
+    def _asked_text(self):
         """The step's question as it was just asked, blanks filled, tone marks off."""
         asked, plain = asked_line(self.method, self.state)
         return tone.plain(self._filler.fill(asked, self.state.slots) or plain
@@ -326,9 +320,9 @@ class ScriptSeller:
         """`lead`, then the current question again. A step that asks nothing (a statement) is not
         said again: a fact answered at a statement step said the statement twice. Said again once: a second
         side reply in a row gets the step in other words, or moves on (`_carry_on`), never the same line."""
-        if self._repeated:
-            return self._carry_on(lead.strip(), self.method.steps[self.state.step], rephrase=False)[0]
-        self.state = replace(self.state, repeated=True)
+        self._turn.side = True
+        if self.state.repeated:
+            return self._carry_on(lead.strip())[0]
         say, say_plain = asked_line(self.method, self.state)  # the words last used, not always the first
         question = self._line(self.method.steps[self.state.step], say, "", say_plain, self.state.slots,
                               theirs=bool(self.state.asked))

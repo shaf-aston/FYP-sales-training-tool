@@ -19,7 +19,7 @@ class ScriptState:
     quoted: bool = False   # the last message said their words back (the echo budget, echo.py)
     echoed: tuple = ()     # their phrases said back this call, once per time said
     meant: tuple = ()      # meaning lines said this call
-    repeated: bool = False  # the last message said the step's question again after a side reply: next time, other words
+    repeated: bool = False  # the last message was a side reply that said the step again: the next one uses other words (seller `_then_ask`)
     bridged: bool = False  # the last message ended on a step's `bridge` question: the next reply to it is heard, not saved
 
 
@@ -89,6 +89,12 @@ def ask_again(method, state):
     return _ask_again(method, state, method.steps[state.step], lead=False)
 
 
+def carry_on(method, state, rephrase=False):
+    """The step in other words; a step with no other words is moved on from (the reply not taken as its
+    answer), so the same line is never said twice in a row."""
+    return ask_again(method, state) if rephrase or method.steps[state.step].probes else move_on(method, state)
+
+
 def _limit(step, misses):
     """How many times the step is asked again: `misses` for a step that captures an answer, else once per probe."""
     return misses if step.capture and misses else len(step.probes or (step.say,))
@@ -115,7 +121,7 @@ def _ask_again(method, state, step, ack="", line="", misses=0, lead=True):
     elif used < len(step.probes):
         said = step.probes[used]
     else:
-        said = step.probes[-1] if step.probes else _question(step.say)
+        said = step.probes[-1] if step.probes else question_of(step.say)
         turn = used - len(step.probes)  # each lead once a step: a third "No rush" sounds like a loop
         if lead and turn < len(method.reask) and not ack and (step.probes or "?" in step.say):
             ack = method.reask[turn]
@@ -123,7 +129,7 @@ def _ask_again(method, state, step, ack="", line="", misses=0, lead=True):
     return Move(said, state, step.ui_stage, ack=ack, theirs=bool(line))
 
 
-def _question(say):
+def question_of(say):
     """The question in a line, without the talk before it: asked again, the talk is not said twice."""
     asks = [s for s in re.split(r"(?<=[.!?])\s+", say) if s.endswith("?")]
     return asks[-1] if asks else say
