@@ -51,3 +51,20 @@ def test_an_early_answer_rides_on_the_verdict_not_on_the_seller(ear):
     v = ear.hear("I want to make 5k a month", ScriptState(step="01"), opened=False)
     assert v.ahead is not None and v.ahead.slots
     assert ear.hear("how much do I need to make 5k a month?", ScriptState(step="01"), opened=False).ahead is None
+
+
+@pytest.mark.parametrize("pick, heard_as", [("money objection", "objection:money"), ("vague", "answer")])
+def test_a_grey_band_objection_before_the_price_is_the_ais_call(fake_embedder, pick, heard_as):
+    from core.buy_mode.script_engine.hear.recognise import Match
+
+    class GreyBand(Listener):  # the embedder put "money" at 0.81: under the early-objection floor, over the judge's line
+        def interruption(self, *a):
+            return None
+
+        def match(self, *a, **k):
+            return Match("money", 0.81, ("money",), False)
+
+    sense, listener = load_common_sense(), GreyBand(CFG, fake_embedder)
+    ear = Ear(CFG, CAT, load_offer("shay_coaching"), sense, listener, Shrugs(CFG, sense, listener, lambda t, s: t),
+              lambda reply, candidates: pick)  # "vague": AI down or unsure, so an answer as before
+    assert ear.hear("10k seems like a lot", ScriptState(step="03"), False).heard_as.startswith(heard_as)

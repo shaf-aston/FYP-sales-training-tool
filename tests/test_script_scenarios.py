@@ -792,19 +792,3 @@ def test_a_monthly_figure_said_early_is_kept_only_when_it_is_the_goal(reply, kep
     state = hear_ahead(CAT, ScriptState(step="goal_identity"), reply)
     assert state.slots.get("number") == kept
 
-
-# ---- a grey-band objection before the price is the AI's call ----------------------------------------
-
-def test_a_grey_band_objection_is_taken_only_when_the_ai_says_so(fake_embedder):
-    from core.buy_mode.script_engine.hear.recognise import Match
-
-    class GreyBand:  # the embedder put "money" at 0.81: under the early-objection floor, over the judge's line
-        interruption = staticmethod(lambda *a: None)
-        match = staticmethod(lambda *a, **k: Match("money", 0.81, ("money",), False))
-
-    s = seller(fake_embedder, step="03")
-    s._ear._listener = GreyBand()
-    s._ear._judge = lambda reply, c: "money objection"
-    assert s._ear.hear("10k seems like a lot", s.state, False).heard_as == "objection:money"
-    s._ear._judge = lambda reply, c: "vague"  # AI down or unsure: an answer, as before
-    assert s._ear.hear("10k seems like a lot", s.state, False).kind == "answer"
