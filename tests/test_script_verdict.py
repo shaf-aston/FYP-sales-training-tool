@@ -16,7 +16,7 @@ CAT = load_method("cat")
 def ear(fake_embedder):
     sense, listener = load_common_sense(), Listener(CFG, fake_embedder)
     shrugs = Shrugs(CFG, sense, listener, lambda t, slots: t)
-    return Ear(CFG, CAT, load_offer("shay_coaching"), sense, listener, shrugs)
+    return Ear(CFG, CAT, load_offer("shay_coaching"), sense, listener, shrugs, lambda *_: "vague")
 
 
 @pytest.mark.parametrize("text, state, heard_as", [

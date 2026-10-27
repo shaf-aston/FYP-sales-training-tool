@@ -769,3 +769,42 @@ def test_who_are_you_later_in_the_call_goes_back_to_the_question_without_a_bridg
     s = seller(fake_embedder, step="goal_practical", slots={"outcome": "more money"})
     text, _ = s.reply("who are you")
     assert CAT.steps["01"].bridge not in text and not s.state.bridged and "What are you hoping" in text
+
+
+# ---- side replies in a row never say the same question three times ---------------------------------
+
+def test_a_second_side_question_in_a_row_gets_the_step_in_other_words(fake_embedder):
+    s = seller(fake_embedder, step="03")
+    first, _ = s.reply("who are you")
+    second, _ = s.reply("who are you")
+    assert first.endswith(say("03")) and not second.endswith(say("03"))
+
+
+# ---- a reply that is only a monthly figure answers the number step early ----------------------------
+
+@pytest.mark.parametrize("reply, kept", [
+    ("about 5k a month", "5k a month"),
+    ("I want 5k a month", "5k a month"),
+    ("I make 2k a month", None),
+    ("2k a month is what I make", None),
+])
+def test_a_monthly_figure_said_early_is_kept_only_when_it_is_the_goal(reply, kept):
+    state = hear_ahead(CAT, ScriptState(step="goal_identity"), reply)
+    assert state.slots.get("number") == kept
+
+
+# ---- a grey-band objection before the price is the AI's call ----------------------------------------
+
+def test_a_grey_band_objection_is_taken_only_when_the_ai_says_so(fake_embedder):
+    from core.buy_mode.script_engine.hear.recognise import Match
+
+    class GreyBand:  # the embedder put "money" at 0.81: under the early-objection floor, over the judge's line
+        interruption = staticmethod(lambda *a: None)
+        match = staticmethod(lambda *a, **k: Match("money", 0.81, ("money",), False))
+
+    s = seller(fake_embedder, step="03")
+    s._ear._listener = GreyBand()
+    s._ear._judge = lambda reply, c: "money objection"
+    assert s._ear.hear("10k seems like a lot", s.state, False).heard_as == "objection:money"
+    s._ear._judge = lambda reply, c: "vague"  # AI down or unsure: an answer, as before
+    assert s._ear.hear("10k seems like a lot", s.state, False).kind == "answer"

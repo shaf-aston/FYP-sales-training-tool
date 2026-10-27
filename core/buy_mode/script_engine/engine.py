@@ -19,6 +19,7 @@ class ScriptState:
     quoted: bool = False   # the last message said their words back (the echo budget, echo.py)
     echoed: tuple = ()     # their phrases said back this call, once per time said
     meant: tuple = ()      # meaning lines said this call
+    repeated: bool = False  # the last message said the step's question again after a side reply: next time, other words
     bridged: bool = False  # the last message ended on a step's `bridge` question: the next reply to it is heard, not saved
 
 

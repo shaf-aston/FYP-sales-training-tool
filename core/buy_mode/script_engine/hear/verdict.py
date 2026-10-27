@@ -31,9 +31,10 @@ class Ear:
     shrug, then an interruption that clearly beats an answer, then a question
     the step's own answers don't cover, else an answer."""
 
-    def __init__(self, cfg, method, offer, sense, listener, shrugs):
+    def __init__(self, cfg, method, offer, sense, listener, shrugs, judge):
+        """`judge(reply, {name: [examples]})`: the AI's pick of one name, or VAGUE."""
         self.cfg, self.method, self.offer, self.sense = cfg, method, offer, sense
-        self._listener, self._shrugs = listener, shrugs
+        self._listener, self._shrugs, self._judge = listener, shrugs, judge
 
     def is_question(self, text):
         return is_question(text, self.cfg)
@@ -97,7 +98,19 @@ class Ear:
             floors["ready:prospect"] = self.method.ready.min_score
         takes_any = any(r.label == ANY for r in step.listen)
         won = self._listener.interruption(text, labels, answer_labels(step), takes_any, asking, floors)
+        if not won and not opened and not asking:
+            won = self._judged_objection(text, step, dict(objections))
         return tuple(won.split(":", 1)) if won else (None, "")
+
+    def _judged_objection(self, text, step, objections):
+        """An objection that scored in the grey band before the price ("10k seems like a lot", 0.81): too close
+        to the step's answers for the embedder alone, so the AI picks objection or answer. AI down = answer."""
+        found = self._listener.match(text, {k: o.examples for k, o in objections.items()})
+        if not found.label or found.score < self.cfg["early_objection_judge_score"]:
+            return None
+        answers = [f"answering '{_question(step.say_plain or step.say)}'"]  # the question asked, so the AI judges in context
+        pick = self._judge(text, {f"{found.label} objection": objections[found.label].examples, "answer": answers})
+        return f"objection:{found.label}" if pick == f"{found.label} objection" else None
 
     def _answers(self, text, step):
         """The reply matches one of the step's own answers, even with a question in it ("yeah makes

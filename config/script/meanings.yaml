@@ -19,6 +19,17 @@ meanings:
     lines:
       - "So this isn't really about the money.¶It's about ==them==."
       - "That's a lot of people counting on you."
+  family_time:
+    draft: true
+    examples:
+      - "so I can spend more time with my kids"
+      - "to be there for my children growing up"
+      - "I want to see my family more"
+      - "I miss my kids because I'm always at work"
+      - "to pick my kids up from school"
+    lines:
+      - "So it's really about ==being there== for them."
+      - "Time with them is the thing you can't get back."
   bills_pressure:
     draft: true
     examples:

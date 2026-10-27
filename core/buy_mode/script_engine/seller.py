@@ -84,10 +84,11 @@ class ScriptSeller:
         echo = frozenset(s.capture for s in method.steps.values() if s.echo) | {"said"}  # {said}: sense.ask_meaning
         self._filler = Filler(cfg, offer, echo, vocab)
         self._shrugs = Shrugs(cfg, sense, self._listener, self._filler.fill)
-        self._ear = Ear(cfg, method, offer, sense, self._listener, self._shrugs)
+        self._ear = Ear(cfg, method, offer, sense, self._listener, self._shrugs, self._voice.judge)
         self._echo = Echo(cfg)
         self._meanings = MeaningBank(cfg, meanings or load_meanings(), self._listener)
         self._turn = Turn()
+        self._repeated = False  # this turn began right after a side reply re-asked the step: see `_then_ask`
         embedder.warm(examples + self._meanings.examples())
 
     def _script_examples(self):
@@ -138,8 +139,8 @@ class ScriptSeller:
         step = self.method.steps[self.state.step]
         opened = price_open(self.method, self.state.step)
         v = self._ear.hear(text, self.state, opened)
-        bridged = self.state.bridged
-        self.state = replace(v.ahead or self.state, waiting=False, bridged=False)  # early answers are kept whatever it was
+        bridged, self._repeated = self.state.bridged, self.state.repeated
+        self.state = replace(v.ahead or self.state, waiting=False, bridged=False, repeated=False)  # early answers are kept whatever it was
         if bridged and v.kind in ("answer", "says_nothing"):  # their reply to the getting-to-know-you question
             return self._then_ask(self.cfg["bridge_ack"]), step.ui_stage, "bridge"
         said, ui_stage, detail = self._respond(v, step, opened)
@@ -323,7 +324,11 @@ class ScriptSeller:
 
     def _then_ask(self, lead):
         """`lead`, then the current question again. A step that asks nothing (a statement) is not
-        said again: a fact answered at a statement step said the statement twice."""
+        said again: a fact answered at a statement step said the statement twice. Said again once: a second
+        side reply in a row gets the step in other words, or moves on (`_carry_on`), never the same line."""
+        if self._repeated:
+            return self._carry_on(lead.strip(), self.method.steps[self.state.step], rephrase=False)[0]
+        self.state = replace(self.state, repeated=True)
         say, say_plain = asked_line(self.method, self.state)  # the words last used, not always the first
         question = self._line(self.method.steps[self.state.step], say, "", say_plain, self.state.slots,
                               theirs=bool(self.state.asked))
