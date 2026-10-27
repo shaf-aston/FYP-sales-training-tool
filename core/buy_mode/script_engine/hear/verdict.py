@@ -109,7 +109,9 @@ class Ear:
         if not found.label or found.score < self.cfg["early_objection_judge_score"]:
             return None
         answers = [f"answering '{_question(step.say_plain or step.say)}'"]  # the question asked, so the AI judges in context
-        pick = self._judge(text, {f"{found.label} objection": objections[found.label].examples, "answer": answers})
+        examples = objections[found.label].examples
+        nearest = self._listener.match(text, {e: [e] for e in examples}).candidates  # the AI sees the closest ones
+        pick = self._judge(text, {f"{found.label} objection": list(nearest) or examples, "answer": answers})
         return f"objection:{found.label}" if pick == f"{found.label} objection" else None
 
     def _answers(self, text, step):
