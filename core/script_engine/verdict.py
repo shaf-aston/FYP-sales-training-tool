@@ -49,7 +49,7 @@ class Ear:
             return Verdict("says_nothing", text=text, asking=asking)  # an answer only: never an interruption
         ahead = None if asking else hear_ahead(self.method, state, text)  # "do I need 5k?" is not their goal
         ahead = None if ahead is state else ahead
-        kind, name = self._interrupt(text, step, ahead or state, opened, asking)
+        kind, name = self._interrupt(self._shrugs.unhedged(text), step, ahead or state, opened, asking)
         if kind:
             return Verdict(kind, name, text, asking, ahead)
         if asking and not self._answers(text, step):

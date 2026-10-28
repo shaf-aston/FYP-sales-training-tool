@@ -692,7 +692,7 @@ def test_months_thinking_counts_the_answer_in_months(reply, months):
 def test_years_line_fills_from_their_answer():
     from core.script_engine.fill import Filler
     line = "You already have for {years} years."
-    offer = type("Offer", (), {"months": 6, "price": "£1", "industry": "", "pillars": []})()
+    offer = type("Offer", (), {"months": 6, "price": "£1", "industry": "", "setter": "", "pillars": []})()
     filler = Filler(CFG, offer, frozenset())
     assert filler.fill(line, {"years": "probably 3 years"}) == "You already have for 3 years."
     assert filler.fill(line, {"years": "a while"}) is None
@@ -852,3 +852,34 @@ def test_after_the_call_has_ended_every_reply_gets_the_sign_off(fake_embedder, e
     for reply in ("bye", "ok thanks", "how much was it again?"):
         text, _ = s.reply(reply)  # live: "bye" after the follow-up line said that line again
         assert text == SENSE.ended and s.state.step == end
+
+
+# ---- replayed calls, round 3 -----------------------------------------------------------------
+
+@pytest.mark.parametrize("reply, kept", [
+    ("five grand a month", "five grand a month"),  # live: said at the goal, then asked "how much a month?"
+    ("5k a month.", "5k a month"),
+    ("five grand a month would change my life", None),  # not only the figure: no want word, not the goal
+    ("I make 2k a month", None),
+])
+def test_a_figure_said_on_its_own_early_answers_the_money_step(reply, kept):
+    state = hear_ahead(CAT, ScriptState(step="goal_identity"), reply)
+    assert state.slots.get("number") == kept
+
+
+def test_an_early_figure_skips_the_money_question(fake_embedder):
+    s = seller(fake_embedder, step="goal_identity", slots={"outcome": "more money"})
+    text, _ = s.reply("five grand a month")
+    assert s.state.slots["number"] == "five grand a month" and "each month" not in text
+
+
+def test_the_money_step_never_says_the_same_line_twice_in_a_row(fake_embedder):
+    s = seller(fake_embedder, step="02", slots={"outcome": "more money"})
+    texts = [s.reply("not sure")[0] for _ in range(CFG["misses"])]
+    assert s.state.step == "02" and texts[0] == CAT.steps["02"].probes[0]
+    assert all(not b.endswith(a) for a, b in pairwise(texts))  # live: "If you had to put a number on it..." twice
+
+
+def test_the_opening_names_the_setter(fake_embedder):
+    text, _ = seller(fake_embedder).opening()  # live: {setter} was never filled, so the plain line was said
+    assert text.startswith("I believe you had a chat with our setter...")

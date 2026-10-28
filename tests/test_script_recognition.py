@@ -277,7 +277,8 @@ def test_failed_past_attempt_gets_an_acknowledgement():
     seller = _real_seller()
     seller.reset(ScriptState(step="03"))
     text, _ = seller.reply("I tried dropshipping and it failed")
-    assert text.startswith("Sorry to hear that") and seller.state.step == "04"
+    assert text.startswith("Sorry to hear that") and seller.state.step == "03"  # still asked how long
+    assert "years" not in seller.state.slots
 
 
 def test_floored_labels_clear_their_floor_only_when_meant(capsys):
@@ -361,3 +362,18 @@ def test_a_scam_question_where_doubts_are_answers_is_the_scam_worry_not_a_bot_qu
     seller.reset(ScriptState(step=step))
     reply, _ = seller.reply("is this a scam though?")
     assert "I'm an AI" not in reply
+
+
+@pytest.mark.parametrize("said, clarify", [
+    ("I don't know, enough to live", False),  # live: "Fair point, let me put it another way."
+    ("not sure, enough to pay the bills", False),
+    ("idk, what do you mean?", True),
+    ("what do you mean", True),
+])
+def test_a_shrug_in_front_of_an_answer_is_not_asking_what_we_mean(said, clarify):
+    from core.script_engine.engine import ScriptState
+
+    seller = _real_seller()
+    seller.reset(ScriptState(step="goal_practical", slots={"outcome": "more money"}))
+    text, _ = seller.reply(said)
+    assert text.startswith(seller.sense.interruptions["clarify"].reply) == clarify

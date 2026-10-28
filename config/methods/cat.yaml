@@ -30,7 +30,7 @@ steps:
     ui_stage: intent
     draft: true
     run_on: true   # the frame leads straight into step 01's question
-    say: "I believe you had a chat with {setter} setter... I've read your application but I don't like to assume anything"
+    say: "I believe you had a chat with {setter} setter... I've read your application but I don't like to assume anything."
     say_plain: "I've read your application but I don't like to assume anything."
     listen:
       any: {then: "01"}
@@ -142,7 +142,8 @@ steps:
     # "I want 5k a month" said earlier answers this step, so it is skipped. Needs a want/need word,
     # only "to make / be earning / around"-type words, then the figure and "a month": "I make 2k a month",
     # "a job paying 2k a month", "I need to save 200 a month" and "I don't want ..." are not the goal.
-    answered_by: '(?<!n''t )(?<!not )\b(?:want|need|aim|aiming|hoping|looking|goal|target|(?<=to |nd )have|having)(?:\s+(?:to|be|make|making|earn|earning|bring|bringing|in|about|around|at|least|like|roughly|for|of|is|maybe|ideally|say|minimum))*\s+(?P<answer>[$£€]?\d[\d,.]*\s*(?:k|grand|thousand)?\s*(?:a|per|each|every|/)\s*(?:month|mo)\b)'
+    # A reply that is only the figure ("five grand a month") needs no want word: it can only be the goal.
+    answered_by: '(?:(?P<lead>(?<!n''t )(?<!not )\b(?:want|need|aim|aiming|hoping|looking|goal|target|(?<=to |nd )have|having)(?:\s+(?:to|be|make|making|earn|earning|bring|bringing|in|about|around|at|least|like|roughly|for|of|is|maybe|ideally|say|minimum))*\s+)|^\s*)(?P<answer>(?:[$£€]?\d[\d,.]*\s*(?:k|grand|thousand)?|(?:a|one|two|three|four|five|six|seven|eight|nine|ten|fifteen|twenty|thirty|forty|fifty)\s+(?:grand|thousand|k))\s*(?:a|per|each|every|/)\s*(?:month|mo)\b)(?(lead)|\s*[.!]?\s*$)'
     listen:
       any: {then: "03"}
   "03":
@@ -161,7 +162,8 @@ steps:
           - "I've tried a few things online and lost money"
           - "I started a business before but it didn't work out"
           - "I gave it a go and it flopped"
-        then: "04"
+        then: "03"   # still asked how long: 04 says "so many nights, months and years" as if they told us
+        keep: false
         ack: "Sorry to hear that, plenty of people have a first attempt that doesn't work out."
       any:
         then: "04"

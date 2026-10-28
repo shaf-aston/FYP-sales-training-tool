@@ -3,6 +3,7 @@
 # draft is an authoring marker only: the app ignores it.
 months: 6
 price: "$5k"
+setter: "our"   # draft: who booked the call, said in the opening ("a chat with {setter} setter"); a name also works
 industry: "online"   # draft: where the business is built; fills {industry} in the vague intro
 # What the AI may say about the programme when no fact below covers a question. Only what the
 # facts and the pitch steps already say: anything else gets the honest "I'll find out" line.

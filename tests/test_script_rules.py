@@ -588,9 +588,10 @@ def test_ok_to_an_open_question_is_asked_again_then_the_call_moves_on(seller):
     at(seller, "03", outcome="freedom")
     again, _ = seller.reply("ok")
     assert seller.state.step == "03" and again == "Roughly, is it more like months, or a few years?"
-    for _ in range(CFG["misses"] - 1):  # probes ran out: its last one behind a lead, never moved on early
-        again, _ = seller.reply("sure")
-        assert seller.state.step == "03" and again.endswith("Roughly, is it more like months, or a few years?")
+    for _ in range(CFG["misses"] - 1):  # probes ran out: back to the question behind a lead, never moved on early
+        last, (again, _) = again, seller.reply("sure")
+        assert seller.state.step == "03" and again.endswith("How long have you been thinking about this?")
+        assert not again.endswith(last)  # the same words twice in a row read like a bot
     seller.reply("sure")
     assert seller.state.step == "04" and "years" not in seller.state.slots
 

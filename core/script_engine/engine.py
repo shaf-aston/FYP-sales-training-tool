@@ -102,8 +102,8 @@ def asks_left(method, state, misses):
 def _ask_again(method, state, step, ack="", line="", misses=0, lead=True):
     """A person rephrases rather than repeating themselves, and moves on rather than asking forever.
     `line`: the words to ask in (the AI's, or a clarifying question), dropped if already said on this step;
-    else the step's next probe; once those run out, its last question again behind a `reask` lead (each
-    once, then none), so no line is said twice. Asked `_limit` times, then `stuck`. A step that asks nothing (a closing line, a
+    else the step's next probe; once those run out, its earlier words in turn (`_rewording`) behind a `reask`
+    lead (each once, then none), so no line is said twice in a row. Asked `_limit` times, then `stuck`. A step that asks nothing (a closing line, a
     statement) is said again plain: "no rush" in front of it answers a question nobody asked."""
     if step.stuck and state.asks >= _limit(step, misses):
         return _take(method, state, step.stuck)
@@ -115,13 +115,20 @@ def _ask_again(method, state, step, ack="", line="", misses=0, lead=True):
     elif used < len(step.probes):
         said = step.probes[used]
     else:
-        said = step.probes[-1] if step.probes else _question(step.say)
+        said = _rewording(step, used)
         turn = used - len(step.probes)  # each lead once a step: a third "No rush" sounds like a loop
         leads = step.reask or method.reask
         if lead and turn < len(leads) and not ack and (step.probes or "?" in step.say):
             ack = leads[turn]
     state = replace(state, asks=state.asks + 1, asked=line, said=state.said + (line,) if line else state.said)
     return Move(said, state, step.ui_stage, ack=ack, theirs=bool(line))
+
+
+def _rewording(step, used):
+    """The script's words for its `used`-th ask again, once its probes ran out: back to the question, then the
+    probes again, in turn, so the line just said is never said again ("If you had to put a number on it..." twice)."""
+    turns = (_question(step.say), *step.probes)
+    return turns[(used - len(step.probes)) % len(turns)]
 
 
 def _question(say):
@@ -139,7 +146,10 @@ def asked_line(method, state):
     used = state.asks - len(state.said)
     if used == 0 or not step.probes:
         return step.say, step.say_plain
-    return step.probes[min(used - 1, len(step.probes) - 1)], ""
+    if used <= len(step.probes):
+        return step.probes[used - 1], ""
+    said = _rewording(step, used - 1)
+    return (step.say, step.say_plain) if said == _question(step.say) else (said, "")
 
 
 def move_on(method, state):

@@ -104,6 +104,7 @@ class Offer:
     industry: str = ""  # where the business is built ("online"): fills {industry}, so an intro stays vague about the how
     about: str = ""     # what the AI may say when no fact covers a question; empty = never answer from it
     about_after_price: str = ""  # added to `about` from the price step on
+    setter: str = ""    # who booked the call: fills {setter} in the opening; empty = the plain line
 
 
 class _StrictLoader(yaml.SafeLoader):
@@ -343,6 +344,7 @@ def parse_offer(name, data):
         name, int(data["months"]), str(data["price"]),
         tuple(data["pillars"]), facts, str(data.get("industry", "")),
         (data.get("about") or {}).get("text", ""), (data.get("about") or {}).get("after_price", ""),
+        str(data.get("setter", "")),
     )
 
 
