@@ -11,6 +11,7 @@ embed_threads: 1       # CPU threads for the model; more threads use much more m
 embed_batch_size: 16   # texts embedded at once; smaller keeps peak memory low
 threshold: 0.65        # lowest similarity that counts as a match
 early_objection_min_score: 0.85   # before the price, a stated objection must match this well: "money", "scared", "risk" (about 0.7-0.81) are answers; "I can't afford it" (0.9+) is an objection
+early_objection_judge_score: 0.78   # between this and the line above, the AI judges objection or answer ("10k seems like a lot" 0.81); AI down = answer
 interrupt_threshold: 0.8   # on a step that takes any answer, an interruption must score this high
 question_answer_min_score: 0.8   # a question is one of the step's answers only this sure: "can we do option 2?" (0.9) chooses, "what happens to the card?" (0.74) asks
 near_miss: 0.1         # a top score this far under the threshold is a close call too

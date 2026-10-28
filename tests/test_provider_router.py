@@ -2,8 +2,8 @@
 
 import pytest
 
-from core.providers.base import LLMResponse
-from core.services.provider_router import ProviderRouter
+from core.infra.providers.base import LLMResponse
+from core.infra.providers.router import ProviderRouter
 
 
 class _Provider:
@@ -29,10 +29,10 @@ def router(monkeypatch):
         "good": _Provider("good", reply="hi there"),
     }
     monkeypatch.setattr(
-        "core.services.provider_router.list_providers", lambda fallback=False: list(providers)
+        "core.infra.providers.router.list_providers", lambda fallback=False: list(providers)
     )
     monkeypatch.setattr(
-        "core.services.provider_router.create_provider", lambda name, model=None: providers[name]
+        "core.infra.providers.router.create_provider", lambda name, model=None: providers[name]
     )
     return ProviderRouter()
 
@@ -44,7 +44,7 @@ def test_skips_unavailable_and_empty_then_switches_to_first_good(router):
 
 
 def test_all_fail_returns_first_error_and_keeps_provider(router, monkeypatch):
-    monkeypatch.setattr("core.services.provider_router.list_providers", lambda fallback=False: ["groq"])
+    monkeypatch.setattr("core.infra.providers.router.list_providers", lambda fallback=False: ["groq"])
     result = router.chat_with_fallback([])
     assert not result.ok and "429" in result.response.error
     assert router.provider_name == "groq"

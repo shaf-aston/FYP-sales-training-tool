@@ -1,6 +1,6 @@
 # Products the AI buyer (sell mode) can be shopping for. Which picker group each is in
 # (transactional or consultative) is set by product_groups in buyer.yaml.
-# context and knowledge: what the buyer has read about it (core/buyer_prompt.py).
+# context and knowledge: what the buyer has read about it (core/sell_mode/buyer_prompt.py).
 # name: label in the sell-mode product picker.
 # Buy mode (the AI seller) sells only the scripted products in script/engine.yaml.
 

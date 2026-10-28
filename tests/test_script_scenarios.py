@@ -6,15 +6,15 @@ from itertools import pairwise
 
 import pytest
 
-from core.loader import load_yaml
-from core.script_engine.engine import ScriptState, asked_line, hear_ahead, jump, move_on
-from core.script_engine.method import (
+from core.infra.loader import load_yaml
+from core.buy_mode.script_engine.engine import ScriptState, asked_line, hear_ahead, jump, move_on
+from core.buy_mode.script_engine.method import (
     load_common_sense,
     load_method,
     load_offer,
     parse_method,
 )
-from core.script_engine.seller import ScriptSeller
+from core.buy_mode.script_engine.seller import ScriptSeller
 
 CFG = load_yaml("script/engine.yaml")
 CAT = load_method("cat")
@@ -361,7 +361,7 @@ def test_loader_rejects_a_shortcut_that_leads_back():
 
 @pytest.mark.parametrize("item", [{"after": "sing"}, {"wait": True}, {"min_score": -1}])
 def test_loader_rejects_bad_interruptions(item):
-    from core.script_engine.method import parse_common_sense
+    from core.buy_mode.script_engine.method import parse_common_sense
     data = {"park": "", "revisit": "",
             "interruptions": {"x": {"examples": ["x"], "reply": "ok", **item}}}
     with pytest.raises(ValueError):
@@ -369,7 +369,7 @@ def test_loader_rejects_bad_interruptions(item):
 
 
 def test_loader_rejects_an_unknown_after():
-    from core.script_engine.method import parse_common_sense
+    from core.buy_mode.script_engine.method import parse_common_sense
     data = {"park": "", "revisit": "",
             "interruptions": {"x": {"examples": ["x"], "reply": "ok", "after": "sing"}}}
     with pytest.raises(ValueError, match="after"):
@@ -540,7 +540,7 @@ def test_whats_next_asks_no_ai(fake_embedder):
     ("", None),
 ])
 def test_echo_phrase(reply, phrase):
-    from core.script_engine.fill import echo_phrase
+    from core.buy_mode.script_engine.words.fill import echo_phrase
     assert echo_phrase(reply, CFG) == phrase
 
 
@@ -656,7 +656,7 @@ def test_a_nudge_word_inside_a_reply_is_not_a_nudge(fake_embedder, text):
     ({"reply": "Sure."}, "both"),
 ])
 def test_loader_rejects_a_bad_nudge(nudge, error):
-    from core.script_engine.method import parse_common_sense
+    from core.buy_mode.script_engine.method import parse_common_sense
     data = {"park": "", "revisit": "", "interruptions": {}, "nudge": nudge}
     with pytest.raises(ValueError, match=error):
         parse_common_sense(data)
@@ -679,18 +679,18 @@ def test_loader_rejects_echo_without_a_capture():
     ("", None),
 ])
 def test_number_phrase(reply, number):
-    from core.script_engine.fill import number_phrase
+    from core.buy_mode.script_engine.words.fill import number_phrase
     assert number_phrase(reply, CFG["number_blanks"]["years"], CFG) == number
 
 
 @pytest.mark.parametrize("reply, months", [("a year", "12"), ("a couple of years", "24"), ("six months", "6"), ("a month", "1"), ("ages", None)])
 def test_months_thinking_counts_the_answer_in_months(reply, months):
-    from core.script_engine.fill import number_phrase
+    from core.buy_mode.script_engine.words.fill import number_phrase
     assert number_phrase(reply, CFG["number_blanks"]["months_thinking"], CFG) == months
 
 
 def test_years_line_fills_from_their_answer():
-    from core.script_engine.fill import Filler
+    from core.buy_mode.script_engine.words.fill import Filler
     line = "You already have for {years} years."
     offer = type("Offer", (), {"months": 6, "price": "£1", "industry": "", "setter": "", "pillars": []})()
     filler = Filler(CFG, offer, frozenset())
@@ -705,7 +705,7 @@ def test_years_line_fills_from_their_answer():
     ("more time", "more time"),           # short words are left alone
 ])
 def test_echo_phrase_fixes_typos(reply, phrase):
-    from core.script_engine.fill import echo_phrase
+    from core.buy_mode.script_engine.words.fill import echo_phrase
     assert echo_phrase(reply, CFG, frozenset(CFG["spell_words"])) == phrase
 
 
@@ -716,7 +716,7 @@ def test_echo_phrase_fixes_typos(reply, phrase):
     ("time in Dubai!", "time in Dubai!"),
 ])
 def test_fix_typos_keeps_real_words(text, fixed):
-    from core.script_engine.fill import fix_typos
+    from core.buy_mode.script_engine.words.fill import fix_typos
     vocab = frozenset(CFG["spell_words"]) | {"month", "months", "work"}
     assert fix_typos(text, vocab, CFG) == fixed
 
@@ -883,3 +883,26 @@ def test_the_money_step_never_says_the_same_line_twice_in_a_row(fake_embedder):
 def test_the_opening_names_the_setter(fake_embedder):
     text, _ = seller(fake_embedder).opening()  # live: {setter} was never filled, so the plain line was said
     assert text.startswith("I believe you had a chat with our setter...")
+
+
+# ---- side replies in a row never say the same question three times ---------------------------------
+
+def test_a_second_side_question_in_a_row_gets_the_step_in_other_words(fake_embedder):
+    s = seller(fake_embedder, step="03")
+    first, _ = s.reply("who are you")
+    second, _ = s.reply("who are you")
+    assert first.endswith(say("03")) and not second.endswith(say("03"))
+
+
+# ---- a reply that is only a monthly figure answers the number step early ----------------------------
+
+@pytest.mark.parametrize("reply, kept", [
+    ("about 5k a month", "5k a month"),
+    ("I want 5k a month", "5k a month"),
+    ("I make 2k a month", None),
+    ("2k a month is what I make", None),
+])
+def test_a_monthly_figure_said_early_is_kept_only_when_it_is_the_goal(reply, kept):
+    state = hear_ahead(CAT, ScriptState(step="goal_identity"), reply)
+    assert state.slots.get("number") == kept
+

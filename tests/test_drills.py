@@ -2,7 +2,7 @@
 
 import pytest
 
-from core.drills import (
+from core.training.drills import (
     OWN_LINE_ID,
     build_drill_set,
     drills_from_own_turns,

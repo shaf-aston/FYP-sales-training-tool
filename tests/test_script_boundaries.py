@@ -4,12 +4,12 @@ import logging
 import wave
 from pathlib import Path
 
-from core.loader import load_yaml
-from core.providers import speech
-from core.script_engine.checks import CheckContext, check, clip
-from core.script_engine.engine import ScriptState, asked_line, object_to
-from core.script_engine.listen import hear, parse
-from core.script_engine.method import load_method
+from core.infra.loader import load_yaml
+from core.infra.providers import speech
+from core.buy_mode.script_engine.ai.checks import CheckContext, check, clip
+from core.buy_mode.script_engine.engine import ScriptState, asked_line, object_to
+from core.buy_mode.script_engine.ai.listen import hear, parse
+from core.buy_mode.script_engine.method import load_method
 
 CFG = load_yaml("script/engine.yaml")
 CAT = load_method("cat")
@@ -130,7 +130,7 @@ def test_join_wav_keeps_the_first_format():
 
 
 def test_more():
-    from core.script_engine.engine import ask_again
+    from core.buy_mode.script_engine.engine import ask_again
     st = ScriptState(step="00")
     for _ in range(3):
         mv = ask_again(CAT, st)

@@ -1,9 +1,9 @@
 # The meaning bank: what an answer means, beyond its words, and a line that says so.
 # "my mum's relying on me" and "my mam needs me" are the same meaning, so they get the same line.
-# A meaning line shows they were heard without quoting them back (see core/script_engine/echo.py):
+# A meaning line shows they were heard without quoting them back (see core/buy_mode/script_engine/words/echo.py):
 # said before the next question, in its own bubble, each line once a call, in turn.
 # draft: true = our wording, not the coach's; it needs the owner's approval. The app ignores it.
-# Lines never ask (the step's question follows) and have no {blanks}. Tone marks: core/script_engine/tone.py.
+# Lines never ask (the step's question follows) and have no {blanks}. Tone marks: core/buy_mode/script_engine/words/tone.py.
 min_score: 0.83  # an answer means one only when it matches an example this well: "5k a month" means none
 min_words: 2     # and has this many words that carry meaning: "debt", "my job", "for my mum" mean none
 meanings:
@@ -19,6 +19,17 @@ meanings:
     lines:
       - "So this isn't really about the money.¶It's about ==them==."
       - "That's a lot of people counting on you."
+  family_time:
+    draft: true
+    examples:
+      - "so I can spend more time with my kids"
+      - "to be there for my children growing up"
+      - "I want to see my family more"
+      - "I miss my kids because I'm always at work"
+      - "to pick my kids up from school"
+    lines:
+      - "So it's really about ==being there== for them."
+      - "Time with them is the thing you can't get back."
   bills_pressure:
     draft: true
     examples:

@@ -2,8 +2,8 @@
 
 from flask import Blueprint, Response, request
 
-from core.constants import SPEECH
-from core.providers.speech import speak
+from core.infra.constants import SPEECH
+from core.infra.providers.speech import speak
 
 from ..security import require_rate_limit
 

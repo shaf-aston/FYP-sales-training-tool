@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-import core.knowledge as knowledge
+import core.sell_mode.knowledge as knowledge
 
 
 def test_save_custom_knowledge_sanitizes_and_writes_primary_file(monkeypatch):

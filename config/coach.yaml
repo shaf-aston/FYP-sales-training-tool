@@ -1,4 +1,4 @@
-# Buy mode's coach: answers the learner's questions about the live call (core/coach.py).
+# Buy mode's coach: answers the learner's questions about the live call (core/buy_mode/coach.py).
 
 default_style: tactical
 # Style id -> how the coach answers. The ids are sent by the web app's coach panel.

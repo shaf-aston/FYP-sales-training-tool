@@ -2,14 +2,14 @@
 
 from flask import Blueprint, current_app, jsonify, request
 
-from core import sell_service
-from core.buyer_state import UnknownPersona, persona_name, personas_for
-from core.constants import MAX_CHOSEN_OBJECTION_CHARS, MAX_PERSONA_NAME_CHARS
-from core.drills import build_drill_set
-from core.logs import SessionAnalytics
-from core.quiz import build_sell_question, score_sell_answer
-from core.sell_service import InvalidDifficulty
-from core.services.provider_router import ProviderUnavailable
+from core.sell_mode import sell_service
+from core.sell_mode.buyer_state import UnknownPersona, persona_name, personas_for
+from core.infra.constants import MAX_CHOSEN_OBJECTION_CHARS, MAX_PERSONA_NAME_CHARS
+from core.training.drills import build_drill_set
+from core.infra.logs import SessionAnalytics
+from core.training.quiz import build_sell_question, score_sell_answer
+from core.sell_mode.sell_service import InvalidDifficulty
+from core.infra.providers.router import ProviderUnavailable
 
 from ..messages import (
     INVALID_DIFFICULTY,

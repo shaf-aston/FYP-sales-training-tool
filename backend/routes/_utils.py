@@ -8,7 +8,7 @@ from typing import Any
 
 from flask import current_app, jsonify, request
 
-from core.constants import MAX_MESSAGE_LENGTH
+from core.infra.constants import MAX_MESSAGE_LENGTH
 
 from ..messages import (
     MESSAGE_REQUIRED,
@@ -93,7 +93,7 @@ def stage_fields(seller):
 
 def validate_provider(data):
     """Return (provider, error). Error is a ready response when the provider is unknown."""
-    from core.providers import list_providers
+    from core.infra.providers import list_providers
 
     provider = InputValidator.normalize_provider(data.get("provider"))
     supported = list_providers()

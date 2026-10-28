@@ -15,7 +15,7 @@ def test_no_audio_means_the_browser_reads_it(client, monkeypatch):
 
 
 def test_long_text_goes_in_sentence_pieces_under_the_limit():
-    from core.providers.speech import chunks
+    from core.infra.providers.speech import chunks
     text = "Twenty four months. Damn. " * 12 + "x" * 250
     pieces = chunks(text, 200)
     assert all(len(p) <= 200 for p in pieces) and " ".join(pieces) == text.strip().replace("x" * 250, "x" * 200 + " " + "x" * 50)
@@ -27,7 +27,7 @@ def test_pieces_come_back_as_one_wav(monkeypatch):
     import io
     import wave
 
-    from core.providers import speech
+    from core.infra.providers import speech
 
     def tone(n):
         buf = io.BytesIO()
@@ -65,7 +65,7 @@ def test_pieces_come_back_as_one_wav(monkeypatch):
 
 
 def test_a_failing_piece_means_the_browser_reads_it(monkeypatch):
-    from core.providers import speech
+    from core.infra.providers import speech
     monkeypatch.setattr(speech, "get_groq_api_keys", lambda: ["k"])
     monkeypatch.setattr(speech, "Groq", lambda api_key: (_ for _ in ()).throw(RuntimeError("terms not accepted")))
     assert speech.speak("hi") is None

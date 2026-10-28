@@ -4,10 +4,10 @@ import json
 
 import pytest
 
-from core.loader import load_yaml
-from core.script_engine.echo import Echo
-from core.script_engine.meanings import parse_meanings
-from core.script_engine.method import load_common_sense, load_method, parse_method
+from core.infra.loader import load_yaml
+from core.buy_mode.script_engine.words.echo import Echo
+from core.buy_mode.script_engine.hear.meanings import parse_meanings
+from core.buy_mode.script_engine.method import load_common_sense, load_method, parse_method
 
 CFG = load_yaml("script/engine.yaml")
 CAT = load_method("cat")

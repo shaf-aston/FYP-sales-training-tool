@@ -3,7 +3,7 @@ from pathlib import Path
 
 from flask import Flask
 
-import core.knowledge as knowledge_module
+import core.sell_mode.knowledge as knowledge_module
 from backend.request_log import RequestLog
 from backend.routes import knowledge as knowledge_routes
 from backend.routes import monitoring as monitoring_routes

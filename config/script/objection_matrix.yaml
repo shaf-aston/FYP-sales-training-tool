@@ -22,6 +22,12 @@ objections:
       - "I'm not paying for anything"
       - "I'm not buying anything"
       - "I won't pay for this"
+      - "that seems like a lot of money"
+      - "that feels pretty steep"
+      - "that's a big number for me"
+      - "why does it cost that much"
+      - "I can't spare the money with my mortgage"
+      - "money is tight for me at the moment"
   partner:
     enter: m_partner_here
     examples:
@@ -32,6 +38,9 @@ objections:
       - "I need to check with my business partner"
       - "I need approval from my boss"
       - "I need to check with my team"
+      - "I'd have to run it past my other half first"
+      - "my partner would have to be on board"
+      - "I can't decide without my wife"
   fear:
     enter: m_reframe1
     examples:
@@ -41,6 +50,10 @@ objections:
       - "I've been burned before"
       - "I'm scared of making the wrong choice"
       - "I'm afraid of making a mistake"
+      - "I have a family and responsibilities to think about"
+      - "I've got kids to look after, I can't take risks"
+      - "it's just how I am, I'm cautious"
+      - "I'm not sure I'm capable of doing this"
   think:   # Procrastinator: the SOP says handle the logistics behind it first, then fear
     enter: m_think_what
     examples:
@@ -49,6 +62,10 @@ objections:
       - "now isn't the right time"
       - "can I sleep on it"
       - "maybe later, not right now"
+      - "I don't make decisions on the spot"
+      - "let me take a step back first"
+      - "I like it but I'll get back to you"
+      - "I need to sleep on it and get back to you"
   research:   # Analyser: still researching, needs more info
     enter: m_think_what
     examples:
@@ -58,6 +75,10 @@ objections:
       - "I'm still comparing programmes"
       - "I want to read some reviews first"
       - "send me some information"
+      - "I should probably look into it more"
+      - "I need to look into your company a bit"
+      - "send me the details and I'll look over them"
+      - "what exactly do I get, can you send me that"
   scam:
     enter: m_scam
     early: "Fair question, there's a lot of shady stuff online. This call is to see if we can even help you first."   # draft
@@ -74,6 +95,13 @@ objections:
       - "have you got any proof"
       - "can you prove it works"
       - "there's so many rip-offs online"
+      - "how can you guarantee it works"
+      - "I need to see case studies or testimonials"
+      - "show me results from other people"
+      - "I want to know the return on my investment"
+      - "I don't know if these courses are even real"
+      - "I'm not sure who to trust online"
+      - "I've paid for stuff like this before and got nothing"
 
 steps:
   # Identify the objection. The SOP gives no wording for this.

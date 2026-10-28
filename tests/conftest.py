@@ -10,10 +10,10 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from core import quiz  # noqa: E402
-from core.providers.base import BaseLLMProvider, LLMResponse  # noqa: E402
-from core.providers.factory import LLM_PROVIDER_TYPES  # noqa: E402
-from core.seller_bot import ChatResponse  # noqa: E402
+from core.training import quiz  # noqa: E402
+from core.infra.providers.base import BaseLLMProvider, LLMResponse  # noqa: E402
+from core.infra.providers.factory import LLM_PROVIDER_TYPES  # noqa: E402
+from core.buy_mode.seller_bot import ChatResponse  # noqa: E402
 
 
 class DummyProvider(BaseLLMProvider):
@@ -127,10 +127,10 @@ def mirror():
 @pytest.fixture
 def cat_seller():
     """Builds the cat script's seller: `cat_seller(embedder, llm=MirrorAI(), step=None, meanings=None, **state)`."""
-    from core.loader import load_yaml
-    from core.script_engine.engine import ScriptState
-    from core.script_engine.method import load_common_sense, load_method, load_offer
-    from core.script_engine.seller import ScriptSeller
+    from core.infra.loader import load_yaml
+    from core.buy_mode.script_engine.engine import ScriptState
+    from core.buy_mode.script_engine.method import load_common_sense, load_method, load_offer
+    from core.buy_mode.script_engine.seller import ScriptSeller
 
     def build(bow, llm=None, step=None, meanings=None, **state):
         s = ScriptSeller(load_yaml("script/engine.yaml"), load_method("cat"), load_offer("shay_coaching"),
@@ -145,7 +145,7 @@ def cat_seller():
 @pytest.fixture(autouse=True)
 def _offline_embedder(monkeypatch, fake_embedder):
     """Every SellerBot runs the script; tests use the offline embedder (no model download)."""
-    monkeypatch.setattr("core.script_engine.seller.shared_embedder", lambda: fake_embedder)
+    monkeypatch.setattr("core.buy_mode.script_engine.seller.shared_embedder", lambda: fake_embedder)
 
 
 # --- sell mode: an offline AI buyer ---
@@ -173,7 +173,7 @@ class StubBuyerProvider:
 def stub_buyer(monkeypatch):
     """Every provider the app builds is this one stub, so a test can steer what the buyer says."""
     provider = StubBuyerProvider()
-    monkeypatch.setattr("core.services.provider_router.create_provider", lambda *_a, **_k: provider)
+    monkeypatch.setattr("core.infra.providers.router.create_provider", lambda *_a, **_k: provider)
     return provider
 
 

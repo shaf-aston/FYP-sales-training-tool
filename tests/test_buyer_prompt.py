@@ -1,9 +1,9 @@
 """What the AI buyer is told: the product, the learner's custom knowledge, and the persona once."""
 
-import core.knowledge as knowledge_module
-import core.loader as loader
-from core import buyer_session
-from core.buyer_prompt import build_system_prompt
+import core.sell_mode.knowledge as knowledge_module
+import core.infra.loader as loader
+from core.sell_mode import buyer_session
+from core.sell_mode.buyer_prompt import build_system_prompt
 
 
 def test_sell_session_prompt_has_product_custom_data_and_persona_once(monkeypatch, stub_buyer):

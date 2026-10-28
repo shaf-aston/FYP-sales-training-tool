@@ -5,12 +5,12 @@ from pathlib import Path
 import pytest
 import yaml
 
-from core.script_engine.engine import ScriptState, advance, start
-from core.script_engine.method import load_method, load_offer, parse_method
-from core.script_engine.recognise import Listener
+from core.buy_mode.script_engine.engine import ScriptState, advance, start
+from core.buy_mode.script_engine.method import load_method, load_offer, parse_method
+from core.buy_mode.script_engine.hear.recognise import Listener
 
 FIXTURES = Path(__file__).parent / "fixtures" / "script_engine"
-ENGINE_DIR = Path(__file__).parent.parent / "core" / "script_engine"
+ENGINE_DIR = Path(__file__).parent.parent / "core" / "buy_mode" / "script_engine"
 
 
 @pytest.fixture
@@ -153,7 +153,9 @@ def test_recognise_close_call_and_threshold(fake_embedder):
 
 def test_engine_code_names_no_method_or_offer():
     banned = re.compile(r"\b(cat|impact|formula|shay|coaching|freedom|pillar)\b", re.IGNORECASE)
-    for path in ENGINE_DIR.glob("*.py"):
+    paths = list(ENGINE_DIR.rglob("*.py"))
+    assert len(paths) > 10  # the folder moved once and this silently checked nothing
+    for path in paths:
         assert not banned.search(path.read_text(encoding="utf-8")), path.name
 
 

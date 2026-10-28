@@ -49,7 +49,7 @@ def test_resetting_a_session_that_is_already_gone_records_nothing(sell_client, a
 
 def test_ending_a_buy_session_records_where_it_got_to(analytics_events):
     """Ending a session records the final stage reached."""
-    from core.seller_bot import SellerBot
+    from core.buy_mode.seller_bot import SellerBot
 
     class _Call:
         current_stage = "pitch"
@@ -69,7 +69,7 @@ def test_ending_a_buy_session_records_where_it_got_to(analytics_events):
 
 
 def test_a_buy_session_with_no_id_records_nothing(analytics_events):
-    from core.seller_bot import SellerBot
+    from core.buy_mode.seller_bot import SellerBot
 
     seller = SellerBot.__new__(SellerBot)
     seller.session_id = ""

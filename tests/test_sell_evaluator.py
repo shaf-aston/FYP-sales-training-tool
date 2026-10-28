@@ -1,8 +1,8 @@
 """Sell-mode session evaluation."""
 
-import core.sell_evaluator as evaluator
-from core.buyer_state import BuyerState
-from core.loader import load_buyer_config
+import core.sell_mode.sell_evaluator as evaluator
+from core.sell_mode.buyer_state import BuyerState
+from core.infra.loader import load_buyer_config
 
 NO_EVIDENCE = load_buyer_config()["evaluation"]["feedback"]["no_evidence"]
 

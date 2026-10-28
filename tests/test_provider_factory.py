@@ -1,7 +1,7 @@
 import pytest
 
-from core.providers.factory import create_provider, list_providers
-from core.providers.llm import GroqProvider
+from core.infra.providers.factory import create_provider, list_providers
+from core.infra.providers.llm import GroqProvider
 
 
 def test_create_provider_accepts_aliases_and_rejects_unknown_names():

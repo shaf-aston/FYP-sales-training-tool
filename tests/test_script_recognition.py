@@ -8,10 +8,10 @@ from pathlib import Path
 import pytest
 import yaml
 
-from core.loader import load_yaml
-from core.script_engine.embedder import make_embedder
-from core.script_engine.method import load_common_sense, load_method, load_offer
-from core.script_engine.recognise import Listener
+from core.infra.loader import load_yaml
+from core.buy_mode.script_engine.hear.embedder import make_embedder
+from core.buy_mode.script_engine.method import load_common_sense, load_method, load_offer
+from core.buy_mode.script_engine.hear.recognise import Listener
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("RUN_EMBED_TESTS") != "1", reason="set RUN_EMBED_TESTS=1 (downloads a model)"
@@ -162,7 +162,7 @@ def _down(prompt, max_tokens):
     (["I want freedom", "so I can stop worrying about bills", "I'd finally be proud of myself", "ok cool, about 10k", "three years"], "04"),
 ])
 def test_answers_move_the_script_on(replies, expected_step):
-    from core.script_engine.seller import ScriptSeller
+    from core.buy_mode.script_engine.seller import ScriptSeller
 
     cfg = load_yaml("script/engine.yaml")
     seller = ScriptSeller(cfg, load_method("cat"), load_offer(cfg["products"]["high_ticket_sales_mentorship"]["offer"]), load_common_sense(),
@@ -173,7 +173,7 @@ def test_answers_move_the_script_on(replies, expected_step):
 
 
 def test_real_price_question_still_gets_the_early_answer():
-    from core.script_engine.seller import ScriptSeller
+    from core.buy_mode.script_engine.seller import ScriptSeller
 
     cfg = load_yaml("script/engine.yaml")
     seller = ScriptSeller(cfg, load_method("cat"), load_offer(cfg["products"]["high_ticket_sales_mentorship"]["offer"]), load_common_sense(),
@@ -185,7 +185,7 @@ def test_real_price_question_still_gets_the_early_answer():
 
 
 def _real_seller():
-    from core.script_engine.seller import ScriptSeller
+    from core.buy_mode.script_engine.seller import ScriptSeller
 
     cfg = load_yaml("script/engine.yaml")
     return ScriptSeller(cfg, load_method("cat"), load_offer(cfg["products"]["high_ticket_sales_mentorship"]["offer"]), load_common_sense(),
@@ -195,7 +195,7 @@ def _real_seller():
 @pytest.mark.parametrize("said", ["money is tight and I don't have time", "I'm scared it won't work for me"])
 def test_open_question_takes_an_objection_shaped_reply_as_its_answer(said):
     # "What's the reason you haven't got there?" - "money is tight" IS the answer, not an objection
-    from core.script_engine.engine import ScriptState
+    from core.buy_mode.script_engine.engine import ScriptState
 
     seller = _real_seller()
     seller.reset(ScriptState(step="05", slots={"outcome": "financial freedom"}))
@@ -227,7 +227,7 @@ def test_objection_mid_discovery_is_acknowledged(said):
 @pytest.mark.parametrize("said", ["isnt this just a scam", "is this legit", "have you got any proof", "how do I know it works"])
 def test_a_trust_question_gets_the_early_line_even_without_a_question_mark(step, said):
     # step 05 takes money, time and fear as its answer; a trust question is still asked, not answered
-    from core.script_engine.engine import ScriptState
+    from core.buy_mode.script_engine.engine import ScriptState
 
     seller = _real_seller()
     seller.reset(ScriptState(step=step))
@@ -237,7 +237,7 @@ def test_a_trust_question_gets_the_early_line_even_without_a_question_mark(step,
 
 @pytest.mark.parametrize("said", ["this is taking too long", "can we hurry up"])
 def test_hurrying_the_call_up_is_frustration_not_a_pause(said):
-    from core.script_engine.engine import ScriptState
+    from core.buy_mode.script_engine.engine import ScriptState
 
     seller = _real_seller()
     seller.reset(ScriptState(step="05"))
@@ -246,8 +246,8 @@ def test_hurrying_the_call_up_is_frustration_not_a_pause(said):
 
 @pytest.mark.parametrize("step", ["03", "04", "05", "18"])
 def test_a_pause_is_a_pause_on_any_step(step):
-    from core.script_engine.engine import ScriptState
-    from core.script_engine.seller import ScriptSeller
+    from core.buy_mode.script_engine.engine import ScriptState
+    from core.buy_mode.script_engine.seller import ScriptSeller
 
     cfg = load_yaml("script/engine.yaml")
     seller = ScriptSeller(cfg, load_method("cat"), load_offer(cfg["products"]["high_ticket_sales_mentorship"]["offer"]), load_common_sense(),
@@ -272,7 +272,7 @@ def test_refusing_to_pay_at_the_start_is_the_money_worry_not_a_goal(reply):
 
 
 def test_failed_past_attempt_gets_an_acknowledgement():
-    from core.script_engine.engine import ScriptState
+    from core.buy_mode.script_engine.engine import ScriptState
 
     seller = _real_seller()
     seller.reset(ScriptState(step="03"))
@@ -315,7 +315,7 @@ def test_floored_labels_clear_their_floor_only_when_meant(capsys):
     ("I just want to know the price", "objection:money"),
 ])
 def test_before_the_price_short_answers_are_not_objections(reply, heard):
-    from core.script_engine import seller as S
+    from core.buy_mode.script_engine import seller as S
     gate = type("Down", (), {"llm": lambda self, router: None})()
     real = make_embedder(load_yaml("script/engine.yaml"), ROOT)  # not S.shared_embedder: conftest swaps in the fake
     s = S.build_seller(None, S.resolve_product(None), embedder=real, gate=gate)
@@ -345,7 +345,7 @@ def test_shrugs_are_unclear_and_real_answers_are_not():
 @pytest.mark.parametrize("said, step", [("what happens to the card exactly?", "m_open_wallet"), ("can we do option 2?", "22")])
 def test_a_card_question_asks_and_a_sure_choice_chooses(said, step):
     # at the wallet: asking about the card is not choosing to pay, "can we do option 2?" is
-    from core.script_engine.engine import ScriptState
+    from core.buy_mode.script_engine.engine import ScriptState
 
     seller = _real_seller()
     seller.reset(ScriptState(step="m_open_wallet"))
@@ -355,7 +355,7 @@ def test_a_card_question_asks_and_a_sure_choice_chooses(said, step):
 
 def test_a_scam_question_where_doubts_are_answers_is_the_scam_worry_not_a_bot_question():
     # live call: "is this a scam though?" at "what's stopping you" got "Yes, I'm an AI..."
-    from core.script_engine.engine import ScriptState
+    from core.buy_mode.script_engine.engine import ScriptState
 
     seller = _real_seller()
     step = next(k for k, s in seller.method.steps.items() if s.doubts_answer)
@@ -371,7 +371,7 @@ def test_a_scam_question_where_doubts_are_answers_is_the_scam_worry_not_a_bot_qu
     ("what do you mean", True),
 ])
 def test_a_shrug_in_front_of_an_answer_is_not_asking_what_we_mean(said, clarify):
-    from core.script_engine.engine import ScriptState
+    from core.buy_mode.script_engine.engine import ScriptState
 
     seller = _real_seller()
     seller.reset(ScriptState(step="goal_practical", slots={"outcome": "more money"}))

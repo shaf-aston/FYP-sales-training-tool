@@ -1,5 +1,5 @@
 # Quiz: buy mode asks where the AI seller is in its script and what it should do next
-# (core/quiz.py); sell mode replays one of the learner's own turns.
+# (core/training/quiz.py); sell mode replays one of the learner's own turns.
 
 # Points and score bands for the rule-based quiz scores (0-100). The rules set the score; the AI only adds wording.
 scoring:
@@ -22,7 +22,7 @@ words:
   reasoning: [because, so that, therefore, which means, this helps]
   plan: [first, next, then, after that, from there]
 
-# Rubric per stage (the script's ui_stage). Every stage in core/enums.py needs one.
+# Rubric per stage (the script's ui_stage). Every stage in core/buy_mode/stage.py needs one.
 stages:
   intent:
     goal: "Complete the INTENT stage by confirming the user's goal and context"
