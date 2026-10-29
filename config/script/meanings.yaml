@@ -90,3 +90,14 @@ meanings:
     lines:
       - "Getting burned once makes the next try feel riskier."
       - "That makes sense after a bad first try."
+  fear_of_loss:
+    draft: true
+    examples:
+      - "I'm scared of losing money"
+      - "I don't want to lose money again"
+      - "I'm worried I'll waste my money"
+      - "what if I put money in and lose it"
+      - "I can't afford to lose what I have"
+    lines:
+      - "That's a fair worry. Nobody wants to lose money."
+      - "Makes sense to be careful with your money."

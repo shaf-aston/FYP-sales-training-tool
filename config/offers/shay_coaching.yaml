@@ -23,6 +23,10 @@ facts:
       - "what's the price"
       - "what do you charge"
       - "can you give me a ballpark figure"
+      - "can you just tell me the price"   # draft: a price request is this fact, not the money objection ("I haven't mentioned a price yet")
+      - "I just want to know the price"   # draft
+      - "just tell me what it costs"   # draft
+      - "what's this going to cost me?"   # draft
     answer: "Fair question. I'll give you the exact price once I know what you need, then you decide."
     again: "Like I said, the exact price comes once I know what you need."   # draft: ours
     late_answer: "It's a {months}-month process and the investment is {price}."

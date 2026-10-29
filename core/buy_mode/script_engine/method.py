@@ -49,6 +49,7 @@ class Step:
     bridge: str = ""    # a getting-to-know-you question that follows a short intro of who we are (a fact with `bridge`); their reply is not saved
     reask: tuple = ()   # this step's own `reask` leads, in place of the method's ("more money" again is an answer, not a blank)
     needs: str = ""     # regex an answer must match ("how much a month?" needs a figure); a reply without it is asked again
+    plain_if: str = ""  # regex: their words said back that match it get the plain line ("each month to make more money?" asks money for money)
 
     @property
     def routes(self):
@@ -188,6 +189,9 @@ def _step(step_id, data):
         raise ValueError(f"step {step_id}: reask leads must not ask (the step's question follows)")
     if needs and (not data.get("capture") or re.search(needs, "")):
         raise ValueError(f"step {step_id}: needs takes a capture and must not match an empty reply")
+    plain_if = data.get("plain_if", "")
+    if plain_if and not data.get("say_plain"):
+        raise ValueError(f"step {step_id}: plain_if needs a say_plain")
     if data.get("echo") and not data.get("capture"):
         raise ValueError(f"step {step_id}: echo needs a capture")
     for line in (data.get("say", ""), data.get("say_plain", ""), *probes, *reask,
@@ -204,7 +208,7 @@ def _step(step_id, data):
         listen, bool(data.get("run_on")),
         data.get("name", ""), data.get("note", ""), bool(data.get("doubts_answer")),
         stuck, answered_by, bool(data.get("echo")), unsure, bool(data.get("moment")), data.get("bridge", ""),
-        reask, needs,
+        reask, needs, plain_if,
     )
 
 

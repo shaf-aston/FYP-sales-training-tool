@@ -143,7 +143,7 @@ class ScriptSeller:
         bridged = self.state.bridged
         self.state = replace(v.ahead or self.state, waiting=False, bridged=False)  # early answers are kept whatever it was
         if bridged and v.kind in ("answer", "says_nothing"):  # their reply to the getting-to-know-you question
-            return self._then_ask(self.cfg["bridge_ack"]), step.ui_stage, "bridge"
+            return self._then_ask(self.cfg["bridge_ack"]), self.ui_stage(), "bridge"
         said, ui_stage, detail = self._respond(v, step, opened)
         self.state = replace(Echo.settle(self.state, self._turn), repeated=self._turn.side)
         return said, ui_stage, detail or v.heard_as
@@ -159,10 +159,10 @@ class ScriptSeller:
         if v.kind == "ready":
             return *self._go(jump(self.method, self.state, self.method.ready.then)), ""
         if v.kind == "sense":
-            return *self._sense(self.sense.interruptions[v.name], step), ""
+            return *self._sense(self.sense.interruptions[v.name]), ""
         if v.kind == "objection" and not opened:
             self.state = park(self.state, v.name)
-            return self._then_ask(self.method.objections[v.name].early or self.sense.park), step.ui_stage, ""
+            return self._then_ask(self.method.objections[v.name].early or self.sense.park), self.ui_stage(), ""
         if v.kind == "objection":
             return *self._object(v.name), ""
         if v.kind == "fact":
@@ -170,31 +170,38 @@ class ScriptSeller:
             late = opened and f.late_answer
             if not late and v.name in self.state.told:  # "who is this?" then "what is this about?"
                 again = self._filler.fill(f.again or self.sense.told_again or f.answer, {})
-                return self._then_ask(again), step.ui_stage, ""
+                return self._then_ask(again), self.ui_stage(), ""
             if not late:
                 self.state = replace(self.state, told=(*self.state.told, v.name))
             lead = self._filler.fill(f.late_answer if late else f.answer, {})
             if f.bridge and step.bridge:
                 self.state = replace(self.state, bridged=True)
-                return f"{lead} {step.bridge}", step.ui_stage, ""
-            return self._then_ask(lead), step.ui_stage, ""
+                return f"{lead} {step.bridge}", self.ui_stage(), ""
+            return self._then_ask(lead), self.ui_stage(), ""
         if v.kind == "question":
             answer = self._answer_uncovered(v.text, opened) or self.cfg["uncovered_fallback"]
-            return self._then_ask(answer), step.ui_stage, ""
+            return self._then_ask(answer), self.ui_stage(), ""
         return self._answer(v, step, opened)
 
     def _answer(self, v, step, opened):
         text = v.text
         move, ack, heard_as = self._listen(v, step, opened)
         if self._hesitates(move):
-            return self._revisit(), step.ui_stage, "hesitates"
+            return self._revisit(), self.ui_stage(), "hesitates"
         earlier = self._earlier(step)
         self.state = move.state
         # an answer with a question in it: the question gets an answer when the facts have one, else
         # nothing ("what's next?" needs none). After the judge: a failed AI line can't cost it.
         heard = self._answer_uncovered(text, opened) if v.asking else ""
+        leads = step.reask or self.method.reask  # "No rush" in front says they weren't heard; a route's ack says they were
+        asked_again = move.state.step == step.id and (not move.ack or move.ack in leads)
+        meant = self._meaning(text) if asked_again and not heard else ""
+        if meant:
+            move = replace(move, ack="")  # "That's a fair worry." in place of "No rush"
         body = self._render(move)  # first: the question may quote them, and then the AI line may not
         acked = move.ack and self._filler.fill(move.ack, move.state.slots) is not None  # "{months} months..." needs a number
+        if meant:  # asked again: "scared of losing money" to "how long?" is still heard, never quoted
+            return tone.join(meant, body), move.ui_stage, heard_as
         if heard or acked or move.state.step == step.id:
             return (f"{heard} {body}" if heard else body), move.ui_stage, heard_as
         line, own = self._react(text, step, ack, earlier, opened)
@@ -206,9 +213,8 @@ class ScriptSeller:
         """What shows their answer was heard: (line, own bubble). A meaning line first (no AI, and no quoting
         them); else the AI's "I heard you" line, which says their words back, so only when the echo budget
         allows it; else nothing."""
-        line = self._meanings.line(text, self.state.meant + self._turn.meant)
+        line = self._meaning(text)
         if line:
-            self._turn.meant += (line,)
             return line, True
         if not self._echo.may_quote(self._turn, self.state, (), False):
             return "", False
@@ -221,6 +227,13 @@ class ScriptSeller:
             Echo.said(self._turn, quote)
         return ack, False
 
+    def _meaning(self, text):
+        """The meaning bank's line for the reply, each once a call; "" when it means none."""
+        line = self._meanings.line(text, self.state.meant + self._turn.meant)
+        if line:
+            self._turn.meant += (line,)
+        return line
+
     def _earlier(self, step):
         """Their answers to the other steps: what an AI line may link to."""
         return {k: v for k, v in self.state.slots.items() if k != step.capture}
@@ -230,22 +243,23 @@ class ScriptSeller:
         self.state = move.state
         return self._render(move), move.ui_stage
 
-    def _sense(self, said, step):
+    def _sense(self, said):
         """An everyday interruption: its reply, then what its `after` says."""
         if said.after == "wait":
             self.state = replace(self.state, waiting=True)
-            return said.reply, step.ui_stage
+            return said.reply, self.ui_stage()
         if said.after == "follow_up":  # "bye": book the follow-up, never carry on as if they stayed
             text, stage = self._go(jump(self.method, self.state, self.method.follow_up))
             return f"{said.reply} {text}".strip(), stage
         if said.after == "ask":
-            return self._then_ask(said.reply), step.ui_stage
+            return self._then_ask(said.reply), self.ui_stage()
         return self._carry_on(said.reply, rephrase=said.after == "rephrase")
 
-    def _carry_on(self, lead, rephrase=False):
+    def _carry_on(self, lead, rephrase=False, stay=False):
         """`lead`, then the step in other words; a step with no other words moves on instead (without
-        taking the reply as its answer), so the same line is never said twice in a row."""
-        text, stage = self._go(carry_on(self.method, self.state, rephrase))
+        taking the reply as its answer), so the same line is never said twice in a row. `stay`: a step with
+        other words is never moved on from (a second question in a row is no reason to skip the step)."""
+        text, stage = self._go(carry_on(self.method, self.state, rephrase, stay))
         return f"{lead} {text}", stage
 
     def _hesitates(self, move):
@@ -284,10 +298,8 @@ class ScriptSeller:
         line from the listen call ("" when it failed a check), or None when no listen call was made."""
         text, labels = v.text, answer_labels(step)
         label, line, ack, missed = None, "", None, False
-        short = step.needs and not re.search(step.needs, text, re.IGNORECASE)
-        if short:
-            empty, missed = True, True  # "I don't know where to start" to "how much a month?": no figure in it
-        elif labels:
+        needed = not step.needs or re.search(step.needs, text, re.IGNORECASE)
+        if labels:
             found = self._listener.answer(text, labels, list(self.sense.unclear),
                                           {r.label: r.min_score for r in step.listen if r.label})
             label, near = found.label, found.candidates
@@ -296,12 +308,17 @@ class ScriptSeller:
                 label = None if pick == VAGUE else pick
                 if found.label and not label and step.unsure and all(r.then != step.id for r in step.listen if r.label in near):
                     label = step.unsure  # every near meaning is a real answer: take the step's safe one, don't ask again
-        elif self.cfg["listen"] and step.capture and not (empty and not asks_left(self.method, self.state, self.cfg["misses"])):
+        elif needed and self.cfg["listen"] and step.capture and not (empty and not asks_left(self.method, self.state, self.cfg["misses"])):
             concept = f"{step.name}: {step.note}" if step.note else step.name  # the AI hears for it
             heard = self._voice.listen(text, concept, self._asked_text(), self._earlier(step), opened)
             if heard is not None:
                 missed = not heard.answered
                 empty, line, ack = empty or missed, heard.probe, heard.ack
+        # "I don't know where to start" to "how much a month?": no figure in it. A route that doesn't keep the
+        # reply ("I tried dropshipping and it failed" to "how long?") needs none: it isn't taken as the answer.
+        short = not needed and (not label or any(r.keep for r in step.listen if r.label == label))
+        if short:
+            empty, missed = True, True
         if step.capture and not line and not self.state.said and not short:  # their words asked about once a step, never twice
             line = self._shrugs.ask_meaning(text, self._asked_text(), empty, v.ahead is not None,
                                             self.state.slots.values())  # said only if asked again
@@ -337,7 +354,7 @@ class ScriptSeller:
         side reply in a row gets the step in other words, or moves on (`_carry_on`), never the same line."""
         self._turn.side = True
         if self.state.repeated:
-            return self._carry_on(lead.strip())[0]
+            return self._carry_on(lead.strip(), stay=True)[0]
         say, say_plain = asked_line(self.method, self.state)  # the words last used, not always the first
         question = self._line(self.method.steps[self.state.step], say, "", say_plain, self.state.slots,
                               theirs=bool(self.state.asked))
@@ -359,7 +376,8 @@ class ScriptSeller:
         """One line as said, within the echo budget (echo.py): their words where it allows, else the plain
         line. `theirs`: the line was made from their reply ("What do you mean by ...?", an AI probe)."""
         phrases = self._filler.echoes(say, slots) + self._filler.echoes(ack, slots)
-        if phrases and not self._echo.may_quote(self._turn, self.state, phrases, step.moment):
+        circular = step.plain_if and any(re.search(step.plain_if, p, re.IGNORECASE) for p in phrases)
+        if phrases and (circular or not self._echo.may_quote(self._turn, self.state, phrases, step.moment)):
             slots, phrases = {k: v for k, v in slots.items() if k not in self._filler.echo}, []
         if phrases:
             Echo.said(self._turn, phrases)

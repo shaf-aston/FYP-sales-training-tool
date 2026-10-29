@@ -21,6 +21,8 @@ ready:
     - "where do I sign up, I want to join"
     - "how do I sign up"
     - "just send me the link to pay"
+    - "yes I'm in, how do I pay"        # draft: these two hear "yes I'm in" (0.87), never "sounds good" (0.77),
+    - "yes I'm in, send me the link"    # draft: "I'm in sales" (0.70) or "I want to join the people who made it" (0.78)
 # Said before a question asked again once its probes ran out, in turn: the same line twice in a row
 # reads like a bot. draft: ours, the source has no wording for this.
 reask: ["No rush, even a rough idea helps.", "Just your best guess is fine.", "Whatever comes to mind first."]   # draft: the third lead is ours
@@ -101,6 +103,9 @@ steps:
     say_plain: "What are you hoping that would get you?"
     capture: practical
     echo: true
+    # Not an answer: a reply made only of shrugs, figures or spans of time ("dunno like 10k", "a while",
+    # "like 5 grand"); asked again, then moved on unsaved. A figure is still kept for 02 (`answered_by`).
+    needs: &a_goal '^(?!\W*(?:(?:dunno|idk|i\s+don''?t\s+know|not\s+sure|like|about|around|maybe|probably|roughly|um+|uh+|hmm+|lol|ig|i\s+guess|a\s+while|ages|a\s+long\s+time|for\s+ages|forever|[$£€]?\d[\d,.]*\s*(?:k|grand|thousand|years?|months?|weeks?)?|(?:a|one|two|three|four|five|six|seven|eight|nine|ten|twenty|thirty|forty|fifty|few|couple)\s+(?:grand|thousand|k|years?|months?|weeks?))(?:\W+(?:dunno|idk|i\s+don''?t\s+know|not\s+sure|like|about|around|maybe|probably|roughly|um+|uh+|hmm+|lol|ig|i\s+guess|a\s+while|ages|a\s+long\s+time|for\s+ages|forever|[$£€]?\d[\d,.]*\s*(?:k|grand|thousand|years?|months?|weeks?)?|(?:a|one|two|three|four|five|six|seven|eight|nine|ten|twenty|thirty|forty|fifty|few|couple)\s+(?:grand|thousand|k|years?|months?|weeks?)))*)?\W*$)'
     probe:
       - "What would that actually change for you, day to day?"
     # "financial freedom" again is a real answer, just not deeper: "No rush" would read as if they said nothing
@@ -122,6 +127,7 @@ steps:
     say: "And what would that change about you, as a person?"
     capture: identity
     echo: true
+    needs: *a_goal
     probe:
       - "Who would you be, once that's real?"
     stuck: {then: "02"}
@@ -133,17 +139,18 @@ steps:
     draft: true
     say: "How much would you need to be making each month {outcome|to have $|to $}?"
     say_plain: "How much would you need to be making each month to make that happen?"
+    plain_if: '\bmoney\b|\bcash\b|\brich\b'   # "to make more money" after "how much each month" asks money for money
     capture: number
     # A reply with no figure ("I don't know where to start") is not the answer: asked again, then moved on unsaved.
     needs: '\d|\b(?:two|three|four|five|six|seven|eight|nine|ten|twenty|thirty|forty|fifty|hundred|thousand|grand|million)\b'   # not "one": "no one knows" is no figure
     probe:   # draft: ours, so a reply with no figure gets an easier question, not the same one
       - "If you had to put a number on it, what would you want coming in each month?"
     stuck: {then: "03"}
-    # "I want 5k a month" (or a reply that is only the figure, "about 5k a month", "five grand a month") said earlier answers this step,
+    # "I want 5k a month" (or a reply that is only the figure, "about 5k a month", "like 5 grand") said earlier answers this step,
     # so it is skipped. Otherwise needs a want/need word,
     # only "to make / be earning / around"-type words, then the figure and "a month": "I make 2k a month",
     # "a job paying 2k a month", "I need to save 200 a month" and "I don't want ..." are not the goal.
-    answered_by: '(?:(?<!n''t )(?<!not )\b(?:want|need|aim|aiming|hoping|looking|goal|target|(?<=to |nd )have|having)(?:\s+(?:to|be|make|making|earn|earning|bring|bringing|in|about|around|at|least|like|roughly|for|of|is|maybe|ideally|say|minimum))*\s+|^\W*(?P<bare>)(?:(?:about|around|roughly|maybe|probably|like|say|ideally|at least|i''d say)\s+)*)(?P<answer>(?:[$£€]?\d[\d,.]*\s*(?:k|grand|thousand)?|(?:a|one|two|three|four|five|six|seven|eight|nine|ten|fifteen|twenty|thirty|forty|fifty)\s+(?:grand|thousand|k))\s*(?:a|per|each|every|/)\s*(?:month|mo)\b)(?(bare)\W*$)'
+    answered_by: '(?:(?<!n''t )(?<!not )\b(?:want|need|aim|aiming|hoping|looking|goal|target|(?<=to |nd )have|having)(?:\s+(?:to|be|make|making|earn|earning|bring|bringing|in|about|around|at|least|like|roughly|for|of|is|maybe|ideally|say|minimum))*\s+|^\W*(?P<bare>)(?:(?:about|around|roughly|maybe|probably|like|say|ideally|at least|i''d say|dunno|idk|i guess)\s+)*)(?P<answer>(?:[$£€]?\d[\d,.]*\s*(?:k|grand|thousand)?|(?:a|one|two|three|four|five|six|seven|eight|nine|ten|fifteen|twenty|thirty|forty|fifty)\s+(?:grand|thousand|k))\s*(?:a|per|each|every|/)\s*(?:month|mo)\b|(?(bare)(?:[$£€]?\d[\d,.]*\s*(?:k|grand|thousand)|(?:a|one|two|three|four|five|six|seven|eight|nine|ten|fifteen|twenty|thirty|forty|fifty)\s+(?:grand|thousand|k))|(?!)))(?(bare)\W*$)'
     listen:
       any: {then: "03"}
   "03":
@@ -151,6 +158,8 @@ steps:
     ui_stage: logical
     say: "How long have you been thinking about this?"
     capture: years
+    # A span of time: "nothing" or "time" is no answer to how long ("about 3 years", "since covid", "ages" are).
+    needs: '\d|\b(?:since|ages|while|long|forever|always|ever|recently|lately|life|bit|days?|weeks?|months?|years?|yrs?|decades?)\b'
     probe:   # draft: ours, so "I don't know" gets an easier question, not the same one
       - "Roughly, is it more like months, or a few years?"
     stuck: {then: "04"}
@@ -165,6 +174,14 @@ steps:
         then: "03"   # still asked how long: 04 says "so many nights, months and years" as if they told us
         keep: false
         ack: "Sorry to hear that, plenty of people have a first attempt that doesn't work out."
+      worried:   # a rival label: "I'm scared of losing money" (0.75 to the attempts above) is a worry, not a failed attempt
+        draft: true
+        examples:
+          - "I'm scared of losing money"
+          - "I don't want to lose money again"
+          - "I'm worried I'll waste my money"
+        then: "03"   # still asked how long; the meaning bank says they were heard
+        keep: false
       any:
         then: "04"
         ack: "{months_thinking} months... Damn.¶"   # owner's line: their time, in months, before 04 asks why

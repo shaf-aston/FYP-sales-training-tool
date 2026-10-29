@@ -312,7 +312,7 @@ def test_floored_labels_clear_their_floor_only_when_meant(capsys):
     ("risk I guess", "answer"),
     ("I can't afford anything right now", "objection:money"),
     ("I'm scared it won't work for me", "objection:fear"),
-    ("I just want to know the price", "objection:money"),
+    ("I just want to know the price", "fact:price"),   # live: "I haven't mentioned a price yet" answered a price request
 ])
 def test_before_the_price_short_answers_are_not_objections(reply, heard):
     from core.buy_mode.script_engine import seller as S

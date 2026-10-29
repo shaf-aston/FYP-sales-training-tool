@@ -58,11 +58,11 @@ def test_one_quote_per_message(fake_embedder, cat_seller, mirror):
 
 def test_the_ai_line_is_not_asked_for_when_the_last_message_quoted_them(fake_embedder, cat_seller, mirror):
     s = cat_seller(fake_embedder, mirror, meanings=NO_MEANINGS, step="01")
-    s.reply("more money")                       # the goal question says "more money"
+    s.reply("financial freedom")                # the goal question says "financial freedom"
     text, _ = s.reply("paying the bills")       # level 2: on to the identity question
     assert text == CAT.steps["goal_identity"].say and mirror.acks == 0
     text, _ = s.reply("someone my kids look up to")  # 02's own line names their goal: that is this message's quote
-    assert text == "How much would you need to be making each month to have more money?" and mirror.acks == 0
+    assert text == "How much would you need to be making each month to have financial freedom?" and mirror.acks == 0
 
 
 def test_the_ai_line_is_asked_for_when_the_budget_allows(fake_embedder, cat_seller):

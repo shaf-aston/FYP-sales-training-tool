@@ -535,9 +535,9 @@ def test_a_line_asked_again_is_filled_the_same_way_without_new_ai_calls(fake_emb
 
 
 def test_im_back_is_an_answer_unless_they_stepped_away(fake_embedder):
-    s = at(make_seller(fake_embedder), "03", why="more time with my kids")
+    s = at(make_seller(fake_embedder), "04", why="more time with my kids")
     s.reply("ok I'm back")
-    assert s.state.step != "03"  # step 03 takes any answer, so the script moved on
+    assert s.state.step != "04"  # step 04 takes any answer, so the script moved on
 
 
 def test_the_same_worry_said_again_in_its_branch_answers_the_step(seller):

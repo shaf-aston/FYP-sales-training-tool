@@ -906,3 +906,66 @@ def test_a_monthly_figure_said_early_is_kept_only_when_it_is_the_goal(reply, kep
     state = hear_ahead(CAT, ScriptState(step="goal_identity"), reply)
     assert state.slots.get("number") == kept
 
+
+
+# ---- live test calls, round 4 ----------------------------------------------------------------------
+
+def test_what_do_you_mean_is_answered_on_the_step_even_after_its_last_ask(fake_embedder):
+    s = seller(fake_embedder, step="01", asks=CFG["misses"])  # live: "hey" used the probe, then "wat do u mean" skipped 01
+    s.reply("what do you mean")
+    assert s.state.step == "01"
+
+
+@pytest.mark.parametrize("step, reply", [
+    ("goal_practical", "dunno like 10k"),   # live: taken as their practical goal
+    ("goal_identity", "a while"),           # live: taken as who they'd be
+    ("goal_identity", "like 5 grand"),
+    ("03", "nothing"),                      # live: taken as how long they've thought about it
+])
+def test_a_reply_that_is_no_answer_is_asked_again_not_kept(fake_embedder, step, reply):
+    s = seller(fake_embedder, step=step, slots={"outcome": "more money"})
+    s.reply(reply)
+    assert s.state.step == step and CAT.steps[step].capture not in s.state.slots
+
+
+@pytest.mark.parametrize("reply, kept", [
+    ("like 5 grand", "5 grand"),    # live: a bare figure with no "a month" was not kept for 02
+    ("dunno like 10k", "10k"),
+    ("I want 10k", None),           # a want with no "a month" may be a lump sum
+])
+def test_a_bare_big_figure_is_kept_for_the_money_step(reply, kept):
+    assert hear_ahead(CAT, ScriptState(step="goal_identity"), reply).slots.get("number") == kept
+
+
+def test_im_in_is_ready_even_though_it_is_made_of_shrug_words(fake_embedder):
+    from dataclasses import replace
+    method = replace(CAT, ready=replace(CAT.ready, examples=("yes I'm in",)))
+    s = seller(fake_embedder, step="belief_cost", method=method)
+    s.reply("yes I'm in")  # live: heard as saying nothing, and asked the cost question again
+    assert s.state.step == CAT.ready.then
+
+
+def test_a_worry_at_the_time_step_is_heard_not_called_a_failed_attempt(fake_embedder):
+    from core.buy_mode.script_engine.hear.meanings import load_meanings
+    text, _ = seller(fake_embedder, step="03").reply("I'm scared of losing money")
+    assert text.startswith(load_meanings().items["fear_of_loss"].lines[0]) and "Sorry to hear" not in text
+
+
+def test_a_price_request_gets_the_price_answer_and_keeps_the_step(fake_embedder):
+    s = seller(fake_embedder, step="04")
+    s.reply("my partner would have to be on board")
+    text, _ = s.reply("can you just tell me the price")  # live: "I haven't mentioned a price yet", then 04 skipped
+    assert text.startswith(load_offer("shay_coaching").facts["price"].answer) and s.state.step == "04"
+
+
+def test_a_money_goal_is_not_said_back_in_the_money_question(fake_embedder):
+    s = seller(fake_embedder, step="goal_identity", slots={"outcome": "make more money"})
+    text, _ = s.reply("I want to finally be proud of myself")  # live: "each month to make more money?"
+    assert text.endswith(CAT.steps["02"].say_plain)
+
+
+def test_a_side_reply_that_moves_the_step_shows_the_new_stage(fake_embedder):
+    s = seller(fake_embedder, step="12")
+    s.reply("who are you")
+    _, stage = s.reply("who are you")  # the second side reply in a row moves 12 (no other words) on to 13
+    assert s.state.step == "13" and stage == CAT.steps["13"].ui_stage != CAT.steps["12"].ui_stage
