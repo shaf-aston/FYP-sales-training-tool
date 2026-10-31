@@ -76,6 +76,8 @@ steps:
           - "to spend more time with my family"
           - "so I can help my parents out"
           - "to not have to check my bank balance before buying food"
+          - "not dreading Mondays and actually enjoying life instead of just surviving"   # draft: live, heard as level 1
+          - "a bit extra each month would help with the mortgage"   # draft: live ("an extra few hundred a month would help with the mortgage"), heard as level 1
         then: "goal_identity"
       identity:   # level 3 already: the ladder is climbed
         examples: &identity
@@ -84,6 +86,7 @@ steps:
           - "to be the provider for my family I always wanted to be"
           - "to prove to myself I am capable of more"
           - "I want to become my own person and not someone's employee"
+          - "someone who actually follows through on things"   # draft: live, heard as no level and asked again
         then: "02"
       vague:   # restates the question or names no outcome: ask again, never take it as their goal
         examples:
@@ -101,11 +104,12 @@ steps:
     say: "What are you hoping to achieve {outcome|with $|by being able to $}?"
     moment: true   # the goal formula: their exact words, whatever the echo budget says
     say_plain: "What are you hoping that would get you?"
+    plain_if: '^\W*(?:money|cash)\W*$'   # "What are you hoping to achieve with money?" reads oddly
     capture: practical
     echo: true
     # Not an answer: a reply made only of shrugs, figures or spans of time ("dunno like 10k", "a while",
     # "like 5 grand"); asked again, then moved on unsaved. A figure is still kept for 02 (`answered_by`).
-    needs: &a_goal '^(?!\W*(?:(?:dunno|idk|i\s+don''?t\s+know|not\s+sure|like|about|around|maybe|probably|roughly|um+|uh+|hmm+|lol|ig|i\s+guess|a\s+while|ages|a\s+long\s+time|for\s+ages|forever|[$£€]?\d[\d,.]*\s*(?:k|grand|thousand|years?|months?|weeks?)?|(?:a|one|two|three|four|five|six|seven|eight|nine|ten|twenty|thirty|forty|fifty|few|couple)\s+(?:grand|thousand|k|years?|months?|weeks?))(?:\W+(?:dunno|idk|i\s+don''?t\s+know|not\s+sure|like|about|around|maybe|probably|roughly|um+|uh+|hmm+|lol|ig|i\s+guess|a\s+while|ages|a\s+long\s+time|for\s+ages|forever|[$£€]?\d[\d,.]*\s*(?:k|grand|thousand|years?|months?|weeks?)?|(?:a|one|two|three|four|five|six|seven|eight|nine|ten|twenty|thirty|forty|fifty|few|couple)\s+(?:grand|thousand|k|years?|months?|weeks?)))*)?\W*$)'
+    needs: &a_goal '^(?!\W*(?:(?:dunno|idk|i\s+don''?t\s+know|not\s+sure|like|about|around|maybe|probably|roughly|um+|uh+|hmm+|lol|ig|i\s+guess|a\s+while|ages|on\s+the\s+side|a\s+month|per\s+month|or\s+so|a\s+long\s+time|for\s+ages|forever|[$£€]?\d[\d,.]*\s*(?:k|grand|thousand|years?|months?|weeks?)?|(?:a|one|two|three|four|five|six|seven|eight|nine|ten|twenty|thirty|forty|fifty|few|couple)\s+(?:grand|thousand|k|years?|months?|weeks?))(?:\W+(?:dunno|idk|i\s+don''?t\s+know|not\s+sure|like|about|around|maybe|probably|roughly|um+|uh+|hmm+|lol|ig|i\s+guess|a\s+while|ages|on\s+the\s+side|a\s+month|per\s+month|or\s+so|a\s+long\s+time|for\s+ages|forever|[$£€]?\d[\d,.]*\s*(?:k|grand|thousand|years?|months?|weeks?)?|(?:a|one|two|three|four|five|six|seven|eight|nine|ten|twenty|thirty|forty|fifty|few|couple)\s+(?:grand|thousand|k|years?|months?|weeks?)))*)?\W*$)'
     probe:
       - "What would that actually change for you, day to day?"
     # "financial freedom" again is a real answer, just not deeper: "No rush" would read as if they said nothing
@@ -150,7 +154,7 @@ steps:
     # so it is skipped. Otherwise needs a want/need word,
     # only "to make / be earning / around"-type words, then the figure and "a month": "I make 2k a month",
     # "a job paying 2k a month", "I need to save 200 a month" and "I don't want ..." are not the goal.
-    answered_by: '(?:(?<!n''t )(?<!not )\b(?:want|need|aim|aiming|hoping|looking|goal|target|(?<=to |nd )have|having)(?:\s+(?:to|be|make|making|earn|earning|bring|bringing|in|about|around|at|least|like|roughly|for|of|is|maybe|ideally|say|minimum))*\s+|^\W*(?P<bare>)(?:(?:about|around|roughly|maybe|probably|like|say|ideally|at least|i''d say|dunno|idk|i guess)\s+)*)(?P<answer>(?:[$£€]?\d[\d,.]*\s*(?:k|grand|thousand)?|(?:a|one|two|three|four|five|six|seven|eight|nine|ten|fifteen|twenty|thirty|forty|fifty)\s+(?:grand|thousand|k))\s*(?:a|per|each|every|/)\s*(?:month|mo)\b|(?(bare)(?:[$£€]?\d[\d,.]*\s*(?:k|grand|thousand)|(?:a|one|two|three|four|five|six|seven|eight|nine|ten|fifteen|twenty|thirty|forty|fifty)\s+(?:grand|thousand|k))|(?!)))(?(bare)\W*$)'
+    answered_by: '(?:(?<!n''t )(?<!not )\b(?:want|need|aim|aiming|hoping|looking|goal|target|(?<=to |nd )have|having)(?:\s+(?:to|be|make|making|earn|earning|bring|bringing|in|about|around|at|least|like|roughly|for|of|is|maybe|ideally|say|minimum))*\s+|^\W*(?P<bare>)(?:(?:about|around|roughly|maybe|probably|like|say|ideally|at least|i''d say|dunno|idk|i guess)\s+)*)(?P<answer>(?:[$£€]?\d[\d,.]*\s*(?:k|grand|thousand)?|(?:a|one|two|three|four|five|six|seven|eight|nine|ten|fifteen|twenty|thirty|forty|fifty)\s+(?:grand|thousand|k))\s*(?:a|per|each|every|/)\s*(?:month|mo)\b|(?(bare)(?:[$£€]?\d[\d,.]*\s*(?:k|grand|thousand)|(?:a|one|two|three|four|five|six|seven|eight|nine|ten|fifteen|twenty|thirty|forty|fifty)\s+(?:grand|thousand|k))|(?!)))(?(bare)(?:\W+(?:on the side|or so|ish|maybe|probably|roughly|at least|tbh|honestly|would do it|would do|would be nice))*\W*$)'
     listen:
       any: {then: "03"}
   "03":
@@ -180,6 +184,7 @@ steps:
           - "I'm scared of losing money"
           - "I don't want to lose money again"
           - "I'm worried I'll waste my money"
+          - "I don't trust most of these online things"   # draft: live, heard as a failed attempt ("Sorry to hear that")
         then: "03"   # still asked how long; the meaning bank says they were heard
         keep: false
       any:
@@ -399,6 +404,7 @@ steps:
     capture: reason
     listen:
       backs_out: &backs_out   # live: "actually no, forget it" got "Welcome aboard"; back to the soft close
+        min_score: 0.78   # live: "because I'm sick of waiting for things to change" (0.71) is their reason, not backing out (0.78+)
         examples:
           - "actually no, forget it"
           - "no, I changed my mind"
@@ -407,6 +413,7 @@ steps:
           - "never mind, I'm out"
           - "wait, I'm not sure anymore"
           - "no thanks, I'll pass"
+          - "actually I don't think so"   # draft
           - "no"
         then: "19"
         ack: "No pressure at all."
@@ -429,6 +436,7 @@ steps:
     stuck: {then: "19"}   # still no way to pay after asking twice: back to the soft close, never "welcome aboard"
     listen:
       pays:   # only a way to pay ends the call: "no, forget it" must never get "Welcome aboard"
+        min_score: 0.8   # live: "ok" (0.73) to "Credit or debit?" got "Welcome aboard"; a choice ("card", "debit pls") scores 0.83+
         examples:
           - "credit"
           - "debit"
@@ -439,6 +447,9 @@ steps:
           - "let's do credit"
           - "visa"
           - "paypal"
+          - "mastercard"   # draft
+          - "amex"   # draft
+          - "apple pay"   # draft
           - "bank transfer"
           - "either is fine"
           - "whichever is easier"

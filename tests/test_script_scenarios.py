@@ -536,6 +536,7 @@ def test_whats_next_asks_no_ai(fake_embedder):
     ("my own boss", "your own boss"),            # first person turned to second
     ("freedom for me and my whole family", None),  # too long
     ("travel more", "travel more"),
+    ("fine. more money obviously", "more money"),   # live: said back whole
     ("not sure really", None),
     ("", None),
 ])
@@ -969,3 +970,19 @@ def test_a_side_reply_that_moves_the_step_shows_the_new_stage(fake_embedder):
     s.reply("who are you")
     _, stage = s.reply("who are you")  # the second side reply in a row moves 12 (no other words) on to 13
     assert s.state.step == "13" and stage == CAT.steps["13"].ui_stage != CAT.steps["12"].ui_stage
+
+
+@pytest.mark.parametrize("said, step", [
+    ("dunno, a year?", "04"),          # live: "I'll find out and let you know": the answer said with a rise
+    ("how long will it take?", "03"),  # a real question with a span-of-time word still asks
+])
+def test_a_short_answer_with_a_question_mark_is_still_the_answer(fake_embedder, said, step):
+    s = seller(fake_embedder, step="03")
+    s.reply(said)
+    assert s.state.step == step
+
+
+def test_a_yes_or_no_question_asked_again_never_asks_for_a_rough_idea(fake_embedder):
+    s = seller(fake_embedder, step="m_close2")   # live: "No rush, even a rough idea helps. Do you see yourself jumping in?"
+    reply, _ = s.reply("banana")
+    assert reply.startswith("No pressure either way.") and s.state.step == "m_close2"

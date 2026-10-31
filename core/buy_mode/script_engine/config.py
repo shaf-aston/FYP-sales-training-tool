@@ -15,7 +15,7 @@ TYPES = {
     "ai_retries": int, "ai_rest_seconds": NUMBER, "ai_fail_limit": int, "ai_timeout_seconds": NUMBER,
     "ai_workers": int, "judge_examples": int, "judge_tokens": int, "answer_tokens": int, "listen_tokens": int,
     "ack_tokens": int, "ack_retries": int, "ack_max_words": int, "probe_max_words": int, "memory_chars": int,
-    "log_text_chars": int,
+    "log_text_chars": int, "rise_answer_words": int,
     "ack": bool, "listen": bool, "log_uncovered": bool,
     "stop_words": list, "filler_words": list, "filler_tags": list, "question_words": list, "question_subjects": list, "question_starts": list, "closed_question_starts": list,
     "bad_phrase_starts": list, "verb_goal_starts": list, "be_goal_words": list, "echo_drop_starts": list, "echo_drop_ends": list,

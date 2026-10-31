@@ -512,6 +512,10 @@ def test_a_question_word_without_a_question_mark_still_counts(fake_embedder):
     ("have a family to look after", False),
     ("can't afford it", False),
     ("how I see it is I need more time", False),
+    ("shut up and just tell me the price", True),   # live: moved on as their answer
+    ("ok fine, how much is it", True),
+    ("I want freedom and time with my kids", False),
+    ("how'd you get my number", True),   # live: "Good to know."
 ])
 def test_question_detection_uses_the_opening_words_or_a_question_mark(text, expected):
     from core.infra.utils import is_question

@@ -40,6 +40,22 @@ facts:
     bridge: true   # at the very start, a getting-to-know-you question follows (the step's `bridge`)
     answer: "We help people build their own business {industry}, and there are a few different ways to do it.¶It always comes down to what would work best for you, so before I can suggest anything I need to know a bit more."
     again: "Like I said, it depends on what would work best for you, which is why I'm asking."   # draft: ours
+  how_reached:   # live: "how'd you get my number" was taken as their answer to "have you tried before?" ("Good to know.")
+    draft: true
+    examples:
+      - "how did you get my number"
+      - "why are you calling me"
+      - "where did you get my details"
+      - "I didn't ask for this call"
+    answer: "You filled in an application and booked this call with our setter, so I'm following up on that."
+  payment_plan:   # live: "can I split it into payments?" at the payment step got "I'll find out and let you know"
+    draft: true
+    examples:
+      - "can I pay in instalments"
+      - "can I split it into payments"
+      - "is there a payment plan"
+      - "can I pay monthly"
+    answer: "There are ways to make the investment work, and we'll find the one that suits you."
   length:
     draft: true
     examples:

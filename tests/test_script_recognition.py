@@ -377,3 +377,37 @@ def test_a_shrug_in_front_of_an_answer_is_not_asking_what_we_mean(said, clarify)
     seller.reset(ScriptState(step="goal_practical", slots={"outcome": "more money"}))
     text, _ = seller.reply(said)
     assert text.startswith(seller.sense.interruptions["clarify"].reply) == clarify
+
+
+ROUND_5 = [   # live persona calls (round 5): (step, slots, raised, said, step after, the reply starts with or None)
+    ("20", {}, (), "because I'm sick of waiting for things to change", "22", None),   # was "No pressure at all"
+    ("22", {}, (), "ok", "22", None),                                    # was "Welcome aboard"
+    ("22", {}, (), "debit", "end", None),
+    ("14", {}, (), "5 grand? that's a lot mate", "m_funded", None),       # was taken as a nod
+    ("m_funded", {}, ("money",), "I don't have 5k lying around", "m_funded", None),   # was "think it over"
+    ("m_think_what", {}, ("research",), "mostly whether it actually works for people", "m_reframe1", None),   # was money
+    ("03", {}, (), "dunno, a year?", "04", None),                         # was "I'll find out and let you know"
+    ("03", {}, (), "honestly I don't trust most of these online things", "03", None),
+    ("goal_practical", {"outcome": "a side income"}, (), "ok well, an extra few hundred a month would help with the mortgage", "goal_identity", None),
+    ("goal_practical", {"outcome": "out of the rat race"}, (),
+     "not dreading Mondays, and having a bit more cash to actually enjoy life rather than just surviving", "goal_identity", None),
+    ("01", {}, (), "how'd you get my number", "01", "You filled in an application"),   # was "Good to know."
+    ("01", {}, (), "hey sorry, did you catch the match last night?", "01", "Ha, all good here"),
+    ("01", {}, (), "fine. more money obviously", "goal_practical", "What are you hoping to achieve with more money?"),
+    ("m_funded", {}, ("money",), "can I split it into payments?", "m_funded", "There are ways to make the investment work"),
+    ("m_close2", {}, ("fear",), "credit", "20", None),   # was "No rush, even a rough idea helps."
+]
+
+
+@pytest.mark.parametrize("step, slots, raised, said, after, starts", ROUND_5)
+def test_round_5_live_replies(step, slots, raised, said, after, starts):
+    from core.buy_mode.script_engine.engine import ScriptState
+
+    seller = _real_seller()
+    seller.reset(ScriptState(step=step, slots=dict(slots), raised=raised))
+    text, _ = seller.reply(said)
+    assert seller.state.step == after, text
+    assert not text.startswith("Sorry to hear that")   # a worry is not a failed attempt
+    assert seller.cfg["uncovered_fallback"] not in text
+    if starts:
+        assert text.startswith(starts), text

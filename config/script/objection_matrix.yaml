@@ -26,6 +26,8 @@ objections:
       - "why does it cost that much"
       - "I can't spare the money with my mortgage"
       - "money is tight for me at the moment"
+      - "woah, that's a lot mate"   # draft: live ("5 grand? that's a lot mate"), said at the price and taken as a nod
+      - "I don't have that kind of money lying around"   # draft: live ("I don't have 5k lying around"), same
   partner:
     enter: m_partner_here
     examples:
@@ -140,6 +142,9 @@ steps:
       partner:
         examples: ["my wife", "talking to my partner", "what my husband thinks"]
         then: m_partner_here
+      works:   # draft: a rival to money: live, "mostly whether it actually works for people" went to the money questions
+        examples: ["whether it actually works", "if it works for people like me", "if I can trust it"]
+        then: m_reframe1
       any: {then: m_reframe1}
 
   # Money objections
@@ -147,6 +152,7 @@ steps:
     name: "Money 1: if funded"
     ui_stage: outcome
     say: "Tell me if you did have the funding, is this something that would work for you?"
+    reask: &yes_no_reask ["No pressure either way."]   # draft: a yes-or-no question; "even a rough idea helps" read oddly before it (live)
     stuck: {then: m_reframe1}
     listen:
       "yes":
@@ -267,13 +273,21 @@ steps:
     name: "Partner 2: soft close"
     ui_stage: outcome
     say: "Do you see yourself jumping in?"   # the script's own soft close
+    reask: *yes_no_reask
     stuck: {then: m_reframe1}
     listen:
       "yes":
-        examples: ["yes", "yes let's do it", "I'm in"]
+        examples: &close_yes   # a way to pay says yes too (live: "credit" here got "No rush, even a rough idea helps")
+          - "yes"
+          - "yes let's do it"
+          - "I'm in"
+          - "ok, let's go"   # draft
+          - "how do I pay"   # draft
+          - "credit"   # draft
+          - "I'll pay by card"   # draft
         then: resell
       "no":
-        examples: ["no", "not yet", "I'm not sure"]
+        examples: &close_no ["no", "not yet", "I'm not sure"]
         then: m_reframe1   # partner handled, still no: it's fear
   m_open_wallet:
     name: "Partner 2: Open Wallet test"
@@ -337,13 +351,14 @@ steps:
     name: "Reframe 1: close"
     ui_stage: outcome
     say: "Do you see yourself jumping in?"
+    reask: *yes_no_reask
     stuck: {then: m_reframe2}
     listen:
       "yes":
-        examples: ["yes", "yes let's do it", "I'm in"]
+        examples: *close_yes
         then: resell
       "no":
-        examples: ["no", "not yet", "I'm not sure"]
+        examples: *close_no
         then: m_reframe2
   m_reframe2:
     name: "Reframe 2: the island"
@@ -355,13 +370,14 @@ steps:
     name: "Reframe 2: close"
     ui_stage: outcome
     say: "Do you see yourself jumping in?"
+    reask: *yes_no_reask
     stuck: {then: m_reframe3}
     listen:
       "yes":
-        examples: ["yes", "yes let's do it", "I'm in"]
+        examples: *close_yes
         then: resell
       "no":
-        examples: ["no", "not yet", "I'm not sure"]
+        examples: *close_no
         then: m_reframe3
   m_reframe3:
     name: "Reframe 3: choices"
@@ -373,12 +389,13 @@ steps:
     name: "Reframe 3: close"
     ui_stage: outcome
     say: "Do you see yourself jumping in?"
+    reask: *yes_no_reask
     stuck: {then: follow_up}
     listen:
       "yes":
-        examples: ["yes", "yes let's do it", "I'm in"]
+        examples: *close_yes
         then: resell
       "no":
-        examples: ["no", "not yet", "I'm not sure"]
+        examples: *close_no
         then: follow_up
 

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from core.buy_mode.script_engine.engine import asked_line, question_of, hear_ahead, ready_open
 from core.buy_mode.script_engine.method import ANY
-from core.infra.utils import is_question, tokenize
+from core.infra.utils import is_question, opens_question, tokenize
 
 
 @dataclass(frozen=True)
@@ -46,6 +46,9 @@ class Ear:
             return Verdict("nudge", text=text)  # "ok, what's next?": no answer
         text = text if rest is None else rest  # "credit, what's next?": the rest answers
         asking = self.is_question(text)
+        if (asking and step.needs and len(tokenize(text)) <= self.cfg["rise_answer_words"]
+                and not opens_question(text, self.cfg) and re.search(step.needs, text, re.IGNORECASE)):
+            asking = False  # "dunno, a year?" to "how long?": the answer said with a rise, not a question
         if (not state.waiting and not self._yes_or_no(state) and self._shrugs.says_nothing(text, step, asking)
                 and not self._ready(text, state)):  # "yes I'm in" is a shrug's words, but it says they're in
             return Verdict("says_nothing", text=text, asking=asking)  # an answer only: never an interruption
@@ -94,10 +97,11 @@ class Ear:
             objections = [(k, o) for k, o in objections if o.early]  # "is this a scam?" gets an honest early line
         if not opened:
             objections = [(k, o) for k, o in objections if k not in state.parked]  # parked once: never twice
-        else:  # a worry already being handled, or one the step asks about ("the money?"), answers the step
-            asked = {r.label for r in step.listen}
-            objections = [(k, o) for k, o in objections if k not in state.raised and k not in asked]
+        handled = set()  # a worry already being handled, or one the step asks about ("the money?"), answers the step
+        if opened:
+            handled = {k for k, _ in objections if k in state.raised or k in {r.label for r in step.listen}}
         labels.update({f"objection:{k}": o.examples for k, o in objections})
+        objections = [(k, o) for k, o in objections if k not in handled]
         if not opened and not asking:  # "money", "scared", "risk" before the price are answers, not objections
             floors.update({f"objection:{k}": self.cfg["early_objection_min_score"] for k, _ in objections})
         if ready_open(self.method, state.step):
@@ -105,6 +109,8 @@ class Ear:
             floors["ready:prospect"] = self.method.ready.min_score
         takes_any = any(r.label == ANY for r in step.listen)
         won = self._listener.interruption(text, labels, answer_labels(step), takes_any, asking, floors)
+        if won and won.split(":", 1)[1] in handled:  # still kept as a label so a near worry can't win in its place
+            won = None   # live: "I don't have 5k lying around" in the money talk was heard as "think it over"
         if not won and not opened and not asking:
             won = self._judged_objection(text, step, dict(objections))
         return tuple(won.split(":", 1)) if won else (None, "")

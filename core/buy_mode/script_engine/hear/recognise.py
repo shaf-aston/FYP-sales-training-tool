@@ -53,10 +53,8 @@ class Listener:
         second = ranked[1][1] if len(ranked) > 1 else -1.0
         in_band = self.threshold - self.near_miss <= top < self.threshold
         close = (top - second < self.margin and top >= self.threshold - self.near_miss) or in_band
-        floors = floors or {}
-        candidates = tuple(n for n, _ in ranked[:self.k] if top >= floors.get(n, 0.0))
-        label = top_name if top >= self.threshold and top_name in candidates else None
-        return Match(label, top, candidates, close)
+        label = top_name if top >= self.threshold else None
+        return _floored(Match(label, top, tuple(n for n, _ in ranked[:self.k]), close), floors)
 
     def answer(self, reply, labels, unsure, floors=None):
         """As match, for the step's own answers: when the whole reply reaches no answer, a clear first clause
@@ -64,8 +62,9 @@ class Listener:
         torn between two answers ("no, credit?") stays a close call: its lead never settles it. A lead nearer
         `unsure` (examples of not knowing) than any answer is none ("dunno, he's never..."). Never for
         interruptions, so "yeah but I need to think" still reads as an objection."""
-        found = self.match(reply, labels, floors=floors)
-        if found.label:
+        whole = self.match(reply, labels)
+        found = _floored(whole, floors)
+        if found.label or (whole.label and whole.close):  # torn between two answers: a floor never lets its lead settle it
             return found
         lead = self.breaks.split(reply, 1)[0].strip()
         if lead and lead != reply.strip():
@@ -101,3 +100,10 @@ class Listener:
             bar = as_answer  # a question need beat only an answer it surely is
         bar = max(bar, floors.get(found.label, 0.0))
         return found.label if found.score > bar else None
+
+
+def _floored(found, floors):
+    """`found` with every name whose floor its best score misses taken out of the label and candidates."""
+    floors = floors or {}
+    candidates = tuple(n for n in found.candidates if found.score >= floors.get(n, 0.0))
+    return Match(found.label if found.label in candidates else None, found.score, candidates, found.close)

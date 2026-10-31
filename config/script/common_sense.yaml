@@ -49,6 +49,15 @@ interruptions:
       - "brb"
       - "sorry, I need to take this call"   # "someone's calling me" read as "am I talking to a real person"
     reply: "No problem, take your time."
+  small_talk:   # live: "did you catch the match last night?" got "I'll find out and let you know"
+    draft: true
+    examples:
+      - "did you catch the match last night"
+      - "did you watch the game"
+      - "what's the weather like where you are"
+      - "how's your day going"
+      - "how are you doing today"
+    reply: "Ha, all good here. Let's keep the time about you though."
   back:
     draft: true
     after_wait: true
@@ -119,6 +128,7 @@ interruptions:
       - "meh, whatever"   # not bare "whatever": it pulls in "whatever works for me"
       - "ugh whatever man"
       - "f*** off with the questions"
+      - "why do you keep asking me all these questions"   # draft: live, heard as "what do you mean?"
     reply: "Fair enough, I'll keep this quick."
   leaving:   # live: "bye" was ignored and the next question asked
     draft: true
