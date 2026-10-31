@@ -681,7 +681,27 @@ def test_broken_revisit_settings_fail_loud(change, error):
     else:
         data[key] = value
     with pytest.raises(ValueError, match=error):
-        parse_method("cat", data, matrix)
+        parse_method("cat", data, matrix, _read(CONFIG_DIR / "script", "answers"))
+
+
+def test_a_route_like_a_shared_answer_hears_it_and_its_own_examples():
+    # one list per meaning (answers.yaml): "credit" was a yes at one "jumping in?" and unclear at the other
+    from core.buy_mode.script_engine.method import load_method
+
+    method = load_method("cat")
+    for step in ("19", "m_partner_close", "m_close1", "m_close2", "m_close3"):
+        assert "credit" in next(r for r in method.steps[step].listen if r.then != step).examples
+    card = next(r for r in method.steps["m_card"].listen if r.label == "yes").examples
+    assert card[0] == "yes" and "ok let's put it on a card" in card and len(card) == len(set(card))
+
+
+def test_a_route_like_an_unknown_answer_fails_loud():
+    from core.buy_mode.script_engine.method import CONFIG_DIR, _read, parse_method
+
+    data, matrix = _read(CONFIG_DIR / "methods", "cat"), _read(CONFIG_DIR / "script", "objection_matrix")
+    data["steps"]["19"]["listen"]["agrees"]["like"] = "jump_inn"
+    with pytest.raises(ValueError, match="unknown answer 'jump_inn'"):
+        parse_method("cat", data, matrix, _read(CONFIG_DIR / "script", "answers"))
 
 
 def test_is_this_a_bot_gets_an_honest_yes_then_the_question(seller):

@@ -83,22 +83,19 @@ class Listener:
         return found.score if found.label and found.score >= bar else 0.0
 
     def interruption(self, reply, labels, answers, any_reply, asking, floors):
-        """The label in `labels` that clearly beats reading the reply as one of the step's own `answers`,
-        else None. `any_reply`: the step takes any reply as its answer, so only a sure match interrupts.
-        `asking`: the reply is a question. `floors`: {label: lowest score it counts at}. A "fact:" label always wins: a product question
-        is never an answer."""
+        """The label in `labels` that clearly beats reading the reply another way, else None. One rule: it
+        must beat the step's own `answers` (how surely the reply is one), and, where the other way has no
+        score of its own (`any_reply`: the step takes any reply; `asking`: a plain question is answered
+        as asked), `interrupt_threshold` too. `floors`: {label: lowest score it counts at}. A "fact:"
+        label always wins: a product question is never an answer."""
         found = self.match(reply, labels)
         if not found.label or found.close:
             return None
         if found.label.startswith("fact:"):
             return found.label
-        as_answer = self.answer_score(reply, answers, asking) if answers else 0.0  # only a real answer competes
-        bar = as_answer if answers else self.interrupt_threshold
-        if any_reply:
-            bar = max(bar, self.interrupt_threshold)
-        if asking:
-            bar = as_answer  # a question need beat only an answer it surely is
-        bar = max(bar, floors.get(found.label, 0.0))
+        as_answer = self.answer_score(reply, answers, asking) if answers else 0.0
+        unscored = any_reply or asking  # live: "what happens to the card?" lost to a 0.68 worry
+        bar = max(as_answer, self.interrupt_threshold if unscored else 0.0, floors.get(found.label, 0.0))
         return found.label if found.score > bar else None
 
 

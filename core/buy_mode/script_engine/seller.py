@@ -298,7 +298,7 @@ class ScriptSeller:
         line from the listen call ("" when it failed a check), or None when no listen call was made."""
         text, labels = v.text, answer_labels(step)
         label, line, ack, missed = None, "", None, False
-        needed = not step.needs or re.search(step.needs, text, re.IGNORECASE)
+        needed = self._ear.shaped(text, step)
         if labels:
             found = self._listener.answer(text, labels, list(self.sense.unclear),
                                           {r.label: r.min_score for r in step.listen if r.label})

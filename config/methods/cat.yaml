@@ -380,20 +380,10 @@ steps:
     stuck: {then: "m_identify"}   # still hesitant: find what holds them back (the objection matrix)
     listen:
       agrees:
-        examples:
-          - "yes I'm ready to jump in"
-          - "yes let's do it"
-          - "I'm in, I can see myself doing this"
-          - "yes I see myself taking the jump"
+        like: jump_in   # answers.yaml: the same yes as every other "jumping in?" (live: "debit" here was unclear)
         then: "20"
       hesitant:
-        examples:
-          - "no, not really"
-          - "I'm not sure I'm ready"
-          - "I don't see myself doing this"
-          - "not right now"
-          - "I can't see that happening"
-          - "maybe, I'm not sure yet"
+        like: not_yet
         then: "19"
   "20":
     name: "Self-resell"

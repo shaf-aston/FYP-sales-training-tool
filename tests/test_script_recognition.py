@@ -396,6 +396,9 @@ ROUND_5 = [   # live persona calls (round 5): (step, slots, raised, said, step a
     ("01", {}, (), "fine. more money obviously", "goal_practical", "What are you hoping to achieve with more money?"),
     ("m_funded", {}, ("money",), "can I split it into payments?", "m_funded", "There are ways to make the investment work"),
     ("m_close2", {}, ("fear",), "credit", "20", None),   # was "No rush, even a rough idea helps."
+    ("19", {}, (), "debit", "20", None),   # one shared "jumping in?" yes (answers.yaml); was asked again
+    ("03", {}, (), "I don't have time for this", "03", "Fair enough"),   # no span of time: can't be the answer
+    ("02", {}, (), "I don't have time for this", "02", "Fair enough"),   # no figure: can't be the answer
 ]
 
 

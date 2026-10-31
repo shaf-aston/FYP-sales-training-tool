@@ -149,10 +149,14 @@ def _read(directory, name):
         return yaml.load(f, Loader=_StrictLoader)
 
 
-def _route(step_id, label, data):
+def _route(step_id, label, data, answers):
+    """`answers`: the shared answer lists (answers.yaml); `like: <name>` takes one, before the route's own examples."""
     if not isinstance(label, str):
         raise TypeError(f"step {step_id}: route name {label!r} is not text (quote yes/no)")
-    examples = tuple(data.get("examples") or ())
+    like = data.get("like")
+    if like is not None and like not in answers:
+        raise ValueError(f"step {step_id}: route '{label}' is like unknown answer {like!r}")
+    examples = tuple(dict.fromkeys([*answers.get(like, ()), *(data.get("examples") or ())]))
     if label == ANY and examples:
         raise ValueError(f"step {step_id}: '{ANY}' route takes no examples")
     if label != ANY and not examples:
@@ -163,14 +167,14 @@ def _route(step_id, label, data):
     return Route(label, examples, str(data["then"]), data.get("ack", ""), data.get("keep", True) is not False, floor)
 
 
-def _step(step_id, data):
+def _step(step_id, data, answers):
     stage = data.get("ui_stage")
     if stage not in {s.value for s in Stage}:
         raise ValueError(f"step {step_id}: unknown ui_stage {stage!r}")
-    listen = tuple(_route(step_id, k, v) for k, v in (data.get("listen") or {}).items())
+    listen = tuple(_route(step_id, k, v, answers) for k, v in (data.get("listen") or {}).items())
     probes = data.get("probe") or ()
     probes = (probes,) if isinstance(probes, str) else tuple(probes)
-    stuck = _route(step_id, ANY, data["stuck"]) if data.get("stuck") else None
+    stuck = _route(step_id, ANY, data["stuck"], answers) if data.get("stuck") else None
     if not data.get("say") and not any(r.label == ANY for r in listen):
         raise ValueError(f"step {step_id}: silent step needs an '{ANY}' route")
     if data.get("run_on") and not any(r.label == ANY for r in listen):
@@ -265,11 +269,12 @@ def _reachable(name, first, steps, starts):
         raise ValueError(f"method {name}: steps {sorted(set(steps) - seen)} can never be reached")
 
 
-def parse_method(name, data, matrix=None):
-    """Build a Method from parsed YAML; `matrix` is its objection_handling file. Fails loud on a broken
-    script graph."""
+def parse_method(name, data, matrix=None, answers=None):
+    """Build a Method from parsed YAML; `matrix` is its objection_handling file, `answers` the shared answer
+    lists (answers.yaml). Fails loud on a broken script graph."""
     data, objections, follow_up = _with_matrix(name, data, matrix)
-    steps = {str(k): _step(str(k), v) for k, v in data["steps"].items()}
+    answers = {str(k): tuple(v) for k, v in (answers or {}).items()}
+    steps = {str(k): _step(str(k), v, answers) for k, v in data["steps"].items()}
     first = str(data.get("first", ""))
     if first not in steps:
         raise ValueError(f"method {name}: first step {first!r} not defined")
@@ -387,10 +392,11 @@ def parse_common_sense(data):
 
 
 def load_method(name, directory=CONFIG_DIR / "methods", shared=CONFIG_DIR / "script"):
-    """`shared`: where the objection_handling file the method names lives."""
+    """`shared`: where the objection_handling file the method names, and the shared answers, live."""
     data = _read(directory, name)
     handling = data.get("objection_handling")
-    return parse_method(name, data, _read(shared, handling) if handling else None)
+    answers = _read(shared, "answers") if (Path(shared) / "answers.yaml").exists() else None
+    return parse_method(name, data, _read(shared, handling) if handling else None, answers)
 
 
 def load_offer(name, directory=CONFIG_DIR / "offers"):

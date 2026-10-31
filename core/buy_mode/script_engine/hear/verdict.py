@@ -47,7 +47,7 @@ class Ear:
         text = text if rest is None else rest  # "credit, what's next?": the rest answers
         asking = self.is_question(text)
         if (asking and step.needs and len(tokenize(text)) <= self.cfg["rise_answer_words"]
-                and not opens_question(text, self.cfg) and re.search(step.needs, text, re.IGNORECASE)):
+                and not opens_question(text, self.cfg) and self.shaped(text, step)):
             asking = False  # "dunno, a year?" to "how long?": the answer said with a rise, not a question
         if (not state.waiting and not self._yes_or_no(state) and self._shrugs.says_nothing(text, step, asking)
                 and not self._ready(text, state)):  # "yes I'm in" is a shrug's words, but it says they're in
@@ -60,6 +60,11 @@ class Ear:
         if asking and not self._answers(text, step):
             return Verdict("question", text=text, asking=asking, ahead=ahead)
         return Verdict("answer", text=text, asking=asking, ahead=ahead)
+
+    @staticmethod
+    def shaped(text, step):
+        """The reply has the shape the step's answer needs (`needs`: a figure, a span of time), or it needs none."""
+        return not step.needs or bool(re.search(step.needs, text, re.IGNORECASE))
 
     def _yes_or_no(self, state):
         """The step was last asked as a yes-or-no question ("Is there anything you've tried?"): "yes" answers it."""
@@ -107,7 +112,9 @@ class Ear:
         if ready_open(self.method, state.step):
             labels["ready:prospect"] = self.method.ready.examples
             floors["ready:prospect"] = self.method.ready.min_score
-        takes_any = any(r.label == ANY for r in step.listen)
+        # the catch-all keeps any reply only if it has the step's shape: "I don't have time for this" to "how
+        # long?" can't be the answer, so nothing has to out-score it there (live: the frustration went unheard)
+        takes_any = any(r.label == ANY for r in step.listen) and self.shaped(text, step)
         won = self._listener.interruption(text, labels, answer_labels(step), takes_any, asking, floors)
         if won and won.split(":", 1)[1] in handled:  # still kept as a label so a near worry can't win in its place
             won = None   # live: "I don't have 5k lying around" in the money talk was heard as "think it over"
