@@ -512,6 +512,10 @@ def test_a_question_word_without_a_question_mark_still_counts(fake_embedder):
     ("have a family to look after", False),
     ("can't afford it", False),
     ("how I see it is I need more time", False),
+    ("shut up and just tell me the price", True),   # live: moved on as their answer
+    ("ok fine, how much is it", True),
+    ("I want freedom and time with my kids", False),
+    ("how'd you get my number", True),   # live: "Good to know."
 ])
 def test_question_detection_uses_the_opening_words_or_a_question_mark(text, expected):
     from core.infra.utils import is_question
@@ -535,9 +539,9 @@ def test_a_line_asked_again_is_filled_the_same_way_without_new_ai_calls(fake_emb
 
 
 def test_im_back_is_an_answer_unless_they_stepped_away(fake_embedder):
-    s = at(make_seller(fake_embedder), "03", why="more time with my kids")
+    s = at(make_seller(fake_embedder), "04", why="more time with my kids")
     s.reply("ok I'm back")
-    assert s.state.step != "03"  # step 03 takes any answer, so the script moved on
+    assert s.state.step != "04"  # step 04 takes any answer, so the script moved on
 
 
 def test_the_same_worry_said_again_in_its_branch_answers_the_step(seller):
@@ -588,9 +592,10 @@ def test_ok_to_an_open_question_is_asked_again_then_the_call_moves_on(seller):
     at(seller, "03", outcome="freedom")
     again, _ = seller.reply("ok")
     assert seller.state.step == "03" and again == "Roughly, is it more like months, or a few years?"
-    for _ in range(CFG["misses"] - 1):  # probes ran out: its last one behind a lead, never moved on early
-        again, _ = seller.reply("sure")
-        assert seller.state.step == "03" and again.endswith("Roughly, is it more like months, or a few years?")
+    for _ in range(CFG["misses"] - 1):  # probes ran out: back to the question behind a lead, never moved on early
+        last, (again, _) = again, seller.reply("sure")
+        assert seller.state.step == "03" and again.endswith("How long have you been thinking about this?")
+        assert not again.endswith(last)  # the same words twice in a row read like a bot
     seller.reply("sure")
     assert seller.state.step == "04" and "years" not in seller.state.slots
 
@@ -676,7 +681,27 @@ def test_broken_revisit_settings_fail_loud(change, error):
     else:
         data[key] = value
     with pytest.raises(ValueError, match=error):
-        parse_method("cat", data, matrix)
+        parse_method("cat", data, matrix, _read(CONFIG_DIR / "script", "answers"))
+
+
+def test_a_route_like_a_shared_answer_hears_it_and_its_own_examples():
+    # one list per meaning (answers.yaml): "credit" was a yes at one "jumping in?" and unclear at the other
+    from core.buy_mode.script_engine.method import load_method
+
+    method = load_method("cat")
+    for step in ("19", "m_partner_close", "m_close1", "m_close2", "m_close3"):
+        assert "credit" in next(r for r in method.steps[step].listen if r.then != step).examples
+    card = next(r for r in method.steps["m_card"].listen if r.label == "yes").examples
+    assert card[0] == "yes" and "ok let's put it on a card" in card and len(card) == len(set(card))
+
+
+def test_a_route_like_an_unknown_answer_fails_loud():
+    from core.buy_mode.script_engine.method import CONFIG_DIR, _read, parse_method
+
+    data, matrix = _read(CONFIG_DIR / "methods", "cat"), _read(CONFIG_DIR / "script", "objection_matrix")
+    data["steps"]["19"]["listen"]["agrees"]["like"] = "jump_inn"
+    with pytest.raises(ValueError, match="unknown answer 'jump_inn'"):
+        parse_method("cat", data, matrix, _read(CONFIG_DIR / "script", "answers"))
 
 
 def test_is_this_a_bot_gets_an_honest_yes_then_the_question(seller):

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from core.buy_mode.script_engine.engine import asked_line, question_of, hear_ahead, ready_open
 from core.buy_mode.script_engine.method import ANY
-from core.infra.utils import is_question, tokenize
+from core.infra.utils import is_question, opens_question, tokenize
 
 
 @dataclass(frozen=True)
@@ -46,21 +46,36 @@ class Ear:
             return Verdict("nudge", text=text)  # "ok, what's next?": no answer
         text = text if rest is None else rest  # "credit, what's next?": the rest answers
         asking = self.is_question(text)
-        if not state.waiting and not self._yes_or_no(state) and self._shrugs.says_nothing(text, step, asking):
+        if (asking and step.needs and len(tokenize(text)) <= self.cfg["rise_answer_words"]
+                and not opens_question(text, self.cfg) and self.shaped(text, step)):
+            asking = False  # "dunno, a year?" to "how long?": the answer said with a rise, not a question
+        if (not state.waiting and not self._yes_or_no(state) and self._shrugs.says_nothing(text, step, asking)
+                and not self._ready(text, state)):  # "yes I'm in" is a shrug's words, but it says they're in
             return Verdict("says_nothing", text=text, asking=asking)  # an answer only: never an interruption
         ahead = None if asking else hear_ahead(self.method, state, text)  # "do I need 5k?" is not their goal
         ahead = None if ahead is state else ahead
-        kind, name = self._interrupt(text, step, ahead or state, opened, asking)
+        kind, name = self._interrupt(self._shrugs.unhedged(text), step, ahead or state, opened, asking)
         if kind:
             return Verdict(kind, name, text, asking, ahead)
         if asking and not self._answers(text, step):
             return Verdict("question", text=text, asking=asking, ahead=ahead)
         return Verdict("answer", text=text, asking=asking, ahead=ahead)
 
+    @staticmethod
+    def shaped(text, step):
+        """The reply has the shape the step's answer needs (`needs`: a figure, a span of time), or it needs none."""
+        return not step.needs or bool(re.search(step.needs, text, re.IGNORECASE))
+
     def _yes_or_no(self, state):
         """The step was last asked as a yes-or-no question ("Is there anything you've tried?"): "yes" answers it."""
         words = tokenize(question_of(asked_line(self.method, state)[0]))
         return bool(words) and words[0] in self.cfg["closed_question_starts"]
+
+    def _ready(self, text, state):
+        """The reply says they're ready to buy, at a step where they may skip ahead."""
+        ready = self.method.ready
+        return (ready_open(self.method, state.step)
+                and self._listener.match(text, {"ready": list(ready.examples)}, by_clause=False).score >= ready.min_score)
 
     def _unnudged(self, text):
         """The reply without a nudge on its end ("credit, what's next?" -> "credit"); None when it has none."""
@@ -87,17 +102,22 @@ class Ear:
             objections = [(k, o) for k, o in objections if o.early]  # "is this a scam?" gets an honest early line
         if not opened:
             objections = [(k, o) for k, o in objections if k not in state.parked]  # parked once: never twice
-        else:  # a worry already being handled, or one the step asks about ("the money?"), answers the step
-            asked = {r.label for r in step.listen}
-            objections = [(k, o) for k, o in objections if k not in state.raised and k not in asked]
+        handled = set()  # a worry already being handled, or one the step asks about ("the money?"), answers the step
+        if opened:
+            handled = {k for k, _ in objections if k in state.raised or k in {r.label for r in step.listen}}
         labels.update({f"objection:{k}": o.examples for k, o in objections})
+        objections = [(k, o) for k, o in objections if k not in handled]
         if not opened and not asking:  # "money", "scared", "risk" before the price are answers, not objections
             floors.update({f"objection:{k}": self.cfg["early_objection_min_score"] for k, _ in objections})
         if ready_open(self.method, state.step):
             labels["ready:prospect"] = self.method.ready.examples
             floors["ready:prospect"] = self.method.ready.min_score
-        takes_any = any(r.label == ANY for r in step.listen)
+        # the catch-all keeps any reply only if it has the step's shape: "I don't have time for this" to "how
+        # long?" can't be the answer, so nothing has to out-score it there (live: the frustration went unheard)
+        takes_any = any(r.label == ANY for r in step.listen) and self.shaped(text, step)
         won = self._listener.interruption(text, labels, answer_labels(step), takes_any, asking, floors)
+        if won and won.split(":", 1)[1] in handled:  # still kept as a label so a near worry can't win in its place
+            won = None   # live: "I don't have 5k lying around" in the money talk was heard as "think it over"
         if not won and not opened and not asking:
             won = self._judged_objection(text, step, dict(objections))
         return tuple(won.split(":", 1)) if won else (None, "")

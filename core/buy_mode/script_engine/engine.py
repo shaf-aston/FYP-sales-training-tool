@@ -19,6 +19,7 @@ class ScriptState:
     quoted: bool = False   # the last message said their words back (the echo budget, echo.py)
     echoed: tuple = ()     # their phrases said back this call, once per time said
     meant: tuple = ()      # meaning lines said this call
+    told: tuple = ()       # facts answered before the price this call: asked again, a short reminder
     repeated: bool = False  # the last message was a side reply that said the step again: the next one uses other words (seller `_then_ask`)
     bridged: bool = False  # the last message ended on a step's `bridge` question: the next reply to it is heard, not saved
 
@@ -83,16 +84,18 @@ def _take(method, state, route):
     return replace(_speak(method, replace(state, step=route.then)), ack=route.ack)
 
 
-def ask_again(method, state):
+def ask_again(method, state, stay=True):
     """The current step in other words (they asked what it meant). No `reask` lead: the caller's own lead
-    (the sense's reply) goes in front."""
-    return _ask_again(method, state, method.steps[state.step], lead=False)
+    (the sense's reply) goes in front. `stay`: never `stuck`, as moving on leaves the question they asked about unanswered."""
+    return _ask_again(method, state, method.steps[state.step], lead=False, stay=stay)
 
 
-def carry_on(method, state, rephrase=False):
+def carry_on(method, state, rephrase=False, stay=False):
     """The step in other words; a step with no other words is moved on from (the reply not taken as its
     answer), so the same line is never said twice in a row."""
-    return ask_again(method, state) if rephrase or method.steps[state.step].probes else move_on(method, state)
+    if rephrase or method.steps[state.step].probes:
+        return ask_again(method, state, stay=rephrase or stay)
+    return move_on(method, state)
 
 
 def _limit(step, misses):
@@ -105,13 +108,13 @@ def asks_left(method, state, misses):
     return state.asks < _limit(method.steps[state.step], misses)
 
 
-def _ask_again(method, state, step, ack="", line="", misses=0, lead=True):
+def _ask_again(method, state, step, ack="", line="", misses=0, lead=True, stay=False):
     """A person rephrases rather than repeating themselves, and moves on rather than asking forever.
     `line`: the words to ask in (the AI's, or a clarifying question), dropped if already said on this step;
-    else the step's next probe; once those run out, its last question again behind a `reask` lead (each
-    once, then none), so no line is said twice. Asked `_limit` times, then `stuck`. A step that asks nothing (a closing line, a
+    else the step's next probe; once those run out, its earlier words in turn (`_rewording`) behind a `reask`
+    lead (each once, then none), so no line is said twice in a row. Asked `_limit` times, then `stuck`. A step that asks nothing (a closing line, a
     statement) is said again plain: "no rush" in front of it answers a question nobody asked."""
-    if step.stuck and state.asks >= _limit(step, misses):
+    if step.stuck and not stay and state.asks >= _limit(step, misses):
         return _take(method, state, step.stuck)
     if line.strip().lower() in {s.strip().lower() for s in state.said}:
         line = ""  # never the same words twice on one step
@@ -121,12 +124,20 @@ def _ask_again(method, state, step, ack="", line="", misses=0, lead=True):
     elif used < len(step.probes):
         said = step.probes[used]
     else:
-        said = step.probes[-1] if step.probes else question_of(step.say)
+        said = _rewording(step, used)
         turn = used - len(step.probes)  # each lead once a step: a third "No rush" sounds like a loop
-        if lead and turn < len(method.reask) and not ack and (step.probes or "?" in step.say):
-            ack = method.reask[turn]
+        leads = step.reask or method.reask
+        if lead and turn < len(leads) and not ack and (step.probes or "?" in step.say):
+            ack = leads[turn]
     state = replace(state, asks=state.asks + 1, asked=line, said=state.said + (line,) if line else state.said)
     return Move(said, state, step.ui_stage, ack=ack, theirs=bool(line))
+
+
+def _rewording(step, used):
+    """The script's words for its `used`-th ask again, once its probes ran out: back to the question, then the
+    probes again, in turn, so the line just said is never said again ("If you had to put a number on it..." twice)."""
+    turns = (question_of(step.say), *step.probes)
+    return turns[(used - len(step.probes)) % len(turns)]
 
 
 def question_of(say):
@@ -144,7 +155,10 @@ def asked_line(method, state):
     used = state.asks - len(state.said)
     if used == 0 or not step.probes:
         return step.say, step.say_plain
-    return step.probes[min(used - 1, len(step.probes) - 1)], ""
+    if used <= len(step.probes):
+        return step.probes[used - 1], ""
+    said = _rewording(step, used - 1)
+    return (step.say, step.say_plain) if said == question_of(step.say) else (said, "")
 
 
 def move_on(method, state):

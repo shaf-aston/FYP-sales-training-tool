@@ -1,6 +1,7 @@
 """Live test chats A-E (round 2) as scenario tests: keen buyer, early number, re-ask wording,
 frustration, safe product answers, memory in the ack. Offline: bag-of-words embedder, fake AI.
 These prove the wiring; how well the real model hears each phrase is test_script_recognition's job."""
+import json
 from itertools import pairwise
 
 import pytest
@@ -185,7 +186,7 @@ def test_asked_line_follows_the_asks():
     assert asked_line(CAT, ScriptState(step="01")) == (CAT.steps["01"].say, "")
     assert asked_line(CAT, ScriptState(step="01", asks=1))[0] == CAT.steps["01"].probes[0]
     assert asked_line(CAT, ScriptState(step="01", asks=9))[0] == CAT.steps["01"].probes[-1]
-    assert asked_line(CAT, ScriptState(step="02", asks=1))[0] == CAT.steps["02"].say  # no probes
+    assert asked_line(CAT, ScriptState(step="05", asks=1))[0] == CAT.steps["05"].say  # no probes
 
 
 # ---- C5 frustration (chat C) -----------------------------------------------------------------
@@ -535,6 +536,7 @@ def test_whats_next_asks_no_ai(fake_embedder):
     ("my own boss", "your own boss"),            # first person turned to second
     ("freedom for me and my whole family", None),  # too long
     ("travel more", "travel more"),
+    ("fine. more money obviously", "more money"),   # live: said back whole
     ("not sure really", None),
     ("", None),
 ])
@@ -691,7 +693,7 @@ def test_months_thinking_counts_the_answer_in_months(reply, months):
 def test_years_line_fills_from_their_answer():
     from core.buy_mode.script_engine.words.fill import Filler
     line = "You already have for {years} years."
-    offer = type("Offer", (), {"months": 6, "price": "£1", "industry": "", "pillars": []})()
+    offer = type("Offer", (), {"months": 6, "price": "£1", "industry": "", "setter": "", "pillars": []})()
     filler = Filler(CFG, offer, frozenset())
     assert filler.fill(line, {"years": "probably 3 years"}) == "You already have for 3 years."
     assert filler.fill(line, {"years": "a while"}) is None
@@ -771,6 +773,119 @@ def test_who_are_you_later_in_the_call_goes_back_to_the_question_without_a_bridg
     assert CAT.steps["01"].bridge not in text and not s.state.bridged and "What are you hoping" in text
 
 
+# ---- replayed calls, round 2 -----------------------------------------------------------------
+
+def test_the_money_question_needs_a_figure(fake_embedder):
+    s = seller(fake_embedder, step="02", slots={"outcome": "more money"})
+    text, _ = s.reply("I don't know where to start")  # live: taken as their number, and {number} said it later
+    assert s.state.step == "02" and "number" not in s.state.slots
+    assert text == CAT.steps["02"].probes[0]
+    s.reply("about 3k")
+    assert s.state.step == "03" and s.state.slots["number"] == "about 3k"
+
+
+def test_no_figure_after_the_asks_moves_on_unsaved(fake_embedder):
+    s = seller(fake_embedder, step="02", slots={"outcome": "more money"})
+    for reply in ("financial freedom", "enough to quit", "loads"):
+        s.reply(reply)
+    assert s.state.step == "03" and "number" not in s.state.slots
+
+
+def test_a_figure_in_words_is_a_figure(fake_embedder):
+    s = seller(fake_embedder, step="02", slots={"outcome": "more money"})
+    s.reply("five grand")
+    assert s.state.slots["number"] == "five grand"
+
+
+def test_a_shallow_goal_again_is_not_treated_as_no_answer(fake_embedder):
+    s = seller(fake_embedder, step="goal_practical", slots={"outcome": "financial freedom"})
+    s.reply("financial freedom")
+    text, _ = s.reply("more money")
+    assert not any(r in text for r in CAT.reask), text  # "No rush" reads as if they said nothing
+    assert text.startswith(CAT.steps["goal_practical"].reask[0])
+
+
+def test_the_same_fact_twice_gets_a_short_reminder(fake_embedder):
+    s = seller(fake_embedder, step="03")
+    first, _ = s.reply("what do you do")
+    again, _ = s.reply("who are you")
+    what = load_offer("shay_coaching").facts["what_we_do"]
+    assert what.again and what.again in again and first.split("¶")[0] not in again
+
+
+def test_a_fact_with_no_reminder_of_its_own_uses_the_shared_one(fake_embedder):
+    s = seller(fake_embedder, step="03")
+    s.reply("where are you based")
+    again, _ = s.reply("where are you based")
+    assert again.startswith(SENSE.told_again)
+
+
+def test_the_price_after_the_pitch_is_said_again_in_full(fake_embedder):
+    s = seller(fake_embedder, step="14", told=("price",))
+    text, _ = s.reply("how much does it cost")
+    assert load_offer("shay_coaching").facts["price"].again not in text
+
+
+def test_bye_books_the_follow_up(fake_embedder):
+    s = seller(fake_embedder, step="04")
+    text, _ = s.reply("bye")
+    assert s.state.step == CAT.follow_up and text == CAT.steps[CAT.follow_up].say
+
+
+def test_a_told_fact_survives_a_saved_call(fake_embedder):
+    s = seller(fake_embedder, step="03")
+    s.reply("where are you based")
+    saved = json.loads(json.dumps(s.snapshot()))
+    s.restore(saved)
+    assert s.state.told == ("location",)
+
+
+@pytest.mark.parametrize("reply", ["no one knows", "k", "I'd love to take a look"])
+def test_words_that_only_look_like_a_figure_are_not_one(fake_embedder, reply):
+    s = seller(fake_embedder, step="02", slots={"outcome": "more money"})
+    s.reply(reply)
+    assert "number" not in s.state.slots
+
+
+@pytest.mark.parametrize("end", ["later", "end"])
+def test_after_the_call_has_ended_every_reply_gets_the_sign_off(fake_embedder, end):
+    s = seller(fake_embedder, step=end)
+    for reply in ("bye", "ok thanks", "how much was it again?"):
+        text, _ = s.reply(reply)  # live: "bye" after the follow-up line said that line again
+        assert text == SENSE.ended and s.state.step == end
+
+
+# ---- replayed calls, round 3 -----------------------------------------------------------------
+
+@pytest.mark.parametrize("reply, kept", [
+    ("five grand a month", "five grand a month"),  # live: said at the goal, then asked "how much a month?"
+    ("5k a month.", "5k a month"),
+    ("five grand a month would change my life", None),  # not only the figure: no want word, not the goal
+    ("I make 2k a month", None),
+])
+def test_a_figure_said_on_its_own_early_answers_the_money_step(reply, kept):
+    state = hear_ahead(CAT, ScriptState(step="goal_identity"), reply)
+    assert state.slots.get("number") == kept
+
+
+def test_an_early_figure_skips_the_money_question(fake_embedder):
+    s = seller(fake_embedder, step="goal_identity", slots={"outcome": "more money"})
+    text, _ = s.reply("five grand a month")
+    assert s.state.slots["number"] == "five grand a month" and "each month" not in text
+
+
+def test_the_money_step_never_says_the_same_line_twice_in_a_row(fake_embedder):
+    s = seller(fake_embedder, step="02", slots={"outcome": "more money"})
+    texts = [s.reply("not sure")[0] for _ in range(CFG["misses"])]
+    assert s.state.step == "02" and texts[0] == CAT.steps["02"].probes[0]
+    assert all(not b.endswith(a) for a, b in pairwise(texts))  # live: "If you had to put a number on it..." twice
+
+
+def test_the_opening_names_the_setter(fake_embedder):
+    text, _ = seller(fake_embedder).opening()  # live: {setter} was never filled, so the plain line was said
+    assert text.startswith("I believe you had a chat with our setter...")
+
+
 # ---- side replies in a row never say the same question three times ---------------------------------
 
 def test_a_second_side_question_in_a_row_gets_the_step_in_other_words(fake_embedder):
@@ -792,3 +907,82 @@ def test_a_monthly_figure_said_early_is_kept_only_when_it_is_the_goal(reply, kep
     state = hear_ahead(CAT, ScriptState(step="goal_identity"), reply)
     assert state.slots.get("number") == kept
 
+
+
+# ---- live test calls, round 4 ----------------------------------------------------------------------
+
+def test_what_do_you_mean_is_answered_on_the_step_even_after_its_last_ask(fake_embedder):
+    s = seller(fake_embedder, step="01", asks=CFG["misses"])  # live: "hey" used the probe, then "wat do u mean" skipped 01
+    s.reply("what do you mean")
+    assert s.state.step == "01"
+
+
+@pytest.mark.parametrize("step, reply", [
+    ("goal_practical", "dunno like 10k"),   # live: taken as their practical goal
+    ("goal_identity", "a while"),           # live: taken as who they'd be
+    ("goal_identity", "like 5 grand"),
+    ("03", "nothing"),                      # live: taken as how long they've thought about it
+])
+def test_a_reply_that_is_no_answer_is_asked_again_not_kept(fake_embedder, step, reply):
+    s = seller(fake_embedder, step=step, slots={"outcome": "more money"})
+    s.reply(reply)
+    assert s.state.step == step and CAT.steps[step].capture not in s.state.slots
+
+
+@pytest.mark.parametrize("reply, kept", [
+    ("like 5 grand", "5 grand"),    # live: a bare figure with no "a month" was not kept for 02
+    ("dunno like 10k", "10k"),
+    ("I want 10k", None),           # a want with no "a month" may be a lump sum
+])
+def test_a_bare_big_figure_is_kept_for_the_money_step(reply, kept):
+    assert hear_ahead(CAT, ScriptState(step="goal_identity"), reply).slots.get("number") == kept
+
+
+def test_im_in_is_ready_even_though_it_is_made_of_shrug_words(fake_embedder):
+    from dataclasses import replace
+    method = replace(CAT, ready=replace(CAT.ready, examples=("yes I'm in",)))
+    s = seller(fake_embedder, step="belief_cost", method=method)
+    s.reply("yes I'm in")  # live: heard as saying nothing, and asked the cost question again
+    assert s.state.step == CAT.ready.then
+
+
+def test_a_worry_at_the_time_step_is_heard_not_called_a_failed_attempt(fake_embedder):
+    from core.buy_mode.script_engine.hear.meanings import load_meanings
+    text, _ = seller(fake_embedder, step="03").reply("I'm scared of losing money")
+    assert text.startswith(load_meanings().items["fear_of_loss"].lines[0]) and "Sorry to hear" not in text
+
+
+def test_a_price_request_gets_the_price_answer_and_keeps_the_step(fake_embedder):
+    s = seller(fake_embedder, step="04")
+    s.reply("my partner would have to be on board")
+    text, _ = s.reply("can you just tell me the price")  # live: "I haven't mentioned a price yet", then 04 skipped
+    assert text.startswith(load_offer("shay_coaching").facts["price"].answer) and s.state.step == "04"
+
+
+def test_a_money_goal_is_not_said_back_in_the_money_question(fake_embedder):
+    s = seller(fake_embedder, step="goal_identity", slots={"outcome": "make more money"})
+    text, _ = s.reply("I want to finally be proud of myself")  # live: "each month to make more money?"
+    assert text.endswith(CAT.steps["02"].say_plain)
+
+
+def test_a_side_reply_that_moves_the_step_shows_the_new_stage(fake_embedder):
+    s = seller(fake_embedder, step="12")
+    s.reply("who are you")
+    _, stage = s.reply("who are you")  # the second side reply in a row moves 12 (no other words) on to 13
+    assert s.state.step == "13" and stage == CAT.steps["13"].ui_stage != CAT.steps["12"].ui_stage
+
+
+@pytest.mark.parametrize("said, step", [
+    ("dunno, a year?", "04"),          # live: "I'll find out and let you know": the answer said with a rise
+    ("how long will it take?", "03"),  # a real question with a span-of-time word still asks
+])
+def test_a_short_answer_with_a_question_mark_is_still_the_answer(fake_embedder, said, step):
+    s = seller(fake_embedder, step="03")
+    s.reply(said)
+    assert s.state.step == step
+
+
+def test_a_yes_or_no_question_asked_again_never_asks_for_a_rough_idea(fake_embedder):
+    s = seller(fake_embedder, step="m_close2")   # live: "No rush, even a rough idea helps. Do you see yourself jumping in?"
+    reply, _ = s.reply("banana")
+    assert reply.startswith("No pressure either way.") and s.state.step == "m_close2"

@@ -19,6 +19,8 @@ def blanks(line):
 
 def offer_blanks(offer):
     values = {"months": str(offer.months), "price": offer.price, "industry": offer.industry}
+    if offer.setter:  # unset: the line with {setter} falls back to its plain line
+        values["setter"] = offer.setter
     values.update({f"pillar_{i}": p for i, p in enumerate(offer.pillars, 1)})
     return values
 

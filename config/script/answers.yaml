@@ -1,0 +1,26 @@
+# Answers that mean the same wherever they are asked for. A step's route takes one with `like: <name>`,
+# plus any examples of its own (`examples:`). One list per meaning: a fix here reaches every step that
+# hears it (live: "credit" was a yes at one "Do you see yourself jumping in?" and not at the other).
+"yes": ["yes", "yeah it would", "definitely", "probably yes", "yeah I would"]
+"no": ["no", "not really", "probably not", "definitely not"]
+jump_in:   # a yes to "Do you see yourself jumping in?": a way to pay says yes too
+  - "yes"
+  - "yes let's do it"
+  - "I'm in"
+  - "yes I'm ready to jump in"
+  - "I'm in, I can see myself doing this"
+  - "yes I see myself taking the jump"
+  - "ok, let's go"   # draft
+  - "how do I pay"   # draft
+  - "credit"   # draft
+  - "I'll pay by card"   # draft
+not_yet:   # a no to "Do you see yourself jumping in?"
+  - "no"
+  - "not yet"
+  - "I'm not sure"
+  - "no, not really"
+  - "I'm not sure I'm ready"
+  - "I don't see myself doing this"
+  - "not right now"
+  - "I can't see that happening"
+  - "maybe, I'm not sure yet"

@@ -29,6 +29,16 @@ class Shrugs:
         found = self._listener.match(text, {"unclear": list(self._sense.unclear)}, by_clause=False)
         return found.score >= self._sense.unclear_min_score
 
+    def unhedged(self, text):
+        """The reply without a shrug in front ("I don't know, enough to live" -> "enough to live"); else as it
+        is. A hedge is not what they meant, so it never decides an interruption: "I don't know" alone reads
+        as "what do you mean?"."""
+        lead, *rest = self._listener.breaks.split(text, 1)
+        if not rest or not tokenize(rest[0]) or not tokenize(lead) or not self._sense.unclear:
+            return text
+        found = self._listener.match(lead, {"unclear": list(self._sense.unclear)}, by_clause=False)
+        return rest[0].strip() if found.score >= self._sense.unclear_min_score else text
+
     def ask_meaning(self, text, question, empty, heard_ahead, known=()):
         """"What do you mean by stuff?": their own words asked about. Only for a shrug, or a miss that is about
         the question ("money online" to "...making money online?"), never off-topic words ("hey"). "" when

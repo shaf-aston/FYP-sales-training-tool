@@ -6,6 +6,7 @@
 #   rephrase = ask the step in other words (its next probe) instead of the same line.
 #   rephrase_else_move_on = rephrase a step that has other words; otherwise go on to the next step
 #     without taking the reply as its answer.
+#   follow_up = they are leaving: go to the method's follow-up step (book the next call).
 # min_score: a match must score at least this on every step (for words that are often real answers too).
 park: "That's fair, and we'll come back to it once we know this is even a fit."   # objection before the price: acknowledge, keep going
 revisit: "Coming back to what you raised earlier."   # a parked objection, raised again when they hesitate at the close
@@ -25,6 +26,8 @@ unclear:
              "I haven't thought about it", "hard to say", "it depends", "not sure what to say",
              "I can't think of anything", "beats me", "no clue", "maybe", "eh", "good question",
              "let me think", "who knows", "anything", "I guess", "umm"]
+ended: "Speak soon."   # draft: any reply once the call has ended (booked the follow-up, or paid)
+told_again: "Like I said a moment ago."   # draft: a fact asked a second time with no `again` of its own
 # Their reply had words but not the answer ("stuff", "make more money"): ask what they meant by them.
 ask_meaning: "What do you mean by {said|$|wanting to $}?"   # draft: the owner's ask, our wording
 nudge:
@@ -46,6 +49,15 @@ interruptions:
       - "brb"
       - "sorry, I need to take this call"   # "someone's calling me" read as "am I talking to a real person"
     reply: "No problem, take your time."
+  small_talk:   # live: "did you catch the match last night?" got "I'll find out and let you know"
+    draft: true
+    examples:
+      - "did you catch the match last night"
+      - "did you watch the game"
+      - "what's the weather like where you are"
+      - "how's your day going"
+      - "how are you doing today"
+    reply: "Ha, all good here. Let's keep the time about you though."
   back:
     draft: true
     after_wait: true
@@ -116,4 +128,19 @@ interruptions:
       - "meh, whatever"   # not bare "whatever": it pulls in "whatever works for me"
       - "ugh whatever man"
       - "f*** off with the questions"
+      - "why do you keep asking me all these questions"   # draft: live, heard as "what do you mean?"
     reply: "Fair enough, I'll keep this quick."
+  leaving:   # live: "bye" was ignored and the next question asked
+    draft: true
+    after: follow_up
+    min_score: 0.8
+    examples:
+      - "bye"
+      - "goodbye"
+      - "I have to go now"
+      - "gotta go"
+      - "I need to go, talk later"
+      - "I'm hanging up"
+      - "gotta run"
+      - "see you"
+    reply: ""   # the follow-up step says it

@@ -14,8 +14,8 @@ from core.buy_mode.script_engine.words.tone import stresses
 
 ANY = "any"  # listen route with no examples: taken for any reply
 # What happens after an interruption's reply: ask the step again (same words), wait for them to come
-# back, ask it in other words, or (a step with no other words) move on to the next step.
-AFTER = ("ask", "wait", "rephrase", "rephrase_else_move_on")
+# back, ask it in other words, (a step with no other words) move on to the next step, or book the follow-up.
+AFTER = ("ask", "wait", "rephrase", "rephrase_else_move_on", "follow_up")
 
 
 @dataclass(frozen=True)
@@ -47,6 +47,9 @@ class Step:
     unsure: str = ""    # a close call nobody settles, between answers that all move on, is heard as this one
     moment: bool = False  # one of the call's few moments for their exact words (see echo.py); elsewhere a short term at most
     bridge: str = ""    # a getting-to-know-you question that follows a short intro of who we are (a fact with `bridge`); their reply is not saved
+    reask: tuple = ()   # this step's own `reask` leads, in place of the method's ("more money" again is an answer, not a blank)
+    needs: str = ""     # regex an answer must match ("how much a month?" needs a figure); a reply without it is asked again
+    plain_if: str = ""  # regex: their words said back that match it get the plain line ("each month to make more money?" asks money for money)
 
     @property
     def routes(self):
@@ -89,6 +92,7 @@ class Fact:
     answer: str
     late_answer: str    # used once the price step is reached; empty = same answer
     bridge: bool = False  # the step's `bridge` question follows the answer, in place of the step's own question
+    again: str = ""     # before the price, asked a second time: a short reminder, not the same long answer twice
 
 
 @dataclass(frozen=True)
@@ -101,6 +105,7 @@ class Offer:
     industry: str = ""  # where the business is built ("online"): fills {industry}, so an intro stays vague about the how
     about: str = ""     # what the AI may say when no fact covers a question; empty = never answer from it
     about_after_price: str = ""  # added to `about` from the price step on
+    setter: str = ""    # who booked the call: fills {setter} in the opening; empty = the plain line
 
 
 class _StrictLoader(yaml.SafeLoader):
@@ -134,6 +139,8 @@ class CommonSense:
     unclear: tuple = ()  # replies that give nothing to an open question ("dunno man", "stuff I guess")
     unclear_min_score: float = 1.0  # a reply counts as unclear when it matches `unclear` at least this well
     ask_meaning: str = ""  # asks what they meant by their own words ({said}); empty = never asked
+    told_again: str = ""  # a fact asked a second time with no `again` of its own; empty = the answer again
+    ended: str = ""     # said to any reply once the call has ended (a step with nowhere to go); empty = its line again
 
 
 def _read(directory, name):
@@ -142,10 +149,14 @@ def _read(directory, name):
         return yaml.load(f, Loader=_StrictLoader)
 
 
-def _route(step_id, label, data):
+def _route(step_id, label, data, answers):
+    """`answers`: the shared answer lists (answers.yaml); `like: <name>` takes one, before the route's own examples."""
     if not isinstance(label, str):
         raise TypeError(f"step {step_id}: route name {label!r} is not text (quote yes/no)")
-    examples = tuple(data.get("examples") or ())
+    like = data.get("like")
+    if like is not None and like not in answers:
+        raise ValueError(f"step {step_id}: route '{label}' is like unknown answer {like!r}")
+    examples = tuple(dict.fromkeys([*answers.get(like, ()), *(data.get("examples") or ())]))
     if label == ANY and examples:
         raise ValueError(f"step {step_id}: '{ANY}' route takes no examples")
     if label != ANY and not examples:
@@ -156,14 +167,14 @@ def _route(step_id, label, data):
     return Route(label, examples, str(data["then"]), data.get("ack", ""), data.get("keep", True) is not False, floor)
 
 
-def _step(step_id, data):
+def _step(step_id, data, answers):
     stage = data.get("ui_stage")
     if stage not in {s.value for s in Stage}:
         raise ValueError(f"step {step_id}: unknown ui_stage {stage!r}")
-    listen = tuple(_route(step_id, k, v) for k, v in (data.get("listen") or {}).items())
+    listen = tuple(_route(step_id, k, v, answers) for k, v in (data.get("listen") or {}).items())
     probes = data.get("probe") or ()
     probes = (probes,) if isinstance(probes, str) else tuple(probes)
-    stuck = _route(step_id, ANY, data["stuck"]) if data.get("stuck") else None
+    stuck = _route(step_id, ANY, data["stuck"], answers) if data.get("stuck") else None
     if not data.get("say") and not any(r.label == ANY for r in listen):
         raise ValueError(f"step {step_id}: silent step needs an '{ANY}' route")
     if data.get("run_on") and not any(r.label == ANY for r in listen):
@@ -176,9 +187,18 @@ def _step(step_id, data):
             raise ValueError(f"step {step_id}: answered_by needs a capture and an '{ANY}' route")
         if re.search(answered_by, ""):
             raise ValueError(f"step {step_id}: answered_by must not match an empty reply")
+    needs = data.get("needs", "")
+    reask = tuple(data.get("reask") or ())
+    if any("?" in r for r in reask):
+        raise ValueError(f"step {step_id}: reask leads must not ask (the step's question follows)")
+    if needs and (not data.get("capture") or re.search(needs, "")):
+        raise ValueError(f"step {step_id}: needs takes a capture and must not match an empty reply")
+    plain_if = data.get("plain_if", "")
+    if plain_if and not data.get("say_plain"):
+        raise ValueError(f"step {step_id}: plain_if needs a say_plain")
     if data.get("echo") and not data.get("capture"):
         raise ValueError(f"step {step_id}: echo needs a capture")
-    for line in (data.get("say", ""), data.get("say_plain", ""), *probes,
+    for line in (data.get("say", ""), data.get("say_plain", ""), *probes, *reask,
                  *(r.get("ack", "") for r in [*(data.get("listen") or {}).values(), data.get("stuck") or {}])):
         _one_stress(f"step {step_id}", line)
         if line.count("{") != len(NAME.findall(line)):
@@ -192,6 +212,7 @@ def _step(step_id, data):
         listen, bool(data.get("run_on")),
         data.get("name", ""), data.get("note", ""), bool(data.get("doubts_answer")),
         stuck, answered_by, bool(data.get("echo")), unsure, bool(data.get("moment")), data.get("bridge", ""),
+        reask, needs, plain_if,
     )
 
 
@@ -248,11 +269,12 @@ def _reachable(name, first, steps, starts):
         raise ValueError(f"method {name}: steps {sorted(set(steps) - seen)} can never be reached")
 
 
-def parse_method(name, data, matrix=None):
-    """Build a Method from parsed YAML; `matrix` is its objection_handling file. Fails loud on a broken
-    script graph."""
+def parse_method(name, data, matrix=None, answers=None):
+    """Build a Method from parsed YAML; `matrix` is its objection_handling file, `answers` the shared answer
+    lists (answers.yaml). Fails loud on a broken script graph."""
     data, objections, follow_up = _with_matrix(name, data, matrix)
-    steps = {str(k): _step(str(k), v) for k, v in data["steps"].items()}
+    answers = {str(k): tuple(v) for k, v in (answers or {}).items()}
+    steps = {str(k): _step(str(k), v, answers) for k, v in data["steps"].items()}
     first = str(data.get("first", ""))
     if first not in steps:
         raise ValueError(f"method {name}: first step {first!r} not defined")
@@ -323,7 +345,7 @@ def parse_offer(name, data):
     facts = {
         k: Fact(
             tuple(v.get("examples") or ()), v["answer"],
-            v.get("late_answer", ""), bool(v.get("bridge")),
+            v.get("late_answer", ""), bool(v.get("bridge")), v.get("again", ""),
         )
         for k, v in (data.get("facts") or {}).items()
     }
@@ -331,6 +353,7 @@ def parse_offer(name, data):
         name, int(data["months"]), str(data["price"]),
         tuple(data["pillars"]), facts, str(data.get("industry", "")),
         (data.get("about") or {}).get("text", ""), (data.get("about") or {}).get("after_price", ""),
+        str(data.get("setter", "")),
     )
 
 
@@ -352,7 +375,7 @@ def parse_common_sense(data):
             raise ValueError(f"interruption {i.name}: after must be one of {AFTER}")
         _one_stress(f"interruption {i.name}", i.reply)
     nudge = data.get("nudge") or {}
-    if "?" in data["park"] or "?" in nudge.get("reply", "") or any(
+    if "?" in data["park"] or "?" in data.get("told_again", "") or "?" in data.get("ended", "") or "?" in nudge.get("reply", "") or any(
             "?" in i.reply for i in items.values() if i.after != "wait"):
         raise ValueError("park, nudge and interruption replies must not ask (the step's question follows)")
     if bool(nudge.get("reply")) != bool(nudge.get("phrases")):
@@ -364,14 +387,16 @@ def parse_common_sense(data):
     return CommonSense(data["park"], data["revisit"], items,
                        nudge.get("reply", ""), tuple(nudge.get("phrases") or ()),
                        tuple(unclear.get("examples") or ()),
-                       _score("unclear", unclear.get("min_score")) if unclear else 1.0, ask_meaning)
+                       _score("unclear", unclear.get("min_score")) if unclear else 1.0, ask_meaning,
+                       data.get("told_again", ""), data.get("ended", ""))
 
 
 def load_method(name, directory=CONFIG_DIR / "methods", shared=CONFIG_DIR / "script"):
-    """`shared`: where the objection_handling file the method names lives."""
+    """`shared`: where the objection_handling file the method names, and the shared answers, live."""
     data = _read(directory, name)
     handling = data.get("objection_handling")
-    return parse_method(name, data, _read(shared, handling) if handling else None)
+    answers = _read(shared, "answers") if (Path(shared) / "answers.yaml").exists() else None
+    return parse_method(name, data, _read(shared, handling) if handling else None, answers)
 
 
 def load_offer(name, directory=CONFIG_DIR / "offers"):

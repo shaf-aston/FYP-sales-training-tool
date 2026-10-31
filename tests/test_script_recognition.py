@@ -263,13 +263,22 @@ def test_vague_opening_answer_gets_a_dig_not_an_objection_line():
     assert seller.sense.park not in text and seller.state.step == "01"
 
 
+@pytest.mark.parametrize("reply", ["I'm not paying you anything", "you're not getting my money"])
+def test_refusing_to_pay_at_the_start_is_the_money_worry_not_a_goal(reply):
+    seller = _real_seller()
+    text, _ = seller.reply(reply)  # live: "I'm not giving you money" was dug into as their goal
+    assert text.startswith(seller.method.objections["money"].early) and seller.state.step == "01"
+    assert "outcome" not in seller.state.slots
+
+
 def test_failed_past_attempt_gets_an_acknowledgement():
     from core.buy_mode.script_engine.engine import ScriptState
 
     seller = _real_seller()
     seller.reset(ScriptState(step="03"))
     text, _ = seller.reply("I tried dropshipping and it failed")
-    assert text.startswith("Sorry to hear that") and seller.state.step == "04"
+    assert text.startswith("Sorry to hear that") and seller.state.step == "03"  # still asked how long
+    assert "years" not in seller.state.slots
 
 
 def test_floored_labels_clear_their_floor_only_when_meant(capsys):
@@ -303,7 +312,7 @@ def test_floored_labels_clear_their_floor_only_when_meant(capsys):
     ("risk I guess", "answer"),
     ("I can't afford anything right now", "objection:money"),
     ("I'm scared it won't work for me", "objection:fear"),
-    ("I just want to know the price", "objection:money"),
+    ("I just want to know the price", "fact:price"),   # live: "I haven't mentioned a price yet" answered a price request
 ])
 def test_before_the_price_short_answers_are_not_objections(reply, heard):
     from core.buy_mode.script_engine import seller as S
@@ -353,3 +362,55 @@ def test_a_scam_question_where_doubts_are_answers_is_the_scam_worry_not_a_bot_qu
     seller.reset(ScriptState(step=step))
     reply, _ = seller.reply("is this a scam though?")
     assert "I'm an AI" not in reply
+
+
+@pytest.mark.parametrize("said, clarify", [
+    ("I don't know, enough to live", False),  # live: "Fair point, let me put it another way."
+    ("not sure, enough to pay the bills", False),
+    ("idk, what do you mean?", True),
+    ("what do you mean", True),
+])
+def test_a_shrug_in_front_of_an_answer_is_not_asking_what_we_mean(said, clarify):
+    from core.buy_mode.script_engine.engine import ScriptState
+
+    seller = _real_seller()
+    seller.reset(ScriptState(step="goal_practical", slots={"outcome": "more money"}))
+    text, _ = seller.reply(said)
+    assert text.startswith(seller.sense.interruptions["clarify"].reply) == clarify
+
+
+ROUND_5 = [   # live persona calls (round 5): (step, slots, raised, said, step after, the reply starts with or None)
+    ("20", {}, (), "because I'm sick of waiting for things to change", "22", None),   # was "No pressure at all"
+    ("22", {}, (), "ok", "22", None),                                    # was "Welcome aboard"
+    ("22", {}, (), "debit", "end", None),
+    ("14", {}, (), "5 grand? that's a lot mate", "m_funded", None),       # was taken as a nod
+    ("m_funded", {}, ("money",), "I don't have 5k lying around", "m_funded", None),   # was "think it over"
+    ("m_think_what", {}, ("research",), "mostly whether it actually works for people", "m_reframe1", None),   # was money
+    ("03", {}, (), "dunno, a year?", "04", None),                         # was "I'll find out and let you know"
+    ("03", {}, (), "honestly I don't trust most of these online things", "03", None),
+    ("goal_practical", {"outcome": "a side income"}, (), "ok well, an extra few hundred a month would help with the mortgage", "goal_identity", None),
+    ("goal_practical", {"outcome": "out of the rat race"}, (),
+     "not dreading Mondays, and having a bit more cash to actually enjoy life rather than just surviving", "goal_identity", None),
+    ("01", {}, (), "how'd you get my number", "01", "You filled in an application"),   # was "Good to know."
+    ("01", {}, (), "hey sorry, did you catch the match last night?", "01", "Ha, all good here"),
+    ("01", {}, (), "fine. more money obviously", "goal_practical", "What are you hoping to achieve with more money?"),
+    ("m_funded", {}, ("money",), "can I split it into payments?", "m_funded", "There are ways to make the investment work"),
+    ("m_close2", {}, ("fear",), "credit", "20", None),   # was "No rush, even a rough idea helps."
+    ("19", {}, (), "debit", "20", None),   # one shared "jumping in?" yes (answers.yaml); was asked again
+    ("03", {}, (), "I don't have time for this", "03", "Fair enough"),   # no span of time: can't be the answer
+    ("02", {}, (), "I don't have time for this", "02", "Fair enough"),   # no figure: can't be the answer
+]
+
+
+@pytest.mark.parametrize("step, slots, raised, said, after, starts", ROUND_5)
+def test_round_5_live_replies(step, slots, raised, said, after, starts):
+    from core.buy_mode.script_engine.engine import ScriptState
+
+    seller = _real_seller()
+    seller.reset(ScriptState(step=step, slots=dict(slots), raised=raised))
+    text, _ = seller.reply(said)
+    assert seller.state.step == after, text
+    assert not text.startswith("Sorry to hear that")   # a worry is not a failed attempt
+    assert seller.cfg["uncovered_fallback"] not in text
+    if starts:
+        assert text.startswith(starts), text
