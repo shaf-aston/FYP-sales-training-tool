@@ -2,7 +2,7 @@
 import pytest
 
 from core.infra.loader import load_yaml
-from core.buy_mode.script_engine.engine import ScriptState
+from core.buy_mode.script_engine.engine import ScriptState, question_of
 from core.buy_mode.script_engine.method import load_common_sense, load_method, load_offer
 from core.buy_mode.script_engine.hear.recognise import Listener
 from core.buy_mode.script_engine.hear.shrug import Shrugs
@@ -53,8 +53,7 @@ def test_an_early_answer_rides_on_the_verdict_not_on_the_seller(ear):
     assert ear.hear("how much do I need to make 5k a month?", ScriptState(step="01"), opened=False).ahead is None
 
 
-@pytest.mark.parametrize("pick, heard_as", [("money objection", "objection:money"), ("vague", "answer")])
-def test_a_grey_band_objection_before_the_price_is_the_ais_call(fake_embedder, pick, heard_as):
+def _grey_band_ear(fake_embedder, judge, score=0.81):
     from core.buy_mode.script_engine.hear.recognise import Match
 
     class GreyBand(Listener):  # the embedder put "money" at 0.81: under the early-objection floor, over the judge's line
@@ -62,12 +61,31 @@ def test_a_grey_band_objection_before_the_price_is_the_ais_call(fake_embedder, p
             return None
 
         def match(self, *a, **k):
-            return Match("money", 0.81, ("money",), False)
+            return Match("money", score, ("money",), False)
 
     sense, listener = load_common_sense(), GreyBand(CFG, fake_embedder)
-    ear = Ear(CFG, CAT, load_offer("shay_coaching"), sense, listener, Shrugs(CFG, sense, listener, lambda t, s: t),
-              lambda reply, candidates: pick)  # "vague": AI down or unsure, so an answer as before
+    return Ear(CFG, CAT, load_offer("shay_coaching"), sense, listener, Shrugs(CFG, sense, listener, lambda t, s: t), judge)
+
+
+@pytest.mark.parametrize("pick, heard_as", [("money objection", "objection:money"), ("vague", "answer")])
+def test_a_grey_band_objection_before_the_price_is_the_ais_call(fake_embedder, pick, heard_as):
+    ear = _grey_band_ear(fake_embedder, lambda reply, candidates: pick)  # "vague": AI down or unsure, so an answer
     assert ear.hear("10k seems like a lot", ScriptState(step="03"), False).heard_as.startswith(heard_as)
+
+
+def test_the_ai_judges_a_grey_band_worry_against_the_question_asked(fake_embedder):
+    asked = []
+    ear = _grey_band_ear(fake_embedder, lambda reply, options: asked.append((reply, options)) or "vague")
+    ear.hear("10k seems like a lot", ScriptState(step="03"), False)
+    question = question_of(CAT.steps["03"].say_plain or CAT.steps["03"].say)
+    assert asked == [("10k seems like a lot", {"money objection": ["money"], "answer": [f"answering '{question}'"]})]
+
+
+def test_a_worry_under_the_judges_line_is_not_judged(fake_embedder):
+    asked = []
+    ear = _grey_band_ear(fake_embedder, lambda *a: asked.append(a) or "money objection",
+                         score=CFG["early_objection_judge_score"] - 0.01)
+    assert ear.hear("10k seems like a lot", ScriptState(step="03"), False).heard_as == "answer" and not asked
 
 
 # A reply with an answer and a question or worry beside it ("3 years, what about you?"): which part leads.
@@ -78,6 +96,7 @@ def test_a_grey_band_objection_before_the_price_is_the_ais_call(fake_embedder, p
     ("19", "no, how do I pay?", ("answer", "", "no, how do I pay?", "", "")),
     ("22", "no, credit?", ("answer", "", "no, credit?", "", "")),
     ("14", "that's a lot, how do I pay?", ("ready", "pays", None, "", "")),   # a worry beside it: not alone
+    ("19", "I don't have the money, how do I pay?", ("objection", "money", "I don't have the money", "", "")),  # not ready
     ("03", "3 years, what about you?", ("answer", "", "3 years", "question", "what about you?")),
     ("03", "about 3 years, is this a scam?", ("answer", "", "about 3 years", "objection:scam", "is this a scam?")),
     ("01", "more money, how long is the course?", ("answer", "", "more money", "fact:length", "how long is the course?")),
@@ -90,6 +109,7 @@ def test_a_side_question_or_worry_is_heard_beside_the_answer(ear, step, text, he
     v = ear.hear(text, ScriptState(step=step), opened=step in {"14", "19", "22"})
     got = (v.kind, v.name, v.text, v.side, v.asked)
     assert all(want is None or g == want for g, want in zip(got, heard)), got
+    assert v.asking == (v.kind != "objection")  # the worry is heard on its own: the question beside it is dropped
 
 
 @pytest.mark.parametrize("step, text, kind, name", [   # back from "brb": the whole reply, heard as one
@@ -106,3 +126,14 @@ def test_an_early_answer_beside_a_side_question_is_kept(ear):
     v = ear.hear("more money, I want 5k a month, how long is the course?", ScriptState(step="01"), opened=False)
     assert (v.text, v.side, v.ahead.slots) == ("more money, I want 5k a month", "fact:length", {"number": "5k a month"})
     assert ear.hear("freedom, how long is the course?", ScriptState(step="01"), opened=False).ahead is None
+
+
+@pytest.mark.parametrize("step, text, kind", [   # "3 years?" to "how long?" is the answer said with a rise
+    ("03", "3 years?", "answer"), ("03", "a year?", "answer"), ("02", "5k a month?", "answer"),
+    ("goal_practical", "freedom?", "answer"), ("goal_practical", "um, my family?", "answer"),
+    ("goal_practical", "3 years?", "question"),   # a figure is not a goal: they ask
+    ("02", "freedom?", "question"), ("03", "freedom?", "question"),   # not the step's shape
+    ("01", "3 years?", "question"),   # a step with no shape: a rise asks
+])
+def test_a_short_reply_with_a_rise_is_the_answer_when_it_has_the_steps_shape(ear, step, text, kind):
+    assert ear.hear(text, ScriptState(step=step), opened=False).kind == kind

@@ -3,7 +3,12 @@
 import re
 from dataclasses import dataclass
 
-from core.buy_mode.script_engine.engine import asked_line, question_of, hear_ahead, ready_open
+from core.buy_mode.script_engine.engine import (
+    asked_line,
+    hear_ahead,
+    question_of,
+    ready_open,
+)
 from core.buy_mode.script_engine.hear.reply import Reader
 from core.buy_mode.script_engine.method import ANY
 from core.infra.utils import tokenize
@@ -72,27 +77,28 @@ class Ear:
     def _with_side(self, reply, step, state, opened):
         """Content that answers the step, beside a question a one-line reply covers ("i guess 3 years, what
         about you?", "nothing, why do you ask?"): the answer is kept and the question answered in front of the
-        next line. A worry in the content leads instead ("5k? that's a lot"). None, so the question leads as
-        it always did, when the question is a worry after the price, "say that again?", a shortcut, or itself
-        one of the step's answers beside a worry, after a pause, or when the content is no answer. A question that
-        picks one of the step's answers beside a plain one ("yeah I'm in, how do I pay?") is that answer, heard alone."""
+        next line. A worry in the content leads instead ("5k? that's a lot"), whatever is asked beside it. None, so
+        the question leads as it always did, when the question is a worry after the price, "say that again?", a
+        shortcut, or itself one of the step's answers beside a "no", after a pause, or when the content is no
+        answer. A question that picks one of the step's answers beside a plain one ("yeah I'm in, how do I
+        pay?") is that answer, heard alone."""
         if state.waiting:
             return None  # "ok I'm back, where were we" after a pause
+        within, about = self._interrupt(reply.said, step, state, opened, False)
+        if within == "objection":  # a worry leads, whatever is asked beside it: "5k? that's a lot" is the money,
+            return Verdict(within, about, reply.said)  # "I can't afford it, how do I pay?" is not ready to pay
         picked = self._chooses(reply.asked, step)
         if picked:  # "yeah I'm in, how do I pay?": the question is the answer, heard alone, unless the content
-            # takes it back ("no, credit?": torn, judged as before) or is a worry ("that's a lot, how do I pay?")
-            if self._takes_back(reply.said, picked, step) or self._interrupt(reply.said, step, state, opened, False)[0]:
+            # takes it back ("no, credit?": torn, judged as before) or is a sense ("brb, how do I pay?")
+            if within or self._takes_back(reply.said, picked, step):
                 return None
             return Verdict("answer", text=reply.asked, asking=True)
         kind, name = self._interrupt(reply.asked, step, state, opened, True)
         if (kind == "ready" or (kind == "objection" and opened)
                 or (kind == "sense" and not self.sense.interruptions[name].with_answer)):  # "say that again?" leads
             return None
-        within, about = self._interrupt(reply.said, step, state, opened, False)
-        if within:  # the content is itself a worry or a sense, no answer: "that's a lot", "shut up"
-            # a worry leads ("5k? that's a lot": the money, not the price again); a sense leads only beside a
-            # plain question ("shut up and just tell me the price" wants the price)
-            return Verdict(within, about, reply.said) if within == "objection" or not kind else None
+        if within:  # the content is a sense, no answer ("shut up"): it leads only beside a plain question
+            return None if kind else Verdict(within, about, reply.said)  # "shut up, what's the price?" wants the price
         if not self._answers_step(reply.said, step, state):
             return None
         ahead = hear_ahead(self.method, state, reply.said)
