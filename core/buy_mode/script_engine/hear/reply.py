@@ -60,7 +60,7 @@ def break_pattern(cfg):
     """The one place a reply is cut: at `clause_breaks` (punctuation only before a space or the end, so "2.5k"
     stays whole; words as whole words)."""
     parts = [rf"\b{re.escape(b)}\b" if b.isalpha() else rf"{re.escape(b)}(?=\s|$)" for b in cfg["clause_breaks"]]
-    return re.compile("|".join(parts), re.I)
+    return re.compile("|".join(parts), re.IGNORECASE)
 
 
 def clauses(text, breaks):
@@ -78,7 +78,7 @@ class Reader:
         """`nudges`: phrases cut off the end of a reply. `hedges(text)`: the part says nothing on its own."""
         self.cfg, self.breaks, self._hedges = cfg, break_pattern(cfg), hedges
         leads = "|".join(map(re.escape, cfg["nudge_leads"]))
-        self._nudges = [re.compile(rf"(?:^|\W)(?:(?:{leads})\W+)?{words}\W*$", re.I)
+        self._nudges = [re.compile(rf"(?:^|\W)(?:(?:{leads})\W+)?{words}\W*$", re.IGNORECASE)
                         for words in (r"\W+".join(map(re.escape, tokenize(p))) for p in sorted(nudges, key=len, reverse=True))]
         self._tags = {" ".join(tokenize(t)) for t in cfg["filler_tags"]}
         self._starts = set(cfg["question_words"]) | set(cfg["closed_question_starts"])
@@ -101,7 +101,7 @@ class Reader:
         starts with a question word or a helper verb ("what?", "is it?")."""
         words = tokenize(part)
         first = words[0] if words else ""
-        said_as = {first, first.split("'")[0], first[:-1] if first.endswith("s") else first}  # "what's", "whats" -> what
+        said_as = {first, first.split("'")[0], first.removesuffix("s")}  # "what's", "whats" -> what
         return opens_question(part, self.cfg) or (part.rstrip().endswith("?") and bool(said_as & self._starts))
 
     def _act(self, part, several):

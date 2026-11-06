@@ -4,14 +4,13 @@ per-turn breaker live here only, so the seller never builds a prompt and tests c
 import json
 import logging
 
-from core.buy_mode.script_engine.ai.line import checked_line
 from core.buy_mode.script_engine.ai.checks import CheckContext, clip, figures
 from core.buy_mode.script_engine.ai.judge import judge
+from core.buy_mode.script_engine.ai.line import checked_line
 from core.buy_mode.script_engine.ai.listen import hear
 from core.buy_mode.script_engine.words.tone import plain
-from core.infra.utils import tokenize
-
 from core.infra.logs import timed
+from core.infra.utils import tokenize
 
 uncovered_log = logging.getLogger("script_engine.uncovered")
 

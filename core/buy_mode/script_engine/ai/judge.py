@@ -2,9 +2,8 @@
 
 import logging
 
-from core.infra.utils import tokenize
-
 from core.infra.logs import timed
+from core.infra.utils import tokenize
 
 VAGUE = "vague"
 logger = logging.getLogger("script_engine.fallback")

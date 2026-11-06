@@ -5,9 +5,9 @@ from dataclasses import dataclass
 from functools import lru_cache
 from types import MappingProxyType
 
-from core.infra.loader import CONFIG_DIR
 from core.buy_mode.script_engine.config import plain_words
 from core.buy_mode.script_engine.method import _one_stress, _read, _score
+from core.infra.loader import CONFIG_DIR
 from core.infra.utils import tokenize
 
 

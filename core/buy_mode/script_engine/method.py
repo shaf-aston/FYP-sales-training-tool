@@ -7,10 +7,10 @@ from pathlib import Path
 
 import yaml
 
-from core.buy_mode.stage import Stage
-from core.infra.loader import CONFIG_DIR
 from core.buy_mode.script_engine.words.fill import NAME, blanks
 from core.buy_mode.script_engine.words.tone import stresses
+from core.buy_mode.stage import Stage
+from core.infra.loader import CONFIG_DIR
 
 ANY = "any"  # listen route with no examples: taken for any reply
 # What happens after an interruption's reply: ask the step again (same words), wait for them to come

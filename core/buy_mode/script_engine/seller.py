@@ -4,39 +4,41 @@ import re
 from dataclasses import asdict, replace
 from functools import lru_cache
 
-from core.infra.loader import load_yaml
-from core.buy_mode.script_engine.words import tone
-from core.infra.env import ROOT_DIR
 from core.buy_mode.script_engine.ai.gate import AiGate
+from core.buy_mode.script_engine.ai.judge import VAGUE
+from core.buy_mode.script_engine.ai.voice import Voice
 from core.buy_mode.script_engine.config import check
-from core.buy_mode.script_engine.words.echo import Echo, Turn
-from core.buy_mode.script_engine.hear.embedder import make_embedder
 from core.buy_mode.script_engine.engine import (
     ScriptState,
     advance,
-    carry_on,
-    move_on,
     asked_line,
     asks_left,
+    carry_on,
     jump,
+    move_on,
     object_to,
     park,
     price_open,
     question_of,
     start,
 )
-from core.buy_mode.script_engine.words.fill import Filler, fix_typos
-from core.buy_mode.script_engine.ai.judge import VAGUE
+from core.buy_mode.script_engine.hear.embedder import make_embedder
 from core.buy_mode.script_engine.hear.meanings import MeaningBank, load_meanings
-from core.buy_mode.script_engine.method import load_common_sense, load_method, load_offer
 from core.buy_mode.script_engine.hear.recognise import Listener
 from core.buy_mode.script_engine.hear.shrug import Shrugs
 from core.buy_mode.script_engine.hear.verdict import Ear, answer_labels
-from core.buy_mode.script_engine.ai.voice import Voice
-from core.infra.utils import tokenize
-
+from core.buy_mode.script_engine.method import (
+    load_common_sense,
+    load_method,
+    load_offer,
+)
+from core.buy_mode.script_engine.words import tone
+from core.buy_mode.script_engine.words.echo import Echo, Turn
+from core.buy_mode.script_engine.words.fill import Filler, fix_typos
+from core.infra.env import ROOT_DIR
+from core.infra.loader import load_yaml
 from core.infra.logs import timed
-
+from core.infra.utils import tokenize
 
 
 def engine_config():
