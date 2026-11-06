@@ -50,6 +50,7 @@ class Step:
     reask: tuple = ()   # this step's own `reask` leads, in place of the method's ("more money" again is an answer, not a blank)
     needs: str = ""     # regex an answer must match ("how much a month?" needs a figure); a reply without it is asked again
     plain_if: str = ""  # regex: their words said back that match it get the plain line ("each month to make more money?" asks money for money)
+    shrug_moves_on: bool = False  # the next line answers the question itself: a shrug ("yeah") moves on unsaved, never asked again
 
     @property
     def routes(self):
@@ -206,6 +207,8 @@ def _step(step_id, data, answers):
     plain_if = data.get("plain_if", "")
     if plain_if and not data.get("say_plain"):
         raise ValueError(f"step {step_id}: plain_if needs a say_plain")
+    if data.get("shrug_moves_on") and not any(r.label == ANY for r in listen):
+        raise ValueError(f"step {step_id}: shrug_moves_on needs an '{ANY}' route to move on by")
     if data.get("echo") and not data.get("capture"):
         raise ValueError(f"step {step_id}: echo needs a capture")
     for line in (data.get("say", ""), data.get("say_plain", ""), *probes, *reask,
@@ -222,7 +225,7 @@ def _step(step_id, data, answers):
         listen, bool(data.get("run_on")),
         data.get("name", ""), data.get("note", ""), bool(data.get("doubts_answer")),
         stuck, answered_by, bool(data.get("echo")), unsure, bool(data.get("moment")), data.get("bridge", ""),
-        reask, needs, plain_if,
+        reask, needs, plain_if, bool(data.get("shrug_moves_on")),
     )
 
 

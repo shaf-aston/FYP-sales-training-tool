@@ -62,7 +62,7 @@ def test_a_question_rephrased_for_a_sense_gets_no_reask_lead():
 
 
 def test_each_lead_is_said_once_a_step(fake_embedder):
-    s = seller(fake_embedder, "08")
+    s = seller(fake_embedder, "09")
     said = [s.reply(r)[0] for r in ("yeah", "sure")]  # `misses` re-asks, then the step moves on
     assert [leads(t) for t in said] == [[lead] for lead in CAT.reask[:2]]
 
@@ -132,3 +132,22 @@ def test_the_same_message_twice_in_a_row_moves_on(fake_embedder):
     s.reset(ScriptState(step="belief_origin", spoken=tuple(CAT.reask) * CFG["lead_repeats"]))  # leads worn out
     texts = [s.reply("ok")[0] for _ in range(6)]
     assert all(a != b for a, b in zip(texts, texts[1:])), texts
+
+
+def test_a_shrug_moves_on_where_the_next_line_answers_the_question():
+    """08 is answered by its own ack ("What makes you successful as an employee..."): "yeah" moves on unsaved."""
+    from core.buy_mode.script_engine.engine import advance
+    step = next(v for v in CAT.steps.values() if v.shrug_moves_on)
+    move = advance(CAT, ScriptState(step=step.id), None, "yeah", empty=True, misses=CFG["misses"])
+    assert move.state.step != step.id and step.capture not in move.state.slots
+
+
+def test_a_step_that_hears_no_also_hears_yes():
+    """"yes" and "no" sit close in meaning: a step with only one of them heard a plain "yes" as "no"."""
+    from core.infra.loader import load_yaml as load
+    answers = load("script/answers.yaml")
+    for name in ("cat", "impact_formula"):
+        for step in load_method(name).steps.values():
+            heard = [set(r.examples) for r in step.listen]
+            hears = [any(set(answers[a]) <= h for h in heard) for a in ("yes", "no")]
+            assert hears[0] == hears[1], (name, step.id)

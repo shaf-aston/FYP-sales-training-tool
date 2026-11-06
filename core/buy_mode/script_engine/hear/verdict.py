@@ -74,9 +74,16 @@ class Ear:
         about you?", "nothing, why do you ask?"): the answer is kept and the question answered in front of the
         next line. A worry in the content leads instead ("5k? that's a lot"). None, so the question leads as
         it always did, when the question is a worry after the price, "say that again?", a shortcut, or itself
-        one of the step's answers ("yes, how do I pay?"), after a pause, or when the content is no answer."""
-        if state.waiting or self._chooses(reply.asked, step):
-            return None  # "ok I'm back, where were we" after a pause; "yes, how do I pay?": the question is the answer
+        one of the step's answers beside a worry, after a pause, or when the content is no answer. A question that
+        picks one of the step's answers beside a plain one ("yeah I'm in, how do I pay?") is that answer, heard alone."""
+        if state.waiting:
+            return None  # "ok I'm back, where were we" after a pause
+        picked = self._chooses(reply.asked, step)
+        if picked:  # "yeah I'm in, how do I pay?": the question is the answer, heard alone, unless the content
+            # takes it back ("no, credit?": torn, judged as before) or is a worry ("that's a lot, how do I pay?")
+            if self._takes_back(reply.said, picked, step) or self._interrupt(reply.said, step, state, opened, False)[0]:
+                return None
+            return Verdict("answer", text=reply.asked, asking=True)
         kind, name = self._interrupt(reply.asked, step, state, opened, True)
         if (kind == "ready" or (kind == "objection" and opened)
                 or (kind == "sense" and not self.sense.interruptions[name].with_answer)):  # "say that again?" leads
@@ -93,11 +100,22 @@ class Ear:
                        side=f"{kind}:{name}" if kind else "question", asked=reply.asked)
 
     def _chooses(self, question, step):
-        """The question surely picks one of the step's answers on its own ("how do I pay?" at the close): one
-        label, not torn between two ("how much is it anyway" is near two goal levels and picks neither)."""
+        """The one label of the step's answers the question surely picks on its own ("how do I pay?" at the
+        close), else "": not torn between two ("how much is it anyway" is near two goal levels and picks neither)."""
         labels = answer_labels(step)
         found = self._listener.match(question, labels) if labels else None
-        return bool(found and found.label and not found.close and found.score >= self.cfg["question_answer_min_score"])
+        sure = found and found.label and not found.close and found.score >= self.cfg["question_answer_min_score"]
+        return found.label if sure else ""
+
+    def _takes_back(self, said, label, step):
+        """The content picks another of the step's answers, one that goes no further on ("no" backs out to the
+        soft close; "not sure" stays): beside "how do I pay?" it takes the question back. "yeah I'm in" goes on."""
+        found = self._listener.match(said, answer_labels(step))
+        if not (found and found.label) or found.label == label:
+            return False
+        order = list(self.method.steps)
+        route = next(r for r in step.listen if r.label == found.label)
+        return order.index(route.then) <= order.index(step.id)
 
     def _answers_step(self, text, step, state):
         """`text` is an answer the step keeps: its shape, not a shrug, and one of its answers or any reply."""

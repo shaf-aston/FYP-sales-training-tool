@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from core.buy_mode.script_engine.engine import ScriptState, advance, start
+from core.buy_mode.script_engine.engine import ScriptState, advance, question_of, start
 from core.buy_mode.script_engine.method import load_method, load_offer, parse_method
 from core.buy_mode.script_engine.hear.recognise import Listener
 
@@ -102,6 +102,8 @@ def test_loader_rejects_broken_graphs():
         (lambda d: d["steps"]["a"]["listen"]["clear"].update(then="a") or d["steps"]["a"].update(unsure="clear"), "unsure"),
         (lambda d: d["steps"]["a"].update(needs="x*"), "needs"),
         (lambda d: d["steps"]["a"].update(reask=["Sure?"]), "reask"),
+        (lambda d: d["steps"]["a"].update(shrug_moves_on=True), "shrug_moves_on"),
+        (lambda d: d.update(max_visits=-1), "max_visits"),
     ]:
         data = yaml.safe_load(yaml.safe_dump(good))
         mutate(data)
@@ -168,9 +170,9 @@ def test_loader_rejects_yaml_boolean_route_names():
 
 def test_asked_again_after_its_probes_a_step_says_only_its_question_behind_a_lead():
     cat = load_method("cat")
-    move = advance(cat, ScriptState(step="08"), None, "k", empty=True, misses=3)
-    assert move.say == "What's the main difference between a successful business owner and an employee?"
-    assert move.ack == cat.reask[0] and move.state.step == "08"
+    move = advance(cat, ScriptState(step="09"), None, "k", empty=True, misses=3)
+    assert move.say == question_of(cat.steps["09"].say)
+    assert move.ack == cat.reask[0] and move.state.step == "09"
 
 
 def test_a_capture_step_is_not_left_by_stuck_before_its_misses():

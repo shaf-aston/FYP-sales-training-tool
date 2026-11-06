@@ -345,6 +345,9 @@ steps:
         like: "no"
         examples: ["no I don't"]
         then: m_reframe1_why
+      "yes":   # a rival label: alone, "no" took a plain "yes" (close in meaning) to "Why not?" (whole calls)
+        like: "yes"
+        then: m_reframe2
       any: {then: m_reframe2}
   m_reframe1_why:
     name: "Reframe 1: why not"

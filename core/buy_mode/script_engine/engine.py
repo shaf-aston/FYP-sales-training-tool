@@ -71,7 +71,7 @@ def advance(method, state, label, reply="", empty=False, line="", misses=1):
     saving the reply as their answer. `line` is used only when the step is asked again."""
     step = method.steps[state.step]
     if empty and (step.capture or not label and any(r.label != ANY for r in step.listen)):
-        if asks_left(method, state, misses):
+        if asks_left(method, state, misses) and not step.shrug_moves_on:
             return _ask_again(method, state, step, line=line, misses=misses)
         reply = ""
     route = _route(step, label) if label else None

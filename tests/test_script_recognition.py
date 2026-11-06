@@ -440,9 +440,28 @@ ROUND_6 = [   # whole simulated calls (calls.py personas): (step, slots, raised,
     ("m_reframe1", {}, ("research",), "not sure", "m_reframe1_now", None),   # was "let me put it another way" x3: not knowing is no "what do you mean?"
     ("18", {}, (), "not sure", "18", "Put simply"),   # the step's own "unclear" answer, not the clarify sense
     ("goal_practical", {"outcome": "more money"}, (), "what do you mean", "goal_practical", "Fair point"),   # still asks
+    ("goal_practical", {"outcome": "more money"}, (), "huh?", "goal_practical", None),   # was saved as their goal
+    ("goal_practical", {"outcome": "more money"}, (), "dunno, pay my bills?", "goal_identity", None),   # a rise that answers still answers
+    ("08", {}, (), "yeah", "09", None),   # its ack answers it (shrug_moves_on); was asked 3 times
+    ("08", {}, (), "ok", "09", None),
+    ("goal_practical", {"outcome": "more money"}, (),
+     "not having to ask my boss for time off, what about you, do you travel much?", "goal_identity", None),   # was heard as "what do you mean?"
+    ("03", {}, (), "i guess 3 years, what about you", "04", None),   # "what about you" asks, "?" or not
+    ("19", {}, (), "yeah I'm in, how do I pay?", "22", None),   # the question picks the answer; was "Where are you at with it?"
+    ("19", {}, (), "ok I'm in, what do I pay with?", "22", None),
+    ("m_close2", {}, (), "hmm", "m_close2", "No pressure"),   # thinking, not "what do you mean?" ("huh" is)
 ]
 
 
 @pytest.mark.parametrize("step, slots, raised, said, after, starts", ROUND_6)
 def test_round_6_whole_calls(step, slots, raised, said, after, starts):
     test_round_5_live_replies(step, slots, raised, said, after, starts)
+
+
+def test_huh_is_never_saved_as_their_goal():
+    from core.buy_mode.script_engine.engine import ScriptState
+
+    seller = _real_seller()
+    seller.reset(ScriptState(step="goal_practical", slots={"outcome": "more money"}))
+    seller.reply("huh?")
+    assert "practical" not in seller.state.slots

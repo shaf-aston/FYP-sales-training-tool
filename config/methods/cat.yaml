@@ -243,6 +243,7 @@ steps:
     ui_stage: emotional
     say: "We love working with people going from 9-5er to business owner... exciting, but terrifying, because it's outside your comfort zone. What's the main difference between a successful business owner and an employee?"
     capture: gap
+    shrug_moves_on: true   # the ack below answers it: "yeah" moves on, never asked again (was asked 3 times)
     listen:
       any:
         then: "09"
