@@ -182,3 +182,20 @@ def test_carry_on_stays_once_more_only_when_asked_to():
     assert carry_on(CAT, at_limit, misses=CFG["misses"]).state.step != "19"
     assert carry_on(CAT, at_limit, stay=True, misses=CFG["misses"]).state.step == "19"
     assert carry_on(CAT, at_limit, rephrase=True, misses=CFG["misses"]).state.step == "19"
+
+
+def test_a_worry_handled_starts_the_visit_count_again():
+    """Review: a buyer who handled two worries and came back to pay was booked a follow-up (a third
+    landing on the payment step is progress after each worry, not going round in circles)."""
+    from core.buy_mode.script_engine.engine import jump, object_to
+    pay = CAT.steps["22"].id
+    state = ScriptState(step="19", seen=(pay,) * CAT.max_visits)
+    state = object_to(CAT, state, "money", CFG["objection_entries"]).state
+    assert state.step != CAT.follow_up and pay not in state.seen
+    assert jump(CAT, state, pay).state.step == pay
+
+
+def test_going_round_in_circles_without_a_worry_still_books_the_follow_up():
+    from core.buy_mode.script_engine.engine import jump
+    state = ScriptState(step="19", seen=("22",) * CAT.max_visits)
+    assert jump(CAT, state, "22").state.step == CAT.follow_up

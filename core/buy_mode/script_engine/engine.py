@@ -23,7 +23,7 @@ class ScriptState:
     repeated: bool = False  # the last message was a side reply that said the step again: the next one uses other words (seller `_then_ask`)
     bridged: bool = False  # the last message ended on a step's `bridge` question: the next reply to it is heard, not saved
     spoken: tuple = ()     # lead lines said this call, once per time said (seller `_wear`)
-    seen: tuple = ()       # steps landed on this call, once per time (`_speak`: a third time books the follow-up)
+    seen: tuple = ()       # steps landed on since the last worry handled, once per time (`_speak`: going round in circles)
     last: str = ""         # the last message said: never the very same one twice in a row (seller `_reply`)
 
 
@@ -219,8 +219,8 @@ def object_to(method, state, name, entries):
     """Handle an objection by its matrix branch. Past `entries` objections in one call they are
     smokescreens: book the follow-up instead."""
     to = method.follow_up if len(state.raised) >= entries else method.objections[name].enter
-    parked = tuple(p for p in state.parked if p != name)
-    return _speak(method, replace(state, step=to, raised=(*state.raised, name), parked=parked))
+    parked = tuple(p for p in state.parked if p != name)  # a worry handled is new ground: `seen` starts again
+    return _speak(method, replace(state, step=to, raised=(*state.raised, name), parked=parked, seen=()))
 
 
 def park(state, name):

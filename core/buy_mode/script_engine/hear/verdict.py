@@ -108,14 +108,12 @@ class Ear:
         return found.label if sure else ""
 
     def _takes_back(self, said, label, step):
-        """The content picks another of the step's answers, one that goes no further on ("no" backs out to the
-        soft close; "not sure" stays): beside "how do I pay?" it takes the question back. "yeah I'm in" goes on."""
+        """The content is another of the step's answers, one that says no (`takes_back`: "no", "not yet"):
+        beside "how do I pay?" it takes the question back. "yeah I'm in" doesn't."""
         found = self._listener.match(said, answer_labels(step))
         if not (found and found.label) or found.label == label:
             return False
-        order = list(self.method.steps)
-        route = next(r for r in step.listen if r.label == found.label)
-        return order.index(route.then) <= order.index(step.id)
+        return next(r for r in step.listen if r.label == found.label).like in self.cfg["takes_back"]
 
     def _answers_step(self, text, step, state):
         """`text` is an answer the step keeps: its shape, not a shrug, and one of its answers or any reply."""

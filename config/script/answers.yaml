@@ -27,3 +27,13 @@ not_yet:   # a no to "Do you see yourself jumping in?"
   - "not right now"
   - "I can't see that happening"
   - "maybe, I'm not sure yet"
+backs_out:   # changing their mind after a yes (live: "actually no, forget it" got "Welcome aboard")
+  - "actually no, forget it"
+  - "no, I changed my mind"
+  - "I don't want to do this anymore"
+  - "no, I'm not doing this"
+  - "never mind, I'm out"
+  - "wait, I'm not sure anymore"
+  - "no thanks, I'll pass"
+  - "actually I don't think so"   # draft
+  - "no"

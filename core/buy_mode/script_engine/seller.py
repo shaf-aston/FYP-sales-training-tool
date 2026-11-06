@@ -167,11 +167,16 @@ class ScriptSeller:
         bridged = self.state.bridged
         self.state = replace(v.ahead or self.state, waiting=False, bridged=False)  # early answers are kept whatever it was
         if bridged and v.kind in ("answer", "says_nothing"):  # their reply to the getting-to-know-you question
-            return self._then_ask(self.cfg["bridge_ack"]), self.ui_stage(), "bridge"
+            said = self._then_ask(self.cfg["bridge_ack"])
+            self.state = replace(self.state, last=said)
+            return said, self.ui_stage(), "bridge"
         said, ui_stage, detail = self._respond(v, step, opened)
+        spoken = self.state.spoken
         said = self._wear(said)
-        if said == self.state.last and "?" in said and self.state.step == step.id:
-            said, ui_stage = self._go(move_on(self.method, self.state))  # word for word again: move on instead
+        if said == self.state.last and "?" in said and self.state.step == step.id:  # word for word again: move on
+            self.state = replace(self.state, spoken=spoken)  # the lead it wore was never said
+            said, ui_stage = self._go(move_on(self.method, self.state))
+            said = self._wear(said)
         self.state = replace(Echo.settle(self.state, self._turn), repeated=self._turn.side, last=said)
         return said, ui_stage, detail or v.heard_as
 

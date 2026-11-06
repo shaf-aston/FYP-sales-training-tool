@@ -450,6 +450,8 @@ ROUND_6 = [   # whole simulated calls (calls.py personas): (step, slots, raised,
     ("19", {}, (), "yeah I'm in, how do I pay?", "22", None),   # the question picks the answer; was "Where are you at with it?"
     ("19", {}, (), "ok I'm in, what do I pay with?", "22", None),
     ("m_close2", {}, (), "hmm", "m_close2", "No pressure"),   # thinking, not "what do you mean?" ("huh" is)
+    ("m_close1", {}, ("research",), "not yet, how do I pay?", "m_close1", None),   # review: a no takes the question back
+    ("m_close1", {}, ("research",), "yeah I'm in, how do I pay?", "22", None),   # review: was taken back (file order)
 ]
 
 

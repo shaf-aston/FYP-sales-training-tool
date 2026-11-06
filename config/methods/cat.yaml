@@ -409,17 +409,8 @@ steps:
     capture: reason
     listen:
       backs_out: &backs_out   # live: "actually no, forget it" got "Welcome aboard"; back to the soft close
+        like: backs_out   # answers.yaml; a no, so beside "how do I pay?" it takes the question back (engine.yaml `takes_back`)
         min_score: 0.78   # live: "because I'm sick of waiting for things to change" (0.71) is their reason, not backing out (0.78+)
-        examples:
-          - "actually no, forget it"
-          - "no, I changed my mind"
-          - "I don't want to do this anymore"
-          - "no, I'm not doing this"
-          - "never mind, I'm out"
-          - "wait, I'm not sure anymore"
-          - "no thanks, I'll pass"
-          - "actually I don't think so"   # draft
-          - "no"
         then: "19"
         ack: "No pressure at all."
         keep: false   # "forget it" is not their reason: never said back or quoted later

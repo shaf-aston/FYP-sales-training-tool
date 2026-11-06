@@ -30,6 +30,7 @@ slot_words: 6          # longest phrase echoed into a script blank
 rise_answer_words: 6   # a part this short that ends in "?" but isn't phrased as a question, and has the step's `needs` ("dunno, a year?"), is the answer said with a rise
 echo_term_words: 3     # outside a step marked `moment`, their words come back only as a term this short (echo.py)
 echo_repeats: 2        # the same phrase of theirs is said back at most this many times a call
+takes_back: ["no", not_yet, backs_out]   # shared answers (answers.yaml) that say no: "no, credit?" is torn, not paying (verdict `_takes_back`)
 lead_repeats: 2        # a lead line ("No rush, even a rough idea helps.", "Fair enough, I'll keep this quick.") is said at most this many times a call, then left out
 stop_words: [a, an, the, i, i'm, i've, my, me, to, of, and, or, in, "on", at, for, is, am, are, be, it, that, this, so, with, as, by, we, you, your]
 filler_words: [ok, okay, sure, yeah, yep, "yes", hmm, mm, cool, alright, right, k, kk, idk, dunno, fr, frfr, lol, lmao, fine]   # a reply made only of these (and stop_words) says nothing ("fine, but is this a scam?" answers nothing); never add "no", it answers yes/no steps

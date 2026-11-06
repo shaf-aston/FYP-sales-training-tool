@@ -26,6 +26,7 @@ class Route:
     ack: str = ""
     keep: bool = True   # false = the reply is not kept as the step's answer (a vague one restates the question)
     min_score: float = 0.0  # a match must score at least this to take the route; under it, the reply is heard as unmatched
+    like: str = ""      # the shared answer (answers.yaml) it takes examples from: what kind of answer it is ("no")
 
 
 @dataclass(frozen=True)
@@ -176,7 +177,8 @@ def _route(step_id, label, data, answers):
     if label == ANY and "min_score" in data:
         raise ValueError(f"step {step_id}: '{ANY}' route takes no min_score")
     floor = _score(f"step {step_id} route {label}", data["min_score"]) if "min_score" in data else 0.0
-    return Route(label, examples, str(data["then"]), data.get("ack", ""), data.get("keep", True) is not False, floor)
+    return Route(label, examples, str(data["then"]), data.get("ack", ""), data.get("keep", True) is not False, floor,
+                 like or "")
 
 
 def _step(step_id, data, answers):

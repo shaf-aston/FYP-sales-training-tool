@@ -11,7 +11,7 @@ TYPES = {
     "threshold": NUMBER, "early_objection_min_score": NUMBER, "early_objection_judge_score": NUMBER, "interrupt_threshold": NUMBER,
     "question_answer_min_score": NUMBER, "clause_min_words": int, "clause_breaks": list,
     "near_miss": NUMBER, "margin": NUMBER, "close_call_k": int, "spell_cutoff": NUMBER,
-    "max_words": int, "slot_words": int, "echo_term_words": int, "echo_repeats": int, "lead_repeats": int, "objection_entries": int, "misses": int, "spell_min_letters": int,
+    "max_words": int, "slot_words": int, "echo_term_words": int, "echo_repeats": int, "lead_repeats": int, "takes_back": list, "objection_entries": int, "misses": int, "spell_min_letters": int,
     "ai_retries": int, "ai_rest_seconds": NUMBER, "ai_fail_limit": int, "ai_timeout_seconds": NUMBER,
     "ai_workers": int, "judge_examples": int, "judge_tokens": int, "answer_tokens": int, "listen_tokens": int,
     "ack_tokens": int, "ack_retries": int, "ack_max_words": int, "probe_max_words": int, "memory_chars": int,
