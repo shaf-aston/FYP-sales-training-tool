@@ -66,11 +66,13 @@ class Objection:
 
 @dataclass(frozen=True)
 class Ready:
-    """A keen prospect says they're in before the pitch: skip to `then` instead of making them sit through it."""
+    """A shortcut heard on every step in its window: a keen prospect says they're in before the pitch (`ready`),
+    or asks how to pay once the price is out (`pays`): skip to `then` instead of making them sit through it."""
     examples: tuple
     then: str           # the step the call jumps to
     until: str          # only before this step; from here on the script itself is closing
     min_score: float    # a match must score at least this on every step ("I'm in sales" must not jump)
+    start: str = ""     # only from this step on; "" = from the first
 
 
 @dataclass(frozen=True)
@@ -84,6 +86,12 @@ class Method:
     revisit_step: str = ""  # an objection parked before the price is raised again when they hesitate here
     ready: Ready = None     # keen prospect shortcut; none = every prospect hears the whole script
     reask: tuple = ()       # leads said before a question asked again once its probes ran out, in turn
+    pays: Ready = None      # "how do I pay?" from the price on: straight to paying
+
+    @property
+    def shortcuts(self):
+        """{name: Ready} for the shortcuts this method has; the name is how the reply was heard ("ready:pays")."""
+        return {k: r for k, r in (("prospect", self.ready), ("pays", self.pays)) if r}
 
 
 @dataclass(frozen=True)
@@ -127,6 +135,7 @@ class Interruption:
     after: str = "ask"  # one of AFTER: what follows the reply
     after_wait: bool = False  # only makes sense right after a `wait` reply ("ok, I'm back")
     min_score: float = 0.0  # a match must score at least this on every step (words that are often answers too)
+    with_answer: bool = False  # may sit beside an answer ("3 years, what about you?"): answer kept, this said first
 
 
 @dataclass(frozen=True)
@@ -308,9 +317,11 @@ def parse_method(name, data, matrix=None, answers=None):
             raise ValueError(f"method {name}: revisit_step {revisit_step!r} must be a step at or after the price")
         if not steps[revisit_step].stuck:
             raise ValueError(f"method {name}: revisit_step {revisit_step!r} needs a 'stuck' route")
-    ready = _ready(name, data.get("ready"), steps)
-    _reachable(name, first, steps, [o.enter for o in objections.values()] + [s for s in (follow_up, ready and ready.then) if s])
-    return Method(name, first, steps, objections, price_step, follow_up, revisit_step, ready, reask)
+    ready = _ready(name, data.get("ready"), steps, answers)
+    pays = _ready(name, data.get("pays"), steps, answers)
+    _reachable(name, first, steps, [o.enter for o in objections.values()]
+               + [s for s in (follow_up, ready and ready.then, pays and pays.then) if s])
+    return Method(name, first, steps, objections, price_step, follow_up, revisit_step, ready, reask, pays)
 
 
 def _score(where, value):
@@ -319,16 +330,23 @@ def _score(where, value):
     return float(value)
 
 
-def _ready(name, data, steps):
+def _ready(name, data, steps, answers):
+    """A shortcut (`ready`, `pays`); its examples may be `like` a shared answer (answers.yaml)."""
     if not data:
         return None
-    if not data.get("examples"):
+    like = data.get("like")
+    if like is not None and like not in answers:
+        raise ValueError(f"method {name}: shortcut is like unknown answer {like!r}")
+    examples = tuple(dict.fromkeys([*answers.get(like, ()), *(data.get("examples") or ())]))
+    if not examples:
         raise ValueError(f"method {name}: ready needs examples")
-    ready = Ready(tuple(data["examples"]), str(data.get("then", "")), str(data.get("until", "")),
-                  _score(f"method {name} ready", data.get("min_score")))
+    ready = Ready(examples, str(data.get("then", "")), str(data.get("until", "")),
+                  _score(f"method {name} ready", data.get("min_score")), str(data.get("from", "")))
     order = list(steps)
-    if ready.then not in steps or ready.until not in steps:
-        raise ValueError(f"method {name}: ready then/until must be defined steps")
+    if ready.then not in steps or ready.until not in steps or (ready.start and ready.start not in steps):
+        raise ValueError(f"method {name}: ready then/until/from must be defined steps")
+    if ready.start and order.index(ready.start) >= order.index(ready.until):
+        raise ValueError(f"method {name}: a shortcut's from must come before its until")
     seen, todo = set(), [ready.then]  # every step the shortcut can lead to stays past `until`: no loop
     while todo:
         step_id = todo.pop()
@@ -357,7 +375,7 @@ def parse_offer(name, data):
     )
 
 
-INTERRUPTION_KEYS = {"examples", "reply", "draft", "after", "after_wait", "min_score"}  # `draft` is accepted, never read
+INTERRUPTION_KEYS = {"examples", "reply", "draft", "after", "after_wait", "min_score", "with_answer"}  # `draft` is accepted, never read
 
 
 def parse_common_sense(data):
@@ -367,12 +385,15 @@ def parse_common_sense(data):
     items = {
         k: Interruption(k, tuple(v["examples"]), v["reply"], v.get("after", "ask"),
                         bool(v.get("after_wait")),
-                        _score(f"interruption {k}", v["min_score"]) if "min_score" in v else 0.0)
+                        _score(f"interruption {k}", v["min_score"]) if "min_score" in v else 0.0,
+                        v.get("with_answer", False) is True)
         for k, v in data["interruptions"].items()
     }
     for i in items.values():
         if i.after not in AFTER:
             raise ValueError(f"interruption {i.name}: after must be one of {AFTER}")
+        if i.with_answer and i.after != "ask":
+            raise ValueError(f"interruption {i.name}: with_answer only goes with after: ask (the next question follows)")
         _one_stress(f"interruption {i.name}", i.reply)
     nudge = data.get("nudge") or {}
     if "?" in data["park"] or "?" in data.get("told_again", "") or "?" in data.get("ended", "") or "?" in nudge.get("reply", "") or any(

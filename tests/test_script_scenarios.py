@@ -452,9 +452,16 @@ def test_an_answer_with_a_question_in_it_is_an_answer(fake_embedder):
 def test_a_real_product_question_is_still_answered(fake_embedder):
     ai = Recorder("NOT_COVERED")
     s = seller(fake_embedder, ai, step="18")
-    reply, _ = s.reply("yeah but how long is it?")
+    reply, _ = s.reply("yeah but are refunds possible?")
     assert reply.startswith(CFG["uncovered_fallback"]) and s.state.step == "18"
     assert any("<question>" in p for p in ai.prompts)
+
+
+def test_a_question_after_a_yeah_but_is_heard_on_its_own(fake_embedder):
+    # reply.py cuts "yeah but how long is it?" once: the question part alone is the length fact
+    s = seller(fake_embedder, Recorder("NOT_COVERED"), step="18")
+    reply, _ = s.reply("yeah but how long is it?")
+    assert reply.startswith(s.offer.facts["length"].answer.split("{")[0]) and s.state.step == "18"
 
 
 class ByPrompt:

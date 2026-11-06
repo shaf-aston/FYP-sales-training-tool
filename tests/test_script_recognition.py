@@ -395,8 +395,28 @@ ROUND_5 = [   # live persona calls (round 5): (step, slots, raised, said, step a
     ("01", {}, (), "hey sorry, did you catch the match last night?", "01", "Ha, all good here"),
     ("01", {}, (), "fine. more money obviously", "goal_practical", "What are you hoping to achieve with more money?"),
     ("m_funded", {}, ("money",), "can I split it into payments?", "m_funded", "There are ways to make the investment work"),
-    ("m_close2", {}, ("fear",), "credit", "20", None),   # was "No rush, even a rough idea helps."
-    ("19", {}, (), "debit", "20", None),   # one shared "jumping in?" yes (answers.yaml); was asked again
+    ("m_close2", {}, ("fear",), "credit", "22", None),   # was "No rush, even a rough idea helps."; a way to pay goes to paying
+    ("19", {}, (), "debit", "22", None),   # one shared list for every "jumping in?" (answers.yaml); was asked again
+    ("19", {}, (), "yes let's do it", "20", None),   # a plain yes still sells itself first
+    ("03", {}, (), "within a year ideally", "03", None),   # when they want it, not how long: asked again
+    ("03", {}, (), "because my job could go any day, there's layoffs", "03", None),
+    ("03", {}, (), "i guess 3 years, what about you?", "04", None),   # reply.py: the answer is kept beside the question
+    ("06", {}, (), "nothing, why do you ask?", "08", None),
+    ("03", {}, (), "two years, and what's the price", "04", "Fair question"),
+    ("05", {}, (), "ok so what's the price", "05", "Fair question"),   # was taken as their answer
+    ("03", {}, (), "yeah but how much is it", "03", "Fair question"),   # was ignored
+    ("04", {}, (), "shut up and just tell me the price", "04", "Fair question"),
+    ("14", {}, (), "5 grand? that's a lot mate", "m_funded", None),   # the worry beside "5 grand?" still leads
+    ("goal_practical", {"outcome": "freedom"}, (), "being able to quit my job, and how long is the course?",
+     "goal_practical", "It's a 6-month process. What would that actually change"),   # live: the goal was lost; level 1, so the ladder digs
+    ("01", {}, (), "money. how much is it anyway", "goal_practical", "Fair question"),
+    ("05", {}, (), "no time honestly, are you a bot?", "06", "Yes, I'm an AI"),
+    ("19", {}, (), "yes, how do I pay?", "22", None),   # the question is itself the answer
+    ("17", {}, (), "yes, how do I pay?", "22", None),   # the `pays` shortcut from the price on; was "I'll find out"
+    ("16", {}, (), "sounds good, send me the link", "22", None),
+    ("15", {}, (), "ok", "16", None),   # a nod still moves the pitch on
+    ("18", {}, (), "yes, how do I pay?", "22", None),   # was "Are you aware of the programme?" after the whole pitch
+    ("14", {}, (), "5k? that's a lot", "m_funded", None),   # the worry leads, not the price again
     ("03", {}, (), "I don't have time for this", "03", "Fair enough"),   # no span of time: can't be the answer
     ("02", {}, (), "I don't have time for this", "02", "Fair enough"),   # no figure: can't be the answer
 ]

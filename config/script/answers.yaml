@@ -3,7 +3,7 @@
 # hears it (live: "credit" was a yes at one "Do you see yourself jumping in?" and not at the other).
 "yes": ["yes", "yeah it would", "definitely", "probably yes", "yeah I would"]
 "no": ["no", "not really", "probably not", "definitely not"]
-jump_in:   # a yes to "Do you see yourself jumping in?": a way to pay says yes too
+jump_in:   # a yes to "Do you see yourself jumping in?"
   - "yes"
   - "yes let's do it"
   - "I'm in"
@@ -11,9 +11,12 @@ jump_in:   # a yes to "Do you see yourself jumping in?": a way to pay says yes t
   - "I'm in, I can see myself doing this"
   - "yes I see myself taking the jump"
   - "ok, let's go"   # draft
+pay_now:   # a yes that is already about paying: the payment question next, not "What makes you say that?"
   - "how do I pay"   # draft
   - "credit"   # draft
+  - "debit"   # draft
   - "I'll pay by card"   # draft
+  - "send me the payment link"   # draft
 not_yet:   # a no to "Do you see yourself jumping in?"
   - "no"
   - "not yet"

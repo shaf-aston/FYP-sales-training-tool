@@ -1,7 +1,8 @@
 """Match a prospect reply to the closest labelled meaning. Pure given an embedder."""
 
-import re
 from dataclasses import dataclass
+
+from core.buy_mode.script_engine.hear.reply import break_pattern, clauses
 
 
 @dataclass(frozen=True)
@@ -24,13 +25,12 @@ class Listener:
         self.threshold, self.margin, self.k = cfg["threshold"], cfg["margin"], cfg["close_call_k"]
         self.near_miss, self.interrupt_threshold = cfg["near_miss"], cfg["interrupt_threshold"]
         self.question_answer_min_score = cfg["question_answer_min_score"]
-        words = "|".join(rf"\b{re.escape(b)}\b" if b.isalpha() else re.escape(b) for b in cfg["clause_breaks"])
-        self.breaks, self.clause_min_words = re.compile(words, re.I), cfg["clause_min_words"]
+        self.breaks, self.clause_min_words = break_pattern(cfg), cfg["clause_min_words"]
 
     def _parts(self, reply):
-        """The reply, plus its clauses when it has two or more long enough to hear alone."""
-        clauses = [c.strip() for c in self.breaks.split(reply) if len(c.split()) >= self.clause_min_words]
-        return [reply] + clauses if len(clauses) > 1 else [reply]
+        """The reply, plus its clauses (reply.py's cut) when it has two or more long enough to hear alone."""
+        long = [c for c in clauses(reply, self.breaks) if len(c.split()) >= self.clause_min_words]
+        return [reply] + long if len(long) > 1 else [reply]
 
     def match(self, reply, labels, by_clause=True, floors=None):
         """labels: {name: [example, ...]}. Score = best similarity per label, of the reply or (`by_clause`) any
@@ -66,7 +66,7 @@ class Listener:
         found = _floored(whole, floors)
         if found.label or (whole.label and whole.close):  # torn between two answers: a floor never lets its lead settle it
             return found
-        lead = self.breaks.split(reply, 1)[0].strip()
+        lead = next(iter(clauses(reply, self.breaks)), "")
         if lead and lead != reply.strip():
             first = self.match(lead, labels, by_clause=False, floors=floors)
             if first.label and not first.close and first.score > self.match(lead, {"": unsure}, by_clause=False).score:

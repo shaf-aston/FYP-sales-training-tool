@@ -9,10 +9,14 @@ revisit_step: "19"   # an objection parked before the price comes back when they
 objection_handling: objection_matrix
 exits: {resell: "20", payment: "22", follow_up: "later"}
 # A keen prospect who says they're in before the pitch is asked one question, then shown how to pay
-# (coach: "just send the payment link, make it easy"). From the soft close on, the script closes itself.
+# (coach: "just send the payment link, make it easy"). From the pitch on, the script closes itself: live,
+# "yes, how do I pay?" after the whole pitch got "Are you aware of the programme from beforehand?".
+# Once the price is out, a reply that is already about paying ("credit", "how do I pay?") goes straight to the
+# payment question from any pitch line: live, "yes, how do I pay?" on a pitch line got "I'll find out".
+pays: {like: pay_now, then: "22", from: "14", until: "19", min_score: 0.8}   # "ok" (0.73) is no way to pay
 ready:
   then: "ready"
-  until: "19"
+  until: "13"
   min_score: 0.8   # long, specific examples: "I'm in sales" or "yes" must never jump
   examples:
     - "I'm in, send me the payment link"
@@ -162,8 +166,9 @@ steps:
     ui_stage: logical
     say: "How long have you been thinking about this?"
     capture: years
-    # A span of time: "nothing" or "time" is no answer to how long ("about 3 years", "since covid", "ages" are).
-    needs: '\d|\b(?:since|ages|while|long|forever|always|ever|recently|lately|life|bit|days?|weeks?|months?|years?|yrs?|decades?)\b'
+    # A span of time already spent: "nothing" or "time" is no answer to how long ("about 3 years", "since covid",
+    # "ages" are). Live: "within a year" (when they want it) and "my job could go any day" were taken as how long.
+    needs: '^(?!.*\b(?:within|in\s+(?:the\s+next|a|an|one|two|\d+)\s+(?:years?|months?|weeks?|days?)|by\s+next|next\s+(?:years?|months?|weeks?|summer|spring|autumn|winter)|any\s+day|one\s+day|some\s*day)\b).*(?:\d|\b(?:since|ages|while|long|forever|always|ever|recently|lately|life|bit|days?|weeks?|months?|years?|yrs?|decades?)\b)'
     probe:   # draft: ours, so "I don't know" gets an easier question, not the same one
       - "Roughly, is it more like months, or a few years?"
     stuck: {then: "04"}
@@ -358,6 +363,10 @@ steps:
           - "yeah, I am following you"
           - "yeah makes sense"
         then: "19"
+      pays:   # "yes, how do I pay?" after the pitch: straight to how (answers.yaml)
+        like: pay_now
+        min_score: 0.8   # "ok" (0.73) is no way to pay
+        then: "22"
       unclear:
         examples:
           - "no, that doesn't make sense"
@@ -382,6 +391,10 @@ steps:
       agrees:
         like: jump_in   # answers.yaml: the same yes as every other "jumping in?" (live: "debit" here was unclear)
         then: "20"
+      pays:   # "credit", "how do I pay": ready to pay, so straight to how, not "What makes you say that?"
+        like: pay_now
+        min_score: 0.8   # "ok" (0.73) is no way to pay
+        then: "22"
       hesitant:
         like: not_yet
         then: "19"

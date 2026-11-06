@@ -195,10 +195,13 @@ def price_open(method, step_id):
     return order.index(step_id) >= order.index(method.price_step)
 
 
-def ready_open(method, step_id):
-    """True while a keen prospect may skip ahead: before the method's `ready.until` step."""
+def ready_open(method, step_id, ready=None):
+    """True while a shortcut (default the keen prospect's `ready`) may be taken: from its `start` step, before
+    its `until` step."""
+    ready = ready or method.ready
     order = list(method.steps)
-    return method.ready is not None and order.index(step_id) < order.index(method.ready.until)
+    return (ready is not None and order.index(step_id) < order.index(ready.until)
+            and (not ready.start or order.index(step_id) >= order.index(ready.start)))
 
 
 def object_to(method, state, name, entries):

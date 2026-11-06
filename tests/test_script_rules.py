@@ -516,10 +516,37 @@ def test_a_question_word_without_a_question_mark_still_counts(fake_embedder):
     ("ok fine, how much is it", True),
     ("I want freedom and time with my kids", False),
     ("how'd you get my number", True),   # live: "Good to know."
+    ("yeah but how much is it", True),   # a question after "but" or "so" is a question part
+    ("ok so what's the price", True),
+    ("bro, you get me?", False),   # a filler tag, not a question
+    ("wait, sorry, what's this going to cost me?", True),   # "what's" is "what": never an answer said with a rise
+    ("whats the catch?", True),
 ])
 def test_question_detection_uses_the_opening_words_or_a_question_mark(text, expected):
-    from core.infra.utils import is_question
-    assert is_question(text, CFG) is expected
+    from core.buy_mode.script_engine.hear.reply import Reader
+    reply = Reader(CFG, (), lambda part: False).read(text).settle(lambda part: False)  # a rise asks unless the step says
+    assert bool(reply.asked) is expected
+
+
+HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the real model's "unclear" match
+
+
+@pytest.mark.parametrize("text, said, asked", [
+    ("i guess 3 years, what about you?", "i guess 3 years", "what about you?"),   # live: the 3 years was lost
+    ("honestly no idea, 3 years?", "3 years", ""),   # a hedge part is left out
+    ("nothing, why do you ask?", "nothing", "why do you ask?"),
+    ("two years, and what's the price", "two years", "what's the price"),
+    ("lol idk, money?", "money", ""),   # a "?" after a hedge is an unsure answer
+    ("time and money tbh", "time and money tbh", ""),   # nothing left out: the reply as typed
+    ("credit, what's next?", "credit", ""),   # the nudge is cut off its end
+    ("it's 2.5k, is that ok?", "it's 2.5k", "is that ok?"),   # "2.5k" is never cut at its point
+])
+def test_a_reply_is_read_once_into_what_it_says_and_what_it_asks(text, said, asked):
+    from core.buy_mode.script_engine.hear.reply import Reader
+    from core.buy_mode.script_engine.method import load_common_sense
+    reply = Reader(CFG, load_common_sense().nudges, lambda part: part.lower() in HEDGES).read(text)
+    reply = reply.settle(lambda part: False)
+    assert (reply.said, reply.asked) == (said, asked)
 
 
 def test_a_line_asked_again_is_filled_the_same_way_without_new_ai_calls(fake_embedder):
@@ -689,8 +716,9 @@ def test_a_route_like_a_shared_answer_hears_it_and_its_own_examples():
     from core.buy_mode.script_engine.method import load_method
 
     method = load_method("cat")
-    for step in ("19", "m_partner_close", "m_close1", "m_close2", "m_close3"):
-        assert "credit" in next(r for r in method.steps[step].listen if r.then != step).examples
+    for step in ("19", "m_partner_close", "m_close1", "m_close2", "m_close3"):   # every "jumping in?"
+        pays = next(r for r in method.steps[step].listen if r.label == "pays")
+        assert "credit" in pays.examples and pays.then == "22"   # a way to pay goes to paying
     card = next(r for r in method.steps["m_card"].listen if r.label == "yes").examples
     assert card[0] == "yes" and "ok let's put it on a card" in card and len(card) == len(set(card))
 
@@ -821,3 +849,22 @@ def test_how_long_they_have_thought_about_it_is_said_back_in_months(seller):
     # owner: "2 years" -> "24 months... Damn." in its own bubble, then the why question
     text, _ = at(seller, "03").reply("2 years")
     assert text.startswith("24 months... Damn.¶") and "why can't you just ignore it?" in text
+
+
+def test_the_pays_shortcut_is_open_from_the_price_until_the_soft_close():
+    from core.buy_mode.script_engine.engine import ready_open
+    from core.buy_mode.script_engine.method import load_method
+
+    method = load_method("cat")
+    open_at = [s for s in method.steps if ready_open(method, s, method.pays)]
+    assert open_at == ["14", "15", "16", "17", "18"] and "credit" in method.pays.examples
+    assert not ready_open(method, "13") and not ready_open(method, "14")   # the keen-buyer one shuts at the pitch
+
+
+def test_a_shortcut_whose_from_is_not_before_its_until_fails_loud():
+    from core.buy_mode.script_engine.method import CONFIG_DIR, _read, parse_method
+
+    data, matrix = _read(CONFIG_DIR / "methods", "cat"), _read(CONFIG_DIR / "script", "objection_matrix")
+    data["pays"] = {**data["pays"], "from": "19"}
+    with pytest.raises(ValueError, match="from must come before its until"):
+        parse_method("cat", data, matrix, _read(CONFIG_DIR / "script", "answers"))

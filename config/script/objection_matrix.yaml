@@ -283,6 +283,10 @@ steps:
     reask: *yes_no_reask
     stuck: {then: m_reframe1}
     listen:
+      pays:
+        like: pay_now
+        min_score: 0.8   # "ok" (0.73) is no way to pay
+        then: payment
       "yes":
         like: jump_in
         then: resell
@@ -355,6 +359,10 @@ steps:
     reask: *yes_no_reask
     stuck: {then: m_reframe2}
     listen:
+      pays:
+        like: pay_now
+        min_score: 0.8   # "ok" (0.73) is no way to pay
+        then: payment
       "yes":
         like: jump_in
         then: resell
@@ -374,6 +382,10 @@ steps:
     reask: *yes_no_reask
     stuck: {then: m_reframe3}
     listen:
+      pays:
+        like: pay_now
+        min_score: 0.8   # "ok" (0.73) is no way to pay
+        then: payment
       "yes":
         like: jump_in
         then: resell
@@ -393,6 +405,10 @@ steps:
     reask: *yes_no_reask
     stuck: {then: follow_up}
     listen:
+      pays:
+        like: pay_now
+        min_score: 0.8   # "ok" (0.73) is no way to pay
+        then: payment
       "yes":
         like: jump_in
         then: resell

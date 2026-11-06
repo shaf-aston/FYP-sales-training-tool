@@ -95,7 +95,7 @@ class ScriptSeller:
         found += [e for f in self.offer.facts.values() for e in f.examples]
         found += [e for o in self.method.objections.values() for e in o.examples]
         found += [e for s in self.method.steps.values() for r in s.listen for e in r.examples]
-        found += list(self.method.ready.examples) if self.method.ready else []
+        found += [e for r in self.method.shortcuts.values() for e in r.examples]
         return found
 
     def reset(self, state=None):
@@ -157,7 +157,7 @@ class ScriptSeller:
             self.state = move.state
             return self._render(move), move.ui_stage, detail
         if v.kind == "ready":
-            return *self._go(jump(self.method, self.state, self.method.ready.then)), ""
+            return *self._go(jump(self.method, self.state, self.method.shortcuts[v.name].then)), ""
         if v.kind == "sense":
             return *self._sense(self.sense.interruptions[v.name]), ""
         if v.kind == "objection" and not opened:
@@ -166,22 +166,43 @@ class ScriptSeller:
         if v.kind == "objection":
             return *self._object(v.name), ""
         if v.kind == "fact":
-            f = self.offer.facts[v.name]
-            late = opened and f.late_answer
-            if not late and v.name in self.state.told:  # "who is this?" then "what is this about?"
-                again = self._filler.fill(f.again or self.sense.told_again or f.answer, {})
-                return self._then_ask(again), self.ui_stage(), ""
-            if not late:
-                self.state = replace(self.state, told=(*self.state.told, v.name))
-            lead = self._filler.fill(f.late_answer if late else f.answer, {})
-            if f.bridge and step.bridge:
+            lead, fresh = self._fact(v.name, opened)
+            if fresh and self.offer.facts[v.name].bridge and step.bridge:
                 self.state = replace(self.state, bridged=True)
                 return f"{lead} {step.bridge}", self.ui_stage(), ""
             return self._then_ask(lead), self.ui_stage(), ""
         if v.kind == "question":
             answer = self._answer_uncovered(v.text, opened) or self.cfg["uncovered_fallback"]
             return self._then_ask(answer), self.ui_stage(), ""
-        return self._answer(v, step, opened)
+        said, ui_stage, detail = self._answer(v, step, opened)
+        return said, ui_stage, f"{detail}+{v.side}" if detail and v.side else detail
+
+    def _fact(self, name, opened):
+        """A product fact's answer: (line, fresh). Asked again before the price ("who is this?" then "what is
+        this about?"), a short reminder, not fresh."""
+        f = self.offer.facts[name]
+        late = opened and f.late_answer
+        if not late and name in self.state.told:
+            return self._filler.fill(f.again or self.sense.told_again or f.answer, {}), False
+        if not late:
+            self.state = replace(self.state, told=(*self.state.told, name))
+        return self._filler.fill(f.late_answer if late else f.answer, {}), True
+
+    def _side(self, v, opened):
+        """The line for the question beside an answer (`v.side`), said in front of the next one: a fact's
+        answer, a sense's one line, a worry before the price acknowledged (and parked), else the AI's answer
+        from the facts ("" when it has none: the answer still moves the call on)."""
+        kind, _, name = v.side.partition(":")
+        if kind == "fact" and not opened and price_open(self.method, self.state.step):
+            return ""  # the answer reached the price step, which tells the offer: "how much is it?" needs no "later"
+        if kind == "fact":
+            return self._fact(name, opened)[0]
+        if kind == "sense":
+            return self.sense.interruptions[name].reply
+        if kind == "objection":
+            self.state = park(self.state, name)
+            return self.method.objections[name].early or self.sense.park
+        return self._answer_uncovered(v.asked, opened) or ""
 
     def _answer(self, v, step, opened):
         text = v.text
@@ -192,7 +213,7 @@ class ScriptSeller:
         self.state = move.state
         # an answer with a question in it: the question gets an answer when the facts have one, else
         # nothing ("what's next?" needs none). After the judge: a failed AI line can't cost it.
-        heard = self._answer_uncovered(text, opened) if v.asking else ""
+        heard = self._side(v, opened) if v.side else (self._answer_uncovered(text, opened) if v.asking else "")
         leads = step.reask or self.method.reask  # "No rush" in front says they weren't heard; a route's ack says they were
         asked_again = move.state.step == step.id and (not move.ack or move.ack in leads)
         meant = self._meaning(text) if asked_again and not heard else ""

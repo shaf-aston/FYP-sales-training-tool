@@ -122,6 +122,10 @@ steps:
       agrees:
         like: jump_in   # answers.yaml: the same yes as every other "jumping in?" (live: "debit" here was unclear)
         then: "payment"
+      pays:
+        like: pay_now
+        min_score: 0.8   # "ok" (0.73) is no way to pay
+        then: "payment"
       hesitant:
         like: not_yet
         then: "close"

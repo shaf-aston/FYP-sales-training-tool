@@ -50,6 +50,7 @@ interruptions:
       - "sorry, I need to take this call"   # "someone's calling me" read as "am I talking to a real person"
     reply: "No problem, take your time."
   small_talk:   # live: "did you catch the match last night?" got "I'll find out and let you know"
+    with_answer: true   # "I guess 3 years, what about you?": the 3 years is kept, this goes in front of the next question
     draft: true
     examples:
       - "did you catch the match last night"
@@ -81,12 +82,14 @@ interruptions:
       - "sorry, the line is bad"
     reply: "Of course, let me ask that again."
   thanks:
+    with_answer: true   # a thank-you beside an answer: the answer is kept
     draft: true
     examples:
       - "thanks for your time"
       - "thank you, that's helpful"
     reply: "You're welcome."
   bot:
+    with_answer: true   # "2 years, wait is this a bot?": the answer is kept, the honest yes goes first
     draft: true
     examples:
       - "is this a bot?"
@@ -126,6 +129,7 @@ interruptions:
       - "can we hurry up"
       - "this is a waste of my time"
       - "meh, whatever"   # not bare "whatever": it pulls in "whatever works for me"
+      - "shut up"   # draft; live: "shut up and just tell me the price" kept "shut up" as their answer
       - "ugh whatever man"
       - "f*** off with the questions"
       - "why do you keep asking me all these questions"   # draft: live, heard as "what do you mean?"
