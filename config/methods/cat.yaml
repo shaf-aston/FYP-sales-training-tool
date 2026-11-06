@@ -7,6 +7,7 @@ price_step: "14"
 revisit_step: "19"   # an objection parked before the price comes back when they hesitate at the soft close
 # Objections after the price run the shared matrix (config/script); `exits` lead back into this script.
 objection_handling: objection_matrix
+max_visits: 2   # a step reached a third time means the call goes round in circles: book the follow-up instead
 exits: {resell: "20", payment: "22", follow_up: "later"}
 # A keen prospect who says they're in before the pitch is asked one question, then shown how to pay
 # (coach: "just send the payment link, make it easy"). From the pitch on, the script closes itself: live,

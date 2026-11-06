@@ -86,7 +86,7 @@ def test_replay_is_deterministic(mini, fake_embedder):
 def test_state_is_not_mutated(mini, fake_embedder):
     before = start(mini).state
     advance(mini, before, "clear", "reply")
-    assert before == ScriptState(step="a")
+    assert before == start(mini).state
 
 
 def test_loader_rejects_broken_graphs():

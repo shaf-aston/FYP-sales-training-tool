@@ -434,3 +434,15 @@ def test_round_5_live_replies(step, slots, raised, said, after, starts):
     assert seller.cfg["uncovered_fallback"] not in text
     if starts:
         assert text.startswith(starts), text
+
+
+ROUND_6 = [   # whole simulated calls (calls.py personas): (step, slots, raised, said, step after, the reply starts with or None)
+    ("m_reframe1", {}, ("research",), "not sure", "m_reframe1_now", None),   # was "let me put it another way" x3: not knowing is no "what do you mean?"
+    ("18", {}, (), "not sure", "18", "Put simply"),   # the step's own "unclear" answer, not the clarify sense
+    ("goal_practical", {"outcome": "more money"}, (), "what do you mean", "goal_practical", "Fair point"),   # still asks
+]
+
+
+@pytest.mark.parametrize("step, slots, raised, said, after, starts", ROUND_6)
+def test_round_6_whole_calls(step, slots, raised, said, after, starts):
+    test_round_5_live_replies(step, slots, raised, said, after, starts)

@@ -132,10 +132,11 @@ def test_join_wav_keeps_the_first_format():
 def test_more():
     from core.buy_mode.script_engine.engine import ask_again
     st = ScriptState(step="00")
-    for _ in range(3):
+    for _ in range(2):
         mv = ask_again(CAT, st)
         st = mv.state
-    assert mv.say == CAT.steps["00"].say and st.asks == 3
+    assert mv.say == CAT.steps["00"].say and st.asks == 2
+    assert ask_again(CAT, st).state.step == "01"  # a third time: moved on, never said forever
     assert "banned_phrase" not in check("Is that a rebut?", ctx())
 
 

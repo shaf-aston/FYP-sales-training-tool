@@ -87,6 +87,7 @@ class Method:
     ready: Ready = None     # keen prospect shortcut; none = every prospect hears the whole script
     reask: tuple = ()       # leads said before a question asked again once its probes ran out, in turn
     pays: Ready = None      # "how do I pay?" from the price on: straight to paying
+    max_visits: int = 0     # a step landed on this many times a call is going round in circles: the follow-up instead (0 = no limit)
 
     @property
     def shortcuts(self):
@@ -321,7 +322,10 @@ def parse_method(name, data, matrix=None, answers=None):
     pays = _ready(name, data.get("pays"), steps, answers)
     _reachable(name, first, steps, [o.enter for o in objections.values()]
                + [s for s in (follow_up, ready and ready.then, pays and pays.then) if s])
-    return Method(name, first, steps, objections, price_step, follow_up, revisit_step, ready, reask, pays)
+    max_visits = data.get("max_visits", 0)
+    if not isinstance(max_visits, int) or max_visits < 0 or (max_visits and not follow_up):
+        raise ValueError(f"method {name}: max_visits must be a whole number >= 0, and needs a follow_up step")
+    return Method(name, first, steps, objections, price_step, follow_up, revisit_step, ready, reask, pays, max_visits)
 
 
 def _score(where, value):

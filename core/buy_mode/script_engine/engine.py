@@ -22,6 +22,9 @@ class ScriptState:
     told: tuple = ()       # facts answered before the price this call: asked again, a short reminder
     repeated: bool = False  # the last message was a side reply that said the step again: the next one uses other words (seller `_then_ask`)
     bridged: bool = False  # the last message ended on a step's `bridge` question: the next reply to it is heard, not saved
+    spoken: tuple = ()     # lead lines said this call, once per time said (seller `_wear`)
+    seen: tuple = ()       # steps landed on this call, once per time (`_speak`: a third time books the follow-up)
+    last: str = ""         # the last message said: never the very same one twice in a row (seller `_reply`)
 
 
 @dataclass(frozen=True)
@@ -42,7 +45,9 @@ def _speak(method, state):
             lead += (step.id,)
         state = replace(state, step=_route(step, ANY).then)
         step = method.steps[state.step]
-    return Move(step.say, replace(state, asks=0, asked="", said=()), step.ui_stage, lead=lead)
+    if method.max_visits and state.seen.count(step.id) >= method.max_visits and step.id != method.follow_up:
+        return _speak(method, replace(state, step=method.follow_up))  # round in circles: book a later call
+    return Move(step.say, replace(state, asks=0, asked="", said=(), seen=state.seen + (step.id,)), step.ui_stage, lead=lead)
 
 
 def _answered(step, state):
@@ -84,17 +89,18 @@ def _take(method, state, route):
     return replace(_speak(method, replace(state, step=route.then)), ack=route.ack)
 
 
-def ask_again(method, state, stay=True):
+def ask_again(method, state, stay=True, misses=0):
     """The current step in other words (they asked what it meant). No `reask` lead: the caller's own lead
-    (the sense's reply) goes in front. `stay`: never `stuck`, as moving on leaves the question they asked about unanswered."""
-    return _ask_again(method, state, method.steps[state.step], lead=False, stay=stay)
+    (the sense's reply) goes in front. `stay`: asked once more than the step's usual `misses`, as moving on
+    leaves the question they asked about unanswered; after that the call moves on (`_ask_again`)."""
+    return _ask_again(method, state, method.steps[state.step], misses=misses, lead=False, stay=stay)
 
 
-def carry_on(method, state, rephrase=False, stay=False):
+def carry_on(method, state, rephrase=False, stay=False, misses=0):
     """The step in other words; a step with no other words is moved on from (the reply not taken as its
     answer), so the same line is never said twice in a row."""
     if rephrase or method.steps[state.step].probes:
-        return ask_again(method, state, stay=rephrase or stay)
+        return ask_again(method, state, stay=rephrase or stay, misses=misses)
     return move_on(method, state)
 
 
@@ -112,10 +118,15 @@ def _ask_again(method, state, step, ack="", line="", misses=0, lead=True, stay=F
     """A person rephrases rather than repeating themselves, and moves on rather than asking forever.
     `line`: the words to ask in (the AI's, or a clarifying question), dropped if already said on this step;
     else the step's next probe; once those run out, its earlier words in turn (`_rewording`) behind a `reask`
-    lead (each once, then none), so no line is said twice in a row. Asked `_limit` times, then `stuck`. A step that asks nothing (a closing line, a
-    statement) is said again plain: "no rush" in front of it answers a question nobody asked."""
-    if step.stuck and not stay and state.asks >= _limit(step, misses):
-        return _take(method, state, step.stuck)
+    lead (each once, then none), so no line is said twice in a row. Asked `_limit` times, then `stuck`;
+    `stay` (they asked what it meant) gets one more go, then moves on too: by `stuck`, else past the step
+    without its answer. A step that asks nothing (a closing line, a statement) is said again plain: "no rush"
+    in front of it answers a question nobody asked."""
+    if state.asks >= _limit(step, misses) + (1 if stay else 0):
+        if step.stuck:
+            return _take(method, state, step.stuck)
+        if stay:
+            return move_on(method, state)
     if line.strip().lower() in {s.strip().lower() for s in state.said}:
         line = ""  # never the same words twice on one step
     used = state.asks - len(state.said)  # times asked in the script's words: a probe is never skipped

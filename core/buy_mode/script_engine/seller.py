@@ -15,6 +15,7 @@ from core.buy_mode.script_engine.engine import (
     ScriptState,
     advance,
     carry_on,
+    move_on,
     asked_line,
     asks_left,
     jump,
@@ -88,7 +89,28 @@ class ScriptSeller:
         self._echo = Echo(cfg)
         self._meanings = MeaningBank(cfg, meanings or load_meanings(), self._listener)
         self._turn = Turn()
+        self._leads = self._lead_lines()
         embedder.warm(examples + self._meanings.examples())
+
+    def _lead_lines(self):
+        """The fixed lines said in front of a question asked again: the `reask` leads and the replies of the
+        senses that rephrase ("Fair point, let me put it another way.")."""
+        lines = set(self.method.reask) | {line for s in self.method.steps.values() for line in s.reask}
+        lines |= {i.reply for i in self.sense.interruptions.values() if i.after.startswith("rephrase")}
+        return sorted(line for line in lines if line)
+
+    def _wear(self, text):
+        """A lead line said `lead_repeats` times this call is left out after that: the same lead again and
+        again sounds like a loop ("Fair enough, I'll keep this quick." x20). Never the whole message."""
+        for line in self._leads:
+            if line not in text:
+                continue
+            rest = re.sub(r" {2,}", " ", text.replace(line, "", 1)).strip()
+            if self.state.spoken.count(line) >= self.cfg["lead_repeats"] and rest:
+                text = rest
+            else:
+                self.state = replace(self.state, spoken=self.state.spoken + (line,))
+        return text
 
     def _script_examples(self):
         found = [e for i in self.sense.interruptions.values() for e in i.examples] + list(self.sense.unclear)
@@ -108,7 +130,7 @@ class ScriptSeller:
     def restore(self, saved=None):
         """Back to a `snapshot()`; None goes back to the opening."""
         if saved:  # JSON gives lists back: tuples, so `said + (line,)` still adds up
-            saved = {**saved, **{k: tuple(saved.get(k, ())) for k in ("said", "parked", "raised", "echoed", "meant", "told")}}
+            saved = {**saved, **{k: tuple(saved.get(k, ())) for k in ("said", "parked", "raised", "echoed", "meant", "told", "spoken", "seen")}}
         self.reset(ScriptState(**saved) if saved else None)
 
     def opening(self):
@@ -145,7 +167,10 @@ class ScriptSeller:
         if bridged and v.kind in ("answer", "says_nothing"):  # their reply to the getting-to-know-you question
             return self._then_ask(self.cfg["bridge_ack"]), self.ui_stage(), "bridge"
         said, ui_stage, detail = self._respond(v, step, opened)
-        self.state = replace(Echo.settle(self.state, self._turn), repeated=self._turn.side)
+        said = self._wear(said)
+        if said == self.state.last and "?" in said and self.state.step == step.id:
+            said, ui_stage = self._go(move_on(self.method, self.state))  # word for word again: move on instead
+        self.state = replace(Echo.settle(self.state, self._turn), repeated=self._turn.side, last=said)
         return said, ui_stage, detail or v.heard_as
 
     def _respond(self, v, step, opened):
@@ -279,9 +304,13 @@ class ScriptSeller:
     def _carry_on(self, lead, rephrase=False, stay=False):
         """`lead`, then the step in other words; a step with no other words moves on instead (without
         taking the reply as its answer), so the same line is never said twice in a row. `stay`: a step with
-        other words is never moved on from (a second question in a row is no reason to skip the step)."""
-        text, stage = self._go(carry_on(self.method, self.state, rephrase, stay))
-        return f"{lead} {text}", stage
+        other words is moved on from only once asked once more than usual (`engine._ask_again`). A rephrase
+        that moved on drops its lead: "let me put it another way" in front of a new question is untrue."""
+        step = self.state.step
+        text, stage = self._go(carry_on(self.method, self.state, rephrase, stay, self.cfg["misses"]))
+        if rephrase and self.state.step != step:
+            lead = ""
+        return f"{lead} {text}".strip(), stage
 
     def _hesitates(self, move):
         """They held back at the revisit step (asked again, or given up on) while a worry from earlier is

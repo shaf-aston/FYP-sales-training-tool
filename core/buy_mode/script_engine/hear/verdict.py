@@ -133,7 +133,10 @@ class Ear:
     def _interrupt(self, text, step, state, opened, asking):
         """An everyday interruption, product question or objection - only when it clearly beats
         reading the reply as an answer to the step's own question, like a human closer would."""
-        senses = {k: i for k, i in self.sense.interruptions.items() if state.waiting or not i.after_wait}
+        # "not sure" alone is not knowing, not asking what we meant: no sense that rephrases hears a hedge
+        hedge = not asking and self._shrugs.hedges(text)
+        senses = {k: i for k, i in self.sense.interruptions.items()
+                  if (state.waiting or not i.after_wait) and not (hedge and i.after == "rephrase")}
         labels = {f"sense:{k}": i.examples for k, i in senses.items()}
         floors = {f"sense:{k}": i.min_score for k, i in senses.items()}  # lowest score a label counts at
         if asking:
