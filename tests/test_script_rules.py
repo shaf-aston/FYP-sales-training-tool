@@ -819,7 +819,7 @@ def test_the_ack_comes_before_run_on_lines(fake_embedder):
 def test_not_sure_what_you_mean_is_not_taken_as_the_gap_answer(seller):
     # live check: "not sure what you mean" at 08 was saved as their answer and the script moved on
     text, _ = at(seller, "08").reply("not sure what you mean")
-    assert text.startswith(seller.sense.interruptions["clarify"].reply)
+    assert text.startswith(seller.sense.same_words)   # 08 has no other words: asked again, never "another way"
     assert seller.state.step == "08"
 
 

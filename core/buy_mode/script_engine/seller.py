@@ -22,6 +22,7 @@ from core.buy_mode.script_engine.engine import (
     object_to,
     park,
     price_open,
+    question_of,
     start,
 )
 from core.buy_mode.script_engine.words.fill import Filler, fix_typos
@@ -97,6 +98,7 @@ class ScriptSeller:
         senses that rephrase ("Fair point, let me put it another way.")."""
         lines = set(self.method.reask) | {line for s in self.method.steps.values() for line in s.reask}
         lines |= {i.reply for i in self.sense.interruptions.values() if i.after.startswith("rephrase")}
+        lines.add(self.sense.same_words)
         return sorted(line for line in lines if line)
 
     def _wear(self, text):
@@ -305,11 +307,15 @@ class ScriptSeller:
         """`lead`, then the step in other words; a step with no other words moves on instead (without
         taking the reply as its answer), so the same line is never said twice in a row. `stay`: a step with
         other words is moved on from only once asked once more than usual (`engine._ask_again`). A rephrase
-        that moved on drops its lead: "let me put it another way" in front of a new question is untrue."""
+        that moved on drops its lead: "let me put it another way" in front of a new question is untrue; one
+        back on the step's own question (no other words left) says `same_words` instead."""
         step = self.state.step
-        text, stage = self._go(carry_on(self.method, self.state, rephrase, stay, self.cfg["misses"]))
+        move = carry_on(self.method, self.state, rephrase, stay, self.cfg["misses"])
+        text, stage = self._go(move)
         if rephrase and self.state.step != step:
             lead = ""
+        elif rephrase and move.say == question_of(self.method.steps[step].say):
+            lead = self.sense.same_words or lead  # no other words left: never promise them
         return f"{lead} {text}".strip(), stage
 
     def _hesitates(self, move):

@@ -152,6 +152,7 @@ class CommonSense:
     ask_meaning: str = ""  # asks what they meant by their own words ({said}); empty = never asked
     told_again: str = ""  # a fact asked a second time with no `again` of its own; empty = the answer again
     ended: str = ""     # said to any reply once the call has ended (a step with nowhere to go); empty = its line again
+    same_words: str = ""  # in place of a rephrase's lead when the step has no other words left; empty = the lead
 
 
 def _read(directory, name):
@@ -403,7 +404,7 @@ def parse_common_sense(data):
             raise ValueError(f"interruption {i.name}: with_answer only goes with after: ask (the next question follows)")
         _one_stress(f"interruption {i.name}", i.reply)
     nudge = data.get("nudge") or {}
-    if "?" in data["park"] or "?" in data.get("told_again", "") or "?" in data.get("ended", "") or "?" in nudge.get("reply", "") or any(
+    if "?" in data["park"] or "?" in data.get("told_again", "") or "?" in data.get("ended", "") or "?" in data.get("same_words", "") or "?" in nudge.get("reply", "") or any(
             "?" in i.reply for i in items.values() if i.after != "wait"):
         raise ValueError("park, nudge and interruption replies must not ask (the step's question follows)")
     if bool(nudge.get("reply")) != bool(nudge.get("phrases")):
@@ -416,7 +417,7 @@ def parse_common_sense(data):
                        nudge.get("reply", ""), tuple(nudge.get("phrases") or ()),
                        tuple(unclear.get("examples") or ()),
                        _score("unclear", unclear.get("min_score")) if unclear else 1.0, ask_meaning,
-                       data.get("told_again", ""), data.get("ended", ""))
+                       data.get("told_again", ""), data.get("ended", ""), data.get("same_words", ""))
 
 
 def load_method(name, directory=CONFIG_DIR / "methods", shared=CONFIG_DIR / "script"):

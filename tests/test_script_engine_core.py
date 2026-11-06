@@ -104,6 +104,11 @@ def test_loader_rejects_broken_graphs():
         (lambda d: d["steps"]["a"].update(reask=["Sure?"]), "reask"),
         (lambda d: d["steps"]["a"].update(shrug_moves_on=True), "shrug_moves_on"),
         (lambda d: d.update(max_visits=-1), "max_visits"),
+        (lambda d: d.update(max_visits=2) or d["exits"].pop("follow_up"), "max_visits|follow_up"),
+        (lambda d: d["steps"]["a"].update(run_on=True), "run_on"),
+        (lambda d: d["steps"]["a"].update(plain_if="money"), "plain_if"),
+        (lambda d: d["steps"]["a"].update(answered_by="(?P<answer>.*)"), "answered_by"),
+        (lambda d: d["steps"]["a"].update(say_plain="What is it, {goal?"), "blank"),
     ]:
         data = yaml.safe_load(yaml.safe_dump(good))
         mutate(data)
@@ -215,3 +220,9 @@ def test_a_route_under_its_floor_is_neither_the_label_nor_a_candidate(fake_embed
     floored = _listener(fake_embedder, 0.65).match("yes sounds good", labels, floors={"yes": 1.01})
     assert floored.label is None and "yes" not in floored.candidates
     assert _listener(fake_embedder, 0.65).match("yes sounds good", labels, floors={"no": 0.99}).label == "yes"
+
+
+def test_one_probe_written_as_a_line_is_one_probe():
+    data = yaml.safe_load((FIXTURES / "mini.yaml").read_text(encoding="utf-8"))
+    data["steps"]["b"]["probe"] = "Put simply: does that make sense?"
+    assert parse_method("one", data).steps["b"].probes == ("Put simply: does that make sense?",)

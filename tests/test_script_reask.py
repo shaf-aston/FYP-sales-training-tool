@@ -151,3 +151,34 @@ def test_a_step_that_hears_no_also_hears_yes():
             heard = [set(r.examples) for r in step.listen]
             hears = [any(set(answers[a]) <= h for h in heard) for a in ("yes", "no")]
             assert hears[0] == hears[1], (name, step.id)
+
+
+def test_a_rephrase_with_no_other_words_left_never_promises_other_words(fake_embedder):
+    """Carla (whole calls): "what do you mean?" got the probe; "I don't understand the question" then got
+    "let me put it another way" and the very same question."""
+    sense = load_common_sense()
+    rephrase = sense.interruptions["clarify"].reply
+    s = seller(fake_embedder, "01")
+    first, _ = s.reply("what do you mean")
+    second, _ = s.reply("I don't understand the question")
+    assert first.startswith(rephrase)
+    assert s.state.step == "01" and rephrase not in second and second.startswith(sense.same_words), second
+
+
+def test_a_rephrase_that_moves_on_drops_its_lead(fake_embedder):
+    sense = load_common_sense()
+    s = seller(fake_embedder, "08")   # no other words: asked again once, then the same message would follow
+    s.reply("what do you mean")
+    assert s.state.step == "08"
+    text, _ = s.reply("what do you mean")
+    assert s.state.step != "08"
+    assert not text.startswith((sense.interruptions["clarify"].reply, sense.same_words)), text
+
+
+def test_carry_on_stays_once_more_only_when_asked_to():
+    from core.buy_mode.script_engine.engine import carry_on
+    step = CAT.steps["19"]   # a step with other words (a probe)
+    at_limit = ScriptState(step="19", asks=_limit(step, CFG["misses"]))
+    assert carry_on(CAT, at_limit, misses=CFG["misses"]).state.step != "19"
+    assert carry_on(CAT, at_limit, stay=True, misses=CFG["misses"]).state.step == "19"
+    assert carry_on(CAT, at_limit, rephrase=True, misses=CFG["misses"]).state.step == "19"
