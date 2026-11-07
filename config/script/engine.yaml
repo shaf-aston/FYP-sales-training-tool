@@ -35,7 +35,7 @@ echo_repeats: 2        # the same phrase of theirs is said back at most this man
 takes_back: ["no", not_yet, backs_out]   # shared answers (answers.yaml) that say no: "no, credit?" is torn, not paying (verdict `_takes_back`)
 lead_repeats: 2        # a lead line ("No rush, even a rough idea helps.", "Fair enough, I'll keep this quick.") is said at most this many times a call, then left out
 stop_words: [a, an, the, i, i'm, i've, my, me, to, of, and, or, in, "on", at, for, is, am, are, be, it, that, this, so, with, as, by, we, you, your]
-filler_words: [ok, okay, sure, yeah, yep, "yes", hmm, mm, cool, alright, right, k, kk, idk, dunno, fr, frfr, lol, lmao, fine]   # a reply made only of these (and stop_words) says nothing ("fine, but is this a scam?" answers nothing); never add "no", it answers yes/no steps
+filler_words: [ok, okay, sure, yeah, yep, "yes", hmm, mm, cool, alright, right, k, kk, idk, dunno, fr, frfr, lol, lmao, fine, ye, yeh, yea, yh, ya, mhm, mmm, certainly, absolutely, definitely, indeed, totally]   # a reply made only of these (and stop_words) says nothing ("fine, but is this a scam?" answers nothing); never add "no", it answers yes/no steps; draft (ye to totally): whole calls, "ye" and "Certainly." to an open question were saved as the answer
 no_answer_words: [hmm, mm, idk, dunno, lol, lmao, lmfao, haha, hahaha, rofl]   # draft: a reply made only of these (and stop_words) answers no yes-or-no question either ("lol" to "do you want that to dictate your results?" was heard as "no")
 filler_tags: ["you get me", "you know", "you know what i mean", "innit", "right", "yeah", "ya know", "get me", "you feel me"]   # "...bro, you get me?" is talk, not a question
 question_words: [what, who, where, when, why, which, how]   # a question word then a helper verb opens a question: "how do I know", "who are you"
@@ -81,7 +81,7 @@ probe_max_words: 18   # longest probe the AI may ask
 misses: 2             # times a step that captures an answer is asked again (each time in other words) when the reply says nothing or misses its concept; then the call moves on without saving it
 fact_presses: 3     # draft: a fact asked this many times before the price gets its `pressed` line (offer facts)
 openers: ["Okay"]   # draft: a word that opened the last message too is left off this one: the owner's matrix lines open "Okay." four times in a row
-vague_words: [maybe, eh, hmm, um, umm, ummm, lol, haha, bro, man, mate, tbh, honestly, really, guess, know, sure, idea, clue, depends, think, question, good, anything, something, just, like, suppose, mean]   # a reply made only of these (and stop/filler words) is a shrug: nothing to ask "what do you mean by". Never "whatever" or "meh": those are frustration
+vague_words: [maybe, eh, hmm, um, umm, ummm, lol, haha, bro, man, mate, tbh, honestly, really, guess, know, sure, idea, clue, depends, think, question, good, anything, something, just, like, suppose, mean, let]   # a reply made only of these (and stop/filler words) is a shrug: nothing to ask "what do you mean by". Never "whatever" or "meh": those are frustration; draft (let): whole calls, "hmm let me think" got "What do you mean by hmm let you think?"
 ack_max_words: 12
 ack_tokens: 30
 ack_retries: 0        # one try: a turn never waits on two ack calls

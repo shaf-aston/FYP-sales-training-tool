@@ -413,3 +413,30 @@ def test_an_answer_beside_a_handled_worry_asked_again_is_heard_whole(fake_embedd
     s.state = replace(s.state, raised=("scam",))
     s.reply("find out, how do I know this is legit?")
     assert "+" not in s.last_turn["heard_as"] and s.last_turn["heard_as"].startswith("answer"), s.last_turn
+
+
+@pytest.mark.parametrize("step, text", [("goal_practical", "ye"), ("05", "yh"), ("06", "Certainly."), ("05", "mhm"),
+                                        ("05", "hmm let me think"), ("goal_practical", "let me think")])
+def test_text_speak_yes_and_thinking_out_loud_say_nothing_to_an_open_question(fake_embedder, step, text):
+    """Round 14: "ye" and "Certainly." were saved as the answer; "hmm let me think" got "What do you mean by
+    hmm let you think?"."""
+    s = seller(fake_embedder, step)
+    said, _ = s.reply(text)
+    assert s.last_turn["heard_as"] == "says_nothing" and "What do you mean by" not in said, (said, s.last_turn)
+
+
+@pytest.mark.parametrize("text", ["ye", "yh", "certainly"])
+def test_text_speak_yes_still_says_yes_to_a_yes_or_no_question(fake_embedder, text):
+    s = seller(fake_embedder, "willing")
+    s.reply(text)
+    assert s.state.step != "willing", s.last_turn
+
+
+def test_a_sense_asked_again_straight_after_gets_the_reminder_not_the_same_line(fake_embedder):
+    """Round 14: "what about you?" every turn got "I'm the AI playing the salesperson..." word for word each time."""
+    s = seller(fake_embedder, "01")
+    name = next(k for k, i in s.sense.interruptions.items() if i.after == "ask" and i.only_asked)
+    ask = s.sense.interruptions[name].examples[0] + "?"
+    first, _ = s.reply(ask)
+    second, _ = s.reply(ask)
+    assert s.sense.interruptions[name].reply in first and second.startswith(s.sense.told_again), (first, second)

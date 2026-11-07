@@ -75,6 +75,7 @@ facts:
       - "what's included"
       - "what do I get"
       - "how does the programme work"
+      - "how does it work"   # draft: round 14 replay, "no, but how does it work" at the close was left unanswered
       - "what's in the programme"
       - "do I get one to one calls"   # draft: whole calls: "I'll find out"
       - "do I get a mentor"   # draft
@@ -96,6 +97,14 @@ facts:
       - "why is this better than a course"
       - "I've done courses before, why is this different"
     answer: "It's not just a course: you get {pillar_1}, plus {pillar_2} and {pillar_3}, so you're not doing it alone."
+  results:   # whole calls: "how much do your clients make?" and "how long does it take to see results?" got "I'll find out"
+    draft: true
+    examples:
+      - "how much do your clients make"
+      - "what results do people get"
+      - "how long does it take to see results"
+      - "does it actually work"
+    answer: "Honestly, results depend on the work you put in."   # the offer's own words, never a figure we don't have
   length:
     draft: true
     examples:

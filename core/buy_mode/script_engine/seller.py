@@ -330,8 +330,9 @@ class ScriptSeller:
         if said.after == "follow_up":  # "bye": book the follow-up, never carry on as if they stayed
             text, stage = self._go(jump(self.method, self.state, self.method.follow_up))
             return f"{said.reply} {text}".strip(), stage
-        if said.after == "ask":
-            return self._then_ask(said.reply), self.ui_stage()
+        if said.after == "ask":  # said again straight after ("what about you?" twice): the reminder, not the same line
+            again = said.reply in self.state.last and self.sense.told_again
+            return self._then_ask(self.sense.told_again if again else said.reply), self.ui_stage()
         return self._carry_on(said.reply, rephrase=said.after == "rephrase")
 
     def _carry_on(self, lead, rephrase=False, stay=False):

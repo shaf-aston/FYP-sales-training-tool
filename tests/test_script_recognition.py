@@ -553,6 +553,24 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("01", 0, (), "i want more money for my family", "goal_practical", "So this isn't really about the money"),
     ("01", 0, (), "who is this?", "01", "I'm an AI playing the salesperson"),   # guard: near "who am I talking to", got nothing
     ("01", 0, (), "who are you?", "01", "We help people build their own business"),   # guard: still the intro
+    # round 14
+    ("01", 0, (), "what about you?", "01", "I'm the AI playing the salesperson"),   # was the fallback
+    ("goal_practical", 0, (), "how much do you make?", "goal_practical", "I'm the AI playing the salesperson"),  # was the price
+    ("19", 0, (), "would you do it?", "19", "I'm the AI playing the salesperson"),
+    ("02", 0, (), "how much do your clients make?", "02", "Honestly, results depend"),   # was the fallback
+    ("05", 0, (), "how long does it take to see results?", "05", "Honestly, results depend"),
+    ("goal_practical", 0, (), "that's not what I said", "goal_practical", "Sorry, I got that wrong."),  # was kept as the goal
+    ("04", 0, (), "you're not listening", "04", "Sorry, I got that wrong."),
+    ("01", 0, (), "earn an extra three grand a month", "goal_practical", None),   # was asked again: too close to call
+    ("goal_practical", 0, (), "hmm let me think", "goal_practical", None),   # was "What do you mean by hmm let you think?"
+    ("19", 0, (), "let me think about it", "m_think_what", "Sure. What specifically"),   # was heard as a shrug
+    ("20", 0, (), "I just need a minute", "20", "No problem, take your time."),   # was saved as the reason, then payment
+    ("19", 0, (), "I need to think about it", "m_think_what", "Sure. What specifically"),   # guard
+    ("19", 0, (), "let me think", "19", None),   # guard: thinking now, not a worry
+    ("03", 0, (), "how long is the programme?", "03", "It's a 6-month process"),   # guard: still the length
+    ("goal_practical", 0, (), "how much is it?", "goal_practical", "Fair question. I'll give you the exact price"),  # guard
+    ("19", 0, (), "no, but how does it work", "19", "Three parts"),   # round 14 replay: was left unanswered
+    ("05", 0, (), "does it actually work?", "05", "Honestly, results depend"),   # guard: not how it works
 ]
 
 

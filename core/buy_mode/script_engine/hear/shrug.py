@@ -25,10 +25,7 @@ class Shrugs:
             return False
         if words <= self._plain:
             return True  # "dunno man": only shrug words, nothing the catch-all should keep
-        if not self._sense.unclear:
-            return False
-        found = self._listener.match(text, {"unclear": list(self._sense.unclear)}, by_clause=False)
-        return found.score >= self._sense.unclear_min_score
+        return self.hedges(text)
 
     def blank(self, text):
         """Only words that answer nothing, not even a yes-or-no question ("lol", "hmm", "idk"). No words at
@@ -39,9 +36,13 @@ class Shrugs:
     def hedges(self, text):
         """One part of a reply that says nothing on its own ("I don't know", "honestly", "lol idk"): reply.py
         leaves it out of what they meant, so "I don't know, enough to live" answers "enough to live"."""
+        return self.unsure(text) >= self._sense.unclear_min_score
+
+    def unsure(self, text):
+        """How close the reply is to not knowing ("let me think" 1.0); 0 with nothing to match."""
         if not self._sense.unclear or not tokenize(text):  # by meaning only: "yes" and "I'm in" are plain words that answer
-            return False
-        return self._listener.match(text, {"unclear": list(self._sense.unclear)}, by_clause=False).score >= self._sense.unclear_min_score
+            return 0.0
+        return self._listener.match(text, {"unclear": list(self._sense.unclear)}, by_clause=False).score
 
     def ask_meaning(self, text, question, empty, heard_ahead, known=()):
         """"What do you mean by stuff?": their own words asked about. Only for a shrug, or a miss that is about

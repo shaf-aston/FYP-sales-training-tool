@@ -53,6 +53,7 @@ interruptions:
       - "can you give me two minutes"
       - "brb"
       - "sorry, I need to take this call"   # "someone's calling me" read as "am I talking to a real person"
+      - "give me a minute"   # draft: whole calls, "I just need a minute" at 20 was saved as their reason (not "I just need a minute": 0.81 to "I don't have time for this")
     reply: "No problem, take your time."
   small_talk:   # live: "did you catch the match last night?" got "I'll find out and let you know"
     with_answer: true   # "I guess 3 years, what about you?": the 3 years is kept, this goes in front of the next question
@@ -126,6 +127,17 @@ interruptions:
       - "I just told you"
       - "you asked me that already"
     reply: "Fair point, let me put it another way."
+  misheard:   # whole calls: "that's not what I said" was saved as their answer, or got "I'll find out"
+    draft: true
+    after: rephrase_else_move_on   # the sorry stays in front: "Sure, let me ask that again." answers no "that's wrong"
+    examples:
+      - "that's not what I said"
+      - "that's not what I meant"
+      - "I never said that"
+      - "you're not listening"
+      - "you've got me wrong"
+      - "you misunderstood me"
+    reply: "Sorry, I got that wrong."
   why_ask:   # whole calls: "why do you ask?" got "I don't know that one offhand, I'll find out"
     with_answer: true   # "3 years, why do you ask?": the 3 years is kept, the reason goes first
     only_asked: true   # "that's important to me" (0.86 to "why is that important") is an answer
@@ -140,6 +152,19 @@ interruptions:
       - "why would I tell you that"   # draft: whole calls, got "I'll find out"
       - "what kind of question is that"   # draft: whole calls, got "let me ask that again"
     reply: "It helps me see if this is even right for you, so neither of us wastes time."
+  about_me:   # whole calls: "what about you?", "did this work for you?" got "I'll find out"; "how much do you make?" got the price
+    with_answer: true   # "a few years, you?": the answer is kept, this goes in front of the next question
+    only_asked: true
+    draft: true
+    examples:
+      - "what about you"
+      - "how about you"
+      - "what do you want to achieve"
+      - "how much do you make"
+      - "did this work for you"
+      - "would you do it"
+      - "have you done this yourself"
+    reply: "I'm the AI playing the salesperson, so this one's all about you."
   no_wrong_answer:   # whole calls: "what do most people say?" got "I'll find out and let you know"
     only_asked: true   # "what most people do is give up" is an answer
     draft: true

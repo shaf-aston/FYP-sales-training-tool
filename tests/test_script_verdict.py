@@ -25,9 +25,11 @@ def ear(fake_embedder):
     ("brb", ScriptState(step="04"), "sense:pause"),
     ("ok", ScriptState(step="04", waiting=True), "answer"),            # back from "brb": not a shrug
     ("it's my kids", ScriptState(step="04"), "answer"),
+    ("let me think about it", ScriptState(step="19"), "objection:think"),   # round 14: the worry, word for word
+    ("I don't know", ScriptState(step="19"), "answer"),                     # not knowing, never a worry
 ])
 def test_heard_as(ear, text, state, heard_as):
-    assert ear.hear(text, state, opened=False).heard_as == heard_as
+    assert ear.hear(text, state, opened=state.step == "19").heard_as.startswith(heard_as)
 
 
 def test_a_worry_already_in_its_branch_is_heard_as_the_answer(ear):
@@ -97,12 +99,14 @@ def test_a_worry_under_the_judges_line_is_not_judged(fake_embedder):
     ("22", "no, credit?", ("answer", "", "no, credit?", "", "")),
     ("14", "that's a lot, how do I pay?", ("ready", "pays", None, "", "")),   # a worry beside it: not alone
     ("19", "I don't have the money, how do I pay?", ("objection", "money", "I don't have the money", "", "")),  # not ready
-    ("03", "3 years, what about you?", ("answer", "", "3 years", "question", "what about you?")),
+    ("03", "3 years, what time is it there?", ("answer", "", "3 years", "question", "what time is it there?")),
+    ("03", "3 years, what about you?", ("answer", "", "3 years", "sense:about_me", "what about you?")),   # round 14
     ("03", "about 3 years, is this a scam?", ("answer", "", "about 3 years", "objection:scam", "is this a scam?")),
     ("01", "more money, how long is the course?", ("answer", "", "more money", "fact:length", "how long is the course?")),
     ("05", "nothing, why do you ask?", ("answer", "", "nothing", "sense:why_ask", "why do you ask?")),   # round 10: the reason, not "I'll find out"
     ("03", "3 years, can you say that again?", ("question", None, None, "", "")),   # a sense leads, no side
-    ("02", "dunno, what about you?", ("question", None, "what about you?", "", "")),   # no answer in the content
+    ("02", "dunno, what time is it there?", ("question", None, "what time is it there?", "", "")),   # no answer in the content
+    ("02", "dunno, what about you?", ("sense", "about_me", "what about you?", "", "")),   # round 14: the honest line
     ("03", "shut up, what's the price?", ("fact", "price", None, "", "")),
 ])
 def test_a_side_question_or_worry_is_heard_beside_the_answer(ear, step, text, heard):

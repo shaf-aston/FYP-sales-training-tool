@@ -167,7 +167,8 @@ class Ear:
         """An everyday interruption, product question or objection - only when it clearly beats
         reading the reply as an answer to the step's own question, like a human closer would."""
         # "not sure" alone is not knowing, not asking what we meant: no sense that rephrases hears a hedge
-        hedge = not asking and self._shrugs.hedges(text)
+        unsure = 0.0 if asking else self._shrugs.unsure(text)
+        hedge = unsure >= self.sense.unclear_min_score
         senses = {k: i for k, i in self.sense.interruptions.items()
                   if (state.waiting or not i.after_wait) and not (hedge and i.after == "rephrase")
                   and (asking or not i.only_asked)}
@@ -182,8 +183,10 @@ class Ear:
             objections = [(k, o) for k, o in objections if o.early]  # "is this a scam?" gets an honest early line
         if not opened and not asking:  # parked once, said again: an answer. Asked again ("how do I know this
             objections = [(k, o) for k, o in objections if k not in state.parked]  # isn't a scam?"): still the worry
-        if hedge:
-            objections = ()  # "I don't know" (0.74 to "I don't trust this") is not knowing, not a worry
+        if hedge and objections:  # "I don't know" (0.74 to "I don't trust this") is not knowing, not a worry; one
+            # nearer a worry than not knowing is the worry ("let me think about it": 1.0 to it, 0.96 to "let me think")
+            worry = self._listener.match(text, {k: o.examples for k, o in objections}, by_clause=False)
+            objections = [(k, o) for k, o in objections if k == worry.label and worry.score > unsure]
         handled = set()  # a worry already being handled, or one the step asks about ("the money?"), answers the step
         if opened:
             handled = {k for k, _ in objections if k in state.raised or k in {r.label for r in step.listen}}

@@ -907,3 +907,32 @@ def test_an_open_question_with_a_lead_in_is_not_a_yes_or_no(fake_embedder, step)
     if CAT.steps[step].probes:
         state = replace(state, asks=1)  # 19's probe: "Where are you at with it right now?"
     assert not make_seller(fake_embedder)._ear._yes_or_no(state)
+
+
+@pytest.mark.parametrize("text, part, rest", [
+    ("make money online so I can quit my job", "make money online", "so I can quit my job"),
+    ("money, so I can rest!", "money", "so I can rest"),   # the break and the end are trimmed
+    ("time, more time", "time", "more time"),               # from the first time it comes
+    ("make money online.", "make money online", ""),       # nothing after it
+    ("make money online", "quit", ""),                     # not in the reply
+    ("make money online", "", ""),
+])
+def test_after_a_part_is_what_follows_it(text, part, rest):
+    from core.buy_mode.script_engine.hear.reply import after
+    assert after(text, part) == rest
+
+
+def test_after_restated_is_what_follows_the_part_that_says_the_question_back(seller):
+    said_back = {"restated": ["it's a long story"]}
+    assert seller._after_restated("it's a long story, so I can cut down my hours", said_back) == "so I can cut down my hours"
+    assert seller._after_restated("so I can cut down my hours, it's a long story", said_back) == ""
+    assert seller._after_restated("it's a long story", said_back) == ""
+
+
+@pytest.mark.parametrize("part, rises", [
+    ("a year?", True), ("because money is nice?", True), ("cos I need it, honestly?", True),
+    ("about a year or so I would say really?", False),   # longer than `rise_answer_words`: a question
+    ("one two three four five years?", True),            # exactly `rise_answer_words`
+])
+def test_a_rise_is_an_answer_when_short_and_shaped_or_a_reason(seller, part, rises):
+    assert seller._ear._rises(part, seller.method.steps["03"]) == rises
