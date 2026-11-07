@@ -8,6 +8,7 @@ from core.buy_mode.script_engine.engine import (
     asked_line,
     hear_ahead,
     question_of,
+    questions_of,
     ready_open,
 )
 from core.buy_mode.script_engine.hear.reply import Reader, break_pattern, clauses
@@ -87,11 +88,12 @@ class Ear:
     def _asked_back(self, text, state):
         """Their reply is the question just asked, said back about themselves ("what do I want to achieve?" to
         "What do you want to specifically achieve...?"): they want it put another way. Their I-words are turned
-        into you-words (`asked_back`), and `asked_back_share` of their words must be in the question. A you-word
+        into you-words (`asked_back`), and `asked_back_share` of their words must be in its questions, not the talk
+        around them ("can we do option 2?" picks from the talk: it is not the question said back). A you-word
         of theirs (`asked_back_you`) asks about us ("what do you do?"); one word ("why?") is too few to tell.
         A "what?" tacked on (`asked_back_what`: "how long what?") is not counted unless the question has it too."""
         swap = self.cfg["asked_back"]
-        asked = set(tokenize(" ".join(asked_line(self.method, state))))
+        asked = set(tokenize(" ".join(q for line in asked_line(self.method, state) for q in questions_of(line))))
         words = [w for w in tokenize(text) if w in asked or w not in self.cfg["asked_back_what"]]
         if len(words) < self.cfg["asked_back_min_words"] or any(w in self.cfg["asked_back_you"] for w in words):
             return False

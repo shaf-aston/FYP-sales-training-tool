@@ -160,10 +160,15 @@ def _rewording(step, used):
     return turns[(used - len(step.probes)) % len(turns)]
 
 
+def questions_of(say):
+    """The questions in a line, without the talk around them (the whole line when it asks none)."""
+    asks = [s for s in re.split(r"(?<=[.!?])\s+", say) if s.endswith("?")]
+    return asks or [say]
+
+
 def question_of(say):
     """The question in a line, without the talk before it: asked again, the talk is not said twice."""
-    asks = [s for s in re.split(r"(?<=[.!?])\s+", say) if s.endswith("?")]
-    return asks[-1] if asks else say
+    return questions_of(say)[-1]
 
 
 def asked_line(method, state):

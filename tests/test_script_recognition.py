@@ -476,8 +476,8 @@ def test_huh_is_never_saved_as_their_goal():
 
 
 ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step after, the reply starts with or None)
-    ("19", 1, (), "ok", "m_identify", None),   # a shrug to "Where are you at with it?" took the yes route: 19 -> 20 -> 22 -> 19
-    ("19", 1, (), "yeah", "m_identify", None),
+    ("19", 1, (), "ok", "20", None),   # the second ask is a yes/no ("Is this something you can see yourself doing?"): "ok" is a yes
+    ("19", 1, (), "yeah", "20", None),   # (all "ok" still ends: 19 -> 20 -> 22 -> 19 twice, then a follow-up call)
     ("m_funding_options", 0, ("money",), "maybe", "m_funding_options", "No pressure either way."),   # was a yes; and "No rush, even a rough idea helps."
     ("m_funding_options", 0, ("money",), "not sure", "m_funding_options", "No pressure either way."),
     ("m_card", 0, ("money",), "maybe", "m_card", "No pressure either way."),
@@ -677,6 +677,9 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("01", 0, (), "how long would I be in it for?", "01", "It's a 6-month process."),   # was the hours-a-week line
     ("01", 0, (), "mroe money", "goal_practical", "What are you hoping to achieve with more money?"),   # was said back with the typo
     ("03", 0, (), "how long what?", "03", "Fair point, let me put it another way."),   # moved on unanswered
+    ("04", 0, (), "my loan isn't enough", "05", None),   # was "I haven't mentioned a price yet"
+    ("04", 0, (), "is this a scam?", "04", "Fair question"),   # guard: a worry asked is still the worry
+    ("m_open_wallet", 0, (), "can we do option 2?", "22", None),   # was "Sure, let me ask that again" (the talk is not the question)
 ]
 
 

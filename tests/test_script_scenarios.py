@@ -640,7 +640,8 @@ def test_a_figure_is_never_a_typo():
 
 
 @pytest.mark.parametrize("step, text", [("04", "because money is tight for me at the moment"),
-                                         ("01", "cos I can't afford that right now")])
+                                         ("01", "cos I can't afford that right now"),
+                                         ("04", "money is tight")])   # round 20: no "because" at "why can't you ignore it?"
 def test_a_reason_is_never_a_worry_before_the_price(fake_embedder, step, text):
     # whole calls: "because my kid just started school and money is tight" got "I haven't mentioned a price yet"
     s = seller(fake_embedder, step=step)
@@ -671,6 +672,12 @@ def test_two_letters_the_wrong_way_round_are_fixed(text, fixed):
     from core.buy_mode.script_engine.words.fill import fix_typos
     vocab = frozenset(CFG["spell_words"]) | {"more", "yes", "time", "from", "does", "vie", "bat", "a", "my"}
     assert fix_typos(text, vocab, CFG) == fixed
+
+
+def test_a_figure_is_never_swapped_and_a_5_letter_typo_is_still_fixed():
+    from core.buy_mode.script_engine.words.fill import fix_typos
+    assert fix_typos("120k", frozenset({"102k"}), CFG) == "120k"   # one swap from a script figure, still theirs
+    assert fix_typos("travl", frozenset({"travel"}), CFG) == "travel"
 
 
 def test_yes_with_two_letters_swapped_is_a_yes_at_the_close(fake_embedder):
@@ -872,6 +879,9 @@ def test_years_line_fills_from_their_answer():
     ("I want finanical fredom", "financial freedom"),
     ("time in Dubai", "time in Dubai"),   # a place name is not "fixed"
     ("more time", "more time"),           # short words are left alone
+    ("mak more mony", None),              # round 20: a typo left in is never said back ("being able to mak more mony?")
+    ("quit my jbo", None),
+    ("travel to Dubai", "travel to Dubai"),   # a Name is not a typo
 ])
 def test_echo_phrase_fixes_typos(reply, phrase):
     from core.buy_mode.script_engine.words.fill import echo_phrase
@@ -1133,7 +1143,7 @@ def test_a_worry_at_the_time_step_is_heard_not_called_a_failed_attempt(fake_embe
 
 def test_a_price_request_gets_the_price_answer_and_keeps_the_step(fake_embedder):
     s = seller(fake_embedder, step="04")
-    s.reply("my partner would have to be on board")
+    s.reply("how do I know this isn't a scam?")   # a side reply: before round 20, "my partner would have to be on board"
     text, _ = s.reply("can you just tell me the price")  # live: "I haven't mentioned a price yet", then 04 skipped
     assert text.startswith(load_offer("shay_coaching").facts["price"].answer) and s.state.step == "04"
 

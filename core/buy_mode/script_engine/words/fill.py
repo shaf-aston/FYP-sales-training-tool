@@ -108,9 +108,11 @@ def echo_phrase(reply, cfg, vocab=frozenset(), verbs=False):
     swap = cfg["echo_pronoun_swap"]
     words = [swap.get(w.lower(), spell(w, vocab, cfg)) for w in words]
     lower = [w.lower() for w in words]
+    known = vocab | real_words(cfg["spell_real_words"])
     if (not words or len(words) > cfg["slot_words"] or lower[0] in cfg["bad_phrase_starts"]
-            or set(lower) & set(cfg["prospect_pronouns"])):
-        return None
+            or set(lower) & set(cfg["prospect_pronouns"])
+            or any(w.isalpha() and w.islower() and len(w) > 2 and w not in known for w in words)):
+        return None  # a typo still in it is never said back ("being able to mak more mony?"); a Name can be
     if words[0] == reply.lstrip()[:len(words[0])]:
         words[0] = words[0].lower()  # sentence case at the start of their reply, not a name
     return " ".join(words)

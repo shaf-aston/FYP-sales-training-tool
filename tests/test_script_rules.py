@@ -1039,6 +1039,7 @@ def test_the_question_said_back_asks_it_another_way(seller, step, said):
     ("01", "what do you mean?"),    # their own "you": about us
     ("04", "why?"),                 # one word is too few to tell
     ("03", "what what?"),           # "what?" alone is never their words
+    ("m_open_wallet", "can we do option 2?"),  # its words are in the talk, not the question
 ])
 def test_a_question_of_their_own_is_not_the_question_said_back(seller, step, said):
     assert not seller._ear._asked_back(said, ScriptState(step=step))
