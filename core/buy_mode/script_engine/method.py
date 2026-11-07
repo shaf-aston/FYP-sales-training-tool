@@ -27,6 +27,8 @@ class Route:
     keep: bool = True   # false = the reply is not kept as the step's answer (a vague one restates the question)
     min_score: float = 0.0  # a match must score at least this to take the route; under it, the reply is heard as unmatched
     like: str = ""      # the shared answer (answers.yaml) it takes examples from: what kind of answer it is ("no")
+    say: str = ""       # said in place of the next step's own line, which this answer would make untrue ("not long" ->
+                        # not "so many nights, months and years")
 
 
 @dataclass(frozen=True)
@@ -183,8 +185,11 @@ def _route(step_id, label, data, answers):
     if label == ANY and "min_score" in data:
         raise ValueError(f"step {step_id}: '{ANY}' route takes no min_score")
     floor = _score(f"step {step_id} route {label}", data["min_score"]) if "min_score" in data else 0.0
+    say = data.get("say", "")
+    if say and ("?" not in say or NAME.search(say) or str(data["then"]) == step_id):
+        raise ValueError(f"step {step_id}: route '{label}' say must ask, have no blanks and move on")
     return Route(label, examples, str(data["then"]), data.get("ack", ""), data.get("keep", True) is not False, floor,
-                 like or "")
+                 like or "", say)
 
 
 def _step(step_id, data, answers):
@@ -221,7 +226,7 @@ def _step(step_id, data, answers):
     if data.get("echo") and not data.get("capture"):
         raise ValueError(f"step {step_id}: echo needs a capture")
     for line in (data.get("say", ""), data.get("say_plain", ""), *probes, *reask,
-                 *(r.get("ack", "") for r in [*(data.get("listen") or {}).values(), data.get("stuck") or {}])):
+                 *(r.get(k, "") for r in [*(data.get("listen") or {}).values(), data.get("stuck") or {}] for k in ("ack", "say"))):
         _one_stress(f"step {step_id}", line)
         if line.count("{") != len(NAME.findall(line)):
             raise ValueError(f"step {step_id}: a blank is {{name}} or {{name|noun form|verb form}}: {line!r}")

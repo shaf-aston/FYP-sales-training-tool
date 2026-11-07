@@ -515,6 +515,20 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("m_partner_proceed", 0, ("partner",), "it's my decision", "m_partner_close", None),
     ("01", 0, (), "to earn 2500 a month on the side", "goal_practical", None),   # was no goal, asked again
     ("m_scam", 0, ("scam",), "how do I know this isn't a scam?", "m_scam", "No pressure either way."),   # was "I'll find out"
+    # round 11
+    ("03", 0, (), "3 years, sorry, 2 years", "04", "24 months"),   # was 36: the 3 they took back
+    ("03", 0, (), "since I started the business 3 years ago", "04", "36 months"),   # was a failed attempt ("Sorry to hear that")
+    ("03", 0, (), "I tried dropshipping and it failed", "03", "Sorry to hear that"),   # still a failed attempt
+    ("03", 0, (), "not long", "04", "So what made it come up for you now?"),   # was "so many nights, months and years"
+    ("03", 0, (), "a few weeks", "04", "So what made it come up for you now?"),
+    ("03", 0, (), "a long time", "04", "If this has been on your mind"),   # a long time is not recent
+    ("03", 0, (), "ages", "04", "If this has been on your mind"),
+    ("03", 0, (), "why would I tell you that?", "03", "It helps me see"),   # was "I'll find out"
+    ("05", 0, (), "sorry, where were we?", "05", "Of course, let me ask that again."),   # was "sorry" taken as the answer
+    ("01", 0, (), "a bit of extra income", "goal_practical", None),   # was no goal, asked again
+    ("01", 0, (), "sorry, my kid is yelling", "01", "No problem, take your time."),   # "sorry," is no correction here
+    ("goal_identity", 0, (), "can you do it for 3k?", "goal_identity", "Let's see if it's even right for you first"),   # was "I'll find out"
+    ("14", 0, (), "can you do it for 3k?", "14", "The price is $5k, but"),
 ]
 
 
@@ -528,6 +542,19 @@ def test_round_7_whole_calls(step, asks, raised, said, after, starts):
     assert seller.state.step == after, text
     if starts:
         assert text.startswith(starts), text
+
+
+def test_what_they_take_back_and_say_early_is_kept_right():
+    """Whole calls: "3k, no wait, more like 4k" kept the 3k; the time said in the first reply was asked again."""
+    from core.buy_mode.script_engine.engine import ScriptState
+
+    seller = _real_seller()
+    seller.reset(ScriptState(step="02"))
+    seller.reply("3k, no wait, more like 4k")
+    assert seller.state.slots["number"] == "more like 4k" and seller.state.step == "03"
+    seller.reset(ScriptState(step="01"))
+    seller.reply("I want to quit my job, I need about 4k a month and I've been thinking about it for 2 years")
+    assert seller.state.slots["years"] == "2 years" and seller.state.slots["number"] == "4k a month"
 
 
 def test_a_worry_asked_again_before_the_price_is_still_the_worry():

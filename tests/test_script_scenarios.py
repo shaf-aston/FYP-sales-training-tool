@@ -8,6 +8,7 @@ import pytest
 
 from core.buy_mode.script_engine.engine import (
     ScriptState,
+    advance,
     asked_line,
     hear_ahead,
     jump,
@@ -171,6 +172,18 @@ def test_a_question_about_a_figure_is_not_their_goal(fake_embedder):
                                   "i want to cancel the 300 a month gym"])
 def test_spending_is_not_the_goal(text):
     assert "number" not in hear_ahead(CAT, ScriptState(step="01"), text).slots
+
+
+@pytest.mark.parametrize("text, years", [
+    ("I want to quit, I've been thinking about it for 2 years", "2 years"),   # whole calls: asked again
+    ("been thinking about this for the last 3 years", "3 years"),
+    ("I've wanted this for about a year and a half", "about a year and a half"),
+    ("I've been at my job for 5 years", None),   # time in a job is not how long they've thought about this
+    ("I've been thinking about it", None),
+    ("I've wanted it for 2 years", "2 years"),
+])
+def test_how_long_they_have_thought_about_it_said_early_is_kept(text, years):
+    assert hear_ahead(CAT, ScriptState(step="01"), text).slots.get("years") == years
 
 
 def test_the_step_itself_still_captures_normally():
@@ -351,10 +364,34 @@ READY = {"examples": ["x"], "then": "b", "until": "b", "min_score": 0.8}
     (_mini(ready={k: v for k, v in READY.items() if k != "min_score"}), "min_score"),
     (_mini(a={"answered_by": r"(?P<answer>\d+)", "capture": ""}), "capture"),
     (_mini(ready={"examples": ["x"], "then": "a", "until": "b", "min_score": 0.8}), "until"),
+    (_mini(a={"listen": {"x": {"examples": ["x"], "then": "b", "say": "Tell me."}, "any": {"then": "b"}}}), "say must ask"),
+    (_mini(a={"listen": {"x": {"examples": ["x"], "then": "b", "say": "Why {x}?"}, "any": {"then": "b"}}}), "say must ask"),
+    (_mini(a={"listen": {"x": {"examples": ["x"], "then": "a", "say": "Why?"}, "any": {"then": "b"}}}), "say must ask"),
 ])
 def test_loader_rejects_bad_shortcuts(data, error):
     with pytest.raises(ValueError, match=error):
         parse_method("bad", data)
+
+
+def _says(data):
+    data["steps"]["a"]["listen"] = {"soon": {"examples": ["x"], "then": "b", "say": "What made it come up now?"},
+                                    "any": {"then": "b"}}
+    return parse_method("ok", data)
+
+
+def test_a_route_line_replaces_the_next_line_it_would_make_untrue():
+    # whole calls: "not long" was followed by "so many nights, months and years"
+    method = _says(_mini())
+    assert advance(method, ScriptState(step="a"), "soon", "x").say == "What made it come up now?"
+    assert advance(method, ScriptState(step="a"), "any", "x").say == "Done."   # other answers: the step's own line
+
+
+def test_a_route_line_is_never_said_on_a_step_walked_past_to():
+    data = _mini()
+    data["steps"]["b"] = {"ui_stage": "intent", "listen": {"any": {"then": "c"}}}   # silent: walked past
+    data["steps"]["c"] = {"ui_stage": "intent", "say": "C."}
+    move = advance(_says(data), ScriptState(step="a"), "soon", "x")
+    assert move.state.step == "c" and move.say == "C."
 
 
 def test_loader_rejects_a_shortcut_that_leads_back():

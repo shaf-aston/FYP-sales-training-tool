@@ -79,6 +79,8 @@ interruptions:
       - "sorry, can you say that again"
       - "I didn't catch that"
       - "what was the question"
+      - "where were we"   # draft: whole calls: "sorry, where were we?" was taken as an answer, or looped "take your time"
+      - "I lost track"   # draft
       - "I can't hear you"   # not "can you hear me?": "great, sounds good" read as it (0.74)
       - "hello? you've gone quiet"
       - "hello? you still with me?"
@@ -131,6 +133,8 @@ interruptions:
       - "does that matter"
       - "what's that got to do with anything"
       - "why is that important"
+      - "why would I tell you that"   # draft: whole calls, got "I'll find out"
+      - "what kind of question is that"   # draft: whole calls, got "let me ask that again"
     reply: "It helps me see if this is even right for you, so neither of us wastes time."
   no_wrong_answer:   # whole calls: "what do most people say?" got "I'll find out and let you know"
     only_asked: true   # "what most people do is give up" is an answer

@@ -544,6 +544,13 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("time and money tbh", "time and money tbh", ""),   # nothing left out: the reply as typed
     ("credit, what's next?", "credit", ""),   # the nudge is cut off its end
     ("it's 2.5k, is that ok?", "it's 2.5k", "is that ok?"),   # "2.5k" is never cut at its point
+    ("3k, no wait, more like 4k", "more like 4k", ""),   # whole calls: the 3k they took back was kept
+    ("3 years, sorry, 2 years", "2 years", ""),
+    ("pay off my car, no actually my credit card", "my credit card", ""),
+    ("sorry, where were we?", "", "where were we?"),   # was "sorry" taken as their answer
+    ("wait, sorry, what's this going to cost me?", "", "what's this going to cost me?"),   # one after another
+    ("nothing, sorry", "nothing, sorry", ""),   # nothing after it: nothing taken back
+    ("sorry my dog is barking", "sorry my dog is barking", ""),   # one word takes back only with a break after it
 ])
 def test_a_reply_is_read_once_into_what_it_says_and_what_it_asks(text, said, asked):
     from core.buy_mode.script_engine.hear.reply import Reader

@@ -8,6 +8,8 @@ question, not one question that loses the answer).
   rise   ends in "?" but isn't phrased as a question ("a year?", "what's this going to cost me?"): the Ear
          settles it per step (`Reply.settle`), as content said with a rise or as a question
   said   everything else: the content
+
+A self-correction (`take_backs`: "3 years, sorry, 2 years") takes back what came before it; only the rest is read.
 """
 
 import re
@@ -25,7 +27,7 @@ class Part:
 @dataclass(frozen=True)
 class Reply:
     text: str          # as typed
-    unnudged: str      # without a nudge on its end ("credit, what's next?" -> "credit"); "" when only a nudge
+    unnudged: str      # without a nudge on its end ("credit, what's next?" -> "credit") or what a correction took back; "" when only a nudge
     nudged: bool       # a nudge was cut off its end
     parts: tuple
 
@@ -82,6 +84,12 @@ class Reader:
                         for words in (r"\W+".join(map(re.escape, tokenize(p))) for p in sorted(nudges, key=len, reverse=True))]
         self._tags = {" ".join(tokenize(t)) for t in cfg["filler_tags"]}
         self._starts = set(cfg["question_words"]) | set(cfg["closed_question_starts"])
+        backs = [r"\W+".join(map(re.escape, tokenize(b))) for b in sorted(cfg["take_backs"], key=len, reverse=True)]
+        words = "|".join(b for b in backs if "\\W+" in b)   # "no actually my credit card"
+        word = "|".join(b for b in backs if "\\W+" not in b)  # one word needs a break after it: "sorry my dog is barking" isn't one
+        # at the start or after a break, with words after it: "nothing, sorry" takes nothing back
+        self._take_back = re.compile(rf"(?:^|[,;.!?]\s*)(?:(?:{words})\b[\s,;.!-]*|(?:{word})\s*[,;.!-][\s,;.!-]*)(?=\w)",
+                                     re.IGNORECASE)
 
     def read(self, text):
         rest, nudged = text, False
@@ -90,6 +98,8 @@ class Reader:
             if found:
                 rest, nudged = text[:found.start()].rstrip(" ,;:-"), True
                 break
+        while back := self._take_back.search(rest):  # "3k, no wait, more like 4k" -> "more like 4k": they took
+            rest = rest[back.end():]  # the first part back; cut again so "wait, sorry, what's the price?" asks
         parts, acts = clauses(rest, self.breaks), []
         for part in parts:
             act = self._act(part, len(parts) > 1)

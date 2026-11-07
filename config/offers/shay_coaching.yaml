@@ -58,6 +58,17 @@ facts:
       - "is there a payment plan"
       - "can I pay monthly"
     answer: "There are ways to make the investment work, and we'll find the one that suits you."
+  discount:   # whole calls: "can you do it for 3k?" got "I'll find out and let you know"
+    draft: true
+    examples:
+      - "can you do it for 3k"
+      - "is there a discount"
+      - "what's the best price you can do"
+      - "can you knock some off"
+      - "any deals on"
+    answer: "Let's see if it's even right for you first, then we'll talk about making the numbers work."
+    late_answer: "The price is {price}, but there are ways to make it work, like splitting it into payments."   # draft
+    late_again: "Like I said, it's {price}, and there are ways to make it work."   # draft
   included:   # whole calls: "what's included?" got "I'll find out and let you know"
     draft: true
     examples:

@@ -87,7 +87,9 @@ def advance(method, state, label, reply="", empty=False, line="", misses=1):
 
 
 def _take(method, state, route):
-    return replace(_speak(method, replace(state, step=route.then)), ack=route.ack)
+    move = _speak(method, replace(state, step=route.then))
+    said = route.say if route.say and move.state.step == route.then else move.say  # never on a step walked past to
+    return replace(move, ack=route.ack, say=said)
 
 
 def ask_again(method, state, stay=True, misses=0):

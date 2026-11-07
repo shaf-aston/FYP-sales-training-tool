@@ -73,6 +73,7 @@ steps:
           - "I want to quit my job and be my own boss"
           - "freedom to do what I want with my days"
           - "to earn 2k a month"   # draft: whole calls ("to earn £2,500pm on the side"), heard as no goal and asked again
+          - "a bit of extra income"   # draft: whole calls, heard as no goal and asked again
         then: "goal_practical"
       practical:   # level 2 already: skip the formula, ask the identity rung
         examples: &practical
@@ -174,7 +175,31 @@ steps:
     probe:   # draft: ours, so "I don't know" gets an easier question, not the same one
       - "Roughly, is it more like months, or a few years?"
     stuck: {then: "04"}
+    # "I want to quit, I've been thinking about it for 2 years" said earlier answers this step (whole calls: asked
+    # again, "2 years, I told you"). Only after "thinking / wanting ... for": "I've been at my job for 5 years" is not it.
+    answered_by: '\b(?:thinking|thought|wanting|wanted|dreaming|dreamt|dreamed)\s+(?:about\s+(?:it|this|that|doing\s+(?:it|this))\s+|of\s+(?:it|this)\s+|(?:it|this|that)\s+)?for\s+(?:the\s+(?:last|past)\s+)?(?P<answer>(?:about\s+|around\s+|nearly\s+|almost\s+|over\s+)?(?:\d+(?:\.\d+)?|a|an|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|eighteen|a\s+couple\s+of|a\s+few|few)\s+(?:years?|yrs?|months?)(?:\s+and\s+a\s+half)?)\b'   # draft
     listen:
+      recent:   # draft: whole calls: "not long" went on to "so many nights, months and years"
+        draft: true
+        min_score: 0.85
+        examples:
+          - "not long"
+          - "only recently"
+          - "just a few weeks"
+          - "it's pretty new"
+          - "I only just started thinking about it"
+        then: "04"
+        say: "So what made it come up for you now?"   # draft: ours, in place of 04's "so many nights, months and years"
+      started:   # draft: a rival label: "since I started the business 3 years ago" (0.77) was heard as a failed attempt
+        draft: true
+        min_score: 0.8   # "my whole life really" is not one
+        examples:
+          - "since I started the business 3 years ago"
+          - "ever since I started my job"
+          - "since I started working there"
+          - "since I opened my shop"
+        then: "04"
+        ack: "{months_thinking} months... Damn.¶"
       failed_before:   # a past failed attempt is acknowledged before the script goes on
         min_score: 0.7   # "since my dad got sick" (0.66) is a hard time, not a failed attempt: the meaning bank answers it
         examples:
