@@ -68,6 +68,12 @@ class Objection:
     examples: tuple
     enter: str           # after the price: the matrix step its branch starts at
     early: str = ""      # before the price: a short honest answer instead of `park`; may be raised while asking
+    early_examples: tuple = ()   # the examples heard before the price: `after_price` ones ("money is tight") are
+    # their life then, not our price (whole calls: "money has been tight" at step 01 got "I haven't mentioned a price yet")
+
+    def heard(self, opened):
+        """The examples that count: all once the price is out, else only the ones about paying us."""
+        return self.examples if opened else self.early_examples
 
 
 @dataclass(frozen=True)
@@ -258,7 +264,8 @@ def _one_stress(where, line):
 def _objection(name, data):
     if not data.get("examples"):
         raise ValueError(f"objection {name}: needs examples, or it can never be heard")
-    return Objection(name, tuple(data["examples"]), str(data["enter"]), data.get("early", ""))
+    early = tuple(data["examples"])
+    return Objection(name, early + tuple(data.get("after_price", ())), str(data["enter"]), data.get("early", ""), early)
 
 
 def _with_matrix(name, data, matrix):

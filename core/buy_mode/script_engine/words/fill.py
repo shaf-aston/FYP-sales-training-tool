@@ -14,7 +14,8 @@ NAME = re.compile(r"\{(\w+)(?:\|([^|{}]*)\|([^|{}]*))?\}")  # {name} or {name|no
 WORD = re.compile(r"[$£€]?\d+(?:[.,]\d+)*[A-Za-z0-9'-]*|[A-Za-z0-9'-]+")  # "£2,500", "1.5", "2.5k" stay one word
 FIGURE = re.compile(r"\d+(?:\.\d+)?")
 GLUED = re.compile(r"(\d)([A-Za-z])")  # a number stuck to its unit: "1yr", "18mo"
-SENTENCE_END = re.compile(r"[.!?]+\s+")  # "more money. Mostly for my kids": "2.5k" and "5k." stay whole
+SENTENCE_END = re.compile(r"[.!?]+\s+|\s*\n\s*|(?:^|\s)(?:\d{1,2}[.)]|[-*•])\s+(?=[^\W\d])")  # "more money. Mostly for my kids": "2.5k" and "5k." stay whole
+# A new line or a list mark ("1. more money 2. more time", "- pay rent") ends a sentence too: whole calls, "with 1?"
 
 
 def blanks(line):
@@ -115,7 +116,7 @@ def echo_phrase(reply, cfg, vocab=frozenset(), verbs=False):
     lower = [w.lower() for w in words]
     known = vocab | real_words(cfg["spell_real_words"])
     if (not words or len(words) > cfg["slot_words"] or lower[0] in cfg["bad_phrase_starts"]
-            or set(lower) & set(cfg["prospect_pronouns"])
+            or set(lower) & {*cfg["prospect_pronouns"], *cfg["echo_not_with"]}
             or any(w.isalpha() and w.islower() and len(w) > 2 and w not in known for w in words)):
         return None  # a typo still in it is never said back ("being able to mak more mony?"); a Name can be
     if words[0] == reply.lstrip()[:len(words[0])]:

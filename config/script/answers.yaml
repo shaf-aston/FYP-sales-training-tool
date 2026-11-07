@@ -11,6 +11,7 @@ jump_in:   # a yes to "Do you see yourself jumping in?"
   - "I'm in, I can see myself doing this"
   - "yes I see myself taking the jump"
   - "ok, let's go"   # draft
+  - "I don't see why not"   # draft: whole calls, it was heard as not yet
 pay_now:   # a yes that is already about paying: the payment question next, not "What makes you say that?"
   - "how do I pay"   # draft
   - "credit"   # draft
@@ -37,3 +38,4 @@ backs_out:   # changing their mind after a yes (live: "actually no, forget it" g
   - "no thanks, I'll pass"
   - "actually I don't think so"   # draft
   - "no"
+  - "I'm not interested"   # draft: whole calls, "I'm just not interested" at 20 went to payment

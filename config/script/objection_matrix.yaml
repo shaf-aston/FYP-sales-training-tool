@@ -24,10 +24,11 @@ objections:
       - "that feels pretty steep"
       - "that's a big number for me"
       - "why does it cost that much"
-      - "I can't spare the money with my mortgage"
-      - "money is tight for me at the moment"
       - "woah, that's a lot mate"   # draft: live ("5 grand? that's a lot mate"), said at the price and taken as a nod
       - "I don't have that kind of money lying around"   # draft: live ("I don't have 5k lying around"), same
+    after_price:   # draft: heard only once the price is out; before it, this is their life, not our price
+      - "I can't spare the money with my mortgage"
+      - "money is tight for me at the moment"
   partner:
     enter: m_partner_here
     examples:

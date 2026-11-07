@@ -259,14 +259,14 @@ class Ear:
             objections = [(k, o) for k, o in objections if k not in state.parked]  # isn't a scam?"): still the worry
         if hedge and objections:  # "I don't know" (0.74 to "I don't trust this") is not knowing, not a worry; one
             # nearer a worry than not knowing is the worry ("let me think about it": 1.0 to it, 0.96 to "let me think")
-            worry = self._listener.match(text, {k: o.examples for k, o in objections}, by_clause=False)
+            worry = self._listener.match(text, {k: o.heard(opened) for k, o in objections}, by_clause=False)
             objections = [(k, o) for k, o in objections if k == worry.label and worry.score > unsure]
         handled = set()  # a worry already being handled, or one the step asks about ("the money?"), answers the step.
         if opened:  # Past its talk, a step that keeps any reply would keep it as their answer: it is the worry again
             # (whole calls: "he decides the money stuff" to "What makes you say that?" was their reason, then payment)
             talking = state.step in self.method.talks or not any(r.label == ANY for r in step.listen)
             handled = {k for k, _ in objections if (k in state.raised and talking) or k in {r.label for r in step.listen}}
-        labels.update({f"objection:{k}": o.examples for k, o in objections})
+        labels.update({f"objection:{k}": o.heard(opened) for k, o in objections})
         objections = [(k, o) for k, o in objections if k not in handled]
         if not opened and not asking:  # "money", "scared", "risk" before the price are answers, not objections
             floors.update({f"objection:{k}": self.cfg["early_objection_min_score"] for k, _ in objections})
@@ -287,11 +287,11 @@ class Ear:
     def _judged_objection(self, text, step, objections):
         """An objection that scored in the grey band before the price ("10k seems like a lot", 0.81): too close
         to the step's answers for the embedder alone, so the AI picks objection or answer. AI down = answer."""
-        found = self._listener.match(text, {k: o.examples for k, o in objections.items()})
+        found = self._listener.match(text, {k: o.heard(False) for k, o in objections.items()})
         if not found.label or found.score < self.cfg["early_objection_judge_score"]:
             return None
         answers = [f"answering '{question_of(step.say_plain or step.say)}'"]  # the question asked, so the AI judges in context
-        examples = objections[found.label].examples
+        examples = objections[found.label].heard(False)
         nearest = self._listener.match(text, {e: [e] for e in examples}).candidates  # the AI sees the closest ones
         pick = self._judge(text, {f"{found.label} objection": list(nearest) or examples, "answer": answers})
         return f"objection:{found.label}" if pick == f"{found.label} objection" else None

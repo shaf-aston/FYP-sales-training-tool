@@ -627,6 +627,11 @@ def test_whats_next_asks_no_ai(fake_embedder):
     ("so i can travel", "travel"),                         # the longest lead-in, not "so"
     ("IDK MAYBE 2K A MONTH EXTRA", "2k a month extra"),     # round 18: said back as "maybe 2k a month extra"
     ("jk, more money", "more money"),                      # round 19: said back as "jk more money"
+    ("1. more money 2. more time", "more money"),          # round 22: said back as "1"
+    ("- pay rent\n- save", "pay rent"),                    # a new line ends a sentence too
+    ("oh ok, more money I guess", "more money"),           # round 22: said back as "oh ok more money"
+    ("money has been tight", None),                        # round 22: a sentence about their life, not a goal
+    ("things are hard", None),
     ("", None),
 ])
 def test_echo_phrase(reply, phrase):
@@ -646,6 +651,17 @@ def test_a_reason_is_never_a_worry_before_the_price(fake_embedder, step, text):
     # whole calls: "because my kid just started school and money is tight" got "I haven't mentioned a price yet"
     s = seller(fake_embedder, step=step)
     s.reply(text)
+    assert s.last_turn["heard_as"].startswith("answer")
+
+
+def test_money_trouble_is_the_price_worry_only_once_the_price_is_out(fake_embedder):
+    """Whole calls: "money has been tight" at step 01 got "I haven't mentioned a price yet"."""
+    money = CAT.objections["money"]
+    assert "money is tight for me at the moment" in money.heard(True)
+    assert "money is tight for me at the moment" not in money.heard(False)
+    assert "I can't afford that right now" in money.heard(False)   # paying us is still the worry early
+    s = seller(fake_embedder, step="01")
+    s.reply("money is tight for me at the moment")
     assert s.last_turn["heard_as"].startswith("answer")
 
 

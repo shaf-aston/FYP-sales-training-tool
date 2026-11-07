@@ -686,6 +686,13 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("19", 0, (), "y", "20", None),   # was not a yes
     ("05", 0, (), "y", "05", "No rush"),   # "y" to an open question says nothing: never saved as their reason
     ("19", 0, (), "can I get it cheaper?", "19", "The price is"),   # was "I'll find out"
+    # round 22
+    ("20", 0, (), "I'm just not interested", "19", "No pressure at all."),   # was payment
+    ("19", 0, (), "I don't see why not", "20", None),   # was not yet
+    ("19", 0, (), "I don't see myself doing this", "19", None),   # guard: still not yet
+    ("01", 0, (), "well it started when my dad got ill last year and I had to take time off work and since then money has been tight and I just want to get back on my feet", "goal_practical", None),   # was "I haven't mentioned a price yet"
+    ("01", 0, (), "I can't afford that", "01", "I haven't mentioned a price yet"),   # guard: paying us is still the worry
+    ("01", 0, (), "1. more money 2. more time", "goal_practical", "What are you hoping to achieve with more money?"),   # was "with 1?"
 ]
 
 
