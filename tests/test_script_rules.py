@@ -4,13 +4,17 @@ import logging
 
 import pytest
 
-from core.infra.loader import CONFIG_DIR, load_yaml
 from core.buy_mode.script_engine.ai.checks import CheckContext, check, clip
-from core.buy_mode.script_engine.engine import ScriptState
-from core.buy_mode.script_engine.words.fill import Filler
 from core.buy_mode.script_engine.ai.judge import VAGUE, judge
-from core.buy_mode.script_engine.method import load_common_sense, load_method, load_offer
+from core.buy_mode.script_engine.engine import ScriptState
+from core.buy_mode.script_engine.method import (
+    load_common_sense,
+    load_method,
+    load_offer,
+)
 from core.buy_mode.script_engine.seller import ScriptSeller
+from core.buy_mode.script_engine.words.fill import Filler
+from core.infra.loader import CONFIG_DIR, load_yaml
 
 CFG = load_yaml("script/engine.yaml")
 OFFER = load_offer("shay_coaching")
@@ -589,8 +593,8 @@ def test_scripted_coaching_note_comes_from_the_step_without_ai(fake_embedder):
 
 def test_checked_line_retries_then_gives_up_on_rule_breaking_ai():
     """Every AI sentence goes through one loop: a bad line is retried, never used."""
-    from core.buy_mode.script_engine.ai.line import checked_line
     from core.buy_mode.script_engine.ai.checks import CheckContext
+    from core.buy_mode.script_engine.ai.line import checked_line
 
     cfg = {"ai_retries": 1, "log_text_chars": 50}
     ctx = CheckContext(max_words=10, questions=0, price_ok=False, price="£3000")
