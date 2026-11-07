@@ -632,6 +632,10 @@ def test_whats_next_asks_no_ai(fake_embedder):
     ("oh ok, more money I guess", "more money"),           # round 22: said back as "oh ok more money"
     ("money has been tight", None),                        # round 22: a sentence about their life, not a goal
     ("things are hard", None),
+    ("50% more income", "50% more income"),                # round 24: said back as "50 more income"
+    ("kind of more money", "more money"),                  # round 24: said back as "kind of more money"
+    ("more money inshallah", "more money"),
+    ("sorry, more money bro", "more money"),
     ("", None),
 ])
 def test_echo_phrase(reply, phrase):
@@ -853,9 +857,11 @@ def test_number_phrase(reply, number):
     assert number_phrase(reply, CFG["number_blanks"]["years"], CFG) == number
 
 
-@pytest.mark.parametrize("reply, months", [("a year", "12"), ("a couple of years", "24"), ("six months", "6"), ("a month", "1"), ("ages", None),
-    ("a year and a half", "18"), ("year and a half", "18"), ("2 and a half years", "30"), ("about 2 years and a half", "30"),
-    ("1.5 years", "18"), ("18mo", "18"), ("2yrs", "24"), ("half a year", "6"), ("2y", "24")])
+@pytest.mark.parametrize("reply, months", [("a year", "12 months"), ("a couple of years", "24 months"), ("six months", "6 months"),
+    ("a month", "1 month"), ("ages", None),  # round 24: "1 month", never "1 months"
+    ("a year and a half", "18 months"), ("year and a half", "18 months"), ("2 and a half years", "30 months"),
+    ("about 2 years and a half", "30 months"), ("1.5 years", "18 months"), ("18mo", "18 months"), ("2yrs", "24 months"),
+    ("half a year", "6 months"), ("2y", "24 months")])
 def test_months_thinking_counts_the_answer_in_months(reply, months):
     from core.buy_mode.script_engine.words.fill import number_phrase
     assert number_phrase(reply, CFG["number_blanks"]["months_thinking"], CFG) == months
@@ -1204,3 +1210,11 @@ def test_a_one_letter_reply_is_its_word(text, fixed):
     """Round 21: "y" to "Do you see yourself jumping in?" was not a yes."""
     from core.buy_mode.script_engine.words.fill import fix_typos
     assert fix_typos(text, {"yes", "year"}, CFG) == fixed
+
+
+@pytest.mark.parametrize("reply, spans", [("about 3 months", True), ("a month", True), ("2 years", True),
+    ("3k a month", False), ("£500 a month", False), ("a grand a month", False), ("100 dollars a month", False)])
+def test_how_long_needs_a_span_of_time_never_a_sum_of_money(reply, spans):
+    """Round 24: "3k a month" at "How long have you been thinking about this?" was saved as "1 months"."""
+    import re
+    assert bool(re.search(CAT.steps["03"].needs, reply, re.I)) == spans

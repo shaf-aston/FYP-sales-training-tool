@@ -11,7 +11,7 @@ from core.infra.utils import tokenize
 
 logger = logging.getLogger("script_engine.fallback")
 NAME = re.compile(r"\{(\w+)(?:\|([^|{}]*)\|([^|{}]*))?\}")  # {name} or {name|noun form|verb form}, $ = the phrase
-WORD = re.compile(r"[$£€]?\d+(?:[.,]\d+)*[A-Za-z0-9'-]*|[A-Za-z0-9'-]+")  # "£2,500", "1.5", "2.5k" stay one word
+WORD = re.compile(r"[$£€]?\d+(?:[.,]\d+)*%?[A-Za-z0-9'-]*|[A-Za-z0-9'-]+")  # "£2,500", "1.5", "2.5k", "50%" stay one word
 FIGURE = re.compile(r"\d+(?:\.\d+)?")
 GLUED = re.compile(r"(\d)([A-Za-z])")  # a number stuck to its unit: "1yr", "18mo"
 SENTENCE_END = re.compile(r"[.!?]+\s+|\s*\n\s*|(?:^|\s)(?:\d{1,2}[.)]|[-*•])\s+(?=[^\W\d])")  # "more money. Mostly for my kids": "2.5k" and "5k." stay whole
@@ -128,7 +128,7 @@ def number_phrase(reply, rule, cfg):
     """The number before the blank's unit, as digits, by rule: "about 5 years now" -> "5", "a year" -> "1".
     None when no number sits right before the unit ("ages", "6 months" for a years blank). "and a half"
     (`number_half`) before or after the unit adds a half; a singular unit on its own opens a reply as one
-    ("year and a half"), a part (`number_parts`) before it takes that share ("half a year" -> 6 months), and a number stuck to its unit is read apart ("1yr"). With `per`, the number is converted: "2 years" -> "24" for a months blank. With
+    ("year and a half"), a part (`number_parts`) before it takes that share ("half a year" -> 6 months), and a number stuck to its unit is read apart ("1yr"). With `per`, the number is converted: "2 years" -> "24" for a months blank ("24 months" with `unit`). With
     `unit` ([one, many]), the unit is said after it: "1 year", "2 years", "a year and a half". A rule with
     `from` and no `units` takes that rule's units."""
     units = rule.get("units") or cfg["number_blanks"][rule["from"]]["units"]
@@ -146,7 +146,8 @@ def number_phrase(reply, rule, cfg):
         part = lower[at - 1] if at >= 1 and lower[at - 1] in cfg["number_parts"] else ""  # "half a year"
         value = count * cfg["number_parts"].get(part, 1) + (0.5 if halved else 0)
         if per:
-            return f"{value * per[word]:g}"
+            value *= per[word]
+            return f"{value:g} {unit[value != 1]}" if unit else f"{value:g}"
         if not unit:
             return f"{value:g}"
         if part:

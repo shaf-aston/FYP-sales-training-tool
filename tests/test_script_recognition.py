@@ -703,6 +703,21 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("19", 0, (), "yes but what if I can't keep up?", "m_reframe1", None),   # was "What makes you say that?"
     ("01", 0, (), "depends what you're offering", "01", "We help people"),   # was "What do you mean by depends..."
     ("01", 0, (), "it depends on what it is", "01", "We help people"),
+    # round 24
+    ("01", 0, (), "I was wondering how this works first", "01", "Three parts"),   # was "What are you actually hoping to achieve?"
+    ("01", 0, (), "I was wondering if you could tell me more", "01", "We help people"),
+    ("goal_practical", 0, (), "I'd like to know the price first", "goal_practical", "Fair question."),
+    ("04", 0, (), "I want to know more", "04", "We help people"),
+    ("01", 0, (), "I want to know the price", "01", "Fair question."),   # guard: still the price
+    ("02", 0, (), "about 2k, I was wondering what it costs", "03", "Fair question."),   # the answer kept, the question answered
+    ("19", 0, (), "yes, sorry", "20", None),   # was unsure
+    ("19", 0, (), "would it be ok to say yes?", "20", None),   # was unsure
+    ("01", 0, (), "is it ok to say quit my job?", "goal_practical", "What are you hoping to achieve by being able to quit your job?"),
+    ("01", 0, (), "sorry for the long message but I want to quit my job", "goal_practical", None),
+    ("03", 0, (), "3k a month", "03", "Roughly, is it more like months, or a few years?"),   # was saved as "1 months"
+    ("03", 0, (), "a month", "04", "1 month... Damn."),   # was "1 months... Damn."
+    ("01", 0, (), "kind of more money", "goal_practical", "What are you hoping to achieve with more money?"),   # was "with kind of more money?"
+    ("01", 0, (), "50% more income", "goal_practical", "What are you hoping to achieve with 50% more income?"),   # was "50 more income"
 ]
 
 

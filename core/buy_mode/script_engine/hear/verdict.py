@@ -79,11 +79,19 @@ class Ear:
             beside = self._beside_worry(text, step, state, name)
             if beside:
                 return beside
+        if kind == "sense" and self._paused_again(name, state):
+            return Verdict("says_nothing", asking=asking)  # no words to ask about: never "What do you mean by brb?"
         if kind:
             return Verdict(kind, name, text, asking, ahead)
         if asking and not self._answers(text, step):
             return Verdict("question", text=text, asking=asking, ahead=ahead)
         return Verdict("answer", text=text, asking=asking, ahead=ahead)
+
+    def _paused_again(self, name, state):
+        """A third pause in a row (the last line was `wait_again`, said only to a second one) says nothing: the
+        step is asked again, which spends an ask, so a call never waits forever ("sorry" 20 times did)."""
+        wait_again = self.sense.wait_again
+        return bool(wait_again) and self.sense.interruptions[name].after == "wait" and state.last == wait_again
 
     def _what_alone(self, text):
         """A reply of only "what?" (`asked_back_what`, maybe with `what_alone_with`: "sorry, what?") wants the

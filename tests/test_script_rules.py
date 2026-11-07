@@ -549,7 +549,8 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("pay off my car, no actually my credit card", "my credit card", ""),
     ("sorry, where were we?", "", "where were we?"),   # was "sorry" taken as their answer
     ("wait, sorry, what's this going to cost me?", "", "what's this going to cost me?"),   # one after another
-    ("nothing, sorry", "nothing, sorry", ""),   # nothing after it: nothing taken back
+    ("nothing, sorry", "nothing", ""),   # nothing after it: nothing taken back, and a lone "sorry" beside it is a hedge
+    ("yes, sorry", "yes", ""),   # round 24: "yes, sorry" at the close was heard as unsure
     ("sorry my dog is barking", "sorry my dog is barking", ""),   # one word takes back only with a break after it
     ("a year, no, two years", "two years", ""),   # whole calls: "no" between two parts corrects the first
     ("credit, no, debit", "debit", ""),
@@ -560,6 +561,15 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("hold on, how much?", "", "how much?"),   # whole calls: heard as unclear, the price never said
     ("hold on a second", "hold on a second", ""),   # a pause with no break after it is the pause
     ("hang on my phone is dying", "hang on my phone is dying", ""),
+    ("I was wondering how this works first", "", "I was wondering how this works first"),   # round 24: heard as unclear; all asked: as typed
+    ("about 2k, I was wondering what it costs", "about 2k", "what it costs?"),   # a polite lead asks in any part
+    ("I'd like to know the price first", "", "I'd like to know the price first"),
+    ("I was wondering", "I was wondering", ""),   # a lead with nothing after it asks nothing
+    ("is it ok to say quit my job?", "quit my job", ""),   # round 24: the answer, its "?" asks leave
+    ("would it be ok if I said 2 years?", "2 years", ""),
+    ("is it ok to say?", "", "is it ok to say?"),   # nothing after the lead: a question, as typed
+    ("sorry for the long message, I want to quit my job", "I want to quit my job", ""),   # round 24: an aside
+    ("yes, lol", "yes", ""),   # a part of only no-answer words beside others is a hedge
 ])
 def test_a_reply_is_read_once_into_what_it_says_and_what_it_asks(text, said, asked):
     from core.buy_mode.script_engine.hear.reply import Reader

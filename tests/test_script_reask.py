@@ -256,9 +256,29 @@ def test_a_yes_or_no_question_asked_again_gets_a_yes_or_no_lead(fake_embedder):
 def test_brb_twice_is_never_the_same_words_twice(fake_embedder):
     """Live (whole calls): "brb" three times got "No problem, take your time." three times."""
     s = seller(fake_embedder, "03")
-    said = [s.reply("brb")[0] for _ in range(3)]
-    assert said[1] == s.sense.wait_again and all(a != b for a, b in pairwise(said)), said
+    said = [s.reply("brb")[0] for _ in range(2)]
+    assert said[1] == s.sense.wait_again and said[0] != said[1], said
     assert s.state.waiting and s.state.step == "03"
+
+
+def test_a_third_pause_in_a_row_asks_the_step_again_so_the_call_never_waits_forever(fake_embedder):
+    """Round 24 (whole calls): "sorry" 20 times at "Does that make sense?" got "take your time" / "I'm here" 20
+    times. A third pause in a row says nothing: the step is asked again, which spends an ask, so it moves on."""
+    s = seller(fake_embedder, "03")
+    said = [s.reply("brb")[0] for _ in range(3)]
+    assert said[2] == "Roughly, is it more like months, or a few years?" and s.last_turn["heard_as"] == "misses"
+    assert s.state.asks == 1 and not s.state.waiting
+    for _ in range(6):
+        s.reply("brb")
+    assert s.state.step != "03"   # asks spent: the call moved on
+
+
+def test_a_pause_after_another_line_still_waits(fake_embedder):
+    """Only a pause right after `wait_again` says nothing: one after the step's own question still waits."""
+    s = seller(fake_embedder, "03")
+    for r in ("brb", "brb", "brb"):
+        s.reply(r)
+    assert s.reply("brb")[0] == "No problem, take your time." and s.state.waiting
 
 
 def test_a_yes_to_keep_settling_is_checked_and_a_no_goes_on():

@@ -2,13 +2,15 @@
 these parts, so a reply is never cut two ways ("i guess 3 years, what about you?": a hedge, an answer and a
 question, not one question that loses the answer).
 
-  hedge  "idk", "honestly no idea": says nothing on its own, never what they meant
+  hedge  "idk", "honestly no idea", "sorry for the long message" (`aside_starts`), "sorry" beside an answer
+         (`no_answer_words`): says nothing on its own, never what they meant
   tag    "you know?", "right?": talk, not a question
   asks   "what about you?", "how much is it", "is this legit": a question
   rise   ends in "?" but isn't phrased as a question ("a year?", "what's this going to cost me?"): the Ear
          settles it per step (`Reply.settle`), as content said with a rise or as a question
   said   everything else: the content
 
+A lead that asks leave to answer (`answer_leads`: "is it ok to say quit my job?") is cut off: the rest is the answer.
 A self-correction (`take_backs`: "3 years, sorry, 2 years") takes back what came before it; only the rest is read.
 """
 
@@ -99,6 +101,10 @@ class Reader:
         not_mid = "".join(rf"(?<!\b{re.escape(b)})" for b in cfg["take_backs_mid"] if " " not in b)  # "no, no, I can't" is a no
         # at the start or after a break, with words after it: "nothing, sorry" takes nothing back; a mid one
         # ("no") only between two parts: "a year, no, two years" corrects, "no, credit?" says no
+        self._blank = set(cfg["no_answer_words"])  # "yes, sorry": a part of only these beside others says nothing
+        self._aside = re.compile(rf"^\W*(?:{any_of(cfg['aside_starts'])})\b", re.IGNORECASE)
+        self._ask_lead = re.compile(rf"^\W*(?:{any_of(cfg['ask_leads'])})\b\W*", re.IGNORECASE)
+        self._answer_lead = re.compile(rf"^\W*(?:{any_of(cfg['answer_leads'])})\b\W*", re.IGNORECASE)
         self._take_back = re.compile(rf"(?:^|[,;.!?]\s*)(?:(?:{words})\b[\s,;.!-]*|(?:{word})\s*[,;.!-][\s,;.!-]*)(?=\w)"
                                      rf"|(?<=\w){not_mid}[,;.!?]\s*(?:{mid})\s*[,;.!-][\s,;.!-]*(?=\w)", re.IGNORECASE)
 
@@ -109,13 +115,27 @@ class Reader:
             if found:
                 rest, nudged = text[:found.start()].rstrip(" ,;:-"), True
                 break
+        lead = self._answer_lead.match(rest)
+        if lead and tokenize(rest[lead.end():]):  # "is it ok to say quit my job?": the answer, its "?" asks leave
+            rest = rest[lead.end():].rstrip(" ?")
         while back := self._take_back.search(rest):  # "3k, no wait, more like 4k" -> "more like 4k": they took
             rest = rest[back.end():]  # the first part back; cut again so "wait, sorry, what's the price?" asks
-        parts, acts = clauses(rest, self.breaks), []
-        for part in parts:
-            act = self._act(part, len(parts) > 1)
+        parts, acts = [], []
+        cut = clauses(rest, self.breaks)
+        for part in cut:
+            part, led = self._unlead(part)
+            act = "asks" if led else self._act(part, len(cut) > 1)
+            parts.append(part)
             acts.append("said" if act == "rise" and acts[-1:] == ["hedge"] else act)  # "lol idk, money?": unsure, not asking
         return Reply(text, rest, nudged, tuple(map(Part, parts, acts)))
+
+    def _unlead(self, part):
+        """A part opening with a polite lead (`ask_leads`: "I was wondering how this works") is the question
+        after it, heard alone: ("how this works?", True); else (part, False)."""
+        lead = self._ask_lead.match(part)
+        if not lead or not tokenize(part[lead.end():]):
+            return part, False
+        return part[lead.end():].rstrip(" ?") + "?", True
 
     def asks(self, part):
         """Phrased as a question: it opens like one ("is this legit", "how much is it"), or it ends in "?" and
@@ -132,6 +152,7 @@ class Reader:
             return "asks"
         if part.rstrip().endswith("?"):
             return "rise"
-        if several and self._hedges(part):  # a reply that is only a hedge is a shrug: heard whole (shrug.py)
-            return "hedge"
+        if several and (self._hedges(part) or self._aside.match(part) or set(tokenize(part)) <= self._blank):
+            return "hedge"  # a reply that is only a hedge is a shrug: heard whole (shrug.py); "sorry for the long
+            # message" says nothing on its own either, nor "sorry" or "lol" beside an answer ("yes, sorry")
         return "said"
