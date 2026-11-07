@@ -134,6 +134,8 @@ def test_an_early_answer_beside_a_side_question_is_kept(ear):
     ("goal_practical", "3 years?", "question"),   # a figure is not a goal: they ask
     ("02", "freedom?", "question"), ("03", "freedom?", "question"),   # not the step's shape
     ("01", "3 years?", "question"),   # a step with no shape: a rise asks
+    ("04", "because money is nice?", "answer"),   # whole calls: a reason said with a rise was a question
+    ("01", "cos I need it?", "answer"),   # any step: "because ..." never asks
 ])
 def test_a_short_reply_with_a_rise_is_the_answer_when_it_has_the_steps_shape(ear, step, text, kind):
     assert ear.hear(text, ScriptState(step=step), opened=False).kind == kind

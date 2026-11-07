@@ -72,8 +72,12 @@ class Ear:
 
     def _rises(self, part, step):
         """A part ending in "?" that isn't phrased as a question is the answer said with a rise when it is short
-        and has the step's shape ("dunno, a year?" to "how long?"); else it asks ("what's this going to cost me?")."""
-        return bool(step.needs) and len(tokenize(part)) <= self.cfg["rise_answer_words"] and self.shaped(part, step)
+        and has the step's shape ("dunno, a year?" to "how long?"), or it opens with a reason ("because money is
+        nice?"); else it asks ("what's this going to cost me?")."""
+        words = tokenize(part)
+        if words[:1] and words[0] in self.cfg["rise_answer_starts"]:
+            return True
+        return bool(step.needs) and len(words) <= self.cfg["rise_answer_words"] and self.shaped(part, step)
 
     def _with_side(self, reply, step, state, opened):
         """Content that answers the step, beside a question a one-line reply covers ("i guess 3 years, what

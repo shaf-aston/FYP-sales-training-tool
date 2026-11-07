@@ -414,7 +414,7 @@ ROUND_5 = [   # live persona calls (round 5): (step, slots, raised, said, step a
     ("goal_practical", {"outcome": "freedom"}, (), "being able to quit my job, and how long is the course?",
      "goal_practical", "It's a 6-month process. What would that actually change"),   # live: the goal was lost; level 1, so the ladder digs
     ("01", {}, (), "money. how much is it anyway", "goal_practical", "Fair question"),
-    ("05", {}, (), "no time honestly, are you a bot?", "06", "Yes, I'm an AI"),
+    ("05", {}, (), "no time honestly, are you a bot?", "06", "I'm an AI"),
     ("19", {}, (), "yes, how do I pay?", "22", None),   # the question is itself the answer
     ("17", {}, (), "yes, how do I pay?", "22", None),   # the `pays` shortcut from the price on; was "I'll find out"
     ("16", {}, (), "sounds good, send me the link", "22", None),
@@ -540,6 +540,19 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("01", 0, (), "i want to make money online so i can quit my job and spend more time with my kids", "goal_identity", None),   # was asked again
     ("01", 0, (), "I want to make money online but I don't know how", "01", None),   # still no goal
     ("goal_practical", 0, (), "more money, so I can pay my bills", "goal_identity", None),
+    # round 13
+    ("04", 0, (), "are you a real person?", "04", "I'm an AI playing the salesperson"),   # was the fallback
+    ("goal_identity", 0, (), "what's your name?", "goal_identity", "I'm an AI playing the salesperson"),
+    ("04", 0, (), "because money is nice?", "05", None),   # was taken as a question
+    ("03", 0, (), "a year, no, two years", "04", "24 months"),   # was 12
+    ("03", 0, (), "2y", "04", "24 months"),   # was no number
+    ("01", 0, (), "Well it's a long story. I've been a nurse for twelve years and I love it but the shifts are killing me. "
+                  "I want something online that pays the bills so I can cut down my hours.", "goal_practical",
+     "What are you hoping to achieve by being able to cut down your hours?"),   # was heard as no goal
+    ("01", 0, (), "I want more money", "goal_practical", "What are you hoping to achieve with more money?"),   # was "It's about them"
+    ("01", 0, (), "i want more money for my family", "goal_practical", "So this isn't really about the money"),
+    ("01", 0, (), "who is this?", "01", "I'm an AI playing the salesperson"),   # guard: near "who am I talking to", got nothing
+    ("01", 0, (), "who are you?", "01", "We help people build their own business"),   # guard: still the intro
 ]
 
 

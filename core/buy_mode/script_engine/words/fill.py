@@ -132,10 +132,12 @@ def _count(word, cfg):
 
 def is_verb_goal(phrase, cfg, said=""):
     """True when the phrase starts with a verb: one of `verb_goal_starts` ("be your own boss"), or any word
-    they put after "to" (`said`: "I want to replace my salary"; whole calls: "achieve with replace your salary")."""
+    they put after a `verb_goal_leads` word (`said`: "I want to replace my salary", "so I can cut down my hours";
+    whole calls: "achieve with replace your salary")."""
     first = tokenize(phrase)[:1]
+    leads = "|".join(map(re.escape, cfg["verb_goal_leads"]))
     return bool(first) and (first[0] in cfg["verb_goal_starts"]
-                            or bool(re.search(rf"\bto\s+{re.escape(first[0])}\b", said or "", re.IGNORECASE)))
+                            or bool(re.search(rf"\b(?:{leads})\s+{re.escape(first[0])}\b", said or "", re.IGNORECASE)))
 
 
 class Filler:

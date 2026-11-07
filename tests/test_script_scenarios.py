@@ -593,6 +593,7 @@ def test_whats_next_asks_no_ai(fake_embedder):
     ("2.5k a month", "2.5k a month"),
     ("3-4k", "3-4k"),
     ("I WANT TO BE RICH!!!", "be rich"),   # whole calls: said back in capitals ("BE RICH?")
+    ("BE RICH", "be rich"),                # two words shouted are shouted too
     ("so I can travel", "travel"),         # was no echo: the plain line
     ("more money basically", "more money"),
     ("", None),
@@ -746,6 +747,7 @@ def test_loader_rejects_echo_without_a_capture():
     ("since 2021", None),
     ("years ago", None),          # but never a plural one
     ("half a year", "0.5"),       # whole calls: read as a year
+    ("2y", "2"),                  # whole calls: "2y" was no number
     ("6 months", None),      # wrong unit, the years line is dropped
     ("ages", None),
     ("", None),
@@ -757,7 +759,7 @@ def test_number_phrase(reply, number):
 
 @pytest.mark.parametrize("reply, months", [("a year", "12"), ("a couple of years", "24"), ("six months", "6"), ("a month", "1"), ("ages", None),
     ("a year and a half", "18"), ("year and a half", "18"), ("2 and a half years", "30"), ("about 2 years and a half", "30"),
-    ("1.5 years", "18"), ("18mo", "18"), ("2yrs", "24"), ("half a year", "6")])
+    ("1.5 years", "18"), ("18mo", "18"), ("2yrs", "24"), ("half a year", "6"), ("2y", "24")])
 def test_months_thinking_counts_the_answer_in_months(reply, months):
     from core.buy_mode.script_engine.words.fill import number_phrase
     assert number_phrase(reply, CFG["number_blanks"]["months_thinking"], CFG) == months
@@ -776,6 +778,9 @@ def test_years_said_reads_like_they_said_it(reply, said):
     ("be your own boss", "", True),
     ("more money", "I want more money", False),
     ("more money", "I want to have more money", False),   # "to" before another word, not this one
+    ("cut down your hours", "so I can cut down my hours", True),   # whole calls: "achieve with cut down your hours"
+    ("quit your job", "I could quit my job", True),
+    ("quit your job", "I WANT TO QUIT MY JOB", True),   # shouted
 ])
 def test_a_goal_said_after_to_is_a_verb_goal(phrase, said, verb):
     from core.buy_mode.script_engine.words.fill import is_verb_goal

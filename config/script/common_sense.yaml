@@ -104,7 +104,11 @@ interruptions:
       - "are you an AI"
       - "is this automated"
       - "are you a robot"
-    reply: "Yes, I'm an AI playing the salesperson so you can practise."   # never deny being an AI
+      - "are you a real person"   # draft: whole calls, "I'll find out" at step 04
+      - "who am I talking to"     # draft
+      - "who is this"             # draft: near "who am I talking to" but under the bar, so it got nothing
+      - "what's your name"        # draft: whole calls, heard as "what do you do"
+    reply: "I'm an AI playing the salesperson so you can practise."   # never deny being an AI; no "Yes": "who am I talking to?" isn't a yes-or-no
   clarify:
     draft: true
     after: rephrase

@@ -25,7 +25,7 @@ from core.buy_mode.script_engine.engine import (
 from core.buy_mode.script_engine.hear.embedder import make_embedder
 from core.buy_mode.script_engine.hear.meanings import MeaningBank, load_meanings
 from core.buy_mode.script_engine.hear.recognise import Listener
-from core.buy_mode.script_engine.hear.reply import after_lead
+from core.buy_mode.script_engine.hear.reply import after, clauses
 from core.buy_mode.script_engine.hear.shrug import Shrugs
 from core.buy_mode.script_engine.hear.verdict import Ear, answer_labels
 from core.buy_mode.script_engine.method import (
@@ -390,7 +390,7 @@ class ScriptSeller:
             floors = {r.label: r.min_score for r in step.listen if r.label}
             found = self._listener.answer(text, labels, list(self.sense.unclear), floors)
             restates = {r.label for r in step.listen if r.restates}
-            rest = after_lead(text, self._listener.breaks) if found.label in restates else ""
+            rest = self._after_restated(text, {k: labels[k] for k in restates}) if found.label in restates else ""
             if rest:  # "i want to make money online so i can quit my job": the question said back, then the answer
                 after = self._listener.answer(rest, labels, list(self.sense.unclear), floors)
                 if after.label and after.label not in restates and not after.close:
@@ -421,6 +421,16 @@ class ScriptSeller:
         elif v.kind == "answer":
             detail = f"answer:{label}" if label else ("answer:any" if not labels else "answer:unclear")
         return self._closed_lead(advance(self.method, self.state, label, text, empty, line, self.cfg["misses"])), ack, detail
+
+    def _after_restated(self, text, said_back):
+        """What follows the part of a long reply that only says the question back (`said_back`: those routes'
+        examples): "Well it's a long story. ... I want something online that pays the bills so I can cut down
+        my hours" -> "so I can cut down my hours". "" when that part ends the reply or it has one part."""
+        parts = clauses(text, self._listener.breaks)
+        if len(parts) < 2:
+            return ""
+        scores = [self._listener.match(p, said_back, by_clause=False).score for p in parts]
+        return after(text, parts[scores.index(max(scores))])
 
     def _closed_lead(self, move):
         """A yes-or-no question asked again gets a yes-or-no lead, in the same turn: "No rush, even a rough

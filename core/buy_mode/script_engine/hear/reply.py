@@ -75,11 +75,10 @@ def clauses(text, breaks):
     return [p.strip(" \t,;.!") for p in parts if tokenize(p)]
 
 
-def after_lead(text, breaks):
-    """What follows the reply's first part ("make money online so I can quit my job" -> "I can quit my job"),
-    "" when it has one part only."""
-    found = breaks.search(text)
-    rest = text[found.end():].strip(" \t,;.!") if found else ""
+def after(text, part):
+    """What follows one of the reply's parts ("make money online" in "make money online so I can quit my job"
+    -> "so I can quit my job"); "" when nothing does."""
+    rest = text[text.find(part) + len(part):].strip(" \t,;.!") if part and part in text else ""
     return rest if tokenize(rest) else ""
 
 
@@ -95,9 +94,12 @@ class Reader:
         backs = [r"\W+".join(map(re.escape, tokenize(b))) for b in sorted(cfg["take_backs"], key=len, reverse=True)]
         words = "|".join(b for b in backs if "\\W+" in b)   # "no actually my credit card"
         word = "|".join(b for b in backs if "\\W+" not in b)  # one word needs a break after it: "sorry my dog is barking" isn't one
-        # at the start or after a break, with words after it: "nothing, sorry" takes nothing back
-        self._take_back = re.compile(rf"(?:^|[,;.!?]\s*)(?:(?:{words})\b[\s,;.!-]*|(?:{word})\s*[,;.!-][\s,;.!-]*)(?=\w)",
-                                     re.IGNORECASE)
+        mid = "|".join(r"\W+".join(map(re.escape, tokenize(b))) for b in cfg["take_backs_mid"])
+        not_mid = "".join(rf"(?<!\b{re.escape(b)})" for b in cfg["take_backs_mid"] if " " not in b)  # "no, no, I can't" is a no
+        # at the start or after a break, with words after it: "nothing, sorry" takes nothing back; a mid one
+        # ("no") only between two parts: "a year, no, two years" corrects, "no, credit?" says no
+        self._take_back = re.compile(rf"(?:^|[,;.!?]\s*)(?:(?:{words})\b[\s,;.!-]*|(?:{word})\s*[,;.!-][\s,;.!-]*)(?=\w)"
+                                     rf"|(?<=\w){not_mid}[,;.!?]\s*(?:{mid})\s*[,;.!-][\s,;.!-]*(?=\w)", re.IGNORECASE)
 
     def read(self, text):
         rest, nudged = text, False
