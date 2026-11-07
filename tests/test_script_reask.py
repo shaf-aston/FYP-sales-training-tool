@@ -1,14 +1,24 @@
 """The `reask` lead ("No rush, even a rough idea helps.") only goes in front of a question asked again,
 never twice, and a saved call carries on after a JSON round trip."""
 import json
-
-import pytest
+from itertools import pairwise
 from dataclasses import replace
 
-from core.infra.loader import load_yaml
-from core.buy_mode.script_engine.engine import ScriptState, _ask_again, _limit, ask_again
-from core.buy_mode.script_engine.method import load_common_sense, load_method, load_offer
+import pytest
+
+from core.buy_mode.script_engine.engine import (
+    ScriptState,
+    _ask_again,
+    _limit,
+    ask_again,
+)
+from core.buy_mode.script_engine.method import (
+    load_common_sense,
+    load_method,
+    load_offer,
+)
 from core.buy_mode.script_engine.seller import ScriptSeller
+from core.infra.loader import load_yaml
 
 CFG = load_yaml("script/engine.yaml")
 CAT = load_method("cat")
@@ -133,7 +143,7 @@ def test_the_same_message_twice_in_a_row_moves_on(fake_embedder):
     s = seller(fake_embedder, "belief_origin")
     s.reset(ScriptState(step="belief_origin", spoken=tuple(CAT.reask) * CFG["lead_repeats"]))  # leads worn out
     texts = [s.reply("ok")[0] for _ in range(6)]
-    assert all(a != b for a, b in zip(texts, texts[1:])), texts
+    assert all(a != b for a, b in pairwise(texts)), texts
 
 
 def test_a_shrug_moves_on_where_the_next_line_answers_the_question():

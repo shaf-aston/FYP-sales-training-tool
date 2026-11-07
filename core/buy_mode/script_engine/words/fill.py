@@ -3,6 +3,7 @@
 import logging
 import re
 from difflib import get_close_matches
+from itertools import pairwise
 
 from core.buy_mode.script_engine.words.tone import PAUSE
 from core.infra.utils import tokenize
@@ -96,7 +97,7 @@ def number_phrase(reply, rule, cfg):
     units = rule.get("units") or cfg["number_blanks"][rule["from"]]["units"]
     per = rule.get("per")
     lower = [w.lower() for w in WORD.findall(reply or "") if w.lower() not in cfg["number_skip"]]
-    for before, word in zip(lower, lower[1:]):
+    for before, word in pairwise(lower):
         count = int(before) if before.isdigit() else cfg["number_words"].get(before)
         if count is not None and word in (per or units):
             if per:
