@@ -599,6 +599,11 @@ def test_whats_next_asks_no_ai(fake_embedder):
     ("I want more money. Mostly for my kids.", "more money"),   # round 16: said back as "more money. Mostly for your kids"
     ("Yes. more money", "more money"),                     # a filler sentence first: the one that says something
     ("quit my job but I'm scared", "quit your job"),       # round 16: the worry was said back too
+    ("quit my job But I'm scared", "quit your job"),       # any case
+    ("for sure, more money", "more money"),                # round 18: said back as "sure more money"
+    ("totally, quit my job", "quit your job"),             # a filler word first is dropped too
+    ("so i can travel", "travel"),                         # the longest lead-in, not "so"
+    ("IDK MAYBE 2K A MONTH EXTRA", "2k a month extra"),     # round 18: said back as "maybe 2k a month extra"
     ("", None),
 ])
 def test_echo_phrase(reply, phrase):

@@ -950,6 +950,32 @@ def test_an_answer_with_a_worry_beside_it_keeps_the_answer(seller):
     assert text.startswith("That's fair") and text.endswith("What do you mean by wanting to make money online?"), text
 
 
+def test_an_answer_beside_a_worry_keeps_a_later_answer_too(seller):
+    """"I want to make 5k a month, but...": the 5k is kept for "how much?", as without the worry."""
+    at(seller, "01").reply("I want to make 5k a month, but I'm scared it won't work for me")
+    assert seller.last_turn["heard_as"].endswith("+objection:fear"), seller.last_turn
+    assert seller.state.slots == {"number": "5k a month"}, seller.state.slots
+
+
+def test_a_worry_beside_an_interruption_is_only_the_worry(seller, monkeypatch):
+    """"brb, but I'm scared it won't work" is the worry: "brb" is never kept as the answer. Each part is heard
+    as said before the price, as a statement, and the rest without its "but"."""
+    heard = []
+
+    def interrupt(text, step, state, opened, asking, answers=True):
+        heard.append((text, opened, asking))
+        return {"brb": ("sense", "pause"), "I hate my job": (None, "")}.get(text, ("objection", "fear"))
+
+    monkeypatch.setattr(seller._ear, "_interrupt", interrupt)
+    ear, state = seller._ear, ScriptState(step="04")
+    step = ear.method.steps["04"]
+    assert ear._beside_worry("brb, but I'm scared it won't work", step, state, "fear") is None
+    v = ear._beside_worry("I hate my job, but I'm scared, it won't work", step, state, "fear")
+    assert (v.kind, v.text, v.side) == ("answer", "I hate my job", "objection:fear"), v
+    assert ("I'm scared, it won't work", False, False) in heard, heard
+    assert all(h[1:] == (False, False) for h in heard), heard
+
+
 def test_a_plain_no_is_never_an_interruption(seller, monkeypatch):
     """Round 17: "nah" (0.76 to "huh") got "Fair point, let me put it another way"; it is a no, an answer."""
     monkeypatch.setattr(seller._ear, "_interrupt", lambda *a, **k: ("sense", "clarify"))
@@ -961,6 +987,9 @@ def test_a_plain_no_is_never_an_interruption(seller, monkeypatch):
     ("03", {"number": "2k"}, "sorry I meant 3k not 2k", {"number": "3k"}),   # round 17: saved as how long
     ("04", {"years": "a year"}, "make that 18 months", {"years": "18 months"}),
     ("goal_practical", {"outcome": "more money"}, "I meant freedom, not money", {"outcome": "freedom"}),
+    ("03", {"number": "2k"}, "sorry I meant 3k.", {"number": "3k"}),   # the stop is not kept
+    ("03", {"number": "2k"}, "sorry I meant 3k NOT 2k", {"number": "3k"}),   # any case
+    ("04", {"years": "a year"}, "make that 18 MONTHS", {"years": "18 MONTHS"}),
 ])
 def test_an_answer_fixed_a_turn_later_replaces_it(seller, step, slots, said, kept):
     text, _ = at(seller, step, **slots).reply(said)
@@ -978,3 +1007,9 @@ def test_only_a_real_fix_replaces_an_answer(seller, step, slots, said):
     assert seller.last_turn["heard_as"] != "corrects:" + next(iter(slots), ""), seller.last_turn
     for k, v in slots.items():
         assert seller.state.slots[k] == v
+
+
+def test_a_fix_on_the_step_still_asked_is_its_answer(seller):
+    """On the step that saved it, "I meant 3k" is that step's answer again, not a fix of an earlier one."""
+    assert seller._ear._correction("sorry I meant 3k", ScriptState(step="02", slots={"number": "2k"})) is None
+    assert seller._ear._correction("sorry I meant 3k", ScriptState(step="03", slots={"number": "2k"})).text == "3k"

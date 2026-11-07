@@ -121,6 +121,8 @@ interruptions:
       - "what's your name"        # draft: whole calls, heard as "what do you do"
       - "can I speak to your manager"   # draft: whole calls, got "I'll find out"
       - "can I talk to someone else"    # draft
+      - "are you reading from a script"   # draft: whole calls, got "I'll find out"
+      - "is this a sales call"   # draft: same
     reply: "I'm an AI playing the salesperson so you can practise."   # never deny being an AI; no "Yes": "who am I talking to?" isn't a yes-or-no
   clarify:
     draft: true
@@ -151,6 +153,20 @@ interruptions:
       - "you've got me wrong"
       - "you misunderstood me"
     reply: "Sorry, I got that wrong."
+  private:   # whole calls: "I'd rather not say" got "Sorry, I got that wrong."
+    draft: true
+    after: rephrase_else_move_on   # asked once more, gently, in other words; then the call moves on
+    min_score: 0.8   # draft: "I'm not really interested to be honest" (0.77) is a polite no, not "private"
+    examples:
+      - "I'd rather not say"
+      - "I don't want to say"
+      - "that's private"
+      - "that's personal"
+      - "none of your business"
+      - "I'd prefer not to answer that"
+      - "I'd rather keep that to myself"   # draft: 0.73 without it
+      - "I'm not telling you"   # draft: heard as "that's not what I said"
+    reply: "That's fine, no pressure."
   why_ask:   # whole calls: "why do you ask?" got "I don't know that one offhand, I'll find out"
     with_answer: true   # "3 years, why do you ask?": the 3 years is kept, the reason goes first
     only_asked: true   # "that's important to me" (0.86 to "why is that important") is an answer

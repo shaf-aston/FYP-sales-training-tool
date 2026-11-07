@@ -633,6 +633,20 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("willing", 0, (), "nah", "11", None),   # guard: still a no
     ("02", 0, (), "can I speak to your manager?", "02", "I'm an AI playing the salesperson"),   # was the fallback
     ("02", 0, (), "can I talk to someone else?", "02", "I'm an AI playing the salesperson"),
+    # round 18
+    ("22", 0, (), "can I pay next week?", "22", "There are ways to make the investment work"),   # was the fallback
+    ("19", 0, (), "can I pay later?", "19", "There are ways to make the investment work"),
+    ("22", 0, (), "can I pay on friday?", "22", "There are ways to make the investment work"),
+    ("01", 0, (), "are you reading from a script?", "01", "I'm an AI playing the salesperson"),   # was the fallback
+    ("goal_practical", 0, (), "is this a sales call?", "goal_practical", "I'm an AI playing the salesperson"),
+    ("01", 0, (), "I'd rather not say", "01", "That's fine, no pressure."),   # was "Sorry, I got that wrong."
+    ("04", 0, (), "none of your business", "04", "That's fine, no pressure."),   # was saved as their reason
+    ("02", 0, (), "that's private", "02", "That's fine, no pressure."),
+    ("04", 0, (), "I don't want to keep living like this", "05", None),   # guard: a real answer
+    ("01", 0, (), "I'd rather be my own boss", "goal_practical", None),   # guard
+    ("01", 0, (), "I'm not really interested to be honest", "01", "What are you actually hoping to achieve?"),   # not "private": "That's fine, no pressure."
+    ("02", 0, (), "I'd rather keep that to myself", "02", "That's fine, no pressure."),   # was 0.73
+    ("02", 0, (), "I'm not telling you", "02", "That's fine, no pressure."),   # was "Sorry, I got that wrong."
 ]
 
 

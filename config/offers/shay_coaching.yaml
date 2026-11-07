@@ -60,6 +60,7 @@ facts:
       - "can I pay monthly"
       - "is there a deposit"   # draft: whole calls, got "I'll find out"
       - "do you take klarna"   # draft: same
+      - "can I wait until next week to pay"   # draft: whole calls, "can I pay next week?" got "I'll find out" (not "can I pay next week": "do I have to pay today?" was then torn)
     answer: "There are ways to make the investment work, and we'll find the one that suits you."
   discount:   # whole calls: "can you do it for 3k?" got "I'll find out and let you know"
     draft: true

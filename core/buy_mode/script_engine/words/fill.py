@@ -86,11 +86,11 @@ def echo_phrase(reply, cfg, vocab=frozenset(), verbs=False):
     if reply and reply.isupper() and len(tokenize(reply)) > 1:
         reply = reply.lower()  # shouted ("I WANT TO BE RICH!!!"): never said back in capitals ("BE RICH?")
     words = WORD.findall(reply or "")
-    drops = [tokenize(d) for d in cfg["echo_drop_starts"]]
+    drops = [tokenize(d) for d in [*cfg["echo_drop_starts"], *cfg["filler_words"]]]  # "for sure, more money"
     cut = True
     while cut:
         lower = [w.lower() for w in words]
-        cut = next((len(d) for d in drops if lower[:len(d)] == d), 0)
+        cut = max((len(d) for d in drops if lower[:len(d)] == d), default=0)  # the longest: "so i can", not "so"
         words = words[cut:]
     for end in (tokenize(e) for e in cfg["echo_drop_ends"]):
         if [w.lower() for w in words[-len(end):]] == end:
