@@ -143,3 +143,13 @@ def test_an_early_answer_beside_a_side_question_is_kept(ear):
 ])
 def test_a_short_reply_with_a_rise_is_the_answer_when_it_has_the_steps_shape(ear, step, text, kind):
     assert ear.hear(text, ScriptState(step=step), opened=False).kind == kind
+
+
+@pytest.mark.parametrize("unsure, heard_as", [(0.9, "objection:think"), (1.0, "answer")])
+def test_a_hedge_is_the_worry_only_when_it_is_nearer_the_worry(ear, monkeypatch, unsure, heard_as):
+    """Round 14: "let me think about it" (1.0 to the think-it-over worry, 0.96 to "let me think") at the close
+    was heard as a shrug. A hedge just as near not knowing as the worry stays a hedge."""
+    monkeypatch.setattr(ear._shrugs, "unsure", lambda text: unsure)
+    v = ear.hear("let me think about it", ScriptState(step="19"), opened=True)
+    assert v.heard_as.startswith(heard_as), v.heard_as
+
