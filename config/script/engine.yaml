@@ -41,7 +41,8 @@ no_words: ["no", nah, nope, naw, nay]   # draft: a reply made only of these (and
 filler_tags: ["you get me", "you know", "you know what i mean", "innit", "right", "yeah", "ya know", "get me", "you feel me"]   # "...bro, you get me?" is talk, not a question
 asked_back: {i: you, me: you, my: your, myself: yourself, mine: yours, "i'm": "you're", am: are}   # draft: the question said back about themselves is "what do you mean?" (whole calls: "what do I want to achieve?" got the AI line, "why can't I ignore it?" got "I'll find out")
 asked_back_you: [you, your, yours, yourself, "you're", u, ur]   # draft: their own "you" asks about us ("what do you do?" has every word of "What do you want...?")
-asked_back_what: [what, huh, eh]   # draft: not counted as their words (whole calls: "how long what?" to "How long have you been thinking about this?" moved on without an answer)
+asked_back_what: [what, huh, eh, pardon]   # draft: not counted as their words (whole calls: "how long what?" to "How long have you been thinking about this?" moved on without an answer)
+what_alone_with: [sorry, wait, um, uh]   # draft: a reply of only these and asked_back_what words is "what do you mean?" (whole calls: "what?" was torn between "say that again" and "why do you ask", and got "I'll find out")
 asked_back_share: 0.75   # draft: "what would it get me?" (4 of 5 words in "What are you hoping that would get you?") is; "how do I pay?" (2 of 4) is not
 asked_back_min_words: 2   # draft: "what would it change?" needs no I-word (whole calls: it got "I'll find out"); "why?" alone is too short to tell
 question_words: [what, who, where, when, why, which, how]   # a question word then a helper verb opens a question: "how do I know", "who are you"
@@ -60,6 +61,7 @@ spell_cutoff: 0.85     # how close a typo must be to a known word to be fixed be
 spell_min_letters: 5   # shorter words are left alone: too easy to "fix" into the wrong word
 spell_swap_min_letters: 3   # draft: two letters the wrong way round is a typo even in a short word (whole calls: "mroe money" was said back, "yse" was not a yes)
 spell_word_endings: [s, es, ed, d, ing, er, ers, ly]   # a known word plus one of these is a real word, never "fixed"
+short_replies: {y: "yes", n: "no", yh: "yeah", ys: "yes", nop: "nope"}   # draft: a reply of only one of these is its word (whole calls: "y" to "Do you see yourself jumping in?" was not a yes)
 spell_words: [freedom, financial, family, retire, retirement, independence, business, boss, travel, wealth, security, money, income, kids, children, house, mortgage, debt, career, passive, year]   # draft: year (whole calls: "a yaer" was not a time). Extra words typos are fixed to, beside every word in the script's examples
 spell_real_words: "script/real_words.txt"   # draft: real English words, never "fixed" as typos (whole calls: "just not drown in debt" was saved as "down in debt")
 number_words: {a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, eighteen: 18, fifteen: 15, twenty: 20, couple: 2}   # a number said in words: "a year", "two years", "a couple of years"

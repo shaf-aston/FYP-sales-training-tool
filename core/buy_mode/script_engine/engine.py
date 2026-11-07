@@ -89,7 +89,8 @@ def advance(method, state, label, reply="", empty=False, line="", misses=1):
 def _take(method, state, route):
     move = _speak(method, replace(state, step=route.then))
     said = route.say if route.say and move.state.step == route.then else move.say  # never on a step walked past to
-    return replace(move, ack=route.ack, say=said)
+    turned = move.state.step == method.follow_up != route.then  # round in circles: the follow-up's own "No problem."
+    return replace(move, ack="" if turned else route.ack, say=said)  # answers them, never after "No pressure at all."
 
 
 def ask_again(method, state, stay=True, misses=0):
@@ -130,8 +131,10 @@ def _ask_again(method, state, step, ack="", line="", misses=0, lead=True, stay=F
     lead (each once, then none), so no line is said twice in a row. Asked `_limit` times, then `stuck`;
     `stay` (they asked what it meant) gets one more go, then moves on too: by `stuck`, else past the step
     without its answer. A step that asks nothing (a closing line, a statement) is said again plain: "no rush"
-    in front of it answers a question nobody asked."""
-    if _budget(state) >= _limit(step, misses) + (1 if stay else 0):
+    in front of it answers a question nobody asked; and only once, `stay` or not: a talk line has no question
+    left unanswered, and a third time word for word reads as a recording."""
+    asks = bool(step.probes) or "?" in step.say
+    if _budget(state) >= _limit(step, misses) + (1 if stay and asks else 0):
         if step.stuck:
             return _take(method, state, step.stuck)
         if stay:
@@ -147,7 +150,7 @@ def _ask_again(method, state, step, ack="", line="", misses=0, lead=True, stay=F
         said = _rewording(step, used)
         turn = used - len(step.probes)  # each lead once a step: a third "No rush" sounds like a loop
         leads = step.reask or method.reask
-        if lead and turn < len(leads) and not ack and (step.probes or "?" in step.say):
+        if lead and turn < len(leads) and not ack and asks:
             ack = leads[turn]
     state = replace(state, asks=state.asks + 1, asked=line, said=state.said + (line,) if line else state.said)
     return Move(said, state, step.ui_stage, ack=ack, theirs=bool(line))

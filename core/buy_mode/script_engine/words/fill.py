@@ -61,7 +61,11 @@ def spell(word, vocab, cfg):
 
 def fix_typos(text, vocab, cfg):
     """The reply with plain typos fixed before it is understood ("monthy income" -> "monthly income");
-    punctuation and every other word kept as typed."""
+    punctuation and every other word kept as typed. A reply of one short form alone (`short_replies`: "y")
+    is its word ("yes"): inside a reply, "y" is more often a year ("2 y")."""
+    word = (text or "").strip().rstrip("?!.").lower()
+    if word in cfg["short_replies"]:
+        return cfg["short_replies"][word] + (text or "").strip()[len(word):]
     return WORD.sub(lambda m: spell(m.group(0), vocab, cfg), text or "")
 
 

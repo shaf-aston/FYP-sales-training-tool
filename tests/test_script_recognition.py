@@ -524,7 +524,7 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("03", 0, (), "a long time", "04", "If this has been on your mind"),   # a long time is not recent
     ("03", 0, (), "ages", "04", "If this has been on your mind"),
     ("03", 0, (), "why would I tell you that?", "03", "It helps me see"),   # was "I'll find out"
-    ("05", 0, (), "sorry, where were we?", "05", "Of course, let me ask that again."),   # was "sorry" taken as the answer
+    ("05", 0, (), "sorry, where were we?", "05", "Of course, let me say that again."),   # was "sorry" taken as the answer
     ("01", 0, (), "a bit of extra income", "goal_practical", None),   # was no goal, asked again
     ("01", 0, (), "sorry, my kid is yelling", "01", "No problem, take your time."),   # "sorry," is no correction here
     ("goal_identity", 0, (), "can you do it for 3k?", "goal_identity", "Let's see if it's even right for you first"),   # was "I'll find out"
@@ -680,6 +680,12 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("04", 0, (), "my loan isn't enough", "05", None),   # was "I haven't mentioned a price yet"
     ("04", 0, (), "is this a scam?", "04", "Fair question"),   # guard: a worry asked is still the worry
     ("m_open_wallet", 0, (), "can we do option 2?", "22", None),   # was "Sure, let me ask that again" (the talk is not the question)
+    # round 21
+    ("03", 0, (), "what?", "03", "Fair point, let me put it another way."),   # was "I'll find out"
+    ("goal_identity", 0, (), "sorry what?", "goal_identity", "Fair point, let me put it another way."),
+    ("19", 0, (), "y", "20", None),   # was not a yes
+    ("05", 0, (), "y", "05", "No rush"),   # "y" to an open question says nothing: never saved as their reason
+    ("19", 0, (), "can I get it cheaper?", "19", "The price is"),   # was "I'll find out"
 ]
 
 

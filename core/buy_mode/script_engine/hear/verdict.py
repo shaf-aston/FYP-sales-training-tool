@@ -62,7 +62,7 @@ class Ear:
         if fixed:
             return fixed
         asking = bool(reply.asked)
-        if asking and not reply.said and self._asked_back(text, state):
+        if self._what_alone(text) or (asking and not reply.said and self._asked_back(text, state)):
             return Verdict("sense", "clarify", text, asking)
         if asking and reply.said:
             both = self._with_side(reply, step, state, opened)
@@ -84,6 +84,12 @@ class Ear:
         if asking and not self._answers(text, step):
             return Verdict("question", text=text, asking=asking, ahead=ahead)
         return Verdict("answer", text=text, asking=asking, ahead=ahead)
+
+    def _what_alone(self, text):
+        """A reply of only "what?" (`asked_back_what`, maybe with `what_alone_with`: "sorry, what?") wants the
+        question put another way: it is near "say that again" and "why do you ask" alike, so no score settles it."""
+        words = set(tokenize(text))
+        return bool(words & set(self.cfg["asked_back_what"])) and words <= {*self.cfg["asked_back_what"], *self.cfg["what_alone_with"]}
 
     def _asked_back(self, text, state):
         """Their reply is the question just asked, said back about themselves ("what do I want to achieve?" to

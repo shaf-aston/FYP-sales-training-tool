@@ -440,3 +440,13 @@ def test_a_sense_asked_again_straight_after_gets_the_reminder_not_the_same_line(
     first, _ = s.reply(ask)
     second, _ = s.reply(ask)
     assert s.sense.interruptions[name].reply in first and second.startswith(s.sense.told_again), (first, second)
+
+
+def test_a_route_turned_to_the_follow_up_is_not_acknowledged_twice():
+    """Round 21: "no wait, I'm not sure" at payment, with the soft close landed twice, got "No pressure at
+    all. No problem. Let's book a follow-up call...": the follow-up's own "No problem." answers them."""
+    from core.buy_mode.script_engine.engine import advance
+    move = advance(CAT, ScriptState(step="22", seen=("19",) * CAT.max_visits), "backs_out", "no wait")
+    assert move.state.step == CAT.follow_up and move.ack == ""
+    move = advance(CAT, ScriptState(step="22", seen=("19",)), "backs_out", "no wait")   # guard: not turned
+    assert move.state.step == "19" and move.ack == "No pressure at all."

@@ -70,6 +70,7 @@ facts:
       - "what's the best price you can do"
       - "can you knock some off"
       - "any deals on"
+      - "can I get it cheaper"   # draft: whole calls, it was torn between the discount, the price and the money worry, and got "I'll find out"
     answer: "Let's see if it's even right for you first, then we'll talk about making the numbers work."
     late_answer: "The price is {price}, but there are ways to make it work, like splitting it into payments."   # draft
     late_again: "Like I said, it's {price}, and there are ways to make it work."   # draft

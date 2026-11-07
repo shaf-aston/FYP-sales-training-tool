@@ -1175,3 +1175,13 @@ def test_a_yes_or_no_question_asked_again_never_asks_for_a_rough_idea(fake_embed
     s = seller(fake_embedder, step="m_close2")   # live: "No rush, even a rough idea helps. Do you see yourself jumping in?"
     reply, _ = s.reply("banana")
     assert reply.startswith("No pressure either way.") and s.state.step == "m_close2"
+
+
+@pytest.mark.parametrize("text, fixed", [
+    ("y", "yes"), ("Y?", "yes?"), ("n", "no"), ("yh", "yeah"),
+    ("2 y", "2 y"), ("y not", "y not"),   # inside a reply "y" is kept: it is more often a year ("2 y")
+])
+def test_a_one_letter_reply_is_its_word(text, fixed):
+    """Round 21: "y" to "Do you see yourself jumping in?" was not a yes."""
+    from core.buy_mode.script_engine.words.fill import fix_typos
+    assert fix_typos(text, {"yes", "year"}, CFG) == fixed

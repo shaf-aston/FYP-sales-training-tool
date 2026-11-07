@@ -1043,3 +1043,15 @@ def test_the_question_said_back_asks_it_another_way(seller, step, said):
 ])
 def test_a_question_of_their_own_is_not_the_question_said_back(seller, step, said):
     assert not seller._ear._asked_back(said, ScriptState(step=step))
+
+
+@pytest.mark.parametrize("said", ["what?", "what", "eh?", "sorry, what?", "pardon?", "wait what?"])
+def test_what_alone_wants_the_question_put_another_way(seller, said):
+    """Round 21: "what?" was torn between "say that again" and "why do you ask", and got "I'll find out"."""
+    v = at(seller, "03")._ear.hear(said, seller.state, False)
+    assert (v.kind, v.name) == ("sense", "clarify"), v
+
+
+@pytest.mark.parametrize("said", ["what do most people make?", "sorry", "what's next?", "what about you?"])
+def test_a_question_with_what_in_it_is_not_what_alone(seller, said):
+    assert not seller._ear._what_alone(said)
