@@ -663,6 +663,8 @@ def test_money_trouble_is_the_price_worry_only_once_the_price_is_out(fake_embedd
     s = seller(fake_embedder, step="01")
     s.reply("money is tight for me at the moment")
     assert s.last_turn["heard_as"].startswith("answer")
+    s._ear._judge = lambda text, options: next(iter(options))   # an AI that always says "objection"
+    assert s._ear._judged_objection("money is tight for me at the moment", CAT.steps["01"], {"money": money}) is None
 
 
 @pytest.mark.parametrize("text", ["just not drown in debt", "my shop might crash", "get on a plane"])
