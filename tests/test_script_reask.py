@@ -1,8 +1,8 @@
 """The `reask` lead ("No rush, even a rough idea helps.") only goes in front of a question asked again,
 never twice, and a saved call carries on after a JSON round trip."""
 import json
-from itertools import pairwise
 from dataclasses import replace
+from itertools import pairwise
 
 import pytest
 
@@ -251,3 +251,19 @@ def test_a_yes_or_no_question_asked_again_gets_a_yes_or_no_lead(fake_embedder):
     fair = Move("Would that work for you?", ScriptState(step="m_funding_options"), "", ack="Fair enough.")
     assert s._closed_lead(fair).ack == "Fair enough."   # a route's own ack is never swapped
     assert set(sense.yes_no_reask) <= set(s._leads)   # worn out like any lead
+
+
+def test_brb_twice_is_never_the_same_words_twice(fake_embedder):
+    """Live (whole calls): "brb" three times got "No problem, take your time." three times."""
+    s = seller(fake_embedder, "03")
+    said = [s.reply("brb")[0] for _ in range(3)]
+    assert said[1] == s.sense.wait_again and all(a != b for a, b in pairwise(said)), said
+    assert s.state.waiting and s.state.step == "03"
+
+
+def test_a_yes_to_keep_settling_is_checked_and_a_no_goes_on():
+    """"yes definitely" to "Are you willing to keep settling?" is most likely "willing to change": checked."""
+    from core.buy_mode.script_engine.engine import advance
+    assert advance(CAT, ScriptState(step="willing"), "yes").state.step == "willing_check"
+    assert advance(CAT, ScriptState(step="willing"), "no").state.step == "11"
+    assert advance(CAT, ScriptState(step="willing_check"), None, "ready for a change").state.step == "11"

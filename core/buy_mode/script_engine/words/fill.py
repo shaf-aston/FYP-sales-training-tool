@@ -3,7 +3,6 @@
 import logging
 import re
 from difflib import get_close_matches
-from itertools import pairwise
 
 from core.buy_mode.script_engine.words.tone import PAUSE
 from core.infra.utils import tokenize
@@ -91,20 +90,36 @@ def echo_phrase(reply, cfg, vocab=frozenset(), verbs=False):
 
 def number_phrase(reply, rule, cfg):
     """The number before the blank's unit, as digits, by rule: "about 5 years now" -> "5", "a year" -> "1".
-    None when no number sits right before the unit ("ages", "6 months" for a years blank).
-    With `per`, the number is converted: "2 years" -> "24" for a months blank. With `unit` ([one, many]),
-    the unit is said after it: "1 year", "2 years". A rule with `from` and no `units` takes that rule's units."""
+    None when no number sits right before the unit ("ages", "6 months" for a years blank). "and a half"
+    (`number_half`) before or after the unit adds a half; a singular unit on its own opens a reply as one
+    ("year and a half"). With `per`, the number is converted: "2 years" -> "24" for a months blank. With
+    `unit` ([one, many]), the unit is said after it: "1 year", "2 years", "a year and a half". A rule with
+    `from` and no `units` takes that rule's units."""
     units = rule.get("units") or cfg["number_blanks"][rule["from"]]["units"]
-    per = rule.get("per")
+    per, unit, half = rule.get("per"), rule.get("unit"), tokenize(cfg["number_half"])
     lower = [w.lower() for w in WORD.findall(reply or "") if w.lower() not in cfg["number_skip"]]
-    for before, word in pairwise(lower):
-        count = int(before) if before.isdigit() else cfg["number_words"].get(before)
-        if count is not None and word in (per or units):
-            if per:
-                return str(count * per[word])
-            unit = rule.get("unit")
-            return f"{count} {unit[count != 1]}" if unit else str(count)
+    for i, word in enumerate(lower):
+        if word not in (per or units):
+            continue
+        halved = lower[i + 1:i + 1 + len(half)] == half or (i > len(half) and lower[i - len(half):i] == half)
+        at = i - 1 - (len(half) if halved and lower[i - len(half):i] == half else 0)
+        count = _count(lower[at], cfg) if at >= 0 else (1 if not word.endswith("s") else None)
+        if count is None:
+            continue
+        value = count + (0.5 if halved else 0)
+        if per:
+            return f"{value * per[word]:g}"
+        if not unit:
+            return f"{value:g}"
+        if halved:
+            return f"a {unit[0]} and a half" if count == 1 else f"{count} and a half {unit[1]}"
+        return f"{count} {unit[count != 1]}"
     return None
+
+
+def _count(word, cfg):
+    """A number said in digits or words ("3", "three", "a"), else None."""
+    return int(word) if word.isdigit() else cfg["number_words"].get(word)
 
 
 def is_verb_goal(phrase, cfg):

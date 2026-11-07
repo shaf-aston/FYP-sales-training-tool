@@ -30,6 +30,17 @@ meanings:
     lines:
       - "So it's really about ==being there== for them."
       - "Time with them is the thing you can't get back."
+  role_model:   # live: "I want to be someone my kids look up to" got family_time's "being there"
+    draft: true
+    examples:
+      - "I want my kids to be proud of me"
+      - "I want to set a good example for my kids"
+      - "I want to be a role model for my children"
+      - "I want my children to look up to me"
+      - "I want to show my kids what's possible"
+    lines:
+      - "So it's about the ==example== you set for them."
+      - "Kids copy what they see, not what they're told."
   bills_pressure:
     draft: true
     examples:

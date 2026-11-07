@@ -301,8 +301,9 @@ class ScriptSeller:
     def _sense(self, said):
         """An everyday interruption: its reply, then what its `after` says."""
         if said.after == "wait":
-            self.state = replace(self.state, waiting=True)
-            return said.reply, self.ui_stage()
+            self.state = replace(self.state, waiting=True)  # "brb" twice: never the same words twice in a row
+            again = said.reply == self.state.last and self.sense.wait_again
+            return (self.sense.wait_again if again else said.reply), self.ui_stage()
         if said.after == "follow_up":  # "bye": book the follow-up, never carry on as if they stayed
             text, stage = self._go(jump(self.method, self.state, self.method.follow_up))
             return f"{said.reply} {text}".strip(), stage

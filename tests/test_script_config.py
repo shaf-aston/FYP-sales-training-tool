@@ -1,8 +1,8 @@
 """engine.yaml fails loudly when a seller is built, naming the key, not mid-call."""
 import pytest
 
-from core.infra.loader import load_yaml
 from core.buy_mode.script_engine.config import check, problems
+from core.infra.loader import load_yaml
 
 CFG = load_yaml("script/engine.yaml")
 
@@ -38,7 +38,11 @@ def test_check_lists_every_problem_at_once():
 
 
 def test_a_seller_will_not_build_on_a_broken_config(fake_embedder):
-    from core.buy_mode.script_engine.method import load_common_sense, load_method, load_offer
+    from core.buy_mode.script_engine.method import (
+        load_common_sense,
+        load_method,
+        load_offer,
+    )
     from core.buy_mode.script_engine.seller import ScriptSeller
 
     cfg = load_yaml("script/engine.yaml")
@@ -65,3 +69,13 @@ def test_an_unclear_sense_without_min_score_is_named_not_a_key_error():
     data = {**data, "unclear": {k: v for k, v in data["unclear"].items() if k != "min_score"}}
     with pytest.raises(ValueError, match="unclear: min_score"):
         parse_common_sense(data)
+
+
+@pytest.mark.parametrize("key, value", [("wait_again", "Still there?"), ("yes_no_reask", ["Yes or no?"])])
+def test_lines_said_before_a_question_never_ask(key, value):
+    """The step's question follows them: a "?" in front would be two questions in one message."""
+    from core.buy_mode.script_engine.method import parse_common_sense
+    data = {"park": "", "revisit": "", "interruptions": {}, key: value}
+    with pytest.raises(ValueError, match="must not ask"):
+        parse_common_sense(data)
+    assert parse_common_sense({**data, key: "Sure." if key == "wait_again" else ["Sure."]})

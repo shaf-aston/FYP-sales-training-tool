@@ -52,6 +52,7 @@ spell_min_letters: 5   # shorter words are left alone: too easy to "fix" into th
 spell_word_endings: [s, es, ed, d, ing, er, ers, ly]   # a known word plus one of these is a real word, never "fixed"
 spell_words: [freedom, financial, family, retire, retirement, independence, business, boss, travel, wealth, security, money, income, kids, children, house, mortgage, debt, career, passive]   # extra words typos are fixed to, beside every word in the script's examples
 number_words: {a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, eighteen: 18, fifteen: 15, twenty: 20, couple: 2}   # a number said in words: "a year", "two years", "a couple of years"
+number_half: "and a half"   # draft: after the unit ("a year and a half") or before it ("2 and a half years"), half is added
 number_skip: [of]   # dropped before a number is read, so "a couple of years" reads "a couple years"
 number_blanks:   # blanks filled with the number they said before a unit, as digits: "about 5 years" -> {years} = 5
   years:

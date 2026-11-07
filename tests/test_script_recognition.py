@@ -8,10 +8,14 @@ from pathlib import Path
 import pytest
 import yaml
 
-from core.infra.loader import load_yaml
 from core.buy_mode.script_engine.hear.embedder import make_embedder
-from core.buy_mode.script_engine.method import load_common_sense, load_method, load_offer
 from core.buy_mode.script_engine.hear.recognise import Listener
+from core.buy_mode.script_engine.method import (
+    load_common_sense,
+    load_method,
+    load_offer,
+)
+from core.infra.loader import load_yaml
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("RUN_EMBED_TESTS") != "1", reason="set RUN_EMBED_TESTS=1 (downloads a model)"
@@ -481,6 +485,10 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("m_funding_options", 0, ("money",), "probably", "22", None),
     ("m_reframe1_dictate", 0, ("research",), "not sure", "m_reframe2", None),   # was "Why not?"
     ("16", 0, (), "I don't know", "17", None),   # was heard as the scam worry (0.74 to "I don't trust this")
+    ("willing", 0, (), "yes definitely", "willing_check", "Just so I'm clear"),   # was "What makes you so different" with no reaction
+    ("willing", 0, (), "hell no I'm done settling", "11", None),
+    ("willing", 0, (), "yeah I'm willing to change", "11", None),   # a no said as wanting change
+    ("willing", 0, (), "no", "11", None),
 ]
 
 

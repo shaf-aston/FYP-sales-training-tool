@@ -290,6 +290,20 @@ steps:
     ui_stage: emotional
     say: "Are you willing to keep settling for being average? Nothing wrong with that, I'm not here to judge"
     listen:
+      "yes":   # draft: "yes definitely" to "keep settling?" is most likely a misread ("willing to change"): checked, never taken as settling
+        like: "yes"
+        then: "willing_check"
+      "no":
+        like: "no"
+        examples: ["I'm done settling", "I'm willing to change", "no I want to change", "I'm ready for a change"]   # draft: a no said as wanting change
+        then: "11"
+      any: {then: "11"}
+  "willing_check":
+    name: "Willingness check"
+    ui_stage: emotional
+    draft: true
+    say: "Just so I'm clear: happy to keep things as they are, or ready for a change?"   # draft: ours
+    listen:
       any: {then: "11"}
   "11":
     name: "Why not?"

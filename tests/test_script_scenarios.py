@@ -6,8 +6,13 @@ from itertools import pairwise
 
 import pytest
 
-from core.infra.loader import load_yaml
-from core.buy_mode.script_engine.engine import ScriptState, asked_line, hear_ahead, jump, move_on
+from core.buy_mode.script_engine.engine import (
+    ScriptState,
+    asked_line,
+    hear_ahead,
+    jump,
+    move_on,
+)
 from core.buy_mode.script_engine.method import (
     load_common_sense,
     load_method,
@@ -15,6 +20,7 @@ from core.buy_mode.script_engine.method import (
     parse_method,
 )
 from core.buy_mode.script_engine.seller import ScriptSeller
+from core.infra.loader import load_yaml
 
 CFG = load_yaml("script/engine.yaml")
 CAT = load_method("cat")
@@ -682,6 +688,9 @@ def test_loader_rejects_echo_without_a_capture():
     ("a year", "1"),
     ("about a year now", "1"),
     ("a couple of years", "2"),
+    ("a year and a half", "1.5"),
+    ("year and a half", "1.5"),   # a unit on its own is one (live: the line was dropped)
+    ("years ago", None),          # but never a plural one
     ("6 months", None),      # wrong unit, the years line is dropped
     ("ages", None),
     ("", None),
@@ -691,10 +700,18 @@ def test_number_phrase(reply, number):
     assert number_phrase(reply, CFG["number_blanks"]["years"], CFG) == number
 
 
-@pytest.mark.parametrize("reply, months", [("a year", "12"), ("a couple of years", "24"), ("six months", "6"), ("a month", "1"), ("ages", None)])
+@pytest.mark.parametrize("reply, months", [("a year", "12"), ("a couple of years", "24"), ("six months", "6"), ("a month", "1"), ("ages", None),
+    ("a year and a half", "18"), ("year and a half", "18"), ("2 and a half years", "30"), ("about 2 years and a half", "30")])
 def test_months_thinking_counts_the_answer_in_months(reply, months):
     from core.buy_mode.script_engine.words.fill import number_phrase
     assert number_phrase(reply, CFG["number_blanks"]["months_thinking"], CFG) == months
+
+
+@pytest.mark.parametrize("reply, said", [("a year", "1 year"), ("3 years", "3 years"), ("a year and a half", "a year and a half"),
+                                          ("year and a half", "a year and a half"), ("2 years and a half", "2 and a half years")])
+def test_years_said_reads_like_they_said_it(reply, said):
+    from core.buy_mode.script_engine.words.fill import number_phrase
+    assert number_phrase(reply, CFG["number_blanks"]["years_said"], CFG) == said
 
 
 def test_years_line_fills_from_their_answer():
