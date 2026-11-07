@@ -28,7 +28,7 @@ class Route:
     min_score: float = 0.0  # a match must score at least this to take the route; under it, the reply is heard as unmatched
     like: str = ""      # the shared answer (answers.yaml) it takes examples from: what kind of answer it is ("no")
     say: str = ""       # said in place of the next step's own line, which this answer would make untrue ("not long" ->
-                        # not "so many nights, months and years")
+                        # not "so many nights, months and years"); on a route back to its own step, the line asked again
     restates: bool = False  # the answer only says the question back ("I want to make money online"): a reply that
                             # opens with it and goes on is heard by the rest ("..., so I can quit my job")
 
@@ -189,8 +189,8 @@ def _route(step_id, label, data, answers):
         raise ValueError(f"step {step_id}: '{ANY}' route takes no min_score")
     floor = _score(f"step {step_id} route {label}", data["min_score"]) if "min_score" in data else 0.0
     say = data.get("say", "")
-    if say and ("?" not in say or NAME.search(say) or str(data["then"]) == step_id):
-        raise ValueError(f"step {step_id}: route '{label}' say must ask, have no blanks and move on")
+    if say and ("?" not in say or NAME.search(say)):
+        raise ValueError(f"step {step_id}: route '{label}' say must ask and have no blanks")
     keep, restates = data.get("keep", True) is not False, data.get("restates", False) is True
     if restates and keep:
         raise ValueError(f"step {step_id}: route '{label}' restates the question, so it can't keep the reply")

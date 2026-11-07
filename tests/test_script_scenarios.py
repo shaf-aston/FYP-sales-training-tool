@@ -366,7 +366,6 @@ READY = {"examples": ["x"], "then": "b", "until": "b", "min_score": 0.8}
     (_mini(ready={"examples": ["x"], "then": "a", "until": "b", "min_score": 0.8}), "until"),
     (_mini(a={"listen": {"x": {"examples": ["x"], "then": "b", "say": "Tell me."}, "any": {"then": "b"}}}), "say must ask"),
     (_mini(a={"listen": {"x": {"examples": ["x"], "then": "b", "say": "Why {x}?"}, "any": {"then": "b"}}}), "say must ask"),
-    (_mini(a={"listen": {"x": {"examples": ["x"], "then": "a", "say": "Why?"}, "any": {"then": "b"}}}), "say must ask"),
     (_mini(a={"listen": {"x": {"examples": ["x"], "then": "a", "restates": True}, "any": {"then": "b"}}}), "can't keep"),
 ])
 def test_loader_rejects_bad_shortcuts(data, error):
@@ -385,6 +384,15 @@ def test_a_route_line_replaces_the_next_line_it_would_make_untrue():
     method = _says(_mini())
     assert advance(method, ScriptState(step="a"), "soon", "x").say == "What made it come up now?"
     assert advance(method, ScriptState(step="a"), "any", "x").say == "Done."   # other answers: the step's own line
+
+
+def test_a_route_back_to_its_own_step_asks_in_its_own_words():
+    # round 19: "I'm scared" to "What makes you say that?" is asked "What makes you want to go for it anyway?"
+    data = _mini()
+    data["steps"]["a"]["listen"] = {"scared": {"examples": ["x"], "then": "a", "ack": "Normal.", "say": "Why go anyway?",
+                                               "keep": False}, "any": {"then": "b"}}
+    move = advance(parse_method("ok", data), ScriptState(step="a"), "scared", "x", misses=2)
+    assert move.state.step == "a" and (move.ack, move.say) == ("Normal.", "Why go anyway?")
 
 
 def test_a_route_line_is_never_said_on_a_step_walked_past_to():

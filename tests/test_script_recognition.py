@@ -659,6 +659,11 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("goal_practical", 0, (), "this is taking too long", "goal_practical", "Fair enough, I'll keep this quick."),   # guard
     ("01", 0, (), "what do I want to achieve?", "01", "Fair point, let me put it another way."),   # was the AI line
     ("02", 0, (), "how much do I need?", "02", "Fair point, let me put it another way."),   # was the price line
+    ("20", 0, ("fear",), "I'm scared", "20", "That's normal, it's a big step. What makes you want to go for it anyway?"),   # was payment
+    ("20", 0, (), "I'm nervous", "20", "That's normal, it's a big step."),   # was the whole fear talk again after a yes
+    ("20", 0, ("fear",), "because I'm sick of my job", "22", None),   # guard: their reason
+    ("19", 1, (), "yes", "20", "What makes you say that?"),   # was heard as saying nothing to "Where are you at with it?"
+    ("goal_identity", 0, (), "what would it change?", "goal_identity", "Fair point, let me put it another way."),   # was "I'll find out"
 ]
 
 
@@ -685,6 +690,17 @@ def test_an_answer_fixed_a_turn_later_is_kept():
     assert seller.state.slots == {"number": "3k"} and seller.state.step == "03", (text, seller.state.slots)
     text, _ = seller.reply("a year")
     assert seller.state.slots == {"number": "3k", "years": "a year"} and seller.state.step == "04", text
+
+
+def test_still_scared_after_the_yes_goes_back_to_the_soft_close():
+    """Round 19: "I'm scared" to "What makes you say that?" was asked again forever (no way out of step 20)."""
+    from core.buy_mode.script_engine.engine import ScriptState
+
+    seller = _real_seller()
+    seller.reset(ScriptState(step="20", raised=("fear",)))
+    for _ in range(3):
+        text, _ = seller.reply("I'm scared")
+    assert seller.state.step == "19" and text == "Do you see yourself jumping in?", text
 
 
 def test_a_real_word_is_kept_as_they_said_it():

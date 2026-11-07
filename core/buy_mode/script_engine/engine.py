@@ -81,8 +81,8 @@ def advance(method, state, label, reply="", empty=False, line="", misses=1):
         return _ask_again(method, state, step, line=line, misses=misses)
     if step.capture and reply and route.keep:
         state = replace(state, slots={**state.slots, step.capture: reply})
-    if route.then == state.step:
-        return _ask_again(method, state, step, route.ack, line=line, misses=misses)
+    if route.then == state.step:  # "I'm scared" to "What makes you say that?" is asked in its own words
+        return _ask_again(method, state, step, route.ack, line=route.say or line, misses=misses)
     return _take(method, state, route)
 
 

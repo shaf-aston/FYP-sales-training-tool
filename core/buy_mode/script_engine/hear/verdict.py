@@ -87,11 +87,11 @@ class Ear:
     def _asked_back(self, text, state):
         """Their reply is the question just asked, said back about themselves ("what do I want to achieve?" to
         "What do you want to specifically achieve...?"): they want it put another way. Their I-words are turned
-        into you-words (`asked_back`); at least one must be there ("what do you do?" asks about us), and
-        `asked_back_share` of their words must be in the question."""
+        into you-words (`asked_back`), and `asked_back_share` of their words must be in the question. A you-word
+        of theirs (`asked_back_you`) asks about us ("what do you do?"); one word ("why?") is too few to tell."""
         swap = self.cfg["asked_back"]
         words = tokenize(text)
-        if not any(w in swap for w in words):
+        if len(words) < self.cfg["asked_back_min_words"] or any(w in self.cfg["asked_back_you"] for w in words):
             return False
         asked = set(tokenize(" ".join(asked_line(self.method, state))))
         return sum(swap.get(w, w) in asked for w in words) >= self.cfg["asked_back_share"] * len(words)

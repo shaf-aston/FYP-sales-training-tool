@@ -903,7 +903,7 @@ def test_a_question_with_a_lead_in_is_still_a_yes_or_no(fake_embedder, step):
     assert make_seller(fake_embedder)._ear._yes_or_no(ScriptState(step=step))
 
 
-@pytest.mark.parametrize("step", ["01", "goal_identity", "19", "m_partner_feel", "m_partner_if_not", "m_reframe2", "22"])
+@pytest.mark.parametrize("step", ["01", "goal_identity", "m_partner_feel", "m_partner_if_not", "m_reframe2", "22"])
 def test_an_open_question_with_a_lead_in_is_not_a_yes_or_no(fake_embedder, step):
     """"So, How does your partner feel...?", "Well, what are you going to do...?": the lead-in hides no helper verb."""
     from dataclasses import replace
@@ -1020,6 +1020,8 @@ def test_a_fix_on_the_step_still_asked_is_its_answer(seller):
     ("goal_practical", "what would it get me?"),         # round 19: got "I'll find out"
     ("04", "why can't I ignore it?"),
     ("19", "do I see myself jumping in?"),
+    ("goal_identity", "what would it change?"),          # round 19: no I-word, got "I'll find out"
+    ("03", "how long?"),                                 # round 19: was heard as "recent"
 ])
 def test_the_question_said_back_asks_it_another_way(seller, step, said):
     text, _ = at(seller, step).reply(said)
@@ -1031,6 +1033,8 @@ def test_the_question_said_back_asks_it_another_way(seller, step, said):
     ("01", "what do you do?"),      # no I-word: it asks about us
     ("22", "how do I pay?"),        # 2 of 4 words in the question
     ("01", "what should I say?"),
+    ("01", "what do you mean?"),    # their own "you": about us
+    ("04", "why?"),                 # one word is too few to tell
 ])
 def test_a_question_of_their_own_is_not_the_question_said_back(seller, step, said):
     assert not seller._ear._asked_back(said, ScriptState(step=step))

@@ -445,7 +445,7 @@ steps:
     ui_stage: pitch
     draft: true  # probe is ours: no source line for a second ask
     say: "Do you see yourself jumping in?"
-    probe: "Where are you at with it right now?"
+    probe: "Is this something you can see yourself doing?"   # draft: whole calls, "yes" to "Where are you at with it right now?" was heard as saying nothing
     stuck: {then: "m_identify"}   # still hesitant: find what holds them back (the objection matrix)
     listen:
       agrees:
@@ -464,6 +464,7 @@ steps:
     ui_stage: outcome
     draft: true  # the back-out ack is ours: no source line for someone who changes their mind
     say: "What makes you say that?"
+    stuck: {then: "19"}   # draft: still scared after the probe: back to the soft close, never round and round here
     capture: reason
     listen:
       backs_out: &backs_out   # live: "actually no, forget it" got "Welcome aboard"; back to the soft close
@@ -472,6 +473,12 @@ steps:
         then: "19"
         ack: "No pressure at all."
         keep: false   # "forget it" is not their reason: never said back or quoted later
+      fear:   # draft: whole calls, "I'm scared" here (after the fear talk) was kept as their reason, then payment
+        examples: ["I'm scared", "I'm nervous", "I'm scared it won't work", "I'm worried about it"]
+        then: "20"
+        ack: "That's normal, it's a big step."
+        say: "What makes you want to go for it anyway?"
+        keep: false
       any: {then: "21"}
   "21":
     name: "Next steps"
