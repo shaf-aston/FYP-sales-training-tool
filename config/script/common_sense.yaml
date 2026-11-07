@@ -43,6 +43,7 @@ interruptions:
   pause:
     draft: true
     after: wait
+    min_score: 0.74   # draft: real pauses score 0.76+ ("bear with me"); one word it has never seen does not ("tiktok": 0.67 got "take your time")
     examples:
       - "hold on a second"
       - "sorry, give me a moment"
@@ -53,6 +54,13 @@ interruptions:
       - "can you give me two minutes"
       - "brb"
       - "sorry, I need to take this call"   # "someone's calling me" read as "am I talking to a real person"
+      - "hang on"   # draft: whole calls, "hang on" was torn with leaving and asked again
+      - "wait a sec"   # draft: same, torn with frustrated
+      - "can we pause for a minute"   # draft: whole calls, "can we pause" got "I'll find out"
+      - "hold that thought"   # draft: whole calls, heard as "think it over"
+      - "I'll be right back"   # draft: whole calls, "back in a bit" was saved as how long they had been thinking about it (not "back in a bit": "a bit" read as it)
+      - "my phone is about to die"   # draft: whole calls, "hang on my phone is dying" was asked again
+      - "sorry, my phone's ringing"   # draft: whole calls, "sorry, phone" was a close call
       - "give me a minute"   # draft: whole calls, "I just need a minute" at 20 was saved as their reason (not "I just need a minute": 0.81 to "I don't have time for this")
     reply: "No problem, take your time."
   small_talk:   # live: "did you catch the match last night?" got "I'll find out and let you know"
@@ -118,6 +126,7 @@ interruptions:
       - "what do you mean"
       - "what do you mean by that"
       - "huh"   # draft; whole calls: "huh?" (0.73 to the rest) was saved as their goal
+      - "wait what"   # draft: whole calls, "wait what?" got "I'll find out"
       - "not sure what you mean"
       - "I don't understand the question"
       - "I don't get what you're asking"
@@ -164,6 +173,7 @@ interruptions:
       - "did this work for you"
       - "would you do it"
       - "have you done this yourself"
+      - "what's in it for you"   # draft: whole calls, got "I'll find out"
     reply: "I'm the AI playing the salesperson, so this one's all about you."
   no_wrong_answer:   # whole calls: "what do most people say?" got "I'll find out and let you know"
     only_asked: true   # "what most people do is give up" is an answer

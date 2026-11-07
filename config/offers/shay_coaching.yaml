@@ -97,6 +97,51 @@ facts:
       - "why is this better than a course"
       - "I've done courses before, why is this different"
     answer: "It's not just a course: you get {pillar_1}, plus {pillar_2} and {pillar_3}, so you're not doing it alone."
+  privacy:   # whole calls: "is this call recorded?" and "will you sell my data?" got "I'll find out"
+    draft: true
+    examples:
+      - "is this call recorded"
+      - "will you sell my data"
+      - "what do you do with my information"
+      - "is my data safe"
+    answer: "Fair question. I'll make sure you have that in writing before you decide anything."   # never a promise we can't check
+  pay_when:   # whole calls: "do you need my bank details?" got how we got their number; "do I have to give my card now?" got "I'll find out"
+    draft: true
+    examples:
+      - "do you need my bank details"
+      - "do I have to give my card now"
+      - "do you need my card details"
+      - "will I be charged today"   # not "do I have to pay today": "not yet, how do I pay?" read as it (0.83) and paid
+    answer: "Only if you decide to go ahead."
+  start:   # whole calls: "can I start next month?" and "when does it start?" got "I'll find out"
+    draft: true
+    examples:
+      - "can I start next month"
+      - "when does it start"
+      - "when can I start"
+      - "how soon can I begin"
+    answer: "We'll sort a start date that works for you once we know it's a fit."
+  call_length:   # whole calls: "how long is this call?" got "I'll find out"
+    draft: true
+    examples:
+      - "how long will this call take"
+      - "will this call take long"
+      - "will this take much longer"
+    answer: "Not long, just a few questions to see if this is right for you."
+  next_steps:   # whole calls: "what happens next?" got "I'll find out"
+    draft: true
+    examples:
+      - "what happens next"
+      - "what's the next step"
+      - "what happens after this call"
+    answer: "First we see if this is a fit, then I'll walk you through the next step."
+  send_details:   # whole calls: "can you email me the details?" got how we got their number
+    draft: true
+    examples:
+      - "can you email me the details"
+      - "can you send me something to read"
+      - "do you have a website"
+    answer: "I can send the details after, once we know it's even a fit."
   results:   # whole calls: "how much do your clients make?" and "how long does it take to see results?" got "I'll find out"
     draft: true
     examples:
@@ -111,6 +156,7 @@ facts:
       - "how long is the programme"
       - "how many months does it run"
       - "how long does it last"
+      - "how long does it take"   # draft: whole calls, "so I can quit my job, but how long does it take?" got how long the call is
     answer: "It's a 6-month process."
   location:
     examples:
@@ -129,4 +175,5 @@ facts:
       - "will this work for me"
       - "does this work for beginners"
       - "is this for people with no experience"
+      - "is it worth it"   # draft: whole calls, got "I'll find out"
     answer: "That's exactly what these questions are for: to see if we can even help you."

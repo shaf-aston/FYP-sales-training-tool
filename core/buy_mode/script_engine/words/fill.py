@@ -3,8 +3,10 @@
 import logging
 import re
 from difflib import get_close_matches
+from functools import lru_cache
 
 from core.buy_mode.script_engine.words.tone import PAUSE
+from core.infra.loader import CONFIG_DIR
 from core.infra.utils import tokenize
 
 logger = logging.getLogger("script_engine.fallback")
@@ -27,12 +29,22 @@ def offer_blanks(offer):
     return values
 
 
+@lru_cache(maxsize=None)
+def real_words(filename):
+    """The English words in config/`filename` (one a line, "#" lines are notes)."""
+    lines = (CONFIG_DIR / filename).read_text(encoding="utf-8").splitlines()
+    return frozenset(w.strip().lower() for w in lines if w.strip() and not w.startswith("#"))
+
+
 def spell(word, vocab, cfg):
     """A typo turned into the script word it is plainly meant to be ("financialy" -> "financial").
-    Known, short or unmatched words (names, places) stay as they are."""
+    Known, short or unmatched words (names, places) stay as they are, and so does a real word that is
+    just not in the script ("drown" is never "down")."""
     lower = word.lower()
     if lower in vocab or len(lower) < cfg["spell_min_letters"] or any(c.isdigit() for c in lower):
         return word  # a figure ("2,500pm") is never a typo
+    if lower in real_words(cfg["spell_real_words"]):
+        return word
     if any(lower.endswith(end) and lower[:-len(end)] in vocab for end in cfg["spell_word_endings"]):
         return word  # "months", "works": a real word ending, not a typo
     near = get_close_matches(lower, vocab, 1, cfg["spell_cutoff"])

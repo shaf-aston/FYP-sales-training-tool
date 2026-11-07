@@ -608,6 +608,27 @@ def test_a_figure_is_never_a_typo():
     assert fix_typos("£2,500pm financialy", {"financial", "pm"}, CFG) == "£2,500pm financial"
 
 
+@pytest.mark.parametrize("step, text", [("04", "because money is tight for me at the moment"),
+                                         ("01", "cos I can't afford that right now")])
+def test_a_reason_is_never_a_worry_before_the_price(fake_embedder, step, text):
+    # whole calls: "because my kid just started school and money is tight" got "I haven't mentioned a price yet"
+    s = seller(fake_embedder, step=step)
+    s.reply(text)
+    assert s.last_turn["heard_as"].startswith("answer")
+
+
+@pytest.mark.parametrize("text", ["just not drown in debt", "my shop might crash", "get on a plane"])
+def test_a_real_word_is_never_fixed_into_a_script_word(text):
+    """Whole calls: "drown" was "fixed" to "down" (one letter off a script word); a real word stays as typed."""
+    from core.buy_mode.script_engine.words.fill import fix_typos
+    assert fix_typos(text, {"down", "cash", "plan", "shop", "might", "get"}, CFG) == text
+
+
+def test_a_typo_is_still_fixed_beside_real_words():
+    from core.buy_mode.script_engine.words.fill import fix_typos
+    assert fix_typos("drown in debt, financialy free", {"down", "financial"}, CFG) == "drown in debt, financial free"
+
+
 def test_their_outcome_goes_back_into_the_next_question(fake_embedder):
     s = seller(fake_embedder, step="01")
     reply, _ = s.reply("I want financial freedom")

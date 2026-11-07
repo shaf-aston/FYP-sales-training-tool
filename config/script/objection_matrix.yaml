@@ -43,6 +43,7 @@ objections:
       - "I can't decide without my wife"
   fear:
     enter: m_reframe1
+    early: "That's fair. That's what this call is for, to see if it can work for you first."   # draft: whole calls, "what if it doesn't work?" before the price got "I'll find out"
     examples:
       - "I'm nervous it won't work for me"
       - "what if I fail"
@@ -54,6 +55,7 @@ objections:
       - "I've got kids to look after, I can't take risks"
       - "it's just how I am, I'm cautious"
       - "I'm not sure I'm capable of doing this"
+      - "what if it doesn't work for me"   # draft: whole calls, "what if it doesn't work?" got "I'll find out"
   think:   # Procrastinator: the SOP says handle the logistics behind it first, then fear
     enter: m_think_what
     examples:
@@ -66,6 +68,7 @@ objections:
       - "let me take a step back first"
       - "I like it but I'll get back to you"
       - "I need to sleep on it and get back to you"
+      - "can I call you back"   # draft: whole calls, at the close it got "I'll find out"
       - "let me think about it"   # draft: whole calls, at 19 it was heard as a shrug and asked again
   research:   # Analyser: still researching, needs more info
     enter: m_think_what
@@ -86,6 +89,7 @@ objections:
     examples:
       - "is this a scam"
       - "this is too good to be true"   # not "sounds too good": "sounds good to me" read as this (0.81)
+      - "what's the catch"   # draft: whole calls, got "I'll find out"
       - "I don't trust this"
       - "this feels dodgy"
       - "I've been scammed before"
@@ -102,6 +106,7 @@ objections:
       - "I want to know the return on my investment"
       - "I don't know if these courses are even real"
       - "I'm not sure who to trust online"
+      - "why should I trust you"   # draft: whole calls, at the close it got "I'll find out"
       - "I've paid for stuff like this before and got nothing"
 
 steps:

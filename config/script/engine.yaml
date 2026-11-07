@@ -29,7 +29,7 @@ ai_workers: 4          # AI calls in flight at once; an abandoned slow call keep
 objection_entries: 2   # objections that get their matrix branch in one call; the next books the follow-up
 slot_words: 6          # longest phrase echoed into a script blank
 rise_answer_words: 6   # a part this short that ends in "?" but isn't phrased as a question, and has the step's `needs` ("dunno, a year?"), is the answer said with a rise
-rise_answer_starts: [because, cause, cos, coz, cuz, bc]   # draft: a part opening like this that ends in "?" is a reason said with a rise ("because money is nice?"), never a question
+reason_starts: [because, cause, cos, coz, cuz, bc]   # draft: a reply opening like this is a reason: said with a rise ("because money is nice?") it is never a question, and before the price it is never an objection (whole calls: "because my kid just started school and money is tight" got "I haven't mentioned a price yet")
 echo_term_words: 3     # outside a step marked `moment`, their words come back only as a term this short (echo.py)
 echo_repeats: 2        # the same phrase of theirs is said back at most this many times a call
 takes_back: ["no", not_yet, backs_out]   # shared answers (answers.yaml) that say no: "no, credit?" is torn, not paying (verdict `_takes_back`)
@@ -54,6 +54,7 @@ spell_cutoff: 0.85     # how close a typo must be to a known word to be fixed be
 spell_min_letters: 5   # shorter words are left alone: too easy to "fix" into the wrong word
 spell_word_endings: [s, es, ed, d, ing, er, ers, ly]   # a known word plus one of these is a real word, never "fixed"
 spell_words: [freedom, financial, family, retire, retirement, independence, business, boss, travel, wealth, security, money, income, kids, children, house, mortgage, debt, career, passive]   # extra words typos are fixed to, beside every word in the script's examples
+spell_real_words: "script/real_words.txt"   # draft: real English words, never "fixed" as typos (whole calls: "just not drown in debt" was saved as "down in debt")
 number_words: {a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, eighteen: 18, fifteen: 15, twenty: 20, couple: 2}   # a number said in words: "a year", "two years", "a couple of years"
 number_half: "and a half"   # draft: after the unit ("a year and a half") or before it ("2 and a half years"), half is added
 number_parts: {half: 0.5}   # draft: a share said before the number ("half a year" -> 6 months; whole calls: it was read as a year)
@@ -88,7 +89,8 @@ ack_retries: 0        # one try: a turn never waits on two ack calls
 memory_chars: 120     # longest piece of an earlier answer handed to the AI as memory
 banned_phrases: [but, you said, any questions]   # no AI sentence may contain these (whole words): "but" undoes what was just said, "you said" quotes them back, "any questions" ends the call
 nudge_leads: [so, ok, okay]   # words allowed before a nudge: "so, what's next?"
-take_backs: ["no wait", "no actually", "or actually", "actually", "sorry", "wait", "i mean", "or rather", "scratch that"]   # draft: a self-correction: what came before it is taken back ("3 years, sorry, 2 years" -> "2 years"; whole calls: the 3 was kept)
+take_backs: ["no wait", "no actually", "or actually", "i mean", "or rather", "scratch that"]   # draft: a self-correction: what came before it is taken back ("3 years, i mean 2 years" -> "2 years"; whole calls: the 3 was kept)
+take_backs_with_break: ["actually", "sorry", "wait", "hang on", "hold on", "hang on a minute", "hold on a minute", "hang on a sec", "hold on a sec", "wait a sec", "wait a minute"]   # draft: the same, only with a break after it ("3 years, sorry, 2 years"): "sorry my dog is barking" and "hold on a second" take nothing back. Said first, it is cut off the words after it ("hang on a minute, that's a lot of money" is the money; whole calls: torn with a pause and saved as a yes)
 take_backs_mid: ["no"]   # draft: a correction only between two answers, with a break both sides ("a year, no, two years" -> "two years"; whole calls: the year was kept); "no, credit?" at the start still says no
 coach_notes: {step: "The seller is finding out about your {name}.", listen: "Listen for: {note}", default: "Answer honestly, then watch how the seller follows up."}   # the learner's coach note for each step (buy mode's "training" panel)
 ack_words: [you, your, you're, you've, got, it, sounds, makes, sense, hear, that, tough, hard, sorry, okay, right, fair, understand, so, really, lot, see, why, must, be, can, totally, thanks, for, sharing, not, "no", easy, been, there, while]   # words the ack may add to the prospect's own; neutral or kind, never "great"

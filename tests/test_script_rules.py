@@ -556,6 +556,10 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("no, credit?", "no", "credit?"),   # "no" at the start says no, takes nothing back
     ("no, no, I can't", "no, no, I can't", ""),   # "no" after "no" says no again
     ("I said no, debit", "I said no, debit", ""),   # "no" with no break before it is a word, not a correction
+    ("hang on a minute, that's a lot of money", "that's a lot of money", ""),   # whole calls: torn with a pause, saved as a yes
+    ("hold on, how much?", "", "how much?"),   # whole calls: heard as unclear, the price never said
+    ("hold on a second", "hold on a second", ""),   # a pause with no break after it is the pause
+    ("hang on my phone is dying", "hang on my phone is dying", ""),
 ])
 def test_a_reply_is_read_once_into_what_it_says_and_what_it_asks(text, said, asked):
     from core.buy_mode.script_engine.hear.reply import Reader

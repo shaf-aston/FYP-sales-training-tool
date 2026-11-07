@@ -571,6 +571,38 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("goal_practical", 0, (), "how much is it?", "goal_practical", "Fair question. I'll give you the exact price"),  # guard
     ("19", 0, (), "no, but how does it work", "19", "Three parts"),   # round 14 replay: was left unanswered
     ("05", 0, (), "does it actually work?", "05", "Honestly, results depend"),   # guard: not how it works
+    # round 15
+    ("01", 0, (), "is this call recorded?", "01", "Fair question. I'll make sure you have that in writing"),  # was the fallback
+    ("goal_practical", 0, (), "will you sell my data?", "goal_practical", "Fair question. I'll make sure"),
+    ("02", 0, (), "do you need my bank details?", "02", "Only if you decide to go ahead."),   # was how we got their number
+    ("19", 0, (), "do I have to give my card now?", "19", "Only if you decide to go ahead."),   # was the fallback
+    ("04", 0, (), "can I start next month?", "04", "We'll sort a start date"),   # was the fallback
+    ("19", 0, (), "when does it start?", "19", "We'll sort a start date"),
+    ("01", 0, (), "how long is this call?", "01", "Not long, just a few questions"),
+    ("goal_practical", 0, (), "what happens next?", "goal_practical", "First we see if this is a fit"),
+    ("04", 0, (), "can you email me the details?", "04", "I can send the details after"),   # was how we got their number
+    ("04", 0, (), "is it worth it though?", "04", "That's exactly what these questions are for"),
+    ("01", 0, (), "what's in it for you?", "01", "I'm the AI playing the salesperson"),
+    ("19", 0, (), "why should I trust you?", "m_scam", None),   # was the fallback
+    ("19", 0, (), "can I call you back?", "m_think_what", "Sure. What specifically"),   # was the fallback
+    ("04", 0, (), "because my kid just started school and money is tight", "05", None),   # was "I haven't mentioned a price yet"
+    ("04", 0, (), "is this a scam?", "04", "Fair question, there's a lot of shady stuff"),   # guard: still asks
+    ("06", 0, (), "how did you get my number", "06", "You filled in an application"),   # guard: still how we got it
+    ("03", 0, (), "how long is the programme?", "03", "It's a 6-month process"),   # guard: not the call length
+    ("03", 0, (), "hang on", "03", "No problem, take your time."),   # was torn with leaving, asked again
+    ("03", 0, (), "can we pause for a sec", "03", "No problem, take your time."),   # was the fallback
+    ("03", 0, (), "be right back", "03", "No problem, take your time."),   # was asked again
+    ("19", 0, (), "do I have to pay today?", "19", "Only if you decide to go ahead."),
+    ("03", 0, (), "a bit", "04", None),   # guard: how long, never a pause
+    ("01", 0, (), "so I can quit my job, but how long does it take?", "goal_practical", "It's a 6-month process."),   # guard: not the call
+    ("03", 0, (), "tiktok", "03", "Roughly, is it more like months"),   # was "take your time" (0.67 to a pause)
+    ("19", 0, (), "hang on a minute, that's a lot of money", "m_funded", None),   # was torn, saved as a yes
+    ("19", 0, (), "hold on, how much?", "19", "It's a 6-month process and the investment"),   # was unclear
+    ("19", 0, (), "wait what?", "19", "Fair point, let me put it another way."),   # was the fallback
+    ("19", 0, (), "what's the catch?", "m_scam", None),   # was the fallback
+    ("19", 0, (), "what if it doesn't work?", "m_reframe1", None),   # was the fallback
+    ("04", 0, (), "what if it doesn't work?", "04", "That's fair. That's what this call is for"),   # was the fallback
+    ("19", 0, (), "hold on a second", "19", "No problem, take your time."),   # guard: still a pause
 ]
 
 
@@ -584,6 +616,16 @@ def test_round_7_whole_calls(step, asks, raised, said, after, starts):
     assert seller.state.step == after, text
     if starts:
         assert text.startswith(starts), text
+
+
+def test_a_real_word_is_kept_as_they_said_it():
+    """Whole calls: "just not drown in debt" was saved as "just not down in debt" (a typo of "down")."""
+    from core.buy_mode.script_engine.engine import ScriptState
+
+    seller = _real_seller()
+    seller.reset(ScriptState(step="goal_practical"))
+    seller.reply("just not drown in debt")
+    assert seller.state.slots["practical"] == "just not drown in debt"
 
 
 def test_what_they_take_back_and_say_early_is_kept_right():

@@ -91,10 +91,11 @@ class Reader:
                         for words in (r"\W+".join(map(re.escape, tokenize(p))) for p in sorted(nudges, key=len, reverse=True))]
         self._tags = {" ".join(tokenize(t)) for t in cfg["filler_tags"]}
         self._starts = set(cfg["question_words"]) | set(cfg["closed_question_starts"])
-        backs = [r"\W+".join(map(re.escape, tokenize(b))) for b in sorted(cfg["take_backs"], key=len, reverse=True)]
-        words = "|".join(b for b in backs if "\\W+" in b)   # "no actually my credit card"
-        word = "|".join(b for b in backs if "\\W+" not in b)  # one word needs a break after it: "sorry my dog is barking" isn't one
-        mid = "|".join(r"\W+".join(map(re.escape, tokenize(b))) for b in cfg["take_backs_mid"])
+        def any_of(phrases):
+            return "|".join(r"\W+".join(map(re.escape, tokenize(b))) for b in sorted(phrases, key=len, reverse=True))
+        words = any_of(cfg["take_backs"])   # "no actually my credit card"
+        word = any_of(cfg["take_backs_with_break"])  # needs a break after it: "sorry my dog is barking" isn't one
+        mid = any_of(cfg["take_backs_mid"])
         not_mid = "".join(rf"(?<!\b{re.escape(b)})" for b in cfg["take_backs_mid"] if " " not in b)  # "no, no, I can't" is a no
         # at the start or after a break, with words after it: "nothing, sorry" takes nothing back; a mid one
         # ("no") only between two parts: "a year, no, two years" corrects, "no, credit?" says no

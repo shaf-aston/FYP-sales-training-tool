@@ -75,9 +75,14 @@ class Ear:
         and has the step's shape ("dunno, a year?" to "how long?"), or it opens with a reason ("because money is
         nice?"); else it asks ("what's this going to cost me?")."""
         words = tokenize(part)
-        if words[:1] and words[0] in self.cfg["rise_answer_starts"]:
+        if self._reason(part):
             return True
         return bool(step.needs) and len(words) <= self.cfg["rise_answer_words"] and self.shaped(part, step)
+
+    def _reason(self, text):
+        """The reply opens with a reason ("because...", "cos..."): it gives one, it does not ask or object."""
+        words = tokenize(text)
+        return bool(words) and words[0] in self.cfg["reason_starts"]
 
     def _with_side(self, reply, step, state, opened):
         """Content that answers the step, beside a question a one-line reply covers ("i guess 3 years, what
@@ -177,8 +182,9 @@ class Ear:
         if asking:
             labels.update({f"fact:{k}": f.examples for k, f in self.offer.facts.items()})
         objections = self.method.objections.items()
-        if not opened and step.doubts_answer and not asking:
-            objections = ()  # "money's tight" answers "what holds you back"; "is this a scam?" still asks
+        if not opened and not asking and (step.doubts_answer or self._reason(text)):
+            objections = ()  # "money's tight" answers "what holds you back", "because money is tight" any step;
+            # "is this a scam?" still asks
         elif not opened and asking:
             objections = [(k, o) for k, o in objections if o.early]  # "is this a scam?" gets an honest early line
         if not opened and not asking:  # parked once, said again: an answer. Asked again ("how do I know this
