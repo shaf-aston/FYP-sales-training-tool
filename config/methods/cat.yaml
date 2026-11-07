@@ -86,7 +86,7 @@ steps:
           - "to not have to check my bank balance before buying food"
           - "not dreading Mondays and actually enjoying life instead of just surviving"   # draft: live, heard as level 1
           - "a bit extra each month would help with the mortgage"   # draft: live ("an extra few hundred a month would help with the mortgage"), heard as level 1
-          - "more free time"   # draft: whole calls, "more time" was heard as annoyance ("I'll keep this quick")
+          - "more time for me and my family"   # draft: whole calls, "more time" was heard as annoyance ("I'll keep this quick")
         then: "goal_identity"
       identity:   # level 3 already: the ladder is climbed
         examples: &identity
