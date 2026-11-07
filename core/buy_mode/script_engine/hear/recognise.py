@@ -91,13 +91,13 @@ class Listener:
         must beat the step's own `answers` (how surely the reply is one), and, where the other way has no
         score of its own (`any_reply`: the step takes any reply; `asking`: a plain question is answered
         as asked), `interrupt_threshold` too. `floors`: {label: lowest score it counts at}. A "fact:"
-        label always wins: a product question is never an answer."""
+        label needs only to beat the answers: a product question is never a plain answer."""
         found = self.match(reply, labels)
         if not found.label or found.close:
             return None
-        if found.label.startswith("fact:"):
-            return found.label
         as_answer = self.answer_score(reply, answers, asking) if answers else 0.0
+        if found.label.startswith("fact:"):  # unless it is more surely one of the step's answers: "debit card
+            return found.label if found.score >= as_answer else None  # is ok?" to "credit or debit?" pays
         unscored = any_reply or asking  # live: "what happens to the card?" lost to a 0.68 worry
         bar = max(as_answer, self.interrupt_threshold if unscored else 0.0, floors.get(found.label, 0.0))
         return found.label if found.score > bar else None

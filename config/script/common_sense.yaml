@@ -32,7 +32,7 @@ ended: "Speak soon."   # draft: any reply once the call has ended (booked the fo
 same_words: "Sure, let me ask that again."   # draft: a rephrase with no other words left ("let me put it another way" then the same question is untrue)
 yes_no_reask: ["No pressure either way.", "A yes or no is fine."]   # draft: in front of a yes-or-no question asked again, in place of the method's `reask` ("even a rough idea helps" reads oddly before "Would that work for you?")
 wait_again: "Sure, I'm here."   # draft: in place of a wait reply said just before ("brb" twice: "No problem, take your time." word for word)
-told_again: "Like I said a moment ago."   # draft: a fact asked a second time with no `again` of its own
+told_again: "Like I said a moment ago."   # draft: a fact asked again straight after its answer, with no `again` of its own (asked long after: the answer again; whole calls: "a moment ago" 17 turns on)
 # Their reply had words but not the answer ("stuff", "make more money"): ask what they meant by them.
 ask_meaning: "What do you mean by {said|$|wanting to $}?"   # draft: the owner's ask, our wording
 nudge:

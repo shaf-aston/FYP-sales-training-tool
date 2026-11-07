@@ -938,6 +938,17 @@ def test_a_fact_with_no_reminder_of_its_own_uses_the_shared_one(fake_embedder):
     assert again.startswith(SENSE.told_again)
 
 
+def test_a_fact_asked_again_long_after_gets_its_answer_not_like_i_said_a_moment_ago(fake_embedder):
+    """Whole calls: "do you need my bank details?" at 02, then "do I have to give my card now?" at the close,
+    got "Like I said a moment ago." 17 turns on: untrue, and the answer was long gone."""
+    s = seller(fake_embedder, step="03")
+    s.reply("where are you based")
+    s.reply("about a year")
+    again, _ = s.reply("where are you based")
+    where = s._filler.fill(load_offer("shay_coaching").facts["location"].answer, {})
+    assert not again.startswith(SENSE.told_again) and again.startswith(where), again
+
+
 def test_the_price_after_the_pitch_is_said_again_in_full(fake_embedder):
     s = seller(fake_embedder, step="14", told=("price",))
     text, _ = s.reply("how much does it cost")

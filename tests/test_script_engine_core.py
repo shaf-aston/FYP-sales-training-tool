@@ -158,6 +158,16 @@ def test_recognise_close_call_and_threshold(fake_embedder):
     assert both.close
 
 
+
+def test_a_product_question_beats_the_steps_answers_only_when_it_scores_higher(fake_embedder):
+    """Whole calls: "debit card is ok?" to "credit or debit?" was heard as "do you need my card details?"
+    (0.74) over paying (0.85), so the call never closed. A fact still wins when it scores higher."""
+    listener = _listener(fake_embedder, 0.3)
+    pays = {"pays": ["debit card ok"]}
+    labels = {"fact:pay_when": ["need my card ok"]}
+    assert listener.interruption("debit card ok", labels, pays, False, True, {}) is None   # 0.82 to the fact, 1.0 to pays
+    assert listener.interruption("need my card ok", labels, pays, False, True, {}) == "fact:pay_when"
+
 def test_engine_code_names_no_method_or_offer():
     banned = re.compile(r"\b(cat|impact|formula|shay|coaching|freedom|pillar)\b", re.IGNORECASE)
     paths = list(ENGINE_DIR.rglob("*.py"))

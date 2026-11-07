@@ -223,7 +223,7 @@ class ScriptSeller:
 
     def _fact(self, name, opened):
         """A product fact's answer: (line, fresh). Asked again, a short reminder, never fresh: before the price
-        its `again`; pressed `fact_presses` times before the price, its `pressed` line once (Ivy: "how much is
+        its `again` (else "like I said", straight after the answer); pressed `fact_presses` times before the price, its `pressed` line once (Ivy: "how much is
         it?" got "the exact price comes once I know what you need" 30 times); once the price step is reached or
         the number is out, `late_answer`, then `late_again`. `told` keeps each telling ("price+" told late)."""
         f, told = self.offer.facts[name], self.state.told
@@ -232,8 +232,9 @@ class ScriptSeller:
             line, key = f.pressed, f"{name}+"
         elif (opened or out) and f.late_answer:
             line, key = (f.late_again or f.late_answer) if out else f.late_answer, f"{name}+"
-        elif name in told:
-            line, key = f.again or self.sense.told_again or f.answer, name
+        elif name in told:  # "like I said a moment ago" only when it was: told long ago, the answer again
+            just = self._filler.fill(f.answer, {}) in self.state.last
+            line, key = f.again or (just and self.sense.told_again) or f.answer, name
         else:
             line, key = f.answer, name
         self.state = replace(self.state, told=(*told, key))

@@ -603,6 +603,11 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("19", 0, (), "what if it doesn't work?", "m_reframe1", None),   # was the fallback
     ("04", 0, (), "what if it doesn't work?", "04", "That's fair. That's what this call is for"),   # was the fallback
     ("19", 0, (), "hold on a second", "19", "No problem, take your time."),   # guard: still a pause
+    ("22", 0, (), "debit card is ok?", "end", "Perfect."),   # was "Only if you decide to go ahead" (a fact beat paying)
+    ("22", 0, (), "can I pay by card?", "end", "Perfect."),   # was "There are ways to make the investment work"
+    ("22", 0, (), "what happens to the card?", "22", None),   # guard: a real question, never paid
+    ("18", 0, (), "hmm let me think", "18", "Put simply"),   # was "take your time" forever
+    ("18", 0, (), "give me a sec", "18", "No problem, take your time."),   # guard: still a pause
 ]
 
 
