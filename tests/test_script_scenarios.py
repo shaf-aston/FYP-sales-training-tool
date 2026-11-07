@@ -395,6 +395,20 @@ def test_a_route_back_to_its_own_step_asks_in_its_own_words():
     assert move.state.step == "a" and (move.ack, move.say) == ("Normal.", "Why go anyway?")
 
 
+def test_the_objection_talks_are_the_matrix_steps():
+    # round 20: past its talk a worry said again is the worry, not an answer ("he decides the money stuff" at 20)
+    assert "m_reframe1" in CAT.talks and "m_partner_here" in CAT.talks
+    assert not {"19", "20", "22"} & set(CAT.talks)
+
+
+@pytest.mark.parametrize("step, then", [("20", "m_partner_here"), ("m_reframe1", "m_reframe1_now")])
+def test_a_worry_said_again_past_its_talk_is_the_worry(fake_embedder, step, then):
+    # 20 keeps any reply: the partner again there is no reason to buy; in a talk it answers the step
+    s = seller(fake_embedder, step=step, raised=("partner",))
+    s.reply("I need to speak to my partner first")
+    assert s.state.step == then
+
+
 def test_a_route_line_is_never_said_on_a_step_walked_past_to():
     data = _mini()
     data["steps"]["b"] = {"ui_stage": "intent", "listen": {"any": {"then": "c"}}}   # silent: walked past

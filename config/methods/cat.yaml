@@ -475,6 +475,7 @@ steps:
         keep: false   # "forget it" is not their reason: never said back or quoted later
       fear:   # draft: whole calls, "I'm scared" here (after the fear talk) was kept as their reason, then payment
         examples: ["I'm scared", "I'm nervous", "I'm scared it won't work", "I'm worried about it"]
+        min_score: 0.85   # draft: replay, "idk I just feel ready" (0.79) is their reason; a fear is 0.89+
         then: "20"
         ack: "That's normal, it's a big step."
         say: "What makes you want to go for it anyway?"

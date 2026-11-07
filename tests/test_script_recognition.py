@@ -662,6 +662,14 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("20", 0, ("fear",), "I'm scared", "20", "That's normal, it's a big step. What makes you want to go for it anyway?"),   # was payment
     ("20", 0, (), "I'm nervous", "20", "That's normal, it's a big step."),   # was the whole fear talk again after a yes
     ("20", 0, ("fear",), "because I'm sick of my job", "22", None),   # guard: their reason
+    ("20", 0, ("fear",), "idk I just feel ready", "22", None),   # guard: replay, was heard as the fear
+    # round 20
+    ("20", 0, ("partner",), "I need to ask my husband first", "m_partner_here", "Okay. So, if your partner"),   # was their reason, then payment
+    ("20", 0, (), "he decides the money stuff", "m_partner_here", None),   # was their reason, then payment
+    ("m_reframe1", 0, ("fear",), "I'm scared", "m_reframe1_now", None),   # guard: in its own talk a worry answers
+    ("04", 0, (), "my husband earns most of the money", "05", None),   # guard: an answer, not the partner
+    ("01", 0, (), "is this one of those get rich quick things?", "01", "Fair question, there's a lot of shady stuff online."),   # was "I'll find out"
+    ("01", 0, (), "is this MLM?", "01", "Fair question, there's a lot of shady stuff online."),   # was "I'll find out"
     ("19", 1, (), "yes", "20", "What makes you say that?"),   # was heard as saying nothing to "Where are you at with it?"
     ("goal_identity", 0, (), "what would it change?", "goal_identity", "Fair point, let me put it another way."),   # was "I'll find out"
 ]

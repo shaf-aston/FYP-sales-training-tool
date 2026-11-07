@@ -1024,6 +1024,8 @@ def test_a_fix_on_the_step_still_asked_is_its_answer(seller):
     ("03", "how long?"),                                 # round 19: was heard as "recent"
 ])
 def test_the_question_said_back_asks_it_another_way(seller, step, said):
+    v = seller._ear.hear(said, ScriptState(step=step), False)
+    assert (v.kind, v.name, v.text, v.asking) == ("sense", "clarify", said, True), v
     text, _ = at(seller, step).reply(said)
     assert seller.last_turn["heard_as"] == "sense:clarify", seller.last_turn
     assert text.startswith("Fair point, let me put it another way."), text

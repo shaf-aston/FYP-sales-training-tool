@@ -94,6 +94,7 @@ class Method:
     reask: tuple = ()       # leads said before a question asked again once its probes ran out, in turn
     pays: Ready = None      # "how do I pay?" from the price on: straight to paying
     max_visits: int = 0     # a step landed on this many times a call is going round in circles: the follow-up instead (0 = no limit)
+    talks: tuple = ()  # the objection matrix's steps: while on one, a worry raised is being talked through
 
     @property
     def shortcuts(self):
@@ -347,7 +348,8 @@ def parse_method(name, data, matrix=None, answers=None):
     max_visits = data.get("max_visits", 0)
     if not isinstance(max_visits, int) or max_visits < 0 or (max_visits and not follow_up):
         raise ValueError(f"method {name}: max_visits must be a whole number >= 0, and needs a follow_up step")
-    return Method(name, first, steps, objections, price_step, follow_up, revisit_step, ready, reask, pays, max_visits)
+    talks = tuple(str(k) for k in (matrix or {}).get("steps", {}))
+    return Method(name, first, steps, objections, price_step, follow_up, revisit_step, ready, reask, pays, max_visits, talks)
 
 
 def _score(where, value):

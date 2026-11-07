@@ -252,9 +252,11 @@ class Ear:
             # nearer a worry than not knowing is the worry ("let me think about it": 1.0 to it, 0.96 to "let me think")
             worry = self._listener.match(text, {k: o.examples for k, o in objections}, by_clause=False)
             objections = [(k, o) for k, o in objections if k == worry.label and worry.score > unsure]
-        handled = set()  # a worry already being handled, or one the step asks about ("the money?"), answers the step
-        if opened:
-            handled = {k for k, _ in objections if k in state.raised or k in {r.label for r in step.listen}}
+        handled = set()  # a worry already being handled, or one the step asks about ("the money?"), answers the step.
+        if opened:  # Past its talk, a step that keeps any reply would keep it as their answer: it is the worry again
+            # (whole calls: "he decides the money stuff" to "What makes you say that?" was their reason, then payment)
+            talking = state.step in self.method.talks or not any(r.label == ANY for r in step.listen)
+            handled = {k for k, _ in objections if (k in state.raised and talking) or k in {r.label for r in step.listen}}
         labels.update({f"objection:{k}": o.examples for k, o in objections})
         objections = [(k, o) for k, o in objections if k not in handled]
         if not opened and not asking:  # "money", "scared", "risk" before the price are answers, not objections

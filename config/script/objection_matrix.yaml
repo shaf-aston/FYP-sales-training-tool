@@ -41,6 +41,8 @@ objections:
       - "I'd have to run it past my other half first"
       - "my partner would have to be on board"
       - "I can't decide without my wife"
+      - "my husband decides about money things"   # draft: whole calls, "he decides the money stuff" was their reason to buy
+      - "my wife makes the decisions about money"   # draft
   fear:
     enter: m_reframe1
     early: "That's fair. That's what this call is for, to see if it can work for you first."   # draft: whole calls, "what if it doesn't work?" before the price got "I'll find out"
@@ -100,6 +102,8 @@ objections:
       - "have you got any proof"
       - "can you prove it works"
       - "there's so many rip-offs online"
+      - "is this a get rich quick scheme"   # draft: whole calls, "is this one of those get rich quick things?" got "I'll find out"
+      - "is this MLM"   # draft
       - "how can you guarantee it works"
       - "I need to see case studies or testimonials"
       - "show me results from other people"
