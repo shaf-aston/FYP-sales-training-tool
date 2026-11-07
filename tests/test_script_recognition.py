@@ -608,6 +608,23 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("22", 0, (), "what happens to the card?", "22", None),   # guard: a real question, never paid
     ("18", 0, (), "hmm let me think", "18", "Put simply"),   # was "take your time" forever
     ("18", 0, (), "give me a sec", "18", "No problem, take your time."),   # guard: still a pause
+    # round 16
+    ("01", 0, (), "make money online, but I've been burnt before", "01", "That's fair. That's what this call is for"),   # was the worry only, the goal lost
+    ("01", 0, (), "for my kids", "goal_practical", None),   # was a pause (0.79 to "hang on, my kids need me")
+    ("01", 0, (), "hang on, the kids need me", "01", "No problem, take your time."),   # guard: still a pause
+    ("06", 0, (), "ok?", "06", None),   # was "I'll find out": filler with a rise asks nothing
+    ("01", 0, (), "what kind of business is this?", "01", "We help people build their own business online"),   # was the fallback
+    ("01", 0, (), "do you have reviews?", "01", "Fair question. I'll show you what others have done"),   # was the fallback
+    ("goal_practical", 0, (), "how many people have done it?", "goal_practical", "Fair question. I'll show you"),
+    ("goal_practical", 0, (), "can I see some testimonials?", "goal_practical", "Fair question. I'll show you"),
+    ("goal_practical", 0, (), "is there a community?", "goal_practical", "Three parts"),   # was the fallback
+    ("goal_practical", 0, (), "do you like your job?", "goal_practical", "I'm the AI playing the salesperson"),
+    ("goal_practical", 0, (), "what time is it there?", "goal_practical", "Ha, all good here."),   # was when it starts
+    ("22", 0, (), "is there a deposit?", "22", "There are ways to make the investment work"),   # was the fallback
+    ("22", 0, (), "do you take klarna?", "22", "There are ways to make the investment work"),
+    ("22", 0, (), "do you take paypal?", "end", "Perfect."),   # guard: still pays
+    ("04", 0, (), "sorry, I'm driving", "later", "No problem. Let's book a follow-up call"),   # was saved as their reason
+    ("05", 0, (), "I can't talk right now", "later", None),
 ]
 
 

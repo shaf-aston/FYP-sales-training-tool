@@ -10,7 +10,7 @@ from core.buy_mode.script_engine.engine import (
     question_of,
     ready_open,
 )
-from core.buy_mode.script_engine.hear.reply import Reader
+from core.buy_mode.script_engine.hear.reply import Reader, break_pattern, clauses
 from core.buy_mode.script_engine.method import ANY
 from core.infra.utils import tokenize
 
@@ -46,6 +46,7 @@ class Ear:
         self.cfg, self.method, self.offer, self.sense = cfg, method, offer, sense
         self._listener, self._shrugs, self._judge = listener, shrugs, judge
         self.reader = Reader(cfg, sense.nudges, shrugs.hedges)
+        self._breaks = break_pattern(cfg)
 
     def hear(self, text, state, opened):
         step = self.method.steps[state.step]
@@ -64,6 +65,10 @@ class Ear:
         ahead = None if asking else hear_ahead(self.method, state, text)  # "do I need 5k?" is not their goal
         ahead = None if ahead is state else ahead
         kind, name = self._interrupt(text, step, ahead or state, opened, asking)
+        if kind == "objection" and not opened and not asking:
+            beside = self._beside_worry(text, step, state, name)
+            if beside:
+                return beside
         if kind:
             return Verdict(kind, name, text, asking, ahead)
         if asking and not self._answers(text, step):
@@ -72,10 +77,10 @@ class Ear:
 
     def _rises(self, part, step):
         """A part ending in "?" that isn't phrased as a question is the answer said with a rise when it is short
-        and has the step's shape ("dunno, a year?" to "how long?"), or it opens with a reason ("because money is
-        nice?"); else it asks ("what's this going to cost me?")."""
+        and has the step's shape ("dunno, a year?" to "how long?"), it opens with a reason ("because money is
+        nice?"), or it is only filler words ("ok?"); else it asks ("what's this going to cost me?")."""
         words = tokenize(part)
-        if self._reason(part):
+        if self._reason(part) or self._shrugs.filler(part):  # whole calls: "ok?" got "I'll find out"
             return True
         return bool(step.needs) and len(words) <= self.cfg["rise_answer_words"] and self.shaped(part, step)
 
@@ -100,8 +105,11 @@ class Ear:
         picked = self._chooses(reply.asked, step)
         if picked:  # "yeah I'm in, how do I pay?": the question is the answer, heard alone, unless the content
             # takes it back ("no, credit?": torn, judged as before) or is a sense ("brb, how do I pay?")
-            if within or self._takes_back(reply.said, picked, step):
+            if within:
                 return None
+            if self._takes_back(reply.said, picked, step):  # "not yet, how do I pay?": the yes is taken back, so
+                kind, name = self._interrupt(reply.meant, step, state, opened, True, answers=False)  # it asks
+                return Verdict(kind, name, reply.meant, asking=True) if kind == "fact" else None
             return Verdict("answer", text=reply.asked, asking=True)
         kind, name = self._interrupt(reply.asked, step, state, opened, True)
         if (kind in ("ready", "answer") or (kind == "objection" and opened)
@@ -114,6 +122,21 @@ class Ear:
         ahead = hear_ahead(self.method, state, reply.said)
         return Verdict("answer", text=reply.said, asking=True, ahead=None if ahead is state else ahead,
                        side=f"{kind}:{name}" if kind else "question", asked=reply.asked)
+
+    def _beside_worry(self, text, step, state, name):
+        """An answer, then a worry before the price ("make money online, but I've been burnt before"): the
+        answer is kept and the worry's early line goes in front of the next question, as for a worry asked
+        beside an answer. None when the first part is no answer, or the worry is not in the rest alone."""
+        head, *rest = clauses(text, self._breaks)
+        rest = ", ".join(rest)  # without the "but" that joins them: the worry heard on its own words
+        if not rest or self._interrupt(head, step, state, False, False)[0]:
+            return None
+        if self._interrupt(rest, step, state, False, False) != ("objection", name):
+            return None
+        if not self._answers_step(head, step, state):
+            return None
+        ahead = hear_ahead(self.method, state, head)
+        return Verdict("answer", text=head, ahead=None if ahead is state else ahead, side=f"objection:{name}")
 
     def _chooses(self, question, step):
         """The one label of the step's answers the question surely picks on its own ("how do I pay?" at the
@@ -168,9 +191,10 @@ class Ear:
         return any(self._listener.match(text, {"ready": list(r.examples)}, by_clause=False).score >= r.min_score
                    for r in self._open(state.step).values())
 
-    def _interrupt(self, text, step, state, opened, asking):
+    def _interrupt(self, text, step, state, opened, asking, answers=True):
         """An everyday interruption, product question or objection - only when it clearly beats
-        reading the reply as an answer to the step's own question, like a human closer would."""
+        reading the reply as an answer to the step's own question, like a human closer would. `answers`
+        False: the step's answers are not in the running (one was taken back beside it)."""
         # "not sure" alone is not knowing, not asking what we meant: no sense that rephrases hears a hedge, and
         # "let me think" is thinking out loud, not a pause: no sense that waits does (whole calls: "take your time" forever)
         unsure = 0.0 if asking else self._shrugs.unsure(text)
@@ -206,7 +230,7 @@ class Ear:
         # the catch-all keeps any reply only if it has the step's shape: "I don't have time for this" to "how
         # long?" can't be the answer, so nothing has to out-score it there (live: the frustration went unheard)
         takes_any = any(r.label == ANY for r in step.listen) and self.shaped(text, step)
-        won = self._listener.interruption(text, labels, answer_labels(step), takes_any, asking, floors)
+        won = self._listener.interruption(text, labels, answer_labels(step) if answers else {}, takes_any, asking, floors)
         if won and won.split(":", 1)[1] in handled:  # still kept as a label so a near worry can't win in its place
             # live: "I don't have 5k lying around" in the money talk was heard as "think it over". Asked again
             # ("how do I know this isn't a scam?" in the scam talk) it answers the step too, never "I'll find out"

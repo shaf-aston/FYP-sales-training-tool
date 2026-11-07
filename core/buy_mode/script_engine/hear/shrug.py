@@ -9,7 +9,8 @@ from core.infra.utils import tokenize
 class Shrugs:
     def __init__(self, cfg, sense, listener, fill):
         """`fill(template, slots)`: the Filler's, to say their words back; None when they can't be."""
-        self._filler = frozenset(cfg["stop_words"]) | frozenset(cfg["filler_words"])
+        self._fillers = frozenset(cfg["filler_words"])
+        self._filler = frozenset(cfg["stop_words"]) | self._fillers
         self._blank = frozenset(cfg["stop_words"]) | frozenset(cfg["no_answer_words"])
         self._plain = plain_words(cfg)
         self._sense, self._listener, self._fill = sense, listener, fill
@@ -26,6 +27,11 @@ class Shrugs:
         if words <= self._plain:
             return True  # "dunno man": only shrug words, nothing the catch-all should keep
         return self.hedges(text)
+
+    def filler(self, text):
+        """Only filler words ("ok", "yeah", "right"): with a rise ("ok?") it asks nothing."""
+        words = set(tokenize(text))
+        return bool(words) and words <= self._fillers
 
     def blank(self, text):
         """Only words that answer nothing, not even a yes-or-no question ("lol", "hmm", "idk"). No words at

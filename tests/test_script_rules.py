@@ -937,6 +937,14 @@ def test_after_restated_is_what_follows_the_part_that_says_the_question_back(sel
     ("a year?", True), ("because money is nice?", True), ("cos I need it, honestly?", True),
     ("about a year or so I would say really?", False),   # longer than `rise_answer_words`: a question
     ("one two three four five years?", True),            # exactly `rise_answer_words`
+    ("ok?", True), ("yeah?", True),                      # round 16: only filler asks nothing, "ok?" got "I'll find out"
 ])
 def test_a_rise_is_an_answer_when_short_and_shaped_or_a_reason(seller, part, rises):
     assert seller._ear._rises(part, seller.method.steps["03"]) == rises
+
+
+def test_an_answer_with_a_worry_beside_it_keeps_the_answer(seller):
+    """Round 16: "make money online, but I've been burnt before" lost the goal to the worry's early line."""
+    text, _ = at(seller, "01").reply("make money online, but I'm scared it won't work for me")
+    assert seller.last_turn["heard_as"] == "answer:vague+objection:fear", seller.last_turn
+    assert text.startswith("That's fair") and text.endswith("What do you mean by wanting to make money online?"), text

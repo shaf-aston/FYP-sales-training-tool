@@ -39,6 +39,7 @@ facts:
       - "what is this about"
       - "who are you"
       - "what exactly are you offering"
+      - "what kind of business is this"   # draft: whole calls, got "I'll find out"
     bridge: true   # at the very start, a getting-to-know-you question follows (the step's `bridge`)
     answer: "We help people build their own business {industry}, and there are a few different ways to do it.¶It always comes down to what would work best for you, so before I can suggest anything I need to know a bit more."
     again: "Like I said, it depends on what would work best for you, which is why I'm asking."   # draft: ours
@@ -57,6 +58,8 @@ facts:
       - "can I split it into payments"
       - "is there a payment plan"
       - "can I pay monthly"
+      - "is there a deposit"   # draft: whole calls, got "I'll find out"
+      - "do you take klarna"   # draft: same
     answer: "There are ways to make the investment work, and we'll find the one that suits you."
   discount:   # whole calls: "can you do it for 3k?" got "I'll find out and let you know"
     draft: true
@@ -79,6 +82,7 @@ facts:
       - "what's in the programme"
       - "do I get one to one calls"   # draft: whole calls: "I'll find out"
       - "do I get a mentor"   # draft
+      - "is there a community"   # draft: whole calls, got "I'll find out"
     answer: "Three parts: {pillar_1}, {pillar_2} and {pillar_3}. I'll go through each one once I know a bit more about you."
     late_answer: "Three parts: {pillar_1}, {pillar_2} and {pillar_3}."   # draft: once the pitch has been said
   guarantee:   # whole calls: "is there a refund?" went unanswered, "is there a guarantee?" was heard as the scam worry
@@ -105,6 +109,15 @@ facts:
       - "what do you do with my information"
       - "is my data safe"
     answer: "Fair question. I'll make sure you have that in writing before you decide anything."   # never a promise we can't check
+  proof:   # whole calls: "do you have reviews?" and "how many people have done it?" got "I'll find out"
+    draft: true
+    examples:
+      - "do you have reviews"
+      - "can I see some testimonials"
+      - "how many people have done it"
+      - "do you have any success stories"
+      - "can I speak to someone who has done it"
+    answer: "Fair question. I'll show you what others have done before you decide anything."   # never a number we can't check
   pay_when:   # whole calls: "do you need my bank details?" got how we got their number; "do I have to give my card now?" got "I'll find out"
     draft: true
     examples:

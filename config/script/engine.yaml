@@ -68,6 +68,7 @@ number_blanks:   # blanks filled with the number they said before a unit, as dig
   months_thinking:   # the same answer counted in months: "2 years" -> 24, "six months" -> 6
     from: years
     per: {year: 12, years: 12, yr: 12, yrs: 12, y: 12, month: 1, months: 1, mo: 1, mos: 1, mth: 1, mths: 1}   # draft: mo, mth (whole calls: "18mo")
+echo_cut_at: [but, though, although, except]   # draft: their words said back stop here: whole calls, "quit your job but you're scared?"
 echo_pronoun_swap: {my: your, me: you, mine: yours, myself: yourself, "i'm": "you're", "i've": "you've", "i'd": "you'd", i: you}   # their first person said back to them: "my kids" -> "your kids"
 judge_examples: 2     # examples per candidate shown to the judge
 judge_tokens: 10       # max_tokens for a close-call judge

@@ -49,7 +49,7 @@ interruptions:
       - "sorry, give me a moment"
       - "one sec, someone's at the door"
       - "sorry, my kid is yelling"
-      - "hang on, my kids need me"
+      - "hang on, I need to sort the kids out"   # draft: not "hang on, my kids need me": "for my kids", a goal, read as it (0.79)
       - "sorry, the dog is going mad"
       - "can you give me two minutes"
       - "brb"
@@ -72,6 +72,7 @@ interruptions:
       - "what's the weather like where you are"
       - "how's your day going"
       - "how are you doing today"
+      - "what time is it there"   # draft: whole calls, heard as when it starts
     reply: "Ha, all good here. Let's keep the time about you though."
   back:
     draft: true
@@ -174,6 +175,7 @@ interruptions:
       - "would you do it"
       - "have you done this yourself"
       - "what's in it for you"   # draft: whole calls, got "I'll find out"
+      - "do you like your job"   # draft: whole calls, got "I'll find out"
     reply: "I'm the AI playing the salesperson, so this one's all about you."
   no_wrong_answer:   # whole calls: "what do most people say?" got "I'll find out and let you know"
     only_asked: true   # "what most people do is give up" is an answer
@@ -217,4 +219,6 @@ interruptions:
       - "I'm hanging up"
       - "gotta run"
       - "see you"
+      - "sorry, I'm driving"   # draft: whole calls, saved as their reason
+      - "I can't talk right now"   # draft
     reply: ""   # the follow-up step says it

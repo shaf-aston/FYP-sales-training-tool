@@ -14,6 +14,7 @@ NAME = re.compile(r"\{(\w+)(?:\|([^|{}]*)\|([^|{}]*))?\}")  # {name} or {name|no
 WORD = re.compile(r"[$£€]?\d+(?:[.,]\d+)*[A-Za-z0-9'-]*|[A-Za-z0-9'-]+")  # "£2,500", "1.5", "2.5k" stay one word
 FIGURE = re.compile(r"\d+(?:\.\d+)?")
 GLUED = re.compile(r"(\d)([A-Za-z])")  # a number stuck to its unit: "1yr", "18mo"
+SENTENCE_END = re.compile(r"[.!?]+\s+")  # "more money. Mostly for my kids": "2.5k" and "5k." stay whole
 
 
 def blanks(line):
@@ -73,9 +74,15 @@ def base_verb(word, cfg):
 def echo_phrase(reply, cfg, vocab=frozenset(), verbs=False):
     """Their own words for a blank, by rule, no AI: lead-ins like "I want" and hedges like "I guess" dropped
     ("I want more time I guess" -> "more time"), first person turned to second ("my kids" -> "your kids"). None when the words would
-    not read right in the line: too long, no goal ("nothing"), or still speaking as the prospect.
+    not read right in the line: too long, no goal ("nothing"), or still speaking as the prospect. Only their
+    first sentence is said back, up to any `echo_cut_at` word ("but").
     `verbs`: the blank has a verb form, so a goal they put as "-ing" or as a state is made a verb for it
     ("paying the bills" -> "pay the bills", "debt free" -> "be debt free")."""
+    sentences = SENTENCE_END.split((reply or "").strip())  # one sentence, the first with more than filler ("fine.
+    # more money"): whole calls, "with more money Mostly for your kids?"
+    reply = next((x for x in sentences if set(tokenize(x)) - set(cfg["filler_words"])), sentences[0])
+    cut = "|".join(map(re.escape, cfg["echo_cut_at"]))
+    reply = re.split(rf"\b(?:{cut})\b", reply, maxsplit=1, flags=re.IGNORECASE)[0]  # "quit my job but I'm scared"
     if reply and reply.isupper() and len(tokenize(reply)) > 1:
         reply = reply.lower()  # shouted ("I WANT TO BE RICH!!!"): never said back in capitals ("BE RICH?")
     words = WORD.findall(reply or "")

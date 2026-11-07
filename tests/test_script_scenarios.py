@@ -596,6 +596,9 @@ def test_whats_next_asks_no_ai(fake_embedder):
     ("BE RICH", "be rich"),                # two words shouted are shouted too
     ("so I can travel", "travel"),         # was no echo: the plain line
     ("more money basically", "more money"),
+    ("I want more money. Mostly for my kids.", "more money"),   # round 16: said back as "more money. Mostly for your kids"
+    ("Yes. more money", "more money"),                     # a filler sentence first: the one that says something
+    ("quit my job but I'm scared", "quit your job"),       # round 16: the worry was said back too
     ("", None),
 ])
 def test_echo_phrase(reply, phrase):
