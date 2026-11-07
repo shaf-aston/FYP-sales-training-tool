@@ -141,6 +141,7 @@ class Interruption:
     after_wait: bool = False  # only makes sense right after a `wait` reply ("ok, I'm back")
     min_score: float = 0.0  # a match must score at least this on every step (words that are often answers too)
     with_answer: bool = False  # may sit beside an answer ("3 years, what about you?"): answer kept, this said first
+    only_asked: bool = False  # counts only as a question: "does that matter?" asks, "that matters to me" answers
 
 
 @dataclass(frozen=True)
@@ -158,6 +159,7 @@ class CommonSense:
     same_words: str = ""  # in place of a rephrase's lead when the step has no other words left; empty = the lead
     wait_again: str = ""  # in place of a wait reply said just before ("brb" twice); empty = the reply again
     yes_no_reask: tuple = ()  # leads for a yes-or-no question asked again, in turn, in place of the `reask` ones
+    park_again: str = ""  # a worry already parked before the price, asked about again; empty = its first line again
 
 
 def _read(directory, name):
@@ -390,7 +392,7 @@ def parse_offer(name, data):
     )
 
 
-INTERRUPTION_KEYS = {"examples", "reply", "draft", "after", "after_wait", "min_score", "with_answer"}  # `draft` is accepted, never read
+INTERRUPTION_KEYS = {"examples", "reply", "draft", "after", "after_wait", "min_score", "with_answer", "only_asked"}  # `draft` is accepted, never read
 
 
 def parse_common_sense(data):
@@ -401,7 +403,7 @@ def parse_common_sense(data):
         k: Interruption(k, tuple(v["examples"]), v["reply"], v.get("after", "ask"),
                         bool(v.get("after_wait")),
                         _score(f"interruption {k}", v["min_score"]) if "min_score" in v else 0.0,
-                        v.get("with_answer", False) is True)
+                        v.get("with_answer", False) is True, v.get("only_asked", False) is True)
         for k, v in data["interruptions"].items()
     }
     for i in items.values():
@@ -411,7 +413,7 @@ def parse_common_sense(data):
             raise ValueError(f"interruption {i.name}: with_answer only goes with after: ask (the next question follows)")
         _one_stress(f"interruption {i.name}", i.reply)
     nudge = data.get("nudge") or {}
-    if "?" in data["park"] or "?" in data.get("told_again", "") or "?" in data.get("ended", "") or "?" in data.get("same_words", "") or "?" in data.get("wait_again", "") or any("?" in r for r in data.get("yes_no_reask") or ()) or "?" in nudge.get("reply", "") or any(
+    if "?" in data["park"] or "?" in data.get("told_again", "") or "?" in data.get("ended", "") or "?" in data.get("same_words", "") or "?" in data.get("wait_again", "") or "?" in data.get("park_again", "") or any("?" in r for r in data.get("yes_no_reask") or ()) or "?" in nudge.get("reply", "") or any(
             "?" in i.reply for i in items.values() if i.after != "wait"):
         raise ValueError("park, nudge and interruption replies must not ask (the step's question follows)")
     if bool(nudge.get("reply")) != bool(nudge.get("phrases")):
@@ -425,7 +427,7 @@ def parse_common_sense(data):
                        tuple(unclear.get("examples") or ()),
                        _score("unclear", unclear.get("min_score")) if unclear else 1.0, ask_meaning,
                        data.get("told_again", ""), data.get("ended", ""), data.get("same_words", ""),
-                       data.get("wait_again", ""), tuple(data.get("yes_no_reask") or ()))
+                       data.get("wait_again", ""), tuple(data.get("yes_no_reask") or ()), data.get("park_again", ""))
 
 
 def load_method(name, directory=CONFIG_DIR / "methods", shared=CONFIG_DIR / "script"):

@@ -72,6 +72,7 @@ steps:
           - "travel the world"
           - "I want to quit my job and be my own boss"
           - "freedom to do what I want with my days"
+          - "to earn 2k a month"   # draft: whole calls ("to earn £2,500pm on the side"), heard as no goal and asked again
         then: "goal_practical"
       practical:   # level 2 already: skip the formula, ask the identity rung
         examples: &practical

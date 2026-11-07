@@ -551,11 +551,19 @@ def test_whats_next_asks_no_ai(fake_embedder):
     ("travel more", "travel more"),
     ("fine. more money obviously", "more money"),   # live: said back whole
     ("not sure really", None),
+    ("to earn £2,500 a month", "earn £2,500 a month"),   # whole calls: said back as "earn 2 500 a month"
+    ("2.5k a month", "2.5k a month"),
+    ("3-4k", "3-4k"),
     ("", None),
 ])
 def test_echo_phrase(reply, phrase):
     from core.buy_mode.script_engine.words.fill import echo_phrase
     assert echo_phrase(reply, CFG) == phrase
+
+
+def test_a_figure_is_never_a_typo():
+    from core.buy_mode.script_engine.words.fill import fix_typos
+    assert fix_typos("£2,500pm financialy", {"financial", "pm"}, CFG) == "£2,500pm financial"
 
 
 def test_their_outcome_goes_back_into_the_next_question(fake_embedder):
@@ -690,6 +698,11 @@ def test_loader_rejects_echo_without_a_capture():
     ("a couple of years", "2"),
     ("a year and a half", "1.5"),
     ("year and a half", "1.5"),   # a unit on its own is one (live: the line was dropped)
+    ("1.5 years", "1.5"),         # whole calls: read as 5 years ("1", "5")
+    ("I've been thinking about it for 5 years", "5"),   # a long reply is never a half
+    ("a year and a half now", "1.5"),
+    ("1yr", "1"),                 # a number stuck to its unit
+    ("since 2021", None),
     ("years ago", None),          # but never a plural one
     ("6 months", None),      # wrong unit, the years line is dropped
     ("ages", None),
@@ -701,14 +714,16 @@ def test_number_phrase(reply, number):
 
 
 @pytest.mark.parametrize("reply, months", [("a year", "12"), ("a couple of years", "24"), ("six months", "6"), ("a month", "1"), ("ages", None),
-    ("a year and a half", "18"), ("year and a half", "18"), ("2 and a half years", "30"), ("about 2 years and a half", "30")])
+    ("a year and a half", "18"), ("year and a half", "18"), ("2 and a half years", "30"), ("about 2 years and a half", "30"),
+    ("1.5 years", "18"), ("18mo", "18"), ("2yrs", "24")])
 def test_months_thinking_counts_the_answer_in_months(reply, months):
     from core.buy_mode.script_engine.words.fill import number_phrase
     assert number_phrase(reply, CFG["number_blanks"]["months_thinking"], CFG) == months
 
 
 @pytest.mark.parametrize("reply, said", [("a year", "1 year"), ("3 years", "3 years"), ("a year and a half", "a year and a half"),
-                                          ("year and a half", "a year and a half"), ("2 years and a half", "2 and a half years")])
+                                          ("year and a half", "a year and a half"), ("2 years and a half", "2 and a half years"),
+                                          ("1.5 years", "1.5 years"), ("1yr", "1 year")])
 def test_years_said_reads_like_they_said_it(reply, said):
     from core.buy_mode.script_engine.words.fill import number_phrase
     assert number_phrase(reply, CFG["number_blanks"]["years_said"], CFG) == said

@@ -95,7 +95,7 @@ class Ear:
                 return None
             return Verdict("answer", text=reply.asked, asking=True)
         kind, name = self._interrupt(reply.asked, step, state, opened, True)
-        if (kind == "ready" or (kind == "objection" and opened)
+        if (kind in ("ready", "answer") or (kind == "objection" and opened)
                 or (kind == "sense" and not self.sense.interruptions[name].with_answer)):  # "say that again?" leads
             return None
         if within:  # the content is a sense, no answer ("shut up"): it leads only beside a plain question
@@ -165,7 +165,8 @@ class Ear:
         # "not sure" alone is not knowing, not asking what we meant: no sense that rephrases hears a hedge
         hedge = not asking and self._shrugs.hedges(text)
         senses = {k: i for k, i in self.sense.interruptions.items()
-                  if (state.waiting or not i.after_wait) and not (hedge and i.after == "rephrase")}
+                  if (state.waiting or not i.after_wait) and not (hedge and i.after == "rephrase")
+                  and (asking or not i.only_asked)}
         labels = {f"sense:{k}": i.examples for k, i in senses.items()}
         floors = {f"sense:{k}": i.min_score for k, i in senses.items()}  # lowest score a label counts at
         if asking:
@@ -175,8 +176,8 @@ class Ear:
             objections = ()  # "money's tight" answers "what holds you back"; "is this a scam?" still asks
         elif not opened and asking:
             objections = [(k, o) for k, o in objections if o.early]  # "is this a scam?" gets an honest early line
-        if not opened:
-            objections = [(k, o) for k, o in objections if k not in state.parked]  # parked once: never twice
+        if not opened and not asking:  # parked once, said again: an answer. Asked again ("how do I know this
+            objections = [(k, o) for k, o in objections if k not in state.parked]  # isn't a scam?"): still the worry
         if hedge:
             objections = ()  # "I don't know" (0.74 to "I don't trust this") is not knowing, not a worry
         handled = set()  # a worry already being handled, or one the step asks about ("the money?"), answers the step
@@ -193,7 +194,9 @@ class Ear:
         takes_any = any(r.label == ANY for r in step.listen) and self.shaped(text, step)
         won = self._listener.interruption(text, labels, answer_labels(step), takes_any, asking, floors)
         if won and won.split(":", 1)[1] in handled:  # still kept as a label so a near worry can't win in its place
-            won = None   # live: "I don't have 5k lying around" in the money talk was heard as "think it over"
+            # live: "I don't have 5k lying around" in the money talk was heard as "think it over". Asked again
+            # ("how do I know this isn't a scam?" in the scam talk) it answers the step too, never "I'll find out"
+            won = "answer:" if asking else None
         if not won and not opened and not asking:
             won = self._judged_objection(text, step, dict(objections))
         return tuple(won.split(":", 1)) if won else (None, "")

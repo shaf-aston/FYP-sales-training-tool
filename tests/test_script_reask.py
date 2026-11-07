@@ -350,3 +350,66 @@ def test_a_question_of_vague_words_is_asked_not_shrugged(fake_embedder):
     s = seller(fake_embedder, "05")
     s.reply("anything")
     assert s.last_turn["heard_as"] == "says_nothing", s.last_turn
+
+
+def test_a_worry_parked_before_the_price_asked_again_gets_a_short_line(fake_embedder):
+    """Whole calls: "how do I know this isn't a scam?" asked again before the price got "I'll find out"."""
+    s = seller(fake_embedder, "04")
+    name = next(k for k, o in s.method.objections.items() if o.early)
+    first, again = s._park(name), s._park(name)
+    assert first == s.method.objections[name].early and again == s.sense.park_again != first
+    assert s.state.parked == (name,)
+
+
+def test_a_worry_with_no_park_again_line_says_its_first_line_again(fake_embedder):
+    s = seller(fake_embedder, "04")
+    s.sense = replace(s.sense, park_again="")
+    name = next(k for k, o in s.method.objections.items() if o.early)
+    assert s._park(name) == s._park(name) == s.method.objections[name].early
+
+
+def test_a_question_only_sense_said_as_a_statement_is_an_answer(fake_embedder):
+    """`only_asked`: "does that matter?" asks why we ask; the same words said ("that does matter") answer the step."""
+    asked = seller(fake_embedder, "05")
+    asked.reply("does that matter?")
+    said = seller(fake_embedder, "05")
+    said.reply("that does matter")
+    assert asked.last_turn["heard_as"] == "sense:why_ask" and said.last_turn["heard_as"] != "sense:why_ask", said.last_turn
+
+
+@pytest.mark.parametrize("step, said, heard", [
+    ("04", "I don't trust this", "answer"),                         # parked, said again before the price: an answer
+    ("04", "how do I know this is legit?", "objection:scam"),       # asked again: still the worry
+    ("15", "I don't trust this", "objection:scam"),                 # after the price: raised again, handled
+])
+def test_a_parked_worry_said_again(fake_embedder, step, said, heard):
+    s = seller(fake_embedder, step)
+    s.state = replace(s.state, parked=("scam",))
+    s.reply(said)
+    assert s.last_turn["heard_as"].startswith(heard), s.last_turn
+
+
+def test_a_worry_asked_again_while_it_is_handled_answers_the_step(fake_embedder):
+    """Whole calls: "how do I know this is legit?" in the scam talk got "I'll find out and let you know" 7 times."""
+    s = seller(fake_embedder, "m_scam")
+    s.state = replace(s.state, raised=("scam",))
+    s.reply("how do I know this is legit?")
+    assert s.last_turn["heard_as"].startswith("answer") and s.state.step == "m_scam", s.last_turn
+
+
+def test_the_same_worry_parked_again_and_again_wears_its_line(fake_embedder):
+    s = seller(fake_embedder, "09")
+    assert s.sense.park_again in s._leads
+    said = []
+    for _ in range(4):
+        s.state = replace(s.state, parked=("scam",), step="09", asks=0)
+        said.append(s.reply("how do I know this is legit?")[0])
+    assert [s.sense.park_again in t for t in said] == [True] * s.cfg["lead_repeats"] + [False] * (4 - s.cfg["lead_repeats"]), said
+
+
+def test_an_answer_beside_a_handled_worry_asked_again_is_heard_whole(fake_embedder):
+    """"find out, how do I know this is legit?" in the scam talk: one reply, never an answer with that question beside it."""
+    s = seller(fake_embedder, "m_scam")
+    s.state = replace(s.state, raised=("scam",))
+    s.reply("find out, how do I know this is legit?")
+    assert "+" not in s.last_turn["heard_as"] and s.last_turn["heard_as"].startswith("answer"), s.last_turn

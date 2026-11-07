@@ -9,7 +9,9 @@ from core.infra.utils import tokenize
 
 logger = logging.getLogger("script_engine.fallback")
 NAME = re.compile(r"\{(\w+)(?:\|([^|{}]*)\|([^|{}]*))?\}")  # {name} or {name|noun form|verb form}, $ = the phrase
-WORD = re.compile(r"[A-Za-z0-9'-]+")
+WORD = re.compile(r"[$£€]?\d+(?:[.,]\d+)*[A-Za-z0-9'-]*|[A-Za-z0-9'-]+")  # "£2,500", "1.5", "2.5k" stay one word
+FIGURE = re.compile(r"\d+(?:\.\d+)?")
+GLUED = re.compile(r"(\d)([A-Za-z])")  # a number stuck to its unit: "1yr", "18mo"
 
 
 def blanks(line):
@@ -29,8 +31,8 @@ def spell(word, vocab, cfg):
     """A typo turned into the script word it is plainly meant to be ("financialy" -> "financial").
     Known, short or unmatched words (names, places) stay as they are."""
     lower = word.lower()
-    if lower in vocab or len(lower) < cfg["spell_min_letters"]:
-        return word
+    if lower in vocab or len(lower) < cfg["spell_min_letters"] or any(c.isdigit() for c in lower):
+        return word  # a figure ("2,500pm") is never a typo
     if any(lower.endswith(end) and lower[:-len(end)] in vocab for end in cfg["spell_word_endings"]):
         return word  # "months", "works": a real word ending, not a typo
     near = get_close_matches(lower, vocab, 1, cfg["spell_cutoff"])
@@ -92,12 +94,13 @@ def number_phrase(reply, rule, cfg):
     """The number before the blank's unit, as digits, by rule: "about 5 years now" -> "5", "a year" -> "1".
     None when no number sits right before the unit ("ages", "6 months" for a years blank). "and a half"
     (`number_half`) before or after the unit adds a half; a singular unit on its own opens a reply as one
-    ("year and a half"). With `per`, the number is converted: "2 years" -> "24" for a months blank. With
+    ("year and a half"), and a number stuck to its unit is read apart ("1yr"). With `per`, the number is converted: "2 years" -> "24" for a months blank. With
     `unit` ([one, many]), the unit is said after it: "1 year", "2 years", "a year and a half". A rule with
     `from` and no `units` takes that rule's units."""
     units = rule.get("units") or cfg["number_blanks"][rule["from"]]["units"]
     per, unit, half = rule.get("per"), rule.get("unit"), tokenize(cfg["number_half"])
-    lower = [w.lower() for w in WORD.findall(reply or "") if w.lower() not in cfg["number_skip"]]
+    words = WORD.findall(GLUED.sub(r"\1 \2", reply or ""))  # "1yr" -> "1 yr"
+    lower = [w.lower() for w in words if w.lower() not in cfg["number_skip"]]
     for i, word in enumerate(lower):
         if word not in (per or units):
             continue
@@ -112,14 +115,14 @@ def number_phrase(reply, rule, cfg):
         if not unit:
             return f"{value:g}"
         if halved:
-            return f"a {unit[0]} and a half" if count == 1 else f"{count} and a half {unit[1]}"
-        return f"{count} {unit[count != 1]}"
+            return f"a {unit[0]} and a half" if count == 1 else f"{count:g} and a half {unit[1]}"
+        return f"{count:g} {unit[count != 1]}"
     return None
 
 
 def _count(word, cfg):
-    """A number said in digits or words ("3", "three", "a"), else None."""
-    return int(word) if word.isdigit() else cfg["number_words"].get(word)
+    """A number said in digits or words ("3", "1.5", "three", "a"), else None."""
+    return float(word) if FIGURE.fullmatch(word) else cfg["number_words"].get(word)
 
 
 def is_verb_goal(phrase, cfg):

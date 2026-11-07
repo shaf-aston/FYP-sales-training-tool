@@ -9,6 +9,7 @@
 #   follow_up = they are leaving: go to the method's follow-up step (book the next call).
 # min_score: a match must score at least this on every step (for words that are often real answers too).
 park: "That's fair, and we'll come back to it once we know this is even a fit."   # objection before the price: acknowledge, keep going
+park_again: "Like I said, fair question. Let's see if this is even right for you first, then you can judge for yourself."   # draft: the same worry asked again before the price (whole calls: "how do I know this isn't a scam?" again got "I'll find out")
 revisit: "Coming back to what you raised earlier."   # a parked objection, raised again when they hesitate at the close
 # A nudge to carry on ("what's next?", "go on"). Live: "yeah makes sense, what's next?" got "I don't know
 # that one offhand". Cut off the end of a reply, the rest is heard as usual ("credit, what's next?" pays).
@@ -119,6 +120,27 @@ interruptions:
       - "I just told you"
       - "you asked me that already"
     reply: "Fair point, let me put it another way."
+  why_ask:   # whole calls: "why do you ask?" got "I don't know that one offhand, I'll find out"
+    with_answer: true   # "3 years, why do you ask?": the 3 years is kept, the reason goes first
+    only_asked: true   # "that's important to me" (0.86 to "why is that important") is an answer
+    draft: true
+    examples:
+      - "why do you ask"
+      - "why do you want to know"
+      - "why does that matter"
+      - "does that matter"
+      - "what's that got to do with anything"
+      - "why is that important"
+    reply: "It helps me see if this is even right for you, so neither of us wastes time."
+  no_wrong_answer:   # whole calls: "what do most people say?" got "I'll find out and let you know"
+    only_asked: true   # "what most people do is give up" is an answer
+    draft: true
+    examples:
+      - "what do most people say"
+      - "what should I say"
+      - "what's the right answer"
+      - "what do you want me to say"
+    reply: "There's no right answer here, it's just about you."
   frustrated:   # live: "stop with the script man", "whatever", "this is stupid" got the same line again
     draft: true
     after: rephrase_else_move_on

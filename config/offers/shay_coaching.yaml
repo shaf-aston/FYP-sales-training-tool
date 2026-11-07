@@ -58,6 +58,15 @@ facts:
       - "is there a payment plan"
       - "can I pay monthly"
     answer: "There are ways to make the investment work, and we'll find the one that suits you."
+  included:   # whole calls: "what's included?" got "I'll find out and let you know"
+    draft: true
+    examples:
+      - "what's included"
+      - "what do I get"
+      - "how does the programme work"
+      - "what's in the programme"
+    answer: "Three parts: {pillar_1}, {pillar_2} and {pillar_3}. I'll go through each one once I know a bit more about you."
+    late_answer: "Three parts: {pillar_1}, {pillar_2} and {pillar_3}."   # draft: once the pitch has been said
   length:
     draft: true
     examples:

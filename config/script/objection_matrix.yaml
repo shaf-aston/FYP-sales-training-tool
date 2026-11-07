@@ -280,7 +280,7 @@ steps:
         then: m_partner_close
       "no":
         like: "no"
-        examples: ["not without her", "I need him on board"]
+        examples: ["not without her", "I need him on board", "I'd have to ask my wife", "I need to talk to her first", "I'd have to check with my partner"]   # draft: asking them first is not going ahead (whole calls: heard as yes)
         then: m_open_wallet
   m_partner_close:
     name: "Partner 2: soft close"

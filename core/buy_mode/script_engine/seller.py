@@ -96,11 +96,11 @@ class ScriptSeller:
         embedder.warm(examples + self._meanings.examples())
 
     def _lead_lines(self):
-        """The fixed lines said in front of a question asked again: the `reask` leads and the replies of the
-        senses that rephrase ("Fair point, let me put it another way.")."""
+        """The fixed lines said in front of a question asked again: the `reask` leads, the replies of the
+        senses that rephrase ("Fair point, let me put it another way.") and the same worry asked again."""
         lines = set(self.method.reask) | {line for s in self.method.steps.values() for line in s.reask}
         lines |= {i.reply for i in self.sense.interruptions.values() if i.after.startswith("rephrase")}
-        lines |= {self.sense.same_words, *self.sense.yes_no_reask}
+        lines |= {self.sense.same_words, self.sense.park_again, *self.sense.yes_no_reask}
         return sorted(line for line in lines if line)
 
     def _wear(self, text):
@@ -205,8 +205,7 @@ class ScriptSeller:
         if v.kind == "sense":
             return *self._sense(self.sense.interruptions[v.name]), ""
         if v.kind == "objection" and not opened:
-            self.state = park(self.state, v.name)
-            return self._then_ask(self.method.objections[v.name].early or self.sense.park), self.ui_stage(), ""
+            return self._then_ask(self._park(v.name)), self.ui_stage(), ""
         if v.kind == "objection":
             return *self._object(v.name), ""
         if v.kind == "fact":
@@ -251,9 +250,15 @@ class ScriptSeller:
         if kind == "sense":
             return self.sense.interruptions[name].reply
         if kind == "objection":
-            self.state = park(self.state, name)
-            return self.method.objections[name].early or self.sense.park
+            return self._park(name)
         return self._answer_uncovered(v.asked, opened) or ""
+
+    def _park(self, name):
+        """A worry before the price: its honest early line (or `park`), parked for the close. Asked about again,
+        `park_again`: the same long line twice reads as a recording."""
+        again = name in self.state.parked and self.sense.park_again
+        self.state = park(self.state, name)
+        return again or self.method.objections[name].early or self.sense.park
 
     def _answer(self, v, step, opened):
         text = v.text

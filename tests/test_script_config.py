@@ -71,11 +71,21 @@ def test_an_unclear_sense_without_min_score_is_named_not_a_key_error():
         parse_common_sense(data)
 
 
-@pytest.mark.parametrize("key, value", [("wait_again", "Still there?"), ("yes_no_reask", ["Yes or no?"])])
+@pytest.mark.parametrize("key, value", [("wait_again", "Still there?"), ("yes_no_reask", ["Yes or no?"]),
+                                        ("park_again", "Still worried?")])
 def test_lines_said_before_a_question_never_ask(key, value):
     """The step's question follows them: a "?" in front would be two questions in one message."""
     from core.buy_mode.script_engine.method import parse_common_sense
     data = {"park": "", "revisit": "", "interruptions": {}, key: value}
     with pytest.raises(ValueError, match="must not ask"):
         parse_common_sense(data)
-    assert parse_common_sense({**data, key: "Sure." if key == "wait_again" else ["Sure."]})
+    assert parse_common_sense({**data, key: ["Sure."] if key == "yes_no_reask" else "Sure."})
+
+
+def test_a_sense_can_count_only_as_a_question():
+    """`only_asked`: "does that matter?" asks why, "that matters to me" answers."""
+    from core.buy_mode.script_engine.method import parse_common_sense
+    sense = {"examples": ["why do you ask"], "reply": "It helps.", "only_asked": True}
+    data = {"park": "", "revisit": "", "interruptions": {"why_ask": sense, "thanks": {"examples": ["thanks"], "reply": "Sure."}}}
+    found = parse_common_sense(data).interruptions
+    assert found["why_ask"].only_asked and not found["thanks"].only_asked

@@ -500,6 +500,21 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("m_identify", 0, (), "I need to think about it", "m_think_what", None),   # think still thinks
     ("m_identify", 0, (), "I need more time", "m_think_what", None),
     ("05", 0, (), "I don't have time", "06", None),   # a real answer, never the frustration line
+    # round 10
+    ("05", 0, (), "why do you ask?", "05", "It helps me see"),   # was "I don't know that one offhand, I'll find out"
+    ("03", 0, (), "does that matter?", "03", "It helps me see"),
+    ("03", 0, (), "3 years, why do you ask?", "04", "It helps me see"),   # the 3 years kept
+    ("05", 0, (), "that's important to me", "06", None),   # said, not asked: an answer (0.86 to "why is that important")
+    ("05", 0, (), "that matters to me", "06", None),
+    ("02", 0, (), "what do most people say?", "02", "There's no right answer"),
+    ("09", 0, (), "what most people do is give up", "belief_origin", None),
+    ("01", 0, (), "what's included?", "01", "Three parts"),
+    ("03", 0, (), "how does the programme work?", "03", "Three parts"),   # was the length
+    ("03", 0, (), "how long is the programme?", "03", "It's a 6-month process."),
+    ("m_partner_proceed", 0, ("partner",), "I'd have to ask my wife", "m_open_wallet", None),   # was a yes
+    ("m_partner_proceed", 0, ("partner",), "it's my decision", "m_partner_close", None),
+    ("01", 0, (), "to earn 2500 a month on the side", "goal_practical", None),   # was no goal, asked again
+    ("m_scam", 0, ("scam",), "how do I know this isn't a scam?", "m_scam", "No pressure either way."),   # was "I'll find out"
 ]
 
 
@@ -513,3 +528,18 @@ def test_round_7_whole_calls(step, asks, raised, said, after, starts):
     assert seller.state.step == after, text
     if starts:
         assert text.startswith(starts), text
+
+
+def test_a_worry_asked_again_before_the_price_is_still_the_worry():
+    """Whole calls: "how do I know this isn't a scam?" asked a 2nd time got "I'll find out"; said as a statement
+    once parked it answers the step."""
+    from core.buy_mode.script_engine.engine import ScriptState
+
+    seller = _real_seller()
+    seller.reset(ScriptState(step="04"))
+    first, _ = seller.reply("how do I know this isn't a scam?")
+    again, _ = seller.reply("how do I know this isn't a scam?")
+    assert seller.state.step == "04" and seller.state.parked, (first, again)
+    assert again.startswith(seller.sense.park_again) and first != again, again
+    seller.reply("I'm not sure I trust it")
+    assert seller.state.step == "05"
