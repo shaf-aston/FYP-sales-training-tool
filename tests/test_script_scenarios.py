@@ -604,6 +604,7 @@ def test_whats_next_asks_no_ai(fake_embedder):
     ("totally, quit my job", "quit your job"),             # a filler word first is dropped too
     ("so i can travel", "travel"),                         # the longest lead-in, not "so"
     ("IDK MAYBE 2K A MONTH EXTRA", "2k a month extra"),     # round 18: said back as "maybe 2k a month extra"
+    ("jk, more money", "more money"),                      # round 19: said back as "jk more money"
     ("", None),
 ])
 def test_echo_phrase(reply, phrase):

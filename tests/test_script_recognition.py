@@ -647,6 +647,18 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("01", 0, (), "I'm not really interested to be honest", "01", "What are you actually hoping to achieve?"),   # not "private": "That's fine, no pressure."
     ("02", 0, (), "I'd rather keep that to myself", "02", "That's fine, no pressure."),   # was 0.73
     ("02", 0, (), "I'm not telling you", "02", "That's fine, no pressure."),   # was "Sorry, I got that wrong."
+    # round 19
+    ("22", 0, (), "how do I pay?", "22", "Which works better for you, credit or debit?"),   # was the fallback
+    ("19", 0, (), "how do I pay?", "22", "How would you like to process the investment?"),   # guard: still pays
+    ("19", 0, (), "can I cancel anytime?", "19", "Fair question. I'll confirm exactly how that works"),   # was the fallback
+    ("19", 0, (), "is there a contract?", "19", "Fair question. I'll confirm exactly how that works"),   # was heard as unsure
+    ("19", 0, (), "can I do it alongside my job?", "19", "Fair question. We'll plan it around the time"),   # was the fallback
+    ("01", 0, (), "how many hours a week does it take?", "01", "Fair question. We'll plan it around the time"),   # was "It's a 6-month process."
+    ("01", 0, (), "how long does it take?", "01", "It's a 6-month process."),   # guard
+    ("goal_practical", 0, (), "more time", "goal_identity", None),   # was "Fair enough, I'll keep this quick."
+    ("goal_practical", 0, (), "this is taking too long", "goal_practical", "Fair enough, I'll keep this quick."),   # guard
+    ("01", 0, (), "what do I want to achieve?", "01", "Fair point, let me put it another way."),   # was the AI line
+    ("02", 0, (), "how much do I need?", "02", "Fair point, let me put it another way."),   # was the price line
 ]
 
 

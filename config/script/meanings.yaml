@@ -52,6 +52,8 @@ meanings:
       - "I'm drowning in debt"
       - "money is always tight at the end of the month"
       - "I'm stressed about paying the bills"
+      - "I don't want to be broke anymore"   # draft: whole calls, heard as fear_of_loss ("Nobody wants to lose money.")
+      - "I'm always skint"   # draft
     lines:
       - "That kind of money stress wears you down."
       - "Always one bill behind… that's exhausting."

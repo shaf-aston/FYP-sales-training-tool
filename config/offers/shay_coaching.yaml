@@ -93,6 +93,8 @@ facts:
       - "is there a guarantee"
       - "can I get my money back"
       - "what if I don't make any money"
+      - "can I cancel anytime"   # draft: whole calls, got "I'll find out"
+      - "is there a contract"   # draft: whole calls, heard as unsure at the close
     answer: "Fair question. I'll confirm exactly how that works before you decide anything."   # never a policy we don't know
   different:   # whole calls: "how is this any different from the others?" got "I'll find out"
     draft: true
@@ -164,6 +166,14 @@ facts:
       - "how long does it take to see results"
       - "does it actually work"
     answer: "Honestly, results depend on the work you put in."   # the offer's own words, never a figure we don't have
+  hours:   # whole calls: "how many hours a week does it take?" got "It's a 6-month process."; "can I do it alongside my job?" got "I'll find out"
+    draft: true
+    examples:
+      - "how many hours a week does it take"
+      - "can I do it alongside my job"
+      - "do I have to quit my job first"
+      - "how much time do I need to put in"
+    answer: "Fair question. We'll plan it around the time you actually have."   # never a number of hours we can't check
   length:
     draft: true
     examples:

@@ -61,6 +61,8 @@ class Ear:
         if fixed:
             return fixed
         asking = bool(reply.asked)
+        if asking and not reply.said and self._asked_back(text, state):
+            return Verdict("sense", "clarify", text, asking)
         if asking and reply.said:
             both = self._with_side(reply, step, state, opened)
             if both:
@@ -81,6 +83,18 @@ class Ear:
         if asking and not self._answers(text, step):
             return Verdict("question", text=text, asking=asking, ahead=ahead)
         return Verdict("answer", text=text, asking=asking, ahead=ahead)
+
+    def _asked_back(self, text, state):
+        """Their reply is the question just asked, said back about themselves ("what do I want to achieve?" to
+        "What do you want to specifically achieve...?"): they want it put another way. Their I-words are turned
+        into you-words (`asked_back`); at least one must be there ("what do you do?" asks about us), and
+        `asked_back_share` of their words must be in the question."""
+        swap = self.cfg["asked_back"]
+        words = tokenize(text)
+        if not any(w in swap for w in words):
+            return False
+        asked = set(tokenize(" ".join(asked_line(self.method, state))))
+        return sum(swap.get(w, w) in asked for w in words) >= self.cfg["asked_back_share"] * len(words)
 
     def _rises(self, part, step):
         """A part ending in "?" that isn't phrased as a question is the answer said with a rise when it is short

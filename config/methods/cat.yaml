@@ -86,6 +86,7 @@ steps:
           - "to not have to check my bank balance before buying food"
           - "not dreading Mondays and actually enjoying life instead of just surviving"   # draft: live, heard as level 1
           - "a bit extra each month would help with the mortgage"   # draft: live ("an extra few hundred a month would help with the mortgage"), heard as level 1
+          - "more free time"   # draft: whole calls, "more time" was heard as annoyance ("I'll keep this quick")
         then: "goal_identity"
       identity:   # level 3 already: the ladder is climbed
         examples: &identity
@@ -509,6 +510,10 @@ steps:
           - "yes, let's do it"
         then: "end"
       backs_out: *backs_out
+      how:   # draft: whole calls, "how do I pay?" got "I'll find out"; the choice again answers it
+        examples: ["how do I pay", "how does the payment work"]
+        then: "22"
+        keep: false
   "end":
     name: "Welcome"
     ui_stage: outcome

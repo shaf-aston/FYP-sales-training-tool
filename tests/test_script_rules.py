@@ -1013,3 +1013,24 @@ def test_a_fix_on_the_step_still_asked_is_its_answer(seller):
     """On the step that saved it, "I meant 3k" is that step's answer again, not a fix of an earlier one."""
     assert seller._ear._correction("sorry I meant 3k", ScriptState(step="02", slots={"number": "2k"})) is None
     assert seller._ear._correction("sorry I meant 3k", ScriptState(step="03", slots={"number": "2k"})).text == "3k"
+
+
+@pytest.mark.parametrize("step, said", [
+    ("01", "what do I want to achieve?"),                # round 19: got "I'm the AI playing the salesperson"
+    ("goal_practical", "what would it get me?"),         # round 19: got "I'll find out"
+    ("04", "why can't I ignore it?"),
+    ("19", "do I see myself jumping in?"),
+])
+def test_the_question_said_back_asks_it_another_way(seller, step, said):
+    text, _ = at(seller, step).reply(said)
+    assert seller.last_turn["heard_as"] == "sense:clarify", seller.last_turn
+    assert text.startswith("Fair point, let me put it another way."), text
+
+
+@pytest.mark.parametrize("step, said", [
+    ("01", "what do you do?"),      # no I-word: it asks about us
+    ("22", "how do I pay?"),        # 2 of 4 words in the question
+    ("01", "what should I say?"),
+])
+def test_a_question_of_their_own_is_not_the_question_said_back(seller, step, said):
+    assert not seller._ear._asked_back(said, ScriptState(step=step))
