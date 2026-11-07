@@ -570,6 +570,7 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("is it ok to say?", "", "is it ok to say?"),   # nothing after the lead: a question, as typed
     ("sorry for the long message, I want to quit my job", "I want to quit my job", ""),   # round 24: an aside
     ("yes, lol", "yes", ""),   # a part of only no-answer words beside others is a hedge
+    ("sorry", "sorry", ""),   # on its own it is the reply, never a hedge left out
 ])
 def test_a_reply_is_read_once_into_what_it_says_and_what_it_asks(text, said, asked):
     from core.buy_mode.script_engine.hear.reply import Reader
@@ -577,6 +578,17 @@ def test_a_reply_is_read_once_into_what_it_says_and_what_it_asks(text, said, ask
     reply = Reader(CFG, load_common_sense().nudges, lambda part: part.lower() in HEDGES).read(text)
     reply = reply.settle(lambda part: False)
     assert (reply.said, reply.asked) == (said, asked)
+
+
+@pytest.mark.parametrize("text, asked", [("about 2k, I was wondering what it costs ?", "what it costs?"),
+                                          ("about 2k, I'd like to know the price", "the price?")])
+def test_a_polite_lead_asks_even_when_a_rise_would_be_heard_as_an_answer(text, asked):
+    """Round 24: the part after "I was wondering" is a question, never settled into content ("what it costs?")."""
+    from core.buy_mode.script_engine.hear.reply import Reader
+    from core.buy_mode.script_engine.method import load_common_sense
+    reply = Reader(CFG, load_common_sense().nudges, lambda part: part.lower() in HEDGES).read(text)
+    reply = reply.settle(lambda part: True)
+    assert (reply.said, reply.asked) == ("about 2k", asked)
 
 
 def test_a_line_asked_again_is_filled_the_same_way_without_new_ai_calls(fake_embedder):
