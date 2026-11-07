@@ -203,6 +203,9 @@ class ScriptSeller:
             return self._render(move), move.ui_stage, detail
         if v.kind == "ready":
             return *self._go(jump(self.method, self.state, self.method.shortcuts[v.name].then)), ""
+        if v.kind == "corrects":  # "sorry I meant 3k not 2k": the answer fixed, the question asked again
+            self.state = replace(self.state, slots={**self.state.slots, v.name: v.text})
+            return self._then_ask(self.sense.corrected), self.ui_stage(), ""
         if v.kind == "sense":
             return *self._sense(self.sense.interruptions[v.name]), ""
         if v.kind == "objection" and not opened:

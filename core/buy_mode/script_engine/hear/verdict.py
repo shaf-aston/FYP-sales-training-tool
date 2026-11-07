@@ -47,12 +47,19 @@ class Ear:
         self._listener, self._shrugs, self._judge = listener, shrugs, judge
         self.reader = Reader(cfg, sense.nudges, shrugs.hedges)
         self._breaks = break_pattern(cfg)
+        self._captures = {}  # slot: the first step that saves it
+        for s in method.steps.values():
+            if s.capture:
+                self._captures.setdefault(s.capture, s)
 
     def hear(self, text, state, opened):
         step = self.method.steps[state.step]
         reply = self.reader.read(text).settle(lambda part: self._rises(part, step))
         if reply.nudged and not tokenize(reply.unnudged):
             return Verdict("nudge", text=text)  # "what's next?": no answer
+        fixed = self._correction(text, state)
+        if fixed:
+            return fixed
         asking = bool(reply.asked)
         if asking and reply.said:
             both = self._with_side(reply, step, state, opened)
@@ -64,7 +71,7 @@ class Ear:
             return Verdict("says_nothing", text=text, asking=asking)  # an answer only: never an interruption
         ahead = None if asking else hear_ahead(self.method, state, text)  # "do I need 5k?" is not their goal
         ahead = None if ahead is state else ahead
-        kind, name = self._interrupt(text, step, ahead or state, opened, asking)
+        kind, name = (None, "") if self._shrugs.plain_no(text) else self._interrupt(text, step, ahead or state, opened, asking)
         if kind == "objection" and not opened and not asking:
             beside = self._beside_worry(text, step, state, name)
             if beside:
@@ -122,6 +129,19 @@ class Ear:
         ahead = hear_ahead(self.method, state, reply.said)
         return Verdict("answer", text=reply.said, asking=True, ahead=None if ahead is state else ahead,
                        side=f"{kind}:{name}" if kind else "question", asked=reply.asked)
+
+    def _correction(self, text, state):
+        """Their last answer fixed a turn later ("sorry I meant 3k not 2k"): the new words, for the slot it was
+        saved in, when they have that step's shape. None otherwise: "I meant what I said" fixes nothing."""
+        opening = re.match(self.cfg["corrects"], text, re.IGNORECASE)
+        if not opening or not state.slots:
+            return None
+        slot = next(reversed(state.slots))
+        value = re.sub(self.cfg["corrects_drop"], "", text[opening.end():], flags=re.IGNORECASE).strip(" .!,")
+        step = self._captures.get(slot)
+        if not value or not step or step.id == state.step or (step.needs and not re.search(step.needs, value, re.IGNORECASE)):
+            return None
+        return Verdict("corrects", slot, value)
 
     def _beside_worry(self, text, step, state, name):
         """An answer, then a worry before the price ("make money online, but I've been burnt before"): the

@@ -47,3 +47,10 @@ def test_an_answer_they_already_gave_is_never_asked_about(fake_embedder):
 def test_ask_meaning_is_empty_when_their_words_cant_be_said_back(fake_embedder):
     s = shrugs(fake_embedder, fill=lambda t, slots: None)
     assert s.ask_meaning("stuff I guess", "Why?", empty=True, heard_ahead=False) == ""
+
+
+def test_a_plain_no_is_only_no_words(fake_embedder):
+    """Round 17: "nah" was heard as "what do you mean?"; a plain no is an answer, never an interruption."""
+    s = shrugs(fake_embedder)
+    assert all(s.plain_no(t) for t in ("nah", "nope", "no", "no no", "nah."))
+    assert not any(s.plain_no(t) for t in ("nah not really", "no idea", "ok", "", "the"))

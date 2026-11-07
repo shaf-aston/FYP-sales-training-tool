@@ -202,6 +202,7 @@ steps:
           - "for ages"
           - "forever"
           - "years"
+          - "too long"   # draft: whole calls, heard as "this is taking too long" (frustrated)
         then: "04"
         ack: "{months_thinking} months... Damn.¶"
       started:   # draft: a rival label: "since I started the business 3 years ago" (0.77) was heard as a failed attempt

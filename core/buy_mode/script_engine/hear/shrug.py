@@ -12,6 +12,7 @@ class Shrugs:
         self._fillers = frozenset(cfg["filler_words"])
         self._filler = frozenset(cfg["stop_words"]) | self._fillers
         self._blank = frozenset(cfg["stop_words"]) | frozenset(cfg["no_answer_words"])
+        self._no = frozenset(cfg["stop_words"]) | frozenset(cfg["no_words"])
         self._plain = plain_words(cfg)
         self._sense, self._listener, self._fill = sense, listener, fill
 
@@ -32,6 +33,11 @@ class Shrugs:
         """Only filler words ("ok", "yeah", "right"): with a rise ("ok?") it asks nothing."""
         words = set(tokenize(text))
         return bool(words) and words <= self._fillers
+
+    def plain_no(self, text):
+        """Only a no ("nah", "nope"): an answer, never "what do you mean?" or a worry."""
+        words = set(tokenize(text))
+        return bool(words - self._filler) and words <= self._no
 
     def blank(self, text):
         """Only words that answer nothing, not even a yes-or-no question ("lol", "hmm", "idk"). No words at

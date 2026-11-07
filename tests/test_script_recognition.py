@@ -625,6 +625,14 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("22", 0, (), "do you take paypal?", "end", "Perfect."),   # guard: still pays
     ("04", 0, (), "sorry, I'm driving", "later", "No problem. Let's book a follow-up call"),   # was saved as their reason
     ("05", 0, (), "I can't talk right now", "later", None),
+    # round 17
+    ("03", 0, (), "too long", "04", "If this has been on your mind"),   # was "Fair enough, I'll keep this quick"
+    ("03", 0, (), "way too long", "04", "If this has been on your mind"),
+    ("03", 0, (), "this is taking too long", "03", "Fair enough, I'll keep this quick."),   # guard: still annoyed
+    ("01", 0, (), "nah", "01", "What are you actually hoping to achieve?"),   # was "let me put it another way"
+    ("willing", 0, (), "nah", "11", None),   # guard: still a no
+    ("02", 0, (), "can I speak to your manager?", "02", "I'm an AI playing the salesperson"),   # was the fallback
+    ("02", 0, (), "can I talk to someone else?", "02", "I'm an AI playing the salesperson"),
 ]
 
 
@@ -638,6 +646,19 @@ def test_round_7_whole_calls(step, asks, raised, said, after, starts):
     assert seller.state.step == after, text
     if starts:
         assert text.startswith(starts), text
+
+
+def test_an_answer_fixed_a_turn_later_is_kept():
+    """Round 17: "sorry I meant 3k not 2k" to "how long?" was saved as how long they had been thinking."""
+    from core.buy_mode.script_engine.engine import ScriptState
+
+    seller = _real_seller()
+    seller.reset(ScriptState(step="02"))
+    seller.reply("2k")
+    text, _ = seller.reply("sorry I meant 3k not 2k")
+    assert seller.state.slots == {"number": "3k"} and seller.state.step == "03", (text, seller.state.slots)
+    text, _ = seller.reply("a year")
+    assert seller.state.slots == {"number": "3k", "years": "a year"} and seller.state.step == "04", text
 
 
 def test_a_real_word_is_kept_as_they_said_it():

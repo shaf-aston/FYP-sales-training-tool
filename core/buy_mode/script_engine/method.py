@@ -164,6 +164,7 @@ class CommonSense:
     wait_again: str = ""  # in place of a wait reply said just before ("brb" twice); empty = the reply again
     yes_no_reask: tuple = ()  # leads for a yes-or-no question asked again, in turn, in place of the `reask` ones
     park_again: str = ""  # a worry already parked before the price, asked about again; empty = its first line again
+    corrected: str = ""  # they fixed their last answer a turn later; empty = the question again only
 
 
 def _read(directory, name):
@@ -422,7 +423,7 @@ def parse_common_sense(data):
             raise ValueError(f"interruption {i.name}: with_answer only goes with after: ask (the next question follows)")
         _one_stress(f"interruption {i.name}", i.reply)
     nudge = data.get("nudge") or {}
-    if "?" in data["park"] or "?" in data.get("told_again", "") or "?" in data.get("ended", "") or "?" in data.get("same_words", "") or "?" in data.get("wait_again", "") or "?" in data.get("park_again", "") or any("?" in r for r in data.get("yes_no_reask") or ()) or "?" in nudge.get("reply", "") or any(
+    if "?" in data["park"] or "?" in data.get("told_again", "") or "?" in data.get("ended", "") or "?" in data.get("same_words", "") or "?" in data.get("wait_again", "") or "?" in data.get("park_again", "") or "?" in data.get("corrected", "") or any("?" in r for r in data.get("yes_no_reask") or ()) or "?" in nudge.get("reply", "") or any(
             "?" in i.reply for i in items.values() if i.after != "wait"):
         raise ValueError("park, nudge and interruption replies must not ask (the step's question follows)")
     if bool(nudge.get("reply")) != bool(nudge.get("phrases")):
@@ -436,7 +437,8 @@ def parse_common_sense(data):
                        tuple(unclear.get("examples") or ()),
                        _score("unclear", unclear.get("min_score")) if unclear else 1.0, ask_meaning,
                        data.get("told_again", ""), data.get("ended", ""), data.get("same_words", ""),
-                       data.get("wait_again", ""), tuple(data.get("yes_no_reask") or ()), data.get("park_again", ""))
+                       data.get("wait_again", ""), tuple(data.get("yes_no_reask") or ()), data.get("park_again", ""),
+                       data.get("corrected", ""))
 
 
 def load_method(name, directory=CONFIG_DIR / "methods", shared=CONFIG_DIR / "script"):

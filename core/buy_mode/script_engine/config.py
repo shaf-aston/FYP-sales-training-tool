@@ -17,12 +17,12 @@ TYPES = {
     "ack_tokens": int, "ack_retries": int, "ack_max_words": int, "probe_max_words": int, "memory_chars": int,
     "log_text_chars": int, "rise_answer_words": int, "reason_starts": list,
     "ack": bool, "listen": bool, "log_uncovered": bool,
-    "stop_words": list, "filler_words": list, "no_answer_words": list, "filler_tags": list, "question_words": list, "question_subjects": list, "question_starts": list, "closed_question_starts": list, "question_lead_words": list,
+    "stop_words": list, "filler_words": list, "no_answer_words": list, "no_words": list, "filler_tags": list, "question_words": list, "question_subjects": list, "question_starts": list, "closed_question_starts": list, "question_lead_words": list,
     "bad_phrase_starts": list, "verb_goal_starts": list, "verb_goal_leads": list, "be_goal_words": list, "echo_drop_starts": list, "echo_drop_ends": list, "echo_cut_at": list,
     "prospect_pronouns": list, "spell_word_endings": list, "spell_words": list, "spell_real_words": str, "answer_banned_words": list,
     "vague_words": list, "openers": list, "fact_presses": int, "banned_phrases": list, "nudge_leads": list, "take_backs": list, "take_backs_with_break": list, "take_backs_mid": list, "ack_words": list,
     "number_blanks": dict, "number_words": dict, "number_skip": list, "number_half": str, "number_parts": dict, "echo_pronoun_swap": dict, "coach_notes": dict, "prompts": dict,
-    "uncovered_fallback": str, "bridge_ack": str,
+    "uncovered_fallback": str, "bridge_ack": str, "corrects": str, "corrects_drop": str,
 }
 
 # the blanks the code fills in each template; a template may leave any of them out, never add one

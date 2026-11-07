@@ -948,3 +948,33 @@ def test_an_answer_with_a_worry_beside_it_keeps_the_answer(seller):
     text, _ = at(seller, "01").reply("make money online, but I'm scared it won't work for me")
     assert seller.last_turn["heard_as"] == "answer:vague+objection:fear", seller.last_turn
     assert text.startswith("That's fair") and text.endswith("What do you mean by wanting to make money online?"), text
+
+
+def test_a_plain_no_is_never_an_interruption(seller, monkeypatch):
+    """Round 17: "nah" (0.76 to "huh") got "Fair point, let me put it another way"; it is a no, an answer."""
+    monkeypatch.setattr(seller._ear, "_interrupt", lambda *a, **k: ("sense", "clarify"))
+    assert seller._ear.hear("nah", ScriptState(step="01"), False).kind == "answer"
+    assert seller._ear.hear("huh", ScriptState(step="01"), False).kind == "sense"   # guard: anything else is heard
+
+
+@pytest.mark.parametrize("step, slots, said, kept", [
+    ("03", {"number": "2k"}, "sorry I meant 3k not 2k", {"number": "3k"}),   # round 17: saved as how long
+    ("04", {"years": "a year"}, "make that 18 months", {"years": "18 months"}),
+    ("goal_practical", {"outcome": "more money"}, "I meant freedom, not money", {"outcome": "freedom"}),
+])
+def test_an_answer_fixed_a_turn_later_replaces_it(seller, step, slots, said, kept):
+    text, _ = at(seller, step, **slots).reply(said)
+    assert seller.state.slots == kept and seller.state.step == step, (text, seller.state)
+    assert text.startswith("Got it, thanks."), text
+
+
+@pytest.mark.parametrize("step, slots, said", [
+    ("03", {"number": "2k"}, "I meant what I said"),        # no figure: no fix to "how much"
+    ("05", {"years": "a year"}, "I meant to start ages ago"),  # "meant to" is no fix
+    ("02", {}, "I meant 3k"),                               # nothing saved yet
+])
+def test_only_a_real_fix_replaces_an_answer(seller, step, slots, said):
+    at(seller, step, **slots).reply(said)
+    assert seller.last_turn["heard_as"] != "corrects:" + next(iter(slots), ""), seller.last_turn
+    for k, v in slots.items():
+        assert seller.state.slots[k] == v
