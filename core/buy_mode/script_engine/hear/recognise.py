@@ -26,6 +26,7 @@ class Listener:
         self.near_miss, self.interrupt_threshold = cfg["near_miss"], cfg["interrupt_threshold"]
         self.question_answer_min_score = cfg["question_answer_min_score"]
         self.breaks, self.clause_min_words = break_pattern(cfg), cfg["clause_min_words"]
+        self.unsure_margin = cfg["unsure_margin"]
 
     def _parts(self, reply):
         """The reply, plus its clauses (reply.py's cut) when it has two or more long enough to hear alone."""
@@ -61,9 +62,12 @@ class Listener:
         is ("nope. my other half would go mental"): a question is answered first and explained after. A reply
         torn between two answers ("no, credit?") stays a close call: its lead never settles it. A lead nearer
         `unsure` (examples of not knowing) than any answer is none ("dunno, he's never..."). Never for
-        interruptions, so "yeah but I need to think" still reads as an objection."""
+        interruptions, so "yeah but I need to think" still reads as an objection. A clear answer whose reply is
+        `unsure_margin` nearer not knowing is none too: "maybe" to "Would that work for you?" (a close call is the judge's)."""
         whole = self.match(reply, labels)
         found = _floored(whole, floors)
+        if found.label and not whole.close and self.match(reply, {"": unsure}, by_clause=False).score >= found.score + self.unsure_margin:
+            return Match(None, found.score, (), False)  # "maybe" to "Would that work for you?" is not knowing, no yes
         if found.label or (whole.label and whole.close):  # torn between two answers: a floor never lets its lead settle it
             return found
         lead = next(iter(clauses(reply, self.breaks)), "")

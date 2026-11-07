@@ -469,3 +469,28 @@ def test_huh_is_never_saved_as_their_goal():
     seller.reset(ScriptState(step="goal_practical", slots={"outcome": "more money"}))
     seller.reply("huh?")
     assert "practical" not in seller.state.slots
+
+
+ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step after, the reply starts with or None)
+    ("19", 1, (), "ok", "m_identify", None),   # a shrug to "Where are you at with it?" took the yes route: 19 -> 20 -> 22 -> 19
+    ("19", 1, (), "yeah", "m_identify", None),
+    ("m_funding_options", 0, ("money",), "maybe", "m_funding_options", "No pressure either way."),   # was a yes; and "No rush, even a rough idea helps."
+    ("m_funding_options", 0, ("money",), "not sure", "m_funding_options", "No pressure either way."),
+    ("m_card", 0, ("money",), "maybe", "m_card", "No pressure either way."),
+    ("m_funding_options", 0, ("money",), "I guess so", "22", None),   # a soft yes is still a yes
+    ("m_funding_options", 0, ("money",), "probably", "22", None),
+    ("m_reframe1_dictate", 0, ("research",), "not sure", "m_reframe2", None),   # was "Why not?"
+    ("16", 0, (), "I don't know", "17", None),   # was heard as the scam worry (0.74 to "I don't trust this")
+]
+
+
+@pytest.mark.parametrize("step, asks, raised, said, after, starts", ROUND_7)
+def test_round_7_whole_calls(step, asks, raised, said, after, starts):
+    from core.buy_mode.script_engine.engine import ScriptState
+
+    seller = _real_seller()
+    seller.reset(ScriptState(step=step, asks=asks, raised=raised))
+    text, _ = seller.reply(said)
+    assert seller.state.step == after, text
+    if starts:
+        assert text.startswith(starts), text

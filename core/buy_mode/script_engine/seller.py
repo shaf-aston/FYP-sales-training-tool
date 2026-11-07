@@ -100,7 +100,7 @@ class ScriptSeller:
         senses that rephrase ("Fair point, let me put it another way.")."""
         lines = set(self.method.reask) | {line for s in self.method.steps.values() for line in s.reask}
         lines |= {i.reply for i in self.sense.interruptions.values() if i.after.startswith("rephrase")}
-        lines.add(self.sense.same_words)
+        lines |= {self.sense.same_words, *self.sense.yes_no_reask}
         return sorted(line for line in lines if line)
 
     def _wear(self, text):
@@ -248,7 +248,7 @@ class ScriptSeller:
         # an answer with a question in it: the question gets an answer when the facts have one, else
         # nothing ("what's next?" needs none). After the judge: a failed AI line can't cost it.
         heard = self._side(v, opened) if v.side else (self._answer_uncovered(text, opened) if v.asking else "")
-        leads = step.reask or self.method.reask  # "No rush" in front says they weren't heard; a route's ack says they were
+        leads = (*(step.reask or self.method.reask), *self.sense.yes_no_reask)  # "No rush" in front says they weren't heard; a route's ack says they were
         asked_again = move.state.step == step.id and (not move.ack or move.ack in leads)
         meant = self._meaning(text) if asked_again and not heard else ""
         if meant:
@@ -362,7 +362,7 @@ class ScriptSeller:
         text, labels = v.text, answer_labels(step)
         label, line, ack, missed = None, "", None, False
         needed = self._ear.shaped(text, step)
-        if labels:
+        if labels and not empty:  # a shrug takes no answer's route: "ok" to "Where are you at with it?" is no yes
             found = self._listener.answer(text, labels, list(self.sense.unclear),
                                           {r.label: r.min_score for r in step.listen if r.label})
             label, near = found.label, found.candidates
@@ -390,7 +390,16 @@ class ScriptSeller:
             detail = "misses"
         elif v.kind == "answer":
             detail = f"answer:{label}" if label else ("answer:any" if not labels else "answer:unclear")
-        return advance(self.method, self.state, label, text, empty, line, self.cfg["misses"]), ack, detail
+        return self._closed_lead(advance(self.method, self.state, label, text, empty, line, self.cfg["misses"])), ack, detail
+
+    def _closed_lead(self, move):
+        """A yes-or-no question asked again gets a yes-or-no lead, in the same turn: "No rush, even a rough
+        idea helps." in front of "Would that work for you?" asks for a guess nobody needs."""
+        leads, closed = self.method.reask, self.sense.yes_no_reask
+        if move.ack not in leads or not self._ear._yes_or_no(move.state):
+            return move
+        turn = leads.index(move.ack)
+        return replace(move, ack=closed[turn] if turn < len(closed) else "")
 
     def _asked_text(self):
         """The step's question as it was just asked, blanks filled, tone marks off."""

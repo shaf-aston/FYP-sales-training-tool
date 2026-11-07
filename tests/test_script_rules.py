@@ -881,7 +881,17 @@ def test_no_two_closes_ask_jumping_in_word_for_word():
     assert len(set(says)) == len(says), says
 
 
-@pytest.mark.parametrize("step", ["19", "m_partner_close", "m_close1", "m_close2", "m_close3", "13", "m_funded", "m_partner_proceed"])
+@pytest.mark.parametrize("step", ["19", "m_partner_close", "m_close1", "m_close2", "m_close3", "13", "m_funded", "m_partner_proceed", "m_partner_here", "m_reframe1_now", "m_reframe1_dictate"])
 def test_a_question_with_a_lead_in_is_still_a_yes_or_no(fake_embedder, step):
     """A lead-in before the helper verb ("With all that in mind, do you...", "So if ..., would you...") keeps it yes or no."""
     assert make_seller(fake_embedder)._ear._yes_or_no(ScriptState(step=step))
+
+
+@pytest.mark.parametrize("step", ["01", "goal_identity", "19", "m_partner_feel", "m_partner_if_not", "m_reframe2", "22"])
+def test_an_open_question_with_a_lead_in_is_not_a_yes_or_no(fake_embedder, step):
+    """"So, How does your partner feel...?", "Well, what are you going to do...?": the lead-in hides no helper verb."""
+    from dataclasses import replace
+    state = ScriptState(step=step)
+    if CAT.steps[step].probes:
+        state = replace(state, asks=1)  # 19's probe: "Where are you at with it right now?"
+    assert not make_seller(fake_embedder)._ear._yes_or_no(state)

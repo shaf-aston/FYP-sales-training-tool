@@ -6,8 +6,8 @@ import pytest
 import yaml
 
 from core.buy_mode.script_engine.engine import ScriptState, advance, question_of, start
-from core.buy_mode.script_engine.method import load_method, load_offer, parse_method
 from core.buy_mode.script_engine.hear.recognise import Listener
+from core.buy_mode.script_engine.method import load_method, load_offer, parse_method
 
 FIXTURES = Path(__file__).parent / "fixtures" / "script_engine"
 ENGINE_DIR = Path(__file__).parent.parent / "core" / "buy_mode" / "script_engine"
@@ -21,7 +21,7 @@ def mini():
 def _listener(embedder, threshold, margin=0.03):
     return Listener({"threshold": threshold, "margin": margin, "close_call_k": 3, "near_miss": 0.1,
                      "interrupt_threshold": 0.0, "question_answer_min_score": 0.8,
-                     "clause_breaks": [",", "and"], "clause_min_words": 3}, embedder)
+                     "clause_breaks": [",", "and"], "clause_min_words": 3, "unsure_margin": 0.12}, embedder)
 
 
 def _labels(method, step_id):
@@ -226,3 +226,12 @@ def test_one_probe_written_as_a_line_is_one_probe():
     data = yaml.safe_load((FIXTURES / "mini.yaml").read_text(encoding="utf-8"))
     data["steps"]["b"]["probe"] = "Put simply: does that make sense?"
     assert parse_method("one", data).steps["b"].probes == ("Put simply: does that make sense?",)
+
+
+def test_an_answer_much_nearer_not_knowing_is_no_answer(fake_embedder):
+    """"maybe" to "Would that work for you?" scored as a yes: `unsure_margin` nearer not knowing is none."""
+    listener = _listener(fake_embedder, 0.3)
+    labels = {"yes": ["yes that works"], "no": ["no it does not"]}
+    assert listener.answer("not sure that works", labels, ["not sure"]).label is None   # 0.71 unsure vs 0.58 yes
+    assert listener.answer("yes that works", labels, ["not sure"]).label == "yes"
+    assert listener.answer("sure that works", labels, ["not sure"]).label == "yes"   # 0.58 unsure vs 0.67 yes: kept

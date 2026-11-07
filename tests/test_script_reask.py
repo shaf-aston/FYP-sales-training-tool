@@ -236,3 +236,18 @@ def test_the_ask_budget_counts_a_side_reply_and_resets_on_a_new_step():
     assert not asks_left(CAT, state, CFG["misses"])
     assert asks_left(CAT, replace(state, resaid=0), CFG["misses"])
     assert start(CAT).state.resaid == 0
+
+
+def test_a_yes_or_no_question_asked_again_gets_a_yes_or_no_lead(fake_embedder):
+    """"No rush, even a rough idea helps." in front of "Would that work for you?" asks for a guess nobody needs."""
+    from core.buy_mode.script_engine.engine import Move
+    s, sense = seller(fake_embedder, "m_funding_options"), load_common_sense()
+    for turn, lead in enumerate(CAT.reask):
+        move = Move("Would that work for you?", ScriptState(step="m_funding_options"), "", ack=lead)
+        want = sense.yes_no_reask[turn] if turn < len(sense.yes_no_reask) else ""
+        assert s._closed_lead(move).ack == want
+    open_move = Move("What do you do?", ScriptState(step="01"), "", ack=CAT.reask[0])
+    assert s._closed_lead(open_move).ack == CAT.reask[0]   # an open question keeps "No rush"
+    fair = Move("Would that work for you?", ScriptState(step="m_funding_options"), "", ack="Fair enough.")
+    assert s._closed_lead(fair).ack == "Fair enough."   # a route's own ack is never swapped
+    assert set(sense.yes_no_reask) <= set(s._leads)   # worn out like any lead

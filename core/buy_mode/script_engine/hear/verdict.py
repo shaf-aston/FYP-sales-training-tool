@@ -2,6 +2,7 @@
 
 import re
 from dataclasses import dataclass
+from itertools import dropwhile
 
 from core.buy_mode.script_engine.engine import (
     asked_line,
@@ -140,11 +141,14 @@ class Ear:
 
     def _yes_or_no(self, state):
         """The step was last asked as a yes-or-no question ("Is there anything you've tried?"): "yes" answers it.
-        Its first word, or the first after its last comma: "So if your partner isn't on board, would you still
-        go ahead?", "...but you're the one who drives, aren't you?"."""
-        question = question_of(asked_line(self.method, state)[0])
-        starts = self.cfg["closed_question_starts"]
-        return any(words and words[0] in starts for words in (tokenize(question), tokenize(question.rsplit(",", 1)[-1])))
+        Any part of it (between commas) opening with a helper verb, past lead-ins ("so", "and", "okay"): "So if
+        your partner isn't on board, would you still go ahead?", "Okay, And do you want...", "..., aren't you?"."""
+        leads = self.cfg["question_lead_words"]
+        for part in question_of(asked_line(self.method, state)[0]).split(","):
+            words = list(dropwhile(leads.__contains__, tokenize(part)))
+            if words and words[0] in self.cfg["closed_question_starts"]:
+                return True
+        return False
 
     def _open(self, step_id):
         """{name: Ready} for the shortcuts open at this step."""
@@ -173,6 +177,8 @@ class Ear:
             objections = [(k, o) for k, o in objections if o.early]  # "is this a scam?" gets an honest early line
         if not opened:
             objections = [(k, o) for k, o in objections if k not in state.parked]  # parked once: never twice
+        if hedge:
+            objections = ()  # "I don't know" (0.74 to "I don't trust this") is not knowing, not a worry
         handled = set()  # a worry already being handled, or one the step asks about ("the money?"), answers the step
         if opened:
             handled = {k for k, _ in objections if k in state.raised or k in {r.label for r in step.listen}}
