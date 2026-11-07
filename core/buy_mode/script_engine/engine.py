@@ -12,6 +12,7 @@ class ScriptState:
     slots: dict = field(default_factory=dict)
     raised: tuple = ()  # objections handled after the price, oldest first
     asks: int = 0       # times the current step has been asked again
+    resaid: int = 0     # times a side reply said the current step's question again: spends the same budget (`_budget`)
     asked: str = ""     # the AI's own words the step was last asked in, if any (see `asked_line`)
     said: tuple = ()    # every such line asked on the current step, so none is asked twice
     parked: tuple = ()  # objections raised before the price, oldest first; raised again at the revisit step
@@ -47,7 +48,7 @@ def _speak(method, state):
         step = method.steps[state.step]
     if method.max_visits and state.seen.count(step.id) >= method.max_visits and step.id != method.follow_up:
         return _speak(method, replace(state, step=method.follow_up))  # round in circles: book a later call
-    return Move(step.say, replace(state, asks=0, asked="", said=(), seen=state.seen + (step.id,)), step.ui_stage, lead=lead)
+    return Move(step.say, replace(state, asks=0, resaid=0, asked="", said=(), seen=state.seen + (step.id,)), step.ui_stage, lead=lead)
 
 
 def _answered(step, state):
@@ -109,9 +110,15 @@ def _limit(step, misses):
     return misses if step.capture and misses else len(step.probes or (step.say,))
 
 
+def _budget(state):
+    """Times the step's question was put to them again, by an ask again or said behind a side reply: a question
+    is said at most `_limit` + 1 times a step, whatever came between ("how much is it?" then two shrugs)."""
+    return state.asks + state.resaid
+
+
 def asks_left(method, state, misses):
     """The current step may still be asked again before it moves on."""
-    return state.asks < _limit(method.steps[state.step], misses)
+    return _budget(state) < _limit(method.steps[state.step], misses)
 
 
 def _ask_again(method, state, step, ack="", line="", misses=0, lead=True, stay=False):
@@ -122,7 +129,7 @@ def _ask_again(method, state, step, ack="", line="", misses=0, lead=True, stay=F
     `stay` (they asked what it meant) gets one more go, then moves on too: by `stuck`, else past the step
     without its answer. A step that asks nothing (a closing line, a statement) is said again plain: "no rush"
     in front of it answers a question nobody asked."""
-    if state.asks >= _limit(step, misses) + (1 if stay else 0):
+    if _budget(state) >= _limit(step, misses) + (1 if stay else 0):
         if step.stuck:
             return _take(method, state, step.stuck)
         if stay:

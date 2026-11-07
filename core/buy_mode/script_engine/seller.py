@@ -423,6 +423,8 @@ class ScriptSeller:
                               theirs=bool(self.state.asked))
         if "?" not in question:
             question = ""
+        else:  # the question said again spends an ask: never a 4th time after two shrugs
+            self.state = replace(self.state, resaid=self.state.resaid + 1)
         return f"{lead.strip()} {question.strip()}".strip()
 
     def _render(self, move):

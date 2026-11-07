@@ -1,6 +1,8 @@
 """The `reask` lead ("No rush, even a rough idea helps.") only goes in front of a question asked again,
 never twice, and a saved call carries on after a JSON round trip."""
 import json
+
+import pytest
 from dataclasses import replace
 
 from core.infra.loader import load_yaml
@@ -199,3 +201,28 @@ def test_going_round_in_circles_without_a_worry_still_books_the_follow_up():
     from core.buy_mode.script_engine.engine import jump
     state = ScriptState(step="19", seen=("22",) * CAT.max_visits)
     assert jump(CAT, state, "22").state.step == CAT.follow_up
+
+
+@pytest.mark.parametrize("step", ["12", "01", "05"])
+@pytest.mark.parametrize("side", ["how much is it?", "how did you get my number?", "who are you?"])
+def test_a_question_said_again_behind_a_side_reply_spends_an_ask(fake_embedder, step, side):
+    """Sid: "do my research" then "not sure" twice heard the question a 4th time. A side reply that says the
+    step's question again spends the same budget as an ask again: at most `misses` + 1 times a step."""
+    from core.buy_mode.script_engine.engine import question_of
+    s = seller(fake_embedder, step)
+    asked = 1
+    for reply in (side, "not sure", "not sure", "not sure"):
+        before = s.state.step
+        s.reply(reply)
+        if before != step or s.state.step != step:
+            break
+        asked += 1 if (s.state.asks + s.state.resaid) else 0
+    assert s.state.step != step and asked <= CFG["misses"] + 1, (asked, question_of(CAT.steps[step].say))
+
+
+def test_the_ask_budget_counts_a_side_reply_and_resets_on_a_new_step():
+    from core.buy_mode.script_engine.engine import asks_left, start
+    state = ScriptState(step="12", resaid=1, asks=CFG["misses"] - 1)
+    assert not asks_left(CAT, state, CFG["misses"])
+    assert asks_left(CAT, replace(state, resaid=0), CFG["misses"])
+    assert start(CAT).state.resaid == 0
