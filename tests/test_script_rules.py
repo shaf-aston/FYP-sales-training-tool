@@ -1022,6 +1022,7 @@ def test_a_fix_on_the_step_still_asked_is_its_answer(seller):
     ("19", "do I see myself jumping in?"),
     ("goal_identity", "what would it change?"),          # round 19: no I-word, got "I'll find out"
     ("03", "how long?"),                                 # round 19: was heard as "recent"
+    ("03", "how long what?"),                            # round 20: the "what?" made it 2 of 3, moved on unanswered
 ])
 def test_the_question_said_back_asks_it_another_way(seller, step, said):
     v = seller._ear.hear(said, ScriptState(step=step), False)
@@ -1037,6 +1038,7 @@ def test_the_question_said_back_asks_it_another_way(seller, step, said):
     ("01", "what should I say?"),
     ("01", "what do you mean?"),    # their own "you": about us
     ("04", "why?"),                 # one word is too few to tell
+    ("03", "what what?"),           # "what?" alone is never their words
 ])
 def test_a_question_of_their_own_is_not_the_question_said_back(seller, step, said):
     assert not seller._ear._asked_back(said, ScriptState(step=step))

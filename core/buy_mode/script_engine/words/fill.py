@@ -38,13 +38,18 @@ def real_words(filename):
 
 
 def spell(word, vocab, cfg):
-    """A typo turned into the script word it is plainly meant to be ("financialy" -> "financial").
+    """A typo turned into the script word it is plainly meant to be ("financialy" -> "financial", "mroe" -> "more").
     Known, short or unmatched words (names, places) stay as they are, and so does a real word that is
     just not in the script ("drown" is never "down")."""
-    lower = word.lower()
-    if lower in vocab or len(lower) < cfg["spell_min_letters"] or any(c.isdigit() for c in lower):
+    lower, real = word.lower(), real_words(cfg["spell_real_words"])
+    if lower in vocab or any(c.isdigit() for c in lower) or lower in real:
         return word  # a figure ("2,500pm") is never a typo
-    if lower in real_words(cfg["spell_real_words"]):
+    swaps = {lower[:i] + lower[i + 1] + lower[i] + lower[i + 2:] for i in range(1, len(lower) - 1)}  # the first letter is
+    # rarely the slip, and keeping it keeps slang whole: "ive" is not "vie", "abt" is not "bat"
+    swapped = swaps & vocab  # only into a script word: the real words hold names and letters too ("mam" is not "mma")
+    if len(swapped) == 1 and len(lower) >= cfg["spell_swap_min_letters"]:
+        return swapped.pop()  # two letters typed the wrong way round: "mroe", "yse"
+    if len(lower) < cfg["spell_min_letters"]:
         return word
     if any(lower.endswith(end) and lower[:-len(end)] in vocab for end in cfg["spell_word_endings"]):
         return word  # "months", "works": a real word ending, not a typo

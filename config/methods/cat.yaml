@@ -74,6 +74,7 @@ steps:
           - "freedom to do what I want with my days"
           - "to earn 2k a month"   # draft: whole calls ("to earn £2,500pm on the side"), heard as no goal and asked again
           - "a bit of extra income"   # draft: whole calls, heard as no goal and asked again
+          - "I just need some cash"   # draft: whole calls, "I'm a student and need cash" was heard as no goal
           - "earn an extra few grand a month"   # draft: whole calls, "earn an extra three grand a month" was too close to call
         then: "goal_practical"
       practical:   # level 2 already: skip the formula, ask the identity rung

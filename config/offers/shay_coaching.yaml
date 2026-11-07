@@ -172,7 +172,7 @@ facts:
       - "how many hours a week does it take"
       - "can I do it alongside my job"
       - "do I have to quit my job first"
-      - "how much time do I need to put in"
+      - "how much time a week do I need to put in"   # draft: "how much time do I need to put in" took "how long would I be in it for" from length
     answer: "Fair question. We'll plan it around the time you actually have."   # never a number of hours we can't check
   length:
     draft: true
@@ -180,6 +180,7 @@ facts:
       - "how long is the programme"
       - "how many months does it run"
       - "how long does it last"
+      - "how long would I be on the programme"   # draft: "how long would I be in it for" was a close call with hours
       - "how long does it take"   # draft: whole calls, "so I can quit my job, but how long does it take?" got how long the call is
     answer: "It's a 6-month process."
   location:

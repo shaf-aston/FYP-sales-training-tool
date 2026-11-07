@@ -88,12 +88,13 @@ class Ear:
         """Their reply is the question just asked, said back about themselves ("what do I want to achieve?" to
         "What do you want to specifically achieve...?"): they want it put another way. Their I-words are turned
         into you-words (`asked_back`), and `asked_back_share` of their words must be in the question. A you-word
-        of theirs (`asked_back_you`) asks about us ("what do you do?"); one word ("why?") is too few to tell."""
+        of theirs (`asked_back_you`) asks about us ("what do you do?"); one word ("why?") is too few to tell.
+        A "what?" tacked on (`asked_back_what`: "how long what?") is not counted unless the question has it too."""
         swap = self.cfg["asked_back"]
-        words = tokenize(text)
+        asked = set(tokenize(" ".join(asked_line(self.method, state))))
+        words = [w for w in tokenize(text) if w in asked or w not in self.cfg["asked_back_what"]]
         if len(words) < self.cfg["asked_back_min_words"] or any(w in self.cfg["asked_back_you"] for w in words):
             return False
-        asked = set(tokenize(" ".join(asked_line(self.method, state))))
         return sum(swap.get(w, w) in asked for w in words) >= self.cfg["asked_back_share"] * len(words)
 
     def _rises(self, part, step):

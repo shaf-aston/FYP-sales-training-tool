@@ -660,6 +660,25 @@ def test_a_typo_is_still_fixed_beside_real_words():
     assert fix_typos("drown in debt, financialy free", {"down", "financial"}, CFG) == "drown in debt, financial free"
 
 
+@pytest.mark.parametrize("text, fixed", [
+    ("mroe money", "more money"), ("yse", "yes"), ("a yaer", "a year"), ("tiem", "time"),
+    ("form", "form"), ("dose", "dose"),   # a real word stays, though one swap from a script word
+    ("ive", "ive"), ("abt", "abt"),       # the first letter is kept: slang is never "vie" or "bat"
+    ("my mam", "my mam"),                 # never into a word outside the script ("mma")
+])
+def test_two_letters_the_wrong_way_round_are_fixed(text, fixed):
+    """Whole calls: "mroe money" was said back with the typo and "yse" at the close was not a yes."""
+    from core.buy_mode.script_engine.words.fill import fix_typos
+    vocab = frozenset(CFG["spell_words"]) | {"more", "yes", "time", "from", "does", "vie", "bat", "a", "my"}
+    assert fix_typos(text, vocab, CFG) == fixed
+
+
+def test_yes_with_two_letters_swapped_is_a_yes_at_the_close(fake_embedder):
+    s = seller(fake_embedder, step="19")
+    s.reply("yse")
+    assert s.state.step == "20"
+
+
 def test_their_outcome_goes_back_into_the_next_question(fake_embedder):
     s = seller(fake_embedder, step="01")
     reply, _ = s.reply("I want financial freedom")

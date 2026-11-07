@@ -672,6 +672,11 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("01", 0, (), "is this MLM?", "01", "Fair question, there's a lot of shady stuff online."),   # was "I'll find out"
     ("19", 1, (), "yes", "20", "What makes you say that?"),   # was heard as saying nothing to "Where are you at with it?"
     ("goal_identity", 0, (), "what would it change?", "goal_identity", "Fair point, let me put it another way."),   # was "I'll find out"
+    ("01", 0, (), "I'm a student and need cash", "goal_practical", None),   # round 20: was heard as no goal
+    ("01", 0, (), "I need money", "goal_practical", None),   # was heard as the money worry before any price
+    ("01", 0, (), "how long would I be in it for?", "01", "It's a 6-month process."),   # was the hours-a-week line
+    ("01", 0, (), "mroe money", "goal_practical", "What are you hoping to achieve with more money?"),   # was said back with the typo
+    ("03", 0, (), "how long what?", "03", "Fair point, let me put it another way."),   # moved on unanswered
 ]
 
 
