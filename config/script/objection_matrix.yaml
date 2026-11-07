@@ -279,7 +279,7 @@ steps:
   m_partner_close:
     name: "Partner 2: soft close"
     ui_stage: outcome
-    say: "Do you see yourself jumping in?"   # the script's own soft close
+    say: "In that case, do you see yourself jumping in?"   # the script's own soft close; draft: "In that case," is ours, the same question word for word a 2nd time sounds like a loop
     reask: *yes_no_reask
     stuck: {then: m_reframe1}
     listen:
@@ -358,7 +358,7 @@ steps:
   m_close1:
     name: "Reframe 1: close"
     ui_stage: outcome
-    say: "Do you see yourself jumping in?"
+    say: "With all that in mind, do you see yourself jumping in?"   # draft: the lead-in is ours; the source asks the same close word for word up to 4 times a call
     reask: *yes_no_reask
     stuck: {then: m_reframe2}
     listen:
@@ -381,7 +381,7 @@ steps:
   m_close2:
     name: "Reframe 2: close"
     ui_stage: outcome
-    say: "Do you see yourself jumping in?"
+    say: "From the top of that mountain, do you see yourself jumping in?"   # draft: the lead-in is ours; the source asks the same close word for word up to 4 times a call
     reask: *yes_no_reask
     stuck: {then: m_reframe3}
     listen:
@@ -404,7 +404,7 @@ steps:
   m_close3:
     name: "Reframe 3: close"
     ui_stage: outcome
-    say: "Do you see yourself jumping in?"
+    say: "Making decisions from where you WANT to be, do you see yourself jumping in?"   # draft: the lead-in is ours; the source asks the same close word for word up to 4 times a call
     reask: *yes_no_reask
     stuck: {then: follow_up}
     listen:

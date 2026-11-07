@@ -868,3 +868,16 @@ def test_a_shortcut_whose_from_is_not_before_its_until_fails_loud():
     data["pays"] = {**data["pays"], "from": "19"}
     with pytest.raises(ValueError, match="from must come before its until"):
         parse_method("cat", data, matrix, _read(CONFIG_DIR / "script", "answers"))
+
+
+def test_no_two_closes_ask_jumping_in_word_for_word():
+    """Sid heard "Do you see yourself jumping in?" four times, word for word (19, then each reframe's close)."""
+    steps = ("19", "m_partner_close", "m_close1", "m_close2", "m_close3")
+    says = [CAT.steps[s].say for s in steps]
+    assert len(set(says)) == len(says), says
+
+
+@pytest.mark.parametrize("step", ["19", "m_partner_close", "m_close1", "m_close2", "m_close3", "13", "m_funded", "m_partner_proceed"])
+def test_a_question_with_a_lead_in_is_still_a_yes_or_no(fake_embedder, step):
+    """A lead-in before the helper verb ("With all that in mind, do you...", "So if ..., would you...") keeps it yes or no."""
+    assert make_seller(fake_embedder)._ear._yes_or_no(ScriptState(step=step))
