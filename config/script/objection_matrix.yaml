@@ -59,6 +59,7 @@ objections:
       - "it's just how I am, I'm cautious"
       - "I'm not sure I'm capable of doing this"
       - "what if it doesn't work for me"   # draft: whole calls, "what if it doesn't work?" got "I'll find out"
+      - "what if I can't keep up"   # draft: whole calls, "yes but what if I can't keep up?" at the close got no answer
   think:   # Procrastinator: the SOP says handle the logistics behind it first, then fear
     enter: m_think_what
     examples:

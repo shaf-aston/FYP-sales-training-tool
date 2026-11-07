@@ -693,6 +693,16 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("01", 0, (), "well it started when my dad got ill last year and I had to take time off work and since then money has been tight and I just want to get back on my feet", "goal_practical", None),   # was "I haven't mentioned a price yet"
     ("01", 0, (), "I can't afford that", "01", "I haven't mentioned a price yet"),   # guard: paying us is still the worry
     ("01", 0, (), "1. more money 2. more time", "goal_practical", "What are you hoping to achieve with more money?"),   # was "with 1?"
+    # round 23
+    ("02", 0, (), "a month?", "02", "Fair point, let me put it another way."),   # was "I'll find out"
+    ("01", 0, (), "achieve?", "01", "Fair point, let me put it another way."),   # was the AI line
+    ("22", 0, (), "debit?", "end", None),   # guard: picks one of the choices
+    ("01", 0, (), "lol idk, money?", "goal_practical", None),   # guard: the answer said with a rise
+    ("20", 0, (), "not for me", "19", "No pressure at all."),   # was payment
+    ("20", 0, (), "no thanks", "19", "No pressure at all."),   # guard: passes on both
+    ("19", 0, (), "yes but what if I can't keep up?", "m_reframe1", None),   # was "What makes you say that?"
+    ("01", 0, (), "depends what you're offering", "01", "We help people"),   # was "What do you mean by depends..."
+    ("01", 0, (), "it depends on what it is", "01", "We help people"),
 ]
 
 

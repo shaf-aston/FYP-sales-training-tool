@@ -39,3 +39,4 @@ backs_out:   # changing their mind after a yes (live: "actually no, forget it" g
   - "actually I don't think so"   # draft
   - "no"
   - "I'm not interested"   # draft: whole calls, "I'm just not interested" at 20 went to payment
+  - "it's not for me"   # draft: whole calls, "not for me" at 20 went to payment

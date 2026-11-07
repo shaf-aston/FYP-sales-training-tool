@@ -1055,3 +1055,32 @@ def test_what_alone_wants_the_question_put_another_way(seller, said):
 @pytest.mark.parametrize("said", ["what do most people make?", "sorry", "what's next?", "what about you?"])
 def test_a_question_with_what_in_it_is_not_what_alone(seller, said):
     assert not seller._ear._what_alone(said)
+
+
+@pytest.mark.parametrize("step, said", [
+    ("02", "a month?"),        # "...making each month..."
+    ("02", "months?"),         # a plural of the question's word
+    ("01", "achieve?"),
+    ("19", "jumping in?"),
+    ("02", "each month? "),     # two words, a space after the "?"
+    ("belief_cost", "year?"),  # "...over the next few years?"
+])
+def test_a_word_from_the_question_said_back_wants_it_put_another_way(seller, step, said):
+    """Round 23: "a month?" to "How much... each month...?" got "I'll find out"; "achieve?" got the AI line."""
+    assert seller._ear._word_back(said, ScriptState(step=step))
+    v = at(seller, step)._ear.hear(said, seller.state, False)
+    assert (v.kind, v.name) == ("sense", "clarify"), v
+
+
+@pytest.mark.parametrize("step, said", [
+    ("02", "a month"),          # no "?": said, not asked
+    ("22", "debit?"),           # the question offers a choice: it picks one
+    ("04", "why?"),             # a question word asks
+    ("02", "2k?"),              # not the question's words
+    ("01", "achieve more money?"),   # 3 words is too many: their own question
+    ("02", "making each month?"),    # 3 words: their own question, not a word said back
+    ("02", "?"),                # no words at all
+    ("02", "bills?"),           # ends in "s", but "bill" isn't in the question either
+])
+def test_a_reply_of_its_own_is_not_a_word_said_back(seller, step, said):
+    assert not seller._ear._word_back(said, ScriptState(step=step))
