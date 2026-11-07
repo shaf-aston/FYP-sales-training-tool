@@ -29,6 +29,8 @@ class Route:
     like: str = ""      # the shared answer (answers.yaml) it takes examples from: what kind of answer it is ("no")
     say: str = ""       # said in place of the next step's own line, which this answer would make untrue ("not long" ->
                         # not "so many nights, months and years")
+    restates: bool = False  # the answer only says the question back ("I want to make money online"): a reply that
+                            # opens with it and goes on is heard by the rest ("..., so I can quit my job")
 
 
 @dataclass(frozen=True)
@@ -188,8 +190,10 @@ def _route(step_id, label, data, answers):
     say = data.get("say", "")
     if say and ("?" not in say or NAME.search(say) or str(data["then"]) == step_id):
         raise ValueError(f"step {step_id}: route '{label}' say must ask, have no blanks and move on")
-    return Route(label, examples, str(data["then"]), data.get("ack", ""), data.get("keep", True) is not False, floor,
-                 like or "", say)
+    keep, restates = data.get("keep", True) is not False, data.get("restates", False) is True
+    if restates and keep:
+        raise ValueError(f"step {step_id}: route '{label}' restates the question, so it can't keep the reply")
+    return Route(label, examples, str(data["then"]), data.get("ack", ""), keep, floor, like or "", say, restates)
 
 
 def _step(step_id, data, answers):

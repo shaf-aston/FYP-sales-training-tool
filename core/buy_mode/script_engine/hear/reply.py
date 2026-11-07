@@ -75,6 +75,14 @@ def clauses(text, breaks):
     return [p.strip(" \t,;.!") for p in parts if tokenize(p)]
 
 
+def after_lead(text, breaks):
+    """What follows the reply's first part ("make money online so I can quit my job" -> "I can quit my job"),
+    "" when it has one part only."""
+    found = breaks.search(text)
+    rest = text[found.end():].strip(" \t,;.!") if found else ""
+    return rest if tokenize(rest) else ""
+
+
 class Reader:
     def __init__(self, cfg, nudges, hedges):
         """`nudges`: phrases cut off the end of a reply. `hedges(text)`: the part says nothing on its own."""

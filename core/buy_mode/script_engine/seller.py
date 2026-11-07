@@ -25,6 +25,7 @@ from core.buy_mode.script_engine.engine import (
 from core.buy_mode.script_engine.hear.embedder import make_embedder
 from core.buy_mode.script_engine.hear.meanings import MeaningBank, load_meanings
 from core.buy_mode.script_engine.hear.recognise import Listener
+from core.buy_mode.script_engine.hear.reply import after_lead
 from core.buy_mode.script_engine.hear.shrug import Shrugs
 from core.buy_mode.script_engine.hear.verdict import Ear, answer_labels
 from core.buy_mode.script_engine.method import (
@@ -386,8 +387,14 @@ class ScriptSeller:
         label, line, ack, missed = None, "", None, False
         needed = self._ear.shaped(text, step)
         if labels and not empty:  # a shrug takes no answer's route: "ok" to "Where are you at with it?" is no yes
-            found = self._listener.answer(text, labels, list(self.sense.unclear),
-                                          {r.label: r.min_score for r in step.listen if r.label})
+            floors = {r.label: r.min_score for r in step.listen if r.label}
+            found = self._listener.answer(text, labels, list(self.sense.unclear), floors)
+            restates = {r.label for r in step.listen if r.restates}
+            rest = after_lead(text, self._listener.breaks) if found.label in restates else ""
+            if rest:  # "i want to make money online so i can quit my job": the question said back, then the answer
+                after = self._listener.answer(rest, labels, list(self.sense.unclear), floors)
+                if after.label and after.label not in restates and not after.close:
+                    text, found = rest, after
             label, near = found.label, found.candidates
             if found.close:
                 pick = self._voice.judge(text, {c: labels[c] for c in near}) if near else VAGUE

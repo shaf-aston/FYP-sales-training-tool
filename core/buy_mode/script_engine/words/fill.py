@@ -64,6 +64,8 @@ def echo_phrase(reply, cfg, vocab=frozenset(), verbs=False):
     not read right in the line: too long, no goal ("nothing"), or still speaking as the prospect.
     `verbs`: the blank has a verb form, so a goal they put as "-ing" or as a state is made a verb for it
     ("paying the bills" -> "pay the bills", "debt free" -> "be debt free")."""
+    if reply and reply.isupper() and len(tokenize(reply)) > 1:
+        reply = reply.lower()  # shouted ("I WANT TO BE RICH!!!"): never said back in capitals ("BE RICH?")
     words = WORD.findall(reply or "")
     drops = [tokenize(d) for d in cfg["echo_drop_starts"]]
     cut = True
@@ -94,7 +96,7 @@ def number_phrase(reply, rule, cfg):
     """The number before the blank's unit, as digits, by rule: "about 5 years now" -> "5", "a year" -> "1".
     None when no number sits right before the unit ("ages", "6 months" for a years blank). "and a half"
     (`number_half`) before or after the unit adds a half; a singular unit on its own opens a reply as one
-    ("year and a half"), and a number stuck to its unit is read apart ("1yr"). With `per`, the number is converted: "2 years" -> "24" for a months blank. With
+    ("year and a half"), a part (`number_parts`) before it takes that share ("half a year" -> 6 months), and a number stuck to its unit is read apart ("1yr"). With `per`, the number is converted: "2 years" -> "24" for a months blank. With
     `unit` ([one, many]), the unit is said after it: "1 year", "2 years", "a year and a half". A rule with
     `from` and no `units` takes that rule's units."""
     units = rule.get("units") or cfg["number_blanks"][rule["from"]]["units"]
@@ -109,11 +111,14 @@ def number_phrase(reply, rule, cfg):
         count = _count(lower[at], cfg) if at >= 0 else (1 if not word.endswith("s") else None)
         if count is None:
             continue
-        value = count + (0.5 if halved else 0)
+        part = lower[at - 1] if at >= 1 and lower[at - 1] in cfg["number_parts"] else ""  # "half a year"
+        value = count * cfg["number_parts"].get(part, 1) + (0.5 if halved else 0)
         if per:
             return f"{value * per[word]:g}"
         if not unit:
             return f"{value:g}"
+        if part:
+            return f"{part} {lower[at]} {unit[0]}"
         if halved:
             return f"a {unit[0]} and a half" if count == 1 else f"{count:g} and a half {unit[1]}"
         return f"{count:g} {unit[count != 1]}"
@@ -125,9 +130,12 @@ def _count(word, cfg):
     return float(word) if FIGURE.fullmatch(word) else cfg["number_words"].get(word)
 
 
-def is_verb_goal(phrase, cfg):
-    """True when the phrase starts with a verb: "be your own boss", "quit your job"."""
-    return tokenize(phrase)[:1] != [] and tokenize(phrase)[0] in cfg["verb_goal_starts"]
+def is_verb_goal(phrase, cfg, said=""):
+    """True when the phrase starts with a verb: one of `verb_goal_starts` ("be your own boss"), or any word
+    they put after "to" (`said`: "I want to replace my salary"; whole calls: "achieve with replace your salary")."""
+    first = tokenize(phrase)[:1]
+    return bool(first) and (first[0] in cfg["verb_goal_starts"]
+                            or bool(re.search(rf"\bto\s+{re.escape(first[0])}\b", said or "", re.IGNORECASE)))
 
 
 class Filler:
@@ -154,7 +162,7 @@ class Filler:
             if phrase is None:
                 return None
             noun, verb = forms[blank]
-            form = (verb if is_verb_goal(phrase, self.cfg) else noun) if noun is not None else "$"
+            form = (verb if is_verb_goal(phrase, self.cfg, reply) else noun) if noun is not None else "$"
             values[blank] = form.replace("$", phrase)
         return NAME.sub(lambda m: values.get(m.group(1), m.group(0)), line)
 

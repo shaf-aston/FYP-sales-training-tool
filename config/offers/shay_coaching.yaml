@@ -76,8 +76,26 @@ facts:
       - "what do I get"
       - "how does the programme work"
       - "what's in the programme"
+      - "do I get one to one calls"   # draft: whole calls: "I'll find out"
+      - "do I get a mentor"   # draft
     answer: "Three parts: {pillar_1}, {pillar_2} and {pillar_3}. I'll go through each one once I know a bit more about you."
     late_answer: "Three parts: {pillar_1}, {pillar_2} and {pillar_3}."   # draft: once the pitch has been said
+  guarantee:   # whole calls: "is there a refund?" went unanswered, "is there a guarantee?" was heard as the scam worry
+    draft: true
+    examples:
+      - "is there a refund"
+      - "is there a guarantee"
+      - "can I get my money back"
+      - "what if I don't make any money"
+    answer: "Fair question. I'll confirm exactly how that works before you decide anything."   # never a policy we don't know
+  different:   # whole calls: "how is this any different from the others?" got "I'll find out"
+    draft: true
+    examples:
+      - "how is this different from other courses"
+      - "what makes you different"
+      - "why is this better than a course"
+      - "I've done courses before, why is this different"
+    answer: "It's not just a course: you get {pillar_1}, plus {pillar_2} and {pillar_3}, so you're not doing it alone."
   length:
     draft: true
     examples:
@@ -91,6 +109,8 @@ facts:
       - "do you work with people in my country"
       - "is this only for people in the UK"
       - "can I join from abroad"
+      - "is it all online"   # draft: whole calls: "I'll find out"
+      - "do I have to come in person"   # draft
     answer: "We work with people all around the world."
   fit:
     draft: true

@@ -529,6 +529,17 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("01", 0, (), "sorry, my kid is yelling", "01", "No problem, take your time."),   # "sorry," is no correction here
     ("goal_identity", 0, (), "can you do it for 3k?", "goal_identity", "Let's see if it's even right for you first"),   # was "I'll find out"
     ("14", 0, (), "can you do it for 3k?", "14", "The price is $5k, but"),
+    # round 12
+    ("03", 0, (), "a while", "04", "If this has been on your mind"),   # was recent: "So what made it come up for you now?"
+    ("03", 0, (), "half a year", "04", "6 months"),   # was 12
+    ("goal_practical", 0, (), "is it all online?", "goal_practical", "We work with people all around the world"),   # was "I'll find out"
+    ("goal_identity", 0, (), "do I get one to one calls?", "goal_identity", "Three parts"),
+    ("04", 0, (), "is there a guarantee?", "04", "Fair question."),   # was the scam worry
+    ("14", 0, (), "how is this any different from the others?", "14", "It's not just a course"),
+    ("01", 0, (), "I want to replace my salary", "goal_practical", "What are you hoping to achieve by being able to replace your salary?"),
+    ("01", 0, (), "i want to make money online so i can quit my job and spend more time with my kids", "goal_identity", None),   # was asked again
+    ("01", 0, (), "I want to make money online but I don't know how", "01", None),   # still no goal
+    ("goal_practical", 0, (), "more money, so I can pay my bills", "goal_identity", None),
 ]
 
 

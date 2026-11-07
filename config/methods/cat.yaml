@@ -103,6 +103,7 @@ steps:
           - "I don't know"
         then: "01"
         keep: false   # "not sure really" is not their outcome: never said back to them
+        restates: true   # draft: live, "i want to make money online so i can quit my job and spend more time with my kids" was asked again
   "goal_practical":
     name: "Practical goal"
     note: 'Level 2 (practical): what it does for them day to day, e.g. no stress buying things'
@@ -127,6 +128,7 @@ steps:
         examples: *surface
         then: "goal_practical"
         keep: false
+        restates: true   # draft: "more money, so I can pay my bills" is heard by the rest
       practical: {examples: *practical, then: "goal_identity"}   # a rival label, so a level 2 answer is never heard as level 1
       identity: {examples: *identity, then: "02"}
       any: {then: "goal_identity"}
@@ -190,6 +192,17 @@ steps:
           - "I only just started thinking about it"
         then: "04"
         say: "So what made it come up for you now?"   # draft: ours, in place of 04's "so many nights, months and years"
+      long:   # draft: a rival label: "a while" (0.86 to "not long") was asked what made it come up now
+        draft: true
+        examples:
+          - "a while"
+          - "quite a while"
+          - "a long time"
+          - "for ages"
+          - "forever"
+          - "years"
+        then: "04"
+        ack: "{months_thinking} months... Damn.¶"
       started:   # draft: a rival label: "since I started the business 3 years ago" (0.77) was heard as a failed attempt
         draft: true
         min_score: 0.8   # "my whole life really" is not one

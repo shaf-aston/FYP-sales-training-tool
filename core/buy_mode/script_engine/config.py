@@ -21,7 +21,7 @@ TYPES = {
     "bad_phrase_starts": list, "verb_goal_starts": list, "be_goal_words": list, "echo_drop_starts": list, "echo_drop_ends": list,
     "prospect_pronouns": list, "spell_word_endings": list, "spell_words": list, "answer_banned_words": list,
     "vague_words": list, "openers": list, "fact_presses": int, "banned_phrases": list, "nudge_leads": list, "take_backs": list, "ack_words": list,
-    "number_blanks": dict, "number_words": dict, "number_skip": list, "number_half": str, "echo_pronoun_swap": dict, "coach_notes": dict, "prompts": dict,
+    "number_blanks": dict, "number_words": dict, "number_skip": list, "number_half": str, "number_parts": dict, "echo_pronoun_swap": dict, "coach_notes": dict, "prompts": dict,
     "uncovered_fallback": str, "bridge_ack": str,
 }
 
