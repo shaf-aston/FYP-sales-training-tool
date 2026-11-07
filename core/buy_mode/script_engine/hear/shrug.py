@@ -10,6 +10,7 @@ class Shrugs:
     def __init__(self, cfg, sense, listener, fill):
         """`fill(template, slots)`: the Filler's, to say their words back; None when they can't be."""
         self._filler = frozenset(cfg["stop_words"]) | frozenset(cfg["filler_words"])
+        self._blank = frozenset(cfg["stop_words"]) | frozenset(cfg["no_answer_words"])
         self._plain = plain_words(cfg)
         self._sense, self._listener, self._fill = sense, listener, fill
 
@@ -28,6 +29,12 @@ class Shrugs:
             return False
         found = self._listener.match(text, {"unclear": list(self._sense.unclear)}, by_clause=False)
         return found.score >= self._sense.unclear_min_score
+
+    def blank(self, text):
+        """Only words that answer nothing, not even a yes-or-no question ("lol", "hmm", "idk"). No words at
+        all ("👍") is not blank: a thumbs-up can say yes."""
+        words = set(tokenize(text))
+        return bool(words) and words <= self._blank
 
     def hedges(self, text):
         """One part of a reply that says nothing on its own ("I don't know", "honestly", "lol idk"): reply.py

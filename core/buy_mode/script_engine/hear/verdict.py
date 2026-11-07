@@ -58,8 +58,8 @@ class Ear:
             if both:
                 return both
         text = reply.said if reply.said and not asking else reply.meant  # "dunno, a year?" -> "a year"
-        if (not state.waiting and not self._yes_or_no(state) and self._shrugs.says_nothing(text, step, asking)
-                and not self._ready(text, state)):  # "yes I'm in" is a shrug's words, but it says they're in
+        nothing = self._shrugs.blank(text) or (not self._yes_or_no(state) and self._shrugs.says_nothing(text, step, asking))
+        if not state.waiting and nothing and not self._ready(text, state):  # "yes I'm in" is a shrug's words, but it says they're in
             return Verdict("says_nothing", text=text, asking=asking)  # an answer only: never an interruption
         ahead = None if asking else hear_ahead(self.method, state, text)  # "do I need 5k?" is not their goal
         ahead = None if ahead is state else ahead

@@ -124,7 +124,13 @@ steps:
       think:
         examples: ["I just need to think", "I want to look around first", "I need more time"]
         then: m_think_what
-      any: {then: m_reframe1}   # fear, or anything else: a perspective shift
+      fear:   # draft: a rival to think: whole calls, "just nervous I guess" went to "what do you need to think over"
+        examples: ["I'm nervous", "I'm scared it won't work", "worried I'll fail", "it's a big risk"]
+        then: m_reframe1
+      busy:   # draft: a rival to think: whole calls, "time" from someone working 60 hours went to "think over"
+        examples: ["time", "I don't have the time", "I'm too busy with work", "I work too much"]
+        then: m_reframe1
+      any: {then: m_reframe1}   # anything else: a perspective shift
 
   m_think_what:
     name: "Find the logistics behind 'think about it'"

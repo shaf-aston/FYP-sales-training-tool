@@ -135,3 +135,11 @@ def test_wanting_to_be_looked_up_to_is_the_example_they_set_not_being_there(mode
     """Live: "I want to be someone my kids look up to" got "So it's really about ==being there== for them."."""
     line = MeaningBank(CFG, MEANINGS, Listener(CFG, model)).line(reply, ())
     assert line in MEANINGS.items["role_model"].lines, line
+
+
+@real
+@pytest.mark.parametrize("reply", ["i want more money for my family", "to support my family"])
+def test_money_for_the_family_is_about_them_not_being_there(model, reply):
+    """Whole calls: "i want more money for my family" got family_time's "being there"."""
+    line = MeaningBank(CFG, MEANINGS, Listener(CFG, model)).line(reply, ())
+    assert line in MEANINGS.items["family_duty"].lines, line

@@ -30,6 +30,8 @@ facts:
     answer: "Fair question. I'll give you the exact price once I know what you need, then you decide."
     again: "Like I said, the exact price comes once I know what you need."   # draft: ours
     late_answer: "It's a {months}-month process and the investment is {price}."
+    pressed: "Straight answer then: it's {price} for the {months}-month programme. Whether it's worth it depends on what you tell me next."   # draft: ours; asked 3 times before the price, the number honestly (delete to keep holding it back)
+    late_again: "Like I said, it's {price}."   # draft: ours
   what_we_do:
     draft: true
     examples:

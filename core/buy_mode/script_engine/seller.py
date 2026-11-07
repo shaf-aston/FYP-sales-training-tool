@@ -179,8 +179,18 @@ class ScriptSeller:
             self.state = replace(self.state, spoken=spoken)  # the lead it wore was never said
             said, ui_stage = self._go(move_on(self.method, self.state))
             said = self._wear(said)
+        said = self._fresh_opener(said)
         self.state = replace(Echo.settle(self.state, self._turn), repeated=self._turn.side, last=said)
         return said, ui_stage, detail or v.heard_as
+
+    def _fresh_opener(self, said):
+        """An opener ("Okay.") that also opened the last message is left off: "Okay." four times in a row
+        through the owner's lines reads as a tic. The rest is said as it is, capitalised."""
+        for word in self.cfg["openers"]:
+            rest = said[len(word):].lstrip(" .,")
+            if said.startswith(word) and self.state.last.startswith(word) and rest:
+                return rest[0].upper() + rest[1:]
+        return said
 
     def _respond(self, v, step, opened):
         """(text, ui_stage, heard_as detail or "")."""
@@ -212,15 +222,22 @@ class ScriptSeller:
         return said, ui_stage, f"{detail}+{v.side}" if detail and v.side else detail
 
     def _fact(self, name, opened):
-        """A product fact's answer: (line, fresh). Asked again before the price ("who is this?" then "what is
-        this about?"), a short reminder, not fresh."""
-        f = self.offer.facts[name]
-        late = opened and f.late_answer
-        if not late and name in self.state.told:
-            return self._filler.fill(f.again or self.sense.told_again or f.answer, {}), False
-        if not late:
-            self.state = replace(self.state, told=(*self.state.told, name))
-        return self._filler.fill(f.late_answer if late else f.answer, {}), True
+        """A product fact's answer: (line, fresh). Asked again, a short reminder, never fresh: before the price
+        its `again`; pressed `fact_presses` times before the price, its `pressed` line once (Ivy: "how much is
+        it?" got "the exact price comes once I know what you need" 30 times); once the price step is reached or
+        the number is out, `late_answer`, then `late_again`. `told` keeps each telling ("price+" told late)."""
+        f, told = self.offer.facts[name], self.state.told
+        out = f"{name}+" in told
+        if not opened and not out and f.pressed and told.count(name) + 1 >= self.cfg["fact_presses"]:
+            line, key = f.pressed, f"{name}+"
+        elif (opened or out) and f.late_answer:
+            line, key = (f.late_again or f.late_answer) if out else f.late_answer, f"{name}+"
+        elif name in told:
+            line, key = f.again or self.sense.told_again or f.answer, name
+        else:
+            line, key = f.answer, name
+        self.state = replace(self.state, told=(*told, key))
+        return self._filler.fill(line, {}), key not in told
 
     def _side(self, v, opened):
         """The line for the question beside an answer (`v.side`), said in front of the next one: a fact's

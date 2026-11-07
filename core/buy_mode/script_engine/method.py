@@ -104,6 +104,8 @@ class Fact:
     late_answer: str    # used once the price step is reached; empty = same answer
     bridge: bool = False  # the step's `bridge` question follows the answer, in place of the step's own question
     again: str = ""     # before the price, asked a second time: a short reminder, not the same long answer twice
+    pressed: str = ""   # before the price, asked `fact_presses` times: said once, the late lines after it; empty = `again`
+    late_again: str = ""  # once `late_answer` (or `pressed`) was said, asked again: a short reminder; empty = `late_answer`
 
 
 @dataclass(frozen=True)
@@ -376,6 +378,7 @@ def parse_offer(name, data):
         k: Fact(
             tuple(v.get("examples") or ()), v["answer"],
             v.get("late_answer", ""), bool(v.get("bridge")), v.get("again", ""),
+            v.get("pressed", ""), v.get("late_again", ""),
         )
         for k, v in (data.get("facts") or {}).items()
     }

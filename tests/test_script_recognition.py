@@ -489,6 +489,17 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("willing", 0, (), "hell no I'm done settling", "11", None),
     ("willing", 0, (), "yeah I'm willing to change", "11", None),   # a no said as wanting change
     ("willing", 0, (), "no", "11", None),
+    ("18", 0, (), "no", "18", "Put simply"),   # a bare "no" was nearest "yes": heard as agrees, on to the close
+    ("18", 0, (), "nope", "18", "Put simply"),
+    ("18", 0, (), "yes", "19", None),
+    ("m_reframe1_dictate", 0, ("think",), "lol", "m_reframe1_dictate", "No pressure either way."),   # was heard as "no"
+    ("willing", 0, (), "haha", "willing", "No pressure either way."),
+    ("m_identify", 0, (), "just nervous I guess", "m_reframe1", None),   # was "what do you need to think over"
+    ("m_identify", 0, (), "time", "m_reframe1", None),
+    ("m_identify", 0, (), "I'm too busy with work", "m_reframe1", None),
+    ("m_identify", 0, (), "I need to think about it", "m_think_what", None),   # think still thinks
+    ("m_identify", 0, (), "I need more time", "m_think_what", None),
+    ("05", 0, (), "I don't have time", "06", None),   # a real answer, never the frustration line
 ]
 
 

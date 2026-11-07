@@ -267,3 +267,86 @@ def test_a_yes_to_keep_settling_is_checked_and_a_no_goes_on():
     assert advance(CAT, ScriptState(step="willing"), "yes").state.step == "willing_check"
     assert advance(CAT, ScriptState(step="willing"), "no").state.step == "11"
     assert advance(CAT, ScriptState(step="willing_check"), None, "ready for a change").state.step == "11"
+
+
+def test_two_lines_in_a_row_never_both_open_with_okay(fake_embedder):
+    """Whole calls: "Okay." opened four owner lines in a row (m_reframe1, _now, _dictate)."""
+    s = seller(fake_embedder, "m_reframe1")
+    s.state = replace(s.state, last="Okay. So, I can understand that.")
+    assert s._fresh_opener("Okay. And are you 100% with where you are at right now?") == \
+        "And are you 100% with where you are at right now?"
+    assert s._fresh_opener("Okay, And do you want that?") == "And do you want that?"
+    assert s._fresh_opener("Okay.") == "Okay."   # nothing left: said as it is
+    s.state = replace(s.state, last="Fair enough.")
+    assert s._fresh_opener("Okay. And are you sure?") == "Okay. And are you sure?"
+
+
+def _price_asks(s, n):
+    return [s._fact("price", False)[0] for _ in range(n)]
+
+
+def test_the_price_asked_again_and_again_gets_a_straight_answer_once(fake_embedder):
+    """Whole calls: the price asked ~40 times before the pitch got the same holding line each time."""
+    s = seller(fake_embedder, "01")
+    fact = s.offer.facts["price"]
+    said = _price_asks(s, 4)
+    assert said[0] == s._filler.fill(fact.answer, {})
+    assert said[2] == s._filler.fill(fact.pressed, {})
+    assert "$5k" in said[2] and "$5k" in said[3] and said[3] != said[2]
+    assert s._fact("price", True)[0] == s._filler.fill(fact.late_again, {})   # told: the pitch doesn't tell again
+
+
+def test_the_price_after_the_pitch_is_the_late_answer_then_its_short_form(fake_embedder):
+    s = seller(fake_embedder, "15")
+    fact = s.offer.facts["price"]
+    first, again = _price_asks_opened(s)
+    assert first == s._filler.fill(fact.late_answer, {}) and again == s._filler.fill(fact.late_again, {})
+
+
+def _price_asks_opened(s):
+    return s._fact("price", True)[0], s._fact("price", True)[0]
+
+
+def test_a_fact_with_no_pressed_line_is_never_pressed(fake_embedder):
+    s = seller(fake_embedder, "01")
+    name = next(k for k, f in s.offer.facts.items() if not f.pressed)
+    said = [s._fact(name, False)[0] for _ in range(4)]
+    assert f"{name}+" not in s.state.told and len(set(said[1:])) == 1, said
+
+
+def test_a_shrug_with_suppose_or_mean_is_never_asked_about(fake_embedder):
+    """Whole calls: "yeah I mean I suppose so, it depends really" was kept as an answer."""
+    s = seller(fake_embedder, "05")
+    text, _ = s.reply("yeah I mean I suppose so")
+    assert s.last_turn["heard_as"] == "says_nothing" and "What do you mean by" not in text, text
+
+
+def test_laughing_answers_no_yes_or_no_question(fake_embedder):
+    """Whole calls: "lol" to "do you want that to dictate your results?" was heard as "no"."""
+    for step in ("willing", "m_reframe1_dictate", "18"):
+        s = seller(fake_embedder, step)
+        s.reply("lol")
+        assert s.state.step == step and s.last_turn["heard_as"] == "says_nothing", (step, s.last_turn)
+
+
+def test_a_thumbs_up_is_not_blank(fake_embedder):
+    s = seller(fake_embedder, "18")
+    assert not s._ear._shrugs.blank("👍") and s._ear._shrugs.blank("lol hmm") and not s._ear._shrugs.blank("lol yes")
+
+
+def test_okay_left_off_never_hides_a_word_for_word_repeat(fake_embedder):
+    """The same question twice moves on; the opener is only left off what is finally said."""
+    s = seller(fake_embedder, "m_reframe1_now")
+    first, _ = s.reply("hmm")
+    second, _ = s.reply("hmm")
+    assert first != second, (first, second)
+
+
+def test_a_question_of_vague_words_is_asked_not_shrugged(fake_embedder):
+    """"anything?" asks something; "anything" alone says nothing."""
+    s = seller(fake_embedder, "05")
+    s.reply("anything?")
+    assert s.last_turn["heard_as"] != "says_nothing", s.last_turn
+    s = seller(fake_embedder, "05")
+    s.reply("anything")
+    assert s.last_turn["heard_as"] == "says_nothing", s.last_turn

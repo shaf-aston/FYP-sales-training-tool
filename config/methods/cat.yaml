@@ -385,6 +385,8 @@ steps:
         then: "22"
       unclear:
         examples:
+          - "no"   # draft: whole calls, a bare "no" was nearest "yes" and heard as agrees
+          - "nope"   # draft
           - "no, that doesn't make sense"
           - "not really, I'm confused"
           - "kind of"

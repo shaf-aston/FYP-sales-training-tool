@@ -16,6 +16,8 @@ meanings:
       - "my kids depend on me"
       - "I'm the one who supports my parents"
       - "I have to provide for my wife and kids"
+      - "I need more money to provide for my family"   # draft: whole calls, "i want more money for my family" got family_time
+      - "to support my family"   # draft
     lines:
       - "So this isn't really about the money.¶It's about ==them==."
       - "That's a lot of people counting on you."
