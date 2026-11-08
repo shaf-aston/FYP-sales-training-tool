@@ -64,6 +64,7 @@ interruptions:
       - "my phone is about to die"   # draft: whole calls, "hang on my phone is dying" was asked again
       - "sorry, my phone's ringing"   # draft: whole calls, "sorry, phone" was a close call
       - "one sec, getting my card"   # draft: round 29 callers, at "Credit or debit?" it was asked again
+      - "sorry, I was away for a minute"   # draft: round 34 callers, "was on the train, 2k" was saved whole
       - "give me a minute"   # draft: whole calls, "I just need a minute" at 20 was saved as their reason (not "I just need a minute": 0.81 to "I don't have time for this")
     reply: "No problem, take your time."
   small_talk:   # live: "did you catch the match last night?" got "I'll find out and let you know"

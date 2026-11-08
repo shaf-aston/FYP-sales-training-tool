@@ -96,7 +96,7 @@ class Ear:
             return Verdict(kind, name, text, asking, ahead)
         if asking and not self._answers(text, step):
             return Verdict("question", text=text, asking=asking, ahead=ahead)
-        return Verdict("answer", text=text, asking=asking, ahead=ahead)
+        return Verdict("answer", text=text if asking else self._unbroken(text, step, state), asking=asking, ahead=ahead)
 
     def _unecho(self, reply, state):
         """The question said back before their answer ("how long? about 2 years", "achieve? quit my job", "what
@@ -279,6 +279,27 @@ class Ear:
             side = "" if not said.with_answer or self._said_again(name, state) else f"sense:{name}"  # "You're welcome." once a call
             return Verdict("answer", text=rest, ahead=None if ahead is state else ahead, side=side)
         return None
+
+    def _unbroken(self, text, step, state):
+        """The answer without a part that alone is a break already over ("sorry I was in a meeting, more money":
+        more money). The break leads or ends the reply: the fewest parts that are one ("sorry, I was out" is two), then
+        any part beside it that answers nothing ("more money, sorry, I was out"). Round 34 callers: the answer won,
+        so the whole was saved and said back."""
+        parts = clauses(text, self._breaks)
+        if not set(self.cfg["sense_over_words"]) & set(tokenize(text)):
+            return text
+        for k in range(1, len(parts)):
+            for cut, rest, edge in ((parts[:k], parts[k:], 0), (parts[-k:], parts[:-k], -1)):
+                if self._ended(", ".join(cut), step, state):
+                    while len(rest) > 1 and not self._answers_step(rest[edge], step, state):
+                        rest = rest[1:] if edge == 0 else rest[:-1]
+                    return ", ".join(rest)
+        return text
+
+    def _ended(self, part, step, state):
+        """The part alone is a pause or goodbye said in the past."""
+        kind, name = self._interrupt(part, step, state, False, False)
+        return kind == "sense" and self._over(part, name)
 
     def _over(self, text, name):
         """A pause or goodbye said in the past ("sorry, was driving", "the kids were shouting"): the break is

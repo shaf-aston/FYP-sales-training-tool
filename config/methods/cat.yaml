@@ -106,8 +106,6 @@ steps:
           - "I want to earn online"
           - "not sure really"
           - "I don't know"
-          - "what I said"   # draft: round 33 callers, "what I said" was saved as their goal and said back as "have what you said"
-          - "I already told you"   # draft: the same
         then: "01"
         keep: false   # "not sure really" is not their outcome: never said back to them
         restates: true   # draft: live, "i want to make money online so i can quit my job and spend more time with my kids" was asked again

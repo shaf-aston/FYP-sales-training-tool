@@ -812,15 +812,19 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("02", 0, (), "sorry, my kid is yelling", "02", "No problem, take your time."),   # guard: a pause now still waits
     ("02", 0, (), "sorry, I'm driving", "later", None),   # guard: still leaving
     ("03", 0, (), "a year, well two", "04", "24 months"),   # was "12 months"
-    ("01", 0, (), "what I said", "01", "What are you actually hoping to achieve?"),   # was saved as their goal: "to have what you said"
+    ("01", 0, (), "what I said", "02", "How much would you need to be making each month to make that happen?"),   # was said back: "to have what you said"
     # round 34
     ("03", 0, (), "6 months, actually more like a year", "04", "12 months"),   # was "6 months"
     ("01", 0, (), "more time, sorry more money", "goal_practical", "What are you hoping to achieve with more money?"),   # was "with more time, sorry more money"
     ("22", 0, (), "which is better?", "22", "There's no right answer"),   # was heard as paying: "Welcome aboard"
     ("22", 0, (), "which is easier?", "22", "There's no right answer"),   # the same
     ("22", 0, (), "which do you recommend?", "22", "There's no right answer"),   # was "I'll find out"
-    ("22", 0, (), "can I use paypal?", "end", "Welcome aboard"),   # guard: a question naming a way to pay still pays
-    ("22", 0, (), "whichever is easier", "end", "Welcome aboard"),   # guard: leaving the choice to us still pays
+    ("22", 0, (), "can I use paypal?", "end", "Perfect."),   # guard: a question naming a way to pay still pays
+    ("22", 0, (), "whichever is easier", "end", "Perfect."),   # guard: leaving the choice to us still pays
+    ("01", 0, (), "sorry I was in a meeting, more money", "goal_practical", "What are you hoping to achieve with more money?"),   # the aside was kept: "What are you hoping that would get you?"
+    ("01", 0, (), "more money, sorry had a call", "goal_practical", "What are you hoping to achieve with more money?"),
+    ("01", 0, (), "I was broke, more money", "goal_practical", "What are you hoping that would get you?"),   # guard: no break, kept whole
+    ("01", 0, (), "for my wife", "goal_practical", "What are you hoping to achieve with your wife?"),   # guard: round 33's "what I said" as a goal example took it (0.67)
 ]
 
 

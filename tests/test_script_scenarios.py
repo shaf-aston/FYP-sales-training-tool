@@ -632,6 +632,8 @@ def test_whats_next_asks_no_ai(fake_embedder):
     ("oh ok, more money I guess", "more money"),           # round 22: said back as "oh ok more money"
     ("money has been tight", None),                        # round 22: a sentence about their life, not a goal
     ("things are hard", None),
+    ("what I said", None),                                 # round 34: said back as "to have what you said"
+    ("like I told you", None),
     ("50% more income", "50% more income"),                # round 24: said back as "50 more income"
     ("kind of more money", "more money"),                  # round 24: said back as "kind of more money"
     ("more money inshallah", "more money"),

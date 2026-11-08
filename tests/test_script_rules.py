@@ -675,6 +675,44 @@ def test_a_question_chooses_an_answer_only_when_it_names_one_of_its_words(seller
     assert seller._ear._names(question, examples) == names
 
 
+@pytest.mark.parametrize("text, kept", [
+    ("sorry, I was away for a minute, more money", "more money"),   # round 34 callers: the whole was saved
+    ("more money, sorry, I was away for a minute", "more money"),   # the lone "sorry" beside it answers nothing: cut too
+    ("sorry I was away for a minute, more money", "more money"),   # the break is one part
+    ("sorry I was away for a minute, more money, more time", "more money, more time"),   # the fewest parts: the answer stays
+    ("more money, more time, sorry, I was away for a minute", "more money, more time"),
+    ("sorry, my kid is yelling, more money", "sorry, my kid is yelling, more money"),   # guard: a pause now is no aside
+    ("I was broke, more money", "I was broke, more money"),   # guard: the past, but no break
+    ("sorry, I was away for a minute, ok, more money", "more money"),   # the "ok" between answers nothing: cut
+    ("more money, ok, sorry, I was away for a minute", "more money"),
+    ("sorry, I was away for a minute, ok", "ok"),   # the last part left is kept, even if it answers nothing
+])
+def test_a_break_that_is_over_is_cut_from_the_answer(seller, text, kept):
+    at(seller, "01")
+    assert seller._ear._unbroken(text, seller.method.steps["01"], seller.state) == kept
+
+
+@pytest.mark.parametrize("found, question, answers", [
+    (("pays", False), "which is better?", False),   # sure, but names no word of the answer: it asks
+    (("pays", False), "can I use paypal?", True),
+    (("pays", True), "which is better?", True),   # torn between two answers is still answering
+    ((None, False), "which is better?", True),   # no one answer to check it against: the score decides
+])
+def test_a_sure_question_answers_only_when_it_names_the_answer(seller, monkeypatch, found, question, answers):
+    from types import SimpleNamespace
+    ear, step = seller._ear, seller.method.steps["22"]
+    monkeypatch.setattr(ear._listener, "answer_score", lambda *a, **k: 0.81)
+    monkeypatch.setattr(ear._listener, "match", lambda *a, **k: SimpleNamespace(label=found[0], close=found[1],
+                                                                       score=ear.cfg["question_answer_min_score"]))   # just sure
+    assert ear._answers(question, step) == answers
+    assert ear._chooses(question, step) == (found[0] if answers and not found[1] and found[0] else "")
+
+
+def test_a_question_less_than_sure_is_no_answer(seller):
+    assert not seller._ear._answers("what happens to the card?", seller.method.steps["22"])   # asks about the card
+    assert not seller._ear._answers("what card?", seller.method.steps["22"])   # 0.71 to "card": near, not sure
+
+
 def test_which_is_better_at_payment_is_no_way_to_pay(seller):
     said, _ = at(seller, "22").reply("which is better?")   # round 34 callers: got "Welcome aboard"
     assert seller.state.step == "22" and said.startswith("There's no right answer")
