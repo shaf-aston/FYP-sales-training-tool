@@ -1057,8 +1057,8 @@ def test_only_a_real_fix_replaces_an_answer(seller, step, slots, said):
 
 def test_a_fix_on_the_step_still_asked_is_its_answer(seller):
     """On the step that saved it, "I meant 3k" is that step's answer again, not a fix of an earlier one."""
-    assert seller._ear._correction("sorry I meant 3k", ScriptState(step="02", slots={"number": "2k"})) is None
-    assert seller._ear._correction("sorry I meant 3k", ScriptState(step="03", slots={"number": "2k"})).text == "3k"
+    assert seller._ear._correction("sorry I meant 3k", ScriptState(step="02", slots={"number": "2k"})) == (None, "")
+    assert seller._ear._correction("sorry I meant 3k", ScriptState(step="03", slots={"number": "2k"}))[0].text == "3k"
 
 
 @pytest.mark.parametrize("step, said", [
@@ -1188,3 +1188,12 @@ def test_a_comma_with_no_space_breaks_but_never_inside_a_number(text, parts):
     from core.buy_mode.script_engine.method import load_common_sense
     reply = Reader(CFG, load_common_sense().nudges, lambda part: False).read(text)
     assert [p.text for p in reply.parts] == parts
+
+
+@pytest.mark.parametrize("said, step, slots", [
+    ("no wait, I meant 3k, and a year", "04", {"number": "3k", "years": "and a year"}),   # round 29 callers: "a year" was lost, 03 asked again
+    ("sorry I meant 3k not 2k", "03", {"number": "3k"}),   # guard: a fix alone asks the step again
+])
+def test_a_fix_with_this_steps_answer_after_it_keeps_both(seller, said, step, slots):
+    at(seller, "03", number="2k").reply(said)
+    assert (seller.state.step, seller.state.slots) == (step, slots), seller.last_turn

@@ -58,8 +58,12 @@ class Ear:
         reply = self._unecho(self.reader.read(text), state).settle(lambda part: self._rises(part, step))
         if reply.nudged and not tokenize(reply.unnudged):
             return Verdict("nudge", text=text)  # "what's next?": no answer
-        fixed = self._correction(text, state)
+        fixed, rest = self._correction(text, state)
         if fixed:
+            fixed_state = replace(state, slots={**state.slots, fixed.name: fixed.text})
+            then = self.hear(rest, fixed_state, opened) if rest else None
+            if then and then.kind == "answer":  # "I meant 3k, and a year": the 3k fixed, "and a year" this step's answer
+                return replace(then, ahead=then.ahead or fixed_state)
             return fixed
         asking = bool(reply.asked)
         if self._what_alone(text) or self._word_back(text, state) or (asking and not reply.said and self._asked_back(reply.asked, state)):
@@ -221,17 +225,19 @@ class Ear:
                        side=f"{kind}:{name}" if kind else "question", asked=reply.asked)
 
     def _correction(self, text, state):
-        """Their last answer fixed a turn later ("sorry I meant 3k not 2k"): the new words, for the slot it was
-        saved in, when they have that step's shape. None otherwise: "I meant what I said" fixes nothing."""
+        """(verdict, rest): their last answer fixed a turn later ("sorry I meant 3k not 2k"): the new words, for
+        the slot it was saved in, when they have that step's shape, and what came after them for this step
+        ("I meant 3k, and a year" -> "and a year"). (None, "") otherwise: "I meant what I said" fixes nothing."""
         opening = re.match(self.cfg["corrects"], text, re.IGNORECASE)
         if not opening or not state.slots:
-            return None
+            return None, ""
         slot = next(reversed(state.slots))
-        value = re.sub(self.cfg["corrects_drop"], "", text[opening.end():], flags=re.IGNORECASE).strip(" .!,")
+        value, _, rest = re.sub(self.cfg["corrects_drop"], "", text[opening.end():], flags=re.IGNORECASE).partition(", ")
+        value = value.strip(" .!,")
         step = self._captures.get(slot)
         if not value or not step or step.id == state.step or (step.needs and not re.search(step.needs, value, re.IGNORECASE)):
-            return None
-        return Verdict("corrects", slot, value)
+            return None, ""
+        return Verdict("corrects", slot, value), rest.strip(" .!,")
 
     def _beside_worry(self, text, step, state, name):
         """An answer, then a worry before the price ("make money online, but I've been burnt before"): the

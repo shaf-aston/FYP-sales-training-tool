@@ -1226,3 +1226,47 @@ def test_how_long_needs_a_span_of_time_never_a_sum_of_money(reply, spans):
     """Round 24: "3k a month" at "How long have you been thinking about this?" was saved as "1 months"."""
     import re
     assert bool(re.search(CAT.steps["03"].needs, reply, re.I)) == spans
+
+
+@pytest.mark.parametrize("reply, rest", [
+    ("my wife and kids want a house", "a house"),   # round 28 callers: who wants it is left out
+    ("my husband wants me to earn more", "to earn more"),   # round 29 callers: who it is wanted of too
+    ("I do not want to work", "I do not want to work"),   # a "not" before it: kept whole
+    ("I never want to be broke", "I never want to be broke"),
+    ("my wife and my kids want a house", "my wife and my kids want a house"),   # past `echo_want_within`: kept whole
+    ("need more money", "need more money"),   # at the very start it is the goal itself
+])
+def test_who_wants_it_is_left_out_near_the_start(reply, rest):
+    from core.buy_mode.script_engine.words.fill import WORD, _after_want
+    assert " ".join(_after_want(WORD.findall(reply), CFG)) == rest
+
+
+@pytest.mark.parametrize("reply, phrase", [
+    ("more f***ing money", "more money"),   # round 29 callers: said back as "more f ing money"
+    ("more bloody money", "more money"),   # a swear word is never said back
+    ("in 5 years I'd like to be rich", "be rich"),   # round 29 callers: "I'd like" was never matched, the plain line was used
+    ("we'd love to travel", "travel"),
+    ("my husband wants me to earn more", "earn more"),   # round 29 callers: the plain line was used
+])
+def test_echo_phrase_leaves_out_swears_and_who_wants_it(reply, phrase):
+    from core.buy_mode.script_engine.words.fill import echo_phrase
+    assert echo_phrase(reply, CFG, frozenset(CFG["spell_words"])) == phrase
+
+
+@pytest.mark.parametrize("text, fixed", [
+    ("deb", "debit"), ("cred", "credit"),   # round 29 callers: "deb" at "Credit or debit?" was heard as a pause
+    ("debt", "debt"), ("deb please", "deb please"),   # guard: only a reply of the short form alone
+])
+def test_a_short_form_alone_is_its_word(text, fixed):
+    from core.buy_mode.script_engine.words.fill import fix_typos
+    assert fix_typos(text, frozenset(CFG["spell_words"]), CFG) == fixed
+
+
+def test_a_verb_goal_reads_without_being_able_to_be(fake_embedder):
+    """Round 29 callers: "I'd like to be rich" and "debt free" were said back as "by being able to be rich"."""
+    from core.buy_mode.script_engine.words.fill import Filler
+    offer = type("Offer", (), {"months": 6, "price": "£1", "industry": "", "setter": "", "pillars": []})()
+    filler = Filler(CFG, offer, {"outcome"}, frozenset(CFG["spell_words"]))
+    line = "What are you hoping to achieve {outcome|with $|by being able to $}?"
+    assert filler.fill(line, {"outcome": "debt free"}) == "What are you hoping to achieve by being debt free?"
+    assert filler.fill(line, {"outcome": "quit my job"}) == "What are you hoping to achieve by being able to quit your job?"

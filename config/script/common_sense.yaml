@@ -63,6 +63,7 @@ interruptions:
       - "I'll be right back"   # draft: whole calls, "back in a bit" was saved as how long they had been thinking about it (not "back in a bit": "a bit" read as it)
       - "my phone is about to die"   # draft: whole calls, "hang on my phone is dying" was asked again
       - "sorry, my phone's ringing"   # draft: whole calls, "sorry, phone" was a close call
+      - "one sec, getting my card"   # draft: round 29 callers, at "Credit or debit?" it was asked again
       - "give me a minute"   # draft: whole calls, "I just need a minute" at 20 was saved as their reason (not "I just need a minute": 0.81 to "I don't have time for this")
     reply: "No problem, take your time."
   small_talk:   # live: "did you catch the match last night?" got "I'll find out and let you know"
@@ -215,6 +216,9 @@ interruptions:
       - "what do you want me to say"
       - "is that normal"   # draft: round 25 callers, "A year. Is that normal?" got no answer
       - "is that enough"   # draft
+      - "what do you think"   # draft: round 29 callers, asked back every turn, each got "I'll find out"
+      - "what would you do"   # draft
+      - "what's normal"   # draft
     reply: "There's no right answer here, it's just about you."
   frustrated:   # live: "stop with the script man", "whatever", "this is stupid" got the same line again
     draft: true

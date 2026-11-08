@@ -11,6 +11,7 @@ from core.infra.utils import tokenize
 
 logger = logging.getLogger("script_engine.fallback")
 NAME = re.compile(r"\{(\w+)(?:\|([^|{}]*)\|([^|{}]*))?\}")  # {name} or {name|noun form|verb form}, $ = the phrase
+CENSORED = re.compile(r"\S*\w\*+\w*\S*")  # a word with stars in it ("f***ing"): never said back
 WORD = re.compile(r"[$£€]?\d+(?:[.,]\d+)*%?[A-Za-z0-9'-]*|[A-Za-z0-9'-]+")  # "£2,500", "1.5", "2.5k", "50%" stay one word
 FIGURE = re.compile(r"\d+(?:\.\d+)?")
 GLUED = re.compile(r"(\d)([A-Za-z])")  # a number stuck to its unit: "1yr", "18mo"
@@ -93,6 +94,8 @@ def _after_want(words, cfg):
         if lower[i] in ("not", "never", *cfg["question_words"]) or lower[i].endswith("n't"):
             return words  # "people who want more": not who wants it
         want = next((len(w) for w in map(tokenize, cfg["echo_want_words"]) if lower[i:i + len(w)] == w), 0)
+        if want and i + want < len(lower) and lower[i + want] in cfg["echo_want_objects"]:
+            want += 1  # "my husband wants me to earn more" -> "to earn more"
         if want:
             return words[i + want:] if i else words  # at the very start ("need more money") it is the goal itself
     return words
@@ -112,8 +115,8 @@ def echo_phrase(reply, cfg, vocab=frozenset(), verbs=False):
     reply = re.split(rf"\b(?:{cut})\b", reply, maxsplit=1, flags=re.IGNORECASE)[0]  # "quit my job but I'm scared"
     if reply and reply.isupper() and len(tokenize(reply)) > 1:
         reply = reply.lower()  # shouted ("I WANT TO BE RICH!!!"): never said back in capitals ("BE RICH?")
-    words = WORD.findall(reply or "")
-    words = _after_want(words, cfg)  # "my family needs more money" -> "more money"
+    words = WORD.findall(CENSORED.sub(" ", reply or ""))  # "more f***ing money" -> "more money"
+    words = [w for w in _after_want(words, cfg) if w.lower() not in cfg["echo_drop_words"]]  # "more money" from "my family needs more money"
     drops = [tokenize(d) for d in [*cfg["echo_drop_starts"], *cfg["filler_words"]]]  # "for sure, more money"
     cut = True
     while cut:
@@ -217,6 +220,8 @@ class Filler:
             noun, verb = forms[blank]
             form = (verb if is_verb_goal(phrase, self.cfg, reply) else noun) if noun is not None else "$"
             values[blank] = form.replace("$", phrase)
+            for wordy, plain in self.cfg["form_joins"].items():  # "by being able to be rich" -> "by being rich"
+                values[blank] = values[blank].replace(wordy, plain)
         return NAME.sub(lambda m: values.get(m.group(1), m.group(0)), line)
 
     def echoes(self, line, slots):

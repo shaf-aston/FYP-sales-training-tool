@@ -766,6 +766,16 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("19", 0, (), "yeah no", "19", None),   # guard: "yeah no" is a no
     ("19", 0, (), "I'll pass", "19", None),   # guard: still not heard as private
     ("02", 0, (), "is there a discount", "02", None),   # guard: still the discount worry
+    # round 29
+    ("goal_practical", 0, (), "what do you think?", "goal_practical", "There's no right answer here"),   # was "I'll find out"
+    ("19", 0, (), "what would you do?", "19", "There's no right answer here"),
+    ("02", 0, (), "what's normal?", "02", "There's no right answer here"),
+    ("19", 0, (), "would you do it?", "19", "I'm the AI playing the salesperson"),   # guard: still about the seller
+    ("22", 0, (), "deb", "end", "Perfect."),   # was "No problem, take your time."
+    ("22", 0, (), "one sec, getting my card", "22", "No problem, take your time."),   # was "credit or debit?" again
+    ("01", 0, (), "in 5 years I'd like to be rich", "goal_practical", "What are you hoping to achieve by being rich?"),   # was the plain line
+    ("01", 0, (), "my husband wants me to earn more", "goal_practical", "What are you hoping to achieve by being able to earn more?"),
+    ("01", 0, (), "more f***ing money", "goal_practical", "What are you hoping to achieve with more money?"),   # was "with more f ing money?"
 ]
 
 
