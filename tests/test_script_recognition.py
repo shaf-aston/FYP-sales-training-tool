@@ -1232,6 +1232,9 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("05", 0, (), "for the record", "05", "No rush"), ("05", 0, (), "count me in", "05", "No rush"),   # were saved as the reason
     ("goal_practical", 0, (), "all good", "goal_practical", "What would that actually change"), ("18", 0, (), "count me in", "19", None), ("18", 0, (), "all good", "19", None),   # were "You're welcome" and unclear
     ("02", 0, (), "2k at most", "03", None), ("19", 0, (), "go for it", "20", None),   # guard: as before
+    ("05", 0, (), "who knows?", "05", "No rush"), ("02", 0, (), "up to you?", "02", "If you had to put"), ("05", 0, (), "no idea?", "05", "No rush"),   # round 71 mutation: were "I don't know that one offhand" and "I'm the AI playing the salesperson"
+    ("18", 0, (), "you tell me?", "18", "Put simply"), ("19", 0, (), "hard to say?", "19", "Is this something"),
+    ("05", 0, (), "why?", "05", "It helps me see"), ("01", 0, (), "who knows, money?", "goal_practical", None),   # guard: a real question, and an answer with the shrug
 ]
 
 

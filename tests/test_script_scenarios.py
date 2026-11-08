@@ -1357,7 +1357,7 @@ def test_echo_phrase_fixes_typos(reply, phrase):
     (":-)", "🙂"), (":-D", "😀"), (":-(", "🙁"), (":-/", "😕"),   # round 65 mutation: the nose forms of round 59's smileys had no row
     ("ta da", "ta da"), ("for really", "for really"),   # guard: only the reply alone, only the whole phrase
     ("count me in", "yes"), ("let's do it", "yes"), ("lets do it", "yes"), ("go for it", "yes"), ("say no more", "yes"), ("all good", "okay"),   # round 71 callers: "count me in" was saved as the reason, "all good" got "You're welcome"
-    ("sounds good", "yes"), ("works for me", "yes"), ("you bet", "yes"), ("fine by me", "okay"), ("roger that", "okay"), ("righto", "okay"), ("indeed", "yes"), ("deal", "yes"),   # rounds 69 and 70: pinned without the real model
+    ("sounds good", "yes"), ("works for me", "yes"), ("you bet", "yes"), ("fine by me", "okay"), ("roger that", "okay"), ("roger", "okay"), ("righto", "okay"), ("indeed", "yes"), ("deal", "yes"),   # rounds 69 and 70: pinned without the real model
     ("count me in later", "count me in later"), ("all good things", "all good things"),   # guard: only the reply alone
 ])
 def test_fix_typos_keeps_real_words(text, fixed):
