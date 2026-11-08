@@ -20,7 +20,7 @@ TYPES = {
     "stop_words": list, "filler_words": list, "no_answer_words": list, "no_words": list, "filler_tags": list, "question_words": list, "question_subjects": list, "question_starts": list, "closed_question_starts": list, "question_lead_words": list,
     "bad_phrase_starts": list, "echo_not_with": list, "verb_goal_starts": list, "verb_goal_leads": list, "be_goal_words": list, "echo_drop_starts": list, "echo_drop_ends": list, "echo_cut_at": list,
     "prospect_pronouns": list, "spell_word_endings": list, "spell_words": list, "spell_real_words": str, "answer_banned_words": list,
-    "vague_words": list, "openers": list, "fact_presses": int, "banned_phrases": list, "nudge_leads": list, "take_backs": list, "answer_leads": list, "aside_starts": list, "ask_leads": list, "take_backs_with_break": list, "take_backs_mid": list, "ack_words": list,
+    "vague_words": list, "openers": list, "fact_presses": int, "banned_phrases": list, "nudge_leads": list, "take_backs": list, "answer_leads": list, "aside_starts": list, "unsure_leads": list, "ask_leads": list, "take_backs_with_break": list, "take_backs_mid": list, "ack_words": list,
     "number_blanks": dict, "number_words": dict, "number_skip": list, "number_half": str, "number_parts": dict, "echo_pronoun_swap": dict, "coach_notes": dict, "prompts": dict,
     "uncovered_fallback": str, "bridge_ack": str, "corrects": str, "corrects_drop": str,
 }

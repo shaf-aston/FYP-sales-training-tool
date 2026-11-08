@@ -1,7 +1,7 @@
 """What one prospect reply was heard as, before anything is said back: one `Verdict` per turn."""
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from itertools import dropwhile
 
 from core.buy_mode.script_engine.engine import (
@@ -11,7 +11,7 @@ from core.buy_mode.script_engine.engine import (
     questions_of,
     ready_open,
 )
-from core.buy_mode.script_engine.hear.reply import Reader, break_pattern, clauses
+from core.buy_mode.script_engine.hear.reply import Part, Reader, break_pattern, clauses
 from core.buy_mode.script_engine.method import ANY
 from core.infra.utils import tokenize
 
@@ -55,14 +55,14 @@ class Ear:
 
     def hear(self, text, state, opened):
         step = self.method.steps[state.step]
-        reply = self.reader.read(text).settle(lambda part: self._rises(part, step))
+        reply = self._unecho(self.reader.read(text), state).settle(lambda part: self._rises(part, step))
         if reply.nudged and not tokenize(reply.unnudged):
             return Verdict("nudge", text=text)  # "what's next?": no answer
         fixed = self._correction(text, state)
         if fixed:
             return fixed
         asking = bool(reply.asked)
-        if self._what_alone(text) or self._word_back(text, state) or (asking and not reply.said and self._asked_back(text, state)):
+        if self._what_alone(text) or self._word_back(text, state) or (asking and not reply.said and self._asked_back(reply.asked, state)):
             return Verdict("sense", "clarify", text, asking)
         if asking and reply.said:
             both = self._with_side(reply, step, state, opened)
@@ -79,6 +79,10 @@ class Ear:
             beside = self._beside_worry(text, step, state, name)
             if beside:
                 return beside
+        if kind == "sense" and not asking and self.sense.interruptions[name].with_answer:
+            beside = self._beside_sense(text, step, state, name)
+            if beside:
+                return beside
         if kind == "sense" and self._paused_again(name, state):
             return Verdict("says_nothing", asking=asking)  # no words to ask about: never "What do you mean by brb?"
         if kind:
@@ -86,6 +90,19 @@ class Ear:
         if asking and not self._answers(text, step):
             return Verdict("question", text=text, asking=asking, ahead=ahead)
         return Verdict("answer", text=text, asking=asking, ahead=ahead)
+
+    def _unecho(self, reply, state):
+        """The question said back before their answer ("how long? about 2 years", "achieve? quit my job", "what
+        do I want? more money") is talk, not a question: it never picks an answer ("how long?" is near "not
+        long") and is never asked about. Said back alone, it still asks for the question put another way."""
+        parts = list(reply.parts)
+        for i, part in enumerate(parts):
+            if part.act not in ("asks", "rise") or not (self._word_back(part.text, state) or self._asked_back(part.text, state)):
+                break
+            parts[i] = Part(part.text, "tag")
+        if not any(p.act in ("said", "rise", "asks") for p in parts):
+            return reply  # all of it said back: "how long?" alone
+        return replace(reply, parts=tuple(parts))
 
     def _paused_again(self, name, state):
         """A third pause in a row (the last line was `wait_again`, said only to a second one) says nothing: the
@@ -200,6 +217,23 @@ class Ear:
             return None
         ahead = hear_ahead(self.method, state, head)
         return Verdict("answer", text=head, ahead=None if ahead is state else ahead, side=f"objection:{name}")
+
+    def _beside_sense(self, text, step, state, name):
+        """A remark that is a sense able to sit beside an answer (`with_answer`), with an answer in the other parts
+        ("oh great, another sales call. more money I guess"): the answer is kept and the sense's line goes in
+        front of the next question, as when it is asked beside one. The answer is the parts after the remark
+        ("oh great" before it is talk), else those before it. None when no part alone is that sense, or the
+        rest is no answer."""
+        parts = clauses(text, self._breaks)
+        for i, part in enumerate(parts):
+            if self._interrupt(part, step, state, False, False) != ("sense", name):
+                continue
+            rest = ", ".join(parts[i + 1:] or parts[:i])
+            if not rest or self._interrupt(rest, step, state, False, False)[0] or not self._answers_step(rest, step, state):
+                return None
+            ahead = hear_ahead(self.method, state, rest)
+            return Verdict("answer", text=rest, ahead=None if ahead is state else ahead, side=f"sense:{name}")
+        return None
 
     def _chooses(self, question, step):
         """The one label of the step's answers the question surely picks on its own ("how do I pay?" at the

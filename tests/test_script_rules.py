@@ -576,6 +576,13 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("3k, actually make it 5k", "5k", ""),   # round 25: the 3k was kept
     ("more money, actually no, more time", "more time", ""),   # round 25: said back whole
     ("actually no idea", "actually no idea", ""),   # "actually no" takes back only with a break after it
+    ("a million, jk, 2k", "2k", ""),   # round 26 callers: "jk" between two answers takes the first back
+    ("buy a yacht obviously, lol no, pay rent", "pay rent", ""),
+    ("jk lol", "jk lol", ""),   # with nothing after it, nothing is taken back
+    ("I guess my car loan?", "I guess my car loan?", ""),   # round 26 callers: unsure, not asking ("I'll find out")
+    ("lol, probably like 2k?", "probably like 2k", ""),
+    ("maybe a year?", "maybe a year?", ""),
+    ("is it a year?", "", "is it a year?"),   # a question still asks
 ])
 def test_a_reply_is_read_once_into_what_it_says_and_what_it_asks(text, said, asked):
     from core.buy_mode.script_engine.hear.reply import Reader
@@ -1111,3 +1118,19 @@ def test_a_word_from_the_question_said_back_wants_it_put_another_way(seller, ste
 ])
 def test_a_reply_of_its_own_is_not_a_word_said_back(seller, step, said):
     assert not seller._ear._word_back(said, ScriptState(step=step))
+
+
+@pytest.mark.parametrize("step, text, acts", [
+    ("03", "how long? about 2 years", ["tag", "said"]),     # was heard as "recent": "how long?" is near "not long"
+    ("goal_practical", "achieve? quit my job", ["tag", "said"]),   # was "What do you mean by achieve?"
+    ("01", "what do I want? more money", ["tag", "said"]),  # their I-words are our you-words
+    ("02", "how much? about 2k", ["tag", "said"]),
+    ("03", "how long?", ["asks"]),                         # said back alone: it still asks for it another way
+    ("02", "how much is it? about 2k", ["asks", "said"]),  # their own question, not ours said back
+    ("02", "about 2k, how much?", ["said", "asks"]),       # only before the answer
+    ("03", "how long? how long? 2 years", ["tag", "tag", "said"]),
+])
+def test_the_question_said_back_before_an_answer_is_talk(seller, step, text, acts):
+    """Round 26 callers: "how long? about 2 years" went to "So what made it come up for you now?"."""
+    reply = seller._ear._unecho(seller._ear.reader.read(text), ScriptState(step=step))
+    assert [p.act if p.act != "rise" else "asks" for p in reply.parts] == acts

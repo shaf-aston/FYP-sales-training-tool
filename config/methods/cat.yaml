@@ -177,7 +177,7 @@ steps:
     # A span of time already spent: "nothing" or "time" is no answer to how long ("about 3 years", "since covid",
     # "ages" are). Live: "within a year" (when they want it) and "my job could go any day" were taken as how long.
     # draft: a sum of money is no span of time ("3k a month"; whole calls: saved as "1 months").
-    needs: '^(?!.*(?:[$£€]\s*\d|\d\s*k\b|\b(?:grand|thousand|quid|pounds?|dollars?|bucks)\b))(?!.*\b(?:within|in\s+(?:the\s+next|a|an|one|two|\d+)\s+(?:years?|months?|weeks?|days?)|by\s+next|next\s+(?:years?|months?|weeks?|summer|spring|autumn|winter)|any\s+day|one\s+day|some\s*day)\b).*(?:\d|\b(?:since|ages|while|long|forever|always|ever|recently|lately|life|bit|days?|weeks?|months?|years?|yrs?|decades?)\b)'
+    needs: '^(?!.*(?:[$£€]\s*\d|\d\s*k\b|\b(?:grand|thousand|quid|pounds?|dollars?|bucks)\b))(?!.*\b(?:within|in\s+(?:the\s+next|a|an|one|two|\d+)\s+(?:years?|months?|weeks?|days?)|by\s+next|next\s+(?:years?|months?|weeks?|summer|spring|autumn|winter)|any\s+day|one\s+day|some\s*day)\b).*(?:\d|\b(?:since|ages|while|long|forever|always|ever|recently|lately|life|bit|days?|weeks?|fortnights?|months?|years?|yrs?|decades?)\b)'
     probe:   # draft: ours, so "I don't know" gets an easier question, not the same one
       - "Roughly, is it more like months, or a few years?"
     stuck: {then: "04"}
@@ -192,6 +192,8 @@ steps:
           - "not long"
           - "only recently"
           - "just a few weeks"
+          - "a fortnight"   # draft: round 26 callers, heard as a long time
+          - "a couple of weeks"   # draft
           - "it's pretty new"
           - "I only just started thinking about it"
         then: "04"
@@ -519,6 +521,7 @@ steps:
           - "either is fine"
           - "whichever is easier"
           - "yes, let's do it"
+          - "debit, I don't do credit"   # draft: round 26 callers, "debit because I don't do credit" was asked again
         then: "end"
       backs_out: *backs_out
       how:   # draft: whole calls, "how do I pay?" got "I'll find out"; the choice again answers it

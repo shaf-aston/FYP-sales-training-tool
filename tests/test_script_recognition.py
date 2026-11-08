@@ -719,13 +719,30 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("01", 0, (), "kind of more money", "goal_practical", "What are you hoping to achieve with more money?"),   # was "with kind of more money?"
     ("01", 0, (), "50% more income", "goal_practical", "What are you hoping to achieve with 50% more income?"),   # was "50 more income"
     # round 25
-    ("02", 0, (), "2k, is that a lot?", "03", None),   # was "I haven't mentioned a price yet"
+    ("02", 0, (), "2k, is that a lot?", "03", "How long"),   # was "I haven't mentioned a price yet"
     ("14", 0, (), "is that a lot?", "m_funded", None),   # guard: after the price it is the money worry
     ("03", 0, (), "A year. Is that normal?", "04", "There's no right answer here"),   # was no answer to the question
     ("01", 0, (), "what do most people say?", "01", "There's no right answer here"),   # guard: asked alone, the step is asked again
     ("01", 0, (), "more money, actually no, more time", "goal_identity", None),   # was "What are you hoping to achieve with more money actually no more time?"
     ("22", 0, (), "credit, is that ok?", "end", "Perfect."),   # round 25 replay: got "There's no right answer here"
     ("03", 0, (), "2 years, is that ok?", "04", "24 months"),
+    # round 26
+    ("01", 0, (), "oh great, another sales call. more money I guess", "goal_practical", "I'm an AI playing"),   # was the honest line, "more money" lost
+    ("03", 0, (), "how long? hmm, about 2 years", "04", "24 months"),   # was "So what made it come up for you now?"
+    ("goal_practical", 0, (), "achieve? quit my job", "goal_practical", "What would that actually change"),   # was "What do you mean by achieve?"
+    ("04", 0, (), "I guess my car loan?", "05", None),   # was "I'll find out"
+    ("22", 0, (), "debit because I don't do credit", "end", "Perfect."),   # was asked again
+    ("19", 0, (), "I wouldn't say no", "20", None),   # was "That's fine, no pressure."
+    ("01", 0, (), "come again?", "01", "Of course, let me say that again"),   # was "I'll find out"
+    ("01", 0, (), "say what now?", "01", "Of course, let me say that again"),   # was saved as their answer
+    ("22", 0, (), "which?", "22", "Fair point"),   # was "I'll find out"
+    ("22", 0, (), "sorry, which one?", "22", "Fair point"),
+    ("03", 0, (), "a fortnight", "04", "So what made it come up"),   # was asked again
+    ("03", 0, (), "how long?", "03", "Fair point"),   # guard: said back alone, it is put another way
+    ("02", 0, (), "about 2k, how much is it?", "03", "Fair question"),   # guard: their own question is answered
+    ("01", 0, (), "is this a sales call", "01", "I'm an AI playing"),   # guard: asked alone, the step is asked again
+    ("03", 0, (), "thanks for asking, about 2 years", "04", "You're welcome. 24 months"),   # was "You're welcome." and the 2 years lost
+    ("02", 0, (), "sorry, how much what?", "02", "Fair point"),   # was the price: "sorry" counted against the question said back
 ]
 
 

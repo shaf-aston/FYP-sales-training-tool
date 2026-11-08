@@ -12,6 +12,7 @@ jump_in:   # a yes to "Do you see yourself jumping in?"
   - "yes I see myself taking the jump"
   - "ok, let's go"   # draft
   - "I don't see why not"   # draft: whole calls, it was heard as not yet
+  - "I wouldn't say no"   # draft: round 26 callers, heard as "I'd rather not say"
 pay_now:   # a yes that is already about paying: the payment question next, not "What makes you say that?"
   - "how do I pay"   # draft
   - "credit"   # draft

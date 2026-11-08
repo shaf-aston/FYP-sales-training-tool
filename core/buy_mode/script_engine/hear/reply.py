@@ -102,6 +102,7 @@ class Reader:
         # at the start or after a break, with words after it: "nothing, sorry" takes nothing back; a mid one
         # ("no") only between two parts: "a year, no, two years" corrects, "no, credit?" says no
         self._blank = set(cfg["no_answer_words"])  # "yes, sorry": a part of only these beside others says nothing
+        self._unsure = re.compile(rf"^\W*(?:{any_of(cfg['unsure_leads'])})\b", re.IGNORECASE)
         self._aside = re.compile(rf"^\W*(?:{any_of(cfg['aside_starts'])})\b", re.IGNORECASE)
         self._ask_lead = re.compile(rf"^\W*(?:{any_of(cfg['ask_leads'])})\b\W*", re.IGNORECASE)
         self._answer_lead = re.compile(rf"^\W*(?:{any_of(cfg['answer_leads'])})\b\W*", re.IGNORECASE)
@@ -126,7 +127,8 @@ class Reader:
             part, led = self._unlead(part)
             act = "asks" if led else self._act(part, len(cut) > 1)
             parts.append(part)
-            acts.append("said" if act == "rise" and acts[-1:] == ["hedge"] else act)  # "lol idk, money?": unsure, not asking
+            unsure = act == "rise" and (acts[-1:] == ["hedge"] or self._unsure.match(part))
+            acts.append("said" if unsure else act)  # "lol idk, money?", "I guess my car loan?": unsure, not asking
         return Reply(text, rest, nudged, tuple(map(Part, parts, acts)))
 
     def _unlead(self, part):

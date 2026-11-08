@@ -97,6 +97,8 @@ interruptions:
       - "hello? you still with me?"
       - "sorry, you cut out"
       - "you're breaking up"
+      - "come again"   # draft: round 26 callers, "come again?" got "I'll find out"
+      - "say what now"   # draft: round 26 callers, saved as their answer
       - "sorry, the line is bad"
     reply: "Of course, let me say that again."   # draft: "say", not "ask": a talk line asks nothing
   thanks:
@@ -133,6 +135,7 @@ interruptions:
       - "what do you mean by that"
       - "huh"   # draft; whole calls: "huh?" (0.73 to the rest) was saved as their goal
       - "wait what"   # draft: whole calls, "wait what?" got "I'll find out"
+      - "which one"   # draft: round 26 callers, "sorry, which one?" got "I'll find out"
       - "depends what you mean by that"   # draft: whole calls, "depends on what you mean" got "I'll find out"
       - "not sure what you mean"
       - "I don't understand the question"
