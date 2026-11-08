@@ -63,6 +63,20 @@ def test_round_66_asked_as_yes_or_no_only_tags_say_nothing(said, nothing, fake_e
     assert shrugs(fake_embedder).says_nothing(said, CAT.steps["06"], asking=False, closed=True) == nothing
 
 
+@pytest.mark.parametrize("said, nothing", [
+    ("so to speak", True), ("as it were", True), ("you see", True), ("for what it's worth", True), ("tops", True),
+    ("in a nutshell", True), ("at least", True), ("mind you", True), ("long story short", True), ("full stop", True),   # round 67: heard as "say that again", leaving, or a goal
+    ("ok, so to speak", True), ("who knows", True),   # filler and shrug words beside them
+    ("money so to speak", False), ("dunno man", False), ("freedom", False), ("tops up", False), ("my boss", False),   # guard: a word the labels must hear
+])
+def test_round_67_only_tags_say_nothing_where_labels_hear(said, nothing, fake_embedder):
+    assert shrugs(fake_embedder).says_nothing(said, CAT.steps["01"], asking=False) == nothing
+
+
+def test_round_67_asked_as_yes_or_no_without_a_catch_all_labels_still_decide(fake_embedder):
+    assert not shrugs(fake_embedder).says_nothing("obviously", CAT.steps["01"], asking=False, closed=True)  # a yes to "jumping in?"
+
+
 def test_shrug_words_say_nothing_only_where_a_catch_all_would_keep_them(fake_embedder):
     s = shrugs(fake_embedder)
     assert s.says_nothing("dunno man", CAT.steps["03"], asking=False)      # labels + catch-all

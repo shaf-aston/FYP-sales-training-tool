@@ -724,6 +724,13 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("truth be told money", "money", ""), ("to be fair money", "money", ""), ("if i'm being honest 2k", "2k", ""), ("money hand on heart", "money", ""),
     ("call it quits", "call it quits", ""), ("call it fear", "fear", ""),   # guard: "call it quits" is leaving, not a lead
     ("hand on heart money", "money", ""), ("if i'm honest 2k", "2k", ""), ("2k either way", "2k", ""),   # round 66 mutation: no row had these without a comma
+    ("2k so to speak", "2k", ""), ("2k mind you", "2k", ""), ("2k tops", "2k", ""), ("2k full stop", "2k", ""), ("2k at the very least", "2k", ""), ("money in a nutshell", "money", ""),   # round 67 callers: saved whole
+    ("money, for what it's worth", "money", ""), ("money as it were", "money", ""), ("money you see", "money", ""), ("2k at least", "2k", ""), ("money for what its worth", "money", ""),
+    ("my boss, period", "my boss", ""), ("a year, max", "a year", ""),   # round 67 callers: saved whole
+    ("a short period", "a short period", ""), ("a year max", "a year max", ""), ("money tops up", "money tops up", ""),   # guard: no comma, so the word stays
+    ("mind you, my boss", "my boss", ""), ("long story short, money", "money", ""), ("at least a year", "a year", ""), ("in a nutshell 2k", "2k", ""),   # round 67 callers: saved with the lead
+    ("you see, money", "money", ""), ("so to speak money", "money", ""), ("as it were, money", "money", ""), ("for what it's worth, money", "money", ""), ("at the very least 2k", "2k", ""), ("for what its worth 2k", "2k", ""),
+    ("you see what?", "", "you see what?"),   # guard: before a question it is kept, so it still asks
     ("money though", "money", ""), ("money anyways", "money", ""), ("money mainly", "money", ""), ("money ideally", "money", ""), ("money highkey", "money", ""), ("money sort of thing", "money", ""), ("money that sort of thing", "money", ""),   # round 65 mutation: round 59-62 end tags no row had
     ("money that type of thing", "money", ""), ("money or anything like that", "money", ""), ("money essentially", "money", ""), ("money ultimately", "money", ""), ("money usually", "money", ""), ("money to start with", "money", ""), ("money whatnot", "money", ""), ("ok so yeah", "okay", ""),
     ("anyway money", "money", ""), ("anyways money", "money", ""), ("mainly money", "money", ""), ("seriously money", "money", ""), ("highkey money", "money", ""), ("ultimately money", "money", ""), ("generally money", "money", ""), ("mm money", "money", ""), ("mmm money", "money", ""),   # round 65 mutation: round 59-64 filler leads no row had

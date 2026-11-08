@@ -32,18 +32,24 @@ class Shrugs:
     def says_nothing(self, text, step, asking, closed=False):
         """"ok", "idk", "dunno man", "stuff I guess": no answer to an open question. Beyond the filler words,
         only on a step whose catch-all route would keep it as the answer (a step with no catch-all hears these
-        with its own labels), and a question is never a shrug. `closed`: asked as yes-or-no, where "yes", "ok"
+        with its own labels, past tags alone: "you see"), and a question is never a shrug. `closed`: asked as yes-or-no, where "yes", "ok"
         and "👍" answer, so only shrug phrases and tags say nothing (round 66: "hand on heart" was kept)."""
         words = set(tokenize(text))
         if not closed and words <= self._filler:  # also no words at all: "👍", "..."
             return True
-        if not any(r.label == ANY for r in step.listen) or asking:
+        if asking:
             return False
+        if not any(r.label == ANY for r in step.listen):  # round 67: "so to speak" alone was "say that again"
+            return not closed and self.only_tags(text)
         if closed:
             return bool(words) and not words & self._fillers and not self._words(text) - self._leads  # "yeah" is a tag too
         if self._words(text) <= self._plain:
             return True  # "dunno man", "we'll see": only shrug words, nothing the catch-all should keep
         return self.hedges(text)
+
+    def only_tags(self, text):
+        """Only tags, shrug phrases and filler ("so to speak", "ok, you see"): no words to hear a meaning in."""
+        return bool(tokenize(text)) and self._words(text) <= self._filler
 
     def _words(self, text):
         """The reply's words, less any shrug phrase or tag in it ("who knows", "hard to say", "per se"): those say

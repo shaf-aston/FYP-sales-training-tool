@@ -1197,6 +1197,13 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("01", 0, (), "money if anything", "goal_practical", "What are you hoping that would get you?"),   # was "achieve with money if anything?"
     ("06", 1, (), "hand on heart", "06", "No rush"), ("06", 1, (), "per se", "06", "No rush"),   # asked as yes-or-no: was saved as the answer
     ("06", 1, (), "yes, hand on heart", "08", None), ("06", 1, (), "yeah", "08", None),   # guard: these answer it
+    # round 67
+    ("18", 0, (), "you see", "18", "Put simply"), ("18", 0, (), "so to speak", "18", "Put simply"), ("18", 0, (), "as it were", "18", "Put simply"),   # were leaving, "let me say that again", "let me put it another way"
+    ("goal_practical", 0, (), "you see", "goal_practical", "What would that actually change"),   # was leaving: the call ended
+    ("01", 0, (), "so to speak", "01", "What are you actually hoping"), ("01", 0, (), "in a nutshell", "01", "What are you actually hoping"), ("01", 0, (), "tops", "01", "What are you actually hoping"),   # were "say that again", a goal, saved
+    ("18", 0, (), "obviously", "19", None), ("18", 0, (), "ok", "19", None), ("18", 0, (), "no worries", "19", None),   # guard: these say yes
+    ("19", 0, (), "spot on", "20", None), ("19", 0, (), "bang on", "20", None),   # were unclear and "take your time"
+    ("02", 0, (), "2k tops", "03", None), ("03", 0, (), "at least a year", "04", None),   # guard: the answer is kept
 ]
 
 
