@@ -1211,6 +1211,12 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("05", 0, (), "let's say", "05", "No rush"), ("05", 0, (), "needless to say", "05", "No rush"),   # were "let me say that again" and saved as the answer
     ("18", 0, (), "lovely", "19", None),   # was unclear
     ("18", 0, (), "by and large, the money", "m_funded", None), ("19", 0, (), "correct", "20", None), ("03", 0, (), "let's say a year", "04", None),   # guard: these still say it
+    # round 69
+    ("goal_practical", 0, (), "to some extent", "goal_practical", "What would that actually change"), ("goal_practical", 0, (), "on the whole", "goal_practical", "What would that actually change"),   # were "let me put it another way" and saved
+    ("05", 0, (), "to some extent", "05", "No rush"), ("05", 0, (), "admittedly", "05", "No rush"), ("05", 0, (), "roger that", "05", "No rush"),   # were "let me say that again" and saved as the answer
+    ("18", 0, (), "to some extent", "18", "Put simply"), ("01", 0, (), "at any rate", "01", "What are you actually hoping"),   # were "let me put it another way" and a goal
+    ("18", 0, (), "roger that", "19", None), ("19", 0, (), "deal", "20", None),   # were unclear
+    ("18", 0, (), "righto", "19", None), ("19", 0, (), "indeed", "20", None), ("19", 0, (), "on the whole", "19", "Is this something"),   # guard: as before
 ]
 
 
