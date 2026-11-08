@@ -719,6 +719,9 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("2k inshallah", "2k", ""), ("money fingers crossed", "money", ""), ("2k touch wood", "2k", ""), ("money god willing", "money", ""),   # round 65 callers: saved whole
     ("2k knock on wood", "2k", ""), ("money wallah", "money", ""),   # round 65: the rest of the hope words
     ("tbh 2k", "2k", ""), ("tbf money", "money", ""), ("to be honest 2k", "2k", ""),   # round 65 callers: "tbh 2k" was saved whole, while "2k tbh" lost it
+    ("money though", "money", ""), ("money anyways", "money", ""), ("money mainly", "money", ""), ("money ideally", "money", ""), ("money highkey", "money", ""), ("money sort of thing", "money", ""), ("money that sort of thing", "money", ""),   # round 65 mutation: round 59-62 end tags no row had
+    ("money that type of thing", "money", ""), ("money or anything like that", "money", ""), ("money essentially", "money", ""), ("money ultimately", "money", ""), ("money usually", "money", ""), ("money to start with", "money", ""), ("money whatnot", "money", ""), ("ok so yeah", "okay", ""),
+    ("anyway money", "money", ""), ("anyways money", "money", ""), ("mainly money", "money", ""), ("seriously money", "money", ""), ("highkey money", "money", ""), ("ultimately money", "money", ""), ("generally money", "money", ""), ("mm money", "money", ""), ("mmm money", "money", ""),   # round 65 mutation: round 59-64 filler leads no row had
 ])
 def test_a_reply_is_read_once_into_what_it_says_and_what_it_asks(text, said, asked):
     from core.buy_mode.script_engine.hear.reply import Reader

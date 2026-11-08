@@ -43,6 +43,7 @@ def test_filler_words_say_nothing_on_any_step(fake_embedder):
     ("fingers crossed", True), ("touch wood", True), ("knock on wood", True), ("god willing", True),   # round 65 callers: saved as the answer
     ("up to you", True), ("you tell me", True), ("your call", True),   # round 65 callers: "up to you" at 05 was heard as leaving
     ("up to you to decide", False), ("you tell me the price", False),   # guard: words beside them
+    ("your guess is as good as mine", True), ("though", True), ("mostly", True), ("ideally", True), ("ultimately", True), ("ok whatnot", True),   # round 65 mutation: no row had these
 ])
 def test_round_51_words_alone_say_nothing(said, nothing, fake_embedder):
     assert shrugs(fake_embedder).says_nothing(said, CAT.steps["05"], asking=False) == nothing
@@ -70,7 +71,11 @@ def test_ask_meaning_only_about_the_question_or_after_a_shrug(fake_embedder):
     assert s.ask_meaning("who knows", q, empty=True, heard_ahead=False) == ""          # round 64: was "What do you mean by who knows?"
     assert s.ask_meaning("hard to say", q, empty=True, heard_ahead=False) == ""
     assert s.ask_meaning("beats me", q, empty=True, heard_ahead=False) == ""
-    assert s.ask_meaning("who knows, stuff", q, empty=True, heard_ahead=False) != ""   # guard: words beside it
+    assert s.ask_meaning("who knows, stuff", q, empty=True, heard_ahead=False) == "What do you mean by stuff?"   # round 65: was "...by who knows, stuff?"
+    assert s.ask_meaning("good question, things", q, empty=True, heard_ahead=False) == "What do you mean by things?"
+    assert s.ask_meaning("stuff, hard to say", q, empty=True, heard_ahead=False) == "What do you mean by stuff?"
+    for said in ("not sure what to say", "I haven't thought about it", "I can't think of anything"):   # round 65 mutation: no row had these
+        assert s.ask_meaning(said, q, empty=True, heard_ahead=False) == "", said
 
 
 def test_an_answer_they_already_gave_is_never_asked_about(fake_embedder):

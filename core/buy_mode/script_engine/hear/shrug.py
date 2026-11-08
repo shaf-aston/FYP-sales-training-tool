@@ -1,6 +1,8 @@
 """Did the reply say anything? A shrug ("dunno man") is never kept as an answer; unclear words about the
 question ("I want to make money online") get asked about: "What do you mean by ...?"."""
 
+import re
+
 from core.buy_mode.script_engine.config import plain_words
 from core.buy_mode.script_engine.method import ANY
 from core.infra.utils import tokenize
@@ -17,6 +19,8 @@ class Shrugs:
         self._polite = frozenset(cfg["no_polite_words"])
         self._plain = plain_words(cfg)
         self._phrases = [tokenize(p) for p in cfg["shrug_phrases"]]
+        longest = sorted(self._phrases, key=len, reverse=True)
+        self._phrase_cut = re.compile(r"\b(?:" + "|".join(r"\W+".join(map(re.escape, p)) for p in longest) + r")\b[\s,.;:!-]*", re.IGNORECASE)
         self._asks = set(cfg["question_words"])  # "what" shares no topic with a question: "what I said" is not about it
         self._sense, self._listener, self._fill = sense, listener, fill
 
@@ -82,4 +86,5 @@ class Shrugs:
         if (not self._sense.ask_meaning or heard_ahead or not said or repeated
                 or not (empty or said & set(tokenize(question)) - self._asks)):
             return ""
-        return self._fill(self._sense.ask_meaning, {"said": text}) or ""
+        back = self._phrase_cut.sub("", text).strip(" ,.;:!-") or text  # "who knows, stuff": "What do you mean by stuff?"
+        return self._fill(self._sense.ask_meaning, {"said": back}) or ""

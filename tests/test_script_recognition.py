@@ -1187,6 +1187,7 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("05", 0, (), "up to you", "05", None),   # was heard as leaving, and the call ended
     ("20", 0, (), "I'd like to think so", "20", None),   # was "What specifically do you need to think over"
     ("20", 0, (), "I'd like to think about it", "m_think_what", None),   # guard: the real one
+    ("goal_practical", 0, (), "who knows, stuff", "goal_practical", "What do you mean by stuff?"),   # round 65 mutation: was "...by who knows, stuff?"
 ]
 
 
