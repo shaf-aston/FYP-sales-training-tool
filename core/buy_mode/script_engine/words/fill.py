@@ -15,6 +15,7 @@ CENSORED = re.compile(r"\S*\w\*+\w*\S*")  # a word with stars in it ("f***ing"):
 WORD = re.compile(r"[$£€]?\d+(?:[.,]\d+)*%?[A-Za-z0-9'-]*|[A-Za-z0-9'-]+")  # "£2,500", "1.5", "2.5k", "50%" stay one word
 FIGURE = re.compile(r"\d+(?:\.\d+)?")
 GLUED = re.compile(r"(\d)([A-Za-z])")  # a number stuck to its unit: "1yr", "18mo"
+RANGE = re.compile(r"(\d)-(?=\d)")  # two numbers joined by a dash: "1-2 years" reads like "1 to 2 years"
 MONEY_SIGNS = re.compile(r"(?<![\w£$€])[£$€]{2,}(?![\w£$€])")  # "£££", "$$$": a word for money, never a number
 EMPHASIS = re.compile(r"(?<!\w)([*_`]+)(?=\S)([^*_`\n]+?)(?<=\S)\1(?!\w)")  # "**more money**": a pair, so "f***ing" stays
 STRETCHED = re.compile(r"\w*([^\W\d_])\1\1\w*")  # "moneyyy": a letter three times or more in one word; "100000" stays
@@ -187,7 +188,7 @@ def number_phrase(reply, rule, cfg):
     `from` and no `units` takes that rule's units."""
     units = rule.get("units") or cfg["number_blanks"][rule["from"]]["units"]
     per, unit, half = rule.get("per"), rule.get("unit"), tokenize(cfg["number_half"])
-    words = WORD.findall(GLUED.sub(r"\1 \2", reply or ""))  # "1yr" -> "1 yr"
+    words = WORD.findall(GLUED.sub(r"\1 \2", RANGE.sub(r"\1 - ", reply or "")))  # "1yr" -> "1 yr", "1-2" -> "1 - 2"
     lower = [w.lower() for w in words if w.lower() not in cfg["number_skip"]]
     for i, word in enumerate(lower):
         if word not in (per or units):

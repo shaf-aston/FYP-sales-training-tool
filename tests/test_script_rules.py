@@ -582,7 +582,7 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("actually no idea", "actually no idea", ""),   # "actually no" takes back only with a break after it
     ("a million, jk, 2k", "2k", ""),   # round 26 callers: "jk" between two answers takes the first back
     ("buy a yacht obviously, lol no, pay rent", "pay rent", ""),
-    ("jk lol", "jk lol", ""),   # with nothing after it, nothing is taken back
+    ("jk lol", "jk", ""),   # with nothing after it, nothing is taken back ("lol" at the end is its own part, as in "jk, lol")
     ("I guess my car loan?", "I guess my car loan?", ""),   # round 26 callers: unsure, not asking ("I'll find out")
     ("lol, probably like 2k?", "probably like 2k", ""),
     ("maybe a year?", "maybe a year?", ""),
@@ -612,6 +612,10 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("quit my job, actually quit my job and travel", "quit my job and travel", ""),
     ("yes, sorry the baby was crying", "yes, sorry the baby was crying", ""),   # guard: two kinds, nothing taken back
     ("a year, sorry had to pay for parking", "a year, sorry had to pay for parking", ""),   # guard: no span after
+    ("yes sorry", "yes", ""),   # round 39: an end word that answers nothing is its own part, as "yes, sorry" (was unclear)
+    ("more money lol", "more money", ""),
+    ("sorry I was driving", "sorry I was driving", ""),   # guard: only at the end
+    ("lol", "lol", ""),   # guard: alone it is the reply
 ])
 def test_a_reply_is_read_once_into_what_it_says_and_what_it_asks(text, said, asked):
     from core.buy_mode.script_engine.hear.reply import Reader

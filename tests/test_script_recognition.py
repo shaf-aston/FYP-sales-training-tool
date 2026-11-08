@@ -866,6 +866,15 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("05", 0, (), "Understood.", "05", None),   # was saved as the reason
     ("01", 0, (), "mor mony", "goal_practical", "What are you hoping to achieve with more money?"),   # was unclear
     ("01", 0, (), "u know, more money", "goal_practical", "What are you hoping to achieve with more money?"),   # was "with u know, more money?"
+    # round 39
+    ("19", 0, (), "yes sorry", "20", None),   # was unclear ("yes, sorry" was a yes)
+    ("19", 0, (), "no sorry", "19", None),   # guard: still not a yes
+    ("03", 0, (), "1-2 years", "04", "24 months... Damn."),   # was no number
+    ("01", 0, (), "back, more money", "goal_practical", "What are you hoping to achieve with more money?"),   # was "with back, more money?"
+    ("01", 0, (), "I want more money for my family yes", "goal_practical", "So this isn't really about the money."),
+    ("01", 0, (), "more money, is that silly?", "goal_practical", "There's no right answer here"),   # was no answer to it
+    ("goal_practical", 0, (), "quit my job, is that weird?", "goal_practical", "There's no right answer here"),
+    ("04", 0, (), "my job, does that make sense?", "05", "There's no right answer here"),
 ]
 
 

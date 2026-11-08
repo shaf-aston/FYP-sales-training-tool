@@ -106,6 +106,7 @@ class Reader:
         # at the start or after a break, with words after it: "nothing, sorry" takes nothing back; a mid one
         # ("no") only between two parts: "a year, no, two years" corrects, "no, credit?" says no
         self._blank = set(cfg["no_answer_words"])  # "yes, sorry": a part of only these beside others says nothing
+        self._blank_end = re.compile(rf"(?<=\w)\s+((?:{any_of(cfg['no_answer_words'])})\W*)$", re.IGNORECASE)
         self._unsure = re.compile(rf"^\W*(?:{any_of(cfg['unsure_leads'])})\b", re.IGNORECASE)
         self._aside = re.compile(rf"^\W*(?:{any_of(cfg['aside_starts'])})\b", re.IGNORECASE)
         self._ask_lead = re.compile(rf"^\W*(?:{any_of(cfg['ask_leads'])})\b\W*", re.IGNORECASE)
@@ -147,6 +148,7 @@ class Reader:
             if found:
                 rest, nudged = text[:found.start()].rstrip(" ,;:-"), True
                 break
+        rest = self._blank_end.sub(r", \1", rest)  # "yes sorry" is "yes, sorry" (round 39 callers: it was unclear)
         rest = self._flip.sub("", rest)  # round 28 callers: "no yeah" was heard as backing out
         lead = self._answer_lead.match(rest)
         if lead and tokenize(rest[lead.end():]):  # "is it ok to say quit my job?": the answer, its "?" asks leave

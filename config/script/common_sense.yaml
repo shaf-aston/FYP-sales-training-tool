@@ -225,6 +225,12 @@ interruptions:
       - "which is better"   # draft: round 34 callers, at payment it was heard as paying ("Welcome aboard")
       - "which do you recommend"   # draft: the same, got "I'll find out"
       - "which is easier"   # draft: "whichever is easier" chooses, "which is easier?" asks
+      - "is that silly"   # draft: round 39 callers, "quit my job, is that silly?" got no answer to it
+      - "is that weird"   # draft
+      - "is that stupid"   # draft
+      - "is that bad"   # draft
+      - "is that long"   # draft: "a year, is that long?"
+      - "does that make sense"   # draft: "my job, does that make sense?"
       - "what do most people use"   # draft
       - "should I"   # draft: round 34 callers, "should I?" to "jumping in?" got "I'll find out"
       - "do you think I should"   # draft

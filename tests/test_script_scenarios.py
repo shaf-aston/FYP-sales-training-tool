@@ -643,6 +643,12 @@ def test_whats_next_asks_no_ai(fake_embedder):
     ("we want to buy a house", "buy a house"),
     ("I don't want to work", None),                        # never past a "not"
     ("people who want more", "people who want more"),      # nor past a "who"
+    ("paying the bills", "paying the bills"),               # made a verb only when asked
+    ("more money for my family yes", "more money for your family"),   # round 39: said back with "yes"
+    ("back, more money", "more money"),                     # round 39: back from a break, said back with "back"
+    ("back in shape", None),                                # guard: never "with in shape"
+    ("in control of my time", None),                        # round 39: was "with in control of your time"
+    ("more money in the bank", "more money in the bank"),   # guard: "in" later is fine
     ("", None),
 ])
 def test_echo_phrase(reply, phrase):
@@ -883,7 +889,8 @@ def test_number_phrase(reply, number):
     ("a month", "1 month"), ("ages", None),  # round 24: "1 month", never "1 months"
     ("a year and a half", "18 months"), ("year and a half", "18 months"), ("2 and a half years", "30 months"),
     ("about 2 years and a half", "30 months"), ("1.5 years", "18 months"), ("18mo", "18 months"), ("2yrs", "24 months"),
-    ("half a year", "6 months"), ("2y", "24 months")])
+    ("half a year", "6 months"), ("2y", "24 months"),
+    ("1-2 years", "24 months"), ("6-12 months", "12 months"), ("1 to 2 years", "24 months")])   # round 39: a dash range was no number
 def test_months_thinking_counts_the_answer_in_months(reply, months):
     from core.buy_mode.script_engine.words.fill import number_phrase
     assert number_phrase(reply, CFG["number_blanks"]["months_thinking"], CFG) == months
