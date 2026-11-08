@@ -1133,6 +1133,19 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("20", 0, (), "obviously not", "19", "No pressure"),   # was unclear, then on to the payment
     ("20", 0, (), "not for now", "m_think_what", "Sure."),   # guard: still a "later"
     ("willing", 0, (), "really not", "11", None),   # guard: still a no
+    # round 61
+    ("05", 0, (), "true", "05", "No rush"),   # was saved as the answer
+    ("05", 0, (), "ok kind of thing", "05", "No rush"),   # was saved as the answer
+    ("05", 0, (), "essentially ok", "05", "No rush"),   # was saved as the answer
+    ("05", 0, (), "ok as well", "05", "No rush"),   # was saved as the answer
+    ("05", 0, (), "ok or anything", "05", "No rush"),   # was saved as the answer
+    ("05", 0, (), "generally ok", "05", "No rush"),   # was saved as the answer
+    ("01", 0, (), "money kind of thing", "goal_practical", "What are you hoping that would get you?"),   # was "...with money kind of thing?"
+    ("01", 0, (), "true, money", "goal_practical", "What are you hoping that would get you?"),   # was "...with true, money?"
+    ("01", 0, (), "money to start", "goal_practical", "What are you hoping that would get you?"),   # was "...with money to start?"
+    ("01", 0, (), "money right now", "goal_practical", "What are you hoping that would get you?"),   # was "...with money right now?"
+    ("01", 0, (), "true freedom", "goal_practical", "What are you hoping to achieve with true freedom?"),   # guard: "true" is theirs
+    ("willing", 0, (), "true", "willing_check", None),   # guard: still a yes
 ]
 
 

@@ -33,6 +33,8 @@ def test_filler_words_say_nothing_on_any_step(fake_embedder):
     ("mainly money", False),   # guard
     ("obviously", True), ("lowkey", True), ("highkey", True), ("seriously", True), ("obviously ok", True), ("lowkey ok", True),   # round 60 callers
     ("lowkey money", False),   # guard
+    ("true", True), ("essentially", True), ("usually", True), ("generally ok", True), ("essentially ok", True),   # round 61 callers
+    ("true freedom", False),   # guard
 ])
 def test_round_51_words_alone_say_nothing(said, nothing, fake_embedder):
     assert shrugs(fake_embedder).says_nothing(said, CAT.steps["05"], asking=False) == nothing

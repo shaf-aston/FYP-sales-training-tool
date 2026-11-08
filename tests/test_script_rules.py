@@ -689,6 +689,11 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("seriously, a year", "a year", ""), ("basically money", "money", ""),
     ("not for now", "not for now", ""), ("2k for now", "2k for now", ""), ("definitely not", "definitely not", ""),   # guard: "not for now" is a "later"
     ("really?", "", "really?"), ("seriously, how much?", "", "how much?"),   # guard: still asks
+    ("money kind of thing", "money", ""), ("2k type thing", "2k", ""), ("money as well", "money", ""), ("2k or anything", "2k", ""),   # round 61: saved whole
+    ("2k generally", "2k", ""), ("a year to begin with", "a year", ""),
+    ("2k, that kind of thing", "2k", ""), ("2k, for me personally", "2k", ""), ("2k, and stuff like that", "2k", ""),   # round 61: was "2k, that"
+    ("essentially money", "money", ""), ("usually quit", "quit my job", ""), ("mhm 2k", "2k", ""), ("true, money", "money", ""),   # round 61: the lead
+    ("true freedom", "true freedom", ""), ("I want to start", "I want to start", ""), ("not right now", "not right now", ""),   # guard
     ("literally what?", "", "literally what?"), ("do you know?", "", "do you know?"),   # guard: still asks
     ("well paid job", "well paid job", ""),   # guard: "well paid" is the answer
     ("oh what?", "", "oh what?"),   # guard: still asks
