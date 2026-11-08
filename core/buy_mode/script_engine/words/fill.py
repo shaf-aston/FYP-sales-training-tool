@@ -172,6 +172,10 @@ def echo_phrase(reply, cfg, vocab=frozenset(), verbs=False):
     sentences = SENTENCE_END.split((reply or "").strip())  # one sentence, the first with more than filler ("fine.
     # more money"): whole calls, "with more money Mostly for your kids?"
     reply = next((x for x in sentences if set(tokenize(x)) - set(cfg["filler_words"])), sentences[0])
+    parts = reply.split(",")
+    while len(parts) > 1 and tokenize(parts[0])[:1] and tokenize(parts[0])[0] in cfg["echo_reason_starts"]:
+        parts = parts[1:]  # round 42: "because I'm broke, more money" -> "more money"
+    reply = ",".join(parts)
     cut = "|".join(map(re.escape, cfg["echo_cut_at"]))
     reply = re.split(rf"\b(?:{cut})\b", reply, maxsplit=1, flags=re.IGNORECASE)[0]  # "quit my job but I'm scared"
     joins = "|".join(map(re.escape, cfg["echo_list_joins"]))

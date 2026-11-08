@@ -678,6 +678,9 @@ def test_whats_next_asks_no_ai(fake_embedder):
     ("what I want is just more money", "more money"),
     ("the main thing I want is more time", "more time"),
     ("what is more money", None),                        # guard: no one before the "is", a question
+    ("because I'm broke, more money", "more money"),     # round 42: reason first said no goal back
+    ("cause my job sucks, I want freedom", "freedom"),
+    ("more money, because I'm broke", "more money"),     # guard: the reason after it was always cut
     ("I guess more money", "more money"),
     ("more money ish", "more money"),                       # round 41: "more money-ish" was said back with "-ish"
     ("", None),
@@ -815,6 +818,7 @@ def test_a_short_form_after_a_filler_word_is_its_word(text, read):
     ("thats it", "that's it"),
     ("id quit my job", "I'd quit my job"),
     ("since last year", "for a year"),                 # round 42: was no number
+    ("since last month", "for a month"),
     ("my ID card", "my ID card"),                      # guard: a word in capitals is not a short form
     ("IM me", "IM me"),
     ("I'm after more money", "I'm after more money"),  # guard: already right
