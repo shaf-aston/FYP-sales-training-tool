@@ -87,7 +87,7 @@ class Ear:
         backed = not asking and self._yes_or_no(state) and self._backed.match(text)
         if backed:  # round 52: "yes because I want change" to "are you willing?" was a no; the yes decides
             text = short_form(backed.group(1), self.cfg) or backed.group(1)
-        nothing = self._shrugs.blank(text) or (not self._yes_or_no(state) and self._shrugs.says_nothing(text, step, asking))
+        nothing = self._shrugs.blank(text) or self._shrugs.says_nothing(text, step, asking, self._yes_or_no(state))
         if not state.waiting and nothing and not self._ready(text, state):  # "yes I'm in" is a shrug's words, but it says they're in
             return Verdict("says_nothing", text=text, asking=asking)  # an answer only: never an interruption
         ahead, text = (None, text) if asking else self._ahead(text, step, state)  # "do I need 5k?" is not their goal

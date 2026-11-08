@@ -13,7 +13,7 @@ class Shrugs:
         """`fill(template, slots)`: the Filler's, to say their words back; None when they can't be."""
         self._fillers = frozenset(cfg["filler_words"])
         stop = frozenset(cfg["stop_words"]) - frozenset(cfg["side_words"])  # "I'm in" takes a side: never a shrug
-        self._filler = stop | self._fillers
+        self._stop, self._filler = stop, stop | self._fillers
         self._blank = stop | frozenset(cfg["no_answer_words"])
         self._no = stop | frozenset(cfg["no_words"])
         self._polite = frozenset(cfg["no_polite_words"])
@@ -28,15 +28,18 @@ class Shrugs:
         self._asks = set(cfg["question_words"])  # "what" shares no topic with a question: "what I said" is not about it
         self._sense, self._listener, self._fill = sense, listener, fill
 
-    def says_nothing(self, text, step, asking):
+    def says_nothing(self, text, step, asking, closed=False):
         """"ok", "idk", "dunno man", "stuff I guess": no answer to an open question. Beyond the filler words,
         only on a step whose catch-all route would keep it as the answer (a step with no catch-all hears these
-        with its own labels), and a question is never a shrug."""
+        with its own labels), and a question is never a shrug. `closed`: asked as yes-or-no, where "yes", "ok"
+        and "👍" answer, so only shrug phrases and tags say nothing (round 66: "hand on heart" was kept)."""
         words = set(tokenize(text))
-        if words <= self._filler:  # also no words at all: "👍", "..."
+        if not closed and words <= self._filler:  # also no words at all: "👍", "..."
             return True
         if not any(r.label == ANY for r in step.listen) or asking:
             return False
+        if closed:
+            return bool(words) and not words & self._fillers and not self._words(text) - self._stop  # "yeah" is a tag too
         if self._words(text) <= self._plain:
             return True  # "dunno man", "we'll see": only shrug words, nothing the catch-all should keep
         return self.hedges(text)

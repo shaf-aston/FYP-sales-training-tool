@@ -52,6 +52,15 @@ def test_round_51_words_alone_say_nothing(said, nothing, fake_embedder):
     assert shrugs(fake_embedder).says_nothing(said, CAT.steps["05"], asking=False) == nothing
 
 
+@pytest.mark.parametrize("said, nothing", [
+    ("hand on heart", True), ("per se", True), ("I'm easy", True), ("in all honesty", True),   # round 66: kept at "Is there anything you've tried so far?"
+    ("yes", False), ("yh", False), ("ok", False), ("yeah", False), ("👍", False), ("yes, hand on heart", False), ("no", False),   # guard: these answer it
+    ("I suppose", False), ("a course", False),
+])
+def test_round_66_asked_as_yes_or_no_only_tags_say_nothing(said, nothing, fake_embedder):
+    assert shrugs(fake_embedder).says_nothing(said, CAT.steps["06"], asking=False, closed=True) == nothing
+
+
 def test_shrug_words_say_nothing_only_where_a_catch_all_would_keep_them(fake_embedder):
     s = shrugs(fake_embedder)
     assert s.says_nothing("dunno man", CAT.steps["03"], asking=False)      # labels + catch-all
