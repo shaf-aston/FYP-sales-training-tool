@@ -355,7 +355,7 @@ class ScriptSeller:
         text, stage = self._go(move)
         if rephrase and self.state.step != step:
             lead = ""
-        elif rephrase and move.say == question_of(self.method.steps[step].say):
+        elif rephrase and move.say == question_of(self.state.opened or self.method.steps[step].say):
             lead = self.sense.same_words or lead  # no other words left: never promise them
         return f"{lead} {text}".strip(), stage
 

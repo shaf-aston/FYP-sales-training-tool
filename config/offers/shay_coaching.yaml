@@ -63,6 +63,7 @@ facts:
       - "can I split it into payments"
       - "is there a payment plan"
       - "can I pay monthly"
+      - "is that per month"   # draft: round 40 callers, "a month?" after the price got "I'll find out"
       - "is there a deposit"   # draft: whole calls, got "I'll find out"
       - "do you take klarna"   # draft: same
       - "can I wait until next week to pay"   # draft: whole calls, "can I pay next week?" got "I'll find out" (not "can I pay next week": "do I have to pay today?" was then torn)

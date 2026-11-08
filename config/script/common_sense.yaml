@@ -140,6 +140,10 @@ interruptions:
       - "huh"   # draft; whole calls: "huh?" (0.73 to the rest) was saved as their goal
       - "wait what"   # draft: whole calls, "wait what?" got "I'll find out"
       - "which one"   # draft: round 26 callers, "sorry, which one?" got "I'll find out"
+      - "like what"   # draft: round 40 callers, "like who?" was kept as the answer
+      - "like who"   # draft
+      - "such as"   # draft
+      - "for example"   # draft
       - "depends what you mean by that"   # draft: whole calls, "depends on what you mean" got "I'll find out"
       - "not sure what you mean"
       - "I don't understand the question"
@@ -247,7 +251,9 @@ interruptions:
       - "enough with the questions"
       - "why are you interrogating me"
       - "just get to the point"
-      - "this is taking too long"
+      - "this call is taking too long"   # draft: round 40 callers, "not having enough time" (0.81 to "this is taking too long") got "I'll keep this quick"
+      - "this is taking forever"   # draft
+      - "this is dragging on"   # draft
       - "can we hurry up"
       - "this is a waste of my time"
       - "meh, whatever"   # not bare "whatever": it pulls in "whatever works for me"

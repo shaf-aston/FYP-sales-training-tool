@@ -1207,6 +1207,8 @@ def test_a_question_with_what_in_it_is_not_what_alone(seller, said):
     ("19", "jumping in?"),
     ("02", "each month? "),     # two words, a space after the "?"
     ("belief_cost", "year?"),  # "...over the next few years?"
+    ("02", "per month?"),      # round 40: got the payment plan line
+    ("02", "monthly?"),        # round 40: "-ly" on the question's word
 ])
 def test_a_word_from_the_question_said_back_wants_it_put_another_way(seller, step, said):
     """Round 23: "a month?" to "How much... each month...?" got "I'll find out"; "achieve?" got the AI line."""
@@ -1221,9 +1223,11 @@ def test_a_word_from_the_question_said_back_wants_it_put_another_way(seller, ste
     ("04", "why?"),             # a question word asks
     ("02", "2k?"),              # not the question's words
     ("01", "achieve more money?"),   # 3 words is too many: their own question
-    ("02", "making each month?"),    # 3 words: their own question, not a word said back
+    ("02", "need to be making each month?"),    # 3 words ("each" skipped): their own question, not a word said back
     ("02", "?"),                # no words at all
     ("02", "bills?"),           # ends in "s", but "bill" isn't in the question either
+    ("14", "a month?"),         # round 40: the price line asks nothing, so "a month?" asks how it is paid
+    ("02", "only?"),            # "-ly" alone lifts nothing
 ])
 def test_a_reply_of_its_own_is_not_a_word_said_back(seller, step, said):
     assert not seller._ear._word_back(said, ScriptState(step=step))
@@ -1238,7 +1242,7 @@ def test_a_reply_of_its_own_is_not_a_word_said_back(seller, step, said):
     ("02", "how much is it? about 2k", ["asks", "said"]),  # their own question, not ours said back
     ("02", "about 2k, how much?", ["said", "asks"]),       # only before the answer
     ("03", "how long? how long? 2 years", ["tag", "tag", "said"]),
-    ("02", "how much? is it monthly?", ["tag", "asks"]),   # their own question after it still asks
+    ("02", "how much? is it before tax?", ["tag", "asks"]),   # their own question after it still asks ("is it monthly?" is ours said back: round 40)
     ("03", "how long? a year?", ["tag", "asks"]),          # and an answer with a rise is settled later
     ("01", "what am I hoping to achieve? more money", ["tag", "said"]),   # round 31: 4 of 6 words got "I'm the AI"
 ])
@@ -1335,3 +1339,21 @@ def test_a_step_can_want_a_yes_or_no_with_no_helper_verb(seller):
 ])
 def test_because_alone_says_nothing(seller, said, nothing):
     assert seller._ear._shrugs.says_nothing(said, seller.method.steps["05"], False) == nothing
+
+
+@pytest.mark.parametrize("said, means", [
+    ("what do you mean stopping me?", True),   # round 40: got "I'll find out"
+    ("wdym by that?", True),                   # "wdym" reads "what do you mean"
+    ("what does that mean?", True),
+    ("what do you do?", False),                # guard: a question about us
+    ("what does mentorship mean?", False),     # guard: a product question names its thing
+])
+def test_a_question_asking_what_we_meant_opens_with_it(seller, said, means):
+    from core.buy_mode.script_engine.words.fill import fix_typos
+    assert seller._ear._means_what(fix_typos(said, frozenset(), seller.cfg)) is means
+
+
+def test_an_unknown_question_asking_what_we_meant_is_put_another_way(seller):
+    """Round 40 callers: "what do you mean stopping me?" to 04 got "I don't know that one offhand"."""
+    v = at(seller, "04")._ear.hear("what do you mean stopping me?", seller.state, False)
+    assert (v.kind, v.name) == ("sense", "clarify"), v

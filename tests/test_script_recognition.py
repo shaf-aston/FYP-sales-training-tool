@@ -875,6 +875,20 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("01", 0, (), "more money, is that silly?", "goal_practical", "There's no right answer here"),   # was no answer to it
     ("goal_practical", 0, (), "quit my job, is that weird?", "goal_practical", "There's no right answer here"),
     ("04", 0, (), "my job, does that make sense?", "05", "There's no right answer here"),
+    # round 40
+    ("01", 0, (), "money/time", "goal_practical", "What are you hoping to achieve with money or time?"),   # was "What do you mean by money time?"
+    ("01", 0, (), "money and time", "goal_practical", "What are you hoping to achieve with money and time?"),   # was "What do you mean by"
+    ("01", 0, (), "time", "goal_practical", None),   # was small talk: "Let's keep the time about you though"
+    ("01", 0, (), "um so basically i want more money you know", "goal_practical", "What are you hoping to achieve with more money?"),
+    ("01", 0, (), "Honestly. More money. That's it.", "goal_practical", "What are you hoping to achieve with more money?"),
+    ("01", 0, (), "wdym", "01", "Fair point"),   # was unclear
+    ("goal_identity", 0, (), "like who?", "goal_identity", "Fair point"),   # was kept as the answer
+    ("02", 0, (), "per month?", "02", "Fair point"),   # was the payment plan line
+    ("14", 0, (), "a month?", "14", "There are ways to make the investment work"),   # the price line asks nothing: how it is paid
+    ("04", 0, (), "what do you mean stopping me?", "04", "Fair point"),   # was "I'll find out"
+    ("04", 0, (), "not having enough time", "05", None),   # was "Fair enough, I'll keep this quick"
+    ("04", 0, (), "this is taking forever", "04", "Fair enough, I'll keep this quick."),   # guard: still heard
+    ("03", 0, (), "1,5 years", "04", "18 months... Damn."),   # was no number
 ]
 
 

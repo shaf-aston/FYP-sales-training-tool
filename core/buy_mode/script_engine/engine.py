@@ -26,6 +26,7 @@ class ScriptState:
     spoken: tuple = ()     # lead lines said this call, once per time said (seller `_wear`)
     seen: tuple = ()       # steps landed on since the last worry handled, once per time (`_speak`: going round in circles)
     last: str = ""         # the last message said: never the very same one twice in a row (seller `_reply`)
+    opened: str = ""       # the route's own words the current step was first asked in, if any: asked again, those words (round 40)
 
 
 @dataclass(frozen=True)
@@ -48,7 +49,7 @@ def _speak(method, state):
         step = method.steps[state.step]
     if method.max_visits and state.seen.count(step.id) >= method.max_visits and step.id != method.follow_up:
         return _speak(method, replace(state, step=method.follow_up))  # round in circles: book a later call
-    return Move(step.say, replace(state, asks=0, resaid=0, asked="", said=(), seen=state.seen + (step.id,)), step.ui_stage, lead=lead)
+    return Move(step.say, replace(state, asks=0, resaid=0, asked="", said=(), opened="", seen=state.seen + (step.id,)), step.ui_stage, lead=lead)
 
 
 def _answered(step, state):
@@ -90,7 +91,8 @@ def _take(method, state, route):
     move = _speak(method, replace(state, step=route.then))
     said = route.say if route.say and move.state.step == route.then else move.say  # never on a step walked past to
     turned = move.state.step == method.follow_up != route.then  # round in circles: the follow-up's own "No problem."
-    return replace(move, ack="" if turned else route.ack, say=said)  # answers them, never after "No pressure at all."
+    state = replace(move.state, opened=said if said != move.say else "")  # round 40 callers: "not long" then "ok" got "so many nights, months and years"
+    return replace(move, ack="" if turned else route.ack, say=said, state=state)  # answers them, never after "No pressure at all."
 
 
 def ask_again(method, state, stay=True, misses=0):
@@ -147,7 +149,7 @@ def _ask_again(method, state, step, ack="", line="", misses=0, lead=True, stay=F
     elif used < len(step.probes):
         said = step.probes[used]
     else:
-        said = _rewording(step, used)
+        said = _rewording(step, used, state.opened)
         turn = used - len(step.probes)  # each lead once a step: a third "No rush" sounds like a loop
         leads = step.reask or method.reask
         if lead and turn < len(leads) and not ack and asks:
@@ -156,10 +158,11 @@ def _ask_again(method, state, step, ack="", line="", misses=0, lead=True, stay=F
     return Move(said, state, step.ui_stage, ack=ack, theirs=bool(line))
 
 
-def _rewording(step, used):
+def _rewording(step, used, opened=""):
     """The script's words for its `used`-th ask again, once its probes ran out: back to the question, then the
-    probes again, in turn, so the line just said is never said again ("If you had to put a number on it..." twice)."""
-    turns = (question_of(step.say), *step.probes)
+    probes again, in turn, so the line just said is never said again ("If you had to put a number on it..." twice).
+    `opened`: the route's words the step was first asked in, which are its question here."""
+    turns = (question_of(opened or step.say), *step.probes)
     return turns[(used - len(step.probes)) % len(turns)]
 
 
@@ -181,11 +184,13 @@ def asked_line(method, state):
     if state.asked:
         return state.asked, ""
     used = state.asks - len(state.said)
+    if state.opened and (used == 0 or not step.probes):
+        return state.opened, ""
     if used == 0 or not step.probes:
         return step.say, step.say_plain
     if used <= len(step.probes):
         return step.probes[used - 1], ""
-    said = _rewording(step, used - 1)
+    said = _rewording(step, used - 1, state.opened)
     return (step.say, step.say_plain) if said == question_of(step.say) else (said, "")
 
 

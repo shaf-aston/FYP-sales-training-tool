@@ -19,6 +19,8 @@ RANGE = re.compile(r"(\d)-(?=\d)")  # two numbers joined by a dash: "1-2 years" 
 MONEY_SIGNS = re.compile(r"(?<![\w£$€])[£$€]{2,}(?![\w£$€])")  # "£££", "$$$": a word for money, never a number
 EMPHASIS = re.compile(r"(?<!\w)([*_`]+)(?=\S)([^*_`\n]+?)(?<=\S)\1(?!\w)")  # "**more money**": a pair, so "f***ing" stays
 STRETCHED = re.compile(r"\w*([^\W\d_])\1\1\w*")  # "moneyyy": a letter three times or more in one word; "100000" stays
+SLASHED = re.compile(r"(?<![\w./:-])[^\W\d_]{2,}(?:\s*/\s*[^\W\d_]{2,})+(?![\w./:])")  # "money/time": a choice, not a link or "km/h"
+DECIMAL_COMMA = re.compile(r"\d+,\d{1,2}")  # "1,5 years": a comma before one or two digits is a decimal point ("2,000" keeps three)
 STRUCK = re.compile(r"(~+)(?=\S)[^~\n]+?(?<=\S)\1\s*")  # "~a year~ two years": taken back as they typed it
 SENTENCE_END = re.compile(r"[.!?]+\s+|\s*\n\s*|(?:^|\s)(?:\d{1,2}[.)]|[-*•])\s+(?=[^\W\d])")  # "more money. Mostly for my kids": "2.5k" and "5k." stay whole
 # A new line or a list mark ("1. more money 2. more time", "- pay rent") ends a sentence too: whole calls, "with 1?"
@@ -83,6 +85,7 @@ def fix_typos(text, vocab, cfg):
     text = _as_words(text, cfg)  # round 31: "💰💰💰" said nothing, "I want to by a house" was said back as typed
     text = STRETCHED.sub(lambda m: unstretch(m.group(0), vocab, cfg), text)  # round 32: "a yearrr" was not a time
     text = EMPHASIS.sub(r"\2", STRUCK.sub("", text))  # round 30: "with more?", and "~a year~ two years" was a year
+    text = SLASHED.sub(lambda m: re.sub(r"\s*/\s*", " or ", m.group()), text)  # round 40: "money/time" was "What do you mean by money time?"
     return WORD.sub(lambda m: spell(m.group(0), vocab, cfg), text)
 
 
@@ -215,6 +218,8 @@ def number_phrase(reply, rule, cfg):
 
 def _count(word, cfg):
     """A number said in digits or words ("3", "1.5", "three", "a"), else None."""
+    if DECIMAL_COMMA.fullmatch(word):
+        word = word.replace(",", ".")  # round 40 callers: "1,5 years" was no number
     return float(word) if FIGURE.fullmatch(word) else cfg["number_words"].get(word)
 
 

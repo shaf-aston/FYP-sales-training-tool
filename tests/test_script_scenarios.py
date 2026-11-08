@@ -386,6 +386,25 @@ def test_a_route_line_replaces_the_next_line_it_would_make_untrue():
     assert advance(method, ScriptState(step="a"), "any", "x").say == "Done."   # other answers: the step's own line
 
 
+def test_a_step_opened_in_a_routes_words_is_asked_again_in_them():
+    # round 40 callers: "not long, 6 months" then "ok" got "so many nights, months and years"
+    from core.buy_mode.script_engine.engine import asked_line
+    data = _mini()
+    data["steps"]["b"] = {"ui_stage": "intent", "say": "Long?", "capture": "y", "probe": ["Other words?"],
+                          "listen": {"any": {"then": "c"}}}
+    data["steps"]["c"] = {"ui_stage": "intent", "say": "Done."}
+    method = _says(data)
+    move = advance(method, ScriptState(step="a"), "soon", "x")
+    assert move.state.opened == "What made it come up now?"
+    assert asked_line(method, move.state) == ("What made it come up now?", "")   # what was asked, for "a month?" and "what do I...?"
+    again = advance(method, move.state, None, "", empty=True, misses=3)
+    assert again.say == "Other words?"
+    again = advance(method, again.state, None, "", empty=True, misses=3)
+    assert again.say == "What made it come up now?"   # was "Long?"
+    assert advance(method, ScriptState(step="a"), "any", "x").state.opened == ""   # the step's own line
+    assert advance(method, move.state, "any", "z").state.opened == ""   # the next step starts afresh
+
+
 def test_a_route_back_to_its_own_step_asks_in_its_own_words():
     # round 19: "I'm scared" to "What makes you say that?" is asked "What makes you want to go for it anyway?"
     data = _mini()
@@ -649,6 +668,10 @@ def test_whats_next_asks_no_ai(fake_embedder):
     ("back in shape", None),                                # guard: never "with in shape"
     ("in control of my time", None),                        # round 39: was "with in control of your time"
     ("more money in the bank", "more money in the bank"),   # guard: "in" later is fine
+    ("more money you know", "more money"),                  # round 40: said back as "more money you know"
+    ("more money, that's it", "more money"),                # round 40: said back as "more money, That's it"
+    ("with my kids, more money", None),                     # round 40: was "with with your kids, more money"
+    ("more time with my kids", "more time with your kids"),   # guard: "with" later is fine
     ("", None),
 ])
 def test_echo_phrase(reply, phrase):
@@ -722,6 +745,22 @@ def test_two_letters_the_wrong_way_round_are_fixed(text, fixed):
     from core.buy_mode.script_engine.words.fill import fix_typos
     vocab = frozenset(CFG["spell_words"]) | {"more", "yes", "time", "from", "does", "vie", "bat", "a", "my"}
     assert fix_typos(text, vocab, CFG) == fixed
+
+
+@pytest.mark.parametrize("text, read", [
+    ("money/time", "money or time"),                 # round 40: was "What do you mean by money time?"
+    ("quit job / travel", "quit job or travel"),
+    ("money and/or time", "money or time"),
+    ("w/ my kids", "with my kids"),                  # round 40: was said back as "w your kids"
+    ("2k/month", "2k/month"),                        # guard: a figure keeps its slash
+    ("50km/h", "50km/h"),
+    ("see site.com/page", "see site.com/page"),      # guard: a link keeps its slash
+    ("https://a.io/x", "https://a.io/x"),
+    ("y/n", "y/n"),                                  # guard: one-letter pieces are not words
+])
+def test_a_slash_between_words_reads_as_or(text, read):
+    from core.buy_mode.script_engine.words.fill import fix_typos
+    assert fix_typos(text, frozenset(), CFG) == read
 
 
 def test_a_figure_is_never_swapped_and_a_5_letter_typo_is_still_fixed():
@@ -890,7 +929,8 @@ def test_number_phrase(reply, number):
     ("a year and a half", "18 months"), ("year and a half", "18 months"), ("2 and a half years", "30 months"),
     ("about 2 years and a half", "30 months"), ("1.5 years", "18 months"), ("18mo", "18 months"), ("2yrs", "24 months"),
     ("half a year", "6 months"), ("2y", "24 months"),
-    ("1-2 years", "24 months"), ("6-12 months", "12 months"), ("1 to 2 years", "24 months")])   # round 39: a dash range was no number
+    ("1-2 years", "24 months"), ("6-12 months", "12 months"), ("1 to 2 years", "24 months"),   # round 39: a dash range was no number
+    ("1,5 years", "18 months"), ("2,5 years", "30 months")])   # round 40: a decimal comma was no number
 def test_months_thinking_counts_the_answer_in_months(reply, months):
     from core.buy_mode.script_engine.words.fill import number_phrase
     assert number_phrase(reply, CFG["number_blanks"]["months_thinking"], CFG) == months

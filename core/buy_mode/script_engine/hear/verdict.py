@@ -96,6 +96,8 @@ class Ear:
         if kind:
             return Verdict(kind, name, text, asking, ahead)
         if asking and not self._answers(text, step):
+            if self._means_what(text):  # round 40 callers: "what do you mean stopping me?" got "I'll find out"
+                return Verdict("sense", "clarify", text, asking)
             return Verdict("question", text=text, asking=asking, ahead=ahead)
         return Verdict("answer", text=text if asking else self._unbroken(text, step, state), asking=asking, ahead=ahead)
 
@@ -152,17 +154,25 @@ class Ear:
         words = set(tokenize(text))
         return bool(words & set(self.cfg["asked_back_what"])) and words <= {*self.cfg["asked_back_what"], *self.cfg["what_alone_with"]}
 
+    def _means_what(self, text):
+        """A question that opens by asking what we meant (`clarify_starts`: "what do you mean stopping me?"):
+        nothing else heard it, so it wants the step put another way, never "I'll find out"."""
+        words = tokenize(text)
+        return any(words[:len(lead)] == lead for lead in map(tokenize, self.cfg["clarify_starts"]))
+
     def _word_back(self, text, state):
         """A word or two lifted from the question just asked, said back with a "?" ("a month?" to "How much would
-        you need to be making each month...?", "achieve?") checks what it means: put it another way. Not when the
-        question offers a choice ("Credit or debit?": "debit?" picks one) or the reply holds a question word ("why?")."""
+        you need to be making each month...?", "achieve?", "monthly?") checks what it means: put it another way. Not
+        when the question offers a choice ("Credit or debit?": "debit?" picks one), the reply holds a question word
+        ("why?"), or the line asks nothing ("$5k." then "a month?" asks how it is paid)."""
         if not text.rstrip().endswith("?"):
             return False
-        asked = set(tokenize(" ".join(q for line in asked_line(self.method, state) for q in questions_of(line))))
-        words = [w for w in tokenize(text) if w not in self.cfg["stop_words"]]
+        asked = set(tokenize(" ".join(q for line in asked_line(self.method, state) for q in questions_of(line) if q.endswith("?"))))
+        words = [w for w in tokenize(text) if w not in {*self.cfg["stop_words"], *self.cfg["word_back_skip"]}]
         if "or" in asked or not 0 < len(words) <= self.cfg["word_back_words"] or set(words) & set(self.cfg["question_words"]):
             return False
-        return all(w in asked or w + "s" in asked or (w.endswith("s") and w[:-1] in asked) for w in words)
+        ends = ("", *self.cfg["word_back_ends"])
+        return all(any(w + e in asked or (e and w.endswith(e) and w[:-len(e)] in asked) for e in ends) for w in words)
 
     def _asked_back(self, text, state, share="asked_back_share"):
         """Their reply is the question just asked, said back about themselves ("what do I want to achieve?" to
