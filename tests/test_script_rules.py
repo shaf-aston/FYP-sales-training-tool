@@ -597,6 +597,12 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("I want to carry on", "I want to carry on", ""),
     ("debit, next", "debit", ""),   # guard: after a break it still nudges
     ("about 2k a month, if that helps", "about 2k a month", ""),   # round 32: "if that helps" got "You're welcome."
+    ("2k, no 3k", "3k", ""),   # round 33: a correction between two amounts needs no break after it (the 2k was kept)
+    ("a year, well two", "two year", ""),   # a bare amount keeps the unit said with the first (was "12 months")
+    ("about a year, no 2", "2 year", ""),
+    ("6 months, no a year", "a year", ""),
+    ("pay off debt, well 5k of it", "pay off debt, well 5k of it", ""),   # guard: no amount before, nothing taken back
+    ("a year, no more", "a year, no more", ""),   # guard: no amount after
 ])
 def test_a_reply_is_read_once_into_what_it_says_and_what_it_asks(text, said, asked):
     from core.buy_mode.script_engine.hear.reply import Reader
@@ -631,6 +637,27 @@ def test_a_line_asked_again_is_filled_the_same_way_without_new_ai_calls(fake_emb
     assert first[0] == "No problem, take your time."
     s.reply("hold on a second")
     assert s.reply("ok I'm back")[0] == again and calls == asked
+
+
+@pytest.mark.parametrize("said, after, line", [
+    ("I had to go, talk later", "02", "If you had to put a number on it"),   # round 33 callers: a goodbye in the past ended the call
+    ("I have to go now", "later", None),   # guard: still leaving
+    ("sorry, my kid is yelling", "02", "No problem, take your time."),   # guard: a pause now still waits
+])
+def test_a_pause_said_in_the_past_is_over(seller, said, after, line):
+    text, _ = at(seller, "02").reply(said)
+    assert seller.state.step == after, text
+    assert not line or text.startswith(line), text
+
+
+@pytest.mark.parametrize("text, name, over", [
+    ("sorry kids were shouting", "pause", True),   # round 33 callers: "sorry kids were shouting, 2k" got "take your time"
+    ("sorry was driving", "leaving", True),   # "sorry was driving, 2k" ended the call
+    ("sorry, my kid is yelling", "pause", False),
+    ("thanks, that was helpful", "thanks", False),   # only a pause or goodbye can be over
+])
+def test_a_pause_or_goodbye_in_the_past_is_over(seller, text, name, over):
+    assert seller._ear._over(text, name) == over
 
 
 def test_im_back_is_an_answer_unless_they_stepped_away(fake_embedder):

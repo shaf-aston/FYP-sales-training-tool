@@ -14,6 +14,7 @@ class Shrugs:
         self._blank = frozenset(cfg["stop_words"]) | frozenset(cfg["no_answer_words"])
         self._no = frozenset(cfg["stop_words"]) | frozenset(cfg["no_words"])
         self._plain = plain_words(cfg)
+        self._asks = set(cfg["question_words"])  # "what" shares no topic with a question: "what I said" is not about it
         self._sense, self._listener, self._fill = sense, listener, fill
 
     def says_nothing(self, text, step, asking):
@@ -67,6 +68,6 @@ class Shrugs:
         said = words - self._plain
         repeated = any(said <= set(tokenize(k)) for k in known if k)
         if (not self._sense.ask_meaning or heard_ahead or not said or repeated
-                or not (empty or said & set(tokenize(question)))):
+                or not (empty or said & set(tokenize(question)) - self._asks)):
             return ""
         return self._fill(self._sense.ask_meaning, {"said": text}) or ""

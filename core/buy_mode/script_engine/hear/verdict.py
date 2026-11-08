@@ -82,10 +82,12 @@ class Ear:
             beside = self._beside_worry(text, step, state, name)
             if beside:
                 return beside
-        if kind == "sense" and not asking and self.sense.interruptions[name].with_answer:
+        if kind == "sense" and not asking:
             beside = self._beside_sense(text, step, state, name)
             if beside:
                 return beside
+            if self._over(text, name):
+                return Verdict("says_nothing", text=text)  # "sorry, was driving": back, so the step is asked again
         if kind == "sense" and self._paused_again(name, state):
             return Verdict("says_nothing", asking=asking)  # no words to ask about: never "What do you mean by brb?"
         if kind == "sense" and not asking and self._said_again(name, state):
@@ -259,20 +261,32 @@ class Ear:
     def _beside_sense(self, text, step, state, name):
         """A remark that is a sense able to sit beside an answer (`with_answer`), with an answer in the other parts
         ("oh great, another sales call. more money I guess"): the answer is kept and the sense's line goes in
-        front of the next question, as when it is asked beside one. The answer is the parts after the remark
-        ("oh great" before it is talk), else those before it. None when no part alone is that sense, or the
-        rest is no answer."""
+        front of the next question, as when it is asked beside one. A pause or goodbye said in the past sits
+        beside one too, with no line ("sorry kids were shouting, 2k": they are back). The answer is the parts
+        after the remark ("oh great" before it is talk), else those before it. None when no part alone is that
+        sense, or the rest is no answer."""
+        said = self.sense.interruptions[name]
         parts = clauses(text, self._breaks)
         for i, part in enumerate(parts):
             if self._interrupt(part, step, state, False, False) != ("sense", name):
                 continue
+            if not said.with_answer and not self._over(part, name):
+                return None
             rest = ", ".join(parts[i + 1:] or parts[:i])
             if not rest or self._interrupt(rest, step, state, False, False)[0] or not self._answers_step(rest, step, state):
                 return None
             ahead = hear_ahead(self.method, state, rest)
-            side = "" if self._said_again(name, state) else f"sense:{name}"  # "You're welcome." once a call
+            side = "" if not said.with_answer or self._said_again(name, state) else f"sense:{name}"  # "You're welcome." once a call
             return Verdict("answer", text=rest, ahead=None if ahead is state else ahead, side=side)
         return None
+
+    def _over(self, text, name):
+        """A pause or goodbye said in the past ("sorry, was driving", "the kids were shouting"): the break is
+        over and they are back, so it is talk, never "take your time" or the call left (round 33 callers:
+        "sorry was driving, 2k" ended the call). `sense_over_after`: the senses it can be; `sense_over_words`:
+        the words that put it in the past."""
+        return (self.sense.interruptions[name].after in self.cfg["sense_over_after"]
+                and any(w in self.cfg["sense_over_words"] for w in tokenize(text)))
 
     def _chooses(self, question, step):
         """The one label of the step's answers the question surely picks on its own ("how do I pay?" at the

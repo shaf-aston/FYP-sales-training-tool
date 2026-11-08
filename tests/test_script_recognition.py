@@ -806,6 +806,13 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("02", 0, (), "thanks", "02", "You're welcome."),   # guard: thanks alone is still thanks
     ("01", 0, (), "Could I possibly say more money, please?", "goal_practical", "What are you hoping to achieve with more money?"),   # was "with could you possibly say more money?"
     ("01", 0, (), "loads more dosh", "goal_practical", "What are you hoping to achieve with loads more money?"),   # was the plain line
+    # round 33
+    ("02", 0, (), "sorry was driving, 2k", "03", "How long"),   # was heard as leaving: the call ended
+    ("02", 0, (), "sorry kids were shouting, 2k", "03", "How long"),   # was "No problem, take your time."
+    ("02", 0, (), "sorry, my kid is yelling", "02", "No problem, take your time."),   # guard: a pause now still waits
+    ("02", 0, (), "sorry, I'm driving", "later", None),   # guard: still leaving
+    ("03", 0, (), "a year, well two", "04", "24 months"),   # was "12 months"
+    ("01", 0, (), "what I said", "01", "What are you actually hoping to achieve?"),   # was saved as their goal: "to have what you said"
 ]
 
 

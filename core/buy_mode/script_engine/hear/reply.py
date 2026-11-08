@@ -114,6 +114,23 @@ class Reader:
         self._take_back = re.compile(rf"(?:^|[,;.!?]\s*)(?:(?:{words})\b[\s,;.!-]*|(?:{word})\s*[,;.!-][\s,;.!-]*)(?=\w)"
                                      rf"|(?<=\w){not_mid}[,;.!?]\s*(?:{mid})\s*[,;.!-][\s,;.!-]*(?=\w)", re.IGNORECASE)
 
+        # "2k, no 3k", "a year, well two": between two amounts a correction needs no break after it (round 33 callers:
+        # the year was kept); "pay off debt, well 5k of it" has no amount before, so nothing is taken back
+        self._amount = re.compile(rf"\d\w*|(?:{any_of(cfg['number_words'])})", re.IGNORECASE)
+        self._amount_back = re.compile(rf"(?<=\w){not_mid}[,;.!?]\s*(?:{mid}|{word})\s+(?=(?:{self._amount.pattern})\b)", re.IGNORECASE)
+
+    def _amount_back_in(self, text):
+        """A correction between two amounts ("2k, no 3k"): the words kept, else None. A bare amount keeps the
+        unit said after the first one: "a year, well two" -> "two year"."""
+        back = self._amount_back.search(text)
+        before = tokenize(clauses(text[:back.start()], self.breaks)[-1]) if back else []
+        said = [i for i, w in enumerate(before) if self._amount.fullmatch(w)]
+        if not said:
+            return None
+        new = text[back.end():].strip()
+        bare = all(self._amount.fullmatch(w) for w in tokenize(new))
+        return " ".join([new, *before[said[-1] + 1:]]) if bare else new
+
     def read(self, text):
         rest, nudged = text, False
         for nudge in self._nudges:
@@ -125,8 +142,9 @@ class Reader:
         lead = self._answer_lead.match(rest)
         if lead and tokenize(rest[lead.end():]):  # "is it ok to say quit my job?": the answer, its "?" asks leave
             rest = rest[lead.end():].rstrip(" ?")
-        while back := self._take_back.search(rest):  # "3k, no wait, more like 4k" -> "more like 4k": they took
-            rest = rest[back.end():]  # the first part back; cut again so "wait, sorry, what's the price?" asks
+        while (back := self._take_back.search(rest)) or (kept := self._amount_back_in(rest)) is not None:
+            rest = rest[back.end():] if back else kept  # "3k, no wait, more like 4k" -> "more like 4k": they took
+            # the first part back; cut again so "wait, sorry, what's the price?" asks
         parts, acts = [], []
         cut = clauses(rest, self.breaks)
         for part in cut:

@@ -946,6 +946,8 @@ def test_echo_phrase_fixes_typos(reply, phrase):
     ("2kkk", "2k"),
     ("100000", "100000"),   # guard: figures are never cut
     ("good", "good"),   # guard: a real double letter stays
+    ("more coffeee", "more coffee"),   # a real word not in the script keeps its double letter too
+    ("Quiet my job", "quit my job"),   # a swap is heard whatever the case
 ])
 def test_fix_typos_keeps_real_words(text, fixed):
     from core.buy_mode.script_engine.words.fill import fix_typos

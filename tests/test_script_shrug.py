@@ -34,6 +34,7 @@ def test_ask_meaning_only_about_the_question_or_after_a_shrug(fake_embedder):
     assert s.ask_meaning("stuff I guess", q, empty=True, heard_ahead=False) != ""      # a shrug with words
     assert s.ask_meaning("dunno man", q, empty=True, heard_ahead=False) == ""          # nothing to ask about
     assert s.ask_meaning("I want money online", q, empty=False, heard_ahead=True) == ""  # clear, just early
+    assert s.ask_meaning("what I said", q, empty=False, heard_ahead=False) == ""       # round 33: "what" is no topic
 
 
 def test_an_answer_they_already_gave_is_never_asked_about(fake_embedder):
