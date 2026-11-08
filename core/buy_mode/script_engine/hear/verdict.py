@@ -14,6 +14,7 @@ from core.buy_mode.script_engine.engine import (
 )
 from core.buy_mode.script_engine.hear.reply import Part, Reader, break_pattern, clauses
 from core.buy_mode.script_engine.method import ANY
+from core.buy_mode.script_engine.words.fill import short_form
 from core.infra.utils import tokenize
 
 
@@ -51,6 +52,10 @@ class Ear:
         self._breaks = break_pattern(cfg)
         self._nudge_yes = {" ".join(tokenize(p)) for p in cfg["nudge_yes"]}
         self._nudge_leads = frozenset(cfg["nudge_leads"])
+        backs = [*cfg["reason_backs"], *(k for k, v in cfg["short_replies"].items() if v in cfg["reason_backs"])]  # "k", "ofc"
+        backs, reasons = (r"\W+".join(map(re.escape, tokenize(p))) for p in backs), map(re.escape, cfg["reason_starts"])
+        backs = "|".join(sorted(backs, key=len, reverse=True))
+        self._backed = re.compile(rf"^\W*((?:{backs})(?:\W+(?:{backs}))*)\W+(?:{'|'.join(reasons)})\W+\w", re.IGNORECASE)
         self._captures = {}  # slot: the first step that saves it
         for s in method.steps.values():
             if s.capture:
@@ -79,6 +84,9 @@ class Ear:
             if both:
                 return both
         text = reply.said if reply.said and not asking else reply.meant  # "dunno, a year?" -> "a year"
+        backed = not asking and self._yes_or_no(state) and self._backed.match(text)
+        if backed:  # round 52: "yes because I want change" to "are you willing?" was a no; the yes decides
+            text = short_form(backed.group(1), self.cfg) or backed.group(1)
         nothing = self._shrugs.blank(text) or (not self._yes_or_no(state) and self._shrugs.says_nothing(text, step, asking))
         if not state.waiting and nothing and not self._ready(text, state):  # "yes I'm in" is a shrug's words, but it says they're in
             return Verdict("says_nothing", text=text, asking=asking)  # an answer only: never an interruption
@@ -412,7 +420,9 @@ class Ear:
         if asking:
             labels.update({f"fact:{k}": f.examples for k, f in self.offer.facts.items()})
         objections = self.method.objections.items()
-        if not opened and not asking and (step.doubts_answer or self._reason(text)):
+        if not asking and self._backed.match(text):
+            objections = ()  # round 52: "yes because I need the money" says why yes; it is no money worry
+        elif not opened and not asking and (step.doubts_answer or self._reason(text)):
             objections = ()  # "money's tight" answers "what holds you back", "because money is tight" any step;
             # "is this a scam?" still asks
         elif not opened and asking:

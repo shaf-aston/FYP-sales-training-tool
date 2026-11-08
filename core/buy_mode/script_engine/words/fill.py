@@ -152,6 +152,8 @@ def _as_words(text, cfg):
         text = re.sub(rf"((?<!\w)(?:\d\w*|(?i:{re.escape(word)})))?\s*(?:{re.escape(sign)}\ufe0f?\s*)+", lambda m: f"{m.group(1)} " if m.group(1) else f" {word} ", text).strip()
     for heard, meant in cfg["word_swaps"].items():
         text = re.sub(rf"(?<!\w){re.escape(heard)}(?!\w)", meant, text, flags=re.IGNORECASE)
+    per = cfg["amount_per"]  # round 52: "£2k/month" was said back as "£2k month"; "50km/h" keeps its slash
+    text = re.sub(rf"(\d\w*)/(?=(?:{'|'.join(per['units'])})\b)", rf"\1 {per['as']} ", text, flags=re.IGNORECASE)
     for bare, meant in cfg["apostrophe_words"].items():   # round 42: "im after more money"; never "ID"
         text = re.sub(rf"(?<!\w)[{bare[0]}{bare[0].upper()}]{re.escape(bare[1:])}(?!\w)", meant, text)
     return text

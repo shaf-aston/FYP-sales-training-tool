@@ -962,7 +962,7 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("19", 0, (), "ok go on", "20", "What makes you say that?"),   # was asked again
     ("goal_practical", 0, (), "quit, obviously, like everyone", "goal_practical", "What would that actually change"),   # was heard as who they want to be
     ("goal_practical", 0, (), "I don't want to be like everyone else", "02", None),   # guard
-    ("18", 0, (), '"ok"', "18", "Put simply"),   # was "let me put it another way"
+    ("18", 0, (), '"ok"', "19", "Do you see yourself jumping in?"),   # was "let me put it another way"; since round 51 a bare "ok" here is a yes
     ("18", 0, (), "yeah, ok", "19", None),   # was "Put simply": the "yeah" was left out
     ("willing", 0, (), "yeah. ok.", "willing_check", None),   # was unclear, so the check was skipped
     # round 48
@@ -1013,6 +1013,25 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("03", 0, (), "not a year, two", "04", "24 months... Damn."),   # was "12 months"
     ("03", 0, (), "a whole year", "04", "12 months... Damn."),   # said no number back
     ("19", 0, (), "not now, maybe later", "m_think_what", None),   # guard: a stall, the denied "now" is not cut off
+    # round 52
+    ("19", 0, (), "yes because I need the money", "20", "What makes you say that?"),   # was a money worry
+    ("19", 0, (), "yeah because my wife wants it", "20", "What makes you say that?"),   # was a partner worry
+    ("19", 0, (), "yes cos I need it", "20", "What makes you say that?"),   # was unclear
+    ("willing", 0, (), "yes because I want change", "willing_check", None),   # was a no
+    ("willing", 0, (), "why not", "willing_check", None),   # was a no
+    ("willing", 0, (), "ofc because I want change", "willing_check", None),   # a short form of yes, then a reason: was unclear
+    ("willing", 0, (), "k because why not", "willing_check", None),   # was a no
+    ("19", 0, (), "y because I need money", "20", "What makes you say that?"),   # was a money worry
+    ("19", 0, (), "yh cos I need the money", "20", "What makes you say that?"),   # was unclear
+    ("18", 0, (), "sound", "19", "Do you see yourself jumping in?"),   # was "let me say that again"
+    ("20", 0, (), "sure because I trust you", "22", None),   # was a scam worry
+    ("05", 0, (), "ok rn", "05", None),   # was saved as the answer
+    ("01", 0, (), "more money rn", "goal_practical", "What are you hoping to achieve with more money?"),   # was "...more money rn?"
+    ("01", 0, (), "£2k/month", "goal_practical", "What are you hoping to achieve with £2k a month?"),   # was "£2k month"
+    ("01", 0, (), "also more money", "goal_practical", "What are you hoping to achieve with more money?"),   # was "...also more money?"
+    ("19", 0, (), "no because I can't afford it", "m_funded", None),   # guard: a reason after a no is still the worry
+    ("19", 0, (), "yes but I can't afford it", "m_funded", None),   # guard: so is one after "but"
+    ("willing", 0, (), "n because I like my job", "11", None),   # guard: a short form of no stays a no
 ]
 
 

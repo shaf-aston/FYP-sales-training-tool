@@ -581,6 +581,8 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("not a year, two", "two year", ""),   # round 51 callers: said back as "12 months"
     ("not 2k, 3k", "3k", ""),
     ("not my boss, my wife", "my wife", ""),
+    ("more money rn", "more money", ""), ("quit asap", "quit my job", ""),   # round 52 callers: "rn" was said back
+    ("ok rn", "okay", ""),   # was saved as the answer
     ("not money, time", "not money, time", ""),   # guard: nothing says they are one kind, kept whole
     ("not really, I'm busy", "not really, I'm busy", ""),   # guard: a no with a reason stays a no
     ("not sure, a year", "not sure, a year", ""),
@@ -1435,3 +1437,16 @@ def test_an_unknown_question_asking_what_we_meant_is_put_another_way(seller):
     """Round 40 callers: "what do you mean stopping me?" to 04 got "I don't know that one offhand"."""
     v = at(seller, "04")._ear.hear("what do you mean stopping me?", seller.state, False)
     assert (v.kind, v.name) == ("sense", "clarify"), v
+
+
+@pytest.mark.parametrize("said, backed", [
+    ("yes because I need the money", "yes"), ("yeah cos my wife wants it", "yeah"),   # round 52 callers: heard as a worry
+    ("ok sure, because why not", "ok sure"), ("of course because I trust you", "of course"),
+    ("k because why not", "k"), ("y because I need money", "y"),   # a short form of one: was a no, and a money worry
+    ("no because I can't afford it", None), ("yes but I can't afford it", None),   # guard: a no, and a "but"
+    ("n because I like my job", None),   # guard: a short form of no
+    ("because I need it", None), ("yes because", None),   # guard: no yes before it, no reason after it
+])
+def test_a_reason_after_a_yes_only_says_why(seller, said, backed):
+    found = seller._ear._backed.match(said)
+    assert (found.group(1) if found else None) == backed

@@ -778,7 +778,10 @@ def test_two_letters_the_wrong_way_round_are_fixed(text, fixed):
     ("quit job / travel", "quit job or travel"),
     ("money and/or time", "money or time"),
     ("w/ my kids", "with my kids"),                  # round 40: was said back as "w your kids"
-    ("2k/month", "2k/month"),                        # guard: a figure keeps its slash
+    ("2k/month", "2k a month"),                      # round 52: a time unit after the slash reads "a"
+    ("week/month", "week or month"),                 # guard: only after an amount
+    ("2k/mortgage", "2k/mortgage"),                  # guard: only a whole unit ("mo" is one)
+    ("10/10", "10/10"),                              # guard: a figure keeps its slash
     ("50km/h", "50km/h"),
     ("see site.com/page", "see site.com/page"),      # guard: a link keeps its slash
     ("https://a.io/x", "https://a.io/x"),
@@ -1266,6 +1269,8 @@ def test_echo_phrase_fixes_typos(reply, phrase):
     ("u know, more money", "you know, more money"),   # round 38 callers: said back as "with u know, more money?"
     ("my uncle", "my uncle"),   # guard: only "u" alone
     ("okk", "okay"),   # round 44 callers: a held last letter on a filler word was saved as the answer
+    ("£2k/month", "£2k a month"), ("2k/mo", "2k a mo"),   # round 52 callers: said back as "with £2k month?"
+    ("24/7", "24/7"), ("and/or", "or"),   # guard: no word after the "/", or a swap of its own
     ("Yess", "yes"),
     ("boss", "boss"),   # guard: only a filler word is cut
     ("k tx", "k thanks"), ("k thx", "k thanks"),   # round 49 callers: "k tx" was saved as the answer
@@ -1609,6 +1614,7 @@ def test_who_wants_it_is_left_out_near_the_start(reply, rest):
     ("same as everyone, more money", "more money"),   # round 30 callers: said back whole
     ("the usual, more time", "more time"),
     ("hi, more money", "more money"), ("hey, more time", "more time"),   # round 51 callers: said back as "with hi, money?"
+    ("and more money", "more money"), ("also more time", "more time"),   # round 52 callers: said back as "with and money?"
     ("more money, thank you", "more money"),   # round 31 callers: the thanks was said back
     ("more money please", "more money"),
     ("I would like to achieve financial independence, thank you.", "financial independence"),   # round 31: "by being able to achieve financial independence"
@@ -1640,6 +1646,7 @@ def test_echo_phrase_leaves_out_swears_and_who_wants_it(reply, phrase):
     ("debt", "debt"), ("deb please", "deb please"),   # guard: only a reply of the short form alone
     ("ok", "okay"), ("OK", "okay"), ("k", "okay"),   # round 51 callers: a bare "ok" was unclear at "Does that make sense?"
     ("Understood.", "okay."), ("noted", "okay"), ("Got it", "okay"),   # round 38 callers: "Understood." was kept as the answer
+    ("sound", "okay"), ("why not", "yes"), ("ok why not", "ok yes"),   # round 52 callers: "sound" was "say that again", "why not" a no
     ("I got it from my dad", "I got it from my dad"),   # guard: only the whole reply
 ])
 def test_a_short_form_alone_is_its_word(text, fixed):
