@@ -848,6 +848,12 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("05", 0, (), "safe", "05", "No rush"),   # was kept as the answer at every open step
     ("05", 0, (), "I want to feel safe", "06", None),   # guard: a reason
     ("01", 0, (), "money 💰", "goal_practical", "What are you hoping that would get you?"),   # was "with money money?"
+    # round 37
+    ("04", 0, (), "I told you, my job", "05", None),   # was "Fair point, let me put it another way.", the job lost
+    ("03", 0, (), "I already told you, a year", "04", "12 months... Damn."),
+    ("04", 0, (), "I told you already", "04", "Fair point"),   # guard: alone it is still "you asked me that"
+    ("01", 0, (), "idk more money idk", "goal_practical", "What are you hoping to achieve with more money?"),   # was "with more money idk?"
+    ("01", 0, (), "more money obviously, stupid question", "goal_practical", "What are you hoping to achieve with more money?"),   # was said back whole
 ]
 
 

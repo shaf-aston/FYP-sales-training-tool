@@ -570,6 +570,10 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("is it ok to say quit my job?", "quit my job", ""),   # round 24: the answer, its "?" asks leave
     ("would it be ok if I said 2 years?", "2 years", ""),
     ("is it ok to say?", "", "is it ok to say?"),   # nothing after the lead: a question, as typed
+    ("I told you, my job", "my job", ""),   # round 37 callers: heard as "what do you mean?", the job lost
+    ("I already told you 2k", "2k", ""),
+    ("I told you already", "I told you already", ""),   # a lead with nothing after it is the reply
+    ("I just told you", "I just told you", ""),
     ("sorry for the long message, I want to quit my job", "I want to quit my job", ""),   # round 24: an aside
     ("yes, lol", "yes", ""),   # a part of only no-answer words beside others is a hedge
     ("sorry", "sorry", ""),   # on its own it is the reply, never a hedge left out

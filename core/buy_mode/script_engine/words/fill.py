@@ -150,9 +150,9 @@ def echo_phrase(reply, cfg, vocab=frozenset(), verbs=False):
         lower = [w.lower() for w in words]
         cut = max((len(d) for d in drops if lower[:len(d)] == d), default=0)  # the longest: "so i can", not "so"
         words = words[cut:]
-    for end in (tokenize(e) for e in cfg["echo_drop_ends"]):
-        if [w.lower() for w in words[-len(end):]] == end:
-            words = words[:-len(end)]
+    ends = [tokenize(e) for e in cfg["echo_drop_ends"]]
+    while words and (end := next((e for e in ends if [w.lower() for w in words[-len(e):]] == e), None)):
+        words = words[:-len(end)]  # each one, in any order (round 37: "money obviously, stupid question" kept "obviously")
     if len(words) > 1 and words[0].lower() in cfg["echo_drop_verbs"] and words[1].lower() not in cfg["echo_drop_verbs_not_before"]:
         words = words[1:]  # round 31: "achieve financial independence" was "by being able to achieve financial independence"
     if verbs and words:

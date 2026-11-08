@@ -1290,6 +1290,10 @@ def test_who_wants_it_is_left_out_near_the_start(reply, rest):
     ("money & time", "money and time"),
     ("plus more money", "plus more money"),   # guard: only between two things
     ("Could I possibly say more money, please?", "more money"),   # round 32: "with could you possibly say more money?"
+    ("idk more money idk", "more money"),   # round 37 callers: "with more money idk?"
+    ("money obviously, stupid question", "money"),   # round 37 callers: said back whole; each end word, in any order
+    ("more money lol haha", "more money"),
+    ("more money, duh", "more money"),
     ("I'd say more time", "more time"),
 ])
 def test_echo_phrase_leaves_out_swears_and_who_wants_it(reply, phrase):
