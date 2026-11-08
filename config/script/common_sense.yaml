@@ -176,6 +176,8 @@ interruptions:
       - "I'm not telling you"   # draft: heard as "that's not what I said"
       - "skip"   # draft: round 28 callers, saved as the answer
       - "can we skip this one"   # draft
+      - "pass"   # draft: round 38 callers, "pass" and "next question" were saved as the answer
+      - "next question"   # draft
     reply: "That's fine, no pressure."
   why_ask:   # whole calls: "why do you ask?" got "I don't know that one offhand, I'll find out"
     with_answer: true   # "3 years, why do you ask?": the 3 years is kept, the reason goes first

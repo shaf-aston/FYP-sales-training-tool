@@ -55,14 +55,16 @@ def test_an_early_answer_rides_on_the_verdict_not_on_the_seller(ear):
     assert ear.hear("how much do I need to make 5k a month?", ScriptState(step="01"), opened=False).ahead is None
 
 
-def _grey_band_ear(fake_embedder, judge, score=0.81):
+def _grey_band_ear(fake_embedder, judge, score=0.81, matched=None):
     from core.buy_mode.script_engine.hear.recognise import Match
 
     class GreyBand(Listener):  # the embedder put "money" at 0.81: under the early-objection floor, over the judge's line
         def interruption(self, *a):
             return None
 
-        def match(self, *a, **k):
+        def match(self, text, labels, **k):
+            if matched is not None:
+                matched.append((text, labels))
             return Match("money", score, ("money",), False)
 
     sense, listener = load_common_sense(), GreyBand(CFG, fake_embedder)
@@ -81,6 +83,24 @@ def test_the_ai_judges_a_grey_band_worry_against_the_question_asked(fake_embedde
     ear.hear("10k seems like a lot", ScriptState(step="03"), False)
     question = question_of(CAT.steps["03"].say_plain or CAT.steps["03"].say)
     assert asked == [("10k seems like a lot", {"money objection": ["money"], "answer": [f"answering '{question}'"]})]
+
+
+def test_the_grey_band_is_matched_on_the_early_worries_and_their_nearest_examples(fake_embedder):
+    """The worry is picked from what counts before the price, and the AI is shown that worry's nearest examples."""
+    matched = []
+    ear = _grey_band_ear(fake_embedder, lambda *a: "vague", matched=matched)
+    ear.hear("10k seems like a lot", ScriptState(step="03"), False)
+    early = {k: o.heard(False) for k, o in CAT.objections.items()}
+    text, labels = matched[-2]
+    assert text == "10k seems like a lot" and set(labels) <= set(early) and labels["money"] == early["money"]
+    assert matched[-1] == ("10k seems like a lot", {e: [e] for e in early["money"]})
+
+
+def test_a_worry_right_on_the_judges_line_is_judged(fake_embedder):
+    asked = []
+    ear = _grey_band_ear(fake_embedder, lambda *a: asked.append(a) or "money objection",
+                         score=CFG["early_objection_judge_score"])
+    assert ear.hear("10k seems like a lot", ScriptState(step="03"), False).heard_as.startswith("objection:money") and asked
 
 
 def test_a_worry_under_the_judges_line_is_not_judged(fake_embedder):

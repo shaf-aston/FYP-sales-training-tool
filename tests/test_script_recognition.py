@@ -854,6 +854,18 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("04", 0, (), "I told you already", "04", "Fair point"),   # guard: alone it is still "you asked me that"
     ("01", 0, (), "idk more money idk", "goal_practical", "What are you hoping to achieve with more money?"),   # was "with more money idk?"
     ("01", 0, (), "more money obviously, stupid question", "goal_practical", "What are you hoping to achieve with more money?"),   # was said back whole
+    # round 38
+    ("01", 0, (), "hmm let me think", "01", "What are you actually hoping to achieve?"),   # was "let me say that again": thinking out loud is not knowing yet
+    ("01", 0, (), "sorry, can you say that again", "01", "Of course, let me say that again."),   # guard
+    ("04", 0, (), "next question", "04", "That's fine, no pressure."),   # was saved as the answer
+    ("04", 0, (), "pass", "04", "That's fine, no pressure."),
+    ("19", 0, (), "I guess so", "20", None),   # a soft yes went into the not-yet talk
+    ("19", 0, (), "I suppose so", "20", None),
+    ("19", 0, (), "maybe", "19", None),   # guard: still not a yes
+    ("19", 0, (), "I guess not", "19", None),   # guard: still not yet
+    ("05", 0, (), "Understood.", "05", None),   # was saved as the reason
+    ("01", 0, (), "mor mony", "goal_practical", "What are you hoping to achieve with more money?"),   # was unclear
+    ("01", 0, (), "u know, more money", "goal_practical", "What are you hoping to achieve with more money?"),   # was "with u know, more money?"
 ]
 
 

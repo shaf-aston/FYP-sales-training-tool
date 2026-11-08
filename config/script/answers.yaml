@@ -15,6 +15,8 @@ jump_in:   # a yes to "Do you see yourself jumping in?"
   - "I wouldn't say no"   # draft: round 26 callers, heard as "I'd rather not say"
   - "my partner said yes"   # draft: round 36 callers, a partner who already agreed was heard as needing to ask them
   - "my husband is on board with it"   # draft
+  - "I guess so"   # draft: round 38 callers, a soft yes went into the not-yet talk; "What makes you say that?" lets them say why
+  - "I suppose so"   # draft
 pay_now:   # a yes that is already about paying: the payment question next, not "What makes you say that?"
   - "how do I pay"   # draft
   - "credit"   # draft
@@ -31,6 +33,8 @@ not_yet:   # a no to "Do you see yourself jumping in?"
   - "not right now"
   - "I can't see that happening"
   - "maybe, I'm not sure yet"
+  - "probably not"   # draft: round 38 callers, "I guess not" was unclear once "I guess so" was a yes
+  - "I guess not"   # draft
   - "I doubt it"   # draft: full real-model check, "I don't think so" was nearest "I don't see why not" (a yes)
 backs_out:   # changing their mind after a yes (live: "actually no, forget it" got "Welcome aboard")
   - "actually no, forget it"

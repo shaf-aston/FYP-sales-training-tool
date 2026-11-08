@@ -55,6 +55,10 @@ def spell(word, vocab, cfg):
     swapped = swaps & vocab  # only into a script word: the real words hold names and letters too ("mam" is not "mma")
     if len(swapped) == 1 and len(lower) >= cfg["spell_swap_min_letters"]:
         return swapped.pop()  # two letters typed the wrong way round: "mroe", "yse"
+    if cfg["spell_drop_min_letters"] <= len(lower) < cfg["spell_min_letters"]:
+        grown = {v for v in vocab if len(v) == len(lower) + 1 and any(v[:i] + v[i + 1:] == lower for i in range(1, len(v)))}
+        if len(grown) == 1:
+            return grown.pop()  # one letter left out of a short word: "mony", "mor" (a longer word may only be shorter)
     if len(lower) < cfg["spell_min_letters"]:
         return word
     if any(lower.endswith(end) and lower[:-len(end)] in vocab for end in cfg["spell_word_endings"]):

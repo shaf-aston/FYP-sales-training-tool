@@ -650,6 +650,21 @@ def test_echo_phrase(reply, phrase):
     assert echo_phrase(reply, CFG) == phrase
 
 
+@pytest.mark.parametrize("reply, verbs, phrase", [
+    ("paying the bills", False, "paying the bills"),   # made a verb only for a blank with a verb form
+    ("paying the bills", True, "pay the bills"),
+    ("rich", True, "be rich"),                          # a state alone is a goal with "be"
+    ("retire rich", True, "retire rich"),               # one that starts with a verb already has one
+    ("achieve freedom", False, "freedom"),              # "achieve" is the line's own word
+    ("achieve", False, "achieve"),                      # but never the whole goal
+    ("more money Plus more time", False, "more money and more time"),   # a join in any case
+    ("time, money", False, "time, money"),              # the comma they put stays
+])
+def test_echo_phrase_shapes_the_goal_for_its_blank(reply, verbs, phrase):
+    from core.buy_mode.script_engine.words.fill import echo_phrase
+    assert echo_phrase(reply, CFG, verbs=verbs) == phrase
+
+
 def test_a_figure_is_never_a_typo():
     from core.buy_mode.script_engine.words.fill import fix_typos
     assert fix_typos("£2,500pm financialy", {"financial", "pm"}, CFG) == "£2,500pm financial"
@@ -955,6 +970,11 @@ def test_echo_phrase_fixes_typos(reply, phrase):
     ("good", "good"),   # guard: a real double letter stays
     ("more coffeee", "more coffee"),   # a real word not in the script keeps its double letter too
     ("Quiet my job", "quit my job"),   # a swap is heard whatever the case
+    ("mor mony", "more money"),   # round 38 callers: one letter left out of a short word, was not a goal
+    ("bday money", "bday money"),   # guard: a word one letter longer than a script word stays ("day")
+    ("cos money", "cos money"),   # guard: 3 letters stay ("cost")
+    ("u know, more money", "you know, more money"),   # round 38 callers: said back as "with u know, more money?"
+    ("my uncle", "my uncle"),   # guard: only "u" alone
 ])
 def test_fix_typos_keeps_real_words(text, fixed):
     from core.buy_mode.script_engine.words.fill import fix_typos
@@ -1308,6 +1328,8 @@ def test_echo_phrase_leaves_out_swears_and_who_wants_it(reply, phrase):
     ("Bet.", "yes."),
     ("I bet", "I bet"), ("I want to feel safe", "I want to feel safe"),   # guard: only the whole reply
     ("debt", "debt"), ("deb please", "deb please"),   # guard: only a reply of the short form alone
+    ("Understood.", "ok."), ("noted", "ok"), ("Got it", "ok"),   # round 38 callers: "Understood." was kept as the answer
+    ("I got it from my dad", "I got it from my dad"),   # guard: only the whole reply
 ])
 def test_a_short_form_alone_is_its_word(text, fixed):
     from core.buy_mode.script_engine.words.fill import fix_typos

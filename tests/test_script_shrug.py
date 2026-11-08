@@ -55,3 +55,4 @@ def test_a_plain_no_is_only_no_words(fake_embedder):
     s = shrugs(fake_embedder)
     assert all(s.plain_no(t) for t in ("nah", "nope", "no", "no no", "nah."))
     assert not any(s.plain_no(t) for t in ("nah not really", "no idea", "ok", "", "the"))
+    assert not s.plain_no("no thanks")   # thanks counts only when they say so (a yes-or-no question asked)

@@ -1,5 +1,6 @@
 """What one prospect reply was heard as, before anything is said back: one `Verdict` per turn."""
 
+import math
 import re
 from dataclasses import dataclass, replace
 from itertools import dropwhile
@@ -386,6 +387,8 @@ class Ear:
                   and (asking or not i.only_asked) and not (opened and i.before_price)}
         labels = {f"sense:{k}": i.examples for k, i in senses.items()}
         floors = {f"sense:{k}": i.min_score for k, i in senses.items()}  # lowest score a label counts at
+        if hedge:  # one that is nearer not knowing counts only if it beats it (round 38: "let me think" got "let me say that again")
+            floors = {k: max(f, math.nextafter(unsure, 2)) for k, f in floors.items()}
         if asking:
             labels.update({f"fact:{k}": f.examples for k, f in self.offer.facts.items()})
         objections = self.method.objections.items()
