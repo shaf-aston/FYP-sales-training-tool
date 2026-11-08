@@ -231,14 +231,18 @@ class Ear:
                 return Verdict(kind, name, reply.meant, asking=True) if kind == "fact" else None
             return Verdict("answer", text=reply.asked, asking=True)
         kind, name = self._interrupt(reply.asked, step, state, opened, True)
-        if (kind in ("ready", "answer") or (kind == "objection" and opened)
-                or (kind == "sense" and not self.sense.interruptions[name].with_answer)):  # "say that again?" leads
-            return None
+        sense = self.sense.interruptions[name] if kind == "sense" else None
+        # "what do you mean? money I suppose": a sense that asks for other words, then their own answer, is the answer
+        reworded = sense and not sense.with_answer and sense.after.startswith("rephrase")
+        if kind in ("ready", "answer") or (kind == "objection" and opened) or (sense and not sense.with_answer and not reworded):
+            return None  # "say that again?" leads
         if within:  # the content is a sense, no answer ("shut up"): it leads only beside a plain question
             return None if kind else Verdict(within, about, reply.said)  # "shut up, what's the price?" wants the price
         if not self._answers_step(reply.said, step, state):
             return None
         ahead = hear_ahead(self.method, state, reply.said)
+        if reworded:
+            return Verdict("answer", text=reply.said, ahead=None if ahead is state else ahead)
         return Verdict("answer", text=reply.said, asking=True, ahead=None if ahead is state else ahead,
                        side=f"{kind}:{name}" if kind else "question", asked=reply.asked)
 

@@ -934,6 +934,15 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("willing", 0, (), "yeah I suppose", "willing_check", None),   # guard: still a soft yes
     ("14", 0, (), "is that a lot?", "m_funded", None),   # guard: after the price it is the money worry
     ("03", 0, (), "how long do most people say?", "03", None),   # guard: still no wrong answer
+    # round 45
+    ("goal_practical", 0, (), "what would I do? quit", "goal_practical", "What would that actually change"),   # was "quit" the call
+    ("01", 0, (), "what do you mean? money I suppose", "goal_practical", "What are you hoping that would get you?"),   # the answer was lost
+    ("01", 0, (), "what do you mean? I don't know", "01", "Fair point"),   # guard: no answer, still put another way
+    ("01", 0, (), "more money like", "goal_practical", "What are you hoping to achieve with more money?"),   # was "with more money like?"
+    ("01", 0, (), "money money", "goal_practical", "What are you hoping that would get you?"),   # was "with money money?"
+    ("01", 0, (), "honestly i just want more money so i can stop stressing", "goal_practical", "What are you hoping to achieve with more money?"),   # no goal said back
+    ("03", 0, (), "a few months maybe", "04", "So what made it come up for you now?"),   # was "so many nights, months and years"
+    ("03", 0, (), "a few years", "04", "If this has been on your mind"),   # guard: never recent
 ]
 
 

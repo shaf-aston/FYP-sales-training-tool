@@ -73,18 +73,30 @@ def spell(word, vocab, cfg):
     return near[0]
 
 
-def fix_typos(text, vocab, cfg):
-    """The reply with plain typos fixed before it is understood ("monthy income" -> "monthly income", "£££" ->
-    "money");
-    punctuation and every other word kept as typed. A reply of one short form alone (`short_replies`: "y")
-    is its word ("yes"): inside a reply, "y" is more often a year ("2 y")."""
-    text = (text or "").strip()
+def _short_form(text, cfg):
+    """A reply of one short form alone ("y", "ok I understand") as its words; "" when it is not one."""
     word = text.rstrip("?!.").lower()
     if word in cfg["short_replies"]:
         return cfg["short_replies"][word] + text[len(word):]
     head, _, rest = word.partition(" ")
     if head.strip(",") in cfg["filler_words"] and rest in cfg["short_replies"]:  # round 41: "ok I understand"
         return text[:len(word) - len(rest)] + cfg["short_replies"][rest] + text[len(word):]
+    return ""
+
+
+def fix_typos(text, vocab, cfg):
+    """The reply with plain typos fixed before it is understood ("monthy income" -> "monthly income", "£££" ->
+    "money");
+    punctuation and every other word kept as typed. A reply of one short form alone (`short_replies`: "y")
+    is its word ("yes"): inside a reply, "y" is more often a year ("2 y")."""
+    text = (text or "").strip()
+    whole = _short_form(text, cfg)
+    if whole:
+        return whole
+    ask, mark, tail = text.rpartition("? ")
+    said = mark and _short_form(tail.strip(), cfg)
+    if said:  # round 45: "what would I do? quit" was "quit" the call: after their own question it is a reply alone
+        text = f"{ask}{mark}{said}"
     text = MONEY_SIGNS.sub(cfg["money_signs_as"], text)  # "more £££" -> "more money": round 28, said back as "with more?"
     text = _as_words(text, cfg)  # round 31: "💰💰💰" said nothing, "I want to by a house" was said back as typed
     text = STRETCHED.sub(lambda m: unstretch(m.group(0), vocab, cfg), text)  # round 32: "a yearrr" was not a time
@@ -93,6 +105,19 @@ def fix_typos(text, vocab, cfg):
     text = ISH.sub(lambda m: unish(m, vocab, cfg), text)  # round 41: "a yearish" was no time
     text = WORD.sub(lambda m: unheld(m.group(0), cfg), text)  # round 44: "okk" was saved as the answer
     return WORD.sub(lambda m: spell(m.group(0), vocab, cfg), text)
+
+
+def said_once(words):
+    """Words with a run said twice in a row kept once: "money money" -> "money", "a year a year" -> "a year"."""
+    words, i = list(words), 0
+    while i < len(words):
+        lower = [w.lower() for w in words]
+        n = next((n for n in (3, 2, 1) if lower[i:i + n] == lower[i + n:i + 2 * n]), 0)
+        if n:
+            del words[i + n:i + 2 * n]
+        else:
+            i += 1
+    return words
 
 
 def unheld(word, cfg):
@@ -184,7 +209,8 @@ def echo_phrase(reply, cfg, vocab=frozenset(), verbs=False):
         parts = parts[1:]  # round 42: "because I'm broke, more money" -> "more money"
     reply = ",".join(parts)
     cut = "|".join(map(re.escape, cfg["echo_cut_at"]))
-    reply = re.split(rf"\b(?:{cut})\b", reply, maxsplit=1, flags=re.IGNORECASE)[0]  # "quit my job but I'm scared"
+    head = re.split(rf"\b(?:{cut})\b", reply, maxsplit=1, flags=re.IGNORECASE)[0]  # "quit my job but I'm scared"
+    reply = head if tokenize(head) else reply  # round 45: "so I can travel" starts with one, nothing to cut
     joins = "|".join(map(re.escape, cfg["echo_list_joins"]))
     items = re.split(rf"\s+(?:{joins})\s+", reply or "", flags=re.IGNORECASE)  # round 31: "a plus b plus c" -> "a, b and c"
     reply = ", ".join(items[:-1]) + " and " + items[-1] if len(items) > 1 else reply
@@ -192,6 +218,7 @@ def echo_phrase(reply, cfg, vocab=frozenset(), verbs=False):
         reply = reply.lower()  # shouted ("I WANT TO BE RICH!!!"): never said back in capitals ("BE RICH?")
     words = WORD.findall(CENSORED.sub(" ", reply or ""))  # "more f***ing money" -> "more money"
     words = [w for w in _after_want(words, cfg) if w.lower() not in cfg["echo_drop_words"]]  # "more money" from "my family needs more money"
+    words = said_once(words)  # round 45: "money money" was said back twice
     drops = [tokenize(d) for d in [*cfg["echo_drop_starts"], *cfg["filler_words"]]]  # "for sure, more money"
     cut = True
     while cut:

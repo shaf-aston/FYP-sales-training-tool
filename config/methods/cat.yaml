@@ -203,7 +203,7 @@ steps:
           - "a few days"   # draft: round 43 callers, "a few days" said nothing back
           - "it's pretty new"
           - "I only just started thinking about it"
-        pattern: '^(?!.*\b(?:months?|years?|yrs?)\b).*\b(?:[1-9]|1[0-2])\s*(?:weeks?|wks?)\b|^(?!.*\b(?:months?|years?|yrs?)\b).*\b\d{1,2}\s*days?\b'   # draft: round 43 callers, "6 weeks" and "10 days" were unclear; up to 12 weeks, never with months or years in it
+        pattern: '^(?!.*\b(?:months?|years?|yrs?)\b).*\b(?:[1-9]|1[0-2])\s*(?:weeks?|wks?)\b|^(?!.*\b(?:months?|years?|yrs?)\b).*\b\d{1,2}\s*days?\b|^(?!.*\b(?:years?|yrs?)\b)(?:\W*\w+){0,3}?\W*\b(?<!good\s)(?:a\s+)?(?:few|couple(?:\s+of)?)\s+months?\b'   # draft: round 43 callers, "6 weeks" and "10 days" were unclear; up to 12 weeks, never with months or years in it; draft (few months): round 45 callers, "a few months maybe" got "so many nights, months and years"
         then: "04"
         say: "So what made it come up for you now?"   # draft: ours, in place of 04's "so many nights, months and years"
       long:   # draft: a rival label: "a while" (0.86 to "not long") was asked what made it come up now

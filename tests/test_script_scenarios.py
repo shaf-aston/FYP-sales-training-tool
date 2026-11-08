@@ -46,6 +46,12 @@ class Recorder:
         return self.line
 
 
+def planted(name, **changes):
+    """The common sense with one sense changed, on a copy: the shared SENSE is never changed under other tests."""
+    from dataclasses import replace
+    return replace(SENSE, interruptions={**SENSE.interruptions, name: replace(SENSE.interruptions[name], **changes)})
+
+
 def seller(bow, llm=down, step=None, method=CAT, sense=SENSE, offer=None, **state):
     s = ScriptSeller(CFG, method, offer or load_offer("shay_coaching"), sense, bow, llm)
     if step:
@@ -684,6 +690,12 @@ def test_whats_next_asks_no_ai(fake_embedder):
     ("more money, because I'm broke", "more money"),     # guard: the reason after it was always cut
     ("I guess more money", "more money"),
     ("more money ish", "more money"),                       # round 41: "more money-ish" was said back with "-ish"
+    ("money money", "money"),                               # round 45 callers: said back twice
+    ("a year a year", "a year"),
+    ("more more money", "more money"),
+    ("more money like", "more money"),                      # round 45 callers: said back with "like"
+    ("a house I'd like", None),                             # guard: still their own words
+    ("more money so i can stop stressing", "more money"),   # round 45 callers: said no goal back
     ("", None),
 ])
 def test_echo_phrase(reply, phrase):
@@ -810,6 +822,28 @@ def test_ish_on_a_word_is_its_own_word(text, read):
 def test_a_short_form_after_a_filler_word_is_its_word(text, read):
     from core.buy_mode.script_engine.words.fill import fix_typos
     assert fix_typos(text, frozenset(), CFG) == read
+
+
+@pytest.mark.parametrize("sense, said, heard", [
+    ("clarify", "plonk wibble? more money", "answer"),   # round 45 callers: "what do you mean? money I suppose" lost the answer
+    ("clarify", "plonk wibble?", "sense:clarify"),         # guard: alone it still asks for other words
+    ("misheard", "plonk wibble? more money", "answer"),
+])
+def test_a_sense_asking_for_other_words_then_their_answer_is_the_answer(fake_embedder, sense, said, heard):
+    s = seller(fake_embedder, step="01", sense=planted(sense, examples=("plonk wibble",)))
+    s.reply(said)
+    assert s.last_turn["heard_as"].startswith(heard) and "+" not in s.last_turn["heard_as"]   # no "let me put it another way" in front
+
+
+def test_a_run_said_twice_is_said_once():
+    from core.buy_mode.script_engine.words.fill import said_once
+    assert said_once(["money", "Money"]) == ["money"]
+    assert said_once(["a", "year", "a", "year"]) == ["a", "year"]
+    assert said_once(["quit", "my", "job", "quit", "my", "job"]) == ["quit", "my", "job"]
+    assert said_once(["more", "more", "money"]) == ["more", "money"]
+    assert said_once(["more", "money", "money"]) == ["more", "money"]   # the run starts on an odd word
+    assert said_once(["time", "and", "money"]) == ["time", "and", "money"]   # guard
+    assert said_once(["a", "b", "a"]) == ["a", "b", "a"]
 
 
 @pytest.mark.parametrize("text, saved", [
@@ -1000,10 +1034,7 @@ def test_a_want_is_never_a_say_that_again(fake_embedder, text, repeat):
     ("swanton again", ("want",), "sense:repeat"),         # guard: a whole word, never inside one
 ])
 def test_a_sense_is_never_heard_with_its_never_with_words(fake_embedder, said, never_with, heard):
-    from dataclasses import replace
-    s = seller(fake_embedder, step="01")
-    repeat = s.sense.interruptions["repeat"]
-    s.sense.interruptions["repeat"] = replace(repeat, examples=(said.lower(),), never_with=never_with)
+    s = seller(fake_embedder, step="01", sense=planted("repeat", examples=(said.lower(),), never_with=never_with))
     s.reply(said)
     assert s.last_turn["heard_as"] == heard
 
@@ -1015,10 +1046,8 @@ def test_say_that_again_is_never_heard_with_a_want():
 
 @pytest.mark.parametrize("step, heard", [("01", True), ("14", False)])
 def test_an_until_price_example_is_only_heard_before_the_price(fake_embedder, step, heard):
-    from dataclasses import replace
-    s = seller(fake_embedder, step=step)   # round 44: "2k, is that a lot?" got no answer; after the price it is the money worry
-    repeat = s.sense.interruptions["repeat"]
-    s.sense.interruptions["repeat"] = replace(repeat, examples=(), until_price=("plonk wibble",))
+    # round 44: "2k, is that a lot?" got no answer; after the price it is the money worry
+    s = seller(fake_embedder, step=step, sense=planted("repeat", examples=(), until_price=("plonk wibble",)))
     s.reply("plonk wibble")
     assert (s.last_turn["heard_as"] == "sense:repeat") == heard
 
@@ -1039,6 +1068,8 @@ def test_a_route_pattern_takes_the_route_by_rule(fake_embedder):
 @pytest.mark.parametrize("text, then", [
     ("6 weeks", "recent"), ("10 days", "recent"), ("12 weeks", "recent"), ("about 3 wks", "recent"),   # round 43: was unclear
     ("20 weeks", None), ("6 months", None), ("a year and 2 weeks", None), ("15 days and 2 years", None),   # guard: never a long time
+    ("a few months", "recent"), ("a few months maybe", "recent"), ("for the last few months", "recent"), ("a couple of months", "recent"),   # round 45 callers: was unclear
+    ("a few years", None), ("a good few months", None), ("a few months, well years really", None),   # guard: never a long time
 ])
 def test_a_few_weeks_or_days_by_number_is_recent(fake_embedder, text, then):
     import re
@@ -1196,6 +1227,9 @@ def test_echo_phrase_fixes_typos(reply, phrase):
     ("okk", "ok"),   # round 44 callers: a held last letter on a filler word was saved as the answer
     ("Yess", "yes"),
     ("boss", "boss"),   # guard: only a filler word is cut
+    ("what would I do? quit", "what would I do? quit my job"),   # round 45 callers: "quit" after their own question ended the call
+    ("what? y", "what? yes"),
+    ("quit? no", "quit? no"),   # guard: only the part after the question
     ("💳", "card"),   # round 44 callers: said nothing at payment
     ("🏖️ with family", "a holiday with family"),
 ])
