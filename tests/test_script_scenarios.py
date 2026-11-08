@@ -939,6 +939,13 @@ def test_echo_phrase_fixes_typos(reply, phrase):
     ("I am board of my job", "I am bored of my job"),
     ("going to grandma's", "going to grandma's"),   # guard: only the whole phrase
     ("quiet my job", "quit my job"),   # round 28 limit: autocorrect was said back as typed
+    ("loads more dosh", "loads more money"),   # round 32 callers: slang got the plain line
+    ("moreee moneyyy", "more money"),   # round 32 callers: held letters got the plain line
+    ("a yearrr", "a year"),   # was not a time, asked 3 times
+    ("my own bosss", "my own boss"),   # cut to 2 when that is a word
+    ("2kkk", "2k"),
+    ("100000", "100000"),   # guard: figures are never cut
+    ("good", "good"),   # guard: a real double letter stays
 ])
 def test_fix_typos_keeps_real_words(text, fixed):
     from core.buy_mode.script_engine.words.fill import fix_typos
@@ -1273,6 +1280,8 @@ def test_who_wants_it_is_left_out_near_the_start(reply, rest):
     ("money plus time plus freedom", "money, time and freedom"),   # round 31: said back with "plus"
     ("money & time", "money and time"),
     ("plus more money", "plus more money"),   # guard: only between two things
+    ("Could I possibly say more money, please?", "more money"),   # round 32: "with could you possibly say more money?"
+    ("I'd say more time", "more time"),
 ])
 def test_echo_phrase_leaves_out_swears_and_who_wants_it(reply, phrase):
     from core.buy_mode.script_engine.words.fill import echo_phrase

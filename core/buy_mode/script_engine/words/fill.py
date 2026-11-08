@@ -17,6 +17,7 @@ FIGURE = re.compile(r"\d+(?:\.\d+)?")
 GLUED = re.compile(r"(\d)([A-Za-z])")  # a number stuck to its unit: "1yr", "18mo"
 MONEY_SIGNS = re.compile(r"(?<![\w£$€])[£$€]{2,}(?![\w£$€])")  # "£££", "$$$": a word for money, never a number
 EMPHASIS = re.compile(r"(?<!\w)([*_`]+)(?=\S)([^*_`\n]+?)(?<=\S)\1(?!\w)")  # "**more money**": a pair, so "f***ing" stays
+STRETCHED = re.compile(r"\w*([^\W\d_])\1\1\w*")  # "moneyyy": a letter three times or more in one word; "100000" stays
 STRUCK = re.compile(r"(~+)(?=\S)[^~\n]+?(?<=\S)\1\s*")  # "~a year~ two years": taken back as they typed it
 SENTENCE_END = re.compile(r"[.!?]+\s+|\s*\n\s*|(?:^|\s)(?:\d{1,2}[.)]|[-*•])\s+(?=[^\W\d])")  # "more money. Mostly for my kids": "2.5k" and "5k." stay whole
 # A new line or a list mark ("1. more money 2. more time", "- pay rent") ends a sentence too: whole calls, "with 1?"
@@ -75,16 +76,25 @@ def fix_typos(text, vocab, cfg):
         return cfg["short_replies"][word] + text[len(word):]
     text = MONEY_SIGNS.sub(cfg["money_signs_as"], text)  # "more £££" -> "more money": round 28, said back as "with more?"
     text = _as_words(text, cfg)  # round 31: "💰💰💰" said nothing, "I want to by a house" was said back as typed
+    text = STRETCHED.sub(lambda m: unstretch(m.group(0), vocab, cfg), text)  # round 32: "a yearrr" was not a time
     text = EMPHASIS.sub(r"\2", STRUCK.sub("", text))  # round 30: "with more?", and "~a year~ two years" was a year
     return WORD.sub(lambda m: spell(m.group(0), vocab, cfg), text)
 
 
+def unstretch(word, vocab, cfg):
+    """A word with a letter held for effect ("moneyyy", "bosss", "2kkk") as the word: each run of 3 or more
+    cut to 2 when that is a word ("boss"), else to 1 ("money")."""
+    known = vocab | real_words(cfg["spell_real_words"])
+    two = re.sub(r"([^\W\d_])\1{2,}", r"\1\1", word)
+    return two if two.lower() in known else re.sub(r"([^\W\d_])\1+", r"\1", two)
+
+
 def _as_words(text, cfg):
     """Pictures and misheard words as the words they stand for: an emoji in `emoji_words` ("💰💰💰" -> "money",
-    a run is one word) and a phrase in `sound_alikes` (voice to text: "to by a house" -> "to buy a house")."""
+    a run is one word) and a phrase in `word_swaps` (voice to text: "to by a house" -> "to buy a house"; slang: "dosh" -> "money")."""
     for sign, word in cfg["emoji_words"].items():   # after an amount it only decorates it ("2k 💸")
         text = re.sub(rf"(\d\w*)?\s*(?:{re.escape(sign)}\ufe0f?\s*)+", lambda m: f"{m.group(1)} " if m.group(1) else f" {word} ", text).strip()
-    for heard, meant in cfg["sound_alikes"].items():
+    for heard, meant in cfg["word_swaps"].items():
         text = re.sub(rf"(?<!\w){re.escape(heard)}(?!\w)", meant, text, flags=re.IGNORECASE)
     return text
 

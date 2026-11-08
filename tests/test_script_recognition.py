@@ -799,6 +799,13 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("goal_practical", 0, (), "🏠 for my family", "goal_identity", None),   # was unclear
     ("goal_practical", 0, (), "next", "goal_practical", "Sure."),   # guard: alone it still nudges
     ("01", 0, (), "I want to achieve financial freedom", "goal_practical", "What are you hoping to achieve with financial freedom?"),   # was "by being able to achieve"
+    # round 32
+    ("01", 0, (), "moreee moneyyy", "goal_practical", "What are you hoping to achieve with more money?"),   # was the plain line
+    ("03", 0, (), "a yearrr", "04", "12 months"),   # was asked 3 times
+    ("02", 0, (), "Around two thousand a month, if that helps.", "03", "How long"),   # was "You're welcome."
+    ("02", 0, (), "thanks", "02", "You're welcome."),   # guard: thanks alone is still thanks
+    ("01", 0, (), "Could I possibly say more money, please?", "goal_practical", "What are you hoping to achieve with more money?"),   # was "with could you possibly say more money?"
+    ("01", 0, (), "loads more dosh", "goal_practical", "What are you hoping to achieve with loads more money?"),   # was the plain line
 ]
 
 

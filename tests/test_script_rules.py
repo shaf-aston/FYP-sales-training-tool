@@ -596,6 +596,7 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("what happens next?", "", "what happens next?"),   # round 31: "next" was cut off and "what happens" said back
     ("I want to carry on", "I want to carry on", ""),
     ("debit, next", "debit", ""),   # guard: after a break it still nudges
+    ("about 2k a month, if that helps", "about 2k a month", ""),   # round 32: "if that helps" got "You're welcome."
 ])
 def test_a_reply_is_read_once_into_what_it_says_and_what_it_asks(text, said, asked):
     from core.buy_mode.script_engine.hear.reply import Reader
