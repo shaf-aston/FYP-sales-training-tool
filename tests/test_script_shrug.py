@@ -56,6 +56,8 @@ def test_round_51_words_alone_say_nothing(said, nothing, fake_embedder):
     ("hand on heart", True), ("per se", True), ("I'm easy", True), ("in all honesty", True),   # round 66: kept at "Is there anything you've tried so far?"
     ("yes", False), ("yh", False), ("ok", False), ("yeah", False), ("👍", False), ("yes, hand on heart", False), ("no", False),   # guard: these answer it
     ("I suppose", False), ("a course", False),
+    ("so, hand on heart", True), ("and if anything", True), ("but per se", True),   # a lead word beside it
+    ("I am", False), ("it is", False), ("this", False), ("that's it", False), ("we are", False),   # guard: stop words answer "Are you...?"
 ])
 def test_round_66_asked_as_yes_or_no_only_tags_say_nothing(said, nothing, fake_embedder):
     assert shrugs(fake_embedder).says_nothing(said, CAT.steps["06"], asking=False, closed=True) == nothing

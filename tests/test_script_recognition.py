@@ -1195,6 +1195,8 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("19", 0, (), "cool beans", "20", None), ("19", 0, (), "sweet as", "20", None),   # were unclear
     ("19", 0, (), "either way", "19", "Is this something you can see yourself doing?"),   # was "Fair point, let me put it another way"
     ("01", 0, (), "money if anything", "goal_practical", "What are you hoping that would get you?"),   # was "achieve with money if anything?"
+    ("06", 1, (), "hand on heart", "06", "No rush"), ("06", 1, (), "per se", "06", "No rush"),   # asked as yes-or-no: was saved as the answer
+    ("06", 1, (), "yes, hand on heart", "08", None), ("06", 1, (), "yeah", "08", None),   # guard: these answer it
 ]
 
 

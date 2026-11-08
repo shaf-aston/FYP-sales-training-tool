@@ -13,7 +13,8 @@ class Shrugs:
         """`fill(template, slots)`: the Filler's, to say their words back; None when they can't be."""
         self._fillers = frozenset(cfg["filler_words"])
         stop = frozenset(cfg["stop_words"]) - frozenset(cfg["side_words"])  # "I'm in" takes a side: never a shrug
-        self._stop, self._filler = stop, stop | self._fillers
+        self._filler = stop | self._fillers
+        self._leads = frozenset(cfg["question_lead_words"])  # "so", "but": stop words like "am" and "it" answer ("I am")
         self._blank = stop | frozenset(cfg["no_answer_words"])
         self._no = stop | frozenset(cfg["no_words"])
         self._polite = frozenset(cfg["no_polite_words"])
@@ -39,7 +40,7 @@ class Shrugs:
         if not any(r.label == ANY for r in step.listen) or asking:
             return False
         if closed:
-            return bool(words) and not words & self._fillers and not self._words(text) - self._stop  # "yeah" is a tag too
+            return bool(words) and not words & self._fillers and not self._words(text) - self._leads  # "yeah" is a tag too
         if self._words(text) <= self._plain:
             return True  # "dunno man", "we'll see": only shrug words, nothing the catch-all should keep
         return self.hedges(text)
