@@ -80,6 +80,8 @@ steps:
           - "open a shop"   # draft: round 41 callers, "open a shop" was unclear
           - "change careers"   # draft: round 41 callers, "change careers" was unclear
           - "time"   # draft: round 40 callers, "time" alone got "Let's keep the time about you though"
+          - "I want a side income"   # draft: round 58 replay, "I guess I want a side income" got "What do you mean by a side income?"
+          - "passive income"   # draft: round 58, "I want passive income" got "What do you mean by passive income?"
         then: "goal_practical"
       practical:   # level 2 already: skip the formula, ask the identity rung
         examples: &practical

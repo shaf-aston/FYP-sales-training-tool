@@ -536,7 +536,7 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
 
 
 @pytest.mark.parametrize("text, said, asked", [
-    ("i guess 3 years, what about you?", "i guess 3 years", "what about you?"),   # live: the 3 years was lost
+    ("i guess 3 years, what about you?", "3 years", "what about you?"),   # live: the 3 years was lost; round 58: the "i guess" goes
     ("honestly no idea, 3 years?", "3 years", ""),   # a hedge part is left out
     ("nothing, why do you ask?", "nothing", "why do you ask?"),
     ("two years, and what's the price", "two years", "what's the price"),
@@ -602,7 +602,7 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("a million, jk, 2k", "2k", ""),   # round 26 callers: "jk" between two answers takes the first back
     ("buy a yacht obviously, lol no, pay rent", "pay rent", ""),
     ("jk lol", "jk", ""),   # with nothing after it, nothing is taken back ("lol" at the end is its own part, as in "jk, lol")
-    ("I guess my car loan?", "I guess my car loan", ""),   # round 26 callers: unsure, not asking ("I'll find out")
+    ("I guess my car loan?", "my car loan", ""),   # round 26 callers: unsure, not asking ("I'll find out"); round 58: the "I guess" goes
     ("lol, probably like 2k?", "probably like 2k", ""),
     ("maybe a year?", "maybe a year", ""),
     ("is it a year?", "", "is it a year?"),   # a question still asks
@@ -664,9 +664,21 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("yes please", "yes", ""), ("I'm not sure", "I'm not sure", ""),   # guard: "sure" alone is no end tag
     ("2k as I said", "2k", ""), ("as I say free", "free", ""),   # round 56 mutation: no row had these without a comma
     ("erm 2k", "2k", ""), ("um 2k", "2k", ""), ("hmm 2k", "2k", ""), ("uh quit", "quit my job", ""),   # round 57: saved with the "erm"
+    ("errm 2k", "2k", ""), ("er 2k", "2k", ""), ("uhm quit", "quit my job", ""), ("umm money", "money", ""),   # round 57 mutation: no row had these
+    ("let me think... money", "money", ""), ("lemme see, 2k", "2k", ""),
     ("let me see... money", "money", ""), ("lemme think, 2k", "2k", ""), ("you know what, quit", "quit my job", ""),   # was "with let you see?"
     ("money in a way", "money", ""), ("free in a sense", "free", ""), ("2k in some ways", "2k", ""), ("quit proper", "quit my job", ""),
     ("let me see the price", "let me see the price", ""), ("proper money", "proper money", ""),   # guard: no break, or at the start
+    ("money literally", "money", ""), ("quit or whatever", "quit my job", ""), ("2k and that", "2k", ""),   # round 58: saved whole
+    ("my boss if that makes sense", "my boss", ""), ("free y'know", "free", ""), ("money at the end of the day", "money", ""),
+    ("quit stuff like that", "quit my job", ""), ("money and all that", "money", ""), ("2k or something like that", "2k", ""),
+    ("literally money", "money", ""), ("personally, money", "money", ""), ("for me personally 2k", "2k", ""),   # round 58: saved with the lead
+    ("ya know, 2k", "2k", ""), ("at the end of the day money", "money", ""), ("for me, quit", "quit my job", ""),
+    ("I guess money", "money", ""), ("probably money", "probably, money", ""), ("I reckon 2k", "I reckon, 2k", ""),   # round 58: a hedge first
+    ("money probably", "money, probably", ""), ("quit I think", "quit, I think", ""),   # round 58: and after
+    ("probably not", "probably not", ""), ("I think so", "I think so", ""), ("I guess not", "I guess not", ""),   # guard: the hedge is the answer
+    ("maybe later", "maybe later", ""), ("for me it's money", "for me it's money", ""),   # guard: "maybe" is not split; no break
+    ("literally what?", "", "literally what?"), ("do you know?", "", "do you know?"),   # guard: still asks
     ("well paid job", "well paid job", ""),   # guard: "well paid" is the answer
     ("oh what?", "", "oh what?"),   # guard: still asks
     ("like 2k", "2k", ""),

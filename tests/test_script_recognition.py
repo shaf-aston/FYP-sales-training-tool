@@ -1089,6 +1089,24 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("05", 0, (), "let me think about it", "05", "No rush"),   # was "What do you mean by let you think about it?"
     ("18", 0, (), "let me see the price", "18", "Put simply"),   # guard: no break, nothing cut
     ("19", 0, (), "see you", "later", None),   # guard: still leaving
+    # round 58
+    ("01", 0, (), "money or whatever", "goal_practical", "What are you hoping that would get you?"),   # was "...with money or?"
+    ("01", 0, (), "literally money", "goal_practical", "What are you hoping that would get you?"),   # was "...with literally money?"
+    ("01", 0, (), "money if that makes sense", "goal_practical", "What are you hoping that would get you?"),
+    ("01", 0, (), "free or whatever", "goal_practical", "What are you hoping to achieve by being free?"),   # was asked again
+    ("01", 0, (), "probably money", "goal_practical", "What are you hoping that would get you?"),   # was "What do you mean by money?"
+    ("05", 0, (), "I guess money", "06", None),   # was "What do you mean by money?"
+    ("05", 0, (), "ok stuff like that", "05", "No rush"),   # was "let me say that again", at every step
+    ("05", 0, (), "perhaps", "05", "No rush"),   # was "What do you mean by perhaps?"
+    ("05", 0, (), "probably ok", "05", "No rush"),   # was saved as the answer
+    ("05", 0, (), "literally ok", "05", "No rush"),   # was saved as the answer
+    ("05", 0, (), "ok if that makes sense", "05", "No rush"),   # was saved as the answer
+    ("22", 0, (), "dbt", "end", None),   # was asked again
+    ("01", 0, (), "I guess I want a side income", "goal_practical", "What are you hoping to achieve with a side income?"),   # was "What
+    ("01", 0, (), "I want passive income", "goal_practical", "What are you hoping to achieve with passive income?"),   # do you mean by"
+    ("01", 0, (), "maybe later", "01", "That's fair"),   # guard: "maybe" is not split off
+    ("19", 0, (), "probably not", "19", None),   # guard: the hedge is the answer
+    ("19", 0, (), "yes I reckon", "20", "What makes you say that?"),   # guard: still a yes
 ]
 
 

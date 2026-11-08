@@ -115,6 +115,7 @@ class Reader:
         self._plain = plain_words(cfg)
         self._tag_end = re.compile(rf"(?<=\w)\s+(?:{any_of(cfg['end_tags'])})\W*$", re.IGNORECASE)
         self._unsure = re.compile(rf"^\W*(?:{any_of(cfg['unsure_leads'])})\b", re.IGNORECASE)
+        self._unsure_lead = re.compile(rf"^\W*((?:{any_of(cfg['unsure_ends'])}))\s+(?!(?:{any_of(cfg['unsure_whole'])})\b)(?=\w)", re.IGNORECASE)
         self._aside = re.compile(rf"^\W*(?:{any_of(cfg['aside_starts'])})\b", re.IGNORECASE)
         self._ask_lead = re.compile(rf"^\W*(?:{any_of(cfg['ask_leads'])})\b\W*", re.IGNORECASE)
         flips = "|".join(rf"{re.escape(a)}\W+(?={re.escape(b)}\s*(?:[,;.!?]|$))" for a, b in map(tokenize, cfg["flip_leads"]))
@@ -172,6 +173,9 @@ class Reader:
         end = self._unsure_end.search(rest)  # round 44: "money I guess" is "money, I guess"; "yeah I guess", "stuff I guess" stay whole
         if end and set(tokenize(rest[:end.start()])) - self._plain:
             rest = f"{rest[:end.start()]}, {end.group(1)}"
+        lead = self._unsure_lead.match(rest)  # round 58: "probably money", "I guess money" got "What do you mean by
+        if lead and set(tokenize(rest[lead.end():])) - self._plain:  # money?"; "I think so", "probably not" stay whole
+            rest = f"{lead.group(1)}, {rest[lead.end():]}"
         rest = self._tag_end.sub("", rest)  # round 53: "ok if it works", "free tbh" were saved whole
         rest = self._flip.sub("", rest)  # round 28 callers: "no yeah" was heard as backing out
         lead = self._answer_lead.match(rest)

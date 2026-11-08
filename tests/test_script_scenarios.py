@@ -636,6 +636,9 @@ def test_whats_next_asks_no_ai(fake_embedder):
     ("not sure", None),  # guard
     ("money in a way", "money"), ("free in a sense", "free"), ("my boss in some ways", "your boss"),  # round 57: was "with money in a way?"
     ("quit proper", "quit"), ("proper money", "proper money"),  # guard: "proper" before its word stays
+    ("money literally", "money"), ("free or whatever", "free"), ("my boss and that", "your boss"),  # round 58: "with money and that?"
+    ("quit if that makes sense", "quit"), ("money you know", "money"), ("2k ya know", "2k"), ("free at the end of the day", "free"),
+    ("my boss personally", "your boss"), ("more money stuff like that", "more money"), ("free and all that", "free"),
     ("a year innit", "a year"),
     ("well paid job", "well paid job"),  # round 54: was "paid job"
     ("so well off", "well off"),
@@ -1305,8 +1308,12 @@ def test_echo_phrase_fixes_typos(reply, phrase):
     ("sure thing", "sure"),   # round 56 callers: saved as the answer
     ("not gonna lie, money", "ngl, money"), ("2k not going to lie", "2k ngl"),   # round 57 callers: saved whole ("ngl" was cut)
     ("same as before", "same"), ("as before", "same"), ("what I said before", "same"),   # round 57 callers: "let me say that again"
+    ("like before", "same"), ("same as last time", "same"),   # round 57 mutation: no row had these
     ("let me see", "let me think"), ("lemme see", "let me think"), ("lemme think", "let me think"),   # round 57 callers: heard as leaving
     ("let me see the price", "let me see the price"), ("before", "before"),   # guard: only the reply alone
+    ("dbt", "debit"), ("I reckon", "I think"), ("probs", "probably"), ("prolly", "probably"),   # round 58 callers: unclear, saved whole
+    ("I reckon money", "I think money"), ("probs not", "probably not"),
+    ("a dbt", "a dbt"),   # guard: only the reply alone
     ("ta da", "ta da"), ("for really", "for really"),   # guard: only the reply alone, only the whole phrase
 ])
 def test_fix_typos_keeps_real_words(text, fixed):

@@ -235,8 +235,9 @@ def echo_phrase(reply, cfg, vocab=frozenset(), verbs=False):
         # the longest: "so i can", not "so"; round 54: "well paid job" was "with paid job?"
         words = words[cut:]
     ends = [tokenize(e) for e in cfg["echo_drop_ends"]]
-    while words and (end := next((e for e in ends if [w.lower() for w in words[-len(e):]] == e), None)):
-        words = words[:-len(end)]  # each one, in any order (round 37: "money obviously, stupid question" kept "obviously")
+    while words and (end := max((e for e in ends if [w.lower() for w in words[-len(e):]] == e), key=len, default=None)):
+        words = words[:-len(end)]  # each one, in any order (round 37: "money obviously, stupid question" kept "obviously"),
+        # the longest first (round 58: "free or whatever" was "free or")
     if len(words) > 1 and words[0].lower() in cfg["echo_drop_verbs"] and words[1].lower() not in cfg["echo_drop_verbs_not_before"]:
         words = words[1:]  # round 31: "achieve financial independence" was "by being able to achieve financial independence"
     if verbs and words:
