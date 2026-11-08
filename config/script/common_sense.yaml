@@ -198,6 +198,7 @@ interruptions:
       - "do you like your job"   # draft: whole calls, got "I'll find out"
     reply: "I'm the AI playing the salesperson, so this one's all about you."
   no_wrong_answer:   # whole calls: "what do most people say?" got "I'll find out and let you know"
+    with_answer: true   # draft: "2k, is that a lot?": the 2k is kept, this goes in front of the next question
     only_asked: true   # "what most people do is give up" is an answer
     draft: true
     examples:
@@ -205,6 +206,8 @@ interruptions:
       - "what should I say"
       - "what's the right answer"
       - "what do you want me to say"
+      - "is that normal"   # draft: round 25 callers, "A year. Is that normal?" got no answer
+      - "is that enough"   # draft
     reply: "There's no right answer here, it's just about you."
   frustrated:   # live: "stop with the script man", "whatever", "this is stupid" got the same line again
     draft: true

@@ -29,6 +29,7 @@ objections:
     after_price:   # draft: heard only once the price is out; before it, this is their life, not our price
       - "I can't spare the money with my mortgage"
       - "money is tight for me at the moment"
+      - "is that a lot"   # draft: round 25 callers; before the price, "2k, is that a lot?" asks about their own figure
   partner:
     enter: m_partner_here
     examples:

@@ -571,6 +571,9 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("sorry for the long message, I want to quit my job", "I want to quit my job", ""),   # round 24: an aside
     ("yes, lol", "yes", ""),   # a part of only no-answer words beside others is a hedge
     ("sorry", "sorry", ""),   # on its own it is the reply, never a hedge left out
+    ("3k, actually make it 5k", "5k", ""),   # round 25: the 3k was kept
+    ("more money, actually no, more time", "more time", ""),   # round 25: said back whole
+    ("actually no idea", "actually no idea", ""),   # "actually no" takes back only with a break after it
 ])
 def test_a_reply_is_read_once_into_what_it_says_and_what_it_asks(text, said, asked):
     from core.buy_mode.script_engine.hear.reply import Reader

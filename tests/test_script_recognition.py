@@ -718,6 +718,12 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("03", 0, (), "a month", "04", "1 month... Damn."),   # was "1 months... Damn."
     ("01", 0, (), "kind of more money", "goal_practical", "What are you hoping to achieve with more money?"),   # was "with kind of more money?"
     ("01", 0, (), "50% more income", "goal_practical", "What are you hoping to achieve with 50% more income?"),   # was "50 more income"
+    # round 25
+    ("02", 0, (), "2k, is that a lot?", "03", None),   # was "I haven't mentioned a price yet"
+    ("14", 0, (), "is that a lot?", "m_funded", None),   # guard: after the price it is the money worry
+    ("03", 0, (), "A year. Is that normal?", "04", "There's no right answer here"),   # was no answer to the question
+    ("01", 0, (), "what do most people say?", "01", "There's no right answer here"),   # guard: asked alone, the step is asked again
+    ("01", 0, (), "more money, actually no, more time", "goal_identity", None),   # was "What are you hoping to achieve with more money actually no more time?"
 ]
 
 
