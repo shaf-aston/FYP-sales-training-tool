@@ -1178,6 +1178,15 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("01", 0, (), "money ong", "goal_practical", "What are you hoping that would get you?"),   # was "...with money ong?"
     ("goal_practical", 0, (), "stuff I guess", "goal_practical", "What do you mean by stuff?"),   # guard: words to ask about
     ("goal_practical", 0, (), "hard to say, my family", "goal_identity", None),   # guard: the answer after it
+    # round 65
+    ("01", 0, (), "money fingers crossed", "goal_practical", "What are you hoping that would get you?"),   # was "...with money fingers crossed?"
+    ("01", 0, (), "money touch wood", "goal_practical", "What are you hoping that would get you?"),   # was "...with money touch wood?"
+    ("goal_practical", 0, (), "fingers crossed", "goal_practical", "What would that actually change"),   # was saved as the answer
+    ("goal_practical", 0, (), "you tell me", "goal_practical", "What would that actually change"),   # was saved as the answer
+    ("goal_practical", 0, (), "aight", "goal_practical", "What would that actually change"),   # was saved as the answer
+    ("05", 0, (), "up to you", "05", None),   # was heard as leaving, and the call ended
+    ("20", 0, (), "I'd like to think so", "20", None),   # was "What specifically do you need to think over"
+    ("20", 0, (), "I'd like to think about it", "m_think_what", None),   # guard: the real one
 ]
 
 

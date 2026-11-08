@@ -40,6 +40,9 @@ def test_filler_words_say_nothing_on_any_step(fake_embedder):
     ("who knows", True), ("hard to say", True), ("beats me", True), ("we'll see", True), ("good question", True),   # round 64 callers
     ("who knows lol", True), ("it is what it is", True),
     ("hard to say, my family", False), ("we'll see more of the kids", False),   # guard: words beside them
+    ("fingers crossed", True), ("touch wood", True), ("knock on wood", True), ("god willing", True),   # round 65 callers: saved as the answer
+    ("up to you", True), ("you tell me", True), ("your call", True),   # round 65 callers: "up to you" at 05 was heard as leaving
+    ("up to you to decide", False), ("you tell me the price", False),   # guard: words beside them
 ])
 def test_round_51_words_alone_say_nothing(said, nothing, fake_embedder):
     assert shrugs(fake_embedder).says_nothing(said, CAT.steps["05"], asking=False) == nothing

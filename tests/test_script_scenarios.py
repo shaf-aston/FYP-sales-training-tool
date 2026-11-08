@@ -1333,6 +1333,8 @@ def test_echo_phrase_fixes_typos(reply, phrase):
     ("see ye", "see ye"), ("ye money", "ye money"),   # guard: never "ye"
     ("deadass", "fr"), ("money ong", "money fr"), ("on god", "fr"), ("no cap 2k", "fr 2k"),   # round 64 callers: saved as the answer
     ("long", "long"), ("wrong", "wrong"), ("song", "song"),   # guard: whole words only
+    ("aight", "okay"), ("aite", "okay"), ("I'd like to think so", "i think so"),   # round 65 callers: "aight" was saved as the answer, "I'd like to think so" was "I need to think about it"
+    ("I'd like to think about it", "I'd like to think about it"), ("night", "night"),   # guard: the real "think about it", and whole words only
     ("ta da", "ta da"), ("for really", "for really"),   # guard: only the reply alone, only the whole phrase
 ])
 def test_fix_typos_keeps_real_words(text, fixed):

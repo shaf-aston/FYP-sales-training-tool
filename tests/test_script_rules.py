@@ -716,6 +716,9 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("probably later", "probably later", ""), ("probably yeah", "probably yeah", ""), ("I think yeah", "I think yeah", ""), ("I guess ok", "I guess ok", ""),
     ("fr 2k", "2k", ""), ("fr, money", "money", ""), ("fr?", "", ""),   # round 64: "no cap 2k" (now "fr 2k") was saved with "fr"; guard: a filler with a rise, like "ok?"
     ("probably yes for the money", "probably, yes for the money", ""), ("probably not the money", "probably, not the money", ""),   # round 64: was kept whole, so it got "What do you mean by the money?"
+    ("2k inshallah", "2k", ""), ("money fingers crossed", "money", ""), ("2k touch wood", "2k", ""), ("money god willing", "money", ""),   # round 65 callers: saved whole
+    ("2k knock on wood", "2k", ""), ("money wallah", "money", ""),   # round 65: the rest of the hope words
+    ("tbh 2k", "2k", ""), ("tbf money", "money", ""), ("to be honest 2k", "2k", ""),   # round 65 callers: "tbh 2k" was saved whole, while "2k tbh" lost it
 ])
 def test_a_reply_is_read_once_into_what_it_says_and_what_it_asks(text, said, asked):
     from core.buy_mode.script_engine.hear.reply import Reader
