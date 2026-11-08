@@ -177,6 +177,20 @@ def test_a_rephrase_with_no_other_words_left_never_promises_other_words(fake_emb
     assert s.state.step == "01" and rephrase not in second and second.startswith(sense.same_words), second
 
 
+def test_a_step_opened_in_a_routes_words_never_promises_other_words_on_its_last_turn(fake_embedder):
+    """Round 40: once 04 is opened in the "recent" route's words, its last rewording is those words again,
+    so it is said again, not "let me put it another way"."""
+    sense = load_common_sense()
+    rephrase = sense.interruptions["clarify"].reply
+    s = seller(fake_embedder, "04")
+    s.state = replace(s.state, opened="So what made it come up for you now?")
+    first, _ = s.reply("what do you mean")
+    second, _ = s.reply("I don't understand the question")
+    assert first.startswith(rephrase)
+    assert s.state.step == "04" and second.endswith("So what made it come up for you now?"), second
+    assert rephrase not in second and second.startswith(sense.same_words), second
+
+
 def test_a_rephrase_that_moves_on_drops_its_lead(fake_embedder):
     sense = load_common_sense()
     s = seller(fake_embedder, "08")   # no other words: asked again once, then the same message would follow
