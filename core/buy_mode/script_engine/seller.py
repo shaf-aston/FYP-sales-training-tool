@@ -412,8 +412,8 @@ class ScriptSeller:
             if found.close:
                 pick = self._voice.judge(text, {c: labels[c] for c in near}) if near else VAGUE
                 label = None if pick == VAGUE else pick
-                if found.label and not label and step.unsure and all(r.then != step.id for r in step.listen if r.label in near):
-                    label = step.unsure  # every near meaning is a real answer: take the step's safe one, don't ask again
+                if found.label and not label and step.unsure and all(r.then != step.id for r in step.listen if r.label in found.torn):
+                    label = step.unsure  # every meaning it is torn between is a real answer: take the step's safe one, don't ask again
         elif needed and self.cfg["listen"] and step.capture and not (empty and not asks_left(self.method, self.state, self.cfg["misses"])):
             concept = f"{step.name}: {step.note}" if step.note else step.name  # the AI hears for it
             heard = self._voice.listen(text, concept, self._asked_text(), self._earlier(step), opened)

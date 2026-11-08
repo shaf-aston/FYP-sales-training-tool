@@ -125,6 +125,7 @@ class Reader:
         # "2k, no 3k", "more time, sorry more money": between two answers of one kind a correction needs no break
         # after it (round 33/34 callers: the first was kept); "yes, sorry the baby was crying" is two kinds, so stays
         self._amount = re.compile(rf"\d\w*|(?:{any_of(cfg['number_words'])})", re.IGNORECASE)
+        self._bare = re.compile(rf"\d+(?:[.,]\d+)?|(?:{any_of(cfg['number_words'])})", re.IGNORECASE)  # "2k" has its unit
         self._fix_back = re.compile(rf"(?<=\w){not_mid}[,;.!?]\s*(?:{mid}|{word})\s+(?=\w)", re.IGNORECASE)
         self._cfg = cfg
 
@@ -136,15 +137,22 @@ class Reader:
 
     def _fixed_in(self, text):
         """A correction between two answers of one kind ("2k, no 3k", "more time, sorry more money"): the words
-        kept, else None. A bare amount keeps the unit said after the first one: "a year, well two" -> "two year"."""
+        kept, else None."""
         back = self._fix_back.search(text)
         if not back:
             return None
         before, new = tokenize(clauses(text[:back.start()], self.breaks)[-1]), text[back.end():].strip()
         if not ((self._figure(" ".join(before)) and self._figure(new)) or before[:1] == tokenize(new)[:1]):
             return None
+        return self._with_unit(text[:back.start()], new)
+
+    def _with_unit(self, taken, new):
+        """The words kept after a correction. A bare amount keeps the unit said after the first one: "a year,
+        well two" -> "two year" (round 50 callers: "a year, no, two" was a bare "two" and missed)."""
+        last = clauses(taken, self.breaks)
+        before = tokenize(last[-1]) if last else []
         said = [i for i, w in enumerate(before) if self._amount.fullmatch(w)]
-        bare = said and all(self._amount.fullmatch(w) for w in tokenize(new))
+        bare = said and all(self._bare.fullmatch(w) for w in tokenize(new))  # "a million, jk, 2k": 2k
         return " ".join([new, *before[said[-1] + 1:]]) if bare else new
 
     def read(self, text):
@@ -162,10 +170,13 @@ class Reader:
         lead = self._answer_lead.match(rest)
         if lead and tokenize(rest[lead.end():]):  # "is it ok to say quit my job?": the answer, its "?" asks leave
             rest = rest[lead.end():].rstrip(" ?")
-            rest = short_form(rest, self._cfg) or rest  # round 49: "I'd say quit" was bare "quit" and ended the call
         while (back := self._take_back.search(rest)) or (kept := self._fixed_in(rest)) is not None:
-            rest = rest[back.end():] if back else kept  # "3k, no wait, more like 4k" -> "more like 4k": they took
-            # the first part back; cut again so "wait, sorry, what's the price?" asks
+            rest = self._with_unit(rest[:back.start()], rest[back.end():]) if back else kept
+            # "3k, no wait, more like 4k" -> "more like 4k": they took the first part back; cut again so
+            # "wait, sorry, what's the price?" asks
+        if tokenize(rest) != tokenize(text):  # what is left once cut is read like a whole reply: "I'd say quit",
+            rest = short_form(rest, self._cfg) or rest  # "sorry, quit", "quit, what else" were bare "quit" and
+            # ended the call (rounds 49, 50); "quit" alone is still leaving
         parts, acts = [], []
         cut = clauses(rest, self.breaks)
         for part in cut:

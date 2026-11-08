@@ -989,6 +989,18 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("01", 0, (), "mo money", "goal_practical", "What are you hoping to achieve with more money?"),
     ("01", 0, (), "I hope to be rich", "goal_practical", "What are you hoping to achieve by being rich?"),   # was "by being you hope to be rich?"
     ("02", 0, (), "100% of my salary", "03", None),   # guard: an amount, not "for sure"
+    # round 50
+    ("goal_practical", 0, (), "sorry, quit", "goal_practical", "What would that actually change for you, day to day?"),   # ended the call
+    ("goal_practical", 0, (), "quit, what else", "goal_practical", "What would that actually change for you, day to day?"),
+    ("goal_practical", 0, (), "well, quit", "goal_practical", "What would that actually change for you, day to day?"),
+    ("01", 0, (), "money, wait no, time", "goal_practical", "What are you hoping to achieve with time?"),   # was said back whole
+    ("01", 0, (), "money because bills", "goal_practical", "What are you hoping that would get you?"),   # was "What do you mean by money?"
+    ("01", 0, (), "money because of bills", "goal_identity", None),   # guard: not a close call, as before
+    ("03", 0, (), "a year, no, two", "04", "24 months... Damn."),   # was a bare "two", missed
+    ("19", 0, (), "yy", "20", "What makes you say that?"),   # was unclear
+    ("22", 0, (), "db", "end", "Perfect."),   # was unclear
+    ("19", 0, (), "sorry, y", "20", "What makes you say that?"),   # was asked again: the bare "y" after a cut
+    ("19", 0, (), "well, no", "19", None),   # guard: still a no
 ]
 
 

@@ -942,25 +942,39 @@ def test_a_goal_already_at_level_2_or_3_skips_the_rungs_it_climbed(fake_embedder
     assert s.state.step == "02"
 
 
-FRUIT = parse_method("fruit", {"first": "a", "price_step": "z", "steps": {
+FRUIT_DATA = {"first": "a", "price_step": "z", "steps": {
     "a": {"ui_stage": "intent", "say": "Which fruit?", "unsure": "apple", "stuck": {"then": "z"}, "listen": {
         "apple": {"examples": ["red apple"], "then": "y"},
         "pear": {"examples": ["red pear"], "then": "z"},
         "grape": {"examples": ["green grape"], "then": "z"},
         "plum": {"examples": ["blue plum"], "then": "a", "keep": False}}},   # the "vague, ask again" route
     "y": {"ui_stage": "intent", "say": "Apple then."},
-    "z": {"ui_stage": "intent", "say": "Done."}}})
+    "z": {"ui_stage": "intent", "say": "Done."}}}
+FRUIT = parse_method("fruit", FRUIT_DATA)
 
 
 @pytest.mark.parametrize("reply, step", [
     ("red apple pear", "y"),                # apple and pear tie, both real answers: the safe one, not asked again
     ("red apple blue plum", "a"),           # might be the ask-again route: asked again
+    ("red apple pear plum", "y"),           # round 50: torn between apple and pear only; plum (0.35) is a far third
     ("red apple pear fig kiwi", "a"),       # nothing clears the bar: asked again
 ])
 def test_a_close_call_nobody_settles(fake_embedder, reply, step):
     s = seller(fake_embedder, method=FRUIT, step="a")   # AI down: the judge can't settle it
     s.reply(reply)
     assert s.state.step == step
+
+
+def test_a_meaning_under_its_own_floor_is_not_torn_between(fake_embedder):
+    """Round 50: only the meanings a close call is torn between decide it, and one under its `min_score`
+    doesn't count: "red apple blue plum" ties apple with the ask-again route, but plum needs 0.9."""
+    data = {"first": "a", "price_step": "z", "steps": {k: dict(v) for k, v in FRUIT_DATA["steps"].items()}}
+    data["steps"]["a"] = {**data["steps"]["a"], "listen": {**data["steps"]["a"]["listen"],
+                                                           "plum": {"examples": ["blue plum"], "then": "a", "keep": False,
+                                                                    "min_score": 0.9}}}
+    s = seller(fake_embedder, method=parse_method("fruit", data), step="a")
+    s.reply("red apple blue plum")
+    assert s.state.step == "y"
 
 
 def test_a_close_call_that_might_be_vague_is_still_asked_again(fake_embedder):
@@ -1616,6 +1630,7 @@ def test_echo_phrase_leaves_out_swears_and_who_wants_it(reply, phrase):
 
 @pytest.mark.parametrize("text, fixed", [
     ("deb", "debit"), ("cred", "credit"),
+    ("yy", "yes"), ("db", "debit"),   # round 50 callers: "yy" to "can you see yourself doing it?" and "db" to "credit or debit?" were unclear
     ("quit", "quit my job"),   # round 30 callers: "quit" alone at a goal step was heard as leaving the call   # round 29 callers: "deb" at "Credit or debit?" was heard as a pause
     ("bet", "yes"), ("say less", "yes"), ("safe", "ok"),   # round 36 callers: slang "bet" at "jumping in?" was unclear, "safe" was kept as the answer at every open step
     ("Bet.", "yes."),

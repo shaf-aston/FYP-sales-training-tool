@@ -571,6 +571,13 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("would it be ok if I said 2 years?", "2 years", ""),
     ("is it ok to say quit?", "quit my job", ""),   # round 49 callers: bare "quit" after the lead ended the call
     ("I'd say quit", "quit my job", ""),
+    ("sorry, quit", "quit my job", ""),   # round 50 callers: bare "quit" after a cut ended the call
+    ("well, quit", "quit my job", ""),
+    ("quit, what else", "quit my job", ""),
+    ("money, wait no, time", "time", ""),   # round 50 callers: "wait no" took nothing back
+    ("a year, no, two", "two year", ""),   # round 50 callers: the bare "two" lost its unit and was missed
+    ("3 years, actually, 2", "2 years", ""),
+    ("2k, sorry, 3", "3", ""),   # guard: no unit after the first amount, none kept
     ("is it ok to say?", "", "is it ok to say?"),   # nothing after the lead: a question, as typed
     ("I told you, my job", "my job", ""),   # round 37 callers: heard as "what do you mean?", the job lost
     ("I already told you 2k", "2k", ""),

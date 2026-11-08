@@ -11,6 +11,8 @@ class Match:
     score: float        # best similarity found
     candidates: tuple   # top-k label names, best first
     close: bool         # too near to call: hand to the judge
+    torn: tuple = ()    # the names it is torn between: within `margin` of the best (round 50: a far third,
+    # "vague" at 0.63 to "money because bills", kept the step's safe answer from being taken)
 
 
 def _dot(a, b):
@@ -55,7 +57,8 @@ class Listener:
         in_band = self.threshold - self.near_miss <= top < self.threshold
         close = (top - second < self.margin and top >= self.threshold - self.near_miss) or in_band
         label = top_name if top >= self.threshold else None
-        return _floored(Match(label, top, tuple(n for n, _ in ranked[:self.k]), close), floors)
+        torn = tuple(n for n, s in ranked if top - s < self.margin)
+        return _floored(Match(label, top, tuple(n for n, _ in ranked[:self.k]), close, torn), floors)
 
     def answer(self, reply, labels, unsure, floors=None):
         """As match, for the step's own answers: when the whole reply reaches no answer, a clear first clause
@@ -107,4 +110,5 @@ def _floored(found, floors):
     """`found` with every name whose floor its best score misses taken out of the label and candidates."""
     floors = floors or {}
     candidates = tuple(n for n in found.candidates if found.score >= floors.get(n, 0.0))
-    return Match(found.label if found.label in candidates else None, found.score, candidates, found.close)
+    torn = tuple(n for n in found.torn if found.score >= floors.get(n, 0.0))
+    return Match(found.label if found.label in candidates else None, found.score, candidates, found.close, torn)
