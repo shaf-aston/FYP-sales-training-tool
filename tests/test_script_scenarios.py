@@ -636,6 +636,11 @@ def test_whats_next_asks_no_ai(fake_embedder):
     ("kind of more money", "more money"),                  # round 24: said back as "kind of more money"
     ("more money inshallah", "more money"),
     ("sorry, more money bro", "more money"),
+    ("my family needs more money", "more money"),          # round 28: said back as "your family needs more money"
+    ("my wife and I would like more time", "more time"),
+    ("we want to buy a house", "buy a house"),
+    ("I don't want to work", None),                        # never past a "not"
+    ("people who want more", "people who want more"),      # nor past a "who"
     ("", None),
 ])
 def test_echo_phrase(reply, phrase):
@@ -917,6 +922,9 @@ def test_echo_phrase_fixes_typos(reply, phrase):
     ("5k a month", "5k a month"),          # base form of a known word, not a typo
     ("whatever works for me", "whatever works for me"),   # known word plus an ending
     ("time in Dubai!", "time in Dubai!"),
+    ("more £££", "more money"),   # round 28 callers: "£££" was said back as "more"
+    ("$$$ please", "money please"),
+    ("£2k", "£2k"),   # guard: one sign before a figure is kept
 ])
 def test_fix_typos_keeps_real_words(text, fixed):
     from core.buy_mode.script_engine.words.fill import fix_typos

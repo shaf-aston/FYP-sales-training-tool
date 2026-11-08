@@ -171,12 +171,15 @@ class Ear:
 
     def _rises(self, part, step):
         """A part ending in "?" that isn't phrased as a question is the answer said with a rise when it is short
-        and has the step's shape ("dunno, a year?" to "how long?"), it opens with a reason ("because money is
-        nice?"), or it is only filler words ("ok?"); else it asks ("what's this going to cost me?")."""
+        and has the step's shape ("dunno, a year?" to "how long?") or is about them ("my job?": nothing to ask the
+        seller), it opens with a reason ("because money is nice?"), or it is only filler words ("ok?"); else it
+        asks ("what's this going to cost me?")."""
         words = tokenize(part)
         if self._reason(part) or self._shrugs.filler(part):  # whole calls: "ok?" got "I'll find out"
             return True
-        return bool(step.needs) and len(words) <= self.cfg["rise_answer_words"] and self.shaped(part, step)
+        if len(words) > self.cfg["rise_answer_words"]:
+            return False
+        return words[0] in self.cfg["prospect_pronouns"] or bool(step.needs) and self.shaped(part, step)  # round 28: "my job?" got "I'll find out"
 
     def _reason(self, text):
         """The reply opens with a reason ("because...", "cos..."): it gives one, it does not ask or object."""

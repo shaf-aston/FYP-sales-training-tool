@@ -172,6 +172,8 @@ interruptions:
       - "I'd prefer not to answer that"
       - "I'd rather keep that to myself"   # draft: 0.73 without it
       - "I'm not telling you"   # draft: heard as "that's not what I said"
+      - "skip"   # draft: round 28 callers, saved as the answer
+      - "can we skip this one"   # draft
     reply: "That's fine, no pressure."
   why_ask:   # whole calls: "why do you ask?" got "I don't know that one offhand, I'll find out"
     with_answer: true   # "3 years, why do you ask?": the 3 years is kept, the reason goes first

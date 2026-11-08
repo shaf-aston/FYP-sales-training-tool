@@ -14,6 +14,7 @@ NAME = re.compile(r"\{(\w+)(?:\|([^|{}]*)\|([^|{}]*))?\}")  # {name} or {name|no
 WORD = re.compile(r"[$£€]?\d+(?:[.,]\d+)*%?[A-Za-z0-9'-]*|[A-Za-z0-9'-]+")  # "£2,500", "1.5", "2.5k", "50%" stay one word
 FIGURE = re.compile(r"\d+(?:\.\d+)?")
 GLUED = re.compile(r"(\d)([A-Za-z])")  # a number stuck to its unit: "1yr", "18mo"
+MONEY_SIGNS = re.compile(r"(?<![\w£$€])[£$€]{2,}(?![\w£$€])")  # "£££", "$$$": a word for money, never a number
 SENTENCE_END = re.compile(r"[.!?]+\s+|\s*\n\s*|(?:^|\s)(?:\d{1,2}[.)]|[-*•])\s+(?=[^\W\d])")  # "more money. Mostly for my kids": "2.5k" and "5k." stay whole
 # A new line or a list mark ("1. more money 2. more time", "- pay rent") ends a sentence too: whole calls, "with 1?"
 
@@ -61,13 +62,15 @@ def spell(word, vocab, cfg):
 
 
 def fix_typos(text, vocab, cfg):
-    """The reply with plain typos fixed before it is understood ("monthy income" -> "monthly income");
+    """The reply with plain typos fixed before it is understood ("monthy income" -> "monthly income", "£££" ->
+    "money");
     punctuation and every other word kept as typed. A reply of one short form alone (`short_replies`: "y")
     is its word ("yes"): inside a reply, "y" is more often a year ("2 y")."""
     text = (text or "").strip()
     word = text.rstrip("?!.").lower()
     if word in cfg["short_replies"]:
         return cfg["short_replies"][word] + text[len(word):]
+    text = MONEY_SIGNS.sub(cfg["money_signs_as"], text)  # "more £££" -> "more money": round 28, said back as "with more?"
     return WORD.sub(lambda m: spell(m.group(0), vocab, cfg), text)
 
 
@@ -80,6 +83,19 @@ def base_verb(word, cfg):
     stem = lower[:-3]
     doubled = stem[:-1] if len(stem) > 2 and stem[-1] == stem[-2] else None
     return next((v for v in (stem, stem + "e", doubled) if v in cfg["verb_goal_starts"]), None)
+
+
+def _after_want(words, cfg):
+    """The words after who wants it ("my family needs", "we want", "my wife and I would like"): the goal, said
+    back without them. Only near the start, and never past a "not" ("I don't want to work") or a "who"."""
+    lower = [w.lower() for w in words]
+    for i in range(min(len(lower), cfg["echo_want_within"] + 1)):
+        if lower[i] in ("not", "never", *cfg["question_words"]) or lower[i].endswith("n't"):
+            return words  # "people who want more": not who wants it
+        want = next((len(w) for w in map(tokenize, cfg["echo_want_words"]) if lower[i:i + len(w)] == w), 0)
+        if want:
+            return words[i + want:] if i else words  # at the very start ("need more money") it is the goal itself
+    return words
 
 
 def echo_phrase(reply, cfg, vocab=frozenset(), verbs=False):
@@ -97,6 +113,7 @@ def echo_phrase(reply, cfg, vocab=frozenset(), verbs=False):
     if reply and reply.isupper() and len(tokenize(reply)) > 1:
         reply = reply.lower()  # shouted ("I WANT TO BE RICH!!!"): never said back in capitals ("BE RICH?")
     words = WORD.findall(reply or "")
+    words = _after_want(words, cfg)  # "my family needs more money" -> "more money"
     drops = [tokenize(d) for d in [*cfg["echo_drop_starts"], *cfg["filler_words"]]]  # "for sure, more money"
     cut = True
     while cut:
@@ -121,7 +138,8 @@ def echo_phrase(reply, cfg, vocab=frozenset(), verbs=False):
         return None  # a typo still in it is never said back ("being able to mak more mony?"); a Name can be
     if words[0] == reply.lstrip()[:len(words[0])]:
         words[0] = words[0].lower()  # sentence case at the start of their reply, not a name
-    return " ".join(words)
+    listed = {m.group().lower() for m in WORD.finditer(reply) if reply[m.end():m.end() + 1] == ","}
+    return " ".join(w + "," if w.lower() in listed and i < len(words) - 1 else w for i, w in enumerate(words))  # "money, time and travel"
 
 
 def number_phrase(reply, rule, cfg):

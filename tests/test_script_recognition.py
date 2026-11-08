@@ -754,6 +754,18 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("01", 0, (), "um so basically i want more money because like rent", "goal_practical", "What are you hoping to achieve with more money?"),
     ("01", 0, (), "more money, well, more time really", "goal_identity", "And what would"),   # was "more money" kept
     ("goal_practical", 0, (), "pay rent", "goal_identity", None),   # was heard as level 1 and asked again
+    # round 28
+    ("01", 0, (), "can we skip to the price", "01", "Fair question."),   # was "What do you mean by skip?"
+    ("goal_identity", 0, (), "skip", "goal_identity", "That's fine, no pressure."),   # was heard as their answer
+    ("04", 0, (), "my job?", "05", None),   # was "I'll find out"
+    ("01", 0, (), "my family needs more money", "goal_practical", "So this isn't really about the money.¶It's about ==them==.¶What are you hoping to achieve with more money?"),   # was "my family needs more money" said back
+    ("01", 0, (), "more £££", "goal_practical", "What are you hoping to achieve with more money?"),   # was "with more?"
+    ("01", 0, (), "more money,more time", "goal_practical", "What are you hoping to achieve with more money, more time?"),
+    ("19", 0, (), "no yeah", "20", None),   # was heard as unsure
+    ("20", 0, (), "no yeah, it makes sense", "22", None),   # was heard as backing out
+    ("19", 0, (), "yeah no", "19", None),   # guard: "yeah no" is a no
+    ("19", 0, (), "I'll pass", "19", None),   # guard: still not heard as private
+    ("02", 0, (), "is there a discount", "02", None),   # guard: still the discount worry
 ]
 
 

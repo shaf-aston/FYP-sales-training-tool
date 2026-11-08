@@ -589,6 +589,10 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("uh pay rent, stuff you know", "uh pay rent", ""),   # "stuff you know" is talk
     ("to be fair, around 2k", "around 2k", ""),
     ("well I want more money", "well I want more money", ""),   # guard: "well" with no break is a word
+    ("yeah no, not for me", "no, not for me", ""),   # round 28 callers: a yes and no said together mean the last one
+    ("yeah no, I mean yes", "yes", ""),
+    ("no yeah, it makes sense", "it makes sense", ""),   # was heard as backing out
+    ("yeah no worries", "yeah no worries", ""),   # guard: no break after the "no", it is a phrase
 ])
 def test_a_reply_is_read_once_into_what_it_says_and_what_it_asks(text, said, asked):
     from core.buy_mode.script_engine.hear.reply import Reader
@@ -978,6 +982,8 @@ def test_after_restated_is_what_follows_the_part_that_says_the_question_back(sel
     ("about a year or so I would say really?", False),   # longer than `rise_answer_words`: a question
     ("one two three four five years?", True),            # exactly `rise_answer_words`
     ("ok?", True), ("yeah?", True),                      # round 16: only filler asks nothing, "ok?" got "I'll find out"
+    ("my job?", True), ("my kids?", True),               # round 28 callers: their own thing said with a rise was "I'll find out"
+    ("what job?", False),                                # guard: a question word still asks
 ])
 def test_a_rise_is_an_answer_when_short_and_shaped_or_a_reason(seller, part, rises):
     assert seller._ear._rises(part, seller.method.steps["03"]) == rises
@@ -1169,3 +1175,16 @@ def test_a_later_answer_in_one_part_is_kept_and_left_out_of_this_one(seller):
     assert text == "more money"
     ahead, text = seller._ear._ahead("more money", seller.method.steps["01"], ScriptState(step="01"))
     assert ahead is None and text == "more money"
+
+
+@pytest.mark.parametrize("text, parts", [
+    ("more money,more time", ["more money", "more time"]),   # round 28 callers: a comma with no space was one part
+    ("2k,maybe 3k", ["2k", "maybe 3k"]),
+    ("5,000 a month", ["5,000 a month"]),   # guard: a comma inside a number is not a break
+    ("1,5k", ["1,5k"]),
+])
+def test_a_comma_with_no_space_breaks_but_never_inside_a_number(text, parts):
+    from core.buy_mode.script_engine.hear.reply import Reader
+    from core.buy_mode.script_engine.method import load_common_sense
+    reply = Reader(CFG, load_common_sense().nudges, lambda part: False).read(text)
+    assert [p.text for p in reply.parts] == parts

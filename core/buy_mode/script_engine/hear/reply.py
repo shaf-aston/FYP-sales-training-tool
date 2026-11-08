@@ -12,6 +12,7 @@ question, not one question that loses the answer).
 
 A lead that asks leave to answer (`answer_leads`: "is it ok to say quit my job?") is cut off: the rest is the answer.
 A self-correction (`take_backs`: "3 years, sorry, 2 years") takes back what came before it; only the rest is read.
+A yes and no said together (`flip_leads`: "no yeah", "yeah no") mean the last one.
 """
 
 import re
@@ -62,8 +63,9 @@ class Reply:
 
 def break_pattern(cfg):
     """The one place a reply is cut: at `clause_breaks` (punctuation only before a space or the end, so "2.5k"
-    stays whole; words as whole words)."""
-    parts = [rf"\b{re.escape(b)}\b" if b.isalpha() else rf"{re.escape(b)}(?=\s|$)" for b in cfg["clause_breaks"]]
+    stays whole, and a comma also before a letter: "more money,more time"; words as whole words)."""
+    ends = {",": r"(?=\s|$|[^\W\d])"}
+    parts = [rf"\b{re.escape(b)}\b" if b.isalpha() else re.escape(b) + ends.get(b, r"(?=\s|$)") for b in cfg["clause_breaks"]]
     return re.compile("|".join(parts), re.IGNORECASE)
 
 
@@ -105,6 +107,8 @@ class Reader:
         self._unsure = re.compile(rf"^\W*(?:{any_of(cfg['unsure_leads'])})\b", re.IGNORECASE)
         self._aside = re.compile(rf"^\W*(?:{any_of(cfg['aside_starts'])})\b", re.IGNORECASE)
         self._ask_lead = re.compile(rf"^\W*(?:{any_of(cfg['ask_leads'])})\b\W*", re.IGNORECASE)
+        flips = "|".join(rf"{re.escape(a)}\W+(?={re.escape(b)}\s*(?:[,;.!?]|$))" for a, b in map(tokenize, cfg["flip_leads"]))
+        self._flip = re.compile(rf"^\W*(?:{flips})", re.IGNORECASE)  # "no yeah" is a yes, "yeah no" a no: the last word counts
         self._answer_lead = re.compile(rf"^\W*(?:{any_of(cfg['answer_leads'])})\b\W*", re.IGNORECASE)
         self._take_back = re.compile(rf"(?:^|[,;.!?]\s*)(?:(?:{words})\b[\s,;.!-]*|(?:{word})\s*[,;.!-][\s,;.!-]*)(?=\w)"
                                      rf"|(?<=\w){not_mid}[,;.!?]\s*(?:{mid})\s*[,;.!-][\s,;.!-]*(?=\w)", re.IGNORECASE)
@@ -116,6 +120,7 @@ class Reader:
             if found:
                 rest, nudged = text[:found.start()].rstrip(" ,;:-"), True
                 break
+        rest = self._flip.sub("", rest)  # round 28 callers: "no yeah" was heard as backing out
         lead = self._answer_lead.match(rest)
         if lead and tokenize(rest[lead.end():]):  # "is it ok to say quit my job?": the answer, its "?" asks leave
             rest = rest[lead.end():].rstrip(" ?")
