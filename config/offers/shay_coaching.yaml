@@ -44,7 +44,7 @@ facts:
       - "depends what you're offering"   # draft: whole calls, "depends what you're offering" got "What do you mean by..."
       - "it depends on what it is"   # draft
       - "can you tell me more about it"   # draft: whole calls, "I was wondering if you could tell me more" was saved as the answer, "I want to know more" got "I'll find out"
-      - "I want to know more about it"   # draft
+      - "I want to know more about what you do"   # draft: "about it" was nearer "I need to think about it" than its own meaning
     bridge: true   # at the very start, a getting-to-know-you question follows (the step's `bridge`)
     answer: "We help people build their own business {industry}, and there are a few different ways to do it.¶It always comes down to what would work best for you, so before I can suggest anything I need to know a bit more."
     again: "Like I said, it depends on what would work best for you, which is why I'm asking."   # draft: ours

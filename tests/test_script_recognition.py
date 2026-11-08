@@ -10,6 +10,7 @@ import yaml
 
 from core.buy_mode.script_engine.hear.embedder import make_embedder
 from core.buy_mode.script_engine.hear.recognise import Listener
+from core.buy_mode.script_engine.hear.reply import Reader
 from core.buy_mode.script_engine.method import (
     load_common_sense,
     load_method,
@@ -58,6 +59,8 @@ def results():
     embedder = make_embedder(cfg, ROOT)
     listener = Listener(cfg, embedder)
     floors = {k: i.min_score for k, i in load_common_sense().interruptions.items()}  # as the seller judges them
+    only_asked = {k for k, i in load_common_sense().interruptions.items() if i.only_asked}  # heard only in a question
+    reader = Reader(cfg, [], lambda _: False)
     data = yaml.safe_load((ROOT / "tests/data/script_replies.yaml").read_text(encoding="utf-8"))
     embedder.warm([e for labels in _contexts().values() for ex in labels.values() for e in ex])
     rows, times = [], []
@@ -65,7 +68,9 @@ def results():
         for expected, replies in data[context].items():
             for reply in replies:
                 start = time.perf_counter()
-                match = listener.match(reply, labels)
+                heard = labels if context != "common_sense" or reader.read(reply).asked else {
+                    k: v for k, v in labels.items() if k not in only_asked}
+                match = listener.match(reply, heard)
                 if context == "common_sense" and match.label and match.score < floors[match.label]:
                     match = replace(match, label=None)
                 times.append((time.perf_counter() - start) * 1000)
@@ -399,8 +404,8 @@ ROUND_5 = [   # live persona calls (round 5): (step, slots, raised, said, step a
     ("01", {}, (), "hey sorry, did you catch the match last night?", "01", "Ha, all good here"),
     ("01", {}, (), "fine. more money obviously", "goal_practical", "What are you hoping to achieve with more money?"),
     ("m_funded", {}, ("money",), "can I split it into payments?", "m_funded", "There are ways to make the investment work"),
-    ("m_close2", {}, ("fear",), "credit", "22", None),   # was "No rush, even a rough idea helps."; a way to pay goes to paying
-    ("19", {}, (), "debit", "22", None),   # one shared list for every "jumping in?" (answers.yaml); was asked again
+    ("m_close2", {}, ("fear",), "credit", "end", None),   # was "No rush, even a rough idea helps."; a way to pay named ends the call (round 27)
+    ("19", {}, (), "debit", "end", None),   # one shared list for every "jumping in?" (answers.yaml); was asked again; named, so the end (round 27)
     ("19", {}, (), "yes let's do it", "20", None),   # a plain yes still sells itself first
     ("03", {}, (), "within a year ideally", "03", None),   # when they want it, not how long: asked again
     ("03", {}, (), "because my job could go any day, there's layoffs", "03", None),
@@ -417,7 +422,7 @@ ROUND_5 = [   # live persona calls (round 5): (step, slots, raised, said, step a
     ("05", {}, (), "no time honestly, are you a bot?", "06", "I'm an AI"),
     ("19", {}, (), "yes, how do I pay?", "22", None),   # the question is itself the answer
     ("17", {}, (), "yes, how do I pay?", "22", None),   # the `pays` shortcut from the price on; was "I'll find out"
-    ("16", {}, (), "sounds good, send me the link", "22", None),
+    ("16", {}, (), "sounds good, send me the link", "end", None),   # a way to pay named ends the call (round 27)
     ("15", {}, (), "ok", "16", None),   # a nod still moves the pitch on
     ("18", {}, (), "yes, how do I pay?", "22", None),   # was "Are you aware of the programme?" after the whole pitch
     ("14", {}, (), "5k? that's a lot", "m_funded", None),   # the worry leads, not the price again

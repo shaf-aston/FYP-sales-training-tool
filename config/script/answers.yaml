@@ -11,7 +11,7 @@ jump_in:   # a yes to "Do you see yourself jumping in?"
   - "I'm in, I can see myself doing this"
   - "yes I see myself taking the jump"
   - "ok, let's go"   # draft
-  - "I don't see why not"   # draft: whole calls, it was heard as not yet
+  - "sure, why not"   # draft: whole calls, "I don't see why not" was heard as not yet; this wording keeps it a yes, and "I don't think so" a no
   - "I wouldn't say no"   # draft: round 26 callers, heard as "I'd rather not say"
 pay_now:   # a yes that is already about paying: the payment question next, not "What makes you say that?"
   - "how do I pay"   # draft
@@ -29,6 +29,7 @@ not_yet:   # a no to "Do you see yourself jumping in?"
   - "not right now"
   - "I can't see that happening"
   - "maybe, I'm not sure yet"
+  - "I doubt it"   # draft: full real-model check, "I don't think so" was nearest "I don't see why not" (a yes)
 backs_out:   # changing their mind after a yes (live: "actually no, forget it" got "Welcome aboard")
   - "actually no, forget it"
   - "no, I changed my mind"
