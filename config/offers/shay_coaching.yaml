@@ -28,6 +28,8 @@ facts:
       - "just tell me what it costs"   # draft
       - "what's this going to cost me?"   # draft
       - "can we skip to the price"   # draft: round 28 callers, got the discount line
+      - "depends on the price"   # draft: round 44 callers, after the price got "let me put it another way"
+      - "depends how much it costs"   # draft
     answer: "Fair question. I'll give you the exact price once I know what you need, then you decide."
     again: "Like I said, the exact price comes once I know what you need."   # draft: ours
     late_answer: "It's a {months}-month process and the investment is {price}."

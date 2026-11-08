@@ -217,6 +217,8 @@ interruptions:
     with_answer: true   # draft: "2k, is that a lot?": the 2k is kept, this goes in front of the next question
     only_asked: true   # "what most people do is give up" is an answer
     draft: true
+    never_with: ["how long is"]   # draft: round 44 hunt, "how long is it?" got "There's no right answer here" (near "is that long"); it asks how long we take
+    until_price: ["is that a lot"]   # draft: round 44 hunt, "2k, is that a lot?" got no answer to it; from the price on it is the money worry
     examples:
       - "what do most people say"
       - "what should I say"

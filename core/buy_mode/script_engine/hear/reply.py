@@ -18,6 +18,7 @@ A yes and no said together (`flip_leads`: "no yeah", "yeah no") mean the last on
 import re
 from dataclasses import dataclass, replace
 
+from core.buy_mode.script_engine.config import plain_words
 from core.infra.utils import opens_question, tokenize
 from core.buy_mode.script_engine.words.fill import number_phrase
 
@@ -108,6 +109,8 @@ class Reader:
         # ("no") only between two parts: "a year, no, two years" corrects, "no, credit?" says no
         self._blank = set(cfg["no_answer_words"])  # "yes, sorry": a part of only these beside others says nothing
         self._blank_end = re.compile(rf"(?<=\w)\s+((?:{any_of(cfg['no_answer_words'])})\W*)$", re.IGNORECASE)
+        self._unsure_end = re.compile(rf"(?<=\w)\s+((?:{any_of(cfg['unsure_ends'])})\W*)$", re.IGNORECASE)
+        self._plain = plain_words(cfg)
         self._unsure = re.compile(rf"^\W*(?:{any_of(cfg['unsure_leads'])})\b", re.IGNORECASE)
         self._aside = re.compile(rf"^\W*(?:{any_of(cfg['aside_starts'])})\b", re.IGNORECASE)
         self._ask_lead = re.compile(rf"^\W*(?:{any_of(cfg['ask_leads'])})\b\W*", re.IGNORECASE)
@@ -150,6 +153,9 @@ class Reader:
                 rest, nudged = text[:found.start()].rstrip(" ,;:-"), True
                 break
         rest = self._blank_end.sub(r", \1", rest)  # "yes sorry" is "yes, sorry" (round 39 callers: it was unclear)
+        end = self._unsure_end.search(rest)  # round 44: "money I guess" is "money, I guess"; "yeah I guess", "stuff I guess" stay whole
+        if end and set(tokenize(rest[:end.start()])) - self._plain:
+            rest = f"{rest[:end.start()]}, {end.group(1)}"
         rest = self._flip.sub("", rest)  # round 28 callers: "no yeah" was heard as backing out
         lead = self._answer_lead.match(rest)
         if lead and tokenize(rest[lead.end():]):  # "is it ok to say quit my job?": the answer, its "?" asks leave

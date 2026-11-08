@@ -621,6 +621,10 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("more money lol", "more money", ""),
     ("sorry I was driving", "sorry I was driving", ""),   # guard: only at the end
     ("lol", "lol", ""),   # guard: alone it is the reply
+    ("money I guess", "money", ""),   # round 44 callers: a hedge at the end is its own part (got "What do you mean by money?")
+    ("no idea, money I guess", "no idea, money", ""),
+    ("yeah I guess", "yeah I guess", ""),   # guard: only after real words
+    ("I guess", "I guess", ""),
 ])
 def test_a_reply_is_read_once_into_what_it_says_and_what_it_asks(text, said, asked):
     from core.buy_mode.script_engine.hear.reply import Reader

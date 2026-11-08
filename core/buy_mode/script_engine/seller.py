@@ -118,7 +118,7 @@ class ScriptSeller:
         return text
 
     def _script_examples(self):
-        found = [e for i in self.sense.interruptions.values() for e in i.examples] + list(self.sense.unclear)
+        found = [e for i in self.sense.interruptions.values() for e in i.heard(False)] + list(self.sense.unclear)
         found += [e for f in self.offer.facts.values() for e in f.examples]
         found += [e for o in self.method.objections.values() for e in o.examples]
         found += [e for s in self.method.steps.values() for r in s.listen for e in r.examples]

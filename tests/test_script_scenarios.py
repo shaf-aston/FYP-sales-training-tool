@@ -812,6 +812,25 @@ def test_a_short_form_after_a_filler_word_is_its_word(text, read):
     assert fix_typos(text, frozenset(), CFG) == read
 
 
+@pytest.mark.parametrize("text, saved", [
+    ("alright then", False), ("ok then", False), ("okk", False),   # round 44 callers: saved as the answer to an open question
+    ("then I'd quit my job", True),                                  # guard: words after it are the answer
+])
+def test_a_filler_with_then_or_a_held_letter_answers_nothing(fake_embedder, text, saved):
+    s = seller(fake_embedder, step="05")
+    s.reply(text)
+    assert (s.state.step != "05") == saved
+
+
+@pytest.mark.parametrize("text, asks", [
+    ("depends on the price", True), ("it depends how much it costs", True),   # round 44 callers: got "let me put it another way"
+    ("it depends on my job", False),                                          # guard: an answer
+])
+def test_it_depends_on_the_price_asks_it(text, asks):
+    from core.infra.utils import opens_question
+    assert opens_question(text, CFG) == asks
+
+
 @pytest.mark.parametrize("text, read", [
     ("im after more money", "I'm after more money"),   # round 42: said back as "with im after more money?"
     ("Im after more money", "I'm after more money"),
@@ -994,6 +1013,23 @@ def test_say_that_again_is_never_heard_with_a_want():
     assert {"want", "used to"} <= set(load_common_sense().interruptions["repeat"].never_with)
 
 
+@pytest.mark.parametrize("step, heard", [("01", True), ("14", False)])
+def test_an_until_price_example_is_only_heard_before_the_price(fake_embedder, step, heard):
+    from dataclasses import replace
+    s = seller(fake_embedder, step=step)   # round 44: "2k, is that a lot?" got no answer; after the price it is the money worry
+    repeat = s.sense.interruptions["repeat"]
+    s.sense.interruptions["repeat"] = replace(repeat, examples=(), until_price=("plonk wibble",))
+    s.reply("plonk wibble")
+    assert (s.last_turn["heard_as"] == "sense:repeat") == heard
+
+
+def test_is_that_a_lot_is_no_right_answer_only_before_the_price_and_how_long_is_never_one():
+    from core.buy_mode.script_engine.method import load_common_sense
+    sense = load_common_sense().interruptions["no_wrong_answer"]
+    assert "is that a lot" in sense.heard(False) and "is that a lot" not in sense.heard(True)
+    assert "how long is" in sense.never_with
+
+
 def test_a_route_pattern_takes_the_route_by_rule(fake_embedder):
     s = seller(fake_embedder, step="03")   # round 43: "6 weeks" was "so many nights, months and years"
     reply, _ = s.reply("about 9 WKS")
@@ -1157,6 +1193,11 @@ def test_echo_phrase_fixes_typos(reply, phrase):
     ("cos money", "cos money"),   # guard: 3 letters stay ("cost")
     ("u know, more money", "you know, more money"),   # round 38 callers: said back as "with u know, more money?"
     ("my uncle", "my uncle"),   # guard: only "u" alone
+    ("okk", "ok"),   # round 44 callers: a held last letter on a filler word was saved as the answer
+    ("Yess", "yes"),
+    ("boss", "boss"),   # guard: only a filler word is cut
+    ("💳", "card"),   # round 44 callers: said nothing at payment
+    ("🏖️ with family", "a holiday with family"),
 ])
 def test_fix_typos_keeps_real_words(text, fixed):
     from core.buy_mode.script_engine.words.fill import fix_typos

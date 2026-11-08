@@ -91,7 +91,14 @@ def fix_typos(text, vocab, cfg):
     text = EMPHASIS.sub(r"\2", STRUCK.sub("", text))  # round 30: "with more?", and "~a year~ two years" was a year
     text = SLASHED.sub(lambda m: re.sub(r"\s*/\s*", " or ", m.group()), text)  # round 40: "money/time" was "What do you mean by money time?"
     text = ISH.sub(lambda m: unish(m, vocab, cfg), text)  # round 41: "a yearish" was no time
+    text = WORD.sub(lambda m: unheld(m.group(0), cfg), text)  # round 44: "okk" was saved as the answer
     return WORD.sub(lambda m: spell(m.group(0), vocab, cfg), text)
+
+
+def unheld(word, cfg):
+    """A filler word with its last letter held once or more ("okk", "yess", "yeahh") as the word."""
+    cut = re.sub(r"(\w)\1+$", r"\1", word.lower())
+    return cut if cut in cfg["filler_words"] else word
 
 
 def unish(match, vocab, cfg):

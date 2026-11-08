@@ -922,6 +922,18 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("03", 0, (), "10 days", "04", "So what made it come up for you now?"),
     ("03", 0, (), "6 months", "04", "6 months... Damn."),   # guard: still a number
     ("01", 0, (), "something called freedom", "goal_practical", "What are you hoping to achieve with freedom?"),   # was taken as its answer; never a yes to settling
+    # round 44
+    ("01", 0, (), "money I guess", "goal_practical", "What are you hoping that would get you?"),   # was "What do you mean by money?"
+    ("01", 0, (), "no idea, money I guess", "goal_practical", "What are you hoping that would get you?"),
+    ("05", 0, (), "alright then", "05", "No rush"),   # was saved as the answer
+    ("05", 0, (), "okk", "05", "No rush"),
+    ("19", 0, (), "depends on the price", "19", "It's a 6-month process and the investment is $5k."),   # was "let me put it another way"
+    ("02", 0, (), "2k, is that a lot?", "03", "There's no right answer here"),   # the question got no answer
+    ("18", 0, (), "how long is it?", "18", "It's a 6-month process."),   # was "There's no right answer here"
+    ("22", 0, (), "💳", "end", None),   # said nothing
+    ("willing", 0, (), "yeah I suppose", "willing_check", None),   # guard: still a soft yes
+    ("14", 0, (), "is that a lot?", "m_funded", None),   # guard: after the price it is the money worry
+    ("03", 0, (), "how long do most people say?", "03", None),   # guard: still no wrong answer
 ]
 
 

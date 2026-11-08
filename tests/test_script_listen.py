@@ -235,9 +235,9 @@ def test_a_shrug_beyond_the_filler_words_is_asked_again_not_saved(fake_embedder)
 
 def test_unclear_words_get_asked_what_they_mean(fake_embedder):
     s = seller(fake_embedder, _down, step="04")
-    text, _ = s.reply("stuff I guess")
+    text, _ = s.reply("I guess stuff")
     assert text == "What do you mean by stuff?" and "why" not in s.state.slots
-    text, _ = s.reply("stuff I guess")  # asked once: next time other words
+    text, _ = s.reply("I guess stuff")  # asked once: next time other words
     assert text == CAT.steps["04"].probes[0]
 
 
@@ -295,5 +295,5 @@ def test_a_shrug_after_an_early_answer_is_still_asked_about_this_turn(fake_embed
     s.reply("I want to make 5k a month")  # answers a later step early
     assert s.state.slots
     s.reset(ScriptState(step="04", slots=s.state.slots))
-    text, _ = s.reply("stuff I guess")
+    text, _ = s.reply("I guess stuff")
     assert text == "What do you mean by stuff?"

@@ -161,6 +161,12 @@ class Interruption:
     once: bool = False  # answered once a call: said again ("ok, thank you" after "You're welcome.") it is heard as the rest
     before_price: bool = False  # heard only before the price is out; from it on, the close hears a no its own way
     never_with: tuple = ()  # words that make a reply never this one ("I want that again" is no "say that again")
+    until_price: tuple = ()  # more examples, heard only before the price: "is that a lot?" asks about their own figure,
+    # from the price on it is the money worry
+
+    def heard(self, opened):
+        """The examples that count: `until_price` ones only before the price is out."""
+        return self.examples if opened else self.examples + self.until_price
 
 
 @dataclass(frozen=True)
@@ -432,7 +438,7 @@ def parse_offer(name, data):
     )
 
 
-INTERRUPTION_KEYS = {"examples", "reply", "draft", "after", "after_wait", "min_score", "with_answer", "only_asked", "once", "before_price", "never_with"}  # `draft` is accepted, never read
+INTERRUPTION_KEYS = {"examples", "reply", "draft", "after", "after_wait", "min_score", "with_answer", "only_asked", "once", "before_price", "never_with", "until_price"}  # `draft` is accepted, never read
 
 
 def parse_common_sense(data):
@@ -445,7 +451,8 @@ def parse_common_sense(data):
                         _score(f"interruption {k}", v["min_score"]) if "min_score" in v else 0.0,
                         v.get("with_answer", False) is True, v.get("only_asked", False) is True,
                         v.get("once", False) is True, v.get("before_price", False) is True,
-                        tuple(" ".join(tokenize(w)) for w in v.get("never_with") or ()))
+                        tuple(" ".join(tokenize(w)) for w in v.get("never_with") or ()),
+                        tuple(v.get("until_price") or ()))
         for k, v in data["interruptions"].items()
     }
     for i in items.values():
