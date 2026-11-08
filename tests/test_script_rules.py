@@ -683,6 +683,12 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("money so yeah", "money", ""),   # guard: this was already cut
     ("anyway, money", "money", ""), ("ideally money", "money", ""), ("hopefully quit", "quit my job", ""), ("mostly 2k", "2k", ""),   # round 59: the lead
     ("no tho", "no", ""), ("anyway what's the price?", "", "anyway what's the price?"),   # round 59: "no tho" was saved whole; guard: still asks
+    ("money pretty much", "money", ""), ("2k give or take", "2k", ""), ("a year more or less", "a year", ""), ("money basically", "money", ""),   # round 60: saved whole
+    ("2k definitely", "2k", ""), ("money obviously", "money", ""), ("free lowkey", "free", ""), ("my boss seriously", "my boss", ""),
+    ("obviously money", "money", ""), ("really money", "money", ""), ("lowkey 2k", "2k", ""), ("pretty much quit", "quit my job", ""),   # round 60: the lead
+    ("seriously, a year", "a year", ""), ("basically money", "money", ""),
+    ("not for now", "not for now", ""), ("2k for now", "2k for now", ""), ("definitely not", "definitely not", ""),   # guard: "not for now" is a "later"
+    ("really?", "", "really?"), ("seriously, how much?", "", "how much?"),   # guard: still asks
     ("literally what?", "", "literally what?"), ("do you know?", "", "do you know?"),   # guard: still asks
     ("well paid job", "well paid job", ""),   # guard: "well paid" is the answer
     ("oh what?", "", "oh what?"),   # guard: still asks
@@ -1409,7 +1415,7 @@ def test_a_question_beside_what_they_said_keeps_its_question_mark():
 
 
 @pytest.mark.parametrize("text, meant", [
-    ("quit, obviously, like everyone", "quit my job, obviously"),   # round 47 callers: heard as who they want to be
+    ("quit, obviously, like everyone", "quit my job"),   # round 47 callers: heard as who they want to be; round 60: "obviously" is cut too
     ("I don't want to be like everyone else", "I don't want to be like everyone else"),   # guard: inside the part it is theirs
 ])
 def test_like_everyone_after_the_answer_is_a_tag(text, meant):

@@ -1120,6 +1120,19 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("05", 0, (), "ok tho", "05", "No rush"),   # was saved as the answer
     ("22", 0, (), "ideally debit", "end", None),   # guard: still pays
     ("willing", 0, (), "no tho", "11", None),   # guard: still a no
+    # round 60
+    ("05", 0, (), "obviously ok", "05", "No rush"),   # was saved as the answer
+    ("05", 0, (), "ok pretty much", "05", "No rush"),   # was saved as the answer
+    ("05", 0, (), "ok more or less", "05", "No rush"),   # was saved as the answer
+    ("05", 0, (), "lowkey ok", "05", "No rush"),   # was saved as the answer
+    ("01", 0, (), "money pretty much", "goal_practical", "What are you hoping that would get you?"),   # was "...with money pretty much?"
+    ("01", 0, (), "seriously money", "goal_practical", "What are you hoping that would get you?"),   # was "...with seriously money?"
+    ("01", 0, (), "money for now", "goal_practical", "What are you hoping that would get you?"),   # was "...with money for now?"
+    ("01", 0, (), "money to me", "goal_practical", "What are you hoping that would get you?"),   # was "...with money to you?"
+    ("18", 0, (), "ok basically", "19", "Do you see yourself"),   # was asked again
+    ("20", 0, (), "obviously not", "19", "No pressure"),   # was unclear, then on to the payment
+    ("20", 0, (), "not for now", "m_think_what", "Sure."),   # guard: still a "later"
+    ("willing", 0, (), "really not", "11", None),   # guard: still a no
 ]
 
 

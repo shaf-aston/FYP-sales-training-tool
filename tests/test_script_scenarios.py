@@ -642,6 +642,9 @@ def test_whats_next_asks_no_ai(fake_embedder):
     ("money tho", "money"), ("2k anyway", "2k"), ("free big time", "free"), ("my boss so yeah", "your boss"),  # round 59: "with money tho?"
     ("more money mainly", "more money"),
     ("free hopefully", "free"), ("money though", "money"),  # guard: these were already cut
+    ("money pretty much", "money"), ("2k give or take", "2k"), ("free for now", "free"), ("my boss at this point", "your boss"),  # round 60: "with money pretty much?"
+    ("money to me", "money"), ("free for me", "free"), ("more money seriously", "more money"), ("quit lowkey", "quit"),
+    ("money basically", "money"), ("free obviously", "free"),  # guard: these were already cut
     ("a year innit", "a year"),
     ("well paid job", "well paid job"),  # round 54: was "paid job"
     ("so well off", "well off"),
