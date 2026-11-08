@@ -1058,6 +1058,14 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("01", 0, (), "actually money", "goal_practical", "What are you hoping that would get you?"),   # was "...with actually money?"
     ("01", 0, (), "well paid job", "goal_practical", "What are you hoping to achieve with well paid job?"),   # was "...with paid job?"
     ("01", 0, (), "free innit", "goal_practical", "What are you hoping to achieve by being free?"),   # could not be said back
+    # round 55
+    ("01", 0, (), "kinda free", "goal_practical", "What are you hoping to achieve by being free?"),   # was "...with kinda free?"
+    ("01", 0, (), "free for real", "goal_practical", "What are you hoping to achieve by being free?"),   # was "...with free for real?"
+    ("05", 0, (), "kinda ok", "05", None),   # was saved as the answer
+    ("05", 0, (), "defo", "05", None),   # was saved as the answer
+    ("05", 0, (), "cheers", "05", "You're welcome"),   # was saved as the answer
+    ("18", 0, (), "deffo", "19", "Do you see yourself jumping in?"),   # was unclear
+    ("18", 0, (), "for real", "18", "Put simply"),   # was "I'm an AI playing the salesperson"
 ]
 
 

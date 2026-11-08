@@ -630,6 +630,7 @@ def test_whats_next_asks_no_ai(fake_embedder):
     ("actually money", "money"),  # round 54: was "actually money"
     ("oh wow money", "money"),
     ("money innit", "money"),  # round 54: could not be said back
+    ("money fr", "money"), ("my boss frfr", "your boss"),  # round 55: was "with money for real?"
     ("a year innit", "a year"),
     ("well paid job", "well paid job"),  # round 54: was "paid job"
     ("so well off", "well off"),
@@ -1293,6 +1294,10 @@ def test_echo_phrase_fixes_typos(reply, phrase):
     ("#1 priority", "#1 priority"), ("C#", "C#"),   # guard: a bare number keeps its "#", and so does a word it ends
     ("fair enough", "okay"), ("that's fair", "okay"),   # round 53 callers: "fair enough" was heard as paying
     ("shore", "sure"),   # round 53 callers: voice to text, unclear everywhere
+    ("kinda money", "kind of money"), ("sorta quit", "sort of quit"),   # round 55 callers: said back as "with kinda money?"
+    ("defo", "definitely"), ("Deffo yes", "definitely yes"), ("money for real", "money fr"),   # round 55 callers: unclear everywhere
+    ("cheers", "thanks"), ("ta", "thanks"),   # round 55 callers: saved as the answer
+    ("ta da", "ta da"), ("for really", "for really"),   # guard: only the reply alone, only the whole phrase
 ])
 def test_fix_typos_keeps_real_words(text, fixed):
     from core.buy_mode.script_engine.words.fill import fix_typos
