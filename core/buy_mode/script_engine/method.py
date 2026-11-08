@@ -56,6 +56,7 @@ class Step:
     needs: str = ""     # regex an answer must match ("how much a month?" needs a figure); a reply without it is asked again
     plain_if: str = ""  # regex: their words said back that match it get the plain line ("each month to make more money?" asks money for money)
     shrug_moves_on: bool = False  # the next line answers the question itself: a shrug ("yeah") moves on unsaved, never asked again
+    yes_no: bool = False  # the question wants a yes or no but opens with no helper verb ("Open to being called out?")
 
     @property
     def routes(self):
@@ -154,6 +155,7 @@ class Interruption:
     with_answer: bool = False  # may sit beside an answer ("3 years, what about you?"): answer kept, this said first
     only_asked: bool = False  # counts only as a question: "does that matter?" asks, "that matters to me" answers
     once: bool = False  # answered once a call: said again ("ok, thank you" after "You're welcome.") it is heard as the rest
+    before_price: bool = False  # heard only before the price is out; from it on, the close hears a no its own way
 
 
 @dataclass(frozen=True)
@@ -236,6 +238,8 @@ def _step(step_id, data, answers):
         raise ValueError(f"step {step_id}: plain_if needs a say_plain")
     if data.get("shrug_moves_on") and not any(r.label == ANY for r in listen):
         raise ValueError(f"step {step_id}: shrug_moves_on needs an '{ANY}' route to move on by")
+    if data.get("yes_no") and "?" not in data.get("say", ""):
+        raise ValueError(f"step {step_id}: yes_no needs a say that asks")
     if data.get("echo") and not data.get("capture"):
         raise ValueError(f"step {step_id}: echo needs a capture")
     for line in (data.get("say", ""), data.get("say_plain", ""), *probes, *reask,
@@ -252,7 +256,7 @@ def _step(step_id, data, answers):
         listen, bool(data.get("run_on")),
         data.get("name", ""), data.get("note", ""), bool(data.get("doubts_answer")),
         stuck, answered_by, bool(data.get("echo")), unsure, bool(data.get("moment")), data.get("bridge", ""),
-        reask, needs, plain_if, bool(data.get("shrug_moves_on")),
+        reask, needs, plain_if, bool(data.get("shrug_moves_on")), bool(data.get("yes_no")),
     )
 
 
@@ -412,7 +416,7 @@ def parse_offer(name, data):
     )
 
 
-INTERRUPTION_KEYS = {"examples", "reply", "draft", "after", "after_wait", "min_score", "with_answer", "only_asked", "once"}  # `draft` is accepted, never read
+INTERRUPTION_KEYS = {"examples", "reply", "draft", "after", "after_wait", "min_score", "with_answer", "only_asked", "once", "before_price"}  # `draft` is accepted, never read
 
 
 def parse_common_sense(data):
@@ -424,7 +428,7 @@ def parse_common_sense(data):
                         bool(v.get("after_wait")),
                         _score(f"interruption {k}", v["min_score"]) if "min_score" in v else 0.0,
                         v.get("with_answer", False) is True, v.get("only_asked", False) is True,
-                        v.get("once", False) is True)
+                        v.get("once", False) is True, v.get("before_price", False) is True)
         for k, v in data["interruptions"].items()
     }
     for i in items.values():

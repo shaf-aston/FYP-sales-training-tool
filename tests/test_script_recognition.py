@@ -825,6 +825,20 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("01", 0, (), "more money, sorry had a call", "goal_practical", "What are you hoping to achieve with more money?"),
     ("01", 0, (), "I was broke, more money", "goal_practical", "What are you hoping that would get you?"),   # guard: no break, kept whole
     ("01", 0, (), "for my wife", "goal_practical", "What are you hoping to achieve with your wife?"),   # guard: round 33's "what I said" as a goal example took it (0.67)
+    # round 35
+    ("05", 0, (), "no thank you", "later", "No problem. Let's book a follow-up call"),   # was kept as the answer, 25 steps on
+    ("goal_practical", 0, (), "no thanks", "later", "No problem."),   # was unclear, then moved on
+    ("05", 0, (), "honestly not interested", "later", "No problem."),
+    ("17", 0, (), "no thanks", "18", None),   # `yes_no`: a plain no, never leaving
+    ("05", 0, (), "I'm not interested in money", "06", None),   # guard: an answer (0.86 to "I'm not interested")
+    ("willing", 0, (), "no thank you", "11", None),   # guard: a plain no to a yes-or-no question
+    ("20", 0, (), "no thank you", "19", None),   # guard: the close hears it its own way (backs out)
+    ("m_close1", 0, (), "I'm not interested", "m_reframe2", None),   # guard: the soft close goes on
+    ("05", 0, (), "because", "05", "No rush"),   # was saved as the answer at every open step
+    ("20", 0, (), "because", "20", None),   # was unclear, then payment
+    ("05", 0, (), "because I hate my job", "06", None),   # guard: a reason
+    ("19", 0, (), "should I?", "19", "There's no right answer"),   # was "I'll find out"
+    ("19", 0, (), "should I do it?", "19", "There's no right answer"),   # was "I'm the AI playing the salesperson"
 ]
 
 

@@ -1287,3 +1287,43 @@ def test_a_comma_with_no_space_breaks_but_never_inside_a_number(text, parts):
 def test_a_fix_with_this_steps_answer_after_it_keeps_both(seller, said, step, slots):
     at(seller, "03", number="2k").reply(said)
     assert (seller.state.step, seller.state.slots) == (step, slots), seller.last_turn
+
+
+@pytest.mark.parametrize("step, said, after", [
+    ("05", "no thank you", "later"),   # round 34 callers: kept as the answer, 25 steps on
+    ("goal_practical", "I'm not interested", "later"),
+    ("willing", "no thank you", "11"),   # to a yes-or-no question it is a plain no
+    ("17", "no thanks", "18"),   # `yes_no`: "Open to being called out?" wants a yes or no
+])
+def test_a_polite_no_before_the_price_leaves_the_call(seller, step, said, after):
+    at(seller, step).reply(said)
+    assert seller.state.step == after
+
+
+def test_a_polite_no_at_the_close_is_the_closes_own(seller):
+    at(seller, "20").reply("no thank you")   # `before_price`: the close's routes hear it (backs out, the soft close)
+    assert seller.state.step != "later"
+
+
+def test_thanks_beside_a_no_keeps_it_a_plain_no_only_to_a_yes_or_no_question(seller):
+    shrugs = seller._ear._shrugs
+    assert shrugs.plain_no("no thank you", True) and shrugs.plain_no("nah, thanks", True)
+    assert not shrugs.plain_no("no thank you", False)   # to an open question: no to the call
+    assert not shrugs.plain_no("no thanks, I have a job", True)   # more than a no
+    assert not shrugs.plain_no("thanks", True)   # no no in it
+
+
+def test_a_step_can_want_a_yes_or_no_with_no_helper_verb(seller):
+    at(seller, "17")
+    assert seller.method.steps["17"].yes_no and seller._ear._yes_or_no(seller.state)
+    at(seller, "05")
+    assert not seller._ear._yes_or_no(seller.state)
+
+
+@pytest.mark.parametrize("said, nothing", [
+    ("because", True),   # round 34 callers: saved as the answer at every open step
+    ("cos", True),
+    ("because I hate my job", False),   # guard: a reason
+])
+def test_because_alone_says_nothing(seller, said, nothing):
+    assert seller._ear._shrugs.says_nothing(said, seller.method.steps["05"], False) == nothing

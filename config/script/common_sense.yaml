@@ -224,6 +224,9 @@ interruptions:
       - "which do you recommend"   # draft: the same, got "I'll find out"
       - "which is easier"   # draft: "whichever is easier" chooses, "which is easier?" asks
       - "what do most people use"   # draft
+      - "should I"   # draft: round 34 callers, "should I?" to "jumping in?" got "I'll find out"
+      - "do you think I should"   # draft
+      - "should I do it"   # draft: torn with "should I", it got "I'll find out"
     reply: "There's no right answer here, it's just about you."
   frustrated:   # live: "stop with the script man", "whatever", "this is stupid" got the same line again
     draft: true
@@ -261,3 +264,12 @@ interruptions:
       - "sorry, I'm driving"   # draft: whole calls, saved as their reason
       - "I can't talk right now"   # draft
     reply: ""   # the follow-up step says it
+  not_interested:   # round 34 callers: "no thank you" to every open question was kept as the answer, 25 steps on
+    draft: true
+    after: follow_up   # a no to the call; to a yes-or-no question "no thanks" is a plain no (engine.yaml `no_polite_words`)
+    before_price: true   # from the price on, the close's own routes hear a no (backs out, the soft close)
+    min_score: 0.88   # draft: "I'm not interested in money" (0.86) is an answer, "honestly not interested" (0.90) is not
+    examples:
+      - "no thank you"
+      - "I'm not interested"   # at the close it backs out (answers.yaml)
+    reply: ""

@@ -13,6 +13,7 @@ class Shrugs:
         self._filler = frozenset(cfg["stop_words"]) | self._fillers
         self._blank = frozenset(cfg["stop_words"]) | frozenset(cfg["no_answer_words"])
         self._no = frozenset(cfg["stop_words"]) | frozenset(cfg["no_words"])
+        self._polite = frozenset(cfg["no_polite_words"])
         self._plain = plain_words(cfg)
         self._asks = set(cfg["question_words"])  # "what" shares no topic with a question: "what I said" is not about it
         self._sense, self._listener, self._fill = sense, listener, fill
@@ -35,9 +36,10 @@ class Shrugs:
         words = set(tokenize(text))
         return bool(words) and words <= self._fillers
 
-    def plain_no(self, text):
-        """Only a no ("nah", "nope"): an answer, never "what do you mean?" or a worry."""
-        words = set(tokenize(text))
+    def plain_no(self, text, polite=False):
+        """Only a no ("nah", "nope"): an answer, never "what do you mean?" or a worry. `polite`: thanks with it
+        too ("no thank you"), said to a yes-or-no question; to an open one that is no to the call."""
+        words = set(tokenize(text)) - (self._polite if polite else set())
         return bool(words - self._filler) and words <= self._no
 
     def blank(self, text):

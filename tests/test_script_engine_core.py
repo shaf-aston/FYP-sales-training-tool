@@ -103,6 +103,7 @@ def test_loader_rejects_broken_graphs():
         (lambda d: d["steps"]["a"].update(needs="x*"), "needs"),
         (lambda d: d["steps"]["a"].update(reask=["Sure?"]), "reask"),
         (lambda d: d["steps"]["a"].update(shrug_moves_on=True), "shrug_moves_on"),
+        (lambda d: d["steps"]["a"].update(yes_no=True, say="Tell me more."), "yes_no"),
         (lambda d: d.update(max_visits=-1), "max_visits"),
         (lambda d: d.update(max_visits=2) or d["exits"].pop("follow_up"), "max_visits|follow_up"),
         (lambda d: d["steps"]["a"].update(run_on=True), "run_on"),

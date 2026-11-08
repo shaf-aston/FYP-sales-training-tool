@@ -89,3 +89,13 @@ def test_a_sense_can_count_only_as_a_question():
     data = {"park": "", "revisit": "", "interruptions": {"why_ask": sense, "thanks": {"examples": ["thanks"], "reply": "Sure."}}}
     found = parse_common_sense(data).interruptions
     assert found["why_ask"].only_asked and not found["thanks"].only_asked
+
+
+def test_a_sense_can_count_only_before_the_price():
+    """`before_price`: "I'm not interested" early leaves; from the price on the close hears it its own way."""
+    from core.buy_mode.script_engine.method import parse_common_sense
+    data = {"park": "", "revisit": "", "interruptions": {
+        "not_interested": {"examples": ["no thank you"], "reply": "", "after": "follow_up", "before_price": True},
+        "thanks": {"examples": ["thanks"], "reply": "Sure."}}}
+    found = parse_common_sense(data).interruptions
+    assert found["not_interested"].before_price and not found["thanks"].before_price

@@ -77,7 +77,7 @@ class Ear:
         if not state.waiting and nothing and not self._ready(text, state):  # "yes I'm in" is a shrug's words, but it says they're in
             return Verdict("says_nothing", text=text, asking=asking)  # an answer only: never an interruption
         ahead, text = (None, text) if asking else self._ahead(text, step, state)  # "do I need 5k?" is not their goal
-        kind, name = (None, "") if self._shrugs.plain_no(text) else self._interrupt(text, step, ahead or state, opened, asking)
+        kind, name = (None, "") if self._shrugs.plain_no(text, self._yes_or_no(state)) else self._interrupt(text, step, ahead or state, opened, asking)
         if kind == "objection" and not opened and not asking:
             beside = self._beside_worry(text, step, state, name)
             if beside:
@@ -355,6 +355,8 @@ class Ear:
         """The step was last asked as a yes-or-no question ("Is there anything you've tried?"): "yes" answers it.
         Any part of it (between commas) opening with a helper verb, past lead-ins ("so", "and", "okay"): "So if
         your partner isn't on board, would you still go ahead?", "Okay, And do you want...", "..., aren't you?"."""
+        if self.method.steps[state.step].yes_no:
+            return True
         leads = self.cfg["question_lead_words"]
         for part in question_of(asked_line(self.method, state)[0]).split(","):
             words = list(dropwhile(leads.__contains__, tokenize(part)))
@@ -381,7 +383,7 @@ class Ear:
         hedge = unsure >= self.sense.unclear_min_score
         senses = {k: i for k, i in self.sense.interruptions.items()
                   if (state.waiting or not i.after_wait) and not (hedge and i.after in ("rephrase", "wait"))
-                  and (asking or not i.only_asked)}
+                  and (asking or not i.only_asked) and not (opened and i.before_price)}
         labels = {f"sense:{k}": i.examples for k, i in senses.items()}
         floors = {f"sense:{k}": i.min_score for k, i in senses.items()}  # lowest score a label counts at
         if asking:
