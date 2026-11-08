@@ -866,6 +866,9 @@ def test_a_contraction_of_a_stop_word_is_a_stop_word():
 
 
 @pytest.mark.parametrize("text, saved", [
+    ("okey-dokey", False), ("okie dokie", False),   # round 48 callers: saved as the answer
+    ("oh sure", False), ("acha ok", False), ("please", False),   # round 47 callers: saved as the answer
+    ("oh my boss", True),                     # guard: words after it are the answer
     ("alright then", False), ("ok then", False), ("okk", False),   # round 44 callers: saved as the answer to an open question
     ("then I'd quit my job", True),                                  # guard: words after it are the answer
 ])
@@ -1013,7 +1016,7 @@ def test_a_nudged_reason_is_kept_without_the_nudge(fake_embedder):
     assert s.state.slots["reason"] == "because I want freedom"
 
 
-@pytest.mark.parametrize("text", ["go on then", "go ahead", "fire away"])
+@pytest.mark.parametrize("text", ["go on then", "go ahead", "fire away", "please go on"])   # round 47: "please go on" was saved
 def test_go_on_to_an_open_question_is_a_nudge_not_its_answer(fake_embedder, text):
     s = seller(fake_embedder, step="11")   # round 42: "go on then" was saved as the answer
     reply, _ = s.reply(text)
@@ -1022,6 +1025,7 @@ def test_go_on_to_an_open_question_is_a_nudge_not_its_answer(fake_embedder, text
 
 @pytest.mark.parametrize("text, then", [
     ("go on", "20"), ("go on then", "20"), ("go ahead", "20"), ("fire away", "20"),   # round 42: was the question again
+    ("ok go on", "20"), ("please go on", "20"), ("ok. go on.", "20"),               # round 47: was the question again
     ("what's next?", "19"),                                                            # guard: asks, never agrees
 ])
 def test_go_on_to_a_yes_or_no_question_is_a_yes(fake_embedder, text, then):
@@ -1151,7 +1155,8 @@ def test_number_phrase(reply, number):
     ("about 2 years and a half", "30 months"), ("1.5 years", "18 months"), ("18mo", "18 months"), ("2yrs", "24 months"),
     ("half a year", "6 months"), ("2y", "24 months"),
     ("1-2 years", "24 months"), ("6-12 months", "12 months"), ("1 to 2 years", "24 months"),   # round 39: a dash range was no number
-    ("1,5 years", "18 months"), ("2,5 years", "30 months")])   # round 40: a decimal comma was no number
+    ("1,5 years", "18 months"), ("2,5 years", "30 months"),   # round 40: a decimal comma was no number
+    ("18ish months", "18 months"), ("18 ish months", "18 months"), ("a year ish", "12 months")])   # round 48: "ish" lost the number
 def test_months_thinking_counts_the_answer_in_months(reply, months):
     from core.buy_mode.script_engine.words.fill import number_phrase
     assert number_phrase(reply, CFG["number_blanks"]["months_thinking"], CFG) == months
@@ -1246,9 +1251,8 @@ def test_echo_phrase_fixes_typos(reply, phrase):
     ("okk", "ok"),   # round 44 callers: a held last letter on a filler word was saved as the answer
     ("Yess", "yes"),
     ("boss", "boss"),   # guard: only a filler word is cut
-    ("what would I do? quit", "what would I do? quit my job"),   # round 45 callers: "quit" after their own question ended the call
-    ("what? y", "what? yes"),
-    ("quit? no", "quit? no"),   # guard: only the part after the question
+    ('"ok"', "ok"),   # round 47 callers: the whole reply in quotes got "let me put it another way"
+    ('he said "quit"', 'he said "quit"'),   # guard: only quotes round the whole reply
     ("we're fine", "we're fine"),   # round 46 callers: "were fine" at payment got "Welcome aboard"
     ("they'd quit", "they'd quit"),   # a word typed with its apostrophe is never a typo
     ("💳", "card"),   # round 44 callers: said nothing at payment

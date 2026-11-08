@@ -583,9 +583,9 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("a million, jk, 2k", "2k", ""),   # round 26 callers: "jk" between two answers takes the first back
     ("buy a yacht obviously, lol no, pay rent", "pay rent", ""),
     ("jk lol", "jk", ""),   # with nothing after it, nothing is taken back ("lol" at the end is its own part, as in "jk, lol")
-    ("I guess my car loan?", "I guess my car loan?", ""),   # round 26 callers: unsure, not asking ("I'll find out")
+    ("I guess my car loan?", "I guess my car loan", ""),   # round 26 callers: unsure, not asking ("I'll find out")
     ("lol, probably like 2k?", "probably like 2k", ""),
-    ("maybe a year?", "maybe a year?", ""),
+    ("maybe a year?", "maybe a year", ""),
     ("is it a year?", "", "is it a year?"),   # a question still asks
     ("well, to be honest with you, more money", "more money", ""),   # round 27 callers: was said back whole
     ("more money, well, more time really", "more time really", ""),   # "well" with a break takes back
@@ -1299,6 +1299,60 @@ def test_a_comma_with_no_space_breaks_but_never_inside_a_number(text, parts):
     from core.buy_mode.script_engine.method import load_common_sense
     reply = Reader(CFG, load_common_sense().nudges, lambda part: False).read(text)
     assert [p.text for p in reply.parts] == parts
+
+
+@pytest.mark.parametrize("text, parts", [
+    ("yeah. quit.", [("yeah", "tag"), ("quit my job", "said")]),   # round 47 callers: "quit" next to another part ended the call
+    ("quit lol", [("quit my job", "said"), ("lol", "hedge")]),
+    ("what would I do? quit", [("what would I do?", "asks"), ("quit my job", "said")]),   # round 45 callers
+    ("what? y", [("what?", "asks"), ("yes", "said")]),
+    ("quit? no", [("quit?", "rise"), ("no", "said")]),   # guard: only a part said, never one asked
+    ("quit", [("quit", "said")]),                         # guard: alone it is still leaving
+])
+def test_a_short_form_next_to_another_part_is_its_word(text, parts):
+    from core.buy_mode.script_engine.hear.reply import Reader
+    from core.buy_mode.script_engine.method import load_common_sense
+    reply = Reader(CFG, load_common_sense().nudges, lambda part: False).read(text)
+    assert [(p.text, p.act) for p in reply.parts] == parts
+
+
+@pytest.mark.parametrize("text, parts", [
+    ("yeah, ok", [("yeah", "said"), ("ok", "said")]),   # round 47 callers: "yeah" was left out, so "ok" alone was unclear
+    ("yeah. ok.", [("yeah", "said"), ("ok", "said")]),
+    ("yeah, my boss", [("yeah", "tag"), ("my boss", "said")]),   # guard: beside content it is still talk
+])
+def test_a_tag_with_no_content_beside_it_is_the_reply(text, parts):
+    from core.buy_mode.script_engine.hear.reply import Reader
+    from core.buy_mode.script_engine.method import load_common_sense
+    reply = Reader(CFG, load_common_sense().nudges, lambda part: False).read(text)
+    assert [(p.text, p.act) for p in reply.parts] == parts
+
+
+@pytest.mark.parametrize("text, said", [
+    ("maybe money?", "maybe money"),   # round 48 callers: a "?" on a guess was asked "What do you mean by money?"
+    ("maybe money? or time?", "maybe money"),   # guard: parts left out are joined as before
+    ("what's money?", ""),   # guard: a question is still asked, never said
+])
+def test_a_question_mark_on_a_said_reply_is_not_kept(text, said):
+    from core.buy_mode.script_engine.hear.reply import Reader
+    from core.buy_mode.script_engine.method import load_common_sense
+    assert Reader(CFG, load_common_sense().nudges, lambda part: False).read(text).said == said
+
+
+def test_a_question_beside_what_they_said_keeps_its_question_mark():
+    from core.buy_mode.script_engine.hear.reply import Reader
+    from core.buy_mode.script_engine.method import load_common_sense
+    assert Reader(CFG, load_common_sense().nudges, lambda part: False).read("money, why?").meant == "money, why?"   # guard: round 48
+
+
+@pytest.mark.parametrize("text, meant", [
+    ("quit, obviously, like everyone", "quit my job, obviously"),   # round 47 callers: heard as who they want to be
+    ("I don't want to be like everyone else", "I don't want to be like everyone else"),   # guard: inside the part it is theirs
+])
+def test_like_everyone_after_the_answer_is_a_tag(text, meant):
+    from core.buy_mode.script_engine.hear.reply import Reader
+    from core.buy_mode.script_engine.method import load_common_sense
+    assert Reader(CFG, load_common_sense().nudges, lambda part: False).read(text).meant == meant
 
 
 @pytest.mark.parametrize("said, step, slots", [

@@ -50,6 +50,7 @@ class Ear:
         self.reader = Reader(cfg, sense.nudges, shrugs.hedges)
         self._breaks = break_pattern(cfg)
         self._nudge_yes = {" ".join(tokenize(p)) for p in cfg["nudge_yes"]}
+        self._nudge_leads = frozenset(cfg["nudge_leads"])
         self._captures = {}  # slot: the first step that saves it
         for s in method.steps.values():
             if s.capture:
@@ -59,7 +60,8 @@ class Ear:
         step = self.method.steps[state.step]
         reply = self._unecho(self.reader.read(text), state).settle(lambda part: self._rises(part, step))
         if reply.nudged and not tokenize(reply.unnudged):
-            if " ".join(tokenize(text)) in self._nudge_yes and self.method.steps[state.step].go_on_is_yes:
+            words = list(dropwhile(self._nudge_leads.__contains__, tokenize(text)))  # round 47: "ok go on" was asked again
+            if " ".join(words) in self._nudge_yes and self.method.steps[state.step].go_on_is_yes:
                 return self.hear("yes", state, opened)  # round 42: "go on" to "jumping in?" lets us go on: a yes
             return Verdict("nudge", text=text)  # "what's next?": no answer
         fixed, rest = self._correction(text, state)

@@ -20,7 +20,7 @@ from dataclasses import dataclass, replace
 
 from core.buy_mode.script_engine.config import plain_words
 from core.infra.utils import opens_question, tokenize
-from core.buy_mode.script_engine.words.fill import number_phrase
+from core.buy_mode.script_engine.words.fill import number_phrase, short_form
 
 
 @dataclass(frozen=True)
@@ -43,8 +43,10 @@ class Reply:
 
     def _joined(self, acts):
         kept = [p for p in self.parts if p.act in acts]
-        if len(kept) == len(self.parts):
-            return self.unnudged  # nothing left out: the reply as typed, never re-punctuated
+        if len(kept) == len(self.parts):  # nothing left out: the reply as typed, never re-punctuated
+            if all(p.act == "said" for p in kept):  # round 48: "maybe money?" got "What do you mean by money?";
+                return self.unnudged.rstrip(" ?")     # a "?" on what they said goes, as when parts are joined
+            return self.unnudged
         return ", ".join(p.text.rstrip("?").strip() if p.act == "said" else p.text for p in kept)
 
     @property
@@ -168,9 +170,13 @@ class Reader:
         for part in cut:
             part, led = self._unlead(part)
             act = "asks" if led else self._act(part, len(cut) > 1)
+            if act == "said" and len(cut) > 1:  # round 47: "yeah. quit." and "quit lol" were "quit" the call
+                part = short_form(part, self._cfg) or part
             parts.append(part)
             unsure = act == "rise" and (acts[-1:] == ["hedge"] or self._unsure.match(part))
             acts.append("said" if unsure else act)  # "lol idk, money?", "I guess my car loan?": unsure, not asking
+        if len(cut) > 1 and set(tokenize(rest)) <= self._plain:  # round 47: "yeah, ok" lost its "yeah" and was unclear;
+            acts = ["said" if a == "tag" else a for a in acts]    # with no content beside it, a tag is the reply
         return Reply(text, rest, nudged, tuple(map(Part, parts, acts)))
 
     def _unlead(self, part):

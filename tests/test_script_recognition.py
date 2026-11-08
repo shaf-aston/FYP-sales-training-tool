@@ -953,6 +953,25 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("04", 0, (), "time", "05", None),
     ("04", 0, (), "how's your day going", "04", "Ha, all good here"),   # guard: still small talk
     ("01", 0, (), "you watching the football later?", "01", "Ha, all good here"),   # guard
+    # round 47
+    ("goal_practical", 0, (), "yeah. quit.", "goal_practical", "What would that actually change"),   # was "quit" the call
+    ("goal_practical", 0, (), "quit lol", "goal_practical", "What would that actually change"),
+    ("05", 0, (), "oh sure", "05", None),   # was saved as the reason
+    ("05", 0, (), "please go on", "06", "Sure."),
+    ("05", 0, (), "oh my boss", "06", None),   # guard
+    ("19", 0, (), "ok go on", "20", "What makes you say that?"),   # was asked again
+    ("goal_practical", 0, (), "quit, obviously, like everyone", "goal_practical", "What would that actually change"),   # was heard as who they want to be
+    ("goal_practical", 0, (), "I don't want to be like everyone else", "02", None),   # guard
+    ("18", 0, (), '"ok"', "18", "Put simply"),   # was "let me put it another way"
+    ("18", 0, (), "yeah, ok", "19", None),   # was "Put simply": the "yeah" was left out
+    ("willing", 0, (), "yeah. ok.", "willing_check", None),   # was unclear, so the check was skipped
+    # round 48
+    ("01", 0, (), "maybe money?", "goal_practical", None),   # was "What do you mean by money?"
+    ("goal_practical", 0, (), "maybe quit?", "goal_practical", "What would that actually change"),   # was skipped to who they want to be
+    ("01", 0, (), "money?", "01", "Fair point"),   # guard: a bare word asked back is still a question
+    ("05", 0, (), "okey-dokey", "05", None),   # was saved as the reason
+    ("03", 0, (), "18ish months", "04", "18 months... Damn."),   # the number was lost
+    ("03", 0, (), "eighteen-ish months", "04", "18 months... Damn."),
 ]
 
 
