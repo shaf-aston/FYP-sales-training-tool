@@ -659,6 +659,9 @@ def test_whats_next_asks_no_ai(fake_embedder):
     ("money needless to say", "money"), ("money believe it or not", "money"), ("money and all", "money"), ("money as such", "money"), ("2k let's say", "2k"), ("quit lets say", "quit"),
     ("money on the whole", "money"), ("free for the most part", "free"), ("money all things considered", "money"), ("quit at any rate", "quit"), ("money first and foremost", "money"), ("money for starters", "money"),  # round 69: "with money to some extent?"
     ("free deep down", "free"), ("money to some extent", "money"), ("money as I see it", "money"), ("free as far as I know", "free"), ("money when all is said and done", "money"), ("more money admittedly", "more money"),
+    ("money in any case", "money"), ("free simply put", "free"), ("money as a matter of fact", "money"), ("free in truth", "free"), ("money on balance", "money"), ("money in theory", "money"),  # round 70: "with money in any case?"
+    ("quit in practice", "quit"), ("money at a guess", "money"), ("money presumably", "money"), ("free as it happens", "free"), ("money funnily enough", "money"), ("money by the way", "money"),
+    ("money in fact", "money"), ("money apparently", "money"), ("money btw", "money"), ("more money i'd guess", "more money"), ("2k if that", "2k"), ("a year at best", "a year"), ("a year at worst", "a year"),
     ("a year innit", "a year"),
     ("money for me personally", "money"), ("free if that make sense", "free"), ("2k and stuff like that", "2k"), ("more money or something like that", "more money"),  # round 58 mutation: no row had these
     ("money anyways", "money"), ("money mostly", "money"), ("money ideally", "money"), ("money more or less", "money"), ("money highkey", "money"), ("money that kind of thing", "money"), ("money sort of thing", "money"), ("money that sort of thing", "money"), ("money that type of thing", "money"),   # round 65 mutation: round 59-62 echo ends no row had

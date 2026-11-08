@@ -1218,6 +1218,13 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("18", 0, (), "to some extent", "18", "Put simply"), ("01", 0, (), "at any rate", "01", "What are you actually hoping"),   # were "let me put it another way" and a goal
     ("18", 0, (), "roger that", "19", None), ("19", 0, (), "deal", "20", None),   # were unclear
     ("18", 0, (), "righto", "19", None), ("19", 0, (), "indeed", "20", None), ("19", 0, (), "on the whole", "19", "Is this something"),   # guard: as before
+    # round 70
+    ("05", 0, (), "if that", "05", "No rush"), ("goal_practical", 0, (), "if that", "goal_practical", "What would that actually change"),   # were "let me say that again" at every step: the call never ended
+    ("18", 0, (), "on balance", "18", "Put simply"), ("18", 0, (), "in any case", "18", "Put simply"),   # were "take your time" and "let me put it another way"
+    ("05", 0, (), "in any case", "05", "No rush"), ("goal_practical", 0, (), "as a matter of fact", "goal_practical", "What would that actually change"),   # were saved as the answer
+    ("05", 0, (), "sounds good", "05", "No rush"), ("05", 0, (), "you bet", "05", "No rush"),   # were saved as the reason
+    ("19", 0, (), "works for me", "20", None), ("18", 0, (), "you bet", "19", None),   # were a scam worry and unclear
+    ("18", 0, (), "sounds good", "19", None), ("18", 0, (), "simply put", "19", None), ("02", 0, (), "2k if that", "03", None),   # guard: as before
 ]
 
 
