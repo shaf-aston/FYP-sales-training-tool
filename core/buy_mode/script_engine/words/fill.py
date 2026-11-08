@@ -21,6 +21,7 @@ EMPHASIS = re.compile(r"(?<!\w)([*_`]+)(?=\S)([^*_`\n]+?)(?<=\S)\1(?!\w)")  # "*
 STRETCHED = re.compile(r"\w*([^\W\d_])\1\1\w*")  # "moneyyy": a letter three times or more in one word; "100000" stays
 SLASHED = re.compile(r"(?<![\w./:-])[^\W\d_]{2,}(?:\s*/\s*[^\W\d_]{2,})+(?![\w./:])")  # "money/time": a choice, not a link or "km/h"
 DECIMAL_COMMA = re.compile(r"\d+,\d{1,2}")  # "1,5 years": a comma before one or two digits is a decimal point ("2,000" keeps three)
+ISH = re.compile(r"\b([^\W_]+?)(-?)ish\b", re.IGNORECASE)  # "a yearish", "money-ish": roughly, not a word
 STRUCK = re.compile(r"(~+)(?=\S)[^~\n]+?(?<=\S)\1\s*")  # "~a year~ two years": taken back as they typed it
 SENTENCE_END = re.compile(r"[.!?]+\s+|\s*\n\s*|(?:^|\s)(?:\d{1,2}[.)]|[-*•])\s+(?=[^\W\d])")  # "more money. Mostly for my kids": "2.5k" and "5k." stay whole
 # A new line or a list mark ("1. more money 2. more time", "- pay rent") ends a sentence too: whole calls, "with 1?"
@@ -81,12 +82,26 @@ def fix_typos(text, vocab, cfg):
     word = text.rstrip("?!.").lower()
     if word in cfg["short_replies"]:
         return cfg["short_replies"][word] + text[len(word):]
+    head, _, rest = word.partition(" ")
+    if head.strip(",") in cfg["filler_words"] and rest in cfg["short_replies"]:  # round 41: "ok I understand"
+        return text[:len(word) - len(rest)] + cfg["short_replies"][rest] + text[len(word):]
     text = MONEY_SIGNS.sub(cfg["money_signs_as"], text)  # "more £££" -> "more money": round 28, said back as "with more?"
     text = _as_words(text, cfg)  # round 31: "💰💰💰" said nothing, "I want to by a house" was said back as typed
     text = STRETCHED.sub(lambda m: unstretch(m.group(0), vocab, cfg), text)  # round 32: "a yearrr" was not a time
     text = EMPHASIS.sub(r"\2", STRUCK.sub("", text))  # round 30: "with more?", and "~a year~ two years" was a year
     text = SLASHED.sub(lambda m: re.sub(r"\s*/\s*", " or ", m.group()), text)  # round 40: "money/time" was "What do you mean by money time?"
+    text = ISH.sub(lambda m: unish(m, vocab, cfg), text)  # round 41: "a yearish" was no time
     return WORD.sub(lambda m: spell(m.group(0), vocab, cfg), text)
+
+
+def unish(match, vocab, cfg):
+    """"-ish" on a word ("money-ish", "a yearish", "2kish") as its own word, "ish": a real word that ends
+    in it ("English", "finish") stays as typed."""
+    stem, dash = match.group(1), match.group(2)
+    known = vocab | real_words(cfg["spell_real_words"])
+    if dash or (match.group(0).lower() not in known and (stem.lower() in known or any(c.isdigit() for c in stem))):
+        return f"{stem} ish"
+    return match.group(0)
 
 
 def unstretch(word, vocab, cfg):

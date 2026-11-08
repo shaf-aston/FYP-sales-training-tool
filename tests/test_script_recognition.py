@@ -889,6 +889,21 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("04", 0, (), "not having enough time", "05", None),   # was "Fair enough, I'll keep this quick"
     ("04", 0, (), "this is taking forever", "04", "Fair enough, I'll keep this quick."),   # guard: still heard
     ("03", 0, (), "1,5 years", "04", "18 months... Damn."),   # was no number
+    # round 41
+    ("03", 0, (), "if I really think about it, about a year", "04", "12 months... Damn."),   # was "I need to think about it"
+    ("03", 0, (), "a yearish", "04", "12 months... Damn."),   # was missed
+    ("03", 0, (), "about a year-ish", "04", "12 months... Damn."),   # was no number
+    ("03", 0, (), "I need to think about it", "03", "That's fair"),   # guard: still the worry
+    ("01", 0, (), "to be completely honest, more money", "goal_practical", "What are you hoping to achieve with more money?"),   # was "by being completely honest, more money?"
+    ("01", 0, (), "well, to be completely honest with you, I'd say more money", "goal_practical", "What are you hoping to achieve with more money?"),
+    ("01", 0, (), "more money-ish", "goal_practical", "What are you hoping to achieve with more money?"),   # was "with more money-ish?"
+    ("01", 0, (), "I suppose more money would be nice", "goal_practical", "What are you hoping to achieve with more money?"),   # was no goal said back
+    ("01", 0, (), "finish my degree", "goal_practical", "What are you hoping to achieve by being able to finish your degree?"),   # was "with finish your degree?"
+    ("01", 0, (), "open a shop", "goal_practical", None),   # was unclear
+    ("05", 0, (), "ok I understand", "05", "No rush"),   # was saved as the answer
+    ("05", 0, (), "aye", "05", "No rush"),
+    ("05", 0, (), "I see", "05", "No rush"),
+    ("19", 0, (), "aye", "20", None),   # guard: still a yes
 ]
 
 

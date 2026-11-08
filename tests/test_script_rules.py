@@ -612,6 +612,11 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("quit my job, actually quit my job and travel", "quit my job and travel", ""),
     ("yes, sorry the baby was crying", "yes, sorry the baby was crying", ""),   # guard: two kinds, nothing taken back
     ("a year, sorry had to pay for parking", "a year, sorry had to pay for parking", ""),   # guard: no span after
+    ("to be completely honest, more money", "more money", ""),   # round 41: said back as "by being completely honest, more money"
+    ("if I really think about it, about a year", "about a year", ""),   # round 41: heard as "I need to think about it"
+    ("at the end of the day, being my own boss", "being my own boss", ""),
+    ("realistically speaking, about 2k a month", "about 2k a month", ""),
+    ("I really think about it a lot", "I really think about it a lot", ""),   # guard: no break, it is what they said
     ("yes sorry", "yes", ""),   # round 39: an end word that answers nothing is its own part, as "yes, sorry" (was unclear)
     ("more money lol", "more money", ""),
     ("sorry I was driving", "sorry I was driving", ""),   # guard: only at the end

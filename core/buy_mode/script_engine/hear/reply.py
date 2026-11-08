@@ -96,6 +96,7 @@ class Reader:
         self._nudges = [re.compile(rf"(?:^|{r'[^\w\s]' if p in broken else ''}\W)(?:(?:{leads})\W+)?{words}\W*$", re.IGNORECASE)
                         for p, words in ((p, r"\W+".join(map(re.escape, tokenize(p)))) for p in sorted(nudges, key=len, reverse=True))]
         self._tags = {" ".join(tokenize(t)) for t in cfg["filler_tags"]}
+        self._tag_skip = frozenset(cfg["tag_skip"])  # "to be completely honest" is "to be honest"
         self._starts = set(cfg["question_words"]) | set(cfg["closed_question_starts"])
         def any_of(phrases):
             return "|".join(r"\W+".join(map(re.escape, tokenize(b))) for b in sorted(phrases, key=len, reverse=True))
@@ -183,7 +184,7 @@ class Reader:
         return opens_question(part, self.cfg) or (part.rstrip().endswith("?") and bool(said_as & self._starts))
 
     def _act(self, part, several):
-        if " ".join(tokenize(part)) in self._tags:
+        if " ".join(w for w in tokenize(part) if w not in self._tag_skip) in self._tags:
             return "tag"
         if self.asks(part):
             return "asks"

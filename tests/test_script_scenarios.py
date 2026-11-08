@@ -672,6 +672,9 @@ def test_whats_next_asks_no_ai(fake_embedder):
     ("more money, that's it", "more money"),                # round 40: said back as "more money, That's it"
     ("with my kids, more money", None),                     # round 40: was "with with your kids, more money"
     ("more time with my kids", "more time with your kids"),   # guard: "with" later is fine
+    ("I suppose more money would be nice", "more money"),   # round 41: said no goal back
+    ("I guess more money", "more money"),
+    ("more money ish", "more money"),                       # round 41: "more money-ish" was said back with "-ish"
     ("", None),
 ])
 def test_echo_phrase(reply, phrase):
@@ -688,6 +691,8 @@ def test_echo_phrase(reply, phrase):
     ("achieve", False, "achieve"),                      # but never the whole goal
     ("more money Plus more time", False, "more money and more time"),   # a join in any case
     ("time, money", False, "time, money"),              # the comma they put stays
+    ("finish my degree", True, "finish your degree"),   # round 41: was "with finish your degree?"
+    ("open a shop", True, "open a shop"),
 ])
 def test_echo_phrase_shapes_the_goal_for_its_blank(reply, verbs, phrase):
     from core.buy_mode.script_engine.words.fill import echo_phrase
@@ -759,6 +764,41 @@ def test_two_letters_the_wrong_way_round_are_fixed(text, fixed):
     ("y/n", "y/n"),                                  # guard: one-letter pieces are not words
 ])
 def test_a_slash_between_words_reads_as_or(text, read):
+    from core.buy_mode.script_engine.words.fill import fix_typos
+    assert fix_typos(text, frozenset(), CFG) == read
+
+
+@pytest.mark.parametrize("text, read", [
+    ("a yearish", "a year ish"),                     # round 41: was no time
+    ("about a year-ish", "about a year ish"),         # round 41: was no number
+    ("money-ish", "money ish"),                      # round 41: said back as "more money-ish"
+    ("2kish", "2k ish"),
+    ("6ish months", "6 ish months"),
+    ("comfy-ish", "comfy ish"),                      # a dash marks it on any word
+    ("comfyish", "comfyish"),                        # guard: without one, only on a known word or a figure
+    ("English lessons", "English lessons"),          # guard: real words that end in "ish" stay
+    ("finish my degree", "finish my degree"),
+    ("rubbish job", "rubbish job"),
+    ("selfish", "selfish"),
+    ("polish my cv", "polish my cv"),
+])
+def test_ish_on_a_word_is_its_own_word(text, read):
+    from core.buy_mode.script_engine.words.fill import fix_typos
+    assert fix_typos(text, frozenset(), CFG) == read
+
+
+@pytest.mark.parametrize("text, read", [
+    ("ok I understand", "ok ok"),                    # round 41: saved as the answer to an open question
+    ("ok, understood", "ok, ok"),
+    ("I see", "ok"),
+    ("aye", "yes"),                                  # round 41: saved as the answer
+    ("yessir", "yes"),
+    ("yeah y", "yeah yes"),
+    ("ok I see you", "ok I see you"),                # guard: more words after it are theirs
+    ("I see myself in it", "I see myself in it"),
+    ("my job", "my job"),                            # guard: no filler first
+])
+def test_a_short_form_after_a_filler_word_is_its_word(text, read):
     from core.buy_mode.script_engine.words.fill import fix_typos
     assert fix_typos(text, frozenset(), CFG) == read
 
