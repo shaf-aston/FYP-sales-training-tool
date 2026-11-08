@@ -98,7 +98,7 @@ class Reader:
         broken = set(cfg["nudge_after_break"])   # "what happens next?" keeps its "next"; "debit, next" does not
         self._nudges = [re.compile(rf"(?:^|{r'[^\w\s]' if p in broken else ''}\W)(?:(?:{leads})\W+)?{words}\W*$", re.IGNORECASE)
                         for p, words in ((p, r"\W+".join(map(re.escape, tokenize(p)))) for p in sorted(nudges, key=len, reverse=True))]
-        self._tags = {" ".join(tokenize(t)) for t in cfg["filler_tags"]}
+        self._tags = {" ".join(tokenize(t)) for t in [*cfg["filler_tags"], *cfg["end_tags"]]}
         self._tag_skip = frozenset(cfg["tag_skip"])  # "to be completely honest" is "to be honest"
         self._starts = set(cfg["question_words"]) | set(cfg["closed_question_starts"])
         def any_of(phrases):
@@ -113,11 +113,13 @@ class Reader:
         self._blank_end = re.compile(rf"(?<=\w)\s+((?:{any_of(cfg['no_answer_words'])})\W*)$", re.IGNORECASE)
         self._unsure_end = re.compile(rf"(?<=\w)\s+((?:{any_of(cfg['unsure_ends'])})\W*)$", re.IGNORECASE)
         self._plain = plain_words(cfg)
+        self._tag_end = re.compile(rf"(?<=\w)\s+(?:{any_of(cfg['end_tags'])})\W*$", re.IGNORECASE)
         self._unsure = re.compile(rf"^\W*(?:{any_of(cfg['unsure_leads'])})\b", re.IGNORECASE)
         self._aside = re.compile(rf"^\W*(?:{any_of(cfg['aside_starts'])})\b", re.IGNORECASE)
         self._ask_lead = re.compile(rf"^\W*(?:{any_of(cfg['ask_leads'])})\b\W*", re.IGNORECASE)
         flips = "|".join(rf"{re.escape(a)}\W+(?={re.escape(b)}\s*(?:[,;.!?]|$))" for a, b in map(tokenize, cfg["flip_leads"]))
         self._flip = re.compile(rf"^\W*(?:{flips})", re.IGNORECASE)  # "no yeah" is a yes, "yeah no" a no: the last word counts
+        self._filler_lead = re.compile(rf"^\W*(?:{any_of(cfg['filler_leads'])})\b\W*", re.IGNORECASE)
         self._answer_lead = re.compile(rf"^\W*(?:{any_of(cfg['answer_leads'])})\b\W*", re.IGNORECASE)
         self._take_back = re.compile(rf"(?:^|[,;.!?]\s*)(?:(?:{words})\b[\s,;.!-]*|(?:{word})\s*[,;.!-][\s,;.!-]*)(?=\w)"
                                      rf"|(?<=\w){not_mid}[,;.!?]\s*(?:{mid})\s*[,;.!-][\s,;.!-]*(?=\w)", re.IGNORECASE)
@@ -169,10 +171,14 @@ class Reader:
         end = self._unsure_end.search(rest)  # round 44: "money I guess" is "money, I guess"; "yeah I guess", "stuff I guess" stay whole
         if end and set(tokenize(rest[:end.start()])) - self._plain:
             rest = f"{rest[:end.start()]}, {end.group(1)}"
+        rest = self._tag_end.sub("", rest)  # round 53: "ok if it works", "free tbh" were saved whole
         rest = self._flip.sub("", rest)  # round 28 callers: "no yeah" was heard as backing out
         lead = self._answer_lead.match(rest)
         if lead and tokenize(rest[lead.end():]):  # "is it ok to say quit my job?": the answer, its "?" asks leave
             rest = rest[lead.end():].rstrip(" ?")
+        lead = self._filler_lead.match(rest)
+        if lead and tokenize(rest[lead.end():]) and not self.asks(rest[lead.end():]):  # round 53: "like money" got
+            rest = rest[lead.end():]  # "let me put it another way"; "like what?" still asks
         while (back := self._take_back.search(rest)) or (kept := self._fixed_in(rest)) is not None:
             rest = self._with_unit(rest[:back.start()], rest[back.end():]) if back else kept
             # "3k, no wait, more like 4k" -> "more like 4k": they took the first part back; cut again so

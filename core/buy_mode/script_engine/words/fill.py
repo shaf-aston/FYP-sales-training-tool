@@ -24,6 +24,7 @@ SLASHED = re.compile(r"(?<![\w./:-])[^\W\d_]{2,}(?:\s*/\s*[^\W\d_]{2,})+(?![\w./
 DECIMAL_COMMA = re.compile(r"\d+,\d{1,2}")  # "1,5 years": a comma before one or two digits is a decimal point ("2,000" keeps three)
 ISH = re.compile(r"\b([^\W_]+?)(-?)ish\b", re.IGNORECASE)  # "a yearish", "money-ish": roughly, not a word
 QUOTED = re.compile(r'^\s*["\u201c\u201d](.+)["\u201c\u201d]\s*$')  # '"ok"': the whole reply in quotes
+HASHED = re.compile(r"#+(?=\d*[^\W\d_])")  # "#money", "#2k" -> "money", "2k" (round 53: saved as typed); "#1" stays
 STRUCK = re.compile(r"(~+)(?=\S)[^~\n]+?(?<=\S)\1\s*")  # "~a year~ two years": taken back as they typed it
 SENTENCE_END = re.compile(r"[.!?]+\s+|\s*\n\s*|(?:^|\s)(?:\d{1,2}[.)]|[-*•])\s+(?=[^\W\d])")  # "more money. Mostly for my kids": "2.5k" and "5k." stay whole
 # A new line or a list mark ("1. more money 2. more time", "- pay rent") ends a sentence too: whole calls, "with 1?"
@@ -100,7 +101,7 @@ def fix_typos(text, vocab, cfg):
     text = re.sub(rf"(?<!\w)(?:{sure})(?!\w)(?!\s+of\b)", cfg["sure_marks_as"], text, flags=re.IGNORECASE)
     text = _as_words(text, cfg)  # round 31: "💰💰💰" said nothing, "I want to by a house" was said back as typed
     text = STRETCHED.sub(lambda m: unstretch(m.group(0), vocab, cfg), text)  # round 32: "a yearrr" was not a time
-    text = EMPHASIS.sub(r"\2", STRUCK.sub("", text))  # round 30: "with more?", and "~a year~ two years" was a year
+    text = HASHED.sub("", EMPHASIS.sub(r"\2", STRUCK.sub("", text)))  # round 30: "with more?", and "~a year~ two years" was a year
     text = SLASHED.sub(lambda m: re.sub(r"\s*/\s*", " or ", m.group()), text)  # round 40: "money/time" was "What do you mean by money time?"
     text = ISH.sub(lambda m: unish(m, vocab, cfg), text)  # round 41: "a yearish" was no time
     text = WORD.sub(lambda m: unheld(m.group(0), cfg), text)  # round 44: "okk" was saved as the answer

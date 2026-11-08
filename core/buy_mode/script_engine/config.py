@@ -15,7 +15,7 @@ TYPES = {
     "ai_retries": int, "ai_rest_seconds": NUMBER, "ai_fail_limit": int, "ai_timeout_seconds": NUMBER,
     "ai_workers": int, "judge_examples": int, "judge_tokens": int, "answer_tokens": int, "listen_tokens": int,
     "ack_tokens": int, "ack_retries": int, "ack_max_words": int, "probe_max_words": int, "memory_chars": int,
-    "log_text_chars": int, "rise_answer_words": int, "reason_starts": list, "reason_backs": list, "amount_per": dict,
+    "log_text_chars": int, "rise_answer_words": int, "reason_starts": list, "reason_backs": list, "amount_per": dict, "filler_leads": list, "end_tags": list,
     "ack": bool, "listen": bool, "log_uncovered": bool,
     "stop_words": list, "side_words": list, "filler_words": list, "no_answer_words": list, "no_words": list, "no_polite_words": list, "filler_tags": list, "tag_skip": list, "question_words": list, "question_subjects": list, "question_starts": list, "closed_question_starts": list, "question_lead_words": list,
     "bad_phrase_starts": list, "echo_not_with": list, "verb_goal_starts": list, "verb_goal_leads": list, "be_goal_words": list, "echo_drop_starts": list, "echo_drop_ends": list, "echo_cut_at": list, "echo_want_words": list, "echo_want_within": int, "echo_cleft_starts": list, "echo_cleft_verbs": list, "echo_reason_starts": list, "money_signs_as": str, "sure_marks": list, "sure_marks_as": str, "emoji_words": dict, "word_swaps": dict, "flip_leads": list, "echo_want_objects": list, "form_joins": dict, "echo_drop_words": list, "echo_drop_verbs": list, "echo_list_joins": list, "echo_drop_verbs_not_before": list,

@@ -1032,6 +1032,21 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("19", 0, (), "no because I can't afford it", "m_funded", None),   # guard: a reason after a no is still the worry
     ("19", 0, (), "yes but I can't afford it", "m_funded", None),   # guard: so is one after "but"
     ("willing", 0, (), "n because I like my job", "11", None),   # guard: a short form of no stays a no
+    # round 53
+    ("20", 0, (), "fair enough", "20", None),   # was heard as paying at "Credit or debit?": "Welcome aboard"
+    ("22", 0, (), "fair enough", "22", "Which works better for you, credit or debit?"),   # was "Welcome aboard"
+    ("22", 0, (), "debit tbh", "end", None),   # guard: a way to pay still ends the call
+    ("22", 0, (), "#debit", "end", None),
+    ("05", 0, (), "ok if it works", "05", None),   # was saved as the answer
+    ("05", 0, (), "ok damn", "05", None),   # was saved as the answer
+    ("05", 0, (), "shore", "05", None),   # was saved as the answer
+    ("18", 0, (), "shore", "19", "Do you see yourself jumping in?"),   # was unclear
+    ("18", 0, (), "#ok", "19", "Do you see yourself jumping in?"),   # was unclear
+    ("18", 0, (), "like ok", "19", "Do you see yourself jumping in?"),   # was "let me put it another way"
+    ("01", 0, (), "like money", "goal_practical", None),   # was "let me put it another way"
+    ("01", 0, (), "like what?", "01", "Fair point, let me put it another way."),   # guard: still asks what we mean
+    ("01", 0, (), "to be fair money", "goal_practical", "What are you hoping that would get you?"),   # was "...by being fair money?"
+    ("01", 0, (), "free tbh", "goal_practical", "What are you hoping to achieve by being free?"),   # guard: said back without its tag, as before
 ]
 
 

@@ -541,7 +541,9 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("nothing, why do you ask?", "nothing", "why do you ask?"),
     ("two years, and what's the price", "two years", "what's the price"),
     ("lol idk, money?", "money", ""),   # a "?" after a hedge is an unsure answer
-    ("time and money tbh", "time and money tbh", ""),   # nothing left out: the reply as typed
+    ("time and money tbh", "time and money", ""),   # round 53: a tag at the end is cut, comma or not
+    ("time and money", "time and money", ""),   # nothing else left out: the reply as typed
+    ("yeah right", "yeah right", ""),   # a tag of plain words stays: "yeah right" is no "yeah"
     ("credit, what's next?", "credit", ""),   # the nudge is cut off its end
     ("credit, is that ok?", "credit", ""),   # round 25 replay: a check-in tag is talk, not a question
     ("is that ok?", "", ""),
@@ -642,6 +644,16 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("no idea, money I guess", "no idea, money", ""),
     ("yeah I guess", "yeah I guess", ""),   # guard: only after real words
     ("I guess", "I guess", ""),
+    ("money if possible", "money", ""),   # round 53 callers: a hedge at the end was saved with the answer
+    ("free tbh", "free", ""), ("2k damn it", "2k", ""), ("ok if it works", "okay", ""),
+    ("quit if I can", "quit my job", ""),   # what is left is read like a whole reply
+    ("I answered honestly", "I answered honestly", ""),   # guard: a tag that can end what was said needs its comma
+    ("I don't want to be like everyone else", "I don't want to be like everyone else", ""),
+    ("like money", "money", ""),   # round 53 callers: "like" opening a reply got "let me put it another way"
+    ("like", "like", ""),   # guard: a filler lead with nothing after it is the reply
+    ("quit goddamn it", "quit goddamn it", ""),   # guard: an end tag needs a space before it, never "quit god"
+    ("like 2k", "2k", ""),
+    ("like what?", "", "like what?"),   # guard: before a question it is kept, so it still asks
 ])
 def test_a_reply_is_read_once_into_what_it_says_and_what_it_asks(text, said, asked):
     from core.buy_mode.script_engine.hear.reply import Reader

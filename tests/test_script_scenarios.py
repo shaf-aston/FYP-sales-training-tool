@@ -1283,6 +1283,10 @@ def test_echo_phrase_fixes_typos(reply, phrase):
     ("they'd quit", "they'd quit"),   # a word typed with its apostrophe is never a typo
     ("💳", "card"),   # round 44 callers: said nothing at payment
     ("🏖️ with family", "a holiday with family"),
+    ("#money", "money"), ("#2k", "2k"), ("##money", "money"), ("#ok", "okay"),   # round 53 callers: saved as typed
+    ("#1 priority", "#1 priority"), ("C#", "C#"),   # guard: a bare number keeps its "#", and so does a word it ends
+    ("fair enough", "okay"), ("that's fair", "okay"),   # round 53 callers: "fair enough" was heard as paying
+    ("shore", "sure"),   # round 53 callers: voice to text, unclear everywhere
 ])
 def test_fix_typos_keeps_real_words(text, fixed):
     from core.buy_mode.script_engine.words.fill import fix_typos
