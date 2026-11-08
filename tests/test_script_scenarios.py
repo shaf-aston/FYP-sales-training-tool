@@ -647,6 +647,8 @@ def test_whats_next_asks_no_ai(fake_embedder):
     ("money basically", "money"), ("free obviously", "free"),  # guard: these were already cut
     ("money kind of thing", "money"), ("2k type thing", "2k"), ("free as well", "free"), ("my boss or anything", "your boss"),  # round 61: "with money kind of thing?"
     ("money to start", "money"), ("free right now", "free"), ("more money these days", "more money"), ("quit generally", "quit"),
+    ("money etc", "money"), ("2k and whatnot", "2k"), ("free no doubt", "free"), ("my boss at the moment", "your boss"),  # round 62: "with money etc?"
+    ("money frankly", "money"), ("free bruh", "free"), ("more money and so on", "more money"), ("quit or thereabouts", "quit"),
     ("a year innit", "a year"),
     ("well paid job", "well paid job"),  # round 54: was "paid job"
     ("so well off", "well off"),

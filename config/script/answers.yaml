@@ -17,6 +17,8 @@ jump_in:   # a yes to "Do you see yourself jumping in?"
   - "my husband is on board with it"   # draft
   - "I guess so"   # draft: round 38 callers, a soft yes went into the not-yet talk; "What makes you say that?" lets them say why
   - "I suppose so"   # draft
+  - "no doubt"   # draft: round 62 callers, "no doubt" here was heard as not yet (nearest "I doubt it"); a yes, the same as at "Does that make sense?"
+  - "yes, no doubt about it"   # draft
 pay_now:   # a yes that is already about paying: the payment question next, not "What makes you say that?"
   - "how do I pay"   # draft
   - "credit"   # draft

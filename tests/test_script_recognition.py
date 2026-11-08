@@ -1146,6 +1146,19 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("01", 0, (), "money right now", "goal_practical", "What are you hoping that would get you?"),   # was "...with money right now?"
     ("01", 0, (), "true freedom", "goal_practical", "What are you hoping to achieve with true freedom?"),   # guard: "true" is theirs
     ("willing", 0, (), "true", "willing_check", None),   # guard: still a yes
+    # round 62
+    ("05", 0, (), "ok etc", "05", "No rush"),   # was saved as the answer
+    ("05", 0, (), "ok innit", "05", "No rush"),   # was saved as the answer
+    ("05", 0, (), "frankly ok", "05", "No rush"),   # was saved as the answer
+    ("05", 0, (), "bruh ok", "05", "No rush"),   # was saved as the answer
+    ("05", 0, (), "ok and whatnot", "05", "No rush"),   # was saved as the answer
+    ("18", 0, (), "ok and so on", "19", "Do you see yourself"),   # was unclear
+    ("18", 0, (), "ok etc", "19", "Do you see yourself"),   # was "let me put it another way"
+    ("01", 0, (), "money etc", "goal_practical", "What are you hoping that would get you?"),   # was "...with money etc?"
+    ("01", 0, (), "frankly money", "goal_practical", "What are you hoping that would get you?"),   # was "...with frankly money?"
+    ("01", 0, (), "money no doubt", "goal_practical", "What are you hoping that would get you?"),   # was "...with money no doubt?"
+    ("19", 0, (), "no doubt", "20", "What makes you say that?"),   # was heard as not yet
+    ("19", 0, (), "I doubt it", "19", None),   # guard: still not yet
 ]
 
 
