@@ -1210,6 +1210,7 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("01", 0, (), "as such", "01", "What are you actually hoping"), ("01", 0, (), "all in all", "01", "What are you actually hoping"),
     ("05", 0, (), "let's say", "05", "No rush"), ("05", 0, (), "needless to say", "05", "No rush"),   # were "let me say that again" and saved as the answer
     ("18", 0, (), "lovely", "19", None),   # was unclear
+    ("05", 0, (), "correct", "05", "No rush"),   # round 68 mutation: was saved as the answer; "that's right" already said nothing
     ("18", 0, (), "by and large, the money", "m_funded", None), ("19", 0, (), "correct", "20", None), ("03", 0, (), "let's say a year", "04", None),   # guard: these still say it
     # round 69
     ("goal_practical", 0, (), "to some extent", "goal_practical", "What would that actually change"), ("goal_practical", 0, (), "on the whole", "goal_practical", "What would that actually change"),   # were "let me put it another way" and saved
