@@ -16,6 +16,8 @@ WORD = re.compile(r"[$£€]?\d+(?:[.,]\d+)*%?[A-Za-z0-9'-]*|[A-Za-z0-9'-]+")  #
 FIGURE = re.compile(r"\d+(?:\.\d+)?")
 GLUED = re.compile(r"(\d)([A-Za-z])")  # a number stuck to its unit: "1yr", "18mo"
 MONEY_SIGNS = re.compile(r"(?<![\w£$€])[£$€]{2,}(?![\w£$€])")  # "£££", "$$$": a word for money, never a number
+EMPHASIS = re.compile(r"(?<!\w)([*_`]+)(?=\S)([^*_`\n]+?)(?<=\S)\1(?!\w)")  # "**more money**": a pair, so "f***ing" stays
+STRUCK = re.compile(r"(~+)(?=\S)[^~\n]+?(?<=\S)\1\s*")  # "~a year~ two years": taken back as they typed it
 SENTENCE_END = re.compile(r"[.!?]+\s+|\s*\n\s*|(?:^|\s)(?:\d{1,2}[.)]|[-*•])\s+(?=[^\W\d])")  # "more money. Mostly for my kids": "2.5k" and "5k." stay whole
 # A new line or a list mark ("1. more money 2. more time", "- pay rent") ends a sentence too: whole calls, "with 1?"
 
@@ -72,6 +74,7 @@ def fix_typos(text, vocab, cfg):
     if word in cfg["short_replies"]:
         return cfg["short_replies"][word] + text[len(word):]
     text = MONEY_SIGNS.sub(cfg["money_signs_as"], text)  # "more £££" -> "more money": round 28, said back as "with more?"
+    text = EMPHASIS.sub(r"\2", STRUCK.sub("", text))  # round 30: "with more?", and "~a year~ two years" was a year
     return WORD.sub(lambda m: spell(m.group(0), vocab, cfg), text)
 
 

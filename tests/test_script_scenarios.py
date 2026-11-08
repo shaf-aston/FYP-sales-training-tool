@@ -925,6 +925,12 @@ def test_echo_phrase_fixes_typos(reply, phrase):
     ("more £££", "more money"),   # round 28 callers: "£££" was said back as "more"
     ("$$$ please", "money please"),
     ("£2k", "£2k"),   # guard: one sign before a figure is kept
+    ("**more money**", "more money"),   # round 30 callers: said back as "with more?"
+    ("_more time_ and `2k`", "more time and 2k"),
+    ("~a year~ two years", "two years"),   # round 30 callers: the struck "a year" was heard
+    ("~~2 years~~ 3 years", "3 years"),
+    ("more f***ing money", "more f***ing money"),   # guard: no pair, so a starred swear is left for echo_phrase
+    ("*money", "*money"),   # guard: one star alone is kept
 ])
 def test_fix_typos_keeps_real_words(text, fixed):
     from core.buy_mode.script_engine.words.fill import fix_typos
@@ -1235,6 +1241,7 @@ def test_how_long_needs_a_span_of_time_never_a_sum_of_money(reply, spans):
     ("I never want to be broke", "I never want to be broke"),
     ("my wife and my kids want a house", "my wife and my kids want a house"),   # past `echo_want_within`: kept whole
     ("need more money", "need more money"),   # at the very start it is the goal itself
+    ("my kids want", ""),   # nothing after it: nothing kept, never past the end
 ])
 def test_who_wants_it_is_left_out_near_the_start(reply, rest):
     from core.buy_mode.script_engine.words.fill import WORD, _after_want
@@ -1247,6 +1254,8 @@ def test_who_wants_it_is_left_out_near_the_start(reply, rest):
     ("in 5 years I'd like to be rich", "be rich"),   # round 29 callers: "I'd like" was never matched, the plain line was used
     ("we'd love to travel", "travel"),
     ("my husband wants me to earn more", "earn more"),   # round 29 callers: the plain line was used
+    ("same as everyone, more money", "more money"),   # round 30 callers: said back whole
+    ("the usual, more time", "more time"),
 ])
 def test_echo_phrase_leaves_out_swears_and_who_wants_it(reply, phrase):
     from core.buy_mode.script_engine.words.fill import echo_phrase
@@ -1254,7 +1263,8 @@ def test_echo_phrase_leaves_out_swears_and_who_wants_it(reply, phrase):
 
 
 @pytest.mark.parametrize("text, fixed", [
-    ("deb", "debit"), ("cred", "credit"),   # round 29 callers: "deb" at "Credit or debit?" was heard as a pause
+    ("deb", "debit"), ("cred", "credit"),
+    ("quit", "quit my job"),   # round 30 callers: "quit" alone at a goal step was heard as leaving the call   # round 29 callers: "deb" at "Credit or debit?" was heard as a pause
     ("debt", "debt"), ("deb please", "deb please"),   # guard: only a reply of the short form alone
 ])
 def test_a_short_form_alone_is_its_word(text, fixed):
@@ -1270,3 +1280,4 @@ def test_a_verb_goal_reads_without_being_able_to_be(fake_embedder):
     line = "What are you hoping to achieve {outcome|with $|by being able to $}?"
     assert filler.fill(line, {"outcome": "debt free"}) == "What are you hoping to achieve by being debt free?"
     assert filler.fill(line, {"outcome": "quit my job"}) == "What are you hoping to achieve by being able to quit your job?"
+    assert filler.fill(line, {"outcome": "I want to replace my salary"}) == "What are you hoping to achieve by being able to replace your salary?"   # a verb by what came before it

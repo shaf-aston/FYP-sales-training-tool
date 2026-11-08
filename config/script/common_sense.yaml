@@ -40,7 +40,7 @@ ask_meaning: "What do you mean by {said|$|wanting to $}?"   # draft: the owner's
 nudge:
   draft: true
   reply: "Sure."
-  phrases: ["what's next", "what next", "whats next", "what now", "and then what", "then what", "and then", "go on", "keep going", "what else", "ok and", "and"]
+  phrases: ["what's next", "what next", "whats next", "what now", "and then what", "then what", "and then", "go on", "keep going", "what else", "ok and", "and", "next", "continue", "carry on", "move on"]   # draft (next to move on): round 30 callers, "next" was saved as their goal ("with next?")
 interruptions:
   pause:
     draft: true

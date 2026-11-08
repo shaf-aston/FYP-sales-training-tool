@@ -776,6 +776,15 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("01", 0, (), "in 5 years I'd like to be rich", "goal_practical", "What are you hoping to achieve by being rich?"),   # was the plain line
     ("01", 0, (), "my husband wants me to earn more", "goal_practical", "What are you hoping to achieve by being able to earn more?"),
     ("01", 0, (), "more f***ing money", "goal_practical", "What are you hoping to achieve with more money?"),   # was "with more f ing money?"
+    # round 30
+    ("01", 0, (), "next", "01", "Sure. What are you actually hoping to achieve?"),   # was "with next?"
+    ("goal_practical", 0, (), "continue", "goal_practical", "Sure."),   # was unclear
+    ("01", 0, (), "carry on", "01", "Sure."),
+    ("goal_practical", 0, (), "quit", "goal_practical", None),   # was heard as leaving the call
+    ("goal_practical", 0, (), "bye", "later", None),   # guard: still leaving
+    ("01", 0, (), "**more money**", "goal_practical", "What are you hoping to achieve with more money?"),   # was "with more?"
+    ("03", 0, (), "~a year~ two years", "04", "24 months"),   # was "12 months"
+    ("01", 0, (), "same as everyone, more money", "goal_practical", "What are you hoping to achieve with more money?"),   # was said back whole
 ]
 
 
