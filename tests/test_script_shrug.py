@@ -1,4 +1,6 @@
 """Shrugs: what counts as saying nothing, and when their words are asked about."""
+import pytest
+
 from core.infra.loader import load_yaml
 from core.buy_mode.script_engine.method import load_common_sense, load_method
 from core.buy_mode.script_engine.hear.recognise import Listener
@@ -14,6 +16,14 @@ def shrugs(bow, fill=lambda t, slots: t.replace("{said|$|wanting to $}", slots["
 
 def test_filler_words_say_nothing_on_any_step(fake_embedder):
     assert shrugs(fake_embedder).says_nothing("ok", CAT.steps["01"], asking=False)
+
+
+@pytest.mark.parametrize("said, nothing", [
+    ("same", True), ("the usual", True), ("so basically ok", True), ("hi", True), ("hey, ok", True),   # round 51 callers: saved as the answer at every open step
+    ("hi, more money", False), ("the usual stuff, my mortgage", False),   # guard: real words beside them
+])
+def test_round_51_words_alone_say_nothing(said, nothing, fake_embedder):
+    assert shrugs(fake_embedder).says_nothing(said, CAT.steps["05"], asking=False) == nothing
 
 
 def test_shrug_words_say_nothing_only_where_a_catch_all_would_keep_them(fake_embedder):

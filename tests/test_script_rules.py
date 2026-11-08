@@ -578,6 +578,12 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("a year, no, two", "two year", ""),   # round 50 callers: the bare "two" lost its unit and was missed
     ("3 years, actually, 2", "2 years", ""),
     ("2k, sorry, 3", "3", ""),   # guard: no unit after the first amount, none kept
+    ("not a year, two", "two year", ""),   # round 51 callers: said back as "12 months"
+    ("not 2k, 3k", "3k", ""),
+    ("not my boss, my wife", "my wife", ""),
+    ("not money, time", "not money, time", ""),   # guard: nothing says they are one kind, kept whole
+    ("not really, I'm busy", "not really, I'm busy", ""),   # guard: a no with a reason stays a no
+    ("not sure, a year", "not sure, a year", ""),
     ("is it ok to say?", "", "is it ok to say?"),   # nothing after the lead: a question, as typed
     ("I told you, my job", "my job", ""),   # round 37 callers: heard as "what do you mean?", the job lost
     ("I already told you 2k", "2k", ""),
@@ -1326,8 +1332,8 @@ def test_a_short_form_next_to_another_part_is_its_word(text, parts):
 
 
 @pytest.mark.parametrize("text, parts", [
-    ("yeah, ok", [("yeah", "said"), ("ok", "said")]),   # round 47 callers: "yeah" was left out, so "ok" alone was unclear
-    ("yeah. ok.", [("yeah", "said"), ("ok", "said")]),
+    ("yeah, ok", [("yeah", "said"), ("okay", "said")]),   # round 47 callers: "yeah" was left out, so "ok" alone was unclear
+    ("yeah. ok.", [("yeah", "said"), ("okay", "said")]),
     ("yeah, my boss", [("yeah", "tag"), ("my boss", "said")]),   # guard: beside content it is still talk
 ])
 def test_a_tag_with_no_content_beside_it_is_the_reply(text, parts):

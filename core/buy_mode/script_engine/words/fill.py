@@ -104,7 +104,8 @@ def fix_typos(text, vocab, cfg):
     text = SLASHED.sub(lambda m: re.sub(r"\s*/\s*", " or ", m.group()), text)  # round 40: "money/time" was "What do you mean by money time?"
     text = ISH.sub(lambda m: unish(m, vocab, cfg), text)  # round 41: "a yearish" was no time
     text = WORD.sub(lambda m: unheld(m.group(0), cfg), text)  # round 44: "okk" was saved as the answer
-    return WORD.sub(lambda m: spell(m.group(0), vocab, cfg), text)
+    text = WORD.sub(lambda m: spell(m.group(0), vocab, cfg), text)
+    return short_form(text, cfg) or text  # round 51: "quitt" alone, once spelled, is "quit": not leaving
 
 
 def said_once(words):

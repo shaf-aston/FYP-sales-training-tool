@@ -127,6 +127,7 @@ class Reader:
         self._amount = re.compile(rf"\d\w*|(?:{any_of(cfg['number_words'])})", re.IGNORECASE)
         self._bare = re.compile(rf"\d+(?:[.,]\d+)?|(?:{any_of(cfg['number_words'])})", re.IGNORECASE)  # "2k" has its unit
         self._fix_back = re.compile(rf"(?<=\w){not_mid}[,;.!?]\s*(?:{mid}|{word})\s+(?=\w)", re.IGNORECASE)
+        self._denied = re.compile(rf"^\W*(?:{any_of(cfg['denied_leads'])})\s+(?=\w)", re.IGNORECASE)  # "not a year, two"
         self._cfg = cfg
 
     def _figure(self, text):
@@ -136,15 +137,17 @@ class Reader:
             number_phrase(text, rule, self._cfg) for rule in self._cfg["number_blanks"].values())
 
     def _fixed_in(self, text):
-        """A correction between two answers of one kind ("2k, no 3k", "more time, sorry more money"): the words
-        kept, else None."""
-        back = self._fix_back.search(text)
-        if not back:
+        """A correction between two answers of one kind ("2k, no 3k", "more time, sorry more money", "not 2k,
+        3k"): the words kept, else None."""
+        back, denied = self._fix_back.search(text), self._denied.match(text)
+        cut = clauses(text[denied.end():], self.breaks) if denied else []
+        if not back and len(cut) < 2:
             return None
-        before, new = tokenize(clauses(text[:back.start()], self.breaks)[-1]), text[back.end():].strip()
+        taken = text[:back.start()] if back else cut[0]  # "not a year, two": the year is denied, two is kept
+        before, new = tokenize(clauses(taken, self.breaks)[-1]), text[back.end():].strip() if back else after(text, cut[0])
         if not ((self._figure(" ".join(before)) and self._figure(new)) or before[:1] == tokenize(new)[:1]):
             return None
-        return self._with_unit(text[:back.start()], new)
+        return self._with_unit(taken, new)
 
     def _with_unit(self, taken, new):
         """The words kept after a correction. A bare amount keeps the unit said after the first one: "a year,

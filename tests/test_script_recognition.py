@@ -1001,6 +1001,18 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("22", 0, (), "db", "end", "Perfect."),   # was unclear
     ("19", 0, (), "sorry, y", "20", "What makes you say that?"),   # was asked again: the bare "y" after a cut
     ("19", 0, (), "well, no", "19", None),   # guard: still a no
+    # round 51
+    ("18", 0, (), "ok", "19", "Do you see yourself jumping in?"),   # was unclear: torn between a yes and a no
+    ("18", 0, (), "okk", "19", "Do you see yourself jumping in?"),
+    ("willing", 0, (), "ok", "willing_check", None),   # was "What makes you so different": the check skipped
+    ("goal_practical", 0, (), "quitt", "goal_practical", "What would that actually change for you, day to day?"),   # ended the call
+    ("01", 0, (), "hi, money", "goal_practical", "What are you hoping that would get you?"),   # was "...with hi, money?"
+    ("05", 0, (), "same", "05", None),   # was saved as the answer
+    ("05", 0, (), "the usual", "05", None),
+    ("05", 0, (), "so basically ok", "05", None),
+    ("03", 0, (), "not a year, two", "04", "24 months... Damn."),   # was "12 months"
+    ("03", 0, (), "a whole year", "04", "12 months... Damn."),   # said no number back
+    ("19", 0, (), "not now, maybe later", "m_think_what", None),   # guard: a stall, the denied "now" is not cut off
 ]
 
 

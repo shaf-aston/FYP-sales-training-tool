@@ -809,9 +809,9 @@ def test_ish_on_a_word_is_its_own_word(text, read):
 
 
 @pytest.mark.parametrize("text, read", [
-    ("ok I understand", "ok ok"),                    # round 41: saved as the answer to an open question
-    ("ok, understood", "ok, ok"),
-    ("I see", "ok"),
+    ("ok I understand", "ok okay"),                    # round 41: saved as the answer to an open question
+    ("ok, understood", "ok, okay"),
+    ("I see", "okay"),
     ("aye", "yes"),                                  # round 41: saved as the answer
     ("yessir", "yes"),
     ("yeah y", "yeah yes"),
@@ -1172,7 +1172,8 @@ def test_number_phrase(reply, number):
     ("half a year", "6 months"), ("2y", "24 months"),
     ("1-2 years", "24 months"), ("6-12 months", "12 months"), ("1 to 2 years", "24 months"),   # round 39: a dash range was no number
     ("1,5 years", "18 months"), ("2,5 years", "30 months"),   # round 40: a decimal comma was no number
-    ("18ish months", "18 months"), ("18 ish months", "18 months"), ("a year ish", "12 months")])   # round 48: "ish" lost the number
+    ("18ish months", "18 months"), ("18 ish months", "18 months"), ("a year ish", "12 months"),
+    ("a whole year", "12 months"), ("a good two years", "24 months")])   # round 51: "a whole year" said no number back   # round 48: "ish" lost the number
 def test_months_thinking_counts_the_answer_in_months(reply, months):
     from core.buy_mode.script_engine.words.fill import number_phrase
     assert number_phrase(reply, CFG["number_blanks"]["months_thinking"], CFG) == months
@@ -1264,14 +1265,14 @@ def test_echo_phrase_fixes_typos(reply, phrase):
     ("cos money", "cos money"),   # guard: 3 letters stay ("cost")
     ("u know, more money", "you know, more money"),   # round 38 callers: said back as "with u know, more money?"
     ("my uncle", "my uncle"),   # guard: only "u" alone
-    ("okk", "ok"),   # round 44 callers: a held last letter on a filler word was saved as the answer
+    ("okk", "okay"),   # round 44 callers: a held last letter on a filler word was saved as the answer
     ("Yess", "yes"),
     ("boss", "boss"),   # guard: only a filler word is cut
     ("k tx", "k thanks"), ("k thx", "k thanks"),   # round 49 callers: "k tx" was saved as the answer
     ("taxes", "taxes"),   # guard: only the whole word
     ("mo money", "more money"), ("quit 100%", "quit definitely"), ("100 percent yes", "definitely yes"),   # round 49 callers
     ("100% of my salary", "100% of my salary"),   # guard: a share of something is an amount
-    ('"ok"', "ok"),   # round 47 callers: the whole reply in quotes got "let me put it another way"
+    ('"ok"', "okay"),   # round 47 callers: the whole reply in quotes got "let me put it another way"
     ('he said "quit"', 'he said "quit"'),   # guard: only quotes round the whole reply
     ("we're fine", "we're fine"),   # round 46 callers: "were fine" at payment got "Welcome aboard"
     ("they'd quit", "they'd quit"),   # a word typed with its apostrophe is never a typo
@@ -1564,7 +1565,7 @@ def test_a_yes_or_no_question_asked_again_never_asks_for_a_rough_idea(fake_embed
 @pytest.mark.parametrize("text, fixed", [
     ("y", "yes"), ("Y?", "yes?"), ("n", "no"), ("yh", "yeah"),
     ("2 y", "2 y"), ("y not", "y not"),   # inside a reply "y" is kept: it is more often a year ("2 y")
-    (None, ""), (" k ", "k"),
+    (None, ""), (" k ", "okay"),
 ])
 def test_a_one_letter_reply_is_its_word(text, fixed):
     """Round 21: "y" to "Do you see yourself jumping in?" was not a yes."""
@@ -1607,6 +1608,7 @@ def test_who_wants_it_is_left_out_near_the_start(reply, rest):
     ("my husband wants me to earn more", "earn more"),   # round 29 callers: the plain line was used
     ("same as everyone, more money", "more money"),   # round 30 callers: said back whole
     ("the usual, more time", "more time"),
+    ("hi, more money", "more money"), ("hey, more time", "more time"),   # round 51 callers: said back as "with hi, money?"
     ("more money, thank you", "more money"),   # round 31 callers: the thanks was said back
     ("more money please", "more money"),
     ("I would like to achieve financial independence, thank you.", "financial independence"),   # round 31: "by being able to achieve financial independence"
@@ -1632,16 +1634,24 @@ def test_echo_phrase_leaves_out_swears_and_who_wants_it(reply, phrase):
     ("deb", "debit"), ("cred", "credit"),
     ("yy", "yes"), ("db", "debit"),   # round 50 callers: "yy" to "can you see yourself doing it?" and "db" to "credit or debit?" were unclear
     ("quit", "quit my job"),   # round 30 callers: "quit" alone at a goal step was heard as leaving the call   # round 29 callers: "deb" at "Credit or debit?" was heard as a pause
-    ("bet", "yes"), ("say less", "yes"), ("safe", "ok"),   # round 36 callers: slang "bet" at "jumping in?" was unclear, "safe" was kept as the answer at every open step
+    ("bet", "yes"), ("say less", "yes"), ("safe", "okay"),   # round 36 callers: slang "bet" at "jumping in?" was unclear, "safe" was kept as the answer at every open step
     ("Bet.", "yes."),
     ("I bet", "I bet"), ("I want to feel safe", "I want to feel safe"),   # guard: only the whole reply
     ("debt", "debt"), ("deb please", "deb please"),   # guard: only a reply of the short form alone
-    ("Understood.", "ok."), ("noted", "ok"), ("Got it", "ok"),   # round 38 callers: "Understood." was kept as the answer
+    ("ok", "okay"), ("OK", "okay"), ("k", "okay"),   # round 51 callers: a bare "ok" was unclear at "Does that make sense?"
+    ("Understood.", "okay."), ("noted", "okay"), ("Got it", "okay"),   # round 38 callers: "Understood." was kept as the answer
     ("I got it from my dad", "I got it from my dad"),   # guard: only the whole reply
 ])
 def test_a_short_form_alone_is_its_word(text, fixed):
     from core.buy_mode.script_engine.words.fill import fix_typos
     assert fix_typos(text, frozenset(CFG["spell_words"]), CFG) == fixed
+
+
+@pytest.mark.parametrize("text, fixed", [("quitt", "quit my job"), ("okk", "okay"), ("quitt now", "quit now")])
+def test_a_short_form_is_found_once_typos_are_fixed(text, fixed):
+    """Round 51 callers: "quitt" alone ended the call; spelled "quit", it is the short form."""
+    from core.buy_mode.script_engine.words.fill import fix_typos
+    assert fix_typos(text, frozenset(CFG["spell_words"]) | {"quit", "now"}, CFG) == fixed
 
 
 def test_a_verb_goal_reads_without_being_able_to_be(fake_embedder):

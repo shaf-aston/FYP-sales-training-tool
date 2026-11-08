@@ -14,7 +14,7 @@ from core.buy_mode.script_engine.seller import ScriptSeller
 
 CFG = load_yaml("script/engine.yaml")
 CAT = load_method("cat")
-SHRUGS = {"k", "kk", "idk", "dunno", "ok", "meh", "whatever", "no idea", "not sure"}
+SHRUGS = {"k", "kk", "idk", "dunno", "ok", "okay", "meh", "whatever", "no idea", "not sure"}   # "okay": round 51, a bare "k" or "ok" reaches the AI as "okay"
 
 
 class ListenAI:
