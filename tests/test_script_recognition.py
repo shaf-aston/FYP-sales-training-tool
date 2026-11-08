@@ -1204,6 +1204,13 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("18", 0, (), "obviously", "19", None), ("18", 0, (), "ok", "19", None), ("18", 0, (), "no worries", "19", None),   # guard: these say yes
     ("19", 0, (), "spot on", "20", None), ("19", 0, (), "bang on", "20", None),   # were unclear and "take your time"
     ("02", 0, (), "2k tops", "03", None), ("03", 0, (), "at least a year", "04", None),   # guard: the answer is kept
+    # round 68
+    ("18", 0, (), "by and large", "18", "Put simply"),   # was a money worry: "Tell me if you did have the funding"
+    ("18", 0, (), "if you ask me", "18", "Put simply"), ("18", 0, (), "in short", "18", "Put simply"),   # were "Fair point, let me put it another way"
+    ("01", 0, (), "as such", "01", "What are you actually hoping"), ("01", 0, (), "all in all", "01", "What are you actually hoping"),
+    ("05", 0, (), "let's say", "05", "No rush"), ("05", 0, (), "needless to say", "05", "No rush"),   # were "let me say that again" and saved as the answer
+    ("18", 0, (), "lovely", "19", None),   # was unclear
+    ("18", 0, (), "by and large, the money", "m_funded", None), ("19", 0, (), "correct", "20", None), ("03", 0, (), "let's say a year", "04", None),   # guard: these still say it
 ]
 
 

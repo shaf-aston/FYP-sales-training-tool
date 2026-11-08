@@ -96,8 +96,8 @@ class Ear:
             beside = self._beside_worry(text, step, state, name)
             if beside:
                 return beside
-        if kind == "sense" and not asking and self._shrugs.only_tags(text):
-            return Verdict("says_nothing", text=text)  # round 67: "you see" alone to "Does that make sense?" was leaving
+        if kind in ("sense", "objection") and not asking and self._shrugs.only_tags(text):
+            return Verdict("says_nothing", text=text)  # round 67: "you see" to "Does that make sense?" was leaving; 68: "by and large" a worry
         if kind == "sense" and not asking:
             beside = self._beside_sense(text, step, state, name)
             if beside:

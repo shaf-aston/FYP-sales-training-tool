@@ -655,6 +655,8 @@ def test_whats_next_asks_no_ai(fake_embedder):
     ("money so to speak", "money"), ("money as it were", "money"), ("free for what it's worth", "free"), ("money for what its worth", "money"),  # round 67: "with money so to speak?"
     ("money mind you", "money"), ("free you see", "free"), ("money in a nutshell", "money"), ("more money full stop", "more money"),
     ("2k at the very least", "2k"), ("quit at least", "quit"), ("2k tops", "2k"),
+    ("money if you ask me", "money"), ("free all in all", "free"), ("money by and large", "money"), ("money in short", "money"), ("freedom if you will", "freedom"),  # round 68: "with money if you ask you?"
+    ("money needless to say", "money"), ("money believe it or not", "money"), ("money and all", "money"), ("money as such", "money"), ("2k let's say", "2k"), ("quit lets say", "quit"),
     ("a year innit", "a year"),
     ("money for me personally", "money"), ("free if that make sense", "free"), ("2k and stuff like that", "2k"), ("more money or something like that", "more money"),  # round 58 mutation: no row had these
     ("money anyways", "money"), ("money mostly", "money"), ("money ideally", "money"), ("money more or less", "money"), ("money highkey", "money"), ("money that kind of thing", "money"), ("money sort of thing", "money"), ("money that sort of thing", "money"), ("money that type of thing", "money"),   # round 65 mutation: round 59-62 echo ends no row had

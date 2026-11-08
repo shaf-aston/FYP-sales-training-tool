@@ -73,6 +73,15 @@ def test_round_67_only_tags_say_nothing_where_labels_hear(said, nothing, fake_em
     assert shrugs(fake_embedder).says_nothing(said, CAT.steps["01"], asking=False) == nothing
 
 
+@pytest.mark.parametrize("said, nothing", [
+    ("if you ask me", True), ("all in all", True), ("by and large", True), ("in short", True), ("let's say", True),
+    ("if you will", True), ("needless to say", True), ("believe it or not", True), ("as such", True),   # round 68: heard as "say that again", a worry, or a goal
+    ("money as such", False), ("in short supply", False), ("once and for all", False), ("all of it", False),   # guard: a word the labels must hear
+])
+def test_round_68_only_tags_say_nothing_where_labels_hear(said, nothing, fake_embedder):
+    assert shrugs(fake_embedder).says_nothing(said, CAT.steps["01"], asking=False) == nothing
+
+
 def test_round_67_asked_as_yes_or_no_without_a_catch_all_labels_still_decide(fake_embedder):
     assert not shrugs(fake_embedder).says_nothing("obviously", CAT.steps["01"], asking=False, closed=True)  # a yes to "jumping in?"
 
