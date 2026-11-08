@@ -1076,6 +1076,19 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("06", 1, (), "ok please", "08", None),   # was "No problem, take your time."
     ("18", 0, (), "sure thing", "19", "Do you see yourself jumping in?"),   # guard: still a yes
     ("22", 0, (), "debit please", "end", None),   # guard: still pays
+    # round 57
+    ("01", 0, (), "let me see... money", "goal_practical", "What are you hoping that would get you?"),   # was "...with let you see?"
+    ("01", 0, (), "money in a way", "goal_practical", "What are you hoping that would get you?"),   # was "...with money in a way?"
+    ("01", 0, (), "quit proper", "goal_practical", "What are you hoping to achieve by being able to quit your job?"),   # was "...quit proper?"
+    ("01", 0, (), "same as before", "01", "What are you actually hoping to achieve?"),   # was "let me say that again"
+    ("goal_practical", 0, (), "same as before", "goal_practical", None),   # was saved as the answer
+    ("05", 0, (), "erm ok", "05", None),   # was saved as the answer
+    ("05", 0, (), "you know what, ok", "05", None),   # was saved as the answer
+    ("05", 0, (), "let me see", "05", "No rush"),   # was heard as leaving: the call ended
+    ("05", 0, (), "lemme see", "05", "No rush"),   # was heard as leaving
+    ("05", 0, (), "let me think about it", "05", "No rush"),   # was "What do you mean by let you think about it?"
+    ("18", 0, (), "let me see the price", "18", "Put simply"),   # guard: no break, nothing cut
+    ("19", 0, (), "see you", "later", None),   # guard: still leaving
 ]
 
 

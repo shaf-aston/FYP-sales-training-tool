@@ -608,8 +608,8 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("is it a year?", "", "is it a year?"),   # a question still asks
     ("well, to be honest with you, more money", "more money", ""),   # round 27 callers: was said back whole
     ("more money, well, more time really", "more time really", ""),   # "well" with a break takes back
-    ("uh pay rent and stuff you know", "uh pay rent", ""),   # round 27 callers: "and stuff you know" is talk
-    ("uh pay rent, stuff you know", "uh pay rent", ""),   # "stuff you know" is talk
+    ("uh pay rent and stuff you know", "pay rent", ""),   # round 27 callers: "and stuff you know" is talk; round 57: the "uh" goes too
+    ("uh pay rent, stuff you know", "pay rent", ""),   # "stuff you know" is talk
     ("to be fair, around 2k", "around 2k", ""),
     ("well I want more money", "I want more money", ""),   # guard: "well" with no break takes nothing back (round 54: opening a reply it is a filler)
     ("yeah no, not for me", "no, not for me", ""),   # round 28 callers: a yes and no said together mean the last one
@@ -662,6 +662,11 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("free in my opinion", "free", ""), ("2k as I say", "2k", ""), ("a year like I say", "a year", ""), ("imo free", "free", ""),
     ("as I say, 2k", "2k", ""), ("like I say, quit", "quit my job", ""), ("as I mentioned, 2k", "2k", ""), ("like I mentioned, free", "free", ""),
     ("yes please", "yes", ""), ("I'm not sure", "I'm not sure", ""),   # guard: "sure" alone is no end tag
+    ("2k as I said", "2k", ""), ("as I say free", "free", ""),   # round 56 mutation: no row had these without a comma
+    ("erm 2k", "2k", ""), ("um 2k", "2k", ""), ("hmm 2k", "2k", ""), ("uh quit", "quit my job", ""),   # round 57: saved with the "erm"
+    ("let me see... money", "money", ""), ("lemme think, 2k", "2k", ""), ("you know what, quit", "quit my job", ""),   # was "with let you see?"
+    ("money in a way", "money", ""), ("free in a sense", "free", ""), ("2k in some ways", "2k", ""), ("quit proper", "quit my job", ""),
+    ("let me see the price", "let me see the price", ""), ("proper money", "proper money", ""),   # guard: no break, or at the start
     ("well paid job", "well paid job", ""),   # guard: "well paid" is the answer
     ("oh what?", "", "oh what?"),   # guard: still asks
     ("like 2k", "2k", ""),

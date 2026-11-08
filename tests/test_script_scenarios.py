@@ -634,6 +634,8 @@ def test_whats_next_asks_no_ai(fake_embedder):
     ("money sure", "money"), ("free ngl", "free"), ("money imo", "money"), ("more money as I said", "more money"),  # round 56: was "with money sure?"
     ("my boss yup", "your boss"), ("money sure thing", "money"), ("more money like I said", "more money"),
     ("not sure", None),  # guard
+    ("money in a way", "money"), ("free in a sense", "free"), ("my boss in some ways", "your boss"),  # round 57: was "with money in a way?"
+    ("quit proper", "quit"), ("proper money", "proper money"),  # guard: "proper" before its word stays
     ("a year innit", "a year"),
     ("well paid job", "well paid job"),  # round 54: was "paid job"
     ("so well off", "well off"),
@@ -1301,6 +1303,10 @@ def test_echo_phrase_fixes_typos(reply, phrase):
     ("defo", "definitely"), ("Deffo yes", "definitely yes"), ("money for real", "money fr"),   # round 55 callers: unclear everywhere
     ("cheers", "thanks"), ("ta", "thanks"),   # round 55 callers: saved as the answer
     ("sure thing", "sure"),   # round 56 callers: saved as the answer
+    ("not gonna lie, money", "ngl, money"), ("2k not going to lie", "2k ngl"),   # round 57 callers: saved whole ("ngl" was cut)
+    ("same as before", "same"), ("as before", "same"), ("what I said before", "same"),   # round 57 callers: "let me say that again"
+    ("let me see", "let me think"), ("lemme see", "let me think"), ("lemme think", "let me think"),   # round 57 callers: heard as leaving
+    ("let me see the price", "let me see the price"), ("before", "before"),   # guard: only the reply alone
     ("ta da", "ta da"), ("for really", "for really"),   # guard: only the reply alone, only the whole phrase
 ])
 def test_fix_typos_keeps_real_words(text, fixed):

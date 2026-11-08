@@ -23,6 +23,8 @@ def test_filler_words_say_nothing_on_any_step(fake_embedder):
     ("hi, more money", False), ("the usual stuff, my mortgage", False),   # guard: real words beside them
     ("ok well", True), ("omg!", True), ("well", True), ("actually ok", True),   # round 54 callers: saved as the answer at every open step
     ("yup", True), ("ngl ok", True), ("imo ok", True),   # round 56 callers: saved as the answer at every open step
+    ("erm ok", True), ("uh ok", True), ("er", True), ("uhm", True), ("about that", True),   # round 57 callers: saved as the answer
+    ("erm, my mortgage", False),   # guard
 ])
 def test_round_51_words_alone_say_nothing(said, nothing, fake_embedder):
     assert shrugs(fake_embedder).says_nothing(said, CAT.steps["05"], asking=False) == nothing
