@@ -543,7 +543,9 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("lol idk, money?", "money", ""),   # a "?" after a hedge is an unsure answer
     ("time and money tbh", "time and money tbh", ""),   # nothing left out: the reply as typed
     ("credit, what's next?", "credit", ""),   # the nudge is cut off its end
-    ("it's 2.5k, is that ok?", "it's 2.5k", "is that ok?"),   # "2.5k" is never cut at its point
+    ("credit, is that ok?", "credit", ""),   # round 25 replay: a check-in tag is talk, not a question
+    ("is that ok?", "", ""),
+    ("it's 2.5k, is that a lot?", "it's 2.5k", "is that a lot?"),   # "2.5k" is never cut at its point
     ("3k, no wait, more like 4k", "more like 4k", ""),   # whole calls: the 3k they took back was kept
     ("3 years, sorry, 2 years", "2 years", ""),
     ("pay off my car, no actually my credit card", "my credit card", ""),

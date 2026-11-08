@@ -724,6 +724,8 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("03", 0, (), "A year. Is that normal?", "04", "There's no right answer here"),   # was no answer to the question
     ("01", 0, (), "what do most people say?", "01", "There's no right answer here"),   # guard: asked alone, the step is asked again
     ("01", 0, (), "more money, actually no, more time", "goal_identity", None),   # was "What are you hoping to achieve with more money actually no more time?"
+    ("22", 0, (), "credit, is that ok?", "end", "Perfect."),   # round 25 replay: got "There's no right answer here"
+    ("03", 0, (), "2 years, is that ok?", "04", "24 months"),
 ]
 
 
