@@ -153,6 +153,7 @@ class Interruption:
     min_score: float = 0.0  # a match must score at least this on every step (words that are often answers too)
     with_answer: bool = False  # may sit beside an answer ("3 years, what about you?"): answer kept, this said first
     only_asked: bool = False  # counts only as a question: "does that matter?" asks, "that matters to me" answers
+    once: bool = False  # answered once a call: said again ("ok, thank you" after "You're welcome.") it is heard as the rest
 
 
 @dataclass(frozen=True)
@@ -411,7 +412,7 @@ def parse_offer(name, data):
     )
 
 
-INTERRUPTION_KEYS = {"examples", "reply", "draft", "after", "after_wait", "min_score", "with_answer", "only_asked"}  # `draft` is accepted, never read
+INTERRUPTION_KEYS = {"examples", "reply", "draft", "after", "after_wait", "min_score", "with_answer", "only_asked", "once"}  # `draft` is accepted, never read
 
 
 def parse_common_sense(data):
@@ -422,7 +423,8 @@ def parse_common_sense(data):
         k: Interruption(k, tuple(v["examples"]), v["reply"], v.get("after", "ask"),
                         bool(v.get("after_wait")),
                         _score(f"interruption {k}", v["min_score"]) if "min_score" in v else 0.0,
-                        v.get("with_answer", False) is True, v.get("only_asked", False) is True)
+                        v.get("with_answer", False) is True, v.get("only_asked", False) is True,
+                        v.get("once", False) is True)
         for k, v in data["interruptions"].items()
     }
     for i in items.values():

@@ -72,8 +72,7 @@ class Ear:
         nothing = self._shrugs.blank(text) or (not self._yes_or_no(state) and self._shrugs.says_nothing(text, step, asking))
         if not state.waiting and nothing and not self._ready(text, state):  # "yes I'm in" is a shrug's words, but it says they're in
             return Verdict("says_nothing", text=text, asking=asking)  # an answer only: never an interruption
-        ahead = None if asking else hear_ahead(self.method, state, text)  # "do I need 5k?" is not their goal
-        ahead = None if ahead is state else ahead
+        ahead, text = (None, text) if asking else self._ahead(text, step, state)  # "do I need 5k?" is not their goal
         kind, name = (None, "") if self._shrugs.plain_no(text) else self._interrupt(text, step, ahead or state, opened, asking)
         if kind == "objection" and not opened and not asking:
             beside = self._beside_worry(text, step, state, name)
@@ -85,6 +84,8 @@ class Ear:
                 return beside
         if kind == "sense" and self._paused_again(name, state):
             return Verdict("says_nothing", asking=asking)  # no words to ask about: never "What do you mean by brb?"
+        if kind == "sense" and not asking and self._said_again(name, state):
+            return Verdict("says_nothing")  # "ok, thank you" once "You're welcome." was said: heard as "ok"
         if kind:
             return Verdict(kind, name, text, asking, ahead)
         if asking and not self._answers(text, step):
@@ -103,6 +104,32 @@ class Ear:
         if not any(p.act in ("said", "rise", "asks") for p in parts):
             return reply  # all of it said back: "how long?" alone
         return replace(reply, parts=tuple(parts))
+
+    def _ahead(self, text, step, state):
+        """(the state with answers to later steps kept, else None; this step's words). Each part is heard too:
+        "more money, about 2k a month" keeps the 2k for the income step, and a part that answers only a later
+        step is left out of this step's answer, so "more money" alone is said back (round 27 callers: "about
+        2k a month" was said back, and the income was asked again)."""
+        ahead = hear_ahead(self.method, state, text)
+        parts = clauses(text, self._breaks)
+        kept = []
+        for part in parts if len(parts) > 1 else ():
+            alone = hear_ahead(self.method, state, part)
+            if alone is state:
+                kept.append(part)
+            else:
+                ahead = replace(ahead, slots={**alone.slots, **ahead.slots})
+        rest = ", ".join(kept)
+        if kept and len(kept) < len(parts) and self._answers_step(rest, step, state):
+            text = rest
+        return (None if ahead is state else ahead), text
+
+    def _said_again(self, name, state):
+        """A remark marked `once`, said again once its reply was said this call ("ok, thank you" after "You're
+        welcome."): nothing new to answer. Round 27 callers: a second thank-you got "Like I said a moment ago."
+        on its own, and "You're welcome." every turn."""
+        said = self.sense.interruptions[name]
+        return said.once and said.reply in state.spoken
 
     def _paused_again(self, name, state):
         """A third pause in a row (the last line was `wait_again`, said only to a second one) says nothing: the
@@ -232,7 +259,8 @@ class Ear:
             if not rest or self._interrupt(rest, step, state, False, False)[0] or not self._answers_step(rest, step, state):
                 return None
             ahead = hear_ahead(self.method, state, rest)
-            return Verdict("answer", text=rest, ahead=None if ahead is state else ahead, side=f"sense:{name}")
+            side = "" if self._said_again(name, state) else f"sense:{name}"  # "You're welcome." once a call
+            return Verdict("answer", text=rest, ahead=None if ahead is state else ahead, side=side)
         return None
 
     def _chooses(self, question, step):

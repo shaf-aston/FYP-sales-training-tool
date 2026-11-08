@@ -174,6 +174,9 @@ class ScriptSeller:
             self.state = replace(self.state, last=said)
             return said, self.ui_stage(), "bridge"
         said, ui_stage, detail = self._respond(v, step, opened)
+        remark = self.sense.interruptions.get(v.name if v.kind == "sense" else v.side.removeprefix("sense:"))
+        if remark and remark.once and remark.reply in said:  # said once: the same remark again is heard as the rest (ear `_said_again`)
+            self.state = replace(self.state, spoken=self.state.spoken + (remark.reply,))
         spoken = self.state.spoken
         said = self._wear(said)
         if said == self.state.last and "?" in said and self.state.step == step.id:  # word for word again: move on
@@ -202,7 +205,8 @@ class ScriptSeller:
             self.state = move.state
             return self._render(move), move.ui_stage, detail
         if v.kind == "ready":
-            return *self._go(jump(self.method, self.state, self.method.shortcuts[v.name].then)), ""
+            move = jump(self.method, self.state, self.method.shortcuts[v.name].then)
+            return *self._go(self._ends_there(move, v, opened)), ""
         if v.kind == "corrects":  # "sorry I meant 3k not 2k": the answer fixed, the question asked again
             self.state = replace(self.state, slots={**self.state.slots, v.name: v.text})
             return self._then_ask(self.sense.corrected), self.ui_stage(), ""
@@ -268,6 +272,7 @@ class ScriptSeller:
     def _answer(self, v, step, opened):
         text = v.text
         move, ack, heard_as = self._listen(v, step, opened)
+        move = self._ends_there(move, v, opened)
         if self._hesitates(move):
             return self._revisit(), self.ui_stage(), "hesitates"
         earlier = self._earlier(step)
@@ -426,6 +431,24 @@ class ScriptSeller:
         elif v.kind == "answer":
             detail = f"answer:{label}" if label else ("answer:any" if not labels else "answer:unclear")
         return self._closed_lead(advance(self.method, self.state, label, text, empty, line, self.cfg["misses"])), ack, detail
+
+    def _ends_there(self, move, v, opened):
+        """The step this reply led to, when the same reply already ends the call there: "yes, debit" to
+        "jumping in?" goes to the payment question, and "debit" answers it (round 27 callers: "Credit or
+        debit?" after "debit"). Only an ending (a step with no routes, never the follow-up) is taken: "how
+        do I pay?" still gets the question."""
+        to = self.method.steps[move.state.step]
+        if to.id == self.state.step or not any(self._ends(r.then) for r in to.listen):
+            return move
+        here, self.state = self.state, move.state
+        try:
+            then, _, _ = self._listen(replace(v, ahead=None), to, opened)
+        finally:
+            self.state = here
+        return then if self._ends(then.state.step) and then.state.step != to.id else move
+
+    def _ends(self, step_id):
+        return not self.method.steps[step_id].routes and step_id != self.method.follow_up
 
     def _after_restated(self, text, said_back):
         """What follows the part of a long reply that only says the question back (`said_back`: those routes'

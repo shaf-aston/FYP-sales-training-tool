@@ -8,6 +8,7 @@
 #     without taking the reply as its answer.
 #   follow_up = they are leaving: go to the method's follow-up step (book the next call).
 # min_score: a match must score at least this on every step (for words that are often real answers too).
+# once: answered once a call; said again it is heard as what came with it ("ok, thank you" twice). Draft.
 park: "That's fair, and we'll come back to it once we know this is even a fit."   # objection before the price: acknowledge, keep going
 park_again: "Like I said, fair question. Let's see if this is even right for you first, then you can judge for yourself."   # draft: the same worry asked again before the price (whole calls: "how do I know this isn't a scam?" again got "I'll find out")
 revisit: "Coming back to what you raised earlier."   # a parked objection, raised again when they hesitate at the close
@@ -103,6 +104,7 @@ interruptions:
     reply: "Of course, let me say that again."   # draft: "say", not "ask": a talk line asks nothing
   thanks:
     with_answer: true   # a thank-you beside an answer: the answer is kept
+    once: true   # draft: round 27 callers, "ok, thank you" again got "What do you mean by thank you?"
     draft: true
     examples:
       - "thanks for your time"

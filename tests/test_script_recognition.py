@@ -743,6 +743,17 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("01", 0, (), "is this a sales call", "01", "I'm an AI playing"),   # guard: asked alone, the step is asked again
     ("03", 0, (), "thanks for asking, about 2 years", "04", "You're welcome. 24 months"),   # was "You're welcome." and the 2 years lost
     ("02", 0, (), "sorry, how much what?", "02", "Fair point"),   # was the price: "sorry" counted against the question said back
+    # round 27
+    ("19", 0, (), "yes, debit", "end", "Perfect."),   # was "jumping in?" asked again, then the payment asked
+    ("19", 0, (), "debit", "end", "Perfect."),
+    ("m_close1", 0, (), "debit", "end", "Perfect."),
+    ("15", 0, (), "debit", "end", "Perfect."),
+    ("19", 0, (), "yes, how do I pay?", "22", "How would you like"),   # guard: no way named, the payment is asked
+    ("01", 0, (), "more money, about 2k a month", "goal_practical", "What are you hoping to achieve with more money?"),   # was "about 2k a month" said back
+    ("01", 0, (), "well, to be honest with you, more money", "goal_practical", "What are you hoping to achieve with more money?"),
+    ("01", 0, (), "um so basically i want more money because like rent", "goal_practical", "What are you hoping to achieve with more money?"),
+    ("01", 0, (), "more money, well, more time really", "goal_identity", "And what would"),   # was "more money" kept
+    ("goal_practical", 0, (), "pay rent", "goal_identity", None),   # was heard as level 1 and asked again
 ]
 
 
@@ -756,6 +767,20 @@ def test_round_7_whole_calls(step, asks, raised, said, after, starts):
     assert seller.state.step == after, text
     if starts:
         assert text.startswith(starts), text
+
+
+def test_a_second_thank_you_is_heard_as_the_rest():
+    """Round 27 callers: "ok, thank you" again got "What do you mean by thank you?" and "Like I said"."""
+    from core.buy_mode.script_engine.engine import ScriptState
+
+    seller = _real_seller()
+    seller.reset(ScriptState(step="05"))
+    first, _ = seller.reply("ok, thank you")
+    assert "You're welcome." in first, first
+    step = seller.state.step
+    second, _ = seller.reply("ok, thank you")
+    assert "You're welcome." not in second and "Like I said" not in second and "What do you mean" not in second, second
+    assert seller.state.step != step or second, (step, second)
 
 
 def test_an_answer_fixed_a_turn_later_is_kept():

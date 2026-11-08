@@ -583,6 +583,12 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("lol, probably like 2k?", "probably like 2k", ""),
     ("maybe a year?", "maybe a year?", ""),
     ("is it a year?", "", "is it a year?"),   # a question still asks
+    ("well, to be honest with you, more money", "more money", ""),   # round 27 callers: was said back whole
+    ("more money, well, more time really", "more time really", ""),   # "well" with a break takes back
+    ("uh pay rent and stuff you know", "uh pay rent", ""),   # round 27 callers: "and stuff you know" is talk
+    ("uh pay rent, stuff you know", "uh pay rent", ""),   # "stuff you know" is talk
+    ("to be fair, around 2k", "around 2k", ""),
+    ("well I want more money", "well I want more money", ""),   # guard: "well" with no break is a word
 ])
 def test_a_reply_is_read_once_into_what_it_says_and_what_it_asks(text, said, asked):
     from core.buy_mode.script_engine.hear.reply import Reader
@@ -1129,8 +1135,37 @@ def test_a_reply_of_its_own_is_not_a_word_said_back(seller, step, said):
     ("02", "how much is it? about 2k", ["asks", "said"]),  # their own question, not ours said back
     ("02", "about 2k, how much?", ["said", "asks"]),       # only before the answer
     ("03", "how long? how long? 2 years", ["tag", "tag", "said"]),
+    ("02", "how much? is it monthly?", ["tag", "asks"]),   # their own question after it still asks
+    ("03", "how long? a year?", ["tag", "asks"]),          # and an answer with a rise is settled later
 ])
 def test_the_question_said_back_before_an_answer_is_talk(seller, step, text, acts):
     """Round 26 callers: "how long? about 2 years" went to "So what made it come up for you now?"."""
-    reply = seller._ear._unecho(seller._ear.reader.read(text), ScriptState(step=step))
+    read = seller._ear.reader.read(text)
+    reply = seller._ear._unecho(read, ScriptState(step=step))
     assert [p.act if p.act != "rise" else "asks" for p in reply.parts] == acts
+    assert [p.text for p in reply.parts] == [p.text for p in read.parts]   # only the act changes
+
+
+@pytest.mark.parametrize("name, spoken, again", [
+    ("thanks", ("You're welcome.",), True),   # round 27 callers: "ok, thank you" a second time was "What do you mean by thank you?"
+    ("thanks", (), False),                    # the first thank-you is answered
+    ("thanks", ("Fair enough.",), False),     # another line said is not this one
+])
+def test_a_remark_answered_once_is_heard_as_the_rest(seller, name, spoken, again):
+    assert seller._ear._said_again(name, ScriptState(step="05", spoken=spoken)) is again
+
+
+@pytest.mark.parametrize("name", ["repeat", "back", "clarify", "why_ask"])
+def test_only_a_once_remark_is_heard_as_the_rest(seller, name):
+    """"say what now?" twice asks twice (round 27: Eli's second one was missed); "ok, I'm back" follows a new pause."""
+    said = seller._ear.sense.interruptions[name].reply
+    assert not seller._ear._said_again(name, ScriptState(step="05", spoken=(said,)))
+
+
+def test_a_later_answer_in_one_part_is_kept_and_left_out_of_this_one(seller):
+    """Round 27 callers: "more money, about 2k a month" had "about 2k a month" said back, and the income asked again."""
+    ahead, text = seller._ear._ahead("more money, about 2k a month", seller.method.steps["01"], ScriptState(step="01"))
+    assert ahead is not None and ahead.slots.get("number"), ahead
+    assert text == "more money"
+    ahead, text = seller._ear._ahead("more money", seller.method.steps["01"], ScriptState(step="01"))
+    assert ahead is None and text == "more money"
