@@ -1047,6 +1047,17 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("01", 0, (), "like what?", "01", "Fair point, let me put it another way."),   # guard: still asks what we mean
     ("01", 0, (), "to be fair money", "goal_practical", "What are you hoping that would get you?"),   # was "...by being fair money?"
     ("01", 0, (), "free tbh", "goal_practical", "What are you hoping to achieve by being free?"),   # guard: said back without its tag, as before
+    # round 54
+    ("05", 0, (), "well ok", "05", None),   # was saved as the answer
+    ("05", 0, (), "actually ok", "05", None),   # was saved as the answer
+    ("05", 0, (), "omg ok", "05", None),   # was saved as the answer
+    ("18", 0, (), "omg ok", "19", "Do you see yourself jumping in?"),   # was unclear
+    ("18", 0, (), "wow ok", "19", "Do you see yourself jumping in?"),   # was "let me put it another way"
+    ("18", 0, (), "oh ok", "19", "Do you see yourself jumping in?"),   # was "let me put it another way"
+    ("18", 0, (), "oh no", "18", None),   # guard: heard as a plain "no", as before
+    ("01", 0, (), "actually money", "goal_practical", "What are you hoping that would get you?"),   # was "...with actually money?"
+    ("01", 0, (), "well paid job", "goal_practical", "What are you hoping to achieve with well paid job?"),   # was "...with paid job?"
+    ("01", 0, (), "free innit", "goal_practical", "What are you hoping to achieve by being free?"),   # could not be said back
 ]
 
 

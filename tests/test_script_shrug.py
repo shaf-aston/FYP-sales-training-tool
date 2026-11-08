@@ -21,6 +21,7 @@ def test_filler_words_say_nothing_on_any_step(fake_embedder):
 @pytest.mark.parametrize("said, nothing", [
     ("same", True), ("the usual", True), ("so basically ok", True), ("hi", True), ("hey, ok", True),   # round 51 callers: saved as the answer at every open step
     ("hi, more money", False), ("the usual stuff, my mortgage", False),   # guard: real words beside them
+    ("ok well", True), ("omg!", True), ("well", True), ("actually ok", True),   # round 54 callers: saved as the answer at every open step
 ])
 def test_round_51_words_alone_say_nothing(said, nothing, fake_embedder):
     assert shrugs(fake_embedder).says_nothing(said, CAT.steps["05"], asking=False) == nothing

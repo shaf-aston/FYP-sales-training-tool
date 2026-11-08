@@ -598,7 +598,7 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("sorry", "sorry", ""),   # on its own it is the reply, never a hedge left out
     ("3k, actually make it 5k", "5k", ""),   # round 25: the 3k was kept
     ("more money, actually no, more time", "more time", ""),   # round 25: said back whole
-    ("actually no idea", "actually no idea", ""),   # "actually no" takes back only with a break after it
+    ("actually no idea", "no idea", ""),   # "actually no" takes back only with a break after it (round 54: "actually" opening a reply is a filler)
     ("a million, jk, 2k", "2k", ""),   # round 26 callers: "jk" between two answers takes the first back
     ("buy a yacht obviously, lol no, pay rent", "pay rent", ""),
     ("jk lol", "jk", ""),   # with nothing after it, nothing is taken back ("lol" at the end is its own part, as in "jk, lol")
@@ -611,7 +611,7 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("uh pay rent and stuff you know", "uh pay rent", ""),   # round 27 callers: "and stuff you know" is talk
     ("uh pay rent, stuff you know", "uh pay rent", ""),   # "stuff you know" is talk
     ("to be fair, around 2k", "around 2k", ""),
-    ("well I want more money", "well I want more money", ""),   # guard: "well" with no break is a word
+    ("well I want more money", "I want more money", ""),   # guard: "well" with no break takes nothing back (round 54: opening a reply it is a filler)
     ("yeah no, not for me", "no, not for me", ""),   # round 28 callers: a yes and no said together mean the last one
     ("yeah no, I mean yes", "yes", ""),
     ("no yeah, it makes sense", "it makes sense", ""),   # was heard as backing out
@@ -652,6 +652,11 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("like money", "money", ""),   # round 53 callers: "like" opening a reply got "let me put it another way"
     ("like", "like", ""),   # guard: a filler lead with nothing after it is the reply
     ("quit goddamn it", "quit goddamn it", ""),   # guard: an end tag needs a space before it, never "quit god"
+    ("oh ok", "okay", ""),   # round 54: "oh ok" got "let me put it another way"
+    ("omg wow ok", "okay", ""),   # round 54: each filler lead goes
+    ("actually money", "money", ""),
+    ("well paid job", "well paid job", ""),   # guard: "well paid" is the answer
+    ("oh what?", "", "oh what?"),   # guard: still asks
     ("like 2k", "2k", ""),
     ("like what?", "", "like what?"),   # guard: before a question it is kept, so it still asks
 ])

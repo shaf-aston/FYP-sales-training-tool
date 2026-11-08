@@ -627,6 +627,12 @@ def test_whats_next_asks_no_ai(fake_embedder):
     ("I want financial freedom", "financial freedom"),
     ("honestly I just want freedom", "freedom"),
     ("just like more money", "more money"),  # filler "like" is never said back
+    ("actually money", "money"),  # round 54: was "actually money"
+    ("oh wow money", "money"),
+    ("money innit", "money"),  # round 54: could not be said back
+    ("a year innit", "a year"),
+    ("well paid job", "well paid job"),  # round 54: was "paid job"
+    ("so well off", "well off"),
     ("Financial freedom!", "financial freedom"),
     ("more time with family", "more time with family"),
     ("time in Dubai", "time in Dubai"),

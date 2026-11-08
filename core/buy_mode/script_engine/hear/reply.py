@@ -119,7 +119,8 @@ class Reader:
         self._ask_lead = re.compile(rf"^\W*(?:{any_of(cfg['ask_leads'])})\b\W*", re.IGNORECASE)
         flips = "|".join(rf"{re.escape(a)}\W+(?={re.escape(b)}\s*(?:[,;.!?]|$))" for a, b in map(tokenize, cfg["flip_leads"]))
         self._flip = re.compile(rf"^\W*(?:{flips})", re.IGNORECASE)  # "no yeah" is a yes, "yeah no" a no: the last word counts
-        self._filler_lead = re.compile(rf"^\W*(?:{any_of(cfg['filler_leads'])})\b\W*", re.IGNORECASE)
+        self._filler_lead = re.compile(rf"^\W*(?:(?:{any_of(cfg['filler_leads'])})\b(?!\W+(?:{any_of(cfg['lead_not_before'])})\b)\W*)+",
+                                       re.IGNORECASE)  # round 54: "oh wow ok" is "ok"; "well paid job" keeps its "well"
         self._answer_lead = re.compile(rf"^\W*(?:{any_of(cfg['answer_leads'])})\b\W*", re.IGNORECASE)
         self._take_back = re.compile(rf"(?:^|[,;.!?]\s*)(?:(?:{words})\b[\s,;.!-]*|(?:{word})\s*[,;.!-][\s,;.!-]*)(?=\w)"
                                      rf"|(?<=\w){not_mid}[,;.!?]\s*(?:{mid})\s*[,;.!-][\s,;.!-]*(?=\w)", re.IGNORECASE)

@@ -226,10 +226,13 @@ def echo_phrase(reply, cfg, vocab=frozenset(), verbs=False):
     words = [w for w in _after_want(words, cfg) if w.lower() not in cfg["echo_drop_words"]]  # "more money" from "my family needs more money"
     words = said_once(words)  # round 45: "money money" was said back twice
     drops = [tokenize(d) for d in [*cfg["echo_drop_starts"], *cfg["filler_words"]]]  # "for sure, more money"
+    keeps = [[w] for w in cfg["lead_not_before"]]
     cut = True
     while cut:
         lower = [w.lower() for w in words]
-        cut = max((len(d) for d in drops if lower[:len(d)] == d), default=_cleft(lower, cfg))  # the longest: "so i can", not "so"
+        cut = max((len(d) for d in drops if lower[:len(d)] == d and lower[len(d):len(d) + 1] not in keeps),
+                  default=_cleft(lower, cfg))
+        # the longest: "so i can", not "so"; round 54: "well paid job" was "with paid job?"
         words = words[cut:]
     ends = [tokenize(e) for e in cfg["echo_drop_ends"]]
     while words and (end := next((e for e in ends if [w.lower() for w in words[-len(e):]] == e), None)):
