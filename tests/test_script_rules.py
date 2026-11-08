@@ -655,6 +655,7 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("oh ok", "okay", ""),   # round 54: "oh ok" got "let me put it another way"
     ("omg wow ok", "okay", ""),   # round 54: each filler lead goes
     ("actually money", "money", ""),
+    ("2k fr", "2k", ""), ("free frfr", "free", ""),   # round 55: "fr" (for real) on the end was saved with the answer
     ("well paid job", "well paid job", ""),   # guard: "well paid" is the answer
     ("oh what?", "", "oh what?"),   # guard: still asks
     ("like 2k", "2k", ""),
