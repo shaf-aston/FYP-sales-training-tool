@@ -639,6 +639,9 @@ def test_whats_next_asks_no_ai(fake_embedder):
     ("money literally", "money"), ("free or whatever", "free"), ("my boss and that", "your boss"),  # round 58: "with money and that?"
     ("quit if that makes sense", "quit"), ("money you know", "money"), ("2k ya know", "2k"), ("free at the end of the day", "free"),
     ("my boss personally", "your boss"), ("more money stuff like that", "more money"), ("free and all that", "free"),
+    ("money tho", "money"), ("2k anyway", "2k"), ("free big time", "free"), ("my boss so yeah", "your boss"),  # round 59: "with money tho?"
+    ("more money mainly", "more money"),
+    ("free hopefully", "free"), ("money though", "money"),  # guard: these were already cut
     ("a year innit", "a year"),
     ("well paid job", "well paid job"),  # round 54: was "paid job"
     ("so well off", "well off"),
@@ -1314,6 +1317,8 @@ def test_echo_phrase_fixes_typos(reply, phrase):
     ("dbt", "debit"), ("I reckon", "I think"), ("probs", "probably"), ("prolly", "probably"),   # round 58 callers: unclear, saved whole
     ("I reckon money", "I think money"), ("probs not", "probably not"),
     ("a dbt", "a dbt"),   # guard: only the reply alone
+    ("ok :)", "ok 🙂"), (":D", "😀"), ("money :(", "money 🙁"), ("ok xD", "ok 😆"), (";)", "😉"), ("ok :/", "ok 😕"), ("ok :P", "ok 😛"),   # round 59 callers
+    ("see https://x.com", "see https://x.com"), ("re:Dave", "re:Dave"), ("2:30", "2:30"),   # guard: only a smiley on its own
     ("ta da", "ta da"), ("for really", "for really"),   # guard: only the reply alone, only the whole phrase
 ])
 def test_fix_typos_keeps_real_words(text, fixed):

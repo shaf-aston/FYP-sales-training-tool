@@ -1107,6 +1107,19 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("01", 0, (), "maybe later", "01", "That's fair"),   # guard: "maybe" is not split off
     ("19", 0, (), "probably not", "19", None),   # guard: the hedge is the answer
     ("19", 0, (), "yes I reckon", "20", "What makes you say that?"),   # guard: still a yes
+    # round 59
+    ("22", 0, (), "ok ideally", "22", "Which works better"),   # was heard as paying: "Welcome aboard"
+    ("20", 0, (), "ok ideally", "20", "No rush"),   # was saved, then heard as paying at 22
+    ("18", 0, (), "ok :)", "19", "Do you see yourself"),   # was "You're welcome"
+    ("18", 0, (), "ok big time", "19", "Do you see yourself"),   # was "You're welcome"
+    ("willing", 0, (), "ok tho", "willing_check", None),   # was a no
+    ("willing", 0, (), "ok mainly", "willing_check", None),   # was a no
+    ("01", 0, (), "money tho", "goal_practical", "What are you hoping that would get you?"),   # was "...with money tho?"
+    ("01", 0, (), "ideally money", "goal_practical", "What are you hoping that would get you?"),   # was "...with ideally money?"
+    ("01", 0, (), "anyway, money", "goal_practical", "What are you hoping that would get you?"),   # was "...with anyway, money?"
+    ("05", 0, (), "ok tho", "05", "No rush"),   # was saved as the answer
+    ("22", 0, (), "ideally debit", "end", None),   # guard: still pays
+    ("willing", 0, (), "no tho", "11", None),   # guard: still a no
 ]
 
 

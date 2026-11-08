@@ -678,6 +678,11 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("money probably", "money, probably", ""), ("quit I think", "quit, I think", ""),   # round 58: and after
     ("probably not", "probably not", ""), ("I think so", "I think so", ""), ("I guess not", "I guess not", ""),   # guard: the hedge is the answer
     ("maybe later", "maybe later", ""), ("for me it's money", "for me it's money", ""),   # guard: "maybe" is not split; no break
+    ("money tho", "money", ""), ("2k anyway", "2k", ""), ("money big time", "money", ""),   # round 59: saved whole
+    ("a year hopefully", "a year", ""), ("debit mostly", "debit", ""),
+    ("money so yeah", "money", ""),   # guard: this was already cut
+    ("anyway, money", "money", ""), ("ideally money", "money", ""), ("hopefully quit", "quit my job", ""), ("mostly 2k", "2k", ""),   # round 59: the lead
+    ("no tho", "no", ""), ("anyway what's the price?", "", "anyway what's the price?"),   # round 59: "no tho" was saved whole; guard: still asks
     ("literally what?", "", "literally what?"), ("do you know?", "", "do you know?"),   # guard: still asks
     ("well paid job", "well paid job", ""),   # guard: "well paid" is the answer
     ("oh what?", "", "oh what?"),   # guard: still asks
