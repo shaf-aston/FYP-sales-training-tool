@@ -45,6 +45,7 @@ objections:
       - "I can't decide without my wife"
       - "my husband decides about money things"   # draft: whole calls, "he decides the money stuff" was their reason to buy
       - "my wife makes the decisions about money"   # draft
+      - "my partner said no"   # draft: round 36 callers; beside "my partner said yes" (a yes, answers.yaml) so a no still asks about them
   fear:
     enter: m_reframe1
     early: "That's fair. That's what this call is for, to see if it can work for you first."   # draft: whole calls, "what if it doesn't work?" before the price got "I'll find out"

@@ -936,6 +936,11 @@ def test_echo_phrase_fixes_typos(reply, phrase):
     ("💰💰💰", "money"),   # round 31 callers: said nothing
     ("🏠 for my family", "a house for my family"),   # was unclear
     ("2k 💸", "2k"),   # guard: after an amount it only decorates it
+    ("money 💰", "money"),   # round 36 callers: after its own word it only decorates it (was "with money money?")
+    ("MORE MONEY 💰", "MORE MONEY"),   # whatever the case
+    ("a house 🏠🏠", "a house"),
+    ("moneybags 💰", "moneybags money"),   # guard: only the whole word
+    ("time 💰", "time money"),   # guard: after another word it is still its word
     ("I want to by a house", "I want to buy a house"),   # round 31 callers: voice to text said back as typed
     ("to grand a month", "two grand a month"),
     ("I am board of my job", "I am bored of my job"),
@@ -1295,6 +1300,9 @@ def test_echo_phrase_leaves_out_swears_and_who_wants_it(reply, phrase):
 @pytest.mark.parametrize("text, fixed", [
     ("deb", "debit"), ("cred", "credit"),
     ("quit", "quit my job"),   # round 30 callers: "quit" alone at a goal step was heard as leaving the call   # round 29 callers: "deb" at "Credit or debit?" was heard as a pause
+    ("bet", "yes"), ("say less", "yes"), ("safe", "ok"),   # round 36 callers: slang "bet" at "jumping in?" was unclear, "safe" was kept as the answer at every open step
+    ("Bet.", "yes."),
+    ("I bet", "I bet"), ("I want to feel safe", "I want to feel safe"),   # guard: only the whole reply
     ("debt", "debt"), ("deb please", "deb please"),   # guard: only a reply of the short form alone
 ])
 def test_a_short_form_alone_is_its_word(text, fixed):

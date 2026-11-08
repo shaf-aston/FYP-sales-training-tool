@@ -92,8 +92,8 @@ def unstretch(word, vocab, cfg):
 def _as_words(text, cfg):
     """Pictures and misheard words as the words they stand for: an emoji in `emoji_words` ("💰💰💰" -> "money",
     a run is one word) and a phrase in `word_swaps` (voice to text: "to by a house" -> "to buy a house"; slang: "dosh" -> "money")."""
-    for sign, word in cfg["emoji_words"].items():   # after an amount it only decorates it ("2k 💸")
-        text = re.sub(rf"(\d\w*)?\s*(?:{re.escape(sign)}\ufe0f?\s*)+", lambda m: f"{m.group(1)} " if m.group(1) else f" {word} ", text).strip()
+    for sign, word in cfg["emoji_words"].items():   # after an amount or its own word it only decorates it ("2k 💸", "money 💰")
+        text = re.sub(rf"((?<!\w)(?:\d\w*|(?i:{re.escape(word)})))?\s*(?:{re.escape(sign)}\ufe0f?\s*)+", lambda m: f"{m.group(1)} " if m.group(1) else f" {word} ", text).strip()
     for heard, meant in cfg["word_swaps"].items():
         text = re.sub(rf"(?<!\w){re.escape(heard)}(?!\w)", meant, text, flags=re.IGNORECASE)
     return text

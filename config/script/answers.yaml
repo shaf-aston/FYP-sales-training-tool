@@ -13,6 +13,8 @@ jump_in:   # a yes to "Do you see yourself jumping in?"
   - "ok, let's go"   # draft
   - "sure, why not"   # draft: whole calls, "I don't see why not" was heard as not yet; this wording keeps it a yes, and "I don't think so" a no
   - "I wouldn't say no"   # draft: round 26 callers, heard as "I'd rather not say"
+  - "my partner said yes"   # draft: round 36 callers, a partner who already agreed was heard as needing to ask them
+  - "my husband is on board with it"   # draft
 pay_now:   # a yes that is already about paying: the payment question next, not "What makes you say that?"
   - "how do I pay"   # draft
   - "credit"   # draft

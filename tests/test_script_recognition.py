@@ -839,6 +839,15 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("05", 0, (), "because I hate my job", "06", None),   # guard: a reason
     ("19", 0, (), "should I?", "19", "There's no right answer"),   # was "I'll find out"
     ("19", 0, (), "should I do it?", "19", "There's no right answer"),   # was "I'm the AI playing the salesperson"
+    # round 36
+    ("19", 0, (), "my partner said yes", "20", None),   # was the partner objection: "if your partner was here..."
+    ("19", 0, (), "my partner is fine with it", "20", None),
+    ("19", 0, (), "my wife said no", "m_partner_here", None),   # guard: a no from them is still about them
+    ("19", 0, (), "I need to ask my partner", "m_partner_here", None),   # guard
+    ("19", 0, (), "bet", "20", None),   # was unclear, then "safe" ran the soft closes to a follow-up call
+    ("05", 0, (), "safe", "05", "No rush"),   # was kept as the answer at every open step
+    ("05", 0, (), "I want to feel safe", "06", None),   # guard: a reason
+    ("01", 0, (), "money 💰", "goal_practical", "What are you hoping that would get you?"),   # was "with money money?"
 ]
 
 
