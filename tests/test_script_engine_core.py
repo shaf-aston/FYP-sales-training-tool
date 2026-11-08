@@ -226,6 +226,38 @@ def test_bad_reask_fails_loud(change, error):
         parse_method("mini", data)
 
 
+@pytest.mark.parametrize("change, error", [  # each line a route says is checked, and the error names its step
+    (lambda s: s["b"]["listen"]["agrees"].update(ack="Good, {goal."), "step b: a blank"),
+    (lambda s: s["a"]["stuck"].update(ack="Ok, {goal."), "step a: a blank"),
+    (lambda s: s["a"]["listen"]["clear"].update(say="Is _this_ _it_?"), "step a: at most one stress"),
+    (lambda s: s["a"]["stuck"].update(say="Is _this_ _it_?"), "step a: at most one stress"),
+    (lambda s: s["a"]["listen"]["clear"].pop("examples"), "step a: route 'clear' needs examples"),
+    (lambda s: s["a"]["stuck"].update(examples=["x"]), "step a: 'any' route takes no examples"),
+    (lambda s: s["a"].update(answered_by=r"^(?P<answer>\d*)$") or s["a"]["listen"].update(any={"then": "b"}), "step a: answered_by must not match an empty"),
+])
+def test_a_bad_line_on_a_route_fails_loud_naming_its_step(change, error):
+    data = yaml.safe_load((FIXTURES / "mini.yaml").read_text(encoding="utf-8"))
+    change(data["steps"])
+    with pytest.raises(ValueError, match=re.escape(error)):
+        parse_method("mini", data)
+
+
+def test_a_step_keeps_each_field_it_was_given_and_defaults_the_rest():
+    data = yaml.safe_load((FIXTURES / "mini.yaml").read_text(encoding="utf-8"))
+    data["steps"]["a"].update(name="Goal", note="listen for why", doubts_answer=True, bridge="Where are you based?",
+                              unsure="clear", needs=r"\w", say_plain="What would you like?", plain_if="money")
+    data["steps"]["silent"]["shrug_moves_on"] = True
+    data["steps"]["b"]["yes_no"] = True
+    steps = parse_method("mini", data).steps
+    a = steps["a"]
+    assert (a.name, a.note, a.doubts_answer, a.bridge, a.unsure, a.needs, a.plain_if) == (
+        "Goal", "listen for why", True, "Where are you based?", "clear", r"\w", "money")
+    assert steps["silent"].shrug_moves_on is True and steps["b"].yes_no is True
+    c = steps["c"]  # given none of them
+    assert (c.capture, c.name, c.note, c.bridge, c.unsure, c.needs, c.plain_if, c.answered_by) == ("",) * 8
+    assert (c.doubts_answer, c.shrug_moves_on, c.yes_no, c.echo, c.moment, c.run_on) == (False,) * 6
+
+
 def test_a_route_under_its_floor_is_neither_the_label_nor_a_candidate(fake_embedder):
     labels = {"yes": ["yes sounds good"], "no": ["no not for me"]}
     floored = _listener(fake_embedder, 0.65).match("yes sounds good", labels, floors={"yes": 1.01})
