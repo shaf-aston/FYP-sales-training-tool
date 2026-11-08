@@ -914,7 +914,14 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("19", 0, (), "what's next?", "19", "Sure."),   # guard: still a nudge
     ("01", 0, (), "because I'm broke, more money", "goal_practical", "What are you hoping to achieve with more money?"),   # was no goal said back
     ("03", 0, (), "since last month", "04", "1 month... Damn."),   # was no number
-    ("willing", 0, (), "go on then", "11", "Sure."),   # was taken as its answer; never a yes to settling
+    ("willing", 0, (), "go on then", "11", "Sure."),
+    # round 43
+    ("01", 0, (), "I used to run a business, I want that again", "goal_practical", None),   # was "let me say that again"
+    ("01", 0, (), "come again?", "01", "Of course, let me say that again."),   # guard: still asks
+    ("03", 0, (), "6 weeks", "04", "So what made it come up for you now?"),   # was "so many nights, months and years"
+    ("03", 0, (), "10 days", "04", "So what made it come up for you now?"),
+    ("03", 0, (), "6 months", "04", "6 months... Damn."),   # guard: still a number
+    ("01", 0, (), "something called freedom", "goal_practical", "What are you hoping to achieve with freedom?"),   # was taken as its answer; never a yes to settling
 ]
 
 

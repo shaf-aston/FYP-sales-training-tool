@@ -673,6 +673,7 @@ def test_whats_next_asks_no_ai(fake_embedder):
     ("with my kids, more money", None),                     # round 40: was "with with your kids, more money"
     ("more time with my kids", "more time with your kids"),   # guard: "with" later is fine
     ("I suppose more money would be nice", "more money"),   # round 41: said no goal back
+    ("a thing called freedom", "freedom"),                  # round 43: said back whole
     ("what I'm hoping to achieve is more money", "more money"),   # round 42: said no goal back
     ("honestly what I really want is freedom", "freedom"),
     ("what I want is just more money", "more money"),
@@ -962,6 +963,51 @@ def test_go_on_is_no_yes_where_the_question_never_asks_to_go_ahead(fake_embedder
     s = seller(fake_embedder, step=step)   # round 42: "go on then" to "keep settling?" was a yes to settling
     reply, _ = s.reply("go on then")
     assert s.state.step == then and reply.startswith(f"{GO_ON} ")
+
+
+@pytest.mark.parametrize("text, repeat", [
+    ("I want that again", False), ("I used to run a business, I want that again", False),   # round 43: got "let me say that again"
+    ("come again", True), ("say that again", True),                                          # guard: still asks
+])
+def test_a_want_is_never_a_say_that_again(fake_embedder, text, repeat):
+    s = seller(fake_embedder, step="01")
+    s.reply(text)
+    assert (s.last_turn["heard_as"] == "sense:repeat") == repeat
+
+
+@pytest.mark.parametrize("said, never_with, heard", [
+    ("I want that again", ("want",), "answer:unclear"),   # round 43: "I want that again" got "let me say that again"
+    ("I want that again", (), "sense:repeat"),
+    ("swanton again", ("want",), "sense:repeat"),         # guard: a whole word, never inside one
+])
+def test_a_sense_is_never_heard_with_its_never_with_words(fake_embedder, said, never_with, heard):
+    from dataclasses import replace
+    s = seller(fake_embedder, step="01")
+    repeat = s.sense.interruptions["repeat"]
+    s.sense.interruptions["repeat"] = replace(repeat, examples=(said.lower(),), never_with=never_with)
+    s.reply(said)
+    assert s.last_turn["heard_as"] == heard
+
+
+def test_say_that_again_is_never_heard_with_a_want():
+    from core.buy_mode.script_engine.method import load_common_sense
+    assert {"want", "used to"} <= set(load_common_sense().interruptions["repeat"].never_with)
+
+
+def test_a_route_pattern_takes_the_route_by_rule(fake_embedder):
+    s = seller(fake_embedder, step="03")   # round 43: "6 weeks" was "so many nights, months and years"
+    reply, _ = s.reply("about 9 WKS")
+    assert s.last_turn["heard_as"] == "answer:recent" and reply.startswith("So what made it come up")
+
+
+@pytest.mark.parametrize("text, then", [
+    ("6 weeks", "recent"), ("10 days", "recent"), ("12 weeks", "recent"), ("about 3 wks", "recent"),   # round 43: was unclear
+    ("20 weeks", None), ("6 months", None), ("a year and 2 weeks", None), ("15 days and 2 years", None),   # guard: never a long time
+])
+def test_a_few_weeks_or_days_by_number_is_recent(fake_embedder, text, then):
+    import re
+    route = next(r for r in seller(fake_embedder, step="03").method.steps["03"].listen if r.label == "recent")
+    assert (route.label if re.search(route.pattern, text, re.IGNORECASE) else None) == then
 
 
 @pytest.mark.parametrize("text", ["what's next for me after the programme?", "I want to go on holiday more"])

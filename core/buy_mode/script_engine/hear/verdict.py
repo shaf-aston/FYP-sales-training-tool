@@ -397,7 +397,8 @@ class Ear:
         hedge = unsure >= self.sense.unclear_min_score
         senses = {k: i for k, i in self.sense.interruptions.items()
                   if (state.waiting or not i.after_wait) and not (hedge and i.after in ("rephrase", "wait"))
-                  and (asking or not i.only_asked) and not (opened and i.before_price)}
+                  and (asking or not i.only_asked) and not (opened and i.before_price)
+                  and not any(f" {w} " in f" {' '.join(tokenize(text))} " for w in i.never_with)}
         labels = {f"sense:{k}": i.examples for k, i in senses.items()}
         floors = {f"sense:{k}": i.min_score for k, i in senses.items()}  # lowest score a label counts at
         if hedge:  # one that is nearer not knowing counts only if it beats it (round 38: "let me think" got "let me say that again")

@@ -396,7 +396,10 @@ class ScriptSeller:
         text, labels = v.text, answer_labels(step)
         label, line, ack, missed = None, "", None, False
         needed = self._ear.shaped(text, step)
-        if labels and not empty:  # a shrug takes no answer's route: "ok" to "Where are you at with it?" is no yes
+        ruled = next((r.label for r in step.listen if r.pattern and re.search(r.pattern, text, re.IGNORECASE)), None)
+        if ruled and not empty:
+            label = ruled  # by rule, before meaning: round 43, "6 weeks" was unclear ("so many nights, months and years")
+        elif labels and not empty:  # a shrug takes no answer's route: "ok" to "Where are you at with it?" is no yes
             floors = {r.label: r.min_score for r in step.listen if r.label}
             found = self._listener.answer(text, labels, list(self.sense.unclear), floors)
             restates = {r.label for r in step.listen if r.restates}

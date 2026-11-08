@@ -11,6 +11,7 @@ from core.buy_mode.script_engine.words.fill import NAME, blanks
 from core.buy_mode.script_engine.words.tone import stresses
 from core.buy_mode.stage import Stage
 from core.infra.loader import CONFIG_DIR
+from core.infra.utils import tokenize
 
 ANY = "any"  # listen route with no examples: taken for any reply
 # What happens after an interruption's reply: ask the step again (same words), wait for them to come
@@ -29,6 +30,8 @@ class Route:
     like: str = ""      # the shared answer (answers.yaml) it takes examples from: what kind of answer it is ("no")
     say: str = ""       # said in place of the next step's own line, which this answer would make untrue ("not long" ->
                         # not "so many nights, months and years"); on a route back to its own step, the line asked again
+    pattern: str = ""   # regex: a reply it matches takes this route by rule, before any meaning ("6 weeks" is recent:
+                        # the embedder puts "6 weeks" next to "6 months")
     restates: bool = False  # the answer only says the question back ("I want to make money online"): a reply that
                             # opens with it and goes on is heard by the rest ("..., so I can quit my job")
 
@@ -157,6 +160,7 @@ class Interruption:
     only_asked: bool = False  # counts only as a question: "does that matter?" asks, "that matters to me" answers
     once: bool = False  # answered once a call: said again ("ok, thank you" after "You're welcome.") it is heard as the rest
     before_price: bool = False  # heard only before the price is out; from it on, the close hears a no its own way
+    never_with: tuple = ()  # words that make a reply never this one ("I want that again" is no "say that again")
 
 
 @dataclass(frozen=True)
@@ -205,7 +209,16 @@ def _route(step_id, label, data, answers):
     keep, restates = data.get("keep", True) is not False, data.get("restates", False) is True
     if restates and keep:
         raise ValueError(f"step {step_id}: route '{label}' restates the question, so it can't keep the reply")
-    return Route(label, examples, str(data["then"]), data.get("ack", ""), keep, floor, like or "", say, restates)
+    pattern = data.get("pattern", "")
+    if pattern:
+        if label == ANY:
+            raise ValueError(f"step {step_id}: '{ANY}' route takes no pattern")
+        try:
+            re.compile(pattern)
+        except re.error as e:
+            raise ValueError(f"step {step_id}: route '{label}' pattern: {e}") from None
+    return Route(label, examples, str(data["then"]), data.get("ack", ""), keep, floor, like or "", say,
+                 pattern=pattern, restates=restates)
 
 
 def _step(step_id, data, answers):
@@ -419,7 +432,7 @@ def parse_offer(name, data):
     )
 
 
-INTERRUPTION_KEYS = {"examples", "reply", "draft", "after", "after_wait", "min_score", "with_answer", "only_asked", "once", "before_price"}  # `draft` is accepted, never read
+INTERRUPTION_KEYS = {"examples", "reply", "draft", "after", "after_wait", "min_score", "with_answer", "only_asked", "once", "before_price", "never_with"}  # `draft` is accepted, never read
 
 
 def parse_common_sense(data):
@@ -431,7 +444,8 @@ def parse_common_sense(data):
                         bool(v.get("after_wait")),
                         _score(f"interruption {k}", v["min_score"]) if "min_score" in v else 0.0,
                         v.get("with_answer", False) is True, v.get("only_asked", False) is True,
-                        v.get("once", False) is True, v.get("before_price", False) is True)
+                        v.get("once", False) is True, v.get("before_price", False) is True,
+                        tuple(" ".join(tokenize(w)) for w in v.get("never_with") or ()))
         for k, v in data["interruptions"].items()
     }
     for i in items.values():
