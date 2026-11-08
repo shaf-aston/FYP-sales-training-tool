@@ -656,6 +656,12 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("omg wow ok", "okay", ""),   # round 54: each filler lead goes
     ("actually money", "money", ""),
     ("2k fr", "2k", ""), ("free frfr", "free", ""),   # round 55: "fr" (for real) on the end was saved with the answer
+    ("2k ngl", "2k", ""), ("free imo", "free", ""), ("2k please", "2k", ""), ("2k sure thing", "2k", ""),   # round 56: saved whole
+    ("a year like I said", "a year", ""), ("as I said, 2k", "2k", ""), ("like I said, free", "free", ""),   # was "I said, free"
+    ("ngl money", "money", ""), ("yup quit", "quit my job", ""), ("ok please", "okay", ""),   # "ok please" got "take your time"
+    ("free in my opinion", "free", ""), ("2k as I say", "2k", ""), ("a year like I say", "a year", ""), ("imo free", "free", ""),
+    ("as I say, 2k", "2k", ""), ("like I say, quit", "quit my job", ""), ("as I mentioned, 2k", "2k", ""), ("like I mentioned, free", "free", ""),
+    ("yes please", "yes", ""), ("I'm not sure", "I'm not sure", ""),   # guard: "sure" alone is no end tag
     ("well paid job", "well paid job", ""),   # guard: "well paid" is the answer
     ("oh what?", "", "oh what?"),   # guard: still asks
     ("like 2k", "2k", ""),

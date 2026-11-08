@@ -631,6 +631,9 @@ def test_whats_next_asks_no_ai(fake_embedder):
     ("oh wow money", "money"),
     ("money innit", "money"),  # round 54: could not be said back
     ("money fr", "money"), ("my boss frfr", "your boss"),  # round 55: was "with money for real?"
+    ("money sure", "money"), ("free ngl", "free"), ("money imo", "money"), ("more money as I said", "more money"),  # round 56: was "with money sure?"
+    ("my boss yup", "your boss"), ("money sure thing", "money"), ("more money like I said", "more money"),
+    ("not sure", None),  # guard
     ("a year innit", "a year"),
     ("well paid job", "well paid job"),  # round 54: was "paid job"
     ("so well off", "well off"),
@@ -1297,6 +1300,7 @@ def test_echo_phrase_fixes_typos(reply, phrase):
     ("kinda money", "kind of money"), ("sorta quit", "sort of quit"),   # round 55 callers: said back as "with kinda money?"
     ("defo", "definitely"), ("Deffo yes", "definitely yes"), ("money for real", "money fr"),   # round 55 callers: unclear everywhere
     ("cheers", "thanks"), ("ta", "thanks"),   # round 55 callers: saved as the answer
+    ("sure thing", "sure"),   # round 56 callers: saved as the answer
     ("ta da", "ta da"), ("for really", "for really"),   # guard: only the reply alone, only the whole phrase
 ])
 def test_fix_typos_keeps_real_words(text, fixed):

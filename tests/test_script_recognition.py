@@ -1067,6 +1067,15 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("05", 0, (), "cheers", "05", "You're welcome"),   # was saved as the answer
     ("18", 0, (), "deffo", "19", "Do you see yourself jumping in?"),   # was unclear
     ("18", 0, (), "for real", "18", "Put simply"),   # was "I'm an AI playing the salesperson"
+    # round 56
+    ("01", 0, (), "free sure", "goal_practical", "What are you hoping to achieve by being free?"),   # was "...with free sure?"
+    ("05", 0, (), "yup", "05", None),   # was saved as the answer
+    ("05", 0, (), "sure thing", "05", None),   # was saved as the answer
+    ("05", 0, (), "ngl ok", "05", None),   # was saved as the answer
+    ("05", 0, (), "as I said ok", "05", None),   # was saved as the answer
+    ("06", 1, (), "ok please", "08", None),   # was "No problem, take your time."
+    ("18", 0, (), "sure thing", "19", "Do you see yourself jumping in?"),   # guard: still a yes
+    ("22", 0, (), "debit please", "end", None),   # guard: still pays
 ]
 
 
