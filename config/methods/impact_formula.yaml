@@ -117,6 +117,7 @@ steps:
     ui_stage: pitch
     draft: true  # probe is ours: the source has no second wording
     say: "Do you see yourself jumping in, or how do you feel?"
+    go_on_is_yes: true   # draft: round 42 callers, "go on" is a yes to it
     probe: "Where are you at with it right now?"
     stuck: {then: "m_identify"}   # still hesitant: find what holds them back (the objection matrix)
     listen:

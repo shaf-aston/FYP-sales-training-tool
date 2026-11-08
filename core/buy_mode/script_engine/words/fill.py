@@ -119,6 +119,8 @@ def _as_words(text, cfg):
         text = re.sub(rf"((?<!\w)(?:\d\w*|(?i:{re.escape(word)})))?\s*(?:{re.escape(sign)}\ufe0f?\s*)+", lambda m: f"{m.group(1)} " if m.group(1) else f" {word} ", text).strip()
     for heard, meant in cfg["word_swaps"].items():
         text = re.sub(rf"(?<!\w){re.escape(heard)}(?!\w)", meant, text, flags=re.IGNORECASE)
+    for bare, meant in cfg["apostrophe_words"].items():   # round 42: "im after more money"; never "ID"
+        text = re.sub(rf"(?<!\w)[{bare[0]}{bare[0].upper()}]{re.escape(bare[1:])}(?!\w)", meant, text)
     return text
 
 
@@ -133,10 +135,22 @@ def base_verb(word, cfg):
     return next((v for v in (stem, stem + "e", doubled) if v in cfg["verb_goal_starts"]), None)
 
 
+def _cleft(lower, cfg):
+    """How many words open a "what I want is" reply: up to and with its "is" ("what I'm hoping to achieve is
+    more money" -> 6). 0 when it is not one: no subject before the "is" ("what is it?")."""
+    start = max((len(s) for s in map(tokenize, cfg["echo_cleft_starts"]) if lower[:len(s)] == s), default=0)
+    if not start:
+        return 0
+    span = lower[start + 1:start + cfg["echo_want_within"] + 3]
+    return next((start + 2 + i for i, w in enumerate(span) if w in cfg["echo_cleft_verbs"]), 0)
+
+
 def _after_want(words, cfg):
     """The words after who wants it ("my family needs", "we want", "my wife and I would like"): the goal, said
     back without them. Only near the start, and never past a "not" ("I don't want to work") or a "who"."""
     lower = [w.lower() for w in words]
+    if cleft := _cleft(lower, cfg):
+        return words[cleft:]  # "the main thing I want is more time": after its "is", not its "want"
     for i in range(min(len(lower), cfg["echo_want_within"] + 1)):
         if lower[i] in ("not", "never", *cfg["question_words"]) or lower[i].endswith("n't"):
             return words  # "people who want more": not who wants it
@@ -171,7 +185,7 @@ def echo_phrase(reply, cfg, vocab=frozenset(), verbs=False):
     cut = True
     while cut:
         lower = [w.lower() for w in words]
-        cut = max((len(d) for d in drops if lower[:len(d)] == d), default=0)  # the longest: "so i can", not "so"
+        cut = max((len(d) for d in drops if lower[:len(d)] == d), default=_cleft(lower, cfg))  # the longest: "so i can", not "so"
         words = words[cut:]
     ends = [tokenize(e) for e in cfg["echo_drop_ends"]]
     while words and (end := next((e for e in ends if [w.lower() for w in words[-len(e):]] == e), None)):

@@ -673,6 +673,11 @@ def test_whats_next_asks_no_ai(fake_embedder):
     ("with my kids, more money", None),                     # round 40: was "with with your kids, more money"
     ("more time with my kids", "more time with your kids"),   # guard: "with" later is fine
     ("I suppose more money would be nice", "more money"),   # round 41: said no goal back
+    ("what I'm hoping to achieve is more money", "more money"),   # round 42: said no goal back
+    ("honestly what I really want is freedom", "freedom"),
+    ("what I want is just more money", "more money"),
+    ("the main thing I want is more time", "more time"),
+    ("what is more money", None),                        # guard: no one before the "is", a question
     ("I guess more money", "more money"),
     ("more money ish", "more money"),                       # round 41: "more money-ish" was said back with "-ish"
     ("", None),
@@ -742,7 +747,7 @@ def test_a_typo_is_still_fixed_beside_real_words():
 @pytest.mark.parametrize("text, fixed", [
     ("mroe money", "more money"), ("yse", "yes"), ("a yaer", "a year"), ("tiem", "time"),
     ("form", "form"), ("dose", "dose"),   # a real word stays, though one swap from a script word
-    ("ive", "ive"), ("abt", "abt"),       # the first letter is kept: slang is never "vie" or "bat"
+    ("ive", "I've"), ("abt", "abt"),     # the first letter is kept: never "vie" or "bat" (round 42: "ive" is "I've")
     ("my mam", "my mam"),                 # never into a word outside the script ("mma")
 ])
 def test_two_letters_the_wrong_way_round_are_fixed(text, fixed):
@@ -799,6 +804,22 @@ def test_ish_on_a_word_is_its_own_word(text, read):
     ("my job", "my job"),                            # guard: no filler first
 ])
 def test_a_short_form_after_a_filler_word_is_its_word(text, read):
+    from core.buy_mode.script_engine.words.fill import fix_typos
+    assert fix_typos(text, frozenset(), CFG) == read
+
+
+@pytest.mark.parametrize("text, read", [
+    ("im after more money", "I'm after more money"),   # round 42: said back as "with im after more money?"
+    ("Im after more money", "I'm after more money"),
+    ("i dont know", "i don't know"),
+    ("thats it", "that's it"),
+    ("id quit my job", "I'd quit my job"),
+    ("since last year", "for a year"),                 # round 42: was no number
+    ("my ID card", "my ID card"),                      # guard: a word in capitals is not a short form
+    ("IM me", "IM me"),
+    ("I'm after more money", "I'm after more money"),  # guard: already right
+])
+def test_a_short_form_typed_without_its_apostrophe_gets_it(text, read):
     from core.buy_mode.script_engine.words.fill import fix_typos
     assert fix_typos(text, frozenset(), CFG) == read
 
@@ -913,6 +934,30 @@ def test_a_nudged_reason_is_kept_without_the_nudge(fake_embedder):
     s = seller(fake_embedder, step="20")
     s.reply("because I want freedom, what's next?")
     assert s.state.slots["reason"] == "because I want freedom"
+
+
+@pytest.mark.parametrize("text", ["go on then", "go ahead", "fire away"])
+def test_go_on_to_an_open_question_is_a_nudge_not_its_answer(fake_embedder, text):
+    s = seller(fake_embedder, step="11")   # round 42: "go on then" was saved as the answer
+    reply, _ = s.reply(text)
+    assert reply.startswith(f"{GO_ON} ")
+
+
+@pytest.mark.parametrize("text, then", [
+    ("go on", "20"), ("go on then", "20"), ("go ahead", "20"), ("fire away", "20"),   # round 42: was the question again
+    ("what's next?", "19"),                                                            # guard: asks, never agrees
+])
+def test_go_on_to_a_yes_or_no_question_is_a_yes(fake_embedder, text, then):
+    s = seller(fake_embedder, step="19")
+    s.reply(text)
+    assert s.state.step == then
+
+
+@pytest.mark.parametrize("step, then", [("willing", "11"), ("13", "14")])
+def test_go_on_is_no_yes_where_the_question_never_asks_to_go_ahead(fake_embedder, step, then):
+    s = seller(fake_embedder, step=step)   # round 42: "go on then" to "keep settling?" was a yes to settling
+    reply, _ = s.reply("go on then")
+    assert s.state.step == then and reply.startswith(f"{GO_ON} ")
 
 
 @pytest.mark.parametrize("text", ["what's next for me after the programme?", "I want to go on holiday more"])

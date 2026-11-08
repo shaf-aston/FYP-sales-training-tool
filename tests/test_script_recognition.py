@@ -904,6 +904,15 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("05", 0, (), "aye", "05", "No rush"),
     ("05", 0, (), "I see", "05", "No rush"),
     ("19", 0, (), "aye", "20", None),   # guard: still a yes
+    # round 42
+    ("01", 0, (), "im after more money", "goal_practical", "What are you hoping to achieve with more money?"),   # was "with im after more money?"
+    ("03", 0, (), "since last year", "04", "12 months... Damn."),   # was no number
+    ("19", 0, (), "go on", "20", None),   # was "Sure. Is this something...?" again
+    ("19", 0, (), "fire away", "20", None),   # was unclear
+    ("11", 0, (), "go on then", "12", "Sure."),   # was saved as the answer
+    ("01", 0, (), "what I'm hoping to achieve is more money", "goal_practical", "What are you hoping to achieve with more money?"),   # was no goal said back
+    ("19", 0, (), "what's next?", "19", "Sure."),   # guard: still a nudge
+    ("willing", 0, (), "go on then", "11", "Sure."),   # was taken as its answer; never a yes to settling
 ]
 
 

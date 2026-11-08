@@ -137,6 +137,7 @@ def _method(**step):
     ({"say": "It's _all_ about ==you==?"}, "one stress"),
     ({"say": "So {outcome }?", "say_plain": "So?"}, "a blank is"),
     ({"say": "Go?", "listen": {"any": {"then": "a", "min_score": 0.5}}}, "no min_score"),
+    ({"say": "Go.", "go_on_is_yes": True}, "go_on_is_yes needs a say that asks"),   # round 42
 ])
 def test_a_line_the_budget_could_not_handle_fails_loud(step, why):
     with pytest.raises(ValueError, match=why):

@@ -409,6 +409,7 @@ steps:
     draft: true
     say: "{pillar_3}: we tell you what you NEED to hear... hold your feet to the fire. Open to being called out?"
     yes_no: true   # draft: round 34 callers, "no thanks" to it was heard as leaving the call
+    go_on_is_yes: true   # draft: round 42 callers, "fire away" to it is a yes
     listen:
       any: {then: "18"}
   "18":
@@ -457,6 +458,7 @@ steps:
     ui_stage: pitch
     draft: true  # probe is ours: no source line for a second ask
     say: "Do you see yourself jumping in?"
+    go_on_is_yes: true   # draft: round 42 callers, "go on" got the question again
     probe: "Is this something you can see yourself doing?"   # draft: whole calls, "yes" to "Where are you at with it right now?" was heard as saying nothing
     stuck: {then: "m_identify"}   # still hesitant: find what holds them back (the objection matrix)
     listen:
