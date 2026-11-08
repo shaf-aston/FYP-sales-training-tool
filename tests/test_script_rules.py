@@ -700,6 +700,7 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("frankly money", "money", ""), ("bruh quit", "quit my job", ""), ("frankly, a year", "a year", ""),   # round 62: the lead
     ("I have no doubt", "I have no doubt", ""), ("not at the moment", "not at the moment", ""), ("money at the moment", "money at the moment", ""),   # guard
     ("bruh what?", "", "bruh what?"),   # guard: still asks, lead and all
+    ("money, if not more", "money", ""), ("money and then some", "money", ""), ("2k or more", "2k", ""), ("2k if not more", "2k", ""),   # round 63: saved whole
     ("literally what?", "", "literally what?"), ("do you know?", "", "do you know?"),   # guard: still asks
     ("well paid job", "well paid job", ""),   # guard: "well paid" is the answer
     ("oh what?", "", "oh what?"),   # guard: still asks

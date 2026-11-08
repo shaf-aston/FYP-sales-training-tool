@@ -649,6 +649,7 @@ def test_whats_next_asks_no_ai(fake_embedder):
     ("money to start", "money"), ("free right now", "free"), ("more money these days", "more money"), ("quit generally", "quit"),
     ("money etc", "money"), ("2k and whatnot", "2k"), ("free no doubt", "free"), ("my boss at the moment", "your boss"),  # round 62: "with money etc?"
     ("money frankly", "money"), ("free bruh", "free"), ("more money and so on", "more money"), ("quit or thereabouts", "quit"),
+    ("money and then some", "money"), ("free, if not more", "free"), ("more money or more", "more money"),  # round 63: "with money and then some?"
     ("a year innit", "a year"),
     ("well paid job", "well paid job"),  # round 54: was "paid job"
     ("so well off", "well off"),
@@ -1327,6 +1328,8 @@ def test_echo_phrase_fixes_typos(reply, phrase):
     ("ok :)", "ok 🙂"), (":D", "😀"), ("money :(", "money 🙁"), ("ok xD", "ok 😆"), (";)", "😉"), ("ok :/", "ok 😕"), ("ok :P", "ok 😛"),   # round 59 callers
     ("see https://x.com", "see https://x.com"), ("re:Dave", "re:Dave"), ("2:30", "2:30"),   # guard: only a smiley on its own
     ("yh money", "yeah money"), ("yh", "yeah"),   # round 61 callers
+    ("aye money", "yeah money"), ("aye quit", "yeah quit my job"), ("yea", "yeah"), ("Aye", "yes"),   # round 63 callers: "aye quit" was heard as leaving
+    ("see ye", "see ye"), ("ye money", "ye money"),   # guard: never "ye"
     ("ta da", "ta da"), ("for really", "for really"),   # guard: only the reply alone, only the whole phrase
 ])
 def test_fix_typos_keeps_real_words(text, fixed):

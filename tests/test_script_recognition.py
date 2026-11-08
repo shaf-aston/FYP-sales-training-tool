@@ -1159,6 +1159,13 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("01", 0, (), "money no doubt", "goal_practical", "What are you hoping that would get you?"),   # was "...with money no doubt?"
     ("19", 0, (), "no doubt", "20", "What makes you say that?"),   # was heard as not yet
     ("19", 0, (), "I doubt it", "19", None),   # guard: still not yet
+    # round 63
+    ("goal_practical", 0, (), "aye quit", "goal_practical", "What would that actually change"),   # was heard as leaving: the call ended
+    ("01", 0, (), "aye money", "goal_practical", "What are you hoping that would get you?"),   # was "...with aye money?"
+    ("01", 0, (), "money, if not more", "goal_practical", "What are you hoping that would get you?"),   # was "...with money, if not more?"
+    ("01", 0, (), "money and then some", "goal_practical", "What are you hoping that would get you?"),   # was "...with money and then some?"
+    ("willing", 0, (), "aye", "willing_check", None),   # guard: still a yes
+    ("01", 0, (), "see ye", "later", "No problem."),   # guard: still a goodbye
 ]
 
 
