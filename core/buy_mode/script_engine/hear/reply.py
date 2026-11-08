@@ -19,6 +19,7 @@ import re
 from dataclasses import dataclass, replace
 
 from core.infra.utils import opens_question, tokenize
+from core.buy_mode.script_engine.words.fill import number_phrase
 
 
 @dataclass(frozen=True)
@@ -92,7 +93,7 @@ class Reader:
         self.cfg, self.breaks, self._hedges = cfg, break_pattern(cfg), hedges
         leads = "|".join(map(re.escape, cfg["nudge_leads"]))
         broken = set(cfg["nudge_after_break"])   # "what happens next?" keeps its "next"; "debit, next" does not
-        self._nudges = [re.compile(rf"(?:^|{'[^\w\s]' if p in broken else ''}\W)(?:(?:{leads})\W+)?{words}\W*$", re.IGNORECASE)
+        self._nudges = [re.compile(rf"(?:^|{r'[^\w\s]' if p in broken else ''}\W)(?:(?:{leads})\W+)?{words}\W*$", re.IGNORECASE)
                         for p, words in ((p, r"\W+".join(map(re.escape, tokenize(p)))) for p in sorted(nudges, key=len, reverse=True))]
         self._tags = {" ".join(tokenize(t)) for t in cfg["filler_tags"]}
         self._starts = set(cfg["question_words"]) | set(cfg["closed_question_starts"])
@@ -114,21 +115,29 @@ class Reader:
         self._take_back = re.compile(rf"(?:^|[,;.!?]\s*)(?:(?:{words})\b[\s,;.!-]*|(?:{word})\s*[,;.!-][\s,;.!-]*)(?=\w)"
                                      rf"|(?<=\w){not_mid}[,;.!?]\s*(?:{mid})\s*[,;.!-][\s,;.!-]*(?=\w)", re.IGNORECASE)
 
-        # "2k, no 3k", "a year, well two": between two amounts a correction needs no break after it (round 33 callers:
-        # the year was kept); "pay off debt, well 5k of it" has no amount before, so nothing is taken back
+        # "2k, no 3k", "more time, sorry more money": between two answers of one kind a correction needs no break
+        # after it (round 33/34 callers: the first was kept); "yes, sorry the baby was crying" is two kinds, so stays
         self._amount = re.compile(rf"\d\w*|(?:{any_of(cfg['number_words'])})", re.IGNORECASE)
-        self._amount_back = re.compile(rf"(?<=\w){not_mid}[,;.!?]\s*(?:{mid}|{word})\s+(?=(?:{self._amount.pattern})\b)", re.IGNORECASE)
+        self._fix_back = re.compile(rf"(?<=\w){not_mid}[,;.!?]\s*(?:{mid}|{word})\s+(?=\w)", re.IGNORECASE)
+        self._cfg = cfg
 
-    def _amount_back_in(self, text):
-        """A correction between two amounts ("2k, no 3k"): the words kept, else None. A bare amount keeps the
-        unit said after the first one: "a year, well two" -> "two year"."""
-        back = self._amount_back.search(text)
-        before = tokenize(clauses(text[:back.start()], self.breaks)[-1]) if back else []
-        said = [i for i, w in enumerate(before) if self._amount.fullmatch(w)]
-        if not said:
+    def _figure(self, text):
+        """A figure or span is in it: a digit, a number word that is no stop word, or a number with its unit."""
+        words = tokenize(text)
+        return any(w[0].isdigit() or (w in self._cfg["number_words"] and w not in self._cfg["stop_words"]) for w in words) or any(
+            number_phrase(text, rule, self._cfg) for rule in self._cfg["number_blanks"].values())
+
+    def _fixed_in(self, text):
+        """A correction between two answers of one kind ("2k, no 3k", "more time, sorry more money"): the words
+        kept, else None. A bare amount keeps the unit said after the first one: "a year, well two" -> "two year"."""
+        back = self._fix_back.search(text)
+        if not back:
             return None
-        new = text[back.end():].strip()
-        bare = all(self._amount.fullmatch(w) for w in tokenize(new))
+        before, new = tokenize(clauses(text[:back.start()], self.breaks)[-1]), text[back.end():].strip()
+        if not ((self._figure(" ".join(before)) and self._figure(new)) or before[:1] == tokenize(new)[:1]):
+            return None
+        said = [i for i, w in enumerate(before) if self._amount.fullmatch(w)]
+        bare = said and all(self._amount.fullmatch(w) for w in tokenize(new))
         return " ".join([new, *before[said[-1] + 1:]]) if bare else new
 
     def read(self, text):
@@ -142,7 +151,7 @@ class Reader:
         lead = self._answer_lead.match(rest)
         if lead and tokenize(rest[lead.end():]):  # "is it ok to say quit my job?": the answer, its "?" asks leave
             rest = rest[lead.end():].rstrip(" ?")
-        while (back := self._take_back.search(rest)) or (kept := self._amount_back_in(rest)) is not None:
+        while (back := self._take_back.search(rest)) or (kept := self._fixed_in(rest)) is not None:
             rest = rest[back.end():] if back else kept  # "3k, no wait, more like 4k" -> "more like 4k": they took
             # the first part back; cut again so "wait, sorry, what's the price?" asks
         parts, acts = [], []

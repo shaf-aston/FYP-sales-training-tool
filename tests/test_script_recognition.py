@@ -813,6 +813,14 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("02", 0, (), "sorry, I'm driving", "later", None),   # guard: still leaving
     ("03", 0, (), "a year, well two", "04", "24 months"),   # was "12 months"
     ("01", 0, (), "what I said", "01", "What are you actually hoping to achieve?"),   # was saved as their goal: "to have what you said"
+    # round 34
+    ("03", 0, (), "6 months, actually more like a year", "04", "12 months"),   # was "6 months"
+    ("01", 0, (), "more time, sorry more money", "goal_practical", "What are you hoping to achieve with more money?"),   # was "with more time, sorry more money"
+    ("22", 0, (), "which is better?", "22", "There's no right answer"),   # was heard as paying: "Welcome aboard"
+    ("22", 0, (), "which is easier?", "22", "There's no right answer"),   # the same
+    ("22", 0, (), "which do you recommend?", "22", "There's no right answer"),   # was "I'll find out"
+    ("22", 0, (), "can I use paypal?", "end", "Welcome aboard"),   # guard: a question naming a way to pay still pays
+    ("22", 0, (), "whichever is easier", "end", "Welcome aboard"),   # guard: leaving the choice to us still pays
 ]
 
 

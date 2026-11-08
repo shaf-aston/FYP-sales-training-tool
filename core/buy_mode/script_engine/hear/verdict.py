@@ -294,7 +294,16 @@ class Ear:
         labels = answer_labels(step)
         found = self._listener.match(question, labels) if labels else None
         sure = found and found.label and not found.close and found.score >= self.cfg["question_answer_min_score"]
-        return found.label if sure else ""
+        return found.label if sure and self._names(question, labels[found.label]) else ""
+
+    def _names(self, question, examples):
+        """The question names a word of the answer it is near ("can I use paypal?": paypal), or only small words
+        ("which one?"). One with words of its own the answer never uses asks about something else (round 34
+        callers: "which is better?", 0.81 to "whichever is easier", got "Welcome aboard")."""
+        small = {*self.cfg["stop_words"], *self.cfg["question_words"], *self.cfg["closed_question_starts"],
+                 *self.cfg["question_subjects"]}
+        own = {w for w in tokenize(question) if w not in small}
+        return not own or bool(own & {w for e in examples for w in tokenize(e)})
 
     def _takes_back(self, said, label, step):
         """The content is another of the step's answers, one that says no (`takes_back`: "no", "not yet"):
@@ -408,4 +417,7 @@ class Ear:
         sense, what's next?" at the temp check), only when sure: "what happens to the card?" asks about the
         card, it doesn't choose it. Two answers too close to call are judged as usual."""
         labels = answer_labels(step)
-        return bool(labels) and self._listener.answer_score(text, labels, asking=True) > 0
+        if not labels or self._listener.answer_score(text, labels, asking=True) <= 0:
+            return False
+        found = self._listener.match(text, labels)
+        return not found.label or found.close or self._names(text, labels[found.label])

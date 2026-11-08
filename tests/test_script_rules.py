@@ -603,6 +603,11 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("6 months, no a year", "a year", ""),
     ("pay off debt, well 5k of it", "pay off debt, well 5k of it", ""),   # guard: no amount before, nothing taken back
     ("a year, no more", "a year, no more", ""),   # guard: no amount after
+    ("6 months, actually more like a year", "more like a year", ""),   # round 34: a span fixed by a span (was both)
+    ("more time, sorry more money", "more money", ""),   # two answers that start the same: the second is meant
+    ("quit my job, actually quit my job and travel", "quit my job and travel", ""),
+    ("yes, sorry the baby was crying", "yes, sorry the baby was crying", ""),   # guard: two kinds, nothing taken back
+    ("a year, sorry had to pay for parking", "a year, sorry had to pay for parking", ""),   # guard: no span after
 ])
 def test_a_reply_is_read_once_into_what_it_says_and_what_it_asks(text, said, asked):
     from core.buy_mode.script_engine.hear.reply import Reader
@@ -658,6 +663,21 @@ def test_a_pause_said_in_the_past_is_over(seller, said, after, line):
 ])
 def test_a_pause_or_goodbye_in_the_past_is_over(seller, text, name, over):
     assert seller._ear._over(text, name) == over
+
+
+@pytest.mark.parametrize("question, examples, names", [
+    ("which is better?", ["whichever is easier", "either is fine"], False),   # round 34: asks advice, chooses nothing
+    ("can I use paypal?", ["paypal", "credit"], True),
+    ("debit card is ok?", ["debit card please"], True),
+    ("is it?", ["credit"], True),   # only small words: the score alone decides, as before
+])
+def test_a_question_chooses_an_answer_only_when_it_names_one_of_its_words(seller, question, examples, names):
+    assert seller._ear._names(question, examples) == names
+
+
+def test_which_is_better_at_payment_is_no_way_to_pay(seller):
+    said, _ = at(seller, "22").reply("which is better?")   # round 34 callers: got "Welcome aboard"
+    assert seller.state.step == "22" and said.startswith("There's no right answer")
 
 
 def test_im_back_is_an_answer_unless_they_stepped_away(fake_embedder):
