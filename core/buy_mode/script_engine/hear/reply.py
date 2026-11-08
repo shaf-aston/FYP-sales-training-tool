@@ -91,8 +91,9 @@ class Reader:
         """`nudges`: phrases cut off the end of a reply. `hedges(text)`: the part says nothing on its own."""
         self.cfg, self.breaks, self._hedges = cfg, break_pattern(cfg), hedges
         leads = "|".join(map(re.escape, cfg["nudge_leads"]))
-        self._nudges = [re.compile(rf"(?:^|\W)(?:(?:{leads})\W+)?{words}\W*$", re.IGNORECASE)
-                        for words in (r"\W+".join(map(re.escape, tokenize(p))) for p in sorted(nudges, key=len, reverse=True))]
+        broken = set(cfg["nudge_after_break"])   # "what happens next?" keeps its "next"; "debit, next" does not
+        self._nudges = [re.compile(rf"(?:^|{'[^\w\s]' if p in broken else ''}\W)(?:(?:{leads})\W+)?{words}\W*$", re.IGNORECASE)
+                        for p, words in ((p, r"\W+".join(map(re.escape, tokenize(p)))) for p in sorted(nudges, key=len, reverse=True))]
         self._tags = {" ".join(tokenize(t)) for t in cfg["filler_tags"]}
         self._starts = set(cfg["question_words"]) | set(cfg["closed_question_starts"])
         def any_of(phrases):

@@ -931,6 +931,14 @@ def test_echo_phrase_fixes_typos(reply, phrase):
     ("~~2 years~~ 3 years", "3 years"),
     ("more f***ing money", "more f***ing money"),   # guard: no pair, so a starred swear is left for echo_phrase
     ("*money", "*money"),   # guard: one star alone is kept
+    ("💰💰💰", "money"),   # round 31 callers: said nothing
+    ("🏠 for my family", "a house for my family"),   # was unclear
+    ("2k 💸", "2k"),   # guard: after an amount it only decorates it
+    ("I want to by a house", "I want to buy a house"),   # round 31 callers: voice to text said back as typed
+    ("to grand a month", "two grand a month"),
+    ("I am board of my job", "I am bored of my job"),
+    ("going to grandma's", "going to grandma's"),   # guard: only the whole phrase
+    ("quiet my job", "quit my job"),   # round 28 limit: autocorrect was said back as typed
 ])
 def test_fix_typos_keeps_real_words(text, fixed):
     from core.buy_mode.script_engine.words.fill import fix_typos
@@ -1256,6 +1264,15 @@ def test_who_wants_it_is_left_out_near_the_start(reply, rest):
     ("my husband wants me to earn more", "earn more"),   # round 29 callers: the plain line was used
     ("same as everyone, more money", "more money"),   # round 30 callers: said back whole
     ("the usual, more time", "more time"),
+    ("more money, thank you", "more money"),   # round 31 callers: the thanks was said back
+    ("more money please", "more money"),
+    ("I would like to achieve financial independence, thank you.", "financial independence"),   # round 31: "by being able to achieve financial independence"
+    ("reach out to more people", "reach out to more people"),   # guard: a verb before "out" is kept
+    ("achieve more", "achieve more"),
+    ("to reach my goals", "reach your goals"),
+    ("money plus time plus freedom", "money, time and freedom"),   # round 31: said back with "plus"
+    ("money & time", "money and time"),
+    ("plus more money", "plus more money"),   # guard: only between two things
 ])
 def test_echo_phrase_leaves_out_swears_and_who_wants_it(reply, phrase):
     from core.buy_mode.script_engine.words.fill import echo_phrase

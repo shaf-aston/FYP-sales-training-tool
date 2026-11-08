@@ -790,6 +790,15 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("01", 0, (), "**more money**", "goal_practical", "What are you hoping to achieve with more money?"),   # was "with more?"
     ("03", 0, (), "~a year~ two years", "04", "24 months"),   # was "12 months"
     ("01", 0, (), "same as everyone, more money", "goal_practical", "What are you hoping to achieve with more money?"),   # was said back whole
+    # round 31
+    ("01", 0, (), "what am I hoping to achieve? more money", "goal_practical", "What are you hoping to achieve with more money?"),   # was "I'm the AI"
+    ("01", 0, (), "more money, thank you", "goal_practical", "What are you hoping to achieve with more money?"),   # thanks said back
+    ("01", 0, (), "💰💰💰", "goal_practical", None),   # was "with?" or nothing
+    ("01", 0, (), "I want to by a house", "goal_identity", None),   # was "What do you mean by wanting to buy a house?"
+    ("01", 0, (), "I want to buy a house", "goal_identity", None),
+    ("goal_practical", 0, (), "🏠 for my family", "goal_identity", None),   # was unclear
+    ("goal_practical", 0, (), "next", "goal_practical", "Sure."),   # guard: alone it still nudges
+    ("01", 0, (), "I want to achieve financial freedom", "goal_practical", "What are you hoping to achieve with financial freedom?"),   # was "by being able to achieve"
 ]
 
 

@@ -99,10 +99,12 @@ class Ear:
     def _unecho(self, reply, state):
         """The question said back before their answer ("how long? about 2 years", "achieve? quit my job", "what
         do I want? more money") is talk, not a question: it never picks an answer ("how long?" is near "not
-        long") and is never asked about. Said back alone, it still asks for the question put another way."""
+        long") and is never asked about. With an answer after it, it needs fewer of the question's words
+        (`asked_back_share_with_answer`: "what am I hoping to achieve? more money"). Said back alone, it still
+        asks for the question put another way."""
         parts = list(reply.parts)
         for i, part in enumerate(parts):
-            if part.act not in ("asks", "rise") or not (self._word_back(part.text, state) or self._asked_back(part.text, state)):
+            if part.act not in ("asks", "rise") or not (self._word_back(part.text, state) or self._asked_back(part.text, state, "asked_back_share_with_answer")):
                 break
             parts[i] = Part(part.text, "tag")
         if not any(p.act in ("said", "rise", "asks") for p in parts):
@@ -159,7 +161,7 @@ class Ear:
             return False
         return all(w in asked or w + "s" in asked or (w.endswith("s") and w[:-1] in asked) for w in words)
 
-    def _asked_back(self, text, state):
+    def _asked_back(self, text, state, share="asked_back_share"):
         """Their reply is the question just asked, said back about themselves ("what do I want to achieve?" to
         "What do you want to specifically achieve...?"): they want it put another way. Their I-words are turned
         into you-words (`asked_back`), and `asked_back_share` of their words must be in its questions, not the talk
@@ -171,7 +173,7 @@ class Ear:
         words = [w for w in tokenize(text) if w in asked or w not in self.cfg["asked_back_what"]]
         if len(words) < self.cfg["asked_back_min_words"] or any(w in self.cfg["asked_back_you"] for w in words):
             return False
-        return sum(swap.get(w, w) in asked for w in words) >= self.cfg["asked_back_share"] * len(words)
+        return sum(swap.get(w, w) in asked for w in words) >= self.cfg[share] * len(words)
 
     def _rises(self, part, step):
         """A part ending in "?" that isn't phrased as a question is the answer said with a rise when it is short

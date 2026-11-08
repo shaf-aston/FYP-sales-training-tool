@@ -74,8 +74,19 @@ def fix_typos(text, vocab, cfg):
     if word in cfg["short_replies"]:
         return cfg["short_replies"][word] + text[len(word):]
     text = MONEY_SIGNS.sub(cfg["money_signs_as"], text)  # "more £££" -> "more money": round 28, said back as "with more?"
+    text = _as_words(text, cfg)  # round 31: "💰💰💰" said nothing, "I want to by a house" was said back as typed
     text = EMPHASIS.sub(r"\2", STRUCK.sub("", text))  # round 30: "with more?", and "~a year~ two years" was a year
     return WORD.sub(lambda m: spell(m.group(0), vocab, cfg), text)
+
+
+def _as_words(text, cfg):
+    """Pictures and misheard words as the words they stand for: an emoji in `emoji_words` ("💰💰💰" -> "money",
+    a run is one word) and a phrase in `sound_alikes` (voice to text: "to by a house" -> "to buy a house")."""
+    for sign, word in cfg["emoji_words"].items():   # after an amount it only decorates it ("2k 💸")
+        text = re.sub(rf"(\d\w*)?\s*(?:{re.escape(sign)}\ufe0f?\s*)+", lambda m: f"{m.group(1)} " if m.group(1) else f" {word} ", text).strip()
+    for heard, meant in cfg["sound_alikes"].items():
+        text = re.sub(rf"(?<!\w){re.escape(heard)}(?!\w)", meant, text, flags=re.IGNORECASE)
+    return text
 
 
 def base_verb(word, cfg):
@@ -116,6 +127,9 @@ def echo_phrase(reply, cfg, vocab=frozenset(), verbs=False):
     reply = next((x for x in sentences if set(tokenize(x)) - set(cfg["filler_words"])), sentences[0])
     cut = "|".join(map(re.escape, cfg["echo_cut_at"]))
     reply = re.split(rf"\b(?:{cut})\b", reply, maxsplit=1, flags=re.IGNORECASE)[0]  # "quit my job but I'm scared"
+    joins = "|".join(map(re.escape, cfg["echo_list_joins"]))
+    items = re.split(rf"\s+(?:{joins})\s+", reply or "", flags=re.IGNORECASE)  # round 31: "a plus b plus c" -> "a, b and c"
+    reply = ", ".join(items[:-1]) + " and " + items[-1] if len(items) > 1 else reply
     if reply and reply.isupper() and len(tokenize(reply)) > 1:
         reply = reply.lower()  # shouted ("I WANT TO BE RICH!!!"): never said back in capitals ("BE RICH?")
     words = WORD.findall(CENSORED.sub(" ", reply or ""))  # "more f***ing money" -> "more money"
@@ -129,6 +143,8 @@ def echo_phrase(reply, cfg, vocab=frozenset(), verbs=False):
     for end in (tokenize(e) for e in cfg["echo_drop_ends"]):
         if [w.lower() for w in words[-len(end):]] == end:
             words = words[:-len(end)]
+    if len(words) > 1 and words[0].lower() in cfg["echo_drop_verbs"] and words[1].lower() not in cfg["echo_drop_verbs_not_before"]:
+        words = words[1:]  # round 31: "achieve financial independence" was "by being able to achieve financial independence"
     if verbs and words:
         if verb := base_verb(words[0], cfg):
             words = [verb, *words[1:]]

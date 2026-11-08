@@ -593,6 +593,9 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("yeah no, I mean yes", "yes", ""),
     ("no yeah, it makes sense", "it makes sense", ""),   # was heard as backing out
     ("yeah no worries", "yeah no worries", ""),   # guard: no break after the "no", it is a phrase
+    ("what happens next?", "", "what happens next?"),   # round 31: "next" was cut off and "what happens" said back
+    ("I want to carry on", "I want to carry on", ""),
+    ("debit, next", "debit", ""),   # guard: after a break it still nudges
 ])
 def test_a_reply_is_read_once_into_what_it_says_and_what_it_asks(text, said, asked):
     from core.buy_mode.script_engine.hear.reply import Reader
@@ -1143,6 +1146,7 @@ def test_a_reply_of_its_own_is_not_a_word_said_back(seller, step, said):
     ("03", "how long? how long? 2 years", ["tag", "tag", "said"]),
     ("02", "how much? is it monthly?", ["tag", "asks"]),   # their own question after it still asks
     ("03", "how long? a year?", ["tag", "asks"]),          # and an answer with a rise is settled later
+    ("01", "what am I hoping to achieve? more money", ["tag", "said"]),   # round 31: 4 of 6 words got "I'm the AI"
 ])
 def test_the_question_said_back_before_an_answer_is_talk(seller, step, text, acts):
     """Round 26 callers: "how long? about 2 years" went to "So what made it come up for you now?"."""

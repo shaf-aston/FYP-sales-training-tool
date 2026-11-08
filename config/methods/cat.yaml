@@ -89,6 +89,7 @@ steps:
           - "a bit extra each month would help with the mortgage"   # draft: live ("an extra few hundred a month would help with the mortgage"), heard as level 1
           - "more time for me and my family"   # draft: whole calls, "more time" was heard as annoyance ("I'll keep this quick")
           - "pay my rent and bills"   # draft: round 27 callers, "pay rent" was heard as level 1 and asked again
+          - "I want to buy a house"   # draft: round 31 callers, "I want to by a house" was "What do you mean by wanting to buy a house?"
         then: "goal_identity"
       identity:   # level 3 already: the ladder is climbed
         examples: &identity
