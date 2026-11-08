@@ -724,11 +724,11 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("01", 0, (), "kind of more money", "goal_practical", "What are you hoping to achieve with more money?"),   # was "with kind of more money?"
     ("01", 0, (), "50% more income", "goal_practical", "What are you hoping to achieve with 50% more income?"),   # was "50 more income"
     # round 25
-    ("02", 0, (), "2k, is that a lot?", "03", "How long"),   # was "I haven't mentioned a price yet"
+    ("02", 0, (), "2k, is that a lot?", "03", "There's no right answer here"),   # was "I haven't mentioned a price yet"; round 44: the question is answered first
     ("14", 0, (), "is that a lot?", "m_funded", None),   # guard: after the price it is the money worry
     ("03", 0, (), "A year. Is that normal?", "04", "There's no right answer here"),   # was no answer to the question
     ("01", 0, (), "what do most people say?", "01", "There's no right answer here"),   # guard: asked alone, the step is asked again
-    ("01", 0, (), "more money, actually no, more time", "goal_identity", None),   # was "What are you hoping to achieve with more money actually no more time?"
+    ("01", 0, (), "more money, actually no, more time", "goal_practical", "What are you hoping to achieve with more time?"),   # was "...with more money actually no more time?"; now the same as a bare "more time"
     ("22", 0, (), "credit, is that ok?", "end", "Perfect."),   # round 25 replay: got "There's no right answer here"
     ("03", 0, (), "2 years, is that ok?", "04", "24 months"),
     # round 26
@@ -943,6 +943,16 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("01", 0, (), "honestly i just want more money so i can stop stressing", "goal_practical", "What are you hoping to achieve with more money?"),   # no goal said back
     ("03", 0, (), "a few months maybe", "04", "So what made it come up for you now?"),   # was "so many nights, months and years"
     ("03", 0, (), "a few years", "04", "If this has been on your mind"),   # guard: never recent
+    # round 46
+    ("22", 0, (), "we're fine", "22", "Which works better for you"),   # was "Welcome aboard" ("we're" spelled "were")
+    ("22", 0, (), "either is fine", "end", None),   # guard: a choice still pays
+    ("19", 0, (), "I'm in", "20", "What makes you say that?"),   # was asked again: only stop words, so a shrug
+    ("18", 0, (), "we're in", "19", None),
+    ("m_partner_close", 0, (), "I'm with you", "20", None),
+    ("04", 0, (), "money, no, time", "05", None),   # was "Ha, all good here"
+    ("04", 0, (), "time", "05", None),
+    ("04", 0, (), "how's your day going", "04", "Ha, all good here"),   # guard: still small talk
+    ("01", 0, (), "you watching the football later?", "01", "Ha, all good here"),   # guard
 ]
 
 

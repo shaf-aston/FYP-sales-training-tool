@@ -52,8 +52,8 @@ def spell(word, vocab, cfg):
     Known, short or unmatched words (names, places) stay as they are, and so does a real word that is
     just not in the script ("drown" is never "down")."""
     lower, real = word.lower(), real_words(cfg["spell_real_words"])
-    if lower in vocab or any(c.isdigit() for c in lower) or lower in real:
-        return word  # a figure ("2,500pm") is never a typo
+    if lower in vocab or any(c.isdigit() for c in lower) or lower in real or "'" in lower:
+        return word  # a figure ("2,500pm") is never a typo, nor a word typed with its apostrophe (round 46: "we're" was "were")
     swaps = {lower[:i] + lower[i + 1] + lower[i] + lower[i + 2:] for i in range(1, len(lower) - 1)}  # the first letter is
     # rarely the slip, and keeping it keeps slang whole: "ive" is not "vie", "abt" is not "bat"
     swapped = swaps & vocab  # only into a script word: the real words hold names and letters too ("mam" is not "mma")

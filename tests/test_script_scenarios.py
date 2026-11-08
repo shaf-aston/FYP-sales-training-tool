@@ -846,6 +846,25 @@ def test_a_run_said_twice_is_said_once():
     assert said_once(["a", "b", "a"]) == ["a", "b", "a"]
 
 
+@pytest.mark.parametrize("text, blank", [
+    ("I'm in", False), ("we're in", False), ("I'm with you", False),   # round 46 callers: "I'm in" at the close was a shrug
+    ("it is", True), ("I'm", True),                                     # guard: only stop words still say nothing
+])
+def test_where_they_stand_is_never_blank(text, blank):
+    from core.buy_mode.script_engine.hear.shrug import Shrugs
+    assert Shrugs(CFG, SENSE, None, None).blank(text) == blank
+
+
+def test_a_contraction_of_a_stop_word_is_a_stop_word():
+    from core.buy_mode.script_engine.hear.shrug import Shrugs
+    step = CAT.steps["22"]   # no catch-all: only the filler test runs
+    assert Shrugs(CFG, SENSE, None, None).says_nothing("we're fine", step, False)   # round 46: like "I'm fine"
+    assert not Shrugs(CFG, SENSE, None, None).says_nothing("we're debit", step, False)   # guard
+    from core.buy_mode.script_engine.words.fill import fix_typos
+    vocab = frozenset(CFG["spell_words"]) | {"were"}   # the real call's vocab has "were": "we're" was spelled as it
+    assert fix_typos("we're fine", vocab, CFG) == "we're fine"
+
+
 @pytest.mark.parametrize("text, saved", [
     ("alright then", False), ("ok then", False), ("okk", False),   # round 44 callers: saved as the answer to an open question
     ("then I'd quit my job", True),                                  # guard: words after it are the answer
@@ -1230,6 +1249,8 @@ def test_echo_phrase_fixes_typos(reply, phrase):
     ("what would I do? quit", "what would I do? quit my job"),   # round 45 callers: "quit" after their own question ended the call
     ("what? y", "what? yes"),
     ("quit? no", "quit? no"),   # guard: only the part after the question
+    ("we're fine", "we're fine"),   # round 46 callers: "were fine" at payment got "Welcome aboard"
+    ("they'd quit", "they'd quit"),   # a word typed with its apostrophe is never a typo
     ("💳", "card"),   # round 44 callers: said nothing at payment
     ("🏖️ with family", "a holiday with family"),
 ])

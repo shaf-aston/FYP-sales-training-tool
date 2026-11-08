@@ -10,9 +10,10 @@ class Shrugs:
     def __init__(self, cfg, sense, listener, fill):
         """`fill(template, slots)`: the Filler's, to say their words back; None when they can't be."""
         self._fillers = frozenset(cfg["filler_words"])
-        self._filler = frozenset(cfg["stop_words"]) | self._fillers
-        self._blank = frozenset(cfg["stop_words"]) | frozenset(cfg["no_answer_words"])
-        self._no = frozenset(cfg["stop_words"]) | frozenset(cfg["no_words"])
+        stop = frozenset(cfg["stop_words"]) - frozenset(cfg["side_words"])  # "I'm in" takes a side: never a shrug
+        self._filler = stop | self._fillers
+        self._blank = stop | frozenset(cfg["no_answer_words"])
+        self._no = stop | frozenset(cfg["no_words"])
         self._polite = frozenset(cfg["no_polite_words"])
         self._plain = plain_words(cfg)
         self._asks = set(cfg["question_words"])  # "what" shares no topic with a question: "what I said" is not about it

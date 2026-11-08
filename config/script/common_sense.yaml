@@ -69,6 +69,7 @@ interruptions:
     reply: "No problem, take your time."
   small_talk:   # live: "did you catch the match last night?" got "I'll find out and let you know"
     with_answer: true   # "I guess 3 years, what about you?": the 3 years is kept, this goes in front of the next question
+    min_score: 0.82   # draft: round 46 callers, "time" (0.81 to "what time is it there") to "why can't you ignore it?" got "Ha, all good here"; small talk scores 0.85+
     draft: true
     examples:
       - "did you catch the match last night"
@@ -77,6 +78,8 @@ interruptions:
       - "how's your day going"
       - "how are you doing today"
       - "what time is it there"   # draft: whole calls, heard as when it starts
+      - "you watching the football later"   # draft: round 46, kept small talk with the floor above
+      - "nice day today, isn't it"   # draft: round 46, same
     reply: "Ha, all good here. Let's keep the time about you though."
   back:
     draft: true
@@ -257,6 +260,7 @@ interruptions:
       - "this call is taking too long"   # draft: round 40 callers, "not having enough time" (0.81 to "this is taking too long") got "I'll keep this quick"
       - "this is taking forever"   # draft
       - "this is dragging on"   # draft
+      - "I don't have time for this sales call"   # draft: full real run, round 5 live reply, lost when "this is taking too long" went (round 40); "for this call" also pulled in "not having enough time" (0.78)
       - "can we hurry up"
       - "this is a waste of my time"
       - "meh, whatever"   # not bare "whatever": it pulls in "whatever works for me"
