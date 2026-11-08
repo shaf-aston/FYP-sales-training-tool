@@ -12,6 +12,7 @@ from core.infra.utils import tokenize
 logger = logging.getLogger("script_engine.fallback")
 NAME = re.compile(r"\{(\w+)(?:\|([^|{}]*)\|([^|{}]*))?\}")  # {name} or {name|noun form|verb form}, $ = the phrase
 CENSORED = re.compile(r"\S*\w\*+\w*\S*")  # a word with stars in it ("f***ing"): never said back
+ASIDE = re.compile(r"\s*\([^()]*\)")  # "money (lots)": words in brackets are an aside, never said back
 WORD = re.compile(r"[$£€]?\d+(?:[.,]\d+)*%?[A-Za-z0-9'-]*|[A-Za-z0-9'-]+")  # "£2,500", "1.5", "2.5k", "50%" stay one word
 FIGURE = re.compile(r"\d+(?:\.\d+)?")
 GLUED = re.compile(r"(\d)([A-Za-z])")  # a number stuck to its unit: "1yr", "18mo"
@@ -95,6 +96,8 @@ def fix_typos(text, vocab, cfg):
     if whole:
         return whole
     text = MONEY_SIGNS.sub(cfg["money_signs_as"], text)  # "more £££" -> "more money": round 28, said back as "with more?"
+    sure = "|".join(map(re.escape, cfg["sure_marks"]))  # round 49: "quit 100%" got "What do you mean"; "100% of" is an amount
+    text = re.sub(rf"(?<!\w)(?:{sure})(?!\w)(?!\s+of\b)", cfg["sure_marks_as"], text, flags=re.IGNORECASE)
     text = _as_words(text, cfg)  # round 31: "💰💰💰" said nothing, "I want to by a house" was said back as typed
     text = STRETCHED.sub(lambda m: unstretch(m.group(0), vocab, cfg), text)  # round 32: "a yearrr" was not a time
     text = EMPHASIS.sub(r"\2", STRUCK.sub("", text))  # round 30: "with more?", and "~a year~ two years" was a year
@@ -198,6 +201,8 @@ def echo_phrase(reply, cfg, vocab=frozenset(), verbs=False):
     first sentence is said back, up to any `echo_cut_at` word ("but").
     `verbs`: the blank has a verb form, so a goal they put as "-ing" or as a state is made a verb for it
     ("paying the bills" -> "pay the bills", "debt free" -> "be debt free")."""
+    unaside = ASIDE.sub("", reply or "")  # round 49: "money (lots)" was "with money lots?"
+    reply = unaside if tokenize(unaside) else reply  # all in brackets: kept
     sentences = SENTENCE_END.split((reply or "").strip())  # one sentence, the first with more than filler ("fine.
     # more money"): whole calls, "with more money Mostly for your kids?"
     reply = next((x for x in sentences if set(tokenize(x)) - set(cfg["filler_words"])), sentences[0])

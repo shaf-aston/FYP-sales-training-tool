@@ -972,6 +972,23 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("05", 0, (), "okey-dokey", "05", None),   # was saved as the reason
     ("03", 0, (), "18ish months", "04", "18 months... Damn."),   # the number was lost
     ("03", 0, (), "eighteen-ish months", "04", "18 months... Damn."),
+    # round 49
+    ("05", 0, (), "k tx", "05", "You're welcome"),   # was saved as the reason
+    ("05", 0, (), "of course", "05", None),   # was saved as the reason
+    ("05", 0, (), "I'd say ok", "05", None),
+    ("05", 0, (), "exactly", "05", None),
+    ("05", 0, (), "I'd say my boss", "06", None),   # guard: the lead goes, the answer stays
+    ("01", 0, (), "precisely more money", "goal_practical", "What are you hoping to achieve with more money?"),   # was "with precisely more money?"
+    ("01", 0, (), "money (lots)", "goal_practical", "What are you hoping that would get you?"),   # was "with money lots?"
+    ("01", 0, (), "ugh money", "goal_practical", "What are you hoping that would get you?"),   # was "with ugh money?"
+    ("19", 0, (), "of course", "20", "What makes you say that?"),   # guard: still a yes
+    ("goal_practical", 0, (), "is it ok to say quit?", "goal_practical", "What would that actually change for you, day to day?"),   # ended the call
+    ("goal_practical", 0, (), "I'd say quit", "goal_practical", "What would that actually change for you, day to day?"),
+    ("goal_practical", 0, (), "quit 100%", "goal_practical", "What would that actually change for you, day to day?"),   # was "What do you mean"
+    ("01", 0, (), "more money, if possible", "goal_practical", "What are you hoping to achieve with more money?"),   # was said back whole
+    ("01", 0, (), "mo money", "goal_practical", "What are you hoping to achieve with more money?"),
+    ("01", 0, (), "I hope to be rich", "goal_practical", "What are you hoping to achieve by being rich?"),   # was "by being you hope to be rich?"
+    ("02", 0, (), "100% of my salary", "03", None),   # guard: an amount, not "for sure"
 ]
 
 

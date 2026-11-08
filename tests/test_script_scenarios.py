@@ -866,6 +866,8 @@ def test_a_contraction_of_a_stop_word_is_a_stop_word():
 
 
 @pytest.mark.parametrize("text, saved", [
+    ("exactly", False), ("precisely", False), ("of course", False), ("ofc", False), ("I'd say ok", False),   # round 49 callers: saved as the answer
+    ("I'd say my boss", True), ("a course", True), ("exactly my boss", True),   # guard: words after it are the answer
     ("okey-dokey", False), ("okie dokie", False),   # round 48 callers: saved as the answer
     ("oh sure", False), ("acha ok", False), ("please", False),   # round 47 callers: saved as the answer
     ("oh my boss", True),                     # guard: words after it are the answer
@@ -1251,6 +1253,10 @@ def test_echo_phrase_fixes_typos(reply, phrase):
     ("okk", "ok"),   # round 44 callers: a held last letter on a filler word was saved as the answer
     ("Yess", "yes"),
     ("boss", "boss"),   # guard: only a filler word is cut
+    ("k tx", "k thanks"), ("k thx", "k thanks"),   # round 49 callers: "k tx" was saved as the answer
+    ("taxes", "taxes"),   # guard: only the whole word
+    ("mo money", "more money"), ("quit 100%", "quit definitely"), ("100 percent yes", "definitely yes"),   # round 49 callers
+    ("100% of my salary", "100% of my salary"),   # guard: a share of something is an amount
     ('"ok"', "ok"),   # round 47 callers: the whole reply in quotes got "let me put it another way"
     ('he said "quit"', 'he said "quit"'),   # guard: only quotes round the whole reply
     ("we're fine", "we're fine"),   # round 46 callers: "were fine" at payment got "Welcome aboard"
@@ -1575,6 +1581,11 @@ def test_who_wants_it_is_left_out_near_the_start(reply, rest):
 
 
 @pytest.mark.parametrize("reply, phrase", [
+    ("money (lots)", "money"), ("more money (2k)", "more money"),   # round 49 callers: "money (lots)" was "with money lots?"
+    ("(more money)", "more money"),   # guard: all in brackets, the brackets go and the words stay
+    ("ugh money", "money"), ("precisely more money", "more money"),   # round 49 callers: said back with "ugh" and "precisely"
+    ("more money, if possible", "more money"), ("money and time, both", "money and time"),   # round 49 callers: said back whole
+    ("more money definitely", "more money"), ("hopefully more money", "more money"), ("I hope to be rich", "be rich"),
     ("more f***ing money", "more money"),   # round 29 callers: said back as "more f ing money"
     ("more bloody money", "more money"),   # a swear word is never said back
     ("in 5 years I'd like to be rich", "be rich"),   # round 29 callers: "I'd like" was never matched, the plain line was used

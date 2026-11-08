@@ -162,6 +162,7 @@ class Reader:
         lead = self._answer_lead.match(rest)
         if lead and tokenize(rest[lead.end():]):  # "is it ok to say quit my job?": the answer, its "?" asks leave
             rest = rest[lead.end():].rstrip(" ?")
+            rest = short_form(rest, self._cfg) or rest  # round 49: "I'd say quit" was bare "quit" and ended the call
         while (back := self._take_back.search(rest)) or (kept := self._fixed_in(rest)) is not None:
             rest = rest[back.end():] if back else kept  # "3k, no wait, more like 4k" -> "more like 4k": they took
             # the first part back; cut again so "wait, sorry, what's the price?" asks
