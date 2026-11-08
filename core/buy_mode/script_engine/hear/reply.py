@@ -116,7 +116,8 @@ class Reader:
         # round 61: after a comma too, so "2k, that kind of thing" loses the whole tag, not just "kind of thing"
         self._tag_end = re.compile(rf"(?<=\w)[,;]?\s+(?:{any_of(cfg['end_tags'])})\W*$", re.IGNORECASE)
         self._unsure = re.compile(rf"^\W*(?:{any_of(cfg['unsure_leads'])})\b", re.IGNORECASE)
-        self._unsure_lead = re.compile(rf"^\W*((?:{any_of(cfg['unsure_ends'])}))\s+(?!(?:{any_of(cfg['unsure_whole'])})\b)(?=\w)", re.IGNORECASE)
+        # round 64: the hedge stays whole only when that word ends the reply ("probably not"), so "probably yes for the money" is split
+        self._unsure_lead = re.compile(rf"^\W*((?:{any_of(cfg['unsure_ends'])}))\s+(?!(?:{any_of(cfg['unsure_whole'])})\W*(?:$|[,.;!]))(?=\w)", re.IGNORECASE)
         self._aside = re.compile(rf"^\W*(?:{any_of(cfg['aside_starts'])})\b", re.IGNORECASE)
         self._ask_lead = re.compile(rf"^\W*(?:{any_of(cfg['ask_leads'])})\b\W*", re.IGNORECASE)
         flips = "|".join(rf"{re.escape(a)}\W+(?={re.escape(b)}\s*(?:[,;.!?]|$))" for a, b in map(tokenize, cfg["flip_leads"]))

@@ -1166,6 +1166,18 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("01", 0, (), "money and then some", "goal_practical", "What are you hoping that would get you?"),   # was "...with money and then some?"
     ("willing", 0, (), "aye", "willing_check", None),   # guard: still a yes
     ("01", 0, (), "see ye", "later", "No problem."),   # guard: still a goodbye
+    ("01", 0, (), "passive income streams", "goal_practical", "What are you hoping to achieve with passive income streams?"),   # round 58 mutation: no row had this
+    # round 64
+    ("goal_practical", 0, (), "who knows", "goal_practical", "What would that actually change"),   # was "What do you mean by who knows?"
+    ("goal_practical", 0, (), "hard to say", "goal_practical", "What would that actually change"),   # was "What do you mean by hard to say?"
+    ("goal_practical", 0, (), "beats me", "goal_practical", "What would that actually change"),   # was "What do you mean by beats you?"
+    ("goal_practical", 0, (), "we'll see", "goal_practical", "What would that actually change"),   # was saved as the answer
+    ("goal_practical", 0, (), "deadass", "goal_practical", "What would that actually change"),   # was saved as the answer
+    ("goal_practical", 0, (), "ong", "goal_practical", "What would that actually change"),   # was saved as the answer
+    ("01", 0, (), "money deadass", "goal_practical", "What are you hoping that would get you?"),   # was "...with money deadass?"
+    ("01", 0, (), "money ong", "goal_practical", "What are you hoping that would get you?"),   # was "...with money ong?"
+    ("goal_practical", 0, (), "stuff I guess", "goal_practical", "What do you mean by stuff?"),   # guard: words to ask about
+    ("goal_practical", 0, (), "hard to say, my family", "goal_identity", None),   # guard: the answer after it
 ]
 
 

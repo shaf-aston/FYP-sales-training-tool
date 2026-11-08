@@ -16,6 +16,7 @@ class Shrugs:
         self._no = stop | frozenset(cfg["no_words"])
         self._polite = frozenset(cfg["no_polite_words"])
         self._plain = plain_words(cfg)
+        self._phrases = [tokenize(p) for p in cfg["shrug_phrases"]]
         self._asks = set(cfg["question_words"])  # "what" shares no topic with a question: "what I said" is not about it
         self._sense, self._listener, self._fill = sense, listener, fill
 
@@ -28,9 +29,18 @@ class Shrugs:
             return True
         if not any(r.label == ANY for r in step.listen) or asking:
             return False
-        if words <= self._plain:
-            return True  # "dunno man": only shrug words, nothing the catch-all should keep
+        if self._words(text) <= self._plain:
+            return True  # "dunno man", "we'll see": only shrug words, nothing the catch-all should keep
         return self.hedges(text)
+
+    def _words(self, text):
+        """The reply's words, less any shrug phrase in it ("who knows", "hard to say"): those say nothing."""
+        words = tokenize(text)
+        for phrase in self._phrases:
+            n = len(phrase)
+            words = [w for j, w in enumerate(words)
+                     if not any(words[k:k + n] == phrase for k in range(max(0, j - n + 1), j + 1))]
+        return set(words)
 
     def filler(self, text):
         """Only filler words ("ok", "yeah", "right"): with a rise ("ok?") it asks nothing."""
@@ -67,8 +77,7 @@ class Shrugs:
         that can't be said back, or an answer they already gave (`known`: "more money" again, after "What
         are you hoping to achieve with more money?"): what they meant is known, so the step is asked another
         way instead. Whether it was already said is the engine's to check."""
-        words = set(tokenize(text))
-        said = words - self._plain
+        said = self._words(text) - self._plain
         repeated = any(said <= set(tokenize(k)) for k in known if k)
         if (not self._sense.ask_meaning or heard_ahead or not said or repeated
                 or not (empty or said & set(tokenize(question)) - self._asks)):

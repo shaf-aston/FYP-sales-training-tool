@@ -706,6 +706,16 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("oh what?", "", "oh what?"),   # guard: still asks
     ("like 2k", "2k", ""),
     ("like what?", "", "like what?"),   # guard: before a question it is kept, so it still asks
+    ("money personally", "money", ""), ("money for me personally", "money", ""), ("money if that make sense", "money", ""),   # round 58 mutation: no row had these
+    ("money ya know", "money", ""), ("money and stuff like that", "money", ""),
+    ("personally money", "money", ""), ("y'know money", "money", ""), ("ya know money", "money", ""),
+    ("money probs", "money, probs", ""), ("money prolly", "money, prolly", ""), ("money perhaps", "money, perhaps", ""), ("money possibly", "money, possibly", ""),
+    ("probs money", "probs, money", ""), ("prolly money", "prolly, money", ""), ("perhaps money", "perhaps, money", ""), ("possibly money", "possibly, money", ""),
+    ("probably no", "probably no", ""), ("probably never", "probably never", ""), ("probably never, money", "probably never, money", ""),
+    ("I think so, more money", "I think so, more money", ""), ("I guess yes, quit", "I guess yes, quit", ""),
+    ("probably later", "probably later", ""), ("probably yeah", "probably yeah", ""), ("I think yeah", "I think yeah", ""), ("I guess ok", "I guess ok", ""),
+    ("fr 2k", "2k", ""), ("fr, money", "money", ""), ("fr?", "", ""),   # round 64: "no cap 2k" (now "fr 2k") was saved with "fr"; guard: a filler with a rise, like "ok?"
+    ("probably yes for the money", "probably, yes for the money", ""), ("probably not the money", "probably, not the money", ""),   # round 64: was kept whole, so it got "What do you mean by the money?"
 ])
 def test_a_reply_is_read_once_into_what_it_says_and_what_it_asks(text, said, asked):
     from core.buy_mode.script_engine.hear.reply import Reader

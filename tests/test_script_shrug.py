@@ -37,6 +37,9 @@ def test_filler_words_say_nothing_on_any_step(fake_embedder):
     ("true freedom", False),   # guard
     ("whatnot", True), ("innit", True), ("bruh", True), ("frankly ok", True), ("ok etc", True), ("bruh ok", True),   # round 62 callers
     ("frankly money", False),   # guard
+    ("who knows", True), ("hard to say", True), ("beats me", True), ("we'll see", True), ("good question", True),   # round 64 callers
+    ("who knows lol", True), ("it is what it is", True),
+    ("hard to say, my family", False), ("we'll see more of the kids", False),   # guard: words beside them
 ])
 def test_round_51_words_alone_say_nothing(said, nothing, fake_embedder):
     assert shrugs(fake_embedder).says_nothing(said, CAT.steps["05"], asking=False) == nothing
@@ -61,6 +64,10 @@ def test_ask_meaning_only_about_the_question_or_after_a_shrug(fake_embedder):
     assert s.ask_meaning("dunno man", q, empty=True, heard_ahead=False) == ""          # nothing to ask about
     assert s.ask_meaning("I want money online", q, empty=False, heard_ahead=True) == ""  # clear, just early
     assert s.ask_meaning("what I said", q, empty=False, heard_ahead=False) == ""       # round 33: "what" is no topic
+    assert s.ask_meaning("who knows", q, empty=True, heard_ahead=False) == ""          # round 64: was "What do you mean by who knows?"
+    assert s.ask_meaning("hard to say", q, empty=True, heard_ahead=False) == ""
+    assert s.ask_meaning("beats me", q, empty=True, heard_ahead=False) == ""
+    assert s.ask_meaning("who knows, stuff", q, empty=True, heard_ahead=False) != ""   # guard: words beside it
 
 
 def test_an_answer_they_already_gave_is_never_asked_about(fake_embedder):

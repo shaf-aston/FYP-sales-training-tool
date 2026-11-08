@@ -651,6 +651,7 @@ def test_whats_next_asks_no_ai(fake_embedder):
     ("money frankly", "money"), ("free bruh", "free"), ("more money and so on", "more money"), ("quit or thereabouts", "quit"),
     ("money and then some", "money"), ("free, if not more", "free"), ("more money or more", "more money"),  # round 63: "with money and then some?"
     ("a year innit", "a year"),
+    ("money for me personally", "money"), ("free if that make sense", "free"), ("2k and stuff like that", "2k"), ("more money or something like that", "more money"),  # round 58 mutation: no row had these
     ("well paid job", "well paid job"),  # round 54: was "paid job"
     ("so well off", "well off"),
     ("Financial freedom!", "financial freedom"),
@@ -1330,6 +1331,8 @@ def test_echo_phrase_fixes_typos(reply, phrase):
     ("yh money", "yeah money"), ("yh", "yeah"),   # round 61 callers
     ("aye money", "yeah money"), ("aye quit", "yeah quit my job"), ("yea", "yeah"), ("Aye", "yes"),   # round 63 callers: "aye quit" was heard as leaving
     ("see ye", "see ye"), ("ye money", "ye money"),   # guard: never "ye"
+    ("deadass", "fr"), ("money ong", "money fr"), ("on god", "fr"), ("no cap 2k", "fr 2k"),   # round 64 callers: saved as the answer
+    ("long", "long"), ("wrong", "wrong"), ("song", "song"),   # guard: whole words only
     ("ta da", "ta da"), ("for really", "for really"),   # guard: only the reply alone, only the whole phrase
 ])
 def test_fix_typos_keeps_real_words(text, fixed):
