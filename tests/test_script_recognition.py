@@ -649,7 +649,8 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("02", 0, (), "that's private", "02", "That's fine, no pressure."),
     ("04", 0, (), "I don't want to keep living like this", "05", None),   # guard: a real answer
     ("01", 0, (), "I'd rather be my own boss", "goal_practical", None),   # guard
-    ("01", 0, (), "I'm not really interested to be honest", "01", "What are you actually hoping to achieve?"),   # not "private": "That's fine, no pressure."
+    ("01", 0, (), "I'm not really interested to be honest", "later", "No problem."),   # not "private": "That's fine, no pressure."; round 53 cuts "to be honest", so it is a polite no like "honestly not interested"
+    ("01", 0, (), "not really interested tbh", "later", "No problem."),   # round 53: same no with "tbh"
     ("02", 0, (), "I'd rather keep that to myself", "02", "That's fine, no pressure."),   # was 0.73
     ("02", 0, (), "I'm not telling you", "02", "That's fine, no pressure."),   # was "Sorry, I got that wrong."
     # round 19
