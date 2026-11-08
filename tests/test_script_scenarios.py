@@ -650,6 +650,8 @@ def test_whats_next_asks_no_ai(fake_embedder):
     ("money etc", "money"), ("2k and whatnot", "2k"), ("free no doubt", "free"), ("my boss at the moment", "your boss"),  # round 62: "with money etc?"
     ("money frankly", "money"), ("free bruh", "free"), ("more money and so on", "more money"), ("quit or thereabouts", "quit"),
     ("money and then some", "money"), ("free, if not more", "free"), ("more money or more", "more money"),  # round 63: "with money and then some?"
+    ("money if anything", "money"), ("money per se", "money"), ("free at a push", "free"), ("money truth be told", "money"),  # round 66: "with money if anything?"
+    ("money hand on heart", "money"), ("money in all honesty", "money"), ("money either way", "money"),
     ("a year innit", "a year"),
     ("money for me personally", "money"), ("free if that make sense", "free"), ("2k and stuff like that", "2k"), ("more money or something like that", "more money"),  # round 58 mutation: no row had these
     ("money anyways", "money"), ("money mostly", "money"), ("money ideally", "money"), ("money more or less", "money"), ("money highkey", "money"), ("money that kind of thing", "money"), ("money sort of thing", "money"), ("money that sort of thing", "money"), ("money that type of thing", "money"),   # round 65 mutation: round 59-62 echo ends no row had
@@ -1336,6 +1338,8 @@ def test_echo_phrase_fixes_typos(reply, phrase):
     ("deadass", "fr"), ("money ong", "money fr"), ("on god", "fr"), ("no cap 2k", "fr 2k"),   # round 64 callers: saved as the answer
     ("long", "long"), ("wrong", "wrong"), ("song", "song"),   # guard: whole words only
     ("aight", "okay"), ("aite", "okay"), ("I'd like to think so", "i think so"),   # round 65 callers: "aight" was saved as the answer, "I'd like to think so" was "I need to think about it"
+    ("cool beans", "cool"), ("sweet as", "cool"), ("either way", "i don't mind"), ("whichever", "i don't mind"), ("either", "i don't mind"),   # round 66 callers: unclear at yes-or-no steps, "either way" heard as "what do you mean?"
+    ("sweet as pie", "sweet as pie"), ("either way works", "either way works"),   # guard: only the reply alone
     ("I'd like to think about it", "I'd like to think about it"), ("night", "night"),   # guard: the real "think about it", and whole words only
     (":-)", "🙂"), (":-D", "😀"), (":-(", "🙁"), (":-/", "😕"),   # round 65 mutation: the nose forms of round 59's smileys had no row
     ("ta da", "ta da"), ("for really", "for really"),   # guard: only the reply alone, only the whole phrase

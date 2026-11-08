@@ -719,6 +719,10 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("2k inshallah", "2k", ""), ("money fingers crossed", "money", ""), ("2k touch wood", "2k", ""), ("money god willing", "money", ""),   # round 65 callers: saved whole
     ("2k knock on wood", "2k", ""), ("money wallah", "money", ""),   # round 65: the rest of the hope words
     ("tbh 2k", "2k", ""), ("tbf money", "money", ""), ("to be honest 2k", "2k", ""),   # round 65 callers: "tbh 2k" was saved whole, while "2k tbh" lost it
+    ("2k truth be told", "2k", ""), ("2k at a push", "2k", ""), ("2k per se", "2k", ""), ("2k if anything", "2k", ""),   # round 66 callers: saved whole
+    ("in all honesty 2k", "2k", ""), ("call it 2k", "2k", ""), ("call it a year", "a year", ""), ("hand on heart, money", "money", ""),   # round 66 callers: saved with the lead
+    ("truth be told money", "money", ""), ("to be fair money", "money", ""), ("if i'm being honest 2k", "2k", ""), ("money hand on heart", "money", ""),
+    ("call it quits", "call it quits", ""), ("call it fear", "fear", ""),   # guard: "call it quits" is leaving, not a lead
     ("money though", "money", ""), ("money anyways", "money", ""), ("money mainly", "money", ""), ("money ideally", "money", ""), ("money highkey", "money", ""), ("money sort of thing", "money", ""), ("money that sort of thing", "money", ""),   # round 65 mutation: round 59-62 end tags no row had
     ("money that type of thing", "money", ""), ("money or anything like that", "money", ""), ("money essentially", "money", ""), ("money ultimately", "money", ""), ("money usually", "money", ""), ("money to start with", "money", ""), ("money whatnot", "money", ""), ("ok so yeah", "okay", ""),
     ("anyway money", "money", ""), ("anyways money", "money", ""), ("mainly money", "money", ""), ("seriously money", "money", ""), ("highkey money", "money", ""), ("ultimately money", "money", ""), ("generally money", "money", ""), ("mm money", "money", ""), ("mmm money", "money", ""),   # round 65 mutation: round 59-64 filler leads no row had

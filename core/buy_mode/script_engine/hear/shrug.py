@@ -19,6 +19,10 @@ class Shrugs:
         self._polite = frozenset(cfg["no_polite_words"])
         self._plain = plain_words(cfg)
         self._phrases = [tokenize(p) for p in cfg["shrug_phrases"]]
+        # round 66: a reply of only tags ("hand on heart", "in all honesty") says nothing too; the say-back below
+        # keeps them, as "like" is one and "things like money" needs it
+        tags = dict.fromkeys([*cfg["filler_tags"], *cfg["end_tags"], *cfg["filler_leads"]])
+        self._cuts = [*self._phrases, *map(tokenize, tags)]
         longest = sorted(self._phrases, key=len, reverse=True)
         self._phrase_cut = re.compile(r"\b(?:" + "|".join(r"\W+".join(map(re.escape, p)) for p in longest) + r")\b[\s,.;:!-]*", re.IGNORECASE)
         self._asks = set(cfg["question_words"])  # "what" shares no topic with a question: "what I said" is not about it
@@ -38,9 +42,10 @@ class Shrugs:
         return self.hedges(text)
 
     def _words(self, text):
-        """The reply's words, less any shrug phrase in it ("who knows", "hard to say"): those say nothing."""
+        """The reply's words, less any shrug phrase or tag in it ("who knows", "hard to say", "per se"): those say
+        nothing."""
         words = tokenize(text)
-        for phrase in self._phrases:
+        for phrase in self._cuts:
             n = len(phrase)
             words = [w for j, w in enumerate(words)
                      if not any(words[k:k + n] == phrase for k in range(max(0, j - n + 1), j + 1))]

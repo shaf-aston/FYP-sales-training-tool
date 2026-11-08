@@ -1188,6 +1188,13 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("20", 0, (), "I'd like to think so", "20", None),   # was "What specifically do you need to think over"
     ("20", 0, (), "I'd like to think about it", "m_think_what", None),   # guard: the real one
     ("goal_practical", 0, (), "who knows, stuff", "goal_practical", "What do you mean by stuff?"),   # round 65 mutation: was "...by who knows, stuff?"
+    # round 66
+    ("05", 0, (), "hand on heart", "05", None), ("05", 0, (), "if anything", "05", None),   # were saved as the reason
+    ("05", 0, (), "I'm easy", "05", None), ("05", 0, (), "I don't mind", "05", None),
+    ("05", 0, (), "my boss, hand on heart", "06", None),   # guard: an answer beside it
+    ("19", 0, (), "cool beans", "20", None), ("19", 0, (), "sweet as", "20", None),   # were unclear
+    ("19", 0, (), "either way", "19", "Is this something you can see yourself doing?"),   # was "Fair point, let me put it another way"
+    ("01", 0, (), "money if anything", "goal_practical", "What are you hoping that would get you?"),   # was "achieve with money if anything?"
 ]
 
 
