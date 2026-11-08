@@ -662,6 +662,9 @@ def test_whats_next_asks_no_ai(fake_embedder):
     ("money in any case", "money"), ("free simply put", "free"), ("money as a matter of fact", "money"), ("free in truth", "free"), ("money on balance", "money"), ("money in theory", "money"),  # round 70: "with money in any case?"
     ("quit in practice", "quit"), ("money at a guess", "money"), ("money presumably", "money"), ("free as it happens", "free"), ("money funnily enough", "money"), ("money by the way", "money"),
     ("money in fact", "money"), ("money apparently", "money"), ("money btw", "money"), ("more money i'd guess", "more money"), ("2k if that", "2k"), ("a year at best", "a year"), ("a year at worst", "a year"),
+    ("money for the record", "money"), ("free to be clear", "free"), ("money in other words", "money"), ("free that said", "free"), ("money having said that", "money"), ("money off the top of my head", "money"),  # round 71: "with money for the record?"
+    ("money roughly speaking", "money"), ("money strictly speaking", "money"), ("free technically", "free"), ("money real talk", "money"), ("money no lie", "money"), ("money and such", "money"),
+    ("quit and the like", "quit"), ("money or whatnot", "money"), ("money or so", "money"), ("2k at most", "2k"),
     ("a year innit", "a year"),
     ("money for me personally", "money"), ("free if that make sense", "free"), ("2k and stuff like that", "2k"), ("more money or something like that", "more money"),  # round 58 mutation: no row had these
     ("money anyways", "money"), ("money mostly", "money"), ("money ideally", "money"), ("money more or less", "money"), ("money highkey", "money"), ("money that kind of thing", "money"), ("money sort of thing", "money"), ("money that sort of thing", "money"), ("money that type of thing", "money"),   # round 65 mutation: round 59-62 echo ends no row had
@@ -1353,6 +1356,9 @@ def test_echo_phrase_fixes_typos(reply, phrase):
     ("I'd like to think about it", "I'd like to think about it"), ("night", "night"),   # guard: the real "think about it", and whole words only
     (":-)", "🙂"), (":-D", "😀"), (":-(", "🙁"), (":-/", "😕"),   # round 65 mutation: the nose forms of round 59's smileys had no row
     ("ta da", "ta da"), ("for really", "for really"),   # guard: only the reply alone, only the whole phrase
+    ("count me in", "yes"), ("let's do it", "yes"), ("lets do it", "yes"), ("go for it", "yes"), ("say no more", "yes"), ("all good", "okay"),   # round 71 callers: "count me in" was saved as the reason, "all good" got "You're welcome"
+    ("sounds good", "yes"), ("works for me", "yes"), ("you bet", "yes"), ("fine by me", "okay"), ("roger that", "okay"), ("righto", "okay"), ("indeed", "yes"), ("deal", "yes"),   # rounds 69 and 70: pinned without the real model
+    ("count me in later", "count me in later"), ("all good things", "all good things"),   # guard: only the reply alone
 ])
 def test_fix_typos_keeps_real_words(text, fixed):
     from core.buy_mode.script_engine.words.fill import fix_typos

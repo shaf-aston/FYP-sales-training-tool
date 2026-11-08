@@ -1225,6 +1225,13 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("05", 0, (), "sounds good", "05", "No rush"), ("05", 0, (), "you bet", "05", "No rush"),   # were saved as the reason
     ("19", 0, (), "works for me", "20", None), ("18", 0, (), "you bet", "19", None),   # were a scam worry and unclear
     ("18", 0, (), "sounds good", "19", None), ("18", 0, (), "simply put", "19", None), ("02", 0, (), "2k if that", "03", None),   # guard: as before
+    # round 71
+    ("05", 0, (), "and such", "05", "No rush"), ("goal_practical", 0, (), "and such", "goal_practical", "What would that actually change"),   # were "let me say that again" at every step: the call never ended
+    ("05", 0, (), "real talk", "05", "No rush"), ("18", 0, (), "real talk", "18", "Put simply"),   # were "I'm an AI playing the salesperson"
+    ("18", 0, (), "bottom line", "18", "Put simply"), ("18", 0, (), "that said", "18", "Put simply"), ("18", 0, (), "off the top of my head", "18", "Put simply"),   # were "say that again", "put it another way" and "think it over"
+    ("05", 0, (), "for the record", "05", "No rush"), ("05", 0, (), "count me in", "05", "No rush"),   # were saved as the reason
+    ("goal_practical", 0, (), "all good", "goal_practical", "What would that actually change"), ("18", 0, (), "count me in", "19", None), ("18", 0, (), "all good", "19", None),   # were "You're welcome" and unclear
+    ("02", 0, (), "2k at most", "03", None), ("19", 0, (), "go for it", "20", None),   # guard: as before
 ]
 
 
