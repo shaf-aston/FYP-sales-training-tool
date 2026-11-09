@@ -601,6 +601,9 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("a year, closer to two", "two year", ""), ("A year. Closer to two.", "two year", ""), ("a year or closer to two", "two year", ""), ("a year, almost two", "two year", ""),   # round 94 callers: said back as 12 months
     ("money, more like time", "time", ""), ("money or rather freedom", "freedom", ""), ("free I think, if that's what you mean", "free I think", ""),   # round 94 callers: said back whole
     ("for nearly 2 years", "for nearly 2 years", ""), ("almost 2 years", "almost 2 years", ""), ("money, more like a lot", "money, more like a lot", ""),   # round 94 guards: no figure before it, or no answer after it
+    ("quit my job, sorry, kids are loud", "quit my job", ""), ("2k, sorry, where was I", "2k", ""), ("a year, my phone is dying", "a year", ""), ("debit, one sec, finding my card", "debit", ""),   # round 95 callers: an aside was saved, or took the answer back
+    ("I would say, if I may, financial security", "financial security", ""), ("money, if I may", "money", ""),   # round 95 callers: said back
+    ("sorry, where was I?", "", "where was I?"), ("my dog is barking", "my dog is barking", ""), ("dunno, sorry my dog is barking", "sorry my dog is barking", ""),   # round 95 guards: no answer beside it, so it stays
     ("not really, I'm busy", "not really, I'm busy", ""),   # guard: a no with a reason stays a no
     ("not sure, a year", "not sure, a year", ""),
     ("is it ok to say?", "", "is it ok to say?"),   # nothing after the lead: a question, as typed

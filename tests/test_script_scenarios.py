@@ -1336,6 +1336,7 @@ def test_echo_phrase_fixes_typos(reply, phrase):
     ("going to grandma's", "going to grandma's"),   # guard: only the whole phrase
     ("quiet my job", "quit my job"),   # round 28 limit: autocorrect was said back as typed
     ("loads more dosh", "loads more money"),   # round 32 callers: slang got the plain line
+    ("bucks", "money"), ("more bucks", "more money"),   # round 95 callers: "bucks" was unclear
     ("moreee moneyyy", "more money"),   # round 32 callers: held letters got the plain line
     ("a yearrr", "a year"),   # was not a time, asked 3 times
     ("my own bosss", "my own boss"),   # cut to 2 when that is a word

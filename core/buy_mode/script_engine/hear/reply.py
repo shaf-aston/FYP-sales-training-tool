@@ -159,6 +159,7 @@ class Reader:
         not_before = any_of([*cfg["question_words"], *cfg["shrug_leads_not_before"]])  # round 84: "dunno my boss" was saved whole
         self._shrug_lead = re.compile(rf"^\W*((?:{any_of(cfg['shrug_leads'])}))\W+(?!(?:{not_before})\b)(?=\w)", re.IGNORECASE)
         self._aside = re.compile(rf"^\W*(?:{any_of(cfg['aside_starts'])})\b", re.IGNORECASE)
+        self._aside_say = re.compile(rf"\b(?:{any_of(cfg['aside_says'])})\b", re.IGNORECASE)
         self._ask_lead = re.compile(rf"^\W*(?:{any_of(cfg['ask_leads'])})\b\W*", re.IGNORECASE)
         flips = "|".join(rf"{re.escape(a)}\W+(?={re.escape(b)}\s*(?:[,;.!?]|$))" for a, b in map(tokenize, cfg["flip_leads"]))
         self._flip = re.compile(rf"^\W*(?:{flips})", re.IGNORECASE)  # "no yeah" is a yes, "yeah no" a no: the last word counts
@@ -241,6 +242,10 @@ class Reader:
         aside = self._bracket_end.search(rest)  # round 76: "money (mostly)", "a year (sorry)" were saved whole;
         if aside and self._act(aside.group(1), True) in ("tag", "hedge"):
             rest = rest[:aside.start()]  # "quit (my job)" and "2k (maybe more)" keep theirs
+        cut = clauses(rest, self.breaks)  # round 95 callers: "quit my job, sorry, kids are loud" was saved as "kids are
+        kept = [c for c in cut if not self._aside_say.search(c)]  # loud" ("sorry" took the answer back), "2k, sorry,
+        if len(kept) < len(cut) and set(tokenize(" ".join(kept))) - self._plain:  # where was I" got "let me say that
+            rest = ", ".join(kept)  # again": an aside beside an answer is left out ("sorry, where was I?" still asks)
         if self._act(rest, False) == "tag":  # full run 84: a whole tag is one part, never cut ("so to speak" was "to speak",
             return Reply(text, rest, nudged, (Part(rest, "tag"),))  # "like everyone" "everyone", "for me personally" "for me")
         first = (clauses(rest, self.breaks) or [""])[0]
