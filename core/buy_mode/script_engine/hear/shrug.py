@@ -24,7 +24,8 @@ class Shrugs:
         # keeps them, as "like" is one and "things like money" needs it
         # round 73: never a tag said alone with a meaning of its own ("meh" alone is fed up)
         tags = dict.fromkeys(t for t in [*cfg["filler_tags"], *cfg["end_tags"], *cfg["filler_leads"]] if t not in cfg["tags_alone_mean"])
-        self._cuts = [*self._phrases, *map(tokenize, tags)]
+        # round 74: longest first, so "that's a tough one" goes whole, not "tough one" leaving "that's a"
+        self._cuts = sorted([*self._phrases, *map(tokenize, tags)], key=len, reverse=True)
         longest = sorted(self._phrases, key=len, reverse=True)
         self._phrase_cut = re.compile(r"\b(?:" + "|".join(r"\W+".join(map(re.escape, p)) for p in longest) + r")\b[\s,.;:!-]*", re.IGNORECASE)
         self._asks = set(cfg["question_words"])  # "what" shares no topic with a question: "what I said" is not about it

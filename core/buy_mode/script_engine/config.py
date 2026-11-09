@@ -9,7 +9,7 @@ TYPES = {
     "method": str, "products": dict, "default_product": str,
     "embed_model": str, "embed_cache_dir": str, "embed_threads": int, "embed_batch_size": int,
     "threshold": NUMBER, "early_objection_min_score": NUMBER, "early_objection_judge_score": NUMBER, "interrupt_threshold": NUMBER,
-    "question_answer_min_score": NUMBER, "asked_back": dict, "asked_back_you": list, "asked_back_what": list, "what_alone_with": list, "asked_back_share": NUMBER, "sense_over_after": list, "sense_over_words": list, "asked_back_share_with_answer": NUMBER, "asked_back_min_words": int, "word_back_words": int, "word_back_skip": list, "word_back_ends": list, "clarify_starts": list, "clause_min_words": int, "clause_breaks": list,
+    "question_answer_min_score": NUMBER, "asked_back": dict, "asked_back_you": list, "asked_back_what": list, "what_alone_with": list, "asked_back_share": NUMBER, "sense_over_after": list, "sense_over_words": list, "asked_back_share_with_answer": NUMBER, "asked_back_min_words": int, "word_back_words": int, "word_back_skip": list, "word_back_ends": list, "clarify_starts": list, "clause_min_words": int, "clause_breaks": list, "break_not_before": list,
     "near_miss": NUMBER, "margin": NUMBER, "close_call_k": int, "unsure_margin": NUMBER, "spell_cutoff": NUMBER, "spell_swap_min_letters": int, "spell_drop_min_letters": int, "short_replies": dict, "apostrophe_words": dict, "nudge_yes": list,
     "max_words": int, "slot_words": int, "echo_term_words": int, "echo_repeats": int, "lead_repeats": int, "takes_back": list, "objection_entries": int, "misses": int, "spell_min_letters": int,
     "ai_retries": int, "ai_rest_seconds": NUMBER, "ai_fail_limit": int, "ai_timeout_seconds": NUMBER,

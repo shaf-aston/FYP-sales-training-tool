@@ -1248,6 +1248,13 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("02", 0, (), "can I go now? 2k", "later", "No problem"), ("02", 0, (), "say that again? money", "02", "Of course"),   # were "I don't know that one offhand": the words beside it hid the ask
     ("02", 0, (), "can we stop here?", "later", "No problem"), ("19", 0, (), "can we do this another time?", "later", "No problem"),   # were "I don't know that one offhand"
     ("05", 0, (), "how long is it. no?", "05", "It's a 6-month process"), ("19", 0, (), "hmm, yeah?", "20", None), ("19", 0, (), "can we do this", "20", None),   # guard: as before
+    ("01", 0, (), "that's a tough one, a year", "goal_practical", "What are you hoping to achieve with a year"), ("01", 0, (), "erm a year erm", "goal_practical", "What are you hoping to achieve with a year"),   # round 74 callers: were asked again and said back as "a year erm"
+    ("01", 0, (), "cheers for asking, money", "goal_practical", "What are you hoping that would get you"), ("01", 0, (), "thanks, 2k", "goal_practical", "What are you hoping to achieve with 2k"), ("01", 0, (), "thank you so much, money", "goal_practical", "What are you hoping that would get you"),   # were said back with the thanks
+    ("01", 0, (), "one sec, money", "goal_practical", "What are you hoping that would get you"), ("01", 0, (), "brb, my boss", "goal_practical", "What are you hoping to achieve with your boss"), ("01", 0, (), "money, like", "goal_practical", "What are you hoping that would get you"),   # were "take your time", "with brb, my boss?" and "let me put it another way"
+    ("05", 0, (), "cheers for asking", "05", "You're welcome"), ("05", 0, (), "nice of you to ask", "05", "You're welcome"), ("05", 0, (), "thanks mate", "05", "You're welcome"), ("05", 0, (), "thanks so much", "05", "You're welcome. What's the reason"),   # were kept as the answer ("much")
+    ("01", 0, (), "thanks mate", "01", "You're welcome"), ("01", 0, (), "hang on my phone is dying", "01", "No problem, take your time"), ("05", 0, (), "one sec", "05", "No problem, take your time"), ("05", 0, (), "thank you", "05", "You're welcome"),   # guard: as before
+    ("06", 0, (), "thanks but no thanks", "later", "No problem"), ("05", 0, (), "I don't know how to start", "06", None),   # guard: as before
+    ("06", 1, (), "don't know", "06", "No rush"), ("06", 1, (), "that's a tough one", "06", "No rush"), ("06", 1, (), "nothing", "08", None),   # round 74 callers: to "Is there anything you've tried so far?" saved as what they do; guard: "nothing" answers it
 ]
 
 

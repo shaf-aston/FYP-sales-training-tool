@@ -115,6 +115,9 @@ interruptions:
     examples:
       - "thanks for your time"
       - "thank you, that's helpful"
+      - "cheers for asking"   # draft: round 74 callers, at 05 it was kept as the answer, "thanks for asking" got "You're welcome"
+      - "nice of you to ask"   # draft: same
+      - "thanks mate"   # draft: round 74 callers, at 05 and 06 it was kept as the answer
     reply: "You're welcome."
   bot:
     with_answer: true   # "2 years, wait is this a bot?": the answer is kept, the honest yes goes first

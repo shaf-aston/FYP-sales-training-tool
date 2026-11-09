@@ -69,7 +69,9 @@ def break_pattern(cfg):
     """The one place a reply is cut: at `clause_breaks` (punctuation only before a space or the end, so "2.5k"
     stays whole, and a comma also before a letter: "more money,more time"; words as whole words)."""
     ends = {",": r"(?=\s|$|[^\W\d])"}
-    parts = [rf"\b{re.escape(b)}\b" if b.isalpha() else re.escape(b) + ends.get(b, r"(?=\s|$)") for b in cfg["clause_breaks"]]
+    keep = "|".join(map(re.escape, cfg["break_not_before"]))  # round 74: "thanks so much" was "thanks" and "much"
+    keep = rf"(?!\W+(?:{keep})\b)" if keep else ""
+    parts = [rf"\b{re.escape(b)}\b{keep}" if b.isalpha() else re.escape(b) + ends.get(b, r"(?=\s|$)") for b in cfg["clause_breaks"]]
     return re.compile("|".join(parts), re.IGNORECASE)
 
 
@@ -114,7 +116,9 @@ class Reader:
         self._unsure_said = {" ".join(tokenize(u)) for u in cfg["unsure_ends"]}  # round 73: "I daresay, money" was saved whole
         self._unsure_end = re.compile(rf"(?<=\w)\s+((?:{any_of(cfg['unsure_ends'])})\W*)$", re.IGNORECASE)
         self._plain = plain_words(cfg)
-        self._alone_mean = self._plain | {w for t in cfg["tags_alone_mean"] for w in tokenize(t)}  # round 73: "meh, whatever"
+        alone = {w for t in cfg["tags_alone_mean"] for w in tokenize(t)}
+        self._alone_mean = self._plain | alone  # round 73: "meh, whatever"
+        self._lead_alone = alone - self._plain  # round 74: a lead with a meaning alone ("thanks", "brb")
         # round 61: after a comma too, so "2k, that kind of thing" loses the whole tag, not just "kind of thing"
         # round 73: every tag at the end, not just the last ("and so on and so forth", "yada yada tbh")
         self._tag_end = re.compile(rf"(?<=\w)(?:[,;]?\s+(?:{any_of(cfg['end_tags'])}))+\W*$", re.IGNORECASE)
@@ -193,8 +197,10 @@ class Reader:
         if lead and tokenize(rest[lead.end():]):  # "is it ok to say quit my job?": the answer, its "?" asks leave
             rest = rest[lead.end():].rstrip(" ?")
         lead = self._filler_lead.match(rest)
-        if lead and tokenize(rest[lead.end():]) and not self.asks(rest[lead.end():]):  # round 53: "like money" got
-            rest = rest[lead.end():]  # "let me put it another way"; "like what?" still asks
+        after = rest[lead.end():] if lead else ""
+        if (lead and tokenize(after) and not self.asks(after)  # round 53: "like money" got "let me put it another way"
+                and not (set(tokenize(lead.group())) & self._lead_alone and set(tokenize(after)) <= self._plain)):
+            rest = after  # "like what?" still asks; round 74: "thanks mate" stays whole, "thanks, 2k" is "2k"
         while (back := self._take_back.search(rest)) or (kept := self._fixed_in(rest)) is not None:
             rest = self._with_unit(rest[:back.start()], rest[back.end():]) if back else kept
             # "3k, no wait, more like 4k" -> "more like 4k": they took the first part back; cut again so

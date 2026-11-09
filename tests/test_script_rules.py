@@ -650,7 +650,7 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("I answered honestly", "I answered honestly", ""),   # guard: a tag that can end what was said needs its comma
     ("I don't want to be like everyone else", "I don't want to be like everyone else", ""),
     ("like money", "money", ""),   # round 53 callers: "like" opening a reply got "let me put it another way"
-    ("like", "like", ""),   # guard: a filler lead with nothing after it is the reply
+    ("like", "", ""),   # guard: a filler lead with nothing after it is the reply; round 74: "like" is a tag too ("money, like"), and a tag alone says nothing (still asked again, as before)
     ("quit goddamn it", "quit goddamn it", ""),   # guard: an end tag needs a space before it, never "quit god"
     ("oh ok", "okay", ""),   # round 54: "oh ok" got "let me put it another way"
     ("omg wow ok", "okay", ""),   # round 54: each filler lead goes
@@ -770,6 +770,9 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("is it free, no?", "", "is it free, no?"), ("it's 2k, is that right?", "it's 2k", "is that right?"), ("money or no?", "", "money or no?"),   # guard: a question or a choice still asks
     ("money yada yada", "money", ""), ("money blah blah blah", "money", ""), ("2k and all that jazz", "2k", ""), ("money and what have you", "money", ""), ("money and everything", "money", ""),   # round 73 callers: saved whole
     ("money as you do", "money", ""), ("quit as one does", "quit my job", ""), ("money and so on and so forth", "money", ""), ("a year and so on tbh", "a year", ""), ("money meh", "money", ""),   # every tag at the end, not just the last
+    ("thanks, 2k", "2k", ""), ("cheers for asking, money", "money", ""), ("one sec, money", "money", ""), ("brb, my boss", "my boss", ""), ("one sec... 2k", "2k", ""), ("much appreciated, 2k", "2k", ""), ("thank you so much, money", "money", ""),   # round 74 callers: saved whole, said back with the thanks
+    ("that's a tough one, money", "money", ""), ("tricky one, a year", "a year", ""), ("that's a tough one, maybe", "maybe", ""), ("money, like", "money", ""), ("money, like, yeah", "money", ""), ("erm money erm", "money", ""), ("money um", "money", ""), ("a year uh", "a year", ""),   # round 74 callers: "money, like" got "let me put it another way"
+    ("thanks mate", "thanks mate", ""), ("thanks but no thanks", "thanks but no thanks", ""), ("thanks so much", "thanks so much", ""), ("hang on, quit", "quit my job", ""), ("things I like", "things I like", ""), ("hold on, what?", "", "what?"),   # guard: a thanks with no answer stays whole, a polite no too
     ("meh, money", "money", ""), ("meh, whatever", "meh, whatever", ""), ("everything", "everything", ""),   # round 73: "meh, money" was fed up; guard: one fed-up phrase, and a word alone
     ("I daresay money", "money", ""), ("2k I'd imagine", "2k", ""), ("a year methinks", "a year", ""), ("money you'd think", "money", ""), ("I gather a year", "a year", ""),   # round 73 callers: saved with the hedge
 ])
@@ -779,6 +782,15 @@ def test_a_reply_is_read_once_into_what_it_says_and_what_it_asks(text, said, ask
     reply = Reader(CFG, load_common_sense().nudges, lambda part: part.lower() in HEDGES).read(text)
     reply = reply.settle(lambda part: False)
     assert (reply.said, reply.asked) == (said, asked)
+
+
+@pytest.mark.parametrize("text, parts", [
+    ("thanks so much", ["thanks so much"]), ("nothing so far", ["nothing so far"]), ("so many bills", ["so many bills"]),   # round 74: "thanks so much" was "thanks" and "much", and "much" was kept as the answer
+    ("money so I can quit", ["money", "I can quit"]), ("money and time", ["money", "time"]),   # guard: still a break
+])
+def test_so_before_much_is_not_a_break(text, parts):
+    from core.buy_mode.script_engine.hear.reply import break_pattern, clauses
+    assert clauses(text, break_pattern(CFG)) == parts
 
 
 @pytest.mark.parametrize("text, asked", [("about 2k, I was wondering what it costs ?", "what it costs?"),
@@ -1554,9 +1566,19 @@ def test_a_step_can_want_a_yes_or_no_with_no_helper_verb(seller):
     ("because", True),   # round 34 callers: saved as the answer at every open step
     ("cos", True),
     ("because I hate my job", False),   # guard: a reason
+    ("one sec", False), ("brb", False), ("hold on", False), ("thank you", False), ("thanks", False), ("cheers", False),   # round 74: once leads, alone they said nothing; they mean a pause and thanks
+    ("um", True), ("erm", True),   # guard: tags alone still say nothing
 ])
 def test_because_alone_says_nothing(seller, said, nothing):
     assert seller._ear._shrugs.says_nothing(said, seller.method.steps["05"], False) == nothing
+
+
+@pytest.mark.parametrize("said, nothing", [
+    ("that's a tough one", True), ("that's a hard one", True), ("don't know", True), ("let me think", True),   # round 74 callers: to "Is there anything you've tried so far?" saved as what they do; "tough one" was cut first, leaving "that's a"
+    ("nothing", False), ("no", False), ("youtube", False),   # guard: these answer it
+])
+def test_a_shrug_to_a_yes_or_no_question_says_nothing(seller, said, nothing):
+    assert seller._ear._shrugs.says_nothing(said, seller.method.steps["06"], False, closed=True) == nothing
 
 
 @pytest.mark.parametrize("said, means", [
