@@ -54,6 +54,7 @@ class Ear:
         self._nudge_yes = {" ".join(tokenize(p)) for p in cfg["nudge_yes"]}
         self._nudge_leads = frozenset(cfg["nudge_leads"])
         self._wants_more = [tokenize(p) for p in cfg["wants_more_starts"]]  # round 98: "more than I have now"
+        self._wants_more_words = [" ".join(tokenize(p)) for p in cfg["wants_more_words"]]  # round 99: "my wife wants more money"
         backs = [*cfg["reason_backs"], *(k for k, v in cfg["short_replies"].items() if v in cfg["reason_backs"])]  # "k", "ofc"
         backs, reasons = (r"\W+".join(map(re.escape, tokenize(p))) for p in backs), map(re.escape, cfg["reason_starts"])
         backs = "|".join(sorted(backs, key=len, reverse=True))
@@ -268,6 +269,12 @@ class Ear:
         if not words & self._me or words & self._you:
             return examples
         return [e for e in examples if not set(tokenize(e)) & self._you or set(tokenize(e)) & self._me]
+
+    def _wants_more_in(self, text):
+        """The reply wants more ("more than I have now", "my wife wants more money"): a goal, never a worry."""
+        words = tokenize(text)
+        return (any(words[:len(p)] == p for p in self._wants_more)
+                or any(f" {w} " in f" {' '.join(words)} " for w in self._wants_more_words))
 
     def _reason(self, text):
         """The reply opens with a reason ("because...", "cos..."): it gives one, it does not ask or object."""
@@ -484,7 +491,7 @@ class Ear:
         if not asking and self._backed.match(text):
             objections = ()  # round 52: "yes because I need the money" says why yes; it is no money worry
         elif not opened and not asking and (step.doubts_answer or self._reason(text)
-                                             or any(tokenize(text)[:len(p)] == p for p in self._wants_more)):
+                                             or self._wants_more_in(text)):
             objections = ()  # "money's tight" answers "what holds you back", "because money is tight" any step;
             # "is this a scam?" still asks
         elif not opened and asking:

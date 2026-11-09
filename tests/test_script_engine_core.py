@@ -110,6 +110,7 @@ def test_loader_rejects_broken_graphs():
         (lambda d: d["steps"]["a"].update(plain_if="money"), "plain_if"),
         (lambda d: d["steps"]["a"].update(answered_by="(?P<answer>.*)"), "answered_by"),
         (lambda d: d["steps"]["a"].update(say_plain="What is it, {goal?"), "blank"),
+        (lambda d: d["steps"]["a"]["listen"]["clear"].update(climbs_to=["nope"]), "climbs to an unknown route"),   # round 100
     ]:
         data = yaml.safe_load(yaml.safe_dump(good))
         mutate(data)

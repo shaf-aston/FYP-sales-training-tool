@@ -83,6 +83,7 @@ steps:
           - "I want a side income"   # draft: round 58 replay, "I guess I want a side income" got "What do you mean by a side income?"
           - "passive income"   # draft: round 58, "I want passive income" got "What do you mean by passive income?"
         then: "goal_practical"
+        climbs_to: [practical, identity]   # draft: round 100 callers, "I just want more money so I can stop worrying about bills" got "What are you hoping to achieve with more money?": the rest already says the next rung
       practical:   # level 2 already: skip the formula, ask the identity rung
         examples: &practical
           - "so I can stop stressing every time I buy something"

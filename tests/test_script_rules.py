@@ -1757,3 +1757,12 @@ def test_an_unknown_question_asking_what_we_meant_is_put_another_way(seller):
 def test_a_reason_after_a_yes_only_says_why(seller, said, backed):
     found = seller._ear._backed.match(said)
     assert (found.group(1) if found else None) == backed
+
+
+@pytest.mark.parametrize("said, wants", [
+    ("my wife wants more money", True), ("we want more time together", True), ("I wanted more for my kids", True),   # round 99 callers: heard as the partner worry
+    ("more than I have now", True),   # round 98: a want that opens the reply
+    ("I need to ask my wife", False), ("I want to run it by my wife first", False), ("money, more or less", False),   # guard: a want for no more is still read on its own
+])
+def test_a_want_for_more_anywhere_is_never_a_worry(seller, said, wants):
+    assert seller._ear._wants_more_in(said) == wants

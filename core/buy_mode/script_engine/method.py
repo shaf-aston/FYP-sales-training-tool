@@ -34,6 +34,8 @@ class Route:
                         # the embedder puts "6 weeks" next to "6 months")
     restates: bool = False  # the answer only says the question back ("I want to make money online"): a reply that
                             # opens with it and goes on is heard by the rest ("..., so I can quit my job")
+    climbs_to: tuple = ()   # routes a reply that goes on past this answer moves up to, when the rest is clearly one
+                            # ("I want more money so I can stop worrying about bills": already the next rung)
 
 
 @dataclass(frozen=True)
@@ -216,6 +218,7 @@ def _route(step_id, label, data, answers):
     keep, restates = data.get("keep", True) is not False, data.get("restates", False) is True
     if restates and keep:
         raise ValueError(f"step {step_id}: route '{label}' restates the question, so it can't keep the reply")
+    climbs_to = tuple(data.get("climbs_to") or ())
     pattern = data.get("pattern", "")
     if pattern:
         if label == ANY:
@@ -225,7 +228,7 @@ def _route(step_id, label, data, answers):
         except re.error as e:
             raise ValueError(f"step {step_id}: route '{label}' pattern: {e}") from None
     return Route(label, examples, str(data["then"]), data.get("ack", ""), keep, floor, like or "", say,
-                 pattern=pattern, restates=restates)
+                 pattern=pattern, restates=restates, climbs_to=climbs_to)
 
 
 def _step(step_id, data, answers):
@@ -353,6 +356,8 @@ def parse_method(name, data, matrix=None, answers=None):
         for route in step.routes:
             if route.then not in steps:
                 raise ValueError(f"step {step.id}: unknown then {route.then!r}")
+            if set(route.climbs_to) - {r.label for r in step.listen}:
+                raise ValueError(f"step {step.id}: route '{route.label}' climbs to an unknown route")
         if step.listen and not step.stuck and not any(r.label == ANY for r in step.listen):
             raise ValueError(f"step {step.id}: can be asked again, so it needs a 'stuck' route")
     echo = {s.capture for s in steps.values() if s.echo}

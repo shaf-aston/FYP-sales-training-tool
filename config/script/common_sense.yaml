@@ -107,7 +107,8 @@ interruptions:
       - "come again"   # draft: round 26 callers, "come again?" got "I'll find out"
       - "say what now"   # draft: round 26 callers, saved as their answer
       - "sorry, the line is bad"
-    never_with: [want, wants, wanted, "used to"]   # draft: round 43 callers, "I used to run a business, I want that again" got "let me say that again"
+      - "what did you say"   # draft: round 100 hunt, "what did you say?" got "I'll find out and let you know"
+    never_with: [want, wants, wanted, "used to", whatever]   # draft: round 43 callers, "I used to run a business, I want that again" got "let me say that again"; round 100 callers, "whatever he says" (their figure is his call) too
     reply: "Of course, let me say that again."   # draft: "say", not "ask": a talk line asks nothing
   thanks:
     with_answer: true   # a thank-you beside an answer: the answer is kept

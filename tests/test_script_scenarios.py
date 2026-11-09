@@ -1185,6 +1185,16 @@ def test_a_want_for_more_is_never_a_worry_and_one_odd_word_is_never_thanks():
     assert 0.67 <= load_common_sense().interruptions["thanks"].min_score <= 0.72
 
 
+def test_a_surface_goal_with_its_why_climbs_and_whatever_is_never_say_that_again():
+    """Round 100 callers: "I just want more money so I can stop worrying about bills" was asked what more money
+    would get them, and "whatever he says" (to "how much a month?") got "let me say that again"."""
+    from core.buy_mode.script_engine.method import load_common_sense
+    surface = next(r for r in CAT.steps["01"].listen if r.label == "surface")
+    assert surface.climbs_to == ("practical", "identity")
+    assert not any(r.climbs_to for s in CAT.steps.values() for r in s.listen if r.label != "surface")   # guard: only the first rung climbs
+    assert "whatever" in load_common_sense().interruptions["repeat"].never_with
+
+
 @pytest.mark.parametrize("step, heard", [("01", True), ("14", False)])
 def test_an_until_price_example_is_only_heard_before_the_price(fake_embedder, step, heard):
     # round 44: "2k, is that a lot?" got no answer; after the price it is the money worry
@@ -1366,7 +1376,7 @@ def test_echo_phrase_fixes_typos(reply, phrase):
     ("quiet my job", "quit my job"),   # round 28 limit: autocorrect was said back as typed
     ("loads more dosh", "loads more money"),   # round 32 callers: slang got the plain line
     ("bucks", "money"), ("more bucks", "more money"),   # round 95 callers: "bucks" was unclear
-    ("money pls", "money please"), ("dbt plz", "dbt please"), ("like 2 bandz", "like 2 grand"), ("tysm", "thank you so much"),   # round 96 callers: "money pls" saved whole, "dbt pls" unclear
+    ("money pls", "money please"), ("dbt plz", "dbt please"), ("like 2 bandz", "like 2 grand"), ("tysm", "thank you so much"), ("a yeer", "a year"), ("2 yeers", "2 years"),   # round 96 callers: "money pls" saved whole, "dbt pls" unclear
     ("moreee moneyyy", "more money"),   # round 32 callers: held letters got the plain line
     ("a yearrr", "a year"),   # was not a time, asked 3 times
     ("my own bosss", "my own boss"),   # cut to 2 when that is a word

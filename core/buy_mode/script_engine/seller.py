@@ -409,6 +409,11 @@ class ScriptSeller:
                 after = self._listener.answer(rest, labels, list(self.sense.unclear), floors)
                 if after.label and after.label not in restates and not after.close:
                     text, found = rest, after
+            climbs = next((r.climbs_to for r in step.listen if r.label == found.label), ())  # torn with the next rung too
+            rest = self._after_restated(text, {found.label: labels[found.label]}) if climbs else ""
+            up = self._listener.answer(rest, labels, list(self.sense.unclear), floors) if rest else None
+            if up and up.label in climbs and not up.close:  # round 100: "more money so I can stop worrying about
+                found = up  # bills" is already the next rung; the whole reply is still kept
             label, near = found.label, found.candidates
             if found.close:
                 pick = self._voice.judge(text, {c: labels[c] for c in near}) if near else VAGUE
