@@ -1300,6 +1300,24 @@ def test_a_shortcut_whose_from_is_not_before_its_until_fails_loud():
         parse_method("cat", data, matrix, _read(CONFIG_DIR / "script", "answers"))
 
 
+def test_a_shortcut_keeps_its_pattern_and_a_bad_one_fails_loud():
+    """Round 109: "take my money" is heard by its words, so it can't steal "the money" by meaning."""
+    import re
+
+    from core.buy_mode.script_engine.method import (
+        CONFIG_DIR,
+        _read,
+        load_method,
+        parse_method,
+    )
+
+    assert load_method("cat").pays.pattern
+    data, matrix = _read(CONFIG_DIR / "methods", "cat"), _read(CONFIG_DIR / "script", "objection_matrix")
+    data["pays"] = {**data["pays"], "pattern": "(take"}
+    with pytest.raises(re.error):
+        parse_method("cat", data, matrix, _read(CONFIG_DIR / "script", "answers"))
+
+
 def test_no_two_closes_ask_jumping_in_word_for_word():
     """Sid heard "Do you see yourself jumping in?" four times, word for word (19, then each reframe's close)."""
     steps = ("19", "m_partner_close", "m_close1", "m_close2", "m_close3")

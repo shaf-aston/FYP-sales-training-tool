@@ -103,7 +103,8 @@ class Ear:
         backed = not asking and self._yes_or_no(state) and self._backed.match(text)
         if backed:  # round 52: "yes because I want change" to "are you willing?" was a no; the yes decides
             text = short_form(backed.group(1), self.cfg) or backed.group(1)
-        elif not asking and not self._yes_or_no(state) and (lead := self._yes_lead.match(text)) and set(tokenize(text[lead.end():])) - self._plain:
+        elif (not asking and not self._yes_or_no(state) and (lead := self._yes_lead.match(text)) and set(tokenize(text[lead.end():])) - self._plain
+              and not self._backed.match(text)):  # round 109 full run: "sure because I trust you" kept its "sure": a reason, no worry
             text = text[lead.end():]  # round 85 callers: "aye money", "yes, money" to an open question were saved with the yes
         if step.either and " ".join(tokenize(text)) in self._leave_it:  # round 87 callers: "whichever" to "credit or debit?"
             return self.hear(step.either, state, opened)  # was asked again until the call left the close: it is their pick
@@ -272,7 +273,8 @@ class Ear:
         # round 103 callers: "they fail?" to "What happens to people who...?" got "I don't know that one offhand,
         # I'll find out": a guess said with a rise. "the price?", "stopping me how?" and "anything?" still ask
         if (step.needs or not any(r.label == ANY for r in step.listen) or set(words) & set(self.cfg["question_words"])
-                or self._shrugs.says_nothing(part, step, False)):
+                or self._shrugs.says_nothing(part, step, False) or self._shrugs.plain_no(part)):  # "how long is it. no?"
+                # still asks: a plain no only answers alone (round 109 full run)
             return False
         heard = self._interrupt(part, step, state, opened, True)[0]
         # round 104 callers: "books?" to "What are you doing now...?" got "I can send the details after": a product
@@ -487,7 +489,8 @@ class Ear:
 
     def _ready(self, text, state):
         """The reply takes a shortcut open at this step ("yes I'm in", "credit")."""
-        return any(self._listener.match(text, {"ready": list(r.examples)}, by_clause=False).score >= r.min_score
+        return any((r.pattern and re.search(r.pattern, text, re.IGNORECASE))
+                   or self._listener.match(text, {"ready": list(r.examples)}, by_clause=False).score >= r.min_score
                    for r in self._open(state.step).values())
 
     def _interrupt(self, text, step, state, opened, asking, answers=True):
@@ -533,6 +536,8 @@ class Ear:
         if not opened and not asking:  # "money", "scared", "risk" before the price are answers, not objections
             floors.update({f"objection:{k}": self.cfg["early_objection_min_score"] for k, _ in objections})
         for k, r in self._open(state.step).items():
+            if r.pattern and re.search(r.pattern, text, re.IGNORECASE):  # its own words ("take my money") take it outright
+                return "ready", k
             labels[f"ready:{k}"], floors[f"ready:{k}"] = r.examples, r.min_score
         # the catch-all keeps any reply only if it has the step's shape: "I don't have time for this" to "how
         # long?" can't be the answer, so nothing has to out-score it there (live: the frustration went unheard)

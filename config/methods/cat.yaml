@@ -14,7 +14,7 @@ exits: {resell: "20", payment: "22", follow_up: "later"}
 # "yes, how do I pay?" after the whole pitch got "Are you aware of the programme from beforehand?".
 # Once the price is out, a reply that is already about paying ("credit", "how do I pay?") goes straight to the
 # payment question from any pitch line: live, "yes, how do I pay?" on a pitch line got "I'll find out".
-pays: {like: pay_now, then: "22", from: "14", until: "19", min_score: 0.8}   # "ok" (0.73) is no way to pay
+pays: {like: pay_now, then: "22", from: "14", until: "19", min_score: 0.8, pattern: '\btake my money\b'}   # "ok" (0.73) is no way to pay; draft (pattern): round 109 full run, "take my money" by its words, see answers.yaml
 ready:
   then: "ready"
   until: "13"
@@ -451,6 +451,7 @@ steps:
       pays:   # "yes, how do I pay?" after the pitch: straight to how (answers.yaml)
         like: pay_now
         min_score: 0.8   # "ok" (0.73) is no way to pay
+        pattern: '\btake my money\b'   # draft: round 109 full run, by its words: as a meaning example ("take my money") it drew "the money" off the money worry
         then: "22"
       unclear:
         examples:
@@ -482,6 +483,7 @@ steps:
       pays:   # "credit", "how do I pay": ready to pay, so straight to how, not "What makes you say that?"
         like: pay_now
         min_score: 0.8   # "ok" (0.73) is no way to pay
+        pattern: '\btake my money\b'   # draft: round 109 full run, by its words: as a meaning example ("take my money") it drew "the money" off the money worry
         then: "22"
       hesitant:
         like: not_yet

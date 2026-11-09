@@ -80,7 +80,7 @@ objections:
       - "can I call you back"   # draft: whole calls, at the close it got "I'll find out"
       - "let me think about it"   # draft: whole calls, at 19 it was heard as a shrug and asked again
       - "can I do it another day"   # draft: round 106 callers, "can I do it tomorrow?" at the payment step got "I'll find out"
-      - "can we do this next week"   # draft
+      - "can we pick this up next week"   # draft
     never_with: ["do it now", "do it today", "do it right now", "pay now", "pay today", "start now", "start today"]   # draft: round 106 callers, "can I do it today?" is near "another day" (0.88) but keen, never a wait
   research:   # Analyser: still researching, needs more info
     enter: m_think_what

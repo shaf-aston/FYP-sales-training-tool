@@ -27,7 +27,7 @@ pay_now:   # a yes that is already about paying: the payment question next, not 
   - "debit"   # draft
   - "I'll pay by card"   # draft
   - "send me the payment link"   # draft
-  - "take my money"   # draft: round 86 callers, "take my money" to "jumping in?" was unclear
+  # "take my money" (round 86 callers: unclear at "jumping in?") is heard by its words: each pays route has the pattern (round 109 full run: as an example it drew "the money" off the money worry)
   - "where do I sign"   # draft: round 87 callers, "where do I sign" got "I'll find out" and "how do I sign up" a start date
   - "how do I sign up"   # draft
 not_yet:   # a no to "Do you see yourself jumping in?"

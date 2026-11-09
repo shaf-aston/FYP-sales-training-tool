@@ -721,7 +721,7 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("01", 0, (), "is it ok to say quit my job?", "goal_practical", "What are you hoping to achieve by being able to quit your job?"),
     ("01", 0, (), "sorry for the long message but I want to quit my job", "goal_practical", None),
     ("03", 0, (), "3k a month", "03", "Roughly, is it more like months, or a few years?"),   # was saved as "1 months"
-    ("03", 0, (), "a month", "04", "1 month... Damn."),   # was "1 months... Damn."
+    ("03", 0, (), "a month", "04", "So what made it come up for you now?"),   # was "1 months... Damn."
     ("01", 0, (), "kind of more money", "goal_practical", "What are you hoping to achieve with more money?"),   # was "with kind of more money?"
     ("01", 0, (), "50% more income", "goal_practical", "What are you hoping to achieve with 50% more income?"),   # was "50 more income"
     # round 25
@@ -941,7 +941,7 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("01", 0, (), "what do you mean? I don't know", "01", "Fair point"),   # guard: no answer, still put another way
     ("01", 0, (), "more money like", "goal_practical", "What are you hoping to achieve with more money?"),   # was "with more money like?"
     ("01", 0, (), "money money", "goal_practical", "What are you hoping that would get you?"),   # was "with money money?"
-    ("01", 0, (), "honestly i just want more money so i can stop stressing", "goal_practical", "What are you hoping to achieve with more money?"),   # no goal said back
+    ("01", 0, (), "honestly i just want more money so i can stop stressing", "goal_identity", "And what would that change"),   # no goal said back
     ("03", 0, (), "a few months maybe", "04", "So what made it come up for you now?"),   # was "so many nights, months and years"
     ("03", 0, (), "a few years", "04", "If this has been on your mind"),   # guard: never recent
     # round 46
@@ -1217,7 +1217,7 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("05", 0, (), "to some extent", "05", "No rush"), ("05", 0, (), "admittedly", "05", "No rush"), ("05", 0, (), "roger that", "05", "No rush"),   # were "let me say that again" and saved as the answer
     ("18", 0, (), "to some extent", "18", "Put simply"), ("01", 0, (), "at any rate", "01", "What are you actually hoping"),   # were "let me put it another way" and a goal
     ("18", 0, (), "roger that", "19", None), ("19", 0, (), "deal", "20", None),   # were unclear
-    ("18", 0, (), "righto", "19", None), ("19", 0, (), "indeed", "20", None), ("19", 0, (), "on the whole", "19", "Is this something"),   # guard: as before
+    ("18", 0, (), "righto", "19", None), ("19", 0, (), "indeed", "20", None), ("19", 0, (), "on the whole", "20", "What makes you say that?"),   # guard: as before
     # round 70
     ("05", 0, (), "if that", "05", "No rush"), ("goal_practical", 0, (), "if that", "goal_practical", "What would that actually change"),   # were "let me say that again" at every step: the call never ended
     ("18", 0, (), "on balance", "18", "Put simply"), ("18", 0, (), "in any case", "18", "Put simply"),   # were "take your time" and "let me put it another way"
@@ -1370,6 +1370,8 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("12", 0, (), "go all in", "13", None), ("12", 0, (), "get going", "13", None), ("12", 0, (), "I have to go now", "later", None),   # round 105 callers: ended the call; guard: a goodbye still ends it
     ("11", 0, (), "I keep going", "12", None), ("belief_cost", 0, (), "a lot of money", "10", None),   # round 105 callers: asked again; "I haven't mentioned a price yet"
     ("22", 0, (), "can I do it tomorrow?", "m_think_what", None), ("19", 0, (), "can we do this next week?", "m_think_what", None),   # round 106 callers: "I'll find out"
+    ("16", 0, (), "ok take my money", "22", None), ("18", 0, (), "take my money", "22", None), ("19", 0, (), "take my money", "22", None),   # full run: "take my money" by its words, not a meaning
+    ("18", 0, (), "the money", "m_funded", None), ("19", 0, (), "can we pick this up next week", "m_think_what", None), ("16", 0, (), "ok", "17", None),   # guard: the money worry, think, a bare ok
     ("22", 0, (), "can I do it today?", "22", None), ("22", 0, (), "can I pay now?", "22", None),   # round 106 guards: keen, never a wait
     ("09", 0, (), "I don't have limiting beliefs", "10", "Fair enough"), ("09", 0, (), "nothing, I'm great", "10", "Fair enough"),   # round 107 callers: "Where does that belief come from?"
     ("09", 0, (), "nothing holds me back except money", "belief_origin", None), ("09", 0, (), "I don't believe in myself", "belief_origin", None),   # round 107 guards: a belief

@@ -94,6 +94,7 @@ class Ready:
     until: str          # only before this step; from here on the script itself is closing
     min_score: float    # a match must score at least this on every step ("I'm in sales" must not jump)
     start: str = ""     # only from this step on; "" = from the first
+    pattern: str = ""   # words that take it whatever the examples score ("take my money"); "" = none
 
 
 @dataclass(frozen=True)
@@ -415,7 +416,10 @@ def _ready(name, data, steps, answers):
     if not examples:
         raise ValueError(f"method {name}: ready needs examples")
     ready = Ready(examples, str(data.get("then", "")), str(data.get("until", "")),
-                  _score(f"method {name} ready", data.get("min_score")), str(data.get("from", "")))
+                  _score(f"method {name} ready", data.get("min_score")), str(data.get("from", "")),
+                  str(data.get("pattern", "")))
+    if ready.pattern:
+        re.compile(ready.pattern)
     order = list(steps)
     if ready.then not in steps or ready.until not in steps or (ready.start and ready.start not in steps):
         raise ValueError(f"method {name}: ready then/until/from must be defined steps")
