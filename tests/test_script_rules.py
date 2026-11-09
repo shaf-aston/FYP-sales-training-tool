@@ -788,6 +788,9 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("money?!", "", "money?"), ("what?!", "", "what?"), ("free!?", "", "free?"), ("2k!!!", "2k", ""), ("my boss!!", "my boss", ""), ("money 🙂", "money", ""), ("a year 😕", "a year", ""),   # round 76 callers: "money?!" was a question it could not answer, "2k!!!" and "money 🙂" were saved whole
     ("2k. roughly", "2k", ""), ("2k - ish", "2k", ""), ("my boss smh", "my boss", ""), ("free - i guess", "free", ""), ("2k+", "2k+", ""),   # round 76 callers: saved whole; guard: a plus says more
     ("so, quit", "quit my job", ""), ("so... quit", "quit my job", ""),   # round 76: "so, quit" ended the call once "so" went
+
+    ("money x", "money", ""), ("quit xx", "quit my job", ""), ("the x factor", "the x factor", ""),   # round 77 callers: a kiss was said back ("with money x?"); guard: only on the end
+    ("yes why?", "yes", "why?"), ("money why do you want to know?", "money", "why do you want to know?"), ("money, why?", "money", "why?"),   # round 77 callers: "yes why?" was all asked, no yes
 ])
 def test_a_reply_is_read_once_into_what_it_says_and_what_it_asks(text, said, asked):
     from core.buy_mode.script_engine.hear.reply import Reader
@@ -816,6 +819,9 @@ def test_every_listed_tag_beside_an_answer_is_cut():
     ("thanks so much", ["thanks so much"]), ("nothing so far", ["nothing so far"]), ("so many bills", ["so many bills"]),   # round 74: "thanks so much" was "thanks" and "much", and "much" was kept as the answer
     ("money so I can quit", ["money", "I can quit"]), ("money and time", ["money", "time"]),   # guard: still a break
     ("money so that I can quit", ["money so that I can quit"]), ("2k and that's it", ["2k", "that's it"]),   # round 76: "so that" stays whole; guard: the pair is for "so" only
+
+    ("yes why?", ["yes", "why?"]), ("money why do you ask?", ["money", "why do you ask?"]), ("yes how come?", ["yes", "how come?"]),   # round 77 callers: "yes why?" was one question, the fallback
+    ("I don't know why", ["I don't know why"]), ("why?", ["why?"]), ("why do you ask?", ["why do you ask?"]), ("that's why I want it", ["that's why I want it"]),   # guard: only last, with its "?", after a word
 ])
 def test_so_before_much_is_not_a_break(text, parts):
     from core.buy_mode.script_engine.hear.reply import break_pattern, clauses

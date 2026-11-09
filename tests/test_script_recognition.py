@@ -1265,6 +1265,9 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("18", 0, (), "y 🙂", "19", "Do you see yourself jumping in?"), ("18", 0, (), "k 🙂", "19", "Do you see yourself jumping in?"),   # round 76: a short form before a smiley was unclear
     ("22", 0, (), "send me the link", "end", "Perfect."), ("22", 0, (), "yes, send me the link", "end", "Perfect."), ("22", 0, (), "the link please", "end", "Perfect."),   # round 76 replay: were "What do you need to think over?" and the fallback
     ("22", 0, (), "send me some information", "m_think_what", None),   # guard: still research
+    ("01", 0, (), "A: money", "goal_practical", "What are you hoping that would get you?"), ("05", 0, (), "a) not sure", "05", "No rush"), ("01", 0, (), "money x", "goal_practical", "What are you hoping that would get you?"),   # round 77 callers: were "with a money?", "What do you mean by a not?" and "with money x?"
+    ("19", 0, (), "yes why?", "20", "It helps me see"), ("01", 0, (), "money why?", "goal_practical", "It helps me see"), ("19", 0, (), "how come?", "19", "It helps me see"),   # round 77 callers: were "I don't know that one offhand"
+    ("01", 0, (), "a year", "goal_practical", "What are you hoping to achieve with a year?"), ("01", 0, (), "I don't know why", "01", None),   # guard: as before
 ]
 
 

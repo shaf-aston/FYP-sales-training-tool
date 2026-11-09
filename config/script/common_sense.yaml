@@ -203,6 +203,7 @@ interruptions:
       - "why is that important"
       - "why would I tell you that"   # draft: whole calls, got "I'll find out"
       - "what kind of question is that"   # draft: whole calls, got "let me ask that again"
+      - "how come"   # draft: round 77 callers, "how come?" got "I don't know that one offhand"
     reply: "It helps me see if this is even right for you, so neither of us wastes time."
   about_me:   # whole calls: "what about you?", "did this work for you?" got "I'll find out"; "how much do you make?" got the price
     with_answer: true   # "a few years, you?": the answer is kept, this goes in front of the next question

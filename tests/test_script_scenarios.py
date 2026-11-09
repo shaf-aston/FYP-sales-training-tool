@@ -1375,6 +1375,8 @@ def test_echo_phrase_fixes_typos(reply, phrase):
     ("count me in", "yes"), ("let's do it", "yes"), ("lets do it", "yes"), ("go for it", "yes"), ("say no more", "yes"), ("all good", "okay"),   # round 71 callers: "count me in" was saved as the reason, "all good" got "You're welcome"
     ("sounds good", "yes"), ("works for me", "yes"), ("you bet", "yes"), ("fine by me", "okay"), ("roger that", "okay"), ("roger", "okay"), ("righto", "okay"), ("indeed", "yes"), ("deal", "yes"),   # rounds 69 and 70: pinned without the real model
     ("count me in later", "count me in later"), ("all good things", "all good things"),   # guard: only the reply alone
+    ("A: money", "money"), ("Answer: quit", "quit my job"), ("a) a year", "a year"), ("A) 2k", "2k"), ("Me: 2k", "2k"), ("Ans: 2k", "2k"), ("Reply: money", "money"), ("> free", "free"), ("1. my boss", "my boss"),   # round 77 callers: the label was saved with the answer ("a money")
+    ("a year", "a year"), ("a lot", "a lot"), ("me :)", "me 🙂"), ("1.5 years", "1.5 years"), ("A:money", "A:money"),   # guard: a label needs its ":" or ")" and a space after
 ])
 def test_fix_typos_keeps_real_words(text, fixed):
     from core.buy_mode.script_engine.words.fill import fix_typos

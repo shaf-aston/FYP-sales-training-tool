@@ -86,6 +86,8 @@ def break_pattern(cfg):
         words = [w.split()[-1] for w in cfg["break_not_before"] if " " not in w or w.split()[0] == b]
         return rf"(?!\W+(?:{'|'.join(map(re.escape, words))})\b)" if words else ""
     parts = [rf"\b{re.escape(b)}\b{keep(b)}" if b.isalpha() else re.escape(b) + ends.get(b, r"(?=\s|$)") for b in cfg["clause_breaks"]]
+    if cfg["ask_tails"]:  # round 77: "yes why?" is read as "yes, why?"
+        parts.append(rf"(?<=\w)\s+(?=(?:{'|'.join(map(re.escape, cfg['ask_tails']))})\s*\?+\W*$)")
     return re.compile("|".join(parts), re.IGNORECASE)
 
 
