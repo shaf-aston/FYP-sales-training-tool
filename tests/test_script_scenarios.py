@@ -778,6 +778,14 @@ def test_a_tag_in_a_listed_tag_list_is_never_a_typo(text, vocab):
     assert fix_typos(text, vocab, CFG) == text
 
 
+@pytest.mark.parametrize("text, fixed", [("y e s", "yes"), ("m o n e y please", "money please"), ("Y E S!", "yes!"),
+                                          ("i a m", "i a m"), ("q z x", "q z x"), ("y e", "y e"), ("plan b e", "plan b e")])   # guards: no known word, two letters, inside a word run
+def test_a_word_typed_one_letter_at_a_time_is_joined(text, fixed):
+    """Round 89 callers: "y e s" to "Do you see yourself jumping in?" was unclear, and at the start it was saved as "e s"."""
+    from core.buy_mode.script_engine.words.fill import fix_typos
+    assert fix_typos(text, frozenset({"yes", "money", "please"}), CFG) == fixed
+
+
 def test_a_figure_is_never_a_typo():
     from core.buy_mode.script_engine.words.fill import fix_typos
     assert fix_typos("£2,500pm financialy", {"financial", "pm"}, CFG) == "£2,500pm financial"

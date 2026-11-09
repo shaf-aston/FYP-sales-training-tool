@@ -195,7 +195,13 @@ def test_a_choice_left_to_us_is_heard_as_the_steps_either(ear, text):
     assert ear.hear(text, ScriptState(step="22"), opened=True).text == CAT.steps["22"].either
 
 
-@pytest.mark.parametrize("step, text", [("22", "ok"), ("22", "idk"), ("01", "whichever"), ("22", "whichever card")])
+@pytest.mark.parametrize("text", ["the second one", "the first one", "second one please", "the latter", "the other one", "Option 2"])
+def test_a_pick_by_place_is_heard_as_the_steps_either(ear, text):
+    # round 88 callers: "the second one" to "credit or debit?" was asked again until the call left the close
+    assert ear.hear(text, ScriptState(step="22"), opened=True).text == CAT.steps["22"].either
+
+
+@pytest.mark.parametrize("step, text", [("22", "ok"), ("22", "idk"), ("01", "whichever"), ("22", "whichever card"), ("01", "the second one"), ("22", "the second card")])
 def test_only_a_choice_left_to_us_at_a_step_with_an_either_is_turned(ear, step, text):
     assert ear.hear(text, ScriptState(step=step), opened=True).text != "either is fine"   # guards
 

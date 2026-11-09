@@ -26,6 +26,7 @@ SLASHED = re.compile(r"(?<![\w./:-])[^\W\d_]{2,}(?:\s*/\s*[^\W\d_]{2,})+(?![\w./
 STUTTER = re.compile(r"(?<![\w'])(\w+(?:\s+\w+){0,2}),\s+(?=\1(?![\w']))", re.IGNORECASE)  # words, a comma, the same words again
 DECIMAL_COMMA = re.compile(r"\d+,\d{1,2}")  # "1,5 years": a comma before one or two digits is a decimal point ("2,000" keeps three)
 ISH = re.compile(r"\b([^\W_]+?)(-?)ish\b", re.IGNORECASE)  # "a yearish", "money-ish": roughly, not a word
+SPACED = re.compile(r"(?<![\w'])[^\W\d_](?: [^\W\d_]){2,}(?![\w'])")  # "y e s": one letter at a time, a space between each
 QUOTED = re.compile(r'^\s*["\u201c\u201d](.+)["\u201c\u201d]\s*$')  # '"ok"': the whole reply in quotes
 HASHED = re.compile(r"#+(?=\d*[^\W\d_])")  # "#money", "#2k" -> "money", "2k" (round 53: saved as typed); "#1" stays
 STRUCK = re.compile(r"(~+)(?=\S)[^~\n]+?(?<=\S)\1\s*")  # "~a year~ two years": taken back as they typed it
@@ -141,6 +142,8 @@ def fix_typos(text, vocab, cfg):
     punctuation and every other word kept as typed. A reply of one short form alone (`short_replies`: "y")
     is its word ("yes"): inside a reply, "y" is more often a year ("2 y")."""
     text = QUOTED.sub(r"\1", (text or "").strip())  # round 47: '"ok"' at "Does that make sense?" got "let me put it another way"
+    text = SPACED.sub(lambda m: joined if (joined := m.group().replace(" ", "")).lower() in vocab | real_words(cfg["spell_real_words"]) else m.group(), text)  # round 89
+    # callers: "y e s" was saved as the goal "e s"; joined only into a known word ("i a m" -> "iam" stays apart)
     label = "|".join(map(re.escape, cfg["answer_labels"]))  # round 77: "A: money" was "a money", "1. my boss" saved whole
     text, listed = re.subn(rf"^(?:>+\s+|\d{{1,2}}[.)]\s+|(?:{label})\s*[:)]\s+)", "", text, flags=re.IGNORECASE)
     if listed:  # round 85 callers: "1. money 2. time" was saved as "money 2. time", "a) quit b) travel" whole

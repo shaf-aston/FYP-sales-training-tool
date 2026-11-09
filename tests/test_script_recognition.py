@@ -1326,6 +1326,11 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("03", 0, (), "a decade", "04", "120 months... Damn"), ("02", 0, (), "2k sorry 3k", "03", None), ("01", 0, (), "bread", "goal_practical", None),
     ("01", 0, (), "my wife says money", "goal_practical", None), ("19", 0, (), "where do I sign", "22", None), ("22", 0, (), "where do I sign", "22", None),   # round 87 callers
     ("22", 0, (), "whichever", "end", None), ("22", 0, (), "card ending 1234", "end", None), ("22", 0, (), "put it on my card", "end", None), ("22", 0, (), "ok", "22", None),   # round 87 callers; guard
+    ("22", 0, (), "the second one", "end", None), ("22", 0, (), "the latter", "end", None),   # round 88 callers: asked again until the call left the close
+    ("01", 0, (), "Money. I'm broke.", "goal_practical", "What are you hoping that would get you?"),   # round 89 callers: was "I haven't mentioned a price yet"
+    ("01", 0, (), "money, sounds like a scam", "goal_practical", "Fair question"), ("01", 0, (), "money, but this sounds like a scam", "goal_practical", "Fair question"),   # was saved whole and said back
+    ("01", 0, (), "money, I can't afford much", "goal_practical", "I haven't mentioned a price yet"),   # guard: a worry beside the answer still gets its line
+    ("19", 0, (), "y e s", "20", "What makes you say that?"),   # round 89 callers: "y e s" was unclear
     ("03", 0, (), "since when?", "03", "Fair point"), ("04", 0, (), "for what? dunno", "04", "Fair point"), ("03", 0, (), "since 2020", "04", None),   # round 87 probes: saved as how long, "I'll find out"; guard
 ]
 

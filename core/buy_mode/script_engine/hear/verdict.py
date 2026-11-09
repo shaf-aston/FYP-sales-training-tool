@@ -59,7 +59,7 @@ class Ear:
         self._backed = re.compile(rf"^\W*((?:{backs})(?:\W+(?:{backs}))*)\W+(?:{'|'.join(reasons)})\W+\w", re.IGNORECASE)
         self._yes_lead = re.compile(rf"^\W*(?:{backs})(?:\W+(?:{backs}))*[\s,;.!-]+(?=\w)", re.IGNORECASE)
         self._plain = plain_words(cfg)
-        self._leave_it = {" ".join(tokenize(p)) for p in cfg["leave_it_to_us"]}
+        self._leave_it = {" ".join(tokenize(p)) for p in (*cfg["leave_it_to_us"], *cfg["picks_by_place"])}  # round 88: "the second one" picks too
         self._me, self._you = set(cfg["asked_back"]), set(cfg["asked_back_you"])
         self._captures = {}  # slot: the first step that saves it
         for s in method.steps.values():
@@ -116,6 +116,8 @@ class Ear:
             last = self._interrupt(short_form(parts[-1], self.cfg) or parts[-1], step, state, opened, False)  # saved whole: the whole reply is no thank-you
             if last[0] == "sense" and self.sense.interruptions[last[1]].with_answer:
                 kind, name = last
+            elif last[0] == "objection" and not opened and (beside := self._beside_worry(text, step, state, last[1])):
+                return beside  # round 89 probes: "money, sounds like a scam" was saved whole and said back
         if kind == "sense" and not asking:
             beside = self._beside_sense(text, step, state, name)
             if beside:
@@ -333,12 +335,13 @@ class Ear:
         rest = ", ".join(rest)  # without the "but" that joins them: the worry heard on its own words
         if not rest or self._interrupt(head, step, state, False, False)[0]:
             return None
-        if self._interrupt(rest, step, state, False, False) != ("objection", name):
-            return None
+        alone = self._interrupt(rest, step, state, False, False)
+        if alone not in {("objection", name), (None, "")}:  # round 89 callers: "money, I'm broke" got "I haven't mentioned
+            return None  # a price yet": "I'm broke" alone is no worry, only the reason beside the answer
         if not self._answers_step(head, step, state):
             return None
         ahead = hear_ahead(self.method, state, head)
-        return Verdict("answer", text=head, ahead=None if ahead is state else ahead, side=f"objection:{name}")
+        return Verdict("answer", text=head, ahead=None if ahead is state else ahead, side=f"objection:{name}" if alone[0] else "")
 
     def _beside_sense(self, text, step, state, name):
         """A remark that is a sense able to sit beside an answer (`with_answer`), with an answer in the other parts

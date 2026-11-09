@@ -1362,6 +1362,21 @@ def test_a_worry_beside_an_interruption_is_only_the_worry(seller, monkeypatch):
     assert all(h[1:] == (False, False) for h in heard), heard
 
 
+def test_an_answer_beside_a_reason_or_a_later_worry_keeps_the_answer(seller, monkeypatch):
+    """Round 89 callers: "Money. I'm broke." got "I haven't mentioned a price yet" and the goal was lost: "I'm broke"
+    alone is no worry, so the answer is kept with no early line. "money, sounds like a scam" was saved whole and
+    said back: the whole is an answer, but its last part alone is a worry, so it goes beside the answer."""
+    heard = {"money": (None, ""), "I'm broke": (None, ""), "sounds like a scam": ("objection", "scam"), "money, sounds like a scam": (None, "")}
+    monkeypatch.setattr(seller._ear, "_interrupt", lambda text, *a, **k: heard.get(text, ("objection", "money")))
+    monkeypatch.setattr(seller._ear, "_answers_step", lambda text, *a: text == "money")
+    ear, state = seller._ear, ScriptState(step="01")
+    v = ear._beside_worry("money, I'm broke", ear.method.steps["01"], state, "money")
+    assert (v.kind, v.text, v.side) == ("answer", "money", ""), v
+    v = ear.hear("money, sounds like a scam", state, opened=False)
+    assert (v.kind, v.text, v.side) == ("answer", "money", "objection:scam"), v
+    assert ear.hear("money, sounds like a scam", state, opened=True).side == ""   # guard: after the price, no early line
+
+
 def test_a_plain_no_is_never_an_interruption(seller, monkeypatch):
     """Round 17: "nah" (0.76 to "huh") got "Fair point, let me put it another way"; it is a no, an answer."""
     monkeypatch.setattr(seller._ear, "_interrupt", lambda *a, **k: ("sense", "clarify"))
