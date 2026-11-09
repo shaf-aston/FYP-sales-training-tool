@@ -1480,6 +1480,15 @@ def test_the_question_said_back_before_an_answer_is_talk(seller, step, text, act
     assert [p.text for p in reply.parts] == [p.text for p in read.parts]   # only the act changes
 
 
+@pytest.mark.parametrize("step, text, meant", [
+    ("01", "achieve? dunno", "dunno"), ("goal_practical", "achieve? lol", "lol"), ("03", "how long? dunno", "dunno"),
+])
+def test_a_shrug_after_the_question_said_back_is_the_shrug_alone(seller, step, text, meant):
+    """Round 83 callers: "achieve? dunno" got "I'm the AI playing the salesperson"."""
+    reply = seller._ear._unecho(seller._ear.reader.read(text), ScriptState(step=step))
+    assert (reply.meant, [p.text for p in reply.parts]) == (meant, [meant])
+
+
 @pytest.mark.parametrize("name, spoken, again", [
     ("thanks", ("You're welcome.",), True),   # round 27 callers: "ok, thank you" a second time was "What do you mean by thank you?"
     ("thanks", (), False),                    # the first thank-you is answered

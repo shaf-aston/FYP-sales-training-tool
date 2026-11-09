@@ -1237,7 +1237,8 @@ def test_number_phrase(reply, number):
     ("18ish months", "18 months"), ("18 ish months", "18 months"), ("a year ish", "12 months"),
     ("a whole year", "12 months"), ("a good two years", "24 months"),
     ("a year or two", "24 months"), ("one or two years", "24 months"), ("a year or so", "12 months"), ("a year to 18 months", "12 months"),   # round 83 callers: a range was its bottom
-    ("under a year", None), ("less than a year", None), ("not even a year", None)])   # round 83 callers: "12 months... Damn." for less than a year   # round 51: "a whole year" said no number back   # round 48: "ish" lost the number
+    ("under a year", None), ("less than a year", None), ("not even a year", None),
+    ("under half a year", None), ("a year or two years", "24 months")])   # round 83 mutation: "below" before a part word; a top in the same unit   # round 83 callers: "12 months... Damn." for less than a year   # round 51: "a whole year" said no number back   # round 48: "ish" lost the number
 def test_months_thinking_counts_the_answer_in_months(reply, months):
     from core.buy_mode.script_engine.words.fill import number_phrase
     assert number_phrase(reply, CFG["number_blanks"]["months_thinking"], CFG) == months
