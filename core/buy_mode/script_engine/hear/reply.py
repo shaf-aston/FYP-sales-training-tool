@@ -139,6 +139,8 @@ class Reader:
         self._lead_asks = set(cfg["question_leads"])
         self._you = set(cfg["asked_back_you"])
         self._lead_alone = alone - self._plain  # round 74: a lead with a meaning alone ("thanks", "brb")
+        self._no = set(cfg["no_words"])
+        self._thanks_end = re.compile(rf"(?<=\w)\s+((?:{any_of(cfg['thanks_ends'])})\W*)$", re.IGNORECASE)
         # round 61: after a comma too, so "2k, that kind of thing" loses the whole tag, not just "kind of thing"
         # round 73: every tag at the end, not just the last ("and so on and so forth", "yada yada tbh")
         # round 75: after a full stop, "!", "..." or a dash too ("a year. or so", "money - tbh" were saved whole)
@@ -153,7 +155,9 @@ class Reader:
         flips = "|".join(rf"{re.escape(a)}\W+(?={re.escape(b)}\s*(?:[,;.!?]|$))" for a, b in map(tokenize, cfg["flip_leads"]))
         self._flip = re.compile(rf"^\W*(?:{flips})", re.IGNORECASE)  # "no yeah" is a yes, "yeah no" a no: the last word counts
         joins = any_of([b for b in cfg["clause_breaks"] if b.isalpha()])  # round 79: "so like money" got "let me put it another way"
-        fillers = any_of(cfg["filler_leads"])  # a break word only between fillers: "so that I can quit" stays whole
+        self._shorts = shorts = {*cfg["short_replies"], *cfg["short_replies"].values()}  # round 82: "ok 2k" loses its "ok", "oh ok" keeps it
+        fillers = any_of([f for f in cfg["filler_leads"] if f not in shorts])  # a break word only between fillers: "so that I can quit" stays whole
+        fillers = rf"{fillers}|(?:{any_of([f for f in cfg['filler_leads'] if f in shorts])})(?=\W+\w)"
         self._filler_lead = re.compile(rf"^\W*(?:(?:{fillers})\b(?!\W+(?:{any_of(cfg['lead_not_before'])})\b)\W*|(?:{joins})\W+(?=(?:{fillers})\b))+",
                                        re.IGNORECASE)  # round 54: "oh wow ok" is "ok"; "well paid job" keeps its "well"
         self._answer_lead = re.compile(rf"^\W*(?:{any_of(cfg['answer_leads'])})\b\W*", re.IGNORECASE)
@@ -214,6 +218,9 @@ class Reader:
         if check and set(tokenize(kept)) - self._plain and not self.asks((clauses(kept, self.breaks) or [kept])[-1] + "?"):
             rest = kept
         rest = self._blank_end.sub(r", \1", rest)  # "yes sorry" is "yes, sorry" (round 39 callers: it was unclear)
+        thanks = self._thanks_end.search(rest)  # round 82 callers: "2k thanks" was saved whole; "ok thanks", "no thanks" stay whole
+        if thanks and set(tokenize(rest[:thanks.start()])) - self._alone_mean - self._no and tokenize(rest[:thanks.start()])[-1] not in self._no:
+            rest = f"{rest[:thanks.start()]}, {thanks.group(1)}"
         end = self._unsure_end.search(rest)  # round 44: "money I guess" is "money, I guess"; "yeah I guess", "stuff I guess" stay whole
         if end and set(tokenize(rest[:end.start()])) - self._plain:
             rest = f"{self._tag_end.sub('', rest[:end.start()])}, {end.group(1)}"  # round 75: "money or so i think" was "money or"
@@ -228,7 +235,8 @@ class Reader:
         lead = self._filler_lead.match(rest)
         after = rest[lead.end():] if lead else ""
         if (lead and tokenize(after) and not (self.asks(after) and set(tokenize(lead.group())) & self._lead_asks)  # round 53: "like money" got "let me put it another way"
-                and not (set(tokenize(lead.group())) & self._lead_alone and set(tokenize(after)) <= self._plain)):
+                and not (set(tokenize(lead.group())) & self._lead_alone and set(tokenize(after)) <= self._plain)
+                and not (set(tokenize(lead.group())) & self._shorts and (set(tokenize(after)) <= self._alone_mean | self._blank or self._act(" ".join(w for w in tokenize(rest) if w not in self._shorts), False) == "tag"))):
             rest = after  # "like what?" still asks, "oh what?" is "what?" (round 80); round 74: "thanks mate" stays whole, "thanks, 2k" is "2k"
         while (back := self._take_back.search(rest)) or (kept := self._fixed_in(rest)) is not None:
             rest = self._with_unit(rest[:back.start()], rest[back.end():]) if back else kept

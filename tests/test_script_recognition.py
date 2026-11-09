@@ -1298,6 +1298,10 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("goal_practical", 0, (), "hm?", "goal_practical", "What would that actually change"), ("goal_practical", 0, (), "hm", "goal_practical", "What would that actually change"),   # round 82: "hm" was saved as the answer
     ("goal_practical", 0, (), "confused?", "goal_practical", "Fair point"), ("goal_practical", 0, (), "i'm lost", "goal_practical", "Fair point"), ("goal_practical", 0, (), "you lost me", "goal_practical", "Fair point"),   # round 82: saved as the answer
     ("goal_practical", 0, (), "I lost my job", "goal_identity", None), ("05", 0, (), "feeling lost", "06", None),   # guards: lost something is an answer
+    ("goal_identity", 0, (), "who would I be?", "goal_identity", "There's no right answer"), ("goal_identity", 0, (), "who would I be? free", "02", "There's no right answer"),   # round 82 callers: got what we do ("who are you")
+    ("goal_identity", 0, (), "who are you?", "goal_identity", "We help people"), ("goal_identity", 0, (), "can I pay monthly?", "goal_identity", "There are ways"),   # guards: about us still gets the fact
+    ("goal_identity", 0, (), "great question", "goal_identity", "Who would you be"),   # round 82 callers: was "What do you mean by great question?"
+    ("02", 0, (), "2k thanks", "03", "You're welcome"), ("05", 0, (), "money ty", "06", "You're welcome"), ("goal_identity", 0, (), "free ta", "02", "You're welcome"),   # round 82 callers: the thanks was saved with the answer
     ("goal_identity", 0, (), "2 years, what about you?", "goal_identity", "I'm the AI"),   # round 81: was "I'll find out" (2 years answers nothing)
     ("goal_practical", 0, (), "2 years, is that normal?", "goal_practical", "There's no right answer"),   # round 81: was "I'll find out"
     ("05", 0, (), "2 years, what about you?", "06", "I'm the AI"), ("goal_identity", 0, (), "5k, are you a bot?", "goal_identity", "I'm an AI"),   # guards

@@ -28,7 +28,7 @@ unclear:
              "I haven't thought about it", "hard to say", "it depends", "not sure what to say",
              "I can't think of anything", "beats me", "no clue", "maybe", "eh", "good question",
              "let me think", "who knows", "anything", "I guess", "umm",
-             "hmm"]   # draft: thinking out loud, not "what do you mean?" (whole calls: "hmm" got "let me put it another way" once "huh" was a clarify example)
+             "hmm", "good one"]   # draft (good one): round 82 callers, "ooh good one, free" was saved whole; draft: thinking out loud, not "what do you mean?" (whole calls: "hmm" got "let me put it another way" once "huh" was a clarify example)
 ended: "Speak soon."   # draft: any reply once the call has ended (booked the follow-up, or paid)
 same_words: "Sure, let me say that again."   # draft: "say", not "ask": a talk line asks nothing (round 21: "what?" to the price line). a rephrase with no other words left ("let me put it another way" then the same question is untrue)
 yes_no_reask: ["No pressure either way.", "A yes or no is fine."]   # draft: in front of a yes-or-no question asked again, in place of the method's `reask` ("even a rough idea helps" reads oddly before "Would that work for you?")
@@ -245,6 +245,8 @@ interruptions:
       - "what would you do"   # draft
       - "what's normal"   # draft
       - "which is better"   # draft: round 34 callers, at payment it was heard as paying ("Welcome aboard")
+      - "who would I be"   # draft: round 82 callers, it got what we do ("who are you"), then "I'll find out"
+      - "who am I"   # draft
       - "which do you recommend"   # draft: the same, got "I'll find out"
       - "which is easier"   # draft: "whichever is easier" chooses, "which is easier?" asks
       - "is that silly"   # draft: round 39 callers, "quit my job, is that silly?" got no answer to it

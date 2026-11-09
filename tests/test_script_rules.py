@@ -794,6 +794,8 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("lol what?", "", "what?"), ("well what do you want?", "", "what do you want?"),   # round 80 callers: "oh what?" got "I don't know that one offhand"
     ("my boss that's why?", "my boss", ""), ("kids thats why?", "kids", ""), ("money, that is why", "money", ""),   # round 82: "kids thats why?" got "I don't know that one offhand", "my boss that's why" was saved whole
     ("that's why I want to quit", "that's why I want to quit", ""), ("no clue why?", "", "no clue why?"), ("idk why?", "", "idk why?"),   # guards: only on the end; after not knowing, the "why" is what they don't know
+    ("2k thanks", "2k, thanks", ""), ("money cheers mate", "money, cheers mate", ""), ("ok 2k", "2k", ""), ("okay, money", "money", ""), ("hm ok money", "money", ""),   # round 82 callers: saved whole
+    ("ok thanks", "ok thanks", ""), ("ok rn", "okay", ""), ("ok lol", "okay", ""), ("ok but is it a scam?", "okay", "is it a scam?"), ("ok realistically", "ok realistically", ""), ("ok like everyone", "ok like everyone", ""),   # guards: "ok" goes only before an answer; "thanks but no thanks" above stays whole
 
     ("money x", "money", ""), ("quit xx", "quit my job", ""), ("the x factor", "the x factor", ""),   # round 77 callers: a kiss was said back ("with money x?"); guard: only on the end
     ("yes why?", "yes", "why?"), ("money why do you want to know?", "money", "why do you want to know?"), ("money, why?", "money", "why?"),   # round 77 callers: "yes why?" was all asked, no yes

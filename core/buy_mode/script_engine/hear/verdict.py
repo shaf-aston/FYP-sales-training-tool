@@ -56,6 +56,7 @@ class Ear:
         backs, reasons = (r"\W+".join(map(re.escape, tokenize(p))) for p in backs), map(re.escape, cfg["reason_starts"])
         backs = "|".join(sorted(backs, key=len, reverse=True))
         self._backed = re.compile(rf"^\W*((?:{backs})(?:\W+(?:{backs}))*)\W+(?:{'|'.join(reasons)})\W+\w", re.IGNORECASE)
+        self._me, self._you = set(cfg["asked_back"]), set(cfg["asked_back_you"])
         self._captures = {}  # slot: the first step that saves it
         for s in method.steps.values():
             if s.capture:
@@ -103,6 +104,10 @@ class Ear:
                 return beside
         if kind in ("sense", "objection") and not asking and self._shrugs.only_tags(text):
             return Verdict("says_nothing", text=text)  # round 67: "you see" to "Does that make sense?" was leaving; 68: "by and large" a worry
+        if not kind and not asking and len(parts := clauses(text, self._breaks)) > 1:  # round 82 callers: "2k, thanks" was
+            last = self._interrupt(short_form(parts[-1], self.cfg) or parts[-1], step, state, opened, False)  # saved whole: the whole reply is no thank-you
+            if last[0] == "sense" and self.sense.interruptions[last[1]].with_answer:
+                kind, name = last
         if kind == "sense" and not asking:
             beside = self._beside_sense(text, step, state, name)
             if beside:
@@ -230,6 +235,14 @@ class Ear:
             return True  # round 78: "not sure?" got "let me say that again"; "eh?" alone still asks for it again
         return words[0] in self.cfg["prospect_pronouns"] or bool(step.needs) and self.shaped(part, step)  # round 28: "my job?" got "I'll find out"
 
+    def _same_person(self, text, examples):
+        """The examples that ask about the same person: a question about themselves ("who would I be?") is never
+        one about us ("who are you"). Round 82 callers: "who would I be? free" got what we do."""
+        words = set(tokenize(text))
+        if not words & self._me or words & self._you:
+            return examples
+        return [e for e in examples if not set(tokenize(e)) & self._you or set(tokenize(e)) & self._me]
+
     def _reason(self, text):
         """The reply opens with a reason ("because...", "cos..."): it gives one, it does not ask or object."""
         words = tokenize(text)
@@ -316,7 +329,7 @@ class Ear:
         said = self.sense.interruptions[name]
         parts = clauses(text, self._breaks)
         for i, part in enumerate(parts):
-            if self._interrupt(part, step, state, False, False) != ("sense", name):
+            if self._interrupt(short_form(part, self.cfg) or part, step, state, False, False) != ("sense", name):  # "free, ta" (round 82)
                 continue
             if not said.with_answer and not self._over(part, name):
                 return None
@@ -438,7 +451,7 @@ class Ear:
         if hedge:  # one that is nearer not knowing counts only if it beats it (round 38: "let me think" got "let me say that again")
             floors = {k: max(f, math.nextafter(unsure, 2)) for k, f in floors.items()}
         if asking:
-            labels.update({f"fact:{k}": f.examples for k, f in self.offer.facts.items()})
+            labels.update({f"fact:{k}": e for k, f in self.offer.facts.items() if (e := self._same_person(text, f.examples))})
         objections = self.method.objections.items()
         if not asking and self._backed.match(text):
             objections = ()  # round 52: "yes because I need the money" says why yes; it is no money worry
