@@ -137,6 +137,7 @@ interruptions:
       - "are you reading from a script"   # draft: whole calls, got "I'll find out"
       - "is this a sales call"   # draft: same
       - "are you human"   # draft: round 80 callers, "are you human?" got "I'll find out"
+    never_with: ["my manager", "my managers", "our manager"]   # draft: round 91 callers, "my manager" (their reason at 04) got "I'm an AI" (near "can I speak to your manager")
     reply: "I'm an AI playing the salesperson so you can practise."   # never deny being an AI; no "Yes": "who am I talking to?" isn't a yes-or-no
   clarify:
     draft: true

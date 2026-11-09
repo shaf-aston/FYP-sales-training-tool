@@ -585,7 +585,10 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("not my boss, my wife", "my wife", ""),
     ("more money rn", "more money", ""), ("quit asap", "quit my job", ""),   # round 52 callers: "rn" was said back
     ("ok rn", "okay", ""),   # was saved as the answer
-    ("not money, time", "not money, time", ""),   # guard: nothing says they are one kind, kept whole
+    ("not money, time", "time", ""), ("money, actually time", "time", ""), ("not quit, travel", "travel", ""),   # round 91 callers: said back whole
+    ("not today, tomorrow", "not today, tomorrow", ""), ("not now, later", "not now, later", ""), ("money, actually quite a lot", "money, actually quite a lot", ""), ("not me, them", "not me, them", ""),   # round 91 guards: time asked for, sides of two lengths, people
+    ("2k a month, mate", "2k a month", ""), ("my boss, mate", "my boss", ""), ("free, dude", "free", ""), ("yes, mate", "yes", ""),   # round 91 callers: ", mate" was heard as "thanks mate"
+    ("my mate", "my mate", ""), ("2k mate", "2k mate", ""), ("mate", "mate", ""),   # round 91 guards: no break before it, or nothing before it
     ("not really, I'm busy", "not really, I'm busy", ""),   # guard: a no with a reason stays a no
     ("not sure, a year", "not sure, a year", ""),
     ("is it ok to say?", "", "is it ok to say?"),   # nothing after the lead: a question, as typed

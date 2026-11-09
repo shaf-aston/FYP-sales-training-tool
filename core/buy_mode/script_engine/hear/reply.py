@@ -180,6 +180,9 @@ class Reader:
         self._fix_back = re.compile(rf"(?<=\w){not_mid}[,;.!?]\s*(?:{mid}|{word})\s+(?=\w)", re.IGNORECASE)
         self._fix_bare = re.compile(rf"(?<=\w){not_mid}\s+(?:{mid}|{word})\s+(?=\w)", re.IGNORECASE)  # "2k sorry 3k"
         self._denied = re.compile(rf"^\W*(?:{any_of(cfg['denied_leads'])})\s+(?=\w)", re.IGNORECASE)  # "not a year, two"
+        self._any_kind = {" ".join(tokenize(w)) for w in cfg["fix_any_kind"]}  # round 91: "money, actually time"
+        self._kept = self._plain | set(cfg["fix_kept_words"])  # "not today, tomorrow" asks for time, so stays whole
+        self._address_end = re.compile(rf"(?<=\w)\s*[,;.!…–—-]+\s*(?:{any_of(cfg['address_ends'])})\W*$", re.IGNORECASE)
         self._marks = re.compile(r"[?!]*\?[?!]*(?=\s|$)")
         self._bracket_end = re.compile(r"(?<=\S)\s*\(([^()]*)\)\W*$")
         self._cfg = cfg
@@ -202,8 +205,10 @@ class Reader:
             return None
         taken = text[:back.start()] if back else cut[0]  # "not a year, two": the year is denied, two is kept
         before, new = tokenize(clauses(taken, self.breaks)[-1]), text[back.end():].strip() if back else after(text, cut[0])
-        if not ((self._figure(" ".join(before)) and self._figure(new)) or before[:1] == tokenize(new)[:1]):
-            return None
+        swap = (denied or " ".join(tokenize(back.group())) in self._any_kind) and len(before) == len(tokenize(new)) <= 2
+        if not ((self._figure(" ".join(before)) and self._figure(new)) or before[:1] == tokenize(new)[:1]
+                or (swap and not {*before, *tokenize(new)} & self._kept)):  # round 91 callers: "not money, time" and
+            return None  # "money, actually time" were said back whole; "not really, busy" and "money, actually quite a lot" stay
         return self._with_unit(taken, new)
 
     def _with_unit(self, taken, new):
@@ -252,6 +257,7 @@ class Reader:
         lead = self._shrug_lead.match(rest)  # round 84 callers: "dunno my boss" as "dunno, my boss"; "dunno why" stays whole
         if lead and set(tokenize(rest[lead.end():])) - self._plain:
             rest = f"{lead.group(1)}, {rest[lead.end():]}"
+        rest = self._address_end.sub("", rest)  # round 91 callers: "2k, mate" got "You're welcome"; "my mate" stays
         rest = self._tag_end.sub("", rest)  # round 53: "ok if it works", "free tbh" were saved whole
         rest = self._flip.sub("", rest)  # round 28 callers: "no yeah" was heard as backing out
         lead = self._report_lead.match(rest)  # round 87 callers: "my wife says money" was a partner worry; "my partner says no" stays

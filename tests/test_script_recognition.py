@@ -1331,6 +1331,10 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("01", 0, (), "money, sounds like a scam", "goal_practical", "Fair question"), ("01", 0, (), "money, but this sounds like a scam", "goal_practical", "Fair question"),   # was saved whole and said back
     ("01", 0, (), "money, I can't afford much", "goal_practical", "I haven't mentioned a price yet"),   # guard: a worry beside the answer still gets its line
     ("19", 0, (), "y e s", "20", "What makes you say that?"),   # round 89 callers: "y e s" was unclear
+    ("04", 0, (), "my manager", "05", "What's the reason"),   # round 91 callers: got "I'm an AI playing the salesperson"
+    ("02", 0, (), "2k a month, mate", "03", "How long"), ("04", 0, (), "my boss, mate", "05", "What's the reason"),   # round 91 callers: got "You're welcome"
+    ("01", 0, (), "money, actually time", "goal_practical", "What are you hoping to achieve with time?"), ("01", 0, (), "not money, time", "goal_practical", "What are you hoping to achieve with time?"),   # round 91 callers: said back whole
+    ("22", 0, (), "not today, tomorrow", "m_think_what", None), ("02", 0, (), "cheers, mate", "02", "You're welcome"),   # round 91 guards: still asks for time; a thank-you alone is still one
     ("03", 0, (), "since when?", "03", "Fair point"), ("04", 0, (), "for what? dunno", "04", "Fair point"), ("03", 0, (), "since 2020", "04", None),   # round 87 probes: saved as how long, "I'll find out"; guard
 ]
 
