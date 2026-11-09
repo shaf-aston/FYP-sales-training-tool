@@ -187,3 +187,24 @@ def test_a_hedge_is_the_worry_only_when_it_is_nearer_the_worry(ear, monkeypatch,
     v = ear.hear("let me think about it", ScriptState(step="19"), opened=True)
     assert v.heard_as.startswith(heard_as), v.heard_as
 
+
+
+@pytest.mark.parametrize("text", ["whichever", "up to you", "either", "i don't mind", "Whichever!"])
+def test_a_choice_left_to_us_is_heard_as_the_steps_either(ear, text):
+    # round 87 callers: "whichever" to "credit or debit?" was asked again until the call left the close
+    assert ear.hear(text, ScriptState(step="22"), opened=True).text == CAT.steps["22"].either
+
+
+@pytest.mark.parametrize("step, text", [("22", "ok"), ("22", "idk"), ("01", "whichever"), ("22", "whichever card")])
+def test_only_a_choice_left_to_us_at_a_step_with_an_either_is_turned(ear, step, text):
+    assert ear.hear(text, ScriptState(step=step), opened=True).text != "either is fine"   # guards
+
+
+@pytest.mark.parametrize("step, text, heard_as", [
+    ("05", "stopping me how? dunno", "question"), ("04", "the reason for what? dunno", "question"),   # a question word is asked, not wondered
+    ("04", "for what? dunno", "sense:clarify"), ("03", "since when?", "sense:clarify"),   # round 87 probes: a word and a question word asks what we meant
+    ("03", "a long long time? dunno", "answer"),   # three words are more than a word or two said back: the unsure answer
+])
+def test_only_a_word_or_two_with_no_question_word_is_wondered_aloud(ear, step, text, heard_as):
+    # mutation 89: both limits on a wondered-aloud rise had no test
+    assert ear.hear(text, ScriptState(step=step), opened=False).heard_as == heard_as

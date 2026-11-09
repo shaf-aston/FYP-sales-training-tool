@@ -58,6 +58,10 @@ class Shrugs:
         """Only tags, shrug phrases and filler ("so to speak", "ok, you see"): no words to hear a meaning in."""
         return bool(tokenize(text)) and self._words(text) <= self._filler
 
+    def shrug(self, text):
+        """Only a shrug ("dunno", "idk", "no idea", "lol"), never a soft answer ("maybe", "probably")."""
+        return self.blank(text) or self._only_shrug(text)
+
     def _only_shrug(self, text):
         """A shrug phrase or tag and at most filler words ("lol who knows?", "so to speak?"): "is it up to you?"
         asks something."""

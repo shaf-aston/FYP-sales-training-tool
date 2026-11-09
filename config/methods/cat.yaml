@@ -205,7 +205,7 @@ steps:
           - "a few days"   # draft: round 43 callers, "a few days" said nothing back
           - "it's pretty new"
           - "I only just started thinking about it"
-        pattern: '^(?!.*\b(?:months?|years?|yrs?)\b).*\b(?:[1-9]|1[0-2])\s*(?:weeks?|wks?)\b|^(?!.*\b(?:months?|years?|yrs?)\b).*\b\d{1,2}\s*days?\b|^(?!.*\b(?:years?|yrs?)\b)(?:\W*\w+){0,3}?\W*\b(?<!good\s)(?:a\s+)?(?:few|couple(?:\s+of)?)\s+months?\b'   # draft: round 43 callers, "6 weeks" and "10 days" were unclear; up to 12 weeks, never with months or years in it; draft (few months): round 45 callers, "a few months maybe" got "so many nights, months and years"
+        pattern: '^(?!.*\b(?:months?|years?|yrs?)\b).*\b(?:[1-9]|1[0-2])\s*(?:weeks?|wks?)\b|^(?!.*\b(?:months?|years?|yrs?)\b).*\b\d{1,2}\s*days?\b|^(?!.*\b(?:years?|yrs?)\b)(?:\W*\w+){0,3}?\W*\b(?<!good\s)(?:a\s+)?(?:few|couple(?:\s+of)?)\s+months?\b|^(?!.*\b(?:years?|yrs?)\b)(?:\W*\w+){0,3}?\W*\b(?:a|an|one|two|three|[1-3])\s*(?:months?|mos?|mths?)\b(?!\s*(?:or|to|-)\s*(?:[4-9]|1\d|four|five|six|seven|eight|nine|ten|eleven|twelve)\b)'   # draft: round 84 callers, "a month or two" and "2 months" were "2 months... Damn."; up to 3 months is recent; draft: round 43 callers, "6 weeks" and "10 days" were unclear; up to 12 weeks, never with months or years in it; draft (few months): round 45 callers, "a few months maybe" got "so many nights, months and years"
         then: "04"
         say: "So what made it come up for you now?"   # draft: ours, in place of 04's "so many nights, months and years"
       long:   # draft: a rival label: "a while" (0.86 to "not long") was asked what made it come up now
@@ -513,6 +513,7 @@ steps:
     draft: true  # probe and back-out are ours: the source only has the question
     say: "How would you like to process the investment? Credit or debit?"
     probe: "Which works better for you, credit or debit?"
+    either: "either is fine"   # draft: round 87 callers, "whichever", "up to you" were asked again until the call left the close
     stuck: {then: "19"}   # still no way to pay after asking twice: back to the soft close, never "welcome aboard"
     listen:
       pays:   # only a way to pay ends the call: "no, forget it" must never get "Welcome aboard"
@@ -530,9 +531,13 @@ steps:
           - "mastercard"   # draft
           - "amex"   # draft
           - "apple pay"   # draft
+          - "google pay"   # draft: round 86 callers, "klarna" got "credit or debit?" again
+          - "klarna"   # draft
           - "bank transfer"
           - "either is fine"
           - "whichever is easier"
+          - "my card ending 1234"   # draft: round 87 callers, "card ending 1234" got "credit or debit?" again and
+          - "put it on my card"   # draft: "on my card" "take your time"
           - "yes, let's do it"
           - "debit, I don't do credit"   # draft: round 26 callers, "debit because I don't do credit" was asked again
           - "send me the link"   # draft: round 76 replay, "send me the link" here got "What do you need to think over?"
@@ -540,7 +545,7 @@ steps:
         then: "end"
       backs_out: *backs_out
       how:   # draft: whole calls, "how do I pay?" got "I'll find out"; the choice again answers it
-        examples: ["how do I pay", "how does the payment work"]
+        examples: ["how do I pay", "how does the payment work", "where do I sign"]   # draft (where do I sign): round 87 callers, it got "I'll find out"
         then: "22"
         keep: false
   "end":

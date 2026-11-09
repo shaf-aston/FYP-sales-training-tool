@@ -914,7 +914,7 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("01", 0, (), "what I'm hoping to achieve is more money", "goal_practical", "What are you hoping to achieve with more money?"),   # was no goal said back
     ("19", 0, (), "what's next?", "19", "Sure."),   # guard: still a nudge
     ("01", 0, (), "because I'm broke, more money", "goal_practical", "What are you hoping to achieve with more money?"),   # was no goal said back
-    ("03", 0, (), "since last month", "04", "1 month... Damn."),   # was no number
+    ("03", 0, (), "since last month", "04", "So what made it"),   # was no number; round 84 callers: a month is recent
     ("willing", 0, (), "go on then", "11", "Sure."),
     # round 43
     ("01", 0, (), "I used to run a business, I want that again", "goal_practical", None),   # was "let me say that again"
@@ -1224,7 +1224,7 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("05", 0, (), "in any case", "05", "No rush"), ("goal_practical", 0, (), "as a matter of fact", "goal_practical", "What would that actually change"),   # were saved as the answer
     ("05", 0, (), "sounds good", "05", "No rush"), ("05", 0, (), "you bet", "05", "No rush"),   # were saved as the reason
     ("19", 0, (), "works for me", "20", None), ("18", 0, (), "you bet", "19", None),   # were a scam worry and unclear
-    ("18", 0, (), "sounds good", "19", None), ("18", 0, (), "simply put", "19", None), ("02", 0, (), "2k if that", "03", None),   # guard: as before
+    ("18", 0, (), "sounds good", "19", None), ("18", 0, (), "simply put", "18", "Put simply"), ("02", 0, (), "2k if that", "03", None),   # guard: as before; full run 85: a filler alone says nothing, so the simpler version
     # round 71
     ("05", 0, (), "and such", "05", "No rush"), ("goal_practical", 0, (), "and such", "goal_practical", "What would that actually change"),   # were "let me say that again" at every step: the call never ended
     ("05", 0, (), "real talk", "05", "No rush"), ("18", 0, (), "real talk", "18", "Put simply"),   # were "I'm an AI playing the salesperson"
@@ -1249,7 +1249,7 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("02", 0, (), "can we stop here?", "later", "No problem"), ("19", 0, (), "can we do this another time?", "later", "No problem"),   # were "I don't know that one offhand"
     ("05", 0, (), "how long is it. no?", "05", "It's a 6-month process"), ("19", 0, (), "hmm, yeah?", "20", None), ("19", 0, (), "can we do this", "20", None),   # guard: as before
     ("01", 0, (), "that's a tough one, a year", "goal_practical", "What are you hoping to achieve with a year"), ("01", 0, (), "erm a year erm", "goal_practical", "What are you hoping to achieve with a year"),   # round 74 callers: were asked again and said back as "a year erm"
-    ("01", 0, (), "cheers for asking, money", "goal_practical", "What are you hoping that would get you"), ("01", 0, (), "thanks, 2k", "goal_practical", "What are you hoping to achieve with 2k"), ("01", 0, (), "thank you so much, money", "goal_practical", "What are you hoping that would get you"),   # were said back with the thanks
+    ("01", 0, (), "cheers for asking, money", "goal_practical", "You're welcome. What are you hoping that would get you"), ("01", 0, (), "thanks, 2k", "goal_practical", "You're welcome. What are you hoping to achieve with 2k"), ("01", 0, (), "thank you so much, money", "goal_practical", "You're welcome. What are you hoping that would get you"),   # were said back with the thanks; full run 85: the thanks is now heard
     ("01", 0, (), "one sec, money", "goal_practical", "What are you hoping that would get you"), ("01", 0, (), "brb, my boss", "goal_practical", "What are you hoping to achieve with your boss"), ("01", 0, (), "money, like", "goal_practical", "What are you hoping that would get you"),   # were "take your time", "with brb, my boss?" and "let me put it another way"
     ("05", 0, (), "cheers for asking", "05", "You're welcome"), ("05", 0, (), "nice of you to ask", "05", "You're welcome"), ("05", 0, (), "thanks mate", "05", "You're welcome"), ("05", 0, (), "thanks so much", "05", "You're welcome. What's the reason"),   # were kept as the answer ("much")
     ("01", 0, (), "thanks mate", "01", "You're welcome"), ("01", 0, (), "hang on my phone is dying", "01", "No problem, take your time"), ("05", 0, (), "one sec", "05", "No problem, take your time"), ("05", 0, (), "thank you", "05", "You're welcome"),   # guard: as before
@@ -1313,6 +1313,20 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("01", 0, (), "clueless?", "01", "What are you actually"), ("goal_identity", 0, (), "clueless", "goal_identity", "Who would you be"),   # round 83 callers: saved as the answer
     ("02", 0, (), "2k ok", "03", "How long"), ("01", 0, (), "money ok", "goal_practical", None),   # round 83 callers: the "ok" was saved with the answer
     ("03", 0, (), "a year or two", "04", "24 months"), ("03", 0, (), "a year to 18 months", "04", "12 months"), ("03", 0, (), "under a year", "04", "If this has been"),   # round 83 callers: were "12 months", "12 months... Damn." for under a year
+    ("willing", 0, (), "🤷", "willing", "No pressure"), ("18", 0, (), "🤷", "18", "Put simply"), ("19", 0, (), "👍", "20", None),   # round 84 callers: the shrug emoji was a yes; guard: a thumbs-up still is
+    ("03", 0, (), "a month or two", "04", "So what made it"), ("03", 0, (), "2 months", "04", "So what made it"), ("03", 0, (), "4 months", "04", "4 months... Damn"),   # round 84 callers: was "2 months... Damn."
+    ("05", 0, (), "dunno my boss", "06", None), ("01", 0, (), "idk money", "goal_practical", "What are you hoping that"),   # round 84 callers: saved whole ("idk money" was said back)
+    ("05", 0, (), "who am I to say", "05", "No rush"), ("05", 0, (), "idk how", "05", "No rush"),   # round 84 callers: "I'm an AI", and saved as the blocker
+    ("04", 0, (), "the reason? dunno", "04", "What is it about"), ("01", 0, (), "like everyone, money", "goal_practical", "What are you hoping that"),   # round 84 callers: "I'll find out", and "everyone, money" said back
+    ("19", 0, (), "right now", "20", "What makes you say"), ("19", 0, (), "not right now", "19", "Is this something"),   # round 84 callers: "right now" was not yet; guard
+    ("03", 0, (), "a year and 2 months", "04", "14 months... Damn"),   # round 84 callers: was 12 months
+    ("01", 0, (), "sorry bad signal", "01", None), ("05", 0, (), "dinnae ken", "05", "No rush"), ("03", 0, (), "a year maybe two", "04", "24 months... Damn"),   # round 85 callers: saved as the answer; 12 months
+    ("01", 0, (), "honestly free", "goal_practical", "What are you hoping to achieve by being free?"), ("02", 0, (), "2k a month? maybe", "03", None),   # round 85 callers: "with honestly free?"; guard
+    ("22", 0, (), "klarna", "end", None), ("19", 0, (), "take my money", "22", None), ("01", 0, (), "money no wait time", "goal_practical", "What are you hoping to achieve with time?"),   # round 86 callers
+    ("03", 0, (), "a decade", "04", "120 months... Damn"), ("02", 0, (), "2k sorry 3k", "03", None), ("01", 0, (), "bread", "goal_practical", None),
+    ("01", 0, (), "my wife says money", "goal_practical", None), ("19", 0, (), "where do I sign", "22", None), ("22", 0, (), "where do I sign", "22", None),   # round 87 callers
+    ("22", 0, (), "whichever", "end", None), ("22", 0, (), "card ending 1234", "end", None), ("22", 0, (), "put it on my card", "end", None), ("22", 0, (), "ok", "22", None),   # round 87 callers; guard
+    ("03", 0, (), "since when?", "03", "Fair point"), ("04", 0, (), "for what? dunno", "04", "Fair point"), ("03", 0, (), "since 2020", "04", None),   # round 87 probes: saved as how long, "I'll find out"; guard
 ]
 
 

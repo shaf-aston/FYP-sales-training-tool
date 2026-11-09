@@ -140,6 +140,7 @@ def _method(**step):
     ({"say": "Go.", "go_on_is_yes": True}, "go_on_is_yes needs a say that asks"),   # round 42
     ({"listen": {"any": {"then": "a", "pattern": "x"}}}, "takes no pattern"),          # round 43
     ({"listen": {"r": {"examples": ["x"], "then": "a", "pattern": "("}}}, "pattern"),
+    ({"either": "y", "listen": {"r": {"examples": ["x"], "then": "a"}}}, "either"),   # round 87
 ])
 def test_a_line_the_budget_could_not_handle_fails_loud(step, why):
     with pytest.raises(ValueError, match=why):

@@ -120,6 +120,7 @@ class Reader:
         self._tags = {" ".join(tokenize(t)) for t in [*cfg["filler_tags"], *cfg["end_tags"]]}
         self._tag_skip = frozenset(cfg["tag_skip"])  # "to be completely honest" is "to be honest"
         self._starts = set(cfg["question_words"]) | set(cfg["closed_question_starts"])
+        self._question_words = set(cfg["question_words"])
         def any_of(phrases):
             return "|".join(r"\W+".join(map(re.escape, tokenize(b))) for b in sorted(phrases, key=len, reverse=True))
         words = any_of(cfg["take_backs"])   # "no actually my credit card"
@@ -130,7 +131,8 @@ class Reader:
         # ("no") only between two parts: "a year, no, two years" corrects, "no, credit?" says no
         self._blank = set(cfg["no_answer_words"])  # "yes, sorry": a part of only these beside others says nothing
         self._blank_end = re.compile(rf"(?<=\w)\s+((?:{any_of(cfg['no_answer_words'])})\W*)$", re.IGNORECASE)
-        self._unsure_said = {" ".join(tokenize(u)) for u in cfg["unsure_ends"]}  # round 73: "I daresay, money" was saved whole
+        self._unsure_said = {" ".join(tokenize(u)) for u in [*cfg["unsure_ends"], *cfg["shrug_leads"]]}  # round 73: "I daresay, money" was saved whole
+        # round 85 callers: "nae idea, money" too (a shrug its meaning alone missed)
         # round 76: after a dash too ("free - i guess" was saved whole)
         self._unsure_end = re.compile(rf"(?<=\w)(?:\s+[–—-])?\s+((?:{any_of(cfg['unsure_ends'])})\W*)$", re.IGNORECASE)
         self._plain = plain_words(cfg)
@@ -153,6 +155,8 @@ class Reader:
         self._unsure = re.compile(rf"^\W*(?:{any_of(cfg['unsure_leads'])})\b", re.IGNORECASE)
         # round 64: the hedge stays whole only when that word ends the reply ("probably not"), so "probably yes for the money" is split
         self._unsure_lead = re.compile(rf"^\W*((?:{any_of(cfg['unsure_ends'])}))\s+(?!(?:{any_of(cfg['unsure_whole'])})\W*(?:$|[,.;!]))(?=\w)", re.IGNORECASE)
+        not_before = any_of([*cfg["question_words"], *cfg["shrug_leads_not_before"]])  # round 84: "dunno my boss" was saved whole
+        self._shrug_lead = re.compile(rf"^\W*((?:{any_of(cfg['shrug_leads'])}))\W+(?!(?:{not_before})\b)(?=\w)", re.IGNORECASE)
         self._aside = re.compile(rf"^\W*(?:{any_of(cfg['aside_starts'])})\b", re.IGNORECASE)
         self._ask_lead = re.compile(rf"^\W*(?:{any_of(cfg['ask_leads'])})\b\W*", re.IGNORECASE)
         flips = "|".join(rf"{re.escape(a)}\W+(?={re.escape(b)}\s*(?:[,;.!?]|$))" for a, b in map(tokenize, cfg["flip_leads"]))
@@ -164,14 +168,17 @@ class Reader:
         self._filler_lead = re.compile(rf"^\W*(?:(?:{fillers})\b(?!\W+(?:{any_of(cfg['lead_not_before'])})\b)\W*|(?:{joins})\W+(?=(?:{fillers})\b))+",
                                        re.IGNORECASE)  # round 54: "oh wow ok" is "ok"; "well paid job" keeps its "well"
         self._answer_lead = re.compile(rf"^\W*(?:{any_of(cfg['answer_leads'])})\b\W*", re.IGNORECASE)
+        self._report_lead = re.compile(rf"^\W*(?:{any_of(cfg['report_people'])})\s+(?:{any_of(cfg['report_verbs'])})\b\W*", re.IGNORECASE)
         self._take_back = re.compile(rf"(?:^|[,;.!?]\s*)(?:(?:{words})\b[\s,;.!-]*|(?:{word})\s*[,;.!-][\s,;.!-]*)(?=\w)"
-                                     rf"|(?<=\w){not_mid}[,;.!?]\s*(?:{mid})\s*[,;.!-][\s,;.!-]*(?=\w)", re.IGNORECASE)
+                                     rf"|(?<=\w){not_mid}[,;.!?]\s*(?:{mid})\s*[,;.!-][\s,;.!-]*(?=\w)"
+                                     rf"|(?<=\w)\s+(?:{any_of(cfg['take_backs_no_break'])})\b[\s,;.!-]*(?=\w)", re.IGNORECASE)
 
         # "2k, no 3k", "more time, sorry more money": between two answers of one kind a correction needs no break
         # after it (round 33/34 callers: the first was kept); "yes, sorry the baby was crying" is two kinds, so stays
         self._amount = re.compile(rf"\d\w*|(?:{any_of(cfg['number_words'])})", re.IGNORECASE)
         self._bare = re.compile(rf"\d+(?:[.,]\d+)?|(?:{any_of(cfg['number_words'])})", re.IGNORECASE)  # "2k" has its unit
         self._fix_back = re.compile(rf"(?<=\w){not_mid}[,;.!?]\s*(?:{mid}|{word})\s+(?=\w)", re.IGNORECASE)
+        self._fix_bare = re.compile(rf"(?<=\w){not_mid}\s+(?:{mid}|{word})\s+(?=\w)", re.IGNORECASE)  # "2k sorry 3k"
         self._denied = re.compile(rf"^\W*(?:{any_of(cfg['denied_leads'])})\s+(?=\w)", re.IGNORECASE)  # "not a year, two"
         self._marks = re.compile(r"[?!]*\?[?!]*(?=\s|$)")
         self._bracket_end = re.compile(r"(?<=\S)\s*\(([^()]*)\)\W*$")
@@ -187,6 +194,9 @@ class Reader:
         """A correction between two answers of one kind ("2k, no 3k", "more time, sorry more money", "not 2k,
         3k"): the words kept, else None."""
         back, denied = self._fix_back.search(text), self._denied.match(text)
+        bare = None if back else self._fix_bare.search(text)  # round 86 callers: "2k sorry 3k" was saved whole; with no
+        if bare and self._figure(text[:bare.start()]) and self._figure(text[bare.end():]):  # comma, only between figures
+            back = bare
         cut = clauses(text[denied.end():], self.breaks) if denied else []
         if not back and len(cut) < 2:
             return None
@@ -218,6 +228,9 @@ class Reader:
             rest = rest[:aside.start()]  # "quit (my job)" and "2k (maybe more)" keep theirs
         if self._act(rest, False) == "tag":  # full run 84: a whole tag is one part, never cut ("so to speak" was "to speak",
             return Reply(text, rest, nudged, (Part(rest, "tag"),))  # "like everyone" "everyone", "for me personally" "for me")
+        first = (clauses(rest, self.breaks) or [""])[0]
+        if len(tokenize(first)) > 1 and self._act(first, False) == "tag" and set(tokenize(after(rest, first))) - self._plain:
+            rest = after(rest, first)  # round 84 callers: "like everyone, money" was saved as "everyone, money"; "thanks a lot, 2k" keeps its thanks
         check = self._check_end.search(rest)  # "is it free, no?" and "credit, is that ok?" still ask; "yes, no?" is torn
         kept = rest[:check.start()] if check else ""
         if check and set(tokenize(kept)) - self._plain and not self.asks((clauses(kept, self.breaks) or [kept])[-1] + "?"):
@@ -227,31 +240,34 @@ class Reader:
         if thanks and set(tokenize(rest[:thanks.start()])) - self._alone_mean - self._no and tokenize(rest[:thanks.start()])[-1] not in self._no:
             rest = f"{rest[:thanks.start()]}, {thanks.group(1)}"
         okay = self._okay_end.search(rest)  # round 83 callers: "money ok", "2k k" were saved whole; "I'm doing ok" stays whole
-        if okay and set(before := tokenize(rest[:okay.start()])) - self._plain and before[-1] not in self._okay_not_after:
-            rest = rest[:okay.start()]
+        if (okay and set(before := tokenize(rest[:okay.start()])) - self._plain and before[-1] not in self._okay_not_after
+                and not ((back := self._take_back.match(rest)) and back.end() > okay.start())):  # full run 85: "you know
+            rest = rest[:okay.start()]  # what, ok" was saved as "you know what"; a take-back before the "ok" leaves it alone
         end = self._unsure_end.search(rest)  # round 44: "money I guess" is "money, I guess"; "yeah I guess", "stuff I guess" stay whole
         if end and set(tokenize(rest[:end.start()])) - self._plain:
             rest = f"{self._tag_end.sub('', rest[:end.start()])}, {end.group(1)}"  # round 75: "money or so i think" was "money or"
         lead = self._unsure_lead.match(rest)  # round 58: "probably money", "I guess money" got "What do you mean by
         if lead and set(tokenize(rest[lead.end():])) - self._plain:  # money?"; "I think so", "probably not" stay whole
             rest = f"{lead.group(1)}, {rest[lead.end():]}"
+        lead = self._shrug_lead.match(rest)  # round 84 callers: "dunno my boss" as "dunno, my boss"; "dunno why" stays whole
+        if lead and set(tokenize(rest[lead.end():])) - self._plain:
+            rest = f"{lead.group(1)}, {rest[lead.end():]}"
         rest = self._tag_end.sub("", rest)  # round 53: "ok if it works", "free tbh" were saved whole
         rest = self._flip.sub("", rest)  # round 28 callers: "no yeah" was heard as backing out
+        lead = self._report_lead.match(rest)  # round 87 callers: "my wife says money" was a partner worry; "my partner says no" stays
+        if lead and set(tokenize(rest[lead.end():])) - self._alone_mean - self._no:
+            rest = rest[lead.end():]
         lead = self._answer_lead.match(rest)
         if lead and tokenize(rest[lead.end():]):  # "is it ok to say quit my job?": the answer, its "?" asks leave
             rest = rest[lead.end():].rstrip(" ?")
-        lead = self._filler_lead.match(rest)
-        after = rest[lead.end():] if lead else ""
-        if (lead and tokenize(after) and not (self.asks(after) and set(tokenize(lead.group())) & self._lead_asks)  # round 53: "like money" got "let me put it another way"
-                and not (set(tokenize(lead.group())) & self._lead_alone and set(tokenize(after)) <= self._plain)
-                and not (set(tokenize(lead.group())) & self._shorts and (set(tokenize(after)) <= self._alone_mean | self._blank or self._act(" ".join(w for w in tokenize(rest) if w not in self._shorts), False) == "tag"))):
-            thanks = self._thanks_lead.match(lead.group())  # full run 84: "thanks for asking, 2 years" lost its thank-you;
-            rest = f"{after}, {lead.group().strip(' ,;:-')}" if thanks else after  # now it goes last, as in "2 years, thanks"
-            # "like what?" still asks, "oh what?" is "what?" (round 80); round 74: "thanks mate" stays whole, "thanks, 2k" is "2k"
+        rest = self._unfill(rest)
+        taken = rest
         while (back := self._take_back.search(rest)) or (kept := self._fixed_in(rest)) is not None:
             rest = self._with_unit(rest[:back.start()], rest[back.end():]) if back else kept
             # "3k, no wait, more like 4k" -> "more like 4k": they took the first part back; cut again so
             # "wait, sorry, what's the price?" asks
+        if rest != taken:
+            rest = self._unfill(rest)  # round 84 callers: "just a sec, actually 3k" was saved as "actually 3k"
         if tokenize(rest) != tokenize(text):  # what is left once cut is read like a whole reply: "I'd say quit",
             rest = short_form(rest, self._cfg) or rest  # "sorry, quit", "quit, what else" were bare "quit" and
             # ended the call (rounds 49, 50); "quit" alone is still leaving
@@ -268,6 +284,21 @@ class Reader:
         if len(cut) > 1 and set(tokenize(rest)) <= self._alone_mean:  # round 47: "yeah, ok" lost its "yeah" and was unclear;
             acts = ["said" if a == "tag" else a for a in acts]    # with no content beside it, a tag is the reply
         return Reply(text, rest, nudged, tuple(map(Part, parts, acts)))
+
+    def _unfill(self, rest):
+        """`rest` without a filler lead before an answer: "like money" is "money"; "like what?" still asks, "oh
+        what?" is "what?" (round 80); "thanks mate" stays whole, "thanks, 2k" is "2k" (round 74)."""
+        lead = self._filler_lead.match(rest)
+        after = rest[lead.end():] if lead else ""
+        if (lead and tokenize(after) and not (self.asks(after) and set(tokenize(lead.group())) & self._lead_asks)  # round 53: "like money" got "let me put it another way"
+                and not (set(tokenize(lead.group())) & self._lead_alone and set(tokenize(after)) <= self._plain)
+                and not (set(tokenize(lead.group())) & self._shorts and (set(tokenize(after)) <= self._alone_mean | self._blank or self._act(" ".join(w for w in tokenize(rest) if w not in self._shorts), False) == "tag"))):
+            thanks = self._thanks_lead.match(rest)  # full run 84: "thanks for asking, 2 years" lost its thank-you;
+            if thanks:  # now it goes last, as in "2 years, thanks"; round 86 callers: the whole of it ("cheers mate, 2k" was "mate, 2k, cheers")
+                after = rest[thanks.end():].lstrip(" ,;:-.!")
+                return f"{after}, {thanks.group()}" if tokenize(after) else rest
+            return after
+        return rest
 
     def turned_back(self, text):
         """"you?", "and you?", "u?": only a "you" and plain words, their question turned back on us. Round 81
@@ -293,7 +324,8 @@ class Reader:
         words = tokenize(part)
         first = words[0] if words else ""
         said_as = {first, first.split("'")[0], first.removesuffix("s")}  # "what's", "whats" -> what
-        return opens_question(part, self.cfg) or (part.rstrip().endswith("?") and bool(said_as & self._starts))
+        asked_after = len(words) == 2 and words[1] in self._question_words  # round 87 probes: "since when?", "for what?"
+        return opens_question(part, self.cfg) or (part.rstrip().endswith("?") and (bool(said_as & self._starts) or asked_after))
 
     def _act(self, part, several):
         if " ".join(w for w in tokenize(part) if w not in self._tag_skip) in self._tags:

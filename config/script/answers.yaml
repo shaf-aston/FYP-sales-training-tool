@@ -19,12 +19,17 @@ jump_in:   # a yes to "Do you see yourself jumping in?"
   - "I suppose so"   # draft
   - "no doubt"   # draft: round 62 callers, "no doubt" here was heard as not yet (nearest "I doubt it"); a yes, the same as at "Does that make sense?"
   - "yes, no doubt about it"   # draft
+  - "right now"   # draft: round 84 callers, "right now" here was heard as not yet (nearest "not right now")
+  - "yes, right now"   # draft
 pay_now:   # a yes that is already about paying: the payment question next, not "What makes you say that?"
   - "how do I pay"   # draft
   - "credit"   # draft
   - "debit"   # draft
   - "I'll pay by card"   # draft
   - "send me the payment link"   # draft
+  - "take my money"   # draft: round 86 callers, "take my money" to "jumping in?" was unclear
+  - "where do I sign"   # draft: round 87 callers, "where do I sign" got "I'll find out" and "how do I sign up" a start date
+  - "how do I sign up"   # draft
 not_yet:   # a no to "Do you see yourself jumping in?"
   - "no"
   - "not yet"

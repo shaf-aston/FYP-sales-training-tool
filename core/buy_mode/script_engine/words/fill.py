@@ -5,7 +5,7 @@ import re
 import unicodedata
 from difflib import get_close_matches
 from functools import lru_cache
-from itertools import pairwise
+from itertools import pairwise, takewhile
 
 from core.buy_mode.script_engine.words.tone import PAUSE
 from core.infra.loader import CONFIG_DIR
@@ -31,6 +31,7 @@ HASHED = re.compile(r"#+(?=\d*[^\W\d_])")  # "#money", "#2k" -> "money", "2k" (r
 STRUCK = re.compile(r"(~+)(?=\S)[^~\n]+?(?<=\S)\1\s*")  # "~a year~ two years": taken back as they typed it
 SENTENCE_END = re.compile(r"[.!?]+\s+|\s*\n\s*|(?:^|\s)(?:\d{1,2}[.)]|[-*•])\s+(?=[^\W\d])")  # "more money. Mostly for my kids": "2.5k" and "5k." stay whole
 # A new line or a list mark ("1. more money 2. more time", "- pay rent") ends a sentence too: whole calls, "with 1?"
+INNER_MARK = re.compile(r"[,;]?\s+(?:\d{1,2}[.)]|[^\W\d_]\))\s+(?=\w)")  # "money 2. time", "quit b) travel": the next item
 
 
 def blanks(line):
@@ -141,7 +142,9 @@ def fix_typos(text, vocab, cfg):
     is its word ("yes"): inside a reply, "y" is more often a year ("2 y")."""
     text = QUOTED.sub(r"\1", (text or "").strip())  # round 47: '"ok"' at "Does that make sense?" got "let me put it another way"
     label = "|".join(map(re.escape, cfg["answer_labels"]))  # round 77: "A: money" was "a money", "1. my boss" saved whole
-    text = re.sub(rf"^(?:>+\s+|\d{{1,2}}[.)]\s+|(?:{label})\s*[:)]\s+)", "", text, flags=re.IGNORECASE)
+    text, listed = re.subn(rf"^(?:>+\s+|\d{{1,2}}[.)]\s+|(?:{label})\s*[:)]\s+)", "", text, flags=re.IGNORECASE)
+    if listed:  # round 85 callers: "1. money 2. time" was saved as "money 2. time", "a) quit b) travel" whole
+        text = INNER_MARK.sub(", ", text)
     text = _bare_lead_marks(text, cfg)  # round 80: "😂 quit" left the call, "😂 money" was saved with its picture
     text = re.sub(rf"(?<=\w)[,\s]+(?:{'|'.join(map(re.escape, cfg['mid_fillers']))})\b,?(?=\s+\w)", lambda m: "," * ("," in m.group()), text, flags=re.IGNORECASE)  # round 80: "more um money"
     text = STUTTER.sub("", text)  # round 78: "no, no idea" was a no ("I, I want money" -> "I want money")
@@ -335,13 +338,16 @@ def number_phrase(reply, rule, cfg):
         first = at - (1 if part else 0)
         if any(first >= len(b) and lower[first - len(b):first] == b for b in map(tokenize, cfg["number_below"])):
             return None  # round 83 callers: "under a year" was "12 months... Damn."; less than the number is no number
-        join, top, then = (lower[i + 1:i + 4] + ["", "", ""])[:3]  # round 83 callers: "a year or two" was 12 months,
+        joins = max(1, len(list(takewhile(cfg["number_range_joins"].__contains__, lower[i + 1:]))))  # round 85: "a year or maybe two"
+        join, top, then = (lower[i + 1:i + 2] + lower[i + 1 + joins:i + 3 + joins] + ["", "", ""])[:3]  # round 83 callers: "a year or two" was 12 months,
         if join in cfg["number_range_joins"] and _count(top, cfg) is not None and (  # "1-2 years" 24: a range is its top
                 then not in (per or units) or then.rstrip("s") == word.rstrip("s")):  # "a year to 18 months" keeps its year
             count = _count(top, cfg)
         value = count * cfg["number_parts"].get(part, 1) + (0.5 if halved else 0)
         if per:
             value *= per[word]
+            if join in cfg["number_add_joins"] and _count(top, cfg) is not None and per.get(then, per[word]) < per[word]:
+                value += _count(top, cfg) * per[then]  # round 84 callers: "a year and 2 months" was 12 months
             return f"{value:g} {unit[value != 1]}" if unit else f"{value:g}"
         if not unit:
             return f"{value:g}"

@@ -641,7 +641,7 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("sorry I was driving", "sorry I was driving", ""),   # guard: only at the end
     ("lol", "lol", ""),   # guard: alone it is the reply
     ("money I guess", "money", ""),   # round 44 callers: a hedge at the end is its own part (got "What do you mean by money?")
-    ("no idea, money I guess", "no idea, money", ""),
+    ("no idea, money I guess", "money", ""),   # round 85: "no idea" is a shrug lead, so a hedge by its words too
     ("yeah I guess", "yeah I guess", ""),   # guard: only after real words
     ("I guess", "I guess", ""),
     ("money if possible", "money", ""),   # round 53 callers: a hedge at the end was saved with the answer
@@ -804,6 +804,23 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("yes why?", "yes", "why?"), ("money why do you want to know?", "money", "why do you want to know?"), ("money, why?", "money", "why?"),   # round 77 callers: "yes why?" was all asked, no yes
     ("money ok", "money", ""), ("2k, ok", "2k", ""), ("quit k", "quit my job", ""), ("money okay?", "money", ""), ("2k ok.", "2k", ""),   # round 83 callers: the "ok" was saved with the answer
     ("I'm doing ok", "I'm doing ok", ""), ("that's ok", "that's ok", ""), ("sounds ok", "sounds ok", ""), ("money is ok", "money is ok", ""), ("all ok", "all ok", ""), ("yes ok", "yes ok", ""), ("I think ok", "I think ok", ""), ("I'd say ok", "okay", ""),   # guards: "ok" that is the answer stays
+    ("dunno my boss", "my boss", ""), ("idk money", "money", ""), ("idk 2k", "2k", ""), ("no clue my boss", "my boss", ""), ("i dunno quit", "quit my job", ""),   # round 84 callers: the shrug was saved with the answer
+    ("dunno why", "dunno why", ""), ("idk how", "idk how", ""), ("idk man", "idk man", ""), ("no idea about it", "no idea about it", ""), ("idk if", "idk if", ""),   # guards: a question word or a tag after it stays whole
+    ("just a sec, actually 3k", "3k", ""), ("hold on, actually 3k", "3k", ""), ("like everyone, money", "money", ""), ("as i said, money", "money", ""),   # round 84 callers: "actually 3k", "everyone, money" were saved
+    ("thanks a lot, 2k", "2k, thanks a lot", ""), ("cheers mate, 2k", "2k, cheers mate", ""), ("ta very much, 2k", "2k, ta very much", ""), ("thanks mate, money", "money, thanks mate", ""),   # round 86 callers: the whole thank-you goes last
+    ("cheers mate", "cheers mate", ""), ("thank you for asking", "thank you for asking", ""), ("2k ta very much", "2k, ta very much", ""), ("money, like everyone", "money", ""), ("like everyone", "", ""),   # guards: a thanks lead goes last; a tag alone is the reply
+    ("sorry bad signal. money", "money", ""), ("sorry was driving, 2k", "2k", ""), ("free i hope", "free", ""), ("honestly free", "free", ""), ("honestly tbh free", "free", ""),   # round 85 callers: saved with the aside, the hope and
+    ("nae idea, money", "money", ""), ("dinnae ken my boss", "my boss", ""),   # the "honestly"; the Scots shrug too
+    ("i hope so", "i hope so", ""), ("bad signal", "bad signal", ""), ("honestly", "", ""),   # guards: alone, each is the reply
+    ("money no wait time", "time", ""), ("2k sorry 3k", "3k", ""), ("money scratch that time", "time", ""), ("1 year no 2", "2 year", ""),   # round 86 callers: a correction with no comma was saved whole
+    ("2k thanks for asking", "2k, thanks for asking", ""), ("2k thank you for asking", "2k, thank you for asking", ""), ("money cheers for asking", "money, cheers for asking", ""), ("2k thanks very much", "2k, thanks very much", ""), ("2k thanks a million", "2k, thanks a million", ""),   # round 86 item check
+    ("idk either", "idk either", ""), ("money wait no time", "time", ""),   # round 86 item check
+    ("you know what, ok", "okay", ""), ("wait, ok", "okay", ""), ("actually, money ok", "money", ""),   # full run 85: the "ok" was cut and "you know what" saved
+    ("my wife says money", "money", ""), ("my husband says quit my job", "quit my job", ""), ("my partner says 2k", "2k", ""),   # round 87: who said it is cut
+    ("dunno then", "dunno then", ""), ("dunno ok", "dunno ok", ""), ("dunno honestly", "dunno honestly", ""),   # mutation 89: a shrug lead before plain words stays whole
+    ("my partner says no", "my partner says no", ""), ("my wife said yes", "my wife said yes", ""), ("my wife says ok", "my wife says ok", ""), ("my wife", "my wife", ""),   # round 87 guards
+    ("3 years no regrets", "3 years no regrets", ""), ("2 kids no money", "2 kids no money", ""), ("there's no wait", "there's no wait", ""),   # guards: no answer after it, or not two figures
+    ("no clue at all", "no clue at all", ""), ("dunno now", "dunno now", ""), ("idk too", "idk too", ""), ("idk so", "idk so", ""), ("idk then", "idk then", ""),   # round 86 mutation: a shrug lead before only these stays whole
 ])
 def test_a_reply_is_read_once_into_what_it_says_and_what_it_asks(text, said, asked):
     from core.buy_mode.script_engine.hear.reply import Reader
@@ -1482,11 +1499,29 @@ def test_the_question_said_back_before_an_answer_is_talk(seller, step, text, act
 
 @pytest.mark.parametrize("step, text, meant", [
     ("01", "achieve? dunno", "dunno"), ("goal_practical", "achieve? lol", "lol"), ("03", "how long? dunno", "dunno"),
+    ("04", "the reason? dunno", "dunno"), ("05", "money? idk", "idk"), ("04", "money? quit? dunno", "dunno"),   # round 84 callers: a word wondered about, then a shrug, got "I'll find out"
 ])
 def test_a_shrug_after_the_question_said_back_is_the_shrug_alone(seller, step, text, meant):
     """Round 83 callers: "achieve? dunno" got "I'm the AI playing the salesperson"."""
     reply = seller._ear._unecho(seller._ear.reader.read(text), ScriptState(step=step))
     assert (reply.meant, [p.text for p in reply.parts]) == (meant, [meant])
+
+
+@pytest.mark.parametrize("step, text, said", [
+    ("02", "2k a month? maybe", "2k a month"), ("02", "2k? probably", "2k"), ("02", "2k a month? not sure", "2k a month"),   # round 85 calls: a soft word after
+    ("04", "the reason? 2 years", "2 years"),   # guard: an answer after it is the answer   # a rise is an unsure answer, never a question (it missed)
+])
+def test_a_soft_word_after_a_rise_keeps_the_answer(seller, step, text, said):
+    reply = seller._ear._unecho(seller._ear.reader.read(text), ScriptState(step=step))
+    assert reply.settle(lambda part: False).said == said
+
+
+@pytest.mark.parametrize("step, said, text", [
+    ("01", "yes, money", "money"), ("01", "yeah money", "money"), ("05", "yeah my boss", "my boss"), ("03", "yes 2 years", "2 years"),   # round 85 callers: saved with the yes
+    ("19", "yes, money", "yes, money"), ("01", "yeah i guess", "yeah i guess"), ("01", "yes", "yes"),   # guards: a yes-or-no question keeps it, and so does a yes with nothing beside it
+])
+def test_a_yes_before_an_answer_to_an_open_question_is_left_out(seller, step, said, text):
+    assert seller._ear.hear(said, ScriptState(step=step), False).text == text
 
 
 @pytest.mark.parametrize("name, spoken, again", [

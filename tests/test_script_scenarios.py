@@ -1170,6 +1170,8 @@ def test_a_route_pattern_takes_the_route_by_rule(fake_embedder):
     ("20 weeks", None), ("6 months", None), ("a year and 2 weeks", None), ("15 days and 2 years", None),   # guard: never a long time
     ("a few months", "recent"), ("a few months maybe", "recent"), ("for the last few months", "recent"), ("a couple of months", "recent"),   # round 45 callers: was unclear
     ("a few years", None), ("a good few months", None), ("a few months, well years really", None),   # guard: never a long time
+    ("a month or two", "recent"), ("2 months", "recent"), ("a month", "recent"), ("about 3 months", "recent"), ("1 or 2 months", "recent"), ("2mo", "recent"),   # round 84 callers: "2 months... Damn."
+    ("4 months", None), ("12 months", None), ("2-6 months", None), ("a month or six", None), ("a year and 2 months", None),   # guard: more than 3 months, or years in it
 ])
 def test_a_few_weeks_or_days_by_number_is_recent(fake_embedder, text, then):
     import re
@@ -1238,7 +1240,11 @@ def test_number_phrase(reply, number):
     ("a whole year", "12 months"), ("a good two years", "24 months"),
     ("a year or two", "24 months"), ("one or two years", "24 months"), ("a year or so", "12 months"), ("a year to 18 months", "12 months"),   # round 83 callers: a range was its bottom
     ("under a year", None), ("less than a year", None), ("not even a year", None),
-    ("under half a year", None), ("a year or two years", "24 months")])   # round 83 mutation: "below" before a part word; a top in the same unit   # round 83 callers: "12 months... Damn." for less than a year   # round 51: "a whole year" said no number back   # round 48: "ish" lost the number
+    ("under half a year", None), ("a year or two years", "24 months"),
+    ("a year and 2 months", "14 months"), ("2 years and 3 months", "27 months"), ("a year plus 3 months", "15 months"),   # round 84 callers: the months were left out
+    ("2 years and 2 kids", "24 months"), ("a year and a half", "18 months"),
+    ("a year maybe two", "24 months"), ("a year, or maybe two", "24 months"), ("a year probably two", "24 months"),   # round 85 callers: was 12 months
+    ("a year maybe", "12 months"), ("6 months maybe a year", "6 months")])   # guard: no top, or a top in another unit   # round 83 mutation: "below" before a part word; a top in the same unit   # round 83 callers: "12 months... Damn." for less than a year   # round 51: "a whole year" said no number back   # round 48: "ish" lost the number
 def test_months_thinking_counts_the_answer_in_months(reply, months):
     from core.buy_mode.script_engine.words.fill import number_phrase
     assert number_phrase(reply, CFG["number_blanks"]["months_thinking"], CFG) == months
@@ -1344,6 +1350,7 @@ def test_echo_phrase_fixes_typos(reply, phrase):
     ("we're fine", "we're fine"),   # round 46 callers: "were fine" at payment got "Welcome aboard"
     ("they'd quit", "they'd quit"),   # a word typed with its apostrophe is never a typo
     ("💳", "card"),   # round 44 callers: said nothing at payment
+    ("🤷", "dunno"), ("🤷‍♂️", "dunno"), ("🤷‍♀️ my boss", "dunno my boss"),   # round 84 callers: "🤷" was a yes to "are you willing...?"
     ("🏖️ with family", "a holiday with family"),
     ("#money", "money"), ("#2k", "2k"), ("##money", "money"), ("#ok", "okay"),   # round 53 callers: saved as typed
     ("#1 priority", "#1 priority"), ("C#", "C#"),   # guard: a bare number keeps its "#", and so does a word it ends
@@ -1391,6 +1398,9 @@ def test_echo_phrase_fixes_typos(reply, phrase):
     ("idj", "idk"), ("ifk", "idk"), ("nit sure", "not sure"), ("no idra", "no idea"), ("unsute", "unsure"),   # round 80 callers: "idj" and "nit sure" were saved as answers
     ("ids", "ids"), ("not pure", "not pure"), ("no idrs", "no idrs"),   # guard: one key, side by side on a row, whole reply only
     ("no, not sure", "no, not sure"), ("2k, maybe 2k", "2k, maybe 2k"), ("no, nobody", "no, nobody"), ("time, time and money", "time and money"),   # guard: other words after the comma stay
+    ("1. money 2. time", "money, time"), ("1) my boss 2) bills", "my boss, bills"), ("a) quit b) travel", "quit, travel"), ("1. 2k 2. 3 years", "2k, 3 years"), ("bread", "money"), ("dough", "money"), ("moolah", "money"), ("wonga", "money"), ("2 racks", "2 grand"), ("a couple bands", "a couple grand"), ("a decade", "10 years"),   # round 86 callers: slang money and a decade
+      # round 85 callers: the next item's mark was saved
+    ("money 2. time", "money 2. time"), ("2k 2) maybe", "2k 2) maybe"),   # guard: only once the reply opens with a mark
     ("a year", "a year"), ("a lot", "a lot"), ("me :)", "me 🙂"), ("1.5 years", "1.5 years"), ("A:money", "A:money"), (">2k", ">2k"), (">5 years", ">5 years"),   # guard: a label needs its ":" or ")" and a space after
 ])
 def test_fix_typos_keeps_real_words(text, fixed):

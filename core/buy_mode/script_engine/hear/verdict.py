@@ -5,6 +5,7 @@ import re
 from dataclasses import dataclass, replace
 from itertools import dropwhile
 
+from core.buy_mode.script_engine.config import plain_words
 from core.buy_mode.script_engine.engine import (
     asked_line,
     hear_ahead,
@@ -56,6 +57,9 @@ class Ear:
         backs, reasons = (r"\W+".join(map(re.escape, tokenize(p))) for p in backs), map(re.escape, cfg["reason_starts"])
         backs = "|".join(sorted(backs, key=len, reverse=True))
         self._backed = re.compile(rf"^\W*((?:{backs})(?:\W+(?:{backs}))*)\W+(?:{'|'.join(reasons)})\W+\w", re.IGNORECASE)
+        self._yes_lead = re.compile(rf"^\W*(?:{backs})(?:\W+(?:{backs}))*[\s,;.!-]+(?=\w)", re.IGNORECASE)
+        self._plain = plain_words(cfg)
+        self._leave_it = {" ".join(tokenize(p)) for p in cfg["leave_it_to_us"]}
         self._me, self._you = set(cfg["asked_back"]), set(cfg["asked_back_you"])
         self._captures = {}  # slot: the first step that saves it
         for s in method.steps.values():
@@ -91,6 +95,10 @@ class Ear:
         backed = not asking and self._yes_or_no(state) and self._backed.match(text)
         if backed:  # round 52: "yes because I want change" to "are you willing?" was a no; the yes decides
             text = short_form(backed.group(1), self.cfg) or backed.group(1)
+        elif not asking and not self._yes_or_no(state) and (lead := self._yes_lead.match(text)) and set(tokenize(text[lead.end():])) - self._plain:
+            text = text[lead.end():]  # round 85 callers: "aye money", "yes, money" to an open question were saved with the yes
+        if step.either and " ".join(tokenize(text)) in self._leave_it:  # round 87 callers: "whichever" to "credit or debit?"
+            return self.hear(step.either, state, opened)  # was asked again until the call left the close: it is their pick
         nothing = not (asking and self.reader.turned_back(text)) and (self._shrugs.blank(text) or self._shrugs.says_nothing(text, step, asking, self._yes_or_no(state)))
         if not state.waiting and nothing and not self._ready(text, state):  # "yes I'm in" is a shrug's words, but it says they're in
             return Verdict("says_nothing", text=text, asking=asking)  # an answer only: never an interruption
@@ -125,9 +133,9 @@ class Ear:
             if back and self._shrugs.filler(text):  # "take your time" was saved, and "ok" too: a bare "ok" is back
                 return Verdict("sense", back, text, asking)
             return Verdict("says_nothing", text=text, asking=asking)
+        if asking and self._means_what(text):  # round 40 callers: "what do you mean stopping me?" got "I'll find out";
+            return Verdict("sense", "clarify", text, asking)  # round 87 probes: "since when?" was saved as how long
         if asking and not self._answers(text, step):
-            if self._means_what(text):  # round 40 callers: "what do you mean stopping me?" got "I'll find out"
-                return Verdict("sense", "clarify", text, asking)
             return Verdict("question", text=text, asking=asking, ahead=ahead)
         return Verdict("answer", text=text if asking else self._unbroken(text, step, state), asking=asking, ahead=ahead)
 
@@ -142,12 +150,22 @@ class Ear:
             if part.act not in ("asks", "rise") or not (self._word_back(part.text, state) or self._asked_back(part.text, state, "asked_back_share_with_answer")):
                 break
             echoed += 1
-        left = parts[echoed:]
-        if not echoed or not left:
+        rises = next((i for i, p in enumerate(parts) if p.act != "rise" or not self._short_rise(p.text)), 0)
+        left = parts[echoed or rises:]
+        if not (echoed or rises) or not left:
             return reply  # all of it said back: "how long?" alone
-        if not any(p.act in ("said", "rise", "asks") for p in left):  # round 83 callers: "achieve? dunno" got "I'm the AI
-            return replace(reply, unnudged=", ".join(p.text for p in left), parts=tuple(left))  # playing the salesperson": the shrug alone
+        content = any(p.act in ("said", "rise", "asks") for p in left)
+        if not content and (echoed or all(self._shrugs.shrug(p.text) for p in left)):  # round 83 callers: "achieve? dunno" got "I'm the
+            return replace(reply, unnudged=", ".join(p.text for p in left), parts=tuple(left))  # AI playing the salesperson": the shrug alone;
+        if not echoed:  # round 84 callers: "the reason? dunno" got "I'll find out", a word they wondered about, then a shrug;
+            return reply if content else replace(reply, parts=tuple(Part(p.text.rstrip(" ?"), "said") for p in parts[:rises]) + tuple(left))
+            # round 85 callers: "2k a month? maybe" is an unsure answer, never a question
         return replace(reply, parts=tuple(Part(p.text, "tag") for p in parts[:echoed]) + tuple(left))
+
+    def _short_rise(self, text):
+        """A word or two with a "?" and no question word ("the reason?", "money?"): wondered aloud, not asked."""
+        words = [w for w in tokenize(text) if w not in self.cfg["stop_words"]]
+        return 0 < len(words) <= self.cfg["word_back_words"] and not set(words) & set(self.cfg["question_words"])
 
     def _ahead(self, text, step, state):
         """(the state with answers to later steps kept, else None; this step's words). Each part is heard too:

@@ -61,6 +61,7 @@ class Step:
     shrug_moves_on: bool = False  # the next line answers the question itself: a shrug ("yeah") moves on unsaved, never asked again
     yes_no: bool = False  # the question wants a yes or no but opens with no helper verb ("Open to being called out?")
     go_on_is_yes: bool = False  # the question asks to go ahead ("jumping in?"): "go on" says yes; at "keep settling?" it never does
+    either: str = ""    # one of its answers' examples: a reply that leaves a choice to us ("whichever", "up to you") is heard as it
 
     @property
     def routes(self):
@@ -268,6 +269,9 @@ def _step(step_id, data, answers):
         _one_stress(f"step {step_id}", line)
         if line.count("{") != len(NAME.findall(line)):
             raise ValueError(f"step {step_id}: a blank is {{name}} or {{name|noun form|verb form}}: {line!r}")
+    either = data.get("either", "")
+    if either and not any(either in r.examples for r in listen):
+        raise ValueError(f"step {step_id}: either {either!r} must be one of its answers' examples")
     unsure = data.get("unsure", "")
     if unsure and not any(r.label == unsure and r.examples and r.then != step_id for r in listen):
         raise ValueError(f"step {step_id}: unsure {unsure!r} must name one of its answers that moves on")
@@ -278,7 +282,7 @@ def _step(step_id, data, answers):
         data.get("name", ""), data.get("note", ""), bool(data.get("doubts_answer")),
         stuck, answered_by, bool(data.get("echo")), unsure, bool(data.get("moment")), data.get("bridge", ""),
         reask, needs, plain_if, bool(data.get("shrug_moves_on")), bool(data.get("yes_no")),
-        bool(data.get("go_on_is_yes")),
+        bool(data.get("go_on_is_yes")), either,
     )
 
 

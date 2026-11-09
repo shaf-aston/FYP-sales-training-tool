@@ -38,6 +38,12 @@ def test_filler_words_say_nothing_on_any_step(fake_embedder):
     ("whatnot", True), ("innit", True), ("bruh", True), ("frankly ok", True), ("ok etc", True), ("bruh ok", True),   # round 62 callers
     ("frankly money", False),   # guard
     ("who knows", True), ("hard to say", True), ("beats me", True), ("we'll see", True), ("good question", True),   # round 64 callers
+    ("idk how", True), ("no idea how", True), ("not sure how", True), ("who am i to say", True),   # round 84 callers: saved as the blocker, and "I'm an AI"
+    ("idk how to start", False),   # guard
+    ("nae idea", True), ("nae clue", True), ("dinnae ken", True), ("dinnae know", True), ("sorry bad signal", True), ("bad signal", True), ("poor signal", True), ("bad connection", True),   # round 85 callers: saved as the answer
+    ("no clue at all", True), ("dunno now", True), ("idk either", True), ("idk too", True), ("now", False), ("either", False),   # round 86 mutation: saved as "at all", "now", "too"
+    ("no idea at all", True), ("dunno at all", True), ("idk at all", True), ("dunno either", True), ("no idea either", True), ("not sure either", True), ("idk now", True), ("dunno too", True),   # round 86 item check: each phrase pinned
+    ("bad signal at home", False),   # guard: words beside it
     ("who knows lol", True), ("it is what it is", True),
     ("hard to say, my family", False), ("we'll see more of the kids", False),   # guard: words beside them
     ("fingers crossed", True), ("touch wood", True), ("knock on wood", True), ("god willing", True),   # round 65 callers: saved as the answer
