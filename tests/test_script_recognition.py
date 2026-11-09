@@ -793,7 +793,7 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("01", 0, (), "same as everyone, more money", "goal_practical", "What are you hoping to achieve with more money?"),   # was said back whole
     # round 31
     ("01", 0, (), "what am I hoping to achieve? more money", "goal_practical", "What are you hoping to achieve with more money?"),   # was "I'm the AI"
-    ("01", 0, (), "more money, thank you", "goal_practical", "What are you hoping to achieve with more money?"),   # thanks said back
+    ("01", 0, (), "more money, thank you", "goal_practical", "You're welcome. What are you hoping to achieve with more money?"),   # thanks said back (round 82: and heard)
     ("01", 0, (), "💰💰💰", "goal_practical", None),   # was "with?" or nothing
     ("01", 0, (), "I want to by a house", "goal_identity", None),   # was "What do you mean by wanting to buy a house?"
     ("01", 0, (), "I want to buy a house", "goal_identity", None),
@@ -813,7 +813,7 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("02", 0, (), "sorry, my kid is yelling", "02", "No problem, take your time."),   # guard: a pause now still waits
     ("02", 0, (), "sorry, I'm driving", "later", None),   # guard: still leaving
     ("03", 0, (), "a year, well two", "04", "24 months"),   # was "12 months"
-    ("01", 0, (), "what I said", "02", "How much would you need to be making each month to make that happen?"),   # was said back: "to have what you said"
+    ("01", 0, (), "what I said", "01", "What are you actually hoping"),   # was said back: "to have what you said"; round 79: nothing said before, so asked again
     # round 34
     ("03", 0, (), "6 months, actually more like a year", "04", "12 months"),   # was "6 months"
     ("01", 0, (), "more time, sorry more money", "goal_practical", "What are you hoping to achieve with more money?"),   # was "with more time, sorry more money"
@@ -1302,6 +1302,9 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("goal_identity", 0, (), "who are you?", "goal_identity", "We help people"), ("goal_identity", 0, (), "can I pay monthly?", "goal_identity", "There are ways"),   # guards: about us still gets the fact
     ("goal_identity", 0, (), "great question", "goal_identity", "Who would you be"),   # round 82 callers: was "What do you mean by great question?"
     ("02", 0, (), "2k thanks", "03", "You're welcome"), ("05", 0, (), "money ty", "06", "You're welcome"), ("goal_identity", 0, (), "free ta", "02", "You're welcome"),   # round 82 callers: the thanks was saved with the answer
+    ("19", 0, (), "to be honest", "19", "Is this something"), ("19", 0, (), "in my opinion", "19", "Is this something"), ("19", 0, (), "like everyone", "19", "Is this something"), ("18", 0, (), "truth be told", "18", "Put simply"),   # full run 84: tags alone were a yes
+    ("19", 0, (), "obviously", "20", None), ("19", 0, (), "if i can", "20", None),   # guards: tags that answer a yes-or-no question still do
+    ("02", 0, (), "thanks, 2k", "03", "You're welcome"), ("01", 0, (), "cheers, money", "goal_practical", "You're welcome"),   # full run 84: a thanks first was dropped
     ("goal_identity", 0, (), "2 years, what about you?", "goal_identity", "I'm the AI"),   # round 81: was "I'll find out" (2 years answers nothing)
     ("goal_practical", 0, (), "2 years, is that normal?", "goal_practical", "There's no right answer"),   # round 81: was "I'll find out"
     ("05", 0, (), "2 years, what about you?", "06", "I'm the AI"), ("goal_identity", 0, (), "5k, are you a bot?", "goal_identity", "I'm an AI"),   # guards

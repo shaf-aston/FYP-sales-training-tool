@@ -126,6 +126,16 @@ def test_round_67_asked_as_yes_or_no_without_a_catch_all_labels_still_decide(fak
     assert not shrugs(fake_embedder).says_nothing("obviously", CAT.steps["01"], asking=False, closed=True)  # a yes to "jumping in?"
 
 
+def test_only_empty_tags_say_nothing_to_a_yes_or_no_question_without_a_catch_all(fake_embedder):
+    """Full run 84: "if you ask me" and "to be honest" to "Does that make sense?" were a yes; tags that answer
+    one ("obviously", "hopefully") and shrug phrases ("I don't know") still go to the labels."""
+    s, step = shrugs(fake_embedder), CAT.steps["01"]
+    assert all(s.says_nothing(t, step, asking=False, closed=True) for t in ("if you ask me", "to be honest", "so to speak", "in my opinion",
+                                                                       "but to be honest"))   # a lead word with the tag says nothing too
+    assert not any(s.says_nothing(t, step, asking=False, closed=True) for t in ("obviously", "hopefully", "sure thing", "I don't know", "yeah you know", "👍",
+                                                                          "but"))   # a lead word alone, no tag: the labels decide
+
+
 def test_shrug_words_say_nothing_only_where_a_catch_all_would_keep_them(fake_embedder):
     s = shrugs(fake_embedder)
     assert s.says_nothing("dunno man", CAT.steps["03"], asking=False)      # labels + catch-all

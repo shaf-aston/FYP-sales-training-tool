@@ -141,6 +141,7 @@ class Reader:
         self._lead_alone = alone - self._plain  # round 74: a lead with a meaning alone ("thanks", "brb")
         self._no = set(cfg["no_words"])
         self._thanks_end = re.compile(rf"(?<=\w)\s+((?:{any_of(cfg['thanks_ends'])})\W*)$", re.IGNORECASE)
+        self._thanks_lead = re.compile(rf"(?:{any_of(cfg['thanks_ends'])})\b", re.IGNORECASE)
         # round 61: after a comma too, so "2k, that kind of thing" loses the whole tag, not just "kind of thing"
         # round 73: every tag at the end, not just the last ("and so on and so forth", "yada yada tbh")
         # round 75: after a full stop, "!", "..." or a dash too ("a year. or so", "money - tbh" were saved whole)
@@ -213,6 +214,8 @@ class Reader:
         aside = self._bracket_end.search(rest)  # round 76: "money (mostly)", "a year (sorry)" were saved whole;
         if aside and self._act(aside.group(1), True) in ("tag", "hedge"):
             rest = rest[:aside.start()]  # "quit (my job)" and "2k (maybe more)" keep theirs
+        if self._act(rest, False) == "tag":  # full run 84: a whole tag is one part, never cut ("so to speak" was "to speak",
+            return Reply(text, rest, nudged, (Part(rest, "tag"),))  # "like everyone" "everyone", "for me personally" "for me")
         check = self._check_end.search(rest)  # "is it free, no?" and "credit, is that ok?" still ask; "yes, no?" is torn
         kept = rest[:check.start()] if check else ""
         if check and set(tokenize(kept)) - self._plain and not self.asks((clauses(kept, self.breaks) or [kept])[-1] + "?"):
@@ -237,7 +240,9 @@ class Reader:
         if (lead and tokenize(after) and not (self.asks(after) and set(tokenize(lead.group())) & self._lead_asks)  # round 53: "like money" got "let me put it another way"
                 and not (set(tokenize(lead.group())) & self._lead_alone and set(tokenize(after)) <= self._plain)
                 and not (set(tokenize(lead.group())) & self._shorts and (set(tokenize(after)) <= self._alone_mean | self._blank or self._act(" ".join(w for w in tokenize(rest) if w not in self._shorts), False) == "tag"))):
-            rest = after  # "like what?" still asks, "oh what?" is "what?" (round 80); round 74: "thanks mate" stays whole, "thanks, 2k" is "2k"
+            thanks = self._thanks_lead.match(lead.group())  # full run 84: "thanks for asking, 2 years" lost its thank-you;
+            rest = f"{after}, {lead.group().strip(' ,;:-')}" if thanks else after  # now it goes last, as in "2 years, thanks"
+            # "like what?" still asks, "oh what?" is "what?" (round 80); round 74: "thanks mate" stays whole, "thanks, 2k" is "2k"
         while (back := self._take_back.search(rest)) or (kept := self._fixed_in(rest)) is not None:
             rest = self._with_unit(rest[:back.start()], rest[back.end():]) if back else kept
             # "3k, no wait, more like 4k" -> "more like 4k": they took the first part back; cut again so

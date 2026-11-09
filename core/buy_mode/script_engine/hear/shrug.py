@@ -26,6 +26,8 @@ class Shrugs:
         tags = dict.fromkeys(t for t in [*cfg["filler_tags"], *cfg["end_tags"], *cfg["filler_leads"]] if t not in cfg["tags_alone_mean"])
         # round 74: longest first, so "that's a tough one" goes whole, not "tough one" leaving "that's a"
         self._cuts = sorted([*self._phrases, *map(tokenize, tags)], key=len, reverse=True)
+        answer = set(cfg["tags_answer_yes_no"])  # full run 84: "obviously" and "hopefully" still answer "jumping in?"
+        self._empty_tags = sorted((tokenize(t) for t in tags if t not in answer), key=len, reverse=True)
         longest = sorted(self._phrases, key=len, reverse=True)
         self._phrase_cut = re.compile(r"\b(?:" + "|".join(r"\W+".join(map(re.escape, p)) for p in longest) + r")\b[\s,.;:!-]*", re.IGNORECASE)
         self._asks = set(cfg["question_words"])  # "what" shares no topic with a question: "what I said" is not about it
@@ -42,7 +44,10 @@ class Shrugs:
         if asking:  # round 71: "who knows?", "up to you?", "so to speak?" got "I don't know that one offhand": no question in it
             return self._only_shrug(text)
         if not any(r.label == ANY for r in step.listen):  # round 67: "so to speak" alone was "say that again"
-            return not closed and self.only_tags(text)
+            if closed:  # full run 84: "if you ask me" and "to be honest" to "Does that make sense?" were a yes
+                left = self._words(text, self._empty_tags)  # ("I don't know" and "obviously" still go to the labels)
+                return not words & self._fillers and left != words and not left - self._leads
+            return self.only_tags(text)
         if closed:
             return bool(words) and not words & self._fillers and not self._words(text) - self._leads  # "yeah" is a tag too
         if self._words(text) <= self._plain:
@@ -59,11 +64,11 @@ class Shrugs:
         left = self._words(text)
         return left != set(tokenize(text)) and left <= self._fillers
 
-    def _words(self, text):
+    def _words(self, text, cuts=None):
         """The reply's words, less any shrug phrase or tag in it ("who knows", "hard to say", "per se"): those say
-        nothing."""
+        nothing. `cuts`: only these instead."""
         words = tokenize(text)
-        for phrase in self._cuts:
+        for phrase in self._cuts if cuts is None else cuts:
             n = len(phrase)
             words = [w for j, w in enumerate(words)
                      if not any(words[k:k + n] == phrase for k in range(max(0, j - n + 1), j + 1))]
