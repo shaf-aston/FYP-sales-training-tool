@@ -95,6 +95,8 @@ class Ear:
             return Verdict("says_nothing", text=text, asking=asking)  # an answer only: never an interruption
         ahead, text = (None, text) if asking else self._ahead(text, step, state)  # "do I need 5k?" is not their goal
         kind, name = (None, "") if self._shrugs.plain_no(text, self._yes_or_no(state)) else self._interrupt(text, step, ahead or state, opened, asking)
+        if not kind and asking and reply.said and not self._answers_step(reply.said, step, state):  # round 81: "2 years, what about you?" to "Who would you be?" got "I'll find
+            kind, name = self._interrupt(reply.asked, step, state, opened, asking)  # out": the 2 years answers nothing there
         if kind == "objection" and not opened and not asking:
             beside = self._beside_worry(text, step, state, name)
             if beside:

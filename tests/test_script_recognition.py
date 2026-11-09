@@ -1291,6 +1291,9 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("02", 0, (), "give me a sec, 2k", "03", None), ("02", 0, (), "give me a second, 2k", "03", None),   # round 78 config mutation: pinned
     ("02", 0, (), "just a sec, 2k", "03", None),   # round 78 config mutation: was saved whole
     ("05", 0, (), "don't know why", "05", "No rush"), ("05", 0, (), "no clue why", "05", "No rush"),   # round 78 config mutation: pinned
+    ("goal_identity", 0, (), "2 years, what about you?", "goal_identity", "I'm the AI"),   # round 81: was "I'll find out" (2 years answers nothing)
+    ("goal_practical", 0, (), "2 years, is that normal?", "goal_practical", "There's no right answer"),   # round 81: was "I'll find out"
+    ("05", 0, (), "2 years, what about you?", "06", "I'm the AI"), ("goal_identity", 0, (), "5k, are you a bot?", "goal_identity", "I'm an AI"),   # guards
     ("01", 0, (), "like what?", "01", "Fair point"), ("01", 0, (), "are you married?", "01", "I don't know that one"),   # guard: as before
 ]
 
