@@ -115,6 +115,8 @@ def _line(step, reply):
     ("debt free", "02", "each month to be debt free?"),                       # a state: "be" in front
     ("time freedom honestly", "05", "don't have time freedom yet?"),
     ("whatever, more money", "02", "each month to have more money?"),
+    ("gotta make more money", "06", "to make more money rather than just dream about it?"), ("have to get money", "02", "each month to get money?"),   # round 97 callers:
+    ("I got to quit my job", "05", "haven't managed to quit your job?"), ("gonna be rich", "02", "each month to be rich?"),   # the lead was said back
 ])
 def test_script_lines_echo_the_goal_in_noun_or_verb_form(reply, step, expected):
     assert expected in _line(step, reply)
@@ -594,6 +596,7 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("hold on", "hold on", ""), ("yes, hold on", "yes, hold on", ""), ("hold on, 2k", "2k", ""),   # round 92 guards: a pause alone or after a plain word stays one
     ("more money period", "more money", ""), ("quit my job comma travel", "quit my job, travel", ""), ("free exclamation mark", "free", ""),   # round 92 callers: voice to text
     ("the trial period", "the trial period", ""), ("for a short period", "for a short period", ""), ("a cooling off period", "a cooling off period", ""),   # round 92 guards
+    ("money period, then time", "money period, then time", ""), ("money comma-wise", "money comma-wise", ""),   # guard: a mark word before a real mark or a dash stays a word
     ("is money a good answer?", "money", "is that a good answer?"), ("would 2k be enough?", "2k", "would that be enough?"), ("does money count?", "money", "does that count?"),   # round 93 callers: got "I'll find out"
     ("primarily money", "money", ""), ("chiefly money", "money", ""),   # round 93 callers: saved whole
     ("is it enough?", "", "is it enough?"), ("is my goal realistic?", "", "is my goal realistic?"), ("is that normal?", "", "is that normal?"),   # round 93 guards: no answer in it

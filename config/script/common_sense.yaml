@@ -45,6 +45,7 @@ interruptions:
   pause:
     draft: true
     after: wait
+    never_with: [support, provide]   # draft: round 97 callers, "have to support my kids" got "take your time", near "hang on, I need to sort the kids out"
     min_score: 0.74   # draft: real pauses score 0.76+ ("bear with me"); one word it has never seen does not ("tiktok": 0.67 got "take your time")
     examples:
       - "hold on a second"
@@ -293,6 +294,7 @@ interruptions:
     draft: true
     after: follow_up
     min_score: 0.8
+    never_with: ["gotta quit", "got to quit", "have to quit", "need to quit", "wanna quit", "want to quit"]   # draft: round 97 callers, "gotta quit" (to "what would that get you?") ended the call, near "gotta go"
     examples:
       - "bye"
       - "goodbye"

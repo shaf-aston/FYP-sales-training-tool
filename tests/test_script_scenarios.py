@@ -790,6 +790,15 @@ def test_a_word_typed_one_letter_at_a_time_is_joined(text, fixed):
     assert fix_typos(text, frozenset({"yes", "money", "please", "no"}), CFG) == fixed
 
 
+@pytest.mark.parametrize("text, fixed", [("m0ney", "money"), ("qu1t my job", "quit my job"), ("fr33", "free"), ("2k a m0nth", "2k a month"),   # round 96 callers
+                                          ("2k", "2k"), ("1yr", "1yr"), ("10am", "10am"), ("£1500", "£1500"), ("2019", "2019"), ("b4", "b4"),   # guards: figures stay
+                                          ("y3s", "y3s"), ("z0rp", "z0rp")])   # guards: three letters, or no known word, stay as typed
+def test_a_word_typed_with_numbers_for_letters_is_read(text, fixed):
+    """Round 96 callers: "m0ney" was unclear and "qu1t" was saved as typed."""
+    from core.buy_mode.script_engine.words.fill import fix_typos
+    assert fix_typos(text, frozenset({"money", "quit", "my", "job", "free", "month", "yes"}), CFG) == fixed
+
+
 def test_a_figure_is_never_a_typo():
     from core.buy_mode.script_engine.words.fill import fix_typos
     assert fix_typos("£2,500pm financialy", {"financial", "pm"}, CFG) == "£2,500pm financial"
@@ -886,6 +895,7 @@ def test_ish_on_a_word_is_its_own_word(text, read):
     ("ok, understood", "ok, okay"),
     ("I see", "okay"),
     ("aye", "yes"),                                  # round 41: saved as the answer
+    ("si", "yes"), ("sí", "yes"), ("oui", "yes"),   # round 96 callers: unclear to "can you see yourself doing this?"
     ("yessir", "yes"),
     ("yeah y", "yeah yes"),
     ("ok I see you", "ok I see you"),                # guard: more words after it are theirs
@@ -1156,6 +1166,16 @@ def test_say_that_again_is_never_heard_with_a_want():
     assert {"want", "used to"} <= set(load_common_sense().interruptions["repeat"].never_with)
 
 
+def test_a_goal_with_quit_or_support_is_never_leaving_or_a_pause():
+    """Round 97 callers: "gotta quit" (to "what would that get you?") ended the call, near "gotta go", and "have to
+    support my kids" got "take your time", near "hang on, I need to sort the kids out"."""
+    from core.buy_mode.script_engine.method import load_common_sense
+    senses = load_common_sense().interruptions
+    assert {"gotta quit", "have to quit", "need to quit"} <= set(senses["leaving"].never_with)
+    assert "quit" not in senses["leaving"].never_with   # guard: "I quit, bye" still leaves
+    assert {"support", "provide"} <= set(senses["pause"].never_with)
+
+
 @pytest.mark.parametrize("step, heard", [("01", True), ("14", False)])
 def test_an_until_price_example_is_only_heard_before_the_price(fake_embedder, step, heard):
     # round 44: "2k, is that a lot?" got no answer; after the price it is the money worry
@@ -1337,6 +1357,7 @@ def test_echo_phrase_fixes_typos(reply, phrase):
     ("quiet my job", "quit my job"),   # round 28 limit: autocorrect was said back as typed
     ("loads more dosh", "loads more money"),   # round 32 callers: slang got the plain line
     ("bucks", "money"), ("more bucks", "more money"),   # round 95 callers: "bucks" was unclear
+    ("money pls", "money please"), ("dbt plz", "dbt please"), ("like 2 bandz", "like 2 grand"),   # round 96 callers: "money pls" saved whole, "dbt pls" unclear
     ("moreee moneyyy", "more money"),   # round 32 callers: held letters got the plain line
     ("a yearrr", "a year"),   # was not a time, asked 3 times
     ("my own bosss", "my own boss"),   # cut to 2 when that is a word
