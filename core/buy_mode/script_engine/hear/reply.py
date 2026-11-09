@@ -115,6 +115,7 @@ class Reader:
         """`nudges`: phrases cut off the end of a reply. `hedges(text)`: the part says nothing on its own."""
         self.cfg, self.breaks, self._hedges = cfg, break_pattern(cfg), hedges
         leads = "|".join(map(re.escape, cfg["nudge_leads"]))
+        self._subjects = set(cfg["nudge_subjects"])
         broken = set(cfg["nudge_after_break"])   # "what happens next?" keeps its "next"; "debit, next" does not
         self._nudges = [re.compile(rf"(?:^|{r'[^\w\s]' if p in broken else ''}\W)(?:(?:{leads})\W+)?{words}\W*$", re.IGNORECASE)
                         for p, words in ((p, r"\W+".join(map(re.escape, tokenize(p)))) for p in sorted(nudges, key=len, reverse=True))]
@@ -231,12 +232,17 @@ class Reader:
         return " ".join([new.rstrip(" .!;:"), *unit]) if bare else new  # round 94 callers: "A year. Closer to two." was
         # "two. year", and "a year or closer to two" was "two year or"
 
+    def _own_words(self, before):
+        """The words before a nudge say who does it ("I keep going", "we carry on"): the nudge is their answer.
+        Round 105 callers: "I keep going" to "What makes you different?" was cut to "I" and asked again."""
+        return not re.search(r"[^\w\s']\W*$", before) and bool(set(tokenize((clauses(before, self.breaks) or [""])[-1])) & self._subjects)
+
     def read(self, text):
         rest = marked = self.squash(text)
         nudged = False
         for nudge in self._nudges:
             found = nudge.search(marked)
-            if found:
+            if found and not self._own_words(marked[:found.start()]):
                 rest, nudged = marked[:found.start()].rstrip(" ,;:-"), True
                 break
         aside = self._bracket_end.search(rest)  # round 76: "money (mostly)", "a year (sorry)" were saved whole;

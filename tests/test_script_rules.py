@@ -1352,7 +1352,7 @@ def test_after_restated_is_what_follows_the_part_that_says_the_question_back(sel
     ("what job?", False),                                # guard: a question word still asks
 ])
 def test_a_rise_is_an_answer_when_short_and_shaped_or_a_reason(seller, part, rises):
-    assert seller._ear._rises(part, seller.method.steps["03"], True) == rises
+    assert seller._ear._rises(part, seller.method.steps["03"], True, ScriptState(step="03"), False) == rises
 
 
 @pytest.mark.parametrize("part, alone, rises", [
@@ -1360,7 +1360,7 @@ def test_a_rise_is_an_answer_when_short_and_shaped_or_a_reason(seller, part, ris
     ("no?", False, False),   # guard: beside a question ("is it free, no?") it is part of what they ask
 ])
 def test_a_plain_no_with_a_rise_is_an_answer_only_alone(seller, part, alone, rises):
-    assert seller._ear._rises(part, seller.method.steps["02"], alone) == rises
+    assert seller._ear._rises(part, seller.method.steps["02"], alone, ScriptState(step="02"), False) == rises
 
 
 def test_an_answer_with_a_worry_beside_it_keeps_the_answer(seller):
@@ -1766,3 +1766,18 @@ def test_a_reason_after_a_yes_only_says_why(seller, said, backed):
 ])
 def test_a_want_for_more_anywhere_is_never_a_worry(seller, said, wants):
     assert seller._ear._wants_more_in(said) == wants
+
+
+@pytest.mark.parametrize("step, said, heard, sure, rises", [
+    ("10", "they fail?", None, 0, True), ("12", "work harder?", None, 0, True), ("09", "that I am lazy?", None, 0, True),   # round 103 callers: "I'll find out"
+    ("10", "the price?", "fact", 0.9, False), ("06", "a scam?", "objection", 0, False),   # guard: what the seller answers still asks
+    ("06", "books?", "fact", 0.75, True), ("06", "youtube?", "fact", 0.73, True),   # round 104 callers: "I can send the details after"
+    ("06", "a website?", "fact", 0.8, False),   # guard: as sure as an interruption, it asks
+    ("03", "they fail?", None, 0, False), ("05", "stopping me how?", None, 0, False), ("05", "anything?", None, 0, False),   # guards: a step with a shape of its own keeps its rule; a question word or no words still ask
+])
+def test_a_guess_with_a_rise_on_an_open_step_is_said(seller, monkeypatch, step, said, heard, sure, rises):
+    ear = seller._ear
+    monkeypatch.setattr(ear, "_interrupt", lambda *a, **k: (heard, "x") if heard else (None, ""))
+    monkeypatch.setattr(ear, "_fact_score", lambda text: sure)
+    state = ScriptState(step=step)
+    assert ear._rises(said, ear.method.steps[step], True, state, False) == rises

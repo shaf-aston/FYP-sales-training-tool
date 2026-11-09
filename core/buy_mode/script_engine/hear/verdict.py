@@ -40,6 +40,12 @@ def answer_labels(step):
     return {r.label: list(r.examples) for r in step.listen if r.examples}
 
 
+def _says_any(text, phrases):
+    """Whether `text` says one of `phrases` as whole words (each already tokenized)."""
+    said = f" {' '.join(tokenize(text))} "
+    return any(f" {w} " in said for w in phrases)
+
+
 class Ear:
     """Hears a reply against the call so far, from its parts (reply.py). Order matters and lives here only: a
     nudge on its own; an answer with a question beside it (both kept); then a shrug, an interruption that
@@ -72,7 +78,7 @@ class Ear:
         step = self.method.steps[state.step]
         text = self.reader.squash(text)  # every rule reads "money?!" as "money?"
         reply = self._unecho(self.reader.read(text), state)
-        reply = reply.settle(lambda part: self._rises(part, step, alone=len(reply.parts) == 1))
+        reply = reply.settle(lambda part: self._rises(part, step, len(reply.parts) == 1, state, opened))
         if reply.nudged and not tokenize(reply.unnudged):
             words = list(dropwhile(self._nudge_leads.__contains__, tokenize(text)))  # round 47: "ok go on" was asked again
             if " ".join(words) in self._nudge_yes and self.method.steps[state.step].go_on_is_yes:
@@ -245,10 +251,11 @@ class Ear:
             return False
         return sum(swap.get(w, w) in asked for w in words) >= self.cfg[share] * len(words)
 
-    def _rises(self, part, step, alone):
+    def _rises(self, part, step, alone, state, opened):
         """A part ending in "?" that isn't phrased as a question is the answer said with a rise when it is short
         and has the step's shape ("dunno, a year?" to "how long?") or is about them ("my job?": nothing to ask the
-        seller), it opens with a reason ("because money is nice?"), or it is only filler words ("ok?"); else it
+        seller), it opens with a reason ("because money is nice?"), or it is only filler words ("ok?"); on an open
+        step, also when nothing the seller answers hears it as asked ("they fail?", "work harder?"); else it
         asks ("what's this going to cost me?"). `alone`: the part is the whole reply, where a plain no ("no?")
         answers too; beside a question ("is it free, no?") it is part of what they ask."""
         words = tokenize(part)
@@ -260,7 +267,21 @@ class Ear:
             return False
         if len(words) >= self.cfg["rise_unsure_words"] and self._shrugs.unsure(part) >= self.sense.unclear_min_score:
             return True  # round 78: "not sure?" got "let me say that again"; "eh?" alone still asks for it again
-        return words[0] in self.cfg["prospect_pronouns"] or bool(step.needs) and self.shaped(part, step)  # round 28: "my job?" got "I'll find out"
+        if words[0] in self.cfg["prospect_pronouns"] or bool(step.needs) and self.shaped(part, step):
+            return True  # round 28: "my job?" got "I'll find out"
+        # round 103 callers: "they fail?" to "What happens to people who...?" got "I don't know that one offhand,
+        # I'll find out": a guess said with a rise. "the price?", "stopping me how?" and "anything?" still ask
+        if (step.needs or not any(r.label == ANY for r in step.listen) or set(words) & set(self.cfg["question_words"])
+                or self._shrugs.says_nothing(part, step, False)):
+            return False
+        heard = self._interrupt(part, step, state, opened, True)[0]
+        # round 104 callers: "books?" to "What are you doing now...?" got "I can send the details after": a product
+        # question only as sure as an interruption on a step that takes any reply ("the price?" 0.9, "books?" 0.75)
+        return not heard or heard == "fact" and self._fact_score(part) < self.cfg["interrupt_threshold"]
+
+    def _fact_score(self, text):
+        """How surely `text` asks one of the offer's product questions."""
+        return self._listener.match(text, {k: e for k, f in self.offer.facts.items() if (e := self._same_person(text, f.examples))}).score
 
     def _same_person(self, text, examples):
         """The examples that ask about the same person: a question about themselves ("who would I be?") is never
@@ -480,14 +501,14 @@ class Ear:
         senses = {k: i for k, i in self.sense.interruptions.items()
                   if (state.waiting or not i.after_wait) and not (hedge and i.after in ("rephrase", "wait"))
                   and (asking or not i.only_asked) and not (opened and i.before_price)
-                  and not any(f" {w} " in f" {' '.join(tokenize(text))} " for w in i.never_with)}
+                  and not _says_any(text, i.never_with) and (not i.only_with or _says_any(text, i.only_with))}
         labels = {f"sense:{k}": i.heard(opened) for k, i in senses.items()}
         floors = {f"sense:{k}": i.min_score for k, i in senses.items()}  # lowest score a label counts at
         if hedge:  # one that is nearer not knowing counts only if it beats it (round 38: "let me think" got "let me say that again")
             floors = {k: max(f, math.nextafter(unsure, 2)) for k, f in floors.items()}
         if asking:
             labels.update({f"fact:{k}": e for k, f in self.offer.facts.items() if (e := self._same_person(text, f.examples))})
-        objections = self.method.objections.items()
+        objections = [(k, o) for k, o in self.method.objections.items() if not _says_any(text, o.never_with)]
         if not asking and self._backed.match(text):
             objections = ()  # round 52: "yes because I need the money" says why yes; it is no money worry
         elif not opened and not asking and (step.doubts_answer or self._reason(text)

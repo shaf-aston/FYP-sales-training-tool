@@ -78,6 +78,7 @@ class Objection:
     early: str = ""      # before the price: a short honest answer instead of `park`; may be raised while asking
     early_examples: tuple = ()   # the examples heard before the price: `after_price` ones ("money is tight") are
     # their life then, not our price (whole calls: "money has been tight" at step 01 got "I haven't mentioned a price yet")
+    never_with: tuple = ()   # words that make a reply never this one ("can I do it today?" is no "another day")
 
     def heard(self, opened):
         """The examples that count: all once the price is out, else only the ones about paying us."""
@@ -164,6 +165,7 @@ class Interruption:
     once: bool = False  # answered once a call: said again ("ok, thank you" after "You're welcome.") it is heard as the rest
     before_price: bool = False  # heard only before the price is out; from it on, the close hears a no its own way
     never_with: tuple = ()  # words that make a reply never this one ("I want that again" is no "say that again")
+    only_with: tuple = ()  # words a reply must say to be this one: "what held me back?" asks no "what held you back?"
     until_price: tuple = ()  # more examples, heard only before the price: "is that a lot?" asks about their own figure,
     # from the price on it is the money worry
 
@@ -299,7 +301,8 @@ def _objection(name, data):
     if not data.get("examples"):
         raise ValueError(f"objection {name}: needs examples, or it can never be heard")
     early = tuple(data["examples"])
-    return Objection(name, early + tuple(data.get("after_price", ())), str(data["enter"]), data.get("early", ""), early)
+    return Objection(name, early + tuple(data.get("after_price", ())), str(data["enter"]), data.get("early", ""), early,
+                     tuple(" ".join(tokenize(w)) for w in data.get("never_with") or ()))
 
 
 def _with_matrix(name, data, matrix):
@@ -447,7 +450,7 @@ def parse_offer(name, data):
     )
 
 
-INTERRUPTION_KEYS = {"examples", "reply", "draft", "after", "after_wait", "min_score", "with_answer", "only_asked", "once", "before_price", "never_with", "until_price"}  # `draft` is accepted, never read
+INTERRUPTION_KEYS = {"examples", "reply", "draft", "after", "after_wait", "min_score", "with_answer", "only_asked", "once", "before_price", "never_with", "only_with", "until_price"}  # `draft` is accepted, never read
 
 
 def parse_common_sense(data):
@@ -461,6 +464,7 @@ def parse_common_sense(data):
                         v.get("with_answer", False) is True, v.get("only_asked", False) is True,
                         v.get("once", False) is True, v.get("before_price", False) is True,
                         tuple(" ".join(tokenize(w)) for w in v.get("never_with") or ()),
+                        tuple(" ".join(tokenize(w)) for w in v.get("only_with") or ()),
                         tuple(v.get("until_price") or ()))
         for k, v in data["interruptions"].items()
     }

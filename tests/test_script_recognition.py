@@ -1360,6 +1360,25 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("01", 0, (), "I just want more money so I can stop worrying about bills", "goal_identity", None),   # round 100 callers: asked what more money would get them
     ("01", 0, (), "more money so I can quit my job", "goal_practical", "What are you hoping to achieve with more money?"),   # round 100 guard: quitting is the same rung
     ("02", 0, (), "whatever he says", "02", "If you had to put a number on it"), ("02", 0, (), "what did you say?", "02", "Of course, let me say that again"),   # round 100 callers: "let me say that again"; "I'll find out"
+    ("01", 0, (), "stop doing nights", "goal_practical", "What are you hoping to achieve by being able to stop doing nights?"),   # round 102 callers: unclear, asked again
+    ("01", 0, (), "sleep at night", "goal_identity", None), ("01", 0, (), "stop worrying at night", "goal_identity", None),   # round 102 guards: a night example never pulls sleep or worry down to level 1
+    ("10", 0, (), "they fail?", "willing", None), ("12", 0, (), "work harder?", "13", None), ("09", 0, (), "that I am lazy?", "belief_origin", None),   # round 103 callers: "I'll find out"
+    ("belief_origin", 0, (), "how would I know?", "belief_origin", "No rush"), ("08", 0, (), "is that a trick question?", "08", "It helps me see"),   # round 103 callers: "I'll find out"
+    ("10", 0, (), "the price?", "10", "Fair question"), ("06", 0, (), "is it a scam?", "06", "Fair question"),   # round 103 guards: what the seller answers still asks
+    ("12", 0, (), "show up", "13", None), ("12", 0, (), "be there", "13", None), ("12", 0, (), "see you", "later", None),   # round 104 callers: ended the call; guard: a goodbye still ends it
+    ("06", 0, (), "books?", "08", None), ("06", 0, (), "reading books?", "08", None), ("06", 0, (), "a website?", "06", "I can send the details after"),   # round 104 callers: "I can send the details after"; guard: a sure ask still asks
+    ("12", 0, (), "go all in", "13", None), ("12", 0, (), "get going", "13", None), ("12", 0, (), "I have to go now", "later", None),   # round 105 callers: ended the call; guard: a goodbye still ends it
+    ("11", 0, (), "I keep going", "12", None), ("belief_cost", 0, (), "a lot of money", "10", None),   # round 105 callers: asked again; "I haven't mentioned a price yet"
+    ("22", 0, (), "can I do it tomorrow?", "m_think_what", None), ("19", 0, (), "can we do this next week?", "m_think_what", None),   # round 106 callers: "I'll find out"
+    ("22", 0, (), "can I do it today?", "22", None), ("22", 0, (), "can I pay now?", "22", None),   # round 106 guards: keen, never a wait
+    ("09", 0, (), "I don't have limiting beliefs", "10", "Fair enough"), ("09", 0, (), "nothing, I'm great", "10", "Fair enough"),   # round 107 callers: "Where does that belief come from?"
+    ("09", 0, (), "nothing holds me back except money", "belief_origin", None), ("09", 0, (), "I don't believe in myself", "belief_origin", None),   # round 107 guards: a belief
+    ("05", 0, (), "what held you back?", "05", "I'm the AI"), ("08", 0, (), "were you scared?", "08", "I'm the AI"),   # round 107 callers: "I'll find out"
+    ("05", 0, (), "what holds me back? money", "06", "What are you doing now"),   # round 107 guard: about them, never "I'm the AI"
+    ("19", 0, (), "I would if I had the money", "m_funded", None), ("22", 0, (), "my card is maxed out", "m_funded", None),   # round 109 callers: asked again
+    ("22", 0, (), "I don't have a card", "end", "No problem, a bank transfer works too"), ("22", 0, (), "I don't use cards", "end", None),   # round 109 callers: "credit or debit?" again
+    ("22", 0, (), "neither, cash", "end", None), ("22", 0, (), "I have no money on my card", "m_funded", None),   # round 109 callers: "if you did have the funding"; guard: no money is the money talk
+    ("19", 0, (), "yeah that works", "20", None), ("22", 0, (), "that works", "22", "Which works better"), ("19", 0, (), "how do I know that works?", "m_scam", None),   # round 109 callers: a scam worry; guard
     ("22", 0, (), "not today, tomorrow", "m_think_what", None), ("02", 0, (), "cheers, mate", "02", "You're welcome"),   # round 91 guards: still asks for time; a thank-you alone is still one
     ("03", 0, (), "since when?", "03", "Fair point"), ("04", 0, (), "for what? dunno", "04", "Fair point"), ("03", 0, (), "since 2020", "04", None),   # round 87 probes: saved as how long, "I'll find out"; guard
 ]

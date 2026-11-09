@@ -82,6 +82,7 @@ steps:
           - "time"   # draft: round 40 callers, "time" alone got "Let's keep the time about you though"
           - "I want a side income"   # draft: round 58 replay, "I guess I want a side income" got "What do you mean by a side income?"
           - "passive income"   # draft: round 58, "I want passive income" got "What do you mean by passive income?"
+          - "no more night shifts at work"   # draft: round 102 callers, "stop doing nights" was unclear and asked again
         then: "goal_practical"
         climbs_to: [practical, identity]   # draft: round 100 callers, "I just want more money so I can stop worrying about bills" got "What are you hoping to achieve with more money?": the rest already says the next rung
       practical:   # level 2 already: skip the formula, ask the identity rung
@@ -97,6 +98,7 @@ steps:
           - "more time for me and my family"   # draft: whole calls, "more time" was heard as annoyance ("I'll keep this quick")
           - "pay my rent and bills"   # draft: round 27 callers, "pay rent" was heard as level 1 and asked again
           - "I want to buy a house"   # draft: round 31 callers, "I want to by a house" was "What do you mean by wanting to buy a house?"
+          - "to sleep properly at night without stressing"   # draft: round 102 callers, the night shift example pulled "sleep at night" down to level 1
         then: "goal_identity"
       identity:   # level 3 already: the ladder is climbed
         examples: &identity
@@ -314,6 +316,12 @@ steps:
     say: "When you're honest with yourself, what do you believe about yourself that's held you back?"
     capture: belief
     listen:
+      none:   # draft: round 107 callers, "I don't have limiting beliefs" got "Where do you think that belief comes from?"
+        examples: ["I don't have any", "I don't have limiting beliefs", "nothing, I'm confident in myself", "I have none", "there's no belief holding me back", "there is no belief", "nothing, I'm great"]
+        min_score: 0.85   # "nothing holds me back except money" (0.83) names one: it is their answer
+        then: "10"   # no belief to trace or cost: on to what happens to people who don't push
+        ack: "Fair enough, good to hear."
+        keep: false
       any: {then: "belief_origin"}
   "belief_origin":
     name: "Where the belief came from"
@@ -331,6 +339,7 @@ steps:
     draft: true
     say: "If you keep believing that, what does it cost you over the next few years?"
     capture: belief_cost
+    doubts_answer: true   # draft: round 105 callers, "a lot of money" got "I haven't mentioned a price yet": what it costs them is the answer
     listen:
       any: {then: "10"}
   "10":
@@ -535,6 +544,7 @@ steps:
           - "google pay"   # draft: round 86 callers, "klarna" got "credit or debit?" again
           - "klarna"   # draft
           - "bank transfer"
+          - "cash"   # draft: round 109 callers, "neither, cash" got "if you did have the funding"
           - "either is fine"
           - "whichever is easier"
           - "my card ending 1234"   # draft: round 87 callers, "card ending 1234" got "credit or debit?" again and
@@ -545,6 +555,12 @@ steps:
           - "payment link please"   # draft: round 78, "payment link please" got "credit or debit?" again ("send me the payment link" already paid)
         then: "end"
       backs_out: *backs_out
+      no_card:   # draft: round 109 callers, "I don't have a card" got "credit or debit?" again
+        examples: ["I don't have a card", "I don't have a credit card", "I haven't got a card", "no card"]
+        min_score: 0.84   # "I don't use cards" 0.849; "I don't have the money" (0.79) is the money talk
+        then: "end"   # they are paying, just not by card: no question back, or a "yes" to it is asked "credit or debit?"
+        ack: "No problem, a bank transfer works too."   # draft
+        keep: false
       how:   # draft: whole calls, "how do I pay?" got "I'll find out"; the choice again answers it
         examples: ["how do I pay", "how does the payment work", "where do I sign"]   # draft (where do I sign): round 87 callers, it got "I'll find out"
         then: "22"

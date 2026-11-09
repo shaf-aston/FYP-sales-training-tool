@@ -29,6 +29,7 @@ from core.buy_mode.script_engine.hear.reply import after, clauses
 from core.buy_mode.script_engine.hear.shrug import Shrugs
 from core.buy_mode.script_engine.hear.verdict import Ear, answer_labels
 from core.buy_mode.script_engine.method import (
+    ANY,
     load_common_sense,
     load_method,
     load_offer,
@@ -421,7 +422,10 @@ class ScriptSeller:
                 label = None if pick == VAGUE else pick
                 if found.label and not label and step.unsure and all(r.then != step.id for r in step.listen if r.label in found.torn):
                     label = step.unsure  # every meaning it is torn between is a real answer: take the step's safe one, don't ask again
-        elif needed and self.cfg["listen"] and step.capture and not (empty and not asks_left(self.method, self.state, self.cfg["misses"])):
+        # round 109: a step with an exit beside its "any" route (09's "I don't have any") still hears the rest
+        takes_any = not labels or any(r.label == ANY for r in step.listen)
+        if (not label and takes_any and needed and self.cfg["listen"] and step.capture
+                and not (empty and not asks_left(self.method, self.state, self.cfg["misses"]))):
             concept = f"{step.name}: {step.note}" if step.note else step.name  # the AI hears for it
             heard = self._voice.listen(text, concept, self._asked_text(), self._earlier(step), opened)
             if heard is not None:

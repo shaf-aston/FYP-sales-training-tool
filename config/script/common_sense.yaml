@@ -212,6 +212,7 @@ interruptions:
       - "why would I tell you that"   # draft: whole calls, got "I'll find out"
       - "what kind of question is that"   # draft: whole calls, got "let me ask that again"
       - "how come"   # draft: round 77 callers, "how come?" got "I don't know that one offhand"
+      - "is that a trick question"   # draft: round 103 callers, got "I don't know that one offhand, I'll find out"
     reply: "It helps me see if this is even right for you, so neither of us wastes time."
   about_me:   # whole calls: "what about you?", "did this work for you?" got "I'll find out"; "how much do you make?" got the price
     with_answer: true   # "a few years, you?": the answer is kept, this goes in front of the next question
@@ -231,6 +232,10 @@ interruptions:
       - "and you"   # draft: round 81 callers, "dunno, and you?" got "No rush"
       - "yourself"   # draft: round 81 callers, "yourself?" got "I don't know that one offhand"
       - "and yourself"   # draft: round 81 callers
+      - "what did you do"   # draft: round 107 callers, the step's question asked back got "I'll find out"
+      - "were you scared"   # draft
+      - "what held you back"   # draft
+    only_with: [you, your, yours, yourself, "you're", "you've", u, ya]   # draft: round 107 callers, "what held me back?" is near "what held you back" but asks about them
     reply: "I'm the AI playing the salesperson, so this one's all about you."
   no_wrong_answer:   # whole calls: "what do most people say?" got "I'll find out and let you know"
     with_answer: true   # draft: "2k, is that a lot?": the 2k is kept, this goes in front of the next question
@@ -296,7 +301,7 @@ interruptions:
     draft: true
     after: follow_up
     min_score: 0.8
-    never_with: ["gotta quit", "got to quit", "have to quit", "need to quit", "wanna quit", "want to quit"]   # draft: round 97 callers, "gotta quit" (to "what would that get you?") ended the call, near "gotta go"
+    never_with: ["gotta quit", "got to quit", "have to quit", "need to quit", "wanna quit", "want to quit", "show up", "turn up", "be there", "all in", "go hard", "get going"]   # draft: round 97 callers, "gotta quit" (to "what would that get you?") ended the call, near "gotta go"; draft (show up, turn up, be there): round 104 callers, "show up" and "be there" (to "What are you going to do differently?") ended the call, near "see you"; draft (all in, go hard, get going): round 105 callers, "go all in" there ended the call, near "gotta go"
     examples:
       - "bye"
       - "goodbye"

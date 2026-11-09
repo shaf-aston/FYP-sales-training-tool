@@ -1161,6 +1161,54 @@ def test_a_sense_is_never_heard_with_its_never_with_words(fake_embedder, said, n
     assert s.last_turn["heard_as"] == heard
 
 
+@pytest.mark.parametrize("said, never_with, heard", [
+    ("can I do it another day?", ("another day",), "question"),   # round 106 callers: "can I do it today?" is near
+    ("can I do it another day?", (), "objection:think"),          # "another day" (0.88) but keen, never a wait
+])
+def test_an_objection_is_never_heard_with_its_never_with_words(fake_embedder, said, never_with, heard):
+    from dataclasses import replace
+    think = replace(CAT.objections["think"], examples=(said.lower(),), never_with=never_with)
+    s = seller(fake_embedder, step="22", method=replace(CAT, objections={**CAT.objections, "think": think}))
+    s.reply(said)
+    assert s.last_turn["heard_as"] == heard
+
+
+def test_doing_it_now_or_today_is_never_a_wait():
+    """Round 106 callers: "can I do it tomorrow?" at the close got "I'll find out"; its examples are near "today"."""
+    never = set(CAT.objections["think"].never_with)
+    assert {"do it now", "do it today", "pay now", "start today"} <= never
+    assert not never & {"now", "today", "right now"}   # guard: "now isn't the right time" still asks for time
+
+
+@pytest.mark.parametrize("said, only_with, heard", [
+    ("what held me back", ("you",), "answer:unclear"),   # round 107 callers: near "what held you back" but asks about them
+    ("what held me back", (), "sense:repeat"),
+    ("what held you back", ("you",), "sense:repeat"),    # guard: a "you" word lets it in
+])
+def test_a_sense_is_only_heard_with_its_only_with_words(fake_embedder, said, only_with, heard):
+    s = seller(fake_embedder, step="01", sense=planted("repeat", examples=(said,), only_with=only_with))
+    s.reply(said)
+    assert s.last_turn["heard_as"] == heard
+
+
+def test_about_me_needs_a_you_and_no_belief_moves_on():
+    """Round 107 callers: "what did you do?" got "I'll find out", and "I don't have limiting beliefs" got "Where do you
+    think that belief comes from?"."""
+    from core.buy_mode.script_engine.method import load_common_sense
+    assert {"you", "your", "yourself", "u"} <= set(load_common_sense().interruptions["about_me"].only_with)
+    none = next(r for r in CAT.steps["09"].listen if r.label == "none")
+    assert (none.then, none.keep, none.min_score) == ("10", False, 0.85)
+
+
+def test_no_card_is_a_bank_transfer_and_that_works_is_a_yes():
+    """Round 109 callers: "I don't have a card" got "credit or debit?" again, and "yeah that works" at the closes was
+    heard as a scam worry (near "can you prove it works")."""
+    no_card = next(r for r in CAT.steps["22"].listen if r.label == "no_card")
+    assert (no_card.then, no_card.keep) == ("end", False) and "bank transfer" in no_card.ack
+    assert all(CFG["short_replies"][w] == "yes" for w in ("that works", "that works for me", "yeah that works"))
+    assert {"my card is maxed out", "I would if I had the money"} <= set(CAT.objections["money"].examples)
+
+
 def test_say_that_again_is_never_heard_with_a_want():
     from core.buy_mode.script_engine.method import load_common_sense
     assert {"want", "used to"} <= set(load_common_sense().interruptions["repeat"].never_with)
@@ -1235,6 +1283,17 @@ def test_a_nudge_word_inside_a_reply_is_not_a_nudge(fake_embedder, text):
     s = seller(fake_embedder, step="15")
     reply, _ = s.reply(text)
     assert not reply.startswith(f"{GO_ON} ")
+
+
+@pytest.mark.parametrize("text, nudge", [
+    ("I keep going", False), ("I just keep going", False), ("we keep going", False), ("I'll keep going", False),   # round 105 callers: cut to "I", asked again
+    ("ok, keep going", True), ("so keep going", True), ("keep going", True),   # guards: still a nudge
+])
+def test_a_nudge_after_who_does_it_is_their_answer(fake_embedder, text, nudge):
+    s = seller(fake_embedder, step="11")
+    reply, _ = s.reply(text)
+    assert reply.startswith(f"{GO_ON} ") == nudge
+    assert (s.state.slots.get("different") == text) != nudge   # their answer, kept whole
 
 
 @pytest.mark.parametrize("nudge, error", [
