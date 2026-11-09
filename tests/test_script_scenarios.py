@@ -670,6 +670,8 @@ def test_whats_next_asks_no_ai(fake_embedder):
     ("money anyways", "money"), ("money mostly", "money"), ("money ideally", "money"), ("money more or less", "money"), ("money highkey", "money"), ("money that kind of thing", "money"), ("money sort of thing", "money"), ("money that sort of thing", "money"), ("money that type of thing", "money"),   # round 65 mutation: round 59-62 echo ends no row had
     ("money or anything like that", "money"), ("money essentially", "money"), ("money ultimately", "money"), ("money usually", "money"), ("money to start with", "money"), ("money to begin with", "money"), ("money whatnot", "money"), ("money and so forth", "money"),
     ("money yada yada", "money"), ("money as you do", "money"), ("money and so on and so forth", "money"), ("2k and all that jazz", "2k"), ("money meh", "money"), ("money and what have you", "money"),   # round 73 callers: said back whole
+    ("money blah blah", "money"), ("money blah blah blah", "money"), ("money or what have you", "money"), ("money as one does", "money"), ("money yada yada yada", "money"), ("money and everything", "money"), ("money whatevs", "money"), ("money so on and so forth", "money"),   # round 73 mutation: no row had these
+    ("money and stuff", "money"), ("freedom and things", "freedom"), ("2k and things like that", "2k"),   # round 75: said back whole
     ("well paid job", "well paid job"),  # round 54: was "paid job"
     ("so well off", "well off"),
     ("Financial freedom!", "financial freedom"),
@@ -765,11 +767,15 @@ def test_echo_phrase_shapes_the_goal_for_its_blank(reply, verbs, phrase):
     assert echo_phrase(reply, CFG, verbs=verbs) == phrase
 
 
-@pytest.mark.parametrize("text", ["a year methinks", "money i daresay", "money whatevs"])
-def test_a_tag_in_a_listed_tag_list_is_never_a_typo(text):
+WORDS = {"thinks", "dare", "whats", "year", "money"}
+
+
+@pytest.mark.parametrize("text, vocab", [("a year methinks", WORDS), ("money i daresay", WORDS), ("money whatevs", WORDS),
+                                         ("money whatnot", {"whatnow"}), ("money truthfully", {"truthfull"})])  # round 75: end and filler tags
+def test_a_tag_in_a_listed_tag_list_is_never_a_typo(text, vocab):
     """Round 73 callers: "a year methinks" was saved as "a year thinks", one letter from a script word."""
     from core.buy_mode.script_engine.words.fill import fix_typos
-    assert fix_typos(text, {"thinks", "dare", "whats", "year", "money"}, CFG) == text
+    assert fix_typos(text, vocab, CFG) == text
 
 
 def test_a_figure_is_never_a_typo():

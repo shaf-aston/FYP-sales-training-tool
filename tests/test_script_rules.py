@@ -775,6 +775,12 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("thanks mate", "thanks mate", ""), ("thanks but no thanks", "thanks but no thanks", ""), ("thanks so much", "thanks so much", ""), ("hang on, quit", "quit my job", ""), ("things I like", "things I like", ""), ("hold on, what?", "", "what?"),   # guard: a thanks with no answer stays whole, a polite no too
     ("meh, money", "money", ""), ("meh, whatever", "meh, whatever", ""), ("everything", "everything", ""),   # round 73: "meh, money" was fed up; guard: one fed-up phrase, and a word alone
     ("I daresay money", "money", ""), ("2k I'd imagine", "2k", ""), ("a year methinks", "a year", ""), ("money you'd think", "money", ""), ("I gather a year", "a year", ""),   # round 73 callers: saved with the hedge
+    ("money or what have you", "money", ""), ("money yada yada yada", "money", ""), ("money whatevs", "money", ""), ("money blah blah", "money", ""), ("money so on and so forth", "money", ""),   # round 73 mutation: no row had these
+    ("money yes?", "money", ""), ("money ya?", "money", ""), ("money yea?", "money", ""), ("money okay?", "money", ""), ("money yep?", "money", ""), ("money yh?", "money", ""),   # round 73 mutation: no row had these checks
+    ("a year. or so", "a year", ""), ("money - tbh", "money", ""), ("money! and all that jazz", "money", ""), ("money... so to speak", "money", ""), ("money – if possible", "money", ""),   # round 75: a tag after a full stop or dash was kept
+    ("money or so i think", "money", ""), ("a year or so i guess", "a year", ""),   # round 75: "money or so i think" was "money or"
+    ("2k I'd wager", "2k", ""), ("whatevs money", "money", ""), ("2k I dare say", "2k", ""), ("money I imagine", "money", ""), ("meh money", "money", ""),   # round 73 mutation: no row had these
+    ("money and stuff", "money", ""), ("freedom and things", "freedom", ""), ("2-3k", "2-3k", ""), ("a year - maybe two", "a year - maybe two", ""), ("money - and freedom", "money - and freedom", ""),   # round 75: "money and stuff" was saved whole; guards: a dash between answers stays
 ])
 def test_a_reply_is_read_once_into_what_it_says_and_what_it_asks(text, said, asked):
     from core.buy_mode.script_engine.hear.reply import Reader
@@ -782,6 +788,21 @@ def test_a_reply_is_read_once_into_what_it_says_and_what_it_asks(text, said, ask
     reply = Reader(CFG, load_common_sense().nudges, lambda part: part.lower() in HEDGES).read(text)
     reply = reply.settle(lambda part: False)
     assert (reply.said, reply.asked) == (said, asked)
+
+
+def test_every_listed_tag_beside_an_answer_is_cut():
+    # round 75: each tag works after a word, a comma, a full stop and a dash (a tag taken out is caught by the rows above)
+    from core.buy_mode.script_engine.hear.reply import Reader
+    from core.buy_mode.script_engine.method import load_common_sense
+    from core.buy_mode.script_engine.words.fill import echo_phrase
+    reader = Reader(CFG, load_common_sense().nudges, lambda part: False)
+
+    def said(text):
+        reply = reader.read(text).settle(lambda part: False)
+        return reply.said, reply.asked
+    assert [(t, s) for t in CFG["end_tags"] for s in (" ", ", ", ". ", "! ", "... ", " - ") if said(f"money{s}{t}") != ("money", "")] == []
+    assert [t for t in CFG["check_tags"] if said(f"money {t}?") != ("money", "")] == []
+    assert [t for t in CFG["echo_drop_ends"] if echo_phrase(f"money {t}", CFG) != "money"] == []
 
 
 @pytest.mark.parametrize("text, parts", [

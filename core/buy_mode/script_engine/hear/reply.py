@@ -121,7 +121,8 @@ class Reader:
         self._lead_alone = alone - self._plain  # round 74: a lead with a meaning alone ("thanks", "brb")
         # round 61: after a comma too, so "2k, that kind of thing" loses the whole tag, not just "kind of thing"
         # round 73: every tag at the end, not just the last ("and so on and so forth", "yada yada tbh")
-        self._tag_end = re.compile(rf"(?<=\w)(?:[,;]?\s+(?:{any_of(cfg['end_tags'])}))+\W*$", re.IGNORECASE)
+        # round 75: after a full stop, "!", "..." or a dash too ("a year. or so", "money - tbh" were saved whole)
+        self._tag_end = re.compile(rf"(?<=\w)(?:\s*[,;.!…–—-]*\s+(?:{any_of(cfg['end_tags'])}))+\W*$", re.IGNORECASE)
         # round 73: "money yeah?", "free, no?", "money. no?": a check at the end asks nothing; "yes or no?" picks one
         self._check_end = re.compile(rf"(?<=\w)(?<!\bor)[,;.!]?\s+(?:{any_of(cfg['check_tags'])})\s*\?[\s?!.]*$", re.IGNORECASE)
         self._unsure = re.compile(rf"^\W*(?:{any_of(cfg['unsure_leads'])})\b", re.IGNORECASE)
@@ -187,7 +188,7 @@ class Reader:
         rest = self._blank_end.sub(r", \1", rest)  # "yes sorry" is "yes, sorry" (round 39 callers: it was unclear)
         end = self._unsure_end.search(rest)  # round 44: "money I guess" is "money, I guess"; "yeah I guess", "stuff I guess" stay whole
         if end and set(tokenize(rest[:end.start()])) - self._plain:
-            rest = f"{rest[:end.start()]}, {end.group(1)}"
+            rest = f"{self._tag_end.sub('', rest[:end.start()])}, {end.group(1)}"  # round 75: "money or so i think" was "money or"
         lead = self._unsure_lead.match(rest)  # round 58: "probably money", "I guess money" got "What do you mean by
         if lead and set(tokenize(rest[lead.end():])) - self._plain:  # money?"; "I think so", "probably not" stay whole
             rest = f"{lead.group(1)}, {rest[lead.end():]}"

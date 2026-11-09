@@ -1255,6 +1255,8 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("01", 0, (), "thanks mate", "01", "You're welcome"), ("01", 0, (), "hang on my phone is dying", "01", "No problem, take your time"), ("05", 0, (), "one sec", "05", "No problem, take your time"), ("05", 0, (), "thank you", "05", "You're welcome"),   # guard: as before
     ("06", 0, (), "thanks but no thanks", "later", "No problem"), ("05", 0, (), "I don't know how to start", "06", None),   # guard: as before
     ("06", 1, (), "don't know", "06", "No rush"), ("06", 1, (), "that's a tough one", "06", "No rush"), ("06", 1, (), "nothing", "08", None),   # round 74 callers: to "Is there anything you've tried so far?" saved as what they do; guard: "nothing" answers it
+    ("01", 0, (), "a year. or so", "goal_practical", "What are you hoping to achieve with a year?"), ("01", 0, (), "money. or so i think", "goal_practical", "What are you hoping that would get you"),   # round 75: a tag after a full stop was kept ("a year. or so" was unclear)
+    ("01", 0, (), "2k and stuff", "goal_practical", "What are you hoping to achieve with 2k?"),   # guard: as before
 ]
 
 
