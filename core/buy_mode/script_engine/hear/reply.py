@@ -87,7 +87,8 @@ def break_pattern(cfg):
         return rf"(?!\W+(?:{'|'.join(map(re.escape, words))})\b)" if words else ""
     parts = [rf"\b{re.escape(b)}\b{keep(b)}" if b.isalpha() else re.escape(b) + ends.get(b, r"(?=\s|$)") for b in cfg["clause_breaks"]]
     if cfg["ask_tails"]:  # round 77: "yes why?" is read as "yes, why?"
-        parts.append(rf"(?<=\w)\s+(?=(?:{'|'.join(map(re.escape, cfg['ask_tails']))})\s*\?+\W*$)")
+        never = "".join(rf"(?<!\b{re.escape(w)})" for w in cfg["ask_tails_not_after"])  # round 78 mutation: "I don't know why?" is not knowing
+        parts.append(rf"(?<!\s){never}\s+(?=(?:{'|'.join(map(re.escape, cfg['ask_tails']))})\s*\?)")
     return re.compile("|".join(parts), re.IGNORECASE)
 
 

@@ -1378,7 +1378,7 @@ def test_echo_phrase_fixes_typos(reply, phrase):
     ("A: money", "money"), ("Answer: quit", "quit my job"), ("a) a year", "a year"), ("A) 2k", "2k"), ("Me: 2k", "2k"), ("Ans: 2k", "2k"), ("Reply: money", "money"), ("> free", "free"), ("1. my boss", "my boss"),   # round 77 callers: the label was saved with the answer ("a money")
     ("no, no idea", "no idea"), ("I, I want money", "I want money"), ("yes, yes", "yes"), ("money, money, money", "money"), ("n/a", "not sure"), ("tbd", "not sure"), ("TBC", "not sure"),   # round 78 callers: "no, no idea" was a no, "n/a" saved as the reason
     ("no, not sure", "no, not sure"), ("2k, maybe 2k", "2k, maybe 2k"), ("no, nobody", "no, nobody"), ("time, time and money", "time and money"),   # guard: other words after the comma stay
-    ("a year", "a year"), ("a lot", "a lot"), ("me :)", "me 🙂"), ("1.5 years", "1.5 years"), ("A:money", "A:money"),   # guard: a label needs its ":" or ")" and a space after
+    ("a year", "a year"), ("a lot", "a lot"), ("me :)", "me 🙂"), ("1.5 years", "1.5 years"), ("A:money", "A:money"), (">2k", ">2k"), (">5 years", ">5 years"),   # guard: a label needs its ":" or ")" and a space after
 ])
 def test_fix_typos_keeps_real_words(text, fixed):
     from core.buy_mode.script_engine.words.fill import fix_typos

@@ -821,7 +821,9 @@ def test_every_listed_tag_beside_an_answer_is_cut():
     ("money so that I can quit", ["money so that I can quit"]), ("2k and that's it", ["2k", "that's it"]),   # round 76: "so that" stays whole; guard: the pair is for "so" only
 
     ("yes why?", ["yes", "why?"]), ("money why do you ask?", ["money", "why do you ask?"]), ("yes how come?", ["yes", "how come?"]),   # round 77 callers: "yes why?" was one question, the fallback
-    ("I don't know why", ["I don't know why"]), ("why?", ["why?"]), ("why do you ask?", ["why do you ask?"]), ("that's why I want it", ["that's why I want it"]),   # guard: only last, with its "?", after a word
+    ("I don't know why", ["I don't know why"]), ("why?", ["why?"]), ("why do you ask?", ["why do you ask?"]), ("that's why I want it", ["that's why I want it"]),   # guard: only with its "?"
+    ("yes why? because", ["yes", "why?", "because"]), ("yes - why?", ["yes -", "why?"]), ("yes  why?", ["yes", "why?"]),   # round 78 mutation: not only last, nor only after a letter
+    ("I don't know why?", ["I don't know why?"]), ("I don't know  why?", ["I don't know  why?"]), ("not sure why? money", ["not sure why?", "money"]),   # round 78 mutation: was "It helps me see"
 ])
 def test_so_before_much_is_not_a_break(text, parts):
     from core.buy_mode.script_engine.hear.reply import break_pattern, clauses

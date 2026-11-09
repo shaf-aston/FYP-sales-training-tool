@@ -109,7 +109,7 @@ def fix_typos(text, vocab, cfg):
     is its word ("yes"): inside a reply, "y" is more often a year ("2 y")."""
     text = QUOTED.sub(r"\1", (text or "").strip())  # round 47: '"ok"' at "Does that make sense?" got "let me put it another way"
     label = "|".join(map(re.escape, cfg["answer_labels"]))  # round 77: "A: money" was "a money", "1. my boss" saved whole
-    text = re.sub(rf"^(?:>+\s+|\d{{1,2}}[.)]\s+|(?:{label})\s*[:)]\s+)(?=\S)", "", text, flags=re.IGNORECASE)
+    text = re.sub(rf"^(?:>+\s+|\d{{1,2}}[.)]\s+|(?:{label})\s*[:)]\s+)", "", text, flags=re.IGNORECASE)
     text = STUTTER.sub("", text)  # round 78: "no, no idea" was a no ("I, I want money" -> "I want money")
     whole = short_form(text, cfg)
     if whole:

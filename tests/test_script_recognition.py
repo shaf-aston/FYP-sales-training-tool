@@ -1273,6 +1273,8 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("05", 0, (), "n/a", "05", "No rush"), ("05", 0, (), "tbd", "05", "No rush"),   # round 78 callers: were saved as the reason
     ("goal_identity", 0, (), "gimme a sec, free", "02", None),   # round 78 callers: was "take your time", the "free" lost
     ("goal_practical", 0, (), "eh?", "goal_practical", "Fair point"), ("20", 0, (), "nah", "19", "No pressure"), ("goal_identity", 0, (), "gimme a sec", "goal_identity", "No problem, take your time."),   # guard: as before
+    ("05", 0, (), "I don't know why?", "05", "No rush"), ("05", 0, (), "not sure why", "05", "No rush"), ("05", 0, (), "no idea why?", "05", "No rush"),   # round 78 mutation: were "It helps me see" (round 77's cut), the reason saved, and "I'll find out"
+    ("22", 0, (), "payment link please", "end", "Perfect."),   # round 78: was "credit or debit?" again
 ]
 
 
