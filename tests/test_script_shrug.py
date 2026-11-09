@@ -113,6 +113,8 @@ def test_round_71_only_tags_say_nothing_where_labels_hear(said, nothing, fake_em
 @pytest.mark.parametrize("said, nothing", [
     ("who knows?", True), ("hard to say?", True), ("we'll see?", True), ("up to you?", True), ("you tell me?", True), ("lol who knows?", True),   # round 71 mutation: "I don't know that one offhand"
     ("no idea?", True), ("no clue?", True), ("search me?", True),
+    ("so to speak?", True), ("by and large?", True), ("that said?", True), ("really?", True), ("lol, per se?", True),   # round 72: tags as a question got "I don't know that one offhand"
+    ("how so?", False), ("really, how much?", False), ("really, why?", False), ("per se, what?", False), ("so to speak, money?", False),   # guard: words that ask, or an answer
     ("why?", False), ("is it up to you?", False), ("who knows, money?", False), ("who knows what?", False), ("what is your call?", False), ("not sure?", False),   # guard: a question, or more than the shrug
 ])
 def test_a_question_that_is_only_a_shrug_says_nothing(said, nothing, fake_embedder):

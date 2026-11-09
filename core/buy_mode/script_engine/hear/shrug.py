@@ -37,7 +37,7 @@ class Shrugs:
         words = set(tokenize(text))
         if not closed and words <= self._filler:  # also no words at all: "👍", "..."
             return True
-        if asking:  # round 71: "who knows?" and "up to you?" got "I don't know that one offhand": only a shrug, no question
+        if asking:  # round 71: "who knows?", "up to you?", "so to speak?" got "I don't know that one offhand": no question in it
             return self._only_shrug(text)
         if not any(r.label == ANY for r in step.listen):  # round 67: "so to speak" alone was "say that again"
             return not closed and self.only_tags(text)
@@ -52,9 +52,10 @@ class Shrugs:
         return bool(tokenize(text)) and self._words(text) <= self._filler
 
     def _only_shrug(self, text):
-        """A shrug phrase and at most filler words ("lol who knows?"): "is it up to you?" asks something."""
-        left = self._phrase_cut.sub("", text)
-        return left != text and not set(tokenize(left)) - self._fillers
+        """A shrug phrase or tag and at most filler words ("lol who knows?", "so to speak?"): "is it up to you?"
+        asks something."""
+        left = self._words(text)
+        return left != set(tokenize(text)) and left <= self._fillers
 
     def _words(self, text):
         """The reply's words, less any shrug phrase or tag in it ("who knows", "hard to say", "per se"): those say

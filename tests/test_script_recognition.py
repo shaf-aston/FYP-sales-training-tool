@@ -1235,6 +1235,10 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("05", 0, (), "who knows?", "05", "No rush"), ("02", 0, (), "up to you?", "02", "If you had to put"), ("05", 0, (), "no idea?", "05", "No rush"),   # round 71 mutation: were "I don't know that one offhand" and "I'm the AI playing the salesperson"
     ("18", 0, (), "you tell me?", "18", "Put simply"), ("19", 0, (), "hard to say?", "19", "Is this something"),
     ("05", 0, (), "why?", "05", "It helps me see"), ("01", 0, (), "who knows, money?", "goal_practical", None),   # guard: a real question, and an answer with the shrug
+    # round 72
+    ("05", 0, (), "so to speak?", "05", "No rush"), ("12", 0, (), "by and large?", "12", "No rush"), ("20", 0, (), "that said?", "20", "No rush"),   # were "I don't know that one offhand"
+    ("willing", 0, (), "that said?", "willing", "No pressure"), ("02", 0, (), "really?", "02", "If you had to put"),   # were "What makes you so different" and "I don't know that one offhand"
+    ("05", 0, (), "so?", "05", "No rush"), ("19", 0, (), "yeah?", "20", None),   # guard: as before
 ]
 
 
