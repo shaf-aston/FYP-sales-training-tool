@@ -124,7 +124,6 @@ def test_a_worry_under_the_judges_line_is_not_judged(fake_embedder):
     ("03", "about 3 years, is this a scam?", ("answer", "", "about 3 years", "objection:scam", "is this a scam?")),
     ("01", "more money, how long is the course?", ("answer", "", "more money", "fact:length", "how long is the course?")),
     ("05", "nothing, why do you ask?", ("answer", "", "nothing", "sense:why_ask", "why do you ask?")),   # round 10: the reason, not "I'll find out"
-    ("03", "3 years, can you say that again?", ("question", None, None, "", "")),   # a sense leads, no side
     ("02", "dunno, which team won?", ("question", None, "which team won?", "", "")),   # no answer in the content
     ("02", "dunno, what about you?", ("sense", "about_me", "what about you?", "", "")),   # round 14: the honest line
     ("03", "shut up, what's the price?", ("fact", "price", None, "", "")),
@@ -134,6 +133,20 @@ def test_a_side_question_or_worry_is_heard_beside_the_answer(ear, step, text, he
     got = (v.kind, v.name, v.text, v.side, v.asked)
     assert all(want is None or g == want for g, want in zip(got, heard)), got
     assert v.asking == (v.kind != "objection")  # the worry is heard on its own: the question beside it is dropped
+
+
+@pytest.mark.parametrize("step, text, said", [
+    ("03", "3 years, can you say that again?", "3 years"),   # round 73 callers: "come again? 2k" lost the 2k
+    ("02", "come again? 2k", "2k"), ("05", "what was the question? money", "money"),
+])
+def test_an_answer_beside_a_say_that_again_is_kept_with_no_side(ear, step, text, said):
+    v = ear.hear(text, ScriptState(step=step), opened=False)
+    assert (v.kind, v.text, v.side) == ("answer", said, "")
+
+
+def test_say_that_again_alone_still_says_it_again(ear):
+    v = ear.hear("can you say that again?", ScriptState(step="03"), opened=False)
+    assert v.kind != "answer"   # guard: no answer beside it
 
 
 @pytest.mark.parametrize("step, text, kind, name", [   # back from "brb": the whole reply, heard as one

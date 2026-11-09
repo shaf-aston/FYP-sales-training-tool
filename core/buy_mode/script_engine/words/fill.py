@@ -50,12 +50,24 @@ def real_words(filename):
     return frozenset(w.strip().lower() for w in lines if w.strip() and not w.startswith("#"))
 
 
+_LISTED = {}
+
+
+def listed_words(cfg):
+    """Every word in the engine's own phrase lists (`spell_keep_lists`: tags, hedges, shrugs): words it hears, so
+    never typos (round 73: "a year methinks" was saved as "a year thinks")."""
+    held = _LISTED.get(id(cfg))
+    if held is None or held[0] is not cfg:
+        held = _LISTED[id(cfg)] = (cfg, frozenset(w for k in cfg["spell_keep_lists"] for p in cfg[k] for w in tokenize(p)))
+    return held[1]
+
+
 def spell(word, vocab, cfg):
     """A typo turned into the script word it is plainly meant to be ("financialy" -> "financial", "mroe" -> "more").
     Known, short or unmatched words (names, places) stay as they are, and so does a real word that is
     just not in the script ("drown" is never "down")."""
     lower, real = word.lower(), real_words(cfg["spell_real_words"])
-    if lower in vocab or any(c.isdigit() for c in lower) or lower in real or "'" in lower:
+    if lower in vocab or any(c.isdigit() for c in lower) or lower in real or "'" in lower or lower in listed_words(cfg):
         return word  # a figure ("2,500pm") is never a typo, nor a word typed with its apostrophe (round 46: "we're" was "were")
     swaps = {lower[:i] + lower[i + 1] + lower[i] + lower[i + 2:] for i in range(1, len(lower) - 1)}  # the first letter is
     # rarely the slip, and keeping it keeps slang whole: "ive" is not "vie", "abt" is not "bat"
@@ -224,7 +236,6 @@ def echo_phrase(reply, cfg, vocab=frozenset(), verbs=False):
         reply = reply.lower()  # shouted ("I WANT TO BE RICH!!!"): never said back in capitals ("BE RICH?")
     words = WORD.findall(CENSORED.sub(" ", reply or ""))  # "more f***ing money" -> "more money"
     words = [w for w in _after_want(words, cfg) if w.lower() not in cfg["echo_drop_words"]]  # "more money" from "my family needs more money"
-    words = said_once(words)  # round 45: "money money" was said back twice
     drops = [tokenize(d) for d in [*cfg["echo_drop_starts"], *cfg["filler_words"]]]  # "for sure, more money"
     keeps = [[w] for w in cfg["lead_not_before"]]
     cut = True
@@ -238,6 +249,7 @@ def echo_phrase(reply, cfg, vocab=frozenset(), verbs=False):
     while words and (end := max((e for e in ends if [w.lower() for w in words[-len(e):]] == e), key=len, default=None)):
         words = words[:-len(end)]  # each one, in any order (round 37: "money obviously, stupid question" kept "obviously"),
         # the longest first (round 58: "free or whatever" was "free or")
+    words = said_once(words)  # round 45: "money money" was said back twice; after the ends (round 73: "money yada yada" was "money yada")
     if len(words) > 1 and words[0].lower() in cfg["echo_drop_verbs"] and words[1].lower() not in cfg["echo_drop_verbs_not_before"]:
         words = words[1:]  # round 31: "achieve financial independence" was "by being able to achieve financial independence"
     if verbs and words:

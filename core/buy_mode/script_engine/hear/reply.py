@@ -111,10 +111,15 @@ class Reader:
         # ("no") only between two parts: "a year, no, two years" corrects, "no, credit?" says no
         self._blank = set(cfg["no_answer_words"])  # "yes, sorry": a part of only these beside others says nothing
         self._blank_end = re.compile(rf"(?<=\w)\s+((?:{any_of(cfg['no_answer_words'])})\W*)$", re.IGNORECASE)
+        self._unsure_said = {" ".join(tokenize(u)) for u in cfg["unsure_ends"]}  # round 73: "I daresay, money" was saved whole
         self._unsure_end = re.compile(rf"(?<=\w)\s+((?:{any_of(cfg['unsure_ends'])})\W*)$", re.IGNORECASE)
         self._plain = plain_words(cfg)
+        self._alone_mean = self._plain | {w for t in cfg["tags_alone_mean"] for w in tokenize(t)}  # round 73: "meh, whatever"
         # round 61: after a comma too, so "2k, that kind of thing" loses the whole tag, not just "kind of thing"
-        self._tag_end = re.compile(rf"(?<=\w)[,;]?\s+(?:{any_of(cfg['end_tags'])})\W*$", re.IGNORECASE)
+        # round 73: every tag at the end, not just the last ("and so on and so forth", "yada yada tbh")
+        self._tag_end = re.compile(rf"(?<=\w)(?:[,;]?\s+(?:{any_of(cfg['end_tags'])}))+\W*$", re.IGNORECASE)
+        # round 73: "money yeah?", "free, no?": a check at the end asks nothing; "yes or no?" picks one
+        self._check_end = re.compile(rf"(?<=\w)(?<!\bor)[,;]?\s+(?:{any_of(cfg['check_tags'])})\s*\?[\s?!.]*$", re.IGNORECASE)
         self._unsure = re.compile(rf"^\W*(?:{any_of(cfg['unsure_leads'])})\b", re.IGNORECASE)
         # round 64: the hedge stays whole only when that word ends the reply ("probably not"), so "probably yes for the money" is split
         self._unsure_lead = re.compile(rf"^\W*((?:{any_of(cfg['unsure_ends'])}))\s+(?!(?:{any_of(cfg['unsure_whole'])})\W*(?:$|[,.;!]))(?=\w)", re.IGNORECASE)
@@ -171,6 +176,10 @@ class Reader:
             if found:
                 rest, nudged = text[:found.start()].rstrip(" ,;:-"), True
                 break
+        check = self._check_end.search(rest)  # "is it free, no?" and "credit, is that ok?" still ask; "yes, no?" is torn
+        kept = rest[:check.start()] if check else ""
+        if check and set(tokenize(kept)) - self._plain and not self.asks((clauses(kept, self.breaks) or [kept])[-1] + "?"):
+            rest = kept
         rest = self._blank_end.sub(r", \1", rest)  # "yes sorry" is "yes, sorry" (round 39 callers: it was unclear)
         end = self._unsure_end.search(rest)  # round 44: "money I guess" is "money, I guess"; "yeah I guess", "stuff I guess" stay whole
         if end and set(tokenize(rest[:end.start()])) - self._plain:
@@ -203,7 +212,7 @@ class Reader:
             parts.append(part)
             unsure = act == "rise" and (acts[-1:] == ["hedge"] or self._unsure.match(part))
             acts.append("said" if unsure else act)  # "lol idk, money?", "I guess my car loan?": unsure, not asking
-        if len(cut) > 1 and set(tokenize(rest)) <= self._plain:  # round 47: "yeah, ok" lost its "yeah" and was unclear;
+        if len(cut) > 1 and set(tokenize(rest)) <= self._alone_mean:  # round 47: "yeah, ok" lost its "yeah" and was unclear;
             acts = ["said" if a == "tag" else a for a in acts]    # with no content beside it, a tag is the reply
         return Reply(text, rest, nudged, tuple(map(Part, parts, acts)))
 
@@ -230,7 +239,8 @@ class Reader:
             return "asks"
         if part.rstrip().endswith("?"):
             return "rise"
-        if several and (self._hedges(part) or self._aside.match(part) or set(tokenize(part)) <= self._blank):
+        if several and (self._hedges(part) or " ".join(tokenize(part)) in self._unsure_said or self._aside.match(part)
+                        or set(tokenize(part)) <= self._blank):
             return "hedge"  # a reply that is only a hedge is a shrug: heard whole (shrug.py); "sorry for the long
             # message" says nothing on its own either, nor "sorry" or "lol" beside an answer ("yes, sorry")
         return "said"

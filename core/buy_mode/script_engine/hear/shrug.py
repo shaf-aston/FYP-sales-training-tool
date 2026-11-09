@@ -22,7 +22,8 @@ class Shrugs:
         self._phrases = [tokenize(p) for p in cfg["shrug_phrases"]]
         # round 66: a reply of only tags ("hand on heart", "in all honesty") says nothing too; the say-back below
         # keeps them, as "like" is one and "things like money" needs it
-        tags = dict.fromkeys([*cfg["filler_tags"], *cfg["end_tags"], *cfg["filler_leads"]])
+        # round 73: never a tag said alone with a meaning of its own ("meh" alone is fed up)
+        tags = dict.fromkeys(t for t in [*cfg["filler_tags"], *cfg["end_tags"], *cfg["filler_leads"]] if t not in cfg["tags_alone_mean"])
         self._cuts = [*self._phrases, *map(tokenize, tags)]
         longest = sorted(self._phrases, key=len, reverse=True)
         self._phrase_cut = re.compile(r"\b(?:" + "|".join(r"\W+".join(map(re.escape, p)) for p in longest) + r")\b[\s,.;:!-]*", re.IGNORECASE)

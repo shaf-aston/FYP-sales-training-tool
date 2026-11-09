@@ -63,7 +63,8 @@ class Ear:
 
     def hear(self, text, state, opened):
         step = self.method.steps[state.step]
-        reply = self._unecho(self.reader.read(text), state).settle(lambda part: self._rises(part, step))
+        reply = self._unecho(self.reader.read(text), state)
+        reply = reply.settle(lambda part: self._rises(part, step, alone=len(reply.parts) == 1))
         if reply.nudged and not tokenize(reply.unnudged):
             words = list(dropwhile(self._nudge_leads.__contains__, tokenize(text)))  # round 47: "ok go on" was asked again
             if " ".join(words) in self._nudge_yes and self.method.steps[state.step].go_on_is_yes:
@@ -203,14 +204,15 @@ class Ear:
             return False
         return sum(swap.get(w, w) in asked for w in words) >= self.cfg[share] * len(words)
 
-    def _rises(self, part, step):
+    def _rises(self, part, step, alone):
         """A part ending in "?" that isn't phrased as a question is the answer said with a rise when it is short
         and has the step's shape ("dunno, a year?" to "how long?") or is about them ("my job?": nothing to ask the
         seller), it opens with a reason ("because money is nice?"), or it is only filler words ("ok?"); else it
-        asks ("what's this going to cost me?")."""
+        asks ("what's this going to cost me?"). `alone`: the part is the whole reply, where a plain no ("no?")
+        answers too; beside a question ("is it free, no?") it is part of what they ask."""
         words = tokenize(part)
-        if self._reason(part) or self._shrugs.filler(part):  # whole calls: "ok?" got "I'll find out"
-            return True
+        if self._reason(part) or self._shrugs.filler(part) or (alone and self._shrugs.plain_no(part)):  # whole calls:
+            return True  # "ok?" got "I'll find out"; round 73: "no?" alone too, at every step
         if len(words) > self.cfg["rise_answer_words"]:
             return False
         return words[0] in self.cfg["prospect_pronouns"] or bool(step.needs) and self.shaped(part, step)  # round 28: "my job?" got "I'll find out"
@@ -224,7 +226,7 @@ class Ear:
         """Content that answers the step, beside a question a one-line reply covers ("i guess 3 years, what
         about you?", "nothing, why do you ask?"): the answer is kept and the question answered in front of the
         next line. A worry in the content leads instead ("5k? that's a lot"), whatever is asked beside it. None, so
-        the question leads as it always did, when the question is a worry after the price, "say that again?", a
+        the question leads as it always did, when the question is a worry after the price, a pause or goodbye, a
         shortcut, or itself one of the step's answers beside a "no", after a pause, or when the content is no
         answer. A question that picks one of the step's answers beside a plain one ("yeah I'm in, how do I
         pay?") is that answer, heard alone."""
@@ -244,8 +246,9 @@ class Ear:
             return Verdict("answer", text=reply.asked, asking=True)
         kind, name = self._interrupt(reply.asked, step, state, opened, True)
         sense = self.sense.interruptions[name] if kind == "sense" else None
-        # "what do you mean? money I suppose": a sense that asks for other words, then their own answer, is the answer
-        reworded = sense and not sense.with_answer and sense.after.startswith("rephrase")
+        # "what do you mean? money I suppose": a sense that asks for other words, then their own answer, is the answer;
+        # round 73: so is one that asks for the same words ("come again? 2k" lost the 2k). A pause or goodbye leads
+        reworded = sense and not sense.with_answer and (sense.after == "ask" or sense.after.startswith("rephrase"))
         if kind in ("ready", "answer") or (kind == "objection" and opened) or (sense and not sense.with_answer and not reworded):
             return None  # "say that again?" leads
         if within:  # the content is a sense, no answer ("shut up"): it leads only beside a plain question

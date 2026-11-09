@@ -674,8 +674,8 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("quit stuff like that", "quit my job", ""), ("money and all that", "money", ""), ("2k or something like that", "2k", ""),
     ("literally money", "money", ""), ("personally, money", "money", ""), ("for me personally 2k", "2k", ""),   # round 58: saved with the lead
     ("ya know, 2k", "2k", ""), ("at the end of the day money", "money", ""), ("for me, quit", "quit my job", ""),
-    ("I guess money", "money", ""), ("probably money", "probably, money", ""), ("I reckon 2k", "I reckon, 2k", ""),   # round 58: a hedge first
-    ("money probably", "money, probably", ""), ("quit I think", "quit, I think", ""),   # round 58: and after
+    ("I guess money", "money", ""), ("probably money", "money", ""), ("I reckon 2k", "2k", ""),   # round 58: a hedge first
+    ("money probably", "money", ""), ("quit I think", "quit my job", ""),   # round 58: and after
     ("probably not", "probably not", ""), ("I think so", "I think so", ""), ("I guess not", "I guess not", ""),   # guard: the hedge is the answer
     ("maybe later", "maybe later", ""), ("for me it's money", "for me it's money", ""),   # guard: "maybe" is not split; no break
     ("money tho", "money", ""), ("2k anyway", "2k", ""), ("money big time", "money", ""),   # round 59: saved whole
@@ -709,13 +709,13 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("money personally", "money", ""), ("money for me personally", "money", ""), ("money if that make sense", "money", ""),   # round 58 mutation: no row had these
     ("money ya know", "money", ""), ("money and stuff like that", "money", ""),
     ("personally money", "money", ""), ("y'know money", "money", ""), ("ya know money", "money", ""),
-    ("money probs", "money, probs", ""), ("money prolly", "money, prolly", ""), ("money perhaps", "money, perhaps", ""), ("money possibly", "money, possibly", ""),
-    ("probs money", "probs, money", ""), ("prolly money", "prolly, money", ""), ("perhaps money", "perhaps, money", ""), ("possibly money", "possibly, money", ""),
+    ("money probs", "money", ""), ("money prolly", "money", ""), ("money perhaps", "money", ""), ("money possibly", "money", ""),
+    ("probs money", "money", ""), ("prolly money", "money", ""), ("perhaps money", "money", ""), ("possibly money", "money", ""),
     ("probably no", "probably no", ""), ("probably never", "probably never", ""), ("probably never, money", "probably never, money", ""),
-    ("I think so, more money", "I think so, more money", ""), ("I guess yes, quit", "I guess yes, quit", ""),
+    ("I think so, more money", "more money", ""), ("I guess yes, quit", "I guess yes, quit", ""),
     ("probably later", "probably later", ""), ("probably yeah", "probably yeah", ""), ("I think yeah", "I think yeah", ""), ("I guess ok", "I guess ok", ""),
     ("fr 2k", "2k", ""), ("fr, money", "money", ""), ("fr?", "", ""),   # round 64: "no cap 2k" (now "fr 2k") was saved with "fr"; guard: a filler with a rise, like "ok?"
-    ("probably yes for the money", "probably, yes for the money", ""), ("probably not the money", "probably, not the money", ""),   # round 64: was kept whole, so it got "What do you mean by the money?"
+    ("probably yes for the money", "yes for the money", ""), ("probably not the money", "not the money", ""),   # round 64: was kept whole, so it got "What do you mean by the money?"
     ("2k inshallah", "2k", ""), ("money fingers crossed", "money", ""), ("2k touch wood", "2k", ""), ("money god willing", "money", ""),   # round 65 callers: saved whole
     ("2k knock on wood", "2k", ""), ("money wallah", "money", ""),   # round 65: the rest of the hope words
     ("tbh 2k", "2k", ""), ("tbf money", "money", ""), ("to be honest 2k", "2k", ""),   # round 65 callers: "tbh 2k" was saved whole, while "2k tbh" lost it
@@ -764,6 +764,12 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("money though", "money", ""), ("money anyways", "money", ""), ("money mainly", "money", ""), ("money ideally", "money", ""), ("money highkey", "money", ""), ("money sort of thing", "money", ""), ("money that sort of thing", "money", ""),   # round 65 mutation: round 59-62 end tags no row had
     ("money that type of thing", "money", ""), ("money or anything like that", "money", ""), ("money essentially", "money", ""), ("money ultimately", "money", ""), ("money usually", "money", ""), ("money to start with", "money", ""), ("money whatnot", "money", ""), ("ok so yeah", "okay", ""),
     ("anyway money", "money", ""), ("anyways money", "money", ""), ("mainly money", "money", ""), ("seriously money", "money", ""), ("highkey money", "money", ""), ("ultimately money", "money", ""), ("generally money", "money", ""), ("mm money", "money", ""), ("mmm money", "money", ""),   # round 65 mutation: round 59-64 filler leads no row had
+    ("money yeah?", "money", ""), ("free, no?", "free", ""), ("2k right?", "2k", ""), ("quit, eh?", "quit my job", ""), ("money innit?", "money", ""), ("a year ok?", "a year", ""),   # round 73 callers: "money yeah?" got "What do you mean by money?", "free, no?" "I don't know that one offhand"
+    ("is it free, no?", "", "is it free, no?"), ("it's 2k, is that right?", "it's 2k", "is that right?"), ("money or no?", "", "money or no?"),   # guard: a question or a choice still asks
+    ("money yada yada", "money", ""), ("money blah blah blah", "money", ""), ("2k and all that jazz", "2k", ""), ("money and what have you", "money", ""), ("money and everything", "money", ""),   # round 73 callers: saved whole
+    ("money as you do", "money", ""), ("quit as one does", "quit my job", ""), ("money and so on and so forth", "money", ""), ("a year and so on tbh", "a year", ""), ("money meh", "money", ""),   # every tag at the end, not just the last
+    ("meh, money", "money", ""), ("meh, whatever", "meh, whatever", ""), ("everything", "everything", ""),   # round 73: "meh, money" was fed up; guard: one fed-up phrase, and a word alone
+    ("I daresay money", "money", ""), ("2k I'd imagine", "2k", ""), ("a year methinks", "a year", ""), ("money you'd think", "money", ""), ("I gather a year", "a year", ""),   # round 73 callers: saved with the hedge
 ])
 def test_a_reply_is_read_once_into_what_it_says_and_what_it_asks(text, said, asked):
     from core.buy_mode.script_engine.hear.reply import Reader
@@ -1231,7 +1237,15 @@ def test_after_restated_is_what_follows_the_part_that_says_the_question_back(sel
     ("what job?", False),                                # guard: a question word still asks
 ])
 def test_a_rise_is_an_answer_when_short_and_shaped_or_a_reason(seller, part, rises):
-    assert seller._ear._rises(part, seller.method.steps["03"]) == rises
+    assert seller._ear._rises(part, seller.method.steps["03"], True) == rises
+
+
+@pytest.mark.parametrize("part, alone, rises", [
+    ("no?", True, True), ("nope?", True, True), ("nah?", True, True),   # round 73 callers: "no?" got "I don't know that one offhand"
+    ("no?", False, False),   # guard: beside a question ("is it free, no?") it is part of what they ask
+])
+def test_a_plain_no_with_a_rise_is_an_answer_only_alone(seller, part, alone, rises):
+    assert seller._ear._rises(part, seller.method.steps["02"], alone) == rises
 
 
 def test_an_answer_with_a_worry_beside_it_keeps_the_answer(seller):

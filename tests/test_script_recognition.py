@@ -1239,6 +1239,11 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("05", 0, (), "so to speak?", "05", "No rush"), ("12", 0, (), "by and large?", "12", "No rush"), ("20", 0, (), "that said?", "20", "No rush"),   # were "I don't know that one offhand"
     ("willing", 0, (), "that said?", "willing", "No pressure"), ("02", 0, (), "really?", "02", "If you had to put"),   # were "What makes you so different" and "I don't know that one offhand"
     ("05", 0, (), "so?", "05", "No rush"), ("19", 0, (), "yeah?", "20", None),   # guard: as before
+    # round 73
+    ("05", 0, (), "money yeah?", "06", None), ("02", 0, (), "no?", "02", "If you had to put"), ("05", 0, (), "yada yada", "05", "No rush"),   # were "I don't know that one offhand" and the next step
+    ("02", 0, (), "come again? 2k", "03", None), ("19", 0, (), "touché", "20", None),   # were "Of course, let me say that again" with the 2k lost, and asked again
+    ("02", 0, (), "2k right?", "03", None), ("05", 0, (), "a year methinks", "06", None), ("05", 0, (), "meh", "06", "Fair enough"), ("19", 0, (), "no biggie", "20", None),   # guard: as before
+    ("02", 0, (), "come again?", "02", "Of course"), ("05", 0, (), "meh, whatever", "06", "Fair enough"), ("02", 0, (), "yes or no?", "02", None),   # guard: as before
 ]
 
 
