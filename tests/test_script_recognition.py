@@ -698,7 +698,7 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("19", 0, (), "I don't see myself doing this", "19", None),   # guard: still not yet
     ("01", 0, (), "well it started when my dad got ill last year and I had to take time off work and since then money has been tight and I just want to get back on my feet", "goal_practical", None),   # was "I haven't mentioned a price yet"
     ("01", 0, (), "I can't afford that", "01", "I haven't mentioned a price yet"),   # guard: paying us is still the worry
-    ("01", 0, (), "1. more money 2. more time", "goal_practical", "What are you hoping to achieve with more money?"),   # was "with 1?"
+    ("01", 0, (), "1. more money 2. more time", "goal_practical", "What are you hoping to achieve with more money, more time?"),   # was "with 1?"; full run 91: both items, as "more money,more time"
     # round 23
     ("02", 0, (), "a month?", "02", "Fair point, let me put it another way."),   # was "I'll find out"
     ("01", 0, (), "achieve?", "01", "Fair point, let me put it another way."),   # was the AI line
