@@ -235,8 +235,25 @@
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-lg);
   font-size: var(--text-sm);
-  animation: pop-in var(--dur-pop) var(--ease-pop);
+  animation: message-in var(--dur-base) var(--ease-out);
 }
+.thread {
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+  transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
+}
+.thread[data-leaving] {
+  opacity: 0;
+  transform: translateY(calc(-1 * var(--space-2)));
+}
+
+.typing {
+  display: flex;
+  align-items: center;
+  width: fit-content;
+}
+
 .buyer {
   background: var(--bg-card);
   color: var(--text-primary);

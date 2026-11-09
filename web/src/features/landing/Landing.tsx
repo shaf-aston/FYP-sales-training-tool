@@ -6,7 +6,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import { AmbientFilm } from "@/components/film/AmbientFilm";
-import { buttonClass } from "@/components/ui";
+import { buttonClass, TypingDots } from "@/components/ui";
 import { config } from "@/lib/config";
 import { challenge, demoChat, features, heroWords, objections, steps } from "./content";
 import s from "./Landing.module.css";
@@ -39,8 +39,27 @@ function trackPointer(e: PointerEvent<HTMLElement>) {
 }
 
 function LiveDemo() {
-  // One extra tick shows the whole chat before it restarts.
-  const shown = useTicker(demoChat.length + 1, landing.demoStepMs, demoChat.length) + 1;
+  // Each message: typing dots, then the bubble. After the last one the chat
+  // holds, fades out, and restarts, so nothing ever snaps away.
+  const n = demoChat.length;
+  const [step, setStep] = useState(n * 2); // even = typing, odd = shown; n*2 = hold
+  const [leaving, setLeaving] = useState(false);
+  useEffect(() => {
+    if (prefersReducedMotion()) return;
+    const typingMs = landing.demoStepMs * 0.45;
+    let id: ReturnType<typeof setTimeout>;
+    if (leaving) {
+      id = setTimeout(() => { setLeaving(false); setStep(0); }, 600);
+    } else if (step >= n * 2) {
+      id = setTimeout(() => setLeaving(true), landing.demoStepMs * 1.5);
+    } else {
+      id = setTimeout(() => setStep(step + 1), step % 2 === 0 ? typingMs : landing.demoStepMs);
+    }
+    return () => clearTimeout(id);
+  }, [step, leaving, n]);
+
+  const visible = Math.ceil(step / 2);
+  const typing = !leaving && step < n * 2 && step % 2 === 0 ? demoChat[step / 2] : null;
   return (
     <div className={s.demo} aria-label="Example practice chat" role="img">
       <div className={s.demoBar}>
@@ -48,11 +67,18 @@ function LiveDemo() {
         <span>Live practice</span>
         <span className={s.stage}>Stage · Objection</span>
       </div>
-      {demoChat.slice(0, shown).map((m, i) => (
-        <p key={i} className={`${s.bubble} ${s[m.who]}`}>
-          {m.text}
-        </p>
-      ))}
+      <div className={s.thread} data-leaving={leaving || undefined}>
+        {demoChat.slice(0, visible).map((m, i) => (
+          <p key={i} className={`${s.bubble} ${s[m.who]}`}>
+            {m.text}
+          </p>
+        ))}
+        {typing && (
+          <span className={`${s.bubble} ${s.typing} ${s[typing.who]}`}>
+            <TypingDots />
+          </span>
+        )}
+      </div>
     </div>
   );
 }
