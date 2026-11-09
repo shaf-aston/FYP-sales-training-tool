@@ -16,6 +16,7 @@ A yes and no said together (`flip_leads`: "no yeah", "yeah no") mean the last on
 """
 
 import re
+import unicodedata
 from dataclasses import dataclass, replace
 
 from core.buy_mode.script_engine.config import plain_words
@@ -45,7 +46,7 @@ class Reply:
         kept = [p for p in self.parts if p.act in acts]
         if len(kept) == len(self.parts):  # nothing left out: the reply as typed, never re-punctuated
             if all(p.act == "said" for p in kept):  # round 48: "maybe money?" got "What do you mean by money?";
-                return self.unnudged.rstrip(" ?")     # a "?" on what they said goes, as when parts are joined
+                return _span(self.unnudged, kept).rstrip(" ?")  # a "?" on what they said goes, as when parts are joined
             return self.unnudged
         return ", ".join(p.text.rstrip("?").strip() if p.act == "said" else p.text for p in kept)
 
@@ -65,13 +66,26 @@ class Reply:
         return self._joined({"said", "asks"}) if any(p.act in ("said", "asks") for p in self.parts) else self.unnudged
 
 
+def _span(text, parts):
+    """The reply as typed, from its first part on: a break word before it goes, and marks and emoji on the end
+    (round 76 callers: "so 2k", "money!!" and "money 🙂" were saved whole; "I think so" keeps its "so").
+    The parts joined when the first was reworded ("so, quit" -> "quit my job")."""
+    start = text.find(parts[0].text)
+    if start < 0:
+        return ", ".join(p.text for p in parts)
+    kept = text[start:]
+    return kept.rstrip("".join(c for c in set(kept) if unicodedata.category(c) in ("So", "Mn")) + " !.…") or kept
+
+
 def break_pattern(cfg):
     """The one place a reply is cut: at `clause_breaks` (punctuation only before a space or the end, so "2.5k"
     stays whole, and a comma also before a letter: "more money,more time"; words as whole words)."""
     ends = {",": r"(?=\s|$|[^\W\d])"}
-    keep = "|".join(map(re.escape, cfg["break_not_before"]))  # round 74: "thanks so much" was "thanks" and "much"
-    keep = rf"(?!\W+(?:{keep})\b)" if keep else ""
-    parts = [rf"\b{re.escape(b)}\b{keep}" if b.isalpha() else re.escape(b) + ends.get(b, r"(?=\s|$)") for b in cfg["clause_breaks"]]
+
+    def keep(b):  # round 74: "thanks so much" was "thanks" and "much"; round 76: a pair ("so that") keeps that break only
+        words = [w.split()[-1] for w in cfg["break_not_before"] if " " not in w or w.split()[0] == b]
+        return rf"(?!\W+(?:{'|'.join(map(re.escape, words))})\b)" if words else ""
+    parts = [rf"\b{re.escape(b)}\b{keep(b)}" if b.isalpha() else re.escape(b) + ends.get(b, r"(?=\s|$)") for b in cfg["clause_breaks"]]
     return re.compile("|".join(parts), re.IGNORECASE)
 
 
@@ -114,7 +128,8 @@ class Reader:
         self._blank = set(cfg["no_answer_words"])  # "yes, sorry": a part of only these beside others says nothing
         self._blank_end = re.compile(rf"(?<=\w)\s+((?:{any_of(cfg['no_answer_words'])})\W*)$", re.IGNORECASE)
         self._unsure_said = {" ".join(tokenize(u)) for u in cfg["unsure_ends"]}  # round 73: "I daresay, money" was saved whole
-        self._unsure_end = re.compile(rf"(?<=\w)\s+((?:{any_of(cfg['unsure_ends'])})\W*)$", re.IGNORECASE)
+        # round 76: after a dash too ("free - i guess" was saved whole)
+        self._unsure_end = re.compile(rf"(?<=\w)(?:\s+[–—-])?\s+((?:{any_of(cfg['unsure_ends'])})\W*)$", re.IGNORECASE)
         self._plain = plain_words(cfg)
         alone = {w for t in cfg["tags_alone_mean"] for w in tokenize(t)}
         self._alone_mean = self._plain | alone  # round 73: "meh, whatever"
@@ -144,6 +159,8 @@ class Reader:
         self._bare = re.compile(rf"\d+(?:[.,]\d+)?|(?:{any_of(cfg['number_words'])})", re.IGNORECASE)  # "2k" has its unit
         self._fix_back = re.compile(rf"(?<=\w){not_mid}[,;.!?]\s*(?:{mid}|{word})\s+(?=\w)", re.IGNORECASE)
         self._denied = re.compile(rf"^\W*(?:{any_of(cfg['denied_leads'])})\s+(?=\w)", re.IGNORECASE)  # "not a year, two"
+        self._marks = re.compile(r"[?!]*\?[?!]*(?=\s|$)")
+        self._bracket_end = re.compile(r"(?<=\S)\s*\(([^()]*)\)\W*$")
         self._cfg = cfg
 
     def _figure(self, text):
@@ -175,12 +192,16 @@ class Reader:
         return " ".join([new, *before[said[-1] + 1:]]) if bare else new
 
     def read(self, text):
-        rest, nudged = text, False
+        rest = marked = self.squash(text)
+        nudged = False
         for nudge in self._nudges:
-            found = nudge.search(text)
+            found = nudge.search(marked)
             if found:
-                rest, nudged = text[:found.start()].rstrip(" ,;:-"), True
+                rest, nudged = marked[:found.start()].rstrip(" ,;:-"), True
                 break
+        aside = self._bracket_end.search(rest)  # round 76: "money (mostly)", "a year (sorry)" were saved whole;
+        if aside and tokenize(rest[:aside.start()]) and self._act(aside.group(1), True) in ("tag", "hedge"):
+            rest = rest[:aside.start()]  # "quit (my job)" and "2k (maybe more)" keep theirs
         check = self._check_end.search(rest)  # "is it free, no?" and "credit, is that ok?" still ask; "yes, no?" is torn
         kept = rest[:check.start()] if check else ""
         if check and set(tokenize(kept)) - self._plain and not self.asks((clauses(kept, self.breaks) or [kept])[-1] + "?"):
@@ -214,14 +235,18 @@ class Reader:
         for part in cut:
             part, led = self._unlead(part)
             act = "asks" if led else self._act(part, len(cut) > 1)
-            if act == "said" and len(cut) > 1:  # round 47: "yeah. quit." and "quit lol" were "quit" the call
-                part = short_form(part, self._cfg) or part
+            if act == "said" and (len(cut) > 1 or part != rest):  # round 47: "yeah. quit." and "quit lol" were "quit" the call;
+                part = short_form(part, self._cfg) or part  # round 76: "so, quit" too, once its "so" went
             parts.append(part)
             unsure = act == "rise" and (acts[-1:] == ["hedge"] or self._unsure.match(part))
             acts.append("said" if unsure else act)  # "lol idk, money?", "I guess my car loan?": unsure, not asking
         if len(cut) > 1 and set(tokenize(rest)) <= self._alone_mean:  # round 47: "yeah, ok" lost its "yeah" and was unclear;
             acts = ["said" if a == "tag" else a for a in acts]    # with no content beside it, a tag is the reply
         return Reply(text, rest, nudged, tuple(map(Part, parts, acts)))
+
+    def squash(self, text):
+        """A run of end marks with a "?" in it is one "?" (round 76 callers: "money?!" was a question it could not answer)."""
+        return self._marks.sub("?", text)
 
     def _unlead(self, part):
         """A part opening with a polite lead (`ask_leads`: "I was wondering how this works") is the question

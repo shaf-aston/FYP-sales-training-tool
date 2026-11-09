@@ -781,6 +781,13 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("money or so i think", "money", ""), ("a year or so i guess", "a year", ""),   # round 75: "money or so i think" was "money or"
     ("2k I'd wager", "2k", ""), ("whatevs money", "money", ""), ("2k I dare say", "2k", ""), ("money I imagine", "money", ""), ("meh money", "money", ""),   # round 73 mutation: no row had these
     ("money and stuff", "money", ""), ("freedom and things", "freedom", ""), ("2-3k", "2-3k", ""), ("a year - maybe two", "a year - maybe two", ""), ("money - and freedom", "money - and freedom", ""),   # round 75: "money and stuff" was saved whole; guards: a dash between answers stays
+    ("to answer your question, money", "money", ""), ("to answer the question: money", "money", ""), ("to answer that money", "money", ""), ("in answer to your question, money", "money", ""), ("short answer: money", "money", ""), ("the short answer money", "money", ""), ("short answer is, money", "money", ""), ("the short answer is: money", "money", ""), ("simple answer money", "money", ""), ("the simple answer, money", "money", ""), ("simple answer is: money", "money", ""), ("the simple answer is money", "money", ""), ("honest answer, money", "money", ""), ("my honest answer: money", "money", ""), ("honest answer is money", "money", ""), ("the honest answer is, money", "money", ""), ("my honest answer is: money", "money", ""), ("quick answer money", "money", ""), ("the quick answer is, money", "money", ""), ("my answer is: money", "money", ""), ("my answer would be money", "money", ""), ("the answer is, money", "money", ""), ("i'd have to say: money", "money", ""), ("i would have to say money", "money", ""), ("i have to say, money", "money", ""), ("if i had to say: money", "money", ""), ("if i had to pick money", "money", ""), ("if i had to choose, money", "money", ""),   # round 76 callers: "to answer your question, money" was said back whole, "short answer: 2k" saved whole
+    ("honest answer? free", "free", ""), ("I'd have to say free", "free", ""), ("to answer to no one", "to answer to no one", ""),   # round 76; guard: a goal that starts like one
+    ("so... money", "money", ""), ("so 2k", "2k", ""), ("and money", "money", ""), ("so yeah free", "free", ""), ("so that I can quit", "so that I can quit", ""), ("so much money", "so much money", ""),   # round 76 callers: a lead "so" was saved; guards
+    ("money (mostly)", "money", ""), ("no idea (sorry)", "no idea", ""), ("free (ish)", "free", ""), ("2k (maybe more)", "2k (maybe more)", ""), ("quit (my job)", "quit (my job)", ""),   # round 76 callers: a tag in brackets was saved; guards: words that say something
+    ("money?!", "", "money?"), ("what?!", "", "what?"), ("free!?", "", "free?"), ("2k!!!", "2k", ""), ("my boss!!", "my boss", ""), ("money 🙂", "money", ""), ("a year 😕", "a year", ""),   # round 76 callers: "money?!" was a question it could not answer, "2k!!!" and "money 🙂" were saved whole
+    ("2k. roughly", "2k", ""), ("2k - ish", "2k", ""), ("my boss smh", "my boss", ""), ("free - i guess", "free", ""), ("2k+", "2k+", ""),   # round 76 callers: saved whole; guard: a plus says more
+    ("so, quit", "quit my job", ""), ("so... quit", "quit my job", ""),   # round 76: "so, quit" ended the call once "so" went
 ])
 def test_a_reply_is_read_once_into_what_it_says_and_what_it_asks(text, said, asked):
     from core.buy_mode.script_engine.hear.reply import Reader
@@ -808,6 +815,7 @@ def test_every_listed_tag_beside_an_answer_is_cut():
 @pytest.mark.parametrize("text, parts", [
     ("thanks so much", ["thanks so much"]), ("nothing so far", ["nothing so far"]), ("so many bills", ["so many bills"]),   # round 74: "thanks so much" was "thanks" and "much", and "much" was kept as the answer
     ("money so I can quit", ["money", "I can quit"]), ("money and time", ["money", "time"]),   # guard: still a break
+    ("money so that I can quit", ["money so that I can quit"]), ("2k and that's it", ["2k", "that's it"]),   # round 76: "so that" stays whole; guard: the pair is for "so" only
 ])
 def test_so_before_much_is_not_a_break(text, parts):
     from core.buy_mode.script_engine.hear.reply import break_pattern, clauses
@@ -1496,6 +1504,7 @@ def test_a_comma_with_no_space_breaks_but_never_inside_a_number(text, parts):
     ("what? y", [("what?", "asks"), ("yes", "said")]),
     ("quit? no", [("quit?", "rise"), ("no", "said")]),   # guard: only a part said, never one asked
     ("quit", [("quit", "said")]),                         # guard: alone it is still leaving
+    ("so, quit", [("quit my job", "said")]), ("and quit", [("quit my job", "said")]),   # round 76: once its "so" went, "quit" was bare and ended the call
 ])
 def test_a_short_form_next_to_another_part_is_its_word(text, parts):
     from core.buy_mode.script_engine.hear.reply import Reader
@@ -1544,7 +1553,7 @@ def test_like_everyone_after_the_answer_is_a_tag(text, meant):
 
 
 @pytest.mark.parametrize("said, step, slots", [
-    ("no wait, I meant 3k, and a year", "04", {"number": "3k", "years": "and a year"}),   # round 29 callers: "a year" was lost, 03 asked again
+    ("no wait, I meant 3k, and a year", "04", {"number": "3k", "years": "a year"}),   # round 29 callers: "a year" was lost, 03 asked again; round 76: saved without its "and"
     ("sorry I meant 3k not 2k", "03", {"number": "3k"}),   # guard: a fix alone asks the step again
 ])
 def test_a_fix_with_this_steps_answer_after_it_keeps_both(seller, said, step, slots):

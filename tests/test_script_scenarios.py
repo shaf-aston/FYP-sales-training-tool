@@ -771,7 +771,7 @@ WORDS = {"thinks", "dare", "whats", "year", "money"}
 
 
 @pytest.mark.parametrize("text, vocab", [("a year methinks", WORDS), ("money i daresay", WORDS), ("money whatevs", WORDS),
-                                         ("money whatnot", {"whatnow"}), ("money truthfully", {"truthfull"})])  # round 75: end and filler tags
+                                         ("money whatnot", {"whatnow"}), ("money truthfully", {"truthfull"}), ("yup money", {"ypu"})])  # round 75: end and filler tags, leads
 def test_a_tag_in_a_listed_tag_list_is_never_a_typo(text, vocab):
     """Round 73 callers: "a year methinks" was saved as "a year thinks", one letter from a script word."""
     from core.buy_mode.script_engine.words.fill import fix_typos
@@ -1357,7 +1357,7 @@ def test_echo_phrase_fixes_typos(reply, phrase):
     ("dbt", "debit"), ("I reckon", "I think"), ("probs", "probably"), ("prolly", "probably"),   # round 58 callers: unclear, saved whole
     ("I reckon money", "I think money"), ("probs not", "probably not"),
     ("a dbt", "a dbt"),   # guard: only the reply alone
-    ("ok :)", "ok 🙂"), (":D", "😀"), ("money :(", "money 🙁"), ("ok xD", "ok 😆"), (";)", "😉"), ("ok :/", "ok 😕"), ("ok :P", "ok 😛"),   # round 59 callers
+    ("ok :)", "okay 🙂"), (":D", "😀"), ("money :(", "money 🙁"), ("ok xD", "okay 😆"), (";)", "😉"), ("ok :/", "okay 😕"), ("ok :P", "okay 😛"),   # round 59 callers; round 76: "ok" before a smiley is "okay", as alone
     ("see https://x.com", "see https://x.com"), ("re:Dave", "re:Dave"), ("2:30", "2:30"),   # guard: only a smiley on its own
     ("yh money", "yeah money"), ("yh", "yeah"),   # round 61 callers
     ("aye money", "yeah money"), ("aye quit", "yeah quit my job"), ("yea", "yeah"), ("Aye", "yes"),   # round 63 callers: "aye quit" was heard as leaving
@@ -1740,6 +1740,8 @@ def test_echo_phrase_leaves_out_swears_and_who_wants_it(reply, phrase):
     ("Understood.", "okay."), ("noted", "okay"), ("Got it", "okay"),   # round 38 callers: "Understood." was kept as the answer
     ("sound", "okay"), ("why not", "yes"), ("ok why not", "ok yes"),   # round 52 callers: "sound" was "say that again", "why not" a no
     ("I got it from my dad", "I got it from my dad"),   # guard: only the whole reply
+    ("quit 🙁", "quit my job 🙁"), ("quit :(", "quit my job 🙁"), ("ok 👍", "okay 👍"),   # round 76 callers: the emoji went from what was saved, so "quit" was bare and ended the call
+    ("quit 🙁 now", "quit 🙁 now"), ("money 🙂", "money 🙂"),   # guard: only an emoji on the end
 ])
 def test_a_short_form_alone_is_its_word(text, fixed):
     from core.buy_mode.script_engine.words.fill import fix_typos

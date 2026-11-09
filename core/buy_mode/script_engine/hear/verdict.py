@@ -63,6 +63,7 @@ class Ear:
 
     def hear(self, text, state, opened):
         step = self.method.steps[state.step]
+        text = self.reader.squash(text)  # every rule reads "money?!" as "money?"
         reply = self._unecho(self.reader.read(text), state)
         reply = reply.settle(lambda part: self._rises(part, step, alone=len(reply.parts) == 1))
         if reply.nudged and not tokenize(reply.unnudged):

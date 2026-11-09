@@ -2,6 +2,7 @@
 
 import logging
 import re
+import unicodedata
 from difflib import get_close_matches
 from functools import lru_cache
 
@@ -91,6 +92,7 @@ def spell(word, vocab, cfg):
 def short_form(text, cfg):
     """A reply of one short form alone ("y", "ok I understand") as its words; "" when it is not one."""
     word = text.rstrip("?!.").lower()
+    word = word.rstrip("".join(c for c in set(word) if unicodedata.category(c) in ("So", "Mn")) + " ?!.") or word  # round 76: "quit 🙁" left the call
     if word in cfg["short_replies"]:
         return cfg["short_replies"][word] + text[len(word):]
     head, _, rest = word.partition(" ")

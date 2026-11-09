@@ -1257,6 +1257,12 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("06", 1, (), "don't know", "06", "No rush"), ("06", 1, (), "that's a tough one", "06", "No rush"), ("06", 1, (), "nothing", "08", None),   # round 74 callers: to "Is there anything you've tried so far?" saved as what they do; guard: "nothing" answers it
     ("01", 0, (), "a year. or so", "goal_practical", "What are you hoping to achieve with a year?"), ("01", 0, (), "money. or so i think", "goal_practical", "What are you hoping that would get you"),   # round 75: a tag after a full stop was kept ("a year. or so" was unclear)
     ("01", 0, (), "2k and stuff", "goal_practical", "What are you hoping to achieve with 2k?"),   # guard: as before
+    ("01", 0, (), "I'd have to say free", "goal_practical", "What are you hoping to achieve by being free?"), ("01", 0, (), "to answer your question, money", "goal_practical", "What are you hoping that would get you?"),   # round 76 callers: said back whole
+    ("01", 0, (), "short answer: 2k", "goal_practical", "What are you hoping to achieve with 2k?"), ("01", 0, (), "so... 2k", "goal_practical", "What are you hoping to achieve with 2k?"),   # round 76 callers: said back with the lead, or not at all
+    ("01", 0, (), "money?!", "01", "Fair point, let me put it another way."), ("01", 0, (), "a year (sorry)", "goal_practical", "What are you hoping to achieve with a year?"),   # round 76 callers: "I don't know that one offhand", asked again
+    ("01", 0, (), "2k (mostly)", "goal_practical", "What are you hoping to achieve with 2k?"),   # guard: as before
+    ("goal_practical", 0, (), "so, quit", "goal_practical", None), ("goal_practical", 0, (), "quit :(", "goal_practical", None),   # round 76 callers: once the "so" or the emoji went, "quit" was bare and ended the call
+    ("18", 0, (), "y 🙂", "19", "Do you see yourself jumping in?"), ("18", 0, (), "k 🙂", "19", "Do you see yourself jumping in?"),   # round 76: a short form before a smiley was unclear
 ]
 
 
