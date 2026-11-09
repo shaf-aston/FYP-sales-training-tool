@@ -1377,6 +1377,8 @@ def test_echo_phrase_fixes_typos(reply, phrase):
     ("count me in later", "count me in later"), ("all good things", "all good things"),   # guard: only the reply alone
     ("A: money", "money"), ("Answer: quit", "quit my job"), ("a) a year", "a year"), ("A) 2k", "2k"), ("Me: 2k", "2k"), ("Ans: 2k", "2k"), ("Reply: money", "money"), ("> free", "free"), ("1. my boss", "my boss"),   # round 77 callers: the label was saved with the answer ("a money")
     ("no, no idea", "no idea"), ("I, I want money", "I want money"), ("yes, yes", "yes"), ("money, money, money", "money"), ("n/a", "not sure"), ("tbd", "not sure"), ("TBC", "not sure"),   # round 78 callers: "no, no idea" was a no, "n/a" saved as the reason
+    ("ditto", "same"), ("what I said", "same"), ("like I said", "same"), ("as I said", "same"), ("both", "same"),   # round 79 callers: "ditto" was saved, "both" got "let me say that again"
+    ("both of them", "both of them"), ("a bit of both", "a bit of both"), ("what I said before", "same"),   # guard: only the reply alone
     ("no, not sure", "no, not sure"), ("2k, maybe 2k", "2k, maybe 2k"), ("no, nobody", "no, nobody"), ("time, time and money", "time and money"),   # guard: other words after the comma stay
     ("a year", "a year"), ("a lot", "a lot"), ("me :)", "me 🙂"), ("1.5 years", "1.5 years"), ("A:money", "A:money"), (">2k", ">2k"), (">5 years", ">5 years"),   # guard: a label needs its ":" or ")" and a space after
 ])

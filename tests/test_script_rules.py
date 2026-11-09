@@ -788,6 +788,8 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("money?!", "", "money?"), ("what?!", "", "what?"), ("free!?", "", "free?"), ("2k!!!", "2k", ""), ("my boss!!", "my boss", ""), ("money 🙂", "money", ""), ("a year 😕", "a year", ""),   # round 76 callers: "money?!" was a question it could not answer, "2k!!!" and "money 🙂" were saved whole
     ("2k. roughly", "2k", ""), ("2k - ish", "2k", ""), ("my boss smh", "my boss", ""), ("free - i guess", "free", ""), ("2k+", "2k+", ""),   # round 76 callers: saved whole; guard: a plus says more
     ("so, quit", "quit my job", ""), ("so... quit", "quit my job", ""),   # round 76: "so, quit" ended the call once "so" went
+    ("so like money", "money", ""), ("so like quit my job", "quit my job", ""), ("and like 2k", "2k", ""), ("like so money", "money", ""), ("um so like money", "money", ""),   # round 79 callers: "so like money" got "let me put it another way"
+    ("so like what?", "", "so like what?"), ("so well paid job", "well paid job", ""), ("so like", "", ""),   # guard: a question still asks; a break word alone is no filler
 
     ("money x", "money", ""), ("quit xx", "quit my job", ""), ("the x factor", "the x factor", ""),   # round 77 callers: a kiss was said back ("with money x?"); guard: only on the end
     ("yes why?", "yes", "why?"), ("money why do you want to know?", "money", "why do you want to know?"), ("money, why?", "money", "why?"),   # round 77 callers: "yes why?" was all asked, no yes

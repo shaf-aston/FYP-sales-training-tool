@@ -1275,6 +1275,10 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("goal_practical", 0, (), "eh?", "goal_practical", "Fair point"), ("20", 0, (), "nah", "19", "No pressure"), ("goal_identity", 0, (), "gimme a sec", "goal_identity", "No problem, take your time."),   # guard: as before
     ("05", 0, (), "I don't know why?", "05", "No rush"), ("05", 0, (), "not sure why", "05", "No rush"), ("05", 0, (), "no idea why?", "05", "No rush"),   # round 78 mutation: were "It helps me see" (round 77's cut), the reason saved, and "I'll find out"
     ("22", 0, (), "payment link please", "end", "Perfect."),   # round 78: was "credit or debit?" again
+    ("01", 0, (), "um so like money I guess", "goal_practical", "What are you hoping that would get you?"), ("01", 0, (), "so like freedom", "goal_practical", None),   # round 79 callers: were "let me put it another way"
+    ("05", 0, (), "both", "05", "No rush"), ("05", 0, (), "like I said", "05", "No rush"), ("05", 0, (), "ditto", "05", "No rush"), ("05", 0, (), "what I said", "05", "No rush"),   # round 79 callers: were "let me say that again", or saved as the reason
+    ("05", 0, (), "unsure", "05", "No rush"), ("05", 0, (), "I am uncertain", "05", "No rush"),   # round 79 callers: were "What do you mean by unsure?", and saved as the reason
+    ("01", 0, (), "so like what?", "01", "Fair point"), ("05", 0, (), "a bit of both", "06", None),   # guard: as before
 ]
 
 

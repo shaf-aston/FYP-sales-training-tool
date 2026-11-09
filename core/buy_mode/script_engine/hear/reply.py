@@ -150,7 +150,9 @@ class Reader:
         self._ask_lead = re.compile(rf"^\W*(?:{any_of(cfg['ask_leads'])})\b\W*", re.IGNORECASE)
         flips = "|".join(rf"{re.escape(a)}\W+(?={re.escape(b)}\s*(?:[,;.!?]|$))" for a, b in map(tokenize, cfg["flip_leads"]))
         self._flip = re.compile(rf"^\W*(?:{flips})", re.IGNORECASE)  # "no yeah" is a yes, "yeah no" a no: the last word counts
-        self._filler_lead = re.compile(rf"^\W*(?:(?:{any_of(cfg['filler_leads'])})\b(?!\W+(?:{any_of(cfg['lead_not_before'])})\b)\W*)+",
+        joins = any_of([b for b in cfg["clause_breaks"] if b.isalpha()])  # round 79: "so like money" got "let me put it another way"
+        fillers = any_of(cfg["filler_leads"])  # a break word only between fillers: "so that I can quit" stays whole
+        self._filler_lead = re.compile(rf"^\W*(?:(?:{fillers})\b(?!\W+(?:{any_of(cfg['lead_not_before'])})\b)\W*|(?:{joins})\W+(?=(?:{fillers})\b))+",
                                        re.IGNORECASE)  # round 54: "oh wow ok" is "ok"; "well paid job" keeps its "well"
         self._answer_lead = re.compile(rf"^\W*(?:{any_of(cfg['answer_leads'])})\b\W*", re.IGNORECASE)
         self._take_back = re.compile(rf"(?:^|[,;.!?]\s*)(?:(?:{words})\b[\s,;.!-]*|(?:{word})\s*[,;.!-][\s,;.!-]*)(?=\w)"
