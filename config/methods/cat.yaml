@@ -535,6 +535,8 @@ steps:
           - "whichever is easier"
           - "yes, let's do it"
           - "debit, I don't do credit"   # draft: round 26 callers, "debit because I don't do credit" was asked again
+          - "send me the link"   # draft: round 76 replay, "send me the link" here got "What do you need to think over?"
+          - "send me the payment link"   # draft
         then: "end"
       backs_out: *backs_out
       how:   # draft: whole calls, "how do I pay?" got "I'll find out"; the choice again answers it

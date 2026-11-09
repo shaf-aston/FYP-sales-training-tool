@@ -1263,6 +1263,8 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("01", 0, (), "2k (mostly)", "goal_practical", "What are you hoping to achieve with 2k?"),   # guard: as before
     ("goal_practical", 0, (), "so, quit", "goal_practical", None), ("goal_practical", 0, (), "quit :(", "goal_practical", None),   # round 76 callers: once the "so" or the emoji went, "quit" was bare and ended the call
     ("18", 0, (), "y 🙂", "19", "Do you see yourself jumping in?"), ("18", 0, (), "k 🙂", "19", "Do you see yourself jumping in?"),   # round 76: a short form before a smiley was unclear
+    ("22", 0, (), "send me the link", "end", "Perfect."), ("22", 0, (), "yes, send me the link", "end", "Perfect."), ("22", 0, (), "the link please", "end", "Perfect."),   # round 76 replay: were "What do you need to think over?" and the fallback
+    ("22", 0, (), "send me some information", "m_think_what", None),   # guard: still research
 ]
 
 

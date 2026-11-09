@@ -200,7 +200,7 @@ class Reader:
                 rest, nudged = marked[:found.start()].rstrip(" ,;:-"), True
                 break
         aside = self._bracket_end.search(rest)  # round 76: "money (mostly)", "a year (sorry)" were saved whole;
-        if aside and tokenize(rest[:aside.start()]) and self._act(aside.group(1), True) in ("tag", "hedge"):
+        if aside and self._act(aside.group(1), True) in ("tag", "hedge"):
             rest = rest[:aside.start()]  # "quit (my job)" and "2k (maybe more)" keep theirs
         check = self._check_end.search(rest)  # "is it free, no?" and "credit, is that ok?" still ask; "yes, no?" is torn
         kept = rest[:check.start()] if check else ""
