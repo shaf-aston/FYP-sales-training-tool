@@ -1515,6 +1515,7 @@ def test_the_question_said_back_before_an_answer_is_talk(seller, step, text, act
 @pytest.mark.parametrize("step, text, meant", [
     ("01", "achieve? dunno", "dunno"), ("goal_practical", "achieve? lol", "lol"), ("03", "how long? dunno", "dunno"),
     ("04", "the reason? dunno", "dunno"), ("05", "money? idk", "idk"), ("04", "money? quit? dunno", "dunno"),   # round 84 callers: a word wondered about, then a shrug, got "I'll find out"
+    ("04", "the reason? who knows", "who knows"), ("05", "money? hard to say", "hard to say"),   # mutation 91: a shrug phrase, not only a blank word
 ])
 def test_a_shrug_after_the_question_said_back_is_the_shrug_alone(seller, step, text, meant):
     """Round 83 callers: "achieve? dunno" got "I'm the AI playing the salesperson"."""
