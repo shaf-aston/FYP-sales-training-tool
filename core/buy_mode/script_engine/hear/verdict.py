@@ -53,6 +53,7 @@ class Ear:
         self._breaks = break_pattern(cfg)
         self._nudge_yes = {" ".join(tokenize(p)) for p in cfg["nudge_yes"]}
         self._nudge_leads = frozenset(cfg["nudge_leads"])
+        self._wants_more = [tokenize(p) for p in cfg["wants_more_starts"]]  # round 98: "more than I have now"
         backs = [*cfg["reason_backs"], *(k for k, v in cfg["short_replies"].items() if v in cfg["reason_backs"])]  # "k", "ofc"
         backs, reasons = (r"\W+".join(map(re.escape, tokenize(p))) for p in backs), map(re.escape, cfg["reason_starts"])
         backs = "|".join(sorted(backs, key=len, reverse=True))
@@ -482,7 +483,8 @@ class Ear:
         objections = self.method.objections.items()
         if not asking and self._backed.match(text):
             objections = ()  # round 52: "yes because I need the money" says why yes; it is no money worry
-        elif not opened and not asking and (step.doubts_answer or self._reason(text)):
+        elif not opened and not asking and (step.doubts_answer or self._reason(text)
+                                             or any(tokenize(text)[:len(p)] == p for p in self._wants_more)):
             objections = ()  # "money's tight" answers "what holds you back", "because money is tight" any step;
             # "is this a scam?" still asks
         elif not opened and asking:

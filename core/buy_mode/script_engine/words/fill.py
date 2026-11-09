@@ -277,6 +277,9 @@ def echo_phrase(reply, cfg, vocab=frozenset(), verbs=False):
     while len(parts) > 1 and tokenize(parts[0])[:1] and tokenize(parts[0])[0] in cfg["echo_reason_starts"]:
         parts = parts[1:]  # round 42: "because I'm broke, more money" -> "more money"
     reply = ",".join(parts)
+    ifs, thens = ("|".join(map(re.escape, cfg[k])) for k in ("echo_if_starts", "echo_if_thens"))
+    if_then = re.match(rf"\W*(?:{ifs})\s+\S.*?\s(?:{thens})\s+(?=\w)", reply, re.IGNORECASE)
+    reply = reply[if_then.end():] if if_then else reply  # round 98: "if I had money I'd quit" -> "quit"
     cut = "|".join(map(re.escape, cfg["echo_cut_at"]))
     head = re.split(rf"\b(?:{cut})\b", reply, maxsplit=1, flags=re.IGNORECASE)[0]  # "quit my job but I'm scared"
     reply = head if tokenize(head) else reply  # round 45: "so I can travel" starts with one, nothing to cut

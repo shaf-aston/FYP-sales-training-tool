@@ -1351,6 +1351,9 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("01", 0, (), "gotta get that bread", "goal_practical", "What are you hoping to achieve by being able to get that money?"), ("01", 0, (), "have to get money", "goal_practical", "What are you hoping to achieve by being able to get money?"),   # round 97 callers: the lead was said back
     ("goal_practical", 0, (), "gotta quit", "goal_practical", "What would that actually change"), ("01", 0, (), "have to support my kids", "goal_practical", "So this isn't really about the money"),   # round 97 callers: left the call, "take your time"
     ("19", 0, (), "I quit, bye", "later", None), ("01", 0, (), "gotta go", "later", None), ("05", 0, (), "hang on, I need to sort the kids out", "05", "No problem, take your time"),   # round 97 guards
+    ("01", 0, (), "more than I have now", "goal_practical", "What are you hoping to achieve with more than you have now?"), ("01", 0, (), "argent", "01", "What are you actually hoping to achieve?"),   # round 98 callers: a money worry, thanks
+    ("01", 0, (), "tysm", "01", "You're welcome"), ("01", 0, (), "if I had money I'd quit", "goal_practical", "What are you hoping to achieve by being able to quit?"),   # round 98 callers: unclear, the if part said back
+    ("01", 0, (), "gracias", "01", "You're welcome"), ("01", 0, (), "I don't have money", "01", "I haven't mentioned a price yet"),   # round 98 guards
     ("22", 0, (), "not today, tomorrow", "m_think_what", None), ("02", 0, (), "cheers, mate", "02", "You're welcome"),   # round 91 guards: still asks for time; a thank-you alone is still one
     ("03", 0, (), "since when?", "03", "Fair point"), ("04", 0, (), "for what? dunno", "04", "Fair point"), ("03", 0, (), "since 2020", "04", None),   # round 87 probes: saved as how long, "I'll find out"; guard
 ]

@@ -117,6 +117,9 @@ def _line(step, reply):
     ("whatever, more money", "02", "each month to have more money?"),
     ("gotta make more money", "06", "to make more money rather than just dream about it?"), ("have to get money", "02", "each month to get money?"),   # round 97 callers:
     ("I got to quit my job", "05", "haven't managed to quit your job?"), ("gonna be rich", "02", "each month to be rich?"),   # the lead was said back
+    ("if I had money I'd quit", "goal_practical", "by being able to quit?"), ("if I had money, I'd quit", "goal_practical", "by being able to quit?"),   # round 98 callers:
+    ("if only I had time", "goal_practical", "achieve with time?"), ("if I won the lottery I'd quit my job", "02", "each month to quit your job?"),   # the if part was said back
+    ("quit my job if I could", "02", "each month to quit your job if you could?"),   # round 98 guard: an if part after the goal stays
 ])
 def test_script_lines_echo_the_goal_in_noun_or_verb_form(reply, step, expected):
     assert expected in _line(step, reply)
