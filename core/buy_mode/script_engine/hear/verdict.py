@@ -249,12 +249,14 @@ class Ear:
         # "what do you mean? money I suppose": a sense that asks for other words, then their own answer, is the answer;
         # round 73: so is one that asks for the same words ("come again? 2k" lost the 2k). A pause or goodbye leads
         reworded = sense and not sense.with_answer and (sense.after == "ask" or sense.after.startswith("rephrase"))
-        if kind in ("ready", "answer") or (kind == "objection" and opened) or (sense and not sense.with_answer and not reworded):
-            return None  # "say that again?" leads
+        if sense and not sense.with_answer and not reworded:  # round 73: "can I go now? 2k" was "I don't know that
+            return Verdict(kind, name, reply.asked, asking=True)  # one offhand": the 2k beside it hid the goodbye
+        if kind in ("ready", "answer") or (kind == "objection" and opened):
+            return None
         if within:  # the content is a sense, no answer ("shut up"): it leads only beside a plain question
             return None if kind else Verdict(within, about, reply.said)  # "shut up, what's the price?" wants the price
-        if not self._answers_step(reply.said, step, state):
-            return None
+        if not self._answers_step(reply.said, step, state):  # "say that again? money" to "how much a month?":
+            return Verdict(kind, name, reply.asked, asking=True) if reworded else None  # no answer, so it is said again
         ahead = hear_ahead(self.method, state, reply.said)
         if reworded:
             return Verdict("answer", text=reply.said, ahead=None if ahead is state else ahead)

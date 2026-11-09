@@ -118,8 +118,8 @@ class Reader:
         # round 61: after a comma too, so "2k, that kind of thing" loses the whole tag, not just "kind of thing"
         # round 73: every tag at the end, not just the last ("and so on and so forth", "yada yada tbh")
         self._tag_end = re.compile(rf"(?<=\w)(?:[,;]?\s+(?:{any_of(cfg['end_tags'])}))+\W*$", re.IGNORECASE)
-        # round 73: "money yeah?", "free, no?": a check at the end asks nothing; "yes or no?" picks one
-        self._check_end = re.compile(rf"(?<=\w)(?<!\bor)[,;]?\s+(?:{any_of(cfg['check_tags'])})\s*\?[\s?!.]*$", re.IGNORECASE)
+        # round 73: "money yeah?", "free, no?", "money. no?": a check at the end asks nothing; "yes or no?" picks one
+        self._check_end = re.compile(rf"(?<=\w)(?<!\bor)[,;.!]?\s+(?:{any_of(cfg['check_tags'])})\s*\?[\s?!.]*$", re.IGNORECASE)
         self._unsure = re.compile(rf"^\W*(?:{any_of(cfg['unsure_leads'])})\b", re.IGNORECASE)
         # round 64: the hedge stays whole only when that word ends the reply ("probably not"), so "probably yes for the money" is split
         self._unsure_lead = re.compile(rf"^\W*((?:{any_of(cfg['unsure_ends'])}))\s+(?!(?:{any_of(cfg['unsure_whole'])})\W*(?:$|[,.;!]))(?=\w)", re.IGNORECASE)

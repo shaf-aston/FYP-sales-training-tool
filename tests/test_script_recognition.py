@@ -1244,6 +1244,10 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("02", 0, (), "come again? 2k", "03", None), ("19", 0, (), "touché", "20", None),   # were "Of course, let me say that again" with the 2k lost, and asked again
     ("02", 0, (), "2k right?", "03", None), ("05", 0, (), "a year methinks", "06", None), ("05", 0, (), "meh", "06", "Fair enough"), ("19", 0, (), "no biggie", "20", None),   # guard: as before
     ("02", 0, (), "come again?", "02", "Of course"), ("05", 0, (), "meh, whatever", "06", "Fair enough"), ("02", 0, (), "yes or no?", "02", None),   # guard: as before
+    ("02", 0, (), "money. no?", "02", "If you had to put"), ("02", 0, (), "quit. nope?", "02", "If you had to put"),   # round 73 mutation: were "I don't know that one offhand" and "Fair question"
+    ("02", 0, (), "can I go now? 2k", "later", "No problem"), ("02", 0, (), "say that again? money", "02", "Of course"),   # were "I don't know that one offhand": the words beside it hid the ask
+    ("02", 0, (), "can we stop here?", "later", "No problem"), ("19", 0, (), "can we do this another time?", "later", "No problem"),   # were "I don't know that one offhand"
+    ("05", 0, (), "how long is it. no?", "05", "It's a 6-month process"), ("19", 0, (), "hmm, yeah?", "20", None), ("19", 0, (), "can we do this", "20", None),   # guard: as before
 ]
 
 

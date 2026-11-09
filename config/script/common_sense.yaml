@@ -284,6 +284,8 @@ interruptions:
       - "see you"
       - "sorry, I'm driving"   # draft: whole calls, saved as their reason
       - "I can't talk right now"   # draft
+      - "can we stop here"   # draft: round 73 callers, said alone it got "I don't know that one offhand"
+      - "can we pick this up another time"   # draft: not "can we do this another time", it took "can we do this" (a yes)
     reply: ""   # the follow-up step says it
   not_interested:   # round 34 callers: "no thank you" to every open question was kept as the answer, 25 steps on
     draft: true
