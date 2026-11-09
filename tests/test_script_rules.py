@@ -802,6 +802,8 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
 
     ("money x", "money", ""), ("quit xx", "quit my job", ""), ("the x factor", "the x factor", ""),   # round 77 callers: a kiss was said back ("with money x?"); guard: only on the end
     ("yes why?", "yes", "why?"), ("money why do you want to know?", "money", "why do you want to know?"), ("money, why?", "money", "why?"),   # round 77 callers: "yes why?" was all asked, no yes
+    ("money ok", "money", ""), ("2k, ok", "2k", ""), ("quit k", "quit my job", ""), ("money okay?", "money", ""), ("2k ok.", "2k", ""),   # round 83 callers: the "ok" was saved with the answer
+    ("I'm doing ok", "I'm doing ok", ""), ("that's ok", "that's ok", ""), ("sounds ok", "sounds ok", ""), ("money is ok", "money is ok", ""), ("all ok", "all ok", ""), ("yes ok", "yes ok", ""), ("I think ok", "I think ok", ""), ("I'd say ok", "okay", ""),   # guards: "ok" that is the answer stays
 ])
 def test_a_reply_is_read_once_into_what_it_says_and_what_it_asks(text, said, asked):
     from core.buy_mode.script_engine.hear.reply import Reader

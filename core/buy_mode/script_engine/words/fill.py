@@ -332,6 +332,13 @@ def number_phrase(reply, rule, cfg):
         if count is None:
             continue
         part = lower[at - 1] if at >= 1 and lower[at - 1] in cfg["number_parts"] else ""  # "half a year"
+        first = at - (1 if part else 0)
+        if any(first >= len(b) and lower[first - len(b):first] == b for b in map(tokenize, cfg["number_below"])):
+            return None  # round 83 callers: "under a year" was "12 months... Damn."; less than the number is no number
+        join, top, then = (lower[i + 1:i + 4] + ["", "", ""])[:3]  # round 83 callers: "a year or two" was 12 months,
+        if join in cfg["number_range_joins"] and _count(top, cfg) is not None and (  # "1-2 years" 24: a range is its top
+                then not in (per or units) or then.rstrip("s") == word.rstrip("s")):  # "a year to 18 months" keeps its year
+            count = _count(top, cfg)
         value = count * cfg["number_parts"].get(part, 1) + (0.5 if halved else 0)
         if per:
             value *= per[word]

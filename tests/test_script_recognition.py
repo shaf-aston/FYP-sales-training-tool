@@ -1309,6 +1309,10 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("goal_practical", 0, (), "2 years, is that normal?", "goal_practical", "There's no right answer"),   # round 81: was "I'll find out"
     ("05", 0, (), "2 years, what about you?", "06", "I'm the AI"), ("goal_identity", 0, (), "5k, are you a bot?", "goal_identity", "I'm an AI"),   # guards
     ("01", 0, (), "like what?", "01", "Fair point"), ("01", 0, (), "are you married?", "01", "I don't know that one"),   # guard: as before
+    ("01", 0, (), "achieve? dunno", "01", "What are you actually"), ("05", 0, (), "reason? idk", "05", "No rush"), ("03", 0, (), "how long? dunno", "03", "Roughly"),   # round 83 callers: the shrug after our word said back got "I'm the AI playing the salesperson"
+    ("01", 0, (), "clueless?", "01", "What are you actually"), ("goal_identity", 0, (), "clueless", "goal_identity", "Who would you be"),   # round 83 callers: saved as the answer
+    ("02", 0, (), "2k ok", "03", "How long"), ("01", 0, (), "money ok", "goal_practical", None),   # round 83 callers: the "ok" was saved with the answer
+    ("03", 0, (), "a year or two", "04", "24 months"), ("03", 0, (), "a year to 18 months", "04", "12 months"), ("03", 0, (), "under a year", "04", "If this has been"),   # round 83 callers: were "12 months", "12 months... Damn." for under a year
 ]
 
 

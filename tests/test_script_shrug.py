@@ -105,6 +105,7 @@ def test_round_70_only_tags_say_nothing_where_labels_hear(said, nothing, fake_em
     ("roughly speaking", True), ("strictly speaking", True), ("technically", True), ("real talk", True), ("no lie", True), ("bottom line", True),
     ("and such", True), ("and the like", True), ("or so", True),   # round 71: "and such" was "say that again" at every step, "real talk" "I'm an AI"
     ("the record", False), ("bottom", False), ("talk", False), ("money technically", False),   # guard: a word the labels must hear
+    ("clueless", True), ("clueless?", True), ("clueless about business", False),   # round 83 callers: "clueless" was saved as the answer
 ])
 def test_round_71_only_tags_say_nothing_where_labels_hear(said, nothing, fake_embedder):
     assert shrugs(fake_embedder).says_nothing(said, CAT.steps["01"], asking=False) == nothing

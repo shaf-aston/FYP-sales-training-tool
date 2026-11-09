@@ -140,6 +140,8 @@ class Reader:
         self._you = set(cfg["asked_back_you"])
         self._lead_alone = alone - self._plain  # round 74: a lead with a meaning alone ("thanks", "brb")
         self._no = set(cfg["no_words"])
+        self._okay_end = re.compile(rf"(?<=\w)[\s,;.!-]+(?:{any_of(cfg['okay_ends'])})\W*$", re.IGNORECASE)
+        self._okay_not_after = set(cfg["stop_words"]) | set(cfg["okay_ends_not_after"])
         self._thanks_end = re.compile(rf"(?<=\w)\s+((?:{any_of(cfg['thanks_ends'])})\W*)$", re.IGNORECASE)
         self._thanks_lead = re.compile(rf"(?:{any_of(cfg['thanks_ends'])})\b", re.IGNORECASE)
         # round 61: after a comma too, so "2k, that kind of thing" loses the whole tag, not just "kind of thing"
@@ -224,6 +226,9 @@ class Reader:
         thanks = self._thanks_end.search(rest)  # round 82 callers: "2k thanks" was saved whole; "ok thanks", "no thanks" stay whole
         if thanks and set(tokenize(rest[:thanks.start()])) - self._alone_mean - self._no and tokenize(rest[:thanks.start()])[-1] not in self._no:
             rest = f"{rest[:thanks.start()]}, {thanks.group(1)}"
+        okay = self._okay_end.search(rest)  # round 83 callers: "money ok", "2k k" were saved whole; "I'm doing ok" stays whole
+        if okay and set(before := tokenize(rest[:okay.start()])) - self._plain and before[-1] not in self._okay_not_after:
+            rest = rest[:okay.start()]
         end = self._unsure_end.search(rest)  # round 44: "money I guess" is "money, I guess"; "yeah I guess", "stuff I guess" stay whole
         if end and set(tokenize(rest[:end.start()])) - self._plain:
             rest = f"{self._tag_end.sub('', rest[:end.start()])}, {end.group(1)}"  # round 75: "money or so i think" was "money or"

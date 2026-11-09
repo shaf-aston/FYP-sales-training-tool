@@ -1218,6 +1218,7 @@ def test_loader_rejects_echo_without_a_capture():
     ("half a year", "0.5"),       # whole calls: read as a year
     ("2y", "2"),                  # whole calls: "2y" was no number
     ("6 months", None),      # wrong unit, the years line is dropped
+    ("under a year", None), ("a year or two", "2"),   # round 83 callers
     ("ages", None),
     ("", None),
 ])
@@ -1234,7 +1235,9 @@ def test_number_phrase(reply, number):
     ("1-2 years", "24 months"), ("6-12 months", "12 months"), ("1 to 2 years", "24 months"),   # round 39: a dash range was no number
     ("1,5 years", "18 months"), ("2,5 years", "30 months"),   # round 40: a decimal comma was no number
     ("18ish months", "18 months"), ("18 ish months", "18 months"), ("a year ish", "12 months"),
-    ("a whole year", "12 months"), ("a good two years", "24 months")])   # round 51: "a whole year" said no number back   # round 48: "ish" lost the number
+    ("a whole year", "12 months"), ("a good two years", "24 months"),
+    ("a year or two", "24 months"), ("one or two years", "24 months"), ("a year or so", "12 months"), ("a year to 18 months", "12 months"),   # round 83 callers: a range was its bottom
+    ("under a year", None), ("less than a year", None), ("not even a year", None)])   # round 83 callers: "12 months... Damn." for less than a year   # round 51: "a whole year" said no number back   # round 48: "ish" lost the number
 def test_months_thinking_counts_the_answer_in_months(reply, months):
     from core.buy_mode.script_engine.words.fill import number_phrase
     assert number_phrase(reply, CFG["number_blanks"]["months_thinking"], CFG) == months

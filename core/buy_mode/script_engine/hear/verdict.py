@@ -137,14 +137,17 @@ class Ear:
         long") and is never asked about. With an answer after it, it needs fewer of the question's words
         (`asked_back_share_with_answer`: "what am I hoping to achieve? more money"). Said back alone, it still
         asks for the question put another way."""
-        parts = list(reply.parts)
-        for i, part in enumerate(parts):
+        parts, echoed = list(reply.parts), 0
+        for part in parts:
             if part.act not in ("asks", "rise") or not (self._word_back(part.text, state) or self._asked_back(part.text, state, "asked_back_share_with_answer")):
                 break
-            parts[i] = Part(part.text, "tag")
-        if not any(p.act in ("said", "rise", "asks") for p in parts):
+            echoed += 1
+        left = parts[echoed:]
+        if not echoed or not left:
             return reply  # all of it said back: "how long?" alone
-        return replace(reply, parts=tuple(parts))
+        if not any(p.act in ("said", "rise", "asks") for p in left):  # round 83 callers: "achieve? dunno" got "I'm the AI
+            return replace(reply, unnudged=", ".join(p.text for p in left), parts=tuple(left))  # playing the salesperson": the shrug alone
+        return replace(reply, parts=tuple(Part(p.text, "tag") for p in parts[:echoed]) + tuple(left))
 
     def _ahead(self, text, step, state):
         """(the state with answers to later steps kept, else None; this step's words). Each part is heard too:
