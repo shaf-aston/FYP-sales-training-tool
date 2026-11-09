@@ -1291,6 +1291,13 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("02", 0, (), "give me a sec, 2k", "03", None), ("02", 0, (), "give me a second, 2k", "03", None),   # round 78 config mutation: pinned
     ("02", 0, (), "just a sec, 2k", "03", None),   # round 78 config mutation: was saved whole
     ("05", 0, (), "don't know why", "05", "No rush"), ("05", 0, (), "no clue why", "05", "No rush"),   # round 78 config mutation: pinned
+    ("05", 0, (), "no clue why?", "05", "No rush"), ("05", 0, (), "dunno why?", "05", "No rush"), ("05", 0, (), "idk why?", "05", "No rush"),   # round 78 config mutation: were "It helps me see"
+    ("05", 0, (), "i wonder why?", "05", None), ("05", 0, (), "kids thats why?", "06", None),   # round 78 config mutation: "i wonder" was saved; round 82: was "I don't know that one offhand"
+    ("05", 0, (), "dunno why", "05", "No rush"), ("05", 0, (), "idk why", "05", "No rush"), ("05", 0, (), "dunno how", "05", "No rush"), ("05", 0, (), "i don't know how", "05", "No rush"),   # round 78 config mutation: were "What do you mean by why?"
+    ("05", 0, (), "don't know how", "05", "No rush"),   # round 78 config mutation: was "let me say that again"
+    ("goal_practical", 0, (), "hm?", "goal_practical", "What would that actually change"), ("goal_practical", 0, (), "hm", "goal_practical", "What would that actually change"),   # round 82: "hm" was saved as the answer
+    ("goal_practical", 0, (), "confused?", "goal_practical", "Fair point"), ("goal_practical", 0, (), "i'm lost", "goal_practical", "Fair point"), ("goal_practical", 0, (), "you lost me", "goal_practical", "Fair point"),   # round 82: saved as the answer
+    ("goal_practical", 0, (), "I lost my job", "goal_identity", None), ("05", 0, (), "feeling lost", "06", None),   # guards: lost something is an answer
     ("goal_identity", 0, (), "2 years, what about you?", "goal_identity", "I'm the AI"),   # round 81: was "I'll find out" (2 years answers nothing)
     ("goal_practical", 0, (), "2 years, is that normal?", "goal_practical", "There's no right answer"),   # round 81: was "I'll find out"
     ("05", 0, (), "2 years, what about you?", "06", "I'm the AI"), ("goal_identity", 0, (), "5k, are you a bot?", "goal_identity", "I'm an AI"),   # guards

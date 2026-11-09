@@ -147,6 +147,9 @@ interruptions:
       - "what do you mean by that"
       - "huh"   # draft; whole calls: "huh?" (0.73 to the rest) was saved as their goal
       - "wait what"   # draft: whole calls, "wait what?" got "I'll find out"
+      - "confused"   # draft: round 82, "confused?" and "I'm lost" were saved as the answer
+      - "I'm lost"   # draft
+      - "you've lost me"   # draft
       - "which one"   # draft: round 26 callers, "sorry, which one?" got "I'll find out"
       - "like what"   # draft: round 40 callers, "like who?" was kept as the answer
       - "like who"   # draft

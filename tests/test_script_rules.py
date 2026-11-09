@@ -792,7 +792,8 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("so like what?", "", "so like what?"), ("so well paid job", "well paid job", ""), ("so like", "", ""),   # guard: a question still asks; a break word alone is no filler
     ("lol money", "money", ""), ("haha, quit my job", "quit my job", ""), ("lmao 2k", "2k", ""),   # round 80 callers: "lol money" was saved whole
     ("lol what?", "", "what?"), ("well what do you want?", "", "what do you want?"),   # round 80 callers: "oh what?" got "I don't know that one offhand"
-    ("like what?", "", "like what?"), ("lol", "lol", ""),   # guard: "like" asks for an example; a laugh alone stays
+    ("my boss that's why?", "my boss", ""), ("kids thats why?", "kids", ""), ("money, that is why", "money", ""),   # round 82: "kids thats why?" got "I don't know that one offhand", "my boss that's why" was saved whole
+    ("that's why I want to quit", "that's why I want to quit", ""), ("no clue why?", "", "no clue why?"), ("idk why?", "", "idk why?"),   # guards: only on the end; after not knowing, the "why" is what they don't know
 
     ("money x", "money", ""), ("quit xx", "quit my job", ""), ("the x factor", "the x factor", ""),   # round 77 callers: a kiss was said back ("with money x?"); guard: only on the end
     ("yes why?", "yes", "why?"), ("money why do you want to know?", "money", "why do you want to know?"), ("money, why?", "money", "why?"),   # round 77 callers: "yes why?" was all asked, no yes
