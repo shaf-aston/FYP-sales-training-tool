@@ -1284,6 +1284,13 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("01", 0, (), "lol what?", "01", "Fair point"), ("01", 0, (), "oh what?", "01", "Fair point"),   # round 80 callers: were "I don't know that one offhand"
     ("19", 0, (), "yes, are you human?", "20", "I'm an AI"), ("01", 0, (), "are you human?", "01", "I'm an AI"),   # round 80 callers: were "I'll find out", or no answer
     ("05", 0, (), "idj", "05", "No rush"), ("05", 0, (), "nit sure", "05", "No rush"),   # round 80 callers: saved as the reason
+    ("05", 0, (), "not sure, you?", "05", "I'm the AI"), ("05", 0, (), "dunno, and you?", "05", "I'm the AI"),   # round 81 callers: were "No rush"
+    ("goal_identity", 0, (), "you?", "goal_identity", "I'm the AI"), ("05", 0, (), "idk, u?", "05", "I'm the AI"),   # round 81 callers: were "No rush"
+    ("05", 0, (), "yourself?", "05", "I'm the AI"),   # round 81 callers: was "I don't know that one offhand"
+    ("05", 0, (), "not sure, you know?", "05", "No rush"), ("05", 0, (), "lol idk, money?", "06", None),   # guards: a tag, and an unsure answer
+    ("02", 0, (), "give me a sec, 2k", "03", None), ("02", 0, (), "give me a second, 2k", "03", None),   # round 78 config mutation: pinned
+    ("02", 0, (), "just a sec, 2k", "03", None),   # round 78 config mutation: was saved whole
+    ("05", 0, (), "don't know why", "05", "No rush"), ("05", 0, (), "no clue why", "05", "No rush"),   # round 78 config mutation: pinned
     ("01", 0, (), "like what?", "01", "Fair point"), ("01", 0, (), "are you married?", "01", "I don't know that one"),   # guard: as before
 ]
 
@@ -1298,6 +1305,21 @@ def test_round_7_whole_calls(step, asks, raised, said, after, starts):
     assert seller.state.step == after, text
     if starts:
         assert text.startswith(starts), text
+
+
+def test_a_side_line_said_just_before_is_the_reminder():
+    """Round 81 callers: "2k, is that enough?", then "a year, is that long?" each got "There's no right answer
+    here, it's just about you." word for word, four turns in a row."""
+    from core.buy_mode.script_engine.engine import ScriptState
+
+    seller = _real_seller()
+    seller.reset(ScriptState(step="goal_identity", slots={"outcome": "money"}))
+    first, _ = seller.reply("free, does that make sense?")
+    text, _ = seller.reply("2k, is that enough?")
+    assert first.startswith("There's no right answer") and text.startswith("Like I said a moment ago."), text
+    assert seller.state.slots.get("number") == "2k" and seller.state.step == "03", seller.state   # the answer still moves on
+    text, _ = seller.reply("a year, is that long?")
+    assert text.startswith("There's no right answer"), text   # not said just before: the line itself
 
 
 def test_a_shrug_after_a_pause_is_no_answer():

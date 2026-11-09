@@ -220,6 +220,10 @@ interruptions:
       - "have you done this yourself"
       - "what's in it for you"   # draft: whole calls, got "I'll find out"
       - "do you like your job"   # draft: whole calls, got "I'll find out"
+      - "you"   # draft: round 81 callers, "not sure, you?" got "No rush, even a rough idea helps" (the "you?" was dropped)
+      - "and you"   # draft: round 81 callers, "dunno, and you?" got "No rush"
+      - "yourself"   # draft: round 81 callers, "yourself?" got "I don't know that one offhand"
+      - "and yourself"   # draft: round 81 callers
     reply: "I'm the AI playing the salesperson, so this one's all about you."
   no_wrong_answer:   # whole calls: "what do most people say?" got "I'll find out and let you know"
     with_answer: true   # draft: "2k, is that a lot?": the 2k is kept, this goes in front of the next question

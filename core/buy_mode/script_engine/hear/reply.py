@@ -137,6 +137,7 @@ class Reader:
         alone = {w for t in cfg["tags_alone_mean"] for w in tokenize(t)}
         self._alone_mean = self._plain | alone  # round 73: "meh, whatever"
         self._lead_asks = set(cfg["question_leads"])
+        self._you = set(cfg["asked_back_you"])
         self._lead_alone = alone - self._plain  # round 74: a lead with a meaning alone ("thanks", "brb")
         # round 61: after a comma too, so "2k, that kind of thing" loses the whole tag, not just "kind of thing"
         # round 73: every tag at the end, not just the last ("and so on and so forth", "yada yada tbh")
@@ -244,11 +245,17 @@ class Reader:
             if act == "said" and (len(cut) > 1 or part != rest):  # round 47: "yeah. quit." and "quit lol" were "quit" the call;
                 part = short_form(part, self._cfg) or part  # round 76: "so, quit" too, once its "so" went
             parts.append(part)
-            unsure = act == "rise" and (acts[-1:] == ["hedge"] or self._unsure.match(part))
+            unsure = act == "rise" and (acts[-1:] == ["hedge"] or self._unsure.match(part)) and not self.turned_back(part)
             acts.append("said" if unsure else act)  # "lol idk, money?", "I guess my car loan?": unsure, not asking
         if len(cut) > 1 and set(tokenize(rest)) <= self._alone_mean:  # round 47: "yeah, ok" lost its "yeah" and was unclear;
             acts = ["said" if a == "tag" else a for a in acts]    # with no content beside it, a tag is the reply
         return Reply(text, rest, nudged, tuple(map(Part, parts, acts)))
+
+    def turned_back(self, text):
+        """"you?", "and you?", "u?": only a "you" and plain words, their question turned back on us. Round 81
+        callers: "not sure, you?" got "No rush, even a rough idea helps" ("you" and "and" are stop words)."""
+        words = set(tokenize(text))
+        return bool(words & self._you) and words <= self._plain | self._you
 
     def squash(self, text):
         """A run of end marks with a "?" in it is one "?" (round 76 callers: "money?!" was a question it could not answer)."""

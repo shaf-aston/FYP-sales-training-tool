@@ -256,8 +256,9 @@ class ScriptSeller:
             return ""  # the answer reached the price step, which tells the offer: "how much is it?" needs no "later"
         if kind == "fact":
             return self._fact(name, opened)[0]
-        if kind == "sense":
-            return self.sense.interruptions[name].reply
+        if kind == "sense":  # said just before ("2k, is that enough?", "a year, is that long?"): the reminder (round 81)
+            reply = self.sense.interruptions[name].reply
+            return self.sense.told_again if reply and reply in self.state.last and self.sense.told_again else reply
         if kind == "objection":
             return self._park(name)
         return self._answer_uncovered(v.asked, opened) or ""

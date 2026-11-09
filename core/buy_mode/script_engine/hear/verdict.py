@@ -90,7 +90,7 @@ class Ear:
         backed = not asking and self._yes_or_no(state) and self._backed.match(text)
         if backed:  # round 52: "yes because I want change" to "are you willing?" was a no; the yes decides
             text = short_form(backed.group(1), self.cfg) or backed.group(1)
-        nothing = self._shrugs.blank(text) or self._shrugs.says_nothing(text, step, asking, self._yes_or_no(state))
+        nothing = not (asking and self.reader.turned_back(text)) and (self._shrugs.blank(text) or self._shrugs.says_nothing(text, step, asking, self._yes_or_no(state)))
         if not state.waiting and nothing and not self._ready(text, state):  # "yes I'm in" is a shrug's words, but it says they're in
             return Verdict("says_nothing", text=text, asking=asking)  # an answer only: never an interruption
         ahead, text = (None, text) if asking else self._ahead(text, step, state)  # "do I need 5k?" is not their goal
@@ -218,6 +218,8 @@ class Ear:
         asks ("what's this going to cost me?"). `alone`: the part is the whole reply, where a plain no ("no?")
         answers too; beside a question ("is it free, no?") it is part of what they ask."""
         words = tokenize(part)
+        if self.reader.turned_back(part):
+            return False  # round 81: "you?" asks, though its words are filler and "you" fits "Who would you be?"
         if self._reason(part) or self._shrugs.filler(part) or (alone and self._shrugs.plain_no(part)):  # whole calls:
             return True  # "ok?" got "I'll find out"; round 73: "no?" alone too, at every step
         if len(words) > self.cfg["rise_answer_words"]:
