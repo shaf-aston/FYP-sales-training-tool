@@ -260,6 +260,9 @@ interruptions:
       - "should I"   # draft: round 34 callers, "should I?" to "jumping in?" got "I'll find out"
       - "do you think I should"   # draft
       - "should I do it"   # draft: torn with "should I", it got "I'll find out"
+      - "is that a good answer"   # draft: round 93 callers, "is money a good answer?" got "I'll find out", then (read as "money, is that a good answer?") no answer to it
+      - "is that ok to say"   # draft
+      - "does that count"   # draft
     reply: "There's no right answer here, it's just about you."
   frustrated:   # live: "stop with the script man", "whatever", "this is stupid" got the same line again
     draft: true

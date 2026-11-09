@@ -589,6 +589,15 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("not today, tomorrow", "not today, tomorrow", ""), ("not now, later", "not now, later", ""), ("money, actually quite a lot", "money, actually quite a lot", ""), ("not me, them", "not me, them", ""),   # round 91 guards: time asked for, sides of two lengths, people
     ("2k a month, mate", "2k a month", ""), ("my boss, mate", "my boss", ""), ("free, dude", "free", ""), ("yes, mate", "yes", ""),   # round 91 callers: ", mate" was heard as "thanks mate"
     ("my mate", "my mate", ""), ("2k mate", "2k mate", ""), ("mate", "mate", ""),   # round 91 guards: no break before it, or nothing before it
+    ("probably about a year and a half", "about a year and a half", ""), ("2 and a half years", "2 and a half years", ""),   # round 92 callers: cut at "and" (said back as 12 months)
+    ("money, hold on", "money", ""), ("2k, hang on a sec", "2k", ""), ("money, actually", "money", ""), ("a year, wait", "a year", ""),   # round 92 callers: lost to a pause, or said back
+    ("hold on", "hold on", ""), ("yes, hold on", "yes, hold on", ""), ("hold on, 2k", "2k", ""),   # round 92 guards: a pause alone or after a plain word stays one
+    ("more money period", "more money", ""), ("quit my job comma travel", "quit my job, travel", ""), ("free exclamation mark", "free", ""),   # round 92 callers: voice to text
+    ("the trial period", "the trial period", ""), ("for a short period", "for a short period", ""), ("a cooling off period", "a cooling off period", ""),   # round 92 guards
+    ("is money a good answer?", "money", "is that a good answer?"), ("would 2k be enough?", "2k", "would that be enough?"), ("does money count?", "money", "does that count?"),   # round 93 callers: got "I'll find out"
+    ("primarily money", "money", ""), ("chiefly money", "money", ""),   # round 93 callers: saved whole
+    ("is it enough?", "", "is it enough?"), ("is my goal realistic?", "", "is my goal realistic?"), ("is that normal?", "", "is that normal?"),   # round 93 guards: no answer in it
+    ("2k actually time", "2k actually time", ""), ("2k sorry about that", "2k sorry about that", ""),   # mutation 91: with no comma, a take-back only between figures
     ("not really, I'm busy", "not really, I'm busy", ""),   # guard: a no with a reason stays a no
     ("not sure, a year", "not sure, a year", ""),
     ("is it ok to say?", "", "is it ok to say?"),   # nothing after the lead: a question, as typed
@@ -831,6 +840,16 @@ def test_a_reply_is_read_once_into_what_it_says_and_what_it_asks(text, said, ask
     reply = Reader(CFG, load_common_sense().nudges, lambda part: part.lower() in HEDGES).read(text)
     reply = reply.settle(lambda part: False)
     assert (reply.said, reply.asked) == (said, asked)
+
+
+@pytest.mark.parametrize("part, asked", [
+    ("since when?", True), ("for what?", True),   # round 87 probes: two words, the second a question word
+    ("money for what?", False), ("2k by when?", False), ("travel and where?", False),   # mutation 92: a question word last after an answer
+])
+def test_only_a_short_question_word_tail_is_heard_as_asking(part, asked):
+    from core.buy_mode.script_engine.hear.reply import Reader
+    from core.buy_mode.script_engine.method import load_common_sense
+    assert Reader(CFG, load_common_sense().nudges, lambda part: False).asks(part) is asked
 
 
 def test_every_listed_tag_beside_an_answer_is_cut():

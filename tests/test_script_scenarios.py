@@ -187,6 +187,9 @@ def test_spending_is_not_the_goal(text):
     ("I've been at my job for 5 years", None),   # time in a job is not how long they've thought about this
     ("I've been thinking about it", None),
     ("I've wanted it for 2 years", "2 years"),
+    ("money, about 2k a month, been on my mind a year", "a year"),   # round 92 callers: asked "How long" again
+    ("it's been on my mind for 2 years", "2 years"),
+    ("I've had my job on my mind", None),   # round 92 guard: no span after it
 ])
 def test_how_long_they_have_thought_about_it_said_early_is_kept(text, years):
     assert hear_ahead(CAT, ScriptState(step="01"), text).slots.get("years") == years
@@ -779,11 +782,12 @@ def test_a_tag_in_a_listed_tag_list_is_never_a_typo(text, vocab):
 
 
 @pytest.mark.parametrize("text, fixed", [("y e s", "yes"), ("m o n e y please", "money please"), ("Y E S!", "yes!"),
-                                          ("i a m", "i a m"), ("q z x", "q z x"), ("y e", "y e"), ("plan b e", "plan b e")])   # guards: no known word, two letters, inside a word run
+                                          ("i a m", "i a m"), ("q z x", "q z x"), ("y e", "y e"), ("plan b e", "plan b e"),   # guards: no known word, two letters, inside a word run
+                                          ("c a s h", "cash"), ("n o", "n o")])   # mutation 93: a real word joins; two letters never do, even a known word
 def test_a_word_typed_one_letter_at_a_time_is_joined(text, fixed):
     """Round 89 callers: "y e s" to "Do you see yourself jumping in?" was unclear, and at the start it was saved as "e s"."""
     from core.buy_mode.script_engine.words.fill import fix_typos
-    assert fix_typos(text, frozenset({"yes", "money", "please"}), CFG) == fixed
+    assert fix_typos(text, frozenset({"yes", "money", "please", "no"}), CFG) == fixed
 
 
 def test_a_figure_is_never_a_typo():

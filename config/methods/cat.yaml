@@ -191,7 +191,7 @@ steps:
     stuck: {then: "04"}
     # "I want to quit, I've been thinking about it for 2 years" said earlier answers this step (whole calls: asked
     # again, "2 years, I told you"). Only after "thinking / wanting ... for": "I've been at my job for 5 years" is not it.
-    answered_by: '\b(?:thinking|thought|wanting|wanted|dreaming|dreamt|dreamed)\s+(?:about\s+(?:it|this|that|doing\s+(?:it|this))\s+|of\s+(?:it|this)\s+|(?:it|this|that)\s+)?for\s+(?:the\s+(?:last|past)\s+)?(?P<answer>(?:about\s+|around\s+|nearly\s+|almost\s+|over\s+)?(?:\d+(?:\.\d+)?|a|an|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|eighteen|a\s+couple\s+of|a\s+few|few)\s+(?:years?|yrs?|months?)(?:\s+and\s+a\s+half)?)\b'   # draft
+    answered_by: '\b(?:(?:thinking|thought|wanting|wanted|dreaming|dreamt|dreamed)\s+(?:about\s+(?:it|this|that|doing\s+(?:it|this))\s+|of\s+(?:it|this)\s+|(?:it|this|that)\s+)?for|on\s+my\s+mind(?:\s+for)?)\s+(?:the\s+(?:last|past)\s+)?(?P<answer>(?:about\s+|around\s+|nearly\s+|almost\s+|over\s+)?(?:\d+(?:\.\d+)?|a|an|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|eighteen|a\s+couple\s+of|a\s+few|few)\s+(?:years?|yrs?|months?)(?:\s+and\s+a\s+half)?)\b'   # draft (on my mind): round 92 callers, "money, 2k a month, been on my mind a year" was asked "How long" again
     listen:
       recent:   # draft: whole calls: "not long" went on to "so many nights, months and years"
         draft: true

@@ -1334,6 +1334,12 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("04", 0, (), "my manager", "05", "What's the reason"),   # round 91 callers: got "I'm an AI playing the salesperson"
     ("02", 0, (), "2k a month, mate", "03", "How long"), ("04", 0, (), "my boss, mate", "05", "What's the reason"),   # round 91 callers: got "You're welcome"
     ("01", 0, (), "money, actually time", "goal_practical", "What are you hoping to achieve with time?"), ("01", 0, (), "not money, time", "goal_practical", "What are you hoping to achieve with time?"),   # round 91 callers: said back whole
+    ("03", 0, (), "probably about a year and a half now if I'm honest", "04", "18 months"),   # round 92 callers: "12 months"
+    ("01", 0, (), "money, hold on", "goal_practical", None), ("02", 0, (), "2k, hang on", "03", "How long"),   # round 92 callers: lost to a pause
+    ("01", 0, (), "more money period", "goal_practical", "What are you hoping to achieve with more money?"),   # round 92 callers: voice to text
+    ("05", 0, (), "no sé", "05", "No rush"), ("19", 0, (), "yes, hold on", "19", "No problem"),   # round 92 callers: saved as the answer; guard: still a pause
+    ("01", 0, (), "is money a good answer?", "goal_practical", "There's no right answer"), ("02", 0, (), "would 2k be enough?", "03", "There's no right answer"),   # round 93 callers: "I'll find out"
+    ("01", 0, (), "money, is that a good answer?", "goal_practical", "There's no right answer"), ("01", 0, (), "primarily money", "goal_practical", None),   # round 93 callers: moved on without it; saved whole
     ("22", 0, (), "not today, tomorrow", "m_think_what", None), ("02", 0, (), "cheers, mate", "02", "You're welcome"),   # round 91 guards: still asks for time; a thank-you alone is still one
     ("03", 0, (), "since when?", "03", "Fair point"), ("04", 0, (), "for what? dunno", "04", "Fair point"), ("03", 0, (), "since 2020", "04", None),   # round 87 probes: saved as how long, "I'll find out"; guard
 ]

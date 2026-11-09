@@ -83,8 +83,8 @@ def break_pattern(cfg):
     ends = {",": r"(?=\s|$|[^\W\d])"}
 
     def keep(b):  # round 74: "thanks so much" was "thanks" and "much"; round 76: a pair ("so that") keeps that break only
-        words = [w.split()[-1] for w in cfg["break_not_before"] if " " not in w or w.split()[0] == b]
-        return rf"(?!\W+(?:{'|'.join(map(re.escape, words))})\b)" if words else ""
+        words = [w.split(maxsplit=1)[-1] for w in cfg["break_not_before"] if " " not in w or w.split()[0] == b]
+        return rf"(?!\W+(?:{'|'.join(r'\W+'.join(map(re.escape, w.split())) for w in words)})\b)" if words else ""  # round 92: "and a half"
     parts = [rf"\b{re.escape(b)}\b{keep(b)}" if b.isalpha() else re.escape(b) + ends.get(b, r"(?=\s|$)") for b in cfg["clause_breaks"]]
     if cfg["ask_tails"]:  # round 77: "yes why?" is read as "yes, why?"
         never = "".join(rf"(?<!\b{re.escape(w)})" for w in cfg["ask_tails_not_after"])  # round 78 mutation: "I don't know why?" is not knowing
@@ -168,6 +168,7 @@ class Reader:
         self._filler_lead = re.compile(rf"^\W*(?:(?:{fillers})\b(?!\W+(?:{any_of(cfg['lead_not_before'])})\b)\W*|(?:{joins})\W+(?=(?:{fillers})\b))+",
                                        re.IGNORECASE)  # round 54: "oh wow ok" is "ok"; "well paid job" keeps its "well"
         self._answer_lead = re.compile(rf"^\W*(?:{any_of(cfg['answer_leads'])})\b\W*", re.IGNORECASE)
+        self._answer_check = re.compile(rf"^\W*({any_of(cfg['answer_check_leads'])})\s+(\w.*?)\s+({any_of(cfg['answer_checks'])})\s*\?\W*$", re.IGNORECASE)
         self._report_lead = re.compile(rf"^\W*(?:{any_of(cfg['report_people'])})\s+(?:{any_of(cfg['report_verbs'])})\b\W*", re.IGNORECASE)
         self._take_back = re.compile(rf"(?:^|[,;.!?]\s*)(?:(?:{words})\b[\s,;.!-]*|(?:{word})\s*[,;.!-][\s,;.!-]*)(?=\w)"
                                      rf"|(?<=\w){not_mid}[,;.!?]\s*(?:{mid})\s*[,;.!-][\s,;.!-]*(?=\w)"
@@ -184,6 +185,12 @@ class Reader:
         self._kept = self._plain | set(cfg["fix_kept_words"])  # "not today, tomorrow" asks for time, so stays whole
         self._address_end = re.compile(rf"(?<=\w)\s*[,;.!…–—-]+\s*(?:{any_of(cfg['address_ends'])})\W*$", re.IGNORECASE)
         self._marks = re.compile(r"[?!]*\?[?!]*(?=\s|$)")
+        never = "".join(rf"(?<!\b{re.escape(w)})" for w in cfg["dictated_not_after"])  # "a short period" keeps it
+        self._dictated = re.compile(rf"(?<=\w){never}\s+({any_of(cfg['dictated_marks'])})\b(?=\s*$|\s+\w)", re.IGNORECASE)
+        self._marks_said = {" ".join(tokenize(k)): v for k, v in cfg["dictated_marks"].items()}
+        # round 92 callers: "money, hold on" lost the money (heard as a pause) and "money, actually" was said back:
+        # a take-back after a break with nothing after it takes nothing back; "yes, hold on" and "hold on" stay whole
+        self._back_end = re.compile(rf"(?<=\w)\s*[,;.!…–—-]+\s*(?:{word})\W*$", re.IGNORECASE)
         self._bracket_end = re.compile(r"(?<=\S)\s*\(([^()]*)\)\W*$")
         self._cfg = cfg
 
@@ -257,12 +264,21 @@ class Reader:
         lead = self._shrug_lead.match(rest)  # round 84 callers: "dunno my boss" as "dunno, my boss"; "dunno why" stays whole
         if lead and set(tokenize(rest[lead.end():])) - self._plain:
             rest = f"{lead.group(1)}, {rest[lead.end():]}"
+        back = self._back_end.search(rest)
+        if back and set(tokenize(rest[:back.start()])) - self._alone_mean:
+            rest = rest[:back.start()]
         rest = self._address_end.sub("", rest)  # round 91 callers: "2k, mate" got "You're welcome"; "my mate" stays
         rest = self._tag_end.sub("", rest)  # round 53: "ok if it works", "free tbh" were saved whole
         rest = self._flip.sub("", rest)  # round 28 callers: "no yeah" was heard as backing out
         lead = self._report_lead.match(rest)  # round 87 callers: "my wife says money" was a partner worry; "my partner says no" stays
         if lead and set(tokenize(rest[lead.end():])) - self._alone_mean - self._no:
             rest = rest[lead.end():]
+        # round 93 callers: "is money a good answer?" got "I'll find out"; now "money, is that a good answer?".
+        # "is it enough?" and "is my goal realistic?" stay questions
+        check = self._answer_check.match(rest)
+        said = tokenize(check.group(2)) if check else []
+        if said and set(said) - self._plain and said[0] not in self._cfg["stop_words"]:
+            rest = f"{check.group(2)}, {check.group(1)} that {check.group(3)}?"
         lead = self._answer_lead.match(rest)
         if lead and tokenize(rest[lead.end():]):  # "is it ok to say quit my job?": the answer, its "?" asks leave
             rest = rest[lead.end():].rstrip(" ?")
@@ -313,7 +329,9 @@ class Reader:
         return bool(words & self._you) and words <= self._plain | self._you
 
     def squash(self, text):
-        """A run of end marks with a "?" in it is one "?" (round 76 callers: "money?!" was a question it could not answer)."""
+        """A run of end marks with a "?" in it is one "?" (round 76 callers: "money?!" was a question it could not answer);
+        a mark said as a word after a word is the mark (round 92 callers: voice to text, "more money period")."""
+        text = self._dictated.sub(lambda m: self._marks_said[" ".join(tokenize(m.group(1)))], text)  # round 92: "money period"
         return self._marks.sub("?", text)
 
     def _unlead(self, part):
