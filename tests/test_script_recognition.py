@@ -1279,6 +1279,12 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("05", 0, (), "both", "05", "No rush"), ("05", 0, (), "like I said", "05", "No rush"), ("05", 0, (), "ditto", "05", "No rush"), ("05", 0, (), "what I said", "05", "No rush"),   # round 79 callers: were "let me say that again", or saved as the reason
     ("05", 0, (), "unsure", "05", "No rush"), ("05", 0, (), "I am uncertain", "05", "No rush"),   # round 79 callers: were "What do you mean by unsure?", and saved as the reason
     ("01", 0, (), "so like what?", "01", "Fair point"), ("05", 0, (), "a bit of both", "06", None),   # guard: as before
+    ("goal_practical", 0, (), "😂 quit", "goal_practical", "What would that actually change"), ("goal_practical", 0, (), ":) quit", "goal_practical", "What would that actually change"),   # round 80 callers: left the call
+    ("01", 0, (), "more um money", "goal_practical", "What are you hoping to achieve with more money?"),   # round 80 callers: was "with more um money?"
+    ("01", 0, (), "lol what?", "01", "Fair point"), ("01", 0, (), "oh what?", "01", "Fair point"),   # round 80 callers: were "I don't know that one offhand"
+    ("19", 0, (), "yes, are you human?", "20", "I'm an AI"), ("01", 0, (), "are you human?", "01", "I'm an AI"),   # round 80 callers: were "I'll find out", or no answer
+    ("05", 0, (), "idj", "05", "No rush"), ("05", 0, (), "nit sure", "05", "No rush"),   # round 80 callers: saved as the reason
+    ("01", 0, (), "like what?", "01", "Fair point"), ("01", 0, (), "are you married?", "01", "I don't know that one"),   # guard: as before
 ]
 
 
@@ -1309,6 +1315,10 @@ def test_a_shrug_after_a_pause_is_no_answer():
     seller.reply("brb")
     text, _ = seller.reply("okay")
     assert text.startswith("No worries.") and "blocker" not in seller.state.slots, text   # was saved as the reason
+    seller.reset(ScriptState(step="05"))
+    seller.reply("brb")
+    text, _ = seller.reply("not sure")
+    assert text.startswith("No rush"), text   # round 78 mutation: a shrug after a pause is no answer, not "I'm back"
 
 
 def test_a_second_thank_you_is_heard_as_the_rest():

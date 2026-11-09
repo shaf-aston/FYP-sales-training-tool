@@ -682,7 +682,7 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("a year hopefully", "a year", ""), ("debit mostly", "debit", ""),
     ("money so yeah", "money", ""),   # guard: this was already cut
     ("anyway, money", "money", ""), ("ideally money", "money", ""), ("hopefully quit", "quit my job", ""), ("mostly 2k", "2k", ""),   # round 59: the lead
-    ("no tho", "no", ""), ("anyway what's the price?", "", "anyway what's the price?"),   # round 59: "no tho" was saved whole; guard: still asks
+    ("no tho", "no", ""), ("anyway what's the price?", "", "what's the price?"),   # round 59: "no tho" was saved whole; guard: still asks (round 80: without its lead)
     ("money pretty much", "money", ""), ("2k give or take", "2k", ""), ("a year more or less", "a year", ""), ("money basically", "money", ""),   # round 60: saved whole
     ("2k definitely", "2k", ""), ("money obviously", "money", ""), ("free lowkey", "free", ""), ("my boss seriously", "my boss", ""),
     ("obviously money", "money", ""), ("really money", "money", ""), ("lowkey 2k", "2k", ""), ("pretty much quit", "quit my job", ""),   # round 60: the lead
@@ -699,11 +699,11 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("money, etc", "money", ""), ("2k, and so forth", "2k", ""),
     ("frankly money", "money", ""), ("bruh quit", "quit my job", ""), ("frankly, a year", "a year", ""),   # round 62: the lead
     ("I have no doubt", "I have no doubt", ""), ("not at the moment", "not at the moment", ""), ("money at the moment", "money at the moment", ""),   # guard
-    ("bruh what?", "", "bruh what?"),   # guard: still asks, lead and all
+    ("bruh what?", "", "what?"),   # guard: still asks (round 80: without its lead)
     ("money, if not more", "money", ""), ("money and then some", "money", ""), ("2k or more", "2k", ""), ("2k if not more", "2k", ""),   # round 63: saved whole
-    ("literally what?", "", "literally what?"), ("do you know?", "", "do you know?"),   # guard: still asks
+    ("literally what?", "", "what?"), ("do you know?", "", "do you know?"),   # guard: still asks
     ("well paid job", "well paid job", ""),   # guard: "well paid" is the answer
-    ("oh what?", "", "oh what?"),   # guard: still asks
+    ("oh what?", "", "what?"),   # guard: still asks (round 80: without its lead)
     ("like 2k", "2k", ""),
     ("like what?", "", "like what?"),   # guard: before a question it is kept, so it still asks
     ("money personally", "money", ""), ("money for me personally", "money", ""), ("money if that make sense", "money", ""),   # round 58 mutation: no row had these
@@ -731,7 +731,7 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("mind you, my boss", "my boss", ""), ("long story short, money", "money", ""), ("at least a year", "a year", ""), ("in a nutshell 2k", "2k", ""),   # round 67 callers: saved with the lead
     ("you see, money", "money", ""), ("so to speak money", "money", ""), ("as it were, money", "money", ""), ("for what it's worth, money", "money", ""), ("at the very least 2k", "2k", ""), ("for what its worth 2k", "2k", ""),
     ("mind you my boss", "my boss", ""), ("you see money", "money", ""), ("as it were money", "money", ""), ("for what it's worth money", "money", ""),   # round 67 mutation: no row had these leads without a comma
-    ("you see what?", "", "you see what?"),   # guard: before a question it is kept, so it still asks
+    ("you see what?", "", "what?"),   # guard: it still asks (round 80: without its lead)
     ("2k if you ask me", "2k", ""), ("2k all in all", "2k", ""), ("2k by and large", "2k", ""), ("2k in short", "2k", ""), ("2k as such", "2k", ""), ("2k let's say", "2k", ""), ("2k lets say", "2k", ""),   # round 68 callers: saved whole
     ("money if you will", "money", ""), ("money needless to say", "money", ""), ("money believe it or not", "money", ""), ("my boss and all", "my boss", ""),
     ("if you ask me, money", "money", ""), ("all in all money", "money", ""), ("by and large money", "money", ""), ("in short, 2k", "2k", ""), ("let's say a year", "a year", ""),   # round 68 callers: saved with the lead
@@ -790,6 +790,9 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("so, quit", "quit my job", ""), ("so... quit", "quit my job", ""),   # round 76: "so, quit" ended the call once "so" went
     ("so like money", "money", ""), ("so like quit my job", "quit my job", ""), ("and like 2k", "2k", ""), ("like so money", "money", ""), ("um so like money", "money", ""),   # round 79 callers: "so like money" got "let me put it another way"
     ("so like what?", "", "so like what?"), ("so well paid job", "well paid job", ""), ("so like", "", ""),   # guard: a question still asks; a break word alone is no filler
+    ("lol money", "money", ""), ("haha, quit my job", "quit my job", ""), ("lmao 2k", "2k", ""),   # round 80 callers: "lol money" was saved whole
+    ("lol what?", "", "what?"), ("well what do you want?", "", "what do you want?"),   # round 80 callers: "oh what?" got "I don't know that one offhand"
+    ("like what?", "", "like what?"), ("lol", "lol", ""),   # guard: "like" asks for an example; a laugh alone stays
 
     ("money x", "money", ""), ("quit xx", "quit my job", ""), ("the x factor", "the x factor", ""),   # round 77 callers: a kiss was said back ("with money x?"); guard: only on the end
     ("yes why?", "yes", "why?"), ("money why do you want to know?", "money", "why do you want to know?"), ("money, why?", "money", "why?"),   # round 77 callers: "yes why?" was all asked, no yes

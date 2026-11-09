@@ -79,7 +79,8 @@ class Ear:
                 return replace(then, ahead=then.ahead or fixed_state)
             return fixed
         asking = bool(reply.asked)
-        if self._what_alone(text) or self._word_back(text, state) or (asking and not reply.said and self._asked_back(reply.asked, state)):
+        alone = asking and not reply.said  # "lol what?" is "what?" once its lead is cut (round 80)
+        if self._what_alone(reply.asked if alone else text) or self._word_back(text, state) or (alone and self._asked_back(reply.asked, state)):
             return Verdict("sense", "clarify", text, asking)
         if asking and reply.said:
             both = self._with_side(reply, step, state, opened)

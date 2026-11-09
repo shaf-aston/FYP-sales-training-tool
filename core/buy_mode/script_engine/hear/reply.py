@@ -136,6 +136,7 @@ class Reader:
         self._plain = plain_words(cfg)
         alone = {w for t in cfg["tags_alone_mean"] for w in tokenize(t)}
         self._alone_mean = self._plain | alone  # round 73: "meh, whatever"
+        self._lead_asks = set(cfg["question_leads"])
         self._lead_alone = alone - self._plain  # round 74: a lead with a meaning alone ("thanks", "brb")
         # round 61: after a comma too, so "2k, that kind of thing" loses the whole tag, not just "kind of thing"
         # round 73: every tag at the end, not just the last ("and so on and so forth", "yada yada tbh")
@@ -225,9 +226,9 @@ class Reader:
             rest = rest[lead.end():].rstrip(" ?")
         lead = self._filler_lead.match(rest)
         after = rest[lead.end():] if lead else ""
-        if (lead and tokenize(after) and not self.asks(after)  # round 53: "like money" got "let me put it another way"
+        if (lead and tokenize(after) and not (self.asks(after) and set(tokenize(lead.group())) & self._lead_asks)  # round 53: "like money" got "let me put it another way"
                 and not (set(tokenize(lead.group())) & self._lead_alone and set(tokenize(after)) <= self._plain)):
-            rest = after  # "like what?" still asks; round 74: "thanks mate" stays whole, "thanks, 2k" is "2k"
+            rest = after  # "like what?" still asks, "oh what?" is "what?" (round 80); round 74: "thanks mate" stays whole, "thanks, 2k" is "2k"
         while (back := self._take_back.search(rest)) or (kept := self._fixed_in(rest)) is not None:
             rest = self._with_unit(rest[:back.start()], rest[back.end():]) if back else kept
             # "3k, no wait, more like 4k" -> "more like 4k": they took the first part back; cut again so

@@ -136,6 +136,7 @@ interruptions:
       - "can I talk to someone else"    # draft
       - "are you reading from a script"   # draft: whole calls, got "I'll find out"
       - "is this a sales call"   # draft: same
+      - "are you human"   # draft: round 80 callers, "are you human?" got "I'll find out"
     reply: "I'm an AI playing the salesperson so you can practise."   # never deny being an AI; no "Yes": "who am I talking to?" isn't a yes-or-no
   clarify:
     draft: true

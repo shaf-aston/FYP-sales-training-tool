@@ -5,6 +5,7 @@ import re
 import unicodedata
 from difflib import get_close_matches
 from functools import lru_cache
+from itertools import pairwise
 
 from core.buy_mode.script_engine.words.tone import PAUSE
 from core.infra.loader import CONFIG_DIR
@@ -102,6 +103,37 @@ def short_form(text, cfg):
     return ""
 
 
+def _bare_lead_marks(text, cfg):
+    """The reply without the pictures in front of its words ("😂 quit" -> "quit"); a picture that stands for a
+    word (`emoji_words`: "💰 please") stays, and so does a reply of pictures alone."""
+    words = {c for sign in cfg["emoji_words"] for c in sign if unicodedata.category(c) == "So"}
+    faces = "|".join(re.escape(typed) for typed, pic in cfg["word_swaps"].items() if not re.search(r"\w", pic))  # ":) quit"
+    start = 0
+    while start < len(text):
+        face = re.match(rf"(?:{faces})(?!\w)", text[start:], re.IGNORECASE)
+        if face:
+            start += face.end()
+        elif text[start] not in words and (text[start].isspace() or unicodedata.category(text[start]) in ("So", "Sk", "Mn", "Cf")):
+            start += 1
+        else:
+            break
+    return text[start:] if start and re.match(r"\w", text[start:]) else text
+
+
+def unslipped(text, cfg):
+    """A whole reply one key off a shrug in `slip_targets` ("idj" -> "idk", "nit sure" -> "not sure"): only keys
+    side by side on one of `keyboard_rows`; a real word alone ("insure") and anything else stay as typed."""
+    lower = text.lower().rstrip(" ?!.")
+    if lower in real_words(cfg["spell_real_words"]):
+        return text
+    beside = {pair for row in cfg["keyboard_rows"] for pair in pairwise(row)}
+    for target in cfg["slip_targets"]:
+        slips = [(a, b) for a, b in zip(lower, target) if a != b]
+        if len(lower) == len(target) and len(slips) == 1 and (slips[0] in beside or slips[0][::-1] in beside):
+            return target + text[len(lower):]
+    return text
+
+
 def fix_typos(text, vocab, cfg):
     """The reply with plain typos fixed before it is understood ("monthy income" -> "monthly income", "£££" ->
     "money");
@@ -110,10 +142,13 @@ def fix_typos(text, vocab, cfg):
     text = QUOTED.sub(r"\1", (text or "").strip())  # round 47: '"ok"' at "Does that make sense?" got "let me put it another way"
     label = "|".join(map(re.escape, cfg["answer_labels"]))  # round 77: "A: money" was "a money", "1. my boss" saved whole
     text = re.sub(rf"^(?:>+\s+|\d{{1,2}}[.)]\s+|(?:{label})\s*[:)]\s+)", "", text, flags=re.IGNORECASE)
+    text = _bare_lead_marks(text, cfg)  # round 80: "😂 quit" left the call, "😂 money" was saved with its picture
+    text = re.sub(rf"(?<=\w)[,\s]+(?:{'|'.join(map(re.escape, cfg['mid_fillers']))})\b,?(?=\s+\w)", lambda m: "," * ("," in m.group()), text, flags=re.IGNORECASE)  # round 80: "more um money"
     text = STUTTER.sub("", text)  # round 78: "no, no idea" was a no ("I, I want money" -> "I want money")
     whole = short_form(text, cfg)
     if whole:
         return whole
+    text = unslipped(text, cfg)  # round 80: "idj" and "nit sure" were saved as answers
     text = MONEY_SIGNS.sub(cfg["money_signs_as"], text)  # "more £££" -> "more money": round 28, said back as "with more?"
     sure = "|".join(map(re.escape, cfg["sure_marks"]))  # round 49: "quit 100%" got "What do you mean"; "100% of" is an amount
     text = re.sub(rf"(?<!\w)(?:{sure})(?!\w)(?!\s+of\b)", cfg["sure_marks_as"], text, flags=re.IGNORECASE)
