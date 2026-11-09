@@ -23,7 +23,8 @@ def ear(fake_embedder):
     ("ok, what's next?", ScriptState(step="04"), "nudge"),
     ("ok", ScriptState(step="04"), "says_nothing"),
     ("brb", ScriptState(step="04"), "sense:pause"),
-    ("ok", ScriptState(step="04", waiting=True), "answer"),            # back from "brb": not a shrug
+    ("ok", ScriptState(step="04", waiting=True), "sense:back"),        # back from "brb": not a shrug, nor the answer (round 78: saved as it)
+    ("my kids", ScriptState(step="04", waiting=True), "answer"),         # guard: an answer after a pause is the answer
     ("it's my kids", ScriptState(step="04"), "answer"),
     ("let me think about it", ScriptState(step="19"), "objection:think"),   # round 14: the worry, word for word
     ("I don't know", ScriptState(step="19"), "answer"),                     # not knowing, never a worry

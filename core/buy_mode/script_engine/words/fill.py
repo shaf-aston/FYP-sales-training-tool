@@ -22,6 +22,7 @@ MONEY_SIGNS = re.compile(r"(?<![\w£$€])[£$€]{2,}(?![\w£$€])")  # "££�
 EMPHASIS = re.compile(r"(?<!\w)([*_`]+)(?=\S)([^*_`\n]+?)(?<=\S)\1(?!\w)")  # "**more money**": a pair, so "f***ing" stays
 STRETCHED = re.compile(r"\w*([^\W\d_])\1\1\w*")  # "moneyyy": a letter three times or more in one word; "100000" stays
 SLASHED = re.compile(r"(?<![\w./:-])[^\W\d_]{2,}(?:\s*/\s*[^\W\d_]{2,})+(?![\w./:])")  # "money/time": a choice, not a link or "km/h"
+STUTTER = re.compile(r"(?<![\w'])(\w+(?:\s+\w+){0,2}),\s+(?=\1(?![\w']))", re.IGNORECASE)  # words, a comma, the same words again
 DECIMAL_COMMA = re.compile(r"\d+,\d{1,2}")  # "1,5 years": a comma before one or two digits is a decimal point ("2,000" keeps three)
 ISH = re.compile(r"\b([^\W_]+?)(-?)ish\b", re.IGNORECASE)  # "a yearish", "money-ish": roughly, not a word
 QUOTED = re.compile(r'^\s*["\u201c\u201d](.+)["\u201c\u201d]\s*$')  # '"ok"': the whole reply in quotes
@@ -109,6 +110,7 @@ def fix_typos(text, vocab, cfg):
     text = QUOTED.sub(r"\1", (text or "").strip())  # round 47: '"ok"' at "Does that make sense?" got "let me put it another way"
     label = "|".join(map(re.escape, cfg["answer_labels"]))  # round 77: "A: money" was "a money", "1. my boss" saved whole
     text = re.sub(rf"^(?:>+\s+|\d{{1,2}}[.)]\s+|(?:{label})\s*[:)]\s+)(?=\S)", "", text, flags=re.IGNORECASE)
+    text = STUTTER.sub("", text)  # round 78: "no, no idea" was a no ("I, I want money" -> "I want money")
     whole = short_form(text, cfg)
     if whole:
         return whole

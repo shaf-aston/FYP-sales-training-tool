@@ -1268,6 +1268,11 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("01", 0, (), "A: money", "goal_practical", "What are you hoping that would get you?"), ("05", 0, (), "a) not sure", "05", "No rush"), ("01", 0, (), "money x", "goal_practical", "What are you hoping that would get you?"),   # round 77 callers: were "with a money?", "What do you mean by a not?" and "with money x?"
     ("19", 0, (), "yes why?", "20", "It helps me see"), ("01", 0, (), "money why?", "goal_practical", "It helps me see"), ("19", 0, (), "how come?", "19", "It helps me see"),   # round 77 callers: were "I don't know that one offhand"
     ("01", 0, (), "a year", "goal_practical", "What are you hoping to achieve with a year?"), ("01", 0, (), "I don't know why", "01", None),   # guard: as before
+    ("goal_practical", 0, (), "not sure?", "goal_practical", "What would that actually change"), ("05", 0, (), "not sure ?", "05", "No rush"),   # round 78 callers: were "let me say that again"
+    ("20", 0, (), "no, no idea", "20", "No rush"), ("05", 0, (), "no, no idea", "05", "No rush"),   # round 78 callers: were backing out, and "no" saved as the reason
+    ("05", 0, (), "n/a", "05", "No rush"), ("05", 0, (), "tbd", "05", "No rush"),   # round 78 callers: were saved as the reason
+    ("goal_identity", 0, (), "gimme a sec, free", "02", None),   # round 78 callers: was "take your time", the "free" lost
+    ("goal_practical", 0, (), "eh?", "goal_practical", "Fair point"), ("20", 0, (), "nah", "19", "No pressure"), ("goal_identity", 0, (), "gimme a sec", "goal_identity", "No problem, take your time."),   # guard: as before
 ]
 
 
@@ -1281,6 +1286,23 @@ def test_round_7_whole_calls(step, asks, raised, said, after, starts):
     assert seller.state.step == after, text
     if starts:
         assert text.startswith(starts), text
+
+
+def test_a_shrug_after_a_pause_is_no_answer():
+    """Round 78 callers: "let me think" after "take your time" was saved as the answer."""
+    from core.buy_mode.script_engine.engine import ScriptState
+
+    seller = _real_seller()
+    seller.reset(ScriptState(step="goal_identity"))
+    seller.reply("gimme a sec")
+    text, _ = seller.reply("lemme think")
+    assert seller.state.step == "goal_identity" and "identity" not in seller.state.slots, text
+    seller.reply("free")
+    assert seller.state.slots.get("identity") == "free", seller.state.slots
+    seller.reset(ScriptState(step="05"))
+    seller.reply("brb")
+    text, _ = seller.reply("okay")
+    assert text.startswith("No worries.") and "blocker" not in seller.state.slots, text   # was saved as the reason
 
 
 def test_a_second_thank_you_is_heard_as_the_rest():

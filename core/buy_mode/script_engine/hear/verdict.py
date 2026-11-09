@@ -112,6 +112,11 @@ class Ear:
             return Verdict("says_nothing")  # "ok, thank you" once "You're welcome." was said: heard as "ok"
         if kind:
             return Verdict(kind, name, text, asking, ahead)
+        if nothing and not self._ready(text, state):  # only after a pause: "I'm back" is heard above, but round 78's
+            back = next((k for k, i in self.sense.interruptions.items() if i.after_wait), None)  # "let me think" after
+            if back and self._shrugs.filler(text):  # "take your time" was saved, and "ok" too: a bare "ok" is back
+                return Verdict("sense", back, text, asking)
+            return Verdict("says_nothing", text=text, asking=asking)
         if asking and not self._answers(text, step):
             if self._means_what(text):  # round 40 callers: "what do you mean stopping me?" got "I'll find out"
                 return Verdict("sense", "clarify", text, asking)
@@ -216,6 +221,8 @@ class Ear:
             return True  # "ok?" got "I'll find out"; round 73: "no?" alone too, at every step
         if len(words) > self.cfg["rise_answer_words"]:
             return False
+        if len(words) >= self.cfg["rise_unsure_words"] and self._shrugs.unsure(part) >= self.sense.unclear_min_score:
+            return True  # round 78: "not sure?" got "let me say that again"; "eh?" alone still asks for it again
         return words[0] in self.cfg["prospect_pronouns"] or bool(step.needs) and self.shaped(part, step)  # round 28: "my job?" got "I'll find out"
 
     def _reason(self, text):
