@@ -1340,6 +1340,10 @@ ROUND_7 = [   # whole simulated calls, round 9: (step, asks, raised, said, step 
     ("05", 0, (), "no sé", "05", "No rush"), ("19", 0, (), "yes, hold on", "19", "No problem"),   # round 92 callers: saved as the answer; guard: still a pause
     ("01", 0, (), "is money a good answer?", "goal_practical", "There's no right answer"), ("02", 0, (), "would 2k be enough?", "03", "There's no right answer"),   # round 93 callers: "I'll find out"
     ("01", 0, (), "money, is that a good answer?", "goal_practical", "There's no right answer"), ("01", 0, (), "primarily money", "goal_practical", None),   # round 93 callers: moved on without it; saved whole
+    ("01", 0, (), "what do you mean by achieve? money I guess", "goal_practical", "What are you hoping that would get you?"), ("02", 0, (), "per month or total? 2k a month", "03", "How long"),   # round 94 callers: the AI line, the payment plan line
+    ("03", 0, (), "A year. Closer to two.", "04", "24 months"), ("01", 0, (), "£", "goal_practical", "What are you hoping that would get you?"), ("01", 0, (), "money or rather freedom", "goal_practical", "What are you hoping to achieve with freedom?"),   # round 94 callers
+    ("22", 0, (), "credit or debit? debit", "end", "Perfect"), ("04", 0, (), "what do you mean by that? my boss", "05", "What's the reason"),   # round 94 guards
+    ("02", 0, (), "what do others do?", "02", "There's no right answer"), ("04", 0, (), "what do other people do?", "04", "There's no right answer"), ("01", 0, (), "what do you guys do?", "01", "We help people"),   # round 94 callers: got what we do; guard
     ("22", 0, (), "not today, tomorrow", "m_think_what", None), ("02", 0, (), "cheers, mate", "02", "You're welcome"),   # round 91 guards: still asks for time; a thank-you alone is still one
     ("03", 0, (), "since when?", "03", "Fair point"), ("04", 0, (), "for what? dunno", "04", "Fair point"), ("03", 0, (), "since 2020", "04", None),   # round 87 probes: saved as how long, "I'll find out"; guard
 ]

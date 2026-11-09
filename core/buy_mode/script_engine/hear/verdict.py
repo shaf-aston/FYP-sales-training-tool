@@ -217,15 +217,17 @@ class Ear:
         """A word or two lifted from the question just asked, said back with a "?" ("a month?" to "How much would
         you need to be making each month...?", "achieve?", "monthly?") checks what it means: put it another way. Not
         when the question offers a choice ("Credit or debit?": "debit?" picks one), the reply holds a question word
-        ("why?"), or the line asks nothing ("$5k." then "a month?" asks how it is paid)."""
+        ("why?"), or the line asks nothing ("$5k." then "a month?" asks how it is paid). Two choices of their own
+        ("per month or total?") check it when one is lifted."""
         if not text.rstrip().endswith("?"):
             return False
         asked = set(tokenize(" ".join(q for line in asked_line(self.method, state) for q in questions_of(line) if q.endswith("?"))))
-        words = [w for w in tokenize(text) if w not in {*self.cfg["stop_words"], *self.cfg["word_back_skip"]}]
-        if "or" in asked or not 0 < len(words) <= self.cfg["word_back_words"] or set(words) & set(self.cfg["question_words"]):
-            return False
+        words = [w for w in tokenize(text) if w == "or" or w not in {*self.cfg["stop_words"], *self.cfg["word_back_skip"]}]
+        sides = [s.split() for s in " ".join(words).split(" or ")]  # round 94 callers: "per month or total? 2k a month"
+        if "or" in asked or len(sides) > 2 or not all(0 < len(s) <= self.cfg["word_back_words"] for s in sides) or set(words) & set(self.cfg["question_words"]):
+            return False  # got the payment plan line: one side lifted from the question is checking what it means
         ends = ("", *self.cfg["word_back_ends"])
-        return all(any(w + e in asked or (e and w.endswith(e) and w[:-len(e)] in asked) for e in ends) for w in words)
+        return any(all(any(w + e in asked or (e and w.endswith(e) and w[:-len(e)] in asked) for e in ends) for w in s) for s in sides)
 
     def _asked_back(self, text, state, share="asked_back_share"):
         """Their reply is the question just asked, said back about themselves ("what do I want to achieve?" to
@@ -293,7 +295,8 @@ class Ear:
                 kind, name = self._interrupt(reply.meant, step, state, opened, True, answers=False)  # it asks
                 return Verdict(kind, name, reply.meant, asking=True) if kind == "fact" else None
             return Verdict("answer", text=reply.asked, asking=True)
-        kind, name = self._interrupt(reply.asked, step, state, opened, True)
+        # round 94 callers: "what do you mean by achieve? money I guess" got "I'm the AI playing the salesperson"
+        kind, name = ("sense", "clarify") if self._means_what(reply.asked) else self._interrupt(reply.asked, step, state, opened, True)
         sense = self.sense.interruptions[name] if kind == "sense" else None
         # "what do you mean? money I suppose": a sense that asks for other words, then their own answer, is the answer;
         # round 73: so is one that asks for the same words ("come again? 2k" lost the 2k). A pause or goodbye leads

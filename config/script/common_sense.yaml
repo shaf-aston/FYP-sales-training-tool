@@ -263,6 +263,8 @@ interruptions:
       - "is that a good answer"   # draft: round 93 callers, "is money a good answer?" got "I'll find out", then (read as "money, is that a good answer?") no answer to it
       - "is that ok to say"   # draft
       - "does that count"   # draft
+      - "what do others do"   # draft: round 94 callers, "what do others do? quit" got what we do ("what do you do")
+      - "what do other people do"   # draft
     reply: "There's no right answer here, it's just about you."
   frustrated:   # live: "stop with the script man", "whatever", "this is stupid" got the same line again
     draft: true

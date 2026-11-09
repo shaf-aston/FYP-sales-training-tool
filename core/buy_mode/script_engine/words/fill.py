@@ -19,7 +19,8 @@ WORD = re.compile(r"[$£€]?\d+(?:[.,]\d+)*%?[A-Za-z0-9'-]*|[A-Za-z0-9'-]+")  #
 FIGURE = re.compile(r"\d+(?:\.\d+)?")
 GLUED = re.compile(r"(\d)([A-Za-z])")  # a number stuck to its unit: "1yr", "18mo"
 RANGE = re.compile(r"(\d)-(?=\d)")  # two numbers joined by a dash: "1-2 years" reads like "1 to 2 years"
-MONEY_SIGNS = re.compile(r"(?<![\w£$€])[£$€]{2,}(?![\w£$€])")  # "£££", "$$$": a word for money, never a number
+MONEY_SIGNS = re.compile(r"(?<![\w£$€])[£$€]{2,}(?![\w£$€])|^\s*[£$€]\s*$")  # "£££", "$$$": a word for money, never a
+# number; round 94 callers: a reply of one "£" alone was "say that again"
 EMPHASIS = re.compile(r"(?<!\w)([*_`]+)(?=\S)([^*_`\n]+?)(?<=\S)\1(?!\w)")  # "**more money**": a pair, so "f***ing" stays
 STRETCHED = re.compile(r"\w*([^\W\d_])\1\1\w*")  # "moneyyy": a letter three times or more in one word; "100000" stays
 SLASHED = re.compile(r"(?<![\w./:-])[^\W\d_]{2,}(?:\s*/\s*[^\W\d_]{2,})+(?![\w./:])")  # "money/time": a choice, not a link or "km/h"

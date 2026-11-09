@@ -598,6 +598,9 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("primarily money", "money", ""), ("chiefly money", "money", ""),   # round 93 callers: saved whole
     ("is it enough?", "", "is it enough?"), ("is my goal realistic?", "", "is my goal realistic?"), ("is that normal?", "", "is that normal?"),   # round 93 guards: no answer in it
     ("2k actually time", "2k actually time", ""), ("2k sorry about that", "2k sorry about that", ""),   # mutation 91: with no comma, a take-back only between figures
+    ("a year, closer to two", "two year", ""), ("A year. Closer to two.", "two year", ""), ("a year or closer to two", "two year", ""), ("a year, almost two", "two year", ""),   # round 94 callers: said back as 12 months
+    ("money, more like time", "time", ""), ("money or rather freedom", "freedom", ""), ("free I think, if that's what you mean", "free I think", ""),   # round 94 callers: said back whole
+    ("for nearly 2 years", "for nearly 2 years", ""), ("almost 2 years", "almost 2 years", ""), ("money, more like a lot", "money, more like a lot", ""),   # round 94 guards: no figure before it, or no answer after it
     ("not really, I'm busy", "not really, I'm busy", ""),   # guard: a no with a reason stays a no
     ("not sure, a year", "not sure, a year", ""),
     ("is it ok to say?", "", "is it ok to say?"),   # nothing after the lead: a question, as typed
@@ -1489,6 +1492,7 @@ def test_a_question_with_what_in_it_is_not_what_alone(seller, said):
     ("belief_cost", "year?"),  # "...over the next few years?"
     ("02", "per month?"),      # round 40: got the payment plan line
     ("02", "monthly?"),        # round 40: "-ly" on the question's word
+    ("02", "per month or total?"), ("02", "total or monthly?"),   # round 94 callers: got the payment plan line
 ])
 def test_a_word_from_the_question_said_back_wants_it_put_another_way(seller, step, said):
     """Round 23: "a month?" to "How much... each month...?" got "I'll find out"; "achieve?" got the AI line."""
@@ -1508,6 +1512,7 @@ def test_a_word_from_the_question_said_back_wants_it_put_another_way(seller, ste
     ("02", "bills?"),           # ends in "s", but "bill" isn't in the question either
     ("14", "a month?"),         # round 40: the price line asks nothing, so "a month?" asks how it is paid
     ("02", "only?"),            # "-ly" alone lifts nothing
+    ("22", "credit or debit?"), ("02", "per month or what?"), ("02", "month or year or total?"),   # round 94 guards: the question's own choice, a question word, three sides
 ])
 def test_a_reply_of_its_own_is_not_a_word_said_back(seller, step, said):
     assert not seller._ear._word_back(said, ScriptState(step=step))

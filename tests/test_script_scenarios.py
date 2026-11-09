@@ -1314,6 +1314,7 @@ def test_echo_phrase_fixes_typos(reply, phrase):
     ("time in Dubai!", "time in Dubai!"),
     ("more £££", "more money"),   # round 28 callers: "£££" was said back as "more"
     ("$$$ please", "money please"),
+    ("£", "money"), ("$", "money"), ("2k £", "2k £"),   # round 94 callers: a "£" alone was "say that again"; guard: beside a figure it stays
     ("£2k", "£2k"),   # guard: one sign before a figure is kept
     ("**more money**", "more money"),   # round 30 callers: said back as "with more?"
     ("_more time_ and `2k`", "more time and 2k"),

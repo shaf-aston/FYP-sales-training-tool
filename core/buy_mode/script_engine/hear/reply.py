@@ -18,6 +18,7 @@ A yes and no said together (`flip_leads`: "no yeah", "yeah no") mean the last on
 import re
 import unicodedata
 from dataclasses import dataclass, replace
+from itertools import takewhile
 
 from core.buy_mode.script_engine.config import plain_words
 from core.infra.utils import opens_question, tokenize
@@ -225,7 +226,9 @@ class Reader:
         before = tokenize(last[-1]) if last else []
         said = [i for i, w in enumerate(before) if self._amount.fullmatch(w)]
         bare = said and all(self._bare.fullmatch(w) for w in tokenize(new))  # "a million, jk, 2k": 2k
-        return " ".join([new, *before[said[-1] + 1:]]) if bare else new
+        unit = takewhile(lambda w: w not in self.cfg["number_range_joins"], before[said[-1] + 1:]) if bare else ()
+        return " ".join([new.rstrip(" .!;:"), *unit]) if bare else new  # round 94 callers: "A year. Closer to two." was
+        # "two. year", and "a year or closer to two" was "two year or"
 
     def read(self, text):
         rest = marked = self.squash(text)
