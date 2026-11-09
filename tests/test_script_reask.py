@@ -484,3 +484,16 @@ def test_a_route_turned_to_the_follow_up_is_not_acknowledged_twice():
     assert move.state.step == CAT.follow_up and move.ack == ""
     move = advance(CAT, ScriptState(step="22", seen=("19",)), "backs_out", "no wait")   # guard: not turned
     assert move.state.step == "19" and move.ack == "No pressure at all."
+
+
+def test_a_line_said_beside_an_answer_wears_like_any_lead(fake_embedder):
+    """Round 101 callers: "There's no right answer here, it's just about you." three times in one call."""
+    s = seller(fake_embedder, "01")
+    line = s.sense.interruptions["no_wrong_answer"].reply
+    assert line in s._leads and s.sense.interruptions["why_ask"].reply in s._leads
+    said = []
+    for step in ("01", "02", "03", "04"):
+        s.state = replace(s.state, step=step, asks=0, last="")
+        said.append(s.reply("what do most people say")[0])
+    assert [line in t for t in said] == [True] * s.cfg["lead_repeats"] + [False] * (4 - s.cfg["lead_repeats"]), said
+    assert all(t.strip() for t in said)

@@ -98,9 +98,10 @@ class ScriptSeller:
 
     def _lead_lines(self):
         """The fixed lines said in front of a question asked again: the `reask` leads, the replies of the
-        senses that rephrase ("Fair point, let me put it another way.") and the same worry asked again."""
+        senses that rephrase ("Fair point, let me put it another way.") or sit beside an answer (round 101: "There's
+        no right answer here" three times a call) and the same worry asked again."""
         lines = set(self.method.reask) | {line for s in self.method.steps.values() for line in s.reask}
-        lines |= {i.reply for i in self.sense.interruptions.values() if i.after.startswith("rephrase")}
+        lines |= {i.reply for i in self.sense.interruptions.values() if i.after.startswith("rephrase") or i.with_answer}
         lines |= {self.sense.same_words, self.sense.park_again, *self.sense.yes_no_reask}
         return sorted(line for line in lines if line)
 
