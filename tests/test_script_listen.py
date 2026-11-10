@@ -340,3 +340,11 @@ def test_08_agrees_with_risk_and_shows_it_otherwise(fake_embedder, answer, agree
     text, _ = s.reply(answer)
     assert s.state.step == "09"
     assert text.startswith("Exactly.") == agreed and ("A big one is risk" in text) != agreed, text
+
+
+@pytest.mark.parametrize("whole", ["I can't afford that", "stuff like that", "2k if that"])
+def test_that_at_the_end_of_a_whole_sentence_is_not_held(fake_embedder, whole):
+    """Real suite: "that" alone ends plenty of whole replies; only "the fact that", "is that"... are held."""
+    s = seller(fake_embedder, _down, step="05")
+    s.reply(whole)
+    assert s.last_turn["heard_as"] != "unfinished"

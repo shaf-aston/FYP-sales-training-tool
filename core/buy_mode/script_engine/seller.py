@@ -198,7 +198,8 @@ class ScriptSeller:
         """The reply stops mid-sentence: 2+ words, no end mark, the last word leaves it open ("the fact that")."""
         words = text.lower().rstrip().split()
         return (bool(self.sense.unfinished) and len(words) >= 2 and not text.rstrip()[-1:] in ".?!"
-                and words[-1].strip(",;:-") in self.sense.unfinished_ends and "," not in text.rstrip()[-1:])
+                and "," not in text.rstrip()[-1:]
+                and any(words[-len(e.split()):] == e.split() for e in self.sense.unfinished_ends))
 
     def _fresh_opener(self, said):
         """An opener ("Okay.") that also opened the last message is left off: "Okay." four times in a row

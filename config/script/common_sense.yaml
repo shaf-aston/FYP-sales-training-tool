@@ -42,7 +42,7 @@ corrected: "Got it, thanks."   # draft: they fixed their last answer a turn late
 unfinished:
   draft: true
   reply: "Go on, I'm listening."
-  ends: [that, the, a, an, because, cos, coz, and, but, or, than, which, my, your, their, our, they, we, "i'm", "they're", "it's"]   # never words a sentence can end on: "look up to", "I think so", "it is what it is", "yes I would"
+  ends: ["fact that", "is that", "was that", "so that", "think that", "feel that", "mean that", "say that", "said that", "be that", the, a, an, because, cos, coz, and, but, or, than, which, my, your, their, our, they, we, "i'm", "they're", "it's"]   # never words a sentence can end on: "look up to", "I think so", "it is what it is", "yes I would"; "that" only in a phrase: "I can't afford that", "stuff like that", "2k if that" are whole (real suite)
 # One kind of question (a clarifying one), many wordings: used in turn through the call, so it never sounds like a loop.
 ask_meaning:   # draft: the owner's ask, our wording; draft (the rest): live call, "What do you mean by" twice read as a script
   - "What do you mean by {said|$|wanting to $}?"
