@@ -15,7 +15,10 @@ branch → PR (template: problem, fix, proof, risk) → **ci** green → merge t
 
 - **ci** (`.github/workflows/ci.yml`): Python lint + tests, web check + build. Runs on every PR.
 - **deploy** (`.github/workflows/deploy.yml`): runs only after ci passes on `master`.
-  Updates the VM, redeploys Vercel, then checks `/api/health` reports the new commit.
+  Updates the VM with `scripts/deploy_vm.sh`, redeploys Vercel, then checks `/api/health` reports the new commit.
+  On the VM the script installs packages when `requirements.txt` changed, restarts, waits for the new commit
+  on `/api/health`, and rolls back to the previous commit if it does not come up (the run then fails).
+  It refuses to touch a VM checkout with local changes or one that has diverged from `master`.
   Skips itself until the setup below is done. Manual run: Actions → deploy → Run workflow.
 
 ## One-time setup
