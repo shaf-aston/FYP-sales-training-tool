@@ -97,9 +97,9 @@ footer{font-size:12px;color:var(--muted)}
   </section>
 
   <section class="stats" aria-label="Summary">
-    <div class="stat"><b>8</b><span>steps, in order</span></div>
+    <div class="stat"><b>7</b><span>steps, in order</span></div>
     <div class="stat"><b>7–9 wk</b><span>one developer</span></div>
-    <div class="stat"><b>~1.5 wk</b><span>to first demo (step 3)</span></div>
+    <div class="stat"><b>~1.5 wk</b><span>to first demo (step 2)</span></div>
     <div class="stat"><b>~45%</b><span>already built</span></div>
   </section>
 
@@ -144,13 +144,9 @@ const steps=[
   why:"<b>Why:</b> new backend code isn't reaching the live API. Everything after this needs it.",
   need:["Add VM secrets in GitHub","Run the deploy, confirm /api/health"],have:["Deploy workflow","Health check"],
   out:"Every merge ships to the live server"},
- {k:"upload",t:"Call intake (transcripts)",e:"3–5 days",
-  why:"<b>Why:</b> every feature starts with a real call as text, with each line marked rep or prospect.",
-  need:["Upload Fathom / Zoom / VTT","Parse into rep and prospect turns","Size and format checks"],have:["Fathom import script","Turn format used by sessions"],
-  out:"Any call becomes a clean, labelled transcript"},
- {k:"play",t:"Roleplay the prospect",e:"1–1.5 wk",
+ {k:"play",t:"Upload a call, roleplay the prospect",e:"~1.5–2 wk",
   why:"<b>Why:</b> the core feature. Practise against the buyer you actually lost.",
-  need:["LLM pulls out the profile: pains, budget, tone, objections","Rep edits the profile, then plays","Buyer session takes a custom persona"],have:["AI buyer","Persona format","Objection extraction"],
+  need:["Upload button for a call transcript (Fathom / Zoom)","Split it into rep and prospect lines","LLM pulls out the profile: pains, budget, tone, objections","Rep edits the profile, then plays","Buyer session takes a custom persona"],have:["AI buyer","Persona format","Objection extraction (offline script only)"],
   out:"Upload a call, then practise against that same prospect"},
  {k:"review",t:"Call review",e:"~1 wk",
   why:"<b>Why:</b> shows where the real call was won or lost, and picks the moment to replay.",
@@ -174,10 +170,10 @@ const steps=[
   out:"Managers see what to train, by whom, with evidence"}
 ];
 const route=document.getElementById("route");
-route.innerHTML=steps.map((s,i)=>`<li class="stop${s.fix?' now':''}"${i===2?' data-open':''}>
+route.innerHTML=steps.map((s,i)=>`<li class="stop${s.fix?' now':''}"${i===1?' data-open':''}>
  <div class="pin">${ic(s.k)}</div>
  <div class="card">
-  <button class="head" id="h${i}" aria-expanded="${i===2}" aria-controls="b${i}">
+  <button class="head" id="h${i}" aria-expanded="${i===1}" aria-controls="b${i}">
    <span class="label">${String(i+1).padStart(2,"0")}</span><h3>${s.t}</h3>
    <span class="chip${s.fix?' fix':''}">${s.e}</span><svg class="i chev" viewBox="0 0 24 24" aria-hidden="true">${I.chev}</svg>
   </button>
@@ -193,9 +189,9 @@ route.innerHTML=steps.map((s,i)=>`<li class="stop${s.fix?' now':''}"${i===2?' da
 route.addEventListener("click",e=>{const b=e.target.closest(".head");if(!b)return;const li=b.closest(".stop");const open=li.toggleAttribute("data-open");b.setAttribute("aria-expanded",open)});
 
 const qs=[
- {q:"Who uses it?",o:{"Solo reps":"Step 5 can wait; ship steps 2–4 without login first.","Teams + managers":"Step 5 moves up, right after step 3."}},
- {q:"What do calls arrive as?",o:{"Fathom exports":"Skip step 6 for now and save ~4 days.","Raw audio":"Step 6 is needed; budget ~$0.25/hr for speaker detection."}},
- {q:"Whose SOP?",o:{"One company":"Hard-code it as a script; step 7 drops to ~1 wk.","Each customer's":"Needs upload and conversion; full step 7."}}
+ {q:"Who uses it?",o:{"Solo reps":"Step 4 can wait; ship steps 2–3 without login first.","Teams + managers":"Step 4 moves up, right after step 2."}},
+ {q:"What do calls arrive as?",o:{"Fathom exports":"Skip step 5 for now and save ~4 days.","Raw audio":"Step 5 is needed; budget ~$0.25/hr for speaker detection."}},
+ {q:"Whose SOP?",o:{"One company":"Hard-code it as a script; step 6 drops to ~1 wk.","Each customer's":"Needs upload and conversion; full step 6."}}
 ];
 const dec=document.getElementById("decide");
 dec.innerHTML=qs.map((x,i)=>`<div class="q"><p>${x.q}</p><div class="opts">${Object.keys(x.o).map(k=>`<button class="opt" type="button" data-q="${i}" aria-pressed="false">${k}</button>`).join("")}</div><div class="effect" id="e${i}">Pick one to see what changes.</div></div>`).join("");
