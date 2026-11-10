@@ -1,0 +1,25 @@
+# Run one command on the Oracle VM by hand, and show its output here.
+# Actions -> vm-run -> Run workflow -> type a command (default: show status).
+# Uses the same VM_HOST / VM_USER / VM_SSH_KEY secrets as deploy.
+name: vm-run
+
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: Shell command to run on the VM
+        required: true
+        default: 'uname -a; whoami; pwd'
+
+jobs:
+  run:
+    if: vars.VM_APP_DIR != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run the command on the VM
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          script: ${{ github.event.inputs.command }}
