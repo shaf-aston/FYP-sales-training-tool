@@ -205,7 +205,7 @@ class CommonSense:
     nudges: tuple = ()  # phrases that nudge, cut off the end of a reply
     unclear: tuple = ()  # replies that give nothing to an open question ("dunno man", "stuff I guess")
     unclear_min_score: float = 1.0  # a reply counts as unclear when it matches `unclear` at least this well
-    ask_meaning: str = ""  # asks what they meant by their own words ({said}); empty = never asked
+    ask_meaning: tuple = ()  # ways to ask what they meant by their own words ({said}), used in turn; empty = never asked
     told_again: str = ""  # a fact asked a second time with no `again` of its own; empty = the answer again
     ended: str = ""     # said to any reply once the call has ended (a step with nowhere to go); empty = its line again
     same_words: str = ""  # in place of a rephrase's lead when the step has no other words left; empty = the lead
@@ -213,6 +213,8 @@ class CommonSense:
     yes_no_reask: tuple = ()  # leads for a yes-or-no question asked again, in turn, in place of the `reask` ones
     park_again: str = ""  # a worry already parked before the price, asked about again; empty = its first line again
     corrected: str = ""  # they fixed their last answer a turn later; empty = the question again only
+    unfinished: str = ""  # said to a reply cut off mid-sentence ("probably the fact that"): the next one is joined on
+    unfinished_ends: tuple = ()  # last words that leave a sentence open
 
 
 def _read(directory, name):
@@ -503,8 +505,9 @@ def parse_common_sense(data):
     if bool(nudge.get("reply")) != bool(nudge.get("phrases")):
         raise ValueError("nudge needs both a reply and phrases")
     unclear = data.get("unclear") or {}
-    ask_meaning = data.get("ask_meaning", "")
-    if ask_meaning and ("{said" not in ask_meaning or "?" not in ask_meaning):
+    ask_meaning = data.get("ask_meaning") or ()
+    ask_meaning = (ask_meaning,) if isinstance(ask_meaning, str) else tuple(ask_meaning)
+    if any("{said" not in a or "?" not in a for a in ask_meaning):
         raise ValueError("ask_meaning must ask (a '?') about their words (a {said} blank)")
     return CommonSense(data["park"], data["revisit"], items,
                        nudge.get("reply", ""), tuple(nudge.get("phrases") or ()),
@@ -512,7 +515,8 @@ def parse_common_sense(data):
                        _score("unclear", unclear.get("min_score")) if unclear else 1.0, ask_meaning,
                        data.get("told_again", ""), data.get("ended", ""), data.get("same_words", ""),
                        data.get("wait_again", ""), tuple(data.get("yes_no_reask") or ()), data.get("park_again", ""),
-                       data.get("corrected", ""))
+                       data.get("corrected", ""), (data.get("unfinished") or {}).get("reply", ""),
+                       tuple((data.get("unfinished") or {}).get("ends") or ()))
 
 
 def load_method(name, directory=CONFIG_DIR / "methods", shared=CONFIG_DIR / "script"):

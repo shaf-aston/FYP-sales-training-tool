@@ -106,7 +106,7 @@ class Shrugs:
             return 0.0
         return self._listener.match(text, {"unclear": list(self._sense.unclear)}, by_clause=False).score
 
-    def ask_meaning(self, text, question, empty, heard_ahead, known=()):
+    def ask_meaning(self, text, question, empty, heard_ahead, known=(), turn=0):
         """"What do you mean by stuff?": their own words asked about. Only for a shrug, or a miss that is about
         the question ("money online" to "...making money online?"), never off-topic words ("hey"). "" when
         nothing can be asked: only shrug words, an early answer to a later step ("5k a month" is clear), words
@@ -119,4 +119,5 @@ class Shrugs:
                 or not (empty or said & set(tokenize(question)) - self._asks)):
             return ""
         back = self._phrase_cut.sub("", text).strip(" ,.;:!-") or text  # "who knows, stuff": "What do you mean by stuff?"
-        return self._fill(self._sense.ask_meaning, {"said": back}) or ""
+        ways = self._sense.ask_meaning  # `turn`: asks so far this call, so "What do you mean by" is never said twice running
+        return self._fill(ways[turn % len(ways)], {"said": back}) or ""

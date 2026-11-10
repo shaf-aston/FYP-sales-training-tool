@@ -1259,7 +1259,7 @@ def test_last_turn_says_what_the_reply_was_heard_as(seller):
     assert seller.last_turn["heard_as"] == "sense:clarify"
     assert seller.last_turn["step_from"] == seller.last_turn["step_to"] == "08"
     at(seller, "08").reply("taking risks and making decisions")
-    assert seller.last_turn["heard_as"] == "answer:any"
+    assert seller.last_turn["heard_as"] == "answer:takes_risk"   # 08 hears risk by its words (live call)
     assert seller.last_turn["step_from"] == "08" != seller.last_turn["step_to"]
 
 
