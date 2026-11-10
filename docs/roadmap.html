@@ -1,0 +1,203 @@
+<title>Eloquence Build Roadmap</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: one vertical route of stops (the build order); a live pipeline strip on top shows how a call flows through the product. */
+:root{
+  --bg:#f5f6fb; --panel:#ffffff; --fg:#151827; --muted:#5d6380; --line:#dfe2ee;
+  --accent:#6d4cff; --accent2:#00a6c8; --soft:#ece8ff; --done:#14a36b; --warn:#c77700;
+  --display:"Sora",system-ui,sans-serif; --body:"Inter",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0d0f1a; --panel:#161927; --fg:#eceefa; --muted:#9aa0bf; --line:#262a3d;
+  --accent:#9b84ff; --accent2:#3fd6f2; --soft:#221d45; --done:#39d394; --warn:#f2b04a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d0f1a; --panel:#161927; --fg:#eceefa; --muted:#9aa0bf; --line:#262a3d;
+  --accent:#9b84ff; --accent2:#3fd6f2; --soft:#221d45; --done:#39d394; --warn:#f2b04a; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:15px/1.55 var(--body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:40px 64px}
+.wrap{max-width:880px;margin:0 auto;display:grid;gap:40px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
+h1{font-size:clamp(28px,5vw,40px);letter-spacing:-.02em}
+.lede{color:var(--muted);margin:8px 0 0;max-width:60ch}
+.label{font:500 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* Pipeline */
+.flow{display:flex;align-items:center;gap:6px;overflow-x:auto;padding:4px 2px 10px}
+.node{display:grid;justify-items:center;gap:6px;min-width:86px;text-align:center;font-size:12px;color:var(--muted)}
+.node .ic{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;background:var(--panel);border:1px solid var(--line);color:var(--fg);transition:all .35s}
+.node.on .ic{background:var(--accent);border-color:var(--accent);color:#fff;transform:translateY(-3px);box-shadow:0 8px 22px -8px var(--accent)}
+.node.on{color:var(--fg)}
+.pipe{flex:1;min-width:24px;height:2px;background:var(--line);position:relative;overflow:hidden;border-radius:2px}
+.pipe::after{content:"";position:absolute;inset:0;width:40%;background:linear-gradient(90deg,transparent,var(--accent2),transparent);animation:run 1.6s linear infinite}
+@keyframes run{from{transform:translateX(-100%)}to{transform:translateX(250%)}}
+
+/* Stats */
+.stats{display:flex;flex-wrap:wrap;gap:28px}
+.stat b{display:block;font:700 26px var(--display);font-variant-numeric:tabular-nums}
+.stat span{font-size:13px;color:var(--muted)}
+
+/* Route */
+.route{list-style:none;margin:0;padding:0;display:grid;gap:12px;position:relative}
+.route::before{content:"";position:absolute;left:27px;top:28px;bottom:28px;width:2px;background:linear-gradient(var(--accent),var(--accent2))}
+.stop{position:relative;display:grid;grid-template-columns:56px 1fr;gap:14px;align-items:start}
+.pin{width:56px;height:56px;border-radius:50%;display:grid;place-items:center;background:var(--panel);border:2px solid var(--line);color:var(--accent);position:relative;z-index:1;transition:all .3s}
+.stop[data-open] .pin{background:var(--accent);border-color:var(--accent);color:#fff}
+.stop.now .pin{border-color:var(--warn);color:var(--warn)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;min-width:0;transition:border-color .2s}
+.stop[data-open] .card{border-color:var(--accent)}
+.head{all:unset;box-sizing:border-box;cursor:pointer;width:100%;display:flex;gap:12px;align-items:center;padding:14px 16px;flex-wrap:wrap}
+.head:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:14px}
+.head h3{font-size:17px;flex:1;min-width:180px}
+.chip{font:500 11px var(--mono);padding:3px 9px;border-radius:99px;background:var(--soft);color:var(--accent);white-space:nowrap}
+.chip.fix{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn)}
+.chev{transition:transform .3s;color:var(--muted)}
+.stop[data-open] .chev{transform:rotate(180deg)}
+.body{display:grid;grid-template-rows:0fr;transition:grid-template-rows .4s ease}
+.stop[data-open] .body{grid-template-rows:1fr}
+.body>div{overflow:hidden}
+.inner{padding:0 16px 16px;display:grid;gap:14px}
+.why{margin:0;font-size:14px;color:var(--muted)}
+.why b{color:var(--fg);font-weight:600}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.box{border:1px dashed var(--line);border-radius:10px;padding:12px;min-width:0}
+.box ul{margin:6px 0 0;padding-left:18px;font-size:14px}
+.box li+li{margin-top:3px}
+.out{display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:10px;background:color-mix(in srgb,var(--done) 12%,transparent);color:var(--fg);font-size:14px}
+.out svg{color:var(--done)}
+.uses{font-size:12px;color:var(--muted)}
+.uses span{font-family:var(--mono);color:var(--accent2)}
+
+/* Decisions */
+.decide{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.q{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:8px;min-width:0}
+.q p{margin:0;font-weight:600}
+.opts{display:flex;flex-wrap:wrap;gap:6px}
+.opt{font:inherit;font-size:13px;padding:5px 10px;border-radius:99px;border:1px solid var(--line);background:transparent;color:var(--fg);cursor:pointer}
+.opt[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.opt:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.effect{font-size:13px;color:var(--muted);min-height:2.6em}
+footer{font-size:12px;color:var(--muted)}
+@media (max-width:640px){.cols,.decide{grid-template-columns:1fr}.route::before{left:21px}.stop{grid-template-columns:44px 1fr}.pin{width:44px;height:44px}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="label">Eloquence · requirements</div>
+    <h1>From a real call to a better rep</h1>
+    <p class="lede">Upload a call. Get it reviewed. Practise against that exact prospect. Managers see what the whole team needs.</p>
+  </header>
+
+  <section aria-label="How a call moves through the product">
+    <div class="label" style="margin-bottom:12px">The flow</div>
+    <div class="flow" id="flow"></div>
+  </section>
+
+  <section class="stats" aria-label="Summary">
+    <div class="stat"><b>8</b><span>steps, in order</span></div>
+    <div class="stat"><b>7–9 wk</b><span>one developer</span></div>
+    <div class="stat"><b>~1.5 wk</b><span>to first demo (step 3)</span></div>
+    <div class="stat"><b>~45%</b><span>already built</span></div>
+  </section>
+
+  <section>
+    <div class="label" style="margin-bottom:12px">Build order · tap a step</div>
+    <ol class="route" id="route"></ol>
+  </section>
+
+  <section>
+    <div class="label" style="margin-bottom:12px">Decide first</div>
+    <div class="decide" id="decide"></div>
+  </section>
+
+  <footer>Based on the current repo: sell mode, deterministic turn rating, personas in <code>config/buyer.yaml</code>, Fathom objection import, Groq LLM. Effort assumes one developer.</footer>
+</div>
+
+<script>
+const I={
+ upload:'<path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/>',
+ text:'<path d="M5 6h14M5 11h14M5 16h9"/>',
+ review:'<path d="M4 19V9M10 19V5M16 19v-7M21 19H3"/>',
+ person:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>',
+ play:'<circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l6-3.5z"/>',
+ team:'<circle cx="8" cy="9" r="3"/><circle cx="17" cy="10" r="2.5"/><path d="M2 20c.8-3.5 3.2-5 6-5s5.2 1.5 6 5M14 20c.4-2.4 1.8-3.6 4-3.6s3.4 1.2 4 3.6"/>',
+ server:'<rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/>',
+ lock:'<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
+ mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
+ doc:'<path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5M9 13l2 2 4-4"/>',
+ check:'<path d="M5 12.5l4.5 4.5L19 7"/>',
+ chev:'<path d="M6 9l6 6 6-6"/>'
+};
+const ic=(k)=>`<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${I[k]}</svg>`;
+
+const flow=[["upload","Upload call"],["text","Transcript"],["review","Review"],["person","Prospect profile"],["play","Roleplay"],["team","Team insights"]];
+document.getElementById("flow").innerHTML=flow.map(([k,t],i)=>(i?'<div class="pipe"></div>':'')+`<div class="node" data-i="${i}"><div class="ic">${ic(k)}</div>${t}</div>`).join("");
+const nodes=[...document.querySelectorAll(".node")];let f=0;
+nodes[0].classList.add("on");
+if(!matchMedia("(prefers-reduced-motion: reduce)").matches)setInterval(()=>{nodes[f].classList.remove("on");f=(f+1)%nodes.length;nodes[f].classList.add("on")},1300);
+
+const steps=[
+ {k:"server",t:"Fix the server deploy",e:"½ day",fix:1,
+  why:"<b>Why:</b> new backend code isn't reaching the live API. Everything after this needs it.",
+  need:["Add VM secrets in GitHub","Run the deploy, confirm /api/health"],have:["Deploy workflow","Health check"],
+  out:"Every merge ships to the live server"},
+ {k:"upload",t:"Call intake (transcripts)",e:"3–5 days",
+  why:"<b>Why:</b> every feature starts with a real call as text, with each line marked rep or prospect.",
+  need:["Upload Fathom / Zoom / VTT","Parse into rep and prospect turns","Size and format checks"],have:["Fathom import script","Turn format used by sessions"],
+  out:"Any call becomes a clean, labelled transcript"},
+ {k:"play",t:"Roleplay the prospect",e:"1–1.5 wk",
+  why:"<b>Why:</b> the core feature. Practise against the buyer you actually lost.",
+  need:["LLM pulls out the profile: pains, budget, tone, objections","Rep edits the profile, then plays","Buyer session takes a custom persona"],have:["AI buyer","Persona format","Objection extraction"],
+  out:"Upload a call, then practise against that same prospect"},
+ {k:"review",t:"Call review",e:"~1 wk",
+  why:"<b>Why:</b> shows where the real call was won or lost, and picks the moment to replay.",
+  need:["Run the review on uploaded calls","Tune scores for spoken calls (10–20 real calls)","Tag call stages","Replay from a pivotal moment"],have:["Turn rating","Pivotal moments","Drills"],
+  out:"Every rep line rated, with the turning points marked"},
+ {k:"lock",t:"Accounts, database, privacy",e:"6–10 days",
+  why:"<b>Why:</b> calls, profiles and progress must be saved per person and per team.",
+  need:["Login (magic link or Google)","Database for users, teams, calls, sessions","Background jobs for long tasks","Consent, retention, delete"],have:["Nothing yet: memory and localStorage only"],
+  out:"Saved history, a profile library, safe handling of recordings"},
+ {k:"mic",t:"Audio upload",e:"3–4 days",
+  why:"<b>Why:</b> most reps have recordings, not transcripts.",
+  need:["Groq Whisper transcription","Split files over 25 MB","Work out who is speaking (paid service or LLM)"],have:["Groq key","Text-to-speech"],
+  out:"Drop in an MP3 or M4A and get the same review"},
+ {k:"doc",t:"SOP review",e:"1.5–2 wk",
+  why:"<b>Why:</b> check the playbook, then check calls against it.",
+  need:["Upload PDF / DOCX","Critique it against the CAT and Impact methods","Convert it to script stages","Score each call step by step"],have:["Script stages","Method configs","Buy mode script engine"],
+  out:"A playbook report, call adherence scores, and buy mode can play the SOP"},
+ {k:"team",t:"Manager insights",e:"2–3 wk",
+  why:"<b>Why:</b> turns many calls into clear coaching for the team.",
+  need:["Rep and manager roles","Numbers per call: talk ratio, questions, objection wins","Team dashboard","AI-written coaching guidelines, plus export"],have:["Session analytics events"],
+  out:"Managers see what to train, by whom, with evidence"}
+];
+const route=document.getElementById("route");
+route.innerHTML=steps.map((s,i)=>`<li class="stop${s.fix?' now':''}"${i===2?' data-open':''}>
+ <div class="pin">${ic(s.k)}</div>
+ <div class="card">
+  <button class="head" id="h${i}" aria-expanded="${i===2}" aria-controls="b${i}">
+   <span class="label">${String(i+1).padStart(2,"0")}</span><h3>${s.t}</h3>
+   <span class="chip${s.fix?' fix':''}">${s.e}</span><svg class="i chev" viewBox="0 0 24 24" aria-hidden="true">${I.chev}</svg>
+  </button>
+  <div class="body" id="b${i}"><div><div class="inner">
+   <p class="why">${s.why}</p>
+   <div class="cols">
+    <div class="box"><div class="label">To build</div><ul>${s.need.map(x=>`<li>${x}</li>`).join("")}</ul></div>
+    <div class="box"><div class="label">Already have</div><ul>${s.have.map(x=>`<li>${x}</li>`).join("")}</ul></div>
+   </div>
+   <div class="out">${ic("check")}<span><b>Outcome:</b> ${s.out}</span></div>
+  </div></div></div>
+ </div></li>`).join("");
+route.addEventListener("click",e=>{const b=e.target.closest(".head");if(!b)return;const li=b.closest(".stop");const open=li.toggleAttribute("data-open");b.setAttribute("aria-expanded",open)});
+
+const qs=[
+ {q:"Who uses it?",o:{"Solo reps":"Step 5 can wait; ship steps 2–4 without login first.","Teams + managers":"Step 5 moves up, right after step 3."}},
+ {q:"What do calls arrive as?",o:{"Fathom exports":"Skip step 6 for now and save ~4 days.","Raw audio":"Step 6 is needed; budget ~$0.25/hr for speaker detection."}},
+ {q:"Whose SOP?",o:{"One company":"Hard-code it as a script; step 7 drops to ~1 wk.","Each customer's":"Needs upload and conversion; full step 7."}}
+];
+const dec=document.getElementById("decide");
+dec.innerHTML=qs.map((x,i)=>`<div class="q"><p>${x.q}</p><div class="opts">${Object.keys(x.o).map(k=>`<button class="opt" type="button" data-q="${i}" aria-pressed="false">${k}</button>`).join("")}</div><div class="effect" id="e${i}">Pick one to see what changes.</div></div>`).join("");
+dec.addEventListener("click",e=>{const b=e.target.closest(".opt");if(!b)return;const i=b.dataset.q;dec.querySelectorAll(`[data-q="${i}"]`).forEach(o=>o.setAttribute("aria-pressed",o===b));document.getElementById("e"+i).textContent=qs[i].o[b.textContent]});
+</script>
