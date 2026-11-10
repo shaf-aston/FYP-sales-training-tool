@@ -297,3 +297,46 @@ def test_a_shrug_after_an_early_answer_is_still_asked_about_this_turn(fake_embed
     s.reset(ScriptState(step="04", slots=s.state.slots))
     text, _ = s.reply("things")
     assert text == "What do you mean by things?"
+
+
+def test_clarifying_questions_use_a_new_wording_each_time(fake_embedder):
+    """Live call: "What do you mean by..." twice in a call read as a script. One kind of question, many
+    wordings, used in turn: the second ask in a call is worded differently."""
+    s = seller(fake_embedder, _down, step="04")
+    first, _ = s.reply("things")
+    assert first == "What do you mean by things?" and s.state.clarified == 1
+    s.reset(ScriptState(step="04", clarified=s.state.clarified))  # a later step in the same call
+    second, _ = s.reply("things")
+    assert second == "When you say things, what do you mean?", second
+    ways = load_common_sense().ask_meaning
+    assert len(set(ways)) == len(ways) >= 4
+
+
+@pytest.mark.parametrize("cut", ["Um probably the fact that", "owners are braver than", "I think it's because"])
+def test_a_reply_cut_off_mid_sentence_waits_then_hears_both_parts(fake_embedder, cut):
+    """Live call: "Um probably the fact that" was taken as 08's answer, and the rest landed on 09."""
+    s = seller(fake_embedder, _down, step="08")
+    text, _ = s.reply(cut)
+    assert text == "Go on, I'm listening." and s.state.step == "08" and s.state.pending == cut
+    text, _ = s.reply("they take risks")
+    assert s.state.step == "09" and text.startswith("Exactly.") and not s.state.pending
+
+
+@pytest.mark.parametrize("whole", ["money and time", "I want to quit.", "thank you", "the fact that?", "yes"])
+def test_a_finished_reply_is_never_held(fake_embedder, whole):
+    s = seller(fake_embedder, _down, step="08")
+    s.reply(whole)
+    assert s.state.step == "09" or s.last_turn["heard_as"] != "unfinished"
+
+
+@pytest.mark.parametrize("answer, agreed", [
+    ("taking risks", True), ("they're not scared to fail", True), ("employees get a pay check no matter what", True),
+    ("stepping out of your comfort zone", True), ("they back themselves", True), ("owners make the decisions", True),
+    ("money", False), ("they work harder", False), ("vision", False), ("scarf", False),
+])
+def test_08_agrees_with_risk_and_shows_it_otherwise(fake_embedder, answer, agreed):
+    """08 is after risk, fear and the uncomfortable (by words, no AI): named = agreed with; missed = shown it."""
+    s = seller(fake_embedder, _down, step="08")
+    text, _ = s.reply(answer)
+    assert s.state.step == "09"
+    assert text.startswith("Exactly.") == agreed and ("A big one is risk" in text) != agreed, text

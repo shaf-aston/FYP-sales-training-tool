@@ -20,6 +20,8 @@ class ScriptState:
     quoted: bool = False   # the last message said their words back (the echo budget, echo.py)
     echoed: tuple = ()     # their phrases said back this call, once per time said
     meant: tuple = ()      # meaning lines said this call
+    pending: str = ""      # a reply cut off mid-sentence, joined onto the next one
+    clarified: int = 0     # times we asked what their words meant this call: the next ask uses the next wording
     told: tuple = ()       # facts answered this call, once per telling ("price+": told the late way): asked again, a short reminder
     repeated: bool = False  # the last message was a side reply that said the step again: the next one uses other words (seller `_then_ask`)
     bridged: bool = False  # the last message ended on a step's `bridge` question: the next reply to it is heard, not saved

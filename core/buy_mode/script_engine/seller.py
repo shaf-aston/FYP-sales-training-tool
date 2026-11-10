@@ -163,10 +163,15 @@ class ScriptSeller:
     def _reply(self, text):
         """(text, ui_stage, heard_as): hear the reply, then answer what it was heard as."""
         self._voice.new_turn()
-        self._turn = Turn(text)
         step = self.method.steps[self.state.step]
         if not step.routes and self.sense.ended:  # the call is over: "bye" again never re-books the follow-up
             return self.sense.ended, step.ui_stage, "ended"
+        text, pending = (f"{self.state.pending} {text}" if self.state.pending else text), self.state.pending
+        if not pending and self._unfinished(text):  # "probably the fact that": wait for the rest, once
+            self.state = replace(self.state, pending=text, last=self.sense.unfinished)
+            return self.sense.unfinished, step.ui_stage, "unfinished"
+        self.state = replace(self.state, pending="")
+        self._turn = Turn(text)
         opened = price_open(self.method, self.state.step)
         v = self._ear.hear(text, self.state, opened)
         bridged = self.state.bridged
@@ -188,6 +193,12 @@ class ScriptSeller:
         said = self._fresh_opener(said)
         self.state = replace(Echo.settle(self.state, self._turn), repeated=self._turn.side, last=said)
         return said, ui_stage, detail or v.heard_as
+
+    def _unfinished(self, text):
+        """The reply stops mid-sentence: 2+ words, no end mark, the last word leaves it open ("the fact that")."""
+        words = text.lower().rstrip().split()
+        return (bool(self.sense.unfinished) and len(words) >= 2 and not text.rstrip()[-1:] in ".?!"
+                and words[-1].strip(",;:-") in self.sense.unfinished_ends and "," not in text.rstrip()[-1:])
 
     def _fresh_opener(self, said):
         """An opener ("Okay.") that also opened the last message is left off: "Okay." four times in a row
@@ -440,15 +451,20 @@ class ScriptSeller:
         short = not needed and (not label or any(r.keep for r in step.listen if r.label == label))
         if short:
             empty, missed = True, True
+        clarified = False
         if step.capture and not line and not self.state.said and not short:  # their words asked about once a step, never twice
             line = self._shrugs.ask_meaning(text, self._asked_text(), empty, v.ahead is not None,
-                                            self.state.slots.values())  # said only if asked again
+                                            self.state.slots.values(), self.state.clarified)  # said only if asked again
+            clarified = bool(line)
         detail = ""
         if missed:
             detail = "misses"
         elif v.kind == "answer":
             detail = f"answer:{label}" if label else ("answer:any" if not labels else "answer:unclear")
-        return self._closed_lead(advance(self.method, self.state, label, text, empty, line, self.cfg["misses"])), ack, detail
+        move = advance(self.method, self.state, label, text, empty, line, self.cfg["misses"])
+        if clarified and line in move.state.said:
+            move = replace(move, state=replace(move.state, clarified=move.state.clarified + 1))
+        return self._closed_lead(move), ack, detail
 
     def _ends_there(self, move, v, opened):
         """The step this reply led to, when the same reply already ends the call there: "yes, debit" to
