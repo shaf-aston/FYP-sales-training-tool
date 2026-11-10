@@ -43,5 +43,10 @@ branch → PR (template: problem, fix, proof, risk) → **ci** green → merge t
 The VM runs the API via gunicorn on `127.0.0.1:8000` under systemd unit `eloquence.service`.
 `vm-run.yml` (Actions → vm-run) runs any one command on the VM and prints its output.
 
+Only the **deploy** workflow updates the VM, and only after CI passes. The VM used to also have
+`eloquence-update.timer`, which pulled `master` every 10 minutes with no CI gate and no rollback.
+It is disabled (the unit files are kept). Do not re-enable it; to switch it back on anyway:
+`sudo systemctl enable --now eloquence-update.timer`.
+
 ### 3. Vercel
 Settings → Git → Production Branch = `master`.
