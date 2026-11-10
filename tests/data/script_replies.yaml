@@ -271,3 +271,15 @@ floored:
       - "honestly whatever pays the bills"
       - "I want to stop working for someone else"
       - "I'm tired of my job"
+  leaving:   # live: "bye" was ignored and the next question asked
+    meant:
+      - "ok bye"
+      - "I've got to go"
+      - "gotta run, bye"
+      - "I'm leaving now"
+    not_meant:
+      - "I want to say bye to my 9-5"
+      - "I want to leave my job"
+      - "I have to go to work every day"
+      - "I want to go travelling"
+      - "I'm done with my boss"

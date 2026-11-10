@@ -3,7 +3,6 @@
 import logging
 
 from core.buy_mode.script_engine.ai.checks import check, clip
-
 from core.infra.logs import timed
 
 logger = logging.getLogger("script_engine.fallback")

@@ -3,6 +3,7 @@
 # draft is an authoring marker only: the app ignores it.
 months: 6
 price: "$5k"
+setter: "our"   # draft: who booked the call, said in the opening ("a chat with {setter} setter"); a name also works
 industry: "online"   # draft: where the business is built; fills {industry} in the vague intro
 # What the AI may say about the programme when no fact below covers a question. Only what the
 # facts and the pitch steps already say: anything else gets the honest "I'll find out" line.
@@ -22,8 +23,18 @@ facts:
       - "what's the price"
       - "what do you charge"
       - "can you give me a ballpark figure"
+      - "can you just tell me the price"   # draft: a price request is this fact, not the money objection ("I haven't mentioned a price yet")
+      - "I just want to know the price"   # draft
+      - "just tell me what it costs"   # draft
+      - "what's this going to cost me?"   # draft
+      - "can we skip to the price"   # draft: round 28 callers, got the discount line
+      - "depends on the price"   # draft: round 44 callers, after the price got "let me put it another way"
+      - "depends how much it costs"   # draft
     answer: "Fair question. I'll give you the exact price once I know what you need, then you decide."
+    again: "Like I said, the exact price comes once I know what you need."   # draft: ours
     late_answer: "It's a {months}-month process and the investment is {price}."
+    pressed: "Straight answer then: it's {price} for the {months}-month programme. Whether it's worth it depends on what you tell me next."   # draft: ours; asked 3 times before the price, the number honestly (delete to keep holding it back)
+    late_again: "Like I said, it's {price}."   # draft: ours
   what_we_do:
     draft: true
     examples:
@@ -31,14 +42,156 @@ facts:
       - "what is this about"
       - "who are you"
       - "what exactly are you offering"
+      - "what kind of business is this"   # draft: whole calls, got "I'll find out"
+      - "depends what you're offering"   # draft: whole calls, "depends what you're offering" got "What do you mean by..."
+      - "it depends on what it is"   # draft
+      - "can you tell me more about it"   # draft: whole calls, "I was wondering if you could tell me more" was saved as the answer, "I want to know more" got "I'll find out"
+      - "I want to know more about what you do"   # draft: "about it" was nearer "I need to think about it" than its own meaning
     bridge: true   # at the very start, a getting-to-know-you question follows (the step's `bridge`)
     answer: "We help people build their own business {industry}, and there are a few different ways to do it.¶It always comes down to what would work best for you, so before I can suggest anything I need to know a bit more."
+    again: "Like I said, it depends on what would work best for you, which is why I'm asking."   # draft: ours
+  how_reached:   # live: "how'd you get my number" was taken as their answer to "have you tried before?" ("Good to know.")
+    draft: true
+    examples:
+      - "how did you get my number"
+      - "why are you calling me"
+      - "where did you get my details"
+      - "I didn't ask for this call"
+    answer: "You filled in an application and booked this call with our setter, so I'm following up on that."
+  payment_plan:   # live: "can I split it into payments?" at the payment step got "I'll find out and let you know"
+    draft: true
+    examples:
+      - "can I pay in instalments"
+      - "can I split it into payments"
+      - "is there a payment plan"
+      - "can I pay monthly"
+      - "is that per month"   # draft: round 40 callers, "a month?" after the price got "I'll find out"
+      - "is there a deposit"   # draft: whole calls, got "I'll find out"
+      - "do you take klarna"   # draft: same
+      - "can I wait until next week to pay"   # draft: whole calls, "can I pay next week?" got "I'll find out" (not "can I pay next week": "do I have to pay today?" was then torn)
+    answer: "There are ways to make the investment work, and we'll find the one that suits you."
+  discount:   # whole calls: "can you do it for 3k?" got "I'll find out and let you know"
+    draft: true
+    examples:
+      - "can you do it for 3k"
+      - "is there a discount"
+      - "what's the best price you can do"
+      - "can you knock some off"
+      - "any deals on"
+      - "can I get it cheaper"   # draft: whole calls, it was torn between the discount, the price and the money worry, and got "I'll find out"
+    answer: "Let's see if it's even right for you first, then we'll talk about making the numbers work."
+    late_answer: "The price is {price}, but there are ways to make it work, like splitting it into payments."   # draft
+    late_again: "Like I said, it's {price}, and there are ways to make it work."   # draft
+  included:   # whole calls: "what's included?" got "I'll find out and let you know"
+    draft: true
+    examples:
+      - "what's included"
+      - "what do I get"
+      - "how does the programme work"
+      - "how does it work"   # draft: round 14 replay, "no, but how does it work" at the close was left unanswered
+      - "how this works"   # draft: round 24 callers, "I was wondering how this works first" got "I'll find out"
+      - "what's in the programme"
+      - "do I get one to one calls"   # draft: whole calls: "I'll find out"
+      - "do I get a mentor"   # draft
+      - "is there a community"   # draft: whole calls, got "I'll find out"
+    answer: "Three parts: {pillar_1}, {pillar_2} and {pillar_3}. I'll go through each one once I know a bit more about you."
+    late_answer: "Three parts: {pillar_1}, {pillar_2} and {pillar_3}."   # draft: once the pitch has been said
+  guarantee:   # whole calls: "is there a refund?" went unanswered, "is there a guarantee?" was heard as the scam worry
+    draft: true
+    examples:
+      - "is there a refund"
+      - "is there a guarantee"
+      - "can I get my money back"
+      - "what if I don't make any money"
+      - "can I cancel anytime"   # draft: whole calls, got "I'll find out"
+      - "is there a contract"   # draft: whole calls, heard as unsure at the close
+    answer: "Fair question. I'll confirm exactly how that works before you decide anything."   # never a policy we don't know
+  different:   # whole calls: "how is this any different from the others?" got "I'll find out"
+    draft: true
+    examples:
+      - "how is this different from other courses"
+      - "what makes you different"
+      - "why is this better than a course"
+      - "I've done courses before, why is this different"
+    answer: "It's not just a course: you get {pillar_1}, plus {pillar_2} and {pillar_3}, so you're not doing it alone."
+  privacy:   # whole calls: "is this call recorded?" and "will you sell my data?" got "I'll find out"
+    draft: true
+    examples:
+      - "is this call recorded"
+      - "will you sell my data"
+      - "what do you do with my information"
+      - "is my data safe"
+    answer: "Fair question. I'll make sure you have that in writing before you decide anything."   # never a promise we can't check
+  proof:   # whole calls: "do you have reviews?" and "how many people have done it?" got "I'll find out"
+    draft: true
+    examples:
+      - "do you have reviews"
+      - "can I see some testimonials"
+      - "how many people have done it"
+      - "do you have any success stories"
+      - "can I speak to someone who has done it"
+    answer: "Fair question. I'll show you what others have done before you decide anything."   # never a number we can't check
+  pay_when:   # whole calls: "do you need my bank details?" got how we got their number; "do I have to give my card now?" got "I'll find out"
+    draft: true
+    examples:
+      - "do you need my bank details"
+      - "do I have to give my card now"
+      - "do you need my card details"
+      - "will I be charged today"   # not "do I have to pay today": "not yet, how do I pay?" read as it (0.83) and paid
+    answer: "Only if you decide to go ahead."
+  start:   # whole calls: "can I start next month?" and "when does it start?" got "I'll find out"
+    draft: true
+    examples:
+      - "can I start next month"
+      - "when does it start"
+      - "when can I start"
+      - "how soon can I begin"
+    answer: "We'll sort a start date that works for you once we know it's a fit."
+  call_length:   # whole calls: "how long is this call?" got "I'll find out"
+    draft: true
+    examples:
+      - "how long will this call take"
+      - "will this call take long"
+      - "will this take much longer"
+    answer: "Not long, just a few questions to see if this is right for you."
+  next_steps:   # whole calls: "what happens next?" got "I'll find out"
+    draft: true
+    examples:
+      - "what happens next"
+      - "what's the next step"
+      - "what happens after this call"
+    answer: "First we see if this is a fit, then I'll walk you through the next step."
+  send_details:   # whole calls: "can you email me the details?" got how we got their number
+    draft: true
+    examples:
+      - "can you email me the details"
+      - "can you send me something to read"
+      - "do you have a website"
+    answer: "I can send the details after, once we know it's even a fit."
+  results:   # whole calls: "how much do your clients make?" and "how long does it take to see results?" got "I'll find out"
+    draft: true
+    examples:
+      - "how much do your clients make"
+      - "what results do people get"
+      - "how long does it take to see results"
+      - "does it actually work"
+    answer: "Honestly, results depend on the work you put in."   # the offer's own words, never a figure we don't have
+  hours:   # whole calls: "how many hours a week does it take?" got "It's a 6-month process."; "can I do it alongside my job?" got "I'll find out"
+    draft: true
+    examples:
+      - "how many hours a week does it take"
+      - "can I do it alongside my job"
+      - "do I have to quit my job first"
+      - "how much time a week do I need to put in"   # draft: "how much time do I need to put in" took "how long would I be in it for" from length
+    answer: "Fair question. We'll plan it around the time you actually have."   # never a number of hours we can't check
   length:
     draft: true
     examples:
       - "how long is the programme"
       - "how many months does it run"
       - "how long does it last"
+      - "how long would I be on the programme"   # draft: "how long would I be in it for" was a close call with hours
+      - "how long does it take"   # draft: whole calls, "so I can quit my job, but how long does it take?" got how long the call is
     answer: "It's a 6-month process."
   location:
     examples:
@@ -46,6 +199,8 @@ facts:
       - "do you work with people in my country"
       - "is this only for people in the UK"
       - "can I join from abroad"
+      - "is it all online"   # draft: whole calls: "I'll find out"
+      - "do I have to come in person"   # draft
     answer: "We work with people all around the world."
   fit:
     draft: true
@@ -55,4 +210,5 @@ facts:
       - "will this work for me"
       - "does this work for beginners"
       - "is this for people with no experience"
+      - "is it worth it"   # draft: whole calls, got "I'll find out"
     answer: "That's exactly what these questions are for: to see if we can even help you."

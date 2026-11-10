@@ -14,7 +14,7 @@ from core.buy_mode.script_engine.seller import ScriptSeller
 
 CFG = load_yaml("script/engine.yaml")
 CAT = load_method("cat")
-SHRUGS = {"k", "kk", "idk", "dunno", "ok", "meh", "whatever", "no idea", "not sure"}
+SHRUGS = {"k", "kk", "idk", "dunno", "ok", "okay", "meh", "whatever", "no idea", "not sure"}   # "okay": round 51, a bare "k" or "ok" reaches the AI as "okay"
 
 
 class ListenAI:
@@ -230,14 +230,14 @@ def test_a_shrug_beyond_the_filler_words_is_asked_again_not_saved(fake_embedder)
     s = seller(fake_embedder, _down, step="02", slots={"outcome": "I want financial freedom"})
     text, _ = s.reply("no clue")  # live: "dunno man" at 02 was saved as their number
     assert s.state.step == "02" and "number" not in s.state.slots
-    assert text == f"{CAT.reask[0]} How much would you need to be making each month to have financial freedom?"
+    assert text == CAT.steps["02"].probes[0]
 
 
 def test_unclear_words_get_asked_what_they_mean(fake_embedder):
     s = seller(fake_embedder, _down, step="04")
-    text, _ = s.reply("stuff I guess")
-    assert text == "What do you mean by stuff?" and "why" not in s.state.slots
-    text, _ = s.reply("stuff I guess")  # asked once: next time other words
+    text, _ = s.reply("things")  # round 58: "I guess stuff" is now read "I guess, stuff", as "stuff I guess" was
+    assert text == "What do you mean by things?" and "why" not in s.state.slots
+    text, _ = s.reply("things")  # asked once: next time other words
     assert text == CAT.steps["04"].probes[0]
 
 
@@ -295,5 +295,5 @@ def test_a_shrug_after_an_early_answer_is_still_asked_about_this_turn(fake_embed
     s.reply("I want to make 5k a month")  # answers a later step early
     assert s.state.slots
     s.reset(ScriptState(step="04", slots=s.state.slots))
-    text, _ = s.reply("stuff I guess")
-    assert text == "What do you mean by stuff?"
+    text, _ = s.reply("things")
+    assert text == "What do you mean by things?"

@@ -16,6 +16,8 @@ meanings:
       - "my kids depend on me"
       - "I'm the one who supports my parents"
       - "I have to provide for my wife and kids"
+      - "money to provide for my family"   # draft: whole calls, "i want more money for my family" got family_time; "I need more money to ..." made plain "I want more money" mean this (0.85)
+      - "to support my family"   # draft
     lines:
       - "So this isn't really about the money.¶It's about ==them==."
       - "That's a lot of people counting on you."
@@ -30,6 +32,17 @@ meanings:
     lines:
       - "So it's really about ==being there== for them."
       - "Time with them is the thing you can't get back."
+  role_model:   # live: "I want to be someone my kids look up to" got family_time's "being there"
+    draft: true
+    examples:
+      - "I want my kids to be proud of me"
+      - "I want to set a good example for my kids"
+      - "I want to be a role model for my children"
+      - "I want my children to look up to me"
+      - "I want to show my kids what's possible"
+    lines:
+      - "So it's about the ==example== you set for them."
+      - "Kids copy what they see, not what they're told."
   bills_pressure:
     draft: true
     examples:
@@ -39,6 +52,8 @@ meanings:
       - "I'm drowning in debt"
       - "money is always tight at the end of the month"
       - "I'm stressed about paying the bills"
+      - "I don't want to be broke anymore"   # draft: whole calls, heard as fear_of_loss ("Nobody wants to lose money.")
+      - "I'm always skint"   # draft
     lines:
       - "That kind of money stress wears you down."
       - "Always one bill behind… that's exhausting."
@@ -90,3 +105,14 @@ meanings:
     lines:
       - "Getting burned once makes the next try feel riskier."
       - "That makes sense after a bad first try."
+  fear_of_loss:
+    draft: true
+    examples:
+      - "I'm scared of losing money"
+      - "I don't want to lose money again"
+      - "I'm worried I'll waste my money"
+      - "what if I put money in and lose it"
+      - "I can't afford to lose what I have"
+    lines:
+      - "That's a fair worry. Nobody wants to lose money."
+      - "Makes sense to be careful with your money."

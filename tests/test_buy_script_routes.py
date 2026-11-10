@@ -21,9 +21,9 @@ def _say(client, headers, text):
 
 def test_call_opens_with_the_script_and_follows_it(client):
     opened, headers = _init(client)
-    # step 00 (plain line: no setter) runs straight on into step 01's question
+    # step 00 ({setter} from the offer) runs straight on into step 01's question
     assert opened["message"] == (
-        "I've read your application but I don't like to assume anything. "
+        "I believe you had a chat with our setter... I've read your application but I don't like to assume anything. "
         "What do you want to specifically achieve by making money online?"
     )
     # "freedom" is a level 1 goal: dug into with their own words (no AI), then levels 2 and 3, then 02
@@ -124,7 +124,9 @@ def test_a_failed_past_attempt_is_acknowledged_before_going_on(client):
     _say(client, headers, "I'd finally be proud of myself")
     _say(client, headers, "ten thousand a month")
     text = _say(client, headers, "I tried dropshipping and it failed")["message"]
-    assert text.startswith("Sorry to hear that") and "why can't you just ignore it" in text
+    # still asked how long: the next line says "so many nights, months and years" as if they had told us
+    assert text.startswith("Sorry to hear that") and text.endswith("Roughly, is it more like months, or a few years?")
+    assert "why can't you just ignore it" in _say(client, headers, "about two years")["message"]
 
 
 def test_a_product_can_run_its_own_method(client, monkeypatch):

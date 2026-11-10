@@ -5,10 +5,14 @@ from pathlib import Path
 
 import pytest
 
-from core.infra.loader import load_yaml
-from core.buy_mode.script_engine.hear.meanings import MeaningBank, load_meanings, parse_meanings
+from core.buy_mode.script_engine.hear.meanings import (
+    MeaningBank,
+    load_meanings,
+    parse_meanings,
+)
 from core.buy_mode.script_engine.hear.recognise import Listener
 from core.buy_mode.script_engine.words.tone import stresses
+from core.infra.loader import load_yaml
 
 CFG = load_yaml("script/engine.yaml")
 MEANINGS = load_meanings()
@@ -118,8 +122,24 @@ def test_time_answers_still_get_the_months_line_or_the_question(model, cat_selle
 
 @real
 @pytest.mark.parametrize("reply", ["5k a month", "about two years", "I watch youtube videos", "more money",
-                                   "nothing really", "risk taking", "I want to be someone my kids look up to",
+                                   "nothing really", "risk taking",
                                    "for my mum", "for my kids", "my job", "I work full time", "debt", "the bills",
                                    "my family", "bills", "because of my kids"])
 def test_everyday_answers_mean_nothing_in_the_bank(model, reply):
     assert MeaningBank(CFG, MEANINGS, Listener(CFG, model)).line(reply, ()) == ""
+
+
+@real
+@pytest.mark.parametrize("reply", ["I want to be someone my kids look up to", "I want my son to be proud of his dad"])
+def test_wanting_to_be_looked_up_to_is_the_example_they_set_not_being_there(model, reply):
+    """Live: "I want to be someone my kids look up to" got "So it's really about ==being there== for them."."""
+    line = MeaningBank(CFG, MEANINGS, Listener(CFG, model)).line(reply, ())
+    assert line in MEANINGS.items["role_model"].lines, line
+
+
+@real
+@pytest.mark.parametrize("reply", ["i want more money for my family", "to support my family"])
+def test_money_for_the_family_is_about_them_not_being_there(model, reply):
+    """Whole calls: "i want more money for my family" got family_time's "being there"."""
+    line = MeaningBank(CFG, MEANINGS, Listener(CFG, model)).line(reply, ())
+    assert line in MEANINGS.items["family_duty"].lines, line

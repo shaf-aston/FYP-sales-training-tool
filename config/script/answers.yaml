@@ -1,0 +1,57 @@
+# Answers that mean the same wherever they are asked for. A step's route takes one with `like: <name>`,
+# plus any examples of its own (`examples:`). One list per meaning: a fix here reaches every step that
+# hears it (live: "credit" was a yes at one "Do you see yourself jumping in?" and not at the other).
+"yes": ["yes", "yeah it would", "definitely", "probably yes", "yeah I would"]
+"no": ["no", "not really", "probably not", "definitely not"]
+jump_in:   # a yes to "Do you see yourself jumping in?"
+  - "yes"
+  - "yes let's do it"
+  - "I'm in"
+  - "yes I'm ready to jump in"
+  - "I'm in, I can see myself doing this"
+  - "yes I see myself taking the jump"
+  - "ok, let's go"   # draft
+  - "sure, why not"   # draft: whole calls, "I don't see why not" was heard as not yet; this wording keeps it a yes, and "I don't think so" a no
+  - "I wouldn't say no"   # draft: round 26 callers, heard as "I'd rather not say"
+  - "my partner said yes"   # draft: round 36 callers, a partner who already agreed was heard as needing to ask them
+  - "my husband is on board with it"   # draft
+  - "I guess so"   # draft: round 38 callers, a soft yes went into the not-yet talk; "What makes you say that?" lets them say why
+  - "I suppose so"   # draft
+  - "no doubt"   # draft: round 62 callers, "no doubt" here was heard as not yet (nearest "I doubt it"); a yes, the same as at "Does that make sense?"
+  - "yes, no doubt about it"   # draft
+  - "right now"   # draft: round 84 callers, "right now" here was heard as not yet (nearest "not right now")
+  - "yes, right now"   # draft
+pay_now:   # a yes that is already about paying: the payment question next, not "What makes you say that?"
+  - "how do I pay"   # draft
+  - "credit"   # draft
+  - "debit"   # draft
+  - "I'll pay by card"   # draft
+  - "send me the payment link"   # draft
+  # "take my money" (round 86 callers: unclear at "jumping in?") is heard by its words: each pays route has the pattern (round 109 full run: as an example it drew "the money" off the money worry)
+  - "where do I sign"   # draft: round 87 callers, "where do I sign" got "I'll find out" and "how do I sign up" a start date
+  - "how do I sign up"   # draft
+not_yet:   # a no to "Do you see yourself jumping in?"
+  - "no"
+  - "not yet"
+  - "I'm not sure"
+  - "no, not really"
+  - "I'm not sure I'm ready"
+  - "I don't see myself doing this"
+  - "not right now"
+  - "I can't see that happening"
+  - "maybe, I'm not sure yet"
+  - "probably not"   # draft: round 38 callers, "I guess not" was unclear once "I guess so" was a yes
+  - "I guess not"   # draft
+  - "I doubt it"   # draft: full real-model check, "I don't think so" was nearest "I don't see why not" (a yes)
+backs_out:   # changing their mind after a yes (live: "actually no, forget it" got "Welcome aboard")
+  - "actually no, forget it"
+  - "no, I changed my mind"
+  - "I don't want to do this anymore"
+  - "no, I'm not doing this"
+  - "never mind, I'm out"
+  - "wait, I'm not sure anymore"
+  - "no thanks, I'll pass"
+  - "actually I don't think so"   # draft
+  - "no"
+  - "I'm not interested"   # draft: whole calls, "I'm just not interested" at 20 went to payment
+  - "it's not for me"   # draft: whole calls, "not for me" at 20 went to payment

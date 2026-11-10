@@ -6,8 +6,11 @@
 #   rephrase = ask the step in other words (its next probe) instead of the same line.
 #   rephrase_else_move_on = rephrase a step that has other words; otherwise go on to the next step
 #     without taking the reply as its answer.
+#   follow_up = they are leaving: go to the method's follow-up step (book the next call).
 # min_score: a match must score at least this on every step (for words that are often real answers too).
+# once: answered once a call; said again it is heard as what came with it ("ok, thank you" twice). Draft.
 park: "That's fair, and we'll come back to it once we know this is even a fit."   # objection before the price: acknowledge, keep going
+park_again: "Like I said, fair question. Let's see if this is even right for you first, then you can judge for yourself."   # draft: the same worry asked again before the price (whole calls: "how do I know this isn't a scam?" again got "I'll find out")
 revisit: "Coming back to what you raised earlier."   # a parked objection, raised again when they hesitate at the close
 # A nudge to carry on ("what's next?", "go on"). Live: "yeah makes sense, what's next?" got "I don't know
 # that one offhand". Cut off the end of a reply, the rest is heard as usual ("credit, what's next?" pays).
@@ -24,28 +27,61 @@ unclear:
   examples: ["I don't know", "not sure", "no idea", "dunno", "idk", "stuff I guess", "things",
              "I haven't thought about it", "hard to say", "it depends", "not sure what to say",
              "I can't think of anything", "beats me", "no clue", "maybe", "eh", "good question",
-             "let me think", "who knows", "anything", "I guess", "umm"]
+             "let me think", "who knows", "anything", "I guess", "umm",
+             "hmm", "good one"]   # draft (good one): round 82 callers, "ooh good one, free" was saved whole; draft: thinking out loud, not "what do you mean?" (whole calls: "hmm" got "let me put it another way" once "huh" was a clarify example)
+ended: "Speak soon."   # draft: any reply once the call has ended (booked the follow-up, or paid)
+same_words: "Sure, let me say that again."   # draft: "say", not "ask": a talk line asks nothing (round 21: "what?" to the price line). a rephrase with no other words left ("let me put it another way" then the same question is untrue)
+yes_no_reask: ["No pressure either way.", "A yes or no is fine."]   # draft: in front of a yes-or-no question asked again, in place of the method's `reask` ("even a rough idea helps" reads oddly before "Would that work for you?")
+wait_again: "Sure, I'm here."   # draft: in place of a wait reply said just before ("brb" twice: "No problem, take your time." word for word)
+told_again: "Like I said a moment ago."   # draft: a fact asked again straight after its answer, with no `again` of its own (asked long after: the answer again; whole calls: "a moment ago" 17 turns on)
+corrected: "Got it, thanks."   # draft: they fixed their last answer a turn later ("sorry I meant 3k not 2k"): kept, then the question again
 # Their reply had words but not the answer ("stuff", "make more money"): ask what they meant by them.
 ask_meaning: "What do you mean by {said|$|wanting to $}?"   # draft: the owner's ask, our wording
 nudge:
   draft: true
   reply: "Sure."
-  phrases: ["what's next", "what next", "whats next", "what now", "and then what", "then what", "and then", "go on", "keep going", "what else", "ok and", "and"]
+  phrases: ["what's next", "what next", "whats next", "what now", "and then what", "then what", "and then", "go on", "keep going", "what else", "ok and", "and", "next", "continue", "carry on", "move on", "go on then", "go ahead", "fire away", "carry on then"]   # draft (go on then to carry on then): round 42 callers, "go on then" was saved as the answer to every open question; draft (next to move on): round 30 callers, "next" was saved as their goal ("with next?")
 interruptions:
   pause:
     draft: true
     after: wait
+    never_with: [support, provide]   # draft: round 97 callers, "have to support my kids" got "take your time", near "hang on, I need to sort the kids out"
+    min_score: 0.74   # draft: real pauses score 0.76+ ("bear with me"); one word it has never seen does not ("tiktok": 0.67 got "take your time")
     examples:
       - "hold on a second"
       - "sorry, give me a moment"
       - "one sec, someone's at the door"
       - "sorry, my kid is yelling"
-      - "hang on, my kids need me"
+      - "hang on, I need to sort the kids out"   # draft: not "hang on, my kids need me": "for my kids", a goal, read as it (0.79)
       - "sorry, the dog is going mad"
       - "can you give me two minutes"
       - "brb"
       - "sorry, I need to take this call"   # "someone's calling me" read as "am I talking to a real person"
+      - "hang on"   # draft: whole calls, "hang on" was torn with leaving and asked again
+      - "wait a sec"   # draft: same, torn with frustrated
+      - "can we pause for a minute"   # draft: whole calls, "can we pause" got "I'll find out"
+      - "hold that thought"   # draft: whole calls, heard as "think it over"
+      - "I'll be right back"   # draft: whole calls, "back in a bit" was saved as how long they had been thinking about it (not "back in a bit": "a bit" read as it)
+      - "my phone is about to die"   # draft: whole calls, "hang on my phone is dying" was asked again
+      - "sorry, my phone's ringing"   # draft: whole calls, "sorry, phone" was a close call
+      - "one sec, getting my card"   # draft: round 29 callers, at "Credit or debit?" it was asked again
+      - "sorry, I was away for a minute"   # draft: round 34 callers, "was on the train, 2k" was saved whole
+      - "give me a minute"   # draft: whole calls, "I just need a minute" at 20 was saved as their reason (not "I just need a minute": 0.81 to "I don't have time for this")
     reply: "No problem, take your time."
+  small_talk:   # live: "did you catch the match last night?" got "I'll find out and let you know"
+    with_answer: true   # "I guess 3 years, what about you?": the 3 years is kept, this goes in front of the next question
+    min_score: 0.82   # draft: round 46 callers, "time" (0.81 to "what time is it there") to "why can't you ignore it?" got "Ha, all good here"; small talk scores 0.85+
+    draft: true
+    examples:
+      - "did you catch the match last night"
+      - "did you watch the game"
+      - "what's the weather like where you are"
+      - "how's your day going"
+      - "how are you doing today"
+      - "what time is it there"   # draft: whole calls, heard as when it starts
+      - "you watching the football later"   # draft: round 46, kept small talk with the floor above
+      - "nice day today, isn't it"   # draft: round 46, same
+    reply: "Ha, all good here. Let's keep the time about you though."
   back:
     draft: true
     after_wait: true
@@ -61,20 +97,33 @@ interruptions:
       - "sorry, can you say that again"
       - "I didn't catch that"
       - "what was the question"
+      - "where were we"   # draft: whole calls: "sorry, where were we?" was taken as an answer, or looped "take your time"
+      - "I lost track"   # draft
       - "I can't hear you"   # not "can you hear me?": "great, sounds good" read as it (0.74)
       - "hello? you've gone quiet"
       - "hello? you still with me?"
       - "sorry, you cut out"
       - "you're breaking up"
+      - "come again"   # draft: round 26 callers, "come again?" got "I'll find out"
+      - "say what now"   # draft: round 26 callers, saved as their answer
       - "sorry, the line is bad"
-    reply: "Of course, let me ask that again."
+      - "what did you say"   # draft: round 100 hunt, "what did you say?" got "I'll find out and let you know"
+    never_with: [want, wants, wanted, "used to", whatever]   # draft: round 43 callers, "I used to run a business, I want that again" got "let me say that again"; round 100 callers, "whatever he says" (their figure is his call) too
+    reply: "Of course, let me say that again."   # draft: "say", not "ask": a talk line asks nothing
   thanks:
+    with_answer: true   # a thank-you beside an answer: the answer is kept
+    once: true   # draft: round 27 callers, "ok, thank you" again got "What do you mean by thank you?"
     draft: true
     examples:
       - "thanks for your time"
       - "thank you, that's helpful"
+      - "cheers for asking"   # draft: round 74 callers, at 05 it was kept as the answer, "thanks for asking" got "You're welcome"
+      - "nice of you to ask"   # draft: same
+      - "thanks mate"   # draft: round 74 callers, at 05 and 06 it was kept as the answer
+    min_score: 0.7   # draft: round 98 callers, "argent" (0.66) got "You're welcome"; real thanks score 0.73+ ("gracias")
     reply: "You're welcome."
   bot:
+    with_answer: true   # "2 years, wait is this a bot?": the answer is kept, the honest yes goes first
     draft: true
     examples:
       - "is this a bot?"
@@ -82,7 +131,17 @@ interruptions:
       - "are you an AI"
       - "is this automated"
       - "are you a robot"
-    reply: "Yes, I'm an AI playing the salesperson so you can practise."   # never deny being an AI
+      - "are you a real person"   # draft: whole calls, "I'll find out" at step 04
+      - "who am I talking to"     # draft
+      - "who is this"             # draft: near "who am I talking to" but under the bar, so it got nothing
+      - "what's your name"        # draft: whole calls, heard as "what do you do"
+      - "can I speak to your manager"   # draft: whole calls, got "I'll find out"
+      - "can I talk to someone else"    # draft
+      - "are you reading from a script"   # draft: whole calls, got "I'll find out"
+      - "is this a sales call"   # draft: same
+      - "are you human"   # draft: round 80 callers, "are you human?" got "I'll find out"
+    never_with: ["my manager", "my managers", "our manager"]   # draft: round 91 callers, "my manager" (their reason at 04) got "I'm an AI" (near "can I speak to your manager")
+    reply: "I'm an AI playing the salesperson so you can practise."   # never deny being an AI; no "Yes": "who am I talking to?" isn't a yes-or-no
   clarify:
     draft: true
     after: rephrase
@@ -90,6 +149,17 @@ interruptions:
     examples:
       - "what do you mean"
       - "what do you mean by that"
+      - "huh"   # draft; whole calls: "huh?" (0.73 to the rest) was saved as their goal
+      - "wait what"   # draft: whole calls, "wait what?" got "I'll find out"
+      - "confused"   # draft: round 82, "confused?" and "I'm lost" were saved as the answer
+      - "I'm lost"   # draft
+      - "you've lost me"   # draft
+      - "which one"   # draft: round 26 callers, "sorry, which one?" got "I'll find out"
+      - "like what"   # draft: round 40 callers, "like who?" was kept as the answer
+      - "like who"   # draft
+      - "such as"   # draft
+      - "for example"   # draft
+      - "depends what you mean by that"   # draft: whole calls, "depends on what you mean" got "I'll find out"
       - "not sure what you mean"
       - "I don't understand the question"
       - "I don't get what you're asking"
@@ -99,6 +169,111 @@ interruptions:
       - "I just told you"
       - "you asked me that already"
     reply: "Fair point, let me put it another way."
+  misheard:   # whole calls: "that's not what I said" was saved as their answer, or got "I'll find out"
+    draft: true
+    after: rephrase_else_move_on   # the sorry stays in front: "Sure, let me say that again." answers no "that's wrong"
+    examples:
+      - "that's not what I said"
+      - "that's not what I meant"
+      - "I never said that"
+      - "you're not listening"
+      - "you've got me wrong"
+      - "you misunderstood me"
+    reply: "Sorry, I got that wrong."
+  private:   # whole calls: "I'd rather not say" got "Sorry, I got that wrong."
+    draft: true
+    after: rephrase_else_move_on   # asked once more, gently, in other words; then the call moves on
+    min_score: 0.8   # draft: "I'm not really interested to be honest" (0.77) is a polite no, not "private"
+    examples:
+      - "I'd rather not say"
+      - "I don't want to say"
+      - "that's private"
+      - "that's personal"
+      - "none of your business"
+      - "I'd prefer not to answer that"
+      - "I'd rather keep that to myself"   # draft: 0.73 without it
+      - "I'm not telling you"   # draft: heard as "that's not what I said"
+      - "skip"   # draft: round 28 callers, saved as the answer
+      - "can we skip this one"   # draft
+      - "pass"   # draft: round 38 callers, "pass" and "next question" were saved as the answer
+      - "next question"   # draft
+    reply: "That's fine, no pressure."
+  why_ask:   # whole calls: "why do you ask?" got "I don't know that one offhand, I'll find out"
+    with_answer: true   # "3 years, why do you ask?": the 3 years is kept, the reason goes first
+    only_asked: true   # "that's important to me" (0.86 to "why is that important") is an answer
+    draft: true
+    examples:
+      - "why do you ask"
+      - "why do you want to know"
+      - "why does that matter"
+      - "does that matter"
+      - "what's that got to do with anything"
+      - "why is that important"
+      - "why would I tell you that"   # draft: whole calls, got "I'll find out"
+      - "what kind of question is that"   # draft: whole calls, got "let me ask that again"
+      - "how come"   # draft: round 77 callers, "how come?" got "I don't know that one offhand"
+      - "is that a trick question"   # draft: round 103 callers, got "I don't know that one offhand, I'll find out"
+    reply: "It helps me see if this is even right for you, so neither of us wastes time."
+  about_me:   # whole calls: "what about you?", "did this work for you?" got "I'll find out"; "how much do you make?" got the price
+    with_answer: true   # "a few years, you?": the answer is kept, this goes in front of the next question
+    only_asked: true
+    draft: true
+    examples:
+      - "what about you"
+      - "how about you"
+      - "what do you want to achieve"
+      - "how much do you make"
+      - "did this work for you"
+      - "would you do it"
+      - "have you done this yourself"
+      - "what's in it for you"   # draft: whole calls, got "I'll find out"
+      - "do you like your job"   # draft: whole calls, got "I'll find out"
+      - "you"   # draft: round 81 callers, "not sure, you?" got "No rush, even a rough idea helps" (the "you?" was dropped)
+      - "and you"   # draft: round 81 callers, "dunno, and you?" got "No rush"
+      - "yourself"   # draft: round 81 callers, "yourself?" got "I don't know that one offhand"
+      - "and yourself"   # draft: round 81 callers
+      - "what did you do"   # draft: round 107 callers, the step's question asked back got "I'll find out"
+      - "were you scared"   # draft
+      - "what held you back"   # draft
+    only_with: [you, your, yours, yourself, "you're", "you've", u, ya]   # draft: round 107 callers, "what held me back?" is near "what held you back" but asks about them
+    reply: "I'm the AI playing the salesperson, so this one's all about you."
+  no_wrong_answer:   # whole calls: "what do most people say?" got "I'll find out and let you know"
+    with_answer: true   # draft: "2k, is that a lot?": the 2k is kept, this goes in front of the next question
+    only_asked: true   # "what most people do is give up" is an answer
+    draft: true
+    never_with: ["how long is"]   # draft: round 44 hunt, "how long is it?" got "There's no right answer here" (near "is that long"); it asks how long we take
+    until_price: ["is that a lot"]   # draft: round 44 hunt, "2k, is that a lot?" got no answer to it; from the price on it is the money worry
+    examples:
+      - "what do most people say"
+      - "what should I say"
+      - "what's the right answer"
+      - "what do you want me to say"
+      - "is that normal"   # draft: round 25 callers, "A year. Is that normal?" got no answer
+      - "is that enough"   # draft
+      - "what do you think"   # draft: round 29 callers, asked back every turn, each got "I'll find out"
+      - "what would you do"   # draft
+      - "what's normal"   # draft
+      - "which is better"   # draft: round 34 callers, at payment it was heard as paying ("Welcome aboard")
+      - "who would I be"   # draft: round 82 callers, it got what we do ("who are you"), then "I'll find out"
+      - "who am I"   # draft
+      - "which do you recommend"   # draft: the same, got "I'll find out"
+      - "which is easier"   # draft: "whichever is easier" chooses, "which is easier?" asks
+      - "is that silly"   # draft: round 39 callers, "quit my job, is that silly?" got no answer to it
+      - "is that weird"   # draft
+      - "is that stupid"   # draft
+      - "is that bad"   # draft
+      - "is that long"   # draft: "a year, is that long?"
+      - "does that make sense"   # draft: "my job, does that make sense?"
+      - "what do most people use"   # draft
+      - "should I"   # draft: round 34 callers, "should I?" to "jumping in?" got "I'll find out"
+      - "do you think I should"   # draft
+      - "should I do it"   # draft: torn with "should I", it got "I'll find out"
+      - "is that a good answer"   # draft: round 93 callers, "is money a good answer?" got "I'll find out", then (read as "money, is that a good answer?") no answer to it
+      - "is that ok to say"   # draft
+      - "does that count"   # draft
+      - "what do others do"   # draft: round 94 callers, "what do others do? quit" got what we do ("what do you do")
+      - "what do other people do"   # draft
+    reply: "There's no right answer here, it's just about you."
   frustrated:   # live: "stop with the script man", "whatever", "this is stupid" got the same line again
     draft: true
     after: rephrase_else_move_on
@@ -110,10 +285,43 @@ interruptions:
       - "enough with the questions"
       - "why are you interrogating me"
       - "just get to the point"
-      - "this is taking too long"
+      - "this call is taking too long"   # draft: round 40 callers, "not having enough time" (0.81 to "this is taking too long") got "I'll keep this quick"
+      - "this is taking forever"   # draft
+      - "this is dragging on"   # draft
+      - "I don't have time for this sales call"   # draft: full real run, round 5 live reply, lost when "this is taking too long" went (round 40); "for this call" also pulled in "not having enough time" (0.78)
       - "can we hurry up"
       - "this is a waste of my time"
       - "meh, whatever"   # not bare "whatever": it pulls in "whatever works for me"
+      - "shut up"   # draft; live: "shut up and just tell me the price" kept "shut up" as their answer
       - "ugh whatever man"
       - "f*** off with the questions"
+      - "why do you keep asking me all these questions"   # draft: live, heard as "what do you mean?"
     reply: "Fair enough, I'll keep this quick."
+  leaving:   # live: "bye" was ignored and the next question asked
+    draft: true
+    after: follow_up
+    min_score: 0.8
+    never_with: ["gotta quit", "got to quit", "have to quit", "need to quit", "wanna quit", "want to quit", "show up", "turn up", "be there", "all in", "go hard", "get going"]   # draft: round 97 callers, "gotta quit" (to "what would that get you?") ended the call, near "gotta go"; draft (show up, turn up, be there): round 104 callers, "show up" and "be there" (to "What are you going to do differently?") ended the call, near "see you"; draft (all in, go hard, get going): round 105 callers, "go all in" there ended the call, near "gotta go"
+    examples:
+      - "bye"
+      - "goodbye"
+      - "I have to go now"
+      - "gotta go"
+      - "I need to go, talk later"
+      - "I'm hanging up"
+      - "gotta run"
+      - "see you"
+      - "sorry, I'm driving"   # draft: whole calls, saved as their reason
+      - "I can't talk right now"   # draft
+      - "can we stop here"   # draft: round 73 callers, said alone it got "I don't know that one offhand"
+      - "can we pick this up another time"   # draft: not "can we do this another time", it took "can we do this" (a yes)
+    reply: ""   # the follow-up step says it
+  not_interested:   # round 34 callers: "no thank you" to every open question was kept as the answer, 25 steps on
+    draft: true
+    after: follow_up   # a no to the call; to a yes-or-no question "no thanks" is a plain no (engine.yaml `no_polite_words`)
+    before_price: true   # from the price on, the close's own routes hear a no (backs out, the soft close)
+    min_score: 0.88   # draft: "I'm not interested in money" (0.86) is an answer, "honestly not interested" (0.90) is not
+    examples:
+      - "no thank you"
+      - "I'm not interested"   # at the close it backs out (answers.yaml)
+    reply: ""

@@ -7,12 +7,17 @@ price_step: "14"
 revisit_step: "19"   # an objection parked before the price comes back when they hesitate at the soft close
 # Objections after the price run the shared matrix (config/script); `exits` lead back into this script.
 objection_handling: objection_matrix
+max_visits: 2   # a step reached a third time means the call goes round in circles: book the follow-up instead
 exits: {resell: "20", payment: "22", follow_up: "later"}
 # A keen prospect who says they're in before the pitch is asked one question, then shown how to pay
-# (coach: "just send the payment link, make it easy"). From the soft close on, the script closes itself.
+# (coach: "just send the payment link, make it easy"). From the pitch on, the script closes itself: live,
+# "yes, how do I pay?" after the whole pitch got "Are you aware of the programme from beforehand?".
+# Once the price is out, a reply that is already about paying ("credit", "how do I pay?") goes straight to the
+# payment question from any pitch line: live, "yes, how do I pay?" on a pitch line got "I'll find out".
+pays: {like: pay_now, then: "22", from: "14", until: "19", min_score: 0.8, pattern: &take_money '^(?!.*\b(?:not|never|no|don''t|won''t|can''t|ain''t|isn''t|scam\w*)\b).*\btake my money\b'}   # "ok" (0.73) is no way to pay; draft (pattern): round 109 full run, "take my money" by its words, see answers.yaml; draft (guard): code review, never after a no ("not gonna take my money")
 ready:
   then: "ready"
-  until: "19"
+  until: "13"
   min_score: 0.8   # long, specific examples: "I'm in sales" or "yes" must never jump
   examples:
     - "I'm in, send me the payment link"
@@ -21,6 +26,8 @@ ready:
     - "where do I sign up, I want to join"
     - "how do I sign up"
     - "just send me the link to pay"
+    - "yes I'm in, how do I pay"        # draft: these two hear "yes I'm in" (0.87), never "sounds good" (0.77),
+    - "yes I'm in, send me the link"    # draft: "I'm in sales" (0.70) or "I want to join the people who made it" (0.78)
 # Said before a question asked again once its probes ran out, in turn: the same line twice in a row
 # reads like a bot. draft: ours, the source has no wording for this.
 reask: ["No rush, even a rough idea helps.", "Just your best guess is fine.", "Whatever comes to mind first."]   # draft: the third lead is ours
@@ -30,7 +37,7 @@ steps:
     ui_stage: intent
     draft: true
     run_on: true   # the frame leads straight into step 01's question
-    say: "I believe you had a chat with {setter} setter... I've read your application but I don't like to assume anything"
+    say: "I believe you had a chat with {setter} setter... I've read your application but I don't like to assume anything."
     say_plain: "I've read your application but I don't like to assume anything."
     listen:
       any: {then: "01"}
@@ -65,7 +72,19 @@ steps:
           - "travel the world"
           - "I want to quit my job and be my own boss"
           - "freedom to do what I want with my days"
+          - "to earn 2k a month"   # draft: whole calls ("to earn £2,500pm on the side"), heard as no goal and asked again
+          - "a bit of extra income"   # draft: whole calls, heard as no goal and asked again
+          - "I just need some cash"   # draft: whole calls, "I'm a student and need cash" was heard as no goal
+          - "earn an extra few grand a month"   # draft: whole calls, "earn an extra three grand a month" was too close to call
+          - "money and time"   # draft: round 40 callers, "money and time" was "What do you mean by money and time?"
+          - "open a shop"   # draft: round 41 callers, "open a shop" was unclear
+          - "change careers"   # draft: round 41 callers, "change careers" was unclear
+          - "time"   # draft: round 40 callers, "time" alone got "Let's keep the time about you though"
+          - "I want a side income"   # draft: round 58 replay, "I guess I want a side income" got "What do you mean by a side income?"
+          - "passive income"   # draft: round 58, "I want passive income" got "What do you mean by passive income?"
+          - "no more night shifts at work"   # draft: round 102 callers, "stop doing nights" was unclear and asked again
         then: "goal_practical"
+        climbs_to: [practical, identity]   # draft: round 100 callers, "I just want more money so I can stop worrying about bills" got "What are you hoping to achieve with more money?": the rest already says the next rung
       practical:   # level 2 already: skip the formula, ask the identity rung
         examples: &practical
           - "so I can stop stressing every time I buy something"
@@ -74,6 +93,12 @@ steps:
           - "to spend more time with my family"
           - "so I can help my parents out"
           - "to not have to check my bank balance before buying food"
+          - "not dreading Mondays and actually enjoying life instead of just surviving"   # draft: live, heard as level 1
+          - "a bit extra each month would help with the mortgage"   # draft: live ("an extra few hundred a month would help with the mortgage"), heard as level 1
+          - "more time for me and my family"   # draft: whole calls, "more time" was heard as annoyance ("I'll keep this quick")
+          - "pay my rent and bills"   # draft: round 27 callers, "pay rent" was heard as level 1 and asked again
+          - "I want to buy a house"   # draft: round 31 callers, "I want to by a house" was "What do you mean by wanting to buy a house?"
+          - "to sleep properly at night without stressing"   # draft: round 102 callers, the night shift example pulled "sleep at night" down to level 1
         then: "goal_identity"
       identity:   # level 3 already: the ladder is climbed
         examples: &identity
@@ -82,6 +107,7 @@ steps:
           - "to be the provider for my family I always wanted to be"
           - "to prove to myself I am capable of more"
           - "I want to become my own person and not someone's employee"
+          - "someone who actually follows through on things"   # draft: live, heard as no level and asked again
         then: "02"
       vague:   # restates the question or names no outcome: ask again, never take it as their goal
         examples:
@@ -91,6 +117,7 @@ steps:
           - "I don't know"
         then: "01"
         keep: false   # "not sure really" is not their outcome: never said back to them
+        restates: true   # draft: live, "i want to make money online so i can quit my job and spend more time with my kids" was asked again
   "goal_practical":
     name: "Practical goal"
     note: 'Level 2 (practical): what it does for them day to day, e.g. no stress buying things'
@@ -99,16 +126,23 @@ steps:
     say: "What are you hoping to achieve {outcome|with $|by being able to $}?"
     moment: true   # the goal formula: their exact words, whatever the echo budget says
     say_plain: "What are you hoping that would get you?"
+    plain_if: '^\W*(?:money|cash)\W*$'   # "What are you hoping to achieve with money?" reads oddly
     capture: practical
     echo: true
+    # Not an answer: a reply made only of shrugs, figures or spans of time ("dunno like 10k", "a while",
+    # "like 5 grand"); asked again, then moved on unsaved. A figure is still kept for 02 (`answered_by`).
+    needs: &a_goal '^(?!\W*(?:(?:dunno|idk|i\s+don''?t\s+know|not\s+sure|like|about|around|maybe|probably|roughly|um+|uh+|hmm+|lol|ig|i\s+guess|a\s+while|ages|on\s+the\s+side|a\s+month|per\s+month|or\s+so|a\s+long\s+time|for\s+ages|forever|[$£€]?\d[\d,.]*\s*(?:k|grand|thousand|years?|months?|weeks?)?|(?:a|one|two|three|four|five|six|seven|eight|nine|ten|twenty|thirty|forty|fifty|few|couple)\s+(?:grand|thousand|k|years?|months?|weeks?))(?:\W+(?:dunno|idk|i\s+don''?t\s+know|not\s+sure|like|about|around|maybe|probably|roughly|um+|uh+|hmm+|lol|ig|i\s+guess|a\s+while|ages|on\s+the\s+side|a\s+month|per\s+month|or\s+so|a\s+long\s+time|for\s+ages|forever|[$£€]?\d[\d,.]*\s*(?:k|grand|thousand|years?|months?|weeks?)?|(?:a|one|two|three|four|five|six|seven|eight|nine|ten|twenty|thirty|forty|fifty|few|couple)\s+(?:grand|thousand|k|years?|months?|weeks?)))*)?\W*$)'
     probe:
       - "What would that actually change for you, day to day?"
+    # "financial freedom" again is a real answer, just not deeper: "No rush" would read as if they said nothing
+    reask: ["Picture you already had it."]   # draft: ours
     stuck: {then: "goal_identity"}
     listen:
       surface:   # still level 1 ("more money" again): asked another way, not taken
         examples: *surface
         then: "goal_practical"
         keep: false
+        restates: true   # draft: "more money, so I can pay my bills" is heard by the rest
       practical: {examples: *practical, then: "goal_identity"}   # a rival label, so a level 2 answer is never heard as level 1
       identity: {examples: *identity, then: "02"}
       any: {then: "goal_identity"}
@@ -120,6 +154,7 @@ steps:
     say: "And what would that change about you, as a person?"
     capture: identity
     echo: true
+    needs: *a_goal
     probe:
       - "Who would you be, once that's real?"
     stuck: {then: "02"}
@@ -131,12 +166,18 @@ steps:
     draft: true
     say: "How much would you need to be making each month {outcome|to have $|to $}?"
     say_plain: "How much would you need to be making each month to make that happen?"
+    plain_if: '\bmoney\b|\bcash\b|\brich\b'   # "to make more money" after "how much each month" asks money for money
     capture: number
-    # "I want 5k a month" (or a reply that is only the figure, "about 5k a month") said earlier answers this step,
+    # A reply with no figure ("I don't know where to start") is not the answer: asked again, then moved on unsaved.
+    needs: '\d|\b(?:two|three|four|five|six|seven|eight|nine|ten|twenty|thirty|forty|fifty|hundred|thousand|grand|million)\b'   # not "one": "no one knows" is no figure
+    probe:   # draft: ours, so a reply with no figure gets an easier question, not the same one
+      - "If you had to put a number on it, what would you want coming in each month?"
+    stuck: {then: "03"}
+    # "I want 5k a month" (or a reply that is only the figure, "about 5k a month", "like 5 grand") said earlier answers this step,
     # so it is skipped. Otherwise needs a want/need word,
     # only "to make / be earning / around"-type words, then the figure and "a month": "I make 2k a month",
     # "a job paying 2k a month", "I need to save 200 a month" and "I don't want ..." are not the goal.
-    answered_by: '(?:(?<!n''t )(?<!not )\b(?:want|need|aim|aiming|hoping|looking|goal|target|(?<=to |nd )have|having)(?:\s+(?:to|be|make|making|earn|earning|bring|bringing|in|about|around|at|least|like|roughly|for|of|is|maybe|ideally|say|minimum))*\s+|^\W*(?P<bare>)(?:(?:about|around|roughly|maybe|probably|like|say|ideally|at least|i''d say)\s+)*)(?P<answer>[$£€]?\d[\d,.]*\s*(?:k|grand|thousand)?\s*(?:a|per|each|every|/)\s*(?:month|mo)\b)(?(bare)\W*$)'
+    answered_by: '(?:(?<!n''t )(?<!not )\b(?:want|need|aim|aiming|hoping|looking|goal|target|(?<=to |nd )have|having)(?:\s+(?:to|be|make|making|earn|earning|bring|bringing|in|about|around|at|least|like|roughly|for|of|is|maybe|ideally|say|minimum))*\s+|^\W*(?P<bare>)(?:(?:about|around|roughly|maybe|probably|like|say|ideally|at least|i''d say|dunno|idk|i guess)\s+)*)(?P<answer>(?:[$£€]?\d[\d,.]*\s*(?:k|grand|thousand)?|(?:a|one|two|three|four|five|six|seven|eight|nine|ten|fifteen|twenty|thirty|forty|fifty)\s+(?:grand|thousand|k))\s*(?:a|per|each|every|/)\s*(?:month|mo)\b|(?(bare)(?:[$£€]?\d[\d,.]*\s*(?:k|grand|thousand)|(?:a|one|two|three|four|five|six|seven|eight|nine|ten|fifteen|twenty|thirty|forty|fifty)\s+(?:grand|thousand|k))|(?!)))(?(bare)(?:\W+(?:on the side|or so|ish|maybe|probably|roughly|at least|tbh|honestly|would do it|would do|would be nice))*\W*$)'
     listen:
       any: {then: "03"}
   "03":
@@ -144,10 +185,54 @@ steps:
     ui_stage: logical
     say: "How long have you been thinking about this?"
     capture: years
+    # A span of time already spent: "nothing" or "time" is no answer to how long ("about 3 years", "since covid",
+    # "ages" are). Live: "within a year" (when they want it) and "my job could go any day" were taken as how long.
+    # draft: a sum of money is no span of time ("3k a month"; whole calls: saved as "1 months").
+    needs: '^(?!.*(?:[$£€]\s*\d|\d\s*k\b|\b(?:grand|thousand|quid|pounds?|dollars?|bucks)\b))(?!.*\b(?:within|in\s+(?:the\s+next|a|an|one|two|\d+)\s+(?:years?|months?|weeks?|days?)|by\s+next|next\s+(?:years?|months?|weeks?|summer|spring|autumn|winter)|any\s+day|one\s+day|some\s*day)\b).*(?:\d|\b(?:since|ages|while|long|forever|always|ever|recently|lately|life|bit|days?|weeks?|fortnights?|months?|years?|yrs?|decades?)\b)'
     probe:   # draft: ours, so "I don't know" gets an easier question, not the same one
       - "Roughly, is it more like months, or a few years?"
     stuck: {then: "04"}
+    # "I want to quit, I've been thinking about it for 2 years" said earlier answers this step (whole calls: asked
+    # again, "2 years, I told you"). Only after "thinking / wanting ... for": "I've been at my job for 5 years" is not it.
+    answered_by: '\b(?:(?:thinking|thought|wanting|wanted|dreaming|dreamt|dreamed)\s+(?:about\s+(?:it|this|that|doing\s+(?:it|this))\s+|of\s+(?:it|this)\s+|(?:it|this|that)\s+)?for|on\s+my\s+mind(?:\s+for)?)\s+(?:the\s+(?:last|past)\s+)?(?P<answer>(?:about\s+|around\s+|nearly\s+|almost\s+|over\s+)?(?:\d+(?:\.\d+)?|a|an|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|eighteen|a\s+couple\s+of|a\s+few|few)\s+(?:years?|yrs?|months?)(?:\s+and\s+a\s+half)?)\b'   # draft (on my mind): round 92 callers, "money, 2k a month, been on my mind a year" was asked "How long" again
     listen:
+      recent:   # draft: whole calls: "not long" went on to "so many nights, months and years"
+        draft: true
+        min_score: 0.85
+        examples:
+          - "not long"
+          - "only recently"
+          - "just a few weeks"
+          - "a fortnight"   # draft: round 26 callers, heard as a long time
+          - "a couple of weeks"   # draft
+          - "a few days"   # draft: round 43 callers, "a few days" said nothing back
+          - "it's pretty new"
+          - "I only just started thinking about it"
+        pattern: '^(?!.*\b(?:months?|years?|yrs?)\b).*\b(?:[1-9]|1[0-2])\s*(?:weeks?|wks?)\b|^(?!.*\b(?:months?|years?|yrs?)\b).*\b\d{1,2}\s*days?\b|^(?!.*\b(?:years?|yrs?)\b)(?:\W*\w+){0,3}?\W*\b(?<!good\s)(?:a\s+)?(?:few|couple(?:\s+of)?)\s+months?\b|^(?!.*\b(?:years?|yrs?)\b)(?:\W*\w+){0,3}?\W*\b(?:a|an|one|two|three|[1-3])\s*(?:months?|mos?|mths?)\b(?!\s*(?:or|to|-)\s*(?:[4-9]|1\d|four|five|six|seven|eight|nine|ten|eleven|twelve)\b)'   # draft: round 84 callers, "a month or two" and "2 months" were "2 months... Damn."; up to 3 months is recent; draft: round 43 callers, "6 weeks" and "10 days" were unclear; up to 12 weeks, never with months or years in it; draft (few months): round 45 callers, "a few months maybe" got "so many nights, months and years"
+        then: "04"
+        say: "So what made it come up for you now?"   # draft: ours, in place of 04's "so many nights, months and years"
+      long:   # draft: a rival label: "a while" (0.86 to "not long") was asked what made it come up now
+        draft: true
+        examples:
+          - "a while"
+          - "quite a while"
+          - "a long time"
+          - "for ages"
+          - "forever"
+          - "years"
+          - "too long"   # draft: whole calls, heard as "this is taking too long" (frustrated)
+        then: "04"
+        ack: "{months_thinking}... Damn.¶"
+      started:   # draft: a rival label: "since I started the business 3 years ago" (0.77) was heard as a failed attempt
+        draft: true
+        min_score: 0.8   # "my whole life really" is not one
+        examples:
+          - "since I started the business 3 years ago"
+          - "ever since I started my job"
+          - "since I started working there"
+          - "since I opened my shop"
+        then: "04"
+        ack: "{months_thinking}... Damn.¶"
       failed_before:   # a past failed attempt is acknowledged before the script goes on
         min_score: 0.7   # "since my dad got sick" (0.66) is a hard time, not a failed attempt: the meaning bank answers it
         examples:
@@ -155,17 +240,28 @@ steps:
           - "I've tried a few things online and lost money"
           - "I started a business before but it didn't work out"
           - "I gave it a go and it flopped"
-        then: "04"
+        then: "03"   # still asked how long: 04 says "so many nights, months and years" as if they told us
+        keep: false
         ack: "Sorry to hear that, plenty of people have a first attempt that doesn't work out."
+      worried:   # a rival label: "I'm scared of losing money" (0.75 to the attempts above) is a worry, not a failed attempt
+        draft: true
+        examples:
+          - "I'm scared of losing money"
+          - "I don't want to lose money again"
+          - "I'm worried I'll waste my money"
+          - "I don't trust most of these online things"   # draft: live, heard as a failed attempt ("Sorry to hear that")
+        then: "03"   # still asked how long; the meaning bank says they were heard
+        keep: false
       any:
         then: "04"
-        ack: "{months_thinking} months... Damn.¶"   # owner's line: their time, in months, before 04 asks why
+        ack: "{months_thinking}... Damn.¶"   # owner's line: their time, in months, before 04 asks why
   "04":
     name: "Contextualise"
     note: 'emotional why. Let them talk'
     ui_stage: emotional
     say: "If this has been on your mind for so many nights, months and years, why can't you just ignore it?"
     capture: why
+    doubts_answer: true   # draft: money trouble is their reason here, not the price worry (whole calls: "my loan isn't enough" got "I haven't mentioned a price yet")
     probe:   # draft: ours, so "I don't know" gets an easier question, not the same one
       - "What is it about where you are now that you don't want to keep living with?"
     stuck: {then: "05"}
@@ -207,6 +303,7 @@ steps:
     ui_stage: emotional
     say: "We love working with people going from 9-5er to business owner... exciting, but terrifying, because it's outside your comfort zone. What's the main difference between a successful business owner and an employee?"
     capture: gap
+    shrug_moves_on: true   # the ack below answers it: "yeah" moves on, never asked again (was asked 3 times)
     listen:
       any:
         then: "09"
@@ -219,6 +316,12 @@ steps:
     say: "When you're honest with yourself, what do you believe about yourself that's held you back?"
     capture: belief
     listen:
+      none:   # draft: round 107 callers, "I don't have limiting beliefs" got "Where do you think that belief comes from?"
+        examples: ["I don't have any", "I don't have limiting beliefs", "nothing, I'm confident in myself", "I have none", "there's no belief holding me back", "there is no belief", "nothing, I'm great"]
+        min_score: 0.85   # "nothing holds me back except money" (0.83) names one: it is their answer
+        then: "10"   # no belief to trace or cost: on to what happens to people who don't push
+        ack: "Fair enough, good to hear."
+        keep: false
       any: {then: "belief_origin"}
   "belief_origin":
     name: "Where the belief came from"
@@ -236,6 +339,7 @@ steps:
     draft: true
     say: "If you keep believing that, what does it cost you over the next few years?"
     capture: belief_cost
+    doubts_answer: true   # draft: round 105 callers, "a lot of money" got "I haven't mentioned a price yet": what it costs them is the answer
     listen:
       any: {then: "10"}
   "10":
@@ -252,6 +356,20 @@ steps:
     name: "Willingness"
     ui_stage: emotional
     say: "Are you willing to keep settling for being average? Nothing wrong with that, I'm not here to judge"
+    listen:
+      "yes":   # draft: "yes definitely" to "keep settling?" is most likely a misread ("willing to change"): checked, never taken as settling
+        like: "yes"
+        then: "willing_check"
+      "no":
+        like: "no"
+        examples: ["I'm done settling", "I'm willing to change", "no I want to change", "I'm ready for a change"]   # draft: a no said as wanting change
+        then: "11"
+      any: {then: "11"}
+  "willing_check":
+    name: "Willingness check"
+    ui_stage: emotional
+    draft: true
+    say: "Just so I'm clear: happy to keep things as they are, or ready for a change?"   # draft: ours
     listen:
       any: {then: "11"}
   "11":
@@ -304,6 +422,8 @@ steps:
     ui_stage: pitch
     draft: true
     say: "{pillar_3}: we tell you what you NEED to hear... hold your feet to the fire. Open to being called out?"
+    yes_no: true   # draft: round 34 callers, "no thanks" to it was heard as leaving the call
+    go_on_is_yes: true   # draft: round 42 callers, "fire away" to it is a yes
     listen:
       any: {then: "18"}
   "18":
@@ -328,8 +448,15 @@ steps:
           - "yeah, I am following you"
           - "yeah makes sense"
         then: "19"
+      pays:   # "yes, how do I pay?" after the pitch: straight to how (answers.yaml)
+        like: pay_now
+        min_score: 0.8   # "ok" (0.73) is no way to pay
+        pattern: *take_money   # draft: round 109 full run, by its words: as a meaning example ("take my money") it drew "the money" off the money worry
+        then: "22"
       unclear:
         examples:
+          - "no"   # draft: whole calls, a bare "no" was nearest "yes" and heard as agrees
+          - "nope"   # draft
           - "no, that doesn't make sense"
           - "not really, I'm confused"
           - "kind of"
@@ -346,24 +473,20 @@ steps:
     ui_stage: pitch
     draft: true  # probe is ours: no source line for a second ask
     say: "Do you see yourself jumping in?"
-    probe: "Where are you at with it right now?"
+    go_on_is_yes: true   # draft: round 42 callers, "go on" got the question again
+    probe: "Is this something you can see yourself doing?"   # draft: whole calls, "yes" to "Where are you at with it right now?" was heard as saying nothing
     stuck: {then: "m_identify"}   # still hesitant: find what holds them back (the objection matrix)
     listen:
       agrees:
-        examples:
-          - "yes I'm ready to jump in"
-          - "yes let's do it"
-          - "I'm in, I can see myself doing this"
-          - "yes I see myself taking the jump"
+        like: jump_in   # answers.yaml: the same yes as every other "jumping in?" (live: "debit" here was unclear)
         then: "20"
+      pays:   # "credit", "how do I pay": ready to pay, so straight to how, not "What makes you say that?"
+        like: pay_now
+        min_score: 0.8   # "ok" (0.73) is no way to pay
+        pattern: *take_money   # draft: round 109 full run, by its words: as a meaning example ("take my money") it drew "the money" off the money worry
+        then: "22"
       hesitant:
-        examples:
-          - "no, not really"
-          - "I'm not sure I'm ready"
-          - "I don't see myself doing this"
-          - "not right now"
-          - "I can't see that happening"
-          - "maybe, I'm not sure yet"
+        like: not_yet
         then: "19"
   "20":
     name: "Self-resell"
@@ -371,21 +494,22 @@ steps:
     ui_stage: outcome
     draft: true  # the back-out ack is ours: no source line for someone who changes their mind
     say: "What makes you say that?"
+    stuck: {then: "19"}   # draft: still scared after the probe: back to the soft close, never round and round here
     capture: reason
     listen:
       backs_out: &backs_out   # live: "actually no, forget it" got "Welcome aboard"; back to the soft close
-        examples:
-          - "actually no, forget it"
-          - "no, I changed my mind"
-          - "I don't want to do this anymore"
-          - "no, I'm not doing this"
-          - "never mind, I'm out"
-          - "wait, I'm not sure anymore"
-          - "no thanks, I'll pass"
-          - "no"
+        like: backs_out   # answers.yaml; a no, so beside "how do I pay?" it takes the question back (engine.yaml `takes_back`)
+        min_score: 0.78   # live: "because I'm sick of waiting for things to change" (0.71) is their reason, not backing out (0.78+)
         then: "19"
         ack: "No pressure at all."
         keep: false   # "forget it" is not their reason: never said back or quoted later
+      fear:   # draft: whole calls, "I'm scared" here (after the fear talk) was kept as their reason, then payment
+        examples: ["I'm scared", "I'm nervous", "I'm scared it won't work", "I'm worried about it"]
+        min_score: 0.85   # draft: replay, "idk I just feel ready" (0.79) is their reason; a fear is 0.89+
+        then: "20"
+        ack: "That's normal, it's a big step."
+        say: "What makes you want to go for it anyway?"
+        keep: false
       any: {then: "21"}
   "21":
     name: "Next steps"
@@ -401,9 +525,11 @@ steps:
     draft: true  # probe and back-out are ours: the source only has the question
     say: "How would you like to process the investment? Credit or debit?"
     probe: "Which works better for you, credit or debit?"
+    either: "either is fine"   # draft: round 87 callers, "whichever", "up to you" were asked again until the call left the close
     stuck: {then: "19"}   # still no way to pay after asking twice: back to the soft close, never "welcome aboard"
     listen:
       pays:   # only a way to pay ends the call: "no, forget it" must never get "Welcome aboard"
+        min_score: 0.8   # live: "ok" (0.73) to "Credit or debit?" got "Welcome aboard"; a choice ("card", "debit pls") scores 0.83+
         examples:
           - "credit"
           - "debit"
@@ -414,12 +540,33 @@ steps:
           - "let's do credit"
           - "visa"
           - "paypal"
+          - "mastercard"   # draft
+          - "amex"   # draft
+          - "apple pay"   # draft
+          - "google pay"   # draft: round 86 callers, "klarna" got "credit or debit?" again
+          - "klarna"   # draft
           - "bank transfer"
+          - "cash"   # draft: round 109 callers, "neither, cash" got "if you did have the funding"
           - "either is fine"
           - "whichever is easier"
+          - "my card ending 1234"   # draft: round 87 callers, "card ending 1234" got "credit or debit?" again and
+          - "put it on my card"   # draft: "on my card" "take your time"
           - "yes, let's do it"
+          - "debit, I don't do credit"   # draft: round 26 callers, "debit because I don't do credit" was asked again
+          - "send me the link"   # draft: round 76 replay, "send me the link" here got "What do you need to think over?"
+          - "payment link please"   # draft: round 78, "payment link please" got "credit or debit?" again ("send me the payment link" already paid)
         then: "end"
       backs_out: *backs_out
+      no_card:   # draft: round 109 callers, "I don't have a card" got "credit or debit?" again
+        examples: ["I don't have a card", "I don't have a credit card", "I haven't got a card", "no card"]
+        min_score: 0.84   # "I don't use cards" 0.849; "I don't have the money" (0.79) is the money talk
+        then: "end"   # they are paying, just not by card: no question back, or a "yes" to it is asked "credit or debit?"
+        ack: "No problem, a bank transfer works too."   # draft
+        keep: false
+      how:   # draft: whole calls, "how do I pay?" got "I'll find out"; the choice again answers it
+        examples: ["how do I pay", "how does the payment work", "where do I sign"]   # draft (where do I sign): round 87 callers, it got "I'll find out"
+        then: "22"
+        keep: false
   "end":
     name: "Welcome"
     ui_stage: outcome

@@ -2,14 +2,39 @@
 
 import logging
 import re
+import unicodedata
 from difflib import get_close_matches
+from functools import lru_cache
+from itertools import pairwise, takewhile
 
 from core.buy_mode.script_engine.words.tone import PAUSE
+from core.infra.loader import CONFIG_DIR
 from core.infra.utils import tokenize
 
 logger = logging.getLogger("script_engine.fallback")
 NAME = re.compile(r"\{(\w+)(?:\|([^|{}]*)\|([^|{}]*))?\}")  # {name} or {name|noun form|verb form}, $ = the phrase
-WORD = re.compile(r"[A-Za-z0-9'-]+")
+CENSORED = re.compile(r"\S*\w\*+\w*\S*")  # a word with stars in it ("f***ing"): never said back
+ASIDE = re.compile(r"\s*\([^()]*\)")  # "money (lots)": words in brackets are an aside, never said back
+WORD = re.compile(r"[$£€]?\d+(?:[.,]\d+)*%?[A-Za-z0-9'-]*|[A-Za-z0-9'-]+")  # "£2,500", "1.5", "2.5k", "50%" stay one word
+FIGURE = re.compile(r"\d+(?:\.\d+)?")
+GLUED = re.compile(r"(\d)([A-Za-z])")  # a number stuck to its unit: "1yr", "18mo"
+RANGE = re.compile(r"(\d)-(?=\d)")  # two numbers joined by a dash: "1-2 years" reads like "1 to 2 years"
+MONEY_SIGNS = re.compile(r"(?<![\w£$€])[£$€]{2,}(?![\w£$€])|^\s*[£$€]\s*$")  # "£££", "$$$": a word for money, never a
+# number; round 94 callers: a reply of one "£" alone was "say that again"
+EMPHASIS = re.compile(r"(?<!\w)([*_`]+)(?=\S)([^*_`\n]+?)(?<=\S)\1(?!\w)")  # "**more money**": a pair, so "f***ing" stays
+STRETCHED = re.compile(r"\w*([^\W\d_])\1\1\w*")  # "moneyyy": a letter three times or more in one word; "100000" stays
+SLASHED = re.compile(r"(?<![\w./:-])[^\W\d_]{2,}(?:\s*/\s*[^\W\d_]{2,})+(?![\w./:])")  # "money/time": a choice, not a link or "km/h"
+STUTTER = re.compile(r"(?<![\w'])(\w+(?:\s+\w+){0,2}),\s+(?=\1(?![\w']))", re.IGNORECASE)  # words, a comma, the same words again
+DECIMAL_COMMA = re.compile(r"\d+,\d{1,2}")  # "1,5 years": a comma before one or two digits is a decimal point ("2,000" keeps three)
+ISH = re.compile(r"\b([^\W_]+?)(-?)ish\b", re.IGNORECASE)  # "a yearish", "money-ish": roughly, not a word
+DIGITED = re.compile(r"(?<![\w'])(?=[^\W_]*[^\W\d_])[^\W_]*\d[^\W_]*(?![\w'])")  # "m0ney", "qu1t": a word with a number or two in it
+SPACED = re.compile(r"(?<![\w'])[^\W\d_](?: [^\W\d_]){2,}(?![\w'])")  # "y e s": one letter at a time, a space between each
+QUOTED = re.compile(r'^\s*["\u201c\u201d](.+)["\u201c\u201d]\s*$')  # '"ok"': the whole reply in quotes
+HASHED = re.compile(r"#+(?=\d*[^\W\d_])")  # "#money", "#2k" -> "money", "2k" (round 53: saved as typed); "#1" stays
+STRUCK = re.compile(r"(~+)(?=\S)[^~\n]+?(?<=\S)\1\s*")  # "~a year~ two years": taken back as they typed it
+SENTENCE_END = re.compile(r"[.!?]+\s+|\s*\n\s*|(?:^|\s)(?:\d{1,2}[.)]|[-*•])\s+(?=[^\W\d])")  # "more money. Mostly for my kids": "2.5k" and "5k." stay whole
+# A new line or a list mark ("1. more money 2. more time", "- pay rent") ends a sentence too: whole calls, "with 1?"
+INNER_MARK = re.compile(r"[,;]?\s+(?:\d{1,2}[.)]|[^\W\d_]\))\s+(?=\w)")  # "money 2. time", "quit b) travel": the next item
 
 
 def blanks(line):
@@ -19,15 +44,48 @@ def blanks(line):
 
 def offer_blanks(offer):
     values = {"months": str(offer.months), "price": offer.price, "industry": offer.industry}
+    if offer.setter:  # unset: the line with {setter} falls back to its plain line
+        values["setter"] = offer.setter
     values.update({f"pillar_{i}": p for i, p in enumerate(offer.pillars, 1)})
     return values
 
 
+@lru_cache(maxsize=None)
+def real_words(filename):
+    """The English words in config/`filename` (one a line, "#" lines are notes)."""
+    lines = (CONFIG_DIR / filename).read_text(encoding="utf-8").splitlines()
+    return frozenset(w.strip().lower() for w in lines if w.strip() and not w.startswith("#"))
+
+
+_LISTED = {}
+
+
+def listed_words(cfg):
+    """Every word in the engine's own phrase lists (`spell_keep_lists`: tags, hedges, shrugs): words it hears, so
+    never typos (round 73: "a year methinks" was saved as "a year thinks")."""
+    held = _LISTED.get(id(cfg))
+    if held is None or held[0] is not cfg:
+        held = _LISTED[id(cfg)] = (cfg, frozenset(w for k in cfg["spell_keep_lists"] for p in cfg[k] for w in tokenize(p)))
+    return held[1]
+
+
 def spell(word, vocab, cfg):
-    """A typo turned into the script word it is plainly meant to be ("financialy" -> "financial").
-    Known, short or unmatched words (names, places) stay as they are."""
-    lower = word.lower()
-    if lower in vocab or len(lower) < cfg["spell_min_letters"]:
+    """A typo turned into the script word it is plainly meant to be ("financialy" -> "financial", "mroe" -> "more").
+    Known, short or unmatched words (names, places) stay as they are, and so does a real word that is
+    just not in the script ("drown" is never "down")."""
+    lower, real = word.lower(), real_words(cfg["spell_real_words"])
+    if lower in vocab or any(c.isdigit() for c in lower) or lower in real or "'" in lower or lower in listed_words(cfg):
+        return word  # a figure ("2,500pm") is never a typo, nor a word typed with its apostrophe (round 46: "we're" was "were")
+    swaps = {lower[:i] + lower[i + 1] + lower[i] + lower[i + 2:] for i in range(1, len(lower) - 1)}  # the first letter is
+    # rarely the slip, and keeping it keeps slang whole: "ive" is not "vie", "abt" is not "bat"
+    swapped = swaps & vocab  # only into a script word: the real words hold names and letters too ("mam" is not "mma")
+    if len(swapped) == 1 and len(lower) >= cfg["spell_swap_min_letters"]:
+        return swapped.pop()  # two letters typed the wrong way round: "mroe", "yse"
+    if cfg["spell_drop_min_letters"] <= len(lower) < cfg["spell_min_letters"]:
+        grown = {v for v in vocab if len(v) == len(lower) + 1 and any(v[:i] + v[i + 1:] == lower for i in range(1, len(v)))}
+        if len(grown) == 1:
+            return grown.pop()  # one letter left out of a short word: "mony", "mor" (a longer word may only be shorter)
+    if len(lower) < cfg["spell_min_letters"]:
         return word
     if any(lower.endswith(end) and lower[:-len(end)] in vocab for end in cfg["spell_word_endings"]):
         return word  # "months", "works": a real word ending, not a typo
@@ -37,10 +95,132 @@ def spell(word, vocab, cfg):
     return near[0]
 
 
+def short_form(text, cfg):
+    """A reply of one short form alone ("y", "ok I understand") as its words; "" when it is not one."""
+    word = text.rstrip("?!.").lower()
+    word = word.rstrip("".join(c for c in set(word) if unicodedata.category(c) in ("So", "Mn")) + " ?!.") or word  # round 76: "quit 🙁" left the call
+    if word in cfg["short_replies"]:
+        return cfg["short_replies"][word] + text[len(word):]
+    head, _, rest = word.partition(" ")
+    if head.strip(",") in cfg["filler_words"] and rest in cfg["short_replies"]:  # round 41: "ok I understand"
+        return text[:len(word) - len(rest)] + cfg["short_replies"][rest] + text[len(word):]
+    return ""
+
+
+def _bare_lead_marks(text, cfg):
+    """The reply without the pictures in front of its words ("😂 quit" -> "quit"); a picture that stands for a
+    word (`emoji_words`: "💰 please") stays, and so does a reply of pictures alone."""
+    words = {c for sign in cfg["emoji_words"] for c in sign if unicodedata.category(c) == "So"}
+    faces = "|".join(re.escape(typed) for typed, pic in cfg["word_swaps"].items() if not re.search(r"\w", pic))  # ":) quit"
+    start = 0
+    while start < len(text):
+        face = re.match(rf"(?:{faces})(?!\w)", text[start:], re.IGNORECASE)
+        if face:
+            start += face.end()
+        elif text[start] not in words and (text[start].isspace() or unicodedata.category(text[start]) in ("So", "Sk", "Mn", "Cf")):
+            start += 1
+        else:
+            break
+    return text[start:] if start and re.match(r"\w", text[start:]) else text
+
+
+def unslipped(text, cfg):
+    """A whole reply one key off a shrug in `slip_targets` ("idj" -> "idk", "nit sure" -> "not sure"): only keys
+    side by side on one of `keyboard_rows`; a real word alone ("insure") and anything else stay as typed."""
+    lower = text.lower().rstrip(" ?!.")
+    if lower in real_words(cfg["spell_real_words"]):
+        return text
+    beside = {pair for row in cfg["keyboard_rows"] for pair in pairwise(row)}
+    for target in cfg["slip_targets"]:
+        slips = [(a, b) for a, b in zip(lower, target) if a != b]
+        if len(lower) == len(target) and len(slips) == 1 and (slips[0] in beside or slips[0][::-1] in beside):
+            return target + text[len(lower):]
+    return text
+
+
 def fix_typos(text, vocab, cfg):
-    """The reply with plain typos fixed before it is understood ("monthy income" -> "monthly income");
-    punctuation and every other word kept as typed."""
-    return WORD.sub(lambda m: spell(m.group(0), vocab, cfg), text or "")
+    """The reply with plain typos fixed before it is understood ("monthy income" -> "monthly income", "£££" ->
+    "money");
+    punctuation and every other word kept as typed. A reply of one short form alone (`short_replies`: "y")
+    is its word ("yes"): inside a reply, "y" is more often a year ("2 y")."""
+    text = QUOTED.sub(r"\1", (text or "").strip())  # round 47: '"ok"' at "Does that make sense?" got "let me put it another way"
+    text = SPACED.sub(lambda m: joined if (joined := m.group().replace(" ", "")).lower() in vocab | real_words(cfg["spell_real_words"]) else m.group(), text)  # round 89
+    # callers: "y e s" was saved as the goal "e s"; joined only into a known word ("i a m" -> "iam" stays apart)
+    digits = str.maketrans({str(k): v for k, v in cfg["digit_letters"].items()})  # round 96 callers: "m0ney" was unclear,
+    text = DIGITED.sub(lambda m: word if (word := m.group().translate(digits)).lower() in vocab | real_words(cfg["spell_real_words"]) and len(word) > 3 else m.group(), text)  # "qu1t" saved as typed
+    label = "|".join(map(re.escape, cfg["answer_labels"]))  # round 77: "A: money" was "a money", "1. my boss" saved whole
+    text, listed = re.subn(rf"^(?:>+\s+|\d{{1,2}}[.)]\s+|(?:{label})\s*[:)]\s+)", "", text, flags=re.IGNORECASE)
+    if listed:  # round 85 callers: "1. money 2. time" was saved as "money 2. time", "a) quit b) travel" whole
+        text = INNER_MARK.sub(", ", text)
+    text = _bare_lead_marks(text, cfg)  # round 80: "😂 quit" left the call, "😂 money" was saved with its picture
+    text = re.sub(rf"(?<=\w)[,\s]+(?:{'|'.join(map(re.escape, cfg['mid_fillers']))})\b,?(?=\s+\w)", lambda m: "," * ("," in m.group()), text, flags=re.IGNORECASE)  # round 80: "more um money"
+    text = STUTTER.sub("", text)  # round 78: "no, no idea" was a no ("I, I want money" -> "I want money")
+    whole = short_form(text, cfg)
+    if whole:
+        return whole
+    text = unslipped(text, cfg)  # round 80: "idj" and "nit sure" were saved as answers
+    text = MONEY_SIGNS.sub(cfg["money_signs_as"], text)  # "more £££" -> "more money": round 28, said back as "with more?"
+    sure = "|".join(map(re.escape, cfg["sure_marks"]))  # round 49: "quit 100%" got "What do you mean"; "100% of" is an amount
+    text = re.sub(rf"(?<!\w)(?:{sure})(?!\w)(?!\s+of\b)", cfg["sure_marks_as"], text, flags=re.IGNORECASE)
+    text = _as_words(text, cfg)  # round 31: "💰💰💰" said nothing, "I want to by a house" was said back as typed
+    text = STRETCHED.sub(lambda m: unstretch(m.group(0), vocab, cfg), text)  # round 32: "a yearrr" was not a time
+    text = HASHED.sub("", EMPHASIS.sub(r"\2", STRUCK.sub("", text)))  # round 30: "with more?", and "~a year~ two years" was a year
+    text = SLASHED.sub(lambda m: re.sub(r"\s*/\s*", " or ", m.group()), text)  # round 40: "money/time" was "What do you mean by money time?"
+    text = ISH.sub(lambda m: unish(m, vocab, cfg), text)  # round 41: "a yearish" was no time
+    text = WORD.sub(lambda m: unheld(m.group(0), cfg), text)  # round 44: "okk" was saved as the answer
+    text = WORD.sub(lambda m: spell(m.group(0), vocab, cfg), text)
+    return short_form(text, cfg) or text  # round 51: "quitt" alone, once spelled, is "quit": not leaving
+
+
+def said_once(words):
+    """Words with a run said twice in a row kept once: "money money" -> "money", "a year a year" -> "a year"."""
+    words, i = list(words), 0
+    while i < len(words):
+        lower = [w.lower() for w in words]
+        n = next((n for n in (3, 2, 1) if lower[i:i + n] == lower[i + n:i + 2 * n]), 0)
+        if n:
+            del words[i + n:i + 2 * n]
+        else:
+            i += 1
+    return words
+
+
+def unheld(word, cfg):
+    """A filler word with its last letter held once or more ("okk", "yess", "yeahh") as the word."""
+    cut = re.sub(r"(\w)\1+$", r"\1", word.lower())
+    return cut if cut in cfg["filler_words"] else word
+
+
+def unish(match, vocab, cfg):
+    """"-ish" on a word ("money-ish", "a yearish", "2kish") as its own word, "ish": a real word that ends
+    in it ("English", "finish") stays as typed."""
+    stem, dash = match.group(1), match.group(2)
+    known = vocab | real_words(cfg["spell_real_words"])
+    if dash or (match.group(0).lower() not in known and (stem.lower() in known or any(c.isdigit() for c in stem))):
+        return f"{stem} ish"
+    return match.group(0)
+
+
+def unstretch(word, vocab, cfg):
+    """A word with a letter held for effect ("moneyyy", "bosss", "2kkk") as the word: each run of 3 or more
+    cut to 2 when that is a word ("boss"), else to 1 ("money")."""
+    known = vocab | real_words(cfg["spell_real_words"])
+    two = re.sub(r"([^\W\d_])\1{2,}", r"\1\1", word)
+    return two if two.lower() in known else re.sub(r"([^\W\d_])\1+", r"\1", two)
+
+
+def _as_words(text, cfg):
+    """Pictures and misheard words as the words they stand for: an emoji in `emoji_words` ("💰💰💰" -> "money",
+    a run is one word) and a phrase in `word_swaps` (voice to text: "to by a house" -> "to buy a house"; slang: "dosh" -> "money")."""
+    for sign, word in cfg["emoji_words"].items():   # after an amount or its own word it only decorates it ("2k 💸", "money 💰")
+        text = re.sub(rf"((?<!\w)(?:\d\w*|(?i:{re.escape(word)})))?\s*(?:{re.escape(sign)}\ufe0f?\s*)+", lambda m: f"{m.group(1)} " if m.group(1) else f" {word} ", text).strip()
+    for heard, meant in cfg["word_swaps"].items():
+        text = re.sub(rf"(?<!\w){re.escape(heard)}(?!\w)", meant, text, flags=re.IGNORECASE)
+    per = cfg["amount_per"]  # round 52: "£2k/month" was said back as "£2k month"; "50km/h" keeps its slash
+    text = re.sub(rf"(\d\w*)/(?=(?:{'|'.join(per['units'])})\b)", rf"\1 {per['as']} ", text, flags=re.IGNORECASE)
+    for bare, meant in cfg["apostrophe_words"].items():   # round 42: "im after more money"; never "ID"
+        text = re.sub(rf"(?<!\w)[{bare[0]}{bare[0].upper()}]{re.escape(bare[1:])}(?!\w)", meant, text)
+    return text
 
 
 def base_verb(word, cfg):
@@ -54,22 +234,78 @@ def base_verb(word, cfg):
     return next((v for v in (stem, stem + "e", doubled) if v in cfg["verb_goal_starts"]), None)
 
 
+def _cleft(lower, cfg):
+    """How many words open a "what I want is" reply: up to and with its "is" ("what I'm hoping to achieve is
+    more money" -> 6). 0 when it is not one: no subject before the "is" ("what is it?")."""
+    start = max((len(s) for s in map(tokenize, cfg["echo_cleft_starts"]) if lower[:len(s)] == s), default=0)
+    if not start:
+        return 0
+    span = lower[start + 1:start + cfg["echo_want_within"] + 3]
+    return next((start + 2 + i for i, w in enumerate(span) if w in cfg["echo_cleft_verbs"]), 0)
+
+
+def _after_want(words, cfg):
+    """The words after who wants it ("my family needs", "we want", "my wife and I would like"): the goal, said
+    back without them. Only near the start, and never past a "not" ("I don't want to work") or a "who"."""
+    lower = [w.lower() for w in words]
+    if cleft := _cleft(lower, cfg):
+        return words[cleft:]  # "the main thing I want is more time": after its "is", not its "want"
+    for i in range(min(len(lower), cfg["echo_want_within"] + 1)):
+        if lower[i] in ("not", "never", *cfg["question_words"]) or lower[i].endswith("n't"):
+            return words  # "people who want more": not who wants it
+        want = next((len(w) for w in map(tokenize, cfg["echo_want_words"]) if lower[i:i + len(w)] == w), 0)
+        if want and i + want < len(lower) and lower[i + want] in cfg["echo_want_objects"]:
+            want += 1  # "my husband wants me to earn more" -> "to earn more"
+        if want:
+            return words[i + want:] if i else words  # at the very start ("need more money") it is the goal itself
+    return words
+
+
 def echo_phrase(reply, cfg, vocab=frozenset(), verbs=False):
     """Their own words for a blank, by rule, no AI: lead-ins like "I want" and hedges like "I guess" dropped
     ("I want more time I guess" -> "more time"), first person turned to second ("my kids" -> "your kids"). None when the words would
-    not read right in the line: too long, no goal ("nothing"), or still speaking as the prospect.
+    not read right in the line: too long, no goal ("nothing"), or still speaking as the prospect. Only their
+    first sentence is said back, up to any `echo_cut_at` word ("but").
     `verbs`: the blank has a verb form, so a goal they put as "-ing" or as a state is made a verb for it
     ("paying the bills" -> "pay the bills", "debt free" -> "be debt free")."""
-    words = WORD.findall(reply or "")
-    drops = [tokenize(d) for d in cfg["echo_drop_starts"]]
+    unaside = ASIDE.sub("", reply or "")  # round 49: "money (lots)" was "with money lots?"
+    reply = unaside if tokenize(unaside) else reply  # all in brackets: kept
+    sentences = SENTENCE_END.split((reply or "").strip())  # one sentence, the first with more than filler ("fine.
+    # more money"): whole calls, "with more money Mostly for your kids?"
+    reply = next((x for x in sentences if set(tokenize(x)) - set(cfg["filler_words"])), sentences[0])
+    parts = reply.split(",")
+    while len(parts) > 1 and tokenize(parts[0])[:1] and tokenize(parts[0])[0] in cfg["echo_reason_starts"]:
+        parts = parts[1:]  # round 42: "because I'm broke, more money" -> "more money"
+    reply = ",".join(parts)
+    ifs, thens = ("|".join(map(re.escape, cfg[k])) for k in ("echo_if_starts", "echo_if_thens"))
+    if_then = re.match(rf"\W*(?:{ifs})\s+\S.*?\s(?:{thens})\s+(?=\w)", reply, re.IGNORECASE)
+    reply = reply[if_then.end():] if if_then else reply  # round 98: "if I had money I'd quit" -> "quit"
+    cut = "|".join(map(re.escape, cfg["echo_cut_at"]))
+    head = re.split(rf"\b(?:{cut})\b", reply, maxsplit=1, flags=re.IGNORECASE)[0]  # "quit my job but I'm scared"
+    reply = head if tokenize(head) else reply  # round 45: "so I can travel" starts with one, nothing to cut
+    joins = "|".join(map(re.escape, cfg["echo_list_joins"]))
+    items = re.split(rf"\s+(?:{joins})\s+", reply or "", flags=re.IGNORECASE)  # round 31: "a plus b plus c" -> "a, b and c"
+    reply = ", ".join(items[:-1]) + " and " + items[-1] if len(items) > 1 else reply
+    if reply and reply.isupper() and len(tokenize(reply)) > 1:
+        reply = reply.lower()  # shouted ("I WANT TO BE RICH!!!"): never said back in capitals ("BE RICH?")
+    words = WORD.findall(CENSORED.sub(" ", reply or ""))  # "more f***ing money" -> "more money"
+    words = [w for w in _after_want(words, cfg) if w.lower() not in cfg["echo_drop_words"]]  # "more money" from "my family needs more money"
+    drops = [tokenize(d) for d in [*cfg["echo_drop_starts"], *cfg["filler_words"]]]  # "for sure, more money"
+    keeps = [[w] for w in cfg["lead_not_before"]]
     cut = True
     while cut:
         lower = [w.lower() for w in words]
-        cut = next((len(d) for d in drops if lower[:len(d)] == d), 0)
+        cut = max((len(d) for d in drops if lower[:len(d)] == d and lower[len(d):len(d) + 1] not in keeps),
+                  default=_cleft(lower, cfg))
+        # the longest: "so i can", not "so"; round 54: "well paid job" was "with paid job?"
         words = words[cut:]
-    for end in (tokenize(e) for e in cfg["echo_drop_ends"]):
-        if [w.lower() for w in words[-len(end):]] == end:
-            words = words[:-len(end)]
+    ends = [tokenize(e) for e in cfg["echo_drop_ends"]]
+    while words and (end := max((e for e in ends if [w.lower() for w in words[-len(e):]] == e), key=len, default=None)):
+        words = words[:-len(end)]  # each one, in any order (round 37: "money obviously, stupid question" kept "obviously"),
+        # the longest first (round 58: "free or whatever" was "free or")
+    words = said_once(words)  # round 45: "money money" was said back twice; after the ends (round 73: "money yada yada" was "money yada")
+    if len(words) > 1 and words[0].lower() in cfg["echo_drop_verbs"] and words[1].lower() not in cfg["echo_drop_verbs_not_before"]:
+        words = words[1:]  # round 31: "achieve financial independence" was "by being able to achieve financial independence"
     if verbs and words:
         if verb := base_verb(words[0], cfg):
             words = [verb, *words[1:]]
@@ -78,35 +314,76 @@ def echo_phrase(reply, cfg, vocab=frozenset(), verbs=False):
     swap = cfg["echo_pronoun_swap"]
     words = [swap.get(w.lower(), spell(w, vocab, cfg)) for w in words]
     lower = [w.lower() for w in words]
+    known = vocab | real_words(cfg["spell_real_words"])
     if (not words or len(words) > cfg["slot_words"] or lower[0] in cfg["bad_phrase_starts"]
-            or set(lower) & set(cfg["prospect_pronouns"])):
-        return None
+            or set(lower) & {*cfg["prospect_pronouns"], *cfg["echo_not_with"]}
+            or any(w.isalpha() and w.islower() and len(w) > 2 and w not in known for w in words)):
+        return None  # a typo still in it is never said back ("being able to mak more mony?"); a Name can be
     if words[0] == reply.lstrip()[:len(words[0])]:
         words[0] = words[0].lower()  # sentence case at the start of their reply, not a name
-    return " ".join(words)
+    listed = {m.group().lower() for m in WORD.finditer(reply) if reply[m.end():m.end() + 1] == ","}
+    return " ".join(w + "," if w.lower() in listed and i < len(words) - 1 else w for i, w in enumerate(words))  # "money, time and travel"
 
 
 def number_phrase(reply, rule, cfg):
     """The number before the blank's unit, as digits, by rule: "about 5 years now" -> "5", "a year" -> "1".
-    None when no number sits right before the unit ("ages", "6 months" for a years blank).
-    With `per`, the number is converted: "2 years" -> "24" for a months blank. With `unit` ([one, many]),
-    the unit is said after it: "1 year", "2 years". A rule with `from` and no `units` takes that rule's units."""
+    None when no number sits right before the unit ("ages", "6 months" for a years blank). "and a half"
+    (`number_half`) before or after the unit adds a half; a singular unit on its own opens a reply as one
+    ("year and a half"), a part (`number_parts`) before it takes that share ("half a year" -> 6 months), and a number stuck to its unit is read apart ("1yr"). With `per`, the number is converted: "2 years" -> "24" for a months blank ("24 months" with `unit`). With
+    `unit` ([one, many]), the unit is said after it: "1 year", "2 years", "a year and a half". A rule with
+    `from` and no `units` takes that rule's units."""
     units = rule.get("units") or cfg["number_blanks"][rule["from"]]["units"]
-    per = rule.get("per")
-    lower = [w.lower() for w in WORD.findall(reply or "") if w.lower() not in cfg["number_skip"]]
-    for before, word in zip(lower, lower[1:]):
-        count = int(before) if before.isdigit() else cfg["number_words"].get(before)
-        if count is not None and word in (per or units):
-            if per:
-                return str(count * per[word])
-            unit = rule.get("unit")
-            return f"{count} {unit[count != 1]}" if unit else str(count)
+    per, unit, half = rule.get("per"), rule.get("unit"), tokenize(cfg["number_half"])
+    words = WORD.findall(GLUED.sub(r"\1 \2", RANGE.sub(r"\1 - ", reply or "")))  # "1yr" -> "1 yr", "1-2" -> "1 - 2"
+    lower = [w.lower() for w in words if w.lower() not in cfg["number_skip"]]
+    for i, word in enumerate(lower):
+        if word not in (per or units):
+            continue
+        halved = lower[i + 1:i + 1 + len(half)] == half or (i > len(half) and lower[i - len(half):i] == half)
+        at = i - 1 - (len(half) if halved and lower[i - len(half):i] == half else 0)
+        count = _count(lower[at], cfg) if at >= 0 else (1 if not word.endswith("s") else None)
+        if count is None:
+            continue
+        part = lower[at - 1] if at >= 1 and lower[at - 1] in cfg["number_parts"] else ""  # "half a year"
+        first = at - (1 if part else 0)
+        if any(first >= len(b) and lower[first - len(b):first] == b for b in map(tokenize, cfg["number_below"])):
+            return None  # round 83 callers: "under a year" was "12 months... Damn."; less than the number is no number
+        joins = max(1, len(list(takewhile(cfg["number_range_joins"].__contains__, lower[i + 1:]))))  # round 85: "a year or maybe two"
+        join, top, then = (lower[i + 1:i + 2] + lower[i + 1 + joins:i + 3 + joins] + ["", "", ""])[:3]  # round 83 callers: "a year or two" was 12 months,
+        if join in cfg["number_range_joins"] and _count(top, cfg) is not None and (  # "1-2 years" 24: a range is its top
+                then not in (per or units) or then.rstrip("s") == word.rstrip("s")):  # "a year to 18 months" keeps its year
+            count = _count(top, cfg)
+        value = count * cfg["number_parts"].get(part, 1) + (0.5 if halved else 0)
+        if per:
+            value *= per[word]
+            if join in cfg["number_add_joins"] and _count(top, cfg) is not None and per.get(then, per[word]) < per[word]:
+                value += _count(top, cfg) * per[then]  # round 84 callers: "a year and 2 months" was 12 months
+            return f"{value:g} {unit[value != 1]}" if unit else f"{value:g}"
+        if not unit:
+            return f"{value:g}"
+        if part:
+            return f"{part} {lower[at]} {unit[0]}"
+        if halved:
+            return f"a {unit[0]} and a half" if count == 1 else f"{count:g} and a half {unit[1]}"
+        return f"{count:g} {unit[count != 1]}"
     return None
 
 
-def is_verb_goal(phrase, cfg):
-    """True when the phrase starts with a verb: "be your own boss", "quit your job"."""
-    return tokenize(phrase)[:1] != [] and tokenize(phrase)[0] in cfg["verb_goal_starts"]
+def _count(word, cfg):
+    """A number said in digits or words ("3", "1.5", "three", "a"), else None."""
+    if DECIMAL_COMMA.fullmatch(word):
+        word = word.replace(",", ".")  # round 40 callers: "1,5 years" was no number
+    return float(word) if FIGURE.fullmatch(word) else cfg["number_words"].get(word)
+
+
+def is_verb_goal(phrase, cfg, said=""):
+    """True when the phrase starts with a verb: one of `verb_goal_starts` ("be your own boss"), or any word
+    they put after a `verb_goal_leads` word (`said`: "I want to replace my salary", "so I can cut down my hours";
+    whole calls: "achieve with replace your salary")."""
+    first = tokenize(phrase)[:1]
+    leads = "|".join(map(re.escape, cfg["verb_goal_leads"]))
+    return bool(first) and (first[0] in cfg["verb_goal_starts"]
+                            or bool(re.search(rf"\b(?:{leads})\s+{re.escape(first[0])}\b", said or "", re.IGNORECASE)))
 
 
 class Filler:
@@ -133,8 +410,10 @@ class Filler:
             if phrase is None:
                 return None
             noun, verb = forms[blank]
-            form = (verb if is_verb_goal(phrase, self.cfg) else noun) if noun is not None else "$"
+            form = (verb if is_verb_goal(phrase, self.cfg, reply) else noun) if noun is not None else "$"
             values[blank] = form.replace("$", phrase)
+            for wordy, plain in self.cfg["form_joins"].items():  # "by being able to be rich" -> "by being rich"
+                values[blank] = values[blank].replace(wordy, plain)
         return NAME.sub(lambda m: values.get(m.group(1), m.group(0)), line)
 
     def echoes(self, line, slots):

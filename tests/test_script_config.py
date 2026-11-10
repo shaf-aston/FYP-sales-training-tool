@@ -1,8 +1,8 @@
 """engine.yaml fails loudly when a seller is built, naming the key, not mid-call."""
 import pytest
 
-from core.infra.loader import load_yaml
 from core.buy_mode.script_engine.config import check, problems
+from core.infra.loader import load_yaml
 
 CFG = load_yaml("script/engine.yaml")
 
@@ -38,7 +38,11 @@ def test_check_lists_every_problem_at_once():
 
 
 def test_a_seller_will_not_build_on_a_broken_config(fake_embedder):
-    from core.buy_mode.script_engine.method import load_common_sense, load_method, load_offer
+    from core.buy_mode.script_engine.method import (
+        load_common_sense,
+        load_method,
+        load_offer,
+    )
     from core.buy_mode.script_engine.seller import ScriptSeller
 
     cfg = load_yaml("script/engine.yaml")
@@ -65,3 +69,33 @@ def test_an_unclear_sense_without_min_score_is_named_not_a_key_error():
     data = {**data, "unclear": {k: v for k, v in data["unclear"].items() if k != "min_score"}}
     with pytest.raises(ValueError, match="unclear: min_score"):
         parse_common_sense(data)
+
+
+@pytest.mark.parametrize("key, value", [("wait_again", "Still there?"), ("yes_no_reask", ["Yes or no?"]),
+                                        ("park_again", "Still worried?")])
+def test_lines_said_before_a_question_never_ask(key, value):
+    """The step's question follows them: a "?" in front would be two questions in one message."""
+    from core.buy_mode.script_engine.method import parse_common_sense
+    data = {"park": "", "revisit": "", "interruptions": {}, key: value}
+    with pytest.raises(ValueError, match="must not ask"):
+        parse_common_sense(data)
+    assert parse_common_sense({**data, key: ["Sure."] if key == "yes_no_reask" else "Sure."})
+
+
+def test_a_sense_can_count_only_as_a_question():
+    """`only_asked`: "does that matter?" asks why, "that matters to me" answers."""
+    from core.buy_mode.script_engine.method import parse_common_sense
+    sense = {"examples": ["why do you ask"], "reply": "It helps.", "only_asked": True}
+    data = {"park": "", "revisit": "", "interruptions": {"why_ask": sense, "thanks": {"examples": ["thanks"], "reply": "Sure."}}}
+    found = parse_common_sense(data).interruptions
+    assert found["why_ask"].only_asked and not found["thanks"].only_asked
+
+
+def test_a_sense_can_count_only_before_the_price():
+    """`before_price`: "I'm not interested" early leaves; from the price on the close hears it its own way."""
+    from core.buy_mode.script_engine.method import parse_common_sense
+    data = {"park": "", "revisit": "", "interruptions": {
+        "not_interested": {"examples": ["no thank you"], "reply": "", "after": "follow_up", "before_price": True},
+        "thanks": {"examples": ["thanks"], "reply": "Sure."}}}
+    found = parse_common_sense(data).interruptions
+    assert found["not_interested"].before_price and not found["thanks"].before_price

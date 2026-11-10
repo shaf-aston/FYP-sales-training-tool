@@ -16,14 +16,23 @@ objections:
       - "that's more than I have"
       - "I don't have the money"
       - "I'm not sure I can cover the cost"
-      - "I just want to know the price"   # draft: a price request before the pitch gets the honest early line
-      - "just tell me what it costs"   # draft
+      - "I'm not giving you any money"   # live: heard as their goal at step 01
+      - "I'm not paying for anything"
+      - "I'm not buying anything"
+      - "I won't pay for this"
       - "that seems like a lot of money"
       - "that feels pretty steep"
       - "that's a big number for me"
       - "why does it cost that much"
+      - "woah, that's a lot mate"   # draft: live ("5 grand? that's a lot mate"), said at the price and taken as a nod
+      - "I don't have that kind of money lying around"   # draft: live ("I don't have 5k lying around"), same
+    after_price:   # draft: heard only once the price is out; before it, this is their life, not our price
       - "I can't spare the money with my mortgage"
       - "money is tight for me at the moment"
+      - "is that a lot"   # draft: round 25 callers; before the price, "2k, is that a lot?" asks about their own figure
+      - "I would if I had the money"   # draft: round 109 callers, at the soft close it was asked again
+      - "my card is maxed out"   # draft: round 109 callers, at the payment step it got "credit or debit?" again
+      - "there's no money on my card"   # draft: near "I don't have a card" (0.88), which gets the bank transfer
   partner:
     enter: m_partner_here
     examples:
@@ -37,8 +46,12 @@ objections:
       - "I'd have to run it past my other half first"
       - "my partner would have to be on board"
       - "I can't decide without my wife"
+      - "my husband decides about money things"   # draft: whole calls, "he decides the money stuff" was their reason to buy
+      - "my wife makes the decisions about money"   # draft
+      - "my partner said no"   # draft: round 36 callers; beside "my partner said yes" (a yes, answers.yaml) so a no still asks about them
   fear:
     enter: m_reframe1
+    early: "That's fair. That's what this call is for, to see if it can work for you first."   # draft: whole calls, "what if it doesn't work?" before the price got "I'll find out"
     examples:
       - "I'm nervous it won't work for me"
       - "what if I fail"
@@ -50,6 +63,8 @@ objections:
       - "I've got kids to look after, I can't take risks"
       - "it's just how I am, I'm cautious"
       - "I'm not sure I'm capable of doing this"
+      - "what if it doesn't work for me"   # draft: whole calls, "what if it doesn't work?" got "I'll find out"
+      - "what if I can't keep up"   # draft: whole calls, "yes but what if I can't keep up?" at the close got no answer
   think:   # Procrastinator: the SOP says handle the logistics behind it first, then fear
     enter: m_think_what
     examples:
@@ -62,6 +77,11 @@ objections:
       - "let me take a step back first"
       - "I like it but I'll get back to you"
       - "I need to sleep on it and get back to you"
+      - "can I call you back"   # draft: whole calls, at the close it got "I'll find out"
+      - "let me think about it"   # draft: whole calls, at 19 it was heard as a shrug and asked again
+      - "can I do it another day"   # draft: round 106 callers, "can I do it tomorrow?" at the payment step got "I'll find out"
+      - "can we pick this up next week"   # draft
+    never_with: ["do it now", "do it today", "do it right now", "pay now", "pay today", "start now", "start today"]   # draft: round 106 callers, "can I do it today?" is near "another day" (0.88) but keen, never a wait
   research:   # Analyser: still researching, needs more info
     enter: m_think_what
     examples:
@@ -81,6 +101,7 @@ objections:
     examples:
       - "is this a scam"
       - "this is too good to be true"   # not "sounds too good": "sounds good to me" read as this (0.81)
+      - "what's the catch"   # draft: whole calls, got "I'll find out"
       - "I don't trust this"
       - "this feels dodgy"
       - "I've been scammed before"
@@ -91,12 +112,15 @@ objections:
       - "have you got any proof"
       - "can you prove it works"
       - "there's so many rip-offs online"
+      - "is this a get rich quick scheme"   # draft: whole calls, "is this one of those get rich quick things?" got "I'll find out"
+      - "is this MLM"   # draft
       - "how can you guarantee it works"
       - "I need to see case studies or testimonials"
       - "show me results from other people"
       - "I want to know the return on my investment"
       - "I don't know if these courses are even real"
       - "I'm not sure who to trust online"
+      - "why should I trust you"   # draft: whole calls, at the close it got "I'll find out"
       - "I've paid for stuff like this before and got nothing"
 
 steps:
@@ -120,7 +144,13 @@ steps:
       think:
         examples: ["I just need to think", "I want to look around first", "I need more time"]
         then: m_think_what
-      any: {then: m_reframe1}   # fear, or anything else: a perspective shift
+      fear:   # draft: a rival to think: whole calls, "just nervous I guess" went to "what do you need to think over"
+        examples: ["I'm nervous", "I'm scared it won't work", "worried I'll fail", "it's a big risk"]
+        then: m_reframe1
+      busy:   # draft: a rival to think: whole calls, "time" from someone working 60 hours went to "think over"
+        examples: ["time", "I don't have the time", "I'm too busy with work", "I work too much"]
+        then: m_reframe1
+      any: {then: m_reframe1}   # anything else: a perspective shift
 
   m_think_what:
     name: "Find the logistics behind 'think about it'"
@@ -138,6 +168,9 @@ steps:
       partner:
         examples: ["my wife", "talking to my partner", "what my husband thinks"]
         then: m_partner_here
+      works:   # draft: a rival to money: live, "mostly whether it actually works for people" went to the money questions
+        examples: ["whether it actually works", "if it works for people like me", "if I can trust it"]
+        then: m_reframe1
       any: {then: m_reframe1}
 
   # Money objections
@@ -145,13 +178,14 @@ steps:
     name: "Money 1: if funded"
     ui_stage: outcome
     say: "Tell me if you did have the funding, is this something that would work for you?"
+    reask: &yes_no_reask ["No pressure either way."]   # draft: a yes-or-no question; "even a rough idea helps" read oddly before it (live)
     stuck: {then: m_reframe1}
     listen:
       "yes":
-        examples: ["yes", "yeah it would", "definitely"]
+        like: "yes"
         then: m_funded_why
       "no":
-        examples: ["no", "not really", "probably not"]
+        like: "no"
         then: m_reframe1
   m_funded_why:
     name: "Money 1: why it works"
@@ -191,10 +225,12 @@ steps:
     stuck: {then: m_funding_options}
     listen:
       "yes":
-        examples: ["yes", "yeah I could do that", "ok let's put it on a card"]
+        like: "yes"
+        examples: ["yeah I could do that", "ok let's put it on a card"]
         then: payment
       "no":
-        examples: ["no", "I don't do credit", "I'd rather not"]
+        like: "no"
+        examples: ["I don't do credit", "I'd rather not"]
         then: m_funding_options
   m_funding_options:
     name: "Money 4: funding options"
@@ -204,10 +240,12 @@ steps:
     stuck: {then: m_reframe1}
     listen:
       "yes":
-        examples: ["yes", "that could work", "ok, payments then"]
+        like: "yes"
+        examples: ["that could work", "ok, payments then"]
         then: payment
       "no":
-        examples: ["no", "still no", "I can't do that"]
+        like: "no"
+        examples: ["still no", "I can't do that"]
         then: m_reframe1   # money handled, still no: it's fear
 
   # Partner objections
@@ -218,10 +256,11 @@ steps:
     stuck: {then: m_reframe1}
     listen:
       "yes":
-        examples: ["yes", "yeah it would", "probably yes"]
+        like: "yes"
         then: m_partner_element
       "no":
-        examples: ["no", "not really", "I'm not sure it would"]
+        like: "no"
+        examples: ["I'm not sure it would"]
         then: m_reframe1
   m_partner_element:
     name: "Partner 1: the benefit"
@@ -256,22 +295,29 @@ steps:
     stuck: {then: m_open_wallet}
     listen:
       "yes":
-        examples: ["yes", "yeah I would", "it's my decision"]
+        like: "yes"
+        examples: ["it's my decision"]
         then: m_partner_close
       "no":
-        examples: ["no", "not without her", "I need him on board"]
+        like: "no"
+        examples: ["not without her", "I need him on board", "I'd have to ask my wife", "I need to talk to her first", "I'd have to check with my partner"]   # draft: asking them first is not going ahead (whole calls: heard as yes)
         then: m_open_wallet
   m_partner_close:
     name: "Partner 2: soft close"
     ui_stage: outcome
-    say: "Do you see yourself jumping in?"   # the script's own soft close
+    say: "In that case, do you see yourself jumping in?"   # the script's own soft close; draft: "In that case," is ours, the same question word for word a 2nd time sounds like a loop
+    reask: *yes_no_reask
     stuck: {then: m_reframe1}
     listen:
+      pays:
+        like: pay_now
+        min_score: 0.8   # "ok" (0.73) is no way to pay
+        then: payment
       "yes":
-        examples: ["yes", "yes let's do it", "I'm in"]
+        like: jump_in
         then: resell
       "no":
-        examples: ["no", "not yet", "I'm not sure"]
+        like: not_yet
         then: m_reframe1   # partner handled, still no: it's fear
   m_open_wallet:
     name: "Partner 2: Open Wallet test"
@@ -322,8 +368,12 @@ steps:
     say: "Okay, And do you want that decision making process to dictate your results moving forward?"
     listen:
       "no":
-        examples: ["no", "no I don't", "definitely not"]
+        like: "no"
+        examples: ["no I don't"]
         then: m_reframe1_why
+      "yes":   # a rival label: alone, "no" took a plain "yes" (close in meaning) to "Why not?" (whole calls)
+        like: "yes"
+        then: m_reframe2
       any: {then: m_reframe2}
   m_reframe1_why:
     name: "Reframe 1: why not"
@@ -334,14 +384,19 @@ steps:
   m_close1:
     name: "Reframe 1: close"
     ui_stage: outcome
-    say: "Do you see yourself jumping in?"
+    say: "With all that in mind, do you see yourself jumping in?"   # draft: the lead-in is ours; the source asks the same close word for word up to 4 times a call
+    reask: *yes_no_reask
     stuck: {then: m_reframe2}
     listen:
+      pays:
+        like: pay_now
+        min_score: 0.8   # "ok" (0.73) is no way to pay
+        then: payment
       "yes":
-        examples: ["yes", "yes let's do it", "I'm in"]
+        like: jump_in
         then: resell
       "no":
-        examples: ["no", "not yet", "I'm not sure"]
+        like: not_yet
         then: m_reframe2
   m_reframe2:
     name: "Reframe 2: the island"
@@ -352,14 +407,19 @@ steps:
   m_close2:
     name: "Reframe 2: close"
     ui_stage: outcome
-    say: "Do you see yourself jumping in?"
+    say: "From the top of that mountain, do you see yourself jumping in?"   # draft: the lead-in is ours; the source asks the same close word for word up to 4 times a call
+    reask: *yes_no_reask
     stuck: {then: m_reframe3}
     listen:
+      pays:
+        like: pay_now
+        min_score: 0.8   # "ok" (0.73) is no way to pay
+        then: payment
       "yes":
-        examples: ["yes", "yes let's do it", "I'm in"]
+        like: jump_in
         then: resell
       "no":
-        examples: ["no", "not yet", "I'm not sure"]
+        like: not_yet
         then: m_reframe3
   m_reframe3:
     name: "Reframe 3: choices"
@@ -370,13 +430,18 @@ steps:
   m_close3:
     name: "Reframe 3: close"
     ui_stage: outcome
-    say: "Do you see yourself jumping in?"
+    say: "Making decisions from where you WANT to be, do you see yourself jumping in?"   # draft: the lead-in is ours; the source asks the same close word for word up to 4 times a call
+    reask: *yes_no_reask
     stuck: {then: follow_up}
     listen:
+      pays:
+        like: pay_now
+        min_score: 0.8   # "ok" (0.73) is no way to pay
+        then: payment
       "yes":
-        examples: ["yes", "yes let's do it", "I'm in"]
+        like: jump_in
         then: resell
       "no":
-        examples: ["no", "not yet", "I'm not sure"]
+        like: not_yet
         then: follow_up
 

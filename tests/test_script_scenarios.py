@@ -1,12 +1,19 @@
 """Live test chats A-E (round 2) as scenario tests: keen buyer, early number, re-ask wording,
 frustration, safe product answers, memory in the ack. Offline: bag-of-words embedder, fake AI.
 These prove the wiring; how well the real model hears each phrase is test_script_recognition's job."""
+import json
 from itertools import pairwise
 
 import pytest
 
-from core.infra.loader import load_yaml
-from core.buy_mode.script_engine.engine import ScriptState, asked_line, hear_ahead, jump, move_on
+from core.buy_mode.script_engine.engine import (
+    ScriptState,
+    advance,
+    asked_line,
+    hear_ahead,
+    jump,
+    move_on,
+)
 from core.buy_mode.script_engine.method import (
     load_common_sense,
     load_method,
@@ -14,6 +21,7 @@ from core.buy_mode.script_engine.method import (
     parse_method,
 )
 from core.buy_mode.script_engine.seller import ScriptSeller
+from core.infra.loader import load_yaml
 
 CFG = load_yaml("script/engine.yaml")
 CAT = load_method("cat")
@@ -36,6 +44,12 @@ class Recorder:
         if "<goal>" in prompt:  # the listen call: they answered, `line` is the ack
             return f"ANSWERED: yes\nACK: {self.line}\nPROBE: none"
         return self.line
+
+
+def planted(name, **changes):
+    """The common sense with one sense changed, on a copy: the shared SENSE is never changed under other tests."""
+    from dataclasses import replace
+    return replace(SENSE, interruptions={**SENSE.interruptions, name: replace(SENSE.interruptions[name], **changes)})
 
 
 def seller(bow, llm=down, step=None, method=CAT, sense=SENSE, offer=None, **state):
@@ -166,6 +180,21 @@ def test_spending_is_not_the_goal(text):
     assert "number" not in hear_ahead(CAT, ScriptState(step="01"), text).slots
 
 
+@pytest.mark.parametrize("text, years", [
+    ("I want to quit, I've been thinking about it for 2 years", "2 years"),   # whole calls: asked again
+    ("been thinking about this for the last 3 years", "3 years"),
+    ("I've wanted this for about a year and a half", "about a year and a half"),
+    ("I've been at my job for 5 years", None),   # time in a job is not how long they've thought about this
+    ("I've been thinking about it", None),
+    ("I've wanted it for 2 years", "2 years"),
+    ("money, about 2k a month, been on my mind a year", "a year"),   # round 92 callers: asked "How long" again
+    ("it's been on my mind for 2 years", "2 years"),
+    ("I've had my job on my mind", None),   # round 92 guard: no span after it
+])
+def test_how_long_they_have_thought_about_it_said_early_is_kept(text, years):
+    assert hear_ahead(CAT, ScriptState(step="01"), text).slots.get("years") == years
+
+
 def test_the_step_itself_still_captures_normally():
     state = hear_ahead(CAT, ScriptState(step="02"), "I want 5k a month")
     assert "number" not in state.slots  # only later steps are heard ahead
@@ -185,7 +214,7 @@ def test_asked_line_follows_the_asks():
     assert asked_line(CAT, ScriptState(step="01")) == (CAT.steps["01"].say, "")
     assert asked_line(CAT, ScriptState(step="01", asks=1))[0] == CAT.steps["01"].probes[0]
     assert asked_line(CAT, ScriptState(step="01", asks=9))[0] == CAT.steps["01"].probes[-1]
-    assert asked_line(CAT, ScriptState(step="02", asks=1))[0] == CAT.steps["02"].say  # no probes
+    assert asked_line(CAT, ScriptState(step="05", asks=1))[0] == CAT.steps["05"].say  # no probes
 
 
 # ---- C5 frustration (chat C) -----------------------------------------------------------------
@@ -344,10 +373,76 @@ READY = {"examples": ["x"], "then": "b", "until": "b", "min_score": 0.8}
     (_mini(ready={k: v for k, v in READY.items() if k != "min_score"}), "min_score"),
     (_mini(a={"answered_by": r"(?P<answer>\d+)", "capture": ""}), "capture"),
     (_mini(ready={"examples": ["x"], "then": "a", "until": "b", "min_score": 0.8}), "until"),
+    (_mini(a={"listen": {"x": {"examples": ["x"], "then": "b", "say": "Tell me."}, "any": {"then": "b"}}}), "say must ask"),
+    (_mini(a={"listen": {"x": {"examples": ["x"], "then": "b", "say": "Why {x}?"}, "any": {"then": "b"}}}), "say must ask"),
+    (_mini(a={"listen": {"x": {"examples": ["x"], "then": "a", "restates": True}, "any": {"then": "b"}}}), "can't keep"),
 ])
 def test_loader_rejects_bad_shortcuts(data, error):
     with pytest.raises(ValueError, match=error):
         parse_method("bad", data)
+
+
+def _says(data):
+    data["steps"]["a"]["listen"] = {"soon": {"examples": ["x"], "then": "b", "say": "What made it come up now?"},
+                                    "any": {"then": "b"}}
+    return parse_method("ok", data)
+
+
+def test_a_route_line_replaces_the_next_line_it_would_make_untrue():
+    # whole calls: "not long" was followed by "so many nights, months and years"
+    method = _says(_mini())
+    assert advance(method, ScriptState(step="a"), "soon", "x").say == "What made it come up now?"
+    assert advance(method, ScriptState(step="a"), "any", "x").say == "Done."   # other answers: the step's own line
+
+
+def test_a_step_opened_in_a_routes_words_is_asked_again_in_them():
+    # round 40 callers: "not long, 6 months" then "ok" got "so many nights, months and years"
+    from core.buy_mode.script_engine.engine import asked_line
+    data = _mini()
+    data["steps"]["b"] = {"ui_stage": "intent", "say": "Long?", "capture": "y", "probe": ["Other words?"],
+                          "listen": {"any": {"then": "c"}}}
+    data["steps"]["c"] = {"ui_stage": "intent", "say": "Done."}
+    method = _says(data)
+    move = advance(method, ScriptState(step="a"), "soon", "x")
+    assert move.state.opened == "What made it come up now?"
+    assert asked_line(method, move.state) == ("What made it come up now?", "")   # what was asked, for "a month?" and "what do I...?"
+    again = advance(method, move.state, None, "", empty=True, misses=3)
+    assert again.say == "Other words?"
+    again = advance(method, again.state, None, "", empty=True, misses=3)
+    assert again.say == "What made it come up now?"   # was "Long?"
+    assert advance(method, ScriptState(step="a"), "any", "x").state.opened == ""   # the step's own line
+    assert advance(method, move.state, "any", "z").state.opened == ""   # the next step starts afresh
+
+
+def test_a_route_back_to_its_own_step_asks_in_its_own_words():
+    # round 19: "I'm scared" to "What makes you say that?" is asked "What makes you want to go for it anyway?"
+    data = _mini()
+    data["steps"]["a"]["listen"] = {"scared": {"examples": ["x"], "then": "a", "ack": "Normal.", "say": "Why go anyway?",
+                                               "keep": False}, "any": {"then": "b"}}
+    move = advance(parse_method("ok", data), ScriptState(step="a"), "scared", "x", misses=2)
+    assert move.state.step == "a" and (move.ack, move.say) == ("Normal.", "Why go anyway?")
+
+
+def test_the_objection_talks_are_the_matrix_steps():
+    # round 20: past its talk a worry said again is the worry, not an answer ("he decides the money stuff" at 20)
+    assert "m_reframe1" in CAT.talks and "m_partner_here" in CAT.talks
+    assert not {"19", "20", "22"} & set(CAT.talks)
+
+
+@pytest.mark.parametrize("step, then", [("20", "m_partner_here"), ("m_reframe1", "m_reframe1_now")])
+def test_a_worry_said_again_past_its_talk_is_the_worry(fake_embedder, step, then):
+    # 20 keeps any reply: the partner again there is no reason to buy; in a talk it answers the step
+    s = seller(fake_embedder, step=step, raised=("partner",))
+    s.reply("I need to speak to my partner first")
+    assert s.state.step == then
+
+
+def test_a_route_line_is_never_said_on_a_step_walked_past_to():
+    data = _mini()
+    data["steps"]["b"] = {"ui_stage": "intent", "listen": {"any": {"then": "c"}}}   # silent: walked past
+    data["steps"]["c"] = {"ui_stage": "intent", "say": "C."}
+    move = advance(_says(data), ScriptState(step="a"), "soon", "x")
+    assert move.state.step == "c" and move.say == "C."
 
 
 def test_loader_rejects_a_shortcut_that_leads_back():
@@ -451,9 +546,16 @@ def test_an_answer_with_a_question_in_it_is_an_answer(fake_embedder):
 def test_a_real_product_question_is_still_answered(fake_embedder):
     ai = Recorder("NOT_COVERED")
     s = seller(fake_embedder, ai, step="18")
-    reply, _ = s.reply("yeah but how long is it?")
+    reply, _ = s.reply("yeah but are refunds possible?")
     assert reply.startswith(CFG["uncovered_fallback"]) and s.state.step == "18"
     assert any("<question>" in p for p in ai.prompts)
+
+
+def test_a_question_after_a_yeah_but_is_heard_on_its_own(fake_embedder):
+    # reply.py cuts "yeah but how long is it?" once: the question part alone is the length fact
+    s = seller(fake_embedder, Recorder("NOT_COVERED"), step="18")
+    reply, _ = s.reply("yeah but how long is it?")
+    assert reply.startswith(s.offer.facts["length"].answer.split("{")[0]) and s.state.step == "18"
 
 
 class ByPrompt:
@@ -528,6 +630,53 @@ def test_whats_next_asks_no_ai(fake_embedder):
     ("I want financial freedom", "financial freedom"),
     ("honestly I just want freedom", "freedom"),
     ("just like more money", "more money"),  # filler "like" is never said back
+    ("actually money", "money"),  # round 54: was "actually money"
+    ("oh wow money", "money"),
+    ("money innit", "money"),  # round 54: could not be said back
+    ("money fr", "money"), ("my boss frfr", "your boss"),  # round 55: was "with money for real?"
+    ("money sure", "money"), ("free ngl", "free"), ("money imo", "money"), ("more money as I said", "more money"),  # round 56: was "with money sure?"
+    ("my boss yup", "your boss"), ("money sure thing", "money"), ("more money like I said", "more money"),
+    ("not sure", None),  # guard
+    ("money in a way", "money"), ("free in a sense", "free"), ("my boss in some ways", "your boss"),  # round 57: was "with money in a way?"
+    ("quit proper", "quit"), ("proper money", "proper money"),  # guard: "proper" before its word stays
+    ("money literally", "money"), ("free or whatever", "free"), ("my boss and that", "your boss"),  # round 58: "with money and that?"
+    ("quit if that makes sense", "quit"), ("money you know", "money"), ("2k ya know", "2k"), ("free at the end of the day", "free"),
+    ("my boss personally", "your boss"), ("more money stuff like that", "more money"), ("free and all that", "free"),
+    ("money tho", "money"), ("2k anyway", "2k"), ("free big time", "free"), ("my boss so yeah", "your boss"),  # round 59: "with money tho?"
+    ("more money mainly", "more money"),
+    ("free hopefully", "free"), ("money though", "money"),  # guard: these were already cut
+    ("money pretty much", "money"), ("2k give or take", "2k"), ("free for now", "free"), ("my boss at this point", "your boss"),  # round 60: "with money pretty much?"
+    ("money to me", "money"), ("free for me", "free"), ("more money seriously", "more money"), ("quit lowkey", "quit"),
+    ("money basically", "money"), ("free obviously", "free"),  # guard: these were already cut
+    ("money kind of thing", "money"), ("2k type thing", "2k"), ("free as well", "free"), ("my boss or anything", "your boss"),  # round 61: "with money kind of thing?"
+    ("money to start", "money"), ("free right now", "free"), ("more money these days", "more money"), ("quit generally", "quit"),
+    ("money etc", "money"), ("2k and whatnot", "2k"), ("free no doubt", "free"), ("my boss at the moment", "your boss"),  # round 62: "with money etc?"
+    ("money frankly", "money"), ("free bruh", "free"), ("more money and so on", "more money"), ("quit or thereabouts", "quit"),
+    ("money and then some", "money"), ("free, if not more", "free"), ("more money or more", "more money"),  # round 63: "with money and then some?"
+    ("money if anything", "money"), ("money per se", "money"), ("free at a push", "free"), ("money truth be told", "money"),  # round 66: "with money if anything?"
+    ("money hand on heart", "money"), ("money in all honesty", "money"), ("money either way", "money"),
+    ("money so to speak", "money"), ("money as it were", "money"), ("free for what it's worth", "free"), ("money for what its worth", "money"),  # round 67: "with money so to speak?"
+    ("money mind you", "money"), ("free you see", "free"), ("money in a nutshell", "money"), ("more money full stop", "more money"),
+    ("2k at the very least", "2k"), ("quit at least", "quit"), ("2k tops", "2k"),
+    ("money if you ask me", "money"), ("free all in all", "free"), ("money by and large", "money"), ("money in short", "money"), ("freedom if you will", "freedom"),  # round 68: "with money if you ask you?"
+    ("money needless to say", "money"), ("money believe it or not", "money"), ("money and all", "money"), ("money as such", "money"), ("2k let's say", "2k"), ("quit lets say", "quit"),
+    ("money on the whole", "money"), ("free for the most part", "free"), ("money all things considered", "money"), ("quit at any rate", "quit"), ("money first and foremost", "money"), ("money for starters", "money"),  # round 69: "with money to some extent?"
+    ("free deep down", "free"), ("money to some extent", "money"), ("money as I see it", "money"), ("free as far as I know", "free"), ("money when all is said and done", "money"), ("more money admittedly", "more money"),
+    ("money in any case", "money"), ("free simply put", "free"), ("money as a matter of fact", "money"), ("free in truth", "free"), ("money on balance", "money"), ("money in theory", "money"),  # round 70: "with money in any case?"
+    ("quit in practice", "quit"), ("money at a guess", "money"), ("money presumably", "money"), ("free as it happens", "free"), ("money funnily enough", "money"), ("money by the way", "money"),
+    ("money in fact", "money"), ("money apparently", "money"), ("money btw", "money"), ("more money i'd guess", "more money"), ("2k if that", "2k"), ("a year at best", "a year"), ("a year at worst", "a year"),
+    ("money for the record", "money"), ("free to be clear", "free"), ("money in other words", "money"), ("free that said", "free"), ("money having said that", "money"), ("money off the top of my head", "money"),  # round 71: "with money for the record?"
+    ("money roughly speaking", "money"), ("money strictly speaking", "money"), ("free technically", "free"), ("money real talk", "money"), ("money no lie", "money"), ("money and such", "money"),
+    ("quit and the like", "quit"), ("money or whatnot", "money"), ("money or so", "money"), ("2k at most", "2k"),
+    ("a year innit", "a year"),
+    ("money for me personally", "money"), ("free if that make sense", "free"), ("2k and stuff like that", "2k"), ("more money or something like that", "more money"),  # round 58 mutation: no row had these
+    ("money anyways", "money"), ("money mostly", "money"), ("money ideally", "money"), ("money more or less", "money"), ("money highkey", "money"), ("money that kind of thing", "money"), ("money sort of thing", "money"), ("money that sort of thing", "money"), ("money that type of thing", "money"),   # round 65 mutation: round 59-62 echo ends no row had
+    ("money or anything like that", "money"), ("money essentially", "money"), ("money ultimately", "money"), ("money usually", "money"), ("money to start with", "money"), ("money to begin with", "money"), ("money whatnot", "money"), ("money and so forth", "money"),
+    ("money yada yada", "money"), ("money as you do", "money"), ("money and so on and so forth", "money"), ("2k and all that jazz", "2k"), ("money meh", "money"), ("money and what have you", "money"),   # round 73 callers: said back whole
+    ("money blah blah", "money"), ("money blah blah blah", "money"), ("money or what have you", "money"), ("money as one does", "money"), ("money yada yada yada", "money"), ("money and everything", "money"), ("money whatevs", "money"), ("money so on and so forth", "money"),   # round 73 mutation: no row had these
+    ("money and stuff", "money"), ("freedom and things", "freedom"), ("2k and things like that", "2k"),   # round 75: said back whole
+    ("well paid job", "well paid job"),  # round 54: was "paid job"
+    ("so well off", "well off"),
     ("Financial freedom!", "financial freedom"),
     ("more time with family", "more time with family"),
     ("time in Dubai", "time in Dubai"),
@@ -535,12 +684,321 @@ def test_whats_next_asks_no_ai(fake_embedder):
     ("my own boss", "your own boss"),            # first person turned to second
     ("freedom for me and my whole family", None),  # too long
     ("travel more", "travel more"),
+    ("fine. more money obviously", "more money"),   # live: said back whole
     ("not sure really", None),
+    ("to earn £2,500 a month", "earn £2,500 a month"),   # whole calls: said back as "earn 2 500 a month"
+    ("2.5k a month", "2.5k a month"),
+    ("3-4k", "3-4k"),
+    ("I WANT TO BE RICH!!!", "be rich"),   # whole calls: said back in capitals ("BE RICH?")
+    ("BE RICH", "be rich"),                # two words shouted are shouted too
+    ("so I can travel", "travel"),         # was no echo: the plain line
+    ("more money basically", "more money"),
+    ("I want more money. Mostly for my kids.", "more money"),   # round 16: said back as "more money. Mostly for your kids"
+    ("Yes. more money", "more money"),                     # a filler sentence first: the one that says something
+    ("quit my job but I'm scared", "quit your job"),       # round 16: the worry was said back too
+    ("quit my job But I'm scared", "quit your job"),       # any case
+    ("for sure, more money", "more money"),                # round 18: said back as "sure more money"
+    ("totally, quit my job", "quit your job"),             # a filler word first is dropped too
+    ("so i can travel", "travel"),                         # the longest lead-in, not "so"
+    ("IDK MAYBE 2K A MONTH EXTRA", "2k a month extra"),     # round 18: said back as "maybe 2k a month extra"
+    ("jk, more money", "more money"),                      # round 19: said back as "jk more money"
+    ("1. more money 2. more time", "more money"),          # round 22: said back as "1"
+    ("- pay rent\n- save", "pay rent"),                    # a new line ends a sentence too
+    ("oh ok, more money I guess", "more money"),           # round 22: said back as "oh ok more money"
+    ("money has been tight", None),                        # round 22: a sentence about their life, not a goal
+    ("things are hard", None),
+    ("what I said", None),                                 # round 34: said back as "to have what you said"
+    ("like I told you", None),
+    ("50% more income", "50% more income"),                # round 24: said back as "50 more income"
+    ("kind of more money", "more money"),                  # round 24: said back as "kind of more money"
+    ("more money inshallah", "more money"),
+    ("sorry, more money bro", "more money"),
+    ("my family needs more money", "more money"),          # round 28: said back as "your family needs more money"
+    ("my wife and I would like more time", "more time"),
+    ("we want to buy a house", "buy a house"),
+    ("I don't want to work", None),                        # never past a "not"
+    ("people who want more", "people who want more"),      # nor past a "who"
+    ("paying the bills", "paying the bills"),               # made a verb only when asked
+    ("more money for my family yes", "more money for your family"),   # round 39: said back with "yes"
+    ("back, more money", "more money"),                     # round 39: back from a break, said back with "back"
+    ("back in shape", None),                                # guard: never "with in shape"
+    ("in control of my time", None),                        # round 39: was "with in control of your time"
+    ("more money in the bank", "more money in the bank"),   # guard: "in" later is fine
+    ("more money you know", "more money"),                  # round 40: said back as "more money you know"
+    ("more money, that's it", "more money"),                # round 40: said back as "more money, That's it"
+    ("with my kids, more money", None),                     # round 40: was "with with your kids, more money"
+    ("more time with my kids", "more time with your kids"),   # guard: "with" later is fine
+    ("I suppose more money would be nice", "more money"),   # round 41: said no goal back
+    ("a thing called freedom", "freedom"),                  # round 43: said back whole
+    ("what I'm hoping to achieve is more money", "more money"),   # round 42: said no goal back
+    ("honestly what I really want is freedom", "freedom"),
+    ("what I want is just more money", "more money"),
+    ("the main thing I want is more time", "more time"),
+    ("what is more money", None),                        # guard: no one before the "is", a question
+    ("because I'm broke, more money", "more money"),     # round 42: reason first said no goal back
+    ("cause my job sucks, I want freedom", "freedom"),
+    ("more money, because I'm broke", "more money"),     # guard: the reason after it was always cut
+    ("I guess more money", "more money"),
+    ("more money ish", "more money"),                       # round 41: "more money-ish" was said back with "-ish"
+    ("money money", "money"),                               # round 45 callers: said back twice
+    ("a year a year", "a year"),
+    ("more more money", "more money"),
+    ("more money like", "more money"),                      # round 45 callers: said back with "like"
+    ("a house I'd like", None),                             # guard: still their own words
+    ("more money so i can stop stressing", "more money"),   # round 45 callers: said no goal back
     ("", None),
 ])
 def test_echo_phrase(reply, phrase):
     from core.buy_mode.script_engine.words.fill import echo_phrase
     assert echo_phrase(reply, CFG) == phrase
+
+
+@pytest.mark.parametrize("reply, verbs, phrase", [
+    ("paying the bills", False, "paying the bills"),   # made a verb only for a blank with a verb form
+    ("paying the bills", True, "pay the bills"),
+    ("rich", True, "be rich"),                          # a state alone is a goal with "be"
+    ("retire rich", True, "retire rich"),               # one that starts with a verb already has one
+    ("achieve freedom", False, "freedom"),              # "achieve" is the line's own word
+    ("achieve", False, "achieve"),                      # but never the whole goal
+    ("more money Plus more time", False, "more money and more time"),   # a join in any case
+    ("time, money", False, "time, money"),              # the comma they put stays
+    ("finish my degree", True, "finish your degree"),   # round 41: was "with finish your degree?"
+    ("open a shop", True, "open a shop"),
+])
+def test_echo_phrase_shapes_the_goal_for_its_blank(reply, verbs, phrase):
+    from core.buy_mode.script_engine.words.fill import echo_phrase
+    assert echo_phrase(reply, CFG, verbs=verbs) == phrase
+
+
+WORDS = {"thinks", "dare", "whats", "year", "money"}
+
+
+@pytest.mark.parametrize("text, vocab", [("a year methinks", WORDS), ("money i daresay", WORDS), ("money whatevs", WORDS),
+                                         ("money whatnot", {"whatnow"}), ("money truthfully", {"truthfull"}), ("yup money", {"ypu"})])  # round 75: end and filler tags, leads
+def test_a_tag_in_a_listed_tag_list_is_never_a_typo(text, vocab):
+    """Round 73 callers: "a year methinks" was saved as "a year thinks", one letter from a script word."""
+    from core.buy_mode.script_engine.words.fill import fix_typos
+    assert fix_typos(text, vocab, CFG) == text
+
+
+@pytest.mark.parametrize("text, fixed", [("y e s", "yes"), ("m o n e y please", "money please"), ("Y E S!", "yes!"),
+                                          ("i a m", "i a m"), ("q z x", "q z x"), ("y e", "y e"), ("plan b e", "plan b e"),   # guards: no known word, two letters, inside a word run
+                                          ("c a s h", "cash"), ("n o", "n o")])   # mutation 93: a real word joins; two letters never do, even a known word
+def test_a_word_typed_one_letter_at_a_time_is_joined(text, fixed):
+    """Round 89 callers: "y e s" to "Do you see yourself jumping in?" was unclear, and at the start it was saved as "e s"."""
+    from core.buy_mode.script_engine.words.fill import fix_typos
+    assert fix_typos(text, frozenset({"yes", "money", "please", "no"}), CFG) == fixed
+
+
+@pytest.mark.parametrize("text, fixed", [("m0ney", "money"), ("qu1t my job", "quit my job"), ("fr33", "free"), ("2k a m0nth", "2k a month"),   # round 96 callers
+                                          ("2k", "2k"), ("1yr", "1yr"), ("10am", "10am"), ("£1500", "£1500"), ("2019", "2019"), ("b4", "b4"),   # guards: figures stay
+                                          ("y3s", "y3s"), ("z0rp", "z0rp")])   # guards: three letters, or no known word, stay as typed
+def test_a_word_typed_with_numbers_for_letters_is_read(text, fixed):
+    """Round 96 callers: "m0ney" was unclear and "qu1t" was saved as typed."""
+    from core.buy_mode.script_engine.words.fill import fix_typos
+    assert fix_typos(text, frozenset({"money", "quit", "my", "job", "free", "month", "yes"}), CFG) == fixed
+
+
+def test_a_figure_is_never_a_typo():
+    from core.buy_mode.script_engine.words.fill import fix_typos
+    assert fix_typos("£2,500pm financialy", {"financial", "pm"}, CFG) == "£2,500pm financial"
+
+
+@pytest.mark.parametrize("step, text", [("04", "because money is tight for me at the moment"),
+                                         ("01", "cos I can't afford that right now"),
+                                         ("04", "money is tight")])   # round 20: no "because" at "why can't you ignore it?"
+def test_a_reason_is_never_a_worry_before_the_price(fake_embedder, step, text):
+    # whole calls: "because my kid just started school and money is tight" got "I haven't mentioned a price yet"
+    s = seller(fake_embedder, step=step)
+    s.reply(text)
+    assert s.last_turn["heard_as"].startswith("answer")
+
+
+def test_money_trouble_is_the_price_worry_only_once_the_price_is_out(fake_embedder):
+    """Whole calls: "money has been tight" at step 01 got "I haven't mentioned a price yet"."""
+    money = CAT.objections["money"]
+    assert "money is tight for me at the moment" in money.heard(True)
+    assert "money is tight for me at the moment" not in money.heard(False)
+    assert "I can't afford that right now" in money.heard(False)   # paying us is still the worry early
+    s = seller(fake_embedder, step="01")
+    s.reply("money is tight for me at the moment")
+    assert s.last_turn["heard_as"].startswith("answer")
+    s._ear._judge = lambda text, options: next(iter(options))   # an AI that always says "objection"
+    assert s._ear._judged_objection("money is tight for me at the moment", CAT.steps["01"], {"money": money}) is None
+
+
+@pytest.mark.parametrize("text", ["just not drown in debt", "my shop might crash", "get on a plane"])
+def test_a_real_word_is_never_fixed_into_a_script_word(text):
+    """Whole calls: "drown" was "fixed" to "down" (one letter off a script word); a real word stays as typed."""
+    from core.buy_mode.script_engine.words.fill import fix_typos
+    assert fix_typos(text, {"down", "cash", "plan", "shop", "might", "get"}, CFG) == text
+
+
+def test_a_typo_is_still_fixed_beside_real_words():
+    from core.buy_mode.script_engine.words.fill import fix_typos
+    assert fix_typos("drown in debt, financialy free", {"down", "financial"}, CFG) == "drown in debt, financial free"
+
+
+@pytest.mark.parametrize("text, fixed", [
+    ("mroe money", "more money"), ("yse", "yes"), ("a yaer", "a year"), ("tiem", "time"),
+    ("form", "form"), ("dose", "dose"),   # a real word stays, though one swap from a script word
+    ("ive", "I've"), ("abt", "abt"),     # the first letter is kept: never "vie" or "bat" (round 42: "ive" is "I've")
+    ("my mam", "my mam"),                 # never into a word outside the script ("mma")
+])
+def test_two_letters_the_wrong_way_round_are_fixed(text, fixed):
+    """Whole calls: "mroe money" was said back with the typo and "yse" at the close was not a yes."""
+    from core.buy_mode.script_engine.words.fill import fix_typos
+    vocab = frozenset(CFG["spell_words"]) | {"more", "yes", "time", "from", "does", "vie", "bat", "a", "my"}
+    assert fix_typos(text, vocab, CFG) == fixed
+
+
+@pytest.mark.parametrize("text, read", [
+    ("money/time", "money or time"),                 # round 40: was "What do you mean by money time?"
+    ("quit job / travel", "quit job or travel"),
+    ("money and/or time", "money or time"),
+    ("w/ my kids", "with my kids"),                  # round 40: was said back as "w your kids"
+    ("2k/month", "2k a month"),                      # round 52: a time unit after the slash reads "a"
+    ("week/month", "week or month"),                 # guard: only after an amount
+    ("2k/mortgage", "2k/mortgage"),                  # guard: only a whole unit ("mo" is one)
+    ("10/10", "10/10"),                              # guard: a figure keeps its slash
+    ("50km/h", "50km/h"),
+    ("see site.com/page", "see site.com/page"),      # guard: a link keeps its slash
+    ("https://a.io/x", "https://a.io/x"),
+    ("y/n", "y/n"),                                  # guard: one-letter pieces are not words
+])
+def test_a_slash_between_words_reads_as_or(text, read):
+    from core.buy_mode.script_engine.words.fill import fix_typos
+    assert fix_typos(text, frozenset(), CFG) == read
+
+
+@pytest.mark.parametrize("text, read", [
+    ("a yearish", "a year ish"),                     # round 41: was no time
+    ("about a year-ish", "about a year ish"),         # round 41: was no number
+    ("money-ish", "money ish"),                      # round 41: said back as "more money-ish"
+    ("2kish", "2k ish"),
+    ("6ish months", "6 ish months"),
+    ("comfy-ish", "comfy ish"),                      # a dash marks it on any word
+    ("comfyish", "comfyish"),                        # guard: without one, only on a known word or a figure
+    ("English lessons", "English lessons"),          # guard: real words that end in "ish" stay
+    ("finish my degree", "finish my degree"),
+    ("rubbish job", "rubbish job"),
+    ("selfish", "selfish"),
+    ("polish my cv", "polish my cv"),
+])
+def test_ish_on_a_word_is_its_own_word(text, read):
+    from core.buy_mode.script_engine.words.fill import fix_typos
+    assert fix_typos(text, frozenset(), CFG) == read
+
+
+@pytest.mark.parametrize("text, read", [
+    ("ok I understand", "ok okay"),                    # round 41: saved as the answer to an open question
+    ("ok, understood", "ok, okay"),
+    ("I see", "okay"),
+    ("aye", "yes"),                                  # round 41: saved as the answer
+    ("si", "yes"), ("sí", "yes"), ("oui", "yes"),   # round 96 callers: unclear to "can you see yourself doing this?"
+    ("yessir", "yes"),
+    ("yeah y", "yeah yes"),
+    ("ok I see you", "ok I see you"),                # guard: more words after it are theirs
+    ("I see myself in it", "I see myself in it"),
+    ("my job", "my job"),                            # guard: no filler first
+])
+def test_a_short_form_after_a_filler_word_is_its_word(text, read):
+    from core.buy_mode.script_engine.words.fill import fix_typos
+    assert fix_typos(text, frozenset(), CFG) == read
+
+
+@pytest.mark.parametrize("sense, said, heard", [
+    ("clarify", "plonk wibble? more money", "answer"),   # round 45 callers: "what do you mean? money I suppose" lost the answer
+    ("clarify", "plonk wibble?", "sense:clarify"),         # guard: alone it still asks for other words
+    ("misheard", "plonk wibble? more money", "answer"),
+])
+def test_a_sense_asking_for_other_words_then_their_answer_is_the_answer(fake_embedder, sense, said, heard):
+    s = seller(fake_embedder, step="01", sense=planted(sense, examples=("plonk wibble",)))
+    s.reply(said)
+    assert s.last_turn["heard_as"].startswith(heard) and "+" not in s.last_turn["heard_as"]   # no "let me put it another way" in front
+
+
+def test_a_run_said_twice_is_said_once():
+    from core.buy_mode.script_engine.words.fill import said_once
+    assert said_once(["money", "Money"]) == ["money"]
+    assert said_once(["a", "year", "a", "year"]) == ["a", "year"]
+    assert said_once(["quit", "my", "job", "quit", "my", "job"]) == ["quit", "my", "job"]
+    assert said_once(["more", "more", "money"]) == ["more", "money"]
+    assert said_once(["more", "money", "money"]) == ["more", "money"]   # the run starts on an odd word
+    assert said_once(["time", "and", "money"]) == ["time", "and", "money"]   # guard
+    assert said_once(["a", "b", "a"]) == ["a", "b", "a"]
+
+
+@pytest.mark.parametrize("text, blank", [
+    ("I'm in", False), ("we're in", False), ("I'm with you", False),   # round 46 callers: "I'm in" at the close was a shrug
+    ("it is", True), ("I'm", True),                                     # guard: only stop words still say nothing
+])
+def test_where_they_stand_is_never_blank(text, blank):
+    from core.buy_mode.script_engine.hear.shrug import Shrugs
+    assert Shrugs(CFG, SENSE, None, None).blank(text) == blank
+
+
+def test_a_contraction_of_a_stop_word_is_a_stop_word():
+    from core.buy_mode.script_engine.hear.shrug import Shrugs
+    step = CAT.steps["22"]   # no catch-all: only the filler test runs
+    assert Shrugs(CFG, SENSE, None, None).says_nothing("we're fine", step, False)   # round 46: like "I'm fine"
+    assert not Shrugs(CFG, SENSE, None, None).says_nothing("we're debit", step, False)   # guard
+    from core.buy_mode.script_engine.words.fill import fix_typos
+    vocab = frozenset(CFG["spell_words"]) | {"were"}   # the real call's vocab has "were": "we're" was spelled as it
+    assert fix_typos("we're fine", vocab, CFG) == "we're fine"
+
+
+@pytest.mark.parametrize("text, saved", [
+    ("exactly", False), ("precisely", False), ("of course", False), ("ofc", False), ("I'd say ok", False),   # round 49 callers: saved as the answer
+    ("I'd say my boss", True), ("a course", True), ("exactly my boss", True),   # guard: words after it are the answer
+    ("okey-dokey", False), ("okie dokie", False),   # round 48 callers: saved as the answer
+    ("oh sure", False), ("acha ok", False), ("please", False),   # round 47 callers: saved as the answer
+    ("oh my boss", True),                     # guard: words after it are the answer
+    ("alright then", False), ("ok then", False), ("okk", False),   # round 44 callers: saved as the answer to an open question
+    ("then I'd quit my job", True),                                  # guard: words after it are the answer
+])
+def test_a_filler_with_then_or_a_held_letter_answers_nothing(fake_embedder, text, saved):
+    s = seller(fake_embedder, step="05")
+    s.reply(text)
+    assert (s.state.step != "05") == saved
+
+
+@pytest.mark.parametrize("text, asks", [
+    ("depends on the price", True), ("it depends how much it costs", True),   # round 44 callers: got "let me put it another way"
+    ("it depends on my job", False),                                          # guard: an answer
+])
+def test_it_depends_on_the_price_asks_it(text, asks):
+    from core.infra.utils import opens_question
+    assert opens_question(text, CFG) == asks
+
+
+@pytest.mark.parametrize("text, read", [
+    ("im after more money", "I'm after more money"),   # round 42: said back as "with im after more money?"
+    ("Im after more money", "I'm after more money"),
+    ("i dont know", "i don't know"),
+    ("thats it", "that's it"),
+    ("id quit my job", "I'd quit my job"),
+    ("since last year", "for a year"),                 # round 42: was no number
+    ("since last month", "for a month"),
+    ("my ID card", "my ID card"),                      # guard: a word in capitals is not a short form
+    ("IM me", "IM me"),
+    ("I'm after more money", "I'm after more money"),  # guard: already right
+])
+def test_a_short_form_typed_without_its_apostrophe_gets_it(text, read):
+    from core.buy_mode.script_engine.words.fill import fix_typos
+    assert fix_typos(text, frozenset(), CFG) == read
+
+
+def test_a_figure_is_never_swapped_and_a_5_letter_typo_is_still_fixed():
+    from core.buy_mode.script_engine.words.fill import fix_typos
+    assert fix_typos("120k", frozenset({"102k"}), CFG) == "120k"   # one swap from a script figure, still theirs
+    assert fix_typos("travl", frozenset({"travel"}), CFG) == "travel"
+
+
+def test_yes_with_two_letters_swapped_is_a_yes_at_the_close(fake_embedder):
+    s = seller(fake_embedder, step="19")
+    s.reply("yse")
+    assert s.state.step == "20"
 
 
 def test_their_outcome_goes_back_into_the_next_question(fake_embedder):
@@ -567,25 +1025,39 @@ def test_a_goal_already_at_level_2_or_3_skips_the_rungs_it_climbed(fake_embedder
     assert s.state.step == "02"
 
 
-FRUIT = parse_method("fruit", {"first": "a", "price_step": "z", "steps": {
+FRUIT_DATA = {"first": "a", "price_step": "z", "steps": {
     "a": {"ui_stage": "intent", "say": "Which fruit?", "unsure": "apple", "stuck": {"then": "z"}, "listen": {
         "apple": {"examples": ["red apple"], "then": "y"},
         "pear": {"examples": ["red pear"], "then": "z"},
         "grape": {"examples": ["green grape"], "then": "z"},
         "plum": {"examples": ["blue plum"], "then": "a", "keep": False}}},   # the "vague, ask again" route
     "y": {"ui_stage": "intent", "say": "Apple then."},
-    "z": {"ui_stage": "intent", "say": "Done."}}})
+    "z": {"ui_stage": "intent", "say": "Done."}}}
+FRUIT = parse_method("fruit", FRUIT_DATA)
 
 
 @pytest.mark.parametrize("reply, step", [
     ("red apple pear", "y"),                # apple and pear tie, both real answers: the safe one, not asked again
     ("red apple blue plum", "a"),           # might be the ask-again route: asked again
+    ("red apple pear plum", "y"),           # round 50: torn between apple and pear only; plum (0.35) is a far third
     ("red apple pear fig kiwi", "a"),       # nothing clears the bar: asked again
 ])
 def test_a_close_call_nobody_settles(fake_embedder, reply, step):
     s = seller(fake_embedder, method=FRUIT, step="a")   # AI down: the judge can't settle it
     s.reply(reply)
     assert s.state.step == step
+
+
+def test_a_meaning_under_its_own_floor_is_not_torn_between(fake_embedder):
+    """Round 50: only the meanings a close call is torn between decide it, and one under its `min_score`
+    doesn't count: "red apple blue plum" ties apple with the ask-again route, but plum needs 0.9."""
+    data = {"first": "a", "price_step": "z", "steps": {k: dict(v) for k, v in FRUIT_DATA["steps"].items()}}
+    data["steps"]["a"] = {**data["steps"]["a"], "listen": {**data["steps"]["a"]["listen"],
+                                                           "plum": {"examples": ["blue plum"], "then": "a", "keep": False,
+                                                                    "min_score": 0.9}}}
+    s = seller(fake_embedder, method=parse_method("fruit", data), step="a")
+    s.reply("red apple blue plum")
+    assert s.state.step == "y"
 
 
 def test_a_close_call_that_might_be_vague_is_still_asked_again(fake_embedder):
@@ -643,11 +1115,185 @@ def test_a_nudged_reason_is_kept_without_the_nudge(fake_embedder):
     assert s.state.slots["reason"] == "because I want freedom"
 
 
+@pytest.mark.parametrize("text", ["go on then", "go ahead", "fire away", "please go on"])   # round 47: "please go on" was saved
+def test_go_on_to_an_open_question_is_a_nudge_not_its_answer(fake_embedder, text):
+    s = seller(fake_embedder, step="11")   # round 42: "go on then" was saved as the answer
+    reply, _ = s.reply(text)
+    assert reply.startswith(f"{GO_ON} ")
+
+
+@pytest.mark.parametrize("text, then", [
+    ("go on", "20"), ("go on then", "20"), ("go ahead", "20"), ("fire away", "20"),   # round 42: was the question again
+    ("ok go on", "20"), ("please go on", "20"), ("ok. go on.", "20"),               # round 47: was the question again
+    ("what's next?", "19"),                                                            # guard: asks, never agrees
+])
+def test_go_on_to_a_yes_or_no_question_is_a_yes(fake_embedder, text, then):
+    s = seller(fake_embedder, step="19")
+    s.reply(text)
+    assert s.state.step == then
+
+
+@pytest.mark.parametrize("step, then", [("willing", "11"), ("13", "14")])
+def test_go_on_is_no_yes_where_the_question_never_asks_to_go_ahead(fake_embedder, step, then):
+    s = seller(fake_embedder, step=step)   # round 42: "go on then" to "keep settling?" was a yes to settling
+    reply, _ = s.reply("go on then")
+    assert s.state.step == then and reply.startswith(f"{GO_ON} ")
+
+
+@pytest.mark.parametrize("text, repeat", [
+    ("I want that again", False), ("I used to run a business, I want that again", False),   # round 43: got "let me say that again"
+    ("come again", True), ("say that again", True),                                          # guard: still asks
+])
+def test_a_want_is_never_a_say_that_again(fake_embedder, text, repeat):
+    s = seller(fake_embedder, step="01")
+    s.reply(text)
+    assert (s.last_turn["heard_as"] == "sense:repeat") == repeat
+
+
+@pytest.mark.parametrize("said, never_with, heard", [
+    ("I want that again", ("want",), "answer:unclear"),   # round 43: "I want that again" got "let me say that again"
+    ("I want that again", (), "sense:repeat"),
+    ("swanton again", ("want",), "sense:repeat"),         # guard: a whole word, never inside one
+])
+def test_a_sense_is_never_heard_with_its_never_with_words(fake_embedder, said, never_with, heard):
+    s = seller(fake_embedder, step="01", sense=planted("repeat", examples=(said.lower(),), never_with=never_with))
+    s.reply(said)
+    assert s.last_turn["heard_as"] == heard
+
+
+@pytest.mark.parametrize("said, never_with, heard", [
+    ("can I do it another day?", ("another day",), "question"),   # round 106 callers: "can I do it today?" is near
+    ("can I do it another day?", (), "objection:think"),          # "another day" (0.88) but keen, never a wait
+])
+def test_an_objection_is_never_heard_with_its_never_with_words(fake_embedder, said, never_with, heard):
+    from dataclasses import replace
+    think = replace(CAT.objections["think"], examples=(said.lower(),), never_with=never_with)
+    s = seller(fake_embedder, step="22", method=replace(CAT, objections={**CAT.objections, "think": think}))
+    s.reply(said)
+    assert s.last_turn["heard_as"] == heard
+
+
+def test_doing_it_now_or_today_is_never_a_wait():
+    """Round 106 callers: "can I do it tomorrow?" at the close got "I'll find out"; its examples are near "today"."""
+    never = set(CAT.objections["think"].never_with)
+    assert {"do it now", "do it today", "pay now", "start today"} <= never
+    assert not never & {"now", "today", "right now"}   # guard: "now isn't the right time" still asks for time
+
+
+@pytest.mark.parametrize("said, only_with, heard", [
+    ("what held me back", ("you",), "answer:unclear"),   # round 107 callers: near "what held you back" but asks about them
+    ("what held me back", (), "sense:repeat"),
+    ("what held you back", ("you",), "sense:repeat"),    # guard: a "you" word lets it in
+])
+def test_a_sense_is_only_heard_with_its_only_with_words(fake_embedder, said, only_with, heard):
+    s = seller(fake_embedder, step="01", sense=planted("repeat", examples=(said,), only_with=only_with))
+    s.reply(said)
+    assert s.last_turn["heard_as"] == heard
+
+
+def test_about_me_needs_a_you_and_no_belief_moves_on():
+    """Round 107 callers: "what did you do?" got "I'll find out", and "I don't have limiting beliefs" got "Where do you
+    think that belief comes from?"."""
+    from core.buy_mode.script_engine.method import load_common_sense
+    assert {"you", "your", "yourself", "u"} <= set(load_common_sense().interruptions["about_me"].only_with)
+    none = next(r for r in CAT.steps["09"].listen if r.label == "none")
+    assert (none.then, none.keep, none.min_score) == ("10", False, 0.85)
+
+
+def test_no_card_is_a_bank_transfer_and_that_works_is_a_yes():
+    """Round 109 callers: "I don't have a card" got "credit or debit?" again, and "yeah that works" at the closes was
+    heard as a scam worry (near "can you prove it works")."""
+    no_card = next(r for r in CAT.steps["22"].listen if r.label == "no_card")
+    assert (no_card.then, no_card.keep) == ("end", False) and "bank transfer" in no_card.ack
+    assert all(CFG["short_replies"][w] == "yes" for w in ("that works", "that works for me", "yeah that works"))
+    assert {"my card is maxed out", "I would if I had the money"} <= set(CAT.objections["money"].examples)
+
+
+def test_say_that_again_is_never_heard_with_a_want():
+    from core.buy_mode.script_engine.method import load_common_sense
+    assert {"want", "used to"} <= set(load_common_sense().interruptions["repeat"].never_with)
+
+
+def test_a_goal_with_quit_or_support_is_never_leaving_or_a_pause():
+    """Round 97 callers: "gotta quit" (to "what would that get you?") ended the call, near "gotta go", and "have to
+    support my kids" got "take your time", near "hang on, I need to sort the kids out"."""
+    from core.buy_mode.script_engine.method import load_common_sense
+    senses = load_common_sense().interruptions
+    assert {"gotta quit", "have to quit", "need to quit"} <= set(senses["leaving"].never_with)
+    assert "quit" not in senses["leaving"].never_with   # guard: "I quit, bye" still leaves
+    assert {"support", "provide"} <= set(senses["pause"].never_with)
+
+
+def test_a_want_for_more_is_never_a_worry_and_one_odd_word_is_never_thanks():
+    """Round 98 callers: "more than I have now" was heard as a money worry before the price, and "argent" (0.66 to
+    thanks) got "You're welcome"; real thanks score 0.73+ ("gracias")."""
+    from core.buy_mode.script_engine.method import load_common_sense
+    assert {"more than", "better than"} <= set(CFG["wants_more_starts"])
+    assert "more" not in CFG["wants_more_starts"]   # guard: "more money" alone is still read on its own
+    assert 0.67 <= load_common_sense().interruptions["thanks"].min_score <= 0.72
+
+
+def test_a_surface_goal_with_its_why_climbs_and_whatever_is_never_say_that_again():
+    """Round 100 callers: "I just want more money so I can stop worrying about bills" was asked what more money
+    would get them, and "whatever he says" (to "how much a month?") got "let me say that again"."""
+    from core.buy_mode.script_engine.method import load_common_sense
+    surface = next(r for r in CAT.steps["01"].listen if r.label == "surface")
+    assert surface.climbs_to == ("practical", "identity")
+    assert not any(r.climbs_to for s in CAT.steps.values() for r in s.listen if r.label != "surface")   # guard: only the first rung climbs
+    assert "whatever" in load_common_sense().interruptions["repeat"].never_with
+
+
+@pytest.mark.parametrize("step, heard", [("01", True), ("14", False)])
+def test_an_until_price_example_is_only_heard_before_the_price(fake_embedder, step, heard):
+    # round 44: "2k, is that a lot?" got no answer; after the price it is the money worry
+    s = seller(fake_embedder, step=step, sense=planted("repeat", examples=(), until_price=("plonk wibble",)))
+    s.reply("plonk wibble")
+    assert (s.last_turn["heard_as"] == "sense:repeat") == heard
+
+
+def test_is_that_a_lot_is_no_right_answer_only_before_the_price_and_how_long_is_never_one():
+    from core.buy_mode.script_engine.method import load_common_sense
+    sense = load_common_sense().interruptions["no_wrong_answer"]
+    assert "is that a lot" in sense.heard(False) and "is that a lot" not in sense.heard(True)
+    assert "how long is" in sense.never_with
+
+
+def test_a_route_pattern_takes_the_route_by_rule(fake_embedder):
+    s = seller(fake_embedder, step="03")   # round 43: "6 weeks" was "so many nights, months and years"
+    reply, _ = s.reply("about 9 WKS")
+    assert s.last_turn["heard_as"] == "answer:recent" and reply.startswith("So what made it come up")
+
+
+@pytest.mark.parametrize("text, then", [
+    ("6 weeks", "recent"), ("10 days", "recent"), ("12 weeks", "recent"), ("about 3 wks", "recent"),   # round 43: was unclear
+    ("20 weeks", None), ("6 months", None), ("a year and 2 weeks", None), ("15 days and 2 years", None),   # guard: never a long time
+    ("a few months", "recent"), ("a few months maybe", "recent"), ("for the last few months", "recent"), ("a couple of months", "recent"),   # round 45 callers: was unclear
+    ("a few years", None), ("a good few months", None), ("a few months, well years really", None),   # guard: never a long time
+    ("a month or two", "recent"), ("2 months", "recent"), ("a month", "recent"), ("about 3 months", "recent"), ("1 or 2 months", "recent"), ("2mo", "recent"),   # round 84 callers: "2 months... Damn."
+    ("4 months", None), ("12 months", None), ("2-6 months", None), ("a month or six", None), ("a year and 2 months", None),   # guard: more than 3 months, or years in it
+])
+def test_a_few_weeks_or_days_by_number_is_recent(fake_embedder, text, then):
+    import re
+    route = next(r for r in seller(fake_embedder, step="03").method.steps["03"].listen if r.label == "recent")
+    assert (route.label if re.search(route.pattern, text, re.IGNORECASE) else None) == then
+
+
 @pytest.mark.parametrize("text", ["what's next for me after the programme?", "I want to go on holiday more"])
 def test_a_nudge_word_inside_a_reply_is_not_a_nudge(fake_embedder, text):
     s = seller(fake_embedder, step="15")
     reply, _ = s.reply(text)
     assert not reply.startswith(f"{GO_ON} ")
+
+
+@pytest.mark.parametrize("text, nudge", [
+    ("I keep going", False), ("I just keep going", False), ("we keep going", False), ("I'll keep going", False),   # round 105 callers: cut to "I", asked again
+    ("ok, keep going", True), ("so keep going", True), ("keep going", True),   # guards: still a nudge
+])
+def test_a_nudge_after_who_does_it_is_their_answer(fake_embedder, text, nudge):
+    s = seller(fake_embedder, step="11")
+    reply, _ = s.reply(text)
+    assert reply.startswith(f"{GO_ON} ") == nudge
+    assert (s.state.slots.get("different") == text) != nudge   # their answer, kept whole
 
 
 @pytest.mark.parametrize("nudge, error", [
@@ -673,7 +1319,18 @@ def test_loader_rejects_echo_without_a_capture():
     ("a year", "1"),
     ("about a year now", "1"),
     ("a couple of years", "2"),
+    ("a year and a half", "1.5"),
+    ("year and a half", "1.5"),   # a unit on its own is one (live: the line was dropped)
+    ("1.5 years", "1.5"),         # whole calls: read as 5 years ("1", "5")
+    ("I've been thinking about it for 5 years", "5"),   # a long reply is never a half
+    ("a year and a half now", "1.5"),
+    ("1yr", "1"),                 # a number stuck to its unit
+    ("since 2021", None),
+    ("years ago", None),          # but never a plural one
+    ("half a year", "0.5"),       # whole calls: read as a year
+    ("2y", "2"),                  # whole calls: "2y" was no number
     ("6 months", None),      # wrong unit, the years line is dropped
+    ("under a year", None), ("a year or two", "2"),   # round 83 callers
     ("ages", None),
     ("", None),
 ])
@@ -682,16 +1339,53 @@ def test_number_phrase(reply, number):
     assert number_phrase(reply, CFG["number_blanks"]["years"], CFG) == number
 
 
-@pytest.mark.parametrize("reply, months", [("a year", "12"), ("a couple of years", "24"), ("six months", "6"), ("a month", "1"), ("ages", None)])
+@pytest.mark.parametrize("reply, months", [("a year", "12 months"), ("a couple of years", "24 months"), ("six months", "6 months"),
+    ("a month", "1 month"), ("ages", None),  # round 24: "1 month", never "1 months"
+    ("a year and a half", "18 months"), ("year and a half", "18 months"), ("2 and a half years", "30 months"),
+    ("about 2 years and a half", "30 months"), ("1.5 years", "18 months"), ("18mo", "18 months"), ("2yrs", "24 months"),
+    ("half a year", "6 months"), ("2y", "24 months"),
+    ("1-2 years", "24 months"), ("6-12 months", "12 months"), ("1 to 2 years", "24 months"),   # round 39: a dash range was no number
+    ("1,5 years", "18 months"), ("2,5 years", "30 months"),   # round 40: a decimal comma was no number
+    ("18ish months", "18 months"), ("18 ish months", "18 months"), ("a year ish", "12 months"),
+    ("a whole year", "12 months"), ("a good two years", "24 months"),
+    ("a year or two", "24 months"), ("one or two years", "24 months"), ("a year or so", "12 months"), ("a year to 18 months", "12 months"),   # round 83 callers: a range was its bottom
+    ("under a year", None), ("less than a year", None), ("not even a year", None),
+    ("under half a year", None), ("a year or two years", "24 months"),
+    ("a year and 2 months", "14 months"), ("2 years and 3 months", "27 months"), ("a year plus 3 months", "15 months"),   # round 84 callers: the months were left out
+    ("2 years and 2 kids", "24 months"), ("a year and a half", "18 months"),
+    ("a year maybe two", "24 months"), ("a year, or maybe two", "24 months"), ("a year probably two", "24 months"),   # round 85 callers: was 12 months
+    ("a year maybe", "12 months"), ("6 months maybe a year", "6 months")])   # guard: no top, or a top in another unit   # round 83 mutation: "below" before a part word; a top in the same unit   # round 83 callers: "12 months... Damn." for less than a year   # round 51: "a whole year" said no number back   # round 48: "ish" lost the number
 def test_months_thinking_counts_the_answer_in_months(reply, months):
     from core.buy_mode.script_engine.words.fill import number_phrase
     assert number_phrase(reply, CFG["number_blanks"]["months_thinking"], CFG) == months
 
 
+@pytest.mark.parametrize("reply, said", [("a year", "1 year"), ("3 years", "3 years"), ("a year and a half", "a year and a half"),
+                                          ("year and a half", "a year and a half"), ("2 years and a half", "2 and a half years"),
+                                          ("1.5 years", "1.5 years"), ("1yr", "1 year"), ("half a year", "half a year")])
+def test_years_said_reads_like_they_said_it(reply, said):
+    from core.buy_mode.script_engine.words.fill import number_phrase
+    assert number_phrase(reply, CFG["number_blanks"]["years_said"], CFG) == said
+
+
+@pytest.mark.parametrize("phrase, said, verb", [
+    ("replace your salary", "I want to replace my salary", True),   # whole calls: "achieve with replace your salary"
+    ("be your own boss", "", True),
+    ("more money", "I want more money", False),
+    ("more money", "I want to have more money", False),   # "to" before another word, not this one
+    ("cut down your hours", "so I can cut down my hours", True),   # whole calls: "achieve with cut down your hours"
+    ("quit your job", "I could quit my job", True),
+    ("quit your job", "I WANT TO QUIT MY JOB", True),   # shouted
+])
+def test_a_goal_said_after_to_is_a_verb_goal(phrase, said, verb):
+    from core.buy_mode.script_engine.words.fill import is_verb_goal
+    assert is_verb_goal(phrase, CFG, said) is verb
+
+
 def test_years_line_fills_from_their_answer():
     from core.buy_mode.script_engine.words.fill import Filler
     line = "You already have for {years} years."
-    offer = type("Offer", (), {"months": 6, "price": "£1", "industry": "", "pillars": []})()
+    offer = type("Offer", (), {"months": 6, "price": "£1", "industry": "", "setter": "", "pillars": []})()
     filler = Filler(CFG, offer, frozenset())
     assert filler.fill(line, {"years": "probably 3 years"}) == "You already have for 3 years."
     assert filler.fill(line, {"years": "a while"}) is None
@@ -702,6 +1396,9 @@ def test_years_line_fills_from_their_answer():
     ("I want finanical fredom", "financial freedom"),
     ("time in Dubai", "time in Dubai"),   # a place name is not "fixed"
     ("more time", "more time"),           # short words are left alone
+    ("mak more mony", None),              # round 20: a typo left in is never said back ("being able to mak more mony?")
+    ("quit my jbo", None),
+    ("travel to Dubai", "travel to Dubai"),   # a Name is not a typo
 ])
 def test_echo_phrase_fixes_typos(reply, phrase):
     from core.buy_mode.script_engine.words.fill import echo_phrase
@@ -713,6 +1410,111 @@ def test_echo_phrase_fixes_typos(reply, phrase):
     ("5k a month", "5k a month"),          # base form of a known word, not a typo
     ("whatever works for me", "whatever works for me"),   # known word plus an ending
     ("time in Dubai!", "time in Dubai!"),
+    ("more £££", "more money"),   # round 28 callers: "£££" was said back as "more"
+    ("$$$ please", "money please"),
+    ("£", "money"), ("$", "money"), ("2k £", "2k £"),   # round 94 callers: a "£" alone was "say that again"; guard: beside a figure it stays
+    ("£2k", "£2k"),   # guard: one sign before a figure is kept
+    ("**more money**", "more money"),   # round 30 callers: said back as "with more?"
+    ("_more time_ and `2k`", "more time and 2k"),
+    ("~a year~ two years", "two years"),   # round 30 callers: the struck "a year" was heard
+    ("~~2 years~~ 3 years", "3 years"),
+    ("more f***ing money", "more f***ing money"),   # guard: no pair, so a starred swear is left for echo_phrase
+    ("*money", "*money"),   # guard: one star alone is kept
+    ("💰💰💰", "money"),   # round 31 callers: said nothing
+    ("🏠 for my family", "a house for my family"),   # was unclear
+    ("2k 💸", "2k"),   # guard: after an amount it only decorates it
+    ("money 💰", "money"),   # round 36 callers: after its own word it only decorates it (was "with money money?")
+    ("MORE MONEY 💰", "MORE MONEY"),   # whatever the case
+    ("a house 🏠🏠", "a house"),
+    ("moneybags 💰", "moneybags money"),   # guard: only the whole word
+    ("time 💰", "time money"),   # guard: after another word it is still its word
+    ("I want to by a house", "I want to buy a house"),   # round 31 callers: voice to text said back as typed
+    ("to grand a month", "two grand a month"),
+    ("I am board of my job", "I am bored of my job"),
+    ("going to grandma's", "going to grandma's"),   # guard: only the whole phrase
+    ("quiet my job", "quit my job"),   # round 28 limit: autocorrect was said back as typed
+    ("loads more dosh", "loads more money"),   # round 32 callers: slang got the plain line
+    ("bucks", "money"), ("more bucks", "more money"),   # round 95 callers: "bucks" was unclear
+    ("money pls", "money please"), ("dbt plz", "dbt please"), ("like 2 bandz", "like 2 grand"), ("tysm", "thank you so much"), ("a yeer", "a year"), ("2 yeers", "2 years"),   # round 96 callers: "money pls" saved whole, "dbt pls" unclear
+    ("moreee moneyyy", "more money"),   # round 32 callers: held letters got the plain line
+    ("a yearrr", "a year"),   # was not a time, asked 3 times
+    ("my own bosss", "my own boss"),   # cut to 2 when that is a word
+    ("2kkk", "2k"),
+    ("100000", "100000"),   # guard: figures are never cut
+    ("good", "good"),   # guard: a real double letter stays
+    ("more coffeee", "more coffee"),   # a real word not in the script keeps its double letter too
+    ("Quiet my job", "quit my job"),   # a swap is heard whatever the case
+    ("mor mony", "more money"),   # round 38 callers: one letter left out of a short word, was not a goal
+    ("bday money", "bday money"),   # guard: a word one letter longer than a script word stays ("day")
+    ("cos money", "cos money"),   # guard: 3 letters stay ("cost")
+    ("u know, more money", "you know, more money"),   # round 38 callers: said back as "with u know, more money?"
+    ("my uncle", "my uncle"),   # guard: only "u" alone
+    ("okk", "okay"),   # round 44 callers: a held last letter on a filler word was saved as the answer
+    ("£2k/month", "£2k a month"), ("2k/mo", "2k a mo"),   # round 52 callers: said back as "with £2k month?"
+    ("24/7", "24/7"), ("and/or", "or"),   # guard: no word after the "/", or a swap of its own
+    ("Yess", "yes"),
+    ("boss", "boss"),   # guard: only a filler word is cut
+    ("k tx", "k thanks"), ("k thx", "k thanks"),   # round 49 callers: "k tx" was saved as the answer
+    ("taxes", "taxes"),   # guard: only the whole word
+    ("mo money", "more money"), ("quit 100%", "quit definitely"), ("100 percent yes", "definitely yes"),   # round 49 callers
+    ("100% of my salary", "100% of my salary"),   # guard: a share of something is an amount
+    ('"ok"', "okay"),   # round 47 callers: the whole reply in quotes got "let me put it another way"
+    ('he said "quit"', 'he said "quit"'),   # guard: only quotes round the whole reply
+    ("we're fine", "we're fine"),   # round 46 callers: "were fine" at payment got "Welcome aboard"
+    ("they'd quit", "they'd quit"),   # a word typed with its apostrophe is never a typo
+    ("💳", "card"),   # round 44 callers: said nothing at payment
+    ("🤷", "dunno"), ("🤷‍♂️", "dunno"), ("🤷‍♀️ my boss", "dunno my boss"),   # round 84 callers: "🤷" was a yes to "are you willing...?"
+    ("🏖️ with family", "a holiday with family"),
+    ("#money", "money"), ("#2k", "2k"), ("##money", "money"), ("#ok", "okay"),   # round 53 callers: saved as typed
+    ("#1 priority", "#1 priority"), ("C#", "C#"),   # guard: a bare number keeps its "#", and so does a word it ends
+    ("fair enough", "okay"), ("that's fair", "okay"),   # round 53 callers: "fair enough" was heard as paying
+    ("shore", "sure"),   # round 53 callers: voice to text, unclear everywhere
+    ("kinda money", "kind of money"), ("sorta quit", "sort of quit"),   # round 55 callers: said back as "with kinda money?"
+    ("defo", "definitely"), ("Deffo yes", "definitely yes"), ("money for real", "money fr"),   # round 55 callers: unclear everywhere
+    ("cheers", "thanks"), ("ta", "thanks"),   # round 55 callers: saved as the answer
+    ("sure thing", "sure"),   # round 56 callers: saved as the answer
+    ("not gonna lie, money", "ngl, money"), ("2k not going to lie", "2k ngl"),   # round 57 callers: saved whole ("ngl" was cut)
+    ("same as before", "same"), ("as before", "same"), ("what I said before", "same"),   # round 57 callers: "let me say that again"
+    ("like before", "same"), ("same as last time", "same"),   # round 57 mutation: no row had these
+    ("let me see", "let me think"), ("lemme see", "let me think"), ("lemme think", "let me think"),   # round 57 callers: heard as leaving
+    ("let me see the price", "let me see the price"), ("before", "before"),   # guard: only the reply alone
+    ("dbt", "debit"), ("I reckon", "I think"), ("probs", "probably"), ("prolly", "probably"),   # round 58 callers: unclear, saved whole
+    ("I reckon money", "I think money"), ("probs not", "probably not"),
+    ("a dbt", "a dbt"),   # guard: only the reply alone
+    ("ok :)", "okay 🙂"), (":D", "😀"), ("money :(", "money 🙁"), ("ok xD", "okay 😆"), (";)", "😉"), ("ok :/", "okay 😕"), ("ok :P", "okay 😛"),   # round 59 callers; round 76: "ok" before a smiley is "okay", as alone
+    ("see https://x.com", "see https://x.com"), ("re:Dave", "re:Dave"), ("2:30", "2:30"),   # guard: only a smiley on its own
+    ("yh money", "yeah money"), ("yh", "yeah"),   # round 61 callers
+    ("aye money", "yeah money"), ("aye quit", "yeah quit my job"), ("yea", "yeah"), ("Aye", "yes"),   # round 63 callers: "aye quit" was heard as leaving
+    ("see ye", "see ye"), ("ye money", "ye money"),   # guard: never "ye"
+    ("deadass", "fr"), ("money ong", "money fr"), ("on god", "fr"), ("no cap 2k", "fr 2k"),   # round 64 callers: saved as the answer
+    ("long", "long"), ("wrong", "wrong"), ("song", "song"),   # guard: whole words only
+    ("aight", "okay"), ("aite", "okay"), ("I'd like to think so", "i think so"),   # round 65 callers: "aight" was saved as the answer, "I'd like to think so" was "I need to think about it"
+    ("cool beans", "cool"), ("sweet as", "cool"), ("either way", "i don't mind"), ("whichever", "i don't mind"), ("either", "i don't mind"),   # round 66 callers: unclear at yes-or-no steps, "either way" heard as "what do you mean?"
+    ("sweet as pie", "sweet as pie"), ("either way works", "either way works"),   # guard: only the reply alone
+    ("no biggie", "okay"), ("touché", "okay"), ("touche", "okay"), ("fair dos", "okay"), ("fair do's", "okay"), ("whatevs", "whatever"),   # round 73 callers: "no biggie" was saved as the reason, "touché" unclear
+    ("no biggie deal", "no biggie deal"),   # guard: only the reply alone
+    ("I'd like to think about it", "I'd like to think about it"), ("night", "night"),   # guard: the real "think about it", and whole words only
+    (":-)", "🙂"), (":-D", "😀"), (":-(", "🙁"), (":-/", "😕"),   # round 65 mutation: the nose forms of round 59's smileys had no row
+    ("ta da", "ta da"), ("for really", "for really"),   # guard: only the reply alone, only the whole phrase
+    ("count me in", "yes"), ("let's do it", "yes"), ("lets do it", "yes"), ("go for it", "yes"), ("say no more", "yes"), ("all good", "okay"),   # round 71 callers: "count me in" was saved as the reason, "all good" got "You're welcome"
+    ("sounds good", "yes"), ("works for me", "yes"), ("you bet", "yes"), ("fine by me", "okay"), ("roger that", "okay"), ("roger", "okay"), ("righto", "okay"), ("indeed", "yes"), ("deal", "yes"),   # rounds 69 and 70: pinned without the real model
+    ("count me in later", "count me in later"), ("all good things", "all good things"),   # guard: only the reply alone
+    ("A: money", "money"), ("Answer: quit", "quit my job"), ("a) a year", "a year"), ("A) 2k", "2k"), ("Me: 2k", "2k"), ("Ans: 2k", "2k"), ("Reply: money", "money"), ("> free", "free"), ("1. my boss", "my boss"),   # round 77 callers: the label was saved with the answer ("a money")
+    ("no, no idea", "no idea"), ("I, I want money", "I want money"), ("yes, yes", "yes"), ("money, money, money", "money"), ("n/a", "not sure"), ("tbd", "not sure"), ("TBC", "not sure"),   # round 78 callers: "no, no idea" was a no, "n/a" saved as the reason
+    ("my boss, my boss", "my boss"), ("quit my job, quit my job", "quit my job"), ("also, so what", "also, so what"),   # round 78 mutation: no row had a stutter of 2 or 3 words, or one starting mid-word
+    ("ditto", "same"), ("what I said", "same"), ("like I said", "same"), ("as I said", "same"), ("both", "same"),   # round 79 callers: "ditto" was saved, "both" got "let me say that again"
+    ("both of them", "both of them"), ("a bit of both", "a bit of both"), ("what I said before", "same"),   # guard: only the reply alone
+    ("😂 quit", "quit my job"), ("😂😂 money", "money"), (":) quit", "quit my job"), ("xD 2k", "2k"), ("❤️ my kids", "my kids"), ("👍🏽 yes", "yes"),   # round 80 callers: "😂 quit" left the call, "😂 money" was saved with its picture
+    ("💰 please", "money please"), ("😂", "😂"), (":)", "🙂"), (":Dave", ":Dave"),   # guard: a picture that stands for a word stays, and so does a picture alone
+    ("more um money", "more money"), ("quit my uh job", "quit my job"), ("2k, um, maybe", "2k, maybe"),   # round 80 callers: "more um money" was said back as "with more um money?"
+    ("Mr Er", "Mr Er"), ("money um", "money um"),   # guard: only between two words
+    ("idj", "idk"), ("ifk", "idk"), ("nit sure", "not sure"), ("no idra", "no idea"), ("unsute", "unsure"),   # round 80 callers: "idj" and "nit sure" were saved as answers
+    ("ids", "ids"), ("not pure", "not pure"), ("no idrs", "no idrs"),   # guard: one key, side by side on a row, whole reply only
+    ("no, not sure", "no, not sure"), ("2k, maybe 2k", "2k, maybe 2k"), ("no, nobody", "no, nobody"), ("time, time and money", "time and money"),   # guard: other words after the comma stay
+    ("1. money 2. time", "money, time"), ("1) my boss 2) bills", "my boss, bills"), ("a) quit b) travel", "quit, travel"), ("1. 2k 2. 3 years", "2k, 3 years"), ("bread", "money"), ("dough", "money"), ("moolah", "money"), ("wonga", "money"), ("2 racks", "2 grand"), ("a couple bands", "a couple grand"), ("a decade", "10 years"),   # round 86 callers: slang money and a decade
+      # round 85 callers: the next item's mark was saved
+    ("money 2. time", "money 2. time"), ("2k 2) maybe", "2k 2) maybe"),   # guard: only once the reply opens with a mark
+    ("a year", "a year"), ("a lot", "a lot"), ("me :)", "me 🙂"), ("1.5 years", "1.5 years"), ("A:money", "A:money"), (">2k", ">2k"), (">5 years", ">5 years"),   # guard: a label needs its ":" or ")" and a space after
 ])
 def test_fix_typos_keeps_real_words(text, fixed):
     from core.buy_mode.script_engine.words.fill import fix_typos
@@ -771,6 +1573,130 @@ def test_who_are_you_later_in_the_call_goes_back_to_the_question_without_a_bridg
     assert CAT.steps["01"].bridge not in text and not s.state.bridged and "What are you hoping" in text
 
 
+# ---- replayed calls, round 2 -----------------------------------------------------------------
+
+def test_the_money_question_needs_a_figure(fake_embedder):
+    s = seller(fake_embedder, step="02", slots={"outcome": "more money"})
+    text, _ = s.reply("I don't know where to start")  # live: taken as their number, and {number} said it later
+    assert s.state.step == "02" and "number" not in s.state.slots
+    assert text == CAT.steps["02"].probes[0]
+    s.reply("about 3k")
+    assert s.state.step == "03" and s.state.slots["number"] == "about 3k"
+
+
+def test_no_figure_after_the_asks_moves_on_unsaved(fake_embedder):
+    s = seller(fake_embedder, step="02", slots={"outcome": "more money"})
+    for reply in ("financial freedom", "enough to quit", "loads"):
+        s.reply(reply)
+    assert s.state.step == "03" and "number" not in s.state.slots
+
+
+def test_a_figure_in_words_is_a_figure(fake_embedder):
+    s = seller(fake_embedder, step="02", slots={"outcome": "more money"})
+    s.reply("five grand")
+    assert s.state.slots["number"] == "five grand"
+
+
+def test_a_shallow_goal_again_is_not_treated_as_no_answer(fake_embedder):
+    s = seller(fake_embedder, step="goal_practical", slots={"outcome": "financial freedom"})
+    s.reply("financial freedom")
+    text, _ = s.reply("more money")
+    assert not any(r in text for r in CAT.reask), text  # "No rush" reads as if they said nothing
+    assert text.startswith(CAT.steps["goal_practical"].reask[0])
+
+
+def test_the_same_fact_twice_gets_a_short_reminder(fake_embedder):
+    s = seller(fake_embedder, step="03")
+    first, _ = s.reply("what do you do")
+    again, _ = s.reply("who are you")
+    what = load_offer("shay_coaching").facts["what_we_do"]
+    assert what.again and what.again in again and first.split("¶")[0] not in again
+
+
+def test_a_fact_with_no_reminder_of_its_own_uses_the_shared_one(fake_embedder):
+    s = seller(fake_embedder, step="03")
+    s.reply("where are you based")
+    again, _ = s.reply("where are you based")
+    assert again.startswith(SENSE.told_again)
+
+
+def test_a_fact_asked_again_long_after_gets_its_answer_not_like_i_said_a_moment_ago(fake_embedder):
+    """Whole calls: "do you need my bank details?" at 02, then "do I have to give my card now?" at the close,
+    got "Like I said a moment ago." 17 turns on: untrue, and the answer was long gone."""
+    s = seller(fake_embedder, step="03")
+    s.reply("where are you based")
+    s.reply("about a year")
+    again, _ = s.reply("where are you based")
+    where = s._filler.fill(load_offer("shay_coaching").facts["location"].answer, {})
+    assert not again.startswith(SENSE.told_again) and again.startswith(where), again
+
+
+def test_the_price_after_the_pitch_is_said_again_in_full(fake_embedder):
+    s = seller(fake_embedder, step="14", told=("price",))
+    text, _ = s.reply("how much does it cost")
+    assert load_offer("shay_coaching").facts["price"].again not in text
+
+
+def test_bye_books_the_follow_up(fake_embedder):
+    s = seller(fake_embedder, step="04")
+    text, _ = s.reply("bye")
+    assert s.state.step == CAT.follow_up and text == CAT.steps[CAT.follow_up].say
+
+
+def test_a_told_fact_survives_a_saved_call(fake_embedder):
+    s = seller(fake_embedder, step="03")
+    s.reply("where are you based")
+    saved = json.loads(json.dumps(s.snapshot()))
+    s.restore(saved)
+    assert s.state.told == ("location",)
+
+
+@pytest.mark.parametrize("reply", ["no one knows", "k", "I'd love to take a look"])
+def test_words_that_only_look_like_a_figure_are_not_one(fake_embedder, reply):
+    s = seller(fake_embedder, step="02", slots={"outcome": "more money"})
+    s.reply(reply)
+    assert "number" not in s.state.slots
+
+
+@pytest.mark.parametrize("end", ["later", "end"])
+def test_after_the_call_has_ended_every_reply_gets_the_sign_off(fake_embedder, end):
+    s = seller(fake_embedder, step=end)
+    for reply in ("bye", "ok thanks", "how much was it again?"):
+        text, _ = s.reply(reply)  # live: "bye" after the follow-up line said that line again
+        assert text == SENSE.ended and s.state.step == end
+
+
+# ---- replayed calls, round 3 -----------------------------------------------------------------
+
+@pytest.mark.parametrize("reply, kept", [
+    ("five grand a month", "five grand a month"),  # live: said at the goal, then asked "how much a month?"
+    ("5k a month.", "5k a month"),
+    ("five grand a month would change my life", None),  # not only the figure: no want word, not the goal
+    ("I make 2k a month", None),
+])
+def test_a_figure_said_on_its_own_early_answers_the_money_step(reply, kept):
+    state = hear_ahead(CAT, ScriptState(step="goal_identity"), reply)
+    assert state.slots.get("number") == kept
+
+
+def test_an_early_figure_skips_the_money_question(fake_embedder):
+    s = seller(fake_embedder, step="goal_identity", slots={"outcome": "more money"})
+    text, _ = s.reply("five grand a month")
+    assert s.state.slots["number"] == "five grand a month" and "each month" not in text
+
+
+def test_the_money_step_never_says_the_same_line_twice_in_a_row(fake_embedder):
+    s = seller(fake_embedder, step="02", slots={"outcome": "more money"})
+    texts = [s.reply("not sure")[0] for _ in range(CFG["misses"])]
+    assert s.state.step == "02" and texts[0] == CAT.steps["02"].probes[0]
+    assert all(not b.endswith(a) for a, b in pairwise(texts))  # live: "If you had to put a number on it..." twice
+
+
+def test_the_opening_names_the_setter(fake_embedder):
+    text, _ = seller(fake_embedder).opening()  # live: {setter} was never filled, so the plain line was said
+    assert text.startswith("I believe you had a chat with our setter...")
+
+
 # ---- side replies in a row never say the same question three times ---------------------------------
 
 def test_a_second_side_question_in_a_row_gets_the_step_in_other_words(fake_embedder):
@@ -792,3 +1718,189 @@ def test_a_monthly_figure_said_early_is_kept_only_when_it_is_the_goal(reply, kep
     state = hear_ahead(CAT, ScriptState(step="goal_identity"), reply)
     assert state.slots.get("number") == kept
 
+
+
+# ---- live test calls, round 4 ----------------------------------------------------------------------
+
+def test_what_do_you_mean_is_answered_on_the_step_even_after_its_last_ask(fake_embedder):
+    s = seller(fake_embedder, step="01", asks=CFG["misses"])  # live: "hey" used the probe, then "wat do u mean" skipped 01
+    s.reply("what do you mean")
+    assert s.state.step == "01"
+
+
+@pytest.mark.parametrize("step, reply", [
+    ("goal_practical", "dunno like 10k"),   # live: taken as their practical goal
+    ("goal_identity", "a while"),           # live: taken as who they'd be
+    ("goal_identity", "like 5 grand"),
+    ("03", "nothing"),                      # live: taken as how long they've thought about it
+])
+def test_a_reply_that_is_no_answer_is_asked_again_not_kept(fake_embedder, step, reply):
+    s = seller(fake_embedder, step=step, slots={"outcome": "more money"})
+    s.reply(reply)
+    assert s.state.step == step and CAT.steps[step].capture not in s.state.slots
+
+
+@pytest.mark.parametrize("reply, kept", [
+    ("like 5 grand", "5 grand"),    # live: a bare figure with no "a month" was not kept for 02
+    ("dunno like 10k", "10k"),
+    ("I want 10k", None),           # a want with no "a month" may be a lump sum
+])
+def test_a_bare_big_figure_is_kept_for_the_money_step(reply, kept):
+    assert hear_ahead(CAT, ScriptState(step="goal_identity"), reply).slots.get("number") == kept
+
+
+def test_im_in_is_ready_even_though_it_is_made_of_shrug_words(fake_embedder):
+    from dataclasses import replace
+    method = replace(CAT, ready=replace(CAT.ready, examples=("yes I'm in",)))
+    s = seller(fake_embedder, step="belief_cost", method=method)
+    s.reply("yes I'm in")  # live: heard as saying nothing, and asked the cost question again
+    assert s.state.step == CAT.ready.then
+
+
+def test_a_worry_at_the_time_step_is_heard_not_called_a_failed_attempt(fake_embedder):
+    from core.buy_mode.script_engine.hear.meanings import load_meanings
+    text, _ = seller(fake_embedder, step="03").reply("I'm scared of losing money")
+    assert text.startswith(load_meanings().items["fear_of_loss"].lines[0]) and "Sorry to hear" not in text
+
+
+def test_a_price_request_gets_the_price_answer_and_keeps_the_step(fake_embedder):
+    s = seller(fake_embedder, step="04")
+    s.reply("how do I know this isn't a scam?")   # a side reply: before round 20, "my partner would have to be on board"
+    text, _ = s.reply("can you just tell me the price")  # live: "I haven't mentioned a price yet", then 04 skipped
+    assert text.startswith(load_offer("shay_coaching").facts["price"].answer) and s.state.step == "04"
+
+
+def test_a_money_goal_is_not_said_back_in_the_money_question(fake_embedder):
+    s = seller(fake_embedder, step="goal_identity", slots={"outcome": "make more money"})
+    text, _ = s.reply("I want to finally be proud of myself")  # live: "each month to make more money?"
+    assert text.endswith(CAT.steps["02"].say_plain)
+
+
+def test_a_side_reply_that_moves_the_step_shows_the_new_stage(fake_embedder):
+    s = seller(fake_embedder, step="12")
+    s.reply("who are you")
+    _, stage = s.reply("who are you")  # the second side reply in a row moves 12 (no other words) on to 13
+    assert s.state.step == "13" and stage == CAT.steps["13"].ui_stage != CAT.steps["12"].ui_stage
+
+
+@pytest.mark.parametrize("said, step", [
+    ("dunno, a year?", "04"),          # live: "I'll find out and let you know": the answer said with a rise
+    ("how long will it take?", "03"),  # a real question with a span-of-time word still asks
+])
+def test_a_short_answer_with_a_question_mark_is_still_the_answer(fake_embedder, said, step):
+    s = seller(fake_embedder, step="03")
+    s.reply(said)
+    assert s.state.step == step
+
+
+def test_a_yes_or_no_question_asked_again_never_asks_for_a_rough_idea(fake_embedder):
+    s = seller(fake_embedder, step="m_close2")   # live: "No rush, even a rough idea helps. Do you see yourself jumping in?"
+    reply, _ = s.reply("banana")
+    assert reply.startswith("No pressure either way.") and s.state.step == "m_close2"
+
+
+@pytest.mark.parametrize("text, fixed", [
+    ("y", "yes"), ("Y?", "yes?"), ("n", "no"), ("yh", "yeah"),
+    ("2 y", "2 y"), ("y not", "y not"),   # inside a reply "y" is kept: it is more often a year ("2 y")
+    (None, ""), (" k ", "okay"),
+])
+def test_a_one_letter_reply_is_its_word(text, fixed):
+    """Round 21: "y" to "Do you see yourself jumping in?" was not a yes."""
+    from core.buy_mode.script_engine.words.fill import fix_typos
+    assert fix_typos(text, {"yes", "year"}, CFG) == fixed
+
+
+@pytest.mark.parametrize("reply, spans", [("about 3 months", True), ("a month", True), ("2 years", True),
+    ("3k a month", False), ("£500 a month", False), ("a grand a month", False), ("100 dollars a month", False)])
+def test_how_long_needs_a_span_of_time_never_a_sum_of_money(reply, spans):
+    """Round 24: "3k a month" at "How long have you been thinking about this?" was saved as "1 months"."""
+    import re
+    assert bool(re.search(CAT.steps["03"].needs, reply, re.I)) == spans
+
+
+@pytest.mark.parametrize("reply, rest", [
+    ("my wife and kids want a house", "a house"),   # round 28 callers: who wants it is left out
+    ("my husband wants me to earn more", "to earn more"),   # round 29 callers: who it is wanted of too
+    ("I do not want to work", "I do not want to work"),   # a "not" before it: kept whole
+    ("I never want to be broke", "I never want to be broke"),
+    ("my wife and my kids want a house", "my wife and my kids want a house"),   # past `echo_want_within`: kept whole
+    ("need more money", "need more money"),   # at the very start it is the goal itself
+    ("my kids want", ""),   # nothing after it: nothing kept, never past the end
+])
+def test_who_wants_it_is_left_out_near_the_start(reply, rest):
+    from core.buy_mode.script_engine.words.fill import WORD, _after_want
+    assert " ".join(_after_want(WORD.findall(reply), CFG)) == rest
+
+
+@pytest.mark.parametrize("reply, phrase", [
+    ("money (lots)", "money"), ("more money (2k)", "more money"),   # round 49 callers: "money (lots)" was "with money lots?"
+    ("(more money)", "more money"),   # guard: all in brackets, the brackets go and the words stay
+    ("ugh money", "money"), ("precisely more money", "more money"),   # round 49 callers: said back with "ugh" and "precisely"
+    ("more money, if possible", "more money"), ("money and time, both", "money and time"),   # round 49 callers: said back whole
+    ("more money definitely", "more money"), ("hopefully more money", "more money"), ("I hope to be rich", "be rich"),
+    ("more f***ing money", "more money"),   # round 29 callers: said back as "more f ing money"
+    ("more bloody money", "more money"),   # a swear word is never said back
+    ("in 5 years I'd like to be rich", "be rich"),   # round 29 callers: "I'd like" was never matched, the plain line was used
+    ("we'd love to travel", "travel"),
+    ("my husband wants me to earn more", "earn more"),   # round 29 callers: the plain line was used
+    ("same as everyone, more money", "more money"),   # round 30 callers: said back whole
+    ("the usual, more time", "more time"),
+    ("hi, more money", "more money"), ("hey, more time", "more time"),   # round 51 callers: said back as "with hi, money?"
+    ("and more money", "more money"), ("also more time", "more time"),   # round 52 callers: said back as "with and money?"
+    ("more money, thank you", "more money"),   # round 31 callers: the thanks was said back
+    ("more money please", "more money"),
+    ("I would like to achieve financial independence, thank you.", "financial independence"),   # round 31: "by being able to achieve financial independence"
+    ("reach out to more people", "reach out to more people"),   # guard: a verb before "out" is kept
+    ("achieve more", "achieve more"),
+    ("to reach my goals", "reach your goals"),
+    ("money plus time plus freedom", "money, time and freedom"),   # round 31: said back with "plus"
+    ("money & time", "money and time"),
+    ("plus more money", "plus more money"),   # guard: only between two things
+    ("Could I possibly say more money, please?", "more money"),   # round 32: "with could you possibly say more money?"
+    ("idk more money idk", "more money"),   # round 37 callers: "with more money idk?"
+    ("money obviously, stupid question", "money"),   # round 37 callers: said back whole; each end word, in any order
+    ("more money lol haha", "more money"),
+    ("more money, duh", "more money"),
+    ("I'd say more time", "more time"),
+])
+def test_echo_phrase_leaves_out_swears_and_who_wants_it(reply, phrase):
+    from core.buy_mode.script_engine.words.fill import echo_phrase
+    assert echo_phrase(reply, CFG, frozenset(CFG["spell_words"])) == phrase
+
+
+@pytest.mark.parametrize("text, fixed", [
+    ("deb", "debit"), ("cred", "credit"),
+    ("yy", "yes"), ("db", "debit"),   # round 50 callers: "yy" to "can you see yourself doing it?" and "db" to "credit or debit?" were unclear
+    ("quit", "quit my job"),   # round 30 callers: "quit" alone at a goal step was heard as leaving the call   # round 29 callers: "deb" at "Credit or debit?" was heard as a pause
+    ("bet", "yes"), ("say less", "yes"), ("safe", "okay"),   # round 36 callers: slang "bet" at "jumping in?" was unclear, "safe" was kept as the answer at every open step
+    ("Bet.", "yes."),
+    ("I bet", "I bet"), ("I want to feel safe", "I want to feel safe"),   # guard: only the whole reply
+    ("debt", "debt"), ("deb please", "deb please"),   # guard: only a reply of the short form alone
+    ("ok", "okay"), ("OK", "okay"), ("k", "okay"),   # round 51 callers: a bare "ok" was unclear at "Does that make sense?"
+    ("Understood.", "okay."), ("noted", "okay"), ("Got it", "okay"),   # round 38 callers: "Understood." was kept as the answer
+    ("sound", "okay"), ("why not", "yes"), ("ok why not", "ok yes"),   # round 52 callers: "sound" was "say that again", "why not" a no
+    ("I got it from my dad", "I got it from my dad"),   # guard: only the whole reply
+    ("quit 🙁", "quit my job 🙁"), ("quit :(", "quit my job 🙁"), ("ok 👍", "okay 👍"),   # round 76 callers: the emoji went from what was saved, so "quit" was bare and ended the call
+    ("quit 🙁 now", "quit 🙁 now"), ("money 🙂", "money 🙂"),   # guard: only an emoji on the end
+])
+def test_a_short_form_alone_is_its_word(text, fixed):
+    from core.buy_mode.script_engine.words.fill import fix_typos
+    assert fix_typos(text, frozenset(CFG["spell_words"]), CFG) == fixed
+
+
+@pytest.mark.parametrize("text, fixed", [("quitt", "quit my job"), ("okk", "okay"), ("quitt now", "quit now")])
+def test_a_short_form_is_found_once_typos_are_fixed(text, fixed):
+    """Round 51 callers: "quitt" alone ended the call; spelled "quit", it is the short form."""
+    from core.buy_mode.script_engine.words.fill import fix_typos
+    assert fix_typos(text, frozenset(CFG["spell_words"]) | {"quit", "now"}, CFG) == fixed
+
+
+def test_a_verb_goal_reads_without_being_able_to_be(fake_embedder):
+    """Round 29 callers: "I'd like to be rich" and "debt free" were said back as "by being able to be rich"."""
+    from core.buy_mode.script_engine.words.fill import Filler
+    offer = type("Offer", (), {"months": 6, "price": "£1", "industry": "", "setter": "", "pillars": []})()
+    filler = Filler(CFG, offer, {"outcome"}, frozenset(CFG["spell_words"]))
+    line = "What are you hoping to achieve {outcome|with $|by being able to $}?"
+    assert filler.fill(line, {"outcome": "debt free"}) == "What are you hoping to achieve by being debt free?"
+    assert filler.fill(line, {"outcome": "quit my job"}) == "What are you hoping to achieve by being able to quit your job?"
+    assert filler.fill(line, {"outcome": "I want to replace my salary"}) == "What are you hoping to achieve by being able to replace your salary?"   # a verb by what came before it

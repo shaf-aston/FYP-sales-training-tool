@@ -5,9 +5,9 @@ from pathlib import Path
 import pytest
 import yaml
 
-from core.buy_mode.script_engine.engine import ScriptState, advance, start
-from core.buy_mode.script_engine.method import load_method, load_offer, parse_method
+from core.buy_mode.script_engine.engine import ScriptState, advance, question_of, start
 from core.buy_mode.script_engine.hear.recognise import Listener
+from core.buy_mode.script_engine.method import load_method, load_offer, parse_method
 
 FIXTURES = Path(__file__).parent / "fixtures" / "script_engine"
 ENGINE_DIR = Path(__file__).parent.parent / "core" / "buy_mode" / "script_engine"
@@ -21,7 +21,7 @@ def mini():
 def _listener(embedder, threshold, margin=0.03):
     return Listener({"threshold": threshold, "margin": margin, "close_call_k": 3, "near_miss": 0.1,
                      "interrupt_threshold": 0.0, "question_answer_min_score": 0.8,
-                     "clause_breaks": [",", "and"], "clause_min_words": 3}, embedder)
+                     "clause_breaks": [",", "and"], "break_not_before": [], "ask_tails": [], "ask_tails_not_after": [], "clause_min_words": 3, "unsure_margin": 0.12}, embedder)
 
 
 def _labels(method, step_id):
@@ -86,7 +86,7 @@ def test_replay_is_deterministic(mini, fake_embedder):
 def test_state_is_not_mutated(mini, fake_embedder):
     before = start(mini).state
     advance(mini, before, "clear", "reply")
-    assert before == ScriptState(step="a")
+    assert before == start(mini).state
 
 
 def test_loader_rejects_broken_graphs():
@@ -100,6 +100,17 @@ def test_loader_rejects_broken_graphs():
         (lambda d: d["steps"]["a"]["stuck"].update(then="nope"), "unknown then"),
         (lambda d: d["steps"]["a"].update(unsure="nope"), "unsure"),
         (lambda d: d["steps"]["a"]["listen"]["clear"].update(then="a") or d["steps"]["a"].update(unsure="clear"), "unsure"),
+        (lambda d: d["steps"]["a"].update(needs="x*"), "needs"),
+        (lambda d: d["steps"]["a"].update(reask=["Sure?"]), "reask"),
+        (lambda d: d["steps"]["a"].update(shrug_moves_on=True), "shrug_moves_on"),
+        (lambda d: d["steps"]["a"].update(yes_no=True, say="Tell me more."), "yes_no"),
+        (lambda d: d.update(max_visits=-1), "max_visits"),
+        (lambda d: d.update(max_visits=2) or d["exits"].pop("follow_up"), "max_visits|follow_up"),
+        (lambda d: d["steps"]["a"].update(run_on=True), "run_on"),
+        (lambda d: d["steps"]["a"].update(plain_if="money"), "plain_if"),
+        (lambda d: d["steps"]["a"].update(answered_by="(?P<answer>.*)"), "answered_by"),
+        (lambda d: d["steps"]["a"].update(say_plain="What is it, {goal?"), "blank"),
+        (lambda d: d["steps"]["a"]["listen"]["clear"].update(climbs_to=["nope"]), "climbs to an unknown route"),   # round 100
     ]:
         data = yaml.safe_load(yaml.safe_dump(good))
         mutate(data)
@@ -149,6 +160,16 @@ def test_recognise_close_call_and_threshold(fake_embedder):
     assert both.close
 
 
+
+def test_a_product_question_beats_the_steps_answers_only_when_it_scores_higher(fake_embedder):
+    """Whole calls: "debit card is ok?" to "credit or debit?" was heard as "do you need my card details?"
+    (0.74) over paying (0.85), so the call never closed. A fact still wins when it scores higher."""
+    listener = _listener(fake_embedder, 0.3)
+    pays = {"pays": ["debit card ok"]}
+    labels = {"fact:pay_when": ["need my card ok"]}
+    assert listener.interruption("debit card ok", labels, pays, False, True, {}) is None   # 0.82 to the fact, 1.0 to pays
+    assert listener.interruption("need my card ok", labels, pays, False, True, {}) == "fact:pay_when"
+
 def test_engine_code_names_no_method_or_offer():
     banned = re.compile(r"\b(cat|impact|formula|shay|coaching|freedom|pillar)\b", re.IGNORECASE)
     paths = list(ENGINE_DIR.rglob("*.py"))
@@ -166,9 +187,9 @@ def test_loader_rejects_yaml_boolean_route_names():
 
 def test_asked_again_after_its_probes_a_step_says_only_its_question_behind_a_lead():
     cat = load_method("cat")
-    move = advance(cat, ScriptState(step="08"), None, "k", empty=True, misses=3)
-    assert move.say == "What's the main difference between a successful business owner and an employee?"
-    assert move.ack == cat.reask[0] and move.state.step == "08"
+    move = advance(cat, ScriptState(step="09"), None, "k", empty=True, misses=3)
+    assert move.say == question_of(cat.steps["09"].say)
+    assert move.ack == cat.reask[0] and move.state.step == "09"
 
 
 def test_a_capture_step_is_not_left_by_stuck_before_its_misses():
@@ -206,8 +227,55 @@ def test_bad_reask_fails_loud(change, error):
         parse_method("mini", data)
 
 
+@pytest.mark.parametrize("change, error", [  # each line a route says is checked, and the error names its step
+    (lambda s: s["b"]["listen"]["agrees"].update(ack="Good, {goal."), "step b: a blank"),
+    (lambda s: s["a"]["stuck"].update(ack="Ok, {goal."), "step a: a blank"),
+    (lambda s: s["a"]["listen"]["clear"].update(say="Is _this_ _it_?"), "step a: at most one stress"),
+    (lambda s: s["a"]["stuck"].update(say="Is _this_ _it_?"), "step a: at most one stress"),
+    (lambda s: s["a"]["listen"]["clear"].pop("examples"), "step a: route 'clear' needs examples"),
+    (lambda s: s["a"]["stuck"].update(examples=["x"]), "step a: 'any' route takes no examples"),
+    (lambda s: s["a"].update(answered_by=r"^(?P<answer>\d*)$") or s["a"]["listen"].update(any={"then": "b"}), "step a: answered_by must not match an empty"),
+])
+def test_a_bad_line_on_a_route_fails_loud_naming_its_step(change, error):
+    data = yaml.safe_load((FIXTURES / "mini.yaml").read_text(encoding="utf-8"))
+    change(data["steps"])
+    with pytest.raises(ValueError, match=re.escape(error)):
+        parse_method("mini", data)
+
+
+def test_a_step_keeps_each_field_it_was_given_and_defaults_the_rest():
+    data = yaml.safe_load((FIXTURES / "mini.yaml").read_text(encoding="utf-8"))
+    data["steps"]["a"].update(name="Goal", note="listen for why", doubts_answer=True, bridge="Where are you based?",
+                              unsure="clear", needs=r"\w", say_plain="What would you like?", plain_if="money")
+    data["steps"]["silent"]["shrug_moves_on"] = True
+    data["steps"]["b"]["yes_no"] = True
+    steps = parse_method("mini", data).steps
+    a = steps["a"]
+    assert (a.name, a.note, a.doubts_answer, a.bridge, a.unsure, a.needs, a.plain_if) == (
+        "Goal", "listen for why", True, "Where are you based?", "clear", r"\w", "money")
+    assert steps["silent"].shrug_moves_on is True and steps["b"].yes_no is True
+    c = steps["c"]  # given none of them
+    assert (c.capture, c.name, c.note, c.bridge, c.unsure, c.needs, c.plain_if, c.answered_by) == ("",) * 8
+    assert (c.doubts_answer, c.shrug_moves_on, c.yes_no, c.echo, c.moment, c.run_on) == (False,) * 6
+
+
 def test_a_route_under_its_floor_is_neither_the_label_nor_a_candidate(fake_embedder):
     labels = {"yes": ["yes sounds good"], "no": ["no not for me"]}
     floored = _listener(fake_embedder, 0.65).match("yes sounds good", labels, floors={"yes": 1.01})
     assert floored.label is None and "yes" not in floored.candidates
     assert _listener(fake_embedder, 0.65).match("yes sounds good", labels, floors={"no": 0.99}).label == "yes"
+
+
+def test_one_probe_written_as_a_line_is_one_probe():
+    data = yaml.safe_load((FIXTURES / "mini.yaml").read_text(encoding="utf-8"))
+    data["steps"]["b"]["probe"] = "Put simply: does that make sense?"
+    assert parse_method("one", data).steps["b"].probes == ("Put simply: does that make sense?",)
+
+
+def test_an_answer_much_nearer_not_knowing_is_no_answer(fake_embedder):
+    """"maybe" to "Would that work for you?" scored as a yes: `unsure_margin` nearer not knowing is none."""
+    listener = _listener(fake_embedder, 0.3)
+    labels = {"yes": ["yes that works"], "no": ["no it does not"]}
+    assert listener.answer("not sure that works", labels, ["not sure"]).label is None   # 0.71 unsure vs 0.58 yes
+    assert listener.answer("yes that works", labels, ["not sure"]).label == "yes"
+    assert listener.answer("sure that works", labels, ["not sure"]).label == "yes"   # 0.58 unsure vs 0.67 yes: kept

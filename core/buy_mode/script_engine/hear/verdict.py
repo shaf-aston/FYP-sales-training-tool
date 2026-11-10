@@ -1,24 +1,38 @@
 """What one prospect reply was heard as, before anything is said back: one `Verdict` per turn."""
 
+import math
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from itertools import dropwhile
 
-from core.buy_mode.script_engine.engine import asked_line, question_of, hear_ahead, ready_open
+from core.buy_mode.script_engine.config import plain_words
+from core.buy_mode.script_engine.engine import (
+    asked_line,
+    hear_ahead,
+    question_of,
+    questions_of,
+    ready_open,
+)
+from core.buy_mode.script_engine.hear.reply import Part, Reader, break_pattern, clauses
 from core.buy_mode.script_engine.method import ANY
-from core.infra.utils import is_question, tokenize
+from core.buy_mode.script_engine.words.fill import short_form
+from core.infra.utils import normal, tokenize
 
 
 @dataclass(frozen=True)
 class Verdict:
     kind: str           # nudge | says_nothing | ready | sense | objection | fact | question | answer
     name: str = ""      # which sense, objection or fact
-    text: str = ""      # the reply without a nudge on its end
+    text: str = ""      # what they meant (reply.py): no nudge on its end, no hedge; an answer's content only
     asking: bool = False
     ahead: object = None  # the state with answers to later steps kept ("I want 5k a month"), else None
+    side: str = ""      # an answer with a question beside it: how the question was heard ("fact:price", "question")
+    asked: str = ""     # that question's words
 
     @property
     def heard_as(self):
-        return f"{self.kind}:{self.name}" if self.name else self.kind
+        heard = f"{self.kind}:{self.name}" if self.name else self.kind
+        return f"{heard}+{self.side}" if self.side else heard
 
 
 def answer_labels(step):
@@ -26,78 +40,519 @@ def answer_labels(step):
     return {r.label: list(r.examples) for r in step.listen if r.examples}
 
 
+def _says_any(text, phrases):
+    """Whether `text` says one of `phrases` as whole words (each already tokenized)."""
+    said = f" {normal(text)} "
+    return any(f" {w} " in said for w in phrases)
+
+
 class Ear:
-    """Hears a reply against the call so far. Order matters and lives here only: a nudge on its own, then a
-    shrug, then an interruption that clearly beats an answer, then a question
-    the step's own answers don't cover, else an answer."""
+    """Hears a reply against the call so far, from its parts (reply.py). Order matters and lives here only: a
+    nudge on its own; an answer with a question beside it (both kept); then a shrug, an interruption that
+    clearly beats an answer, a question the step's own answers don't cover, else an answer."""
 
     def __init__(self, cfg, method, offer, sense, listener, shrugs, judge):
         """`judge(reply, {name: [examples]})`: the AI's pick of one name, or VAGUE."""
         self.cfg, self.method, self.offer, self.sense = cfg, method, offer, sense
         self._listener, self._shrugs, self._judge = listener, shrugs, judge
-
-    def is_question(self, text):
-        return is_question(text, self.cfg)
+        self.reader = Reader(cfg, sense.nudges, shrugs.hedges)
+        self._breaks = break_pattern(cfg)
+        self._nudge_yes = {normal(p) for p in cfg["nudge_yes"]}
+        self._nudge_leads = frozenset(cfg["nudge_leads"])
+        self._wants_more = [tokenize(p) for p in cfg["wants_more_starts"]]  # round 98: "more than I have now"
+        self._wants_more_words = [normal(p) for p in cfg["wants_more_words"]]  # round 99: "my wife wants more money"
+        backs = [*cfg["reason_backs"], *(k for k, v in cfg["short_replies"].items() if v in cfg["reason_backs"])]  # "k", "ofc"
+        backs, reasons = (r"\W+".join(map(re.escape, tokenize(p))) for p in backs), map(re.escape, cfg["reason_starts"])
+        backs = "|".join(sorted(backs, key=len, reverse=True))
+        self._backed = re.compile(rf"^\W*((?:{backs})(?:\W+(?:{backs}))*)\W+(?:{'|'.join(reasons)})\W+\w", re.IGNORECASE)
+        self._yes_lead = re.compile(rf"^\W*(?:{backs})(?:\W+(?:{backs}))*[\s,;.!-]+(?=\w)", re.IGNORECASE)
+        self._plain = plain_words(cfg)
+        self._leave_it = {normal(p) for p in (*cfg["leave_it_to_us"], *cfg["picks_by_place"])}  # round 88: "the second one" picks too
+        self._me, self._you = set(cfg["asked_back"]), set(cfg["asked_back_you"])
+        self._captures = {}  # slot: the first step that saves it
+        for s in method.steps.values():
+            if s.capture:
+                self._captures.setdefault(s.capture, s)
 
     def hear(self, text, state, opened):
         step = self.method.steps[state.step]
-        rest = self._unnudged(text)
-        if rest is not None and not tokenize(rest):
-            return Verdict("nudge", text=text)  # "ok, what's next?": no answer
-        text = text if rest is None else rest  # "credit, what's next?": the rest answers
-        asking = self.is_question(text)
-        if not state.waiting and not self._yes_or_no(state) and self._shrugs.says_nothing(text, step, asking):
+        text = self.reader.squash(text)  # every rule reads "money?!" as "money?"
+        reply = self._unecho(self.reader.read(text), state)
+        reply = reply.settle(lambda part: self._rises(part, step, len(reply.parts) == 1, state, opened))
+        if reply.nudged and not tokenize(reply.unnudged):
+            words = list(dropwhile(self._nudge_leads.__contains__, tokenize(text)))  # round 47: "ok go on" was asked again
+            if " ".join(words) in self._nudge_yes and self.method.steps[state.step].go_on_is_yes:
+                return self.hear("yes", state, opened)  # round 42: "go on" to "jumping in?" lets us go on: a yes
+            return Verdict("nudge", text=text)  # "what's next?": no answer
+        fixed, rest = self._correction(text, state)
+        if fixed:
+            fixed_state = replace(state, slots={**state.slots, fixed.name: fixed.text})
+            then = self.hear(rest, fixed_state, opened) if rest else None
+            if then and then.kind == "answer":  # "I meant 3k, and a year": the 3k fixed, "and a year" this step's answer
+                return replace(then, ahead=then.ahead or fixed_state)
+            return fixed
+        asking = bool(reply.asked)
+        alone = asking and not reply.said  # "lol what?" is "what?" once its lead is cut (round 80)
+        if self._what_alone(reply.asked if alone else text) or self._word_back(text, state) or (alone and self._asked_back(reply.asked, state)):
+            return Verdict("sense", "clarify", text, asking)
+        if asking and reply.said:
+            both = self._with_side(reply, step, state, opened)
+            if both:
+                return both
+        text = reply.said if reply.said and not asking else reply.meant  # "dunno, a year?" -> "a year"
+        backed = not asking and self._yes_or_no(state) and self._backed.match(text)
+        if backed:  # round 52: "yes because I want change" to "are you willing?" was a no; the yes decides
+            text = short_form(backed.group(1), self.cfg) or backed.group(1)
+        elif (not asking and not self._yes_or_no(state) and (lead := self._yes_lead.match(text)) and set(tokenize(text[lead.end():])) - self._plain
+              and not self._backed.match(text)):  # round 109 full run: "sure because I trust you" kept its "sure": a reason, no worry
+            text = text[lead.end():]  # round 85 callers: "aye money", "yes, money" to an open question were saved with the yes
+        if step.either and normal(text) in self._leave_it:  # round 87 callers: "whichever" to "credit or debit?"
+            return self.hear(step.either, state, opened)  # was asked again until the call left the close: it is their pick
+        nothing = not (asking and self.reader.turned_back(text)) and (self._shrugs.blank(text) or self._shrugs.says_nothing(text, step, asking, self._yes_or_no(state)))
+        if not state.waiting and nothing and not self._ready(text, state):  # "yes I'm in" is a shrug's words, but it says they're in
             return Verdict("says_nothing", text=text, asking=asking)  # an answer only: never an interruption
-        ahead = None if asking else hear_ahead(self.method, state, text)  # "do I need 5k?" is not their goal
-        ahead = None if ahead is state else ahead
-        kind, name = self._interrupt(text, step, ahead or state, opened, asking)
+        ahead, text = (None, text) if asking else self._ahead(text, step, state)  # "do I need 5k?" is not their goal
+        kind, name = (None, "") if self._shrugs.plain_no(text, self._yes_or_no(state)) else self._interrupt(text, step, ahead or state, opened, asking)
+        if not kind and asking and reply.said and not self._answers_step(reply.said, step, state):  # round 81: "2 years, what about you?" to "Who would you be?" got "I'll find
+            kind, name = self._interrupt(reply.asked, step, state, opened, asking)  # out": the 2 years answers nothing there
+        if kind == "objection" and not opened and not asking:
+            beside = self._beside_worry(text, step, state, name)
+            if beside:
+                return beside
+        if kind in ("sense", "objection") and not asking and self._shrugs.only_tags(text):
+            return Verdict("says_nothing", text=text)  # round 67: "you see" to "Does that make sense?" was leaving; 68: "by and large" a worry
+        if not kind and not asking and len(parts := clauses(text, self._breaks)) > 1:  # round 82 callers: "2k, thanks" was
+            last = self._interrupt(short_form(parts[-1], self.cfg) or parts[-1], step, state, opened, False)  # saved whole: the whole reply is no thank-you
+            if last[0] == "sense" and self.sense.interruptions[last[1]].with_answer:
+                kind, name = last
+            elif last[0] == "objection" and not opened and (beside := self._beside_worry(text, step, state, last[1])):
+                return beside  # round 89 probes: "money, sounds like a scam" was saved whole and said back
+        if kind == "sense" and not asking:
+            beside = self._beside_sense(text, step, state, name)
+            if beside:
+                return beside
+            if self._over(text, name):
+                return Verdict("says_nothing", text=text)  # "sorry, was driving": back, so the step is asked again
+        if kind == "sense" and self._paused_again(name, state):
+            return Verdict("says_nothing", asking=asking)  # no words to ask about: never "What do you mean by brb?"
+        if kind == "sense" and not asking and self._said_again(name, state):
+            return Verdict("says_nothing")  # "ok, thank you" once "You're welcome." was said: heard as "ok"
         if kind:
             return Verdict(kind, name, text, asking, ahead)
+        if nothing and not self._ready(text, state):  # only after a pause: "I'm back" is heard above, but round 78's
+            back = next((k for k, i in self.sense.interruptions.items() if i.after_wait), None)  # "let me think" after
+            if back and self._shrugs.filler(text):  # "take your time" was saved, and "ok" too: a bare "ok" is back
+                return Verdict("sense", back, text, asking)
+            return Verdict("says_nothing", text=text, asking=asking)
+        if asking and self._means_what(text):  # round 40 callers: "what do you mean stopping me?" got "I'll find out";
+            return Verdict("sense", "clarify", text, asking)  # round 87 probes: "since when?" was saved as how long
         if asking and not self._answers(text, step):
             return Verdict("question", text=text, asking=asking, ahead=ahead)
-        return Verdict("answer", text=text, asking=asking, ahead=ahead)
+        return Verdict("answer", text=text if asking else self._unbroken(text, step, state), asking=asking, ahead=ahead)
 
-    def _yes_or_no(self, state):
-        """The step was last asked as a yes-or-no question ("Is there anything you've tried?"): "yes" answers it."""
-        words = tokenize(question_of(asked_line(self.method, state)[0]))
-        return bool(words) and words[0] in self.cfg["closed_question_starts"]
+    def _unecho(self, reply, state):
+        """The question said back before their answer ("how long? about 2 years", "achieve? quit my job", "what
+        do I want? more money") is talk, not a question: it never picks an answer ("how long?" is near "not
+        long") and is never asked about. With an answer after it, it needs fewer of the question's words
+        (`asked_back_share_with_answer`: "what am I hoping to achieve? more money"). Said back alone, it still
+        asks for the question put another way."""
+        parts, echoed = list(reply.parts), 0
+        for part in parts:
+            if part.act not in ("asks", "rise") or not (self._word_back(part.text, state) or self._asked_back(part.text, state, "asked_back_share_with_answer")):
+                break
+            echoed += 1
+        rises = next((i for i, p in enumerate(parts) if p.act != "rise" or not self._short_rise(p.text)), 0)
+        left = parts[echoed or rises:]
+        if not (echoed or rises) or not left:
+            return reply  # all of it said back: "how long?" alone
+        content = any(p.act in ("said", "rise", "asks") for p in left)
+        if not content and (echoed or all(self._shrugs.shrug(p.text) for p in left)):  # round 83 callers: "achieve? dunno" got "I'm the
+            return replace(reply, unnudged=", ".join(p.text for p in left), parts=tuple(left))  # AI playing the salesperson": the shrug alone;
+        if not echoed:  # round 84 callers: "the reason? dunno" got "I'll find out", a word they wondered about, then a shrug;
+            return reply if content else replace(reply, parts=tuple(Part(p.text.rstrip(" ?"), "said") for p in parts[:rises]) + tuple(left))
+            # round 85 callers: "2k a month? maybe" is an unsure answer, never a question
+        return replace(reply, parts=tuple(Part(p.text, "tag") for p in parts[:echoed]) + tuple(left))
 
-    def _unnudged(self, text):
-        """The reply without a nudge on its end ("credit, what's next?" -> "credit"); None when it has none."""
-        for phrase in sorted(self.sense.nudges, key=len, reverse=True):
-            words = r"\W+".join(map(re.escape, tokenize(phrase)))
-            leads = "|".join(map(re.escape, self.cfg["nudge_leads"]))
-            found = re.search(rf"(?:^|\W)(?:(?:{leads})\W+)?{words}\W*$", text, re.IGNORECASE)
-            if found:
-                return text[:found.start()].rstrip(" ,;:-")
+    def _short_rise(self, text):
+        """A word or two with a "?" and no question word ("the reason?", "money?"): wondered aloud, not asked."""
+        words = [w for w in tokenize(text) if w not in self.cfg["stop_words"]]
+        return 0 < len(words) <= self.cfg["word_back_words"] and not set(words) & set(self.cfg["question_words"])
+
+    def _ahead(self, text, step, state):
+        """(the state with answers to later steps kept, else None; this step's words). Each part is heard too:
+        "more money, about 2k a month" keeps the 2k for the income step, and a part that answers only a later
+        step is left out of this step's answer, so "more money" alone is said back (round 27 callers: "about
+        2k a month" was said back, and the income was asked again)."""
+        ahead = hear_ahead(self.method, state, text)
+        parts = clauses(text, self._breaks)
+        kept = []
+        for part in parts if len(parts) > 1 else ():
+            alone = hear_ahead(self.method, state, part)
+            if alone is state:
+                kept.append(part)
+            else:
+                ahead = replace(ahead, slots={**alone.slots, **ahead.slots})
+        rest = ", ".join(kept)
+        if kept and len(kept) < len(parts) and self._answers_step(rest, step, state):
+            text = rest
+        return (None if ahead is state else ahead), text
+
+    def _said_again(self, name, state):
+        """A remark marked `once`, said again once its reply was said this call ("ok, thank you" after "You're
+        welcome."): nothing new to answer. Round 27 callers: a second thank-you got "Like I said a moment ago."
+        on its own, and "You're welcome." every turn."""
+        said = self.sense.interruptions[name]
+        return said.once and said.reply in state.spoken
+
+    def _paused_again(self, name, state):
+        """A third pause in a row (the last line was `wait_again`, said only to a second one) says nothing: the
+        step is asked again, which spends an ask, so a call never waits forever ("sorry" 20 times did)."""
+        wait_again = self.sense.wait_again
+        return bool(wait_again) and self.sense.interruptions[name].after == "wait" and state.last == wait_again
+
+    def _what_alone(self, text):
+        """A reply of only "what?" (`asked_back_what`, maybe with `what_alone_with`: "sorry, what?") wants the
+        question put another way: it is near "say that again" and "why do you ask" alike, so no score settles it."""
+        words = set(tokenize(text))
+        return bool(words & set(self.cfg["asked_back_what"])) and words <= {*self.cfg["asked_back_what"], *self.cfg["what_alone_with"]}
+
+    def _means_what(self, text):
+        """A question that opens by asking what we meant (`clarify_starts`: "what do you mean stopping me?"):
+        nothing else heard it, so it wants the step put another way, never "I'll find out"."""
+        words = tokenize(text)
+        return any(words[:len(lead)] == lead for lead in map(tokenize, self.cfg["clarify_starts"]))
+
+    def _word_back(self, text, state):
+        """A word or two lifted from the question just asked, said back with a "?" ("a month?" to "How much would
+        you need to be making each month...?", "achieve?", "monthly?") checks what it means: put it another way. Not
+        when the question offers a choice ("Credit or debit?": "debit?" picks one), the reply holds a question word
+        ("why?"), or the line asks nothing ("$5k." then "a month?" asks how it is paid). Two choices of their own
+        ("per month or total?") check it when one is lifted."""
+        if not text.rstrip().endswith("?"):
+            return False
+        asked = set(tokenize(" ".join(q for line in asked_line(self.method, state) for q in questions_of(line) if q.endswith("?"))))
+        words = [w for w in tokenize(text) if w == "or" or w not in {*self.cfg["stop_words"], *self.cfg["word_back_skip"]}]
+        sides = [s.split() for s in " ".join(words).split(" or ")]  # round 94 callers: "per month or total? 2k a month"
+        if "or" in asked or len(sides) > 2 or not all(0 < len(s) <= self.cfg["word_back_words"] for s in sides) or set(words) & set(self.cfg["question_words"]):
+            return False  # got the payment plan line: one side lifted from the question is checking what it means
+        ends = ("", *self.cfg["word_back_ends"])
+        return any(all(any(w + e in asked or (e and w.endswith(e) and w[:-len(e)] in asked) for e in ends) for w in s) for s in sides)
+
+    def _asked_back(self, text, state, share="asked_back_share"):
+        """Their reply is the question just asked, said back about themselves ("what do I want to achieve?" to
+        "What do you want to specifically achieve...?"): they want it put another way. Their I-words are turned
+        into you-words (`asked_back`), and `asked_back_share` of their words must be in its questions, not the talk
+        around them ("can we do option 2?" picks from the talk: it is not the question said back). A you-word
+        of theirs (`asked_back_you`) asks about us ("what do you do?"); one word ("why?") is too few to tell.
+        A "what?" tacked on (`asked_back_what`: "how long what?") is not counted unless the question has it too."""
+        swap = self.cfg["asked_back"]
+        asked = set(tokenize(" ".join(q for line in asked_line(self.method, state) for q in questions_of(line))))
+        words = [w for w in tokenize(text) if w in asked or w not in self.cfg["asked_back_what"]]
+        if len(words) < self.cfg["asked_back_min_words"] or any(w in self.cfg["asked_back_you"] for w in words):
+            return False
+        return sum(swap.get(w, w) in asked for w in words) >= self.cfg[share] * len(words)
+
+    def _rises(self, part, step, alone, state, opened):
+        """A part ending in "?" that isn't phrased as a question is the answer said with a rise when it is short
+        and has the step's shape ("dunno, a year?" to "how long?") or is about them ("my job?": nothing to ask the
+        seller), it opens with a reason ("because money is nice?"), or it is only filler words ("ok?"); on an open
+        step, also when nothing the seller answers hears it as asked ("they fail?", "work harder?"); else it
+        asks ("what's this going to cost me?"). `alone`: the part is the whole reply, where a plain no ("no?")
+        answers too; beside a question ("is it free, no?") it is part of what they ask."""
+        words = tokenize(part)
+        if self.reader.turned_back(part):
+            return False  # round 81: "you?" asks, though its words are filler and "you" fits "Who would you be?"
+        if self._reason(part) or self._shrugs.filler(part) or (alone and self._shrugs.plain_no(part)):  # whole calls:
+            return True  # "ok?" got "I'll find out"; round 73: "no?" alone too, at every step
+        if len(words) > self.cfg["rise_answer_words"]:
+            return False
+        if len(words) >= self.cfg["rise_unsure_words"] and self._shrugs.unsure(part) >= self.sense.unclear_min_score:
+            return True  # round 78: "not sure?" got "let me say that again"; "eh?" alone still asks for it again
+        if words[0] in self.cfg["prospect_pronouns"] or bool(step.needs) and self.shaped(part, step):
+            return True  # round 28: "my job?" got "I'll find out"
+        # round 103 callers: "they fail?" to "What happens to people who...?" got "I don't know that one offhand,
+        # I'll find out": a guess said with a rise. "the price?", "stopping me how?" and "anything?" still ask
+        if (step.needs or not any(r.label == ANY for r in step.listen) or set(words) & set(self.cfg["question_words"])
+                or self._shrugs.says_nothing(part, step, False) or self._shrugs.plain_no(part)):  # "how long is it. no?"
+                # still asks: a plain no only answers alone (round 109 full run)
+            return False
+        heard = self._interrupt(part, step, state, opened, True)[0]
+        # round 104 callers: "books?" to "What are you doing now...?" got "I can send the details after": a product
+        # question only as sure as an interruption on a step that takes any reply ("the price?" 0.9, "books?" 0.75)
+        return not heard or heard == "fact" and self._fact_score(part) < self.cfg["interrupt_threshold"]
+
+    def _fact_score(self, text):
+        """How surely `text` asks one of the offer's product questions."""
+        return self._listener.match(text, {k: e for k, f in self.offer.facts.items() if (e := self._same_person(text, f.examples))}).score
+
+    def _same_person(self, text, examples):
+        """The examples that ask about the same person: a question about themselves ("who would I be?") is never
+        one about us ("who are you"). Round 82 callers: "who would I be? free" got what we do."""
+        words = set(tokenize(text))
+        if not words & self._me or words & self._you:
+            return examples
+        return [e for e in examples if not set(tokenize(e)) & self._you or set(tokenize(e)) & self._me]
+
+    def _wants_more_in(self, text):
+        """The reply wants more ("more than I have now", "my wife wants more money"): a goal, never a worry."""
+        words = tokenize(text)
+        return (any(words[:len(p)] == p for p in self._wants_more)
+                or any(f" {w} " in f" {' '.join(words)} " for w in self._wants_more_words))
+
+    def _reason(self, text):
+        """The reply opens with a reason ("because...", "cos..."): it gives one, it does not ask or object."""
+        words = tokenize(text)
+        return bool(words) and words[0] in self.cfg["reason_starts"]
+
+    def _with_side(self, reply, step, state, opened):
+        """Content that answers the step, beside a question a one-line reply covers ("i guess 3 years, what
+        about you?", "nothing, why do you ask?"): the answer is kept and the question answered in front of the
+        next line. A worry in the content leads instead ("5k? that's a lot"), whatever is asked beside it. None, so
+        the question leads as it always did, when the question is a worry after the price, a pause or goodbye, a
+        shortcut, or itself one of the step's answers beside a "no", after a pause, or when the content is no
+        answer. A question that picks one of the step's answers beside a plain one ("yeah I'm in, how do I
+        pay?") is that answer, heard alone."""
+        if state.waiting:
+            return None  # "ok I'm back, where were we" after a pause
+        within, about = self._interrupt(reply.said, step, state, opened, False)
+        if within == "objection":  # a worry leads, whatever is asked beside it: "5k? that's a lot" is the money,
+            return Verdict(within, about, reply.said)  # "I can't afford it, how do I pay?" is not ready to pay
+        picked = self._chooses(reply.asked, step)
+        if picked:  # "yeah I'm in, how do I pay?": the question is the answer, heard alone, unless the content
+            # takes it back ("no, credit?": torn, judged as before) or is a sense ("brb, how do I pay?")
+            if within:
+                return None
+            if self._takes_back(reply.said, picked, step):  # "not yet, how do I pay?": the yes is taken back, so
+                kind, name = self._interrupt(reply.meant, step, state, opened, True, answers=False)  # it asks
+                return Verdict(kind, name, reply.meant, asking=True) if kind == "fact" else None
+            return Verdict("answer", text=reply.asked, asking=True)
+        # round 94 callers: "what do you mean by achieve? money I guess" got "I'm the AI playing the salesperson"
+        kind, name = ("sense", "clarify") if self._means_what(reply.asked) else self._interrupt(reply.asked, step, state, opened, True)
+        sense = self.sense.interruptions[name] if kind == "sense" else None
+        # "what do you mean? money I suppose": a sense that asks for other words, then their own answer, is the answer;
+        # round 73: so is one that asks for the same words ("come again? 2k" lost the 2k). A pause or goodbye leads
+        reworded = sense and not sense.with_answer and (sense.after == "ask" or sense.after.startswith("rephrase"))
+        if sense and not sense.with_answer and not reworded:  # round 73: "can I go now? 2k" was "I don't know that
+            return Verdict(kind, name, reply.asked, asking=True)  # one offhand": the 2k beside it hid the goodbye
+        if kind in ("ready", "answer") or (kind == "objection" and opened):
+            return None
+        if within:  # the content is a sense, no answer ("shut up"): it leads only beside a plain question
+            return None if kind else Verdict(within, about, reply.said)  # "shut up, what's the price?" wants the price
+        if not self._answers_step(reply.said, step, state):  # "say that again? money" to "how much a month?":
+            return Verdict(kind, name, reply.asked, asking=True) if reworded else None  # no answer, so it is said again
+        ahead = hear_ahead(self.method, state, reply.said)
+        if reworded:
+            return Verdict("answer", text=reply.said, ahead=None if ahead is state else ahead)
+        return Verdict("answer", text=reply.said, asking=True, ahead=None if ahead is state else ahead,
+                       side=f"{kind}:{name}" if kind else "question", asked=reply.asked)
+
+    def _correction(self, text, state):
+        """(verdict, rest): their last answer fixed a turn later ("sorry I meant 3k not 2k"): the new words, for
+        the slot it was saved in, when they have that step's shape, and what came after them for this step
+        ("I meant 3k, and a year" -> "and a year"). (None, "") otherwise: "I meant what I said" fixes nothing."""
+        opening = re.match(self.cfg["corrects"], text, re.IGNORECASE)
+        if not opening or not state.slots:
+            return None, ""
+        slot = next(reversed(state.slots))
+        value, _, rest = re.sub(self.cfg["corrects_drop"], "", text[opening.end():], flags=re.IGNORECASE).partition(", ")
+        value = value.strip(" .!,")
+        step = self._captures.get(slot)
+        if not value or not step or step.id == state.step or (step.needs and not re.search(step.needs, value, re.IGNORECASE)):
+            return None, ""
+        return Verdict("corrects", slot, value), rest.strip(" .!,")
+
+    def _beside_worry(self, text, step, state, name):
+        """An answer, then a worry before the price ("make money online, but I've been burnt before"): the
+        answer is kept and the worry's early line goes in front of the next question, as for a worry asked
+        beside an answer. None when the first part is no answer, or the worry is not in the rest alone."""
+        head, *rest = clauses(text, self._breaks)
+        rest = ", ".join(rest)  # without the "but" that joins them: the worry heard on its own words
+        if not rest or self._interrupt(head, step, state, False, False)[0]:
+            return None
+        alone = self._interrupt(rest, step, state, False, False)
+        if alone not in {("objection", name), (None, "")}:  # round 89 callers: "money, I'm broke" got "I haven't mentioned
+            return None  # a price yet": "I'm broke" alone is no worry, only the reason beside the answer
+        if not self._answers_step(head, step, state):
+            return None
+        ahead = hear_ahead(self.method, state, head)
+        return Verdict("answer", text=head, ahead=None if ahead is state else ahead, side=f"objection:{name}" if alone[0] else "")
+
+    def _beside_sense(self, text, step, state, name):
+        """A remark that is a sense able to sit beside an answer (`with_answer`), with an answer in the other parts
+        ("oh great, another sales call. more money I guess"): the answer is kept and the sense's line goes in
+        front of the next question, as when it is asked beside one. A pause or goodbye said in the past sits
+        beside one too, with no line ("sorry kids were shouting, 2k": they are back). The answer is the parts
+        after the remark ("oh great" before it is talk), else those before it. None when no part alone is that
+        sense, or the rest is no answer."""
+        said = self.sense.interruptions[name]
+        parts = clauses(text, self._breaks)
+        for i, part in enumerate(parts):
+            if self._interrupt(short_form(part, self.cfg) or part, step, state, False, False) != ("sense", name):  # "free, ta" (round 82)
+                continue
+            if not said.with_answer and not self._over(part, name):
+                return None
+            rest = ", ".join(parts[i + 1:] or parts[:i])
+            if not rest or self._interrupt(rest, step, state, False, False)[0] or not self._answers_step(rest, step, state):
+                return None
+            ahead = hear_ahead(self.method, state, rest)
+            side = "" if not said.with_answer or self._said_again(name, state) else f"sense:{name}"  # "You're welcome." once a call
+            return Verdict("answer", text=rest, ahead=None if ahead is state else ahead, side=side)
         return None
 
-    def _interrupt(self, text, step, state, opened, asking):
-        """An everyday interruption, product question or objection - only when it clearly beats
-        reading the reply as an answer to the step's own question, like a human closer would."""
-        senses = {k: i for k, i in self.sense.interruptions.items() if state.waiting or not i.after_wait}
-        labels = {f"sense:{k}": i.examples for k, i in senses.items()}
-        floors = {f"sense:{k}": i.min_score for k, i in senses.items()}  # lowest score a label counts at
-        if asking:
-            labels.update({f"fact:{k}": f.examples for k, f in self.offer.facts.items()})
-        objections = self.method.objections.items()
-        if not opened and step.doubts_answer and not asking:
-            objections = ()  # "money's tight" answers "what holds you back"; "is this a scam?" still asks
+    def _unbroken(self, text, step, state):
+        """The answer without a part that alone is a break already over ("sorry I was in a meeting, more money":
+        more money). The break leads or ends the reply: the fewest parts that are one ("sorry, I was out" is two), then
+        any part beside it that answers nothing ("more money, sorry, I was out"). Round 34 callers: the answer won,
+        so the whole was saved and said back."""
+        parts = clauses(text, self._breaks)
+        if not set(self.cfg["sense_over_words"]) & set(tokenize(text)):
+            return text
+        for k in range(1, len(parts)):
+            for cut, rest, edge in ((parts[:k], parts[k:], 0), (parts[-k:], parts[:-k], -1)):
+                if self._ended(", ".join(cut), step, state):
+                    while len(rest) > 1 and not self._answers_step(rest[edge], step, state):
+                        rest = rest[1:] if edge == 0 else rest[:-1]
+                    return ", ".join(rest)
+        return text
+
+    def _ended(self, part, step, state):
+        """The part alone is a pause or goodbye said in the past."""
+        kind, name = self._interrupt(part, step, state, False, False)
+        return kind == "sense" and self._over(part, name)
+
+    def _over(self, text, name):
+        """A pause or goodbye said in the past ("sorry, was driving", "the kids were shouting"): the break is
+        over and they are back, so it is talk, never "take your time" or the call left (round 33 callers:
+        "sorry was driving, 2k" ended the call). `sense_over_after`: the senses it can be; `sense_over_words`:
+        the words that put it in the past."""
+        return (self.sense.interruptions[name].after in self.cfg["sense_over_after"]
+                and any(w in self.cfg["sense_over_words"] for w in tokenize(text)))
+
+    def _chooses(self, question, step):
+        """The one label of the step's answers the question surely picks on its own ("how do I pay?" at the
+        close), else "": not torn between two ("how much is it anyway" is near two goal levels and picks neither)."""
+        labels = answer_labels(step)
+        found = self._listener.match(question, labels) if labels else None
+        sure = found and found.label and not found.close and found.score >= self.cfg["question_answer_min_score"]
+        return found.label if sure and self._names(question, labels[found.label]) else ""
+
+    def _names(self, question, examples):
+        """The question names a word of the answer it is near ("can I use paypal?": paypal), or only small words
+        ("which one?"). One with words of its own the answer never uses asks about something else (round 34
+        callers: "which is better?", 0.81 to "whichever is easier", got "Welcome aboard")."""
+        small = {*self.cfg["stop_words"], *self.cfg["question_words"], *self.cfg["closed_question_starts"],
+                 *self.cfg["question_subjects"]}
+        own = {w for w in tokenize(question) if w not in small}
+        return not own or bool(own & {w for e in examples for w in tokenize(e)})
+
+    def _takes_back(self, said, label, step):
+        """The content is another of the step's answers, one that says no (`takes_back`: "no", "not yet"):
+        beside "how do I pay?" it takes the question back. "yeah I'm in" doesn't."""
+        found = self._listener.match(said, answer_labels(step))
+        if not (found and found.label) or found.label == label:
+            return False
+        return next(r for r in step.listen if r.label == found.label).like in self.cfg["takes_back"]
+
+    def _answers_step(self, text, step, state):
+        """`text` is an answer the step keeps: its shape, not a shrug, and one of its answers or any reply."""
+        if not self.shaped(text, step):
+            return False
+        if self._shrugs.says_nothing(text, step, False) and not self._yes_or_no(state):
+            return False
+        labels = answer_labels(step)
+        if labels and self._listener.answer(text, labels, list(self.sense.unclear),
+                                            {r.label: r.min_score for r in step.listen if r.label}).label:
+            return True
+        return any(r.label == ANY for r in step.listen)
+
+    @staticmethod
+    def shaped(text, step):
+        """The reply has the shape the step's answer needs (`needs`: a figure, a span of time), or it needs none."""
+        return not step.needs or bool(re.search(step.needs, text, re.IGNORECASE))
+
+    def _yes_or_no(self, state):
+        """The step was last asked as a yes-or-no question ("Is there anything you've tried?"): "yes" answers it.
+        Any part of it (between commas) opening with a helper verb, past lead-ins ("so", "and", "okay"): "So if
+        your partner isn't on board, would you still go ahead?", "Okay, And do you want...", "..., aren't you?"."""
+        if self.method.steps[state.step].yes_no:
+            return True
+        leads = self.cfg["question_lead_words"]
+        for part in question_of(asked_line(self.method, state)[0]).split(","):
+            words = list(dropwhile(leads.__contains__, tokenize(part)))
+            if words and words[0] in self.cfg["closed_question_starts"]:
+                return True
+        return False
+
+    def _open(self, step_id):
+        """{name: Ready} for the shortcuts open at this step."""
+        return {k: r for k, r in self.method.shortcuts.items() if ready_open(self.method, step_id, r)}
+
+    def _ready(self, text, state):
+        """The reply takes a shortcut open at this step ("yes I'm in", "credit")."""
+        return any(r.says(text)
+                   or self._listener.match(text, {"ready": list(r.examples)}, by_clause=False).score >= r.min_score
+                   for r in self._open(state.step).values())
+
+    def _worries(self, text, step, state, opened, asking, hedge, unsure):
+        """The objections still in the running for this reply, as (name, Objection): a worry is only heard where
+        it can be one ("money's tight" answers "what holds you back"; "yes because I need the money" says why yes)."""
+        objections = [(k, o) for k, o in self.method.objections.items() if not _says_any(text, o.never_with)]
+        if not asking and self._backed.match(text):
+            objections = ()  # round 52: "yes because I need the money" says why yes; it is no money worry
+        elif not opened and not asking and (step.doubts_answer or self._reason(text)
+                                             or self._wants_more_in(text)):
+            objections = ()  # "money's tight" answers "what holds you back", "because money is tight" any step;
+            # "is this a scam?" still asks
         elif not opened and asking:
             objections = [(k, o) for k, o in objections if o.early]  # "is this a scam?" gets an honest early line
-        if not opened:
-            objections = [(k, o) for k, o in objections if k not in state.parked]  # parked once: never twice
-        else:  # a worry already being handled, or one the step asks about ("the money?"), answers the step
-            asked = {r.label for r in step.listen}
-            objections = [(k, o) for k, o in objections if k not in state.raised and k not in asked]
-        labels.update({f"objection:{k}": o.examples for k, o in objections})
+        if not opened and not asking:  # parked once, said again: an answer. Asked again ("how do I know this
+            objections = [(k, o) for k, o in objections if k not in state.parked]  # isn't a scam?"): still the worry
+        if hedge and objections:  # "I don't know" (0.74 to "I don't trust this") is not knowing, not a worry; one
+            # nearer a worry than not knowing is the worry ("let me think about it": 1.0 to it, 0.96 to "let me think")
+            worry = self._listener.match(text, {k: o.heard(opened) for k, o in objections}, by_clause=False)
+            objections = [(k, o) for k, o in objections if k == worry.label and worry.score > unsure]
+        return objections
+
+    def _interrupt(self, text, step, state, opened, asking, answers=True):
+        """An everyday interruption, product question or objection - only when it clearly beats
+        reading the reply as an answer to the step's own question, like a human closer would. `answers`
+        False: the step's answers are not in the running (one was taken back beside it)."""
+        # "not sure" alone is not knowing, not asking what we meant: no sense that rephrases hears a hedge, and
+        # "let me think" is thinking out loud, not a pause: no sense that waits does (whole calls: "take your time" forever)
+        unsure = 0.0 if asking else self._shrugs.unsure(text)
+        hedge = unsure >= self.sense.unclear_min_score
+        senses = {k: i for k, i in self.sense.interruptions.items()
+                  if (state.waiting or not i.after_wait) and not (hedge and i.after in ("rephrase", "wait"))
+                  and (asking or not i.only_asked) and not (opened and i.before_price)
+                  and not _says_any(text, i.never_with) and (not i.only_with or _says_any(text, i.only_with))}
+        labels = {f"sense:{k}": i.heard(opened) for k, i in senses.items()}
+        floors = {f"sense:{k}": i.min_score for k, i in senses.items()}  # lowest score a label counts at
+        if hedge:  # one that is nearer not knowing counts only if it beats it (round 38: "let me think" got "let me say that again")
+            floors = {k: max(f, math.nextafter(unsure, 2)) for k, f in floors.items()}
+        if asking:
+            labels.update({f"fact:{k}": e for k, f in self.offer.facts.items() if (e := self._same_person(text, f.examples))})
+        objections = self._worries(text, step, state, opened, asking, hedge, unsure)
+        handled = set()  # a worry already being handled, or one the step asks about ("the money?"), answers the step.
+        if opened:  # Past its talk, a step that keeps any reply would keep it as their answer: it is the worry again
+            # (whole calls: "he decides the money stuff" to "What makes you say that?" was their reason, then payment)
+            talking = state.step in self.method.talks or not any(r.label == ANY for r in step.listen)
+            handled = {k for k, _ in objections if (k in state.raised and talking) or k in {r.label for r in step.listen}}
+        labels.update({f"objection:{k}": o.heard(opened) for k, o in objections})
+        objections = [(k, o) for k, o in objections if k not in handled]
         if not opened and not asking:  # "money", "scared", "risk" before the price are answers, not objections
             floors.update({f"objection:{k}": self.cfg["early_objection_min_score"] for k, _ in objections})
-        if ready_open(self.method, state.step):
-            labels["ready:prospect"] = self.method.ready.examples
-            floors["ready:prospect"] = self.method.ready.min_score
-        takes_any = any(r.label == ANY for r in step.listen)
-        won = self._listener.interruption(text, labels, answer_labels(step), takes_any, asking, floors)
+        for k, r in self._open(state.step).items():
+            if r.says(text):  # its own words ("take my money") take it outright
+                return "ready", k
+            labels[f"ready:{k}"], floors[f"ready:{k}"] = r.examples, r.min_score
+        # the catch-all keeps any reply only if it has the step's shape: "I don't have time for this" to "how
+        # long?" can't be the answer, so nothing has to out-score it there (live: the frustration went unheard)
+        takes_any = any(r.label == ANY for r in step.listen) and self.shaped(text, step)
+        won = self._listener.interruption(text, labels, answer_labels(step) if answers else {}, takes_any, asking, floors)
+        if won and won.split(":", 1)[1] in handled:  # still kept as a label so a near worry can't win in its place
+            # live: "I don't have 5k lying around" in the money talk was heard as "think it over". Asked again
+            # ("how do I know this isn't a scam?" in the scam talk) it answers the step too, never "I'll find out"
+            won = "answer:" if asking else None
         if not won and not opened and not asking:
             won = self._judged_objection(text, step, dict(objections))
         return tuple(won.split(":", 1)) if won else (None, "")
@@ -105,11 +560,11 @@ class Ear:
     def _judged_objection(self, text, step, objections):
         """An objection that scored in the grey band before the price ("10k seems like a lot", 0.81): too close
         to the step's answers for the embedder alone, so the AI picks objection or answer. AI down = answer."""
-        found = self._listener.match(text, {k: o.examples for k, o in objections.items()})
+        found = self._listener.match(text, {k: o.heard(False) for k, o in objections.items()})
         if not found.label or found.score < self.cfg["early_objection_judge_score"]:
             return None
         answers = [f"answering '{question_of(step.say_plain or step.say)}'"]  # the question asked, so the AI judges in context
-        examples = objections[found.label].examples
+        examples = objections[found.label].heard(False)
         nearest = self._listener.match(text, {e: [e] for e in examples}).candidates  # the AI sees the closest ones
         pick = self._judge(text, {f"{found.label} objection": list(nearest) or examples, "answer": answers})
         return f"objection:{found.label}" if pick == f"{found.label} objection" else None
@@ -119,4 +574,7 @@ class Ear:
         sense, what's next?" at the temp check), only when sure: "what happens to the card?" asks about the
         card, it doesn't choose it. Two answers too close to call are judged as usual."""
         labels = answer_labels(step)
-        return bool(labels) and self._listener.answer_score(text, labels, asking=True) > 0
+        if not labels or self._listener.answer_score(text, labels, asking=True) <= 0:
+            return False
+        found = self._listener.match(text, labels)
+        return not found.label or found.close or self._names(text, labels[found.label])
