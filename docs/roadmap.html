@@ -68,6 +68,25 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .subs li::before{counter-increment:s;content:var(--n) "." counter(s);font:500 11px var(--mono);color:var(--accent);min-width:2.4em}
 .subs li.ok{color:var(--muted)}
 .subs li.ok::after{content:"";}
+.m{font:600 10px var(--mono);padding:1px 6px;border-radius:5px;margin-left:6px;white-space:nowrap;vertical-align:1px}
+.m.R{background:color-mix(in srgb,var(--done) 15%,transparent);color:var(--done)}
+.m.M{background:color-mix(in srgb,var(--accent2) 16%,transparent);color:var(--accent2)}
+.m.G{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn)}
+.legend{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.leg{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:6px;min-width:0}
+.leg .m{margin:0;justify-self:start;font-size:12px;padding:3px 8px}
+.leg p{margin:0;font-size:13px;color:var(--muted)}
+.bar{display:flex;height:10px;border-radius:99px;overflow:hidden;background:var(--line)}
+.bar i{display:block;transition:width 1s ease}
+.barkey{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--muted);margin-top:8px}
+.how{margin:0;font-size:13px;color:var(--muted);border-left:2px solid var(--accent2);padding-left:10px}
+.models{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.model{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:6px;min-width:0}
+.model h3{font-size:15px}
+.model p{margin:0;font-size:13px;color:var(--muted)}
+.model dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:13px}
+.model dt{font:500 11px var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding-top:2px}
+.model dd{margin:0}
 .chip.built{background:color-mix(in srgb,var(--done) 16%,transparent);color:var(--done)}
 .chip.prog{background:color-mix(in srgb,var(--accent2) 16%,transparent);color:var(--accent2)}
 .mod{font:600 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent2);margin:10px 0 2px 70px}
@@ -97,7 +116,7 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .opt:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .effect{font-size:13px;color:var(--muted);min-height:2.6em}
 footer{font-size:12px;color:var(--muted)}
-@media (max-width:640px){.cols,.decide,.duo{grid-template-columns:1fr}.swap{justify-self:center;rotate:90deg}.mod{margin-left:54px}.route::before{left:21px}.stop{grid-template-columns:44px 1fr}.pin{width:44px;height:44px}}
+@media (max-width:640px){.cols,.decide,.duo,.legend,.models{grid-template-columns:1fr}.swap{justify-self:center;rotate:90deg}.mod{margin-left:54px}.route::before{left:21px}.stop{grid-template-columns:44px 1fr}.pin{width:44px;height:44px}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 
@@ -105,7 +124,7 @@ footer{font-size:12px;color:var(--muted)}
   <header>
     <div class="label">Eloquence · requirements</div>
     <h1>From a real call to a better rep</h1>
-    <p class="lede">Upload a call. Get it reviewed. Practise against that exact prospect. Managers see what the whole team needs.</p>
+    <p class="lede">Upload a call. See where it turned. Practise against that exact prospect. Track the skills that need work.</p>
   </header>
 
   <section aria-label="How a call moves through the product">
@@ -116,17 +135,27 @@ footer{font-size:12px;color:var(--muted)}
   <section aria-label="Two ways to practise">
     <div class="label" style="margin-bottom:12px">Two ways to practise</div>
     <div class="duo">
-      <div class="role"><div class="who">ICON_person<span>You are the <b>prospect</b></span></div><div class="who">ICON_bot<span>AI is the <b>salesperson</b></span></div><span class="tag">Buy mode · building now</span><p>Hear how a good rep sells. Learn the script from the other side.</p></div>
+      <div class="role"><div class="who">ICON_person<span>You are the <b>prospect</b></span></div><div class="who">ICON_bot<span>A virtual <b>rep</b> sells to you</span></div><span class="tag">Buy mode · building now</span><p>Hear how a good rep sells. Learn the script from the other side.</p></div>
       <svg class="i swap" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4L3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/></svg>
-      <div class="role"><div class="who">ICON_person<span>You are the <b>salesperson</b></span></div><div class="who">ICON_bot<span>AI is the <b>prospect</b></span></div><span class="tag">Sell mode · next</span><p>Practise selling. Upload a real call and the AI becomes that exact prospect.</p></div>
+      <div class="role"><div class="who">ICON_person<span>You are the <b>salesperson</b></span></div><div class="who">ICON_bot<span>A virtual <b>prospect</b> pushes back</span></div><span class="tag">Sell mode · next</span><p>Practise selling. Upload a real call and the prospect becomes that exact buyer.</p></div>
     </div>
+  </section>
+
+  <section aria-label="How each part works">
+    <div class="label" style="margin-bottom:12px">How it's done · fastest first</div>
+    <div class="legend">
+      <div class="leg"><span class="m R">Rules</span><p>Patterns, checklists, maths. Instant, free, same answer every time.</p></div>
+      <div class="leg"><span class="m M">Our model</span><p>Small models trained on Kaggle, run on our own server. Fast, free per use.</p></div>
+      <div class="leg"><span class="m G">Groq</span><p>Only where new sentences must be written. Always has a fallback.</p></div>
+    </div>
+    <div style="margin-top:14px"><div class="bar" id="bar"></div><div class="barkey" id="barkey"></div></div>
   </section>
 
   <section class="stats" aria-label="Summary">
     <div class="stat"><b>10</b><span>steps, 4 modules</span></div>
-    <div class="stat"><b>10–13 wk</b><span>one developer</span></div>
+    <div class="stat"><b>11–14 wk</b><span>one developer</span></div>
     <div class="stat"><b>~3 wk</b><span>to upload-a-call demo</span></div>
-    <div class="stat"><b>~45%</b><span>already built</span></div>
+    <div class="stat"><b id="donepct">–</b><span>sub-steps already built</span></div>
   </section>
 
   <section>
@@ -135,11 +164,16 @@ footer{font-size:12px;color:var(--muted)}
   </section>
 
   <section>
+    <div class="label" style="margin-bottom:12px">Models to train on Kaggle</div>
+    <div class="models" id="models"></div>
+  </section>
+
+  <section>
     <div class="label" style="margin-bottom:12px">Decide first</div>
     <div class="decide" id="decide"></div>
   </section>
 
-  <footer>Based on the current repo: sell mode, deterministic turn rating, personas in <code>config/buyer.yaml</code>, Fathom objection import, Groq LLM. Effort assumes one developer.</footer>
+  <footer>Based on the current repo: buy mode already hears by meaning with a local model (bge-small via fastembed) and calls Groq only for close calls; sell mode runs readiness and objections by rules and uses Groq to word each buyer reply. Effort assumes one developer.</footer>
 </div>
 
 <script>
@@ -162,7 +196,7 @@ I.radar='<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><path d="
 I.target='<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>';
 const ic=(k)=>`<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${I[k]}</svg>`;
 
-const flow=[["upload","Upload call"],["person","AI becomes prospect"],["play","You sell"],["review","Review"],["radar","Skill Radar"],["team","Team insights"]];
+const flow=[["upload","Upload call"],["person","Prospect profile"],["play","You sell"],["review","Review"],["radar","Skill Radar"],["team","Team insights"]];
 document.getElementById("flow").innerHTML=flow.map(([k,t],i)=>(i?'<div class="pipe"></div>':'')+`<div class="node" data-i="${i}"><div class="ic">${ic(k)}</div>${t}</div>`).join("");
 const nodes=[...document.querySelectorAll(".node")];let f=0;
 nodes[0].classList.add("on");
@@ -170,53 +204,72 @@ if(!matchMedia("(prefers-reduced-motion: reduce)").matches)setInterval(()=>{node
 
 document.querySelectorAll(".who").forEach(w=>w.innerHTML=w.innerHTML.replace(/ICON_(\w+)/,(m,k)=>ic(k)));
 // st: built | prog | new ; subs: [text, done?]
+// Each sub-step: [text, method R|M|G, done?]
 const steps=[
  {mod:"Foundation"},
  {k:"server",t:"Fix the server deploy",e:"½ day",st:"fix",
-  why:"New backend code isn't reaching the live API. Everything below needs it.",
-  subs:["Add VM secrets in GitHub","Run the deploy","Confirm /api/health shows the new version"],have:["Deploy workflow","Health check"],
-  out:"Every merge ships to the live server"},
+  why:"New backend code isn't reaching the live server. Everything below needs it.",
+  subs:[["Add the server secrets in GitHub","R"],["Run the deploy","R"],["Confirm /api/health shows the new version","R"]],
+  have:["Deploy workflow","Health check"],out:"Every merge ships to the live server"},
  {mod:"Practice · two directions"},
- {k:"bot",t:"AI plays the salesperson",e:"in progress",st:"prog",
-  why:"You play the prospect and watch a good rep work. This is the part you're building first.",
-  subs:[["Scripted seller moves through stages",1],["Coach notes and stage tracking",1],"Finish and polish the seller's flow","Pick which script or offer the AI sells","Optional: clone a top rep from their uploaded call"],have:["Buy mode","Script engine","Coach"],
-  out:"A believable AI rep you can learn from"},
- {k:"person",t:"Reverse it: you sell, AI is the prospect",e:"built · tune",st:"built",
-  why:"The main practice loop. You sell; the AI pushes back like a real buyer.",
-  subs:[["Buyer personas and difficulty",1],["Real objections from Fathom",1],["Turn-by-turn review, drills, quiz",1],"One switch to swap roles between the two modes","Tune buyer realism with real calls"],have:["Sell mode","Turn rating","Drills"],
-  out:"Reps practise selling on demand"},
- {k:"upload",t:"Upload a call → AI becomes that prospect",e:"1.5–2 wk",st:"new",
-  why:"Practise against the buyer you actually lost, automatically.",
-  subs:["Upload button for a transcript (Fathom / Zoom)","Split it into rep and prospect lines","AI reads the call and builds a profile: role, pains, budget, tone, objections","Show a profile card the rep can edit","Start the roleplay with the AI as that prospect","Option: start from the moment the real call went wrong","Save the prospect to a library to replay later"],have:["Persona format","Objection extraction (offline only)"],
-  out:"Upload, confirm, practise in under a minute"},
+ {k:"bot",t:"Virtual rep sells to you",e:"in progress",st:"prog",
+  why:"You play the prospect and watch a good rep work. Being built now.",
+  how:"Already the pattern to copy: rules lead, a local model hears meaning, Groq only settles close calls.",
+  subs:[["Rep follows the script stages","R",1],["Hears your reply by meaning (local bge-small)","M",1],["Coach notes and stage tracking","R",1],["Groq settles close calls and writes short acknowledgements","G",1],["Finish and polish the flow","R"],["Choose the script or offer it sells","R"],["Copy a top rep: their lines from an uploaded call, sorted into stages","M"]],
+  have:["Buy mode","Script engine","Meaning matcher"],out:"A believable rep you can learn from"},
+ {k:"person",t:"Reverse it: you sell, the prospect pushes back",e:"built · rework",st:"built",
+  why:"The main practice loop. Rules already own readiness, objections, opening and closing lines. Groq still writes the middle of each reply; most of that can move to real lines.",
+  how:"Rules pick the buyer's next move. Real prospect lines say it. Groq only fills gaps.",
+  subs:[["Personas and difficulty","R",1],["Readiness, objections, opening and closing lines","R",1],["Real objections from Fathom","R",1],["Turn-by-turn review, drills, quiz","R",1],["One switch to swap roles","R"],["Rules choose the next move from readiness: object, ask, warm up, stall, agree","R"],["Say it with a real prospect line that fits the move and topic","M"],["Groq writes the line only when nothing fits","G"],["Check realism against real calls: reply length, questions, objection rate","R"]],
+  have:["Sell mode","Buyer state and readiness","Turn rating"],out:"Faster, cheaper replies that sound like real buyers"},
+ {k:"upload",t:"Upload a call → it becomes that prospect",e:"~2 wk",st:"new",
+  why:"Practise against the buyer you actually lost, set up automatically.",
+  how:"No Groq needed. The same call always gives the same profile.",
+  subs:[["Upload a transcript: Fathom, Zoom, VTT, SRT or text","R"],["Find the rep: your name, or the speaker asking most questions. One tap to correct","R"],["Spot objections: phrase lists first, then a trained classifier","M"],["Pull facts: budget, prices, team size, dates, competitors","R"],["Set difficulty from behaviour: pushback, short replies, hedging","R"],["Pick the pains in their own words: the sentences that best match pain examples","M"],["Profile card the rep can edit","R"],["Start the roleplay as that prospect","R"],["Option: start from where the real call turned","R"],["Save to a prospect library","R"]],
+  have:["Persona format","Objection types","Meaning matcher"],out:"Upload, confirm, practise in under a minute"},
  {k:"review",t:"Call review",e:"~1 wk",st:"new",
-  why:"Shows where a real call was won or lost, and picks the moment to replay.",
-  subs:["Run the review on uploaded calls","Tune scoring for spoken calls (10–20 real calls)","Tag each turn's stage","Mark the turning points","\"Replay from here\" button into step 4"],have:["Turn rating","Pivotal moments"],
-  out:"Every rep line rated, the turning points marked"},
+  why:"Shows where a real call was won or lost, and which moment to replay.",
+  subs:[["Rate every rep line with the existing judge","R"],["Calibrate thresholds on 10–20 real Fathom calls","R"],["Tag each turn's stage: example matching, then a trained classifier","M"],["Mark turning points from readiness swings","R"],["\"Replay from here\" button into step 4","R"]],
+  have:["Turn rating","Pivotal moments"],out:"Every rep line rated, the turning points marked"},
  {mod:"Platform"},
  {k:"lock",t:"Accounts, database, privacy",e:"1.5–2 wk",st:"new",
   why:"Calls, prospects and progress must be saved per person and team.",
-  subs:["Login (magic link or Google)","Database: users, teams, calls, sessions, prospects","Background jobs for long tasks","Consent, retention period, delete button"],have:["Nothing yet: memory and browser storage only"],
-  out:"Saved history and safe handling of recordings"},
- {k:"mic",t:"Audio upload",e:"3–4 days",st:"new",
+  subs:[["Login: magic link or Google","R"],["Database: users, teams, calls, sessions, prospects","R"],["Background jobs for long tasks","R"],["Consent, retention period, delete button","R"],["Remove names and numbers before anything reaches Groq","R"]],
+  have:["Nothing yet: server memory and browser storage only"],out:"Saved history and safe handling of recordings"},
+ {k:"mic",t:"Audio upload",e:"3–5 days",st:"new",
   why:"Most reps have recordings, not transcripts.",
-  subs:["Transcribe with Groq Whisper","Split files over 25 MB","Work out who is speaking"],have:["Groq key"],
-  out:"Drop in an MP3 and everything above works"},
+  how:"Turning speech into text needs a speech model. Groq is fastest; our own is free but slower.",
+  subs:[["Speech to text: Groq Whisper, or Whisper on our server","G"],["Split long files into chunks","R"],["Who is speaking: separate stereo channels when recorded that way","R"],["Otherwise a speaker model, tested on Kaggle first","M"]],
+  have:["Groq key"],out:"Drop in an MP3 and everything above works"},
  {mod:"Skill Radar · personal growth"},
  {k:"radar",t:"Skill Radar",e:"1.5–2 wk",st:"new",
-  why:"Targeted improvement: find each rep's weakest skill, set a target, and train exactly that.",
-  subs:["Skill scores per session: questions, listening, objections, closing","Radar chart and trend over time","Rep sets targets (e.g. handle price objections 70%+)","Auto-pick weak spots and assign drills and prospects","Weekly progress summary"],have:["Turn rating scores","Drills on a spaced schedule","Analytics events"],
-  out:"Each rep knows their next skill to fix, and sees it improve"},
+  why:"Targeted improvement: find each rep's weakest skill, set a target, train exactly that.",
+  how:"All rules. Built on scores the app already computes.",
+  subs:[["Skill scores per session: questions, listening, objections, closing","R"],["Radar chart and trend over time","R"],["Rep sets targets, e.g. win 70% of price objections","R"],["Weakest skill picks the next drills and prospects","R"],["Weekly progress summary from templates","R"]],
+  have:["Turn rating scores","Spaced drills","Analytics events"],out:"Each rep knows their next skill to fix, and sees it improve"},
  {mod:"Business"},
  {k:"doc",t:"SOP review",e:"1.5–2 wk",st:"new",
   why:"Check the playbook, then check calls against it.",
-  subs:["Upload PDF / DOCX","Critique against CAT and Impact methods","Convert into script stages","Score each call step by step","AI salesperson (step 2) can sell using the SOP"],have:["Script stages","Method configs"],
-  out:"A playbook report and adherence score per call"},
+  subs:[["Read PDF and DOCX","R"],["Headings and lists become stages and steps","R"],["Checklist against CAT and Impact: is each element there?","M"],["Score each call: does a rep line match each step's meaning?","M"],["Optional written critique","G"],["Virtual rep (step 2) sells using the SOP","R"]],
+  have:["Script stages","Method configs","Meaning matcher"],out:"A playbook report and an adherence score per call"},
  {k:"team",t:"Manager insights",e:"2–3 wk",st:"new",
   why:"Turns every rep's Skill Radar into coaching for the team.",
-  subs:["Rep and manager roles","Team dashboard built on Skill Radar","Compare reps and spot team-wide gaps","AI-written coaching guidelines","Export"],have:["Session analytics events"],
-  out:"Managers see what to train, by whom, with evidence"}
+  subs:[["Rep and manager roles","R"],["Team dashboard built on Skill Radar","R"],["Compare reps and spot team-wide gaps","R"],["Coaching guidelines from rules: if a skill is below target, assign this","R"],["Optional plain-English rewrite","G"],["Export CSV","R"]],
+  have:["Analytics events"],out:"Managers see what to train, by whom, with evidence"}
 ];
+const models=[
+ {t:"Objection classifier",use:"Steps 3, 4, 5",data:"Fathom objections, already labelled by type",how:"TF-IDF + logistic regression first; under 1 MB, about 1 ms",why:"Replaces phrase lists that miss new wording"},
+ {t:"Stage classifier",use:"Steps 2, 5, 9",data:"Script lines per stage, plus hand-labelled Fathom turns",how:"Same small model; upgrade to bge-small features if accuracy is short",why:"Tags which stage a line belongs to"},
+ {t:"Tuned meaning matcher",use:"Steps 2, 3, 4, 9",data:"Pairs of lines that mean the same, from our scripts and calls",how:"Fine-tune bge-small on a Kaggle GPU, export ONNX, run with fastembed",why:"Better matches for SOP steps and buyer replies"},
+ {t:"Speaker separation",use:"Step 7",data:"A few labelled recordings",how:"Test pyannote on a Kaggle GPU; adopt only if it runs on our server",why:"Splits rep and prospect in mono audio"}
+];
+const MN={R:"Rules",M:"Our model",G:"Groq"};
+document.getElementById("models").innerHTML=models.map(m=>`<div class="model"><h3>${m.t}</h3><p>${m.why}</p><dl><dt>Used in</dt><dd>${m.use}</dd><dt>Data</dt><dd>${m.data}</dd><dt>Build</dt><dd>${m.how}</dd></dl></div>`).join("");
+const all=steps.filter(s=>s.subs).flatMap(s=>s.subs),cnt={R:0,M:0,G:0};all.forEach(x=>cnt[x[1]]++);
+document.getElementById("donepct").textContent=all.filter(x=>x[2]).length+" of "+all.length;
+const col={R:"var(--done)",M:"var(--accent2)",G:"var(--warn)"};
+document.getElementById("bar").innerHTML=["R","M","G"].map(k=>`<i style="width:${cnt[k]/all.length*100}%;background:${col[k]}"></i>`).join("");
+document.getElementById("barkey").innerHTML=["R","M","G"].map(k=>`<span><b style="color:${col[k]}">${cnt[k]}</b> ${MN[k]}</span>`).join("")+`<span>${Math.round((cnt.R+cnt.M)/all.length*100)}% of sub-steps need no Groq</span>`;
 const chipCls={fix:"fix",prog:"prog",built:"built",new:""};
 const route=document.getElementById("route");let n=0;
 route.innerHTML=steps.map(s=>{ if(s.mod) return `<li class="mod">${s.mod}</li>`; n++; const i=n;
@@ -228,9 +281,9 @@ route.innerHTML=steps.map(s=>{ if(s.mod) return `<li class="mod">${s.mod}</li>`;
    <span class="chip ${chipCls[s.st]}">${s.e}</span><svg class="i chev" viewBox="0 0 24 24" aria-hidden="true">${I.chev}</svg>
   </button>
   <div class="body" id="b${i}"><div><div class="inner">
-   <p class="why"><b>Why:</b> ${s.why}</p>
+   <p class="why"><b>Why:</b> ${s.why}</p>${s.how?`<p class="how">${s.how}</p>`:""}
    <div class="cols">
-    <div class="box"><div class="label">Sub-steps</div><ol class="subs" style="--n:'${i}'">${s.subs.map(x=>Array.isArray(x)?`<li class="ok">✓ ${x[0]}</li>`:`<li>${x}</li>`).join("")}</ol></div>
+    <div class="box"><div class="label">Sub-steps</div><ol class="subs" style="--n:'${i}'">${s.subs.map(x=>`<li${x[2]?' class="ok"':''}><span>${x[2]?'✓ ':''}${x[0]}<span class="m ${x[1]}">${MN[x[1]]}</span></span></li>`).join("")}</ol></div>
     <div class="box"><div class="label">Already have</div><ul>${s.have.map(x=>`<li>${x}</li>`).join("")}</ul></div>
    </div>
    <div class="out">${ic("check")}<span><b>Outcome:</b> ${s.out}</span></div>
