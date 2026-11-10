@@ -29,18 +29,16 @@ branch → PR (template: problem, fix, proof, risk) → **ci** green → merge t
 
 | Name | Kind | Value |
 |---|---|---|
-| `VM_HOST` | secret | VM address |
-| `VM_USER` | secret | SSH user |
-| `VM_SSH_KEY` | secret | private key the VM accepts |
+| `VM_HOST` | secret | `140.238.102.50` |
+| `VM_USER` | secret | `ubuntu` |
+| `VM_SSH_KEY` | secret | private key the VM accepts (an authorized `authorized_keys` entry for `ubuntu`) |
 | `VERCEL_TOKEN` | secret | vercel.com/account/tokens → Create (scope: ShafBiz team) |
-| `VM_APP_DIR` | variable | repo folder on the VM |
-| `VM_RESTART` | variable | restart command, e.g. `sudo systemctl restart sales-bot` |
-| `SITE_URL` | variable | e.g. `https://your-app.vercel.app` |
+| `VM_APP_DIR` | variable | `/opt/eloquence` (git repo, runs as `eloquence.service`) |
+| `VM_RESTART` | variable | `sudo systemctl restart eloquence` (`ubuntu` has passwordless sudo) |
+| `SITE_URL` | variable | `https://eloquence-sales.vercel.app` |
+
+The VM runs the API via gunicorn on `127.0.0.1:8000` under systemd unit `eloquence.service`.
+`vm-run.yml` (Actions → vm-run) runs any one command on the VM and prints its output.
 
 ### 3. Vercel
 Settings → Git → Production Branch = `master`.
-
-### 4. Netlify (not used)
-`netlify.toml` tells the linked Netlify site to skip every build, so it no longer fails PR checks.
-To remove it completely: Netlify → fyp-sales → Site configuration → Build & deploy → Unlink repository
-(or delete the site), then delete `netlify.toml`.
