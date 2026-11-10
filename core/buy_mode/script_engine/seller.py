@@ -242,8 +242,7 @@ class ScriptSeller:
         elif (opened or out) and f.late_answer:
             line, key = (f.late_again or f.late_answer) if out else f.late_answer, f"{name}+"
         elif name in told:  # "like I said a moment ago" only when it was: told long ago, the answer again
-            just = self._filler.fill(f.answer, {}) in self.state.last
-            line, key = f.again or (just and self.sense.told_again) or f.answer, name
+            line, key = f.again or self._unless_just_said(self._filler.fill(f.answer, {})), name
         else:
             line, key = f.answer, name
         self.state = replace(self.state, told=(*told, key))
@@ -260,10 +259,16 @@ class ScriptSeller:
             return self._fact(name, opened)[0]
         if kind == "sense":  # said just before ("2k, is that enough?", "a year, is that long?"): the reminder (round 81)
             reply = self.sense.interruptions[name].reply
-            return self.sense.told_again if reply and reply in self.state.last and self.sense.told_again else reply
+            return self._unless_just_said(reply)
         if kind == "objection":
             return self._park(name)
         return self._answer_uncovered(v.asked, opened) or ""
+
+    def _unless_just_said(self, line, reminder=None):
+        """`line`, or the short reminder (default `told_again`) when the last message already said it: the same
+        words twice in a row read as a recording (round 81: "2k, is that enough?" twice)."""
+        reminder = self.sense.told_again if reminder is None else reminder
+        return reminder if line and reminder and line in self.state.last else line
 
     def _park(self, name):
         """A worry before the price: its honest early line (or `park`), parked for the close. Asked about again,
@@ -343,8 +348,7 @@ class ScriptSeller:
             text, stage = self._go(jump(self.method, self.state, self.method.follow_up))
             return f"{said.reply} {text}".strip(), stage
         if said.after == "ask":  # said again straight after ("what about you?" twice): the reminder, not the same line
-            again = said.reply in self.state.last and self.sense.told_again
-            return self._then_ask(self.sense.told_again if again else said.reply), self.ui_stage()
+            return self._then_ask(self._unless_just_said(said.reply)), self.ui_stage()
         return self._carry_on(said.reply, rephrase=said.after == "rephrase")
 
     def _carry_on(self, lead, rephrase=False, stay=False):
@@ -399,7 +403,7 @@ class ScriptSeller:
         text, labels = v.text, answer_labels(step)
         label, line, ack, missed = None, "", None, False
         needed = self._ear.shaped(text, step)
-        ruled = next((r.label for r in step.listen if r.pattern and re.search(r.pattern, text, re.IGNORECASE)), None)
+        ruled = next((r.label for r in step.listen if r.says(text)), None)
         if ruled and not empty:
             label = ruled  # by rule, before meaning: round 43, "6 weeks" was unclear ("so many nights, months and years")
         elif labels and not empty:  # a shrug takes no answer's route: "ok" to "Where are you at with it?" is no yes

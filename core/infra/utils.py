@@ -87,12 +87,17 @@ def tokenize(text: str) -> list[str]:
     return re.findall(r"[a-z0-9']+", (text or "").lower())
 
 
+def normal(text: str) -> str:
+    """A phrase as its words only, lower case, one space apart: how word lists are matched ("Up to YOU!" -> "up to you")."""
+    return " ".join(tokenize(text))
+
+
 def opens_question(text: str, cfg) -> bool:
     """The words themselves ask, whatever the punctuation (reply.py: a part that ends in "?" may ask too). A question opening a later part
     counts too: "shut up and just tell me the price", "ok fine, how much is it"."""
     words = tokenize(text)
     first, second = (words + ["", ""])[:2]
-    parts = (" ".join(tokenize(part)) + " " for part in re.split(r"[,.;:!]|\band\b", (text or "").lower()))
+    parts = (normal(part) + " " for part in re.split(r"[,.;:!]|\band\b", (text or "").lower()))
     return (
         (first in cfg["closed_question_starts"] and second in cfg["question_subjects"])
         or (first in cfg["question_words"] and second in cfg["closed_question_starts"])

@@ -21,8 +21,8 @@ from dataclasses import dataclass, replace
 from itertools import takewhile
 
 from core.buy_mode.script_engine.config import plain_words
-from core.infra.utils import opens_question, tokenize
 from core.buy_mode.script_engine.words.fill import number_phrase, short_form
+from core.infra.utils import normal, opens_question, tokenize
 
 
 @dataclass(frozen=True)
@@ -119,7 +119,7 @@ class Reader:
         broken = set(cfg["nudge_after_break"])   # "what happens next?" keeps its "next"; "debit, next" does not
         self._nudges = [re.compile(rf"(?:^|{r'[^\w\s]' if p in broken else ''}\W)(?:(?:{leads})\W+)?{words}\W*$", re.IGNORECASE)
                         for p, words in ((p, r"\W+".join(map(re.escape, tokenize(p)))) for p in sorted(nudges, key=len, reverse=True))]
-        self._tags = {" ".join(tokenize(t)) for t in [*cfg["filler_tags"], *cfg["end_tags"]]}
+        self._tags = {normal(t) for t in [*cfg["filler_tags"], *cfg["end_tags"]]}
         self._tag_skip = frozenset(cfg["tag_skip"])  # "to be completely honest" is "to be honest"
         self._starts = set(cfg["question_words"]) | set(cfg["closed_question_starts"])
         self._question_words = set(cfg["question_words"])
@@ -133,7 +133,7 @@ class Reader:
         # ("no") only between two parts: "a year, no, two years" corrects, "no, credit?" says no
         self._blank = set(cfg["no_answer_words"])  # "yes, sorry": a part of only these beside others says nothing
         self._blank_end = re.compile(rf"(?<=\w)\s+((?:{any_of(cfg['no_answer_words'])})\W*)$", re.IGNORECASE)
-        self._unsure_said = {" ".join(tokenize(u)) for u in [*cfg["unsure_ends"], *cfg["shrug_leads"]]}  # round 73: "I daresay, money" was saved whole
+        self._unsure_said = {normal(u) for u in [*cfg["unsure_ends"], *cfg["shrug_leads"]]}  # round 73: "I daresay, money" was saved whole
         # round 85 callers: "nae idea, money" too (a shrug its meaning alone missed)
         # round 76: after a dash too ("free - i guess" was saved whole)
         self._unsure_end = re.compile(rf"(?<=\w)(?:\s+[–—-])?\s+((?:{any_of(cfg['unsure_ends'])})\W*)$", re.IGNORECASE)
@@ -184,13 +184,13 @@ class Reader:
         self._fix_back = re.compile(rf"(?<=\w){not_mid}[,;.!?]\s*(?:{mid}|{word})\s+(?=\w)", re.IGNORECASE)
         self._fix_bare = re.compile(rf"(?<=\w){not_mid}\s+(?:{mid}|{word})\s+(?=\w)", re.IGNORECASE)  # "2k sorry 3k"
         self._denied = re.compile(rf"^\W*(?:{any_of(cfg['denied_leads'])})\s+(?=\w)", re.IGNORECASE)  # "not a year, two"
-        self._any_kind = {" ".join(tokenize(w)) for w in cfg["fix_any_kind"]}  # round 91: "money, actually time"
+        self._any_kind = {normal(w) for w in cfg["fix_any_kind"]}  # round 91: "money, actually time"
         self._kept = self._plain | set(cfg["fix_kept_words"])  # "not today, tomorrow" asks for time, so stays whole
         self._address_end = re.compile(rf"(?<=\w)\s*[,;.!…–—-]+\s*(?:{any_of(cfg['address_ends'])})\W*$", re.IGNORECASE)
         self._marks = re.compile(r"[?!]*\?[?!]*(?=\s|$)")
         never = "".join(rf"(?<!\b{re.escape(w)})" for w in cfg["dictated_not_after"])  # "a short period" keeps it
         self._dictated = re.compile(rf"(?<=\w){never}\s+({any_of(cfg['dictated_marks'])})\b(?=\s*$|\s+\w)", re.IGNORECASE)
-        self._marks_said = {" ".join(tokenize(k)): v for k, v in cfg["dictated_marks"].items()}
+        self._marks_said = {normal(k): v for k, v in cfg["dictated_marks"].items()}
         # round 92 callers: "money, hold on" lost the money (heard as a pause) and "money, actually" was said back:
         # a take-back after a break with nothing after it takes nothing back; "yes, hold on" and "hold on" stay whole
         self._back_end = re.compile(rf"(?<=\w)\s*[,;.!…–—-]+\s*(?:{word})\W*$", re.IGNORECASE)
@@ -215,7 +215,7 @@ class Reader:
             return None
         taken = text[:back.start()] if back else cut[0]  # "not a year, two": the year is denied, two is kept
         before, new = tokenize(clauses(taken, self.breaks)[-1]), text[back.end():].strip() if back else after(text, cut[0])
-        swap = (denied or " ".join(tokenize(back.group())) in self._any_kind) and len(before) == len(tokenize(new)) <= 2
+        swap = (denied or normal(back.group()) in self._any_kind) and len(before) == len(tokenize(new)) <= 2
         if not ((self._figure(" ".join(before)) and self._figure(new)) or before[:1] == tokenize(new)[:1]
                 or (swap and not {*before, *tokenize(new)} & self._kept)):  # round 91 callers: "not money, time" and
             return None  # "money, actually time" were said back whole; "not really, busy" and "money, actually quite a lot" stay
@@ -345,7 +345,7 @@ class Reader:
     def squash(self, text):
         """A run of end marks with a "?" in it is one "?" (round 76 callers: "money?!" was a question it could not answer);
         a mark said as a word after a word is the mark (round 92 callers: voice to text, "more money period")."""
-        text = self._dictated.sub(lambda m: self._marks_said[" ".join(tokenize(m.group(1)))], text)  # round 92: "money period"
+        text = self._dictated.sub(lambda m: self._marks_said[normal(m.group(1))], text)  # round 92: "money period"
         return self._marks.sub("?", text)
 
     def _unlead(self, part):
@@ -372,7 +372,7 @@ class Reader:
             return "asks"
         if part.rstrip().endswith("?"):
             return "rise"
-        if several and (self._hedges(part) or " ".join(tokenize(part)) in self._unsure_said or self._aside.match(part)
+        if several and (self._hedges(part) or normal(part) in self._unsure_said or self._aside.match(part)
                         or set(tokenize(part)) <= self._blank):
             return "hedge"  # a reply that is only a hedge is a shrug: heard whole (shrug.py); "sorry for the long
             # message" says nothing on its own either, nor "sorry" or "lol" beside an answer ("yes, sorry")

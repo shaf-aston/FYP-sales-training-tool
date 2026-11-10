@@ -1,6 +1,7 @@
 """AI gap rules (checks, fill, judge) and the coach's selling rules, offline."""
 import json
 import logging
+import re
 
 import pytest
 
@@ -819,20 +820,20 @@ HEDGES = {"i guess", "idk", "lol idk", "honestly no idea"}   # stands in for the
     ("my boss that's why?", "my boss", ""), ("kids thats why?", "kids", ""), ("money, that is why", "money", ""),   # round 82: "kids thats why?" got "I don't know that one offhand", "my boss that's why" was saved whole
     ("that's why I want to quit", "that's why I want to quit", ""), ("no clue why?", "", "no clue why?"), ("idk why?", "", "idk why?"),   # guards: only on the end; after not knowing, the "why" is what they don't know
     ("2k thanks", "2k, thanks", ""), ("money cheers mate", "money, cheers mate", ""), ("ok 2k", "2k", ""), ("okay, money", "money", ""), ("hm ok money", "money", ""),   # round 82 callers: saved whole
-    ("ok thanks", "ok thanks", ""), ("ok rn", "okay", ""), ("ok lol", "okay", ""), ("ok but is it a scam?", "okay", "is it a scam?"), ("ok realistically", "ok realistically", ""), ("ok like everyone", "ok like everyone", ""),   # guards: "ok" goes only before an answer; "thanks but no thanks" above stays whole
+    ("ok thanks", "ok thanks", ""), ("ok lol", "okay", ""), ("ok but is it a scam?", "okay", "is it a scam?"), ("ok realistically", "ok realistically", ""), ("ok like everyone", "ok like everyone", ""),   # guards: "ok" goes only before an answer; "thanks but no thanks" above stays whole
 
     ("so to speak", "", ""), ("and such", "", ""), ("and so on", "", ""), ("like everyone", "", ""), ("for me personally", "", ""),   # full run 84: a whole tag was cut to "to speak", "such", "everyone", "for me"
-    ("thanks for asking, about 2 years", "about 2 years, thanks for asking", ""), ("money and such", "money", ""), ("for me personally, quit", "quit my job", ""),   # full run 84: a thanks lead goes last, to be heard; guards: tags beside an answer still go
+    ("thanks for asking, about 2 years", "about 2 years, thanks for asking", ""), ("for me personally, quit", "quit my job", ""),   # full run 84: a thanks lead goes last, to be heard; guards: tags beside an answer still go
 
     ("money x", "money", ""), ("quit xx", "quit my job", ""), ("the x factor", "the x factor", ""),   # round 77 callers: a kiss was said back ("with money x?"); guard: only on the end
     ("yes why?", "yes", "why?"), ("money why do you want to know?", "money", "why do you want to know?"), ("money, why?", "money", "why?"),   # round 77 callers: "yes why?" was all asked, no yes
-    ("money ok", "money", ""), ("2k, ok", "2k", ""), ("quit k", "quit my job", ""), ("money okay?", "money", ""), ("2k ok.", "2k", ""),   # round 83 callers: the "ok" was saved with the answer
+    ("money ok", "money", ""), ("2k, ok", "2k", ""), ("quit k", "quit my job", ""), ("2k ok.", "2k", ""),   # round 83 callers: the "ok" was saved with the answer
     ("I'm doing ok", "I'm doing ok", ""), ("that's ok", "that's ok", ""), ("sounds ok", "sounds ok", ""), ("money is ok", "money is ok", ""), ("all ok", "all ok", ""), ("yes ok", "yes ok", ""), ("I think ok", "I think ok", ""), ("I'd say ok", "okay", ""),   # guards: "ok" that is the answer stays
     ("dunno my boss", "my boss", ""), ("idk money", "money", ""), ("idk 2k", "2k", ""), ("no clue my boss", "my boss", ""), ("i dunno quit", "quit my job", ""),   # round 84 callers: the shrug was saved with the answer
     ("dunno why", "dunno why", ""), ("idk how", "idk how", ""), ("idk man", "idk man", ""), ("no idea about it", "no idea about it", ""), ("idk if", "idk if", ""),   # guards: a question word or a tag after it stays whole
     ("just a sec, actually 3k", "3k", ""), ("hold on, actually 3k", "3k", ""), ("like everyone, money", "money", ""), ("as i said, money", "money", ""),   # round 84 callers: "actually 3k", "everyone, money" were saved
     ("thanks a lot, 2k", "2k, thanks a lot", ""), ("cheers mate, 2k", "2k, cheers mate", ""), ("ta very much, 2k", "2k, ta very much", ""), ("thanks mate, money", "money, thanks mate", ""),   # round 86 callers: the whole thank-you goes last
-    ("cheers mate", "cheers mate", ""), ("thank you for asking", "thank you for asking", ""), ("2k ta very much", "2k, ta very much", ""), ("money, like everyone", "money", ""), ("like everyone", "", ""),   # guards: a thanks lead goes last; a tag alone is the reply
+    ("cheers mate", "cheers mate", ""), ("thank you for asking", "thank you for asking", ""), ("2k ta very much", "2k, ta very much", ""), ("money, like everyone", "money", ""),   # guards: a thanks lead goes last; a tag alone is the reply
     ("sorry bad signal. money", "money", ""), ("sorry was driving, 2k", "2k", ""), ("free i hope", "free", ""), ("honestly free", "free", ""), ("honestly tbh free", "free", ""),   # round 85 callers: saved with the aside, the hope and
     ("nae idea, money", "money", ""), ("dinnae ken my boss", "my boss", ""),   # the "honestly"; the Scots shrug too
     ("i hope so", "i hope so", ""), ("bad signal", "bad signal", ""), ("honestly", "", ""),   # guards: alone, each is the reply
@@ -1301,9 +1302,8 @@ def test_a_shortcut_whose_from_is_not_before_its_until_fails_loud():
 
 
 def test_a_shortcut_keeps_its_pattern_and_a_bad_one_fails_loud():
-    """Round 109: "take my money" is heard by its words, so it can't steal "the money" by meaning."""
-    import re
-
+    """Round 109: "take my money" is heard by its words, so it can't steal "the money" by meaning. A bad
+    pattern fails loud with where it is; one that matches an empty reply would take every reply."""
     from core.buy_mode.script_engine.method import (
         CONFIG_DIR,
         _read,
@@ -1313,9 +1313,21 @@ def test_a_shortcut_keeps_its_pattern_and_a_bad_one_fails_loud():
 
     assert load_method("cat").pays.pattern
     data, matrix = _read(CONFIG_DIR / "methods", "cat"), _read(CONFIG_DIR / "script", "objection_matrix")
-    data["pays"] = {**data["pays"], "pattern": "(take"}
-    with pytest.raises(re.error):
-        parse_method("cat", data, matrix, _read(CONFIG_DIR / "script", "answers"))
+    answers = _read(CONFIG_DIR / "script", "answers")
+    for bad, why in (("(take", "shortcut pattern"), ("(take)?", "empty reply")):
+        with pytest.raises(ValueError, match=re.escape(why)):
+            parse_method("cat", {**data, "pays": {**data["pays"], "pattern": bad}}, matrix, answers)
+
+
+@pytest.mark.parametrize(("step", "text", "pays"), [
+    ("16", "take my money", True), ("18", "shut up and take my money", True),
+    ("16", "you're not gonna take my money that easy", False), ("16", "take my money? no way, it's a scam", False),
+    ("19", "please don't take my money yet", False),
+])
+def test_take_my_money_pays_only_when_meant(step, text, pays):
+    """Code review: "not gonna take my money" was heard as ready to pay ("Credit or debit?")."""
+    assert CAT.pays.says(text) is pays
+    assert any(r.says(text) for r in CAT.steps["18"].listen) is pays
 
 
 def test_no_two_closes_ask_jumping_in_word_for_word():

@@ -11,12 +11,27 @@ from core.buy_mode.script_engine.words.fill import NAME, blanks
 from core.buy_mode.script_engine.words.tone import stresses
 from core.buy_mode.stage import Stage
 from core.infra.loader import CONFIG_DIR
-from core.infra.utils import tokenize
+from core.infra.utils import normal
 
 ANY = "any"  # listen route with no examples: taken for any reply
 # What happens after an interruption's reply: ask the step again (same words), wait for them to come
 # back, ask it in other words, (a step with no other words) move on to the next step, or book the follow-up.
 AFTER = ("ask", "wait", "rephrase", "rephrase_else_move_on", "follow_up")
+
+
+def says(pattern, text):
+    """A rule's regex (`pattern`, case-blind) finds its words in the reply; an empty pattern never does."""
+    return bool(pattern) and re.search(pattern, text, re.IGNORECASE) is not None
+
+
+def _checked_pattern(where, pattern):
+    """A rule's regex, failing loud at load: it must compile and must not match an empty reply (it would take every one)."""
+    try:
+        if re.search(pattern, "", re.IGNORECASE):
+            raise ValueError(f"{where} pattern must not match an empty reply")
+    except re.error as e:
+        raise ValueError(f"{where} pattern: {e}") from None
+    return pattern
 
 
 @dataclass(frozen=True)
@@ -36,6 +51,9 @@ class Route:
                             # opens with it and goes on is heard by the rest ("..., so I can quit my job")
     climbs_to: tuple = ()   # routes a reply that goes on past this answer moves up to, when the rest is clearly one
                             # ("I want more money so I can stop worrying about bills": already the next rung)
+
+    def says(self, text):
+        return says(self.pattern, text)
 
 
 @dataclass(frozen=True)
@@ -95,6 +113,9 @@ class Ready:
     min_score: float    # a match must score at least this on every step ("I'm in sales" must not jump)
     start: str = ""     # only from this step on; "" = from the first
     pattern: str = ""   # words that take it whatever the examples score ("take my money"); "" = none
+
+    def says(self, text):
+        return says(self.pattern, text)
 
 
 @dataclass(frozen=True)
@@ -226,10 +247,7 @@ def _route(step_id, label, data, answers):
     if pattern:
         if label == ANY:
             raise ValueError(f"step {step_id}: '{ANY}' route takes no pattern")
-        try:
-            re.compile(pattern)
-        except re.error as e:
-            raise ValueError(f"step {step_id}: route '{label}' pattern: {e}") from None
+        _checked_pattern(f"step {step_id}: route '{label}'", pattern)
     return Route(label, examples, str(data["then"]), data.get("ack", ""), keep, floor, like or "", say,
                  pattern=pattern, restates=restates, climbs_to=climbs_to)
 
@@ -303,7 +321,7 @@ def _objection(name, data):
         raise ValueError(f"objection {name}: needs examples, or it can never be heard")
     early = tuple(data["examples"])
     return Objection(name, early + tuple(data.get("after_price", ())), str(data["enter"]), data.get("early", ""), early,
-                     tuple(" ".join(tokenize(w)) for w in data.get("never_with") or ()))
+                     tuple(normal(w) for w in data.get("never_with") or ()))
 
 
 def _with_matrix(name, data, matrix):
@@ -419,7 +437,7 @@ def _ready(name, data, steps, answers):
                   _score(f"method {name} ready", data.get("min_score")), str(data.get("from", "")),
                   str(data.get("pattern", "")))
     if ready.pattern:
-        re.compile(ready.pattern)
+        _checked_pattern(f"method {name}: shortcut", ready.pattern)
     order = list(steps)
     if ready.then not in steps or ready.until not in steps or (ready.start and ready.start not in steps):
         raise ValueError(f"method {name}: ready then/until/from must be defined steps")
@@ -467,8 +485,8 @@ def parse_common_sense(data):
                         _score(f"interruption {k}", v["min_score"]) if "min_score" in v else 0.0,
                         v.get("with_answer", False) is True, v.get("only_asked", False) is True,
                         v.get("once", False) is True, v.get("before_price", False) is True,
-                        tuple(" ".join(tokenize(w)) for w in v.get("never_with") or ()),
-                        tuple(" ".join(tokenize(w)) for w in v.get("only_with") or ()),
+                        tuple(normal(w) for w in v.get("never_with") or ()),
+                        tuple(normal(w) for w in v.get("only_with") or ()),
                         tuple(v.get("until_price") or ()))
         for k, v in data["interruptions"].items()
     }

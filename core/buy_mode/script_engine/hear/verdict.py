@@ -16,7 +16,7 @@ from core.buy_mode.script_engine.engine import (
 from core.buy_mode.script_engine.hear.reply import Part, Reader, break_pattern, clauses
 from core.buy_mode.script_engine.method import ANY
 from core.buy_mode.script_engine.words.fill import short_form
-from core.infra.utils import tokenize
+from core.infra.utils import normal, tokenize
 
 
 @dataclass(frozen=True)
@@ -42,7 +42,7 @@ def answer_labels(step):
 
 def _says_any(text, phrases):
     """Whether `text` says one of `phrases` as whole words (each already tokenized)."""
-    said = f" {' '.join(tokenize(text))} "
+    said = f" {normal(text)} "
     return any(f" {w} " in said for w in phrases)
 
 
@@ -57,17 +57,17 @@ class Ear:
         self._listener, self._shrugs, self._judge = listener, shrugs, judge
         self.reader = Reader(cfg, sense.nudges, shrugs.hedges)
         self._breaks = break_pattern(cfg)
-        self._nudge_yes = {" ".join(tokenize(p)) for p in cfg["nudge_yes"]}
+        self._nudge_yes = {normal(p) for p in cfg["nudge_yes"]}
         self._nudge_leads = frozenset(cfg["nudge_leads"])
         self._wants_more = [tokenize(p) for p in cfg["wants_more_starts"]]  # round 98: "more than I have now"
-        self._wants_more_words = [" ".join(tokenize(p)) for p in cfg["wants_more_words"]]  # round 99: "my wife wants more money"
+        self._wants_more_words = [normal(p) for p in cfg["wants_more_words"]]  # round 99: "my wife wants more money"
         backs = [*cfg["reason_backs"], *(k for k, v in cfg["short_replies"].items() if v in cfg["reason_backs"])]  # "k", "ofc"
         backs, reasons = (r"\W+".join(map(re.escape, tokenize(p))) for p in backs), map(re.escape, cfg["reason_starts"])
         backs = "|".join(sorted(backs, key=len, reverse=True))
         self._backed = re.compile(rf"^\W*((?:{backs})(?:\W+(?:{backs}))*)\W+(?:{'|'.join(reasons)})\W+\w", re.IGNORECASE)
         self._yes_lead = re.compile(rf"^\W*(?:{backs})(?:\W+(?:{backs}))*[\s,;.!-]+(?=\w)", re.IGNORECASE)
         self._plain = plain_words(cfg)
-        self._leave_it = {" ".join(tokenize(p)) for p in (*cfg["leave_it_to_us"], *cfg["picks_by_place"])}  # round 88: "the second one" picks too
+        self._leave_it = {normal(p) for p in (*cfg["leave_it_to_us"], *cfg["picks_by_place"])}  # round 88: "the second one" picks too
         self._me, self._you = set(cfg["asked_back"]), set(cfg["asked_back_you"])
         self._captures = {}  # slot: the first step that saves it
         for s in method.steps.values():
@@ -106,7 +106,7 @@ class Ear:
         elif (not asking and not self._yes_or_no(state) and (lead := self._yes_lead.match(text)) and set(tokenize(text[lead.end():])) - self._plain
               and not self._backed.match(text)):  # round 109 full run: "sure because I trust you" kept its "sure": a reason, no worry
             text = text[lead.end():]  # round 85 callers: "aye money", "yes, money" to an open question were saved with the yes
-        if step.either and " ".join(tokenize(text)) in self._leave_it:  # round 87 callers: "whichever" to "credit or debit?"
+        if step.either and normal(text) in self._leave_it:  # round 87 callers: "whichever" to "credit or debit?"
             return self.hear(step.either, state, opened)  # was asked again until the call left the close: it is their pick
         nothing = not (asking and self.reader.turned_back(text)) and (self._shrugs.blank(text) or self._shrugs.says_nothing(text, step, asking, self._yes_or_no(state)))
         if not state.waiting and nothing and not self._ready(text, state):  # "yes I'm in" is a shrug's words, but it says they're in
@@ -489,9 +489,29 @@ class Ear:
 
     def _ready(self, text, state):
         """The reply takes a shortcut open at this step ("yes I'm in", "credit")."""
-        return any((r.pattern and re.search(r.pattern, text, re.IGNORECASE))
+        return any(r.says(text)
                    or self._listener.match(text, {"ready": list(r.examples)}, by_clause=False).score >= r.min_score
                    for r in self._open(state.step).values())
+
+    def _worries(self, text, step, state, opened, asking, hedge, unsure):
+        """The objections still in the running for this reply, as (name, Objection): a worry is only heard where
+        it can be one ("money's tight" answers "what holds you back"; "yes because I need the money" says why yes)."""
+        objections = [(k, o) for k, o in self.method.objections.items() if not _says_any(text, o.never_with)]
+        if not asking and self._backed.match(text):
+            objections = ()  # round 52: "yes because I need the money" says why yes; it is no money worry
+        elif not opened and not asking and (step.doubts_answer or self._reason(text)
+                                             or self._wants_more_in(text)):
+            objections = ()  # "money's tight" answers "what holds you back", "because money is tight" any step;
+            # "is this a scam?" still asks
+        elif not opened and asking:
+            objections = [(k, o) for k, o in objections if o.early]  # "is this a scam?" gets an honest early line
+        if not opened and not asking:  # parked once, said again: an answer. Asked again ("how do I know this
+            objections = [(k, o) for k, o in objections if k not in state.parked]  # isn't a scam?"): still the worry
+        if hedge and objections:  # "I don't know" (0.74 to "I don't trust this") is not knowing, not a worry; one
+            # nearer a worry than not knowing is the worry ("let me think about it": 1.0 to it, 0.96 to "let me think")
+            worry = self._listener.match(text, {k: o.heard(opened) for k, o in objections}, by_clause=False)
+            objections = [(k, o) for k, o in objections if k == worry.label and worry.score > unsure]
+        return objections
 
     def _interrupt(self, text, step, state, opened, asking, answers=True):
         """An everyday interruption, product question or objection - only when it clearly beats
@@ -511,21 +531,7 @@ class Ear:
             floors = {k: max(f, math.nextafter(unsure, 2)) for k, f in floors.items()}
         if asking:
             labels.update({f"fact:{k}": e for k, f in self.offer.facts.items() if (e := self._same_person(text, f.examples))})
-        objections = [(k, o) for k, o in self.method.objections.items() if not _says_any(text, o.never_with)]
-        if not asking and self._backed.match(text):
-            objections = ()  # round 52: "yes because I need the money" says why yes; it is no money worry
-        elif not opened and not asking and (step.doubts_answer or self._reason(text)
-                                             or self._wants_more_in(text)):
-            objections = ()  # "money's tight" answers "what holds you back", "because money is tight" any step;
-            # "is this a scam?" still asks
-        elif not opened and asking:
-            objections = [(k, o) for k, o in objections if o.early]  # "is this a scam?" gets an honest early line
-        if not opened and not asking:  # parked once, said again: an answer. Asked again ("how do I know this
-            objections = [(k, o) for k, o in objections if k not in state.parked]  # isn't a scam?"): still the worry
-        if hedge and objections:  # "I don't know" (0.74 to "I don't trust this") is not knowing, not a worry; one
-            # nearer a worry than not knowing is the worry ("let me think about it": 1.0 to it, 0.96 to "let me think")
-            worry = self._listener.match(text, {k: o.heard(opened) for k, o in objections}, by_clause=False)
-            objections = [(k, o) for k, o in objections if k == worry.label and worry.score > unsure]
+        objections = self._worries(text, step, state, opened, asking, hedge, unsure)
         handled = set()  # a worry already being handled, or one the step asks about ("the money?"), answers the step.
         if opened:  # Past its talk, a step that keeps any reply would keep it as their answer: it is the worry again
             # (whole calls: "he decides the money stuff" to "What makes you say that?" was their reason, then payment)
@@ -536,7 +542,7 @@ class Ear:
         if not opened and not asking:  # "money", "scared", "risk" before the price are answers, not objections
             floors.update({f"objection:{k}": self.cfg["early_objection_min_score"] for k, _ in objections})
         for k, r in self._open(state.step).items():
-            if r.pattern and re.search(r.pattern, text, re.IGNORECASE):  # its own words ("take my money") take it outright
+            if r.says(text):  # its own words ("take my money") take it outright
                 return "ready", k
             labels[f"ready:{k}"], floors[f"ready:{k}"] = r.examples, r.min_score
         # the catch-all keeps any reply only if it has the step's shape: "I don't have time for this" to "how
