@@ -207,10 +207,10 @@ document.querySelectorAll(".who").forEach(w=>w.innerHTML=w.innerHTML.replace(/IC
 // Each sub-step: [text, method R|M|G, done?]
 const steps=[
  {mod:"Foundation"},
- {k:"server",t:"Fix the server deploy",e:"½ day",st:"fix",
-  why:"New backend code isn't reaching the live server. Everything below needs it.",
-  subs:[["Add the server secrets in GitHub","R"],["Run the deploy","R"],["Confirm /api/health shows the new version","R"]],
-  have:["Deploy workflow","Health check"],out:"Every merge ships to the live server"},
+ {k:"server",t:"Server deploy",e:"done",st:"built",
+  why:"Every merge that passes CI reaches the live server safely.",
+  subs:[["Server secrets in GitHub","R",1],["Deploy runs after CI and checks /api/health","R",1],["Installs new packages when requirements change","R",1],["Rolls back automatically if the new version doesn't start","R",1],["Turned off the 10-minute auto-pull that skipped CI","R",1]],
+  have:["Deploy workflow","vm-run for server commands"],out:"Every merge ships to the live server, only after CI"},
  {mod:"Practice · two directions"},
  {k:"bot",t:"Virtual rep sells to you",e:"in progress",st:"prog",
   why:"You play the prospect and watch a good rep work. Being built now.",
