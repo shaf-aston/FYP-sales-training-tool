@@ -60,6 +60,7 @@ Rule: modes are named for the learner; engines and stores for the AI (`seller_se
 | **team** | Learners grouped under a manager, joined with an **invite code**. One team per learner. | `core/accounts/teams.py`, API `/api/team/*` |
 | **manager** | A team role: sees members' details and progress, removes members, replaces the invite code. A team always has one. | `teams.MANAGER`, `keep_a_manager` |
 | **member** | The other team role (never "rep", which is the salesperson in an uploaded call). | `teams.MEMBER` |
+| **team insights** | A manager's view: each member's skill **levels** (average of recent sessions), the team's, and coaching **guidelines** from rules. | `core/training/team_insights.py`, `config/insights.yaml`, `/api/team/insights` |
 | **saved prospect** | A custom buyer kept in the learner's account to practise against again. | `core/accounts/library.py`, `/api/account/prospects` |
 
 ## Uploaded calls

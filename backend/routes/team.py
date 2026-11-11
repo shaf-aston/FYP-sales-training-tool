@@ -1,11 +1,21 @@
 """Team endpoints (/api/team): create one (you manage it), join with an invite code, leave, and see the team.
 A manager sees every member's name and email and the invite code, removes members and replaces the code;
-a member sees the team's name and its managers only."""
+a member sees the team's name and its managers only. Managers also get insights: every member's skill levels and
+coaching guidelines (core/training/team_insights.py), as JSON or a CSV download."""
 
-from flask import Blueprint, jsonify
+import csv
+import io
+import time
+from datetime import datetime, timezone
+
+from flask import Blueprint, Response, jsonify, request
 
 from core.accounts.db import database
+from core.accounts.library import Library
 from core.accounts.teams import MANAGER, TeamError, Teams
+from core.infra.loader import load_yaml
+from core.sell_mode import sell_service
+from core.training.team_insights import build_insights
 
 from ..auth import require_user
 from ..messages import TEAM_ERRORS
@@ -92,3 +102,48 @@ def new_code(user):
     except TeamError as e:
         return _error(e)
     return jsonify({"success": True, "invite_code": code})
+
+
+def _insights(user):
+    """(insights, None) for a manager, else (None, error response). `?target=` picks one of the offered targets."""
+    teams = Teams(database())
+    membership = teams.membership(user.id)
+    if membership is None or membership.role != MANAGER:
+        return None, _error(TeamError("not_manager"))
+    offered = sell_service.skills()
+    target = request.args.get("target", type=int)
+    target = target if target in offered["targets"] else offered["target"]
+    library = Library(database())
+    entries = {m.user_id: library.skill_entries(m.user_id) for m in teams.members(membership.team_id)}
+    # A manager who doesn't practise is not a gap in the team: managers count once they have sessions of their own.
+    members = [(m.user_id, m.name, entries[m.user_id]) for m in teams.members(membership.team_id)
+               if m.role != MANAGER or entries[m.user_id]]
+    return build_insights(members, offered["skills"], target, int(time.time() * 1000), load_yaml("insights.yaml")), None
+
+
+@bp.route("/insights", methods=["GET"])
+@require_user
+def insights(user):
+    """A manager's view of the team: each member's skill levels, the team's, and what to coach next."""
+    data, error = _insights(user)
+    return error or jsonify({"success": True, "targets": sell_service.skills()["targets"], **data})
+
+
+@bp.route("/insights.csv", methods=["GET"])
+@require_user
+def insights_csv(user):
+    """The same numbers as a spreadsheet: one row per member."""
+    data, error = _insights(user)
+    if error:
+        return error
+    skills = data["skills"]
+    out = io.StringIO()
+    writer = csv.writer(out)
+    writer.writerow(["Member", "Scored sessions", "Last practised", *[s["label"] for s in skills], "Work on next"])
+    label = {s["id"]: s["label"] for s in skills}
+    for m in data["members"]:
+        last = datetime.fromtimestamp(m["last_at"] / 1000, timezone.utc).date().isoformat() if m["last_at"] else ""
+        writer.writerow([m["name"], m["sessions"], last, *[m["levels"].get(s["id"], "") for s in skills],
+                         label.get(m["weakest"], "")])
+    return Response(out.getvalue(), mimetype="text/csv",
+                    headers={"Content-Disposition": "attachment; filename=team-insights.csv"})

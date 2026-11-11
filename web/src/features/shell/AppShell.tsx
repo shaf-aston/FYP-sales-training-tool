@@ -7,6 +7,7 @@ import { ConfirmProvider, ToastProvider } from "@/components/ui";
 import { AmbientFilm } from "@/components/film/AmbientFilm";
 import { AccountProvider } from "@/features/account/AccountContext";
 import { AccountDialog } from "@/features/account/AccountDialog";
+import { InsightsDialog } from "@/features/insights/InsightsDialog";
 import { ChatView } from "@/features/chat/ChatView";
 import { DraftProvider } from "@/state/DraftContext";
 import { CoachPanel } from "@/features/coach/CoachPanel";
@@ -34,6 +35,7 @@ function Layout() {
       <HelpDialog />
       <FeedbackDialog />
       <AccountDialog />
+      <InsightsDialog />
       <SellDialogs />
     </div>
   );

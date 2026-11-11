@@ -29,6 +29,7 @@ const SECTIONS: { title: string; items: { term?: string; text: string; keys?: st
       { term: "Walk it back", text: "sell mode, after the call: replay each of your turns with the reasons behind its rating, and redo one." },
       { term: "Say it from memory", text: "fill in the missing move in lines from real sales scripts." },
       { term: "Skill Radar", text: "sell mode: your five skills across every scored session, the one to work on next, and a session that trains it." },
+      { term: "Team insights", text: "managers (Account, Team): every member's skill levels, the team's radar, what to coach next, and a CSV." },
       { term: "SOP review", text: "sell mode, Tools: see what your team's sales SOP covers of a good call, then check a real call against it." },
       { term: "Quiz", text: "buy mode: pick the stage and the next move. Sell mode: rewrite one of your turns and see if it lands better." },
     ],
