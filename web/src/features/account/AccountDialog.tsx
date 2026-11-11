@@ -28,7 +28,7 @@ function AccountPanel({ onClose }: { onClose: () => void }) {
       </div>
       <TeamSection />
       <DataSection onDeleted={onClose} />
-      <Button variant="ghost" className={s.start} onClick={out}>
+      <Button variant="ghost" className={s.flush} onClick={out}>
         Log out
       </Button>
     </div>

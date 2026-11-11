@@ -84,7 +84,7 @@ export function DataSection({ onDeleted }: { onDeleted: () => void }) {
           </div>
         </div>
       ) : (
-        <Button variant="ghost" className={s.start} onClick={() => setDeleting(true)}>
+        <Button variant="ghost" className={s.flush} onClick={() => setDeleting(true)}>
           Delete account…
         </Button>
       )}

@@ -56,7 +56,7 @@ function NoTeam() {
 
 /** In a team: its name, your role, the invite code (managers), who is in it, and leaving. */
 function InTeam({ team }: { team: Team }) {
-  const { refresh, handleLoggedOut } = useAccount();
+  const { user, refresh, handleLoggedOut } = useAccount();
   const toast = useToast();
   const confirm = useConfirm();
   const [members, setMembers] = useState<TeamMember[] | null>(null);
@@ -124,9 +124,10 @@ function InTeam({ team }: { team: Team }) {
           <ul className={s.members} aria-label={manager ? "Members" : "Managers"}>
             {members.map((m) => (
               <li key={m.id} className={s.member}>
-                <span>
+                <span className={s.memberText}>
                   {m.name}
-                  {m.email && <span className={s.muted}> · {m.email}</span>}
+                  {m.id === user?.id && " (you)"}
+                  {m.email && <span className={s.muted}>{m.email}</span>}
                 </span>
                 <Badge tone={m.role === "manager" ? "accent" : "neutral"}>{roleLabel[m.role]}</Badge>
               </li>
@@ -134,7 +135,7 @@ function InTeam({ team }: { team: Team }) {
           </ul>
         )
       )}
-      <Button variant="ghost" className={s.start} onClick={leave}>
+      <Button variant="ghost" className={s.flush} onClick={leave}>
         Leave team
       </Button>
     </div>

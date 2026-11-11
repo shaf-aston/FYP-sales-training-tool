@@ -66,9 +66,20 @@
   align-items: center;
   gap: var(--space-3);
   font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+/* Name above email; a long email wraps instead of squeezing the role badge. */
+.memberText {
+  display: grid;
+  min-width: 0;
   overflow-wrap: anywhere;
 }
 /* Secondary actions sit at their natural width, not stretched across the window. */
 .start {
   justify-self: start;
+}
+/* A text-only (ghost) button whose words line up with the text above it. */
+.flush {
+  justify-self: start;
+  margin-inline-start: calc(var(--space-4) * -1);
 }
