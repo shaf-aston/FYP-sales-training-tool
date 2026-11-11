@@ -2,15 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Button, Icon, Notice, Segmented, Select, TextArea, useConfirm } from "@/components/ui";
+import { CallImport } from "@/features/calls/CallImport";
 import { useSession } from "@/features/session/SessionContext";
 import { api, errorText } from "@/lib/api/client";
 import type { Difficulty, Persona, ProductGroups } from "@/lib/api/types";
 import { config } from "@/lib/config";
-import { difficultyOptions } from "./options";
+import { difficultyOptions, GENERAL_PRODUCT } from "./options";
 import s from "./BuyerSetup.module.css";
 
-/** The general product; must match the backend default product_type (backend/routes/sell.py). */
-const GENERAL = "default";
 /** Select value meaning "let the server pick the buyer". */
 const SURPRISE = "";
 /** Objection select values: the buyer picks, or the learner writes one. */
@@ -29,14 +28,37 @@ interface Props {
   onCancel?: () => void;
 }
 
-/** Sell mode: set up the AI buyer (product, difficulty, who they are, an objection to practise). */
-export function BuyerSetup({ onStarted, onCancel }: Props) {
+type Source = "pick" | "call";
+const sourceOptions: { value: Source; label: string }[] = [
+  { value: "pick", label: "Pick a buyer" },
+  { value: "call", label: "From a real call" },
+];
+
+/** Sell mode: set up the AI buyer, picked from the list or built from a real call. */
+export function BuyerSetup(props: Props) {
+  const [source, setSource] = useState<Source>("pick");
+  // Both stay mounted so switching back and forth keeps what was filled in.
+  return (
+    <div className={s.stack}>
+      <Segmented label="Where the buyer comes from" hideLabel options={sourceOptions} value={source} onChange={setSource} />
+      <div hidden={source !== "pick"}>
+        <PickBuyer {...props} />
+      </div>
+      <div hidden={source !== "call"}>
+        <CallImport {...props} />
+      </div>
+    </div>
+  );
+}
+
+/** Choose the AI buyer: product, difficulty, who they are, an objection to practise. */
+function PickBuyer({ onStarted, onCancel }: Props) {
   const { sellSession, startBuyer, endBuyer } = useSession();
   const confirm = useConfirm();
   const [groups, setGroups] = useState<Groups>(() => (loadedGroups ? { status: "ready", groups: loadedGroups } : { status: "loading" }));
   const [attempt, setAttempt] = useState(0);
   // A new buyer starts from the current product; the first one from general practice.
-  const [product, setProduct] = useState(sellSession?.productType ?? GENERAL);
+  const [product, setProduct] = useState(sellSession?.productType ?? GENERAL_PRODUCT);
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [persona, setPersona] = useState(SURPRISE);
@@ -122,7 +144,7 @@ export function BuyerSetup({ onStarted, onCancel }: Props) {
   return (
     <div className={s.stack}>
       <Select label="Product" value={product} onChange={(e) => setProduct(e.target.value)}>
-        <option value={GENERAL}>General practice</option>
+        <option value={GENERAL_PRODUCT}>General practice</option>
         {(["transactional", "consultative"] as const).map((kind) => (
           <optgroup key={kind} label={kind === "transactional" ? "Transactional" : "Consultative"}>
             {groups.groups[kind].map((p) => (

@@ -55,8 +55,14 @@ async function request<R>(path: string, opts: RequestOptions = {}): Promise<R> {
 
   const data = await res.json().catch(() => null);
   if (!res.ok || !data || data.error || data.success === false) {
-    // Server faults get a plain message so internals never reach the screen.
-    const message = res.status >= 500 && !data?.code ? "Something went wrong on our side. Try again in a moment." : data?.error;
+    // Server faults get a plain message so internals never reach the screen. 413 comes before any route
+    // (no JSON): only a call transcript is that big.
+    const message =
+      res.status === 413
+        ? "That call is too big to send. Use a shorter one."
+        : res.status >= 500 && !data?.code
+          ? "Something went wrong on our side. Try again in a moment."
+          : data?.error;
     throw new ApiError(message ?? `Request failed (${res.status})`, res.status, data?.code);
   }
   return data as R;
@@ -91,7 +97,7 @@ export function createHttpApi() {
       request<{ success: true; personas: T.Persona[] }>(`/api/sell/personas?product_type=${encodeURIComponent(productType)}`),
     sellInit: (difficulty: T.Difficulty, productType: string, pick: T.BuyerPick = {}) =>
       request<T.SellInitRes>("/api/sell/init", {
-        body: { difficulty, product_type: productType, persona: pick.persona, objection: pick.objection },
+        body: { difficulty, product_type: productType, persona: pick.persona, objection: pick.objection, custom_buyer: pick.custom, replay: pick.replay },
         timeoutMs: chat,
       }),
     sellChat: (sid: string, message: string, showHints: boolean) =>
@@ -105,6 +111,13 @@ export function createHttpApi() {
     sellQuizAnswer: (sid: string, turn: number, answer: string) =>
       request<T.QuizResult>("/api/sell/quiz", { body: { turn, answer }, sessionId: sid, timeoutMs: chat }),
     sellDrills: (sid: string | null) => request<{ success: true; drills: T.Drill[] }>("/api/sell/drills", { sessionId: sid }),
+
+    // Calls: a real sales call the learner brings in, read by rules on the server (no AI).
+    callsSample: () => request<{ success: true; text: string; filename: string }>("/api/calls/sample"),
+    callsRead: (call: T.CallReq) => request<T.CallReadRes>("/api/calls/read", { body: call, timeoutMs: chat }),
+    /** Replayed at `difficulty` (the one the learner picked), else the one read from the call. */
+    callsReview: (call: T.CallReq, difficulty?: T.Difficulty) =>
+      request<T.Review>("/api/calls/review", { body: { ...call, difficulty }, timeoutMs: chat }),
 
     // Shared
     /** The text as audio, or null when the server has no voice for it (the browser reads it instead). */

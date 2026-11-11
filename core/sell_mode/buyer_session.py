@@ -32,9 +32,11 @@ class BuyerSession(BuyerRecord):
         persona: dict | None = None,
         session_id: str = "",
         objection: str | None = None,
+        objection_bank: list[dict] | None = None,
     ):
         """`persona` is picked at random when None; `objection` is one the learner chose to
-        practise, raised on turn 1."""
+        practise, raised on turn 1. `objection_bank` ({type, text}, raised in order) replaces the real-call
+        and difficulty banks: a buyer built from one call raises that call's objections."""
         # An id-less session logs nothing and shares its objection dice with every other
         # id-less session. One owner of the id, never blank.
         self.session_id = session_id or new_session_id()
@@ -53,7 +55,7 @@ class BuyerSession(BuyerRecord):
         self.pacer = ObjectionPacer(
             self.session_id,
             behaviour,
-            pick_bank(real_pool, self.session_id, len(profile_bank)) if real_pool else profile_bank,
+            objection_bank or (pick_bank(real_pool, self.session_id, len(profile_bank)) if real_pool else profile_bank),
             first={"type": "chosen", "text": objection} if objection else None,
         )
 
@@ -107,7 +109,7 @@ class BuyerSession(BuyerRecord):
         """The buyer's opening line, filled from opening_lines in config (no AI)."""
         persona = self.persona
         background = str(persona.get("background", "")).strip()
-        lines = load_buyer_config()["opening_lines"][self.state.difficulty]
+        lines = load_buyer_config()["custom_opening_lines" if persona.get("custom") else "opening_lines"][self.state.difficulty]
         line = random.Random(self.session_id).choice(lines)
         content = line.format(
             name=persona_name(persona),
@@ -204,6 +206,19 @@ class BuyerSession(BuyerRecord):
             return False
 
         self.conversation_history = self.conversation_history[: seller_turns[turn_index - 1]]
+        self._settle()
+        return True
+
+    def continue_from(self, history: list[dict]) -> BuyerResponse:
+        """Pick up a conversation that already happened (e.g. a real call up to where it turned): the buyer
+        is exactly where that transcript left them, and their last line is what the learner answers next.
+        `history` must end with the buyer (custom_buyer.parse_replay checks it)."""
+        self.conversation_history = [dict(entry) for entry in history]
+        self._settle()
+        return self._response(self.conversation_history[-1]["content"])
+
+    def _settle(self) -> None:
+        """Set every count from the transcript as it now stands, as if the session had gone this way."""
         replay = self.review()
         self.state.turn_count = replay["summary"]["turn_count"]
         self.state.objections_raised = self.pacer.raised_by(self.state.turn_count)
@@ -212,7 +227,6 @@ class BuyerSession(BuyerRecord):
         self.state.has_walked = False
         self.last_turn_signals = []
         self.log_snapshot()
-        return True
 
     @timed
     def redo(self, turn_index: int, user_message: str) -> BuyerResponse | None:

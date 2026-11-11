@@ -1,8 +1,10 @@
 export { Badge, type Tone } from "./Badge";
 export { Button, buttonClass } from "./Button";
 export { Card, Eyebrow } from "./Card";
+export { ChipList } from "./ChipList";
 export { ConfirmProvider, useConfirm } from "./Confirm";
 export { Dialog } from "./Dialog";
+export { FileDrop } from "./FileDrop";
 export { Notice, TypingDots, VoiceWave } from "./Notice";
 export { Segmented, Select, Switch, TextArea, TextInput } from "./Field";
 export { Icon } from "./Icon";

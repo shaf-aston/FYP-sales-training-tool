@@ -107,3 +107,13 @@ def test_every_session_route_answers_a_dead_session_the_same_way(sell_client, me
 
     assert response.status_code == 400
     assert response.get_json() == {"error": SELL_SESSION_NOT_FOUND, "code": "SESSION_EXPIRED"}
+
+
+def test_skills_are_the_evaluation_criteria(client):
+    from core.infra.loader import load_buyer_config
+
+    body = client.get("/api/sell/skills").get_json()
+    criteria = load_buyer_config()["evaluation"]["criteria"]
+    assert [s["id"] for s in body["skills"]] == list(criteria)
+    assert all(s["label"] and s["tip"] for s in body["skills"])
+    assert body["target"] == load_buyer_config()["evaluation"]["scoring"]["strong_score"]

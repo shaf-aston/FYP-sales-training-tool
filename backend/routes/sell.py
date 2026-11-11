@@ -8,10 +8,12 @@ from core.infra.constants import MAX_CHOSEN_OBJECTION_CHARS, MAX_PERSONA_NAME_CH
 from core.training.drills import build_drill_set
 from core.infra.logs import SessionAnalytics
 from core.training.quiz import build_sell_question, score_sell_answer
+from core.sell_mode.custom_buyer import InvalidCustomBuyer
 from core.sell_mode.sell_service import InvalidDifficulty
 from core.infra.providers.router import ProviderUnavailable
 
 from ..messages import (
+    CUSTOM_BUYER_INVALID,
     INVALID_DIFFICULTY,
     NO_TURNS_YET,
     OPTIONAL_TEXT_INVALID,
@@ -66,6 +68,12 @@ def personas():
     return jsonify({"success": True, "personas": [_persona_card(p) for p in personas_for(product_type)]})
 
 
+@bp.route("/skills", methods=["GET"])
+def skills():
+    """The skills each session is scored on, with labels and tips: what the learner tracks over time."""
+    return jsonify({"success": True, **sell_service.skills()})
+
+
 @bp.route("/product-groups", methods=["GET"])
 def product_groups():
     """Curated product picker groups as JSON."""
@@ -110,7 +118,11 @@ def init():
             provider=provider,
             persona_name=chosen_persona,
             objection=objection,
+            custom_buyer=data.get("custom_buyer"),
+            replay=data.get("replay"),
         )
+    except InvalidCustomBuyer as e:
+        return jsonify({"error": CUSTOM_BUYER_INVALID.format(detail=e)}), 400
     except InvalidDifficulty as e:
         return jsonify({"error": INVALID_DIFFICULTY.format(choices=", ".join(e.choices))}), 400
     except UnknownPersona as e:

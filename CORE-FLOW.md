@@ -23,7 +23,8 @@ Each folder holds one job; its `__init__.py` says which. Imports point down or i
 core/
   infra/        plumbing, no sales knowledge: env, constants, loader, utils, logs/, providers/ (LLM, speech, router)
   training/     learner tools both modes use: turn_rating, quiz, drills
-  sell_mode/    learner sells, AI buys: buyer_*, sell_service, sell_evaluator, session_review, knowledge, real_calls
+  sell_mode/    learner sells, AI buys: buyer_*, sell_service, sell_evaluator, session_review, knowledge, real_calls, custom_buyer
+  calls/        an uploaded real call, no AI: transcript (parsers), roles (rep / prospect), profile, reader (the one entry)
   buy_mode/     learner buys, script sells: seller_bot, flow, coach, stage
     script_engine/  seller (one turn), engine (next line), method (load YAML), config (check YAML)
       hear/     what the reply meant: verdict, recognise, embedder, meanings, shrug
@@ -96,6 +97,30 @@ The same fields go into the `conversation_turn` analytics event. To read a whole
 | `feedback/` | `feedback.py` `save_feedback` (from `/api/feedback`) | ratings and comments, with their session |
 
 `backend/request_log.py` switches logging on and wraps every `/api` request in the outer span (request id, session id, route, status; `Server-Timing` and `X-Request-ID` headers back to the browser). To time a new step, put `@timed` on it. Read the numbers: `python scripts/timings_report.py data/logs/timings [session_id]`.
+
+## Uploaded calls
+
+A learner pastes or uploads a real call's transcript. `backend/routes/calls.py` hands it to `core/calls/reader.py`
+`read_call`, which never calls the AI and never stores anything:
+
+1. `transcript.py` `parse`: cleaned lines (BOM, line endings, `noise` from `calls.yaml`) go through `PARSERS` in order;
+   the first layout that finds two or more speakers wins. Turns by one speaker in a row are merged.
+2. `roles.py` `assign_roles`: the rep is the speaker the learner names, else the one asking the most questions
+   (`sure` only with a clear lead), else the first speaker. The prospect is whoever else talked most.
+3. `profile.py` `build_profile`: `calls.yaml` patterns over the prospect's own sentences give background, needs, pains,
+   budget (a sum said next to spending words), objections (typed like buyer.yaml concerns), difficulty and
+   personality, each with its `evidence`.
+
+`/api/calls/review` replays the call as a sell-mode transcript (`CallReading.history`: rep = learner side) through
+`sell_service.review_transcript`, the same review a practice session gets. Practising against the prospect is
+`/api/sell/init` with `custom_buyer`: `custom_buyer.py` checks it, the buyer opens with `custom_opening_lines` and raises
+the call's objections (`BuyerSession(objection_bank=...)`). With `replay` (the call up to a turning point, ending
+with the prospect) the session starts there instead: `BuyerSession.continue_from` settles readiness and counts from
+that transcript the same way a rewind does (`_settle`), and the prospect's last line is what the learner answers.
+
+**Adding a transcript format**: write one parser in `transcript.py` (`(lines, cfg) -> list[Turn] | None`), add it to
+`PARSERS` before any looser layout that could claim its text, and add a sample of the real export to
+`tests/test_calls_transcript.py`. Junk lines a tool adds go in `calls.yaml` `noise`.
 
 ## Adding a product or script
 

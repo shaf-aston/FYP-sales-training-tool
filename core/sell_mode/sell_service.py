@@ -4,6 +4,8 @@ from dataclasses import dataclass
 
 from core.sell_mode.buyer_session import BuyerSession
 from core.sell_mode.buyer_state import BuyerResponse, select_persona
+from core.sell_mode.custom_buyer import parse_custom_buyer, parse_replay
+from core.sell_mode.session_review import build_review
 from core.infra.loader import load_buyer_config, load_buyer_products
 
 
@@ -39,29 +41,63 @@ def product_groups() -> dict[str, list[dict]]:
     }
 
 
-def start_sell_session(
-    store, *, difficulty: str | None, product_type: str, provider: str | None,
-    persona_name: str | None, objection: str | None,
-) -> SellStart:
-    """Build the buyer, get its opening line and register the session.
-
-    `difficulty` None means the configured default. Raises InvalidDifficulty or
-    UnknownPersona for bad choices, and ProviderUnavailable when no LLM answers.
-    `store` is the live-session store (needs `.set`).
-    """
+def _checked_difficulty(difficulty: str | None) -> str:
+    """The difficulty asked for, or the configured default for None. Raises InvalidDifficulty."""
     config = load_buyer_config()
     if difficulty is None:
-        difficulty = config["default_difficulty"]
+        return config["default_difficulty"]
     choices = list(config["difficulty_profiles"])
     if difficulty not in choices:
         raise InvalidDifficulty(choices)
+    return difficulty
+
+
+def review_transcript(history: list[dict], difficulty: str | None) -> dict:
+    """The turn-by-turn review of any transcript (e.g. a real call), replayed at a difficulty's behaviour:
+    the same review a practice session gets. Raises InvalidDifficulty."""
+    behaviour = load_buyer_config()["difficulty_profiles"][_checked_difficulty(difficulty)]["behaviour"]
+    review = build_review(history, behaviour)
+    review.pop("readiness_exact")   # for rewinding a live session only
+    return review
+
+
+def start_sell_session(
+    store, *, difficulty: str | None, product_type: str, provider: str | None,
+    persona_name: str | None, objection: str | None, custom_buyer: dict | None = None,
+    replay: list | None = None,
+) -> SellStart:
+    """Build the buyer, get its opening line and register the session.
+
+    `difficulty` None means the configured default. `custom_buyer` (a buyer the learner described, e.g. from
+    a real call) replaces the persona pick and brings its own objections; `replay` (a transcript ending with the
+    buyer) is where the conversation starts instead of an opening line. Raises InvalidDifficulty,
+    UnknownPersona or InvalidCustomBuyer for bad choices, and ProviderUnavailable when no LLM answers.
+    `store` is the live-session store (needs `.set`).
+    """
+    persona, bank = parse_custom_buyer(custom_buyer) if custom_buyer is not None else (None, None)
+    history = parse_replay(replay) if replay is not None else None
     session = BuyerSession(
         provider_type=provider,
         product_type=product_type,
-        difficulty=difficulty,
-        persona=select_persona(product_type, persona_name),
+        difficulty=_checked_difficulty(difficulty),
+        persona=persona or select_persona(product_type, persona_name),
         objection=objection,
+        objection_bank=bank,
     )
-    opening = session.get_opening_message()
+    opening = session.continue_from(history) if history else session.get_opening_message()
     store.set(session.session_id, session)
     return SellStart(session, opening)
+
+
+def skills() -> dict:
+    """The skills every sell session is scored on (buyer.yaml evaluation.criteria), for tracking them over time:
+    id, label, the tip for when it is the weakest, its share of the overall score, and the score that counts as
+    strong (the default target)."""
+    evaluation = load_buyer_config()["evaluation"]
+    return {
+        "target": evaluation["scoring"]["strong_score"],
+        "skills": [
+            {"id": name, "label": info["label"], "tip": info["tip"], "weight": info["weight"]}
+            for name, info in evaluation["criteria"].items()
+        ],
+    }

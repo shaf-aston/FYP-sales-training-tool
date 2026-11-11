@@ -12,6 +12,9 @@ export const gradeTone = (g: string) => (g === "A" || g === "B" ? "success" : g 
 /** A change in points with its sign, e.g. "+5" or "-3". */
 export const signed = (n: number) => (n > 0 ? `+${n}` : `${n}`);
 
+/** The general product; must match the backend default product_type (backend/routes/sell.py). */
+export const GENERAL_PRODUCT = "default";
+
 export const difficultyOptions = [
   { value: "easy", label: "Easy" },
   { value: "medium", label: "Medium" },
