@@ -1,0 +1,31 @@
+.stack {
+  display: grid;
+  gap: var(--space-4);
+  animation: fade-in var(--dur-base) var(--ease-out);
+}
+.choose {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.types {
+  flex-basis: 100%;
+  font-size: var(--text-xs);
+  color: var(--text-subtle);
+}
+/* A quiet text link under the main button: the sample is a way in, not the main action. */
+.sample {
+  justify-self: center;
+  min-height: var(--touch-target);
+  padding: 0 var(--space-2);
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: var(--text-sm);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.sample:disabled {
+  color: var(--text-muted);
+  cursor: progress;
+}

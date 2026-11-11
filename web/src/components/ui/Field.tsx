@@ -82,11 +82,13 @@ export function Switch({ label, checked, onChange }: { label: string; checked: b
 /** One-of-many choice shown as joined buttons, e.g. Easy / Medium / Hard. */
 export function Segmented<V extends string>({
   label,
+  hideLabel,
   options,
   value,
   onChange,
 }: {
   label: string;
+  hideLabel?: boolean;
   options: { value: V; label: string }[];
   value: V;
   onChange: (v: V) => void;
@@ -94,7 +96,7 @@ export function Segmented<V extends string>({
   const id = useId();
   return (
     <div className={s.field}>
-      <span className={s.label} id={id}>
+      <span className={hideLabel ? "sr-only" : s.label} id={id}>
         {label}
       </span>
       <div className={s.segmented} role="group" aria-labelledby={id}>

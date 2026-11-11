@@ -19,7 +19,7 @@ npm run check                         # types + lint + the three logic checks
 3. **Talk to the server**: every request goes through `api.*` (`src/lib/api/client.ts`). Why: one swappable seam; nothing else calls `fetch`.
 4. **Type or speak**: the message box text lives in `DraftContext` (`src/state/DraftContext.tsx`); voice writes into it (`src/features/voice/`). Why: keyboard and mic share one draft.
 5. **Send**: `send()` adds the message at once, calls the API, rolls back on failure, and drops replies from a conversation that was replaced. Why: feels instant, never shows the wrong reply.
-6. **Show progress**: the sidebar's stage card (buy mode), the coach panel and the sidebar's Buyer tab (sell mode: `BuyerTab` shows the setup form, then `BuyerProfile` with a folded "New buyer" form) read the same store (`src/features/sidebar`, `coach`, `sell`). Why: one source of truth.
+6. **Show progress**: the sidebar's stage card (buy mode), the coach panel and the sidebar's Buyer tab (sell mode: `BuyerTab` shows the setup form, then `BuyerProfile` with a folded "New buyer" form; the form picks a buyer or builds one from a real call, `src/features/calls/`) read the same store (`src/features/sidebar`, `coach`, `sell`). Why: one source of truth.
 7. **Learn after**: evaluation, "Walk it back", quiz and drills (`src/features/sell`, `quiz`). Why: turn a session into something to learn from.
 
 ## Web-only words
