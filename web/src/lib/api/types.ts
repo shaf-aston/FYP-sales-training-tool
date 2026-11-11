@@ -175,7 +175,8 @@ export interface Evaluation {
   overall_score: number;
   grade: string;
   outcome: Outcome;
-  criteria_scores: Record<string, { score: number; feedback: string }>;
+  /** `measured` false: a stand-in score (no evidence in this session, e.g. no objection was raised). */
+  criteria_scores: Record<string, { score: number; feedback: string; measured?: boolean }>;
   strengths: string[];
   improvements: string[];
   summary: string;
@@ -197,6 +198,8 @@ export interface SkillsRes {
   success: true;
   /** The score that counts as strong: the default target. */
   target: number;
+  /** The targets a learner can pick (the default is one of them). */
+  targets: number[];
   skills: Skill[];
 }
 

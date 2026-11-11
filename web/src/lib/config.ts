@@ -35,8 +35,8 @@ export const config = {
     celebrateGrades: ["A"],
   },
   knowledge: { nameMax: 100, fieldMax: 1_000 },
-  /** Skill Radar: sessions kept on this device, how many make the average, and the targets the learner can pick. */
-  skills: { historyCap: 100, averageWindow: 5, targets: [60, 70, 80] as const },
+  /** Skill Radar: sessions kept on this device and how many make the recent average (targets come from the server). */
+  skills: { historyCap: 100, averageWindow: 5 },
   /** Buyer setup in sell mode: the learner's own objection (server caps at the same length) and quick picks. */
   chosenObjection: {
     max: 200,

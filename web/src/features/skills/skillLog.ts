@@ -1,18 +1,18 @@
-// Every finished sell session's skill scores, newest last, so progress shows over time. Pure functions:
-// callers pass the log, the clock and the limits; the hook in useSkillLog.ts keeps it in storage.
+// Every finished sell session's skill scores, oldest first, so progress shows over time. Pure functions:
+// callers pass the log, the clock and the limits; skillStore.ts keeps it in storage.
 
 export interface SkillEntry {
   sessionId: string;
   /** When the session was scored (ms since epoch). */
   at: number;
   overall: number;
-  /** Skill id (buyer.yaml evaluation.criteria) -> 0-100. */
+  /** Skill id (buyer.yaml evaluation.criteria) -> 0-100. Only measured skills: a stand-in score is left out. */
   scores: Record<string, number>;
 }
 
 export type SkillLog = SkillEntry[];
 
-const isScore = (n: unknown): n is number => typeof n === "number" && Number.isFinite(n);
+const isScore = (n: unknown): n is number => typeof n === "number" && Number.isFinite(n) && n >= 0 && n <= 100;
 
 /** Reads saved JSON defensively: anything that is not a valid entry is dropped. */
 export function parseLog(raw: string | null): SkillLog {
@@ -24,7 +24,8 @@ export function parseLog(raw: string | null): SkillLog {
       (e): e is SkillEntry =>
         !!e &&
         typeof e.sessionId === "string" &&
-        isScore(e.at) &&
+        typeof e.at === "number" &&
+        Number.isFinite(e.at) &&
         isScore(e.overall) &&
         !!e.scores &&
         typeof e.scores === "object" &&
@@ -35,9 +36,12 @@ export function parseLog(raw: string | null): SkillLog {
   }
 }
 
-/** Adds a session's scores. Scoring the same session again replaces its entry; the oldest drop past `cap`. */
+/** Adds a session's scores; the oldest drop past `cap`. Scoring the same session again replaces its scores in place,
+ * keeping when it was first scored, so the history stays in session order. */
 export function record(log: SkillLog, entry: SkillEntry, cap: number): SkillLog {
-  return [...log.filter((e) => e.sessionId !== entry.sessionId), entry].slice(-cap);
+  const at = log.findIndex((e) => e.sessionId === entry.sessionId);
+  if (at >= 0) return log.map((e, i) => (i === at ? { ...entry, at: e.at } : e));
+  return [...log, entry].slice(-cap);
 }
 
 /** Each skill's average over the last `window` sessions that scored it. */

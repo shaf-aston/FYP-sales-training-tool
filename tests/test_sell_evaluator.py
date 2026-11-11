@@ -22,8 +22,8 @@ def test_criteria_score_empty_when_the_salesperson_said_nothing():
     scores = evaluator._criteria_scores([], _config()["evaluation"])
 
     assert scores == {
-        "needs_discovery": {"score": 40, "feedback": NO_EVIDENCE},
-        "rapport_building": {"score": 40, "feedback": NO_EVIDENCE},
+        "needs_discovery": {"score": 40, "feedback": NO_EVIDENCE, "measured": False},
+        "rapport_building": {"score": 40, "feedback": NO_EVIDENCE, "measured": False},
     }
 
 
@@ -36,8 +36,8 @@ def test_empty_session_scores_neutral(monkeypatch):
     assert result["overall_score"] == 40
     assert result["grade"] == "F"
     assert result["criteria_scores"] == {
-        "needs_discovery": {"score": 40, "feedback": NO_EVIDENCE},
-        "rapport_building": {"score": 40, "feedback": NO_EVIDENCE},
+        "needs_discovery": {"score": 40, "feedback": NO_EVIDENCE, "measured": False},
+        "rapport_building": {"score": 40, "feedback": NO_EVIDENCE, "measured": False},
     }
     assert result["summary"] == "Foundational attempt; focus on core questioning and structure. Outcome: active."
     assert result["coach_tip"] == "Ask one open question that surfaces root cause, not symptoms."

@@ -27,6 +27,12 @@ log = record(log, entry("s2", 3, 55, 62, 60), 3);
 log = record(log, entry("s3", 4, 65, 64, 50), 3);
 log = record(log, entry("s4", 5, 75, 66, 40), 3);
 assert.deepEqual(log.map((e) => e.sessionId), ["s2", "s3", "s4"]);
+// re-scoring keeps the session's place and first time
+const rescored = record(log, entry("s3", 99, 1, 1, 1), 3);
+assert.deepEqual(rescored.map((e) => [e.sessionId, e.at]), [["s2", 3], ["s3", 4], ["s4", 5]]);
+assert.equal(rescored[1].scores.needs_discovery, 1);
+// scores outside 0-100 are not trusted from storage
+assert.deepEqual(parseLog(JSON.stringify([{ ...entry("s1", 1, 50, 60, 70), scores: { a: 1e6 } }])), []);
 
 // averages over a window, trend in order
 assert.deepEqual(averages(log, ids, 2), { needs_discovery: 70, rapport_building: 65, objection_handling: 45 });

@@ -13,7 +13,8 @@ interface Props {
   target: number;
 }
 
-/** Each skill on its own axis (0-100): the latest session, the recent average and the target ring. Draws only. */
+/** Each skill on its own axis (0-100): the latest session, the recent average and the target ring. Draws only.
+ * A skill the latest session did not measure is drawn at its average, without a dot. */
 export function SkillRadar({ axes, latest, average, target }: Props) {
   const n = axes.length;
   const values = (scores: Record<string, number>) => axes.map((a) => scores[a.id]);
@@ -42,9 +43,10 @@ export function SkillRadar({ axes, latest, average, target }: Props) {
       <polygon className={s.target} points={polygon(axes.map(() => target), 100, R)} />
       <g className={s.grow}>
         <polygon className={s.average} points={polygon(values(average), 100, R)} />
-        <polygon className={s.latest} points={polygon(values(latest), 100, R)} />
+        <polygon className={s.latest} points={polygon(axes.map((a) => latest[a.id] ?? average[a.id]), 100, R)} />
         {axes.map((a, i) => {
-          const p = axisPoint(i, n, latest[a.id] ?? 0, 100, R);
+          if (latest[a.id] === undefined) return null;
+          const p = axisPoint(i, n, latest[a.id], 100, R);
           return <circle key={a.id} className={s.dot} cx={p.x} cy={p.y} r={3.5} />;
         })}
       </g>

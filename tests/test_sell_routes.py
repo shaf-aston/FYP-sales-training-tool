@@ -127,3 +127,28 @@ def test_each_skill_has_a_practice_session_the_buyer_can_start(sell_client):
         assert len(practice.get("objection", "")) <= MAX_CHOSEN_OBJECTION_CHARS
         started = sell_client.post("/api/sell/init", json={"product_type": "default", **practice})
         assert started.status_code == 200, (skill["id"], started.get_json())
+
+
+def test_a_skill_without_a_practice_session_gets_the_default(monkeypatch):
+    from core.infra.loader import load_buyer_config
+    from core.sell_mode import sell_service
+
+    config = load_buyer_config()
+    del config["evaluation"]["criteria"]["conversation_flow"]["practice"]
+    monkeypatch.setattr(sell_service, "load_buyer_config", lambda: config)
+    flow = next(s for s in sell_service.skills()["skills"] if s["id"] == "conversation_flow")
+    assert flow["practice"] == {"difficulty": config["default_difficulty"]}
+    assert config["evaluation"]["scoring"]["strong_score"] in sell_service.skills()["targets"]
+
+
+def test_a_stand_in_score_is_not_measured():
+    from core.sell_mode.sell_evaluator import _criteria_scores
+    from core.infra.loader import load_buyer_config
+
+    evaluation = load_buyer_config()["evaluation"]
+    calm = [{"role": "assistant", "content": "Hi."}, {"role": "user", "content": "What brings you here today?"},
+            {"role": "assistant", "content": "Just looking."}]
+    scores = _criteria_scores(calm, evaluation)
+    assert scores["objection_handling"]["measured"] is False      # no objection was raised
+    assert scores["needs_discovery"]["measured"] is True
+    assert all(not s["measured"] for s in _criteria_scores([], evaluation).values())

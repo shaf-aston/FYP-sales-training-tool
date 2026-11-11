@@ -345,7 +345,8 @@ evaluation:
   scoring:
     empty_score: 40          # no salesperson turns at all
     neutral_score: 60        # a custom criterion with no rule of its own
-    strong_score: 70         # at or above this a criterion counts as a strength
+    strong_score: 70         # at or above this a criterion counts as a strength (and is Skill Radar's default target)
+    skill_targets: [60, 70, 80]   # the targets a learner can pick in Skill Radar (strong_score is always one)
     summary_bands: [65, 80]  # overall below the first = "foundational", at or above the second = "solid"
     length_fit:              # average words per salesperson turn -> fit (first band that matches wins)
       bands:
