@@ -113,6 +113,7 @@ def init():
             persona_name=chosen_persona,
             objection=objection,
             custom_buyer=data.get("custom_buyer"),
+            replay=data.get("replay"),
         )
     except InvalidCustomBuyer as e:
         return jsonify({"error": CUSTOM_BUYER_INVALID.format(detail=e)}), 400
