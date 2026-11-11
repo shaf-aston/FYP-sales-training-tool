@@ -63,6 +63,10 @@ export const config = {
     repGuess: { named: "Named you", most_questions: "Asked the most questions", first_speaker: "Spoke first" },
     objectionTypes: { price: "Price", skepticism: "Doubt", timing: "Timing", partner: "Partner", fear: "Fear" },
   },
+  /** Optional account; the server checks the same limits (limits.yaml accounts). */
+  account: { nameMax: 60, passwordMin: 8, teamNameMax: 60 },
+  /** A saved prospect keeps no difficulty: practising one starts here. */
+  savedProspectDifficulty: "medium",
   coachTextMax: 120,
   /** Night-city film: light sizes, drift speed, glow and flicker. */
   film: {

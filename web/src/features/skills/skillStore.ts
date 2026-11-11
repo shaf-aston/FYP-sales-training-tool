@@ -43,6 +43,10 @@ export const skillStore = {
     writeString(storageKeys.skillLog, JSON.stringify(log));
     notify();
   },
+  /** Swap in a whole log (the account's history after login), oldest first; the oldest drop past the cap. */
+  replace(next: SkillLog) {
+    set(next.slice(-config.skills.historyCap));
+  },
 };
 
 export const useSkillLog = () => useSyncExternalStore(skillStore.subscribe, skillStore.get, () => EMPTY);

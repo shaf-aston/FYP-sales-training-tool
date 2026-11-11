@@ -7,7 +7,7 @@ import { config, storageKeys } from "@/lib/config";
 import { useStoredState } from "@/lib/useStoredState";
 
 type SidePanel = "coach" | "quiz" | null;
-type DialogName = "help" | "review" | "drills" | "evaluation" | "feedback" | "skills" | null;
+type DialogName = "help" | "review" | "drills" | "evaluation" | "feedback" | "skills" | "account" | null;
 /** "buyer" exists only in sell mode; the sidebar falls back to its first tab when the saved one is missing or old. */
 export type SidebarTab = "buyer" | "tools" | "settings";
 

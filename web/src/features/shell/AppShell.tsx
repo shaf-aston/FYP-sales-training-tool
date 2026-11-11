@@ -5,6 +5,8 @@
 
 import { ConfirmProvider, ToastProvider } from "@/components/ui";
 import { AmbientFilm } from "@/components/film/AmbientFilm";
+import { AccountProvider } from "@/features/account/AccountContext";
+import { AccountDialog } from "@/features/account/AccountDialog";
 import { ChatView } from "@/features/chat/ChatView";
 import { DraftProvider } from "@/state/DraftContext";
 import { CoachPanel } from "@/features/coach/CoachPanel";
@@ -31,6 +33,7 @@ function Layout() {
       </main>
       <HelpDialog />
       <FeedbackDialog />
+      <AccountDialog />
       <SellDialogs />
     </div>
   );
@@ -42,14 +45,16 @@ export function AppShell({ mode }: { mode: Mode }) {
     <ToastProvider>
       <ConfirmProvider>
         <UiProvider>
-          <SessionProvider mode={mode}>
-            <DraftProvider>
-              <VoiceProvider>
-                <AmbientFilm />
-                <Layout />
-              </VoiceProvider>
-            </DraftProvider>
-          </SessionProvider>
+          <AccountProvider>
+            <SessionProvider mode={mode}>
+              <DraftProvider>
+                <VoiceProvider>
+                  <AmbientFilm />
+                  <Layout />
+                </VoiceProvider>
+              </DraftProvider>
+            </SessionProvider>
+          </AccountProvider>
         </UiProvider>
       </ConfirmProvider>
     </ToastProvider>
