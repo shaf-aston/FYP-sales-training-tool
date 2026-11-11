@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { Button, buttonClass, Icon, useConfirm } from "@/components/ui";
 import { useSession } from "@/features/session/SessionContext";
+import { api } from "@/lib/api/client";
+import type { ScriptStep } from "@/lib/api/types";
 import { config } from "@/lib/config";
 import { MODE_META, STAGE_STEPS, stageIndex } from "@/lib/labels";
 import { useUi } from "@/state/UiContext";
@@ -18,7 +20,8 @@ const MODES = {
 
 export function ChatHeader() {
   const { openDialog, showPanels } = useUi();
-  const { mode, reset, sellSession, stage } = useSession();
+  const { mode, reset, jumpTo, buySessionId, sellSession, stage } = useSession();
+  const [steps, setSteps] = useState<ScriptStep[]>([]);
   const at = stageIndex(stage);
   // Phones and tablets: the sidebar sits below the chat, so its button carries the stage.
   const staged = mode === "buy" && at >= 0;
@@ -56,6 +59,18 @@ export function ChatHeader() {
       document.removeEventListener("keydown", onKey);
     };
   }, [menuOpen]);
+
+  // Buy mode: the script's steps, loaded once the menu first opens, to start a fresh call at one.
+  useEffect(() => {
+    if (!menuOpen || mode !== "buy" || !buySessionId || steps.length) return;
+    api.buySteps(buySessionId).then((r) => setSteps(r.steps)).catch(() => {});
+  }, [menuOpen, mode, buySessionId, steps.length]);
+
+  const onJump = async (step: string) => {
+    if (!step) return;
+    setMenuOpen(false);
+    await jumpTo(step);
+  };
 
   const pick = (dialog: "help" | "feedback") => {
     setMenuOpen(false);
@@ -134,6 +149,25 @@ export function ChatHeader() {
               <button type="button" role="menuitem" className={s.item} onClick={() => pick("feedback")}>
                 Feedback
               </button>
+              {mode === "buy" && steps.length > 0 && (
+                <label className={s.item}>
+                  <span className="sr-only">Jump to step (starts a fresh call there)</span>
+                  <select
+                    role="menuitem"
+                    className={s.jump}
+                    value=""
+                    onChange={(e) => void onJump(e.target.value)}
+                    title="Start a fresh call at this step, to test it"
+                  >
+                    <option value="">Jump to step…</option>
+                    {steps.map((st) => (
+                      <option key={st.id} value={st.id}>
+                        {st.id} · {st.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
               <button type="button" role="menuitem" className={`${s.item} ${s.danger}`} onClick={onReset}>
                 Reset session
               </button>

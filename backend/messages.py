@@ -47,6 +47,7 @@ RATING_NOT_NUMBER = "Rating must be a number 1-5"
 # Buy mode
 MISSING_INDEX = "Missing message index"
 INVALID_INDEX = "Invalid index format"
+INVALID_STEP = "That step does not exist"
 REWIND_FAILED = "Rewind failed"
 EDIT_FAILED = "Couldn't apply that edit -- try again in a sec"
 QUESTION_REQUIRED = "Question required"
