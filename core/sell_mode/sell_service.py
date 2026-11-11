@@ -87,3 +87,17 @@ def start_sell_session(
     opening = session.continue_from(history) if history else session.get_opening_message()
     store.set(session.session_id, session)
     return SellStart(session, opening)
+
+
+def skills() -> dict:
+    """The skills every sell session is scored on (buyer.yaml evaluation.criteria), for tracking them over time:
+    id, label, the tip for when it is the weakest, its share of the overall score, and the score that counts as
+    strong (the default target)."""
+    evaluation = load_buyer_config()["evaluation"]
+    return {
+        "target": evaluation["scoring"]["strong_score"],
+        "skills": [
+            {"id": name, "label": info["label"], "tip": info["tip"], "weight": info["weight"]}
+            for name, info in evaluation["criteria"].items()
+        ],
+    }

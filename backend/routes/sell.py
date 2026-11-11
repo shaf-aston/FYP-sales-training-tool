@@ -68,6 +68,12 @@ def personas():
     return jsonify({"success": True, "personas": [_persona_card(p) for p in personas_for(product_type)]})
 
 
+@bp.route("/skills", methods=["GET"])
+def skills():
+    """The skills each session is scored on, with labels and tips: what the learner tracks over time."""
+    return jsonify({"success": True, **sell_service.skills()})
+
+
 @bp.route("/product-groups", methods=["GET"])
 def product_groups():
     """Curated product picker groups as JSON."""
