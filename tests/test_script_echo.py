@@ -85,7 +85,7 @@ def test_the_scripts_own_question_asked_again_is_not_a_quote(fake_embedder, cat_
     # script's, even where they share some with the reply, so the next message may still quote them.
     s = cat_seller(fake_embedder, meanings=NO_MEANINGS, step="08")
     text, _ = s.reply("what do you mean by business owner employee")
-    assert text.endswith("What's the main difference between a successful business owner and an employee?")
+    assert text.endswith("What's the main difference in the way a successful business owner makes decisions, compared to an employee?")
     assert not s.state.quoted and s.state.echoed == ()
 
 

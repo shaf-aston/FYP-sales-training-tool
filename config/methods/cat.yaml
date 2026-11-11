@@ -301,7 +301,7 @@ steps:
     name: "Identity gap"
     note: 'they name gap: risk, decisions, responsibility, action'
     ui_stage: emotional
-    say: "We love working with people going from 9-5er to business owner... exciting, but terrifying, because it's outside your comfort zone. What's the main difference between a successful business owner and an employee?"
+    say: "We love working with people going from 9-5er to business owner... exciting, but terrifying, because it's outside your comfort zone. What's the main difference in the way a successful business owner makes decisions, compared to an employee?"
     capture: gap
     shrug_moves_on: true   # the ack below answers it: "yeah" moves on, never asked again (was asked 3 times)
     listen:
@@ -310,12 +310,31 @@ steps:
       takes_risk:
         examples: ["business owners take risks", "they're not scared to fail", "they get out of their comfort zone"]
         min_score: 0.9   # by meaning only when it is nearly these: "they work harder" (near) is not about risk
-        pattern: '(?i)\b(?:risk\w*|gambl\w*|(?:bet|back)\w* (?:on )?(?:yourself|themselves|myself|himself|herself)|leap|jump in|all in|fear\w*|scared|scary|scare|afraid|terrif\w*|brave\w*|courag\w*|bold\w*|guts|nerve|daring|comfort(?:able| zone)?|uncomfortabl\w*|safe(?:ty)?|secur\w*|stab\w*|guarantee\w*|certain\w*|uncertain\w*|unknown|steady|regular (?:pay|wage|income)|pay ?(?:check|cheque|slip)|salary|wages?|paid (?:regardless|no matter|every month)|fail\w*|los(?:e|ing) (?:money|everything)|responsib\w*|accountab\w*|own(?:ership| it)|decisions?|decid\w*|initiative|on (?:your|their) own|self.?(?:starter|motivat\w*|disciplin\w*)|disciplin\w*|hustle|pressure)\b'
+        pattern: &risk_words '(?i)\b(?:risk\w*|gambl\w*|(?:bet|back)\w* (?:on )?(?:yourself|themselves|myself|himself|herself)|leap|jump in|all in|fear\w*|scared|scary|scare|afraid|terrif\w*|brave\w*|courag\w*|bold\w*|guts|nerve|daring|comfort(?:able| zone)?|uncomfortabl\w*|safe(?:ty)?|secur\w*|stab\w*|guarantee\w*|certain\w*|uncertain\w*|unknown|steady|regular (?:pay|wage|income)|pay ?(?:check|cheque|slip)|salary|wages?|paid (?:regardless|no matter|every month)|fail\w*|los(?:e|ing) (?:money|everything)|responsib\w*|accountab\w*|own(?:ership| it)|decisions?|decid\w*|initiative|on (?:your|their) own|self.?(?:starter|motivat\w*|disciplin\w*)|disciplin\w*|hustle|pressure)\b'
+        then: "09"
+        ack: "Exactly. Business owners take the risk and do the uncomfortable thing. What makes you successful as an employee doesn't make you successful in business."
+      any:   # draft: never said for them ("a big one is risk" fed the answer): one other question so they say it
+        then: "08_decide"
+        ack: "Sure."   # fits an answer ("more money") and a bare "yeah" alike
+  "08_decide":
+    name: "Identity gap, drawn out"
+    note: 'they say risk / fear / comfort zone themselves; we never say it for them'
+    ui_stage: emotional
+    draft: true
+    say: "Picture a big decision with no guarantee it works out. What does the business owner do there that the employee doesn't?"
+    capture: gap_how
+    shrug_moves_on: true
+    follow_up: true   # only after a real answer at 08: "this is stupid" goes on to 09
+    listen:
+      takes_risk:
+        examples: ["business owners take risks", "they're not scared to fail", "they get out of their comfort zone"]
+        min_score: 0.9
+        pattern: *risk_words
         then: "09"
         ack: "Exactly. Business owners take the risk and do the uncomfortable thing. What makes you successful as an employee doesn't make you successful in business."
       any:
         then: "09"
-        ack: "A big one is risk: business owners step outside their comfort zone and back themselves. What makes you successful as an employee doesn't make you successful in business."
+        ack: "Got it. What makes you successful as an employee doesn't make you successful in business."
   "09":
     name: "Limiting belief"
     note: 'the story they tell themselves: "not smart enough", "too late", "market is saturated"'

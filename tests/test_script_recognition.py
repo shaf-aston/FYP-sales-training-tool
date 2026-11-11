@@ -451,8 +451,8 @@ ROUND_6 = [   # whole simulated calls (calls.py personas): (step, slots, raised,
     ("goal_practical", {"outcome": "more money"}, (), "what do you mean", "goal_practical", "Fair point"),   # still asks
     ("goal_practical", {"outcome": "more money"}, (), "huh?", "goal_practical", None),   # was saved as their goal
     ("goal_practical", {"outcome": "more money"}, (), "dunno, pay my bills?", "goal_identity", None),   # a rise that answers still answers
-    ("08", {}, (), "yeah", "09", None),   # its ack answers it (shrug_moves_on); was asked 3 times
-    ("08", {}, (), "ok", "09", None),
+    ("08", {}, (), "yeah", "08_decide", None),   # nothing said: asked once another way (never fed the answer), never the same line
+    ("08", {}, (), "ok", "08_decide", None),
     ("goal_practical", {"outcome": "more money"}, (),
      "not having to ask my boss for time off, what about you, do you travel much?", "goal_identity", None),   # was heard as "what do you mean?"
     ("03", {}, (), "i guess 3 years, what about you", "04", None),   # "what about you" asks, "?" or not

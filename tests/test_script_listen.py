@@ -334,12 +334,13 @@ def test_a_finished_reply_is_never_held(fake_embedder, whole):
     ("stepping out of your comfort zone", True), ("they back themselves", True), ("owners make the decisions", True),
     ("money", False), ("they work harder", False), ("vision", False), ("scarf", False),
 ])
-def test_08_agrees_with_risk_and_shows_it_otherwise(fake_embedder, answer, agreed):
-    """08 is after risk, fear and the uncomfortable (by words, no AI): named = agreed with; missed = shown it."""
+def test_08_agrees_with_risk_and_asks_again_otherwise(fake_embedder, answer, agreed):
+    """08 is after risk, fear and the uncomfortable (by words, no AI): named = agreed with; missed = asked
+    another way so they say it (never said for them)."""
     s = seller(fake_embedder, _down, step="08")
     text, _ = s.reply(answer)
-    assert s.state.step == "09"
-    assert text.startswith("Exactly.") == agreed and ("A big one is risk" in text) != agreed, text
+    assert s.state.step == ("09" if agreed else "08_decide")
+    assert text.startswith("Exactly.") == agreed and "A big one is risk" not in text, text
 
 
 @pytest.mark.parametrize("whole", ["I can't afford that", "stuff like that", "2k if that"])
@@ -372,3 +373,19 @@ def test_voiceover_marks_never_reach_the_words():
     line = "(slow, deliberate) Where are you **now**... that you _don't_ want[pause] Why?"
     assert plain(line) == "Where are you now... that you don't want ¶ Why?".replace(" ¶", "")
     assert stresses(line) == 2 and plain("(all of it) a**b") == "(all of it) a**b"
+
+
+def test_08_never_says_the_answer_for_them_it_asks_once_more(fake_embedder):
+    # live call: "more money" got "A big one is risk..." (the answer fed to them); now one other question
+    s = seller(fake_embedder, _down, step="08")
+    text, _ = s.reply("more money")
+    assert s.state.step == "08_decide" and "risk" not in text.lower() and "comfort" not in text.lower()
+    assert s.method.steps["08_decide"].say in text
+    text, _ = s.reply("they just go for it even if they might lose money")
+    assert text.startswith("Exactly.") and s.state.step == "09"
+
+
+def test_08_drawn_out_moves_on_without_feeding_it_either(fake_embedder):
+    s = seller(fake_embedder, _down, step="08_decide")
+    text, _ = s.reply("they think harder")
+    assert s.state.step == "09" and "risk" not in text.lower()

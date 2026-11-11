@@ -203,7 +203,10 @@ def move_on(method, state):
     route = _route(step, ANY) or step.stuck
     if route is None:
         return _ask_again(method, state, step)
-    return _speak(method, replace(state, step=route.then))
+    then = route.then
+    while method.steps[then].follow_up and _route(method.steps[then], ANY):  # a follow-up needs an answer first
+        then = _route(method.steps[then], ANY).then
+    return _speak(method, replace(state, step=then))
 
 
 def jump(method, state, step_id):
