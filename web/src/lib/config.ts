@@ -47,6 +47,20 @@ export const config = {
       "We tried something like this before and it didn't work.",
     ],
   },
+  /** A real call the learner brings in (sell mode, Buyer tab). The server caps the transcript length itself. */
+  calls: {
+    /** File types the drop zone takes; the server reads WebVTT, SRT and "Name: line" text. */
+    accept: [".txt", ".vtt", ".srt"],
+    /** Bigger files are not transcripts; refuse before reading them into memory. */
+    maxFileBytes: 1_000_000,
+    /** Caps on the prospect fields the learner edits. */
+    prospect: { nameMax: 60, textMax: 300, itemMax: 120, maxItems: 8 },
+    /** Quotes shown under a field as "from the call". */
+    evidenceShown: 2,
+    /** How the server guessed which speaker is the learner (rep.how). */
+    repGuess: { named: "Named you", most_questions: "Asked the most questions", first_speaker: "Spoke first" },
+    objectionTypes: { price: "Price", skepticism: "Doubt", timing: "Timing", partner: "Partner", fear: "Fear" },
+  },
   coachTextMax: 120,
   /** Night-city film: light sizes, drift speed, glow and flicker. */
   film: {

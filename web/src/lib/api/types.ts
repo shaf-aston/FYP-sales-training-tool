@@ -120,6 +120,27 @@ export interface Persona {
 export interface BuyerPick {
   persona?: string;
   objection?: string;
+  /** A buyer built from a real call (sent as custom_buyer); replaces persona when set. */
+  custom?: CustomBuyer;
+}
+
+export type ObjectionType = "price" | "skepticism" | "timing" | "partner" | "fear";
+
+/** An objection the prospect raised on the call, in their own words. */
+export interface CallObjection {
+  type: ObjectionType;
+  text: string;
+}
+
+/** A buyer the learner describes (built from a real call); /api/sell/init custom_buyer. */
+export interface CustomBuyer {
+  name: string;
+  background: string;
+  personality: string;
+  budget: string;
+  needs: string[];
+  pain_points: string[];
+  objections: CallObjection[];
 }
 
 export interface SellInitRes {
@@ -193,6 +214,47 @@ export interface Drill {
   label: string;
   segments: string[]; // segments.length === answers.length + 1
   answers: string[];
+}
+
+/** A real sales call the learner pasted or uploaded (/api/calls/read and /api/calls/review). */
+export interface CallReq {
+  text: string;
+  filename?: string;
+  /** The speaker who is the learner; the server guesses when it is missing. */
+  rep?: string;
+}
+
+export interface CallSpeaker {
+  name: string;
+  turns: number;
+  words: number;
+  questions: number;
+}
+
+/** How the server picked the rep: the learner's name, the most questions, or who spoke first. */
+export type RepGuess = "named" | "most_questions" | "first_speaker";
+
+export interface CallTurn {
+  speaker: string;
+  role: "rep" | "prospect" | "other";
+  text: string;
+  at: string | null;
+}
+
+/** The prospect as read from the call, with the short quotes or reasons behind each field. */
+export interface CallProfile extends CustomBuyer {
+  difficulty: Difficulty;
+  evidence: Partial<Record<string, string[]>>;
+}
+
+export interface CallReadRes {
+  success: true;
+  format: "vtt" | "srt" | "speaker_lines" | "speaker_blocks";
+  speakers: CallSpeaker[];
+  rep: { name: string; how: RepGuess; sure: boolean };
+  prospect: string;
+  turns: CallTurn[];
+  profile: CallProfile;
 }
 
 export type KnowledgeField =

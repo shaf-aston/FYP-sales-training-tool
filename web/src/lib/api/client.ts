@@ -91,7 +91,7 @@ export function createHttpApi() {
       request<{ success: true; personas: T.Persona[] }>(`/api/sell/personas?product_type=${encodeURIComponent(productType)}`),
     sellInit: (difficulty: T.Difficulty, productType: string, pick: T.BuyerPick = {}) =>
       request<T.SellInitRes>("/api/sell/init", {
-        body: { difficulty, product_type: productType, persona: pick.persona, objection: pick.objection },
+        body: { difficulty, product_type: productType, persona: pick.persona, objection: pick.objection, custom_buyer: pick.custom },
         timeoutMs: chat,
       }),
     sellChat: (sid: string, message: string, showHints: boolean) =>
@@ -105,6 +105,11 @@ export function createHttpApi() {
     sellQuizAnswer: (sid: string, turn: number, answer: string) =>
       request<T.QuizResult>("/api/sell/quiz", { body: { turn, answer }, sessionId: sid, timeoutMs: chat }),
     sellDrills: (sid: string | null) => request<{ success: true; drills: T.Drill[] }>("/api/sell/drills", { sessionId: sid }),
+
+    // Calls: a real sales call the learner brings in, read by rules on the server (no AI).
+    callsSample: () => request<{ success: true; text: string; filename: string }>("/api/calls/sample"),
+    callsRead: (call: T.CallReq) => request<T.CallReadRes>("/api/calls/read", { body: call, timeoutMs: chat }),
+    callsReview: (call: T.CallReq) => request<T.Review>("/api/calls/review", { body: call, timeoutMs: chat }),
 
     // Shared
     /** The text as audio, or null when the server has no voice for it (the browser reads it instead). */

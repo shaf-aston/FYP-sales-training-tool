@@ -28,7 +28,7 @@ export interface SellSession {
   state: BuyerState;
   difficulty: Difficulty;
   productType: string;
-  /** What the learner picked in setup, so "play again" keeps the same buyer and objection. */
+  /** What the learner picked in setup, so "play again" keeps the same buyer and objection (or the buyer from a real call). */
   pick: BuyerPick;
   ended: boolean;
   outcome: Outcome;
