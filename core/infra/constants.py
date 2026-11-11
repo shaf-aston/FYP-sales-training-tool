@@ -41,10 +41,13 @@ BUYER_IDLE_MINUTES = _L["sessions"]["buyer_idle_minutes"]
 CLEANUP_INTERVAL_SECONDS = _L["sessions"]["cleanup_interval_seconds"]
 
 # input validation
+MAX_REQUEST_BYTES = _L["input"]["max_request_bytes"]
 MAX_MESSAGE_LENGTH = _L["input"]["max_message_length"]
 MAX_FIELD_LENGTH = _L["input"]["max_field_length"]
 MAX_CHOSEN_OBJECTION_CHARS = _L["input"]["max_chosen_objection_chars"]
 MAX_PERSONA_NAME_CHARS = _L["input"]["max_persona_name_chars"]
+MAX_CUSTOM_BUYER_TEXT_CHARS = _L["input"]["max_custom_buyer_text_chars"]
+MAX_CUSTOM_BUYER_ITEMS = _L["input"]["max_custom_buyer_items"]
 MAX_FEEDBACK_COMMENT_CHARS = _L["input"]["max_feedback_comment_chars"]
 MAX_FEEDBACK_PAGE_CHARS = _L["input"]["max_feedback_page_chars"]
 MAX_TURN_NUMBER = _L["input"]["max_turn_number"]

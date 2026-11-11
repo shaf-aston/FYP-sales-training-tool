@@ -1,0 +1,67 @@
+# Reading an uploaded sales-call transcript (core/calls). Every rule the reader uses lives here; the code
+# only applies them. No AI: the same transcript always gives the same speakers, rep and prospect profile.
+
+limits:
+  max_chars: 200000        # a two-hour call is about 120k characters
+  min_turns: 4             # fewer turns than this is not a conversation we can learn from
+  min_speakers: 2
+  max_speaker_chars: 40    # a "Name:" prefix longer than this is a sentence, not a speaker
+  max_quote_chars: 180     # a quote kept from the call (objection, need, pain) is cut to this
+  max_list_items: 3        # needs and pain points kept per profile
+  max_objections: 4        # objections kept per profile (at most `per_type` of one type)
+  per_type: 2
+
+# Speaker labels that name no one: the profile then calls the prospect `fallback_name`.
+anonymous_speakers: ["^speaker\\s*\\d*$", "^unknown(\\s+speaker)?$", "^participant\\s*\\d*$", "^guest\\s*\\d*$", "^caller\\s*\\d*$", "^customer$", "^prospect$", "^client$", "^lead$"]
+fallback_name: "Prospect"
+
+# Which speaker is the rep (the learner). Without a name from the learner, the rep is the speaker who asks
+# the most questions; `sure_ratio` is how many times more than the next speaker that must be to trust it.
+rep:
+  sure_ratio: 1.5
+  question_starts: [what, why, how, when, where, who, which, "do you", "does it", "are you", "is it", "is that", "have you", "has it", "can you", "could you", "would you", "will you", "did you", "tell me", "walk me through"]
+
+# Header lines that are not part of the conversation (titles, links, footers some tools add).
+# Seen in real exports: Fathom (VIEW RECORDING, ---, BOOKMARK/HIGHLIGHT ... WATCH), Otter ("Transcribed by"),
+# Google Meet (disclaimer, "Transcription ended after"), Teams ("X started transcription"), VTT ids and NOTE blocks.
+noise: ["^webvtt", "^note\\b", "^transcript$", "^meeting (notes|recording|transcript)", "^https?://", "editable transcript was computer generated", "^people can also change the text", "^recorded (on|by)", "^attendees$", "^\\d+$", "^[0-9a-f-]{20,}(/\\d+-\\d+)?$", "^-{3,}$", "^view recording\\b", "^(bookmark|highlight|action item)s?:", "- watch: https?://", "^transcribed by\\b", "^(meeting|transcription) ended after\\b", "\\b(started|stopped) transcription$"]
+
+# The prospect's own sentences say these things. Patterns are regular expressions, matched case-insensitively
+# on one sentence at a time. Objection types are the buyer's concern types in buyer.yaml.
+objections:
+  price: ["\\b(too|so|quite|bit) (expensive|pricey|much)\\b", "\\bcan'?t afford\\b", "\\bout of (my|our) (budget|price range)\\b", "\\bmore than (i|we) (wanted|planned|budgeted|expected)\\b", "\\b(cost|price|investment) is (high|steep|a lot)\\b", "\\bthat'?s a lot( of money)?\\b", "\\bno budget\\b"]
+  skepticism: ["\\b(sounds|seems) too good\\b", "\\bis (this|it) a scam\\b", "\\bhow do i know\\b", "\\b(don'?t|not sure i) (trust|believe)\\b", "\\bheard that before\\b", "\\bprove it\\b", "\\bguarantee\\b", "\\breviews?\\b", "\\bburn(ed|t) before\\b"]
+  timing: ["\\bthink (about|it over|on it)\\b", "\\bnot (the )?right (time|now)\\b", "\\b(next|later this) (month|quarter|year)\\b", "\\bcircle back\\b", "\\bget back to you\\b", "\\bsleep on it\\b", "\\bnot in a rush\\b", "\\btoo busy\\b"]
+  partner: ["\\b(talk|speak|check) (to|with) (my )?(wife|husband|partner|boss|team|business partner|co-?founder|manager)\\b", "\\b(wife|husband|partner|boss)('s| has| needs)\\b", "\\bnot my (decision|call)\\b", "\\bsign[- ]off\\b"]
+  fear: ["\\b(scared|afraid|nervous|worried)\\b", "\\bwhat if (it|this|i)\\b", "\\bnot sure (i|it) (can|will|would) work\\b", "\\bfailed before\\b", "\\b(tried|done) (this|that|something like this) before\\b", "\\bnot confident\\b", "\\brisky?\\b"]
+
+# What the prospect says about themselves and what they want.
+background: ["\\bi(?:'m| am) (an?|the) \\w+", "\\bi (work|worked) (as|at|in|for)\\b", "\\bi (run|own|started|founded|manage)\\b", "\\bmy (business|company|agency|team|store|shop|practice)\\b(?! partner)", "\\bwe(?:'re| are) an?\\b"]
+needs: ["\\b(i|we) (want|need|would like|'d like) to\\b", "\\b(i|we)(?:'m| am|'re| are) (looking|hoping|trying) (for|to)\\b", "\\b(my|our|the) (goal|aim|priority) is\\b", "\\bwhat (i|we) (really )?want is\\b"]
+pains: ["\\bstruggl", "\\bfrustrat", "\\bstuck\\b", "\\bproblem\\b", "\\bhard to\\b", "\\bcan'?t (seem|get|find|keep)\\b", "\\blosing\\b", "\\bwast(e|ing)\\b", "\\bstress", "\\b(tired|sick) of\\b", "\\bnot working\\b", "\\boverwhelm", "\\bburn(ed|t)? out\\b", "\\bfalling behind\\b"]
+# A budget: a sum of money in a sentence that talks about spending ("£3k set aside"), so a revenue goal
+# ("add £10k a month") is not read as what they can pay.
+budget_words: ["\\bbudget", "\\bset aside\\b", "\\bspend\\b", "\\bafford\\b", "\\binvest", "\\bpay\\b", "\\bcost", "\\bprice"]
+money: "(?:[£$€]\\s?\\d[\\d,.]*\\s?(?:k|m|grand|thousand|million)?|\\b\\d[\\d,.]*\\s?(?:k|grand|thousand|million|pounds|dollars|euros|quid|bucks)\\b)"
+
+# How hard a buyer they were. Points: one per objection and per push-back sentence; `short_reply_words` or
+# fewer words per reply on average adds `short_reply_points`. Up to `easy_max` points is easy, up to
+# `medium_max` medium, more is hard.
+difficulty:
+  pushback: ["^no\\b", "\\bnot (really|sure|interested)\\b", "\\bi don'?t think\\b", "\\bwhy would i\\b", "\\bwhat'?s the catch\\b", "\\bwe already (have|use)\\b"]
+  short_reply_words: 8
+  short_reply_points: 2
+  easy_max: 1
+  medium_max: 4
+
+# How they come across, from how they talk. A trait is used when its stat is at least / at most the number;
+# the texts are joined in this order. Stats: avg_words (per reply), questions, pushback, hedges (counts).
+personality:
+  traits:
+    - {stat: avg_words, at_most: 8, text: "Gives short answers and makes you work for detail"}
+    - {stat: avg_words, at_least: 25, text: "Talks freely and shares a lot of context"}
+    - {stat: questions, at_least: 3, text: "asks plenty of questions"}
+    - {stat: pushback, at_least: 2, text: "pushes back before agreeing to anything"}
+    - {stat: hedges, at_least: 2, text: "hedges and keeps options open"}
+  default: "Open to the conversation but needs a reason to move forward"
+hedges: ["\\bmaybe\\b", "\\bi guess\\b", "\\bperhaps\\b", "\\bkind of\\b", "\\bsort of\\b", "\\bprobably\\b", "\\bnot sure\\b", "\\bi suppose\\b"]

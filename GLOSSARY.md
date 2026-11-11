@@ -14,7 +14,8 @@ New idea → add it here first, then name things after it. A word in the "never"
 | **salesperson** | The learner in sell mode. | "your turn", `rate_turn` |
 | **seller** | The AI in buy mode. | `SellerBot` (`core/buy_mode/seller_bot.py`), route variable `seller` |
 | **buyer** | The AI in sell mode. | `BuyerSession` (`core/sell_mode/buyer_session.py`), route variable `buyer` |
-| **prospect** | The person being sold to, **inside the buy-mode script only** (`config/methods/`, `core/buy_mode/script_engine/`). Never a mode. | `prospect_pronouns`, label `ready:prospect` |
+| **prospect** | The person being sold to: inside the buy-mode script (`config/methods/`, `core/buy_mode/script_engine/`), and the non-rep side of an uploaded **call**. Never a mode, never the sell-mode AI. | `prospect_pronouns`, label `ready:prospect`, `Roles.prospect` |
+| **rep** | The salesperson in an uploaded **call**: the learner's side of a real conversation. | `core/calls/roles.py` `Roles.rep` |
 
 Rule: modes are named for the learner; engines and stores for the AI (`seller_sessions` hold buy-mode sessions).
 
@@ -42,6 +43,15 @@ Rule: modes are named for the learner; engines and stores for the AI (`seller_se
 | **objection** | Buyer pushback. Sell mode draws from an **objection bank**, paced by `ObjectionPacer`; **real objections** come from recorded calls; a **chosen objection** is one the learner typed in setup. | `buyer_rules.py`, `buyer.yaml` |
 | **guardrail** | Check on each AI buyer reply (e.g. no early "yes, I'll buy"). | `core/sell_mode/buyer_guardrails.py` `CheckedReply` |
 | **knowledge** | The learner's own product notes, given to the AI buyer as research notes. | `core/sell_mode/knowledge.py`, `config/knowledge_fields.yaml`, page `/knowledge/` |
+
+## Uploaded calls
+
+| Term | Meaning | Owner |
+|---|---|---|
+| **call** | A real sales conversation the learner uploads as a transcript. Read, never stored. | `core/calls/`, API `/api/calls/*`, web `features/calls/` |
+| **format** | The transcript layout a parser read: `vtt`, `srt`, `speaker_blocks`, `speaker_lines`. | `core/calls/transcript.py` `PARSERS` |
+| **profile** | The prospect as a buyer: a persona's keys plus their objections, difficulty and `evidence` (the quotes or counts behind each field). | `core/calls/profile.py` `Profile` |
+| **custom buyer** | A buyer the learner describes (from a profile) instead of picking a persona; raises its own objections. | `/api/sell/init` `custom_buyer`, `core/sell_mode/custom_buyer.py` |
 
 ## Buy mode (the scripted seller)
 
@@ -104,7 +114,7 @@ Rule: modes are named for the learner; engines and stores for the AI (`seller_se
 |---|---|---|
 | **provider** | One LLM service behind the shared interface. **Router** tries them in order. **LLM profile**: named call settings, `**LLM["buyer_reply"]`. | `core/infra/providers/`, `core/infra/providers/router.py`, `config/limits.yaml` |
 | **session store** | Live sessions with an idle timeout: `seller_sessions`, `buyer_sessions`. | `backend/security.py` `SessionStore` |
-| **rate bucket** | Request limit per route group: `buy_init`, `buy_chat`, `sell`. | `limits.yaml` `rate_limits` |
+| **rate bucket** | Request limit per route group: `buy_init`, `buy_chat`, `sell`, `calls`. | `limits.yaml` `rate_limits` |
 | **hands-free** | Speak, it sends, the reply is read aloud. | web `handsFree` |
 | **tokens** | Every colour, size and timing, once. | `web/src/styles/tokens.css` |
 
@@ -117,11 +127,11 @@ Rule: modes are named for the learner; engines and stores for the AI (`seller_se
 - Constants `UPPER_CASE`, only read from config: tunable numbers come from `config/limits.yaml` via `core/infra/constants.py`.
 
 **Config** (`config/`)
-- One file per owner, named like its module: `buyer.yaml` → `buyer_session.py`, `turn_rating.yaml` → `turn_rating.py`, `quiz.yaml` → `quiz.py`, `coach.yaml` → `coach.py`, `drills.yaml` → `drills.py`, `script/engine.yaml` → `script_engine/`.
+- One file per owner, named like its module: `calls.yaml` → `core/calls/`, `buyer.yaml` → `buyer_session.py`, `turn_rating.yaml` → `turn_rating.py`, `quiz.yaml` → `quiz.py`, `coach.yaml` → `coach.py`, `drills.yaml` → `drills.py`, `script/engine.yaml` → `script_engine/`.
 - Keys `snake_case`. All learner-facing wording and word lists live here, not in code.
 
 **API**
-- Path `/api/<mode>/<action>`; JSON keys `snake_case`. The web client names each call mode + action: `buyChat` = `/api/buy/chat`, `sellReview` = `/api/sell/review`.
+- Path `/api/<mode>/<action>` (or `/api/<feature>/<action>` for one both modes share: `calls`, `knowledge`); JSON keys `snake_case`. The web client names each call mode + action: `buyChat` = `/api/buy/chat`, `sellReview` = `/api/sell/review`.
 
 **Web** (`web/src/`)
 - Components `PascalCase.tsx` with `PascalCase.module.css` imported as `s`; hooks `useX`; contexts `XContext.tsx` exporting `XProvider` and `useX`.
