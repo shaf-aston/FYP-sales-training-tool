@@ -175,11 +175,32 @@ export interface Evaluation {
   overall_score: number;
   grade: string;
   outcome: Outcome;
-  criteria_scores: Record<string, { score: number; feedback: string }>;
+  /** `measured` false: a stand-in score (no evidence in this session, e.g. no objection was raised). */
+  criteria_scores: Record<string, { score: number; feedback: string; measured?: boolean }>;
   strengths: string[];
   improvements: string[];
   summary: string;
   coach_tip: string;
+}
+
+/** A skill every sell session is scored on (buyer.yaml evaluation.criteria), tracked by Skill Radar. */
+export interface Skill {
+  id: string;
+  label: string;
+  /** What to try when this is the weakest skill. */
+  tip: string;
+  weight: number;
+  /** The session that trains it: a difficulty, and an objection the buyer raises on turn 1. */
+  practice: { difficulty: Difficulty; objection?: string };
+}
+
+export interface SkillsRes {
+  success: true;
+  /** The score that counts as strong: the default target. */
+  target: number;
+  /** The targets a learner can pick (the default is one of them). */
+  targets: number[];
+  skills: Skill[];
 }
 
 export interface ReviewTurn {

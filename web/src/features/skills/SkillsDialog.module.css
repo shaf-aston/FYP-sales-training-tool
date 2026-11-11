@@ -1,0 +1,58 @@
+.body {
+  display: grid;
+  gap: var(--space-5);
+}
+.muted {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+.focus {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+  animation: pop-in var(--dur-pop) var(--ease-pop);
+}
+.eyebrow {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.focusName {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+}
+.rows {
+  list-style: none;
+  display: grid;
+  gap: var(--space-1);
+}
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 3.5em 2.5em;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--bg-card-soft);
+  font-size: var(--text-sm);
+}
+.row strong {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.name {
+  min-width: 0;
+}
+.met {
+  color: var(--success);
+}
+@media (max-width: 420px) {
+  .row {
+    grid-template-columns: minmax(0, 1fr) auto 2.5em;
+  }
+  .row > :nth-child(2) {
+    display: none;
+  }
+}

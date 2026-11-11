@@ -20,7 +20,10 @@ def _weighted_overall(criteria_scores: dict, criteria: dict) -> int:
 
 
 def _criteria_scores(conversation_history: list[dict], evaluation: dict) -> dict:
-    """Score every configured criterion from the transcript's language."""
+    """Score every configured criterion from the transcript's language.
+
+    Each score says whether it was `measured`: False when it is a stand-in, not evidence (no salesperson turns,
+    no objection to handle, a criterion with no rule), so progress tracking can leave it out."""
     criteria, hints, scoring = evaluation["criteria"], evaluation["hints"], evaluation["scoring"]
     feedback = evaluation["feedback"]
     sales_turns = [m.get("content", "") for m in conversation_history if m.get("role") == "user"]
@@ -28,7 +31,7 @@ def _criteria_scores(conversation_history: list[dict], evaluation: dict) -> dict
 
     if not sales_turns:
         return {
-            name: {"score": scoring["empty_score"], "feedback": feedback["no_evidence"]}
+            name: {"score": scoring["empty_score"], "feedback": feedback["no_evidence"], "measured": False}
             for name in criteria
         }
 
@@ -87,12 +90,13 @@ def _criteria_scores(conversation_history: list[dict], evaluation: dict) -> dict
     scores = {}
     for name, info in criteria.items():
         if name not in computed:  # a criterion added in config with no rule of its own
-            scores[name] = {"score": scoring["neutral_score"], "feedback": feedback["neutral"]}
+            scores[name] = {"score": scoring["neutral_score"], "feedback": feedback["neutral"], "measured": False}
             continue
         score, good = computed[name]
         scores[name] = {
             "score": clamp_score(round(score)),
             "feedback": info["praise"] if good else info["advice"],
+            "measured": not (name == "objection_handling" and objection_turns == 0),
         }
     return scores
 

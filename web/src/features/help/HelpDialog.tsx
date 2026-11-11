@@ -28,6 +28,7 @@ const SECTIONS: { title: string; items: { term?: string; text: string; keys?: st
     items: [
       { term: "Walk it back", text: "sell mode, after the call: replay each of your turns with the reasons behind its rating, and redo one." },
       { term: "Say it from memory", text: "fill in the missing move in lines from real sales scripts." },
+      { term: "Skill Radar", text: "sell mode: your five skills across every scored session, the one to work on next, and a session that trains it." },
       { term: "Quiz", text: "buy mode: pick the stage and the next move. Sell mode: rewrite one of your turns and see if it lands better." },
     ],
   },

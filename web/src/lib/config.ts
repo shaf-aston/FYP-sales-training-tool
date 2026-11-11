@@ -35,6 +35,8 @@ export const config = {
     celebrateGrades: ["A"],
   },
   knowledge: { nameMax: 100, fieldMax: 1_000 },
+  /** Skill Radar: sessions kept on this device and how many make the recent average (targets come from the server). */
+  skills: { historyCap: 100, averageWindow: 5 },
   /** Buyer setup in sell mode: the learner's own objection (server caps at the same length) and quick picks. */
   chosenObjection: {
     max: 200,
@@ -99,6 +101,8 @@ export const storageKeys = {
   buyProduct: "buyProduct",
   sidebarTab: "sidebarTab",
   sellSettings: "sellSettings",
+  skillLog: "skillLog.v1",
+  skillTarget: "skillTarget",
   coachStyle: "trainingStyle",
   ttsSpeed: "ttsPlaybackSpeed",
   autoSendDictation: "autoSendDictation",
