@@ -36,6 +36,8 @@ CALL_UNREADABLE_TEXT = "Couldn't find who said what. Use a transcript with speak
 CALL_TOO_LONG_TEXT = "That transcript is too long. Keep it under {max_chars:,} characters."
 CALL_TOO_SHORT_TEXT = "That's too short to learn from. Use a call with a few back-and-forth turns between two people."
 CALL_UNKNOWN_SPEAKER_TEXT = "Nobody called {name} speaks in this call."
+CALL_ONE_SPEAKER_TEXT = "Everyone in this transcript is labelled \"{name}\". Name the speakers (or export it with names) so we can tell you from the prospect."
+REQUEST_TOO_LARGE = "That's too big to send. Keep files under 1 MB."
 
 # Request checks
 SESSION_ID_REQUIRED = "Session ID required"

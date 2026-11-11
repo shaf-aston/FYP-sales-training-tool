@@ -2,7 +2,8 @@
 import pytest
 
 from core.calls.errors import CALL_TOO_LONG, CALL_TOO_SHORT, CALL_UNREADABLE, UNKNOWN_SPEAKER, CallError
-from core.calls.reader import load_calls_config, read_call
+from core.calls.reader import read_call
+from core.infra.constants import CALL_LIMITS
 from core.calls.roles import FIRST_SPEAKER, MOST_QUESTIONS, NAMED
 from core.infra.loader import CONFIG_DIR
 
@@ -58,7 +59,7 @@ def test_the_same_call_always_gives_the_same_profile():
 def test_every_profile_field_says_where_it_came_from():
     evidence = read_call(SAMPLE).profile.evidence
     assert evidence["budget"] == ["£3k"]
-    assert evidence["difficulty"][0] == "4 objection(s)"
+    assert evidence["difficulty"][0] == "4 objections"
 
 
 def test_an_anonymous_speaker_gets_a_plain_name():
@@ -93,9 +94,74 @@ def test_unusable_text_says_why(text, code):
     assert caught.value.code == code
 
 
-def test_too_long_is_refused_before_reading():
-    cfg = load_calls_config()
-    cfg["limits"]["max_chars"] = 10
+def test_too_long_is_refused_before_reading(monkeypatch):
+    monkeypatch.setitem(CALL_LIMITS, "max_chars", 10)
     with pytest.raises(CallError) as caught:
-        read_call(SAMPLE, cfg=cfg)
+        read_call(SAMPLE)
     assert caught.value.code == CALL_TOO_LONG
+
+
+# --- regressions from review ---
+
+FRIENDLY = call(
+    "Rep: Thanks for joining. What made you take the call?",
+    "Pat: I think about growth all the time. My partner has been great with the numbers.",
+    "Rep: How are things going?",
+    "Pat: Our reviews are great and it's low risk for us. No problem at all. I'm a bit busy today.",
+    "Rep: What would you change?",
+    "Pat: We made $50k last year, mostly on price. We spend $10k a month on ads and it's not working.",
+    "Rep: Got it, thanks.",
+    "Pat: I'm not worried about it, honestly.",
+)
+
+
+def test_a_friendly_prospect_raises_no_made_up_objections():
+    profile = read_call(FRIENDLY).profile
+    assert profile.objections == []
+    assert "No problem at all." not in profile.pain_points
+    assert profile.background == ""          # "I'm a bit busy today" is not who they are
+    assert profile.budget == ""              # past revenue and current spend are not what they can pay
+    assert profile.difficulty != "hard"
+
+
+def test_a_storytelling_prospect_is_not_taken_for_the_rep():
+    reading = read_call(call(
+        "Rep: Tell me about the business.",
+        "Pat: When we started, it was just me. What a mess that was. Which is why I hired help.",
+        "Rep: How big is the team now?",
+        "Pat: How it grew surprised me. Who knew.",
+    ))
+    assert reading.roles.rep == "Rep"
+
+
+def test_last_first_names_read_and_match_either_way():
+    teams = call("WEBVTT", "", "00:00:01.000 --> 00:00:02.000", "<v Mauch, Lukas>What do you need?", "",
+                 "00:00:03.000 --> 00:00:04.000", "<v Ray, Bo>A new tool.", "",
+                 "00:00:05.000 --> 00:00:06.000", "<v Mauch, Lukas>Why now?", "",
+                 "00:00:07.000 --> 00:00:08.000", "<v Ray, Bo>Budget opened up.")
+    reading = read_call(teams)
+    assert reading.roles.rep == "Lukas Mauch" and reading.profile.name == "Bo"
+    for named in ("Lukas", "Mauch", "lukas mauch", "Mauch, Lukas"):
+        assert read_call(teams, rep=named).roles.rep == "Lukas Mauch"
+
+
+def test_one_labelled_speaker_says_so():
+    otter = "\n\n".join(f"Unknown Speaker  0:0{i}\nLine {i}." for i in range(6))
+    with pytest.raises(CallError) as caught:
+        read_call(otter)
+    assert caught.value.code == "CALL_ONE_SPEAKER" and caught.value.detail == "Unknown Speaker"
+
+
+def test_a_third_speaker_never_splits_one_side_into_two_turns():
+    history = read_call(call("Rep: What do you need?", "SE: I can show the demo.", "Rep: Shall we?",
+                             "Pat: Sure, go ahead.", "Rep: Here it is.", "Pat: Looks good.",
+                             "SE: Any questions?", "Pat: Not yet.", "SE: Great.")).history()
+    roles = [h["role"] for h in history]
+    assert all(a != b for a, b in zip(roles, roles[1:]))
+
+
+def test_objection_types_are_the_buyers_concern_types():
+    from core.calls.reader import load_calls_config
+    from core.sell_mode.custom_buyer import concern_types
+
+    assert set(load_calls_config()["objections"]) <= set(concern_types())

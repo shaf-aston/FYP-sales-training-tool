@@ -152,7 +152,7 @@ def test_one_speakers_lines_and_cues_become_one_turn():
 
 def test_out_of_order_teams_cues_are_put_back_in_time_order():
     _, turns = parse(TEAMS_VTT, CFG)
-    assert [t.speaker for t in turns] == ["Álvaro Ruiz", "Mauch, Lukas"]
+    assert [t.speaker for t in turns] == ["Álvaro Ruiz", "Lukas Mauch"]   # Teams "Last, First" turned round
 
 
 def test_a_colon_in_ordinary_prose_is_not_a_speaker():
@@ -163,3 +163,54 @@ def test_a_colon_in_ordinary_prose_is_not_a_speaker():
 @pytest.mark.parametrize("at, expected", [("0:05", 5), ("1:02:03.5", 3723.5), ("00:00:05,790", 5.79), (None, 0)])
 def test_times_turn_into_seconds(at, expected):
     assert round(seconds(at), 3) == expected
+
+
+# --- regressions from review: speech must never be lost or mistaken for structure ---
+
+OTTER_SPEECH = """Jane Doe  0:00
+How many leads do you get a week?
+
+Bob Ray  0:04
+50
+
+Jane Doe  0:06
+And how many book a call?
+
+Bob Ray  0:09
+Note that most of them never answer.
+2:30 tomorrow works for a follow-up though.
+"""
+
+
+def test_a_number_a_note_or_a_time_said_out_loud_stays_speech():
+    _, turns = parse(OTTER_SPEECH, CFG)
+    assert [(t.speaker, t.text) for t in turns] == [
+        ("Jane Doe", "How many leads do you get a week?"),
+        ("Bob Ray", "50"),
+        ("Jane Doe", "And how many book a call?"),
+        ("Bob Ray", "Note that most of them never answer. 2:30 tomorrow works for a follow-up though."),
+    ]
+
+
+def test_speech_after_a_fathom_bookmark_is_kept():
+    _, turns = parse(FATHOM, CFG)
+    assert turns[1].text.endswith("We need help with onboarding.")
+    text = FATHOM.replace("  BOOKMARK: pricing - WATCH: https://fathom.video/share/abc?t=30",
+                          "  BOOKMARK: pricing - WATCH: https://fathom.video/share/abc?t=30  I'm using the Zoom app.")
+    _, turns = parse(text, CFG)
+    assert turns[1].text.endswith("onboarding. I'm using the Zoom app.")
+
+
+def test_gemini_note_headings_are_not_speakers():
+    notes = "Summary: the team reviewed pricing.\nTip: follow up Friday.\n" + MEET
+    _, turns = parse(notes, CFG)
+    assert {t.speaker for t in turns} == {"Sam Longley", "Guhan Sivaji"}
+
+
+def test_long_runs_of_spaces_read_in_linear_time():
+    import time
+
+    hostile = "\n".join(["a" + " " * 4000 + "b"] * 50 + ["Ann: Hi?", "Bob: Hello.", "Ann: Why?", "Bob: Because."])
+    started = time.perf_counter()
+    parse(hostile, CFG)
+    assert time.perf_counter() - started < 2   # it took minutes before labels were matched on short lines only

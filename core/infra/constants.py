@@ -55,6 +55,9 @@ SESSION_ID_MIN_CHARS = _L["input"]["session_id_min_chars"]
 SESSION_ID_MAX_CHARS = _L["input"]["session_id_max_chars"]
 RATE_LIMITS = {route: tuple(limit) for route, limit in _L["rate_limits"].items()}
 
+# uploaded calls (core/calls): read-only mapping of the `calls:` block
+CALL_LIMITS = _L["calls"]
+
 # provider requests
 PROVIDER_TIMEOUT_SECONDS = _L["provider"]["timeout_seconds"]
 PROVIDER_ATTEMPTS = _L["provider"]["attempts"]

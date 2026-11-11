@@ -7,6 +7,7 @@ The prospect is whoever else talked the most.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 from core.calls.errors import UNKNOWN_SPEAKER, CallError
@@ -35,8 +36,9 @@ class Roles:
 
 
 def count_questions(text: str, cfg: dict) -> int:
-    """Sentences that ask: they end in "?" or open like a question ("tell me about...")."""
-    starts = tuple(f"{w} " for w in cfg["rep"]["question_starts"])
+    """Sentences that ask: they end in "?", or open with a request that asks without one ("tell me about...").
+    A sentence that only opens like a question ("When we started, ...", "What a mess.") does not count."""
+    starts = tuple(f"{w} " for w in cfg["rep"]["ask_starts"])
     return sum(1 for s in sentences(text) if s.endswith("?") or s.lower().startswith(starts))
 
 
@@ -51,14 +53,22 @@ def speaker_stats(turns: list[Turn], cfg: dict) -> list[SpeakerStats]:
     return [SpeakerStats(name, *counts) for name, counts in order.items()]
 
 
+def _words(name: str) -> list[str]:
+    """A name's words, lower case, in order: "Mauch, Lukas" and "Lukas Mauch" are the same name."""
+    return sorted(re.findall(r"[^\W_]+", name.lower()))
+
+
 def _match(named: str, speakers: list[str]) -> str | None:
-    """The speaker the learner meant: the exact label, else the only one with that first name."""
-    want = named.strip().lower()
-    exact = [s for s in speakers if s.lower() == want]
-    if exact:
-        return exact[0]
-    first = [s for s in speakers if s.lower().split()[0] == want.split()[0]] if want else []
-    return first[0] if len(first) == 1 else None
+    """The speaker the learner meant, punctuation and case aside: the same name, else the only speaker with that
+    one word in their name ("Lukas" or "Mauch" for "Lukas Mauch")."""
+    want = _words(named)
+    if not want:
+        return None
+    same = [s for s in speakers if _words(s) == want]
+    if same:
+        return same[0]
+    partial = [s for s in speakers if len(want) == 1 and want[0] in _words(s)]
+    return partial[0] if len(partial) == 1 else None
 
 
 def assign_roles(stats: list[SpeakerStats], cfg: dict, named: str | None = None) -> Roles:

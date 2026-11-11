@@ -7,13 +7,15 @@ handler (logged, generic 500); an oversized body is a 413 before any route runs 
 
 from flask import Blueprint, jsonify, request
 
-from core.calls.errors import CALL_TOO_LONG, CALL_TOO_SHORT, CALL_UNREADABLE, UNKNOWN_SPEAKER, CallError
-from core.calls.reader import load_calls_config, read_call
+from core.calls.errors import CALL_ONE_SPEAKER, CALL_TOO_LONG, CALL_TOO_SHORT, CALL_UNREADABLE, UNKNOWN_SPEAKER, CallError
+from core.calls.reader import read_call
+from core.infra.constants import CALL_LIMITS
 from core.infra.loader import CONFIG_DIR
 from core.sell_mode import sell_service
 from core.sell_mode.sell_service import InvalidDifficulty
 
 from ..messages import (
+    CALL_ONE_SPEAKER_TEXT,
     CALL_TEXT_REQUIRED,
     CALL_TOO_LONG_TEXT,
     CALL_TOO_SHORT_TEXT,
@@ -30,20 +32,26 @@ _ERRORS = {
     CALL_UNREADABLE: CALL_UNREADABLE_TEXT,
     CALL_TOO_LONG: CALL_TOO_LONG_TEXT,
     CALL_TOO_SHORT: CALL_TOO_SHORT_TEXT,
+    CALL_ONE_SPEAKER: CALL_ONE_SPEAKER_TEXT,
     UNKNOWN_SPEAKER: CALL_UNKNOWN_SPEAKER_TEXT,
 }
 
 
+def _body() -> dict:
+    data = request.get_json(silent=True)
+    return data if isinstance(data, dict) else {}
+
+
 def _read():
     """(reading, None), or (None, error response) for a missing transcript or one the reader refuses."""
-    data = request.get_json(silent=True) or {}
+    data = _body()
     text, rep = data.get("text"), data.get("rep")
     if not isinstance(text, str) or not text.strip():
         return None, (jsonify({"error": CALL_TEXT_REQUIRED, "code": CALL_UNREADABLE}), 400)
     try:
         return read_call(text, rep if isinstance(rep, str) and rep.strip() else None), None
     except CallError as e:
-        message = _ERRORS[e.code].format(max_chars=load_calls_config()["limits"]["max_chars"], name=e.detail)
+        message = _ERRORS[e.code].format(max_chars=CALL_LIMITS["max_chars"], name=e.detail)
         return None, (jsonify({"error": message, "code": e.code}), 400)
 
 
@@ -73,7 +81,7 @@ def review():
     reading, error = _read()
     if error:
         return error
-    difficulty = (request.get_json(silent=True) or {}).get("difficulty") or reading.profile.difficulty
+    difficulty = _body().get("difficulty") or reading.profile.difficulty
     try:
         return jsonify({"success": True, **sell_service.review_transcript(reading.history(), difficulty)})
     except InvalidDifficulty as e:

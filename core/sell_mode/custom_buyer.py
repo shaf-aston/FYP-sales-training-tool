@@ -10,23 +10,42 @@ turn the learner wants to redo) that ends with the buyer speaking.
 
 from __future__ import annotations
 
-from core.infra.constants import MAX_CUSTOM_BUYER_ITEMS, MAX_CUSTOM_BUYER_TEXT_CHARS, MAX_FIELD_LENGTH, MAX_TURN_NUMBER
+import re
+
+from core.infra.constants import (
+    MAX_CUSTOM_BUYER_ITEMS,
+    MAX_CUSTOM_BUYER_TEXT_CHARS,
+    MAX_FIELD_LENGTH,
+    MAX_PERSONA_NAME_CHARS,
+    MAX_TURN_NUMBER,
+)
+from core.infra.loader import load_buyer_config
 
 TEXT_FIELDS = ("name", "background", "personality", "budget")
 LIST_FIELDS = ("needs", "pain_points")
-OBJECTION_TYPES = ("price", "skepticism", "timing", "partner", "fear")
+# Line breaks and control characters become one space: a field is one line in the buyer's prompt and can never
+# start a section of its own ("Bob\n\nRULES: ...").
+_UNPRINTABLE = re.compile(r"[\s\x00-\x1f\x7f\u2028\u2029]+")
+
+
+def concern_types() -> list[str]:
+    """The buyer's objection types (buyer.yaml real_objections.type_map values): the only ones a buyer raises."""
+    return sorted(set(load_buyer_config()["real_objections"]["type_map"].values()))
 
 
 class InvalidCustomBuyer(ValueError):
     """The described buyer is the wrong shape; the message names the field."""
 
 
-def _text(value, field: str) -> str:
+def _text(value, field: str, limit: int = MAX_CUSTOM_BUYER_TEXT_CHARS) -> str:
     if value is None:
         return ""
-    if not isinstance(value, str) or len(value.strip()) > MAX_CUSTOM_BUYER_TEXT_CHARS:
-        raise InvalidCustomBuyer(f"{field}: text up to {MAX_CUSTOM_BUYER_TEXT_CHARS} characters")
-    return value.strip()
+    if not isinstance(value, str):
+        raise InvalidCustomBuyer(f"{field}: text up to {limit} characters")
+    text = _UNPRINTABLE.sub(" ", value).strip()
+    if len(text) > limit:
+        raise InvalidCustomBuyer(f"{field}: text up to {limit} characters")
+    return text
 
 
 def _items(value, field: str) -> list:
@@ -41,18 +60,19 @@ def parse_custom_buyer(data) -> tuple[dict, list[dict]]:
     """(persona, objection bank) from the request's `custom_buyer`. Raises InvalidCustomBuyer."""
     if not isinstance(data, dict):
         raise InvalidCustomBuyer("custom_buyer: an object")
-    texts = {field: _text(data.get(field), field) for field in TEXT_FIELDS}
+    texts = {field: _text(data.get(field), field, MAX_PERSONA_NAME_CHARS if field == "name" else MAX_CUSTOM_BUYER_TEXT_CHARS)
+             for field in TEXT_FIELDS}
     if not texts["name"]:
         raise InvalidCustomBuyer("name: required")
     # A blank field is left out, so the prompt's own default (e.g. a "mid-range" budget) applies.
     persona = {field: value for field, value in texts.items() if value} | {"custom": True}
     for field in LIST_FIELDS:
         persona[field] = [t for t in (_text(v, field) for v in _items(data.get(field), field)) if t]
-    bank = []
+    bank, kinds = [], concern_types()
     for item in _items(data.get("objections"), "objections"):
         kind = item.get("type") if isinstance(item, dict) else None
-        if kind not in OBJECTION_TYPES:
-            raise InvalidCustomBuyer(f"objections: type is one of {', '.join(OBJECTION_TYPES)}")
+        if kind not in kinds:
+            raise InvalidCustomBuyer(f"objections: type is one of {', '.join(kinds)}")
         text = _text(item.get("text"), "objections")
         if text:
             bank.append({"type": kind, "text": text})

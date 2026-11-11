@@ -13,7 +13,7 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from backend.messages import INTERNAL_SERVER_ERROR  # noqa: E402
+from backend.messages import INTERNAL_SERVER_ERROR, REQUEST_TOO_LARGE  # noqa: E402
 from backend.request_log import RequestLog, configure_logging  # noqa: E402
 from backend.routes import buy, calls, knowledge, monitoring, sell, speech  # noqa: E402
 from backend.routes._utils import Sessions  # noqa: E402
@@ -116,6 +116,14 @@ def web_app(path: str):
         except NotFound:
             continue
     return send_from_directory(WEB_BUILD_DIR, "404.html"), 404
+
+
+@app.errorhandler(413)
+def handle_too_large(_e):
+    """An oversized body (limits.yaml max_request_bytes) gets JSON like every other API error."""
+    from flask import jsonify
+
+    return jsonify({"error": REQUEST_TOO_LARGE, "code": "REQUEST_TOO_LARGE"}), 413
 
 
 @app.errorhandler(Exception)

@@ -12,8 +12,8 @@ from dataclasses import dataclass, field
 
 from core.calls.roles import Roles, count_questions
 from core.calls.transcript import Turn, sentences
-
-OBJECTION_TYPES = ("price", "skepticism", "timing", "partner", "fear")   # buyer.yaml concern types
+from core.infra.constants import CALL_LIMITS
+from core.infra.utils import NEGATION_WINDOW, NEGATIONS
 
 
 @dataclass
@@ -33,20 +33,30 @@ def _patterns(items: list[str]) -> list[re.Pattern]:
     return [re.compile(p, re.IGNORECASE) for p in items]
 
 
+def _says(sentence: str, patterns: list[re.Pattern]) -> bool:
+    """A pattern matches with no negation in the few words before it: "I'm not worried" says no worry."""
+    for pattern in patterns:
+        for match in pattern.finditer(sentence):
+            before = re.findall(r"[\w']+", sentence[: match.start()].lower())[-NEGATION_WINDOW:]
+            if not any(word in NEGATIONS for word in before):
+                return True
+    return False
+
+
 def _hits(said: list[str], patterns: list[re.Pattern]) -> list[str]:
-    """The sentences that match any pattern, in call order, without repeats."""
+    """The sentences that say any pattern, in call order, without repeats."""
     seen, found = set(), []
     for sentence in said:
         key = sentence.lower()
-        if key not in seen and any(p.search(sentence) for p in patterns):
+        if key not in seen and _says(sentence, patterns):
             seen.add(key)
             found.append(sentence)
     return found
 
 
-def _quote(sentence: str, cfg: dict) -> str:
+def _quote(sentence: str) -> str:
     """A sentence kept as it was said, cut at a word boundary to the quote limit."""
-    limit = cfg["limits"]["max_quote_chars"]
+    limit = CALL_LIMITS["max_quote_chars"]
     if len(sentence) <= limit:
         return sentence
     return sentence[:limit].rsplit(" ", 1)[0].rstrip(",;:") + "…"
@@ -60,16 +70,17 @@ def display_name(speaker: str, cfg: dict) -> str:
 
 
 def _objections(said: list[str], cfg: dict) -> list[dict]:
-    """Their objections in their own words: at most `per_type` of a type and `max_objections` in all."""
-    limits, found, per_type = cfg["limits"], [], {}
-    patterns = {kind: _patterns(cfg["objections"][kind]) for kind in OBJECTION_TYPES}
+    """Their objections in their own words: one type per sentence (the first listed in calls.yaml wins), at most
+    `per_type` of a type and `max_objections` in all."""
+    found, per_type = [], {}
+    patterns = {kind: _patterns(items) for kind, items in cfg["objections"].items()}
     for sentence in said:
-        for kind in OBJECTION_TYPES:
-            if per_type.get(kind, 0) < limits["per_type"] and any(p.search(sentence) for p in patterns[kind]):
-                found.append({"type": kind, "text": _quote(sentence, cfg)})
+        for kind, kind_patterns in patterns.items():
+            if per_type.get(kind, 0) < CALL_LIMITS["per_type"] and _says(sentence, kind_patterns):
+                found.append({"type": kind, "text": _quote(sentence)})
                 per_type[kind] = per_type.get(kind, 0) + 1
-                break   # one type per sentence: the first listed wins
-        if len(found) >= limits["max_objections"]:
+                break
+        if len(found) >= CALL_LIMITS["max_objections"]:
             break
     return found
 
@@ -85,10 +96,14 @@ def _stats(turns: list[Turn], said: list[str], cfg: dict) -> dict[str, float]:
     }
 
 
+def _count(n: int, noun: str) -> str:
+    return f"{n} {noun}{'' if n == 1 else 's'}"
+
+
 def _difficulty(stats: dict, objections: list[dict], cfg: dict) -> tuple[str, list[str]]:
     rules = cfg["difficulty"]
     points = len(objections) + stats["pushback"]
-    why = [f"{len(objections)} objection(s)", f"{int(stats['pushback'])} push-back(s)"]
+    why = [_count(len(objections), "objection"), _count(int(stats["pushback"]), "push-back")]
     if stats["avg_words"] <= rules["short_reply_words"]:
         points += rules["short_reply_points"]
         why.append(f"short replies ({stats['avg_words']:.0f} words on average)")
@@ -113,26 +128,26 @@ def build_profile(turns: list[Turn], roles: Roles, cfg: dict) -> Profile:
     """The prospect's profile from their turns in the call."""
     theirs = [t for t in turns if t.speaker == roles.prospect]
     said = [s for t in theirs for s in sentences(t.text)]
-    cap = cfg["limits"]["max_list_items"]
+    cap = CALL_LIMITS["max_list_items"]
 
     def quote(items: list[str]) -> list[str]:
-        return [_quote(s, cfg) for s in items[:cap]]
+        return [_quote(s) for s in items[:cap]]
 
     background = _hits(said, _patterns(cfg["background"]))
     needs = _hits(said, _patterns(cfg["needs"]))
     pains = _hits(said, _patterns(cfg["pains"]))
     money = re.compile(cfg["money"], re.IGNORECASE)
     spending = _patterns(cfg["budget_words"])
-    budget = [s for s in said if money.search(s) and any(p.search(s) for p in spending)]
+    budget = [s for s in said if money.search(s) and _says(s, spending)]
     objections = _objections(said, cfg)
     stats = _stats(theirs, said, cfg)
     difficulty, why = _difficulty(stats, objections, cfg)
 
     return Profile(
         name=display_name(roles.prospect, cfg),
-        background=_quote(background[0], cfg) if background else "",
+        background=_quote(background[0]) if background else "",
         personality=_personality(stats, cfg),
-        budget=_quote(budget[0], cfg) if budget else "",
+        budget=_quote(budget[0]) if budget else "",
         needs=quote(needs),
         pain_points=quote(pains),
         objections=objections,
@@ -141,7 +156,7 @@ def build_profile(turns: list[Turn], roles: Roles, cfg: dict) -> Profile:
             "background": quote(background[1:]),
             "budget": [money.search(s).group(0) for s in budget[:cap]],
             "difficulty": why,
-            "personality": [f"{stats['avg_words']:.0f} words per reply", f"{int(stats['questions'])} question(s) asked",
-                            f"{int(stats['hedges'])} hedge(s)"],
+            "personality": [f"{stats['avg_words']:.0f} words per reply", _count(int(stats["questions"]), "question"),
+                            _count(int(stats["hedges"]), "hedge")],
         },
     )

@@ -39,11 +39,23 @@ input:
   session_id_min_chars: 8
   session_id_max_chars: 128
 
+calls:               # an uploaded call transcript (core/calls)
+  max_chars: 200000        # a two-hour call is about 120k characters
+  min_turns: 4             # fewer turns than this is not a conversation to learn from
+  min_speakers: 2
+  max_speaker_chars: 40    # a label longer than this is a sentence with a colon, not a speaker
+  max_speaker_words: 5     # "Norio Kobota" fits; "The plan for next quarter" does not
+  max_header_chars: 80     # only lines (or line starts) this short are tried as speaker labels
+  max_quote_chars: 180     # a quote kept from the call (objection, need, pain) is cut to this
+  max_list_items: 3        # needs and pain points kept per profile
+  max_objections: 4        # objections kept per profile...
+  per_type: 2              # ...and at most this many of one type
+
 rate_limits:         # [max_requests, window_seconds] per client IP; bucket names are used in the routes
   buy_init: [10, 60]   # buy mode: starting a session
   buy_chat: [60, 60]   # buy mode: chat, edit and coach
-  sell: [30, 60]
-  calls: [20, 60]      # reading an uploaded call transcript (each read parses up to calls.yaml max_chars)       # sell mode: every rate-limited sell route
+  sell: [30, 60]       # sell mode: every rate-limited sell route
+  calls: [20, 60]      # reading an uploaded call transcript (each read parses up to calls.max_chars)
   knowledge: [10, 60]  # both modes: custom product knowledge
   feedback: [5, 300]   # both modes: feedback form
   speech: [40, 60]     # both modes: replies read aloud
