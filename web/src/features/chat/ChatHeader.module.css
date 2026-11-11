@@ -122,3 +122,34 @@
   font: inherit;
   cursor: pointer;
 }
+
+.jump option {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+.group {
+  margin: var(--space-1) 0;
+  padding: var(--space-1) 0;
+  border-block: 1px solid var(--border-strong);
+}
+.groupLabel {
+  margin: 0;
+  padding: var(--space-1) var(--space-3);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.choice {
+  display: flex;
+  white-space: nowrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.choice[aria-checked="true"] {
+  color: var(--accent);
+  cursor: default;
+}
+.check {
+  width: 1em;
+}

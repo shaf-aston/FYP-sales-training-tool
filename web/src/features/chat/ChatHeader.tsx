@@ -47,7 +47,7 @@ export function ChatHeader() {
         setMenuOpen(false);
         triggerRef.current?.focus();
       } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-        const items = [...(menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])];
+        const items = [...(menuRef.current?.querySelectorAll<HTMLElement>('[role^="menuitem"]') ?? [])];
         const at = items.indexOf(document.activeElement as HTMLElement);
         const step = e.key === "ArrowDown" ? 1 : -1;
         items[(at + step + items.length) % items.length]?.focus();
@@ -173,24 +173,22 @@ export function ChatHeader() {
                 Feedback
               </button>
               {mode === "buy" && products.length > 1 && (
-                <label className={s.item}>
-                  <span className="sr-only">What the rep sells (starts a fresh call)</span>
-                  <select
-                    role="menuitem"
-                    className={s.jump}
-                    value=""
-                    onChange={(e) => void onProduct(e.target.value)}
-                    title="Choose which call the rep runs; starts a fresh call"
-                  >
-                    <option value="">Call type…</option>
-                    {products.map((p) => (
-                      <option key={p.id} value={p.id} disabled={p.id === buyProduct}>
-                        {p.id === buyProduct ? "✓ " : ""}
-                        {p.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <div role="group" aria-label="Call type (starts a fresh call)" className={s.group}>
+                  <p className={s.groupLabel}>Call type</p>
+                  {products.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={p.id === buyProduct}
+                      className={`${s.item} ${s.choice}`}
+                      onClick={() => p.id !== buyProduct && void onProduct(p.id)}
+                    >
+                      <span className={s.check} aria-hidden="true">{p.id === buyProduct ? "✓" : ""}</span>
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
               )}
               {mode === "buy" && steps.length > 0 && (
                 <label className={s.item}>
