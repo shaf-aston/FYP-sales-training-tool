@@ -1,0 +1,73 @@
+# Reviewing a team's sales SOP (core/sop). Wording and examples live here; size limits in limits.yaml `sop`.
+# Meaning is matched with the local embedding model (the same one buy mode hears replies with).
+
+untitled_stage: "Before the first heading"
+
+# Lines that are document furniture, not steps: dropped wherever they are.
+skip_lines: ["^(version|v)\\s*\\d", "^last (updated|reviewed|edited)\\b", "^(owner|author|approved by|prepared by)\\s*:", "^page \\d+( of \\d+)?$", "^(confidential|internal use only)\\b"]
+
+# A step that forbids something covers nothing ("Never discuss pricing on the first call").
+negated_step: ["^(never|do not|don.?t|avoid|no)\\b"]
+
+# A step that only applies sometimes ("If they say it's too expensive, ..."): the part before the comma is cut off
+# when matching, and the step does not count against a call that never needed it.
+condition: "^(if|when|whenever|unless|should|in case)\\b[^,]{0,80},\\s*"
+
+# A step is done when a sentence the rep said reaches `adherence`, matched as search query (the step) against passage
+# (the sentence; `query_prefix` is bge's own query instruction), each sentence carrying at most one step. Measured on 3
+# labelled calls against sop_sample.md (good, weak, mixed; 20 true steps): 0.58 gives precision 0.95 and recall 0.90.
+thresholds:
+  element_fallback: 0.8
+  adherence: 0.58
+query_prefix: "Represent this sentence for searching relevant passages: "
+
+# What a good sales call covers, in call order (the CAT and Impact Formula scripts in config/methods agree on these).
+# Rules first: a step covers every element whose `cues` (regexes, case-insensitive) it says, unless a negation comes
+# just before ("Never discuss pricing" covers nothing). A step no cue catches
+# falls back to meaning: it covers the one element whose `examples` it is most like, if at least `element_fallback`.
+elements:
+  - id: opening
+    label: "Opening and agenda"
+    cues: ["\\b(agenda|introduce (yourself|ourselves)|introductions?|greet|hello|welcome them|rapport|thank them for (their|the) time|how (long|much time) they have|check they (can talk|have time)|have \\d+ minutes)\\b"]
+    why: "Setting the agenda and asking permission to ask questions makes the rest of the call a conversation, not a pitch."
+    examples: ["Set the agenda for the call", "Ask permission to ask a few questions", "Confirm how much time they have", "Explain how the call will run", "Greet them and thank them for their time", "Build rapport before getting into business"]
+  - id: discovery
+    label: "Discovery of goals"
+    cues: ["\\b(goals?|achieve|aims?|success looks?|want to (change|improve|get)|would like to (change|improve)|current (setup|situation|process)|understand their|qualify|what made them)\\b"]
+    why: "Without their goal in their own words, the pitch has nothing to attach to."
+    examples: ["Ask what they want to achieve", "Ask about their goals", "Find out what success looks like for them", "Ask what made them book the call", "Ask what they would like to change", "Qualify whether they are a good fit"]
+  - id: pain
+    label: "The problem and its impact"
+    cues: ["\\b(problems?|frustrat\\w*|struggl\\w*|challenges?|pain points?|stuck|getting in the way|stopping them|cost(ing)? them|tried so far|what.?s not working)\\b"]
+    why: "The size of the problem is what makes the price feel small."
+    examples: ["Ask what is getting in the way", "Ask how long the problem has been going on", "Ask what the problem is costing them", "Dig into the impact of the problem", "Ask what they have tried so far"]
+  - id: urgency
+    label: "Why now"
+    cues: ["\\b(why now|nothing changes?|changed? nothing|cost of (doing nothing|inaction)|stay(ed)? the same|by when|timeline|deadline|urgen\\w*|ideally like (this|it) fixed|when (would|do) they (want|need|like))\\b"]
+    why: "A buyer with no reason to act now buys later, which usually means never."
+    examples: ["Ask why they want to change now", "Ask what happens if nothing changes", "Explore the cost of doing nothing", "Ask what it would mean if things stayed the same"]
+  - id: decision
+    label: "Decision process and budget"
+    cues: ["\\b(decision|decide|decision.?maker|sign(s|ed)? off|approv\\w*|budget|invest(ment)?|set aside|who else)\\b"]
+    why: "Knowing who decides and what they can invest stops the call ending in 'I need to check with...'."
+    examples: ["Ask who else is involved in the decision", "Find out who signs off on the purchase", "Ask about their budget", "Ask how much they have set aside to invest", "Ask how they usually make buying decisions"]
+  - id: pitch
+    label: "Pitch tied to their needs"
+    cues: ["\\b(present (the|our|your|a)|presentation|demo|demonstrat\\w*|show (them|two|the|a) \\w*\\s?(case|demo|result|example)|case stud(y|ies)|walk them through|explain (our|the) (offer|pricing|programme|program|product|service)|pricing (tiers?|options?|page)|the offer|our (programme|program|product|service|solution)|proposal)\\b"]
+    why: "A pitch in the buyer's own words lands; a generic feature list does not."
+    examples: ["Present the offer using their own words", "Explain how the programme solves the problem they described", "Recap their goals before presenting the solution", "Demo the product", "Walk them through the pricing options"]
+  - id: objections
+    label: "Objection handling"
+    cues: ["\\b(objections?|concerns?|push.?back|too expensive|think about it|think it over|reframe|tried an? \\w+ before)\\b"]
+    why: "Every serious buyer raises a concern; a plan for the common ones keeps the call on track."
+    examples: ["Acknowledge the concern and reframe it", "Handle price objections", "Answer the need to think about it", "Isolate the real objection", "Respond when they say it is too expensive"]
+  - id: close
+    label: "The close"
+    cues: ["(^close\\s*:|\\bclose (the|a) (sale|deal)|\\bgo ahead\\b|\\bcommit(ment)?\\b|\\bsign up\\b|\\bget started\\b|\\bstart on\\b|\\b(take|collect) payment\\b|\\bready to (start|buy|begin)\\b|\\bask for the (sale|business)\\b|\\bwhich (tier|plan|option|package)\\b)"]
+    why: "Asking clearly for the decision is the step most often skipped."
+    examples: ["Ask for the sale", "Ask if they want to go ahead", "Ask if they are ready to get started today", "Take payment on the call", "Ask which option they want to start with"]
+  - id: follow_up
+    label: "Next step or follow-up"
+    cues: ["\\b(follow.?up|next steps?|book (a|another|the next) (call|meeting|session|follow)|schedule (a|the|another|next)|calendar invite|send (them )?(a|the) (summary|recap|proposal)|recap email)\\b"]
+    why: "A call that doesn't close still needs a booked next step, or the deal goes cold."
+    examples: ["Book a follow-up call", "Agree a clear next step with a date", "Send a recap after the call", "Schedule the next meeting before hanging up"]

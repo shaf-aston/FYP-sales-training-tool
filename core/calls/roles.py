@@ -11,7 +11,8 @@ import re
 from dataclasses import dataclass
 
 from core.calls.errors import UNKNOWN_SPEAKER, CallError
-from core.calls.transcript import Turn, sentences
+from core.calls.transcript import Turn
+from core.infra.utils import sentences
 
 NAMED, MOST_QUESTIONS, FIRST_SPEAKER = "named", "most_questions", "first_speaker"
 

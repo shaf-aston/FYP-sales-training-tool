@@ -44,6 +44,14 @@ Rule: modes are named for the learner; engines and stores for the AI (`seller_se
 | **guardrail** | Check on each AI buyer reply (e.g. no early "yes, I'll buy"). | `core/sell_mode/buyer_guardrails.py` `CheckedReply` |
 | **knowledge** | The learner's own product notes, given to the AI buyer as research notes. | `core/sell_mode/knowledge.py`, `config/knowledge_fields.yaml`, page `/knowledge/` |
 
+## SOP review
+
+| Term | Meaning | Owner |
+|---|---|---|
+| **SOP** | A team's written sales process: stages (headings) of steps (lines). Read, never stored. | `core/sop/`, API `/api/sop/*`, `config/sop.yaml` |
+| **element** | One thing a good sales call covers (opening, discovery, pain, urgency, decision, pitch, objections, close, follow-up); the **checklist** says which an SOP covers. | `sop.yaml` `elements`, `checklist.py` |
+| **adherence** | How much of the SOP a real call carried out, step by step, and whether in order. | `adherence.py` |
+
 ## Accounts and teams
 
 | Term | Meaning | Owner |

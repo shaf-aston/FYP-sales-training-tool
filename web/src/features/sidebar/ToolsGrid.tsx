@@ -45,6 +45,7 @@ export function ToolsGrid() {
       />
       <Tool title="Say it from memory" copy="Fill in the missing line" onClick={() => openDialog("drills")} />
       {sell && <Tool title="Skill Radar" copy="Your skills over time" onClick={() => openDialog("skills")} />}
+      {sell && <Tool title="SOP review" copy="Check your SOP and calls" href={config.routes.sop} />}
     </div>
   );
 }

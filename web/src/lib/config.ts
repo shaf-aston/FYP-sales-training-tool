@@ -3,6 +3,15 @@
 export const config = {
   /** API lives on the same origin (Flask serves the built app; dev proxies /api). */
   apiBase: "",
+  api: {
+    /**
+     * Where call recordings are uploaded: straight to the API host, because the Vercel rewrite can't be trusted with
+     * 25 MB bodies. The host is the one in web/public/vercel.json (keep them the same). On localhost the page and the
+     * API share an origin, so "". The API's CORS allows the Vercel site, and a multipart POST needs no preflight.
+     */
+    uploadOrigin: () =>
+      typeof location === "undefined" || ["localhost", "127.0.0.1"].includes(location.hostname) ? "" : "https://140-238-102-50.sslip.io",
+  },
   /** DOM id of the sidebar (target of the mobile "Panels" button). */
   ids: { panels: "session-panels" },
   chatTimeoutMs: 25_000,
@@ -56,6 +65,13 @@ export const config = {
     accept: [".txt", ".vtt", ".srt"],
     /** Bigger files are not transcripts; refuse before reading them into memory (limits.yaml max_request_bytes). */
     maxFileBytes: 1_000_000,
+    /** A call recording, turned into a transcript on the server (limits.yaml transcription: formats, max_bytes). */
+    audio: {
+      accept: [".mp3", ".m4a", ".mp4", ".mpeg", ".mpga", ".wav", ".webm", ".ogg", ".flac"],
+      maxBytes: 25_000_000,
+      /** Speech to text plus speaker labels: the server allows 180 s for the speech part alone. */
+      timeoutMs: 300_000,
+    },
     /** Caps on the prospect fields the learner edits; the server allows 300 characters a field and 5 items a list (limits.yaml max_custom_buyer_*). */
     prospect: { nameMax: 60, textMax: 300, itemMax: 180, maxItems: 5 },
     /** Saved prospects listed before "Show all". */
@@ -65,6 +81,11 @@ export const config = {
     /** How the server guessed which speaker is the learner (rep.how). */
     repGuess: { named: "Named you", most_questions: "Asked the most questions", first_speaker: "Spoke first" },
     objectionTypes: { price: "Price", skepticism: "Doubt", timing: "Timing", partner: "Partner", fear: "Fear" },
+  },
+  /** SOP review: a team's sales SOP (limits.yaml sop: max_bytes; core/sop/document.py reads these types). */
+  sop: {
+    accept: [".pdf", ".docx", ".md", ".txt"],
+    maxBytes: 5_000_000,
   },
   /** Optional account; the server checks the same limits (limits.yaml accounts). */
   account: { nameMax: 60, passwordMin: 8, teamNameMax: 60 },
@@ -90,7 +111,7 @@ export const config = {
     lightness: "90%, 65%",
   },
   /** Page addresses, so links never hard-code paths. */
-  routes: { home: "/", buy: "/buy/", sell: "/sell/", knowledge: "/knowledge/" },
+  routes: { home: "/", buy: "/buy/", sell: "/sell/", knowledge: "/knowledge/", sop: "/sop/" },
   /** A missing page sends you home after this long, unless you choose to stay. */
   notFound: { redirectSeconds: 30 },
   landing: { wordRotateMs: 2_200, demoStepMs: 1_800, revealThreshold: 0.15 },

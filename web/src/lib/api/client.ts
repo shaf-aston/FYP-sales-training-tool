@@ -33,24 +33,28 @@ export const errorText = (err: unknown, fallback: string) => (err instanceof Api
 
 interface RequestOptions {
   method?: "GET" | "POST" | "DELETE";
+  /** Sent as JSON, or as multipart when it is FormData (the browser sets that content type). */
   body?: unknown;
   sessionId?: string | null;
   timeoutMs?: number;
+  /** Another origin for this request (big uploads skip the Vercel rewrite); default the page's. */
+  origin?: string;
 }
 
 async function request<R>(path: string, opts: RequestOptions = {}): Promise<R> {
+  const form = opts.body instanceof FormData;
   const headers: Record<string, string> = {};
-  if (opts.body !== undefined) headers["Content-Type"] = "application/json";
+  if (opts.body !== undefined && !form) headers["Content-Type"] = "application/json";
   if (opts.sessionId) headers["X-Session-ID"] = opts.sessionId;
 
   const abort = new AbortController();
   const timer = opts.timeoutMs ? setTimeout(() => abort.abort(), opts.timeoutMs) : undefined;
   let res: Response;
   try {
-    res = await fetch(config.apiBase + path, {
+    res = await fetch((opts.origin ?? config.apiBase) + path, {
       method: opts.method ?? (opts.body === undefined ? "GET" : "POST"),
       headers,
-      body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
+      body: opts.body === undefined ? undefined : form ? (opts.body as FormData) : JSON.stringify(opts.body),
       signal: abort.signal,
     });
   } catch {
@@ -62,17 +66,23 @@ async function request<R>(path: string, opts: RequestOptions = {}): Promise<R> {
 
   const data = await res.json().catch(() => null);
   if (!res.ok || !data || data.error || data.success === false) {
-    // Server faults get a plain message so internals never reach the screen. 413 comes before any route
-    // (no JSON): only a call transcript is that big.
+    // Server faults get a plain message so internals never reach the screen. A 413 from a proxy has no JSON.
     const message =
-      res.status === 413
-        ? "That call is too big to send. Use a shorter one."
+      res.status === 413 && !data?.error
+        ? "That's too big to send. Use a smaller file."
         : res.status >= 500 && !data?.code
           ? "Something went wrong on our side. Try again in a moment."
           : data?.error;
     throw new ApiError(message ?? `Request failed (${res.status})`, res.status, data?.code, data?.field);
   }
   return data as R;
+}
+
+/** A multipart body with the one upload the server reads as `file`. */
+function fileForm(file: File): FormData {
+  const form = new FormData();
+  form.append("file", file);
+  return form;
 }
 
 /** Each call is named mode + action, after its path: buyChat = /api/buy/chat, sellReview = /api/sell/review. */
@@ -126,6 +136,21 @@ export function createHttpApi() {
     /** Replayed at `difficulty` (the one the learner picked), else the one read from the call. */
     callsReview: (call: T.CallReq, difficulty?: T.Difficulty) =>
       request<T.Review>("/api/calls/review", { body: { ...call, difficulty }, timeoutMs: chat }),
+    /** A call recording -> a transcript with AI-labelled speakers. Uploaded straight to the API host (config.api). */
+    callsTranscribe: (file: File) =>
+      request<{ success: true; text: string; filename: string; labels_sure: boolean }>("/api/calls/transcribe", {
+        body: fileForm(file),
+        origin: config.api.uploadOrigin(),
+        timeoutMs: config.calls.audio.timeoutMs,
+      }),
+
+    // SOP review: a team's sales SOP, what it covers, and how a real call follows it.
+    sopSample: () => request<{ success: true; text: string; filename: string }>("/api/sop/sample"),
+    /** The SOP as a file (PDF, Word, Markdown, text) or as pasted text. */
+    sopRead: (sop: { file: File } | { text: string }) =>
+      request<T.SopReadRes>("/api/sop/read", { body: "file" in sop ? fileForm(sop.file) : { text: sop.text }, timeoutMs: chat }),
+    sopCheck: (stages: T.SopStage[], call: { text: string; rep?: string }) =>
+      request<T.SopCheckRes>("/api/sop/check", { body: { stages, call }, timeoutMs: chat }),
 
     // Account: an optional login (a same-origin cookie) that keeps skill history and saved prospects.
     accountMe: () => request<T.AccountMe>("/api/account/me"),

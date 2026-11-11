@@ -3,17 +3,20 @@
 import { useId } from "react";
 import type { CallReadRes } from "@/lib/api/types";
 import { config } from "@/lib/config";
+import type { AiLabels } from "./useCallReader";
 import s from "./SpeakerPicker.module.css";
 
 interface Props {
   call: CallReadRes;
   /** True while the call is read again with another speaker as the learner. */
   busy: boolean;
+  /** The speakers were named by AI from a recording, so the learner should check them. */
+  aiLabelled?: AiLabels;
   onPick: (name: string) => void;
 }
 
 /** Who is who on the call: the guessed rep is marked "You"; tapping another speaker says "that's me". */
-export function SpeakerPicker({ call, busy, onPick }: Props) {
+export function SpeakerPicker({ call, busy, aiLabelled, onPick }: Props) {
   const id = useId();
   const { speakers, rep, prospect } = call;
   return (
@@ -47,10 +50,19 @@ export function SpeakerPicker({ call, busy, onPick }: Props) {
         ) : (
           <>
             How we guessed: {config.calls.repGuess[rep.how].toLowerCase()}.
-            {!rep.sure && <span className={s.unsure}> Not you? Tap your name.</span>}
+            {!rep.sure && !aiLabelled && <span className={s.unsure}> Not you? Tap your name.</span>}
           </>
         )}
       </p>
+      {aiLabelled === "sure" && (
+        <p className={s.aiNote}>Speakers were labelled by AI from what was said; tap the one that&apos;s you if it&apos;s wrong.</p>
+      )}
+      {aiLabelled === "unsure" && (
+        <p className={s.aiNote}>
+          AI couldn&apos;t tell the speakers apart well. Choose &quot;Use another call&quot;, fix the Speaker A / B labels in the
+          transcript, then read it again.
+        </p>
+      )}
     </section>
   );
 }

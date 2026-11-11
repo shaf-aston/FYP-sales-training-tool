@@ -285,6 +285,51 @@ export interface CallReadRes {
   profile: CallProfile;
 }
 
+// SOP review (/api/sop): a team's sales SOP read into stages and steps.
+
+export interface SopStage {
+  title: string;
+  steps: string[];
+}
+
+/** One element of a good call (core/sop/checklist.py), and the SOP step that covers it. */
+export interface SopElement {
+  id: string;
+  label: string;
+  covered: boolean;
+  step: string | null;
+  /** Why it matters: shown when the SOP misses it. */
+  why: string;
+}
+
+export interface SopReadRes {
+  success: true;
+  stages: SopStage[];
+  elements: SopElement[];
+  /** Share of elements covered, 0-100. */
+  coverage: number;
+}
+
+/** One SOP step in a real call: done at the rep's turn `turn` (1-based) with what they said, or not heard. */
+export interface SopStepResult {
+  stage: string;
+  step: string;
+  done: boolean;
+  turn: number | null;
+  said: string | null;
+}
+
+export interface SopCheckRes {
+  success: true;
+  /** The speaker taken as the rep. */
+  rep: string;
+  /** Share of steps done, 0-100. */
+  score: number;
+  /** The done steps happened in the SOP's order. */
+  in_order: boolean;
+  steps: SopStepResult[];
+}
+
 // Accounts (/api/account, /api/team): optional; everything works logged out.
 
 export interface AccountUser {

@@ -1,7 +1,8 @@
 "use client";
 
-import { Button, FileDrop, Icon, Notice, TextArea } from "@/components/ui";
+import { Button, FileDrop, Notice, TextArea, TextButton } from "@/components/ui";
 import { config } from "@/lib/config";
+import { megabytes } from "@/lib/files";
 import type { CallReader } from "./useCallReader";
 import s from "./CallSource.module.css";
 
@@ -10,14 +11,14 @@ export function CallSource({ reader, onCancel }: { reader: CallReader; onCancel?
   const { text, filename, busy, error } = reader;
   return (
     <div className={s.stack}>
-      <FileDrop accept={config.calls.accept} onFile={reader.loadFile}>
-        <Icon name="upload" />
-        <span>
-          {busy === "file" ? "Opening…" : "Drop a transcript or "}
-          {busy !== "file" && <span className={s.choose}>choose a file</span>}
-        </span>
-        <span className={s.types}>{reader.acceptList}</span>
-      </FileDrop>
+      <FileDrop
+        accept={reader.acceptAll}
+        onFile={reader.loadFile}
+        prompt="Drop a transcript or recording,"
+        hint={`${config.calls.accept.join(" ")} · recordings up to ${megabytes(config.calls.audio.maxBytes)}`}
+        busyLabel={busy === "file" ? "Opening…" : busy === "audio" ? "Uploading the recording…" : undefined}
+      />
+      {busy === "audio" && <Notice kind="loading">Turning the recording into text… about a minute per hour of audio</Notice>}
 
       <TextArea
         label="Or paste the call"
@@ -34,9 +35,9 @@ export function CallSource({ reader, onCancel }: { reader: CallReader; onCancel?
       <Button variant="primary" block busy={busy === "read"} busyLabel="Reading…" disabled={!text.trim() || !!busy} onClick={reader.read}>
         Read call
       </Button>
-      <button type="button" className={s.sample} disabled={!!busy} onClick={reader.loadSample}>
+      <TextButton className={s.sample} disabled={!!busy} onClick={reader.loadSample}>
         {busy === "sample" ? "Loading the sample…" : "Try a sample call"}
-      </button>
+      </TextButton>
       {onCancel && (
         <Button variant="ghost" onClick={onCancel}>
           Cancel
