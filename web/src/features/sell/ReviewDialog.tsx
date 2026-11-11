@@ -1,27 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Badge, Button, Card, Dialog, Notice, TextArea } from "@/components/ui";
+import { Button, Card, Dialog, Notice, TextArea } from "@/components/ui";
 import { useSession } from "@/features/session/SessionContext";
 import { useUi } from "@/state/UiContext";
 import { api, errorText } from "@/lib/api/client";
 import type { RedoRes, Review, ReviewTurn } from "@/lib/api/types";
 import { config } from "@/lib/config";
 import { gradeOf, useEvalState } from "./evalStore";
-import { gradeTone, signed } from "./options";
+import { gradeTone } from "./options";
+import { ReviewLine, ReviewSummary, ReviewTurns } from "./ReviewTurns";
 import s from "./ReviewDialog.module.css";
 
 type Load = { status: "loading" } | { status: "error"; message: string } | { status: "ready"; review: Review };
-
-function Dots({ rating }: { rating: number }) {
-  return (
-    <span className={s.rating} role="img" aria-label={`Rated ${rating} out of 5`}>
-      {[1, 2, 3, 4, 5].map((i) => (
-        <span key={i} className={i <= rating ? s.dotOn : s.dot} />
-      ))}
-    </span>
-  );
-}
 
 function intro(review: Review, grade: string): string {
   const n = review.pivotal_turns.length;
@@ -65,14 +56,8 @@ function Redo({ turn, laterTurns, done, onDone }: RedoProps) {
   if (done)
     return (
       <div className={s.redoResult}>
-        <p className={s.said}>
-          <span className={s.who}>You</span>
-          {sent}
-        </p>
-        <p className={s.said}>
-          <span className={s.who}>Buyer</span>
-          {done.message}
-        </p>
+        <ReviewLine who="You">{sent}</ReviewLine>
+        <ReviewLine who="Buyer">{done.message}</ReviewLine>
         <p className={s.muted}>The conversation now continues from here.</p>
       </div>
     );
@@ -148,16 +133,13 @@ function ReviewBody() {
   const { review } = load;
   if (!review.turns.length) return <Notice kind="empty">There are no turns to review yet.</Notice>;
 
-  const pivotal = new Set(review.pivotal_turns);
   const redoneTurns = Object.keys(redone).map(Number);
   const cutoff = redoneTurns.length ? Math.min(...redoneTurns) : Infinity;
 
   return (
     <div className={s.body}>
       <p>{intro(review, gradeOf(evalState))}</p>
-      <p className={s.muted}>
-        {review.summary.turn_count} {review.summary.turn_count === 1 ? "turn" : "turns"} · average {review.summary.average_rating} out of 5
-      </p>
+      <ReviewSummary review={review} />
       {redoneTurns.length > 0 && (
         <Card tone="warning" role="status">
           <p>
@@ -166,53 +148,20 @@ function ReviewBody() {
           </p>
         </Card>
       )}
-      <ol className={s.turns}>
-        {review.turns.map((t) => {
-          const gone = t.turn > cutoff;
-          const change = Math.round(t.readiness_change * 100);
-          return (
-            <li key={t.turn} className={`${s.turn} ${pivotal.has(t.turn) ? s.pivotal : ""} ${gone ? s.gone : ""}`}>
-              <div className={s.turnHead}>
-                <strong>Turn {t.turn}</strong>
-                <Dots rating={t.rating} />
-                {change !== 0 && (
-                  <Badge tone={change > 0 ? "success" : "danger"}>
-                    {signed(change)}% interest
-                  </Badge>
-                )}
-                {gone && <Badge>Replaced</Badge>}
-              </div>
-              <p className={s.said}>
-                <span className={s.who}>You</span>
-                {t.seller}
-              </p>
-              {t.buyer && (
-                <p className={s.said}>
-                  <span className={s.who}>Buyer</span>
-                  {t.buyer}
-                </p>
-              )}
-              {t.reasons.length ? (
-                <ul className={s.reasons}>
-                  {t.reasons.map((r, i) => (
-                    <li key={i}>{r}</li>
-                  ))}
-                </ul>
-              ) : (
-                <p className={s.muted}>Nothing here moved them either way.</p>
-              )}
-              {pivotal.has(t.turn) && !gone && (
-                <Redo
-                  turn={t}
-                  laterTurns={review.turns.length - t.turn}
-                  done={redone[t.turn]}
-                  onDone={(res) => setRedone((r) => ({ ...r, [t.turn]: res }))}
-                />
-              )}
-            </li>
-          );
-        })}
-      </ol>
+      <ReviewTurns
+        review={review}
+        seller="You"
+        buyer="Buyer"
+        cutoff={cutoff}
+        pivotalAction={(t) => (
+          <Redo
+            turn={t}
+            laterTurns={review.turns.length - t.turn}
+            done={redone[t.turn]}
+            onDone={(res) => setRedone((r) => ({ ...r, [t.turn]: res }))}
+          />
+        )}
+      />
     </div>
   );
 }
