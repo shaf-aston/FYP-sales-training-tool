@@ -77,9 +77,53 @@ def test_docx_headings_come_from_paragraph_styles():
     assert [(s.title, s.steps) for s in stages] == [("Open", ["Set the agenda"]), ("Close", ["Ask for the sale"])]
 
 
-def test_pdf_text_is_read_and_short_capitalised_lines_become_headings():
-    stages = build_outline(read_document(pdf(["Open", "Set the agenda for the call.", "Close", "Ask for the sale today."]), "sop.pdf"), "-")
-    assert [(s.title, s.steps) for s in stages] == [("Open", ["Set the agenda for the call."]), ("Close", ["Ask for the sale today."])]
+def test_pdf_text_is_read_and_all_caps_or_numbered_lines_become_stages():
+    stages = build_outline(read_document(pdf(["1. OPENING", "Set the agenda", "Ask about their budget", "2. Close",
+                                              "Ask for the sale today"]), "sop.pdf"), "-")
+    assert [(s.title, s.steps) for s in stages] == [("OPENING", ["Set the agenda", "Ask about their budget"]),
+                                                     ("Close", ["Ask for the sale today"])]
+
+
+def test_short_bullet_steps_without_full_stops_stay_steps():
+    stages = build_outline(read_document(pdf(["Ask about their goals", "Ask about their budget", "Present the offer"]), "sop.pdf"), "Steps")
+    assert stages[0].steps == ["Ask about their goals", "Ask about their budget", "Present the offer"]
+
+
+@pytest.mark.parametrize("text, titles", [
+    ("1. Opening\n1.1 Set the agenda\n1.2 Thank them\n2. Discovery\n2.1 Ask about goals", ["Opening", "Discovery"]),
+    ("OPENING\nSet the agenda\nDISCOVERY\nAsk about goals", ["OPENING", "DISCOVERY"]),
+    ("Step 1: Open\nSet the agenda\nStep 2: Discover\nAsk about goals", ["Step 1: Open", "Step 2: Discover"]),
+    ("Sales SOP\nVersion 2.1\nLast updated March\nOpening:\nSet the agenda", ["Opening"]),
+])
+def test_common_plain_text_layouts_become_stages(text, titles):
+    stages = build_outline(read_document(text.encode(), "sop.txt"), "Before")
+    assert [s.title for s in stages if s.title != "Before"] == titles
+    assert all(not s[:1].isdigit() for st in stages for s in st.steps)   # "1.1" is a list mark, not part of the step
+
+
+def test_docx_bold_paragraphs_and_outline_levels_are_headings():
+    w = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'
+    body = ('<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>Opening</w:t></w:r></w:p>'
+            '<w:p><w:r><w:t>Set the agenda for the call.</w:t></w:r></w:p>'
+            '<w:p><w:pPr><w:pStyle w:val="berschrift1"/></w:pPr><w:r><w:t>Abschluss</w:t></w:r></w:p>'
+            '<w:p><w:r><w:t>Ask for the sale.</w:t></w:r></w:p>')
+    styles = f'<w:styles {w}><w:style w:styleId="berschrift1"><w:pPr><w:outlineLvl w:val="0"/></w:pPr></w:style></w:styles>'
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("word/document.xml", f"<w:document {w}><w:body>{body}</w:body></w:document>")
+        z.writestr("word/styles.xml", styles)
+    blocks = read_document(buf.getvalue(), "sop.docx")
+    assert [(b.text, b.level > 0) for b in blocks] == [("Opening", True), ("Set the agenda for the call.", False),
+                                                       ("Abschluss", True), ("Ask for the sale.", False)]
+
+
+def test_a_docx_zip_bomb_is_refused_unread(monkeypatch):
+    from core.infra import constants
+
+    monkeypatch.setitem(constants.SOP_LIMITS, "max_unzipped_bytes", 1000)
+    with pytest.raises(DocumentError) as caught:
+        read_document(docx([("x" * 5000, None)]), "sop.docx")
+    assert caught.value.code == "too_big"
 
 
 @pytest.mark.parametrize("data, name, code", [
@@ -172,3 +216,34 @@ def test_the_sample_sop_reads_and_covers_every_element(client):
     body = client.post("/api/sop/read", json={"text": text}).get_json()
     assert [s["title"] for s in body["stages"]] == ["Open", "Discover", "Pitch", "Handle objections", "Close"]
     assert body["coverage"] == 100
+
+
+@pytest.mark.parametrize("step", ["Never discuss pricing on the first call", "Do not take payment on the call",
+                                  "Don't ask about budget until they ask", "Close the CRM ticket after the call",
+                                  "Offer them a coffee", "Make sure the decision maker is present",
+                                  "Reply within 5 minutes of the booking", "Recap their goals in their own words"])
+def test_cue_false_positives_cover_nothing_they_should_not(step, fake_embedder):
+    covered = {r.id for r in check_elements([Stage("x", [step])], CFG, fake_embedder.embed) if r.covered}
+    assert covered <= {"decision", "discovery"}   # only what the words really say (decision maker / their goals)
+    assert "pitch" not in covered and "close" not in covered and "opening" not in covered and "follow_up" not in covered
+
+
+def test_the_sample_follow_up_evidence_is_the_follow_up_step(client):
+    text = client.get("/api/sop/sample").get_json()["text"]
+    elements = {e["id"]: e for e in client.post("/api/sop/read", json={"text": text}).get_json()["elements"]}
+    assert elements["follow_up"]["step"] == "If they're not ready, book a follow-up call before hanging up"
+
+
+def test_a_conditional_step_only_counts_when_it_happened():
+    stages = [Stage("Close", ["Ask them to start today", "If they say it's too expensive, talk about the budget"])]
+    result = check_call(stages, ["Shall we start today?"], CFG, topic_embed)
+    assert [s.conditional for s in result.steps] == [False, True]
+    assert result.score == 100            # the price objection never came up
+    both = check_call(stages, ["Shall we start today?", "Let's look at the budget again."], CFG, topic_embed)
+    assert both.steps[1].done and both.score == 100
+
+
+def test_each_sentence_of_a_turn_is_matched_on_its_own():
+    stages = [Stage("Open", ["Set the agenda", "Ask about their goal"])]
+    result = check_call(stages, ["Thanks for coming. Here's the agenda. What's your goal?"], CFG, topic_embed)
+    assert [(s.done, s.said) for s in result.steps] == [(True, "Here's the agenda."), (True, "What's your goal?")]

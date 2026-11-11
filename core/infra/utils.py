@@ -48,6 +48,30 @@ def contains_nonnegated_keyword(text: str, keywords) -> bool:
     return False
 
 
+def says_unnegated(text: str, patterns) -> bool:
+    """A compiled pattern matches with no negation in the few words before it: "I'm not worried" says no worry,
+    "Never discuss pricing" says no pricing. Regex counterpart of contains_nonnegated_keyword."""
+    for pattern in patterns:
+        for match in pattern.finditer(text):
+            # Only the same clause: in "If they're not ready, book a follow-up" the "not" belongs to the condition.
+            clause = re.split(r"[,;:.!?]", text[: match.start()])[-1]
+            before = re.findall(r"[\w']+", clause.lower())[-NEGATION_WINDOW:]
+            if not any(word in NEGATIONS for word in before):
+                return True
+    return False
+
+
+def sentences(text: str) -> list[str]:
+    """The sentences of a passage, cut after . ! ? (every module that reads what was said or written uses this)."""
+    return [s.strip() for s in re.split(r"(?<=[.!?])\s+", text or "") if s.strip()]
+
+
+def file_ext(filename: str) -> str:
+    """"Call.Final.M4A" -> "m4a"; no extension -> ""."""
+    name = (filename or "").rsplit("/", 1)[-1]
+    return name.rsplit(".", 1)[-1].lower() if "." in name else ""
+
+
 def clamp_score(value, default=50) -> int:
     """Clamp a score to a 0-100 int"""
     try:

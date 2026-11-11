@@ -15,7 +15,7 @@ from core.sop.checklist import check_elements
 from core.sop.document import DocumentError, read_document
 from core.sop.outline import Stage, build_outline
 
-from ..messages import SOP_EMPTY, SOP_OUTLINE_INVALID, SOP_UNREADABLE, SOP_UNSUPPORTED
+from ..messages import SOP_EMPTY, SOP_OUTLINE_INVALID, SOP_TOO_BIG, SOP_UNREADABLE, SOP_UNSUPPORTED
 from ..security import require_rate_limit
 from ._utils import json_body
 from .calls import call_error
@@ -23,6 +23,7 @@ from .calls import call_error
 bp = Blueprint("sop", __name__, url_prefix="/api/sop")
 
 SAMPLE_FILE = "sop_sample.md"   # in config/: the SOP behind "Try a sample SOP"
+_DOCUMENT_ERRORS = {"unsupported": SOP_UNSUPPORTED, "unreadable": SOP_UNREADABLE, "too_big": SOP_TOO_BIG}
 
 
 def _embed(texts: list[str]) -> list[list[float]]:
@@ -69,7 +70,7 @@ def read():
             text = json_body().get("text")
             blocks = read_document(text.encode("utf-8"), "sop.txt") if isinstance(text, str) and text.strip() else []
     except DocumentError as e:
-        return jsonify({"error": SOP_UNSUPPORTED if e.code == "unsupported" else SOP_UNREADABLE, "code": f"SOP_{e.code.upper()}"}), 400
+        return jsonify({"error": _DOCUMENT_ERRORS[e.code], "code": f"SOP_{e.code.upper()}"}), 400
     cfg = load_yaml("sop.yaml")
     stages = build_outline(blocks, cfg["untitled_stage"])
     if not stages:

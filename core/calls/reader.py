@@ -4,7 +4,13 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 
-from core.calls.errors import CALL_ONE_SPEAKER, CALL_TOO_LONG, CALL_TOO_SHORT, CALL_UNREADABLE, CallError
+from core.calls.errors import (
+    CALL_ONE_SPEAKER,
+    CALL_TOO_LONG,
+    CALL_TOO_SHORT,
+    CALL_UNREADABLE,
+    CallError,
+)
 from core.calls.profile import Profile, build_profile
 from core.calls.roles import Roles, SpeakerStats, assign_roles, speaker_stats
 from core.calls.transcript import Turn, parse

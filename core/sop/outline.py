@@ -3,10 +3,10 @@ paragraph is split into its sentences, each a step). Text before any heading for
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass, field
 
 from core.infra.constants import SOP_LIMITS
+from core.infra.utils import sentences
 from core.sop.document import Block
 
 
@@ -19,7 +19,7 @@ class Stage:
 def _steps(text: str) -> list[str]:
     if len(text) <= SOP_LIMITS["max_step_chars"]:
         return [text]
-    return [s.strip() for s in re.split(r"(?<=[.!?])\s+", text) if s.strip()]
+    return sentences(text)
 
 
 def build_outline(blocks: list[Block], untitled: str) -> list[Stage]:

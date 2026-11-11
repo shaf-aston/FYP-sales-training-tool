@@ -30,8 +30,8 @@ def oracle(prompt: str) -> str:
 
 
 def test_labels_come_back_per_segment_and_join_into_turns():
-    labels = label_speakers(SEGMENTS, oracle, PROMPT)
-    assert labels == TRUTH
+    labels, sure = label_speakers(SEGMENTS, oracle, PROMPT)
+    assert labels == TRUTH and sure
     text = as_transcript(SEGMENTS, labels)
     assert text.splitlines()[3] == "[0:11] Speaker B: About a year. It's getting worse."
     reading = read_call(text)                                   # the reader takes it like any transcript
@@ -48,14 +48,21 @@ def test_batches_repeat_the_last_labels_for_continuity(monkeypatch):
         prompts.append(prompt)
         return oracle(prompt)
 
-    assert label_speakers(SEGMENTS, recording, PROMPT) == TRUTH
+    assert label_speakers(SEGMENTS, recording, PROMPT)[0] == TRUTH
     assert len(prompts) == 3
     assert "2. B: I run a small agency" in prompts[1] and "3. A: How long" in prompts[1]   # context from batch 1
 
 
 def test_a_missing_or_garbled_label_keeps_the_speaker_going():
-    labels = label_speakers(SEGMENTS, lambda prompt: "1. A\n2. B\nnonsense\n4: b\n", PROMPT)
-    assert labels == ["A", "B", "B", "B", "B", "B", "B"]
+    labels, sure = label_speakers(SEGMENTS, lambda prompt: "1. A\n2. B\nnonsense\n4: b\n", PROMPT)
+    assert labels == ["A", "B", "B", "B", "B", "B", "B"] and not sure   # 3 of 7 readable, even after asking again
+
+
+@pytest.mark.parametrize("reply", ["1. Speaker A\n2. Speaker B", "**1.** A\n**2.** B", "1 -> A\n2 -> B", "1=A\n2=B",
+                                   "- 1: A\n- 2: B", "1) speaker a\n2) speaker b"])
+def test_label_reply_variants_are_read(reply):
+    labels, sure = label_speakers(SEGMENTS[:2], lambda prompt: reply, PROMPT)
+    assert labels == ["A", "B"] and sure
 
 
 def test_long_recordings_get_hour_clocks():
@@ -78,7 +85,7 @@ def upload(client, data=b"ID3fake-mp3", name="call.mp3"):
 def test_a_recording_becomes_a_transcript_to_check(client, fakes):
     body = upload(client).get_json()
     assert body["filename"] == "call.txt"
-    assert body["text"].startswith("[0:00] Speaker A: Hi Dan")
+    assert body["text"].startswith("[0:00] Speaker A: Hi Dan") and body["labels_sure"] is True
     assert client.post("/api/calls/read", json={"text": body["text"]}).status_code == 200
 
 

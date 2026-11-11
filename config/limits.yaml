@@ -72,7 +72,7 @@ rate_limits:         # [max_requests, window_seconds] per client IP; bucket name
   buy_chat: [60, 60]   # buy mode: chat, edit and coach
   sell: [30, 60]       # sell mode: every rate-limited sell route
   calls: [20, 60]      # reading an uploaded call transcript (each read parses up to calls.max_chars)
-  audio: [4, 600]
+  audio: [4, 600]      # turning a recording into a transcript (speech to text plus labelling: the costly one)
   sop: [10, 60]        # reading an SOP or checking a call against it (both embed every step)      # turning a recording into a transcript (speech to text plus labelling: the costly one)
   login: [10, 60]      # log in and delete account (each password check costs ~50 ms of scrypt)
   signup: [5, 60]      # sign up
@@ -131,6 +131,9 @@ security:
 
 sop:                 # a team's sales SOP (core/sop)
   max_bytes: 5000000       # an SOP file (PDF, DOCX, text)
+  max_unzipped_bytes: 20000000   # a DOCX part unpacking past this is refused unread (a zip bomb)
+  max_pdf_pages: 50
+  max_text_chars: 200000   # text kept from a PDF
   max_stages: 20
   max_steps_per_stage: 25
   max_step_chars: 300      # a longer paragraph is split into its sentences, each a step

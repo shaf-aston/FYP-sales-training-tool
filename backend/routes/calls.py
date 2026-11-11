@@ -16,6 +16,7 @@ from core.infra.providers.router import ProviderRouter, ProviderUnavailable, com
 from core.infra.providers.transcribe import TranscriptionUnavailable, transcribe
 from core.infra.loader import CONFIG_DIR
 from core.sell_mode import sell_service
+from core.infra.utils import file_ext
 from core.sell_mode.sell_service import InvalidDifficulty
 
 from ..messages import (
@@ -102,14 +103,15 @@ def review():
 @require_rate_limit("audio")
 def transcribe_audio():
     """A call recording (multipart `file`) -> a transcript with speakers labelled "Speaker A" / "Speaker B",
-    for the learner to check and read like any other (core/calls/audio.py). Nothing is stored."""
+    for the learner to check and read like any other (core/calls/audio.py). `labels_sure` is False when the AI's
+    labels mostly could not be read, so the learner is asked to fix them. Nothing is stored."""
     # Recordings are far bigger than any other request: this route alone takes up to the engine's limit.
     request.max_content_length = TRANSCRIPTION["max_bytes"] + MAX_REQUEST_BYTES
     upload = request.files.get("file")
     if upload is None or not upload.filename:
         return jsonify({"error": AUDIO_REQUIRED, "code": "AUDIO_REQUIRED"}), 400
-    name = upload.filename.rsplit("/", 1)[-1]
-    ext = name.rsplit(".", 1)[-1].lower() if "." in name else ""
+    name = upload.filename.replace("\\", "/").rsplit("/", 1)[-1]
+    ext = file_ext(name)
     if ext not in TRANSCRIPTION["formats"]:
         formats = ", ".join(TRANSCRIPTION["formats"])
         return jsonify({"error": AUDIO_FORMAT.format(formats=formats), "code": "AUDIO_FORMAT"}), 400
@@ -125,7 +127,8 @@ def transcribe_audio():
         def ask(prompt: str) -> str:
             return complete(router, [{"role": "user", "content": prompt}], **LLM["speaker_labels"])
 
-        labels = label_speakers(segments, ask, load_calls_config()["speaker_prompt"])
+        labels, sure = label_speakers(segments, ask, load_calls_config()["speaker_prompt"])
     except (TranscriptionUnavailable, ProviderUnavailable):
         return jsonify({"error": AUDIO_UNAVAILABLE, "code": "AUDIO_UNAVAILABLE"}), 503
-    return jsonify({"success": True, "text": as_transcript(segments, labels), "filename": name.rsplit(".", 1)[0] + ".txt"})
+    return jsonify({"success": True, "text": as_transcript(segments, labels), "labels_sure": sure,
+                    "filename": name.rsplit(".", 1)[0] + ".txt"})

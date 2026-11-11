@@ -62,6 +62,7 @@ CALL_TOO_SHORT_TEXT = "That's too short to learn from. Use a call with a few bac
 CALL_UNKNOWN_SPEAKER_TEXT = "Nobody called {name} speaks in this call."
 SOP_UNSUPPORTED = "Use a PDF, Word (.docx), Markdown or text file."
 SOP_UNREADABLE = "Couldn't read any text in that file. Try exporting it as PDF or Word, or paste the text."
+SOP_TOO_BIG = "That file unpacks to far more than an SOP needs. Save it again as a plain PDF or paste the text."
 SOP_EMPTY = "There are no steps in that SOP. Use headings for stages and a line per step."
 SOP_OUTLINE_INVALID = "Read the SOP first, then check a call against it."
 AUDIO_REQUIRED = "Choose a call recording to upload."

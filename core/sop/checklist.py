@@ -8,6 +8,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from core.infra.utils import says_unnegated
 from core.sop.match import Embed, similarity
 from core.sop.outline import Stage
 
@@ -22,7 +23,8 @@ class ElementResult:
 
 
 def _by_cues(step: str, cues: dict[str, list[re.Pattern]]) -> list[str]:
-    return [eid for eid, patterns in cues.items() if any(p.search(step) for p in patterns)]
+    """The elements whose cues the step says, not negated ("Don't ask about budget" says no budget step)."""
+    return [eid for eid, patterns in cues.items() if says_unnegated(step, patterns)]
 
 
 def check_elements(stages: list[Stage], cfg: dict, embed: Embed) -> list[ElementResult]:
@@ -31,7 +33,10 @@ def check_elements(stages: list[Stage], cfg: dict, embed: Embed) -> list[Element
     steps = [step for stage in stages for step in stage.steps]
     covering: dict[str, str] = {}
     unmatched = []
+    negated = [re.compile(c, re.IGNORECASE) for c in cfg["negated_step"]]
     for step in steps:
+        if any(p.search(step) for p in negated):   # "Never ...", "Do not ...": a rule against something
+            continue
         hits = _by_cues(step, cues)
         for eid in hits:
             covering.setdefault(eid, step)
