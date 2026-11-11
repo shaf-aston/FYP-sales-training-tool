@@ -146,6 +146,8 @@ export function createHttpApi() {
     teamCreate: (name: string) => request<{ success: true; team: T.Team }>("/api/team/create", { body: { name } }),
     teamJoin: (code: string) => request<{ success: true; team: T.Team }>("/api/team/join", { body: { code } }),
     teamLeave: () => request<{ success: true }>("/api/team/leave", { body: {} }),
+    teamRemove: (userId: number) => request<{ success: true }>("/api/team/remove", { body: { user_id: userId } }),
+    teamNewCode: () => request<{ success: true; invite_code: string }>("/api/team/code", { body: {} }),
 
     // Shared
     /** The text as audio, or null when the server has no voice for it (the browser reads it instead). */

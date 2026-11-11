@@ -71,6 +71,7 @@
 /* Name above email; a long email wraps instead of squeezing the role badge. */
 .memberText {
   display: grid;
+  flex: 1;   /* the name takes the room; the role and Remove sit at the end */
   min-width: 0;
   overflow-wrap: anywhere;
 }

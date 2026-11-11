@@ -8,7 +8,7 @@ import { config } from "@/lib/config";
 import { useAccount } from "./AccountContext";
 import s from "./AccountDialog.module.css";
 
-const roleLabel = { manager: "Manager", rep: "Rep" } as const;
+const roleLabel = { manager: "Manager", member: "Member" } as const;
 
 /** No team yet: start one (you manage it) or join one with a code. */
 function NoTeam() {
@@ -26,7 +26,7 @@ function NoTeam() {
       if (kind === "create") await api.teamCreate(name.trim());
       else await api.teamJoin(code.trim());
       await refresh();
-      toast(kind === "create" ? "Team created. Share the invite code with your reps." : "You're in the team.", "success");
+      toast(kind === "create" ? "Team created. Share the invite code with your team." : "You're in the team.", "success");
     } catch (err) {
       if (!handleLoggedOut(err)) setError(errorText(err, "That didn't go through. Try again."));
     } finally {
@@ -60,6 +60,7 @@ function InTeam({ team }: { team: Team }) {
   const toast = useToast();
   const confirm = useConfirm();
   const [members, setMembers] = useState<TeamMember[] | null>(null);
+  const [reload, setReload] = useState(0);
   const manager = team.role === "manager";
 
   useEffect(() => {
@@ -71,7 +72,34 @@ function InTeam({ team }: { team: Team }) {
     return () => {
       live = false;
     };
-  }, [team.id, handleLoggedOut]);
+  }, [team.id, reload, handleLoggedOut]);
+
+  /** A manager action: confirm, call, then refresh what it changed. */
+  const managerAction = async (ask: Parameters<typeof confirm>[0], call: () => Promise<unknown>, done: string) => {
+    if (!(await confirm(ask))) return;
+    try {
+      await call();
+      await refresh();
+      setReload((n) => n + 1);
+      toast(done, "success");
+    } catch (err) {
+      if (!handleLoggedOut(err)) toast(errorText(err, "That didn't go through. Try again."), "error");
+    }
+  };
+
+  const remove = (m: TeamMember) =>
+    managerAction(
+      { title: `Remove ${m.name}?`, body: "They leave the team. They can join again with the invite code.", confirmLabel: "Remove", cancelLabel: "Keep", danger: true },
+      () => api.teamRemove(m.id),
+      `${m.name} left the team.`,
+    );
+
+  const newCode = () =>
+    managerAction(
+      { title: "Make a new invite code?", body: "The current code stops working. People already in the team stay.", confirmLabel: "New code", cancelLabel: "Keep this code" },
+      () => api.teamNewCode(),
+      "New invite code ready.",
+    );
 
   const copy = async () => {
     try {
@@ -86,7 +114,7 @@ function InTeam({ team }: { team: Team }) {
     const ok = await confirm({
       title: `Leave ${team.name}?`,
       body: manager
-        ? "If no other manager is left, the rep who joined first takes over the team."
+        ? "If no other manager is left, the member who joined first takes over the team."
         : "You can join again with the invite code.",
       confirmLabel: "Leave team",
       cancelLabel: "Stay",
@@ -115,6 +143,11 @@ function InTeam({ team }: { team: Team }) {
           <Button variant="ghost" onClick={copy}>
             Copy
           </Button>
+          {manager && (
+            <Button variant="ghost" onClick={newCode}>
+              New code
+            </Button>
+          )}
         </div>
       )}
       {members === null ? (
@@ -130,6 +163,11 @@ function InTeam({ team }: { team: Team }) {
                   {m.email && <span className={s.muted}>{m.email}</span>}
                 </span>
                 <Badge tone={m.role === "manager" ? "accent" : "neutral"}>{roleLabel[m.role]}</Badge>
+                {manager && m.id !== user?.id && (
+                  <Button variant="ghost" onClick={() => remove(m)} aria-label={`Remove ${m.name} from the team`}>
+                    Remove
+                  </Button>
+                )}
               </li>
             ))}
           </ul>

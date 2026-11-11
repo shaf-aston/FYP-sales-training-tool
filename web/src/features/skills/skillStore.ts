@@ -45,7 +45,9 @@ export const skillStore = {
   },
   /** Swap in a whole log (the account's history after login), oldest first; the oldest drop past the cap. */
   replace(next: SkillLog) {
-    set(next.slice(-config.skills.historyCap));
+    log = next.slice(-config.skills.historyCap);
+    writeString(storageKeys.skillLog, JSON.stringify(log));
+    notify();
   },
 };
 

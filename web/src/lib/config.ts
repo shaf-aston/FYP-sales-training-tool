@@ -36,7 +36,8 @@ export const config = {
   },
   knowledge: { nameMax: 100, fieldMax: 1_000 },
   /** Skill Radar: sessions kept on this device and how many make the recent average (targets come from the server). */
-  skills: { historyCap: 100, averageWindow: 5 },
+  /** historyCap matches the server's max_skill_entries (limits.yaml), so a synced history fits the device whole. */
+  skills: { historyCap: 200, averageWindow: 5 },
   /** Buyer setup in sell mode: the learner's own objection (server caps at the same length) and quick picks. */
   chosenObjection: {
     max: 200,

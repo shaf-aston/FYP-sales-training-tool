@@ -297,7 +297,7 @@ export interface AccountUser {
 export interface Team {
   id: number;
   name: string;
-  role: "rep" | "manager";
+  role: "member" | "manager";
   invite_code: string | null;
 }
 
