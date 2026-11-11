@@ -230,8 +230,8 @@ def test_bad_reask_fails_loud(change, error):
 @pytest.mark.parametrize("change, error", [  # each line a route says is checked, and the error names its step
     (lambda s: s["b"]["listen"]["agrees"].update(ack="Good, {goal."), "step b: a blank"),
     (lambda s: s["a"]["stuck"].update(ack="Ok, {goal."), "step a: a blank"),
-    (lambda s: s["a"]["listen"]["clear"].update(say="Is _this_ _it_?"), "step a: at most one stress"),
-    (lambda s: s["a"]["stuck"].update(say="Is _this_ _it_?"), "step a: at most one stress"),
+    (lambda s: s["a"]["listen"]["clear"].update(say="Is **this** _it_ ==now==?"), "step a: at most two stress"),
+    (lambda s: s["a"]["stuck"].update(say="Is **this** _it_ ==now==?"), "step a: at most two stress"),
     (lambda s: s["a"]["listen"]["clear"].pop("examples"), "step a: route 'clear' needs examples"),
     (lambda s: s["a"]["stuck"].update(examples=["x"]), "step a: 'any' route takes no examples"),
     (lambda s: s["a"].update(answered_by=r"^(?P<answer>\d*)$") or s["a"]["listen"].update(any={"then": "b"}), "step a: answered_by must not match an empty"),

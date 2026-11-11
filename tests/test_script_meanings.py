@@ -54,7 +54,7 @@ def test_meaning_lines_never_ask_and_stress_once_at_most():
 
 @pytest.mark.parametrize("bad, why", [
     ({"meanings": {"x": {"examples": ["a"], "lines": ["ok?"]}}, "min_score": 0.8}, "neither asks"),
-    ({"meanings": {"x": {"examples": ["a"], "lines": ["==so== _very_ much"]}}, "min_score": 0.8}, "one stress"),
+    ({"meanings": {"x": {"examples": ["a"], "lines": ["==so== _very_ **much**"]}}, "min_score": 0.8}, "two stress"),
     ({"meanings": {"x": {"examples": ["a"], "lines": ["for {outcome}"]}}, "min_score": 0.8}, "blanks"),
     ({"meanings": {"x": {"lines": ["ok"]}}, "min_score": 0.8}, "needs examples"),
     ({"meanings": {}}, "min_score"),

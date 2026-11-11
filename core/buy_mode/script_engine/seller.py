@@ -1,5 +1,6 @@
 """One selling turn: the script picks the line, the AI only fills small checked gaps."""
 
+import logging
 import re
 from dataclasses import asdict, replace
 from functools import lru_cache
@@ -41,6 +42,8 @@ from core.infra.env import ROOT_DIR
 from core.infra.loader import load_yaml
 from core.infra.logs import timed
 from core.infra.utils import tokenize
+
+log = logging.getLogger(__name__)
 
 
 def engine_config():
@@ -154,8 +157,16 @@ class ScriptSeller:
     def reply(self, text):
         """Answer one prospect message. Returns (text, ui_stage). `self.last_turn` then says what the
         reply was heard as and where the script went, for the turn log."""
-        before = self.state.step
-        said, ui_stage, heard_as = self._reply(fix_typos(text, self._vocab, self.cfg))
+        before, saved = self.state.step, self.state
+        if not tokenize(text):  # no words we can read (another language, emoji, symbols): ask again, stay put
+            said, ui_stage, heard_as = self.sense.no_words, self.ui_stage(), "no_words"
+        else:
+            try:
+                said, ui_stage, heard_as = self._reply(fix_typos(text, self._vocab, self.cfg))
+            except Exception:  # blanket: any fault in hearing → same step, one safe line, never a crash
+                log.exception("script reply failed")
+                self.state = saved
+                said, ui_stage, heard_as = self.sense.no_words, self.ui_stage(), "error"
         self.last_turn = {"step_from": before, "step_to": self.state.step, "heard_as": heard_as,
                           "saved": {k: v for k, v in self.state.slots.items() if v}}
         return said, ui_stage

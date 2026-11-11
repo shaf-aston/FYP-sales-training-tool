@@ -81,6 +81,7 @@ class Step:
     shrug_moves_on: bool = False  # the next line answers the question itself: a shrug ("yeah") moves on unsaved, never asked again
     yes_no: bool = False  # the question wants a yes or no but opens with no helper verb ("Open to being called out?")
     go_on_is_yes: bool = False  # the question asks to go ahead ("jumping in?"): "go on" says yes; at "keep settling?" it never does
+    follow_up: bool = False  # asked only after a real answer: a reply that moves on (frustration) goes past it
     either: str = ""    # one of its answers' examples: a reply that leaves a choice to us ("whichever", "up to you") is heard as it
 
     @property
@@ -215,6 +216,7 @@ class CommonSense:
     corrected: str = ""  # they fixed their last answer a turn later; empty = the question again only
     unfinished: str = ""  # said to a reply cut off mid-sentence ("probably the fact that"): the next one is joined on
     unfinished_ends: tuple = ()  # last words that leave a sentence open
+    no_words: str = "Sorry, I didn't catch that. Could you say it in English?"  # a reply with no readable words, or a fault while hearing it
 
 
 def _read(directory, name):
@@ -308,14 +310,14 @@ def _step(step_id, data, answers):
         data.get("name", ""), data.get("note", ""), bool(data.get("doubts_answer")),
         stuck, answered_by, bool(data.get("echo")), unsure, bool(data.get("moment")), data.get("bridge", ""),
         reask, needs, plain_if, bool(data.get("shrug_moves_on")), bool(data.get("yes_no")),
-        bool(data.get("go_on_is_yes")), either,
+        bool(data.get("go_on_is_yes")), either=either, follow_up=bool(data.get("follow_up")),
     )
 
 
 def _one_stress(where, line):
-    """A line stresses one word at most: stress everywhere is stress nowhere."""
-    if stresses(line) > 1:
-        raise ValueError(f"{where}: at most one stress mark (_word_ or ==words==) per line: {line!r}")
+    """A line stresses two words at most (one loud, one stretched): stress everywhere is stress nowhere."""
+    if stresses(line) > 2:
+        raise ValueError(f"{where}: at most two stress marks (**word**, _word_, ==words==) per line: {line!r}")
 
 
 def _objection(name, data):
