@@ -55,8 +55,14 @@ async function request<R>(path: string, opts: RequestOptions = {}): Promise<R> {
 
   const data = await res.json().catch(() => null);
   if (!res.ok || !data || data.error || data.success === false) {
-    // Server faults get a plain message so internals never reach the screen.
-    const message = res.status >= 500 && !data?.code ? "Something went wrong on our side. Try again in a moment." : data?.error;
+    // Server faults get a plain message so internals never reach the screen. 413 comes before any route
+    // (no JSON): only a call transcript is that big.
+    const message =
+      res.status === 413
+        ? "That file is too big. Use a shorter call."
+        : res.status >= 500 && !data?.code
+          ? "Something went wrong on our side. Try again in a moment."
+          : data?.error;
     throw new ApiError(message ?? `Request failed (${res.status})`, res.status, data?.code);
   }
   return data as R;
@@ -109,7 +115,9 @@ export function createHttpApi() {
     // Calls: a real sales call the learner brings in, read by rules on the server (no AI).
     callsSample: () => request<{ success: true; text: string; filename: string }>("/api/calls/sample"),
     callsRead: (call: T.CallReq) => request<T.CallReadRes>("/api/calls/read", { body: call, timeoutMs: chat }),
-    callsReview: (call: T.CallReq) => request<T.Review>("/api/calls/review", { body: call, timeoutMs: chat }),
+    /** Replayed at `difficulty` (the one the learner picked), else the one read from the call. */
+    callsReview: (call: T.CallReq, difficulty?: T.Difficulty) =>
+      request<T.Review>("/api/calls/review", { body: { ...call, difficulty }, timeoutMs: chat }),
 
     // Shared
     /** The text as audio, or null when the server has no voice for it (the browser reads it instead). */

@@ -25,8 +25,9 @@ export function CallResult({ reader, result, draft, onStarted, onCancel }: Props
   const [reviewing, setReviewing] = useState(false);
   const top = useRef<HTMLElement>(null);
   const { call, source } = result;
-  const name = draft.name.trim() || call.prospect;
-  const practiseLabel = `Practise against ${name}`;
+  // The buyer needs a name (the server refuses one without).
+  const name = draft.name.trim();
+  const practiseLabel = name ? `Practise against ${name}` : "Name the prospect to practise";
 
   // The Read button that had focus is gone: start keyboard and screen-reader users at the result (without jumping the panel).
   useEffect(() => top.current?.focus({ preventScroll: true }), []);
@@ -45,7 +46,7 @@ export function CallResult({ reader, result, draft, onStarted, onCancel }: Props
       {reader.error && <Notice kind="error">{reader.error}</Notice>}
       <ProspectCard draft={draft} evidence={call.profile.evidence} onEdit={reader.edit} />
       <div className={s.actions}>
-        <Button variant="primary" block busy={starting} busyLabel="Starting…" disabled={!!reader.busy} onClick={practise}>
+        <Button variant="primary" block busy={starting} busyLabel="Starting…" disabled={!!reader.busy || !name} onClick={practise}>
           {practiseLabel}
         </Button>
         <Button block disabled={!!reader.busy} onClick={() => setReviewing(true)}>
@@ -67,7 +68,8 @@ export function CallResult({ reader, result, draft, onStarted, onCancel }: Props
         onClose={() => setReviewing(false)}
         call={source}
         prospect={call.prospect}
-        practise={{ label: practiseLabel, onClick: practise }}
+        difficulty={draft.difficulty}
+        practise={{ label: practiseLabel, onClick: practise, disabled: !name }}
       />
     </section>
   );

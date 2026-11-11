@@ -51,10 +51,10 @@ export const config = {
   calls: {
     /** File types the drop zone takes; the server reads WebVTT, SRT and "Name: line" text. */
     accept: [".txt", ".vtt", ".srt"],
-    /** Bigger files are not transcripts; refuse before reading them into memory. */
+    /** Bigger files are not transcripts; refuse before reading them into memory (limits.yaml max_request_bytes). */
     maxFileBytes: 1_000_000,
-    /** Caps on the prospect fields the learner edits. */
-    prospect: { nameMax: 60, textMax: 300, itemMax: 120, maxItems: 8 },
+    /** Caps on the prospect fields the learner edits; the server allows 300 characters a field and 5 items a list (limits.yaml max_custom_buyer_*). */
+    prospect: { nameMax: 60, textMax: 300, itemMax: 180, maxItems: 5 },
     /** Quotes shown under a field as "from the call". */
     evidenceShown: 2,
     /** How the server guessed which speaker is the learner (rep.how). */

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Button, Dialog, Notice } from "@/components/ui";
 import { ReviewSummary, ReviewTurns } from "@/features/sell/ReviewTurns";
 import { api, errorText } from "@/lib/api/client";
-import type { CallReq, Review } from "@/lib/api/types";
+import type { CallReq, Difficulty, Review } from "@/lib/api/types";
 
 type Load = { status: "loading" } | { status: "error"; message: string } | { status: "ready"; review: Review };
 
@@ -15,20 +15,22 @@ function intro(review: Review, prospect: string): string {
   return `No single turn cost you ground, but the call did not land. Work on this: ${review.summary.work_on}`;
 }
 
-function CallReviewBody({ call, prospect }: { call: CallReq; prospect: string }) {
+type BodyProps = Pick<Props, "call" | "prospect" | "difficulty">;
+
+function CallReviewBody({ call, prospect, difficulty }: BodyProps) {
   const [load, setLoad] = useState<Load>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let live = true;
     api
-      .callsReview(call)
+      .callsReview(call, difficulty)
       .then((review) => live && setLoad({ status: "ready", review }))
       .catch((err) => live && setLoad({ status: "error", message: errorText(err, "Couldn't review the call.") }));
     return () => {
       live = false;
     };
-  }, [call, attempt]);
+  }, [call, difficulty, attempt]);
 
   const retry = useCallback(() => {
     setLoad({ status: "loading" });
@@ -59,14 +61,16 @@ interface Props {
   onClose: () => void;
   /** The call exactly as it was read (with the rep), so the review matches the screen. */
   call: CallReq;
+  /** Rated at the difficulty the learner picked. */
+  difficulty: Difficulty;
   /** The prospect's name as the call shows it (labels their lines). */
   prospect: string;
   /** Primary action under the review, e.g. practise against this prospect. */
-  practise: { label: string; onClick: () => void };
+  practise: { label: string; onClick: () => void; disabled?: boolean };
 }
 
 /** Read-only turn-by-turn review of a real call: what you said, how they took it, which turns cost ground. */
-export function CallReviewDialog({ open, onClose, call, prospect, practise }: Props) {
+export function CallReviewDialog({ open, onClose, call, prospect, difficulty, practise }: Props) {
   return (
     <Dialog
       open={open}
@@ -74,12 +78,12 @@ export function CallReviewDialog({ open, onClose, call, prospect, practise }: Pr
       title="Your real call"
       size="lg"
       actions={
-        <Button variant="primary" onClick={practise.onClick}>
+        <Button variant="primary" disabled={practise.disabled} onClick={practise.onClick}>
           {practise.label}
         </Button>
       }
     >
-      {open && <CallReviewBody call={call} prospect={prospect} />}
+      {open && <CallReviewBody call={call} prospect={prospect} difficulty={difficulty} />}
     </Dialog>
   );
 }
