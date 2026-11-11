@@ -58,6 +58,8 @@ interface SessionValue {
   send: (text: string) => Promise<SendResult>;
   edit: (historyIndex: number, text: string) => Promise<boolean>;
   reset: () => Promise<void>;
+  /** Buy mode: start a fresh call at one script step (nothing said before it). */
+  jumpTo: (step: string) => Promise<void>;
   /** Start a new AI buyer (sell mode). */
   startBuyer: (difficulty: Difficulty, productType: string, pick?: BuyerPick) => Promise<boolean>;
   /** End the current buyer and go back to setup. */
@@ -315,6 +317,23 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
     setTyping(false);
   }, [mode, sellSession, buySessionId, startBuyer, handleExpired, toast, initBuy]);
 
+  const jumpTo = useCallback(
+    async (step: string) => {
+      if (!buySessionId || busy.current) return;
+      busy.current = true;
+      epoch.current++;
+      try {
+        const res = await api.buyJump(buySessionId, step);
+        adopt({ ...res, session_id: buySessionId });
+      } catch (err) {
+        if (!handleExpired(err)) toast("Couldn't jump to that step. Try again.", "error");
+      } finally {
+        busy.current = false;
+      }
+    },
+    [buySessionId, adopt, handleExpired, toast],
+  );
+
   const value = useMemo<SessionValue>(
     () => ({
       mode,
@@ -329,11 +348,12 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
       send,
       edit,
       reset,
+      jumpTo,
       startBuyer,
       endBuyer,
       handleExpired,
     }),
-    [mode, buySessionId, stage, coachNotes, messages, typing, sellSession, sellSettings, setSellSettings, send, edit, reset, startBuyer, endBuyer, handleExpired],
+    [mode, buySessionId, stage, coachNotes, messages, typing, sellSession, sellSettings, setSellSettings, send, edit, reset, jumpTo, startBuyer, endBuyer, handleExpired],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

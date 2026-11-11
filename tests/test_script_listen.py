@@ -389,3 +389,18 @@ def test_08_drawn_out_moves_on_without_feeding_it_either(fake_embedder):
     s = seller(fake_embedder, _down, step="08_decide")
     text, _ = s.reply("they think harder")
     assert s.state.step == "09" and "risk" not in text.lower()
+
+
+def test_jump_starts_a_fresh_call_at_a_step_in_plain_words(fake_embedder):
+    s = seller(fake_embedder, _down, step="03", slots={"outcome": "quit my job"})
+    ids = [st["id"] for st in s.steps()]
+    assert "08" in ids and "07" not in ids   # 07 says nothing: never a place to start
+    text, _ = s.start_at("05")
+    assert text == "What's the reason you haven't got there yet?" and s.state.slots == {}   # nothing from before
+    s.reply("money")
+    s.restore()   # a rewind to the start goes back to the jumped-to step, not the opening
+    assert s.state.step == "05"
+    for step in ids:
+        assert "{" not in s.start_at(step)[0]
+    with pytest.raises(ValueError):
+        s.start_at("07")

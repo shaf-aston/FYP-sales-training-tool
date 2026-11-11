@@ -148,6 +148,17 @@ class SellerBot:
             "turn_state": self.seller.snapshot(),
         }
 
+    def jump_to(self, step_id: str) -> str:
+        """A fresh call that starts at a script step (to test that step): the transcript is only its line.
+        ValueError for an unknown step."""
+        text, ui_stage = self.seller.start_at(step_id)
+        self.call.reset_to_initial()
+        self.call.conversation_history.append({"role": "assistant", "content": text})
+        self._turn_snapshots = []
+        self._show_stage(ui_stage)
+        self.log_snapshot()
+        return text
+
     def rewind_to_turn(self, turn_index: int) -> bool:
         """Put the call back to just after the learner's `turn_index`-th turn (0 = only the greeting)."""
         history = self.call.conversation_history

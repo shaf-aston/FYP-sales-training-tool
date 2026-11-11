@@ -28,6 +28,19 @@ export interface InitRes extends BotState {
   training?: CoachNotes;
 }
 
+/** A script step the learner can start a fresh call at (to test it). */
+export interface ScriptStep {
+  id: string;
+  name: string;
+}
+
+export interface JumpRes extends BotState {
+  success: true;
+  message: string;
+  history: ChatMsg[];
+  training: CoachNotes;
+}
+
 export interface ChatRes extends BotState {
   success: true;
   message: string;

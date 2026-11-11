@@ -85,7 +85,7 @@ class ScriptSeller:
         self._listener = Listener(cfg, embedder)
         self._voice = llm if hasattr(llm, "new_turn") else Voice(cfg, offer, llm)
         self._opening = start(method)
-        self.state = self._opening.state
+        self.state = self._start = self._opening.state  # `_start`: where the call began (the opening, or a jumped-to step)
         self.last_turn = {}  # what the latest reply was heard as: see `reply`
         examples = self._script_examples()
         vocab = frozenset(w for e in examples for w in tokenize(e)) | frozenset(cfg["spell_words"])
@@ -131,7 +131,24 @@ class ScriptSeller:
         return found
 
     def reset(self, state=None):
-        self.state = state or self._opening.state
+        self.state = state or self._start
+
+    def steps(self):
+        """The steps a call can start at, in script order: those with a line to say (id and name)."""
+        return [{"id": s.id, "name": s.name or s.id} for s in self.method.steps.values() if s.say]
+
+    def start_at(self, step_id):
+        """Start the call fresh at `step_id` (testing one step): nothing heard before, so no answers to build
+        on; its line falls back to its plain words. Returns (text, ui_stage). ValueError for a step with no line."""
+        step = self.method.steps.get(step_id)
+        if not step or not step.say:
+            raise ValueError(f"no step to start at: {step_id!r}")
+        self._voice.new_turn()
+        self._turn = Turn()
+        self.state = ScriptState(step=step_id)
+        text, ui_stage = self._go(jump(self.method, self.state, step_id))
+        self.state = self._start = replace(Echo.settle(self.state, self._turn), last=text)
+        return text, ui_stage
 
     def snapshot(self):
         """Everything the call needs to carry on from here, as plain data (kept per turn for rewinds)."""

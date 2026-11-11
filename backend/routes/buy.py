@@ -19,6 +19,7 @@ from ..messages import (
     FIELD_REQUIRED,
     GENERIC_ERROR,
     INVALID_INDEX,
+    INVALID_STEP,
     LABEL_TOO_LONG,
     MISSING_INDEX,
     QUESTION_REQUIRED,
@@ -149,6 +150,30 @@ def chat(seller):
     except Exception as e:
         current_app.logger.exception(f"Chat error: {e}")
         return jsonify({"error": GENERIC_ERROR}), 500
+
+
+@bp.route("/steps", methods=["GET"])
+@with_session("seller")
+def steps(seller):
+    """The script steps a learner can jump to (to test one step)."""
+    return jsonify({"success": True, "steps": seller.seller.steps()})
+
+
+@bp.route("/jump", methods=["POST"])
+@require_rate_limit("buy_chat")
+@with_session("seller")
+def jump(seller):
+    """Start the call again at one script step: a fresh call, nothing said before it."""
+    step = str((request.get_json(silent=True) or {}).get("step") or "")
+    try:
+        message = seller.jump_to(step)
+    except ValueError:
+        return jsonify({"error": INVALID_STEP}), 400
+    except Exception:
+        current_app.logger.exception("Jump failed")
+        return jsonify({"error": GENERIC_ERROR}), 500
+    return jsonify({"success": True, "message": message, "history": history_json(seller.call.conversation_history),
+                    **stage_fields(seller), "training": seller.coach_notes()})
 
 
 @bp.route("/edit", methods=["POST"])
