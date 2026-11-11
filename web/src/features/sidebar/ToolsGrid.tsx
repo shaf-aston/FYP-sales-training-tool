@@ -44,6 +44,7 @@ export function ToolsGrid() {
         onClick={() => toggleSidePanel("quiz")}
       />
       <Tool title="Say it from memory" copy="Fill in the missing line" onClick={() => openDialog("drills")} />
+      {sell && <Tool title="Skill Radar" copy="Your skills over time" onClick={() => openDialog("skills")} />}
     </div>
   );
 }

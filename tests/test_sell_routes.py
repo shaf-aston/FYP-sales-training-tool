@@ -117,3 +117,13 @@ def test_skills_are_the_evaluation_criteria(client):
     assert [s["id"] for s in body["skills"]] == list(criteria)
     assert all(s["label"] and s["tip"] for s in body["skills"])
     assert body["target"] == load_buyer_config()["evaluation"]["scoring"]["strong_score"]
+
+
+def test_each_skill_has_a_practice_session_the_buyer_can_start(sell_client):
+    from core.infra.constants import MAX_CHOSEN_OBJECTION_CHARS
+
+    for skill in sell_client.get("/api/sell/skills").get_json()["skills"]:
+        practice = skill["practice"]
+        assert len(practice.get("objection", "")) <= MAX_CHOSEN_OBJECTION_CHARS
+        started = sell_client.post("/api/sell/init", json={"product_type": "default", **practice})
+        assert started.status_code == 200, (skill["id"], started.get_json())

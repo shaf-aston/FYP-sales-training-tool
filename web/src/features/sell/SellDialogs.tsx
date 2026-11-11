@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { Button, Dialog } from "@/components/ui";
 import { useSession } from "@/features/session/SessionContext";
 import { useUi } from "@/state/UiContext";
+import { SkillsDialog } from "@/features/skills/SkillsDialog";
 import { DrillsDialog } from "./DrillsDialog";
 import { EvaluationBody } from "./EvaluationCard";
 import { evalStore } from "./evalStore";
@@ -39,6 +40,7 @@ export function SellDialogs() {
       </Dialog>
       <ReviewDialog />
       <DrillsDialog />
+      <SkillsDialog />
     </>
   );
 }

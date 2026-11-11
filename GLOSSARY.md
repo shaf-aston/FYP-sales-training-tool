@@ -107,6 +107,7 @@ Rule: modes are named for the learner; engines and stores for the AI (`seller_se
 | **coach** | Buy-mode guidance: **coach notes** per step and answers to "Ask the coach" in a **coach style** (tactical, socratic, teacher). Wire key is still `training`. | `core/buy_mode/coach.py`, `config/coach.yaml` |
 | **quiz** | Buy mode: name the stage, next move, direction. Sell mode: rewrite one of your turns. | `core/training/quiz.py`, `config/quiz.yaml` |
 | **drill** | A strong line with its key move blanked, brought back on a spaced schedule. | `core/training/drills.py`, `config/drills.yaml` |
+| **skill** | One of the five things a sell session is scored on (`evaluation.criteria`). **Skill Radar** shows them across sessions against a **target**, picks the weakest and starts its `practice` session. | `/api/sell/skills`, web `features/skills/` (`skillLog.ts`, `skillStore.ts`) |
 
 ## Plumbing
 

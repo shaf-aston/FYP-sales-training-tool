@@ -91,13 +91,14 @@ def start_sell_session(
 
 def skills() -> dict:
     """The skills every sell session is scored on (buyer.yaml evaluation.criteria), for tracking them over time:
-    id, label, the tip for when it is the weakest, its share of the overall score, and the score that counts as
-    strong (the default target)."""
+    id, label, the tip for when it is the weakest, its share of the overall score, the session that trains it, and
+    the score that counts as strong (the default target)."""
     evaluation = load_buyer_config()["evaluation"]
     return {
         "target": evaluation["scoring"]["strong_score"],
         "skills": [
-            {"id": name, "label": info["label"], "tip": info["tip"], "weight": info["weight"]}
+            {"id": name, "label": info["label"], "tip": info["tip"], "weight": info["weight"],
+             "practice": info["practice"]}
             for name, info in evaluation["criteria"].items()
         ],
     }

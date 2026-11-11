@@ -1,0 +1,66 @@
+.radar {
+  width: 100%;
+  max-width: 420px;
+  margin-inline: auto;
+  display: block;
+  overflow: visible;
+}
+.ring {
+  fill: none;
+  stroke: var(--border-faint);
+}
+.axis {
+  stroke: var(--border);
+}
+.label {
+  fill: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+.target {
+  fill: none;
+  stroke: var(--success);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 4;
+}
+.average {
+  fill: var(--accent-soft);
+  stroke: var(--accent-line);
+}
+.latest {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+.dot {
+  fill: var(--accent);
+}
+/* The shapes grow out of the centre when the radar opens (the viewBox centre is the chart centre). */
+.grow {
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+  animation: radar-grow var(--dur-slow) var(--ease-pop);
+}
+@keyframes radar-grow {
+  from {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+}
+.spark {
+  width: 72px;
+  height: 22px;
+  flex: none;
+}
+.spark polyline {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.sparkEmpty {
+  width: 72px;
+  flex: none;
+}

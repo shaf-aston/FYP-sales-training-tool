@@ -182,6 +182,24 @@ export interface Evaluation {
   coach_tip: string;
 }
 
+/** A skill every sell session is scored on (buyer.yaml evaluation.criteria), tracked by Skill Radar. */
+export interface Skill {
+  id: string;
+  label: string;
+  /** What to try when this is the weakest skill. */
+  tip: string;
+  weight: number;
+  /** The session that trains it: a difficulty, and an objection the buyer raises on turn 1. */
+  practice: { difficulty: Difficulty; objection?: string };
+}
+
+export interface SkillsRes {
+  success: true;
+  /** The score that counts as strong: the default target. */
+  target: number;
+  skills: Skill[];
+}
+
 export interface ReviewTurn {
   turn: number;
   seller: string;

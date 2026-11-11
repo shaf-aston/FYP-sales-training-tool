@@ -4,6 +4,7 @@ import { useCallback } from "react";
 import { api, errorText } from "@/lib/api/client";
 import { useSession } from "@/features/session/SessionContext";
 import { useUi } from "@/state/UiContext";
+import { skillStore } from "@/features/skills/skillStore";
 import { evalStore, useEvalState } from "./evalStore";
 
 /** Request and read the end-of-session evaluation. */
@@ -19,7 +20,9 @@ export function useEvaluation() {
     evalStore.begin(sid);
     if (display === "modal") openDialog("evaluation");
     try {
-      evalStore.succeed(sid, await api.sellEvaluate(sid));
+      const result = await api.sellEvaluate(sid);
+      evalStore.succeed(sid, result);
+      skillStore.recordEvaluation(sid, result);   // Skill Radar keeps every scored session
     } catch (err) {
       if (handleExpired(err)) return;
       evalStore.fail(sid, errorText(err, "Something went wrong while scoring."));

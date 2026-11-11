@@ -359,7 +359,8 @@ evaluation:
     conversation_flow: {base: 40, length_weight: 35, balance_weight: 25, good_length_fit: 0.7, good_balance: 0.6}
   # The five criteria (core/sell_mode/sell_evaluator.py scores each by name). weight: share of the overall score;
   # label: its name in strengths; praise/advice: its feedback at or above / below its "good" ratio;
-  # tip: what to work on when it is among the weakest.
+  # tip: what to work on when it is among the weakest; practice: the session Skill Radar starts to train it
+  # (a difficulty, and optionally an objection the buyer raises on turn 1).
   criteria:
     needs_discovery:
       weight: 0.25
@@ -367,30 +368,35 @@ evaluation:
       praise: "Strong question quality and discovery depth."
       advice: "Ask more open discovery questions to uncover needs clearly."
       tip: "Ask one open question that surfaces root cause, not symptoms."
+      practice: {difficulty: hard}   # short answers: you have to dig
     rapport_building:
       weight: 0.20
       label: "rapport building"
       praise: "Good empathy and trust-building language."
       advice: "Add brief empathy statements before moving to the next question."
       tip: "Start with a brief validation before probing deeper."
+      practice: {difficulty: medium, objection: "I'm not sure you really get what we deal with."}
     objection_handling:
       weight: 0.20
       label: "objection handling"
       praise: "No major objections surfaced; neutral handling score."   # shown when the buyer raised none
       advice: "Acknowledge concerns directly, then reframe toward value and next step."
       tip: "Acknowledge the concern, then reframe with one clear proof point."
+      practice: {difficulty: hard, objection: "Honestly, that's more than I was hoping to spend."}
     solution_presentation:
       weight: 0.20
       label: "solution presentation"
       praise: "Solution language was tied to customer context."
       advice: "Link your recommendation more explicitly to what the buyer said."
       tip: "Tie each benefit directly to a pain point the buyer already shared."
+      practice: {difficulty: medium, objection: "How is this different from what we already use?"}
     conversation_flow:
       weight: 0.15
       label: "conversation flow"
       praise: "Flow was clear and balanced."
       advice: "Keep turns concise and balanced so the buyer speaks more."
       tip: "Use shorter turns and one question at a time."
+      practice: {difficulty: easy}   # a patient buyer: room to practise short, balanced turns
   # Wording shared by every criterion. {label} is a criterion's label; {outcome} is sold, walked or active.
   feedback:
     no_evidence: "Not enough evidence to score this criterion yet."
