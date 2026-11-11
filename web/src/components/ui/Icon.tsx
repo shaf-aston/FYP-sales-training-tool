@@ -21,6 +21,8 @@ const PATHS = {
   send: "M12 19V5M6 11l6-6 6 6",
   /** An arrow up out of a tray: upload a file. */
   upload: "M12 15V4M7 9l5-5 5 5M5 15v4a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4",
+  /** A tick: done, covered. */
+  check: "M5 12.5l4.5 4.5L19 7",
   /** A square: stop. */
   stop: "M7 7h10v10H7z",
 } as const;

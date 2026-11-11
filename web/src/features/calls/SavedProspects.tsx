@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
-import { Button, useConfirm, useToast } from "@/components/ui";
+import { Button, TextButton, useConfirm, useToast } from "@/components/ui";
 import { useAccount } from "@/features/account/AccountContext";
 import { useSession } from "@/features/session/SessionContext";
 import { GENERAL_PRODUCT } from "@/features/sell/options";
@@ -109,9 +109,7 @@ export function SavedProspects({ onStarted }: { onStarted?: () => void }) {
   if (!user)
     return (
       <p className={s.nudge}>
-        <button type="button" className={s.link} onClick={() => openDialog("account")}>
-          Log in
-        </button>{" "}
+        <TextButton onClick={() => openDialog("account")}>Log in</TextButton>{" "}
         to save prospects and keep your progress.
       </p>
     );

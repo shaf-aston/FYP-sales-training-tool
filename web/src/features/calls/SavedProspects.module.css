@@ -68,12 +68,3 @@
   font-size: var(--text-sm);
   color: var(--text-muted);
 }
-.link {
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--accent);
-  font: inherit;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
