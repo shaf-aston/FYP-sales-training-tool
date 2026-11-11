@@ -13,7 +13,8 @@ defaults:            # used when the matching env var is unset (.env overrides)
   groq_reasoning_effort: {"qwen/qwen3.8-27b": "none"}
   trust_proxy_headers: false                                                            # TRUST_PROXY_HEADERS: believe X-Forwarded-For (only behind a proxy you control)
   logs_dir: "data/logs"                                                                # LOGS_DIR: events, timings and feedback land in <dir>/<stream>/<day>.jsonl
-  log_level: "INFO"                                                                     # how much reaches the server log (journalctl)
+  log_level: "INFO"
+  db_path: "data/eloquence.db"   # DB_PATH: accounts database (SQLite), relative to the project root                                                                     # how much reaches the server log (journalctl)
 
 server:
   port: 5000            # `python backend/app.py`; gunicorn takes its own
@@ -51,11 +52,22 @@ calls:               # an uploaded call transcript (core/calls)
   max_objections: 4        # objections kept per profile...
   per_type: 2              # ...and at most this many of one type
 
+accounts:
+  min_password_chars: 8
+  max_email_chars: 254
+  max_account_name_chars: 60
+  max_team_name_chars: 60
+  max_skill_entries: 200     # per learner, newest kept
+  max_saved_prospects: 50    # per learner
+  scrypt: {n: 16384, r: 8, p: 1}   # password hashing cost; raising it only affects new hashes
+  session_days: 30           # how long a login lasts
+
 rate_limits:         # [max_requests, window_seconds] per client IP; bucket names are used in the routes
   buy_init: [10, 60]   # buy mode: starting a session
   buy_chat: [60, 60]   # buy mode: chat, edit and coach
   sell: [30, 60]       # sell mode: every rate-limited sell route
   calls: [20, 60]      # reading an uploaded call transcript (each read parses up to calls.max_chars)
+  account: [10, 60]    # sign up, log in, teams (slows password guessing; each check costs ~50 ms of scrypt)
   knowledge: [10, 60]  # both modes: custom product knowledge
   feedback: [5, 300]   # both modes: feedback form
   speech: [40, 60]     # both modes: replies read aloud

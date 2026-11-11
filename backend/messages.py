@@ -30,6 +30,26 @@ UNKNOWN_PERSONA = "Unknown persona '{name}' for product '{product}'"
 SELL_REVIEW_ERROR = "Couldn't rebuild the session review - try again."
 CUSTOM_BUYER_INVALID = "That buyer can't be used: {detail}"
 
+# Accounts and teams (/api/account, /api/team)
+LOGIN_REQUIRED = "Log in to use this."
+BAD_LOGIN = "That email and password don't match an account."
+PASSWORD_WRONG = "That password isn't right."
+ACCOUNT_FIELD_ERRORS = {
+    ("email", "invalid"): "Enter a valid email address.",
+    ("email", "taken"): "There's already an account with that email. Log in instead.",
+    ("name", "invalid"): "Enter your name (up to 60 characters).",
+    ("password", "too_short"): "Use at least 8 characters for your password.",
+}
+SKILL_ENTRIES_INVALID = "Those scores couldn't be saved: send up to {max} entries in the skill log format."
+PROSPECTS_FULL = "You've saved {max} prospects. Delete one to save another."
+PROSPECT_NOT_FOUND = "That saved prospect doesn't exist."
+TEAM_ERRORS = {
+    "name_invalid": "Give the team a name (up to 60 characters).",
+    "already_in_team": "You're already in a team. Leave it first.",
+    "unknown_code": "No team has that invite code. Check it with your manager.",
+    "not_in_team": "You're not in a team.",
+}
+
 # Uploaded calls (/api/calls)
 CALL_TEXT_REQUIRED = "Paste a call transcript or choose a file."
 CALL_UNREADABLE_TEXT = "Couldn't find who said what. Use a transcript with speaker names, like \"Jane: Hi there\" on each line, or a Zoom, Teams or Fathom export."

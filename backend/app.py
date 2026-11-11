@@ -15,7 +15,8 @@ if str(ROOT_DIR) not in sys.path:
 
 from backend.messages import INTERNAL_SERVER_ERROR, REQUEST_TOO_LARGE  # noqa: E402
 from backend.request_log import RequestLog, configure_logging  # noqa: E402
-from backend.routes import buy, calls, knowledge, monitoring, sell, speech  # noqa: E402
+from backend.auth import init_auth  # noqa: E402
+from backend.routes import account, buy, calls, knowledge, monitoring, sell, speech, team  # noqa: E402
 from backend.routes._utils import Sessions  # noqa: E402
 from backend.security import (  # noqa: E402
     SecurityHeadersMiddleware,
@@ -42,6 +43,7 @@ app = Flask(
     static_folder=None,  # the web app is served by `web_app` below
 )
 app.config["MAX_CONTENT_LENGTH"] = MAX_REQUEST_BYTES  # a bigger body gets 413 before any route reads it
+init_auth(app)  # login cookie (backend/auth.py)
 
 # CORS: restrict to configured origins (default: the Vercel site + localhost dev)
 # Override via ALLOWED_ORIGINS env var (comma-separated) for other deployments
@@ -95,6 +97,8 @@ app.register_blueprint(knowledge.bp)  # /api/knowledge
 app.register_blueprint(monitoring.bp)  # /api/health, /api/feedback
 app.register_blueprint(speech.bp)  # /api/speech: replies read aloud
 app.register_blueprint(calls.bp)  # /api/calls/*: read and review an uploaded real call
+app.register_blueprint(account.bp)  # /api/account/*: sign up, log in, skill history, saved prospects
+app.register_blueprint(team.bp)  # /api/team/*: teams, invite codes, members
 
 
 WEB_BUILD_DIR = ROOT_DIR / "web" / "out"
