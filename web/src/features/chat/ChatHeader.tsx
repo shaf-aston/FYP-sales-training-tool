@@ -6,7 +6,7 @@ import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 
 import { Button, buttonClass, Icon, useConfirm } from "@/components/ui";
 import { useSession } from "@/features/session/SessionContext";
 import { api } from "@/lib/api/client";
-import type { ScriptStep } from "@/lib/api/types";
+import type { BuyProduct, ScriptStep } from "@/lib/api/types";
 import { config } from "@/lib/config";
 import { MODE_META, STAGE_STEPS, stageIndex } from "@/lib/labels";
 import { useUi } from "@/state/UiContext";
@@ -20,8 +20,11 @@ const MODES = {
 
 export function ChatHeader() {
   const { openDialog, showPanels } = useUi();
-  const { mode, reset, jumpTo, buySessionId, sellSession, stage } = useSession();
-  const [steps, setSteps] = useState<ScriptStep[]>([]);
+  const { mode, reset, jumpTo, switchProduct, buySessionId, buyProduct, sellSession, stage } = useSession();
+  // Each product runs its own script, so steps are kept with the product they came from.
+  const [loaded, setLoaded] = useState<{ product: string | null; steps: ScriptStep[] }>({ product: null, steps: [] });
+  const steps = loaded.product === buyProduct ? loaded.steps : [];
+  const [products, setProducts] = useState<BuyProduct[]>([]);
   const at = stageIndex(stage);
   // Phones and tablets: the sidebar sits below the chat, so its button carries the stage.
   const staged = mode === "buy" && at >= 0;
@@ -60,16 +63,36 @@ export function ChatHeader() {
     };
   }, [menuOpen]);
 
+  // Buy mode: what the rep can sell, loaded once the menu first opens.
+  useEffect(() => {
+    if (!menuOpen || mode !== "buy" || products.length) return;
+    api.buyProducts().then((r) => setProducts(r.products)).catch(() => {});
+  }, [menuOpen, mode, products.length]);
+
   // Buy mode: the script's steps, loaded once the menu first opens, to start a fresh call at one.
   useEffect(() => {
     if (!menuOpen || mode !== "buy" || !buySessionId || steps.length) return;
-    api.buySteps(buySessionId).then((r) => setSteps(r.steps)).catch(() => {});
-  }, [menuOpen, mode, buySessionId, steps.length]);
+    const product = buyProduct;
+    api.buySteps(buySessionId).then((r) => setLoaded({ product, steps: r.steps })).catch(() => {});
+  }, [menuOpen, mode, buySessionId, buyProduct, steps.length]);
 
   const onJump = async (step: string) => {
     if (!step) return;
     setMenuOpen(false);
     await jumpTo(step);
+  };
+
+  const onProduct = async (id: string) => {
+    const next = products.find((p) => p.id === id);
+    if (!next || id === buyProduct) return;
+    setMenuOpen(false);
+    const ok = await confirm({
+      title: `Practise a ${next.label.toLowerCase()}?`,
+      body: `${next.blurb} This starts a fresh call; the current chat is cleared.`,
+      confirmLabel: "Start new call",
+      cancelLabel: "Keep this call",
+    });
+    if (ok) await switchProduct(id);
   };
 
   const pick = (dialog: "help" | "feedback") => {
@@ -149,6 +172,26 @@ export function ChatHeader() {
               <button type="button" role="menuitem" className={s.item} onClick={() => pick("feedback")}>
                 Feedback
               </button>
+              {mode === "buy" && products.length > 1 && (
+                <label className={s.item}>
+                  <span className="sr-only">What the rep sells (starts a fresh call)</span>
+                  <select
+                    role="menuitem"
+                    className={s.jump}
+                    value=""
+                    onChange={(e) => void onProduct(e.target.value)}
+                    title="Choose which call the rep runs; starts a fresh call"
+                  >
+                    <option value="">Call type…</option>
+                    {products.map((p) => (
+                      <option key={p.id} value={p.id} disabled={p.id === buyProduct}>
+                        {p.id === buyProduct ? "✓ " : ""}
+                        {p.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
               {mode === "buy" && steps.length > 0 && (
                 <label className={s.item}>
                   <span className="sr-only">Jump to step (starts a fresh call there)</span>

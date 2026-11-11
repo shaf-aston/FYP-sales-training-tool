@@ -11,6 +11,7 @@ from core.buy_mode.coach import COACH_STYLES, DEFAULT_STYLE
 from core.infra.constants import MAX_MESSAGE_LENGTH, MAX_SELLER_SESSIONS
 from core.training.quiz import get_quiz_question
 from core.buy_mode.seller_bot import SellerBot
+from core.buy_mode.script_engine.seller import products as script_products
 from core.infra.utils import new_session_id
 
 from ..messages import (
@@ -46,6 +47,12 @@ bp = Blueprint("buy", __name__, url_prefix="/api/buy")
 # --- session start and end ---
 
 
+@bp.route("/products", methods=["GET"])
+def products():
+    """What the rep can sell: pass an `id` as `product_type` to /init to start a call selling it."""
+    return jsonify({"success": True, "products": script_products()})
+
+
 @bp.route("/init", methods=["POST"])
 @require_rate_limit("buy_init")
 def init():
@@ -68,6 +75,7 @@ def init():
                     "success": True,
                     "session_id": existing_id,
                     "message": None,
+                    "product_type": seller.product_type,
                     **stage_fields(seller),
                     "history": history,
                 }
@@ -101,6 +109,7 @@ def init():
             "success": True,
             "session_id": session_id,
             "message": opening,
+            "product_type": seller.product_type,
             **stage_fields(seller),
             "history": [],
             "training": seller.coach_notes(),  # the web app reads coach notes under this key

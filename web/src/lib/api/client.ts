@@ -67,7 +67,9 @@ export function createHttpApi() {
   const chat = config.chatTimeoutMs;
   return {
     // Buy mode: the learner is the customer, the AI seller sells.
-    buyInit: (sessionId?: string | null) => request<T.InitRes>("/api/buy/init", { body: sessionId ? { session_id: sessionId } : {} }),
+    buyInit: (sessionId?: string | null, productType?: string | null) =>
+      request<T.InitRes>("/api/buy/init", { body: sessionId ? { session_id: sessionId } : productType ? { product_type: productType } : {} }),
+    buyProducts: () => request<{ success: true; products: T.BuyProduct[] }>("/api/buy/products"),
     buyChat: (sid: string, message: string) => request<T.ChatRes>("/api/buy/chat", { body: { message }, sessionId: sid, timeoutMs: chat }),
     buyEdit: (sid: string, index: number, message: string) =>
       request<T.EditRes>("/api/buy/edit", { body: { index, message }, sessionId: sid, timeoutMs: chat }),

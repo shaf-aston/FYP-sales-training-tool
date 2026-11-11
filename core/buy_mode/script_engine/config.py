@@ -4,6 +4,7 @@ never fills fails loudly there, not mid-call (where an AI line's error is swallo
 from string import Formatter
 
 NUMBER = (int, float)
+PRODUCT_KEYS = ("offer", "label", "blurb")  # every product needs these; method is optional
 
 TYPES = {  # one knob per line: its type, checked at load
     "method": str,
@@ -231,8 +232,13 @@ def problems(cfg):
                 continue
             if unknown:
                 found.append(f"{section}.{name}: unknown blanks {sorted(unknown)} (allowed {sorted(allowed)})")
-    if isinstance(cfg.get("products"), dict) and cfg.get("default_product") not in cfg["products"]:
-        found.append(f"default_product: {cfg.get('default_product')!r} is not one of products")
+    if isinstance(cfg.get("products"), dict):
+        if cfg.get("default_product") not in cfg["products"]:
+            found.append(f"default_product: {cfg.get('default_product')!r} is not one of products")
+        for name, entry in cfg["products"].items():  # the learner picks a product by its label and blurb
+            for key in PRODUCT_KEYS:
+                if not isinstance((entry or {}).get(key), str) or not entry[key].strip():
+                    found.append(f"products.{name}.{key}: needs text")
     return found
 
 

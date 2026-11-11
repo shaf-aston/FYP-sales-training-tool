@@ -2,9 +2,19 @@
 method: cat            # default method (config/methods/<name>.yaml); a product may name its own
 # Which practice products the script sells: the offer (config/offers/<name>.yaml) and, optionally, the method for each.
 # A session asking for a product not listed here gets default_product.
+# label and blurb are what the learner sees when picking what the rep sells (/api/buy/products).
 products:
-  high_ticket_sales_mentorship: {offer: shay_coaching, method: cat}
-default_product: high_ticket_sales_mentorship   # used when a session names no listed product (the web UI never picks one)
+  high_ticket_sales_mentorship:
+    offer: shay_coaching
+    method: cat
+    label: "Full sales call"
+    blurb: "The complete CAT script: goals, pain, the pitch, the price and every objection."
+  consultative_coaching:
+    offer: shay_coaching
+    method: impact_formula
+    label: "Short consultative call"
+    blurb: "Fewer questions: what they want, what's in the way, then the offer."
+default_product: high_ticket_sales_mentorship   # used when a session names no listed product
 embed_model: BAAI/bge-small-en-v1.5
 embed_cache_dir: .cache/fastembed   # model files; relative to the project root, gitignored
 embed_threads: 1       # CPU threads for the model; more threads use much more memory (free hosts have 512 MB)

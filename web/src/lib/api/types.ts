@@ -26,6 +26,18 @@ export interface InitRes extends BotState {
   message: string | null; // greeting for a new session, null on restore
   history: ChatMsg[];
   training?: CoachNotes;
+  /** What the rep is selling on this call (an id from /api/buy/products). */
+  product_type?: string;
+}
+
+/** Something the rep can sell in buy mode; each runs its own call script. */
+export interface BuyProduct {
+  id: string;
+  label: string;
+  blurb: string;
+  price: string;
+  /** The one a call sells when none is picked. */
+  default: boolean;
 }
 
 /** A script step the learner can start a fresh call at (to test it). */

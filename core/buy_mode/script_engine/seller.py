@@ -68,6 +68,16 @@ def resolve_product(product):
     return product if product in cfg["products"] else cfg["default_product"]
 
 
+def products():
+    """What the rep can sell, in config order: what the learner picks from (/api/buy/products)."""
+    cfg = engine_config()
+    return [
+        {"id": name, "label": entry["label"], "blurb": entry["blurb"],
+         "price": load_offer(entry["offer"]).price, "default": name == cfg["default_product"]}
+        for name, entry in cfg["products"].items()
+    ]
+
+
 def build_seller(router, product, embedder=None, gate=None):
     cfg = engine_config()
     entry = cfg["products"][product]
