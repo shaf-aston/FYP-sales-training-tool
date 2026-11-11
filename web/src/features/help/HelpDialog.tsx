@@ -33,6 +33,14 @@ const SECTIONS: { title: string; items: { term?: string; text: string; keys?: st
     ],
   },
   {
+    title: "Your account (optional)",
+    items: [
+      { term: "Log in", text: "from the ⋯ menu. Your skill history follows you to any device, and you can save prospects from real calls." },
+      { term: "Team", text: "a manager starts one and shares the invite code; reps join with it." },
+      { term: "Your data", text: "download everything kept for you, or delete the account. Call transcripts are never stored." },
+    ],
+  },
+  {
     title: "Keyboard shortcuts",
     items: [
       { keys: "?", text: "opens this window" },
