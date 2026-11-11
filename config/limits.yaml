@@ -72,6 +72,8 @@ rate_limits:         # [max_requests, window_seconds] per client IP; bucket name
   buy_chat: [60, 60]   # buy mode: chat, edit and coach
   sell: [30, 60]       # sell mode: every rate-limited sell route
   calls: [20, 60]      # reading an uploaded call transcript (each read parses up to calls.max_chars)
+  audio: [4, 600]
+  sop: [10, 60]        # reading an SOP or checking a call against it (both embed every step)      # turning a recording into a transcript (speech to text plus labelling: the costly one)
   login: [10, 60]      # log in and delete account (each password check costs ~50 ms of scrypt)
   signup: [5, 60]      # sign up
   team: [20, 60]       # create, join, leave, remove, new invite code
@@ -88,6 +90,7 @@ llm:                 # one profile per kind of call; pass as **LLM["name"]
   buyer_reply:    {temperature: 0.6, max_tokens: 150}   # a little variety so personas differ
   quiz:           {temperature: 0.3, max_tokens: 300}
   coach_answer:   {temperature: 0.4, max_tokens: 150}
+  speaker_labels: {temperature: 0.1, max_tokens: 700}   # "12. A" per segment, label_batch at a time (low: steady labels)
 
 coach:
   history_turns: 8        # latest turns of the call the coach is shown
@@ -125,6 +128,20 @@ security:
     frame-ancestors: ["'none'"]
     base-uri: ["'self'"]
     form-action: ["'self'"]
+
+sop:                 # a team's sales SOP (core/sop)
+  max_bytes: 5000000       # an SOP file (PDF, DOCX, text)
+  max_stages: 20
+  max_steps_per_stage: 25
+  max_step_chars: 300      # a longer paragraph is split into its sentences, each a step
+
+transcription:       # a call recording turned into a transcript (core/infra/providers/transcribe.py, core/calls/audio.py)
+  model: whisper-large-v3-turbo   # Groq speech to text
+  max_bytes: 25000000  # Groq's upload limit for one file; bigger recordings: export the transcript instead
+  formats: [mp3, m4a, mp4, mpeg, mpga, wav, webm, ogg, flac]
+  timeout_seconds: 180 # a one-hour call takes well under a minute
+  label_batch: 60      # segments per "who said this" request...
+  label_context: 6     # ...plus this many already-labelled ones shown again, so labels stay consistent
 
 speech:              # replies read aloud by the server, so the browser needs no sign-in. Change model/voice here.
   model: canopylabs/orpheus-v1-english   # Groq text-to-speech; accept its terms once in the Groq console
