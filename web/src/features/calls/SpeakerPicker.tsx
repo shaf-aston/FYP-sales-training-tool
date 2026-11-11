@@ -9,11 +9,13 @@ interface Props {
   call: CallReadRes;
   /** True while the call is read again with another speaker as the learner. */
   busy: boolean;
+  /** The speakers were named by AI from a recording, so the learner should check them. */
+  aiLabelled?: boolean;
   onPick: (name: string) => void;
 }
 
 /** Who is who on the call: the guessed rep is marked "You"; tapping another speaker says "that's me". */
-export function SpeakerPicker({ call, busy, onPick }: Props) {
+export function SpeakerPicker({ call, busy, aiLabelled, onPick }: Props) {
   const id = useId();
   const { speakers, rep, prospect } = call;
   return (
@@ -47,10 +49,11 @@ export function SpeakerPicker({ call, busy, onPick }: Props) {
         ) : (
           <>
             How we guessed: {config.calls.repGuess[rep.how].toLowerCase()}.
-            {!rep.sure && <span className={s.unsure}> Not you? Tap your name.</span>}
+            {!rep.sure && !aiLabelled && <span className={s.unsure}> Not you? Tap your name.</span>}
           </>
         )}
       </p>
+      {aiLabelled && <p className={s.aiNote}>Speakers were labelled by AI from what was said; tap the one that&apos;s you if it&apos;s wrong.</p>}
     </section>
   );
 }
