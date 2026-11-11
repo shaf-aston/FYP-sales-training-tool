@@ -122,6 +122,8 @@ export interface BuyerPick {
   objection?: string;
   /** A buyer built from a real call (sent as custom_buyer); replaces persona when set. */
   custom?: CustomBuyer;
+  /** Start inside a real call instead of at an opening line: its lines so far, ending with the buyer's. */
+  replay?: ChatMsg[];
 }
 
 export type ObjectionType = "price" | "skepticism" | "timing" | "partner" | "fear";

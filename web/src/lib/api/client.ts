@@ -59,7 +59,7 @@ async function request<R>(path: string, opts: RequestOptions = {}): Promise<R> {
     // (no JSON): only a call transcript is that big.
     const message =
       res.status === 413
-        ? "That file is too big. Use a shorter call."
+        ? "That call is too big to send. Use a shorter one."
         : res.status >= 500 && !data?.code
           ? "Something went wrong on our side. Try again in a moment."
           : data?.error;
@@ -97,7 +97,7 @@ export function createHttpApi() {
       request<{ success: true; personas: T.Persona[] }>(`/api/sell/personas?product_type=${encodeURIComponent(productType)}`),
     sellInit: (difficulty: T.Difficulty, productType: string, pick: T.BuyerPick = {}) =>
       request<T.SellInitRes>("/api/sell/init", {
-        body: { difficulty, product_type: productType, persona: pick.persona, objection: pick.objection, custom_buyer: pick.custom },
+        body: { difficulty, product_type: productType, persona: pick.persona, objection: pick.objection, custom_buyer: pick.custom, replay: pick.replay },
         timeoutMs: chat,
       }),
     sellChat: (sid: string, message: string, showHints: boolean) =>

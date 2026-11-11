@@ -28,7 +28,7 @@ export interface SellSession {
   state: BuyerState;
   difficulty: Difficulty;
   productType: string;
-  /** What the learner picked in setup, so "play again" keeps the same buyer and objection (or the buyer from a real call). */
+  /** What the learner picked in setup, so "play again" keeps the same buyer and objection (or the buyer from a real call, from the same point in it). */
   pick: BuyerPick;
   ended: boolean;
   outcome: Outcome;
@@ -281,7 +281,11 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
           outcome: "active",
           hint: "",
         });
-        setMessages([{ id: newId(), role: "assistant", content: res.message, historyIndex: 0, meta: metaLine(res.latency_ms, res.provider) }]);
+        // A replayed real call shows its lines so far (the last is the prospect's, which the learner answers);
+        // a normal start shows the buyer's opening line.
+        const shown = fromHistory(pick.replay ?? [{ role: "assistant", content: res.message }], config.historyCap);
+        shown[shown.length - 1].meta = metaLine(res.latency_ms, res.provider);
+        setMessages(pick.replay ? [{ id: newId(), role: "divider", content: "From your real call", historyIndex: -1 }, ...shown] : shown);
         return true;
       } catch (err) {
         toast(errorText(err, "Couldn't start your buyer."), "error");
