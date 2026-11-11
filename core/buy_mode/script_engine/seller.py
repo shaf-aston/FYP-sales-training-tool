@@ -134,8 +134,8 @@ class ScriptSeller:
         self.state = state or self._start
 
     def steps(self):
-        """The steps a call can start at, in script order: those with a line to say (id and name)."""
-        return [{"id": s.id, "name": s.name or s.id} for s in self.method.steps.values() if s.say]
+        """The steps a call can start at, in script order: those with a line to say (id, name, ui stage)."""
+        return [{"id": s.id, "name": s.name or s.id, "stage": s.ui_stage} for s in self.method.steps.values() if s.say]
 
     def start_at(self, step_id):
         """Start the call fresh at `step_id` (testing one step): nothing heard before, so no answers to build

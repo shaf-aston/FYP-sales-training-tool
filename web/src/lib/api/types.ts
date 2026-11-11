@@ -32,6 +32,8 @@ export interface InitRes extends BotState {
 export interface ScriptStep {
   id: string;
   name: string;
+  /** UI stage the step belongs to. */
+  stage: string;
 }
 
 export interface JumpRes extends BotState {

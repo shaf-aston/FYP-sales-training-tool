@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Card, Eyebrow } from "@/components/ui";
+import { Card, Eyebrow, useConfirm } from "@/components/ui";
+import { api } from "@/lib/api/client";
 import { STAGE_STEPS, stageIndex, stageMeta } from "@/lib/labels";
 import { useSession } from "@/features/session/SessionContext";
 import { useUi } from "@/state/UiContext";
@@ -10,7 +11,8 @@ import s from "./StageCard.module.css";
 /** Buy mode: the stage the AI seller has reached, and where it sits in the whole call.
  * Hidden while the quiz is open, so the quiz never shows its own answer. */
 export function StageCard() {
-  const { stage } = useSession();
+  const { stage, mode, buySessionId, jumpTo } = useSession();
+  const confirm = useConfirm();
   const { sidePanel } = useUi();
   const [picked, setPicked] = useState<number | null>(null);
   if (sidePanel === "quiz") {
@@ -25,6 +27,22 @@ export function StageCard() {
   const at = stageIndex(stage);
   const shown = STAGE_STEPS[picked ?? Math.max(at, 0)];
   const showMeta = stageMeta(shown.id);
+
+  // Buy mode: click another stage → confirm → fresh call at that stage's first step.
+  const onStage = async (i: number) => {
+    if (i === at || mode !== "buy" || !buySessionId) return setPicked(picked === i || i === at ? null : i);
+    const target = STAGE_STEPS[i];
+    const ok = await confirm({
+      title: `Jump to ${stageMeta(target.id).label}?`,
+      body: "Starts a fresh call at this stage. The current chat is cleared.",
+      confirmLabel: "Jump",
+      cancelLabel: "Stay",
+    });
+    if (!ok) return;
+    const { steps } = await api.buySteps(buySessionId).catch(() => ({ steps: [] }));
+    const first = steps.find((st) => st.stage === target.id);
+    if (first) await jumpTo(first.id);
+  };
 
   return (
     <Card tone="accent" className={s.card} aria-label="Stage of the sale">
@@ -42,7 +60,8 @@ export function StageCard() {
               className={`${s.step} ${shown.id === step.id ? s.picked : ""}`}
               aria-current={i === at ? "step" : undefined}
               aria-pressed={shown.id === step.id}
-              onClick={() => setPicked(picked === i || i === at ? null : i)}
+              onClick={() => void onStage(i)}
+              title={i === at ? undefined : `Jump to ${step.short}`}
             >
               <span className={s.bar} />
               <span className={s.name}>{step.short}</span>
@@ -58,7 +77,7 @@ export function StageCard() {
           </p>
         )}
         {showMeta.hint && <p className={s.detailText}>{showMeta.hint}</p>}
-        {at > 0 && <p className={s.tip}>To go back a stage, edit one of your earlier messages.</p>}
+        {mode === "buy" && <p className={s.tip}>Click a stage to jump there.</p>}
       </div>
     </Card>
   );
