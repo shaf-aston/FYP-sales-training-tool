@@ -57,6 +57,8 @@ export const config = {
     maxFileBytes: 1_000_000,
     /** Caps on the prospect fields the learner edits; the server allows 300 characters a field and 5 items a list (limits.yaml max_custom_buyer_*). */
     prospect: { nameMax: 60, textMax: 300, itemMax: 180, maxItems: 5 },
+    /** Saved prospects listed before "Show all". */
+    savedShown: 5,
     /** Quotes shown under a field as "from the call". */
     evidenceShown: 2,
     /** How the server guessed which speaker is the learner (rep.how). */

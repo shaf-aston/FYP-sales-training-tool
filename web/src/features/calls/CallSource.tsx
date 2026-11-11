@@ -27,6 +27,7 @@ export function CallSource({ reader, onCancel }: { reader: CallReader; onCancel?
         hint={filename && `From ${filename}`}
         onChange={(e) => reader.setText(e.target.value)}
       />
+      <p className={s.privacy}>Read on our server and never stored. Save a prospect to keep it.</p>
 
       {error && <Notice kind="error">{error}</Notice>}
 
