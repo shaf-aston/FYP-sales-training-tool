@@ -1,0 +1,51 @@
+.chips {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  max-width: 100%;
+  min-height: calc(var(--touch-target) - var(--space-2));
+  padding-left: var(--space-3);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: var(--bg-card-soft);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  animation: pop-in var(--dur-pop) var(--ease-pop);
+}
+.text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.remove {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: calc(var(--touch-target) - var(--space-2));
+  align-self: stretch;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--text-muted);
+  font-size: var(--text-lg);
+  line-height: 1;
+  transition: color var(--dur-fast), background var(--dur-fast);
+}
+.remove:hover {
+  color: var(--danger-text);
+  background: var(--danger-soft);
+}
+.empty {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+.add {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2);
+}
