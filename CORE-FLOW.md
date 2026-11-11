@@ -114,7 +114,9 @@ A learner pastes or uploads a real call's transcript. `backend/routes/calls.py` 
 `/api/calls/review` replays the call as a sell-mode transcript (`CallReading.history`: rep = learner side) through
 `sell_service.review_transcript`, the same review a practice session gets. Practising against the prospect is
 `/api/sell/init` with `custom_buyer`: `custom_buyer.py` checks it, the buyer opens with `custom_opening_lines` and raises
-the call's objections (`BuyerSession(objection_bank=...)`).
+the call's objections (`BuyerSession(objection_bank=...)`). With `replay` (the call up to a turning point, ending
+with the prospect) the session starts there instead: `BuyerSession.continue_from` settles readiness and counts from
+that transcript the same way a rewind does (`_settle`), and the prospect's last line is what the learner answers.
 
 **Adding a transcript format**: write one parser in `transcript.py` (`(lines, cfg) -> list[Turn] | None`), add it to
 `PARSERS` before any looser layout that could claim its text, and add a sample of the real export to
