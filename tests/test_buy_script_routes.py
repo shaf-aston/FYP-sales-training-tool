@@ -137,3 +137,26 @@ def test_a_product_can_run_its_own_method(client, monkeypatch):
     monkeypatch.setattr("core.buy_mode.script_engine.seller.engine_config", lambda: cfg)
     opened, _ = _init(client)
     assert opened["message"] == "What would you like help with first?"
+
+
+def test_products_list_what_the_rep_can_sell(client):
+    body = client.get("/api/buy/products").get_json()
+    by_id = {p["id"]: p for p in body["products"]}
+    assert set(by_id) == {SCRIPT_PRODUCT, "consultative_coaching"}
+    assert by_id[SCRIPT_PRODUCT]["default"] and not by_id["consultative_coaching"]["default"]
+    assert all(p["label"] and p["blurb"] and p["price"] for p in body["products"])
+
+
+def test_a_picked_product_runs_its_own_script(client):
+    opened = client.post("/api/buy/init", json={"product_type": "consultative_coaching"}).get_json()
+    assert opened["product_type"] == "consultative_coaching"
+    assert opened["message"] == "What would you like help with first?"   # impact_formula's first step
+    # reattaching keeps the call's product
+    again = client.post("/api/buy/init", json={"session_id": opened["session_id"]}).get_json()
+    assert again["product_type"] == "consultative_coaching"
+
+
+def test_an_unknown_or_missing_product_sells_the_default(client):
+    for body in ({"product_type": "nope"}, {}):
+        opened = client.post("/api/buy/init", json=body).get_json()
+        assert opened["product_type"] == SCRIPT_PRODUCT

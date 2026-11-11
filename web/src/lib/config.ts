@@ -82,6 +82,7 @@ export const config = {
  */
 export const storageKeys = {
   buySessionId: "salesRoleplaySessionId",
+  buyProduct: "buyProduct",
   sidebarTab: "sidebarTab",
   sellSettings: "sellSettings",
   coachStyle: "trainingStyle",

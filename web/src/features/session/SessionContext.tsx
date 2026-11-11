@@ -45,6 +45,8 @@ interface SessionValue {
   mode: Mode;
   /** Sell mode keeps its own id in sellSession. */
   buySessionId: string | null;
+  /** Buy mode: what the rep sells on this call (an id from /api/buy/products); null until the call starts. */
+  buyProduct: string | null;
   /** Buy-mode script stage; the sidebar stage card shows it. */
   stage: string;
   /** Buy-mode coach notes for the latest turn (wire key "training"). */
@@ -58,6 +60,8 @@ interface SessionValue {
   send: (text: string) => Promise<SendResult>;
   edit: (historyIndex: number, text: string) => Promise<boolean>;
   reset: () => Promise<void>;
+  /** Buy mode: start a fresh call where the rep sells this product (it stays picked for later calls). */
+  switchProduct: (productType: string) => Promise<void>;
   /** Buy mode: start a fresh call at one script step (nothing said before it). */
   jumpTo: (step: string) => Promise<void>;
   /** Start a new AI buyer (sell mode). */
@@ -84,6 +88,7 @@ const metaLine = (latency: number | null | undefined, provider?: string) =>
 export function SessionProvider({ children, mode }: { children: ReactNode; mode: Mode }) {
   const toast = useToast();
   const [buySessionId, setBuySessionId] = useState<string | null>(null);
+  const [buyProduct, setBuyProduct] = useState<string | null>(null);
   const [stage, setStage] = useState(FIRST_STAGE);
   const [coachNotes, setCoachNotes] = useState<CoachNotes | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -101,8 +106,9 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
   const epoch = useRef(0);
   const started = useRef(false);
 
-  const adopt = useCallback((res: { session_id: string; message: string | null; history: ChatMsg[]; training?: CoachNotes } & BotState) => {
+  const adopt = useCallback((res: { session_id: string; message: string | null; history: ChatMsg[]; training?: CoachNotes; product_type?: string } & BotState) => {
     setBuySessionId(res.session_id);
+    if (res.product_type) setBuyProduct(res.product_type);
     writeString(storageKeys.buySessionId, res.session_id);
     setStage(res.stage);
     setCoachNotes(res.training ?? null);
@@ -116,7 +122,7 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
       const saved = useSaved ? readString(storageKeys.buySessionId) : null;
       for (const id of saved ? [saved, null] : [null]) {
         try {
-          adopt(await api.buyInit(id));
+          adopt(await api.buyInit(id, id ? null : readString(storageKeys.buyProduct)));
           break;
         } catch (err) {
           // 400 = the server refused the saved id (expired or unknown): drop it and start fresh.
@@ -317,6 +323,14 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
     setTyping(false);
   }, [mode, sellSession, buySessionId, startBuyer, handleExpired, toast, initBuy]);
 
+  const switchProduct = useCallback(
+    async (productType: string) => {
+      writeString(storageKeys.buyProduct, productType);
+      await reset();
+    },
+    [reset],
+  );
+
   const jumpTo = useCallback(
     async (step: string) => {
       if (!buySessionId || busy.current) return;
@@ -338,6 +352,7 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
     () => ({
       mode,
       buySessionId,
+      buyProduct,
       stage,
       coachNotes,
       messages,
@@ -348,12 +363,13 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
       send,
       edit,
       reset,
+      switchProduct,
       jumpTo,
       startBuyer,
       endBuyer,
       handleExpired,
     }),
-    [mode, buySessionId, stage, coachNotes, messages, typing, sellSession, sellSettings, setSellSettings, send, edit, reset, jumpTo, startBuyer, endBuyer, handleExpired],
+    [mode, buySessionId, buyProduct, stage, coachNotes, messages, typing, sellSession, sellSettings, setSellSettings, send, edit, reset, switchProduct, jumpTo, startBuyer, endBuyer, handleExpired],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
