@@ -3,6 +3,7 @@
 import { useId } from "react";
 import type { CallReadRes } from "@/lib/api/types";
 import { config } from "@/lib/config";
+import type { AiLabels } from "./useCallReader";
 import s from "./SpeakerPicker.module.css";
 
 interface Props {
@@ -10,7 +11,7 @@ interface Props {
   /** True while the call is read again with another speaker as the learner. */
   busy: boolean;
   /** The speakers were named by AI from a recording, so the learner should check them. */
-  aiLabelled?: boolean;
+  aiLabelled?: AiLabels;
   onPick: (name: string) => void;
 }
 
@@ -53,7 +54,15 @@ export function SpeakerPicker({ call, busy, aiLabelled, onPick }: Props) {
           </>
         )}
       </p>
-      {aiLabelled && <p className={s.aiNote}>Speakers were labelled by AI from what was said; tap the one that&apos;s you if it&apos;s wrong.</p>}
+      {aiLabelled === "sure" && (
+        <p className={s.aiNote}>Speakers were labelled by AI from what was said; tap the one that&apos;s you if it&apos;s wrong.</p>
+      )}
+      {aiLabelled === "unsure" && (
+        <p className={s.aiNote}>
+          AI couldn&apos;t tell the speakers apart well. Choose &quot;Use another call&quot;, fix the Speaker A / B labels in the
+          transcript, then read it again.
+        </p>
+      )}
     </section>
   );
 }

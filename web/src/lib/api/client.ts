@@ -138,7 +138,7 @@ export function createHttpApi() {
       request<T.Review>("/api/calls/review", { body: { ...call, difficulty }, timeoutMs: chat }),
     /** A call recording -> a transcript with AI-labelled speakers. Uploaded straight to the API host (config.api). */
     callsTranscribe: (file: File) =>
-      request<{ success: true; text: string; filename: string }>("/api/calls/transcribe", {
+      request<{ success: true; text: string; filename: string; labels_sure: boolean }>("/api/calls/transcribe", {
         body: fileForm(file),
         origin: config.api.uploadOrigin(),
         timeoutMs: config.calls.audio.timeoutMs,

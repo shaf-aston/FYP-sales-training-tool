@@ -13,12 +13,12 @@ negated_step: ["^(never|do not|don.?t|avoid|no)\\b"]
 # when matching, and the step does not count against a call that never needed it.
 condition: "^(if|when|whenever|unless|should|in case)\\b[^,]{0,80},\\s*"
 
-# A step is done when one sentence the rep said reaches `adherence`, matched as search query (the step) against passage
-# (the sentence; `query_prefix` is bge's own query instruction). Measured on 3 labelled calls against sop_sample.md
-# (good, weak, mixed; 30 true steps): 0.60 gives precision 0.85 and recall 0.85; 0.64 gave 0.91 but recall 0.50.
+# A step is done when a sentence the rep said reaches `adherence`, matched as search query (the step) against passage
+# (the sentence; `query_prefix` is bge's own query instruction), each sentence carrying at most one step. Measured on 3
+# labelled calls against sop_sample.md (good, weak, mixed; 20 true steps): 0.58 gives precision 0.95 and recall 0.90.
 thresholds:
   element_fallback: 0.8
-  adherence: 0.6
+  adherence: 0.58
 query_prefix: "Represent this sentence for searching relevant passages: "
 
 # What a good sales call covers, in call order (the CAT and Impact Formula scripts in config/methods agree on these).

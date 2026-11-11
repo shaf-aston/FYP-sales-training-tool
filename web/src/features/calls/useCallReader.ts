@@ -23,6 +23,8 @@ export interface CallResult {
 
 /** "audio": a recording is being turned into text (the slow one: about a minute per hour of audio). */
 type Busy = "file" | "audio" | "sample" | "read";
+/** Who labelled the speakers: the transcript itself (false), or AI from a recording ("unsure": check the labels). */
+export type AiLabels = false | "sure" | "unsure";
 
 const { accept, maxFileBytes, audio } = config.calls;
 /** Everything the drop zone takes: transcripts and recordings. */
@@ -63,8 +65,8 @@ export function useCallReader() {
   const [result, setResult] = useState<CallResult | null>(null);
   const [draft, setDraft] = useState<ProspectDraft | null>(null);
   const { busy, error, setError, run, cancel } = useJob<Busy>();
-  /** The transcript came from a recording, so its speaker names were guessed by AI. */
-  const [aiLabelled, setAiLabelled] = useState(false);
+  /** From a recording, its speakers were labelled by AI: "sure", or "unsure" when most labels came back unreadable. */
+  const [aiLabelled, setAiLabelled] = useState<AiLabels>(false);
   const read = async (call: CallReq) => {
     const res = await run("read", () => api.callsRead(call), "Couldn't read that call. Try again.");
     if (!res) return;
@@ -73,7 +75,7 @@ export function useCallReader() {
   };
 
   /** Put a transcript in the box (and remember where it came from), then read it at once. */
-  const load = async (t: string, name: string, fromRecording: boolean) => {
+  const load = async (t: string, name: string, fromRecording: AiLabels) => {
     setText(t);
     setFilename(name);
     setAiLabelled(fromRecording);
@@ -100,7 +102,7 @@ export function useCallReader() {
       if (hasExt(file, audio.accept)) {
         if (file.size > audio.maxBytes) return setError(`That recording is over ${megabytes(audio.maxBytes)}. Export the call's transcript instead.`);
         const res = await run("audio", () => api.callsTranscribe(file), "Couldn't turn that recording into text. Try again.");
-        if (res) await load(res.text, res.filename, true);
+        if (res) await load(res.text, res.filename, res.labels_sure ? "sure" : "unsure");
         return;
       }
       if (!hasExt(file, accept)) return setError(`Use a transcript (${listOf(accept)}) or a call recording.`);
