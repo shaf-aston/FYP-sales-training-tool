@@ -215,6 +215,7 @@ class CommonSense:
     corrected: str = ""  # they fixed their last answer a turn later; empty = the question again only
     unfinished: str = ""  # said to a reply cut off mid-sentence ("probably the fact that"): the next one is joined on
     unfinished_ends: tuple = ()  # last words that leave a sentence open
+    no_words: str = "Sorry, I didn't catch that. Could you say it in English?"  # a reply with no readable words, or a fault while hearing it
 
 
 def _read(directory, name):

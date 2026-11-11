@@ -348,3 +348,20 @@ def test_that_at_the_end_of_a_whole_sentence_is_not_held(fake_embedder, whole):
     s = seller(fake_embedder, _down, step="05")
     s.reply(whole)
     assert s.last_turn["heard_as"] != "unfinished"
+
+
+@pytest.mark.parametrize("text", ["وَالْمَصْدَرُ، وَاسْمُ الْمَصْدَرِ،", "🙂🙂", "???"])
+def test_no_readable_words_asks_again_and_stays(fake_embedder, text):
+    s = seller(fake_embedder, ListenAI())
+    s.opening()
+    step = s.state.step
+    assert s.reply(text)[0] == s.sense.no_words and s.state.step == step
+    assert s.reply(text)[0] == s.sense.no_words and s.state.step == step   # same every time, never walks on
+
+
+def test_a_fault_while_hearing_keeps_the_call_going(fake_embedder, monkeypatch):
+    s = seller(fake_embedder, ListenAI())
+    s.opening()
+    step = s.state.step
+    monkeypatch.setattr(s, "_reply", lambda t: 1 / 0)
+    assert s.reply("I want more money")[0] == s.sense.no_words and s.state.step == step
