@@ -28,6 +28,14 @@ SELL_SETUP_FAILED = "Couldn't set up the buyer -- try once more"
 INVALID_DIFFICULTY = "Invalid difficulty. Choose: {choices}"
 UNKNOWN_PERSONA = "Unknown persona '{name}' for product '{product}'"
 SELL_REVIEW_ERROR = "Couldn't rebuild the session review - try again."
+CUSTOM_BUYER_INVALID = "That buyer can't be used: {detail}"
+
+# Uploaded calls (/api/calls)
+CALL_TEXT_REQUIRED = "Paste a call transcript or choose a file."
+CALL_UNREADABLE_TEXT = "Couldn't find who said what. Use a transcript with speaker names, like \"Jane: Hi there\" on each line, or a Zoom, Teams or Fathom export."
+CALL_TOO_LONG_TEXT = "That transcript is too long. Keep it under {max_chars:,} characters."
+CALL_TOO_SHORT_TEXT = "That's too short to learn from. Use a call with a few back-and-forth turns between two people."
+CALL_UNKNOWN_SPEAKER_TEXT = "Nobody called {name} speaks in this call."
 
 # Request checks
 SESSION_ID_REQUIRED = "Session ID required"

@@ -15,7 +15,7 @@ if str(ROOT_DIR) not in sys.path:
 
 from backend.messages import INTERNAL_SERVER_ERROR  # noqa: E402
 from backend.request_log import RequestLog, configure_logging  # noqa: E402
-from backend.routes import buy, knowledge, monitoring, sell, speech  # noqa: E402
+from backend.routes import buy, calls, knowledge, monitoring, sell, speech  # noqa: E402
 from backend.routes._utils import Sessions  # noqa: E402
 from backend.security import (  # noqa: E402
     SecurityHeadersMiddleware,
@@ -27,6 +27,7 @@ from core.infra.constants import (  # noqa: E402
     CLEANUP_INTERVAL_SECONDS,
     DEFAULT_ALLOWED_ORIGINS,
     MAX_BUYER_SESSIONS,
+    MAX_REQUEST_BYTES,
     MAX_SELLER_SESSIONS,
     SELLER_IDLE_MINUTES,
     SERVER_PORT,
@@ -40,8 +41,9 @@ app = Flask(
     __name__,
     static_folder=None,  # the web app is served by `web_app` below
 )
+app.config["MAX_CONTENT_LENGTH"] = MAX_REQUEST_BYTES  # a bigger body gets 413 before any route reads it
 
-# CORS: restrict to configured origins (default: Render deployment + localhost dev)
+# CORS: restrict to configured origins (default: the Vercel site + localhost dev)
 # Override via ALLOWED_ORIGINS env var (comma-separated) for other deployments
 allowed_origins = env_str("ALLOWED_ORIGINS", DEFAULT_ALLOWED_ORIGINS)
 CORS(app, origins=[o.strip() for o in allowed_origins.split(",") if o.strip()])
@@ -92,6 +94,7 @@ app.register_blueprint(sell.bp)  # /api/sell/*: learner is the salesperson
 app.register_blueprint(knowledge.bp)  # /api/knowledge
 app.register_blueprint(monitoring.bp)  # /api/health, /api/feedback
 app.register_blueprint(speech.bp)  # /api/speech: replies read aloud
+app.register_blueprint(calls.bp)  # /api/calls/*: read and review an uploaded real call
 
 
 WEB_BUILD_DIR = ROOT_DIR / "web" / "out"
