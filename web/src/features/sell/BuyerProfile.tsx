@@ -36,6 +36,7 @@ export function BuyerProfile({ sellSession }: { sellSession: SellSession }) {
         </div>
         <p className={s.background}>{sellSession.persona.background}</p>
         {sellSession.persona.personality && <p className={s.background}>{sellSession.persona.personality}</p>}
+        {sellSession.pick.custom && <p className={s.background}>Built from your real call.</p>}
         {sellSession.pick.objection && (
           <p className={s.background}>
             <strong>Practising:</strong> “{sellSession.pick.objection}”
