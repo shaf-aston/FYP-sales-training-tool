@@ -1,11 +1,14 @@
 """Shared fixtures: offline AI providers, app clients and stand-ins for a live session."""
 import json
+import os
 import sys
 from pathlib import Path
 
 import pytest
 from flask import Flask
 
+os.environ.setdefault("COOKIE_SECURE", "0")   # before the app is imported: the test client speaks http
+os.environ.setdefault("SECRET_KEY", "test-only-secret")
 ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -35,6 +38,19 @@ class DummyProvider(BaseLLMProvider):
 
 
 LLM_PROVIDER_TYPES["dummy"] = DummyProvider
+
+
+@pytest.fixture(autouse=True)
+def accounts_db(tmp_path, monkeypatch):
+    """Every test gets its own empty accounts database and login throttle."""
+    from backend.auth import login_throttle
+    from core.accounts.db import reset_database
+
+    monkeypatch.setenv("DB_PATH", str(tmp_path / "accounts.db"))
+    reset_database()
+    login_throttle._failures.clear()
+    yield
+    reset_database()
 
 
 @pytest.fixture(autouse=True)

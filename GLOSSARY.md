@@ -44,6 +44,16 @@ Rule: modes are named for the learner; engines and stores for the AI (`seller_se
 | **guardrail** | Check on each AI buyer reply (e.g. no early "yes, I'll buy"). | `core/sell_mode/buyer_guardrails.py` `CheckedReply` |
 | **knowledge** | The learner's own product notes, given to the AI buyer as research notes. | `core/sell_mode/knowledge.py`, `config/knowledge_fields.yaml`, page `/knowledge/` |
 
+## Accounts and teams
+
+| Term | Meaning | Owner |
+|---|---|---|
+| **account** | A learner's login (email and password). Optional: the app works without one. Keeps their skill history and saved prospects. | `core/accounts/users.py`, API `/api/account/*`, `backend/auth.py` |
+| **team** | Learners grouped under a manager, joined with an **invite code**. One team per learner. | `core/accounts/teams.py`, API `/api/team/*` |
+| **manager** | A team role: sees members' details and progress, removes members, replaces the invite code. A team always has one. | `teams.MANAGER`, `keep_a_manager` |
+| **member** | The other team role (never "rep", which is the salesperson in an uploaded call). | `teams.MEMBER` |
+| **saved prospect** | A custom buyer kept in the learner's account to practise against again. | `core/accounts/library.py`, `/api/account/prospects` |
+
 ## Uploaded calls
 
 | Term | Meaning | Owner |
@@ -115,7 +125,7 @@ Rule: modes are named for the learner; engines and stores for the AI (`seller_se
 |---|---|---|
 | **provider** | One LLM service behind the shared interface. **Router** tries them in order. **LLM profile**: named call settings, `**LLM["buyer_reply"]`. | `core/infra/providers/`, `core/infra/providers/router.py`, `config/limits.yaml` |
 | **session store** | Live sessions with an idle timeout: `seller_sessions`, `buyer_sessions`. | `backend/security.py` `SessionStore` |
-| **rate bucket** | Request limit per route group: `buy_init`, `buy_chat`, `sell`, `calls`. | `limits.yaml` `rate_limits` |
+| **rate bucket** | Request limit per route group: `buy_init`, `buy_chat`, `sell`, `calls`, `login`, `signup`, `team`. | `limits.yaml` `rate_limits` |
 | **hands-free** | Speak, it sends, the reply is read aloud. | web `handsFree` |
 | **tokens** | Every colour, size and timing, once. | `web/src/styles/tokens.css` |
 

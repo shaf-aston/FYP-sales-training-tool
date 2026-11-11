@@ -1,0 +1,193 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { Badge, Button, Notice, TextInput, useConfirm, useToast } from "@/components/ui";
+import { api, errorText } from "@/lib/api/client";
+import type { Team, TeamMember } from "@/lib/api/types";
+import { config } from "@/lib/config";
+import { useAccount } from "./AccountContext";
+import s from "./AccountDialog.module.css";
+
+const roleLabel = { manager: "Manager", member: "Member" } as const;
+
+/** No team yet: start one (you manage it) or join one with a code. */
+function NoTeam() {
+  const { refresh, handleLoggedOut } = useAccount();
+  const toast = useToast();
+  const [name, setName] = useState("");
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState<"create" | "join" | null>(null);
+  const [error, setError] = useState("");
+
+  const run = async (kind: "create" | "join") => {
+    setBusy(kind);
+    setError("");
+    try {
+      if (kind === "create") await api.teamCreate(name.trim());
+      else await api.teamJoin(code.trim());
+      await refresh();
+      toast(kind === "create" ? "Team created. Share the invite code with your team." : "You're in the team.", "success");
+    } catch (err) {
+      if (!handleLoggedOut(err)) setError(errorText(err, "That didn't go through. Try again."));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <div className={s.stack}>
+      <p className={s.muted}>Practise with your team: a manager starts one and shares the code.</p>
+      <div className={s.inline}>
+        <TextInput label="Start a team" placeholder="Team name" maxLength={config.account.teamNameMax} value={name} onChange={(e) => setName(e.target.value)} />
+        <Button busy={busy === "create"} busyLabel="Creating…" disabled={!name.trim() || !!busy} onClick={() => run("create")}>
+          Create
+        </Button>
+      </div>
+      <div className={s.inline}>
+        <TextInput label="Or join one" placeholder="Invite code" autoComplete="off" value={code} onChange={(e) => setCode(e.target.value)} />
+        <Button busy={busy === "join"} busyLabel="Joining…" disabled={!code.trim() || !!busy} onClick={() => run("join")}>
+          Join
+        </Button>
+      </div>
+      {error && <Notice kind="error">{error}</Notice>}
+    </div>
+  );
+}
+
+/** In a team: its name, your role, the invite code (managers), who is in it, and leaving. */
+function InTeam({ team }: { team: Team }) {
+  const { user, refresh, handleLoggedOut } = useAccount();
+  const toast = useToast();
+  const confirm = useConfirm();
+  const [members, setMembers] = useState<TeamMember[] | null>(null);
+  const [reload, setReload] = useState(0);
+  const manager = team.role === "manager";
+
+  useEffect(() => {
+    let live = true;
+    api
+      .team()
+      .then((r) => live && setMembers(r.members))
+      .catch((err) => live && !handleLoggedOut(err) && setMembers([]));
+    return () => {
+      live = false;
+    };
+  }, [team.id, reload, handleLoggedOut]);
+
+  /** A manager action: confirm, call, then refresh what it changed. */
+  const managerAction = async (ask: Parameters<typeof confirm>[0], call: () => Promise<unknown>, done: string) => {
+    if (!(await confirm(ask))) return;
+    try {
+      await call();
+      await refresh();
+      setReload((n) => n + 1);
+      toast(done, "success");
+    } catch (err) {
+      if (!handleLoggedOut(err)) toast(errorText(err, "That didn't go through. Try again."), "error");
+    }
+  };
+
+  const remove = (m: TeamMember) =>
+    managerAction(
+      { title: `Remove ${m.name}?`, body: "They leave the team. They can join again with the invite code.", confirmLabel: "Remove", cancelLabel: "Keep", danger: true },
+      () => api.teamRemove(m.id),
+      `${m.name} left the team.`,
+    );
+
+  const newCode = () =>
+    managerAction(
+      { title: "Make a new invite code?", body: "The current code stops working. People already in the team stay.", confirmLabel: "New code", cancelLabel: "Keep this code" },
+      () => api.teamNewCode(),
+      "New invite code ready.",
+    );
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(team.invite_code ?? "");
+      toast("Invite code copied.", "success");
+    } catch {
+      toast("Couldn't copy. Select the code and copy it.", "error");
+    }
+  };
+
+  const leave = async () => {
+    const ok = await confirm({
+      title: `Leave ${team.name}?`,
+      body: manager
+        ? "If no other manager is left, the member who joined first takes over the team."
+        : "You can join again with the invite code.",
+      confirmLabel: "Leave team",
+      cancelLabel: "Stay",
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await api.teamLeave();
+      await refresh();
+      toast(`You left ${team.name}.`, "success");
+    } catch (err) {
+      if (!handleLoggedOut(err)) toast(errorText(err, "Couldn't leave the team. Try again."), "error");
+    }
+  };
+
+  return (
+    <div className={s.stack}>
+      <div className={s.row}>
+        <strong className={s.teamName}>{team.name}</strong>
+        <Badge tone={manager ? "accent" : "neutral"}>{roleLabel[team.role]}</Badge>
+      </div>
+      {team.invite_code && (
+        <div className={s.row}>
+          <span className={s.muted}>Invite code</span>
+          <code className={s.code}>{team.invite_code}</code>
+          <Button variant="ghost" onClick={copy}>
+            Copy
+          </Button>
+          {manager && (
+            <Button variant="ghost" onClick={newCode}>
+              New code
+            </Button>
+          )}
+        </div>
+      )}
+      {members === null ? (
+        <Notice kind="loading">Loading the team…</Notice>
+      ) : (
+        members.length > 0 && (
+          <ul className={s.members} aria-label={manager ? "Members" : "Managers"}>
+            {members.map((m) => (
+              <li key={m.id} className={s.member}>
+                <span className={s.memberText}>
+                  {m.name}
+                  {m.id === user?.id && " (you)"}
+                  {m.email && <span className={s.muted}>{m.email}</span>}
+                </span>
+                <Badge tone={m.role === "manager" ? "accent" : "neutral"}>{roleLabel[m.role]}</Badge>
+                {manager && m.id !== user?.id && (
+                  <Button variant="ghost" onClick={() => remove(m)} aria-label={`Remove ${m.name} from the team`}>
+                    Remove
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )
+      )}
+      <Button variant="ghost" className={s.flush} onClick={leave}>
+        Leave team
+      </Button>
+    </div>
+  );
+}
+
+export function TeamSection() {
+  const { team } = useAccount();
+  return (
+    <section className={s.section} aria-labelledby="account-team">
+      <h3 id="account-team" className={s.heading}>
+        Team
+      </h3>
+      {team ? <InTeam team={team} /> : <NoTeam />}
+    </section>
+  );
+}

@@ -1,5 +1,10 @@
 // Shapes of the Flask JSON API (backend/routes/*). Field names match the server exactly.
 
+import type { SkillEntry } from "@/features/skills/skillLog";
+
+/** The server keeps the web's skill log as is (/api/account/skills): skillLog.ts owns the shape. */
+export type { SkillEntry };
+
 export type Difficulty = "easy" | "medium" | "hard";
 export type CoachStyle = "tactical" | "socratic" | "teacher";
 export type QuizType = "stage" | "next_move" | "direction";
@@ -278,6 +283,50 @@ export interface CallReadRes {
   prospect: string;
   turns: CallTurn[];
   profile: CallProfile;
+}
+
+// Accounts (/api/account, /api/team): optional; everything works logged out.
+
+export interface AccountUser {
+  id: number;
+  email: string;
+  name: string;
+}
+
+/** The learner's team. Only a manager gets the invite code. */
+export interface Team {
+  id: number;
+  name: string;
+  role: "member" | "manager";
+  invite_code: string | null;
+}
+
+/** Who is logged in (nulls when no one is): /api/account/me, signup and login. */
+export interface AccountMe {
+  user: AccountUser | null;
+  team: Team | null;
+}
+
+/** A manager sees every member with their email; a rep sees the managers only. */
+export interface TeamMember {
+  id: number;
+  name: string;
+  role: Team["role"];
+  email?: string;
+}
+
+/** A custom buyer kept to practise against again. Blank text fields are not stored. */
+export interface SavedProspect {
+  id: number;
+  name: string;
+  profile: Partial<CustomBuyer> & { name: string };
+  /** Seconds since epoch. */
+  created_at: number;
+}
+
+export interface AccountExport extends AccountMe {
+  skills: SkillEntry[];
+  prospects: SavedProspect[];
 }
 
 export type KnowledgeField =

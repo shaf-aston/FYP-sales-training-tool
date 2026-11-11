@@ -36,7 +36,8 @@ export const config = {
   },
   knowledge: { nameMax: 100, fieldMax: 1_000 },
   /** Skill Radar: sessions kept on this device and how many make the recent average (targets come from the server). */
-  skills: { historyCap: 100, averageWindow: 5 },
+  /** historyCap matches the server's max_skill_entries (limits.yaml), so a synced history fits the device whole. */
+  skills: { historyCap: 200, averageWindow: 5 },
   /** Buyer setup in sell mode: the learner's own objection (server caps at the same length) and quick picks. */
   chosenObjection: {
     max: 200,
@@ -57,12 +58,18 @@ export const config = {
     maxFileBytes: 1_000_000,
     /** Caps on the prospect fields the learner edits; the server allows 300 characters a field and 5 items a list (limits.yaml max_custom_buyer_*). */
     prospect: { nameMax: 60, textMax: 300, itemMax: 180, maxItems: 5 },
+    /** Saved prospects listed before "Show all". */
+    savedShown: 5,
     /** Quotes shown under a field as "from the call". */
     evidenceShown: 2,
     /** How the server guessed which speaker is the learner (rep.how). */
     repGuess: { named: "Named you", most_questions: "Asked the most questions", first_speaker: "Spoke first" },
     objectionTypes: { price: "Price", skepticism: "Doubt", timing: "Timing", partner: "Partner", fear: "Fear" },
   },
+  /** Optional account; the server checks the same limits (limits.yaml accounts). */
+  account: { nameMax: 60, passwordMin: 8, teamNameMax: 60 },
+  /** A saved prospect keeps no difficulty: practising one starts here. */
+  savedProspectDifficulty: "medium",
   coachTextMax: 120,
   /** Night-city film: light sizes, drift speed, glow and flicker. */
   film: {

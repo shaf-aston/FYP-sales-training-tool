@@ -10,6 +10,8 @@ export class ApiError extends Error {
     message: string,
     readonly status: number,
     readonly code?: string,
+    /** The form field the error is about (account sign-up), so the form can show it under that field. */
+    readonly field?: string,
   ) {
     super(message);
   }
@@ -18,6 +20,11 @@ export class ApiError extends Error {
    *  TIMEOUT and NETWORK are made up here in the client. */
   get sessionExpired(): boolean {
     return this.code === "SESSION_EXPIRED";
+  }
+
+  /** The route needs a login and there is none (logged out elsewhere, or the login ran out). backend/auth.py */
+  get loginRequired(): boolean {
+    return this.code === "LOGIN_REQUIRED";
   }
 }
 
@@ -63,7 +70,7 @@ async function request<R>(path: string, opts: RequestOptions = {}): Promise<R> {
         : res.status >= 500 && !data?.code
           ? "Something went wrong on our side. Try again in a moment."
           : data?.error;
-    throw new ApiError(message ?? `Request failed (${res.status})`, res.status, data?.code);
+    throw new ApiError(message ?? `Request failed (${res.status})`, res.status, data?.code, data?.field);
   }
   return data as R;
 }
@@ -119,6 +126,28 @@ export function createHttpApi() {
     /** Replayed at `difficulty` (the one the learner picked), else the one read from the call. */
     callsReview: (call: T.CallReq, difficulty?: T.Difficulty) =>
       request<T.Review>("/api/calls/review", { body: { ...call, difficulty }, timeoutMs: chat }),
+
+    // Account: an optional login (a same-origin cookie) that keeps skill history and saved prospects.
+    accountMe: () => request<T.AccountMe>("/api/account/me"),
+    accountSignup: (body: { email: string; name: string; password: string }) => request<T.AccountMe>("/api/account/signup", { body }),
+    accountLogin: (body: { email: string; password: string }) => request<T.AccountMe>("/api/account/login", { body }),
+    accountLogout: () => request<{ success: true }>("/api/account/logout", { body: {} }),
+    accountDelete: (password: string) => request<{ success: true }>("/api/account/delete", { body: { password } }),
+    accountExport: () => request<T.AccountExport>("/api/account/export"),
+    accountSkills: () => request<{ success: true; entries: T.SkillEntry[] }>("/api/account/skills"),
+    accountSaveSkills: (entries: T.SkillEntry[]) => request<{ success: true; stored: number }>("/api/account/skills", { body: { entries } }),
+    accountProspects: () => request<{ success: true; prospects: T.SavedProspect[] }>("/api/account/prospects"),
+    accountSaveProspect: (profile: T.CustomBuyer) =>
+      request<{ success: true; prospect: T.SavedProspect }>("/api/account/prospects", { body: { profile } }),
+    accountDeleteProspect: (id: number) => request<{ success: true }>(`/api/account/prospects/${id}`, { method: "DELETE" }),
+
+    // Team: a manager creates one and shares the invite code; reps join with it.
+    team: () => request<{ success: true; team: T.Team | null; members: T.TeamMember[] }>("/api/team"),
+    teamCreate: (name: string) => request<{ success: true; team: T.Team }>("/api/team/create", { body: { name } }),
+    teamJoin: (code: string) => request<{ success: true; team: T.Team }>("/api/team/join", { body: { code } }),
+    teamLeave: () => request<{ success: true }>("/api/team/leave", { body: {} }),
+    teamRemove: (userId: number) => request<{ success: true }>("/api/team/remove", { body: { user_id: userId } }),
+    teamNewCode: () => request<{ success: true; invite_code: string }>("/api/team/code", { body: {} }),
 
     // Shared
     /** The text as audio, or null when the server has no voice for it (the browser reads it instead). */

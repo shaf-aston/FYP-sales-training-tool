@@ -30,6 +30,7 @@ SPEECH = _L["speech"]
 DEFAULT_TRUST_PROXY_HEADERS = _L["defaults"]["trust_proxy_headers"]
 DEFAULT_LOGS_DIR = _L["defaults"]["logs_dir"]
 LOG_LEVEL = _L["defaults"]["log_level"]
+DEFAULT_DB_PATH = _L["defaults"]["db_path"]
 
 SERVER_PORT = _L["server"]["port"]
 
@@ -57,6 +58,22 @@ RATE_LIMITS = {route: tuple(limit) for route, limit in _L["rate_limits"].items()
 
 # uploaded calls (core/calls): read-only mapping of the `calls:` block
 CALL_LIMITS = _L["calls"]
+
+# accounts
+_A = _L["accounts"]
+MIN_PASSWORD_CHARS = _A["min_password_chars"]
+MAX_PASSWORD_CHARS = _A["max_password_chars"]
+MAX_EMAIL_CHARS = _A["max_email_chars"]
+MAX_ACCOUNT_NAME_CHARS = _A["max_account_name_chars"]
+MAX_TEAM_NAME_CHARS = _A["max_team_name_chars"]
+MAX_SKILL_ENTRIES = _A["max_skill_entries"]
+MAX_SAVED_PROSPECTS = _A["max_saved_prospects"]
+SCRYPT_N, SCRYPT_R, SCRYPT_P = _A["scrypt"]["n"], _A["scrypt"]["r"], _A["scrypt"]["p"]
+SESSION_DAYS = _A["session_days"]
+INVITE_CODE_LENGTH = _A["invite_code_length"]
+MAX_SKILLS_PER_ENTRY = _A["max_skills_per_entry"]
+MAX_SKILL_ID_CHARS = _A["max_skill_id_chars"]
+LOGIN_FAILURES, LOGIN_FAILURE_WINDOW_SECONDS = _A["login_failures"]
 
 # provider requests
 PROVIDER_TIMEOUT_SECONDS = _L["provider"]["timeout_seconds"]

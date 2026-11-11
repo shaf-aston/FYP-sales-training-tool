@@ -25,6 +25,7 @@ core/
   training/     learner tools both modes use: turn_rating, quiz, drills
   sell_mode/    learner sells, AI buys: buyer_*, sell_service, sell_evaluator, session_review, knowledge, real_calls, custom_buyer
   calls/        an uploaded real call, no AI: transcript (parsers), roles (rep / prospect), profile, reader (the one entry)
+  accounts/     what is kept for a learner, SQLite: db (file, migrations), passwords, users, teams, library
   buy_mode/     learner buys, script sells: seller_bot, flow, coach, stage
     script_engine/  seller (one turn), engine (next line), method (load YAML), config (check YAML)
       hear/     what the reply meant: verdict, recognise, embedder, meanings, shrug
@@ -121,6 +122,16 @@ that transcript the same way a rewind does (`_settle`), and the prospect's last 
 **Adding a transcript format**: write one parser in `transcript.py` (`(lines, cfg) -> list[Turn] | None`), add it to
 `PARSERS` before any looser layout that could claim its text, and add a sample of the real export to
 `tests/test_calls_transcript.py`. Junk lines a tool adds go in `calls.yaml` `noise`.
+
+## Accounts
+
+Optional: everything works logged out. `backend/auth.py` owns the login cookie (signed, HttpOnly, SameSite=Lax,
+Secure) holding the user id and a session version; logging out bumps the version, so every copy of the cookie stops
+working. Routes in `backend/routes/account.py` and `team.py` call the stores in `core/accounts/`, which never import
+Flask. `db.py` keeps one SQLite file (`DB_PATH`), a short connection per use (`connect(write=True)` takes the write
+lock first, so a check-then-insert cannot race), WAL, and `secure_delete`; a migration is appended to `MIGRATIONS`,
+never edited once shipped. Deleting an account deletes everything kept for it and checkpoints the log. A team always
+keeps a manager (`teams.keep_a_manager`). Wrong passwords are capped per email (`auth.LoginThrottle`).
 
 ## Adding a product or script
 

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { Button, buttonClass, Icon, useConfirm } from "@/components/ui";
+import { useAccount } from "@/features/account/AccountContext";
 import { useSession } from "@/features/session/SessionContext";
 import { api } from "@/lib/api/client";
 import type { BuyProduct, ScriptStep } from "@/lib/api/types";
@@ -21,6 +22,7 @@ const MODES = {
 export function ChatHeader() {
   const { openDialog, showPanels } = useUi();
   const { mode, reset, jumpTo, switchProduct, buySessionId, buyProduct, sellSession, stage } = useSession();
+  const account = useAccount();
   // Each product runs its own script, so steps are kept with the product they came from.
   const [loaded, setLoaded] = useState<{ product: string | null; steps: ScriptStep[] }>({ product: null, steps: [] });
   const steps = loaded.product === buyProduct ? loaded.steps : [];
@@ -95,7 +97,7 @@ export function ChatHeader() {
     if (ok) await switchProduct(id);
   };
 
-  const pick = (dialog: "help" | "feedback") => {
+  const pick = (dialog: "help" | "feedback" | "account") => {
     setMenuOpen(false);
     openDialog(dialog);
   };
@@ -172,6 +174,11 @@ export function ChatHeader() {
               <button type="button" role="menuitem" className={s.item} onClick={() => pick("feedback")}>
                 Feedback
               </button>
+              {account.ready && (
+                <button type="button" role="menuitem" className={s.item} onClick={() => pick("account")}>
+                  {account.user ? "Account" : "Log in"}
+                </button>
+              )}
               {mode === "buy" && products.length > 1 && (
                 <label className={s.item}>
                   <span className="sr-only">What the rep sells (starts a fresh call)</span>
