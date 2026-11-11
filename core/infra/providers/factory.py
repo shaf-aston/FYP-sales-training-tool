@@ -13,15 +13,10 @@ LLM_PROVIDER_TYPES = {
     "groq": GroqProvider,
 }
 
-_PROVIDER_ALIASES = {
-    "groqcloud": "groq",  # kept for server env compatibility (LLM_PROVIDER_ORDER may still name it)
-}
-
 
 def create_provider(name: str, model: str | None = None):
     """Build the named provider. Unknown names raise ValueError."""
     key = name.strip().lower()
-    key = _PROVIDER_ALIASES.get(key, key)
     if key not in LLM_PROVIDER_TYPES:
         supported = ", ".join(sorted(LLM_PROVIDER_TYPES))
         raise ValueError(f"Unknown provider '{key}'. Supported providers: {supported}")
