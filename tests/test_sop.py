@@ -165,3 +165,10 @@ def test_check_a_call_against_the_outline(client):
 def test_check_needs_a_valid_outline(client, stages):
     response = client.post("/api/sop/check", json={"stages": stages, "call": {"text": "A: hi"}})
     assert response.status_code == 400 and response.get_json()["code"] == "SOP_OUTLINE_INVALID"
+
+
+def test_the_sample_sop_reads_and_covers_every_element(client):
+    text = client.get("/api/sop/sample").get_json()["text"]
+    body = client.post("/api/sop/read", json={"text": text}).get_json()
+    assert [s["title"] for s in body["stages"]] == ["Open", "Discover", "Pitch", "Handle objections", "Close"]
+    assert body["coverage"] == 100

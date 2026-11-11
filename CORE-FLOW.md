@@ -26,6 +26,7 @@ core/
   sell_mode/    learner sells, AI buys: buyer_*, sell_service, sell_evaluator, session_review, knowledge, real_calls, custom_buyer
   calls/        an uploaded real call, no AI: transcript (parsers), roles (rep / prospect), profile, reader (the one entry)
   accounts/     what is kept for a learner, SQLite: db (file, migrations), passwords, users, teams, library
+  sop/          a team's sales SOP, no AI: document (txt/md/docx/pdf), outline, match (embeddings), checklist, adherence
   buy_mode/     learner buys, script sells: seller_bot, flow, coach, stage
     script_engine/  seller (one turn), engine (next line), method (load YAML), config (check YAML)
       hear/     what the reply meant: verdict, recognise, embedder, meanings, shrug
@@ -119,9 +120,23 @@ the call's objections (`BuyerSession(objection_bank=...)`). With `replay` (the c
 with the prospect) the session starts there instead: `BuyerSession.continue_from` settles readiness and counts from
 that transcript the same way a rewind does (`_settle`), and the prospect's last line is what the learner answers.
 
+**A recording instead of a transcript**: `/api/calls/transcribe` sends the audio to speech-to-text
+(`core/infra/providers/transcribe.py`, Groq Whisper), then `core/calls/audio.py` has the AI label each segment Speaker A
+or B (the one AI step in calls) and writes ordinary `[m:ss] Speaker A: ...` lines. The learner checks them and reads
+the call like any transcript. Only this route accepts bodies past the 1 MB cap (`transcription.max_bytes`).
+
 **Adding a transcript format**: write one parser in `transcript.py` (`(lines, cfg) -> list[Turn] | None`), add it to
 `PARSERS` before any looser layout that could claim its text, and add a sample of the real export to
 `tests/test_calls_transcript.py`. Junk lines a tool adds go in `calls.yaml` `noise`.
+
+## SOP review
+
+`backend/routes/sop.py` `/read` turns a file (or pasted text) into blocks (`document.py`, one reader per format in
+`READERS`), stages and steps (`outline.py`: each top-level heading is a stage, a lone title is skipped), and a
+checklist of what a good call covers (`checklist.py`, `config/sop.yaml` `elements`): cues first, meaning only as a
+strict fallback. `/check` takes that outline back with a call and says which steps the rep carried out
+(`adherence.py`: each step searched for in the rep's lines with bge's query instruction, thresholds in
+`sop.yaml`). Meaning comes from buy mode's shared embedder, passed in as `embed`, so `core/sop` imports no mode.
 
 ## Accounts
 

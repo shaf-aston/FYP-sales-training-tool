@@ -9,7 +9,7 @@ from flask import Blueprint, jsonify, request
 from core.calls.errors import CallError
 from core.calls.reader import read_call
 from core.infra.constants import MAX_REQUEST_BYTES, SOP_LIMITS
-from core.infra.loader import load_yaml
+from core.infra.loader import CONFIG_DIR, load_yaml
 from core.sop.adherence import check_call
 from core.sop.checklist import check_elements
 from core.sop.document import DocumentError, read_document
@@ -21,6 +21,8 @@ from ._utils import json_body
 from .calls import call_error
 
 bp = Blueprint("sop", __name__, url_prefix="/api/sop")
+
+SAMPLE_FILE = "sop_sample.md"   # in config/: the SOP behind "Try a sample SOP"
 
 
 def _embed(texts: list[str]) -> list[list[float]]:
@@ -46,6 +48,12 @@ def _stages_from(data) -> list[Stage] | None:
             return None
         stages.append(Stage(title.strip()[:SOP_LIMITS["max_step_chars"]], [s.strip() for s in steps]))
     return stages if any(s.steps for s in stages) else None
+
+
+@bp.route("/sample", methods=["GET"])
+def sample():
+    """A realistic SOP to try the review without one of your own."""
+    return jsonify({"success": True, "text": (CONFIG_DIR / SAMPLE_FILE).read_text("utf-8"), "filename": SAMPLE_FILE})
 
 
 @bp.route("/read", methods=["POST"])
