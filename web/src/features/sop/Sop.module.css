@@ -1,0 +1,246 @@
+/* SOP review page. Page chrome follows the knowledge page; the rest is this feature's own. */
+.page {
+  position: relative;
+  z-index: var(--z-base);
+  display: grid;
+  gap: var(--space-5);
+  max-width: var(--w-page);
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-4) var(--space-7);
+}
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+.intro {
+  display: grid;
+  gap: var(--space-2);
+}
+.title {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  color: var(--text-primary);
+}
+.back {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch-target);
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-strong);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  color: var(--text-primary);
+  text-decoration: none;
+  transition: border-color var(--dur-fast);
+}
+.back:hover {
+  border-color: var(--accent);
+}
+
+.card {
+  gap: var(--space-5);
+  padding: var(--space-5);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  animation: pop-in var(--dur-pop) var(--ease-pop) backwards;
+}
+.cardTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-xl);
+}
+/* The step number in a small accent disc. */
+.num {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: calc(var(--space-6) + var(--space-1));
+  height: calc(var(--space-6) + var(--space-1));
+  border-radius: var(--radius-pill);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.stack {
+  display: grid;
+  gap: var(--space-4);
+  animation: fade-in var(--dur-base) var(--ease-out);
+}
+.head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.sample {
+  justify-self: center;
+  min-height: var(--touch-target);
+  font-size: var(--text-sm);
+}
+.start {
+  justify-self: start;
+}
+.muted {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+.label {
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+
+/* Score on the left, the list on the right; stacked on phones. */
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 15rem) minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+.tile {
+  display: grid;
+  gap: var(--space-2);
+}
+.big {
+  font-family: var(--font-display);
+  font-size: var(--text-hero);
+  line-height: 1;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+.tileLabel {
+  font-size: var(--text-sm);
+  color: var(--text-body);
+}
+
+.checklist {
+  list-style: none;
+  display: grid;
+  gap: var(--space-3);
+}
+.check {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+  animation: message-in var(--dur-base) var(--ease-out) backwards;
+}
+.check:nth-child(2) { animation-delay: calc(1 * var(--stagger)); }
+.check:nth-child(3) { animation-delay: calc(2 * var(--stagger)); }
+.check:nth-child(4) { animation-delay: calc(3 * var(--stagger)); }
+.check:nth-child(5) { animation-delay: calc(4 * var(--stagger)); }
+.check:nth-child(n + 6) { animation-delay: calc(5 * var(--stagger)); }
+/* A filled disc with a tick when covered; an empty ring when missing. */
+.mark {
+  display: grid;
+  place-items: center;
+  width: var(--space-5);
+  height: var(--space-5);
+  margin-top: 1px;
+  border-radius: var(--radius-pill);
+  background: var(--success-soft);
+  color: var(--success);
+}
+.missing .mark {
+  background: none;
+  border: 1.5px solid var(--border-strong);
+}
+.checkText {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.checkLabel {
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.missing .checkLabel {
+  font-weight: 500;
+}
+.quote {
+  font-size: var(--text-sm);
+  font-style: italic;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+.why {
+  font-size: var(--text-sm);
+  color: var(--warning);
+}
+.said {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.outline {
+  display: grid;
+  gap: var(--space-2);
+}
+.stage {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-faint);
+  background: var(--bg-card-soft);
+}
+.stage summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--touch-target);
+  padding: 0 var(--space-4);
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.count {
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--text-muted);
+}
+.steps {
+  display: grid;
+  gap: var(--space-2);
+  padding: 0 var(--space-4) var(--space-4) calc(var(--space-4) + var(--space-5));
+  font-size: var(--text-sm);
+  color: var(--text-body);
+  animation: fade-in var(--dur-base) var(--ease-out);
+}
+
+.stages {
+  display: grid;
+  gap: var(--space-5);
+}
+.stageResult {
+  display: grid;
+  gap: var(--space-3);
+}
+
+@media (max-width: 640px) {
+  .split {
+    grid-template-columns: 1fr;
+    gap: var(--space-5);
+  }
+  .card {
+    padding: var(--space-4);
+  }
+}
