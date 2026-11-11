@@ -365,3 +365,10 @@ def test_a_fault_while_hearing_keeps_the_call_going(fake_embedder, monkeypatch):
     step = s.state.step
     monkeypatch.setattr(s, "_reply", lambda t: 1 / 0)
     assert s.reply("I want more money")[0] == s.sense.no_words and s.state.step == step
+
+
+def test_voiceover_marks_never_reach_the_words():
+    from core.buy_mode.script_engine.words.tone import plain, stresses
+    line = "(slow, deliberate) Where are you **now**... that you _don't_ want[pause] Why?"
+    assert plain(line) == "Where are you now... that you don't want ¶ Why?".replace(" ¶", "")
+    assert stresses(line) == 2 and plain("(all of it) a**b") == "(all of it) a**b"

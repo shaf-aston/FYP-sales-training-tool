@@ -314,9 +314,9 @@ def _step(step_id, data, answers):
 
 
 def _one_stress(where, line):
-    """A line stresses one word at most: stress everywhere is stress nowhere."""
-    if stresses(line) > 1:
-        raise ValueError(f"{where}: at most one stress mark (_word_ or ==words==) per line: {line!r}")
+    """A line stresses two words at most (one loud, one stretched): stress everywhere is stress nowhere."""
+    if stresses(line) > 2:
+        raise ValueError(f"{where}: at most two stress marks (**word**, _word_, ==words==) per line: {line!r}")
 
 
 def _objection(name, data):

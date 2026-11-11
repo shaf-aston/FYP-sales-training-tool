@@ -263,7 +263,7 @@ steps:
     capture: why
     doubts_answer: true   # draft: money trouble is their reason here, not the price worry (whole calls: "my loan isn't enough" got "I haven't mentioned a price yet")
     probe:   # draft: ours, so "I don't know" gets an easier question, not the same one
-      - "What is it about where you are now that you don't want to keep living with?"
+      - "(slow, deliberate) What is it about where you are **now**... that you _don't_ want to keep living with?"   # loud "now", stretched "don't"
     stuck: {then: "05"}
     listen:
       any: {then: "05"}

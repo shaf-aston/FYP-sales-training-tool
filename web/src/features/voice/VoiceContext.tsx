@@ -12,7 +12,7 @@ import { useSession } from "@/features/session/SessionContext";
 import { SpeechRecognizer, speechSupported, type StopState } from "./speech/recognizer";
 import { Tts, ttsSupported } from "./speech/tts";
 import { parsePunctuation } from "./voiceCommands";
-import { speakable } from "@/lib/tone";
+import { speakable, toneRate } from "@/lib/tone";
 
 interface VoiceValue {
   /** Can this browser dictate? False until the browser has been checked. */
@@ -27,7 +27,7 @@ interface VoiceValue {
   handsFree: boolean;
   toggleHandsFree: () => void;
   speaking: boolean;
-  /** Say a message aloud: the tone marks (_stress_, ==key==, ¶) are dropped, they are for the screen. */
+  /** Say a message aloud: the tone marks (**loud**, _stretched_, ==key==, ¶, (tone)) are dropped, they are for the screen. */
   speak: (text: string) => void;
   stop: () => void;
   /** Stop speaking and go back to listening if hands-free is on. */
@@ -176,7 +176,9 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
         onFinish: () => resumeAfterSpeech(),
         onError: (m) => live.current.toast(m, "error"),
       });
-      void tts.current.speak(speakable(text), live.current.speed); // words only: the tone marks are for the screen
+      // words only, the marks are for the screen; a tone note ("(slow)") changes the speed (speed is ±% from normal)
+      const speed = Math.round((1 + live.current.speed / 100) * toneRate(text) * 100 - 100);
+      void tts.current.speak(speakable(text), speed);
     },
     [resumeAfterSpeech],
   );

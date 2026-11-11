@@ -134,7 +134,7 @@ def _method(**step):
 @pytest.mark.parametrize("step, why", [
     ({"say": "So {outcome}?"}, "needs a say_plain"),
     ({"say": "Go?", "probe": ["And {outcome}?"], "stuck": {"then": "a"}}, "probes never say"),
-    ({"say": "It's _all_ about ==you==?"}, "one stress"),
+    ({"say": "It's **all** _about_ ==you==?"}, "two stress"),
     ({"say": "So {outcome }?", "say_plain": "So?"}, "a blank is"),
     ({"say": "Go?", "listen": {"any": {"then": "a", "min_score": 0.5}}}, "no min_score"),
     ({"say": "Go.", "go_on_is_yes": True}, "go_on_is_yes needs a say that asks"),   # round 42
