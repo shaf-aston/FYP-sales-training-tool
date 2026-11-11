@@ -11,7 +11,8 @@
   max-width: 100%;
   min-height: calc(var(--touch-target) - var(--space-2));
   padding-left: var(--space-3);
-  border-radius: var(--radius-pill);
+  /* A pill on one line; a quote that wraps keeps soft corners instead of a stretched oval. */
+  border-radius: var(--radius-lg);
   border: 1px solid var(--border);
   background: var(--bg-card-soft);
   font-size: var(--text-sm);

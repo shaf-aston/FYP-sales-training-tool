@@ -48,7 +48,14 @@ export function ProspectCard({ draft, evidence, onEdit }: Props) {
         hint={from("personality")}
         onChange={(e) => onEdit({ personality: e.target.value })}
       />
-      <TextInput label="Budget" value={draft.budget} maxLength={textMax} hint={from("budget")} onChange={(e) => onEdit({ budget: e.target.value })} />
+      <TextArea
+        label="Budget"
+        rows={2}
+        value={draft.budget}
+        maxLength={textMax}
+        hint={from("budget")}
+        onChange={(e) => onEdit({ budget: e.target.value })}
+      />
       <ChipList
         label="Needs"
         noun="need"
