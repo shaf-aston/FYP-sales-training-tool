@@ -1,0 +1,302 @@
+<title>Eloquence Build Roadmap</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: one vertical route of stops (the build order); a live pipeline strip on top shows how a call flows through the product. */
+:root{
+  --bg:#f5f6fb; --panel:#ffffff; --fg:#151827; --muted:#5d6380; --line:#dfe2ee;
+  --accent:#6d4cff; --accent2:#00a6c8; --soft:#ece8ff; --done:#14a36b; --warn:#c77700;
+  --display:"Sora",system-ui,sans-serif; --body:"Inter",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0d0f1a; --panel:#161927; --fg:#eceefa; --muted:#9aa0bf; --line:#262a3d;
+  --accent:#9b84ff; --accent2:#3fd6f2; --soft:#221d45; --done:#39d394; --warn:#f2b04a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d0f1a; --panel:#161927; --fg:#eceefa; --muted:#9aa0bf; --line:#262a3d;
+  --accent:#9b84ff; --accent2:#3fd6f2; --soft:#221d45; --done:#39d394; --warn:#f2b04a; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:15px/1.55 var(--body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:40px 64px}
+.wrap{max-width:880px;margin:0 auto;display:grid;gap:40px}
+.wrap>*{min-width:0}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
+h1{font-size:clamp(28px,5vw,40px);letter-spacing:-.02em}
+.lede{color:var(--muted);margin:8px 0 0;max-width:60ch}
+.label{font:500 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* Pipeline */
+.flow{display:flex;align-items:center;gap:6px;overflow-x:auto;padding:4px 2px 10px}
+.node{display:grid;justify-items:center;gap:6px;min-width:86px;text-align:center;font-size:12px;color:var(--muted)}
+.node .ic{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;background:var(--panel);border:1px solid var(--line);color:var(--fg);transition:all .35s}
+.node.on .ic{background:var(--accent);border-color:var(--accent);color:#fff;transform:translateY(-3px);box-shadow:0 8px 22px -8px var(--accent)}
+.node.on{color:var(--fg)}
+.pipe{flex:1;min-width:24px;height:2px;background:var(--line);position:relative;overflow:hidden;border-radius:2px}
+.pipe::after{content:"";position:absolute;inset:0;width:40%;background:linear-gradient(90deg,transparent,var(--accent2),transparent);animation:run 1.6s linear infinite}
+@keyframes run{from{transform:translateX(-100%)}to{transform:translateX(250%)}}
+
+/* Stats */
+.stats{display:flex;flex-wrap:wrap;gap:28px}
+.stat b{display:block;font:700 26px var(--display);font-variant-numeric:tabular-nums}
+.stat span{font-size:13px;color:var(--muted)}
+
+/* Route */
+.route{list-style:none;margin:0;padding:0;display:grid;gap:12px;position:relative}
+.route::before{content:"";position:absolute;left:27px;top:28px;bottom:28px;width:2px;background:linear-gradient(var(--accent),var(--accent2))}
+.stop{position:relative;display:grid;grid-template-columns:56px 1fr;gap:14px;align-items:start}
+.pin{width:56px;height:56px;border-radius:50%;display:grid;place-items:center;background:var(--panel);border:2px solid var(--line);color:var(--accent);position:relative;z-index:1;transition:all .3s}
+.stop[data-open] .pin{background:var(--accent);border-color:var(--accent);color:#fff}
+.stop.now .pin{border-color:var(--warn);color:var(--warn)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;min-width:0;transition:border-color .2s}
+.stop[data-open] .card{border-color:var(--accent)}
+.head{all:unset;box-sizing:border-box;cursor:pointer;width:100%;display:flex;gap:12px;align-items:center;padding:14px 16px;flex-wrap:wrap}
+.head:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:14px}
+.head h3{font-size:17px;flex:1;min-width:180px}
+.chip{font:500 11px var(--mono);padding:3px 9px;border-radius:99px;background:var(--soft);color:var(--accent);white-space:nowrap}
+.chip.fix{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn)}
+.chev{transition:transform .3s;color:var(--muted)}
+.stop[data-open] .chev{transform:rotate(180deg)}
+.body{display:grid;grid-template-rows:0fr;transition:grid-template-rows .4s ease}
+.stop[data-open] .body{grid-template-rows:1fr}
+.body>div{overflow:hidden}
+.inner{padding:0 16px 16px;display:grid;gap:14px}
+.why{margin:0;font-size:14px;color:var(--muted)}
+.why b{color:var(--fg);font-weight:600}
+.cols{display:grid;grid-template-columns:1.4fr 1fr;gap:14px}
+.subs{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:6px;counter-reset:s}
+.subs li{display:grid;grid-template-columns:auto 1fr;gap:8px;font-size:14px;align-items:baseline}
+.subs li::before{counter-increment:s;content:var(--n) "." counter(s);font:500 11px var(--mono);color:var(--accent);min-width:2.4em}
+.subs li.ok{color:var(--muted)}
+.subs li.ok::after{content:"";}
+.m{font:600 10px var(--mono);padding:1px 6px;border-radius:5px;margin-left:6px;white-space:nowrap;vertical-align:1px}
+.m.R{background:color-mix(in srgb,var(--done) 15%,transparent);color:var(--done)}
+.m.M{background:color-mix(in srgb,var(--accent2) 16%,transparent);color:var(--accent2)}
+.m.G{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn)}
+.legend{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.leg{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:6px;min-width:0}
+.leg .m{margin:0;justify-self:start;font-size:12px;padding:3px 8px}
+.leg p{margin:0;font-size:13px;color:var(--muted)}
+.bar{display:flex;height:10px;border-radius:99px;overflow:hidden;background:var(--line)}
+.bar i{display:block;transition:width 1s ease}
+.barkey{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--muted);margin-top:8px}
+.how{margin:0;font-size:13px;color:var(--muted);border-left:2px solid var(--accent2);padding-left:10px}
+.models{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.model{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:6px;min-width:0}
+.model h3{font-size:15px}
+.model p{margin:0;font-size:13px;color:var(--muted)}
+.model dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:13px}
+.model dt{font:500 11px var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding-top:2px}
+.model dd{margin:0}
+.chip.built{background:color-mix(in srgb,var(--done) 16%,transparent);color:var(--done)}
+.chip.prog{background:color-mix(in srgb,var(--accent2) 16%,transparent);color:var(--accent2)}
+.mod{font:600 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent2);margin:10px 0 2px 70px}
+.duo{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:center}
+.role{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;gap:10px;min-width:0}
+.role .who{display:flex;gap:10px;align-items:center;font-size:14px}
+.role .who b{font-family:var(--display)}
+.tag{justify-self:start;font:500 11px var(--mono);padding:2px 8px;border-radius:99px;background:var(--soft);color:var(--accent)}
+.swap{color:var(--accent2);animation:spin 3s ease-in-out infinite}
+@keyframes spin{0%,40%{transform:rotate(0)}50%,90%{transform:rotate(180deg)}100%{transform:rotate(360deg)}}
+.role p{margin:0;font-size:13px;color:var(--muted)}
+.box{border:1px dashed var(--line);border-radius:10px;padding:12px;min-width:0}
+.box ul{margin:6px 0 0;padding-left:18px;font-size:14px}
+.box li+li{margin-top:3px}
+.out{display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:10px;background:color-mix(in srgb,var(--done) 12%,transparent);color:var(--fg);font-size:14px}
+.out svg{color:var(--done)}
+.uses{font-size:12px;color:var(--muted)}
+.uses span{font-family:var(--mono);color:var(--accent2)}
+
+/* Decisions */
+.decide{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.q{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:8px;min-width:0}
+.q p{margin:0;font-weight:600}
+.opts{display:flex;flex-wrap:wrap;gap:6px}
+.opt{font:inherit;font-size:13px;padding:5px 10px;border-radius:99px;border:1px solid var(--line);background:transparent;color:var(--fg);cursor:pointer}
+.opt[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.opt:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.effect{font-size:13px;color:var(--muted);min-height:2.6em}
+footer{font-size:12px;color:var(--muted)}
+@media (max-width:640px){.cols,.decide,.duo,.legend,.models{grid-template-columns:1fr}.swap{justify-self:center;rotate:90deg}.mod{margin-left:54px}.route::before{left:21px}.stop{grid-template-columns:44px 1fr}.pin{width:44px;height:44px}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="label">Eloquence · requirements</div>
+    <h1>From a real call to a better rep</h1>
+    <p class="lede">Upload a call. See where it turned. Practise against that exact prospect. Track the skills that need work.</p>
+  </header>
+
+  <section aria-label="How a call moves through the product">
+    <div class="label" style="margin-bottom:12px">The flow</div>
+    <div class="flow" id="flow"></div>
+  </section>
+
+  <section aria-label="Two ways to practise">
+    <div class="label" style="margin-bottom:12px">Two ways to practise</div>
+    <div class="duo">
+      <div class="role"><div class="who">ICON_person<span>You are the <b>prospect</b></span></div><div class="who">ICON_bot<span>A virtual <b>rep</b> sells to you</span></div><span class="tag">Buy mode · building now</span><p>Hear how a good rep sells. Learn the script from the other side.</p></div>
+      <svg class="i swap" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4L3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/></svg>
+      <div class="role"><div class="who">ICON_person<span>You are the <b>salesperson</b></span></div><div class="who">ICON_bot<span>A virtual <b>prospect</b> pushes back</span></div><span class="tag">Sell mode · next</span><p>Practise selling. Upload a real call and the prospect becomes that exact buyer.</p></div>
+    </div>
+  </section>
+
+  <section aria-label="How each part works">
+    <div class="label" style="margin-bottom:12px">How it's done · fastest first</div>
+    <div class="legend">
+      <div class="leg"><span class="m R">Rules</span><p>Patterns, checklists, maths. Instant, free, same answer every time.</p></div>
+      <div class="leg"><span class="m M">Our model</span><p>Small models trained on Kaggle, run on our own server. Fast, free per use.</p></div>
+      <div class="leg"><span class="m G">Groq</span><p>Only where new sentences must be written. Always has a fallback.</p></div>
+    </div>
+    <div style="margin-top:14px"><div class="bar" id="bar"></div><div class="barkey" id="barkey"></div></div>
+  </section>
+
+  <section class="stats" aria-label="Summary">
+    <div class="stat"><b>10</b><span>steps, 4 modules</span></div>
+    <div class="stat"><b>11–14 wk</b><span>one developer</span></div>
+    <div class="stat"><b>~3 wk</b><span>to upload-a-call demo</span></div>
+    <div class="stat"><b id="donepct">–</b><span>sub-steps already built</span></div>
+  </section>
+
+  <section>
+    <div class="label" style="margin-bottom:12px">Build order · tap a step</div>
+    <ol class="route" id="route"></ol>
+  </section>
+
+  <section>
+    <div class="label" style="margin-bottom:12px">Models to train on Kaggle</div>
+    <div class="models" id="models"></div>
+  </section>
+
+  <section>
+    <div class="label" style="margin-bottom:12px">Decide first</div>
+    <div class="decide" id="decide"></div>
+  </section>
+
+  <footer>Based on the current repo: buy mode already hears by meaning with a local model (bge-small via fastembed) and calls Groq only for close calls; sell mode runs readiness and objections by rules and uses Groq to word each buyer reply. Effort assumes one developer.</footer>
+</div>
+
+<script>
+const I={
+ upload:'<path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/>',
+ text:'<path d="M5 6h14M5 11h14M5 16h9"/>',
+ review:'<path d="M4 19V9M10 19V5M16 19v-7M21 19H3"/>',
+ person:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>',
+ play:'<circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l6-3.5z"/>',
+ team:'<circle cx="8" cy="9" r="3"/><circle cx="17" cy="10" r="2.5"/><path d="M2 20c.8-3.5 3.2-5 6-5s5.2 1.5 6 5M14 20c.4-2.4 1.8-3.6 4-3.6s3.4 1.2 4 3.6"/>',
+ server:'<rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/>',
+ lock:'<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
+ mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
+ doc:'<path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5M9 13l2 2 4-4"/>',
+ check:'<path d="M5 12.5l4.5 4.5L19 7"/>',
+ chev:'<path d="M6 9l6 6 6-6"/>'
+};
+I.bot='<rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 8V4M9 14h.01M15 14h.01"/>';
+I.radar='<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><path d="M12 12l6-4"/>';
+I.target='<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>';
+const ic=(k)=>`<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${I[k]}</svg>`;
+
+const flow=[["upload","Upload call"],["person","Prospect profile"],["play","You sell"],["review","Review"],["radar","Skill Radar"],["team","Team insights"]];
+document.getElementById("flow").innerHTML=flow.map(([k,t],i)=>(i?'<div class="pipe"></div>':'')+`<div class="node" data-i="${i}"><div class="ic">${ic(k)}</div>${t}</div>`).join("");
+const nodes=[...document.querySelectorAll(".node")];let f=0;
+nodes[0].classList.add("on");
+if(!matchMedia("(prefers-reduced-motion: reduce)").matches)setInterval(()=>{nodes[f].classList.remove("on");f=(f+1)%nodes.length;nodes[f].classList.add("on")},1300);
+
+document.querySelectorAll(".who").forEach(w=>w.innerHTML=w.innerHTML.replace(/ICON_(\w+)/,(m,k)=>ic(k)));
+// st: built | prog | new ; subs: [text, done?]
+// Each sub-step: [text, method R|M|G, done?]
+const steps=[
+ {mod:"Foundation"},
+ {k:"server",t:"Fix the server deploy",e:"½ day",st:"fix",
+  why:"New backend code isn't reaching the live server. Everything below needs it.",
+  subs:[["Add the server secrets in GitHub","R"],["Run the deploy","R"],["Confirm /api/health shows the new version","R"]],
+  have:["Deploy workflow","Health check"],out:"Every merge ships to the live server"},
+ {mod:"Practice · two directions"},
+ {k:"bot",t:"Virtual rep sells to you",e:"in progress",st:"prog",
+  why:"You play the prospect and watch a good rep work. Being built now.",
+  how:"Already the pattern to copy: rules lead, a local model hears meaning, Groq only settles close calls.",
+  subs:[["Rep follows the script stages","R",1],["Hears your reply by meaning (local bge-small)","M",1],["Coach notes and stage tracking","R",1],["Groq settles close calls and writes short acknowledgements","G",1],["Finish and polish the flow","R"],["Choose the script or offer it sells","R"],["Copy a top rep: their lines from an uploaded call, sorted into stages","M"]],
+  have:["Buy mode","Script engine","Meaning matcher"],out:"A believable rep you can learn from"},
+ {k:"person",t:"Reverse it: you sell, the prospect pushes back",e:"built · rework",st:"built",
+  why:"The main practice loop. Rules already own readiness, objections, opening and closing lines. Groq still writes the middle of each reply; most of that can move to real lines.",
+  how:"Rules pick the buyer's next move. Real prospect lines say it. Groq only fills gaps.",
+  subs:[["Personas and difficulty","R",1],["Readiness, objections, opening and closing lines","R",1],["Real objections from Fathom","R",1],["Turn-by-turn review, drills, quiz","R",1],["One switch to swap roles","R"],["Rules choose the next move from readiness: object, ask, warm up, stall, agree","R"],["Say it with a real prospect line that fits the move and topic","M"],["Groq writes the line only when nothing fits","G"],["Check realism against real calls: reply length, questions, objection rate","R"]],
+  have:["Sell mode","Buyer state and readiness","Turn rating"],out:"Faster, cheaper replies that sound like real buyers"},
+ {k:"upload",t:"Upload a call → it becomes that prospect",e:"~2 wk",st:"new",
+  why:"Practise against the buyer you actually lost, set up automatically.",
+  how:"No Groq needed. The same call always gives the same profile.",
+  subs:[["Upload a transcript: Fathom, Zoom, VTT, SRT or text","R"],["Find the rep: your name, or the speaker asking most questions. One tap to correct","R"],["Spot objections: phrase lists first, then a trained classifier","M"],["Pull facts: budget, prices, team size, dates, competitors","R"],["Set difficulty from behaviour: pushback, short replies, hedging","R"],["Pick the pains in their own words: the sentences that best match pain examples","M"],["Profile card the rep can edit","R"],["Start the roleplay as that prospect","R"],["Option: start from where the real call turned","R"],["Save to a prospect library","R"]],
+  have:["Persona format","Objection types","Meaning matcher"],out:"Upload, confirm, practise in under a minute"},
+ {k:"review",t:"Call review",e:"~1 wk",st:"new",
+  why:"Shows where a real call was won or lost, and which moment to replay.",
+  subs:[["Rate every rep line with the existing judge","R"],["Calibrate thresholds on 10–20 real Fathom calls","R"],["Tag each turn's stage: example matching, then a trained classifier","M"],["Mark turning points from readiness swings","R"],["\"Replay from here\" button into step 4","R"]],
+  have:["Turn rating","Pivotal moments"],out:"Every rep line rated, the turning points marked"},
+ {mod:"Platform"},
+ {k:"lock",t:"Accounts, database, privacy",e:"1.5–2 wk",st:"new",
+  why:"Calls, prospects and progress must be saved per person and team.",
+  subs:[["Login: magic link or Google","R"],["Database: users, teams, calls, sessions, prospects","R"],["Background jobs for long tasks","R"],["Consent, retention period, delete button","R"],["Remove names and numbers before anything reaches Groq","R"]],
+  have:["Nothing yet: server memory and browser storage only"],out:"Saved history and safe handling of recordings"},
+ {k:"mic",t:"Audio upload",e:"3–5 days",st:"new",
+  why:"Most reps have recordings, not transcripts.",
+  how:"Turning speech into text needs a speech model. Groq is fastest; our own is free but slower.",
+  subs:[["Speech to text: Groq Whisper, or Whisper on our server","G"],["Split long files into chunks","R"],["Who is speaking: separate stereo channels when recorded that way","R"],["Otherwise a speaker model, tested on Kaggle first","M"]],
+  have:["Groq key"],out:"Drop in an MP3 and everything above works"},
+ {mod:"Skill Radar · personal growth"},
+ {k:"radar",t:"Skill Radar",e:"1.5–2 wk",st:"new",
+  why:"Targeted improvement: find each rep's weakest skill, set a target, train exactly that.",
+  how:"All rules. Built on scores the app already computes.",
+  subs:[["Skill scores per session: questions, listening, objections, closing","R"],["Radar chart and trend over time","R"],["Rep sets targets, e.g. win 70% of price objections","R"],["Weakest skill picks the next drills and prospects","R"],["Weekly progress summary from templates","R"]],
+  have:["Turn rating scores","Spaced drills","Analytics events"],out:"Each rep knows their next skill to fix, and sees it improve"},
+ {mod:"Business"},
+ {k:"doc",t:"SOP review",e:"1.5–2 wk",st:"new",
+  why:"Check the playbook, then check calls against it.",
+  subs:[["Read PDF and DOCX","R"],["Headings and lists become stages and steps","R"],["Checklist against CAT and Impact: is each element there?","M"],["Score each call: does a rep line match each step's meaning?","M"],["Optional written critique","G"],["Virtual rep (step 2) sells using the SOP","R"]],
+  have:["Script stages","Method configs","Meaning matcher"],out:"A playbook report and an adherence score per call"},
+ {k:"team",t:"Manager insights",e:"2–3 wk",st:"new",
+  why:"Turns every rep's Skill Radar into coaching for the team.",
+  subs:[["Rep and manager roles","R"],["Team dashboard built on Skill Radar","R"],["Compare reps and spot team-wide gaps","R"],["Coaching guidelines from rules: if a skill is below target, assign this","R"],["Optional plain-English rewrite","G"],["Export CSV","R"]],
+  have:["Analytics events"],out:"Managers see what to train, by whom, with evidence"}
+];
+const models=[
+ {t:"Objection classifier",use:"Steps 3, 4, 5",data:"Fathom objections, already labelled by type",how:"TF-IDF + logistic regression first; under 1 MB, about 1 ms",why:"Replaces phrase lists that miss new wording"},
+ {t:"Stage classifier",use:"Steps 2, 5, 9",data:"Script lines per stage, plus hand-labelled Fathom turns",how:"Same small model; upgrade to bge-small features if accuracy is short",why:"Tags which stage a line belongs to"},
+ {t:"Tuned meaning matcher",use:"Steps 2, 3, 4, 9",data:"Pairs of lines that mean the same, from our scripts and calls",how:"Fine-tune bge-small on a Kaggle GPU, export ONNX, run with fastembed",why:"Better matches for SOP steps and buyer replies"},
+ {t:"Speaker separation",use:"Step 7",data:"A few labelled recordings",how:"Test pyannote on a Kaggle GPU; adopt only if it runs on our server",why:"Splits rep and prospect in mono audio"}
+];
+const MN={R:"Rules",M:"Our model",G:"Groq"};
+document.getElementById("models").innerHTML=models.map(m=>`<div class="model"><h3>${m.t}</h3><p>${m.why}</p><dl><dt>Used in</dt><dd>${m.use}</dd><dt>Data</dt><dd>${m.data}</dd><dt>Build</dt><dd>${m.how}</dd></dl></div>`).join("");
+const all=steps.filter(s=>s.subs).flatMap(s=>s.subs),cnt={R:0,M:0,G:0};all.forEach(x=>cnt[x[1]]++);
+document.getElementById("donepct").textContent=all.filter(x=>x[2]).length+" of "+all.length;
+const col={R:"var(--done)",M:"var(--accent2)",G:"var(--warn)"};
+document.getElementById("bar").innerHTML=["R","M","G"].map(k=>`<i style="width:${cnt[k]/all.length*100}%;background:${col[k]}"></i>`).join("");
+document.getElementById("barkey").innerHTML=["R","M","G"].map(k=>`<span><b style="color:${col[k]}">${cnt[k]}</b> ${MN[k]}</span>`).join("")+`<span>${Math.round((cnt.R+cnt.M)/all.length*100)}% of sub-steps need no Groq</span>`;
+const chipCls={fix:"fix",prog:"prog",built:"built",new:""};
+const route=document.getElementById("route");let n=0;
+route.innerHTML=steps.map(s=>{ if(s.mod) return `<li class="mod">${s.mod}</li>`; n++; const i=n;
+ return `<li class="stop${s.st==="fix"?' now':''}"${s.k==="upload"?' data-open':''}>
+ <div class="pin">${ic(s.k)}</div>
+ <div class="card">
+  <button class="head" aria-expanded="${s.k==="upload"}" aria-controls="b${i}">
+   <span class="label">${String(i).padStart(2,"0")}</span><h3>${s.t}</h3>
+   <span class="chip ${chipCls[s.st]}">${s.e}</span><svg class="i chev" viewBox="0 0 24 24" aria-hidden="true">${I.chev}</svg>
+  </button>
+  <div class="body" id="b${i}"><div><div class="inner">
+   <p class="why"><b>Why:</b> ${s.why}</p>${s.how?`<p class="how">${s.how}</p>`:""}
+   <div class="cols">
+    <div class="box"><div class="label">Sub-steps</div><ol class="subs" style="--n:'${i}'">${s.subs.map(x=>`<li${x[2]?' class="ok"':''}><span>${x[2]?'✓ ':''}${x[0]}<span class="m ${x[1]}">${MN[x[1]]}</span></span></li>`).join("")}</ol></div>
+    <div class="box"><div class="label">Already have</div><ul>${s.have.map(x=>`<li>${x}</li>`).join("")}</ul></div>
+   </div>
+   <div class="out">${ic("check")}<span><b>Outcome:</b> ${s.out}</span></div>
+  </div></div></div>
+ </div></li>`}).join("");
+route.addEventListener("click",e=>{const b=e.target.closest(".head");if(!b)return;const li=b.closest(".stop");const open=li.toggleAttribute("data-open");b.setAttribute("aria-expanded",open)});
+
+const qs=[
+ {q:"Who uses it?",o:{"Solo reps":"Step 6 can wait; ship steps 1–5 without login first.","Teams + managers":"Step 6 moves up, right after step 4."}},
+ {q:"What do calls arrive as?",o:{"Fathom exports":"Skip step 7 for now and save ~4 days.","Raw audio":"Step 7 is needed; budget ~$0.25/hr for speaker detection."}},
+ {q:"Whose SOP?",o:{"One company":"Hard-code it as a script; step 9 drops to ~1 wk.","Each customer's":"Needs upload and conversion; full step 9."}}
+];
+const dec=document.getElementById("decide");
+dec.innerHTML=qs.map((x,i)=>`<div class="q"><p>${x.q}</p><div class="opts">${Object.keys(x.o).map(k=>`<button class="opt" type="button" data-q="${i}" aria-pressed="false">${k}</button>`).join("")}</div><div class="effect" id="e${i}">Pick one to see what changes.</div></div>`).join("");
+dec.addEventListener("click",e=>{const b=e.target.closest(".opt");if(!b)return;const i=b.dataset.q;dec.querySelectorAll(`[data-q="${i}"]`).forEach(o=>o.setAttribute("aria-pressed",o===b));document.getElementById("e"+i).textContent=qs[i].o[b.textContent]});
+</script>
