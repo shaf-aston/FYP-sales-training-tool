@@ -6,7 +6,15 @@ import json
 import time
 
 from core.accounts.db import Database
-from core.infra.constants import MAX_SAVED_PROSPECTS, MAX_SKILL_ENTRIES
+from core.infra.constants import (
+    MAX_SAVED_PROSPECTS,
+    MAX_SKILL_ENTRIES,
+    MAX_SKILL_ID_CHARS,
+    MAX_SKILLS_PER_ENTRY,
+    SESSION_ID_MAX_CHARS,
+)
+
+_DAY_MS = 86_400_000
 
 
 class LibraryError(ValueError):
@@ -18,14 +26,17 @@ class LibraryError(ValueError):
 
 
 def check_skill_entry(entry) -> tuple[str, int, int, dict]:
-    """(session_id, at, overall, scores) from a posted entry, or LibraryError("invalid")."""
+    """(session_id, at, overall, scores) from a posted entry, or LibraryError("invalid"). `at` is ms since the epoch
+    (the web's Date.now()) and may not be in the future."""
     if not isinstance(entry, dict):
         raise LibraryError("invalid")
     session_id, at, overall, scores = entry.get("sessionId"), entry.get("at"), entry.get("overall"), entry.get("scores")
     numbers = (overall, *(scores.values() if isinstance(scores, dict) else ()))
-    if not (isinstance(session_id, str) and 0 < len(session_id) <= 128 and isinstance(at, int) and at > 0
-            and isinstance(scores, dict) and 0 < len(scores) <= 20
-            and all(isinstance(k, str) and len(k) <= 64 for k in scores)
+    latest_ms = int(time.time() * 1000) + _DAY_MS   # a day of clock skew; later is a bad clock or a forged entry
+    if not (isinstance(session_id, str) and 0 < len(session_id) <= SESSION_ID_MAX_CHARS
+            and isinstance(at, int) and not isinstance(at, bool) and 0 < at <= latest_ms
+            and isinstance(scores, dict) and 0 < len(scores) <= MAX_SKILLS_PER_ENTRY
+            and all(isinstance(k, str) and len(k) <= MAX_SKILL_ID_CHARS for k in scores)
             and all(isinstance(n, (int, float)) and not isinstance(n, bool) and 0 <= n <= 100 for n in numbers)):
         raise LibraryError("invalid")
     return session_id, at, round(overall), {k: round(v) for k, v in scores.items()}
@@ -41,7 +52,7 @@ class Library:
         """Store entries (a session scored again replaces its entry); the oldest past the cap are dropped.
         Returns how many were stored. Raises LibraryError("invalid") before storing any if one is malformed."""
         rows = [check_skill_entry(e) for e in entries]
-        with self.db.connect() as conn:
+        with self.db.connect(write=True) as conn:
             conn.executemany(
                 "INSERT OR REPLACE INTO skill_entries (user_id, session_id, at, overall, scores) VALUES (?, ?, ?, ?, ?)",
                 [(user_id, s, at, o, json.dumps(sc)) for s, at, o, sc in rows],
@@ -65,7 +76,7 @@ class Library:
 
     def save_prospect(self, user_id: int, profile: dict) -> dict:
         """`profile` is a custom buyer (checked by the caller with sell_mode.custom_buyer.parse_custom_buyer)."""
-        with self.db.connect() as conn:
+        with self.db.connect(write=True) as conn:
             if conn.execute("SELECT COUNT(*) FROM prospects WHERE user_id = ?", (user_id,)).fetchone()[0] >= MAX_SAVED_PROSPECTS:
                 raise LibraryError("full")
             now = int(time.time())
@@ -82,5 +93,5 @@ class Library:
                 for r in rows]
 
     def delete_prospect(self, user_id: int, prospect_id: int) -> bool:
-        with self.db.connect() as conn:
+        with self.db.connect(write=True) as conn:
             return conn.execute("DELETE FROM prospects WHERE id = ? AND user_id = ?", (prospect_id, user_id)).rowcount > 0

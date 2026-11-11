@@ -13,8 +13,8 @@ defaults:            # used when the matching env var is unset (.env overrides)
   groq_reasoning_effort: {"qwen/qwen3.8-27b": "none"}
   trust_proxy_headers: false                                                            # TRUST_PROXY_HEADERS: believe X-Forwarded-For (only behind a proxy you control)
   logs_dir: "data/logs"                                                                # LOGS_DIR: events, timings and feedback land in <dir>/<stream>/<day>.jsonl
-  log_level: "INFO"
-  db_path: "data/eloquence.db"   # DB_PATH: accounts database (SQLite), relative to the project root                                                                     # how much reaches the server log (journalctl)
+  log_level: "INFO"                                                                     # how much reaches the server log (journalctl)
+  db_path: "data/eloquence.db"                                                         # DB_PATH: accounts database (SQLite), relative to the project root
 
 server:
   port: 5000            # `python backend/app.py`; gunicorn takes its own
@@ -54,6 +54,7 @@ calls:               # an uploaded call transcript (core/calls)
 
 accounts:
   min_password_chars: 8
+  max_password_chars: 256    # longer is refused before hashing (scrypt on megabytes is a cheap way to burn CPU)
   max_email_chars: 254
   max_account_name_chars: 60
   max_team_name_chars: 60
@@ -61,13 +62,19 @@ accounts:
   max_saved_prospects: 50    # per learner
   scrypt: {n: 16384, r: 8, p: 1}   # password hashing cost; raising it only affects new hashes
   session_days: 30           # how long a login lasts
+  invite_code_length: 8      # team invite codes, from 31 easily read characters
+  max_skills_per_entry: 20   # skill scores in one synced session entry...
+  max_skill_id_chars: 64     # ...and the length of each skill id
+  login_failures: [5, 900]   # wrong passwords for one email within this many seconds before it is locked for the rest
 
 rate_limits:         # [max_requests, window_seconds] per client IP; bucket names are used in the routes
   buy_init: [10, 60]   # buy mode: starting a session
   buy_chat: [60, 60]   # buy mode: chat, edit and coach
   sell: [30, 60]       # sell mode: every rate-limited sell route
   calls: [20, 60]      # reading an uploaded call transcript (each read parses up to calls.max_chars)
-  account: [10, 60]    # sign up, log in, teams (slows password guessing; each check costs ~50 ms of scrypt)
+  login: [10, 60]      # log in and delete account (each password check costs ~50 ms of scrypt)
+  signup: [5, 60]      # sign up
+  team: [20, 60]       # create, join, leave, remove, new invite code
   knowledge: [10, 60]  # both modes: custom product knowledge
   feedback: [5, 300]   # both modes: feedback form
   speech: [40, 60]     # both modes: replies read aloud

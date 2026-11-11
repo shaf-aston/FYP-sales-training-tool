@@ -119,3 +119,11 @@ def safe_latency_ms(value) -> float | None:
         return round(float(value), 1)
     except (TypeError, ValueError):
         return None
+
+
+def json_body() -> dict:
+    """The request's JSON object, or {} for no body, bad JSON or JSON that is not an object."""
+    from flask import request
+
+    data = request.get_json(silent=True)
+    return data if isinstance(data, dict) else {}

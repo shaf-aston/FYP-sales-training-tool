@@ -33,12 +33,14 @@ CUSTOM_BUYER_INVALID = "That buyer can't be used: {detail}"
 # Accounts and teams (/api/account, /api/team)
 LOGIN_REQUIRED = "Log in to use this."
 BAD_LOGIN = "That email and password don't match an account."
+LOGIN_LOCKED = "Too many wrong passwords for this email. Wait 15 minutes and try again."
 PASSWORD_WRONG = "That password isn't right."
 ACCOUNT_FIELD_ERRORS = {
     ("email", "invalid"): "Enter a valid email address.",
     ("email", "taken"): "There's already an account with that email. Log in instead.",
     ("name", "invalid"): "Enter your name (up to 60 characters).",
     ("password", "too_short"): "Use at least 8 characters for your password.",
+    ("password", "too_long"): "Use at most 256 characters for your password.",
 }
 SKILL_ENTRIES_INVALID = "Those scores couldn't be saved: send up to {max} entries in the skill log format."
 PROSPECTS_FULL = "You've saved {max} prospects. Delete one to save another."
@@ -48,6 +50,8 @@ TEAM_ERRORS = {
     "already_in_team": "You're already in a team. Leave it first.",
     "unknown_code": "No team has that invite code. Check it with your manager.",
     "not_in_team": "You're not in a team.",
+    "not_manager": "Only the team's manager can do that.",
+    "not_a_member": "That person isn't in your team.",
 }
 
 # Uploaded calls (/api/calls)

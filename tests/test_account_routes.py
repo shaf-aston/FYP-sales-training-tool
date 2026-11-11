@@ -44,7 +44,7 @@ def test_signup_errors_name_the_field(app_client):
 @pytest.mark.parametrize("method, path", [
     ("get", "/api/account/skills"), ("post", "/api/account/skills"), ("get", "/api/account/prospects"),
     ("post", "/api/account/prospects"), ("delete", "/api/account/prospects/1"), ("get", "/api/account/export"),
-    ("post", "/api/account/delete"), ("get", "/api/team"), ("post", "/api/team/create"), ("post", "/api/team/join"),
+    ("post", "/api/account/delete"), ("get", "/api/team"), ("post", "/api/team/create"), ("post", "/api/team/join"), ("post", "/api/team/remove"), ("post", "/api/team/code"),
 ])
 def test_everything_kept_needs_a_login(app_client, method, path):
     response = getattr(app_client(), method)(path, json={})
@@ -102,3 +102,57 @@ def test_managers_see_the_team_and_its_code_reps_do_not(app_client):
     assert {m["name"] for m in as_boss["members"]} == {"Boss", "Rep"} and as_boss["team"]["invite_code"] == code
     assert [m["name"] for m in as_rep["members"]] == ["Boss"] and as_rep["team"]["invite_code"] is None
     assert "email" not in as_rep["members"][0]
+
+
+
+# --- regressions from review ---
+
+def test_a_cookie_from_before_logout_stops_working(app_client):
+    c = app_client()
+    signup(c)
+    copied = c.get_cookie("session").value
+    c.post("/api/account/logout")
+    thief = app_client()
+    thief.set_cookie("session", copied)
+    assert thief.get("/api/account/me").get_json()["user"] is None
+
+
+def test_wrong_passwords_lock_the_email_not_the_server(app_client):
+    signup(app_client())
+    c = app_client()
+    from core.infra.constants import LOGIN_FAILURES
+
+    for _ in range(LOGIN_FAILURES):
+        assert c.post("/api/account/login", json={"email": "ann@x.co", "password": "nope-nope"}).status_code == 401
+    locked = c.post("/api/account/login", json={"email": "ann@x.co", "password": "longenough"})
+    assert locked.status_code == 429 and locked.get_json()["code"] == "LOGIN_LOCKED"
+    assert c.post("/api/account/login", json={"email": "other@x.co", "password": "whatever1"}).status_code == 401
+
+
+@pytest.mark.parametrize("payload", [{"email": 5, "password": "x"}, {"email": "a@b.co", "password": ["x"]}, ["list"]])
+def test_odd_login_bodies_get_a_clean_401(app_client, payload):
+    assert app_client().post("/api/account/login", json=payload).status_code == 401
+
+
+def test_managers_remove_members_and_replace_the_code(app_client):
+    boss, member = app_client(), app_client()
+    signup(boss, "boss@x.co", "Boss")
+    signup(member, "m@x.co", "Mem")
+    code = boss.post("/api/team/create", json={"name": "Closers"}).get_json()["team"]["invite_code"]
+    member.post("/api/team/join", json={"code": code})
+    member_id = member.get("/api/account/me").get_json()["user"]["id"]
+    assert member.post("/api/team/code").get_json()["code"] == "NOT_MANAGER"
+    assert boss.post("/api/team/remove", json={"user_id": member_id}).status_code == 200
+    assert boss.post("/api/team/code").get_json()["invite_code"] != code
+
+
+def test_an_empty_or_short_key_file_gets_a_whole_new_key(tmp_path, monkeypatch):
+    from backend.auth import _secret_key
+
+    monkeypatch.delenv("SECRET_KEY", raising=False)
+    key_file = tmp_path / "data" / ".secret_key"
+    key_file.parent.mkdir()
+    key_file.write_text("")
+    first = _secret_key(key_file)
+    assert len(first) >= 32 and _secret_key(key_file) == first      # made once, then read back
+    assert oct(key_file.stat().st_mode & 0o777) == "0o600"

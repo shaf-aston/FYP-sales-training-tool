@@ -4,7 +4,7 @@ import pytest
 from core.accounts.db import MIGRATIONS, database
 from core.accounts.library import Library, LibraryError
 from core.accounts.passwords import check_password, hash_password
-from core.accounts.teams import MANAGER, REP, TeamError, Teams
+from core.accounts.teams import MANAGER, MEMBER, TeamError, Teams
 from core.accounts.users import AccountError, Users
 
 
@@ -61,8 +61,8 @@ def test_teams_have_one_manager_and_reps_join_by_code(db):
     made = teams.create(boss.id, "Closers")
     assert made.role == MANAGER and len(made.invite_code) == 8
     joined = teams.join(rep.id, made.invite_code.lower())
-    assert joined.role == REP and joined.team_id == made.team_id
-    assert [(m.name, m.role) for m in teams.members(made.team_id)] == [("Boss", MANAGER), ("Rep", REP)]
+    assert joined.role == MEMBER and joined.team_id == made.team_id
+    assert [(m.name, m.role) for m in teams.members(made.team_id)] == [("Boss", MANAGER), ("Rep", MEMBER)]
     with pytest.raises(TeamError):
         teams.join(rep.id, made.invite_code)
     with pytest.raises(TeamError):
@@ -125,3 +125,94 @@ def test_prospects_are_private_and_capped(db, monkeypatch):
     assert library.prospects(bob.id) == []
     assert not library.delete_prospect(bob.id, saved["id"])   # someone else's prospect
     assert library.delete_prospect(ann.id, saved["id"])
+
+
+
+# --- regressions from review ---
+
+def test_racing_signups_for_one_email_make_one_account_and_no_errors(db):
+    import threading
+
+    results = []
+
+    def go():
+        try:
+            Users(db).create("race@x.co", "Racer", "longenough")
+            results.append("ok")
+        except AccountError as e:
+            results.append(e.code)
+
+    threads = [threading.Thread(target=go) for _ in range(6)]
+    [t.start() for t in threads]
+    [t.join() for t in threads]
+    assert sorted(results) == ["ok"] + ["taken"] * 5
+
+
+def test_racing_first_use_migrates_once(tmp_path, monkeypatch):
+    import threading
+
+    from core.accounts.db import reset_database
+
+    monkeypatch.setenv("DB_PATH", str(tmp_path / "cold.db"))
+    reset_database()
+    errors = []
+
+    def go():
+        try:
+            database()
+        except Exception as e:   # noqa: BLE001 - the test collects any failure
+            errors.append(e)
+
+    threads = [threading.Thread(target=go) for _ in range(8)]
+    [t.start() for t in threads]
+    [t.join() for t in threads]
+    assert errors == [] and database().migrate() == len(MIGRATIONS)
+
+
+def test_a_deleted_account_leaves_no_text_in_the_file(db):
+    users = Users(db)
+    ann = users.create("secret-person@x.co", "Zebediah Quux", "longenough")
+    Library(db).save_prospect(ann.id, {"name": "Xylophonist Dan"})
+    users.delete(ann.id)
+    raw = b"".join(p.read_bytes() for p in db.path.parent.glob(db.path.name + "*"))
+    for text in (b"secret-person@x.co", b"Zebediah Quux", b"Xylophonist Dan"):
+        assert text not in raw
+
+
+@pytest.mark.parametrize("email, name, password", [(5, "Ann", "longenough"), ("a@b.co", ["x"], "longenough"),
+                                                   ("a@b.co", "Ann", 12345678), ("a@b.co", "Ann", "x" * 300)])
+def test_non_text_or_oversized_fields_are_refused_cleanly(db, email, name, password):
+    with pytest.raises(AccountError):
+        Users(db).create(email, name, password)
+    assert Users(db).authenticate(email, password) is None
+
+
+def test_a_far_future_skill_entry_is_refused(db):
+    ann = Users(db).create("a@b.co", "Ann", "longenough")
+    with pytest.raises(LibraryError):
+        Library(db).add_skill_entries(ann.id, [entry(at=10**30)])
+
+
+def test_the_last_manager_leaving_hands_over_and_managers_control_the_team(db):
+    users, teams = Users(db), Teams(db)
+    boss, a, b = (users.create(f"{n}@x.co", n, "longenough") for n in ("boss", "a", "b"))
+    made = teams.create(boss.id, "Closers")
+    teams.join(a.id, made.invite_code)
+    teams.join(b.id, made.invite_code)
+    with pytest.raises(TeamError):
+        teams.remove(a.id, b.id)             # a member can't remove anyone
+    teams.remove(boss.id, b.id)
+    assert teams.membership(b.id) is None
+    fresh = teams.new_code(boss.id)
+    with pytest.raises(TeamError):
+        teams.join(b.id, made.invite_code)   # the old code stopped working
+    teams.join(b.id, fresh)
+    teams.leave(boss.id)
+    assert teams.membership(a.id).role == MANAGER   # longest-standing member takes over
+
+
+def test_ending_sessions_bumps_the_version(db):
+    users = Users(db)
+    ann = users.create("a@b.co", "Ann", "longenough")
+    users.end_sessions(ann.id)
+    assert users.get(ann.id).session_version == ann.session_version + 1

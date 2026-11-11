@@ -6,6 +6,6 @@ backend/routes/account.py and team.py call these stores and decide what a reques
   db.py         the database file, connections, and schema migrations (one list, applied in order)
   passwords.py  password hashing (scrypt) and checking
   users.py      sign up, log in, look up, delete (deleting a user deletes everything kept for them)
-  teams.py      a team with an invite code; members are reps or managers
+  teams.py      a team with an invite code; each person in it is a member or a manager
   library.py    a learner's skill history and saved prospects
 """

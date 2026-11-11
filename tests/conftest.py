@@ -42,13 +42,15 @@ LLM_PROVIDER_TYPES["dummy"] = DummyProvider
 
 @pytest.fixture(autouse=True)
 def accounts_db(tmp_path, monkeypatch):
-    """Every test gets its own empty accounts database; the login cookie works over the test client's http."""
-    from core.accounts.db import database
+    """Every test gets its own empty accounts database and login throttle."""
+    from backend.auth import login_throttle
+    from core.accounts.db import reset_database
 
     monkeypatch.setenv("DB_PATH", str(tmp_path / "accounts.db"))
-    database.cache_clear()
+    reset_database()
+    login_throttle._failures.clear()
     yield
-    database.cache_clear()
+    reset_database()
 
 
 @pytest.fixture(autouse=True)
