@@ -45,4 +45,5 @@ def transcribe(audio: bytes, filename: str) -> list[Segment]:
         raise TranscriptionUnavailable(str(e)) from e
     segments = _field(result, "segments") or []
     out = [Segment(float(_field(s, "start") or 0), str(_field(s, "text") or "").strip()) for s in segments]
-    return [s for s in out if s.text]
+    # Silence and noise come back as segments of only punctuation ("."): there were no words in them.
+    return [s for s in out if any(c.isalnum() for c in s.text)]
