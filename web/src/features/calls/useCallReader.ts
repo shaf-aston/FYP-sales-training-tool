@@ -3,11 +3,12 @@
 // State for "From a real call": the transcript the learner brings, the server's reading of it,
 // and the prospect they edit before practising. Every change happens in an event handler.
 
-import { useRef, useState } from "react";
-import { api, errorText } from "@/lib/api/client";
+import { useState } from "react";
+import { api } from "@/lib/api/client";
 import type { CallProfile, CallReadRes, CallReq, CustomBuyer, Difficulty } from "@/lib/api/types";
 import { config } from "@/lib/config";
 import { hasExt, listOf, megabytes, readText } from "@/lib/files";
+import { useJob } from "@/lib/useJob";
 
 /** The prospect as the learner edits it: the buyer to practise against, plus how hard they are. */
 export interface ProspectDraft extends CustomBuyer {
@@ -21,7 +22,7 @@ export interface CallResult {
 }
 
 /** "audio": a recording is being turned into text (the slow one: about a minute per hour of audio). */
-type Busy = "file" | "audio" | "sample" | "read" | null;
+type Busy = "file" | "audio" | "sample" | "read";
 
 const { accept, maxFileBytes, audio } = config.calls;
 /** Everything the drop zone takes: transcripts and recordings. */
@@ -61,28 +62,9 @@ export function useCallReader() {
   const [filename, setFilename] = useState<string | undefined>();
   const [result, setResult] = useState<CallResult | null>(null);
   const [draft, setDraft] = useState<ProspectDraft | null>(null);
-  const [busy, setBusy] = useState<Busy>(null);
-  const [error, setError] = useState("");
+  const { busy, error, setError, run, cancel } = useJob<Busy>();
   /** The transcript came from a recording, so its speaker names were guessed by AI. */
   const [aiLabelled, setAiLabelled] = useState(false);
-  /** Bumped by every new job (and by "back"), so a late answer from an old one is dropped. */
-  const ticket = useRef(0);
-
-  /** Runs one job with busy and error handling; resolves undefined when it failed or was replaced. */
-  const run = async <R>(kind: Busy, job: () => Promise<R>, fallback: string): Promise<R | undefined> => {
-    const my = ++ticket.current;
-    setBusy(kind);
-    setError("");
-    try {
-      const out = await job();
-      return my === ticket.current ? out : undefined;
-    } catch (err) {
-      if (my === ticket.current) setError(errorText(err, fallback));
-    } finally {
-      if (my === ticket.current) setBusy(null);
-    }
-  };
-
   const read = async (call: CallReq) => {
     const res = await run("read", () => api.callsRead(call), "Couldn't read that call. Try again.");
     if (!res) return;
@@ -140,11 +122,9 @@ export function useCallReader() {
     edit: (patch: Partial<ProspectDraft>) => setDraft((d) => d && { ...d, ...patch }),
     /** Back to the transcript box (the text stays). */
     back: () => {
-      ticket.current++;
+      cancel();
       setResult(null);
       setDraft(null);
-      setBusy(null);
-      setError("");
     },
     acceptAll,
   };
