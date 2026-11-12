@@ -1,6 +1,6 @@
 # What's left: step-by-step plan
 
-Status on 12 Nov 2026: all 10 roadmap steps are built, and 57 of 66 sub-steps are done (`docs/roadmap.html`).
+Status on 12 Nov 2026: all 10 roadmap steps are built, and 58 of 66 sub-steps are done (`docs/roadmap.html`).
 This plan covers everything still open, in build order. Done items are marked **✓ done** with where they landed.
 
 Each item lists **why**, **steps**, **files**, **done when** and **needs**.
@@ -58,14 +58,14 @@ Steps:
 
 ### 1.2 Platform hardening · R
 **✓ 1 (backups), 3 (real IP) and 4 (embedder) done** in PR #102. The VM also had its database file readable by every
-user; it is now 0600. 2 needs the Vercel deploy hook; 5 is below.
+user; it is now 0600. **✓ 2 (deploy order) done** without a deploy hook: the deploy workflow already uploads the web
+with the Vercel CLI, so its web job now waits for the VM job. 5 is below.
 1. **Database backups.**
    - Nightly `sqlite3 .backup` on the VM with 7 days kept, as a systemd timer installed by `scripts/deploy_vm.sh`.
    - Done when a restore of last night's backup on a copy works.
    - Needs nothing: it goes through the `vm-run` workflow.
 2. **Deploy order.**
-   - The web (Vercel) can be live before the API (VM). Gate the Vercel deploy on the API by turning off Vercel's git auto-deploy (`vercel.json` `git.deploymentEnabled: false`) and calling a Vercel deploy hook at the end of `deploy.yml`.
-   - Needs the user to create a deploy hook in Vercel and save it as the GitHub secret `VERCEL_DEPLOY_HOOK`.
+   - The web (Vercel) could go live before the API (VM). ✓ `deploy.yml`'s web job now `needs: vm` (a failed VM deploy holds the web back; an unset-up VM does not), and `web/public/vercel.json` sets `git.deploymentEnabled: false`, so Vercel never deploys from git on its own.
 3. **The visitor's real IP behind the proxies.**
    - Rate limits and the login throttle should read the client IP from Caddy's `X-Forwarded-For`, but only when it comes from Caddy (`TRUST_PROXY_HEADERS=1` on the VM).
    - Done when two requests from different IPs hit separate rate buckets.
@@ -79,7 +79,13 @@ user; it is now 0600. 2 needs the Vercel deploy hook; 5 is below.
    - Done when a 60-minute MP3 over 25 MB reads: `tests/test_calls_audio_parts.py` makes one and reads it wherever ffmpeg is installed.
    - ffmpeg on the VM: `scripts/install_ffmpeg.sh`, run by every deploy. Until it is there, recordings over 25 MB are refused as before.
 
-### 1.3 Rep's words, round 2 · R
+### 1.3 Rep's words, round 2 · R · ✓ done
+**✓ done:** server in `rep_words.py` (`Match.probe`, `with_words(probes=)`), `seller.checked_words`, migration 2
+(`rep_words` table, `teams.words`), `/api/account/words`, `/api/team/words`; web in `features/repWords/`
+(`KeepWords.tsx`: save, saved list, team words; `words.ts`: the chat tag, found client-side, so no step per reply
+from the server). The Playwright journey covers save → use → the "Maya's words" tag → team words for a member →
+the script's words sticking in that tab.
+
 1. **Save a rep's words to the account**, like saved prospects: `library.py` gets a `rep_words` table (migration), with a list, use and delete in the tool.
 2. **Team words.** A manager sets the team's words (from their best rep's call or the team SOP), and members' new buy calls use them by default.
 3. **Show which lines were someone's words** in the chat: a small "Maya's words" tag on those seller bubbles. The server returns the step per reply.
@@ -131,7 +137,7 @@ Both are off by default, carry an "AI-written" note, and fall back to the rules'
 ## Phase 5: user actions (no code)
 1. **Groq console:** accept the terms for `canopylabs/orpheus-v1-english`, so server voice works (now it's the browser voice).
 2. **Netlify:** unlink the repo. Its failing checks on PRs are not ours.
-3. **Vercel deploy hook** for 1.2.2.
+3. ~~Vercel deploy hook for 1.2.2~~: not needed (see 1.2.2).
 4. **Google login (optional):** an OAuth client ID and secret. Magic links need an email sender (Resend or Postmark API key).
 5. **Fathom transcripts** for Phase 2, and **Kaggle** access for Phase 3.
 

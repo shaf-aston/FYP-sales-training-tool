@@ -62,6 +62,8 @@ Rule: modes are named for the learner; engines and stores for the AI (`seller_se
 | **member** | The other team role (never "rep", which is the salesperson in an uploaded call). | `teams.MEMBER` |
 | **team insights** | A manager's view: each member's skill **levels** (average of recent sessions), the team's, and coaching **guidelines** from rules. | `core/training/team_insights.py`, `config/insights.yaml`, `/api/team/insights` |
 | **saved prospect** | A custom buyer kept in the learner's account to practise against again. | `core/accounts/library.py`, `/api/account/prospects` |
+| **saved words** | A Rep's words choice (product, whose, the questions and their probes) kept in the learner's account to start a call in again. | `library.py` `rep_words`, `/api/account/words`, web `repWords/KeepWords.tsx` |
+| **team words** | Rep's words a manager sets for the team: members' new buy calls on that product use them unless the tab chose other words or the script's own. | `teams.set_words`, `/api/team/words`, `/api/account/me` `team.words` |
 
 ## Uploaded calls
 
@@ -98,7 +100,8 @@ Rule: modes are named for the learner; engines and stores for the AI (`seller_se
 | **echo budget / moment / quote** | How often their own words are said back: always at a **moment** step (`moment: true`, the goal question), else a short **quote** within the limits in `echo.py`'s docstring. A refused blank → `say_plain`. | `echo.py`, `engine.yaml` `echo_*`, method `moment` |
 | **meaning bank / meaning line** | Prewritten lines for what an answer means (family duty, bills, no time, ...), picked by the matcher; said in its own bubble before the next question, each once a call. Shows they were heard without quoting them. | `config/script/meanings.yaml`, `meanings.py` |
 | **buyer move** | What the sell-mode buyer does this turn, decided by rules: share, guard, stall, ask or lean in. A real prospect's line says it when one fits; otherwise the AI words it, told the move. | `sell_mode/buyer_moves.py`, `buyer_lines.py`, `config/prospect_lines.yaml` |
-| **rep's words** | A step's question said in someone else's words: a top rep's (from a real call) or the team SOP's. Only question steps take them, only when the meaning matches; the script still runs the call. | `script_engine/rep_words.py`, `/api/buy/words`, web `features/repWords/` |
+| **rep's words** | A step's question said in someone else's words: a top rep's (from a real call) or the team SOP's. Only question steps take them, only when the meaning matches; the script still runs the call. A seller line said in them is tagged ("Maya's words") in the chat. | `script_engine/rep_words.py`, `/api/buy/words`, web `features/repWords/` |
+| **probe (rep's words)** | The source asking a step's question a second time in other words: said first when that step is asked again. | `rep_words.match` `Match.probe`, `with_words(probes=)` |
 | **shared answer (`like`)** | One list of examples per meaning heard on many steps (yes, no, a "jumping in?" yes or no). A route takes it with `like: <name>`, plus examples of its own, so a fix reaches every step at once. | `script/answers.yaml`; method `listen.<label>.like` |
 | **route min_score** | A floor on a labelled route: a weaker match is no match (the judge is never offered it), so the step's other answer path takes it. | method `listen.<label>.min_score` |
 | **tone marks** | `_word_` stress (italics), `==words==` the key thing (soft highlight), `¶` a pause (new bubble after typing dots). One stress a line at most; AI, coach and voice get `plain` text. | `tone.py`, web `lib/tone.ts` |

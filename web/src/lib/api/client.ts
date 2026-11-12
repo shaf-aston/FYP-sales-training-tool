@@ -92,12 +92,12 @@ export function createHttpApi() {
     // Buy mode: the learner is the customer, the AI seller sells.
     /** A saved session's id restores it; otherwise a new call, selling `productType`, in `words` ({step: question}) if given. */
     /** Start a call, or restore `sessionId`; the product and words start a new one if the server forgot it. */
-    buyInit: (sessionId?: string | null, productType?: string | null, words?: { words: Record<string, string>; label: string }) =>
+    buyInit: (sessionId?: string | null, productType?: string | null, words?: Omit<T.WordsChoice, "product">) =>
       request<T.InitRes>("/api/buy/init", {
         body: {
           ...(sessionId ? { session_id: sessionId } : {}),
           ...(productType ? { product_type: productType } : {}),
-          ...(words ? { words: words.words, label: words.label } : {}),
+          ...(words ? { words: words.words, label: words.label, probes: words.probes } : {}),
         },
       }),
     buyWordsSample: (source: "call" | "sop") =>
@@ -177,6 +177,9 @@ export function createHttpApi() {
     accountSaveProspect: (profile: T.CustomBuyer) =>
       request<{ success: true; prospect: T.SavedProspect }>("/api/account/prospects", { body: { profile } }),
     accountDeleteProspect: (id: number) => request<{ success: true }>(`/api/account/prospects/${id}`, { method: "DELETE" }),
+    accountWords: () => request<{ success: true; words: T.SavedWords[] }>("/api/account/words"),
+    accountSaveWords: (choice: T.WordsChoice) => request<{ success: true; words: T.SavedWords }>("/api/account/words", { body: { choice } }),
+    accountDeleteWords: (id: number) => request<{ success: true }>(`/api/account/words/${id}`, { method: "DELETE" }),
 
     // Team: a manager creates one and shares the invite code; reps join with it.
     team: () => request<{ success: true; team: T.Team | null; members: T.TeamMember[] }>("/api/team"),
@@ -184,6 +187,8 @@ export function createHttpApi() {
     teamJoin: (code: string) => request<{ success: true; team: T.Team }>("/api/team/join", { body: { code } }),
     teamLeave: () => request<{ success: true }>("/api/team/leave", { body: {} }),
     teamRemove: (userId: number) => request<{ success: true }>("/api/team/remove", { body: { user_id: userId } }),
+    /** A manager sets the team's Rep's words, or clears them (null). */
+    teamWords: (choice: T.WordsChoice | null) => request<{ success: true; team: T.Team }>("/api/team/words", { body: { choice } }),
     teamNewCode: () => request<{ success: true; invite_code: string }>("/api/team/code", { body: {} }),
     teamInsights: (target?: number) => request<T.TeamInsights>(`/api/team/insights${target ? `?target=${target}` : ""}`),
 

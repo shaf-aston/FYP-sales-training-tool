@@ -37,6 +37,8 @@ export interface InitRes extends BotState {
   words?: Record<string, string>;
   /** Whose those words are ("Maya", "your SOP"), as the client named them when the call started. */
   words_label?: string;
+  /** The same steps asked again in their words ({step: question}). */
+  probes?: Record<string, string>;
 }
 
 /** One of the script's questions the rep can ask in someone else's words (POST /api/buy/words). */
@@ -51,6 +53,27 @@ export interface RepWordsMatch {
   theirs: string;
   /** How alike the two are, 0-1. */
   score: number;
+  /** The source asking the same again in other words ("" when it doesn't): said when the step is asked again. */
+  probe: string;
+}
+
+/** Someone's words as kept: in this tab, saved to an account, or set for a team. */
+export interface WordsChoice {
+  /** The product (script) the words were matched against: other products' calls use the script's own. */
+  product: string;
+  /** Whose words, for the learner: "Maya" (a call's rep) or "your SOP". */
+  label: string;
+  /** {step: question} said instead of the script's. */
+  words: Record<string, string>;
+  /** {step: question} said when those steps are asked again (only steps in `words`). */
+  probes: Record<string, string>;
+}
+
+/** A WordsChoice saved to the account (GET /api/account/words). */
+export interface SavedWords extends WordsChoice {
+  id: number;
+  /** Seconds since epoch. */
+  created_at: number;
 }
 
 /** Where the rep's words come from: a real call (its top rep) or an SOP outline (from /api/sop/read). */
@@ -390,6 +413,8 @@ export interface Team {
   name: string;
   role: "member" | "manager";
   invite_code: string | null;
+  /** The team's Rep's words, set by a manager (null: none): members' new calls on that product use them. */
+  words: WordsChoice | null;
 }
 
 /** Who is logged in (nulls when no one is): /api/account/me, signup and login. */
@@ -443,6 +468,7 @@ export interface SavedProspect {
 export interface AccountExport extends AccountMe {
   skills: SkillEntry[];
   prospects: SavedProspect[];
+  words: SavedWords[];
 }
 
 export type KnowledgeField =

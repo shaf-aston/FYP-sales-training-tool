@@ -102,3 +102,97 @@
   flex-wrap: wrap;
   gap: var(--space-3);
 }
+/* The source asking the same again in other words: said when the step is asked again. */
+.probe {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+/* Save and team actions under the words in use. */
+.keep {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  flex-basis: 100%;
+}
+/* The team's words: a quiet line under the words in use. */
+.team {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-faint);
+  background: var(--bg-card-soft);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+}
+.team > span {
+  flex: 1 1 12rem;
+}
+
+/* Saved words: the same rows as saved prospects. */
+.saved {
+  display: grid;
+  gap: var(--space-2);
+  animation: fade-in var(--dur-base) var(--ease-out);
+}
+.label {
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+.savedList {
+  list-style: none;
+  display: grid;
+  gap: var(--space-2);
+}
+/* Whose words and their first question on the left, Use and × on the right. */
+.item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) 0 var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-faint);
+  background: var(--bg-card-soft);
+  animation: message-in var(--dur-base) var(--ease-out);
+}
+.itemText {
+  display: grid;
+  min-width: 0;
+}
+.itemName {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+.itemLine {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.remove {
+  display: grid;
+  place-items: center;
+  width: var(--touch-target);
+  height: var(--touch-target);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--text-muted);
+  font-size: var(--text-lg);
+  line-height: 1;
+  transition: color var(--dur-fast), background var(--dur-fast);
+}
+.remove:hover:not(:disabled) {
+  color: var(--danger-text);
+  background: var(--danger-soft);
+}

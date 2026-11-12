@@ -1,5 +1,6 @@
-# After CI passes on master: update the Oracle VM, upload web/out to Vercel,
-# then check both live sites really run this commit. Fails loudly if not.
+# After CI passes on master: update the Oracle VM, then (once the API runs this commit) upload web/out to Vercel,
+# then check both live sites really run this commit. Fails loudly if not. This is the only way the web deploys:
+# web/public/vercel.json turns off Vercel's own deploys from git, so pages never go live ahead of the API.
 # The VM job skips itself until the setup below is done; a warning then says if the live API is behind.
 #
 # One-time setup (GitHub repo → Settings → Secrets and variables → Actions). Full guide: docs/SETUP.md
@@ -60,7 +61,10 @@ jobs:
           echo "::warning title=API not deployed::VM_APP_DIR is not set, so the VM was not updated. Live API runs '$v', master is $SHA. Deploy by hand or set the variables (docs/SETUP.md)."
 
   web:
-    if: vars.SITE_URL != '' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
+    # after the API: pages that call a new endpoint must not go live while the VM still runs the old code.
+    # A skipped vm job (VM not set up) does not hold the web back; a failed one does.
+    needs: vm
+    if: ${{ !failure() && !cancelled() && vars.SITE_URL != '' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success') }}
     runs-on: ubuntu-latest
     env:
       VERCEL_ORG_ID: team_1dnaG1QOb0ATRNLYbKwA00nY
