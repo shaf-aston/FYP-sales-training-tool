@@ -5,6 +5,7 @@ import { Badge, Button, Notice, TextInput, useConfirm, useToast } from "@/compon
 import { api, errorText } from "@/lib/api/client";
 import type { Team, TeamMember } from "@/lib/api/types";
 import { config } from "@/lib/config";
+import { useUi } from "@/state/UiContext";
 import { useAccount } from "./AccountContext";
 import s from "./AccountDialog.module.css";
 
@@ -61,6 +62,7 @@ function InTeam({ team }: { team: Team }) {
   const confirm = useConfirm();
   const [members, setMembers] = useState<TeamMember[] | null>(null);
   const [reload, setReload] = useState(0);
+  const { openDialog } = useUi();
   const manager = team.role === "manager";
 
   useEffect(() => {
@@ -172,6 +174,11 @@ function InTeam({ team }: { team: Team }) {
             ))}
           </ul>
         )
+      )}
+      {manager && (
+        <Button className={s.start} onClick={() => openDialog("insights")}>
+          Team insights
+        </Button>
       )}
       <Button variant="ghost" className={s.flush} onClick={leave}>
         Leave team

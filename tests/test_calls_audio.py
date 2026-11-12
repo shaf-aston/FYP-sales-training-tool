@@ -135,7 +135,7 @@ def test_the_engine_reply_becomes_timed_segments(monkeypatch):
 
         def create(self, **kw):
             assert kw["response_format"] == "verbose_json" and kw["model"] == TRANSCRIPTION["model"]
-            return type("R", (), {"segments": [{"start": 1.5, "text": " Hello there. "}, {"start": 3, "text": "  "}]})()
+            return type("R", (), {"segments": [{"start": 1.5, "text": " Hello there. "}, {"start": 3, "text": "  "}, {"start": 4, "text": " . "}, {"start": 5, "text": "..."}]})()
 
     monkeypatch.setattr(engine, "Groq", FakeGroq)
     monkeypatch.setattr(engine, "get_groq_api_keys", lambda: ["k"])

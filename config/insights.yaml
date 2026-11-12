@@ -1,0 +1,16 @@
+# Manager insights (core/training/team_insights.py): the numbers come from members' skill history, the coaching
+# guidelines from these rules. No AI: every guideline names the numbers behind it.
+
+window: 5            # a member's skill level = the average of their last this-many scored sessions
+inactive_days: 7     # no scored session for this long = not practising
+min_sessions: 2      # fewer than this and a member's levels are too early to judge (shown, not ranked)
+rising_points: 8     # a skill's recent average up this much on the one before = worth recognising
+
+# Each guideline is used when its rule holds; {blanks} are filled from the numbers. Shown in this order.
+guidelines:
+  team_gap: "Most of the team is below target on {skill}: {below} of {judged} members average under {target}. Run a group session on it: \"{tip}\""
+  member_gap: "{name} is furthest below target on {skill} (averaging {score}, target {target}). Give them a practice session on it."
+  rising: "{name} improved {skill} by {change} points over their recent sessions. Worth recognising."
+  inactive: "{count} {members} {have} not practised in {days} days: {names}."
+  too_early: "{count} {members} {have} fewer than {min} scored sessions, so their levels aren't shown in rankings yet: {names}."
+  all_met: "Everyone judged is at or above target on every skill. Raise the target to keep stretching."

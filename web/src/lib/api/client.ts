@@ -173,6 +173,7 @@ export function createHttpApi() {
     teamLeave: () => request<{ success: true }>("/api/team/leave", { body: {} }),
     teamRemove: (userId: number) => request<{ success: true }>("/api/team/remove", { body: { user_id: userId } }),
     teamNewCode: () => request<{ success: true; invite_code: string }>("/api/team/code", { body: {} }),
+    teamInsights: (target?: number) => request<T.TeamInsights>(`/api/team/insights${target ? `?target=${target}` : ""}`),
 
     // Shared
     /** The text as audio, or null when the server has no voice for it (the browser reads it instead). */

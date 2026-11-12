@@ -22,7 +22,7 @@ Each folder holds one job; its `__init__.py` says which. Imports point down or i
 ```
 core/
   infra/        plumbing, no sales knowledge: env, constants, loader, utils, logs/, providers/ (LLM, speech, router)
-  training/     learner tools both modes use: turn_rating, quiz, drills
+  training/     learner tools both modes use: turn_rating, quiz, drills, team_insights (a manager's view)
   sell_mode/    learner sells, AI buys: buyer_*, sell_service, sell_evaluator, session_review, knowledge, real_calls, custom_buyer
   calls/        an uploaded real call, no AI: transcript (parsers), roles (rep / prospect), profile, reader (the one entry)
   accounts/     what is kept for a learner, SQLite: db (file, migrations), passwords, users, teams, library
@@ -146,7 +146,9 @@ working. Routes in `backend/routes/account.py` and `team.py` call the stores in 
 Flask. `db.py` keeps one SQLite file (`DB_PATH`), a short connection per use (`connect(write=True)` takes the write
 lock first, so a check-then-insert cannot race), WAL, and `secure_delete`; a migration is appended to `MIGRATIONS`,
 never edited once shipped. Deleting an account deletes everything kept for it and checkpoints the log. A team always
-keeps a manager (`teams.keep_a_manager`). Wrong passwords are capped per email (`auth.LoginThrottle`).
+keeps a manager (`teams.keep_a_manager`). Managers get insights (`/api/team/insights`, `.csv`):
+`core/training/team_insights.py` turns members' synced skill history into levels (recent averages) and coaching
+guidelines, every guideline a sentence from `config/insights.yaml` filled with the numbers that triggered it. Wrong passwords are capped per email (`auth.LoginThrottle`).
 
 ## Adding a product or script
 

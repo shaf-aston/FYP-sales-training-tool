@@ -137,7 +137,7 @@ footer{font-size:12px;color:var(--muted)}
     <div class="duo">
       <div class="role"><div class="who">ICON_person<span>You are the <b>prospect</b></span></div><div class="who">ICON_bot<span>A virtual <b>rep</b> sells to you</span></div><span class="tag">Buy mode · building now</span><p>Hear how a good rep sells. Learn the script from the other side.</p></div>
       <svg class="i swap" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4L3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/></svg>
-      <div class="role"><div class="who">ICON_person<span>You are the <b>salesperson</b></span></div><div class="who">ICON_bot<span>A virtual <b>prospect</b> pushes back</span></div><span class="tag">Sell mode · next</span><p>Practise selling. Upload a real call and the prospect becomes that exact buyer.</p></div>
+      <div class="role"><div class="who">ICON_person<span>You are the <b>salesperson</b></span></div><div class="who">ICON_bot<span>A virtual <b>prospect</b> pushes back</span></div><span class="tag">Sell mode · live</span><p>Practise selling. Upload a real call and the prospect becomes that exact buyer.</p></div>
     </div>
   </section>
 
@@ -153,8 +153,8 @@ footer{font-size:12px;color:var(--muted)}
 
   <section class="stats" aria-label="Summary">
     <div class="stat"><b>10</b><span>steps, 4 modules</span></div>
-    <div class="stat"><b>11–14 wk</b><span>one developer</span></div>
-    <div class="stat"><b>~3 wk</b><span>to upload-a-call demo</span></div>
+    <div class="stat"><b id="stepsdone">–</b><span>steps built</span></div>
+    <div class="stat"><b>Live</b><span>upload a call, today</span></div>
     <div class="stat"><b id="donepct">–</b><span>sub-steps already built</span></div>
   </section>
 
@@ -222,40 +222,40 @@ const steps=[
   how:"Rules pick the buyer's next move. Real prospect lines say it. Groq only fills gaps.",
   subs:[["Personas and difficulty","R",1],["Readiness, objections, opening and closing lines","R",1],["Real objections from Fathom","R",1],["Turn-by-turn review, drills, quiz","R",1],["One switch to swap roles","R"],["Rules choose the next move from readiness: object, ask, warm up, stall, agree","R"],["Say it with a real prospect line that fits the move and topic","M"],["Groq writes the line only when nothing fits","G"],["Check realism against real calls: reply length, questions, objection rate","R"]],
   have:["Sell mode","Buyer state and readiness","Turn rating"],out:"Faster, cheaper replies that sound like real buyers"},
- {k:"upload",t:"Upload a call → it becomes that prospect",e:"~2 wk",st:"new",
+ {k:"upload",t:"Upload a call → it becomes that prospect",e:"done",st:"built",
   why:"Practise against the buyer you actually lost, set up automatically.",
   how:"No Groq needed. The same call always gives the same profile.",
-  subs:[["Upload a transcript: Fathom, Zoom, VTT, SRT or text","R"],["Find the rep: your name, or the speaker asking most questions. One tap to correct","R"],["Spot objections: phrase lists first, then a trained classifier","M"],["Pull facts: budget, prices, team size, dates, competitors","R"],["Set difficulty from behaviour: pushback, short replies, hedging","R"],["Pick the pains in their own words: the sentences that best match pain examples","M"],["Profile card the rep can edit","R"],["Start the roleplay as that prospect","R"],["Option: start from where the real call turned","R"],["Save to a prospect library","R"]],
+  subs:[["Upload a transcript: Fathom, Otter, Gong, Zoom, Teams, Meet, VTT, SRT or text","R",1],["Find the rep: your name, or the speaker asking most questions. One tap to correct","R",1],["Spot objections with phrase lists","R",1],["Trained objection classifier (Kaggle)","M"],["Pull budget, needs and pains in their own words, with the quotes","R",1],["Set difficulty from behaviour: pushback, short replies, hedging","R",1],["Profile card the rep can edit","R",1],["Start the roleplay as that prospect","R",1],["Start from where the real call turned","R",1],["Save to a prospect library","R",1]],
   have:["Persona format","Objection types","Meaning matcher"],out:"Upload, confirm, practise in under a minute"},
- {k:"review",t:"Call review",e:"~1 wk",st:"new",
+ {k:"review",t:"Call review",e:"done",st:"built",
   why:"Shows where a real call was won or lost, and which moment to replay.",
-  subs:[["Rate every rep line with the existing judge","R"],["Calibrate thresholds on 10–20 real Fathom calls","R"],["Tag each turn's stage: example matching, then a trained classifier","M"],["Mark turning points from readiness swings","R"],["\"Replay from here\" button into step 4","R"]],
+  subs:[["Rate every rep line with the existing judge","R",1],["Mark turning points from readiness swings","R",1],["\"Replay from here\" into the roleplay","R",1],["Calibrate thresholds on 10–20 real Fathom calls (needs the call data)","R"],["Tag each turn's stage with a trained classifier","M"]],
   have:["Turn rating","Pivotal moments"],out:"Every rep line rated, the turning points marked"},
  {mod:"Platform"},
- {k:"lock",t:"Accounts, database, privacy",e:"1.5–2 wk",st:"new",
+ {k:"lock",t:"Accounts, database, privacy",e:"done",st:"built",
   why:"Calls, prospects and progress must be saved per person and team.",
-  subs:[["Login: magic link or Google","R"],["Database: users, teams, calls, sessions, prospects","R"],["Background jobs for long tasks","R"],["Consent, retention period, delete button","R"],["Remove names and numbers before anything reaches Groq","R"]],
-  have:["Nothing yet: server memory and browser storage only"],out:"Saved history and safe handling of recordings"},
- {k:"mic",t:"Audio upload",e:"3–5 days",st:"new",
+  subs:[["Login with email and password, signed cookie, sign out everywhere","R",1],["Database: users, teams, prospects, skill history","R",1],["Delete account: data wiped from disk too","R",1],["Nothing stored from uploaded calls unless you save the prospect","R",1],["Google or magic-link login","R"],["Daily database backups","R"]],
+  have:["SQLite on the server"],out:"Saved history and safe handling of recordings"},
+ {k:"mic",t:"Audio upload",e:"done",st:"built",
   why:"Most reps have recordings, not transcripts.",
-  how:"Turning speech into text needs a speech model. Groq is fastest; our own is free but slower.",
-  subs:[["Speech to text: Groq Whisper, or Whisper on our server","G"],["Split long files into chunks","R"],["Who is speaking: separate stereo channels when recorded that way","R"],["Otherwise a speaker model, tested on Kaggle first","M"]],
+  how:"Groq Whisper turns speech into text; Groq labels who spoke, and the rep checks the labels before anything is read.",
+  subs:[["Speech to text: Groq Whisper, up to 25 MB","G",1],["Who is speaking: labelled per segment, flagged when unsure","G",1],["Check and fix the transcript before reading it","R",1],["Split files over 25 MB into chunks","R"],["Speaker model of our own, tested on Kaggle first","M"]],
   have:["Groq key"],out:"Drop in an MP3 and everything above works"},
  {mod:"Skill Radar · personal growth"},
- {k:"radar",t:"Skill Radar",e:"1.5–2 wk",st:"new",
+ {k:"radar",t:"Skill Radar",e:"done",st:"built",
   why:"Targeted improvement: find each rep's weakest skill, set a target, train exactly that.",
   how:"All rules. Built on scores the app already computes.",
-  subs:[["Skill scores per session: questions, listening, objections, closing","R"],["Radar chart and trend over time","R"],["Rep sets targets, e.g. win 70% of price objections","R"],["Weakest skill picks the next drills and prospects","R"],["Weekly progress summary from templates","R"]],
+  subs:[["Skill scores per session: questions, listening, objections, closing","R",1],["Radar chart and trend over time","R",1],["Targets per skill","R",1],["Weakest skill picks the next practice","R",1],["Progress: latest session against the recent ones","R",1],["Synced to your account when signed in","R",1]],
   have:["Turn rating scores","Spaced drills","Analytics events"],out:"Each rep knows their next skill to fix, and sees it improve"},
  {mod:"Business"},
- {k:"doc",t:"SOP review",e:"1.5–2 wk",st:"new",
+ {k:"doc",t:"SOP review",e:"done",st:"built",
   why:"Check the playbook, then check calls against it.",
-  subs:[["Read PDF and DOCX","R"],["Headings and lists become stages and steps","R"],["Checklist against CAT and Impact: is each element there?","M"],["Score each call: does a rep line match each step's meaning?","M"],["Optional written critique","G"],["Virtual rep (step 2) sells using the SOP","R"]],
+  subs:[["Read PDF, DOCX, Markdown and text","R",1],["Headings and lists become stages and steps","R",1],["Checklist: is each core element there? Phrase rules first, meaning match second","M",1],["Score each call: which steps a rep line covered, with the line","M",1],["Optional written critique","G"],["Virtual rep (step 2) sells using the SOP","R"]],
   have:["Script stages","Method configs","Meaning matcher"],out:"A playbook report and an adherence score per call"},
- {k:"team",t:"Manager insights",e:"2–3 wk",st:"new",
+ {k:"team",t:"Manager insights",e:"done",st:"built",
   why:"Turns every rep's Skill Radar into coaching for the team.",
-  subs:[["Rep and manager roles","R"],["Team dashboard built on Skill Radar","R"],["Compare reps and spot team-wide gaps","R"],["Coaching guidelines from rules: if a skill is below target, assign this","R"],["Optional plain-English rewrite","G"],["Export CSV","R"]],
-  have:["Analytics events"],out:"Managers see what to train, by whom, with evidence"}
+  subs:[["Member and manager roles, join code","R",1],["Team view built on Skill Radar","R",1],["Compare reps and spot team-wide gaps","R",1],["Coaching guidelines from rules: below target, practise this","R",1],["Export CSV","R",1],["Optional plain-English rewrite","G"]],
+  have:["Skill Radar","Accounts and teams"],out:"Managers see what to train, by whom, with evidence"}
 ];
 const models=[
  {t:"Objection classifier",use:"Steps 3, 4, 5",data:"Fathom objections, already labelled by type",how:"TF-IDF + logistic regression first; under 1 MB, about 1 ms",why:"Replaces phrase lists that miss new wording"},
@@ -267,6 +267,7 @@ const MN={R:"Rules",M:"Our model",G:"Groq"};
 document.getElementById("models").innerHTML=models.map(m=>`<div class="model"><h3>${m.t}</h3><p>${m.why}</p><dl><dt>Used in</dt><dd>${m.use}</dd><dt>Data</dt><dd>${m.data}</dd><dt>Build</dt><dd>${m.how}</dd></dl></div>`).join("");
 const all=steps.filter(s=>s.subs).flatMap(s=>s.subs),cnt={R:0,M:0,G:0};all.forEach(x=>cnt[x[1]]++);
 document.getElementById("donepct").textContent=all.filter(x=>x[2]).length+" of "+all.length;
+document.getElementById("stepsdone").textContent=steps.filter(s=>s.st==="built").length+" of "+steps.filter(s=>s.subs).length;
 const col={R:"var(--done)",M:"var(--accent2)",G:"var(--warn)"};
 document.getElementById("bar").innerHTML=["R","M","G"].map(k=>`<i style="width:${cnt[k]/all.length*100}%;background:${col[k]}"></i>`).join("");
 document.getElementById("barkey").innerHTML=["R","M","G"].map(k=>`<span><b style="color:${col[k]}">${cnt[k]}</b> ${MN[k]}</span>`).join("")+`<span>${Math.round((cnt.R+cnt.M)/all.length*100)}% of sub-steps need no Groq</span>`;

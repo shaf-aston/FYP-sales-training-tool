@@ -19,21 +19,29 @@ interface Props {
  */
 export function Dialog({ open, onClose, title, children, actions, size = "md" }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
+  const wanted = useRef(open);
   const titleId = useId();
 
   useEffect(() => {
+    wanted.current = open;
     const el = ref.current;
     if (!el) return;
     if (open && !el.open) el.showModal();
     if (!open && el.open) el.close();
   }, [open]);
 
+  // The browser's "close" also fires when this dialog is closed because `open` went false (e.g. one dialog opening
+  // another). Only a close the learner made (Escape) is reported, or it would close the dialog that just opened.
+  const closed = () => {
+    if (wanted.current) onClose();
+  };
+
   return (
     <dialog
       ref={ref}
       className={`${s.dialog} ${s[size]}`}
       aria-labelledby={titleId}
-      onClose={onClose}
+      onClose={closed}
       onClick={(e) => e.target === ref.current && onClose()}
     >
       <div className={s.card}>

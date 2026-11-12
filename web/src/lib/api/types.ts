@@ -360,6 +360,31 @@ export interface TeamMember {
   email?: string;
 }
 
+/** One member in a manager's insights: skill levels are their recent averages (config/insights.yaml window). */
+export interface MemberInsight {
+  user_id: number;
+  name: string;
+  sessions: number;
+  /** Latest scored session, ms since epoch. */
+  last_at: number | null;
+  levels: Record<string, number>;
+  weakest: string | null;
+  /** Enough sessions to rank. */
+  judged: boolean;
+}
+
+export interface TeamInsights {
+  success: true;
+  target: number;
+  targets: number[];
+  skills: Skill[];
+  /** Skill id -> the team's average level (members with enough sessions). */
+  team: Record<string, number>;
+  members: MemberInsight[];
+  /** Coaching guidelines, each with the numbers behind it. */
+  guidelines: string[];
+}
+
 /** A custom buyer kept to practise against again. Blank text fields are not stored. */
 export interface SavedProspect {
   id: number;
