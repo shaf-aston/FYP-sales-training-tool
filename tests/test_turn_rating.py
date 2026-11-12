@@ -194,3 +194,10 @@ def test_asking_about_the_last_one_is_not_pressure():
 def test_buy_now_is_pressure():
     """Live, 12 Nov: "Buy now." got "Sure. I'm not convinced yet though." rather than the pushback lines."""
     assert "pressure" in rate_turn("Buy now.", "", 3).signals
+
+
+def test_shared_function_words_are_not_listening():
+    """Live, 12 Nov: a pitch after a pushback was told "Good listening" for echoing "that's" and "what"."""
+    buyer = "That's a lot of pressure for a first conversation. I've seen similar options for less. What justifies the premium?"
+    assert "mirroring" not in rate_turn("It's $4,000 for the year. That's a great deal for what you get.", buyer, 2).signals
+    assert "mirroring" in rate_turn("Similar options for less? What made those feel like the right price?", buyer, 2).signals
