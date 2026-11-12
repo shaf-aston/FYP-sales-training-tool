@@ -216,3 +216,21 @@ def test_a_manager_sets_the_teams_words_and_members_get_them(app_client):
     assert rep.get("/api/account/me").get_json()["team"]["words"]["words"] == CHOICE["words"]
     assert boss.post("/api/team/words", json={"choice": None}).get_json()["team"]["words"] is None
     assert rep.get("/api/account/me").get_json()["team"]["words"] is None
+
+
+def test_a_deleted_accounts_cookie_never_signs_in_as_the_next_account(app_client):
+    """SQLite hands the newest deleted id to the next account; the old cookie must not follow it."""
+    from core.accounts.db import database
+
+    laptop, phone = app_client(), app_client()
+    signup(laptop, "gone@x.co")
+    with database().connect(write=True) as conn:   # made a while ago, so the next sign-up is not the same second
+        conn.execute("UPDATE users SET created_at = created_at - 100 WHERE email = 'gone@x.co'")
+    for device in (laptop, phone):
+        device.post("/api/account/login", json={"email": "gone@x.co", "password": "longenough"})
+    gone_id = phone.get("/api/account/me").get_json()["user"]["id"]
+    assert laptop.post("/api/account/delete", json={"password": "longenough"}).status_code == 200
+    newcomer = app_client()
+    signup(newcomer, "new@x.co", "New")
+    assert newcomer.get("/api/account/me").get_json()["user"]["id"] == gone_id   # the id came back
+    assert phone.get("/api/account/me").get_json()["user"] is None              # the old cookie did not

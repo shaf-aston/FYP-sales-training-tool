@@ -409,6 +409,15 @@ export interface AccountUser {
   id: number;
   email: string;
   name: string;
+  /** False for an account made by an email link or Google: it signs in only that way. */
+  has_password: boolean;
+}
+
+/** Which ways of signing in without a password the server has set up. */
+export interface SignInOptions {
+  success: true;
+  link: boolean;
+  google: boolean;
 }
 
 /** The learner's team. Only a manager gets the invite code. */

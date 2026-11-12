@@ -84,3 +84,31 @@
   justify-self: start;
   margin-inline-start: calc(var(--space-4) * -1);
 }
+
+.or {
+  margin: 0;
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+.google {
+  display: block;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  text-align: center;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+.google:hover,
+.google:focus-visible {
+  background: var(--bg-card-soft);
+}
+.sent {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--success-soft);
+  font-size: var(--text-sm);
+}

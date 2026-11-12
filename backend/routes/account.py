@@ -10,10 +10,10 @@ from core.accounts.teams import Teams
 from core.accounts.users import AccountError, Users
 from core.buy_mode.script_engine.rep_words import RepWordsError
 from core.buy_mode.script_engine.seller import checked_words
-from core.infra.constants import MAX_SAVED_PROSPECTS, MAX_SAVED_WORDS, MAX_SKILL_ENTRIES
+from core.infra.constants import FRESH_LOGIN_MINUTES, MAX_SAVED_PROSPECTS, MAX_SAVED_WORDS, MAX_SKILL_ENTRIES
 from core.sell_mode.custom_buyer import InvalidCustomBuyer, parse_custom_buyer
 
-from ..auth import current_user, log_in, log_out, login_throttle, require_user
+from ..auth import current_user, log_in, log_out, login_throttle, require_user, signed_in_recently
 from ..messages import (
     ACCOUNT_FIELD_ERRORS,
     BAD_LOGIN,
@@ -22,6 +22,7 @@ from ..messages import (
     PASSWORD_WRONG,
     PROSPECT_NOT_FOUND,
     PROSPECTS_FULL,
+    SIGN_IN_AGAIN,
     WORDS_FULL,
     WORDS_INVALID,
     WORDS_NOT_FOUND,
@@ -87,7 +88,10 @@ def logout():
 @require_user
 def delete(user):
     """Delete the account and everything kept for it. Asks for the password, so a left-open laptop can't."""
-    if Users(database()).authenticate(user.email, json_body().get("password")) is None:
+    if not user.has_password:
+        if not signed_in_recently(FRESH_LOGIN_MINUTES):
+            return jsonify({"error": SIGN_IN_AGAIN, "code": "SIGN_IN_AGAIN"}), 403
+    elif Users(database()).authenticate(user.email, json_body().get("password")) is None:
         return jsonify({"error": PASSWORD_WRONG, "code": "PASSWORD_WRONG"}), 403
     Users(database()).delete(user.id)
     log_out()

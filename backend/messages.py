@@ -113,3 +113,11 @@ SESSION_ENDED = "Session has ended. Get evaluation or reset."
 NO_TURNS_YET = "Say a few things to the buyer first - the quiz uses your own turns."
 TURN_NOT_IN_SESSION = "That turn is not part of this session."
 TURN_REQUIRED = "A turn number is required."
+
+# Signing in without a password (backend/routes/sign_in.py)
+SIGN_IN_OFF = "That way of signing in isn't set up here. Use your email and password."
+LINK_EMAIL_INVALID = "Enter a valid email address."
+LINK_LIMIT = "We've sent a few links to that address already. Use the newest one, or try again in an hour."
+LINK_NOT_SENT = "We couldn't send the email just now. Try again in a minute."
+LINK_INVALID = "That sign-in link has expired or was already used. Ask for a new one."
+SIGN_IN_AGAIN = "For safety, sign in again (a new email link or Google), then delete within 10 minutes."

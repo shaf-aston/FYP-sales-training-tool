@@ -16,7 +16,7 @@ if str(ROOT_DIR) not in sys.path:
 from backend.messages import INTERNAL_SERVER_ERROR, REQUEST_TOO_LARGE  # noqa: E402
 from backend.request_log import RequestLog, configure_logging  # noqa: E402
 from backend.auth import init_auth  # noqa: E402
-from backend.routes import account, buy, calls, knowledge, monitoring, sell, sop, speech, team  # noqa: E402
+from backend.routes import account, buy, calls, knowledge, monitoring, sell, sign_in, sop, speech, team  # noqa: E402
 from backend.routes._utils import Sessions  # noqa: E402
 from backend.security import (  # noqa: E402
     SecurityHeadersMiddleware,
@@ -94,6 +94,7 @@ app.extensions["sessions"] = Sessions(seller=seller_sessions, buyer=buyer_sessio
 app.register_blueprint(buy.bp)  # /api/buy/*: learner is the customer
 app.register_blueprint(sell.bp)  # /api/sell/*: learner is the salesperson
 app.register_blueprint(knowledge.bp)  # /api/knowledge
+app.register_blueprint(sign_in.bp)  # /api/account: email links, Google
 app.register_blueprint(monitoring.bp)  # /api/health, /api/feedback
 app.register_blueprint(speech.bp)  # /api/speech: replies read aloud
 app.register_blueprint(calls.bp)  # /api/calls/*: read and review an uploaded real call

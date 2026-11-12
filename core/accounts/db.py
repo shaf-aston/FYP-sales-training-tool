@@ -74,6 +74,19 @@ MIGRATIONS: tuple[str, ...] = (
     """
     ALTER TABLE users ADD COLUMN knowledge TEXT;
     """,
+    # 4: signing in without a password: one-time email links (only a hash of each is kept), and accounts made that
+    # way (or with Google) that have no password of their own
+    """
+    CREATE TABLE sign_in_links (
+        token_hash TEXT PRIMARY KEY,
+        email TEXT NOT NULL COLLATE NOCASE,
+        created_at INTEGER NOT NULL,
+        expires_at INTEGER NOT NULL,
+        used_at INTEGER
+    );
+    CREATE INDEX sign_in_links_by_email ON sign_in_links (email, created_at);
+    ALTER TABLE users ADD COLUMN has_password INTEGER NOT NULL DEFAULT 1;
+    """,
 )
 
 

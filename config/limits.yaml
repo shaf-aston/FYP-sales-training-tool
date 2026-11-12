@@ -72,6 +72,8 @@ accounts:
   max_skills_per_entry: 20   # skill scores in one synced session entry...
   max_skill_id_chars: 64     # ...and the length of each skill id
   login_failures: [5, 900]   # wrong passwords for one email within this many seconds before it is locked for the rest
+  sign_in_links: {minutes: 15, per_window: 3, window_minutes: 60}   # one-time email links: how long one works, how many an address gets per window
+  fresh_login_minutes: 10    # an account with no password (email link, Google) can be deleted within this long of signing in
 
 rate_limit_peer_factor: 10   # one connecting address (a Vercel edge, or a caller naming many visitors) gets this many times a bucket's limit
 
