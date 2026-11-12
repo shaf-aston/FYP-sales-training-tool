@@ -33,6 +33,37 @@ export interface InitRes extends BotState {
   training?: CoachNotes;
   /** What the rep is selling on this call (an id from /api/buy/products). */
   product_type?: string;
+  /** The script questions this call asks in someone else's words ({step: question}; empty: the script's own). */
+  words?: Record<string, string>;
+}
+
+/** One of the script's questions the rep can ask in someone else's words (POST /api/buy/words). */
+export interface RepWordsMatch {
+  step: string;
+  /** The step's name in the script ("" when it has none). */
+  name: string;
+  stage: string;
+  /** The script's question there. */
+  script: string;
+  /** The top rep's or the SOP's question that asks the same thing. */
+  theirs: string;
+  /** How alike the two are, 0-1. */
+  score: number;
+}
+
+/** Where the rep's words come from: a real call (its top rep) or an SOP outline (from /api/sop/read). */
+export type RepWordsReq = { product_type: string | null } & ({ call: CallReq } | { stages: SopStage[] });
+
+export interface RepWordsRes {
+  success: true;
+  product_type: string;
+  /** The rep's name in the call (null for an SOP). */
+  rep: string | null;
+  /** Questions found in the source. */
+  questions: number;
+  /** Question steps in the script. */
+  steps: number;
+  matches: RepWordsMatch[];
 }
 
 /** Something the rep can sell in buy mode; each runs its own call script. */

@@ -127,6 +127,8 @@ export const config = {
 export const storageKeys = {
   buySessionId: "salesRoleplaySessionId",
   buyProduct: "buyProduct",
+  /** sessionStorage: the rep's words for new calls ({ product, label, words }), set from the Rep's words tool. */
+  buyWords: "buyWords",
   sidebarTab: "sidebarTab",
   sellSettings: "sellSettings",
   /** sessionStorage: the live sell call ({ id, pick }), so a reload or Back picks it up again. */

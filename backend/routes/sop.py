@@ -36,7 +36,7 @@ def _outline_json(stages: list[Stage]) -> list[dict]:
     return [{"title": s.title, "steps": s.steps} for s in stages]
 
 
-def _stages_from(data) -> list[Stage] | None:
+def stages_from(data) -> list[Stage] | None:
     """The outline the web sends back (from /read, maybe edited), checked; None when it is the wrong shape."""
     if not isinstance(data, list) or not 0 < len(data) <= SOP_LIMITS["max_stages"]:
         return None
@@ -90,7 +90,7 @@ def check():
     """A call (`call`: {text, rep?}, like /api/calls/read) against an SOP outline (`stages`, from /read): which steps
     the rep carried out, where, and whether in order."""
     data = json_body()
-    stages = _stages_from(data.get("stages"))
+    stages = stages_from(data.get("stages"))
     if stages is None:
         return jsonify({"error": SOP_OUTLINE_INVALID, "code": "SOP_OUTLINE_INVALID"}), 400
     call = data.get("call") if isinstance(data.get("call"), dict) else {}

@@ -129,6 +129,17 @@ security:
     base-uri: ["'self'"]
     form-action: ["'self'"]
 
+rep_words:           # buy mode: the rep says a top rep's or an SOP's questions (core/buy_mode/script_engine/rep_words.py)
+  min_score: 0.8       # how alike a source question and the script's must be to swap. Measured on 29 labelled rep
+                       # questions and 21 off-script ones (tests/test_rep_words.py): no wrong swap from 0.78 up with the
+                       # sure_score guard; recall 0.83 (cat) and 0.82 (impact) at 0.8
+  sure_score: 0.9      # below this, both must ask for the same sort of answer (why / how much / yes-no ...): bge
+                       # put "How would that make you feel?" at 0.84 to "Why do you feel it would?"
+  max_lines: 60        # questions one call may take from a source (a script has about 50 question steps)
+  max_chars: 200       # one borrowed question
+  min_words: 3         # "Why?" alone says nothing about which step it belongs to
+  max_words: 40
+
 sop:                 # a team's sales SOP (core/sop)
   max_bytes: 5000000       # an SOP file (PDF, DOCX, text)
   max_unzipped_bytes: 20000000   # a DOCX part unpacking past this is refused unread (a zip bomb)

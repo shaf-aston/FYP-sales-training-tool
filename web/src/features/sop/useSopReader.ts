@@ -11,7 +11,8 @@ import { useJob } from "@/lib/useJob";
 
 const { accept, maxBytes } = config.sop;
 
-export function useSopReader() {
+/** `sample`: what "Try a sample SOP" loads (default: the SOP review's sample). */
+export function useSopReader(sample: () => Promise<{ text: string; filename: string }> = api.sopSample) {
   const [text, setText] = useState("");
   const [result, setResult] = useState<SopReadRes | null>(null);
   /** Where the SOP came from (a file name or "Pasted SOP"), shown above the result. */
@@ -45,7 +46,7 @@ export function useSopReader() {
     readText: () => read({ text }, "Pasted SOP"),
     /** The sample SOP goes in the box and is read at once. */
     loadSample: async () => {
-      const res = await run("sample", api.sopSample, "Couldn't load the sample SOP.");
+      const res = await run("sample", sample, "Couldn't load the sample SOP.");
       if (!res) return;
       setText(res.text);
       await read({ text: res.text }, res.filename);
