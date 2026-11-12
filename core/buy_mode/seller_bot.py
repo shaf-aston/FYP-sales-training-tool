@@ -29,17 +29,18 @@ class ChatResponse:
 class SellerBot:
     """Runs one scripted sales call and logs each turn."""
 
-    def __init__(self, provider_type=None, product_type=None, session_id=None, words=None):
-        """`words`: {step id: question} said in place of the script's (a top rep's or an SOP's; rep_words.py).
-        Raises RepWordsError for words the script cannot take."""
+    def __init__(self, provider_type=None, product_type=None, session_id=None, words=None, probes=None):
+        """`words`: {step id: question} said in place of the script's (a top rep's or an SOP's; rep_words.py),
+        `probes` those steps asked again in their words. Raises RepWordsError for words the script cannot take."""
         self._router = ProviderRouter(provider_type=provider_type)
         self.session_id = session_id
         tag_session(session_id)
         self.product_type = resolve_product(product_type)  # only scripted products can be sold
         self.logger = logging.LoggerAdapter(_base_logger, {"session_id": session_id or "-"})
         self.call = CallFlow()
-        self.seller = build_seller(self._router, self.product_type, words=words)
+        self.seller = build_seller(self._router, self.product_type, words=words, probes=probes)
         self.words = dict(words or {})
+        self.probes = dict(probes or {}) if words else {}
         self.words_label = ""   # whose words ("Maya", "your SOP"); the init route sets it
         # One per learner turn: the stage and script state right after it, for rewinding.
         self._turn_snapshots = []

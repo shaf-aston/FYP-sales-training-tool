@@ -7,7 +7,7 @@ question the prospect hears. Statements (the pitch, the frame) keep the script's
 
   questions_in(lines)                 the questions in a rep's lines or an SOP's, cleaned
   match(method, questions, embed)     which question steps a source line can take, with how close it is
-  with_words(method, words)           the method with those lines said instead (validated: only question steps)
+  with_words(method, words, probes)   the method with those lines said instead (validated: only question steps)
 
 No mode imports and no AI: the caller passes `embed` (texts -> vectors), as core/sop does.
 """
@@ -58,6 +58,7 @@ class Match:
     script: str     # the script's question there
     theirs: str     # the source's question said instead
     score: float    # how alike the two are, 0-1
+    probe: str = ""   # the source asking the same again in other words: said when the step is asked again
 
 
 def clean(line: str) -> str:
@@ -177,28 +178,48 @@ def match(method: Method, questions: list[str], embed: Embed) -> list[Match]:
         free = [j for j in range(len(questions)) if j not in pairs.values()]
         found = best_pairs([[scores[i][j] for j in free] for i in rows], REP_WORDS["min_score"])
         pairs.update({rows[r]: free[c] for r, c in found.items()})
-    return [Match(s.id, s.name, s.ui_stage, scripted[i], questions[pairs[i]], round(scores[i][pairs[i]], 3))
+    # A source that asks a step's question twice in different words: the second is that step's probe.
+    used, probes = set(pairs.values()), {}
+    for i in sorted(pairs, key=lambda i: -scores[i][pairs[i]]):
+        spare = [j for j in range(len(questions)) if j not in used and scores[i][j] >= REP_WORDS["min_score"]]
+        if spare:
+            probes[i] = max(spare, key=lambda j: scores[i][j])
+            used.add(probes[i])
+    return [Match(s.id, s.name, s.ui_stage, scripted[i], questions[pairs[i]], round(scores[i][pairs[i]], 3),
+                  questions[probes[i]] if i in probes else "")
             for i, s in enumerate(steps) if i in pairs]
 
 
-def with_words(method: Method, words: dict[str, str]) -> Method:
+def _line(step: Step, line) -> str:
+    """One borrowed question for `step`, cleaned, or RepWordsError."""
+    text = clean(line) if isinstance(line, str) else ""
+    if not _is_question(text):
+        raise RepWordsError(f"step {step.id!r}: not a question")
+    if not _fits(step, text):
+        raise RepWordsError(f"step {step.id!r}: needs a yes/no question, or the step's choices")
+    return text
+
+
+def with_words(method: Method, words: dict[str, str], probes: dict[str, str] | None = None) -> Method:
     """The method with `words` ({step id: question}) said in place of those steps' questions; the talk around a
-    question ("Okay. So ...") stays. Raises RepWordsError for a step that cannot take one or a line that is not a
-    question."""
+    question ("Okay. So ...") stays. `probes` ({step id: question}, only for steps in `words`) is said first when
+    that step is asked again, before the script's own probes. Raises RepWordsError for a step that cannot take one
+    or a line that is not a question."""
+    probes = {} if probes is None else probes
     if not isinstance(words, dict) or len(words) > REP_WORDS["max_lines"]:
         raise RepWordsError("too_many")
+    if not isinstance(probes, dict) or not set(probes) <= set(words):
+        raise RepWordsError("probe_without_words")
     open_steps = {s.id for s in askable(method)}
     steps = dict(method.steps)
     for step_id, line in words.items():
         if step_id not in open_steps:
             raise RepWordsError(f"step {step_id!r} asks nothing")
-        text = clean(line) if isinstance(line, str) else ""
-        if not _is_question(text):
-            raise RepWordsError(f"step {step_id!r}: not a question")
         step = steps[step_id]
-        if not _fits(step, text):
-            raise RepWordsError(f"step {step_id!r}: needs a yes/no question, or the step's choices")
+        text = _line(step, line)
+        probe = (_line(step, probes[step_id]),) if step_id in probes else ()
         # The plain line (the same talk without their words said back) gets the same question.
         plain = _swap(step.say_plain, text) if step.say_plain and _asks(step.say_plain) else ""
-        steps[step_id] = replace(step, say=_swap(step.say, text), say_plain=plain, plain_if=step.plain_if if plain else "")
+        steps[step_id] = replace(step, say=_swap(step.say, text), say_plain=plain, plain_if=step.plain_if if plain else "",
+                                 probes=probe + tuple(p for p in step.probes if p not in probe))
     return replace(method, steps=steps)

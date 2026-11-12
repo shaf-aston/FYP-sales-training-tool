@@ -45,6 +45,9 @@ ACCOUNT_FIELD_ERRORS = {
 SKILL_ENTRIES_INVALID = "Those scores couldn't be saved: send up to {max} entries in the skill log format."
 PROSPECTS_FULL = "You've saved {max} prospects. Delete one to save another."
 PROSPECT_NOT_FOUND = "That saved prospect doesn't exist."
+WORDS_FULL = "You've saved {max} sets of questions already. Delete one to save another."
+WORDS_NOT_FOUND = "Those saved questions are gone."
+WORDS_INVALID = "Those questions don't fit the script any more. Match them again."
 TEAM_ERRORS = {
     "name_invalid": "Give the team a name (up to 60 characters).",
     "already_in_team": "You're already in a team. Leave it first.",

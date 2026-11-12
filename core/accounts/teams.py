@@ -4,6 +4,8 @@ the invite code; members see the team's managers only."""
 
 from __future__ import annotations
 
+import json
+
 import secrets
 import sqlite3
 import time
@@ -31,10 +33,12 @@ class Membership:
     invite_code: str
     role: str
     joined_at: int
+    words: str | None = None   # the team's Rep's words, as JSON ({product, label, words, probes}); None: none set
 
     def to_json(self, show_code: bool) -> dict:
         return {"id": self.team_id, "name": self.team_name, "role": self.role, "joined_at": self.joined_at,
-                "invite_code": self.invite_code if show_code else None}
+                "invite_code": self.invite_code if show_code else None,
+                "words": json.loads(self.words) if self.words else None}
 
 
 @dataclass(frozen=True)
@@ -69,7 +73,7 @@ class Teams:
     def membership(self, user_id: int) -> Membership | None:
         with self.db.connect() as conn:
             row = conn.execute(
-                "SELECT t.id, t.name, t.invite_code, m.role, m.joined_at FROM memberships m "
+                "SELECT t.id, t.name, t.invite_code, m.role, m.joined_at, t.words FROM memberships m "
                 "JOIN teams t ON t.id = m.team_id WHERE m.user_id = ?", (user_id,),
             ).fetchone()
         return Membership(*row) if row else None
@@ -99,14 +103,14 @@ class Teams:
             with self.db.connect(write=True) as conn:
                 if conn.execute("SELECT 1 FROM memberships WHERE user_id = ?", (user_id,)).fetchone():
                     raise TeamError("already_in_team")
-                team = conn.execute("SELECT id, name, invite_code FROM teams WHERE invite_code = ?", (code,)).fetchone()
+                team = conn.execute("SELECT id, name, invite_code, words FROM teams WHERE invite_code = ?", (code,)).fetchone()
                 if not team:
                     raise TeamError("unknown_code")
                 conn.execute("INSERT INTO memberships (user_id, team_id, role, joined_at) VALUES (?, ?, ?, ?)",
                              (user_id, team["id"], MEMBER, now))
         except sqlite3.IntegrityError as e:
             raise TeamError("already_in_team") from e
-        return Membership(team["id"], team["name"], team["invite_code"], MEMBER, now)
+        return Membership(team["id"], team["name"], team["invite_code"], MEMBER, now, team["words"])
 
     def leave(self, user_id: int) -> None:
         """Leave the team. A team is never left without a manager: when the last one leaves, the longest-standing
@@ -133,6 +137,13 @@ class Teams:
         with self.db.connect(write=True) as conn:
             conn.execute("UPDATE teams SET invite_code = ? WHERE id = ?", (code, self._managed(conn, manager_id)))
         return code
+
+    def set_words(self, manager_id: int, choice: dict | None) -> None:
+        """A manager sets the team's Rep's words (checked by the caller), or clears them with None. Members' new
+        buy-mode calls use them unless they chose other words."""
+        with self.db.connect(write=True) as conn:
+            conn.execute("UPDATE teams SET words = ? WHERE id = ?",
+                         (json.dumps(choice) if choice else None, self._managed(conn, manager_id)))
 
     def members(self, team_id: int) -> list[Member]:
         """Managers first, then members, each by name."""

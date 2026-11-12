@@ -65,6 +65,7 @@ accounts:
   max_team_name_chars: 60
   max_skill_entries: 200     # per learner, newest kept
   max_saved_prospects: 50    # per learner
+  max_saved_words: 20        # Rep's words choices per learner
   scrypt: {n: 16384, r: 8, p: 1}   # password hashing cost; raising it only affects new hashes
   session_days: 30           # how long a login lasts
   invite_code_length: 8      # team invite codes, from 31 easily read characters

@@ -13,12 +13,14 @@ from flask import Blueprint, Response, jsonify, request
 from core.accounts.db import database
 from core.accounts.library import Library
 from core.accounts.teams import MANAGER, TeamError, Teams
+from core.buy_mode.script_engine.rep_words import RepWordsError
+from core.buy_mode.script_engine.seller import checked_words
 from core.infra.loader import load_yaml
 from core.sell_mode import sell_service
 from core.training.team_insights import build_insights
 
 from ..auth import require_user
-from ..messages import TEAM_ERRORS
+from ..messages import TEAM_ERRORS, WORDS_INVALID
 from ..security import require_rate_limit
 from ._utils import json_body
 
@@ -121,6 +123,25 @@ def _insights(user):
         if entries or m.role != MANAGER:
             members.append((m.user_id, m.name, entries))
     return build_insights(members, offered["skills"], target, int(time.time() * 1000), load_yaml("insights.yaml")), None
+
+
+@bp.route("/words", methods=["POST"])
+@require_rate_limit("team")
+@require_user
+def set_words(user):
+    """A manager sets the team's Rep's words (`choice`: {product, label, words, probes}), or clears them (null).
+    Members' new buy-mode calls on that product use them unless they chose other words."""
+    raw = json_body().get("choice")
+    try:
+        choice = None if raw is None else checked_words(raw)
+    except RepWordsError:
+        return jsonify({"error": WORDS_INVALID, "code": "REP_WORDS_INVALID"}), 400
+    teams = Teams(database())
+    try:
+        teams.set_words(user.id, choice)
+    except TeamError as e:
+        return _error(e)
+    return jsonify({"success": True, "team": teams.membership(user.id).to_json(show_code=True)})
 
 
 @bp.route("/insights", methods=["GET"])
