@@ -1,7 +1,7 @@
 # What's left: step-by-step plan
 
-Status on 12 Nov 2026: all 10 roadmap steps are built (step 2 lands with PR #101), and 51 of 66 sub-steps are done
-(`docs/roadmap.html`). This plan covers everything still open, in build order.
+Status on 12 Nov 2026: all 10 roadmap steps are built, and 57 of 66 sub-steps are done (`docs/roadmap.html`).
+This plan covers everything still open, in build order. Done items are marked **✓ done** with where they landed.
 
 Each item lists **why**, **steps**, **files**, **done when** and **needs**.
 - **Method:** R = rules, M = our own model (Kaggle), G = Groq. Rules come first; Groq only where new sentences must be written.
@@ -9,7 +9,9 @@ Each item lists **why**, **steps**, **files**, **done when** and **needs**.
 
 ---
 
-## Phase 0: finish step 2 (now)
+## Phase 0: finish step 2 (now) · ✓ done
+PR #101 merged after the independent review's fixes; the live check passed (the first question is Maya's, and her
+words survive a reload). Step 2's polish item is ticked.
 
 1. **Merge PR #101 (Rep's words).**
    - Fix whatever the independent review confirms, then merge once CI is green.
@@ -21,6 +23,9 @@ Each item lists **why**, **steps**, **files**, **done when** and **needs**.
 ## Phase 1: no blockers, highest value first
 
 ### 1.1 Sell-mode buyer: rules choose the move (roadmap step 3) · R, then M, then G
+**✓ steps 1–5 and 7 done** (`buyer_moves.py`, `buyer_lines.py`, `config/prospect_lines.yaml`): moves are share, guard,
+stall, ask and lean in (the objection pacer still adds objections). In the scripted test call, 70%+ of replies come from the
+bank with the real model, and a session replays the same way. Step 6 runs on rough bands until the real calls arrive.
 **Why:** Groq still writes the middle of every buyer reply. Moving the decision to rules makes replies faster, free,
 the same on every run, and easier to tune.
 
@@ -52,6 +57,8 @@ Steps:
 - Step 6 needs the real calls from 3.1 for its reference numbers; rough bands can be used until then.
 
 ### 1.2 Platform hardening · R
+**✓ 1 (backups), 3 (real IP) and 4 (embedder) done** in PR #102. The VM also had its database file readable by every
+user; it is now 0600. 2 needs the Vercel deploy hook; 5 is below.
 1. **Database backups.**
    - Nightly `sqlite3 .backup` on the VM with 7 days kept, as a systemd timer installed by `scripts/deploy_vm.sh`.
    - Done when a restore of last night's backup on a copy works.
@@ -84,7 +91,7 @@ Steps:
 
 ### 1.4 Small open items · R
 - Accept the Groq voice terms (user, see Phase 5), then confirm read-aloud returns audio (`POST /api/speech` → 200).
-- Remove the stale worktree in `.claude/worktrees/` (`git worktree prune`).
+- ✓ Stale worktree removed.
 
 ## Phase 2: needs the real calls (Fathom export)
 

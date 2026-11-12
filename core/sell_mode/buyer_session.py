@@ -4,7 +4,10 @@ import logging
 import random
 import time
 
+from core.infra import embedder as meaning_model
 from core.sell_mode.buyer_guardrails import check_buyer_reply
+from core.sell_mode.buyer_lines import pick_line
+from core.sell_mode.buyer_moves import Move, next_move
 from core.sell_mode.buyer_prompt import build_product_context, build_system_prompt
 from core.sell_mode.buyer_record import BuyerRecord
 from core.sell_mode.buyer_rules import ObjectionPacer, coaching_hint, end_outcome
@@ -18,6 +21,9 @@ from core.sell_mode.session_review import build_review
 from core.infra.utils import new_session_id
 
 logger = logging.getLogger(__name__)
+
+# Say real prospect lines when one fits (config/buyer.yaml moves.bank); off, the AI words every move.
+LINE_BANK = load_buyer_config()["moves"]["bank"]
 
 
 class BuyerSession(BuyerRecord):
@@ -73,6 +79,9 @@ class BuyerSession(BuyerRecord):
         self.conversation_history: list[dict] = []
         # What the latest turn did (signal names), for the coaching hint.
         self.last_turn_signals: list[str] = []
+        # The buyer's latest move (buyer_moves.py) and whether a bank line or the AI said it.
+        self.last_move: Move | None = None
+        self.last_source = ""
         self.behaviour_rules = config.get("behaviour_rules", {}).get(difficulty, "")
 
         # Counted at the start as well as the end, or the two can never be
@@ -150,29 +159,35 @@ class BuyerSession(BuyerRecord):
         objection = self.pacer.for_turn(self.state.turn_count)
         self.state.objections_raised = self.pacer.raised_by(self.state.turn_count - 1)
 
-        messages = [{"role": "system", "content": self._system_prompt()}, *self.conversation_history]
+        # Rules decide what the buyer does; a real prospect's line says it when one fits, else the AI words it.
+        move = next_move(self.state.readiness, user_message, self.last_turn_signals, objection is not None)
         start = time.time()
-        try:
-            reply_text = complete(self._router, messages, **LLM["buyer_reply"])
-        except ProviderUnavailable:
-            self._restore(before_turn)
-            raise
+        reply = self._bank_line(move, user_message)
+        source = "bank"
+        if reply is None:
+            source = "ai"
+            messages = [{"role": "system", "content": self._system_prompt(move)}, *self.conversation_history]
+            try:
+                reply_text = complete(self._router, messages, **LLM["buyer_reply"])
+            except ProviderUnavailable:
+                self._restore(before_turn)
+                raise
+            checked = check_buyer_reply(reply_text, self.state.turn_count)
+            if checked.applied_rules:
+                logger.info("buyer reply checks applied: %s", ", ".join(checked.applied_rules))
+            reply = checked.content
         latency = (time.time() - start) * 1000
+        self.last_move, self.last_source = move, source
 
         if objection:
             self.state.objections_raised += 1
-
-        checked = check_buyer_reply(reply_text, self.state.turn_count)
-        if checked.applied_rules:
-            logger.info("buyer reply checks applied: %s", ", ".join(checked.applied_rules))
-        reply = checked.content
-        # The rules own objections: the AI answers the seller, then the scripted
+        # The rules own objections: the reply answers the seller, then the scripted
         # concern is added word for word, so it always comes after an answer.
         if objection:
             reply = f"{reply} {objection['text']}"
 
         self.conversation_history.append({"role": "assistant", "content": reply})
-        self._log_turn_event(user_message, reply, turn_index=self.state.turn_count)
+        self._log_turn_event(user_message, reply, turn_index=self.state.turn_count, move=move.label, source=source)
         self.log_snapshot()
 
         coaching = coaching_hint(self.last_turn_signals) if show_hints else None
@@ -270,15 +285,30 @@ class BuyerSession(BuyerRecord):
             self.last_turn_signals,
         ) = snapshot
 
-    def _system_prompt(self) -> str:
-        """The buyer's instructions for this turn."""
-        return build_system_prompt(
+    def _bank_line(self, move: Move, user_message: str) -> str | None:
+        """A real prospect's line for the move (config/prospect_lines.yaml), or None for the AI to word it."""
+        if not LINE_BANK:
+            return None
+        try:
+            embed = meaning_model.shared_embedder().embed
+        except Exception:   # no meaning model on this machine: pick by the seed alone
+            logger.exception("meaning model unavailable for buyer lines")
+            embed = None
+        return pick_line(move, user_message, self.persona, self.conversation_history, embed,
+                         seed=f"{self.session_id}|{self.state.turn_count}")
+
+    def _system_prompt(self, move: Move | None = None) -> str:
+        """The buyer's instructions for this turn; with a move, what the buyer does is already decided."""
+        prompt = build_system_prompt(
             load_buyer_config()["system_prompt_template"],
             persona=self.persona,
             readiness=self.state.readiness,
             product_context=self.product_context,
             behaviour_rules=self.behaviour_rules,
         )
+        if move is None:
+            return prompt
+        return f"{prompt}\nTHIS TURN: {load_buyer_config()['moves']['instructions'][move.kind]}"
 
     @timed
     def review(self) -> dict:

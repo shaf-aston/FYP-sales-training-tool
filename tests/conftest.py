@@ -190,6 +190,8 @@ def stub_buyer(monkeypatch):
     """Every provider the app builds is this one stub, so a test can steer what the buyer says."""
     provider = StubBuyerProvider()
     monkeypatch.setattr("core.infra.providers.router.create_provider", lambda *_a, **_k: provider)
+    # Every reply comes from the stub, so a test can steer it; tests/test_buyer_lines.py turns the line bank on.
+    monkeypatch.setattr("core.sell_mode.buyer_session.LINE_BANK", False)
     return provider
 
 
