@@ -1,5 +1,11 @@
-"""Turns text into vectors. Recognition only calls embed() and warm(), so another engine can drop in here."""
+"""Turns text into vectors: the one local meaning model, shared by buy mode's hearing, Rep's words, SOP review and
+the sell-mode buyer's lines. Callers only use embed() and warm(), so another engine can drop in here.
+Settings: config/script/engine.yaml `embed_*` (they move to limits.yaml once that file is quiet)."""
 
+from functools import lru_cache
+
+from core.infra.env import ROOT_DIR
+from core.infra.loader import load_yaml
 from core.infra.logs import timed
 
 
@@ -33,3 +39,10 @@ def make_embedder(cfg, root):
     """cfg = script/engine.yaml. The only place that picks the engine."""
     return FastEmbedEmbedder(cfg["embed_model"], root / cfg["embed_cache_dir"],
                              cfg["embed_threads"], cfg["embed_batch_size"])
+
+
+@lru_cache(maxsize=1)
+def shared_embedder():
+    """One model per process: loading it is the slow part. Look it up through this module
+    (`embedder.shared_embedder()`), so tests can swap it."""
+    return make_embedder(load_yaml("script/engine.yaml"), ROOT_DIR)

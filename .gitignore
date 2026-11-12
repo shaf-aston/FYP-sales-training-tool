@@ -27,6 +27,7 @@ sessions/
 analytics/
 feedback.jsonl
 data/logs/
+data/backups/
 data/*.db
 data/*.db-*
 data/.secret_key

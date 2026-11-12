@@ -40,7 +40,7 @@ const SECTIONS: { title: string; items: { term?: string; text: string; keys?: st
     items: [
       { term: "Log in", text: "from the ⋯ menu. Your skill history follows you to any device, and you can save prospects from real calls." },
       { term: "Team", text: "a manager starts one and shares the invite code; reps join with it." },
-      { term: "Your data", text: "download everything kept for you, or delete the account. Call transcripts are never stored." },
+      { term: "Your data", text: "download everything kept for you, or delete the account (it leaves the nightly backups within 7 days). Call transcripts are never stored." },
     ],
   },
   {

@@ -23,7 +23,7 @@ from core.buy_mode.script_engine.engine import (
     question_of,
     start,
 )
-from core.buy_mode.script_engine.hear.embedder import make_embedder
+from core.infra import embedder as meaning_model
 from core.buy_mode.script_engine.rep_words import with_words
 from core.buy_mode.script_engine.hear.meanings import MeaningBank, load_meanings
 from core.buy_mode.script_engine.hear.recognise import Listener
@@ -39,7 +39,6 @@ from core.buy_mode.script_engine.method import (
 from core.buy_mode.script_engine.words import tone
 from core.buy_mode.script_engine.words.echo import Echo, Turn
 from core.buy_mode.script_engine.words.fill import Filler, fix_typos
-from core.infra.env import ROOT_DIR
 from core.infra.loader import load_yaml
 from core.infra.logs import timed
 from core.infra.utils import tokenize
@@ -50,11 +49,6 @@ log = logging.getLogger(__name__)
 def engine_config():
     return load_yaml("script/engine.yaml")
 
-
-@lru_cache(maxsize=1)
-def shared_embedder():
-    """One model per process: loading it is the slow part."""
-    return make_embedder(engine_config(), ROOT_DIR)
 
 
 @lru_cache(maxsize=1)
@@ -91,7 +85,7 @@ def build_seller(router, product, embedder=None, gate=None, words=None):
     method = method_for(product)
     return ScriptSeller(
         cfg, with_words(method, words) if words else method, load_offer(cfg["products"][product]["offer"]),
-        load_common_sense(), embedder or shared_embedder(), (gate or shared_gate()).llm(router),
+        load_common_sense(), embedder or meaning_model.shared_embedder(), (gate or shared_gate()).llm(router),
     )
 
 

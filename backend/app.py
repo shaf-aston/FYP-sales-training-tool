@@ -34,7 +34,7 @@ from core.infra.constants import (  # noqa: E402
     SERVER_PORT,
 )
 from core.infra.env import env_flag, env_str  # noqa: E402
-from core.buy_mode.script_engine.seller import shared_embedder  # noqa: E402
+from core.infra.embedder import shared_embedder  # noqa: E402
 
 configure_logging()  # before Flask, so the app's logger shares the one handler
 

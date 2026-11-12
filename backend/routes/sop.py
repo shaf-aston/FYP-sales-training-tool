@@ -8,6 +8,7 @@ from flask import Blueprint, jsonify, request
 
 from core.calls.errors import CallError
 from core.calls.reader import read_call
+from core.infra import embedder as meaning_model   # looked up per call: tests swap in a fake embedder
 from core.infra.constants import MAX_REQUEST_BYTES, SOP_LIMITS
 from core.infra.loader import CONFIG_DIR, load_yaml
 from core.sop.adherence import check_call
@@ -27,9 +28,7 @@ _DOCUMENT_ERRORS = {"unsupported": SOP_UNSUPPORTED, "unreadable": SOP_UNREADABLE
 
 
 def _embed(texts: list[str]) -> list[list[float]]:
-    from core.buy_mode.script_engine import seller   # looked up per call: tests swap in a fake embedder
-
-    return seller.shared_embedder().embed(texts)
+    return meaning_model.shared_embedder().embed(texts)
 
 
 def _outline_json(stages: list[Stage]) -> list[dict]:

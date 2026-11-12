@@ -9,11 +9,11 @@ from flask import Blueprint, current_app, jsonify, request
 
 from core.buy_mode.coach import COACH_STYLES, DEFAULT_STYLE
 from core.infra.constants import MAX_MESSAGE_LENGTH, MAX_SELLER_SESSIONS
+from core.infra import embedder as meaning_model
 from core.infra.loader import CONFIG_DIR
 from core.training.quiz import get_quiz_question
 from core.buy_mode.seller_bot import SellerBot
 from core.buy_mode.script_engine import rep_words
-from core.buy_mode.script_engine import seller as script_seller
 from core.buy_mode.script_engine.seller import method_for, products as script_products, resolve_product
 from core.calls.errors import CallError
 from core.calls.reader import read_call
@@ -171,7 +171,7 @@ def words():
         return jsonify({"error": REP_WORDS_SOURCE, "code": "REP_WORDS_SOURCE"}), 400
     questions = rep_words.questions_in(lines)
     method = method_for(product)
-    matches = rep_words.match(method, questions, script_seller.shared_embedder().embed)   # looked up per call: tests swap it
+    matches = rep_words.match(method, questions, meaning_model.shared_embedder().embed)   # looked up per call: tests swap it
     return jsonify({
         "success": True,
         "product_type": product,

@@ -41,6 +41,15 @@ branch → PR (template: problem, fix, proof, risk) → **ci** green → merge t
 | `SITE_URL` | variable | `https://eloquence-sales.vercel.app` |
 
 The VM runs the API via gunicorn on `127.0.0.1:8000` under systemd unit `eloquence.service`.
+Its `.env` must have `TRUST_PROXY_HEADERS=1`: the API sits behind Caddy (and Vercel for the website), so without
+it every visitor looks like `127.0.0.1` and shares one rate limit. With it the visitor is Vercel's `X-Real-IP`, and
+each connecting address (the last `X-Forwarded-For` entry, written by Caddy) also gets a looser limit of its own.
+
+**Backups.** Every deploy installs `eloquence-backup.timer` (`scripts/install_backup.sh`): at 03:15 it copies the
+accounts database to `data/backups/eloquence-<date>.db` and keeps the newest 7 (`limits.yaml` `backups.keep`).
+`systemctl list-timers eloquence-backup.timer` shows the next run. To restore one (the API must be stopped):
+`sudo systemctl stop eloquence && .venv/bin/python scripts/backup_db.py restore data/backups/eloquence-<date>.db && sudo systemctl start eloquence`.
+The file it replaces is kept beside it as `eloquence.db.before`.
 `vm-run.yml` (Actions → vm-run) runs any one command on the VM and prints its output.
 
 Only the **deploy** workflow updates the VM, and only after CI passes. The VM used to also have

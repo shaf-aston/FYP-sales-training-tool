@@ -268,7 +268,7 @@ OFF_SCRIPT = [
 @pytest.mark.skipif(os.environ.get("RUN_EMBED_TESTS") != "1", reason="set RUN_EMBED_TESTS=1 (downloads a model)")
 @pytest.mark.parametrize("script", sorted(LABELLED))
 def test_the_threshold_swaps_nothing_wrong_and_most_of_what_fits(script):
-    from core.buy_mode.script_engine.hear.embedder import make_embedder
+    from core.infra.embedder import make_embedder
     from core.buy_mode.script_engine.seller import engine_config
     from core.infra.env import ROOT_DIR
 
@@ -291,7 +291,7 @@ SAMPLE_MATCHES = {   # the samples behind "Try a sample" in the Rep's words tool
 @pytest.mark.skipif(os.environ.get("RUN_EMBED_TESTS") != "1", reason="set RUN_EMBED_TESTS=1 (downloads a model)")
 @pytest.mark.parametrize("source, script", sorted(SAMPLE_MATCHES))
 def test_the_samples_give_the_right_questions(source, script):
-    from core.buy_mode.script_engine.hear.embedder import make_embedder
+    from core.infra.embedder import make_embedder
     from core.buy_mode.script_engine.seller import engine_config
     from core.calls.reader import read_call
     from core.infra.env import ROOT_DIR
