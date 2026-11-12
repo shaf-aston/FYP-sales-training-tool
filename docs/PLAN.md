@@ -159,6 +159,14 @@ The site used as a learner would, on a phone and a desktop, and each problem fix
 3. **"AI" wording** replaced; the landing page lists the newer features.
 4. **A deleted account's cookie signed in as the next new account** (SQLite reuses the newest id): the cookie now
    carries the account's creation time.
+5. **From a second walk-through (a helper, every journey):** End and score now ends the call; a redo in Walk it back
+   carries the chat; objection handling's praise; buy coach notes survive a reload; Jump to step asks first; the
+   quiz no longer spins, and asks the AI as a user message (the server log showed every attempt refused); SOP
+   acknowledgements no longer count as steps; the rep turns back to its question after a side question.
+
+Checked live after PR #107 (12 Nov): the morning's 9-line sell call now answers every question in kind and books the
+walkthrough; knowledge per learner (15 browser checks, throwaway account deleted); the audit fixes (13 checks); the
+SOP critique; no server errors since the deploy; the database on schema 4.
 
 ## Order of work
 1. ✓ Phase 0 (PR #101).

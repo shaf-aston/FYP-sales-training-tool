@@ -114,11 +114,15 @@ prompts:
     Goal: {goal} | Concepts: {concepts}
     <customer>{customer}</customer>
     <learner>{answer}</learner>
+    Write the feedback to the learner as "you", in one or two plain sentences; it follows our own verdict, so add to it
+    rather than grade again.
     JSON: {{"score": <0-100>, "alignment": "strong|partial|weak", "feedback": "<brief>", "strengths": ["..."], "improvements": ["..."]}}
   direction: |-
     Evaluate the learner's understanding in {stage}.
     Goal: {goal} | Advance: {advance_when} | Concepts: {concepts}
     <learner>{answer}</learner>
+    Write the feedback to the learner as "you", in one or two plain sentences; it follows our own verdict, so add to it
+    rather than grade again.
     JSON: {{"score": <0-100>, "understanding": "excellent|good|partial|needs_work", "feedback": "<brief>", "key_concepts_got": ["..."], "key_concepts_missed": ["..."]}}
 
 # Sell mode: the learner is the seller, so the quiz replays one of their own
