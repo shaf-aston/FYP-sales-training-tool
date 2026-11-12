@@ -15,7 +15,12 @@ export function axisPoint(i: number, n: number, value: number, max: number, radi
 
 /** An SVG `points` attribute for one value per axis (a missing value sits at the centre). */
 export function polygon(values: readonly (number | undefined)[], max: number, radius: number): string {
-  return values.map((v, i) => axisPoint(i, values.length, v ?? 0, max, radius)).map((p) => `${p.x},${p.y}`).join(" ");
+  // A skill never measured has no point: drawn at the centre it read as a score of 0.
+  return values
+    .map((v, i) => (v === undefined ? null : axisPoint(i, values.length, v, max, radius)))
+    .filter((p): p is Point => p !== null)
+    .map((p) => `${p.x},${p.y}`)
+    .join(" ");
 }
 
 /** Where an axis label sits, a little outside the chart edge, and how it should anchor so it never overlaps the chart. */

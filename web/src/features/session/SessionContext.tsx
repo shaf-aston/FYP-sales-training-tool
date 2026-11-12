@@ -120,6 +120,10 @@ interface SessionValue {
   startBuyer: (difficulty: Difficulty, productType: string, pick?: BuyerPick) => Promise<boolean>;
   /** End the current buyer and go back to setup. */
   endBuyer: () => void;
+  /** Sell mode: the call was ended and scored ("End and score"): the box locks until a new buyer or a redo. */
+  markSellEnded: (outcome: Outcome) => void;
+  /** Sell mode: take the chat from the server again (after a redo rewrote it). */
+  refreshSell: () => Promise<void>;
   /** Called when a request reports the session is gone. */
   handleExpired: (err: unknown) => boolean;
 }
@@ -296,6 +300,8 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
     started.current = true;
     restoreSell();
   }, [restoreSell, mode]);
+
+  const markSellEnded = useCallback((outcome: Outcome) => setSellSession((p) => p && { ...p, ended: true, outcome }), []);
 
   const handleExpired = useCallback(
     (err: unknown) => {
@@ -544,9 +550,11 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
       jumpTo,
       startBuyer,
       endBuyer,
+      markSellEnded,
+      refreshSell: restoreSell,
       handleExpired,
     }),
-    [mode, buySessionId, buyProduct, repWords, chooseRepWords, stage, coachNotes, messages, typing, sellSession, sellSettings, setSellSettings, send, edit, reset, switchProduct, jumpTo, startBuyer, endBuyer, handleExpired],
+    [mode, buySessionId, buyProduct, repWords, chooseRepWords, stage, coachNotes, messages, typing, sellSession, sellSettings, setSellSettings, send, edit, reset, switchProduct, jumpTo, startBuyer, endBuyer, markSellEnded, restoreSell, handleExpired],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

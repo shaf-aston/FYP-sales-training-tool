@@ -139,8 +139,8 @@ questions:
     - "Where are we in the sale?"
 
   next_move:
-    - "What would you say next to this customer?"
-    - "How would you respond to their last message?"
+    - "If you were the seller, what would you say next?"
+    - "Put yourself in the seller's seat: how would you answer the customer's last message?"
     - "As the salesperson, what's your next response?"
     - "Given the conversation so far, what would be an effective next message?"
 

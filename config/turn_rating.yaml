@@ -104,7 +104,9 @@ pressure:
   - act now
   - today only
   - limited time
-  - last one
+  - last one left     # not "last one": "what stopped the last one from working?" is a good question
+  - only one left
+  - only a few left
   - won't last
   - wont last
   - need to decide

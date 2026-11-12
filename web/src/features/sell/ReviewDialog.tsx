@@ -1,13 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Button, Card, Dialog, Notice, TextArea } from "@/components/ui";
+import { Button, Dialog, Notice, TextArea } from "@/components/ui";
 import { useSession } from "@/features/session/SessionContext";
 import { useUi } from "@/state/UiContext";
 import { api, errorText } from "@/lib/api/client";
 import type { RedoRes, Review, ReviewTurn } from "@/lib/api/types";
 import { config } from "@/lib/config";
-import { gradeOf, useEvalState } from "./evalStore";
+import { evalStore, gradeOf, useEvalState } from "./evalStore";
 import { gradeTone } from "./options";
 import { ReviewLine, ReviewSummary, ReviewTurns } from "./ReviewTurns";
 import s from "./ReviewDialog.module.css";
@@ -58,7 +58,7 @@ function Redo({ turn, laterTurns, done, onDone }: RedoProps) {
       <div className={s.redoResult}>
         <ReviewLine who="You">{sent}</ReviewLine>
         <ReviewLine who="Buyer">{done.message}</ReviewLine>
-        <p className={s.muted}>The conversation now continues from here.</p>
+        <p className={s.muted}>The chat now continues from here: close this to carry on with the buyer.</p>
       </div>
     );
 
@@ -94,7 +94,7 @@ function Redo({ turn, laterTurns, done, onDone }: RedoProps) {
 }
 
 function ReviewBody() {
-  const { sellSession, handleExpired } = useSession();
+  const { sellSession, handleExpired, refreshSell } = useSession();
   const evalState = useEvalState();
   const [load, setLoad] = useState<Load>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
@@ -140,25 +140,23 @@ function ReviewBody() {
     <div className={s.body}>
       <p>{intro(review, gradeOf(evalState))}</p>
       <ReviewSummary review={review} />
-      {redoneTurns.length > 0 && (
-        <Card tone="warning" role="status">
-          <p>
-            The main chat still shows the original conversation, which no longer matches the buyer&apos;s memory. Restarting from here is not
-            supported, so start a new buyer to keep going.
-          </p>
-        </Card>
-      )}
       <ReviewTurns
         review={review}
         seller="You"
         buyer="Buyer"
         cutoff={cutoff}
+        actionOnEveryTurn
         pivotalAction={(t) => (
           <Redo
             turn={t}
             laterTurns={review.turns.length - t.turn}
             done={redone[t.turn]}
-            onDone={(res) => setRedone((r) => ({ ...r, [t.turn]: res }))}
+            onDone={(res) => {
+              setRedone((r) => ({ ...r, [t.turn]: res }));
+              // The chat shows the conversation as the buyer now remembers it, then the old score (for the call
+              // before this redo) goes: in that order, or the still-ended call is scored, and so ended, again.
+              void refreshSell().then(() => evalStore.reset());
+            }}
           />
         )}
       />

@@ -367,7 +367,7 @@ evaluation:
       other: 0.4
     needs_discovery: {base: 35, question_weight: 35, open_weight: 30, good: 0.5}
     rapport_building: {base: 45, rapport_weight: 55, good: 0.4}
-    objection_handling: {no_objection_score: 60, base: 35, response_weight: 65}
+    objection_handling: {no_objection_score: 60, base: 35, response_weight: 65, good: 0.75}
     solution_presentation: {base: 40, solution_weight: 60, good: 0.35}
     conversation_flow: {base: 40, length_weight: 35, balance_weight: 25, good_length_fit: 0.7, good_balance: 0.6}
   # The five criteria (core/sell_mode/sell_evaluator.py scores each by name). weight: share of the overall score;
@@ -392,7 +392,8 @@ evaluation:
     objection_handling:
       weight: 0.20
       label: "objection handling"
-      praise: "No major objections surfaced; neutral handling score."   # shown when the buyer raised none
+      praise: "You met their concerns head on and kept the call moving."   # at or above `good` of objections answered
+      none: "No major objections surfaced; neutral handling score."      # the buyer raised none
       advice: "Acknowledge concerns directly, then reframe toward value and next step."
       tip: "Acknowledge the concern, then reframe with one clear proof point."
       practice: {difficulty: hard, objection: "Honestly, that's more than I was hoping to spend."}
@@ -410,8 +411,9 @@ evaluation:
       advice: "Keep turns concise and balanced so the buyer speaks more."
       tip: "Use shorter turns and one question at a time."
       practice: {difficulty: easy}   # a patient buyer: room to practise short, balanced turns
-  # Wording shared by every criterion. {label} is a criterion's label; {outcome} is sold, walked or active.
+  # Wording shared by every criterion. {label} is a criterion's label; {outcome} is the outcome in words (outcomes).
   feedback:
+    outcomes: {sold: "they said yes", walked: "they walked away", ended: "you ended it before a decision", active: "no decision yet"}
     no_evidence: "Not enough evidence to score this criterion yet."
     neutral: "Measured with a neutral heuristic baseline."
     strength: "Strong {label}."

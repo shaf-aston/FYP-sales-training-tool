@@ -183,3 +183,9 @@ def test_a_plain_open_discovery_question_is_a_good_turn(line):
 def test_asking_how_they_deal_with_it_is_not_a_pitch():
     assert "premature_pitch" not in rate_turn("How do you deal with it at the moment?", "", 0).signals
     assert "premature_pitch" in rate_turn("I can do you a deal on the price today.", "", 0).signals
+
+
+def test_asking_about_the_last_one_is_not_pressure():
+    """Found in the sample call's review: the rep's best question was flagged pushy for "last one"."""
+    assert "pressure" not in rate_turn("Fair question. What stopped the last one from working?", "", 3).signals
+    assert "pressure" in rate_turn("Better hurry, it's the last one left at this price.", "", 3).signals

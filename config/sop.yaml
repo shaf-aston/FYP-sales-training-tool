@@ -19,6 +19,8 @@ condition: "^(if|when|whenever|unless|should|in case)\\b[^,]{0,80},\\s*"
 thresholds:
   element_fallback: 0.8
   adherence: 0.58
+  evidence_min_words: 3   # a shorter statement ("Fair question.", "Got it.") carries no step: it once "asked them to go
+                          # ahead"; a question counts at any length ("Your goal?")
 query_prefix: "Represent this sentence for searching relevant passages: "
 
 # What a good sales call covers, in call order (the CAT and Impact Formula scripts in config/methods agree on these).

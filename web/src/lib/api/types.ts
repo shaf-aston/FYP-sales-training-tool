@@ -8,7 +8,8 @@ export type { SkillEntry };
 export type Difficulty = "easy" | "medium" | "hard";
 export type CoachStyle = "tactical" | "socratic" | "teacher";
 export type QuizType = "stage" | "next_move" | "direction";
-export type Outcome = "active" | "sold" | "walked";
+/** "ended": the learner ended the call ("End and score") before the buyer said yes or walked. */
+export type Outcome = "active" | "sold" | "walked" | "ended";
 
 export interface BotState {
   stage: string; // UPPERCASE stage id
@@ -386,6 +387,8 @@ export interface SopStepResult {
   stage: string;
   step: string;
   done: boolean;
+  /** An "If they…" step: left out of the score when not done (the call may never have needed it). */
+  conditional: boolean;
   turn: number | null;
   said: string | null;
 }

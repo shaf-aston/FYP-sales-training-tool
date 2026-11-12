@@ -77,7 +77,7 @@ export function StageCard() {
           </p>
         )}
         {showMeta.hint && <p className={s.detailText}>{showMeta.hint}</p>}
-        {mode === "buy" && <p className={s.tip}>Click a stage to jump there.</p>}
+        {mode === "buy" && <p className={s.tip}>Pick a stage to jump there.</p>}
       </div>
     </Card>
   );

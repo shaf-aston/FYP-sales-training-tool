@@ -15,6 +15,7 @@ const OUTCOME: Record<Outcome, { label: string; tone: Tone }> = {
   sold: { label: "Sale made", tone: "success" },
   walked: { label: "Buyer walked away", tone: "danger" },
   active: { label: "Incomplete", tone: "neutral" },
+  ended: { label: "Ended before a decision", tone: "neutral" },
 };
 
 function Bullets({ title, items }: { title: string; items: string[] }) {

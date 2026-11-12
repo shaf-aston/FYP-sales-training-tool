@@ -266,7 +266,7 @@ def test_uncovered_question_with_a_rule_breaking_answer_is_dropped(fake_embedder
     s = at(make_seller(fake_embedder, pushy), "03")
     with caplog.at_level(logging.WARNING, logger="script_engine.fallback"):
         text, _ = s.reply("will refunds exist?")
-    assert text == f"{CFG['uncovered_fallback']} How long have you been thinking about this?"
+    assert text == f"{CFG['uncovered_fallback']} {CFG['back_to_question'][0]} How long have you been thinking about this?"
     assert "broke" in caplog.text
 
 
@@ -276,7 +276,7 @@ def test_ai_down_never_blocks_a_turn(fake_embedder):
 
     s = at(make_seller(fake_embedder, down), "03", outcome="I want financial freedom")
     text, _ = s.reply("will refunds exist?")
-    assert text == f"{CFG['uncovered_fallback']} How long have you been thinking about this?"
+    assert text == f"{CFG['uncovered_fallback']} {CFG['back_to_question'][0]} How long have you been thinking about this?"
     text, _ = at(s, "02", outcome="I want financial freedom").reply("ten thousand")
     assert text == "How long have you been thinking about this?"
     text, _ = at(s, "05", outcome="I want financial freedom").reply("no time")
@@ -295,7 +295,7 @@ def test_common_sense_interruption_then_the_step_again(seller):
     assert s.reply("hold on a second") == ("No problem, take your time.", "logical")
     text, stage = s.reply("ok I'm back")
     assert text.startswith("No worries.")
-    assert text == "No worries. How long have you been thinking about this?"
+    assert text == f"No worries. {CFG['back_to_question'][0]} How long have you been thinking about this?"
     assert stage == "logical" and s.state.step == "03"
 
 
@@ -919,7 +919,8 @@ def test_a_line_asked_again_is_filled_the_same_way_without_new_ai_calls(fake_emb
     asked = calls.copy()
     assert first[0] == "No problem, take your time."
     s.reply("hold on a second")
-    assert s.reply("ok I'm back")[0] == again and calls == asked
+    question = lambda line: line.split("back to you. ")[-1]   # the turn back to it varies; the question must not
+    assert question(s.reply("ok I'm back")[0]) == question(again) and calls == asked
 
 
 @pytest.mark.parametrize("said, after, line", [

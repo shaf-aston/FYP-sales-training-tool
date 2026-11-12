@@ -247,3 +247,11 @@ def test_each_sentence_of_a_turn_is_matched_on_its_own():
     stages = [Stage("Open", ["Set the agenda", "Ask about their goal"])]
     result = check_call(stages, ["Thanks for coming. Here's the agenda. What's your goal?"], CFG, topic_embed)
     assert [(s.done, s.said) for s in result.steps] == [(True, "Here's the agenda."), (True, "What's your goal?")]
+
+
+def test_an_acknowledgement_carries_no_step():
+    """Found live: "Fair question." was the evidence that the rep asked them to go ahead."""
+    stages = [Stage("Close", ["Ask them directly if they want to go ahead"])]
+    result = check_call(stages, ["Fair question. What stopped the last one from working?"], CFG,
+                        lambda texts: [[1.0, 0.0] for _ in texts])   # every sentence "means" the step
+    assert result.steps[0].said == "What stopped the last one from working?"

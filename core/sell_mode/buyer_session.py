@@ -256,6 +256,7 @@ class BuyerSession(BuyerRecord):
         self.state.readiness = replay["readiness_exact"]
         self.state.has_committed = False
         self.state.has_walked = False
+        self.state.has_finished = False   # a redo after "End and score" carries the call on from that turn
         self.last_turn_signals = []
         self.log_snapshot()
 
@@ -286,6 +287,7 @@ class BuyerSession(BuyerRecord):
             state.objections_raised,
             state.has_committed,
             state.has_walked,
+            state.has_finished,
             list(self.last_turn_signals),
         )
 
@@ -298,6 +300,7 @@ class BuyerSession(BuyerRecord):
             state.objections_raised,
             state.has_committed,
             state.has_walked,
+            state.has_finished,
             self.last_turn_signals,
         ) = snapshot
 

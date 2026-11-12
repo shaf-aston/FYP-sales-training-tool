@@ -225,8 +225,10 @@ def state(buyer):
 @require_rate_limit("sell")
 @with_session("buyer")
 def evaluate(buyer):
-    """Generate final evaluation scorecard"""
+    """End the call and score it ("End and score"): the buyer takes no more turns unless a turn is redone."""
     try:
+        if not buyer.state.ended:
+            buyer.state.has_finished = True
         evaluation = buyer.get_evaluation()
         SessionAnalytics.record(
             session_id=buyer.session_id,
@@ -242,7 +244,7 @@ def evaluate(buyer):
             },
             turn_count=buyer.state.turn_count,
         )
-        return jsonify({"success": True, **evaluation})
+        return jsonify({"success": True, **evaluation, "ended": True})
     except Exception as e:
         current_app.logger.exception(f"Sell evaluation error: {e}")
         return jsonify({"error": SELL_SCORING_ERROR}), 500

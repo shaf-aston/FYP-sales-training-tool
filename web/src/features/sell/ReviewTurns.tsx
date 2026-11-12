@@ -33,6 +33,9 @@ interface Props {
   cutoff?: number;
   /** Extra controls under a pivotal turn that is still current (e.g. "Say this differently"). */
   pivotalAction?: (turn: ReviewTurn) => ReactNode;
+  /** Give every current turn the controls, not only pivotal ones: a call with no costly turn still has lines
+   *  worth saying better (sell mode's review). A real call's review keeps them to its turning points. */
+  actionOnEveryTurn?: boolean;
 }
 
 /** One line under the intro: how many turns and the average rating. */
@@ -46,7 +49,7 @@ export function ReviewSummary({ review }: { review: Review }) {
 }
 
 /** A sell review turn by turn: what each side said, the rating, why, and which turns cost ground. Read-only. */
-export function ReviewTurns({ review, seller, buyer, cutoff = Infinity, pivotalAction }: Props) {
+export function ReviewTurns({ review, seller, buyer, cutoff = Infinity, pivotalAction, actionOnEveryTurn = false }: Props) {
   const pivotal = new Set(review.pivotal_turns);
   return (
     <ol className={s.turns}>
@@ -73,7 +76,7 @@ export function ReviewTurns({ review, seller, buyer, cutoff = Infinity, pivotalA
               ) : (
                 <p className={s.muted}>Nothing here moved them either way.</p>
               )}
-              {key && !gone && pivotalAction?.(t)}
+              {(key || actionOnEveryTurn) && !gone && pivotalAction?.(t)}
             </li>
           );
         })}
