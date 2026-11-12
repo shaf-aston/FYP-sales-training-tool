@@ -55,6 +55,7 @@ TEAM_ERRORS = {
     "not_in_team": "You're not in a team.",
     "not_manager": "Only the team's manager can do that.",
     "not_a_member": "That person isn't in your team.",
+    "remove_self": "To take yourself off the team, use Leave team.",
 }
 
 # Uploaded calls (/api/calls)
@@ -121,3 +122,12 @@ LINK_LIMIT = "We've sent a few links to that address already. Use the newest one
 LINK_NOT_SENT = "We couldn't send the email just now. Try again in a minute."
 LINK_INVALID = "That sign-in link has expired or was already used. Ask for a new one."
 SIGN_IN_AGAIN = "For safety, sign in again (a new email link or Google), then delete within 10 minutes."
+
+# Errors the framework raises, answered in JSON on /api (backend/app.py): the parser's own detail is never shown.
+NUMBER_TOO_BIG = "That number is too big."
+HTTP_ERRORS = {
+    400: "That request couldn't be read. Send JSON with the fields this endpoint takes.",
+    404: "There's nothing at that address.",
+    405: "That method isn't allowed here.",
+    415: "Send JSON (Content-Type: application/json).",
+}
