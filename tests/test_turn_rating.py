@@ -189,3 +189,8 @@ def test_asking_about_the_last_one_is_not_pressure():
     """Found in the sample call's review: the rep's best question was flagged pushy for "last one"."""
     assert "pressure" not in rate_turn("Fair question. What stopped the last one from working?", "", 3).signals
     assert "pressure" in rate_turn("Better hurry, it's the last one left at this price.", "", 3).signals
+
+
+def test_buy_now_is_pressure():
+    """Live, 12 Nov: "Buy now." got "Sure. I'm not convinced yet though." rather than the pushback lines."""
+    assert "pressure" in rate_turn("Buy now.", "", 3).signals

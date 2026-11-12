@@ -17,6 +17,7 @@ import re
 from dataclasses import dataclass
 
 from core.infra.loader import load_buyer_config, load_yaml
+from core.training.turn_rating import load_turn_rating
 
 MOVES = ("share", "guard", "stall", "ask", "lean_in")
 
@@ -81,8 +82,10 @@ def next_move(readiness: float, seller_line: str, signals: list[str], objection:
         return Move("stall", "pressure", objection)
     if any(phrase in line for phrase in cfg["invite_questions"]):
         return Move("ask", "general", objection)
-    asked = "?" in line
-    closed = asked and is_closed(line)
+    # "Tell me more about that." asks as surely as a question mark does (turn_rating.yaml invitations): taken as a
+    # statement, it got "That's fair. Tell me more." back (live, 12 Nov)
+    asked = "?" in line or any(_phrase_at(p, line) for p in load_turn_rating()["invitations"])
+    closed = "?" in line and is_closed(line)
     warm, cold = readiness >= cfg["open_from"], readiness < cfg["guarded_below"]
     if asks_to_commit(line):
         return Move("lean_in" if warm else "stall", "next_step", objection, closed)

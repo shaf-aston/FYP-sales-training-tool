@@ -19,7 +19,7 @@ _CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"   # no 0/O, 1/I: read aloud 
 
 
 class TeamError(ValueError):
-    """`code`: name_invalid, already_in_team, unknown_code, not_in_team, not_manager or not_a_member."""
+    """`code`: name_invalid, already_in_team, unknown_code, not_in_team, not_manager, not_a_member or remove_self."""
 
     def __init__(self, code: str):
         super().__init__(code)
@@ -126,7 +126,9 @@ class Teams:
         """A manager removes someone from their own team (themselves: use leave)."""
         with self.db.connect(write=True) as conn:
             team = self._managed(conn, manager_id)
-            if user_id == manager_id or not conn.execute(
+            if user_id == manager_id:
+                raise TeamError("remove_self")
+            if not conn.execute(
                     "SELECT 1 FROM memberships WHERE user_id = ? AND team_id = ?", (user_id, team)).fetchone():
                 raise TeamError("not_a_member")
             conn.execute("DELETE FROM memberships WHERE user_id = ?", (user_id,))

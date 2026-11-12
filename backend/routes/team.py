@@ -28,7 +28,8 @@ bp = Blueprint("team", __name__, url_prefix="/api/team")
 
 
 def _error(e: TeamError):
-    return jsonify({"error": TEAM_ERRORS[e.code], "code": e.code.upper()}), 400
+    """A refusal: 403 when it is the manager's to do, else 400."""
+    return jsonify({"error": TEAM_ERRORS[e.code], "code": e.code.upper()}), 403 if e.code == "not_manager" else 400
 
 
 @bp.route("", methods=["GET"])

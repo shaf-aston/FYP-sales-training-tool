@@ -210,7 +210,7 @@ def test_a_manager_sets_the_teams_words_and_members_get_them(app_client):
     signup(rep, email="rep@x.co", name="Rep")
     code = boss.post("/api/team/create", json={"name": "Closers"}).get_json()["team"]["invite_code"]
     rep.post("/api/team/join", json={"code": code})
-    assert rep.post("/api/team/words", json={"choice": CHOICE}).status_code == 400   # members can't
+    assert rep.post("/api/team/words", json={"choice": CHOICE}).status_code == 403   # members can't
     set_ = boss.post("/api/team/words", json={"choice": CHOICE})
     assert set_.status_code == 200 and set_.get_json()["team"]["words"]["label"] == "Maya"
     assert rep.get("/api/account/me").get_json()["team"]["words"]["words"] == CHOICE["words"]

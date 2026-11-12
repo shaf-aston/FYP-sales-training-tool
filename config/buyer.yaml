@@ -99,11 +99,11 @@ difficulty_profiles:
 # something: a full sentence with no question), `mention` (the seller has said one of these words). Kinds not listed
 # (smokescreen, a chosen one) can come at any time.
 objection_waits:
-  price: {mention: [price, cost, budget, invest, pay, fee, money, spend, afford, package, programme, program], turn: 8}
+  price: {mention: [price, cost, budget, invest, pay, fee, money, spend, afford, "$", "£", "€"], turn: 8}   # not "programme": naming the offer is not talking money (live, 12 Nov)
   skepticism: {pitch: true, turn: 6}
   fear: {pitch: true, turn: 6}
-  timing: {turn: 5, mention: [when, start, book, decide, sign, commit, next step]}
-  partner: {turn: 5, mention: [decide, decision, sign, commit, book, next step, involved]}
+  timing: {turn: 5, mention: [when would, how soon, start date, get started, timeline, decide, sign up, commit, next step]}   # not "book": "what made you book the call?" asks nothing of them
+  partner: {turn: 5, mention: [decide, decision, sign off, sign-off, commit, who else, involved]}
 
 # The buyer's first line (no AI). One is picked per session, the same one every
 # replay. Fields: {name}, {background} (first letter lowered), {need} (first need).
@@ -479,7 +479,8 @@ system_prompt_template: |
 
   RULES:
   1. Stay in character as {name}.
-  2. Answer what the salesperson just asked first, in 1-3 natural, conversational sentences.
+  2. Answer what the salesperson just asked first, in one or two short sentences (under 30 words), the way a real
+     person talks on a call: plain words, no sales or marketing language ("game-changer", "seamless", "ROI").
   3. A good question earns a proportionate answer; pushy or dismissive selling makes you more resistant.
   4. Don't raise new objections (price, timing, partner, proof) yourself - they are added for you.
   5. Never agree to buy, sign, or end the conversation - the session decides that.

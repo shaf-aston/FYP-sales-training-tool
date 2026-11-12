@@ -593,6 +593,7 @@ class ScriptSeller:
         if "?" not in question:
             question = ""
         else:  # the question said again spends an ask: never a 4th time after two shrugs
+            question = question_of(question.strip())   # the question only: its talk was just said (live, 12 Nov)
             backs = self.cfg["back_to_question"]
             if back and lead.strip() and backs:   # after their side question is answered, a turn back to ours
                 lead = f"{lead.strip()} {backs[self.state.resaid % len(backs)]}"

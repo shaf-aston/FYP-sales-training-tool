@@ -13,7 +13,7 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from backend.messages import INTERNAL_SERVER_ERROR, REQUEST_TOO_LARGE  # noqa: E402
+from backend.messages import HTTP_ERRORS, INTERNAL_SERVER_ERROR, NUMBER_TOO_BIG, REQUEST_TOO_LARGE  # noqa: E402
 from backend.request_log import RequestLog, configure_logging  # noqa: E402
 from backend.auth import init_auth  # noqa: E402
 from backend.routes import account, buy, calls, knowledge, monitoring, sell, sign_in, sop, speech, team  # noqa: E402
@@ -132,14 +132,25 @@ def handle_too_large(_e):
     return jsonify({"error": REQUEST_TOO_LARGE, "code": "REQUEST_TOO_LARGE"}), 413
 
 
+@app.errorhandler(OverflowError)
+def handle_overflow(_e):
+    """A number too big to store (an id of 10**23, a rating of 1e400) is a bad request, not a server error."""
+    from flask import jsonify
+
+    return jsonify({"error": NUMBER_TOO_BIG, "code": "NUMBER_TOO_BIG"}), 400
+
+
 @app.errorhandler(Exception)
 def handle_unexpected_error(e):
-    """Catch-all for unhandled exceptions. HTTP exceptions pass through unchanged"""
-    from flask import jsonify
+    """Catch-all for unhandled exceptions. HTTP errors on /api answer in JSON, without the parser's detail; the
+    pages keep Flask's own."""
+    from flask import jsonify, request
     from werkzeug.exceptions import HTTPException
 
     if isinstance(e, HTTPException):
-        return e  # Let Flask handle 400, 404, etc. normally
+        if request.path.startswith("/api/"):
+            return jsonify({"error": HTTP_ERRORS.get(e.code, e.name), "code": e.name.upper().replace(" ", "_")}), e.code
+        return e
     app.logger.exception("Unhandled error")
     return jsonify({"error": INTERNAL_SERVER_ERROR}), 500
 

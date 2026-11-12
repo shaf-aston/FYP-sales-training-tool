@@ -45,6 +45,7 @@ from ._utils import (
     json_body,
     safe_latency_ms,
     stage_fields,
+    text_field,
     validate_message,
     validate_provider,
     with_session,
@@ -68,7 +69,7 @@ def products():
 @require_rate_limit("buy_init")
 def init():
     """Start a session (the seller is built now, so the first message doesn't wait), or reattach to a live one."""
-    data = request.json or {}
+    data = json_body()
     existing_id = data.get("session_id")
     sellers = current_app.extensions["sessions"].seller
 
@@ -103,6 +104,8 @@ def init():
 
     session_id = new_session_id()
     product_type = data.get("product_type")  # unlisted or missing: script/engine.yaml default_product
+    if not isinstance(product_type, str):
+        product_type = None
     provider, provider_error = validate_provider(data)
     if provider_error:
         return provider_error
@@ -259,7 +262,7 @@ def jump(seller):
 @with_session("seller")
 def edit(seller):
     """Edit a learner message and replay the call from there."""
-    data = request.json or {}
+    data = json_body()
     message_index = data.get("index")
     new_message, error = validate_message(data.get("message", ""))
     if error:
@@ -269,7 +272,7 @@ def edit(seller):
         return jsonify({"error": MISSING_INDEX}), 400
     try:
         message_index = int(message_index)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):   # 1e400 is a float too big for int
         return jsonify({"error": INVALID_INDEX}), 400
 
     try:
@@ -301,9 +304,9 @@ def edit(seller):
 @with_session("seller")
 def coach(seller):
     """Answer the learner's question about the call and sales technique."""
-    data = request.json or {}
-    question = (data.get("question") or "").strip()
-    style = (data.get("style") or DEFAULT_STYLE).strip().lower()
+    data = json_body()
+    question = text_field(data, "question")
+    style = text_field(data, "style").lower() or DEFAULT_STYLE
     if style not in COACH_STYLES:
         style = DEFAULT_STYLE
     if not question:
@@ -338,7 +341,7 @@ def quiz_question(seller):
 
 def _required_text(field: str, label: str):
     """A stripped required text field from the JSON body, or an error response."""
-    value = ((request.json or {}).get(field) or "").strip()
+    value = text_field(json_body(), field)
     if not value:
         return None, (jsonify({"error": FIELD_REQUIRED.format(label=label)}), 400)
     if len(value) > MAX_MESSAGE_LENGTH:

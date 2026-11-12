@@ -51,7 +51,7 @@ class ObjectionPacer:
         return (
             turn >= wait.get("turn", 10 ** 6)
             or (wait.get("pitch", False) and any(_is_pitch(line) for line in lines))
-            or any(re.search(rf"\b{re.escape(word)}", line) for word in wait.get("mention", []) for line in lines)
+            or any(_mentions(word, line) for word in wait.get("mention", []) for line in lines)
         )
 
     def _raised(self, turn: int, said: list[str] | None) -> list[tuple[int, dict]]:
@@ -80,6 +80,13 @@ class ObjectionPacer:
 
 
 _PITCH_MIN_WORDS = 6
+
+
+def _mentions(word: str, line: str) -> bool:
+    """`word` said in the line: as a whole word (or a word's start), or as a symbol anywhere ("$4,000")."""
+    if not word[:1].isalnum():
+        return word in line
+    return re.search(rf"\b{re.escape(word)}", line) is not None
 
 
 def _is_pitch(line: str) -> bool:

@@ -31,7 +31,7 @@ from ..messages import (
     UNKNOWN_PERSONA,
 )
 from ..security import InputValidator, require_rate_limit
-from ._utils import history_json, validate_message, validate_provider, with_session
+from ._utils import history_json, json_body, validate_message, validate_provider, with_session
 
 bp = Blueprint("sell", __name__, url_prefix="/api/sell")
 
@@ -100,7 +100,7 @@ def init():
     if not buyer_sessions.can_create():
         return jsonify({"error": SELL_FULL}), 503
 
-    data = request.json or {}
+    data = json_body()
     provider, provider_error = validate_provider(data)
     if provider_error:
         return provider_error
@@ -121,6 +121,8 @@ def init():
             return error
 
     product_type = data.get("product_type", "default")
+    if not isinstance(product_type, str):   # {"a": 1} was a 500 "Couldn't set up the buyer"
+        return jsonify({"error": INVALID_PAYLOAD}), 400
     try:
         started = sell_service.start_sell_session(
             buyer_sessions,
@@ -171,7 +173,7 @@ def init():
 @with_session("buyer")
 def chat(buyer):
     """The learner sends a sales message; the AI buyer responds"""
-    data = request.json or {}
+    data = json_body()
     user_message, err = validate_message(data.get("message", ""))
     if err:
         return err
@@ -283,7 +285,7 @@ def quiz_question(buyer):
 @with_session("buyer")
 def quiz_answer(buyer):
     """Score a replacement line for one of the learner's own turns."""
-    data = request.json or {}
+    data = json_body()
     turn_index = InputValidator.parse_positive_int(data.get("turn"))
     turns = buyer.review()["turns"]
     if turn_index is None or turn_index > len(turns):
@@ -316,7 +318,7 @@ def drills():
 @with_session("buyer")
 def redo(buyer):
     """Rewind to a turn and say it differently, for a real reply from the same buyer."""
-    data = request.json or {}
+    data = json_body()
     turn_index = InputValidator.parse_positive_int(data.get("turn"))
     if turn_index is None:
         return jsonify({"error": TURN_REQUIRED, "code": "INVALID_TURN"}), 400

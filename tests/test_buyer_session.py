@@ -251,3 +251,14 @@ def test_good_questions_alone_never_end_the_call_but_asking_for_the_sale_does(st
     assert buyer.state.readiness >= 0.85
     buyer.process_turn("Would it make sense to get you started this week?")
     assert buyer.state.has_committed
+
+
+def test_naming_the_offer_or_booking_the_call_is_not_talk_of_money_or_commitment():
+    """Live, 12 Nov: 'our programme' made the price objection ready on turn one; 'book the call' the timing one."""
+    buyer = session("hard", "mentions")
+    price = next(o for o in buyer.pacer.bank if o["type"] == "price")
+    timing = next(o for o in buyer.pacer.bank if o["type"] == "timing")
+    assert not buyer.pacer.ready(price, 1, ["I'm calling about our programme."])
+    assert buyer.pacer.ready(price, 1, ["The investment is $4,000 for the year."])
+    assert not buyer.pacer.ready(timing, 1, ["What made you book the call?"])
+    assert buyer.pacer.ready(timing, 1, ["How soon would you want to get started?"])
