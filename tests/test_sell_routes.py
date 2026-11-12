@@ -76,6 +76,19 @@ def test_learner_picks_the_buyer_and_the_objection_to_practise(sell_client):
     assert reply["message"] == f"Can you tell me a bit more about that? {objection}"
 
 
+def test_a_live_call_can_be_picked_back_up_after_a_reload(sell_client):
+    init = sell_client.post("/api/sell/init", json={"difficulty": "easy", "product_type": "default"}).get_json()
+    headers = {"X-Session-ID": init["session_id"]}
+    reply = sell_client.post("/api/sell/chat", json={"message": "What made you take this call?"}, headers=headers).get_json()
+
+    state = sell_client.get("/api/sell/state", headers=headers).get_json()
+
+    assert state["session_id"] == init["session_id"] and state["persona"] == init["persona"]
+    assert state["difficulty"] == "easy" and state["product_type"] == "default"
+    assert [m["content"] for m in state["history"]] == [init["message"], "What made you take this call?", reply["message"]]
+    assert state["state"] == reply["state"] and state["ended"] is False and state["outcome"] == reply["outcome"]
+
+
 def test_sell_init_rejects_unknown_persona_and_oversized_objection(sell_client):
     unknown = sell_client.post("/api/sell/init", json={"persona": "Nobody"})
     too_long = sell_client.post("/api/sell/init", json={"objection": "x" * 201})
@@ -92,6 +105,7 @@ def test_sell_init_rejects_unknown_persona_and_oversized_objection(sell_client):
         ("post", "/api/sell/chat"),
         ("post", "/api/sell/evaluate"),
         ("get", "/api/sell/review"),
+        ("get", "/api/sell/state"),
         ("get", "/api/sell/quiz"),
         ("post", "/api/sell/quiz"),
         ("post", "/api/sell/redo"),

@@ -29,7 +29,7 @@ from ..messages import (
     UNKNOWN_PERSONA,
 )
 from ..security import InputValidator, require_rate_limit
-from ._utils import validate_message, validate_provider, with_session
+from ._utils import history_json, validate_message, validate_provider, with_session
 
 bp = Blueprint("sell", __name__, url_prefix="/api/sell")
 
@@ -187,6 +187,26 @@ def chat(buyer):
     except Exception as e:
         current_app.logger.exception(f"Sell chat error: {e}")
         return jsonify({"error": SELL_ERROR}), 500
+
+
+@bp.route("/state", methods=["GET"])
+@require_rate_limit("sell")
+@with_session("buyer")
+def state(buyer):
+    """The live session as the web app needs it to pick the call back up after a reload."""
+    return jsonify(
+        {
+            "success": True,
+            "session_id": buyer.session_id,
+            "persona": _persona_card(buyer.persona),
+            "state": buyer.state.to_dict(),
+            "difficulty": buyer.state.difficulty,
+            "product_type": buyer.product_type,
+            "history": history_json(buyer.conversation_history),
+            "ended": buyer.state.ended,
+            "outcome": buyer.state.status,
+        }
+    )
 
 
 @bp.route("/evaluate", methods=["POST"])

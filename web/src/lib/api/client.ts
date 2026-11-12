@@ -119,6 +119,7 @@ export function createHttpApi() {
       }),
     sellChat: (sid: string, message: string, showHints: boolean) =>
       request<T.SellChatRes>("/api/sell/chat", { body: { message, show_hints: showHints }, sessionId: sid, timeoutMs: chat }),
+    sellState: (sid: string) => request<T.SellStateRes>("/api/sell/state", { sessionId: sid }),
     sellReset: (sid: string) => request<{ success: true }>("/api/sell/reset", { body: {}, sessionId: sid }),
     sellEvaluate: (sid: string) => request<T.Evaluation>("/api/sell/evaluate", { body: {}, sessionId: sid, timeoutMs: chat }),
     sellSkills: () => request<T.SkillsRes>("/api/sell/skills"),

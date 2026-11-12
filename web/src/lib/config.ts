@@ -129,7 +129,10 @@ export const storageKeys = {
   buyProduct: "buyProduct",
   sidebarTab: "sidebarTab",
   sellSettings: "sellSettings",
+  /** sessionStorage: the live sell call ({ id, pick }), so a reload or Back picks it up again. */
+  sellCall: "sellCall",
   skillLog: "skillLog.v1",
+  skillOwner: "skillLog.owner",
   skillTarget: "skillTarget",
   coachStyle: "trainingStyle",
   ttsSpeed: "ttsPlaybackSpeed",

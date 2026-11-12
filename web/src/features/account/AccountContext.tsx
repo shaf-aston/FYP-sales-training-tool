@@ -7,7 +7,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { useToast } from "@/components/ui";
 import { api, ApiError } from "@/lib/api/client";
 import type { AccountMe, AccountUser, Team } from "@/lib/api/types";
-import { useSkillSync } from "./useSkillSync";
+import { forgetSkills, useSkillSync } from "./useSkillSync";
 
 const LOGGED_OUT: AccountMe = { user: null, team: null };
 
@@ -19,6 +19,7 @@ interface AccountValue {
   /** Throws ApiError (with `field` for a sign-up field) when the server says no. */
   logIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, name: string, password: string) => Promise<void>;
+  /** Logs out and forgets this device's copy of the account's data, so the next person starts clean. */
   logOut: () => Promise<void>;
   /** Ask the server again (after a team change). */
   refresh: () => Promise<void>;
@@ -69,6 +70,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
 
   const logOut = useCallback(async () => {
     await api.accountLogout().catch(() => {});
+    forgetSkills();
     setMe(LOGGED_OUT);
   }, []);
 

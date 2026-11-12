@@ -210,9 +210,9 @@ export function ChatHeader() {
                     title="Start a fresh call at this step, to test it"
                   >
                     <option value="">Jump to step…</option>
-                    {steps.map((st) => (
+                    {steps.map((st, i) => (
                       <option key={st.id} value={st.id}>
-                        {st.id} · {st.name}
+                        {i + 1}. {st.name}
                       </option>
                     ))}
                   </select>

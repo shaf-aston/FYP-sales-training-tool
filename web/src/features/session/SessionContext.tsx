@@ -82,6 +82,19 @@ const debugOn = () => {
   return new URLSearchParams(location.search).get("debug") === "1" || readString(storageKeys.debug) === "1";
 };
 
+/** The live sell call in this tab (sessionStorage), so a reload or Back picks it up instead of losing it. */
+const saveSellCall = (id: string | null, pick: BuyerPick = {}) =>
+  writeString(storageKeys.sellCall, id ? JSON.stringify({ id, pick }) : null, "session");
+
+function savedSellCall(): { id: string; pick: BuyerPick } | null {
+  try {
+    const saved = JSON.parse(readString(storageKeys.sellCall, "session") ?? "null");
+    return saved && typeof saved.id === "string" ? { id: saved.id, pick: saved.pick ?? {} } : null;
+  } catch {
+    return null;
+  }
+}
+
 const metaLine = (latency: number | null | undefined, provider?: string) =>
   debugOn() && latency != null ? `${Math.round(latency)}ms · ${provider ?? "?"}` : undefined;
 
@@ -138,19 +151,55 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
     [adopt, toast],
   );
 
+  /** Sell mode: pick the tab's live call back up (after a reload, or Back from another page). */
+  const restoreSell = useCallback(async () => {
+    const saved = savedSellCall();
+    if (!saved) return;
+    const my = epoch.current;
+    setTyping(true);
+    try {
+      const res = await api.sellState(saved.id);
+      if (epoch.current !== my) return;   // the learner started another buyer meanwhile
+      setSellSession({
+        sessionId: res.session_id,
+        persona: res.persona,
+        state: res.state,
+        difficulty: res.difficulty,
+        productType: res.product_type,
+        pick: saved.pick,
+        ended: res.ended,
+        outcome: res.outcome,
+        hint: "",
+      });
+      setMessages(fromHistory(res.history, config.historyCap));
+    } catch (err) {
+      // Gone on the server (timed out or restarted): back to setup. A network blip keeps it for the next load.
+      if (err instanceof ApiError && err.sessionExpired) saveSellCall(null);
+    } finally {
+      if (epoch.current === my) setTyping(false);
+    }
+  }, []);
+
   useEffect(() => {
-    // Sell mode starts at buyer setup: there is no session to connect to yet.
+    // Sell mode starts at buyer setup, unless this tab already has a live call (restored below).
     if (mode !== "buy") return;
     if (started.current) return; // StrictMode mounts twice in dev; connect once.
     started.current = true;
     initBuy();
   }, [initBuy, mode]);
 
+  useEffect(() => {
+    if (mode !== "sell" || started.current) return;
+    started.current = true;
+    restoreSell();
+  }, [restoreSell, mode]);
+
   const handleExpired = useCallback(
     (err: unknown) => {
       if (!(err instanceof ApiError) || !err.sessionExpired || recovering.current) return false;
       recovering.current = true;
       if (mode === "sell") {
+        saveSellCall(null);
         setSellSession(null);
         setMessages([]);
         toast("Your buyer timed out. Set up a new one.", "error");
@@ -270,6 +319,7 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
       try {
         const res = await api.sellInit(difficulty, productType, pick);
         if (sellSession) api.sellReset(sellSession.sessionId).catch(() => {});
+        saveSellCall(res.session_id, pick);
         setSellSession({
           sessionId: res.session_id,
           persona: res.persona,
@@ -299,6 +349,7 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
 
   const endBuyer = useCallback(() => {
     if (sellSession) api.sellReset(sellSession.sessionId).catch(() => {});
+    saveSellCall(null);
     setSellSession(null);
     setMessages([]);
     epoch.current++;
