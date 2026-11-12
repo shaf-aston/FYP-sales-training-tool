@@ -8,7 +8,9 @@ from core.accounts.db import database
 from core.accounts.library import Library, LibraryError
 from core.accounts.teams import Teams
 from core.accounts.users import AccountError, Users
-from core.infra.constants import MAX_SAVED_PROSPECTS, MAX_SKILL_ENTRIES
+from core.buy_mode.script_engine.rep_words import RepWordsError
+from core.buy_mode.script_engine.seller import checked_words
+from core.infra.constants import MAX_SAVED_PROSPECTS, MAX_SAVED_WORDS, MAX_SKILL_ENTRIES
 from core.sell_mode.custom_buyer import InvalidCustomBuyer, parse_custom_buyer
 
 from ..auth import current_user, log_in, log_out, login_throttle, require_user
@@ -20,6 +22,9 @@ from ..messages import (
     PASSWORD_WRONG,
     PROSPECT_NOT_FOUND,
     PROSPECTS_FULL,
+    WORDS_FULL,
+    WORDS_INVALID,
+    WORDS_NOT_FOUND,
     SKILL_ENTRIES_INVALID,
 )
 from ..security import require_rate_limit
@@ -95,7 +100,7 @@ def export(user):
     """Everything kept for the learner, as one JSON document."""
     library = Library(database())
     return jsonify({"success": True, **_me(user), "skills": library.skill_entries(user.id),
-                    "prospects": library.prospects(user.id)})
+                    "prospects": library.prospects(user.id), "words": library.words(user.id)})
 
 
 # --- skill history ---
@@ -152,4 +157,36 @@ def save_prospect(user):
 def delete_prospect(user, prospect_id):
     if not Library(database()).delete_prospect(user.id, prospect_id):
         return jsonify({"error": PROSPECT_NOT_FOUND}), 404
+    return jsonify({"success": True})
+
+
+# --- saved Rep's words ---
+
+
+@bp.route("/words", methods=["GET"])
+@require_user
+def words(user):
+    return jsonify({"success": True, "words": Library(database()).words(user.id)})
+
+
+@bp.route("/words", methods=["POST"])
+@require_user
+def save_words(user):
+    """Save a Rep's words choice ({product, label, words, probes}, as /api/buy/words matched it) to use again."""
+    try:
+        choice = checked_words(json_body().get("choice"))
+    except RepWordsError:
+        return jsonify({"error": WORDS_INVALID, "code": "REP_WORDS_INVALID"}), 400
+    try:
+        saved = Library(database()).save_words(user.id, choice)
+    except LibraryError:
+        return jsonify({"error": WORDS_FULL.format(max=MAX_SAVED_WORDS)}), 400
+    return jsonify({"success": True, "words": saved}), 201
+
+
+@bp.route("/words/<int:words_id>", methods=["DELETE"])
+@require_user
+def delete_words(user, words_id):
+    if not Library(database()).delete_words(user.id, words_id):
+        return jsonify({"error": WORDS_NOT_FOUND}), 404
     return jsonify({"success": True})

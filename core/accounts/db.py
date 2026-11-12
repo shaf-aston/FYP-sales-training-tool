@@ -57,6 +57,18 @@ MIGRATIONS: tuple[str, ...] = (
     CREATE INDEX skill_entries_by_user ON skill_entries (user_id, at);
     CREATE INDEX prospects_by_user ON prospects (user_id, created_at);
     """,
+    # 2: Rep's words kept: a learner's saved choices, and a team's (set by a manager, used by its members)
+    """
+    CREATE TABLE rep_words (
+        id INTEGER PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        label TEXT NOT NULL,
+        choice TEXT NOT NULL,
+        created_at INTEGER NOT NULL
+    );
+    CREATE INDEX rep_words_by_user ON rep_words (user_id, created_at);
+    ALTER TABLE teams ADD COLUMN words TEXT;
+    """,
 )
 
 

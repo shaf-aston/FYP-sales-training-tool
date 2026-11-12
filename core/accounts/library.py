@@ -1,4 +1,5 @@
-"""What is kept for one learner: their skill history (one entry per scored session) and saved prospects."""
+"""What is kept for one learner: their skill history (one entry per scored session), saved prospects and saved
+Rep's words (a top rep's or an SOP's questions, checked by the caller against the script)."""
 
 from __future__ import annotations
 
@@ -8,6 +9,7 @@ import time
 from core.accounts.db import Database
 from core.infra.constants import (
     MAX_SAVED_PROSPECTS,
+    MAX_SAVED_WORDS,
     MAX_SKILL_ENTRIES,
     MAX_SKILL_ID_CHARS,
     MAX_SKILLS_PER_ENTRY,
@@ -95,3 +97,25 @@ class Library:
     def delete_prospect(self, user_id: int, prospect_id: int) -> bool:
         with self.db.connect(write=True) as conn:
             return conn.execute("DELETE FROM prospects WHERE id = ? AND user_id = ?", (prospect_id, user_id)).rowcount > 0
+
+    # --- saved Rep's words ({product, label, words, probes}, checked by the caller: seller.checked_words) ---
+
+    def save_words(self, user_id: int, choice: dict) -> dict:
+        with self.db.connect(write=True) as conn:
+            if conn.execute("SELECT COUNT(*) FROM rep_words WHERE user_id = ?", (user_id,)).fetchone()[0] >= MAX_SAVED_WORDS:
+                raise LibraryError("full")
+            now = int(time.time())
+            wid = conn.execute("INSERT INTO rep_words (user_id, label, choice, created_at) VALUES (?, ?, ?, ?)",
+                               (user_id, choice["label"], json.dumps(choice), now)).lastrowid
+        return {"id": wid, **choice, "created_at": now}
+
+    def words(self, user_id: int) -> list[dict]:
+        """Newest first."""
+        with self.db.connect() as conn:
+            rows = conn.execute("SELECT id, choice, created_at FROM rep_words WHERE user_id = ? "
+                                "ORDER BY created_at DESC, id DESC", (user_id,)).fetchall()
+        return [{"id": r["id"], **json.loads(r["choice"]), "created_at": r["created_at"]} for r in rows]
+
+    def delete_words(self, user_id: int, words_id: int) -> bool:
+        with self.db.connect(write=True) as conn:
+            return conn.execute("DELETE FROM rep_words WHERE id = ? AND user_id = ?", (words_id, user_id)).rowcount > 0

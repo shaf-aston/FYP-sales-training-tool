@@ -45,6 +45,7 @@ def test_signup_errors_name_the_field(app_client):
     ("get", "/api/account/skills"), ("post", "/api/account/skills"), ("get", "/api/account/prospects"),
     ("post", "/api/account/prospects"), ("delete", "/api/account/prospects/1"), ("get", "/api/account/export"),
     ("post", "/api/account/delete"), ("get", "/api/team"), ("post", "/api/team/create"), ("post", "/api/team/join"), ("post", "/api/team/remove"), ("post", "/api/team/code"),
+    ("get", "/api/account/words"), ("post", "/api/account/words"), ("delete", "/api/account/words/1"), ("post", "/api/team/words"),
 ])
 def test_everything_kept_needs_a_login(app_client, method, path):
     response = getattr(app_client(), method)(path, json={})
@@ -156,3 +157,62 @@ def test_an_empty_or_short_key_file_gets_a_whole_new_key(tmp_path, monkeypatch):
     first = _secret_key(key_file)
     assert len(first) >= 32 and _secret_key(key_file) == first      # made once, then read back
     assert oct(key_file.stat().st_mode & 0o777) == "0o600"
+
+
+# --- Rep's words kept ---
+
+SCRIPT_PRODUCT = "high_ticket_sales_mentorship"
+CHOICE = {"product": SCRIPT_PRODUCT, "label": "Maya", "words": {"03": "How long has this been on your mind?"},
+          "probes": {"03": "And when did it first start bugging you?"}}
+
+
+def test_words_are_saved_listed_used_and_deleted(app_client):
+    c = app_client()
+    signup(c)
+    saved = c.post("/api/account/words", json={"choice": CHOICE})
+    assert saved.status_code == 201
+    kept = saved.get_json()["words"]
+    assert {k: kept[k] for k in CHOICE} == CHOICE
+    assert [w["id"] for w in c.get("/api/account/words").get_json()["words"]] == [kept["id"]]
+    assert c.get("/api/account/export").get_json()["words"][0]["label"] == "Maya"
+    # the saved choice starts a call as it is
+    call = c.post("/api/buy/init", json={"product_type": kept["product"], "words": kept["words"], "probes": kept["probes"],
+                                          "label": kept["label"]}).get_json()
+    assert call["words"] == CHOICE["words"] and call["probes"] == CHOICE["probes"] and call["words_label"] == "Maya"
+    assert c.delete(f"/api/account/words/{kept['id']}").status_code == 200
+    assert c.delete(f"/api/account/words/{kept['id']}").status_code == 404
+    assert c.get("/api/account/words").get_json()["words"] == []
+
+
+@pytest.mark.parametrize("choice", [
+    None, {}, {**CHOICE, "product": "nope"}, {**CHOICE, "label": ""}, {**CHOICE, "words": {}},
+    {**CHOICE, "words": {"00": "Ready to start?"}}, {**CHOICE, "probes": {"01": "What do you want?"}},
+])
+def test_words_the_script_cannot_take_are_not_saved(app_client, choice):
+    c = app_client()
+    signup(c)
+    response = c.post("/api/account/words", json={"choice": choice})
+    assert response.status_code == 400 and response.get_json()["code"] == "REP_WORDS_INVALID"
+
+
+def test_someone_elses_words_cannot_be_deleted(app_client):
+    a, b = app_client(), app_client()
+    signup(a)
+    signup(b, email="bob@x.co", name="Bob")
+    kept = a.post("/api/account/words", json={"choice": CHOICE}).get_json()["words"]
+    assert b.delete(f"/api/account/words/{kept['id']}").status_code == 404
+    assert len(a.get("/api/account/words").get_json()["words"]) == 1
+
+
+def test_a_manager_sets_the_teams_words_and_members_get_them(app_client):
+    boss, rep = app_client(), app_client()
+    signup(boss)
+    signup(rep, email="rep@x.co", name="Rep")
+    code = boss.post("/api/team/create", json={"name": "Closers"}).get_json()["team"]["invite_code"]
+    rep.post("/api/team/join", json={"code": code})
+    assert rep.post("/api/team/words", json={"choice": CHOICE}).status_code == 400   # members can't
+    set_ = boss.post("/api/team/words", json={"choice": CHOICE})
+    assert set_.status_code == 200 and set_.get_json()["team"]["words"]["label"] == "Maya"
+    assert rep.get("/api/account/me").get_json()["team"]["words"]["words"] == CHOICE["words"]
+    assert boss.post("/api/team/words", json={"choice": None}).get_json()["team"]["words"] is None
+    assert rep.get("/api/account/me").get_json()["team"]["words"] is None

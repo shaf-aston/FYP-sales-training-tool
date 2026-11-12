@@ -24,7 +24,7 @@ from core.buy_mode.script_engine.engine import (
     start,
 )
 from core.infra import embedder as meaning_model
-from core.buy_mode.script_engine.rep_words import with_words
+from core.buy_mode.script_engine.rep_words import RepWordsError, clean, clean_label, with_words
 from core.buy_mode.script_engine.hear.meanings import MeaningBank, load_meanings
 from core.buy_mode.script_engine.hear.recognise import Listener
 from core.buy_mode.script_engine.hear.reply import after, clauses
@@ -63,6 +63,20 @@ def resolve_product(product):
     return product if isinstance(product, str) and product in cfg["products"] else cfg["default_product"]
 
 
+def checked_words(choice) -> dict:
+    """A saved choice of someone's words ({product, label, words, probes}), checked against today's script, as it is
+    kept: an account's saved words and a team's. Raises RepWordsError."""
+    if not isinstance(choice, dict) or choice.get("product") not in engine_config()["products"]:
+        raise RepWordsError("unknown_product")
+    words, probes = choice.get("words"), choice.get("probes") or {}
+    label = clean_label(choice.get("label"))
+    if not words or not label:
+        raise RepWordsError("empty")
+    with_words(method_for(choice["product"]), words, probes)   # raises for words the script can't take
+    return {"product": choice["product"], "label": label,
+            "words": {k: clean(v) for k, v in words.items()}, "probes": {k: clean(v) for k, v in probes.items()}}
+
+
 def products():
     """What the rep can sell, in config order: what the learner picks from (/api/buy/products)."""
     cfg = engine_config()
@@ -79,12 +93,13 @@ def method_for(product):
     return load_method(cfg["products"][product].get("method", cfg["method"]))
 
 
-def build_seller(router, product, embedder=None, gate=None, words=None):
-    """`words`: {step id: question} the rep says instead of the script's (rep_words.py); raises RepWordsError."""
+def build_seller(router, product, embedder=None, gate=None, words=None, probes=None):
+    """`words`: {step id: question} the rep says instead of the script's, `probes` the same steps asked again in
+    other words (rep_words.py); raises RepWordsError."""
     cfg = engine_config()
     method = method_for(product)
     return ScriptSeller(
-        cfg, with_words(method, words) if words else method, load_offer(cfg["products"][product]["offer"]),
+        cfg, with_words(method, words, probes) if words else method, load_offer(cfg["products"][product]["offer"]),
         load_common_sense(), embedder or meaning_model.shared_embedder(), (gate or shared_gate()).llm(router),
     )
 

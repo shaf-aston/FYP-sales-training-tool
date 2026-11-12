@@ -239,10 +239,11 @@ class FakeCall:
 class FakeSeller:
     """Stands in for SellerBot behind the buy routes and records what they ask of it."""
 
-    def __init__(self, provider_type=None, product_type=None, session_id=None, words=None):
+    def __init__(self, provider_type=None, product_type=None, session_id=None, words=None, probes=None):
         self.product_type = product_type
         self.session_id = session_id
         self.words = words
+        self.probes = probes or {}
         self.provider_name = provider_type or "probe"
         self.model_name = "probe-model"
         self.call = FakeCall()

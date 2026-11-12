@@ -90,6 +90,7 @@ def init():
                     "product_type": seller.product_type,
                     "words": seller.words or {},
                     "words_label": getattr(seller, "words_label", ""),
+                    "probes": getattr(seller, "probes", {}),
                     **stage_fields(seller),
                     "history": history,
                 }
@@ -107,7 +108,8 @@ def init():
 
     words = data.get("words")   # {step id: question}: the rep says a top rep's or an SOP's words (see /words)
     try:
-        seller = SellerBot(provider_type=provider, product_type=product_type, session_id=session_id, words=words or None)
+        seller = SellerBot(provider_type=provider, product_type=product_type, session_id=session_id, words=words or None,
+                           probes=data.get("probes") or None)   # {step: question}: those steps asked again in their words
         seller.words_label = rep_words.clean_label(data.get("label")) if seller.words else ""   # whose words, for the card
         sellers.set(session_id, seller)
         current_app.logger.info(
@@ -130,6 +132,7 @@ def init():
             "product_type": seller.product_type,
             "words": seller.words or {},   # the questions said in someone else's words, by step
             "words_label": seller.words_label,   # whose they are ("Maya", "your SOP"), as the client named them
+            "probes": seller.probes,   # the same steps asked again in their words
             **stage_fields(seller),
             "history": [],
             "training": seller.coach_notes(),  # the web app reads coach notes under this key

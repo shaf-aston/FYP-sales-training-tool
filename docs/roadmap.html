@@ -239,7 +239,7 @@ const steps=[
  {k:"mic",t:"Audio upload",e:"done",st:"built",
   why:"Most reps have recordings, not transcripts.",
   how:"Groq Whisper turns speech into text; Groq labels who spoke, and the rep checks the labels before anything is read.",
-  subs:[["Speech to text: Groq Whisper, up to 25 MB","G",1],["Who is speaking: labelled per segment, flagged when unsure","G",1],["Check and fix the transcript before reading it","R",1],["Split files over 25 MB into chunks","R"],["Speaker model of our own, tested on Kaggle first","M"]],
+  subs:[["Speech to text: Groq Whisper, 25 MB a request","G",1],["Who is speaking: labelled per segment, flagged when unsure","G",1],["Check and fix the transcript before reading it","R",1],["Split files over 25 MB into 10-minute parts (ffmpeg), up to 200 MB","R",1],["Speaker model of our own, tested on Kaggle first","M"]],
   have:["Groq key"],out:"Drop in an MP3 and everything above works"},
  {mod:"Skill Radar · personal growth"},
  {k:"radar",t:"Skill Radar",e:"done",st:"built",

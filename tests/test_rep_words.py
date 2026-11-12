@@ -115,6 +115,32 @@ def test_markup_never_reaches_the_line(cat):
     assert step.say == "How long have you been name thinking about this?"
 
 
+def test_a_probe_in_their_words_is_asked_first_when_the_step_is_asked_again(cat):
+    step = rep_words.with_words(cat, {"03": "How long has this been on your mind?"},
+                                {"03": "When did it first start bugging you?"}).steps["03"]
+    assert step.probes[0] == "When did it first start bugging you?" and step.probes[1:] == cat.steps["03"].probes
+
+
+@pytest.mark.parametrize("probes", [{"01": "What do you want most?"}, {"03": "Tell me more."}, ["03"]])
+def test_a_probe_needs_its_step_in_their_words_and_must_ask(cat, probes):
+    with pytest.raises(rep_words.RepWordsError):
+        rep_words.with_words(cat, {"03": "How long has this been on your mind?"}, probes)
+
+
+def test_the_source_asking_a_step_twice_gives_its_probe(cat):
+    """Two questions that only step 03 fits: the closer one takes it, the other is asked when it is asked again."""
+    own = rep_words._spoken(question_of(cat.steps["03"].say))
+    sources = {"How long has this been on your mind?": 0.0, "When did this first start bugging you?": 0.2}
+
+    def embed(texts):
+        return [[1.0, 0.0] if t == own else [1.0, sources[t]] if t in sources else [0.0, 1.0] for t in texts]
+    found = {m.step: m for m in rep_words.match(cat, ["How long has this been on your mind?",
+                                                     "When did this first start bugging you?"], embed)}
+    assert list(found) == ["03"]
+    assert (found["03"].theirs, found["03"].probe) == ("How long has this been on your mind?",
+                                                       "When did this first start bugging you?")
+
+
 def test_tone_notes_and_pauses_never_reach_the_line(cat):
     step = rep_words.with_words(cat, {"03": "(curious) How long has this ¶ been on your mind?"}).steps["03"]
     assert step.say == "How long has this been on your mind?"

@@ -45,6 +45,9 @@ ACCOUNT_FIELD_ERRORS = {
 SKILL_ENTRIES_INVALID = "Those scores couldn't be saved: send up to {max} entries in the skill log format."
 PROSPECTS_FULL = "You've saved {max} prospects. Delete one to save another."
 PROSPECT_NOT_FOUND = "That saved prospect doesn't exist."
+WORDS_FULL = "You've saved {max} sets of questions already. Delete one to save another."
+WORDS_NOT_FOUND = "Those saved questions are gone."
+WORDS_INVALID = "Those questions don't fit the script any more. Match them again."
 TEAM_ERRORS = {
     "name_invalid": "Give the team a name (up to 60 characters).",
     "already_in_team": "You're already in a team. Leave it first.",
@@ -69,6 +72,7 @@ AUDIO_REQUIRED = "Choose a call recording to upload."
 AUDIO_FORMAT = "Use an audio file: {formats}."
 AUDIO_TOO_BIG = "That recording is over {mb} MB. Export the call's transcript instead (Zoom, Teams, Fathom and others offer one)."
 AUDIO_NO_SPEECH = "No speech was found in that recording."
+AUDIO_UNREADABLE = "That recording couldn't be read. Check it plays, or paste or upload the call's transcript instead."
 AUDIO_UNAVAILABLE = "Turning recordings into text isn't available right now. Paste or upload the call's transcript instead."
 CALL_ONE_SPEAKER_TEXT = "Everyone in this transcript is labelled \"{name}\". Name the speakers (or export it with names) so we can tell you from the prospect."
 # The rep's own words (/api/buy/words, /api/buy/init `words`)

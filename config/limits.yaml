@@ -65,6 +65,7 @@ accounts:
   max_team_name_chars: 60
   max_skill_entries: 200     # per learner, newest kept
   max_saved_prospects: 50    # per learner
+  max_saved_words: 20        # Rep's words choices per learner
   scrypt: {n: 16384, r: 8, p: 1}   # password hashing cost; raising it only affects new hashes
   session_days: 30           # how long a login lasts
   invite_code_length: 8      # team invite codes, from 31 easily read characters
@@ -159,7 +160,13 @@ sop:                 # a team's sales SOP (core/sop)
 
 transcription:       # a call recording turned into a transcript (core/infra/providers/transcribe.py, core/calls/audio.py)
   model: whisper-large-v3-turbo   # Groq speech to text
-  max_bytes: 25000000  # Groq's upload limit for one file; bigger recordings: export the transcript instead
+  max_bytes: 25000000  # Groq's upload limit for one file; a bigger recording is cut into parts (below) that each fit
+  max_upload_bytes: 200000000  # the biggest recording accepted; past max_bytes it needs ffmpeg on the server, else max_bytes is the cap
+  part_seconds: 600    # a recording past max_bytes is cut into parts this long (core/calls/audio_parts.py)...
+  part_kbps: 64        # ...each re-encoded mono mp3 at this bitrate: 600 s x 64 kbps = 4.8 MB, far under max_bytes
+  part_sample_rate: 16000   # Hz; the speech engine works at 16 kHz anyway, so nothing it hears is lost
+  min_part_seconds: 1  # a shorter tail part is dropped: the engine invents words for a split second of silence
+  split_timeout_seconds: 300   # ffmpeg's time to cut a recording (about 12 s per hour of audio)
   formats: [mp3, m4a, mp4, mpeg, mpga, wav, webm, ogg, flac]
   timeout_seconds: 180 # a one-hour call takes well under a minute
   label_batch: 60      # segments per "who said this" request...

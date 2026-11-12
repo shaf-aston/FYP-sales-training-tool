@@ -10,6 +10,7 @@ from flask import Blueprint, jsonify, request
 
 from core.calls.errors import CALL_ONE_SPEAKER, CALL_TOO_LONG, CALL_TOO_SHORT, CALL_UNREADABLE, UNKNOWN_SPEAKER, CallError
 from core.calls.audio import as_transcript, label_speakers
+from core.calls.audio_parts import AudioUnreadable, can_split, transcribe_in_parts
 from core.calls.reader import load_calls_config, read_call
 from core.infra.constants import CALL_LIMITS, LLM, MAX_REQUEST_BYTES, TRANSCRIPTION
 from core.infra.providers.router import ProviderRouter, ProviderUnavailable, complete
@@ -31,6 +32,7 @@ from ..messages import (
     AUDIO_REQUIRED,
     AUDIO_TOO_BIG,
     AUDIO_UNAVAILABLE,
+    AUDIO_UNREADABLE,
     INVALID_DIFFICULTY,
 )
 from ..security import require_rate_limit
@@ -104,9 +106,12 @@ def review():
 def transcribe_audio():
     """A call recording (multipart `file`) -> a transcript with speakers labelled "Speaker A" / "Speaker B",
     for the learner to check and read like any other (core/calls/audio.py). `labels_sure` is False when the AI's
-    labels mostly could not be read, so the learner is asked to fix them. Nothing is stored."""
-    # Recordings are far bigger than any other request: this route alone takes up to the engine's limit.
-    request.max_content_length = TRANSCRIPTION["max_bytes"] + MAX_REQUEST_BYTES
+    labels mostly could not be read, so the learner is asked to fix them. Nothing is stored.
+
+    A recording past the engine's per-file limit is cut into parts and transcribed part by part
+    (core/calls/audio_parts.py); that needs ffmpeg, so without it the engine's limit stays the cap."""
+    # Recordings are far bigger than any other request: this route alone takes up to max_upload_bytes.
+    request.max_content_length = TRANSCRIPTION["max_upload_bytes"] + MAX_REQUEST_BYTES
     upload = request.files.get("file")
     if upload is None or not upload.filename:
         return jsonify({"error": AUDIO_REQUIRED, "code": "AUDIO_REQUIRED"}), 400
@@ -115,11 +120,13 @@ def transcribe_audio():
     if ext not in TRANSCRIPTION["formats"]:
         formats = ", ".join(TRANSCRIPTION["formats"])
         return jsonify({"error": AUDIO_FORMAT.format(formats=formats), "code": "AUDIO_FORMAT"}), 400
-    audio = upload.read()
-    if len(audio) > TRANSCRIPTION["max_bytes"]:
-        return jsonify({"error": AUDIO_TOO_BIG.format(mb=TRANSCRIPTION["max_bytes"] // 1_000_000), "code": "AUDIO_TOO_BIG"}), 413
+    size = _size(upload.stream)
+    in_parts = size > TRANSCRIPTION["max_bytes"]
+    cap = TRANSCRIPTION["max_upload_bytes"] if can_split() else TRANSCRIPTION["max_bytes"]
+    if size > cap:
+        return jsonify({"error": AUDIO_TOO_BIG.format(mb=cap // 1_000_000), "code": "AUDIO_TOO_BIG"}), 413
     try:
-        segments = transcribe(audio, name)
+        segments = transcribe_in_parts(upload.stream, ext, transcribe) if in_parts else transcribe(upload.read(), name)
         if not segments:
             return jsonify({"error": AUDIO_NO_SPEECH, "code": "AUDIO_NO_SPEECH"}), 400
         router = ProviderRouter()
@@ -128,7 +135,17 @@ def transcribe_audio():
             return complete(router, [{"role": "user", "content": prompt}], **LLM["speaker_labels"])
 
         labels, sure = label_speakers(segments, ask, load_calls_config()["speaker_prompt"])
+    except AudioUnreadable:
+        return jsonify({"error": AUDIO_UNREADABLE, "code": "AUDIO_UNREADABLE"}), 400
     except (TranscriptionUnavailable, ProviderUnavailable):
         return jsonify({"error": AUDIO_UNAVAILABLE, "code": "AUDIO_UNAVAILABLE"}), 503
     return jsonify({"success": True, "text": as_transcript(segments, labels), "labels_sure": sure,
                     "filename": name.rsplit(".", 1)[0] + ".txt"})
+
+
+def _size(stream) -> int:
+    """The upload's size in bytes, without reading it into memory (Werkzeug keeps a big one in a temporary file)."""
+    stream.seek(0, 2)
+    size = stream.tell()
+    stream.seek(0)
+    return size

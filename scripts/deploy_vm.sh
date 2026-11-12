@@ -45,6 +45,9 @@ if deps "$old" "$new" && bash -c "$RESTART" && live_on "$new"; then
   # the nightly database backup; a problem here is reported but never undoes a good deploy
   [ -n "${SKIP_BACKUP_TIMER:-}" ] || bash scripts/install_backup.sh \
     || echo "::warning title=Backup timer::could not install the nightly backup timer"
+  # ffmpeg splits recordings past 25 MB; without it they are refused as too big, so a failure here is only a warning
+  [ -n "${SKIP_FFMPEG_INSTALL:-}" ] || bash scripts/install_ffmpeg.sh \
+    || echo "::warning title=ffmpeg::could not install ffmpeg; recordings over 25 MB will be refused"
   exit 0
 fi
 
