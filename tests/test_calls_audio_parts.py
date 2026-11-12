@@ -226,3 +226,21 @@ def test_ffmpeg_installer_installs_only_when_missing(tmp_path, installed):
         assert calls == []
     else:
         assert any("apt-get" in c and "install" in c and "ffmpeg" in c for c in calls)
+
+
+def test_ffmpeg_reads_only_a_local_audio_file(tmp_path):
+    """A "recording" that is really a playlist (HLS, concat) must not make ffmpeg open other files or URLs."""
+    from core.calls.audio_parts import INPUT_FORMATS, split_command
+
+    cmd = split_command("ffmpeg", tmp_path / "recording.mp3", tmp_path)
+    assert cmd[cmd.index("-protocol_whitelist") + 1] == "file"
+    allowed = cmd[cmd.index("-format_whitelist") + 1].split(",")
+    assert allowed == INPUT_FORMATS.split(",") and not {"hls", "concat", "image2", "lavfi"} & set(allowed)
+    assert cmd.index("-format_whitelist") < cmd.index("-i")
+
+
+@pytest.mark.skipif(not shutil.which("ffmpeg"), reason="needs ffmpeg")
+@pytest.mark.parametrize("body", ["#EXTM3U\n#EXTINF:10,\n/etc/hostname\n", "ffconcat version 1.0\nfile '/etc/hostname'\n"])
+def test_a_playlist_dressed_as_a_recording_is_unreadable(tmp_path, body):
+    with pytest.raises(AudioUnreadable):
+        transcribe_in_parts(io.BytesIO(body.encode()), "mp3", lambda audio, name: [])

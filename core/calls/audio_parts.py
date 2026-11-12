@@ -30,6 +30,10 @@ class AudioUnreadable(ValueError):
     """ffmpeg could not decode the upload: it is not a recording, or it is damaged."""
 
 
+# ffmpeg's demuxers for transcription.formats (mp3/mpga, m4a/mp4, mpeg, wav, webm, ogg, flac).
+INPUT_FORMATS = "mp3,mov,mp4,m4a,3gp,3g2,mj2,mpeg,wav,matroska,webm,ogg,flac,aac"
+
+
 def can_split() -> bool:
     """Whether ffmpeg is installed. Without it a recording past max_bytes is refused as too big, as before."""
     return shutil.which("ffmpeg") is not None
@@ -39,7 +43,10 @@ def split_command(ffmpeg: str, source: Path, folder: Path) -> list[str]:
     """The ffmpeg arguments that cut `source` into small parts in `folder`. Only paths we made go in, never the
     learner's file name, and it runs without a shell."""
     return [
-        ffmpeg, "-nostdin", "-hide_banner", "-loglevel", "error", "-i", str(source),
+        # Only a local file, and only audio containers: a "recording" that is really a playlist (HLS, concat)
+        # would otherwise make ffmpeg open other files or URLs.
+        ffmpeg, "-nostdin", "-hide_banner", "-loglevel", "error",
+        "-protocol_whitelist", "file", "-format_whitelist", INPUT_FORMATS, "-i", str(source),
         "-vn", "-ac", "1", "-ar", str(TRANSCRIPTION["part_sample_rate"]),
         "-c:a", "libmp3lame", "-b:a", f"{TRANSCRIPTION['part_kbps']}k",
         "-f", "segment", "-segment_time", str(TRANSCRIPTION["part_seconds"]), "-reset_timestamps", "1",
