@@ -89,3 +89,13 @@ def test_a_tie_on_how_many_are_below_goes_to_the_lowest_skill():
     team = [(1, "Ann", entries((65, 50), (65, 50))), (2, "Bo", entries((66, 55), (66, 55)))]
     lines = build_insights(team, SKILLS, 70, NOW, CFG)["guidelines"]
     assert lines[0].startswith("Most of the team is below target on objection handling")
+
+
+def test_a_name_that_looks_like_a_formula_is_text_in_the_csv(app_client):
+    boss, rep = app_client(), app_client()
+    signup(boss, "boss2@x.co", "Boss")
+    signup(rep, "rep2@x.co", '=HYPERLINK("http://evil.example","Open")')
+    code = boss.post("/api/team/create", json={"name": "Closers"}).get_json()["team"]["invite_code"]
+    rep.post("/api/team/join", json={"code": code})
+    rows = boss.get("/api/team/insights.csv").get_data(as_text=True).splitlines()
+    assert rows[1].startswith("\"'=HYPERLINK(")

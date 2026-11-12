@@ -114,10 +114,12 @@ def _insights(user):
     target = request.args.get("target", type=int)
     target = target if target in offered["targets"] else offered["target"]
     library = Library(database())
-    entries = {m.user_id: library.skill_entries(m.user_id) for m in teams.members(membership.team_id)}
     # A manager who doesn't practise is not a gap in the team: managers count once they have sessions of their own.
-    members = [(m.user_id, m.name, entries[m.user_id]) for m in teams.members(membership.team_id)
-               if m.role != MANAGER or entries[m.user_id]]
+    members = []
+    for m in teams.members(membership.team_id):   # read once: someone joining meanwhile can't break the view
+        entries = library.skill_entries(m.user_id)
+        if entries or m.role != MANAGER:
+            members.append((m.user_id, m.name, entries))
     return build_insights(members, offered["skills"], target, int(time.time() * 1000), load_yaml("insights.yaml")), None
 
 
@@ -127,6 +129,14 @@ def insights(user):
     """A manager's view of the team: each member's skill levels, the team's, and what to coach next."""
     data, error = _insights(user)
     return error or jsonify({"success": True, "targets": sell_service.skills()["targets"], **data})
+
+
+_FORMULA_START = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _cell(value):
+    """A cell a spreadsheet shows as text: a name starting like a formula ("=HYPERLINK(...)") gets a leading '."""
+    return f"'{value}" if isinstance(value, str) and value.startswith(_FORMULA_START) else value
 
 
 @bp.route("/insights.csv", methods=["GET"])
@@ -143,7 +153,7 @@ def insights_csv(user):
     label = {s["id"]: s["label"] for s in skills}
     for m in data["members"]:
         last = datetime.fromtimestamp(m["last_at"] / 1000, timezone.utc).date().isoformat() if m["last_at"] else ""
-        writer.writerow([m["name"], m["sessions"], last, *[m["levels"].get(s["id"], "") for s in skills],
+        writer.writerow([_cell(m["name"]), m["sessions"], last, *[m["levels"].get(s["id"], "") for s in skills],
                          label.get(m["weakest"], "")])
     return Response(out.getvalue(), mimetype="text/csv",
                     headers={"Content-Disposition": "attachment; filename=team-insights.csv"})
