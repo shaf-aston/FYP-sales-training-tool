@@ -282,7 +282,8 @@ def score_direction(user_explanation: str, router: Any, current_stage: str) -> d
 def _score_with_llm(router: Any, prompt: str, defaults: dict) -> dict:
     """The AI's JSON answer, keeping only known labels and a clamped score; `defaults` on any failure."""
     try:
-        parsed = complete_json(router, [{"role": "system", "content": prompt}], **LLM["quiz"])
+        # As the user turn: the chat models refuse a request with no user message ("No user query found")
+        parsed = complete_json(router, [{"role": "user", "content": prompt}], **LLM["quiz"])
         result = parsed or {}
 
         output = {}
