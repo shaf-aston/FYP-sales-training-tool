@@ -58,14 +58,14 @@ Steps:
 
 ### 1.2 Platform hardening · R
 **✓ 1 (backups), 3 (real IP) and 4 (embedder) done** in PR #102. The VM also had its database file readable by every
-user; it is now 0600. 2 needs the Vercel deploy hook; 5 is below.
+user; it is now 0600. **✓ 2 (deploy order) done** without a deploy hook: the deploy workflow already uploads the web
+with the Vercel CLI, so its web job now waits for the VM job. 5 is below.
 1. **Database backups.**
    - Nightly `sqlite3 .backup` on the VM with 7 days kept, as a systemd timer installed by `scripts/deploy_vm.sh`.
    - Done when a restore of last night's backup on a copy works.
    - Needs nothing: it goes through the `vm-run` workflow.
 2. **Deploy order.**
-   - The web (Vercel) can be live before the API (VM). Gate the Vercel deploy on the API by turning off Vercel's git auto-deploy (`vercel.json` `git.deploymentEnabled: false`) and calling a Vercel deploy hook at the end of `deploy.yml`.
-   - Needs the user to create a deploy hook in Vercel and save it as the GitHub secret `VERCEL_DEPLOY_HOOK`.
+   - The web (Vercel) could go live before the API (VM). ✓ `deploy.yml`'s web job now `needs: vm` (a failed VM deploy holds the web back; an unset-up VM does not), and `web/public/vercel.json` sets `git.deploymentEnabled: false`, so Vercel never deploys from git on its own.
 3. **The visitor's real IP behind the proxies.**
    - Rate limits and the login throttle should read the client IP from Caddy's `X-Forwarded-For`, but only when it comes from Caddy (`TRUST_PROXY_HEADERS=1` on the VM).
    - Done when two requests from different IPs hit separate rate buckets.
@@ -131,7 +131,7 @@ Both are off by default, carry an "AI-written" note, and fall back to the rules'
 ## Phase 5: user actions (no code)
 1. **Groq console:** accept the terms for `canopylabs/orpheus-v1-english`, so server voice works (now it's the browser voice).
 2. **Netlify:** unlink the repo. Its failing checks on PRs are not ours.
-3. **Vercel deploy hook** for 1.2.2.
+3. ~~Vercel deploy hook for 1.2.2~~: not needed (see 1.2.2).
 4. **Google login (optional):** an OAuth client ID and secret. Magic links need an email sender (Resend or Postmark API key).
 5. **Fathom transcripts** for Phase 2, and **Kaggle** access for Phase 3.
 
