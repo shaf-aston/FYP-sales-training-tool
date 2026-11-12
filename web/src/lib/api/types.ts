@@ -163,6 +163,19 @@ export interface SellInitRes {
   model: string;
 }
 
+/** GET /api/sell/state: a live sell call, to pick it back up after a reload. */
+export interface SellStateRes {
+  success: true;
+  session_id: string;
+  persona: Persona;
+  state: BuyerState;
+  difficulty: Difficulty;
+  product_type: string;
+  history: ChatMsg[];
+  ended: boolean;
+  outcome: Outcome;
+}
+
 export interface SellChatRes {
   success: true;
   message: string;
