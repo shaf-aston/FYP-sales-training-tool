@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui";
 import type { SopReadRes } from "@/lib/api/types";
+import { Critique } from "./Critique";
 import { ElementList } from "./ElementList";
 import { ScoreTile } from "./ScoreTile";
 import { SopOutline } from "./SopOutline";
@@ -21,6 +22,7 @@ export function SopResult({ result, source, onBack }: { result: SopReadRes; sour
           Use another SOP
         </Button>
       </div>
+      <Critique text={result.critique} />
       <div className={s.split}>
         <ScoreTile value={result.coverage} label="of a good call covered">
           <p className={s.muted}>

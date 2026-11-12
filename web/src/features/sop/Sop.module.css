@@ -244,3 +244,12 @@
     padding: var(--space-4);
   }
 }
+
+.critique {
+  display: grid;
+  gap: var(--space-2);
+}
+.critique p {
+  margin: 0;
+  line-height: 1.55;
+}

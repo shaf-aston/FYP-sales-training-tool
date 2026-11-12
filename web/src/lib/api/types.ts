@@ -377,6 +377,8 @@ export interface SopReadRes {
   elements: SopElement[];
   /** Share of elements covered, 0-100. */
   coverage: number;
+  /** A short paragraph summing it up, the costliest gap first (written by rules). */
+  critique?: string;
 }
 
 /** One SOP step in a real call: done at the rep's turn `turn` (1-based) with what they said, or not heard. */
@@ -397,6 +399,8 @@ export interface SopCheckRes {
   /** The done steps happened in the SOP's order. */
   in_order: boolean;
   steps: SopStepResult[];
+  /** A short paragraph summing it up: the share done, the first step skipped (written by rules). */
+  critique?: string;
 }
 
 // Accounts (/api/account, /api/team): optional; everything works logged out.

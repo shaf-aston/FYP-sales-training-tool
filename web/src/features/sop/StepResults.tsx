@@ -1,5 +1,6 @@
 import { Badge, Icon } from "@/components/ui";
 import type { SopCheckRes, SopStepResult } from "@/lib/api/types";
+import { Critique } from "./Critique";
 import { ScoreTile } from "./ScoreTile";
 import s from "./Sop.module.css";
 
@@ -18,6 +19,7 @@ export function StepResults({ result }: { result: SopCheckRes }) {
       <p className="sr-only" role="status">
         Call checked: {heard} of {result.steps.length} steps heard{result.in_order ? ", in order" : ", out of order"}.
       </p>
+      <Critique text={result.critique} />
       <div className={s.split}>
         <ScoreTile value={result.score} label="of the SOP's steps heard">
           <div className={s.row}>

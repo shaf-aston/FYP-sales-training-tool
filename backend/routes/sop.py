@@ -13,6 +13,7 @@ from core.infra.constants import MAX_REQUEST_BYTES, SOP_LIMITS
 from core.infra.loader import CONFIG_DIR, load_yaml
 from core.sop.adherence import check_call
 from core.sop.checklist import check_elements
+from core.sop.critique import call_critique, sop_critique
 from core.sop.document import DocumentError, read_document
 from core.sop.outline import Stage, build_outline
 
@@ -80,6 +81,7 @@ def read():
         "stages": _outline_json(stages),
         "elements": [e.__dict__ for e in elements],
         "coverage": round(100 * sum(e.covered for e in elements) / len(elements)),
+        "critique": sop_critique(elements, cfg),
     })
 
 
@@ -99,4 +101,6 @@ def check():
     except CallError as e:
         return call_error(e)
     rep_lines = [h["content"] for h in reading.history() if h["role"] == "user"]
-    return jsonify({"success": True, "rep": reading.roles.rep, **check_call(stages, rep_lines, load_yaml("sop.yaml"), _embed).to_json()})
+    cfg = load_yaml("sop.yaml")
+    result = check_call(stages, rep_lines, cfg, _embed)
+    return jsonify({"success": True, "rep": reading.roles.rep, **result.to_json(), "critique": call_critique(result, cfg)})
