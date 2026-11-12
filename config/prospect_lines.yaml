@@ -1,0 +1,144 @@
+# What the sell-mode buyer says, by rules: lines per move and topic (core/sell_mode/buyer_lines.py).
+# The move comes first (buyer_moves.py, thresholds in buyer.yaml `moves`); a line from here says it. A move with no
+# line that fits (or `share` on a topic not listed) goes to the AI, told the move.
+#
+# Blanks are the persona's own words: {need} and {pain} take the next one they have not said yet (in order, so they
+# open up bit by bit), {budget} their budget when it is a figure, {budget_kind} when it is a description ("mid-range").
+# A line whose blank the persona cannot fill is skipped.
+# A line is never said twice in one call. House voice: short, plain, a real person on a call, no sales words.
+
+topics:   # what the seller asked about: the first topic with a phrase in their line (whole words, lower case)
+  budget: [budget, spend, spending, invest, investment, afford, price, cost, money, pay]
+  time: [when, timeline, how soon, deadline, by when, timeframe, how long, start date]
+  decision: [decide, decision, who else, partner, wife, husband, boss, sign off, sign-off, approve, involved]
+  current: [currently, at the moment, right now, today, using now, what are you using, how do you do, tried, before]
+  pain: [challenge, problem, struggle, struggling, frustrat, hard, difficult, pain, issue, worry, keeping you up, holding you back, wrong]
+  need: [want, need, looking for, achieve, goal, hoping, ideal, success, outcome, matter, important, why]
+
+lines:
+  share:   # answer the question and open up: their need or pain in their own words
+    need:
+      - "Mainly {need}, if I'm honest."
+      - "The big thing for me is {need}."
+      - "I'd say {need}. That's what I keep coming back to."
+      - "Honestly? {need}. Everything else is a nice-to-have."
+      - "If this sorted out {need}, I'd be happy."
+      - "Right now it's {need}. That's the priority."
+      - "{need}, mostly. I've been putting it off for a while."
+      - "What I really want is {need}. I just haven't found the right way to get there."
+      - "Probably {need}. That would make the biggest difference."
+      - "It comes down to {need}, really."
+    pain:
+      - "Honestly? {pain}. That's what keeps coming up."
+      - "The main thing is {pain}. It's been dragging on."
+      - "{pain}. It's starting to wear me down, to be fair."
+      - "If I'm being straight with you, {pain}."
+      - "It's {pain}, mostly. And it's not getting better on its own."
+      - "{pain}. That's the bit I can't keep ignoring."
+      - "The frustrating part is {pain}."
+      - "Biggest one? {pain}. I've tried to fix it myself and it hasn't stuck."
+      - "{pain}, and it's costing me more than I'd like to admit."
+      - "Mostly {pain}. That's why I took the call."
+    current:
+      - "We're making do with what we've got. It works, just not well. {pain}."
+      - "A bit of everything, to be honest. Nothing's really stuck."
+      - "I've tried sorting it myself. {pain}, so clearly that's not working."
+      - "Mostly doing it the old way. It's slow, but it's what we know."
+      - "I've looked at a couple of options but never pulled the trigger."
+      - "Nothing proper. Bits and pieces, and I'm doing most of it by hand."
+      - "We've got something in place, but {pain}."
+      - "Honestly, I've been winging it. That's part of the problem."
+    budget:   # {budget} is a figure ("$50,000-$70,000"), {budget_kind} a description ("cost-conscious")
+      - "Budget-wise I'd say {budget}. I'm not looking to go crazy."
+      - "{budget}, roughly. It depends what I'm getting for it."
+      - "I've got {budget} in mind. Could stretch a bit for the right thing."
+      - "I'd want to keep it around {budget}."
+      - "Somewhere around {budget}. I'd need to see the value first though."
+      - "I've set aside {budget}. That's the honest answer."
+      - "Honestly? {budget_kind}. I'd need to see the value first."
+      - "I'd call myself {budget_kind}, if I'm honest."
+      - "{budget_kind}. I'm not throwing money at it."
+      - "No set figure. {budget_kind}, let's say."
+      - "Money's not unlimited. {budget_kind} is where my head's at."
+      - "I'd rather not give a number yet. {budget_kind}, put it that way."
+    time:
+      - "No fixed date, but sooner rather than later."
+      - "Ideally in the next month or two. I've waited long enough."
+      - "I'd like to get going soon. It's been on my list for ages."
+      - "There's no hard deadline. It just keeps getting pushed back."
+      - "Soon-ish. I don't want another few months to go by like this."
+      - "If it's the right fit, I could start pretty quickly."
+      - "I'm not in a mad rush, but I don't want to drag it out either."
+      - "In the next few weeks, if I'm honest with myself."
+    decision:
+      - "It'd be me, but I'd run it past a couple of people first."
+      - "Me, mostly. I'd want my partner on board though."
+      - "I make the call, but I don't like doing it on my own."
+      - "It's my decision. I just need to be sure about it."
+      - "I'd talk it through at home first. That's just how we do things."
+      - "Mine, in the end. But I'd want to sleep on it."
+      - "There's one other person I'd check with. Shouldn't be an issue if it makes sense."
+      - "I can decide, but I'd want the details in writing first."
+  guard:   # answer, but hold back: they don't trust the seller yet
+    general:
+      - "It depends, really."
+      - "Hard to say. Why do you ask?"
+      - "A few things. I'd rather hear what you do first."
+      - "Bits and pieces. Nothing I want to get into just yet."
+      - "That's a big question. What do you need to know?"
+      - "Honestly, I'm still working that out."
+      - "I'd rather not go into too much detail yet."
+      - "Depends what you're offering, to be honest."
+      - "I'd rather not get into that just yet."
+      - "Let's just say it could be better."
+      - "I'm not sure yet. That's partly why I'm here."
+      - "Maybe. I'd need to know more before I say."
+  stall:   # put it off: not interested yet, or pushed too hard
+    general:
+      - "I'm not sure this is for me, to be honest."
+      - "Okay. I'd need to think about that."
+      - "Right. I'm not really at that point yet."
+      - "Hmm. I'm still not sure what this actually is."
+      - "I hear you. I just don't know if now's the time."
+      - "Maybe. I've heard a lot of pitches like this."
+      - "That's a lot. Can we slow down a bit?"
+      - "Sure. I'm not convinced yet though."
+      - "Okay. I'll be honest, I'm a bit sceptical."
+      - "I'm just looking at the moment."
+    pressure:   # the seller pushed (urgency, a pitch before asking anything)
+      - "Whoa, slow down. I haven't even said what I need yet."
+      - "I don't make decisions on the spot. That's not going to work on me."
+      - "Hang on, you don't know anything about my situation yet."
+      - "I'd rather not be rushed into anything."
+      - "That feels a bit pushy, if I'm honest."
+      - "Let's not get ahead of ourselves."
+      - "I'm not buying anything today, so you can drop the deadline."
+      - "Can we back up? I'm not there yet."
+      - "Every salesperson says it's a limited offer."
+      - "That's a lot of pressure for a first conversation."
+  ask:   # interested enough to ask how it works
+    general:
+      - "How does it actually work, day to day?"
+      - "What would I actually get?"
+      - "Who's this usually for?"
+      - "How's this different from what I could find elsewhere?"
+      - "What happens after I sign up?"
+      - "How quickly do people usually see results?"
+      - "Do you have examples of people like me who've done it?"
+      - "What does it cost, roughly?"
+      - "What if it doesn't work for me?"
+      - "How much time would I need to put in?"
+      - "What's the catch?"
+      - "Can you walk me through what the first few weeks look like?"
+  lean_in:   # warming up: interested, wants the next step
+    general:
+      - "Okay, that actually sounds useful."
+      - "Right, that makes sense. Go on."
+      - "That's more or less what I've been looking for."
+      - "Okay, you've got my attention."
+      - "That would help, to be honest. What's the next step?"
+      - "I like the sound of that."
+      - "That's fair. Tell me more."
+      - "Okay. That's the bit I was hoping to hear."
+      - "Yeah, I can see that working for me."
+      - "That's reassuring, actually."

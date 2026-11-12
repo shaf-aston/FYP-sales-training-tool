@@ -123,7 +123,7 @@ def test_a_live_turn_answers_first_then_adds_the_scripted_objection_and_counts_i
     )
     objection = buyer.pacer.for_turn(turn)
     assert replies[turn - 1] == f"Go on. {objection['text']}"
-    assert "THIS TURN" not in prompts[turn - 1]
+    assert "THIS TURN" in prompts[turn - 1] and objection["text"] not in prompts[turn - 1]   # rules add it, not the AI
     assert buyer.state.objections_raised == 1
 
 

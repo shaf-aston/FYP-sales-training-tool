@@ -411,6 +411,24 @@ evaluation:
       - "Solid session with clear control and progression. Outcome: {outcome}."
 
 # How keen the buyer sounds to themselves: readiness below each threshold picks the next label.
+moves:   # what the buyer does this turn, by rules (core/sell_mode/buyer_moves.py); the AI only words it
+  open_from: 0.65      # readiness at or above this: answers open up, a pitch gets interest
+  guarded_below: 0.35  # readiness below this: answers stay short, a pitch gets put off
+  # signals in the seller's line (turn_rating.yaml) that make the buyer push back, whatever their readiness
+  push_back_on: [pressure, premature_pitch]
+  # the seller hands the floor over: the buyer asks, whatever their readiness
+  invite_questions: [questions do you have, questions for me, anything you want to ask, anything you'd like to ask, what would you like to know, anything i can answer, any questions]
+  bank: true           # say lines from config/prospect_lines.yaml when one fits; false: the AI words every move
+  min_score: 0.55      # an answer's line must be this close to the seller's question (shared embedder) to be said.
+                       # bge-small: a topic's own question scored 0.60-0.71 to its best line, off-topic questions
+                       # ("How are you today?") 0.43-0.55 (tests/test_buyer_lines.py, RUN_EMBED_TESTS=1)
+  instructions:        # added to the AI's prompt for the move ("THIS TURN: ...")
+    share: "Answer their question properly and open up a little: say one real thing about your situation."
+    guard: "Answer briefly and hold back: you don't trust them enough yet to give details."
+    stall: "Don't move forward: you're not convinced, or you feel pushed. Say so plainly, without being rude."
+    ask: "Ask them one question about how it works or what you would get. Don't answer for them."
+    lean_in: "Show real interest in what they just said, in a sentence, and let them carry on."
+
 readiness_bands:
   thresholds: [0.2, 0.4, 0.6, 0.8]
   labels:

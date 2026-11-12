@@ -135,7 +135,7 @@ footer{font-size:12px;color:var(--muted)}
   <section aria-label="Two ways to practise">
     <div class="label" style="margin-bottom:12px">Two ways to practise</div>
     <div class="duo">
-      <div class="role"><div class="who">ICON_person<span>You are the <b>prospect</b></span></div><div class="who">ICON_bot<span>A virtual <b>rep</b> sells to you</span></div><span class="tag">Buy mode · building now</span><p>Hear how a good rep sells. Learn the script from the other side.</p></div>
+      <div class="role"><div class="who">ICON_person<span>You are the <b>prospect</b></span></div><div class="who">ICON_bot<span>A virtual <b>rep</b> sells to you</span></div><span class="tag">Buy mode · live</span><p>Hear how a good rep sells. Learn the script from the other side.</p></div>
       <svg class="i swap" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4L3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/></svg>
       <div class="role"><div class="who">ICON_person<span>You are the <b>salesperson</b></span></div><div class="who">ICON_bot<span>A virtual <b>prospect</b> pushes back</span></div><span class="tag">Sell mode · live</span><p>Practise selling. Upload a real call and the prospect becomes that exact buyer.</p></div>
     </div>
@@ -212,15 +212,15 @@ const steps=[
   subs:[["Server secrets in GitHub","R",1],["Deploy runs after CI and checks /api/health","R",1],["Installs new packages when requirements change","R",1],["Rolls back automatically if the new version doesn't start","R",1],["Turned off the 10-minute auto-pull that skipped CI","R",1]],
   have:["Deploy workflow","vm-run for server commands"],out:"Every merge ships to the live server, only after CI"},
  {mod:"Practice · two directions"},
- {k:"bot",t:"Virtual rep sells to you",e:"built · polish",st:"built",
+ {k:"bot",t:"Virtual rep sells to you",e:"done",st:"built",
   why:"You play the prospect and watch a good rep work, in the script's words, a top rep's or your SOP's.",
   how:"Already the pattern to copy: rules lead, a local model hears meaning, Groq only settles close calls.",
-  subs:[["Rep follows the script stages","R",1],["Hears your reply by meaning (local bge-small)","M",1],["Coach notes and stage tracking","R",1],["Groq settles close calls and writes short acknowledgements","G",1],["Finish and polish the flow","R"],["Choose the call type: full CAT call or short consultative call","R",1],["Copy a top rep: their questions from an uploaded call, each matched to the script step that asks the same","M",1],["Speak your SOP's questions: \"Ask what they want\" said as \"What do you want?\"","R",1]],
+  subs:[["Rep follows the script stages","R",1],["Hears your reply by meaning (local bge-small)","M",1],["Coach notes and stage tracking","R",1],["Groq settles close calls and writes short acknowledgements","G",1],["Finish and polish the flow","R",1],["Choose the call type: full CAT call or short consultative call","R",1],["Copy a top rep: their questions from an uploaded call, each matched to the script step that asks the same","M",1],["Speak your SOP's questions: \"Ask what they want\" said as \"What do you want?\"","R",1]],
   have:["Buy mode","Script engine","Meaning matcher"],out:"A believable rep you can learn from"},
- {k:"person",t:"Reverse it: you sell, the prospect pushes back",e:"built · rework",st:"built",
+ {k:"person",t:"Reverse it: you sell, the prospect pushes back",e:"built · tuning",st:"built",
   why:"The main practice loop. Rules already own readiness, objections, opening and closing lines. Groq still writes the middle of each reply; most of that can move to real lines.",
   how:"Rules pick the buyer's next move. Real prospect lines say it. Groq only fills gaps.",
-  subs:[["Personas and difficulty","R",1],["Readiness, objections, opening and closing lines","R",1],["Real objections from Fathom","R",1],["Turn-by-turn review, drills, quiz","R",1],["One switch to swap roles","R"],["Rules choose the next move from readiness: object, ask, warm up, stall, agree","R"],["Say it with a real prospect line that fits the move and topic","M"],["Groq writes the line only when nothing fits","G"],["Check realism against real calls: reply length, questions, objection rate","R"]],
+  subs:[["Personas and difficulty","R",1],["Readiness, objections, opening and closing lines","R",1],["Real objections from Fathom","R",1],["Turn-by-turn review, drills, quiz","R",1],["One switch to swap roles","R",1],["Rules choose the next move from readiness and your line: share, hold back, stall, ask, lean in","R",1],["Say it with a real prospect line that fits the move and topic, matched by meaning","M",1],["Groq writes the line only when nothing fits, told the move","G",1],["Check realism against real calls: reply length, questions, objection rate","R"]],
   have:["Sell mode","Buyer state and readiness","Turn rating"],out:"Faster, cheaper replies that sound like real buyers"},
  {k:"upload",t:"Upload a call → it becomes that prospect",e:"done",st:"built",
   why:"Practise against the buyer you actually lost, set up automatically.",
@@ -234,7 +234,7 @@ const steps=[
  {mod:"Platform"},
  {k:"lock",t:"Accounts, database, privacy",e:"done",st:"built",
   why:"Calls, prospects and progress must be saved per person and team.",
-  subs:[["Login with email and password, signed cookie, sign out everywhere","R",1],["Database: users, teams, prospects, skill history","R",1],["Delete account: data wiped from disk too","R",1],["Nothing stored from uploaded calls unless you save the prospect","R",1],["Google or magic-link login","R"],["Daily database backups","R"]],
+  subs:[["Login with email and password, signed cookie, sign out everywhere","R",1],["Database: users, teams, prospects, skill history","R",1],["Delete account: data wiped from disk too","R",1],["Nothing stored from uploaded calls unless you save the prospect","R",1],["Google or magic-link login","R"],["Daily database backups","R",1]],
   have:["SQLite on the server"],out:"Saved history and safe handling of recordings"},
  {k:"mic",t:"Audio upload",e:"done",st:"built",
   why:"Most reps have recordings, not transcripts.",

@@ -118,11 +118,13 @@ def test_restore_refuses_a_damaged_copy(tmp_path):
 
 def test_script_backs_up_db_path_into_backup_dir(tmp_path):
     db = _db(tmp_path)
+    db.chmod(0o644)
     env = {**os.environ, "DB_PATH": str(db), "BACKUP_DIR": str(tmp_path / "out")}
     run = subprocess.run([sys.executable, "scripts/backup_db.py"], cwd=ROOT, env=env, capture_output=True, text=True)
     assert run.returncode == 0, run.stderr
     [copy] = (tmp_path / "out").glob("eloquence-*.db")
     assert _emails(copy) == ["a@x.io"]
+    assert oct(db.stat().st_mode & 0o777) == "0o600"   # the live file is made private too
 
 
 @pytest.mark.skipif(not Path("/usr/bin/bash").exists() and not Path("/bin/bash").exists(), reason="needs bash")

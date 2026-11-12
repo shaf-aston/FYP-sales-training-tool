@@ -28,8 +28,8 @@ class BuyerRecord:
             ),
         )
 
-    def _log_turn_event(self, user_message: str | None, assistant_message: str, turn_index: int) -> None:
-        """Record the full sell-mode exchange as an analytics event."""
+    def _log_turn_event(self, user_message: str | None, assistant_message: str, turn_index: int, **extra) -> None:
+        """Record the full sell-mode exchange as an analytics event (`extra`: the buyer's move and its source)."""
         SessionAnalytics.record(
             session_id=self.session_id,
             event="conversation_turn",
@@ -41,6 +41,7 @@ class BuyerRecord:
             user_message=user_message,
             assistant_message=assistant_message,
             persona_name=persona_name(self.persona),
+            **extra,
         )
 
     def record_session_end(self) -> None:
