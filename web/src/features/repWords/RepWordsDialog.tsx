@@ -14,7 +14,10 @@ import { useSession } from "@/features/session/SessionContext";
 import { api } from "@/lib/api/client";
 import { stageMeta } from "@/lib/labels";
 import { useUi } from "@/state/UiContext";
+import type { WordsChoice } from "@/lib/api/types";
+import { SavedWordsList, SaveWords, TeamWords, UseForTeam, useSavedWords, type SavedWordsState } from "./KeepWords";
 import { useRepWords, type RepWordsState } from "./useRepWords";
+import { questionCount, whose } from "./words";
 import s from "./RepWords.module.css";
 
 type Source = "call" | "sop";
@@ -35,17 +38,18 @@ export function RepWordsDialog() {
 function RepWordsBody({ onDone }: { onDone: () => void }) {
   const { repWords, chooseRepWords } = useSession();
   const state = useRepWords();
+  const saved = useSavedWords();
   const [source, setSource] = useState<Source>("call");
   const [starting, setStarting] = useState(false);
 
-  const start = async (words: Parameters<typeof chooseRepWords>[0]) => {
+  const start = async (words: WordsChoice | null) => {
     setStarting(true);
     await chooseRepWords(words);
     setStarting(false);
     onDone();
   };
 
-  if (state.matched) return <Matches state={state} starting={starting} onStart={start} />;
+  if (state.matched) return <Matches state={state} saved={saved} starting={starting} onStart={start} />;
   return (
     <div className={s.body}>
       <p className={s.lede}>
@@ -56,13 +60,22 @@ function RepWordsBody({ onDone }: { onDone: () => void }) {
         <div className={s.active} role="status">
           <Icon name="check" size={16} />
           <span>
-            This call uses {repWords.label}&apos;s words for {count(Object.keys(repWords.words).length)}.
+            {repWords.team
+              ? `This call uses your team's words: ${whose(repWords.label)}, for ${count(Object.keys(repWords.words).length)}.`
+              : `This call uses ${whose(repWords.label)} words for ${count(Object.keys(repWords.words).length)}.`}
           </span>
           <TextButton disabled={starting} onClick={() => start(null)}>
             Use the script&apos;s words
           </TextButton>
+          <div className={s.keep}>
+            <SaveWords choice={repWords} saved={saved} />
+            <UseForTeam choice={repWords} />
+          </div>
         </div>
       )}
+      <TeamWords starting={starting} onUse={start} />
+      <SavedWordsList saved={saved} starting={starting} onUse={start} />
+
       <Segmented<Source>
         label="Take the questions from"
         options={[
@@ -77,7 +90,7 @@ function RepWordsBody({ onDone }: { onDone: () => void }) {
   );
 }
 
-const count = (n: number) => `${n} question${n === 1 ? "" : "s"}`;
+const count = questionCount;
 
 /** A real call: read it, check who the rep is, then match their questions. */
 function FromCall({ state }: { state: RepWordsState }) {
@@ -139,22 +152,24 @@ function FromSop({ state }: { state: RepWordsState }) {
 /** The script questions the source asks too, each kept or not, then a call in those words. */
 function Matches({
   state,
+  saved,
   starting,
   onStart,
 }: {
   state: RepWordsState;
+  saved: SavedWordsState;
   starting: boolean;
-  onStart: (w: { product: string; label: string; words: Record<string, string> }) => void;
+  onStart: (w: WordsChoice) => void;
 }) {
   const { res, label } = state.matched!;
-  const kept = state.kept();
-  const n = Object.keys(kept).length;
-  const whose = label === "your SOP" ? "Your SOP" : label;
+  const choice: WordsChoice = { product: res.product_type, label, ...state.kept() };
+  const n = Object.keys(choice.words).length;
+  const sop = label === "your SOP";
   return (
     <div className={s.body}>
       <p className={s.lede}>
         {res.matches.length
-          ? `${whose} asks ${res.matches.length} of the script's ${res.steps} questions, in ${label === "your SOP" ? "its" : "their"} own words.`
+          ? `${sop ? "Your SOP" : label} asks ${res.matches.length} of the script's ${res.steps} questions, in ${sop ? "its" : "their"} own words.`
           : `None of the ${count(res.questions)} found asks what the script asks.`}
       </p>
       {res.matches.length ? (
@@ -169,6 +184,7 @@ function Matches({
                   </span>
                   <span className={s.lines}>
                     <span className={s.theirs}>{m.theirs}</span>
+                    {m.probe && <span className={s.probe}>Asked again: {m.probe}</span>}
                     <span className={s.script}>
                       <span className={s.stage}>{m.name || stageMeta(m.stage).label}</span> Script: {m.script}
                     </span>
@@ -191,11 +207,13 @@ function Matches({
             busy={starting}
             busyLabel="Starting…"
             disabled={!n}
-            onClick={() => onStart({ product: res.product_type, label, words: kept })}
+            onClick={() => onStart(choice)}
           >
-            Start a call with {count(n)} in {label === "your SOP" ? "your SOP's" : `${label}'s`} words
+            Start a call with {count(n)} in {whose(label)} words
           </Button>
         )}
+        {n > 0 && <SaveWords choice={choice} saved={saved} />}
+        {n > 0 && <UseForTeam choice={choice} />}
         <Button variant="ghost" disabled={starting} onClick={state.back}>
           Back
         </Button>

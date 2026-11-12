@@ -6,7 +6,8 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { api, ApiError, errorText } from "@/lib/api/client";
-import type { BotState, BuyerPick, BuyerState, ChatMsg, CoachNotes, Difficulty, Outcome, Persona } from "@/lib/api/types";
+import type { BotState, BuyerPick, BuyerState, ChatMsg, CoachNotes, Difficulty, Outcome, Persona, WordsChoice } from "@/lib/api/types";
+import { useAccount } from "@/features/account/AccountContext";
 import { config, storageKeys } from "@/lib/config";
 import { readString, writeString } from "@/lib/storage";
 import { useStoredState } from "@/lib/useStoredState";
@@ -21,23 +22,49 @@ export type { ChatMessage };
  */
 export type Mode = "buy" | "sell";
 
-/** Buy mode: the questions new calls ask in someone else's words (the Rep's words tool), kept for this tab. */
-export interface RepWords {
-  /** The product (script) the words were matched against: other products' calls use the script's own. */
-  product: string;
-  /** Whose words, for the learner: "Sam" (a call's rep) or the SOP. */
-  label: string;
-  words: Record<string, string>;
+/** Buy mode: the questions new calls ask in someone else's words (the Rep's words tool): the tab's own choice, or
+ *  the team's (a manager set them) when the tab made none. */
+export interface RepWords extends WordsChoice {
+  /** These are the team's words, not this tab's own choice. */
+  team?: boolean;
 }
 
-function savedRepWords(): RepWords | null {
+/** Stored in place of words when the learner chose the script's own: it beats the team's words for this tab. */
+const SCRIPT_WORDS = "none";
+
+/** This tab's choice: someone's words, the script's own (SCRIPT_WORDS), or null when it made none. */
+type TabChoice = WordsChoice | typeof SCRIPT_WORDS | null;
+
+function savedRepWords(): TabChoice {
+  const raw = readString(storageKeys.buyWords, "session");
+  if (raw === SCRIPT_WORDS) return SCRIPT_WORDS;
   try {
-    const v = JSON.parse(readString(storageKeys.buyWords, "session") ?? "null");
-    return v && typeof v.product === "string" && typeof v.label === "string" && v.words && typeof v.words === "object" ? v : null;
+    const v = JSON.parse(raw ?? "null");
+    if (!v || typeof v.product !== "string" || typeof v.label !== "string" || !v.words || typeof v.words !== "object") return null;
+    return { product: v.product, label: v.label, words: v.words, probes: v.probes && typeof v.probes === "object" ? v.probes : {} };
   } catch {
     return null;
   }
 }
+
+const saveRepWords = (c: TabChoice) =>
+  writeString(
+    storageKeys.buyWords,
+    c === SCRIPT_WORDS ? SCRIPT_WORDS : c ? JSON.stringify({ product: c.product, label: c.label, words: c.words, probes: c.probes }) : null,
+    "session",
+  );
+
+/** The words a new call uses: the tab's own choice when it was matched for `product`, else the team's for that
+ *  product (any product when the tab has not picked one: the call then sells the team's). */
+function wordsFor(product: string | null, team: WordsChoice | null): RepWords | undefined {
+  const own = savedRepWords();
+  if (own === SCRIPT_WORDS) return undefined;
+  if (own) return own.product === product ? own : undefined;
+  return team && (product === null || team.product === product) ? { ...team, team: true } : undefined;
+}
+
+const sameWords = (a: Record<string, string>, b: Record<string, string>) =>
+  Object.keys(a).length === Object.keys(b).length && Object.entries(a).every(([k, v]) => b[k] === v);
 
 /** A live AI buyer in sell mode. */
 export interface SellSession {
@@ -67,8 +94,9 @@ interface SessionValue {
   buyProduct: string | null;
   /** Buy mode: the rep's words this call uses, or null for the script's own. */
   repWords: RepWords | null;
-  /** Buy mode: start a fresh call in these words (null: the script's own); later new calls keep them. */
-  chooseRepWords: (w: RepWords | null) => Promise<void>;
+  /** Buy mode: start a fresh call in these words (null: the script's own, even when the team has words); later new
+   *  calls in this tab keep them. */
+  chooseRepWords: (w: WordsChoice | null) => Promise<void>;
   /** Buy-mode script stage; the sidebar stage card shows it. */
   stage: string;
   /** Buy-mode coach notes for the latest turn (wire key "training"). */
@@ -123,6 +151,9 @@ const metaLine = (latency: number | null | undefined, provider?: string) =>
 
 export function SessionProvider({ children, mode }: { children: ReactNode; mode: Mode }) {
   const toast = useToast();
+  // A member's new calls use the team's words, so a buy call waits for the first account answer.
+  const { ready: accountReady, team } = useAccount();
+  const teamWords = team?.words ?? null;
   const [buySessionId, setBuySessionId] = useState<string | null>(null);
   const [buyProduct, setBuyProduct] = useState<string | null>(null);
   const [stage, setStage] = useState(FIRST_STAGE);
@@ -143,48 +174,62 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
   const epoch = useRef(0);
   const started = useRef(false);
 
-  const adopt = useCallback((res: { session_id: string; message: string | null; history: ChatMsg[]; training?: CoachNotes; product_type?: string; words?: Record<string, string>; words_label?: string } & BotState) => {
+  const adopt = useCallback((res: { session_id: string; message: string | null; history: ChatMsg[]; training?: CoachNotes; product_type?: string; words?: Record<string, string>; words_label?: string; probes?: Record<string, string> } & BotState) => {
     setBuySessionId(res.session_id);
     if (res.product_type) setBuyProduct(res.product_type);
     // The server says which words this call uses (a jump keeps the call's, so it sends none). The tab takes them
-    // on, so its next call matches what the card shows (another tab may have started this one).
+    // on, so its next call matches what the card shows (another tab may have started this one). The team's words
+    // stay the team's: the tab has not chosen them, so a manager's change reaches its next call.
     if (res.words) {
-      const words: RepWords | null = Object.keys(res.words).length
-        ? { product: res.product_type ?? "", label: res.words_label || savedRepWords()?.label || "a top rep", words: res.words }
-        : null;
-      setRepWords(words);
-      writeString(storageKeys.buyWords, words ? JSON.stringify(words) : null, "session");
+      const own = savedRepWords();
+      if (Object.keys(res.words).length) {
+        const ownLabel = own && own !== SCRIPT_WORDS ? own.label : "";
+        const got: WordsChoice = {
+          product: res.product_type ?? "",
+          label: res.words_label || ownLabel || "a top rep",
+          words: res.words,
+          probes: res.probes ?? {},
+        };
+        const team = own === null && !!teamWords && teamWords.label === got.label && sameWords(teamWords.words, got.words);
+        if (!team) saveRepWords(got);
+        setRepWords({ ...got, team });
+      } else {
+        setRepWords(null);
+        if (own && own !== SCRIPT_WORDS) saveRepWords(null);
+      }
     }
     writeString(storageKeys.buySessionId, res.session_id);
     setStage(res.stage);
     setCoachNotes(res.training ?? null);
     const history = res.history?.length ? res.history : res.message ? [{ role: "assistant" as const, content: res.message }] : [];
     setMessages(fromHistory(history, config.historyCap));
-  }, []);
+  }, [teamWords]);
 
-  /** A new buy-mode call, in the tab's rep's words when they were matched for this product. Words the script no
-   *  longer takes (it changed since) are dropped and the call starts in the script's own. */
+  /** A new buy-mode call, in the tab's rep's words when they were matched for this product, else the team's.
+   *  Words the script no longer takes (it changed since) are dropped and the call starts in the script's own. */
   const startBuy = useCallback(async () => {
     const product = readString(storageKeys.buyProduct);
-    const saved = savedRepWords();
-    const words = saved && saved.product === product ? saved : undefined;
+    const words = wordsFor(product, teamWords);
     try {
-      return await api.buyInit(null, product, words);
+      return await api.buyInit(null, words?.product ?? product, words);
     } catch (err) {
       if (!words || !(err instanceof ApiError) || err.code !== "REP_WORDS_INVALID") throw err;
-      writeString(storageKeys.buyWords, null, "session");
-      toast("Those questions no longer fit the script, so the rep uses its own.", "info");
+      if (!words.team) saveRepWords(null);
+      toast(`${words.team ? "Your team's" : "Those"} questions no longer fit the script, so the rep uses its own.`, "info");
       return api.buyInit(null, product);
     }
-  }, [toast]);
+  }, [teamWords, toast]);
 
   /** Restore a call by id, sending this tab's product and words: the server starts a new call from them when it
    *  no longer has that one (it restarted, or the call sat idle too long). */
-  const restoreBuy = useCallback((id: string) => {
-    const product = readString(storageKeys.buyProduct);
-    const saved = savedRepWords();
-    return api.buyInit(id, product, saved && saved.product === product ? saved : undefined);
-  }, []);
+  const restoreBuy = useCallback(
+    (id: string) => {
+      const product = readString(storageKeys.buyProduct);
+      const words = wordsFor(product, teamWords);
+      return api.buyInit(id, words?.product ?? product, words);
+    },
+    [teamWords],
+  );
 
   /** Start or restore a buy-mode session. Retries once without the saved id. */
   const initBuy = useCallback(
@@ -239,11 +284,11 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
 
   useEffect(() => {
     // Sell mode starts at buyer setup, unless this tab already has a live call (restored below).
-    if (mode !== "buy") return;
+    if (mode !== "buy" || !accountReady) return;
     if (started.current) return; // StrictMode mounts twice in dev; connect once.
     started.current = true;
     initBuy();
-  }, [initBuy, mode]);
+  }, [initBuy, mode, accountReady]);
 
   useEffect(() => {
     if (mode !== "sell" || started.current) return;
@@ -437,9 +482,10 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
   }, [mode, sellSession, buySessionId, startBuyer, handleExpired, toast, initBuy]);
 
   const chooseRepWords = useCallback(
-    async (w: RepWords | null) => {
+    async (w: WordsChoice | null) => {
       const before = { words: readString(storageKeys.buyWords, "session"), product: readString(storageKeys.buyProduct) };
-      writeString(storageKeys.buyWords, w ? JSON.stringify(w) : null, "session");
+      // The script's own is a choice too: it beats the team's words in this tab.
+      saveRepWords(w ?? SCRIPT_WORDS);
       if (w) writeString(storageKeys.buyProduct, w.product);
       if (!(await reset())) {
         // the old call carries on, so its words and product stay the tab's choice

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { config } from "@/lib/config";
 import type { ReactNode } from "react";
+import { whose } from "@/features/repWords/words";
 import { useSession } from "@/features/session/SessionContext";
 import { useUi } from "@/state/UiContext";
 import s from "./Sidebar.module.css";
@@ -40,7 +41,13 @@ export function ToolsGrid() {
       {!sell && (
         <Tool
           title="Rep's words"
-          copy={repWords ? `In ${repWords.label}'s words` : "A top rep's or your SOP's questions"}
+          copy={
+            repWords
+              ? repWords.team
+                ? `Your team's words: ${repWords.label}`
+                : `In ${whose(repWords.label)} words`
+              : "A top rep's or your SOP's questions"
+          }
           pressed={!!repWords}
           onClick={() => openDialog("repWords")}
         />

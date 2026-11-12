@@ -162,6 +162,16 @@ a route's lead into it, its probes and its other wordings when asked again stay 
 words and label too, which start a new call when the server no longer has that one. Thresholds in `limits.yaml`
 `rep_words`, measured in `tests/test_rep_words.py`.
 
+When the source asks a step's question twice in different words, the second is that step's probe (`Match.probe`,
+shown under the match as "Asked again"); the web sends the kept ones as `probes` with `words`, and `with_words` says
+them first when the step is asked again. A choice (`{product, label, words, probes}`) can be kept past the tab:
+saved to the account (`/api/account/words`, checked against today's script by `seller.checked_words`), or set by a
+manager as the team's (`/api/team/words`, members read it in `/api/account/me` `team.words`). The tab's words live in
+sessionStorage `buyWords`: someone's words, `"none"` for the script's own (an explicit choice that beats the team's),
+or nothing, when a new call takes the team's words for that product (`SessionContext` `wordsFor`; the buy call waits
+for the account answer). In the chat, a seller line that contains one of the current words or probes gets a tag
+naming whose they are; the web finds them, the server sends nothing extra.
+
 ## Accounts
 
 Optional: everything works logged out. `backend/auth.py` owns the login cookie (signed, HttpOnly, SameSite=Lax,

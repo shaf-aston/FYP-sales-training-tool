@@ -79,7 +79,13 @@ with the Vercel CLI, so its web job now waits for the VM job. 5 is below.
    - Done when a 60-minute MP3 over 25 MB reads: `tests/test_calls_audio_parts.py` makes one and reads it wherever ffmpeg is installed.
    - ffmpeg on the VM: `scripts/install_ffmpeg.sh`, run by every deploy. Until it is there, recordings over 25 MB are refused as before.
 
-### 1.3 Rep's words, round 2 · R
+### 1.3 Rep's words, round 2 · R · ✓ done
+**✓ done:** server in `rep_words.py` (`Match.probe`, `with_words(probes=)`), `seller.checked_words`, migration 2
+(`rep_words` table, `teams.words`), `/api/account/words`, `/api/team/words`; web in `features/repWords/`
+(`KeepWords.tsx`: save, saved list, team words; `words.ts`: the chat tag, found client-side, so no step per reply
+from the server). The Playwright journey covers save → use → the "Maya's words" tag → team words for a member →
+the script's words sticking in that tab.
+
 1. **Save a rep's words to the account**, like saved prospects: `library.py` gets a `rep_words` table (migration), with a list, use and delete in the tool.
 2. **Team words.** A manager sets the team's words (from their best rep's call or the team SOP), and members' new buy calls use them by default.
 3. **Show which lines were someone's words** in the chat: a small "Maya's words" tag on those seller bubbles. The server returns the step per reply.

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, Icon, Markdown, TextArea, TypingDots, useToast } from "@/components/ui";
 import { config } from "@/lib/config";
 import { useSession, type ChatMessage } from "@/features/session/SessionContext";
+import { saysTheirWords, wordsTag } from "@/features/repWords/words";
 import { ListenButton } from "@/features/voice/VoiceBar";
 import { InlineEvaluation } from "@/features/sell/SellDialogs";
 import { useUi } from "@/state/UiContext";
@@ -97,8 +98,9 @@ function useReveal(parts: string[], fresh: boolean, answered: boolean, onGrow?: 
   return answered ? parts.length : shown; // they replied mid-reveal: the rest shows at once, above their line
 }
 
-/** The seller's reply: one bubble per pause in the line, the key thing highlighted. */
-function BotBubbles({ text, meta, fresh, answered, onGrow }: { text: string; meta?: string; fresh: boolean; answered: boolean; onGrow?: () => void }) {
+/** The seller's reply: one bubble per pause in the line, the key thing highlighted. `tag` ("Maya's words") marks a
+ *  line said in someone's words, under its last bubble. */
+function BotBubbles({ text, meta, tag, fresh, answered, onGrow }: { text: string; meta?: string; tag?: string; fresh: boolean; answered: boolean; onGrow?: () => void }) {
   const parts = useMemo(() => {
     const b = bubbles(text);
     return b.length ? b : [""]; // an empty reply still shows its meta
@@ -112,6 +114,7 @@ function BotBubbles({ text, meta, fresh, answered, onGrow }: { text: string; met
           {meta && i === parts.length - 1 && <p className={s.meta}>{meta}</p>}
         </div>
       ))}
+      {tag && shown >= parts.length && <span className={s.wordsTag}>{tag}</span>}
       {shown < parts.length && (
         <div className={`${s.bubble} ${s.typing}`}>
           <TypingDots label="Assistant is typing" />
@@ -135,9 +138,11 @@ interface ItemProps {
   swap?: boolean;
   /** set on the reply just in (its bubbles show one by one): a bubble just showed, keep the newest line in view */
   onGrow?: () => void;
+  /** Buy mode: the seller said this line in someone's words ("Maya's words"). */
+  tag?: string;
 }
 
-function Item({ m, canEdit, editing, later, swap, onEdit, onSave, onCancel, onGrow }: ItemProps) {
+function Item({ m, canEdit, editing, later, swap, onEdit, onSave, onCancel, onGrow, tag }: ItemProps) {
   if (m.role === "divider") {
     return (
       <div className={s.divider} role="separator">
@@ -160,7 +165,7 @@ function Item({ m, canEdit, editing, later, swap, onEdit, onSave, onCancel, onGr
           {m.meta && <p className={s.meta}>{m.meta}</p>}
         </div>
       ) : (
-        <BotBubbles text={m.content} meta={m.meta} fresh={!!onGrow} answered={later > 0} onGrow={onGrow} />
+        <BotBubbles text={m.content} meta={m.meta} tag={tag} fresh={!!onGrow} answered={later > 0} onGrow={onGrow} />
       )}
       {!editing && !m.historical && (
         <div className={s.actions}>
@@ -200,7 +205,10 @@ function SetupPointer() {
 }
 
 export function MessageList() {
-  const { messages, typing, mode, edit, sellSession } = useSession();
+  const { messages, typing, mode, edit, sellSession, repWords } = useSession();
+  // Buy mode: the seller's lines said in someone's words get a tag naming whose.
+  const tagFor = (m: ChatMessage) =>
+    mode === "buy" && repWords && m.role === "assistant" && saysTheirWords(m.content, repWords) ? wordsTag(repWords.label) : undefined;
   const toast = useToast();
   const [editingId, setEditingId] = useState<string | null>(null);
   const frameRef = useRef<HTMLDivElement>(null);
@@ -264,6 +272,7 @@ export function MessageList() {
             canEdit={!typing}
             swap={swapped.has(m.id)}
             onGrow={m.id === swapId ? pin : undefined}
+            tag={tagFor(m)}
             editing={editingId === m.id}
             onEdit={mode === "buy" ? () => startEdit(m.id) : undefined}
             onSave={save(m)}
