@@ -6,6 +6,7 @@ import { api, ApiError, errorText } from "@/lib/api/client";
 import { saveJson } from "@/lib/download";
 import { useAccount } from "./AccountContext";
 import { forgetSkills } from "./useSkillSync";
+import { writeLocalKnowledge } from "@/features/knowledge/knowledgeStore";
 import s from "./AccountDialog.module.css";
 
 /** Everything kept for the learner: download it, or delete the account (password, then a danger confirm). */
@@ -51,6 +52,7 @@ export function DataSection({ onDeleted }: { onDeleted: () => void }) {
     try {
       await api.accountDelete(password);
       forgetSkills();
+      writeLocalKnowledge(null);   // the product details were this account's
       await refresh();
       toast("Account deleted.", "success");
       onDeleted();

@@ -25,6 +25,13 @@ export function useKnowledge() {
     setLoadError("");
     const local = readLocalKnowledge();
     try {
+      // Who is signed in first (/me never answers 401), so a signed-out visit asks nothing it can't have.
+      const { user } = await api.accountMe();
+      if (!user) {
+        setValues(fromData(local));
+        setHome("device");
+        return;
+      }
       const res = await api.knowledge();
       // The account's copy wins; details typed before signing in are kept until saved to it.
       const data = res.data && Object.keys(res.data).length ? res.data : local;
