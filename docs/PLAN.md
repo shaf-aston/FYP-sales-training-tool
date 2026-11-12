@@ -1,6 +1,7 @@
 # What's left: step-by-step plan
 
-Status on 12 Nov 2026: all 10 roadmap steps are built, and 58 of 66 sub-steps are done (`docs/roadmap.html`).
+Status on 12 Nov 2026: all 10 roadmap steps are built, and 61 of 66 sub-steps are done (`docs/roadmap.html`). The 5
+left need the real calls (Phase 2) or Kaggle (Phase 3).
 This plan covers everything still open, in build order. Done items are marked **✓ done** with where they landed.
 
 Each item lists **why**, **steps**, **files**, **done when** and **needs**.
@@ -128,20 +129,36 @@ Every model is exported small (ONNX or a pickle under 5 MB), runs on the VM CPU,
    - Re-measure the buy-mode hearing tests, SOP adherence and Rep's words; adopt it only if none gets worse.
 4. **Speaker separation** for mono recordings: test pyannote on a few labelled recordings, and adopt it only if it runs on the VM in under 2× real time.
 
-## Phase 4: optional Groq extras · G
-1. **SOP written critique:** one paragraph from the checklist gaps. The rules decide what is missing; Groq only words it.
-2. **Insights in plain English:** a rewrite of the rule-made guidelines, with the original always shown.
-
-Both are off by default, carry an "AI-written" note, and fall back to the rules' text.
+## Phase 4: written critique and plain-English insights · ✓ done, by rules (no Groq)
+1. **SOP written critique** ✓ `core/sop/critique.py`, words in `sop.yaml` `critique`. Under the checklist: what the
+   SOP covers and the costliest gap first, with why it matters. Under a checked call: the share of steps done, the
+   first one skipped, how many more, and whether the order held. The rules already knew what was missing, so they
+   write it too: same result, same paragraph, nothing to switch on.
+2. **Insights in plain English** ✓ the team guidelines were already plain sentences made by rules
+   (`insights.yaml` `guidelines`), each naming its numbers; a Groq rewrite would add cost and nothing else.
 
 ## Phase 5: user actions (no code)
 1. **Groq console:** accept the terms for `canopylabs/orpheus-v1-english`, so server voice works (now it's the browser voice).
 2. **Netlify:** unlink the repo. Its failing checks on PRs are not ours.
 3. ~~Vercel deploy hook for 1.2.2~~: not needed (see 1.2.2).
-4. **Google login (optional):** an OAuth client ID and secret. Magic links need an email sender (Resend or Postmark API key).
+4. **Google login and email links (optional):** built and off. Put `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`
+   and/or `RESEND_API_KEY` / `MAIL_FROM`, plus `SITE_URL`, in the VM's `.env` (docs/SETUP.md) and they appear.
 5. **Fathom transcripts** for Phase 2, and **Kaggle** access for Phase 3.
 
 ---
+
+## Phase 6: live audit (12 Nov) · ✓ done
+The site used as a learner would, on a phone and a desktop, and each problem fixed and checked again:
+1. **Sell-mode buyer replies that fit.** A live call got four stonewalls for four good questions, a start date for
+   "How long has that been going on?", "Bits and pieces" for a booking ask, and "What justifies the premium?" on turn
+   one. Now objections wait until they fit (`buyer.yaml` `objection_waits`), the most specific topic wins, yes/no
+   questions and booking asks get their own lines, a plain open question is a good turn, and needs and pains are said
+   in the buyer's own voice.
+2. **Knowledge base was shared by every visitor** (one file, no login): now per learner, on the account or in the
+   browser, sent with each sell call.
+3. **"AI" wording** replaced; the landing page lists the newer features.
+4. **A deleted account's cookie signed in as the next new account** (SQLite reuses the newest id): the cookie now
+   carries the account's creation time.
 
 ## Order of work
 1. ✓ Phase 0 (PR #101).
@@ -151,15 +168,13 @@ Both are off by default, carry an "AI-written" note, and fall back to the rules'
 5. ✓ 1.2.4 embedder move (PR #102) and 1.2.5 long recordings (PR #104; ffmpeg on the VM; a 60-minute 28.8 MB MP3
    read live into one transcript to 59:54). ✓ 1.2.2 deploy order (PR #105).
 6. Phases 2 and 3 as soon as the data and Kaggle access arrive.
-7. Phase 4 if wanted.
+7. ✓ Phase 4, by rules. ✓ Google and email-link login, off until the keys are set. ✓ Phase 6 live audit.
 
 ## Where it stands (12 Nov 2026)
-Everything in Phases 0 and 1 that needs no outside input is built, merged and checked live. Still open:
+Everything that needs no outside input is built, merged and checked live. Still open:
 - **Waiting on you:** accept the Groq voice terms (server read-aloud still answers 204, so the browser voice is
-  used); unlink Netlify; Google login keys if wanted; the Fathom transcripts and Kaggle access.
+  used); unlink Netlify; the sign-in keys if wanted (Google and/or Resend); the Fathom transcripts and Kaggle access.
 - **Waiting on the Fathom calls (Phase 2):** calibrating call review, the realism reference for 1.1.6 (rough bands
   in `tests/test_buyer_lines.py` until then), real prospect lines for the bank, Rep's words thresholds on real calls.
 - **Waiting on Kaggle and Phase 2's labels (Phase 3):** the objection and stage classifiers, the tuned matcher, speaker
   separation.
-- **Optional (Phase 4):** written critique and plain-English insights from Groq. Not built: the rules' own text covers
-  both, and the plan keeps Groq to where new sentences are needed.
