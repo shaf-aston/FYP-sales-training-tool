@@ -97,7 +97,7 @@ function FromCall({ state }: { state: RepWordsState }) {
   const { buyProduct } = useSession();
   const reader = useCallReader(callSample);
   const result = reader.result;
-  if (!result) return <CallSource reader={reader} privacy="Read on our server and never stored; the questions you pick stay in this tab." />;
+  if (!result) return <CallSource reader={reader} privacy="Read on our server and never stored; the questions you pick stay in this tab unless you save them." />;
   const rep = result.call.rep.name;
   return (
     <div className={s.stack}>

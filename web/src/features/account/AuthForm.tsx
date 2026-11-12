@@ -94,7 +94,7 @@ export function AuthForm({ onDone }: { onDone: (mode: Mode) => void }) {
       <Button type="submit" variant="primary" block busy={busy} busyLabel={mode === "login" ? "Logging in…" : "Creating your account…"}>
         {mode === "login" ? "Log in" : "Create account"}
       </Button>
-      <p className={s.muted}>Optional. Practice works the same without one; an account keeps your skill history and saved prospects.</p>
+      <p className={s.muted}>Optional. Practice works the same without one; an account keeps your skill history, saved prospects and saved questions.</p>
     </form>
   );
 }

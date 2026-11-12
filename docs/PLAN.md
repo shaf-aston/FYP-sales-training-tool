@@ -1,6 +1,6 @@
 # What's left: step-by-step plan
 
-Status on 12 Nov 2026: all 10 roadmap steps are built, and 57 of 66 sub-steps are done (`docs/roadmap.html`).
+Status on 12 Nov 2026: all 10 roadmap steps are built, and 58 of 66 sub-steps are done (`docs/roadmap.html`).
 This plan covers everything still open, in build order. Done items are marked **✓ done** with where they landed.
 
 Each item lists **why**, **steps**, **files**, **done when** and **needs**.

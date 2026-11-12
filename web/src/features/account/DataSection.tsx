@@ -34,7 +34,7 @@ export function DataSection({ onDeleted }: { onDeleted: () => void }) {
   const remove = async () => {
     const ok = await confirm({
       title: "Delete your account?",
-      body: "Your skill history, saved prospects and team place go for good, and leave our nightly backups within 7 days. This cannot be undone.",
+      body: "Your skill history, saved prospects, saved questions and team place go for good, and leave our nightly backups within 7 days. This cannot be undone.",
       confirmLabel: "Delete account",
       cancelLabel: "Keep it",
       danger: true,
