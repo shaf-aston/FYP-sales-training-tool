@@ -20,6 +20,7 @@ from dataclasses import dataclass, replace
 from core.buy_mode.script_engine.engine import questions_of
 from core.buy_mode.script_engine.method import Method, Step
 from core.buy_mode.script_engine.words.fill import NAME
+from core.buy_mode.script_engine.words.tone import NOTE, PAUSE
 from core.infra.constants import REP_WORDS
 from core.infra.similarity import Embed, best_pairs, similarity
 from core.infra.utils import sentences
@@ -61,11 +62,18 @@ class Match:
 
 def clean(line: str) -> str:
     """One spoken line: no markup, one line, single spaces, at most `max_chars` (cut at a word)."""
-    text = re.sub(r"\s+([?.!,;:])", r"\1", re.sub(r"\s+", " ", _UNSAFE.sub("", line or ""))).strip(" -–•")
+    bare = _UNSAFE.sub("", NOTE.sub("", (line or "").replace(PAUSE, " ")))   # tone notes and pauses are the script's
+    text = re.sub(r"\s+([?.!,;:])", r"\1", re.sub(r"\s+", " ", bare)).strip(" -–•")
     limit = REP_WORDS["max_chars"]
     if len(text) > limit:
         text = text[:limit].rsplit(" ", 1)[0].rstrip(",;:") + "?"
     return text
+
+
+def clean_label(label: object) -> str:
+    """Whose words they are ("Maya", "your SOP"), as the learner named them: plain text, at most `max_label_chars`."""
+    text = re.sub(r"\s+", " ", _UNSAFE.sub("", label)).strip() if isinstance(label, str) else ""
+    return text[:REP_WORDS["max_label_chars"]].strip()
 
 
 def _is_question(text: str) -> bool:
@@ -121,9 +129,23 @@ def _same_kind(a: str, b: str) -> bool:
     return not ka or not kb or ka == kb
 
 
+def _offers_choices(say: str) -> bool:
+    """"How would you like to pay? Credit or debit?": the step listens for the options it names."""
+    asks = [q for q in questions_of(say) if q.endswith("?")]
+    return any(re.search(r"\bor\b", q, re.IGNORECASE) for q in asks[1:])
+
+
 def askable(method: Method) -> list[Step]:
     """The steps whose question a source line may say, in script order: they ask something and wait for the answer."""
     return [s for s in method.steps.values() if s.say and not s.run_on and _asks(s.say)]
+
+
+def _fits(step: Step, question: str) -> bool:
+    """A step that hears "go on" or "yes" as a yes takes only a yes/no question ("What would stop you?" answered
+    "no" means the opposite), and one that offers choices only a question that offers them too ("credit or debit")."""
+    if (step.yes_no or step.go_on_is_yes) and kind(question) != "yes_no":
+        return False
+    return not _offers_choices(step.say) or bool(re.search(r"\bor\b", question, re.IGNORECASE))
 
 
 def _swap(line: str, question: str) -> str:
@@ -135,7 +157,8 @@ def _swap(line: str, question: str) -> str:
 def match(method: Method, questions: list[str], embed: Embed) -> list[Match]:
     """For each question step, the source question that asks the same thing, if one is close enough; in script order.
     Each source question takes one step at most. Below `sure_score` the two must ask for the same sort of answer
-    ("How would that make you feel?" is no "Why do you feel it would?"). The call's own path is matched first, then
+    ("How would that make you feel?" is no "Why do you feel it would?"). A step that hears yes or no always takes a
+    yes/no question, and one that offers choices a question that offers them. The call's own path is matched first, then
     the objection talks (whose closes repeat the main one) with the questions left."""
     steps = askable(method)
     if not steps or not questions:
@@ -145,7 +168,7 @@ def match(method: Method, questions: list[str], embed: Embed) -> list[Match]:
     sure = REP_WORDS["sure_score"]
     for i, row in enumerate(scores):   # a pair that fails the guard can never be made
         for j, v in enumerate(row):
-            if v < sure and not _same_kind(scripted[i], questions[j]):
+            if (v < sure and not _same_kind(scripted[i], questions[j])) or not _fits(steps[i], questions[j]):
                 row[j] = -1.0
     talks = set(method.talks)
     pairs: dict[int, int] = {}
@@ -173,6 +196,8 @@ def with_words(method: Method, words: dict[str, str]) -> Method:
         if not _is_question(text):
             raise RepWordsError(f"step {step_id!r}: not a question")
         step = steps[step_id]
+        if not _fits(step, text):
+            raise RepWordsError(f"step {step_id!r}: needs a yes/no question, or the step's choices")
         # The plain line (the same talk without their words said back) gets the same question.
         plain = _swap(step.say_plain, text) if step.say_plain and _asks(step.say_plain) else ""
         steps[step_id] = replace(step, say=_swap(step.say, text), say_plain=plain, plain_if=step.plain_if if plain else "")

@@ -81,7 +81,8 @@ interface SessionValue {
   setSellSettings: (s: SellSettings) => void;
   send: (text: string) => Promise<SendResult>;
   edit: (historyIndex: number, text: string) => Promise<boolean>;
-  reset: () => Promise<void>;
+  /** A new call in place of this one; false when the old one could not be ended. */
+  reset: () => Promise<boolean>;
   /** Buy mode: start a fresh call where the rep sells this product (it stays picked for later calls). */
   switchProduct: (productType: string) => Promise<void>;
   /** Buy mode: start a fresh call at one script step (nothing said before it). */
@@ -142,13 +143,17 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
   const epoch = useRef(0);
   const started = useRef(false);
 
-  const adopt = useCallback((res: { session_id: string; message: string | null; history: ChatMsg[]; training?: CoachNotes; product_type?: string; words?: Record<string, string> } & BotState) => {
+  const adopt = useCallback((res: { session_id: string; message: string | null; history: ChatMsg[]; training?: CoachNotes; product_type?: string; words?: Record<string, string>; words_label?: string } & BotState) => {
     setBuySessionId(res.session_id);
     if (res.product_type) setBuyProduct(res.product_type);
-    // The server says which words this call uses (a jump keeps the call's, so it sends none).
+    // The server says which words this call uses (a jump keeps the call's, so it sends none). The tab takes them
+    // on, so its next call matches what the card shows (another tab may have started this one).
     if (res.words) {
-      const saved = savedRepWords();
-      setRepWords(Object.keys(res.words).length ? { product: res.product_type ?? "", label: saved?.label ?? "your rep", words: res.words } : null);
+      const words: RepWords | null = Object.keys(res.words).length
+        ? { product: res.product_type ?? "", label: res.words_label || savedRepWords()?.label || "a top rep", words: res.words }
+        : null;
+      setRepWords(words);
+      writeString(storageKeys.buyWords, words ? JSON.stringify(words) : null, "session");
     }
     writeString(storageKeys.buySessionId, res.session_id);
     setStage(res.stage);
@@ -162,7 +167,7 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
   const startBuy = useCallback(async () => {
     const product = readString(storageKeys.buyProduct);
     const saved = savedRepWords();
-    const words = saved && saved.product === product ? saved.words : undefined;
+    const words = saved && saved.product === product ? saved : undefined;
     try {
       return await api.buyInit(null, product, words);
     } catch (err) {
@@ -173,13 +178,21 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
     }
   }, [toast]);
 
+  /** Restore a call by id, sending this tab's product and words: the server starts a new call from them when it
+   *  no longer has that one (it restarted, or the call sat idle too long). */
+  const restoreBuy = useCallback((id: string) => {
+    const product = readString(storageKeys.buyProduct);
+    const saved = savedRepWords();
+    return api.buyInit(id, product, saved && saved.product === product ? saved : undefined);
+  }, []);
+
   /** Start or restore a buy-mode session. Retries once without the saved id. */
   const initBuy = useCallback(
     async (useSaved = true) => {
       const saved = useSaved ? readString(storageKeys.buySessionId) : null;
       for (const id of saved ? [saved, null] : [null]) {
         try {
-          adopt(id ? await api.buyInit(id) : await startBuy());
+          adopt(id ? await restoreBuy(id) : await startBuy());
           break;
         } catch (err) {
           // 400 = the server refused the saved id (expired or unknown): drop it and start fresh.
@@ -192,7 +205,7 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
         }
       }
     },
-    [adopt, startBuy, toast],
+    [adopt, restoreBuy, startBuy, toast],
   );
 
   /** Sell mode: pick the tab's live call back up (after a reload, or Back from another page). */
@@ -399,17 +412,17 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
     epoch.current++;
   }, [sellSession]);
 
-  const reset = useCallback(async () => {
+  /** A new call in place of this one; false when the old call could not be ended (it carries on). */
+  const reset = useCallback(async (): Promise<boolean> => {
     if (mode === "sell" && sellSession) {
-      await startBuyer(sellSession.difficulty, sellSession.productType, sellSession.pick);
-      return;
+      return startBuyer(sellSession.difficulty, sellSession.productType, sellSession.pick);
     }
     try {
       if (buySessionId) await api.buyReset(buySessionId);
     } catch (err) {
       if (!handleExpired(err)) {
         toast("Reset didn't stick. Try one more time.", "error");
-        return;
+        return false;
       }
     }
     writeString(storageKeys.buySessionId, null);
@@ -420,21 +433,28 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
     setTyping(true);
     await initBuy(false);
     setTyping(false);
+    return true;
   }, [mode, sellSession, buySessionId, startBuyer, handleExpired, toast, initBuy]);
 
   const chooseRepWords = useCallback(
     async (w: RepWords | null) => {
+      const before = { words: readString(storageKeys.buyWords, "session"), product: readString(storageKeys.buyProduct) };
       writeString(storageKeys.buyWords, w ? JSON.stringify(w) : null, "session");
       if (w) writeString(storageKeys.buyProduct, w.product);
-      await reset();
+      if (!(await reset())) {
+        // the old call carries on, so its words and product stay the tab's choice
+        writeString(storageKeys.buyWords, before.words, "session");
+        writeString(storageKeys.buyProduct, before.product);
+      }
     },
     [reset],
   );
 
   const switchProduct = useCallback(
     async (productType: string) => {
+      const before = readString(storageKeys.buyProduct);
       writeString(storageKeys.buyProduct, productType);
-      await reset();
+      if (!(await reset())) writeString(storageKeys.buyProduct, before);
     },
     [reset],
   );

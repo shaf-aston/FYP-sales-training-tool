@@ -40,6 +40,7 @@ class SellerBot:
         self.call = CallFlow()
         self.seller = build_seller(self._router, self.product_type, words=words)
         self.words = dict(words or {})
+        self.words_label = ""   # whose words ("Maya", "your SOP"); the init route sets it
         # One per learner turn: the stage and script state right after it, for rewinding.
         self._turn_snapshots = []
 

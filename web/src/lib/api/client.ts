@@ -91,9 +91,14 @@ export function createHttpApi() {
   return {
     // Buy mode: the learner is the customer, the AI seller sells.
     /** A saved session's id restores it; otherwise a new call, selling `productType`, in `words` ({step: question}) if given. */
-    buyInit: (sessionId?: string | null, productType?: string | null, words?: Record<string, string>) =>
+    /** Start a call, or restore `sessionId`; the product and words start a new one if the server forgot it. */
+    buyInit: (sessionId?: string | null, productType?: string | null, words?: { words: Record<string, string>; label: string }) =>
       request<T.InitRes>("/api/buy/init", {
-        body: sessionId ? { session_id: sessionId } : { ...(productType ? { product_type: productType } : {}), ...(words ? { words } : {}) },
+        body: {
+          ...(sessionId ? { session_id: sessionId } : {}),
+          ...(productType ? { product_type: productType } : {}),
+          ...(words ? { words: words.words, label: words.label } : {}),
+        },
       }),
     buyWordsSample: (source: "call" | "sop") =>
       request<{ success: true; text: string; filename: string }>(`/api/buy/words/sample?source=${source}`),

@@ -115,6 +115,32 @@ def test_markup_never_reaches_the_line(cat):
     assert step.say == "How long have you been name thinking about this?"
 
 
+def test_tone_notes_and_pauses_never_reach_the_line(cat):
+    step = rep_words.with_words(cat, {"03": "(curious) How long has this ¶ been on your mind?"}).steps["03"]
+    assert step.say == "How long has this been on your mind?"
+
+
+def test_a_step_with_choices_takes_a_question_that_offers_them(cat):
+    assert rep_words.with_words(cat, {"22": "How do you want to pay, credit or debit card?"}).steps["22"].say.startswith(
+        "How do you want to pay, credit or debit card?")
+
+
+def test_a_yes_no_step_takes_a_yes_no_question(cat):
+    assert rep_words.with_words(cat, {"19": "Can you see yourself joining us?"}).steps["19"].go_on_is_yes
+
+
+def test_a_yes_no_step_is_never_matched_to_another_kind(cat):
+    same = lambda texts: [[1.0, 0.0] for _ in texts]   # every line scores 1.0 to every other
+    found = rep_words.match(cat, ["What would stop you from joining us today?"], same)
+    assert all(m.step not in {"17", "19"} for m in found)
+
+
+@pytest.mark.parametrize("label, said", [("Maya", "Maya"), ("  your   SOP ", "your SOP"), ("{x}<b>" + "a" * 60, "xb" + "a" * 38),
+                                         (42, ""), (None, "")])
+def test_the_label_is_plain_and_short(label, said):
+    assert rep_words.clean_label(label) == said
+
+
 # --- through the API ---
 
 
@@ -135,6 +161,30 @@ def test_a_call_with_their_own_words(client):
                   "I'd finally be proud of myself", "ten thousand a month"):
         said = client.post("/api/buy/chat", json={"message": reply}, headers=headers).get_json()["message"]
     assert said == "How long has this been on your mind?"
+
+
+def test_the_label_comes_back_with_the_call_and_on_restore(client):
+    words = {"03": "How long has this been on your mind?"}
+    opened = client.post("/api/buy/init", json={"product_type": SCRIPT_PRODUCT, "words": words, "label": "Maya"}).get_json()
+    assert opened["words_label"] == "Maya"
+    again = client.post("/api/buy/init", json={"session_id": opened["session_id"], "label": "someone else"}).get_json()
+    assert again["session_id"] == opened["session_id"] and again["words"] == words and again["words_label"] == "Maya"
+    plain = client.post("/api/buy/init", json={"product_type": SCRIPT_PRODUCT, "label": "Maya"}).get_json()
+    assert plain["words"] == {} and plain["words_label"] == ""
+
+
+def test_a_forgotten_call_starts_again_with_the_words_sent(client):
+    words = {"03": "How long has this been on your mind?"}
+    res = client.post("/api/buy/init", json={"session_id": "gone0001", "product_type": SCRIPT_PRODUCT,
+                                             "words": words, "label": "Maya"}).get_json()
+    assert res["session_id"] != "gone0001"
+    assert (res["product_type"], res["words"], res["words_label"]) == (SCRIPT_PRODUCT, words, "Maya")
+
+
+@pytest.mark.parametrize("product", [["x"], {"a": 1}, 7])
+def test_words_with_an_odd_product_use_the_default(client, product):
+    res = client.post("/api/buy/words", json={"product_type": product, "stages": [{"title": "a", "steps": ["Ask what they want"]}]})
+    assert res.status_code == 200 and res.get_json()["product_type"]
 
 
 def test_words_that_dont_fit_are_refused_before_the_call_starts(client):

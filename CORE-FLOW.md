@@ -147,7 +147,12 @@ script step that asks the same thing (`script_engine/rep_words.py`: the shared e
 call's own path before the objection talks; below `sure_score` both must ask for the same sort of answer). The web
 sends the chosen `{step: question}` to `/api/buy/init` as `words`, and `build_seller` runs the script with those
 lines swapped in (`with_words`). Only the wording changes: what each step listens for, where it goes and the checks
-around the AI stay the script's. Thresholds in `limits.yaml` `rep_words`, measured in `tests/test_rep_words.py`.
+around the AI stay the script's. So a step that hears yes or no ("go on" as yes) takes only a yes/no question, and
+one that offers choices ("Credit or debit?") only a question that offers them. Only the step's own question changes:
+a route's lead into it, its probes and its other wordings when asked again stay the script's. `/init` keeps the
+`label` sent with the words ("Maya", "your SOP") and returns it as `words_label`; a restore sends the tab's product,
+words and label too, which start a new call when the server no longer has that one. Thresholds in `limits.yaml`
+`rep_words`, measured in `tests/test_rep_words.py`.
 
 ## Accounts
 

@@ -136,6 +136,7 @@ rep_words:           # buy mode: the rep says a top rep's or an SOP's questions 
   sure_score: 0.9      # below this, both must ask for the same sort of answer (why / how much / yes-no ...): bge
                        # put "How would that make you feel?" at 0.84 to "Why do you feel it would?"
   max_lines: 60        # questions one call may take from a source (a script has about 50 question steps)
+  max_label_chars: 40  # whose words ("Maya", "your SOP"), shown on the tool card
   max_chars: 200       # one borrowed question
   min_words: 3         # "Why?" alone says nothing about which step it belongs to
   max_words: 40

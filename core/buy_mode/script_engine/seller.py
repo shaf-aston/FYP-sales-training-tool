@@ -66,7 +66,7 @@ def shared_gate():
 def resolve_product(product):
     """The product to sell: the one asked for if it is scripted, else the default."""
     cfg = engine_config()
-    return product if product in cfg["products"] else cfg["default_product"]
+    return product if isinstance(product, str) and product in cfg["products"] else cfg["default_product"]
 
 
 def products():

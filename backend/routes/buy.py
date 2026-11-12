@@ -72,7 +72,8 @@ def init():
     existing_id = data.get("session_id")
     sellers = current_app.extensions["sessions"].seller
 
-    # Restore existing session only if it is still in memory on this process.
+    # Restore existing session only if it is still in memory on this process. Otherwise start a new one from the
+    # product, words and label sent with the id (the client sends this tab's choice, for a call the server forgot).
     if existing_id:
         session_error = InputValidator.validate_session_id(existing_id)
         if session_error:
@@ -88,6 +89,7 @@ def init():
                     "message": None,
                     "product_type": seller.product_type,
                     "words": seller.words or {},
+                    "words_label": getattr(seller, "words_label", ""),
                     **stage_fields(seller),
                     "history": history,
                 }
@@ -106,6 +108,7 @@ def init():
     words = data.get("words")   # {step id: question}: the rep says a top rep's or an SOP's words (see /words)
     try:
         seller = SellerBot(provider_type=provider, product_type=product_type, session_id=session_id, words=words or None)
+        seller.words_label = rep_words.clean_label(data.get("label")) if seller.words else ""   # whose words, for the card
         sellers.set(session_id, seller)
         current_app.logger.info(
             f"New session: {session_id} (product={seller.product_type}, provider={seller.provider_name})"
@@ -126,6 +129,7 @@ def init():
             "message": opening,
             "product_type": seller.product_type,
             "words": seller.words or {},   # the questions said in someone else's words, by step
+            "words_label": seller.words_label,   # whose they are ("Maya", "your SOP"), as the client named them
             **stage_fields(seller),
             "history": [],
             "training": seller.coach_notes(),  # the web app reads coach notes under this key

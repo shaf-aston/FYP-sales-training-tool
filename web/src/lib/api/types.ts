@@ -35,6 +35,8 @@ export interface InitRes extends BotState {
   product_type?: string;
   /** The script questions this call asks in someone else's words ({step: question}; empty: the script's own). */
   words?: Record<string, string>;
+  /** Whose those words are ("Maya", "your SOP"), as the client named them when the call started. */
+  words_label?: string;
 }
 
 /** One of the script's questions the rep can ask in someone else's words (POST /api/buy/words). */
