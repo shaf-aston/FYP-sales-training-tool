@@ -236,3 +236,17 @@ def test_a_clause_only_goes_where_a_clause_reads_right():
     assert fill("The frustrating part is {pain}.", persona, "") == "The frustrating part is my budget is fixed."
     assert fill("It's {pain}, mostly.", persona, "") is None
     assert fill("It's {pain}, mostly.", {"pain_points": ["manual reporting"]}, "") == "It's manual reporting, mostly."
+
+
+def test_after_saying_it_isnt_only_them_the_buyer_never_answers_me_mostly(stub_buyer, monkeypatch):
+    monkeypatch.setattr("core.sell_mode.buyer_session.LINE_BANK", True)
+    monkeypatch.setattr("core.sell_mode.buyer_lines.MIN_SCORE", 0.0)
+    buyer = BuyerSession(difficulty="easy", persona=dict(PERSONA), session_id="shared")   # warm enough to answer
+    partner = "I'd need to discuss this with my partner before committing."
+    buyer.pacer.bank.append({"type": "partner", "text": partner})
+    buyer.conversation_history += [{"role": "user", "content": "What would you want to change?"},
+                                   {"role": "assistant", "content": f"Mostly the admin. {partner}"}]
+    buyer.state.turn_count = 1
+    reply = buyer.process_turn("Who else would be involved in the decision?").content
+    shared = load_yaml("prospect_lines.yaml")["lines"]["share"]["decision_shared"]
+    assert any(reply.startswith(line) for line in shared), reply

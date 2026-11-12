@@ -58,6 +58,12 @@ def is_closed(line: str) -> bool:
     return bool(words) and words[0] in load_buyer_config()["moves"]["closed_openers"]
 
 
+def asks_to_commit(line: str) -> bool:
+    """The seller asked them to take a next step, as a yes/no question ("Shall we book a walkthrough?")."""
+    text = (line or "").lower()
+    return "?" in text and is_closed(text) and any(_phrase_at(p, text) for p in load_buyer_config()["moves"]["next_step"])
+
+
 def next_move(readiness: float, seller_line: str, signals: list[str], objection: bool = False) -> Move:
     """The buyer's move for this turn.
 
@@ -78,7 +84,7 @@ def next_move(readiness: float, seller_line: str, signals: list[str], objection:
     asked = "?" in line
     closed = asked and is_closed(line)
     warm, cold = readiness >= cfg["open_from"], readiness < cfg["guarded_below"]
-    if closed and any(_phrase_at(p, line) for p in cfg["next_step"]):
+    if asks_to_commit(line):
         return Move("lean_in" if warm else "stall", "next_step", objection, closed)
     topic = topic_of(seller_line) if asked else "general"
     if asked:

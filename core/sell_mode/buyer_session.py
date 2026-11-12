@@ -3,11 +3,12 @@
 import logging
 import random
 import time
+from dataclasses import replace
 
 from core.infra import embedder as meaning_model
 from core.sell_mode.buyer_guardrails import check_buyer_reply
 from core.sell_mode.buyer_lines import pick_line
-from core.sell_mode.buyer_moves import Move, next_move
+from core.sell_mode.buyer_moves import Move, asks_to_commit, next_move
 from core.sell_mode.buyer_prompt import build_product_context, build_system_prompt
 from core.sell_mode.buyer_record import BuyerRecord
 from core.sell_mode.buyer_rules import ObjectionPacer, coaching_hint, end_outcome
@@ -149,7 +150,8 @@ class BuyerSession(BuyerRecord):
 
         # Update readiness and outcomes before generation so the response matches end state.
         self._sync_readiness()
-        outcome = end_outcome(self.state.readiness, self.state.turn_count, self.difficulty_profile["behaviour"])
+        outcome = end_outcome(self.state.readiness, self.state.turn_count, self.difficulty_profile["behaviour"],
+                              asks_to_commit(user_message))
         self.state.has_committed = outcome == "sold"
         self.state.has_walked = outcome == "walked"
 
@@ -196,6 +198,12 @@ class BuyerSession(BuyerRecord):
 
         coaching = coaching_hint(self.last_turn_signals) if show_hints else None
         return self._response(reply, latency, coaching)
+
+    def _said_partner_objection(self) -> bool:
+        """The buyer has already said someone else decides with them (a partner objection, before this turn)."""
+        texts = {o["text"] for o in self.pacer.bank if o.get("type") == "partner"}
+        return any(m.get("role") == "assistant" and any(t in m.get("content", "") for t in texts)
+                   for m in self.conversation_history)
 
     def seller_lines(self) -> list[str]:
         """The seller's lines so far, one per turn: when each objection is ready depends on them."""
@@ -297,6 +305,8 @@ class BuyerSession(BuyerRecord):
         """A real prospect's line for the move (config/prospect_lines.yaml), or None for the AI to word it."""
         if not LINE_BANK:
             return None
+        if move.topic == "decision" and self._said_partner_objection():
+            move = replace(move, topic="decision_shared")   # "it isn't only me" said already: never "Me, mostly"
         try:
             embed = meaning_model.shared_embedder().embed
         except Exception:   # no meaning model on this machine: pick by the seed alone

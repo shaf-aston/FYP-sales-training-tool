@@ -123,6 +123,15 @@ lines:
       - "Mine, in the end. But I'd want to sleep on it."
       - "There's one other person I'd check with. Shouldn't be an issue if it makes sense."
       - "I can decide, but I'd want the details in writing first."
+    decision_shared:   # asked who decides, after already saying it isn't only them (a partner objection)
+      - "Like I said, it's not just me. I'd need to run it past them."
+      - "Not just me, no. They'd want a say."
+      - "I'd involve the others. That's how we do it."
+      - "There are a couple of us. I wouldn't sign off alone."
+      - "It's a joint decision, really."
+      - "I'd bring them in before anything's agreed."
+      - "Me and one other. They'd need to see it too."
+      - "We decide together. I'm not going to go behind their backs."
   guard:   # answer, but hold back: they don't trust the seller yet
     general:
       - "It depends, really."

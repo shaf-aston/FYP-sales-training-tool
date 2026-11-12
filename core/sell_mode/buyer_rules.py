@@ -87,9 +87,10 @@ def _is_pitch(line: str) -> bool:
     return "?" not in line and len(line.split()) >= _PITCH_MIN_WORDS
 
 
-def end_outcome(readiness: float, turn_count: int, behaviour: dict) -> str | None:
-    """'sold', 'walked', or None while the conversation should go on."""
-    if readiness >= SOLD_READINESS and turn_count >= SOLD_MIN_TURNS:
+def end_outcome(readiness: float, turn_count: int, behaviour: dict, asked_to_commit: bool = False) -> str | None:
+    """'sold', 'walked', or None while the conversation should go on. A keen buyer says yes only when asked
+    (`asked_to_commit`: the seller's line asked for the next step); three good questions are not a sale."""
+    if readiness >= SOLD_READINESS and turn_count >= SOLD_MIN_TURNS and asked_to_commit:
         return "sold"
     if turn_count >= behaviour["patience_turns"] and readiness < WALK_READINESS:
         return "walked"

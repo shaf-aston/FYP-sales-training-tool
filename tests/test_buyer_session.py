@@ -238,3 +238,16 @@ def test_the_live_session_holds_the_premium_objection_back(stub_buyer):
         for line in QUESTIONS:
             reply = buyer.process_turn(line).content
             assert "premium" not in reply and "actually works" not in reply, (n, line, reply)
+
+
+def test_good_questions_alone_never_end_the_call_but_asking_for_the_sale_does(stub_buyer):
+    """Seen in a replay: an easy buyer said 'I'm ready to move forward' after three questions, and the call was over."""
+    buyer = session("easy", "asked")
+    for line in ["What made you take this call?", "What's been the hardest part of that lately?",
+                 "How long has that been going on?", "What are you using at the moment?",
+                 "If you could fix one thing first, what would it be?"]:
+        buyer.process_turn(line)
+        assert not buyer.state.ended, (line, buyer.state.readiness)
+    assert buyer.state.readiness >= 0.85
+    buyer.process_turn("Would it make sense to get you started this week?")
+    assert buyer.state.has_committed
