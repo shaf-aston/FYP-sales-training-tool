@@ -171,3 +171,15 @@ def test_hint_names_the_worst_problem_without_ai():
 
     assert "pressure" in score.signals
     assert hint == {"hint": "Drop the urgency. Ask what would make now the right time for them."}
+
+
+@pytest.mark.parametrize("line", ["What's been the hardest part of that lately?", "How long has that been going on?",
+                                  "If you could fix one thing first, what would it be?"])
+def test_a_plain_open_discovery_question_is_a_good_turn(line):
+    """A guarded buyer gives nothing to echo back; asking well still has to count, or they never warm up."""
+    assert rate_turn(line, "Hard to say. Why do you ask?", completed_turns=1).rating >= 4
+
+
+def test_asking_how_they_deal_with_it_is_not_a_pitch():
+    assert "premature_pitch" not in rate_turn("How do you deal with it at the moment?", "", 0).signals
+    assert "premature_pitch" in rate_turn("I can do you a deal on the price today.", "", 0).signals

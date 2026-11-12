@@ -63,6 +63,7 @@ class BuyerSession(BuyerRecord):
             behaviour,
             objection_bank or (pick_bank(real_pool, self.session_id, len(profile_bank)) if real_pool else profile_bank),
             first={"type": "chosen", "text": objection} if objection else None,
+            waits=config.get("objection_waits"),
         )
 
         self.persona = persona if persona is not None else select_persona(product_type)
@@ -156,8 +157,9 @@ class BuyerSession(BuyerRecord):
             self.log_snapshot()
             return self._response(content)
 
-        objection = self.pacer.for_turn(self.state.turn_count)
-        self.state.objections_raised = self.pacer.raised_by(self.state.turn_count - 1)
+        said = self.seller_lines()
+        objection = self.pacer.for_turn(self.state.turn_count, said)
+        self.state.objections_raised = self.pacer.raised_by(self.state.turn_count - 1, said)
 
         # Rules decide what the buyer does; a real prospect's line says it when one fits, else the AI words it.
         move = next_move(self.state.readiness, user_message, self.last_turn_signals, objection is not None)
@@ -192,6 +194,10 @@ class BuyerSession(BuyerRecord):
 
         coaching = coaching_hint(self.last_turn_signals) if show_hints else None
         return self._response(reply, latency, coaching)
+
+    def seller_lines(self) -> list[str]:
+        """The seller's lines so far, one per turn: when each objection is ready depends on them."""
+        return [m.get("content", "") for m in self.conversation_history if m.get("role") == "user"]
 
     def _end_message(self) -> str:
         """The buyer's fixed last line for how the session ended."""
@@ -236,7 +242,7 @@ class BuyerSession(BuyerRecord):
         """Set every count from the transcript as it now stands, as if the session had gone this way."""
         replay = self.review()
         self.state.turn_count = replay["summary"]["turn_count"]
-        self.state.objections_raised = self.pacer.raised_by(self.state.turn_count)
+        self.state.objections_raised = self.pacer.raised_by(self.state.turn_count, self.seller_lines())
         self.state.readiness = replay["readiness_exact"]
         self.state.has_committed = False
         self.state.has_walked = False

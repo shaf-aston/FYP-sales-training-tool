@@ -112,8 +112,9 @@ def test_a_live_turn_answers_first_then_adds_the_scripted_objection_and_counts_i
         prompts.append(messages[0]["content"]) or LLMResponse(content="Go on.")
     )
 
-    turn = next(t for t in range(1, TURNS + 1) if buyer.pacer.for_turn(t))
-    replies = [buyer.process_turn("What matters most to you here?").content for _ in range(turn)]
+    line = "What matters most to you here?"
+    turn = next(t for t in range(1, TURNS + 1) if buyer.pacer.for_turn(t, [line] * t))
+    replies = [buyer.process_turn(line).content for _ in range(turn)]
 
     # A session that sold or walked early stops recording prompts, which would
     # otherwise surface as a bare IndexError if difficulty tuning ever changed.
@@ -121,7 +122,7 @@ def test_a_live_turn_answers_first_then_adds_the_scripted_objection_and_counts_i
         f"the buyer ended the session at turn {len(prompts)}, before the objection "
         f"due at turn {turn} - retune the fixture, not the assertion"
     )
-    objection = buyer.pacer.for_turn(turn)
+    objection = buyer.pacer.for_turn(turn, buyer.seller_lines())
     assert replies[turn - 1] == f"Go on. {objection['text']}"
     assert "THIS TURN" in prompts[turn - 1] and objection["text"] not in prompts[turn - 1]   # rules add it, not the AI
     assert buyer.state.objections_raised == 1
@@ -181,3 +182,59 @@ def test_a_rewind_restores_the_exact_readiness_not_the_rounded_one():
     assert buyer.rewind_to_turn(2) is True
     assert buyer.state.readiness == buyer.review()["readiness_exact"]
 
+
+
+# --- an objection waits until the call has got to it (buyer.yaml objection_waits) ---
+
+QUESTIONS = ["What made you take this call?", "What's been the hardest part?", "How long has that been going on?"]
+PITCH = "We help small businesses cut the admin that eats their week."
+
+
+def _first_raised(buyer, said):
+    return next(((t, o) for t in range(1, len(said) + 1) if (o := buyer.pacer.for_turn(t, said))), (None, None))
+
+
+def test_a_pitch_makes_the_does_it_work_objection_ready():
+    buyer = session("hard", "pitched-2")
+    doubt = next(o for o in buyer.pacer.bank if o["type"] == "skepticism")
+    assert not buyer.pacer.ready(doubt, 2, QUESTIONS[:2])
+    assert buyer.pacer.ready(doubt, 2, [QUESTIONS[0], PITCH])
+
+
+def test_no_price_or_does_it_work_objection_before_the_offer_comes_up():
+    for n in range(40):
+        buyer = session("hard", f"wait-{n}")
+        said = QUESTIONS * 2   # six turns of questions only
+        for t in range(1, 6):
+            objection = buyer.pacer.for_turn(t, said)
+            assert objection is None or objection["type"] not in ("price", "skepticism", "fear"), (t, objection)
+
+
+def test_talk_of_money_makes_the_price_objection_ready():
+    buyer = session("hard", "pitched")
+    price = next(o for o in buyer.pacer.bank if o["type"] == "price")
+    assert not buyer.pacer.ready(price, 2, QUESTIONS[:2])
+    assert not buyer.pacer.ready(price, 2, [QUESTIONS[0], PITCH])   # a pitch alone names no price
+    assert buyer.pacer.ready(price, 2, [QUESTIONS[0], "What sort of budget do you have?"])
+
+
+def test_partner_and_timing_wait_a_few_turns():
+    buyer = session("medium", "later")
+    partner = next(o for o in buyer.pacer.bank if o["type"] == "partner")
+    assert not buyer.pacer.ready(partner, 3, QUESTIONS)
+    assert buyer.pacer.ready(partner, 5, QUESTIONS * 2)
+    assert buyer.pacer.ready(partner, 2, [QUESTIONS[0], "Who else is involved in the decision?"])
+
+
+def test_a_chosen_objection_still_comes_on_turn_one():
+    buyer = BuyerSession(difficulty="medium", session_id="chosen", objection="It's too expensive.")
+    assert buyer.pacer.for_turn(1, ["Hi, what made you take this call?"])["text"] == "It's too expensive."
+
+
+def test_the_live_session_holds_the_premium_objection_back(stub_buyer):
+    """The live call that showed it: medium, questions only, no 'what justifies the premium?' on turn 1."""
+    for n in range(20):
+        buyer = session("medium", f"live-{n}")
+        for line in QUESTIONS:
+            reply = buyer.process_turn(line).content
+            assert "premium" not in reply and "actually works" not in reply, (n, line, reply)
