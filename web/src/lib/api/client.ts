@@ -123,9 +123,12 @@ export function createHttpApi() {
     sellProductGroups: () => request<{ success: true; groups: T.ProductGroups }>("/api/sell/product-groups"),
     sellPersonas: (productType: string) =>
       request<{ success: true; personas: T.Persona[] }>(`/api/sell/personas?product_type=${encodeURIComponent(productType)}`),
-    sellInit: (difficulty: T.Difficulty, productType: string, pick: T.BuyerPick = {}) =>
+    sellInit: (difficulty: T.Difficulty, productType: string, pick: T.BuyerPick = {}, knowledge: T.KnowledgeData = {}) =>
       request<T.SellInitRes>("/api/sell/init", {
-        body: { difficulty, product_type: productType, persona: pick.persona, objection: pick.objection, custom_buyer: pick.custom, replay: pick.replay },
+        body: {
+          difficulty, product_type: productType, persona: pick.persona, objection: pick.objection, custom_buyer: pick.custom, replay: pick.replay,
+          knowledge: Object.keys(knowledge).length ? knowledge : undefined,
+        },
         timeoutMs: chat,
       }),
     sellChat: (sid: string, message: string, showHints: boolean) =>
@@ -200,7 +203,7 @@ export function createHttpApi() {
     },
     feedback: (body: T.FeedbackReq) => request<{ success: true }>("/api/feedback", { body }),
     knowledge: () => request<{ success: true; data: T.KnowledgeData }>("/api/knowledge"),
-    saveKnowledge: (data: T.KnowledgeData) => request<{ success: true }>("/api/knowledge", { body: data }),
+    saveKnowledge: (data: T.KnowledgeData) => request<{ success: true; data: T.KnowledgeData }>("/api/knowledge", { body: data }),
     clearKnowledge: () => request<{ success: true }>("/api/knowledge", { method: "DELETE" }),
   };
 }

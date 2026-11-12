@@ -100,7 +100,8 @@ def export(user):
     """Everything kept for the learner, as one JSON document."""
     library = Library(database())
     return jsonify({"success": True, **_me(user), "skills": library.skill_entries(user.id),
-                    "prospects": library.prospects(user.id), "words": library.words(user.id)})
+                    "prospects": library.prospects(user.id), "words": library.words(user.id),
+                    "knowledge": library.knowledge(user.id)})
 
 
 # --- skill history ---

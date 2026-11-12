@@ -13,6 +13,7 @@ import { readString, writeString } from "@/lib/storage";
 import { useStoredState } from "@/lib/useStoredState";
 import { useToast } from "@/components/ui";
 import { fromHistory, newId, nextIndex, parseSettings, type ChatMessage, type SellSettings } from "./history";
+import { readLocalKnowledge } from "@/features/knowledge/knowledgeStore";
 
 export type { ChatMessage };
 
@@ -419,7 +420,7 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
       epoch.current++;
       setTyping(true);
       try {
-        const res = await api.sellInit(difficulty, productType, pick);
+        const res = await api.sellInit(difficulty, productType, pick, readLocalKnowledge());
         if (sellSession) api.sellReset(sellSession.sessionId).catch(() => {});
         saveSellCall(res.session_id, pick);
         setSellSession({

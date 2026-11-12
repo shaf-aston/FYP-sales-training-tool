@@ -145,4 +145,6 @@ export const storageKeys = {
   helpSeen: "helpSeen",
   drillSchedule: "drillSchedule.v1",
   debug: "debug",
+  /** The learner's product details for the sell-mode buyer (knowledge base page); sent with each new sell call. */
+  knowledge: "knowledge.v1",
 } as const;

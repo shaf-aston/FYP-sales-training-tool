@@ -69,6 +69,11 @@ MIGRATIONS: tuple[str, ...] = (
     CREATE INDEX rep_words_by_user ON rep_words (user_id, created_at);
     ALTER TABLE teams ADD COLUMN words TEXT;
     """,
+    # 3: a learner's own product details for the sell-mode buyer (the knowledge base page), once kept in one file
+    # that every visitor shared
+    """
+    ALTER TABLE users ADD COLUMN knowledge TEXT;
+    """,
 )
 
 

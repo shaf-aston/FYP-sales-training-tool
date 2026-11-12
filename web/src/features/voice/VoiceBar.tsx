@@ -51,7 +51,7 @@ export function VoiceBar() {
           <Icon name={v.dictating ? "stop" : "mic"} />
         </Button>
         {v.speaking && (
-          <Button variant="danger" aria-label="Interrupt assistant" onClick={v.interrupt}>
+          <Button variant="danger" aria-label="Stop the voice" onClick={v.interrupt}>
             Stop
           </Button>
         )}

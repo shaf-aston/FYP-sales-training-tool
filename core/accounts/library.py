@@ -1,5 +1,6 @@
-"""What is kept for one learner: their skill history (one entry per scored session), saved prospects and saved
-Rep's words (a top rep's or an SOP's questions, checked by the caller against the script)."""
+"""What is kept for one learner: their skill history (one entry per scored session), saved prospects, saved
+Rep's words (a top rep's or an SOP's questions, checked by the caller against the script) and their product details
+for the sell-mode buyer (cleaned by the caller: sell_mode.knowledge)."""
 
 from __future__ import annotations
 
@@ -119,3 +120,15 @@ class Library:
     def delete_words(self, user_id: int, words_id: int) -> bool:
         with self.db.connect(write=True) as conn:
             return conn.execute("DELETE FROM rep_words WHERE id = ? AND user_id = ?", (words_id, user_id)).rowcount > 0
+
+    # --- product details (the knowledge base page) ---
+
+    def knowledge(self, user_id: int) -> dict:
+        with self.db.connect() as conn:
+            row = conn.execute("SELECT knowledge FROM users WHERE id = ?", (user_id,)).fetchone()
+        return json.loads(row["knowledge"]) if row and row["knowledge"] else {}
+
+    def save_knowledge(self, user_id: int, data: dict) -> None:
+        """Replace the details; an empty dict clears them."""
+        with self.db.connect(write=True) as conn:
+            conn.execute("UPDATE users SET knowledge = ? WHERE id = ?", (json.dumps(data) if data else None, user_id))

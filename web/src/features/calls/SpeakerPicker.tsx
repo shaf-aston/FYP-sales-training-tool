@@ -63,11 +63,11 @@ export function SpeakerPicker({ call, busy, aiLabelled, onPick, pick = "you" }: 
         )}
       </p>
       {aiLabelled === "sure" && (
-        <p className={s.aiNote}>Speakers were labelled by AI from what was said; {copy.ai}.</p>
+        <p className={s.aiNote}>Speakers were labelled automatically from what was said; {copy.ai}.</p>
       )}
       {aiLabelled === "unsure" && (
         <p className={s.aiNote}>
-          AI couldn&apos;t tell the speakers apart well. Choose &quot;Use another call&quot;, fix the Speaker A / B labels in the
+          We couldn&apos;t tell the speakers apart well. Choose &quot;Use another call&quot;, fix the Speaker A / B labels in the
           transcript, then read it again.
         </p>
       )}

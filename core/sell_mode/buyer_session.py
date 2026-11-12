@@ -39,10 +39,12 @@ class BuyerSession(BuyerRecord):
         session_id: str = "",
         objection: str | None = None,
         objection_bank: list[dict] | None = None,
+        knowledge: dict | None = None,
     ):
         """`persona` is picked at random when None; `objection` is one the learner chose to
         practise, raised on turn 1. `objection_bank` ({type, text}, raised in order) replaces the real-call
-        and difficulty banks: a buyer built from one call raises that call's objections."""
+        and difficulty banks: a buyer built from one call raises that call's objections. `knowledge` is the learner's
+        own product details (the knowledge base page), for this call only."""
         # An id-less session logs nothing and shares its objection dice with every other
         # id-less session. One owner of the id, never blank.
         self.session_id = session_id or new_session_id()
@@ -68,7 +70,7 @@ class BuyerSession(BuyerRecord):
 
         self.persona = persona if persona is not None else select_persona(product_type)
         self.product_type = product_type
-        self.product_context = build_product_context(product_type)
+        self.product_context = build_product_context(product_type, knowledge)
 
         self.state = BuyerState(
             readiness=behaviour["initial_readiness"],

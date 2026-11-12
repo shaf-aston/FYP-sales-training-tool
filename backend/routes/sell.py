@@ -4,7 +4,8 @@ from flask import Blueprint, current_app, jsonify, request
 
 from core.sell_mode import sell_service
 from core.sell_mode.buyer_state import UnknownPersona, persona_name, personas_for
-from core.infra.constants import MAX_CHOSEN_OBJECTION_CHARS, MAX_PERSONA_NAME_CHARS
+from core.infra.constants import MAX_CHOSEN_OBJECTION_CHARS, MAX_FIELD_LENGTH, MAX_PERSONA_NAME_CHARS
+from core.sell_mode.knowledge import ALLOWED_FIELDS
 from core.training.drills import build_drill_set
 from core.infra.logs import SessionAnalytics
 from core.training.quiz import build_sell_question, score_sell_answer
@@ -15,6 +16,7 @@ from core.infra.providers.router import ProviderUnavailable
 from ..messages import (
     CUSTOM_BUYER_INVALID,
     INVALID_DIFFICULTY,
+    INVALID_PAYLOAD,
     NO_TURNS_YET,
     OPTIONAL_TEXT_INVALID,
     SELL_ERROR,
@@ -109,6 +111,15 @@ def init():
     if error:
         return error
 
+    knowledge = data.get("knowledge") or None
+    if knowledge is not None:
+        if not isinstance(knowledge, dict):
+            return jsonify({"error": INVALID_PAYLOAD}), 400
+        error = InputValidator.validate_knowledge_data(knowledge, allowed_fields=ALLOWED_FIELDS,
+                                                        max_field_length=MAX_FIELD_LENGTH)
+        if error:
+            return error
+
     product_type = data.get("product_type", "default")
     try:
         started = sell_service.start_sell_session(
@@ -120,6 +131,7 @@ def init():
             objection=objection,
             custom_buyer=data.get("custom_buyer"),
             replay=data.get("replay"),
+            knowledge=knowledge,
         )
     except InvalidCustomBuyer as e:
         return jsonify({"error": CUSTOM_BUYER_INVALID.format(detail=e)}), 400

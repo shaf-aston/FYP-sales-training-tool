@@ -157,7 +157,7 @@ export function Landing() {
             <span /> <span /> <span />
           </div>
           <div className={s.heroCopy}>
-            <p className={s.kicker}>AI sales practice</p>
+            <p className={s.kicker}>Sales call practice</p>
             <h1 className={s.h1}>
               Get good at
               <span key={word} className={`${s.word} neon-text`}>
@@ -165,7 +165,7 @@ export function Landing() {
               </span>
               before the real call.
             </h1>
-            <p className={s.lead}>Roleplay a sales call from either side: buy from an AI seller, or sell to an AI buyer who pushes back. Every move gets feedback. Ten minutes a day.</p>
+            <p className={s.lead}>Roleplay a sales call from either side: buy from a virtual rep, or sell to a buyer who pushes back. Every move gets feedback. Ten minutes a day.</p>
             <div className={s.ctas}>
               <Link href={routes.buy} className={buttonClass("primary", s.bigCta)}>
                 Practise buying →
@@ -247,7 +247,7 @@ export function Landing() {
         <nav className={s.links} aria-label="Footer">
           <Link href={routes.buy}>Buy mode</Link>
           <Link href={routes.sell}>Sell mode</Link>
-          <Link href={routes.knowledge}>Knowledge base</Link>
+          <Link href={`${routes.knowledge}?mode=sell`}>Knowledge base</Link>
           <a href="#try">Try an objection</a>
         </nav>
       </footer>

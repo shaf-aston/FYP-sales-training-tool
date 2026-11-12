@@ -1,6 +1,5 @@
 """What the AI buyer is told: the product, the learner's custom knowledge, and the persona once."""
 
-import core.sell_mode.knowledge as knowledge_module
 import core.infra.loader as loader
 from core.sell_mode import buyer_session
 from core.sell_mode.buyer_prompt import build_system_prompt
@@ -31,11 +30,6 @@ def test_sell_session_prompt_has_product_custom_data_and_persona_once(monkeypatc
         "load_buyer_products",
         lambda: {"products": {"b2b_saas": {"context": "Workflow software", "knowledge": "Core product knowledge."}}},
     )
-    monkeypatch.setattr(
-        knowledge_module,
-        "get_custom_knowledge_text",
-        lambda: "product_name: Acme Pro\nAdditional notes: buyer research",
-    )
 
     session = buyer_session.BuyerSession(
         provider_type="stub",
@@ -50,12 +44,13 @@ def test_sell_session_prompt_has_product_custom_data_and_persona_once(monkeypatc
             "personality": "Pragmatic",
         },
         session_id="sell123",
+        knowledge={"product_name": "Acme Pro", "additional_notes": "buyer research"},
     )
 
     assert "Workflow software" in session.product_context
     assert "Core product knowledge." in session.product_context
     assert loader.load_buyer_config()["research_notes_heading"] in session.product_context
-    assert "product_name: Acme Pro" in session.product_context
+    assert "Product name: Acme Pro" in session.product_context
     assert "Additional notes: buyer research" in session.product_context
 
     prompt = build_system_prompt(

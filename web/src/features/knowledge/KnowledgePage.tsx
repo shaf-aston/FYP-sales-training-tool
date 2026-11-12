@@ -57,7 +57,9 @@ function Editor() {
         </nav>
         <div className={s.fields}>
           <Card tone="accent" className={s.note}>
-            Changes apply after you reset the chat.
+            {k.home === "account"
+              ? "Kept on your account. Your next sell call uses these details."
+              : "Kept on this device only. Your next sell call uses these details; sign in to keep them on your account."}
           </Card>
           {FIELDS.map((f) => {
             const common = {
@@ -80,7 +82,7 @@ function Editor() {
         </div>
       </div>
       <details className={s.preview}>
-        <summary>Preview the product brief the assistant will read</summary>
+        <summary>Preview what the buyer will know about your product</summary>
         <pre>{k.brief}</pre>
       </details>
       <div className={s.actions}>

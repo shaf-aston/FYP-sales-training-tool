@@ -8,6 +8,7 @@ import { useToast } from "@/components/ui";
 import { api, ApiError } from "@/lib/api/client";
 import type { AccountMe, AccountUser, Team } from "@/lib/api/types";
 import { forgetSkills, useSkillSync } from "./useSkillSync";
+import { writeLocalKnowledge } from "@/features/knowledge/knowledgeStore";
 
 const LOGGED_OUT: AccountMe = { user: null, team: null };
 
@@ -71,6 +72,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   const logOut = useCallback(async () => {
     await api.accountLogout().catch(() => {});
     forgetSkills();
+    writeLocalKnowledge(null);   // the product details were this account's
     setMe(LOGGED_OUT);
   }, []);
 
