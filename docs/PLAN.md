@@ -144,10 +144,22 @@ Both are off by default, carry an "AI-written" note, and fall back to the rules'
 ---
 
 ## Order of work
-1. Phase 0 (today).
-2. 1.2.1 backups, then 1.2.3 real IP (small, protects the data).
-3. 1.1 steps 1–5 (largest value; one PR per step).
-4. 1.3 Rep's words round 2.
-5. 1.2.4 embedder move and 1.2.5 long recordings.
+1. ✓ Phase 0 (PR #101).
+2. ✓ 1.2.1 backups, then 1.2.3 real IP (PR #102; `TRUST_PROXY_HEADERS=1` set on the VM, first backup taken).
+3. ✓ 1.1 steps 1–5 and 7 (PR #103; live: replies come from the line bank in about a second).
+4. ✓ 1.3 Rep's words round 2 (server PR #104, web PR #105; checked live with a throwaway account, then deleted).
+5. ✓ 1.2.4 embedder move (PR #102) and 1.2.5 long recordings (PR #104; ffmpeg on the VM; a 60-minute 28.8 MB MP3
+   read live into one transcript to 59:54). ✓ 1.2.2 deploy order (PR #105).
 6. Phases 2 and 3 as soon as the data and Kaggle access arrive.
 7. Phase 4 if wanted.
+
+## Where it stands (12 Nov 2026)
+Everything in Phases 0 and 1 that needs no outside input is built, merged and checked live. Still open:
+- **Waiting on you:** accept the Groq voice terms (server read-aloud still answers 204, so the browser voice is
+  used); unlink Netlify; Google login keys if wanted; the Fathom transcripts and Kaggle access.
+- **Waiting on the Fathom calls (Phase 2):** calibrating call review, the realism reference for 1.1.6 (rough bands
+  in `tests/test_buyer_lines.py` until then), real prospect lines for the bank, Rep's words thresholds on real calls.
+- **Waiting on Kaggle and Phase 2's labels (Phase 3):** the objection and stage classifiers, the tuned matcher, speaker
+  separation.
+- **Optional (Phase 4):** written critique and plain-English insights from Groq. Not built: the rules' own text covers
+  both, and the plan keeps Groq to where new sentences are needed.
