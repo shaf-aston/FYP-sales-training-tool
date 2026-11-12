@@ -13,6 +13,7 @@ from core.buy_mode.script_engine.engine import (
     hear_ahead,
     jump,
     move_on,
+    question_of,
 )
 from core.buy_mode.script_engine.method import (
     load_common_sense,
@@ -97,7 +98,8 @@ def test_price_and_scam_questions_at_the_ready_step_are_answered(fake_embedder):
     s = seller(fake_embedder)
     s.reply("i'm in, send the payment link")
     text, _ = s.reply("what's the price")
-    assert "$5k" in text and text.endswith(READY_Q)  # the jump is past the price step on purpose
+    # the jump is past the price step on purpose; asked again after the answer, only the question ("Love that." was its talk)
+    assert "$5k" in text and text.endswith(READY_Q.split(". ")[-1])
     text, _ = s.reply("is this a scam")
     assert text == CAT.steps[CAT.objections["scam"].enter].say
 
@@ -1904,3 +1906,11 @@ def test_a_verb_goal_reads_without_being_able_to_be(fake_embedder):
     assert filler.fill(line, {"outcome": "debt free"}) == "What are you hoping to achieve by being debt free?"
     assert filler.fill(line, {"outcome": "quit my job"}) == "What are you hoping to achieve by being able to quit your job?"
     assert filler.fill(line, {"outcome": "I want to replace my salary"}) == "What are you hoping to achieve by being able to replace your salary?"   # a verb by what came before it
+
+
+def test_a_side_question_gets_the_question_again_not_the_whole_speech(fake_embedder):
+    """Live, 12 Nov: "Okay, what does it involve?" at the identity-gap step got the reply, then the whole
+    "We love working with people going from 9-5er..." paragraph again, word for word."""
+    s = seller(fake_embedder, step="08")
+    text, _ = s.reply("what does it involve?")
+    assert text.count("9-5er") == 0 and text.endswith(question_of(CAT.steps["08"].say))

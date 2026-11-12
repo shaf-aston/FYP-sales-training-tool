@@ -250,3 +250,10 @@ def test_after_saying_it_isnt_only_them_the_buyer_never_answers_me_mostly(stub_b
     reply = buyer.process_turn("Who else would be involved in the decision?").content
     shared = load_yaml("prospect_lines.yaml")["lines"]["share"]["decision_shared"]
     assert any(reply.startswith(line) for line in shared), reply
+
+
+@pytest.mark.parametrize("line", ["Tell me more about how that affects your week.", "Walk me through a normal Monday."])
+def test_an_invitation_is_asked_like_a_question(line):
+    """Live, 12 Nov: "Tell me more about how that affects your week." got "That's fair. Tell me more." back."""
+    assert next_move(WARM, line, []).kind == "share"
+    assert next_move(COLD, line, []).kind == "guard"
