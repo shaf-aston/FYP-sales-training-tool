@@ -99,7 +99,7 @@ class Database:
                         conn.execute(statement)
                 conn.execute(f"PRAGMA user_version = {number}")
             conn.execute("COMMIT")
-            self._private()
+            self.make_private()
             return conn.execute("PRAGMA user_version").fetchone()[0]
         except BaseException:
             if conn.in_transaction:
@@ -108,7 +108,7 @@ class Database:
         finally:
             conn.close()
 
-    def _private(self) -> None:
+    def make_private(self) -> None:
         """Only the app's own user may read the file and its logs: they hold every account."""
         for path in (self.path, *(self.path.with_name(self.path.name + side) for side in ("-wal", "-shm"))):
             if path.exists() and path.stat().st_mode & 0o077:

@@ -12,12 +12,13 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from core.accounts.backup import backup, restore  # noqa: E402
-from core.accounts.db import backup_dir, db_path  # noqa: E402
+from core.accounts.db import Database, backup_dir, db_path  # noqa: E402
 from core.infra.constants import BACKUPS_KEEP  # noqa: E402
 
 
 def main(argv: list[str]) -> int:
     if not argv:
+        Database(db_path()).make_private()   # a file an older server left readable by everyone
         out = backup(db_path(), backup_dir(), BACKUPS_KEEP)
         print(f"backup: {out.name} ({out.stat().st_size} bytes), keeping {BACKUPS_KEEP}")
         return 0
