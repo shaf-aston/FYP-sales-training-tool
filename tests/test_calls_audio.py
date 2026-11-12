@@ -102,10 +102,12 @@ def test_bad_uploads_say_why(client, fakes, data, name, code, status):
     assert response.status_code == status and response.get_json()["code"] == code
 
 
-def test_too_big_says_export_the_transcript(client, fakes, monkeypatch):
-    monkeypatch.setitem(TRANSCRIPTION, "max_bytes", 10)
-    response = upload(client, b"x" * 20)
-    assert response.status_code == 413 and "transcript" in response.get_json()["error"]
+def test_too_big_without_ffmpeg_says_export_the_transcript(client, fakes, monkeypatch):
+    monkeypatch.setitem(TRANSCRIPTION, "max_bytes", 2_000_000)
+    monkeypatch.setattr("backend.routes.calls.can_split", lambda: False)
+    response = upload(client, b"x" * 2_000_001)
+    assert response.status_code == 413 and response.get_json()["code"] == "AUDIO_TOO_BIG"
+    assert "over 2 MB" in response.get_json()["error"] and "transcript" in response.get_json()["error"]
 
 
 def test_no_engine_points_to_transcripts(client, monkeypatch):

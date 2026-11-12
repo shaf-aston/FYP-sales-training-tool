@@ -50,6 +50,13 @@ accounts database to `data/backups/eloquence-<date>.db` and keeps the newest 7 (
 `systemctl list-timers eloquence-backup.timer` shows the next run. To restore one (the API must be stopped):
 `sudo systemctl stop eloquence && .venv/bin/python scripts/backup_db.py restore data/backups/eloquence-<date>.db && sudo systemctl start eloquence`.
 The file it replaces is kept beside it as `eloquence.db.before`.
+
+**ffmpeg.** Call recordings past 25 MB (Groq's per-file limit) are cut into 10-minute parts by ffmpeg
+(`limits.yaml` `transcription`). Every deploy runs `scripts/install_ffmpeg.sh`, which installs it with
+`apt-get` only when `command -v ffmpeg` finds nothing; a failure is a warning, never a failed deploy
+(`SKIP_FFMPEG_INSTALL=1` skips it). Without ffmpeg, recordings over 25 MB are refused as too big, as before.
+To install it by hand: vm-run with `sudo apt-get install -y ffmpeg`. No restart is needed: the API looks for it on
+each upload.
 `vm-run.yml` (Actions → vm-run) runs any one command on the VM and prints its output.
 
 Only the **deploy** workflow updates the VM, and only after CI passes. The VM used to also have

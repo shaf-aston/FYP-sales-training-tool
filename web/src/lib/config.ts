@@ -6,7 +6,7 @@ export const config = {
   api: {
     /**
      * Where call recordings are uploaded: straight to the API host, because the Vercel rewrite can't be trusted with
-     * 25 MB bodies. The host is the one in web/public/vercel.json (keep them the same). On localhost the page and the
+     * recordings up to 200 MB. The host is the one in web/public/vercel.json (keep them the same). On localhost the page and the
      * API share an origin, so "". The API's CORS allows the Vercel site, and a multipart POST needs no preflight.
      */
     uploadOrigin: () =>
@@ -65,12 +65,15 @@ export const config = {
     accept: [".txt", ".vtt", ".srt"],
     /** Bigger files are not transcripts; refuse before reading them into memory (limits.yaml max_request_bytes). */
     maxFileBytes: 1_000_000,
-    /** A call recording, turned into a transcript on the server (limits.yaml transcription: formats, max_bytes). */
+    /**
+     * A call recording, turned into a transcript on the server (limits.yaml transcription: formats, max_upload_bytes).
+     * Past 25 MB the server cuts it into parts; a server without ffmpeg refuses those and says so itself.
+     */
     audio: {
       accept: [".mp3", ".m4a", ".mp4", ".mpeg", ".mpga", ".wav", ".webm", ".ogg", ".flac"],
-      maxBytes: 25_000_000,
-      /** Speech to text plus speaker labels: the server allows 180 s for the speech part alone. */
-      timeoutMs: 300_000,
+      maxBytes: 200_000_000,
+      /** Upload, speech to text (180 s a part at most) and speaker labels: a long call on a slow line needs minutes. */
+      timeoutMs: 600_000,
     },
     /** Caps on the prospect fields the learner edits; the server allows 300 characters a field and 5 items a list (limits.yaml max_custom_buyer_*). */
     prospect: { nameMax: 60, textMax: 300, itemMax: 180, maxItems: 5 },

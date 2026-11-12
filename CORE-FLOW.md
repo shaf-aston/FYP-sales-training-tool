@@ -123,7 +123,15 @@ that transcript the same way a rewind does (`_settle`), and the prospect's last 
 **A recording instead of a transcript**: `/api/calls/transcribe` sends the audio to speech-to-text
 (`core/infra/providers/transcribe.py`, Groq Whisper), then `core/calls/audio.py` has the AI label each segment Speaker A
 or B (the one AI step in calls) and writes ordinary `[m:ss] Speaker A: ...` lines. The learner checks them and reads
-the call like any transcript. Only this route accepts bodies past the 1 MB cap (`transcription.max_bytes`).
+the call like any transcript. Only this route accepts bodies past the 1 MB cap (`transcription.max_upload_bytes`).
+
+**A recording past 25 MB** (Groq's per-file limit, `transcription.max_bytes`): `core/calls/audio_parts.py`
+`transcribe_in_parts` copies it into a temporary folder and has ffmpeg (no shell, `split_timeout_seconds`) cut it into
+`part_seconds` parts, each re-encoded as mono 16 kHz mp3 at `part_kbps` so it fits the limit. Each part is transcribed,
+its segments are shifted by the part's start (ffmpeg's own part list), and the speakers are labelled once over the
+joined call, so A and B stay the same people from start to end. The folder is always deleted. A recording at or under
+the limit is still one request. Without ffmpeg on the server (`can_split`), the limit is 25 MB as before
+(`AUDIO_TOO_BIG`, 413); a file ffmpeg cannot decode is `AUDIO_UNREADABLE` (400).
 
 **Adding a transcript format**: write one parser in `transcript.py` (`(lines, cfg) -> list[Turn] | None`), add it to
 `PARSERS` before any looser layout that could claim its text, and add a sample of the real export to

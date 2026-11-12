@@ -74,10 +74,10 @@ user; it is now 0600. 2 needs the Vercel deploy hook; 5 is below.
    - Buy mode, SOP review and Rep's words all use it; today the routes reach into buy mode for it.
    - Keep the model settings in `script/engine.yaml` until that file is quiet, then move them to `limits.yaml` `embedder`.
    - Needs nothing.
-5. **Recordings over 25 MB.**
-   - Split them with ffmpeg on the server into 10-minute parts, transcribe each and join them with the times shifted, so speakers are labelled across the whole call.
-   - Done when a 60-minute MP3 over 25 MB reads.
-   - Needs ffmpeg on the VM (`apt-get install ffmpeg`, through vm-run).
+5. **Recordings over 25 MB.** Done.
+   - Split them with ffmpeg on the server into 10-minute parts, transcribe each and join them with the times shifted, so speakers are labelled across the whole call (`core/calls/audio_parts.py`; uploads up to 200 MB).
+   - Done when a 60-minute MP3 over 25 MB reads: `tests/test_calls_audio_parts.py` makes one and reads it wherever ffmpeg is installed.
+   - ffmpeg on the VM: `scripts/install_ffmpeg.sh`, run by every deploy. Until it is there, recordings over 25 MB are refused as before.
 
 ### 1.3 Rep's words, round 2 · R
 1. **Save a rep's words to the account**, like saved prospects: `library.py` gets a `rep_words` table (migration), with a list, use and delete in the tool.
