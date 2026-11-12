@@ -24,8 +24,9 @@ MOVES = ("share", "guard", "stall", "ask", "lean_in")
 @dataclass(frozen=True)
 class Move:
     kind: str       # one of MOVES
-    topic: str      # what the seller asked about (prospect_lines.yaml `topics`), "pressure" or "general"
+    topic: str      # what the seller asked about (prospect_lines.yaml `topics`), "next_step", "pressure" or "general"
     objection: bool = False   # the pacer adds an objection after the reply
+    closed: bool = False      # the seller asked a yes/no question: "Maybe, depends" fits, "Bits and pieces" doesn't
 
     @property
     def label(self) -> str:
@@ -33,14 +34,34 @@ class Move:
         return f"{self.kind}:{self.topic}" + ("+object" if self.objection else "")
 
 
+def _phrase_at(phrase: str, text: str) -> bool:
+    return re.search(rf"\b{re.escape(phrase)}", text) is not None
+
+
 def topic_of(line: str) -> str:
-    """What the seller's line asks about: the first topic in prospect_lines.yaml with a phrase in it, else
-    "general". A phrase ending in a letter matches a whole word or its start ("frustrat" -> "frustrated")."""
+    """What the seller's line asks about: the topic in prospect_lines.yaml whose phrase in it is longest (the most
+    specific: "how long has" is the pain, "how long" the timeline), the first listed on a tie, else "general". A
+    phrase matches a whole word or its start ("frustrat" -> "frustrated")."""
     text = (line or "").lower()
+    best, best_len = "general", 0
     for topic, phrases in load_yaml("prospect_lines.yaml")["topics"].items():
-        if any(re.search(rf"\b{re.escape(p)}", text) for p in phrases):
-            return topic
-    return "general"
+        longest = max((len(p) for p in phrases if _phrase_at(p, text)), default=0)
+        if longest > best_len:
+            best, best_len = topic, longest
+    return best
+
+
+def is_closed(line: str) -> bool:
+    """A yes/no question: it opens with "would", "is", "can" ... (or "so would ..."), not "what" or "how"."""
+    words = re.findall(r"[a-z']+", (line or "").lower().split("?")[0].split(".")[-1].split("!")[-1])
+    words = words[1:] if words[:1] in (["so"], ["and"], ["ok"], ["okay"], ["right"]) else words
+    return bool(words) and words[0] in load_buyer_config()["moves"]["closed_openers"]
+
+
+def asks_to_commit(line: str) -> bool:
+    """The seller asked them to take a next step, as a yes/no question ("Shall we book a walkthrough?")."""
+    text = (line or "").lower()
+    return "?" in text and is_closed(text) and any(_phrase_at(p, text) for p in load_buyer_config()["moves"]["next_step"])
 
 
 def next_move(readiness: float, seller_line: str, signals: list[str], objection: bool = False) -> Move:
@@ -48,20 +69,26 @@ def next_move(readiness: float, seller_line: str, signals: list[str], objection:
 
     - The seller pushed (a pressure or premature-pitch signal): stall, whatever the readiness.
     - The seller asked what questions they have: ask one.
+    - The seller asked them to take a next step ("Shall we book a walkthrough?"): keen buyers lean in and say yes,
+      the others stall.
     - The seller asked something: share once they are warm enough, else guard. An open question built on what they
       said earns a share while they are still on the fence.
     - The seller told them something: keen buyers lean in, the ones on the fence ask how it works, cold ones stall.
     """
     cfg = load_buyer_config()["moves"]
+    line = (seller_line or "").lower()
     if any(s in signals for s in cfg["push_back_on"]):
         return Move("stall", "pressure", objection)
-    if any(phrase in (seller_line or "").lower() for phrase in cfg["invite_questions"]):
+    if any(phrase in line for phrase in cfg["invite_questions"]):
         return Move("ask", "general", objection)
-    asked = "?" in (seller_line or "")
-    topic = topic_of(seller_line) if asked else "general"
+    asked = "?" in line
+    closed = asked and is_closed(line)
     warm, cold = readiness >= cfg["open_from"], readiness < cfg["guarded_below"]
+    if asks_to_commit(line):
+        return Move("lean_in" if warm else "stall", "next_step", objection, closed)
+    topic = topic_of(seller_line) if asked else "general"
     if asked:
         earned = "open_question" in signals and "on_topic" in signals
         return Move("share" if warm or (earned and not cold) or (not cold and topic != "general") else "guard",
-                     topic, objection)
+                     topic, objection, closed)
     return Move("lean_in" if warm else "stall" if cold else "ask", "general", objection)

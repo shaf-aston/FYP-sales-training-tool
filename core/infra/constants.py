@@ -82,6 +82,8 @@ INVITE_CODE_LENGTH = _A["invite_code_length"]
 MAX_SKILLS_PER_ENTRY = _A["max_skills_per_entry"]
 MAX_SKILL_ID_CHARS = _A["max_skill_id_chars"]
 LOGIN_FAILURES, LOGIN_FAILURE_WINDOW_SECONDS = _A["login_failures"]
+SIGN_IN_LINKS = _A["sign_in_links"]
+FRESH_LOGIN_MINUTES = _A["fresh_login_minutes"]
 
 # provider requests
 PROVIDER_TIMEOUT_SECONDS = _L["provider"]["timeout_seconds"]

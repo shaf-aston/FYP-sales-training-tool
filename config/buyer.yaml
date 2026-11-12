@@ -93,6 +93,18 @@ difficulty_profiles:
       - type: "price"
         text: "I need to see a detailed cost breakdown before I consider this."
 
+# When each kind of objection can come up (core/sell_mode/buyer_rules.py ObjectionPacer). Until then a turn whose
+# roll calls for one raises the next ready objection, or none: a buyer doesn't say "what justifies the premium?" before
+# price has come up. Ready at any of: `turn` (from this turn on), `pitch` (the seller has told them
+# something: a full sentence with no question), `mention` (the seller has said one of these words). Kinds not listed
+# (smokescreen, a chosen one) can come at any time.
+objection_waits:
+  price: {mention: [price, cost, budget, invest, pay, fee, money, spend, afford, package, programme, program], turn: 8}
+  skepticism: {pitch: true, turn: 6}
+  fear: {pitch: true, turn: 6}
+  timing: {turn: 5, mention: [when, start, book, decide, sign, commit, next step]}
+  partner: {turn: 5, mention: [decide, decision, sign, commit, book, next step, involved]}
+
 # The buyer's first line (no AI). One is picked per session, the same one every
 # replay. Fields: {name}, {background} (first letter lowered), {need} (first need).
 opening_lines:
@@ -355,7 +367,7 @@ evaluation:
       other: 0.4
     needs_discovery: {base: 35, question_weight: 35, open_weight: 30, good: 0.5}
     rapport_building: {base: 45, rapport_weight: 55, good: 0.4}
-    objection_handling: {no_objection_score: 60, base: 35, response_weight: 65}
+    objection_handling: {no_objection_score: 60, base: 35, response_weight: 65, good: 0.75}
     solution_presentation: {base: 40, solution_weight: 60, good: 0.35}
     conversation_flow: {base: 40, length_weight: 35, balance_weight: 25, good_length_fit: 0.7, good_balance: 0.6}
   # The five criteria (core/sell_mode/sell_evaluator.py scores each by name). weight: share of the overall score;
@@ -380,7 +392,8 @@ evaluation:
     objection_handling:
       weight: 0.20
       label: "objection handling"
-      praise: "No major objections surfaced; neutral handling score."   # shown when the buyer raised none
+      praise: "You met their concerns head on and kept the call moving."   # at or above `good` of objections answered
+      none: "No major objections surfaced; neutral handling score."      # the buyer raised none
       advice: "Acknowledge concerns directly, then reframe toward value and next step."
       tip: "Acknowledge the concern, then reframe with one clear proof point."
       practice: {difficulty: hard, objection: "Honestly, that's more than I was hoping to spend."}
@@ -398,8 +411,9 @@ evaluation:
       advice: "Keep turns concise and balanced so the buyer speaks more."
       tip: "Use shorter turns and one question at a time."
       practice: {difficulty: easy}   # a patient buyer: room to practise short, balanced turns
-  # Wording shared by every criterion. {label} is a criterion's label; {outcome} is sold, walked or active.
+  # Wording shared by every criterion. {label} is a criterion's label; {outcome} is the outcome in words (outcomes).
   feedback:
+    outcomes: {sold: "they said yes", walked: "they walked away", ended: "you ended it before a decision", active: "no decision yet"}
     no_evidence: "Not enough evidence to score this criterion yet."
     neutral: "Measured with a neutral heuristic baseline."
     strength: "Strong {label}."
@@ -418,6 +432,10 @@ moves:   # what the buyer does this turn, by rules (core/sell_mode/buyer_moves.p
   push_back_on: [pressure, premature_pitch]
   # the seller hands the floor over: the buyer asks, whatever their readiness
   invite_questions: [questions do you have, questions for me, anything you want to ask, anything you'd like to ask, what would you like to know, anything i can answer, any questions]
+  # a yes/no question opens with one of these (buyer_moves.is_closed): it gets a yes/no kind of line
+  closed_openers: [would, could, can, do, does, did, is, are, was, were, will, shall, should, have, has, may, might, any, anything]
+  # asked as a yes/no question, these ask them to take a next step: keen buyers say yes, the rest put it off
+  next_step: [book, walkthrough, walk you through, demo, schedule, set up a call, set up a time, another call, follow-up, follow up, next step, sign up, get started, move forward, go ahead, get you started, trial]
   bank: true           # say lines from config/prospect_lines.yaml when one fits; false: the AI words every move
   min_score: 0.55      # an answer's line must be this close to the seller's question (shared embedder) to be said.
                        # bge-small: a topic's own question scored 0.60-0.71 to its best line, off-topic questions

@@ -29,8 +29,8 @@ export const STAGE_STEPS = [
  * seller sells to you. Sell: you are the salesperson and the AI buyer answers.
  */
 export const MODE_META = {
-  buy: { name: "Buy mode", heading: "You're buying", note: "The AI sells to you.", switchLabel: "Switch to selling" },
-  sell: { name: "Sell mode", heading: "You're selling", note: "The AI is your buyer.", switchLabel: "Switch to buying" },
+  buy: { name: "Buy mode", heading: "You're buying", note: "A virtual rep sells to you.", switchLabel: "Switch to selling" },
+  sell: { name: "Sell mode", heading: "You're selling", note: "A virtual buyer pushes back.", switchLabel: "Switch to buying" },
 } as const;
 
 const key = (value: string | null | undefined) => (value ?? "").trim().toLowerCase();

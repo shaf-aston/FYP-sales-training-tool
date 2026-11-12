@@ -166,3 +166,17 @@ def test_a_stand_in_score_is_not_measured():
     assert scores["objection_handling"]["measured"] is False      # no objection was raised
     assert scores["needs_discovery"]["measured"] is True
     assert all(not s["measured"] for s in _criteria_scores([], evaluation).values())
+
+
+def test_end_and_score_ends_the_call_and_a_redo_carries_it_on(sell_client, played_session):
+    """Found live: after End and score the buyer kept answering, under a score that no longer matched."""
+    headers = played_session
+    scored = sell_client.post("/api/sell/evaluate", json={}, headers=headers).get_json()
+    assert scored["ended"] is True and scored["outcome"] == "ended" and "Outcome: you ended it before a decision." in scored["summary"]
+    assert sell_client.get("/api/sell/state", headers=headers).get_json()["ended"] is True
+    after = sell_client.post("/api/sell/chat", json={"message": "One more thing?"}, headers=headers)
+    assert after.status_code == 400   # the call is over
+    redo = sell_client.post("/api/sell/redo", json={"turn": 2, "message": "What made that matter so much to you?"}, headers=headers)
+    assert redo.status_code == 200
+    state = sell_client.get("/api/sell/state", headers=headers).get_json()
+    assert state["ended"] is False and state["outcome"] == "active"

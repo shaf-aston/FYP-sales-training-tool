@@ -6,11 +6,14 @@ import { api, ApiError, errorText } from "@/lib/api/client";
 import { saveJson } from "@/lib/download";
 import { useAccount } from "./AccountContext";
 import { forgetSkills } from "./useSkillSync";
+import { writeLocalKnowledge } from "@/features/knowledge/knowledgeStore";
 import s from "./AccountDialog.module.css";
 
 /** Everything kept for the learner: download it, or delete the account (password, then a danger confirm). */
 export function DataSection({ onDeleted }: { onDeleted: () => void }) {
-  const { refresh, handleLoggedOut } = useAccount();
+  const { user, refresh, handleLoggedOut } = useAccount();
+  // An account made by an email link or Google has no password: the server asks for a fresh sign-in instead.
+  const needsPassword = user?.has_password !== false;
   const toast = useToast();
   const confirm = useConfirm();
   const [exporting, setExporting] = useState(false);
@@ -23,9 +26,13 @@ export function DataSection({ onDeleted }: { onDeleted: () => void }) {
     setExporting(true);
     try {
       const data = await api.accountExport();
-      saveJson(`eloquence-account-${new Date().toISOString().slice(0, 10)}.json`, data);
+      saveJson(
+        `eloquence-account-${new Date().toISOString().slice(0, 10)}.json`,
+        data,
+      );
     } catch (err) {
-      if (!handleLoggedOut(err)) toast(errorText(err, "Couldn't get your data. Try again."), "error");
+      if (!handleLoggedOut(err))
+        toast(errorText(err, "Couldn't get your data. Try again."), "error");
     } finally {
       setExporting(false);
     }
@@ -45,12 +52,21 @@ export function DataSection({ onDeleted }: { onDeleted: () => void }) {
     try {
       await api.accountDelete(password);
       forgetSkills();
+      writeLocalKnowledge(null);   // the product details were this account's
       await refresh();
       toast("Account deleted.", "success");
       onDeleted();
     } catch (err) {
-      if (err instanceof ApiError && err.code === "PASSWORD_WRONG") setWrong(err.message);
-      else if (!handleLoggedOut(err)) toast(errorText(err, "Couldn't delete the account. Try again."), "error");
+      if (
+        err instanceof ApiError &&
+        (err.code === "PASSWORD_WRONG" || err.code === "SIGN_IN_AGAIN")
+      )
+        setWrong(err.message);
+      else if (!handleLoggedOut(err))
+        toast(
+          errorText(err, "Couldn't delete the account. Try again."),
+          "error",
+        );
     } finally {
       setBusy(false);
     }
@@ -61,23 +77,41 @@ export function DataSection({ onDeleted }: { onDeleted: () => void }) {
       <h3 id="account-data" className={s.heading}>
         Your data
       </h3>
-      <Button className={s.start} busy={exporting} busyLabel="Preparing…" onClick={download}>
+      <Button
+        className={s.start}
+        busy={exporting}
+        busyLabel="Preparing…"
+        onClick={download}
+      >
         Download my data
       </Button>
       {deleting ? (
         <div className={s.stack}>
-          <TextInput
-            label="Your password, to delete the account"
-            type="password"
-            autoComplete="current-password"
-            autoFocus
-            value={password}
-            hint={wrong && <span className={s.fieldError}>{wrong}</span>}
-            aria-invalid={!!wrong || undefined}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+          {needsPassword ? (
+            <TextInput
+              label="Your password, to delete the account"
+              type="password"
+              autoComplete="current-password"
+              autoFocus
+              value={password}
+              hint={wrong && <span className={s.fieldError}>{wrong}</span>}
+              aria-invalid={!!wrong || undefined}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          ) : (
+            <p className={wrong ? s.fieldError : s.muted}>
+              {wrong ||
+                "Your account has no password, so this works within 10 minutes of signing in."}
+            </p>
+          )}
           <div className={s.row}>
-            <Button variant="danger" busy={busy} busyLabel="Deleting…" disabled={!password} onClick={remove}>
+            <Button
+              variant="danger"
+              busy={busy}
+              busyLabel="Deleting…"
+              disabled={needsPassword && !password}
+              onClick={remove}
+            >
               Delete account
             </Button>
             <Button variant="ghost" onClick={() => setDeleting(false)}>
@@ -86,7 +120,11 @@ export function DataSection({ onDeleted }: { onDeleted: () => void }) {
           </div>
         </div>
       ) : (
-        <Button variant="ghost" className={s.flush} onClick={() => setDeleting(true)}>
+        <Button
+          variant="ghost"
+          className={s.flush}
+          onClick={() => setDeleting(true)}
+        >
           Delete account…
         </Button>
       )}

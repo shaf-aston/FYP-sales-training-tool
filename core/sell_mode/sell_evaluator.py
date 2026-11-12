@@ -75,7 +75,7 @@ def _criteria_scores(conversation_history: list[dict], evaluation: dict) -> dict
         "objection_handling": (
             oh["no_objection_score"] if objection_turns == 0
             else oh["base"] + oh["response_weight"] * min(1.0, objection_response_turns / objection_turns),
-            objection_turns == 0,
+            objection_turns > 0 and objection_response_turns / objection_turns >= oh["good"],
         ),
         "solution_presentation": (
             sp["base"] + sp["solution_weight"] * solution_ratio,
@@ -95,7 +95,8 @@ def _criteria_scores(conversation_history: list[dict], evaluation: dict) -> dict
         score, good = computed[name]
         scores[name] = {
             "score": clamp_score(round(score)),
-            "feedback": info["praise"] if good else info["advice"],
+            "feedback": (info["none"] if name == "objection_handling" and objection_turns == 0
+                         else info["praise"] if good else info["advice"]),
             "measured": not (name == "objection_handling" and objection_turns == 0),
         }
     return scores
@@ -129,7 +130,7 @@ def evaluate_sell_session(conversation_history, buyer_state) -> dict:
     overall_score = _weighted_overall(criteria_scores, evaluation["criteria"])
     summary = range_label(
         overall_score, evaluation["scoring"]["summary_bands"], evaluation["feedback"]["summary"]
-    ).format(outcome=buyer_state.status)
+    ).format(outcome=evaluation["feedback"]["outcomes"][buyer_state.status])
     return {
         "overall_score": overall_score,
         "grade": range_label(overall_score, GRADE_THRESHOLDS, GRADE_LABELS),

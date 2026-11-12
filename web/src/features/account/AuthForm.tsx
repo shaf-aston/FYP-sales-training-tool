@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Button, Notice, Segmented, TextInput } from "@/components/ui";
-import { ApiError, errorText } from "@/lib/api/client";
+import { api, ApiError, errorText } from "@/lib/api/client";
+import type { SignInOptions } from "@/lib/api/types";
 import { config } from "@/lib/config";
 import { useAccount } from "./AccountContext";
 import s from "./AccountDialog.module.css";
@@ -28,6 +29,37 @@ export function AuthForm({ onDone }: { onDone: (mode: Mode) => void }) {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<Problem | null>(null);
+  // Email links and Google show only when the server has them set up.
+  const [options, setOptions] = useState<
+    Pick<SignInOptions, "link" | "google">
+  >({ link: false, google: false });
+  const [linkSent, setLinkSent] = useState<number | null>(null);
+  const [sending, setSending] = useState(false);
+  useEffect(() => {
+    let live = true;
+    api
+      .signInOptions()
+      .then((o) => live && setOptions({ link: o.link, google: o.google }))
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  const sendLink = async () => {
+    setSending(true);
+    setProblem(null);
+    try {
+      setLinkSent((await api.sendSignInLink(email.trim())).minutes);
+    } catch (err) {
+      setProblem({
+        field: err instanceof ApiError ? err.field : undefined,
+        message: errorText(err, "That didn't go through. Try again."),
+      });
+    } finally {
+      setSending(false);
+    }
+  };
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -38,7 +70,10 @@ export function AuthForm({ onDone }: { onDone: (mode: Mode) => void }) {
       else await signUp(email.trim(), name.trim(), password);
       onDone(mode);
     } catch (err) {
-      setProblem({ field: err instanceof ApiError ? err.field : undefined, message: errorText(err, "That didn't go through. Try again.") });
+      setProblem({
+        field: err instanceof ApiError ? err.field : undefined,
+        message: errorText(err, "That didn't go through. Try again."),
+      });
     } finally {
       setBusy(false);
     }
@@ -46,7 +81,11 @@ export function AuthForm({ onDone }: { onDone: (mode: Mode) => void }) {
 
   /** The field's error in the field's hint slot (read with the field), else its usual hint. */
   const hint = (field: string, usual?: string) =>
-    problem?.field === field ? <span className={s.fieldError}>{problem.message}</span> : usual;
+    problem?.field === field ? (
+      <span className={s.fieldError}>{problem.message}</span>
+    ) : (
+      usual
+    );
   const invalid = (field: string) => problem?.field === field || undefined;
 
   return (
@@ -86,15 +125,58 @@ export function AuthForm({ onDone }: { onDone: (mode: Mode) => void }) {
         type="password"
         autoComplete={mode === "login" ? "current-password" : "new-password"}
         value={password}
-        hint={hint("password", mode === "signup" ? `At least ${config.account.passwordMin} characters.` : undefined)}
+        hint={hint(
+          "password",
+          mode === "signup"
+            ? `At least ${config.account.passwordMin} characters.`
+            : undefined,
+        )}
         aria-invalid={invalid("password")}
         onChange={(e) => setPassword(e.target.value)}
       />
-      {problem && !problem.field && <Notice kind="error">{problem.message}</Notice>}
-      <Button type="submit" variant="primary" block busy={busy} busyLabel={mode === "login" ? "Logging in…" : "Creating your account…"}>
+      {problem && !problem.field && (
+        <Notice kind="error">{problem.message}</Notice>
+      )}
+      <Button
+        type="submit"
+        variant="primary"
+        block
+        busy={busy}
+        busyLabel={mode === "login" ? "Logging in…" : "Creating your account…"}
+      >
         {mode === "login" ? "Log in" : "Create account"}
       </Button>
-      <p className={s.muted}>Optional. Practice works the same without one; an account keeps your skill history, saved prospects and saved questions.</p>
+      {(options.link || options.google) && (
+        <div className={s.stack}>
+          <p className={s.or}>or, without a password</p>
+          {options.link &&
+            (linkSent ? (
+              <p role="status" className={s.sent}>
+                Check your inbox: we&apos;ve sent a sign-in link to{" "}
+                {email.trim()}. It works once, for {linkSent} minutes.
+              </p>
+            ) : (
+              <Button
+                block
+                busy={sending}
+                busyLabel="Sending…"
+                disabled={!email.trim()}
+                onClick={sendLink}
+              >
+                Email me a sign-in link
+              </Button>
+            ))}
+          {options.google && (
+            <a className={s.google} href={config.routes.google}>
+              Continue with Google
+            </a>
+          )}
+        </div>
+      )}
+      <p className={s.muted}>
+        Optional. Practice works the same without one; an account keeps your
+        skill history, saved prospects and saved questions.
+      </p>
     </form>
   );
 }

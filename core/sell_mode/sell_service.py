@@ -64,13 +64,13 @@ def review_transcript(history: list[dict], difficulty: str | None) -> dict:
 def start_sell_session(
     store, *, difficulty: str | None, product_type: str, provider: str | None,
     persona_name: str | None, objection: str | None, custom_buyer: dict | None = None,
-    replay: list | None = None,
+    replay: list | None = None, knowledge: dict | None = None,
 ) -> SellStart:
     """Build the buyer, get its opening line and register the session.
 
     `difficulty` None means the configured default. `custom_buyer` (a buyer the learner described, e.g. from
     a real call) replaces the persona pick and brings its own objections; `replay` (a transcript ending with the
-    buyer) is where the conversation starts instead of an opening line. Raises InvalidDifficulty,
+    buyer) is where the conversation starts instead of an opening line; `knowledge` the learner's own product details. Raises InvalidDifficulty,
     UnknownPersona or InvalidCustomBuyer for bad choices, and ProviderUnavailable when no LLM answers.
     `store` is the live-session store (needs `.set`).
     """
@@ -83,6 +83,7 @@ def start_sell_session(
         persona=persona or select_persona(product_type, persona_name),
         objection=objection,
         objection_bank=bank,
+        knowledge=knowledge,
     )
     opening = session.continue_from(history) if history else session.get_opening_message()
     store.set(session.session_id, session)

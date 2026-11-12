@@ -9,7 +9,7 @@
 # a misstep; missteps are listed in priority order: the first one that fired picks the hint.
 
 weights:
-  open_question: 0.4
+  open_question: 0.5   # an open question alone is a good turn (3.5 rounds to 4): a guarded buyer gives nothing to build on
   on_topic: 0.5
   mirroring: 1.0
   acknowledgement: 0.5
@@ -104,7 +104,9 @@ pressure:
   - act now
   - today only
   - limited time
-  - last one
+  - last one left     # not "last one": "what stopped the last one from working?" is a good question
+  - only one left
+  - only a few left
   - won't last
   - wont last
   - need to decide
@@ -118,7 +120,10 @@ pitch_language:
   - price
   - cost
   - discount
-  - deal
+  - a deal        # not "deal": "how do you deal with it?" is discovery
+  - good deal
+  - great deal
+  - special deal
   - offer
   - package
   - payment

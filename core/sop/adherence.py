@@ -45,7 +45,10 @@ def check_call(stages: list[Stage], rep_lines: list[str], cfg: dict, embed: Embe
     """`rep_lines` are the rep's turns in call order."""
     condition = re.compile(cfg["condition"], re.IGNORECASE)
     flat = [(stage.title, step, *_action(step, condition)) for stage in stages for step in stage.steps]
-    said = [(turn, s) for turn, line in enumerate(rep_lines, 1) for s in (sentences(line) or [line])]
+    # An acknowledgement ("Fair question.", "Got it.") carries no step, however close its meaning scores.
+    least = cfg["thresholds"]["evidence_min_words"]
+    said = [(turn, s) for turn, line in enumerate(rep_lines, 1) for s in (sentences(line) or [line])
+            if "?" in s or len(s.split()) >= least]
     scores = similarity([cfg["query_prefix"] + action for _, _, action, _ in flat], [s for _, s in said], embed)
     # One sentence carries one step: strongest matches first, each step and each sentence used at most once, so
     # "what made you book the call?" cannot also count as booking a follow-up.

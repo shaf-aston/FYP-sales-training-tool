@@ -19,8 +19,8 @@ const MODES = {
 } as const;
 
 export function ChatHeader() {
-  const { openDialog, showPanels } = useUi();
-  const { mode, reset, jumpTo, switchProduct, buySessionId, buyProduct, stage } = useSession();
+  const { openDialog, showPanels, sidePanel } = useUi();
+  const { mode, reset, jumpTo, switchProduct, buySessionId, buyProduct, stage, messages } = useSession();
   const account = useAccount();
   // Each product runs its own script, so steps are kept with the product they came from.
   const [loaded, setLoaded] = useState<{ product: string | null; steps: ScriptStep[] }>({ product: null, steps: [] });
@@ -28,7 +28,8 @@ export function ChatHeader() {
   const [products, setProducts] = useState<BuyProduct[]>([]);
   const at = stageIndex(stage);
   // Phones and tablets: the sidebar sits below the chat, so its button carries the stage.
-  const staged = mode === "buy" && at >= 0;
+  // Not while the quiz is open: it asks which stage the sale is in.
+  const staged = mode === "buy" && at >= 0 && sidePanel !== "quiz";
   const panelsLabel = staged ? `Stage ${at + 1}/${STAGE_STEPS.length}` : "Panels";
   const words = MODE_META[mode];
   const confirm = useConfirm();
@@ -79,7 +80,16 @@ export function ChatHeader() {
   const onJump = async (step: string) => {
     if (!step) return;
     setMenuOpen(false);
-    await jumpTo(step);
+    // Like changing the call type: a call the learner has said something in is cleared only when they agree.
+    const ok =
+      !messages.some((m) => m.role === "user") ||
+      (await confirm({
+        title: "Jump to this step?",
+        body: "Starts a fresh call at this step. The current chat is cleared.",
+        confirmLabel: "Jump",
+        cancelLabel: "Keep this call",
+      }));
+    if (ok) await jumpTo(step);
   };
 
   const onProduct = async (id: string) => {

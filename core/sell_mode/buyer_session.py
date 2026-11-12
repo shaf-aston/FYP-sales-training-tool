@@ -3,11 +3,12 @@
 import logging
 import random
 import time
+from dataclasses import replace
 
 from core.infra import embedder as meaning_model
 from core.sell_mode.buyer_guardrails import check_buyer_reply
 from core.sell_mode.buyer_lines import pick_line
-from core.sell_mode.buyer_moves import Move, next_move
+from core.sell_mode.buyer_moves import Move, asks_to_commit, next_move
 from core.sell_mode.buyer_prompt import build_product_context, build_system_prompt
 from core.sell_mode.buyer_record import BuyerRecord
 from core.sell_mode.buyer_rules import ObjectionPacer, coaching_hint, end_outcome
@@ -39,10 +40,12 @@ class BuyerSession(BuyerRecord):
         session_id: str = "",
         objection: str | None = None,
         objection_bank: list[dict] | None = None,
+        knowledge: dict | None = None,
     ):
         """`persona` is picked at random when None; `objection` is one the learner chose to
         practise, raised on turn 1. `objection_bank` ({type, text}, raised in order) replaces the real-call
-        and difficulty banks: a buyer built from one call raises that call's objections."""
+        and difficulty banks: a buyer built from one call raises that call's objections. `knowledge` is the learner's
+        own product details (the knowledge base page), for this call only."""
         # An id-less session logs nothing and shares its objection dice with every other
         # id-less session. One owner of the id, never blank.
         self.session_id = session_id or new_session_id()
@@ -63,11 +66,12 @@ class BuyerSession(BuyerRecord):
             behaviour,
             objection_bank or (pick_bank(real_pool, self.session_id, len(profile_bank)) if real_pool else profile_bank),
             first={"type": "chosen", "text": objection} if objection else None,
+            waits=config.get("objection_waits"),
         )
 
         self.persona = persona if persona is not None else select_persona(product_type)
         self.product_type = product_type
-        self.product_context = build_product_context(product_type)
+        self.product_context = build_product_context(product_type, knowledge)
 
         self.state = BuyerState(
             readiness=behaviour["initial_readiness"],
@@ -146,7 +150,8 @@ class BuyerSession(BuyerRecord):
 
         # Update readiness and outcomes before generation so the response matches end state.
         self._sync_readiness()
-        outcome = end_outcome(self.state.readiness, self.state.turn_count, self.difficulty_profile["behaviour"])
+        outcome = end_outcome(self.state.readiness, self.state.turn_count, self.difficulty_profile["behaviour"],
+                              asks_to_commit(user_message))
         self.state.has_committed = outcome == "sold"
         self.state.has_walked = outcome == "walked"
 
@@ -156,8 +161,9 @@ class BuyerSession(BuyerRecord):
             self.log_snapshot()
             return self._response(content)
 
-        objection = self.pacer.for_turn(self.state.turn_count)
-        self.state.objections_raised = self.pacer.raised_by(self.state.turn_count - 1)
+        said = self.seller_lines()
+        objection = self.pacer.for_turn(self.state.turn_count, said)
+        self.state.objections_raised = self.pacer.raised_by(self.state.turn_count - 1, said)
 
         # Rules decide what the buyer does; a real prospect's line says it when one fits, else the AI words it.
         move = next_move(self.state.readiness, user_message, self.last_turn_signals, objection is not None)
@@ -192,6 +198,16 @@ class BuyerSession(BuyerRecord):
 
         coaching = coaching_hint(self.last_turn_signals) if show_hints else None
         return self._response(reply, latency, coaching)
+
+    def _said_partner_objection(self) -> bool:
+        """The buyer has already said someone else decides with them (a partner objection, before this turn)."""
+        texts = {o["text"] for o in self.pacer.bank if o.get("type") == "partner"}
+        return any(m.get("role") == "assistant" and any(t in m.get("content", "") for t in texts)
+                   for m in self.conversation_history)
+
+    def seller_lines(self) -> list[str]:
+        """The seller's lines so far, one per turn: when each objection is ready depends on them."""
+        return [m.get("content", "") for m in self.conversation_history if m.get("role") == "user"]
 
     def _end_message(self) -> str:
         """The buyer's fixed last line for how the session ended."""
@@ -236,10 +252,11 @@ class BuyerSession(BuyerRecord):
         """Set every count from the transcript as it now stands, as if the session had gone this way."""
         replay = self.review()
         self.state.turn_count = replay["summary"]["turn_count"]
-        self.state.objections_raised = self.pacer.raised_by(self.state.turn_count)
+        self.state.objections_raised = self.pacer.raised_by(self.state.turn_count, self.seller_lines())
         self.state.readiness = replay["readiness_exact"]
         self.state.has_committed = False
         self.state.has_walked = False
+        self.state.has_finished = False   # a redo after "End and score" carries the call on from that turn
         self.last_turn_signals = []
         self.log_snapshot()
 
@@ -270,6 +287,7 @@ class BuyerSession(BuyerRecord):
             state.objections_raised,
             state.has_committed,
             state.has_walked,
+            state.has_finished,
             list(self.last_turn_signals),
         )
 
@@ -282,6 +300,7 @@ class BuyerSession(BuyerRecord):
             state.objections_raised,
             state.has_committed,
             state.has_walked,
+            state.has_finished,
             self.last_turn_signals,
         ) = snapshot
 
@@ -289,6 +308,8 @@ class BuyerSession(BuyerRecord):
         """A real prospect's line for the move (config/prospect_lines.yaml), or None for the AI to word it."""
         if not LINE_BANK:
             return None
+        if move.topic == "decision" and self._said_partner_objection():
+            move = replace(move, topic="decision_shared")   # "it isn't only me" said already: never "Me, mostly"
         try:
             embed = meaning_model.shared_embedder().embed
         except Exception:   # no meaning model on this machine: pick by the seed alone

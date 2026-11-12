@@ -19,6 +19,8 @@ condition: "^(if|when|whenever|unless|should|in case)\\b[^,]{0,80},\\s*"
 thresholds:
   element_fallback: 0.8
   adherence: 0.58
+  evidence_min_words: 3   # a shorter statement ("Fair question.", "Got it.") carries no step: it once "asked them to go
+                          # ahead"; a question counts at any length ("Your goal?")
 query_prefix: "Represent this sentence for searching relevant passages: "
 
 # What a good sales call covers, in call order (the CAT and Impact Formula scripts in config/methods agree on these).
@@ -71,3 +73,23 @@ elements:
     cues: ["\\b(follow.?up|next steps?|book (a|another|the next) (call|meeting|session|follow)|schedule (a|the|another|next)|calendar invite|send (them )?(a|the) (summary|recap|proposal)|recap email)\\b"]
     why: "A call that doesn't close still needs a booked next step, or the deal goes cold."
     examples: ["Book a follow-up call", "Agree a clear next step with a date", "Send a recap after the call", "Schedule the next meeting before hanging up"]
+
+# The written critique: one short paragraph under each result (core/sop/critique.py). Rules decide what it says;
+# these are its words. {blanks} come from the result.
+critique:
+  # which missing element to name first: the ones that lose the most deals when skipped come first
+  priority: [close, discovery, pain, decision, follow_up, objections, urgency, pitch, opening]
+  sop:
+    complete: "Your SOP covers every part of a good call, from the opening to the follow-up. Next, check a real call against it to see which steps your reps actually say."
+    gaps: "Your SOP covers {covered} of {total} parts of a good call. The biggest gap is {first}: {why}"
+    more: "It also has nothing for {others}."
+    advice: "Add a step for each, in the order a call runs, and check a call against it again."
+  call:
+    none_counted: "Nothing in this call could be checked against the SOP's steps."
+    strong: "The rep carried out {done} of {counted} steps ({score}%)."
+    weak: "The rep carried out only {done} of {counted} steps ({score}%)."
+    skipped_first: "The first step they skipped was \"{step}\" ({stage})."
+    skipped_more: "{more} other {steps} went unsaid too."
+    order: "The steps they did came in the SOP's order."
+    out_of_order: "Some steps came out of the SOP's order, which usually means the call jumped ahead."
+    strong_from: 70   # a score at or above this reads as "carried out", below as "only"

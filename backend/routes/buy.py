@@ -93,6 +93,7 @@ def init():
                     "probes": getattr(seller, "probes", {}),
                     **stage_fields(seller),
                     "history": history,
+                    "training": seller.coach_notes(),   # the coach's notes come back with the call after a reload
                 }
             )
 

@@ -38,10 +38,13 @@ export const steps = [
 export const features = [
   { title: "Hands-free voice", text: "Speak out loud and hear the buyer answer back.", hue: "var(--neon-cyan)" },
   { title: "Live coach", text: "Your stage and a coach note after every message.", hue: "var(--neon-amber)" },
-  { title: "Sell mode", text: "You sell. The AI plays a buyer who pushes back.", hue: "var(--neon-cyan)" },
-  { title: "Quick quizzes", text: "Short checks that explain why an answer works.", hue: "var(--neon-amber)" },
-  { title: "Your product", text: "Load your own product notes so practice feels real.", hue: "var(--neon-cyan)" },
-  { title: "Spaced drills", text: `Weak spots come back on day ${drillDays}.`, hue: "var(--neon-amber)" },
+  { title: "Quick quizzes", text: "Short checks that explain why an answer works.", hue: "var(--neon-cyan)" },
+  { title: "Your product", text: "Load your own product notes so practice feels real.", hue: "var(--neon-amber)" },
+  { title: "Spaced drills", text: `Weak spots come back on day ${drillDays}.`, hue: "var(--neon-cyan)" },
+  { title: "Practise the call you lost", text: "Drop in a transcript or recording and sell to that prospect again.", hue: "var(--neon-amber)" },
+  { title: "Call review", text: "Every line of a real call rated, and the moments it turned marked.", hue: "var(--neon-cyan)" },
+  { title: "SOP review", text: "Check your sales playbook, then see how a call followed it.", hue: "var(--neon-amber)" },
+  { title: "Skill Radar and team view", text: "Your weakest skill picks the next practice; managers see the whole team.", hue: "var(--neon-cyan)" },
 ] as const;
 
 /** The try-it game: one objection, three replies, instant verdicts. */

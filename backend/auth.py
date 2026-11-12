@@ -63,7 +63,16 @@ def init_auth(app: Flask) -> None:
 def log_in(user: User) -> None:
     session.clear()   # a fresh session on every login: nothing from before it carries over
     session.permanent = True
-    session["uid"], session["sv"] = user.id, user.session_version
+    # created_at too: SQLite gives a deleted account's id to the next new one (both at session version 1), and a
+    # deleted account's cookie on another device must not sign in as whoever signs up next
+    session["uid"], session["sv"], session["ca"] = user.id, user.session_version, user.created_at
+    session["at"] = int(time.time())   # when they signed in: an account with no password proves it is them this way
+
+
+def signed_in_recently(minutes: int) -> bool:
+    """This login is at most `minutes` old (an account with no password deletes only then)."""
+    at = session.get("at")
+    return isinstance(at, int) and time.time() - at <= minutes * 60
 
 
 def log_out(user: User | None = None) -> None:
@@ -77,9 +86,9 @@ def current_user() -> User | None:
     """The logged-in user, looked up once per request; None when logged out, the account is gone, or the cookie
     is from before a log-out."""
     if "user" not in g:
-        uid, version = session.get("uid"), session.get("sv")
+        uid, version, created = session.get("uid"), session.get("sv"), session.get("ca")
         user = Users(database()).get(uid) if isinstance(uid, int) else None
-        g.user = user if user and user.session_version == version else None
+        g.user = user if user and user.session_version == version and user.created_at == created else None
     return g.user
 
 

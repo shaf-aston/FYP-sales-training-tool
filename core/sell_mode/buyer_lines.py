@@ -25,21 +25,57 @@ MIN_SCORE = load_buyer_config()["moves"]["min_score"]   # an answer's line must 
 
 
 def lines_for(move: Move) -> list[str]:
-    """The bank's lines for a move: its topic's, or (for anything but an answer) its general ones."""
+    """The bank's lines for a move: its topic's, else (for anything but an answer) its yes/no ones for a yes/no
+    question, else its general ones."""
     bank = load_yaml("prospect_lines.yaml")["lines"].get(move.kind, {})
     if move.topic in bank:
         return list(bank[move.topic])
-    return [] if move.kind == "share" else list(bank.get("general", []))
+    if move.kind == "share":
+        return []
+    return list(bank["closed"] if move.closed and "closed" in bank else bank.get("general", []))
 
 
 def _said(history: list[dict]) -> str:
     return " ".join(m.get("content", "") for m in history if m.get("role") == "assistant").lower()
 
 
+def _voice() -> dict:
+    return load_yaml("prospect_lines.yaml")["voice"]
+
+
+def spoken(item: str) -> str:
+    """A need or pain as the buyer says it about themselves: "wife is worried about his health" -> "my wife is
+    worried about my health", "doesn't know proper form" -> "I don't know proper form". Notes in brackets go."""
+    voice = _voice()
+    text = re.sub(r"\s*\([^)]*\)", "", str(item)).strip()
+    first, _, rest = text.partition(" ")
+    lowered = first.lower()
+    if lowered in voice["starts"]:
+        text = f"{voice['starts'][lowered]} {rest}".strip()
+    elif lowered in voice["my"]:
+        text = f"my {text}"
+    for phrase in sorted(voice["replace"], key=len, reverse=True):
+        text = re.sub(rf"(?<![\w']){re.escape(phrase)}(?![\w'])", voice["replace"][phrase], text, flags=re.IGNORECASE)
+    return text
+
+
+def is_clause(text: str) -> bool:
+    """A whole clause ("my budget is fixed"), not a thing ("manual reporting")."""
+    words = set(re.findall(r"[a-z']+", text.lower()))
+    return bool(words & set(_voice()["clause_words"]))
+
+
+def _takes_clause(line: str, blank: str) -> bool:
+    """Whether a clause reads right in this line's blank: starting a sentence, or after "is ", ", " or "but "."""
+    at = line.index("{" + blank + "}")
+    before = line[:at]
+    return not before.strip() or before.rstrip().endswith((".", "?", "!")) or before.endswith(("is ", ", ", "but "))
+
+
 def _next_unsaid(items: list, said: str) -> str | None:
-    """The persona's first need (or pain) not said yet in this call: they open up one thing at a time."""
+    """The persona's first need (or pain) not said yet in this call, as they say it: they open up one thing at a time."""
     for item in items or []:
-        text = str(item).strip()
+        text = spoken(str(item).strip())
         if text and text.lower() not in said:
             return text
     return None
@@ -60,8 +96,11 @@ def fill(line: str, persona: dict, said: str) -> str | None:
         "budget": budget if figure else None,             # "$50,000-$70,000"
         "budget_kind": budget if budget and not figure else None,   # "cost-conscious", "mid-range"
     }
-    if any(values[name] is None for name in _BLANK.findall(line)):
+    blanks = _BLANK.findall(line)
+    if any(values[name] is None for name in blanks):
         return None
+    if any(is_clause(values[name]) and not _takes_clause(line, name) for name in blanks if name in ("need", "pain")):
+        return None   # "It's my budget is fixed, mostly."
     return _sentence_case(_BLANK.sub(lambda m: values[m.group(1)], line))
 
 

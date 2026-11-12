@@ -220,7 +220,7 @@ const steps=[
  {k:"person",t:"Reverse it: you sell, the prospect pushes back",e:"built · tuning",st:"built",
   why:"The main practice loop. Rules already own readiness, objections, opening and closing lines. Groq still writes the middle of each reply; most of that can move to real lines.",
   how:"Rules pick the buyer's next move. Real prospect lines say it. Groq only fills gaps.",
-  subs:[["Personas and difficulty","R",1],["Readiness, objections, opening and closing lines","R",1],["Real objections from Fathom","R",1],["Turn-by-turn review, drills, quiz","R",1],["One switch to swap roles","R",1],["Rules choose the next move from readiness and your line: share, hold back, stall, ask, lean in","R",1],["Say it with a real prospect line that fits the move and topic, matched by meaning","M",1],["Groq writes the line only when nothing fits, told the move","G",1],["Check realism against real calls: reply length, questions, objection rate","R"]],
+  subs:[["Personas and difficulty","R",1],["Readiness, objections, opening and closing lines","R",1],["Real objections from Fathom","R",1],["Turn-by-turn review, drills, quiz","R",1],["One switch to swap roles","R",1],["Rules choose the next move from readiness and your line: share, hold back, stall, ask, lean in; objections wait until they fit","R",1],["Say it with a real prospect line that fits the move and topic, matched by meaning","M",1],["Groq writes the line only when nothing fits, told the move","G",1],["Check realism against real calls: reply length, questions, objection rate","R"]],
   have:["Sell mode","Buyer state and readiness","Turn rating"],out:"Faster, cheaper replies that sound like real buyers"},
  {k:"upload",t:"Upload a call → it becomes that prospect",e:"done",st:"built",
   why:"Practise against the buyer you actually lost, set up automatically.",
@@ -234,7 +234,7 @@ const steps=[
  {mod:"Platform"},
  {k:"lock",t:"Accounts, database, privacy",e:"done",st:"built",
   why:"Calls, prospects and progress must be saved per person and team.",
-  subs:[["Login with email and password, signed cookie, sign out everywhere","R",1],["Database: users, teams, prospects, skill history","R",1],["Delete account: data wiped from disk too","R",1],["Nothing stored from uploaded calls unless you save the prospect","R",1],["Google or magic-link login","R"],["Daily database backups","R",1]],
+  subs:[["Login with email and password, signed cookie, sign out everywhere","R",1],["Database: users, teams, prospects, skill history","R",1],["Delete account: data wiped from disk too","R",1],["Nothing stored from uploaded calls unless you save the prospect","R",1],["Google or magic-link login (on once the keys are in the server settings)","R",1],["Daily database backups","R",1]],
   have:["SQLite on the server"],out:"Saved history and safe handling of recordings"},
  {k:"mic",t:"Audio upload",e:"done",st:"built",
   why:"Most reps have recordings, not transcripts.",
@@ -250,11 +250,11 @@ const steps=[
  {mod:"Business"},
  {k:"doc",t:"SOP review",e:"done",st:"built",
   why:"Check the playbook, then check calls against it.",
-  subs:[["Read PDF, DOCX, Markdown and text","R",1],["Headings and lists become stages and steps","R",1],["Checklist: is each core element there? Phrase rules first, meaning match second","M",1],["Score each call: which steps a rep line covered, with the line","M",1],["Optional written critique","G"],["Virtual rep (step 2) asks the SOP's questions","R",1]],
+  subs:[["Read PDF, DOCX, Markdown and text","R",1],["Headings and lists become stages and steps","R",1],["Checklist: is each core element there? Phrase rules first, meaning match second","M",1],["Score each call: which steps a rep line covered, with the line","M",1],["Written critique by rules: the costliest gap first, and how a call followed the SOP","R",1],["Virtual rep (step 2) asks the SOP's questions","R",1]],
   have:["Script stages","Method configs","Meaning matcher"],out:"A playbook report and an adherence score per call"},
  {k:"team",t:"Manager insights",e:"done",st:"built",
   why:"Turns every rep's Skill Radar into coaching for the team.",
-  subs:[["Member and manager roles, join code","R",1],["Team view built on Skill Radar","R",1],["Compare reps and spot team-wide gaps","R",1],["Coaching guidelines from rules: below target, practise this","R",1],["Export CSV","R",1],["Optional plain-English rewrite","G"]],
+  subs:[["Member and manager roles, join code","R",1],["Team view built on Skill Radar","R",1],["Compare reps and spot team-wide gaps","R",1],["Coaching guidelines from rules: below target, practise this","R",1],["Export CSV","R",1],["Guidelines in plain English, written by rules (no Groq needed)","R",1]],
   have:["Skill Radar","Accounts and teams"],out:"Managers see what to train, by whom, with evidence"}
 ];
 const models=[

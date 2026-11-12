@@ -70,7 +70,7 @@ export class Tts {
     try {
       await handle.play();
     } catch {
-      this.opts.onError("Could not play the assistant voice");
+      this.opts.onError("Could not play the voice");
       finish();
     }
   }

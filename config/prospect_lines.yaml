@@ -4,16 +4,51 @@
 #
 # Blanks are the persona's own words: {need} and {pain} take the next one they have not said yet (in order, so they
 # open up bit by bit), {budget} their budget when it is a figure, {budget_kind} when it is a description ("mid-range").
-# A line whose blank the persona cannot fill is skipped.
+# A line whose blank the persona cannot fill is skipped. Needs and pains are written about the persona ("doesn't know
+# watch terminology", "wife is worried about his health"); `voice` below has the buyer say them about themselves, and
+# a pain that is a whole clause ("my budget is fixed") only goes where a clause reads right: starting a sentence, or
+# after "is ", ", " or "but ". "It's {pain}, mostly." takes a thing ("manual reporting"), not a clause.
 # A line is never said twice in one call. House voice: short, plain, a real person on a call, no sales words.
 
-topics:   # what the seller asked about: the first topic with a phrase in their line (whole words, lower case)
+topics:   # what the seller asked about: the topic with the longest phrase in their line (whole words, lower case;
+          # the first listed on a tie), so "how long has that been going on" is the duration and "how long" alone the time
   budget: [budget, spend, spending, invest, investment, afford, price, cost, money, pay]
   time: [when, timeline, how soon, deadline, by when, timeframe, how long, start date]
   decision: [decide, decision, who else, partner, wife, husband, boss, sign off, sign-off, approve, involved]
   current: [currently, at the moment, right now, today, using now, what are you using, how do you do, tried, before]
   pain: [challenge, problem, struggle, struggling, frustrat, hard, difficult, pain, issue, worry, keeping you up, holding you back, wrong]
-  need: [want, need, looking for, achieve, goal, hoping, ideal, success, outcome, matter, important, why]
+  duration: [how long has, how long have, been going on, since when, how long's that, been like that]
+  need: [want, need, looking for, achieve, goal, hoping, ideal, success, outcome, matter, important, why, fix, change, priority]
+
+voice:   # how the buyer says a need or pain about themselves (core/sell_mode/buyer_lines.py `spoken`)
+  replace:   # whole words or phrases, anywhere (the longest first)
+    he actually needs: I actually need
+    so he can: so I can
+    if he can't: if I can't
+    he'll: I'll
+    his: my
+    him: me
+    himself: myself
+    herself: myself
+    from current car: from my current car
+  starts:   # the first word, said as
+    doesn't: I don't
+    feels: I feel
+    wants: I want
+    needs: I need
+    had: I had
+    tried: I tried
+    losing: I'm losing
+    worried: I'm worried
+    scared: I'm scared
+    nervous: I'm nervous
+    anxious: I'm anxious
+    confused: I'm confused
+    overwhelmed: I'm overwhelmed
+    unsure: I'm unsure
+  my: [wife, husband, spouse, partner, parents, friends, accountant, gp, previous, current, last, budget]   # "my wife ..."
+  # a pain with one of these words is a whole clause ("my budget is fixed", "calls feel too unstructured")
+  clause_words: [i, i'm, she, he, we, is, are, was, were, has, have, had, keep, keeps, gave, wants, feel, feels, don't]
 
 lines:
   share:   # answer the question and open up: their need or pain in their own words
@@ -32,13 +67,22 @@ lines:
       - "Honestly? {pain}. That's what keeps coming up."
       - "The main thing is {pain}. It's been dragging on."
       - "{pain}. It's starting to wear me down, to be fair."
-      - "If I'm being straight with you, {pain}."
+      - "If I'm being straight with you, it's {pain}."
       - "It's {pain}, mostly. And it's not getting better on its own."
       - "{pain}. That's the bit I can't keep ignoring."
       - "The frustrating part is {pain}."
       - "Biggest one? {pain}. I've tried to fix it myself and it hasn't stuck."
       - "{pain}, and it's costing me more than I'd like to admit."
       - "Mostly {pain}. That's why I took the call."
+    duration:   # how long the problem has been going on
+      - "A good few months now. It's been building for a while."
+      - "Since last year, really. Maybe longer if I'm honest."
+      - "It's been creeping up for a while. I just noticed it properly recently."
+      - "Longer than I'd like to admit."
+      - "On and off for about a year."
+      - "A while. It's got worse in the last few months."
+      - "Since we grew, really. What worked when we were smaller doesn't now."
+      - "Too long. That's partly why I'm on this call."
     current:
       - "We're making do with what we've got. It works, just not well. {pain}."
       - "A bit of everything, to be honest. Nothing's really stuck."
@@ -46,7 +90,7 @@ lines:
       - "Mostly doing it the old way. It's slow, but it's what we know."
       - "I've looked at a couple of options but never pulled the trigger."
       - "Nothing proper. Bits and pieces, and I'm doing most of it by hand."
-      - "We've got something in place, but {pain}."
+      - "We've got something in place. The trouble is {pain}."
       - "Honestly, I've been winging it. That's part of the problem."
     budget:   # {budget} is a figure ("$50,000-$70,000"), {budget_kind} a description ("cost-conscious")
       - "Budget-wise I'd say {budget}. I'm not looking to go crazy."
@@ -79,6 +123,15 @@ lines:
       - "Mine, in the end. But I'd want to sleep on it."
       - "There's one other person I'd check with. Shouldn't be an issue if it makes sense."
       - "I can decide, but I'd want the details in writing first."
+    decision_shared:   # asked who decides, after already saying it isn't only them (a partner objection)
+      - "Like I said, it's not just me. I'd need to run it past them."
+      - "Not just me, no. They'd want a say."
+      - "I'd involve the others. That's how we do it."
+      - "There are a couple of us. I wouldn't sign off alone."
+      - "It's a joint decision, really."
+      - "I'd bring them in before anything's agreed."
+      - "Me and one other. They'd need to see it too."
+      - "We decide together. I'm not going to go behind their backs."
   guard:   # answer, but hold back: they don't trust the seller yet
     general:
       - "It depends, really."
@@ -92,7 +145,15 @@ lines:
       - "I'd rather not get into that just yet."
       - "Let's just say it could be better."
       - "I'm not sure yet. That's partly why I'm here."
+    closed:   # a yes/no question ("Is that something you've looked at?"), still holding back
       - "Maybe. I'd need to know more before I say."
+      - "Possibly. Depends what it involves."
+      - "Not really, no. Not yet."
+      - "I'm not sure, to be honest."
+      - "Could be. I'd want to hear more first."
+      - "Hard to say yet."
+      - "Maybe. I haven't really thought about it."
+      - "I wouldn't rule it out."
   stall:   # put it off: not interested yet, or pushed too hard
     general:
       - "I'm not sure this is for me, to be honest."
@@ -116,6 +177,15 @@ lines:
       - "Can we back up? I'm not there yet."
       - "Every salesperson says it's a limited offer."
       - "That's a lot of pressure for a first conversation."
+    next_step:   # asked to book or commit before they're ready
+      - "I'm not ready to book anything yet."
+      - "Let me think about it first and come back to you."
+      - "Not just yet. I'd want to know more before we go there."
+      - "Maybe. I'd rather not put anything in the diary today."
+      - "Can you send me something to read first? Then we'll see."
+      - "I'd rather hold off on that for now."
+      - "I'm not saying no, but I'm not there yet."
+      - "Let's not book anything until I'm sure it's right for me."
   ask:   # interested enough to ask how it works
     general:
       - "How does it actually work, day to day?"
@@ -142,3 +212,12 @@ lines:
       - "Okay. That's the bit I was hoping to hear."
       - "Yeah, I can see that working for me."
       - "That's reassuring, actually."
+    next_step:   # asked to book or commit, and keen
+      - "Yeah, go on then. What times have you got?"
+      - "Okay, let's do it. When works for you?"
+      - "Sure, that makes sense. Send me a time."
+      - "Yes, I think that's the right next step."
+      - "Go on, book it in. Mornings are best for me."
+      - "Okay. Let's get something in the diary."
+      - "Yeah, I'd be up for that."
+      - "Sounds good. What do I need to have ready?"

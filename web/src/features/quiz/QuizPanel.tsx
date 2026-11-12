@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Button, Markdown, Notice, Panel, Segmented, TextArea } from "@/components/ui";
-import { api, errorText } from "@/lib/api/client";
+import { api, ApiError, errorText } from "@/lib/api/client";
 import type { QuizResult, QuizType } from "@/lib/api/types";
 import { config } from "@/lib/config";
 import { useSession } from "@/features/session/SessionContext";
@@ -29,6 +29,8 @@ export function QuizPanel() {
   const [turn, setTurn] = useState<number | undefined>();
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
+  // Sell mode asked before the learner said anything: not an error, it unlocks once they have (reloads then).
+  const [noTurns, setNoTurns] = useState(false);
   const [answer, setAnswer] = useState("");
   const [empty, setEmpty] = useState(false);
   const [checking, setChecking] = useState(false);
@@ -40,6 +42,7 @@ export function QuizPanel() {
     if (!sid) return;
     setLoading(true);
     setLoadError("");
+    setNoTurns(false);
     setResult(null);
     setAnswer("");
     setEmpty(false);
@@ -49,7 +52,8 @@ export function QuizPanel() {
       setQuestion(q.question);
       setTurn(q.turn);
     } catch (err) {
-      if (!handleExpired(err)) setLoadError(errorText(err, "Could not load a question. Try again."));
+      if (err instanceof ApiError && err.code === "NO_TURNS") setNoTurns(true);
+      else if (!handleExpired(err)) setLoadError(errorText(err, "Could not load a question. Try again."));
     } finally {
       setLoading(false);
     }
@@ -59,6 +63,13 @@ export function QuizPanel() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch a question when the panel opens or the type changes
     void load();
   }, [load]);
+
+  // Waiting on the learner's first turns: ask again once they have taken one.
+  const turns = sellSession?.state.turn_count ?? 0;
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- the turn count changed while the quiz waited for it
+    if (noTurns && turns > 0) void load();
+  }, [noTurns, turns, load]);
 
   // `picked`: a stage chosen from the buttons, sent as its id (the server accepts the id or the plain name).
   const submit = async (picked?: string) => {
@@ -85,21 +96,23 @@ export function QuizPanel() {
   };
 
   const pickStage = !isSell && type === "stage"; // five fixed answers: tap one, nothing to type
-  const needsTurn = isSell && !loading && !loadError && turn === undefined;
-  const canAnswer = !loading && !loadError && !needsTurn && !!question;
+  // No call yet: nothing loads (load() waits for a session), so say how to unlock it instead of spinning.
+  const waiting = loading && !!sid;
+  const needsTurn = isSell && !!sid && !waiting && !loadError && (noTurns || turn === undefined);
+  const canAnswer = !!sid && !waiting && !loadError && !needsTurn && !!question;
 
   return (
     <Panel title="Quiz" onClose={closeSidePanel}>
       <div className={s.stack}>
         {!isSell && <Segmented label="Quiz type" options={TYPES} value={type} onChange={setType} />}
-        {loading && <Notice kind="loading">Loading question…</Notice>}
+        {waiting && <Notice kind="loading">Loading question…</Notice>}
         {loadError && (
           <Notice kind="error" onRetry={() => void load()}>
             {loadError}
           </Notice>
         )}
         {needsTurn && <Notice kind="empty">Talk to the buyer first, then come back for a question about the conversation.</Notice>}
-        {!sid && !loading && <Notice kind="empty">Start a conversation to unlock the quiz.</Notice>}
+        {!sid && <Notice kind="empty">Start a conversation to unlock the quiz.</Notice>}
         {canAnswer && (
           <>
             <Markdown className={s.question} text={question} />

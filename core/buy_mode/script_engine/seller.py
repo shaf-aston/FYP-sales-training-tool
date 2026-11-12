@@ -232,7 +232,7 @@ class ScriptSeller:
         bridged = self.state.bridged
         self.state = replace(v.ahead or self.state, waiting=False, bridged=False)  # early answers are kept whatever it was
         if bridged and v.kind in ("answer", "says_nothing"):  # their reply to the getting-to-know-you question
-            said = self._then_ask(self.cfg["bridge_ack"])
+            said = self._then_ask(self.cfg["bridge_ack"], back=False)
             self.state = replace(self.state, last=said)
             return said, self.ui_stage(), "bridge"
         said, ui_stage, detail = self._respond(v, step, opened)
@@ -578,10 +578,12 @@ class ScriptSeller:
             facts += " " + self._filler.fill(offer.about_after_price, {})
         return self._voice.answer(question, facts, self.state.slots, opened)
 
-    def _then_ask(self, lead):
+    def _then_ask(self, lead, back=True):
         """`lead`, then the current question again. A step that asks nothing (a statement) is not
         said again: a fact answered at a statement step said the statement twice. Said again once: a second
-        side reply in a row gets the step in other words, or moves on (`_carry_on`), never the same line."""
+        side reply in a row gets the step in other words, or moves on (`_carry_on`), never the same line.
+        `back`: a turn back to our question ("So, back to you.") between their side question's answer and it; not
+        after their answer to our own bridge question."""
         self._turn.side = True
         if self.state.repeated:
             return self._carry_on(lead.strip(), stay=True)[0]
@@ -591,6 +593,9 @@ class ScriptSeller:
         if "?" not in question:
             question = ""
         else:  # the question said again spends an ask: never a 4th time after two shrugs
+            backs = self.cfg["back_to_question"]
+            if back and lead.strip() and backs:   # after their side question is answered, a turn back to ours
+                lead = f"{lead.strip()} {backs[self.state.resaid % len(backs)]}"
             self.state = replace(self.state, resaid=self.state.resaid + 1)
         return f"{lead.strip()} {question.strip()}".strip()
 

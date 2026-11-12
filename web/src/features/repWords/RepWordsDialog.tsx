@@ -19,6 +19,7 @@ import { SavedWordsList, SaveWords, TeamWords, UseForTeam, useSavedWords, type S
 import { useRepWords, type RepWordsState } from "./useRepWords";
 import { questionCount, whose } from "./words";
 import s from "./RepWords.module.css";
+import { prefersReducedMotion } from "@/lib/motion";
 
 type Source = "call" | "sop";
 
@@ -47,6 +48,8 @@ function RepWordsBody({ onDone }: { onDone: () => void }) {
     await chooseRepWords(words);
     setStarting(false);
     onDone();
+    // Phones: the tools sit below the chat, so bring the new call's opening line into view.
+    window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? "auto" : "smooth" });
   };
 
   if (state.matched) return <Matches state={state} saved={saved} starting={starting} onStart={start} />;

@@ -114,7 +114,7 @@ export const config = {
     lightness: "90%, 65%",
   },
   /** Page addresses, so links never hard-code paths. */
-  routes: { home: "/", buy: "/buy/", sell: "/sell/", knowledge: "/knowledge/", sop: "/sop/" },
+  routes: { home: "/", buy: "/buy/", sell: "/sell/", knowledge: "/knowledge/", sop: "/sop/", google: "/api/account/google" },
   /** A missing page sends you home after this long, unless you choose to stay. */
   notFound: { redirectSeconds: 30 },
   landing: { wordRotateMs: 2_200, demoStepMs: 1_800, revealThreshold: 0.15 },
@@ -145,4 +145,6 @@ export const storageKeys = {
   helpSeen: "helpSeen",
   drillSchedule: "drillSchedule.v1",
   debug: "debug",
+  /** The learner's product details for the sell-mode buyer (knowledge base page); sent with each new sell call. */
+  knowledge: "knowledge.v1",
 } as const;

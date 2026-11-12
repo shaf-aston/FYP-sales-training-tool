@@ -8,7 +8,8 @@ export type { SkillEntry };
 export type Difficulty = "easy" | "medium" | "hard";
 export type CoachStyle = "tactical" | "socratic" | "teacher";
 export type QuizType = "stage" | "next_move" | "direction";
-export type Outcome = "active" | "sold" | "walked";
+/** "ended": the learner ended the call ("End and score") before the buyer said yes or walked. */
+export type Outcome = "active" | "sold" | "walked" | "ended";
 
 export interface BotState {
   stage: string; // UPPERCASE stage id
@@ -377,6 +378,8 @@ export interface SopReadRes {
   elements: SopElement[];
   /** Share of elements covered, 0-100. */
   coverage: number;
+  /** A short paragraph summing it up, the costliest gap first (written by rules). */
+  critique?: string;
 }
 
 /** One SOP step in a real call: done at the rep's turn `turn` (1-based) with what they said, or not heard. */
@@ -384,6 +387,8 @@ export interface SopStepResult {
   stage: string;
   step: string;
   done: boolean;
+  /** An "If they…" step: left out of the score when not done (the call may never have needed it). */
+  conditional: boolean;
   turn: number | null;
   said: string | null;
 }
@@ -397,6 +402,8 @@ export interface SopCheckRes {
   /** The done steps happened in the SOP's order. */
   in_order: boolean;
   steps: SopStepResult[];
+  /** A short paragraph summing it up: the share done, the first step skipped (written by rules). */
+  critique?: string;
 }
 
 // Accounts (/api/account, /api/team): optional; everything works logged out.
@@ -405,6 +412,15 @@ export interface AccountUser {
   id: number;
   email: string;
   name: string;
+  /** False for an account made by an email link or Google: it signs in only that way. */
+  has_password: boolean;
+}
+
+/** Which ways of signing in without a password the server has set up. */
+export interface SignInOptions {
+  success: true;
+  link: boolean;
+  google: boolean;
 }
 
 /** The learner's team. Only a manager gets the invite code. */

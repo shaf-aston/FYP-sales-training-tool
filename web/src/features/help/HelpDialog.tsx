@@ -12,8 +12,8 @@ const SECTIONS: { title: string; items: { term?: string; text: string; keys?: st
   {
     title: "Two ways to practise",
     items: [
-      { term: MODE_META.buy.name, text: "you're the customer. The AI sells to you; quiz yourself on what stage the sale is in." },
-      { term: MODE_META.sell.name, text: "you're the salesperson. The AI is your buyer." },
+      { term: MODE_META.buy.name, text: "you're the customer. A virtual rep sells to you; quiz yourself on what stage the sale is in." },
+      { term: MODE_META.sell.name, text: "you're the salesperson. A virtual buyer answers and pushes back." },
     ],
   },
   {

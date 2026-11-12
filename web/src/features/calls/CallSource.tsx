@@ -24,7 +24,7 @@ export function CallSource({
         accept={reader.acceptAll}
         onFile={reader.loadFile}
         prompt="Drop a transcript or recording,"
-        hint={`${config.calls.accept.join(" ")} · recordings up to ${megabytes(config.calls.audio.maxBytes)}`}
+        hint={`Transcripts: ${config.calls.accept.join(" ")} · Recordings: .mp3 .m4a .wav and more, up to ${megabytes(config.calls.audio.maxBytes)}`}
         busyLabel={busy === "file" ? "Opening…" : busy === "audio" ? "Uploading the recording…" : undefined}
       />
       {busy === "audio" && <Notice kind="loading">Turning the recording into text… about a minute per hour of audio</Notice>}

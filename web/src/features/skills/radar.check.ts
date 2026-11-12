@@ -12,8 +12,8 @@ assert.deepEqual(axisPoint(2, 4, 50, 100, 50), { x: 50, y: 75 });
 assert.deepEqual(axisPoint(3, 4, 250, 100, 50), { x: 0, y: 50 });
 assert.deepEqual(axisPoint(0, 4, -5, 100, 50), { x: 50, y: 50 });
 
-// polygon: one point per value, missing values at the centre
-assert.equal(polygon([100, undefined, 100, 100], 100, 50), "50,0 50,50 50,100 0,50");
+// polygon: one point per measured value; a skill never measured has no point (not 0 at the centre)
+assert.equal(polygon([100, undefined, 100, 100], 100, 50), "50,0 50,100 0,50");
 
 // labels: top is centred, right side starts, left side ends
 assert.equal(labelPlace(0, 4, 50, 10).anchor, "middle");

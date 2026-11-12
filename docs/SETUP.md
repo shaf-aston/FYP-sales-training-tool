@@ -57,6 +57,18 @@ The file it replaces is kept beside it as `eloquence.db.before`.
 (`SKIP_FFMPEG_INSTALL=1` skips it). Without ffmpeg, recordings over 25 MB are refused as too big, as before.
 To install it by hand: vm-run with `sudo apt-get install -y ffmpeg`. No restart is needed: the API looks for it on
 each upload.
+**Signing in without a password (optional).** Off until its settings are in the VM's `.env` (then restart). The
+account dialog shows only what is on (`/api/account/sign-in-options`).
+- *Email links:* `SITE_URL=https://eloquence-sales.vercel.app`, `RESEND_API_KEY` (resend.com → API Keys) and
+  `MAIL_FROM` (an address on a domain verified in Resend, e.g. `Eloquence <signin@yourdomain>`). A link works once,
+  for 15 minutes; an address gets at most 3 an hour (`limits.yaml` `accounts.sign_in_links`).
+- *Google:* `SITE_URL`, `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. Make them at console.cloud.google.com →
+  APIs & Services → Credentials → OAuth client ID (Web application), with the authorised redirect URI
+  `https://eloquence-sales.vercel.app/api/account/google/callback`.
+
+An account made either way has no password; it is deleted within 10 minutes of signing in instead of with one.
+Keys go in the VM's `.env` only, never in the repo or GitHub variables.
+
 `vm-run.yml` (Actions → vm-run) runs any one command on the VM and prints its output.
 
 Only the **deploy** workflow updates the VM, and only after CI passes. The VM used to also have

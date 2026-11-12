@@ -8,7 +8,7 @@ import pytest
 from core.infra.env import ROOT_DIR
 from core.infra.loader import load_buyer_config, load_yaml
 from core.infra.providers.base import LLMResponse
-from core.sell_mode.buyer_lines import fill, lines_for, pick_line
+from core.sell_mode.buyer_lines import fill, lines_for, pick_line, spoken
 from core.sell_mode.buyer_moves import MOVES, Move, next_move, topic_of
 from core.sell_mode.buyer_session import BuyerSession
 
@@ -31,6 +31,9 @@ WARM, MID, COLD = MOVES_CFG["open_from"], (MOVES_CFG["open_from"] + MOVES_CFG["g
     ("What are you hoping to achieve?", "need"),
     ("Nice weather today, eh?", "current"),
     ("Tell me about your business?", "general"),
+    ("How long has that been going on?", "duration"),   # the longest phrase wins: not "how long" (time)
+    ("How long would it take to get going?", "time"),
+    ("If you could fix one thing first, what would it be?", "need"),
 ])
 def test_the_topic_is_what_the_seller_asked_about(line, topic):
     assert topic_of(line) == topic
@@ -51,6 +54,24 @@ def test_the_topic_is_what_the_seller_asked_about(line, topic):
 def test_rules_choose_the_move(readiness, line, signals, kind):
     move = next_move(readiness, line, signals)
     assert move.kind == kind and move.kind in MOVES
+
+
+@pytest.mark.parametrize("readiness, line, label", [
+    (COLD, "Would it make sense to book a walkthrough next week?", "stall:next_step"),
+    (MID, "Shall we get something in the diary for a demo?", "stall:next_step"),
+    (WARM, "Would it make sense to book a walkthrough next week?", "lean_in:next_step"),
+    (WARM, "When would you want to get started?", "share:time"),   # an open question about timing, not a booking
+])
+def test_a_request_to_book_gets_a_yes_or_a_not_yet(readiness, line, label):
+    assert next_move(readiness, line, []).label == label
+
+
+def test_a_yes_no_question_gets_a_yes_no_answer_when_they_hold_back(fake_embedder):
+    move = next_move(COLD, "So is that something you've looked at before?", [])
+    assert (move.kind, move.closed) == ("guard", True)
+    assert lines_for(move) == load_yaml("prospect_lines.yaml")["lines"]["guard"]["closed"]
+    assert "Bits and pieces. Nothing I want to get into just yet." not in lines_for(move)
+    assert lines_for(next_move(COLD, "What have you looked at before?", [])) == lines_for(Move("guard", "general"))
 
 
 def test_a_push_gets_the_pressure_lines():
@@ -74,7 +95,8 @@ def test_every_line_in_the_bank_is_short_plain_and_fillable():
             assert len(set(lines)) == len(lines), (kind, topic)
             for line in lines:
                 assert len(line.split()) <= 20 and not re.search(r"\{(?!need\}|pain\}|budget\}|budget_kind\})", line), line
-                assert fill(line, PERSONA, "") is not None or fill(line, {**PERSONA, "budget": "$5k"}, "") is not None, line
+                fits = [PERSONA, {**PERSONA, "budget": "$5k"}, {**PERSONA, "pain_points": ["manual reporting"]}]
+                assert any(fill(line, persona, "") is not None for persona in fits), line
 
 
 def test_blanks_take_the_next_thing_not_said_yet_and_start_sentences_with_a_capital():
@@ -195,3 +217,36 @@ def test_with_the_real_model_most_replies_come_from_the_bank(stub_buyer, monkeyp
     monkeypatch.setattr("core.infra.embedder.shared_embedder", lambda: real)
     sources = [s for n in range(5) for s in _play(f"real-model-{n}", stub_buyer, monkeypatch, min_score=None)[1]]
     assert sources.count("bank") / len(sources) >= 0.7, sources
+
+
+@pytest.mark.parametrize("written, said", [
+    ("wife is worried about his health", "my wife is worried about my health"),
+    ("doesn't know watch terminology", "I don't know watch terminology"),
+    ("doesn't want to switch ecosystems (Mac user)", "I don't want to switch ecosystems"),
+    ("partner is sceptical about how serious he'll be", "my partner is sceptical about how serious I'll be"),
+    ("starter gear that won't let him down", "starter gear that won't let me down"),
+    ("manual reporting", "manual reporting"),
+])
+def test_the_buyer_says_their_needs_and_pains_about_themselves(written, said):
+    assert spoken(written) == said
+
+
+def test_a_clause_only_goes_where_a_clause_reads_right():
+    persona = {"pain_points": ["budget is fixed"]}
+    assert fill("The frustrating part is {pain}.", persona, "") == "The frustrating part is my budget is fixed."
+    assert fill("It's {pain}, mostly.", persona, "") is None
+    assert fill("It's {pain}, mostly.", {"pain_points": ["manual reporting"]}, "") == "It's manual reporting, mostly."
+
+
+def test_after_saying_it_isnt_only_them_the_buyer_never_answers_me_mostly(stub_buyer, monkeypatch):
+    monkeypatch.setattr("core.sell_mode.buyer_session.LINE_BANK", True)
+    monkeypatch.setattr("core.sell_mode.buyer_lines.MIN_SCORE", 0.0)
+    buyer = BuyerSession(difficulty="easy", persona=dict(PERSONA), session_id="shared")   # warm enough to answer
+    partner = "I'd need to discuss this with my partner before committing."
+    buyer.pacer.bank.append({"type": "partner", "text": partner})
+    buyer.conversation_history += [{"role": "user", "content": "What would you want to change?"},
+                                   {"role": "assistant", "content": f"Mostly the admin. {partner}"}]
+    buyer.state.turn_count = 1
+    reply = buyer.process_turn("Who else would be involved in the decision?").content
+    shared = load_yaml("prospect_lines.yaml")["lines"]["share"]["decision_shared"]
+    assert any(reply.startswith(line) for line in shared), reply

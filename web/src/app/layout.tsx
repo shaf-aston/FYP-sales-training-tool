@@ -6,7 +6,7 @@ const fraunces = Fraunces({ subsets: ["latin"], weight: ["600"], variable: "--fo
 
 export const metadata: Metadata = {
   title: "Eloquence",
-  description: "Practise sales conversations with an AI buyer and a live coach.",
+  description: "Practise sales calls from both sides, with a buyer who pushes back and a live coach.",
 };
 
 // Meta tags cannot read CSS variables: this literal mirrors --bg-page in styles/tokens.css.

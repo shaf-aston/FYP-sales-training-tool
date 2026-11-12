@@ -12,11 +12,13 @@ import s from "./MessageList.module.css";
 import { prefersReducedMotion } from "@/lib/motion";
 import { bubbles, highlighted, typingMs } from "@/lib/tone";
 
-/** The AI's badge beside its lines, so it is never mistaken for the mode icons in the header. */
+/** The other side's badge beside their lines: the buyer's initial in sell mode, R for the rep in buy mode. */
 function Avatar() {
+  const { mode, sellSession } = useSession();
+  const initial = mode === "sell" ? (sellSession?.persona.name.trim()[0]?.toUpperCase() ?? "B") : "R";
   return (
     <span className={s.avatar} aria-hidden="true">
-      AI
+      {initial}
     </span>
   );
 }
@@ -32,7 +34,7 @@ function TypingBubble() {
       <Avatar />
       <div className={s.body}>
         <div className={`${s.bubble} ${s.typing}`}>
-          <TypingDots label="Assistant is typing" />
+          <TypingDots label="Typing" />
           {slow && <span className={s.slow}>Still thinking…</span>}
         </div>
       </div>
@@ -117,7 +119,7 @@ function BotBubbles({ text, meta, tag, fresh, answered, onGrow }: { text: string
       {tag && shown >= parts.length && <span className={s.wordsTag}>{tag}</span>}
       {shown < parts.length && (
         <div className={`${s.bubble} ${s.typing}`}>
-          <TypingDots label="Assistant is typing" />
+          <TypingDots label="Typing" />
         </div>
       )}
     </div>

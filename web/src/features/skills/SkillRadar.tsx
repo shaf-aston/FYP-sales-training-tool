@@ -30,8 +30,8 @@ export function SkillRadar({ axes, latest, average, target }: Props) {
         return (
           <g key={a.id}>
             <line className={s.axis} x1={R} y1={R} x2={end.x} y2={end.y} />
-            <text className={s.label} x={label.x} y={label.y} textAnchor={label.anchor} dominantBaseline="middle">
-              {labelLines(a.label).map((line, j, all) => (
+            <text className={`${s.label} ${average[a.id] === undefined ? s.unmeasured : ""}`} x={label.x} y={label.y} textAnchor={label.anchor} dominantBaseline="middle">
+              {labelLines(average[a.id] === undefined ? `${a.label} (not yet scored)` : a.label).map((line, j, all) => (
                 <tspan key={j} x={label.x} dy={j === 0 ? -((all.length - 1) * LINE) / 2 : LINE}>
                   {line}
                 </tspan>
