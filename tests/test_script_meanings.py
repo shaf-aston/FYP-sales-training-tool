@@ -72,7 +72,7 @@ real = pytest.mark.skipif(os.environ.get("RUN_EMBED_TESTS") != "1", reason="set 
 
 @pytest.fixture(scope="module")
 def model():
-    from core.buy_mode.script_engine.hear.embedder import make_embedder
+    from core.infra.embedder import make_embedder
     return make_embedder(CFG, Path(__file__).parent.parent)
 
 

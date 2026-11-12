@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from core.buy_mode.script_engine.hear.embedder import make_embedder
+from core.infra.embedder import make_embedder
 from core.buy_mode.script_engine.hear.recognise import Listener
 from core.buy_mode.script_engine.hear.reply import Reader
 from core.buy_mode.script_engine.method import (

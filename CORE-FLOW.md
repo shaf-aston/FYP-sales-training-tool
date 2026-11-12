@@ -21,7 +21,7 @@ Each folder holds one job; its `__init__.py` says which. Imports point down or i
 
 ```
 core/
-  infra/        plumbing, no sales knowledge: env, constants, loader, utils, similarity (meaning match), logs/, providers/ (LLM, speech, router)
+  infra/        plumbing, no sales knowledge: env, constants, loader, utils, embedder (the one local meaning model), similarity (meaning match), logs/, providers/ (LLM, speech, router)
   training/     learner tools both modes use: turn_rating, quiz, drills, team_insights (a manager's view)
   sell_mode/    learner sells, AI buys: buyer_*, sell_service, sell_evaluator, session_review, knowledge, real_calls, custom_buyer
   calls/        an uploaded real call, no AI: transcript (parsers), roles (rep / prospect), profile, reader (the one entry)
@@ -29,7 +29,7 @@ core/
   sop/          a team's sales SOP, no AI: document (txt/md/docx/pdf), outline, checklist, adherence
   buy_mode/     learner buys, script sells: seller_bot, flow, coach, stage
     script_engine/  seller (one turn), engine (next line), method (load YAML), config (check YAML), rep_words
-      hear/     what the reply meant: verdict, recognise, embedder, meanings, shrug
+      hear/     what the reply meant: verdict, recognise, meanings, shrug
       ai/       the only door to the AI: voice, line, gate, checks, judge, listen
       words/    writing lines: fill, echo, tone
 backend/        transport: app, routes/, security
@@ -136,7 +136,7 @@ the call like any transcript. Only this route accepts bodies past the 1 MB cap (
 checklist of what a good call covers (`checklist.py`, `config/sop.yaml` `elements`): cues first, meaning only as a
 strict fallback. `/check` takes that outline back with a call and says which steps the rep carried out
 (`adherence.py`: each step searched for in the rep's lines with bge's query instruction, thresholds in
-`sop.yaml`). Meaning comes from buy mode's shared embedder, passed in as `embed`, so `core/sop` imports no mode.
+`sop.yaml`). Meaning comes from the shared embedder (`core/infra/embedder.py`), passed in as `embed`, so `core/sop` imports no mode.
 
 ## Rep's words (buy mode)
 

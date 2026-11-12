@@ -31,9 +31,12 @@ TRANSCRIPTION = _L["transcription"]
 SOP_LIMITS = _L["sop"]
 REP_WORDS = _L["rep_words"]
 DEFAULT_TRUST_PROXY_HEADERS = _L["defaults"]["trust_proxy_headers"]
+CLIENT_IP_HEADERS = tuple(_L["defaults"]["client_ip_headers"])
 DEFAULT_LOGS_DIR = _L["defaults"]["logs_dir"]
 LOG_LEVEL = _L["defaults"]["log_level"]
 DEFAULT_DB_PATH = _L["defaults"]["db_path"]
+DEFAULT_BACKUP_DIR = _L["defaults"]["backup_dir"]
+BACKUPS_KEEP = _L["backups"]["keep"]
 
 SERVER_PORT = _L["server"]["port"]
 
@@ -57,6 +60,7 @@ MAX_FEEDBACK_PAGE_CHARS = _L["input"]["max_feedback_page_chars"]
 MAX_TURN_NUMBER = _L["input"]["max_turn_number"]
 SESSION_ID_MIN_CHARS = _L["input"]["session_id_min_chars"]
 SESSION_ID_MAX_CHARS = _L["input"]["session_id_max_chars"]
+RATE_LIMIT_PEER_FACTOR = _L["rate_limit_peer_factor"]
 RATE_LIMITS = {route: tuple(limit) for route, limit in _L["rate_limits"].items()}
 
 # uploaded calls (core/calls): read-only mapping of the `calls:` block

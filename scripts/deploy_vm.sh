@@ -42,6 +42,9 @@ say "${old:0:7} -> ${new:0:7}"
 
 if deps "$old" "$new" && bash -c "$RESTART" && live_on "$new"; then
   say "API live on ${new:0:7}"
+  # the nightly database backup; a problem here is reported but never undoes a good deploy
+  [ -n "${SKIP_BACKUP_TIMER:-}" ] || bash scripts/install_backup.sh \
+    || echo "::warning title=Backup timer::could not install the nightly backup timer"
   exit 0
 fi
 

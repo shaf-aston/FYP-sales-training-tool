@@ -161,7 +161,7 @@ def cat_seller():
 @pytest.fixture(autouse=True)
 def _offline_embedder(monkeypatch, fake_embedder):
     """Every SellerBot runs the script; tests use the offline embedder (no model download)."""
-    monkeypatch.setattr("core.buy_mode.script_engine.seller.shared_embedder", lambda: fake_embedder)
+    monkeypatch.setattr("core.infra.embedder.shared_embedder", lambda: fake_embedder)
 
 
 # --- sell mode: an offline AI buyer ---
