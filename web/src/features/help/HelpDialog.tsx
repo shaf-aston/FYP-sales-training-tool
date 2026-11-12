@@ -31,6 +31,7 @@ const SECTIONS: { title: string; items: { term?: string; text: string; keys?: st
       { term: "Skill Radar", text: "sell mode: your five skills across every scored session, the one to work on next, and a session that trains it." },
       { term: "Team insights", text: "managers (Account, Team): every member's skill levels, the team's radar, what to coach next, and a CSV." },
       { term: "SOP review", text: "sell mode, Tools: see what your team's sales SOP covers of a good call, then check a real call against it." },
+      { term: "Rep's words", text: "buy mode, Tools: hear the call with a top rep's questions (from a real call) or your SOP's, wherever they ask what the script asks." },
       { term: "Quiz", text: "buy mode: pick the stage and the next move. Sell mode: rewrite one of your turns and see if it lands better." },
     ],
   },

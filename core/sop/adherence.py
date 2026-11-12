@@ -11,7 +11,7 @@ import re
 from dataclasses import asdict, dataclass
 
 from core.infra.utils import sentences
-from core.sop.match import Embed, similarity
+from core.infra.similarity import Embed, best_pairs, similarity
 from core.sop.outline import Stage
 
 
@@ -49,14 +49,7 @@ def check_call(stages: list[Stage], rep_lines: list[str], cfg: dict, embed: Embe
     scores = similarity([cfg["query_prefix"] + action for _, _, action, _ in flat], [s for _, s in said], embed)
     # One sentence carries one step: strongest matches first, each step and each sentence used at most once, so
     # "what made you book the call?" cannot also count as booking a follow-up.
-    bar = cfg["thresholds"]["adherence"]
-    pairs = sorted(((v, i, j) for i, row in enumerate(scores) for j, v in enumerate(row) if v >= bar), reverse=True)
-    match: dict[int, int] = {}
-    used: set[int] = set()
-    for _, i, j in pairs:
-        if i not in match and j not in used:
-            match[i] = j
-            used.add(j)
+    match = best_pairs(scores, cfg["thresholds"]["adherence"])
     results = []
     for i, (stage, step, _, conditional) in enumerate(flat):
         turn, sentence = said[match[i]] if i in match else (None, None)

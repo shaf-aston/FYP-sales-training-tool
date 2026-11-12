@@ -21,14 +21,14 @@ Each folder holds one job; its `__init__.py` says which. Imports point down or i
 
 ```
 core/
-  infra/        plumbing, no sales knowledge: env, constants, loader, utils, logs/, providers/ (LLM, speech, router)
+  infra/        plumbing, no sales knowledge: env, constants, loader, utils, similarity (meaning match), logs/, providers/ (LLM, speech, router)
   training/     learner tools both modes use: turn_rating, quiz, drills, team_insights (a manager's view)
   sell_mode/    learner sells, AI buys: buyer_*, sell_service, sell_evaluator, session_review, knowledge, real_calls, custom_buyer
   calls/        an uploaded real call, no AI: transcript (parsers), roles (rep / prospect), profile, reader (the one entry)
   accounts/     what is kept for a learner, SQLite: db (file, migrations), passwords, users, teams, library
-  sop/          a team's sales SOP, no AI: document (txt/md/docx/pdf), outline, match (embeddings), checklist, adherence
+  sop/          a team's sales SOP, no AI: document (txt/md/docx/pdf), outline, checklist, adherence
   buy_mode/     learner buys, script sells: seller_bot, flow, coach, stage
-    script_engine/  seller (one turn), engine (next line), method (load YAML), config (check YAML)
+    script_engine/  seller (one turn), engine (next line), method (load YAML), config (check YAML), rep_words
       hear/     what the reply meant: verdict, recognise, embedder, meanings, shrug
       ai/       the only door to the AI: voice, line, gate, checks, judge, listen
       words/    writing lines: fill, echo, tone
@@ -137,6 +137,22 @@ checklist of what a good call covers (`checklist.py`, `config/sop.yaml` `element
 strict fallback. `/check` takes that outline back with a call and says which steps the rep carried out
 (`adherence.py`: each step searched for in the rep's lines with bge's query instruction, thresholds in
 `sop.yaml`). Meaning comes from buy mode's shared embedder, passed in as `embed`, so `core/sop` imports no mode.
+
+## Rep's words (buy mode)
+
+The rep can ask the script's questions in a top rep's words (a real call) or the team SOP's. `/api/buy/words` takes a
+call (read by `core/calls`: the rep's turns) or an SOP outline (from `/api/sop/read`; an instruction such as "Ask what
+they want" is said as "What do you want?" by `core/sop/spoken.py`), finds their questions and matches each to the
+script step that asks the same thing (`script_engine/rep_words.py`: the shared embedder, one question per step, the
+call's own path before the objection talks; below `sure_score` both must ask for the same sort of answer). The web
+sends the chosen `{step: question}` to `/api/buy/init` as `words`, and `build_seller` runs the script with those
+lines swapped in (`with_words`). Only the wording changes: what each step listens for, where it goes and the checks
+around the AI stay the script's. So a step that hears yes or no ("go on" as yes) takes only a yes/no question, and
+one that offers choices ("Credit or debit?") only a question that offers them. Only the step's own question changes:
+a route's lead into it, its probes and its other wordings when asked again stay the script's. `/init` keeps the
+`label` sent with the words ("Maya", "your SOP") and returns it as `words_label`; a restore sends the tab's product,
+words and label too, which start a new call when the server no longer has that one. Thresholds in `limits.yaml`
+`rep_words`, measured in `tests/test_rep_words.py`.
 
 ## Accounts
 

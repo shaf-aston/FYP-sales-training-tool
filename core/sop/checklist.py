@@ -9,7 +9,7 @@ import re
 from dataclasses import dataclass
 
 from core.infra.utils import says_unnegated
-from core.sop.match import Embed, similarity
+from core.infra.similarity import Embed, similarity
 from core.sop.outline import Stage
 
 

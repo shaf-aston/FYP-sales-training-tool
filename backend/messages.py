@@ -71,6 +71,9 @@ AUDIO_TOO_BIG = "That recording is over {mb} MB. Export the call's transcript in
 AUDIO_NO_SPEECH = "No speech was found in that recording."
 AUDIO_UNAVAILABLE = "Turning recordings into text isn't available right now. Paste or upload the call's transcript instead."
 CALL_ONE_SPEAKER_TEXT = "Everyone in this transcript is labelled \"{name}\". Name the speakers (or export it with names) so we can tell you from the prospect."
+# The rep's own words (/api/buy/words, /api/buy/init `words`)
+REP_WORDS_SOURCE = "Paste a call transcript or read an SOP first."
+REP_WORDS_INVALID = "Those lines don't fit this script. Match them again and start the call from there."
 REQUEST_TOO_LARGE = "That's too big to send. Keep files under 1 MB."
 
 # Request checks

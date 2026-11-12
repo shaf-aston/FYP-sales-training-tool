@@ -58,7 +58,8 @@ export function toCustomBuyer(d: ProspectDraft): CustomBuyer {
   };
 }
 
-export function useCallReader() {
+/** `sample`: what "Try a sample call" loads (default: the sample call for practising against a prospect). */
+export function useCallReader(sample: () => Promise<{ text: string; filename: string }> = api.callsSample) {
   const [text, setText] = useState("");
   /** The uploaded file's name; it tells the server the format (.vtt, .srt). */
   const [filename, setFilename] = useState<string | undefined>();
@@ -115,7 +116,7 @@ export function useCallReader() {
     },
     /** Loads the sample transcript and reads it straight away. */
     loadSample: async () => {
-      const res = await run("sample", api.callsSample, "Couldn't load the sample call.");
+      const res = await run("sample", sample, "Couldn't load the sample call.");
       if (res) await load(res.text, res.filename, false);
     },
     read: () => read({ text, filename }),

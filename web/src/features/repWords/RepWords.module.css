@@ -1,0 +1,104 @@
+/* Rep's words dialog: the same quiet stack as the call and SOP tools, then one row per matched question. */
+.body,
+.stack {
+  display: grid;
+  gap: var(--space-4);
+}
+.lede {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+.muted {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+.active {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  animation: pop-in var(--dur-pop) var(--ease-pop);
+}
+.active > span {
+  flex: 1 1 12rem;
+}
+
+.matches {
+  list-style: none;
+  display: grid;
+  gap: var(--space-2);
+}
+.matches li {
+  animation: message-in var(--dur-base) var(--ease-out) backwards;
+}
+.match {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: var(--touch-target);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-card-soft);
+  text-align: left;
+  transition: border-color var(--dur-base), background var(--dur-base), opacity var(--dur-base);
+}
+.match:hover {
+  border-color: var(--accent);
+}
+.match[aria-pressed="false"] {
+  opacity: 0.6;
+}
+.match[aria-pressed="false"] .theirs {
+  text-decoration: line-through;
+}
+.tick {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  color: var(--accent);
+  transition: background var(--dur-base), border-color var(--dur-base);
+}
+.match[aria-pressed="true"] .tick {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.lines {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.theirs {
+  color: var(--text-primary);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.script {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+.stage {
+  margin-right: var(--space-1);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}

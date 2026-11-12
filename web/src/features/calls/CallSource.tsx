@@ -7,7 +7,16 @@ import type { CallReader } from "./useCallReader";
 import s from "./CallSource.module.css";
 
 /** Step one: drop, choose or paste a transcript (or load the sample), then read it. */
-export function CallSource({ reader, onCancel }: { reader: CallReader; onCancel?: () => void }) {
+export function CallSource({
+  reader,
+  onCancel,
+  privacy = "Read on our server and never stored. Save a prospect to keep it.",
+}: {
+  reader: CallReader;
+  onCancel?: () => void;
+  /** What happens to the call: shown under the box. */
+  privacy?: string;
+}) {
   const { text, filename, busy, error } = reader;
   return (
     <div className={s.stack}>
@@ -28,7 +37,7 @@ export function CallSource({ reader, onCancel }: { reader: CallReader; onCancel?
         hint={filename && `From ${filename}`}
         onChange={(e) => reader.setText(e.target.value)}
       />
-      <p className={s.privacy}>Read on our server and never stored. Save a prospect to keep it.</p>
+      <p className={s.privacy}>{privacy}</p>
 
       {error && <Notice kind="error">{error}</Notice>}
 

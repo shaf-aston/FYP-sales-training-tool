@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button, buttonClass, Icon, useConfirm } from "@/components/ui";
 import { useAccount } from "@/features/account/AccountContext";
 import { useSession } from "@/features/session/SessionContext";
@@ -21,7 +20,7 @@ const MODES = {
 
 export function ChatHeader() {
   const { openDialog, showPanels } = useUi();
-  const { mode, reset, jumpTo, switchProduct, buySessionId, buyProduct, sellSession, stage } = useSession();
+  const { mode, reset, jumpTo, switchProduct, buySessionId, buyProduct, stage } = useSession();
   const account = useAccount();
   // Each product runs its own script, so steps are kept with the product they came from.
   const [loaded, setLoaded] = useState<{ product: string | null; steps: ScriptStep[] }>({ product: null, steps: [] });
@@ -33,7 +32,6 @@ export function ChatHeader() {
   const panelsLabel = staged ? `Stage ${at + 1}/${STAGE_STEPS.length}` : "Panels";
   const words = MODE_META[mode];
   const confirm = useConfirm();
-  const router = useRouter();
   const here = MODES[mode];
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -114,19 +112,6 @@ export function ChatHeader() {
     if (ok) await reset();
   };
 
-  // Leaving sell mode drops the live buyer; ask first if the learner has started.
-  const onSwitch = async (e: ReactMouseEvent<HTMLAnchorElement>) => {
-    if (!sellSession || sellSession.state.turn_count < 1) return;
-    e.preventDefault();
-    const ok = await confirm({
-      title: "Switch to buying?",
-      body: "This ends the conversation with your buyer.",
-      confirmLabel: "Switch to buying",
-      cancelLabel: "Keep selling",
-    });
-    if (ok) router.push(here.switchTo);
-  };
-
   return (
     <header className={s.header}>
       <div className={s.copy}>
@@ -137,7 +122,8 @@ export function ChatHeader() {
         <p className={s.subtitle}>{words.note}</p>
       </div>
       <div className={s.actions}>
-        <Link href={here.switchTo} className={buttonClass("pill", s.switch)} onClick={onSwitch}>
+        {/* A live call is kept for this tab: coming back picks it up (SessionContext), so leaving needs no warning. */}
+        <Link href={here.switchTo} className={buttonClass("pill", s.switch)}>
           <Icon name="swap" size={16} /> {words.switchLabel}
         </Link>
         <Button

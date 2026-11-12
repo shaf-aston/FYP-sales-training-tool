@@ -15,6 +15,7 @@ import { FeedbackDialog } from "@/features/feedback/FeedbackDialog";
 import { HelpDialog } from "@/features/help/HelpDialog";
 import { SellDialogs } from "@/features/sell/SellDialogs";
 import { QuizPanel } from "@/features/quiz/QuizPanel";
+import { RepWordsDialog } from "@/features/repWords/RepWordsDialog";
 import { SessionProvider, type Mode } from "@/features/session/SessionContext";
 import { Sidebar } from "@/features/sidebar/Sidebar";
 import { VoiceProvider } from "@/features/voice/VoiceContext";
@@ -37,6 +38,7 @@ function Layout() {
       <AccountDialog />
       <InsightsDialog />
       <SellDialogs />
+      <RepWordsDialog />
     </div>
   );
 }

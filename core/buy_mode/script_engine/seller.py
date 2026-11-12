@@ -24,6 +24,7 @@ from core.buy_mode.script_engine.engine import (
     start,
 )
 from core.buy_mode.script_engine.hear.embedder import make_embedder
+from core.buy_mode.script_engine.rep_words import with_words
 from core.buy_mode.script_engine.hear.meanings import MeaningBank, load_meanings
 from core.buy_mode.script_engine.hear.recognise import Listener
 from core.buy_mode.script_engine.hear.reply import after, clauses
@@ -65,7 +66,7 @@ def shared_gate():
 def resolve_product(product):
     """The product to sell: the one asked for if it is scripted, else the default."""
     cfg = engine_config()
-    return product if product in cfg["products"] else cfg["default_product"]
+    return product if isinstance(product, str) and product in cfg["products"] else cfg["default_product"]
 
 
 def products():
@@ -78,12 +79,19 @@ def products():
     ]
 
 
-def build_seller(router, product, embedder=None, gate=None):
+def method_for(product):
+    """The script a product is sold with (engine.yaml: the product's `method`, else the default one)."""
     cfg = engine_config()
-    entry = cfg["products"][product]
+    return load_method(cfg["products"][product].get("method", cfg["method"]))
+
+
+def build_seller(router, product, embedder=None, gate=None, words=None):
+    """`words`: {step id: question} the rep says instead of the script's (rep_words.py); raises RepWordsError."""
+    cfg = engine_config()
+    method = method_for(product)
     return ScriptSeller(
-        cfg, load_method(entry.get("method", cfg["method"])), load_offer(entry["offer"]), load_common_sense(),
-        embedder or shared_embedder(), (gate or shared_gate()).llm(router),
+        cfg, with_words(method, words) if words else method, load_offer(cfg["products"][product]["offer"]),
+        load_common_sense(), embedder or shared_embedder(), (gate or shared_gate()).llm(router),
     )
 
 

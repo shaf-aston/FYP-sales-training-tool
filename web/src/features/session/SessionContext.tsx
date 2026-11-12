@@ -21,6 +21,24 @@ export type { ChatMessage };
  */
 export type Mode = "buy" | "sell";
 
+/** Buy mode: the questions new calls ask in someone else's words (the Rep's words tool), kept for this tab. */
+export interface RepWords {
+  /** The product (script) the words were matched against: other products' calls use the script's own. */
+  product: string;
+  /** Whose words, for the learner: "Sam" (a call's rep) or the SOP. */
+  label: string;
+  words: Record<string, string>;
+}
+
+function savedRepWords(): RepWords | null {
+  try {
+    const v = JSON.parse(readString(storageKeys.buyWords, "session") ?? "null");
+    return v && typeof v.product === "string" && typeof v.label === "string" && v.words && typeof v.words === "object" ? v : null;
+  } catch {
+    return null;
+  }
+}
+
 /** A live AI buyer in sell mode. */
 export interface SellSession {
   sessionId: string;
@@ -47,6 +65,10 @@ interface SessionValue {
   buySessionId: string | null;
   /** Buy mode: what the rep sells on this call (an id from /api/buy/products); null until the call starts. */
   buyProduct: string | null;
+  /** Buy mode: the rep's words this call uses, or null for the script's own. */
+  repWords: RepWords | null;
+  /** Buy mode: start a fresh call in these words (null: the script's own); later new calls keep them. */
+  chooseRepWords: (w: RepWords | null) => Promise<void>;
   /** Buy-mode script stage; the sidebar stage card shows it. */
   stage: string;
   /** Buy-mode coach notes for the latest turn (wire key "training"). */
@@ -59,7 +81,8 @@ interface SessionValue {
   setSellSettings: (s: SellSettings) => void;
   send: (text: string) => Promise<SendResult>;
   edit: (historyIndex: number, text: string) => Promise<boolean>;
-  reset: () => Promise<void>;
+  /** A new call in place of this one; false when the old one could not be ended. */
+  reset: () => Promise<boolean>;
   /** Buy mode: start a fresh call where the rep sells this product (it stays picked for later calls). */
   switchProduct: (productType: string) => Promise<void>;
   /** Buy mode: start a fresh call at one script step (nothing said before it). */
@@ -104,6 +127,7 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
   const [buyProduct, setBuyProduct] = useState<string | null>(null);
   const [stage, setStage] = useState(FIRST_STAGE);
   const [coachNotes, setCoachNotes] = useState<CoachNotes | null>(null);
+  const [repWords, setRepWords] = useState<RepWords | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [typing, setTyping] = useState(false);
   const [sellSession, setSellSession] = useState<SellSession | null>(null);
@@ -119,14 +143,47 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
   const epoch = useRef(0);
   const started = useRef(false);
 
-  const adopt = useCallback((res: { session_id: string; message: string | null; history: ChatMsg[]; training?: CoachNotes; product_type?: string } & BotState) => {
+  const adopt = useCallback((res: { session_id: string; message: string | null; history: ChatMsg[]; training?: CoachNotes; product_type?: string; words?: Record<string, string>; words_label?: string } & BotState) => {
     setBuySessionId(res.session_id);
     if (res.product_type) setBuyProduct(res.product_type);
+    // The server says which words this call uses (a jump keeps the call's, so it sends none). The tab takes them
+    // on, so its next call matches what the card shows (another tab may have started this one).
+    if (res.words) {
+      const words: RepWords | null = Object.keys(res.words).length
+        ? { product: res.product_type ?? "", label: res.words_label || savedRepWords()?.label || "a top rep", words: res.words }
+        : null;
+      setRepWords(words);
+      writeString(storageKeys.buyWords, words ? JSON.stringify(words) : null, "session");
+    }
     writeString(storageKeys.buySessionId, res.session_id);
     setStage(res.stage);
     setCoachNotes(res.training ?? null);
     const history = res.history?.length ? res.history : res.message ? [{ role: "assistant" as const, content: res.message }] : [];
     setMessages(fromHistory(history, config.historyCap));
+  }, []);
+
+  /** A new buy-mode call, in the tab's rep's words when they were matched for this product. Words the script no
+   *  longer takes (it changed since) are dropped and the call starts in the script's own. */
+  const startBuy = useCallback(async () => {
+    const product = readString(storageKeys.buyProduct);
+    const saved = savedRepWords();
+    const words = saved && saved.product === product ? saved : undefined;
+    try {
+      return await api.buyInit(null, product, words);
+    } catch (err) {
+      if (!words || !(err instanceof ApiError) || err.code !== "REP_WORDS_INVALID") throw err;
+      writeString(storageKeys.buyWords, null, "session");
+      toast("Those questions no longer fit the script, so the rep uses its own.", "info");
+      return api.buyInit(null, product);
+    }
+  }, [toast]);
+
+  /** Restore a call by id, sending this tab's product and words: the server starts a new call from them when it
+   *  no longer has that one (it restarted, or the call sat idle too long). */
+  const restoreBuy = useCallback((id: string) => {
+    const product = readString(storageKeys.buyProduct);
+    const saved = savedRepWords();
+    return api.buyInit(id, product, saved && saved.product === product ? saved : undefined);
   }, []);
 
   /** Start or restore a buy-mode session. Retries once without the saved id. */
@@ -135,7 +192,7 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
       const saved = useSaved ? readString(storageKeys.buySessionId) : null;
       for (const id of saved ? [saved, null] : [null]) {
         try {
-          adopt(await api.buyInit(id, id ? null : readString(storageKeys.buyProduct)));
+          adopt(id ? await restoreBuy(id) : await startBuy());
           break;
         } catch (err) {
           // 400 = the server refused the saved id (expired or unknown): drop it and start fresh.
@@ -148,7 +205,7 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
         }
       }
     },
-    [adopt, toast],
+    [adopt, restoreBuy, startBuy, toast],
   );
 
   /** Sell mode: pick the tab's live call back up (after a reload, or Back from another page). */
@@ -355,17 +412,17 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
     epoch.current++;
   }, [sellSession]);
 
-  const reset = useCallback(async () => {
+  /** A new call in place of this one; false when the old call could not be ended (it carries on). */
+  const reset = useCallback(async (): Promise<boolean> => {
     if (mode === "sell" && sellSession) {
-      await startBuyer(sellSession.difficulty, sellSession.productType, sellSession.pick);
-      return;
+      return startBuyer(sellSession.difficulty, sellSession.productType, sellSession.pick);
     }
     try {
       if (buySessionId) await api.buyReset(buySessionId);
     } catch (err) {
       if (!handleExpired(err)) {
         toast("Reset didn't stick. Try one more time.", "error");
-        return;
+        return false;
       }
     }
     writeString(storageKeys.buySessionId, null);
@@ -376,12 +433,28 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
     setTyping(true);
     await initBuy(false);
     setTyping(false);
+    return true;
   }, [mode, sellSession, buySessionId, startBuyer, handleExpired, toast, initBuy]);
+
+  const chooseRepWords = useCallback(
+    async (w: RepWords | null) => {
+      const before = { words: readString(storageKeys.buyWords, "session"), product: readString(storageKeys.buyProduct) };
+      writeString(storageKeys.buyWords, w ? JSON.stringify(w) : null, "session");
+      if (w) writeString(storageKeys.buyProduct, w.product);
+      if (!(await reset())) {
+        // the old call carries on, so its words and product stay the tab's choice
+        writeString(storageKeys.buyWords, before.words, "session");
+        writeString(storageKeys.buyProduct, before.product);
+      }
+    },
+    [reset],
+  );
 
   const switchProduct = useCallback(
     async (productType: string) => {
+      const before = readString(storageKeys.buyProduct);
       writeString(storageKeys.buyProduct, productType);
-      await reset();
+      if (!(await reset())) writeString(storageKeys.buyProduct, before);
     },
     [reset],
   );
@@ -408,6 +481,8 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
       mode,
       buySessionId,
       buyProduct,
+      repWords,
+      chooseRepWords,
       stage,
       coachNotes,
       messages,
@@ -424,7 +499,7 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
       endBuyer,
       handleExpired,
     }),
-    [mode, buySessionId, buyProduct, stage, coachNotes, messages, typing, sellSession, sellSettings, setSellSettings, send, edit, reset, switchProduct, jumpTo, startBuyer, endBuyer, handleExpired],
+    [mode, buySessionId, buyProduct, repWords, chooseRepWords, stage, coachNotes, messages, typing, sellSession, sellSettings, setSellSettings, send, edit, reset, switchProduct, jumpTo, startBuyer, endBuyer, handleExpired],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
