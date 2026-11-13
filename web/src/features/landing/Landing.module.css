@@ -162,8 +162,14 @@
   gap: var(--space-5);
   min-width: 0;
 }
-.wordSlot {
+/* The headline's three lines stay one line each, whichever word and whichever font: the same height before the
+   display font loads and after (once it arrived, the longest word and "before the real call." wrapped and pushed the
+   page 46-92 px on phones). Narrow screens scale them down to fit instead of wrapping. */
+.wordSlot,
+.heroLine {
   display: grid;
+  white-space: nowrap;
+  font-size: min(1em, 8.4vw);
 }
 .wordSlot > * {
   grid-area: 1 / 1;

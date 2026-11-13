@@ -169,7 +169,7 @@ export function Landing() {
           <div className={s.heroCopy}>
             <p className={s.kicker}>Sales call practice</p>
             <h1 className={s.h1}>
-              Get good at
+              <span className={s.heroLine}>Get good at</span>
               {/* every word sizes the slot, so a longer one never wraps the line and moves the page (phone CLS 0.17) */}
               <span className={s.wordSlot}>
                 {heroWords.map((w) => (
@@ -181,7 +181,7 @@ export function Landing() {
                   {heroWords[word]}
                 </span>
               </span>
-              before the real call.
+              <span className={s.heroLine}>before the real call.</span>
             </h1>
             <p className={s.lead}>Roleplay a sales call from either side: buy from a virtual rep, or sell to a buyer who pushes back. Every move gets feedback. Ten minutes a day.</p>
             <div className={s.ctas}>
