@@ -168,6 +168,29 @@ Checked live after PR #107 (12 Nov): the morning's 9-line sell call now answers 
 walkthrough; knowledge per learner (15 browser checks, throwaway account deleted); the audit fixes (13 checks); the
 SOP critique; no server errors since the deploy; the database on schema 4.
 
+## Phase 7: deeper review, a real voice, a faster front end (13 Nov) · ✓ done
+Conversations tested live in both modes, an independent audit of the front end, and the voice measured on the VM:
+1. **Replies that fit** (PR #111, #113, #114): an open question gets an answer, not a tacked-on objection; the
+   price told gets a reaction to the price; "what happens if nothing changes?", "what would it need to save you?" and
+   tag questions ("..., wouldn't you?") each get their own kind of answer; "I'm good thanks" and "what would the
+   payments look like?" in buy mode.
+2. **The review, stage by stage** (PR #112, `call_stages.py`): ten stages in CAT's order, each with its evidence turns,
+   the human reason it matters and one line to try next; the earliest weak stage is the one to work on.
+3. **A trained second layer** (PR #112, `core/training/blemish.py`, `scripts/blemish/`): flags dismissive, leading,
+   ignored and feature-dump turns the rules miss, only adds, never rates; numbers on a held-out set in
+   `models/blemish.json` (pushy shipped off: it confused dates with pressure).
+4. **A real voice, free** (PR #113, #114): Kokoro reads replies on our server (fp32: twice as fast as int8 on the VM's
+   ARM cores), Parakeet hears the learner (0.8-1.25 s a turn live), the recording stops itself when they stop
+   talking; the fixed lines are made ahead of time (`scripts/speech_prewarm.py`, ~3,660 sentences, run detached by
+   the deploy). The Groq voice terms are no longer needed.
+5. **Front end** (PR #114, #116): the chat pages 18-20 fps → 61 fps (a full-window blur); the call starts in view on
+   phones; a clearer end of call; the landing page's layout shift 0.17 → 0.000; readable light-theme labels.
+6. **One phrase rule** (PR #114, `core/infra/phrases.py`): the score had counted "show" as "how" and "benefit" as
+   "fit".
+
+Still slow: a fresh sentence the AI wrote (not in the bank or the script) takes ~3 s to voice on the VM's 2 cores;
+everything made ahead plays in under a second.
+
 ## Order of work
 1. ✓ Phase 0 (PR #101).
 2. ✓ 1.2.1 backups, then 1.2.3 real IP (PR #102; `TRUST_PROXY_HEADERS=1` set on the VM, first backup taken).
@@ -178,10 +201,9 @@ SOP critique; no server errors since the deploy; the database on schema 4.
 6. Phases 2 and 3 as soon as the data and Kaggle access arrive.
 7. ✓ Phase 4, by rules. ✓ Google and email-link login, off until the keys are set. ✓ Phase 6 live audit.
 
-## Where it stands (12 Nov 2026)
+## Where it stands (13 Nov 2026)
 Everything that needs no outside input is built, merged and checked live. Still open:
-- **Waiting on you:** accept the Groq voice terms (server read-aloud still answers 204, so the browser voice is
-  used); unlink Netlify; the sign-in keys if wanted (Google and/or Resend); the Fathom transcripts and Kaggle access.
+- **Waiting on you:** unlink Netlify; the sign-in keys if wanted (Google and/or Resend); the Fathom transcripts and Kaggle access.
 - **Waiting on the Fathom calls (Phase 2):** calibrating call review, the realism reference for 1.1.6 (rough bands
   in `tests/test_buyer_lines.py` until then), real prospect lines for the bank, Rep's words thresholds on real calls.
 - **Waiting on Kaggle and Phase 2's labels (Phase 3):** the objection and stage classifiers, the tuned matcher, speaker
