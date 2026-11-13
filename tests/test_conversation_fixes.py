@@ -91,3 +91,14 @@ def test_a_real_question_that_starts_like_a_greeting_is_not_a_stock_one():
     assert "open_question" in rate_turn("What do you do when that happens?", "", 3).signals
     for stock in ["How are you?", "Hi, how are you doing today?", "What do you do?", "Anything else?"]:
         assert "generic_question" in rate_turn(stock, "", 3).signals, stock
+
+
+def test_a_tag_question_is_a_yes_no_one():
+    """Live, 13 Nov: "You'd want your evenings back, wouldn't you?" got "A few things, I'd rather hear..." back."""
+    from core.sell_mode.buyer_moves import is_closed
+    for line in ["You'd want your evenings back, wouldn't you?", "It works for you, right?", "That's fair, isn't it?"]:
+        assert is_closed(line), line
+        assert "closed_question" in rate_turn(line, "", 3).signals, line
+    assert next_move(0.3, "You'd want your evenings back, wouldn't you?", ["closed_question"]).closed
+    for line in ["What would that change for you?", "Why didn't it work, do you think?"]:
+        assert not is_closed(line), line

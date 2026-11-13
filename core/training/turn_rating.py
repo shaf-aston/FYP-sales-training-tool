@@ -75,9 +75,21 @@ def _count_openings(message: str, question_words, invitations, stock_questions=(
     return count
 
 
+_TAG = re.compile(r"(?:,|\s)\s*(?:(?:would|wo|do|does|did|is|are|was|were|can|could|have|has|should)n'?t\s+"
+                  r"(?:you|it|they|we|i|he|she|that|there)|right|yeah|yes|ok|okay|eh|no)\s*\?\s*$")
+
+
+def ends_with_tag(sentence: str) -> bool:
+    """A yes/no question by its tag: "You'd want that, wouldn't you?", "It works, right?" (live, 13 Nov: answered
+    "A few things." as if it were open)."""
+    return _TAG.search(sentence.lower().replace("’", "'")) is not None
+
+
 def _is_closed_question(message: str, question_words, closed_starters) -> bool:
-    """A question sentence that starts with a yes/no verb and has no question word."""
+    """A question sentence that starts with a yes/no verb and has no question word, or ends with a tag."""
     for sentence in _sentences(message.lower()):
+        if ends_with_tag(sentence):
+            return True
         words = re.findall(r"[a-z']+", sentence)
         first = words[1:2] if words[:1] in (["so"], ["and"], ["ok"], ["okay"], ["right"]) else words[:1]   # "So shall I ...?"
         if sentence.endswith("?") and first and first[0] in closed_starters and not _has_word(
