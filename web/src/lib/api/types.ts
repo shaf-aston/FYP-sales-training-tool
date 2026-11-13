@@ -287,10 +287,29 @@ export interface ReviewTurn {
   readiness_change: number;
 }
 
+/** How a stage of the call went (core/sell_mode/call_stages.py, config/call_stages.yaml). */
+export type StageStatus = "strong" | "partly" | "missed" | "early" | "weak" | "none";
+export interface CallStage {
+  id: string;
+  name: string;
+  status: StageStatus;
+  /** What happened, in a line. */
+  says: string;
+  /** Why the stage matters, the human reason behind it. */
+  why: string;
+  /** One thing to try next time; empty when there is nothing to work on. */
+  next: string;
+  /** The evidence: turn numbers. */
+  turns: number[];
+}
+
 export interface Review {
   success: true;
   turns: ReviewTurn[];
   pivotal_turns: number[];
+  /** The call stage by stage, in call order; and the earliest one to work on. */
+  stages?: CallStage[];
+  stage_focus?: string | null;
   summary: {
     turn_count: number;
     average_rating: number;

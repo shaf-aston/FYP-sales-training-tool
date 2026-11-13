@@ -1,0 +1,131 @@
+# How a call went, stage by stage (core/sell_mode/call_stages.py). The stages follow the CAT script's thinking
+# (config/methods/cat.yaml): find out what they want and why it matters to them, what is in the way and what staying
+# put costs, play it back, then offer the fix in their words, price it, handle the doubt, and ask for the next step.
+# Rules only, no AI: phrases are lower case and match whole words or a word's start ("frustrat" -> "frustrated").
+#
+# Each stage: name, why (the human reason it matters, said plainly), and a line for each result:
+#   strong  done well, with the evidence turns
+#   partly  started but not taken far enough
+#   missed  not done
+# `next` is the one thing to try next time when it was not strong.
+
+stages:
+  opening:
+    name: "Opening"
+    why: >-
+      The first question decides whether this feels like a conversation or a pitch. Ask about them first and they
+      relax and talk; start with your product and they brace for the sales bit.
+    strong: "You opened by asking about them, not by talking about you."
+    partly: "You asked about them early, but only after saying something about you first."
+    missed: "You opened with your product before asking anything about them."
+    next: "Open with one question about them: \"Before I tell you anything about us, what made you take this call?\""
+
+  goals:
+    name: "What they want"
+    why: >-
+      People act on what something means to them, not on the thing itself. "More money" is a target, "not
+      stressing at the till" is how it feels day to day, and "being someone my family can rely on" is who they want
+      to be. The deeper the answer, the more the reason to change is theirs, not yours.
+    strong: "You found what they want and dug past the first answer to why it matters to them personally."
+    partly: "You asked what they want but took the first answer and moved on."
+    missed: "You never asked what they actually want."
+    next: "Take their first answer and ask once more: \"And what would that change for you, day to day?\""
+
+  situation:
+    name: "Where they are now"
+    why: >-
+      You can only show a way forward from where they actually are. Asking what they do today, and what they have
+      tried, also tells you what they will compare you with.
+    strong: "You found out what they do today and what they have already tried."
+    partly: "You touched on where they are now, but not on what they have tried."
+    missed: "You never asked how they handle it today."
+    next: "Ask: \"How are you handling it at the moment, and what have you tried so far?\""
+
+  problem:
+    name: "The problem and its cost"
+    why: >-
+      People believe what they say more than what they are told. When they name the problem, say how long it has
+      gone on, and put a cost on leaving it, the urgency comes from them, so you never have to push.
+    strong: "They named the problem, how long it has gone on, and what it costs to leave it."
+    partly: "They named the problem, but you didn't ask how long it has gone on or what staying put costs them."
+    missed: "You never found out what the problem actually is for them."
+    next: "Ask: \"And what happens if nothing changes over the next year?\""
+
+  obstacle:
+    name: "What's stopped them"
+    why: >-
+      If the problem is real and has gone on a while, something has kept them stuck: time, money, a bad experience,
+      or a belief about themselves. That reason is the objection you will hear at the end, so find it now.
+    strong: "You asked what has stopped them fixing it before."
+    missed: "You didn't ask what has kept them stuck so far."
+    next: "Ask: \"What's stopped you sorting this out before now?\""
+
+  playback:
+    name: "Playing it back"
+    why: >-
+      Hearing their own words back shows you listened, and people stay consistent with what they have just agreed
+      to. A short summary before the pitch turns your offer into the answer to their problem, not a list of features.
+    strong: "You played their situation back in their own words before offering anything."
+    missed: "You went to your offer without first playing back what they told you."
+    next: "Before the pitch, sum up in their words: \"So if I've got this right, you want ... but ... is getting in the way.\""
+
+  solution:
+    name: "The offer, in their words"
+    why: >-
+      A feature means nothing until it is tied to something they said. "We take the reporting off your plate" lands
+      when they told you reporting eats their evenings; said cold, it is just a claim.
+    strong: "You tied what you offer to what they told you."
+    partly: "You described your offer, but mostly in your words, not theirs."
+    missed: "You never said how you would help."
+    early: "You pitched before you knew what they needed, so the offer answered a question they hadn't asked."
+    next: "Tie each thing you offer to their words: \"You said ..., so ...\""
+
+  price:
+    name: "The price"
+    why: >-
+      A price heard before the value is just a cost. Heard after they have said what the problem costs them, it is
+      weighed against that cost.
+    strong: "You gave the price after the value was clear."
+    early: "You gave the price before they had said what the problem costs them, so there was nothing to weigh it against."
+    missed: "The price never came up."
+    next: "Hold the price until they have told you what the problem is costing them."
+
+  objections:
+    name: "Handling doubt"
+    why: >-
+      A concern you argue with digs in, because people defend what they have just said. Acknowledge it and ask
+      about it, and it usually turns out to be about something smaller, or something you can solve.
+    strong: "When they pushed back, you acknowledged it and asked about it before answering."
+    partly: "You answered their concern, but without first acknowledging it or asking what was behind it."
+    weak: "When they pushed back you pushed harder, which made them dig in."
+    none: "They didn't raise a concern this call."
+    next: "Acknowledge, then ask: \"That's fair. What's making you hesitate, the amount or something else?\""
+
+  close:
+    name: "Asking for the next step"
+    why: >-
+      A clear, small next step is easy to say yes to; "let me know" leaves the decision hanging and usually means no.
+      Asking is not pushy once they have told you why they want this.
+    strong: "You asked for a clear next step."
+    early: "You asked them to commit before they had told you why they want this."
+    missed: "You never asked for a next step."
+    next: "Finish with one small, specific ask: \"Shall we book a walkthrough for Thursday?\""
+
+# What the rules listen for. Seller lines unless marked buyer.
+detect:
+  about_them: [what made you, what brings you, what brought you, tell me about, how are things, what's going on, before i tell you, before i say]
+  goal: [want, hoping, hope to, achieve, goal, ideal, looking for, looking to, success, outcome, after, aiming]
+  dig: [what would that, what does that, why is that, why does that, what would it change, what will that, how would that, how would it feel, what would that mean, what does that mean, mean to you, mean for you, for you personally, day to day, look like, and why, tell me more]
+  identity: [personally, feel, who you, kind of person, proud, your family, for you and, as a person, mean to you, your life]
+  situation: [at the moment, right now, currently, today, how do you, how are you handling, how are you doing it, what are you using, what do you use]
+  tried: [tried, what have you done, done so far, before now, in the past, used before, looked at]
+  obstacle: [stopped you, stopping you from, held you back, holding you back, kept you from, got in the way, getting in the way, why haven't you, why hasn't, what's stopped, what's prevented]
+  playback: [so what you're saying, so you're saying, if i've got this right, if i understand, let me make sure, so it sounds like, sounds like you, so you want, so you need, what i'm hearing, to sum up, just to check]
+  offer: [we help, we take, we'll, we will, we do, our, here's how, what we do, the way we, i'd suggest, i'd recommend, you'd get, you get]
+  # the buyer pushing back (buyer lines): an objection, a hesitation
+  doubt: [more than i, a lot for, a lot of money, steep, hard sell, not there yet, not convinced, too much, too expensive, expensive, can't afford, not sure, think about it, need to think, partner, wife, husband, boss, not the right time, not now, cheaper, for less, how do i know, does it work, actually works, premium, sceptical, skeptical, worried, concern, risk]
+  acknowledge: [that's fair, fair enough, fair point, i understand, i get that, i hear you, makes sense, totally get, good question, i appreciate, that's a good point, completely understand, no problem]
+  argue: [but you, you need to, you have to, trust me, honestly it's, it's worth it, discount, i can do, special price, today only]
+  playback_min_words: 3    # a statement that repeats this many of the buyer's own words plays it back
+  offer_min_words: 2       # an offer that uses this many of the buyer's own words is in their words
+  early_turns: 2           # a pitch or a price within the first this many turns, before any problem, is early

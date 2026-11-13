@@ -80,3 +80,11 @@ def test_small_talk_and_payment_questions_have_answers():
     sense = load_yaml("script/common_sense.yaml")
     assert "I'm good thanks" in str(sense) and "Glad to hear it." in str(sense)
     assert "what would the payments look like" in str(load_yaml("offers/shay_coaching.yaml"))
+
+
+def test_a_real_question_that_starts_like_a_greeting_is_not_a_stock_one():
+    """"How are you handling the admin at the moment?" was rated a stock question, like "How are you?"."""
+    assert "open_question" in rate_turn("How are you handling the admin at the moment?", "", 3).signals
+    assert "open_question" in rate_turn("What do you do when that happens?", "", 3).signals
+    for stock in ["How are you?", "Hi, how are you doing today?", "What do you do?", "Anything else?"]:
+        assert "generic_question" in rate_turn(stock, "", 3).signals, stock

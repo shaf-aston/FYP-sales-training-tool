@@ -9,6 +9,7 @@ the learner actually saw, because both come from the same two functions.
 
 from __future__ import annotations
 
+from core.sell_mode.call_stages import analyse_stages, focus
 from core.training.turn_rating import (
     NEGATIVE_SIGNALS,
     REASONS,
@@ -88,8 +89,11 @@ def build_review(
         previous_buyer_line = buyer_reply or previous_buyer_line
 
     pivotal = pick_pivotal_turns(turns)
+    stages = analyse_stages(turns)
     return {
         "turns": turns,
+        "stages": stages,                 # the call stage by stage (call_stages.py): what was found out, how deep
+        "stage_focus": (focus(stages) or {}).get("id"),
         "pivotal_turns": pivotal,
         "readiness_curve": curve,
         # The curve is rounded for display. A rewind must restore the exact value
