@@ -123,6 +123,20 @@ interruptions:
       - "what did you say"   # draft: round 100 hunt, "what did you say?" got "I'll find out and let you know"
     never_with: [want, wants, wanted, "used to", whatever]   # draft: round 43 callers, "I used to run a business, I want that again" got "let me say that again"; round 100 callers, "whatever he says" (their figure is his call) too
     reply: "Of course, let me say that again."   # draft: "say", not "ask": a talk line asks nothing
+  doing_well:   # an answer to "how are you": live 13 Nov, "Hi, yeah, I'm good thanks." got "You're welcome."
+    with_answer: true
+    once: true
+    examples:
+      - "I'm good thanks"
+      - "yeah I'm good, thanks"
+      - "doing well thanks"
+      - "not bad thanks"
+      - "all good thanks"
+      - "good thanks, how are you"
+      - "I'm alright thanks"
+      - "fine thanks"
+    min_score: 0.75
+    reply: "Glad to hear it."
   thanks:
     with_answer: true   # a thank-you beside an answer: the answer is kept
     once: true   # draft: round 27 callers, "ok, thank you" again got "What do you mean by thank you?"

@@ -6,6 +6,7 @@ Pure logic, no AI calls, no I/O. BuyerSession asks; this module answers.
 import random
 import re
 
+from core.sell_mode.buyer_moves import is_closed
 from core.infra.constants import SOLD_MIN_TURNS, SOLD_READINESS, WALK_MIN_TURNS, WALK_READINESS
 from core.training.turn_rating import NEGATIVE_SIGNALS, load_turn_rating
 
@@ -63,6 +64,11 @@ class ObjectionPacer:
                 break
             if not self._fires(t):
                 continue
+            # An open question gets an answer, not an objection tacked on: "what would it change for you?" got
+            # "Stakeholder confidence. That sounds good on paper, but how do I know it works?" (live, 13 Nov). The
+            # objection waits for a turn where the seller told them something or asked them to commit.
+            if said is not None and t <= len(said) and _asks_open(said[t - 1]) and not (self.first and t == 1):
+                continue
             pick = next((o for o in waiting if said is None or self.ready(o, t, said)), None)
             if pick is not None:
                 waiting.remove(pick)
@@ -87,6 +93,11 @@ def _mentions(word: str, line: str) -> bool:
     if not word[:1].isalnum():
         return word in line
     return re.search(rf"\b{re.escape(word)}", line) is not None
+
+
+def _asks_open(line: str) -> bool:
+    """The seller asked an open question ("What would that change?"), not a yes/no one or a statement."""
+    return "?" in line and not is_closed(line)
 
 
 def _is_pitch(line: str) -> bool:

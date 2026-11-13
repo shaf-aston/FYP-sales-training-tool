@@ -18,6 +18,7 @@ topics:   # what the seller asked about: the topic with the longest phrase in th
   current: [currently, at the moment, right now, today, using now, what are you using, how do you do, tried, before]
   pain: [challenge, problem, struggle, struggling, frustrat, hard, difficult, pain, issue, worry, keeping you up, holding you back, wrong]
   duration: [how long has, how long have, been going on, since when, how long's that, been like that]
+  consequence: [if nothing changes, nothing changes, what happens if, what would happen, if you don't, if you didn't, stays the same, stay the same, keep going like this, carry on like this, costing you, cost you, what's it costing, what's that costing]
   need: [want, need, looking for, achieve, goal, hoping, ideal, success, outcome, matter, important, why, fix, change, priority]
 
 voice:   # how the buyer says a need or pain about themselves (core/sell_mode/buyer_lines.py `spoken`)
@@ -83,6 +84,15 @@ lines:
       - "A while. It's got worse in the last few months."
       - "Since we grew, really. What worked when we were smaller doesn't now."
       - "Too long. That's partly why I'm on this call."
+    consequence:   # what happens if nothing changes: the stakes, said plainly
+      - "More of the same, honestly. And I'm not sure I can keep that up for another year."
+      - "It just keeps getting worse. That's the bit that worries me."
+      - "I'd probably burn out, if I'm honest."
+      - "We'd keep losing time we can't get back."
+      - "Nothing dramatic, it just keeps grinding on. Which is almost worse."
+      - "I don't really want to think about it, to be honest. Probably the same, but more tired."
+      - "Then I've wasted another year. I don't want that."
+      - "It'd start costing us properly. It already is, a bit."
     current:
       - "We're making do with what we've got. It works, just not well. {pain}."
       - "A bit of everything, to be honest. Nothing's really stuck."
@@ -166,6 +176,15 @@ lines:
       - "Sure. I'm not convinced yet though."
       - "Okay. I'll be honest, I'm a bit sceptical."
       - "I'm just looking at the moment."
+    price:   # just told the price, and not sold yet
+      - "That's more than I was expecting, to be honest."
+      - "Hmm. That's a lot for something I'm not sure about yet."
+      - "Right. I'd need to think hard about that."
+      - "That's steep. I'm not there yet."
+      - "Okay. I'm not sure I can justify that right now."
+      - "That's a big number for where I'm at."
+      - "Ooh. I wasn't expecting it to be that much."
+      - "Right. That's going to be a hard sell at home."
     pressure:   # the seller pushed (urgency, a pitch before asking anything)
       - "Whoa, slow down. I haven't even said what I need yet."
       - "I don't make decisions on the spot. That's not going to work on me."
@@ -187,6 +206,15 @@ lines:
       - "I'm not saying no, but I'm not there yet."
       - "Let's not book anything until I'm sure it's right for me."
   ask:   # interested enough to ask how it works
+    price:   # just told the price, on the fence: what do I get for it
+      - "Okay. And what's included in that?"
+      - "Right. What do I actually get for that?"
+      - "Hmm. Is that all in, or are there extras?"
+      - "Okay. Is there a way to spread that out?"
+      - "That's a fair bit. What makes it worth that?"
+      - "Right. How does that compare to what others charge?"
+      - "Okay. Is there anything that comes on top of that?"
+      - "Hmm. What would I see for that in the first month?"
     general:
       - "How does it actually work, day to day?"
       - "What would I actually get?"
@@ -201,6 +229,15 @@ lines:
       - "What's the catch?"
       - "Can you walk me through what the first few weeks look like?"
   lean_in:   # warming up: interested, wants the next step
+    price:   # just told the price, and keen
+      - "Okay, that's about what I expected."
+      - "That's roughly what I had in mind, to be fair."
+      - "Okay. That's doable, if it does what you say."
+      - "Right. That's within what I was thinking."
+      - "Fair enough. That's not far off what I'd budgeted."
+      - "Okay, I can work with that."
+      - "Right. That's not a shock, to be honest."
+      - "Okay. If it does the job, that's fine by me."
     general:
       - "Okay, that actually sounds useful."
       - "Right, that makes sense. Go on."
