@@ -128,10 +128,13 @@ custom_opening_lines:
   hard:
     - "{name}. I've only got a few minutes, so let's keep this quick."
 
+# voice: the Kokoro voice the persona speaks in (limits.yaml speech.kokoro lists them), chosen for who they are:
+# a woman's or a man's voice, older or younger, British for the British. One product's personas never share one.
 personas:
   general:
     - name: "Alex"
       background: "Mid-level marketing manager at a growing tech company"
+      voice: am_fenrir
       needs: ["efficiency improvement", "team productivity", "budget justification"]
       budget: "mid-range"
       pain_points: ["current solution is slow", "team complaints about workflow", "pressure from leadership to show ROI"]
@@ -139,6 +142,7 @@ personas:
 
     - name: "Sam"
       background: "Small business owner running a local services company"
+      voice: af_sarah
       needs: ["cost reduction", "scaling operations", "customer retention"]
       budget: "cost-conscious"
       pain_points: ["losing customers to competitors", "manual processes eating time", "cash flow concerns"]
@@ -146,6 +150,7 @@ personas:
 
     - name: "Jordan"
       background: "Senior executive at a mid-size enterprise"
+      voice: af_kore
       needs: ["strategic advantage", "risk mitigation", "stakeholder confidence"]
       budget: "flexible for the right solution"
       pain_points: ["board pressure for innovation", "previous vendor disappointment", "need for reliable partner"]
@@ -154,6 +159,7 @@ personas:
   luxury_cars:
     - name: "Marcus"
       background: "Finance director, recently promoted, looking to upgrade from a 5-year-old sedan"
+      voice: am_fenrir
       needs: ["status", "comfort", "safety features", "reliable brand"]
       budget: "$50,000-$70,000"
       pain_points: ["current car has high mileage", "wants something that reflects his new role", "spouse wants safety features"]
@@ -161,6 +167,7 @@ personas:
 
     - name: "Priya"
       background: "Entrepreneur who drives 2 hours daily for client meetings"
+      voice: af_bella
       needs: ["comfort for long drives", "technology", "professional image"]
       budget: "$55,000-$65,000"
       pain_points: ["back pain from current car", "outdated infotainment", "wants wireless CarPlay"]
@@ -169,6 +176,7 @@ personas:
   fitness:
     - name: "David"
       background: "Software engineer, 32, wants to get back in shape after years of desk work"
+      voice: am_puck
       needs: ["structured programme", "accountability", "flexible scheduling"]
       budget: "$100-$200/month"
       pain_points: ["tried gym apps but lost motivation", "doesn't know proper form", "irregular work hours"]
@@ -176,6 +184,7 @@ personas:
 
     - name: "Lisa"
       background: "Working mother of two, wants to prioritise her health"
+      voice: bf_emma
       needs: ["time-efficient workouts", "nutrition guidance", "stress management"]
       budget: "$100-$250/month"
       pain_points: ["no time for long gym sessions", "emotional eating", "feels guilty spending on herself"]
@@ -184,6 +193,7 @@ personas:
   insurance:
     - name: "Tom"
       background: "New father, 29, just bought his first house"
+      voice: am_fenrir
       needs: ["life cover for family", "mortgage protection", "affordable premiums"]
       budget: "$50-$150/month"
       pain_points: ["worried about what happens if he can't work", "confused by policy options", "previous bad experience with an insurer"]
@@ -192,6 +202,7 @@ personas:
   jewellery:
     - name: "Ryan"
       background: "Planning to propose, has been with his partner for 4 years"
+      voice: am_puck
       needs: ["engagement ring", "quality assurance", "meaningful presentation"]
       budget: "$4,000-$7,000"
       pain_points: ["doesn't know diamond grades", "worried about overpaying", "wants it to be perfect"]
@@ -200,6 +211,7 @@ personas:
   b2b_saas:
     - name: "Nina"
       background: "Operations lead scaling a 60-person services company"
+      voice: af_aoede
       needs: ["workflow automation", "reporting visibility", "smooth onboarding"]
       budget: "$20-$40 per user/month"
       pain_points: ["tool sprawl", "manual reporting", "slow team adoption"]
@@ -208,6 +220,7 @@ personas:
   high_ticket_sales_mentorship:
     - name: "Ava"
       background: "Independent coach and creator who knows her craft but wants a more consistent way to close premium clients"
+      voice: af_heart
       needs: ["clean discovery structure", "confident objection handling", "more qualified conversions"]
       budget: "$5,000-$12,000"
       pain_points: ["calls feel too unstructured", "she over-explains instead of closing", "lead flow is there but conversions are inconsistent"]
@@ -216,6 +229,7 @@ personas:
   education:
     - name: "Maya"
       background: "Project coordinator aiming to transition into data analytics"
+      voice: af_bella
       needs: ["job-relevant skills", "portfolio projects", "placement support"]
       budget: "$2,000-$8,000"
       pain_points: ["unclear programme quality", "time constraints", "fear of no ROI"]
@@ -224,6 +238,7 @@ personas:
   financial_services:
     - name: "Claire"
       background: "35-year-old accountant with savings sitting idle in a low-interest account"
+      voice: bf_isabella
       needs: ["investment growth", "tax efficiency", "professional guidance"]
       budget: "$50,000-$150,000 to invest"
       pain_points: ["money losing value to inflation", "unsure about risk tolerance", "previous adviser was unresponsive"]
@@ -231,6 +246,7 @@ personas:
 
     - name: "Daniel"
       background: "48-year-old business owner planning to sell his company in 3 years and retire"
+      voice: am_michael
       needs: ["wealth preservation", "estate planning", "tax-efficient drawdown strategy"]
       budget: "$500,000-$1,000,000+"
       pain_points: ["accountant gave generic advice", "worried about outliving savings", "complex tax situation from business income"]
@@ -239,6 +255,7 @@ personas:
   home_services:
     - name: "Derek"
       background: "45-year-old homeowner, kitchen is 15 years old and badly dated"
+      voice: bm_fable
       needs: ["kitchen modernisation", "quality workmanship", "on-time delivery"]
       budget: "$35,000-$60,000"
       pain_points: ["had a contractor disappear mid-job before", "scared of timeline overruns", "wife has very specific design preferences"]
@@ -246,6 +263,7 @@ personas:
 
     - name: "Fiona"
       background: "38-year-old buying a house that needs a full bathroom renovation before moving in"
+      voice: bf_emma
       needs: ["complete bathroom refit", "coordinated project management", "accessible features"]
       budget: "$15,000-$25,000"
       pain_points: ["tight timeline before move-in date", "doesn't want to manage multiple tradespeople", "budget is fixed"]
@@ -254,6 +272,7 @@ personas:
   healthcare_services:
     - name: "Sophie"
       background: "42-year-old marketing director who can't afford to be sick - last routine check-up took 3 weeks to schedule"
+      voice: af_kore
       needs: ["same-day access", "preventive health monitoring", "executive health check"]
       budget: "$300-$400/month"
       pain_points: ["NHS/insurance waits are too long", "stress-related symptoms being ignored", "no time for lengthy appointments"]
@@ -261,6 +280,7 @@ personas:
 
     - name: "James"
       background: "55-year-old father of two managing early-stage type 2 diabetes and high blood pressure"
+      voice: bm_george
       needs: ["proactive chronic condition management", "frequent access to his doctor", "nutritional guidance"]
       budget: "$200-$350/month"
       pain_points: ["GP only has 10 minutes per appointment", "confused by conflicting advice online", "wife is worried about his health"]
@@ -269,6 +289,7 @@ personas:
   watches:
     - name: "Hannah"
       background: "30-year-old buying a luxury watch as a milestone gift for her partner"
+      voice: af_heart
       needs: ["smart styling for work and weekends", "quality and craftsmanship", "reliable brand"]
       budget: "$5,000-$8,000"
       pain_points: ["doesn't know watch terminology", "wants it to feel meaningful rather than flashy", "worried about sizing"]
@@ -277,6 +298,7 @@ personas:
   automotive:
     - name: "Ben"
       background: "26-year-old landing his first full-time job and buying a premium SUV for a longer commute and family use"
+      voice: am_puck
       needs: ["reliability", "fuel economy", "modern safety features", "manageable monthly payments"]
       budget: "$50,000-$70,000"
       pain_points: ["anxious about ongoing costs like insurance and maintenance", "doesn't want to over-commit", "parents are pushing him toward a different brand"]
@@ -284,6 +306,7 @@ personas:
 
     - name: "Sarah"
       background: "34-year-old whose 8-year-old hatchback failed its MOT and needs replacing quickly"
+      voice: bf_emma
       needs: ["reliable daily driver", "good boot space for family shopping", "quick availability"]
       budget: "$55,000-$75,000"
       pain_points: ["needs the car within 2 weeks", "current car is off the road", "husband wants a different model"]
@@ -292,6 +315,7 @@ personas:
   premium_electronics:
     - name: "Rachel"
       background: "33-year-old graphic designer whose workstation needs a major upgrade for 3D and video editing"
+      voice: af_aoede
       needs: ["performance for creative work", "colour-accurate display", "light enough to carry to clients"]
       budget: "$5,000-$7,500"
       pain_points: ["losing billable hours to lag and crashes", "doesn't want to switch ecosystems (Mac user)", "worried about data migration"]
@@ -299,6 +323,7 @@ personas:
 
     - name: "Tom"
       background: "41-year-old operations manager who needs to replace his work setup before an overseas project next month"
+      voice: bm_fable
       needs: ["business durability", "long battery life", "compatibility with company tools (Windows)"]
       budget: "$5,000-$6,500"
       pain_points: ["last laptop had thermal throttling on video calls", "IT department is picky about compatibility", "needs it fast"]
@@ -307,6 +332,7 @@ personas:
   travel:
     - name: "Carlos"
       background: "37-year-old planning a 10th anniversary trip with his wife - first big holiday in 4 years"
+      voice: am_michael
       needs: ["romantic destination", "stress-free all-inclusive", "good cancellation policy"]
       budget: "$5,500-$8,500 total for two"
       pain_points: ["last holiday was self-catered and exhausting to plan", "wife had a bad experience with a resort before", "nervous about hidden costs"]
@@ -314,6 +340,7 @@ personas:
 
     - name: "Priya"
       background: "29-year-old planning a solo adventure trip for her 30th birthday"
+      voice: af_bella
       needs: ["unique experience", "safety as a solo female traveller", "value for money"]
       budget: "$5,000-$7,500"
       pain_points: ["generic package tours feel uninspiring", "solo travel safety is a real concern", "friends keep changing their minds about joining"]
@@ -322,6 +349,7 @@ personas:
   fashion:
     - name: "Zara"
       background: "29-year-old just promoted to a client-facing account manager role - wardrobe is too casual"
+      voice: af_sarah
       needs: ["professional capsule pieces", "versatile for office and evening", "quality that lasts"]
       budget: "$5,000-$9,000 for an initial wardrobe update"
       pain_points: ["overwhelmed by choice", "doesn't know what to invest in first", "worried about spending a lot and it not working"]
@@ -330,6 +358,7 @@ personas:
   home_appliances:
     - name: "Mike"
       background: "41-year-old who just moved into a 1980s house - almost every appliance needs replacing"
+      voice: bm_george
       needs: ["reliable brands", "energy-efficient models", "quick delivery and installation"]
       budget: "$5,000-$9,000 total across multiple appliances"
       pain_points: ["overwhelmed by the number of decisions", "previous house had a fridge that died after 2 years", "needs everything coordinated so he can move in"]
@@ -338,6 +367,7 @@ personas:
   outdoor_equipment:
     - name: "Theo"
       background: "32-year-old software developer who wants to get into hiking and camping after years at a desk"
+      voice: am_fenrir
       needs: ["starter gear that won't let him down", "expert guidance on what's essential vs. optional", "good value"]
       budget: "$5,000-$8,000 to start"
       pain_points: ["doesn't know what he actually needs vs. what's just marketing", "worried about buying cheap kit that fails on a trail", "partner is sceptical about how serious he'll be"]

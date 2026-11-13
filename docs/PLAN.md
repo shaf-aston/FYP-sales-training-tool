@@ -188,6 +188,13 @@ Conversations tested live in both modes, an independent audit of the front end, 
 6. **One phrase rule** (PR #114, `core/infra/phrases.py`): the score had counted "show" as "how" and "benefit" as
    "fit".
 
+7. **A voice for every persona, and the marks heard** (13 Nov): each of the 28 personas names its own voice in
+   `buyer.yaml` (five women had been given a man's voice: nothing in their words said "she"); a learner's own
+   prospect gets one by its words, then its first name (`config/first_names.yaml`). The script's `**loud**`,
+   `_stretched_` and `==key==` words are now heard (`voice_marks.py`: louder and higher, drawn out, a beat before),
+   a tone note's pace is made into the audio, and prices are read as said ("4,000 dollars", not "dollar four
+   thousand").
+
 Still slow: a fresh sentence the AI wrote (not in the bank or the script) takes ~3 s to voice on the VM's 2 cores;
 everything made ahead plays in under a second.
 

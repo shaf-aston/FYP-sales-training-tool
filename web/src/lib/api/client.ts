@@ -200,11 +200,12 @@ export function createHttpApi() {
 
     // Shared
     /** The text as audio in the speaker's voice, or null when the server has no voice for it (the browser reads it). */
-    speech: async (text: string, speaker?: T.Speaker): Promise<Blob | null> => {
+    /** The text in the speaker's voice; `speed` is the line's own pace (its tone note), made into the audio. */
+    speech: async (text: string, speaker?: T.Speaker, speed = 1): Promise<Blob | null> => {
       const res = await fetch(config.apiBase + "/api/speech", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, ...speaker }),
+        body: JSON.stringify({ text, ...speaker, ...(speed !== 1 && { speed }) }),
       }).catch(() => null);
       return res?.status === 200 ? res.blob() : null;
     },

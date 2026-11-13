@@ -83,10 +83,30 @@ def test_the_route_passes_who_is_speaking(client, monkeypatch):
 
 def test_a_buyer_sounds_like_their_persona_and_always_the_same():
     cfg = speech.SPEECH["kokoro"]
-    assert speech.pick_voice("buyer", "Marcus") in cfg["male"]          # "reflects his new role"
+    assert speech.pick_voice("buyer", "Marcus") == "am_fenrir"           # buyer.yaml names it
     assert speech.pick_voice("buyer", "Nobody", "She runs a bakery with her sister.") in cfg["female"]
-    assert speech.pick_voice("buyer", "Alex") == speech.pick_voice("buyer", "Alex")
+    assert speech.pick_voice("buyer", "Nobody", "Runs a bakery; his brother does the books.") in cfg["male"]
+    assert speech.pick_voice("buyer", "Kelly Brown", "Runs a bakery.") in cfg["female"]   # no he or she: the name
+    assert speech.pick_voice("buyer", "Gary", "Runs a bakery.") in cfg["male"]
+    assert speech.pick_voice("buyer", "Robin") == speech.pick_voice("buyer", "Robin")   # either: the same each time
     assert speech.pick_voice("seller") == cfg["seller"]
+
+
+def test_every_persona_speaks_in_a_voice_that_fits():
+    """Live, 13 Nov: Nina, Maya, Fiona, Sophie and Zara spoke in a man's voice (nothing in their words said "she")."""
+    from core.infra.loader import load_buyer_config, load_yaml
+    cfg, names = speech.SPEECH["kokoro"], load_yaml("first_names.yaml")
+    for product, group in load_buyer_config()["personas"].items():
+        voices = [p["voice"] for p in group]
+        assert len(set(voices)) == len(voices), product                  # one product: every buyer sounds different
+        for p in group:
+            pool = "female" if p["name"].lower() in names["female"] else "male" if p["name"].lower() in names["male"] else None
+            assert p["voice"] in (cfg[pool] if pool else cfg["female"] + cfg["male"]), p["name"]
+            hint = f"{p['background']} {p['personality']}"                # as the web sends it
+            assert speech.pick_voice("buyer", p["name"], hint) == p["voice"]
+    toms = [p for g in load_buyer_config()["personas"].values() for p in g if p["name"] == "Tom"]
+    assert len({speech.pick_voice("buyer", "Tom", f"{t['background']} {t['personality']}") for t in toms}) == 2
+    assert not set(names["female"]) & set(names["male"])
 
 
 def test_a_line_said_once_comes_back_from_the_cache(monkeypatch):
@@ -175,10 +195,10 @@ def test_a_message_is_split_as_the_web_splits_it():
     """web/src/lib/tone.ts speakable + voice/speech/tts.ts sentences, mirrored: a cached line is only found if the
     split agrees."""
     assert speech.spoken_sentences("(slow, deliberate) Where are you **now**... that you _don't_ want?") == [
-        "Where are you now...", "that you don't want?"]
+        "Where are you **now**...", "that you _don't_ want?"]   # the marks go to the voice, the tone note doesn't
     assert speech.spoken_sentences("That wears you down.¶And what would that change?") == [
         "That wears you down.", "And what would that change?"]
-    assert speech.spoken_sentences("Honestly? It's ==two days== a month") == ["Honestly?", "It's two days a month."]
+    assert speech.spoken_sentences("Honestly? It's ==two days== a month") == ["Honestly?", "It's ==two days== a month."]
     assert speech.spoken_sentences("Ok. Fine") == ["Ok. Fine."]   # a scrap under 4 characters joins the next
 
 
@@ -194,6 +214,36 @@ def test_the_prewarm_covers_the_bank_the_objections_and_the_script():
     from scripts.speech_prewarm import buyer_lines, seller_lines
     buyer = set().union(*buyer_lines().values())
     assert "That's more than I was expecting, to be honest." in buyer      # a bank line, said as the web asks
-    assert "Glad to hear it." in seller_lines()                            # buy mode's common sense
-    assert "So, back to you." in seller_lines()                            # engine.yaml back_to_question (missed live)
-    assert all("{" not in s for s in buyer | seller_lines())                # no unfilled blanks
+    seller = {s for s, _ in seller_lines()}
+    assert "Glad to hear it." in seller                                    # buy mode's common sense
+    assert "So, back to you." in seller                                    # engine.yaml back_to_question (missed live)
+    assert all("{" not in s for s in buyer | seller)                       # no unfilled blanks
+
+
+def test_the_prewarm_makes_a_line_at_its_tone_notes_pace():
+    from scripts.speech_prewarm import seller_lines
+    lines = seller_lines()
+    assert ("What is it about where you are **now**...", 0.85 * 0.9) in lines   # cat.yaml's (slow, deliberate) probe
+    assert ("Glad to hear it.", 1) in lines
+
+
+def test_the_tone_paces_match_the_web():
+    """lib/tone.ts TONES and tone.py RATES: the pace is part of a made line's name in the cache."""
+    import re
+    from pathlib import Path
+
+    from core.buy_mode.script_engine.words.tone import RATES
+    web = (Path(__file__).resolve().parent.parent / "web/src/lib/tone.ts").read_text()
+    block = web[web.index("const TONES"):web.index("};", web.index("const TONES"))]
+    assert {w: float(r) for w, r in re.findall(r"(\w+): ([\d.]+)", block)} == {w: float(r) for w, r in RATES.items()}
+
+
+def test_prices_are_said_the_way_people_say_them():
+    """The voice's own reading of "$4,000" is "dollar four thousand"."""
+    assert speech.readable("It's $4,000 for the year.") == "It's 4,000 dollars for the year."
+    assert speech.readable("About £300 a month, £1.50 a day, €50 once.") == \
+        "About 300 pounds a month, 1 pound 50 a day, 50 euros once."
+    assert speech.readable("£2.5k up front, $2m budget, 4k all in") == \
+        "2.5 thousand pounds up front, 2 million dollars budget, 4 thousand all in"
+    assert speech.readable("We're 60 people, 10.5% up, v4k") == "We're 60 people, 10.5% up, v4k"
+    assert speech._cache_path("kokoro", "x", 1, "$4,000.") == speech._cache_path("kokoro", "x", 1, "4,000 dollars.")

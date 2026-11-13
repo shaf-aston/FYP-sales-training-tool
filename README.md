@@ -53,12 +53,12 @@ fallback (Groq), then the browser's own voice.
 
 | Job | Model | Licence | Where |
 |---|---|---|---|
-| Replies read aloud | Kokoro-82M (int8 ONNX, `kokoro-onnx`) | Apache-2.0 weights; its phonemizer is GPL-3, used server-side only | `core/infra/providers/speech.py` |
+| Replies read aloud | Kokoro-82M (fp32 ONNX with timings, `kokoro-onnx`); a voice per persona, and the script's stress marks said | Apache-2.0 weights; its phonemizer is GPL-3, used server-side only | `core/infra/providers/speech.py`, `voice_marks.py` |
 | What the learner says | NVIDIA Parakeet TDT 0.6B v2 (int8 ONNX, `onnx-asr`) | CC-BY-4.0 (credit: NVIDIA) | `core/infra/providers/dictation.py` |
 | Meaning of lines | BAAI bge-small-en-v1.5 (`fastembed`) | MIT | `core/infra/embedder.py` |
 | Review: what the rules miss | Our own small model on bge-small vectors (`scripts/blemish/`) | this repo | `core/training/blemish.py` |
 
-The deploy fetches the voice and dictation files once (`scripts/deploy_vm.sh`, about 780 MB into `.cache/`).
+The deploy fetches the voice and dictation files once (`scripts/deploy_vm.sh`, about 1 GB into `.cache/`).
 
 ## 🚀 Run it
 
