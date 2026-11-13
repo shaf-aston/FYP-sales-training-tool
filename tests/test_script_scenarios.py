@@ -431,9 +431,10 @@ def test_the_objection_talks_are_the_matrix_steps():
     assert not {"19", "20", "22"} & set(CAT.talks)
 
 
-@pytest.mark.parametrize("step, then", [("20", "m_partner_here"), ("m_reframe1", "m_reframe1_now")])
+@pytest.mark.parametrize("step, then", [("20", "m_partner_here"), ("m_reframe1_why", "m_close1")])
 def test_a_worry_said_again_past_its_talk_is_the_worry(fake_embedder, step, then):
     # 20 keeps any reply: the partner again there is no reason to buy; in a talk it answers the step
+    # ("Why not?" takes any answer; Reframe 1's own questions want a yes or no, test_objection_reframes.py)
     s = seller(fake_embedder, step=step, raised=("partner",))
     s.reply("I need to speak to my partner first")
     assert s.state.step == then
