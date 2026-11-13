@@ -27,7 +27,8 @@ export const config = {
   voice: {
     silenceDelayMs: 500,
     ttsWatchdogMs: 30_000,
-    puterLoadMs: 15_000,
+    /** Recording for the server: when the learner has finished talking (loudness against the room's noise). */
+    vad: { calibrateMs: 300, overNoise: 3, minLevel: 0.012, endSilenceMs: 900, noSpeechMs: 8_000 },
     maxRecordingMs: 60_000,
     restartBackoffMs: { base: 200, max: 5_000, attempts: 5 },
     speedRange: { min: -50, max: 50, step: 5 },

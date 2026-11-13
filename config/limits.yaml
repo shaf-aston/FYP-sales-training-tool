@@ -90,6 +90,7 @@ rate_limits:         # [max_requests, window_seconds] per client IP; bucket name
   knowledge: [10, 60]  # both modes: custom product knowledge
   feedback: [5, 300]   # both modes: feedback form
   speech: [40, 60]     # both modes: replies read aloud
+  dictate: [40, 60]    # both modes: what the learner says, turned into text
 
 provider:            # every request to an LLM provider
   timeout_seconds: 20   # a stalled request gives up after this
@@ -174,8 +175,33 @@ transcription:       # a call recording turned into a transcript (core/infra/pro
   label_batch: 60      # segments per "who said this" request...
   label_context: 6     # ...plus this many already-labelled ones shown again, so labels stay consistent
 
-speech:              # replies read aloud by the server, so the browser needs no sign-in. Change model/voice here.
-  model: canopylabs/orpheus-v1-english   # Groq text-to-speech; accept its terms once in the Groq console
+dictation:           # what the learner says into the mic, turned into text here (core/infra/providers/dictation.py)
+  engines: [parakeet, groq]   # tried in order; the local model first: no daily limit, the audio never leaves us
+  max_bytes: 4000000   # one spoken turn (a minute of opus is about 0.5 MB)
+  max_seconds: 90
+  parakeet:            # NVIDIA Parakeet TDT 0.6B v2 (CC-BY-4.0: credit NVIDIA), int8 ONNX through onnx-asr (MIT).
+                       # About 0.3 s for a sentence on 2 cores; English only.
+    repo: istupakov/parakeet-tdt-0.6b-v2-onnx
+    files: [encoder-model.int8.onnx, decoder_joint-model.int8.onnx, nemo128.onnx, vocab.txt, config.json]   # 660 MB
+    dir: .cache/parakeet
+    threads: 2
+
+speech:              # replies read aloud by the server, so the browser needs no sign-in (core/infra/providers/speech.py)
+  engines: [kokoro, groq]   # tried in order; the browser's own voice reads it when none answers
+  cache_dir: .cache/speech  # every line said once is kept (gitignored): bank and script lines play at once after that
+  cache_max_mb: 300
+  kokoro:              # Kokoro-82M on this machine: free, no key, no daily limit. Weights Apache-2.0; its phonemizer is
+                       # GPL-3, fine run on our own server. About 0.5 s of work per second of speech on 2 cores.
+    files_url: https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/
+    model: kokoro-v1.0.int8.onnx   # 92 MB; the fp32 one (325 MB) is no faster here and sounds the same
+    voices: voices-v1.0.bin
+    dir: .cache/kokoro
+    threads: 2
+    seller: am_michael              # buy mode's seller
+    female: [af_heart, af_bella, bf_emma]   # a buyer whose persona says she/her/wife...
+    male: [am_michael, am_fenrir, bm_george]   # ...or he/his/husband; a neutral one gets either, the same every time
+  model: canopylabs/orpheus-v1-english   # Groq text-to-speech; accept its terms once in the Groq console. Free tier:
+                                         # 100 requests a day, which is why the browser voice was being heard
   voice: daniel
   format: wav
   max_chars: 200     # the model's limit per request; longer replies go in sentence-sized pieces, joined into one audio file

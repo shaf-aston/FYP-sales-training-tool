@@ -172,6 +172,14 @@ export interface BuyerState {
   turn_count: number;
 }
 
+/** Who a line is read aloud as: the server picks the voice (a buyer's from their persona, the same every time). */
+export interface Speaker {
+  speaker: "seller" | "buyer";
+  persona?: string;
+  /** The persona's own words (background, personality): "his", "her" choose the voice. */
+  hint?: string;
+}
+
 export interface Persona {
   name: string;
   background: string;

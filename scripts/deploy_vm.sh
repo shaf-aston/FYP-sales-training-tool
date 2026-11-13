@@ -48,6 +48,9 @@ if deps "$old" "$new" && bash -c "$RESTART" && live_on "$new"; then
   # ffmpeg splits recordings past 25 MB; without it they are refused as too big, so a failure here is only a warning
   [ -n "${SKIP_FFMPEG_INSTALL:-}" ] || bash scripts/install_ffmpeg.sh \
     || echo "::warning title=ffmpeg::could not install ffmpeg; recordings over 25 MB will be refused"
+  # the voice and dictation models (120 MB + 660 MB, once); without them Groq or the browser does it instead
+  [ -n "${SKIP_VOICE_FETCH:-}" ] || "$PY" -c "from core.infra.providers.speech import fetch_files as a; from core.infra.providers.dictation import fetch_files as b; a(); b()" \
+    || echo "::warning title=Voice::could not fetch the voice models; speech falls back to Groq or the browser"
   exit 0
 fi
 

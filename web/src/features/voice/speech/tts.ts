@@ -1,7 +1,9 @@
 // Text-to-speech. The server's voice first (engine set in config/limits.yaml), the browser's own voice
-// when the server has none. Plain TypeScript, no React.
+// when the server has none. A reply is fetched a sentence at a time and the first plays as soon as it arrives,
+// while the next is made: the wait is one sentence, not the whole reply. Plain TypeScript, no React.
 
 import { api } from "@/lib/api/client";
+import type { Speaker } from "@/lib/api/types";
 import { config } from "@/lib/config";
 
 interface Handle {
@@ -21,7 +23,19 @@ interface TtsOptions {
   onError: (message: string) => void;
 }
 
-export const ttsSupported = () => typeof window !== "undefined" && "speechSynthesis" in window;
+/** The server's voice needs only audio playback; the browser's own voice is the fallback where there is one. */
+export const ttsSupported = () => typeof window !== "undefined" && (typeof Audio !== "undefined" || "speechSynthesis" in window);
+
+/** The reply as the pieces it is fetched in: sentences, a scrap too short to say alone joined to the next one. */
+export function sentences(text: string): string[] {
+  const parts = text.split(/(?<=[.!?…])\s+/).map((p) => p.trim()).filter(Boolean);
+  const out: string[] = [];
+  for (const p of parts) {
+    if (out.length && out[out.length - 1].length < 4) out[out.length - 1] += ` ${p}`;
+    else out.push(p);
+  }
+  return out;
+}
 
 const nativeRate = (speed: number) => Math.min(config.voice.rateClamp.max, Math.max(config.voice.rateClamp.min, 1 + speed / 100));
 
@@ -38,13 +52,13 @@ export class Tts {
     return this.pending || this.handle !== null;
   }
 
-  async speak(text: string, speed: number) {
+  async speak(text: string, speed: number, speaker?: Speaker) {
     if (!text.trim()) return;
     this.stop();
     const mine = this.generation;
     this.pending = true;
 
-    const handle = await this.createHandle(text, speed);
+    const handle = await this.createHandle(text, speed, speaker);
     if (mine !== this.generation) {
       handle?.pause(); // a newer speak() or stop() overtook this one
       return;
@@ -91,25 +105,55 @@ export class Tts {
     }
   }
 
-  private async createHandle(text: string, speed: number): Promise<Handle | null> {
-    return (await this.serverHandle(text, speed)) ?? this.nativeHandle(text, speed);
+  private async createHandle(text: string, speed: number, speaker?: Speaker): Promise<Handle | null> {
+    return (await this.serverHandle(text, speed, speaker)) ?? this.nativeHandle(text, speed);
   }
 
-  private async serverHandle(text: string, speed: number): Promise<Handle | null> {
-    const blob = await api.speech(text);
-    if (!blob) return null;
-    const url = URL.createObjectURL(blob);
-    const audio = new Audio(url);
-    audio.playbackRate = nativeRate(speed);
+  /** The server's voice, sentence by sentence: each piece plays as soon as it is here, the next is fetched while it
+   *  plays. A piece the server can't say ends the reply there (the words are on screen). */
+  private async serverHandle(text: string, speed: number, speaker?: Speaker): Promise<Handle | null> {
+    const parts = sentences(text);
+    const fetches: Promise<Blob | null>[] = [api.speech(parts[0], speaker)];
+    const fetchPart = (i: number) => (fetches[i] ??= i < parts.length ? api.speech(parts[i], speaker) : Promise.resolve(null));
+    const first = await fetches[0];
+    if (!first) return null;
+    fetchPart(1); // the next one is being made while the first plays
+
+    let audio: HTMLAudioElement | null = null;
+    let url = "";
+    let stopped = false;
     const handle: Handle = {
-      pause: () => audio.pause(),
-      play: async () => audio.play(),
+      pause: () => {
+        stopped = true;
+        audio?.pause();
+        if (url) URL.revokeObjectURL(url);
+      },
+      play: async () => {
+        for (let i = 0; i < parts.length && !stopped; i++) {
+          const blob = i === 0 ? first : await fetchPart(i);
+          if (!blob || stopped) break;
+          fetchPart(i + 1);
+          url = URL.createObjectURL(blob);
+          audio = new Audio(url);
+          audio.playbackRate = nativeRate(speed);
+          const playing = audio;
+          const ended = await new Promise<boolean>((resolve) => {
+            playing.addEventListener("ended", () => resolve(true), { once: true });
+            playing.addEventListener("error", () => resolve(false), { once: true });
+            playing.play().catch(() => resolve(false));
+          });
+          URL.revokeObjectURL(url);
+          url = "";
+          if (!ended) {
+            if (!stopped) handle.onerror();
+            return;
+          }
+        }
+        if (!stopped) handle.onended();
+      },
       onended: () => {},
       onerror: () => {},
     };
-    const done = (then: () => void) => () => { URL.revokeObjectURL(url); then(); };
-    audio.addEventListener("ended", done(() => handle.onended()), { once: true });
-    audio.addEventListener("error", done(() => handle.onerror()), { once: true });
     return handle;
   }
 

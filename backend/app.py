@@ -35,6 +35,8 @@ from core.infra.constants import (  # noqa: E402
 )
 from core.infra.env import env_flag, env_str  # noqa: E402
 from core.infra.embedder import shared_embedder  # noqa: E402
+from core.infra.providers.dictation import warm as dictation_warm  # noqa: E402
+from core.infra.providers.speech import warm as speech_warm  # noqa: E402
 
 configure_logging()  # before Flask, so the app's logger shares the one handler
 
@@ -87,6 +89,9 @@ if _should_start_background_cleanup():
     buyer_sessions.start_background_cleanup()
     # load the local meaning model now, so the first call doesn't wait ~2 s for it
     threading.Thread(target=shared_embedder, daemon=True, name="embedder-warmup").start()
+    # and the voice: its files are fetched once on a fresh machine, then the first reply is read without a wait
+    threading.Thread(target=speech_warm, daemon=True, name="speech-warmup").start()
+    threading.Thread(target=dictation_warm, daemon=True, name="dictation-warmup").start()
 
 
 app.extensions["sessions"] = Sessions(seller=seller_sessions, buyer=buyer_sessions)
