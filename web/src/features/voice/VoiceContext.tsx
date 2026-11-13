@@ -12,6 +12,7 @@ import { useSession } from "@/features/session/SessionContext";
 import { SpeechRecognizer, speechSupported, type StopState } from "./speech/recognizer";
 import { Tts, ttsSupported } from "./speech/tts";
 import { parsePunctuation } from "./voiceCommands";
+import type { Speaker } from "@/lib/api/types";
 import { speakable, toneRate } from "@/lib/tone";
 
 interface VoiceValue {
@@ -63,9 +64,14 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   const [speaking, setSpeaking] = useState(false);
 
   // Latest values for callbacks that outlive a render (recognizer and speech events).
-  const live = useRef({ draft, autoSend, speed, toast });
+  // Who replies is read in their own voice: sell mode's buyer (the persona picks it), buy mode's seller.
+  const persona = session.mode === "sell" ? session.sellSession?.persona : undefined;
+  const speaker: Speaker = persona
+    ? { speaker: "buyer", persona: persona.name, hint: `${persona.background} ${persona.personality}` }
+    : { speaker: "seller" };
+  const live = useRef({ draft, autoSend, speed, toast, speaker });
   useEffect(() => {
-    live.current = { draft, autoSend, speed, toast };
+    live.current = { draft, autoSend, speed, toast, speaker };
   });
   const handsFreeNow = useRef(false); // set synchronously on toggle, before React re-renders
 
@@ -141,7 +147,6 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     recognizer.current ??= new SpeechRecognizer({
       language: config.voice.language,
       maxRecordingMs: config.voice.maxRecordingMs,
-      puterLoadMs: config.voice.puterLoadMs,
     });
     const r = recognizer.current;
     if (r.isRecording || r.isTranscribing) return true;
@@ -178,7 +183,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       });
       // words only, the marks are for the screen; a tone note ("(slow)") changes the speed (speed is ±% from normal)
       const speed = Math.round((1 + live.current.speed / 100) * toneRate(text) * 100 - 100);
-      void tts.current.speak(speakable(text), speed);
+      void tts.current.speak(speakable(text), speed, live.current.speaker);
     },
     [resumeAfterSpeech],
   );

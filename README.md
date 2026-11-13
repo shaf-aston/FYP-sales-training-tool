@@ -46,6 +46,20 @@ The script moves on only when the buyer's answer fits the question.
 - **Rules first**: the seller's lines, objections, scores, coach notes and tips come from `config/*.yaml`; the AI (Groq, free tier) plays the buyer and fills small gaps.
 - **Config driven**: scripts, products, objections and drills live in `config/*.yaml`. Adding a product needs no code change.
 
+## 🎙️ Voice and local models
+
+Everything below runs on our own server: free, no daily limit, and the audio never leaves it. Each has a hosted
+fallback (Groq), then the browser's own voice.
+
+| Job | Model | Licence | Where |
+|---|---|---|---|
+| Replies read aloud | Kokoro-82M (int8 ONNX, `kokoro-onnx`) | Apache-2.0 weights; its phonemizer is GPL-3, used server-side only | `core/infra/providers/speech.py` |
+| What the learner says | NVIDIA Parakeet TDT 0.6B v2 (int8 ONNX, `onnx-asr`) | CC-BY-4.0 (credit: NVIDIA) | `core/infra/providers/dictation.py` |
+| Meaning of lines | BAAI bge-small-en-v1.5 (`fastembed`) | MIT | `core/infra/embedder.py` |
+| Review: what the rules miss | Our own small model on bge-small vectors (`scripts/blemish/`) | this repo | `core/training/blemish.py` |
+
+The deploy fetches the voice and dictation files once (`scripts/deploy_vm.sh`, about 780 MB into `.cache/`).
+
 ## 🚀 Run it
 
 ```bash

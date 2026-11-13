@@ -17,7 +17,7 @@ import re
 from dataclasses import dataclass
 
 from core.infra.loader import load_buyer_config, load_yaml
-from core.training.turn_rating import load_turn_rating
+from core.training.turn_rating import ends_with_tag, load_turn_rating
 
 MOVES = ("share", "guard", "stall", "ask", "lean_in")
 
@@ -54,7 +54,10 @@ def topic_of(line: str) -> str:
 
 def is_closed(line: str) -> bool:
     """A yes/no question: it opens with "would", "is", "can" ... (or "so would ..."), not "what" or "how"."""
-    words = re.findall(r"[a-z']+", (line or "").lower().split("?")[0].split(".")[-1].split("!")[-1])
+    question = (line or "").lower().split("?")[0].split(".")[-1].split("!")[-1]
+    if ends_with_tag(f"{question}?"):
+        return True
+    words = re.findall(r"[a-z']+", question)
     words = words[1:] if words[:1] in (["so"], ["and"], ["ok"], ["okay"], ["right"]) else words
     return bool(words) and words[0] in load_buyer_config()["moves"]["closed_openers"]
 

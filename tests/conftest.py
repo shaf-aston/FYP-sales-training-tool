@@ -159,6 +159,16 @@ def cat_seller():
 
 
 @pytest.fixture(autouse=True)
+def _offline_voice(monkeypatch, tmp_path):
+    """No test runs (or downloads) the local voice or dictation models, or writes to the real speech cache: Groq
+    alone answers, faked by the test that needs it."""
+    from core.infra.providers import dictation, speech
+    monkeypatch.setattr(speech, "ROOT_DIR", tmp_path)
+    monkeypatch.setitem(speech.SPEECH, "engines", ["groq"])
+    monkeypatch.setitem(dictation.DICTATION, "engines", ["groq"])
+
+
+@pytest.fixture(autouse=True)
 def _offline_embedder(monkeypatch, fake_embedder):
     """Every SellerBot runs the script; tests use the offline embedder (no model download)."""
     monkeypatch.setattr("core.infra.embedder.shared_embedder", lambda: fake_embedder)

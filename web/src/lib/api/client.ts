@@ -199,10 +199,20 @@ export function createHttpApi() {
     teamInsights: (target?: number) => request<T.TeamInsights>(`/api/team/insights${target ? `?target=${target}` : ""}`),
 
     // Shared
-    /** The text as audio, or null when the server has no voice for it (the browser reads it instead). */
-    speech: async (text: string): Promise<Blob | null> => {
-      const res = await fetch(config.apiBase + "/api/speech", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) }).catch(() => null);
+    /** The text as audio in the speaker's voice, or null when the server has no voice for it (the browser reads it). */
+    speech: async (text: string, speaker?: T.Speaker): Promise<Blob | null> => {
+      const res = await fetch(config.apiBase + "/api/speech", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, ...speaker }),
+      }).catch(() => null);
       return res?.status === 200 ? res.blob() : null;
+    },
+    /** What the learner said: one recorded turn as text (the server hears it). Throws ApiError when nothing was heard. */
+    dictate: async (audio: Blob): Promise<string> => {
+      const form = new FormData();
+      form.append("audio", audio, "turn.webm");
+      return (await request<{ success: true; text: string }>("/api/dictate", { body: form, timeoutMs: 30_000 })).text;
     },
     feedback: (body: T.FeedbackReq) => request<{ success: true }>("/api/feedback", { body }),
     knowledge: () => request<{ success: true; data: T.KnowledgeData }>("/api/knowledge"),
