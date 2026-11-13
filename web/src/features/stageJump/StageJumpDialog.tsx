@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Dialog, TextButton, TextInput } from "@/components/ui";
+import { Button, Dialog, Icon, TextInput } from "@/components/ui";
 import type { StageStart } from "@/lib/api/types";
 import { stageShort } from "@/lib/labels";
 import s from "./StageJump.module.css";
@@ -48,7 +48,13 @@ export function StageJumpDialog({ target, speaker, busy, onClose, onStart }: Pro
         <section className={s.recap} aria-label="So far">
           <div className={s.head}>
             <span className={s.title}>So far, {speaker} said</span>
-            {!isEditing && <TextButton onClick={() => target && setEditing(target.step)}>Edit</TextButton>}
+            {!isEditing && (
+              // The same quiet pencil button as editing a message in the chat: one look for "edit" everywhere.
+              <Button variant="ghost" className={s.edit} onClick={() => target && setEditing(target.step)}>
+                <Icon name="pencil" size={16} />
+                Edit
+              </Button>
+            )}
           </div>
           {isEditing ? (
             recap.map((r) => (
