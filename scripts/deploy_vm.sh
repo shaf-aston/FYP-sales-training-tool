@@ -58,8 +58,10 @@ if deps "$old" "$new" && bash -c "$RESTART" && live_on "$new"; then
   # for the log (exec): any shell around it that still holds the deploy's output keeps the SSH session open until
   # its 10-minute timeout (13 Nov; tested: the deploy now returns at once, the job carries on).
   if [ -z "${SKIP_VOICE_PREWARM:-}" ]; then
-    ( exec > .cache/speech-prewarm.log 2>&1 < /dev/null
-      exec setsid nohup flock -n .cache/speech-prewarm.lock nice -n 19 "$PY" -m scripts.speech_prewarm ) &
+    # the log is opened only once the lock is held: a start skipped because one is still running leaves its log be
+    ( exec > /dev/null 2>&1 < /dev/null
+      exec setsid nohup flock -n .cache/speech-prewarm.lock \
+        sh -c 'exec nice -n 19 "$0" -m scripts.speech_prewarm > .cache/speech-prewarm.log 2>&1' "$PY" ) &
   fi
   exit 0
 fi
