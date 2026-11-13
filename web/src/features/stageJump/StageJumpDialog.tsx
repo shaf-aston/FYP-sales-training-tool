@@ -33,7 +33,6 @@ export function StageJumpDialog({ target, speaker, busy, onClose, onStart }: Pro
     <Dialog
       open={!!target}
       onClose={onClose}
-      size="sm"
       title={target ? `Jump to ${stageShort(target.stage)}` : ""}
       actions={
         <>
