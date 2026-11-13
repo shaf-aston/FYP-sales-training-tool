@@ -167,3 +167,32 @@ def test_dictation_engines_in_order_and_a_failure_falls_through(monkeypatch):
     monkeypatch.setitem(dictation.ENGINES, "groq", lambda s: " . ")   # punctuation only: nothing was said
     with pytest.raises(dictation.NoSpeech):
         dictation.dictate(_wav_bytes())
+
+
+# --- lines made ahead of time must be the very ones the web asks for ---
+
+def test_a_message_is_split_as_the_web_splits_it():
+    """web/src/lib/tone.ts speakable + voice/speech/tts.ts sentences, mirrored: a cached line is only found if the
+    split agrees."""
+    assert speech.spoken_sentences("(slow, deliberate) Where are you **now**... that you _don't_ want?") == [
+        "Where are you now...", "that you don't want?"]
+    assert speech.spoken_sentences("That wears you down.¶And what would that change?") == [
+        "That wears you down.", "And what would that change?"]
+    assert speech.spoken_sentences("Honestly? It's ==two days== a month") == ["Honestly?", "It's two days a month."]
+    assert speech.spoken_sentences("Ok. Fine") == ["Ok. Fine."]   # a scrap under 4 characters joins the next
+
+
+def test_a_line_made_ahead_plays_from_the_cache(monkeypatch):
+    made = []
+    monkeypatch.setitem(speech.ENGINES, "kokoro", lambda text, voice, speed: made.append((text, voice)) or b"RIFFk")
+    assert speech.speak("Honestly?", voice="af_heart", engines=["kokoro"]) == b"RIFFk"
+    assert speech.is_cached("Honestly?", "af_heart") and not speech.is_cached("Honestly?", "am_michael")
+    assert made == [("Honestly?", "af_heart")]
+
+
+def test_the_prewarm_covers_the_bank_the_objections_and_the_script():
+    from scripts.speech_prewarm import buyer_lines, seller_lines
+    buyer = set().union(*buyer_lines().values())
+    assert "That's more than I was expecting, to be honest." in buyer      # a bank line, said as the web asks
+    assert "Glad to hear it." in seller_lines()                            # buy mode's common sense
+    assert all("{" not in s for s in buyer | seller_lines())                # no unfilled blanks

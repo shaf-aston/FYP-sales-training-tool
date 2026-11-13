@@ -63,6 +63,40 @@ def join_wav(parts: list[bytes]) -> bytes:
     return buf.getvalue()
 
 
+# --- how the web asks for a line: one request per sentence (web/src/lib/tone.ts speakable, voice/speech/tts.ts
+# sentences). Kept in step with them so a line made ahead of time (scripts/speech_prewarm.py) is the one asked for.
+_PAUSE = "¶"
+_LONG_PAUSE = re.compile(r"\s*\[pause[^\]]*\]\s*")
+_TONES = "slow|deliberate|calm|gentle|soft|warm|serious|firm|curious|playful|excited|upbeat"
+_NOTE = re.compile(rf"\((?:{_TONES})(?:,\s*(?:{_TONES}))*\)\s*")
+_KEY = re.compile(r"==(.+?)==")
+_LOUD = re.compile(r"\*\*(\S(?:.*?\S)?)\*\*")
+_STRESS = re.compile(r"(^|[\s(\"'“‘])_(\w[^_]*?)_(?=[\s.,!?…:;)—\-\"'”’]|$)")
+
+
+def spoken_sentences(text: str) -> list[str]:
+    """A message as the web sends it to be read: marks gone, each bubble ending a sentence, then one piece per
+    sentence (a scrap under 4 characters joined to the next)."""
+    bubbles = [b.strip() for b in _NOTE.sub("", _LONG_PAUSE.sub(_PAUSE, text or "")).split(_PAUSE) if b.strip()]
+    words = []
+    for b in bubbles:
+        b = _STRESS.sub(r"\1\2", _LOUD.sub(r"\1", _KEY.sub(r"\1", b)))
+        words.append(b if re.search(r"[.!?…]$", b) else f"{b}.")
+    out: list[str] = []
+    for part in (p.strip() for p in re.split(r"(?<=[.!?…])\s+", " ".join(words))):
+        if not part:
+            continue
+        if out and len(out[-1]) < 4:
+            out[-1] = f"{out[-1]} {part}"
+        else:
+            out.append(part)
+    return out
+
+
+def is_cached(text: str, voice: str, speed: float = 1.0) -> bool:
+    return _cache_path("kokoro", voice, speed, " ".join(text.split())).exists()
+
+
 def _persona_words(name: str) -> str:
     """A configured persona's words (background, pains, personality), to hear he or she in; "" for an unknown one."""
     from core.infra.loader import load_buyer_config   # here: the loader is heavier than this module needs at import
@@ -190,20 +224,22 @@ def _trim_cache() -> None:
 
 
 @timed
-def speak(text: str, speaker: str = "seller", persona: str = "", hint: str = "", speed: float = 1.0) -> bytes | None:
-    """The text as WAV audio, or None (empty, or no engine answered) so the browser reads it instead."""
+def speak(text: str, speaker: str = "seller", persona: str = "", hint: str = "", speed: float = 1.0,
+          voice: str | None = None, engines: list[str] | None = None) -> bytes | None:
+    """The text as WAV audio, or None (empty, or no engine answered) so the browser reads it instead. `voice` and
+    `engines` are for making lines ahead of time (scripts/speech_prewarm.py): a set Kokoro voice, Kokoro only."""
     text = " ".join((text or "").split())
     if not text:
         return None
     speed = min(1.5, max(0.6, speed))
-    for name in SPEECH.get("engines", ["groq"]):
-        voice = pick_voice(speaker, persona, hint) if name == "kokoro" else SPEECH["voice"]
-        path = _cache_path(name, voice, speed, text)
+    for name in engines or SPEECH.get("engines", ["groq"]):
+        voice_now = (voice or pick_voice(speaker, persona, hint)) if name == "kokoro" else SPEECH["voice"]
+        path = _cache_path(name, voice_now, speed, text)
         if path.exists():
             path.touch()
             return path.read_bytes()
         try:
-            audio = ENGINES[name](text, voice, speed)
+            audio = ENGINES[name](text, voice_now, speed)
         except Exception as e:  # noqa: BLE001 - any engine failure: the next one, then the browser voice
             logger.warning("speech: %s failed: %s", name, e)
             continue
