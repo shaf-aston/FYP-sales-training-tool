@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Card, Eyebrow, useToast } from "@/components/ui";
+import { Badge, Card, Eyebrow } from "@/components/ui";
 import { api } from "@/lib/api/client";
-import { STAGE_STEPS, stageIndex, stageMeta } from "@/lib/labels";
-import type { StageStart } from "@/lib/api/types";
+import { STAGE_STEPS, stageIndex, stageMeta, stageShort } from "@/lib/labels";
 import { useSession } from "@/features/session/SessionContext";
-import { StageJumpDialog } from "./StageJumpDialog";
+import { StageJumpDialog } from "@/features/stageJump/StageJumpDialog";
+import { useStageJump } from "@/features/stageJump/useStageJump";
 import { useUi } from "@/state/UiContext";
 import s from "./StageCard.module.css";
 
@@ -14,11 +14,16 @@ import s from "./StageCard.module.css";
  * Hidden while the quiz is open, so the quiz never shows its own answer. */
 export function StageCard() {
   const { stage, mode, buySessionId, jumpTo, practiceFrom } = useSession();
-  const toast = useToast();
-  const [target, setTarget] = useState<StageStart | null>(null);
-  const [starting, setStarting] = useState(false);
   const { sidePanel } = useUi();
   const [picked, setPicked] = useState<number | null>(null);
+  const jump = useStageJump(
+    () => (buySessionId ? api.buyStageStarts(buySessionId).then((r) => r.stages) : Promise.resolve([])),
+    async (to, slots) => {
+      const ok = await jumpTo(to.step, slots, to.stage);
+      if (ok) setPicked(null);
+      return ok;
+    },
+  );
   if (sidePanel === "quiz") {
     return (
       <Card tone="accent" className={s.card} aria-label="Stage of the sale">
@@ -35,22 +40,7 @@ export function StageCard() {
   // Buy mode: click another stage → recap card of the answers skipped → fresh practice call at that stage's main step.
   const onStage = async (i: number) => {
     if (i === at || mode !== "buy" || !buySessionId) return setPicked(picked === i || i === at ? null : i);
-    const want = STAGE_STEPS[i].id;
-    const stages = await api.buyStages(buySessionId).then((r) => r.stages).catch(() => null);
-    const found = stages?.find((st) => st.stage === want);
-    if (!found) return toast(`Couldn't open ${stageMeta(want).label}. Try again.`, "error");
-    setTarget(found);
-  };
-
-  const onStart = async (slots: Record<string, string>) => {
-    if (!target) return;
-    setStarting(true);
-    const ok = await jumpTo(target.step, slots, target.stage);
-    setStarting(false);
-    if (ok) {
-      setPicked(null);
-      setTarget(null);
-    }
+    await jump.open(STAGE_STEPS[i].id);
   };
 
   return (
@@ -62,7 +52,9 @@ export function StageCard() {
         {label}
       </p>
       {mode === "buy" && practiceFrom && (
-        <span className={s.practice}>Practice · started at {stageMeta(practiceFrom).label}</span>
+        <span className={s.practice}>
+          <Badge tone="accent">Practice from {stageShort(practiceFrom)}</Badge>
+        </span>
       )}
       <ol className={s.steps} aria-label="All stages">
         {STAGE_STEPS.map((step, i) => (
@@ -91,7 +83,7 @@ export function StageCard() {
         {showMeta.hint && <p className={s.detailText}>{showMeta.hint}</p>}
         {mode === "buy" && <p className={s.tip}>Pick a stage to jump there.</p>}
       </div>
-      <StageJumpDialog target={target} busy={starting} onClose={() => setTarget(null)} onStart={(a) => void onStart(a)} />
+      <StageJumpDialog speaker="you" {...jump.dialog} />
     </Card>
   );
 }

@@ -39,5 +39,8 @@ const key = (value: string | null | undefined) => (value ?? "").trim().toLowerCa
 export const stageMeta = (s: string) =>
   STAGE_META[key(s)] ?? Object.values(STAGE_META).find((m) => key(m.label) === key(s)) ?? { label: s };
 
+/** A stage's one-word name from the progress tracker ("Belief"); the id itself when it has none. */
+export const stageShort = (s: string) => STAGE_STEPS.find((step) => step.id === key(s))?.short ?? s;
+
 /** Where `stage` sits in STAGE_STEPS; -1 before the call starts. */
 export const stageIndex = (s: string) => STAGE_STEPS.findIndex((step) => step.id === key(s));

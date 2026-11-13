@@ -1,6 +1,8 @@
-# Jumping to a stage (buy mode, the stage bar): where each stage starts, and the answers the learner is
-# taken to have given on the stages skipped. The learner sees these on a recap card and can edit them first,
-# so the seller's first line has real answers to build on ("You said leads dried up...").
+# Jumping to a stage: where each stage starts, and what the prospect is taken to have said on the stages skipped.
+# The learner sees these on a recap card (web/src/features/stageJump) and can edit them first, so the call
+# picks up mid-way instead of out of nowhere.
+# Written once for both modes: in buy mode the learner is the prospect ("So far, you said"); in sell mode the
+# AI prospect is taken to have said the same ("So far, they said").
 # starts: stage -> the step on the main path the jump lands on (never an objection branch).
 # samples: slot (a step's `capture`) -> a plausible answer, in the prospect's words.
 lead: "Picking up where we left off."   # said in front of the first line after a jump past the opening
