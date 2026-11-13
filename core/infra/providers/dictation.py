@@ -30,8 +30,30 @@ class NoSpeech(RuntimeError):
     """Nothing could be heard in the clip (silence, a bad file, every engine down)."""
 
 
+def _from_wav(audio: bytes) -> np.ndarray:
+    """A plain PCM WAV, read without ffmpeg: mono, resampled to 16 kHz."""
+    import wave
+    with wave.open(io.BytesIO(audio)) as w:
+        width, channels, rate = w.getsampwidth(), w.getnchannels(), w.getframerate()
+        raw = w.readframes(min(w.getnframes(), rate * int(DICTATION["max_seconds"])))
+    if width != 2:
+        raise NoSpeech("only 16-bit WAV is read without ffmpeg")
+    samples = np.frombuffer(raw, dtype="<i2").astype(np.float32).reshape(-1, channels).mean(axis=1) / 32768.0
+    if rate != RATE and samples.size:
+        samples = np.interp(np.arange(0, samples.size, rate / RATE), np.arange(samples.size), samples).astype(np.float32)
+    return samples
+
+
 def decode(audio: bytes) -> np.ndarray:
-    """Any browser recording as 16 kHz mono float samples (ffmpeg). Raises NoSpeech for something that isn't audio."""
+    """Any browser recording as 16 kHz mono float samples: a WAV read here, anything else (webm/opus, ogg, mp4)
+    through ffmpeg. Raises NoSpeech for something that isn't audio."""
+    if audio[:4] == b"RIFF" and audio[8:12] == b"WAVE":
+        try:
+            return _from_wav(audio)
+        except NoSpeech:
+            pass
+        except Exception as e:  # noqa: BLE001 - a broken WAV header: ffmpeg may still read it
+            logger.info("dictation: wav read failed (%s), trying ffmpeg", e)
     try:
         out = subprocess.run(["ffmpeg", "-nostdin", "-loglevel", "error", "-i", "pipe:0", "-t", str(DICTATION["max_seconds"]),
                               "-ac", "1", "-ar", str(RATE), "-f", "s16le", "pipe:1"],
