@@ -44,6 +44,9 @@ def test_the_price_told_gets_a_reaction_to_the_price():
         assert states_price(line), line
         assert next_move(0.5, line, []).topic == "price"
     assert not states_price("How much would you want to spend?")
+    assert not states_price("We've got invoicing, dashboards and two hundred integrations.")   # live, 13 Nov
+    assert not states_price("We've helped over a thousand owners like you.")
+    assert states_price("It works out at three hundred a month.") and states_price("It's two and a half thousand.")
     assert not states_price("We help owners cut the admin that eats the week.")
     bank = load_yaml("prospect_lines.yaml")["lines"]
     assert all("price" in bank[kind] for kind in ("lean_in", "ask", "stall"))
@@ -80,3 +83,11 @@ def test_small_talk_and_payment_questions_have_answers():
     sense = load_yaml("script/common_sense.yaml")
     assert "I'm good thanks" in str(sense) and "Glad to hear it." in str(sense)
     assert "what would the payments look like" in str(load_yaml("offers/shay_coaching.yaml"))
+
+
+def test_a_real_question_that_starts_like_a_greeting_is_not_a_stock_one():
+    """"How are you handling the admin at the moment?" was rated a stock question, like "How are you?"."""
+    assert "open_question" in rate_turn("How are you handling the admin at the moment?", "", 3).signals
+    assert "open_question" in rate_turn("What do you do when that happens?", "", 3).signals
+    for stock in ["How are you?", "Hi, how are you doing today?", "What do you do?", "Anything else?"]:
+        assert "generic_question" in rate_turn(stock, "", 3).signals, stock

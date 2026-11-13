@@ -9,6 +9,7 @@ import type { RedoRes, Review, ReviewTurn } from "@/lib/api/types";
 import { config } from "@/lib/config";
 import { evalStore, gradeOf, useEvalState } from "./evalStore";
 import { gradeTone } from "./options";
+import { CallStages } from "./CallStages";
 import { ReviewLine, ReviewSummary, ReviewTurns } from "./ReviewTurns";
 import s from "./ReviewDialog.module.css";
 
@@ -140,6 +141,8 @@ function ReviewBody() {
     <div className={s.body}>
       <p>{intro(review, gradeOf(evalState))}</p>
       <ReviewSummary review={review} />
+      <CallStages stages={review.stages ?? []} focus={review.stage_focus} />
+      <h3 className={s.heading}>Turn by turn</h3>
       <ReviewTurns
         review={review}
         seller="You"

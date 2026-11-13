@@ -65,3 +65,10 @@
   color: var(--text-muted);
   font-size: var(--text-sm);
 }
+/* The second layer's flags (a trained model): set apart from the rules' reasons. */
+.noticed {
+  padding-left: var(--space-5);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  font-style: italic;
+}

@@ -436,7 +436,8 @@ moves:   # what the buyer does this turn, by rules (core/sell_mode/buyer_moves.p
   closed_openers: [would, could, can, do, does, did, is, are, was, were, will, shall, should, have, has, may, might, any, anything]
   # asked as a yes/no question, these ask them to take a next step: keen buyers say yes, the rest put it off
   # a statement that gives the price (buyer_moves.states_price): a currency figure, or money words
-  price_said: '[$£€]\s?\d|\b\d[\d,.]*\s?k\b|\b(thousand|grand|hundred|pounds|dollars|euros|quid)\b'
+  # (live, 13 Nov: "two hundred integrations" was heard as a price; a number word counts only as an amount)
+  price_said: '[$£€]\s?\d|\b\d[\d,.]*\s?k\b|\b(pounds|dollars|euros|quid|grand)\b|\b(it''s|it is|that''s|costs?|price is|investment is|comes to|works out at|just)\s+(about |around |roughly |only )?(a|one|two|three|four|five|six|seven|eight|nine|ten|twelve|fifteen|twenty|thirty|forty|fifty|\d[\d,.]*)( and a half)?\s+(thousand|hundred)\b|\b(thousand|hundred)\s+(a|per|for the|every)\s+(month|year|week|seat|user)\b'
   next_step: [sign you up, get you signed up, get you set up, book, walkthrough, walk you through, demo, schedule, set up a call, set up a time, another call, follow-up, follow up, next step, sign up, get started, move forward, go ahead, get you started, trial]
   bank: true           # say lines from config/prospect_lines.yaml when one fits; false: the AI words every move
   min_score: 0.55      # an answer's line must be this close to the seller's question (shared embedder) to be said.

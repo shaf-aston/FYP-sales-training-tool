@@ -1,0 +1,67 @@
+{
+  "embed_model": "BAAI/bge-small-en-v1.5",
+  "min_precision": 0.9,
+  "labels": {
+    "pushy": {
+      "train_examples": 126,
+      "threshold": 0.89,
+      "cv_precision": 0.912,
+      "cv_recall": 0.984,
+      "test_examples": 6,
+      "test_precision": 0.714,
+      "test_recall": 0.833,
+      "enabled": false,
+      "test_false_flags": [
+        "Since late payment is the issue, a reminder would go out three days before each invoice is due.",
+        "That's fine. Shall we pencil in a call for the end of March?"
+      ]
+    },
+    "dismissive": {
+      "train_examples": 114,
+      "threshold": 0.97,
+      "cv_precision": 0.912,
+      "cv_recall": 0.912,
+      "test_examples": 7,
+      "test_precision": 1.0,
+      "test_recall": 0.714,
+      "enabled": true,
+      "test_false_flags": []
+    },
+    "leading": {
+      "train_examples": 108,
+      "threshold": 0.97,
+      "cv_precision": 0.903,
+      "cv_recall": 0.944,
+      "test_examples": 6,
+      "test_precision": 1.0,
+      "test_recall": 0.333,
+      "enabled": true,
+      "test_false_flags": []
+    },
+    "ignored": {
+      "train_examples": 36,
+      "threshold": 0.98,
+      "cv_precision": 0.929,
+      "cv_recall": 0.722,
+      "test_examples": 6,
+      "test_precision": 1.0,
+      "test_recall": 0.833,
+      "enabled": true,
+      "test_false_flags": []
+    },
+    "feature_dump": {
+      "train_examples": 102,
+      "threshold": 0.95,
+      "cv_precision": 0.903,
+      "cv_recall": 1.0,
+      "test_examples": 6,
+      "test_precision": 0.857,
+      "test_recall": 1.0,
+      "enabled": true,
+      "test_false_flags": [
+        "What do they hate most about it?"
+      ]
+    },
+    "clean_test_turns_flagged": "1 of 30"
+  }
+}

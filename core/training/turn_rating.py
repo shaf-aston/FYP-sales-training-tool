@@ -40,6 +40,24 @@ def _has_word(text: str, words) -> bool:
     return any(re.search(rf"\b{re.escape(w)}\b", text) for w in words)
 
 
+_STOCK_LEAD = {"so", "and", "hi", "hey", "hello", "ok", "okay", "right", "well"}
+_STOCK_TAIL = {"doing", "today", "going", "keeping", "at", "all", "then", "there", "mate", "you", "for", "on", "getting"}
+
+
+def _is_stock(sentence: str, stock_questions) -> bool:
+    """The sentence is a stock question and nothing more: "How are you?", "So how are you doing today?". Not one
+    that only starts like one: "How are you handling the admin?" and "What do you do when that happens?" are
+    real questions (live, 13 Nov: the first was rated a stock question)."""
+    words = re.findall(r"[a-z']+", sentence.lower())
+    while words and words[0] in _STOCK_LEAD:
+        words = words[1:]
+    for phrase in stock_questions:
+        p = phrase.lower().split()
+        if words[:len(p)] == p and len(words) - len(p) <= 3 and set(words[len(p):]) <= _STOCK_TAIL:
+            return True
+    return False
+
+
 def _count_openings(message: str, question_words, invitations, stock_questions=()) -> int:
     """How many times the seller tried to open the buyer up in one turn.
 
@@ -52,9 +70,7 @@ def _count_openings(message: str, question_words, invitations, stock_questions=(
     lowered = message.lower()
     count = sum(len(re.findall(rf"\b{re.escape(p)}\b", lowered)) for p in invitations)
     for sentence in _sentences(lowered):
-        if sentence.endswith("?") and _has_word(sentence, question_words) and not _has_word(
-            sentence, stock_questions
-        ):
+        if sentence.endswith("?") and _has_word(sentence, question_words) and not _is_stock(sentence, stock_questions):
             count += 1
     return count
 
@@ -111,7 +127,7 @@ def rate_turn(
         fired.append("open_question")
         if overlap:
             fired.append("on_topic")
-    elif _has_word(text.lower(), stock) and "?" in text:
+    elif "?" in text and any(_is_stock(sentence, stock) for sentence in _sentences(text)):
         fired.append("generic_question")
     elif _is_closed_question(text, question_words, cfg.get("closed_starters", [])):
         fired.append("closed_question")
