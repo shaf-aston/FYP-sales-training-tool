@@ -102,3 +102,10 @@ def test_a_tag_question_is_a_yes_no_one():
     assert next_move(0.3, "You'd want your evenings back, wouldn't you?", ["closed_question"]).closed
     for line in ["What would that change for you?", "Why didn't it work, do you think?"]:
         assert not is_closed(line), line
+
+
+def test_what_it_would_need_to_save_them_asks_about_value():
+    """"What would it need to save you?" got "I'd say scaling operations." (a need line, live 13 Nov)."""
+    assert topic_of("What would it need to save you?") == "value"
+    assert topic_of("What would make it worth it to you?") == "value"
+    assert topic_of("What do you need from a new system?") == "need"

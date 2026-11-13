@@ -4,11 +4,11 @@ Pure logic, no AI calls, no I/O. BuyerSession asks; this module answers.
 """
 
 import random
-import re
 
 from core.sell_mode.buyer_moves import is_closed
 from core.infra.constants import SOLD_MIN_TURNS, SOLD_READINESS, WALK_MIN_TURNS, WALK_READINESS
 from core.training.turn_rating import NEGATIVE_SIGNALS, load_turn_rating
+from core.infra.phrases import says
 
 
 class ObjectionPacer:
@@ -52,7 +52,7 @@ class ObjectionPacer:
         return (
             turn >= wait.get("turn", 10 ** 6)
             or (wait.get("pitch", False) and any(_is_pitch(line) for line in lines))
-            or any(_mentions(word, line) for word in wait.get("mention", []) for line in lines)
+            or any(says(word, line) for word in wait.get("mention", []) for line in lines)
         )
 
     def _raised(self, turn: int, said: list[str] | None) -> list[tuple[int, dict]]:
@@ -86,13 +86,6 @@ class ObjectionPacer:
 
 
 _PITCH_MIN_WORDS = 6
-
-
-def _mentions(word: str, line: str) -> bool:
-    """`word` said in the line: as a whole word (or a word's start), or as a symbol anywhere ("$4,000")."""
-    if not word[:1].isalnum():
-        return word in line
-    return re.search(rf"\b{re.escape(word)}", line) is not None
 
 
 def _asks_open(line: str) -> bool:

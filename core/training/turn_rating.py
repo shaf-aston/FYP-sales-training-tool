@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 
 from core.infra.loader import load_yaml
 from core.infra.utils import clamp, contains_nonnegated_keyword, tokenize
+from core.infra.phrases import says_word
 
 
 @dataclass(frozen=True)
@@ -34,10 +35,6 @@ NEGATIVE_SIGNALS = tuple(name for name, weight in load_turn_rating()["weights"].
 
 def _sentences(message: str) -> list[str]:
     return [p for p in re.split(r"(?<=[.!?])\s+", message.strip()) if p]
-
-
-def _has_word(text: str, words) -> bool:
-    return any(re.search(rf"\b{re.escape(w)}\b", text) for w in words)
 
 
 _STOCK_LEAD = {"so", "and", "hi", "hey", "hello", "ok", "okay", "right", "well"}
@@ -70,7 +67,7 @@ def _count_openings(message: str, question_words, invitations, stock_questions=(
     lowered = message.lower()
     count = sum(len(re.findall(rf"\b{re.escape(p)}\b", lowered)) for p in invitations)
     for sentence in _sentences(lowered):
-        if sentence.endswith("?") and _has_word(sentence, question_words) and not _is_stock(sentence, stock_questions):
+        if sentence.endswith("?") and says_word(question_words, sentence) and not _is_stock(sentence, stock_questions):
             count += 1
     return count
 
@@ -92,9 +89,7 @@ def _is_closed_question(message: str, question_words, closed_starters) -> bool:
             return True
         words = re.findall(r"[a-z']+", sentence)
         first = words[1:2] if words[:1] in (["so"], ["and"], ["ok"], ["okay"], ["right"]) else words[:1]   # "So shall I ...?"
-        if sentence.endswith("?") and first and first[0] in closed_starters and not _has_word(
-            sentence, question_words
-        ):
+        if sentence.endswith("?") and first and first[0] in closed_starters and not says_word(question_words, sentence):
             return True
     return False
 

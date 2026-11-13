@@ -189,11 +189,12 @@ dictation:           # what the learner says into the mic, turned into text here
 speech:              # replies read aloud by the server, so the browser needs no sign-in (core/infra/providers/speech.py)
   engines: [kokoro, groq]   # tried in order; the browser's own voice reads it when none answers
   cache_dir: .cache/speech  # every line said once is kept (gitignored): bank and script lines play at once after that
-  cache_max_mb: 300
+  cache_max_mb: 2000   # the lines made ahead (scripts/speech_prewarm.py) are ~430 MB
   kokoro:              # Kokoro-82M on this machine: free, no key, no daily limit. Weights Apache-2.0; its phonemizer is
                        # GPL-3, fine run on our own server. About 0.5 s of work per second of speech on 2 cores.
     files_url: https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/
-    model: kokoro-v1.0.int8.onnx   # 92 MB; the fp32 one (325 MB) is no faster here and sounds the same
+    model: kokoro-v1.0.onnx   # 325 MB. On the VM's 2 ARM cores fp32 is twice as fast as int8 (1.2 s vs 2.2 s of work
+                              # per second of speech, measured 13 Nov): ARM's int8 kernels are slow
     voices: voices-v1.0.bin
     dir: .cache/kokoro
     threads: 2

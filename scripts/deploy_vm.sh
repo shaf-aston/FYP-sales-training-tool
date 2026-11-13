@@ -51,6 +51,10 @@ if deps "$old" "$new" && bash -c "$RESTART" && live_on "$new"; then
   # the voice and dictation models (120 MB + 660 MB, once); without them Groq or the browser does it instead
   [ -n "${SKIP_VOICE_FETCH:-}" ] || "$PY" -c "from core.infra.providers.speech import fetch_files as a; from core.infra.providers.dictation import fetch_files as b; a(); b()" \
     || echo "::warning title=Voice::could not fetch the voice models; speech falls back to Groq or the browser"
+  # make the fixed lines ahead of time, detached and at the lowest priority (a live call always comes first); one at
+  # a time, and a no-op once they are all made
+  [ -n "${SKIP_VOICE_PREWARM:-}" ] || setsid nohup flock -n .cache/speech-prewarm.lock nice -n 19 \
+    "$PY" -m scripts.speech_prewarm > .cache/speech-prewarm.log 2>&1 < /dev/null &
   exit 0
 fi
 

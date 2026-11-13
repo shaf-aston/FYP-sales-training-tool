@@ -18,6 +18,7 @@ topics:   # what the seller asked about: the topic with the longest phrase in th
   current: [currently, at the moment, right now, today, using now, what are you using, how do you do, tried, before]
   pain: [challenge, problem, struggle, struggling, frustrat, hard, difficult, pain, issue, worry, keeping you up, holding you back, wrong]
   duration: [how long has, how long have, been going on, since when, how long's that, been like that]
+  value: [need to save you, would it need to save, save you, worth it to you, worth to you, pay for itself, make it worth, need to see to, would make it worth]   # what it must be worth: "what would it need to save you?" got "I'd say scaling operations" (live, 13 Nov)
   consequence: [if nothing changes, nothing changes, what happens if, what would happen, if you don't, if you didn't, stays the same, stay the same, keep going like this, carry on like this, costing you, cost you, what's it costing, what's that costing]
   need: [want, need, looking for, achieve, goal, hoping, ideal, success, outcome, matter, important, why, fix, change, priority]
 
@@ -84,6 +85,15 @@ lines:
       - "A while. It's got worse in the last few months."
       - "Since we grew, really. What worked when we were smaller doesn't now."
       - "Too long. That's partly why I'm on this call."
+    value:   # what it would have to be worth to them
+      - "If it saved me a few hours a week, that'd be worth it."
+      - "Honestly, if it paid for itself in a few months, I'd be happy."
+      - "A day a week back would make a real difference."
+      - "It'd need to save more than it costs, obviously. A good chunk more."
+      - "If I could stop working evenings, that's worth a lot to me."
+      - "I'd want to see it pay for itself inside the year."
+      - "Even a few hours a week would be something, to be fair."
+      - "It'd have to be clearly worth it. I'm not after another thing to manage."
     consequence:   # what happens if nothing changes: the stakes, said plainly
       - "More of the same, honestly. And I'm not sure I can keep that up for another year."
       - "It just keeps getting worse. That's the bit that worries me."

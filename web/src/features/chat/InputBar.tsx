@@ -16,7 +16,7 @@ export function InputBar() {
   const placeholder = noBuyer
     ? "Set up your buyer first."
     : ended
-      ? "Conversation over. Reset to go again."
+      ? "Call over. Pick New buyer to go again, or Walk it back."
       : "Type your reply…";
 
   // Grow with the text; CSS caps the height at --input-max-height and scrolls beyond.

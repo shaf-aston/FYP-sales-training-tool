@@ -77,9 +77,16 @@ export function ChatHeader() {
     api.buySteps(buySessionId).then((r) => setLoaded({ product, steps: r.steps })).catch(() => {});
   }, [menuOpen, mode, buySessionId, buyProduct, steps.length]);
 
+  // An item that opens a dialog hands focus back to the menu button first: the dialog returns focus to whatever
+  // had it when it opened, and the item is gone once the menu closes (focus landed on the quiz panel, live 13 Nov).
+  const leaveMenu = () => {
+    setMenuOpen(false);
+    triggerRef.current?.focus();
+  };
+
   const onJump = async (step: string) => {
     if (!step) return;
-    setMenuOpen(false);
+    leaveMenu();
     // Like changing the call type: a call the learner has said something in is cleared only when they agree.
     const ok =
       !messages.some((m) => m.role === "user") ||
@@ -95,7 +102,7 @@ export function ChatHeader() {
   const onProduct = async (id: string) => {
     const next = products.find((p) => p.id === id);
     if (!next || id === buyProduct) return;
-    setMenuOpen(false);
+    leaveMenu();
     const ok = await confirm({
       title: `Practise a ${next.label.toLowerCase()}?`,
       body: `${next.blurb} This starts a fresh call; the current chat is cleared.`,
@@ -106,12 +113,12 @@ export function ChatHeader() {
   };
 
   const pick = (dialog: "help" | "feedback" | "account") => {
-    setMenuOpen(false);
+    leaveMenu();
     openDialog(dialog);
   };
 
   const onReset = async () => {
-    setMenuOpen(false);
+    leaveMenu();
     const ok = await confirm({
       title: "Reset this conversation?",
       body: "This wipes the conversation and starts again. You cannot undo it.",
@@ -176,7 +183,7 @@ export function ChatHeader() {
                 </button>
               )}
               {mode === "buy" && products.length > 1 && (
-                <label className={s.item}>
+                <label className={`${s.item} ${s.selectItem}`}>
                   <span className="sr-only">What the rep sells (starts a fresh call)</span>
                   <select
                     role="menuitem"
@@ -196,7 +203,7 @@ export function ChatHeader() {
                 </label>
               )}
               {mode === "buy" && steps.length > 0 && (
-                <label className={s.item}>
+                <label className={`${s.item} ${s.selectItem}`}>
                   <span className="sr-only">Jump to step (starts a fresh call there)</span>
                   <select
                     role="menuitem"

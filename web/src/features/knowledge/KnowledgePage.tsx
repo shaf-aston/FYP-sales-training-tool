@@ -15,7 +15,8 @@ const sectionId = (id: string) => `s-${id}`;
 const SECTION_IDS = FIELDS.map((f) => sectionId(f.id));
 
 function BackLink() {
-  const sell = useSearchParams().get("mode") === "sell";
+  // the knowledge base sets up sell calls and every link in comes from selling: back to selling unless told otherwise
+  const sell = useSearchParams().get("mode") !== "buy";
   return (
     <Link href={sell ? config.routes.sell : config.routes.buy} className={s.back}>
       ← {sell ? "Back to selling" : "Back to buying"}
@@ -107,7 +108,7 @@ export function KnowledgePage() {
             <div>
               <h1 className={s.title}>Configure knowledge base</h1>
             </div>
-            <Suspense fallback={<Link href={config.routes.buy} className={s.back}>← Back to buying</Link>}>
+            <Suspense fallback={<Link href={config.routes.sell} className={s.back}>← Back to selling</Link>}>
               <BackLink />
             </Suspense>
           </header>

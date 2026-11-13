@@ -30,7 +30,7 @@ function Frame({ id, label, hideLabel, hint, count, max, children }: Wrap & { id
         <div className={s.meta}>
           {hint && <span id={`${id}-hint`}>{hint}</span>}
           {showCount && (
-            <span className={ratio >= 1 ? s.over : ratio > 0.9 ? s.warn : undefined}>
+            <span className={`${s.count} ${ratio >= 1 ? s.over : ratio > 0.9 ? s.warn : ""}`}>
               {count} / {max}
             </span>
           )}

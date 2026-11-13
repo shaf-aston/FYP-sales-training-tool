@@ -67,17 +67,27 @@ function LiveDemo() {
         <span>Live practice</span>
         <span className={s.stage}>Stage · Objection</span>
       </div>
-      <div className={s.thread} data-leaving={leaving || undefined}>
-        {demoChat.slice(0, visible).map((m, i) => (
-          <p key={i} className={`${s.bubble} ${s[m.who]}`}>
-            {m.text}
-          </p>
-        ))}
-        {typing && (
-          <span className={`${s.bubble} ${s.typing} ${s[typing.who]}`}>
-            <TypingDots />
-          </span>
-        )}
+      {/* the whole chat, hidden, sizes the box: restarting the loop never shrinks it and moves the page (phone) */}
+      <div className={s.threadSlot}>
+        <div className={`${s.thread} ${s.threadSizer}`} aria-hidden="true">
+          {demoChat.map((m, i) => (
+            <p key={i} className={`${s.bubble} ${s[m.who]}`}>
+              {m.text}
+            </p>
+          ))}
+        </div>
+        <div className={s.thread} data-leaving={leaving || undefined}>
+          {demoChat.slice(0, visible).map((m, i) => (
+            <p key={i} className={`${s.bubble} ${s[m.who]}`}>
+              {m.text}
+            </p>
+          ))}
+          {typing && (
+            <span className={`${s.bubble} ${s.typing} ${s[typing.who]}`}>
+              <TypingDots />
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -160,8 +170,16 @@ export function Landing() {
             <p className={s.kicker}>Sales call practice</p>
             <h1 className={s.h1}>
               Get good at
-              <span key={word} className={`${s.word} neon-text`}>
-                {heroWords[word]}
+              {/* every word sizes the slot, so a longer one never wraps the line and moves the page (phone CLS 0.17) */}
+              <span className={s.wordSlot}>
+                {heroWords.map((w) => (
+                  <span key={w} className={s.wordSizer} aria-hidden="true">
+                    {w}
+                  </span>
+                ))}
+                <span key={word} className={`${s.word} neon-text`}>
+                  {heroWords[word]}
+                </span>
               </span>
               before the real call.
             </h1>

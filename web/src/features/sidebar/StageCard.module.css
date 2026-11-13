@@ -17,15 +17,18 @@
   padding: 0;
   list-style: none;
 }
+/* each name centred under its own segment, a full tap target tall ("Problem" and "Belief" ran together, 34 px tall) */
 .step {
   display: grid;
   gap: var(--space-1);
+  align-content: start;
   width: 100%;
+  min-height: var(--touch-target);
   padding: var(--space-1) 0;
   background: none;
   border: 0;
   cursor: pointer;
-  text-align: left;
+  text-align: center;
   border-radius: var(--radius-sm);
 }
 .step:focus-visible {

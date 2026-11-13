@@ -21,9 +21,9 @@ Each folder holds one job; its `__init__.py` says which. Imports point down or i
 
 ```
 core/
-  infra/        plumbing, no sales knowledge: env, constants, loader, utils, embedder (the one local meaning model), similarity (meaning match), logs/, providers/ (LLM, speech, router)
-  training/     learner tools both modes use: turn_rating, quiz, drills, team_insights (a manager's view)
-  sell_mode/    learner sells, AI buys: buyer_*, sell_service, sell_evaluator, session_review, knowledge, real_calls, custom_buyer
+  infra/        plumbing, no sales knowledge: env, constants, loader, utils, phrases (the one "does this line say X?" rule), embedder (the one local meaning model), similarity (meaning match), logs/, providers/ (LLM, router, speech: Kokoro then Groq, dictation: Parakeet then Groq)
+  training/     learner tools both modes use: turn_rating, blemish (a trained second layer under it), quiz, drills, team_insights (a manager's view)
+  sell_mode/    learner sells, AI buys: buyer_*, sell_service, sell_evaluator, session_review, call_stages, knowledge, real_calls, custom_buyer
   calls/        an uploaded real call, no AI: transcript (parsers), roles (rep / prospect), profile, reader (the one entry)
   accounts/     what is kept for a learner, SQLite: db (file, migrations), passwords, users, teams, library
   sop/          a team's sales SOP, no AI: document (txt/md/docx/pdf), outline, checklist, adherence
@@ -45,7 +45,7 @@ backend/        transport: app, routes/, security
 | 4 | Pure rules decide | `core/training/turn_rating.py` (rating), `core/sell_mode/buyer_rules.py` (sold / walked / coaching hint), `core/sell_mode/buyer_moves.py` (the buyer's move), `core/sell_mode/buyer_lines.py` (a real prospect's line for it), `core/sell_mode/buyer_prompt.py` (buyer system prompt), `core/sell_mode/buyer_guardrails.py` (checks each AI reply) | Deterministic. No I/O, no HTTP, easy to test. The move (share, guard, stall, ask, lean in) comes from readiness, the seller's line and its turn_rating signals (`buyer.yaml` `moves`); a line from `config/prospect_lines.yaml` says it when one fits (filled from the persona, never twice a call, an answer's line close enough in meaning to the question), else the AI words it, told the move. The objection pacer adds the turn's objection after either. Seeded by session and turn, so a replay goes the same way; each turn's `move` and `source` (bank / ai) are logged. |
 | 5 | Router picks a provider | `core/infra/providers/router.py` `complete` | Tries providers in order, falls back on failure. |
 | 6 | Provider calls the LLM | `core/infra/providers/factory.py` → `providers/llm/groq.py` behind `providers/base.py` | Swap seam: every provider has the same interface. |
-| 7 | Review and analytics | `core/sell_mode/session_review.py` (per-turn replay), `core/sell_mode/sell_evaluator.py` (final score + grade), `core/infra/logs/events.py` (events to the log and `data/logs/events/`) | Everything shown after the session is rebuilt from the saved transcript. |
+| 7 | Review and analytics | `core/sell_mode/session_review.py` (per-turn replay), `core/sell_mode/call_stages.py` (the call stage by stage, CAT's order, with why each stage matters; `config/call_stages.yaml`), `core/training/blemish.py` (a small trained model that adds what the rules missed, never changes a rating; `scripts/blemish/`), `core/sell_mode/sell_evaluator.py` (final score + grade), `core/infra/logs/events.py` (events to the log and `data/logs/events/`) | Everything shown after the session is rebuilt from the saved transcript. Every phrase check (buyer, rating, stages, score) goes through `core/infra/phrases.py`, so they agree on what was said. |
 
 Buy mode: `buy.py` → `SellerBot.chat` → `core/buy_mode/script_engine/` (scripted lines for the products in `config/script/engine.yaml`, listed by `GET /api/buy/products` and picked in the ⋯ menu under "Call type"; `/init` takes the id as `product_type`, any other product gets `default_product`. AI only answers uncovered product questions, acknowledges what they said and judges close calls, and every AI sentence goes through `ai/line.py` `checked_line`). `flow.py` `CallFlow` keeps the call's history and stage. Coach notes come from the script step; `coach.py` answers the learner's questions.
 
