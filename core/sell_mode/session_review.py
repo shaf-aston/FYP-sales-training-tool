@@ -10,6 +10,7 @@ the learner actually saw, because both come from the same two functions.
 from __future__ import annotations
 
 from core.sell_mode.call_stages import analyse_stages, focus
+from core.training.blemish import notice
 from core.training.turn_rating import (
     NEGATIVE_SIGNALS,
     REASONS,
@@ -88,6 +89,8 @@ def build_review(
         curve.append(round(readiness, 3))
         previous_buyer_line = buyer_reply or previous_buyer_line
 
+    for number, flags in notice(turns).items():   # the second layer: only adds what the rules missed
+        turns[number - 1]["noticed"] = flags
     pivotal = pick_pivotal_turns(turns)
     stages = analyse_stages(turns)
     return {

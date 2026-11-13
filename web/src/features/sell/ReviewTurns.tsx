@@ -74,8 +74,15 @@ export function ReviewTurns({ review, seller, buyer, cutoff = Infinity, pivotalA
                   ))}
                 </ul>
               ) : (
-                <p className={s.muted}>Nothing here moved them either way.</p>
+                !t.noticed?.length && <p className={s.muted}>Nothing here moved them either way.</p>
               )}
+              {t.noticed?.length ? (
+                <ul className={s.noticed}>
+                  {t.noticed.map((n) => (
+                    <li key={n.label}>{n.reason}</li>
+                  ))}
+                </ul>
+              ) : null}
               {(key || actionOnEveryTurn) && !gone && pivotalAction?.(t)}
             </li>
           );

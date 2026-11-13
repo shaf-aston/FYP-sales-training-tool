@@ -285,6 +285,8 @@ export interface ReviewTurn {
   rating: number; // 1-5
   reasons: string[];
   readiness_change: number;
+  /** What the second layer (a trained model, core/training/blemish.py) noticed that the rules didn't. */
+  noticed?: { label: string; reason: string; confidence: number }[];
 }
 
 /** How a stage of the call went (core/sell_mode/call_stages.py, config/call_stages.yaml). */

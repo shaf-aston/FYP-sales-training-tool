@@ -129,3 +129,19 @@ detect:
   playback_min_words: 3    # a statement that repeats this many of the buyer's own words plays it back
   offer_min_words: 2       # an offer that uses this many of the buyer's own words is in their words
   early_turns: 2           # a pitch or a price within the first this many turns, before any problem, is early
+
+# The second layer under the turn rules (core/training/blemish.py): a small model trained on hand-written examples
+# (scripts/blemish/) that flags what the rules miss when it is said in other words. It only adds a line to a turn,
+# never changes its rating. A blemish the model could not do reliably is switched off inside the model file.
+blemish:
+  enabled: true
+  model: models/blemish.npz
+  covered_by:   # the rules' signals that already say the same thing: no second flag for it
+    pushy: [pressure]
+    feature_dump: [monologue]
+  reasons:
+    pushy: "Also noticed: this leans on them to decide, which tends to make people push back."
+    dismissive: "Also noticed: this brushes their concern aside; asked about, it usually turns out smaller."
+    leading: "Also noticed: the question hands them the answer, so their yes doesn't tell you much."
+    ignored: "Also noticed: they told you something that mattered and the reply moved on without it."
+    feature_dump: "Also noticed: a list of what it has, with nothing tied to what they told you."
