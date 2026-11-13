@@ -24,6 +24,7 @@ def test_no_answer_is_asked_again_never_taken_as_the_expected_one(fake_embedder,
     ("m_reframe1", "yes of course", "m_reframe1_now"),
     ("m_reframe1", "no", "m_reframe2"),                 # this reframe has no grip: the flow chart's "No"
     ("m_reframe1", "not sure", "m_reframe1_now"),
+    ("m_reframe1", "I'm scared", "m_reframe1_now"),     # the worry again is the yes: it is their mindset deciding
     # Q2 "Are you 100% with where you are at right now?" (SOP: "Well, no.")
     ("m_reframe1_now", "no", "m_reframe1_dictate"),
     ("m_reframe1_now", "not really", "m_reframe1_dictate"),

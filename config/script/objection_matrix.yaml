@@ -365,8 +365,11 @@ steps:
         like: "no"
         examples: ["no it doesn't", "not really"]
         then: m_reframe2
-      unsure:   # not knowing is an answer here: carry on (round 449's "not sure")
+      unsure:   # not knowing is an answer here: carry on
         examples: ["not sure", "maybe", "I guess so", "sort of"]
+        then: m_reframe1_now
+      scared:   # the worry said again is the yes: their mindset is what is deciding (round 20: "I'm scared" answers)
+        examples: ["I'm scared", "I'm nervous about it", "it's a big step for me", "I'm worried"]
         then: m_reframe1_now
   m_reframe1_now:
     name: "Reframe 1: where they are"
