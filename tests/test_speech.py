@@ -83,10 +83,30 @@ def test_the_route_passes_who_is_speaking(client, monkeypatch):
 
 def test_a_buyer_sounds_like_their_persona_and_always_the_same():
     cfg = speech.SPEECH["kokoro"]
-    assert speech.pick_voice("buyer", "Marcus") in cfg["male"]          # "reflects his new role"
+    assert speech.pick_voice("buyer", "Marcus") == "am_fenrir"           # buyer.yaml names it
     assert speech.pick_voice("buyer", "Nobody", "She runs a bakery with her sister.") in cfg["female"]
-    assert speech.pick_voice("buyer", "Alex") == speech.pick_voice("buyer", "Alex")
+    assert speech.pick_voice("buyer", "Nobody", "Runs a bakery; his brother does the books.") in cfg["male"]
+    assert speech.pick_voice("buyer", "Kelly Brown", "Runs a bakery.") in cfg["female"]   # no he or she: the name
+    assert speech.pick_voice("buyer", "Gary", "Runs a bakery.") in cfg["male"]
+    assert speech.pick_voice("buyer", "Robin") == speech.pick_voice("buyer", "Robin")   # either: the same each time
     assert speech.pick_voice("seller") == cfg["seller"]
+
+
+def test_every_persona_speaks_in_a_voice_that_fits():
+    """Live, 13 Nov: Nina, Maya, Fiona, Sophie and Zara spoke in a man's voice (nothing in their words said "she")."""
+    from core.infra.loader import load_buyer_config, load_yaml
+    cfg, names = speech.SPEECH["kokoro"], load_yaml("first_names.yaml")
+    for product, group in load_buyer_config()["personas"].items():
+        voices = [p["voice"] for p in group]
+        assert len(set(voices)) == len(voices), product                  # one product: every buyer sounds different
+        for p in group:
+            pool = "female" if p["name"].lower() in names["female"] else "male" if p["name"].lower() in names["male"] else None
+            assert p["voice"] in (cfg[pool] if pool else cfg["female"] + cfg["male"]), p["name"]
+            hint = f"{p['background']} {p['personality']}"                # as the web sends it
+            assert speech.pick_voice("buyer", p["name"], hint) == p["voice"]
+    toms = [p for g in load_buyer_config()["personas"].values() for p in g if p["name"] == "Tom"]
+    assert len({speech.pick_voice("buyer", "Tom", f"{t['background']} {t['personality']}") for t in toms}) == 2
+    assert not set(names["female"]) & set(names["male"])
 
 
 def test_a_line_said_once_comes_back_from_the_cache(monkeypatch):

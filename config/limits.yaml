@@ -200,8 +200,12 @@ speech:              # replies read aloud by the server, so the browser needs no
     dir: .cache/kokoro/v1.1   # its own folder, so a machine with the older export fetches this one
     threads: 2
     seller: am_michael              # buy mode's seller
-    female: [af_heart, af_bella, bf_emma]   # a buyer whose persona says she/her/wife...
-    male: [am_michael, am_fenrir, bm_george]   # ...or he/his/husband; a neutral one gets either, the same every time
+    # Each buyer.yaml persona names its own voice. One that doesn't (a learner's own prospect) gets one of these: a
+    # woman's if its words say she/her/wife or its first name is a woman's (config/first_names.yaml), a man's for
+    # he/his/husband or a man's name; either when nothing says, the same one every time. Kokoro's best-graded voices
+    # (A to C, VOICES.md): af_ and am_ American, bf_ and bm_ British.
+    female: [af_heart, af_bella, bf_emma, af_sarah, af_kore, af_aoede, bf_isabella]
+    male: [am_michael, am_fenrir, am_puck, bm_george, bm_fable]
   marks:               # the script's stress marks, heard (core/infra/providers/voice_marks.py)
     # longer: the words take this much longer; higher: semitones up; louder_db: this much louder; beat_ms: a pause before
     loud:    {longer: 1.1, higher: 1.5, louder_db: 4}      # **word**: the stress a speaker leans on

@@ -47,7 +47,7 @@ def buyer_lines() -> dict[str, set[str]]:
     out: dict[str, set[str]] = {}
     for group in cfg["personas"].values():
         for persona in group:
-            voice = pick_voice("buyer", persona["name"])
+            voice = pick_voice("buyer", persona["name"], f"{persona['background']} {persona['personality']}")   # as the web asks
             lines: list[str] = list(objections)
             for cells in bank.values():
                 for templates in cells.values():

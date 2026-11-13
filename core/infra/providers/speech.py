@@ -2,8 +2,9 @@
 machine, then Groq) and returns WAV audio, or None so the browser reads it instead. Every line said is kept on disk,
 so a line heard before (the bank's and the script's lines come round again) plays at once.
 
-`speaker` picks the voice: "seller" (buy mode's seller), or "buyer" with the persona's name, whose own words (he,
-she, his wife) choose a male or female voice; the same persona always gets the same voice.
+`speaker` picks the voice: "seller" (buy mode's seller), or "buyer" with the persona's name: a buyer.yaml persona
+speaks in the voice it names; a learner's own prospect gets a woman's or a man's voice by its words (he, she, his
+wife) or its first name, the same one every time.
 """
 
 from __future__ import annotations
@@ -110,23 +111,36 @@ def is_cached(text: str, voice: str, speed: float = 1.0) -> bool:
     return _cache_path("kokoro", voice, speed, text).exists()
 
 
-def _persona_words(name: str) -> str:
-    """A configured persona's words (background, pains, personality), to hear he or she in; "" for an unknown one."""
+def _persona(name: str, hint: str = "") -> dict:
+    """The configured persona by that name ({} for a learner's own); of two with one name (there are two Toms), the
+    one whose background the hint holds."""
     from core.infra.loader import load_buyer_config   # here: the loader is heavier than this module needs at import
-    for group in load_buyer_config()["personas"].values():
-        for p in group:
-            if p.get("name", "").lower() == (name or "").lower():
-                return " ".join(str(v) for k, v in p.items() if k != "name")
-    return ""
+    named = [p for group in load_buyer_config()["personas"].values() for p in group
+             if p.get("name", "").lower() == (name or "").lower()]
+    return next((p for p in named if p.get("background", "\0") in (hint or "")), named[0] if named else {})
+
+
+@lru_cache(maxsize=1)
+def _first_names() -> dict[str, set[str]]:
+    from core.infra.loader import load_yaml
+    return {k: set(v) for k, v in load_yaml("first_names.yaml").items()}
 
 
 def pick_voice(speaker: str, persona: str = "", hint: str = "") -> str:
-    """The Kokoro voice for who is speaking: the seller's, or a buyer's chosen by the persona's own words."""
+    """The Kokoro voice for who is speaking: the seller's, a configured persona's own, or for a learner's own
+    prospect one from the women's or men's pool (by the words it is described in, then its first name), always the
+    same one for the same name."""
     cfg = SPEECH["kokoro"]
     if speaker != "buyer":
         return cfg["seller"]
-    words = f"{_persona_words(persona)} {hint}"
+    known = _persona(persona, hint)
+    if known.get("voice"):
+        return known["voice"]
+    words = f"{' '.join(str(v) for k, v in known.items() if k != 'name')} {hint}"
     female, male = len(_FEMALE.findall(words)), len(_MALE.findall(words))
+    if female == male:
+        first = (persona or "").split()[0].lower() if (persona or "").split() else ""
+        female, male = first in _first_names()["female"], first in _first_names()["male"]
     pool = cfg["female"] if female > male else cfg["male"] if male > female else cfg["female"] + cfg["male"]
     return pool[int(hashlib.sha1((persona or "?").lower().encode()).hexdigest(), 16) % len(pool)]
 
@@ -157,7 +171,9 @@ class _Kokoro:
         from kokoro_onnx import Kokoro
 
         cfg = SPEECH["kokoro"]
-        fetch_files()
+        missing = [p.name for p in kokoro_files() if not p.exists()]
+        if missing:   # the deploy fetches them (scripts/deploy_vm.sh); never in a request, the next engine speaks
+            raise FileNotFoundError(f"kokoro files not here yet: {missing}")
         folder = ROOT_DIR / cfg["dir"]
         options = ort.SessionOptions()
         options.intra_op_num_threads = options.inter_op_num_threads = int(cfg["threads"])

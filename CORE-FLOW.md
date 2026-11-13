@@ -21,7 +21,7 @@ Each folder holds one job; its `__init__.py` says which. Imports point down or i
 
 ```
 core/
-  infra/        plumbing, no sales knowledge: env, constants, loader, utils, phrases (the one "does this line say X?" rule), embedder (the one local meaning model), similarity (meaning match), logs/, providers/ (LLM, router, speech: Kokoro then Groq, dictation: Parakeet then Groq)
+  infra/        plumbing, no sales knowledge: env, constants, loader, utils, phrases (the one "does this line say X?" rule), embedder (the one local meaning model), similarity (meaning match), logs/, providers/ (LLM, router, speech: Kokoro then Groq, with voice_marks: the script's stress marks heard; dictation: Parakeet then Groq)
   training/     learner tools both modes use: turn_rating, blemish (a trained second layer under it), quiz, drills, team_insights (a manager's view)
   sell_mode/    learner sells, AI buys: buyer_*, sell_service, sell_evaluator, session_review, call_stages, knowledge, real_calls, custom_buyer
   calls/        an uploaded real call, no AI: transcript (parsers), roles (rep / prospect), profile, reader (the one entry)
