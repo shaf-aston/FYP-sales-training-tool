@@ -20,7 +20,9 @@ from core.infra.providers.speech import SPEECH, is_cached, kokoro, pick_voice, s
 from core.sell_mode.buyer_lines import fill
 
 TEXT_KEYS = {"say", "say_plain", "probe", "probes", "ack", "reply", "answer", "late_answer", "late_again", "bridge",
-             "reask", "lines", "text"}
+             "reask", "lines", "text", "ask_meaning", "early", "yes_no_reask", "back_to_question", "again", "park",
+             "park_again", "revisit", "ended", "same_words", "wait_again", "told_again", "corrected", "bridge_ack",
+             "uncovered_fallback", "ack_memory", "after_price", "pressed"}   # every key a seller's line lives under
 
 
 def _strings(node, keys=TEXT_KEYS, inside=False):

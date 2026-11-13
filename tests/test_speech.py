@@ -195,4 +195,5 @@ def test_the_prewarm_covers_the_bank_the_objections_and_the_script():
     buyer = set().union(*buyer_lines().values())
     assert "That's more than I was expecting, to be honest." in buyer      # a bank line, said as the web asks
     assert "Glad to hear it." in seller_lines()                            # buy mode's common sense
+    assert "So, back to you." in seller_lines()                            # engine.yaml back_to_question (missed live)
     assert all("{" not in s for s in buyer | seller_lines())                # no unfilled blanks
