@@ -137,14 +137,29 @@ def _quietest(audio: np.ndarray, a: int, b: int) -> int:
     return a + int(np.argmin(energy)) + frame // 2
 
 
-def _higher(piece: np.ndarray, semitones: float) -> np.ndarray:
-    """The piece played faster by a resample: higher by `semitones`, and shorter by the same ratio."""
-    if not semitones or len(piece) < 4:
+def pitch(audio: np.ndarray) -> float | None:
+    """The voice's pitch in Hz over a stretch of audio (median over its voiced 40 ms frames), None when unvoiced."""
+    frame, hop, found = int(0.04 * RATE), int(0.01 * RATE), []
+    lo, hi = RATE // 400, RATE // 60
+    for i in range(0, len(audio) - frame, hop):
+        x = audio[i:i + frame]
+        if np.sqrt((x ** 2).mean()) < 0.015:
+            continue
+        x = x - x.mean()
+        c = np.correlate(x, x, "full")[frame - 1:]
+        j = lo + int(np.argmax(c[lo:hi]))
+        if c[j] > 0.35 * c[0]:
+            found.append(RATE / j)
+    return float(np.median(found)) if len(found) >= 2 else None
+
+
+def _resample(piece: np.ndarray, ratio: float) -> np.ndarray:
+    """The piece played `ratio` times as fast: that much higher, and that much shorter."""
+    if abs(ratio - 1) < 1e-3 or len(piece) < 4:
         return piece
-    n = int(round(len(piece) / 2 ** (semitones / 12)))
+    n = int(round(len(piece) / ratio))
     spectrum = np.fft.rfft(piece)
-    keep = n // 2 + 1
-    return (np.fft.irfft(spectrum[:keep], n) * (n / len(piece))).astype(piece.dtype)
+    return (np.fft.irfft(spectrum[:n // 2 + 1], n) * (n / len(piece))).astype(piece.dtype)
 
 
 def _splice(audio: np.ndarray, a: int, b: int, piece: np.ndarray, fade: int) -> np.ndarray:
@@ -185,17 +200,36 @@ def render_parts(model, sentence: str, voice, speed: float, lang: str) -> tuple[
         return audio, []
     fade = int(cfg["fade_ms"] / 1000 * RATE)
     takes, placed = {}, []
+
+    def piece_at(slower: float, start: int, end: int) -> np.ndarray | None:
+        if slower not in takes:
+            takes[slower] = take(speed / slower)
+        s_audio, _, s_timings = takes[slower]
+        if len(s_timings) != len(timings):
+            return None
+        return s_audio[_edge(s_timings, start, True):_edge(s_timings, end, False)]
+
     for kind, start, end in sorted(spans, key=lambda s: -s[1]):   # the last first, so earlier places stay put
         how = cfg[kind]
         a, b = _edge(timings, start, True), _edge(timings, end, False)
-        longer, higher = how.get("longer", 1.0), how.get("higher", 0.0)
-        if longer != 1.0 or higher:
-            slower = longer * 2 ** (higher / 12)   # the resample takes this much back off
-            if slower not in takes:
-                takes[slower] = take(speed / slower)
-            s_audio, _, s_timings = takes[slower]
-            if len(s_timings) == len(timings):
-                piece = _higher(s_audio[_edge(s_timings, start, True):_edge(s_timings, end, False)], higher)
+        longer, aim = how.get("longer", 1.0), 2 ** (how.get("higher", 0.0) / 12)
+        if longer != 1.0 or aim != 1.0:
+            # A slower take comes out lower (or higher) than the line: the shift is measured, not assumed, so the
+            # word lands `higher` semitones over the plain one; a take far off is made again at a corrected pace.
+            own = pitch(audio[a:b])
+            ratio, slower = aim, round(longer * aim, 3)
+            piece = piece_at(slower, start, end)
+            for attempt in range(2):
+                heard = pitch(piece) if piece is not None and own else None
+                if not heard:
+                    break
+                ratio = float(np.clip(own * aim / heard, 2 ** (-2 / 12), 2 ** (5 / 12)))
+                if abs(np.log(ratio / aim)) < np.log(2 ** (1 / 12)) or attempt == 1:
+                    break
+                slower = round(longer * ratio, 3)
+                piece = piece_at(slower, start, end)
+            if piece is not None:
+                piece = _resample(piece, ratio)
                 audio = _splice(audio, a, b, piece, fade)
                 b = a + len(piece)
         audio = _louder(audio, a, b, how.get("louder_db", 0.0), fade)
