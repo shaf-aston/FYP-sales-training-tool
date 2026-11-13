@@ -353,19 +353,50 @@ steps:
     name: "Reframe 1: change of process"
     ui_stage: outcome
     say: "Okay. So, I can understand that this is a big move for you and that you might need to think about it or take some time. Can I ask you a question? Do you feel your mindset affects your decision-making process?"
+    # The SOP's prospect says "Yes, of course." A no means this reframe has no grip: the flow chart's "No" goes
+    # to Reframe 2. A reply that is neither ("you", "lol") is asked again, never taken as the yes (live, 13 Nov).
+    reask: *yes_no_reask
+    stuck: {then: m_reframe1_now}
     listen:
-      any: {then: m_reframe1_now}
+      "yes":
+        like: "yes"
+        then: m_reframe1_now
+      "no":
+        like: "no"
+        examples: ["no it doesn't", "not really"]
+        then: m_reframe2
+      unsure:   # not knowing is an answer here: carry on
+        examples: ["not sure", "maybe", "I guess so", "sort of"]
+        then: m_reframe1_now
+      scared:   # the worry said again is the yes: their mindset is what is deciding (round 20: "I'm scared" answers)
+        examples: ["I'm scared", "I'm nervous about it", "it's a big step for me", "I'm worried"]
+        then: m_reframe1_now
   m_reframe1_now:
     name: "Reframe 1: where they are"
     ui_stage: outcome
     say: "Okay. And are you 100% with where you are at with {outcome} right now?"
     say_plain: "Okay. And are you 100% with where you are at right now?"
+    # The SOP's prospect says "Well, no." Someone fully happy where they are has no gap for this reframe: Reframe 2.
+    reask: *yes_no_reask
+    stuck: {then: m_reframe1_dictate}
     listen:
-      any: {then: m_reframe1_dictate}
+      "no":
+        like: "no"
+        examples: ["well, no", "not really", "not yet", "nowhere near"]
+        then: m_reframe1_dictate
+      "yes":
+        like: "yes"
+        examples: ["yes I'm happy where I am", "I'm fine where I am"]
+        then: m_reframe2
+      unsure:
+        examples: ["not sure", "kind of", "sort of", "maybe"]
+        then: m_reframe1_dictate
   m_reframe1_dictate:
     name: "Reframe 1: dictate results"
     ui_stage: outcome
     say: "Okay, And do you want that decision making process to dictate your results moving forward?"
+    reask: *yes_no_reask
+    stuck: {then: m_reframe2}
     listen:
       "no":
         like: "no"
@@ -374,7 +405,9 @@ steps:
       "yes":   # a rival label: alone, "no" took a plain "yes" (close in meaning) to "Why not?" (whole calls)
         like: "yes"
         then: m_reframe2
-      any: {then: m_reframe2}
+      unsure:   # not knowing is no "no": the next reframe (was a catch-all, which also took "you")
+        examples: ["not sure", "maybe", "I don't know"]
+        then: m_reframe2
   m_reframe1_why:
     name: "Reframe 1: why not"
     ui_stage: outcome
