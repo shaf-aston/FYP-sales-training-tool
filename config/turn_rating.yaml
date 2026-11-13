@@ -69,6 +69,7 @@ stock_questions:
 
 # A question starting with one of these (and no question word) is yes/no.
 closed_starters:
+  - shall      # "So shall I sign you up now?" asked nothing open
   - do
   - does
   - did

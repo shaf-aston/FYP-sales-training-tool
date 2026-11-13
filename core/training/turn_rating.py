@@ -62,7 +62,8 @@ def _count_openings(message: str, question_words, invitations, stock_questions=(
 def _is_closed_question(message: str, question_words, closed_starters) -> bool:
     """A question sentence that starts with a yes/no verb and has no question word."""
     for sentence in _sentences(message.lower()):
-        first = re.findall(r"[a-z']+", sentence)[:1]
+        words = re.findall(r"[a-z']+", sentence)
+        first = words[1:2] if words[:1] in (["so"], ["and"], ["ok"], ["okay"], ["right"]) else words[:1]   # "So shall I ...?"
         if sentence.endswith("?") and first and first[0] in closed_starters and not _has_word(
             sentence, question_words
         ):

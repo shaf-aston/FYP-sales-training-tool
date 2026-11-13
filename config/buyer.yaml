@@ -435,7 +435,9 @@ moves:   # what the buyer does this turn, by rules (core/sell_mode/buyer_moves.p
   # a yes/no question opens with one of these (buyer_moves.is_closed): it gets a yes/no kind of line
   closed_openers: [would, could, can, do, does, did, is, are, was, were, will, shall, should, have, has, may, might, any, anything]
   # asked as a yes/no question, these ask them to take a next step: keen buyers say yes, the rest put it off
-  next_step: [book, walkthrough, walk you through, demo, schedule, set up a call, set up a time, another call, follow-up, follow up, next step, sign up, get started, move forward, go ahead, get you started, trial]
+  # a statement that gives the price (buyer_moves.states_price): a currency figure, or money words
+  price_said: '[$£€]\s?\d|\b\d[\d,.]*\s?k\b|\b(thousand|grand|hundred|pounds|dollars|euros|quid)\b'
+  next_step: [sign you up, get you signed up, get you set up, book, walkthrough, walk you through, demo, schedule, set up a call, set up a time, another call, follow-up, follow up, next step, sign up, get started, move forward, go ahead, get you started, trial]
   bank: true           # say lines from config/prospect_lines.yaml when one fits; false: the AI words every move
   min_score: 0.55      # an answer's line must be this close to the seller's question (shared embedder) to be said.
                        # bge-small: a topic's own question scored 0.60-0.71 to its best line, off-topic questions
@@ -480,7 +482,9 @@ system_prompt_template: |
   RULES:
   1. Stay in character as {name}.
   2. Answer what the salesperson just asked first, in one or two short sentences (under 30 words), the way a real
-     person talks on a call: plain words, no sales or marketing language ("game-changer", "seamless", "ROI").
+     person talks on a call: plain words, no sales or marketing language ("game-changer", "seamless", "ROI",
+     "cost of inaction", "pain point", "value", "leverage", "stakeholder buy-in"). A buyer says "it'd keep costing
+     us", never "the cost of inaction".
   3. A good question earns a proportionate answer; pushy or dismissive selling makes you more resistant.
   4. Don't raise new objections (price, timing, partner, proof) yourself - they are added for you.
   5. Never agree to buy, sign, or end the conversation - the session decides that.

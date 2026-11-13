@@ -104,15 +104,18 @@ def test_rewinding_puts_the_objection_count_back():
     assert buyer.state.objections_raised == buyer.pacer.raised_by(1)
 
 
-def test_a_live_turn_answers_first_then_adds_the_scripted_objection_and_counts_it(stub_buyer):
-    """The wiring: the helpers above are useless if process_turn ignores them."""
+def test_a_live_turn_answers_first_then_adds_the_scripted_objection_and_counts_it(stub_buyer, monkeypatch):
+    """The wiring: the helpers above are useless if process_turn ignores them. A yes/no question: an open one gets
+    no objection tacked on (test_an_open_question_gets_an_answer_not_an_objection), and no bank line, so the AI
+    words the reply."""
+    monkeypatch.setattr("core.sell_mode.buyer_session.pick_line", lambda *a, **k: None)
     buyer = session("hard", "wiring")
     prompts = []
     stub_buyer.chat = lambda messages, **kw: (
         prompts.append(messages[0]["content"]) or LLMResponse(content="Go on.")
     )
 
-    line = "What matters most to you here?"
+    line = "Would a weekly summary make a difference?"
     turn = next(t for t in range(1, TURNS + 1) if buyer.pacer.for_turn(t, [line] * t))
     replies = [buyer.process_turn(line).content for _ in range(turn)]
 

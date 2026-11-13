@@ -113,6 +113,8 @@ def pick_line(move: Move, seller_line: str, persona: dict, history: list[dict], 
         text = fill(line, persona, said)
         if text and text.lower() not in said and text not in candidates:
             candidates.append(text)
+    if move.objection:   # the objection comes after the line: "What's the next step? I'd need to ask my partner."
+        candidates = [c for c in candidates if "?" not in c]   # asked, then objected (live, 13 Nov)
     if not candidates:
         return None
     rng = random.Random(seed)

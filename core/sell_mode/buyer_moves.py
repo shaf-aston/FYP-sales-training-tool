@@ -65,6 +65,12 @@ def asks_to_commit(line: str) -> bool:
     return "?" in text and is_closed(text) and any(_phrase_at(p, text) for p in load_buyer_config()["moves"]["next_step"])
 
 
+def states_price(line: str) -> bool:
+    """The seller told them the price ("It's four thousand for the year.", "The investment is $4,000.")."""
+    text = (line or "").lower()
+    return "?" not in text and re.search(load_buyer_config()["moves"]["price_said"], text) is not None
+
+
 def next_move(readiness: float, seller_line: str, signals: list[str], objection: bool = False) -> Move:
     """The buyer's move for this turn.
 
@@ -74,7 +80,8 @@ def next_move(readiness: float, seller_line: str, signals: list[str], objection:
       the others stall.
     - The seller asked something: share once they are warm enough, else guard. An open question built on what they
       said earns a share while they are still on the fence.
-    - The seller told them something: keen buyers lean in, the ones on the fence ask how it works, cold ones stall.
+    - The seller told them something: keen buyers lean in, the ones on the fence ask how it works, cold ones stall;
+      told the price, each reacts to the price.
     """
     cfg = load_buyer_config()["moves"]
     line = (seller_line or "").lower()
@@ -94,4 +101,7 @@ def next_move(readiness: float, seller_line: str, signals: list[str], objection:
         earned = "open_question" in signals and "on_topic" in signals
         return Move("share" if warm or (earned and not cold) or (not cold and topic != "general") else "guard",
                      topic, objection, closed)
-    return Move("lean_in" if warm else "stall" if cold else "ask", "general", objection)
+    # a price they were just told gets a reaction to the price: "I like the sound of that." to "It's four thousand
+    # for the year." read as if they had not heard it (live, 13 Nov)
+    return Move("lean_in" if warm else "stall" if cold else "ask", "price" if states_price(line) else "general",
+                objection)
