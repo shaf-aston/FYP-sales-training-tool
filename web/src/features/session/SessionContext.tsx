@@ -8,6 +8,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { api, ApiError, errorText } from "@/lib/api/client";
 import type { BotState, BuyerPick, BuyerState, ChatMsg, CoachNotes, Difficulty, Outcome, Persona, WordsChoice } from "@/lib/api/types";
 import { useAccount } from "@/features/account/AccountContext";
+import { stageShort } from "@/lib/labels";
 import { config, storageKeys } from "@/lib/config";
 import { readString, writeString } from "@/lib/storage";
 import { useStoredState } from "@/lib/useStoredState";
@@ -114,8 +115,11 @@ interface SessionValue {
   reset: () => Promise<boolean>;
   /** Buy mode: start a fresh call where the rep sells this product (it stays picked for later calls). */
   switchProduct: (productType: string) => Promise<void>;
-  /** Buy mode: start a fresh call at one script step (nothing said before it). */
-  jumpTo: (step: string) => Promise<void>;
+  /** Buy mode: start a fresh call at one script step. `slots`: the answers taken as given before it (the recap
+   *  card); `stage`: the stage jumped to, shown as a practice tag until the next fresh call. */
+  jumpTo: (step: string, slots?: Record<string, string>, stage?: string) => Promise<boolean>;
+  /** Buy mode: the stage this call was started at by a jump; null for a call from the start. */
+  practiceFrom: string | null;
   /** Start a new AI buyer (sell mode). */
   startBuyer: (difficulty: Difficulty, productType: string, pick?: BuyerPick) => Promise<boolean>;
   /** End the current buyer and go back to setup. */
@@ -151,6 +155,19 @@ function savedSellCall(): { id: string; pick: BuyerPick } | null {
   }
 }
 
+/** The buy call a stage jump started, and its stage: the practice tag outlives a reload of that call only. */
+const savePractice = (p: { id: string; stage: string } | null) =>
+  writeString(storageKeys.buyPractice, p ? JSON.stringify(p) : null, "session");
+
+function savedPractice(id: string): string | null {
+  try {
+    const p = JSON.parse(readString(storageKeys.buyPractice, "session") ?? "null");
+    return p && p.id === id && typeof p.stage === "string" ? p.stage : null;
+  } catch {
+    return null;
+  }
+}
+
 const metaLine = (latency: number | null | undefined, provider?: string) =>
   debugOn() && latency != null ? `${Math.round(latency)}ms · ${provider ?? "?"}` : undefined;
 
@@ -162,6 +179,7 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
   const [buySessionId, setBuySessionId] = useState<string | null>(null);
   const [buyProduct, setBuyProduct] = useState<string | null>(null);
   const [stage, setStage] = useState(FIRST_STAGE);
+  const [practiceFrom, setPracticeFrom] = useState<string | null>(null);
   const [coachNotes, setCoachNotes] = useState<CoachNotes | null>(null);
   const [repWords, setRepWords] = useState<RepWords | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -243,6 +261,8 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
       for (const id of saved ? [saved, null] : [null]) {
         try {
           adopt(id ? await restoreBuy(id) : await startBuy());
+          setPracticeFrom(id ? savedPractice(id) : null);
+          if (!id) savePractice(null);
           break;
         } catch (err) {
           // 400 = the server refused the saved id (expired or unknown): drop it and start fresh.
@@ -442,9 +462,12 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
         });
         // A replayed real call shows its lines so far (the last is the prospect's, which the learner answers);
         // a normal start shows the buyer's opening line.
-        const shown = fromHistory(pick.replay ?? [{ role: "assistant", content: res.message }], config.historyCap);
+        // A call started at a stage shows its lines so far the same way, under the stage it starts at.
+        const before = res.history?.length ? res.history : pick.replay;
+        const shown = fromHistory(before ?? [{ role: "assistant", content: res.message }], config.historyCap);
         shown[shown.length - 1].meta = metaLine(res.latency_ms, res.provider);
-        setMessages(pick.replay ? [{ id: newId(), role: "divider", content: "From your real call", historyIndex: -1 }, ...shown] : shown);
+        const label = pick.jump ? `Practice from ${stageShort(pick.jump.stage)}` : "From your real call";
+        setMessages(before ? [{ id: newId(), role: "divider", content: label, historyIndex: -1 }, ...shown] : shown);
         return true;
       } catch (err) {
         toast(errorText(err, "Couldn't start your buyer."), "error");
@@ -479,6 +502,8 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
     }
     writeString(storageKeys.buySessionId, null);
     epoch.current++;
+    setPracticeFrom(null);
+    savePractice(null);
     setMessages([]);
     setStage(FIRST_STAGE);
     setCoachNotes(null);
@@ -513,15 +538,19 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
   );
 
   const jumpTo = useCallback(
-    async (step: string) => {
-      if (!buySessionId || busy.current) return;
+    async (step: string, slots?: Record<string, string>, toStage?: string) => {
+      if (!buySessionId || busy.current) return false;
       busy.current = true;
       epoch.current++;
       try {
-        const res = await api.buyJump(buySessionId, step);
+        const res = await api.buyJump(buySessionId, step, slots);
         adopt({ ...res, session_id: buySessionId });
+        setPracticeFrom(toStage ?? res.stage);
+        savePractice({ id: buySessionId, stage: toStage ?? res.stage });
+        return true;
       } catch (err) {
-        if (!handleExpired(err)) toast("Couldn't jump to that step. Try again.", "error");
+        if (!handleExpired(err)) toast("Couldn't jump to that stage. Try again.", "error");
+        return false;
       } finally {
         busy.current = false;
       }
@@ -548,13 +577,15 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
       reset,
       switchProduct,
       jumpTo,
+      // Sell mode: a practice call is one its buyer was started at a stage (kept in the pick, so reloads keep it).
+      practiceFrom: mode === "sell" ? (sellSession?.pick.jump?.stage ?? null) : practiceFrom,
       startBuyer,
       endBuyer,
       markSellEnded,
       refreshSell: restoreSell,
       handleExpired,
     }),
-    [mode, buySessionId, buyProduct, repWords, chooseRepWords, stage, coachNotes, messages, typing, sellSession, sellSettings, setSellSettings, send, edit, reset, switchProduct, jumpTo, startBuyer, endBuyer, markSellEnded, restoreSell, handleExpired],
+    [mode, buySessionId, buyProduct, repWords, chooseRepWords, stage, coachNotes, messages, typing, sellSession, sellSettings, setSellSettings, send, edit, reset, switchProduct, jumpTo, practiceFrom, startBuyer, endBuyer, markSellEnded, restoreSell, handleExpired],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

@@ -12,6 +12,7 @@ from core.infra.constants import MAX_MESSAGE_LENGTH, MAX_SELLER_SESSIONS
 from core.infra import embedder as meaning_model
 from core.infra.loader import CONFIG_DIR
 from core.training.quiz import get_quiz_question
+from core.training.stage_jump import kept_answers
 from core.buy_mode.seller_bot import SellerBot
 from core.buy_mode.script_engine import rep_words
 from core.buy_mode.script_engine.seller import method_for, products as script_products, resolve_product
@@ -233,21 +234,24 @@ def chat(seller):
         return jsonify({"error": GENERIC_ERROR}), 500
 
 
-@bp.route("/steps", methods=["GET"])
+@bp.route("/stage-starts", methods=["GET"])
 @with_session("seller")
-def steps(seller):
-    """The script steps a learner can jump to (to test one step)."""
-    return jsonify({"success": True, "steps": seller.seller.steps()})
+def stages(seller):
+    """Where a jump to each stage lands, with the answers taken as given before it (the recap card)."""
+    return jsonify({"success": True, "stages": seller.stage_starts()})
 
 
 @bp.route("/jump", methods=["POST"])
 @require_rate_limit("buy_chat")
 @with_session("seller")
 def jump(seller):
-    """Start the call again at one script step: a fresh call, nothing said before it."""
-    step = str((request.get_json(silent=True) or {}).get("step") or "")
+    """Start the call again at one script step: a fresh call. `slots` (optional): the answers taken as given
+    before it, so the seller's first line builds on them."""
+    data = request.get_json(silent=True) or {}
+    step = str(data.get("step") or "")
+    kept = kept_answers(seller.stage_starts(), step, data.get("slots"))
     try:
-        message = seller.jump_to(step)
+        message = seller.jump_to(step, kept[1] if kept else {})
     except ValueError:
         return jsonify({"error": INVALID_STEP}), 400
     except Exception:

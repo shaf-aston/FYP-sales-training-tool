@@ -103,11 +103,12 @@ export interface BuyProduct {
 }
 
 /** A script step the learner can start a fresh call at (to test it). */
-export interface ScriptStep {
-  id: string;
-  name: string;
-  /** UI stage the step belongs to. */
+/** Buy mode: where a jump to a stage lands, and the answers taken as given before it (the recap card). */
+export interface StageStart {
   stage: string;
+  step: string;
+  name: string;
+  recap: { slot: string; question: string; answer: string }[];
 }
 
 export interface JumpRes extends BotState {
@@ -194,6 +195,8 @@ export interface BuyerPick {
   custom?: CustomBuyer;
   /** Start inside a real call instead of at an opening line: its lines so far, ending with the buyer's. */
   replay?: ChatMsg[];
+  /** Start a practice call at a stage, on a short call so far built from these answers (the recap card). */
+  jump?: { stage: string; answers: Record<string, string> };
 }
 
 export type ObjectionType = "price" | "skepticism" | "timing" | "partner" | "fear";
@@ -223,6 +226,8 @@ export interface SellInitRes {
   state: BuyerState;
   difficulty: Difficulty;
   product_type: string;
+  /** A call started at a stage: its lines so far (the rep's questions and the buyer's answers). */
+  history?: ChatMsg[];
   latency_ms: number;
   provider: string;
   model: string;

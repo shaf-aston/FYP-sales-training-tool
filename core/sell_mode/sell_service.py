@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from core.sell_mode.buyer_session import BuyerSession
 from core.sell_mode.buyer_state import BuyerResponse, select_persona
+from core.training.stage_jump import sell_history
 from core.sell_mode.custom_buyer import parse_custom_buyer, parse_replay
 from core.sell_mode.session_review import build_review
 from core.infra.loader import load_buyer_config, load_buyer_products
@@ -64,13 +65,14 @@ def review_transcript(history: list[dict], difficulty: str | None) -> dict:
 def start_sell_session(
     store, *, difficulty: str | None, product_type: str, provider: str | None,
     persona_name: str | None, objection: str | None, custom_buyer: dict | None = None,
-    replay: list | None = None, knowledge: dict | None = None,
+    replay: list | None = None, knowledge: dict | None = None, jump: dict | None = None,
 ) -> SellStart:
     """Build the buyer, get its opening line and register the session.
 
     `difficulty` None means the configured default. `custom_buyer` (a buyer the learner described, e.g. from
     a real call) replaces the persona pick and brings its own objections; `replay` (a transcript ending with the
-    buyer) is where the conversation starts instead of an opening line; `knowledge` the learner's own product details. Raises InvalidDifficulty,
+    buyer) is where the conversation starts instead of an opening line; `knowledge` the learner's own product details; `jump` ({stage, answers}) starts a practice call at a stage, on a
+    short call so far built from the recap answers (training/stage_jump.py; ValueError for an unknown stage). Raises InvalidDifficulty,
     UnknownPersona or InvalidCustomBuyer for bad choices, and ProviderUnavailable when no LLM answers.
     `store` is the live-session store (needs `.set`).
     """
@@ -85,6 +87,9 @@ def start_sell_session(
         objection_bank=bank,
         knowledge=knowledge,
     )
+    if jump is not None and history is None:
+        history = sell_history(session.persona, jump.get("stage"), jump.get("answers")) or None
+        session.practice_from = jump.get("stage")
     opening = session.continue_from(history) if history else session.get_opening_message()
     store.set(session.session_id, session)
     return SellStart(session, opening)

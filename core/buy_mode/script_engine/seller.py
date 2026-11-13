@@ -35,6 +35,7 @@ from core.buy_mode.script_engine.method import (
     load_common_sense,
     load_method,
     load_offer,
+    load_stage_jump,
 )
 from core.buy_mode.script_engine.words import tone
 from core.buy_mode.script_engine.words.echo import Echo, Turn
@@ -164,16 +165,24 @@ class ScriptSeller:
         """The steps a call can start at, in script order: those with a line to say (id, name, ui stage)."""
         return [{"id": s.id, "name": s.name or s.id, "stage": s.ui_stage} for s in self.method.steps.values() if s.say]
 
-    def start_at(self, step_id):
-        """Start the call fresh at `step_id` (testing one step): nothing heard before, so no answers to build
-        on; its line falls back to its plain words. Returns (text, ui_stage). ValueError for a step with no line."""
+    def stage_starts(self):
+        """Where a jump to each stage lands, with the answers taken as given before it (training/stage_jump.py)."""
+        from core.training.stage_jump import stage_starts
+        return stage_starts(self.method)
+
+    def start_at(self, step_id, slots=None):
+        """Start the call fresh at `step_id`. `slots`: the answers taken as given before it (the recap card), so
+        its line builds on them; none = its plain words. Returns (text, ui_stage). ValueError for a step with no line."""
         step = self.method.steps.get(step_id)
         if not step or not step.say:
             raise ValueError(f"no step to start at: {step_id!r}")
         self._voice.new_turn()
         self._turn = Turn()
-        self.state = ScriptState(step=step_id)
+        self.state = ScriptState(step=step_id, slots=dict(slots or {}))
         text, ui_stage = self._go(jump(self.method, self.state, step_id))
+        lead = load_stage_jump().get("lead", "")
+        if slots and lead and step_id != self.method.first:
+            text = f"{lead} {text}"
         self.state = self._start = replace(Echo.settle(self.state, self._turn), last=text)
         return text, ui_stage
 

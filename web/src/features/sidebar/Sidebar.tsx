@@ -12,7 +12,7 @@ import s from "./Sidebar.module.css";
 
 export function Sidebar() {
   const { sidebarTab, setSidebarTab } = useUi();
-  const { mode } = useSession();
+  const { mode, sellSession } = useSession();
   const sell = mode === "sell";
   // Buy mode has no buyer tab: the header already has the switch to selling.
   const tabs: { key: SidebarTab; label: string; content: React.ReactNode }[] = [
@@ -24,8 +24,9 @@ export function Sidebar() {
   const active = tabs.some((t) => t.key === sidebarTab) ? sidebarTab : tabs[0].key;
   return (
     <aside id={config.ids.panels} className={s.sidebar} aria-label="Session sidebar" tabIndex={-1}>
-      {/* Sell mode names the buyer and their state in the Buyer tab, so the card would repeat it. */}
-      {!sell && <StageCard />}
+      {/* Sell mode: the stages to practise from, once a buyer is set up (not one built from a real call: its
+          stages are the real call's). The Buyer tab names the buyer and their state. */}
+      {(!sell || (sellSession && !sellSession.pick.custom)) && <StageCard />}
       <Tabs label="Workspace" active={active} onChange={setSidebarTab} tabs={tabs} />
     </aside>
   );

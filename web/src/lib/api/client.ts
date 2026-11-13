@@ -107,8 +107,9 @@ export function createHttpApi() {
     buyChat: (sid: string, message: string) => request<T.ChatRes>("/api/buy/chat", { body: { message }, sessionId: sid, timeoutMs: chat }),
     buyEdit: (sid: string, index: number, message: string) =>
       request<T.EditRes>("/api/buy/edit", { body: { index, message }, sessionId: sid, timeoutMs: chat }),
-    buySteps: (sid: string) => request<{ success: true; steps: T.ScriptStep[] }>("/api/buy/steps", { sessionId: sid }),
-    buyJump: (sid: string, step: string) => request<T.JumpRes>("/api/buy/jump", { body: { step }, sessionId: sid }),
+    buyStageStarts: (sid: string) => request<{ success: true; stages: T.StageStart[] }>("/api/buy/stage-starts", { sessionId: sid }),
+    buyJump: (sid: string, step: string, slots?: Record<string, string>) =>
+      request<T.JumpRes>("/api/buy/jump", { body: { step, slots }, sessionId: sid }),
     buyReset: (sid: string) => request<{ success: true }>("/api/buy/reset", { body: {}, sessionId: sid }),
     buyCoach: (sid: string, question: string, style: T.CoachStyle) =>
       request<{ success: true; answer: string }>("/api/buy/coach", { body: { question, style }, sessionId: sid, timeoutMs: chat }),
@@ -126,11 +127,15 @@ export function createHttpApi() {
     sellInit: (difficulty: T.Difficulty, productType: string, pick: T.BuyerPick = {}, knowledge: T.KnowledgeData = {}) =>
       request<T.SellInitRes>("/api/sell/init", {
         body: {
-          difficulty, product_type: productType, persona: pick.persona, objection: pick.objection, custom_buyer: pick.custom, replay: pick.replay,
+          difficulty, product_type: productType, persona: pick.persona, objection: pick.objection, custom_buyer: pick.custom, replay: pick.replay, jump: pick.jump,
           knowledge: Object.keys(knowledge).length ? knowledge : undefined,
         },
         timeoutMs: chat,
       }),
+    sellStageStarts: (productType: string, persona?: string) =>
+      request<{ success: true; persona: string; stages: T.StageStart[] }>(
+        `/api/sell/stage-starts?product_type=${encodeURIComponent(productType)}${persona ? `&persona=${encodeURIComponent(persona)}` : ""}`,
+      ),
     sellChat: (sid: string, message: string, showHints: boolean) =>
       request<T.SellChatRes>("/api/sell/chat", { body: { message, show_hints: showHints }, sessionId: sid, timeoutMs: chat }),
     sellState: (sid: string) => request<T.SellStateRes>("/api/sell/state", { sessionId: sid }),

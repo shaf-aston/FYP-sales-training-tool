@@ -1,20 +1,46 @@
 "use client";
 
 import { useState } from "react";
-import { Card, Eyebrow, useConfirm } from "@/components/ui";
+import { Badge, Card, Eyebrow } from "@/components/ui";
 import { api } from "@/lib/api/client";
-import { STAGE_STEPS, stageIndex, stageMeta } from "@/lib/labels";
+import { STAGE_STEPS, stageIndex, stageMeta, stageShort } from "@/lib/labels";
 import { useSession } from "@/features/session/SessionContext";
+import { StageJumpDialog } from "@/features/stageJump/StageJumpDialog";
+import { useStageJump } from "@/features/stageJump/useStageJump";
 import { useUi } from "@/state/UiContext";
 import s from "./StageCard.module.css";
 
-/** Buy mode: the stage the AI seller has reached, and where it sits in the whole call.
+/** The call's five stages, and a practice call started at any of them (the same recap and dialog in both modes).
+ * Buy mode: the stage the AI seller has reached. Sell mode: the stage this practice call started at; the learner
+ * moves the call on themselves, so no live stage is claimed.
  * Hidden while the quiz is open, so the quiz never shows its own answer. */
 export function StageCard() {
-  const { stage, mode, buySessionId, jumpTo } = useSession();
-  const confirm = useConfirm();
+  const { stage, mode, buySessionId, jumpTo, practiceFrom, sellSession, startBuyer } = useSession();
   const { sidePanel } = useUi();
   const [picked, setPicked] = useState<number | null>(null);
+  const sell = mode === "sell";
+  const jump = useStageJump(
+    () =>
+      sell
+        ? sellSession
+          ? api.sellStageStarts(sellSession.productType, sellSession.persona.name).then((r) => r.stages)
+          : Promise.resolve([])
+        : buySessionId
+          ? api.buyStageStarts(buySessionId).then((r) => r.stages)
+          : Promise.resolve([]),
+    async (to, answers) => {
+      const ok = sell
+        ? !!sellSession &&
+          (await startBuyer(sellSession.difficulty, sellSession.productType, {
+            persona: sellSession.persona.name,
+            objection: sellSession.pick.objection,
+            jump: { stage: to.stage, answers },
+          }))
+        : await jumpTo(to.step, answers, to.stage);
+      if (ok) setPicked(null);
+      return ok;
+    },
+  );
   if (sidePanel === "quiz") {
     return (
       <Card tone="accent" className={s.card} aria-label="Stage of the sale">
@@ -23,35 +49,28 @@ export function StageCard() {
       </Card>
     );
   }
-  const label = stageMeta(stage).label;
-  const at = stageIndex(stage);
+  const label = sell ? (practiceFrom ? `Practice from ${stageShort(practiceFrom)}` : "From the start") : stageMeta(stage).label;
+  const at = sell ? Math.max(stageIndex(practiceFrom ?? "intent"), 0) : stageIndex(stage);
   const shown = STAGE_STEPS[picked ?? Math.max(at, 0)];
   const showMeta = stageMeta(shown.id);
 
-  // Buy mode: click another stage → confirm → fresh call at that stage's first step.
+  // Click a stage (in buy mode, another one) → recap card of the answers skipped → fresh practice call at that stage's main step.
   const onStage = async (i: number) => {
-    if (i === at || mode !== "buy" || !buySessionId) return setPicked(picked === i || i === at ? null : i);
-    const target = STAGE_STEPS[i];
-    const ok = await confirm({
-      title: `Jump to ${stageMeta(target.id).label}?`,
-      body: "Starts a fresh call at this stage. The current chat is cleared.",
-      confirmLabel: "Jump",
-      cancelLabel: "Stay",
-    });
-    if (!ok) return;
-    const { steps } = await api.buySteps(buySessionId).catch(() => ({ steps: [] }));
-    const first = steps.find((st) => st.stage === target.id);
-    if (first) await jumpTo(first.id);
+    if (sell ? !sellSession : i === at || !buySessionId) return setPicked(picked === i || i === at ? null : i);
+    await jump.open(STAGE_STEPS[i].id);
   };
 
   return (
     <Card tone="accent" className={s.card} aria-label="Stage of the sale">
-      <Eyebrow>
-        Stage {Math.max(at + 1, 1)} of {STAGE_STEPS.length}
-      </Eyebrow>
+      <Eyebrow>{sell ? "Stages" : `Stage ${Math.max(at + 1, 1)} of ${STAGE_STEPS.length}`}</Eyebrow>
       <p key={label} className={s.stageName} aria-live="polite">
         {label}
       </p>
+      {!sell && practiceFrom && (
+        <span className={s.practice}>
+          <Badge tone="accent">Practice from {stageShort(practiceFrom)}</Badge>
+        </span>
+      )}
       <ol className={s.steps} aria-label="All stages">
         {STAGE_STEPS.map((step, i) => (
           <li key={step.id} className={i < at ? s.done : i === at ? s.now : undefined}>
@@ -73,12 +92,13 @@ export function StageCard() {
         {shown.id !== STAGE_STEPS[Math.max(at, 0)].id && (
           <p className={s.detailTitle}>
             {showMeta.label}
-            <span className={s.tag}>{STAGE_STEPS.indexOf(shown) < at ? "Done" : "Coming up"}</span>
+            {!sell && <span className={s.tag}>{STAGE_STEPS.indexOf(shown) < at ? "Done" : "Coming up"}</span>}
           </p>
         )}
-        {showMeta.hint && <p className={s.detailText}>{showMeta.hint}</p>}
-        {mode === "buy" && <p className={s.tip}>Pick a stage to jump there.</p>}
+        {(sell ? showMeta.sellHint : showMeta.hint) && <p className={s.detailText}>{sell ? showMeta.sellHint : showMeta.hint}</p>}
+        <p className={s.tip}>Pick a stage to {sell ? "practise from it" : "jump there"}.</p>
       </div>
+      <StageJumpDialog key={jump.key} speaker={sell ? "they" : "you"} {...jump.dialog} />
     </Card>
   );
 }
