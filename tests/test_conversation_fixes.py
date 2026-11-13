@@ -44,6 +44,9 @@ def test_the_price_told_gets_a_reaction_to_the_price():
         assert states_price(line), line
         assert next_move(0.5, line, []).topic == "price"
     assert not states_price("How much would you want to spend?")
+    assert not states_price("We've got invoicing, dashboards and two hundred integrations.")   # live, 13 Nov
+    assert not states_price("We've helped over a thousand owners like you.")
+    assert states_price("It works out at three hundred a month.") and states_price("It's two and a half thousand.")
     assert not states_price("We help owners cut the admin that eats the week.")
     bank = load_yaml("prospect_lines.yaml")["lines"]
     assert all("price" in bank[kind] for kind in ("lean_in", "ask", "stall"))

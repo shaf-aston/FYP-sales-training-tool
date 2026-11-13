@@ -65,10 +65,11 @@ def analyse_stages(turns: list[dict]) -> list[dict]:
         heard.append(set(words))
     out = []
 
-    # opening: the first thing asked is about them
-    first_q = next((i for i, a in enumerate(asked) if a), None)
+    # opening: the first thing asked is about them (a real question: "how are you?" opens nothing)
+    real_q = [a and ("open_question" in t["signals"] or _has(d["about_them"], s)) for a, t, s in zip(asked, turns, seller)]
+    first_q = next((i for i, a in enumerate(real_q) if a), None)
     pitched_first = bool(seller) and _told(seller[0], d["offer"])
-    if seller and asked[0] and not pitched_first:
+    if seller and real_q[0] and not pitched_first:
         out.append(_stage("opening", "strong", [num[0]]))
     elif first_q is not None and first_q <= 1:
         out.append(_stage("opening", "partly", [num[first_q]]))

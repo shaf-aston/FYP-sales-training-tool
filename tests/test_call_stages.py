@@ -79,3 +79,8 @@ def test_taking_the_first_answer_is_only_part_of_the_goal():
 def test_no_concern_raised_is_nothing_to_work_on():
     got = stages(GOOD[:3])
     assert got["objections"]["status"] == "none" and not got["objections"]["next"]
+
+
+def test_a_greeting_is_not_an_opening_question():
+    got = stages([("Hi, how are you doing today?", "Fine, busy."), ("So what made you take this call?", "Admin, mostly.")])
+    assert got["opening"]["status"] == "partly" and got["opening"]["turns"] == [2]
