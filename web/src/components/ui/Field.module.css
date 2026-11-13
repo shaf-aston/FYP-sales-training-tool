@@ -37,6 +37,12 @@ textarea.control {
   font-size: var(--text-xs);
   color: var(--text-subtle);
 }
+/* the count never wraps ("0 /" over "1000" on a phone, live 13 Nov): the hint wraps instead */
+.count {
+  flex: none;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
 .warn {
   color: var(--warning);
 }

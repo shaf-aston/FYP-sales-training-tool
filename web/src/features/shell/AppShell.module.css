@@ -9,8 +9,9 @@
   margin: 0 auto;
   display: grid;
   grid-template-columns: minmax(0, 1fr) var(--panel-width);
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
+  /* Opaque enough to read on without a blur: a backdrop blur this big, over the moving film, cost ~150 ms a
+     keystroke and held the page at 20 fps (measured on the live site, 13 Nov). */
+  background: var(--glass-bg-strong);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-lg);

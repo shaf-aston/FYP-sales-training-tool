@@ -47,7 +47,7 @@ export function BuyerProfile({ sellSession }: { sellSession: SellSession }) {
       </section>
 
       <section className={s.readiness}>
-        <ProgressBar value={pct} label="Buying readiness" caption={`${pct}% · ${readinessBand(pct)}`} />
+        <ProgressBar value={pct} label="Buying readiness" caption={`${pct}% ready to buy · ${readinessBand(pct)}`} />
         {delta && (
           <span key={delta.key} className={`${s.delta} ${delta.n > 0 ? s.up : s.down}`} aria-hidden="true">
             {signed(delta.n)}%
@@ -60,13 +60,14 @@ export function BuyerProfile({ sellSession }: { sellSession: SellSession }) {
         {ended && <> · {ended}</>}
       </p>
 
-      {sellSettings.showHints && (
+      {/* the live hint is about the next line: once the call is over there is no next line (it stayed, live 13 Nov) */}
+      {sellSettings.showHints && !sellSession.ended && (
         <Card tone="accent" aria-live="polite">
           <p className={s.hint}>{sellSession.hint || "A hint shows after the buyer's next reply."}</p>
         </Card>
       )}
 
-      <Button variant="danger" block busy={evaluating} busyLabel="Scoring…" disabled={turns < 1} onClick={run}>
+      <Button variant="danger" block busy={evaluating} busyLabel="Scoring…" disabled={turns < 1 || sellSession.ended} onClick={run}>
         End and score
       </Button>
 
