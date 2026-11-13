@@ -52,9 +52,13 @@ if deps "$old" "$new" && bash -c "$RESTART" && live_on "$new"; then
   [ -n "${SKIP_VOICE_FETCH:-}" ] || "$PY" -c "from core.infra.providers.speech import fetch_files as a; from core.infra.providers.dictation import fetch_files as b; a(); b()" \
     || echo "::warning title=Voice::could not fetch the voice models; speech falls back to Groq or the browser"
   # make the fixed lines ahead of time, detached and at the lowest priority (a live call always comes first); one at
-  # a time, and a no-op once they are all made
-  [ -n "${SKIP_VOICE_PREWARM:-}" ] || setsid nohup flock -n .cache/speech-prewarm.lock nice -n 19 \
-    "$PY" -m scripts.speech_prewarm > .cache/speech-prewarm.log 2>&1 < /dev/null &
+  # a time, and a no-op once they are all made. The background job must itself be the subshell that swaps its output
+  # for the log (exec): any shell around it that still holds the deploy's output keeps the SSH session open until
+  # its 10-minute timeout (13 Nov; tested: the deploy now returns at once, the job carries on).
+  if [ -z "${SKIP_VOICE_PREWARM:-}" ]; then
+    ( exec > .cache/speech-prewarm.log 2>&1 < /dev/null
+      exec setsid nohup flock -n .cache/speech-prewarm.lock nice -n 19 "$PY" -m scripts.speech_prewarm ) &
+  fi
   exit 0
 fi
 
