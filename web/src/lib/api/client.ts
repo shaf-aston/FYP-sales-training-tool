@@ -127,11 +127,15 @@ export function createHttpApi() {
     sellInit: (difficulty: T.Difficulty, productType: string, pick: T.BuyerPick = {}, knowledge: T.KnowledgeData = {}) =>
       request<T.SellInitRes>("/api/sell/init", {
         body: {
-          difficulty, product_type: productType, persona: pick.persona, objection: pick.objection, custom_buyer: pick.custom, replay: pick.replay,
+          difficulty, product_type: productType, persona: pick.persona, objection: pick.objection, custom_buyer: pick.custom, replay: pick.replay, jump: pick.jump,
           knowledge: Object.keys(knowledge).length ? knowledge : undefined,
         },
         timeoutMs: chat,
       }),
+    sellStageStarts: (productType: string, persona?: string) =>
+      request<{ success: true; persona: string; stages: T.StageStart[] }>(
+        `/api/sell/stage-starts?product_type=${encodeURIComponent(productType)}${persona ? `&persona=${encodeURIComponent(persona)}` : ""}`,
+      ),
     sellChat: (sid: string, message: string, showHints: boolean) =>
       request<T.SellChatRes>("/api/sell/chat", { body: { message, show_hints: showHints }, sessionId: sid, timeoutMs: chat }),
     sellState: (sid: string) => request<T.SellStateRes>("/api/sell/state", { sessionId: sid }),

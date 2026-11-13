@@ -46,6 +46,11 @@ cat:
     commitment: "What you'll change"
     reason: "Why now"
 impact_formula:
+  asks:
+    change: "What would you change about that, if you could?"
+    impact: "Has that held you back from what you're after?"
+    future: "Say there was a way to solve that. What would be different for you?"
+    inaction: "And if nothing changes, where does that leave you?"
   starts: {intent: intent, logical: problem, emotional: why_now, pitch: commit, outcome: payment}
   samples:
     goal: "getting more clients"
@@ -58,12 +63,30 @@ impact_formula:
     cost: "I'd have to go back to a 9-5"
     reason: "I'm tired of guessing"
   labels:
-    goal: "What you want"
+    goal: "The goal"
     problem: "Hardest part"
     duration: "How long"
-    change: "What you'd change"
+    change: "What would change"
     impact: "The impact"
     why_now: "Why now"
     future: "What would be different"
     cost: "If nothing changes"
     reason: "Why act"
+
+# Sell mode: the learner is the rep, so the AI buyer is the one who "said" these. It uses the generic script
+# (its starts and labels above); the answers are filled from the buyer's persona ({need}, {need2}, {pain}, {pain2}
+# from buyer.yaml), so they fit any product. `asks` (in impact_formula below) are the rep's lines where the
+# script's own line needs a blank only the buy-mode seller fills.
+sell:
+  method: impact_formula
+  samples:
+    goal: "mainly {need}"
+    problem: "honestly, {pain}"
+    duration: "a good few months now"
+    change: "I'd want it sorted without it eating my time"
+    impact: "yes, it's held everything back"
+    why_now: "{pain2}, and it's getting worse"
+    future: "I'd finally have {need2} handled"
+    cost: "more of the same, and I can't keep doing that"
+    reason: "I don't want to keep putting it off"
+

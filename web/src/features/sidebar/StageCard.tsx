@@ -10,16 +10,33 @@ import { useStageJump } from "@/features/stageJump/useStageJump";
 import { useUi } from "@/state/UiContext";
 import s from "./StageCard.module.css";
 
-/** Buy mode: the stage the AI seller has reached, and where it sits in the whole call.
+/** The call's five stages, and a practice call started at any of them (the same recap and dialog in both modes).
+ * Buy mode: the stage the AI seller has reached. Sell mode: the stage this practice call started at; the learner
+ * moves the call on themselves, so no live stage is claimed.
  * Hidden while the quiz is open, so the quiz never shows its own answer. */
 export function StageCard() {
-  const { stage, mode, buySessionId, jumpTo, practiceFrom } = useSession();
+  const { stage, mode, buySessionId, jumpTo, practiceFrom, sellSession, startBuyer } = useSession();
   const { sidePanel } = useUi();
   const [picked, setPicked] = useState<number | null>(null);
+  const sell = mode === "sell";
   const jump = useStageJump(
-    () => (buySessionId ? api.buyStageStarts(buySessionId).then((r) => r.stages) : Promise.resolve([])),
-    async (to, slots) => {
-      const ok = await jumpTo(to.step, slots, to.stage);
+    () =>
+      sell
+        ? sellSession
+          ? api.sellStageStarts(sellSession.productType, sellSession.persona.name).then((r) => r.stages)
+          : Promise.resolve([])
+        : buySessionId
+          ? api.buyStageStarts(buySessionId).then((r) => r.stages)
+          : Promise.resolve([]),
+    async (to, answers) => {
+      const ok = sell
+        ? !!sellSession &&
+          (await startBuyer(sellSession.difficulty, sellSession.productType, {
+            persona: sellSession.persona.name,
+            objection: sellSession.pick.objection,
+            jump: { stage: to.stage, answers },
+          }))
+        : await jumpTo(to.step, answers, to.stage);
       if (ok) setPicked(null);
       return ok;
     },
@@ -32,26 +49,24 @@ export function StageCard() {
       </Card>
     );
   }
-  const label = stageMeta(stage).label;
-  const at = stageIndex(stage);
+  const label = sell ? (practiceFrom ? `Practice from ${stageShort(practiceFrom)}` : "From the start") : stageMeta(stage).label;
+  const at = sell ? Math.max(stageIndex(practiceFrom ?? "intent"), 0) : stageIndex(stage);
   const shown = STAGE_STEPS[picked ?? Math.max(at, 0)];
   const showMeta = stageMeta(shown.id);
 
-  // Buy mode: click another stage → recap card of the answers skipped → fresh practice call at that stage's main step.
+  // Click a stage (in buy mode, another one) → recap card of the answers skipped → fresh practice call at that stage's main step.
   const onStage = async (i: number) => {
-    if (i === at || mode !== "buy" || !buySessionId) return setPicked(picked === i || i === at ? null : i);
+    if (sell ? !sellSession : i === at || !buySessionId) return setPicked(picked === i || i === at ? null : i);
     await jump.open(STAGE_STEPS[i].id);
   };
 
   return (
     <Card tone="accent" className={s.card} aria-label="Stage of the sale">
-      <Eyebrow>
-        Stage {Math.max(at + 1, 1)} of {STAGE_STEPS.length}
-      </Eyebrow>
+      <Eyebrow>{sell ? "Stages" : `Stage ${Math.max(at + 1, 1)} of ${STAGE_STEPS.length}`}</Eyebrow>
       <p key={label} className={s.stageName} aria-live="polite">
         {label}
       </p>
-      {mode === "buy" && practiceFrom && (
+      {!sell && practiceFrom && (
         <span className={s.practice}>
           <Badge tone="accent">Practice from {stageShort(practiceFrom)}</Badge>
         </span>
@@ -77,13 +92,13 @@ export function StageCard() {
         {shown.id !== STAGE_STEPS[Math.max(at, 0)].id && (
           <p className={s.detailTitle}>
             {showMeta.label}
-            <span className={s.tag}>{STAGE_STEPS.indexOf(shown) < at ? "Done" : "Coming up"}</span>
+            {!sell && <span className={s.tag}>{STAGE_STEPS.indexOf(shown) < at ? "Done" : "Coming up"}</span>}
           </p>
         )}
-        {showMeta.hint && <p className={s.detailText}>{showMeta.hint}</p>}
-        {mode === "buy" && <p className={s.tip}>Pick a stage to jump there.</p>}
+        {(sell ? showMeta.sellHint : showMeta.hint) && <p className={s.detailText}>{sell ? showMeta.sellHint : showMeta.hint}</p>}
+        <p className={s.tip}>Pick a stage to {sell ? "practise from it" : "jump there"}.</p>
       </div>
-      <StageJumpDialog key={jump.key} speaker="you" {...jump.dialog} />
+      <StageJumpDialog key={jump.key} speaker={sell ? "they" : "you"} {...jump.dialog} />
     </Card>
   );
 }

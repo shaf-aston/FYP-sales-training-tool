@@ -17,7 +17,9 @@ function endLine(b: SellSession): string | null {
 
 /** Top of the Buyer tab while selling: who the buyer is, how warm they are, and scoring. */
 export function BuyerProfile({ sellSession }: { sellSession: SellSession }) {
-  const { sellSettings, setSellSettings } = useSession();
+  const { sellSettings, setSellSettings, markSellEnded } = useSession();
+  // A call started at a stage opens on lines the learner never typed, so it is practice: ended, never scored.
+  const practice = !!sellSession.pick.jump;
   const { state, run, display, forThisSession } = useEvaluation();
   const pct = Math.round(sellSession.state.readiness * 100);
   const delta = useReadinessDelta(pct);
@@ -67,9 +69,15 @@ export function BuyerProfile({ sellSession }: { sellSession: SellSession }) {
         </Card>
       )}
 
-      <Button variant="danger" block busy={evaluating} busyLabel="Scoring…" disabled={turns < 1 || sellSession.ended} onClick={run}>
-        End and score
-      </Button>
+      {practice ? (
+        <Button block disabled={sellSession.ended} onClick={() => markSellEnded(sellSession.outcome)}>
+          End practice
+        </Button>
+      ) : (
+        <Button variant="danger" block busy={evaluating} busyLabel="Scoring…" disabled={turns < 1 || sellSession.ended} onClick={run}>
+          End and score
+        </Button>
+      )}
 
       {display === "panel" && forThisSession && state.status !== "idle" && <EvaluationBody />}
 

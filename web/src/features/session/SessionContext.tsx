@@ -8,6 +8,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { api, ApiError, errorText } from "@/lib/api/client";
 import type { BotState, BuyerPick, BuyerState, ChatMsg, CoachNotes, Difficulty, Outcome, Persona, WordsChoice } from "@/lib/api/types";
 import { useAccount } from "@/features/account/AccountContext";
+import { stageShort } from "@/lib/labels";
 import { config, storageKeys } from "@/lib/config";
 import { readString, writeString } from "@/lib/storage";
 import { useStoredState } from "@/lib/useStoredState";
@@ -461,9 +462,12 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
         });
         // A replayed real call shows its lines so far (the last is the prospect's, which the learner answers);
         // a normal start shows the buyer's opening line.
-        const shown = fromHistory(pick.replay ?? [{ role: "assistant", content: res.message }], config.historyCap);
+        // A call started at a stage shows its lines so far the same way, under the stage it starts at.
+        const before = res.history?.length ? res.history : pick.replay;
+        const shown = fromHistory(before ?? [{ role: "assistant", content: res.message }], config.historyCap);
         shown[shown.length - 1].meta = metaLine(res.latency_ms, res.provider);
-        setMessages(pick.replay ? [{ id: newId(), role: "divider", content: "From your real call", historyIndex: -1 }, ...shown] : shown);
+        const label = pick.jump ? `Practice from ${stageShort(pick.jump.stage)}` : "From your real call";
+        setMessages(before ? [{ id: newId(), role: "divider", content: label, historyIndex: -1 }, ...shown] : shown);
         return true;
       } catch (err) {
         toast(errorText(err, "Couldn't start your buyer."), "error");
@@ -573,7 +577,8 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
       reset,
       switchProduct,
       jumpTo,
-      practiceFrom,
+      // Sell mode: a practice call is one its buyer was started at a stage (kept in the pick, so reloads keep it).
+      practiceFrom: mode === "sell" ? (sellSession?.pick.jump?.stage ?? null) : practiceFrom,
       startBuyer,
       endBuyer,
       markSellEnded,

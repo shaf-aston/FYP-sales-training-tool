@@ -19,6 +19,7 @@ export function SellDialogs() {
   const { state, run } = useEvaluation();
   const sid = sellSession?.sessionId ?? null;
   const ended = !!sellSession?.ended;
+  const practice = !!sellSession?.pick.jump;   // a call started at a stage is never scored
 
   // A different (or no) buyer makes the old evaluation stale.
   useEffect(() => {
@@ -28,10 +29,10 @@ export function SellDialogs() {
     }
   }, [state.sessionId, sid, dialog, closeDialog]);
 
-  // The buyer ended the conversation: score it once.
+  // The buyer ended the conversation: score it once (a practice call is not scored).
   useEffect(() => {
-    if (ended && state.sessionId !== sid) run();
-  }, [ended, sid, state.sessionId, run]);
+    if (ended && !practice && state.sessionId !== sid) run();
+  }, [ended, practice, sid, state.sessionId, run]);
 
   return (
     <>

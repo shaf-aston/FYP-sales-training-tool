@@ -3,7 +3,8 @@
 from flask import Blueprint, current_app, jsonify, request
 
 from core.sell_mode import sell_service
-from core.sell_mode.buyer_state import UnknownPersona, persona_name, personas_for
+from core.sell_mode.buyer_state import UnknownPersona, persona_name, personas_for, select_persona
+from core.training.stage_jump import sell_stage_starts
 from core.infra.constants import MAX_CHOSEN_OBJECTION_CHARS, MAX_FIELD_LENGTH, MAX_PERSONA_NAME_CHARS
 from core.sell_mode.knowledge import ALLOWED_FIELDS
 from core.training.drills import build_drill_set
@@ -92,6 +93,19 @@ def _optional_text(data: dict, field: str, limit: int):
     return value.strip() or None, None
 
 
+@bp.route("/stage-starts", methods=["GET"])
+def stage_starts():
+    """Where a practice call can start, per stage, with the buyer's answers so far (the recap card). The buyer is
+    the named persona for the product, or one picked now (its name comes back, to start the call with)."""
+    product_type = request.args.get("product_type") or "default"
+    name = (request.args.get("persona") or "")[:MAX_PERSONA_NAME_CHARS] or None
+    try:
+        persona = select_persona(product_type, name)
+    except UnknownPersona as e:
+        return jsonify({"error": UNKNOWN_PERSONA.format(name=e.name, product=e.product_type)}), 400
+    return jsonify({"success": True, "persona": persona_name(persona), "stages": sell_stage_starts(persona)})
+
+
 @bp.route("/init", methods=["POST"])
 @require_rate_limit("sell")
 def init():
@@ -120,6 +134,10 @@ def init():
         if error:
             return error
 
+    jump = data.get("jump")
+    if jump is not None and not (isinstance(jump, dict) and isinstance(jump.get("stage"), str)):
+        return jsonify({"error": INVALID_PAYLOAD}), 400
+
     product_type = data.get("product_type", "default")
     if not isinstance(product_type, str):   # {"a": 1} was a 500 "Couldn't set up the buyer"
         return jsonify({"error": INVALID_PAYLOAD}), 400
@@ -134,6 +152,7 @@ def init():
             custom_buyer=data.get("custom_buyer"),
             replay=data.get("replay"),
             knowledge=knowledge,
+            jump=jump,
         )
     except InvalidCustomBuyer as e:
         return jsonify({"error": CUSTOM_BUYER_INVALID.format(detail=e)}), 400
@@ -141,6 +160,8 @@ def init():
         return jsonify({"error": INVALID_DIFFICULTY.format(choices=", ".join(e.choices))}), 400
     except UnknownPersona as e:
         return jsonify({"error": UNKNOWN_PERSONA.format(name=e.name, product=e.product_type)}), 400
+    except ValueError:   # a jump to a stage with no start
+        return jsonify({"error": INVALID_PAYLOAD}), 400
     except ProviderUnavailable:
         return _unavailable()
     except Exception as e:
@@ -161,6 +182,7 @@ def init():
             "state": opening.state_snapshot,
             "difficulty": buyer.state.difficulty,
             "product_type": product_type,
+            **({"history": history_json(buyer.conversation_history)} if jump else {}),
             "latency_ms": opening.latency_ms,
             "provider": opening.provider,
             "model": opening.model,

@@ -12,6 +12,7 @@ from core.infra.constants import MAX_MESSAGE_LENGTH, MAX_SELLER_SESSIONS
 from core.infra import embedder as meaning_model
 from core.infra.loader import CONFIG_DIR
 from core.training.quiz import get_quiz_question
+from core.training.stage_jump import kept_answers
 from core.buy_mode.seller_bot import SellerBot
 from core.buy_mode.script_engine import rep_words
 from core.buy_mode.script_engine.seller import method_for, products as script_products, resolve_product
@@ -240,13 +241,6 @@ def stages(seller):
     return jsonify({"success": True, "stages": seller.stage_starts()})
 
 
-def _jump_slots(raw, allowed):
-    """The recap card's answers: only the slots the card offered, as short plain strings."""
-    if not isinstance(raw, dict):
-        return {}
-    return {k: str(v).strip()[:200] for k, v in raw.items() if k in allowed and isinstance(v, str) and v.strip()}
-
-
 @bp.route("/jump", methods=["POST"])
 @require_rate_limit("buy_chat")
 @with_session("seller")
@@ -255,9 +249,9 @@ def jump(seller):
     before it, so the seller's first line builds on them."""
     data = request.get_json(silent=True) or {}
     step = str(data.get("step") or "")
-    allowed = {r["slot"] for st in seller.stage_starts() if st["step"] == step for r in st["recap"]}
+    kept = kept_answers(seller.stage_starts(), step, data.get("slots"))
     try:
-        message = seller.jump_to(step, _jump_slots(data.get("slots"), allowed))
+        message = seller.jump_to(step, kept[1] if kept else {})
     except ValueError:
         return jsonify({"error": INVALID_STEP}), 400
     except Exception:

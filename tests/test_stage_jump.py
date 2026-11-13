@@ -71,3 +71,50 @@ def test_the_jump_route_refuses_an_unknown_step(live_seller):
 def test_every_sample_has_a_plain_label(name):
     cfg = load_stage_jump()[name]
     assert set(cfg["samples"]) == set(cfg["labels"])
+
+
+# ---- sell mode: the learner is the rep, the AI buyer is the one who "said" the recap ----------------------
+
+from core.sell_mode.buyer_state import select_persona
+from core.training.stage_jump import sell_history, sell_stage_starts
+
+ALEX = select_persona("general", "Alex")
+
+
+def test_sell_recap_answers_are_the_personas_own_words():
+    starts = {s["stage"]: s for s in sell_stage_starts(ALEX)}
+    assert list(starts) == STAGES
+    answers = {r["slot"]: r["answer"] for r in starts["emotional"]["recap"]}
+    assert answers["goal"] == "Mainly efficiency improvement"
+    assert answers["problem"] == "Honestly, current solution is slow"
+    assert all("{" not in r["ask"] for s in starts.values() for r in s["recap"])
+
+
+def test_sell_history_is_the_rep_asking_and_the_buyer_answering_ending_with_the_buyer():
+    history = sell_history(ALEX, "logical", {"goal": "more sales", "junk": "x"})
+    assert history == [{"role": "user", "content": "What would you like help with first?"},
+                       {"role": "assistant", "content": "more sales"}]
+    assert sell_history(ALEX, "intent", {}) == []
+    with pytest.raises(ValueError):
+        sell_history(ALEX, "nowhere", {})
+
+
+def test_sell_stage_starts_route_names_the_buyer(sell_client):
+    res = sell_client.get("/api/sell/stage-starts?product_type=default&persona=Alex").get_json()
+    assert res["persona"] == "Alex" and [s["stage"] for s in res["stages"]] == STAGES
+    assert sell_client.get("/api/sell/stage-starts?persona=Nobody").status_code == 400
+
+
+def test_sell_jump_starts_on_the_call_so_far(sell_client):
+    res = sell_client.post("/api/sell/init", json={"product_type": "default", "persona": "Alex",
+                                                    "jump": {"stage": "logical", "answers": {"goal": "more sales"}}})
+    body = res.get_json()
+    assert res.status_code == 200
+    assert [m["content"] for m in body["history"]] == ["What would you like help with first?", "more sales"]
+    assert body["message"] == "more sales"
+
+
+def test_sell_jump_to_an_unknown_stage_is_refused(sell_client):
+    bad = sell_client.post("/api/sell/init", json={"persona": "Alex", "jump": {"stage": "nowhere"}})
+    wrong = sell_client.post("/api/sell/init", json={"persona": "Alex", "jump": "pitch"})
+    assert bad.status_code == 400 and wrong.status_code == 400
