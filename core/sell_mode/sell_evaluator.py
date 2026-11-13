@@ -3,12 +3,7 @@
 from core.infra.constants import GRADE_LABELS, GRADE_THRESHOLDS
 from core.infra.loader import load_buyer_config
 from core.infra.utils import clamp_score, range_label, tokenize
-
-
-def _contains_any(text: str, hints: list[str]) -> bool:
-    """Return True when any hint phrase appears in the text."""
-    lowered = (text or "").lower()
-    return any(hint in lowered for hint in hints)
+from core.infra.phrases import says_any
 
 
 def _weighted_overall(criteria_scores: dict, criteria: dict) -> int:
@@ -41,15 +36,15 @@ def _criteria_scores(conversation_history: list[dict], evaluation: dict) -> dict
 
     question_turns = sum(1 for turn in sales_turns if "?" in turn)
     open_question_turns = sum(
-        1 for turn in sales_turns if "?" in turn and _contains_any(turn, hints["open_question"])
+        1 for turn in sales_turns if "?" in turn and says_any(hints["open_question"], turn)
     )
     question_ratio = min(1.0, question_turns / sales_count)
     open_ratio = open_question_turns / max(1, question_turns)
 
-    rapport_ratio = min(1.0, sum(1 for t in sales_turns if _contains_any(t, hints["rapport"])) / sales_count)
-    objection_turns = sum(1 for turn in buyer_turns if _contains_any(turn, hints["objection_cues"]))
-    objection_response_turns = sum(1 for t in sales_turns if _contains_any(t, hints["objection_response"]))
-    solution_ratio = min(1.0, sum(1 for t in sales_turns if _contains_any(t, hints["solution"])) / sales_count)
+    rapport_ratio = min(1.0, sum(1 for t in sales_turns if says_any(hints["rapport"], t)) / sales_count)
+    objection_turns = sum(1 for turn in buyer_turns if says_any(hints["objection_cues"], turn))
+    objection_response_turns = sum(1 for t in sales_turns if says_any(hints["objection_response"], t))
+    solution_ratio = min(1.0, sum(1 for t in sales_turns if says_any(hints["solution"], t)) / sales_count)
 
     length_fit = next(
         (band["fit"] for band in scoring["length_fit"]["bands"]

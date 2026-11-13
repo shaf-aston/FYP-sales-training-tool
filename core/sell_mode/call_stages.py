@@ -16,6 +16,7 @@ from core.infra.loader import load_yaml
 from core.infra.utils import tokenize
 from core.sell_mode.buyer_moves import asks_to_commit, states_price, topic_of
 from core.training.turn_rating import load_turn_rating
+from core.infra.phrases import says_any
 
 ORDER = ("opening", "goals", "situation", "problem", "obstacle", "playback", "solution", "price", "objections", "close")
 GOOD = ("strong", "none")   # a stage with nothing to work on
@@ -25,19 +26,13 @@ def _cfg() -> dict:
     return load_yaml("call_stages.yaml")
 
 
-def _has(phrases: list[str], text: str) -> bool:
-    """A phrase said in the text: whole words, or a word's start ("frustrat" -> "frustrated")."""
-    low = (text or "").lower().replace("’", "'")
-    return any(re.search(rf"(?<![a-z']){re.escape(p)}", low) for p in phrases)
-
-
 def _asked(line: str) -> bool:
     return "?" in (line or "")
 
 
 def _told(line: str, phrases: list[str]) -> bool:
     """A statement sentence (no question mark) in the line says one of the phrases: an offer, a playback."""
-    return any(_has(phrases, s) for s in re.split(r"(?<=[.!?])\s+", line or "") if s and not s.rstrip().endswith("?"))
+    return any(says_any(phrases, s) for s in re.split(r"(?<=[.!?])\s+", line or "") if s and not s.rstrip().endswith("?"))
 
 
 def _content_words(text: str) -> set[str]:
@@ -66,7 +61,7 @@ def analyse_stages(turns: list[dict]) -> list[dict]:
     out = []
 
     # opening: the first thing asked is about them (a real question: "how are you?" opens nothing)
-    real_q = [a and ("open_question" in t["signals"] or _has(d["about_them"], s)) for a, t, s in zip(asked, turns, seller)]
+    real_q = [a and ("open_question" in t["signals"] or says_any(d["about_them"], s)) for a, t, s in zip(asked, turns, seller)]
     first_q = next((i for i, a in enumerate(real_q) if a), None)
     pitched_first = bool(seller) and _told(seller[0], d["offer"])
     if seller and real_q[0] and not pitched_first:
@@ -78,22 +73,22 @@ def analyse_stages(turns: list[dict]) -> list[dict]:
 
     # what they want, and how far past the first answer
     goal = [i for i, (s, a, tp) in enumerate(zip(seller, asked, topic)) if a and (
-        tp == "need" or _has(d["goal"], s) or (_has(d["dig"], s) and _has(d["identity"], s)))]   # "what would that mean for you personally?"
+        tp == "need" or says_any(d["goal"], s) or (says_any(d["dig"], s) and says_any(d["identity"], s)))]   # "what would that mean for you personally?"
     if not goal:
         out.append(_stage("goals", "missed", []))
     else:
         digs = [i for i in range(goal[0] + 1, len(seller)) if asked[i] and (
-            _has(d["dig"], seller[i]) or ("on_topic" in turns[i]["signals"] and topic[i] in ("need", "general")))]
-        deep = [i for i in [goal[0], *digs] if _has(d["identity"], seller[i])]
+            says_any(d["dig"], seller[i]) or ("on_topic" in turns[i]["signals"] and topic[i] in ("need", "general")))]
+        deep = [i for i in [goal[0], *digs] if says_any(d["identity"], seller[i])]
         status = "strong" if deep or len(digs) >= 2 else "partly"
         out.append(_stage("goals", status, [num[i] for i in [goal[0], *digs[:3]]]))
 
     # where they are now, and what they have tried
     # an open question about today, not "shall we get you started today?"
     # ... nor "what made you take this call today?", which asks why they came, not how they do it now
-    now = [i for i, s in enumerate(seller) if "open_question" in turns[i]["signals"] and not _has(d["about_them"], s)
-           and (topic[i] == "current" or _has(d["situation"], s))]
-    tried = [i for i, s in enumerate(seller) if asked[i] and _has(d["tried"], s)]
+    now = [i for i, s in enumerate(seller) if "open_question" in turns[i]["signals"] and not says_any(d["about_them"], s)
+           and (topic[i] == "current" or says_any(d["situation"], s))]
+    tried = [i for i, s in enumerate(seller) if asked[i] and says_any(d["tried"], s)]
     status = "strong" if now and tried else "partly" if now or tried else "missed"
     out.append(_stage("situation", status, [num[i] for i in now[:2] + tried[:2]]))
 
@@ -108,7 +103,7 @@ def analyse_stages(turns: list[dict]) -> list[dict]:
     out.append(_stage("problem", status, [num[v[0]] for v in kinds.values() if v]))
 
     # what has kept them stuck
-    stuck = [i for i, s in enumerate(seller) if asked[i] and _has(d["obstacle"], s)]
+    stuck = [i for i, s in enumerate(seller) if asked[i] and says_any(d["obstacle"], s)]
     out.append(_stage("obstacle", "strong" if stuck else "missed", [num[i] for i in stuck[:2]]))
 
     # the offer: where it came, and whether it is in their words
@@ -116,7 +111,7 @@ def analyse_stages(turns: list[dict]) -> list[dict]:
     first_offer = offers[0] if offers else len(seller)
     playback = [i for i in range(first_offer + (0 if offers else 0)) if i < len(seller) and (
         _told(seller[i], d["playback"]) or (not asked[i] and len(_content_words(seller[i]) & heard[i]) >= d["playback_min_words"]))]
-    playback += [first_offer] if offers and _has(d["playback"], seller[first_offer]) else []
+    playback += [first_offer] if offers and says_any(d["playback"], seller[first_offer]) else []
     out.append(_stage("playback", "strong" if playback else "missed", [num[i] for i in playback[:2]]))
     goal_or_problem = min([x for x in (goal[0] if goal else None, problem_at) if x is not None], default=None)
     if not offers:
@@ -138,12 +133,12 @@ def analyse_stages(turns: list[dict]) -> list[dict]:
     # doubt: what the seller did with the turn after the buyer pushed back
     handled = []
     for i, t in enumerate(turns[:-1]):
-        if _has(d["doubt"], t.get("buyer") or ""):
+        if says_any(d["doubt"], t.get("buyer") or ""):
             nxt = turns[i + 1]
             sig = nxt["signals"]
-            if "pressure" in sig or _has(d["argue"], nxt["seller"]):
+            if "pressure" in sig or says_any(d["argue"], nxt["seller"]):
                 handled.append(("weak", nxt["turn"]))
-            elif ("acknowledgement" in sig or _has(d["acknowledge"], nxt["seller"])) and _asked(nxt["seller"]):
+            elif ("acknowledgement" in sig or says_any(d["acknowledge"], nxt["seller"])) and _asked(nxt["seller"]):
                 handled.append(("strong", nxt["turn"]))
             else:
                 handled.append(("partly", nxt["turn"]))

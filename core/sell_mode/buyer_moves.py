@@ -18,6 +18,7 @@ from dataclasses import dataclass
 
 from core.infra.loader import load_buyer_config, load_yaml
 from core.training.turn_rating import ends_with_tag, load_turn_rating
+from core.infra.phrases import says
 
 MOVES = ("share", "guard", "stall", "ask", "lean_in")
 
@@ -35,10 +36,6 @@ class Move:
         return f"{self.kind}:{self.topic}" + ("+object" if self.objection else "")
 
 
-def _phrase_at(phrase: str, text: str) -> bool:
-    return re.search(rf"\b{re.escape(phrase)}", text) is not None
-
-
 def topic_of(line: str) -> str:
     """What the seller's line asks about: the topic in prospect_lines.yaml whose phrase in it is longest (the most
     specific: "how long has" is the pain, "how long" the timeline), the first listed on a tie, else "general". A
@@ -46,7 +43,7 @@ def topic_of(line: str) -> str:
     text = (line or "").lower()
     best, best_len = "general", 0
     for topic, phrases in load_yaml("prospect_lines.yaml")["topics"].items():
-        longest = max((len(p) for p in phrases if _phrase_at(p, text)), default=0)
+        longest = max((len(p) for p in phrases if says(p, text)), default=0)
         if longest > best_len:
             best, best_len = topic, longest
     return best
@@ -65,7 +62,7 @@ def is_closed(line: str) -> bool:
 def asks_to_commit(line: str) -> bool:
     """The seller asked them to take a next step, as a yes/no question ("Shall we book a walkthrough?")."""
     text = (line or "").lower()
-    return "?" in text and is_closed(text) and any(_phrase_at(p, text) for p in load_buyer_config()["moves"]["next_step"])
+    return "?" in text and is_closed(text) and any(says(p, text) for p in load_buyer_config()["moves"]["next_step"])
 
 
 def states_price(line: str) -> bool:
@@ -94,7 +91,7 @@ def next_move(readiness: float, seller_line: str, signals: list[str], objection:
         return Move("ask", "general", objection)
     # "Tell me more about that." asks as surely as a question mark does (turn_rating.yaml invitations): taken as a
     # statement, it got "That's fair. Tell me more." back (live, 12 Nov)
-    asked = "?" in line or any(_phrase_at(p, line) for p in load_turn_rating()["invitations"])
+    asked = "?" in line or any(says(p, line) for p in load_turn_rating()["invitations"])
     closed = "?" in line and is_closed(line)
     warm, cold = readiness >= cfg["open_from"], readiness < cfg["guarded_below"]
     if asks_to_commit(line):
