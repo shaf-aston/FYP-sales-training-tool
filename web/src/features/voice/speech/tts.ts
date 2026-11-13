@@ -5,6 +5,7 @@
 import { api } from "@/lib/api/client";
 import type { Speaker } from "@/lib/api/types";
 import { config } from "@/lib/config";
+import { unmarked } from "@/lib/tone";
 
 interface Handle {
   pause(): void;
@@ -52,13 +53,15 @@ export class Tts {
     return this.pending || this.handle !== null;
   }
 
-  async speak(text: string, speed: number, speaker?: Speaker) {
+  /** `speed` is the learner's setting (± % from normal); `tone` the line's own pace from its tone note (1 = as set),
+   *  which the server's voice is made at, so it is said slower rather than played slower. */
+  async speak(text: string, speed: number, speaker?: Speaker, tone = 1) {
     if (!text.trim()) return;
     this.stop();
     const mine = this.generation;
     this.pending = true;
 
-    const handle = await this.createHandle(text, speed, speaker);
+    const handle = await this.createHandle(text, speed, speaker, tone);
     if (mine !== this.generation) {
       handle?.pause(); // a newer speak() or stop() overtook this one
       return;
@@ -105,16 +108,17 @@ export class Tts {
     }
   }
 
-  private async createHandle(text: string, speed: number, speaker?: Speaker): Promise<Handle | null> {
-    return (await this.serverHandle(text, speed, speaker)) ?? this.nativeHandle(text, speed);
+  private async createHandle(text: string, speed: number, speaker: Speaker | undefined, tone: number): Promise<Handle | null> {
+    const both = Math.round((1 + speed / 100) * tone * 100 - 100);
+    return (await this.serverHandle(text, speed, speaker, tone)) ?? this.nativeHandle(unmarked(text), both);
   }
 
   /** The server's voice, sentence by sentence: each piece plays as soon as it is here, the next is fetched while it
    *  plays. A piece the server can't say ends the reply there (the words are on screen). */
-  private async serverHandle(text: string, speed: number, speaker?: Speaker): Promise<Handle | null> {
+  private async serverHandle(text: string, speed: number, speaker: Speaker | undefined, tone: number): Promise<Handle | null> {
     const parts = sentences(text);
-    const fetches: Promise<Blob | null>[] = [api.speech(parts[0], speaker)];
-    const fetchPart = (i: number) => (fetches[i] ??= i < parts.length ? api.speech(parts[i], speaker) : Promise.resolve(null));
+    const fetches: Promise<Blob | null>[] = [api.speech(parts[0], speaker, tone)];
+    const fetchPart = (i: number) => (fetches[i] ??= i < parts.length ? api.speech(parts[i], speaker, tone) : Promise.resolve(null));
     const first = await fetches[0];
     if (!first) return null;
     fetchPart(1); // the next one is being made while the first plays

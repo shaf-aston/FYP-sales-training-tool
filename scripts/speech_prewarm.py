@@ -16,6 +16,7 @@ import time
 from pathlib import Path
 
 from core.infra.loader import load_buyer_config, load_yaml
+from core.buy_mode.script_engine.words.tone import rate
 from core.infra.providers.speech import SPEECH, is_cached, kokoro, pick_voice, speak, spoken_sentences
 from core.sell_mode.buyer_lines import fill
 
@@ -70,27 +71,28 @@ def buyer_lines() -> dict[str, set[str]]:
     return out
 
 
-def seller_lines() -> set[str]:
-    """Buy mode's seller: the script's own lines (no blanks), the shared script and every offer's answers."""
+def seller_lines() -> set[tuple[str, float]]:
+    """Buy mode's seller: the script's own lines (no blanks), the shared script and every offer's answers, each
+    sentence with the pace its line's tone note asks for (the web sends it: lib/tone.ts toneRate)."""
     root = Path(__file__).resolve().parent.parent / "config"
     texts = []
     for path in [*root.glob("methods/*.yaml"), *root.glob("script/*.yaml"), *root.glob("offers/*.yaml")]:
         texts += [t for t in _strings(load_yaml(str(path.relative_to(root)))) if "{" not in t]
-    return {s for t in texts for s in spoken_sentences(t)}
+    return {(s, rate(t)) for t in texts for s in spoken_sentences(t)}
 
 
 def main(dry: bool = False) -> None:
-    jobs = [(SPEECH["kokoro"]["seller"], s) for s in sorted(seller_lines(), key=len)]
+    jobs = [(SPEECH["kokoro"]["seller"], s, pace) for s, pace in sorted(seller_lines(), key=lambda j: len(j[0]))]
     for voice, sentences in buyer_lines().items():
-        jobs += [(voice, s) for s in sorted(sentences, key=len)]
-    todo = [(v, s) for v, s in dict.fromkeys(jobs) if not is_cached(s, v)]
+        jobs += [(voice, s, 1.0) for s in sorted(sentences, key=len)]
+    todo = [(v, s, pace) for v, s, pace in dict.fromkeys(jobs) if not is_cached(s, v, pace)]
     print(f"{len(jobs)} sentences, {len(todo)} to make", flush=True)
     if dry:
         return
     kokoro()
     start, made = time.time(), 0
-    for voice, sentence in todo:
-        if speak(sentence, voice=voice, engines=["kokoro"]):
+    for voice, sentence, pace in todo:
+        if speak(sentence, speed=pace, voice=voice, engines=["kokoro"]):
             made += 1
         if made and made % 50 == 0:
             print(f"{made}/{len(todo)} made, {time.time() - start:.0f}s", flush=True)

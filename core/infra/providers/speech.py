@@ -23,6 +23,7 @@ from groq import Groq
 from core.infra.constants import SPEECH
 from core.infra.env import ROOT_DIR
 from core.infra.logs import timed
+from core.infra.providers import voice_marks
 from core.infra.providers.config import get_groq_api_keys
 
 logger = logging.getLogger(__name__)
@@ -69,19 +70,13 @@ _PAUSE = "¶"
 _LONG_PAUSE = re.compile(r"\s*\[pause[^\]]*\]\s*")
 _TONES = "slow|deliberate|calm|gentle|soft|warm|serious|firm|curious|playful|excited|upbeat"
 _NOTE = re.compile(rf"\((?:{_TONES})(?:,\s*(?:{_TONES}))*\)\s*")
-_KEY = re.compile(r"==(.+?)==")
-_LOUD = re.compile(r"\*\*(\S(?:.*?\S)?)\*\*")
-_STRESS = re.compile(r"(^|[\s(\"'“‘])_(\w[^_]*?)_(?=[\s.,!?…:;)—\-\"'”’]|$)")
 
 
 def spoken_sentences(text: str) -> list[str]:
-    """A message as the web sends it to be read: marks gone, each bubble ending a sentence, then one piece per
-    sentence (a scrap under 4 characters joined to the next)."""
+    """A message as the web sends it to be read: tone notes gone, each bubble ending a sentence, then one piece per
+    sentence (a scrap under 4 characters joined to the next). The stress marks stay: the voice says them."""
     bubbles = [b.strip() for b in _NOTE.sub("", _LONG_PAUSE.sub(_PAUSE, text or "")).split(_PAUSE) if b.strip()]
-    words = []
-    for b in bubbles:
-        b = _STRESS.sub(r"\1\2", _LOUD.sub(r"\1", _KEY.sub(r"\1", b)))
-        words.append(b if re.search(r"[.!?…]$", b) else f"{b}.")
+    words = [b if re.search(r"[.!?…]$", b) else f"{b}." for b in bubbles]
     out: list[str] = []
     for part in (p.strip() for p in re.split(r"(?<=[.!?…])\s+", " ".join(words))):
         if not part:
@@ -93,8 +88,26 @@ def spoken_sentences(text: str) -> list[str]:
     return out
 
 
+_UNITS = {"$": ("dollar", "dollars"), "£": ("pound", "pounds"), "€": ("euro", "euros")}
+_MONEY = re.compile(r"([$£€])\s?(\d[\d,]*)(?:\.(\d{1,2}))?([kKmM]\b)?")
+_THOUSANDS = re.compile(r"(?<![\w$£€.,])(\d+(?:\.\d+)?)[kK]\b")
+
+
+def readable(text: str) -> str:
+    """Numbers the way they are said: "$4,000" is "4,000 dollars" (the voice's own reading is "dollar four
+    thousand"), "£4.99" "4 pounds 99", "£2.5k" "2.5 thousand pounds", "4k" "4 thousand"."""
+    def money(m):
+        sign, whole, cents, scale = m.groups()
+        one, many = _UNITS[sign]
+        if scale:
+            return f"{whole}{'.' + cents if cents else ''} {'thousand' if scale in 'kK' else 'million'} {many}"
+        unit = one if whole == "1" else many
+        return f"{whole} {unit}" + (f" {int(cents)}" if cents and int(cents) else "")
+    return _THOUSANDS.sub(r"\1 thousand", _MONEY.sub(money, text))
+
+
 def is_cached(text: str, voice: str, speed: float = 1.0) -> bool:
-    return _cache_path("kokoro", voice, speed, " ".join(text.split())).exists()
+    return _cache_path("kokoro", voice, speed, text).exists()
 
 
 def _persona_words(name: str) -> str:
@@ -153,8 +166,13 @@ class _Kokoro:
         self.lock = threading.Lock()   # one line at a time: two at once on two cores is slower for both
 
     def say(self, text: str, voice: str, speed: float) -> bytes:
+        lang = "en-gb" if voice[:1] == "b" else "en-us"
         with self.lock:
-            samples, rate = self.model.create(text, voice=voice, speed=speed, lang="en-gb" if voice[:1] == "b" else "en-us")
+            text = readable(text)
+            if voice_marks.marked(text) and self.model.has_timings:
+                samples, rate = voice_marks.render(self.model, text, voice, speed, lang), voice_marks.RATE
+            else:
+                samples, rate = self.model.create(voice_marks.plain(text), voice=voice, speed=speed, lang=lang)
         pcm = (samples.clip(-1, 1) * 32767).astype("<i2").tobytes()
         buf = io.BytesIO()
         with wave.open(buf, "wb") as w:
@@ -182,7 +200,7 @@ def _groq_engine(text: str, voice: str, speed: float) -> bytes | None:   # noqa:
     limit = SPEECH["max_chars"] - (len(style) + 1 if style else 0)
     client = Groq(api_key=keys[0])
     parts = []
-    for piece in chunks(text, limit):
+    for piece in chunks(voice_marks.plain(text), limit):   # its own voice: it can't say the marks
         audio = client.audio.speech.create(model=SPEECH["model"], voice=SPEECH["voice"], input=f"{style} {piece}".strip(),
                                            response_format=SPEECH["format"])
         parts.append(audio.read())
@@ -207,6 +225,7 @@ def warm() -> None:
 # --- the cache ---------------------------------------------------------------------------------------------------
 
 def _cache_path(engine: str, voice: str, speed: float, text: str):
+    text = readable(" ".join(text.split()))   # said the same, kept once (and a line once misread is made again)
     key = hashlib.sha1(f"{engine}|{voice}|{speed:.2f}|{text}".encode()).hexdigest()
     return ROOT_DIR / SPEECH.get("cache_dir", ".cache/speech") / key[:2] / f"{key}.wav"
 

@@ -181,9 +181,8 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
         onFinish: () => resumeAfterSpeech(),
         onError: (m) => live.current.toast(m, "error"),
       });
-      // words only, the marks are for the screen; a tone note ("(slow)") changes the speed (speed is ±% from normal)
-      const speed = Math.round((1 + live.current.speed / 100) * toneRate(text) * 100 - 100);
-      void tts.current.speak(speakable(text), speed, live.current.speaker);
+      // the stress marks go to the voice too; a tone note ("(slow)") sets the line's pace, on top of the learner's speed
+      void tts.current.speak(speakable(text), live.current.speed, live.current.speaker, toneRate(text));
     },
     [resumeAfterSpeech],
   );
