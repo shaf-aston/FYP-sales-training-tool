@@ -240,14 +240,31 @@ def steps(seller):
     return jsonify({"success": True, "steps": seller.seller.steps()})
 
 
+@bp.route("/stage-starts", methods=["GET"])
+@with_session("seller")
+def stages(seller):
+    """Where a jump to each stage lands, with the answers taken as given before it (the recap card)."""
+    return jsonify({"success": True, "stages": seller.stage_starts()})
+
+
+def _jump_slots(raw, allowed):
+    """The recap card's answers: only the slots the card offered, as short plain strings."""
+    if not isinstance(raw, dict):
+        return {}
+    return {k: str(v).strip()[:200] for k, v in raw.items() if k in allowed and isinstance(v, str) and v.strip()}
+
+
 @bp.route("/jump", methods=["POST"])
 @require_rate_limit("buy_chat")
 @with_session("seller")
 def jump(seller):
-    """Start the call again at one script step: a fresh call, nothing said before it."""
-    step = str((request.get_json(silent=True) or {}).get("step") or "")
+    """Start the call again at one script step: a fresh call. `slots` (optional): the answers taken as given
+    before it, so the seller's first line builds on them."""
+    data = request.get_json(silent=True) or {}
+    step = str(data.get("step") or "")
+    allowed = {r["slot"] for st in seller.stage_starts() if st["step"] == step for r in st["recap"]}
     try:
-        message = seller.jump_to(step)
+        message = seller.jump_to(step, _jump_slots(data.get("slots"), allowed))
     except ValueError:
         return jsonify({"error": INVALID_STEP}), 400
     except Exception:

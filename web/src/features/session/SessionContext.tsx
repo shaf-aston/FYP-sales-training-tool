@@ -114,8 +114,11 @@ interface SessionValue {
   reset: () => Promise<boolean>;
   /** Buy mode: start a fresh call where the rep sells this product (it stays picked for later calls). */
   switchProduct: (productType: string) => Promise<void>;
-  /** Buy mode: start a fresh call at one script step (nothing said before it). */
-  jumpTo: (step: string) => Promise<void>;
+  /** Buy mode: start a fresh call at one script step. `slots`: the answers taken as given before it (the recap
+   *  card); `stage`: the stage jumped to, shown as a practice tag until the next fresh call. */
+  jumpTo: (step: string, slots?: Record<string, string>, stage?: string) => Promise<boolean>;
+  /** Buy mode: the stage this call was started at by a jump; null for a call from the start. */
+  practiceFrom: string | null;
   /** Start a new AI buyer (sell mode). */
   startBuyer: (difficulty: Difficulty, productType: string, pick?: BuyerPick) => Promise<boolean>;
   /** End the current buyer and go back to setup. */
@@ -162,6 +165,7 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
   const [buySessionId, setBuySessionId] = useState<string | null>(null);
   const [buyProduct, setBuyProduct] = useState<string | null>(null);
   const [stage, setStage] = useState(FIRST_STAGE);
+  const [practiceFrom, setPracticeFrom] = useState<string | null>(null);
   const [coachNotes, setCoachNotes] = useState<CoachNotes | null>(null);
   const [repWords, setRepWords] = useState<RepWords | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -479,6 +483,7 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
     }
     writeString(storageKeys.buySessionId, null);
     epoch.current++;
+    setPracticeFrom(null);
     setMessages([]);
     setStage(FIRST_STAGE);
     setCoachNotes(null);
@@ -513,15 +518,18 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
   );
 
   const jumpTo = useCallback(
-    async (step: string) => {
-      if (!buySessionId || busy.current) return;
+    async (step: string, slots?: Record<string, string>, toStage?: string) => {
+      if (!buySessionId || busy.current) return false;
       busy.current = true;
       epoch.current++;
       try {
-        const res = await api.buyJump(buySessionId, step);
+        const res = await api.buyJump(buySessionId, step, slots);
         adopt({ ...res, session_id: buySessionId });
+        setPracticeFrom(toStage ?? res.stage);
+        return true;
       } catch (err) {
-        if (!handleExpired(err)) toast("Couldn't jump to that step. Try again.", "error");
+        if (!handleExpired(err)) toast("Couldn't jump to that stage. Try again.", "error");
+        return false;
       } finally {
         busy.current = false;
       }
@@ -548,13 +556,14 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
       reset,
       switchProduct,
       jumpTo,
+      practiceFrom,
       startBuyer,
       endBuyer,
       markSellEnded,
       refreshSell: restoreSell,
       handleExpired,
     }),
-    [mode, buySessionId, buyProduct, repWords, chooseRepWords, stage, coachNotes, messages, typing, sellSession, sellSettings, setSellSettings, send, edit, reset, switchProduct, jumpTo, startBuyer, endBuyer, markSellEnded, restoreSell, handleExpired],
+    [mode, buySessionId, buyProduct, repWords, chooseRepWords, stage, coachNotes, messages, typing, sellSession, sellSettings, setSellSettings, send, edit, reset, switchProduct, jumpTo, practiceFrom, startBuyer, endBuyer, markSellEnded, restoreSell, handleExpired],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

@@ -108,7 +108,9 @@ export function createHttpApi() {
     buyEdit: (sid: string, index: number, message: string) =>
       request<T.EditRes>("/api/buy/edit", { body: { index, message }, sessionId: sid, timeoutMs: chat }),
     buySteps: (sid: string) => request<{ success: true; steps: T.ScriptStep[] }>("/api/buy/steps", { sessionId: sid }),
-    buyJump: (sid: string, step: string) => request<T.JumpRes>("/api/buy/jump", { body: { step }, sessionId: sid }),
+    buyStages: (sid: string) => request<{ success: true; stages: T.StageStart[] }>("/api/buy/stage-starts", { sessionId: sid }),
+    buyJump: (sid: string, step: string, slots?: Record<string, string>) =>
+      request<T.JumpRes>("/api/buy/jump", { body: { step, slots }, sessionId: sid }),
     buyReset: (sid: string) => request<{ success: true }>("/api/buy/reset", { body: {}, sessionId: sid }),
     buyCoach: (sid: string, question: string, style: T.CoachStyle) =>
       request<{ success: true; answer: string }>("/api/buy/coach", { body: { question, style }, sessionId: sid, timeoutMs: chat }),

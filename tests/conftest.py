@@ -273,6 +273,17 @@ class FakeSeller:
     def coach_notes(self):
         return {"what_happened": "ok"}
 
+    def stage_starts(self):
+        return [{"stage": "logical", "step": "02", "name": "Number",
+                 "recap": [{"slot": "outcome", "question": "End outcome", "answer": "financial freedom"}]}]
+
+    def jump_to(self, step_id, slots=None):
+        if step_id != "02":
+            raise ValueError(step_id)
+        self.jumped = (step_id, slots)
+        self.call.conversation_history = [{"role": "assistant", "content": f"line:{step_id}"}]
+        return f"line:{step_id}"
+
     def chat(self, message):
         reply = f"reply:{message}"
         self.call.conversation_history += [

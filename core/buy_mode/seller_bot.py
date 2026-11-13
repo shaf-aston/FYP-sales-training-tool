@@ -154,10 +154,13 @@ class SellerBot:
             "turn_state": self.seller.snapshot(),
         }
 
-    def jump_to(self, step_id: str) -> str:
-        """A fresh call that starts at a script step (to test that step): the transcript is only its line.
-        ValueError for an unknown step."""
-        text, ui_stage = self.seller.start_at(step_id)
+    def stage_starts(self) -> list[dict]:
+        return self.seller.stage_starts()
+
+    def jump_to(self, step_id: str, slots: dict | None = None) -> str:
+        """A fresh call that starts at a script step: the transcript is only its line. `slots`: the answers taken
+        as given before it (the recap card). ValueError for an unknown step."""
+        text, ui_stage = self.seller.start_at(step_id, slots)
         self.call.reset_to_initial()
         self.call.conversation_history.append({"role": "assistant", "content": text})
         self._turn_snapshots = []

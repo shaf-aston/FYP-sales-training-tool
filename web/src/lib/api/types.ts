@@ -103,6 +103,14 @@ export interface BuyProduct {
 }
 
 /** A script step the learner can start a fresh call at (to test it). */
+/** Buy mode: where a jump to a stage lands, and the answers taken as given before it (the recap card). */
+export interface StageStart {
+  stage: string;
+  step: string;
+  name: string;
+  recap: { slot: string; question: string; answer: string }[];
+}
+
 export interface ScriptStep {
   id: string;
   name: string;
