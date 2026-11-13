@@ -137,6 +137,8 @@ export const storageKeys = {
   sellSettings: "sellSettings",
   /** sessionStorage: the live sell call ({ id, pick }), so a reload or Back picks it up again. */
   sellCall: "sellCall",
+  /** Buy mode: the call started by a stage jump, so its practice tag survives a reload: {id, stage}. */
+  buyPractice: "buyPractice",
   skillLog: "skillLog.v1",
   skillOwner: "skillLog.owner",
   skillTarget: "skillTarget",

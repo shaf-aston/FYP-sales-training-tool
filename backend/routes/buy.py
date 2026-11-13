@@ -233,13 +233,6 @@ def chat(seller):
         return jsonify({"error": GENERIC_ERROR}), 500
 
 
-@bp.route("/steps", methods=["GET"])
-@with_session("seller")
-def steps(seller):
-    """The script steps a learner can jump to (to test one step)."""
-    return jsonify({"success": True, "steps": seller.seller.steps()})
-
-
 @bp.route("/stage-starts", methods=["GET"])
 @with_session("seller")
 def stages(seller):

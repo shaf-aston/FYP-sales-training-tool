@@ -65,3 +65,9 @@ def test_the_jump_route_keeps_only_the_answers_the_recap_offered(live_seller):
 def test_the_jump_route_refuses_an_unknown_step(live_seller):
     client, _seller, headers = live_seller
     assert client.post("/api/buy/jump", headers=headers, json={"step": "zz"}).status_code == 400
+
+
+@pytest.mark.parametrize("name", ["cat", "impact_formula"])
+def test_every_sample_has_a_plain_label(name):
+    cfg = load_stage_jump()[name]
+    assert set(cfg["samples"]) == set(cfg["labels"])

@@ -5,6 +5,7 @@
 # AI prospect is taken to have said the same ("So far, they said").
 # starts: stage -> the step on the main path the jump lands on (never an objection branch).
 # samples: slot (a step's `capture`) -> a plausible answer, in the prospect's words.
+# labels: slot -> how the recap card names it (plain words, not the script's step name).
 lead: "Picking up where we left off."   # said in front of the first line after a jump past the opening
 cat:
   starts: {intent: "00", logical: "02", emotional: "04", pitch: "13", outcome: "21"}
@@ -26,6 +27,24 @@ cat:
     different: "I follow through once I commit"
     commitment: "stop overthinking and take action"
     reason: "I'm sick of waiting for the right time"
+  labels:
+    outcome: "What you want"
+    practical: "Day to day"
+    identity: "Who you'd be"
+    number: "Monthly target"
+    years: "How long"
+    why: "Why it matters"
+    blocker: "What's in the way"
+    action: "What you're doing now"
+    gap: "Where you get stuck"
+    gap_how: "What a business owner does"
+    belief: "What holds you back"
+    belief_from: "Where that comes from"
+    belief_cost: "What it costs you"
+    future: "If nothing changes"
+    different: "Why you're different"
+    commitment: "What you'll change"
+    reason: "Why now"
 impact_formula:
   starts: {intent: intent, logical: problem, emotional: why_now, pitch: commit, outcome: payment}
   samples:
@@ -38,3 +57,13 @@ impact_formula:
     future: "I'd finally hit my monthly target"
     cost: "I'd have to go back to a 9-5"
     reason: "I'm tired of guessing"
+  labels:
+    goal: "What you want"
+    problem: "Hardest part"
+    duration: "How long"
+    change: "What you'd change"
+    impact: "The impact"
+    why_now: "Why now"
+    future: "What would be different"
+    cost: "If nothing changes"
+    reason: "Why act"

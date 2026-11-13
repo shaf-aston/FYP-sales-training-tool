@@ -154,6 +154,19 @@ function savedSellCall(): { id: string; pick: BuyerPick } | null {
   }
 }
 
+/** The buy call a stage jump started, and its stage: the practice tag outlives a reload of that call only. */
+const savePractice = (p: { id: string; stage: string } | null) =>
+  writeString(storageKeys.buyPractice, p ? JSON.stringify(p) : null, "session");
+
+function savedPractice(id: string): string | null {
+  try {
+    const p = JSON.parse(readString(storageKeys.buyPractice, "session") ?? "null");
+    return p && p.id === id && typeof p.stage === "string" ? p.stage : null;
+  } catch {
+    return null;
+  }
+}
+
 const metaLine = (latency: number | null | undefined, provider?: string) =>
   debugOn() && latency != null ? `${Math.round(latency)}ms · ${provider ?? "?"}` : undefined;
 
@@ -247,6 +260,8 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
       for (const id of saved ? [saved, null] : [null]) {
         try {
           adopt(id ? await restoreBuy(id) : await startBuy());
+          setPracticeFrom(id ? savedPractice(id) : null);
+          if (!id) savePractice(null);
           break;
         } catch (err) {
           // 400 = the server refused the saved id (expired or unknown): drop it and start fresh.
@@ -484,6 +499,7 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
     writeString(storageKeys.buySessionId, null);
     epoch.current++;
     setPracticeFrom(null);
+    savePractice(null);
     setMessages([]);
     setStage(FIRST_STAGE);
     setCoachNotes(null);
@@ -526,6 +542,7 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
         const res = await api.buyJump(buySessionId, step, slots);
         adopt({ ...res, session_id: buySessionId });
         setPracticeFrom(toStage ?? res.stage);
+        savePractice({ id: buySessionId, stage: toStage ?? res.stage });
         return true;
       } catch (err) {
         if (!handleExpired(err)) toast("Couldn't jump to that stage. Try again.", "error");

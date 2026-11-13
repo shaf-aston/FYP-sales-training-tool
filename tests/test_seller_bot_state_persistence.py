@@ -162,3 +162,15 @@ def test_editing_the_first_turn_keeps_the_opening_greeting(monkeypatch):
 
     assert replayed == [[{"role": "assistant", "content": "hello"}]]
     assert bot._turn_snapshots == []
+
+
+def test_rewind_to_zero_after_a_stage_jump_keeps_the_jumped_stage(monkeypatch):
+    """Editing the first reply of a call started at Belief must not put the stage bar back to Want."""
+    bot = _build_bot()
+    bot._start_stage = "emotional"
+    _two_turns(bot)
+    bot._turn_snapshots = [{"current_stage": "emotional"}]
+    monkeypatch.setattr(bot, "log_snapshot", lambda: None)
+
+    assert bot.rewind_to_turn(0) is True
+    assert bot.call.current_stage == "emotional"

@@ -169,14 +169,14 @@ class ScriptSeller:
         """Where a jump to each stage lands, and the answers taken as given on the stages before it, for the
         learner to check on a recap card: [{stage, step, name, recap: [{slot, question, answer}]}]."""
         cfg = load_stage_jump().get(self.method.name, {})
-        samples, order = cfg.get("samples", {}), list(self.method.steps)
+        samples, labels, order = cfg.get("samples", {}), cfg.get("labels", {}), list(self.method.steps)
         out = []
         for stage, step_id in cfg.get("starts", {}).items():
             step = self.method.steps.get(step_id)
             if not step or not step.say:
                 continue
             before = [self.method.steps[k] for k in order[:order.index(step_id)] if k not in self.method.talks]
-            recap = [{"slot": s.capture, "question": s.name or s.say_plain or s.say, "answer": samples[s.capture]}
+            recap = [{"slot": s.capture, "question": labels.get(s.capture) or s.name or s.capture, "answer": samples[s.capture]}
                      for s in before if s.capture and s.capture in samples]
             out.append({"stage": stage, "step": step_id, "name": step.name or step_id, "recap": recap})
         return out

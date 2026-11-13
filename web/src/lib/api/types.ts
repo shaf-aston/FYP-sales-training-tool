@@ -111,13 +111,6 @@ export interface StageStart {
   recap: { slot: string; question: string; answer: string }[];
 }
 
-export interface ScriptStep {
-  id: string;
-  name: string;
-  /** UI stage the step belongs to. */
-  stage: string;
-}
-
 export interface JumpRes extends BotState {
   success: true;
   message: string;

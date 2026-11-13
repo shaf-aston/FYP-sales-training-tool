@@ -83,7 +83,7 @@ export function StageCard() {
         {showMeta.hint && <p className={s.detailText}>{showMeta.hint}</p>}
         {mode === "buy" && <p className={s.tip}>Pick a stage to jump there.</p>}
       </div>
-      <StageJumpDialog speaker="you" {...jump.dialog} />
+      <StageJumpDialog key={jump.key} speaker="you" {...jump.dialog} />
     </Card>
   );
 }

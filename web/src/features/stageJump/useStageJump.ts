@@ -10,10 +10,15 @@ export function useStageJump(load: () => Promise<StageStart[]>, start: (to: Stag
   const toast = useToast();
   const [target, setTarget] = useState<StageStart | null>(null);
   const [busy, setBusy] = useState(false);
+  // Each opening starts from the sample answers: edits from an earlier jump (or product) never carry over.
+  const [opened, setOpened] = useState(0);
 
   const open = async (stage: string) => {
     const found = (await load().catch(() => [])).find((st) => st.stage === stage);
-    if (found) setTarget(found);
+    if (found) {
+      setOpened((n) => n + 1);
+      setTarget(found);
+    }
     else toast("Couldn't open that stage. Try again.", "error");
   };
 
@@ -25,5 +30,5 @@ export function useStageJump(load: () => Promise<StageStart[]>, start: (to: Stag
     if (ok) setTarget(null);
   };
 
-  return { open, dialog: { target, busy, onClose: () => setTarget(null), onStart: (a: Record<string, string>) => void onStart(a) } };
+  return { open, key: opened, dialog: { target, busy, onClose: () => setTarget(null), onStart: (a: Record<string, string>) => void onStart(a) } };
 }

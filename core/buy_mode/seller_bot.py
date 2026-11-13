@@ -164,6 +164,7 @@ class SellerBot:
         self.call.reset_to_initial()
         self.call.conversation_history.append({"role": "assistant", "content": text})
         self._turn_snapshots = []
+        self._start_stage = ui_stage   # a rewind to the start goes back here, not to the opening's stage
         self._show_stage(ui_stage)
         self.log_snapshot()
         return text
@@ -180,6 +181,7 @@ class SellerBot:
         if turn_index == 0:
             self.call.reset_to_initial()
             self.seller.restore()
+            self._show_stage(getattr(self, "_start_stage", self.call.current_stage))
         else:
             snapshot = self._turn_snapshots[turn_index - 1]
             self.call.restore_state(snapshot)
