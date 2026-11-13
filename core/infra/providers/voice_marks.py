@@ -3,9 +3,10 @@ and higher, a _stretched_ word drawn out, ==key== words given a beat before and 
 
 Kokoro reads plain phonemes, so the marks are carried out around it. The marked words get a full stress in the
 phonemes; the model reports when every phoneme is spoken, so each marked word's stretch of audio is known. That
-stretch is swapped for the same words from a slower take of the same line, raised in pitch by resampling (which
-also shortens it, so the take is that much slower again), made louder, and crossfaded in where the words meet the
-rest of the line. Everything else is the model's own.
+stretch is swapped for the same words from a slower take of the line, raised in pitch by resampling (by what is
+measured to land it the set number of semitones over the plain word), made louder, and crossfaded in where the
+words meet the rest of the line. Everything else is the model's own. A marked line costs about two plain ones;
+the script's lines are made ahead (scripts/speech_prewarm.py).
 """
 
 from __future__ import annotations
@@ -202,6 +203,8 @@ def render_parts(model, sentence: str, voice, speed: float, lang: str) -> tuple[
     takes, placed = {}, []
 
     def piece_at(slower: float, start: int, end: int) -> np.ndarray | None:
+        """The marked words from a slower take of the whole line, so they are said as they are in it (a take of
+        just them starts a new phrase: measured 13 Nov, it came out at another pitch and clicked at the join)."""
         if slower not in takes:
             takes[slower] = take(speed / slower)
         s_audio, _, s_timings = takes[slower]
@@ -214,20 +217,12 @@ def render_parts(model, sentence: str, voice, speed: float, lang: str) -> tuple[
         a, b = _edge(timings, start, True), _edge(timings, end, False)
         longer, aim = how.get("longer", 1.0), 2 ** (how.get("higher", 0.0) / 12)
         if longer != 1.0 or aim != 1.0:
-            # A slower take comes out lower (or higher) than the line: the shift is measured, not assumed, so the
-            # word lands `higher` semitones over the plain one; a take far off is made again at a corrected pace.
-            own = pitch(audio[a:b])
-            ratio, slower = aim, round(longer * aim, 3)
+            # A slower take comes out at its own pitch: the shift is measured, not assumed, so the word lands
+            # `higher` semitones over the plain one (and a little longer or shorter than `longer` for it).
+            own, slower = pitch(audio[a:b]), round(longer * aim, 3)
             piece = piece_at(slower, start, end)
-            for attempt in range(2):
-                heard = pitch(piece) if piece is not None and own else None
-                if not heard:
-                    break
-                ratio = float(np.clip(own * aim / heard, 2 ** (-2 / 12), 2 ** (5 / 12)))
-                if abs(np.log(ratio / aim)) < np.log(2 ** (1 / 12)) or attempt == 1:
-                    break
-                slower = round(longer * ratio, 3)
-                piece = piece_at(slower, start, end)
+            heard = pitch(piece) if piece is not None and own else None
+            ratio = float(np.clip(own * aim / heard, 2 ** (-2 / 12), 2 ** (5 / 12))) if heard else aim
             if piece is not None:
                 piece = _resample(piece, ratio)
                 audio = _splice(audio, a, b, piece, fade)
