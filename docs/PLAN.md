@@ -193,7 +193,9 @@ Conversations tested live in both modes, an independent audit of the front end, 
    prospect gets one by its words, then its first name (`config/first_names.yaml`). The script's `**loud**`,
    `_stretched_` and `==key==` words are now heard (`voice_marks.py`: louder and higher, drawn out, a beat before),
    a tone note's pace is made into the audio, and prices are read as said ("4,000 dollars", not "dollar four
-   thousand").
+   thousand"). Checked live: every marked word louder (+1.4 to +4.6 dB), higher and longer, each line heard back
+   word for word, all 28 voices in range (women 152-211 Hz, men 119-146 Hz), made lines back in 0.5-0.9 s (PR #118,
+   #119).
 
 Still slow: a fresh sentence the AI wrote (not in the bank or the script) takes ~3 s to voice on the VM's 2 cores;
 everything made ahead plays in under a second.
