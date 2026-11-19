@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Button, Dialog, Notice } from "@/components/ui";
+import { CallStages } from "@/features/sell/CallStages";
 import { ReviewSummary, ReviewTurns } from "@/features/sell/ReviewTurns";
 import { api, errorText } from "@/lib/api/client";
 import type { CallReq, ChatMsg, Difficulty, Review } from "@/lib/api/types";
@@ -61,6 +62,8 @@ function CallReviewBody({ call, prospect, difficulty, practise }: BodyProps) {
     <>
       <p>{intro(review, prospect)}</p>
       <ReviewSummary review={review} />
+      <CallStages stages={review.stages ?? []} focus={review.stage_focus} />
+      <h3>Turn by turn</h3>
       <ReviewTurns
         review={review}
         seller="You"

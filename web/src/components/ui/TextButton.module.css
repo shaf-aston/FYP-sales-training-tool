@@ -1,0 +1,13 @@
+.text {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.text:disabled {
+  color: var(--text-muted);
+  cursor: progress;
+}

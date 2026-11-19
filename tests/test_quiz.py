@@ -190,3 +190,23 @@ def test_sell_quiz_explains_why_in_the_turn_reviews_own_words():
     assert result["before"] == [{"text": REASONS["closed_question"], "good": False}]
     # No signals recorded (older session): nothing invented.
     assert quiz.score_sell_answer("ok", {**turn, "signals": []})["before"] == []
+
+
+def test_the_quiz_asks_the_ai_as_a_user_message():
+    """Groq's chat models refuse a request with no user message, which quietly dropped the AI's feedback wording."""
+    from core.infra.providers.base import LLMResponse
+
+    sent = []
+
+    class Router:
+        provider_name = "stub"
+
+        def chat_with_fallback(self, messages, **kw):
+            sent.append(messages)
+            from types import SimpleNamespace
+            return SimpleNamespace(ok=True, response=LLMResponse(content='{"score": 80, "feedback": "Nicely spotted."}'),
+                                   provider_name="stub")
+
+    result = quiz.score_direction("They are qualifying the budget before pitching.", Router(), "intent")
+    assert sent and any(m["role"] == "user" for m in sent[0])
+    assert result["feedback"].endswith("Nicely spotted.")

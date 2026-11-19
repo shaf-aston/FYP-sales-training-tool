@@ -11,6 +11,7 @@ from core.infra.providers import get_available_providers
 
 from ..messages import FEEDBACK_EMPTY, RATING_NOT_NUMBER, RATING_OUT_OF_RANGE
 from ..security import require_rate_limit
+from ._utils import json_body, text_field
 
 
 def _version() -> str:
@@ -56,9 +57,9 @@ def api_health():
 @require_rate_limit("feedback")
 def submit_feedback():
     """Check the learner's rating/comment, then keep it in the feedback stream."""
-    data = request.json or {}
+    data = json_body()
     rating = data.get("rating")
-    comment = (data.get("comment") or "").strip()
+    comment = text_field(data, "comment")
 
     if not rating and not comment:
         return jsonify({"error": FEEDBACK_EMPTY}), 400
@@ -68,7 +69,7 @@ def submit_feedback():
             rating = int(rating)
             if rating < 1 or rating > 5:
                 return jsonify({"error": RATING_OUT_OF_RANGE}), 400
-        except (TypeError, ValueError):
+        except (TypeError, ValueError, OverflowError):
             return jsonify({"error": RATING_NOT_NUMBER}), 400
 
     if len(comment) > MAX_FEEDBACK_COMMENT_CHARS:

@@ -27,9 +27,17 @@ DEFAULT_LLM_PROVIDER_ORDER = _L["defaults"]["llm_provider_order"]
 DEFAULT_GROQ_MODEL = _L["defaults"]["groq_model"]
 GROQ_REASONING_EFFORT = _L["defaults"]["groq_reasoning_effort"]
 SPEECH = _L["speech"]
+DICTATION = _L["dictation"]
+TRANSCRIPTION = _L["transcription"]
+SOP_LIMITS = _L["sop"]
+REP_WORDS = _L["rep_words"]
 DEFAULT_TRUST_PROXY_HEADERS = _L["defaults"]["trust_proxy_headers"]
+CLIENT_IP_HEADERS = tuple(_L["defaults"]["client_ip_headers"])
 DEFAULT_LOGS_DIR = _L["defaults"]["logs_dir"]
 LOG_LEVEL = _L["defaults"]["log_level"]
+DEFAULT_DB_PATH = _L["defaults"]["db_path"]
+DEFAULT_BACKUP_DIR = _L["defaults"]["backup_dir"]
+BACKUPS_KEEP = _L["backups"]["keep"]
 
 SERVER_PORT = _L["server"]["port"]
 
@@ -53,10 +61,30 @@ MAX_FEEDBACK_PAGE_CHARS = _L["input"]["max_feedback_page_chars"]
 MAX_TURN_NUMBER = _L["input"]["max_turn_number"]
 SESSION_ID_MIN_CHARS = _L["input"]["session_id_min_chars"]
 SESSION_ID_MAX_CHARS = _L["input"]["session_id_max_chars"]
+RATE_LIMIT_PEER_FACTOR = _L["rate_limit_peer_factor"]
 RATE_LIMITS = {route: tuple(limit) for route, limit in _L["rate_limits"].items()}
 
 # uploaded calls (core/calls): read-only mapping of the `calls:` block
 CALL_LIMITS = _L["calls"]
+
+# accounts
+_A = _L["accounts"]
+MIN_PASSWORD_CHARS = _A["min_password_chars"]
+MAX_PASSWORD_CHARS = _A["max_password_chars"]
+MAX_EMAIL_CHARS = _A["max_email_chars"]
+MAX_ACCOUNT_NAME_CHARS = _A["max_account_name_chars"]
+MAX_TEAM_NAME_CHARS = _A["max_team_name_chars"]
+MAX_SKILL_ENTRIES = _A["max_skill_entries"]
+MAX_SAVED_PROSPECTS = _A["max_saved_prospects"]
+MAX_SAVED_WORDS = _A["max_saved_words"]
+SCRYPT_N, SCRYPT_R, SCRYPT_P = _A["scrypt"]["n"], _A["scrypt"]["r"], _A["scrypt"]["p"]
+SESSION_DAYS = _A["session_days"]
+INVITE_CODE_LENGTH = _A["invite_code_length"]
+MAX_SKILLS_PER_ENTRY = _A["max_skills_per_entry"]
+MAX_SKILL_ID_CHARS = _A["max_skill_id_chars"]
+LOGIN_FAILURES, LOGIN_FAILURE_WINDOW_SECONDS = _A["login_failures"]
+SIGN_IN_LINKS = _A["sign_in_links"]
+FRESH_LOGIN_MINUTES = _A["fresh_login_minutes"]
 
 # provider requests
 PROVIDER_TIMEOUT_SECONDS = _L["provider"]["timeout_seconds"]

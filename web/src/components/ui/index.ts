@@ -12,4 +12,5 @@ export { Markdown } from "./Markdown";
 export { Panel } from "./Panel";
 export { ProgressBar } from "./ProgressBar";
 export { Tabs } from "./Tabs";
+export { TextButton } from "./TextButton";
 export { ToastProvider, useToast } from "./Toast";

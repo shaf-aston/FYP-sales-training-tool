@@ -113,20 +113,6 @@
   }
 }
 
-.jump {
-  width: 100%;
-  min-height: var(--touch-target);
-  background: none;
-  border: 0;
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
-}
-
-.jump option {
-  background: var(--bg-elevated);
-  color: var(--text-primary);
-}
 .group {
   margin: var(--space-1) 0;
   padding: var(--space-1) 0;

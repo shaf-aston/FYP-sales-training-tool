@@ -8,15 +8,16 @@ PATIENT = {"patience_turns": 10}
 
 
 @pytest.mark.parametrize(
-    "readiness, turns, expected",
+    "readiness, turns, asked, expected",
     [
-        (0.85, 3, "sold"),      # keen enough, long enough
-        (0.85, 2, None),        # keen but too early to close
-        (0.39, 10, "walked"),   # out of patience and still cold
-        (0.4, 10, None),        # out of patience but warm enough to stay
-        (0.0, 3, "walked"),     # lost all interest, after the grace turns
-        (0.0, 1, None),         # one weak opener is not a lost sale
+        (0.85, 3, True, "sold"),      # keen enough, long enough, and asked
+        (0.85, 3, False, None),       # keen, but nobody asked for the sale yet
+        (0.85, 2, True, None),        # keen but too early to close
+        (0.39, 10, False, "walked"),  # out of patience and still cold
+        (0.4, 10, False, None),       # out of patience but warm enough to stay
+        (0.0, 3, False, "walked"),    # lost all interest, after the grace turns
+        (0.0, 1, False, None),        # one weak opener is not a lost sale
     ],
 )
-def test_end_outcome(readiness, turns, expected):
-    assert end_outcome(readiness, turns, PATIENT) == expected
+def test_end_outcome(readiness, turns, asked, expected):
+    assert end_outcome(readiness, turns, PATIENT, asked) == expected

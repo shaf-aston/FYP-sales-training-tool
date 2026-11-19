@@ -16,7 +16,9 @@ PAUSE = "¶"
 KEY = re.compile(r"==(.+?)==")
 LOUD = re.compile(r"\*\*(\S(?:.*?\S)?)\*\*")
 LONG_PAUSE = re.compile(r"\s*\[pause[^\]]*\]\s*")
-TONES = ("slow", "deliberate", "calm", "gentle", "soft", "warm", "serious", "firm", "curious", "playful", "excited", "upbeat")
+RATES = {"slow": 0.85, "deliberate": 0.9, "calm": 0.92, "gentle": 0.92, "soft": 0.92, "warm": 0.95, "serious": 0.95,
+         "firm": 1, "curious": 1, "playful": 1.08, "excited": 1.12, "upbeat": 1.08}   # web lib/tone.ts TONES, the same
+TONES = tuple(RATES)
 NOTE = re.compile(rf"\((?:{'|'.join(TONES)})(?:,\s*(?:{'|'.join(TONES)}))*\)\s*")
 STRESS = re.compile(r"(^|[\s(\"'“‘])_(\w[^_]*?)_(?=[\s.,!?…:;)—\-\"'”’]|$)")  # "_all_", never belief_cost
 
@@ -39,3 +41,14 @@ def join(first, then):
     """Two lines said one after the other, each in its own bubble."""
     parts = (p.strip().strip(PAUSE).strip() for p in (first, then) if p)
     return PAUSE.join(p for p in parts if p)
+
+
+def rate(line):
+    """How fast the voice says the line, from its tone note: "(slow, deliberate)" 0.765; 1 with none. The web's
+    toneRate, multiplied in the same order, so the number (and the cached audio it names) is the same."""
+    note = NOTE.search(line or "")
+    speed = 1
+    for word, r in RATES.items():
+        if note and re.search(rf"\b{word}\b", note.group()):
+            speed *= r
+    return speed

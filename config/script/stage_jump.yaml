@@ -1,0 +1,92 @@
+# Jumping to a stage: where each stage starts, and what the prospect is taken to have said on the stages skipped.
+# The learner sees these on a recap card (web/src/features/stageJump) and can edit them first, so the call
+# picks up mid-way instead of out of nowhere.
+# Written once for both modes: in buy mode the learner is the prospect ("So far, you said"); in sell mode the
+# AI prospect is taken to have said the same ("So far, they said").
+# starts: stage -> the step on the main path the jump lands on (never an objection branch).
+# samples: slot (a step's `capture`) -> a plausible answer, in the prospect's words.
+# labels: slot -> how the recap card names it (plain words, not the script's step name).
+lead: "Picking up where we left off."   # said in front of the first line after a jump past the opening
+cat:
+  starts: {intent: "00", logical: "02", emotional: "04", pitch: "13", outcome: "21"}
+  samples:
+    outcome: "financial freedom"
+    practical: "pay off my debts and stop stressing about bills"
+    identity: "someone my family can rely on"
+    number: "5k a month"
+    years: "about two years"
+    why: "it keeps me up at night"
+    blocker: "I don't know where to start"
+    action: "watching YouTube videos"
+    gap: "I freeze when it's my call to make"
+    gap_how: "they decide and back themselves"
+    belief: "that I'm not good enough"
+    belief_from: "my dad always said I'd never stick at anything"
+    belief_cost: "another few years stuck in the same job"
+    future: "they stay exactly where they are"
+    different: "I follow through once I commit"
+    commitment: "stop overthinking and take action"
+    reason: "I'm sick of waiting for the right time"
+  labels:
+    outcome: "What you want"
+    practical: "Day to day"
+    identity: "Who you'd be"
+    number: "Monthly target"
+    years: "How long"
+    why: "Why it matters"
+    blocker: "What's in the way"
+    action: "What you're doing now"
+    gap: "Where you get stuck"
+    gap_how: "What a business owner does"
+    belief: "What holds you back"
+    belief_from: "Where that comes from"
+    belief_cost: "What it costs you"
+    future: "If nothing changes"
+    different: "Why you're different"
+    commitment: "What you'll change"
+    reason: "Why now"
+impact_formula:
+  asks:
+    change: "What would you change about that, if you could?"
+    impact: "Has that held you back from what you're after?"
+    future: "Say there was a way to solve that. What would be different for you?"
+    inaction: "And if nothing changes, where does that leave you?"
+  starts: {intent: intent, logical: problem, emotional: why_now, pitch: commit, outcome: payment}
+  samples:
+    goal: "getting more clients"
+    problem: "finding leads consistently"
+    duration: "about six months"
+    change: "have a steady flow of leads"
+    impact: "yes, I can't grow without them"
+    why_now: "I've just lost my biggest client"
+    future: "I'd finally hit my monthly target"
+    cost: "I'd have to go back to a 9-5"
+    reason: "I'm tired of guessing"
+  labels:
+    goal: "The goal"
+    problem: "Hardest part"
+    duration: "How long"
+    change: "What would change"
+    impact: "The impact"
+    why_now: "Why now"
+    future: "What would be different"
+    cost: "If nothing changes"
+    reason: "Why act"
+
+# Sell mode: the learner is the rep, so the AI buyer is the one who "said" these. It uses the generic script
+# (its starts and labels above); the answers are filled from the buyer's persona ({need}, {need2}, {pain}, {pain2}
+# from buyer.yaml), so they fit any product. `asks` (in impact_formula below) are the rep's lines where the
+# script's own line needs a blank only the buy-mode seller fills.
+sell:
+  method: impact_formula
+  samples:
+    goal: "mainly {need}"
+    problem: "honestly, {pain}"
+    duration: "a good few months now"
+    change: "I'd want it sorted without it eating my time"
+    impact: "yes, it's held everything back"
+    why_now: "{pain2}, and it's getting worse"
+    future: "I'd finally have {need2} handled"
+    cost: "more of the same, and I can't keep doing that"
+    reason: "I don't want to keep putting it off"
+

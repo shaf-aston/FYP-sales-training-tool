@@ -59,6 +59,11 @@
   --neon-lime: #b8f05a;
   --neon-sweep: linear-gradient(100deg, var(--neon-amber), var(--neon-coral), var(--neon-magenta), var(--neon-amber));
   --chip-warm: var(--neon-amber);
+  /* the neon colours as text: the same here, darker on the light theme where neon on cream was 1.5-2.8:1 */
+  --ink-amber: var(--neon-amber);
+  --ink-coral: var(--neon-coral);
+  --ink-cyan: var(--neon-cyan);
+  --ink-lime: var(--neon-lime);
   --chip-cool: var(--neon-cyan);
   --neon-glow: 0 0 32px rgba(224, 91, 255, 0.35), 0 0 64px rgba(63, 216, 255, 0.18);
 
@@ -177,6 +182,10 @@
     --glass-bg-strong: rgba(255, 255, 255, 0.85);
     --bubble-user: #1f1b16;
     --chip-warm: #8a4b00; /* the neon chips, dark enough to read on cream (AA) */
+    --ink-amber: #8a4b00;
+    --ink-coral: #a5321f;
+    --ink-cyan: #0b5f78;
+    --ink-lime: #3f6b00;
     --chip-cool: #0b5f78;
     --bubble-user-text: #fbf9f6;
     --overlay-scrim: rgba(40, 30, 20, 0.5);

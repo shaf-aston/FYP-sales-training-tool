@@ -1,36 +1,17 @@
-"""Manage custom instructions stored in YAML."""
+"""A learner's own product details for the sell-mode buyer (the knowledge base page): cleaning them, and the block
+the buyer is told. Pure: no storage here. A signed-in learner's copy is kept on their account (accounts.library);
+otherwise it stays in their browser. Either way it comes with each new sell call (/api/sell/init `knowledge`), so
+one learner's details never reach another's buyer.
+"""
 
-import logging
 import re
 
-import yaml
-
 from core.infra.constants import MAX_FIELD_LENGTH
-from core.infra.loader import CONFIG_DIR, load_yaml
-
-logger = logging.getLogger(__name__)
-
-KNOWLEDGE_FILE = CONFIG_DIR / "custom_instructions.yaml"
+from core.infra.loader import load_yaml
 
 # Field id -> label in the buyer's prompt. Config is the only copy; a broken file stops start-up.
 LABEL_MAP = {str(k): str(v) for k, v in load_yaml("knowledge_fields.yaml")["label_map"].items()}
 ALLOWED_FIELDS = set(LABEL_MAP)
-
-
-def load_custom_knowledge() -> dict:
-    """Load custom knowledge from YAML.
-
-    Returns empty dict if missing or invalid
-    """
-    if not KNOWLEDGE_FILE.exists():
-        return {}
-    try:
-        with open(KNOWLEDGE_FILE, "r", encoding="utf-8") as f:
-            data = yaml.safe_load(f)
-        return data if isinstance(data, dict) else {}
-    except (yaml.YAMLError, IOError) as e:
-        logger.warning(f"Failed to load custom knowledge ({KNOWLEDGE_FILE}): {e}")
-        return {}
 
 
 def clean_value(value: str) -> str:
@@ -66,25 +47,9 @@ def sanitise_knowledge(data: dict) -> dict:
     return cleaned
 
 
-def save_custom_knowledge(data: dict) -> bool:
-    """Sanitize and save custom knowledge to YAML. Returns True on success."""
-    try:
-        sanitized = sanitise_knowledge(data)
-        KNOWLEDGE_FILE.parent.mkdir(parents=True, exist_ok=True)
-        with open(KNOWLEDGE_FILE, "w", encoding="utf-8") as f:
-            yaml.dump(sanitized, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
-        return True
-    except (IOError, yaml.YAMLError) as e:
-        logger.error(f"Failed to save custom knowledge ({KNOWLEDGE_FILE}): {e}")
-        return False
-
-
-def get_custom_knowledge_text() -> str:
-    """Return formatted knowledge text for LLM prompt injection. Empty string if none."""
-    data = load_custom_knowledge()
-    if not data:
-        return ""
-
+def knowledge_text(data: dict | None) -> str:
+    """The details as the buyer's prompt shows them. Empty string if none."""
+    data = sanitise_knowledge(data or {})
     sections = []
     for key, value in data.items():
         label = LABEL_MAP.get(key, key)
@@ -94,15 +59,4 @@ def get_custom_knowledge_text() -> str:
             items = "\n".join(f"  - {item}" for item in value if item)
             if items:
                 sections.append(f"{label}:\n{items}")
-
-    return "\n".join(sections) if sections else ""
-
-
-def clear_custom_knowledge() -> bool:
-    """Delete custom knowledge file(s). Returns True on success or if already absent."""
-    try:
-        KNOWLEDGE_FILE.unlink(missing_ok=True)
-        return True
-    except IOError as e:
-        logger.error(f"Failed to delete custom knowledge ({KNOWLEDGE_FILE}): {e}")
-        return False
+    return "\n".join(sections)

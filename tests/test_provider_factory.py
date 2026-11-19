@@ -4,8 +4,8 @@ from core.infra.providers.factory import create_provider, list_providers
 from core.infra.providers.llm import GroqProvider
 
 
-def test_create_provider_accepts_aliases_and_rejects_unknown_names():
-    assert isinstance(create_provider(" GroqCloud "), GroqProvider)
+def test_create_provider_normalizes_name_and_rejects_unknown_names():
+    assert isinstance(create_provider(" Groq "), GroqProvider)  # case and surrounding spaces ignored
     with pytest.raises(ValueError, match="Unknown provider"):
         create_provider("nope")
 

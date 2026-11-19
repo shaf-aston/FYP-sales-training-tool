@@ -1,0 +1,18 @@
+# First names that say a woman or a man, so a learner's own prospect with no he or she in its words still gets a
+# fitting voice (core/infra/providers/speech.py pick_voice). Names used by both (Alex, Sam, Jordan, Charlie...) are
+# on neither list: those get either voice, the same one every time. Lowercase.
+female: [aaliyah, abigail, ada, aisha, alice, alicia, amanda, amara, amber, amelia, amy, ana, andrea, angela, anna,
+  anya, ava, beatrice, bella, beth, bethany, caroline, catherine, charlotte, chloe, claire, clara, daisy, diana, ella,
+  ellie, eleanor, elena, eliza, elizabeth, ellen, emily, emma, erin, esther, eva, evie, fatima, fiona, florence, freya,
+  gemma, georgia, grace, hannah, harriet, hayley, heather, helen, holly, imogen, isabel, isabella, isla, jade, jane,
+  jasmine, jennifer, jess, jessica, joanna, julia, julie, karen, kate, katherine, katie, kelly, laura, lauren, leah,
+  lily, lisa, lucy, lydia, maria, maryam, megan, mia, michelle, molly, naomi, natalie, nicola, nina, olivia, paige,
+  priya, rachel, rebecca, rosie, ruby, ruth, sara, sarah, scarlett, sienna, sofia, sophia, sophie, stephanie, susan,
+  tara, victoria, yasmin, zara, zoe, zainab, maya]
+male: [aaron, adam, adrian, ahmed, aiden, alan, alexander, ali, andrew, anthony, arjun, arthur, ben, benjamin, bilal,
+  callum, carl, carlos, chris, christopher, colin, connor, craig, daniel, darren, david, dean, derek, dominic, ed,
+  edward, ethan, finn, gary, george, graham, harry, harvey, henry, hugo, ian, imran, isaac, jack, jacob, jake, james,
+  jason, joe, john, jonathan, joseph, josh, joshua, kevin, kieran, leo, liam, logan, luke, marcus, mark, martin,
+  matthew, max, michael, mike, mohammed, muhammad, nathan, neil, nick, noah, oliver, omar, oscar, owen, patrick, paul,
+  peter, raj, richard, rob, robert, ryan, scott, sean, simon, stephen, steven, stuart, theo, thomas, tim, tom, tony,
+  tyler, usman, william, yusuf, zach]

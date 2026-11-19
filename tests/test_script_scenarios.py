@@ -13,6 +13,7 @@ from core.buy_mode.script_engine.engine import (
     hear_ahead,
     jump,
     move_on,
+    question_of,
 )
 from core.buy_mode.script_engine.method import (
     load_common_sense,
@@ -97,7 +98,8 @@ def test_price_and_scam_questions_at_the_ready_step_are_answered(fake_embedder):
     s = seller(fake_embedder)
     s.reply("i'm in, send the payment link")
     text, _ = s.reply("what's the price")
-    assert "$5k" in text and text.endswith(READY_Q)  # the jump is past the price step on purpose
+    # the jump is past the price step on purpose; asked again after the answer, only the question ("Love that." was its talk)
+    assert "$5k" in text and text.endswith(READY_Q.split(". ")[-1])
     text, _ = s.reply("is this a scam")
     assert text == CAT.steps[CAT.objections["scam"].enter].say
 
@@ -429,9 +431,10 @@ def test_the_objection_talks_are_the_matrix_steps():
     assert not {"19", "20", "22"} & set(CAT.talks)
 
 
-@pytest.mark.parametrize("step, then", [("20", "m_partner_here"), ("m_reframe1", "m_reframe1_now")])
+@pytest.mark.parametrize("step, then", [("20", "m_partner_here"), ("m_reframe1_why", "m_close1")])
 def test_a_worry_said_again_past_its_talk_is_the_worry(fake_embedder, step, then):
     # 20 keeps any reply: the partner again there is no reason to buy; in a talk it answers the step
+    # ("Why not?" takes any answer; Reframe 1's own questions want a yes or no, test_objection_reframes.py)
     s = seller(fake_embedder, step=step, raised=("partner",))
     s.reply("I need to speak to my partner first")
     assert s.state.step == then
@@ -1904,3 +1907,11 @@ def test_a_verb_goal_reads_without_being_able_to_be(fake_embedder):
     assert filler.fill(line, {"outcome": "debt free"}) == "What are you hoping to achieve by being debt free?"
     assert filler.fill(line, {"outcome": "quit my job"}) == "What are you hoping to achieve by being able to quit your job?"
     assert filler.fill(line, {"outcome": "I want to replace my salary"}) == "What are you hoping to achieve by being able to replace your salary?"   # a verb by what came before it
+
+
+def test_a_side_question_gets_the_question_again_not_the_whole_speech(fake_embedder):
+    """Live, 12 Nov: "Okay, what does it involve?" at the identity-gap step got the reply, then the whole
+    "We love working with people going from 9-5er..." paragraph again, word for word."""
+    s = seller(fake_embedder, step="08")
+    text, _ = s.reply("what does it involve?")
+    assert text.count("9-5er") == 0 and text.endswith(question_of(CAT.steps["08"].say))

@@ -1,18 +1,23 @@
 "use client";
 
-import { useId, useState, type DragEvent, type ReactNode } from "react";
+import { useId, useState, type DragEvent } from "react";
+import { Icon } from "./Icon";
 import s from "./FileDrop.module.css";
 
 interface Props {
   /** File extensions the picker offers, e.g. [".txt", ".vtt"]. Dropped files are not filtered: check them in onFile. */
   accept: readonly string[];
   onFile: (file: File) => void;
-  /** The prompt inside the zone. */
-  children: ReactNode;
+  /** What to drop, e.g. "Drop your SOP"; the zone adds "or choose a file". */
+  prompt: string;
+  /** A small line under the prompt, e.g. the file types and size limit. */
+  hint?: string;
+  /** Replaces the prompt while a dropped file is being opened or sent. */
+  busyLabel?: string;
 }
 
 /** A box to drop one file on, or click / press Enter to choose one. */
-export function FileDrop({ accept, onFile, children }: Props) {
+export function FileDrop({ accept, onFile, prompt, hint, busyLabel }: Props) {
   const id = useId();
   const [over, setOver] = useState(false);
 
@@ -44,7 +49,13 @@ export function FileDrop({ accept, onFile, children }: Props) {
         }}
       />
       <label htmlFor={id} className={s.label}>
-        {children}
+        <Icon name="upload" />
+        {busyLabel ?? (
+          <span>
+            {prompt} or <span className={s.choose}>choose a file</span>
+          </span>
+        )}
+        {hint && <span className={s.hint}>{hint}</span>}
       </label>
     </div>
   );

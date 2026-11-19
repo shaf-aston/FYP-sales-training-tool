@@ -5,6 +5,7 @@
 //   ... …      a short pause: kept, the voice pauses on it
 //   ¶ [pause]  a long pause: what follows is a new bubble, after typing dots
 //   (slow)     a tone note in front of a line: never shown or said, it sets how fast the voice reads
+// The server's voice hears the stress marks (louder, drawn out, a beat before); the browser's own voice reads words.
 
 export const PAUSE = "¶";
 const KEY = /==(.+?)==/g;
@@ -31,12 +32,15 @@ export const bubbles = (text: string) =>
 /** Markdown with the key mark drawn as <mark> (a tag the sanitiser keeps). */
 export const highlighted = (text: string) => text.replace(KEY, "<mark>$1</mark>");
 
-/** The words to read aloud: no marks, and each bubble ends a sentence so the voice pauses between them. */
+/** The words to read aloud, each bubble ending a sentence so the voice pauses between them. The stress marks stay
+ *  (the server's voice says them: core/infra/providers/voice_marks.py); tone notes and pauses go. */
 export const speakable = (text: string) =>
   bubbles(text)
-    .map((b) => b.replace(KEY, "$1").replace(LOUD, "$1").replace(STRESS, "$1$2"))
     .map((b) => (/[.!?…]$/.test(b) ? b : `${b}.`))
     .join(" ");
+
+/** The words alone, for a voice that can't say the marks (the browser's own). */
+export const unmarked = (text: string) => text.replace(KEY, "$1").replace(LOUD, "$1").replace(STRESS, "$1$2");
 
 /** How long the typing dots show before a bubble: longer lines take longer to "type", within limits. */
 const TYPING = { baseMs: 350, perCharMs: 22, minMs: 600, maxMs: 2400 };

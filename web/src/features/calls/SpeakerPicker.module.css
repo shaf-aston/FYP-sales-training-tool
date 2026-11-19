@@ -69,3 +69,7 @@
 .unsure {
   color: var(--warning);
 }
+.aiNote {
+  font-size: var(--text-sm);
+  color: var(--warning);
+}

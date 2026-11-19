@@ -1,9 +1,15 @@
 // Shapes of the Flask JSON API (backend/routes/*). Field names match the server exactly.
 
+import type { SkillEntry } from "@/features/skills/skillLog";
+
+/** The server keeps the web's skill log as is (/api/account/skills): skillLog.ts owns the shape. */
+export type { SkillEntry };
+
 export type Difficulty = "easy" | "medium" | "hard";
 export type CoachStyle = "tactical" | "socratic" | "teacher";
 export type QuizType = "stage" | "next_move" | "direction";
-export type Outcome = "active" | "sold" | "walked";
+/** "ended": the learner ended the call ("End and score") before the buyer said yes or walked. */
+export type Outcome = "active" | "sold" | "walked" | "ended";
 
 export interface BotState {
   stage: string; // UPPERCASE stage id
@@ -28,6 +34,62 @@ export interface InitRes extends BotState {
   training?: CoachNotes;
   /** What the rep is selling on this call (an id from /api/buy/products). */
   product_type?: string;
+  /** The script questions this call asks in someone else's words ({step: question}; empty: the script's own). */
+  words?: Record<string, string>;
+  /** Whose those words are ("Maya", "your SOP"), as the client named them when the call started. */
+  words_label?: string;
+  /** The same steps asked again in their words ({step: question}). */
+  probes?: Record<string, string>;
+}
+
+/** One of the script's questions the rep can ask in someone else's words (POST /api/buy/words). */
+export interface RepWordsMatch {
+  step: string;
+  /** The step's name in the script ("" when it has none). */
+  name: string;
+  stage: string;
+  /** The script's question there. */
+  script: string;
+  /** The top rep's or the SOP's question that asks the same thing. */
+  theirs: string;
+  /** How alike the two are, 0-1. */
+  score: number;
+  /** The source asking the same again in other words ("" when it doesn't): said when the step is asked again. */
+  probe: string;
+}
+
+/** Someone's words as kept: in this tab, saved to an account, or set for a team. */
+export interface WordsChoice {
+  /** The product (script) the words were matched against: other products' calls use the script's own. */
+  product: string;
+  /** Whose words, for the learner: "Maya" (a call's rep) or "your SOP". */
+  label: string;
+  /** {step: question} said instead of the script's. */
+  words: Record<string, string>;
+  /** {step: question} said when those steps are asked again (only steps in `words`). */
+  probes: Record<string, string>;
+}
+
+/** A WordsChoice saved to the account (GET /api/account/words). */
+export interface SavedWords extends WordsChoice {
+  id: number;
+  /** Seconds since epoch. */
+  created_at: number;
+}
+
+/** Where the rep's words come from: a real call (its top rep) or an SOP outline (from /api/sop/read). */
+export type RepWordsReq = { product_type: string | null } & ({ call: CallReq } | { stages: SopStage[] });
+
+export interface RepWordsRes {
+  success: true;
+  product_type: string;
+  /** The rep's name in the call (null for an SOP). */
+  rep: string | null;
+  /** Questions found in the source. */
+  questions: number;
+  /** Question steps in the script. */
+  steps: number;
+  matches: RepWordsMatch[];
 }
 
 /** Something the rep can sell in buy mode; each runs its own call script. */
@@ -41,11 +103,12 @@ export interface BuyProduct {
 }
 
 /** A script step the learner can start a fresh call at (to test it). */
-export interface ScriptStep {
-  id: string;
-  name: string;
-  /** UI stage the step belongs to. */
+/** Buy mode: where a jump to a stage lands, and the answers taken as given before it (the recap card). */
+export interface StageStart {
   stage: string;
+  step: string;
+  name: string;
+  recap: { slot: string; question: string; answer: string }[];
 }
 
 export interface JumpRes extends BotState {
@@ -110,6 +173,14 @@ export interface BuyerState {
   turn_count: number;
 }
 
+/** Who a line is read aloud as: the server picks the voice (a buyer's from their persona, the same every time). */
+export interface Speaker {
+  speaker: "seller" | "buyer";
+  persona?: string;
+  /** The persona's own words (background, personality): "his", "her" choose the voice. */
+  hint?: string;
+}
+
 export interface Persona {
   name: string;
   background: string;
@@ -124,6 +195,8 @@ export interface BuyerPick {
   custom?: CustomBuyer;
   /** Start inside a real call instead of at an opening line: its lines so far, ending with the buyer's. */
   replay?: ChatMsg[];
+  /** Start a practice call at a stage, on a short call so far built from these answers (the recap card). */
+  jump?: { stage: string; answers: Record<string, string> };
 }
 
 export type ObjectionType = "price" | "skepticism" | "timing" | "partner" | "fear";
@@ -153,9 +226,24 @@ export interface SellInitRes {
   state: BuyerState;
   difficulty: Difficulty;
   product_type: string;
+  /** A call started at a stage: its lines so far (the rep's questions and the buyer's answers). */
+  history?: ChatMsg[];
   latency_ms: number;
   provider: string;
   model: string;
+}
+
+/** GET /api/sell/state: a live sell call, to pick it back up after a reload. */
+export interface SellStateRes {
+  success: true;
+  session_id: string;
+  persona: Persona;
+  state: BuyerState;
+  difficulty: Difficulty;
+  product_type: string;
+  history: ChatMsg[];
+  ended: boolean;
+  outcome: Outcome;
 }
 
 export interface SellChatRes {
@@ -175,11 +263,32 @@ export interface Evaluation {
   overall_score: number;
   grade: string;
   outcome: Outcome;
-  criteria_scores: Record<string, { score: number; feedback: string }>;
+  /** `measured` false: a stand-in score (no evidence in this session, e.g. no objection was raised). */
+  criteria_scores: Record<string, { score: number; feedback: string; measured?: boolean }>;
   strengths: string[];
   improvements: string[];
   summary: string;
   coach_tip: string;
+}
+
+/** A skill every sell session is scored on (buyer.yaml evaluation.criteria), tracked by Skill Radar. */
+export interface Skill {
+  id: string;
+  label: string;
+  /** What to try when this is the weakest skill. */
+  tip: string;
+  weight: number;
+  /** The session that trains it: a difficulty, and an objection the buyer raises on turn 1. */
+  practice: { difficulty: Difficulty; objection?: string };
+}
+
+export interface SkillsRes {
+  success: true;
+  /** The score that counts as strong: the default target. */
+  target: number;
+  /** The targets a learner can pick (the default is one of them). */
+  targets: number[];
+  skills: Skill[];
 }
 
 export interface ReviewTurn {
@@ -189,12 +298,33 @@ export interface ReviewTurn {
   rating: number; // 1-5
   reasons: string[];
   readiness_change: number;
+  /** What the second layer (a trained model, core/training/blemish.py) noticed that the rules didn't. */
+  noticed?: { label: string; reason: string; confidence: number }[];
+}
+
+/** How a stage of the call went (core/sell_mode/call_stages.py, config/call_stages.yaml). */
+export type StageStatus = "strong" | "partly" | "missed" | "early" | "weak" | "none";
+export interface CallStage {
+  id: string;
+  name: string;
+  status: StageStatus;
+  /** What happened, in a line. */
+  says: string;
+  /** Why the stage matters, the human reason behind it. */
+  why: string;
+  /** One thing to try next time; empty when there is nothing to work on. */
+  next: string;
+  /** The evidence: turn numbers. */
+  turns: number[];
 }
 
 export interface Review {
   success: true;
   turns: ReviewTurn[];
   pivotal_turns: number[];
+  /** The call stage by stage, in call order; and the earliest one to work on. */
+  stages?: CallStage[];
+  stage_focus?: string | null;
   summary: {
     turn_count: number;
     average_rating: number;
@@ -257,6 +387,138 @@ export interface CallReadRes {
   prospect: string;
   turns: CallTurn[];
   profile: CallProfile;
+}
+
+// SOP review (/api/sop): a team's sales SOP read into stages and steps.
+
+export interface SopStage {
+  title: string;
+  steps: string[];
+}
+
+/** One element of a good call (core/sop/checklist.py), and the SOP step that covers it. */
+export interface SopElement {
+  id: string;
+  label: string;
+  covered: boolean;
+  step: string | null;
+  /** Why it matters: shown when the SOP misses it. */
+  why: string;
+}
+
+export interface SopReadRes {
+  success: true;
+  stages: SopStage[];
+  elements: SopElement[];
+  /** Share of elements covered, 0-100. */
+  coverage: number;
+  /** A short paragraph summing it up, the costliest gap first (written by rules). */
+  critique?: string;
+}
+
+/** One SOP step in a real call: done at the rep's turn `turn` (1-based) with what they said, or not heard. */
+export interface SopStepResult {
+  stage: string;
+  step: string;
+  done: boolean;
+  /** An "If they…" step: left out of the score when not done (the call may never have needed it). */
+  conditional: boolean;
+  turn: number | null;
+  said: string | null;
+}
+
+export interface SopCheckRes {
+  success: true;
+  /** The speaker taken as the rep. */
+  rep: string;
+  /** Share of steps done, 0-100. */
+  score: number;
+  /** The done steps happened in the SOP's order. */
+  in_order: boolean;
+  steps: SopStepResult[];
+  /** A short paragraph summing it up: the share done, the first step skipped (written by rules). */
+  critique?: string;
+}
+
+// Accounts (/api/account, /api/team): optional; everything works logged out.
+
+export interface AccountUser {
+  id: number;
+  email: string;
+  name: string;
+  /** False for an account made by an email link or Google: it signs in only that way. */
+  has_password: boolean;
+}
+
+/** Which ways of signing in without a password the server has set up. */
+export interface SignInOptions {
+  success: true;
+  link: boolean;
+  google: boolean;
+}
+
+/** The learner's team. Only a manager gets the invite code. */
+export interface Team {
+  id: number;
+  name: string;
+  role: "member" | "manager";
+  invite_code: string | null;
+  /** The team's Rep's words, set by a manager (null: none): members' new calls on that product use them. */
+  words: WordsChoice | null;
+}
+
+/** Who is logged in (nulls when no one is): /api/account/me, signup and login. */
+export interface AccountMe {
+  user: AccountUser | null;
+  team: Team | null;
+}
+
+/** A manager sees every member with their email; a rep sees the managers only. */
+export interface TeamMember {
+  id: number;
+  name: string;
+  role: Team["role"];
+  email?: string;
+}
+
+/** One member in a manager's insights: skill levels are their recent averages (config/insights.yaml window). */
+export interface MemberInsight {
+  user_id: number;
+  name: string;
+  sessions: number;
+  /** Latest scored session, ms since epoch. */
+  last_at: number | null;
+  levels: Record<string, number>;
+  weakest: string | null;
+  /** Enough sessions to rank. */
+  judged: boolean;
+}
+
+export interface TeamInsights {
+  success: true;
+  target: number;
+  targets: number[];
+  skills: Skill[];
+  /** Skill id -> the team's average level (members with enough sessions). */
+  team: Record<string, number>;
+  members: MemberInsight[];
+  /** Coaching guidelines, each with the numbers behind it. */
+  guidelines: string[];
+}
+
+/** A custom buyer kept to practise against again. Blank text fields are not stored. */
+export interface SavedProspect {
+  id: number;
+  name: string;
+  profile: Partial<CustomBuyer> & { name: string };
+  /** Seconds since epoch. */
+  created_at: number;
+}
+
+export interface AccountExport extends AccountMe {
+  skills: SkillEntry[];
+  prospects: SavedProspect[];
+  words: SavedWords[];
 }
 
 export type KnowledgeField =

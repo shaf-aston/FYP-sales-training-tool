@@ -15,6 +15,7 @@ const OUTCOME: Record<Outcome, { label: string; tone: Tone }> = {
   sold: { label: "Sale made", tone: "success" },
   walked: { label: "Buyer walked away", tone: "danger" },
   active: { label: "Incomplete", tone: "neutral" },
+  ended: { label: "Ended before a decision", tone: "neutral" },
 };
 
 function Bullets({ title, items }: { title: string; items: string[] }) {
@@ -52,7 +53,10 @@ function Result({ ev }: { ev: Evaluation }) {
         <span className={s.score} aria-label={`Score ${ev.overall_score} percent`}>
           {score}%
         </span>
-        <Badge tone={gradeTone(grade)}>Grade {grade}</Badge>
+        {/* the grade waits for the count, or it read "0%  Grade D" for a moment (live, 13 Nov) */}
+        <span style={{ visibility: score === (ev.overall_score || 0) ? "visible" : "hidden" }}>
+          <Badge tone={gradeTone(grade)}>Grade {grade}</Badge>
+        </span>
         <Badge tone={outcome.tone}>{outcome.label}</Badge>
       </div>
 

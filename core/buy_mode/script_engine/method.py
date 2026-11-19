@@ -1,6 +1,7 @@
 """Load and validate sales-method and offer YAML into frozen dataclasses."""
 
 import copy
+from functools import lru_cache
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -519,6 +520,16 @@ def parse_common_sense(data):
                        data.get("wait_again", ""), tuple(data.get("yes_no_reask") or ()), data.get("park_again", ""),
                        data.get("corrected", ""), (data.get("unfinished") or {}).get("reply", ""),
                        tuple((data.get("unfinished") or {}).get("ends") or ()))
+
+
+def load_stage_jump(directory=CONFIG_DIR / "script"):
+    """stage_jump.yaml: per method, where each stage starts and the sample answers for the stages skipped."""
+    return _cached_stage_jump(str(directory))
+
+
+@lru_cache(maxsize=None)
+def _cached_stage_jump(directory):
+    return _read(directory, "stage_jump") or {}
 
 
 def load_method(name, directory=CONFIG_DIR / "methods", shared=CONFIG_DIR / "script"):

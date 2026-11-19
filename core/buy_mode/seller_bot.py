@@ -29,14 +29,19 @@ class ChatResponse:
 class SellerBot:
     """Runs one scripted sales call and logs each turn."""
 
-    def __init__(self, provider_type=None, product_type=None, session_id=None):
+    def __init__(self, provider_type=None, product_type=None, session_id=None, words=None, probes=None):
+        """`words`: {step id: question} said in place of the script's (a top rep's or an SOP's; rep_words.py),
+        `probes` those steps asked again in their words. Raises RepWordsError for words the script cannot take."""
         self._router = ProviderRouter(provider_type=provider_type)
         self.session_id = session_id
         tag_session(session_id)
         self.product_type = resolve_product(product_type)  # only scripted products can be sold
         self.logger = logging.LoggerAdapter(_base_logger, {"session_id": session_id or "-"})
         self.call = CallFlow()
-        self.seller = build_seller(self._router, self.product_type)
+        self.seller = build_seller(self._router, self.product_type, words=words, probes=probes)
+        self.words = dict(words or {})
+        self.probes = dict(probes or {}) if words else {}
+        self.words_label = ""   # whose words ("Maya", "your SOP"); the init route sets it
         # One per learner turn: the stage and script state right after it, for rewinding.
         self._turn_snapshots = []
 
@@ -46,6 +51,7 @@ class SellerBot:
                 mode="buy",
                 session_id=session_id,
                 product_type=self.product_type,
+                rep_words=len(self.words),
             )
 
     @property
@@ -148,13 +154,17 @@ class SellerBot:
             "turn_state": self.seller.snapshot(),
         }
 
-    def jump_to(self, step_id: str) -> str:
-        """A fresh call that starts at a script step (to test that step): the transcript is only its line.
-        ValueError for an unknown step."""
-        text, ui_stage = self.seller.start_at(step_id)
+    def stage_starts(self) -> list[dict]:
+        return self.seller.stage_starts()
+
+    def jump_to(self, step_id: str, slots: dict | None = None) -> str:
+        """A fresh call that starts at a script step: the transcript is only its line. `slots`: the answers taken
+        as given before it (the recap card). ValueError for an unknown step."""
+        text, ui_stage = self.seller.start_at(step_id, slots)
         self.call.reset_to_initial()
         self.call.conversation_history.append({"role": "assistant", "content": text})
         self._turn_snapshots = []
+        self._start_stage = ui_stage   # a rewind to the start goes back here, not to the opening's stage
         self._show_stage(ui_stage)
         self.log_snapshot()
         return text
@@ -171,6 +181,7 @@ class SellerBot:
         if turn_index == 0:
             self.call.reset_to_initial()
             self.seller.restore()
+            self._show_stage(getattr(self, "_start_stage", self.call.current_stage))
         else:
             snapshot = self._turn_snapshots[turn_index - 1]
             self.call.restore_state(snapshot)

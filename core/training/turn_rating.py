@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 
 from core.infra.loader import load_yaml
 from core.infra.utils import clamp, contains_nonnegated_keyword, tokenize
+from core.infra.phrases import says_word
 
 
 @dataclass(frozen=True)
@@ -36,8 +37,22 @@ def _sentences(message: str) -> list[str]:
     return [p for p in re.split(r"(?<=[.!?])\s+", message.strip()) if p]
 
 
-def _has_word(text: str, words) -> bool:
-    return any(re.search(rf"\b{re.escape(w)}\b", text) for w in words)
+_STOCK_LEAD = {"so", "and", "hi", "hey", "hello", "ok", "okay", "right", "well"}
+_STOCK_TAIL = {"doing", "today", "going", "keeping", "at", "all", "then", "there", "mate", "you", "for", "on", "getting"}
+
+
+def _is_stock(sentence: str, stock_questions) -> bool:
+    """The sentence is a stock question and nothing more: "How are you?", "So how are you doing today?". Not one
+    that only starts like one: "How are you handling the admin?" and "What do you do when that happens?" are
+    real questions (live, 13 Nov: the first was rated a stock question)."""
+    words = re.findall(r"[a-z']+", sentence.lower())
+    while words and words[0] in _STOCK_LEAD:
+        words = words[1:]
+    for phrase in stock_questions:
+        p = phrase.lower().split()
+        if words[:len(p)] == p and len(words) - len(p) <= 3 and set(words[len(p):]) <= _STOCK_TAIL:
+            return True
+    return False
 
 
 def _count_openings(message: str, question_words, invitations, stock_questions=()) -> int:
@@ -52,20 +67,29 @@ def _count_openings(message: str, question_words, invitations, stock_questions=(
     lowered = message.lower()
     count = sum(len(re.findall(rf"\b{re.escape(p)}\b", lowered)) for p in invitations)
     for sentence in _sentences(lowered):
-        if sentence.endswith("?") and _has_word(sentence, question_words) and not _has_word(
-            sentence, stock_questions
-        ):
+        if sentence.endswith("?") and says_word(question_words, sentence) and not _is_stock(sentence, stock_questions):
             count += 1
     return count
 
 
+_TAG = re.compile(r"(?:,|\s)\s*(?:(?:would|wo|do|does|did|is|are|was|were|can|could|have|has|should)n'?t\s+"
+                  r"(?:you|it|they|we|i|he|she|that|there)|right|yeah|yes|ok|okay|eh|no)\s*\?\s*$")
+
+
+def ends_with_tag(sentence: str) -> bool:
+    """A yes/no question by its tag: "You'd want that, wouldn't you?", "It works, right?" (live, 13 Nov: answered
+    "A few things." as if it were open)."""
+    return _TAG.search(sentence.lower().replace("’", "'")) is not None
+
+
 def _is_closed_question(message: str, question_words, closed_starters) -> bool:
-    """A question sentence that starts with a yes/no verb and has no question word."""
+    """A question sentence that starts with a yes/no verb and has no question word, or ends with a tag."""
     for sentence in _sentences(message.lower()):
-        first = re.findall(r"[a-z']+", sentence)[:1]
-        if sentence.endswith("?") and first and first[0] in closed_starters and not _has_word(
-            sentence, question_words
-        ):
+        if ends_with_tag(sentence):
+            return True
+        words = re.findall(r"[a-z']+", sentence)
+        first = words[1:2] if words[:1] in (["so"], ["and"], ["ok"], ["okay"], ["right"]) else words[:1]   # "So shall I ...?"
+        if sentence.endswith("?") and first and first[0] in closed_starters and not says_word(question_words, sentence):
             return True
     return False
 
@@ -110,7 +134,7 @@ def rate_turn(
         fired.append("open_question")
         if overlap:
             fired.append("on_topic")
-    elif _has_word(text.lower(), stock) and "?" in text:
+    elif "?" in text and any(_is_stock(sentence, stock) for sentence in _sentences(text)):
         fired.append("generic_question")
     elif _is_closed_question(text, question_words, cfg.get("closed_starters", [])):
         fired.append("closed_question")

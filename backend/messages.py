@@ -22,7 +22,7 @@ SELLER_INIT_FAILED = "Setup didn't complete - please try initializing again."
 SELL_ERROR = "The buyer got confused - send that again."
 SELL_SCORING_ERROR = "Scoring didn't work - give it another go."
 SELL_SESSION_NOT_FOUND = "Sell session not found"
-SELL_UNAVAILABLE = "The AI service isn't responding right now - nothing you did. Try again shortly."
+SELL_UNAVAILABLE = "The buyer isn't responding right now - nothing you did. Try again shortly."
 SELL_FULL = "Sell mode is at capacity - check back in a moment."
 SELL_SETUP_FAILED = "Couldn't set up the buyer -- try once more"
 INVALID_DIFFICULTY = "Invalid difficulty. Choose: {choices}"
@@ -30,13 +30,55 @@ UNKNOWN_PERSONA = "Unknown persona '{name}' for product '{product}'"
 SELL_REVIEW_ERROR = "Couldn't rebuild the session review - try again."
 CUSTOM_BUYER_INVALID = "That buyer can't be used: {detail}"
 
+# Accounts and teams (/api/account, /api/team)
+LOGIN_REQUIRED = "Log in to use this."
+BAD_LOGIN = "That email and password don't match an account."
+LOGIN_LOCKED = "Too many wrong passwords for this email. Wait 15 minutes and try again."
+PASSWORD_WRONG = "That password isn't right."
+ACCOUNT_FIELD_ERRORS = {
+    ("email", "invalid"): "Enter a valid email address.",
+    ("email", "taken"): "There's already an account with that email. Log in instead.",
+    ("name", "invalid"): "Enter your name (up to 60 characters).",
+    ("password", "too_short"): "Use at least 8 characters for your password.",
+    ("password", "too_long"): "Use at most 256 characters for your password.",
+}
+SKILL_ENTRIES_INVALID = "Those scores couldn't be saved: send up to {max} entries in the skill log format."
+PROSPECTS_FULL = "You've saved {max} prospects. Delete one to save another."
+PROSPECT_NOT_FOUND = "That saved prospect doesn't exist."
+WORDS_FULL = "You've saved {max} sets of questions already. Delete one to save another."
+WORDS_NOT_FOUND = "Those saved questions are gone."
+WORDS_INVALID = "Those questions don't fit the script any more. Match them again."
+TEAM_ERRORS = {
+    "name_invalid": "Give the team a name (up to 60 characters).",
+    "already_in_team": "You're already in a team. Leave it first.",
+    "unknown_code": "No team has that invite code. Check it with your manager.",
+    "not_in_team": "You're not in a team.",
+    "not_manager": "Only the team's manager can do that.",
+    "not_a_member": "That person isn't in your team.",
+    "remove_self": "To take yourself off the team, use Leave team.",
+}
+
 # Uploaded calls (/api/calls)
 CALL_TEXT_REQUIRED = "Paste a call transcript or choose a file."
 CALL_UNREADABLE_TEXT = "Couldn't find who said what. Use a transcript with speaker names, like \"Jane: Hi there\" on each line, or a Zoom, Teams or Fathom export."
 CALL_TOO_LONG_TEXT = "That transcript is too long. Keep it under {max_chars:,} characters."
 CALL_TOO_SHORT_TEXT = "That's too short to learn from. Use a call with a few back-and-forth turns between two people."
 CALL_UNKNOWN_SPEAKER_TEXT = "Nobody called {name} speaks in this call."
+SOP_UNSUPPORTED = "Use a PDF, Word (.docx), Markdown or text file."
+SOP_UNREADABLE = "Couldn't read any text in that file. Try exporting it as PDF or Word, or paste the text."
+SOP_TOO_BIG = "That file unpacks to far more than an SOP needs. Save it again as a plain PDF or paste the text."
+SOP_EMPTY = "There are no steps in that SOP. Use headings for stages and a line per step."
+SOP_OUTLINE_INVALID = "Read the SOP first, then check a call against it."
+AUDIO_REQUIRED = "Choose a call recording to upload."
+AUDIO_FORMAT = "Use an audio file: {formats}."
+AUDIO_TOO_BIG = "That recording is over {mb} MB. Export the call's transcript instead (Zoom, Teams, Fathom and others offer one)."
+AUDIO_NO_SPEECH = "No speech was found in that recording."
+AUDIO_UNREADABLE = "That recording couldn't be read. Check it plays, or paste or upload the call's transcript instead."
+AUDIO_UNAVAILABLE = "Turning recordings into text isn't available right now. Paste or upload the call's transcript instead."
 CALL_ONE_SPEAKER_TEXT = "Everyone in this transcript is labelled \"{name}\". Name the speakers (or export it with names) so we can tell you from the prospect."
+# The rep's own words (/api/buy/words, /api/buy/init `words`)
+REP_WORDS_SOURCE = "Paste a call transcript or read an SOP first."
+REP_WORDS_INVALID = "Those lines don't fit this script. Match them again and start the call from there."
 REQUEST_TOO_LARGE = "That's too big to send. Keep files under 1 MB."
 
 # Request checks
@@ -72,3 +114,20 @@ SESSION_ENDED = "Session has ended. Get evaluation or reset."
 NO_TURNS_YET = "Say a few things to the buyer first - the quiz uses your own turns."
 TURN_NOT_IN_SESSION = "That turn is not part of this session."
 TURN_REQUIRED = "A turn number is required."
+
+# Signing in without a password (backend/routes/sign_in.py)
+SIGN_IN_OFF = "That way of signing in isn't set up here. Use your email and password."
+LINK_EMAIL_INVALID = "Enter a valid email address."
+LINK_LIMIT = "We've sent a few links to that address already. Use the newest one, or try again in an hour."
+LINK_NOT_SENT = "We couldn't send the email just now. Try again in a minute."
+LINK_INVALID = "That sign-in link has expired or was already used. Ask for a new one."
+SIGN_IN_AGAIN = "For safety, sign in again (a new email link or Google), then delete within 10 minutes."
+
+# Errors the framework raises, answered in JSON on /api (backend/app.py): the parser's own detail is never shown.
+NUMBER_TOO_BIG = "That number is too big."
+HTTP_ERRORS = {
+    400: "That request couldn't be read. Send JSON with the fields this endpoint takes.",
+    404: "There's nothing at that address.",
+    405: "That method isn't allowed here.",
+    415: "Send JSON (Content-Type: application/json).",
+}

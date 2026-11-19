@@ -21,13 +21,15 @@ Each folder holds one job; its `__init__.py` says which. Imports point down or i
 
 ```
 core/
-  infra/        plumbing, no sales knowledge: env, constants, loader, utils, logs/, providers/ (LLM, speech, router)
-  training/     learner tools both modes use: turn_rating, quiz, drills
-  sell_mode/    learner sells, AI buys: buyer_*, sell_service, sell_evaluator, session_review, knowledge, real_calls, custom_buyer
+  infra/        plumbing, no sales knowledge: env, constants, loader, utils, phrases (the one "does this line say X?" rule), embedder (the one local meaning model), similarity (meaning match), logs/, providers/ (LLM, router, speech: Kokoro then Groq, with voice_marks: the script's stress marks heard; dictation: Parakeet then Groq)
+  training/     learner tools both modes use: turn_rating, blemish (a trained second layer under it), quiz, drills, team_insights (a manager's view)
+  sell_mode/    learner sells, AI buys: buyer_*, sell_service, sell_evaluator, session_review, call_stages, knowledge, real_calls, custom_buyer
   calls/        an uploaded real call, no AI: transcript (parsers), roles (rep / prospect), profile, reader (the one entry)
+  accounts/     what is kept for a learner, SQLite: db (file, migrations), passwords, users, teams, library
+  sop/          a team's sales SOP, no AI: document (txt/md/docx/pdf), outline, checklist, adherence
   buy_mode/     learner buys, script sells: seller_bot, flow, coach, stage
-    script_engine/  seller (one turn), engine (next line), method (load YAML), config (check YAML)
-      hear/     what the reply meant: verdict, recognise, embedder, meanings, shrug
+    script_engine/  seller (one turn), engine (next line), method (load YAML), config (check YAML), rep_words
+      hear/     what the reply meant: verdict, recognise, meanings, shrug
       ai/       the only door to the AI: voice, line, gate, checks, judge, listen
       words/    writing lines: fill, echo, tone
 backend/        transport: app, routes/, security
@@ -40,10 +42,10 @@ backend/        transport: app, routes/, security
 | 1 | Browser posts the salesperson's line | `web/src/lib/api/client.ts` (`/api/sell/chat`) | The one place the UI talks to the API. |
 | 2 | Route checks rate limit, session, message | `backend/routes/sell.py` `chat`; `backend/routes/_utils.py` `with_session` / `validate_message` | Transport. Shapes JSON, holds no sales logic. Sessions live in `app.extensions["sessions"]` (`Sessions(seller, buyer)`, two `SessionStore`s named for the AI's side). |
 | 3 | Engine runs the turn | `core/sell_mode/buyer_session.py` `BuyerSession.process_turn` (and `redo`, which rolls itself back on failure); setup in `core/sell_mode/sell_service.py`, state in `core/sell_mode/buyer_state.py`, logs and analytics in `core/sell_mode/buyer_record.py` | Orchestrates: take readiness from the transcript replay (`session_review.build_review`, the same one the review shows, so live play and review cannot disagree), pick objection pacing, store history, save. |
-| 4 | Pure rules decide | `core/training/turn_rating.py` (rating), `core/sell_mode/buyer_rules.py` (sold / walked / coaching hint), `core/sell_mode/buyer_prompt.py` (buyer system prompt), `core/sell_mode/buyer_guardrails.py` (checks each reply) | Deterministic. No I/O, no HTTP, easy to test. |
+| 4 | Pure rules decide | `core/training/turn_rating.py` (rating), `core/sell_mode/buyer_rules.py` (sold / walked / coaching hint), `core/sell_mode/buyer_moves.py` (the buyer's move), `core/sell_mode/buyer_lines.py` (a real prospect's line for it), `core/sell_mode/buyer_prompt.py` (buyer system prompt), `core/sell_mode/buyer_guardrails.py` (checks each AI reply) | Deterministic. No I/O, no HTTP, easy to test. The move (share, guard, stall, ask, lean in) comes from readiness, the seller's line and its turn_rating signals (`buyer.yaml` `moves`); a line from `config/prospect_lines.yaml` says it when one fits (filled from the persona, never twice a call, an answer's line close enough in meaning to the question), else the AI words it, told the move. The objection pacer adds the turn's objection after either. Seeded by session and turn, so a replay goes the same way; each turn's `move` and `source` (bank / ai) are logged. |
 | 5 | Router picks a provider | `core/infra/providers/router.py` `complete` | Tries providers in order, falls back on failure. |
 | 6 | Provider calls the LLM | `core/infra/providers/factory.py` → `providers/llm/groq.py` behind `providers/base.py` | Swap seam: every provider has the same interface. |
-| 7 | Review and analytics | `core/sell_mode/session_review.py` (per-turn replay), `core/sell_mode/sell_evaluator.py` (final score + grade), `core/infra/logs/events.py` (events to the log and `data/logs/events/`) | Everything shown after the session is rebuilt from the saved transcript. |
+| 7 | Review and analytics | `core/sell_mode/session_review.py` (per-turn replay), `core/sell_mode/call_stages.py` (the call stage by stage, CAT's order, with why each stage matters; `config/call_stages.yaml`), `core/training/blemish.py` (a small trained model that adds what the rules missed, never changes a rating; `scripts/blemish/`), `core/sell_mode/sell_evaluator.py` (final score + grade), `core/infra/logs/events.py` (events to the log and `data/logs/events/`) | Everything shown after the session is rebuilt from the saved transcript. Every phrase check (buyer, rating, stages, score) goes through `core/infra/phrases.py`, so they agree on what was said. |
 
 Buy mode: `buy.py` → `SellerBot.chat` → `core/buy_mode/script_engine/` (scripted lines for the products in `config/script/engine.yaml`, listed by `GET /api/buy/products` and picked in the ⋯ menu under "Call type"; `/init` takes the id as `product_type`, any other product gets `default_product`. AI only answers uncovered product questions, acknowledges what they said and judges close calls, and every AI sentence goes through `ai/line.py` `checked_line`). `flow.py` `CallFlow` keeps the call's history and stage. Coach notes come from the script step; `coach.py` answers the learner's questions.
 
@@ -118,9 +120,69 @@ the call's objections (`BuyerSession(objection_bank=...)`). With `replay` (the c
 with the prospect) the session starts there instead: `BuyerSession.continue_from` settles readiness and counts from
 that transcript the same way a rewind does (`_settle`), and the prospect's last line is what the learner answers.
 
+**A recording instead of a transcript**: `/api/calls/transcribe` sends the audio to speech-to-text
+(`core/infra/providers/transcribe.py`, Groq Whisper), then `core/calls/audio.py` has the AI label each segment Speaker A
+or B (the one AI step in calls) and writes ordinary `[m:ss] Speaker A: ...` lines. The learner checks them and reads
+the call like any transcript. Only this route accepts bodies past the 1 MB cap (`transcription.max_upload_bytes`).
+
+**A recording past 25 MB** (Groq's per-file limit, `transcription.max_bytes`): `core/calls/audio_parts.py`
+`transcribe_in_parts` copies it into a temporary folder and has ffmpeg (no shell, `split_timeout_seconds`) cut it into
+`part_seconds` parts, each re-encoded as mono 16 kHz mp3 at `part_kbps` so it fits the limit. Each part is transcribed,
+its segments are shifted by the part's start (ffmpeg's own part list), and the speakers are labelled once over the
+joined call, so A and B stay the same people from start to end. The folder is always deleted. A recording at or under
+the limit is still one request. Without ffmpeg on the server (`can_split`), the limit is 25 MB as before
+(`AUDIO_TOO_BIG`, 413); a file ffmpeg cannot decode is `AUDIO_UNREADABLE` (400).
+
 **Adding a transcript format**: write one parser in `transcript.py` (`(lines, cfg) -> list[Turn] | None`), add it to
 `PARSERS` before any looser layout that could claim its text, and add a sample of the real export to
 `tests/test_calls_transcript.py`. Junk lines a tool adds go in `calls.yaml` `noise`.
+
+## SOP review
+
+`backend/routes/sop.py` `/read` turns a file (or pasted text) into blocks (`document.py`, one reader per format in
+`READERS`), stages and steps (`outline.py`: each top-level heading is a stage, a lone title is skipped), and a
+checklist of what a good call covers (`checklist.py`, `config/sop.yaml` `elements`): cues first, meaning only as a
+strict fallback. `/check` takes that outline back with a call and says which steps the rep carried out
+(`adherence.py`: each step searched for in the rep's lines with bge's query instruction, thresholds in
+`sop.yaml`). Meaning comes from the shared embedder (`core/infra/embedder.py`), passed in as `embed`, so `core/sop` imports no mode.
+
+## Rep's words (buy mode)
+
+The rep can ask the script's questions in a top rep's words (a real call) or the team SOP's. `/api/buy/words` takes a
+call (read by `core/calls`: the rep's turns) or an SOP outline (from `/api/sop/read`; an instruction such as "Ask what
+they want" is said as "What do you want?" by `core/sop/spoken.py`), finds their questions and matches each to the
+script step that asks the same thing (`script_engine/rep_words.py`: the shared embedder, one question per step, the
+call's own path before the objection talks; below `sure_score` both must ask for the same sort of answer). The web
+sends the chosen `{step: question}` to `/api/buy/init` as `words`, and `build_seller` runs the script with those
+lines swapped in (`with_words`). Only the wording changes: what each step listens for, where it goes and the checks
+around the AI stay the script's. So a step that hears yes or no ("go on" as yes) takes only a yes/no question, and
+one that offers choices ("Credit or debit?") only a question that offers them. Only the step's own question changes:
+a route's lead into it, its probes and its other wordings when asked again stay the script's. `/init` keeps the
+`label` sent with the words ("Maya", "your SOP") and returns it as `words_label`; a restore sends the tab's product,
+words and label too, which start a new call when the server no longer has that one. Thresholds in `limits.yaml`
+`rep_words`, measured in `tests/test_rep_words.py`.
+
+When the source asks a step's question twice in different words, the second is that step's probe (`Match.probe`,
+shown under the match as "Asked again"); the web sends the kept ones as `probes` with `words`, and `with_words` says
+them first when the step is asked again. A choice (`{product, label, words, probes}`) can be kept past the tab:
+saved to the account (`/api/account/words`, checked against today's script by `seller.checked_words`), or set by a
+manager as the team's (`/api/team/words`, members read it in `/api/account/me` `team.words`). The tab's words live in
+sessionStorage `buyWords`: someone's words, `"none"` for the script's own (an explicit choice that beats the team's),
+or nothing, when a new call takes the team's words for that product (`SessionContext` `wordsFor`; the buy call waits
+for the account answer). In the chat, a seller line that contains one of the current words or probes gets a tag
+naming whose they are; the web finds them, the server sends nothing extra.
+
+## Accounts
+
+Optional: everything works logged out. `backend/auth.py` owns the login cookie (signed, HttpOnly, SameSite=Lax,
+Secure) holding the user id and a session version; logging out bumps the version, so every copy of the cookie stops
+working. Routes in `backend/routes/account.py` and `team.py` call the stores in `core/accounts/`, which never import
+Flask. `db.py` keeps one SQLite file (`DB_PATH`), a short connection per use (`connect(write=True)` takes the write
+lock first, so a check-then-insert cannot race), WAL, and `secure_delete`; a migration is appended to `MIGRATIONS`,
+never edited once shipped. Deleting an account deletes everything kept for it and checkpoints the log. A team always
+keeps a manager (`teams.keep_a_manager`). Managers get insights (`/api/team/insights`, `.csv`):
+`core/training/team_insights.py` turns members' synced skill history into levels (recent averages) and coaching
+guidelines, every guideline a sentence from `config/insights.yaml` filled with the numbers that triggered it. Wrong passwords are capped per email (`auth.LoginThrottle`).
 
 ## Adding a product or script
 

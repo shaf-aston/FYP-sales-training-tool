@@ -3,12 +3,7 @@
 from core.infra.constants import GRADE_LABELS, GRADE_THRESHOLDS
 from core.infra.loader import load_buyer_config
 from core.infra.utils import clamp_score, range_label, tokenize
-
-
-def _contains_any(text: str, hints: list[str]) -> bool:
-    """Return True when any hint phrase appears in the text."""
-    lowered = (text or "").lower()
-    return any(hint in lowered for hint in hints)
+from core.infra.phrases import says_any
 
 
 def _weighted_overall(criteria_scores: dict, criteria: dict) -> int:
@@ -20,7 +15,10 @@ def _weighted_overall(criteria_scores: dict, criteria: dict) -> int:
 
 
 def _criteria_scores(conversation_history: list[dict], evaluation: dict) -> dict:
-    """Score every configured criterion from the transcript's language."""
+    """Score every configured criterion from the transcript's language.
+
+    Each score says whether it was `measured`: False when it is a stand-in, not evidence (no salesperson turns,
+    no objection to handle, a criterion with no rule), so progress tracking can leave it out."""
     criteria, hints, scoring = evaluation["criteria"], evaluation["hints"], evaluation["scoring"]
     feedback = evaluation["feedback"]
     sales_turns = [m.get("content", "") for m in conversation_history if m.get("role") == "user"]
@@ -28,7 +26,7 @@ def _criteria_scores(conversation_history: list[dict], evaluation: dict) -> dict
 
     if not sales_turns:
         return {
-            name: {"score": scoring["empty_score"], "feedback": feedback["no_evidence"]}
+            name: {"score": scoring["empty_score"], "feedback": feedback["no_evidence"], "measured": False}
             for name in criteria
         }
 
@@ -38,15 +36,15 @@ def _criteria_scores(conversation_history: list[dict], evaluation: dict) -> dict
 
     question_turns = sum(1 for turn in sales_turns if "?" in turn)
     open_question_turns = sum(
-        1 for turn in sales_turns if "?" in turn and _contains_any(turn, hints["open_question"])
+        1 for turn in sales_turns if "?" in turn and says_any(hints["open_question"], turn)
     )
     question_ratio = min(1.0, question_turns / sales_count)
     open_ratio = open_question_turns / max(1, question_turns)
 
-    rapport_ratio = min(1.0, sum(1 for t in sales_turns if _contains_any(t, hints["rapport"])) / sales_count)
-    objection_turns = sum(1 for turn in buyer_turns if _contains_any(turn, hints["objection_cues"]))
-    objection_response_turns = sum(1 for t in sales_turns if _contains_any(t, hints["objection_response"]))
-    solution_ratio = min(1.0, sum(1 for t in sales_turns if _contains_any(t, hints["solution"])) / sales_count)
+    rapport_ratio = min(1.0, sum(1 for t in sales_turns if says_any(hints["rapport"], t)) / sales_count)
+    objection_turns = sum(1 for turn in buyer_turns if says_any(hints["objection_cues"], turn))
+    objection_response_turns = sum(1 for t in sales_turns if says_any(hints["objection_response"], t))
+    solution_ratio = min(1.0, sum(1 for t in sales_turns if says_any(hints["solution"], t)) / sales_count)
 
     length_fit = next(
         (band["fit"] for band in scoring["length_fit"]["bands"]
@@ -72,7 +70,7 @@ def _criteria_scores(conversation_history: list[dict], evaluation: dict) -> dict
         "objection_handling": (
             oh["no_objection_score"] if objection_turns == 0
             else oh["base"] + oh["response_weight"] * min(1.0, objection_response_turns / objection_turns),
-            objection_turns == 0,
+            objection_turns > 0 and objection_response_turns / objection_turns >= oh["good"],
         ),
         "solution_presentation": (
             sp["base"] + sp["solution_weight"] * solution_ratio,
@@ -87,12 +85,14 @@ def _criteria_scores(conversation_history: list[dict], evaluation: dict) -> dict
     scores = {}
     for name, info in criteria.items():
         if name not in computed:  # a criterion added in config with no rule of its own
-            scores[name] = {"score": scoring["neutral_score"], "feedback": feedback["neutral"]}
+            scores[name] = {"score": scoring["neutral_score"], "feedback": feedback["neutral"], "measured": False}
             continue
         score, good = computed[name]
         scores[name] = {
             "score": clamp_score(round(score)),
-            "feedback": info["praise"] if good else info["advice"],
+            "feedback": (info["none"] if name == "objection_handling" and objection_turns == 0
+                         else info["praise"] if good else info["advice"]),
+            "measured": not (name == "objection_handling" and objection_turns == 0),
         }
     return scores
 
@@ -125,7 +125,7 @@ def evaluate_sell_session(conversation_history, buyer_state) -> dict:
     overall_score = _weighted_overall(criteria_scores, evaluation["criteria"])
     summary = range_label(
         overall_score, evaluation["scoring"]["summary_bands"], evaluation["feedback"]["summary"]
-    ).format(outcome=buyer_state.status)
+    ).format(outcome=evaluation["feedback"]["outcomes"][buyer_state.status])
     return {
         "overall_score": overall_score,
         "grade": range_label(overall_score, GRADE_THRESHOLDS, GRADE_LABELS),

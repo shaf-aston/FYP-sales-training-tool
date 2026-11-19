@@ -5,6 +5,9 @@
 
 import { ConfirmProvider, ToastProvider } from "@/components/ui";
 import { AmbientFilm } from "@/components/film/AmbientFilm";
+import { AccountProvider } from "@/features/account/AccountContext";
+import { AccountDialog } from "@/features/account/AccountDialog";
+import { InsightsDialog } from "@/features/insights/InsightsDialog";
 import { ChatView } from "@/features/chat/ChatView";
 import { DraftProvider } from "@/state/DraftContext";
 import { CoachPanel } from "@/features/coach/CoachPanel";
@@ -12,6 +15,7 @@ import { FeedbackDialog } from "@/features/feedback/FeedbackDialog";
 import { HelpDialog } from "@/features/help/HelpDialog";
 import { SellDialogs } from "@/features/sell/SellDialogs";
 import { QuizPanel } from "@/features/quiz/QuizPanel";
+import { RepWordsDialog } from "@/features/repWords/RepWordsDialog";
 import { SessionProvider, type Mode } from "@/features/session/SessionContext";
 import { Sidebar } from "@/features/sidebar/Sidebar";
 import { VoiceProvider } from "@/features/voice/VoiceContext";
@@ -31,7 +35,10 @@ function Layout() {
       </main>
       <HelpDialog />
       <FeedbackDialog />
+      <AccountDialog />
+      <InsightsDialog />
       <SellDialogs />
+      <RepWordsDialog />
     </div>
   );
 }
@@ -42,14 +49,16 @@ export function AppShell({ mode }: { mode: Mode }) {
     <ToastProvider>
       <ConfirmProvider>
         <UiProvider>
-          <SessionProvider mode={mode}>
-            <DraftProvider>
-              <VoiceProvider>
-                <AmbientFilm />
-                <Layout />
-              </VoiceProvider>
-            </DraftProvider>
-          </SessionProvider>
+          <AccountProvider>
+            <SessionProvider mode={mode}>
+              <DraftProvider>
+                <VoiceProvider>
+                  <AmbientFilm />
+                  <Layout />
+                </VoiceProvider>
+              </DraftProvider>
+            </SessionProvider>
+          </AccountProvider>
         </UiProvider>
       </ConfirmProvider>
     </ToastProvider>

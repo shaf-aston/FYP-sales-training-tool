@@ -15,7 +15,8 @@ const sectionId = (id: string) => `s-${id}`;
 const SECTION_IDS = FIELDS.map((f) => sectionId(f.id));
 
 function BackLink() {
-  const sell = useSearchParams().get("mode") === "sell";
+  // the knowledge base sets up sell calls and every link in comes from selling: back to selling unless told otherwise
+  const sell = useSearchParams().get("mode") !== "buy";
   return (
     <Link href={sell ? config.routes.sell : config.routes.buy} className={s.back}>
       ← {sell ? "Back to selling" : "Back to buying"}
@@ -57,7 +58,9 @@ function Editor() {
         </nav>
         <div className={s.fields}>
           <Card tone="accent" className={s.note}>
-            Changes apply after you reset the chat.
+            {k.home === "account"
+              ? "Kept on your account. Your next sell call uses these details."
+              : "Kept on this device only. Your next sell call uses these details; sign in to keep them on your account."}
           </Card>
           {FIELDS.map((f) => {
             const common = {
@@ -80,7 +83,7 @@ function Editor() {
         </div>
       </div>
       <details className={s.preview}>
-        <summary>Preview the product brief the assistant will read</summary>
+        <summary>Preview what the buyer will know about your product</summary>
         <pre>{k.brief}</pre>
       </details>
       <div className={s.actions}>
@@ -105,7 +108,7 @@ export function KnowledgePage() {
             <div>
               <h1 className={s.title}>Configure knowledge base</h1>
             </div>
-            <Suspense fallback={<Link href={config.routes.buy} className={s.back}>← Back to buying</Link>}>
+            <Suspense fallback={<Link href={config.routes.sell} className={s.back}>← Back to selling</Link>}>
               <BackLink />
             </Suspense>
           </header>

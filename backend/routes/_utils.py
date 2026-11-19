@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 from dataclasses import dataclass
 from functools import wraps
 from typing import Any
@@ -54,8 +55,23 @@ def require_session(kind: str):
     return found, None
 
 
+_LOCKS_GUARD = threading.Lock()
+
+
+def session_lock(session) -> threading.Lock:
+    """One lock per live session: its requests take turns. Two sends at once (a duplicated tab) wrote two seller
+    lines in a row and then two replies, and a failed turn's rollback could undo the other's (live audit, 12 Nov)."""
+    with _LOCKS_GUARD:
+        lock = getattr(session, "_request_lock", None)
+        if lock is None:
+            lock = threading.Lock()
+            session._request_lock = lock
+        return lock
+
+
 def with_session(kind: str):
-    """Route decorator: call the handler with the caller's live session, or return the lookup error."""
+    """Route decorator: call the handler with the caller's live session, or return the lookup error. Requests on one
+    session run one at a time."""
 
     def decorator(view):
         @wraps(view)
@@ -63,7 +79,8 @@ def with_session(kind: str):
             session, error = require_session(kind)
             if error:
                 return error
-            return view(session, *args, **kwargs)
+            with session_lock(session):
+                return view(session, *args, **kwargs)
 
         return wrapper
 
@@ -119,3 +136,17 @@ def safe_latency_ms(value) -> float | None:
         return round(float(value), 1)
     except (TypeError, ValueError):
         return None
+
+
+def json_body() -> dict:
+    """The request's JSON object, or {} for no body, bad JSON or JSON that is not an object."""
+    from flask import request
+
+    data = request.get_json(silent=True)
+    return data if isinstance(data, dict) else {}
+
+
+def text_field(data: dict, name: str) -> str:
+    """A text field stripped, or "" when it is missing or not text ({"question": 123} was a 500)."""
+    value = data.get(name)
+    return value.strip() if isinstance(value, str) else ""

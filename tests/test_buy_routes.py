@@ -131,6 +131,7 @@ def test_init_restores_live_session_from_memory(live_seller):
     assert payload["success"] is True
     assert payload["message"] is None
     assert len(payload["history"]) == 3
+    assert payload["training"] == seller.coach_notes()   # found live: the Coaching panel was empty after a reload
 
 
 def test_init_starts_fresh_session_when_missing_from_memory(buy_app):

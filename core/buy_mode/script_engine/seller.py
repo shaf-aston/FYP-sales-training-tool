@@ -23,7 +23,8 @@ from core.buy_mode.script_engine.engine import (
     question_of,
     start,
 )
-from core.buy_mode.script_engine.hear.embedder import make_embedder
+from core.infra import embedder as meaning_model
+from core.buy_mode.script_engine.rep_words import RepWordsError, clean, clean_label, with_words
 from core.buy_mode.script_engine.hear.meanings import MeaningBank, load_meanings
 from core.buy_mode.script_engine.hear.recognise import Listener
 from core.buy_mode.script_engine.hear.reply import after, clauses
@@ -34,11 +35,11 @@ from core.buy_mode.script_engine.method import (
     load_common_sense,
     load_method,
     load_offer,
+    load_stage_jump,
 )
 from core.buy_mode.script_engine.words import tone
 from core.buy_mode.script_engine.words.echo import Echo, Turn
 from core.buy_mode.script_engine.words.fill import Filler, fix_typos
-from core.infra.env import ROOT_DIR
 from core.infra.loader import load_yaml
 from core.infra.logs import timed
 from core.infra.utils import tokenize
@@ -50,11 +51,6 @@ def engine_config():
     return load_yaml("script/engine.yaml")
 
 
-@lru_cache(maxsize=1)
-def shared_embedder():
-    """One model per process: loading it is the slow part."""
-    return make_embedder(engine_config(), ROOT_DIR)
-
 
 @lru_cache(maxsize=1)
 def shared_gate():
@@ -65,7 +61,21 @@ def shared_gate():
 def resolve_product(product):
     """The product to sell: the one asked for if it is scripted, else the default."""
     cfg = engine_config()
-    return product if product in cfg["products"] else cfg["default_product"]
+    return product if isinstance(product, str) and product in cfg["products"] else cfg["default_product"]
+
+
+def checked_words(choice) -> dict:
+    """A saved choice of someone's words ({product, label, words, probes}), checked against today's script, as it is
+    kept: an account's saved words and a team's. Raises RepWordsError."""
+    if not isinstance(choice, dict) or choice.get("product") not in engine_config()["products"]:
+        raise RepWordsError("unknown_product")
+    words, probes = choice.get("words"), choice.get("probes") or {}
+    label = clean_label(choice.get("label"))
+    if not words or not label:
+        raise RepWordsError("empty")
+    with_words(method_for(choice["product"]), words, probes)   # raises for words the script can't take
+    return {"product": choice["product"], "label": label,
+            "words": {k: clean(v) for k, v in words.items()}, "probes": {k: clean(v) for k, v in probes.items()}}
 
 
 def products():
@@ -78,12 +88,20 @@ def products():
     ]
 
 
-def build_seller(router, product, embedder=None, gate=None):
+def method_for(product):
+    """The script a product is sold with (engine.yaml: the product's `method`, else the default one)."""
     cfg = engine_config()
-    entry = cfg["products"][product]
+    return load_method(cfg["products"][product].get("method", cfg["method"]))
+
+
+def build_seller(router, product, embedder=None, gate=None, words=None, probes=None):
+    """`words`: {step id: question} the rep says instead of the script's, `probes` the same steps asked again in
+    other words (rep_words.py); raises RepWordsError."""
+    cfg = engine_config()
+    method = method_for(product)
     return ScriptSeller(
-        cfg, load_method(entry.get("method", cfg["method"])), load_offer(entry["offer"]), load_common_sense(),
-        embedder or shared_embedder(), (gate or shared_gate()).llm(router),
+        cfg, with_words(method, words, probes) if words else method, load_offer(cfg["products"][product]["offer"]),
+        load_common_sense(), embedder or meaning_model.shared_embedder(), (gate or shared_gate()).llm(router),
     )
 
 
@@ -147,16 +165,24 @@ class ScriptSeller:
         """The steps a call can start at, in script order: those with a line to say (id, name, ui stage)."""
         return [{"id": s.id, "name": s.name or s.id, "stage": s.ui_stage} for s in self.method.steps.values() if s.say]
 
-    def start_at(self, step_id):
-        """Start the call fresh at `step_id` (testing one step): nothing heard before, so no answers to build
-        on; its line falls back to its plain words. Returns (text, ui_stage). ValueError for a step with no line."""
+    def stage_starts(self):
+        """Where a jump to each stage lands, with the answers taken as given before it (training/stage_jump.py)."""
+        from core.training.stage_jump import stage_starts
+        return stage_starts(self.method)
+
+    def start_at(self, step_id, slots=None):
+        """Start the call fresh at `step_id`. `slots`: the answers taken as given before it (the recap card), so
+        its line builds on them; none = its plain words. Returns (text, ui_stage). ValueError for a step with no line."""
         step = self.method.steps.get(step_id)
         if not step or not step.say:
             raise ValueError(f"no step to start at: {step_id!r}")
         self._voice.new_turn()
         self._turn = Turn()
-        self.state = ScriptState(step=step_id)
+        self.state = ScriptState(step=step_id, slots=dict(slots or {}))
         text, ui_stage = self._go(jump(self.method, self.state, step_id))
+        lead = load_stage_jump().get("lead", "")
+        if slots and lead and step_id != self.method.first:
+            text = f"{lead} {text}"
         self.state = self._start = replace(Echo.settle(self.state, self._turn), last=text)
         return text, ui_stage
 
@@ -215,7 +241,7 @@ class ScriptSeller:
         bridged = self.state.bridged
         self.state = replace(v.ahead or self.state, waiting=False, bridged=False)  # early answers are kept whatever it was
         if bridged and v.kind in ("answer", "says_nothing"):  # their reply to the getting-to-know-you question
-            said = self._then_ask(self.cfg["bridge_ack"])
+            said = self._then_ask(self.cfg["bridge_ack"], back=False)
             self.state = replace(self.state, last=said)
             return said, self.ui_stage(), "bridge"
         said, ui_stage, detail = self._respond(v, step, opened)
@@ -561,10 +587,12 @@ class ScriptSeller:
             facts += " " + self._filler.fill(offer.about_after_price, {})
         return self._voice.answer(question, facts, self.state.slots, opened)
 
-    def _then_ask(self, lead):
+    def _then_ask(self, lead, back=True):
         """`lead`, then the current question again. A step that asks nothing (a statement) is not
         said again: a fact answered at a statement step said the statement twice. Said again once: a second
-        side reply in a row gets the step in other words, or moves on (`_carry_on`), never the same line."""
+        side reply in a row gets the step in other words, or moves on (`_carry_on`), never the same line.
+        `back`: a turn back to our question ("So, back to you.") between their side question's answer and it; not
+        after their answer to our own bridge question."""
         self._turn.side = True
         if self.state.repeated:
             return self._carry_on(lead.strip(), stay=True)[0]
@@ -574,6 +602,10 @@ class ScriptSeller:
         if "?" not in question:
             question = ""
         else:  # the question said again spends an ask: never a 4th time after two shrugs
+            question = question_of(question.strip())   # the question only: its talk was just said (live, 12 Nov)
+            backs = self.cfg["back_to_question"]
+            if back and lead.strip() and backs:   # after their side question is answered, a turn back to ours
+                lead = f"{lead.strip()} {backs[self.state.resaid % len(backs)]}"
             self.state = replace(self.state, resaid=self.state.resaid + 1)
         return f"{lead.strip()} {question.strip()}".strip()
 

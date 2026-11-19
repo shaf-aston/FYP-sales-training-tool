@@ -40,8 +40,29 @@ git merge -q --ff-only origin/master || fail "VM master has diverged from origin
 new=$(git rev-parse HEAD)
 say "${old:0:7} -> ${new:0:7}"
 
+# the voice and dictation models (350 MB + 660 MB, once each), before the restart so the new process warms up with
+# them; without them Groq or the browser speaks instead, so a failure here is only a warning
+[ -n "${SKIP_VOICE_FETCH:-}" ] || "$PY" -c "from core.infra.providers.speech import fetch_files as a; from core.infra.providers.dictation import fetch_files as b; a(); b()" \
+  || echo "::warning title=Voice::could not fetch the voice models; speech falls back to Groq or the browser"
+
 if deps "$old" "$new" && bash -c "$RESTART" && live_on "$new"; then
   say "API live on ${new:0:7}"
+  # the nightly database backup; a problem here is reported but never undoes a good deploy
+  [ -n "${SKIP_BACKUP_TIMER:-}" ] || bash scripts/install_backup.sh \
+    || echo "::warning title=Backup timer::could not install the nightly backup timer"
+  # ffmpeg splits recordings past 25 MB; without it they are refused as too big, so a failure here is only a warning
+  [ -n "${SKIP_FFMPEG_INSTALL:-}" ] || bash scripts/install_ffmpeg.sh \
+    || echo "::warning title=ffmpeg::could not install ffmpeg; recordings over 25 MB will be refused"
+  # make the fixed lines ahead of time, detached and at the lowest priority (a live call always comes first); one at
+  # a time, and a no-op once they are all made. The background job must itself be the subshell that swaps its output
+  # for the log (exec): any shell around it that still holds the deploy's output keeps the SSH session open until
+  # its 10-minute timeout (13 Nov; tested: the deploy now returns at once, the job carries on).
+  if [ -z "${SKIP_VOICE_PREWARM:-}" ]; then
+    # the log is opened only once the lock is held: a start skipped because one is still running leaves its log be
+    ( exec > /dev/null 2>&1 < /dev/null
+      exec setsid nohup flock -n .cache/speech-prewarm.lock \
+        sh -c 'exec nice -n 19 "$0" -m scripts.speech_prewarm > .cache/speech-prewarm.log 2>&1' "$PY" ) &
+  fi
   exit 0
 fi
 

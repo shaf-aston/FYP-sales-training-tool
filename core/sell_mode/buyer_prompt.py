@@ -6,15 +6,16 @@ from core.sell_mode.buyer_state import persona_name
 from core.infra.utils import range_label
 
 
-def build_product_context(product_type: str) -> str:
-    """What the buyer knows about the product: config and custom knowledge.
+def build_product_context(product_type: str, custom: dict | None = None) -> str:
+    """What the buyer knows about the product: config, and the learner's own details (`custom`, from the knowledge
+    base page) for this call only.
 
     The persona's needs, pains and budget are not repeated here; the template has them.
     """
     products = loader.load_buyer_products()["products"]
     product = products.get(product_type) or products["default"]
     blocks = [product.get("knowledge", "")]
-    custom_knowledge = knowledge.get_custom_knowledge_text()
+    custom_knowledge = knowledge.knowledge_text(custom)
     if custom_knowledge:
         blocks.append(f"{loader.load_buyer_config()['research_notes_heading']}\n{custom_knowledge}")
     body = "\n\n".join(b for b in blocks if b)

@@ -14,7 +14,8 @@ export function ProgressBar({ value, label, caption }: Props) {
   return (
     <div className={s.wrap}>
       <div className={s.track} role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
-        <span className={s.fill} style={{ width: `${Math.max(2, pct)}%` }} />
+        {/* the colour is the place on the whole scale: a 35% bar ends amber, only a full one reaches green */}
+        <span className={s.fill} style={{ width: `${Math.max(2, pct)}%`, backgroundSize: `${(100 / Math.max(2, pct)) * 100}% 100%` }} />
       </div>
       {caption && <p className={s.caption}>{caption}</p>}
     </div>

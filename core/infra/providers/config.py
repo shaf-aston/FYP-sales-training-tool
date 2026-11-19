@@ -46,8 +46,6 @@ def get_groq_llm_model() -> str:
     """Return the preferred Groq chat model, honoring env overrides."""
     return (
         _clean_env_value(env_str("GROQ_LLM_MODEL"))
-        # GROQ_MODEL is the older name, kept for server env compatibility.
-        or _clean_env_value(env_str("GROQ_MODEL"))
         or DEFAULT_GROQ_MODEL
     )
 

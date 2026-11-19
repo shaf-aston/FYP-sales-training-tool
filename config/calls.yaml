@@ -2,7 +2,7 @@
 # only applies them. No AI: the same transcript always gives the same speakers, rep and prospect profile.
 
 # Speaker labels that name no one: the profile then calls the prospect `fallback_name`.
-anonymous_speakers: ["^speaker\\s*\\d*$", "^unknown(\\s+speaker)?$", "^participant\\s*\\d*$", "^guest\\s*\\d*$", "^caller\\s*\\d*$", "^customer$", "^prospect$", "^client$", "^lead$"]
+anonymous_speakers: ["^speaker\\s*(\\d+|[a-z])?$", "^unknown(\\s+speaker)?$", "^participant\\s*\\d*$", "^guest\\s*\\d*$", "^caller\\s*\\d*$", "^customer$", "^prospect$", "^client$", "^lead$"]
 fallback_name: "Prospect"
 
 # Which speaker is the rep (the learner). Without a name from the learner, the rep is the speaker who asks the
@@ -61,3 +61,17 @@ personality:
     - {stat: hedges, at_least: 2, text: "hedges and keeps options open"}
   default: "Open to the conversation but needs a reason to move forward"
 hedges: ["\\bmaybe\\b", "\\bi guess\\b", "\\bperhaps\\b", "\\bkind of\\b", "\\bsort of\\b", "\\bprobably\\b", "\\bnot sure\\b", "\\bi suppose\\b"]
+
+# Labelling a recording's segments by voice (core/calls/audio.py): the AI sees numbered segments and answers one
+# "number. A" or "number. B" line each. {context} repeats the last few labelled segments; {segments} are new.
+speaker_prompt: |
+  These are numbered pieces of a recorded sales call between two people, A and B, in order. Speech-to-text does not
+  say who spoke, so decide it from what is said: questions and answers, who explains the offer, who talks about their
+  own business, greetings, and turn-taking. A piece usually continues the same speaker unless the content changes hands.
+  The first person to speak in the call is A.
+
+  Already labelled, for continuity:
+  {context}
+
+  Label each of these. Answer only with one line per piece, like "14. B", nothing else.
+  {segments}

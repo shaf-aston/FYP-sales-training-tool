@@ -76,6 +76,19 @@ def test_learner_picks_the_buyer_and_the_objection_to_practise(sell_client):
     assert reply["message"] == f"Can you tell me a bit more about that? {objection}"
 
 
+def test_a_live_call_can_be_picked_back_up_after_a_reload(sell_client):
+    init = sell_client.post("/api/sell/init", json={"difficulty": "easy", "product_type": "default"}).get_json()
+    headers = {"X-Session-ID": init["session_id"]}
+    reply = sell_client.post("/api/sell/chat", json={"message": "What made you take this call?"}, headers=headers).get_json()
+
+    state = sell_client.get("/api/sell/state", headers=headers).get_json()
+
+    assert state["session_id"] == init["session_id"] and state["persona"] == init["persona"]
+    assert state["difficulty"] == "easy" and state["product_type"] == "default"
+    assert [m["content"] for m in state["history"]] == [init["message"], "What made you take this call?", reply["message"]]
+    assert state["state"] == reply["state"] and state["ended"] is False and state["outcome"] == reply["outcome"]
+
+
 def test_sell_init_rejects_unknown_persona_and_oversized_objection(sell_client):
     unknown = sell_client.post("/api/sell/init", json={"persona": "Nobody"})
     too_long = sell_client.post("/api/sell/init", json={"objection": "x" * 201})
@@ -92,6 +105,7 @@ def test_sell_init_rejects_unknown_persona_and_oversized_objection(sell_client):
         ("post", "/api/sell/chat"),
         ("post", "/api/sell/evaluate"),
         ("get", "/api/sell/review"),
+        ("get", "/api/sell/state"),
         ("get", "/api/sell/quiz"),
         ("post", "/api/sell/quiz"),
         ("post", "/api/sell/redo"),
@@ -117,3 +131,52 @@ def test_skills_are_the_evaluation_criteria(client):
     assert [s["id"] for s in body["skills"]] == list(criteria)
     assert all(s["label"] and s["tip"] for s in body["skills"])
     assert body["target"] == load_buyer_config()["evaluation"]["scoring"]["strong_score"]
+
+
+def test_each_skill_has_a_practice_session_the_buyer_can_start(sell_client):
+    from core.infra.constants import MAX_CHOSEN_OBJECTION_CHARS
+
+    for skill in sell_client.get("/api/sell/skills").get_json()["skills"]:
+        practice = skill["practice"]
+        assert len(practice.get("objection", "")) <= MAX_CHOSEN_OBJECTION_CHARS
+        started = sell_client.post("/api/sell/init", json={"product_type": "default", **practice})
+        assert started.status_code == 200, (skill["id"], started.get_json())
+
+
+def test_a_skill_without_a_practice_session_gets_the_default(monkeypatch):
+    from core.infra.loader import load_buyer_config
+    from core.sell_mode import sell_service
+
+    config = load_buyer_config()
+    del config["evaluation"]["criteria"]["conversation_flow"]["practice"]
+    monkeypatch.setattr(sell_service, "load_buyer_config", lambda: config)
+    flow = next(s for s in sell_service.skills()["skills"] if s["id"] == "conversation_flow")
+    assert flow["practice"] == {"difficulty": config["default_difficulty"]}
+    assert config["evaluation"]["scoring"]["strong_score"] in sell_service.skills()["targets"]
+
+
+def test_a_stand_in_score_is_not_measured():
+    from core.sell_mode.sell_evaluator import _criteria_scores
+    from core.infra.loader import load_buyer_config
+
+    evaluation = load_buyer_config()["evaluation"]
+    calm = [{"role": "assistant", "content": "Hi."}, {"role": "user", "content": "What brings you here today?"},
+            {"role": "assistant", "content": "Just looking."}]
+    scores = _criteria_scores(calm, evaluation)
+    assert scores["objection_handling"]["measured"] is False      # no objection was raised
+    assert scores["needs_discovery"]["measured"] is True
+    assert all(not s["measured"] for s in _criteria_scores([], evaluation).values())
+
+
+def test_end_and_score_ends_the_call_and_a_redo_carries_it_on(sell_client, played_session):
+    """Found live: after End and score the buyer kept answering, under a score that no longer matched."""
+    headers = played_session
+    scored = sell_client.post("/api/sell/evaluate", json={}, headers=headers).get_json()
+    assert scored["ended"] is True and scored["outcome"] == "ended" and "Outcome: you ended it before a decision." in scored["summary"]
+    assert sell_client.get("/api/sell/state", headers=headers).get_json()["ended"] is True
+    after = sell_client.post("/api/sell/chat", json={"message": "One more thing?"}, headers=headers)
+    assert after.status_code == 400   # the call is over
+    redo = sell_client.post("/api/sell/redo", json={"turn": 2, "message": "What made that matter so much to you?"}, headers=headers)
+    assert redo.status_code == 200
+    state = sell_client.get("/api/sell/state", headers=headers).get_json()
+    assert state["ended"] is False and state["outcome"] == "active"

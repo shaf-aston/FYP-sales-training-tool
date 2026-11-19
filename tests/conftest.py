@@ -1,11 +1,14 @@
 """Shared fixtures: offline AI providers, app clients and stand-ins for a live session."""
 import json
+import os
 import sys
 from pathlib import Path
 
 import pytest
 from flask import Flask
 
+os.environ.setdefault("COOKIE_SECURE", "0")   # before the app is imported: the test client speaks http
+os.environ.setdefault("SECRET_KEY", "test-only-secret")
 ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -35,6 +38,19 @@ class DummyProvider(BaseLLMProvider):
 
 
 LLM_PROVIDER_TYPES["dummy"] = DummyProvider
+
+
+@pytest.fixture(autouse=True)
+def accounts_db(tmp_path, monkeypatch):
+    """Every test gets its own empty accounts database and login throttle."""
+    from backend.auth import login_throttle
+    from core.accounts.db import reset_database
+
+    monkeypatch.setenv("DB_PATH", str(tmp_path / "accounts.db"))
+    reset_database()
+    login_throttle._failures.clear()
+    yield
+    reset_database()
 
 
 @pytest.fixture(autouse=True)
@@ -143,9 +159,19 @@ def cat_seller():
 
 
 @pytest.fixture(autouse=True)
+def _offline_voice(monkeypatch, tmp_path):
+    """No test runs (or downloads) the local voice or dictation models, or writes to the real speech cache: Groq
+    alone answers, faked by the test that needs it."""
+    from core.infra.providers import dictation, speech
+    monkeypatch.setattr(speech, "ROOT_DIR", tmp_path)
+    monkeypatch.setitem(speech.SPEECH, "engines", ["groq"])
+    monkeypatch.setitem(dictation.DICTATION, "engines", ["groq"])
+
+
+@pytest.fixture(autouse=True)
 def _offline_embedder(monkeypatch, fake_embedder):
     """Every SellerBot runs the script; tests use the offline embedder (no model download)."""
-    monkeypatch.setattr("core.buy_mode.script_engine.seller.shared_embedder", lambda: fake_embedder)
+    monkeypatch.setattr("core.infra.embedder.shared_embedder", lambda: fake_embedder)
 
 
 # --- sell mode: an offline AI buyer ---
@@ -174,6 +200,8 @@ def stub_buyer(monkeypatch):
     """Every provider the app builds is this one stub, so a test can steer what the buyer says."""
     provider = StubBuyerProvider()
     monkeypatch.setattr("core.infra.providers.router.create_provider", lambda *_a, **_k: provider)
+    # Every reply comes from the stub, so a test can steer it; tests/test_buyer_lines.py turns the line bank on.
+    monkeypatch.setattr("core.sell_mode.buyer_session.LINE_BANK", False)
     return provider
 
 
@@ -221,9 +249,11 @@ class FakeCall:
 class FakeSeller:
     """Stands in for SellerBot behind the buy routes and records what they ask of it."""
 
-    def __init__(self, provider_type=None, product_type=None, session_id=None):
+    def __init__(self, provider_type=None, product_type=None, session_id=None, words=None, probes=None):
         self.product_type = product_type
         self.session_id = session_id
+        self.words = words
+        self.probes = probes or {}
         self.provider_name = provider_type or "probe"
         self.model_name = "probe-model"
         self.call = FakeCall()
@@ -242,6 +272,17 @@ class FakeSeller:
 
     def coach_notes(self):
         return {"what_happened": "ok"}
+
+    def stage_starts(self):
+        return [{"stage": "logical", "step": "02", "name": "Number",
+                 "recap": [{"slot": "outcome", "question": "End outcome", "answer": "financial freedom"}]}]
+
+    def jump_to(self, step_id, slots=None):
+        if step_id != "02":
+            raise ValueError(step_id)
+        self.jumped = (step_id, slots)
+        self.call.conversation_history = [{"role": "assistant", "content": f"line:{step_id}"}]
+        return f"line:{step_id}"
 
     def chat(self, message):
         reply = f"reply:{message}"

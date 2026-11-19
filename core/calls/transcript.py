@@ -50,11 +50,6 @@ class Turn:
 Parser = Callable[[list[str], dict], "list[Turn] | None"]
 
 
-def sentences(text: str) -> list[str]:
-    """The sentences of one turn, cut after . ! ? (every module that reads what was said uses this)."""
-    return [s.strip() for s in re.split(r"(?<=[.!?])\s+", text) if s.strip()]
-
-
 def clean_lines(text: str, cfg: dict) -> list[str]:
     """One entry per line: BOM, Windows endings and Markdown bold gone, tool junk removed, and spaces collapsed:
     a run of two or more becomes one tab (the gap some tools put between a speaker and a time), one stays one.

@@ -11,9 +11,9 @@ import re
 from dataclasses import dataclass, field
 
 from core.calls.roles import Roles, count_questions
-from core.calls.transcript import Turn, sentences
+from core.calls.transcript import Turn
 from core.infra.constants import CALL_LIMITS
-from core.infra.utils import NEGATION_WINDOW, NEGATIONS
+from core.infra.utils import says_unnegated, sentences
 
 
 @dataclass
@@ -33,22 +33,12 @@ def _patterns(items: list[str]) -> list[re.Pattern]:
     return [re.compile(p, re.IGNORECASE) for p in items]
 
 
-def _says(sentence: str, patterns: list[re.Pattern]) -> bool:
-    """A pattern matches with no negation in the few words before it: "I'm not worried" says no worry."""
-    for pattern in patterns:
-        for match in pattern.finditer(sentence):
-            before = re.findall(r"[\w']+", sentence[: match.start()].lower())[-NEGATION_WINDOW:]
-            if not any(word in NEGATIONS for word in before):
-                return True
-    return False
-
-
 def _hits(said: list[str], patterns: list[re.Pattern]) -> list[str]:
     """The sentences that say any pattern, in call order, without repeats."""
     seen, found = set(), []
     for sentence in said:
         key = sentence.lower()
-        if key not in seen and _says(sentence, patterns):
+        if key not in seen and says_unnegated(sentence, patterns):
             seen.add(key)
             found.append(sentence)
     return found
@@ -76,7 +66,7 @@ def _objections(said: list[str], cfg: dict) -> list[dict]:
     patterns = {kind: _patterns(items) for kind, items in cfg["objections"].items()}
     for sentence in said:
         for kind, kind_patterns in patterns.items():
-            if per_type.get(kind, 0) < CALL_LIMITS["per_type"] and _says(sentence, kind_patterns):
+            if per_type.get(kind, 0) < CALL_LIMITS["per_type"] and says_unnegated(sentence, kind_patterns):
                 found.append({"type": kind, "text": _quote(sentence)})
                 per_type[kind] = per_type.get(kind, 0) + 1
                 break
@@ -138,7 +128,7 @@ def build_profile(turns: list[Turn], roles: Roles, cfg: dict) -> Profile:
     pains = _hits(said, _patterns(cfg["pains"]))
     money = re.compile(cfg["money"], re.IGNORECASE)
     spending = _patterns(cfg["budget_words"])
-    budget = [s for s in said if money.search(s) and _says(s, spending)]
+    budget = [s for s in said if money.search(s) and says_unnegated(s, spending)]
     objections = _objections(said, cfg)
     stats = _stats(theirs, said, cfg)
     difficulty, why = _difficulty(stats, objections, cfg)

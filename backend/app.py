@@ -13,9 +13,10 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from backend.messages import INTERNAL_SERVER_ERROR, REQUEST_TOO_LARGE  # noqa: E402
+from backend.messages import HTTP_ERRORS, INTERNAL_SERVER_ERROR, NUMBER_TOO_BIG, REQUEST_TOO_LARGE  # noqa: E402
 from backend.request_log import RequestLog, configure_logging  # noqa: E402
-from backend.routes import buy, calls, knowledge, monitoring, sell, speech  # noqa: E402
+from backend.auth import init_auth  # noqa: E402
+from backend.routes import account, buy, calls, knowledge, monitoring, sell, sign_in, sop, speech, team  # noqa: E402
 from backend.routes._utils import Sessions  # noqa: E402
 from backend.security import (  # noqa: E402
     SecurityHeadersMiddleware,
@@ -33,7 +34,9 @@ from core.infra.constants import (  # noqa: E402
     SERVER_PORT,
 )
 from core.infra.env import env_flag, env_str  # noqa: E402
-from core.buy_mode.script_engine.seller import shared_embedder  # noqa: E402
+from core.infra.embedder import shared_embedder  # noqa: E402
+from core.infra.providers.dictation import warm as dictation_warm  # noqa: E402
+from core.infra.providers.speech import warm as speech_warm  # noqa: E402
 
 configure_logging()  # before Flask, so the app's logger shares the one handler
 
@@ -42,6 +45,7 @@ app = Flask(
     static_folder=None,  # the web app is served by `web_app` below
 )
 app.config["MAX_CONTENT_LENGTH"] = MAX_REQUEST_BYTES  # a bigger body gets 413 before any route reads it
+init_auth(app)  # login cookie (backend/auth.py)
 
 # CORS: restrict to configured origins (default: the Vercel site + localhost dev)
 # Override via ALLOWED_ORIGINS env var (comma-separated) for other deployments
@@ -85,6 +89,9 @@ if _should_start_background_cleanup():
     buyer_sessions.start_background_cleanup()
     # load the local meaning model now, so the first call doesn't wait ~2 s for it
     threading.Thread(target=shared_embedder, daemon=True, name="embedder-warmup").start()
+    # and the voice: its files are fetched once on a fresh machine, then the first reply is read without a wait
+    threading.Thread(target=speech_warm, daemon=True, name="speech-warmup").start()
+    threading.Thread(target=dictation_warm, daemon=True, name="dictation-warmup").start()
 
 
 app.extensions["sessions"] = Sessions(seller=seller_sessions, buyer=buyer_sessions)
@@ -92,9 +99,13 @@ app.extensions["sessions"] = Sessions(seller=seller_sessions, buyer=buyer_sessio
 app.register_blueprint(buy.bp)  # /api/buy/*: learner is the customer
 app.register_blueprint(sell.bp)  # /api/sell/*: learner is the salesperson
 app.register_blueprint(knowledge.bp)  # /api/knowledge
+app.register_blueprint(sign_in.bp)  # /api/account: email links, Google
 app.register_blueprint(monitoring.bp)  # /api/health, /api/feedback
 app.register_blueprint(speech.bp)  # /api/speech: replies read aloud
 app.register_blueprint(calls.bp)  # /api/calls/*: read and review an uploaded real call
+app.register_blueprint(sop.bp)  # /api/sop/*: review a team's SOP and check a call against it
+app.register_blueprint(account.bp)  # /api/account/*: sign up, log in, skill history, saved prospects
+app.register_blueprint(team.bp)  # /api/team/*: teams, invite codes, members
 
 
 WEB_BUILD_DIR = ROOT_DIR / "web" / "out"
@@ -126,14 +137,25 @@ def handle_too_large(_e):
     return jsonify({"error": REQUEST_TOO_LARGE, "code": "REQUEST_TOO_LARGE"}), 413
 
 
+@app.errorhandler(OverflowError)
+def handle_overflow(_e):
+    """A number too big to store (an id of 10**23, a rating of 1e400) is a bad request, not a server error."""
+    from flask import jsonify
+
+    return jsonify({"error": NUMBER_TOO_BIG, "code": "NUMBER_TOO_BIG"}), 400
+
+
 @app.errorhandler(Exception)
 def handle_unexpected_error(e):
-    """Catch-all for unhandled exceptions. HTTP exceptions pass through unchanged"""
-    from flask import jsonify
+    """Catch-all for unhandled exceptions. HTTP errors on /api answer in JSON, without the parser's detail; the
+    pages keep Flask's own."""
+    from flask import jsonify, request
     from werkzeug.exceptions import HTTPException
 
     if isinstance(e, HTTPException):
-        return e  # Let Flask handle 400, 404, etc. normally
+        if request.path.startswith("/api/"):
+            return jsonify({"error": HTTP_ERRORS.get(e.code, e.name), "code": e.name.upper().replace(" ", "_")}), e.code
+        return e
     app.logger.exception("Unhandled error")
     return jsonify({"error": INTERNAL_SERVER_ERROR}), 500
 

@@ -7,6 +7,7 @@ import { GENERAL_PRODUCT } from "@/features/sell/options";
 import type { ChatMsg } from "@/lib/api/types";
 import { CallReviewDialog } from "./CallReviewDialog";
 import { ProspectCard } from "./ProspectCard";
+import { SaveProspect } from "./SaveProspect";
 import { SpeakerPicker } from "./SpeakerPicker";
 import { toCustomBuyer, type CallReader, type CallResult as Result, type ProspectDraft } from "./useCallReader";
 import s from "./CallResult.module.css";
@@ -44,7 +45,7 @@ export function CallResult({ reader, result, draft, onStarted, onCancel }: Props
 
   return (
     <section ref={top} className={s.result} tabIndex={-1} aria-label="The call">
-      <SpeakerPicker call={call} busy={reader.busy === "read"} onPick={reader.pickRep} />
+      <SpeakerPicker call={call} busy={reader.busy === "read"} aiLabelled={reader.aiLabelled} onPick={reader.pickRep} />
       {reader.error && <Notice kind="error">{reader.error}</Notice>}
       <ProspectCard draft={draft} evidence={call.profile.evidence} onEdit={reader.edit} />
       <div className={s.actions}>
@@ -58,6 +59,7 @@ export function CallResult({ reader, result, draft, onStarted, onCancel }: Props
           <Button variant="ghost" onClick={reader.back}>
             Use another call
           </Button>
+          <SaveProspect buyer={toCustomBuyer(draft)} />
           {onCancel && (
             <Button variant="ghost" onClick={onCancel}>
               Cancel

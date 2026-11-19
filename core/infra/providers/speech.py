@@ -1,18 +1,36 @@
-"""Text to speech. One function, so another engine drops in here; model and voice live in limits.yaml speech."""
+"""Text to speech. `speak(text, speaker)` tries the engines in limits.yaml `speech.engines` in turn (Kokoro on this
+machine, then Groq) and returns WAV audio, or None so the browser reads it instead. Every line said is kept on disk,
+so a line heard before (the bank's and the script's lines come round again) plays at once.
 
+`speaker` picks the voice: "seller" (buy mode's seller), or "buyer" with the persona's name: a buyer.yaml persona
+speaks in the voice it names; a learner's own prospect gets a woman's or a man's voice by its words (he, she, his
+wife) or its first name, the same one every time.
+"""
+
+from __future__ import annotations
+
+import hashlib
 import io
 import logging
 import re
+import sys
+import threading
+import urllib.request
 import wave
+from functools import lru_cache
 
 from groq import Groq
 
 from core.infra.constants import SPEECH
+from core.infra.env import ROOT_DIR
 from core.infra.logs import timed
+from core.infra.providers import voice_marks
 from core.infra.providers.config import get_groq_api_keys
 
 logger = logging.getLogger(__name__)
 SENTENCE_END = re.compile(r"(?<=[.!?…])\s+")
+_FEMALE = re.compile(r"\b(she|her|hers|herself|husband|mum|mother|wife's)\b", re.I)
+_MALE = re.compile(r"\b(he|his|him|himself|wife|dad|father|husband's)\b", re.I)
 
 
 def chunks(text: str, limit: int) -> list[str]:
@@ -47,24 +65,223 @@ def join_wav(parts: list[bytes]) -> bytes:
     return buf.getvalue()
 
 
-@timed
-def speak(text: str) -> bytes | None:
-    """The text as audio, or None (no key, empty, engine failed) so the browser reads it instead. Long text
-    goes to the engine in sentence-sized pieces and comes back as one audio file."""
+# --- how the web asks for a line: one request per sentence (web/src/lib/tone.ts speakable, voice/speech/tts.ts
+# sentences). Kept in step with them so a line made ahead of time (scripts/speech_prewarm.py) is the one asked for.
+_PAUSE = "¶"
+_LONG_PAUSE = re.compile(r"\s*\[pause[^\]]*\]\s*")
+_TONES = "slow|deliberate|calm|gentle|soft|warm|serious|firm|curious|playful|excited|upbeat"
+_NOTE = re.compile(rf"\((?:{_TONES})(?:,\s*(?:{_TONES}))*\)\s*")
+
+
+def spoken_sentences(text: str) -> list[str]:
+    """A message as the web sends it to be read: tone notes gone, each bubble ending a sentence, then one piece per
+    sentence (a scrap under 4 characters joined to the next). The stress marks stay: the voice says them."""
+    bubbles = [b.strip() for b in _NOTE.sub("", _LONG_PAUSE.sub(_PAUSE, text or "")).split(_PAUSE) if b.strip()]
+    words = [b if re.search(r"[.!?…]$", b) else f"{b}." for b in bubbles]
+    out: list[str] = []
+    for part in (p.strip() for p in re.split(r"(?<=[.!?…])\s+", " ".join(words))):
+        if not part:
+            continue
+        if out and len(out[-1]) < 4:
+            out[-1] = f"{out[-1]} {part}"
+        else:
+            out.append(part)
+    return out
+
+
+_UNITS = {"$": ("dollar", "dollars"), "£": ("pound", "pounds"), "€": ("euro", "euros")}
+_MONEY = re.compile(r"([$£€])\s?(\d[\d,]*)(?:\.(\d{1,2}))?([kKmM]\b)?")
+_THOUSANDS = re.compile(r"(?<![\w$£€.,])(\d+(?:\.\d+)?)[kK]\b")
+
+
+def readable(text: str) -> str:
+    """Numbers the way they are said: "$4,000" is "4,000 dollars" (the voice's own reading is "dollar four
+    thousand"), "£4.99" "4 pounds 99", "£2.5k" "2.5 thousand pounds", "4k" "4 thousand"."""
+    def money(m):
+        sign, whole, cents, scale = m.groups()
+        one, many = _UNITS[sign]
+        if scale:
+            return f"{whole}{'.' + cents if cents else ''} {'thousand' if scale in 'kK' else 'million'} {many}"
+        unit = one if whole == "1" else many
+        return f"{whole} {unit}" + (f" {int(cents)}" if cents and int(cents) else "")
+    return _THOUSANDS.sub(r"\1 thousand", _MONEY.sub(money, text))
+
+
+def is_cached(text: str, voice: str, speed: float = 1.0) -> bool:
+    return _cache_path("kokoro", voice, speed, text).exists()
+
+
+def _persona(name: str, hint: str = "") -> dict:
+    """The configured persona by that name ({} for a learner's own); of two with one name (there are two Toms), the
+    one whose background the hint holds."""
+    from core.infra.loader import load_buyer_config   # here: the loader is heavier than this module needs at import
+    named = [p for group in load_buyer_config()["personas"].values() for p in group
+             if p.get("name", "").lower() == (name or "").lower()]
+    return next((p for p in named if p.get("background", "\0") in (hint or "")), named[0] if named else {})
+
+
+@lru_cache(maxsize=1)
+def _first_names() -> dict[str, set[str]]:
+    from core.infra.loader import load_yaml
+    return {k: set(v) for k, v in load_yaml("first_names.yaml").items()}
+
+
+def pick_voice(speaker: str, persona: str = "", hint: str = "") -> str:
+    """The Kokoro voice for who is speaking: the seller's, a configured persona's own, or for a learner's own
+    prospect one from the women's or men's pool (by the words it is described in, then its first name), always the
+    same one for the same name."""
+    cfg = SPEECH["kokoro"]
+    if speaker != "buyer":
+        return cfg["seller"]
+    known = _persona(persona, hint)
+    if known.get("voice"):
+        return known["voice"]
+    words = f"{' '.join(str(v) for k, v in known.items() if k != 'name')} {hint}"
+    female, male = len(_FEMALE.findall(words)), len(_MALE.findall(words))
+    if female == male:
+        first = (persona or "").split()[0].lower() if (persona or "").split() else ""
+        female, male = first in _first_names()["female"], first in _first_names()["male"]
+    pool = cfg["female"] if female > male else cfg["male"] if male > female else cfg["female"] + cfg["male"]
+    return pool[int(hashlib.sha1((persona or "?").lower().encode()).hexdigest(), 16) % len(pool)]
+
+
+# --- the engines -------------------------------------------------------------------------------------------------
+
+def kokoro_files() -> list:
+    cfg = SPEECH["kokoro"]
+    return [ROOT_DIR / cfg["dir"] / name for name in (cfg["model"], cfg["voices"])]
+
+
+def fetch_files() -> None:
+    """Kokoro's model and voices, fetched once (the deploy does it: scripts/deploy_vm.sh)."""
+    for path in kokoro_files():
+        if not path.exists():
+            path.parent.mkdir(parents=True, exist_ok=True)
+            logger.info("speech: fetching %s", path.name)
+            part = path.with_suffix(path.suffix + ".part")
+            urllib.request.urlretrieve(SPEECH["kokoro"]["files_url"] + path.name, part)
+            part.rename(path)
+
+
+class _Kokoro:
+    """Kokoro-82M through onnxruntime: one model per process."""
+
+    def __init__(self):
+        import onnxruntime as ort   # heavy imports, only when the engine is really used
+        from kokoro_onnx import Kokoro
+
+        cfg = SPEECH["kokoro"]
+        missing = [p.name for p in kokoro_files() if not p.exists()]
+        if missing:   # the deploy fetches them (scripts/deploy_vm.sh); never in a request, the next engine speaks
+            raise FileNotFoundError(f"kokoro files not here yet: {missing}")
+        folder = ROOT_DIR / cfg["dir"]
+        options = ort.SessionOptions()
+        options.intra_op_num_threads = options.inter_op_num_threads = int(cfg["threads"])
+        session = ort.InferenceSession(str(folder / cfg["model"]), options, providers=["CPUExecutionProvider"])
+        self.model = Kokoro.from_session(session, str(folder / cfg["voices"]))
+        self.lock = threading.Lock()   # one line at a time: two at once on two cores is slower for both
+
+    def say(self, text: str, voice: str, speed: float) -> bytes:
+        lang = "en-gb" if voice[:1] == "b" else "en-us"
+        with self.lock:
+            text = readable(text)
+            if voice_marks.marked(text) and self.model.has_timings:
+                samples, rate = voice_marks.render(self.model, text, voice, speed, lang), voice_marks.RATE
+            else:
+                samples, rate = self.model.create(voice_marks.plain(text), voice=voice, speed=speed, lang=lang)
+        pcm = (samples.clip(-1, 1) * 32767).astype("<i2").tobytes()
+        buf = io.BytesIO()
+        with wave.open(buf, "wb") as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)
+            w.setframerate(rate)
+            w.writeframes(pcm)
+        return buf.getvalue()
+
+
+@lru_cache(maxsize=1)
+def kokoro() -> _Kokoro:
+    return _Kokoro()
+
+
+def _kokoro_engine(text: str, voice: str, speed: float) -> bytes | None:
+    return kokoro().say(text, voice, speed)
+
+
+def _groq_engine(text: str, voice: str, speed: float) -> bytes | None:   # noqa: ARG001 - its own voice, its own pace
     keys = get_groq_api_keys()
-    if not keys or not text.strip():
+    if not keys:
         return None
     style = SPEECH.get("style", "")
     limit = SPEECH["max_chars"] - (len(style) + 1 if style else 0)
-    try:
-        client = Groq(api_key=keys[0])
-        parts = []
-        for piece in chunks(text, limit):
-            audio = client.audio.speech.create(
-                model=SPEECH["model"], voice=SPEECH["voice"], input=f"{style} {piece}".strip(),
-                response_format=SPEECH["format"])
-            parts.append(audio.read())
-        return parts[0] if len(parts) == 1 else join_wav(parts)
-    except Exception as e:  # noqa: BLE001 - any engine failure falls back to the browser voice
-        logger.warning("speech failed: %s", e)
+    client = Groq(api_key=keys[0])
+    parts = []
+    for piece in chunks(voice_marks.plain(text), limit):   # its own voice: it can't say the marks
+        audio = client.audio.speech.create(model=SPEECH["model"], voice=SPEECH["voice"], input=f"{style} {piece}".strip(),
+                                           response_format=SPEECH["format"])
+        parts.append(audio.read())
+    return parts[0] if len(parts) == 1 else join_wav(parts)
+
+
+ENGINES = {"kokoro": _kokoro_engine, "groq": _groq_engine}
+
+
+def warm() -> None:
+    """Load the first engine ahead of the first reply. Only files already here (the deploy fetches them), and never
+    under a test run, which imports the app too."""
+    if "pytest" in sys.modules or not all(p.exists() for p in kokoro_files()):
+        return
+    if SPEECH.get("engines", ["groq"])[0] == "kokoro":
+        try:
+            kokoro().say("Hello.", SPEECH["kokoro"]["seller"], 1.0)
+        except Exception:   # noqa: BLE001 - the next engine speaks instead
+            logger.exception("speech: kokoro unavailable")
+
+
+# --- the cache ---------------------------------------------------------------------------------------------------
+
+def _cache_path(engine: str, voice: str, speed: float, text: str):
+    text = readable(" ".join(text.split()))   # said the same, kept once (and a line once misread is made again)
+    key = hashlib.sha1(f"{engine}|{voice}|{speed:.2f}|{text}".encode()).hexdigest()
+    return ROOT_DIR / SPEECH.get("cache_dir", ".cache/speech") / key[:2] / f"{key}.wav"
+
+
+def _trim_cache() -> None:
+    """Oldest lines out once the cache passes its size."""
+    folder = ROOT_DIR / SPEECH.get("cache_dir", ".cache/speech")
+    files = sorted(folder.glob("*/*.wav"), key=lambda p: p.stat().st_mtime)
+    total, cap = sum(p.stat().st_size for p in files), SPEECH.get("cache_max_mb", 300) * 1_000_000
+    for path in files:
+        if total <= cap:
+            break
+        total -= path.stat().st_size
+        path.unlink(missing_ok=True)
+
+
+@timed
+def speak(text: str, speaker: str = "seller", persona: str = "", hint: str = "", speed: float = 1.0,
+          voice: str | None = None, engines: list[str] | None = None) -> bytes | None:
+    """The text as WAV audio, or None (empty, or no engine answered) so the browser reads it instead. `voice` and
+    `engines` are for making lines ahead of time (scripts/speech_prewarm.py): a set Kokoro voice, Kokoro only."""
+    text = " ".join((text or "").split())
+    if not text:
         return None
+    speed = min(1.5, max(0.6, speed))
+    for name in engines or SPEECH.get("engines", ["groq"]):
+        voice_now = (voice or pick_voice(speaker, persona, hint)) if name == "kokoro" else SPEECH["voice"]
+        path = _cache_path(name, voice_now, speed, text)
+        if path.exists():
+            path.touch()
+            return path.read_bytes()
+        try:
+            audio = ENGINES[name](text, voice_now, speed)
+        except Exception as e:  # noqa: BLE001 - any engine failure: the next one, then the browser voice
+            logger.warning("speech: %s failed: %s", name, e)
+            continue
+        if audio:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(audio)
+            if hashlib.sha1(text.encode()).digest()[0] < 8:   # now and then, not on every line
+                _trim_cache()
+            return audio
+    return None

@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { Button, Dialog } from "@/components/ui";
 import { useSession } from "@/features/session/SessionContext";
 import { useUi } from "@/state/UiContext";
+import { SkillsDialog } from "@/features/skills/SkillsDialog";
 import { DrillsDialog } from "./DrillsDialog";
 import { EvaluationBody } from "./EvaluationCard";
 import { evalStore } from "./evalStore";
@@ -18,6 +19,7 @@ export function SellDialogs() {
   const { state, run } = useEvaluation();
   const sid = sellSession?.sessionId ?? null;
   const ended = !!sellSession?.ended;
+  const practice = !!sellSession?.pick.jump;   // a call started at a stage is never scored
 
   // A different (or no) buyer makes the old evaluation stale.
   useEffect(() => {
@@ -27,10 +29,10 @@ export function SellDialogs() {
     }
   }, [state.sessionId, sid, dialog, closeDialog]);
 
-  // The buyer ended the conversation: score it once.
+  // The buyer ended the conversation: score it once (a practice call is not scored).
   useEffect(() => {
-    if (ended && state.sessionId !== sid) run();
-  }, [ended, sid, state.sessionId, run]);
+    if (ended && !practice && state.sessionId !== sid) run();
+  }, [ended, practice, sid, state.sessionId, run]);
 
   return (
     <>
@@ -39,6 +41,7 @@ export function SellDialogs() {
       </Dialog>
       <ReviewDialog />
       <DrillsDialog />
+      <SkillsDialog />
     </>
   );
 }

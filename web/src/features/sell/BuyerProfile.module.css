@@ -67,8 +67,26 @@
   min-height: var(--touch-target);
   display: flex;
   align-items: center;
+  gap: var(--space-2);
   color: var(--text-muted);
   font-size: var(--text-sm);
+  list-style: none;
+}
+.settings summary::-webkit-details-marker {
+  display: none;
+}
+/* it opens: an arrow says so (it read as a plain label, live 13 Nov) */
+.settings summary::before {
+  content: "▸";
+  transition: transform 0.15s ease;
+}
+.settings[open] summary::before {
+  transform: rotate(90deg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .settings summary::before {
+    transition: none;
+  }
 }
 .settingsBody {
   display: grid;

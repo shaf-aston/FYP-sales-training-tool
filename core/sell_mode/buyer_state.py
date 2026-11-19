@@ -16,6 +16,7 @@ class BuyerState:
     turn_count: int = 0
     has_committed: bool = False
     has_walked: bool = False
+    has_finished: bool = False   # the seller ended the call ("End and score") before a yes or a walk-out
     persona: dict = field(default_factory=dict)
     product_type: str = "default"
 
@@ -25,17 +26,17 @@ class BuyerState:
 
     @property
     def ended(self) -> bool:
-        """The buyer has bought or walked away."""
-        return self.has_committed or self.has_walked
+        """The buyer has bought or walked away, or the seller ended the call."""
+        return self.has_committed or self.has_walked or self.has_finished
 
     @property
     def status(self) -> str:
-        """Return the session status: 'sold', 'walked', or 'active'."""
+        """Return the session status: 'sold', 'walked', 'ended' (by the seller, no decision) or 'active'."""
         if self.has_committed:
             return "sold"
         if self.has_walked:
             return "walked"
-        return "active"
+        return "ended" if self.has_finished else "active"
 
 
 @dataclass

@@ -1,5 +1,6 @@
 """Rate limiting, input validation and session management"""
 
+import ipaddress
 import logging
 import re
 import threading
@@ -11,11 +12,13 @@ from typing import Any, Callable, Dict, Optional, Tuple
 
 from core.infra.constants import (
     API_HEADERS,
+    CLIENT_IP_HEADERS,
     CSP,
     DEFAULT_TRUST_PROXY_HEADERS,
     MAX_FIELD_LENGTH,
     MAX_MESSAGE_LENGTH,
     MAX_TURN_NUMBER,
+    RATE_LIMIT_PEER_FACTOR,
     RATE_LIMITS,
     SECURITY_HEADERS,
     SESSION_ID_MAX_CHARS,
@@ -44,23 +47,28 @@ CONTENT_SECURITY_POLICY = "; ".join(f"{name} {' '.join(sources)}" for name, sour
 
 
 class RateLimiter:
-    """Track request counts per IP/bucket"""
+    """Request counts per caller and bucket, over a sliding window"""
+
+    SWEEP_EVERY = 1000   # calls between sweeps that forget callers whose window has emptied
 
     def __init__(self, limits: Dict[str, Tuple[int, int]]):
         self.limits = limits
         self._store: Dict[str, deque] = defaultdict(deque)
         self._lock = threading.Lock()
+        self._calls = 0
 
-    def is_limited(self, ip: str, bucket: str) -> bool:
+    def is_limited(self, ip: str, bucket: str, factor: int = 1) -> bool:
+        """Count this request for `ip` unless it is over the bucket's limit (times `factor`)."""
         max_req, window = self.limits[bucket]
-        key = f"{bucket}:{ip}"
+        max_req *= factor
+        key = f"{bucket}:{ip}" if factor == 1 else f"{bucket}:peer:{ip}"
         now = time.time()
 
         with self._lock:
-            dq = self._store.get(key)
-            if dq is None:
-                dq = deque()
-                self._store[key] = dq
+            self._calls += 1
+            if self._calls % self.SWEEP_EVERY == 0:
+                self._sweep(now)
+            dq = self._store[key]
 
             while dq and now - dq[0] > window:
                 dq.popleft()
@@ -70,6 +78,12 @@ class RateLimiter:
 
             dq.append(now)
             return False
+
+    def _sweep(self, now: float) -> None:
+        """Forget callers with nothing left in their window, so the store does not grow with every address seen."""
+        longest = max(window for _, window in self.limits.values())
+        for key in [k for k, dq in self._store.items() if not dq or now - dq[-1] > longest]:
+            del self._store[key]
 
 
 def require_rate_limit(bucket: str) -> Callable:
@@ -84,7 +98,11 @@ def require_rate_limit(bucket: str) -> Callable:
                 return f(*args, **kwargs)
 
             ip = ClientIPExtractor.get_ip(request)
-            if _rate_limiter is not None and _rate_limiter.is_limited(ip, bucket):
+            peer = ClientIPExtractor.peer(request)
+            if _rate_limiter is not None and (
+                _rate_limiter.is_limited(ip, bucket)
+                or (peer != ip and _rate_limiter.is_limited(peer, bucket, RATE_LIMIT_PEER_FACTOR))
+            ):
                 return jsonify({"error": RATE_LIMIT_ERROR}), 429
 
             return f(*args, **kwargs)
@@ -209,20 +227,51 @@ class InputValidator:
 
 
 class ClientIPExtractor:
-    """Extract the real client IP address"""
+    """Who is calling, for rate limits.
+
+    Without TRUST_PROXY_HEADERS the socket's address is used. On the VM that is always Caddy (127.0.0.1), so every
+    visitor would share one limit: set TRUST_PROXY_HEADERS=1 there. Then:
+    - peer: the last X-Forwarded-For entry. Caddy writes the address that connected to it there and drops what
+      the caller sent, so it cannot be forged. For the website it is a Vercel edge, shared by many visitors.
+    - visitor: the first of CLIENT_IP_HEADERS (Vercel's X-Real-IP) when present, else the peer. A direct caller can
+      forge that header, so the peer also gets a looser limit of its own (rate_limit_peer_factor).
+    """
 
     @staticmethod
-    def get_ip(request_obj) -> str:
+    def _trusted() -> bool:
         from flask import current_app
 
-        trust_proxy_headers = current_app.config.get(
+        return current_app.config.get(
             "TRUST_PROXY_HEADERS",
             env_flag("TRUST_PROXY_HEADERS", DEFAULT_TRUST_PROXY_HEADERS),
         )
-        forwarded = request_obj.headers.get("X-Forwarded-For") if trust_proxy_headers else None
-        if forwarded:
-            return forwarded.split(",")[0].strip()
+
+    @staticmethod
+    def peer(request_obj) -> str:
+        """The address that connected to our proxy (or to us, without one)."""
+        if ClientIPExtractor._trusted():
+            hops = [h.strip() for h in (request_obj.headers.get("X-Forwarded-For") or "").split(",") if h.strip()]
+            if hops and _looks_like_ip(hops[-1]):
+                return hops[-1]
         return request_obj.remote_addr or "unknown"
+
+    @staticmethod
+    def get_ip(request_obj) -> str:
+        """The visitor's own address, as near as the proxies say."""
+        if ClientIPExtractor._trusted():
+            for name in CLIENT_IP_HEADERS:
+                value = (request_obj.headers.get(name) or "").split(",")[0].strip()
+                if _looks_like_ip(value):
+                    return value
+        return ClientIPExtractor.peer(request_obj)
+
+
+def _looks_like_ip(value: str) -> bool:
+    try:
+        ipaddress.ip_address(value)
+    except ValueError:
+        return False
+    return True
 
 
 class SessionStore:

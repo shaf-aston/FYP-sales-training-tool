@@ -9,9 +9,16 @@ from flask import Blueprint, current_app, jsonify, request
 
 from core.buy_mode.coach import COACH_STYLES, DEFAULT_STYLE
 from core.infra.constants import MAX_MESSAGE_LENGTH, MAX_SELLER_SESSIONS
+from core.infra import embedder as meaning_model
+from core.infra.loader import CONFIG_DIR
 from core.training.quiz import get_quiz_question
+from core.training.stage_jump import kept_answers
 from core.buy_mode.seller_bot import SellerBot
-from core.buy_mode.script_engine.seller import products as script_products
+from core.buy_mode.script_engine import rep_words
+from core.buy_mode.script_engine.seller import method_for, products as script_products, resolve_product
+from core.calls.errors import CallError
+from core.calls.reader import read_call
+from core.sop.spoken import as_question
 from core.infra.utils import new_session_id
 
 from ..messages import (
@@ -25,15 +32,21 @@ from ..messages import (
     MISSING_INDEX,
     QUESTION_REQUIRED,
     QUESTION_TOO_LONG,
+    REP_WORDS_INVALID,
+    REP_WORDS_SOURCE,
     REWIND_FAILED,
     SELLER_INIT_FAILED,
     SERVER_FULL,
 )
 from ..security import InputValidator, require_rate_limit
+from .calls import call_error
+from .sop import stages_from
 from ._utils import (
     history_json,
+    json_body,
     safe_latency_ms,
     stage_fields,
+    text_field,
     validate_message,
     validate_provider,
     with_session,
@@ -57,11 +70,12 @@ def products():
 @require_rate_limit("buy_init")
 def init():
     """Start a session (the seller is built now, so the first message doesn't wait), or reattach to a live one."""
-    data = request.json or {}
+    data = json_body()
     existing_id = data.get("session_id")
     sellers = current_app.extensions["sessions"].seller
 
-    # Restore existing session only if it is still in memory on this process.
+    # Restore existing session only if it is still in memory on this process. Otherwise start a new one from the
+    # product, words and label sent with the id (the client sends this tab's choice, for a call the server forgot).
     if existing_id:
         session_error = InputValidator.validate_session_id(existing_id)
         if session_error:
@@ -76,8 +90,12 @@ def init():
                     "session_id": existing_id,
                     "message": None,
                     "product_type": seller.product_type,
+                    "words": seller.words or {},
+                    "words_label": getattr(seller, "words_label", ""),
+                    "probes": getattr(seller, "probes", {}),
                     **stage_fields(seller),
                     "history": history,
+                    "training": seller.coach_notes(),   # the coach's notes come back with the call after a reload
                 }
             )
 
@@ -87,16 +105,23 @@ def init():
 
     session_id = new_session_id()
     product_type = data.get("product_type")  # unlisted or missing: script/engine.yaml default_product
+    if not isinstance(product_type, str):
+        product_type = None
     provider, provider_error = validate_provider(data)
     if provider_error:
         return provider_error
 
+    words = data.get("words")   # {step id: question}: the rep says a top rep's or an SOP's words (see /words)
     try:
-        seller = SellerBot(provider_type=provider, product_type=product_type, session_id=session_id)
+        seller = SellerBot(provider_type=provider, product_type=product_type, session_id=session_id, words=words or None,
+                           probes=data.get("probes") or None)   # {step: question}: those steps asked again in their words
+        seller.words_label = rep_words.clean_label(data.get("label")) if seller.words else ""   # whose words, for the card
         sellers.set(session_id, seller)
         current_app.logger.info(
             f"New session: {session_id} (product={seller.product_type}, provider={seller.provider_name})"
         )
+    except rep_words.RepWordsError:
+        return jsonify({"error": REP_WORDS_INVALID, "code": "REP_WORDS_INVALID"}), 400
     except Exception as init_error:
         current_app.logger.exception(f"Seller init failed: {init_error}")
         return jsonify({"error": SELLER_INIT_FAILED}), 500
@@ -110,11 +135,59 @@ def init():
             "session_id": session_id,
             "message": opening,
             "product_type": seller.product_type,
+            "words": seller.words or {},   # the questions said in someone else's words, by step
+            "words_label": seller.words_label,   # whose they are ("Maya", "your SOP"), as the client named them
+            "probes": seller.probes,   # the same steps asked again in their words
             **stage_fields(seller),
             "history": [],
             "training": seller.coach_notes(),  # the web app reads coach notes under this key
         }
     )
+
+
+# The samples behind "Try a sample" in the Rep's words tool (in config/): a top rep's call and an SOP for this offer.
+WORDS_SAMPLES = {"call": "rep_words_sample_call.txt", "sop": "rep_words_sample_sop.md"}
+
+
+@bp.route("/words/sample", methods=["GET"])
+def words_sample():
+    """A sample source for the rep's words: `?source=call` (a top rep's discovery call) or `sop`."""
+    name = WORDS_SAMPLES.get(request.args.get("source", "call"), WORDS_SAMPLES["call"])
+    return jsonify({"success": True, "text": (CONFIG_DIR / name).read_text("utf-8"), "filename": name})
+
+
+@bp.route("/words", methods=["POST"])
+@require_rate_limit("calls")
+def words():
+    """Which of the script's questions the rep can ask in someone else's words: a top rep's, from a real call
+    (`call`: {text, rep?}, as /api/calls/read), or an SOP's (`stages`, from /api/sop/read). Stateless; pass the
+    chosen ones to /init as `words` ({step: theirs})."""
+    data = json_body()
+    product = resolve_product(data.get("product_type"))
+    call, stages, rep = data.get("call"), data.get("stages"), None
+    if isinstance(call, dict) and isinstance(call.get("text"), str) and call["text"].strip():
+        named = call.get("rep")
+        try:
+            reading = read_call(call["text"], named if isinstance(named, str) and named.strip() else None)
+        except CallError as e:
+            return call_error(e)
+        rep = reading.roles.rep
+        lines = [h["content"] for h in reading.history() if h["role"] == "user"]
+    elif (outline := stages_from(stages)) is not None:
+        lines = [as_question(step) or step for stage in outline for step in stage.steps]   # "Ask what ..." -> "What ...?"
+    else:
+        return jsonify({"error": REP_WORDS_SOURCE, "code": "REP_WORDS_SOURCE"}), 400
+    questions = rep_words.questions_in(lines)
+    method = method_for(product)
+    matches = rep_words.match(method, questions, meaning_model.shared_embedder().embed)   # looked up per call: tests swap it
+    return jsonify({
+        "success": True,
+        "product_type": product,
+        "rep": rep,
+        "questions": len(questions),
+        "steps": len(rep_words.askable(method)),
+        "matches": [m.__dict__ for m in matches],
+    })
 
 
 @bp.route("/reset", methods=["POST"])
@@ -161,21 +234,24 @@ def chat(seller):
         return jsonify({"error": GENERIC_ERROR}), 500
 
 
-@bp.route("/steps", methods=["GET"])
+@bp.route("/stage-starts", methods=["GET"])
 @with_session("seller")
-def steps(seller):
-    """The script steps a learner can jump to (to test one step)."""
-    return jsonify({"success": True, "steps": seller.seller.steps()})
+def stages(seller):
+    """Where a jump to each stage lands, with the answers taken as given before it (the recap card)."""
+    return jsonify({"success": True, "stages": seller.stage_starts()})
 
 
 @bp.route("/jump", methods=["POST"])
 @require_rate_limit("buy_chat")
 @with_session("seller")
 def jump(seller):
-    """Start the call again at one script step: a fresh call, nothing said before it."""
-    step = str((request.get_json(silent=True) or {}).get("step") or "")
+    """Start the call again at one script step: a fresh call. `slots` (optional): the answers taken as given
+    before it, so the seller's first line builds on them."""
+    data = request.get_json(silent=True) or {}
+    step = str(data.get("step") or "")
+    kept = kept_answers(seller.stage_starts(), step, data.get("slots"))
     try:
-        message = seller.jump_to(step)
+        message = seller.jump_to(step, kept[1] if kept else {})
     except ValueError:
         return jsonify({"error": INVALID_STEP}), 400
     except Exception:
@@ -190,7 +266,7 @@ def jump(seller):
 @with_session("seller")
 def edit(seller):
     """Edit a learner message and replay the call from there."""
-    data = request.json or {}
+    data = json_body()
     message_index = data.get("index")
     new_message, error = validate_message(data.get("message", ""))
     if error:
@@ -200,7 +276,7 @@ def edit(seller):
         return jsonify({"error": MISSING_INDEX}), 400
     try:
         message_index = int(message_index)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):   # 1e400 is a float too big for int
         return jsonify({"error": INVALID_INDEX}), 400
 
     try:
@@ -232,9 +308,9 @@ def edit(seller):
 @with_session("seller")
 def coach(seller):
     """Answer the learner's question about the call and sales technique."""
-    data = request.json or {}
-    question = (data.get("question") or "").strip()
-    style = (data.get("style") or DEFAULT_STYLE).strip().lower()
+    data = json_body()
+    question = text_field(data, "question")
+    style = text_field(data, "style").lower() or DEFAULT_STYLE
     if style not in COACH_STYLES:
         style = DEFAULT_STYLE
     if not question:
@@ -269,7 +345,7 @@ def quiz_question(seller):
 
 def _required_text(field: str, label: str):
     """A stripped required text field from the JSON body, or an error response."""
-    value = ((request.json or {}).get(field) or "").strip()
+    value = text_field(json_body(), field)
     if not value:
         return None, (jsonify({"error": FIELD_REQUIRED.format(label=label)}), 400)
     if len(value) > MAX_MESSAGE_LENGTH:

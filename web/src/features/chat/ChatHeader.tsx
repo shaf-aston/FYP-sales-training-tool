@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button, buttonClass, Icon, useConfirm } from "@/components/ui";
+import { useAccount } from "@/features/account/AccountContext";
 import { useSession } from "@/features/session/SessionContext";
 import { api } from "@/lib/api/client";
-import type { BuyProduct, ScriptStep } from "@/lib/api/types";
+import type { BuyProduct } from "@/lib/api/types";
 import { config } from "@/lib/config";
 import { MODE_META, STAGE_STEPS, stageIndex } from "@/lib/labels";
 import { useUi } from "@/state/UiContext";
@@ -19,19 +19,17 @@ const MODES = {
 } as const;
 
 export function ChatHeader() {
-  const { openDialog, showPanels } = useUi();
-  const { mode, reset, jumpTo, switchProduct, buySessionId, buyProduct, sellSession, stage } = useSession();
-  // Each product runs its own script, so steps are kept with the product they came from.
-  const [loaded, setLoaded] = useState<{ product: string | null; steps: ScriptStep[] }>({ product: null, steps: [] });
-  const steps = loaded.product === buyProduct ? loaded.steps : [];
+  const { openDialog, showPanels, sidePanel } = useUi();
+  const { mode, reset, switchProduct, buyProduct, stage } = useSession();
+  const account = useAccount();
   const [products, setProducts] = useState<BuyProduct[]>([]);
   const at = stageIndex(stage);
   // Phones and tablets: the sidebar sits below the chat, so its button carries the stage.
-  const staged = mode === "buy" && at >= 0;
+  // Not while the quiz is open: it asks which stage the sale is in.
+  const staged = mode === "buy" && at >= 0 && sidePanel !== "quiz";
   const panelsLabel = staged ? `Stage ${at + 1}/${STAGE_STEPS.length}` : "Panels";
   const words = MODE_META[mode];
   const confirm = useConfirm();
-  const router = useRouter();
   const here = MODES[mode];
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -69,23 +67,19 @@ export function ChatHeader() {
     api.buyProducts().then((r) => setProducts(r.products)).catch(() => {});
   }, [menuOpen, mode, products.length]);
 
-  // Buy mode: the script's steps, loaded once the menu first opens, to start a fresh call at one.
-  useEffect(() => {
-    if (!menuOpen || mode !== "buy" || !buySessionId || steps.length) return;
-    const product = buyProduct;
-    api.buySteps(buySessionId).then((r) => setLoaded({ product, steps: r.steps })).catch(() => {});
-  }, [menuOpen, mode, buySessionId, buyProduct, steps.length]);
 
-  const onJump = async (step: string) => {
-    if (!step) return;
+  // An item that opens a dialog hands focus back to the menu button first: the dialog returns focus to whatever
+  // had it when it opened, and the item is gone once the menu closes (focus landed on the quiz panel, live 13 Nov).
+  const leaveMenu = () => {
     setMenuOpen(false);
-    await jumpTo(step);
+    triggerRef.current?.focus();
   };
+
 
   const onProduct = async (id: string) => {
     const next = products.find((p) => p.id === id);
     if (!next || id === buyProduct) return;
-    setMenuOpen(false);
+    leaveMenu();
     const ok = await confirm({
       title: `Practise a ${next.label.toLowerCase()}?`,
       body: `${next.blurb} This starts a fresh call; the current chat is cleared.`,
@@ -95,13 +89,13 @@ export function ChatHeader() {
     if (ok) await switchProduct(id);
   };
 
-  const pick = (dialog: "help" | "feedback") => {
-    setMenuOpen(false);
+  const pick = (dialog: "help" | "feedback" | "account") => {
+    leaveMenu();
     openDialog(dialog);
   };
 
   const onReset = async () => {
-    setMenuOpen(false);
+    leaveMenu();
     const ok = await confirm({
       title: "Reset this conversation?",
       body: "This wipes the conversation and starts again. You cannot undo it.",
@@ -110,19 +104,6 @@ export function ChatHeader() {
       danger: true,
     });
     if (ok) await reset();
-  };
-
-  // Leaving sell mode drops the live buyer; ask first if the learner has started.
-  const onSwitch = async (e: ReactMouseEvent<HTMLAnchorElement>) => {
-    if (!sellSession || sellSession.state.turn_count < 1) return;
-    e.preventDefault();
-    const ok = await confirm({
-      title: "Switch to buying?",
-      body: "This ends the conversation with your buyer.",
-      confirmLabel: "Switch to buying",
-      cancelLabel: "Keep selling",
-    });
-    if (ok) router.push(here.switchTo);
   };
 
   return (
@@ -135,7 +116,8 @@ export function ChatHeader() {
         <p className={s.subtitle}>{words.note}</p>
       </div>
       <div className={s.actions}>
-        <Link href={here.switchTo} className={buttonClass("pill", s.switch)} onClick={onSwitch}>
+        {/* A live call is kept for this tab: coming back picks it up (SessionContext), so leaving needs no warning. */}
+        <Link href={here.switchTo} className={buttonClass("pill", s.switch)}>
           <Icon name="swap" size={16} /> {words.switchLabel}
         </Link>
         <Button
@@ -172,6 +154,11 @@ export function ChatHeader() {
               <button type="button" role="menuitem" className={s.item} onClick={() => pick("feedback")}>
                 Feedback
               </button>
+              {account.ready && (
+                <button type="button" role="menuitem" className={s.item} onClick={() => pick("account")}>
+                  {account.user ? "Account" : "Log in"}
+                </button>
+              )}
               {mode === "buy" && products.length > 1 && (
                 <div role="group" aria-label="Call type (starts a fresh call)" className={s.group}>
                   <p className={s.groupLabel}>Call type</p>
@@ -189,25 +176,6 @@ export function ChatHeader() {
                     </button>
                   ))}
                 </div>
-              )}
-              {mode === "buy" && steps.length > 0 && (
-                <label className={s.item}>
-                  <span className="sr-only">Jump to step (starts a fresh call there)</span>
-                  <select
-                    role="menuitem"
-                    className={s.jump}
-                    value=""
-                    onChange={(e) => void onJump(e.target.value)}
-                    title="Start a fresh call at this step, to test it"
-                  >
-                    <option value="">Jump to step…</option>
-                    {steps.map((st) => (
-                      <option key={st.id} value={st.id}>
-                        {st.id} · {st.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
               )}
               <button type="button" role="menuitem" className={`${s.item} ${s.danger}`} onClick={onReset}>
                 Reset session

@@ -44,6 +44,27 @@ Rule: modes are named for the learner; engines and stores for the AI (`seller_se
 | **guardrail** | Check on each AI buyer reply (e.g. no early "yes, I'll buy"). | `core/sell_mode/buyer_guardrails.py` `CheckedReply` |
 | **knowledge** | The learner's own product notes, given to the AI buyer as research notes. | `core/sell_mode/knowledge.py`, `config/knowledge_fields.yaml`, page `/knowledge/` |
 
+## SOP review
+
+| Term | Meaning | Owner |
+|---|---|---|
+| **SOP** | A team's written sales process: stages (headings) of steps (lines). Read, never stored. | `core/sop/`, API `/api/sop/*`, `config/sop.yaml` |
+| **element** | One thing a good sales call covers (opening, discovery, pain, urgency, decision, pitch, objections, close, follow-up); the **checklist** says which an SOP covers. | `sop.yaml` `elements`, `checklist.py` |
+| **adherence** | How much of the SOP a real call carried out, step by step, and whether in order. | `adherence.py` |
+
+## Accounts and teams
+
+| Term | Meaning | Owner |
+|---|---|---|
+| **account** | A learner's login (email and password). Optional: the app works without one. Keeps their skill history and saved prospects. | `core/accounts/users.py`, API `/api/account/*`, `backend/auth.py` |
+| **team** | Learners grouped under a manager, joined with an **invite code**. One team per learner. | `core/accounts/teams.py`, API `/api/team/*` |
+| **manager** | A team role: sees members' details and progress, removes members, replaces the invite code. A team always has one. | `teams.MANAGER`, `keep_a_manager` |
+| **member** | The other team role (never "rep", which is the salesperson in an uploaded call). | `teams.MEMBER` |
+| **team insights** | A manager's view: each member's skill **levels** (average of recent sessions), the team's, and coaching **guidelines** from rules. | `core/training/team_insights.py`, `config/insights.yaml`, `/api/team/insights` |
+| **saved prospect** | A custom buyer kept in the learner's account to practise against again. | `core/accounts/library.py`, `/api/account/prospects` |
+| **saved words** | A Rep's words choice (product, whose, the questions and their probes) kept in the learner's account to start a call in again. | `library.py` `rep_words`, `/api/account/words`, web `repWords/KeepWords.tsx` |
+| **team words** | Rep's words a manager sets for the team: members' new buy calls on that product use them unless the tab chose other words or the script's own. | `teams.set_words`, `/api/team/words`, `/api/account/me` `team.words` |
+
 ## Uploaded calls
 
 | Term | Meaning | Owner |
@@ -78,6 +99,9 @@ Rule: modes are named for the learner; engines and stores for the AI (`seller_se
 | **ack** | One checked AI sentence showing their answer was heard. | `engine.yaml` `ack*` |
 | **echo budget / moment / quote** | How often their own words are said back: always at a **moment** step (`moment: true`, the goal question), else a short **quote** within the limits in `echo.py`'s docstring. A refused blank → `say_plain`. | `echo.py`, `engine.yaml` `echo_*`, method `moment` |
 | **meaning bank / meaning line** | Prewritten lines for what an answer means (family duty, bills, no time, ...), picked by the matcher; said in its own bubble before the next question, each once a call. Shows they were heard without quoting them. | `config/script/meanings.yaml`, `meanings.py` |
+| **buyer move** | What the sell-mode buyer does this turn, decided by rules: share, guard, stall, ask or lean in. A real prospect's line says it when one fits; otherwise the AI words it, told the move. | `sell_mode/buyer_moves.py`, `buyer_lines.py`, `config/prospect_lines.yaml` |
+| **rep's words** | A step's question said in someone else's words: a top rep's (from a real call) or the team SOP's. Only question steps take them, only when the meaning matches; the script still runs the call. A seller line said in them is tagged ("Maya's words") in the chat. | `script_engine/rep_words.py`, `/api/buy/words`, web `features/repWords/` |
+| **probe (rep's words)** | The source asking a step's question a second time in other words: said first when that step is asked again. | `rep_words.match` `Match.probe`, `with_words(probes=)` |
 | **shared answer (`like`)** | One list of examples per meaning heard on many steps (yes, no, a "jumping in?" yes or no). A route takes it with `like: <name>`, plus examples of its own, so a fix reaches every step at once. | `script/answers.yaml`; method `listen.<label>.like` |
 | **route min_score** | A floor on a labelled route: a weaker match is no match (the judge is never offered it), so the step's other answer path takes it. | method `listen.<label>.min_score` |
 | **tone marks** | `_word_` stress (italics), `==words==` the key thing (soft highlight), `¶` a pause (new bubble after typing dots). One stress a line at most; AI, coach and voice get `plain` text. | `tone.py`, web `lib/tone.ts` |
@@ -107,6 +131,7 @@ Rule: modes are named for the learner; engines and stores for the AI (`seller_se
 | **coach** | Buy-mode guidance: **coach notes** per step and answers to "Ask the coach" in a **coach style** (tactical, socratic, teacher). Wire key is still `training`. | `core/buy_mode/coach.py`, `config/coach.yaml` |
 | **quiz** | Buy mode: name the stage, next move, direction. Sell mode: rewrite one of your turns. | `core/training/quiz.py`, `config/quiz.yaml` |
 | **drill** | A strong line with its key move blanked, brought back on a spaced schedule. | `core/training/drills.py`, `config/drills.yaml` |
+| **skill** | One of the five things a sell session is scored on (`evaluation.criteria`). **Skill Radar** shows them across sessions against a **target**, picks the weakest and starts its `practice` session. | `/api/sell/skills`, web `features/skills/` (`skillLog.ts`, `skillStore.ts`) |
 
 ## Plumbing
 
@@ -114,7 +139,7 @@ Rule: modes are named for the learner; engines and stores for the AI (`seller_se
 |---|---|---|
 | **provider** | One LLM service behind the shared interface. **Router** tries them in order. **LLM profile**: named call settings, `**LLM["buyer_reply"]`. | `core/infra/providers/`, `core/infra/providers/router.py`, `config/limits.yaml` |
 | **session store** | Live sessions with an idle timeout: `seller_sessions`, `buyer_sessions`. | `backend/security.py` `SessionStore` |
-| **rate bucket** | Request limit per route group: `buy_init`, `buy_chat`, `sell`, `calls`. | `limits.yaml` `rate_limits` |
+| **rate bucket** | Request limit per route group: `buy_init`, `buy_chat`, `sell`, `calls`, `login`, `signup`, `team`. | `limits.yaml` `rate_limits` |
 | **hands-free** | Speak, it sends, the reply is read aloud. | web `handsFree` |
 | **tokens** | Every colour, size and timing, once. | `web/src/styles/tokens.css` |
 

@@ -7,6 +7,7 @@ import { useSession } from "@/features/session/SessionContext";
 import { api, errorText } from "@/lib/api/client";
 import type { Difficulty, Persona, ProductGroups } from "@/lib/api/types";
 import { config } from "@/lib/config";
+import { prefersReducedMotion } from "@/lib/motion";
 import { difficultyOptions, GENERAL_PRODUCT } from "./options";
 import s from "./BuyerSetup.module.css";
 
@@ -111,7 +112,10 @@ function PickBuyer({ onStarted, onCancel }: Props) {
     setBusy(true);
     const ok = await startBuyer(d, product, { persona: persona || undefined, objection: objection || undefined });
     setBusy(false);
-    if (ok) onStarted?.();
+    if (!ok) return;
+    onStarted?.();
+    // Phones: setup sits below the chat, so bring the buyer's opening line into view (it started off-screen, live 13 Nov)
+    window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? "auto" : "smooth" });
   };
 
   const roll = () => {

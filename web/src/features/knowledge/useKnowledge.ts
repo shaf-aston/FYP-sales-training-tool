@@ -2,12 +2,15 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useConfirm, useToast } from "@/components/ui";
-import { api, errorText } from "@/lib/api/client";
+import { api, ApiError, errorText } from "@/lib/api/client";
 import type { KnowledgeField } from "@/lib/api/types";
 import { briefText, emptyValues, fromData, shortSections, toPayload, type Values } from "./fields";
+import { readLocalKnowledge, writeLocalKnowledge } from "./knowledgeStore";
 
+/** Where the details are kept: on the account when signed in, else only in this browser. */
+export type KnowledgeHome = "account" | "device";
 
-/** Loads, edits, saves and clears the product knowledge. */
+/** Loads, edits, saves and clears the learner's product details. Every new sell call sends this browser's copy. */
 export function useKnowledge() {
   const toast = useToast();
   const confirm = useConfirm();
@@ -15,15 +18,31 @@ export function useKnowledge() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [busy, setBusy] = useState<"save" | "clear" | null>(null);
+  const [home, setHome] = useState<KnowledgeHome>("device");
 
   const load = useCallback(async () => {
     setLoading(true);
     setLoadError("");
+    const local = readLocalKnowledge();
     try {
+      // Who is signed in first (/me never answers 401), so a signed-out visit asks nothing it can't have.
+      const { user } = await api.accountMe();
+      if (!user) {
+        setValues(fromData(local));
+        setHome("device");
+        return;
+      }
       const res = await api.knowledge();
-      setValues(fromData(res.data ?? {}));
+      // The account's copy wins; details typed before signing in are kept until saved to it.
+      const data = res.data && Object.keys(res.data).length ? res.data : local;
+      writeLocalKnowledge(data);
+      setValues(fromData(data));
+      setHome("account");
     } catch (e) {
-      setLoadError(`Could not load your saved details. ${errorText(e, "Please try again.")}`);
+      if (e instanceof ApiError && e.loginRequired) {
+        setValues(fromData(local));
+        setHome("device");
+      } else setLoadError(`Could not load your saved details. ${errorText(e, "Please try again.")}`);
     } finally {
       setLoading(false);
     }
@@ -48,7 +67,7 @@ export function useKnowledge() {
     if (thin.length) {
       const ok = await confirm({
         title: "These sections look very short",
-        body: `${thin.join(", ")}. A little more detail makes the AI buyer more realistic. Save anyway?`,
+        body: `${thin.join(", ")}. A little more detail makes the buyer more realistic. Save anyway?`,
         confirmLabel: "Save anyway",
         cancelLabel: "Keep editing",
       });
@@ -56,8 +75,9 @@ export function useKnowledge() {
     }
     setBusy("save");
     try {
-      await api.saveKnowledge(payload);
-      toast("Saved. Reset the chat session to use it.", "success");
+      if (home === "account") await api.saveKnowledge(payload);
+      writeLocalKnowledge(payload);
+      toast(home === "account" ? "Saved to your account. Your next sell call uses it." : "Saved on this device. Your next sell call uses it.", "success");
     } catch (e) {
       toast(`Could not save. ${errorText(e, "Please try again.")}`, "error");
     } finally {
@@ -75,7 +95,8 @@ export function useKnowledge() {
     if (!ok) return;
     setBusy("clear");
     try {
-      await api.clearKnowledge();
+      if (home === "account") await api.clearKnowledge();
+      writeLocalKnowledge(null);
       setValues(emptyValues());
       toast("Cleared", "success");
     } catch (e) {
@@ -85,5 +106,5 @@ export function useKnowledge() {
     }
   };
 
-  return { values, setField, brief, loading, loadError, reload: load, busy, save, clearAll };
+  return { values, setField, brief, home, loading, loadError, reload: load, busy, save, clearAll };
 }

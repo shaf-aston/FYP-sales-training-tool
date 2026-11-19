@@ -3,8 +3,10 @@
 from flask import Blueprint, current_app, jsonify, request
 
 from core.sell_mode import sell_service
-from core.sell_mode.buyer_state import UnknownPersona, persona_name, personas_for
-from core.infra.constants import MAX_CHOSEN_OBJECTION_CHARS, MAX_PERSONA_NAME_CHARS
+from core.sell_mode.buyer_state import UnknownPersona, persona_name, personas_for, select_persona
+from core.training.stage_jump import sell_stage_starts
+from core.infra.constants import MAX_CHOSEN_OBJECTION_CHARS, MAX_FIELD_LENGTH, MAX_PERSONA_NAME_CHARS
+from core.sell_mode.knowledge import ALLOWED_FIELDS
 from core.training.drills import build_drill_set
 from core.infra.logs import SessionAnalytics
 from core.training.quiz import build_sell_question, score_sell_answer
@@ -15,6 +17,7 @@ from core.infra.providers.router import ProviderUnavailable
 from ..messages import (
     CUSTOM_BUYER_INVALID,
     INVALID_DIFFICULTY,
+    INVALID_PAYLOAD,
     NO_TURNS_YET,
     OPTIONAL_TEXT_INVALID,
     SELL_ERROR,
@@ -29,7 +32,7 @@ from ..messages import (
     UNKNOWN_PERSONA,
 )
 from ..security import InputValidator, require_rate_limit
-from ._utils import validate_message, validate_provider, with_session
+from ._utils import history_json, json_body, validate_message, validate_provider, with_session
 
 bp = Blueprint("sell", __name__, url_prefix="/api/sell")
 
@@ -90,6 +93,19 @@ def _optional_text(data: dict, field: str, limit: int):
     return value.strip() or None, None
 
 
+@bp.route("/stage-starts", methods=["GET"])
+def stage_starts():
+    """Where a practice call can start, per stage, with the buyer's answers so far (the recap card). The buyer is
+    the named persona for the product, or one picked now (its name comes back, to start the call with)."""
+    product_type = request.args.get("product_type") or "default"
+    name = (request.args.get("persona") or "")[:MAX_PERSONA_NAME_CHARS] or None
+    try:
+        persona = select_persona(product_type, name)
+    except UnknownPersona as e:
+        return jsonify({"error": UNKNOWN_PERSONA.format(name=e.name, product=e.product_type)}), 400
+    return jsonify({"success": True, "persona": persona_name(persona), "stages": sell_stage_starts(persona)})
+
+
 @bp.route("/init", methods=["POST"])
 @require_rate_limit("sell")
 def init():
@@ -98,7 +114,7 @@ def init():
     if not buyer_sessions.can_create():
         return jsonify({"error": SELL_FULL}), 503
 
-    data = request.json or {}
+    data = json_body()
     provider, provider_error = validate_provider(data)
     if provider_error:
         return provider_error
@@ -109,7 +125,22 @@ def init():
     if error:
         return error
 
+    knowledge = data.get("knowledge") or None
+    if knowledge is not None:
+        if not isinstance(knowledge, dict):
+            return jsonify({"error": INVALID_PAYLOAD}), 400
+        error = InputValidator.validate_knowledge_data(knowledge, allowed_fields=ALLOWED_FIELDS,
+                                                        max_field_length=MAX_FIELD_LENGTH)
+        if error:
+            return error
+
+    jump = data.get("jump")
+    if jump is not None and not (isinstance(jump, dict) and isinstance(jump.get("stage"), str)):
+        return jsonify({"error": INVALID_PAYLOAD}), 400
+
     product_type = data.get("product_type", "default")
+    if not isinstance(product_type, str):   # {"a": 1} was a 500 "Couldn't set up the buyer"
+        return jsonify({"error": INVALID_PAYLOAD}), 400
     try:
         started = sell_service.start_sell_session(
             buyer_sessions,
@@ -120,6 +151,8 @@ def init():
             objection=objection,
             custom_buyer=data.get("custom_buyer"),
             replay=data.get("replay"),
+            knowledge=knowledge,
+            jump=jump,
         )
     except InvalidCustomBuyer as e:
         return jsonify({"error": CUSTOM_BUYER_INVALID.format(detail=e)}), 400
@@ -127,6 +160,8 @@ def init():
         return jsonify({"error": INVALID_DIFFICULTY.format(choices=", ".join(e.choices))}), 400
     except UnknownPersona as e:
         return jsonify({"error": UNKNOWN_PERSONA.format(name=e.name, product=e.product_type)}), 400
+    except ValueError:   # a jump to a stage with no start
+        return jsonify({"error": INVALID_PAYLOAD}), 400
     except ProviderUnavailable:
         return _unavailable()
     except Exception as e:
@@ -147,6 +182,7 @@ def init():
             "state": opening.state_snapshot,
             "difficulty": buyer.state.difficulty,
             "product_type": product_type,
+            **({"history": history_json(buyer.conversation_history)} if jump else {}),
             "latency_ms": opening.latency_ms,
             "provider": opening.provider,
             "model": opening.model,
@@ -159,7 +195,7 @@ def init():
 @with_session("buyer")
 def chat(buyer):
     """The learner sends a sales message; the AI buyer responds"""
-    data = request.json or {}
+    data = json_body()
     user_message, err = validate_message(data.get("message", ""))
     if err:
         return err
@@ -189,12 +225,34 @@ def chat(buyer):
         return jsonify({"error": SELL_ERROR}), 500
 
 
+@bp.route("/state", methods=["GET"])
+@require_rate_limit("sell")
+@with_session("buyer")
+def state(buyer):
+    """The live session as the web app needs it to pick the call back up after a reload."""
+    return jsonify(
+        {
+            "success": True,
+            "session_id": buyer.session_id,
+            "persona": _persona_card(buyer.persona),
+            "state": buyer.state.to_dict(),
+            "difficulty": buyer.state.difficulty,
+            "product_type": buyer.product_type,
+            "history": history_json(buyer.conversation_history),
+            "ended": buyer.state.ended,
+            "outcome": buyer.state.status,
+        }
+    )
+
+
 @bp.route("/evaluate", methods=["POST"])
 @require_rate_limit("sell")
 @with_session("buyer")
 def evaluate(buyer):
-    """Generate final evaluation scorecard"""
+    """End the call and score it ("End and score"): the buyer takes no more turns unless a turn is redone."""
     try:
+        if not buyer.state.ended:
+            buyer.state.has_finished = True
         evaluation = buyer.get_evaluation()
         SessionAnalytics.record(
             session_id=buyer.session_id,
@@ -210,7 +268,7 @@ def evaluate(buyer):
             },
             turn_count=buyer.state.turn_count,
         )
-        return jsonify({"success": True, **evaluation})
+        return jsonify({"success": True, **evaluation, "ended": True})
     except Exception as e:
         current_app.logger.exception(f"Sell evaluation error: {e}")
         return jsonify({"error": SELL_SCORING_ERROR}), 500
@@ -249,7 +307,7 @@ def quiz_question(buyer):
 @with_session("buyer")
 def quiz_answer(buyer):
     """Score a replacement line for one of the learner's own turns."""
-    data = request.json or {}
+    data = json_body()
     turn_index = InputValidator.parse_positive_int(data.get("turn"))
     turns = buyer.review()["turns"]
     if turn_index is None or turn_index > len(turns):
@@ -282,7 +340,7 @@ def drills():
 @with_session("buyer")
 def redo(buyer):
     """Rewind to a turn and say it differently, for a real reply from the same buyer."""
-    data = request.json or {}
+    data = json_body()
     turn_index = InputValidator.parse_positive_int(data.get("turn"))
     if turn_index is None:
         return jsonify({"error": TURN_REQUIRED, "code": "INVALID_TURN"}), 400

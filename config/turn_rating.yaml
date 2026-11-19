@@ -9,7 +9,7 @@
 # a misstep; missteps are listed in priority order: the first one that fired picks the hint.
 
 weights:
-  open_question: 0.4
+  open_question: 0.5   # an open question alone is a good turn (3.5 rounds to 4): a guarded buyer gives nothing to build on
   on_topic: 0.5
   mirroring: 1.0
   acknowledgement: 0.5
@@ -69,6 +69,7 @@ stock_questions:
 
 # A question starting with one of these (and no question word) is yes/no.
 closed_starters:
+  - shall      # "So shall I sign you up now?" asked nothing open
   - do
   - does
   - did
@@ -104,13 +105,18 @@ pressure:
   - act now
   - today only
   - limited time
-  - last one
+  - last one left     # not "last one": "what stopped the last one from working?" is a good question
+  - only one left
+  - only a few left
   - won't last
   - wont last
   - need to decide
   - hurry
   - before it's gone
   - sign today
+  - buy now
+  - buy it now
+  - sign now
 
 # Commercial language. Fine later, premature during early discovery unless the
 # buyer raised it first.
@@ -118,7 +124,10 @@ pitch_language:
   - price
   - cost
   - discount
-  - deal
+  - a deal        # not "deal": "how do you deal with it?" is discovery
+  - good deal
+  - great deal
+  - special deal
   - offer
   - package
   - payment
@@ -170,6 +179,43 @@ mirroring_stopwords:
   - "need"
   - "know"
   - "think"
+  # function words that every reply shares: "That's ... what" in a pitch is not listening (live, 12 Nov)
+  - "that's"
+  - "it's"
+  - "what"
+  - "when"
+  - "how"
+  - "why"
+  - "who"
+  - "which"
+  - "there"
+  - "there's"
+  - "they"
+  - "them"
+  - "their"
+  - "you're"
+  - "i've"
+  - "i'll"
+  - "don't"
+  - "not"
+  - "can"
+  - "will"
+  - "get"
+  - "got"
+  - "all"
+  - "one"
+  - "some"
+  - "more"
+  - "less"
+  - "very"
+  - "much"
+  - "then"
+  - "than"
+  - "out"
+  - "any"
+  - "been"
+  - "from"
+  - "here"
 
 # One-line tip shown after a seller turn when hints are on (sell mode, no AI).
 # The first negative signal that fired picks the tip; otherwise the first positive one;

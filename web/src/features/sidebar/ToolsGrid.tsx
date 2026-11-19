@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { config } from "@/lib/config";
 import type { ReactNode } from "react";
+import { whose } from "@/features/repWords/words";
 import { useSession } from "@/features/session/SessionContext";
 import { useUi } from "@/state/UiContext";
 import s from "./Sidebar.module.css";
@@ -29,7 +30,7 @@ function Tool({ title, copy, onClick, href, pressed }: { title: string; copy?: s
 }
 
 export function ToolsGrid() {
-  const { mode } = useSession();
+  const { mode, repWords } = useSession();
   const { sidePanel, toggleSidePanel, openDialog } = useUi();
   const sell = mode === "sell";
   return (
@@ -37,6 +38,20 @@ export function ToolsGrid() {
       {/* Only the sell-mode AI buyer reads the knowledge base; buy mode's seller follows its script. */}
       {sell && <Tool title="Configure knowledge base" copy="Your product details" href={`${config.routes.knowledge}?mode=sell`} />}
       {!sell && <Tool title="Coaching" copy="Ask the coach" pressed={sidePanel === "coach"} onClick={() => toggleSidePanel("coach")} />}
+      {!sell && (
+        <Tool
+          title="Rep's words"
+          copy={
+            repWords
+              ? repWords.team
+                ? `Your team's words: ${repWords.label}`
+                : `In ${whose(repWords.label)} words`
+              : "A top rep's or your SOP's questions"
+          }
+          pressed={!!repWords}
+          onClick={() => openDialog("repWords")}
+        />
+      )}
       <Tool
         title="Quiz"
         copy={sell ? "Redo your weakest turn" : "Name the stage and next move"}
@@ -44,6 +59,8 @@ export function ToolsGrid() {
         onClick={() => toggleSidePanel("quiz")}
       />
       <Tool title="Say it from memory" copy="Fill in the missing line" onClick={() => openDialog("drills")} />
+      {sell && <Tool title="Skill Radar" copy="Your skills over time" onClick={() => openDialog("skills")} />}
+      {sell && <Tool title="SOP review" copy="Check your SOP and calls" href={config.routes.sop} />}
     </div>
   );
 }

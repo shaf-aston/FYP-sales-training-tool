@@ -3,6 +3,15 @@
 export const config = {
   /** API lives on the same origin (Flask serves the built app; dev proxies /api). */
   apiBase: "",
+  api: {
+    /**
+     * Where call recordings are uploaded: straight to the API host, because the Vercel rewrite can't be trusted with
+     * recordings up to 200 MB. The host is the one in web/public/vercel.json (keep them the same). On localhost the page and the
+     * API share an origin, so "". The API's CORS allows the Vercel site, and a multipart POST needs no preflight.
+     */
+    uploadOrigin: () =>
+      typeof location === "undefined" || ["localhost", "127.0.0.1"].includes(location.hostname) ? "" : "https://140-238-102-50.sslip.io",
+  },
   /** DOM id of the sidebar (target of the mobile "Panels" button). */
   ids: { panels: "session-panels" },
   chatTimeoutMs: 25_000,
@@ -18,7 +27,8 @@ export const config = {
   voice: {
     silenceDelayMs: 500,
     ttsWatchdogMs: 30_000,
-    puterLoadMs: 15_000,
+    /** Recording for the server: when the learner has finished talking (loudness against the room's noise). */
+    vad: { calibrateMs: 300, overNoise: 3, minLevel: 0.012, endSilenceMs: 900, noSpeechMs: 8_000 },
     maxRecordingMs: 60_000,
     restartBackoffMs: { base: 200, max: 5_000, attempts: 5 },
     speedRange: { min: -50, max: 50, step: 5 },
@@ -35,6 +45,9 @@ export const config = {
     celebrateGrades: ["A"],
   },
   knowledge: { nameMax: 100, fieldMax: 1_000 },
+  /** Skill Radar: sessions kept on this device and how many make the recent average (targets come from the server). */
+  /** historyCap matches the server's max_skill_entries (limits.yaml), so a synced history fits the device whole. */
+  skills: { historyCap: 200, averageWindow: 5 },
   /** Buyer setup in sell mode: the learner's own objection (server caps at the same length) and quick picks. */
   chosenObjection: {
     max: 200,
@@ -53,14 +66,35 @@ export const config = {
     accept: [".txt", ".vtt", ".srt"],
     /** Bigger files are not transcripts; refuse before reading them into memory (limits.yaml max_request_bytes). */
     maxFileBytes: 1_000_000,
+    /**
+     * A call recording, turned into a transcript on the server (limits.yaml transcription: formats, max_upload_bytes).
+     * Past 25 MB the server cuts it into parts; a server without ffmpeg refuses those and says so itself.
+     */
+    audio: {
+      accept: [".mp3", ".m4a", ".mp4", ".mpeg", ".mpga", ".wav", ".webm", ".ogg", ".flac"],
+      maxBytes: 200_000_000,
+      /** Upload, speech to text (180 s a part at most) and speaker labels: a long call on a slow line needs minutes. */
+      timeoutMs: 600_000,
+    },
     /** Caps on the prospect fields the learner edits; the server allows 300 characters a field and 5 items a list (limits.yaml max_custom_buyer_*). */
     prospect: { nameMax: 60, textMax: 300, itemMax: 180, maxItems: 5 },
+    /** Saved prospects listed before "Show all". */
+    savedShown: 5,
     /** Quotes shown under a field as "from the call". */
     evidenceShown: 2,
     /** How the server guessed which speaker is the learner (rep.how). */
     repGuess: { named: "Named you", most_questions: "Asked the most questions", first_speaker: "Spoke first" },
     objectionTypes: { price: "Price", skepticism: "Doubt", timing: "Timing", partner: "Partner", fear: "Fear" },
   },
+  /** SOP review: a team's sales SOP (limits.yaml sop: max_bytes; core/sop/document.py reads these types). */
+  sop: {
+    accept: [".pdf", ".docx", ".md", ".txt"],
+    maxBytes: 5_000_000,
+  },
+  /** Optional account; the server checks the same limits (limits.yaml accounts). */
+  account: { nameMax: 60, passwordMin: 8, teamNameMax: 60 },
+  /** A saved prospect keeps no difficulty: practising one starts here. */
+  savedProspectDifficulty: "medium",
   coachTextMax: 120,
   /** Night-city film: light sizes, drift speed, glow and flicker. */
   film: {
@@ -81,7 +115,7 @@ export const config = {
     lightness: "90%, 65%",
   },
   /** Page addresses, so links never hard-code paths. */
-  routes: { home: "/", buy: "/buy/", sell: "/sell/", knowledge: "/knowledge/" },
+  routes: { home: "/", buy: "/buy/", sell: "/sell/", knowledge: "/knowledge/", sop: "/sop/", google: "/api/account/google" },
   /** A missing page sends you home after this long, unless you choose to stay. */
   notFound: { redirectSeconds: 30 },
   landing: { wordRotateMs: 2_200, demoStepMs: 1_800, revealThreshold: 0.15 },
@@ -97,12 +131,23 @@ export const config = {
 export const storageKeys = {
   buySessionId: "salesRoleplaySessionId",
   buyProduct: "buyProduct",
+  /** sessionStorage: the rep's words for new calls ({ product, label, words }), set from the Rep's words tool. */
+  buyWords: "buyWords",
   sidebarTab: "sidebarTab",
   sellSettings: "sellSettings",
+  /** sessionStorage: the live sell call ({ id, pick }), so a reload or Back picks it up again. */
+  sellCall: "sellCall",
+  /** Buy mode: the call started by a stage jump, so its practice tag survives a reload: {id, stage}. */
+  buyPractice: "buyPractice",
+  skillLog: "skillLog.v1",
+  skillOwner: "skillLog.owner",
+  skillTarget: "skillTarget",
   coachStyle: "trainingStyle",
   ttsSpeed: "ttsPlaybackSpeed",
   autoSendDictation: "autoSendDictation",
   helpSeen: "helpSeen",
   drillSchedule: "drillSchedule.v1",
   debug: "debug",
+  /** The learner's product details for the sell-mode buyer (knowledge base page); sent with each new sell call. */
+  knowledge: "knowledge.v1",
 } as const;
