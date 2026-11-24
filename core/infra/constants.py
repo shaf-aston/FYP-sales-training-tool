@@ -26,6 +26,7 @@ DEFAULT_ALLOWED_ORIGINS = _L["defaults"]["allowed_origins"]
 DEFAULT_LLM_PROVIDER_ORDER = _L["defaults"]["llm_provider_order"]
 DEFAULT_GROQ_MODEL = _L["defaults"]["groq_model"]
 GROQ_REASONING_EFFORT = _L["defaults"]["groq_reasoning_effort"]
+GROQ_BACKUP_MODELS = list(_L["defaults"].get("groq_backup_models") or [])
 SPEECH = _L["speech"]
 DICTATION = _L["dictation"]
 TRANSCRIPTION = _L["transcription"]

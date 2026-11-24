@@ -11,6 +11,10 @@ defaults:            # used when the matching env var is unset (.env overrides)
   # Models that think before answering by default, and the setting that stops it. Hidden thinking still
   # uses max_tokens, so a short call (a 30-token ack) came back empty. Only listed models get the setting.
   groq_reasoning_effort: {"qwen/qwen3.8-27b": "none"}
+  # Tried in order when Groq says the model above is gone (retired or not found), so replies never go blank.
+  # Empty = no backup. Put only models your key can use (`client.models.list()`); a thinking model needs its
+  # setting in groq_reasoning_effort, or its hidden thinking can use up a short call's max_tokens.
+  groq_backup_models: []
   trust_proxy_headers: false                                                            # TRUST_PROXY_HEADERS: believe the proxy headers (on the VM: Caddy, after Vercel)
   client_ip_headers: ["X-Real-IP"]                                                      # the visitor's address, as Vercel sends it on (read only with TRUST_PROXY_HEADERS)
   logs_dir: "data/logs"                                                                # LOGS_DIR: events, timings and feedback land in <dir>/<stream>/<day>.jsonl
