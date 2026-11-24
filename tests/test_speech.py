@@ -281,3 +281,62 @@ def test_dictation_turn_during_parakeet_load_goes_to_groq_and_loads_once(monkeyp
     finally:
         release.set()
         dictation.parakeet.cache_clear()
+
+
+# --- Gemini TTS: the human voice first, Kokoro when it has no key or is resting ---
+
+def _gemini(monkeypatch, error=None):
+    import base64
+    import io as _io
+    import json as _json
+    import urllib.error
+    from core.infra.providers import speech
+
+    sent = []
+    audio = speech._pcm_wav(b"\x00\x00" * 2400, 24000)
+    ok = {"steps": [{"type": "model_output", "content": [{"type": "audio", "data": base64.b64encode(audio).decode()}]}]}
+
+    def urlopen(req, timeout):
+        sent.append(_json.loads(req.data))
+        if error:
+            raise urllib.error.HTTPError(req.full_url, error, "no", {}, None)
+        return _io.BytesIO(_json.dumps(ok).encode())
+    monkeypatch.setattr(speech.urllib.request, "urlopen", urlopen)
+    monkeypatch.setattr(speech, "env_str", lambda k: "key" if k == "GEMINI_API_KEY" else None)
+    monkeypatch.setattr(speech, "_gemini_rest_until", 0.0)
+    monkeypatch.setitem(speech.SPEECH, "engines", ["gemini", "groq"])
+    return speech, sent
+
+
+def test_gemini_speaks_first_in_a_matching_voice_and_plain_words(monkeypatch):
+    speech, sent = _gemini(monkeypatch)
+    audio = speech.speak("It's **really** $4,000.", speaker="seller", speed=0.8)
+    assert audio[:4] == b"RIFF"
+    body = sent[0]
+    assert body["generation_config"]["speech_config"][0]["voice"] == speech.SPEECH["gemini"]["seller"]
+    said = body["input"][0]["content"][0]
+    assert "**" not in said["text"] and "dollars" in said["text"]
+    assert "slower" in said["annotations"][0]["style"]
+
+
+def test_a_buyer_gets_a_gemini_voice_of_the_same_kind_every_time():
+    from core.infra.providers import speech
+    g = speech.SPEECH["gemini"]
+    assert speech.gemini_voice("af_heart") in g["female"] and speech.gemini_voice("bm_george") in g["male"]
+    assert speech.gemini_voice("af_heart") == speech.gemini_voice("af_heart")
+
+
+def test_gemini_refused_rests_and_the_next_engine_speaks(monkeypatch):
+    speech, sent = _gemini(monkeypatch, error=429)
+    monkeypatch.setattr(speech, "_groq_engine", lambda t, v, s: b"RIFFgroq")
+    monkeypatch.setitem(speech.ENGINES, "groq", lambda t, v, s: b"RIFFgroq")
+    assert speech.speak("Hello there.") == b"RIFFgroq"
+    assert speech.speak("Another line.") == b"RIFFgroq"
+    assert len(sent) == 1   # resting: not asked again on the next line
+
+
+def test_no_gemini_key_means_no_call(monkeypatch):
+    speech, sent = _gemini(monkeypatch)
+    monkeypatch.setattr(speech, "env_str", lambda k: None)
+    monkeypatch.setitem(speech.ENGINES, "groq", lambda t, v, s: b"RIFFgroq")
+    assert speech.speak("Hi.") == b"RIFFgroq" and sent == []

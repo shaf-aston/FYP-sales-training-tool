@@ -6,6 +6,7 @@
 
 import { api, errorText } from "@/lib/api/client";
 import { config } from "@/lib/config";
+import { Listening } from "./listening";
 
 /** Browser speech error codes in plain words. */
 const MIC_ERRORS: Record<string, string> = {
@@ -277,27 +278,18 @@ export class SpeechRecognizer {
       analyser.fftSize = 1024;
       ctx.createMediaStreamSource(stream).connect(analyser);
       const buf = new Float32Array(analyser.fftSize);
-      const started = performance.now();
-      let floor = Infinity;
-      let heard = false;
-      let quietSince = 0;
+      const listening = new Listening(vad, performance.now());
       this.vadTimer = setInterval(() => {
         analyser.getFloatTimeDomainData(buf);
         let sum = 0;
         for (const v of buf) sum += v * v;
-        const level = Math.sqrt(sum / buf.length);
-        const now = performance.now();
-        if (now - started < vad.calibrateMs) floor = Math.min(floor, level);
-        const speaking = level > Math.max(vad.minLevel, (Number.isFinite(floor) ? floor : 0) * vad.overNoise);
-        if (speaking) {
-          if (!heard) this.onInterim("Hearing you…");
-          heard = true;
+        const heard = listening.frame(Math.sqrt(sum / buf.length), performance.now());
+        if (heard === "speaking") {
+          if (!this.heard) this.onInterim("Hearing you…");
           this.heard = true;
-          quietSince = 0;
-        } else if (heard) {
-          quietSince ||= now;
-          if (now - quietSince > vad.endSilenceMs) this.autoStop(false); // they finished: send it
-        } else if (now - started > vad.noSpeechMs) {
+        } else if (heard === "finished") {
+          this.autoStop(false); // they finished: send it
+        } else if (heard === "nothing") {
           this.autoStop(true); // nothing said: send nothing (hands-free listens again)
         }
       }, 50);

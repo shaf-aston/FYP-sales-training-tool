@@ -191,7 +191,21 @@ dictation:           # what the learner says into the mic, turned into text here
     threads: 2
 
 speech:              # replies read aloud by the server, so the browser needs no sign-in (core/infra/providers/speech.py)
-  engines: [kokoro, groq]   # tried in order; the browser's own voice reads it when none answers
+  engines: [gemini, kokoro, groq]   # tried in order; the browser's own voice reads it when none answers
+  gemini:              # Google Gemini TTS: near the top of the 2026 human-listening leaderboards, and a free tier.
+                       # Needs GEMINI_API_KEY (aistudio.google.com); without it, or when its quota runs out, Kokoro speaks.
+    url: https://generativelanguage.googleapis.com/v1beta/interactions
+    model: gemini-3.8-flash-tts
+    timeout_seconds: 8
+    rest_seconds: 300  # after a refusal (quota, a bad key) it is left alone this long: Kokoro speaks meanwhile
+    # How every line is said: plain words, read as a person on a phone call would say them (no names, ages or
+    # accents here: Google's guidance). The speed setting adds "a little slower" / "a little quicker".
+    style: "natural and conversational, like a real person talking on a phone call, relaxed, with natural pauses"
+    seller: Achird     # buy mode's seller: friendly
+    # A buyer speaks in one of these, matching the Kokoro voice it would have had (af_/bf_ women, am_/bm_ men), the
+    # same one every time.
+    female: [Sulafat, Aoede, Despina, Achernar, Vindemiatrix, Callirrhoe]
+    male: [Achird, Algieba, Umbriel, Charon, Iapetus, Zubenelgenubi]
   cache_dir: .cache/speech  # every line said once is kept (gitignored): bank and script lines play at once after that
   cache_max_mb: 2000   # the lines made ahead (scripts/speech_prewarm.py) are ~430 MB
   kokoro:              # Kokoro-82M on this machine: free, no key, no daily limit. Weights Apache-2.0; its phonemizer is
