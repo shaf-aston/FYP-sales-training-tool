@@ -80,6 +80,8 @@ export class SpeechRecognizer {
   private stream: MediaStream | null = null;
   private recorder: MediaRecorder | null = null;
   private chunks: Blob[] = [];
+  /** The transcription in flight, so stop can cancel it (the learner gave up waiting: they type instead). */
+  private sending: AbortController | null = null;
   private onFinal: (text: string) => void = () => {};
   private onInterim: (text: string) => void = () => {};
   private onStop: (state: StopState) => void = () => {};
@@ -120,8 +122,11 @@ export class SpeechRecognizer {
       }
       return;
     }
+    if (this.isTranscribing) {
+      this.sending?.abort(); // finishServer sees the cancel: no text, no error
+      return;
+    }
     if (this.mode === "server" && this.recorder) {
-      if (this.isTranscribing) return;
       // stopped before a word was said (the reply started playing, or the learner changed their mind): send nothing
       if (!this.heard && this.vadTimer) this.discard = true;
       try {
@@ -333,12 +338,15 @@ export class SpeechRecognizer {
     this.isTranscribing = true;
     this.onTranscribing(true);
     this.onInterim("");
+    const sending = new AbortController();
+    this.sending = sending;
     try {
-      const text = (await api.dictate(blob)).trim(); // "" when nothing could be heard: nothing to add
-      if (text) this.onFinal(`${text} `);
+      const text = (await api.dictate(blob, sending.signal)).trim(); // "" when nothing could be heard: nothing to add
+      if (text && !sending.signal.aborted) this.onFinal(`${text} `);
     } catch (error) {
-      this.onError(errorText(error, "Couldn't make that out. Try again, or type it."));
+      if (!sending.signal.aborted) this.onError(errorText(error, "Couldn't make that out. Try again, or type it."));
     } finally {
+      this.sending = null;
       this.isTranscribing = false;
       this.isRecording = false;
       this.mode = null;
