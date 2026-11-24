@@ -247,3 +247,37 @@ def test_prices_are_said_the_way_people_say_them():
         "2.5 thousand pounds up front, 2 million dollars budget, 4 thousand all in"
     assert speech.readable("We're 60 people, 10.5% up, v4k") == "We're 60 people, 10.5% up, v4k"
     assert speech._cache_path("kokoro", "x", 1, "$4,000.") == speech._cache_path("kokoro", "x", 1, "4,000 dollars.")
+
+
+def test_dictation_turn_during_parakeet_load_goes_to_groq_and_loads_once(monkeypatch):
+    """A turn spoken while the local model loads must not wait for it, or start a second load."""
+    import threading
+    from core.infra.providers import dictation
+
+    loads, release = [], threading.Event()
+
+    class Slow:
+        def __init__(self):
+            loads.append(1)
+            release.wait(5)
+
+        def hear(self, s):
+            return "local"
+
+    dictation.parakeet.cache_clear()
+    monkeypatch.setattr(dictation, "_Parakeet", Slow)
+    monkeypatch.setitem(dictation.DICTATION, "engines", ["parakeet", "groq"])
+    monkeypatch.setitem(dictation.ENGINES, "groq", lambda s: "from groq")
+    try:
+        assert dictation.dictate(_wav_bytes()) == "from groq"
+        assert dictation.dictate(_wav_bytes()) == "from groq"
+        release.set()
+        for _ in range(100):
+            if dictation.parakeet.cache_info().currsize and not dictation._loading:
+                break
+            threading.Event().wait(0.02)
+        assert dictation.dictate(_wav_bytes()) == "local"
+        assert loads == [1]
+    finally:
+        release.set()
+        dictation.parakeet.cache_clear()

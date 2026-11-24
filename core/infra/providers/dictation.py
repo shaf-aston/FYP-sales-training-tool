@@ -101,6 +101,39 @@ def parakeet() -> _Parakeet:
     return _Parakeet()
 
 
+class NotReady(RuntimeError):
+    """The local model is still loading (or fetching): this turn goes to the next engine."""
+
+
+_load_lock = threading.Lock()
+_loading = False
+
+
+def _load_in_background() -> None:
+    global _loading
+    try:
+        parakeet().hear(np.zeros(RATE // 2, dtype=np.float32))   # the first run is slow too: do it here
+    except Exception:   # noqa: BLE001 - Groq hears instead
+        logger.exception("dictation: parakeet unavailable")
+    finally:
+        _loading = False
+
+
+def _parakeet_ready() -> _Parakeet:
+    """The loaded model, or NotReady while it loads. Loading takes seconds to minutes (a 660 MB fetch on a fresh
+    server); a learner's turn never waits for it, and only one load ever runs (two at once doubled the memory)."""
+    global _loading
+    if parakeet.cache_info().currsize:
+        return parakeet()
+    with _load_lock:
+        if parakeet.cache_info().currsize:
+            return parakeet()
+        if not _loading:
+            _loading = True
+            threading.Thread(target=_load_in_background, daemon=True, name="dictation-load").start()
+    raise NotReady("parakeet is loading")
+
+
 def _wav(samples: np.ndarray) -> bytes:
     import wave
     buf = io.BytesIO()
@@ -123,17 +156,18 @@ def _groq(samples: np.ndarray) -> str:
     return str(result).strip()
 
 
-ENGINES = {"parakeet": lambda s: parakeet().hear(s), "groq": _groq}
+ENGINES = {"parakeet": lambda s: _parakeet_ready().hear(s), "groq": _groq}
 
 
 def warm() -> None:
-    """Load the local engine ahead of the first turn: only files already here, never under a test run."""
+    """Load the local engine ahead of the first turn: only files already here, never under a test run. Shares the
+    one load with _parakeet_ready, so a turn spoken during warm-up goes to Groq instead of loading a second copy."""
     if "pytest" in sys.modules or not all(p.exists() for p in _files()):
         return
     try:
-        parakeet().hear(np.zeros(RATE // 2, dtype=np.float32))
-    except Exception:   # noqa: BLE001 - Groq hears instead
-        logger.exception("dictation: parakeet unavailable")
+        _parakeet_ready()
+    except NotReady:
+        pass
 
 
 @timed
