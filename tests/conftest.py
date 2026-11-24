@@ -249,8 +249,10 @@ class FakeCall:
 class FakeSeller:
     """Stands in for SellerBot behind the buy routes and records what they ask of it."""
 
-    def __init__(self, provider_type=None, product_type=None, session_id=None, words=None, probes=None):
+    def __init__(self, provider_type=None, product_type=None, session_id=None, words=None, probes=None,
+                 words_label=""):
         self.product_type = product_type
+        self.words_label = words_label if words else ""
         self.session_id = session_id
         self.words = words
         self.probes = probes or {}
@@ -272,6 +274,9 @@ class FakeSeller:
 
     def coach_notes(self):
         return {"what_happened": "ok"}
+
+    def history(self):
+        return [{"role": m["role"], "content": m["content"]} for m in self.call.conversation_history]
 
     def stage_starts(self):
         return [{"stage": "logical", "step": "02", "name": "Number",

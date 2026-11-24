@@ -42,7 +42,6 @@ from ..security import InputValidator, require_rate_limit
 from .calls import call_error
 from .sop import stages_from
 from ._utils import (
-    history_json,
     json_body,
     safe_latency_ms,
     stage_fields,
@@ -82,7 +81,7 @@ def init():
             return session_error
         seller = sellers.get(existing_id)
         if seller:
-            history = history_json(seller.call.conversation_history)
+            history = seller.history()
             current_app.logger.info(f"Restored session: {existing_id} ({len(history)} messages)")
             return jsonify(
                 {
@@ -91,8 +90,8 @@ def init():
                     "message": None,
                     "product_type": seller.product_type,
                     "words": seller.words or {},
-                    "words_label": getattr(seller, "words_label", ""),
-                    "probes": getattr(seller, "probes", {}),
+                    "words_label": seller.words_label,
+                    "probes": seller.probes,
                     **stage_fields(seller),
                     "history": history,
                     "training": seller.coach_notes(),   # the coach's notes come back with the call after a reload
@@ -114,8 +113,8 @@ def init():
     words = data.get("words")   # {step id: question}: the rep says a top rep's or an SOP's words (see /words)
     try:
         seller = SellerBot(provider_type=provider, product_type=product_type, session_id=session_id, words=words or None,
-                           probes=data.get("probes") or None)   # {step: question}: those steps asked again in their words
-        seller.words_label = rep_words.clean_label(data.get("label")) if seller.words else ""   # whose words, for the card
+                           probes=data.get("probes") or None,   # {step: question}: those steps asked again in their words
+                           words_label=rep_words.clean_label(data.get("label")))   # whose words, for the card
         sellers.set(session_id, seller)
         current_app.logger.info(
             f"New session: {session_id} (product={seller.product_type}, provider={seller.provider_name})"
@@ -257,7 +256,7 @@ def jump(seller):
     except Exception:
         current_app.logger.exception("Jump failed")
         return jsonify({"error": GENERIC_ERROR}), 500
-    return jsonify({"success": True, "message": message, "history": history_json(seller.call.conversation_history),
+    return jsonify({"success": True, "message": message, "history": seller.history(),
                     **stage_fields(seller), "training": seller.coach_notes()})
 
 
@@ -287,7 +286,7 @@ def edit(seller):
             {
                 "success": True,
                 "message": response.content,
-                "history": history_json(seller.call.conversation_history),
+                "history": seller.history(),
                 **stage_fields(seller),
                 "latency_ms": safe_latency_ms(response.latency_ms),
                 "provider": response.provider,

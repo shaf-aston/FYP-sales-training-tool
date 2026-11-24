@@ -29,9 +29,10 @@ class ChatResponse:
 class SellerBot:
     """Runs one scripted sales call and logs each turn."""
 
-    def __init__(self, provider_type=None, product_type=None, session_id=None, words=None, probes=None):
+    def __init__(self, provider_type=None, product_type=None, session_id=None, words=None, probes=None,
+                 words_label=""):
         """`words`: {step id: question} said in place of the script's (a top rep's or an SOP's; rep_words.py),
-        `probes` those steps asked again in their words. Raises RepWordsError for words the script cannot take."""
+        `probes` those steps asked again in their words, `words_label` whose they are. Raises RepWordsError for words the script cannot take."""
         self._router = ProviderRouter(provider_type=provider_type)
         self.session_id = session_id
         tag_session(session_id)
@@ -41,7 +42,7 @@ class SellerBot:
         self.seller = build_seller(self._router, self.product_type, words=words, probes=probes)
         self.words = dict(words or {})
         self.probes = dict(probes or {}) if words else {}
-        self.words_label = ""   # whose words ("Maya", "your SOP"); the init route sets it
+        self.words_label = words_label if self.words else ""   # whose words ("Maya", "your SOP"), for the card
         # One per learner turn: the stage and script state right after it, for rewinding.
         self._turn_snapshots = []
 
@@ -153,6 +154,10 @@ class SellerBot:
             "stage_turn_count": self.call.stage_turn_count,
             "turn_state": self.seller.snapshot(),
         }
+
+    def history(self) -> list[dict]:
+        """The transcript as the web app reads it: role and content only."""
+        return [{"role": m["role"], "content": m["content"]} for m in self.call.conversation_history]
 
     def stage_starts(self) -> list[dict]:
         return self.seller.stage_starts()
