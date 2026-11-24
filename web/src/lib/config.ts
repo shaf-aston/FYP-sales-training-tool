@@ -10,7 +10,7 @@ export const config = {
      * API share an origin, so "". The API's CORS allows the Vercel site, and a multipart POST needs no preflight.
      */
     uploadOrigin: () =>
-      typeof location === "undefined" || ["localhost", "127.0.0.1"].includes(location.hostname) ? "" : "https://140-238-102-50.sslip.io",
+      typeof location === "undefined" || ["localhost", "127.0.0.1"].includes(location.hostname) ? "" : "https://eloquence.79-72-72-134.sslip.io",
   },
   /** DOM id of the sidebar (target of the mobile "Panels" button). */
   ids: { panels: "session-panels" },

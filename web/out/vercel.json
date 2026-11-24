@@ -5,7 +5,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://140-238-102-50.sslip.io/api/:path*"
+      "destination": "https://eloquence.79-72-72-134.sslip.io/api/:path*"
     }
   ],
   "headers": [

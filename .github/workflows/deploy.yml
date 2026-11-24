@@ -41,7 +41,7 @@ jobs:
           SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
         run: |
           for i in $(seq 1 20); do
-            v=$(curl -fsS https://140-238-102-50.sslip.io/api/health | jq -r .version || true)
+            v=$(curl -fsS https://eloquence.79-72-72-134.sslip.io/api/health | jq -r .version || true)
             [ "$v" = "$SHA" ] && echo "API live on $v" && exit 0
             sleep 6
           done
@@ -56,7 +56,7 @@ jobs:
         env:
           SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
         run: |
-          v=$(curl -fsS https://140-238-102-50.sslip.io/api/health | jq -r .version || echo unreachable)
+          v=$(curl -fsS https://eloquence.79-72-72-134.sslip.io/api/health | jq -r .version || echo unreachable)
           if [ "$v" = "$SHA" ]; then echo "API live on $v"; exit 0; fi
           echo "::warning title=API not deployed::VM_APP_DIR is not set, so the VM was not updated. Live API runs '$v', master is $SHA. Deploy by hand or set the variables (docs/SETUP.md)."
 
