@@ -5,14 +5,15 @@ import json
 import logging
 
 from core.buy_mode.script_engine.ai.checks import CheckContext, clip, figures
-from core.buy_mode.script_engine.ai.judge import judge
+from core.buy_mode.script_engine.ai.judge import VAGUE, blanks, judge, pick
 from core.buy_mode.script_engine.ai.line import checked_line
-from core.buy_mode.script_engine.ai.listen import hear
+from core.buy_mode.script_engine.ai.listen import hear, heard_in
 from core.buy_mode.script_engine.words.tone import plain
 from core.infra.logs import timed
 from core.infra.utils import tokenize
 
 uncovered_log = logging.getLogger("script_engine.uncovered")
+logger = logging.getLogger("script_engine.fallback")
 
 
 class Voice:
@@ -57,23 +58,47 @@ class Voice:
         """Did they give the step's `concept`? A `Heard` (an ack if so, a probe if not), or None when the
         AI failed or answered off-format: the rest of the turn then goes without it."""
         c = self.cfg
-        told = self._told(earlier)
         question = plain(question)  # the AI reads words, not tone marks
-        prompt = c["prompts"]["listen"].format(
-            concept=concept, question=question, reply=reply,
-            max_words=c["ack_max_words"], probe_words=c["probe_max_words"],
-            memory=c["prompts"]["ack_memory"].format(told=told) if told else "",
-        )
+        blanks_, ack_ctx, probe_ctx = self._listening(reply, concept, question, earlier, opened)
+        heard = hear(self._ask, c["prompts"]["listen"].format(**blanks_), c["listen_tokens"], ack_ctx, probe_ctx,
+                     question, c)
+        if heard is None:
+            self._ok = False  # off-format counts as a failure: no second call (an ack) this turn
+        return heard
+
+    @timed
+    def judge_listen(self, reply, candidates, concept, question, earlier, opened):
+        """judge() and listen() in one AI call, for a close call that is heard for the step's concept when no
+        meaning wins: (pick, Heard or None). One round trip instead of two; the same checks on every line."""
+        c = self.cfg
+        question = plain(question)
+        blanks_, ack_ctx, probe_ctx = self._listening(reply, concept, question, earlier, opened)
+        prompt = c["prompts"]["judge_listen"].format(**blanks_, **blanks(candidates, c))
+        try:
+            raw = self._ask(prompt, c["judge_tokens"] + c["listen_tokens"])
+        except Exception as exc:  # noqa: BLE001 - any AI failure means fall back
+            logger.warning("judge+listen: AI unavailable: %s", exc)
+            return VAGUE, None
+        meaning = next((line.split(":", 1)[1] for line in raw.splitlines() if line.strip().upper().startswith("MEANING")), "")
+        heard = heard_in(raw, ack_ctx, probe_ctx, question, c)
+        if heard is None:
+            self._ok = False
+        return pick(meaning, candidates), heard
+
+    def _listening(self, reply, concept, question, earlier, opened):
+        """The listen prompt's blanks and the checks its ack and probe must pass."""
+        c = self.cfg
+        told = self._told(earlier)
+        blanks_ = {"concept": concept, "question": question, "reply": reply, "max_words": c["ack_max_words"],
+                   "probe_words": c["probe_max_words"],
+                   "memory": c["prompts"]["ack_memory"].format(told=told) if told else ""}
         ack_ctx = self._ack_ctx(reply, told, opened)
         probe_ctx = CheckContext(
             c["probe_max_words"], 1, opened, self.offer.price,
             known_figures=frozenset(figures(reply + " " + told)), banned_phrases=self._banned_phrases,
             banned=self._banned - ack_ctx.prospect_words,  # a probe promises nothing
         )
-        heard = hear(self._ask, prompt, c["listen_tokens"], ack_ctx, probe_ctx, question, c)
-        if heard is None:
-            self._ok = False  # off-format counts as a failure: no second call (an ack) this turn
-        return heard
+        return blanks_, ack_ctx, probe_ctx
 
     @timed
     def ack(self, reply, question, earlier, opened):

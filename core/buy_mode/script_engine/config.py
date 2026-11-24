@@ -197,6 +197,8 @@ BLANKS = {
         "answer_memory": {"told"},
         "judge": {"options", "vague", "reply", "answers"},
         "listen": {"concept", "question", "reply", "max_words", "probe_words", "memory"},
+        "judge_listen": {"concept", "question", "reply", "max_words", "probe_words", "memory", "options", "vague",
+                         "answers"},
     },
     "coach_notes": {"step": {"title", "name"}, "listen": {"note"}, "default": None},  # None: said as is, never formatted
 }
