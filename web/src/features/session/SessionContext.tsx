@@ -6,7 +6,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { api, ApiError, errorText } from "@/lib/api/client";
-import type { BotState, BuyerPick, BuyerState, ChatMsg, CoachNotes, Difficulty, Outcome, Persona, WordsChoice } from "@/lib/api/types";
+import type { BotState, BuyerPick, BuyerState, ChatMsg, CoachNotes, Difficulty, InitRes, Outcome, Persona, WordsChoice } from "@/lib/api/types";
 import { useAccount } from "@/features/account/AccountContext";
 import { stageShort } from "@/lib/labels";
 import { config, storageKeys } from "@/lib/config";
@@ -191,6 +191,8 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
     parseSettings,
   );
   const recovering = useRef(false);
+  /** The buy-mode connect in flight: a send made while it runs waits for it instead of starting a second call. */
+  const connecting = useRef<Promise<InitRes | null> | null>(null);
   /** True while a send or edit is in flight; blocks a second one before React re-renders. */
   const busy = useRef(false);
   /** Bumped whenever the conversation is replaced, so late replies from the old one are dropped. */
@@ -254,26 +256,39 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
     [teamWords],
   );
 
-  /** Start or restore a buy-mode session. Retries once without the saved id. */
+  /** Start or restore a buy-mode session. Retries once without the saved id. The session it adopted, or null: also
+   *  null when the learner moved on meanwhile (Reset, another product), so a slow connect never replaces a newer call.
+   *  The one in flight is kept in `connecting`, so a send made while it runs waits for it rather than starting another. */
   const initBuy = useCallback(
-    async (useSaved = true) => {
-      const saved = useSaved ? readString(storageKeys.buySessionId) : null;
-      for (const id of saved ? [saved, null] : [null]) {
-        try {
-          adopt(id ? await restoreBuy(id) : await startBuy());
-          setPracticeFrom(id ? savedPractice(id) : null);
-          if (!id) savePractice(null);
-          break;
-        } catch (err) {
-          // 400 = the server refused the saved id (expired or unknown): drop it and start fresh.
-          // A network blip keeps it for the next try.
-          if (id && err instanceof ApiError && err.status === 400) {
-            writeString(storageKeys.buySessionId, null);
-            continue;
+    (useSaved = true): Promise<InitRes | null> => {
+      const my = epoch.current;
+      const run = (async () => {
+        const saved = useSaved ? readString(storageKeys.buySessionId) : null;
+        for (const id of saved ? [saved, null] : [null]) {
+          try {
+            const res = id ? await restoreBuy(id) : await startBuy();
+            if (epoch.current !== my) return null;
+            adopt(res);
+            setPracticeFrom(id ? savedPractice(id) : null);
+            if (!id) savePractice(null);
+            return res;
+          } catch (err) {
+            // 400 = the server refused the saved id (expired or unknown): drop it and start fresh.
+            // A network blip keeps it for the next try.
+            if (id && err instanceof ApiError && err.status === 400) {
+              writeString(storageKeys.buySessionId, null);
+              continue;
+            }
+            if (epoch.current === my) toast(errorText(err, "Couldn't reach the rep. Press Send to try again."), "error");
           }
-          toast(errorText(err, "Connection error. Refresh the page."), "error");
         }
-      }
+        return null;
+      })();
+      connecting.current = run;
+      void run.finally(() => {
+        if (connecting.current === run) connecting.current = null;
+      });
+      return run;
     },
     [adopt, restoreBuy, startBuy, toast],
   );
@@ -378,6 +393,48 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
         return { ok: true };
       } catch (err) {
         if (epoch.current !== my) return { ok: false };
+        if (mode === "buy" && err instanceof ApiError && err.sessionExpired && !recovering.current) {
+          // The server forgot the call (restart or idle): start a new one and say the same thing there, so the
+          // learner never has to press Send twice (live, 24 Nov: "hi" sat on "Reconnecting…").
+          setMessages((m) => m.filter((x) => x.id !== optimisticId));
+          recovering.current = true;
+          if (!connecting.current) {
+            toast("The call timed out. Starting a new one…", "info");
+            writeString(storageKeys.buySessionId, null);
+          }
+          let fresh: InitRes | null = null;
+          try {
+            // a connect already running (the page's own, still starting the rep) is the call: never a second one
+            fresh = connecting.current ? await connecting.current : await initBuy(false);
+          } finally {
+            recovering.current = false;
+          }
+          if (!fresh || epoch.current !== my) return { ok: false, restore: message };
+          const at = fresh.history?.length || (fresh.message ? 1 : 0);
+          setMessages((m) => [...m, { id: optimisticId, role: "user", content: message, historyIndex: at }]);
+          try {
+            const res = await api.buyChat(fresh.session_id, message);
+            if (epoch.current !== my) return { ok: true };
+            setMessages((m) => [...m, { id: newId(), role: "assistant", content: res.message, historyIndex: at + 1, meta: metaLine(res.latency_ms, res.provider) }]);
+            setStage(res.stage);
+            setCoachNotes(res.training);
+            return { ok: true };
+          } catch (again) {
+            if (epoch.current !== my) return { ok: false };
+            try {   // it may have reached the server before failing: take the server's call if it moved on
+              const server = await api.buyInit(fresh.session_id);
+              if (server.history.length > at + 1) {
+                adopt(server);
+                return { ok: true };
+              }
+            } catch {
+              /* fall through to rollback */
+            }
+            setMessages((m) => m.filter((x) => x.id !== optimisticId));
+            toast(`${errorText(again, "Message failed.")} Not sent: it's still in the box, press Send to retry.`, "error");
+            return { ok: false, restore: message };
+          }
+        }
         if (handleExpired(err)) return { ok: false, restore: message };
         // The server may have accepted the message before failing; check before rolling back.
         if (mode === "buy" && buySessionId) {
@@ -401,7 +458,7 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
         setTyping(false);
       }
     },
-    [messages, mode, sellSession, sellSettings.showHints, buySessionId, handleExpired, adopt, toast],
+    [messages, mode, sellSession, sellSettings.showHints, buySessionId, handleExpired, adopt, toast, initBuy],
   );
 
   const edit = useCallback(

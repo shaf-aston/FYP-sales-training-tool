@@ -242,3 +242,16 @@ class SellerBot:
             turn_count=self.call.user_turn_count,
             message_count=len(self.call.conversation_history),
         )
+
+
+def warm() -> None:
+    """Build one throwaway seller at start-up: the first one embeds every script example (~5 s on 2 cores, far
+    longer while the voice models load beside it). After a restart every learner's call is new at once, and the
+    first had waited so long that its reconnect looked stuck (live, 24 Nov). Never under a test run."""
+    import sys
+    if "pytest" in sys.modules:
+        return
+    try:
+        SellerBot()
+    except Exception:   # noqa: BLE001 - the first real call builds it instead
+        logging.getLogger(__name__).exception("seller warm-up failed")

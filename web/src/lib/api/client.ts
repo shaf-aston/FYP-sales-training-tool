@@ -97,6 +97,7 @@ export function createHttpApi() {
     /** Start a call, or restore `sessionId`; the product and words start a new one if the server forgot it. */
     buyInit: (sessionId?: string | null, productType?: string | null, words?: Omit<T.WordsChoice, "product">) =>
       request<T.InitRes>("/api/buy/init", {
+        timeoutMs: config.initTimeoutMs,   // never an endless "Reconnecting…": a slow start fails loud and can be retried
         body: {
           ...(sessionId ? { session_id: sessionId } : {}),
           ...(productType ? { product_type: productType } : {}),

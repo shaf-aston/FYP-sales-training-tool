@@ -15,6 +15,8 @@ export const config = {
   /** DOM id of the sidebar (target of the mobile "Panels" button). */
   ids: { panels: "session-panels" },
   chatTimeoutMs: 25_000,
+  /** Starting a call: the first after a server restart builds the rep (seconds on the VM). */
+  initTimeoutMs: 60_000,
   slowReplyMs: 5_000,
   toastMs: 4_000,
   /** How long the feedback dialog shows "thanks" before closing. */
