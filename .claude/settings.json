@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$(git rev-parse --show-toplevel)\"/.claude/hooks/verify-done.sh",
+            "timeout": 600,
+            "statusMessage": "Verifying: clean tree, pushed, full tests…"
+          }
+        ]
+      }
+    ]
+  }
+}
