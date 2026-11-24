@@ -12,10 +12,14 @@ import s from "./MessageList.module.css";
 import { prefersReducedMotion } from "@/lib/motion";
 import { bubbles, highlighted, typingMs } from "@/lib/tone";
 
-/** The other side's badge beside their lines: the buyer's initial in sell mode, R for the rep in buy mode. */
+/** The other side's badge beside their lines: the buyer's initial in sell mode, the rep's picture in buy mode. */
 function Avatar() {
   const { mode, sellSession } = useSession();
-  const initial = mode === "sell" ? (sellSession?.persona.name.trim()[0]?.toUpperCase() ?? "B") : "R";
+  if (mode !== "sell") {
+    // eslint-disable-next-line @next/next/no-img-element -- a 32px static SVG: next/image adds nothing
+    return <img className={s.avatar} src="/rep-avatar.svg" alt="" aria-hidden="true" width={32} height={32} />;
+  }
+  const initial = sellSession?.persona.name.trim()[0]?.toUpperCase() ?? "B";
   return (
     <span className={s.avatar} aria-hidden="true">
       {initial}
