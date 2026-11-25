@@ -112,8 +112,10 @@ def readable(text: str) -> str:
     return _THOUSANDS.sub(r"\1 thousand", _MONEY.sub(money, text))
 
 
-def is_cached(text: str, voice: str, speed: float = 1.0) -> bool:
-    return _cache_path("kokoro", voice, speed, text).exists()
+def is_cached(text: str, voice: str, speed: float = 1.0, engine: str = "kokoro") -> bool:
+    """Made already: `voice` is the Kokoro one, mapped as speak() maps it for the engine."""
+    voice = gemini_voice(voice) if engine == "gemini" else voice
+    return _cache_path(engine, voice, speed, text).exists()
 
 
 def _persona(name: str, hint: str = "") -> dict:

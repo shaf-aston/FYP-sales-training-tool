@@ -82,25 +82,33 @@ def seller_lines() -> set[tuple[str, float]]:
 
 
 def main(dry: bool = False) -> None:
-    if "kokoro" not in SPEECH.get("engines", []):
-        print("kokoro is off in limits.yaml speech.engines: nothing to make")
+    # the first local-or-Gemini engine in limits.yaml: Kokoro makes every line; Gemini only `prewarm_per_run` a run
+    # (each deploy), since its free daily quota is small, and stops at its first refusal (quota used up)
+    engine = next((e for e in SPEECH.get("engines", []) if e in ("kokoro", "gemini")), None)
+    if not engine:
+        print("no kokoro or gemini in limits.yaml speech.engines: nothing to make")
         return
     jobs = [(SPEECH["kokoro"]["seller"], s, pace) for s, pace in sorted(seller_lines(), key=lambda j: len(j[0]))]
     for voice, sentences in buyer_lines().items():
         jobs += [(voice, s, 1.0) for s in sorted(sentences, key=len)]
-    todo = [(v, s, pace) for v, s, pace in dict.fromkeys(jobs) if not is_cached(s, v, pace)]
-    print(f"{len(jobs)} sentences, {len(todo)} to make", flush=True)
+    todo = [(v, s, pace) for v, s, pace in dict.fromkeys(jobs) if not is_cached(s, v, pace, engine)]
+    if engine == "gemini":
+        todo = todo[:int(SPEECH["gemini"].get("prewarm_per_run", 150))]
+    print(f"{engine}: {len(jobs)} sentences, {len(todo)} to make this run", flush=True)
     if dry:
         return
-    kokoro()
+    if engine == "kokoro":
+        kokoro()
     start, made = time.time(), 0
     for voice, sentence, pace in todo:
-        if speak(sentence, speed=pace, voice=voice, engines=["kokoro"]):
+        if speak(sentence, speed=pace, voice=voice, engines=[engine]):
             made += 1
+        elif engine == "gemini":
+            print("gemini refused (quota?): stopping until the next run", flush=True)
+            break
         if made and made % 50 == 0:
             print(f"{made}/{len(todo)} made, {time.time() - start:.0f}s", flush=True)
     print(f"done: {made} made in {time.time() - start:.0f}s", flush=True)
-
 
 if __name__ == "__main__":
     main(dry="--dry-run" in sys.argv)
