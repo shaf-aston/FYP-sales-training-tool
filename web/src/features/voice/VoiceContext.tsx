@@ -197,7 +197,10 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   const toggleDictation = useCallback(() => {
     if (!speechSupported()) return live.current.toast("Speech not supported in this browser", "error");
     const r = recognizer.current;
-    if (r?.isTranscribing) return live.current.toast("Transcribing, please wait", "info");
+    if (r?.isTranscribing) {
+      r.stop(); // gave up waiting: the clip is dropped and the box is theirs to type in
+      return live.current.toast("Dictation cancelled", "info");
+    }
     if (r?.isRecording) return r.stop();
     begin();
   }, [begin]);

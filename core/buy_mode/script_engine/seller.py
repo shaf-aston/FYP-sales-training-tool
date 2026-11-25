@@ -479,6 +479,7 @@ class ScriptSeller:
         text, labels = v.text, answer_labels(step)
         label, line, ack, missed = None, "", None, False
         needed = self._ear.shaped(text, step)
+        heard, asked_both = None, False
         ruled = next((r.label for r in step.listen if r.says(text)), None)
         if ruled and not empty:
             label = ruled  # by rule, before meaning: round 43, "6 weeks" was unclear ("so many nights, months and years")
@@ -498,16 +499,19 @@ class ScriptSeller:
                 found = up  # bills" is already the next rung; the whole reply is still kept
             label, near = found.label, found.candidates
             if found.close:
-                pick = self._voice.judge(text, {c: labels[c] for c in near}) if near else VAGUE
+                if near and self._would_listen(step, text, needed, empty):
+                    # listen would follow a vague pick: ask both in one AI call, one round trip instead of two
+                    pick, heard = self._voice.judge_listen(text, {c: labels[c] for c in near}, self._concept(step),
+                                                           self._asked_text(), self._earlier(step), opened)
+                    asked_both = True
+                else:
+                    pick = self._voice.judge(text, {c: labels[c] for c in near}) if near else VAGUE
                 label = None if pick == VAGUE else pick
                 if found.label and not label and step.unsure and all(r.then != step.id for r in step.listen if r.label in found.torn):
                     label = step.unsure  # every meaning it is torn between is a real answer: take the step's safe one, don't ask again
-        # round 109: a step with an exit beside its "any" route (09's "I don't have any") still hears the rest
-        takes_any = not labels or any(r.label == ANY for r in step.listen)
-        if (not label and takes_any and needed and self.cfg["listen"] and step.capture
-                and not (empty and not asks_left(self.method, self.state, self.cfg["misses"]))):
-            concept = f"{step.name}: {step.note}" if step.note else step.name  # the AI hears for it
-            heard = self._voice.listen(text, concept, self._asked_text(), self._earlier(step), opened)
+        if not label and self._would_listen(step, text, needed, empty):
+            if not asked_both:
+                heard = self._voice.listen(text, self._concept(step), self._asked_text(), self._earlier(step), opened)
             if heard is not None:
                 missed = not heard.answered
                 empty, line, ack = empty or missed, heard.probe, heard.ack
@@ -530,6 +534,17 @@ class ScriptSeller:
         if clarified and line in move.state.said:
             move = replace(move, state=replace(move.state, clarified=move.state.clarified + 1))
         return self._closed_lead(move), ack, detail
+
+    def _would_listen(self, step, text, needed, empty):
+        """The AI hears the reply for the step's concept when no answer's route took it."""
+        # round 109: a step with an exit beside its "any" route (09's "I don't have any") still hears the rest
+        takes_any = not answer_labels(step) or any(r.label == ANY for r in step.listen)
+        return bool(takes_any and needed and self.cfg["listen"] and step.capture
+                    and not (empty and not asks_left(self.method, self.state, self.cfg["misses"])))
+
+    @staticmethod
+    def _concept(step):
+        return f"{step.name}: {step.note}" if step.note else step.name  # the AI hears for it
 
     def _ends_there(self, move, v, opened):
         """The step this reply led to, when the same reply already ends the call there: "yes, debit" to

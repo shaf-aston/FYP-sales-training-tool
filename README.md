@@ -58,6 +58,11 @@ fallback (Groq), then the browser's own voice.
 | Meaning of lines | BAAI bge-small-en-v1.5 (`fastembed`) | MIT | `core/infra/embedder.py` |
 | Review: what the rules miss | Our own small model on bge-small vectors (`scripts/blemish/`) | this repo | `core/training/blemish.py` |
 
+**Human voice (optional):** with `GEMINI_API_KEY` set (free key: https://aistudio.google.com/apikey), replies are
+read by Google's Gemini TTS first: near the top of the 2026 listening leaderboards, much more human than Kokoro.
+Its free quota isn't published; when it runs out or refuses, Kokoro takes over for 5 minutes, then Gemini is tried
+again. Gemini reads plain words (the stress marks are Kokoro's), and the lines it reads go to Google.
+
 The deploy fetches the voice and dictation files once (`scripts/deploy_vm.sh`, about 1 GB into `.cache/`).
 
 ## 🚀 Run it
@@ -65,6 +70,7 @@ The deploy fetches the voice and dictation files once (`scripts/deploy_vm.sh`, a
 ```bash
 pip install -r requirements.txt
 echo "GROQ_API_KEY=your_key" > .env    # free key: https://console.groq.com/keys
+echo "GEMINI_API_KEY=your_key" >> .env # optional, the human voice: https://aistudio.google.com/apikey
 python backend/app.py                  # http://localhost:5000
 ```
 

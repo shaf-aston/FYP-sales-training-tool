@@ -31,7 +31,10 @@ data/backups/
 data/*.db
 data/*.db-*
 data/.secret_key
-.claude/
+.claude/*
+!.claude/settings.json
+!.claude/hooks/
+.claude/hooks/.state/
 
 # Editor and OS noise
 .vscode/

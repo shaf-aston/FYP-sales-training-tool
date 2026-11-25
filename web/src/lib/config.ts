@@ -15,6 +15,8 @@ export const config = {
   /** DOM id of the sidebar (target of the mobile "Panels" button). */
   ids: { panels: "session-panels" },
   chatTimeoutMs: 25_000,
+  /** Starting a call: the first after a server restart builds the rep (seconds on the VM). */
+  initTimeoutMs: 60_000,
   slowReplyMs: 5_000,
   toastMs: 4_000,
   /** How long the feedback dialog shows "thanks" before closing. */
@@ -28,7 +30,8 @@ export const config = {
     silenceDelayMs: 500,
     ttsWatchdogMs: 30_000,
     /** Recording for the server: when the learner has finished talking (loudness against the room's noise). */
-    vad: { calibrateMs: 300, overNoise: 3, minLevel: 0.012, endSilenceMs: 900, noSpeechMs: 8_000 },
+    // maxFloor: the room's noise is never taken above this, so a learner who talks at once is still heard
+    vad: { overNoise: 3, minLevel: 0.012, maxFloor: 0.02, endSilenceMs: 900, noSpeechMs: 8_000 },
     maxRecordingMs: 60_000,
     restartBackoffMs: { base: 200, max: 5_000, attempts: 5 },
     speedRange: { min: -50, max: 50, step: 5 },

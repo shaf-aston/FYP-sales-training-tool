@@ -45,6 +45,11 @@ def hear(llm, prompt, tokens, ack_ctx, probe_ctx, asked, cfg):
     except Exception as exc:  # noqa: BLE001 - any AI failure means fall back
         logger.warning("listen: AI unavailable: %s", exc)
         return None
+    return heard_in(raw, ack_ctx, probe_ctx, asked, cfg)
+
+
+def heard_in(raw, ack_ctx, probe_ctx, asked, cfg):
+    """The checked `Heard` in an answer already given (its ANSWERED/ACK/PROBE lines), or None off-format."""
     parsed = parse(raw)
     if parsed is None:
         logger.warning("listen: AI answered off-format %r", clip(raw, cfg["log_text_chars"]))

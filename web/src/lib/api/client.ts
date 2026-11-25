@@ -37,6 +37,8 @@ interface RequestOptions {
   body?: unknown;
   sessionId?: string | null;
   timeoutMs?: number;
+  /** The caller's own cancel (the learner tapped stop): aborts the request like a timeout does. */
+  signal?: AbortSignal;
   /** Another origin for this request (big uploads skip the Vercel rewrite); default the page's. */
   origin?: string;
 }
@@ -49,6 +51,7 @@ async function request<R>(path: string, opts: RequestOptions = {}): Promise<R> {
 
   const abort = new AbortController();
   const timer = opts.timeoutMs ? setTimeout(() => abort.abort(), opts.timeoutMs) : undefined;
+  opts.signal?.addEventListener("abort", () => abort.abort(), { once: true });
   let res: Response;
   try {
     res = await fetch((opts.origin ?? config.apiBase) + path, {
@@ -94,6 +97,7 @@ export function createHttpApi() {
     /** Start a call, or restore `sessionId`; the product and words start a new one if the server forgot it. */
     buyInit: (sessionId?: string | null, productType?: string | null, words?: Omit<T.WordsChoice, "product">) =>
       request<T.InitRes>("/api/buy/init", {
+        timeoutMs: config.initTimeoutMs,   // never an endless "Reconnecting…": a slow start fails loud and can be retried
         body: {
           ...(sessionId ? { session_id: sessionId } : {}),
           ...(productType ? { product_type: productType } : {}),
@@ -215,10 +219,10 @@ export function createHttpApi() {
       return res?.status === 200 ? res.blob() : null;
     },
     /** What the learner said: one recorded turn as text (the server hears it). Throws ApiError when nothing was heard. */
-    dictate: async (audio: Blob): Promise<string> => {
+    dictate: async (audio: Blob, signal?: AbortSignal): Promise<string> => {
       const form = new FormData();
       form.append("audio", audio, "turn.webm");
-      return (await request<{ success: true; text: string }>("/api/dictate", { body: form, timeoutMs: 30_000 })).text;
+      return (await request<{ success: true; text: string }>("/api/dictate", { body: form, timeoutMs: 30_000, signal })).text;
     },
     feedback: (body: T.FeedbackReq) => request<{ success: true }>("/api/feedback", { body }),
     knowledge: () => request<{ success: true; data: T.KnowledgeData }>("/api/knowledge"),

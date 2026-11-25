@@ -34,7 +34,7 @@ from core.infra.constants import (  # noqa: E402
     SERVER_PORT,
 )
 from core.infra.env import env_flag, env_str  # noqa: E402
-from core.infra.embedder import shared_embedder  # noqa: E402
+from core.buy_mode.seller_bot import warm as seller_warm  # noqa: E402
 from core.infra.providers.dictation import warm as dictation_warm  # noqa: E402
 from core.infra.providers.speech import warm as speech_warm  # noqa: E402
 
@@ -87,8 +87,9 @@ def _should_start_background_cleanup() -> bool:
 if _should_start_background_cleanup():
     seller_sessions.start_background_cleanup()
     buyer_sessions.start_background_cleanup()
-    # load the local meaning model now, so the first call doesn't wait ~2 s for it
-    threading.Thread(target=shared_embedder, daemon=True, name="embedder-warmup").start()
+    # load the local meaning model and embed the script's examples now: the first call after a restart had waited
+    # for both (seconds on the VM), which every reconnecting learner hits at once
+    threading.Thread(target=seller_warm, daemon=True, name="seller-warmup").start()
     # and the voice: its files are fetched once on a fresh machine, then the first reply is read without a wait
     threading.Thread(target=speech_warm, daemon=True, name="speech-warmup").start()
     threading.Thread(target=dictation_warm, daemon=True, name="dictation-warmup").start()

@@ -42,11 +42,11 @@ export function VoiceBar() {
         <Button
           variant="pill"
           pressed={v.dictating}
-          disabled={micOff || busy}
+          disabled={micOff}
           onClick={v.toggleDictation}
           className={`${s.icon} ${v.dictating ? s.recording : ""}`}
-          aria-label={v.dictating ? "Stop dictating" : "Dictate"}
-          title={micOff ? UNSUPPORTED_HINT : v.dictating ? "Stop dictating" : "Dictate"}
+          aria-label={busy ? "Cancel dictation" : v.dictating ? "Stop dictating" : "Dictate"}
+          title={micOff ? UNSUPPORTED_HINT : busy ? "Cancel: type it instead" : v.dictating ? "Stop dictating" : "Dictate"}
         >
           <Icon name={v.dictating ? "stop" : "mic"} />
         </Button>

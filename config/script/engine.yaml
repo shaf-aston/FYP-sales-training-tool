@@ -237,6 +237,18 @@ prompts:   # AI prompt templates: {name} is filled in by the seller; an empty {m
     <earlier>
     {told}
     </earlier>
+  judge_listen: |-
+    You are the salesperson on a call. You are finding out: <goal>{concept}</goal>
+    You asked: <question>{question}</question>
+    They answered: <reply>{reply}</reply>
+    {memory}Which meaning fits the reply best?
+    {options}
+    - {vague}: none of these clearly fits
+    Reply with exactly four lines:
+    MEANING: exactly one of: {answers}.
+    ANSWERED: yes if the reply gives you the goal, even partly or in their own words; no if it is empty, a shrug ("idk", "k"), off the point or dodges it.
+    ACK: when yes, one short sentence (at most {max_words} words) showing you heard them, using their own words, speaking to them as 'you', no question, no advice, no praise; else none.
+    PROBE: when no, one simpler, more concrete question (at most {probe_words} words) that asks for the goal another way, or, when they said something unclear, asks what they mean by it; never the question's own wording; else none.
   judge: |-
     A prospect replied to a sales question. Which meaning fits best?
     {options}

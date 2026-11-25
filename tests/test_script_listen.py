@@ -404,3 +404,68 @@ def test_jump_starts_a_fresh_call_at_a_step_in_plain_words(fake_embedder):
         assert "{" not in s.start_at(step)[0]
     with pytest.raises(ValueError):
         s.start_at("07")
+
+
+# --- judge + listen in one call: a close call on a concept step costs one round trip, not two ---
+
+def _voice(raw, calls):
+    from core.buy_mode.script_engine.ai.voice import Voice
+
+    def llm(prompt, max_tokens):
+        calls.append(prompt)
+        return raw
+    return Voice(CFG, load_offer("shay_coaching"), llm)
+
+
+CANDIDATES = {"money": ["more money", "pay the bills"], "freedom": ["more time", "quit my job"]}
+
+
+def test_judge_listen_picks_a_meaning_in_one_call():
+    calls = []
+    pick, heard = _voice("MEANING: money\nANSWERED: yes\nACK: none\nPROBE: none", calls).judge_listen(
+        "just cash really", CANDIDATES, "goal", "What do you want?", {}, False)
+    assert pick == "money" and heard is not None and heard.answered
+    assert len(calls) == 1 and "<goal>goal</goal>" in calls[0] and "- money: e.g." in calls[0]
+
+
+def test_judge_listen_vague_meaning_still_gives_the_probe():
+    calls = []
+    pick, heard = _voice("MEANING: vague\nANSWERED: no\nACK: none\nPROBE: What would extra cash change for you?",
+                         calls).judge_listen("idk", CANDIDATES, "goal", "What do you want?", {}, False)
+    assert pick == "vague" and heard is not None and not heard.answered
+    assert heard.probe == "What would extra cash change for you?" and len(calls) == 1
+
+
+def test_judge_listen_ai_down_is_vague_and_unheard():
+    from core.buy_mode.script_engine.ai.voice import Voice
+
+    def down(p, n):
+        raise RuntimeError("down")
+    assert Voice(CFG, load_offer("shay_coaching"), down).judge_listen(
+        "x", CANDIDATES, "goal", "q?", {}, False) == ("vague", None)
+
+
+def test_a_close_call_on_a_listening_step_makes_one_ai_call(fake_embedder, monkeypatch):
+    """The turn that used to ask the judge, get "vague", then ask the listen call: now one call."""
+    from dataclasses import replace as _replace
+    from core.buy_mode.script_engine.hear.recognise import Listener
+
+    calls = []
+
+    def ai(prompt, max_tokens):
+        calls.append(prompt)
+        return "MEANING: vague\nANSWERED: yes\nACK: none\nPROBE: none"
+    s = seller(fake_embedder, ai)
+    step = next(st for st in CAT.steps.values()
+                if st.capture and any(r.label == "any" for r in st.listen) and any(r.label not in ("", "any") for r in st.listen))
+    s.reset(ScriptState(step=step.id))
+    real = Listener.answer
+
+    def close(self, text, labels, unclear, floors=None):
+        found = real(self, text, labels, unclear, floors)
+        near = tuple(list(labels)[:2])
+        return _replace(found, label=near[0], close=True, candidates=near)
+    monkeypatch.setattr(Listener, "answer", close)
+    s.reply("well it is a mix of things for me honestly")
+    assert len([c for c in calls if "<goal>" in c]) == 1
+    assert any("MEANING:" in c for c in calls)

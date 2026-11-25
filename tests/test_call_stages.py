@@ -1,6 +1,8 @@
 """The call read stage by stage (core/sell_mode/call_stages.py): a call that does each stage well, and one that
 skips to the pitch, each read the way a coach would."""
 
+import pytest
+
 from core.infra.loader import load_buyer_config
 from core.sell_mode.call_stages import ORDER, analyse_stages, focus
 from core.sell_mode.session_review import build_review
@@ -84,3 +86,23 @@ def test_no_concern_raised_is_nothing_to_work_on():
 def test_a_greeting_is_not_an_opening_question():
     got = stages([("Hi, how are you doing today?", "Fine, busy."), ("So what made you take this call?", "Admin, mostly.")])
     assert got["opening"]["status"] == "partly" and got["opening"]["turns"] == [2]
+
+
+# --- each status rule on its own (gaps found by mutation testing: only whole good/weak calls were checked) ---
+# GOOD indexes: 1 the problem, 2 how long, 3 what it costs, 5 how now, 6 what stopped you (tried), 9 price, 11 close
+
+@pytest.mark.parametrize("picked, stage, want", [
+    ([5], "situation", "partly"),            # how they do it now, nothing on what they tried
+    ([6], "situation", "strong"),            # "tried a tool that didn't stick" + what stopped them
+    ([1], "problem", "partly"),              # the problem alone
+    ([3], "problem", "partly"),              # its cost alone: consequence needs a second kind
+    ([1, 3], "problem", "strong"),           # problem and cost
+    ([2, 3], "problem", "strong"),           # how long and cost
+    ([9, 1, 3], "price", "early"),           # price before the problem came up
+    ([1, 3, 9], "price", "strong"),          # price after its cost
+    ([11, 1], "close", "early"),             # asked to book before any goal or problem
+    ([1, 11], "close", "strong"),
+    ([], "close", "missed"),
+])
+def test_each_stage_rule(picked, stage, want):
+    assert stages([GOOD[i] for i in picked])[stage]["status"] == want

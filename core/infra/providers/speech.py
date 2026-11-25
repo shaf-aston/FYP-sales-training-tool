@@ -9,12 +9,16 @@ wife) or its first name, the same one every time.
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import io
+import json
+import time
 import logging
 import re
 import sys
 import threading
+import urllib.error
 import urllib.request
 import wave
 from functools import lru_cache
@@ -25,6 +29,7 @@ from core.infra.constants import SPEECH
 from core.infra.env import ROOT_DIR
 from core.infra.logs import timed
 from core.infra.providers import voice_marks
+from core.infra.env import env_str
 from core.infra.providers.config import get_groq_api_keys
 
 logger = logging.getLogger(__name__)
@@ -223,7 +228,73 @@ def _groq_engine(text: str, voice: str, speed: float) -> bytes | None:   # noqa:
     return parts[0] if len(parts) == 1 else join_wav(parts)
 
 
-ENGINES = {"kokoro": _kokoro_engine, "groq": _groq_engine}
+_gemini_rest_until = 0.0
+
+
+def gemini_voice(kokoro_voice: str) -> str:
+    """The Gemini voice for a Kokoro one: the same kind of voice (a woman's for af_/bf_, a man's for am_/bm_),
+    the same one every time; the seller has its own."""
+    cfg = SPEECH["gemini"]
+    if kokoro_voice == SPEECH["kokoro"]["seller"]:
+        return cfg["seller"]
+    pool = cfg["female"] if kokoro_voice[1:2] == "f" else cfg["male"]
+    return pool[int(hashlib.sha1(kokoro_voice.encode()).hexdigest(), 16) % len(pool)]
+
+
+def _gemini_style(speed: float) -> str:
+    style = SPEECH["gemini"]["style"]
+    if speed <= 0.9:
+        style += ", a little slower than usual"
+    elif speed >= 1.1:
+        style += ", a little quicker than usual"
+    return style
+
+
+def _gemini_engine(text: str, voice: str, speed: float) -> bytes | None:
+    """One line from Google's Gemini TTS, as WAV. None when there is no key or it is resting after a refusal."""
+    global _gemini_rest_until
+    key = env_str("GEMINI_API_KEY")
+    if not key or time.monotonic() < _gemini_rest_until:
+        return None
+    cfg = SPEECH["gemini"]
+    body = {
+        "model": cfg["model"],
+        "input": [{"type": "user_input", "content": [{
+            "type": "text", "text": readable(voice_marks.plain(text)),   # it reads words: no stress marks
+            "annotations": [{"type": "speech_metadata", "style": _gemini_style(speed)}],
+        }]}],
+        "response_format": {"type": "audio", "mime_type": "audio/wav"},
+        "generation_config": {"speech_config": [{"voice": voice}]},
+    }
+    req = urllib.request.Request(cfg["url"], data=json.dumps(body).encode(), method="POST",
+                                 headers={"x-goog-api-key": key, "Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=cfg["timeout_seconds"]) as res:
+            reply = json.load(res)
+    except urllib.error.HTTPError as e:
+        if e.code in (400, 401, 403, 404, 429):   # quota, key or model: not worth asking again for a while
+            _gemini_rest_until = time.monotonic() + cfg["rest_seconds"]
+        raise
+    for step in reply.get("steps", []):
+        for part in step.get("content", []) if step.get("type") == "model_output" else []:
+            if part.get("type") == "audio" and part.get("data"):
+                audio = base64.b64decode(part["data"])
+                return audio if audio[:4] == b"RIFF" else _pcm_wav(audio, cfg.get("sample_rate", 24000))
+    return None
+
+
+def _pcm_wav(pcm: bytes, rate: int) -> bytes:
+    """Headerless 16-bit mono PCM as a WAV file."""
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(rate)
+        w.writeframes(pcm)
+    return buf.getvalue()
+
+
+ENGINES = {"gemini": _gemini_engine, "kokoro": _kokoro_engine, "groq": _groq_engine}
 
 
 def warm() -> None:
@@ -231,7 +302,7 @@ def warm() -> None:
     under a test run, which imports the app too."""
     if "pytest" in sys.modules or not all(p.exists() for p in kokoro_files()):
         return
-    if SPEECH.get("engines", ["groq"])[0] == "kokoro":
+    if "kokoro" in SPEECH.get("engines", ["groq"])[:2]:   # first, or the fallback when Gemini rests
         try:
             kokoro().say("Hello.", SPEECH["kokoro"]["seller"], 1.0)
         except Exception:   # noqa: BLE001 - the next engine speaks instead
@@ -268,7 +339,8 @@ def speak(text: str, speaker: str = "seller", persona: str = "", hint: str = "",
         return None
     speed = min(1.5, max(0.6, speed))
     for name in engines or SPEECH.get("engines", ["groq"]):
-        voice_now = (voice or pick_voice(speaker, persona, hint)) if name == "kokoro" else SPEECH["voice"]
+        kokoro_voice = voice or pick_voice(speaker, persona, hint)
+        voice_now = {"kokoro": kokoro_voice, "gemini": gemini_voice(kokoro_voice)}.get(name, SPEECH["voice"])
         path = _cache_path(name, voice_now, speed, text)
         if path.exists():
             path.touch()

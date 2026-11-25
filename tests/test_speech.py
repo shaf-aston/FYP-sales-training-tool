@@ -247,3 +247,96 @@ def test_prices_are_said_the_way_people_say_them():
         "2.5 thousand pounds up front, 2 million dollars budget, 4 thousand all in"
     assert speech.readable("We're 60 people, 10.5% up, v4k") == "We're 60 people, 10.5% up, v4k"
     assert speech._cache_path("kokoro", "x", 1, "$4,000.") == speech._cache_path("kokoro", "x", 1, "4,000 dollars.")
+
+
+def test_dictation_turn_during_parakeet_load_goes_to_groq_and_loads_once(monkeypatch):
+    """A turn spoken while the local model loads must not wait for it, or start a second load."""
+    import threading
+    from core.infra.providers import dictation
+
+    loads, release = [], threading.Event()
+
+    class Slow:
+        def __init__(self):
+            loads.append(1)
+            release.wait(5)
+
+        def hear(self, s):
+            return "local"
+
+    dictation.parakeet.cache_clear()
+    monkeypatch.setattr(dictation, "_Parakeet", Slow)
+    monkeypatch.setitem(dictation.DICTATION, "engines", ["parakeet", "groq"])
+    monkeypatch.setitem(dictation.ENGINES, "groq", lambda s: "from groq")
+    try:
+        assert dictation.dictate(_wav_bytes()) == "from groq"
+        assert dictation.dictate(_wav_bytes()) == "from groq"
+        release.set()
+        for _ in range(100):
+            if dictation.parakeet.cache_info().currsize and not dictation._loading:
+                break
+            threading.Event().wait(0.02)
+        assert dictation.dictate(_wav_bytes()) == "local"
+        assert loads == [1]
+    finally:
+        release.set()
+        dictation.parakeet.cache_clear()
+
+
+# --- Gemini TTS: the human voice first, Kokoro when it has no key or is resting ---
+
+def _gemini(monkeypatch, error=None):
+    import base64
+    import io as _io
+    import json as _json
+    import urllib.error
+    from core.infra.providers import speech
+
+    sent = []
+    audio = speech._pcm_wav(b"\x00\x00" * 2400, 24000)
+    ok = {"steps": [{"type": "model_output", "content": [{"type": "audio", "data": base64.b64encode(audio).decode()}]}]}
+
+    def urlopen(req, timeout):
+        sent.append(_json.loads(req.data))
+        if error:
+            raise urllib.error.HTTPError(req.full_url, error, "no", {}, None)
+        return _io.BytesIO(_json.dumps(ok).encode())
+    monkeypatch.setattr(speech.urllib.request, "urlopen", urlopen)
+    monkeypatch.setattr(speech, "env_str", lambda k: "key" if k == "GEMINI_API_KEY" else None)
+    monkeypatch.setattr(speech, "_gemini_rest_until", 0.0)
+    monkeypatch.setitem(speech.SPEECH, "engines", ["gemini", "groq"])
+    return speech, sent
+
+
+def test_gemini_speaks_first_in_a_matching_voice_and_plain_words(monkeypatch):
+    speech, sent = _gemini(monkeypatch)
+    audio = speech.speak("It's **really** $4,000.", speaker="seller", speed=0.8)
+    assert audio[:4] == b"RIFF"
+    body = sent[0]
+    assert body["generation_config"]["speech_config"][0]["voice"] == speech.SPEECH["gemini"]["seller"]
+    said = body["input"][0]["content"][0]
+    assert "**" not in said["text"] and "dollars" in said["text"]
+    assert "slower" in said["annotations"][0]["style"]
+
+
+def test_a_buyer_gets_a_gemini_voice_of_the_same_kind_every_time():
+    from core.infra.providers import speech
+    g = speech.SPEECH["gemini"]
+    assert speech.gemini_voice("af_heart") in g["female"] and speech.gemini_voice("bm_george") in g["male"]
+    assert speech.gemini_voice("af_heart") == speech.gemini_voice("af_heart")
+
+
+def test_gemini_refused_rests_and_the_next_engine_speaks(monkeypatch):
+    speech, sent = _gemini(monkeypatch, error=429)
+    monkeypatch.setattr(speech, "_groq_engine", lambda t, v, s: b"RIFFgroq")
+    monkeypatch.setitem(speech.ENGINES, "groq", lambda t, v, s: b"RIFFgroq")
+    assert speech.speak("Hello there.") == b"RIFFgroq"
+    assert speech.speak("Another line.") == b"RIFFgroq"
+    assert len(sent) == 1   # resting: not asked again on the next line
+
+
+def test_no_gemini_key_means_no_call(monkeypatch):
+    speech, sent = _gemini(monkeypatch)
+    monkeypatch.setattr(speech, "env_str", lambda k: None)
+    monkeypatch.setitem(speech.ENGINES, "groq", lambda t, v, s: b"RIFFgroq")
+    assert speech.speak("Hi.") == b"RIFFgroq" and sent == []
