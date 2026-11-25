@@ -82,6 +82,9 @@ def seller_lines() -> set[tuple[str, float]]:
 
 
 def main(dry: bool = False) -> None:
+    if "kokoro" not in SPEECH.get("engines", []):
+        print("kokoro is off in limits.yaml speech.engines: nothing to make")
+        return
     jobs = [(SPEECH["kokoro"]["seller"], s, pace) for s, pace in sorted(seller_lines(), key=lambda j: len(j[0]))]
     for voice, sentences in buyer_lines().items():
         jobs += [(voice, s, 1.0) for s in sorted(sentences, key=len)]

@@ -180,7 +180,8 @@ transcription:       # a call recording turned into a transcript (core/infra/pro
   label_context: 6     # ...plus this many already-labelled ones shown again, so labels stay consistent
 
 dictation:           # what the learner says into the mic, turned into text here (core/infra/providers/dictation.py)
-  engines: [parakeet, groq]   # tried in order; the local model first: no daily limit, the audio never leaves us
+  engines: [groq]   # tried in order. `parakeet` (local: no daily limit, audio stays here) is off: loading it starved
+                    # the small shared VM (first call 35 s after a deploy, 25 Nov). Put it first again on a bigger box
   max_bytes: 4000000   # one spoken turn (a minute of opus is about 0.5 MB)
   max_seconds: 90
   parakeet:            # NVIDIA Parakeet TDT 0.6B v2 (CC-BY-4.0: credit NVIDIA), int8 ONNX through onnx-asr (MIT).
@@ -191,7 +192,8 @@ dictation:           # what the learner says into the mic, turned into text here
     threads: 2
 
 speech:              # replies read aloud by the server, so the browser needs no sign-in (core/infra/providers/speech.py)
-  engines: [gemini, kokoro, groq]   # tried in order; the browser's own voice reads it when none answers
+  engines: [gemini, groq]   # tried in order; the browser's own voice reads it when none answers. `kokoro` (local)
+                            # is off on the small shared VM for the same reason as parakeet; add it back on a bigger box
   gemini:              # Google Gemini TTS: near the top of the 2026 human-listening leaderboards, and a free tier.
                        # Needs GEMINI_API_KEY (aistudio.google.com); without it, or when its quota runs out, Kokoro speaks.
     url: https://generativelanguage.googleapis.com/v1beta/interactions
