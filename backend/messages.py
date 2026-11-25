@@ -6,6 +6,7 @@ INTERNAL_SERVER_ERROR = "Internal server error"
 
 # Rate limiting
 RATE_LIMIT_ERROR = "Too much traffic right now - hold on a second and try again."
+SERVER_STARTING = "Server is starting up - one moment"
 SERVER_FULL = "Server is currently full - please check back in a moment"
 
 # Session management

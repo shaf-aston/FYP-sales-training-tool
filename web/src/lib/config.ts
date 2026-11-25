@@ -17,6 +17,8 @@ export const config = {
   chatTimeoutMs: 25_000,
   /** Starting a call: the first after a server restart builds the rep (seconds on the VM). */
   initTimeoutMs: 60_000,
+  /** Between retries of a call start while the server warms up after a restart (it answers STARTING). */
+  startingRetryMs: 2_000,
   slowReplyMs: 5_000,
   toastMs: 4_000,
   /** How long the feedback dialog shows "thanks" before closing. */

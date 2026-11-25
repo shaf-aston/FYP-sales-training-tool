@@ -5,7 +5,7 @@
 // Features read it with useSession(). Pure history helpers live in ./history.ts.
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { api, ApiError, errorText } from "@/lib/api/client";
+import { api, ApiError, errorText, onServerStarting } from "@/lib/api/client";
 import type { BotState, BuyerPick, BuyerState, ChatMsg, CoachNotes, Difficulty, InitRes, Outcome, Persona, WordsChoice } from "@/lib/api/types";
 import { useAccount } from "@/features/account/AccountContext";
 import { stageShort } from "@/lib/labels";
@@ -337,6 +337,9 @@ export function SessionProvider({ children, mode }: { children: ReactNode; mode:
   }, [restoreSell, mode]);
 
   const markSellEnded = useCallback((outcome: Outcome) => setSellSession((p) => p && { ...p, ended: true, outcome }), []);
+
+  // A call started just after a server restart waits while it warms up: say so, instead of a silent spinner.
+  useEffect(() => onServerStarting(() => toast("Server is starting up, one moment…", "info")), [toast]);
 
   const handleExpired = useCallback(
     (err: unknown) => {
