@@ -162,7 +162,7 @@ ENGINES = {"parakeet": lambda s: _parakeet_ready().hear(s), "groq": _groq}
 def warm() -> None:
     """Load the local engine ahead of the first turn: only files already here, never under a test run. Shares the
     one load with _parakeet_ready, so a turn spoken during warm-up goes to Groq instead of loading a second copy."""
-    if "pytest" in sys.modules or not all(p.exists() for p in _files()):
+    if "pytest" in sys.modules or "parakeet" not in DICTATION.get("engines", []) or not all(p.exists() for p in _files()):
         return
     try:
         _parakeet_ready()
