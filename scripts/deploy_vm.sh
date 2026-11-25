@@ -59,9 +59,11 @@ if deps "$old" "$new" && bash -c "$RESTART" && live_on "$new"; then
   # its 10-minute timeout (13 Nov; tested: the deploy now returns at once, the job carries on).
   if [ -z "${SKIP_VOICE_PREWARM:-}" ]; then
     # the log is opened only once the lock is held: a start skipped because one is still running leaves its log be
-    ( exec > /dev/null 2>&1 < /dev/null
-      exec setsid nohup flock -n .cache/speech-prewarm.lock \
-        sh -c 'exec nice -n 19 "$0" -m scripts.speech_prewarm > .cache/speech-prewarm.log 2>&1' "$PY" ) &
+    # setsid -f: detached into its own session before this script goes on, so the SSH session closing a moment
+    # later can't kill it (the old `( ... ) &` lost that race on the AMD VM, 25 Nov: it never started)
+    setsid -f nohup flock -n .cache/speech-prewarm.lock \
+      sh -c 'exec nice -n 19 "$0" -m scripts.speech_prewarm > .cache/speech-prewarm.log 2>&1' "$PY" \
+      > /dev/null 2>&1 < /dev/null
   fi
   exit 0
 fi
