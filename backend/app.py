@@ -78,7 +78,9 @@ def _should_start_background_cleanup() -> bool:
     if app.config.get("TESTING"):
         return False
 
-    if not env_flag("FLASK_DEBUG"):
+    # gunicorn has no reloader, so FLASK_DEBUG means nothing there: the live VM had it on (25 Nov) and so ran with no
+    # warm-up (first call 35 s) and no session cleanup
+    if not env_flag("FLASK_DEBUG") or "gunicorn" in sys.modules:
         return True
 
     return env_flag("WERKZEUG_RUN_MAIN")

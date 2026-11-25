@@ -200,3 +200,16 @@ def test_ready_unless_a_warm_up_is_running_and_not_stuck():
         assert sb.ready()
     finally:
         sb._warm_started, sb._warm_done = None, threading.Event()
+
+
+def test_background_jobs_start_under_gunicorn_even_with_flask_debug(monkeypatch):
+    import sys
+    import types
+    from backend import app as app_module
+    monkeypatch.setitem(app_module.app.config, "TESTING", False)
+    monkeypatch.setenv("FLASK_DEBUG", "True")
+    monkeypatch.delenv("WERKZEUG_RUN_MAIN", raising=False)
+    monkeypatch.delitem(sys.modules, "gunicorn", raising=False)
+    assert not app_module._should_start_background_cleanup()      # the dev reloader's parent: skip
+    monkeypatch.setitem(sys.modules, "gunicorn", types.ModuleType("gunicorn"))
+    assert app_module._should_start_background_cleanup()          # the live server
