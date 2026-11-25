@@ -133,3 +133,26 @@ def test_own_turn_drills_rank_by_rating_then_turn_and_skip_missing_rating():
              {"turn": 2, "rating": 4, "seller": line}, {"turn": 9, "seller": line}]
     ids = [d.id.split(":")[-1] for d in drills_from_own_turns(turns, limit=5)]
     assert ids == ["1", "2", "3"]
+
+
+# --- embedder disk cache ---------------------------------------------------------------------------------------
+
+def test_embedder_keeps_warmed_lines_on_disk_and_reads_them_back(tmp_path):
+    from core.infra.embedder import FastEmbedEmbedder
+
+    def made(calls):
+        e = object.__new__(FastEmbedEmbedder)
+        e._file, e._batch_size = tmp_path / "seen-m.npz", 8
+        e._compute = lambda texts: calls.extend(texts) or [[float(len(t)), 1.0] for t in texts]
+        e._seen = e._load()
+        return e
+
+    first = []
+    made(first).warm(["hi", "hello there"])
+    assert first == ["hi", "hello there"]
+    again = []
+    e = made(again)                            # a restart: nothing embedded again
+    e.warm(["hi", "hello there"])
+    assert again == [] and e.embed(["hello there"]) == [[11.0, 1.0]]
+    (tmp_path / "seen-m.npz").write_bytes(b"broken")
+    assert made([])._seen == {}                # a broken file is ignored, never a crash
