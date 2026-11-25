@@ -4,6 +4,7 @@ Session start and end, chat, edit, the coach's Q&A and the stage/move quiz.
 """
 
 import logging
+from functools import wraps
 
 from flask import Blueprint, current_app, jsonify, request
 
@@ -13,7 +14,7 @@ from core.infra import embedder as meaning_model
 from core.infra.loader import CONFIG_DIR
 from core.training.quiz import get_quiz_question
 from core.training.stage_jump import kept_answers
-from core.buy_mode.seller_bot import SellerBot
+from core.buy_mode.seller_bot import SellerBot, ready as seller_ready
 from core.buy_mode.script_engine import rep_words
 from core.buy_mode.script_engine.seller import method_for, products as script_products, resolve_product
 from core.calls.errors import CallError
@@ -37,6 +38,7 @@ from ..messages import (
     REWIND_FAILED,
     SELLER_INIT_FAILED,
     SERVER_FULL,
+    SERVER_STARTING,
 )
 from ..security import InputValidator, require_rate_limit
 from .calls import call_error
@@ -65,7 +67,20 @@ def products():
     return jsonify({"success": True, "products": script_products()})
 
 
+def _once_started(view):
+    """Before the rate limit, so the page's retries while the server warms up never use up a learner's starts."""
+    @wraps(view)
+    def gated(*args, **kwargs):
+        if not seller_ready():
+            res = jsonify({"error": SERVER_STARTING, "code": "STARTING"})
+            res.headers["Retry-After"] = "2"
+            return res, 503
+        return view(*args, **kwargs)
+    return gated
+
+
 @bp.route("/init", methods=["POST"])
+@_once_started
 @require_rate_limit("buy_init")
 def init():
     """Start a session (the seller is built now, so the first message doesn't wait), or reattach to a live one."""

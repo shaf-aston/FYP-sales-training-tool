@@ -81,6 +81,30 @@ async function request<R>(path: string, opts: RequestOptions = {}): Promise<R> {
   return data as R;
 }
 
+const startingListeners = new Set<() => void>();
+/** Told once per start that waits on a server still warming up (the page shows "Server starting up…"). */
+export function onServerStarting(fn: () => void): () => void {
+  startingListeners.add(fn);
+  return () => startingListeners.delete(fn);
+}
+
+/** Retries a call start while the server says STARTING (just restarted, still warming up), every
+ *  `config.startingRetryMs`, up to `config.initTimeoutMs` in all; then the last error stands. */
+export async function untilStarted<R>(start: () => Promise<R>, now = () => Date.now(), wait = (ms: number) => new Promise((r) => setTimeout(r, ms))): Promise<R> {
+  const until = now() + config.initTimeoutMs;
+  let told = false;
+  for (;;) {
+    try {
+      return await start();
+    } catch (err) {
+      if (!(err instanceof ApiError && err.code === "STARTING") || now() >= until) throw err;
+      if (!told) startingListeners.forEach((fn) => fn());
+      told = true;
+      await wait(config.startingRetryMs);
+    }
+  }
+}
+
 /** A multipart body with the one upload the server reads as `file`. */
 function fileForm(file: File): FormData {
   const form = new FormData();
@@ -96,14 +120,16 @@ export function createHttpApi() {
     /** A saved session's id restores it; otherwise a new call, selling `productType`, in `words` ({step: question}) if given. */
     /** Start a call, or restore `sessionId`; the product and words start a new one if the server forgot it. */
     buyInit: (sessionId?: string | null, productType?: string | null, words?: Omit<T.WordsChoice, "product">) =>
-      request<T.InitRes>("/api/buy/init", {
-        timeoutMs: config.initTimeoutMs,   // never an endless "Reconnecting…": a slow start fails loud and can be retried
-        body: {
-          ...(sessionId ? { session_id: sessionId } : {}),
-          ...(productType ? { product_type: productType } : {}),
-          ...(words ? { words: words.words, label: words.label, probes: words.probes } : {}),
-        },
-      }),
+      untilStarted(() =>
+        request<T.InitRes>("/api/buy/init", {
+          timeoutMs: config.initTimeoutMs,   // never an endless "Reconnecting…": a slow start fails loud and can be retried
+          body: {
+            ...(sessionId ? { session_id: sessionId } : {}),
+            ...(productType ? { product_type: productType } : {}),
+            ...(words ? { words: words.words, label: words.label, probes: words.probes } : {}),
+          },
+        }),
+      ),
     buyWordsSample: (source: "call" | "sop") =>
       request<{ success: true; text: string; filename: string }>(`/api/buy/words/sample?source=${source}`),
     buyWords: (req: T.RepWordsReq) => request<T.RepWordsRes>("/api/buy/words", { body: req, timeoutMs: chat }),

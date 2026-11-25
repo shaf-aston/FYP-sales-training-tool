@@ -3,6 +3,7 @@ rewind snapshots and analytics."""
 
 import json
 import logging
+import threading
 import time
 from dataclasses import dataclass
 from typing import Any, Optional
@@ -244,14 +245,29 @@ class SellerBot:
         )
 
 
+_warm_done = threading.Event()
+_warm_started: float | None = None   # None: no warm-up ran (tests, scripts), so nothing to wait for
+WARM_LIMIT_S = 120   # a warm-up stuck longer than this stops holding calls back; they build their own seller
+
+
+def ready() -> bool:
+    """False only while the start-up warm-up runs: /init then says STARTING and the page retries, instead of one
+    request waiting 30+ s behind it (live, 25 Nov: 36 s, longer than the Vercel rewrite allows)."""
+    return _warm_started is None or _warm_done.is_set() or time.monotonic() - _warm_started > WARM_LIMIT_S
+
+
 def warm() -> None:
     """Build one throwaway seller at start-up: the first one embeds every script example (~5 s on 2 cores, far
     longer while the voice models load beside it). After a restart every learner's call is new at once, and the
     first had waited so long that its reconnect looked stuck (live, 24 Nov). Never under a test run."""
+    global _warm_started
     import sys
     if "pytest" in sys.modules:
         return
+    _warm_started = time.monotonic()
     try:
         SellerBot()
     except Exception:   # noqa: BLE001 - the first real call builds it instead
         logging.getLogger(__name__).exception("seller warm-up failed")
+    finally:
+        _warm_done.set()

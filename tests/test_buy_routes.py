@@ -171,3 +171,32 @@ def test_every_session_route_answers_a_dead_session_the_same_way(buy_app, method
 
 def test_health_says_which_commit_is_running(client):
     assert client.get("/api/health").get_json()["version"]
+
+
+def test_init_says_starting_while_the_warm_up_runs_and_never_spends_the_rate_limit(buy_app, monkeypatch):
+    from core.buy_mode import seller_bot
+    client, _ = buy_app if isinstance(buy_app, tuple) else (buy_app.test_client(), None)
+    monkeypatch.setattr(seller_bot, "_warm_started", seller_bot.time.monotonic())
+    monkeypatch.setattr(seller_bot, "_warm_done", seller_bot.threading.Event())
+    for _ in range(15):   # past the 10-a-minute init limit: none of these count
+        res = client.post("/api/buy/init", json={})
+        assert res.status_code == 503 and res.get_json()["code"] == "STARTING"
+        assert res.headers["Retry-After"]
+    seller_bot._warm_done.set()
+    assert client.post("/api/buy/init", json={}).status_code == 200
+
+
+def test_ready_unless_a_warm_up_is_running_and_not_stuck():
+    from core.buy_mode import seller_bot as sb
+    import threading
+    done = threading.Event()
+    assert sb.ready()                                           # no warm-up ran (tests)
+    sb._warm_started, sb._warm_done = sb.time.monotonic(), done
+    try:
+        assert not sb.ready()
+        sb._warm_started -= sb.WARM_LIMIT_S + 1                 # stuck: stop holding calls back
+        assert sb.ready()
+        sb._warm_started = sb.time.monotonic(); done.set()
+        assert sb.ready()
+    finally:
+        sb._warm_started, sb._warm_done = None, threading.Event()
