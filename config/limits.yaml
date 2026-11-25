@@ -200,6 +200,7 @@ speech:              # replies read aloud by the server, so the browser needs no
     model: gemini-3.8-flash-tts
     timeout_seconds: 8
     rest_seconds: 300  # after a refusal (quota, a bad key) it is left alone this long: Kokoro speaks meanwhile
+    prewarm_per_run: 250   # fixed lines made ahead with Gemini each deploy (scripts/speech_prewarm.py): its free quota is small
     # How every line is said: plain words, read as a person on a phone call would say them (no names, ages or
     # accents here: Google's guidance). The speed setting adds "a little slower" / "a little quicker".
     style: "natural and conversational, like a real person talking on a phone call, relaxed, with natural pauses"

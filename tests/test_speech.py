@@ -340,3 +340,16 @@ def test_no_gemini_key_means_no_call(monkeypatch):
     monkeypatch.setattr(speech, "env_str", lambda k: None)
     monkeypatch.setitem(speech.ENGINES, "groq", lambda t, v, s: b"RIFFgroq")
     assert speech.speak("Hi.") == b"RIFFgroq" and sent == []
+
+
+def test_prewarm_with_gemini_is_capped_and_stops_at_the_first_refusal(monkeypatch):
+    import scripts.speech_prewarm as pw
+    monkeypatch.setitem(pw.SPEECH, "engines", ["gemini", "groq"])
+    monkeypatch.setitem(pw.SPEECH, "gemini", {**pw.SPEECH["gemini"], "prewarm_per_run": 3})
+    monkeypatch.setattr(pw, "seller_lines", lambda: [("one.", 1.0), ("two two.", 1.0), ("three 3.", 1.0), ("four 44.", 1.0)])
+    monkeypatch.setattr(pw, "buyer_lines", lambda: {})
+    monkeypatch.setattr(pw, "is_cached", lambda *a: False)
+    asked = []
+    monkeypatch.setattr(pw, "speak", lambda s, **k: asked.append((s, k["engines"])) or (b"wav" if len(asked) < 2 else None))
+    pw.main()
+    assert asked == [("one.", ["gemini"]), ("two two.", ["gemini"])]   # capped at 3, stopped at the refusal
