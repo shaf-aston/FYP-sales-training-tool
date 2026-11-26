@@ -69,6 +69,21 @@ account dialog shows only what is on (`/api/account/sign-in-options`).
 An account made either way has no password; it is deleted within 10 minutes of signing in instead of with one.
 Keys go in the VM's `.env` only, never in the repo or GitHub variables.
 
+**Voice and dictation engines per server.** `limits.yaml` leaves the local models out (`speech.engines`,
+`dictation.engines`), for the small AMD VM (1 GB). A bigger server turns them on in its own `.env`, then restart:
+`SPEECH_ENGINES=kokoro,groq` and `DICTATION_ENGINES=parakeet,groq`. Kokoro first, not Gemini: Gemini's free key
+refused after 4 lines (25 Nov). Also remove `SKIP_VOICE_PREWARM=1` from `/etc/environment` there, so each deploy
+makes the script's fixed lines ahead of time.
+
+**Moving to an Oracle ARM server (free: up to 4 cores, 24 GB).** cloud.oracle.com → Compute → Instances → Create:
+image Ubuntu 24.04, shape `VM.Standard.A1.Flex` (2 OCPU, 12 GB is plenty), add your SSH public key. Then on it:
+clone this repo to `/opt/eloquence`, `python3 -m venv .venv && .venv/bin/pip install -r requirements.txt gunicorn`,
+copy `.env` from the old VM (plus the two lines above), make `eloquence.service` as on the old VM
+(`ExecStart=/opt/eloquence/.venv/bin/gunicorn -c gunicorn.conf.py -b 127.0.0.1:8010 backend.app:app`), and put
+Caddy in front for HTTPS (`<ip-with-dashes>.sslip.io { reverse_proxy 127.0.0.1:8010 }`). Open ports 80 and 443 in the
+VCN security list. Last: set `VM_HOST` to the new IP, change the API address in `web/src/lib/config.ts` and
+`web/public/vercel.json`, rebuild `web/out`, and push.
+
 `vm-run.yml` (Actions → vm-run) runs any one command on the VM and prints its output.
 
 Only the **deploy** workflow updates the VM, and only after CI passes. The VM used to also have

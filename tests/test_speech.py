@@ -353,3 +353,13 @@ def test_prewarm_with_gemini_is_capped_and_stops_at_the_first_refusal(monkeypatc
     monkeypatch.setattr(pw, "speak", lambda s, **k: asked.append((s, k["engines"])) or (b"wav" if len(asked) < 2 else None))
     pw.main()
     assert asked == [("one.", ["gemini"]), ("two two.", ["gemini"])]   # capped at 3, stopped at the refusal
+
+
+def test_a_machine_picks_its_own_engines_from_its_env():
+    import os
+    import subprocess
+    import sys
+    code = "from core.infra.constants import SPEECH, DICTATION; print(SPEECH['engines'], DICTATION['engines'])"
+    env = {**os.environ, "SPEECH_ENGINES": " kokoro, groq ", "DICTATION_ENGINES": "parakeet,groq"}
+    out = subprocess.run([sys.executable, "-c", code], env=env, capture_output=True, text=True, check=True).stdout
+    assert out.strip() == "['kokoro', 'groq'] ['parakeet', 'groq']"

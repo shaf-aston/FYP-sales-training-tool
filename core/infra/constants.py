@@ -1,5 +1,8 @@
 """Every tunable number, read once from config/limits.yaml and validated."""
 
+import os
+
+from core.infra import env as _env  # noqa: F401 - loads .env first, for the engine overrides below
 from core.infra.loader import load_yaml
 
 
@@ -29,6 +32,18 @@ GROQ_REASONING_EFFORT = _L["defaults"]["groq_reasoning_effort"]
 GROQ_BACKUP_MODELS = list(_L["defaults"].get("groq_backup_models") or [])
 SPEECH = _L["speech"]
 DICTATION = _L["dictation"]
+
+
+def _engines(cfg: dict, var: str) -> None:
+    """A machine picks its own engines in its .env (comma list, e.g. SPEECH_ENGINES=gemini,kokoro,groq): a big
+    server runs the local models, a small one leaves them out, from the same limits.yaml."""
+    names = [n.strip() for n in os.environ.get(var, "").split(",") if n.strip()]
+    if names:
+        cfg["engines"] = names
+
+
+_engines(SPEECH, "SPEECH_ENGINES")
+_engines(DICTATION, "DICTATION_ENGINES")
 TRANSCRIPTION = _L["transcription"]
 SOP_LIMITS = _L["sop"]
 REP_WORDS = _L["rep_words"]
