@@ -41,6 +41,13 @@ def topic_of(line: str) -> str:
     specific: "how long has" is the pain, "how long" the timeline), the first listed on a tie, else "general". A
     phrase matches a whole word or its start ("frustrat" -> "frustrated")."""
     text = (line or "").lower()
+    # the question itself first: "Fair concern on price. Compared to what the problem costs you, how does it
+    # look?" asks about value, not the price it opened on (live, 26 Nov)
+    question = re.split(r"(?<=[.!?])\s+", text.split("?")[0])[-1] if "?" in text else ""
+    return _topic_in(question) if question and _topic_in(question) != "general" else _topic_in(text)
+
+
+def _topic_in(text: str) -> str:
     best, best_len = "general", 0
     for topic, phrases in load_yaml("prospect_lines.yaml")["topics"].items():
         longest = max((len(p) for p in phrases if says(p, text)), default=0)
