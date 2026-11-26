@@ -257,3 +257,9 @@ def test_an_invitation_is_asked_like_a_question(line):
     """Live, 12 Nov: "Tell me more about how that affects your week." got "That's fair. Tell me more." back."""
     assert next_move(WARM, line, []).kind == "share"
     assert next_move(COLD, line, []).kind == "guard"
+
+
+def test_the_question_decides_the_topic_not_its_lead_in():
+    from core.sell_mode.buyer_moves import topic_of
+    assert topic_of("Fair concern on price. Compared to what the problem costs you, how does it look?") == "value"
+    assert topic_of("If nothing changed in six months, what happens?") == "consequence"
